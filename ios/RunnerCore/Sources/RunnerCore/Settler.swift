@@ -27,15 +27,17 @@ public final class Settler {
         var last = before
         var changedAt = actionAt
         while true {
+            let readStart = clock()
             let next = read()
             reads += 1
             let now = clock()
+            // a read shows the layout as it was when it began: stillness is proven up to its start only
             if let prev = last, same(next, prev), !busy(next) {
                 // still
             } else {
-                changedAt = now
+                changedAt = readStart
             }
-            let settled = last != nil && !busy(next) && now - changedAt >= quietMs
+            let settled = last != nil && !busy(next) && readStart - changedAt >= quietMs
             last = next
             if settled { return SettleOutcome(settled: true, reads: reads, last: next, elapsedMs: now - actionAt) }
             if cancelled() || now >= deadline {

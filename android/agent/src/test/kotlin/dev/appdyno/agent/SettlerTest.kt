@@ -78,6 +78,18 @@ class SettlerTest {
     }
 
     @Test
+    fun oneSlowReadOfTheOldScreenIsNoProofOfQuiet() {
+        // the first read takes 1.5 s (a starved device) and still shows the screen before the tap
+        val s = Settler({ now }, { now += it }, { lastEvent })
+        var n = 0
+        val o = s.run(now, 200, 3_000, R("A"), { n++; now += if (n == 1) 1_500 else 10; R(if (n == 1) "A" else "B") },
+            { a, b -> a.hash == b.hash }, { it.busy }, { false })
+        assertTrue(o.settled)
+        assertEquals("B", o.last.hash)
+        assertTrue("reads ${o.reads}", o.reads >= 3)
+    }
+
+    @Test
     fun lateWakeUpsStretchTheQuietWindow() {
         // every 80 ms sleep takes 240 ms (a starved CPU) while reads stay fast
         val s = Settler({ now }, { now += it * 3 }, { lastEvent })

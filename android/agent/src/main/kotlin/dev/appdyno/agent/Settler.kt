@@ -74,9 +74,10 @@ class Settler(
             noteRead(now - readStart, size(next))
             val quiet = (quietMs * slowdown()).toLong()
             val prev = last
-            if (prev == null || !same(next, prev) || busy(next)) changedAt = now
+            // a read shows the layout as it was when it began: stillness is proven up to its start only
+            if (prev == null || !same(next, prev) || busy(next)) changedAt = readStart
             last = next
-            val stillLayout = now - changedAt
+            val stillLayout = readStart - changedAt
             val quietEvents = now - maxOf(lastEventAt(), actionAt)
             val settled = prev != null && !busy(next) &&
                 ((stillLayout >= quiet && quietEvents >= quiet) || stillLayout >= 2 * quiet)

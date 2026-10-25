@@ -72,6 +72,19 @@ final class SettlerTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(r.elapsedMs, 350)
     }
 
+    func testOneSlowReadOfTheOldScreenIsNoProofOfQuiet() {
+        let c = Clock()
+        let s = Settler(clock: { c.now }, sleep: { c.now += $0 })
+        var n = 0
+        let r = s.run(actionAt: 0, quietMs: 200, maxMs: 3000, before: 0, read: { () -> Int in
+            n += 1
+            c.now += n == 1 ? 1500 : 10
+            return n == 1 ? 0 : 1
+        }, same: ==, busy: { _ in false }, cancelled: { false })
+        XCTAssertTrue(r.settled)
+        XCTAssertEqual(r.last, 1)
+    }
+
     func testABusyScreenRunsToTheLimit() {
         let c = Clock()
         let s = Settler(clock: { c.now }, sleep: { c.now += $0 })
