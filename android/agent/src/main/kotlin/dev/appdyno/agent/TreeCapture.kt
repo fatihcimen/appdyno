@@ -33,12 +33,16 @@ class Capture(
     /** The digest of the app's and the system dialogs' windows (status bar, keyboard and overlays left out). */
     val hash: String by lazy { LayoutHash.of(appNodes) }
 
+    private fun appWindow(w: CWindow) = w.type != TYPE_IME && w.type != TYPE_OVERLAY && !(w.type == TYPE_SYSTEM && w.pkg == SYSTEM_UI)
+
+    /** A node of the app's or a system dialog's window (not the status bar, the keyboard, an overlay). */
+    fun inApp(n: CNode) = appWindow(windows[n.window])
+
+    /** A point on a window that is not the app's (a key of the keyboard, the status bar). */
+    fun onOtherWindow(x: Int, y: Int) = windows.any { !appWindow(it) && it.bounds.contains(x, y) }
+
     /** The nodes of the app's and the system dialogs' windows. */
-    val appNodes: List<CNode> by lazy {
-        nodes.filter { n ->
-            windows[n.window].let { it.type != TYPE_IME && it.type != TYPE_OVERLAY && !(it.type == TYPE_SYSTEM && it.pkg == SYSTEM_UI) }
-        }
-    }
+    val appNodes: List<CNode> by lazy { nodes.filter(::inApp) }
 
     fun sameLayout(other: Capture) = LayoutHash.same(appNodes, other.appNodes)
 

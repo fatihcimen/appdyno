@@ -72,6 +72,17 @@ class HitTestTest {
     fun aWebViewTakesTouchesItself() = assertTrue(HitTest.actionable(screen, 100, 1000))
 
     @Test
+    fun parentsAreIndicesOfTheWholeCaptureWhenSomeWindowsAreLeftOut() {
+        // a status bar window first (left out), then the app: the app's parents point past it
+        val whole = listOf(
+            CNode(-1, 1, "StatusBar", null, null, null, null, 0, 0, 1000, 100, Flags.VISIBLE or Flags.CLICKABLE),
+            CNode(-1, 0, "FrameLayout", null, null, null, null, 0, 0, 1000, 2000, Flags.VISIBLE),
+            CNode(1, 0, "TextView", null, null, null, null, 0, 1500, 1000, 1600, Flags.VISIBLE),
+        )
+        assertFalse(HitTest.actionable(whole, 500, 1550) { it.window == 0 })
+    }
+
+    @Test
     fun anInvisibleButtonDoesNotCountAndNoScreenMeansCareful() {
         assertFalse(HitTest.actionable(screen, 100, 1650))
         assertTrue(HitTest.actionable(null, 1, 1))

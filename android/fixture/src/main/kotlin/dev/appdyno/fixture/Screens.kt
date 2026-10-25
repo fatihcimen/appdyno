@@ -431,7 +431,7 @@ class LateActivity : Activity() {
         val handler = Handler(Looper.getMainLooper())
         column {
             val result = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; id = R.id.late_result }
-            for (delay in listOf(0, 50, 100, 150, 200, 300, 450, 700, 1000)) {
+            for (delay in listOf(0, 50, 100, 150, 200, 250, 300, 350, 450, 700, 1000)) {
                 button("$delay ms", View.generateViewId()) {
                     handler.postDelayed({ result.addView(TextView(context).apply { text = "Tepki $delay" }) }, delay.toLong())
                 }.tag = "late_$delay"

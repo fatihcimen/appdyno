@@ -96,11 +96,12 @@ object HitTest {
     private val DRAWS_OWN = Regex("WebView|SurfaceView|TextureView|MapView|GLSurfaceView", RegexOption.IGNORE_CASE)
     private const val ACTIONABLE = Flags.CLICKABLE or Flags.LONG_CLICKABLE or Flags.EDITABLE or Flags.CHECKABLE
 
-    fun actionable(nodes: List<CNode>?, x: Int, y: Int): Boolean {
+    /** `nodes` is a whole capture (parents are its indices); `considered` says which windows' nodes count. */
+    fun actionable(nodes: List<CNode>?, x: Int, y: Int, considered: (CNode) -> Boolean = { true }): Boolean {
         if (nodes == null) return true
         var deepest = -1
         for ((i, n) in nodes.withIndex()) {
-            if (n.flags and Flags.VISIBLE == 0 || n.right <= n.left || n.bottom <= n.top) continue
+            if (!considered(n) || n.flags and Flags.VISIBLE == 0 || n.right <= n.left || n.bottom <= n.top) continue
             if (x < n.left || x >= n.right || y < n.top || y >= n.bottom) continue
             // nodes come root first: a later hit is deeper, or in a window above
             deepest = i

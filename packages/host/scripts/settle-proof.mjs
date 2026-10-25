@@ -10,7 +10,8 @@ if (!serial) {
 }
 const n = Number(nArg ?? 50);
 const APP = 'dev.appdyno.fixture';
-const SETTLE = { quietMs: 200, maxMs: 3_000 };
+const SETTLE = { quietMs: Number(process.env.QUIET ?? 200), maxMs: 3_000 };
+const DELAYS = (process.env.DELAYS ?? '0,50,100,150,200,300').split(',').map(Number);
 const adb = new Adb();
 const d = new AndroidDevice(serial, adb);
 await d.open();
@@ -28,8 +29,8 @@ const clean = async () => {
   if (late.tree.nodes.some((x) => x.t?.startsWith('Tepki') || x.t === 'Dokunuş tepkisi'))
     throw new Error('not clean');
 };
-const out = { n, actionable: {}, touch: {}, unchanged: {} };
-for (const delay of [0, 50, 100, 150, 200, 300]) {
+const out = { n, quietMs: SETTLE.quietMs, actionable: {}, touch: {}, unchanged: {} };
+for (const delay of DELAYS) {
   let missed = 0;
   const ms = [];
   for (let i = 0; i < n; i++) {

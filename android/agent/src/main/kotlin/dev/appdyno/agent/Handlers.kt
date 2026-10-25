@@ -102,7 +102,12 @@ class Handlers(private val automation: Automation, private val token: String) {
         }
         // a tap on something that cannot react (plain text, empty space) needs only a short look
         val inert = a.getString("kind") == "tap" && p.has("before") &&
-            recent[p.getString("before")]?.let { !HitTest.actionable(it.appNodes, a.getDouble("x").toInt(), a.getDouble("y").toInt()) } == true
+            recent[p.getString("before")]?.let { c ->
+                val x = a.getDouble("x").toInt()
+                val y = a.getDouble("y").toInt()
+                // a key of the keyboard reacts like any control
+                !c.onOtherWindow(x, y) && !HitTest.actionable(c.nodes, x, y, c::inApp)
+            } == true
         return after(p, at, job, JSONObject(), inert)
     }
 
