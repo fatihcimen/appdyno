@@ -1,0 +1,317 @@
+import UIKit
+import XCTest
+
+/// The device side of every method, on top of public XCUI API. Coordinates are points.
+final class Device {
+    static let springboardId = "com.apple.springboard"
+    let springboard = XCUIApplication(bundleIdentifier: Device.springboardId)
+    private(set) var target: XCUIApplication?
+    private var targetId: String?
+    /// Recent captures by layout digest: what `before` names (compare and hit test).
+    private var recent: [(hash: String, nodes: [Node])] = []
+    private let settler = Settler(clock: { Int(Date().timeIntervalSince1970 * 1000) },
+                                  sleep: { Thread.sleep(forTimeInterval: Double($0) / 1000) })
+    static let inertQuietMs = 80
+
+    func setTarget(_ id: String) {
+        targetId = id
+        target = XCUIApplication(bundleIdentifier: id)
+    }
+
+    /// The app on screen: the target when it is in front, else the home screen.
+    private func front() -> (XCUIApplication, String) {
+        if let target, let targetId, target.state == .runningForeground { return (target, targetId) }
+        return (springboard, Device.springboardId)
+    }
+
+    // MARK: tree
+
+    struct Capture {
+        var windows: [[String: Any]]
+        var nodes: [Node]
+        var truncated: Bool
+        var busy: Bool
+        var hash: String { layoutHash(nodes) }
+    }
+
+    func capture(maxDepth: Int = 128, maxNodes: Int = 5000, job: Job? = nil) throws -> Capture {
+        let (app, id) = front()
+        var windows: [[String: Any]] = []
+        var nodes: [Node] = []
+        var truncated = false
+        var busy = false
+        let screen = UIScreen.main.bounds
+        func add(_ root: XCUIElementSnapshot, window: Int) {
+            var queue: [(XCUIElementSnapshot, Int, Int)] = [(root, -1, 0)]
+            var head = 0
+            while head < queue.count {
+                let (s, parent, depth) = queue[head]
+                head += 1
+                if nodes.count >= maxNodes || job?.over == true { truncated = true; break }
+                let index = nodes.count
+                let n = Device.node(s, parent: parent, window: window, screen: screen)
+                if s.elementType == .activityIndicator, n.flags & Flag.visible != 0 { busy = true }
+                nodes.append(n)
+                if depth + 1 >= maxDepth { if !s.children.isEmpty { truncated = true }; continue }
+                for c in s.children { queue.append((c, index, depth + 1)) }
+            }
+        }
+        let snap: XCUIElementSnapshot
+        do { snap = try app.snapshot() } catch {
+            throw AgentError("APP_NOT_RUNNING", "the screen could not be read: \(error.localizedDescription)")
+        }
+        windows.append(["type": 1, "pkg": id, "layer": 0, "b": Device.rect(snap.frame), "active": true, "focused": true])
+        add(snap, window: 0)
+        if app !== springboard, let alert = try? springboard.alerts.firstMatch.snapshot() {
+            // a system alert (permission, notification prompt) over the app
+            windows.append(["type": 3, "pkg": Device.springboardId, "layer": 1, "b": Device.rect(alert.frame),
+                            "active": false, "focused": false])
+            add(alert, window: 1)
+        }
+        return Capture(windows: windows, nodes: nodes, truncated: truncated, busy: busy)
+    }
+
+    func remember(_ c: Capture) {
+        let h = c.hash
+        recent.removeAll { $0.hash == h }
+        recent.append((h, c.nodes))
+        if recent.count > 8 { recent.removeFirst() }
+    }
+
+    func treeJSON(_ c: Capture, elapsedMs: Int) -> [String: Any] {
+        ["windows": c.windows, "nodes": c.nodes.map(Device.wire), "truncated": c.truncated,
+         "elapsedMs": elapsedMs, "hash": c.hash]
+    }
+
+    // MARK: actions
+
+    private func point(_ x: Double, _ y: Double) -> XCUICoordinate {
+        front().0.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: x, dy: y))
+    }
+
+    func perform(_ a: [String: Any]) throws {
+        func num(_ k: String, _ d: [String: Any] = a) throws -> Double {
+            guard let v = (d[k] as? NSNumber)?.doubleValue else { throw AgentError("INVALID_ARGUMENT", "\(k) is required") }
+            return v
+        }
+        switch a["kind"] as? String {
+        case "tap":
+            point(try num("x"), try num("y")).tap()
+        case "longPress":
+            point(try num("x"), try num("y")).press(forDuration: try num("durationMs") / 1000)
+        case "swipe":
+            guard let f = a["from"] as? [String: Any], let t = a["to"] as? [String: Any] else {
+                throw AgentError("INVALID_ARGUMENT", "from and to are required")
+            }
+            try drag(try num("x", f), try num("y", f), try num("x", t), try num("y", t), ms: try num("durationMs"))
+        case "gesture":
+            guard let pointers = a["pointers"] as? [[[String: Any]]], pointers.count == 1, let path = pointers.first,
+                  let first = path.first, let last = path.last
+            else { throw AgentError("UNSUPPORTED", "only one-finger gestures on iOS for now") }
+            let (x0, y0, x1, y1) = (try num("x", first), try num("y", first), try num("x", last), try num("y", last))
+            let ms = max(20, try num("t", last) - num("t", first))
+            if x0 == x1, y0 == y1 { point(x0, y0).press(forDuration: ms / 1000) } else { try drag(x0, y0, x1, y1, ms: ms) }
+        case "key":
+            try key(a["key"] as? String ?? "")
+        default:
+            throw AgentError("INVALID_ARGUMENT", "unknown action \(a["kind"] ?? "nil")")
+        }
+    }
+
+    private func drag(_ x0: Double, _ y0: Double, _ x1: Double, _ y1: Double, ms: Double) throws {
+        let distance = hypot(x1 - x0, y1 - y0)
+        let velocity = XCUIGestureVelocity(max(1, distance / max(0.02, ms / 1000)))
+        point(x0, y0).press(forDuration: 0.05, thenDragTo: point(x1, y1), withVelocity: velocity, thenHoldForDuration: 0)
+    }
+
+    private func key(_ k: String) throws {
+        switch k {
+        case "home": XCUIDevice.shared.press(.home)
+        case "enter": front().0.typeText("\n")
+        case "delete": front().0.typeText(XCUIKeyboardKey.delete.rawValue)
+        case "tab": front().0.typeText("\t")
+        default: throw AgentError("UNSUPPORTED", "no \(k) key on iOS", hint: "tap the screen's own back control")
+        }
+    }
+
+    // MARK: settle
+
+    /// After an action: settle (when asked) and read what the caller wants.
+    func after(_ p: [String: Any], job: Job, actionAt: Int, tapAt: (Double, Double)?) throws -> [String: Any] {
+        var out: [String: Any] = [:]
+        var last: Capture?
+        if let s = p["settle"] as? [String: Any] {
+            var quiet = (s["quietMs"] as? NSNumber)?.intValue ?? 200
+            let maxMs = (s["maxMs"] as? NSNumber)?.intValue ?? 3000
+            let before = (p["before"] as? String).flatMap { h in recent.last { $0.hash == h }?.nodes }
+            if let tapAt, let before, !actionable(before, x: Int(tapAt.0), y: Int(tapAt.1)) {
+                quiet = min(quiet, Device.inertQuietMs)
+            }
+            let r = settler.run(actionAt: actionAt, quietMs: quiet, maxMs: maxMs,
+                                before: before.map { Capture(windows: [], nodes: $0, truncated: false, busy: false) },
+                                read: { (try? self.capture(job: job)) ?? Capture(windows: [], nodes: [], truncated: true, busy: true) },
+                                same: { sameLayout($0.nodes, $1.nodes) }, busy: { $0.busy }, cancelled: { job.over })
+            last = r.last
+            out["settle"] = ["settled": r.settled, "ms": r.elapsedMs, "reads": r.reads, "quietMs": quiet]
+        }
+        switch p["read"] as? String ?? "none" {
+        case "hash", "tree":
+            let t0 = Date()
+            let c = try last.flatMap { $0.windows.isEmpty ? nil : $0 } ?? capture(job: job)
+            remember(c)
+            out["hash"] = c.hash
+            if p["read"] as? String == "tree" { out["tree"] = treeJSON(c, elapsedMs: Int(Date().timeIntervalSince(t0) * 1000)) }
+        default: break
+        }
+        return out
+    }
+
+    // MARK: text
+
+    func focusedField(_ app: XCUIApplication) -> XCUIElement? {
+        let f = app.descendants(matching: .any).matching(NSPredicate(format: "hasKeyboardFocus == true")).firstMatch
+        return f.exists ? f : nil
+    }
+
+    func setText(_ p: [String: Any], job: Job) throws -> [String: Any] {
+        guard let text = p["text"] as? String else { throw AgentError("INVALID_ARGUMENT", "text is required") }
+        let t0 = Date()
+        if let at = p["at"] as? [String: Any], let x = (at["x"] as? NSNumber)?.doubleValue, let y = (at["y"] as? NSNumber)?.doubleValue {
+            point(x, y).tap()
+        }
+        let app = front().0
+        let timeout = Double((p["focusTimeoutMs"] as? NSNumber)?.intValue ?? 2000) / 1000
+        var field = focusedField(app)
+        while field == nil, Date().timeIntervalSince(t0) < timeout, !job.over {
+            Thread.sleep(forTimeInterval: 0.08)
+            field = focusedField(app)
+        }
+        guard let field else { throw AgentError("NO_FOCUS", "no text field took the focus", hint: "tap the field first") }
+        let focusMs = Int(Date().timeIntervalSince(t0) * 1000)
+        if p["replace"] as? Bool == true, let old = field.value as? String, !old.isEmpty,
+           old != field.placeholderValue {
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old.count))
+        }
+        field.typeText(text)
+        let now = (field.value as? String) ?? ""
+        let verified = p["replace"] as? Bool == true ? now == text : now.contains(text)
+        if p["submit"] as? Bool == true { field.typeText("\n") }
+        var out = try after(p, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
+        out["mode"] = "keys"
+        out["verified"] = verified
+        out["focusMs"] = focusMs
+        return out
+    }
+
+    // MARK: screen
+
+    func screenshot(_ p: [String: Any]) throws -> Reply {
+        let shot = XCUIScreen.main.screenshot()
+        var image = shot.image
+        if let maxPx = (p["maxPx"] as? NSNumber)?.doubleValue {
+            let px = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
+            let k = maxPx / max(px.width, px.height)
+            if k < 1 {
+                let size = CGSize(width: (px.width * k).rounded(), height: (px.height * k).rounded())
+                let format = UIGraphicsImageRendererFormat()
+                format.scale = 1
+                image = UIGraphicsImageRenderer(size: size, format: format).image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
+            }
+        }
+        let png = p["format"] as? String == "png"
+        let q = Double((p["quality"] as? NSNumber)?.intValue ?? 80) / 100
+        guard let data = png ? image.pngData() : image.jpegData(compressionQuality: q) else {
+            throw AgentError("INTERNAL", "the screenshot could not be encoded")
+        }
+        let w = Int(image.size.width * image.scale), h = Int(image.size.height * image.scale)
+        return Reply(result: ["w": w, "h": h, "format": png ? "png" : "jpeg", "bytes": data.count], binary: data)
+    }
+
+    func foreground() -> [String: Any] {
+        let (_, id) = front()
+        return ["pkg": id]
+    }
+
+    func orientation(_ r: Int) {
+        XCUIDevice.shared.orientation = [.portrait, .landscapeLeft, .portraitUpsideDown, .landscapeRight][r & 3]
+    }
+
+    // MARK: mapping
+
+    static func rect(_ r: CGRect) -> [Int] {
+        guard r.width.isFinite, r.height.isFinite else { return [0, 0, 0, 0] }
+        return [Int(r.minX.rounded()), Int(r.minY.rounded()), Int(r.maxX.rounded()), Int(r.maxY.rounded())]
+    }
+
+    private static let clickableTypes: Set<XCUIElement.ElementType> = [
+        .button, .cell, .link, .tab, .menuItem, .segmentedControl, .switch, .toggle, .slider, .stepper, .picker,
+        .pickerWheel, .key, .icon, .incrementArrow, .decrementArrow, .radioButton, .checkBox, .popUpButton,
+        .menuButton, .disclosureTriangle, .pageIndicator,
+    ]
+    private static let editableTypes: Set<XCUIElement.ElementType> = [.textField, .secureTextField, .searchField, .textView]
+    private static let scrollableTypes: Set<XCUIElement.ElementType> = [.scrollView, .table, .collectionView, .webView]
+    private static let checkableTypes: Set<XCUIElement.ElementType> = [.switch, .toggle, .checkBox]
+
+    static func node(_ s: XCUIElementSnapshot, parent: Int, window: Int, screen: CGRect) -> Node {
+        let b = rect(s.frame)
+        let t = s.elementType
+        var f = 0
+        if s.frame.width > 0, s.frame.height > 0, s.frame.intersects(screen) { f |= Flag.visible }
+        if clickableTypes.contains(t) { f |= Flag.clickable }
+        if editableTypes.contains(t) { f |= Flag.editable | Flag.focusable }
+        if s.hasFocus { f |= Flag.focused }
+        if s.isEnabled { f |= Flag.enabled }
+        if s.isSelected { f |= Flag.selected }
+        if scrollableTypes.contains(t) { f |= Flag.scrollable }
+        if t == .secureTextField { f |= Flag.password }
+        if checkableTypes.contains(t) {
+            f |= Flag.checkable
+            if (s.value as? String) == "1" || (s.value as? NSNumber)?.intValue == 1 { f |= Flag.checked }
+        }
+        let value: String? = {
+            if let v = s.value as? String { return v }
+            if let v = s.value as? NSNumber { return v.stringValue }
+            return nil
+        }()
+        func nonEmpty(_ x: String?) -> String? { x.flatMap { $0.isEmpty ? nil : $0 } }
+        let placeholder = nonEmpty(s.placeholderValue)
+        return Node(parent: parent, window: window, type: typeName(t), id: nonEmpty(s.identifier),
+                    text: value == placeholder ? nil : nonEmpty(value), label: nonEmpty(s.label), hint: placeholder,
+                    left: b[0], top: b[1], right: b[2], bottom: b[3], flags: f)
+    }
+
+    static func wire(_ n: Node) -> [String: Any] {
+        var w: [String: Any] = ["p": n.parent, "w": n.window, "c": n.type, "b": [n.left, n.top, n.right, n.bottom], "f": n.flags]
+        if let v = n.id { w["id"] = v }
+        if let v = n.text { w["t"] = v }
+        if let v = n.label { w["d"] = v }
+        if let v = n.hint { w["h"] = v }
+        return w
+    }
+
+    private static let names: [XCUIElement.ElementType: String] = [
+        .any: "Any", .other: "Other", .application: "Application", .group: "Group", .window: "Window",
+        .sheet: "Sheet", .drawer: "Drawer", .alert: "Alert", .dialog: "Dialog", .button: "Button",
+        .radioButton: "RadioButton", .radioGroup: "RadioGroup", .checkBox: "CheckBox",
+        .disclosureTriangle: "DisclosureTriangle", .popUpButton: "PopUpButton", .comboBox: "ComboBox",
+        .menuButton: "MenuButton", .toolbarButton: "ToolbarButton", .popover: "Popover", .keyboard: "Keyboard",
+        .key: "Key", .navigationBar: "NavigationBar", .tabBar: "TabBar", .tabGroup: "TabGroup", .toolbar: "Toolbar",
+        .statusBar: "StatusBar", .table: "Table", .tableRow: "TableRow", .tableColumn: "TableColumn",
+        .outline: "Outline", .outlineRow: "OutlineRow", .browser: "Browser", .collectionView: "CollectionView",
+        .slider: "Slider", .pageIndicator: "PageIndicator", .progressIndicator: "ProgressIndicator",
+        .activityIndicator: "ActivityIndicator", .segmentedControl: "SegmentedControl", .picker: "Picker",
+        .pickerWheel: "PickerWheel", .switch: "Switch", .toggle: "Toggle", .link: "Link", .image: "Image",
+        .icon: "Icon", .searchField: "SearchField", .scrollView: "ScrollView", .scrollBar: "ScrollBar",
+        .staticText: "StaticText", .textField: "TextField", .secureTextField: "SecureTextField",
+        .datePicker: "DatePicker", .textView: "TextView", .menu: "Menu", .menuItem: "MenuItem", .menuBar: "MenuBar",
+        .menuBarItem: "MenuBarItem", .map: "Map", .webView: "WebView", .incrementArrow: "IncrementArrow",
+        .decrementArrow: "DecrementArrow", .timeline: "Timeline", .ratingIndicator: "RatingIndicator",
+        .valueIndicator: "ValueIndicator", .splitGroup: "SplitGroup", .splitter: "Splitter",
+        .relevanceIndicator: "RelevanceIndicator", .colorWell: "ColorWell", .helpTag: "HelpTag", .matte: "Matte",
+        .dockItem: "DockItem", .ruler: "Ruler", .rulerMarker: "RulerMarker", .grid: "Grid",
+        .levelIndicator: "LevelIndicator", .cell: "Cell", .layoutArea: "LayoutArea", .layoutItem: "LayoutItem",
+        .handle: "Handle", .stepper: "Stepper", .tab: "Tab", .touchBar: "TouchBar",
+    ]
+
+    static func typeName(_ t: XCUIElement.ElementType) -> String { names[t] ?? "Type\(t.rawValue)" }
+}

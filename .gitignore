@@ -9,3 +9,4 @@ android/local.properties
 packages/host/agents/
 .ci/
 ios/*/.build/
+ios/.derived/

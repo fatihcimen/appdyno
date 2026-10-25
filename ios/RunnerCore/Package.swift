@@ -5,7 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "RunnerCore",
-    platforms: [.macOS(.v13), .iOS(.v16)],
+    platforms: [.macOS(.v13), .iOS(.v17)],
     products: [.library(name: "RunnerCore", targets: ["RunnerCore"])],
     targets: [
         .target(name: "RunnerCore"),

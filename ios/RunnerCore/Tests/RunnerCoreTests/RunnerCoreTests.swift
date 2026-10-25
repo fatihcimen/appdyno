@@ -81,3 +81,18 @@ final class SettlerTests: XCTestCase {
         XCTAssertEqual(r.elapsedMs, 1000)
     }
 }
+
+final class ErrorTests: XCTestCase {
+    func testWireCodesFollowTheProtocolOrder() {
+        XCTAssertEqual(AgentError("TIMEOUT", "").rpcCode, -32000)
+        XCTAssertEqual(AgentError("NOT_FOUND", "").rpcCode, -32008)
+        XCTAssertEqual(AgentError("whatever", "").code, "INTERNAL")
+        XCTAssertEqual(AgentError("INTERNAL", "").rpcCode, -32013)
+    }
+
+    func testTokens() {
+        XCTAssertTrue(sameToken("abcdefghijklmnop", "abcdefghijklmnop"))
+        XCTAssertFalse(sameToken("abcdefghijklmnop", "abcdefghijklmnoq"))
+        XCTAssertFalse(sameToken("abc", "abcd"))
+    }
+}

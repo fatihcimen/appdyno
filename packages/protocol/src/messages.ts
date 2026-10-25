@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Protocol major (breaking changes) and minor (additive, announced by capabilities). */
-export const PROTOCOL = { major: 1, minor: 0 } as const;
+export const PROTOCOL = { major: 1, minor: 1 } as const;
 
 /** Node flags (bit mask `f` of a wire node). */
 export const NODE_FLAGS = {
@@ -191,6 +191,8 @@ export const METHODS = {
     result: Screenshot,
   },
   'app.foreground': { params: z.object({}), result: Foreground },
+  /** iOS (capability `app.target`): the app the runner reads and acts on while it is in front. */
+  'app.target': { params: z.object({ pkg: z.string().min(1).max(255) }), result: z.object({}) },
   'clipboard.set': { params: z.object({ text: z.string().max(10_000) }), result: z.object({}) },
   'clipboard.get': { params: z.object({}), result: z.object({ text: z.string().optional() }) },
   'orientation.set': {

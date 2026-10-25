@@ -51,6 +51,7 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 | `text.set`                        | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (2000), `settle?`, `read` | as `act`, plus `mode` (`setText`/`paste`/`keys`), `verified`, `focusMs` |
 | `screenshot`                      | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                              | `w`, `h`, `format`, `bytes`, plus the image as an attachment            |
 | `app.foreground`                  | –                                                                              | `pkg?`                                                                  |
+| `app.target` (iOS)                | `pkg` (bundle id)                                                              | –                                                                       |
 | `clipboard.set` / `clipboard.get` | `text` / –                                                                     | – / `text?`                                                             |
 | `orientation.set`                 | `rotation` 0–3 (frozen)                                                        | –                                                                       |
 | `cancel`                          | `id`                                                                           | –                                                                       |
@@ -60,6 +61,14 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 `gesture {pointers}` (1–5 fingers, each a list of `{x,y,t}` samples; fingers go down together at their
 first sample and up together at their last) and `key {key}` (`back`, `home`, `enter`, `delete`, `tab`,
 `appSwitch`). Coordinates are device pixels.
+
+### iOS
+
+The runner is a UI test (`ios/Runner`) serving one TCP port on the loopback; the simulator shares the
+Mac's loopback. Coordinates are points (`screen.density` is the scale). It reads and acts on the
+`app.target` app while that app is in front, else on the home screen; a system alert over the app is a
+second window (type 3, `com.apple.springboard`). There is no back key; multi-finger gestures are not
+supported yet. iOS sends no accessibility events to a test, so the settle decides from reads alone.
 
 ### Tree
 
