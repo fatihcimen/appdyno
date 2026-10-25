@@ -94,7 +94,7 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     expect(warm.medianMs!).toBeLessThan(cold.medianMs!);
   }, 120_000);
 
-  it('CPU profile: the fixture's busy loop is the top function', async () => {
+  it('CPU profile: the busy loop of the fixture is the top function', async () => {
     const s = await open('cpu');
     const prof = (
       await d.perf.cpuProfile(APP, 2_000, async () => {
