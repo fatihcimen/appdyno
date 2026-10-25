@@ -292,6 +292,26 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(back).toBe(APP);
   });
 
+  it('a dark screen is woken and read', async () => {
+    await home();
+    await d.shell('input keyevent KEYCODE_SLEEP');
+    await new Promise((r) => setTimeout(r, 1_500));
+    const s = await d.read(APP);
+    expect(s.foreground).toBe(APP);
+    expect(find(s, 'appdyno fixture')).toBeDefined();
+  });
+
+  it('a dropped adb connection: a read waits for the device and finds the running agent again', async () => {
+    const back = new AndroidDevice(serial!, new Adb(), 30_000);
+    await back.open();
+    const pid = back.hello!.pid;
+    await new Adb().run(['-s', serial!, 'reconnect'], 30_000);
+    const s = await back.read(APP);
+    expect(s.list.length).toBeGreaterThan(0);
+    expect(back.hello!.pid).toBe(pid); // the same agent, reconnected, not restarted
+    back.close();
+  });
+
   it('a second host connects to the running agent without starting another', async () => {
     const other = new AndroidDevice(serial!);
     await other.open();

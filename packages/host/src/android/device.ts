@@ -59,6 +59,8 @@ export class AndroidDevice {
   constructor(
     readonly serial: string,
     private readonly adb: Adb = new Adb(),
+    /** How long a read-only call waits for an unplugged or rebooting device to come back (0: not at all). */
+    private readonly reconnectWaitMs = 0,
   ) {
     assertSerial(serial);
     this.launcher = new AndroidAgentLauncher(adb, serial);
@@ -90,19 +92,80 @@ export class AndroidDevice {
 
   private call<M extends Method>(method: M, params: ParamsOf<M>, timeoutMs: number) {
     return this.queue.run(async () => {
-      const rpc = await this.ensure();
       try {
+        const rpc = await this.ensure();
         return await rpc.call(method, params, { timeoutMs });
       } catch (e) {
-        if (!(e instanceof DeviceError) || e.code !== 'AGENT_UNAVAILABLE' || !RETRY_SAFE.has(method)) throw e;
+        const lost = e instanceof DeviceError && (e.code === 'AGENT_UNAVAILABLE' || e.code === 'DEVICE_GONE');
+        if (!lost || !RETRY_SAFE.has(method)) throw e;
         this.rpc = undefined;
+        // an unplugged cable or a reboot: the agent may still run on the device, its state file finds it
+        if ((e as DeviceError).code === 'DEVICE_GONE') await this.waitForDevice(e);
         return (await this.ensure()).call(method, params, { timeoutMs });
       }
     });
   }
 
+  /** Waits until adb lists the device as usable again, at most reconnectWaitMs; else rethrows `cause`. */
+  private async waitForDevice(cause: unknown) {
+    const end = Date.now() + this.reconnectWaitMs;
+    while (Date.now() < end) {
+      const d = (await this.adb.devices().catch(() => [])).find((x) => x.serial === this.serial);
+      if (d?.state === 'device') return;
+      await new Promise((r) => setTimeout(r, 1_000));
+    }
+    throw cause;
+  }
+
+  /**
+   * A screen that went dark or locked comes back: wake it, dismiss a keyguard without a credential, and
+   * swipe it up when dismissing did not work. Says what it did; a locked device with a PIN stays locked.
+   */
+  async ensureAwake(): Promise<{ woke: boolean; unlocked: boolean; locked: boolean }> {
+    const state = async () => {
+      const out = await this.shell(
+        "dumpsys power | grep -m1 'mWakefulness='; dumpsys window | grep -m1 -E 'isKeyguardShowing=|mShowingLockscreen='",
+      );
+      return { awake: /mWakefulness=Awake/.test(out), locked: /isKeyguardShowing=true|mShowingLockscreen=true/.test(out) };
+    };
+    let s = await state();
+    let woke = false;
+    let unlocked = false;
+    if (!s.awake) {
+      await this.shell('input keyevent KEYCODE_WAKEUP');
+      await new Promise((r) => setTimeout(r, 400));
+      woke = true;
+      s = await state();
+    }
+    if (s.locked) {
+      await this.shell('wm dismiss-keyguard');
+      await new Promise((r) => setTimeout(r, 600));
+      s = await state();
+      if (s.locked) {
+        const w = this.helloInfo?.screen ?? { w: 1080, h: 2400 };
+        await this.shell(`input swipe ${Math.round(w.w / 2)} ${Math.round(w.h * 0.9)} ${Math.round(w.w / 2)} ${Math.round(w.h * 0.3)} 250`);
+        await new Promise((r) => setTimeout(r, 600));
+        s = await state();
+      }
+      unlocked = !s.locked;
+    }
+    return { woke, unlocked, locked: s.locked };
+  }
+
   async tree(opts: { maxDepth?: number; maxNodes?: number } = {}): Promise<Tree> {
-    return (await this.call('tree.get', opts, TIMEOUTS.read)).result;
+    const read = async () => (await this.call('tree.get', opts, TIMEOUTS.read)).result;
+    const t = await read().catch((e: unknown) => {
+      if (e instanceof DeviceError && e.code === 'NOT_FOUND') return undefined;
+      throw e;
+    });
+    // no app window at all: a dark or locked screen; once awake, read again
+    if (t && t.windows.some((w) => w.type === 1)) return t;
+    const s = await this.ensureAwake();
+    if (!s.woke && !s.unlocked) {
+      if (t) return t;
+      throw new DeviceError('NOT_FOUND', 'no window to read', s.locked ? 'the device is locked' : undefined);
+    }
+    return read();
   }
 
   /** The current screen with stable refs. */

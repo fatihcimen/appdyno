@@ -13,8 +13,9 @@ export class ServerContext {
     readonly policy: Policy,
     readonly adb: Pick<Adb, 'devices'> = new Adb(),
     private readonly defaults: { device?: string; app?: string; measurements?: string } = {},
+    // a phone unplugged for a moment (or rebooting) is waited for, up to 30 s, on read-only calls
     private readonly makeDevice: (serial: string) => DriveableDevice = (serial) =>
-      new AndroidDevice(serial),
+      new AndroidDevice(serial, new Adb(), 30_000),
   ) {}
 
   /** Where measurements and their raw outputs are stored (this machine only). */
