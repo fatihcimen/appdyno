@@ -9,6 +9,7 @@ export default defineConfig({
     alias: {
       '@appdyno/protocol': src('protocol'),
       'appdyno': src('host'),
+      'appdyno-mcp': src('mcp'),
     },
   },
   test: {
