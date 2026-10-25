@@ -88,6 +88,7 @@ class SettlerTest {
         assertTrue(o.settled)
         assertTrue("settled ${o.elapsedMs}", o.elapsedMs >= 280)
         assertEquals(3.0, s.slowdown(), 0.01)
+        assertTrue("reported window ${o.quietMs}", o.quietMs > 100)
     }
 
     @Test

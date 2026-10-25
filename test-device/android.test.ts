@@ -75,7 +75,8 @@ describe.skipIf(!serial)('android agent on a device', () => {
     const r = await d.tap(title, { settle: SETTLE, read: 'hash', before: s.hash });
     expect(r.settle!.settled).toBe(true);
     expect(r.settle!.ms).toBeGreaterThanOrEqual(SETTLE.quietMs);
-    expect(r.settle!.ms).toBeLessThan(SETTLE.quietMs + 250);
+    // one window (stretched while the device is loaded) and a few reads
+    expect(r.settle!.ms).toBeLessThan(r.settle!.quietMs! + 250);
     expect(r.hash).toBe(s.hash);
   });
 

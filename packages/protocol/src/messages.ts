@@ -73,7 +73,8 @@ export const SettleResult = z.object({
   settled: z.boolean(),
   ms: z.number(),
   reads: z.number().int(),
-  /** The quiet window used: shorter after a tap on something that cannot react (plain text, empty space). */
+  /** The quiet window in effect: shorter after a tap on something that cannot react (plain text, empty
+   * space), stretched on a loaded device. */
   quietMs: z.number().int().optional(),
 });
 export type SettleResult = z.infer<typeof SettleResult>;

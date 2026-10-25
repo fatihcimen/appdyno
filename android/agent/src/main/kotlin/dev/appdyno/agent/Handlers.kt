@@ -142,7 +142,7 @@ class Handlers(private val automation: Automation, private val token: String) {
                 { job.cancelled },
                 { it.nodes.size },
             )
-            out.put("settle", JSONObject().put("settled", o.settled).put("ms", o.elapsedMs).put("reads", o.reads).put("quietMs", quiet))
+            out.put("settle", JSONObject().put("settled", o.settled).put("ms", o.elapsedMs).put("reads", o.reads).put("quietMs", o.quietMs))
         }
         when (read) {
             "tree" -> out.put("tree", treeJson(last ?: capture.capture()))

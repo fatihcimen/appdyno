@@ -1,6 +1,7 @@
 package dev.appdyno.agent
 
-class SettleOutcome<S>(val settled: Boolean, val reads: Int, val last: S, val elapsedMs: Long)
+/** `quietMs`: the window in effect at the end (stretched on a loaded device). */
+class SettleOutcome<S>(val settled: Boolean, val reads: Int, val last: S, val elapsedMs: Long, val quietMs: Long = 0)
 
 /**
  * After an action: read the layout every POLL_MS and call the screen settled once it has been still for
@@ -66,8 +67,8 @@ class Settler(
             val quietEvents = now - maxOf(lastEventAt(), actionAt)
             val settled = prev != null && !busy(next) &&
                 ((stillLayout >= quiet && quietEvents >= quiet) || stillLayout >= 2 * quiet)
-            if (settled) return SettleOutcome(true, reads, next, now - actionAt)
-            if (cancelled() || now >= deadline) return SettleOutcome(false, reads, next, now - actionAt)
+            if (settled) return SettleOutcome(true, reads, next, now - actionAt, quiet)
+            if (cancelled() || now >= deadline) return SettleOutcome(false, reads, next, now - actionAt, quiet)
             sleep(minOf(POLL_MS, deadline - now).coerceAtLeast(1))
         }
     }
