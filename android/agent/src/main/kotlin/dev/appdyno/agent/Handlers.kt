@@ -123,15 +123,17 @@ class Handlers(private val automation: Automation, private val token: String) {
                 at,
                 settle.optLong("quietMs", 250),
                 settle.optLong("maxMs", 3_000),
-                if (p.has("before")) p.getString("before") else null,
-                { capture.capture().also { last = it }.hash },
+                if (p.has("before")) recent[p.getString("before")] else null,
+                { capture.capture().also { last = it } },
+                { x, y -> x.sameLayout(y) },
+                { it.busy },
                 { job.cancelled },
             )
             out.put("settle", JSONObject().put("settled", o.settled).put("ms", o.elapsedMs).put("reads", o.reads))
         }
         when (read) {
             "tree" -> out.put("tree", treeJson(last ?: capture.capture()))
-            "hash" -> out.put("hash", (last ?: capture.capture()).hash)
+            "hash" -> out.put("hash", (last ?: capture.capture()).also { recent[it.hash] = it }.hash)
         }
         return Reply(out)
     }
@@ -164,7 +166,13 @@ class Handlers(private val automation: Automation, private val token: String) {
         return app?.root?.packageName?.toString() ?: automation.ua.rootInActiveWindow?.packageName?.toString()
     }
 
+    /** The captures sent lately, by digest: a caller's `before` is compared with the layout itself. */
+    private val recent = object : LinkedHashMap<String, Capture>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Capture>?) = size > 8
+    }
+
     private fun treeJson(c: Capture): JSONObject {
+        recent[c.hash] = c
         val windows = JSONArray()
         for (w in c.windows) {
             windows.put(

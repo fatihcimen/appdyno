@@ -133,7 +133,10 @@ class Server(private val opts: Options, private val handlers: Handlers) {
         is java.lang.reflect.InvocationTargetException -> failure(t.targetException)
         is IllegalArgumentException, is org.json.JSONException ->
             AgentFailure("INVALID_ARGUMENT", t.message ?: t.toString(), cause = t)
-        else -> AgentFailure("INTERNAL", t.toString(), cause = t)
+        else -> {
+            t.printStackTrace()
+            AgentFailure("INTERNAL", t.toString(), cause = t)
+        }
     }
 
     private fun result(id: Int, r: JSONObject) = JSONObject().put("jsonrpc", "2.0").put("id", id).put("result", r).toString()

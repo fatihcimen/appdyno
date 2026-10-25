@@ -57,4 +57,28 @@ object LayoutHash {
         }
         return java.lang.Long.toHexString(h)
     }
+
+    /** Moves up to this many pixels are no layout change (rounding, a jittering parent). */
+    const val TOLERANCE = 8
+
+    /**
+     * The same layout: the same visible nodes (class, id) in the same order, each within TOLERANCE of its
+     * place (a plain text node vertically only, as in the digest).
+     */
+    fun same(a: List<CNode>, b: List<CNode>): Boolean {
+        val x = a.filter { it.flags and Flags.VISIBLE != 0 }
+        val y = b.filter { it.flags and Flags.VISIBLE != 0 }
+        if (x.size != y.size) return false
+        for (i in x.indices) {
+            val p = x[i]
+            val q = y[i]
+            if (p.cls != q.cls || p.id != q.id) return false
+            fun near(u: Int, v: Int) = kotlin.math.abs(u - v) <= TOLERANCE
+            if (!near(p.top, q.top) || !near(p.bottom, q.bottom)) return false
+            val interactive = p.flags and (Flags.CLICKABLE or Flags.EDITABLE or Flags.CHECKABLE or Flags.SCROLLABLE) != 0
+            val plainText = !interactive && !p.text.isNullOrEmpty()
+            if (!plainText && (!near(p.left, q.left) || !near(p.right, q.right))) return false
+        }
+        return true
+    }
 }

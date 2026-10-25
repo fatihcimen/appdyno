@@ -93,7 +93,11 @@ export function windowRect(elements: UiElement[], platform: Platform): Rect | un
   const area = (r: Rect) => r.width * r.height;
   const roots = elements.filter((e) => e.parent === undefined && e.rect && area(e.rect) > 0);
   const [big, next] = roots.map((e) => e.rect!).sort((a, b) => area(b) - area(a));
-  if (big && big.x === 0 && big.y === 0 && (!next || area(big) > area(next))) return big;
+  const same = (a: Rect, b: Rect) =>
+    a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+  // an activity in transition shows two full-screen roots: equal ones are still the window
+  if (big && big.x === 0 && big.y === 0 && (!next || area(big) > area(next) || same(big, next)))
+    return big;
   if (platform !== 'ios') return undefined;
   const bar = elements.find(
     (e) => /^(navigationbar|tabbar)$/.test(bare(e.type)) && e.rect?.x === 0,

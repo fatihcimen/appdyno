@@ -18,8 +18,26 @@ class CWindow(
     val focused: Boolean,
 )
 
+private const val TYPE_IME = 2
+private const val TYPE_SYSTEM = 3
+private const val TYPE_OVERLAY = 4
+private const val SYSTEM_UI = "com.android.systemui"
+
 class Capture(val windows: List<CWindow>, val nodes: List<CNode>, val truncated: Boolean, val elapsedMs: Long) {
-    val hash: String by lazy { LayoutHash.of(nodes) }
+    /** The digest of the app's and the system dialogs' windows (status bar, keyboard and overlays left out). */
+    val hash: String by lazy { LayoutHash.of(appNodes) }
+
+    /** The nodes of the app's and the system dialogs' windows. */
+    val appNodes: List<CNode> by lazy {
+        nodes.filter { n ->
+            windows[n.window].let { it.type != TYPE_IME && it.type != TYPE_OVERLAY && !(it.type == TYPE_SYSTEM && it.pkg == SYSTEM_UI) }
+        }
+    }
+
+    fun sameLayout(other: Capture) = LayoutHash.same(appNodes, other.appNodes)
+
+    /** A progress indicator is on the screen (a spinner, a loading bar): the screen is not done. */
+    val busy: Boolean by lazy { nodes.any { it.flags and Flags.VISIBLE != 0 && it.cls.endsWith("ProgressBar") } }
 }
 
 /**
@@ -34,10 +52,13 @@ class TreeCapture(private val automation: Automation) {
         Thread(r, "appdyno-tree").apply { isDaemon = true }
     }
 
+    @Volatile
+    private var failedReads = 0
+
     fun capture(maxDepth: Int = 128, maxNodes: Int = 5_000, budgetMs: Long = 8_000): Capture {
         val start = SystemClock.uptimeMillis()
         val ua = automation.ua
-        if (Build.VERSION.SDK_INT >= 34) ua.clearCache() else ua.serviceInfo = ua.serviceInfo
+        automation.clearCache()
         val windows = mutableListOf<CWindow>()
         val roots = mutableListOf<Pair<AccessibilityNodeInfo, Int>>()
         val list: List<AccessibilityWindowInfo> = try {
@@ -59,6 +80,7 @@ class TreeCapture(private val automation: Automation) {
             roots += root to 0
         }
 
+        failedReads = 0
         val nodes = ArrayList<CNode>(512)
         var truncated = false
         var level: List<Triple<AccessibilityNodeInfo, Int, Int>> = roots.map { (n, w) -> Triple(n, -1, w) }
@@ -79,7 +101,7 @@ class TreeCapture(private val automation: Automation) {
             }
             level = children(level, indices)
         }
-        return Capture(windows, nodes, truncated, SystemClock.uptimeMillis() - start)
+        return Capture(windows, nodes, truncated || failedReads > 0, SystemClock.uptimeMillis() - start)
     }
 
     private class Want(val node: AccessibilityNodeInfo, val child: Int, val parent: Int, val window: Int)
@@ -92,8 +114,14 @@ class TreeCapture(private val automation: Automation) {
         for ((i, item) in level.withIndex()) {
             for (c in 0 until item.first.childCount) wanted += Want(item.first, c, indices[i], item.third)
         }
+        // a node the app cannot give (a web view rebuilding its virtual tree) is left out, not fatal
         val read: (Want) -> AccessibilityNodeInfo? = { w ->
-            if (Build.VERSION.SDK_INT >= 33) w.node.getChild(w.child, PREFETCH) else w.node.getChild(w.child)
+            try {
+                if (Build.VERSION.SDK_INT >= 33) w.node.getChild(w.child, PREFETCH) else w.node.getChild(w.child)
+            } catch (_: RuntimeException) {
+                failedReads++
+                null
+            }
         }
         val got: List<AccessibilityNodeInfo?> = if (wanted.size <= PARALLEL) {
             wanted.map(read)

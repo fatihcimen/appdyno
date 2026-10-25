@@ -209,10 +209,10 @@ class TickerActivity : Activity() {
         column {
             val ticker = label("", R.id.ticker)
             button("Dur", R.id.stop) { }
-            handler.post(object : Runnable {
+            this@TickerActivity.handler.post(object : Runnable {
                 override fun run() {
                     ticker.text = "Kalan: ${left--}"
-                    handler.postDelayed(this, 100)
+                    this@TickerActivity.handler.postDelayed(this, 100)
                 }
             })
         }

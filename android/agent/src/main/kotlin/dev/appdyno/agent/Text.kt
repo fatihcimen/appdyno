@@ -92,10 +92,28 @@ class TextInput(private val automation: Automation, private val input: Input, pr
         )
     }
 
+    /** The focused editable node of the active window, searched breadth-first (bounded). */
+    private fun focusedField(): AccessibilityNodeInfo? {
+        val queue = ArrayDeque<AccessibilityNodeInfo>()
+        automation.ua.rootInActiveWindow?.let { queue.add(it) }
+        var seen = 0
+        while (queue.isNotEmpty() && seen++ < 3_000) {
+            val n = queue.removeFirst()
+            if (n.isFocused && n.isEditable) return n
+            for (i in 0 until n.childCount) n.getChild(i)?.let { queue.add(it) }
+        }
+        return null
+    }
+
     private fun waitFocus(deadline: Long, cancelled: () -> Boolean): AccessibilityNodeInfo? {
+        var polls = 0
         while (!cancelled()) {
+            // the cached answer may predate the tap's focus change
+            if (polls++ % 3 == 0) automation.clearCache()
             val f = automation.ua.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
             if (f != null && f.isEditable) return f
+            // a toolkit that draws its own fields (Compose) reports the host view as the input focus
+            focusedField()?.let { return it }
             if (SystemClock.uptimeMillis() >= deadline) return null
             Thread.sleep(40)
         }

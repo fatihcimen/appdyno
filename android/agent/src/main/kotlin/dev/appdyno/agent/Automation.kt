@@ -42,14 +42,31 @@ class Automation private constructor(val ua: UiAutomation) {
 
     init {
         ua.setOnAccessibilityEventListener { e: AccessibilityEvent ->
-            // a selection or a focus change moves no layout; everything else counts as activity
-            if (e.eventType != AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED &&
-                e.eventType != AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED
-            ) {
+            if (movesLayout(e)) {
                 lastEventAt = SystemClock.uptimeMillis()
                 events++
             }
         }
+    }
+
+    /**
+     * Whether an event can mean the layout moved: focus changes and pure text changes (a countdown, a
+     * typed character) cannot, as the layout digest leaves text out too.
+     */
+    private fun movesLayout(e: AccessibilityEvent): Boolean = when (e.eventType) {
+        AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED,
+        AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED,
+        AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED,
+        AccessibilityEvent.TYPE_VIEW_TEXT_SELECTION_CHANGED,
+        -> false
+        AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ->
+            e.contentChangeTypes != AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT
+        else -> true
+    }
+
+    /** Drops the client's node cache (a focus or a screen swap it missed would be read stale). */
+    fun clearCache() {
+        if (android.os.Build.VERSION.SDK_INT >= 34) ua.clearCache() else ua.serviceInfo = ua.serviceInfo
     }
 
     fun inject(event: InputEvent) {
