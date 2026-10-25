@@ -164,12 +164,13 @@ export class AndroidPerf {
     const file = `/data/local/tmp/appdyno-${randomBytes(4).toString('hex')}.data`;
     try {
       const rec = this.device.shellAlongside(
-        `LC_ALL=C simpleperf record --app ${pkg} -f 1000 --duration ${s} -o ${file} 2>&1`,
+        // the CPU clock (time-based sampling) works on every device; emulators have no cycle counter
+        `LC_ALL=C simpleperf record --app ${pkg} -e cpu-clock -f 1000 --duration ${s} -o ${file} 2>&1`,
         (s + 30) * 1000,
       );
       if (during) await during();
       const recorded = await rec;
-      if (!/Samples recorded|samples/i.test(recorded) && /error|fail/i.test(recorded))
+      if (/ E |error|fail|not supported/i.test(recorded) && !/Samples recorded/i.test(recorded))
         throw new DeviceError('UNSUPPORTED', `simpleperf could not record ${pkg}: ${recorded.trim().slice(0, 300)}`);
       const report = await this.sh(`simpleperf report -i ${file} --sort symbol -n --percent-limit 0.3 2>&1`, 60_000);
       const total = Number(/^Samples:\s*(\d+)/m.exec(report)?.[1] ?? 0);
