@@ -7,3 +7,4 @@ android/*/build/
 android/local.properties
 .bench/
 packages/host/agents/
+.ci/
