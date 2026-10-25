@@ -69,11 +69,13 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(labels(s)).toContain('Bilgilerinizi girin');
   });
 
-  it('an unchanged screen settles after one read', async () => {
+  it('an unchanged screen settles after one quiet window', async () => {
     const s = await home();
     const title = find(s, 'appdyno fixture')!;
     const r = await d.tap(title, { settle: SETTLE, read: 'hash', before: s.hash });
-    expect(r.settle).toMatchObject({ settled: true, reads: 1 });
+    expect(r.settle!.settled).toBe(true);
+    expect(r.settle!.ms).toBeGreaterThanOrEqual(SETTLE.quietMs);
+    expect(r.settle!.ms).toBeLessThan(SETTLE.quietMs + 250);
     expect(r.hash).toBe(s.hash);
   });
 

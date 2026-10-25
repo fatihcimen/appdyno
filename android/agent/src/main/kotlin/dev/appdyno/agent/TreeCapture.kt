@@ -23,7 +23,13 @@ private const val TYPE_SYSTEM = 3
 private const val TYPE_OVERLAY = 4
 private const val SYSTEM_UI = "com.android.systemui"
 
-class Capture(val windows: List<CWindow>, val nodes: List<CNode>, val truncated: Boolean, val elapsedMs: Long) {
+class Capture(
+    val windows: List<CWindow>,
+    val nodes: List<CNode>,
+    val truncated: Boolean,
+    val elapsedMs: Long,
+    private val display: DisplayInfo,
+) {
     /** The digest of the app's and the system dialogs' windows (status bar, keyboard and overlays left out). */
     val hash: String by lazy { LayoutHash.of(appNodes) }
 
@@ -36,8 +42,18 @@ class Capture(val windows: List<CWindow>, val nodes: List<CNode>, val truncated:
 
     fun sameLayout(other: Capture) = LayoutHash.same(appNodes, other.appNodes)
 
-    /** A progress indicator is on the screen (a spinner, a loading bar): the screen is not done. */
-    val busy: Boolean by lazy { nodes.any { it.flags and Flags.VISIBLE != 0 && it.cls.endsWith("ProgressBar") } }
+    /**
+     * The screen is not done: a progress indicator shows (a spinner, a loading bar), or an app window
+     * sticks out of the display (a window sliding in or out: its reported place stays at a midway point
+     * until the animation ends).
+     */
+    val busy: Boolean by lazy {
+        nodes.any { it.flags and Flags.VISIBLE != 0 && it.cls.endsWith("ProgressBar") } ||
+            windows.any { w ->
+                w.type == AccessibilityWindowInfo.TYPE_APPLICATION &&
+                    (w.bounds.left < 0 || w.bounds.top < 0 || w.bounds.right > display.width || w.bounds.bottom > display.height)
+            }
+    }
 }
 
 /**
@@ -101,7 +117,7 @@ class TreeCapture(private val automation: Automation) {
             }
             level = children(level, indices)
         }
-        return Capture(windows, nodes, truncated || failedReads > 0, SystemClock.uptimeMillis() - start)
+        return Capture(windows, nodes, truncated || failedReads > 0, SystemClock.uptimeMillis() - start, Platform.display())
     }
 
     private class Want(val node: AccessibilityNodeInfo, val child: Int, val parent: Int, val window: Int)

@@ -18,11 +18,13 @@ const POLL_MS = 100;
 /** The agent APK the package ships (or a development build), and its sha256. */
 export async function agentApk(): Promise<{ path: string; sha256: string }> {
   const here = dirname(fileURLToPath(import.meta.url));
+  const built = join(here, '../../../../android/agent/build/outputs/apk/debug/agent-debug.apk');
+  const packaged = join(here, '../../agents/android/agent.apk');
+  // from the sources (tests, development) the fresh build wins over a copy packaged earlier
+  const fromSource = /[\\/]src[\\/]android$/.test(here);
   const candidates = [
     process.env.APPDYNO_ANDROID_AGENT,
-    join(here, '../../agents/android/agent.apk'),
-    join(here, '../../../agents/android/agent.apk'),
-    join(here, '../../../../android/agent/build/outputs/apk/debug/agent-debug.apk'),
+    ...(fromSource ? [built, packaged] : [packaged, built]),
   ].filter((p): p is string => !!p);
   const path = candidates.find((p) => existsSync(p));
   if (!path)
