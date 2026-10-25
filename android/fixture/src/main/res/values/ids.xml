@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="title" type="id" />
+    <item name="name_input" type="id" />
+    <item name="phone_input" type="id" />
+    <item name="password_input" type="id" />
+    <item name="submit" type="id" />
+    <item name="result" type="id" />
+    <item name="list" type="id" />
+    <item name="row_name" type="id" />
+    <item name="row_count" type="id" />
+    <item name="add_button" type="id" />
+    <item name="open_dialog" type="id" />
+    <item name="ticker" type="id" />
+    <item name="stop" type="id" />
+    <item name="load" type="id" />
+    <item name="loaded" type="id" />
+    <item name="ask_permission" type="id" />
+    <item name="slow_input" type="id" />
+    <item name="web" type="id" />
+</resources>
