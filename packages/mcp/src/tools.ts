@@ -15,7 +15,17 @@ import { checkApp, checkUrl, redact, type Policy } from './policy.js';
 import type { ServerContext } from './context.js';
 import { refused, type Session } from './session.js';
 import { perfTools } from './perf-tools.js';
-import { ACT, DESTRUCTIVE, READ, text, ToolError, type Block, type Tool } from './tool.js';
+import {
+  ActionOut,
+  DeviceOut,
+  DevicesOut,
+  DoneOut,
+  FindOut,
+  ScreenOut,
+  ScreenshotOut,
+  WaitOut,
+} from './schemas.js';
+import { ACT, DESTRUCTIVE, READ, reply, ToolError, type Tool, type ToolResult } from './tool.js';
 
 /** After an action: quiet window and cap of the on-device settle (the window: docs/protocol.md, measured). */
 export const SETTLE = { quietMs: 200, maxMs: 3_000 } as const;
@@ -75,13 +85,22 @@ const Step = z.discriminatedUnion('action', [TapStep, LongPressStep, SwipeStep, 
 type Step = z.infer<typeof Step>;
 type ReadMode = z.infer<typeof Read>;
 
+/** A tool; its structured answer follows `output` (an action's summary unless said otherwise). */
 const tool = <S extends z.ZodObject>(
   title: string,
   description: string,
   input: S,
   annotations: Tool['annotations'],
-  handler: (args: z.infer<S>) => Promise<Block[]>,
-): Tool => ({ title, description, input, annotations, handler: handler as Tool['handler'] });
+  handler: (args: z.infer<S>) => Promise<ToolResult>,
+  output: z.ZodObject = ActionOut,
+): Tool => ({
+  title,
+  description,
+  input,
+  output,
+  annotations,
+  handler: handler as Tool['handler'],
+});
 
 /**
  * A swipe's start and end on a screen of `size`: from x,y (the centre) by `distance` (40 % of the
@@ -137,6 +156,18 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
     return `\nUYARI: uygulama ön planda değil (${screen.foreground}): çöktüyse launch_app ile geri appdyno`;
   };
 
+  const info = (s: Session) => {
+    const h = s.device.hello!;
+    return {
+      serial: s.device.serial,
+      model: h.model,
+      os: `Android ${h.osVersion}`,
+      ...(h.sdk !== undefined && { sdk: h.sdk }),
+      screen: h.screen,
+      agentVersion: h.agentVersion,
+    };
+  };
+
   const show = (s: Session, screen: Screen) => {
     s.remember(screen);
     s.shown = screen.list;
@@ -150,16 +181,48 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
     before: Session['shown'],
     r?: ActResult,
   ) => {
-    if (read === 'none' || !r?.tree) return text(done);
+    if (read === 'none' || !r?.tree) return reply(done, summary(done));
     const screen = s.screenOf(r.tree);
     show(s, screen);
     const moving = r.settle && !r.settle.settled ? ' (ekran hâlâ değişiyor olabilir)' : '';
-    const diff =
-      read === 'diff' && before
-        ? diffText(diffScreens(before, screen.list), screen.list.length, clean)
-        : undefined;
-    return text(`${done}${foreground(s, screen)}${moving}\n${diff ?? header(s, screen)}`);
+    const d = read === 'diff' && before ? diffScreens(before, screen.list) : undefined;
+    const diff = d && diffText(d, screen.list.length, clean);
+    const fg = foreground(s, screen);
+    return reply(
+      `${done}${fg}${moving}\n${diff ?? header(s, screen)}`,
+      summary(done, screen, { diff, d, fg, settled: r.settle?.settled }),
+    );
   };
+
+  /** The structured answer of an action (ActionOut). */
+  const summary = (
+    done: string,
+    screen?: Screen,
+    o: { diff?: string; d?: ReturnType<typeof diffScreens>; fg?: string; settled?: boolean } = {},
+  ): ActionOut => ({
+    done: clean(done),
+    screen: !screen
+      ? 'none'
+      : o.diff === undefined
+        ? 'full'
+        : o.diff.startsWith('ekran değişmedi')
+          ? 'unchanged'
+          : 'diff',
+    ...(o.d && {
+      changes: {
+        added: o.d.added.length,
+        removed: o.d.removed.length,
+        changed: o.d.changed.length,
+      },
+    }),
+    ...(screen && { elements: screen.list.length }),
+    ...(screen?.foreground && { foreground: screen.foreground }),
+    ...(o.settled !== undefined && { settled: o.settled }),
+    warnings: [
+      ...(o.fg ? [o.fg.trim()] : []),
+      ...(o.settled === false ? ['ekran hâlâ değişiyor olabilir'] : []),
+    ],
+  });
 
   /** Runs a device action with the settle and read `read` asks for. */
   const act = async (
@@ -194,15 +257,15 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
   const afterChange = async (s: Session, done: string, read: ReadMode) => {
     const before = s.shown;
     s.acted();
-    if (read === 'none') return text(done);
+    if (read === 'none') return reply(done, summary(done));
     const { screen, settled } = await settleRead(s);
     show(s, screen);
-    const diff =
-      read === 'diff' && before
-        ? diffText(diffScreens(before, screen.list), screen.list.length, clean)
-        : undefined;
-    return text(
-      `${done}${foreground(s, screen)}${settled ? '' : ' (ekran hâlâ değişiyor olabilir)'}\n${diff ?? header(s, screen)}`,
+    const d = read === 'diff' && before ? diffScreens(before, screen.list) : undefined;
+    const diff = d && diffText(d, screen.list.length, clean);
+    const fg = foreground(s, screen);
+    return reply(
+      `${done}${fg}${settled ? '' : ' (ekran hâlâ değişiyor olabilir)'}\n${diff ?? header(s, screen)}`,
+      summary(done, screen, { diff, d, fg, settled }),
     );
   };
 
@@ -294,16 +357,25 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       READ,
       async () => {
         const all = await ctx.adb.devices().catch(refused);
-        if (all.length === 0) return text('bağlı cihaz yok (adb devices boş)');
-        return text(
-          all
+        const devices = all.map((d) => ({
+          serial: d.serial,
+          state: d.state,
+          ...(d.props.model && { model: d.props.model }),
+          allowed: ctx.allowed(d.serial),
+          selected: d.serial === ctx.currentSerial,
+        }));
+        if (all.length === 0) return reply('bağlı cihaz yok (adb devices boş)', { devices });
+        return reply(
+          devices
             .map(
               (d) =>
-                `${d.serial} ${d.state} ${d.props.model ?? ''}${ctx.allowed(d.serial) ? '' : ' (bu sunucuya verilmemiş)'}${d.serial === ctx.currentSerial ? ' ← seçili' : ''}`,
+                `${d.serial} ${d.state} ${d.model ?? ''}${d.allowed ? '' : ' (bu sunucuya verilmemiş)'}${d.selected ? ' ← seçili' : ''}`,
             )
             .join('\n'),
+          { devices },
         );
       },
+      DevicesOut,
     ),
     use_device: tool(
       'Cihaz seç',
@@ -313,11 +385,17 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       async ({ device, app }) => {
         const s = await ctx.use(device, app);
         const h = s.device.hello!;
-        return text(
+        return reply(
           `seçildi ${device}: ${h.model}, Android ${h.osVersion}, ekran ${h.screen.w}x${h.screen.h}` +
             `${s.device.lastStartWasCold ? ' (ajan başlatıldı)' : ''}${s.appId ? `; uygulama ${s.appId}` : ''}`,
+          {
+            ...info(s),
+            agentStarted: s.device.lastStartWasCold,
+            ...(s.appId && { app: s.appId }),
+          },
         );
       },
+      DeviceOut,
     ),
     device_info: tool(
       'Cihaz bilgisi',
@@ -328,15 +406,17 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
         const s = await ctx.session(device);
         const h = s.device.hello!;
         const fg = await s.device.foreground().catch(refused);
-        return text(
+        return reply(
           [
             `${s.device.serial}: ${h.model}, Android ${h.osVersion} (SDK ${h.sdk ?? '?'})`,
             `ekran ${h.screen.w}x${h.screen.h} px, ${h.screen.density} dpi, dönüş ${h.screen.rotation}`,
             `ajan ${h.agentVersion}, protokol ${h.protocol.major}.${h.protocol.minor}, yetenekler: ${h.capabilities.join(', ')}`,
             `ön planda: ${fg ?? 'bilinmiyor'}`,
           ].join('\n'),
+          { ...info(s), capabilities: h.capabilities, ...(fg && { foreground: fg }) },
         );
       },
+      DeviceOut,
     ),
     screen: tool(
       'Ekranı oku',
@@ -347,8 +427,14 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
         const s = await ctx.session(device);
         const screen = await s.read();
         s.shown = screen.list;
-        return text(`${header(s, screen)}${foreground(s, screen)}`);
+        const fg = foreground(s, screen);
+        return reply(`${header(s, screen)}${fg}`, {
+          elements: screen.list.length,
+          ...(screen.foreground && { foreground: screen.foreground }),
+          warnings: fg ? [fg.trim()] : [],
+        });
       },
+      ScreenOut,
     ),
     find: tool(
       'Öğe bul',
@@ -369,9 +455,18 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
         const hits = screen.list.filter(
           (e) => (!w || e.label.toLocaleLowerCase('tr').includes(w)) && (!id || e.id === id),
         );
-        if (hits.length === 0) return text(`bulunamadı (${screen.list.length} öğe)`);
-        return text(renderScreen(hits, clean));
+        const matches = hits.map((e) => ({
+          ref: e.ref,
+          role: e.role,
+          label: clean(e.label),
+          ...(e.id && { id: e.id }),
+          x: e.x,
+          y: e.y,
+        }));
+        if (hits.length === 0) return reply(`bulunamadı (${screen.list.length} öğe)`, { matches });
+        return reply(renderScreen(hits, clean), { matches });
       },
+      FindOut,
     ),
     wait_for: tool(
       'Bekle',
@@ -418,13 +513,23 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
             ? 'kayboldu'
             : `bulundu: ${found!.ref} ${JSON.stringify(clean(found!.label))}`
           : `${timeoutMs} ms içinde ${gone ? 'kaybolmadı' : 'görünmedi'}`;
-        if (read === 'none') return text(head);
+        const out = {
+          met,
+          gone,
+          ...(found && !gone && { found: { ref: found.ref, label: clean(found.label) } }),
+        };
+        if (read === 'none') return reply(head, { ...out, screen: 'none' });
         const diff =
           read === 'diff' && before
             ? diffText(diffScreens(before, last.list), last.list.length, clean)
             : undefined;
-        return text(`${head}\n${diff ?? header(s, last)}`);
+        return reply(`${head}\n${diff ?? header(s, last)}`, {
+          ...out,
+          screen:
+            diff === undefined ? 'full' : diff.startsWith('ekran değişmedi') ? 'unchanged' : 'diff',
+        });
       },
+      WaitOut,
     ),
     screenshot: tool(
       'Ekran görüntüsü',
@@ -441,14 +546,14 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
           .catch(refused);
         const w = s.device.hello?.screen.w;
         s.shot = { at: s.version, hash: layout ?? '' };
-        return [
-          {
-            type: 'text',
-            text: `görüntü ${meta.w}x${meta.h} px${w ? `; dokunma birimi = piksel × ${(w / meta.w).toFixed(3)}` : ''}`,
-          },
-          { type: 'image', data: data.toString('base64'), mimeType: 'image/jpeg' },
-        ];
+        const scale = w ? Math.round((w / meta.w) * 1000) / 1000 : undefined;
+        return reply(
+          `görüntü ${meta.w}x${meta.h} px${scale ? `; dokunma birimi = piksel × ${scale.toFixed(3)}` : ''}`,
+          { width: meta.w, height: meta.h, ...(scale && { scale }) },
+          [{ type: 'image', data: data.toString('base64'), mimeType: 'image/jpeg' }],
+        );
       },
+      ScreenshotOut,
     ),
     tap: tool(
       'Dokun',
@@ -562,12 +667,11 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
           } catch (e) {
             if (!(e instanceof ToolError)) throw e;
             if (done.length === 0) throw e;
-            return text(
-              `${done.join('\n')}\n${i + 1}. adım başarısız, kalanlar uygulanmadı: ${e.message}`,
-            );
+            const t = `${done.join('\n')}\n${i + 1}. adım başarısız, kalanlar uygulanmadı: ${e.message}`;
+            return reply(t, { ...summary(t), warnings: [e.message] });
           }
         }
-        return text(done.join('\n'));
+        return reply(done.join('\n'), summary(done.join('\n')));
       },
     ),
     dismiss_alert: tool(
@@ -582,7 +686,10 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
         const screen = await s.read();
         const button = alertButton(screen.elements, 'android', action);
         if (!button)
-          return text('açık sistem izin penceresi yok (uygulamanın kendi penceresine dokunulmaz)');
+          return reply(
+            'açık sistem izin penceresi yok (uygulamanın kendi penceresine dokunulmaz)',
+            summary('açık sistem izin penceresi yok'),
+          );
         return act(
           s,
           read,
@@ -627,8 +734,9 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
         if (!pkg) throw new ToolError('app ver (ya da use_device ile uygulama seç)');
         await s.device.terminate(pkg).catch(refused);
         s.acted();
-        return text(`durduruldu ${pkg}`);
+        return reply(`durduruldu ${pkg}`, { done: `durduruldu ${pkg}` });
       },
+      DoneOut,
     ),
     set_orientation: tool(
       'Ekran yönü',
@@ -653,8 +761,10 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
           throw new ToolError('gizli bilgi panoya konmaz');
         const s = await ctx.session(device);
         await s.device.setClipboard(value).catch(refused);
-        return text(`panoya kondu (${Array.from(value).length} karakter)`);
+        const done = `panoya kondu (${Array.from(value).length} karakter)`;
+        return reply(done, { done });
       },
+      DoneOut,
     ),
     set_location: tool(
       'Konum',
@@ -670,8 +780,10 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       async ({ device, lat, lon }) => {
         const s = await ctx.session(device);
         await s.device.setLocation(lat, lon).catch(refused);
-        return text(`konum: ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
+        const done = `konum: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+        return reply(done, { done });
       },
+      DoneOut,
     ),
     ...perfTools(ctx, ctx.measurementsDir),
   };

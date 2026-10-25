@@ -13,15 +13,28 @@ export type ToolAnnotations = {
   openWorldHint: boolean;
 };
 
+/** What a tool answers: the text (and images) for the model, a summary matching its output schema. */
+export type ToolResult = { blocks: Block[]; data: Record<string, unknown> };
+
 export interface Tool {
   title: string;
   description: string;
   input: z.ZodObject;
+  output: z.ZodObject;
   annotations: ToolAnnotations;
-  handler: (args: Record<string, unknown>) => Promise<Block[]>;
+  handler: (args: Record<string, unknown>) => Promise<ToolResult>;
 }
 
 export const text = (t: string): Block[] => [{ type: 'text', text: t }];
+
+export const reply = (
+  t: string,
+  data: Record<string, unknown>,
+  extra: Block[] = [],
+): ToolResult => ({
+  blocks: [{ type: 'text', text: t }, ...extra],
+  data,
+});
 
 /** Reads the device, changes nothing. */
 export const READ: ToolAnnotations = {

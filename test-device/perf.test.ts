@@ -1,3 +1,6 @@
+import { mkdtempSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AndroidDevice, traceProcessor, type Screen } from 'appdyno';
 
@@ -90,6 +93,32 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     ).toBeGreaterThanOrEqual(2);
     expect(warm.medianMs!).toBeLessThan(cold.medianMs!);
   }, 120_000);
+
+  it('CPU profile: the fixture's busy loop is the top function', async () => {
+    const s = await open('cpu');
+    const prof = (
+      await d.perf.cpuProfile(APP, 2_000, async () => {
+        await pause(200);
+        await d.tap(byId(s, 'cpu_load'), { settle: false });
+      })
+    ).value;
+    expect(prof.samples).toBeGreaterThan(100);
+    // the loop runs in a lambda of the CPU screen: the top function belongs to it
+    expect(prof.top[0]!.symbol).toMatch(/CpuActivity/);
+    expect(prof.top[0]!.percent).toBeGreaterThan(30);
+    await pause(1_500);
+  }, 60_000);
+
+  it('heap dump: 50 MB held makes a dump over 50 MB', async () => {
+    const s = await open('memory');
+    await d.tap(byId(s, 'memory_alloc'), { settle: false });
+    await pause(1_000);
+    const file = join(mkdtempSync(join(tmpdir(), 'gd-heap-')), 'heap.hprof');
+    const dump = (await d.perf.heapDump(APP, file)).value;
+    expect(dump.bytes).toBeGreaterThan(50 * 1024 * 1024);
+    expect(statSync(file).size).toBe(dump.bytes);
+    await d.tap(byId(s, 'memory_free'), { settle: false });
+  }, 180_000);
 
   it('vitals: load, memory and thermal state of the device', async () => {
     const v = (await d.perf.vitals()).value;

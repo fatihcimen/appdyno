@@ -80,6 +80,7 @@ describe('tool list', () => {
     `);
     for (const t of tools) {
       expect(t.annotations, t.name).toBeDefined();
+      expect(t.outputSchema, t.name).toBeDefined();
       expect(t.title, t.name).toBeTruthy();
       expect(t.description!.length, t.name).toBeLessThan(400);
     }
@@ -107,6 +108,41 @@ describe('tool list', () => {
     const info = client.getServerVersion()!;
     expect(info.title).toBe('appdyno');
     expect((info as { icons?: unknown[] }).icons).toHaveLength(1);
+  });
+});
+
+describe('structured answers', () => {
+  it('every answer carries a summary that matches the tool output schema', async () => {
+    const t = await connect();
+    const sc = async (name: string, args: Record<string, unknown> = {}) =>
+      (
+        (await t.client.callTool({ name, arguments: args })) as {
+          structuredContent?: Record<string, unknown>;
+        }
+      ).structuredContent;
+    const home = (await t.textOf('screen')).text;
+    expect(await sc('screen')).toMatchObject({ elements: 3, foreground: 'dev.app', warnings: [] });
+    expect(await sc('tap', { ref: refOf(home, 'Form') })).toMatchObject({
+      screen: 'full',
+      settled: true,
+      foreground: 'dev.app',
+    });
+    expect(await sc('tap', { x: 1, y: 1 })).toMatchObject({
+      screen: 'unchanged',
+      changes: { added: 0, removed: 0, changed: 0 },
+    });
+    expect(await sc('list_devices')).toMatchObject({
+      devices: [{ serial: 'emulator-5580', allowed: true }],
+    });
+    expect(await sc('perf_launch')).toMatchObject({
+      mode: 'cold',
+      medianMs: 600,
+      excessive: false,
+      virtualDevice: true,
+    });
+    expect(await sc('find', { text: 'Gönder' })).toMatchObject({
+      matches: [{ role: 'button', label: 'Gönder' }],
+    });
   });
 });
 

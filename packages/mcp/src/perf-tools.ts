@@ -6,7 +6,8 @@ import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { checkApp } from './policy.js';
 import { refused, type Session } from './session.js';
-import { ACT, DESTRUCTIVE, READ, text, ToolError, type Block, type Tool } from './tool.js';
+import { HeapOut, LaunchOut, ProfileOut, ScrollOut, SnapshotOut, TraceOut } from './schemas.js';
+import { ACT, DESTRUCTIVE, READ, reply, ToolError, type Tool, type ToolResult } from './tool.js';
 import { swipeLine } from './tools.js';
 
 const Device = z
@@ -23,9 +24,17 @@ const tool = <S extends z.ZodObject>(
   title: string,
   description: string,
   input: S,
+  output: z.ZodObject,
   annotations: Tool['annotations'],
-  handler: (args: z.infer<S>) => Promise<Block[]>,
-): Tool => ({ title, description, input, annotations, handler: handler as Tool['handler'] });
+  handler: (args: z.infer<S>) => Promise<ToolResult>,
+): Tool => ({
+  title,
+  description,
+  input,
+  output,
+  annotations,
+  handler: handler as Tool['handler'],
+});
 
 /**
  * Stores a measurement (its values and the raw tool output they came from) under `dir`; returns the id
@@ -72,6 +81,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
           cpuWindowMs: z.number().int().min(500).max(10_000).default(2_000),
         })
         .strict(),
+      SnapshotOut,
       READ,
       async ({ device, app, cpuWindowMs }) => {
         const s = await ctx.session(device);
@@ -91,7 +101,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
         };
         const saved = await save('snapshot', [cpu, mem, frames, vitals], value);
         const f = frames.value;
-        return text(
+        return reply(
           [
             `ölçüm ${saved.id}${relative(s)}`,
             `CPU: %${cpu.value.percent} (bir çekirdeğin, ${cpu.value.windowMs} ms)`,
@@ -105,6 +115,22 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
             `cihaz: yük ${vitals.value.load?.join(' ') ?? '?'}, CPU baskısı ${vitals.value.cpuPressure ?? '?'}, termal ${vitals.value.thermalStatus ?? '?'}`,
             `ham çıktı: ${saved.txt}`,
           ].join('\n'),
+          {
+            id: saved.id,
+            raw: saved.txt,
+            virtualDevice: virtual(s),
+            cpuPercent: cpu.value.percent,
+            pssKb: mem.value.pssKb,
+            ...(mem.value.javaHeapKb !== undefined && { javaHeapKb: mem.value.javaHeapKb }),
+            ...(mem.value.nativeHeapKb !== undefined && { nativeHeapKb: mem.value.nativeHeapKb }),
+            frames: {
+              total: f.totalFrames,
+              jankyPercent: f.jankyPercent,
+              frozen: f.frozenFrames,
+              ...(f.p95Ms !== undefined && { p95Ms: f.p95Ms }),
+            },
+            ...(vitals.value.load && { deviceLoad: vitals.value.load }),
+          },
         );
       },
     ),
@@ -120,6 +146,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
           repeats: z.number().int().min(1).max(5).default(3),
         })
         .strict(),
+      ScrollOut,
       ACT,
       async ({ device, app, direction, swipes, repeats }) => {
         const s = await ctx.session(device);
@@ -183,7 +210,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
             ? [`bellek artıyor: %${Math.round(growth * 100)} (2. turdan sona)`]
             : []),
         ];
-        return text(
+        return reply(
           [
             `ölçüm ${saved.id}${relative(s)}`,
             ...rounds.map(
@@ -194,6 +221,16 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
             ...(notes.length ? notes : ['eşik aşılmadı']),
             `ham çıktı: ${saved.txt}`,
           ].join('\n'),
+          {
+            id: saved.id,
+            raw: saved.txt,
+            virtualDevice: virtual(s),
+            rounds,
+            ...(jank !== undefined && { jankMedianPercent: jank }),
+            frozen,
+            ...(growth !== undefined && { memGrowth: Math.round(growth * 1000) / 1000 }),
+            findings: notes,
+          },
         );
       },
     ),
@@ -208,6 +245,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
           repeats: z.number().int().min(1).max(10).default(3),
         })
         .strict(),
+      LaunchOut,
       DESTRUCTIVE,
       async ({ device, app, mode, repeats }) => {
         const s = await ctx.session(device);
@@ -217,13 +255,25 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
         const saved = await save('launch', [m], m.value);
         const limit = mode === 'cold' ? 5_000 : 2_000; // Android vitals: excessive cold ≥ 5 s, warm ≥ 2 s
         const med = m.value.medianMs;
-        return text(
+        return reply(
           [
             `ölçüm ${saved.id}${relative(s)}`,
             `${mode} açılış: ${m.value.samples.map((x) => `${x.totalMs ?? '?'} ms (${x.state ?? '?'})`).join(', ')}`,
             `medyan: ${med === undefined ? 'ölçülemedi' : `${med} ms`}${med !== undefined && med >= limit ? ` (aşırı: eşik ${limit} ms)` : ''}`,
             `ham çıktı: ${saved.txt}`,
           ].join('\n'),
+          {
+            id: saved.id,
+            raw: saved.txt,
+            virtualDevice: virtual(s),
+            mode,
+            samples: m.value.samples.map((x) => ({
+              ...(x.totalMs !== undefined && { totalMs: x.totalMs }),
+              ...(x.state && { state: x.state }),
+            })),
+            ...(med !== undefined && { medianMs: med }),
+            excessive: med !== undefined && med >= limit,
+          },
         );
       },
     ),
@@ -238,6 +288,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
           scroll: z.enum(['up', 'down']).optional(),
         })
         .strict(),
+      ProfileOut,
       READ,
       async ({ device, app, seconds, scroll }) => {
         const s = await ctx.session(device);
@@ -256,13 +307,20 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
         const m = await s.device.perf.cpuProfile(pkg, seconds * 1000, during).catch(refused);
         if (scroll) s.acted();
         const saved = await save('cpu-profile', [m], m.value);
-        return text(
+        return reply(
           [
             `ölçüm ${saved.id}${relative(s)}`,
             `${m.value.samples} örnek, ${m.value.durationMs} ms; en çok zaman alanlar:`,
             ...m.value.top.slice(0, 10).map((e) => `%${e.percent} ${e.symbol}`),
             `ham çıktı: ${saved.txt}`,
           ].join('\n'),
+          {
+            id: saved.id,
+            raw: saved.txt,
+            virtualDevice: virtual(s),
+            samples: m.value.samples,
+            top: m.value.top.map((e) => ({ percent: e.percent, symbol: e.symbol })),
+          },
         );
       },
     ),
@@ -270,6 +328,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
       'Bellek dökümü',
       'appdyno: uygulamanın Java bellek dökümü (HPROF) bu makinede bir dosyaya; bir bellek analizcisiyle açılır. Sızıntı şüphesinde perf_scroll’dan sonra.',
       z.object({ device: Device, app: App }).strict(),
+      HeapOut,
       READ,
       async ({ device, app }) => {
         const s = await ctx.session(device);
@@ -278,8 +337,9 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
         const file = join(measurementsDir, `heap-${pkg}-${Date.now()}.hprof`);
         const m = await s.device.perf.heapDump(pkg, file).catch(refused);
         const saved = await save('heap-dump', [m], m.value);
-        return text(
+        return reply(
           `ölçüm ${saved.id}\nbellek dökümü: ${m.value.file} (${(m.value.bytes / 1048576).toFixed(1)} MB)`,
+          { id: saved.id, file: m.value.file, bytes: m.value.bytes },
         );
       },
     ),
@@ -294,6 +354,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
           scroll: z.enum(['up', 'down']).optional(),
         })
         .strict(),
+      TraceOut,
       ACT,
       async ({ device, app, seconds, scroll }) => {
         const s = await ctx.session(device);
@@ -313,7 +374,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
         if (scroll) s.acted();
         const saved = await save('frame-timeline', [m], m.value);
         const v = m.value;
-        return text(
+        return reply(
           [
             `ölçüm ${saved.id}${relative(s)}`,
             `${v.frames} kare; uygulamanın geciktirdiği ${v.appDeadlineMissed} (%${v.appJankPercent}); herhangi bir takılma ${v.janky} (%${v.jankyPercent}: buffer stuffing ${v.bufferStuffing}, birleştirici ${v.surfaceFlinger})`,
@@ -325,6 +386,18 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
             `kare süresi p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, en kötü ${v.worstMs} ms`,
             `ham çıktı: ${saved.txt}`,
           ].join('\n'),
+          {
+            id: saved.id,
+            raw: saved.txt,
+            virtualDevice: virtual(s),
+            frames: v.frames,
+            appDeadlineMissed: v.appDeadlineMissed,
+            appJankPercent: v.appJankPercent,
+            jankyPercent: v.jankyPercent,
+            p50Ms: v.p50Ms,
+            p95Ms: v.p95Ms,
+            worstMs: v.worstMs,
+          },
         );
       },
     ),

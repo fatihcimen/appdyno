@@ -12,14 +12,15 @@ export function createServer(tools: Record<string, Tool>, log: (line: object) =>
         title: t.title,
         description: t.description,
         inputSchema: t.input,
+        outputSchema: t.output,
         annotations: t.annotations,
       },
       async (args) => {
         const started = Date.now();
         try {
-          const content = await t.handler(args as Record<string, unknown>);
+          const r = await t.handler(args as Record<string, unknown>);
           log({ tool: name, ms: Date.now() - started, outcome: 'ok' });
-          return { content };
+          return { content: r.blocks, structuredContent: r.data };
         } catch (e) {
           if (e instanceof ToolError) {
             log({ tool: name, ms: Date.now() - started, outcome: 'refused' });
