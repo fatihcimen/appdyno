@@ -413,7 +413,8 @@ class CpuActivity : Activity() {
                 Thread {
                     val end = android.os.SystemClock.uptimeMillis() + 3_000
                     var x = 0L
-                    while (android.os.SystemClock.uptimeMillis() < end) x += x xor 7
+                    // the clock is read rarely: the time goes to this loop, not to the clock
+                    while (android.os.SystemClock.uptimeMillis() < end) repeat(100_000) { x += x xor 7 }
                     if (x == 42L) println(x)
                 }.start()
             }
