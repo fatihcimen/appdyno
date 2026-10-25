@@ -226,7 +226,7 @@ export class AndroidDevice {
   }
 
   /** A shell command on the device (adb protocol, no adb process); output with stderr when redirected. */
-  async shell(command: string, timeoutMs = TIMEOUTS.action): Promise<string> {
+  async shell(command: string, timeoutMs: number = TIMEOUTS.action): Promise<string> {
     return this.queue.run(() => this.adb.exec(this.serial, command, { timeoutMs }));
   }
 

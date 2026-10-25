@@ -100,14 +100,14 @@ export class AndroidAgentLauncher {
     }
   }
 
-  private async waitReady(s: State, log: string) {
-    const { socket, token } = s;
-    const apk = { sha256: s.sha256 };
+  private async waitReady(s: State, log: string): Promise<{ rpc: RpcClient; hello: Hello }> {
     const deadline = Date.now() + START_MS;
     for (;;) {
-      const c = await this.tryConnect({ socket, token, sha256: apk.sha256 }).catch((e: unknown) => e);
+      const c = await this.tryConnect(s).catch((e: unknown) =>
+        e instanceof Error ? e : new Error(String(e)),
+      );
       if (!(c instanceof Error)) {
-        await this.writeState({ socket, token, sha256: apk.sha256, ...(c.hello.pid && { pid: c.hello.pid }) });
+        await this.writeState({ ...s, ...(c.hello.pid && { pid: c.hello.pid }) });
         return c;
       }
       if (c instanceof DeviceError && c.code === 'DEVICE_GONE') throw c;

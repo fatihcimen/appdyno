@@ -24,5 +24,6 @@
         <activity android:name=".PermissionActivity" />
         <activity android:name=".SlowFocusActivity" />
         <activity android:name=".WebActivity" />
+        <activity android:name=".ShowcaseActivity" />
     </application>
 </manifest>

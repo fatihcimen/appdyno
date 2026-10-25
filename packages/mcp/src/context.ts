@@ -13,7 +13,7 @@ export class ServerContext {
     readonly adb: Pick<Adb, 'devices'> = new Adb(),
     private readonly defaults: { device?: string; app?: string } = {},
     private readonly makeDevice: (serial: string) => DriveableDevice = (serial) =>
-      new AndroidDevice(serial, adb),
+      new AndroidDevice(serial),
   ) {}
 
   allowed(serial: string) {

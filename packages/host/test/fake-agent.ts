@@ -18,12 +18,8 @@ export function streamPair(): [Duplex, Duplex] {
   return [Duplex.from({ readable: ba, writable: ab }), Duplex.from({ readable: ab, writable: ba })];
 }
 
-export type FakeHandler = (
-  params: Record<string, unknown>,
-) =>
-  | { result: unknown; binary?: Buffer }
-  | { error: ErrorCode; message?: string }
-  | Promise<{ result: unknown; binary?: Buffer } | { error: ErrorCode; message?: string }>;
+type FakeReply = { result: unknown; binary?: Buffer } | { error: ErrorCode; message?: string };
+export type FakeHandler = (params: Record<string, unknown>) => FakeReply | Promise<FakeReply>;
 
 export const TOKEN = 'a'.repeat(32);
 
@@ -42,16 +38,14 @@ export function fakeAgent(handlers: Record<string, FakeHandler> = {}) {
       const m = f.message as { id: number; method: string; params: Record<string, unknown> };
       seen.push({ method: m.method, params: m.params });
       if (m.method === 'cancel') continue;
-      const h =
-        m.method === 'hello'
-          ? () =>
-              m.params.token === TOKEN
-                ? { result: HELLO }
-                : ({ error: 'POLICY_DENIED', message: 'bad token' } as const)
-          : handlers[m.method];
-      const r = h
+      const hello: FakeHandler = () =>
+        m.params.token === TOKEN
+          ? { result: HELLO }
+          : { error: 'POLICY_DENIED', message: 'bad token' };
+      const h = m.method === 'hello' ? hello : handlers[m.method];
+      const r: FakeReply = h
         ? await h(m.params)
-        : { error: 'INVALID_ARGUMENT' as const, message: `no ${m.method}` };
+        : { error: 'INVALID_ARGUMENT', message: `no ${m.method}` };
       if (agent.destroyed) return;
       if ('error' in r) {
         agent.write(
