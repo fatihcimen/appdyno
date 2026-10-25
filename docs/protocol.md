@@ -78,7 +78,7 @@ nodes of the app's and the system dialogs' windows; text left out, a plain text 
 
 ### Settle
 
-With `settle {quietMs (250), maxMs (3000)}` the agent, after the action, reads the layout every 80 ms
+With `settle {quietMs (200), maxMs (3000)}` the agent, after the action, reads the layout every 80 ms
 and calls the screen settled once it has been still for `quietMs`:
 
 - no layout change between two reads ("the same layout": the same visible nodes, class and id, in the

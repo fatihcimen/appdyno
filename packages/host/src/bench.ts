@@ -35,7 +35,7 @@ export interface BenchDriver {
 export function appdynoDriver(serial: string, adb = new Adb()): BenchDriver {
   let d = new AndroidDevice(serial, adb);
   let lastHash: string | undefined;
-  const SETTLE = { quietMs: 250, maxMs: 3_000 };
+  const SETTLE = { quietMs: 200, maxMs: 3_000 };
   return {
     name: 'appdyno',
     async setup() {

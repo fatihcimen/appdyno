@@ -124,7 +124,7 @@ class Handlers(private val automation: Automation, private val token: String) {
         if (settle != null) {
             val o = settler.run(
                 at,
-                settle.optLong("quietMs", 250),
+                settle.optLong("quietMs", 200),
                 settle.optLong("maxMs", 3_000),
                 if (p.has("before")) recent[p.getString("before")] else null,
                 { capture.capture().also { last = it } },

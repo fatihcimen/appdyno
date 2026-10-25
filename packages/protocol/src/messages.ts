@@ -63,7 +63,7 @@ export type Tree = z.infer<typeof Tree>;
 
 export const Settle = z.object({
   /** Quiet window after the action before a read counts. */
-  quietMs: z.number().int().min(0).max(5_000).default(250),
+  quietMs: z.number().int().min(0).max(5_000).default(200),
   /** Longest the agent waits for the layout to stop changing. */
   maxMs: z.number().int().min(0).max(15_000).default(3_000),
 });

@@ -36,7 +36,7 @@ while (Date.now() < end) {
   await timed('read', () => d.read(APP));
   const field = s?.list.find((e) => e.id === 'name_input');
   if (field) {
-    await timed('tap', () => d.tap(field, { settle: { quietMs: 250, maxMs: 3000 }, read: 'hash' }));
+    await timed('tap', () => d.tap(field, { settle: { quietMs: 200, maxMs: 3000 }, read: 'hash' }));
     await timed('type', () =>
       d.typeText(`Deneme ${i} çğış`, { at: field, replace: true, settle: false }),
     );

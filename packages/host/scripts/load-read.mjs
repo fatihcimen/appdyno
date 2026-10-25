@@ -54,7 +54,7 @@ try {
     const home = await d.read(APP);
     const form = home.list.find((e) => e.label === 'FORM');
     const r = await d.tap(form, {
-      settle: { quietMs: 250, maxMs: 3_000 },
+      settle: { quietMs: 200, maxMs: 3_000 },
       read: 'tree',
       before: home.hash,
     });

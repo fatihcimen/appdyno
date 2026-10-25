@@ -17,8 +17,8 @@ import { refused, type Session } from './session.js';
 import { perfTools } from './perf-tools.js';
 import { ACT, DESTRUCTIVE, READ, text, ToolError, type Block, type Tool } from './tool.js';
 
-/** After an action: quiet window and cap of the on-device settle. */
-export const SETTLE = { quietMs: 250, maxMs: 3_000 } as const;
+/** After an action: quiet window and cap of the on-device settle (the window: docs/protocol.md, measured). */
+export const SETTLE = { quietMs: 200, maxMs: 3_000 } as const;
 const WAIT_MS = 5_000;
 const MAX_WAIT_MS = 15_000;
 const WAIT_GAP_MS = 300;

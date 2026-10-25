@@ -120,7 +120,7 @@ describe('act and read', () => {
     expect(r.error).toBe(false);
     const act = t.device.calls.find((c) => c.name === 'act')!;
     expect(act.args[0]).toEqual({ kind: 'tap', x: 540, y: 350 });
-    expect(act.args[1]).toMatchObject({ settle: { quietMs: 250, maxMs: 3000 }, read: 'tree' });
+    expect(act.args[1]).toMatchObject({ settle: { quietMs: 200, maxMs: 3000 }, read: 'tree' });
     expect((act.args[1] as { before?: string }).before).toBeDefined();
     expect(r.text).toMatch(/^dokunuldu @\w+ "Form"/);
     // another screen: the full view comes back

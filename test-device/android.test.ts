@@ -7,7 +7,7 @@ import { Adb, alertButton, AndroidDevice, DeviceError, type Screen } from 'appdy
  */
 const serial = process.env.APPDYNO_ANDROID_SERIAL;
 const APP = 'dev.appdyno.fixture';
-const SETTLE = { quietMs: 250, maxMs: 3_000 };
+const SETTLE = { quietMs: 200, maxMs: 3_000 };
 
 describe.skipIf(!serial)('android agent on a device', () => {
   let d: AndroidDevice;
