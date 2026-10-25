@@ -1,0 +1,40 @@
+/** Every failure an agent or the host reports, with what the caller can do about it. */
+export const ERROR_CODES = [
+  'TIMEOUT',
+  'CANCELLED',
+  'DEVICE_GONE',
+  'AGENT_UNAVAILABLE',
+  'AGENT_CONFLICT',
+  'AGENT_VERSION_MISMATCH',
+  'UNSUPPORTED',
+  'PERMISSION_REQUIRED',
+  'NOT_FOUND',
+  'NO_FOCUS',
+  'APP_NOT_RUNNING',
+  'POLICY_DENIED',
+  'INVALID_ARGUMENT',
+  'INTERNAL',
+] as const;
+export type ErrorCode = (typeof ERROR_CODES)[number];
+
+/** Codes worth one retry by the caller (the device may answer the next time). */
+const RETRYABLE: ReadonlySet<ErrorCode> = new Set(['TIMEOUT', 'AGENT_UNAVAILABLE', 'DEVICE_GONE']);
+
+/** JSON-RPC error codes on the wire: -32000 minus the index of the code. */
+export const rpcCode = (code: ErrorCode) => -32000 - ERROR_CODES.indexOf(code);
+export const codeOfRpc = (n: number): ErrorCode =>
+  n <= -32000 && n > -32000 - ERROR_CODES.length ? ERROR_CODES[-32000 - n]! : 'INTERNAL';
+
+export class DeviceError extends Error {
+  readonly retryable: boolean;
+  constructor(
+    readonly code: ErrorCode,
+    message: string,
+    readonly hint?: string,
+    options?: { cause?: unknown; retryable?: boolean },
+  ) {
+    super(message, options);
+    this.name = 'DeviceError';
+    this.retryable = options?.retryable ?? RETRYABLE.has(code);
+  }
+}
