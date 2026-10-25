@@ -10,7 +10,7 @@ if (!serial) {
 }
 const n = Number(nArg ?? 10);
 const APP = 'dev.appdyno.fixture';
-const QUIETS = [100, 150, 200, 250, 300];
+const QUIETS = [100, 150, 200, 250];
 const DELAYS = [0, 50, 100, 150, 200, 300, 450, 700];
 const adb = new Adb();
 const d = new AndroidDevice(serial, adb);
@@ -38,8 +38,10 @@ for (const quietMs of QUIETS) {
     for (let i = 0; i < n; i++) {
       const clear = button(late, 'Temizle');
       await d.tap(clear, { settle: { quietMs: 250, maxMs: 3_000 }, read: 'none' });
-      await pause(1_200); // every earlier reaction has landed
+      await pause(300);
       late = await read();
+      if (late.tree.nodes.some((x) => x.t?.startsWith('Tepki')))
+        throw new Error('a reaction is still on the screen');
       const b = button(late, `${delay} ms`);
       const r = await d.tap(b, {
         settle: { quietMs, maxMs: 3_000 },
@@ -48,6 +50,7 @@ for (const quietMs of QUIETS) {
       });
       if (!r.tree.nodes.some((x) => x.t === `Tepki ${delay}`)) missed++;
       ms.push(r.settle.ms);
+      await pause(delay + 300); // the reaction lands before the next clear
     }
     row.missed[delay] = missed;
     row.settleMs[delay] = stats(ms, 0).p50;

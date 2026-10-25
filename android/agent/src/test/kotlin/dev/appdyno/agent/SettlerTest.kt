@@ -78,6 +78,19 @@ class SettlerTest {
     }
 
     @Test
+    fun slowReadsStretchTheQuietWindow() {
+        val s = Settler({ now }, { now += it }, { lastEvent })
+        // warm up: fast reads (10 ms)
+        repeat(5) { s.run(now, 100, 3_000, R("A"), { now += 10; R("A") }, { a, b -> a.hash == b.hash }, { it.busy }, { false }) }
+        assertEquals(1.0, s.slowdown(), 0.01)
+        // the device gets slow: reads take 60 ms, the window grows to 3×
+        val o = s.run(now, 100, 3_000, R("A"), { now += 60; R("A") }, { a, b -> a.hash == b.hash }, { it.busy }, { false })
+        assertTrue(o.settled)
+        assertTrue("settled ${o.elapsedMs}", o.elapsedMs >= 280)
+        assertEquals(3.0, s.slowdown(), 0.01)
+    }
+
+    @Test
     fun cancelStopsTheLoop() {
         var n = 0
         val o = go(50, 10_000, null, layoutAt = { t -> r("h$t") }, cancelled = { ++n >= 2 })

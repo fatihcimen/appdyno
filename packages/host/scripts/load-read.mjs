@@ -45,6 +45,28 @@ try {
       errors[e.code ?? 'ERROR'] = (errors[e.code ?? 'ERROR'] ?? 0) + 1;
     }
   }
+  // navigations under the same load: the settled read must be the new screen at its final place
+  var navWrong = 0;
+  var navMs = [];
+  for (let i = 0; i < 20; i++) {
+    await adb.exec(serial, `am start -W -n ${APP}/.MainActivity -f 0x10008000`);
+    await new Promise((r) => setTimeout(r, 1_500));
+    const home = await d.read(APP);
+    const form = home.list.find((e) => e.label === 'FORM');
+    const r = await d.tap(form, {
+      settle: { quietMs: 250, maxMs: 3_000 },
+      read: 'tree',
+      before: home.hash,
+    });
+    navMs.push(r.settle.ms);
+    const now = await d.read(APP);
+    const key = (x) => x.list.map((e) => `${e.id ?? e.label}@${e.x},${e.y}`).join(' ');
+    const settled = await import('../dist/index.js').then((m) =>
+      m.buildScreen(r.tree, { platform: 'android', appId: APP }),
+    );
+    if (!settled.list.some((e) => e.label === 'Bilgilerinizi girin') || key(settled) !== key(now))
+      navWrong++;
+  }
 } finally {
   clearInterval(shooter);
   await adb.exec(serial, 'pkill -f "while :; do :; done"; true').catch(() => undefined);
@@ -60,6 +82,9 @@ console.log(
       truncated,
       errors,
       latency: stats(ms, failed),
+      navigations: 20,
+      navigationsSettledWrong: navWrong,
+      navigationSettleMs: stats(navMs, 0),
       screenshots: shots,
       screenshotFailures: shotFailures,
       deviceLoadBefore: vitalsBefore.load,

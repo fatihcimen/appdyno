@@ -88,6 +88,9 @@ and calls the screen settled once it has been still for `quietMs`:
 - nothing busy: no visible progress indicator, and no application window sticking out of the display (a
   window sliding in is reported frozen at a midway place until its animation ends).
 
+On a loaded device the window stretches (up to 4×) by how much slower the agent's own reads are than
+their recent best, per node read: a slow device also starts its reaction later.
+
 The first read is compared with `before` when it names a layout the agent sent recently (else the first
 read counts as a change), so an action that changed nothing ends after `quietMs`. The settle stops at
 `maxMs` after the action; the result says `settled`, the time and the number of reads.
