@@ -4,7 +4,7 @@ A local device automation server for mobile QA: one MCP stdio server (`appdyno-m
 TypeScript host library (`appdyno`) that drive devices through our own on-device agents and
 measure them.
 
-Status: Android (emulator) works end to end; iOS is planned.
+Status: Android (emulator) works end to end, with performance measurement; iOS is planned.
 
 - Runs only on the machine it is started on: the MCP client starts it over stdio; it opens no network
   listener. The Android agent listens on an abstract unix socket on the device, reached through adb,
@@ -12,6 +12,9 @@ Status: Android (emulator) works end to end; iOS is planned.
 - Android: a Kotlin agent started with `app_process` as the shell user (nothing is installed) on the
   platform's UI automation: screen trees, touch and key input, Turkish text, screenshots, an on-device
   settle after every action.
+- Performance: frames (gfxinfo, Perfetto frame timeline), memory, CPU, cold and warm launch and the
+  device's own state, each stored with its raw output — see `docs/perf.md`. `appdyno tools install`
+  fetches the pinned Perfetto trace processor.
 
 ## Layout
 
@@ -62,4 +65,5 @@ node packages/host/dist/cli.js bench --serial <serial> --n 50 --out bench.json
 Options (or environment variables): `--device` (`APPDYNO_SERIAL`), `--app` (`APPDYNO_APP`),
 `--allow-devices <regex>` (`APPDYNO_ALLOW_DEVICES`), `--allow-apps a,b`
 (`APPDYNO_ALLOW_APPS`), `--allow-urls <regex>` (`APPDYNO_ALLOW_URLS`), `--no-home`;
+`--measurements <dir>` (`APPDYNO_MEASUREMENTS`; default `~/Library/Caches/appdyno/measurements`);
 `APPDYNO_SECRETS=a,b` are never shown back or put on the clipboard.
