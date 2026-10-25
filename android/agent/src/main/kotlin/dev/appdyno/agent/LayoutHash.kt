@@ -46,7 +46,7 @@ object LayoutHash {
             }
         }
         for (n in nodes) {
-            if (n.flags and Flags.VISIBLE == 0) continue
+            if (!shown(n)) continue
             mix(n.cls)
             mix("#")
             mix(n.id ?: "")
@@ -58,6 +58,9 @@ object LayoutHash {
         return java.lang.Long.toHexString(h)
     }
 
+    /** Visible with a non-empty box: a pager's scrolled-away page reports zero width and is not on the screen. */
+    private fun shown(n: CNode) = n.flags and Flags.VISIBLE != 0 && n.right > n.left && n.bottom > n.top
+
     /** Moves up to this many pixels are no layout change (rounding, a jittering parent). */
     const val TOLERANCE = 8
 
@@ -66,8 +69,8 @@ object LayoutHash {
      * place (a plain text node vertically only, as in the digest).
      */
     fun same(a: List<CNode>, b: List<CNode>): Boolean {
-        val x = a.filter { it.flags and Flags.VISIBLE != 0 }
-        val y = b.filter { it.flags and Flags.VISIBLE != 0 }
+        val x = a.filter(::shown)
+        val y = b.filter(::shown)
         if (x.size != y.size) return false
         for (i in x.indices) {
             val p = x[i]

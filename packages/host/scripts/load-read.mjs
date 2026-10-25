@@ -18,8 +18,14 @@ await adb.exec(
   `am start -W -a android.intent.action.VIEW -d gdfixture://open/showcase ${APP}`,
 );
 await new Promise((r) => setTimeout(r, 1_500));
-// two busy device cores (the emulator has four), stopped at the end
-await adb.exec(serial, 'for i in 1 2; do (timeout 900 sh -c "while :; do :; done" &) ; done');
+// two busy device cores (the emulator has four), stopped at the end; detached like the agent (a background
+// process dies with a start session that ends at once)
+const stress = await adb.startDetached(
+  serial,
+  "for i in 1 2; do setsid nohup sh -c 'while :; do :; done' > /dev/null 2>&1 < /dev/null & done",
+);
+await new Promise((r) => setTimeout(r, 3_000));
+stress.close();
 const vitalsBefore = (await d.perf.vitals()).value;
 let shots = 0;
 let shotFailures = 0;
@@ -69,7 +75,7 @@ try {
   }
 } finally {
   clearInterval(shooter);
-  await adb.exec(serial, 'pkill -f "while :; do :; done"; true').catch(() => undefined);
+  await adb.exec(serial, "pkill -f 'while :; do :; done'; true").catch(() => undefined);
 }
 const vitalsAfter = (await d.perf.vitals()).value;
 d.close();

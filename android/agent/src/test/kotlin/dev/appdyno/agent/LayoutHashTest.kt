@@ -33,6 +33,14 @@ class LayoutHashTest {
     }
 
     @Test
+    fun emptyBoxesDoNotCount() {
+        // a carousel page scrolled away: zero width, its place changes as the carousel turns
+        val page = { l: Int -> node(null, l, l, Flags.VISIBLE or Flags.CLICKABLE) }
+        assertEquals(LayoutHash.of(listOf(page(0))), LayoutHash.of(listOf(page(1080))))
+        assertTrue(LayoutHash.same(listOf(node("a", 0, 10), page(0)), listOf(node("a", 0, 10), page(1080))))
+    }
+
+    @Test
     fun invisibleNodesDoNotCount() {
         assertEquals(LayoutHash.of(listOf()), LayoutHash.of(listOf(node("x", 0, 10, flags = 0))))
     }
