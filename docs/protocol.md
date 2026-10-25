@@ -78,17 +78,19 @@ nodes of the app's and the system dialogs' windows; text left out, a plain text 
 
 ### Settle
 
-With `settle {quietMs (250), maxMs (3000)}` the agent, after the action:
+With `settle {quietMs (250), maxMs (3000)}` the agent, after the action, reads the layout every 80 ms
+and calls the screen settled once it has been still for `quietMs`:
 
-1. waits until no layout-moving accessibility event came for `quietMs` (focus and text-only events do not
-   count; after two quiet windows' time it reads anyway: an endless animation never goes quiet);
-2. reads the layout; when `before` names a layout the agent sent recently and the read is the same layout,
-   the screen is settled;
-3. otherwise reads again until two reads in a row are the same layout, never while a progress indicator is
-   visible, at most `maxMs` after the action.
+- no layout change between two reads ("the same layout": the same visible nodes, class and id, in the
+  same order, each within 8 pixels of its place; a plain text node vertically only);
+- no layout-moving accessibility event for `quietMs` (focus and text-only events do not count; events
+  alone hold the settle for at most twice `quietMs`, as an endless animation never goes quiet);
+- nothing busy: no visible progress indicator, and no application window sticking out of the display (a
+  window sliding in is reported frozen at a midway place until its animation ends).
 
-"The same layout" means the same visible nodes (class, id) in the same order, each within 8 pixels of its
-place. The result says `settled`, the time and the number of reads.
+The first read is compared with `before` when it names a layout the agent sent recently (else the first
+read counts as a change), so an action that changed nothing ends after `quietMs`. The settle stops at
+`maxMs` after the action; the result says `settled`, the time and the number of reads.
 
 ## Errors
 
