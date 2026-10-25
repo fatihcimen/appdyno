@@ -93,7 +93,23 @@ their recent best, per node read: a slow device also starts its reaction later.
 
 The first read is compared with `before` when it names a layout the agent sent recently (else the first
 read counts as a change), so an action that changed nothing ends after `quietMs`. The settle stops at
-`maxMs` after the action; the result says `settled`, the time and the number of reads.
+`maxMs` after the action; the result says `settled`, the time, the number of reads and the window used.
+
+A tap whose point hits nothing that can react on the screen named by `before` (plain text, an image,
+empty space; not a clickable, long-clickable, editable or checkable node or anything inside one, not a
+web, map or surface view, not a point over the keyboard or another window) uses an 80 ms window.
+
+What the window catches, measured on the fixture's late-reaction screen (50 taps per delay, emulator):
+
+| window           | reactions caught         | missed          |
+| ---------------- | ------------------------ | --------------- |
+| 200 ms (default) | every delay up to 200 ms | 47/50 at 250 ms |
+| 250 ms           | up to 250 ms             | 10/50 at 300 ms |
+| 300 ms           | up to 300 ms             | 49/50 at 350 ms |
+
+A reaction that starts later than the window (a network answer, a timer) is not waited for: wait for
+the element instead. A touch listener on a view that is not marked clickable is treated as inert; one
+reacting within 80 ms is caught (0/50 missed at 30 ms), a slower one is not.
 
 ## Errors
 
