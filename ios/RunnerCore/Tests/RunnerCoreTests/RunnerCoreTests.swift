@@ -50,6 +50,9 @@ final class LayoutTests: XCTestCase {
         XCTAssertTrue(actionable(nodes, x: 20, y: 500)) // web content
         XCTAssertTrue(actionable(nil, x: 0, y: 0)) // no screen known: careful
         XCTAssertTrue(actionable(nodes, x: 900, y: 900)) // off every node: careful
+        let overlaid = nodes + [node(0, "Other", [0, 0, 400, 800])] // a transparent overlay on top
+        XCTAssertTrue(actionable(overlaid, x: 20, y: 20))
+        XCTAssertFalse(actionable(overlaid, x: 20, y: 350))
     }
 }
 

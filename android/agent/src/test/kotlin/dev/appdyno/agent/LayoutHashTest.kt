@@ -72,6 +72,18 @@ class HitTestTest {
     fun aWebViewTakesTouchesItself() = assertTrue(HitTest.actionable(screen, 100, 1000))
 
     @Test
+    fun aClickableCardUnderATransparentOverlayCounts() {
+        val nodes = listOf(
+            CNode(-1, 0, "FrameLayout", null, null, null, null, 0, 0, 1000, 2000, Flags.VISIBLE),
+            CNode(0, 0, "LinearLayout", null, null, null, null, 0, 0, 1000, 2000, Flags.VISIBLE),
+            CNode(0, 0, "FrameLayout", null, null, null, null, 0, 0, 1000, 2000, Flags.VISIBLE), // overlay
+            CNode(1, 0, "Card", null, null, null, null, 0, 500, 1000, 800, Flags.VISIBLE or Flags.CLICKABLE),
+        )
+        assertTrue(HitTest.actionable(nodes, 500, 600))
+        assertFalse(HitTest.actionable(nodes, 500, 1500))
+    }
+
+    @Test
     fun parentsAreIndicesOfTheWholeCaptureWhenSomeWindowsAreLeftOut() {
         // a status bar window first (left out), then the app: the app's parents point past it
         val whole = listOf(

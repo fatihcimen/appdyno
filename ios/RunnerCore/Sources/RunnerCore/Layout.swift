@@ -67,22 +67,21 @@ public func sameLayout(_ a: [Node], _ b: [Node]) -> Bool {
     return true
 }
 
-/// Can a tap at (x, y) start a reaction the screen does not show yet? Yes on an actionable node (or one
-/// inside it) and on anything drawing its own content (a web view, a map); no on plain text and space.
+/// Can a tap at (x, y) start a reaction the screen does not show yet? Yes when any shown node there, or an
+/// ancestor of one, is actionable or draws its own content (a web view, a map): a touch passes through
+/// a non-interactive overlay. No on plain text and space; without a screen, always yes.
 public func actionable(_ nodes: [Node]?, x: Int, y: Int) -> Bool {
     guard let nodes else { return true }
-    var deepest = -1
-    for (i, n) in nodes.enumerated() where shown(n) && x >= n.left && x < n.right && y >= n.top && y < n.bottom {
-        deepest = i
-    }
-    if deepest < 0 { return true }
-    var i = deepest
     let ownDrawing = ["WebView", "Map"]
-    while i >= 0 {
-        let n = nodes[i]
-        if n.flags & (Flag.clickable | Flag.longClickable | Flag.editable | Flag.checkable) != 0 { return true }
-        if ownDrawing.contains(where: { n.type.contains($0) }) { return true }
-        i = n.parent
+    var hit = false
+    for n in nodes where shown(n) && x >= n.left && x < n.right && y >= n.top && y < n.bottom {
+        hit = true
+        var a: Node? = n
+        while let c = a {
+            if c.flags & (Flag.clickable | Flag.longClickable | Flag.editable | Flag.checkable) != 0 { return true }
+            if ownDrawing.contains(where: { c.type.contains($0) }) { return true }
+            a = c.parent >= 0 ? nodes[c.parent] : nil
+        }
     }
-    return false
+    return !hit
 }

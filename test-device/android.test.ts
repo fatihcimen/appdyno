@@ -157,7 +157,10 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('reads Compose test tags as ids and types into a Compose field', async () => {
     const s = await open('COMPOSE');
-    expect(s.list.find((e) => e.id === 'compose_title')?.label).toBe('Compose ekranı');
+    expect(
+      s.list.find((e) => e.id === 'compose_title')?.label,
+      JSON.stringify({ settle: s.settle, labels: labels(s).slice(0, 8) }),
+    ).toBe('Compose ekranı');
     const input = s.list.find((e) => e.id === 'compose_input')!;
     expect(input).toBeDefined();
     expect((await d.typeText('Kapı zili çalışmıyor', { at: input, replace: true })).verified).toBe(

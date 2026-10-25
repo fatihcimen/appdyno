@@ -87,10 +87,10 @@ object LayoutHash {
 }
 
 /**
- * Can a tap at (x, y) start a reaction the screen does not show yet? Yes when the deepest visible node
- * there, or one of its ancestors, is actionable (clickable, long-clickable, editable, checkable) or draws
- * its own content that takes touches (a web view, a map, a surface); no on plain text, images and empty
- * space. Without a screen to look at, every target is actionable.
+ * Can a tap at (x, y) start a reaction the screen does not show yet? Yes when any visible node there, or
+ * an ancestor of one, is actionable (clickable, long-clickable, editable, checkable) or draws its own
+ * content that takes touches (a web view, a map, a surface): a touch passes through a non-clickable
+ * overlay to what lies below. No on plain text, images and empty space. Without a screen, always yes.
  */
 object HitTest {
     private val DRAWS_OWN = Regex("WebView|SurfaceView|TextureView|MapView|GLSurfaceView", RegexOption.IGNORE_CASE)
@@ -99,20 +99,17 @@ object HitTest {
     /** `nodes` is a whole capture (parents are its indices); `considered` says which windows' nodes count. */
     fun actionable(nodes: List<CNode>?, x: Int, y: Int, considered: (CNode) -> Boolean = { true }): Boolean {
         if (nodes == null) return true
-        var deepest = -1
-        for ((i, n) in nodes.withIndex()) {
+        var hit = false
+        for (n in nodes) {
             if (!considered(n) || n.flags and Flags.VISIBLE == 0 || n.right <= n.left || n.bottom <= n.top) continue
             if (x < n.left || x >= n.right || y < n.top || y >= n.bottom) continue
-            // nodes come root first: a later hit is deeper, or in a window above
-            deepest = i
+            hit = true
+            var a: CNode? = n
+            while (a != null) {
+                if (a.flags and ACTIONABLE != 0 || DRAWS_OWN.containsMatchIn(a.cls)) return true
+                a = if (a.parent >= 0) nodes[a.parent] else null
+            }
         }
-        if (deepest < 0) return true // not on any node we know: be careful
-        var i = deepest
-        while (i >= 0) {
-            val n = nodes[i]
-            if (n.flags and ACTIONABLE != 0 || DRAWS_OWN.containsMatchIn(n.cls)) return true
-            i = n.parent
-        }
-        return false
+        return !hit // not on any node we know: be careful
     }
 }
