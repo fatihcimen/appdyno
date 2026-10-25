@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.tsbuildinfo
+android/.gradle/
+android/build/
+android/*/build/
+android/local.properties
+.bench/
+packages/host/agents/

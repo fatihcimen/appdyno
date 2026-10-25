@@ -1,0 +1,4 @@
+[tools]
+node = "22"
+pnpm = "10.34.0"
+java = "temurin-21"
