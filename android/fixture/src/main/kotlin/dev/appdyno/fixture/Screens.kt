@@ -437,6 +437,18 @@ class LateActivity : Activity() {
                 }.tag = "late_$delay"
             }
             button("Temizle", R.id.late_clear) { result.removeAllViews() }
+            // not clickable: only a touch listener reacts (as a gesture area does), 30 ms after the touch
+            TextView(context).apply {
+                text = "Dokunma alanı"
+                id = R.id.late_touch
+                setPadding(0, 48, 0, 48)
+                setOnTouchListener { v, e ->
+                    if (e.action == android.view.MotionEvent.ACTION_UP)
+                        handler.postDelayed({ result.addView(TextView(context).apply { text = "Dokunuş tepkisi" }) }, 30)
+                    true
+                }
+                addView(this)
+            }
             addView(result)
         }
     }

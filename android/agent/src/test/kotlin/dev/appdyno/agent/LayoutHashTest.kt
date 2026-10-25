@@ -45,3 +45,36 @@ class LayoutHashTest {
         assertEquals(LayoutHash.of(listOf()), LayoutHash.of(listOf(node("x", 0, 10, flags = 0))))
     }
 }
+
+class HitTestTest {
+    private fun n(parent: Int, cls: String, l: Int, t: Int, r: Int, b: Int, flags: Int = Flags.VISIBLE) =
+        CNode(parent, 0, cls, null, null, null, null, l, t, r, b, flags)
+
+    private val screen = listOf(
+        n(-1, "FrameLayout", 0, 0, 1000, 2000),
+        n(0, "LinearLayout", 0, 0, 1000, 600, Flags.VISIBLE or Flags.CLICKABLE), // a card
+        n(1, "TextView", 0, 0, 500, 100), // its title
+        n(0, "TextView", 0, 700, 1000, 800), // plain text
+        n(0, "android.webkit.WebView", 0, 900, 1000, 1500),
+        n(0, "Button", 0, 1600, 500, 1700, Flags.CLICKABLE), // not visible
+    )
+
+    @Test
+    fun textInsideAClickableCardIsActionable() = assertTrue(HitTest.actionable(screen, 100, 50))
+
+    @Test
+    fun plainTextAndEmptySpaceAreNot() {
+        assertFalse(HitTest.actionable(screen, 100, 750))
+        assertFalse(HitTest.actionable(screen, 100, 1800))
+    }
+
+    @Test
+    fun aWebViewTakesTouchesItself() = assertTrue(HitTest.actionable(screen, 100, 1000))
+
+    @Test
+    fun anInvisibleButtonDoesNotCountAndNoScreenMeansCareful() {
+        assertFalse(HitTest.actionable(screen, 100, 1650))
+        assertTrue(HitTest.actionable(null, 1, 1))
+        assertTrue(HitTest.actionable(screen, 5000, 5000))
+    }
+}

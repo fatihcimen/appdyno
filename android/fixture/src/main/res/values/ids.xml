@@ -26,4 +26,5 @@
     <item name="cpu_load" type="id" />
     <item name="late_result" type="id" />
     <item name="late_clear" type="id" />
+    <item name="late_touch" type="id" />
 </resources>

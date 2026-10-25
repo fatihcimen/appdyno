@@ -100,7 +100,10 @@ class Handlers(private val automation: Automation, private val token: String) {
             "key" -> input.key(Input.KEYS[a.getString("key")] ?: throw AgentFailure("INVALID_ARGUMENT", "unknown key"))
             else -> throw AgentFailure("INVALID_ARGUMENT", "unknown action")
         }
-        return after(p, at, job, JSONObject())
+        // a tap on something that cannot react (plain text, empty space) needs only a short look
+        val inert = a.getString("kind") == "tap" && p.has("before") &&
+            recent[p.getString("before")]?.let { !HitTest.actionable(it.appNodes, a.getDouble("x").toInt(), a.getDouble("y").toInt()) } == true
+        return after(p, at, job, JSONObject(), inert)
     }
 
     private fun textSet(p: JSONObject, job: Job): Reply {
@@ -117,14 +120,15 @@ class Handlers(private val automation: Automation, private val token: String) {
     }
 
     /** The settle and the read an action asked for, into its result. */
-    private fun after(p: JSONObject, at: Long, job: Job, out: JSONObject): Reply {
+    private fun after(p: JSONObject, at: Long, job: Job, out: JSONObject, inert: Boolean = false): Reply {
         val read = p.optString("read", "none")
         val settle = p.optJSONObject("settle")
         var last: Capture? = null
         if (settle != null) {
+            val quiet = settle.optLong("quietMs", 200).let { if (inert) minOf(it, INERT_QUIET_MS) else it }
             val o = settler.run(
                 at,
-                settle.optLong("quietMs", 200),
+                quiet,
                 settle.optLong("maxMs", 3_000),
                 if (p.has("before")) recent[p.getString("before")] else null,
                 { capture.capture().also { last = it } },
@@ -133,7 +137,7 @@ class Handlers(private val automation: Automation, private val token: String) {
                 { job.cancelled },
                 { it.nodes.size },
             )
-            out.put("settle", JSONObject().put("settled", o.settled).put("ms", o.elapsedMs).put("reads", o.reads))
+            out.put("settle", JSONObject().put("settled", o.settled).put("ms", o.elapsedMs).put("reads", o.reads).put("quietMs", quiet))
         }
         when (read) {
             "tree" -> out.put("tree", treeJson(last ?: capture.capture()))
@@ -144,19 +148,25 @@ class Handlers(private val automation: Automation, private val token: String) {
 
     private fun screenshot(p: JSONObject): Reply {
         val shot = automation.ua.takeScreenshot() ?: throw AgentFailure("INTERNAL", "the screen could not be captured")
-        var bmp = if (shot.config == Bitmap.Config.HARDWARE) shot.copy(Bitmap.Config.ARGB_8888, false) else shot
-        val max = p.optInt("maxPx", 0)
-        if (max > 0 && maxOf(bmp.width, bmp.height) > max) {
-            val k = max.toFloat() / maxOf(bmp.width, bmp.height)
-            bmp = Bitmap.createScaledBitmap(bmp, (bmp.width * k).toInt().coerceAtLeast(1), (bmp.height * k).toInt().coerceAtLeast(1), true)
+        // bitmaps live in native memory until a collection: each one is freed as soon as it is encoded
+        val made = mutableListOf(shot)
+        try {
+            var bmp = if (shot.config == Bitmap.Config.HARDWARE) shot.copy(Bitmap.Config.ARGB_8888, false).also { made += it } else shot
+            val max = p.optInt("maxPx", 0)
+            if (max > 0 && maxOf(bmp.width, bmp.height) > max) {
+                val k = max.toFloat() / maxOf(bmp.width, bmp.height)
+                bmp = Bitmap.createScaledBitmap(bmp, (bmp.width * k).toInt().coerceAtLeast(1), (bmp.height * k).toInt().coerceAtLeast(1), true).also { made += it }
+            }
+            val png = p.optString("format", "jpeg") == "png"
+            val bytes = ByteArrayOutputStream().use { out ->
+                bmp.compress(if (png) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG, p.optInt("quality", 80), out)
+                out.toByteArray()
+            }
+            val result = JSONObject().put("w", bmp.width).put("h", bmp.height).put("format", if (png) "png" else "jpeg").put("bytes", bytes.size)
+            return Reply(result, bytes)
+        } finally {
+            for (b in made.distinct()) b.recycle()
         }
-        val png = p.optString("format", "jpeg") == "png"
-        val bytes = ByteArrayOutputStream().use { out ->
-            bmp.compress(if (png) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG, p.optInt("quality", 80), out)
-            out.toByteArray()
-        }
-        val result = JSONObject().put("w", bmp.width).put("h", bmp.height).put("format", if (png) "png" else "jpeg").put("bytes", bytes.size)
-        return Reply(result, bytes)
     }
 
     private fun foreground(): String? {
@@ -201,6 +211,9 @@ class Handlers(private val automation: Automation, private val token: String) {
     private fun rect(l: Int, t: Int, r: Int, b: Int) = JSONArray().put(l).put(t).put(r).put(b)
 
     companion object {
+        /** The quiet window after a tap on something that cannot react (an immediate touch reaction still shows). */
+        const val INERT_QUIET_MS = 80L
+
         val CAPABILITIES = listOf(
             "tree", "tap", "longPress", "swipe", "gesture", "key", "text", "screenshot", "foreground",
             "clipboard", "orientation", "settle",
