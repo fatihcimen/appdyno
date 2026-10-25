@@ -78,6 +78,16 @@ class SettlerTest {
     }
 
     @Test
+    fun lateWakeUpsStretchTheQuietWindow() {
+        // every 80 ms sleep takes 240 ms (a starved CPU) while reads stay fast
+        val s = Settler({ now }, { now += it * 3 }, { lastEvent })
+        repeat(3) { s.run(now, 100, 3_000, R("A"), { now += 5; R("A") }, { a, b -> a.hash == b.hash }, { it.busy }, { false }) }
+        assertTrue("slowdown ${s.slowdown()}", s.slowdown() > 2.5)
+        val o = s.run(now, 100, 3_000, R("A"), { now += 5; R("A") }, { a, b -> a.hash == b.hash }, { it.busy }, { false })
+        assertTrue("window ${o.quietMs}", o.quietMs >= 250)
+    }
+
+    @Test
     fun slowReadsStretchTheQuietWindow() {
         val s = Settler({ now }, { now += it }, { lastEvent })
         // warm up: fast reads (10 ms)

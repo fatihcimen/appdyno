@@ -26,9 +26,22 @@ class Settler(
      * stretches with it.
      */
     fun slowdown(): Double {
-        if (readCosts.size < 3) return 1.0
-        val best = readCosts.min().coerceAtLeast(0.01)
-        return (readCosts.last() / best / 2).coerceIn(1.0, 4.0)
+        val byReads = if (readCosts.size < 3) 1.0 else readCosts.last() / readCosts.min().coerceAtLeast(0.01) / 2
+        return maxOf(byReads, lateness).coerceIn(1.0, 4.0)
+    }
+
+    /**
+     * How late this thread wakes from its poll sleep, smoothed (1: on time): a CPU-starved device wakes
+     * late whatever the screen's size, and starts the app's reaction late as well.
+     */
+    private var lateness = 1.0
+
+    private fun pause(ms: Long) {
+        val start = clock()
+        sleep(ms)
+        val ratio = (clock() - start).toDouble() / ms.coerceAtLeast(1)
+        // a sleep cut short by the deadline says nothing; half the old value, half the new
+        if (ms >= POLL_MS / 2) lateness = (lateness + ratio) / 2
     }
 
     private fun noteRead(ms: Long, nodes: Int) {
@@ -69,7 +82,7 @@ class Settler(
                 ((stillLayout >= quiet && quietEvents >= quiet) || stillLayout >= 2 * quiet)
             if (settled) return SettleOutcome(true, reads, next, now - actionAt, quiet)
             if (cancelled() || now >= deadline) return SettleOutcome(false, reads, next, now - actionAt, quiet)
-            sleep(minOf(POLL_MS, deadline - now).coerceAtLeast(1))
+            pause(minOf(POLL_MS, deadline - now).coerceAtLeast(1))
         }
     }
 
