@@ -39,22 +39,35 @@ final class MainPump {
     private var jobs: [() -> Void] = []
     private(set) var stopped = false
 
+    /// A request came (one answered off the main thread, like ping): the runner is in use.
+    func touch() { submit {} }
+
     func submit(_ work: @escaping () -> Void) {
         lock.lock(); jobs.append(work); lock.unlock()
     }
 
     func stop() { lock.lock(); stopped = true; lock.unlock() }
 
-    /// Runs queued work until `stop()`; between jobs the main run loop keeps turning.
-    func run() {
+    private var lastWork = Date()
+
+    /// Runs queued work until `stop()`, or until nothing came for `idleExit` seconds (a runner whose host
+    /// is gone stops instead of lingering); between jobs the main run loop keeps turning.
+    func run(idleExit: TimeInterval) {
         while true {
             lock.lock()
             let next = jobs.isEmpty ? nil : jobs.removeFirst()
             let done = stopped && jobs.isEmpty
             lock.unlock()
-            if let next { next(); continue }
+            if let next { lastWork = Date(); next(); continue }
             if done { return }
-            RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.01))
+            if Date().timeIntervalSince(lastWork) > idleExit {
+                NSLog("appdyno runner: no request for %.0f s, stopping", idleExit)
+                return
+            }
+            // false: the loop has no input source and returned at once; sleep instead of spinning
+            if !RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.01)) {
+                Thread.sleep(forTimeInterval: 0.01)
+            }
         }
     }
 }
@@ -135,6 +148,7 @@ final class Server {
             send(s, id: id, Reply(result: hello()))
             return
         }
+        pump.touch()
         switch method {
         case "ping":
             send(s, id: id, Reply(result: ["uptimeMs": Int(Date().timeIntervalSince(startedAt) * 1000)]))

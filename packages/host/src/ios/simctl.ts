@@ -1,8 +1,19 @@
 import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { promisify } from 'node:util';
 import { DeviceError } from '@appdyno/protocol';
 
 const run = promisify(execFile);
+
+/**
+ * The environment for Xcode's tools: DEVELOPER_DIR when set, else the installed Xcode (the selected
+ * developer folder may be the command line tools, which have no simulator tool).
+ */
+export function xcodeEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  if (env.DEVELOPER_DIR) return env;
+  const xcode = '/Applications/Xcode.app/Contents/Developer';
+  return existsSync(xcode) ? { ...env, DEVELOPER_DIR: xcode } : env;
+}
 
 const UDID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;
 export const assertUdid = (u: string) => {
@@ -26,7 +37,7 @@ export type Simulator = {
 
 /** The simulator tool, always for one named simulator (never "booted": other simulators may run). */
 export class Simctl {
-  constructor(private readonly env: NodeJS.ProcessEnv = process.env) {}
+  constructor(private readonly env: NodeJS.ProcessEnv = xcodeEnv()) {}
 
   async exec(args: string[], timeoutMs = 60_000): Promise<string> {
     try {

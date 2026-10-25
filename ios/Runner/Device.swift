@@ -62,7 +62,9 @@ final class Device {
         }
         windows.append(["type": 1, "pkg": id, "layer": 0, "b": Device.rect(snap.frame), "active": true, "focused": true])
         add(snap, window: 0)
-        if app !== springboard, let alert = try? springboard.alerts.firstMatch.snapshot() {
+        // `exists` answers at once; a snapshot of a missing element waits for it to appear
+        let alertQuery = springboard.alerts.firstMatch
+        if app !== springboard, alertQuery.exists, let alert = try? alertQuery.snapshot() {
             // a system alert (permission, notification prompt) over the app
             windows.append(["type": 3, "pkg": Device.springboardId, "layer": 1, "b": Device.rect(alert.frame),
                             "active": false, "focused": false])

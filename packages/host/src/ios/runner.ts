@@ -10,7 +10,7 @@ import { DeviceError, PROTOCOL, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
 import { stateDir } from '../android/agent.js';
 import { RpcClient } from '../rpc.js';
-import { assertUdid } from './simctl.js';
+import { assertUdid, xcodeEnv } from './simctl.js';
 
 const run = promisify(execFile);
 /** A first start installs the runner on the simulator: allow for it. */
@@ -119,7 +119,7 @@ export class IosRunnerLauncher {
         detached: true,
         stdio: ['ignore', out, out],
         env: {
-          ...process.env,
+          ...xcodeEnv(),
           TEST_RUNNER_GD_PORT: String(port),
           TEST_RUNNER_GD_TOKEN: token,
           ...(target && { TEST_RUNNER_GD_TARGET: target }),

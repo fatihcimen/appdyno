@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { IosSimulatorDevice, Simctl, type Screen } from '@appdyno/host';
+import { IosSimulatorDevice, Simctl, type Screen } from 'appdyno';
 import { join } from 'node:path';
 
 /**

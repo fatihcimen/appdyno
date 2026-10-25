@@ -18,6 +18,9 @@ import { buildScreen, type Screen } from '../screen/index.js';
 import { IosRunnerLauncher } from './runner.js';
 import { assertBundle, Simctl } from './simctl.js';
 
+/** The confirmation's button (English, Turkish). */
+const OPEN = /^(Open|Aç)$/;
+
 /** Read-only requests are retried once on a fresh connection when the runner went away. */
 const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
   'tree.get',
@@ -182,6 +185,24 @@ export class IosSimulatorDevice {
   async openUrl(url: string, pkg?: string) {
     if (pkg) await this.target(pkg);
     await this.queue.run(() => this.simctl.openUrl(this.serial, url));
+    // a link to an app asks "Open in …?" first: with the app named, its Open button is tapped
+    if (!pkg) return;
+    // shortcut: the prompt is looked for during 1 s after every link to an app, without it the link costs that second
+    const end = Date.now() + 1_000;
+    while (Date.now() < end) {
+      const t = await this.tree();
+      const open = t.nodes.find(
+        (n) => t.windows[n.w]?.type === 3 && n.c === 'Button' && OPEN.test(n.d ?? ''),
+      );
+      if (open) {
+        await this.tap(
+          { x: (open.b[0] + open.b[2]) / 2, y: (open.b[1] + open.b[3]) / 2 },
+          { settle: false },
+        );
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 150));
+    }
   }
 
   async launch(pkg: string): Promise<string> {

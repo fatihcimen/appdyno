@@ -11,15 +11,24 @@ final class RunnerTests: XCTestCase {
         guard let port = env["APPDYNO_PORT"].flatMap(UInt16.init), let token = env["APPDYNO_TOKEN"], token.count >= 16 else {
             throw AgentError("INVALID_ARGUMENT", "APPDYNO_PORT and APPDYNO_TOKEN (16+ characters) are required")
         }
+        if env["APPDYNO_IDLE_WAITS"] != "1" { IdleShim.install() }
         let device = Device()
         if let target = env["APPDYNO_TARGET"], !target.isEmpty { device.setTarget(target) }
         let pump = MainPump()
-        let server = try Server(port: port, token: token, pump: pump, hello: { Self.hello(env) }) { job in
-            try Self.handle(job, device, pump)
+        // XCUI must be asked on the main thread; hello is answered on the network queue from this copy
+        let lock = NSLock()
+        var info = Self.hello(env)
+        let server = try Server(port: port, token: token, pump: pump, hello: { lock.lock(); defer { lock.unlock() }; return info }) { job in
+            let reply = try Self.handle(job, device, pump)
+            if job.method == "orientation.set" {
+                let fresh = Self.hello(env)
+                lock.lock(); info = fresh; lock.unlock()
+            }
+            return reply
         }
         server.start()
         NSLog("appdyno runner listening on 127.0.0.1:%d", port)
-        pump.run()
+        pump.run(idleExit: env["APPDYNO_IDLE_EXIT_S"].flatMap(Double.init) ?? 900)
         server.stop()
     }
 
@@ -40,8 +49,10 @@ final class RunnerTests: XCTestCase {
             "osVersion": UIDevice.current.systemVersion,
             "model": env["SIMULATOR_MODEL_IDENTIFIER"] ?? UIDevice.current.model,
             "screen": ["w": b.width, "h": b.height, "density": UIScreen.main.scale, "rotation": rotation],
-            "capabilities": ["tree", "act", "settle", "text", "screenshot", "clipboard", "orientation", "app.target"],
+            "capabilities": ["tree", "act", "settle", "text", "screenshot", "clipboard", "orientation", "app.target"]
+                + (IdleShim.applied.isEmpty ? [] : ["noIdleWait"]),
             "pid": Int(ProcessInfo.processInfo.processIdentifier),
+            "idleWaitsOff": IdleShim.applied,
         ]
     }
 
