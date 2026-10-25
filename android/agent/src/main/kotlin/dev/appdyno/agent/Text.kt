@@ -41,9 +41,20 @@ class Clipboard {
  * pasted, and plain ASCII still left over is typed as key events.
  */
 class TextInput(private val automation: Automation, private val input: Input, private val clipboard: Clipboard) {
-    fun set(text: String, replace: Boolean, focusTimeoutMs: Long, cancelled: () -> Boolean): TextOutcome {
+    /** `retap`: taps the field again (a tap lost while the screen was still moving, a slow phone). */
+    fun set(
+        text: String,
+        replace: Boolean,
+        focusTimeoutMs: Long,
+        cancelled: () -> Boolean,
+        retap: (() -> Unit)? = null,
+    ): TextOutcome {
         val start = SystemClock.uptimeMillis()
-        val field = waitFocus(start + focusTimeoutMs, cancelled)
+        val field = (if (retap != null) waitFocus(start + focusTimeoutMs / 2, cancelled) else null)
+            ?: run {
+                retap?.invoke()
+                waitFocus(start + focusTimeoutMs, cancelled)
+            }
             ?: throw AgentFailure("NO_FOCUS", "no editable field has input focus", "tap the field first")
         val focusMs = SystemClock.uptimeMillis() - start
         val current = if (field.isShowingHintText) "" else field.text?.toString()
