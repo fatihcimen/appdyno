@@ -25,5 +25,9 @@
         <activity android:name=".SlowFocusActivity" />
         <activity android:name=".WebActivity" />
         <activity android:name=".ShowcaseActivity" />
+        <activity android:name=".FramesActivity" />
+        <activity android:name=".MemoryActivity" />
+        <activity android:name=".CpuActivity" />
+        <activity android:name=".LateActivity" />
     </application>
 </manifest>

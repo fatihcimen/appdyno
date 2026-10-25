@@ -2,6 +2,7 @@ import {
   DeviceError,
   type ActOptions,
   type ActParams,
+  type AndroidPerf,
   type Hello,
   type Point,
   type Tree,
@@ -197,4 +198,80 @@ export class FakeDevice implements DriveableDevice {
     this.record('setLocation', lat, lon);
   }
   close() {}
+
+  /** Canned measurements; `jank` sets the share of janky frames, `memKb` the PSS per read. */
+  jank = 4;
+  memKb = [100_000, 110_000, 112_000, 113_000, 114_000, 115_000, 116_000];
+  private memRead = 0;
+  get perf(): AndroidPerf {
+    const m = <T>(value: T, raw: string) => ({ value, raw, at: '2026-10-25T00:00:00.000Z' });
+    return {
+      cpu: async () => {
+        this.record('perf.cpu');
+        return m(
+          { percent: 12.5, windowMs: 2000, ticks: 25, clockTicksPerSec: 100 },
+          'stat a\n---\nstat b',
+        );
+      },
+      memory: async () => {
+        this.record('perf.memory');
+        const pssKb = this.memKb[Math.min(this.memRead++, this.memKb.length - 1)]!;
+        return m(
+          { pssKb, javaHeapKb: 20_000, nativeHeapKb: 30_000, graphicsKb: 10_000 },
+          `TOTAL PSS: ${pssKb}`,
+        );
+      },
+      frames: async () => {
+        this.record('perf.frames');
+        return m(
+          {
+            totalFrames: 120,
+            jankyFrames: Math.round(1.2 * this.jank),
+            jankyPercent: this.jank,
+            frozenFrames: 0,
+            fewFrames: false,
+            p95Ms: 18,
+          },
+          'Total frames rendered: 120',
+        );
+      },
+      resetFrames: async () => {
+        this.record('perf.reset');
+      },
+      vitals: async () => {
+        return m({ load: [1, 1, 1], cpuPressure: 2, thermalStatus: 0 }, '==load==');
+      },
+      launch: async (_pkg: string, o: { mode?: 'cold' | 'warm' } = {}) => {
+        this.record('perf.launch', o.mode);
+        return m(
+          {
+            mode: o.mode ?? 'cold',
+            samples: [
+              { totalMs: 610, state: 'COLD' },
+              { totalMs: 590, state: 'COLD' },
+              { totalMs: 600, state: 'COLD' },
+            ],
+            medianMs: 600,
+          },
+          'TotalTime: 600',
+        );
+      },
+      frameTimeline: async () => {
+        return m(
+          {
+            frames: 50,
+            janky: 5,
+            jankyPercent: 10,
+            appDeadlineMissed: 4,
+            bufferStuffing: 1,
+            surfaceFlinger: 0,
+            p50Ms: 9,
+            p95Ms: 30,
+            worstMs: 45,
+          },
+          '"ts","dur","jank_type"',
+        );
+      },
+    } as unknown as AndroidPerf;
+  }
 }

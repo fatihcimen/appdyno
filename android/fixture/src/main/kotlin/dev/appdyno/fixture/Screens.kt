@@ -14,6 +14,8 @@ import android.webkit.WebView
 import android.widget.BaseAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.widget.HorizontalScrollView
 import android.widget.ScrollView
 import android.widget.LinearLayout
@@ -77,6 +79,14 @@ private val SCREENS = linkedMapOf(
     "showcase" to ("Vitrin" to ShowcaseActivity::class.java),
 )
 
+/** Screens opened by link only (gdfixture://open/<key>): measurement fixtures. */
+private val LINKED = mapOf(
+    "frames" to FramesActivity::class.java,
+    "memory" to MemoryActivity::class.java,
+    "cpu" to CpuActivity::class.java,
+    "late" to LateActivity::class.java,
+)
+
 /** The home screen; `gdfixture://open/<screen>` opens a screen directly. */
 class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,6 +98,8 @@ class MainActivity : Activity() {
             button("Donmuş") { Thread.sleep(12_000) }
         }
         route(intent)
+        // the start's "fully drawn" mark (time to full display) once the first frame is up
+        window.decorView.post { reportFullyDrawn() }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -97,7 +109,7 @@ class MainActivity : Activity() {
 
     private fun route(intent: Intent?) {
         val key = intent?.data?.lastPathSegment ?: return
-        SCREENS[key]?.let { startActivity(Intent(this, it.second)) }
+        (SCREENS[key]?.second ?: LINKED[key])?.let { startActivity(Intent(this, it)) }
     }
 }
 
@@ -333,5 +345,99 @@ class ShowcaseActivity : Activity() {
                 handler.postDelayed(this, 2_000)
             }
         }, 2_000)
+    }
+}
+
+/**
+ * Frames of a known cost: a 2 s animation redrawn every frame, its draw taking about 1 ms ("HAFİF") or
+ * 40 ms ("AĞIR", every frame misses a 60 Hz deadline).
+ */
+class FramesActivity : Activity() {
+    private class Animated(ctx: Activity) : View(ctx) {
+        var costMs = 0L
+        var until = 0L
+        private val paint = Paint().apply { color = 0xFF5D3EBC.toInt() }
+        override fun onDraw(canvas: Canvas) {
+            val now = android.os.SystemClock.uptimeMillis()
+            if (costMs > 0) Thread.sleep(costMs)
+            canvas.drawRect(((now / 4) % width).toFloat(), 0f, ((now / 4) % width + 100).toFloat(), 200f, paint)
+            if (now < until) postInvalidateOnAnimation()
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        column {
+            val view = Animated(this@FramesActivity).apply { layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 220) }
+            fun run(cost: Long) {
+                view.costMs = cost
+                view.until = android.os.SystemClock.uptimeMillis() + 2_000
+                view.postInvalidateOnAnimation()
+            }
+            button("Hafif", R.id.frames_light) { run(0) }
+            button("Ağır", R.id.frames_heavy) { run(40) }
+            addView(view)
+        }
+    }
+}
+
+/** Java heap held on purpose: 50 MB in 1 MB arrays, every page written; released on demand. */
+class MemoryActivity : Activity() {
+    companion object {
+        val held = ArrayList<ByteArray>()
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        column {
+            val status = label("Ayrılan: ${held.size} MB", R.id.memory_status)
+            button("50 MB ayır", R.id.memory_alloc) {
+                repeat(50) { held += ByteArray(1 shl 20).also { a -> for (i in a.indices step 4096) a[i] = 1 } }
+                status.text = "Ayrılan: ${held.size} MB"
+            }
+            button("Bırak", R.id.memory_free) {
+                held.clear()
+                Runtime.getRuntime().gc()
+                status.text = "Ayrılan: 0 MB"
+            }
+        }
+    }
+}
+
+/** One core busy for 3 s on a background thread. */
+class CpuActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        column {
+            button("3 sn yük", R.id.cpu_load) {
+                Thread {
+                    val end = android.os.SystemClock.uptimeMillis() + 3_000
+                    var x = 0L
+                    while (android.os.SystemClock.uptimeMillis() < end) x += x xor 7
+                    if (x == 42L) println(x)
+                }.start()
+            }
+        }
+    }
+}
+
+/**
+ * Reactions that come late with nothing in between: a tap adds a line after the button's delay. A settle
+ * that ends before the delay misses the change.
+ */
+class LateActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val handler = Handler(Looper.getMainLooper())
+        column {
+            val result = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; id = R.id.late_result }
+            for (delay in listOf(0, 50, 100, 150, 200, 300, 450, 700, 1000)) {
+                button("$delay ms", View.generateViewId()) {
+                    handler.postDelayed({ result.addView(TextView(context).apply { text = "Tepki $delay" }) }, delay.toLong())
+                }.tag = "late_$delay"
+            }
+            button("Temizle", R.id.late_clear) { result.removeAllViews() }
+            addView(result)
+        }
     }
 }

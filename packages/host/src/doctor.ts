@@ -3,6 +3,7 @@ import { promisify } from 'node:util';
 import { DeviceError } from '@appdyno/protocol';
 import { Adb } from './adb.js';
 import { agentApk } from './android/agent.js';
+import { traceProcessor } from './tools.js';
 import { AndroidDevice } from './android/device.js';
 
 const run = promisify(execFile);
@@ -48,6 +49,17 @@ export async function doctor(opts: { serial?: string; adb?: Adb } = {}): Promise
       ok: false,
       detail: (e as Error).message,
       fix: (e as DeviceError).hint ?? '',
+    });
+  }
+  try {
+    checks.push({ name: 'trace processor', ok: true, detail: await traceProcessor() });
+  } catch (e) {
+    checks.push({
+      name: 'trace processor',
+      ok: false,
+      warn: true,
+      detail: 'not installed: frame timelines are not available',
+      fix: (e as DeviceError).hint ?? 'appdyno tools install',
     });
   }
   if (!opts.serial) return checks;

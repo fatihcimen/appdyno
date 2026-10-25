@@ -18,6 +18,7 @@ import { DeviceQueue } from '../queue.js';
 import type { RpcClient } from '../rpc.js';
 import { buildScreen, type Screen } from '../screen/index.js';
 import { AndroidAgentLauncher } from './agent.js';
+import { AndroidPerf } from './perf.js';
 
 /** Per-command limits (ms); the settle cap is added to an action's. */
 export const TIMEOUTS = {
@@ -229,6 +230,17 @@ export class AndroidDevice {
   async shell(command: string, timeoutMs: number = TIMEOUTS.action): Promise<string> {
     return this.queue.run(() => this.adb.exec(this.serial, command, { timeoutMs }));
   }
+
+  /** As `shell`, the output as bytes. */
+  async shellBuffer(command: string, timeoutMs: number = TIMEOUTS.action): Promise<Buffer> {
+    return this.queue.run(() => this.adb.execBuffer(this.serial, command, { timeoutMs }));
+  }
+
+  /** The app's and the device's performance (frames, memory, CPU, launch, device state). */
+  get perf(): AndroidPerf {
+    return (this.perfTools ??= new AndroidPerf(this));
+  }
+  private perfTools: AndroidPerf | undefined;
 
   /** Closes the connection; the agent keeps running for the next host. */
   close() {

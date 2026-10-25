@@ -18,4 +18,12 @@
     <item name="ask_permission" type="id" />
     <item name="slow_input" type="id" />
     <item name="web" type="id" />
+    <item name="frames_light" type="id" />
+    <item name="frames_heavy" type="id" />
+    <item name="memory_status" type="id" />
+    <item name="memory_alloc" type="id" />
+    <item name="memory_free" type="id" />
+    <item name="cpu_load" type="id" />
+    <item name="late_result" type="id" />
+    <item name="late_clear" type="id" />
 </resources>

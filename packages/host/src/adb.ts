@@ -123,8 +123,17 @@ export class Adb {
    * redirects into it). A non-zero exit is not seen here: commands that matter print a marker.
    */
   async exec(serial: string, command: string, opts: { timeoutMs?: number } = {}): Promise<string> {
+    return (await this.execBuffer(serial, command, opts)).toString('utf8');
+  }
+
+  /** As `exec`, the output as bytes (a file read with `cat`). */
+  async execBuffer(
+    serial: string,
+    command: string,
+    opts: { timeoutMs?: number } = {},
+  ): Promise<Buffer> {
     const { socket, rest } = await this.open(serial, `exec:${command}`);
-    return new Promise<string>((resolve, reject) => {
+    return new Promise<Buffer>((resolve, reject) => {
       const chunks: Buffer[] = rest.length ? [rest] : [];
       const timer = setTimeout(() => {
         socket.destroy();
@@ -134,7 +143,7 @@ export class Adb {
       socket.resume();
       socket.on('close', () => {
         clearTimeout(timer);
-        resolve(Buffer.concat(chunks).toString('utf8'));
+        resolve(Buffer.concat(chunks));
       });
       socket.on('error', () => undefined);
     });

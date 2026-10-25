@@ -1,3 +1,6 @@
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { DeviceError } from 'appdyno';
@@ -10,6 +13,8 @@ import { FakeDevice } from './fake-device.js';
 
 type Result = { isError?: boolean; content: { type: string; text?: string; data?: string }[] };
 
+const MEASUREMENTS = mkdtempSync(join(tmpdir(), 'gd-measure-'));
+
 async function connect(policy: Partial<Policy> = {}, device = new FakeDevice()) {
   const logs: object[] = [];
   const adb = {
@@ -18,7 +23,7 @@ async function connect(policy: Partial<Policy> = {}, device = new FakeDevice()) 
   const ctx = new ServerContext(
     { ...DEFAULT_POLICY, ...policy },
     adb,
-    { app: 'dev.app' },
+    { app: 'dev.app', measurements: MEASUREMENTS },
     () => device,
   );
   const server = createServer(createTools(ctx), (l) => logs.push(l));
@@ -51,6 +56,10 @@ describe('tool list', () => {
         "list_devices",
         "long_press",
         "open_link",
+        "perf_launch",
+        "perf_scroll",
+        "perf_snapshot",
+        "perf_trace",
         "pinch",
         "press_key",
         "screen",
@@ -77,7 +86,16 @@ describe('tool list', () => {
         .filter((t) => t.annotations!.readOnlyHint)
         .map((t) => t.name)
         .sort(),
-    ).toEqual(['device_info', 'find', 'list_devices', 'screen', 'screenshot', 'wait_for']);
+    ).toEqual([
+      'device_info',
+      'find',
+      'list_devices',
+      'perf_snapshot',
+      'screen',
+      'screenshot',
+      'wait_for',
+    ]);
+    expect(tools.length).toBeLessThanOrEqual(30);
   });
 
   it('reports the server as appdyno with an icon', async () => {
@@ -278,5 +296,59 @@ describe('gesture geometry', () => {
     expect(b![1]!.x).toBeGreaterThan(b![0]!.x);
     const [c] = pinchPaths({ x: 540, y: 1200 }, 0.3, 400, { w: 1080, h: 2400 });
     expect(c![1]!.x).toBeGreaterThan(c![0]!.x);
+  });
+});
+
+describe('perf tools', () => {
+  it('snapshot: CPU, memory, frames and the device, with the raw output stored under its id', async () => {
+    const t = await connect();
+    const r = await t.textOf('perf_snapshot');
+    expect(r.error).toBe(false);
+    expect(r.text).toContain('sanal cihaz: göreli');
+    expect(r.text).toContain('CPU: %12.5');
+    expect(r.text).toContain('takılan %4');
+    const id = /ölçüm (pm-[0-9a-f]{8})/.exec(r.text)![1];
+    const stored = JSON.parse(readFileSync(join(MEASUREMENTS, `${id}.json`), 'utf8'));
+    expect(stored).toMatchObject({ id, kind: 'snapshot', value: { cpu: { percent: 12.5 } } });
+    expect(readFileSync(join(MEASUREMENTS, `${id}.txt`), 'utf8')).toContain('TOTAL PSS');
+  });
+
+  it('scroll: each round resets frames, swipes, reads; jank over the threshold and memory growth are said', async () => {
+    const dev = new FakeDevice();
+    dev.jank = 25;
+    const t = await connect({}, dev);
+    const r = await t.textOf('perf_scroll', { swipes: 2, repeats: 3 });
+    expect(r.text).toContain('medyan takılma: %25');
+    expect(r.text).toContain('takılma yüksek');
+    const order = dev.calls.map((c) => c.name).filter((n) => n.startsWith('perf') || n === 'act');
+    expect(order.slice(0, 6)).toEqual([
+      'perf.memory',
+      'perf.reset',
+      'act',
+      'act',
+      'perf.frames',
+      'perf.memory',
+    ]);
+    const swipe = dev.calls.find((c) => c.name === 'act')!.args[0] as {
+      kind: string;
+      from: { y: number };
+      to: { y: number };
+    };
+    expect(swipe.kind).toBe('swipe');
+    expect(swipe.to.y).toBeLessThan(swipe.from.y);
+  });
+
+  it('launch: the median against the vitals threshold; only allowed apps', async () => {
+    const t = await connect({ apps: ['dev.app'] });
+    const r = await t.textOf('perf_launch', { mode: 'cold' });
+    expect(r.text).toContain('medyan: 600 ms');
+    expect(r.text).not.toContain('aşırı');
+    expect((await t.textOf('perf_launch', { app: 'com.other' })).error).toBe(true);
+  });
+
+  it('trace: the frame timeline summary', async () => {
+    const t = await connect();
+    const r = await t.textOf('perf_trace', { seconds: 2 });
+    expect(r.text).toContain('50 kare, takılan 5 (%10): uygulama gecikmesi 4');
   });
 });

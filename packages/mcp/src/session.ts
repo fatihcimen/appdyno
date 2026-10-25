@@ -32,6 +32,7 @@ export type DriveableDevice = Pick<
   | 'terminate'
   | 'setLocation'
   | 'close'
+  | 'perf'
 >;
 
 /**

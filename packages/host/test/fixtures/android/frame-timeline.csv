@@ -1,0 +1,6 @@
+"ts","dur","jank_type"
+1000,8000000,"None"
+2000,12000000,"None"
+3000,45000000,"App Deadline Missed"
+4000,30000000,"App Deadline Missed, Buffer Stuffing"
+5000,16000000,"SurfaceFlinger CPU Deadline Missed"

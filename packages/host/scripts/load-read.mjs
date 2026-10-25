@@ -1,0 +1,72 @@
+// Reads under load: the storefront screen (an auto-advancing carousel, a few hundred nodes) read <n>
+// times while two device cores are kept busy and a screenshot is taken every second. Counts failed and
+// truncated reads. Usage: node scripts/load-read.mjs <serial> [n]  (build first; a quiet host)
+import { Adb, AndroidDevice, stats } from '../dist/index.js';
+
+const [serial, nArg] = process.argv.slice(2);
+if (!serial) {
+  console.error('usage: load-read.mjs <serial> [n]');
+  process.exit(2);
+}
+const n = Number(nArg ?? 500);
+const APP = 'dev.appdyno.fixture';
+const adb = new Adb();
+const d = new AndroidDevice(serial, adb);
+await d.open();
+await adb.exec(
+  serial,
+  `am start -W -a android.intent.action.VIEW -d gdfixture://open/showcase ${APP}`,
+);
+await new Promise((r) => setTimeout(r, 1_500));
+// two busy device cores (the emulator has four), stopped at the end
+await adb.exec(serial, 'for i in 1 2; do (timeout 900 sh -c "while :; do :; done" &) ; done');
+const vitalsBefore = (await d.perf.vitals()).value;
+let shots = 0;
+let shotFailures = 0;
+const shooter = setInterval(() => {
+  d.screenshot({ maxPx: 1024 }).then(
+    () => shots++,
+    () => shotFailures++,
+  );
+}, 1_000);
+const ms = [];
+let failed = 0;
+let truncated = 0;
+const errors = {};
+try {
+  for (let i = 0; i < n; i++) {
+    const t = performance.now();
+    try {
+      const tree = await d.tree();
+      ms.push(performance.now() - t);
+      if (tree.truncated) truncated++;
+    } catch (e) {
+      failed++;
+      errors[e.code ?? 'ERROR'] = (errors[e.code ?? 'ERROR'] ?? 0) + 1;
+    }
+  }
+} finally {
+  clearInterval(shooter);
+  await adb.exec(serial, 'pkill -f "while :; do :; done"; true').catch(() => undefined);
+}
+const vitalsAfter = (await d.perf.vitals()).value;
+d.close();
+console.log(
+  JSON.stringify(
+    {
+      reads: n,
+      failed,
+      failedPercent: Math.round((failed / n) * 1000) / 10,
+      truncated,
+      errors,
+      latency: stats(ms, failed),
+      screenshots: shots,
+      screenshotFailures: shotFailures,
+      deviceLoadBefore: vitalsBefore.load,
+      deviceLoadAfter: vitalsAfter.load,
+      cpuPressureAfter: vitalsAfter.cpuPressure,
+    },
+    null,
+    2,
+  ),
+);

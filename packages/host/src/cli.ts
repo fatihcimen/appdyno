@@ -6,6 +6,7 @@ import { parseArgs } from 'node:util';
 import { Adb } from './adb.js';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
+import { installTools } from './tools.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
@@ -15,6 +16,14 @@ async function main(): Promise<number> {
     case 'devices': {
       for (const d of await new Adb().devices())
         console.log(`${d.serial}\t${d.state}\t${d.props.model ?? ''}`);
+      return 0;
+    }
+    case 'tools': {
+      if (rest[0] !== 'install') {
+        err('usage: appdyno tools install');
+        return 2;
+      }
+      console.log(await installTools(err));
       return 0;
     }
     case 'doctor': {

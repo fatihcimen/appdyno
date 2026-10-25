@@ -1,4 +1,5 @@
-import { Adb, AndroidDevice } from 'appdyno';
+import { join } from 'node:path';
+import { Adb, AndroidDevice, stateDir } from 'appdyno';
 import { checkApp, checkDevice, type Policy } from './policy.js';
 import { Session, type DriveableDevice } from './session.js';
 import { ToolError } from './tool.js';
@@ -11,10 +12,15 @@ export class ServerContext {
   constructor(
     readonly policy: Policy,
     readonly adb: Pick<Adb, 'devices'> = new Adb(),
-    private readonly defaults: { device?: string; app?: string } = {},
+    private readonly defaults: { device?: string; app?: string; measurements?: string } = {},
     private readonly makeDevice: (serial: string) => DriveableDevice = (serial) =>
       new AndroidDevice(serial),
   ) {}
+
+  /** Where measurements and their raw outputs are stored (this machine only). */
+  get measurementsDir(): string {
+    return this.defaults.measurements ?? join(stateDir(), 'measurements');
+  }
 
   allowed(serial: string) {
     return !this.policy.devices || this.policy.devices.test(serial);

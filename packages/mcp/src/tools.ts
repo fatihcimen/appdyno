@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { checkApp, checkUrl, redact, type Policy } from './policy.js';
 import type { ServerContext } from './context.js';
 import { refused, type Session } from './session.js';
+import { perfTools } from './perf-tools.js';
 import { ACT, DESTRUCTIVE, READ, text, ToolError, type Block, type Tool } from './tool.js';
 
 /** After an action: quiet window and cap of the on-device settle. */
@@ -672,6 +673,7 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
         return text(`konum: ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
       },
     ),
+    ...perfTools(ctx, ctx.measurementsDir),
   };
   return tools;
 }

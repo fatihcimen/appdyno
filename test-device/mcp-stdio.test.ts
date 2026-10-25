@@ -50,7 +50,7 @@ describe.skipIf(!serial)('appdyno-mcp over stdio', () => {
 
   it('starts as appdyno and lists its tools', async () => {
     expect(client.getServerVersion()?.title).toBe('appdyno');
-    expect((await client.listTools()).tools.length).toBe(21);
+    expect((await client.listTools()).tools.length).toBe(25);
   });
 
   it('drives the fixture: launch, read, tap by ref with a diff, type, screenshot', async () => {

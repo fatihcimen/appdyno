@@ -15,6 +15,7 @@ const { values } = parseArgs({
     'allow-apps': { type: 'string' },
     'allow-urls': { type: 'string' },
     'no-home': { type: 'boolean' },
+    measurements: { type: 'string' },
   },
 });
 const env = process.env;
