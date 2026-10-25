@@ -1,0 +1,158 @@
+import type { UiElement } from './elements.js';
+import type { Platform, ScreenElement } from './model.js';
+
+/** One element as the screen view shows it: ref, role, "label", id=<id> without a label, x,y, flags. */
+export function elementLine(e: ScreenElement, clean: (s: string) => string = (s) => s): string {
+  return [
+    e.ref,
+    e.role,
+    JSON.stringify(clean(e.label)),
+    ...(!e.label && e.id ? [`id=${clean(e.id)}`] : []),
+    `${e.x},${e.y}`,
+    ...e.flags,
+    ...(e.refContext ? [`— ${clean(e.refContext)}`] : []),
+  ].join(' ');
+}
+
+export const screenHeader = (n: number) => `${n} elements: ref role "label" x,y flags`;
+
+export const renderScreen = (list: ScreenElement[], clean?: (s: string) => string) =>
+  [screenHeader(list.length), ...list.map((e) => elementLine(e, clean))].join('\n');
+
+/**
+ * Two reads are the same settled screen: the same elements (role, id) in the same places. Texts are left
+ * out: a countdown or a carousel caption keeps ticking on a screen that has settled.
+ */
+export const screenStructure = (list: ScreenElement[]) =>
+  list.map((e) => `${e.role}|${e.id ?? ''}|${e.x},${e.y}`).join('\n');
+
+/** Focus comes and goes with taps and keys: a focus-only change is no screen change. */
+const meaningful = (flags: string[]) => flags.filter((f) => f !== 'focused').join();
+
+/** Moves smaller than this (tap units) are no change: rounding, a scroll indicator. */
+const MOVED = 8;
+
+export type ScreenDiff = {
+  added: ScreenElement[];
+  removed: ScreenElement[];
+  changed: { now: ScreenElement; was: ScreenElement }[];
+};
+
+/** What the second read shows that the first did not (by ref): added, removed and changed elements. */
+export function diffScreens(prev: ScreenElement[], next: ScreenElement[]): ScreenDiff {
+  const before = new Map(prev.map((e) => [e.ref, e]));
+  const after = new Set(next.map((e) => e.ref));
+  const added: ScreenElement[] = [];
+  const changed: ScreenDiff['changed'] = [];
+  for (const e of next) {
+    const was = before.get(e.ref);
+    if (!was) added.push(e);
+    else if (
+      was.label !== e.label ||
+      meaningful(was.flags) !== meaningful(e.flags) ||
+      Math.abs(was.x - e.x) >= MOVED ||
+      Math.abs(was.y - e.y) >= MOVED
+    )
+      changed.push({ now: e, was });
+  }
+  // a text whose ref is its label (no id) and that changed in place is a change, not a new element
+  const removed = prev.filter((e) => !after.has(e.ref));
+  const near = (a: ScreenElement, b: ScreenElement) =>
+    a.role === b.role && Math.abs(a.x - b.x) < MOVED && Math.abs(a.y - b.y) < MOVED;
+  for (const e of [...added]) {
+    const was = removed.find((r) => near(r, e));
+    if (!was) continue;
+    added.splice(added.indexOf(e), 1);
+    removed.splice(removed.indexOf(was), 1);
+    changed.push({ now: e, was });
+  }
+  return { added, removed, changed };
+}
+
+/**
+ * The diff as text, or undefined when it would not be shorter than the whole screen (another screen, a
+ * scroll that moved everything): the caller sends the full view then.
+ */
+export function diffText(
+  d: ScreenDiff,
+  total: number,
+  clean: (s: string) => string = (s) => s,
+): string | undefined {
+  const n = d.added.length + d.removed.length + d.changed.length;
+  if (n === 0) return `ekran değişmedi (${total} öğe)`;
+  if (n >= Math.max(4, total * 0.6)) return undefined;
+  return [
+    `ekran değişti: +${d.added.length} -${d.removed.length} ~${d.changed.length} (${total} öğe; ref role "label" x,y flags)`,
+    ...d.added.map((e) => `+ ${elementLine(e, clean)}`),
+    ...d.removed.map((e) => `- ${e.ref} ${JSON.stringify(clean(e.label))}`),
+    ...d.changed.map(
+      ({ now, was }) =>
+        `~ ${elementLine(now, clean)}${was.label !== now.label ? ` (önce ${JSON.stringify(clean(was.label))})` : ''}`,
+    ),
+  ].join('\n');
+}
+
+export type AlertAction = 'allow' | 'deny';
+
+const ALLOW =
+  /^(allow|allow while using( the)? app|allow once|allow full access|while using the app|only this time|izin ver|uygulamayı kullanırken izin ver|uygulama kullanılırken|bir kez izin ver|yalnızca bu sefer|tam erişime izin ver)$/i;
+const DENY = /^(don[’']t allow|ask app not to track|izin verme|uygulamadan izlememesini iste)$/i;
+const PERMISSION =
+  /konum|bildirim|kamera|fotoğraf|mikrofon|kişiler|izin|izle|yerel ağ|bluetooth|allow|location|notification|camera|photo|microphone|contacts|track|local network/i;
+const PERMISSION_PACKAGES = /^com\.(google\.)?android\.permissioncontroller$/;
+const ANDROID_ALLOW = /:id\/permission_allow(_foreground_only|_one_time)?_button$/;
+const ANDROID_DENY = /:id\/permission_deny(_and_dont_ask_again)?_button$/;
+
+/**
+ * The button of a system permission prompt for `action`: on Android a permission controller's allow or
+ * deny button (by id, any language), on iOS a button of an Alert that asks for a permission. Never an
+ * app's own dialog. Undefined when no such prompt is up.
+ */
+// shortcut: ids and wordings of the stock permission prompts; add an OEM's when a device shows another
+export function alertButton(
+  elements: UiElement[],
+  platform: Platform,
+  action: AlertAction,
+): { label: string; x: number; y: number } | undefined {
+  const text = (e: UiElement) => (e.label || e.text || e.name || '').trim();
+  const says = (re: RegExp, t: string) => re.test(t) || re.test(t.toLocaleLowerCase('tr'));
+  const isUnder = (i: number, p: number): boolean => {
+    for (let q = elements[i]!.parent; q !== undefined; q = elements[q]!.parent)
+      if (q === p) return true;
+    return false;
+  };
+  const below = (p: number) => elements.filter((_, i) => isUnder(i, p));
+  const alertOf = (i: number) => {
+    for (let p = elements[i]!.parent; p !== undefined; p = elements[p]!.parent)
+      if (/alert$/i.test(elements[p]!.type)) return p;
+    return undefined;
+  };
+  const pick = elements.findIndex((e, i) => {
+    if (!e.rect) return false;
+    if (platform === 'android') {
+      const id = e.identifier ?? '';
+      const pkg = /^([\w.]+):id\//.exec(id)?.[1] ?? '';
+      return (
+        PERMISSION_PACKAGES.test(pkg) &&
+        (action === 'allow' ? ANDROID_ALLOW : ANDROID_DENY).test(id)
+      );
+    }
+    if (!/button$/i.test(e.type) || !says(action === 'allow' ? ALLOW : DENY, text(e))) return false;
+    const alert = alertOf(i);
+    if (alert === undefined) return false;
+    const words = [
+      text(elements[alert]!),
+      ...below(alert)
+        .filter((x) => !/button$/i.test(x.type))
+        .map(text),
+    ];
+    return words.some((w) => w && says(PERMISSION, w));
+  });
+  const e = elements[pick];
+  if (!e?.rect) return undefined;
+  return {
+    label: text(e),
+    x: Math.round(e.rect.x + e.rect.width / 2),
+    y: Math.round(e.rect.y + e.rect.height / 2),
+  };
+}

@@ -1,0 +1,160 @@
+import type { Duplex } from 'node:stream';
+import {
+  DeviceError,
+  ERROR_CODES,
+  FRAME_JSON,
+  FrameDecoder,
+  METHODS,
+  codeOfRpc,
+  encodeJson,
+  type ErrorCode,
+  type Method,
+  type ParamsOf,
+  type ResultOf,
+} from '@appdyno/protocol';
+import { z } from 'zod';
+
+/** Extra time the host gives a request over the agent's own deadline before it gives up itself. */
+export const DEADLINE_SLACK_MS = 1_000;
+
+type Pending = {
+  method: string;
+  resolve: (v: { result: unknown; binary?: Buffer }) => void;
+  reject: (e: unknown) => void;
+  timer: NodeJS.Timeout;
+  binary?: Buffer;
+};
+
+const Response = z.object({
+  id: z.number().int(),
+  result: z.unknown().optional(),
+  error: z
+    .object({
+      code: z.number().int(),
+      message: z.string(),
+      data: z.object({ code: z.string().optional(), hint: z.string().optional() }).optional(),
+    })
+    .optional(),
+});
+
+/**
+ * JSON-RPC over the agent's frame stream: one request per id, results validated against the protocol's
+ * schemas, a deadline on every call (the agent gets it as `_deadlineMs` and stops its work; the host
+ * gives up a second later and asks it to cancel), all pending calls failed when the stream ends.
+ */
+export class RpcClient {
+  private nextId = 1;
+  private readonly pending = new Map<number, Pending>();
+  private readonly decoder = new FrameDecoder();
+  private closedWith: DeviceError | undefined;
+  private readonly closeListeners: ((e: DeviceError) => void)[] = [];
+
+  constructor(
+    private readonly stream: Duplex,
+    initial: Buffer = Buffer.alloc(0),
+  ) {
+    stream.on('data', (b: Buffer) => this.onData(b));
+    stream.on('close', () =>
+      this.fail(new DeviceError('AGENT_UNAVAILABLE', 'the agent closed the connection')),
+    );
+    stream.on('error', (e) =>
+      this.fail(new DeviceError('AGENT_UNAVAILABLE', `the agent connection failed: ${e.message}`)),
+    );
+    if (initial.length) this.onData(initial);
+    stream.resume();
+  }
+
+  get closed(): boolean {
+    return this.closedWith !== undefined;
+  }
+
+  onClose(fn: (e: DeviceError) => void) {
+    this.closeListeners.push(fn);
+  }
+
+  async call<M extends Method>(
+    method: M,
+    params: ParamsOf<M>,
+    opts: { timeoutMs: number },
+  ): Promise<{ result: ResultOf<M>; binary?: Buffer }> {
+    const raw = await this.callRaw(
+      method,
+      { ...(params as object), _deadlineMs: opts.timeoutMs },
+      opts.timeoutMs,
+    );
+    const parsed = (METHODS[method].result as z.ZodType).safeParse(raw.result);
+    if (!parsed.success)
+      throw new DeviceError(
+        'INTERNAL',
+        `the agent's ${method} result does not match the protocol: ${parsed.error.message.slice(0, 300)}`,
+      );
+    return { result: parsed.data as ResultOf<M>, ...(raw.binary && { binary: raw.binary }) };
+  }
+
+  private callRaw(method: string, params: object, timeoutMs: number) {
+    if (this.closedWith) return Promise.reject(this.closedWith);
+    const id = this.nextId++;
+    return new Promise<{ result: unknown; binary?: Buffer }>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        // fire and forget: the agent stops the work if it is still running
+        if (!this.closedWith)
+          this.stream.write(
+            encodeJson({ jsonrpc: '2.0', id: this.nextId++, method: 'cancel', params: { id } }),
+          );
+        reject(new DeviceError('TIMEOUT', `${method} did not answer within ${timeoutMs} ms`));
+      }, timeoutMs + DEADLINE_SLACK_MS);
+      this.pending.set(id, { method, resolve, reject, timer });
+      this.stream.write(encodeJson({ jsonrpc: '2.0', id, method, params }));
+    });
+  }
+
+  close() {
+    this.stream.destroy();
+    this.fail(new DeviceError('AGENT_UNAVAILABLE', 'the connection was closed'));
+  }
+
+  private onData(b: Buffer) {
+    let frames;
+    try {
+      frames = this.decoder.push(b);
+    } catch (e) {
+      this.stream.destroy();
+      this.fail(new DeviceError('INTERNAL', `the agent stream is broken: ${(e as Error).message}`));
+      return;
+    }
+    for (const f of frames) {
+      if (f.type !== FRAME_JSON) {
+        const p = this.pending.get(f.id);
+        if (p) p.binary = f.data;
+        continue;
+      }
+      const msg = Response.safeParse(f.message);
+      if (!msg.success) continue; // not a response (the agent sends no requests)
+      const p = this.pending.get(msg.data.id);
+      if (!p) continue; // a late answer to a call that timed out, or to a cancel
+      this.pending.delete(msg.data.id);
+      clearTimeout(p.timer);
+      if (msg.data.error) {
+        const e = msg.data.error;
+        const code = (ERROR_CODES as readonly string[]).includes(e.data?.code ?? '')
+          ? (e.data!.code as ErrorCode)
+          : codeOfRpc(e.code);
+        p.reject(new DeviceError(code, `${p.method}: ${e.message}`, e.data?.hint));
+      } else {
+        p.resolve({ result: msg.data.result, ...(p.binary && { binary: p.binary }) });
+      }
+    }
+  }
+
+  private fail(e: DeviceError) {
+    if (this.closedWith) return;
+    this.closedWith = e;
+    for (const [id, p] of this.pending) {
+      clearTimeout(p.timer);
+      this.pending.delete(id);
+      p.reject(e);
+    }
+    for (const fn of this.closeListeners) fn(e);
+  }
+}

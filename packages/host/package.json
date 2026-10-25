@@ -1,0 +1,27 @@
+{
+  "name": "appdyno",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Drive and measure iOS and Android devices through on-device agents.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "bin": {
+    "appdyno": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "agents"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-agents.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@appdyno/protocol": "workspace:*",
+    "zod": "^4.6.7"
+  }
+}

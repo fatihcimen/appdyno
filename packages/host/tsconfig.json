@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "paths": { "@appdyno/protocol": ["../protocol/src/index.ts"] }
+  },
+  "include": ["src", "test"]
+}

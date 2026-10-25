@@ -1,0 +1,90 @@
+import { NODE_FLAGS, type Tree } from '@appdyno/protocol';
+
+export type Rect = { x: number; y: number; width: number; height: number };
+
+/**
+ * One element of the screen in the host's model (a flat list, each with its parent's index): what the
+ * screen model reads, whatever platform it came from.
+ */
+export type UiElement = {
+  /** Android: class name (`android.widget.Button`); iOS: element type. */
+  type: string;
+  /** Accessibility label (Android content description). */
+  label?: string;
+  text?: string;
+  /** Android resource id (`pkg:id/name`) / iOS accessibility identifier. */
+  identifier?: string;
+  placeholder?: string;
+  /** Device pixels on Android, points on iOS: the units taps are given in. */
+  rect?: Rect;
+  ref?: string;
+  clickable?: boolean;
+  focusable?: boolean;
+  enabled?: boolean;
+  visible?: boolean;
+  checked?: boolean;
+  focused?: boolean;
+  selected?: boolean;
+  editable?: boolean;
+  password?: boolean;
+  scrollable?: boolean;
+  /** Index of the parent in the flat list; absent for a root. */
+  parent?: number;
+  /** Package of the window the element is in (Android). */
+  pkg?: string;
+  /** The stable refs' context: the text that tells this element from identical ones. */
+  refContext?: string;
+  name?: string;
+};
+
+/** Accessibility window types (Android) that are never the app's screen. */
+const INPUT_METHOD = 2;
+const ACCESSIBILITY_OVERLAY = 4;
+const SYSTEM = 3;
+const SYSTEM_UI = 'com.android.systemui';
+
+/**
+ * The agent's tree as screen elements: the keyboard, accessibility overlays and the system UI's own
+ * windows (status bar, navigation bar, notification shade) are left out; system dialogs (permission
+ * prompts, "app isn't responding") stay, as they are what the user sees and answers.
+ */
+export function elementsOf(tree: Tree): UiElement[] {
+  const keep = tree.windows.map(
+    (w) =>
+      w.type !== INPUT_METHOD &&
+      w.type !== ACCESSIBILITY_OVERLAY &&
+      !(w.type === SYSTEM && w.pkg === SYSTEM_UI),
+  );
+  const index = new Map<number, number>();
+  const out: UiElement[] = [];
+  tree.nodes.forEach((n, i) => {
+    if (!keep[n.w]) return;
+    const has = (f: keyof typeof NODE_FLAGS) => (n.f & NODE_FLAGS[f]) !== 0;
+    const [l, t, r, b] = n.b;
+    const parent = n.p >= 0 ? index.get(n.p) : undefined;
+    const el: UiElement = {
+      type: n.c,
+      ...(n.d && { label: n.d }),
+      ...(n.t && { text: n.t }),
+      ...(n.id && { identifier: n.id }),
+      ...(n.h && { placeholder: n.h }),
+      rect: { x: l, y: t, width: r - l, height: b - t },
+      ref: `n${i}`,
+      clickable: has('clickable') || has('longClickable'),
+      focusable: has('focusable'),
+      enabled: has('enabled'),
+      visible: has('visible'),
+      checked: has('checked'),
+      focused: has('focused'),
+      selected: has('selected'),
+      editable: has('editable'),
+      password: has('password'),
+      scrollable: has('scrollable'),
+      ...(parent !== undefined && { parent }),
+      ...(tree.windows[n.w]?.pkg && { pkg: tree.windows[n.w]!.pkg }),
+    };
+    index.set(i, out.length);
+    out.push(el);
+  });
+  return out;
+}

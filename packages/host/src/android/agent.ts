@@ -1,0 +1,164 @@
+import { createHash, randomBytes } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { DeviceError, PROTOCOL, type Hello } from '@appdyno/protocol';
+import { z } from 'zod';
+import { type Adb, assertSerial, shq } from '../adb.js';
+import { RpcClient } from '../rpc.js';
+
+export const AGENT_MAIN = 'dev.appdyno.agent.Main';
+export const REMOTE_DIR = '/data/local/tmp/appdyno';
+/** How long a fresh agent may take to open its socket. */
+const START_MS = 8_000;
+const POLL_MS = 100;
+
+/** The agent APK the package ships (or a development build), and its sha256. */
+export async function agentApk(): Promise<{ path: string; sha256: string }> {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    process.env.APPDYNO_ANDROID_AGENT,
+    join(here, '../../agents/android/agent.apk'),
+    join(here, '../../../agents/android/agent.apk'),
+    join(here, '../../../../android/agent/build/outputs/apk/debug/agent-debug.apk'),
+  ].filter((p): p is string => !!p);
+  const path = candidates.find((p) => existsSync(p));
+  if (!path)
+    throw new DeviceError(
+      'UNSUPPORTED',
+      'the Android agent is not built',
+      'build it: (cd android && ./gradlew :agent:assembleDebug), or set APPDYNO_ANDROID_AGENT',
+    );
+  const sha256 = createHash('sha256').update(await readFile(path)).digest('hex');
+  return { path, sha256 };
+}
+
+const State = z.object({ socket: z.string(), token: z.string(), sha256: z.string(), pid: z.number().optional() });
+type State = z.infer<typeof State>;
+
+export const stateDir = () => process.env.APPDYNO_STATE_DIR ?? join(homedir(), 'Library/Caches/appdyno');
+
+/**
+ * Starts, finds again and stops the Android agent of one device. The agent outlives the host process
+ * (a new host reconnects in one round trip): its socket name and launch token are kept in a state file
+ * readable only by this user. A different agent build on the device is replaced.
+ */
+export class AndroidAgentLauncher {
+  constructor(
+    private readonly adb: Adb,
+    readonly serial: string,
+  ) {
+    assertSerial(serial);
+  }
+
+  private get statePath() {
+    return join(stateDir(), `android-${this.serial.replace(/[^\w.-]/g, '_')}.json`);
+  }
+
+  /** A connected client to a running agent of this build: the one already there, else a new one. */
+  async connect(): Promise<{ rpc: RpcClient; hello: Hello; started: boolean }> {
+    const apk = await agentApk();
+    const state = await this.readState();
+    if (state && state.sha256 === apk.sha256) {
+      const c = await this.tryConnect(state).catch(() => undefined);
+      if (c) return { ...c, started: false };
+    }
+    if (state?.pid) await this.kill(state.pid);
+    const fresh = await this.start(apk);
+    return { ...fresh, started: true };
+  }
+
+  /** Stops this device's agent (and forgets it). */
+  async stop(): Promise<void> {
+    const state = await this.readState();
+    if (state?.pid) await this.kill(state.pid);
+    await rm(this.statePath, { force: true });
+  }
+
+  private async start(apk: { path: string; sha256: string }) {
+    const remote = `${REMOTE_DIR}/agent-${apk.sha256.slice(0, 16)}.apk`;
+    const have = await this.adb.exec(this.serial, `sha256sum ${shq(remote)} 2>/dev/null`);
+    if (!have.startsWith(apk.sha256)) {
+      await this.adb.exec(this.serial, `mkdir -p ${REMOTE_DIR}`);
+      await this.adb.run(['-s', this.serial, 'push', apk.path, remote]);
+    }
+    const socket = `appdyno_${randomBytes(8).toString('hex')}`;
+    const token = randomBytes(24).toString('hex');
+    const log = `${REMOTE_DIR}/agent.log`;
+    const session = await this.adb.startDetached(
+      this.serial,
+      `cd ${REMOTE_DIR} && CLASSPATH=${shq(remote)} setsid nohup app_process / ${AGENT_MAIN} ` +
+        `--socket ${socket} --token ${token} > ${log} 2>&1 < /dev/null &`,
+      START_MS + 2_000,
+    );
+    try {
+      return await this.waitReady({ socket, token, sha256: apk.sha256 }, log);
+    } finally {
+      session.close();
+    }
+  }
+
+  private async waitReady(s: State, log: string) {
+    const { socket, token } = s;
+    const apk = { sha256: s.sha256 };
+    const deadline = Date.now() + START_MS;
+    for (;;) {
+      const c = await this.tryConnect({ socket, token, sha256: apk.sha256 }).catch((e: unknown) => e);
+      if (!(c instanceof Error)) {
+        await this.writeState({ socket, token, sha256: apk.sha256, ...(c.hello.pid && { pid: c.hello.pid }) });
+        return c;
+      }
+      if (c instanceof DeviceError && c.code === 'DEVICE_GONE') throw c;
+      const out = await this.adb.exec(this.serial, `cat ${log} 2>/dev/null`).catch(() => '');
+      const failed = /^(AGENT_CONFLICT|UNSUPPORTED|INTERNAL|INVALID_ARGUMENT): (.*)$/m.exec(out);
+      if (failed) {
+        const code = failed[1] as 'AGENT_CONFLICT' | 'UNSUPPORTED' | 'INTERNAL' | 'INVALID_ARGUMENT';
+        throw new DeviceError(
+          code,
+          `the Android agent could not start: ${failed[2]}`,
+          code === 'AGENT_CONFLICT' ? 'another UI automation server runs on this device: stop it, then retry' : undefined,
+        );
+      }
+      if (Date.now() >= deadline)
+        throw new DeviceError('AGENT_UNAVAILABLE', `the Android agent did not start within ${START_MS} ms`, out.trim().slice(0, 300) || undefined);
+      await new Promise((r) => setTimeout(r, POLL_MS));
+    }
+  }
+
+  private async tryConnect(state: State): Promise<{ rpc: RpcClient; hello: Hello }> {
+    const { socket, rest } = await this.adb.open(this.serial, `localabstract:${state.socket}`);
+    const rpc = new RpcClient(socket, rest);
+    try {
+      const { result } = await rpc.call('hello', { token: state.token, protocol: PROTOCOL.major }, { timeoutMs: 3_000 });
+      if (result.protocol.major !== PROTOCOL.major)
+        throw new DeviceError('AGENT_VERSION_MISMATCH', `agent protocol ${result.protocol.major}, host ${PROTOCOL.major}`);
+      return { rpc, hello: result };
+    } catch (e) {
+      rpc.close();
+      throw e;
+    }
+  }
+
+  private async kill(pid: number) {
+    // only our own agent: its command line names the agent's main class
+    await this.adb
+      .exec(this.serial, `grep -q ${AGENT_MAIN} /proc/${pid}/cmdline 2>/dev/null && kill ${pid}`)
+      .catch(() => undefined);
+  }
+
+  private async readState(): Promise<State | undefined> {
+    try {
+      return State.parse(JSON.parse(await readFile(this.statePath, 'utf8')));
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async writeState(s: State) {
+    await mkdir(stateDir(), { recursive: true, mode: 0o700 });
+    await writeFile(this.statePath, JSON.stringify(s), { mode: 0o600 });
+    await chmod(this.statePath, 0o600);
+  }
+}
