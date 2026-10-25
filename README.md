@@ -25,7 +25,9 @@ Status: Android (emulator) works end to end, with performance measurement; iOS i
 | `packages/mcp`      | the MCP server: device tools with act-and-read answers and a local policy                                                                          |
 | `android/agent`     | the on-device agent (Kotlin)                                                                                                                       |
 | `android/fixture`   | a deterministic test app (Views and Compose)                                                                                                       |
-| `test-device`       | tests on a real emulator or device (`APPDYNO_ANDROID_SERIAL`)                                                                                           |
+| `ios/Runner`        | the iOS runner: a UI test serving the protocol on a loopback port (Swift); `ios/RunnerCore` its tested core                                        |
+| `ios/Fixture`       | the iOS test app (SwiftUI)                                                                                                                         |
+| `test-device`       | tests on a real emulator or device (`APPDYNO_ANDROID_SERIAL`) or simulator (`APPDYNO_IOS_UDID`)                                                              |
 
 ## Build and test
 
@@ -41,6 +43,13 @@ adb -s <serial> install -r -g android/fixture/build/outputs/apk/debug/fixture-de
 APPDYNO_ANDROID_SERIAL=<serial> pnpm test:device
 node packages/host/dist/cli.js doctor --serial <serial>
 node packages/host/dist/cli.js bench --serial <serial> --n 50 --out bench.json
+
+# iOS: the runner core on the Mac, then the runner and fixture for the simulator (Xcode 27)
+(cd ios/RunnerCore && swift test)
+(cd ios && xcodebuild build-for-testing -project Appdyno.xcodeproj -scheme Runner \
+  -destination 'generic/platform=iOS Simulator' -derivedDataPath .derived)
+# on a booted simulator you name by its id (never "booted": other simulators may run)
+APPDYNO_IOS_UDID=<udid> pnpm test:device test-device/ios.test.ts
 ```
 
 ## MCP client configuration
