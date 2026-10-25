@@ -1,0 +1,110 @@
+import { Duplex, PassThrough } from 'node:stream';
+import {
+  FRAME_JSON,
+  FrameDecoder,
+  encodeBinary,
+  encodeJson,
+  rpcCode,
+  type ErrorCode,
+  type Tree,
+  type WireNode,
+} from '@appdyno/protocol';
+import { RpcClient } from '../src/rpc.js';
+
+/** A connected pair of streams: what one side writes, the other reads. */
+export function streamPair(): [Duplex, Duplex] {
+  const ab = new PassThrough();
+  const ba = new PassThrough();
+  return [Duplex.from({ readable: ba, writable: ab }), Duplex.from({ readable: ab, writable: ba })];
+}
+
+export type FakeHandler = (
+  params: Record<string, unknown>,
+) =>
+  | { result: unknown; binary?: Buffer }
+  | { error: ErrorCode; message?: string }
+  | Promise<{ result: unknown; binary?: Buffer } | { error: ErrorCode; message?: string }>;
+
+export const TOKEN = 'a'.repeat(32);
+
+/**
+ * An in-process agent speaking the wire protocol, for host tests: `handlers` answer methods (hello is
+ * built in); a handler may return a promise to simulate a slow device.
+ */
+export function fakeAgent(handlers: Record<string, FakeHandler> = {}) {
+  const [host, agent] = streamPair();
+  const decoder = new FrameDecoder();
+  const seen: { method: string; params: Record<string, unknown> }[] = [];
+  agent.on('error', () => undefined);
+  agent.on('data', async (b: Buffer) => {
+    for (const f of decoder.push(b)) {
+      if (f.type !== FRAME_JSON) continue;
+      const m = f.message as { id: number; method: string; params: Record<string, unknown> };
+      seen.push({ method: m.method, params: m.params });
+      if (m.method === 'cancel') continue;
+      const h =
+        m.method === 'hello'
+          ? () =>
+              m.params.token === TOKEN
+                ? { result: HELLO }
+                : ({ error: 'POLICY_DENIED', message: 'bad token' } as const)
+          : handlers[m.method];
+      const r = h
+        ? await h(m.params)
+        : { error: 'INVALID_ARGUMENT' as const, message: `no ${m.method}` };
+      if (agent.destroyed) return;
+      if ('error' in r) {
+        agent.write(
+          encodeJson({
+            jsonrpc: '2.0',
+            id: m.id,
+            error: {
+              code: rpcCode(r.error),
+              message: r.message ?? r.error,
+              data: { code: r.error },
+            },
+          }),
+        );
+      } else {
+        if (r.binary) agent.write(encodeBinary(m.id, r.binary));
+        agent.write(encodeJson({ jsonrpc: '2.0', id: m.id, result: r.result }));
+      }
+    }
+  });
+  return { rpc: new RpcClient(host), agent, seen };
+}
+
+export const HELLO = {
+  agentVersion: '0.1.0',
+  protocol: { major: 1, minor: 0 },
+  platform: 'android',
+  osVersion: '15',
+  sdk: 35,
+  model: 'Fake',
+  screen: { w: 1080, h: 2400, density: 420, rotation: 0 },
+  capabilities: ['tree'],
+};
+
+/** A wire tree: a full-screen root and the given nodes under it. */
+export function wireTree(nodes: Partial<WireNode>[], extra: Partial<Tree> = {}): Tree {
+  return {
+    windows: [
+      { type: 1, pkg: 'dev.app', layer: 1, b: [0, 0, 1080, 2400], active: true, focused: true },
+    ],
+    nodes: [
+      { p: -1, w: 0, c: 'android.widget.FrameLayout', b: [0, 0, 1080, 2400], f: 1 | 16 },
+      ...nodes.map((n) => ({
+        p: 0,
+        w: 0,
+        c: 'android.widget.TextView',
+        b: [0, 0, 100, 50] as [number, number, number, number],
+        f: 1 | 16,
+        ...n,
+      })),
+    ],
+    truncated: false,
+    elapsedMs: 1,
+    hash: 'h',
+    ...extra,
+  };
+}

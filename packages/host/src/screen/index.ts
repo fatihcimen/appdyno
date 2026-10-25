@@ -24,8 +24,9 @@ export type Screen = {
 export function buildScreen(tree: Tree, opts: { platform: Platform; appId?: string }): Screen {
   const elements = withStableRefs(elementsOf(tree), opts);
   const list = screenElements(elements, opts);
-  const app = tree.windows.filter((w) => w.type === 1);
-  const active = app.find((w) => w.active) ?? app[app.length - 1];
+  // the topmost active application window (a dialog activity over the app), else the topmost
+  const app = tree.windows.filter((w) => w.type === 1).sort((a, b) => b.layer - a.layer);
+  const active = app.find((w) => w.active) ?? app[0];
   const win = windowRect(elements, opts.platform);
   return {
     tree,
