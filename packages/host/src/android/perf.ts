@@ -163,7 +163,10 @@ export class AndroidPerf {
     const s = Math.min(Math.max(Math.round(durationMs / 1000), 1), 30);
     const file = `/data/local/tmp/appdyno-${randomBytes(4).toString('hex')}.data`;
     try {
-      const rec = this.sh(`simpleperf record --app ${pkg} -f 1000 --duration ${s} -o ${file} 2>&1`, (s + 30) * 1000);
+      const rec = this.device.shellAlongside(
+        `LC_ALL=C simpleperf record --app ${pkg} -f 1000 --duration ${s} -o ${file} 2>&1`,
+        (s + 30) * 1000,
+      );
       if (during) await during();
       const recorded = await rec;
       if (!/Samples recorded|samples/i.test(recorded) && /error|fail/i.test(recorded))

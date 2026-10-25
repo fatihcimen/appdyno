@@ -294,6 +294,14 @@ export class AndroidDevice {
     return this.queue.run(() => this.adb.exec(this.serial, command, { timeoutMs }));
   }
 
+  /**
+   * As `shell`, but not queued behind the device's other commands: a recording that runs while the
+   * caller acts on the device (its own adb connection).
+   */
+  async shellAlongside(command: string, timeoutMs: number = TIMEOUTS.action): Promise<string> {
+    return this.adb.exec(this.serial, command, { timeoutMs });
+  }
+
   /** As `shell`, the output as bytes. */
   async shellBuffer(command: string, timeoutMs: number = TIMEOUTS.action): Promise<Buffer> {
     return this.queue.run(() => this.adb.execBuffer(this.serial, command, { timeoutMs }));
