@@ -236,6 +236,11 @@ export class AndroidDevice {
     return this.queue.run(() => this.adb.execBuffer(this.serial, command, { timeoutMs }));
   }
 
+  /** Copies a file from the device (adb's file transfer). */
+  async pull(remote: string, local: string): Promise<void> {
+    await this.queue.run(() => this.adb.run(['-s', this.serial, 'pull', remote, local], 300_000));
+  }
+
   /** The app's and the device's performance (frames, memory, CPU, launch, device state). */
   get perf(): AndroidPerf {
     return (this.perfTools ??= new AndroidPerf(this));

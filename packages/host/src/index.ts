@@ -16,6 +16,13 @@ export {
   type BenchResult,
 } from './bench.js';
 export { doctor, type Check } from './doctor.js';
-export { AndroidPerf, type Measured, type CpuStats, type LaunchStats } from './android/perf.js';
+export {
+  AndroidPerf,
+  type Measured,
+  type CpuStats,
+  type LaunchStats,
+  type CpuProfile,
+  type HeapDump,
+} from './android/perf.js';
 export * from './android/perf-parse.js';
 export { installTools, traceProcessor, PERFETTO } from './tools.js';

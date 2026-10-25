@@ -31,6 +31,7 @@ describe('android perf parsers on recorded outputs', () => {
     expect(parseFramestats(fx('android-gfxinfo-framestats.txt'))[0]).toEqual({
       durationMs: 27.2,
       intervalMs: 16.7,
+      startNs: 851716987249,
     });
   });
 
@@ -39,8 +40,8 @@ describe('android perf parsers on recorded outputs', () => {
       `---PROFILEDATA---\nFlags,IntendedVsync,FrameCompleted,\n${rows}---PROFILEDATA---\n`;
     const text = `${block('')}${block('0,1000000000,1040000000,\n0,2000000000,2010000000,\n1,3000000000,3500000000,\n')}`;
     expect(parseFramestats(text)).toEqual([
-      { durationMs: 40, intervalMs: 16.7 },
-      { durationMs: 10, intervalMs: 16.7 },
+      { durationMs: 40, intervalMs: 16.7, startNs: 1e9 },
+      { durationMs: 10, intervalMs: 16.7, startNs: 2e9 },
     ]);
   });
 
@@ -99,5 +100,42 @@ describe('android perf parsers on recorded outputs', () => {
       p95Ms: 45,
       worstMs: 45,
     });
+  });
+});
+
+describe('profile and frame windows', () => {
+  it('reads the simpleperf symbol report, most first', async () => {
+    const { parseSimpleperfReport } = await import('../src/android/perf-parse.js');
+    const report = [
+      'Cmdline: /system/bin/simpleperf record --app dev.app',
+      'Samples: 2997',
+      'Overhead  Sample  Symbol',
+      '62.10%    1861    dev.appdyno.fixture.CpuActivity.onCreate$lambda$0$lambda$1',
+      '20.02%    600     art::interpreter::Execute',
+      '5.50%     165     [kernel.kallsyms]',
+    ].join('\n');
+    expect(parseSimpleperfReport(report)).toEqual([
+      {
+        percent: 62.1,
+        samples: 1861,
+        symbol: 'dev.appdyno.fixture.CpuActivity.onCreate$lambda$0$lambda$1',
+      },
+      { percent: 20.02, samples: 600, symbol: 'art::interpreter::Execute' },
+      { percent: 5.5, samples: 165, symbol: '[kernel.kallsyms]' },
+    ]);
+  });
+
+  it('finds the worst second of frames', async () => {
+    const { worstWindow } = await import('../src/android/perf-parse.js');
+    const row = (s: number, ms: number) => ({ startNs: s * 1e6, durationMs: ms, intervalMs: 16.7 });
+    // a smooth second, then a second with three missed frames
+    const rows = [
+      ...Array.from({ length: 60 }, (_, i) => row(i * 16, 12)),
+      row(1500, 80),
+      row(1600, 90),
+      row(1700, 70),
+      row(1800, 12),
+    ];
+    expect(worstWindow(rows)).toMatchObject({ slow: 3 });
   });
 });

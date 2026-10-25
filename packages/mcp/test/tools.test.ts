@@ -56,7 +56,9 @@ describe('tool list', () => {
         "list_devices",
         "long_press",
         "open_link",
+        "perf_heap",
         "perf_launch",
+        "perf_profile",
         "perf_scroll",
         "perf_snapshot",
         "perf_trace",
@@ -90,6 +92,8 @@ describe('tool list', () => {
       'device_info',
       'find',
       'list_devices',
+      'perf_heap',
+      'perf_profile',
       'perf_snapshot',
       'screen',
       'screenshot',
@@ -344,6 +348,16 @@ describe('perf tools', () => {
     expect(r.text).toContain('medyan: 600 ms');
     expect(r.text).not.toContain('aşırı');
     expect((await t.textOf('perf_launch', { app: 'com.other' })).error).toBe(true);
+  });
+
+  it('profile: the functions taking the CPU; heap: the dump file stays here', async () => {
+    const t = await connect();
+    expect((await t.textOf('perf_profile', { seconds: 2 })).text).toContain(
+      '%62.1 dev.app.Busy.loop',
+    );
+    expect((await t.textOf('perf_heap')).text).toMatch(
+      /bellek dökümü: .*heap-dev\.app-\d+\.hprof \(60\.0 MB\)/,
+    );
   });
 
   it('trace: the frame timeline summary', async () => {

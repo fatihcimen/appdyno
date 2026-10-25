@@ -256,6 +256,16 @@ export class FakeDevice implements DriveableDevice {
           'TotalTime: 600',
         );
       },
+      cpuProfile: async () =>
+        m(
+          {
+            durationMs: 3000,
+            samples: 2997,
+            top: [{ percent: 62.1, samples: 1861, symbol: 'dev.app.Busy.loop' }],
+          },
+          'Samples: 2997',
+        ),
+      heapDump: async (_pkg: string, file: string) => m({ file, bytes: 60 * 1048576 }, 'dumpheap'),
       frameTimeline: async () => {
         return m(
           {

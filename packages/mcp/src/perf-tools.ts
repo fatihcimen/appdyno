@@ -97,6 +97,11 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
             `CPU: %${cpu.value.percent} (bir çekirdeğin, ${cpu.value.windowMs} ms)`,
             `bellek: PSS ${kb(mem.value.pssKb)}, Java ${kb(mem.value.javaHeapKb)}, native ${kb(mem.value.nativeHeapKb)}, grafik ${kb(mem.value.graphicsKb)}`,
             `kareler (son sıfırlamadan beri): ${f.totalFrames}, takılan %${f.jankyPercent}, donmuş ${f.frozenFrames}${f.p95Ms !== undefined ? `, p95 ${f.p95Ms} ms` : ''}${f.fewFrames ? ' (az kare: oran anlamsız)' : ''}`,
+            ...(f.frames?.worstWindow
+              ? [
+                  `en kötü saniye: ${f.frames.worstWindow.frames} karede ${f.frames.worstWindow.slow} kaçan kare, ortalama ${f.frames.worstWindow.avgMs} ms`,
+                ]
+              : []),
             `cihaz: yük ${vitals.value.load?.join(' ') ?? '?'}, CPU baskısı ${vitals.value.cpuPressure ?? '?'}, termal ${vitals.value.thermalStatus ?? '?'}`,
             `ham çıktı: ${saved.txt}`,
           ].join('\n'),
@@ -219,6 +224,62 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
             `medyan: ${med === undefined ? 'ölçülemedi' : `${med} ms`}${med !== undefined && med >= limit ? ` (aşırı: eşik ${limit} ms)` : ''}`,
             `ham çıktı: ${saved.txt}`,
           ].join('\n'),
+        );
+      },
+    ),
+    perf_profile: tool(
+      'CPU profili',
+      'appdyno: uygulamanın CPU zamanı nereye gidiyor: seconds boyunca örnekleme (uygulama debuggable ya da profileable olmalı), en çok zaman alan fonksiyonlar. İsteğe bağlı kayıt sırasında kaydırma.',
+      z
+        .object({
+          device: Device,
+          app: App,
+          seconds: z.number().int().min(1).max(30).default(3),
+          scroll: z.enum(['up', 'down']).optional(),
+        })
+        .strict(),
+      READ,
+      async ({ device, app, seconds, scroll }) => {
+        const s = await ctx.session(device);
+        const pkg = appOf(s, app);
+        const h = s.device.hello!;
+        const size = (await s.current()).window ?? { w: h.screen.w, h: h.screen.h };
+        const during = scroll
+          ? async () => {
+              await new Promise((x) => setTimeout(x, 300));
+              for (let i = 0; i < 4; i++) {
+                const { from, to } = swipeLine(size, { direction: scroll, distance: size.h * 0.4 });
+                await s.device.swipe(from, to, 300, { settle: false });
+              }
+            }
+          : undefined;
+        const m = await s.device.perf.cpuProfile(pkg, seconds * 1000, during).catch(refused);
+        if (scroll) s.acted();
+        const saved = await save('cpu-profile', [m], m.value);
+        return text(
+          [
+            `ölçüm ${saved.id}${relative(s)}`,
+            `${m.value.samples} örnek, ${m.value.durationMs} ms; en çok zaman alanlar:`,
+            ...m.value.top.slice(0, 10).map((e) => `%${e.percent} ${e.symbol}`),
+            `ham çıktı: ${saved.txt}`,
+          ].join('\n'),
+        );
+      },
+    ),
+    perf_heap: tool(
+      'Bellek dökümü',
+      'appdyno: uygulamanın Java bellek dökümü (HPROF) bu makinede bir dosyaya; bir bellek analizcisiyle açılır. Sızıntı şüphesinde perf_scroll’dan sonra.',
+      z.object({ device: Device, app: App }).strict(),
+      READ,
+      async ({ device, app }) => {
+        const s = await ctx.session(device);
+        const pkg = appOf(s, app);
+        await mkdir(measurementsDir, { recursive: true });
+        const file = join(measurementsDir, `heap-${pkg}-${Date.now()}.hprof`);
+        const m = await s.device.perf.heapDump(pkg, file).catch(refused);
+        const saved = await save('heap-dump', [m], m.value);
+        return text(
+          `ölçüm ${saved.id}\nbellek dökümü: ${m.value.file} (${(m.value.bytes / 1048576).toFixed(1)} MB)`,
         );
       },
     ),

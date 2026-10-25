@@ -55,7 +55,7 @@ export function parseGfxSummary(text: string): FrameSummary {
   return out;
 }
 
-export type FrameRow = { durationMs: number; intervalMs: number };
+export type FrameRow = { durationMs: number; intervalMs: number; startNs?: number };
 
 /**
  * Per-frame rows of `dumpsys gfxinfo <pkg> framestats` (the ring of the last ~120 frames): duration
@@ -79,7 +79,7 @@ export function parseFramestats(text: string): FrameRow[] {
       const ns = Number(v[end]) - Number(v[start]);
       const iv = intervalCols.map((i) => Number(v[i])).find((x) => x > 1e6 && x < 1e9) ?? 16_666_667;
       if (v[flags] === '0' && Number.isFinite(ns) && ns > 0)
-        out.push({ durationMs: Math.round(ns / 1e5) / 10, intervalMs: Math.round(iv / 1e5) / 10 });
+        out.push({ durationMs: Math.round(ns / 1e5) / 10, intervalMs: Math.round(iv / 1e5) / 10, startNs: Number(v[start]) });
     }
   }
   return out;
@@ -87,7 +87,16 @@ export function parseFramestats(text: string): FrameRow[] {
 
 export type FrameStats = FrameSummary & {
   /** From the per-frame rows (the last ~120 frames). */
-  frames?: { count: number; slow: number; slowPercent: number; p50Ms: number; p95Ms: number; worstMs: number };
+  frames?: {
+    count: number;
+    slow: number;
+    slowPercent: number;
+    p50Ms: number;
+    p95Ms: number;
+    worstMs: number;
+    /** The worst second: the one-second window of frames with the most slow frames. */
+    worstWindow?: { frames: number; slow: number; avgMs: number };
+  };
 };
 
 const pct = (xs: number[], p: number) => {
@@ -111,9 +120,26 @@ export function parseFrameStats(text: string): FrameStats {
       p50Ms: pct(ms, 0.5),
       p95Ms: pct(ms, 0.95),
       worstMs: Math.max(...ms),
+      ...(worstWindow(rows) && { worstWindow: worstWindow(rows)! }),
     };
   }
   return out;
+}
+
+/** The one-second window (by vsync time) with the most slow frames, ties by the longer average. */
+export function worstWindow(rows: FrameRow[]): { frames: number; slow: number; avgMs: number } | undefined {
+  const timed = rows.filter((r) => r.startNs !== undefined).sort((a, b) => a.startNs! - b.startNs!);
+  if (timed.length === 0) return undefined;
+  let best: { frames: number; slow: number; avgMs: number } | undefined;
+  let j = 0;
+  for (let i = 0; i < timed.length; i++) {
+    while (timed[i]!.startNs! - timed[j]!.startNs! > 1e9) j++;
+    const win = timed.slice(j, i + 1);
+    const slow = win.filter((r) => r.durationMs > 2 * r.intervalMs).length;
+    const avgMs = Math.round((win.reduce((a, r) => a + r.durationMs, 0) / win.length) * 10) / 10;
+    if (!best || slow > best.slow || (slow === best.slow && avgMs > best.avgMs)) best = { frames: win.length, slow, avgMs };
+  }
+  return best;
 }
 
 export type MemoryStats = {
@@ -252,4 +278,19 @@ export function parseFrameTimelineCsv(csv: string): FrameTimeline {
     p95Ms: Math.round(pct(ms, 0.95) * 10) / 10,
     worstMs: Math.round((ms.length ? Math.max(...ms) : 0) * 10) / 10,
   };
+}
+
+export type ProfileEntry = { percent: number; samples: number; symbol: string };
+
+/**
+ * `simpleperf report --sort symbol -n` text: the functions taking the app's CPU time, most first. Rows look
+ * like `12.34%  1234  java.lang.String.indexOf`.
+ */
+export function parseSimpleperfReport(text: string, limit = 15): ProfileEntry[] {
+  const out: ProfileEntry[] = [];
+  for (const line of text.split('\n')) {
+    const m = /^\s*([\d.]+)%\s+(\d+)\s+(.+?)\s*$/.exec(line);
+    if (m) out.push({ percent: Number(m[1]), samples: Number(m[2]), symbol: m[3]! });
+  }
+  return out.sort((a, b) => b.percent - a.percent).slice(0, limit);
 }

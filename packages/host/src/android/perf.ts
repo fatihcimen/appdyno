@@ -19,12 +19,17 @@ import {
   type FrameTimeline,
   type LaunchSample,
   type MemoryStats,
+  parseSimpleperfReport,
+  type ProfileEntry,
 } from './perf-parse.js';
 
 const run = promisify(execFile);
 
 /** A measurement and the raw output it was read from (kept as its proof). */
 export type Measured<T> = { value: T; raw: string; at: string };
+
+export type CpuProfile = { durationMs: number; samples: number; top: ProfileEntry[] };
+export type HeapDump = { file: string; bytes: number };
 
 export type CpuStats = { percent: number; windowMs: number; ticks: number; clockTicksPerSec: number };
 export type LaunchStats = {
@@ -146,6 +151,52 @@ export class AndroidPerf {
         'echo ==battery==; dumpsys battery 2>/dev/null',
     );
     return { value: parseVitals(raw), raw, at: at() };
+  }
+
+  /**
+   * Where the app's CPU time goes: `simpleperf` samples its threads for `durationMs` (the app must be
+   * debuggable or profileable) and reports the functions by their share of the samples.
+   */
+  async cpuProfile(pkg: string, durationMs = 3_000, during?: () => Promise<unknown>): Promise<Measured<CpuProfile>> {
+    assertPkg(pkg);
+    await this.pid(pkg);
+    const s = Math.min(Math.max(Math.round(durationMs / 1000), 1), 30);
+    const file = `/data/local/tmp/appdyno-${randomBytes(4).toString('hex')}.data`;
+    try {
+      const rec = this.sh(`simpleperf record --app ${pkg} -f 1000 --duration ${s} -o ${file} 2>&1`, (s + 30) * 1000);
+      if (during) await during();
+      const recorded = await rec;
+      if (!/Samples recorded|samples/i.test(recorded) && /error|fail/i.test(recorded))
+        throw new DeviceError('UNSUPPORTED', `simpleperf could not record ${pkg}: ${recorded.trim().slice(0, 300)}`);
+      const report = await this.sh(`simpleperf report -i ${file} --sort symbol -n --percent-limit 0.3 2>&1`, 60_000);
+      const total = Number(/^Samples:\s*(\d+)/m.exec(report)?.[1] ?? 0);
+      return { value: { durationMs: s * 1000, samples: total, top: parseSimpleperfReport(report) }, raw: `${recorded}\n---\n${report}`, at: at() };
+    } finally {
+      await this.device.shell(`rm -f ${file}`).catch(() => undefined);
+    }
+  }
+
+  /** A heap dump of the app (HPROF, for a memory analyser) saved at `localPath`; the file stays on this machine. */
+  async heapDump(pkg: string, localPath: string): Promise<Measured<HeapDump>> {
+    assertPkg(pkg);
+    await this.pid(pkg);
+    const remote = `/data/local/tmp/appdyno-${randomBytes(4).toString('hex')}.hprof`;
+    try {
+      const out = await this.sh(`am dumpheap ${pkg} ${remote} 2>&1`, 120_000);
+      // the dump is written by the app after the command returns: wait until its size stops growing
+      let last = -1;
+      for (let i = 0; i < 120; i++) {
+        const size = Number((await this.device.shell(`stat -c %s ${remote} 2>/dev/null`)).trim() || -1);
+        if (size > 0 && size === last) break;
+        last = size;
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      if (last <= 0) throw new DeviceError('UNSUPPORTED', `no heap dump of ${pkg}: ${out.trim().slice(0, 200)}`);
+      await this.device.pull(remote, localPath);
+      return { value: { file: localPath, bytes: last }, raw: out, at: at() };
+    } finally {
+      await this.device.shell(`rm -f ${remote}`).catch(() => undefined);
+    }
   }
 
   /**
