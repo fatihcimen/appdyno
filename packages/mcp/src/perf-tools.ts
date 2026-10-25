@@ -255,7 +255,12 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
         return text(
           [
             `ölçüm ${saved.id}${relative(s)}`,
-            `${v.frames} kare, takılan ${v.janky} (%${v.jankyPercent}): uygulama gecikmesi ${v.appDeadlineMissed}, buffer stuffing ${v.bufferStuffing}, birleştirici ${v.surfaceFlinger}`,
+            `${v.frames} kare; uygulamanın geciktirdiği ${v.appDeadlineMissed} (%${v.appJankPercent}); herhangi bir takılma ${v.janky} (%${v.jankyPercent}: buffer stuffing ${v.bufferStuffing}, birleştirici ${v.surfaceFlinger})`,
+            ...(virtual(s)
+              ? [
+                  'sanal cihazda birleştirici takılması ekranın tahmin hatasıdır, uygulamaya yazılmaz: uygulamanın payına bak',
+                ]
+              : []),
             `kare süresi p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, en kötü ${v.worstMs} ms`,
             `ham çıktı: ${saved.txt}`,
           ].join('\n'),

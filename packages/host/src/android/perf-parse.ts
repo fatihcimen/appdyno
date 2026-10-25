@@ -63,23 +63,24 @@ export type FrameRow = { durationMs: number; intervalMs: number };
  * frame) and broken rows are left out. Columns are found by their header: releases add columns.
  */
 export function parseFramestats(text: string): FrameRow[] {
-  const block = /---PROFILEDATA---\n([\s\S]*?)---PROFILEDATA---/.exec(text)?.[1];
-  if (!block) return [];
-  const [head, ...rows] = block.trim().split('\n');
-  const cols = (head ?? '').split(',');
-  const at = (c: string) => cols.indexOf(c);
-  const [flags, start, end] = [at('Flags'), at('IntendedVsync'), at('FrameCompleted')];
-  // some releases print FrameInterval and FrameStartTime in the other order than their header: the
-  // interval is whichever of the two is a plausible vsync period (1 ms to 1 s), not a timestamp
-  const intervalCols = [at('FrameInterval'), at('FrameStartTime')].filter((i) => i >= 0);
-  if (flags < 0 || start < 0 || end < 0) return [];
   const out: FrameRow[] = [];
-  for (const r of rows) {
-    const v = r.split(',');
-    const ns = Number(v[end]) - Number(v[start]);
-    const iv = intervalCols.map((i) => Number(v[i])).find((x) => x > 1e6 && x < 1e9) ?? 16_666_667;
-    if (v[flags] === '0' && Number.isFinite(ns) && ns > 0)
-      out.push({ durationMs: Math.round(ns / 1e5) / 10, intervalMs: Math.round((iv > 0 ? iv : 16_666_667) / 1e5) / 10 });
+  // one block per window of the process (an empty one for a window that drew nothing)
+  for (const m of text.matchAll(/---PROFILEDATA---\n([\s\S]*?)---PROFILEDATA---/g)) {
+    const [head, ...rows] = m[1]!.trim().split('\n');
+    const cols = (head ?? '').split(',');
+    const at = (c: string) => cols.indexOf(c);
+    const [flags, start, end] = [at('Flags'), at('IntendedVsync'), at('FrameCompleted')];
+    // some releases print FrameInterval and FrameStartTime in the other order than their header: the
+    // interval is whichever of the two is a plausible vsync period (1 ms to 1 s), not a timestamp
+    const intervalCols = [at('FrameInterval'), at('FrameStartTime')].filter((i) => i >= 0);
+    if (flags < 0 || start < 0 || end < 0) continue;
+    for (const r of rows) {
+      const v = r.split(',');
+      const ns = Number(v[end]) - Number(v[start]);
+      const iv = intervalCols.map((i) => Number(v[i])).find((x) => x > 1e6 && x < 1e9) ?? 16_666_667;
+      if (v[flags] === '0' && Number.isFinite(ns) && ns > 0)
+        out.push({ durationMs: Math.round(ns / 1e5) / 10, intervalMs: Math.round(iv / 1e5) / 10 });
+    }
   }
   return out;
 }
@@ -94,13 +95,15 @@ const pct = (xs: number[], p: number) => {
   return s[Math.min(s.length - 1, Math.max(0, Math.ceil(p * s.length) - 1))] ?? 0;
 };
 
-/** The summary plus what the per-frame rows say: a frame slower than its vsync interval is slow. */
+/** The summary plus what the per-frame rows say: a frame over two vsync intervals is slow. */
 export function parseFrameStats(text: string): FrameStats {
   const out: FrameStats = parseGfxSummary(text);
   const rows = parseFramestats(text);
   if (rows.length > 0) {
     const ms = rows.map((r) => r.durationMs);
-    const slow = rows.filter((r) => r.durationMs > r.intervalMs).length;
+    // a frame finishes about one interval after its vsync even when smooth (the render pipeline): slow is
+    // over two intervals, a missed frame
+    const slow = rows.filter((r) => r.durationMs > 2 * r.intervalMs).length;
     out.frames = {
       count: rows.length,
       slow,
@@ -200,9 +203,12 @@ export function parseVitals(text: string): DeviceVitals {
 
 export type FrameTimeline = {
   frames: number;
+  /** Frames with any jank type (on an emulator nearly all: its display's prediction errors). */
   janky: number;
   jankyPercent: number;
   appDeadlineMissed: number;
+  /** The app's own share: frames whose type says the app missed its deadline. */
+  appJankPercent: number;
   bufferStuffing: number;
   surfaceFlinger: number;
   p50Ms: number;
@@ -237,6 +243,9 @@ export function parseFrameTimelineCsv(csv: string): FrameTimeline {
     janky,
     jankyPercent: rows.length ? Math.round((janky / rows.length) * 1000) / 10 : 0,
     appDeadlineMissed: rows.filter((r) => has(r.jank, /App Deadline Missed/)).length,
+    appJankPercent: rows.length
+      ? Math.round((rows.filter((r) => has(r.jank, /App Deadline Missed/)).length / rows.length) * 1000) / 10
+      : 0,
     bufferStuffing: rows.filter((r) => has(r.jank, /Buffer Stuffing/)).length,
     surfaceFlinger: rows.filter((r) => has(r.jank, /SurfaceFlinger|Display HAL|Prediction Error/)).length,
     p50Ms: Math.round(pct(ms, 0.5) * 10) / 10,

@@ -263,6 +263,7 @@ export class FakeDevice implements DriveableDevice {
             janky: 5,
             jankyPercent: 10,
             appDeadlineMissed: 4,
+            appJankPercent: 8,
             bufferStuffing: 1,
             surfaceFlinger: 0,
             p50Ms: 9,

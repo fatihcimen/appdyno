@@ -349,6 +349,7 @@ describe('perf tools', () => {
   it('trace: the frame timeline summary', async () => {
     const t = await connect();
     const r = await t.textOf('perf_trace', { seconds: 2 });
-    expect(r.text).toContain('50 kare, takılan 5 (%10): uygulama gecikmesi 4');
+    expect(r.text).toContain('50 kare; uygulamanın geciktirdiği 4 (%8)');
+    expect(r.text).toContain('sanal cihazda birleştirici');
   });
 });

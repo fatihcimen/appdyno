@@ -34,6 +34,16 @@ describe('android perf parsers on recorded outputs', () => {
     });
   });
 
+  it('reads the rows of every window block, an empty block first', () => {
+    const block = (rows: string) =>
+      `---PROFILEDATA---\nFlags,IntendedVsync,FrameCompleted,\n${rows}---PROFILEDATA---\n`;
+    const text = `${block('')}${block('0,1000000000,1040000000,\n0,2000000000,2010000000,\n1,3000000000,3500000000,\n')}`;
+    expect(parseFramestats(text)).toEqual([
+      { durationMs: 40, intervalMs: 16.7 },
+      { durationMs: 10, intervalMs: 16.7 },
+    ]);
+  });
+
   it('counts frozen frames from the histogram buckets from 700 ms on', () => {
     const text =
       'Total frames rendered: 100\nJanky frames: 5 (5.00%)\nHISTOGRAM: 5ms=90 700ms=2 1150ms=1\n';
@@ -82,6 +92,7 @@ describe('android perf parsers on recorded outputs', () => {
       janky: 3,
       jankyPercent: 60,
       appDeadlineMissed: 2,
+      appJankPercent: 40,
       bufferStuffing: 1,
       surfaceFlinger: 1,
       p50Ms: 16,

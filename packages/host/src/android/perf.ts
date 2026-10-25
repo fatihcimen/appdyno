@@ -170,7 +170,7 @@ export class AndroidPerf {
     try {
       if (during) await during();
       const end = Date.now() + ms + 15_000;
-      while (Date.now() < end && (await this.device.shell(`kill -0 ${pid} 2>/dev/null && echo up`)).includes('up'))
+      while (Date.now() < end && (await this.device.shell(`[ -d /proc/${pid} ] && echo up`)).includes('up'))
         await new Promise((r) => setTimeout(r, 300));
       const trace = await this.device.shellBuffer(`cat ${remote}`, 60_000);
       if (trace.length === 0) throw new DeviceError('INTERNAL', 'the trace is empty');

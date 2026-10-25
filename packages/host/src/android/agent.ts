@@ -68,8 +68,14 @@ export class AndroidAgentLauncher {
       if (c) return { ...c, started: false };
     }
     if (state?.pid) await this.kill(state.pid);
-    const fresh = await this.start(apk);
-    return { ...fresh, started: true };
+    try {
+      return { ...(await this.start(apk)), started: true };
+    } catch (e) {
+      // our own agent from a lost state (another state folder, a cleared cache) holds the device: it
+      // cannot be reached without its token, so it is replaced, once
+      if (!(e instanceof DeviceError) || e.code !== 'AGENT_CONFLICT' || !(await this.killOrphans())) throw e;
+      return { ...(await this.start(apk)), started: true };
+    }
   }
 
   /** Stops this device's agent (and forgets it). */
@@ -141,6 +147,15 @@ export class AndroidAgentLauncher {
       rpc.close();
       throw e;
     }
+  }
+
+  /** Stops every agent process of ours on the device; true when there was one. */
+  private async killOrphans(): Promise<boolean> {
+    const out = await this.adb.exec(this.serial, `pgrep -f '${AGENT_MAIN.replace(/\./g, '[.]')}'`).catch(() => '');
+    const pids = out.split(/\s+/).map(Number).filter((n) => Number.isInteger(n) && n > 0);
+    for (const pid of pids) await this.kill(pid);
+    if (pids.length > 0) await new Promise((r) => setTimeout(r, 500));
+    return pids.length > 0;
   }
 
   private async kill(pid: number) {
