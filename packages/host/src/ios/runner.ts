@@ -137,9 +137,6 @@ export class IosRunnerLauncher {
           TEST_RUNNER_GD_PORT: String(port),
           TEST_RUNNER_GD_TOKEN: token,
           ...(target && { TEST_RUNNER_GD_TARGET: target }),
-          ...(process.env.APPDYNO_TAP_PRESS_MS && {
-            TEST_RUNNER_GD_TAP_PRESS_MS: process.env.APPDYNO_TAP_PRESS_MS,
-          }),
         },
       },
     );

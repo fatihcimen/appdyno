@@ -27,7 +27,10 @@ export function parseFootprint(out: string): IosMemory | undefined {
     const k = { K: 1, M: 1024, G: 1024 * 1024 }[(m[2] ?? 'K').toUpperCase() as 'K' | 'M' | 'G'];
     return Math.round(Number(m[1]) * k);
   };
-  const now = /^Physical footprint:\s+(\S+)/m.exec(out)?.[1];
+  // the memory tool ("Footprint: 52 MB") or the region map ("Physical footprint: 52.3M")
+  const now =
+    /\bFootprint:\s+([\d.]+\s*[KMG]?)/.exec(out)?.[1] ??
+    /^Physical footprint:\s+(\S+)/m.exec(out)?.[1];
   const peak = /^Physical footprint \(peak\):\s+(\S+)/m.exec(out)?.[1];
   const kb = now ? size(now) : undefined;
   if (kb === undefined) return undefined;
@@ -79,6 +82,60 @@ export function parseSampleTop(
   };
 }
 
+/**
+ * The app's own functions by busy inclusive samples: the call graph's count at the function minus what
+ * its callees spent waiting idle. Where the app's time goes even when a debug build spends it in
+ * runtime helpers; idle threads (a main thread waiting for events) do not count.
+ */
+export function parseSampleApp(report: string, limit = 10): ProfileEntry[] {
+  const exe = /^Path:\s+(.+)$/m.exec(report)?.[1]?.trim().split('/').pop();
+  const start = report.indexOf('Call graph:');
+  if (!exe || start < 0) return [];
+  const own = new Set([exe, `${exe}.debug.dylib`]);
+  const end = report.indexOf('Total number in stack');
+  type N = { depth: number; count: number; symbol: string; image: string; kids: N[] };
+  const roots: N[] = [];
+  const stack: N[] = [];
+  for (const line of report
+    .slice(start, end < 0 ? undefined : end)
+    .split('\n')
+    .slice(1)) {
+    const m = /^([\s+!:|]*?)(\d+)\s+(.+?)(?:\s+\(in ([^)]+)\))?(?:\s+\+\s+\d+.*)?$/.exec(line);
+    if (!m) continue;
+    const node: N = {
+      depth: m[1]!.length,
+      count: Number(m[2]),
+      symbol: m[3]!.trim(),
+      image: m[4] ?? '',
+      kids: [],
+    };
+    while (stack.length && stack[stack.length - 1]!.depth >= node.depth) stack.pop();
+    (stack.length ? stack[stack.length - 1]!.kids : roots).push(node);
+    stack.push(node);
+  }
+  const busyOf = new Map<N, number>();
+  const busy = (n: N): number => {
+    const kids = n.kids.reduce((a, k) => a + k.count, 0);
+    const self = Math.max(0, n.count - kids);
+    const v = (IDLE.test(n.symbol) ? 0 : self) + n.kids.reduce((a, k) => a + busy(k), 0);
+    busyOf.set(n, v);
+    return v;
+  };
+  const total = roots.reduce((a, r) => a + busy(r), 0);
+  const counts = new Map<string, number>();
+  for (const [n, v] of busyOf)
+    if (own.has(n.image)) counts.set(n.symbol, Math.max(counts.get(n.symbol) ?? 0, v));
+  return [...counts]
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([symbol, samples]) => ({
+      symbol,
+      samples,
+      percent: total ? Math.round((samples / total) * 1000) / 10 : 0,
+    }));
+}
+
 const median = (xs: number[]) => {
   const s = [...xs].sort((a, b) => a - b);
   return s.length ? s[Math.floor((s.length - 1) / 2)]! : 0;
@@ -110,7 +167,7 @@ export class IosSimulatorPerf {
 
   async memory(bundle: string): Promise<Measured<IosMemory>> {
     const pid = await this.pid(bundle);
-    const { stdout } = await run('footprint', ['--summary', String(pid)], {
+    const { stdout } = await run('footprint', [String(pid)], {
       timeout: 30_000,
     }).catch(() => run('vmmap', ['--summary', String(pid)], { timeout: 60_000 }));
     const value = parseFootprint(stdout);
@@ -173,7 +230,7 @@ export class IosSimulatorPerf {
     bundle: string,
     durationMs = 3_000,
     during?: () => Promise<unknown>,
-  ): Promise<Measured<CpuProfile>> {
+  ): Promise<Measured<CpuProfile & { appTop: ProfileEntry[] }>> {
     const pid = await this.pid(bundle);
     const s = Math.min(Math.max(Math.round(durationMs / 1000), 1), 30);
     const rec = run('sample', [String(pid), String(s), '-mayDie'], {
@@ -187,6 +244,10 @@ export class IosSimulatorPerf {
       ? await readFile(file, 'utf8').finally(() => rm(file, { force: true }))
       : stdout;
     const { samples, top } = parseSampleTop(report);
-    return { value: { durationMs: s * 1000, samples, top }, raw: report, at: at() };
+    return {
+      value: { durationMs: s * 1000, samples, top, appTop: parseSampleApp(report) },
+      raw: report,
+      at: at(),
+    };
   }
 }

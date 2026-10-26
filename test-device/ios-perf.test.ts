@@ -65,8 +65,9 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
       })
     ).value;
     expect(prof.samples).toBeGreaterThan(100);
-    expect(prof.top[0]!.symbol).toMatch(/CpuScreen/);
-    expect(prof.top[0]!.percent).toBeGreaterThan(30);
+    // a debug build spends the loop's own time in runtime helpers: the app's functions rank by busy inclusive time
+    expect(prof.appTop[0]?.symbol).toMatch(/CpuScreen/);
+    expect(prof.appTop[0]!.percent).toBeGreaterThan(30);
     await pause(2_000);
   }, 60_000);
 

@@ -146,6 +146,8 @@ export const ProfileOut = z.object({
   ...Measurement,
   samples: z.number(),
   top: z.array(z.object({ percent: z.number(), symbol: z.string() })),
+  /** iOS: the app's own functions by busy inclusive time. */
+  appTop: z.array(z.object({ percent: z.number(), symbol: z.string() })).optional(),
 });
 
 export const HeapOut = z.object({ id: z.string(), file: z.string(), bytes: z.number() });

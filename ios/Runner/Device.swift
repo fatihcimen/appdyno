@@ -12,7 +12,6 @@ final class Device {
     private let settler = Settler(clock: { Int(Date().timeIntervalSince1970 * 1000) },
                                   sleep: { Thread.sleep(forTimeInterval: Double($0) / 1000) })
     static let inertQuietMs = 80
-    static let tapPressMs = ProcessInfo.processInfo.environment["APPDYNO_TAP_PRESS_MS"].flatMap(Int.init) ?? 0
 
     func setTarget(_ id: String) {
         targetId = id
@@ -107,12 +106,7 @@ final class Device {
         }
         switch a["kind"] as? String {
         case "tap":
-            // a short press is a tap to UIKit; APPDYNO_TAP_PRESS_MS=0 uses XCUI's own tap
-            if Device.tapPressMs > 0 {
-                point(try num("x"), try num("y")).press(forDuration: Double(Device.tapPressMs) / 1000)
-            } else {
-                point(try num("x"), try num("y")).tap()
-            }
+            point(try num("x"), try num("y")).tap()
         case "longPress":
             point(try num("x"), try num("y")).press(forDuration: try num("durationMs") / 1000)
         case "swipe":
@@ -198,10 +192,12 @@ final class Device {
     func setText(_ p: [String: Any], job: Job) throws -> [String: Any] {
         guard let text = p["text"] as? String else { throw AgentError("INVALID_ARGUMENT", "text is required") }
         let t0 = Date()
-        if let at = p["at"] as? [String: Any], let x = (at["x"] as? NSNumber)?.doubleValue, let y = (at["y"] as? NSNumber)?.doubleValue {
-            point(x, y).tap()
-        }
         let app = front().0
+        if let at = p["at"] as? [String: Any], let x = (at["x"] as? NSNumber)?.doubleValue, let y = (at["y"] as? NSNumber)?.doubleValue {
+            // a field that already has the focus there is not tapped again (each event costs about 350 ms)
+            let focused = focusedField(app)
+            if focused == nil || !(focused!.frame.contains(CGPoint(x: x, y: y))) { point(x, y).tap() }
+        }
         let timeout = Double((p["focusTimeoutMs"] as? NSNumber)?.intValue ?? 2000) / 1000
         var field = focusedField(app)
         while field == nil, Date().timeIntervalSince(t0) < timeout, !job.over {

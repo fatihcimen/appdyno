@@ -84,7 +84,13 @@ try {
     if (!r.verified) throw new Error('not verified');
   });
   await home();
-  await measure('screenshot', n, () => d.screenshot({ format: 'jpeg', quality: 80, maxPx: 1024 }));
+  // a shared simulator: few screenshots, spaced out (10 + 3 warm-up, 500 ms apart)
+  await measure(
+    'screenshot',
+    10,
+    () => d.screenshot({ format: 'jpeg', quality: 80, maxPx: 1024 }),
+    () => pause(500),
+  );
   await measure('reconnect', Math.min(n, 20), async () => {
     d.close();
     d = new IosSimulatorDevice(udid);

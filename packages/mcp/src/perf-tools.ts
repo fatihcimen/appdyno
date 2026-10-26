@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { Measured } from 'appdyno';
+import type { CpuProfile, Measured, ProfileEntry } from 'appdyno';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { checkApp } from './policy.js';
@@ -348,7 +348,9 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
               }
             }
           : undefined;
-        const m = await (s.device.iosPerf ?? perfOf(s.device))
+        const m: Measured<CpuProfile & { appTop?: ProfileEntry[] }> = await (
+          s.device.iosPerf ?? perfOf(s.device)
+        )
           .cpuProfile(pkg, seconds * 1000, during)
           .catch(refused);
         if (scroll) s.acted();
@@ -358,6 +360,12 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
             `ölçüm ${saved.id}${relative(s)}`,
             `${m.value.samples} örnek, ${m.value.durationMs} ms; en çok zaman alanlar:`,
             ...m.value.top.slice(0, 10).map((e) => `%${e.percent} ${e.symbol}`),
+            ...(m.value.appTop?.length
+              ? [
+                  'uygulamanın kendi fonksiyonları (çağırdıkları dahil):',
+                  ...m.value.appTop.slice(0, 10).map((e) => `%${e.percent} ${e.symbol}`),
+                ]
+              : []),
             `ham çıktı: ${saved.txt}`,
           ].join('\n'),
           {
@@ -366,6 +374,9 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
             virtualDevice: virtual(s),
             samples: m.value.samples,
             top: m.value.top.map((e) => ({ percent: e.percent, symbol: e.symbol })),
+            ...(m.value.appTop && {
+              appTop: m.value.appTop.map((e) => ({ percent: e.percent, symbol: e.symbol })),
+            }),
           },
         );
       },
