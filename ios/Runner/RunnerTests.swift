@@ -69,6 +69,7 @@ final class RunnerTests: XCTestCase {
                 + (IdleShim.applied.isEmpty ? [] : ["noIdleWait"]) + (EventShim.available ? ["fastTap"] : []),
             "pid": Int(ProcessInfo.processInfo.processIdentifier),
             "idleWaitsOff": IdleShim.applied,
+            "idleShimChecked": IdleShim.selfChecked,
             "fastTap": EventShim.available,
         ]
     }

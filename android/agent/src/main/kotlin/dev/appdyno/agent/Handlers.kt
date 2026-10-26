@@ -49,7 +49,10 @@ class Handlers(private val automation: Automation, private val token: String) {
     fun ping() = JSONObject().put("uptimeMs", SystemClock.uptimeMillis() - startedAt)
 
     fun handle(method: String, p: JSONObject, job: Job): Reply = when (method) {
-        "tree.get" -> Reply(treeJson(capture.capture(p.optInt("maxDepth", 128), p.optInt("maxNodes", 5_000))))
+        "tree.get" -> {
+            idle(job)
+            Reply(treeJson(capture.capture(p.optInt("maxDepth", 128), p.optInt("maxNodes", 5_000))))
+        }
         "act" -> act(p, job)
         "text.set" -> textSet(p, job)
         "screenshot" -> screenshot(p)
@@ -117,11 +120,24 @@ class Handlers(private val automation: Automation, private val token: String) {
             { input.tap(at.getDouble("x").toFloat(), at.getDouble("y").toFloat()) }
         }
         tapAt?.invoke()
-        val o = text.set(p.getString("text"), p.optBoolean("replace"), p.optLong("focusTimeoutMs", 2_000), cancelled, tapAt)
+        val o = text.set(p.getString("text"), p.optBoolean("replace"), p.optLong("focusTimeoutMs", 5_000), cancelled, tapAt)
         if (p.optBoolean("submit")) input.key(android.view.KeyEvent.KEYCODE_ENTER)
         val at = SystemClock.uptimeMillis()
         val out = JSONObject().put("mode", o.mode).put("verified", o.verified).put("focusMs", o.focusMs)
         return after(p, at, job, out)
+    }
+
+    /**
+     * Before a read: the app quiet, as the platform tells it (no layout-moving accessibility event for
+     * IDLE_QUIET_MS, at most IDLE_MAX_MS); an app already quiet is read at once.
+     */
+    private fun idle(job: Job) {
+        val end = SystemClock.uptimeMillis() + IDLE_MAX_MS
+        while (!job.cancelled && SystemClock.uptimeMillis() < end) {
+            val quiet = SystemClock.uptimeMillis() - automation.lastEventAt
+            if (quiet >= IDLE_QUIET_MS) return
+            Thread.sleep(IDLE_QUIET_MS - quiet)
+        }
     }
 
     /** The settle and the read an action asked for, into its result. */
@@ -218,6 +234,9 @@ class Handlers(private val automation: Automation, private val token: String) {
     companion object {
         /** The quiet window after a tap on something that cannot react (an immediate touch reaction still shows). */
         const val INERT_QUIET_MS = 80L
+        /** A read waits for this long without a layout-moving event (an app already quiet: no wait). */
+        const val IDLE_QUIET_MS = 150L
+        const val IDLE_MAX_MS = 1_000L
 
         val CAPABILITIES = listOf(
             "tree", "tap", "longPress", "swipe", "gesture", "key", "text", "screenshot", "foreground",

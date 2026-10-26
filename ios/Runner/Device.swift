@@ -12,6 +12,8 @@ final class Device {
     private let settler = Settler(clock: { Int(Date().timeIntervalSince1970 * 1000) },
                                   sleep: { Thread.sleep(forTimeInterval: Double($0) / 1000) })
     static let inertQuietMs = 80
+    /// How long an actionable tap that changed nothing watches for a system alert on its way.
+    static let alertWatchS = 0.8
     /// How long an alert or sheet takes to come up (UIKit's presentation is about 0.3–0.4 s).
     static let alertAppearS = 0.45
 
@@ -192,8 +194,10 @@ final class Device {
             var quiet = (s["quietMs"] as? NSNumber)?.intValue ?? 200
             let maxMs = (s["maxMs"] as? NSNumber)?.intValue ?? 3000
             let before = (p["before"] as? String).flatMap { h in recent.last { $0.hash == h }?.nodes }
+            var inert = false
             if let tapAt, let before, !actionable(before, x: Int(tapAt.0), y: Int(tapAt.1)) {
                 quiet = min(quiet, Device.inertQuietMs)
+                inert = true
             }
             // an alert or sheet that came up during the settle is still animating in: a tap on it then is
             // lost, so the screen counts as busy for its appear animation
@@ -213,7 +217,19 @@ final class Device {
                                 },
                                 same: { sameLayout($0.nodes, $1.nodes) }, busy: { $0.busy }, cancelled: { job.over })
             last = r.last
-            out["settle"] = ["settled": r.settled, "ms": r.elapsedMs, "reads": r.reads, "quietMs": quiet]
+            let idleAt = Date()
+            var idleMs = 0
+            // an actionable tap that changed nothing in the app may have asked the system for something (a
+            // permission): its alert comes from the home screen app a moment later, while the app is idle
+            if tapAt != nil, !inert, let before, let now = last, sameLayout(before, now.nodes), !Device.hasAlert(now.nodes) {
+                let end = Date().addingTimeInterval(Device.alertWatchS)
+                while Date() < end, !job.over, !springboard.alerts.firstMatch.exists {
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+                }
+                if springboard.alerts.firstMatch.exists { last = try? capture(job: job) }
+                idleMs = Int(Date().timeIntervalSince(idleAt) * 1000)
+            }
+            out["settle"] = ["settled": r.settled, "ms": r.elapsedMs + idleMs, "reads": r.reads, "quietMs": quiet]
         }
         switch p["read"] as? String ?? "none" {
         case "hash", "tree":

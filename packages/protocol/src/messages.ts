@@ -119,6 +119,8 @@ export const Hello = z.object({
   screen: z.object({ w: z.number(), h: z.number(), density: z.number(), rotation: z.number() }),
   capabilities: z.array(z.string()),
   pid: z.number().int().optional(),
+  /** iOS: the runner's private shims checked at start (a replacement called with a BOOL in every slot). */
+  idleShimChecked: z.boolean().optional(),
 });
 export type Hello = z.infer<typeof Hello>;
 
@@ -177,7 +179,8 @@ export const METHODS = {
       submit: z.boolean().default(false),
       /** Tap here first and wait for an editable field to take focus. */
       at: Point.optional(),
-      focusTimeoutMs: z.number().int().min(0).max(10_000).default(2_000),
+      /** A ceiling: the text goes in as soon as a field reports the focus. */
+      focusTimeoutMs: z.number().int().min(0).max(10_000).default(5_000),
       settle: Settle.optional(),
       read: Read.default('none'),
     }),

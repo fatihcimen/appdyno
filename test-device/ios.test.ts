@@ -42,6 +42,8 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(d.hello).toMatchObject({ platform: 'ios', protocol: { major: 1 } });
     expect(d.hello!.screen.density).toBeGreaterThanOrEqual(2);
     expect(d.hello!.capabilities).toContain('app.target');
+    // the idle shim's replacements were each called at start with a BOOL in every slot (a crash otherwise)
+    expect(d.hello!.idleShimChecked).toBe(true);
   });
 
   it('reads the fixture home with the app in front', async () => {
