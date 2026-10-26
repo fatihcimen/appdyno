@@ -16,11 +16,18 @@ import { DeviceQueue } from '../queue.js';
 import type { RpcClient } from '../rpc.js';
 import { buildScreen, type Screen } from '../screen/index.js';
 import { IosSimulatorPerf } from './perf.js';
+import { existsSync } from 'node:fs';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { stateDir } from '../android/agent.js';
 import { IosRunnerLauncher } from './runner.js';
 import { recordHitches } from './trace.js';
 import { assertBundle, Simctl } from './simctl.js';
+
+/** Diagnostics: while this file exists, iOS tree reads are written to DUMP_DIR. */
+const DUMP_FLAG = join(homedir(), 'Library/Caches/appdyno/dump-trees');
+const DUMP_DIR = join(homedir(), 'Library/Caches/appdyno/tree-dumps');
 
 /** The confirmation's button (English, Turkish). */
 const OPEN = /^(Open|Aç)$/;
@@ -148,7 +155,19 @@ export class IosDevice {
   }
 
   async tree(opts: { maxDepth?: number; maxNodes?: number } = {}): Promise<Tree> {
-    return (await this.call('tree.get', opts, TIMEOUTS.read)).result;
+    const t = (await this.call('tree.get', opts, TIMEOUTS.read)).result;
+    // diagnostics: while the flag file exists, every read is kept (this machine only)
+    if (existsSync(DUMP_FLAG))
+      await mkdir(DUMP_DIR, { recursive: true, mode: 0o700 })
+        .then(() =>
+          writeFile(
+            join(DUMP_DIR, `${Date.now()}-${this.serial.slice(0, 8)}.json`),
+            JSON.stringify(t),
+            { mode: 0o600 },
+          ),
+        )
+        .catch(() => undefined);
+    return t;
   }
 
   async read(appId?: string): Promise<Screen> {
