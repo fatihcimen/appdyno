@@ -73,6 +73,15 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     }
   });
 
+  it('of the same control twice, the copy under another control is not shown', async () => {
+    await open('Form');
+    const nodes = (await d.tree()).nodes.filter((n) => n.id === 'dup_close');
+    expect(nodes).toHaveLength(2);
+    const shown = nodes.filter((n) => n.f & 1);
+    expect(shown).toHaveLength(1);
+    expect(shown[0]!.b[0]).toBeGreaterThan(Math.min(...nodes.map((n) => n.b[0])));
+  });
+
   it('answers an alert', async () => {
     const s = await open('Diyalog');
     await d.tap(byId(s, 'open_dialog')!, { settle: SETTLE });

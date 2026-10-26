@@ -84,6 +84,32 @@ final class Device {
         return Capture(windows: windows, nodes: nodes, truncated: truncated, busy: busy)
     }
 
+    /**
+     * The same control (type and identifier) found more than once: the copies a tap would not reach (drawn
+     * under another view, never shown) are marked not visible, so a tool picks the one on screen. Live: the
+     * Appdyno home walkthrough keeps a second bubble with its close button under the header; other drivers
+     * report one. XCUI's hittable check decides, only for such duplicates (a few queries).
+     */
+    func hideUnreachableCopies(_ c: inout Capture) {
+        let app = front().0
+        var groups: [String: [Int]] = [:]
+        for (i, n) in c.nodes.enumerated() where n.window == 0 && n.flags & Flag.visible != 0 {
+            if let id = n.id { groups["\(n.type)#\(id)", default: []].append(i) }
+        }
+        for idxs in groups.values.filter({ $0.count > 1 }).prefix(4) {
+            guard let id = c.nodes[idxs[0]].id else { continue }
+            let query = app.descendants(matching: .any).matching(identifier: id)
+            for k in 0 ..< min(query.count, 8) {
+                let e = query.element(boundBy: k)
+                guard e.exists, !e.isHittable else { continue }
+                let r = Device.rect(e.frame)
+                if let ni = idxs.first(where: { [c.nodes[$0].left, c.nodes[$0].top, c.nodes[$0].right, c.nodes[$0].bottom] == r }) {
+                    c.nodes[ni].flags &= ~Flag.visible
+                }
+            }
+        }
+    }
+
     func remember(_ c: Capture) {
         let h = c.hash
         recent.removeAll { $0.hash == h }
@@ -192,7 +218,8 @@ final class Device {
         switch p["read"] as? String ?? "none" {
         case "hash", "tree":
             let t0 = Date()
-            let c = try last.flatMap { $0.windows.isEmpty ? nil : $0 } ?? capture(job: job)
+            var c = try last.flatMap { $0.windows.isEmpty ? nil : $0 } ?? capture(job: job)
+            hideUnreachableCopies(&c)
             remember(c)
             out["hash"] = c.hash
             if p["read"] as? String == "tree" { out["tree"] = treeJSON(c, elapsedMs: Int(Date().timeIntervalSince(t0) * 1000)) }
@@ -360,20 +387,6 @@ final class Device {
 
     // MARK: mapping
 
-    private static let visibleFrameKey = NSSelectorFromString("visibleFrame")
-
-    /**
-     * The part of the element on screen after its ancestors' clipping is not empty: XCUI also reports
-     * elements that are not shown (a second close button of an overlay at the top, clipped away; live,
-     * the Appdyno home walkthrough), which other drivers leave out. Where the snapshot has no such part,
-     * nothing is assumed.
-     */
-    static func shownPart(_ s: XCUIElementSnapshot) -> Bool {
-        guard let o = s as? NSObject, o.responds(to: visibleFrameKey),
-              let v = o.value(forKey: "visibleFrame") as? CGRect else { return true }
-        return v.width > 0 && v.height > 0
-    }
-
     static func rect(_ r: CGRect) -> [Int] {
         guard r.width.isFinite, r.height.isFinite else { return [0, 0, 0, 0] }
         return [Int(r.minX.rounded()), Int(r.minY.rounded()), Int(r.maxX.rounded()), Int(r.maxY.rounded())]
@@ -392,7 +405,7 @@ final class Device {
         let b = rect(s.frame)
         let t = s.elementType
         var f = 0
-        if s.frame.width > 0, s.frame.height > 0, s.frame.intersects(screen), shownPart(s) { f |= Flag.visible }
+        if s.frame.width > 0, s.frame.height > 0, s.frame.intersects(screen) { f |= Flag.visible }
         if clickableTypes.contains(t) { f |= Flag.clickable }
         if editableTypes.contains(t) { f |= Flag.editable | Flag.focusable }
         if s.hasFocus { f |= Flag.focused }

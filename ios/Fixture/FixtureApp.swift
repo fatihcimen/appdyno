@@ -97,6 +97,15 @@ struct FormScreen: View {
                     if f != v { gsm = f }
                 }
             Button("Gönder") { result = "Gönderildi: \(name)" }.accessibilityIdentifier("submit")
+            // the same control twice, one copy drawn under another control (as an overlay's spare bubble
+            // under a header): only the one in the open can be tapped
+            HStack {
+                ZStack {
+                    Button("x-mark") {}.accessibilityIdentifier("dup_close")
+                    Button("Üstteki") {}.frame(width: 120, height: 44).background(Color.purple)
+                }
+                Button("x-mark") {}.accessibilityIdentifier("dup_close")
+            }
             Text(result).accessibilityIdentifier("result")
             Spacer()
         }

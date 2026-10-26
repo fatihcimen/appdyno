@@ -85,8 +85,9 @@ final class RunnerTests: XCTestCase {
         switch job.method {
         case "tree.get":
             let t0 = Date()
-            let c = try d.capture(maxDepth: (p["maxDepth"] as? NSNumber)?.intValue ?? 128,
+            var c = try d.capture(maxDepth: (p["maxDepth"] as? NSNumber)?.intValue ?? 128,
                                   maxNodes: (p["maxNodes"] as? NSNumber)?.intValue ?? 5000, job: job)
+            d.hideUnreachableCopies(&c)
             d.remember(c)
             return Reply(result: d.treeJSON(c, elapsedMs: Int(Date().timeIntervalSince(t0) * 1000)))
         case "act":
