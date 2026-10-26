@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseCpuTime, parseFootprint, parseSampleApp, parseSampleTop } from '../src/ios/perf.js';
+import {
+  parseCpuTime,
+  parseFootprint,
+  parseLeaks,
+  parseSampleApp,
+  parseSampleTop,
+} from '../src/ios/perf.js';
 
 describe('iOS simulator perf parsing', () => {
   it('reads the physical footprint and its peak', () => {
@@ -69,5 +75,17 @@ Total number in stack (recursive counted multiple, when >=5):
       samples: 900,
       percent: 98.9,
     });
+  });
+
+  it('reads the leaks summary', () => {
+    expect(parseLeaks('Process 4242: 3 leaks for 192 total leaked bytes.')).toEqual({
+      leaks: 3,
+      leakedBytes: 192,
+    });
+    expect(parseLeaks('Process 4242: 0 leaks for 0 total leaked bytes.')).toEqual({
+      leaks: 0,
+      leakedBytes: 0,
+    });
+    expect(parseLeaks('nothing')).toEqual({});
   });
 });

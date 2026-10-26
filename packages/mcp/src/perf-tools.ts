@@ -383,7 +383,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
     ),
     perf_heap: tool(
       'Bellek dökümü',
-      'appdyno: uygulamanın Java bellek dökümü (HPROF) bu makinede bir dosyaya; bir bellek analizcisiyle açılır. Sızıntı şüphesinde perf_scroll’dan sonra.',
+      'appdyno: uygulamanın bellek dökümü bu makinede bir dosyaya (Android: Java HPROF, bir bellek analizcisiyle açılır; iOS simülatör: Xcode bellek grafiği ve sızıntı sayısı). Sızıntı şüphesinde perf_scroll’dan sonra.',
       z.object({ device: Device, app: App }).strict(),
       HeapOut,
       READ,
@@ -391,6 +391,15 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
         const s = await ctx.session(device);
         const pkg = appOf(s, app);
         await mkdir(measurementsDir, { recursive: true });
+        if (s.device.iosPerf) {
+          const file = join(measurementsDir, `heap-${pkg}-${Date.now()}.memgraph`);
+          const m = await s.device.iosPerf.heapGraph(pkg, file).catch(refused);
+          const saved = await save('heap-graph', [m], m.value);
+          return reply(
+            `ölçüm ${saved.id}\nbellek grafiği (Xcode): ${m.value.file} (${(m.value.bytes / 1048576).toFixed(1)} MB)${m.value.leaks !== undefined ? `; ${m.value.leaks} sızıntı, ${m.value.leakedBytes} bayt` : ''}`,
+            { id: saved.id, file: m.value.file, bytes: m.value.bytes },
+          );
+        }
         const file = join(measurementsDir, `heap-${pkg}-${Date.now()}.hprof`);
         const m = await perfOf(s.device).heapDump(pkg, file).catch(refused);
         const saved = await save('heap-dump', [m], m.value);

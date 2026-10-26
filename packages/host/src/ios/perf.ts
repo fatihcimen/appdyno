@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { readFile, rm } from 'node:fs/promises';
+import { readFile, rm, stat } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { DeviceError } from '@appdyno/protocol';
 import type { ProfileEntry } from '../android/perf-parse.js';
@@ -12,6 +12,14 @@ const at = () => new Date().toISOString();
 /** A simulator app's memory: its physical footprint as the Mac's memory tool counts it. */
 export type IosMemory = { footprintKb: number; peakKb?: number };
 export type IosCpu = { percent: number; windowMs: number; cpuMs: number };
+export type IosHeap = { file: string; bytes: number; leaks?: number; leakedBytes?: number };
+
+/** "Process 4242: 3 leaks for 192 total leaked bytes." */
+export function parseLeaks(out: string): { leaks?: number; leakedBytes?: number } {
+  const m = /:\s+(\d+) leaks? for (\d+) total leaked bytes/.exec(out);
+  return m ? { leaks: Number(m[1]), leakedBytes: Number(m[2]) } : {};
+}
+
 export type IosLaunch = {
   mode: 'cold' | 'warm';
   repeats: number;
@@ -247,6 +255,36 @@ export class IosSimulatorPerf {
     return {
       value: { durationMs: s * 1000, samples, top, appTop: parseSampleApp(report) },
       raw: report,
+      at: at(),
+    };
+  }
+
+  /**
+   * A memory graph of the app (the Mac's leaks tool), saved at `path` for Xcode's memory graph viewer,
+   * and the leaks it found. The file stays on this machine.
+   */
+  async heapGraph(bundle: string, path: string): Promise<Measured<IosHeap>> {
+    const pid = await this.pid(bundle);
+    // leaks exits 1 when it found leaks: its answer, not a failure
+    const r = await run('leaks', [`--outputGraph=${path}`, String(pid)], {
+      timeout: 300_000,
+      maxBuffer: 64 * 1024 * 1024,
+    }).catch((e: { stdout?: string; code?: number }) => {
+      if (e.code === 1 && e.stdout) return { stdout: e.stdout };
+      throw new DeviceError('UNSUPPORTED', `no memory graph of ${bundle}`);
+    });
+    const { size } = await stat(path);
+    // with a graph written the tool prints no summary: the saved graph is read again, offline
+    const summary = await run('leaks', [path], {
+      timeout: 300_000,
+      maxBuffer: 64 * 1024 * 1024,
+    }).then(
+      (x) => x.stdout,
+      (e: { stdout?: string }) => e.stdout ?? '',
+    );
+    return {
+      value: { file: path, bytes: size, ...parseLeaks(summary) },
+      raw: `${r.stdout}\n---\n${summary}`,
       at: at(),
     };
   }

@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { IosSimulatorDevice, Simctl, buildScreen } from 'appdyno';
+import { mkdtempSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 /**
@@ -74,6 +76,18 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
   it('frames: says plainly that hitches need a phone', async () => {
     expect(() => d.hitches()).toThrow(/on an iPhone only/);
   });
+
+  it('heap: a memory graph with the leaks summary', async () => {
+    const s = await open('memory');
+    await d.tap(byId(s, 'memory_alloc'), { settle: false });
+    await pause(1_000);
+    const file = join(mkdtempSync(join(tmpdir(), 'gd-heap-')), 'heap.memgraph');
+    const g = (await d.iosPerf.heapGraph(APP, file)).value;
+    await d.tap(byId(s, 'memory_free'), { settle: false });
+    expect(statSync(file).size).toBe(g.bytes);
+    expect(g.bytes).toBeGreaterThan(100 * 1024);
+    expect(g.leaks).toBeGreaterThanOrEqual(0);
+  }, 180_000);
 
   it('launch: a cold start takes longer than a warm one', async () => {
     const cold = (await d.iosPerf.launch(APP, { mode: 'cold', repeats: 3 })).value;
