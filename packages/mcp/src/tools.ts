@@ -358,6 +358,7 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       async () => {
         const all = await ctx.adb.devices().catch(refused);
         const sims = await ctx.simulators();
+        const phones = await ctx.phones();
         const devices = [
           ...all.map((d) => ({
             serial: d.serial,
@@ -370,6 +371,7 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
             state: 'booted',
             model: `iOS simulator ${d.name}`,
           })),
+          ...phones.map((udid) => ({ serial: udid, state: 'usb', model: 'iPhone' })),
         ].map((d) => ({
           ...d,
           allowed: ctx.allowed(d.serial),

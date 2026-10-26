@@ -30,27 +30,65 @@ const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
   'clipboard.get',
 ]);
 
+/** What differs between a simulator and a phone: whether it is up, app lifecycle, links, location. */
+export type IosDeviceOps = {
+  /** Up and usable (a simulator booted, a phone connected); asked only before a new runner starts. */
+  up(): Promise<boolean>;
+  launch(bundle: string): Promise<string>;
+  terminate(bundle: string): Promise<void>;
+  openUrl(url: string, bundle?: string): Promise<void>;
+  setLocation(lat: number, lon: number): Promise<void>;
+  /** A link to an app first asks "Open in …?" (the simulator does, a link given to the app does not). */
+  linkPrompt: boolean;
+  /** The device, for messages. */
+  name: string;
+};
+
+export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
+  return {
+    up: async () => (await simctl.state(udid)) === 'Booted',
+    launch: (b) => simctl.launch(udid, b),
+    terminate: (b) => simctl.terminate(udid, b),
+    openUrl: async (url) => {
+      await simctl.openUrl(udid, url);
+    },
+    setLocation: async (lat, lon) => {
+      await simctl.setLocation(udid, lat, lon);
+    },
+    linkPrompt: true,
+    name: `simulator ${udid}`,
+  };
+}
+
 /**
- * An iOS simulator driven through the runner: every command has a timeout, commands never overlap,
- * failures are typed DeviceErrors. App lifecycle, links and location go through the simulator tool.
- * Coordinates are points.
+ * An iOS device driven through the runner: every command has a timeout, commands never overlap,
+ * failures are typed DeviceErrors. App lifecycle, links and location go through the device's own
+ * tool (`ops`). Coordinates are points.
  */
-export class IosSimulatorDevice {
+export class IosDevice {
   readonly platform = 'ios' as const;
   private rpc: RpcClient | undefined;
   private connecting: Promise<RpcClient> | undefined;
   private helloInfo: Hello | undefined;
   private readonly queue = new DeviceQueue();
-  private readonly launcher: IosRunnerLauncher;
   /** The app the runner reads and acts on (set by launch, openUrl with a bundle, or target). */
   private targetApp: string | undefined;
   lastStartWasCold = false;
 
   constructor(
     readonly serial: string,
-    private readonly simctl: Simctl = new Simctl(),
-  ) {
-    this.launcher = new IosRunnerLauncher(serial);
+    protected readonly ops: IosDeviceOps,
+    private readonly launcher: IosRunnerLauncher,
+  ) {}
+
+  /** Before a new runner starts: the device must be up (a new runner would boot a shut-down simulator). */
+  protected async prepareStart(): Promise<void> {
+    if (!(await this.ops.up()))
+      throw new DeviceError(
+        'DEVICE_GONE',
+        `${this.ops.name} is not up`,
+        'boot or connect it first',
+      );
   }
 
   async open(): Promise<Hello> {
@@ -65,15 +103,9 @@ export class IosSimulatorDevice {
   private ensure(): Promise<RpcClient> {
     if (this.rpc && !this.rpc.closed) return Promise.resolve(this.rpc);
     this.connecting ??= (async () => {
-      // a new runner would boot a shut-down simulator: the tool is asked first (about 250 ms, only then)
-      const { rpc, hello, started } = await this.launcher.connect(this.targetApp, async () => {
-        if ((await this.simctl.state(this.serial)) !== 'Booted')
-          throw new DeviceError(
-            'DEVICE_GONE',
-            `simulator ${this.serial} is not booted`,
-            'boot it first',
-          );
-      });
+      const { rpc, hello, started } = await this.launcher.connect(this.targetApp, () =>
+        this.prepareStart(),
+      );
       if (this.targetApp)
         await rpc.call('app.target', { pkg: this.targetApp }, { timeoutMs: TIMEOUTS.action });
       this.rpc = rpc;
@@ -190,8 +222,8 @@ export class IosSimulatorDevice {
    */
   async openUrl(url: string, pkg?: string) {
     if (pkg) await this.target(pkg);
-    await this.simctl.openUrl(this.serial, url);
-    if (!pkg) return;
+    await this.queue.run(() => this.ops.openUrl(url, pkg));
+    if (!pkg || !this.ops.linkPrompt) return;
     // shortcut: the prompt is looked for during 3 s after every link to an app; a link without one costs that time
     const end = Date.now() + 3_000;
     while (Date.now() < end) {
@@ -211,7 +243,7 @@ export class IosSimulatorDevice {
   }
 
   async launch(pkg: string): Promise<string> {
-    const out = await this.queue.run(() => this.simctl.launch(this.serial, assertBundle(pkg)));
+    const out = await this.queue.run(() => this.ops.launch(assertBundle(pkg)));
     await this.target(pkg);
     // returns once the app is in front: a read during the launch would get the home screen, slowly
     const end = Date.now() + 10_000;
@@ -221,23 +253,14 @@ export class IosSimulatorDevice {
   }
 
   async terminate(pkg: string) {
-    await this.queue.run(() => this.simctl.terminate(this.serial, assertBundle(pkg)));
+    await this.queue.run(() => this.ops.terminate(assertBundle(pkg)));
   }
 
   async setLocation(lat: number, lon: number) {
     if (!(Math.abs(lat) <= 90 && Math.abs(lon) <= 180))
       throw new DeviceError('INVALID_ARGUMENT', 'latitude/longitude out of range');
-    await this.queue.run(() => this.simctl.setLocation(this.serial, lat, lon));
+    await this.queue.run(() => this.ops.setLocation(lat, lon));
   }
-
-  /** The app's performance, measured from the Mac (memory, CPU, launch, CPU profile). */
-  get iosPerf(): IosSimulatorPerf {
-    return (this.perfTools ??= new IosSimulatorPerf(this.serial, this.simctl, async (bundle) => {
-      const t = await this.tree().catch(() => undefined);
-      return !!t && t.windows[0]?.pkg === bundle && t.nodes.filter((n) => n.w === 0).length > 3;
-    }));
-  }
-  private perfTools: IosSimulatorPerf | undefined;
 
   close() {
     this.rpc?.close();
@@ -251,4 +274,23 @@ export class IosSimulatorDevice {
     await this.launcher.stop(rpc);
     rpc?.close();
   }
+}
+
+/** An iOS simulator: the simulator tool for apps, links and location; perf from the Mac. */
+export class IosSimulatorDevice extends IosDevice {
+  constructor(
+    serial: string,
+    private readonly simctl: Simctl = new Simctl(),
+  ) {
+    super(serial, simulatorOps(serial, simctl), new IosRunnerLauncher(serial));
+  }
+
+  /** The app's performance, measured from the Mac (memory, CPU, launch, CPU profile). */
+  get iosPerf(): IosSimulatorPerf {
+    return (this.perfTools ??= new IosSimulatorPerf(this.serial, this.simctl, async (bundle) => {
+      const t = await this.tree().catch(() => undefined);
+      return !!t && t.windows[0]?.pkg === bundle && t.nodes.filter((n) => n.w === 0).length > 3;
+    }));
+  }
+  private perfTools: IosSimulatorPerf | undefined;
 }

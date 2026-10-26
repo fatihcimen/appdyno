@@ -14,3 +14,17 @@ describe('simulator inputs', () => {
       expect(() => assertBundle(bad), bad).toThrow(/not a bundle id/);
   });
 });
+
+describe('iPhone inputs', () => {
+  it('takes an iPhone UDID in either form, nothing else', async () => {
+    const { assertPhoneUdid } = await import('../src/ios/phone.js');
+    expect(assertPhoneUdid('00001234-0123456789ABCDEF')).toBeTruthy();
+    expect(assertPhoneUdid('0123456789abcdef0123456789abcdef01234567')).toBeTruthy();
+    for (const bad of [
+      '7994F239-7CD7-4247-9FC0-4F92C7CFC951',
+      'iPhone',
+      '00001234-0123456789ABCDEF; ls',
+    ])
+      expect(() => assertPhoneUdid(bad), bad).toThrow(/not an iPhone UDID/);
+  });
+});

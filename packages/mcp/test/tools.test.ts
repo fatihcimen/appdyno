@@ -19,6 +19,7 @@ async function connect(
   policy: Partial<Policy> = {},
   device: FakeDevice = new FakeDevice(),
   simulators: ServerContext['simulators'] = async () => [],
+  phones: ServerContext['phones'] = async () => [],
 ) {
   const logs: object[] = [];
   const adb = {
@@ -30,6 +31,7 @@ async function connect(
     { app: 'dev.app', measurements: MEASUREMENTS },
     () => device,
     simulators,
+    phones,
   );
   const server = createServer(createTools(ctx), (l) => logs.push(l));
   const [a, b] = InMemoryTransport.createLinkedPair();
@@ -417,6 +419,13 @@ describe('iOS simulators', () => {
     ]);
     const r = await t.textOf('list_devices');
     expect(r.text).toContain(`${udid} booted iOS simulator gd-iphone`);
+    const p = await connect(
+      {},
+      new FakeDevice(),
+      async () => [],
+      async () => ['00001234-0123456789ABCDEF'],
+    );
+    expect((await p.textOf('list_devices')).text).toContain('00001234-0123456789ABCDEF usb iPhone');
   });
 
   it('answers a perf tool on a device without perf tools with a plain error', async () => {

@@ -2,8 +2,10 @@ import { join } from 'node:path';
 import {
   Adb,
   AndroidDevice,
+  IosPhoneDevice,
   IosSimulatorDevice,
   Simctl,
+  listPhones,
   stateDir,
   type Simulator,
 } from 'appdyno';
@@ -13,6 +15,8 @@ import { ToolError } from './tool.js';
 
 /** A simulator is named by its id; anything else is an adb serial. */
 const SIMULATOR_ID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;
+/** An iPhone's UDID. */
+const PHONE_ID = /^[0-9A-F]{8}-[0-9A-F]{16}$|^[0-9a-f]{40}$/;
 
 /** The server's devices: the sessions opened so far and which one tools act on by default. */
 export class ServerContext {
@@ -27,13 +31,17 @@ export class ServerContext {
     private readonly makeDevice: (serial: string) => DriveableDevice = (serial) =>
       SIMULATOR_ID.test(serial)
         ? new IosSimulatorDevice(serial)
-        : new AndroidDevice(serial, new Adb(), 30_000),
+        : PHONE_ID.test(serial)
+          ? new IosPhoneDevice(serial)
+          : new AndroidDevice(serial, new Adb(), 30_000),
     /** Booted simulators (none when Xcode is missing). */
     readonly simulators: () => Promise<Simulator[]> = () =>
       new Simctl()
         .list()
         .then((l) => l.filter((d) => d.state === 'Booted'))
         .catch(() => []),
+    /** iPhones connected by USB (UDIDs). */
+    readonly phones: () => Promise<string[]> = () => listPhones().catch(() => []),
   ) {}
 
   /** Where measurements and their raw outputs are stored (this machine only). */

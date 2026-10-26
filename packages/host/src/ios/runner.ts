@@ -2,7 +2,7 @@ import { spawn, execFile } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { closeSync, existsSync, openSync, readdirSync, statSync } from 'node:fs';
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { connect, createServer } from 'node:net';
+import { connect, createServer, type Socket } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
@@ -13,7 +13,7 @@ import { RpcClient } from '../rpc.js';
 import { assertUdid, xcodeEnv } from './simctl.js';
 
 const run = promisify(execFile);
-/** A first start installs the runner on the simulator: allow for it. */
+/** A first start installs the runner (on a phone, UI automation may wait for an approval): allow for it. */
 const START_MS = 180_000;
 const POLL_MS = 250;
 export const RUNNER_TEST = 'Runner/RunnerTests/testServe';
@@ -78,9 +78,31 @@ async function freePort(): Promise<number> {
  * xcodebuild) outlives the host process; its port and launch token are kept in a state file readable
  * only by this user. A different runner build is replaced.
  */
+/** How the runner of one kind of device is built, given a port and reached. */
+export type RunnerTransport = {
+  build(): Promise<{ xctestrun: string; sha256: string }>;
+  port(): Promise<number>;
+  open(port: number): Promise<{ socket: Socket; rest?: Buffer }>;
+};
+
+/** A simulator: the runner as built, a free port of the Mac's loopback (the simulator shares it). */
+export const simulatorTransport: RunnerTransport = {
+  build: runnerBuild,
+  port: freePort,
+  open: (port) =>
+    new Promise((resolve, reject) => {
+      const c = connect({ host: '127.0.0.1', port });
+      c.once('connect', () => resolve({ socket: c }));
+      c.once('error', reject);
+    }),
+};
+
 export class IosRunnerLauncher {
-  constructor(readonly udid: string) {
-    assertUdid(udid);
+  constructor(
+    readonly udid: string,
+    private readonly transport: RunnerTransport = simulatorTransport,
+  ) {
+    if (transport === simulatorTransport) assertUdid(udid);
   }
 
   private get statePath() {
@@ -95,7 +117,7 @@ export class IosRunnerLauncher {
     target?: string,
     beforeStart?: () => Promise<void>,
   ): Promise<{ rpc: RpcClient; hello: Hello; started: boolean }> {
-    const build = await runnerBuild();
+    const build = await this.transport.build();
     const state = await this.readState();
     if (state && state.sha256 === build.sha256) {
       const c = await this.tryConnect(state).catch(() => undefined);
@@ -115,7 +137,7 @@ export class IosRunnerLauncher {
   }
 
   private async start(build: { xctestrun: string; sha256: string }, target?: string) {
-    const port = await freePort();
+    const port = await this.transport.port();
     const token = randomBytes(24).toString('hex');
     await mkdir(stateDir(), { recursive: true, mode: 0o700 });
     const out = openSync(this.logPath, 'w', 0o600);
@@ -170,13 +192,9 @@ export class IosRunnerLauncher {
   }
 
   private async tryConnect(s: State): Promise<{ rpc: RpcClient; hello: Hello }> {
-    const socket = await new Promise<import('node:net').Socket>((resolve, reject) => {
-      const c = connect({ host: '127.0.0.1', port: s.port });
-      c.once('connect', () => resolve(c));
-      c.once('error', reject);
-    });
+    const { socket, rest } = await this.transport.open(s.port);
     socket.setNoDelay(true);
-    const rpc = new RpcClient(socket);
+    const rpc = new RpcClient(socket, rest);
     try {
       const { result } = await rpc.call(
         'hello',

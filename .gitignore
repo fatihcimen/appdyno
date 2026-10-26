@@ -10,3 +10,4 @@ packages/host/agents/
 .ci/
 ios/*/.build/
 ios/.derived/
+ios/.derived-device/
