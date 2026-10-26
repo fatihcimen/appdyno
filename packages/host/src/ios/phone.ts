@@ -87,6 +87,7 @@ export class Devicectl {
     await this.json(['device', 'install', 'app', '--device', this.udid, appPath], 600_000);
   }
 
+  /** Starts the app afresh; with `url`, hands the link to the app as it runs (its state kept). */
   async launch(bundle: string, url?: string) {
     return this.json([
       'device',
@@ -94,10 +95,29 @@ export class Devicectl {
       'launch',
       '--device',
       this.udid,
-      '--terminate-existing',
-      ...(url ? ['--payload-url', url] : []),
+      ...(url ? ['--payload-url', url] : ['--terminate-existing']),
       assertBundle(bundle),
     ]);
+  }
+
+  /** The phone's simulated position (Xcode's location simulation; it stays until cleared). */
+  async setLocation(lat: number, lon: number) {
+    await this.json([
+      'device',
+      'simulate',
+      'location',
+      'coordinate',
+      '--device',
+      this.udid,
+      '--latitude',
+      String(lat),
+      '--longitude',
+      String(lon),
+    ]);
+  }
+
+  async clearLocation() {
+    await this.json(['device', 'simulate', 'location', 'clear', '--device', this.udid]);
   }
 
   /** Process ids of the running app. */
@@ -201,9 +221,7 @@ export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
         );
       await ctl.launch(b, url);
     },
-    setLocation: async () => {
-      throw new DeviceError('UNSUPPORTED', 'no test location on an iPhone yet');
-    },
+    setLocation: (lat, lon) => ctl.setLocation(lat, lon),
     linkPrompt: false,
     name: `iPhone ${udid}`,
     pid: (b) => ctl.pid(b),
@@ -224,6 +242,11 @@ export class IosPhoneDevice extends IosDevice {
     super(serial, phoneOps(serial, ctl), new IosRunnerLauncher(serial, transport));
     this.transport = transport;
     this.ctl = ctl;
+  }
+
+  /** Ends the phone's simulated position (setLocation's). */
+  async clearLocation() {
+    await this.ctl.clearLocation();
   }
 
   /** Our runner on the phone: installed when the phone has another build under the profile's id. */

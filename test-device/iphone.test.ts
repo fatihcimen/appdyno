@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { IosPhoneDevice, buildScreen, type Screen } from 'appdyno';
+import { Devicectl, IosPhoneDevice, buildScreen, type Screen } from 'appdyno';
 
 /**
  * The runner on a real iPhone (APPDYNO_IPHONE_UDID; signing from APPDYNO_IOS_*), on the Settings
@@ -80,6 +80,20 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
     expect(v.frames).toBeGreaterThan(30);
     expect(v.tracePath).toMatch(/\.trace$/);
   }, 120_000);
+
+  it('opens a link in the running app, its state kept (no new launch)', async () => {
+    await settings();
+    const pid = await new Devicectl(udid!).pid(SETTINGS);
+    await d.openUrl('prefs:root=General', SETTINGS);
+    await pause(1_500);
+    expect(await new Devicectl(udid!).pid(SETTINGS)).toBe(pid);
+    expect((await screen()).list.some((e) => /^(About|Hakkında)$/.test(e.label))).toBe(true);
+  });
+
+  it('sets a simulated location and clears it', async () => {
+    await d.setLocation(41.0082, 28.9784);
+    await d.clearLocation();
+  });
 
   it('takes a screenshot', async () => {
     const { meta, data } = await d.screenshot({ format: 'jpeg', maxPx: 1024 });
