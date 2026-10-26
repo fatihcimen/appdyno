@@ -106,7 +106,8 @@ final class Device {
         }
         switch a["kind"] as? String {
         case "tap":
-            point(try num("x"), try num("y")).tap()
+            let x = try num("x"), y = try num("y")
+            if !EventShim.tap(CGPoint(x: x, y: y), orientation: Device.interfaceOrientation()) { point(x, y).tap() }
         case "longPress":
             point(try num("x"), try num("y")).press(forDuration: try num("durationMs") / 1000)
         case "swipe":
@@ -266,6 +267,16 @@ final class Device {
     func foreground() -> [String: Any] {
         let (_, id) = front()
         return ["pkg": id]
+    }
+
+    /// UIInterfaceOrientation of the device now (portrait 1, upside down 2, landscape right 3, left 4).
+    static func interfaceOrientation() -> Int {
+        switch XCUIDevice.shared.orientation {
+        case .portraitUpsideDown: return 2
+        case .landscapeLeft: return 4 // the device turned left shows the interface turned right
+        case .landscapeRight: return 3
+        default: return 1
+        }
     }
 
     func orientation(_ r: Int) {

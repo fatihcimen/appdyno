@@ -50,9 +50,10 @@ final class RunnerTests: XCTestCase {
             "model": env["SIMULATOR_MODEL_IDENTIFIER"] ?? UIDevice.current.model,
             "screen": ["w": b.width, "h": b.height, "density": UIScreen.main.scale, "rotation": rotation],
             "capabilities": ["tree", "act", "settle", "text", "screenshot", "clipboard", "orientation", "app.target"]
-                + (IdleShim.applied.isEmpty ? [] : ["noIdleWait"]),
+                + (IdleShim.applied.isEmpty ? [] : ["noIdleWait"]) + (EventShim.available ? ["fastTap"] : []),
             "pid": Int(ProcessInfo.processInfo.processIdentifier),
             "idleWaitsOff": IdleShim.applied,
+            "fastTap": EventShim.available,
         ]
     }
 

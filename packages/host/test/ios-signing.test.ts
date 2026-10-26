@@ -1,6 +1,12 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { parseProfile, phoneXctestrun, runnerEntitlements, stampOf } from '../src/ios/signing.js';
+import {
+  parseProfile,
+  phoneSigningFromEnv,
+  phoneXctestrun,
+  runnerEntitlements,
+  stampOf,
+} from '../src/ios/signing.js';
 import { parsePlist, plistXml } from '../src/ios/usbmux.js';
 
 describe('iPhone runner signing', () => {
@@ -31,5 +37,22 @@ describe('iPhone runner signing', () => {
     expect(x.Runner!.UITargetAppPath).toBe('/x/R.app');
     expect(x.Runner!.SystemAttachmentLifetime).toBe('keepNever');
     expect(stampOf('abcdef0123456789')).toBe('gd-abcdef012345');
+  });
+
+  it('says what to set when signing is not configured', () => {
+    expect(() => phoneSigningFromEnv({ APPDYNO_IOS_PROFILE: '/p' })).toThrow(
+      /no signing for the iPhone runner/,
+    );
+    expect(
+      phoneSigningFromEnv({
+        APPDYNO_IOS_PROFILE: '/p',
+        APPDYNO_IOS_KEYCHAIN: '/k',
+        APPDYNO_IOS_KEYCHAIN_PASSWORD: 'x',
+      }),
+    ).toEqual({
+      profile: '/p',
+      keychain: '/k',
+      keychainPassword: 'x',
+    });
   });
 });

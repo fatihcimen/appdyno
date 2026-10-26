@@ -27,7 +27,7 @@ export {
   type BenchElement,
   type BenchResult,
 } from './bench.js';
-export { doctor, type Check } from './doctor.js';
+export { doctor, iosChecks, type Check } from './doctor.js';
 export {
   AndroidPerf,
   type Measured,

@@ -5,6 +5,11 @@ import { Adb } from './adb.js';
 import { agentApk } from './android/agent.js';
 import { traceProcessor } from './tools.js';
 import { AndroidDevice } from './android/device.js';
+import { phoneRunnerApp } from './ios/phone.js';
+import { runnerBuild } from './ios/runner.js';
+import { phoneSigningFromEnv, readProfile } from './ios/signing.js';
+import { xcodeEnv } from './ios/simctl.js';
+import { listPhones } from './ios/usbmux.js';
 
 const run = promisify(execFile);
 
@@ -17,6 +22,7 @@ export type Check = { name: string; ok: boolean; warn?: boolean; detail: string;
 export async function doctor(opts: { serial?: string; adb?: Adb } = {}): Promise<Check[]> {
   const adb = opts.adb ?? new Adb();
   const checks: Check[] = [];
+  checks.push(...(await iosChecks()));
   const major = Number(process.versions.node.split('.')[0]);
   checks.push({
     name: 'node',
@@ -127,4 +133,71 @@ export async function doctor(opts: { serial?: string; adb?: Adb } = {}): Promise
     d.close();
   }
   return checks;
+}
+
+/** iOS (optional, so warnings): Xcode, the runner builds, the iPhone signing and the connected phones. */
+export async function iosChecks(now = Date.now()): Promise<Check[]> {
+  const out: Check[] = [];
+  const warn = (name: string, detail: string, fix?: string): Check => ({
+    name,
+    ok: false,
+    warn: true,
+    detail,
+    ...(fix && { fix }),
+  });
+  try {
+    const { stdout } = await run('xcodebuild', ['-version'], { timeout: 30_000, env: xcodeEnv() });
+    out.push({ name: 'xcode', ok: true, detail: stdout.trim().split('\n').join(', ') });
+  } catch {
+    out.push(warn('xcode', 'not found', 'install Xcode (iOS only)'));
+    return out;
+  }
+  try {
+    out.push({ name: 'ios runner (simulator)', ok: true, detail: (await runnerBuild()).xctestrun });
+  } catch (e) {
+    out.push(warn('ios runner (simulator)', (e as Error).message, (e as DeviceError).hint));
+  }
+  try {
+    out.push({ name: 'ios runner (iPhone)', ok: true, detail: phoneRunnerApp() });
+  } catch (e) {
+    out.push(warn('ios runner (iPhone)', (e as Error).message, (e as DeviceError).hint));
+  }
+  let signing;
+  try {
+    signing = phoneSigningFromEnv();
+  } catch (e) {
+    out.push(warn('iPhone signing', 'not set (needed for iPhones only)', (e as DeviceError).hint));
+    return out;
+  }
+  try {
+    const profile = await readProfile(signing.profile);
+    const days = profile.expires
+      ? Math.floor((Date.parse(profile.expires) - now) / 86_400_000)
+      : undefined;
+    const ids = (
+      await run('security', ['find-identity', '-v', '-p', 'codesigning', signing.keychain])
+    ).stdout;
+    const identity = profile.certSha1.some((h) => ids.includes(h));
+    out.push({
+      name: 'iPhone signing',
+      ok: identity && (days === undefined || days > 0),
+      ...(days !== undefined && days < 30 && { warn: true }),
+      detail: `${profile.appId} (team ${profile.team}), ${days === undefined ? 'no expiry' : `expires in ${days} days`}, ${identity ? 'identity in the keychain' : 'no identity of the profile in the keychain'}`,
+      ...(!identity && { fix: "import the profile's development certificate into the keychain" }),
+    });
+    for (const udid of await listPhones().catch(() => [] as string[]))
+      out.push({
+        name: `iPhone ${udid}`,
+        ok: profile.devices.includes(udid),
+        detail: profile.devices.includes(udid)
+          ? 'connected by USB, in the profile'
+          : 'connected by USB, not in the profile',
+        ...(!profile.devices.includes(udid) && {
+          fix: "add the phone's UDID to the profile and download it again",
+        }),
+      });
+  } catch (e) {
+    out.push({ name: 'iPhone signing', ok: false, detail: (e as Error).message });
+  }
+  return out;
 }
