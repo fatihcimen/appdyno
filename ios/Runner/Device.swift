@@ -217,10 +217,21 @@ final class Device {
         var mode = "paste"
         let saved = UIPasteboard.general.string
         UIPasteboard.general.string = text
-        if replace { field.typeKey("a", modifierFlags: .command) }
-        field.typeKey("v", modifierFlags: .command)
+        // on a phone the runner (not the app in front) cannot reach the clipboard: keys then, at once
+        let pasteable = UIPasteboard.general.string == text
+        // a field that just took the focus may not take key commands before its keyboard is up
+        let keyboard = app.keyboards.firstMatch
+        let kbEnd = Date().addingTimeInterval(pasteable ? 1 : 0)
+        while !keyboard.exists, Date() < kbEnd, !job.over { Thread.sleep(forTimeInterval: 0.05) }
+        var verified = false
+        for _ in 0 ..< (pasteable ? 2 : 0) where !verified {
+            if replace { field.typeKey("a", modifierFlags: .command) }
+            field.typeKey("v", modifierFlags: .command)
+            verified = check()
+            // a paste that changed nothing is tried once more; one that changed the text is not repeated
+            if !verified, currentText(field) != before { break }
+        }
         if let saved { UIPasteboard.general.string = saved } else { UIPasteboard.general.items = [] }
-        var verified = check()
         if !verified {
             mode = "keys"
             let now = currentText(field)

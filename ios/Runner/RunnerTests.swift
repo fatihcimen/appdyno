@@ -84,7 +84,11 @@ final class RunnerTests: XCTestCase {
             d.setTarget(id)
             return Reply(result: [:])
         case "clipboard.set":
-            UIPasteboard.general.string = p["text"] as? String ?? ""
+            let text = p["text"] as? String ?? ""
+            UIPasteboard.general.string = text
+            guard UIPasteboard.general.string == text else {
+                throw AgentError("UNSUPPORTED", "the runner cannot reach the clipboard here (on a phone only the app in front can)")
+            }
             return Reply(result: [:])
         case "clipboard.get":
             return Reply(result: UIPasteboard.general.string.map { ["text": $0] } ?? [:])
