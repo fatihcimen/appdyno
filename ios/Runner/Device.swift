@@ -86,6 +86,9 @@ final class Device {
         return Capture(windows: windows, nodes: nodes, truncated: truncated, busy: busy)
     }
 
+    /// The copies found out of reach on a recent layout, by its hash (each hittability check costs a query).
+    private var unreachable: [(hash: String, copies: [String])] = []
+
     /**
      * The same control (type and identifier) found more than once: the copies a tap would not reach (drawn
      * under another view, never shown) are marked not visible, so a tool picks the one on screen. Live: the
@@ -93,20 +96,35 @@ final class Device {
      * report one. XCUI's hittable check decides, only for such duplicates (a few queries).
      */
     func hideUnreachableCopies(_ c: inout Capture) {
+        let key = c.hash
+        if let known = unreachable.first(where: { $0.hash == key }) {
+            for i in c.nodes.indices where known.copies.contains(Device.copyKey(c.nodes[i])) {
+                c.nodes[i].flags &= ~Flag.visible
+            }
+            return
+        }
         let app = front().0
         var groups: [String: [Int]] = [:]
         for (i, n) in c.nodes.enumerated() where n.window == 0 && n.flags & Flag.visible != 0 {
             if let id = n.id { groups["\(n.type)#\(id)", default: []].append(i) }
         }
-        for idxs in groups.values.filter({ $0.count > 1 }).prefix(4) {
+        var hidden: [String] = []
+        defer {
+            unreachable.removeAll { $0.hash == key }
+            unreachable.append((key, hidden))
+            if unreachable.count > 8 { unreachable.removeFirst() }
+        }
+        // A control drawn twice (an overlay's spare copy) comes in 2 or 3; an id repeated more is a list's rows.
+        for idxs in groups.values.filter({ (2 ... 3).contains($0.count) }).prefix(4) {
             guard let id = c.nodes[idxs[0]].id else { continue }
             let query = app.descendants(matching: .any).matching(identifier: id)
             for k in 0 ..< min(query.count, 8) {
                 let e = query.element(boundBy: k)
                 guard e.exists, !e.isHittable else { continue }
                 let r = Device.rect(e.frame)
-                if let ni = idxs.first(where: { [c.nodes[$0].left, c.nodes[$0].top, c.nodes[$0].right, c.nodes[$0].bottom] == r }) {
+                if let ni = idxs.first(where: { Device.box(c.nodes[$0]) == r }) {
                     c.nodes[ni].flags &= ~Flag.visible
+                    hidden.append(Device.copyKey(c.nodes[ni]))
                 }
             }
         }
@@ -402,6 +420,9 @@ final class Device {
     }
 
     // MARK: mapping
+
+    static func box(_ n: Node) -> [Int] { [n.left, n.top, n.right, n.bottom] }
+    static func copyKey(_ n: Node) -> String { "\(n.type)#\(n.id ?? "")@\(box(n))" }
 
     static func rect(_ r: CGRect) -> [Int] {
         guard r.width.isFinite, r.height.isFinite else { return [0, 0, 0, 0] }
