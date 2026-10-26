@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { connect, type Socket } from 'node:net';
 import { DeviceError } from '@appdyno/protocol';
@@ -271,5 +274,7 @@ export function parseDevices(text: string): AdbDevice[] {
 function defaultAdb(): string {
   const sdk = process.env.ANDROID_HOME ?? process.env.ANDROID_SDK_ROOT;
   if (sdk) return `${sdk}/platform-tools/adb`;
-  return 'adb';
+  // where Android Studio puts the SDK on a Mac
+  const studio = join(homedir(), 'Library/Android/sdk/platform-tools/adb');
+  return existsSync(studio) ? studio : 'adb';
 }

@@ -6,9 +6,9 @@ import { agentApk } from './android/agent.js';
 import { traceProcessor } from './tools.js';
 import { AndroidDevice } from './android/device.js';
 import { phoneRunnerApp } from './ios/phone.js';
-import { runnerBuild } from './ios/runner.js';
+import { iosProducts } from './ios/runner.js';
 import { phoneSigningFromEnv, readProfile } from './ios/signing.js';
-import { xcodeEnv } from './ios/simctl.js';
+import { Simctl, xcodeEnv } from './ios/simctl.js';
 import { listPhones } from './ios/usbmux.js';
 
 const run = promisify(execFile);
@@ -30,6 +30,18 @@ export async function doctor(opts: { serial?: string; adb?: Adb } = {}): Promise
     detail: process.versions.node,
     ...(major < 22 && { fix: 'install Node 22 or newer (mise use node@22)' }),
   });
+  const sdk = process.env.ANDROID_HOME ?? process.env.ANDROID_SDK_ROOT;
+  checks.push(
+    sdk
+      ? { name: 'android sdk', ok: true, detail: sdk }
+      : {
+          name: 'android sdk',
+          ok: false,
+          warn: true,
+          detail: 'ANDROID_HOME is not set',
+          fix: 'set ANDROID_HOME to the Android SDK (Android only)',
+        },
+  );
   try {
     const { stdout } = await run(adb.bin, ['version'], { timeout: 10_000 });
     checks.push({ name: 'adb', ok: true, detail: stdout.split('\n')[0]!.trim() });
@@ -68,6 +80,7 @@ export async function doctor(opts: { serial?: string; adb?: Adb } = {}): Promise
       fix: (e as DeviceError).hint ?? 'appdyno tools install',
     });
   }
+  checks.push(...(await deviceList(adb)));
   if (!opts.serial) return checks;
 
   const serial = opts.serial;
@@ -152,16 +165,27 @@ export async function iosChecks(now = Date.now()): Promise<Check[]> {
     out.push(warn('xcode', 'not found', 'install Xcode (iOS only)'));
     return out;
   }
-  try {
-    out.push({ name: 'ios runner (simulator)', ok: true, detail: (await runnerBuild()).xctestrun });
-  } catch (e) {
-    out.push(warn('ios runner (simulator)', (e as Error).message, (e as DeviceError).hint));
-  }
-  try {
-    out.push({ name: 'ios runner (iPhone)', ok: true, detail: phoneRunnerApp() });
-  } catch (e) {
-    out.push(warn('ios runner (iPhone)', (e as Error).message, (e as DeviceError).hint));
-  }
+  // looked up only: a missing runner is built once on its first use, never by doctor
+  const sim = await iosProducts('simulator', false).catch(() => undefined);
+  out.push(
+    sim
+      ? { name: 'ios runner (simulator)', ok: true, detail: sim }
+      : warn(
+          'ios runner (simulator)',
+          'not built yet',
+          'built once on first use (a few minutes), or build it now from ios/ (README)',
+        ),
+  );
+  const phone = await phoneRunnerApp(false).catch(() => undefined);
+  out.push(
+    phone
+      ? { name: 'ios runner (iPhone)', ok: true, detail: phone }
+      : warn(
+          'ios runner (iPhone)',
+          'not built yet',
+          'built once on first use (a few minutes), or build it now from ios/ (README)',
+        ),
+  );
   let signing;
   try {
     signing = phoneSigningFromEnv();
@@ -199,5 +223,22 @@ export async function iosChecks(now = Date.now()): Promise<Check[]> {
   } catch (e) {
     out.push({ name: 'iPhone signing', ok: false, detail: (e as Error).message });
   }
+  return out;
+}
+
+/** What is connected: Android devices (with their state) and booted simulators; iPhones are under iOS. */
+async function deviceList(adb: Adb): Promise<Check[]> {
+  const out: Check[] = [];
+  for (const d of await adb.devices().catch(() => []))
+    out.push({
+      name: `android ${d.serial}`,
+      ok: d.state === 'device',
+      detail: `${d.state}${d.props.model ? `, ${d.props.model}` : ''}`,
+      ...(d.state === 'unauthorized' && { fix: 'accept the USB debugging prompt on the phone' }),
+      ...(d.state === 'offline' && { fix: 'reconnect the cable, or restart the emulator' }),
+    });
+  for (const s of await new Simctl().list().catch(() => []))
+    if (s.state === 'Booted')
+      out.push({ name: `simulator ${s.udid}`, ok: true, detail: `${s.name}, booted` });
   return out;
 }

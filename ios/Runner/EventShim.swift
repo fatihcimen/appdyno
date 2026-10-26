@@ -4,8 +4,8 @@ import UIKit
 import XCTest
 
 /// A tap sent straight to XCTest's event synthesizer (private API): one finger down and up at a screen
-/// point, without XCUI's per-tap lookups and interruption checks. Opt-in, and used only when every
-/// class and selector is there at run time; otherwise the public coordinate tap is used.
+/// point, without XCUI's per-tap lookups and interruption checks. Used only when every class and
+/// selector is there at run time (APPDYNO_FAST_TAP=0 turns it off); otherwise the public coordinate tap.
 enum EventShim {
     private typealias InitRecord = @convention(c) (AnyObject, Selector, NSString, Int) -> AnyObject
     private typealias InitPath = @convention(c) (AnyObject, Selector, CGPoint, Double) -> AnyObject
@@ -25,8 +25,8 @@ enum EventShim {
 
     /// Everything the fast tap needs exists (checked once).
     static let available: Bool = {
-        // opt-in (APPDYNO_FAST_TAP=1): measured 65 ms faster per tap, but a tap on an alert's button was lost
-        guard ProcessInfo.processInfo.environment["APPDYNO_FAST_TAP"] == "1",
+        // on unless APPDYNO_FAST_TAP=0: about half the time of XCUI's tap on a phone (313 vs 603 ms)
+        guard ProcessInfo.processInfo.environment["APPDYNO_FAST_TAP"] != "0",
               let r = recordClass, let p = pathClass,
               class_getInstanceMethod(r, selInitRecord) != nil, class_getInstanceMethod(r, selAdd) != nil,
               class_getInstanceMethod(p, selInitPath) != nil, class_getInstanceMethod(p, selLift) != nil,

@@ -82,4 +82,9 @@ async function main(): Promise<number> {
   }
 }
 
-process.exitCode = await main();
+process.exitCode = await main().catch((e: unknown) => {
+  // a failure the user can act on: its message and hint, not a stack trace
+  const d = e as { message?: string; hint?: string };
+  err(`appdyno: ${d.message ?? String(e)}${d.hint ? `\n  ${d.hint}` : ''}`);
+  return 1;
+});

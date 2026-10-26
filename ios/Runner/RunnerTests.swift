@@ -1,7 +1,7 @@
 import UIKit
 import XCTest
 
-let agentVersion = "0.3.0"
+let agentVersion = "0.5.0"
 
 /// The runner: one long test that serves the host until it asks to shut down. Port and token come from
 /// the launch environment (APPDYNO_PORT, APPDYNO_TOKEN; xcodebuild passes TEST_RUNNER_-prefixed variables).

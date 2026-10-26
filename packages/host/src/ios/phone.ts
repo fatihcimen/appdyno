@@ -2,13 +2,12 @@ import { execFile } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { DeviceError } from '@appdyno/protocol';
 import { stateDir } from '../android/agent.js';
 import { IosDevice, type IosDeviceOps } from './device.js';
-import { IosRunnerLauncher, type RunnerTransport } from './runner.js';
+import { IosRunnerLauncher, iosProducts, type RunnerTransport } from './runner.js';
 import { phoneSigningFromEnv, phoneXctestrun, signedRunner, type PhoneSigning } from './signing.js';
 import { assertBundle, xcodeEnv } from './simctl.js';
 import { connectPort, listDevices } from './usbmux.js';
@@ -135,17 +134,11 @@ export class Devicectl {
   }
 }
 
-/** The runner built for phones (unsigned; signed for the profile at first use). */
-export function phoneRunnerApp(): string {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const candidates = [
-    process.env.APPDYNO_IOS_DEVICE_PRODUCTS &&
-      join(process.env.APPDYNO_IOS_DEVICE_PRODUCTS, 'Runner-Runner.app'),
-    join(here, '../../../../ios/.derived-device/Build/Products/Debug-iphoneos/Runner-Runner.app'),
-    join(here, '../../agents/ios-device/Runner-Runner.app'),
-  ].filter((p): p is string => !!p);
-  const app = candidates.find((p) => existsSync(p));
-  if (!app)
+/** The runner built for phones (unsigned; signed for the profile at first use): built once when missing. */
+export async function phoneRunnerApp(build = true): Promise<string> {
+  const dir = await iosProducts('device', build);
+  const app = dir && join(dir, 'Debug-iphoneos/Runner-Runner.app');
+  if (!app || !existsSync(app))
     throw new DeviceError(
       'UNSUPPORTED',
       'the iPhone runner is not built',
@@ -164,8 +157,8 @@ export function phoneTransport(
   const cache = join(homedir(), 'Library/Caches/appdyno/ios-phone');
   // the signed runner is looked up once per runner build and profile in this process (a reconnect
   // does not ask the keychain again)
-  const signed = () => {
-    const app = phoneRunnerApp();
+  const signed = async () => {
+    const app = await phoneRunnerApp();
     const key = [join(app, 'PlugIns/Runner.xctest/Runner'), signing.profile]
       .map((f) => `${f}@${statSync(f).mtimeMs}`)
       .join(':');

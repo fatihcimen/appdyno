@@ -12,6 +12,12 @@ final class Device {
     private let settler = Settler(clock: { Int(Date().timeIntervalSince1970 * 1000) },
                                   sleep: { Thread.sleep(forTimeInterval: Double($0) / 1000) })
     static let inertQuietMs = 80
+    /// How long an alert or sheet takes to come up (UIKit's presentation is about 0.3–0.4 s).
+    static let alertAppearS = 0.45
+
+    static func hasAlert(_ nodes: [Node]) -> Bool {
+        nodes.contains { ($0.type == "Alert" || $0.type == "Sheet") && $0.flags & Flag.visible != 0 }
+    }
 
     func setTarget(_ id: String) {
         targetId = id
@@ -158,9 +164,22 @@ final class Device {
             if let tapAt, let before, !actionable(before, x: Int(tapAt.0), y: Int(tapAt.1)) {
                 quiet = min(quiet, Device.inertQuietMs)
             }
+            // an alert or sheet that came up during the settle is still animating in: a tap on it then is
+            // lost, so the screen counts as busy for its appear animation
+            var alertSince: Date? = before.flatMap { Device.hasAlert($0) ? Date.distantPast : nil }
             let r = settler.run(actionAt: actionAt, quietMs: quiet, maxMs: maxMs,
                                 before: before.map { Capture(windows: [], nodes: $0, truncated: false, busy: false) },
-                                read: { (try? self.capture(job: job)) ?? Capture(windows: [], nodes: [], truncated: true, busy: true) },
+                                read: { () -> Capture in
+                                    var c = (try? self.capture(job: job)) ?? Capture(windows: [], nodes: [], truncated: true, busy: true)
+                                    if Device.hasAlert(c.nodes) {
+                                        let since = alertSince ?? Date()
+                                        alertSince = since
+                                        if Date().timeIntervalSince(since) < Device.alertAppearS { c.busy = true }
+                                    } else {
+                                        alertSince = nil
+                                    }
+                                    return c
+                                },
                                 same: { sameLayout($0.nodes, $1.nodes) }, busy: { $0.busy }, cancelled: { job.over })
             last = r.last
             out["settle"] = ["settled": r.settled, "ms": r.elapsedMs, "reads": r.reads, "quietMs": quiet]

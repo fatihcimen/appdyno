@@ -3,6 +3,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { closeSync, existsSync, openSync, readdirSync, statSync } from 'node:fs';
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { connect, createServer, type Socket } from 'node:net';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
@@ -20,38 +21,83 @@ export const RUNNER_TEST = 'Runner/RunnerTests/testServe';
 
 const buildIds = new Map<string, { mtime: number; sha256: string }>();
 
+/** The runner's products for a simulator or a phone: a development build, else built once from the packaged sources. */
+export async function iosProducts(
+  kind: 'simulator' | 'device',
+  build = true,
+): Promise<string | undefined> {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const derived = kind === 'simulator' ? '.derived' : '.derived-device';
+  const env =
+    kind === 'simulator'
+      ? process.env.APPDYNO_IOS_PRODUCTS
+      : process.env.APPDYNO_IOS_DEVICE_PRODUCTS;
+  const sdk = kind === 'simulator' ? 'iphonesimulator' : 'iphoneos';
+  const has = (dir: string) =>
+    existsSync(dir) && readdirSync(dir).some((f) => f.includes(sdk) && f.endsWith('.xctestrun'));
+  const found = [env, join(here, `../../../../ios/${derived}/Build/Products`)].find(
+    (d): d is string => !!d && has(d),
+  );
+  if (found) return found;
+  const src = join(here, '../../agents/ios-src');
+  if (!existsSync(join(src, 'Appdyno.xcodeproj'))) return undefined;
+  const id = (await readFile(join(src, 'sources.sha256'), 'utf8').catch(() => 'unknown'))
+    .trim()
+    .slice(0, 16);
+  const out = join(homedir(), 'Library/Caches/appdyno/ios-build', id, kind);
+  const products = join(out, 'Build/Products');
+  if (has(products) || !build) return has(products) ? products : undefined;
+  process.stderr.write(`building the iOS runner for the ${kind} once (a few minutes)\n`);
+  await run(
+    'xcodebuild',
+    [
+      'build-for-testing',
+      '-project',
+      join(src, 'Appdyno.xcodeproj'),
+      '-scheme',
+      'Runner',
+      '-destination',
+      kind === 'simulator' ? 'generic/platform=iOS Simulator' : 'generic/platform=iOS',
+      '-derivedDataPath',
+      out,
+      '-quiet',
+      ...(kind === 'device'
+        ? ['CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_REQUIRED=NO', 'CODE_SIGN_IDENTITY=']
+        : []),
+    ],
+    { env: xcodeEnv(), timeout: 1_800_000, maxBuffer: 64 * 1024 * 1024 },
+  ).catch((e: { stderr?: string; message: string }) => {
+    throw new DeviceError(
+      'UNSUPPORTED',
+      `the iOS runner did not build: ${(e.stderr ?? e.message).trim().split('\n').slice(-3).join(' ').slice(0, 300)}`,
+      'see appdyno doctor',
+    );
+  });
+  return products;
+}
+
 /** The built runner (xctestrun file and products) and an id of its build. */
 export async function runnerBuild(): Promise<{ xctestrun: string; sha256: string }> {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const dirs = [
-    process.env.APPDYNO_IOS_PRODUCTS,
-    join(here, '../../../../ios/.derived/Build/Products'),
-    join(here, '../../agents/ios'),
-  ].filter((p): p is string => !!p && existsSync(p));
-  for (const dir of dirs) {
-    const file = readdirSync(dir).find((f) => /iphonesimulator.*\.xctestrun$/.test(f));
-    if (!file) continue;
-    const binary = join(
-      dir,
-      'Debug-iphonesimulator/Runner-Runner.app/PlugIns/Runner.xctest/Runner',
+  const dir = await iosProducts('simulator');
+  const file = dir && readdirSync(dir).find((f) => /iphonesimulator.*\.xctestrun$/.test(f));
+  if (!dir || !file)
+    throw new DeviceError(
+      'UNSUPPORTED',
+      'the iOS runner is not built',
+      "build it: (cd ios && xcodebuild build-for-testing -project Appdyno.xcodeproj -scheme Runner -destination 'generic/platform=iOS Simulator' -derivedDataPath .derived)",
     );
-    const hashed = existsSync(binary) ? binary : join(dir, file);
-    const mtime = statSync(hashed).mtimeMs;
-    // the build id is read once per build (hashing the binary on every connect costs time)
-    if (buildIds.get(hashed)?.mtime !== mtime)
-      buildIds.set(hashed, {
-        mtime,
-        sha256: createHash('sha256')
-          .update(await readFile(hashed))
-          .digest('hex'),
-      });
-    return { xctestrun: join(dir, file), sha256: buildIds.get(hashed)!.sha256 };
-  }
-  throw new DeviceError(
-    'UNSUPPORTED',
-    'the iOS runner is not built',
-    "build it: (cd ios && xcodebuild build-for-testing -project Appdyno.xcodeproj -scheme Runner -destination 'generic/platform=iOS Simulator' -derivedDataPath .derived)",
-  );
+  const binary = join(dir, 'Debug-iphonesimulator/Runner-Runner.app/PlugIns/Runner.xctest/Runner');
+  const hashed = existsSync(binary) ? binary : join(dir, file);
+  const mtime = statSync(hashed).mtimeMs;
+  // the build id is read once per build (hashing the binary on every connect costs time)
+  if (buildIds.get(hashed)?.mtime !== mtime)
+    buildIds.set(hashed, {
+      mtime,
+      sha256: createHash('sha256')
+        .update(await readFile(hashed))
+        .digest('hex'),
+    });
+  return { xctestrun: join(dir, file), sha256: buildIds.get(hashed)!.sha256 };
 }
 
 const State = z.object({
@@ -159,8 +205,8 @@ export class IosRunnerLauncher {
           TEST_RUNNER_GD_PORT: String(port),
           TEST_RUNNER_GD_TOKEN: token,
           ...(target && { TEST_RUNNER_GD_TARGET: target }),
-          // opt-in: taps through XCTest's event synthesizer (see the runner's EventShim)
-          ...(process.env.APPDYNO_FAST_TAP === '1' && { TEST_RUNNER_GD_FAST_TAP: '1' }),
+          // APPDYNO_FAST_TAP=0: taps through XCUI instead of XCTest's event synthesizer (the runner's EventShim)
+          ...(process.env.APPDYNO_FAST_TAP && { TEST_RUNNER_GD_FAST_TAP: process.env.APPDYNO_FAST_TAP }),
         },
       },
     );

@@ -66,24 +66,41 @@ when the phone has another build under the profile's id (stamped in `CFBundleVer
 using the same id finds a different version and installs its own again. On a phone the runner cannot
 reach the clipboard (only the app in front can), so text goes in as keys there.
 
+## Install
+
+```sh
+scripts/install.sh      # builds this checkout, installs appdyno-mcp and appdyno
+appdyno doctor     # Android SDK and adb, Xcode, runner builds, iPhone signing, connected devices
+```
+
+The package is self-contained (`~/.local/share/appdyno`, or `APPDYNO_HOME`): the Android
+agent is prebuilt; the iOS runner is built once on first use where no build is found (a few minutes,
+Xcode needed); an iPhone also needs the signing variables (above). `CHANGELOG.md` lists the releases.
+
 ## MCP client configuration
+
+Claude Code:
+
+```sh
+claude mcp add appdyno -- appdyno-mcp --device emulator-5554 --app com.example.app
+```
+
+Cursor (`~/.cursor/mcp.json`) or any client that takes a JSON server list:
 
 ```json
 {
   "mcpServers": {
     "appdyno": {
-      "command": "node",
-      "args": [
-        "/path/to/appdyno/packages/mcp/dist/main.js",
-        "--device",
-        "emulator-5554",
-        "--app",
-        "com.example.app"
-      ]
+      "command": "appdyno-mcp",
+      "args": ["--device", "emulator-5554", "--app", "com.example.app"]
     }
   }
 }
 ```
+
+`--device` takes an adb serial, a simulator id or an iPhone's UDID; without it the server drives the
+only connected device it is allowed. From a checkout without installing, the command is
+`node /path/to/appdyno/packages/mcp/dist/main.js`.
 
 Options (or environment variables): `--device` (`APPDYNO_SERIAL`), `--app` (`APPDYNO_APP`),
 `--allow-devices <regex>` (`APPDYNO_ALLOW_DEVICES`), `--allow-apps a,b`

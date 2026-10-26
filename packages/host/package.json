@@ -1,13 +1,14 @@
 {
   "name": "appdyno",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "private": true,
   "description": "Drive and measure iOS and Android devices through on-device agents.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./cli": "./dist/cli.js"
   },
   "bin": {
     "appdyno": "dist/cli.js"
