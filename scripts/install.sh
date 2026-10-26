@@ -10,9 +10,13 @@ dest=${APPDYNO_HOME:-$HOME/.local/share/appdyno}
 pnpm install --frozen-lockfile
 (cd android && ./gradlew --console=plain -q :agent:assembleDebug)
 pnpm build
-rm -rf "$dest"
-# a copy with its own node_modules (the workspace packages included), not links into this checkout
-pnpm --filter appdyno-mcp deploy --legacy --prod "$dest"
+rm -rf "$dest" "$dest.deploy"
+# a copy with its own node_modules (the workspace packages included), not links into this checkout: deploy
+# hard-links the workspace's own files, so a later build here rewrote the installed library in place
+pnpm --filter appdyno-mcp deploy --legacy --prod "$dest.deploy"
+cp -R "$dest.deploy" "$dest"
+rm -rf "$dest.deploy"
+if [[ -n $(find "$dest" -type f -links +1 -print -quit) ]]; then echo "the installed files still share inodes" >&2; exit 1; fi
 prefix=()
 [[ -n ${APPDYNO_PREFIX:-} ]] && prefix=(--prefix "$APPDYNO_PREFIX")
 npm install -g "${prefix[@]}" "$dest"
