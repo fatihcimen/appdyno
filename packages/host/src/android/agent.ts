@@ -159,9 +159,15 @@ export class AndroidAgentLauncher {
   }
 
   private async kill(pid: number) {
-    // only our own agent: its command line names the agent's main class
+    // only our own agent (its command line names the agent's main class); gone before this returns
+    // (it holds the device's one UI automation connection): 3 s to end, then killed outright
+    const ours = `grep -q ${AGENT_MAIN} /proc/${pid}/cmdline 2>/dev/null`;
     await this.adb
-      .exec(this.serial, `grep -q ${AGENT_MAIN} /proc/${pid}/cmdline 2>/dev/null && kill ${pid}`)
+      .exec(
+        this.serial,
+        `${ours} && kill ${pid}; for i in $(seq 1 30); do ${ours} || exit 0; sleep 0.1; done; ${ours} && kill -9 ${pid}; true`,
+        { timeoutMs: 15_000 },
+      )
       .catch(() => undefined);
   }
 
