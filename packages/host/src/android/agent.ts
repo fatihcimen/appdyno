@@ -11,8 +11,13 @@ import { RpcClient } from '../rpc.js';
 
 export const AGENT_MAIN = 'dev.appdyno.agent.Main';
 export const REMOTE_DIR = '/data/local/tmp/appdyno';
-/** How long a fresh agent may take to open its socket (a JVM start on a loaded host, measured: over 8 s). */
-const START_MS = 20_000;
+/**
+ * How long a fresh agent may take to open its socket while its process is alive: a JVM start on a
+ * loaded host took over 20 s (load 85). A process that is gone fails the start at once.
+ */
+const START_MS = 60_000;
+/** A start that has no process after this long has failed (the process shows within a second). */
+const NO_PROCESS_MS = 5_000;
 const POLL_MS = 100;
 
 /** The agent APK the package ships (or a development build), and its sha256. */
@@ -109,7 +114,9 @@ export class AndroidAgentLauncher {
   }
 
   private async waitReady(s: State, log: string): Promise<{ rpc: RpcClient; hello: Hello }> {
-    const deadline = Date.now() + START_MS;
+    const started = Date.now();
+    const deadline = started + START_MS;
+    let polls = 0;
     for (;;) {
       const c = await this.tryConnect(s).catch((e: unknown) =>
         e instanceof Error ? e : new Error(String(e)),
@@ -129,10 +136,21 @@ export class AndroidAgentLauncher {
           code === 'AGENT_CONFLICT' ? 'another UI automation server runs on this device: stop it, then retry' : undefined,
         );
       }
+      // the readiness signal is the socket answering hello; meanwhile the process must be there (every 5th poll)
+      if (++polls % 5 === 0 && Date.now() - started > NO_PROCESS_MS && !(await this.running(s.socket)))
+        throw new DeviceError('AGENT_UNAVAILABLE', 'the Android agent process ended before it was ready', out.trim().slice(-300) || undefined);
       if (Date.now() >= deadline)
         throw new DeviceError('AGENT_UNAVAILABLE', `the Android agent did not start within ${START_MS} ms`, out.trim().slice(0, 300) || undefined);
       await new Promise((r) => setTimeout(r, POLL_MS));
     }
+  }
+
+  /** Our agent process for this socket is running (its command line names the socket). */
+  private async running(socket: string): Promise<boolean> {
+    // [g]etir… never matches this shell's own command line
+    const pattern = `[${socket[0]}]${socket.slice(1)}`;
+    const out = await this.adb.exec(this.serial, `pgrep -f '${pattern}' >/dev/null && echo yes; true`).catch(() => 'yes');
+    return out.includes('yes');
   }
 
   private async tryConnect(state: State): Promise<{ rpc: RpcClient; hello: Hello }> {
