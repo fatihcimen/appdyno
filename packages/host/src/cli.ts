@@ -6,6 +6,7 @@ import { parseArgs } from 'node:util';
 import { Adb } from './adb.js';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
+import { iosProducts, pruneIosBuilds } from './ios/runner.js';
 import { installTools } from './tools.js';
 
 const [command, ...rest] = process.argv.slice(2);
@@ -24,6 +25,17 @@ async function main(): Promise<number> {
         return 2;
       }
       console.log(await installTools(err));
+      return 0;
+    }
+    case 'ios': {
+      if (rest[0] !== 'build') {
+        err('usage: appdyno ios build');
+        return 2;
+      }
+      // both runners now, so a device session never waits for a build (install.sh calls this)
+      for (const kind of ['simulator', 'device'] as const)
+        console.log(`${kind}: ${(await iosProducts(kind)) ?? 'no packaged sources'}`);
+      console.log(`older builds removed: ${await pruneIosBuilds()}`);
       return 0;
     }
     case 'doctor': {
@@ -76,7 +88,7 @@ async function main(): Promise<number> {
     }
     default:
       err(
-        'usage: appdyno <devices | doctor [--serial S] | bench --serial S [--driver appdyno|<module>]... [--n 50] [--out file]>',
+        'usage: appdyno <devices | doctor [--serial S] | ios build | tools install | bench --serial S [--driver appdyno|<module>]... [--n 50] [--out file]>',
       );
       return 2;
   }

@@ -18,5 +18,9 @@ prefix=()
 npm install -g "${prefix[@]}" "$dest"
 # the two commands must be executable where npm linked them
 for f in "$dest/dist/main.js" "$dest/dist/cli.js"; do [[ -x $f ]] || { echo "not executable: $f" >&2; exit 1; }; done
+# the iOS runners built now (a device session never waits for a build); older builds removed
+if [[ -d ${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer} ]]; then
+  node "$dest/dist/cli.js" ios build
+fi
 echo "installed $(node -p "require('$dest/package.json').version") at $dest"
 echo "next: appdyno doctor"

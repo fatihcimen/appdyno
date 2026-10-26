@@ -74,8 +74,8 @@ appdyno doctor     # Android SDK and adb, Xcode, runner builds, iPhone signing, 
 ```
 
 The package is self-contained (`~/.local/share/appdyno`, or `APPDYNO_HOME`): the Android
-agent is prebuilt; the iOS runner is built once on first use where no build is found (a few minutes,
-Xcode needed); an iPhone also needs the signing variables (above). `CHANGELOG.md` lists the releases.
+agent is prebuilt; `install.sh` builds both iOS runners where Xcode is (`appdyno ios build`;
+they are otherwise built once on first use, a few minutes); an iPhone also needs the signing variables (above). `CHANGELOG.md` lists the releases.
 
 ## MCP client configuration
 

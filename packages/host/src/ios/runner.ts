@@ -77,6 +77,25 @@ export async function iosProducts(
   return products;
 }
 
+/** Removes the runner builds of other packaged sources than the installed ones; how many were removed. */
+export async function pruneIosBuilds(): Promise<number> {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const id = (
+    await readFile(join(here, '../../agents/ios-src/sources.sha256'), 'utf8').catch(() => '')
+  )
+    .trim()
+    .slice(0, 16);
+  const root = join(homedir(), 'Library/Caches/appdyno/ios-build');
+  if (!id || !existsSync(root)) return 0;
+  let n = 0;
+  for (const d of readdirSync(root))
+    if (d !== id && /^[0-9a-f]{16}$/.test(d)) {
+      await rm(join(root, d), { recursive: true, force: true });
+      n++;
+    }
+  return n;
+}
+
 /** The built runner (xctestrun file and products) and an id of its build. */
 export async function runnerBuild(): Promise<{ xctestrun: string; sha256: string }> {
   const dir = await iosProducts('simulator');
