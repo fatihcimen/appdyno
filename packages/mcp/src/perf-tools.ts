@@ -14,8 +14,12 @@ const Device = z
   .string()
   .max(64)
   .optional()
-  .describe('cihaz (list_devices); verilmezse seçili cihaz');
-const App = z.string().max(200).optional().describe('paket; verilmezse seçili uygulama');
+  .describe('device (list_devices); default: the selected device');
+const App = z
+  .string()
+  .max(200)
+  .optional()
+  .describe('package or bundle id; default: the selected app');
 
 /** Jank above this share of frames is worth a finding (Android vitals counts a session slow above 25 %). */
 const JANK_PERCENT = 10;
@@ -61,19 +65,19 @@ const kb = (n?: number) => (n === undefined ? '?' : `${(n / 1024).toFixed(1)} MB
 export function perfTools(ctx: ServerContext, measurementsDir: string): Record<string, Tool> {
   const appOf = (s: Session, app?: string) => {
     const pkg = checkApp(ctx.policy, app ?? s.appId ?? '');
-    if (!pkg) throw new ToolError('app ver (ya da use_device ile uygulama seç)');
+    if (!pkg) throw new ToolError('give app (or select one with use_device)');
     return pkg;
   };
   const virtual = (s: Session) => s.device.platform === 'ios' || /^emulator-/.test(s.device.serial);
   const relative = (s: Session) =>
-    virtual(s) ? ' (sanal cihaz: göreli, yalnız aynı tür cihazla karşılaştır)' : '';
+    virtual(s) ? ' (virtual device: relative, compare only with the same kind of device)' : '';
   const save = async (kind: string, m: Measured<unknown>[], value: unknown) =>
     store(measurementsDir, kind, value, m.map((x) => `## ${x.at}\n${x.raw}`).join('\n\n'));
 
   return {
     perf_snapshot: tool(
-      'Performans anlık',
-      'appdyno: uygulamanın şu anki CPU’su (2 sn), belleği, son ölçümden beri kareleri ve cihazın durumu (yük, ısı). Ölçüm kimliği ve ham çıktı saklanır.',
+      'Performance snapshot',
+      "The app's CPU now (2 s), its memory, its frames since the last measure and the device's state (load, heat). The measurement id and the raw output are kept.",
       z
         .object({
           device: Device,
@@ -92,11 +96,11 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
           const saved = await save('snapshot', [cpu, mem], { cpu: cpu.value, memory: mem.value });
           return reply(
             [
-              `ölçüm ${saved.id}${relative(s)}`,
-              `CPU: %${cpu.value.percent} (bir çekirdeğin, ${cpu.value.windowMs} ms)`,
-              `bellek: fiziksel ayak izi ${kb(mem.value.footprintKb)}${mem.value.peakKb !== undefined ? ` (tepe ${kb(mem.value.peakKb)})` : ''}`,
-              'simülatörde kare ölçümü yok',
-              `ham çıktı: ${saved.txt}`,
+              `measurement ${saved.id}${relative(s)}`,
+              `CPU: ${cpu.value.percent}% (of one core, ${cpu.value.windowMs} ms)`,
+              `memory: physical footprint ${kb(mem.value.footprintKb)}${mem.value.peakKb !== undefined ? ` (peak ${kb(mem.value.peakKb)})` : ''}`,
+              'no frame measure on a simulator',
+              `raw output: ${saved.txt}`,
             ].join('\n'),
             {
               id: saved.id,
@@ -124,17 +128,17 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
         const f = frames.value;
         return reply(
           [
-            `ölçüm ${saved.id}${relative(s)}`,
-            `CPU: %${cpu.value.percent} (bir çekirdeğin, ${cpu.value.windowMs} ms)`,
-            `bellek: PSS ${kb(mem.value.pssKb)}, Java ${kb(mem.value.javaHeapKb)}, native ${kb(mem.value.nativeHeapKb)}, grafik ${kb(mem.value.graphicsKb)}`,
-            `kareler (son sıfırlamadan beri): ${f.totalFrames}, takılan %${f.jankyPercent}, donmuş ${f.frozenFrames}${f.p95Ms !== undefined ? `, p95 ${f.p95Ms} ms` : ''}${f.fewFrames ? ' (az kare: oran anlamsız)' : ''}`,
+            `measurement ${saved.id}${relative(s)}`,
+            `CPU: ${cpu.value.percent}% (of one core, ${cpu.value.windowMs} ms)`,
+            `memory: PSS ${kb(mem.value.pssKb)}, Java ${kb(mem.value.javaHeapKb)}, native ${kb(mem.value.nativeHeapKb)}, graphics ${kb(mem.value.graphicsKb)}`,
+            `frames (since the last reset): ${f.totalFrames}, janky ${f.jankyPercent}%, frozen ${f.frozenFrames}${f.p95Ms !== undefined ? `, p95 ${f.p95Ms} ms` : ''}${f.fewFrames ? ' (few frames: the share means little)' : ''}`,
             ...(f.frames?.worstWindow
               ? [
-                  `en kötü saniye: ${f.frames.worstWindow.frames} karede ${f.frames.worstWindow.slow} kaçan kare, ortalama ${f.frames.worstWindow.avgMs} ms`,
+                  `worst second: ${f.frames.worstWindow.slow} missed of ${f.frames.worstWindow.frames} frames, mean ${f.frames.worstWindow.avgMs} ms`,
                 ]
               : []),
-            `cihaz: yük ${vitals.value.load?.join(' ') ?? '?'}, CPU baskısı ${vitals.value.cpuPressure ?? '?'}, termal ${vitals.value.thermalStatus ?? '?'}`,
-            `ham çıktı: ${saved.txt}`,
+            `device: load ${vitals.value.load?.join(' ') ?? '?'}, CPU pressure ${vitals.value.cpuPressure ?? '?'}, thermal ${vitals.value.thermalStatus ?? '?'}`,
+            `raw output: ${saved.txt}`,
           ].join('\n'),
           {
             id: saved.id,
@@ -156,8 +160,8 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
       },
     ),
     perf_scroll: tool(
-      'Kaydırma performansı',
-      'appdyno: listeyi kaydırarak kareleri ve belleği ölç: her tekrarda kareler sıfırlanır, swipes kez kaydırılır, liste durunca kareler ve bellek okunur. Yalnız yukarı/aşağı.',
+      'Scroll performance',
+      'Measure frames and memory while scrolling a list: each round resets the frames, swipes `swipes` times, and reads frames and memory once the list stops. Up or down only.',
       z
         .object({
           device: Device,
@@ -224,23 +228,23 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
         });
         const notes = [
           ...(jank !== undefined && jank > JANK_PERCENT
-            ? [`takılma yüksek: medyan %${jank} (eşik %${JANK_PERCENT})`]
+            ? [`high jank: median ${jank}% (threshold ${JANK_PERCENT}%)`]
             : []),
-          ...(frozen > 0 ? [`donmuş kare: ${frozen} (700 ms üstü)`] : []),
+          ...(frozen > 0 ? [`frozen frames: ${frozen} (over 700 ms)`] : []),
           ...(growth !== undefined && growth > 0.3
-            ? [`bellek artıyor: %${Math.round(growth * 100)} (2. turdan sona)`]
+            ? [`memory grows: ${Math.round(growth * 100)}% (from round 2 to the last)`]
             : []),
         ];
         return reply(
           [
-            `ölçüm ${saved.id}${relative(s)}`,
+            `measurement ${saved.id}${relative(s)}`,
             ...rounds.map(
               (x, i) =>
-                `tur ${i + 1}: ${x.frames} kare, takılan %${x.jankyPercent}${x.p95Ms !== undefined ? `, p95 ${x.p95Ms} ms` : ''}, donmuş ${x.frozen}, bellek ${kb(x.memStartKb)} → ${kb(x.memEndKb)}`,
+                `round ${i + 1}: ${x.frames} frames, janky ${x.jankyPercent}%${x.p95Ms !== undefined ? `, p95 ${x.p95Ms} ms` : ''}, frozen ${x.frozen}, memory ${kb(x.memStartKb)} → ${kb(x.memEndKb)}`,
             ),
-            `medyan takılma: ${jank === undefined ? 'yeterli kare yok' : `%${jank}`}`,
-            ...(notes.length ? notes : ['eşik aşılmadı']),
-            `ham çıktı: ${saved.txt}`,
+            `median jank: ${jank === undefined ? 'not enough frames' : `${jank}%`}`,
+            ...(notes.length ? notes : ['no threshold exceeded']),
+            `raw output: ${saved.txt}`,
           ].join('\n'),
           {
             id: saved.id,
@@ -256,8 +260,8 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
       },
     ),
     perf_launch: tool(
-      'Açılış süresi',
-      'appdyno: uygulamanın açılış süresi: cold (durdurulup açılır) ya da warm (arka plandan döner); ilk açılış ısınma, sonra repeats kez, medyan. Uygulama yeniden başlar.',
+      'Launch time',
+      "The app's launch time: cold (stopped, then started) or warm (back from the background); the first launch warms up, then `repeats` launches, median. The app restarts.",
       z
         .object({
           device: Device,
@@ -278,10 +282,10 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
           const med = m.value.medianMs;
           return reply(
             [
-              `ölçüm ${saved.id}${relative(s)}`,
-              `${mode} açılış (ilk ekran okunana kadar): ${m.value.samplesMs.map((x) => `${x} ms`).join(', ')}`,
-              `medyan: ${med} ms`,
-              `ham çıktı: ${saved.txt}`,
+              `measurement ${saved.id}${relative(s)}`,
+              `${mode} launch (until the first screen is read): ${m.value.samplesMs.map((x) => `${x} ms`).join(', ')}`,
+              `median: ${med} ms`,
+              `raw output: ${saved.txt}`,
             ].join('\n'),
             {
               id: saved.id,
@@ -301,10 +305,10 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
         const med = m.value.medianMs;
         return reply(
           [
-            `ölçüm ${saved.id}${relative(s)}`,
-            `${mode} açılış: ${m.value.samples.map((x) => `${x.totalMs ?? '?'} ms (${x.state ?? '?'})`).join(', ')}`,
-            `medyan: ${med === undefined ? 'ölçülemedi' : `${med} ms`}${med !== undefined && med >= limit ? ` (aşırı: eşik ${limit} ms)` : ''}`,
-            `ham çıktı: ${saved.txt}`,
+            `measurement ${saved.id}${relative(s)}`,
+            `${mode} launch: ${m.value.samples.map((x) => `${x.totalMs ?? '?'} ms (${x.state ?? '?'})`).join(', ')}`,
+            `median: ${med === undefined ? 'not measured' : `${med} ms`}${med !== undefined && med >= limit ? ` (excessive: threshold ${limit} ms)` : ''}`,
+            `raw output: ${saved.txt}`,
           ].join('\n'),
           {
             id: saved.id,
@@ -322,8 +326,8 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
       },
     ),
     perf_profile: tool(
-      'CPU profili',
-      'appdyno: uygulamanın CPU zamanı nereye gidiyor: seconds boyunca örnekleme (uygulama debuggable ya da profileable olmalı), en çok zaman alan fonksiyonlar. İsteğe bağlı kayıt sırasında kaydırma.',
+      'CPU profile',
+      "Where the app's CPU time goes: sampling for `seconds` (the app must be debuggable or profileable), the functions that take the most. Optionally scrolls during the recording.",
       z
         .object({
           device: Device,
@@ -357,16 +361,16 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
         const saved = await save('cpu-profile', [m], m.value);
         return reply(
           [
-            `ölçüm ${saved.id}${relative(s)}`,
-            `${m.value.samples} örnek, ${m.value.durationMs} ms; en çok zaman alanlar:`,
+            `measurement ${saved.id}${relative(s)}`,
+            `${m.value.samples} samples, ${m.value.durationMs} ms; the most time:`,
             ...m.value.top.slice(0, 10).map((e) => `%${e.percent} ${e.symbol}`),
             ...(m.value.appTop?.length
               ? [
-                  'uygulamanın kendi fonksiyonları (çağırdıkları dahil):',
+                  "the app's own functions (with what they call):",
                   ...m.value.appTop.slice(0, 10).map((e) => `%${e.percent} ${e.symbol}`),
                 ]
               : []),
-            `ham çıktı: ${saved.txt}`,
+            `raw output: ${saved.txt}`,
           ].join('\n'),
           {
             id: saved.id,
@@ -382,8 +386,8 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
       },
     ),
     perf_heap: tool(
-      'Bellek dökümü',
-      'appdyno: uygulamanın bellek dökümü bu makinede bir dosyaya (Android: Java HPROF, bir bellek analizcisiyle açılır; iOS simülatör: Xcode bellek grafiği ve sızıntı sayısı). Sızıntı şüphesinde perf_scroll’dan sonra.',
+      'Heap dump',
+      "The app's heap into a file on this machine (Android: Java HPROF, opened with a memory analyser; iOS simulator: an Xcode memory graph and the leak count). For a suspected leak, after perf_scroll.",
       z.object({ device: Device, app: App }).strict(),
       HeapOut,
       READ,
@@ -396,7 +400,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
           const m = await s.device.iosPerf.heapGraph(pkg, file).catch(refused);
           const saved = await save('heap-graph', [m], m.value);
           return reply(
-            `ölçüm ${saved.id}\nbellek grafiği (Xcode): ${m.value.file} (${(m.value.bytes / 1048576).toFixed(1)} MB)${m.value.leaks !== undefined ? `; ${m.value.leaks} sızıntı, ${m.value.leakedBytes} bayt` : ''}`,
+            `measurement ${saved.id}\nmemory graph (Xcode): ${m.value.file} (${(m.value.bytes / 1048576).toFixed(1)} MB)${m.value.leaks !== undefined ? `; ${m.value.leaks} leaks, ${m.value.leakedBytes} bytes` : ''}`,
             { id: saved.id, file: m.value.file, bytes: m.value.bytes },
           );
         }
@@ -404,14 +408,14 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
         const m = await perfOf(s.device).heapDump(pkg, file).catch(refused);
         const saved = await save('heap-dump', [m], m.value);
         return reply(
-          `ölçüm ${saved.id}\nbellek dökümü: ${m.value.file} (${(m.value.bytes / 1048576).toFixed(1)} MB)`,
+          `measurement ${saved.id}\nheap dump: ${m.value.file} (${(m.value.bytes / 1048576).toFixed(1)} MB)`,
           { id: saved.id, file: m.value.file, bytes: m.value.bytes },
         );
       },
     ),
     perf_trace: tool(
-      'Kare izi',
-      'appdyno: kare zaman çizelgesini kaydet (Android 12+: her karenin süresi ve neden geciktiği; iOS: animasyon takılmaları, oranı ve nedenleri, Instruments izi). İsteğe bağlı kayıt sırasında kaydırma.',
+      'Frame trace',
+      "Record the frame timeline (Android 12+: each frame's time and why it was late; iOS: animation hitches, their ratio and causes, an Instruments trace). Optionally scrolls during the recording.",
       z
         .object({
           device: Device,
@@ -449,10 +453,10 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
             .join('; ');
           return reply(
             [
-              `ölçüm ${saved.id}${relative(s)}`,
-              `${v.frames} kare; uygulamanın ${v.hitches} takılması, toplam ${v.hitchMs} ms, en kötü ${v.worstMs} ms; takılma oranı ${v.hitchRatio} ms/sn`,
-              ...(causes ? [`olası nedenler: ${causes}`] : []),
-              `iz (Instruments): ${v.tracePath}`,
+              `measurement ${saved.id}${relative(s)}`,
+              `${v.frames} frames; ${v.hitches} hitches of the app, ${v.hitchMs} ms in all, worst ${v.worstMs} ms; hitch ratio ${v.hitchRatio} ms/s`,
+              ...(causes ? [`likely causes: ${causes}`] : []),
+              `trace (Instruments): ${v.tracePath}`,
             ].join('\n'),
             {
               id: saved.id,
@@ -475,15 +479,15 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
         const v = m.value;
         return reply(
           [
-            `ölçüm ${saved.id}${relative(s)}`,
-            `${v.frames} kare; uygulamanın geciktirdiği ${v.appDeadlineMissed} (%${v.appJankPercent}); herhangi bir takılma ${v.janky} (%${v.jankyPercent}: buffer stuffing ${v.bufferStuffing}, birleştirici ${v.surfaceFlinger})`,
+            `measurement ${saved.id}${relative(s)}`,
+            `${v.frames} frames; late by the app ${v.appDeadlineMissed} (${v.appJankPercent}%); any jank ${v.janky} (${v.jankyPercent}%: buffer stuffing ${v.bufferStuffing}, compositor ${v.surfaceFlinger})`,
             ...(virtual(s)
               ? [
-                  'sanal cihazda birleştirici takılması ekranın tahmin hatasıdır, uygulamaya yazılmaz: uygulamanın payına bak',
+                  "on a virtual device the compositor's jank is the display's prediction error, not the app's: look at the app's share",
                 ]
               : []),
-            `kare süresi p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, en kötü ${v.worstMs} ms`,
-            `ham çıktı: ${saved.txt}`,
+            `frame time p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms`,
+            `raw output: ${saved.txt}`,
           ].join('\n'),
           {
             id: saved.id,
@@ -505,6 +509,9 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
 
 /** The device's performance tools; an iOS simulator has none yet. */
 function perfOf(d: DriveableDevice) {
-  if (!d.perf) throw new ToolError(`${d.platform} cihazında performans ölçümü henüz yok`);
+  if (!d.perf)
+    throw new ToolError(
+      `no performance measures on ${d.platform === 'ios' ? 'iOS' : d.platform} here yet`,
+    );
   return d.perf;
 }

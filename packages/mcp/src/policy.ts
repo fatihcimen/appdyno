@@ -22,22 +22,22 @@ const UNSAFE_SCHEME = /^(file|content|intent|javascript|data|android-app|jar):/i
 export function checkUrl(policy: Policy, url: string): string {
   const u = url.trim();
   if (!/^[a-z][a-z0-9+.-]*:/i.test(u))
-    throw new ToolError('bir link ver (şema ile: https://… ya da uygulama://…)');
-  if (UNSAFE_SCHEME.test(u)) throw new ToolError(`bu şema açılmaz: ${u.split(':')[0]}`);
+    throw new ToolError('give a link with its scheme (https://… or app://…)');
+  if (UNSAFE_SCHEME.test(u)) throw new ToolError(`this scheme is not opened: ${u.split(':')[0]}`);
   if (policy.urls && !policy.urls.test(u))
-    throw new ToolError('bu link bu sunucunun izin listesinde yok');
+    throw new ToolError("this link is not on this server's allow list");
   return u;
 }
 
 export function checkApp(policy: Policy, pkg: string): string {
   if (policy.apps.length > 0 && !policy.apps.includes(pkg))
-    throw new ToolError(`${pkg} izinli uygulamalardan değil (${policy.apps.join(', ')})`);
+    throw new ToolError(`${pkg} is not an allowed app (${policy.apps.join(', ')})`);
   return pkg;
 }
 
 export function checkDevice(policy: Policy, serial: string): string {
   if (policy.devices && !policy.devices.test(serial))
-    throw new ToolError(`${serial} bu sunucuya verilmemiş`);
+    throw new ToolError(`${serial} is not allowed on this server`);
   return serial;
 }
 

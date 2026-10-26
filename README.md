@@ -4,7 +4,7 @@ A local device automation server for mobile QA: one MCP stdio server (`appdyno-m
 TypeScript host library (`appdyno`) that drive devices through our own on-device agents and
 measure them.
 
-Status: Android (emulator) works end to end, with performance measurement; iOS is planned.
+Status: Android (emulators and phones) and iOS (simulators and iPhones) work end to end, with performance measurement.
 
 - Runs only on the machine it is started on: the MCP client starts it over stdio; it opens no network
   listener. The Android agent listens on an abstract unix socket on the device, reached through adb,

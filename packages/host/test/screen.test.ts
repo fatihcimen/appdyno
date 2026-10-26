@@ -6,6 +6,7 @@ import {
   diffText,
   elementLine,
   elementsOf,
+  fold,
   refHash,
   screenElements,
   withStableRefs,
@@ -133,13 +134,13 @@ describe('screen diff', () => {
     expect(d.changed.map((c) => [c.was.label, c.now.label])).toEqual([['B', 'B2']]);
     expect(diffText(d, next.length)).toBe(
       [
-        'ekran değişti: +1 -1 ~1 (3 öğe; ref role "label" x,y flags)',
+        'screen changed: +1 -1 ~1 (3 elements; ref role "label" x,y flags)',
         `+ ${elementLine(d.added[0]!)}`,
         `- ${d.removed[0]!.ref} "C"`,
-        `~ ${elementLine(d.changed[0]!.now)} (önce "B")`,
+        `~ ${elementLine(d.changed[0]!.now)} (was "B")`,
       ].join('\n'),
     );
-    expect(diffText(diffScreens(next, next), 3)).toBe('ekran değişmedi (3 öğe)');
+    expect(diffText(diffScreens(next, next), 3)).toBe('screen unchanged (3 elements)');
   });
 
   it('gives up on a diff as long as the screen (another screen)', () => {
@@ -239,45 +240,70 @@ describe('wire tree to screen', () => {
 });
 
 describe('system alerts', () => {
-  it('finds the iOS alert button for allow and deny, never an app button', () => {
-    const els: UiElement[] = [
-      root,
-      {
-        type: 'Button',
-        label: 'Tamam',
-        ref: '@e2',
-        parent: 0,
-        rect: { x: 0, y: 0, width: 50, height: 50 },
-      },
-      {
-        type: 'Alert',
-        label: 'Konum',
-        ref: '@e3',
-        parent: 0,
-        rect: { x: 50, y: 300, width: 300, height: 200 },
-      },
-      {
-        type: 'Button',
-        label: 'Uygulamayı Kullanırken İzin Ver',
-        ref: '@e4',
-        parent: 2,
-        rect: { x: 50, y: 400, width: 300, height: 44 },
-      },
-      {
-        type: 'Button',
-        label: 'İzin Verme',
-        ref: '@e5',
-        parent: 2,
-        rect: { x: 50, y: 450, width: 300, height: 44 },
-      },
-    ];
-    expect(alertButton(els, 'ios', 'allow')).toEqual({
+  /** An app screen with its own "Tamam" button and a system Alert (the home screen app's) over it. */
+  const promptOver = (buttons: string[], alertPkg = 'com.apple.springboard'): UiElement[] => [
+    { ...root, pkg: 'com.example.app' },
+    {
+      type: 'Button',
+      label: 'Tamam',
+      ref: '@e2',
+      parent: 0,
+      pkg: 'com.example.app',
+      rect: { x: 0, y: 0, width: 50, height: 50 },
+    },
+    {
+      type: 'Alert',
+      label: 'Konum',
+      ref: '@e3',
+      pkg: alertPkg,
+      rect: { x: 50, y: 300, width: 300, height: 200 },
+    },
+    ...buttons.map((label, i): UiElement => ({
+      type: 'Button',
+      label,
+      ref: `@b${i}`,
+      parent: 2,
+      pkg: alertPkg,
+      rect: { x: 50, y: 400 + i * 50, width: 300, height: 44 },
+    })),
+  ];
+
+  it('answers an iOS system alert by the words the caller gives (Turkish here)', () => {
+    // words are matched on the folded label (fold: no accents, dotless ı as i)
+    const tr = {
+      allow: /^(izin ver|uygulamayi kullanirken izin ver|bir kez izin ver)$/,
+      deny: /^izin verme$/,
+    };
+    const els = promptOver(['Uygulamayı Kullanırken İzin Ver', 'İzin Verme']);
+    expect(alertButton(els, 'ios', 'allow', tr)).toEqual({
       label: 'Uygulamayı Kullanırken İzin Ver',
       x: 200,
       y: 422,
     });
-    expect(alertButton(els, 'ios', 'deny')?.label).toBe('İzin Verme');
+    expect(alertButton(els, 'ios', 'deny', tr)?.label).toBe('İzin Verme');
     expect(alertButton(els.slice(0, 2), 'ios', 'allow')).toBeUndefined();
+  });
+
+  it('answers an iOS system alert in English by default and by place in any language', () => {
+    expect(alertButton(promptOver(['Don’t Allow', 'Allow']), 'ios', 'allow')?.label).toBe('Allow');
+    // two buttons (notifications, tracking): deny first, allow last
+    const two = promptOver(['Nicht erlauben', 'Erlauben']);
+    expect(alertButton(two, 'ios', 'allow')?.label).toBe('Erlauben');
+    expect(alertButton(two, 'ios', 'deny')?.label).toBe('Nicht erlauben');
+    // three (location, photos): once, while using, don't
+    const three = promptOver([
+      'Einmal erlauben',
+      'Beim Verwenden der App erlauben',
+      'Nicht erlauben',
+    ]);
+    expect(alertButton(three, 'ios', 'allow')?.label).toBe('Beim Verwenden der App erlauben');
+    expect(alertButton(three, 'ios', 'deny')?.label).toBe('Nicht erlauben');
+  });
+
+  it("never answers an app's own alert on iOS", () => {
+    expect(
+      alertButton(promptOver(['Don’t Allow', 'Allow'], 'com.example.app'), 'ios', 'allow'),
+    ).toBeUndefined();
   });
 
   it('on Android only the permission controller, never a dialog button of the app or the system', () => {
@@ -307,5 +333,14 @@ describe('system alerts', () => {
         'deny',
       ),
     ).toMatchObject({ label: 'İzin verme' });
+  });
+});
+
+describe('fold', () => {
+  it('matches text without a locale: case, accents, dotted and dotless i', () => {
+    expect(fold('INFO')).toBe('info');
+    expect(fold('İstanbul')).toBe('istanbul');
+    expect(fold('ıslak')).toBe('islak');
+    expect(fold('Gönder')).toBe('gonder');
   });
 });

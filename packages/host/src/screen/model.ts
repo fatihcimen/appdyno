@@ -266,7 +266,7 @@ export function screenElements(
         ? ([shown, 'label'] as const)
         : path
           ? ([path, 'path'] as const)
-          : ([`konum ${round10(x)},${round10(y)}`, 'position'] as const);
+          : ([`at ${round10(x)},${round10(y)}`, 'position'] as const);
     out.push({
       ref: i.el.ref,
       role,

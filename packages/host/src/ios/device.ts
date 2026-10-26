@@ -14,7 +14,7 @@ import {
 import { type ActOptions, TIMEOUTS } from '../android/device.js';
 import { DeviceQueue } from '../queue.js';
 import type { RpcClient } from '../rpc.js';
-import { buildScreen, type Screen } from '../screen/index.js';
+import { buildScreen, fold, type Screen } from '../screen/index.js';
 import { IosSimulatorPerf } from './perf.js';
 import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -29,8 +29,17 @@ import { assertBundle, Simctl } from './simctl.js';
 const DUMP_FLAG = join(homedir(), 'Library/Caches/appdyno/dump-trees');
 const DUMP_DIR = join(homedir(), 'Library/Caches/appdyno/tree-dumps');
 
-/** The confirmation's button (English, Turkish). */
-const OPEN = /^(Open|Aç)$/;
+/**
+ * The confirming button of a system prompt over the screen ("Open in …?" after a link): of two buttons
+ * the second (the first cancels, in any language), else one that says `words`.
+ */
+// shortcut: a two-button system prompt that is not the link's (a notification prompt) within the 3 s
+// after a link is answered as confirmed; tell them apart by the prompt's text if one shows up there
+export function promptButton(t: Tree, words: RegExp = /^open$/): Point | undefined {
+  const buttons = t.nodes.filter((n) => t.windows[n.w]?.type === 3 && n.c === 'Button');
+  const b = buttons.length === 2 ? buttons[1] : buttons.find((n) => words.test(fold(n.d ?? '')));
+  return b && { x: (b.b[0] + b.b[2]) / 2, y: (b.b[1] + b.b[3]) / 2 };
+}
 
 /** Read-only requests are retried once on a fresh connection when the runner went away. */
 const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
@@ -264,15 +273,9 @@ export class IosDevice {
     // shortcut: the prompt is looked for during 3 s after every link to an app; a link without one costs that time
     const end = Date.now() + 3_000;
     while (Date.now() < end) {
-      const t = await this.tree();
-      const open = t.nodes.find(
-        (n) => t.windows[n.w]?.type === 3 && n.c === 'Button' && OPEN.test(n.d ?? ''),
-      );
+      const open = promptButton(await this.tree());
       if (open) {
-        await this.tap(
-          { x: (open.b[0] + open.b[2]) / 2, y: (open.b[1] + open.b[3]) / 2 },
-          { settle: false },
-        );
+        await this.tap(open, { settle: false });
         return;
       }
       await new Promise((r) => setTimeout(r, 150));

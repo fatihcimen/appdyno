@@ -1,4 +1,5 @@
 import type { UiElement } from './elements.js';
+import { fold } from './fold.js';
 import type { Platform, ScreenElement } from './model.js';
 
 /** One element as the screen view shows it: ref, role, "label", id=<id> without a label, x,y, flags. */
@@ -69,6 +70,9 @@ export function diffScreens(prev: ScreenElement[], next: ScreenElement[]): Scree
   return { added, removed, changed };
 }
 
+/** How diffText starts when nothing changed. */
+export const UNCHANGED = 'screen unchanged';
+
 /**
  * The diff as text, or undefined when it would not be shorter than the whole screen (another screen, a
  * scroll that moved everything): the caller sends the full view then.
@@ -79,80 +83,85 @@ export function diffText(
   clean: (s: string) => string = (s) => s,
 ): string | undefined {
   const n = d.added.length + d.removed.length + d.changed.length;
-  if (n === 0) return `ekran değişmedi (${total} öğe)`;
+  if (n === 0) return `${UNCHANGED} (${total} elements)`;
   if (n >= Math.max(4, total * 0.6)) return undefined;
   return [
-    `ekran değişti: +${d.added.length} -${d.removed.length} ~${d.changed.length} (${total} öğe; ref role "label" x,y flags)`,
+    `screen changed: +${d.added.length} -${d.removed.length} ~${d.changed.length} (${total} elements; ref role "label" x,y flags)`,
     ...d.added.map((e) => `+ ${elementLine(e, clean)}`),
     ...d.removed.map((e) => `- ${e.ref} ${JSON.stringify(clean(e.label))}`),
     ...d.changed.map(
       ({ now, was }) =>
-        `~ ${elementLine(now, clean)}${was.label !== now.label ? ` (önce ${JSON.stringify(clean(was.label))})` : ''}`,
+        `~ ${elementLine(now, clean)}${was.label !== now.label ? ` (was ${JSON.stringify(clean(was.label))})` : ''}`,
     ),
   ].join('\n');
 }
 
 export type AlertAction = 'allow' | 'deny';
 
-const ALLOW =
-  /^(allow|allow while using( the)? app|allow once|allow full access|while using the app|only this time|izin ver|uygulamayı kullanırken izin ver|uygulama kullanılırken|bir kez izin ver|yalnızca bu sefer|tam erişime izin ver)$/i;
-const DENY = /^(don[’']t allow|ask app not to track|izin verme|uygulamadan izlememesini iste)$/i;
-const PERMISSION =
-  /konum|bildirim|kamera|fotoğraf|mikrofon|kişiler|izin|izle|yerel ağ|bluetooth|allow|location|notification|camera|photo|microphone|contacts|track|local network/i;
+/**
+ * The words of a system prompt's allow and deny buttons (the device's language), matched on the label
+ * as `fold` gives it. English by default; a caller testing in another language passes its own. Without
+ * a match the button is picked by its place in the prompt (see alertButton).
+ */
+export type AlertWords = { allow: RegExp; deny: RegExp };
+export const ALERT_WORDS: AlertWords = {
+  allow:
+    /^(allow|allow while using( the)? app|allow once|allow full access|while using the app|only this time)$/,
+  deny: /^(don[’']t allow|ask app not to track)$/,
+};
 const PERMISSION_PACKAGES = /^com\.(google\.)?android\.permissioncontroller$/;
 const ANDROID_ALLOW = /:id\/permission_allow(_foreground_only|_one_time)?_button$/;
 const ANDROID_DENY = /:id\/permission_deny(_and_dont_ask_again)?_button$/;
+/** The home screen app, whose alerts are the system's (permission prompts), never the app's own. */
+const IOS_SYSTEM = 'com.apple.springboard';
 
 /**
  * The button of a system permission prompt for `action`: on Android a permission controller's allow or
- * deny button (by id, any language), on iOS a button of an Alert that asks for a permission. Never an
- * app's own dialog. Undefined when no such prompt is up.
+ * deny button (by id, any language); on iOS a button of an Alert of the home screen app (never an app's
+ * own dialog), by `words`, else by its place: of two buttons deny is the first and allow the last; of
+ * three or more (location, photos: once / while using / don't) allow is the second and deny the last.
+ * Undefined when no such prompt is up.
  */
-// shortcut: ids and wordings of the stock permission prompts; add an OEM's when a device shows another
+// shortcut: ids of the stock permission controller; add an OEM's when a device shows another
 export function alertButton(
   elements: UiElement[],
   platform: Platform,
   action: AlertAction,
+  words: AlertWords = ALERT_WORDS,
 ): { label: string; x: number; y: number } | undefined {
   const text = (e: UiElement) => (e.label || e.text || e.name || '').trim();
-  const says = (re: RegExp, t: string) => re.test(t) || re.test(t.toLocaleLowerCase('tr'));
+  const at = (e: UiElement | undefined) =>
+    e?.rect && {
+      label: text(e),
+      x: Math.round(e.rect.x + e.rect.width / 2),
+      y: Math.round(e.rect.y + e.rect.height / 2),
+    };
+  if (platform === 'android')
+    return at(
+      elements.find((e) => {
+        const id = e.identifier ?? '';
+        const pkg = /^([\w.]+):id\//.exec(id)?.[1] ?? '';
+        return (
+          !!e.rect &&
+          PERMISSION_PACKAGES.test(pkg) &&
+          (action === 'allow' ? ANDROID_ALLOW : ANDROID_DENY).test(id)
+        );
+      }),
+    );
   const isUnder = (i: number, p: number): boolean => {
     for (let q = elements[i]!.parent; q !== undefined; q = elements[q]!.parent)
       if (q === p) return true;
     return false;
   };
-  const below = (p: number) => elements.filter((_, i) => isUnder(i, p));
-  const alertOf = (i: number) => {
-    for (let p = elements[i]!.parent; p !== undefined; p = elements[p]!.parent)
-      if (/alert$/i.test(elements[p]!.type)) return p;
-    return undefined;
-  };
-  const pick = elements.findIndex((e, i) => {
-    if (!e.rect) return false;
-    if (platform === 'android') {
-      const id = e.identifier ?? '';
-      const pkg = /^([\w.]+):id\//.exec(id)?.[1] ?? '';
-      return (
-        PERMISSION_PACKAGES.test(pkg) &&
-        (action === 'allow' ? ANDROID_ALLOW : ANDROID_DENY).test(id)
-      );
-    }
-    if (!/button$/i.test(e.type) || !says(action === 'allow' ? ALLOW : DENY, text(e))) return false;
-    const alert = alertOf(i);
-    if (alert === undefined) return false;
-    const words = [
-      text(elements[alert]!),
-      ...below(alert)
-        .filter((x) => !/button$/i.test(x.type))
-        .map(text),
-    ];
-    return words.some((w) => w && says(PERMISSION, w));
-  });
-  const e = elements[pick];
-  if (!e?.rect) return undefined;
-  return {
-    label: text(e),
-    x: Math.round(e.rect.x + e.rect.width / 2),
-    y: Math.round(e.rect.y + e.rect.height / 2),
-  };
+  const alert = elements.findIndex((e) => /alert$/i.test(e.type) && e.pkg === IOS_SYSTEM);
+  if (alert < 0) return undefined;
+  const buttons = elements.filter(
+    (e, i) => /button$/i.test(e.type) && !!e.rect && isUnder(i, alert),
+  );
+  const re = action === 'allow' ? words.allow : words.deny;
+  const byWord = buttons.find((b) => re.test(fold(text(b))));
+  if (byWord) return at(byWord);
+  if (buttons.length < 2) return undefined;
+  // allow is the second button either way; deny the first of two, the last of more
+  return at(action === 'allow' ? buttons[1] : buttons.length === 2 ? buttons[0] : buttons.at(-1));
 }
