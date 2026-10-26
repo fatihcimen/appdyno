@@ -16,6 +16,7 @@ import {
 import { Adb, assertSerial, shq } from '../adb.js';
 import { DeviceQueue } from '../queue.js';
 import type { RpcClient } from '../rpc.js';
+import { afterTimeout } from '../stuck.js';
 import { buildScreen, type Screen } from '../screen/index.js';
 import { AndroidAgentLauncher } from './agent.js';
 import { AndroidPerf } from './perf.js';
@@ -92,18 +93,27 @@ export class AndroidDevice {
 
   private call<M extends Method>(method: M, params: ParamsOf<M>, timeoutMs: number) {
     return this.queue.run(async () => {
+      let rpc: RpcClient | undefined;
       try {
-        const rpc = await this.ensure();
+        rpc = await this.ensure();
         return await rpc.call(method, params, { timeoutMs });
       } catch (e) {
         const lost = e instanceof DeviceError && (e.code === 'AGENT_UNAVAILABLE' || e.code === 'DEVICE_GONE');
-        if (!lost || !RETRY_SAFE.has(method)) throw e;
+        if (!lost) throw await afterTimeout(e, rpc, () => this.restartStuck(rpc!));
+        if (!RETRY_SAFE.has(method)) throw e;
         this.rpc = undefined;
         // an unplugged cable or a reboot: the agent may still run on the device, its state file finds it
         if ((e as DeviceError).code === 'DEVICE_GONE') await this.waitForDevice(e);
         return (await this.ensure()).call(method, params, { timeoutMs });
       }
     });
+  }
+
+  /** An agent whose work lane stays stuck: stopped, so the next call starts a new one. */
+  private async restartStuck(rpc: RpcClient) {
+    if (this.rpc === rpc) this.rpc = undefined;
+    rpc.close();
+    await this.launcher.stop();
   }
 
   /** Waits until adb lists the device as usable again, at most reconnectWaitMs; else rethrows `cause`. */

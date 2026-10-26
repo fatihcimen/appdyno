@@ -25,12 +25,13 @@ class Options(val socket: String, val token: String, val idleExitMs: Long) {
 
 /**
  * The agent's server on an abstract unix socket (reachable only through adb on this device). The first
- * request of a connection must be `hello` with the launch token. Device work runs on one thread in order;
- * every request has a deadline after which the host gets TIMEOUT and the work is told to stop.
+ * request of a connection must be `hello` with the launch token. Device work runs on one thread in order
+ * (WorkLane); every request has a deadline after which the host gets TIMEOUT and the work is told to stop,
+ * and a job stuck past it does not hold the requests behind it.
  */
 class Server(private val opts: Options, private val handlers: Handlers) {
-    private val actions = Executors.newSingleThreadExecutor { r -> Thread(r, "appdyno-actions").apply { isDaemon = true } }
     private val timers = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "appdyno-timers").apply { isDaemon = true } }
+    private val actions = WorkLane(timers)
     private val jobs = ConcurrentHashMap<Int, Job>()
 
     @Volatile
@@ -105,13 +106,12 @@ class Server(private val opts: Options, private val handlers: Handlers) {
         jobs[id] = job
         val replied = AtomicBoolean(false)
         val deadlineMs = params.optLong("_deadlineMs", 30_000).coerceIn(100, 600_000)
-        val timeout = timers.schedule({
-            job.cancelled = true
+        val timedOut = {
             if (replied.compareAndSet(false, true)) {
                 writer.safe { json(error(id, AgentFailure("TIMEOUT", "$method took longer than $deadlineMs ms"))) }
             }
-        }, deadlineMs, TimeUnit.MILLISECONDS)
-        actions.execute {
+        }
+        actions.submit(job, deadlineMs, timedOut) {
             try {
                 if (job.cancelled) throw AgentFailure("CANCELLED", "$method was cancelled before it started")
                 val reply = handlers.handle(method, params, job)
@@ -122,7 +122,6 @@ class Server(private val opts: Options, private val handlers: Handlers) {
             } catch (t: Throwable) {
                 if (replied.compareAndSet(false, true)) writer.safe { json(error(id, failure(t))) }
             } finally {
-                timeout.cancel(false)
                 jobs.remove(id)
             }
         }

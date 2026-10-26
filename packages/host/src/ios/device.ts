@@ -14,6 +14,7 @@ import {
 import { type ActOptions, TIMEOUTS } from '../android/device.js';
 import { DeviceQueue } from '../queue.js';
 import type { RpcClient } from '../rpc.js';
+import { afterTimeout } from '../stuck.js';
 import { buildScreen, type Screen } from '../screen/index.js';
 import { IosSimulatorPerf } from './perf.js';
 import { existsSync } from 'node:fs';
@@ -143,15 +144,26 @@ export class IosDevice {
 
   private call<M extends Method>(method: M, params: ParamsOf<M>, timeoutMs: number) {
     return this.queue.run(async () => {
+      let rpc: RpcClient | undefined;
       try {
-        return await (await this.ensure()).call(method, params, { timeoutMs });
+        rpc = await this.ensure();
+        return await rpc.call(method, params, { timeoutMs });
       } catch (e) {
         const lost = e instanceof DeviceError && e.code === 'AGENT_UNAVAILABLE';
-        if (!lost || !RETRY_SAFE.has(method)) throw e;
+        // the runner works on its main thread, one job at a time: a stuck job holds every later one
+        if (!lost) throw await afterTimeout(e, rpc, () => this.restartStuck(rpc!));
+        if (!RETRY_SAFE.has(method)) throw e;
         this.rpc = undefined;
         return (await this.ensure()).call(method, params, { timeoutMs });
       }
     });
+  }
+
+  /** A runner whose main thread stays stuck: stopped (its xcodebuild ends), the next call starts one. */
+  private async restartStuck(rpc: RpcClient) {
+    if (this.rpc === rpc) this.rpc = undefined;
+    await this.launcher.stop(rpc);
+    rpc.close();
   }
 
   async tree(opts: { maxDepth?: number; maxNodes?: number } = {}): Promise<Tree> {

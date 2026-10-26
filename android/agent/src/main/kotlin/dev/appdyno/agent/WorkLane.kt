@@ -1,0 +1,63 @@
+package dev.appdyno.agent
+
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
+
+/**
+ * The agent's device work: one thread, jobs in order. When a job is still running `graceMs` after its
+ * deadline (a stuck accessibility or input call), its thread is given up (interrupted) and the jobs
+ * behind it go on, in order, on a new thread: one stuck call never turns every later request into a
+ * TIMEOUT. The given-up thread finishes on its own, if ever; its job's answer was the TIMEOUT.
+ */
+class WorkLane(private val timers: ScheduledExecutorService, private val graceMs: Long = 1_000) {
+    @Volatile
+    private var lane: ExecutorService = newLane()
+
+    /** Threads given up so far (for the agent's health). */
+    val replaced = AtomicInteger()
+
+    private fun newLane(): ExecutorService =
+        Executors.newSingleThreadExecutor { r -> Thread(r, "appdyno-actions").apply { isDaemon = true } }
+
+    /** Runs `work` after the jobs before it; `onTimeout` once `deadlineMs` passes before it ends. */
+    fun submit(job: Job, deadlineMs: Long, onTimeout: () -> Unit, work: () -> Unit) {
+        val finished = AtomicBoolean(false)
+        // the thread's lane, taken when the job starts (it may have moved to a new lane while it waited)
+        val ranOn = AtomicReference<ExecutorService?>()
+        val timeout = timers.schedule({
+            job.cancelled = true
+            onTimeout()
+            timers.schedule({
+                val on = ranOn.get()
+                if (on != null && !finished.get()) giveUp(on)
+            }, graceMs, TimeUnit.MILLISECONDS)
+        }, deadlineMs, TimeUnit.MILLISECONDS)
+        // never onto a lane being given up (its executor refuses new work)
+        synchronized(this) {
+            lane.execute {
+                ranOn.set(lane)
+                try {
+                    work()
+                } finally {
+                    finished.set(true)
+                    timeout.cancel(false)
+                }
+            }
+        }
+    }
+
+    @Synchronized
+    private fun giveUp(stuck: ExecutorService) {
+        if (lane !== stuck) return
+        val next = newLane()
+        lane = next
+        replaced.incrementAndGet()
+        System.err.println("a job outlived its deadline: its thread is given up, the next jobs run on a new one")
+        for (r in stuck.shutdownNow()) next.execute(r)
+    }
+}
