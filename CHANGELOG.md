@@ -10,6 +10,9 @@
 - iOS: a system alert or sheet that came up during a settle counts as busy while it animates in; with
   that, the tap through XCTest's event synthesizer is the default (about half the time of XCUI's tap on
   a phone; `APPDYNO_FAST_TAP=0` turns it off).
+- The iOS runner shows as "appdyno" with its icon on the simulator and the phone.
+- The adb client starts the adb server again after every outage (another tool's `adb kill-server`
+  between calls is harmless).
 
 ## 0.4.0 — real iPhone
 
