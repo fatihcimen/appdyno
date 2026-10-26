@@ -360,6 +360,20 @@ final class Device {
 
     // MARK: mapping
 
+    private static let visibleFrameKey = NSSelectorFromString("visibleFrame")
+
+    /**
+     * The part of the element on screen after its ancestors' clipping is not empty: XCUI also reports
+     * elements that are not shown (a second close button of an overlay at the top, clipped away; live,
+     * the Appdyno home walkthrough), which other drivers leave out. Where the snapshot has no such part,
+     * nothing is assumed.
+     */
+    static func shownPart(_ s: XCUIElementSnapshot) -> Bool {
+        guard let o = s as? NSObject, o.responds(to: visibleFrameKey),
+              let v = o.value(forKey: "visibleFrame") as? CGRect else { return true }
+        return v.width > 0 && v.height > 0
+    }
+
     static func rect(_ r: CGRect) -> [Int] {
         guard r.width.isFinite, r.height.isFinite else { return [0, 0, 0, 0] }
         return [Int(r.minX.rounded()), Int(r.minY.rounded()), Int(r.maxX.rounded()), Int(r.maxY.rounded())]
@@ -378,7 +392,7 @@ final class Device {
         let b = rect(s.frame)
         let t = s.elementType
         var f = 0
-        if s.frame.width > 0, s.frame.height > 0, s.frame.intersects(screen) { f |= Flag.visible }
+        if s.frame.width > 0, s.frame.height > 0, s.frame.intersects(screen), shownPart(s) { f |= Flag.visible }
         if clickableTypes.contains(t) { f |= Flag.clickable }
         if editableTypes.contains(t) { f |= Flag.editable | Flag.focusable }
         if s.hasFocus { f |= Flag.focused }
