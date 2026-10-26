@@ -5,8 +5,24 @@ let agentVersion = "0.5.0"
 
 /// The runner: one long test that serves the host until it asks to shut down. Port and token come from
 /// the launch environment (APPDYNO_PORT, APPDYNO_TOKEN; xcodebuild passes TEST_RUNNER_-prefixed variables).
+/// A failure XCTest recorded during a request (an element that went away): the request's error, never the
+/// end of the runner.
+enum IssueTrap {
+    private static let lock = NSLock()
+    private static var last: String?
+    static func record(_ s: String) { lock.lock(); last = s; lock.unlock() }
+    static func take() -> String? { lock.lock(); defer { last = nil; lock.unlock() }; return last }
+}
+
 final class RunnerTests: XCTestCase {
+    override func record(_ issue: XCTIssue) {
+        IssueTrap.record(issue.compactDescription)
+        super.record(issue)
+    }
+
     func testServe() throws {
+        // one failed interaction must not end the runner: the request that caused it answers with it
+        continueAfterFailure = true
         let env = ProcessInfo.processInfo.environment
         guard let port = env["APPDYNO_PORT"].flatMap(UInt16.init), let token = env["APPDYNO_TOKEN"], token.count >= 16 else {
             throw AgentError("INVALID_ARGUMENT", "APPDYNO_PORT and APPDYNO_TOKEN (16+ characters) are required")
@@ -58,6 +74,13 @@ final class RunnerTests: XCTestCase {
     }
 
     static func handle(_ job: Job, _ d: Device, _ pump: MainPump) throws -> Reply {
+        _ = IssueTrap.take()
+        let reply = try serve(job, d, pump)
+        if let issue = IssueTrap.take() { throw AgentError("INTERNAL", "XCTest: \(issue)") }
+        return reply
+    }
+
+    static func serve(_ job: Job, _ d: Device, _ pump: MainPump) throws -> Reply {
         let p = job.params
         switch job.method {
         case "tree.get":

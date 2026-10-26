@@ -96,9 +96,11 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     await d.launch(APP);
     await d.openUrl('gdfixture://open/code', APP);
     await new Promise((r) => setTimeout(r, 1_000));
-    const r = await d.typeText('123456', { settle: SETTLE });
+    // full, the entry gives up the focus at once: the runner must not read a field that is gone
+    const r = await d.typeText('123456', { settle: SETTLE, submit: true });
     expect(['paste', 'keys']).toContain(r.mode);
     expect(byId(await d.read(APP), 'code_value')?.label).toBe('Kod: 123456');
+    expect(await d.foreground()).toBe(APP); // the runner still answers
   });
 
   it('takes a screenshot', async () => {

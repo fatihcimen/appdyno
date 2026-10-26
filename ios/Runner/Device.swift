@@ -198,15 +198,25 @@ final class Device {
 
     // MARK: text
 
+    /**
+     * The field with the keyboard focus, held by a query that still finds it after the focus moves on (a
+     * code entry submits itself when it is full): its identifier when it has one, else the focus query.
+     */
     func focusedField(_ app: XCUIApplication) -> XCUIElement? {
         let f = app.descendants(matching: .any).matching(NSPredicate(format: "hasKeyboardFocus == true")).firstMatch
-        return f.exists ? f : nil
+        guard let snap = try? f.snapshot() else { return nil }
+        if !snap.identifier.isEmpty {
+            return app.descendants(matching: snap.elementType).matching(identifier: snap.identifier).firstMatch
+        }
+        return f
     }
 
     /// The field's text; a field showing its placeholder is empty.
-    private func currentText(_ f: XCUIElement) -> String {
-        let v = (f.value as? String) ?? ""
-        return v == f.placeholderValue ? "" : v
+    /// The field's text from a snapshot (nil when it is gone); a field showing its placeholder is empty.
+    private func currentText(_ f: XCUIElement) -> String? {
+        guard let s = try? f.snapshot() else { return nil }
+        let v = (s.value as? String) ?? ""
+        return v == s.placeholderValue ? "" : v
     }
 
     func setText(_ p: [String: Any], job: Job) throws -> [String: Any] {
@@ -240,9 +250,10 @@ final class Device {
             return out
         }
         let replace = p["replace"] as? Bool == true
-        let before = currentText(field)
-        func check() -> Bool {
-            let now = currentText(field)
+        let before = currentText(field) ?? ""
+        // nil: the field is gone (a code entry that submitted itself took the text)
+        func check() -> Bool? {
+            guard let now = currentText(field) else { return nil }
             return replace ? now == text : now == before + text || now.contains(text)
         }
         // paste first (one event for the whole text), keys when the field did not take it
@@ -255,30 +266,32 @@ final class Device {
         let keyboard = app.keyboards.firstMatch
         let kbEnd = Date().addingTimeInterval(pasteable ? 1 : 0)
         while !keyboard.exists, Date() < kbEnd, !job.over { Thread.sleep(forTimeInterval: 0.05) }
-        var verified = false
-        for _ in 0 ..< (pasteable ? 2 : 0) where !verified {
+        var verified: Bool? = false
+        for _ in 0 ..< (pasteable ? 2 : 0) where verified == false {
+            guard field.exists else { verified = nil; break }
             if replace { field.typeKey("a", modifierFlags: .command) }
             field.typeKey("v", modifierFlags: .command)
             verified = check()
             // a paste that changed nothing is tried once more; one that changed the text is not repeated
-            if !verified, currentText(field) != before { break }
+            if verified == false, currentText(field) != before { break }
         }
         if let saved { UIPasteboard.general.string = saved } else { UIPasteboard.general.items = [] }
-        if !verified {
+        if verified == false, field.exists {
             mode = "keys"
-            let now = currentText(field)
+            let now = currentText(field) ?? ""
             let extra = replace ? now.count : max(0, now.count - before.count)
             if extra > 0 { field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: extra)) }
-            if replace, !currentText(field).isEmpty {
-                field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: currentText(field).count))
+            if replace, let left = currentText(field), !left.isEmpty {
+                field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: left.count))
             }
-            field.typeText(text)
+            if field.exists { field.typeText(text) }
             verified = check()
         }
-        if p["submit"] as? Bool == true { field.typeText("\n") }
+        // a field that is gone has taken the text and submitted it already
+        if p["submit"] as? Bool == true, field.exists { field.typeText("\n") }
         var out = try after(p, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
         out["mode"] = mode
-        out["verified"] = verified
+        out["verified"] = verified ?? false
         out["focusMs"] = focusMs
         return out
     }

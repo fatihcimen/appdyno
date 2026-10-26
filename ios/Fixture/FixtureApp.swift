@@ -293,6 +293,10 @@ struct HiddenField: UIViewRepresentable {
     final class Coordinator: NSObject {
         var text: Binding<String>
         init(text: Binding<String>) { self.text = text }
-        @objc func changed(_ f: UITextField) { text.wrappedValue = String((f.text ?? "").prefix(6)) }
+        @objc func changed(_ f: UITextField) {
+            text.wrappedValue = String((f.text ?? "").prefix(6))
+            // full: it submits itself and gives up the focus, as login code entries do
+            if text.wrappedValue.count == 6 { f.resignFirstResponder() }
+        }
     }
 }
