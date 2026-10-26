@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -140,13 +140,29 @@ export function phoneRunnerApp(): string {
   return app;
 }
 
+const signedRunners = new Map<string, ReturnType<typeof signedRunner>>();
+
 /** A phone: the runner signed for the profile, a port on the phone, reached over USB. */
 export function phoneTransport(
   udid: string,
   signing: PhoneSigning,
 ): RunnerTransport & { signed(): ReturnType<typeof signedRunner> } {
   const cache = join(homedir(), 'Library/Caches/appdyno/ios-phone');
-  const signed = () => signedRunner(phoneRunnerApp(), signing, cache);
+  // the signed runner is looked up once per runner build and profile in this process (a reconnect
+  // does not ask the keychain again)
+  const signed = () => {
+    const app = phoneRunnerApp();
+    const key = [join(app, 'PlugIns/Runner.xctest/Runner'), signing.profile]
+      .map((f) => `${f}@${statSync(f).mtimeMs}`)
+      .join(':');
+    let result = signedRunners.get(key);
+    if (!result) {
+      result = signedRunner(app, signing, cache);
+      signedRunners.set(key, result);
+      result.catch(() => signedRunners.delete(key));
+    }
+    return result;
+  };
   return {
     signed,
     async build() {

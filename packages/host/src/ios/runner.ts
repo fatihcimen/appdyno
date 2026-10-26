@@ -159,6 +159,8 @@ export class IosRunnerLauncher {
           TEST_RUNNER_GD_PORT: String(port),
           TEST_RUNNER_GD_TOKEN: token,
           ...(target && { TEST_RUNNER_GD_TARGET: target }),
+          // opt-in: taps through XCTest's event synthesizer (see the runner's EventShim)
+          ...(process.env.APPDYNO_FAST_TAP === '1' && { TEST_RUNNER_GD_FAST_TAP: '1' }),
         },
       },
     );
