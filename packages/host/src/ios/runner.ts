@@ -11,6 +11,7 @@ import { DeviceError, PROTOCOL, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
 import { stateDir } from '../android/agent.js';
 import { RpcClient } from '../rpc.js';
+import { brandSimulatorRunner } from './brand.js';
 import { assertUdid, xcodeEnv } from './simctl.js';
 
 const run = promisify(execFile);
@@ -86,6 +87,8 @@ export async function runnerBuild(): Promise<{ xctestrun: string; sha256: string
       'the iOS runner is not built',
       "build it: (cd ios && xcodebuild build-for-testing -project Appdyno.xcodeproj -scheme Runner -destination 'generic/platform=iOS Simulator' -derivedDataPath .derived)",
     );
+  // the home screen shows the runner as appdyno (once per build; the test binary is not touched)
+  await brandSimulatorRunner(join(dir, 'Debug-iphonesimulator/Runner-Runner.app'));
   const binary = join(dir, 'Debug-iphonesimulator/Runner-Runner.app/PlugIns/Runner.xctest/Runner');
   const hashed = existsSync(binary) ? binary : join(dir, file);
   const mtime = statSync(hashed).mtimeMs;

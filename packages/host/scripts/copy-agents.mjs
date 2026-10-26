@@ -32,7 +32,7 @@ console.log(`agent.apk ${sha.slice(0, 12)}`);
 const ios = join(pkg, '../../ios');
 const dest = join(pkg, 'agents/ios-src');
 rmSync(dest, { recursive: true, force: true });
-for (const part of ['Appdyno.xcodeproj', 'Runner', 'RunnerCore/Sources', 'Fixture'])
+for (const part of ['Appdyno.xcodeproj', 'Runner', 'RunnerCore/Sources', 'Fixture', 'Branding'])
   cpSync(join(ios, part), join(dest, part), {
     recursive: true,
     filter: (p) => !/xcuserdata|\.build|\.derived/.test(p),

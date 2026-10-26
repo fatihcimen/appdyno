@@ -5,6 +5,7 @@ import { cp, mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/pro
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { DeviceError } from '@appdyno/protocol';
+import { BRAND_VERSION, brandRunner } from './brand.js';
 import { parsePlist, plistXml } from './usbmux.js';
 
 const run = promisify(execFile);
@@ -99,6 +100,7 @@ export async function signedRunner(
     .update(await readFile(binary))
     .update(await readFile(signing.profile))
     .update(identity)
+    .update(`brand ${BRAND_VERSION}`)
     .digest('hex');
   const stamp = stampOf(key);
   const dir = join(cacheDir, key.slice(0, 16));
@@ -128,6 +130,8 @@ export async function signedRunner(
     join(xctest, 'Info.plist'),
   ]);
   await cp(signing.profile, join(tmpApp, 'embedded.mobileprovision'));
+  // the home screen shows it as appdyno, with its icon
+  await brandRunner(tmpApp);
   for (const d of [tmpApp, xctest])
     await rm(join(d, '_CodeSignature'), { recursive: true, force: true });
   const entitlements = join(tmp, 'entitlements.plist');
