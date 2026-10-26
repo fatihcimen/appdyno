@@ -16,7 +16,10 @@ const TEXT_20 = 'Çağrı İşgüzar Öğün Ş';
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 let d = new IosSimulatorDevice(udid);
 const ops = {};
+// APPDYNO_ONLY=read.home,tapRead.navigate runs only those operations (the others are skipped)
+const only = process.env.APPDYNO_ONLY?.split(',');
 const measure = async (name, count, fn, between) => {
+  if (only && !only.includes(name)) return;
   const ms = [];
   let failed = 0;
   for (let i = 0; i < count + 3; i++) {
@@ -63,19 +66,26 @@ try {
     const r = await d.tap(title, { settle: SETTLE, read: 'tree', before: hash });
     hash = r.tree.hash;
   });
+  // the screen is read before the timer starts (the first read after a launch is slow, measured apart)
+  let nav = await screen();
   await measure(
     'tapRead.navigate',
     Math.min(n, 20),
     async () => {
-      const s = await screen();
-      const form = s.list.find((e) => e.label === 'Form');
+      const form = nav.list.find((e) => e.label === 'Form');
       if (!form) throw new Error('no Form button');
-      const r = await d.tap(form, { settle: SETTLE, read: 'tree', before: s.hash });
+      const r = await d.tap(form, { settle: SETTLE, read: 'tree', before: nav.hash });
+      if (process.env.APPDYNO_DEBUG) console.error('navigate settle', JSON.stringify(r.settle));
       if (!buildScreen(r.tree, { platform: 'ios' }).list.some((e) => e.id === 'name_input'))
         throw new Error('settled before the form');
     },
-    home,
+    async () => {
+      await home();
+      nav = await screen();
+    },
   );
+  // the first read after the app starts
+  await measure('read.afterLaunch', 10, () => d.tree(), home);
   await d.openUrl('gdfixture://open/form', APP);
   await pause(800);
   const field = await find((e) => e.id === 'name_input');

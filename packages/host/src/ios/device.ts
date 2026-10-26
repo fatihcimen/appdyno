@@ -213,6 +213,10 @@ export class IosSimulatorDevice {
   async launch(pkg: string): Promise<string> {
     const out = await this.queue.run(() => this.simctl.launch(this.serial, assertBundle(pkg)));
     await this.target(pkg);
+    // returns once the app is in front: a read during the launch would get the home screen, slowly
+    const end = Date.now() + 10_000;
+    while ((await this.foreground()) !== pkg && Date.now() < end)
+      await new Promise((r) => setTimeout(r, 100));
     return out;
   }
 
