@@ -270,11 +270,15 @@ export class AndroidDevice {
     await this.shell(`am force-stop ${assertPkg(pkg)}`, TIMEOUTS.app);
   }
 
-  /** A fixed GPS position through a test location provider (the shell user's mock-location right). */
+  /**
+   * A fixed position through test location providers (gps, network, fused; the shell user's mock-location
+   * right). They stay until removed (`cmd location providers remove-test-provider <name>`).
+   */
   async setLocation(lat: number, lon: number) {
     if (!(Math.abs(lat) <= 90 && Math.abs(lon) <= 180)) throw new DeviceError('INVALID_ARGUMENT', 'latitude/longitude out of range');
     const at = `${lat.toFixed(6)},${lon.toFixed(6)}`;
-    const providers = ['gps', 'network']
+    // apps read the fused provider as often as gps and network
+    const providers = ['gps', 'network', 'fused']
       .map(
         (p) =>
           `cmd location providers add-test-provider ${p} 2>/dev/null; cmd location providers set-test-provider-enabled ${p} true; ` +
