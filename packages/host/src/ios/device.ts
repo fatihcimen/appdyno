@@ -254,6 +254,11 @@ export class IosDevice {
 
   async terminate(pkg: string) {
     await this.queue.run(() => this.ops.terminate(assertBundle(pkg)));
+    // returns once the app has left the front (the runner may see it there for a moment)
+    if (!this.rpc || this.rpc.closed) return;
+    const end = Date.now() + 3_000;
+    while ((await this.foreground()) === pkg && Date.now() < end)
+      await new Promise((r) => setTimeout(r, 100));
   }
 
   async setLocation(lat: number, lon: number) {
