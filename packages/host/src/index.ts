@@ -4,7 +4,13 @@ export { RpcClient } from './rpc.js';
 export { DeviceQueue } from './queue.js';
 export { AndroidDevice, TIMEOUTS, type ActOptions } from './android/device.js';
 export { AndroidAgentLauncher, agentApk, stateDir } from './android/agent.js';
-export { IosDevice, IosSimulatorDevice, simulatorOps, type IosDeviceOps } from './ios/device.js';
+export {
+  IosDevice,
+  IosSimulatorDevice,
+  promptButton,
+  simulatorOps,
+  type IosDeviceOps,
+} from './ios/device.js';
 export { Devicectl, IosPhoneDevice, assertPhoneUdid, phoneRunnerApp } from './ios/phone.js';
 export {
   phoneSigningFromEnv,

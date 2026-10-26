@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { DeviceError } from 'appdyno';
+import { DeviceError, type Tree } from 'appdyno';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY, type Policy } from '../src/policy.js';
@@ -161,7 +161,7 @@ describe('act and read', () => {
 
   it('a tap by ref acts on the element centre with a settle, and answers with the diff', async () => {
     const screen = (await t.textOf('screen')).text;
-    expect(screen).toContain('ön planda: dev.app');
+    expect(screen).toContain('foreground: dev.app');
     const form = refOf(screen, 'Form');
     const r = await t.textOf('tap', { ref: form });
     expect(r.error).toBe(false);
@@ -169,7 +169,7 @@ describe('act and read', () => {
     expect(act.args[0]).toEqual({ kind: 'tap', x: 540, y: 350 });
     expect(act.args[1]).toMatchObject({ settle: { quietMs: 200, maxMs: 3000 }, read: 'tree' });
     expect((act.args[1] as { before?: string }).before).toBeDefined();
-    expect(r.text).toMatch(/^dokunuldu @\w+ "Form"/);
+    expect(r.text).toMatch(/^tapped @\w+ "Form"/);
     // another screen: the full view comes back
     expect(r.text).toContain('"Gönder"');
   });
@@ -178,24 +178,24 @@ describe('act and read', () => {
     await t.textOf('screen');
     const r = await t.textOf('tap', { ref: '@zzzz' });
     expect(r).toMatchObject({ error: true });
-    expect(r.text).toContain('ref eskidi');
+    expect(r.text).toContain('stale ref');
   });
 
   it('answers a small change as a diff and an unchanged screen in one line', async () => {
     const home = (await t.textOf('screen')).text;
     const form = (await t.textOf('tap', { ref: refOf(home, 'Form') })).text;
     const sent = await t.textOf('tap', { ref: refOf(form, 'Gönder') });
-    expect(sent.text).toContain('ekran değişti: +1 -0 ~0');
+    expect(sent.text).toContain('screen changed: +1 -0 ~0');
     expect(sent.text).toContain('+ @');
     expect(sent.text).toContain('"Gönderildi"');
     const again = await t.textOf('tap', { ref: refOf(form, 'Gönder') });
-    expect(again.text).toContain('ekran değişmedi');
+    expect(again.text).toContain('screen unchanged');
   });
 
   it('read none acts without a settle or a read', async () => {
     await t.textOf('screen');
     const r = await t.textOf('tap', { x: 10, y: 10, read: 'none' });
-    expect(r.text).toBe('dokunuldu 10,10');
+    expect(r.text).toBe('tapped 10,10');
     expect(t.device.calls.at(-1)!.args[1]).toEqual({ settle: false, read: 'none' });
   });
 
@@ -207,7 +207,7 @@ describe('act and read', () => {
       text: 'İş Gören 5551234',
       replace: true,
     });
-    expect(r.text).toMatch(/^yazıldı \(16 karakter\)/);
+    expect(r.text).toMatch(/^typed \(16 characters\)/);
     expect(r.text).not.toContain('5551234');
     expect(t.device.typed).toEqual(['İş Gören 5551234']);
     expect(t.device.calls.find((c) => c.name === 'typeText')!.args[0]).toMatchObject({
@@ -229,9 +229,9 @@ describe('act and read', () => {
       ],
     });
     expect(r.text.split('\n').slice(0, 3)).toEqual([
-      '1. dokunuldu ' + refOf(home, 'Form') + ' "Form"',
-      '2. yazıldı (3 karakter)',
-      '3. enter tuşuna basıldı',
+      '1. tapped ' + refOf(home, 'Form') + ' "Form"',
+      '2. typed (3 characters)',
+      '3. pressed enter',
     ]);
     const reads = t.device.calls
       .filter((c) => c.name === 'act')
@@ -243,9 +243,9 @@ describe('act and read', () => {
   it('answers only a system permission prompt', async () => {
     const home = (await t.textOf('screen')).text;
     const none = await t.textOf('dismiss_alert');
-    expect(none.text).toContain('açık sistem izin penceresi yok');
+    expect(none.text).toContain('no system permission prompt is open');
     const asked = await t.textOf('tap', { ref: refOf(home, 'İzin') });
-    expect(asked.text).toContain('dismiss_alert ile yanıtla');
+    expect(asked.text).toContain('answer it with dismiss_alert');
     const r = await t.textOf('dismiss_alert');
     expect(r.text).toContain('"Uygulamayı kullanırken"');
     expect(t.device.permissionUp).toBe(false);
@@ -255,7 +255,7 @@ describe('act and read', () => {
     await t.textOf('screen');
     const r = await t.call('screenshot');
     expect(r.content.map((c) => c.type)).toEqual(['text', 'image']);
-    expect(r.content[0]!.text).toContain('piksel × 2.348');
+    expect(r.content[0]!.text).toContain('pixel × 2.348');
     const again = await t.textOf('screenshot');
     expect(again).toMatchObject({ error: true });
   });
@@ -266,7 +266,7 @@ describe('act and read', () => {
     const r = await t.textOf('tap', { x: 1, y: 1 });
     expect(r.error).toBe(true);
     expect(r.text).toContain('(TIMEOUT)');
-    expect(r.text).toContain('tekrar dene');
+    expect(r.text).toContain('try again');
   });
 });
 
@@ -293,7 +293,7 @@ describe('policy', () => {
     expect((await t.textOf('launch_app', { app: 'com.other', read: 'none' })).error).toBe(true);
     expect((await t.textOf('launch_app', { read: 'none' })).error).toBe(false);
     expect((await t.textOf('press_key', { key: 'home' })).text).toContain(
-      'home bu sunucuda kapalı',
+      'home is off on this server',
     );
   });
 
@@ -301,9 +301,9 @@ describe('policy', () => {
     const t = await connect({ devices: /^emulator-55\d\d$/ });
     expect((await t.textOf('use_device', { device: 'EXAMPLE0SERIAL00' })).error).toBe(true);
     expect((await t.textOf('use_device', { device: 'emulator-5580' })).text).toContain(
-      'seçildi emulator-5580',
+      'selected emulator-5580',
     );
-    expect((await t.textOf('list_devices')).text).toContain('← seçili');
+    expect((await t.textOf('list_devices')).text).toContain('← selected');
   });
 
   it('hides secrets in what it shows and keeps them off the clipboard', async () => {
@@ -351,10 +351,10 @@ describe('perf tools', () => {
     const t = await connect();
     const r = await t.textOf('perf_snapshot');
     expect(r.error).toBe(false);
-    expect(r.text).toContain('sanal cihaz: göreli');
-    expect(r.text).toContain('CPU: %12.5');
-    expect(r.text).toContain('takılan %4');
-    const id = /ölçüm (pm-[0-9a-f]{8})/.exec(r.text)![1];
+    expect(r.text).toContain('virtual device: relative');
+    expect(r.text).toContain('CPU: 12.5%');
+    expect(r.text).toContain('janky 4%');
+    const id = /measurement (pm-[0-9a-f]{8})/.exec(r.text)![1];
     const stored = JSON.parse(readFileSync(join(MEASUREMENTS, `${id}.json`), 'utf8'));
     expect(stored).toMatchObject({ id, kind: 'snapshot', value: { cpu: { percent: 12.5 } } });
     expect(readFileSync(join(MEASUREMENTS, `${id}.txt`), 'utf8')).toContain('TOTAL PSS');
@@ -365,8 +365,8 @@ describe('perf tools', () => {
     dev.jank = 25;
     const t = await connect({}, dev);
     const r = await t.textOf('perf_scroll', { swipes: 2, repeats: 3 });
-    expect(r.text).toContain('medyan takılma: %25');
-    expect(r.text).toContain('takılma yüksek');
+    expect(r.text).toContain('median jank: 25%');
+    expect(r.text).toContain('high jank');
     const order = dev.calls.map((c) => c.name).filter((n) => n.startsWith('perf') || n === 'act');
     expect(order.slice(0, 6)).toEqual([
       'perf.memory',
@@ -388,8 +388,8 @@ describe('perf tools', () => {
   it('launch: the median against the vitals threshold; only allowed apps', async () => {
     const t = await connect({ apps: ['dev.app'] });
     const r = await t.textOf('perf_launch', { mode: 'cold' });
-    expect(r.text).toContain('medyan: 600 ms');
-    expect(r.text).not.toContain('aşırı');
+    expect(r.text).toContain('median: 600 ms');
+    expect(r.text).not.toContain('excessive');
     expect((await t.textOf('perf_launch', { app: 'com.other' })).error).toBe(true);
   });
 
@@ -399,19 +399,101 @@ describe('perf tools', () => {
       '%62.1 dev.app.Busy.loop',
     );
     expect((await t.textOf('perf_heap')).text).toMatch(
-      /bellek dökümü: .*heap-dev\.app-\d+\.hprof \(60\.0 MB\)/,
+      /heap dump: .*heap-dev\.app-\d+\.hprof \(60\.0 MB\)/,
     );
   });
 
   it('trace: the frame timeline summary', async () => {
     const t = await connect();
     const r = await t.textOf('perf_trace', { seconds: 2 });
-    expect(r.text).toContain('50 kare; uygulamanın geciktirdiği 4 (%8)');
-    expect(r.text).toContain('sanal cihazda birleştirici');
+    expect(r.text).toContain('50 frames; late by the app 4 (8%)');
+    expect(r.text).toContain("on a virtual device the compositor's jank");
   });
 });
 
+/** The fake app on an iOS simulator; its permission prompt is the home screen app's Alert (German labels). */
+class FakeIos extends FakeDevice {
+  constructor() {
+    super('75505767-61E2-40F2-8FC6-8AFE20EE25C9');
+    Object.defineProperty(this, 'platform', { value: 'ios' });
+    this.hello = {
+      ...this.hello,
+      platform: 'ios',
+      osVersion: '18.2',
+      model: 'iPhone 16',
+      screen: { w: 402, h: 874, density: 3, rotation: 0 },
+    };
+    delete this.hello.sdk;
+  }
+  override current(): Tree {
+    const t = super.current();
+    if (!this.permissionUp) return t;
+    const app = t.nodes.filter((n) => n.w === 0);
+    return {
+      ...t,
+      windows: [
+        t.windows[0]!,
+        {
+          type: 3,
+          pkg: 'com.apple.springboard',
+          layer: 2,
+          b: [60, 800, 342, 1150] as [number, number, number, number],
+          active: false,
+          focused: false,
+        },
+      ],
+      nodes: [
+        ...app,
+        {
+          p: -1,
+          w: 1,
+          c: 'Alert',
+          d: 'Mitteilungen erlauben?',
+          b: [60, 800, 342, 1150] as [number, number, number, number],
+          f: 17,
+        },
+        {
+          p: app.length,
+          w: 1,
+          c: 'Button',
+          d: 'Nicht erlauben',
+          b: [60, 1000, 200, 1100] as [number, number, number, number],
+          f: 19,
+        },
+        {
+          p: app.length,
+          w: 1,
+          c: 'Button',
+          d: 'Erlauben',
+          b: [202, 1000, 342, 1100] as [number, number, number, number],
+          f: 19,
+        },
+      ],
+    };
+  }
+}
+
 describe('iOS simulators', () => {
+  it('says iOS for an iOS device in use_device and device_info', async () => {
+    const t = await connect({}, new FakeIos());
+    const used = await t.textOf('use_device', { device: '75505767-61E2-40F2-8FC6-8AFE20EE25C9' });
+    expect(used.text).toContain('iPhone 16, iOS 18.2');
+    expect(used.text).not.toContain('Android');
+    const info = await t.textOf('device_info');
+    expect(info.text).toContain('iPhone 16, iOS 18.2');
+    expect(info.text).not.toMatch(/Android|SDK/);
+  });
+
+  it('answers an iOS system permission prompt (not only Android ones)', async () => {
+    const t = await connect({}, new FakeIos());
+    const home = (await t.textOf('screen')).text;
+    const asked = await t.textOf('tap', { ref: refOf(home, 'İzin') });
+    expect(asked.text).toContain('answer it with dismiss_alert');
+    const r = await t.textOf('dismiss_alert');
+    expect(r.text).toContain('"Erlauben"');
+    expect(t.device.permissionUp).toBe(false);
+  });
+
   it('lists a booted simulator by its id, under the device policy', async () => {
     const udid = '75505767-61E2-40F2-8FC6-8AFE20EE25C9';
     const t = await connect({}, new FakeDevice(), async () => [
@@ -435,6 +517,6 @@ describe('iOS simulators', () => {
     const t = await connect({}, device);
     const r = await t.textOf('perf_snapshot');
     expect(r.error).toBe(true);
-    expect(r.text).toMatch(/ios cihazında performans ölçümü henüz yok/);
+    expect(r.text).toMatch(/no performance measures on iOS here yet/);
   });
 });

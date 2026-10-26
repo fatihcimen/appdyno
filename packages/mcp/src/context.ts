@@ -79,8 +79,8 @@ export class ServerContext {
     if (ready.length === 1) return this.use(ready[0]!.serial);
     throw new ToolError(
       ready.length === 0
-        ? 'sürülebilecek bağlı cihaz yok (list_devices)'
-        : 'birden çok cihaz var: use_device ile birini seç',
+        ? 'no connected device this server may drive (list_devices)'
+        : 'more than one device: pick one with use_device',
     );
   }
 

@@ -101,12 +101,12 @@ export function refused(err: unknown): never {
   if (err instanceof DeviceError) {
     const hint =
       err.code === 'TIMEOUT'
-        ? 'cihaz yanıt vermedi; ekranı oku ve tekrar dene'
+        ? 'the device did not answer; read the screen and try again'
         : err.code === 'DEVICE_GONE' || err.code === 'AGENT_UNAVAILABLE'
-          ? 'cihaz bağlı değil ya da ajan durdu; bir kez tekrar dene'
+          ? 'the device is not connected or its agent stopped; try once more'
           : err.code === 'NO_FOCUS'
-            ? 'odakta yazılabilir alan yok: önce alana dokun (ya da type_text ile ref ver)'
-            : (err.hint ?? 'cihaz komutu reddetti');
+            ? 'no editable field has the focus: tap the field first (or give type_text a ref)'
+            : (err.hint ?? 'the device refused the command');
     throw new ToolError(`${err.message} (${err.code}): ${hint}`);
   }
   throw err;

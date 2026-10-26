@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Tree } from '@appdyno/protocol';
 import { assertBundle, assertUdid } from '../src/ios/simctl.js';
 
 describe('simulator inputs', () => {
@@ -26,5 +27,59 @@ describe('iPhone inputs', () => {
       '00001234-0123456789ABCDEF; ls',
     ])
       expect(() => assertPhoneUdid(bad), bad).toThrow(/not an iPhone UDID/);
+  });
+});
+
+describe('the link prompt', () => {
+  type Box = [number, number, number, number];
+  const prompt = (labels: string[]): Tree => ({
+    windows: [
+      {
+        type: 1,
+        pkg: 'com.example.app',
+        layer: 0,
+        b: [0, 0, 402, 874],
+        active: true,
+        focused: true,
+      },
+      {
+        type: 3,
+        pkg: 'com.apple.springboard',
+        layer: 1,
+        b: [60, 350, 342, 520],
+        active: false,
+        focused: false,
+      },
+    ],
+    nodes: [
+      { p: -1, w: 0, c: 'Application', b: [0, 0, 402, 874], f: 1 },
+      { p: -1, w: 1, c: 'Alert', d: '“App” içinde açılsın mı?', b: [60, 350, 342, 520], f: 1 },
+      ...labels.map((d, i) => ({
+        p: 1,
+        w: 1,
+        c: 'Button',
+        d,
+        b: [60 + i * 141, 470, 201 + i * 141, 520] as Box,
+        f: 3,
+      })),
+    ],
+    truncated: false,
+    elapsedMs: 1,
+    hash: 'h',
+  });
+
+  it('confirms by place in any language: the second of two buttons', async () => {
+    const { promptButton } = await import('../src/ios/device.js');
+    expect(promptButton(prompt(['Vazgeç', 'Aç']))).toEqual({ x: 271.5, y: 495 });
+    expect(promptButton(prompt(['Abbrechen', 'Öffnen']))).toEqual({ x: 271.5, y: 495 });
+  });
+
+  it('falls back to the word with another count of buttons, and finds nothing without a prompt', async () => {
+    const { promptButton } = await import('../src/ios/device.js');
+    expect(promptButton(prompt(['Cancel', 'Open', 'Always']))).toEqual({ x: 271.5, y: 495 });
+    expect(promptButton(prompt(['OK']))).toBeUndefined();
+    expect(
+      promptButton({ ...prompt([]), windows: prompt([]).windows.slice(0, 1) }),
+    ).toBeUndefined();
   });
 });

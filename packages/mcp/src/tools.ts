@@ -2,6 +2,7 @@ import {
   alertButton,
   diffScreens,
   diffText,
+  fold,
   renderScreen,
   screenStructure,
   type ActOptions,
@@ -9,6 +10,7 @@ import {
   type Point,
   type Screen,
   type TextResult,
+  UNCHANGED,
 } from 'appdyno';
 import { z } from 'zod';
 import { checkApp, checkUrl, redact, type Policy } from './policy.js';
@@ -34,17 +36,19 @@ const MAX_WAIT_MS = 15_000;
 const WAIT_GAP_MS = 300;
 export const SHOT_PX = 1024;
 const MAX_STEPS = 12;
-const STALE = 'ref eskidi, ekranı yeniden oku';
+const STALE = 'stale ref, read the screen again';
+const MAYBE_MOVING = 'the screen may still be changing';
+const NO_APP = 'give app (or select one with use_device)';
 
 const Device = z
   .string()
   .max(64)
   .optional()
-  .describe('cihaz (list_devices); verilmezse seçili cihaz');
+  .describe('device (list_devices); default: the selected device');
 const Read = z
   .enum(['diff', 'full', 'none'])
   .default('diff')
-  .describe('eylemden sonra ekran: diff (değişenler, varsayılan), full (tüm ekran), none');
+  .describe('the screen after the action: diff (what changed, default), full (whole screen), none');
 const Ref = z
   .string()
   .regex(/^@[a-z0-9]{1,10}(-\d{1,3})?$/, 'a ref as the screen shows it (@k3f9)');
@@ -146,22 +150,26 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
   const clean = (s: string) => redact(policy, s);
 
   const header = (s: Session, screen: Screen) =>
-    `${screen.foreground ? `ön planda: ${screen.foreground}\n` : ''}${renderScreen(screen.list, clean)}`;
+    `${screen.foreground ? `foreground: ${screen.foreground}\n` : ''}${renderScreen(screen.list, clean)}`;
 
   /** The app check: a permission prompt points to dismiss_alert; another app in front is said. */
   const foreground = (s: Session, screen: Screen) => {
-    if (alertButton(screen.elements, 'android', 'allow'))
-      return '\nsistem izin penceresi açık: dismiss_alert ile yanıtla';
+    if (alertButton(screen.elements, s.device.platform, 'allow'))
+      return '\na system permission prompt is open: answer it with dismiss_alert';
     if (!s.appId || !screen.foreground || screen.foreground === s.appId) return '';
-    return `\nUYARI: uygulama ön planda değil (${screen.foreground}): çöktüyse launch_app ile geri appdyno`;
+    return `\nWARNING: the app is not in the foreground (${screen.foreground}): if it crashed, bring it back with launch_app`;
   };
+
+  /** The OS as people name it: Android 14, iOS 18.2. */
+  const osName = (s: Session) =>
+    `${s.device.platform === 'ios' ? 'iOS' : 'Android'} ${s.device.hello!.osVersion}`;
 
   const info = (s: Session) => {
     const h = s.device.hello!;
     return {
       serial: s.device.serial,
       model: h.model,
-      os: `Android ${h.osVersion}`,
+      os: osName(s),
       ...(h.sdk !== undefined && { sdk: h.sdk }),
       screen: h.screen,
       agentVersion: h.agentVersion,
@@ -184,7 +192,7 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
     if (read === 'none' || !r?.tree) return reply(done, summary(done));
     const screen = s.screenOf(r.tree);
     show(s, screen);
-    const moving = r.settle && !r.settle.settled ? ' (ekran hâlâ değişiyor olabilir)' : '';
+    const moving = r.settle && !r.settle.settled ? ` (${MAYBE_MOVING})` : '';
     const d = read === 'diff' && before ? diffScreens(before, screen.list) : undefined;
     const diff = d && diffText(d, screen.list.length, clean);
     const fg = foreground(s, screen);
@@ -205,7 +213,7 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       ? 'none'
       : o.diff === undefined
         ? 'full'
-        : o.diff.startsWith('ekran değişmedi')
+        : o.diff.startsWith(UNCHANGED)
           ? 'unchanged'
           : 'diff',
     ...(o.d && {
@@ -218,10 +226,7 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
     ...(screen && { elements: screen.list.length }),
     ...(screen?.foreground && { foreground: screen.foreground }),
     ...(o.settled !== undefined && { settled: o.settled }),
-    warnings: [
-      ...(o.fg ? [o.fg.trim()] : []),
-      ...(o.settled === false ? ['ekran hâlâ değişiyor olabilir'] : []),
-    ],
+    warnings: [...(o.fg ? [o.fg.trim()] : []), ...(o.settled === false ? [MAYBE_MOVING] : [])],
   });
 
   /** Runs a device action with the settle and read `read` asks for. */
@@ -264,7 +269,7 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
     const diff = d && diffText(d, screen.list.length, clean);
     const fg = foreground(s, screen);
     return reply(
-      `${done}${fg}${settled ? '' : ' (ekran hâlâ değişiyor olabilir)'}\n${diff ?? header(s, screen)}`,
+      `${done}${fg}${settled ? '' : ` (${MAYBE_MOVING})`}\n${diff ?? header(s, screen)}`,
       summary(done, screen, { diff, d, fg, settled }),
     );
   };
@@ -273,10 +278,10 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
   const target = async (s: Session, a: { ref?: string; x?: number; y?: number }) => {
     if (a.ref) {
       const e = (await s.current()).list.find((x) => x.ref === a.ref);
-      if (!e) throw new ToolError(`${STALE}: ${a.ref} bu ekranda yok`);
+      if (!e) throw new ToolError(`${STALE}: ${a.ref} is not on this screen`);
       return { point: { x: e.x, y: e.y }, name: `${a.ref} ${JSON.stringify(clean(e.label))}` };
     }
-    if (a.x === undefined || a.y === undefined) throw new ToolError('ref ya da x ve y gerekli');
+    if (a.x === undefined || a.y === undefined) throw new ToolError('give a ref, or x and y');
     return { point: { x: a.x, y: a.y }, name: `${a.x},${a.y}` };
   };
 
@@ -284,7 +289,7 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
     const w =
       (await s.current()).window ??
       (s.device.hello && { w: s.device.hello.screen.w, h: s.device.hello.screen.h });
-    if (!w) throw new ToolError('ekran boyutu bilinmiyor: x, y ve distance ver');
+    if (!w) throw new ToolError('the screen size is unknown: give x, y and distance');
     return w;
   };
 
@@ -297,20 +302,20 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
     switch (st.action) {
       case 'tap': {
         const t = await target(s, st);
-        return { r: await s.device.tap(t.point, opts), done: `dokunuldu ${t.name}` };
+        return { r: await s.device.tap(t.point, opts), done: `tapped ${t.name}` };
       }
       case 'long_press': {
         const t = await target(s, st);
         return {
           r: await s.device.longPress(t.point, st.durationMs ?? 800, opts),
-          done: `uzun basıldı ${t.name}`,
+          done: `long-pressed ${t.name}`,
         };
       }
       case 'swipe': {
         const { from, to } = swipeLine(await windowSize(s), st);
         return {
           r: await s.device.swipe(from, to, st.durationMs ?? 300, opts),
-          done: `kaydırıldı (${st.direction})`,
+          done: `swiped (${st.direction})`,
         };
       }
       case 'type_text': {
@@ -324,13 +329,13 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
         // never the text itself (it may be a phone number or a code)
         return {
           r,
-          done: `yazıldı (${Array.from(st.text).length} karakter${st.submit ? ', gönderildi' : ''}${r.verified ? '' : ', doğrulanamadı'})`,
+          done: `typed (${Array.from(st.text).length} characters${st.submit ? ', submitted' : ''}${r.verified ? '' : ', not verified'})`,
         };
       }
       case 'press_key': {
         if (st.key === 'home' && !policy.allowHome)
-          throw new ToolError('home bu sunucuda kapalı: uygulamadan çıkılmaz');
-        return { r: await s.device.key(st.key, opts), done: `${st.key} tuşuna basıldı` };
+          throw new ToolError('home is off on this server: the app may not be left');
+        return { r: await s.device.key(st.key, opts), done: `pressed ${st.key}` };
       }
     }
   };
@@ -351,8 +356,8 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
 
   const tools: Record<string, Tool> = {
     list_devices: tool(
-      'Cihazlar',
-      'appdyno: bağlı cihazlar (seri, durum, model) ve bu sunucunun hangilerini sürebildiği.',
+      'Devices',
+      'Connected devices (serial, state, model) and which of them this server may drive.',
       z.object({}).strict(),
       READ,
       async () => {
@@ -378,12 +383,12 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
           selected: d.serial === ctx.currentSerial,
         }));
         if (devices.length === 0)
-          return reply('bağlı cihaz yok (adb devices boş, açık simülatör yok)', { devices });
+          return reply('no device connected (adb lists none, no simulator is booted)', { devices });
         return reply(
           devices
             .map(
               (d) =>
-                `${d.serial} ${d.state} ${d.model ?? ''}${d.allowed ? '' : ' (bu sunucuya verilmemiş)'}${d.selected ? ' ← seçili' : ''}`,
+                `${d.serial} ${d.state} ${d.model ?? ''}${d.allowed ? '' : ' (not allowed on this server)'}${d.selected ? ' ← selected' : ''}`,
             )
             .join('\n'),
           { devices },
@@ -392,16 +397,16 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       DevicesOut,
     ),
     use_device: tool(
-      'Cihaz seç',
-      'appdyno: bu cihazı sür (ajanını başlatır ya da bağlanır); app: test edilen uygulamanın paketi.',
+      'Use device',
+      'Drive this device (starts its agent or connects to it); app: the package or bundle id of the app under test.',
       z.object({ device: z.string().max(64), app: z.string().max(200).optional() }).strict(),
       { ...READ, idempotentHint: true, readOnlyHint: false },
       async ({ device, app }) => {
         const s = await ctx.use(device, app);
         const h = s.device.hello!;
         return reply(
-          `seçildi ${device}: ${h.model}, Android ${h.osVersion}, ekran ${h.screen.w}x${h.screen.h}` +
-            `${s.device.lastStartWasCold ? ' (ajan başlatıldı)' : ''}${s.appId ? `; uygulama ${s.appId}` : ''}`,
+          `selected ${device}: ${h.model}, ${osName(s)}, screen ${h.screen.w}x${h.screen.h}` +
+            `${s.device.lastStartWasCold ? ' (agent started)' : ''}${s.appId ? `; app ${s.appId}` : ''}`,
           {
             ...info(s),
             agentStarted: s.device.lastStartWasCold,
@@ -412,8 +417,8 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       DeviceOut,
     ),
     device_info: tool(
-      'Cihaz bilgisi',
-      'appdyno: seçili cihazın modeli, sürümü, ekranı, ajan yetenekleri ve ön plandaki uygulama.',
+      'Device info',
+      "The selected device's model, OS version, screen, agent capabilities and the app in the foreground.",
       z.object({ device: Device }).strict(),
       READ,
       async ({ device }) => {
@@ -422,10 +427,10 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
         const fg = await s.device.foreground().catch(refused);
         return reply(
           [
-            `${s.device.serial}: ${h.model}, Android ${h.osVersion} (SDK ${h.sdk ?? '?'})`,
-            `ekran ${h.screen.w}x${h.screen.h} px, ${h.screen.density} dpi, dönüş ${h.screen.rotation}`,
-            `ajan ${h.agentVersion}, protokol ${h.protocol.major}.${h.protocol.minor}, yetenekler: ${h.capabilities.join(', ')}`,
-            `ön planda: ${fg ?? 'bilinmiyor'}`,
+            `${s.device.serial}: ${h.model}, ${osName(s)}${h.sdk !== undefined ? ` (SDK ${h.sdk})` : ''}`,
+            `screen ${h.screen.w}x${h.screen.h}, density ${h.screen.density}, rotation ${h.screen.rotation}`,
+            `agent ${h.agentVersion}, protocol ${h.protocol.major}.${h.protocol.minor}, capabilities: ${h.capabilities.join(', ')}`,
+            `foreground: ${fg ?? 'unknown'}`,
           ].join('\n'),
           { ...info(s), capabilities: h.capabilities, ...(fg && { foreground: fg }) },
         );
@@ -433,8 +438,8 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       DeviceOut,
     ),
     screen: tool(
-      'Ekranı oku',
-      'appdyno: ekrandaki öğeler (ref role "label" x,y flags). Ref ile tap/type_text kullan; ref ekran değişse de aynı öğeyi gösterir.',
+      'Read screen',
+      'The elements on the screen (ref role "label" x,y flags). Use refs with tap/type_text; a ref keeps naming the same element when the screen changes.',
       z.object({ device: Device }).strict(),
       READ,
       async ({ device }) => {
@@ -451,8 +456,8 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       ScreenOut,
     ),
     find: tool(
-      'Öğe bul',
-      'appdyno: ekranda metni (parçası) ya da id’si tutan öğeler, tüm ekranı göndermeden.',
+      'Find',
+      'The elements whose text contains `text` or whose id is `id`, without sending the whole screen.',
       z
         .object({
           device: Device,
@@ -462,12 +467,12 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
         .strict(),
       READ,
       async ({ device, text: want, id }) => {
-        if (!want && !id) throw new ToolError('text ya da id ver');
+        if (!want && !id) throw new ToolError('give text or id');
         const s = await ctx.session(device);
         const screen = await s.read();
-        const w = want?.toLocaleLowerCase('tr');
+        const w = want && fold(want);
         const hits = screen.list.filter(
-          (e) => (!w || e.label.toLocaleLowerCase('tr').includes(w)) && (!id || e.id === id),
+          (e) => (!w || fold(e.label).includes(w)) && (!id || e.id === id),
         );
         const matches = hits.map((e) => ({
           ref: e.ref,
@@ -477,14 +482,15 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
           x: e.x,
           y: e.y,
         }));
-        if (hits.length === 0) return reply(`bulunamadı (${screen.list.length} öğe)`, { matches });
+        if (hits.length === 0)
+          return reply(`not found (${screen.list.length} elements)`, { matches });
         return reply(renderScreen(hits, clean), { matches });
       },
       FindOut,
     ),
     wait_for: tool(
-      'Bekle',
-      `appdyno: bir öğe görünene (gone: kaybolana) kadar bekle: text, id ya da ref; timeoutMs varsayılan ${WAIT_MS}, en fazla ${MAX_WAIT_MS}. Sabit bekleme yerine bunu kullan.`,
+      'Wait for',
+      `Wait until an element shows (gone: until it is gone): text, id or ref; timeoutMs default ${WAIT_MS}, at most ${MAX_WAIT_MS}. Use this instead of fixed sleeps.`,
       z
         .object({
           device: Device,
@@ -498,13 +504,11 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
         .strict(),
       READ,
       async ({ device, text: want, id, ref, gone, timeoutMs, read }) => {
-        if (!want && !id && !ref) throw new ToolError('text, id ya da ref ver');
+        if (!want && !id && !ref) throw new ToolError('give text, id or ref');
         const s = await ctx.session(device);
-        const w = want?.toLocaleLowerCase('tr');
+        const w = want && fold(want);
         const match = (e: Screen['list'][number]) =>
-          (!w || e.label.toLocaleLowerCase('tr').includes(w)) &&
-          (!id || e.id === id) &&
-          (!ref || e.ref === ref);
+          (!w || fold(e.label).includes(w)) && (!id || e.id === id) && (!ref || e.ref === ref);
         const before = s.shown;
         const end = Date.now() + timeoutMs;
         let last: Screen | undefined;
@@ -519,14 +523,14 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
           if (met || Date.now() >= end) break;
           await new Promise((r) => setTimeout(r, WAIT_GAP_MS));
         }
-        if (!last) throw new ToolError('ekran okunamadı: beklenen öğe aranamadı');
+        if (!last) throw new ToolError('the screen could not be read: nothing to look in');
         show(s, last);
         const found = last.list.find(match);
         const head = met
           ? gone
-            ? 'kayboldu'
-            : `bulundu: ${found!.ref} ${JSON.stringify(clean(found!.label))}`
-          : `${timeoutMs} ms içinde ${gone ? 'kaybolmadı' : 'görünmedi'}`;
+            ? 'gone'
+            : `found: ${found!.ref} ${JSON.stringify(clean(found!.label))}`
+          : `${gone ? 'still there' : 'not shown'} after ${timeoutMs} ms`;
         const out = {
           met,
           gone,
@@ -539,22 +543,23 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
             : undefined;
         return reply(`${head}\n${diff ?? header(s, last)}`, {
           ...out,
-          screen:
-            diff === undefined ? 'full' : diff.startsWith('ekran değişmedi') ? 'unchanged' : 'diff',
+          screen: diff === undefined ? 'full' : diff.startsWith(UNCHANGED) ? 'unchanged' : 'diff',
         });
       },
       WaitOut,
     ),
     screenshot: tool(
-      'Ekran görüntüsü',
-      `appdyno: ekranın görüntüsü (en fazla ${SHOT_PX} px) ve görüntü pikselinden dokunma birimine ölçek. Yalnız görsel bir yargı için; ekranı önce screen ile oku. Aynı ekranın ikinci görüntüsü reddedilir.`,
+      'Screenshot',
+      `An image of the screen (at most ${SHOT_PX} px) and the scale from image pixels to tap units. Only for a visual judgement; read the screen with screen first. A second image of an unchanged screen is refused.`,
       z.object({ device: Device }).strict(),
       READ,
       async ({ device }) => {
         const s = await ctx.session(device);
         const layout = s.fresh ? screenStructure(s.fresh.list) : undefined;
         if (s.shot && s.shot.at === s.version && layout !== undefined && s.shot.hash === layout)
-          throw new ToolError('ekran son görüntüden beri değişmedi: o görüntü geçerli');
+          throw new ToolError(
+            'the screen has not changed since the last image: that image still holds',
+          );
         const { meta, data } = await s.device
           .screenshot({ format: 'jpeg', quality: 80, maxPx: SHOT_PX })
           .catch(refused);
@@ -562,7 +567,7 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
         s.shot = { at: s.version, hash: layout ?? '' };
         const scale = w ? Math.round((w / meta.w) * 1000) / 1000 : undefined;
         return reply(
-          `görüntü ${meta.w}x${meta.h} px${scale ? `; dokunma birimi = piksel × ${scale.toFixed(3)}` : ''}`,
+          `image ${meta.w}x${meta.h} px${scale ? `; tap unit = pixel × ${scale.toFixed(3)}` : ''}`,
           { width: meta.w, height: meta.h, ...(scale && { scale }) },
           [{ type: 'image', data: data.toString('base64'), mimeType: 'image/jpeg' }],
         );
@@ -570,16 +575,16 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       ScreenshotOut,
     ),
     tap: tool(
-      'Dokun',
-      'appdyno: ekrandaki öğeye dokun (ref ile, ya da x,y ile) ve ekranın son halini döndür.',
+      'Tap',
+      'Tap an element (by ref, or at x,y) and return the settled screen after it.',
       z.object({ device: Device, ...Target, read: Read }).strict(),
       ACT,
       async ({ device, read, ...a }) =>
         one(await ctx.session(device), { action: 'tap', ...a }, read),
     ),
     long_press: tool(
-      'Uzun bas',
-      'appdyno: öğeye uzun bas (ref ya da x,y; durationMs varsayılan 800).',
+      'Long press',
+      'Long-press an element (ref or x,y; durationMs default 800).',
       z
         .object({
           device: Device,
@@ -593,16 +598,16 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
         one(await ctx.session(device), { action: 'long_press', ...a }, read),
     ),
     swipe: tool(
-      'Kaydır',
-      'appdyno: kaydır. direction: up (içerik yukarı, liste ilerler), down, left, right; isteğe bağlı başlangıç x,y ve distance.',
+      'Swipe',
+      'Swipe. direction: up (content moves up, a list scrolls on), down, left, right; optional start x,y and distance.',
       z.object({ device: Device, ...SwipeStep.omit({ action: true }).shape, read: Read }).strict(),
       ACT,
       async ({ device, read, ...a }) =>
         one(await ctx.session(device), { action: 'swipe', ...a }, read),
     ),
     pinch: tool(
-      'Yakınlaştır/uzaklaştır',
-      'appdyno: iki parmakla sıkıştır: scale > 1 yakınlaştırır, < 1 uzaklaştırır; merkez x,y (varsayılan ekran ortası).',
+      'Pinch',
+      'Pinch with two fingers: scale > 1 zooms in, < 1 zooms out; centre x,y (default: the middle of the screen).',
       z
         .object({
           device: Device,
@@ -623,29 +628,29 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
           read,
           (o) =>
             s.device.act({ kind: 'gesture', pointers: pinchPaths(c, scale, durationMs, size) }, o),
-          `sıkıştırıldı (×${scale})`,
+          `pinched (×${scale})`,
         );
       },
     ),
     type_text: tool(
-      'Yaz',
-      'appdyno: odaktaki alana yaz. ref verilirse önce o alana dokunur ve odağı bekler; replace: alanın metnini değiştirir; submit: sonra enter. Türkçe karakterler desteklenir.',
+      'Type text',
+      "Type into the focused field. With a ref the field is tapped first and its focus waited for; replace: replaces the field's text; submit: enter afterwards. Any Unicode text.",
       z.object({ device: Device, ...TypeStep.omit({ action: true }).shape, read: Read }).strict(),
       ACT,
       async ({ device, read, ...a }) =>
         one(await ctx.session(device), { action: 'type_text', ...a }, read),
     ),
     press_key: tool(
-      'Tuşa bas',
-      'appdyno: tuşa bas: back, enter, home (sunucu kapattıysa kapalı), delete, tab.',
+      'Press key',
+      'Press a key: back, enter, home (off when the server turned it off), delete, tab.',
       z.object({ device: Device, key: Keys, read: Read }).strict(),
       ACT,
       async ({ device, key, read }) =>
         one(await ctx.session(device), { action: 'press_key', key }, read),
     ),
     steps: tool(
-      'Adımlar',
-      `appdyno: bilinen bir diziyi (giriş, form doldurma) tek çağrıda uygula, en fazla ${MAX_STEPS} adım; her adım { action: tap | long_press | swipe | type_text | press_key, ... }. Bir ref adımından önce ekran yeniden okunur; ilk hatada durur. Sonda tek okuma.`,
+      'Steps',
+      `Run a known sequence (a login, a form) in one call, at most ${MAX_STEPS} steps; each step is { action: tap | long_press | swipe | type_text | press_key, ... }. The screen is read again before a ref step; stops at the first failure. One read at the end.`,
       z.object({ device: Device, steps: z.array(Step).min(1).max(MAX_STEPS), read: Read }).strict(),
       ACT,
       async ({ device, steps, read }) => {
@@ -655,7 +660,7 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
           const screen = await s.current();
           const unknown = refs.filter((r) => !screen.list.some((e) => e.ref === r));
           if (unknown.length > 0)
-            throw new ToolError(`${STALE}: ${[...new Set(unknown)].join(', ')} bu ekranda yok`);
+            throw new ToolError(`${STALE}: ${[...new Set(unknown)].join(', ')} not on this screen`);
         }
         const done: string[] = [];
         for (const [i, st] of steps.entries()) {
@@ -681,7 +686,7 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
           } catch (e) {
             if (!(e instanceof ToolError)) throw e;
             if (done.length === 0) throw e;
-            const t = `${done.join('\n')}\n${i + 1}. adım başarısız, kalanlar uygulanmadı: ${e.message}`;
+            const t = `${done.join('\n')}\n${i + 1}. step failed, the rest were not run: ${e.message}`;
             return reply(t, { ...summary(t), warnings: [e.message] });
           }
         }
@@ -689,8 +694,8 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       },
     ),
     dismiss_alert: tool(
-      'İzin penceresini yanıtla',
-      'appdyno: açık bir sistem izin penceresini (konum, bildirim, kamera…) yanıtla: allow (varsayılan) ya da deny. Uygulamanın kendi pencerelerine dokunmaz.',
+      'Answer permission prompt',
+      "Answer an open system permission prompt (location, notifications, camera…): allow (default) or deny. Never touches the app's own dialogs.",
       z
         .object({ device: Device, action: z.enum(['allow', 'deny']).default('allow'), read: Read })
         .strict(),
@@ -698,63 +703,63 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       async ({ device, action, read }) => {
         const s = await ctx.session(device);
         const screen = await s.read();
-        const button = alertButton(screen.elements, 'android', action);
+        const button = alertButton(screen.elements, s.device.platform, action);
         if (!button)
           return reply(
-            'açık sistem izin penceresi yok (uygulamanın kendi penceresine dokunulmaz)',
-            summary('açık sistem izin penceresi yok'),
+            "no system permission prompt is open (the app's own dialogs are not touched)",
+            summary('no system permission prompt is open'),
           );
         return act(
           s,
           read,
           (o) => s.device.tap(button, o),
-          `sistem izin penceresi yanıtlandı: ${JSON.stringify(button.label)}`,
+          `answered the system prompt: ${JSON.stringify(button.label)}`,
         );
       },
     ),
     open_link: tool(
-      'Link aç',
-      'appdyno: bir linki (https:// ya da uygulama şeması) aç ve açılan ekranı döndür; seçili uygulama varsa link onda açılır.',
+      'Open link',
+      'Open a link (https:// or an app scheme) and return the screen it opened; with an app selected the link opens in it.',
       z.object({ device: Device, url: z.string().min(3).max(2_000), read: Read }).strict(),
       ACT,
       async ({ device, url, read }) => {
         const s = await ctx.session(device);
         const href = checkUrl(policy, url);
         await s.device.openUrl(href, s.appId).catch(refused);
-        return afterChange(s, `açıldı ${href}`, read);
+        return afterChange(s, `opened ${href}`, read);
       },
     ),
     launch_app: tool(
-      'Uygulamayı başlat',
-      'appdyno: uygulamayı başlat (zaten açıksa öne getirir) ve ekranını döndür; app verilmezse seçili uygulama.',
+      'Launch app',
+      'Launch the app (brings it to the front when it runs) and return its screen; default: the selected app.',
       z.object({ device: Device, app: z.string().max(200).optional(), read: Read }).strict(),
       DESTRUCTIVE,
       async ({ device, app, read }) => {
         const s = await ctx.session(device);
         const pkg = checkApp(policy, app ?? s.appId ?? '');
-        if (!pkg) throw new ToolError('app ver (ya da use_device ile uygulama seç)');
+        if (!pkg) throw new ToolError(NO_APP);
         await s.device.launch(pkg).catch(refused);
-        return afterChange(s, `başlatıldı ${pkg}`, read);
+        return afterChange(s, `launched ${pkg}`, read);
       },
     ),
     terminate_app: tool(
-      'Uygulamayı kapat',
-      'appdyno: uygulamayı durdur (force-stop); app verilmezse seçili uygulama.',
+      'Terminate app',
+      'Stop the app (force-stop); default: the selected app.',
       z.object({ device: Device, app: z.string().max(200).optional() }).strict(),
       DESTRUCTIVE,
       async ({ device, app }) => {
         const s = await ctx.session(device);
         const pkg = checkApp(policy, app ?? s.appId ?? '');
-        if (!pkg) throw new ToolError('app ver (ya da use_device ile uygulama seç)');
+        if (!pkg) throw new ToolError(NO_APP);
         await s.device.terminate(pkg).catch(refused);
         s.acted();
-        return reply(`durduruldu ${pkg}`, { done: `durduruldu ${pkg}` });
+        return reply(`stopped ${pkg}`, { done: `stopped ${pkg}` });
       },
       DoneOut,
     ),
     set_orientation: tool(
-      'Ekran yönü',
-      'appdyno: ekran yönü: portrait ya da landscape (yön sabitlenir; sonra portrait’e dön).',
+      'Orientation',
+      'Screen orientation: portrait or landscape (the rotation stays fixed; go back to portrait afterwards).',
       z
         .object({ device: Device, orientation: z.enum(['portrait', 'landscape']), read: Read })
         .strict(),
@@ -762,27 +767,27 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       async ({ device, orientation, read }) => {
         const s = await ctx.session(device);
         await s.device.setOrientation(orientation === 'portrait' ? 0 : 1).catch(refused);
-        return afterChange(s, `yön: ${orientation}`, read);
+        return afterChange(s, `orientation: ${orientation}`, read);
       },
     ),
     set_clipboard: tool(
-      'Panoya koy',
-      'appdyno: panoya bir metin koy (yapıştırma denemeleri için).',
+      'Set clipboard',
+      'Put a text on the clipboard (for paste tests).',
       z.object({ device: Device, text: z.string().min(1).max(2_000) }).strict(),
       ACT,
       async ({ device, text: value }) => {
         if (policy.secrets.some((x) => x && value.includes(x)))
-          throw new ToolError('gizli bilgi panoya konmaz');
+          throw new ToolError('a secret is never put on the clipboard');
         const s = await ctx.session(device);
         await s.device.setClipboard(value).catch(refused);
-        const done = `panoya kondu (${Array.from(value).length} karakter)`;
+        const done = `on the clipboard (${Array.from(value).length} characters)`;
         return reply(done, { done });
       },
       DoneOut,
     ),
     set_location: tool(
-      'Konum',
-      'appdyno: cihazın GPS konumunu sabitle (enlem, boylam).',
+      'Set location',
+      "Fix the device's GPS position (latitude, longitude).",
       z
         .object({
           device: Device,
@@ -794,7 +799,7 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       async ({ device, lat, lon }) => {
         const s = await ctx.session(device);
         await s.device.setLocation(lat, lon).catch(refused);
-        const done = `konum: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+        const done = `location: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
         return reply(done, { done });
       },
       DoneOut,
