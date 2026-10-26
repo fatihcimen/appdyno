@@ -89,6 +89,16 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(labels(await d.read(APP))).toContain('Temizle');
   });
 
+  it('types into a code entry whose hidden field XCUI does not report as focused', async () => {
+    await d.terminate(APP);
+    await d.launch(APP);
+    await d.openUrl('gdfixture://open/code', APP);
+    await new Promise((r) => setTimeout(r, 1_000));
+    const r = await d.typeText('123456', { settle: SETTLE });
+    expect(r.mode).toBe('keys');
+    expect(byId(await d.read(APP), 'code_value')?.label).toBe('Kod: 123456');
+  });
+
   it('takes a screenshot', async () => {
     const { meta, data } = await d.screenshot({ format: 'jpeg', maxPx: 1024 });
     expect(Math.max(meta.w, meta.h)).toBeLessThanOrEqual(1024);

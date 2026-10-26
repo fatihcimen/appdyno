@@ -1,6 +1,7 @@
 import Combine
 import CoreLocation
 import SwiftUI
+import UIKit
 
 /// The iOS fixture: the same screens as the Android one, where the platform has them.
 /// `gdfixture://open/<screen>` opens a screen directly.
@@ -33,6 +34,7 @@ struct FixtureApp: App {
         case "late": LateScreen()
         case "memory": MemoryScreen()
         case "cpu": CpuScreen()
+        case "code": CodeScreen()
         default: Text("Bilinmeyen ekran: \(key)")
         }
     }
@@ -241,5 +243,55 @@ struct CpuScreen: View {
             Spacer()
         }
         .padding()
+    }
+}
+
+/// A code entry as login screens build it: six boxes drawn over a hidden text field that takes the focus
+/// when the screen appears (XCUI does not report the hidden field as focused).
+struct CodeScreen: View {
+    @State private var code = ""
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("Doğrulama kodu").font(.headline)
+            ZStack {
+                HiddenField(text: $code).frame(width: 1, height: 1).opacity(0.01)
+                HStack(spacing: 8) {
+                    ForEach(0 ..< 6, id: \.self) { i in
+                        let chars = Array(code)
+                        Text(i < chars.count ? String(chars[i]) : "–")
+                            .frame(width: 36, height: 44)
+                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(.gray))
+                    }
+                }
+            }
+            Text("Kod: \(code)").accessibilityIdentifier("code_value")
+            Spacer()
+        }
+        .padding()
+    }
+}
+
+struct HiddenField: UIViewRepresentable {
+    @Binding var text: String
+
+    func makeUIView(context: Context) -> UITextField {
+        let f = UITextField()
+        f.keyboardType = .numberPad
+        f.textContentType = .oneTimeCode
+        f.isAccessibilityElement = false
+        f.addTarget(context.coordinator, action: #selector(Coordinator.changed(_:)), for: .editingChanged)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { f.becomeFirstResponder() }
+        return f
+    }
+
+    func updateUIView(_ f: UITextField, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(text: $text) }
+
+    final class Coordinator: NSObject {
+        var text: Binding<String>
+        init(text: Binding<String>) { self.text = text }
+        @objc func changed(_ f: UITextField) { text.wrappedValue = String((f.text ?? "").prefix(6)) }
     }
 }

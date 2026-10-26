@@ -16,5 +16,7 @@ pnpm --filter appdyno-mcp deploy --legacy --prod "$dest"
 prefix=()
 [[ -n ${APPDYNO_PREFIX:-} ]] && prefix=(--prefix "$APPDYNO_PREFIX")
 npm install -g "${prefix[@]}" "$dest"
+# the two commands must be executable where npm linked them
+for f in "$dest/dist/main.js" "$dest/dist/cli.js"; do [[ -x $f ]] || { echo "not executable: $f" >&2; exit 1; }; done
 echo "installed $(node -p "require('$dest/package.json').version") at $dest"
 echo "next: appdyno doctor"

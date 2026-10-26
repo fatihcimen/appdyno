@@ -18,7 +18,7 @@
     "agents"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/copy-agents.mjs",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-agents.mjs && chmod +x dist/cli.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

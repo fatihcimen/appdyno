@@ -224,8 +224,21 @@ final class Device {
             Thread.sleep(forTimeInterval: 0.08)
             field = focusedField(app)
         }
-        guard let field else { throw AgentError("NO_FOCUS", "no text field took the focus", hint: "tap the field first") }
         let focusMs = Int(Date().timeIntervalSince(t0) * 1000)
+        guard let field else {
+            // a field XCUI does not report as focused (a code entry's hidden field) while the keyboard is up:
+            // the keys go to whatever has the keyboard, as a person's would; the text cannot be read back
+            guard app.keyboards.firstMatch.exists else {
+                throw AgentError("NO_FOCUS", "no text field took the focus", hint: "tap the field first")
+            }
+            app.typeText(text)
+            if p["submit"] as? Bool == true { app.typeText("\n") }
+            var out = try after(p, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
+            out["mode"] = "keys"
+            out["verified"] = false
+            out["focusMs"] = focusMs
+            return out
+        }
         let replace = p["replace"] as? Bool == true
         let before = currentText(field)
         func check() -> Bool {

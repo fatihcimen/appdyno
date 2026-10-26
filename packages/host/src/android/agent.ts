@@ -11,8 +11,8 @@ import { RpcClient } from '../rpc.js';
 
 export const AGENT_MAIN = 'dev.appdyno.agent.Main';
 export const REMOTE_DIR = '/data/local/tmp/appdyno';
-/** How long a fresh agent may take to open its socket. */
-const START_MS = 8_000;
+/** How long a fresh agent may take to open its socket (a JVM start on a loaded host, measured: over 8 s). */
+const START_MS = 20_000;
 const POLL_MS = 100;
 
 /** The agent APK the package ships (or a development build), and its sha256. */
