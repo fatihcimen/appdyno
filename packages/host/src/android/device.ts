@@ -18,7 +18,7 @@ import { DeviceQueue } from '../queue.js';
 import type { RpcClient } from '../rpc.js';
 import { afterTimeout } from '../stuck.js';
 import { buildScreen, type Screen } from '../screen/index.js';
-import { AndroidAgentLauncher } from './agent.js';
+import { AndroidAgentLauncher, REMOTE_DIR } from './agent.js';
 import { AndroidPerf } from './perf.js';
 
 /** Per-command limits (ms); the settle cap is added to an action's. */
@@ -81,10 +81,12 @@ export class AndroidDevice {
     if (this.rpc && !this.rpc.closed) return Promise.resolve(this.rpc);
     this.connecting ??= this.launcher
       .connect()
-      .then(({ rpc, hello, started }) => {
+      .then(async ({ rpc, hello, started }) => {
         this.rpc = rpc;
         this.helloInfo = hello;
         this.lastStartWasCold = started;
+        // a new agent: a host that died without stopping its own may have left test providers
+        if (started) await this.clearStaleLocation().catch(() => undefined);
         return rpc;
       })
       .finally(() => (this.connecting = undefined));
@@ -281,26 +283,52 @@ export class AndroidDevice {
   }
 
   /**
-   * A fixed position through test location providers (gps, network, fused; the shell user's mock-location
-   * right). They stay until removed (`cmd location providers remove-test-provider <name>`).
+   * A fixed position through test location providers (gps, network, fused: apps read fused as often as
+   * gps; the shell user's mock-location right). The providers this adds are listed on the device
+   * (TEST_LOCATION, with this host's process) and only they are ever removed: by clearLocation, by
+   * stopAgent, and by the next agent start once this process is gone. A mock provider the device already
+   * had is used, never removed.
    */
   async setLocation(lat: number, lon: number) {
     if (!(Math.abs(lat) <= 90 && Math.abs(lon) <= 180)) throw new DeviceError('INVALID_ARGUMENT', 'latitude/longitude out of range');
     const at = `${lat.toFixed(6)},${lon.toFixed(6)}`;
-    // apps read the fused provider as often as gps and network
-    const providers = ['gps', 'network', 'fused']
-      .map(
-        (p) =>
-          `cmd location providers add-test-provider ${p} 2>/dev/null; cmd location providers set-test-provider-enabled ${p} true; ` +
-          `cmd location providers set-test-provider-location ${p} --location ${at}`,
-      )
-      .join('; ');
+    const mocked = mockedProviders(await this.shell('dumpsys location', TIMEOUTS.app));
+    const ours = parseTestLocation(await this.shell(`cat ${TEST_LOCATION} 2>/dev/null`)).providers;
+    const added = TEST_PROVIDERS.filter((p) => !mocked.has(p) || ours.includes(p));
+    const providers = TEST_PROVIDERS.map(
+      (p) =>
+        `${mocked.has(p) ? '' : `cmd location providers add-test-provider ${p}; `}cmd location providers set-test-provider-enabled ${p} true; ` +
+        `cmd location providers set-test-provider-location ${p} --location ${at}`,
+    ).join('; ');
     const out = await this.shell(
-      `appops set com.android.shell android:mock_location allow; cmd location set-location-enabled true; ${providers}; echo done`,
+      `appops set com.android.shell android:mock_location allow; cmd location set-location-enabled true; ${providers}; ` +
+        `mkdir -p ${REMOTE_DIR}; echo ${process.pid} ${added.join(' ')} > ${TEST_LOCATION}; echo done`,
       TIMEOUTS.app,
     );
     if (!out.trim().endsWith('done') || /Exception|Unknown command/i.test(out))
       throw new DeviceError('UNSUPPORTED', `this device refused the test location: ${firstLine(out)}`);
+  }
+
+  /** Removes the test location providers setLocation added (listed on the device), and only those. */
+  async clearLocation() {
+    const { providers } = parseTestLocation(await this.shell(`cat ${TEST_LOCATION} 2>/dev/null`));
+    await this.shell(
+      [...providers.map((p) => `cmd location providers remove-test-provider ${p}`), `rm -f ${TEST_LOCATION}`].join('; '),
+      TIMEOUTS.app,
+    );
+  }
+
+  /** At a new agent's start: the test providers of a host process that is gone (it died before clearing). */
+  private async clearStaleLocation() {
+    const { pid, providers } = parseTestLocation(
+      await this.adb.exec(this.serial, `cat ${TEST_LOCATION} 2>/dev/null`, { timeoutMs: TIMEOUTS.action }),
+    );
+    if (pid === undefined || processAlive(pid)) return;
+    await this.adb.exec(
+      this.serial,
+      [...providers.map((p) => `cmd location providers remove-test-provider ${p}`), `rm -f ${TEST_LOCATION}`].join('; '),
+      { timeoutMs: TIMEOUTS.app },
+    );
   }
 
   /** A shell command on the device (adb protocol, no adb process); output with stderr when redirected. */
@@ -338,14 +366,42 @@ export class AndroidDevice {
     this.rpc = undefined;
   }
 
-  /** Stops the agent on the device (the UI automation connection is released). */
+  /** Stops the agent on the device (the UI automation connection is released); its test providers go. */
   async stopAgent() {
     this.close();
+    await this.clearLocation().catch(() => undefined);
     await this.launcher.stop();
   }
 }
 
 const firstLine = (s: string) => s.trim().split('\n')[0]?.slice(0, 200) ?? '';
+
+const TEST_PROVIDERS = ['gps', 'network', 'fused'];
+/** The test location providers this library added: `<host pid> <provider>…`. */
+export const TEST_LOCATION = `${REMOTE_DIR}/test-location`;
+
+/** Providers `dumpsys location` shows with a mock (`  gps provider [mock]:`). */
+export function mockedProviders(dumpsys: string): Set<string> {
+  return new Set([...dumpsys.matchAll(/^\s*(\w+) provider \[mock\]/gm)].map((m) => m[1]!));
+}
+
+/** The host process and the providers of a TEST_LOCATION file; nothing when it is missing or not ours. */
+export function parseTestLocation(text: string): { pid?: number; providers: string[] } {
+  const [pid, ...rest] = text.trim().split(/\s+/);
+  if (!pid || !/^\d+$/.test(pid)) return { providers: [] };
+  return { pid: Number(pid), providers: rest.filter((p) => TEST_PROVIDERS.includes(p)) };
+}
+
+/** Whether a process of this Mac still runs (a host that set the location and has not gone). */
+export function processAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    // EPERM: it runs, as another user
+    return (e as NodeJS.ErrnoException).code === 'EPERM';
+  }
+}
 
 function durationOf(a: ActParams): number {
   if (a.kind === 'longPress' || a.kind === 'swipe') return a.durationMs;

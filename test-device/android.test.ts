@@ -1,5 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { Adb, alertButton, AndroidDevice, DeviceError, type Screen } from 'appdyno';
+import { spawnSync } from 'node:child_process';
+import {
+  Adb,
+  alertButton,
+  AndroidDevice,
+  DeviceError,
+  TEST_LOCATION,
+  mockedProviders,
+  type Screen,
+} from 'appdyno';
 
 /**
  * The Android agent against the fixture app on a real emulator or device (APPDYNO_ANDROID_SERIAL; never a
@@ -283,9 +292,35 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(ok).toBe(true);
   });
 
-  it('sets a test location', async () => {
+  const mocks = async () => [...mockedProviders(await d.shell('dumpsys location'))].sort();
+
+  it('sets a test location and removes only the providers it added', async () => {
+    // a mock provider the device already had (another tool's): used, never removed
+    await d.shell('cmd location providers add-test-provider network');
     await d.setLocation(41.0082, 28.9784);
     expect(await d.shell('dumpsys location | grep -c "41.008"')).not.toMatch(/^0/);
+    expect(await mocks()).toEqual(['fused', 'gps', 'network']);
+    await d.clearLocation();
+    expect(await mocks()).toEqual(['network']);
+    await d.shell('cmd location providers remove-test-provider network');
+    expect(await mocks()).toEqual([]);
+  });
+
+  it('a host that died without clearing: the next agent start removes its test providers', async () => {
+    await d.setLocation(41.0082, 28.9784);
+    expect(await mocks()).toEqual(['fused', 'gps', 'network']);
+    // the host that set them is gone (a process that ran and exited), and its agent with it
+    const dead = spawnSync('true').pid!;
+    await d.shell(`sed -i 's/^[0-9]*/${dead}/' ${TEST_LOCATION}`);
+    await new Adb().exec(serial!, `kill ${d.hello!.pid}`);
+    const next = new AndroidDevice(serial!);
+    try {
+      await next.open();
+      expect(next.lastStartWasCold).toBe(true);
+      expect(await mocks()).toEqual([]);
+    } finally {
+      next.close();
+    }
   });
 
   it('sees the app leave the foreground when it crashes, and starts it again', async () => {
