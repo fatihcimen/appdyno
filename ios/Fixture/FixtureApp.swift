@@ -7,14 +7,16 @@ import SwiftUI
 @main
 struct FixtureApp: App {
     @State private var path: [String] = []
+    @State private var lastLink = ""
 
     var body: some Scene {
         WindowGroup {
             NavigationStack(path: $path) {
-                Home(path: $path)
+                Home(path: $path, lastLink: lastLink)
                     .navigationDestination(for: String.self) { screen($0) }
             }
             .onOpenURL { url in
+                lastLink = url.absoluteString
                 if url.host == "open", let key = url.pathComponents.last { path = [key] }
             }
         }
@@ -41,6 +43,7 @@ let screens: [(key: String, title: String)] = [
 
 struct Home: View {
     @Binding var path: [String]
+    var lastLink = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -48,6 +51,7 @@ struct Home: View {
             ForEach(screens, id: \.key) { s in
                 Button(s.title) { path.append(s.key) }.accessibilityIdentifier("open_\(s.key)")
             }
+            if !lastLink.isEmpty { Text("Bağlantı: \(lastLink)").accessibilityIdentifier("last_link") }
             Spacer()
         }
         .padding()

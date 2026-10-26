@@ -64,7 +64,9 @@ final class Device {
         add(snap, window: 0)
         // `exists` answers at once; a snapshot of a missing element waits for it to appear
         let alertQuery = springboard.alerts.firstMatch
+        alertFrame = nil
         if app !== springboard, alertQuery.exists, let alert = try? alertQuery.snapshot() {
+            alertFrame = alert.frame
             // a system alert (permission, notification prompt) over the app
             windows.append(["type": 3, "pkg": Device.springboardId, "layer": 1, "b": Device.rect(alert.frame),
                             "active": false, "focused": false])
@@ -87,8 +89,14 @@ final class Device {
 
     // MARK: actions
 
+    /// The frame of the system alert in the last read, if one was over the app.
+    private var alertFrame: CGRect?
+
+    /// A point on screen; on the system alert it is the home screen app's (events on the alert are its).
     private func point(_ x: Double, _ y: Double) -> XCUICoordinate {
-        front().0.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: x, dy: y))
+        let onAlert = alertFrame?.contains(CGPoint(x: x, y: y)) == true
+        let app = onAlert ? springboard : front().0
+        return app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: x, dy: y))
     }
 
     func perform(_ a: [String: Any]) throws {

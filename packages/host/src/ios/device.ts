@@ -181,14 +181,16 @@ export class IosSimulatorDevice {
     await this.call('app.target', { pkg: bundle }, TIMEOUTS.action);
   }
 
-  /** Opens a link; `pkg` names the app that should handle it (it becomes the target). */
+  /**
+   * Opens a link; `pkg` names the app that should handle it (it becomes the target). A link to an app
+   * first asks "Open in …?": with the app named, the prompt's Open button is tapped.
+   */
   async openUrl(url: string, pkg?: string) {
     if (pkg) await this.target(pkg);
-    await this.queue.run(() => this.simctl.openUrl(this.serial, url));
-    // a link to an app asks "Open in …?" first: with the app named, its Open button is tapped
+    await this.simctl.openUrl(this.serial, url);
     if (!pkg) return;
-    // shortcut: the prompt is looked for during 1 s after every link to an app, without it the link costs that second
-    const end = Date.now() + 1_000;
+    // shortcut: the prompt is looked for during 3 s after every link to an app; a link without one costs that time
+    const end = Date.now() + 3_000;
     while (Date.now() < end) {
       const t = await this.tree();
       const open = t.nodes.find(
