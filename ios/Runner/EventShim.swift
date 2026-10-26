@@ -13,6 +13,8 @@ enum EventShim {
     private typealias AddPath = @convention(c) (AnyObject, Selector, AnyObject) -> Void
     private typealias Getter = @convention(c) (AnyObject, Selector) -> AnyObject?
     private typealias Synthesize = @convention(c) (AnyObject, Selector, AnyObject, AnyObject) -> Void
+    private typealias InitText = @convention(c) (AnyObject, Selector) -> AnyObject
+    private typealias TypeText = @convention(c) (AnyObject, Selector, NSString, Double, UInt64, Bool) -> Void
 
     private static let recordClass: AnyClass? = NSClassFromString("XCSynthesizedEventRecord")
     private static let pathClass: AnyClass? = NSClassFromString("XCPointerEventPath")
@@ -22,6 +24,20 @@ enum EventShim {
     private static let selAdd = NSSelectorFromString("addPointerEventPath:")
     private static let selSynth = NSSelectorFromString("eventSynthesizer")
     private static let selSynthesize = NSSelectorFromString("synthesizeEvent:completion:")
+    private static let selInitText = NSSelectorFromString("initForTextInput")
+    private static let selTypeText = NSSelectorFromString("typeText:atOffset:typingSpeed:shouldRedact:")
+
+    /// Keys typed through the synthesizer reach whatever has the keyboard, with no element reporting focus.
+    static let textAvailable: Bool = {
+        guard let r = recordClass, let p = pathClass,
+              class_getInstanceMethod(r, selInitRecord) != nil, class_getInstanceMethod(r, selAdd) != nil,
+              class_getInstanceMethod(p, selInitText) != nil, class_getInstanceMethod(p, selTypeText) != nil,
+              XCUIDevice.shared.responds(to: selSynth),
+              let s = XCUIDevice.shared.perform(selSynth)?.takeUnretainedValue(),
+              s.responds(to: selSynthesize)
+        else { return false }
+        return true
+    }()
 
     /// Everything the fast tap needs exists (checked once).
     static let available: Bool = {
@@ -50,6 +66,22 @@ enum EventShim {
         let path = imp(rawPath, selInitPath, InitPath.self)(rawPath, selInitPath, p, 0)
         imp(path, selLift, Lift.self)(path, selLift, 0.05)
         imp(record, selAdd, AddPath.self)(record, selAdd, path)
+        return synthesize(record, within: 5)
+    }
+
+    /// Types `text` as key events (60 characters a second); false when the synthesizer refused it.
+    static func type(_ text: String, orientation: Int) -> Bool {
+        guard textAvailable, let r = recordClass, let pc = pathClass else { return false }
+        let rawRecord = r.alloc() as AnyObject
+        let record = imp(rawRecord, selInitRecord, InitRecord.self)(rawRecord, selInitRecord, "type" as NSString, orientation)
+        let rawPath = pc.alloc() as AnyObject
+        let path = imp(rawPath, selInitText, InitText.self)(rawPath, selInitText)
+        imp(path, selTypeText, TypeText.self)(path, selTypeText, text as NSString, 0, 60, false)
+        imp(record, selAdd, AddPath.self)(record, selAdd, path)
+        return synthesize(record, within: 5 + Double(text.count) / 60)
+    }
+
+    private static func synthesize(_ record: AnyObject, within seconds: Double) -> Bool {
         guard let synth = XCUIDevice.shared.perform(selSynth)?.takeUnretainedValue() else { return false }
         var done = false
         var ok = false
@@ -58,7 +90,7 @@ enum EventShim {
             done = true
         }
         imp(synth, selSynthesize, Synthesize.self)(synth, selSynthesize, record, completion as AnyObject)
-        let end = Date().addingTimeInterval(5)
+        let end = Date().addingTimeInterval(seconds)
         // the completion may come on this (main) thread: turn the run loop, never block it
         while !done, Date() < end { RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.005)) }
         return done && ok

@@ -89,16 +89,17 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(labels(await d.read(APP))).toContain('Temizle');
   });
 
-  // a code entry: a hidden text field under six drawn boxes (XCUI still reports its focus here; a field it
-  // does not see gets the keys through the keyboard, the runner's fallback)
-  it('types into a code entry with a hidden field', async () => {
+  // a code entry that takes keys without being a text field: no element reports the focus (XCUI's own
+  // typing refuses then), and it submits itself when full
+  it('types into a code entry no element of which reports the focus', async () => {
     await d.terminate(APP);
     await d.launch(APP);
     await d.openUrl('gdfixture://open/code', APP);
     await new Promise((r) => setTimeout(r, 1_000));
     // full, the entry gives up the focus at once: the runner must not read a field that is gone
     const r = await d.typeText('123456', { settle: SETTLE, submit: true });
-    expect(['paste', 'keys']).toContain(r.mode);
+    // no element reports the focus: typed as key events, not read back
+    expect(r).toMatchObject({ mode: 'keys', verified: false });
     expect(byId(await d.read(APP), 'code_value')?.label).toBe('Kod: 123456');
     expect(await d.foreground()).toBe(APP); // the runner still answers
   });

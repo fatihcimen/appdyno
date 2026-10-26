@@ -276,27 +276,34 @@ struct CodeScreen: View {
 struct HiddenField: UIViewRepresentable {
     @Binding var text: String
 
-    func makeUIView(context: Context) -> UITextField {
-        let f = UITextField()
-        f.keyboardType = .numberPad
-        f.textContentType = .oneTimeCode
-        f.isAccessibilityElement = false
-        f.addTarget(context.coordinator, action: #selector(Coordinator.changed(_:)), for: .editingChanged)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { f.becomeFirstResponder() }
-        return f
-    }
-
-    func updateUIView(_ f: UITextField, context: Context) {}
-
-    func makeCoordinator() -> Coordinator { Coordinator(text: $text) }
-
-    final class Coordinator: NSObject {
-        var text: Binding<String>
-        init(text: Binding<String>) { self.text = text }
-        @objc func changed(_ f: UITextField) {
-            text.wrappedValue = String((f.text ?? "").prefix(6))
+    /// Takes keys without being a text field (no element reports the focus), as code entries do.
+    final class KeyInput: UIView, UIKeyInput {
+        var onChange: (String) -> Void = { _ in }
+        private var value = ""
+        override var canBecomeFirstResponder: Bool { true }
+        var keyboardType: UIKeyboardType = .numberPad
+        var hasText: Bool { !value.isEmpty }
+        func insertText(_ text: String) {
+            guard text != "\n" else { return }
+            value = String((value + text).prefix(6))
+            onChange(value)
             // full: it submits itself and gives up the focus, as login code entries do
-            if text.wrappedValue.count == 6 { f.resignFirstResponder() }
+            if value.count == 6 { resignFirstResponder() }
+        }
+        func deleteBackward() {
+            value = String(value.dropLast())
+            onChange(value)
         }
     }
+
+    func makeUIView(context: Context) -> KeyInput {
+        let v = KeyInput()
+        v.isAccessibilityElement = false
+        v.accessibilityElementsHidden = true
+        v.onChange = { text = $0 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { v.becomeFirstResponder() }
+        return v
+    }
+
+    func updateUIView(_ v: KeyInput, context: Context) {}
 }

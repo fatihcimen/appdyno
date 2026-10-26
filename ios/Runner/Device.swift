@@ -144,7 +144,9 @@ final class Device {
     private func key(_ k: String) throws {
         switch k {
         case "home": XCUIDevice.shared.press(.home)
-        case "enter": front().0.typeText("\n")
+        case "enter":
+            // synthesized: XCUI's typing refuses when no element reports the focus
+            if !EventShim.type("\n", orientation: Device.interfaceOrientation()) { front().0.typeText("\n") }
         case "delete": front().0.typeText(XCUIKeyboardKey.delete.rawValue)
         case "tab": front().0.typeText("\t")
         default: throw AgentError("UNSUPPORTED", "no \(k) key on iOS", hint: "tap the screen's own back control")
@@ -236,13 +238,17 @@ final class Device {
         }
         let focusMs = Int(Date().timeIntervalSince(t0) * 1000)
         guard let field else {
-            // a field XCUI does not report as focused (a code entry's hidden field) while the keyboard is up:
-            // the keys go to whatever has the keyboard, as a person's would; the text cannot be read back
-            guard app.keyboards.firstMatch.exists else {
-                throw AgentError("NO_FOCUS", "no text field took the focus", hint: "tap the field first")
+            // no element reports the focus (a code entry's hidden field): the keys go to whatever has the
+            // keyboard, as a person's would (XCUI's own typing refuses without a focused element); the text
+            // cannot be read back
+            let o = Device.interfaceOrientation()
+            if !EventShim.type(text, orientation: o) {
+                guard app.keyboards.firstMatch.exists else {
+                    throw AgentError("NO_FOCUS", "no text field took the focus", hint: "tap the field first")
+                }
+                app.typeText(text)
             }
-            app.typeText(text)
-            if p["submit"] as? Bool == true { app.typeText("\n") }
+            if p["submit"] as? Bool == true, !EventShim.type("\n", orientation: o) { app.typeText("\n") }
             var out = try after(p, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
             out["mode"] = "keys"
             out["verified"] = false
