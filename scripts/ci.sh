@@ -53,9 +53,11 @@ step typecheck mise exec -- pnpm typecheck
 step unit mise exec -- pnpm test
 step agent zsh -c 'cd android && mise exec -- ./gradlew --console=plain :agent:testDebugUnitTest :agent:assembleDebug :fixture:assembleDebug'
 step build mise exec -- pnpm build
-# the runner's platform-independent core (needs Xcode's Swift; skipped where there is none)
-if xcrun --find swift >/dev/null 2>&1; then
-  step runner-core zsh -c 'cd ios/RunnerCore && swift test -j 2'
+# the runner's platform-independent core (Xcode's Swift: the command line tools have no XCTest; skipped
+# where there is no Xcode)
+xcode=${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}
+if [[ -d $xcode ]]; then
+  step runner-core env DEVELOPER_DIR=$xcode zsh -c 'cd ios/RunnerCore && swift test -j 2'
 fi
 
 if [[ -n $serial ]]; then
