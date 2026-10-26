@@ -14,7 +14,9 @@ describe('release version', () => {
     expect(JSON.parse(read('packages/protocol/package.json')).version).toBe(v);
     expect(read('android/agent/build.gradle.kts')).toContain(`versionName = "${v}"`);
     expect(read('ios/Runner/RunnerTests.swift')).toContain(`let agentVersion = "${v}"`);
-    expect(read('ios/Appdyno.xcodeproj/project.pbxproj')).toContain(`MARKETING_VERSION = ${v};`);
+    expect(read('ios/Appdyno.xcodeproj/project.pbxproj')).toContain(
+      `MARKETING_VERSION = ${v};`,
+    );
     expect(read('packages/mcp/src/brand.ts')).toContain(`version: '${v}'`);
     expect(read('CHANGELOG.md')).toContain(`## ${v}`);
   });
