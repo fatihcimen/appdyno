@@ -5,16 +5,20 @@
 #   scripts/ci.sh                         unit gates only (format, lint, typecheck, unit, agent unit, build)
 #   scripts/ci.sh --device emulator-5580  + install the fixture, device suites (contract, smoke, stdio, perf)
 #   scripts/ci.sh --device … --nightly    + latency suite into .ci/history.jsonl, gate against recent runs
+#   scripts/ci.sh --ios <simulator id>    + the iOS runner build and the simulator suites (contract, perf, stdio)
+#   scripts/ci.sh --iphone <UDID>         + the iPhone runner build and the iPhone suites (APPDYNO_IOS_* signing)
 #
 # Coordination (optional): APPDYNO_BUSY_FILE — while it exists, measuring steps are skipped (reported as
 # postponed); APPDYNO_LOCK_FILE — written while a measuring step runs, removed after.
 set -u
 cd "${0:A:h}/.."
-serial=""; nightly=0
+serial=""; nightly=0; ios=""; iphone=""
 while (( $# )); do
   case $1 in
     --device) serial=$2; shift 2 ;;
     --nightly) nightly=1; shift ;;
+    --ios) ios=$2; shift 2 ;;
+    --iphone) iphone=$2; shift 2 ;;
     *) echo "unknown option $1" >&2; exit 2 ;;
   esac
 done
@@ -49,6 +53,10 @@ step typecheck mise exec -- pnpm typecheck
 step unit mise exec -- pnpm test
 step agent zsh -c 'cd android && mise exec -- ./gradlew --console=plain :agent:testDebugUnitTest :agent:assembleDebug :fixture:assembleDebug'
 step build mise exec -- pnpm build
+# the runner's platform-independent core (needs Xcode's Swift; skipped where there is none)
+if xcrun --find swift >/dev/null 2>&1; then
+  step runner-core zsh -c 'cd ios/RunnerCore && swift test -j 2'
+fi
 
 if [[ -n $serial ]]; then
   export APPDYNO_ANDROID_SERIAL=$serial
@@ -61,6 +69,22 @@ if [[ -n $serial ]]; then
       step regression-gate mise exec -- node scripts/ci-gate.mjs .ci/runs/$stamp-latency.json .ci/history.jsonl
     fi
   fi
+fi
+
+if [[ -n $ios || -n $iphone ]]; then
+  export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}
+  xb() { xcodebuild build-for-testing -project ios/Appdyno.xcodeproj -scheme Runner -jobs 2 -quiet "$@"; }
+fi
+if [[ -n $ios ]]; then
+  step ios-build xb -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/.derived
+  export APPDYNO_IOS_UDID=$ios
+  step ios-functional mise exec -- npx vitest run --config vitest.device.config.ts test-device/ios.test.ts test-device/mcp-stdio.test.ts
+  measuring ios-perf mise exec -- npx vitest run --config vitest.device.config.ts test-device/ios-perf.test.ts
+fi
+if [[ -n $iphone ]]; then
+  step iphone-build xb -destination 'generic/platform=iOS' -derivedDataPath ios/.derived-device CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=
+  export APPDYNO_IPHONE_UDID=$iphone
+  step iphone-functional mise exec -- npx vitest run --config vitest.device.config.ts test-device/iphone.test.ts test-device/iphone-mcp.test.ts
 fi
 
 {

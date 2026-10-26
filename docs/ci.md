@@ -3,14 +3,17 @@
 `scripts/ci.sh` runs every gate in order and stops nothing early: each step's exit code and duration go to
 `.ci/runs/<stamp>.json`, its output to `.ci/logs/`. The script exits 1 when any step failed.
 
-| step                                   | what                                                                                 |
-| -------------------------------------- | ------------------------------------------------------------------------------------ |
-| install, format, lint, typecheck, unit | `pnpm install --frozen-lockfile`, prettier, eslint, tsc, vitest (`--maxWorkers=2`)   |
-| agent                                  | Gradle: the agent's unit tests, the agent and the fixture app                        |
-| build                                  | `pnpm build` (packages the agent)                                                    |
-| fixture-install, device-functional     | with `--device <serial>`: the fixture app, then the contract, smoke and stdio suites |
-| device-perf                            | the measurement accuracy suite (a measuring step)                                    |
-| latency, regression-gate               | with `--nightly`: the latency suite (`appdyno bench`, n = 30) and the gate      |
+| step                                   | what                                                                                  |
+| -------------------------------------- | ------------------------------------------------------------------------------------- |
+| install, format, lint, typecheck, unit | `pnpm install --frozen-lockfile`, prettier, eslint, tsc, vitest (`--maxWorkers=2`)    |
+| agent                                  | Gradle: the agent's unit tests, the agent and the fixture app                         |
+| build                                  | `pnpm build` (packages the agent)                                                     |
+| fixture-install, device-functional     | with `--device <serial>`: the fixture app, then the contract, smoke and stdio suites  |
+| device-perf                            | the measurement accuracy suite (a measuring step)                                     |
+| latency, regression-gate               | with `--nightly`: the latency suite (`appdyno bench`, n = 30) and the gate       |
+| runner-core                            | the iOS runner's Swift core (`swift test`), where Xcode is                            |
+| ios-build, ios-functional, ios-perf    | with `--ios <simulator id>`: the runner, the contract and stdio suites, perf accuracy |
+| iphone-build, iphone-functional        | with `--iphone <UDID>`: the runner for phones, the iPhone suites (signing variables)  |
 
 **Regression gate** (`scripts/ci-gate.mjs`): every operation's p50 against the median p50 of the last five
 passing runs in `.ci/history.jsonl`; slower by more than 20 % and 10 ms, or any failed operation, fails
@@ -24,4 +27,6 @@ and write `APPDYNO_LOCK_FILE` while they run. A device is never chosen by defaul
 scripts/ci.sh                                      # no device
 scripts/ci.sh --device emulator-5580               # + device suites
 scripts/ci.sh --device emulator-5580 --nightly     # + latency history and gate
+scripts/ci.sh --ios <simulator id>                 # + iOS simulator (a shared one: APPDYNO_WATCH_SIM in the session guard)
+scripts/ci.sh --iphone <UDID>                      # + iPhone (APPDYNO_IOS_PROFILE, _KEYCHAIN, _KEYCHAIN_PASSWORD)
 ```
