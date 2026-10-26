@@ -17,6 +17,8 @@ import {
 const serial = process.env.APPDYNO_ANDROID_SERIAL;
 const APP = 'dev.appdyno.fixture';
 const SETTLE = { quietMs: 200, maxMs: 3_000 };
+/** The most reads one quiet window takes: the first, then one every 80 ms (the agent's poll) until it ends. */
+const oneWindow = (quietMs: number) => Math.ceil(quietMs / 80) + 1;
 
 describe.skipIf(!serial)('android agent on a device', () => {
   let d: AndroidDevice;
@@ -83,9 +85,11 @@ describe.skipIf(!serial)('android agent on a device', () => {
     const title = find(s, 'appdyno fixture')!;
     const r = await d.tap(title, { settle: SETTLE, read: 'hash', before: s.hash });
     expect(r.settle!.settled).toBe(true);
-    expect(r.settle!.ms).toBeGreaterThanOrEqual(SETTLE.quietMs);
-    // one window (stretched while the device is loaded) and a few reads
-    expect(r.settle!.ms).toBeLessThan(r.settle!.quietMs! + 250);
+    // the agent's own clock: the window it used (short after a tap on plain text, stretched on a loaded
+    // device) was waited out
+    expect(r.settle!.ms).toBeGreaterThanOrEqual(r.settle!.quietMs!);
+    // one window, no second one: the reads of a single window (one every 80 ms, plus the first)
+    expect(r.settle!.reads).toBeLessThanOrEqual(oneWindow(r.settle!.quietMs!));
     expect(r.hash).toBe(s.hash);
   });
 
@@ -198,10 +202,10 @@ describe.skipIf(!serial)('android agent on a device', () => {
     const s = await open('SAYAÇ');
     expect(s.settle!.settled).toBe(true);
     const stop = s.list.find((e) => e.label === 'DUR')!;
-    const t = Date.now();
     const r = await d.tap(stop, { settle: SETTLE, read: 'none', before: s.hash });
+    // the ticking text never held it to the cap: settled within one window of reads
     expect(r.settle!.settled).toBe(true);
-    expect(Date.now() - t).toBeLessThan(1_500);
+    expect(r.settle!.reads).toBeLessThanOrEqual(oneWindow(r.settle!.quietMs!));
   });
 
   it('waits for content that arrives after a spinner', async () => {

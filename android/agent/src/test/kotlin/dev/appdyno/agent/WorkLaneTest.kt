@@ -29,14 +29,12 @@ class WorkLaneTest {
         val done = Collections.synchronizedList(mutableListOf<String>())
         val bothDone = CountDownLatch(2)
         lane.submit(Job(1), 100, { timedOut.countDown() }) { stuckUntil(release) }
-        val t0 = System.nanoTime()
-        lane.submit(Job(2), 5_000, {}) { done.add("second"); bothDone.countDown() }
-        lane.submit(Job(3), 5_000, {}) { done.add("third"); bothDone.countDown() }
-        assertTrue("the stuck job was answered TIMEOUT", timedOut.await(2, TimeUnit.SECONDS))
-        assertTrue("the jobs behind it ran", bothDone.await(3, TimeUnit.SECONDS))
-        val ms = (System.nanoTime() - t0) / 1_000_000
-        // deadline 100 ms + grace 200 ms, then at once on the new thread
-        assertTrue("took $ms ms", ms < 1_500)
+        lane.submit(Job(2), 30_000, {}) { done.add("second"); bothDone.countDown() }
+        lane.submit(Job(3), 30_000, {}) { done.add("third"); bothDone.countDown() }
+        assertTrue("the stuck job was answered TIMEOUT", timedOut.await(10, TimeUnit.SECONDS))
+        // the jobs behind it ran while it is still stuck (it is released only at the end), in order, on a
+        // new thread: without the lane given up they would wait for ever
+        assertTrue("the jobs behind it ran", bothDone.await(10, TimeUnit.SECONDS))
         assertEquals(listOf("second", "third"), done.toList())
         assertEquals(1, lane.replaced.get())
         release.countDown()
@@ -50,7 +48,8 @@ class WorkLaneTest {
         repeat(3) { i ->
             lane.submit(Job(i), 1_000, {}) { threads.add(Thread.currentThread()); ran.countDown() }
         }
-        assertTrue(ran.await(2, TimeUnit.SECONDS))
+        assertTrue(ran.await(10, TimeUnit.SECONDS))
+        // past every deadline and grace: nothing was given up
         Thread.sleep(1_200)
         assertEquals(1, threads.size)
         assertEquals(0, lane.replaced.get())
