@@ -357,14 +357,26 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       READ,
       async () => {
         const all = await ctx.adb.devices().catch(refused);
-        const devices = all.map((d) => ({
-          serial: d.serial,
-          state: d.state,
-          ...(d.props.model && { model: d.props.model }),
+        const sims = await ctx.simulators();
+        const devices = [
+          ...all.map((d) => ({
+            serial: d.serial,
+            state: d.state,
+            ...(d.props.model && { model: d.props.model }),
+          })),
+          // booted iOS simulators, named by their id
+          ...sims.map((d) => ({
+            serial: d.udid,
+            state: 'booted',
+            model: `iOS simulator ${d.name}`,
+          })),
+        ].map((d) => ({
+          ...d,
           allowed: ctx.allowed(d.serial),
           selected: d.serial === ctx.currentSerial,
         }));
-        if (all.length === 0) return reply('bağlı cihaz yok (adb devices boş)', { devices });
+        if (devices.length === 0)
+          return reply('bağlı cihaz yok (adb devices boş, açık simülatör yok)', { devices });
         return reply(
           devices
             .map(

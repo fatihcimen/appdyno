@@ -1,8 +1,18 @@
 import { join } from 'node:path';
-import { Adb, AndroidDevice, stateDir } from 'appdyno';
+import {
+  Adb,
+  AndroidDevice,
+  IosSimulatorDevice,
+  Simctl,
+  stateDir,
+  type Simulator,
+} from 'appdyno';
 import { checkApp, checkDevice, type Policy } from './policy.js';
 import { Session, type DriveableDevice } from './session.js';
 import { ToolError } from './tool.js';
+
+/** A simulator is named by its id; anything else is an adb serial. */
+const SIMULATOR_ID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;
 
 /** The server's devices: the sessions opened so far and which one tools act on by default. */
 export class ServerContext {
@@ -15,7 +25,15 @@ export class ServerContext {
     private readonly defaults: { device?: string; app?: string; measurements?: string } = {},
     // a phone unplugged for a moment (or rebooting) is waited for, up to 30 s, on read-only calls
     private readonly makeDevice: (serial: string) => DriveableDevice = (serial) =>
-      new AndroidDevice(serial, new Adb(), 30_000),
+      SIMULATOR_ID.test(serial)
+        ? new IosSimulatorDevice(serial)
+        : new AndroidDevice(serial, new Adb(), 30_000),
+    /** Booted simulators (none when Xcode is missing). */
+    readonly simulators: () => Promise<Simulator[]> = () =>
+      new Simctl()
+        .list()
+        .then((l) => l.filter((d) => d.state === 'Booted'))
+        .catch(() => []),
   ) {}
 
   /** Where measurements and their raw outputs are stored (this machine only). */

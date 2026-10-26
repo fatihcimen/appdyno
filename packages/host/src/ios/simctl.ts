@@ -95,9 +95,19 @@ export class Simctl {
     await this.exec(['bootstatus', udid, '-b'], 300_000);
   }
 
+  /** Shuts down and waits until the state says so (a loaded Mac can leave a first request unfinished). */
   async shutdown(udid: string) {
-    if ((await this.state(udid)) === 'Booted')
-      await this.exec(['shutdown', assertUdid(udid)], 120_000);
+    const end = Date.now() + 180_000;
+    for (;;) {
+      const state = await this.state(udid);
+      if (state === 'Shutdown') return;
+      await this.exec(['shutdown', assertUdid(udid)], 120_000).catch((e: unknown) => {
+        if (!(e instanceof DeviceError && /current state: Shutdown/i.test(e.message))) throw e;
+      });
+      if (Date.now() > end)
+        throw new DeviceError('TIMEOUT', `simulator ${udid} did not shut down (state ${state})`);
+      await new Promise((r) => setTimeout(r, 2_000));
+    }
   }
 
   install(udid: string, appPath: string) {

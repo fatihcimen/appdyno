@@ -15,7 +15,11 @@ type Result = { isError?: boolean; content: { type: string; text?: string; data?
 
 const MEASUREMENTS = mkdtempSync(join(tmpdir(), 'gd-measure-'));
 
-async function connect(policy: Partial<Policy> = {}, device = new FakeDevice()) {
+async function connect(
+  policy: Partial<Policy> = {},
+  device: FakeDevice = new FakeDevice(),
+  simulators: ServerContext['simulators'] = async () => [],
+) {
   const logs: object[] = [];
   const adb = {
     devices: async () => [{ serial: device.serial, state: 'device', props: { model: 'Fake' } }],
@@ -25,6 +29,7 @@ async function connect(policy: Partial<Policy> = {}, device = new FakeDevice()) 
     adb,
     { app: 'dev.app', measurements: MEASUREMENTS },
     () => device,
+    simulators,
   );
   const server = createServer(createTools(ctx), (l) => logs.push(l));
   const [a, b] = InMemoryTransport.createLinkedPair();
@@ -401,5 +406,26 @@ describe('perf tools', () => {
     const r = await t.textOf('perf_trace', { seconds: 2 });
     expect(r.text).toContain('50 kare; uygulamanın geciktirdiği 4 (%8)');
     expect(r.text).toContain('sanal cihazda birleştirici');
+  });
+});
+
+describe('iOS simulators', () => {
+  it('lists a booted simulator by its id, under the device policy', async () => {
+    const udid = '75505767-61E2-40F2-8FC6-8AFE20EE25C9';
+    const t = await connect({}, new FakeDevice(), async () => [
+      { udid, name: 'gd-iphone', state: 'Booted', runtime: 'iOS-27-0' },
+    ]);
+    const r = await t.textOf('list_devices');
+    expect(r.text).toContain(`${udid} booted iOS simulator gd-iphone`);
+  });
+
+  it('answers a perf tool on a device without perf tools with a plain error', async () => {
+    const device = new FakeDevice();
+    Object.defineProperty(device, 'platform', { value: 'ios' });
+    Object.defineProperty(device, 'perf', { value: undefined });
+    const t = await connect({}, device);
+    const r = await t.textOf('perf_snapshot');
+    expect(r.error).toBe(true);
+    expect(r.text).toMatch(/ios cihazında performans ölçümü henüz yok/);
   });
 });

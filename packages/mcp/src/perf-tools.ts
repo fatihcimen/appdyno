@@ -5,7 +5,7 @@ import type { Measured } from 'appdyno';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { checkApp } from './policy.js';
-import { refused, type Session } from './session.js';
+import { refused, type DriveableDevice, type Session } from './session.js';
 import { HeapOut, LaunchOut, ProfileOut, ScrollOut, SnapshotOut, TraceOut } from './schemas.js';
 import { ACT, DESTRUCTIVE, READ, reply, ToolError, type Tool, type ToolResult } from './tool.js';
 import { swipeLine } from './tools.js';
@@ -86,7 +86,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
       async ({ device, app, cpuWindowMs }) => {
         const s = await ctx.session(device);
         const pkg = appOf(s, app);
-        const perf = s.device.perf;
+        const perf = perfOf(s.device);
         const [cpu, mem, frames, vitals] = [
           await perf.cpu(pkg, cpuWindowMs).catch(refused),
           await perf.memory(pkg).catch(refused),
@@ -151,7 +151,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
       async ({ device, app, direction, swipes, repeats }) => {
         const s = await ctx.session(device);
         const pkg = appOf(s, app);
-        const perf = s.device.perf;
+        const perf = perfOf(s.device);
         const h = s.device.hello!;
         const size = (await s.current()).window ?? { w: h.screen.w, h: h.screen.h };
         const all: Measured<unknown>[] = [];
@@ -250,7 +250,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
       async ({ device, app, mode, repeats }) => {
         const s = await ctx.session(device);
         const pkg = appOf(s, app);
-        const m = await s.device.perf.launch(pkg, { mode, repeats }).catch(refused);
+        const m = await perfOf(s.device).launch(pkg, { mode, repeats }).catch(refused);
         s.acted();
         const saved = await save('launch', [m], m.value);
         const limit = mode === 'cold' ? 5_000 : 2_000; // Android vitals: excessive cold ≥ 5 s, warm ≥ 2 s
@@ -304,7 +304,9 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
               }
             }
           : undefined;
-        const m = await s.device.perf.cpuProfile(pkg, seconds * 1000, during).catch(refused);
+        const m = await perfOf(s.device)
+          .cpuProfile(pkg, seconds * 1000, during)
+          .catch(refused);
         if (scroll) s.acted();
         const saved = await save('cpu-profile', [m], m.value);
         return reply(
@@ -335,7 +337,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
         const pkg = appOf(s, app);
         await mkdir(measurementsDir, { recursive: true });
         const file = join(measurementsDir, `heap-${pkg}-${Date.now()}.hprof`);
-        const m = await s.device.perf.heapDump(pkg, file).catch(refused);
+        const m = await perfOf(s.device).heapDump(pkg, file).catch(refused);
         const saved = await save('heap-dump', [m], m.value);
         return reply(
           `ölçüm ${saved.id}\nbellek dökümü: ${m.value.file} (${(m.value.bytes / 1048576).toFixed(1)} MB)`,
@@ -370,7 +372,9 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
               }
             }
           : undefined;
-        const m = await s.device.perf.frameTimeline(pkg, seconds * 1000, during).catch(refused);
+        const m = await perfOf(s.device)
+          .frameTimeline(pkg, seconds * 1000, during)
+          .catch(refused);
         if (scroll) s.acted();
         const saved = await save('frame-timeline', [m], m.value);
         const v = m.value;
@@ -402,4 +406,10 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
       },
     ),
   };
+}
+
+/** The device's performance tools; an iOS simulator has none yet. */
+function perfOf(d: DriveableDevice) {
+  if (!d.perf) throw new ToolError(`${d.platform} cihazında performans ölçümü henüz yok`);
+  return d.perf;
 }

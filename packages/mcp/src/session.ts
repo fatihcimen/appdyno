@@ -8,10 +8,9 @@ import {
 } from 'appdyno';
 import { ToolError } from './tool.js';
 
-/** What the tools need of a device (the Android device today; an iOS one implements the same). */
+/** What the tools need of a device: an Android device or an iOS simulator (no perf tools there yet). */
 export type DriveableDevice = Pick<
   AndroidDevice,
-  | 'platform'
   | 'serial'
   | 'hello'
   | 'lastStartWasCold'
@@ -32,8 +31,7 @@ export type DriveableDevice = Pick<
   | 'terminate'
   | 'setLocation'
   | 'close'
-  | 'perf'
->;
+> & { readonly platform: 'android' | 'ios'; readonly perf?: AndroidDevice['perf'] };
 
 /**
  * One device the server drives and what its agent was shown: the screen the diffs are against, the
