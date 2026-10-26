@@ -69,16 +69,17 @@ enum EventShim {
         return synthesize(record, within: 5)
     }
 
-    /// Types `text` as key events (60 characters a second); false when the synthesizer refused it.
-    static func type(_ text: String, orientation: Int) -> Bool {
+    /// Types `text` as key events, `perSecond` of them a second (the synthesizer spaces them itself); false
+    /// when the synthesizer refused it.
+    static func type(_ text: String, orientation: Int, perSecond: UInt64 = 60) -> Bool {
         guard textAvailable, let r = recordClass, let pc = pathClass else { return false }
         let rawRecord = r.alloc() as AnyObject
         let record = imp(rawRecord, selInitRecord, InitRecord.self)(rawRecord, selInitRecord, "type" as NSString, orientation)
         let rawPath = pc.alloc() as AnyObject
         let path = imp(rawPath, selInitText, InitText.self)(rawPath, selInitText)
-        imp(path, selTypeText, TypeText.self)(path, selTypeText, text as NSString, 0, 60, false)
+        imp(path, selTypeText, TypeText.self)(path, selTypeText, text as NSString, 0, perSecond, false)
         imp(record, selAdd, AddPath.self)(record, selAdd, path)
-        return synthesize(record, within: 5 + Double(text.count) / 60)
+        return synthesize(record, within: 5 + Double(text.count) / Double(max(1, perSecond)))
     }
 
     private static func synthesize(_ record: AnyObject, within seconds: Double) -> Bool {

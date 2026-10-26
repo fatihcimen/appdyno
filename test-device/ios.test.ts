@@ -62,6 +62,17 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(byId(await d.read(APP), 'result')?.label).toBe('Gönderildi: Kapı zili çalışmıyor');
   });
 
+  it('replaces the text of a field that formats what is typed (a phone number)', async () => {
+    const s = await open('Form');
+    const gsm = byId(s, 'gsm_input')!;
+    for (const n of ['5999999900', '5321234567']) {
+      const r = await d.typeText(n, { at: gsm, replace: true });
+      expect(r.verified).toBe(true);
+      const field = (await d.tree()).nodes.find((x) => x.id === 'gsm_input');
+      expect(field?.t?.replace(/\D/g, '')).toBe(n);
+    }
+  });
+
   it('answers an alert', async () => {
     const s = await open('Diyalog');
     await d.tap(byId(s, 'open_dialog')!, { settle: SETTLE });

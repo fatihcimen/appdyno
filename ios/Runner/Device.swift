@@ -15,6 +15,9 @@ final class Device {
     /// How long an alert or sheet takes to come up (UIKit's presentation is about 0.3–0.4 s).
     static let alertAppearS = 0.45
 
+    /// Letters and digits only: a formatting field shows "(599) 999-9900" for "5999999900".
+    static func plain(_ s: String) -> String { String(s.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init)) }
+
     static func hasAlert(_ nodes: [Node]) -> Bool {
         nodes.contains { ($0.type == "Alert" || $0.type == "Sheet") && $0.flags & Flag.visible != 0 }
     }
@@ -242,7 +245,8 @@ final class Device {
             // keyboard, as a person's would (XCUI's own typing refuses without a focused element); the text
             // cannot be read back
             let o = Device.interfaceOrientation()
-            if !EventShim.type(text, orientation: o) {
+            let typed = EventShim.type(text, orientation: o)
+            if !typed {
                 guard app.keyboards.firstMatch.exists else {
                     throw AgentError("NO_FOCUS", "no text field took the focus", hint: "tap the field first")
                 }
@@ -260,7 +264,10 @@ final class Device {
         // nil: the field is gone (a code entry that submitted itself took the text)
         func check() -> Bool? {
             guard let now = currentText(field) else { return nil }
-            return replace ? now == text : now == before + text || now.contains(text)
+            if replace ? now == text : now == before + text || now.contains(text) { return true }
+            // a field that formats what is typed (a phone number as "(599) 999-9900"): the same letters and digits
+            let n = Device.plain(now), t = Device.plain(text)
+            return replace ? n == t : n == Device.plain(before) + t || n.contains(t)
         }
         // paste first (one event for the whole text), keys when the field did not take it
         var mode = "paste"
@@ -284,11 +291,17 @@ final class Device {
         if let saved { UIPasteboard.general.string = saved } else { UIPasteboard.general.items = [] }
         if verified == false, field.exists {
             mode = "keys"
-            let now = currentText(field) ?? ""
-            let extra = replace ? now.count : max(0, now.count - before.count)
-            if extra > 0 { field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: extra)) }
-            if replace, let left = currentText(field), !left.isEmpty {
-                field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: left.count))
+            if replace {
+                // all of it selected and deleted at once: deleting a formatting field's characters one by one
+                // moves its cursor and scrambles what is typed after (live: a phone number typed out of order)
+                field.typeKey("a", modifierFlags: .command)
+                field.typeText(XCUIKeyboardKey.delete.rawValue)
+                if let left = currentText(field), !left.isEmpty {
+                    field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: left.count))
+                }
+            } else if let now = currentText(field), now.count > before.count, !now.hasPrefix(before + text) {
+                // a paste that went in half: what it added is taken back
+                field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: now.count - before.count))
             }
             if field.exists { field.typeText(text) }
             verified = check()

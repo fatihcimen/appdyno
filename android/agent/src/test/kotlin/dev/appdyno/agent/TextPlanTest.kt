@@ -24,5 +24,9 @@ class TextPlanTest {
     fun readBackIgnoresTrailingLineBreak() {
         assertTrue(TextPlan.matches("abc\n", "abc"))
         assertFalse(TextPlan.matches("ab", "abc"))
+        // a formatting field shows the same digits with its own punctuation
+        assertTrue(TextPlan.matches("(599) 999-9900", "5999999900"))
+        assertFalse(TextPlan.matches("(599) 999-0099", "5999999900"))
+        assertFalse(TextPlan.matches("--", "()"))
     }
 }

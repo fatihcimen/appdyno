@@ -67,6 +67,19 @@ struct FormScreen: View {
     @State private var name = ""
     @State private var phone = ""
     @State private var password = ""
+    @State private var gsm = ""
+
+    static func phone(_ v: String) -> String {
+        let d = Array(v.filter(\.isNumber).prefix(10))
+        var out = ""
+        for (i, c) in d.enumerated() {
+            if i == 0 { out += "(" }
+            if i == 3 { out += ") " }
+            if i == 6 { out += "-" }
+            out.append(c)
+        }
+        return out
+    }
     @State private var result = ""
 
     var body: some View {
@@ -75,6 +88,14 @@ struct FormScreen: View {
             TextField("Adınız", text: $name).accessibilityIdentifier("name_input")
             TextField("Telefon", text: $phone).keyboardType(.phonePad).accessibilityIdentifier("phone_input")
             SecureField("Şifre", text: $password).accessibilityIdentifier("password_input")
+            // formats the digits as they come, as phone fields do: "(599) 999-9900"
+            TextField("Cep telefonu", text: $gsm)
+                .keyboardType(.phonePad)
+                .accessibilityIdentifier("gsm_input")
+                .onChange(of: gsm) { _, v in
+                    let f = Self.phone(v)
+                    if f != v { gsm = f }
+                }
             Button("Gönder") { result = "Gönderildi: \(name)" }.accessibilityIdentifier("submit")
             Text(result).accessibilityIdentifier("result")
             Spacer()
@@ -283,6 +304,8 @@ struct HiddenField: UIViewRepresentable {
         override var canBecomeFirstResponder: Bool { true }
         var keyboardType: UIKeyboardType = .numberPad
         var hasText: Bool { !value.isEmpty }
+        /// Like an entry that moves to its next box after each digit: a key that comes before that move is lost.
+        private var moving = false
         func insertText(_ text: String) {
             guard text != "\n" else { return }
             value = String((value + text).prefix(6))

@@ -9,8 +9,16 @@ import android.view.accessibility.AccessibilityNodeInfo
 object TextPlan {
     fun target(current: String?, text: String, replace: Boolean): String = if (replace) text else (current ?: "") + text
 
-    /** A read-back equal to the target, after the field's own trimming of trailing line breaks. */
-    fun matches(actual: String?, target: String): Boolean = (actual ?: "") == target || (actual ?: "").trimEnd('\n') == target.trimEnd('\n')
+    /**
+     * A read-back equal to the target, after the field's own trimming of trailing line breaks, or with the
+     * same letters and digits (a field that formats what is typed: "(599) 999-9900" for "5999999900").
+     */
+    fun matches(actual: String?, target: String): Boolean {
+        val a = actual ?: ""
+        if (a == target || a.trimEnd('\n') == target.trimEnd('\n')) return true
+        val plain = { s: String -> s.filter { it.isLetterOrDigit() } }
+        return plain(target).isNotEmpty() && plain(a) == plain(target)
+    }
 
     fun isAscii(text: String) = text.all { it.code in 0x20..0x7e }
 }
