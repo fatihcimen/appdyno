@@ -167,7 +167,11 @@ export const METHODS = {
       action: ActParams,
       settle: Settle.optional(),
       read: Read.default('none'),
-      /** The layout digest the caller saw: an equal digest after the action ends the settle at once. */
+      /**
+       * The layout digest the caller saw: the first read after the action is compared with it, so an
+       * unchanged screen counts as still from the action's end (no second read needed to start the
+       * window), and a tap on something that cannot react settles after a short window.
+       */
       before: z.string().optional(),
     }),
     result: ActResult,

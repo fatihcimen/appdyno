@@ -100,8 +100,12 @@ and calls the screen settled once it has been still for `quietMs`:
 On a loaded device the window stretches (up to 4×) by how much slower the agent's own reads are than
 their recent best, per node read: a slow device also starts its reaction later.
 
-The first read is compared with `before` when it names a layout the agent sent recently (else the first
-read counts as a change), so an action that changed nothing ends after `quietMs`. The settle stops at
+The window counts from the end of the action, not its start: on iOS a synthesized tap alone takes
+300–600 ms, and a window counted from its start was spent before the app had the touch (reactions 300 ms
+late were missed 10 of 10 times). The first read is compared with `before` when it names a layout the
+agent sent recently (else the first read counts as a change), so an action that changed nothing ends
+`quietMs` after it returned. On iOS an actionable tap that changed nothing then watches up to 0.8 s for a
+system alert, and the screen is read again after that watch. The settle stops at
 `maxMs` after the action; the result says `settled`, the time, the number of reads and the window used.
 
 A tap whose point hits nothing that can react on the screen named by `before` (plain text, an image,

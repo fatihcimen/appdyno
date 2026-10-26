@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { IosSimulatorDevice, Simctl, type Screen } from 'appdyno';
+import { IosSimulatorDevice, Simctl, buildScreen, type Screen } from 'appdyno';
 import { join } from 'node:path';
 
 /**
@@ -93,6 +93,28 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     await d.tap(ok, { settle: SETTLE });
     expect(labels(await d.read(APP))).toContain('Onaylandı');
   });
+
+  it('catches a reaction 300 ms after the tap, with and without the screen before it (10 of 10)', async () => {
+    await home();
+    await d.openUrl('gdfixture://open/late', APP);
+    for (const withBefore of [true, false]) {
+      let caught = 0;
+      for (let i = 0; i < 10; i++) {
+        let s = await d.read(APP);
+        await d.tap(byId(s, 'late_clear')!, { settle: SETTLE });
+        s = await d.read(APP);
+        const r = await d.tap(byId(s, 'late_300')!, {
+          settle: SETTLE,
+          read: 'tree',
+          ...(withBefore && { before: s.hash }),
+        });
+        if (labels(buildScreen(r.tree!, { platform: 'ios' })).includes('Tepki 300')) caught++;
+        // a missed reaction lands before the next trial
+        await new Promise((x) => setTimeout(x, 400));
+      }
+      expect(caught, withBefore ? 'with the screen before' : 'without it').toBe(10);
+    }
+  }, 180_000);
 
   it('settles on a screen whose text keeps ticking', async () => {
     const s = await open('Sayaç');

@@ -244,7 +244,8 @@ final class Device {
                 while Date() < end, !job.over, !springboard.alerts.firstMatch.exists {
                     RunLoop.current.run(until: Date().addingTimeInterval(0.1))
                 }
-                if springboard.alerts.firstMatch.exists { last = try? capture(job: job) }
+                // read again either way: an in-app change that came during the watch belongs in the answer
+                last = (try? capture(job: job)) ?? last
                 idleMs = Int(Date().timeIntervalSince(idleAt) * 1000)
             }
             out["settle"] = ["settled": r.settled, "ms": r.elapsedMs + idleMs, "reads": r.reads, "quietMs": quiet]
