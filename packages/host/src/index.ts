@@ -16,6 +16,7 @@ export { IosRunnerLauncher, runnerBuild } from './ios/runner.js';
 export { Simctl, type Simulator } from './ios/simctl.js';
 export { listPhones } from './ios/usbmux.js';
 export * from './ios/perf.js';
+export * from './ios/trace.js';
 export * from './screen/index.js';
 export {
   benchmark,

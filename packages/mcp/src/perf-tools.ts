@@ -402,7 +402,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
     ),
     perf_trace: tool(
       'Kare izi',
-      'appdyno: kare zaman çizelgesini kaydet (Android 12+): her karenin süresi ve neden geciktiği (uygulama, birleştirici). İsteğe bağlı kayıt sırasında kaydırma.',
+      'appdyno: kare zaman çizelgesini kaydet (Android 12+: her karenin süresi ve neden geciktiği; iOS: animasyon takılmaları, oranı ve nedenleri, Instruments izi). İsteğe bağlı kayıt sırasında kaydırma.',
       z
         .object({
           device: Device,
@@ -427,6 +427,37 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
               }
             }
           : undefined;
+        if (s.device.hitches) {
+          const v = await s.device.hitches(pkg, seconds, during).catch(refused);
+          if (scroll) s.acted();
+          const saved = await save(
+            'hitches',
+            [{ value: v, raw: v.tracePath, at: new Date().toISOString() }],
+            v,
+          );
+          const causes = Object.entries(v.causes)
+            .map(([c, k]) => `${k}× ${c}`)
+            .join('; ');
+          return reply(
+            [
+              `ölçüm ${saved.id}${relative(s)}`,
+              `${v.frames} kare; uygulamanın ${v.hitches} takılması, toplam ${v.hitchMs} ms, en kötü ${v.worstMs} ms; takılma oranı ${v.hitchRatio} ms/sn`,
+              ...(causes ? [`olası nedenler: ${causes}`] : []),
+              `iz (Instruments): ${v.tracePath}`,
+            ].join('\n'),
+            {
+              id: saved.id,
+              raw: saved.txt,
+              virtualDevice: virtual(s),
+              frames: v.frames,
+              hitches: v.hitches,
+              hitchMs: v.hitchMs,
+              worstMs: v.worstMs,
+              hitchRatio: v.hitchRatio,
+              tracePath: v.tracePath,
+            },
+          );
+        }
         const m = await perfOf(s.device)
           .frameTimeline(pkg, seconds * 1000, during)
           .catch(refused);

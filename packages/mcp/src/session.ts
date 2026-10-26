@@ -2,6 +2,7 @@ import {
   buildScreen,
   DeviceError,
   type AndroidDevice,
+  type IosDevice,
   type IosSimulatorPerf,
   type Screen,
   type ScreenElement,
@@ -37,6 +38,8 @@ export type DriveableDevice = Pick<
   readonly perf?: AndroidDevice['perf'];
   /** iOS simulator: measured from the Mac. */
   readonly iosPerf?: IosSimulatorPerf;
+  /** iOS: animation hitches through Xcode's trace tool. */
+  hitches?: IosDevice['hitches'];
 };
 
 /**

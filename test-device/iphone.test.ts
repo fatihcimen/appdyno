@@ -70,6 +70,17 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
     expect(r.mode).toBe('keys');
   });
 
+  it('records animation hitches while the list scrolls', async () => {
+    await settings();
+    const { w, h } = d.hello!.screen;
+    const v = await d.hitches(SETTINGS, 5, async () => {
+      for (let i = 0; i < 4; i++)
+        await d.swipe({ x: w / 2, y: h * 0.75 }, { x: w / 2, y: h * 0.25 }, 250, { settle: false });
+    });
+    expect(v.frames).toBeGreaterThan(30);
+    expect(v.tracePath).toMatch(/\.trace$/);
+  }, 120_000);
+
   it('takes a screenshot', async () => {
     const { meta, data } = await d.screenshot({ format: 'jpeg', maxPx: 1024 });
     expect(Math.max(meta.w, meta.h)).toBeLessThanOrEqual(1024);

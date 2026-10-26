@@ -67,12 +67,14 @@ export class Devicectl {
   async app(
     bundle: string,
   ): Promise<{ version?: string; bundleVersion?: string; url?: string } | undefined> {
+    // system apps (Settings, Safari) are listed only with --include-all-apps
     const j = await this.json([
       'device',
       'info',
       'apps',
       '--device',
       this.udid,
+      '--include-all-apps',
       '--bundle-id',
       assertBundle(bundle),
     ]);
@@ -99,16 +101,28 @@ export class Devicectl {
     ]);
   }
 
-  async terminate(bundle: string) {
+  /** Process ids of the running app. */
+  async pids(bundle: string): Promise<number[]> {
     const app = await this.app(bundle);
-    if (!app?.url) return;
+    if (!app?.url) return [];
     const j = await this.json(['device', 'info', 'processes', '--device', this.udid]);
     const procs =
       (
         j.result as
           { runningProcesses?: { processIdentifier: number; executable?: string }[] } | undefined
       )?.runningProcesses ?? [];
-    for (const p of procs.filter((x) => x.executable?.startsWith(app.url!)))
+    return procs.filter((x) => x.executable?.startsWith(app.url!)).map((x) => x.processIdentifier);
+  }
+
+  /** The newest process of the app (right after a relaunch the old one may still be listed). */
+  async pid(bundle: string): Promise<number> {
+    const pid = Math.max(0, ...(await this.pids(bundle)));
+    if (!pid) throw new DeviceError('APP_NOT_RUNNING', `${bundle} is not running`);
+    return pid;
+  }
+
+  async terminate(bundle: string) {
+    for (const pid of await this.pids(bundle))
       await this.json([
         'device',
         'process',
@@ -116,7 +130,7 @@ export class Devicectl {
         '--device',
         this.udid,
         '--pid',
-        String(p.processIdentifier),
+        String(pid),
       ]).catch(() => undefined);
   }
 }
@@ -199,6 +213,7 @@ export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
     },
     linkPrompt: false,
     name: `iPhone ${udid}`,
+    pid: (b) => ctl.pid(b),
   };
 }
 

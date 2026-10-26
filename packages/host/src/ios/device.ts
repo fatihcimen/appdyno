@@ -16,7 +16,10 @@ import { DeviceQueue } from '../queue.js';
 import type { RpcClient } from '../rpc.js';
 import { buildScreen, type Screen } from '../screen/index.js';
 import { IosSimulatorPerf } from './perf.js';
+import { join } from 'node:path';
+import { stateDir } from '../android/agent.js';
 import { IosRunnerLauncher } from './runner.js';
+import { recordHitches } from './trace.js';
 import { assertBundle, Simctl } from './simctl.js';
 
 /** The confirmation's button (English, Turkish). */
@@ -42,6 +45,8 @@ export type IosDeviceOps = {
   linkPrompt: boolean;
   /** The device, for messages. */
   name: string;
+  /** The process id of a running app (for the trace tool). */
+  pid(bundle: string): Promise<number>;
 };
 
 export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
@@ -57,6 +62,19 @@ export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
     },
     linkPrompt: true,
     name: `simulator ${udid}`,
+    pid: async (b) => {
+      const out = await simctl.exec(['spawn', udid, 'launchctl', 'list']);
+      const pid = Number(
+        out
+          .split('\n')
+          .find((l) => l.includes(`UIKitApplication:${b}[`))
+          ?.trim()
+          .split(/\s+/)[0],
+      );
+      if (!Number.isInteger(pid) || pid <= 0)
+        throw new DeviceError('APP_NOT_RUNNING', `${b} is not running`);
+      return pid;
+    },
   };
 }
 
@@ -267,6 +285,21 @@ export class IosDevice {
     await this.queue.run(() => this.ops.setLocation(lat, lon));
   }
 
+  /**
+   * Animation hitches of the app while `during` runs (Xcode's trace tool, Animation Hitches): frames
+   * shown, the app's hitches, their time; the trace is kept for Instruments.
+   */
+  async hitches(bundle: string, seconds = 5, during?: () => Promise<unknown>) {
+    const pid = await this.ops.pid(assertBundle(bundle));
+    return recordHitches(
+      this.serial,
+      pid,
+      Math.min(Math.max(Math.round(seconds), 1), 30),
+      join(stateDir(), 'traces'),
+      during,
+    );
+  }
+
   close() {
     this.rpc?.close();
     this.rpc = undefined;
@@ -288,6 +321,15 @@ export class IosSimulatorDevice extends IosDevice {
     private readonly simctl: Simctl = new Simctl(),
   ) {
     super(serial, simulatorOps(serial, simctl), new IosRunnerLauncher(serial));
+  }
+
+  /** The trace tool's Animation Hitches recording fails on simulators (measured on Xcode 27.1). */
+  override hitches(): never {
+    throw new DeviceError(
+      'UNSUPPORTED',
+      'animation hitches are recorded on an iPhone only',
+      'use a phone',
+    );
   }
 
   /** The app's performance, measured from the Mac (memory, CPU, launch, CPU profile). */

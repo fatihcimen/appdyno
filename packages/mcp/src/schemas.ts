@@ -134,12 +134,18 @@ export const LaunchOut = z.object({
 export const TraceOut = z.object({
   ...Measurement,
   frames: z.number(),
-  appDeadlineMissed: z.number(),
-  appJankPercent: z.number(),
-  jankyPercent: z.number(),
-  p50Ms: z.number(),
-  p95Ms: z.number(),
+  /** Android. */
+  appDeadlineMissed: z.number().optional(),
+  appJankPercent: z.number().optional(),
+  jankyPercent: z.number().optional(),
+  p50Ms: z.number().optional(),
+  p95Ms: z.number().optional(),
   worstMs: z.number(),
+  /** iOS: the app's animation hitches, their time and ratio (ms per second), and the trace. */
+  hitches: z.number().optional(),
+  hitchMs: z.number().optional(),
+  hitchRatio: z.number().optional(),
+  tracePath: z.string().optional(),
 });
 
 export const ProfileOut = z.object({

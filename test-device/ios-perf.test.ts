@@ -71,6 +71,10 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
     await pause(2_000);
   }, 60_000);
 
+  it('frames: says plainly that hitches need a phone', async () => {
+    expect(() => d.hitches()).toThrow(/on an iPhone only/);
+  });
+
   it('launch: a cold start takes longer than a warm one', async () => {
     const cold = (await d.iosPerf.launch(APP, { mode: 'cold', repeats: 3 })).value;
     const warm = (await d.iosPerf.launch(APP, { mode: 'warm', repeats: 3 })).value;
