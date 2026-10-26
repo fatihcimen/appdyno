@@ -6,7 +6,7 @@
 	objectVersion = 56;
 	objects = {
 		00BEDCD534483CBA054311DE = {isa = PBXTargetDependency; target = DDD0E7C23CE616C1A46E5565; targetProxy = 7345B27BA8156FD063A572FD; };
-		09F9AABCC18B884290DE4062 = {isa = XCBuildConfiguration; buildSettings = {DEBUG_INFORMATION_FORMAT = dwarf; INFOPLIST_KEY_CFBundleDisplayName = "appdyno"; ONLY_ACTIVE_ARCH = YES; PRODUCT_BUNDLE_IDENTIFIER = com.example.app.UITests; PRODUCT_NAME = Runner; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; TEST_TARGET_NAME = Fixture; }; name = Debug; };
+		09F9AABCC18B884290DE4062 = {isa = XCBuildConfiguration; buildSettings = {DEBUG_INFORMATION_FORMAT = dwarf; INFOPLIST_KEY_CFBundleDisplayName = "appdyno"; ONLY_ACTIVE_ARCH = YES; PRODUCT_BUNDLE_IDENTIFIER = dev.appdyno.runner; PRODUCT_NAME = Runner; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; TEST_TARGET_NAME = Fixture; }; name = Debug; };
 		1420528BA5187136E6BEF173 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Runner/RunnerTests.swift"; sourceTree = "<group>"; };
 		1F4E3D13C2320EDA50221924 = {isa = XCConfigurationList; buildConfigurations = (4A43692AD8BCEEB8B727C85B, C28449456A5A705A7479770B, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 		338D4573A9E8D097877414AB = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Runner/Device.swift"; sourceTree = "<group>"; };
@@ -43,7 +43,7 @@
 		D146D4B1F67C508B81DB7385 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		D5FC8DF0C22B1CAF203F36BA = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RunnerCore/Sources/RunnerCore/Errors.swift"; sourceTree = "<group>"; };
 		DDD0E7C23CE616C1A46E5565 = {isa = PBXNativeTarget; buildConfigurationList = 5E00FF076D05738B3CAB76F6; buildPhases = (908FC0342594C643FA1C505A, 3956B7C87EE464E58FA69CEB, 8C1B0E714706BFDF5F53476B, ); buildRules = (); dependencies = (); name = Fixture; productName = Fixture; productReference = 7F8703F37702C4E515C50E80; productType = "com.apple.product-type.application"; };
-		DF70B140D57B8363BDA0CA6B = {isa = XCBuildConfiguration; buildSettings = {INFOPLIST_KEY_CFBundleDisplayName = "appdyno"; PRODUCT_BUNDLE_IDENTIFIER = com.example.app.UITests; PRODUCT_NAME = Runner; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_OPTIMIZATION_LEVEL = "-O"; TEST_TARGET_NAME = Fixture; }; name = Release; };
+		DF70B140D57B8363BDA0CA6B = {isa = XCBuildConfiguration; buildSettings = {INFOPLIST_KEY_CFBundleDisplayName = "appdyno"; PRODUCT_BUNDLE_IDENTIFIER = dev.appdyno.runner; PRODUCT_NAME = Runner; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_OPTIMIZATION_LEVEL = "-O"; TEST_TARGET_NAME = Fixture; }; name = Release; };
 		F35AD69BE981F16C9E25BC09 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Runner/IdleShim.swift"; sourceTree = "<group>"; };
 		FA1162DD2539F9E452D50D52 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Runner.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FB87D0728D8F7173AF89F256 = {isa = PBXNativeTarget; buildConfigurationList = 7A7AE75F055B83E385ADD68D; buildPhases = (40F1A926075FF175B2C05659, BE9F8D60265B5B91E8FB0A52, D146D4B1F67C508B81DB7385, ); buildRules = (); dependencies = (00BEDCD534483CBA054311DE, ); name = Runner; productName = Runner; productReference = FA1162DD2539F9E452D50D52; productType = "com.apple.product-type.bundle.ui-testing"; };

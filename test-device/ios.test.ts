@@ -35,7 +35,8 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     d = new IosSimulatorDevice(udid!);
     await d.open();
   }, 240_000);
-  afterAll(() => d?.close());
+  // the runner does not stay on a shared simulator after the run
+  afterAll(() => d?.stopAgent());
 
   it('says hello as iOS in points', () => {
     expect(d.hello).toMatchObject({ platform: 'ios', protocol: { major: 1 } });
