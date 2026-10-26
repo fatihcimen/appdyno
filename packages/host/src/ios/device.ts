@@ -15,6 +15,7 @@ import { type ActOptions, TIMEOUTS } from '../android/device.js';
 import { DeviceQueue } from '../queue.js';
 import type { RpcClient } from '../rpc.js';
 import { buildScreen, type Screen } from '../screen/index.js';
+import { IosSimulatorPerf } from './perf.js';
 import { IosRunnerLauncher } from './runner.js';
 import { assertBundle, Simctl } from './simctl.js';
 
@@ -64,13 +65,15 @@ export class IosSimulatorDevice {
   private ensure(): Promise<RpcClient> {
     if (this.rpc && !this.rpc.closed) return Promise.resolve(this.rpc);
     this.connecting ??= (async () => {
-      if ((await this.simctl.state(this.serial)) !== 'Booted')
-        throw new DeviceError(
-          'DEVICE_GONE',
-          `simulator ${this.serial} is not booted`,
-          'boot it first',
-        );
-      const { rpc, hello, started } = await this.launcher.connect(this.targetApp);
+      // a new runner would boot a shut-down simulator: the tool is asked first (about 250 ms, only then)
+      const { rpc, hello, started } = await this.launcher.connect(this.targetApp, async () => {
+        if ((await this.simctl.state(this.serial)) !== 'Booted')
+          throw new DeviceError(
+            'DEVICE_GONE',
+            `simulator ${this.serial} is not booted`,
+            'boot it first',
+          );
+      });
       if (this.targetApp)
         await rpc.call('app.target', { pkg: this.targetApp }, { timeoutMs: TIMEOUTS.action });
       this.rpc = rpc;
@@ -222,6 +225,15 @@ export class IosSimulatorDevice {
       throw new DeviceError('INVALID_ARGUMENT', 'latitude/longitude out of range');
     await this.queue.run(() => this.simctl.setLocation(this.serial, lat, lon));
   }
+
+  /** The app's performance, measured from the Mac (memory, CPU, launch, CPU profile). */
+  get iosPerf(): IosSimulatorPerf {
+    return (this.perfTools ??= new IosSimulatorPerf(this.serial, this.simctl, async (bundle) => {
+      const t = await this.tree().catch(() => undefined);
+      return !!t && t.windows[0]?.pkg === bundle && t.nodes.filter((n) => n.w === 0).length > 3;
+    }));
+  }
+  private perfTools: IosSimulatorPerf | undefined;
 
   close() {
     this.rpc?.close();

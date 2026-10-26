@@ -2,6 +2,7 @@ import {
   buildScreen,
   DeviceError,
   type AndroidDevice,
+  type IosSimulatorPerf,
   type Screen,
   type ScreenElement,
   type Tree,
@@ -31,7 +32,12 @@ export type DriveableDevice = Pick<
   | 'terminate'
   | 'setLocation'
   | 'close'
-> & { readonly platform: 'android' | 'ios'; readonly perf?: AndroidDevice['perf'] };
+> & {
+  readonly platform: 'android' | 'ios';
+  readonly perf?: AndroidDevice['perf'];
+  /** iOS simulator: measured from the Mac. */
+  readonly iosPerf?: IosSimulatorPerf;
+};
 
 /**
  * One device the server drives and what its agent was shown: the screen the diffs are against, the

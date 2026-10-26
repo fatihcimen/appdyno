@@ -64,7 +64,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
     if (!pkg) throw new ToolError('app ver (ya da use_device ile uygulama seç)');
     return pkg;
   };
-  const virtual = (s: Session) => /^emulator-/.test(s.device.serial);
+  const virtual = (s: Session) => s.device.platform === 'ios' || /^emulator-/.test(s.device.serial);
   const relative = (s: Session) =>
     virtual(s) ? ' (sanal cihaz: göreli, yalnız aynı tür cihazla karşılaştır)' : '';
   const save = async (kind: string, m: Measured<unknown>[], value: unknown) =>
@@ -86,6 +86,27 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
       async ({ device, app, cpuWindowMs }) => {
         const s = await ctx.session(device);
         const pkg = appOf(s, app);
+        if (s.device.iosPerf) {
+          const cpu = await s.device.iosPerf.cpu(pkg, cpuWindowMs).catch(refused);
+          const mem = await s.device.iosPerf.memory(pkg).catch(refused);
+          const saved = await save('snapshot', [cpu, mem], { cpu: cpu.value, memory: mem.value });
+          return reply(
+            [
+              `ölçüm ${saved.id}${relative(s)}`,
+              `CPU: %${cpu.value.percent} (bir çekirdeğin, ${cpu.value.windowMs} ms)`,
+              `bellek: fiziksel ayak izi ${kb(mem.value.footprintKb)}${mem.value.peakKb !== undefined ? ` (tepe ${kb(mem.value.peakKb)})` : ''}`,
+              'simülatörde kare ölçümü yok',
+              `ham çıktı: ${saved.txt}`,
+            ].join('\n'),
+            {
+              id: saved.id,
+              raw: saved.txt,
+              virtualDevice: virtual(s),
+              cpuPercent: cpu.value.percent,
+              footprintKb: mem.value.footprintKb,
+            },
+          );
+        }
         const perf = perfOf(s.device);
         const [cpu, mem, frames, vitals] = [
           await perf.cpu(pkg, cpuWindowMs).catch(refused),
@@ -250,6 +271,29 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
       async ({ device, app, mode, repeats }) => {
         const s = await ctx.session(device);
         const pkg = appOf(s, app);
+        if (s.device.iosPerf) {
+          const m = await s.device.iosPerf.launch(pkg, { mode, repeats }).catch(refused);
+          s.acted();
+          const saved = await save('launch', [m], m.value);
+          const med = m.value.medianMs;
+          return reply(
+            [
+              `ölçüm ${saved.id}${relative(s)}`,
+              `${mode} açılış (ilk ekran okunana kadar): ${m.value.samplesMs.map((x) => `${x} ms`).join(', ')}`,
+              `medyan: ${med} ms`,
+              `ham çıktı: ${saved.txt}`,
+            ].join('\n'),
+            {
+              id: saved.id,
+              raw: saved.txt,
+              virtualDevice: virtual(s),
+              mode,
+              samples: m.value.samplesMs.map((x) => ({ totalMs: x })),
+              medianMs: med,
+              excessive: med >= (mode === 'cold' ? 5_000 : 2_000),
+            },
+          );
+        }
         const m = await perfOf(s.device).launch(pkg, { mode, repeats }).catch(refused);
         s.acted();
         const saved = await save('launch', [m], m.value);
@@ -304,7 +348,7 @@ export function perfTools(ctx: ServerContext, measurementsDir: string): Record<s
               }
             }
           : undefined;
-        const m = await perfOf(s.device)
+        const m = await (s.device.iosPerf ?? perfOf(s.device))
           .cpuProfile(pkg, seconds * 1000, during)
           .catch(refused);
         if (scroll) s.acted();

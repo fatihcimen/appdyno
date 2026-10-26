@@ -1,0 +1,192 @@
+import { execFile } from 'node:child_process';
+import { readFile, rm } from 'node:fs/promises';
+import { promisify } from 'node:util';
+import { DeviceError } from '@appdyno/protocol';
+import type { ProfileEntry } from '../android/perf-parse.js';
+import type { CpuProfile, Measured } from '../android/perf.js';
+import { assertBundle, type Simctl } from './simctl.js';
+
+const run = promisify(execFile);
+const at = () => new Date().toISOString();
+
+/** A simulator app's memory: its physical footprint as the Mac's memory tool counts it. */
+export type IosMemory = { footprintKb: number; peakKb?: number };
+export type IosCpu = { percent: number; windowMs: number; cpuMs: number };
+export type IosLaunch = {
+  mode: 'cold' | 'warm';
+  repeats: number;
+  samplesMs: number[];
+  medianMs: number;
+};
+
+/** "Physical footprint:  52.3M" (and the peak) from the memory tool's summary. */
+export function parseFootprint(out: string): IosMemory | undefined {
+  const size = (s: string) => {
+    const m = /^([\d.]+)\s*([KMG])?/i.exec(s.trim());
+    if (!m) return undefined;
+    const k = { K: 1, M: 1024, G: 1024 * 1024 }[(m[2] ?? 'K').toUpperCase() as 'K' | 'M' | 'G'];
+    return Math.round(Number(m[1]) * k);
+  };
+  const now = /^Physical footprint:\s+(\S+)/m.exec(out)?.[1];
+  const peak = /^Physical footprint \(peak\):\s+(\S+)/m.exec(out)?.[1];
+  const kb = now ? size(now) : undefined;
+  if (kb === undefined) return undefined;
+  const p = peak ? size(peak) : undefined;
+  return { footprintKb: kb, ...(p !== undefined && { peakKb: p }) };
+}
+
+/** `ps -o time=` (cumulative CPU, [[hh:]mm:]ss.cc) in ms. */
+export function parseCpuTime(s: string): number {
+  const parts = s.trim().split(':').map(Number);
+  let secs = 0;
+  for (const p of parts) secs = secs * 60 + p;
+  return Math.round(secs * 1000);
+}
+
+/** Kernel waits: where idle threads sit, never where the app spends its time. */
+const IDLE =
+  /^(mach_msg2?_trap|mach_msg_overwrite|__workq_kernreturn|__psynch_cvwait|__semwait_signal|kevent\w*|__ulock_wait2?|__sigsuspend|__select|poll|__psynch_mutexwait|semaphore_wait_trap|__wait4|read|__recvfrom)$/;
+
+/** The "Sort by top of stack" section of a sample report: the busiest functions, idle waits left out. */
+export function parseSampleTop(
+  report: string,
+  limit = 10,
+): { samples: number; top: ProfileEntry[] } {
+  const start = report.indexOf('Sort by top of stack');
+  if (start < 0) return { samples: 0, top: [] };
+  const rows: { symbol: string; samples: number }[] = [];
+  for (const line of report.slice(start).split('\n').slice(1)) {
+    const m =
+      /^\s+(.+?)\s+\(in [^)]+\)\s+(\d+)\s*$/.exec(line) ?? /^\s+(\S.*?)\s+(\d+)\s*$/.exec(line);
+    if (!m) {
+      if (rows.length > 0 && line.trim() === '') break;
+      continue;
+    }
+    rows.push({ symbol: m[1]!.trim(), samples: Number(m[2]) });
+  }
+  const busy = rows.filter((r) => !IDLE.test(r.symbol));
+  const total = busy.reduce((a, r) => a + r.samples, 0);
+  return {
+    samples: total,
+    top: busy
+      .sort((a, b) => b.samples - a.samples)
+      .slice(0, limit)
+      .map((r) => ({
+        symbol: r.symbol,
+        samples: r.samples,
+        percent: total ? Math.round((r.samples / total) * 1000) / 10 : 0,
+      })),
+  };
+}
+
+const median = (xs: number[]) => {
+  const s = [...xs].sort((a, b) => a - b);
+  return s.length ? s[Math.floor((s.length - 1) / 2)]! : 0;
+};
+
+/**
+ * Performance of an app on a simulator, measured from the Mac (a simulator app is a Mac process):
+ * memory (physical footprint), CPU over a window, launch time (until the app's first screen reads),
+ * a CPU profile (the Mac's sampler).
+ */
+export class IosSimulatorPerf {
+  constructor(
+    private readonly udid: string,
+    private readonly simctl: Simctl,
+    /** Reads the screen once; true when the app's window shows content. */
+    private readonly appShown: (bundle: string) => Promise<boolean>,
+  ) {}
+
+  /** The app's process id (it must be running). */
+  async pid(bundle: string): Promise<number> {
+    assertBundle(bundle);
+    const out = await this.simctl.exec(['spawn', this.udid, 'launchctl', 'list']);
+    const line = out.split('\n').find((l) => l.includes(`UIKitApplication:${bundle}[`));
+    const pid = Number(line?.trim().split(/\s+/)[0]);
+    if (!Number.isInteger(pid) || pid <= 0)
+      throw new DeviceError('APP_NOT_RUNNING', `${bundle} is not running`);
+    return pid;
+  }
+
+  async memory(bundle: string): Promise<Measured<IosMemory>> {
+    const pid = await this.pid(bundle);
+    const { stdout } = await run('footprint', ['--summary', String(pid)], {
+      timeout: 30_000,
+    }).catch(() => run('vmmap', ['--summary', String(pid)], { timeout: 60_000 }));
+    const value = parseFootprint(stdout);
+    if (!value) throw new DeviceError('UNSUPPORTED', `no memory reading for ${bundle}`);
+    return { value, raw: stdout, at: at() };
+  }
+
+  async cpu(bundle: string, windowMs = 2_000): Promise<Measured<IosCpu>> {
+    const pid = await this.pid(bundle);
+    const time = async () =>
+      parseCpuTime((await run('ps', ['-o', 'time=', '-p', String(pid)])).stdout);
+    const t0 = performance.now();
+    const c0 = await time();
+    await new Promise((r) => setTimeout(r, windowMs));
+    const c1 = await time();
+    const wall = performance.now() - t0;
+    const cpuMs = c1 - c0;
+    return {
+      value: { percent: Math.round((cpuMs / wall) * 100), windowMs: Math.round(wall), cpuMs },
+      raw: `${c0} ${c1}`,
+      at: at(),
+    };
+  }
+
+  /** Time from the launch request until the app's screen first reads with content; median of `repeats`. */
+  async launch(
+    bundle: string,
+    opts: { mode?: 'cold' | 'warm'; repeats?: number } = {},
+  ): Promise<Measured<IosLaunch>> {
+    assertBundle(bundle);
+    const mode = opts.mode ?? 'cold';
+    const repeats = Math.min(Math.max(opts.repeats ?? 5, 1), 10);
+    const samples: number[] = [];
+    const raw: string[] = [];
+    for (let i = 0; i < repeats + 1; i++) {
+      if (mode === 'cold') await this.simctl.terminate(this.udid, bundle);
+      else
+        await this.simctl
+          .exec(['launch', this.udid, 'com.apple.Preferences'])
+          .catch(() => undefined);
+      await new Promise((r) => setTimeout(r, 500));
+      const t = performance.now();
+      raw.push(await this.simctl.exec(['launch', this.udid, bundle]));
+      const end = t + 20_000;
+      while (!(await this.appShown(bundle))) {
+        if (performance.now() > end)
+          throw new DeviceError('TIMEOUT', `${bundle} showed no screen within 20 s`);
+      }
+      if (i > 0) samples.push(Math.round(performance.now() - t)); // the first warms up
+    }
+    return {
+      value: { mode, repeats, samplesMs: samples, medianMs: median(samples) },
+      raw: raw.join('\n'),
+      at: at(),
+    };
+  }
+
+  /** The Mac's sampler on the app for `durationMs`; `during` runs while it samples. */
+  async cpuProfile(
+    bundle: string,
+    durationMs = 3_000,
+    during?: () => Promise<unknown>,
+  ): Promise<Measured<CpuProfile>> {
+    const pid = await this.pid(bundle);
+    const s = Math.min(Math.max(Math.round(durationMs / 1000), 1), 30);
+    const rec = run('sample', [String(pid), String(s), '-mayDie'], {
+      timeout: (s + 60) * 1000,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    if (during) await during();
+    const { stdout } = await rec;
+    const file = /written to file (\S+)/.exec(stdout)?.[1];
+    const report = file
+      ? await readFile(file, 'utf8').finally(() => rm(file, { force: true }))
+      : stdout;
+    const { samples, top } = parseSampleTop(report);
+    return { value: { durationMs: s * 1000, samples, top }, raw: report, at: at() };
+  }
+}

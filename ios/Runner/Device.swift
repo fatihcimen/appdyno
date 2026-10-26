@@ -12,6 +12,7 @@ final class Device {
     private let settler = Settler(clock: { Int(Date().timeIntervalSince1970 * 1000) },
                                   sleep: { Thread.sleep(forTimeInterval: Double($0) / 1000) })
     static let inertQuietMs = 80
+    static let tapPressMs = ProcessInfo.processInfo.environment["APPDYNO_TAP_PRESS_MS"].flatMap(Int.init) ?? 0
 
     func setTarget(_ id: String) {
         targetId = id
@@ -106,7 +107,12 @@ final class Device {
         }
         switch a["kind"] as? String {
         case "tap":
-            point(try num("x"), try num("y")).tap()
+            // a short press is a tap to UIKit; APPDYNO_TAP_PRESS_MS=0 uses XCUI's own tap
+            if Device.tapPressMs > 0 {
+                point(try num("x"), try num("y")).press(forDuration: Double(Device.tapPressMs) / 1000)
+            } else {
+                point(try num("x"), try num("y")).tap()
+            }
         case "longPress":
             point(try num("x"), try num("y")).press(forDuration: try num("durationMs") / 1000)
         case "swipe":
@@ -183,6 +189,12 @@ final class Device {
         return f.exists ? f : nil
     }
 
+    /// The field's text; a field showing its placeholder is empty.
+    private func currentText(_ f: XCUIElement) -> String {
+        let v = (f.value as? String) ?? ""
+        return v == f.placeholderValue ? "" : v
+    }
+
     func setText(_ p: [String: Any], job: Job) throws -> [String: Any] {
         guard let text = p["text"] as? String else { throw AgentError("INVALID_ARGUMENT", "text is required") }
         let t0 = Date()
@@ -198,16 +210,34 @@ final class Device {
         }
         guard let field else { throw AgentError("NO_FOCUS", "no text field took the focus", hint: "tap the field first") }
         let focusMs = Int(Date().timeIntervalSince(t0) * 1000)
-        if p["replace"] as? Bool == true, let old = field.value as? String, !old.isEmpty,
-           old != field.placeholderValue {
-            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old.count))
+        let replace = p["replace"] as? Bool == true
+        let before = currentText(field)
+        func check() -> Bool {
+            let now = currentText(field)
+            return replace ? now == text : now == before + text || now.contains(text)
         }
-        field.typeText(text)
-        let now = (field.value as? String) ?? ""
-        let verified = p["replace"] as? Bool == true ? now == text : now.contains(text)
+        // paste first (one event for the whole text), keys when the field did not take it
+        var mode = "paste"
+        let saved = UIPasteboard.general.string
+        UIPasteboard.general.string = text
+        if replace { field.typeKey("a", modifierFlags: .command) }
+        field.typeKey("v", modifierFlags: .command)
+        if let saved { UIPasteboard.general.string = saved } else { UIPasteboard.general.items = [] }
+        var verified = check()
+        if !verified {
+            mode = "keys"
+            let now = currentText(field)
+            let extra = replace ? now.count : max(0, now.count - before.count)
+            if extra > 0 { field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: extra)) }
+            if replace, !currentText(field).isEmpty {
+                field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: currentText(field).count))
+            }
+            field.typeText(text)
+            verified = check()
+        }
         if p["submit"] as? Bool == true { field.typeText("\n") }
         var out = try after(p, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
-        out["mode"] = "keys"
+        out["mode"] = mode
         out["verified"] = verified
         out["focusMs"] = focusMs
         return out

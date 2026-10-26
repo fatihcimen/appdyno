@@ -1,6 +1,6 @@
 import { spawn, execFile } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
-import { existsSync, openSync, closeSync, readdirSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readdirSync, statSync } from 'node:fs';
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { connect, createServer } from 'node:net';
 import { dirname, join } from 'node:path';
@@ -18,6 +18,8 @@ const START_MS = 180_000;
 const POLL_MS = 250;
 export const RUNNER_TEST = 'Runner/RunnerTests/testServe';
 
+const buildIds = new Map<string, { mtime: number; sha256: string }>();
+
 /** The built runner (xctestrun file and products) and an id of its build. */
 export async function runnerBuild(): Promise<{ xctestrun: string; sha256: string }> {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -33,10 +35,17 @@ export async function runnerBuild(): Promise<{ xctestrun: string; sha256: string
       dir,
       'Debug-iphonesimulator/Runner-Runner.app/PlugIns/Runner.xctest/Runner',
     );
-    const sha256 = createHash('sha256')
-      .update(await readFile(existsSync(binary) ? binary : join(dir, file)))
-      .digest('hex');
-    return { xctestrun: join(dir, file), sha256 };
+    const hashed = existsSync(binary) ? binary : join(dir, file);
+    const mtime = statSync(hashed).mtimeMs;
+    // the build id is read once per build (hashing the binary on every connect costs time)
+    if (buildIds.get(hashed)?.mtime !== mtime)
+      buildIds.set(hashed, {
+        mtime,
+        sha256: createHash('sha256')
+          .update(await readFile(hashed))
+          .digest('hex'),
+      });
+    return { xctestrun: join(dir, file), sha256: buildIds.get(hashed)!.sha256 };
   }
   throw new DeviceError(
     'UNSUPPORTED',
@@ -81,13 +90,18 @@ export class IosRunnerLauncher {
     return join(stateDir(), `ios-${this.udid}.log`);
   }
 
-  async connect(target?: string): Promise<{ rpc: RpcClient; hello: Hello; started: boolean }> {
+  /** `beforeStart` runs only when a new runner must be started (e.g. to check the simulator is up). */
+  async connect(
+    target?: string,
+    beforeStart?: () => Promise<void>,
+  ): Promise<{ rpc: RpcClient; hello: Hello; started: boolean }> {
     const build = await runnerBuild();
     const state = await this.readState();
     if (state && state.sha256 === build.sha256) {
       const c = await this.tryConnect(state).catch(() => undefined);
       if (c) return { ...c, started: false };
     }
+    await beforeStart?.();
     if (state?.pid) await this.kill(state.pid);
     return { ...(await this.start(build, target)), started: true };
   }
@@ -123,6 +137,9 @@ export class IosRunnerLauncher {
           TEST_RUNNER_GD_PORT: String(port),
           TEST_RUNNER_GD_TOKEN: token,
           ...(target && { TEST_RUNNER_GD_TARGET: target }),
+          ...(process.env.APPDYNO_TAP_PRESS_MS && {
+            TEST_RUNNER_GD_TAP_PRESS_MS: process.env.APPDYNO_TAP_PRESS_MS,
+          }),
         },
       },
     );

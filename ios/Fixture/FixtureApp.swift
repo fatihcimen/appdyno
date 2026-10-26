@@ -31,6 +31,8 @@ struct FixtureApp: App {
         case "delayed": DelayedScreen()
         case "permission": PermissionScreen()
         case "late": LateScreen()
+        case "memory": MemoryScreen()
+        case "cpu": CpuScreen()
         default: Text("Bilinmeyen ekran: \(key)")
         }
     }
@@ -196,6 +198,46 @@ struct LateScreen: View {
             }
             Button("Temizle") { lines.removeAll() }.accessibilityIdentifier("late_clear")
             ForEach(Array(lines.enumerated()), id: \.offset) { _, l in Text(l) }
+            Spacer()
+        }
+        .padding()
+    }
+}
+
+/// Holds 50 MB (written, so it is resident) until freed: a memory reading must show it.
+struct MemoryScreen: View {
+    @State private var held: [UInt8] = []
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Button("50 MB ayır") { held = [UInt8](repeating: 7, count: 50 * 1024 * 1024) }.accessibilityIdentifier("memory_alloc")
+            Button("Bırak") { held = [] }.accessibilityIdentifier("memory_free")
+            Text(held.isEmpty ? "Boş" : "50 MB tutuluyor").accessibilityIdentifier("memory_state")
+            Spacer()
+        }
+        .padding()
+    }
+}
+
+/// Keeps one core busy for 3 s off the main thread: a CPU reading and a profile must show it.
+struct CpuScreen: View {
+    @State private var busy = false
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Button("3 sn yük") {
+                busy = true
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let end = Date().addingTimeInterval(3)
+                    var x: UInt64 = 1
+                    // the clock is read rarely: the time goes to this loop, not to the clock
+                    while Date() < end { for _ in 0 ..< 100_000 { x = x &+ (x ^ 7) } }
+                    if x == 42 { print(x) }
+                    DispatchQueue.main.async { busy = false }
+                }
+            }
+            .accessibilityIdentifier("cpu_load")
+            Text(busy ? "Yükte" : "Boşta").accessibilityIdentifier("cpu_state")
             Spacer()
         }
         .padding()

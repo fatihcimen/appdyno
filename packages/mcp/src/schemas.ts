@@ -87,15 +87,21 @@ const Measurement = { id: z.string(), raw: z.string(), virtualDevice: z.boolean(
 export const SnapshotOut = z.object({
   ...Measurement,
   cpuPercent: z.number(),
-  pssKb: z.number(),
+  /** Android. */
+  pssKb: z.number().optional(),
   javaHeapKb: z.number().optional(),
   nativeHeapKb: z.number().optional(),
-  frames: z.object({
-    total: z.number(),
-    jankyPercent: z.number(),
-    frozen: z.number(),
-    p95Ms: z.number().optional(),
-  }),
+  /** iOS simulator: the app's physical footprint. */
+  footprintKb: z.number().optional(),
+  /** Android. */
+  frames: z
+    .object({
+      total: z.number(),
+      jankyPercent: z.number(),
+      frozen: z.number(),
+      p95Ms: z.number().optional(),
+    })
+    .optional(),
   deviceLoad: z.array(z.number()).optional(),
 });
 
