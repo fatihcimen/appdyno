@@ -210,7 +210,11 @@ export class Adb {
     try {
       return await this.dial();
     } catch {
-      this.started ??= this.run(['start-server'], 30_000).then(() => undefined);
+      // the server is down (never started, or stopped with kill-server): one start per outage, shared
+      // by the callers that find it down at the same time
+      this.started ??= this.run(['start-server'], 30_000)
+        .then(() => undefined)
+        .finally(() => (this.started = undefined));
       await this.started;
       return this.dial();
     }
