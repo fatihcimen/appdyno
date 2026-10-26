@@ -21,6 +21,9 @@ object TextPlan {
     }
 
     fun isAscii(text: String) = text.all { it.code in 0x20..0x7e }
+
+    /** A field limited to fewer characters than the text (`maxTextLength` -1: no limit) takes it key by key. */
+    fun keysOnly(maxTextLength: Int, text: String) = maxTextLength in 1 until text.length
 }
 
 class TextOutcome(val mode: String, val verified: Boolean, val focusMs: Long)
@@ -63,16 +66,32 @@ class TextInput(private val automation: Automation, private val input: Input, pr
                 retap?.invoke()
                 waitFocus(start + focusTimeoutMs, cancelled)
             }
-            ?: throw AgentFailure("NO_FOCUS", "no editable field has input focus", "tap the field first")
         val focusMs = SystemClock.uptimeMillis() - start
+        if (field == null) {
+            // no field reports the focus but the keyboard is up (a code entry drawn by the app): the keys go to
+            // whatever has the keyboard, as a person's would; the text cannot be read back
+            if (keyboardShown() && TextPlan.isAscii(text) && input.typeKeys(text)) return TextOutcome("keys", false, focusMs)
+            throw AgentFailure("NO_FOCUS", "no editable field has input focus", "tap the field first")
+        }
         val current = if (field.isShowingHintText) "" else field.text?.toString()
         val target = TextPlan.target(current, text, replace)
         val password = field.isPassword
 
+        // a field that takes fewer characters than the text (one box of a code entry) moves on with each
+        // key: set at once, the whole code would go into the first box (live: a refused login code)
+        if (TextPlan.keysOnly(field.maxTextLength, text) && TextPlan.isAscii(text)) {
+            if (replace) {
+                select(field, 0, (field.text ?: "").length)
+                input.key(android.view.KeyEvent.KEYCODE_DEL)
+            }
+            if (input.typeKeys(text)) return TextOutcome("keys", false, focusMs)
+        }
         val args = Bundle().apply {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, target)
         }
-        if (field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args) && check(field, target, password)) {
+        if (!TextPlan.keysOnly(field.maxTextLength, text) &&
+            field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args) && check(field, target, password)
+        ) {
             return TextOutcome("setText", !password, focusMs)
         }
         // paste: the field's own input path (formatters, filters) sees the text
@@ -90,6 +109,10 @@ class TextInput(private val automation: Automation, private val input: Input, pr
         }
         throw AgentFailure("INTERNAL", "the field did not take the text", "read the screen; the field may be read-only")
     }
+
+    /** An input method window is on screen (the keyboard is up). */
+    private fun keyboardShown(): Boolean =
+        automation.ua.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
 
     private fun check(field: AccessibilityNodeInfo, target: String, password: Boolean): Boolean {
         if (password) return true // a password field reports no readable text

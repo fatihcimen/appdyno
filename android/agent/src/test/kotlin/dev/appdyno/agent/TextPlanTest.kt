@@ -29,4 +29,12 @@ class TextPlanTest {
         assertFalse(TextPlan.matches("(599) 999-0099", "5999999900"))
         assertFalse(TextPlan.matches("--", "()"))
     }
+
+    @Test
+    fun aFieldLimitedBelowTheTextTakesItKeyByKey() {
+        assertTrue(TextPlan.keysOnly(1, "9643")) // one box of a code entry
+        assertFalse(TextPlan.keysOnly(4, "9643"))
+        assertFalse(TextPlan.keysOnly(-1, "9643")) // no limit
+        assertFalse(TextPlan.keysOnly(0, "x"))
+    }
 }

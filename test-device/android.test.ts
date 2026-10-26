@@ -156,6 +156,17 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(labels(await screen())).toContain('Onaylandı');
   });
 
+  it('types a code into one-character fields key by key (the app moves from box to box)', async () => {
+    await d.shell(
+      'am start -W -a android.intent.action.VIEW -d gdfixture://open/code dev.appdyno.fixture',
+    );
+    await new Promise((r) => setTimeout(r, 1_000));
+    const first = (await screen()).list.find((e) => e.label === 'Kod')!;
+    const r = await d.typeText('9643', { at: first });
+    expect(r.mode).toBe('keys');
+    expect(labels(await screen())).toContain('Kod: 9643');
+  });
+
   it('reads Compose test tags as ids and types into a Compose field', async () => {
     const s = await open('COMPOSE');
     expect(
