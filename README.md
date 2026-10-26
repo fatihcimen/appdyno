@@ -50,7 +50,21 @@ node packages/host/dist/cli.js bench --serial <serial> --n 50 --out bench.json
   -destination 'generic/platform=iOS Simulator' -derivedDataPath .derived)
 # on a booted simulator you name by its id (never "booted": other simulators may run)
 APPDYNO_IOS_UDID=<udid> pnpm test:device test-device/ios.test.ts
+
+# iPhone: the runner built unsigned, then re-signed at first use for a development profile whose app
+# id is a UI test runner (*.xctrunner), with that profile's identity from a keychain (only unlocked)
+(cd ios && xcodebuild build-for-testing -project Appdyno.xcodeproj -scheme Runner \
+  -destination 'generic/platform=iOS' -derivedDataPath .derived-device CODE_SIGNING_ALLOWED=NO)
+export APPDYNO_IOS_PROFILE=<profile.mobileprovision> APPDYNO_IOS_KEYCHAIN=<keychain-db> \
+  APPDYNO_IOS_KEYCHAIN_PASSWORD=<password>
+node packages/host/dist/cli.js doctor   # Xcode, runner builds, signing, connected iPhones in the profile
+APPDYNO_IPHONE_UDID=<udid> pnpm test:device test-device/iphone.test.ts test-device/iphone-mcp.test.ts
 ```
+
+The phone is reached over USB (the Mac's USB multiplexer), never the network. The runner is installed
+when the phone has another build under the profile's id (stamped in `CFBundleVersion`); another tool
+using the same id finds a different version and installs its own again. On a phone the runner cannot
+reach the clipboard (only the app in front can), so text goes in as keys there.
 
 ## MCP client configuration
 

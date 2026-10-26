@@ -1,4 +1,4 @@
-# Performance measurement (Android)
+# Performance measurement
 
 Every measurement is read from the platform's own tools and stored with the raw output it came from
 (`<measurements dir>/pm-<id>.json` and `.txt`; the MCP server's `--measurements`, default
@@ -33,3 +33,22 @@ the same kind of device (the tools say "sanal cihaz: göreli").
 whose draw takes about 1 ms or 40 ms (frames and the frame timeline), 50 MB of Java heap held (memory,
 within 15 %), one busy core (CPU, 80–125 %), and cold launches against the system's own "Displayed" log
 line (within 50 ms).
+
+## iOS
+
+A simulator app is a Mac process: its measures come from the Mac's own tools. A phone's frames come
+from Xcode's trace tool.
+
+| measure     | simulator                                                         | iPhone                                                    | notes                                                                                                                                                                                                                  |
+| ----------- | ----------------------------------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| memory      | `footprint <pid>` (physical footprint)                            | –                                                         | the pid from the simulator's `launchctl list`                                                                                                                                                                          |
+| CPU         | `ps -o time=` before and after a window                           | –                                                         | % of one core                                                                                                                                                                                                          |
+| launch      | `simctl launch` until the runner reads the app's first screen     | –                                                         | cold: terminated first; warm: another app in between. One warm-up left out, the median of the rest; includes the runner's read (about 60 ms)                                                                           |
+| CPU profile | `sample <pid>`                                                    | –                                                         | the busiest functions by self time, idle waits left out, and the app's own functions by busy inclusive time (a debug build spends a loop's time in runtime helpers; waiting threads do not count)                      |
+| heap        | `leaks --outputGraph` (a memory graph for Xcode), the leaks found | –                                                         | the summary is read from the saved graph                                                                                                                                                                               |
+| hitches     | –                                                                 | `xctrace record --template 'Animation Hitches'`, exported | frames shown, the app's hitches (system ones left out), their total and worst time, the hitch ratio (ms per second) and the likely causes; the trace stays for Instruments. On a simulator the tool's recording fails. |
+
+`test-device/ios-perf.test.ts` checks the simulator measures on the fixture: 50 MB held (memory, within
+15 %), one busy thread (CPU, 80–125 %, and the profile's top app function), a memory graph with its leaks
+summary, cold launches slower than warm. `test-device/iphone.test.ts` records hitches while Settings
+scrolls (frames counted, the trace written); a cost-known frames check needs an app signed for the phone.
