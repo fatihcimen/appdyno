@@ -83,6 +83,9 @@ final class Device {
                             "active": false, "focused": false])
             add(alert, window: 1)
         }
+        // a scroll view's bars are no control: shown only while it scrolls, they would name the screen's
+        // nameless controls differently than the app's own elements do
+        for i in scrollIndicators(nodes) { nodes[i].flags &= ~Flag.visible }
         return Capture(windows: windows, nodes: nodes, truncated: truncated, busy: busy)
     }
 
@@ -474,8 +477,10 @@ final class Device {
         }()
         func nonEmpty(_ x: String?) -> String? { x.flatMap { $0.isEmpty ? nil : $0 } }
         let placeholder = nonEmpty(s.placeholderValue)
+        // the app itself is the screen, not an element of it: its name is no text on the screen
+        let label = t == .application ? nil : nonEmpty(s.label)
         return Node(parent: parent, window: window, type: typeName(t), id: nonEmpty(s.identifier),
-                    text: value == placeholder ? nil : nonEmpty(value), label: nonEmpty(s.label), hint: placeholder,
+                    text: value == placeholder ? nil : nonEmpty(value), label: label, hint: placeholder,
                     left: b[0], top: b[1], right: b[2], bottom: b[3], flags: f)
     }
 

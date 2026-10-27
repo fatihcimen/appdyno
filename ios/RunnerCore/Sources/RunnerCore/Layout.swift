@@ -85,3 +85,32 @@ public func actionable(_ nodes: [Node]?, x: Int, y: Int) -> Bool {
     }
     return !hit
 }
+
+/// Containers that draw scroll indicators.
+private let scrollers: Set<String> = ["ScrollView", "Table", "CollectionView", "WebView", "TextView"]
+
+/**
+ * The scroll indicators XCUI reports as elements (a scroll view's bars, labelled "Vertical scroll bar, 2
+ * pages" in the system's language): `Other` nodes with no identifier and nothing named inside, a thin
+ * strip along a scroll container's right or bottom edge spanning most of it. Told by their shape, never their words; they are
+ * no control of the app and only show while it scrolls.
+ */
+public func scrollIndicators(_ nodes: [Node]) -> [Int] {
+    // a node with a named or labelled descendant is the app's (a table's section index), never a bar
+    var named = [Bool](repeating: false, count: nodes.count)
+    for i in nodes.indices.reversed() where nodes[i].id != nil || nodes[i].label != nil || named[i] {
+        let p = nodes[i].parent
+        if p >= 0 && p < nodes.count && p < i { named[p] = true }
+    }
+    let edge = 40, thin = 40
+    return nodes.indices.filter { i in
+        let n = nodes[i]
+        guard n.type == "Other", n.id == nil, !named[i], n.parent >= 0, n.parent < nodes.count else { return false }
+        let p = nodes[n.parent]
+        guard scrollers.contains(p.type) else { return false }
+        let w = n.right - n.left, h = n.bottom - n.top
+        let vertical = w > 0 && w <= thin && h * 2 >= p.bottom - p.top && abs(p.right - n.right) <= edge
+        let horizontal = h > 0 && h <= thin && w * 2 >= p.right - p.left && abs(p.bottom - n.bottom) <= edge
+        return vertical || horizontal
+    }
+}

@@ -94,6 +94,18 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(shown[0]!.b[0]).toBeGreaterThan(Math.min(...nodes.map((n) => n.b[0])));
   });
 
+  it("leaves a scroll view's bars out of the screen, and the app's name too", async () => {
+    await home();
+    await d.openUrl('gdfixture://open/list', APP);
+    const t = await d.tree();
+    const shown = t.nodes.filter((n) => n.f & 1);
+    // the list's scroll bars are elements to XCUI: they stay in the tree, never shown
+    expect(t.nodes.some((n) => /scroll bar/i.test(n.d ?? ''))).toBe(true);
+    expect(shown.filter((n) => /scroll bar/i.test(n.d ?? ''))).toEqual([]);
+    // the app element is the screen itself: no label of its own
+    expect(t.nodes.find((n) => n.c === 'Application')?.d).toBeUndefined();
+  });
+
   it('answers an alert', async () => {
     const s = await open('Diyalog');
     await d.tap(byId(s, 'open_dialog')!, { settle: SETTLE });

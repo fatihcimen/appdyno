@@ -56,6 +56,32 @@ final class LayoutTests: XCTestCase {
     }
 }
 
+final class ScrollIndicatorTests: XCTestCase {
+    func testTheBarsOfAScrollContainerAreFoundByTheirShape() {
+        let nodes = [
+            node(-1, "Application", [0, 0, 402, 874]),
+            node(0, "CollectionView", [0, 400, 402, 830]),
+            node(1, "Cell", [16, 403, 196, 568]),
+            node(1, "Other", [353, 403, 383, 812]),   // vertical bar along the right edge
+            node(1, "Other", [34, 797, 368, 827]),    // horizontal bar along the bottom
+            node(0, "Other", [380, 100, 402, 300]),   // a thin strip, but not in a scroll container
+            node(1, "Other", [16, 600, 46, 640]),     // small, not along an edge
+            node(3, "Image", [360, 403, 376, 500]),   // the bar's own drawing inside it
+        ]
+        XCTAssertEqual(scrollIndicators(nodes), [3, 4])
+    }
+
+    func testANamedOrParentNodeIsNoIndicator() {
+        var bar = node(1, "Other", [353, 403, 383, 812])
+        bar.id = "progress"
+        var letter = node(3, "StaticText", [355, 410, 380, 430])
+        letter.label = "A"
+        let nodes = [node(-1, "Application", [0, 0, 402, 874]), node(0, "ScrollView", [0, 400, 402, 830]), bar,
+                     node(1, "Other", [353, 403, 383, 812]), letter]
+        XCTAssertEqual(scrollIndicators(nodes), [])
+    }
+}
+
 final class SettlerTests: XCTestCase {
     final class Clock {
         var now = 0
