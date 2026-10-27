@@ -214,6 +214,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(of('a11y_unnamed')).toContain('sufficientElementDescription');
     expect(of('a11y_fixed')).toContain('dynamicType');
     expect(of('a11y_cut')).toContain('textClipped');
+    // a clean control at the simulator's text size, whichever it is (the QA simulator runs "medium")
     expect(of('a11y_ok')).toEqual([]);
     expect(r.elapsedMs).toBeLessThan(15_000);
     // only the asked types; the runner still answers after it

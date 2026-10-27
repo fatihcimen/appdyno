@@ -428,8 +428,13 @@ struct A11yScreen: View {
                 Text("Ayran 1 L").accessibilityIdentifier("a11y_name")
             }
             .frame(width: 200, height: 64, alignment: .topLeading)
-            // a dark tint: the system blue on white is under 4.5:1 for text
-            Button("Devam") {}.tint(Color(red: 0, green: 0.25, blue: 0.6)).accessibilityIdentifier("a11y_ok")
+            // a dark tint: the system blue on white is under 4.5:1 for text. The hit area is the label's own
+            // frame (a frame around the button does not widen it): 44 pt tall, whatever the text size (a
+            // bare text label is 19 pt at the "medium" size, a hit area the audit reports)
+            Button(action: {}) {
+                Text("Devam").padding(.horizontal, 16).frame(minHeight: 44).contentShape(Rectangle())
+            }
+            .tint(Color(red: 0, green: 0.25, blue: 0.6)).accessibilityIdentifier("a11y_ok")
             Spacer()
         }
         .padding()
