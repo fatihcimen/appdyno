@@ -116,11 +116,10 @@ class Handlers(private val automation: Automation, private val token: String) {
 
     private fun textSet(p: JSONObject, job: Job): Reply {
         val cancelled = { job.cancelled }
-        val tapAt = p.optJSONObject("at")?.let { at ->
-            { input.tap(at.getDouble("x").toFloat(), at.getDouble("y").toFloat()) }
-        }
+        val point = p.optJSONObject("at")?.let { at -> at.getDouble("x").toFloat() to at.getDouble("y").toFloat() }
+        val tapAt = point?.let { (x, y) -> { input.tap(x, y) } }
         tapAt?.invoke()
-        val o = text.set(p.getString("text"), p.optBoolean("replace"), p.optLong("focusTimeoutMs", 5_000), cancelled, tapAt)
+        val o = text.set(p.getString("text"), p.optBoolean("replace"), p.optLong("focusTimeoutMs", 5_000), cancelled, tapAt, point)
         if (p.optBoolean("submit")) input.key(android.view.KeyEvent.KEYCODE_ENTER)
         val at = SystemClock.uptimeMillis()
         val out = JSONObject().put("mode", o.mode).put("verified", o.verified).put("focusMs", o.focusMs)

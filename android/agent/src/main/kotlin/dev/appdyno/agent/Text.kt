@@ -28,6 +28,31 @@ object TextPlan {
 
 class TextOutcome(val mode: String, val verified: Boolean, val focusMs: Long)
 
+/** Which editable node a point means (pure, unit tested): boxes are left, top, right, bottom. */
+object EditablePick {
+    fun under(boxes: List<IntArray>, parents: List<Int>, editable: List<Boolean>, x: Int, y: Int): Int? {
+        fun inside(i: Int) = boxes[i].let { x >= it[0] && x < it[2] && y >= it[1] && y < it[3] }
+        fun area(i: Int) = boxes[i].let { (it[2] - it[0]).toLong() * (it[3] - it[1]) }
+        fun under(i: Int, a: Int): Boolean {
+            var p = parents[i]
+            while (p >= 0) {
+                if (p == a) return true
+                p = parents[p]
+            }
+            return false
+        }
+        val fields = editable.indices.filter { editable[it] }
+        fields.filter { inside(it) }.minByOrNull { area(it) }?.let { return it }
+        // the smallest element under the point that holds fields: its only one, never a guess among several
+        for (c in boxes.indices.filter { inside(it) }.sortedBy { area(it) }) {
+            val held = fields.filter { under(it, c) }
+            if (held.isEmpty()) continue
+            return held.singleOrNull()
+        }
+        return null
+    }
+}
+
 /** The device clipboard, read and written as the shell package (allowed in the background). */
 class Clipboard {
     private val service: Any by lazy { Platform.asInterface("android.content.IClipboard\$Stub", Platform.service("clipboard")) }
@@ -52,20 +77,33 @@ class Clipboard {
  * pasted, and plain ASCII still left over is typed as key events.
  */
 class TextInput(private val automation: Automation, private val input: Input, private val clipboard: Clipboard) {
-    /** `retap`: taps the field again (a tap lost while the screen was still moving, a slow phone). */
+    /**
+     * `at`: the point the caller tapped. When no field takes the focus from the tap (a container such as a
+     * Material text-input layout whose middle is not its text field, a tap lost while the screen moved),
+     * the one editable field under that point is focused through accessibility, then the point is tapped
+     * again (`retap`).
+     */
     fun set(
         text: String,
         replace: Boolean,
         focusTimeoutMs: Long,
         cancelled: () -> Boolean,
         retap: (() -> Unit)? = null,
+        at: Pair<Float, Float>? = null,
     ): TextOutcome {
         val start = SystemClock.uptimeMillis()
-        val field = (if (retap != null) waitFocus(start + focusTimeoutMs / 2, cancelled) else null)
-            ?: run {
-                retap?.invoke()
-                waitFocus(start + focusTimeoutMs, cancelled)
+        var field = if (at != null) waitFocus(start + focusTimeoutMs / 3, cancelled) else null
+        if (field == null && at != null) {
+            editableAt(at.first, at.second)?.let { f ->
+                f.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+                f.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             }
+            field = waitFocus(start + focusTimeoutMs * 2 / 3, cancelled)
+        }
+        if (field == null) {
+            retap?.invoke()
+            field = waitFocus(start + focusTimeoutMs, cancelled)
+        }
         val focusMs = SystemClock.uptimeMillis() - start
         if (field == null) {
             // no field reports the focus but the keyboard is up (a code entry drawn by the app): the keys go to
@@ -132,6 +170,33 @@ class TextInput(private val automation: Automation, private val input: Input, pr
                 putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, to)
             },
         )
+    }
+
+    /**
+     * The editable field the point means: the field under it, else the only field inside the smallest
+     * element under it that has any (a text-input layout around its field). None when that is ambiguous.
+     */
+    private fun editableAt(x: Float, y: Float): AccessibilityNodeInfo? {
+        val root = automation.ua.rootInActiveWindow ?: return null
+        val nodes = ArrayList<AccessibilityNodeInfo>()
+        val parents = ArrayList<Int>()
+        nodes.add(root)
+        parents.add(-1)
+        var i = 0
+        while (i < nodes.size && nodes.size < 3_000) {
+            val n = nodes[i]
+            for (c in 0 until n.childCount) n.getChild(c)?.let { nodes.add(it); parents.add(i) }
+            i++
+        }
+        val boxes = nodes.map { n -> android.graphics.Rect().also { n.getBoundsInScreen(it) } }
+        val pick = EditablePick.under(
+            boxes.map { intArrayOf(it.left, it.top, it.right, it.bottom) },
+            parents,
+            nodes.map { it.isEditable && it.isVisibleToUser },
+            x.toInt(),
+            y.toInt(),
+        )
+        return pick?.let { nodes[it] }
     }
 
     /** The focused editable node of the active window, searched breadth-first (bounded). */

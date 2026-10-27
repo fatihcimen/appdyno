@@ -3,6 +3,8 @@
     <item name="title" type="id" />
     <item name="name_input" type="id" />
     <item name="phone_input" type="id" />
+    <item name="gsm_layout" type="id" />
+    <item name="gsm_input" type="id" />
     <item name="password_input" type="id" />
     <item name="submit" type="id" />
     <item name="result" type="id" />

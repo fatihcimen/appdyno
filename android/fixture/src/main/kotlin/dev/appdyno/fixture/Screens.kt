@@ -126,6 +126,24 @@ class FormActivity : Activity() {
                 inputType = InputType.TYPE_CLASS_PHONE
                 addView(this)
             }
+            // a text-input layout as Material draws one: a label above the field and helper text below,
+            // so the layout's middle is not on its field (a tap there focuses nothing)
+            LinearLayout(context).apply {
+                id = R.id.gsm_layout
+                orientation = LinearLayout.VERTICAL
+                TextView(context).apply { text = "Cep telefonu"; addView(this) }
+                EditText(context).apply {
+                    id = R.id.gsm_input
+                    inputType = InputType.TYPE_CLASS_PHONE
+                    addView(this)
+                }
+                TextView(context).apply {
+                    text = "Size bu numaradan ulaşacağız"
+                    minHeight = 240
+                    addView(this)
+                }
+                this@column.addView(this)
+            }
             EditText(context).apply {
                 id = R.id.password_input
                 hint = "Şifre"

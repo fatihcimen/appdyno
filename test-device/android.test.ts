@@ -93,6 +93,21 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(r.hash).toBe(s.hash);
   });
 
+  it('types into a text-input layout tapped on its middle, which is not on its field', async () => {
+    await open('FORM');
+    const nodes = (await d.tree()).nodes;
+    const box = (id: string) => nodes.find((n) => n.id?.endsWith(`:id/${id}`))!.b;
+    const [l, t, r, b] = box('gsm_layout');
+    const at = { x: (l + r) / 2, y: (t + b) / 2 };
+    const [fl, ft, fr, fb] = box('gsm_input');
+    // the layout's middle is on its helper text, not on its field: a tap there focuses nothing
+    expect(at.x >= fl && at.x < fr && at.y >= ft && at.y < fb).toBe(false);
+    const res = await d.typeText('5321234567', { at, replace: true });
+    expect(res.verified).toBe(true);
+    const field = (await d.tree()).nodes.find((n) => n.id?.endsWith(':id/gsm_input'));
+    expect(field?.t?.replace(/\D/g, '')).toBe('5321234567');
+  });
+
   it('types Turkish text into a field and reads it back, replacing and appending', async () => {
     const s = await open('FORM');
     const name = s.list.find((e) => e.id === 'name_input')!;
