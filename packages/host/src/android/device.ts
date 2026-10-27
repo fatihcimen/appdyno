@@ -255,7 +255,8 @@ export class AndroidDevice {
   async audit(opts: { maxIssues?: number } = {}): Promise<AuditResult> {
     const startedAt = Date.now();
     const hello = await this.open();
-    const { tree, clips, traversal } = hello.capabilities.includes('a11y.read')
+    const full = hello.capabilities.includes('a11y.read');
+    const { tree, clips, traversal } = full
       ? (await this.call('a11y.read', {}, TIMEOUTS.read)).result
       : { tree: await this.tree(), clips: [], traversal: [] };
     const shot = await this.screenshot({ format: 'png' });
@@ -265,7 +266,8 @@ export class AndroidDevice {
       ...(opts.maxIssues && { maxIssues: opts.maxIssues }),
       startedAt,
     });
-    return { ...r, read: { tree, traversal } };
+    // an older agent's read has no traversal hints: no reading order is worked out from it
+    return { ...r, ...(full && { read: { tree, traversal } }) };
   }
 
   async foreground(): Promise<string | undefined> {
