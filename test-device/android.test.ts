@@ -170,6 +170,14 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(fifthAfter!.y).toBeLessThan(fifth.y);
   });
 
+  it('sends a node off the screen with an empty box, never a negative one', async () => {
+    await open('LISTE');
+    const nodes = (await d.tree()).nodes;
+    // the list runs on below the screen: its rows there come clipped to the screen's edge
+    expect(nodes.length).toBeGreaterThan(20);
+    expect(nodes.filter((n) => n.b[2] < n.b[0] || n.b[3] < n.b[1])).toEqual([]);
+  });
+
   it('reads a dialog and answers it', async () => {
     const s = await open('DIYALOG');
     const r = await d.tap(find(s, 'DİYALOĞU AÇ') ?? find(s, /DIYALO/)!, {

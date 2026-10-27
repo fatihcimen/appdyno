@@ -163,6 +163,8 @@ class TreeCapture(private val automation: Automation) {
     }
 
     private fun copy(n: AccessibilityNodeInfo, parent: Int, window: Int): CNode {
+        // a node below or beside the screen comes back with its far edge clipped to the screen, before its
+        // near one (top 2453, bottom 2400): it is sent as empty there, never with a negative size
         val r = Rect().also { n.getBoundsInScreen(it) }
         var f = 0
         if (n.isVisibleToUser) f = f or Flags.VISIBLE
@@ -182,7 +184,7 @@ class TreeCapture(private val automation: Automation) {
         val text = if (n.isShowingHintText) null else n.text?.toString()
         return CNode(
             parent, window, n.className?.toString() ?: "", n.viewIdResourceName, text,
-            n.contentDescription?.toString(), hint, r.left, r.top, r.right, r.bottom, f,
+            n.contentDescription?.toString(), hint, r.left, r.top, maxOf(r.right, r.left), maxOf(r.bottom, r.top), f,
         )
     }
 
