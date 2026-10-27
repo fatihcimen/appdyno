@@ -29,6 +29,9 @@ class Options(val socket: String, val token: String, val idleExitMs: Long) {
  * (WorkLane); every request has a deadline after which the host gets TIMEOUT and the work is told to stop,
  * and a job stuck past it does not hold the requests behind it.
  */
+/** How long the agent keeps its UI automation after the last host left. */
+const val RELEASE_GRACE_MS = 2_000L
+
 class Server(private val opts: Options, private val handlers: Handlers) {
     private val timers = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "appdyno-timers").apply { isDaemon = true } }
     private val actions = WorkLane(timers)
@@ -96,8 +99,13 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                 socket.close()
             } catch (_: Throwable) {
             }
-            synchronized(this) { connections-- }
+            val idle = synchronized(this) { --connections == 0 }
             lastActivity = SystemClock.uptimeMillis()
+            // no host: accessibility off in the apps until the next one (an app starting meanwhile starts
+            // without its cost); after a short grace, so a host that reconnects at once keeps it
+            if (idle) timers.schedule({
+                if (connections == 0) actions.submit(Job(-1), 60_000, {}) { if (connections == 0) handlers.release() }
+            }, RELEASE_GRACE_MS, TimeUnit.MILLISECONDS)
         }
     }
 

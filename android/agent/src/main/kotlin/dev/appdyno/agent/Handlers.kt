@@ -25,6 +25,9 @@ class Handlers(private val automation: Automation, private val token: String) {
     private val settler = Settler({ SystemClock.uptimeMillis() }, { Thread.sleep(it) }, { automation.lastEventAt })
     private val startedAt = SystemClock.uptimeMillis()
 
+    /** No host connected: the UI automation is let go (accessibility off) until the next request. */
+    fun release() = automation.release()
+
     fun tokenMatches(given: String): Boolean {
         if (given.length != token.length) return false
         var diff = 0
@@ -50,8 +53,8 @@ class Handlers(private val automation: Automation, private val token: String) {
 
     fun handle(method: String, p: JSONObject, job: Job): Reply = when (method) {
         "tree.get" -> {
-            idle(job)
-            Reply(treeJson(capture.capture(p.optInt("maxDepth", 128), p.optInt("maxNodes", 5_000))))
+            val quiet = idle(job)
+            Reply(treeJson(capture.capture(p.optInt("maxDepth", 128), p.optInt("maxNodes", 5_000), yielding = !quiet)))
         }
         "act" -> act(p, job)
         "text.set" -> textSet(p, job)
@@ -128,15 +131,16 @@ class Handlers(private val automation: Automation, private val token: String) {
 
     /**
      * Before a read: the app quiet, as the platform tells it (no layout-moving accessibility event for
-     * IDLE_QUIET_MS, at most IDLE_MAX_MS); an app already quiet is read at once.
+     * IDLE_QUIET_MS, at most IDLE_MAX_MS); an app already quiet is read at once. Whether it went quiet.
      */
-    private fun idle(job: Job) {
+    private fun idle(job: Job): Boolean {
         val end = SystemClock.uptimeMillis() + IDLE_MAX_MS
         while (!job.cancelled && SystemClock.uptimeMillis() < end) {
             val quiet = SystemClock.uptimeMillis() - automation.lastEventAt
-            if (quiet >= IDLE_QUIET_MS) return
+            if (quiet >= IDLE_QUIET_MS) return true
             Thread.sleep(IDLE_QUIET_MS - quiet)
         }
+        return SystemClock.uptimeMillis() - automation.lastEventAt >= IDLE_QUIET_MS
     }
 
     /** The settle and the read an action asked for, into its result. */

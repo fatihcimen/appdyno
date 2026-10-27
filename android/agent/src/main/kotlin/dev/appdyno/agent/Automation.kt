@@ -10,6 +10,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.InputEvent
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityWindowInfo
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 
@@ -19,9 +20,28 @@ import java.lang.reflect.Method
  * device: a second owner is reported as AGENT_CONFLICT.
  */
 @SuppressLint("PrivateApi")
-class Automation private constructor(val ua: UiAutomation) {
+class Automation private constructor(private val looper: Looper) {
     @Volatile
-    var lastEventAt: Long = SystemClock.uptimeMillis()
+    private var current: UiAutomation? = null
+
+    /**
+     * The connection, opened again on first use after release(): while it is open accessibility is on in
+     * every app, which costs an app's main thread (a cold start about 13 % longer, measured), so it is held
+     * only while a host is connected.
+     */
+    val ua: UiAutomation
+        get() = current ?: synchronized(this) { current ?: open().also { current = it } }
+
+    /** Whether the connection is open now. */
+    val connected: Boolean get() = current != null
+
+    /** How long the last open took (ms): the cost of taking the connection again. */
+    @Volatile
+    var lastOpenMs: Long = 0
+        private set
+
+    @Volatile
+    var lastEventAt: Long = 0
         private set
 
     @Volatile
@@ -40,13 +60,48 @@ class Automation private constructor(val ua: UiAutomation) {
         null
     }
 
-    init {
+    /** Closes the connection (accessibility goes off in the apps); the next use opens it again. */
+    fun release() = synchronized(this) {
+        val ua = current ?: return@synchronized
+        current = null
+        try {
+            UiAutomation::class.java.getDeclaredMethod("disconnect").apply { isAccessible = true }.invoke(ua)
+        } catch (e: Throwable) {
+            System.err.println("UI automation did not disconnect: $e")
+        }
+    }
+
+    private fun open(): UiAutomation {
+        val start = SystemClock.uptimeMillis()
+        val connClass = Class.forName("android.app.UiAutomationConnection")
+        val conn = connClass.getDeclaredConstructor().apply { isAccessible = true }.newInstance()
+        val iface = Class.forName("android.app.IUiAutomationConnection")
+        val ua = construct(looper, conn, iface)
+        connect(ua)
+        val info = ua.serviceInfo ?: AccessibilityServiceInfo()
+        // only the events the settle reads: an app sends only the event types some service asked for,
+        // so every other kind (hover, touch, text, focus, announcements) costs its main thread nothing
+        info.eventTypes = LAYOUT_EVENTS
+        info.flags = info.flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
+            AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
+            AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
+        ua.serviceInfo = info
+        lastEventAt = SystemClock.uptimeMillis()
         ua.setOnAccessibilityEventListener { e: AccessibilityEvent ->
             if (movesLayout(e)) {
                 lastEventAt = SystemClock.uptimeMillis()
                 events++
             }
         }
+        // a fresh connection learns the windows over a moment, and the apps turn their accessibility on: a
+        // read before then shows part of the screen (seen: 17 nodes, then 46). Until the app's window is
+        // known and its events have gone quiet.
+        while (SystemClock.uptimeMillis() - start < WINDOWS_WAIT_MS &&
+            (ua.windows.none { it.type == AccessibilityWindowInfo.TYPE_APPLICATION } ||
+                SystemClock.uptimeMillis() - lastEventAt < OPEN_QUIET_MS)
+        ) Thread.sleep(20)
+        lastOpenMs = SystemClock.uptimeMillis() - start
+        return ua
     }
 
     /**
@@ -90,6 +145,12 @@ class Automation private constructor(val ua: UiAutomation) {
         ) else t
 
     companion object {
+        /** The longest a new connection is given to learn the windows on screen and go quiet. */
+        const val WINDOWS_WAIT_MS = 2_000L
+
+        /** A new connection is ready once the apps sent no layout event for this long. */
+        const val OPEN_QUIET_MS = 150L
+
         /** The events that can mean the layout moved (movesLayout reads them). */
         const val LAYOUT_EVENTS = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
@@ -97,22 +158,10 @@ class Automation private constructor(val ua: UiAutomation) {
             AccessibilityEvent.TYPE_VIEW_SCROLLED or
             AccessibilityEvent.TYPE_VIEW_SELECTED
 
+        /** Opens the connection once at start, so a device that refuses it fails the start. */
         fun connect(): Automation {
             val thread = HandlerThread("appdyno-a11y").apply { start() }
-            val connClass = Class.forName("android.app.UiAutomationConnection")
-            val conn = connClass.getDeclaredConstructor().apply { isAccessible = true }.newInstance()
-            val iface = Class.forName("android.app.IUiAutomationConnection")
-            val ua = construct(thread.looper, conn, iface)
-            open(ua)
-            val info = ua.serviceInfo ?: AccessibilityServiceInfo()
-            // only the events the settle reads: an app sends only the event types some service asked for,
-            // so every other kind (hover, touch, text, focus, announcements) costs its main thread nothing
-            info.eventTypes = LAYOUT_EVENTS
-            info.flags = info.flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
-                AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
-                AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
-            ua.serviceInfo = info
-            return Automation(ua)
+            return Automation(thread.looper).also { it.ua }
         }
 
         /** The constructor this release has: a looper or a context, the connection, maybe a display id. */
@@ -136,7 +185,7 @@ class Automation private constructor(val ua: UiAutomation) {
             throw AgentFailure("UNSUPPORTED", "no known UiAutomation constructor on this release")
         }
 
-        private fun open(ua: UiAutomation) {
+        private fun connect(ua: UiAutomation) {
             val flags = UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES
             try {
                 val withFlags = try {

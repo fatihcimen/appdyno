@@ -381,6 +381,26 @@ describe.skipIf(!serial)('android agent on a device', () => {
     back.close();
   });
 
+  it('lets its UI automation go while no host is connected and takes it again on the next request', async () => {
+    const bound = async () => (await d.shell('dumpsys accessibility')).includes('Ui Automation[');
+    await d.tree();
+    expect(await bound()).toBe(true);
+    d.close();
+    // no host: after the grace, accessibility is off in the apps (an app starting meanwhile pays nothing)
+    let off = false;
+    for (let i = 0; i < 20 && !off; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      off = !(await bound());
+    }
+    expect(off).toBe(true);
+    // the next request opens it again: the same agent, the screen read as before
+    const pid = d.hello!.pid;
+    const t = await d.tree();
+    expect(t.nodes.length).toBeGreaterThan(3);
+    expect(await bound()).toBe(true);
+    expect(d.hello!.pid).toBe(pid);
+  });
+
   it('a second host connects to the running agent without starting another', async () => {
     const other = new AndroidDevice(serial!);
     await other.open();
