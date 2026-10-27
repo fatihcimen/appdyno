@@ -90,6 +90,13 @@ class Automation private constructor(val ua: UiAutomation) {
         ) else t
 
     companion object {
+        /** The events that can mean the layout moved (movesLayout reads them). */
+        const val LAYOUT_EVENTS = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
+            AccessibilityEvent.TYPE_WINDOWS_CHANGED or
+            AccessibilityEvent.TYPE_VIEW_SCROLLED or
+            AccessibilityEvent.TYPE_VIEW_SELECTED
+
         fun connect(): Automation {
             val thread = HandlerThread("appdyno-a11y").apply { start() }
             val connClass = Class.forName("android.app.UiAutomationConnection")
@@ -98,7 +105,9 @@ class Automation private constructor(val ua: UiAutomation) {
             val ua = construct(thread.looper, conn, iface)
             open(ua)
             val info = ua.serviceInfo ?: AccessibilityServiceInfo()
-            info.eventTypes = AccessibilityEvent.TYPES_ALL_MASK
+            // only the events the settle reads: an app sends only the event types some service asked for,
+            // so every other kind (hover, touch, text, focus, announcements) costs its main thread nothing
+            info.eventTypes = LAYOUT_EVENTS
             info.flags = info.flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
                 AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
                 AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
