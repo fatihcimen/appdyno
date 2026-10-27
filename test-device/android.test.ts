@@ -175,6 +175,31 @@ describe.skipIf(!serial)('android agent on a device', () => {
     120_000,
   );
 
+  // a login sheet: its own window, the field focused as it opens, typed into at once without a tap (A/B
+  // runs 3b9df4d5 and 64985b2a: the focus was not found there and the number was typed into nothing)
+  it('types into the field a sheet focuses as it opens, without a tap (3 of 3)', async () => {
+    for (const n of ['5321234561', '5321234562', '5321234563']) {
+      const s = await open('DIYALOG');
+      await d.tap(find(s, /ALANLI PENCERE|Alanlı pencere/)!, { settle: SETTLE });
+      const r = await d.typeText(n, { replace: true, settle: false });
+      const field = (await d.tree()).nodes.find((x) => x.id?.endsWith(':id/sheet_input'));
+      expect({ text: field?.t, verified: r.verified }).toEqual({ text: n, verified: true });
+    }
+  });
+
+  // the app (or a starved emulator) answers nothing for 6 s before its sheet's field takes the focus: the
+  // wait for the focus must not run out meanwhile (A/B runs 3b9df4d5, 64985b2a: a 4 s stall ended it)
+  it('types into a sheet whose field takes the focus after the app stalled for 6 s', async () => {
+    const s = await open('DIYALOG');
+    await d.tap(find(s, /MEŞGUL PENCERE|Meşgul pencere/)!, { settle: false });
+    const r = await d.typeText('5321234569', { replace: true, settle: false });
+    const field = (await d.tree()).nodes.find((x) => x.id?.endsWith(':id/busy_input'));
+    expect({ text: field?.t, verified: r.verified }).toEqual({
+      text: '5321234569',
+      verified: true,
+    });
+  }, 60_000);
+
   it('refuses typing when no field has focus', async () => {
     await home();
     const e = await d.typeText('x', { settle: false }).catch((x: unknown) => x);

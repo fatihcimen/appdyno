@@ -3,6 +3,7 @@ package dev.appdyno.fixture
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.Dialog
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -10,6 +11,7 @@ import android.os.Looper
 import android.text.InputType
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.webkit.WebView
 import android.widget.BaseAdapter
 import android.widget.Button
@@ -208,6 +210,44 @@ class DialogActivity : Activity() {
                     .setPositiveButton("Tamam") { _, _ -> result.text = "Onaylandı" }
                     .setNegativeButton("İptal") { _, _ -> result.text = "Vazgeçildi" }
                     .show()
+            }
+            // a sheet as a login builds one: its own window, the field focused and the keyboard asked for as it
+            // opens (typing goes into it with no tap; seen: the focus not found there, the number lost)
+            button("Alanlı pencere", R.id.open_field_dialog) {
+                val field = EditText(this@DialogActivity).apply {
+                    id = R.id.sheet_input
+                    hint = "Telefon numarası"
+                    inputType = InputType.TYPE_CLASS_PHONE
+                }
+                Dialog(this@DialogActivity).apply {
+                    setContentView(LinearLayout(context).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(48, 48, 48, 48)
+                        addView(TextView(context).apply { text = "Telefon numaranı gir" })
+                        addView(field)
+                    })
+                    window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+                    setOnShowListener { field.requestFocus() }
+                    show()
+                }
+            }
+            // the same sheet on an app (or device) that answers nothing for 6 s before its field takes the focus:
+            // a starved emulator froze 4 s while a login typed into its sheet, and the wait for the focus ran out
+            button("Meşgul pencere", R.id.open_busy_dialog) {
+                val field = EditText(this@DialogActivity).apply {
+                    id = R.id.busy_input
+                    hint = "Telefon numarası"
+                    inputType = InputType.TYPE_CLASS_PHONE
+                }
+                Dialog(this@DialogActivity).apply {
+                    setContentView(field)
+                    window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+                    show()
+                }
+                field.post {
+                    Thread.sleep(6_000)
+                    field.requestFocus()
+                }
             }
             result.id = R.id.result
             addView(result)

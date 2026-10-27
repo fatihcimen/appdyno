@@ -109,8 +109,11 @@ class TextInput(private val automation: Automation, private val input: Input, pr
         val focusMs = SystemClock.uptimeMillis() - start
         if (field == null) {
             // no field reports the focus but the keyboard is up (a code entry drawn by the app): the keys go to
-            // whatever has the keyboard, as a person's would; the text cannot be read back
-            if (keyboardShown() && TextPlan.isAscii(text) && input.typeKeys(text)) return TextOutcome("keys", null, focusMs)
+            // whatever has the keyboard, as a person's would; the text cannot be read back. Never while a field
+            // is on screen: that one could be read back, and keys typed past it are lost unseen
+            if (keyboardShown() && TextPlan.isAscii(text) && editables().isEmpty() && input.typeKeys(text)) {
+                return TextOutcome("keys", null, focusMs)
+            }
             throw AgentFailure("NO_FOCUS", "no editable field has input focus", "tap the field first")
         }
         val current = if (field.isShowingHintText) "" else field.text?.toString()
@@ -232,28 +235,47 @@ class TextInput(private val automation: Automation, private val input: Input, pr
     }
 
     /** The focused editable node of the active window, searched breadth-first (bounded). */
-    private fun focusedField(): AccessibilityNodeInfo? {
-        val queue = ArrayDeque<AccessibilityNodeInfo>()
-        automation.ua.rootInActiveWindow?.let { queue.add(it) }
+    /** Every window's root: a sheet or dialog that just opened has its own window, often not the active one. */
+    private fun roots(): List<AccessibilityNodeInfo> {
+        val all = try {
+            automation.ua.windows.mapNotNull { it.root }
+        } catch (_: Throwable) {
+            emptyList()
+        }
+        return all.ifEmpty { listOfNotNull(automation.ua.rootInActiveWindow) }
+    }
+
+    /** The editable nodes on screen, the focused ones first. */
+    private fun editables(): List<AccessibilityNodeInfo> {
+        val out = ArrayList<AccessibilityNodeInfo>()
+        val queue = ArrayDeque(roots())
         var seen = 0
         while (queue.isNotEmpty() && seen++ < 3_000) {
             val n = queue.removeFirst()
-            if (n.isFocused && n.isEditable) return n
+            if (n.isEditable && n.isVisibleToUser) out.add(n)
             for (i in 0 until n.childCount) n.getChild(i)?.let { queue.add(it) }
         }
-        return null
+        return out.sortedByDescending { it.isFocused }
     }
 
     private fun waitFocus(deadline: Long, cancelled: () -> Boolean): AccessibilityNodeInfo? {
         var polls = 0
+        var end = deadline
+        var last = SystemClock.uptimeMillis()
         while (!cancelled()) {
             // the cached answer may predate the tap's focus change
             if (polls++ % 3 == 0) automation.clearCache()
             val f = automation.ua.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
             if (f != null && f.isEditable) return f
-            // a toolkit that draws its own fields (Compose) reports the host view as the input focus
-            focusedField()?.let { return it }
-            if (SystemClock.uptimeMillis() >= deadline) return null
+            // a toolkit that draws its own fields (Compose) reports the host view as the input focus, and a sheet
+            // that just opened is a window of its own: the focused editable node of any window
+            editables().firstOrNull { it.isFocused }?.let { return it }
+            // a device that stalled (a starved emulator, an app that did not answer for seconds) spent the wait
+            // without looking: that time does not count (A/B runs 3b9df4d5, 64985b2a: a 4 s stall ended it)
+            val now = SystemClock.uptimeMillis()
+            if (now - last > STALL_MS) end = minOf(end + now - last, deadline + MAX_STALL_MS)
+            last = now
+            if (now >= end) return null
             Thread.sleep(40)
         }
         return null
@@ -266,5 +288,9 @@ class TextInput(private val automation: Automation, private val input: Input, pr
         const val CHECK_POLL_MS = 50L
         /** An action that took this long answered from a device that stalled: its text may land late. */
         const val SLOW_ACTION_MS = 1_000L
+        /** A focus poll this far from the one before it: the device stalled between them. */
+        const val STALL_MS = 1_000L
+        /** The most a focus wait is stretched for stalls. */
+        const val MAX_STALL_MS = 10_000L
     }
 }

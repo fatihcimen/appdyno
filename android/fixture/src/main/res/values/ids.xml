@@ -13,6 +13,10 @@
     <item name="row_count" type="id" />
     <item name="add_button" type="id" />
     <item name="open_dialog" type="id" />
+    <item name="open_field_dialog" type="id" />
+    <item name="sheet_input" type="id" />
+    <item name="open_busy_dialog" type="id" />
+    <item name="busy_input" type="id" />
     <item name="ticker" type="id" />
     <item name="stop" type="id" />
     <item name="load" type="id" />
