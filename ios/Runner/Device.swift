@@ -439,6 +439,18 @@ final class Device {
     private static let scrollableTypes: Set<XCUIElement.ElementType> = [.scrollView, .table, .collectionView, .webView]
     private static let checkableTypes: Set<XCUIElement.ElementType> = [.switch, .toggle, .checkBox]
 
+    private static let keyboardFocusKey = NSSelectorFromString("hasKeyboardFocus")
+
+    /**
+     * The text field the keyboard types into: XCUI's snapshot knows it (the attribute its focus queries
+     * use) though `hasFocus` is the focus engine's and stays false for a typed-into field. Where the
+     * snapshot has no such attribute, nothing is assumed.
+     */
+    static func hasKeyboardFocus(_ s: XCUIElementSnapshot) -> Bool {
+        guard let o = s as? NSObject, o.responds(to: keyboardFocusKey) else { return false }
+        return (o.value(forKey: "hasKeyboardFocus") as? Bool) ?? false
+    }
+
     static func node(_ s: XCUIElementSnapshot, parent: Int, window: Int, screen: CGRect) -> Node {
         let b = rect(s.frame)
         let t = s.elementType
@@ -446,7 +458,7 @@ final class Device {
         if s.frame.width > 0, s.frame.height > 0, s.frame.intersects(screen) { f |= Flag.visible }
         if clickableTypes.contains(t) { f |= Flag.clickable }
         if editableTypes.contains(t) { f |= Flag.editable | Flag.focusable }
-        if s.hasFocus { f |= Flag.focused }
+        if s.hasFocus || (editableTypes.contains(t) && hasKeyboardFocus(s)) { f |= Flag.focused }
         if s.isEnabled { f |= Flag.enabled }
         if s.isSelected { f |= Flag.selected }
         if scrollableTypes.contains(t) { f |= Flag.scrollable }

@@ -64,6 +64,16 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(byId(await d.read(APP), 'result')?.label).toBe('Gönderildi: Kapı zili çalışmıyor');
   });
 
+  it('reports the field the keyboard types into as focused', async () => {
+    const s = await open('Form');
+    const name = byId(s, 'name_input')!;
+    expect(name.flags).not.toContain('focused');
+    await d.tap(name, { settle: SETTLE });
+    const after = await d.read(APP);
+    const focused = after.list.filter((e) => e.flags.includes('focused'));
+    expect(focused.map((e) => e.id)).toEqual(['name_input']);
+  });
+
   it('replaces the text of a field that formats what is typed (a phone number)', async () => {
     const s = await open('Form');
     const gsm = byId(s, 'gsm_input')!;
