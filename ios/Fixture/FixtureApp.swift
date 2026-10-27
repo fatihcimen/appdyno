@@ -36,6 +36,7 @@ struct FixtureApp: App {
         case "cpu": CpuScreen()
         case "code": CodeScreen()
         case "slide": SlideScreen()
+        case "a11y": A11yScreen()
         default: Text("Bilinmeyen ekran: \(key)")
         }
     }
@@ -405,4 +406,34 @@ struct HiddenField: UIViewRepresentable {
     }
 
     func updateUIView(_ v: KeyInput, context: Context) {}
+}
+
+/// Known accessibility problems for the platform audit's device tests: faint text, a small target, a
+/// control without a name, a fixed font size, text cut by its frame, and a price read before the name above
+/// it. "Devam" has none of them.
+struct A11yScreen: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Erişilebilirlik").font(.title2).accessibilityIdentifier("title")
+            Text("Soluk metin").foregroundColor(Color(white: 0.85)).accessibilityIdentifier("a11y_faint")
+            Button(action: {}) { Color.blue.frame(width: 18, height: 18) }
+                .accessibilityLabel("Küçük").accessibilityIdentifier("a11y_small")
+            Button(action: {}) { Color.blue.frame(width: 44, height: 44) }.accessibilityIdentifier("a11y_unnamed")
+            Text("Sabit yazı boyutu").font(.system(size: 15)).accessibilityIdentifier("a11y_fixed")
+            Text("Bu metin çerçevesine sığmayacak kadar uzun ve kesiliyor")
+                .lineLimit(1).frame(width: 120, alignment: .leading).accessibilityIdentifier("a11y_cut")
+            // the price comes first in the view tree, though it sits below the name
+            ZStack(alignment: .topLeading) {
+                Text("24,90 TL").padding(.top, 32).accessibilityIdentifier("a11y_price")
+                Text("Ayran 1 L").accessibilityIdentifier("a11y_name")
+            }
+            .frame(width: 200, height: 64, alignment: .topLeading)
+            // a dark tint: the system blue on white is under 4.5:1 for text
+            Button("Devam") {}.tint(Color(red: 0, green: 0.25, blue: 0.6)).accessibilityIdentifier("a11y_ok")
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white)
+    }
 }

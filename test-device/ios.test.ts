@@ -200,6 +200,28 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(await d.foreground()).toBe(APP); // the runner still answers
   });
 
+  it('runs the platform accessibility audit on the accessibility fixture', async () => {
+    await d.terminate(APP);
+    await d.launch(APP);
+    await d.openUrl('gdfixture://open/a11y', APP);
+    await new Promise((r) => setTimeout(r, 1_000));
+    expect(byId(await d.read(APP), 'a11y_ok')).toBeDefined();
+    const r = await d.audit();
+    const of = (id: string) => r.issues.filter((i) => i.element?.id === id).map((i) => i.type);
+    expect(r.engine).toBe('platform');
+    expect(of('a11y_faint')).toContain('contrast');
+    expect(of('a11y_small')).toContain('hitRegion');
+    expect(of('a11y_unnamed')).toContain('sufficientElementDescription');
+    expect(of('a11y_fixed')).toContain('dynamicType');
+    expect(of('a11y_cut')).toContain('textClipped');
+    expect(of('a11y_ok')).toEqual([]);
+    expect(r.elapsedMs).toBeLessThan(15_000);
+    // only the asked types; the runner still answers after it
+    const only = await d.audit({ types: ['contrast'] });
+    expect(new Set(only.issues.map((i) => i.type))).toEqual(new Set(['contrast']));
+    expect(await d.foreground()).toBe(APP);
+  }, 90_000);
+
   it('takes a screenshot', async () => {
     const { meta, data } = await d.screenshot({ format: 'jpeg', maxPx: 1024 });
     expect(Math.max(meta.w, meta.h)).toBeLessThanOrEqual(1024);

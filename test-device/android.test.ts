@@ -5,6 +5,8 @@ import {
   alertButton,
   AndroidDevice,
   DeviceError,
+  elementsOf,
+  NODE_FLAGS,
   TEST_LOCATION,
   mockedProviders,
   type Screen,
@@ -355,6 +357,42 @@ describe.skipIf(!serial)('android agent on a device', () => {
       if (!ok) await new Promise((r) => setTimeout(r, 200));
     }
     expect(ok).toBe(true);
+  });
+
+  it('audits the accessibility fixture: each known problem, nothing on the clean button', async () => {
+    await home();
+    await d.openUrl('gdfixture://open/a11y', APP);
+    // its Compose view starts the first time on this screen: up to 10 s on a slow emulator
+    let ok = false;
+    for (let i = 0; i < 40 && !ok; i++) {
+      ok = labels(await screen()).some((l) => /^devam$/i.test(l));
+      if (!ok) await new Promise((r) => setTimeout(r, 250));
+    }
+    expect(ok).toBe(true);
+    const r = await d.audit();
+    const of = (id: string) =>
+      r.issues.filter((i) => i.element?.id === `${APP}:id/${id}`).map((i) => i.type);
+    expect(r.engine).toBe('rules');
+    expect(of('a11y_faint')).toContain('contrast');
+    expect(of('a11y_small')).toContain('hitRegion');
+    expect(of('a11y_icon')).toContain('sufficientElementDescription');
+    expect(of('a11y_faint_icon')).toContain('imageContrast');
+    expect(of('a11y_add_1')).toContain('duplicateLabel');
+    expect(of('a11y_cut')).toContain('textClipped');
+    expect(of('a11y_ellipsized')).toContain('textClipped');
+    for (const id of ['a11y_ok', 'a11y_name', 'a11y_price', 'title'])
+      expect(of(id), id).toEqual([]);
+    expect(r.elapsedMs).toBeLessThan(5_000);
+    // the read the checks ran on carries the traversal hints: the price is read before the name above it
+    const els = elementsOf(r.read!.tree, r.read!.traversal);
+    const at = (id: string) => els.findIndex((e) => e.identifier === `${APP}:id/${id}`);
+    expect(els[at('a11y_price')]!.traversalBefore).toBe(at('a11y_name'));
+    // the tree says what a screen reader skips or reads as one unit: Compose's text is read, as one unit
+    // (its ellipsis is not found: Compose reports its characters' places at another scale, a known gap)
+    const t = await d.tree();
+    const compose = t.nodes.find((n) => n.t?.startsWith('Compose ile'))!;
+    expect(compose.f & NODE_FLAGS.notImportant).toBe(0);
+    expect(compose.f & NODE_FLAGS.screenReaderFocusable).toBe(NODE_FLAGS.screenReaderFocusable);
   });
 
   const mocks = async () => [...mockedProviders(await d.shell('dumpsys location'))].sort();

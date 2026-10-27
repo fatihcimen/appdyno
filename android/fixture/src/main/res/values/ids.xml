@@ -29,4 +29,16 @@
     <item name="late_result" type="id" />
     <item name="late_clear" type="id" />
     <item name="late_touch" type="id" />
+    <item name="a11y_faint" type="id" />
+    <item name="a11y_small" type="id" />
+    <item name="a11y_icon" type="id" />
+    <item name="a11y_faint_icon" type="id" />
+    <item name="a11y_add_1" type="id" />
+    <item name="a11y_add_2" type="id" />
+    <item name="a11y_cut" type="id" />
+    <item name="a11y_ellipsized" type="id" />
+    <item name="a11y_card" type="id" />
+    <item name="a11y_price" type="id" />
+    <item name="a11y_name" type="id" />
+    <item name="a11y_ok" type="id" />
 </resources>

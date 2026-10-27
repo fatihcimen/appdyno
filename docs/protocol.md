@@ -150,7 +150,8 @@ engine's `rule`, a `message`, the element's box `b` in tap units and the element
   button's transparent inset is not its colour), and from an icon's inner 70 %. The result carries that
   read (`read`: the tree and its traversal hints) for a caller that works out the screen reader's
   reading order.
-- Limits: Compose's ellipsized text is not found (its hidden characters keep places of their own);
+- Limits: Compose's ellipsized text is not found (Compose reports its characters' places at another
+  scale, all inside the text);
   colours of text over a picture or a gradient are not measured (no clean sample).
 
 ## Errors

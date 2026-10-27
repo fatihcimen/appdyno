@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { crc32, deflateSync } from 'node:zlib';
 import { NODE_FLAGS, type Tree, type WireNode } from '@appdyno/protocol';
 import { auditAndroid, contrastRatio, decodePng, type Image } from '../src/audit.js';
@@ -243,5 +245,32 @@ describe('android accessibility checks', () => {
       0x12, 0x34, 0x56, 255,
     ]);
     expect(decodePng(Buffer.from('not a png'))).toBeNull();
+  });
+
+  it("the fixture app's accessibility screen as an emulator read it: each known problem, nothing on the clean parts", () => {
+    // fixtures/android-a11y: one a11y.read and the screenshot after it (Pixel 7 emulator, Android 15)
+    const dir = join(import.meta.dirname, 'fixtures/android-a11y');
+    const read = JSON.parse(readFileSync(join(dir, 'read.json'), 'utf8')) as {
+      density: number;
+      tree: Tree;
+      clips: { n: number; chars: number; hidden: number }[];
+    };
+    const img = decodePng(readFileSync(join(dir, 'screen.png')));
+    expect(img).not.toBeNull();
+    const r = auditAndroid(read.tree, img, { scale: read.density / 160, clips: read.clips });
+    const of = (id: string) =>
+      r.issues
+        .filter((i) => i.element?.id === `dev.appdyno.fixture:id/${id}`)
+        .map((i) => i.rule)
+        .sort();
+    expect(of('a11y_faint')).toEqual(['android.textContrast']);
+    expect(of('a11y_small')).toEqual(['android.touchTarget']);
+    expect(of('a11y_icon')).toContain('android.missingLabel');
+    expect(of('a11y_faint_icon')).toEqual(['android.imageContrast']);
+    expect(of('a11y_add_1')).toEqual(['android.duplicateLabel']);
+    expect(of('a11y_cut')).toEqual(['android.textClipped']);
+    expect(of('a11y_ellipsized')).toEqual(['android.textClipped']);
+    for (const id of ['title', 'a11y_ok', 'a11y_add_2', 'a11y_name', 'a11y_price'])
+      expect(of(id), id).toEqual([]);
   });
 });

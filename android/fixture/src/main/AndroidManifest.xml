@@ -29,6 +29,7 @@
         <activity android:name=".MemoryActivity" />
         <activity android:name=".CpuActivity" />
         <activity android:name=".LateActivity" />
+        <activity android:name=".A11yActivity" />
         <activity android:name=".CodeActivity" android:windowSoftInputMode="stateVisible" />
     </application>
 </manifest>

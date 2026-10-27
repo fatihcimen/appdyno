@@ -1,0 +1,385 @@
+{
+  "density": 420,
+  "tree": {
+    "windows": [
+      {
+        "type": 1,
+        "pkg": "dev.appdyno.fixture",
+        "layer": 0,
+        "b": [0, 0, 1080, 2400],
+        "active": true,
+        "focused": true
+      },
+      {
+        "type": 3,
+        "pkg": "com.android.systemui",
+        "layer": 1,
+        "b": [0, 0, 1080, 136],
+        "active": false,
+        "focused": false
+      }
+    ],
+    "nodes": [
+      { "p": -1, "w": 0, "c": "android.widget.FrameLayout", "b": [0, 0, 1080, 2400], "f": 17 },
+      { "p": -1, "w": 1, "c": "android.widget.FrameLayout", "b": [0, 0, 1080, 136], "f": 17 },
+      { "p": 0, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 0, 1080, 2400], "f": 4113 },
+      {
+        "p": 1,
+        "w": 1,
+        "c": "android.widget.FrameLayout",
+        "id": "com.android.systemui:id/status_bar_launch_animation_container",
+        "b": [0, 0, 1080, 136],
+        "f": 4113
+      },
+      {
+        "p": 1,
+        "w": 1,
+        "c": "android.widget.FrameLayout",
+        "id": "com.android.systemui:id/status_bar_container",
+        "b": [0, 0, 1080, 136],
+        "f": 4113
+      },
+      {
+        "p": 2,
+        "w": 0,
+        "c": "android.widget.FrameLayout",
+        "id": "android:id/content",
+        "b": [0, 0, 1080, 2400],
+        "f": 4113
+      },
+      {
+        "p": 4,
+        "w": 1,
+        "c": "android.widget.FrameLayout",
+        "id": "com.android.systemui:id/status_bar",
+        "b": [0, 0, 1080, 136],
+        "f": 17
+      },
+      { "p": 5, "w": 0, "c": "android.widget.LinearLayout", "b": [0, 0, 1080, 2400], "f": 4113 },
+      {
+        "p": 6,
+        "w": 1,
+        "c": "android.widget.LinearLayout",
+        "id": "com.android.systemui:id/status_bar_contents",
+        "b": [47, 0, 1027, 136],
+        "f": 4113
+      },
+      {
+        "p": 7,
+        "w": 0,
+        "c": "android.widget.TextView",
+        "id": "dev.appdyno.fixture:id/title",
+        "t": "Erişilebilirlik",
+        "b": [32, 96, 1048, 159],
+        "f": 17
+      },
+      {
+        "p": 7,
+        "w": 0,
+        "c": "android.widget.TextView",
+        "id": "dev.appdyno.fixture:id/a11y_faint",
+        "t": "Soluk metin",
+        "b": [32, 159, 1048, 222],
+        "f": 17
+      },
+      {
+        "p": 7,
+        "w": 0,
+        "c": "android.view.View",
+        "id": "dev.appdyno.fixture:id/a11y_small",
+        "d": "Küçük",
+        "b": [32, 222, 95, 285],
+        "f": 23
+      },
+      {
+        "p": 7,
+        "w": 0,
+        "c": "android.widget.ImageButton",
+        "id": "dev.appdyno.fixture:id/a11y_icon",
+        "b": [32, 285, 179, 432],
+        "f": 23
+      },
+      {
+        "p": 7,
+        "w": 0,
+        "c": "android.widget.ImageView",
+        "id": "dev.appdyno.fixture:id/a11y_faint_icon",
+        "d": "Soluk simge",
+        "b": [32, 432, 158, 558],
+        "f": 23
+      },
+      {
+        "p": 7,
+        "w": 0,
+        "c": "android.widget.Button",
+        "id": "dev.appdyno.fixture:id/a11y_add_1",
+        "t": "EKLE",
+        "b": [32, 558, 1048, 684],
+        "f": 23
+      },
+      {
+        "p": 7,
+        "w": 0,
+        "c": "android.widget.Button",
+        "id": "dev.appdyno.fixture:id/a11y_add_2",
+        "t": "EKLE",
+        "b": [32, 684, 1048, 810],
+        "f": 23
+      },
+      {
+        "p": 7,
+        "w": 0,
+        "c": "android.widget.TextView",
+        "id": "dev.appdyno.fixture:id/a11y_cut",
+        "t": "Bu metin çerçevesine sığmayacak kadar uzun ve alttaki satırları görünmüyor",
+        "b": [32, 810, 452, 873],
+        "f": 17
+      },
+      {
+        "p": 7,
+        "w": 0,
+        "c": "android.widget.TextView",
+        "id": "dev.appdyno.fixture:id/a11y_ellipsized",
+        "t": "Kaçmaz Fiyatlar ve Haftanın Fırsatları",
+        "b": [32, 873, 347, 930],
+        "f": 17
+      },
+      {
+        "p": 7,
+        "w": 0,
+        "c": "androidx.compose.ui.platform.ComposeView",
+        "b": [32, 930, 1048, 973],
+        "f": 4113
+      },
+      {
+        "p": 7,
+        "w": 0,
+        "c": "android.widget.FrameLayout",
+        "id": "dev.appdyno.fixture:id/a11y_card",
+        "b": [32, 973, 557, 1141],
+        "f": 4113
+      },
+      {
+        "p": 7,
+        "w": 0,
+        "c": "android.widget.Button",
+        "id": "dev.appdyno.fixture:id/a11y_ok",
+        "t": "DEVAM",
+        "b": [32, 1141, 1048, 1267],
+        "f": 23
+      },
+      {
+        "p": 8,
+        "w": 1,
+        "c": "android.widget.FrameLayout",
+        "id": "com.android.systemui:id/status_bar_start_side_container",
+        "b": [47, 1, 459, 136],
+        "f": 4113
+      },
+      {
+        "p": 8,
+        "w": 1,
+        "c": "android.view.View",
+        "id": "com.android.systemui:id/cutout_space_view",
+        "b": [459, 1, 604, 136],
+        "f": 4113
+      },
+      {
+        "p": 8,
+        "w": 1,
+        "c": "android.widget.FrameLayout",
+        "id": "com.android.systemui:id/status_bar_end_side_container",
+        "b": [604, 1, 1016, 136],
+        "f": 4113
+      },
+      { "p": 18, "w": 0, "c": "android.view.View", "b": [32, 930, 1048, 973], "f": 4113 },
+      {
+        "p": 19,
+        "w": 0,
+        "c": "android.widget.TextView",
+        "id": "dev.appdyno.fixture:id/a11y_name",
+        "t": "Ayran 1 L",
+        "b": [32, 973, 185, 1024],
+        "f": 17
+      },
+      {
+        "p": 19,
+        "w": 0,
+        "c": "android.widget.TextView",
+        "id": "dev.appdyno.fixture:id/a11y_price",
+        "t": "24,90 TL",
+        "b": [32, 1057, 174, 1108],
+        "f": 17
+      },
+      {
+        "p": 21,
+        "w": 1,
+        "c": "android.widget.FrameLayout",
+        "id": "com.android.systemui:id/status_bar_start_side_content",
+        "b": [47, 1, 230, 136],
+        "f": 4113
+      },
+      {
+        "p": 23,
+        "w": 1,
+        "c": "android.widget.LinearLayout",
+        "id": "com.android.systemui:id/status_bar_end_side_content",
+        "b": [876, 1, 1016, 136],
+        "f": 4113
+      },
+      {
+        "p": 24,
+        "w": 0,
+        "c": "android.widget.TextView",
+        "t": "Compose ile çok uzun bir ürün adı burada kesiliyor",
+        "b": [32, 930, 347, 973],
+        "f": 8209
+      },
+      {
+        "p": 27,
+        "w": 1,
+        "c": "android.widget.LinearLayout",
+        "id": "com.android.systemui:id/status_bar_start_side_except_heads_up",
+        "b": [47, 1, 230, 136],
+        "f": 4113
+      },
+      {
+        "p": 28,
+        "w": 1,
+        "c": "android.widget.LinearLayout",
+        "id": "com.android.systemui:id/system_icons",
+        "b": [876, 39, 1016, 97],
+        "f": 17
+      },
+      {
+        "p": 30,
+        "w": 1,
+        "c": "android.widget.TextView",
+        "id": "com.android.systemui:id/clock",
+        "t": "12:49",
+        "d": "12:49 PM",
+        "b": [47, 47, 172, 90],
+        "f": 17
+      },
+      {
+        "p": 30,
+        "w": 1,
+        "c": "android.widget.FrameLayout",
+        "id": "com.android.systemui:id/notification_icon_area",
+        "b": [172, 1, 230, 136],
+        "f": 4113
+      },
+      {
+        "p": 31,
+        "w": 1,
+        "c": "android.widget.LinearLayout",
+        "id": "com.android.systemui:id/statusIcons",
+        "b": [884, 39, 985, 97],
+        "f": 4113
+      },
+      {
+        "p": 31,
+        "w": 1,
+        "c": "android.widget.LinearLayout",
+        "id": "com.android.systemui:id/battery",
+        "d": "Battery charging, 100 percent.",
+        "b": [985, 51, 1005, 85],
+        "f": 17
+      },
+      {
+        "p": 33,
+        "w": 1,
+        "c": "android.view.ViewGroup",
+        "id": "com.android.systemui:id/notificationIcons",
+        "b": [172, 1, 230, 136],
+        "f": 4113
+      },
+      {
+        "p": 34,
+        "w": 1,
+        "c": "android.widget.FrameLayout",
+        "id": "com.android.systemui:id/wifi_combo",
+        "b": [884, 39, 930, 97],
+        "f": 4113
+      },
+      { "p": 34, "w": 1, "c": "android.widget.FrameLayout", "b": [884, 68, 884, 68], "f": 4112 },
+      {
+        "p": 34,
+        "w": 1,
+        "c": "android.widget.FrameLayout",
+        "id": "com.android.systemui:id/mobile_combo",
+        "d": "Phone signal full.",
+        "b": [930, 39, 969, 97],
+        "f": 17
+      },
+      { "p": 35, "w": 1, "c": "android.widget.ImageView", "b": [985, 51, 1005, 85], "f": 4113 },
+      {
+        "p": 36,
+        "w": 1,
+        "c": "android.widget.ImageView",
+        "d": "Android System notification: Serial console enabled",
+        "b": [172, 1, 230, 136],
+        "f": 17
+      },
+      {
+        "p": 37,
+        "w": 1,
+        "c": "android.widget.LinearLayout",
+        "id": "com.android.systemui:id/wifi_group",
+        "b": [891, 39, 930, 97],
+        "f": 4113
+      },
+      {
+        "p": 39,
+        "w": 1,
+        "c": "android.widget.LinearLayout",
+        "id": "com.android.systemui:id/mobile_group",
+        "b": [930, 39, 969, 97],
+        "f": 4113
+      },
+      {
+        "p": 42,
+        "w": 1,
+        "c": "android.widget.FrameLayout",
+        "id": "com.android.systemui:id/wifi_combo",
+        "b": [891, 48, 930, 87],
+        "f": 4113
+      },
+      { "p": 43, "w": 1, "c": "android.widget.FrameLayout", "b": [930, 48, 969, 87], "f": 4113 },
+      {
+        "p": 44,
+        "w": 1,
+        "c": "android.widget.ImageView",
+        "id": "com.android.systemui:id/wifi_signal",
+        "d": "Wifi signal full.",
+        "b": [891, 48, 930, 87],
+        "f": 17
+      },
+      {
+        "p": 45,
+        "w": 1,
+        "c": "android.widget.ImageView",
+        "id": "com.android.systemui:id/mobile_signal",
+        "b": [930, 48, 969, 87],
+        "f": 4113
+      }
+    ],
+    "truncated": false,
+    "elapsedMs": 381,
+    "hash": "f1d8ea128d4550cc"
+  },
+  "clips": [
+    { "n": 9, "chars": 15, "hidden": 0 },
+    { "n": 10, "chars": 11, "hidden": 0 },
+    { "n": 14, "chars": 4, "hidden": 0 },
+    { "n": 15, "chars": 4, "hidden": 0 },
+    { "n": 16, "chars": 74, "hidden": 32 },
+    { "n": 17, "chars": 38, "hidden": 20 },
+    { "n": 20, "chars": 5, "hidden": 0 },
+    { "n": 25, "chars": 9, "hidden": 0 },
+    { "n": 26, "chars": 8, "hidden": 0 },
+    { "n": 29, "chars": 50, "hidden": 0 },
+    { "n": 32, "chars": 5, "hidden": 0 }
+  ],
+  "traversal": [{ "n": 26, "before": 25 }]
+}
