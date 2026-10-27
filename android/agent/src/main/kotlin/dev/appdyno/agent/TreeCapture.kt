@@ -64,8 +64,8 @@ class Capture(
  * Reads every interactive window's tree. Each node read that misses the client cache is a call the app
  * answers on its UI thread; a busy app interrupts the default prefetch after almost every node, so the
  * walk asks for uninterruptible breadth-first prefetch (one call returns a node and its next descendants)
- * and reads the children of a tree level in parallel. The cache is cleared first: an in-place screen swap
- * does not always invalidate it.
+ * and reads the children of a tree level in parallel (a read of an app that would not go quiet yields to it
+ * instead). The cache is cleared first: an in-place screen swap does not always invalidate it.
  */
 class TreeCapture(private val automation: Automation) {
     private val pool: ExecutorService = Executors.newFixedThreadPool(PARALLEL) { r ->
@@ -75,10 +75,16 @@ class TreeCapture(private val automation: Automation) {
     @Volatile
     private var failedReads = 0
 
-    fun capture(maxDepth: Int = 128, maxNodes: Int = 5_000, budgetMs: Long = 8_000): Capture {
+    /**
+     * `yielding`: the app did not go quiet before this read (starting, animating): the prefetch then yields to
+     * its own work, as one that never yields can hold a starting app's UI thread against its input (ANRs at
+     * app start in the A/B). Slower on a busy app; a quiet app is read uninterrupted.
+     */
+    fun capture(maxDepth: Int = 128, maxNodes: Int = 5_000, budgetMs: Long = 8_000, yielding: Boolean = false): Capture {
         val start = SystemClock.uptimeMillis()
         val ua = automation.ua
         automation.clearCache()
+        val prefetch = if (yielding) PREFETCH_YIELDING else PREFETCH
         val windows = mutableListOf<CWindow>()
         val roots = mutableListOf<Pair<AccessibilityNodeInfo, Int>>()
         val list: List<AccessibilityWindowInfo> = try {
@@ -87,7 +93,7 @@ class TreeCapture(private val automation: Automation) {
             emptyList()
         }
         for (w in list) {
-            val root = (if (Build.VERSION.SDK_INT >= 33) w.getRoot(PREFETCH) else w.root) ?: continue
+            val root = (if (Build.VERSION.SDK_INT >= 33) w.getRoot(prefetch) else w.root) ?: continue
             val b = Rect().also { w.getBoundsInScreen(it) }
             windows += CWindow(w.type, root.packageName?.toString(), w.layer, b, w.isActive, w.isFocused)
             roots += root to windows.size - 1
@@ -119,7 +125,7 @@ class TreeCapture(private val automation: Automation) {
                 truncated = truncated || level.any { it.first.childCount > 0 }
                 break
             }
-            level = children(level, indices)
+            level = children(level, indices, prefetch)
         }
         return Capture(windows, nodes, truncated || failedReads > 0, SystemClock.uptimeMillis() - start, Platform.display())
     }
@@ -129,6 +135,7 @@ class TreeCapture(private val automation: Automation) {
     private fun children(
         level: List<Triple<AccessibilityNodeInfo, Int, Int>>,
         indices: IntArray,
+        prefetch: Int,
     ): List<Triple<AccessibilityNodeInfo, Int, Int>> {
         val wanted = ArrayList<Want>()
         for ((i, item) in level.withIndex()) {
@@ -137,7 +144,7 @@ class TreeCapture(private val automation: Automation) {
         // a node the app cannot give (a web view rebuilding its virtual tree) is left out, not fatal
         val read: (Want) -> AccessibilityNodeInfo? = { w ->
             try {
-                if (Build.VERSION.SDK_INT >= 33) w.node.getChild(w.child, PREFETCH) else w.node.getChild(w.child)
+                if (Build.VERSION.SDK_INT >= 33) w.node.getChild(w.child, prefetch) else w.node.getChild(w.child)
             } catch (_: RuntimeException) {
                 failedReads++
                 null
@@ -184,5 +191,7 @@ class TreeCapture(private val automation: Automation) {
         private const val PREFETCH =
             AccessibilityNodeInfo.FLAG_PREFETCH_DESCENDANTS_BREADTH_FIRST or
                 AccessibilityNodeInfo.FLAG_PREFETCH_UNINTERRUPTIBLE
+        /** The same prefetch, stopped by the app's UI thread when it has input or other work waiting. */
+        private const val PREFETCH_YIELDING = AccessibilityNodeInfo.FLAG_PREFETCH_DESCENDANTS_BREADTH_FIRST
     }
 }
