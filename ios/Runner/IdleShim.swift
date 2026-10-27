@@ -1,5 +1,6 @@
 import Foundation
 import ObjectiveC
+import XCTest
 
 /// The one place the runner uses private XCTest API: XCUI waits for the app to go idle before and after
 /// every event and snapshot, and an app with a running animation (a spinner, a ticking timer) never
@@ -26,6 +27,29 @@ enum IdleShim {
         }
         selfCheck()
         NSLog("appdyno runner: idle waits off: %@", applied.joined(separator: ", "))
+    }
+
+    private static let selProcess = NSSelectorFromString("currentProcess")
+    private static let selAnimationsIdle = NSSelectorFromString("_notifyWhenAnimationsAreIdle:")
+    private typealias NotifyIdle = @convention(c) (AnyObject, Selector, AnyObject) -> Void
+
+    /// Milliseconds until `app` reported no UIKit animation running, at most `seconds`: XCTest's own check
+    /// before an event, which the patches above turn off with the rest of its waits. Nil when the app's
+    /// process or the call is missing (APPDYNO_ANIMATION_WAIT=0 too): the touch then goes out at once.
+    static func waitForAnimations(of app: XCUIApplication, within seconds: Double) -> Int? {
+        guard ProcessInfo.processInfo.environment["APPDYNO_ANIMATION_WAIT"] != "0", app.responds(to: selProcess),
+              let process = app.perform(selProcess)?.takeUnretainedValue(), process.responds(to: selAnimationsIdle)
+        else { return nil }
+        let t0 = Date()
+        var idle = false
+        // no parameters: safe whatever the reply passes the block
+        let reply: @convention(block) () -> Void = { idle = true }
+        unsafeBitCast((process as! NSObject).method(for: selAnimationsIdle), to: NotifyIdle.self)(process, selAnimationsIdle, reply as AnyObject)
+        let end = t0.addingTimeInterval(seconds)
+        // the reply may come on this (main) thread: turn the run loop, never block it
+        while !idle, Date() < end { RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.005)) }
+        if !idle { NSLog("appdyno runner: animations still running after %.0f s, touching anyway", seconds) }
+        return Int(Date().timeIntervalSince(t0) * 1000)
     }
 
     private static func method(_ c: AnyClass, _ sel: String) -> (Method, String)? {

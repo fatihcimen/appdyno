@@ -16,6 +16,9 @@ final class Device {
     static let alertWatchS = 0.8
     /// How long an alert or sheet takes to come up (UIKit's presentation is about 0.3–0.4 s).
     static let alertAppearS = 0.45
+    /// The longest a touch waits for the app's animations (UIKit's sheet comes up in about 0.5 s; an
+    /// animation that never ends costs this once per touch).
+    static let animationWaitS = 1.0
 
     /// Letters and digits only: a formatting field shows "(599) 999-9900" for "5999999900".
     static func plain(_ s: String) -> String { String(s.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init)) }
@@ -150,14 +153,25 @@ final class Device {
     /// The frame of the system alert in the last read, if one was over the app.
     private var alertFrame: CGRect?
 
-    /// A point on screen; on the system alert it is the home screen app's (events on the alert are its).
-    private func point(_ x: Double, _ y: Double) -> XCUICoordinate {
-        let onAlert = alertFrame?.contains(CGPoint(x: x, y: y)) == true
-        let app = onAlert ? springboard : front().0
-        return app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: x, dy: y))
+    /// The app a touch at a point goes to: on the system alert the home screen app's, else the one in front.
+    private func app(at x: Double, _ y: Double) -> XCUIApplication {
+        alertFrame?.contains(CGPoint(x: x, y: y)) == true ? springboard : front().0
     }
 
-    func perform(_ a: [String: Any]) throws {
+    /// A point on screen, in the app a touch there goes to.
+    private func point(_ x: Double, _ y: Double) -> XCUICoordinate {
+        app(at: x, y).coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: x, dy: y))
+    }
+
+    /// UIKit takes no touches while a view animates (a sheet sliding in, a button fading in), and the tree
+    /// shows the view where it ends from the start, so the settle cannot see it: a touch first waits for
+    /// the app under it to report its animations over. Milliseconds waited (nil: the app cannot say).
+    private func animationsOver(_ x: Double, _ y: Double) -> Int? {
+        IdleShim.waitForAnimations(of: app(at: x, y), within: Device.animationWaitS)
+    }
+
+    /// Does the action; for a touch, the milliseconds it first waited for the app's animations.
+    func perform(_ a: [String: Any]) throws -> Int? {
         func num(_ k: String, _ d: [String: Any] = a) throws -> Double {
             guard let v = (d[k] as? NSNumber)?.doubleValue else { throw AgentError("INVALID_ARGUMENT", "\(k) is required") }
             return v
@@ -165,23 +179,34 @@ final class Device {
         switch a["kind"] as? String {
         case "tap":
             let x = try num("x"), y = try num("y")
+            let waited = animationsOver(x, y)
             if !EventShim.tap(CGPoint(x: x, y: y), orientation: Device.interfaceOrientation()) { point(x, y).tap() }
+            return waited
         case "longPress":
-            point(try num("x"), try num("y")).press(forDuration: try num("durationMs") / 1000)
+            let x = try num("x"), y = try num("y"), ms = try num("durationMs")
+            let waited = animationsOver(x, y)
+            point(x, y).press(forDuration: ms / 1000)
+            return waited
         case "swipe":
             guard let f = a["from"] as? [String: Any], let t = a["to"] as? [String: Any] else {
                 throw AgentError("INVALID_ARGUMENT", "from and to are required")
             }
-            try drag(try num("x", f), try num("y", f), try num("x", t), try num("y", t), ms: try num("durationMs"))
+            let (x0, y0, x1, y1, ms) = (try num("x", f), try num("y", f), try num("x", t), try num("y", t), try num("durationMs"))
+            let waited = animationsOver(x0, y0)
+            try drag(x0, y0, x1, y1, ms: ms)
+            return waited
         case "gesture":
             guard let pointers = a["pointers"] as? [[[String: Any]]], pointers.count == 1, let path = pointers.first,
                   let first = path.first, let last = path.last
             else { throw AgentError("UNSUPPORTED", "only one-finger gestures on iOS for now") }
             let (x0, y0, x1, y1) = (try num("x", first), try num("y", first), try num("x", last), try num("y", last))
             let ms = max(20, try num("t", last) - num("t", first))
+            let waited = animationsOver(x0, y0)
             if x0 == x1, y0 == y1 { point(x0, y0).press(forDuration: ms / 1000) } else { try drag(x0, y0, x1, y1, ms: ms) }
+            return waited
         case "key":
             try key(a["key"] as? String ?? "")
+            return nil
         default:
             throw AgentError("INVALID_ARGUMENT", "unknown action \(a["kind"] ?? "nil")")
         }
@@ -296,7 +321,10 @@ final class Device {
         if let at = p["at"] as? [String: Any], let x = (at["x"] as? NSNumber)?.doubleValue, let y = (at["y"] as? NSNumber)?.doubleValue {
             // a field that already has the focus there is not tapped again (each event costs about 350 ms)
             let focused = focusedField(app)
-            if focused == nil || !(focused!.frame.contains(CGPoint(x: x, y: y))) { point(x, y).tap() }
+            if focused == nil || !(focused!.frame.contains(CGPoint(x: x, y: y))) {
+                _ = animationsOver(x, y)
+                point(x, y).tap()
+            }
         }
         let timeout = Double((p["focusTimeoutMs"] as? NSNumber)?.intValue ?? 2000) / 1000
         var field = focusedField(app)

@@ -126,6 +126,8 @@ export type Hello = z.infer<typeof Hello>;
 
 export const ActResult = z.object({
   settle: SettleResult.optional(),
+  /** iOS: how long the touch waited for the app's animations to end (UIKit takes no touches during them). */
+  animationWaitMs: z.number().optional(),
   hash: z.string().optional(),
   tree: Tree.optional(),
 });

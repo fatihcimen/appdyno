@@ -138,6 +138,29 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     }
   }, 180_000);
 
+  // UIKit takes no touches while a view animates in, and the tree shows it where it ends from the
+  // start: a tap sent then is lost unless the runner waits for the animation (an A/B run lost one so)
+  it('taps a button that is still sliding in, once (5 of 5)', async () => {
+    await home();
+    await d.openUrl('gdfixture://open/slide', APP);
+    await new Promise((r) => setTimeout(r, 1_000));
+    const show = byId(await d.read(APP), 'slide_show')!;
+    const waits: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      // no settle: the next tap goes out while the button still moves
+      const r = await d.tap(show, { settle: false, read: 'tree' });
+      const confirm = byId(buildScreen(r.tree!, { platform: 'ios' }), 'slide_confirm')!;
+      expect(confirm).toBeDefined();
+      waits.push((await d.tap(confirm, { settle: SETTLE })).animationWaitMs ?? 0);
+    }
+    expect(byId(await d.read(APP), 'slide_count')?.label).toBe('Onay: 5');
+    // each tap waited for the animation: not a lucky late tap
+    expect(
+      waits.every((w) => w > 0),
+      `waits ${waits}`,
+    ).toBe(true);
+  }, 120_000);
+
   it('settles on a screen whose text keeps ticking', async () => {
     const s = await open('Sayaç');
     expect(s.settle!.settled).toBe(true);

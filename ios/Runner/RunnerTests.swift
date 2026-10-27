@@ -93,13 +93,15 @@ final class RunnerTests: XCTestCase {
             return Reply(result: d.treeJSON(c, elapsedMs: Int(Date().timeIntervalSince(t0) * 1000)))
         case "act":
             guard let a = p["action"] as? [String: Any] else { throw AgentError("INVALID_ARGUMENT", "action is required") }
-            try d.perform(a)
+            let waited = try d.perform(a)
             // the quiet window starts once the action has returned: a synthesized tap alone takes 300–600 ms,
             // and a window counted from its start would be spent before the app saw the touch
             let at = Int(Date().timeIntervalSince1970 * 1000)
             let tap: (Double, Double)? = a["kind"] as? String == "tap"
                 ? ((a["x"] as? NSNumber)?.doubleValue ?? -1, (a["y"] as? NSNumber)?.doubleValue ?? -1) : nil
-            return Reply(result: try d.after(p, job: job, actionAt: at, tapAt: tap))
+            var out = try d.after(p, job: job, actionAt: at, tapAt: tap)
+            if let waited { out["animationWaitMs"] = waited }
+            return Reply(result: out)
         case "text.set":
             return Reply(result: try d.setText(p, job: job))
         case "screenshot":
