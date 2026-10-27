@@ -6,6 +6,7 @@ export {
   AndroidDevice,
   TIMEOUTS,
   TEST_LOCATION,
+  TEST_TAG,
   mockedProviders,
   type ActOptions,
 } from './android/device.js';
