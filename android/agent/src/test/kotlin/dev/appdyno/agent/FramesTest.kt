@@ -35,8 +35,8 @@ class FramesTest {
     @Test
     fun errorCodesMatchTheHost() {
         assertEquals(-32000, rpcCode("TIMEOUT"))
-        assertEquals(-32013, rpcCode("INTERNAL"))
-        assertEquals(-32013, rpcCode("NOPE"))
-        assertEquals(14, ERROR_CODES.size)
+        assertEquals(-32014, rpcCode("INTERNAL"))
+        assertEquals(-32014, rpcCode("NOPE"))
+        assertEquals(15, ERROR_CODES.size)
     }
 }

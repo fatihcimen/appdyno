@@ -126,7 +126,7 @@ final class ErrorTests: XCTestCase {
         XCTAssertEqual(AgentError("TIMEOUT", "").rpcCode, -32000)
         XCTAssertEqual(AgentError("NOT_FOUND", "").rpcCode, -32008)
         XCTAssertEqual(AgentError("whatever", "").code, "INTERNAL")
-        XCTAssertEqual(AgentError("INTERNAL", "").rpcCode, -32013)
+        XCTAssertEqual(AgentError("INTERNAL", "").rpcCode, -32014)
     }
 
     func testTokens() {

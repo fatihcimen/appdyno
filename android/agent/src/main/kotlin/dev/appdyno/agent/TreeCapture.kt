@@ -10,6 +10,8 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 class CWindow(
+    /** The platform's window id (-1: not known): a new activity or dialog is a new window. */
+    val id: Int,
     val type: Int,
     val pkg: String?,
     val layer: Int,
@@ -102,14 +104,14 @@ class TreeCapture(private val automation: Automation) {
         for (w in list) {
             val root = (if (Build.VERSION.SDK_INT >= 33) w.getRoot(prefetch) else w.root) ?: continue
             val b = Rect().also { w.getBoundsInScreen(it) }
-            windows += CWindow(w.type, root.packageName?.toString(), w.layer, b, w.isActive, w.isFocused)
+            windows += CWindow(w.id, w.type, root.packageName?.toString(), w.layer, b, w.isActive, w.isFocused)
             roots += root to windows.size - 1
         }
         if (roots.isEmpty()) {
             val root = ua.rootInActiveWindow
                 ?: throw AgentFailure("NOT_FOUND", "no window to read (screen off or locked?)")
             val b = Rect().also { root.getBoundsInScreen(it) }
-            windows += CWindow(AccessibilityWindowInfo.TYPE_APPLICATION, root.packageName?.toString(), 0, b, true, true)
+            windows += CWindow(-1, AccessibilityWindowInfo.TYPE_APPLICATION, root.packageName?.toString(), 0, b, true, true)
             roots += root to 0
         }
 

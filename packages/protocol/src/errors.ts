@@ -13,6 +13,8 @@ export const ERROR_CODES = [
   'APP_NOT_RUNNING',
   'POLICY_DENIED',
   'INVALID_ARGUMENT',
+  /** A touch aimed at a screen another window has replaced since it was read: read it again. */
+  'STALE',
   'INTERNAL',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

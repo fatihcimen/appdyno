@@ -15,6 +15,7 @@ val ERROR_CODES = listOf(
     "APP_NOT_RUNNING",
     "POLICY_DENIED",
     "INVALID_ARGUMENT",
+    "STALE",
     "INTERNAL",
 )
 

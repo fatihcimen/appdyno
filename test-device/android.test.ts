@@ -200,6 +200,20 @@ describe.skipIf(!serial)('android agent on a device', () => {
     });
   }, 60_000);
 
+  // the app replaced its screen (a new activity) between the read and the tap: the tap is refused as stale,
+  // never sent to the new screen (A/B run 8559e13f: a tap meant for the landing went to a splash)
+  it('refuses a tap aimed at a screen another window has replaced since it was read', async () => {
+    const s = await home();
+    const form = find(s, 'FORM')!;
+    await d.openUrl('gdfixture://open/list', APP);
+    await new Promise((r) => setTimeout(r, 1_500));
+    const e = await d.tap(form, { settle: SETTLE, before: s.hash }).catch((x: unknown) => x);
+    expect((e as DeviceError).code).toBe('STALE');
+    // nothing was tapped: still the list
+    expect(labels(await screen())).not.toContain('Bilgilerinizi girin');
+    await home();
+  });
+
   it('refuses typing when no field has focus', async () => {
     await home();
     const e = await d.typeText('x', { settle: false }).catch((x: unknown) => x);

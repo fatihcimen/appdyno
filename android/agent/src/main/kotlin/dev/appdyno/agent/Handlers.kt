@@ -76,6 +76,15 @@ class Handlers(private val automation: Automation, private val token: String) {
     private fun act(p: JSONObject, job: Job): Reply {
         val a = p.getJSONObject("action")
         val cancelled = { job.cancelled }
+        // a touch aimed at a screen that another window has replaced since it was read lands on the wrong one (A/B
+        // run 8559e13f: the app restarted into its splash between the read and the tap, and the tap was lost)
+        if (a.getString("kind") != "key" && p.has("before")) recent[p.getString("before")]?.let { read ->
+            val then = WindowIds.app(read.windows.map { it.id to it.type })
+            val now = WindowIds.app(automation.ua.windows.map { it.id to it.type })
+            if (WindowIds.replaced(then, now)) {
+                throw AgentFailure("STALE", "the screen changed since it was read: another window is in front", "read the screen again")
+            }
+        }
         val at = SystemClock.uptimeMillis()
         when (a.getString("kind")) {
             "tap" -> input.tap(a.getDouble("x").toFloat(), a.getDouble("y").toFloat())
@@ -286,4 +295,13 @@ class Handlers(private val automation: Automation, private val token: String) {
             "clipboard", "orientation", "settle", "a11y.read",
         )
     }
+}
+
+/** The app windows of a screen by id (pure, unit tested). */
+object WindowIds {
+    fun app(windows: List<Pair<Int, Int>>): Set<Int> =
+        windows.filter { it.second == android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION }.map { it.first }.toSet()
+
+    /** Another app window came in front, or the one read is gone (an unknown id proves nothing). */
+    fun replaced(then: Set<Int>, now: Set<Int>) = -1 !in then && then.isNotEmpty() && now.isNotEmpty() && then != now
 }
