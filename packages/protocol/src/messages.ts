@@ -136,7 +136,9 @@ export type ActResult = z.infer<typeof ActResult>;
 export const TextResult = ActResult.extend({
   /** How the text got in: set on the node, pasted, or typed as key events. */
   mode: z.enum(['setText', 'paste', 'keys']),
-  verified: z.boolean(),
+  /** The field read back: true when it holds the text, false when it does not; absent when it cannot be
+   * read back (a password, a code entry no element of which has the focus, a field gone after it submitted). */
+  verified: z.boolean().optional(),
   focusMs: z.number(),
 });
 export type TextResult = z.infer<typeof TextResult>;

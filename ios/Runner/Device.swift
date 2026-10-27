@@ -348,11 +348,11 @@ final class Device {
             if p["submit"] as? Bool == true, !EventShim.type("\n", orientation: o) { app.typeText("\n") }
             var out = try after(p, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
             out["mode"] = "keys"
-            out["verified"] = false
             out["focusMs"] = focusMs
             return out
         }
         let replace = p["replace"] as? Bool == true
+        let secure = field.elementType == .secureTextField
         let before = currentText(field) ?? ""
         // nil: the field is gone (a code entry that submitted itself took the text)
         func check() -> Bool? {
@@ -403,7 +403,8 @@ final class Device {
         if p["submit"] as? Bool == true, field.exists { field.typeText("\n") }
         var out = try after(p, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
         out["mode"] = mode
-        out["verified"] = verified ?? false
+        // no verdict when the field cannot be read back: gone (it took the text and submitted), or secure
+        if let verified, !secure { out["verified"] = verified }
         out["focusMs"] = focusMs
         return out
     }

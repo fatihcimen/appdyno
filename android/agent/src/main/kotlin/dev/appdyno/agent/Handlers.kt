@@ -125,7 +125,8 @@ class Handlers(private val automation: Automation, private val token: String) {
         val o = text.set(p.getString("text"), p.optBoolean("replace"), p.optLong("focusTimeoutMs", 5_000), cancelled, tapAt, point)
         if (p.optBoolean("submit")) input.key(android.view.KeyEvent.KEYCODE_ENTER)
         val at = SystemClock.uptimeMillis()
-        val out = JSONObject().put("mode", o.mode).put("verified", o.verified).put("focusMs", o.focusMs)
+        val out = JSONObject().put("mode", o.mode).put("focusMs", o.focusMs)
+        o.verified?.let { out.put("verified", it) }
         return after(p, at, job, out)
     }
 

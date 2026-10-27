@@ -85,6 +85,12 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     }
   });
 
+  it('gives no verdict on a secure field (it cannot be read back)', async () => {
+    const s = await open('Form');
+    const r = await d.typeText('Gizli123!', { at: byId(s, 'password_input')!, replace: true });
+    expect(r.verified).toBeUndefined();
+  });
+
   it('of the same control twice, the copy under another control is not shown', async () => {
     await open('Form');
     const nodes = (await d.tree()).nodes.filter((n) => n.id === 'dup_close');
@@ -187,8 +193,9 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     await new Promise((r) => setTimeout(r, 1_000));
     // full, the entry gives up the focus at once: the runner must not read a field that is gone
     const r = await d.typeText('123456', { settle: SETTLE, submit: true });
-    // no element reports the focus: typed as key events, not read back
-    expect(r).toMatchObject({ mode: 'keys', verified: false });
+    // no element reports the focus: typed as key events, not read back (no verdict)
+    expect(r.mode).toBe('keys');
+    expect(r.verified).toBeUndefined();
     expect(byId(await d.read(APP), 'code_value')?.label).toBe('Kod: 123456');
     expect(await d.foreground()).toBe(APP); // the runner still answers
   });

@@ -3,6 +3,7 @@ package dev.appdyno.agent
 import android.content.ClipData
 import android.os.Bundle
 import android.os.SystemClock
+import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 
 /** What the field should hold after typing `text` (pure, unit tested). */
@@ -26,7 +27,8 @@ object TextPlan {
     fun keysOnly(maxTextLength: Int, text: String) = maxTextLength in 1 until text.length
 }
 
-class TextOutcome(val mode: String, val verified: Boolean, val focusMs: Long)
+/** `verified`: the field read back holds the text (null: it cannot be read back, a password or no field). */
+class TextOutcome(val mode: String, val verified: Boolean?, val focusMs: Long)
 
 /** Which editable node a point means (pure, unit tested): boxes are left, top, right, bottom. */
 object EditablePick {
@@ -108,7 +110,7 @@ class TextInput(private val automation: Automation, private val input: Input, pr
         if (field == null) {
             // no field reports the focus but the keyboard is up (a code entry drawn by the app): the keys go to
             // whatever has the keyboard, as a person's would; the text cannot be read back
-            if (keyboardShown() && TextPlan.isAscii(text) && input.typeKeys(text)) return TextOutcome("keys", false, focusMs)
+            if (keyboardShown() && TextPlan.isAscii(text) && input.typeKeys(text)) return TextOutcome("keys", null, focusMs)
             throw AgentFailure("NO_FOCUS", "no editable field has input focus", "tap the field first")
         }
         val current = if (field.isShowingHintText) "" else field.text?.toString()
@@ -122,29 +124,57 @@ class TextInput(private val automation: Automation, private val input: Input, pr
                 select(field, 0, (field.text ?: "").length)
                 input.key(android.view.KeyEvent.KEYCODE_DEL)
             }
-            if (input.typeKeys(text)) return TextOutcome("keys", false, focusMs)
+            // one box takes one character: the whole text cannot be read back from the field
+            if (input.typeKeys(text)) return TextOutcome("keys", null, focusMs)
         }
         val args = Bundle().apply {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, target)
         }
+        val verdict: Boolean? = if (password) null else true
+        val path = StringBuilder()
+        // on a device that stalls (a starved emulator) an action's answer times out and the text still lands a
+        // moment later: an accepted or slow action is read back with patience, and nothing that is already in
+        // the field is cleared to try the next way
+        fun attempt(way: String, action: () -> Boolean): Boolean {
+            val t0 = SystemClock.uptimeMillis()
+            val accepted = action()
+            val slow = SystemClock.uptimeMillis() - t0 > SLOW_ACTION_MS
+            val held = check(field, target, password, if (accepted || slow) CHECK_MS else 0)
+            path.append("$way(accepted=$accepted slow=$slow held=$held) ")
+            return held
+        }
+        fun done(mode: String, verified: Boolean?): TextOutcome {
+            // the way it went in, never the text: what a stalled device did shows in its log
+            Log.i(TAG, "typing ${target.length} chars into a field: ${path}-> $mode verified=$verified")
+            return TextOutcome(mode, verified, focusMs)
+        }
         if (!TextPlan.keysOnly(field.maxTextLength, text) &&
-            field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args) && check(field, target, password)
+            attempt("setText") { field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args) }
         ) {
-            return TextOutcome("setText", !password, focusMs)
+            return done("setText", verdict)
         }
         // paste: the field's own input path (formatters, filters) sees the text
         clipboard.set(if (replace) target else text)
-        if (replace) select(field, 0, (field.text ?: "").length) else select(field, (field.text ?: "").length, (field.text ?: "").length)
-        if (field.performAction(AccessibilityNodeInfo.ACTION_PASTE) && check(field, target, password)) {
-            return TextOutcome("paste", !password, focusMs)
+        if (attempt("paste") {
+                if (replace) select(field, 0, (field.text ?: "").length) else select(field, (field.text ?: "").length, (field.text ?: "").length)
+                field.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+            }
+        ) {
+            return done("paste", verdict)
         }
         if (TextPlan.isAscii(text)) {
             if (replace) {
                 select(field, 0, (field.text ?: "").length)
                 input.key(android.view.KeyEvent.KEYCODE_DEL)
             }
-            if (input.typeKeys(text)) return TextOutcome("keys", check(field, target, password), focusMs)
+            if (input.typeKeys(text)) {
+                if (password || check(field, target, password, CHECK_MS)) return done("keys", verdict)
+                // keys lost on their way (a keyboard app switching layouts on a stalled device): set once more
+                if (attempt("setText again") { field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args) }) return done("setText", true)
+                return done("keys", false)
+            }
         }
+        Log.i(TAG, "typing ${target.length} chars into a field: ${path}-> not taken")
         throw AgentFailure("INTERNAL", "the field did not take the text", "read the screen; the field may be read-only")
     }
 
@@ -152,14 +182,16 @@ class TextInput(private val automation: Automation, private val input: Input, pr
     private fun keyboardShown(): Boolean =
         automation.ua.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
 
-    private fun check(field: AccessibilityNodeInfo, target: String, password: Boolean): Boolean {
+    /** The field read back holds `target`, read until `waitMs` has passed (0: one read). */
+    private fun check(field: AccessibilityNodeInfo, target: String, password: Boolean, waitMs: Long = 0): Boolean {
         if (password) return true // a password field reports no readable text
-        repeat(3) {
+        val end = SystemClock.uptimeMillis() + waitMs
+        while (true) {
             field.refresh()
             if (TextPlan.matches(field.text?.toString(), target)) return true
-            Thread.sleep(30)
+            if (SystemClock.uptimeMillis() >= end) return false
+            Thread.sleep(CHECK_POLL_MS)
         }
-        return false
     }
 
     private fun select(field: AccessibilityNodeInfo, from: Int, to: Int) {
@@ -225,5 +257,14 @@ class TextInput(private val automation: Automation, private val input: Input, pr
             Thread.sleep(40)
         }
         return null
+    }
+
+    companion object {
+        const val TAG = "appdyno"
+        /** How long a read-back waits for an accepted (or slow) action's text to show in the field. */
+        const val CHECK_MS = 1_000L
+        const val CHECK_POLL_MS = 50L
+        /** An action that took this long answered from a device that stalled: its text may land late. */
+        const val SLOW_ACTION_MS = 1_000L
     }
 }

@@ -329,7 +329,7 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
         // never the text itself (it may be a phone number or a code)
         return {
           r,
-          done: `typed (${Array.from(st.text).length} characters${st.submit ? ', submitted' : ''}${r.verified ? '' : ', not verified'})`,
+          done: `typed (${Array.from(st.text).length} characters${st.submit ? ', submitted' : ''}${r.verified === false ? ', the field read back holds other text' : r.verified === undefined ? ', not read back' : ''})`,
         };
       }
       case 'press_key': {

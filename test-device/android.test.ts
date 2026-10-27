@@ -126,14 +126,52 @@ describe.skipIf(!serial)('android agent on a device', () => {
       true,
     );
     const pw = after.list.find((e) => e.id === 'password_input')!;
-    // a password field reports no readable text: typed, not verified
-    expect(await d.typeText('Gizli123!', { at: pw, replace: true })).toMatchObject({
-      verified: false,
-    });
+    // a password field reports no readable text: typed, no verdict
+    expect((await d.typeText('Gizli123!', { at: pw, replace: true })).verified).toBeUndefined();
     const submit = (await screen()).list.find((e) => e.label === 'GÖNDER')!;
     const done = await d.tap(submit, { settle: SETTLE, read: 'tree' });
     expect(done.tree!.nodes.some((n) => n.t === 'Gönderildi: Çağrı İşgüzar öğün')).toBe(true);
   });
+
+  // a loaded Mac starves the emulator: an A/B run's device stopped for 3.5 s while a phone number was
+  // typed, its clock going on, and the field stayed empty. The emulator's process is stopped here as the
+  // Mac's load stopped it (the guest's time goes on: its timeouts run out meanwhile)
+  it.skipIf(!serial?.startsWith('emulator-'))(
+    'types the text in although the device stops for 3.5 s mid-typing (4 of 4)',
+    async () => {
+      const port = serial!.slice('emulator-'.length);
+      const pids = spawnSync('pgrep', ['-f', `qemu.*-port ${port}( |$)`])
+        .stdout.toString()
+        .trim()
+        .split('\n')
+        .filter(Boolean)
+        .map(Number);
+      expect(pids.length, 'the emulator process').toBeGreaterThan(0);
+      const stall = async () => {
+        for (const pid of pids) process.kill(pid, 'SIGSTOP');
+        await new Promise((r) => setTimeout(r, 3_500));
+        for (const pid of pids) process.kill(pid, 'SIGCONT');
+      };
+      await open('FORM');
+      const [l, t, r, b] = (await d.tree()).nodes.find((n) => n.id?.endsWith(':id/phone_input'))!.b;
+      const phone = { x: (l + r) / 2, y: (t + b) / 2 };
+      for (const [i, offsetMs] of [0, 60, 150, 300].entries()) {
+        await d.tap(phone, { settle: SETTLE });
+        const text = `53212345${60 + i}`;
+        const typing = d.typeText(text, { replace: true, settle: false });
+        await new Promise((res) => setTimeout(res, offsetMs));
+        await stall();
+        const res = await typing;
+        const field = (await d.tree()).nodes.find((n) => n.id?.endsWith(':id/phone_input'));
+        expect({ offsetMs, text: field?.t, verified: res.verified }).toEqual({
+          offsetMs,
+          text,
+          verified: true,
+        });
+      }
+    },
+    120_000,
+  );
 
   it('refuses typing when no field has focus', async () => {
     await home();
