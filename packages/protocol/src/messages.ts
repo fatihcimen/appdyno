@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Protocol major (breaking changes) and minor (additive, announced by capabilities). */
-export const PROTOCOL = { major: 1, minor: 1 } as const;
+export const PROTOCOL = { major: 1, minor: 2 } as const;
 
 /** Node flags (bit mask `f` of a wire node). */
 export const NODE_FLAGS = {
@@ -17,6 +17,10 @@ export const NODE_FLAGS = {
   password: 512,
   checkable: 1024,
   longClickable: 2048,
+  /** Android: not important for accessibility (a screen reader skips it; its children may be read). */
+  notImportant: 4096,
+  /** Android 9+: a screen reader reads it as one unit with its children. */
+  screenReaderFocusable: 8192,
 } as const;
 export type NodeFlag = keyof typeof NODE_FLAGS;
 
@@ -152,6 +156,69 @@ export const Screenshot = z.object({
 
 export const Foreground = z.object({ pkg: z.string().optional() });
 
+/** Android `a11y.read`: a text node's characters and how many of them are not shown (cut or ellipsized). */
+export const TextClip = z.object({
+  n: z.number().int(),
+  chars: z.number().int(),
+  hidden: z.number().int(),
+});
+export type TextClip = z.infer<typeof TextClip>;
+/** Android `a11y.read`: a node's traversal hints as node indices (a screen reader reads `n` before `before`, after `after`). */
+export const Traversal = z.object({
+  n: z.number().int(),
+  before: z.number().int().optional(),
+  after: z.number().int().optional(),
+});
+export type Traversal = z.infer<typeof Traversal>;
+
+/**
+ * The kinds of accessibility issue `audit` reports: the iOS platform audit's types; Android's checks use
+ * the same names where they check the same thing, plus `imageContrast` and `duplicateLabel`.
+ */
+export const AUDIT_TYPES = [
+  'contrast',
+  'elementDetection',
+  'hitRegion',
+  'sufficientElementDescription',
+  'dynamicType',
+  'textClipped',
+  'trait',
+  'imageContrast',
+  'duplicateLabel',
+] as const;
+export type AuditType = (typeof AUDIT_TYPES)[number];
+
+export const AuditIssue = z.object({
+  type: z.enum(AUDIT_TYPES),
+  /** The engine's own rule: `XCUIAccessibilityAuditType.contrast` (iOS), `android.textContrast`. */
+  rule: z.string(),
+  message: z.string(),
+  /** The element's [left, top, right, bottom] in tap units; absent when the element is gone. */
+  b: Rect.optional(),
+  /** The element as a tree node names it: class or type, id, description (label), text. */
+  element: z
+    .object({
+      c: z.string(),
+      id: z.string().optional(),
+      d: z.string().optional(),
+      t: z.string().optional(),
+    })
+    .optional(),
+});
+export type AuditIssue = z.infer<typeof AuditIssue>;
+
+export const AuditResult = z.object({
+  /** `platform`: the iOS platform audit; `rules`: the host's checks of the tree and a screenshot. */
+  engine: z.enum(['platform', 'rules']),
+  issues: z.array(AuditIssue),
+  /** More issues than `maxIssues`, or the time ran out. */
+  truncated: z.boolean(),
+  elapsedMs: z.number(),
+  /** Android: the read the checks ran on, with the screen reader's traversal hints (its reading order). */
+  read: z.object({ tree: Tree, traversal: z.array(Traversal) }).optional(),
+});
+export type AuditResult = z.infer<typeof AuditResult>;
+
 /** Requests the host sends, with their params and result schemas (the agent validates its side). */
 export const METHODS = {
   hello: {
@@ -212,6 +279,23 @@ export const METHODS = {
       rotation: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
     }),
     result: z.object({}),
+  },
+  /** iOS (capability `audit`): the platform accessibility audit of the app in front. */
+  audit: {
+    params: z.object({
+      types: z.array(z.enum(AUDIT_TYPES)).max(AUDIT_TYPES.length).optional(),
+      maxIssues: z.number().int().min(1).max(200).default(50),
+    }),
+    result: AuditResult.omit({ engine: true, read: true }),
+  },
+  /**
+   * Android (capability `a11y.read`): a tree read with what an accessibility audit needs besides: the
+   * nodes' traversal hints, and for up to `maxNodes` text nodes how many characters have no visible place
+   * on the screen (the platform's character locations).
+   */
+  'a11y.read': {
+    params: z.object({ maxNodes: z.number().int().min(1).max(200).default(60) }),
+    result: z.object({ tree: Tree, clips: z.array(TextClip), traversal: z.array(Traversal) }),
   },
   cancel: { params: z.object({ id: z.number().int() }), result: z.object({}) },
   shutdown: { params: z.object({}), result: z.object({}) },

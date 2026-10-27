@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Accessibility audit (`device.audit()`): the iOS platform audit through the runner (`audit`), and on
+  Android the host's checks of a tree, a screenshot and the characters each text does not show
+  (`a11y.read`, which also brings the nodes' traversal hints): touch targets, text and icon contrast, names, duplicate names, clipped text.
+- Android tree flags: not important for accessibility, and read as one unit by a screen reader.
+
 ## 0.5.0
 
 - Packaging: `scripts/install.sh` installs the MCP server and the `appdyno` command from this

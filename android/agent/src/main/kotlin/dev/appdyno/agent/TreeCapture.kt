@@ -80,7 +80,14 @@ class TreeCapture(private val automation: Automation) {
      * its own work, as one that never yields can hold a starting app's UI thread against its input (ANRs at
      * app start in the A/B). Slower on a busy app; a quiet app is read uninterrupted.
      */
-    fun capture(maxDepth: Int = 128, maxNodes: Int = 5_000, budgetMs: Long = 8_000, yielding: Boolean = false): Capture {
+    fun capture(
+        maxDepth: Int = 128,
+        maxNodes: Int = 5_000,
+        budgetMs: Long = 8_000,
+        yielding: Boolean = false,
+        /** Each framework node with its index, while the walk still holds it (a11y.read's). */
+        onNode: ((Int, AccessibilityNodeInfo) -> Unit)? = null,
+    ): Capture {
         val start = SystemClock.uptimeMillis()
         val ua = automation.ua
         automation.clearCache()
@@ -119,6 +126,7 @@ class TreeCapture(private val automation: Automation) {
                     break
                 }
                 indices[i] = nodes.size
+                onNode?.invoke(nodes.size, item.first)
                 nodes += copy(item.first, item.second, item.third)
             }
             if (truncated || ++depth >= maxDepth || SystemClock.uptimeMillis() - start > budgetMs) {
@@ -179,6 +187,9 @@ class TreeCapture(private val automation: Automation) {
         if (n.isEditable) f = f or Flags.EDITABLE
         if (n.isScrollable) f = f or Flags.SCROLLABLE
         if (n.isPassword) f = f or Flags.PASSWORD
+        // local fields of the node, no call to the app: what a screen reader reads as one unit, or skips
+        if (!n.isImportantForAccessibility) f = f or Flags.NOT_IMPORTANT
+        if (Build.VERSION.SDK_INT >= 28 && n.isScreenReaderFocusable) f = f or Flags.SCREEN_READER_FOCUSABLE
         val hint = n.hintText?.toString()
         // a field showing its hint reports the hint as its text: it has no text of its own
         val text = if (n.isShowingHintText) null else n.text?.toString()

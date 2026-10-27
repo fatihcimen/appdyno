@@ -31,6 +31,7 @@ export { listPhones } from './ios/usbmux.js';
 export * from './ios/perf.js';
 export * from './ios/trace.js';
 export * from './screen/index.js';
+export { auditAndroid, decodePng, contrastRatio, type Image } from './audit.js';
 export {
   benchmark,
   appdynoDriver,

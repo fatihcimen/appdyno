@@ -42,20 +42,22 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 
 ## Methods
 
-| method                            | params                                                                         | result                                                                  |
-| --------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| `hello`                           | `token`, `protocol`                                                            | agent and device description                                            |
-| `ping`                            | –                                                                              | `uptimeMs`                                                              |
-| `tree.get`                        | `maxDepth?` (128), `maxNodes?` (5000)                                          | `Tree`                                                                  |
-| `act`                             | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`                  | `settle?`, `hash?`, `tree?`                                             |
-| `text.set`                        | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (2000), `settle?`, `read` | as `act`, plus `mode` (`setText`/`paste`/`keys`), `verified`, `focusMs` |
-| `screenshot`                      | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                              | `w`, `h`, `format`, `bytes`, plus the image as an attachment            |
-| `app.foreground`                  | –                                                                              | `pkg?`                                                                  |
-| `app.target` (iOS)                | `pkg` (bundle id)                                                              | –                                                                       |
-| `clipboard.set` / `clipboard.get` | `text` / –                                                                     | – / `text?`                                                             |
-| `orientation.set`                 | `rotation` 0–3 (frozen)                                                        | –                                                                       |
-| `cancel`                          | `id`                                                                           | –                                                                       |
-| `shutdown`                        | –                                                                              | – (the agent exits)                                                     |
+| method                            | params                                                                         | result                                                                           |
+| --------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| `hello`                           | `token`, `protocol`                                                            | agent and device description                                                     |
+| `ping`                            | –                                                                              | `uptimeMs`                                                                       |
+| `tree.get`                        | `maxDepth?` (128), `maxNodes?` (5000)                                          | `Tree`                                                                           |
+| `act`                             | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`                  | `settle?`, `hash?`, `tree?`                                                      |
+| `text.set`                        | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (2000), `settle?`, `read` | as `act`, plus `mode` (`setText`/`paste`/`keys`), `verified`, `focusMs`          |
+| `screenshot`                      | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                              | `w`, `h`, `format`, `bytes`, plus the image as an attachment                     |
+| `app.foreground`                  | –                                                                              | `pkg?`                                                                           |
+| `app.target` (iOS)                | `pkg` (bundle id)                                                              | –                                                                                |
+| `clipboard.set` / `clipboard.get` | `text` / –                                                                     | – / `text?`                                                                      |
+| `orientation.set`                 | `rotation` 0–3 (frozen)                                                        | –                                                                                |
+| `audit` (iOS)                     | `types?`, `maxIssues` (50)                                                     | `issues`, `truncated`, `elapsedMs`                                               |
+| `a11y.read` (Android)             | `maxNodes` (60)                                                                | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`) |
+| `cancel`                          | `id`                                                                           | –                                                                                |
+| `shutdown`                        | –                                                                              | – (the agent exits)                                                              |
 
 `action` is one of `tap {x,y}`, `longPress {x,y,durationMs}`, `swipe {from,to,durationMs}`,
 `gesture {pointers}` (1–5 fingers, each a list of `{x,y,t}` samples; fingers go down together at their
@@ -80,6 +82,9 @@ supported yet. iOS sends no accessibility events to a test, so the settle decide
 description), `h` (hint), `b` (bounds on screen), `f` (flags: visible 1, clickable 2, focusable 4,
 focused 8, enabled 16, checked 32, selected 64, editable 128, scrollable 256, password 512, checkable
 1024, long-clickable 2048).
+
+Android adds flag 4096 (not important for accessibility: a screen reader skips the node) and 8192 (a
+screen reader reads the node with its children as one unit, Android 9+); both are local fields of the node.
 
 `truncated` is true when a limit (depth, nodes, 8 s) or an unreadable node cut the walk short;
 `elapsedMs` is the agent's own time; `hash` is the layout digest (class, id and bounds of the visible
@@ -123,6 +128,30 @@ What the window catches, measured on the fixture's late-reaction screen (50 taps
 A reaction that starts later than the window (a network answer, a timer) is not waited for: wait for
 the element instead. A touch listener on a view that is not marked clickable is treated as inert; one
 reacting within 80 ms is caught (0/50 missed at 30 ms), a slower one is not.
+
+### Accessibility audit
+
+`audit` (host API `device.audit()`) answers the screen's accessibility issues, each with its `type`, the
+engine's `rule`, a `message`, the element's box `b` in tap units and the element (`c`, `id`, `d`, `t`):
+
+- iOS: the platform's own audit of the app in front (`performAccessibilityAudit`, Xcode 15+), types
+  `contrast`, `elementDetection`, `hitRegion`, `sufficientElementDescription`, `dynamicType`,
+  `textClipped`, `trait` (`types` picks some). The runner takes every issue itself, so none becomes a
+  test failure. A runner without the capability, or an audit the platform cannot run, answers
+  `UNSUPPORTED`.
+- Android: the host's checks of one `a11y.read` (the tree; per text node, how many characters have no
+  visible place: cut by the frame or replaced by an ellipsis, one call to the app per node, 1.5 s at
+  most; the nodes' traversal hints, resolved after the walk, 300 ms at most) and a PNG screenshot: `hitRegion` (a control under 48×48 dp), `contrast` (text under
+  4.5:1, 3:1 for text 28 dp tall, from the screenshot's pixels), `imageContrast` (an icon that is
+  tapped or named, 12–96 dp, under 3:1), `sufficientElementDescription` (a control, field or icon a
+  screen reader cannot name), `duplicateLabel` (controls read alike), `textClipped`. Elements cut by
+  the screen or a scrolling container's edge are not measured; nodes not important for accessibility
+  are skipped. Colours are read from the middle half of a text's height, 6 dp in from its sides (a
+  button's transparent inset is not its colour), and from an icon's inner 70 %. The result carries that
+  read (`read`: the tree and its traversal hints) for a caller that works out the screen reader's
+  reading order.
+- Limits: Compose's ellipsized text is not found (its hidden characters keep places of their own);
+  colours of text over a picture or a gradient are not measured (no clean sample).
 
 ## Errors
 

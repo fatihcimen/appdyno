@@ -1,4 +1,4 @@
-import { NODE_FLAGS, type Tree } from '@appdyno/protocol';
+import { NODE_FLAGS, type Traversal, type Tree } from '@appdyno/protocol';
 
 export type Rect = { x: number; y: number; width: number; height: number };
 
@@ -28,6 +28,13 @@ export type UiElement = {
   editable?: boolean;
   password?: boolean;
   scrollable?: boolean;
+  /** Android: a screen reader skips it (not important for accessibility); set only when true. */
+  notImportant?: boolean;
+  /** Android: a screen reader reads it with its children as one unit; set only when true. */
+  screenReaderFocusable?: boolean;
+  /** Android: a screen reader reads it before / after the element at this index (`a11y.read`'s hints). */
+  traversalBefore?: number;
+  traversalAfter?: number;
   /** Index of the parent in the flat list; absent for a root. */
   parent?: number;
   /** Package of the window the element is in (Android). */
@@ -48,7 +55,7 @@ const SYSTEM_UI = 'com.android.systemui';
  * windows (status bar, navigation bar, notification shade) are left out; system dialogs (permission
  * prompts, "app isn't responding") stay, as they are what the user sees and answers.
  */
-export function elementsOf(tree: Tree): UiElement[] {
+export function elementsOf(tree: Tree, traversal: Traversal[] = []): UiElement[] {
   const keep = tree.windows.map(
     (w) =>
       w.type !== INPUT_METHOD &&
@@ -80,11 +87,20 @@ export function elementsOf(tree: Tree): UiElement[] {
       editable: has('editable'),
       password: has('password'),
       scrollable: has('scrollable'),
+      ...(has('notImportant') && { notImportant: true }),
+      ...(has('screenReaderFocusable') && { screenReaderFocusable: true }),
       ...(parent !== undefined && { parent }),
       ...(tree.windows[n.w]?.pkg && { pkg: tree.windows[n.w]!.pkg }),
     };
     index.set(i, out.length);
     out.push(el);
   });
+  for (const t of traversal) {
+    const el = out[index.get(t.n) ?? -1];
+    const before = t.before === undefined ? undefined : index.get(t.before);
+    const after = t.after === undefined ? undefined : index.get(t.after);
+    if (el && before !== undefined) el.traversalBefore = before;
+    if (el && after !== undefined) el.traversalAfter = after;
+  }
   return out;
 }

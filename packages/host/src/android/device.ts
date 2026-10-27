@@ -2,6 +2,7 @@ import {
   DeviceError,
   type ActParams,
   type ActResult,
+  type AuditResult,
   type Hello,
   type Key,
   type Method,
@@ -14,6 +15,7 @@ import {
   type Tree,
 } from '@appdyno/protocol';
 import { Adb, assertSerial, shq } from '../adb.js';
+import { auditAndroid, decodePng } from '../audit.js';
 import { DeviceQueue } from '../queue.js';
 import type { RpcClient } from '../rpc.js';
 import { afterTimeout } from '../stuck.js';
@@ -29,12 +31,20 @@ export const TIMEOUTS = {
   read: 15_000,
   screenshot: 30_000,
   app: 60_000,
+  /** The iOS platform audit takes seconds on a busy screen: a stuck-runner restart must not cut it. */
+  audit: 30_000,
 } as const;
 
 export type ActOptions = { settle?: SettleInput | false; read?: Read; before?: string };
 
 /** Read-only requests are retried once on a fresh connection when the agent went away. */
-const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>(['tree.get', 'screenshot', 'app.foreground', 'clipboard.get']);
+const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
+  'tree.get',
+  'a11y.read',
+  'screenshot',
+  'app.foreground',
+  'clipboard.get',
+]);
 
 const PKG = /^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/;
 const assertPkg = (p: string) => {
@@ -236,6 +246,26 @@ export class AndroidDevice {
     const r = await this.call('screenshot', opts, TIMEOUTS.screenshot);
     if (!r.binary) throw new DeviceError('INTERNAL', 'the screenshot came without its image');
     return { meta: r.result, data: r.binary };
+  }
+
+  /**
+   * The screen's accessibility issues (docs/protocol.md "Accessibility audit"): the host's checks of a
+   * tree read, a PNG screenshot and the characters each text does not show.
+   */
+  async audit(opts: { maxIssues?: number } = {}): Promise<AuditResult> {
+    const startedAt = Date.now();
+    const hello = await this.open();
+    const { tree, clips, traversal } = hello.capabilities.includes('a11y.read')
+      ? (await this.call('a11y.read', {}, TIMEOUTS.read)).result
+      : { tree: await this.tree(), clips: [], traversal: [] };
+    const shot = await this.screenshot({ format: 'png' });
+    const r = auditAndroid(tree, decodePng(shot.data), {
+      scale: hello.screen.density / 160,
+      clips,
+      ...(opts.maxIssues && { maxIssues: opts.maxIssues }),
+      startedAt,
+    });
+    return { ...r, read: { tree, traversal } };
   }
 
   async foreground(): Promise<string | undefined> {

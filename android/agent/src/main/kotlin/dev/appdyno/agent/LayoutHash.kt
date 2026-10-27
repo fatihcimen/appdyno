@@ -29,6 +29,8 @@ object Flags {
     const val PASSWORD = 512
     const val CHECKABLE = 1024
     const val LONG_CLICKABLE = 2048
+    const val NOT_IMPORTANT = 4096
+    const val SCREEN_READER_FOCUSABLE = 8192
 }
 
 /**

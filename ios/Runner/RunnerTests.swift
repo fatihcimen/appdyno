@@ -60,12 +60,12 @@ final class RunnerTests: XCTestCase {
         }()
         return [
             "agentVersion": agentVersion,
-            "protocol": ["major": 1, "minor": 1],
+            "protocol": ["major": 1, "minor": 2],
             "platform": "ios",
             "osVersion": UIDevice.current.systemVersion,
             "model": env["SIMULATOR_MODEL_IDENTIFIER"] ?? UIDevice.current.model,
             "screen": ["w": b.width, "h": b.height, "density": UIScreen.main.scale, "rotation": rotation],
-            "capabilities": ["tree", "act", "settle", "text", "screenshot", "clipboard", "orientation", "app.target"]
+            "capabilities": ["tree", "act", "settle", "text", "screenshot", "clipboard", "orientation", "app.target", "audit"]
                 + (IdleShim.applied.isEmpty ? [] : ["noIdleWait"]) + (EventShim.available ? ["fastTap"] : []),
             "pid": Int(ProcessInfo.processInfo.processIdentifier),
             "idleWaitsOff": IdleShim.applied,
@@ -106,6 +106,8 @@ final class RunnerTests: XCTestCase {
             return Reply(result: try d.setText(p, job: job))
         case "screenshot":
             return try d.screenshot(p)
+        case "audit":
+            return Reply(result: try d.audit(p, job: job))
         case "app.foreground":
             return Reply(result: d.foreground())
         case "app.target":

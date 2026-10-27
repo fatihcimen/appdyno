@@ -2,6 +2,8 @@ import {
   DeviceError,
   type ActParams,
   type ActResult,
+  type AuditResult,
+  type AuditType,
   type Hello,
   type Key,
   type Method,
@@ -251,6 +253,22 @@ export class IosDevice {
     const r = await this.call('screenshot', opts, TIMEOUTS.screenshot);
     if (!r.binary) throw new DeviceError('INTERNAL', 'the screenshot came without its image');
     return { meta: r.result, data: r.binary };
+  }
+
+  /**
+   * The platform accessibility audit of the app in front (the runner's `audit`, Xcode's audit types);
+   * UNSUPPORTED from a runner built without it or where the platform cannot run it.
+   */
+  async audit(opts: { types?: AuditType[]; maxIssues?: number } = {}): Promise<AuditResult> {
+    const hello = await this.open();
+    if (!hello.capabilities.includes('audit'))
+      throw new DeviceError(
+        'UNSUPPORTED',
+        'this runner has no platform accessibility audit',
+        'rebuild the runner (appdyno ios build)',
+      );
+    const { result } = await this.call('audit', opts, TIMEOUTS.audit);
+    return { engine: 'platform', ...result };
   }
 
   async foreground(): Promise<string | undefined> {

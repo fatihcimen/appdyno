@@ -39,7 +39,7 @@ class Handlers(private val automation: Automation, private val token: String) {
         val d = Platform.display()
         return JSONObject()
             .put("agentVersion", BuildConfig.VERSION_NAME)
-            .put("protocol", JSONObject().put("major", 1).put("minor", 0))
+            .put("protocol", JSONObject().put("major", 1).put("minor", 2))
             .put("platform", "android")
             .put("osVersion", Build.VERSION.RELEASE)
             .put("sdk", Build.VERSION.SDK_INT)
@@ -57,6 +57,7 @@ class Handlers(private val automation: Automation, private val token: String) {
             Reply(treeJson(capture.capture(p.optInt("maxDepth", 128), p.optInt("maxNodes", 5_000), yielding = !quiet)))
         }
         "act" -> act(p, job)
+        "a11y.read" -> a11yRead(p, job)
         "text.set" -> textSet(p, job)
         "screenshot" -> screenshot(p)
         "app.foreground" -> Reply(JSONObject().apply { foreground()?.let { put("pkg", it) } })
@@ -115,6 +116,40 @@ class Handlers(private val automation: Automation, private val token: String) {
                 !c.onOtherWindow(x, y) && !HitTest.actionable(c.nodes, x, y, c::inApp)
             } == true
         return after(p, at, job, JSONObject(), inert)
+    }
+
+    /**
+     * A tree read with what an accessibility audit needs besides: each node's traversal hints (resolved
+     * after the walk from the nodes it fetched, within TRAVERSAL_MS) and, for its first `maxNodes` visible
+     * text nodes, how many characters the screen does not show (one call to the app per node, within
+     * TEXT_CLIP_MS).
+     */
+    private fun a11yRead(p: JSONObject, job: Job): Reply {
+        val max = p.optInt("maxNodes", 60)
+        val index = HashMap<android.view.accessibility.AccessibilityNodeInfo, Int>()
+        val texts = ArrayList<Pair<Int, android.view.accessibility.AccessibilityNodeInfo>>()
+        val c = capture.capture(yielding = !idle(job), onNode = { i, n ->
+            index[n] = i
+            if (texts.size < max && n.isVisibleToUser && !n.isEditable && !n.text.isNullOrEmpty()) texts += i to n
+        })
+        val traversal = JSONArray()
+        val tEnd = SystemClock.uptimeMillis() + TRAVERSAL_MS
+        for ((n, i) in index) {
+            if (job.cancelled || SystemClock.uptimeMillis() > tEnd) break
+            // a node without hints answers at once; one with hints is looked up (cached by the walk)
+            val before = n.traversalBefore?.let { index[it] }
+            val after = n.traversalAfter?.let { index[it] }
+            if (before == null && after == null) continue
+            traversal.put(JSONObject().put("n", i).apply { before?.let { put("before", it) }; after?.let { put("after", it) } })
+        }
+        val clips = JSONArray()
+        val end = SystemClock.uptimeMillis() + TEXT_CLIP_MS
+        for ((i, n) in texts) {
+            if (job.cancelled || SystemClock.uptimeMillis() > end) break
+            val (chars, hidden) = TextClip.of(n) ?: continue
+            clips.put(JSONObject().put("n", i).put("chars", chars).put("hidden", hidden))
+        }
+        return Reply(JSONObject().put("tree", treeJson(c)).put("clips", clips).put("traversal", traversal))
     }
 
     private fun textSet(p: JSONObject, job: Job): Reply {
@@ -241,10 +276,14 @@ class Handlers(private val automation: Automation, private val token: String) {
         /** A read waits for this long without a layout-moving event (an app already quiet: no wait). */
         const val IDLE_QUIET_MS = 150L
         const val IDLE_MAX_MS = 1_000L
+        /** a11y.read's character lookups stop after this long (the tree read is not counted). */
+        const val TEXT_CLIP_MS = 1_500L
+        /** a11y.read's traversal hints are resolved for this long at most. */
+        const val TRAVERSAL_MS = 300L
 
         val CAPABILITIES = listOf(
             "tree", "tap", "longPress", "swipe", "gesture", "key", "text", "screenshot", "foreground",
-            "clipboard", "orientation", "settle",
+            "clipboard", "orientation", "settle", "a11y.read",
         )
     }
 }
