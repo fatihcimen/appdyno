@@ -304,8 +304,17 @@ describe.skipIf(!serial)('android agent on a device', () => {
   });
 
   it('settles on a screen whose text keeps ticking', async () => {
-    const s = await open('SAYAÇ');
-    expect(s.settle!.settled).toBe(true);
+    const opened = await open('SAYAÇ');
+    expect(opened.settle!.settled).toBe(true);
+    // the tap below is measured once the activity is in: a loaded emulator ends its slide-in after the open
+    // tap's settle, and a tap during it counts that motion (seen: DUR not there yet, 10 reads). The ticking
+    // text moves its own box, so the screen is never the same twice: DUR in three reads 200 ms apart
+    let s = opened;
+    for (let seen = 0, i = 0; seen < 3 && i < 40; i++) {
+      await new Promise((r) => setTimeout(r, 200));
+      s = await screen();
+      seen = find(s, 'DUR') ? seen + 1 : 0;
+    }
     const stop = s.list.find((e) => e.label === 'DUR')!;
     const r = await d.tap(stop, { settle: SETTLE, read: 'none', before: s.hash });
     // the ticking text never held it to the cap: settled within one window of reads
