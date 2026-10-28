@@ -28,20 +28,23 @@ describe.skipIf(!serial)('android agent on a device', () => {
   const find = (s: Screen, label: string | RegExp) =>
     s.list.find((e) => (typeof label === 'string' ? e.label === label : label.test(e.label)));
   const labels = (s: Screen) => s.list.map((e) => e.label);
-  /** The fixture's home, its task cleared, settled (two equal reads). */
-  const home = async () => {
-    await d.shell(`am start -W -n ${APP}/.MainActivity -f 0x10008000`);
+  /** The screen showing `label`, settled: the same layout for 600 ms (its activity transition is over). */
+  const settledOn = async (label: string | RegExp, reads = 40) => {
     let last: Screen | undefined;
     let same = 0;
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < reads; i++) {
       const s = await screen();
-      same = find(s, 'appdyno fixture') && last?.hash === s.hash ? same + 1 : 0;
-      // the same layout for 600 ms: the activity transition is over
+      same = find(s, label) && last?.hash === s.hash ? same + 1 : 0;
       if (same >= 3) return s;
       last = s;
       await new Promise((r) => setTimeout(r, 200));
     }
-    throw new Error('fixture home did not show');
+    throw new Error(`the screen with ${String(label)} did not settle`);
+  };
+  /** The fixture's home, its task cleared, settled. */
+  const home = async () => {
+    await d.shell(`am start -W -n ${APP}/.MainActivity -f 0x10008000`);
+    return settledOn('appdyno fixture');
   };
   const open = async (button: string) => {
     const s = await home();
@@ -401,13 +404,11 @@ describe.skipIf(!serial)('android agent on a device', () => {
   it('audits the accessibility fixture: each known problem, nothing on the clean button', async () => {
     await home();
     await d.openUrl('gdfixture://open/a11y', APP);
-    // its Compose view starts the first time on this screen: up to 10 s on a slow emulator
-    let ok = false;
-    for (let i = 0; i < 40 && !ok; i++) {
-      ok = labels(await screen()).some((l) => /^devam$/i.test(l));
-      if (!ok) await new Promise((r) => setTimeout(r, 250));
-    }
-    expect(ok).toBe(true);
+    // the audit samples a still screen: the tree shows the screen while its window still slides in
+    // (an earlier test's screen changes when that ends), and a screenshot taken a moment after the
+    // read has the icons elsewhere than the read's boxes. Its Compose view starts the first time on
+    // this screen: up to 10 s on a slow emulator.
+    await settledOn(/^devam$/i, 60);
     const r = await d.audit();
     const of = (id: string) =>
       r.issues.filter((i) => i.element?.id === `${APP}:id/${id}`).map((i) => i.type);
