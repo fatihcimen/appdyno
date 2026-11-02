@@ -347,7 +347,7 @@ export class IosDevice implements Device {
     // returns once the app is in front: a read during the launch would get the home screen, slowly
     const end = Date.now() + 10_000;
     while ((await this.foreground()) !== pkg && Date.now() < end)
-      await new Promise((r) => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 20));
     return out;
   }
 
@@ -429,8 +429,7 @@ export class IosSimulatorDevice extends IosDevice {
   readonly direct: DirectSim;
   /** Layouts recently answered, by hash: what an action's `before` names. */
   private readonly recent = new Map<string, Node[]>();
-  private readonly copyVerdicts = new Map<string, Set<string>>();
-  private readMismatches = 0;
+  private readonly verdicts = new Map<string, Set<string>>();
 
   constructor(
     serial: string,
@@ -450,36 +449,24 @@ export class IosSimulatorDevice extends IosDevice {
 
   /**
    * The helper's read of the app in front, when it can say what the runner would; for one in the queue.
-   * `final`: this read is an answer, not one of a settle's looks, and the runner is asked what only it
-   * can tell. Its verdict on a screen's repeated controls is kept by the layout's digest.
+   * `final`: this read is an answer, not one of a settle's looks. Each layout is believed once the runner has
+   * read it alike (XCUI leaves out what a modal covers, and alone tells which copy of a control a tap
+   * reaches), and that verdict is kept by the layout's digest.
    */
   private async readDirect(final: boolean): Promise<Capture | undefined> {
     const r = await this.direct.read(this.targetApp).catch(() => ({ refused: 'failed' }));
     if ('refused' in r) return undefined;
-    let hidden = this.copyVerdicts.get(r.tree.hash);
-    const proven = this.direct.readProven;
-    if ((!hidden && r.copies && final) || !proven) {
-      const runner = (await this.callNow('tree.get', {}, TIMEOUTS.read)).result;
-      const verdict = learnCopies(r.tree, runner);
-      if (!proven) {
-        const believed = verdict && this.direct.checkRead(withoutCopies(r.tree, verdict), runner);
-        if (!believed && ++this.readMismatches >= 3)
-          this.direct.turnReadOff('its read differed from the runner');
-        if (!believed) return { tree: runner, busy: nodesBusy(runner), byRunner: true };
-      }
-      // the screen moved between the two reads: the runner's is the answer
-      if (!verdict) return { tree: runner, busy: nodesBusy(runner), byRunner: true };
-      hidden = verdict;
-      this.copyVerdicts.delete(r.tree.hash);
-      this.copyVerdicts.set(r.tree.hash, hidden);
-      if (this.copyVerdicts.size > 8)
-        this.copyVerdicts.delete(this.copyVerdicts.keys().next().value!);
-    }
-    return {
-      tree: hidden ? withoutCopies(r.tree, hidden) : r.tree,
-      busy: r.busy,
-      askRunner: !hidden && r.copies,
-    };
+    const known = this.verdicts.get(r.tree.hash);
+    if (known) return { tree: withoutCopies(r.tree, known), busy: r.busy };
+    if (!final) return { tree: r.tree, busy: r.busy, askRunner: true };
+    const runner = (await this.callNow('tree.get', {}, TIMEOUTS.read)).result;
+    const verdict = learnCopies(r.tree, runner);
+    if (!verdict || !this.direct.checkRead(withoutCopies(r.tree, verdict), runner))
+      return { tree: runner, busy: nodesBusy(runner), byRunner: true };
+    this.verdicts.delete(r.tree.hash);
+    this.verdicts.set(r.tree.hash, verdict);
+    if (this.verdicts.size > 64) this.verdicts.delete(this.verdicts.keys().next().value!);
+    return { tree: withoutCopies(r.tree, verdict), busy: r.busy };
   }
 
   /** A read for one in the queue: the helper's, else the runner's (a system alert, a web page). */

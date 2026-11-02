@@ -90,13 +90,15 @@ clipboard and every case below. `APPDYNO_SIM_DIRECT=off` turns both off, `read` 
 - **Reads**, `SimAX` inside the simulator through `simctl spawn`: one request of `XCTAccessibilityFramework`
   `userTestingSnapshotForElement:options:error:` per tree (a rejected depth is halved; children withheld at the
   boundary are read again). The nodes are built as the runner builds them, so refs, hashes and diffs do not depend
-  on who read. The first read is compared with the runner's before it is believed. `IgnoreAXServerEntitlements`
+  on who read. An answer on a layout not seen yet is compared with the runner's read of it (about 100 ms, once
+  per layout): XCUI leaves out what a modal covers, and alone tells which copy of a repeated control a tap
+  reaches. Where they differ the runner's is the answer; three differences before a first agreement turn the
+  helper off for the session. `IgnoreAXServerEntitlements`
   was not needed: the runner, always started first, leaves automation mode on, and the helper reads with it
   stopped (not on a boot where no runner ever ran).
 - **The runner answers a read** when the app named is not the primary app (a system alert over it, the home
-  screen, the app's launch), when another process's content reaches the screen (`AXRemoteElement`: a web page, an
-  extension), when the window does not fill the screen, or when the helper fails. A control found two or three
-  times is asked of the runner once per layout: only XCUI can tell which copy a tap reaches.
+  screen, the app's launch), when the app shows an alert, when another process's content reaches the screen
+  (`AXRemoteElement`: a web page, an extension), when the window does not fill the screen, or when the helper fails.
 - **Settle on the host:** as below, each 20 ms and comparing what can be named or acted on, in any order, not the
   system's nameless views: on iOS 26 a glass bar and scroll edge effects come and go for 200 ms after a
   transition. A direct touch is over in 50 ms where XCTest's took 300-600 ms, in which the app had reacted
@@ -106,8 +108,8 @@ clipboard and every case below. `APPDYNO_SIM_DIRECT=off` turns both off, `read` 
   page there with no change in the tree until it goes. An alert going away counts as busy for 600 ms, as one
   coming up does for 450 ms. Before a touch the runner still answers `animations.wait`. The app's accessibility reports are
   no settle signal: `RunLoopIsIdle` and `AnimationsNonActive` both answer within 3 ms during a push.
-- **`launch`** brings a running app forward as it is, and does nothing if it is in front; terminate it first for
-  a fresh start.
+- **`launch`** brings a running app forward as it is (`simctl launch`; `LSApplicationWorkspace` from inside the
+  simulator took 800 ms against about 180), and does nothing if it is in front; terminate it first for a fresh start.
 
 ### Tree
 

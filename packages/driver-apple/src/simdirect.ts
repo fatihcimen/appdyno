@@ -41,6 +41,8 @@ const TRAIT_EDITING = 1n << 21n;
 export type RawAx = {
   /** Automation type. */
   a?: number;
+  /** The view's class. */
+  e?: string;
   l?: string;
   v?: string | number | boolean;
   h?: string;
@@ -241,8 +243,8 @@ export function withoutCopies(t: Tree, hidden: Set<string>): Tree {
 /**
  * The helper's tree in the runner's shape: nodes breadth first, flags as XCUI gives them, so refs and
  * diffs do not depend on who read. Refused when it would not say the same as the runner: content of
- * another process on screen. `copies`: a control found twice, and only XCUI can tell which one a tap
- * reaches (`learnCopies`).
+ * another process on screen, or an alert. `copies`: a control found twice, and only XCUI can tell which one
+ * a tap reaches (`learnCopies`).
  */
 export function toTree(
   raw: RawAx,
@@ -258,6 +260,8 @@ export function toTree(
     const [r, parent] = queue[head]!;
     const n = toNode(r, parent, screen);
     if (r.r && (n.f & F.visible) !== 0) return { refused: 'remote-content' };
+    // XCUI makes an Alert of it and leaves out what it covers; the settle has to see it as one
+    if (r.e?.includes('AlertController')) return { refused: 'alert' };
     if (n.c === 'ActivityIndicator' && (n.f & F.visible) !== 0) busy = true;
     if (r.cut) truncated = true;
     const index = nodes.push(n) - 1;
@@ -299,8 +303,11 @@ export function toTree(
 /** Does the helper's read say what the runner's says? Layout and names of everything shown. */
 export function sameTree(a: Tree, b: Tree): boolean {
   if (!sameLayout(a.nodes, b.nodes)) return false;
+  const x = a.nodes.filter(shown);
   const y = b.nodes.filter(shown);
-  return a.nodes.filter(shown).every((n, i) => n.d === y[i]!.d && n.t === y[i]!.t);
+  // a clock or a counter on screen moves between the two reads
+  const off = x.filter((n, i) => n.d !== y[i]!.d || n.t !== y[i]!.t).length;
+  return off <= x.length * 0.2;
 }
 
 /**
@@ -426,6 +433,7 @@ export class DirectSim {
   private screen: { w: number; h: number } | undefined;
   private rotated = false;
   private axDeaths = 0;
+  private misreads = 0;
   /** How many touches the app in front has reported finished, as of the last answer. */
   touchesEnded: number | undefined;
 
@@ -480,9 +488,11 @@ export class DirectSim {
     return toTree(a.tree as RawAx, bundle, this.screen, a.ms ?? 0);
   }
 
-  /** The start's check: false turns the helper's reads off for this session. */
+  /** Does its read say what the runner's says? Three times no before a first yes: not for this session. */
   checkRead(direct: Tree, runner: Tree): boolean {
     if (sameTree(direct, runner)) return (this.readChecked = true);
+    if (!this.readChecked && ++this.misreads >= 3)
+      this.turnReadOff('its read differed from the runner');
     return false;
   }
 

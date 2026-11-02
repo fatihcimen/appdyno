@@ -250,6 +250,11 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
         expect(sameTree(withoutCopies(direct.tree, hidden!), runner), title).toBe(true);
       }
       expect(d.direct.status().read).toBe('direct');
+      // an alert is the runner's to read
+      const s = await open('Dialog');
+      await d.tap(byId(s, 'open_dialog')!, { settle: SETTLE });
+      expect(await d.direct.read(APP)).toEqual({ refused: 'alert' });
+      expect((await d.tree()).nodes.some((n) => n.c === 'Alert')).toBe(true);
     }, 120_000);
 
     it('reads a typing field as the runner does: the focus and its text', async () => {

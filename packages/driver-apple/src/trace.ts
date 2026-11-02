@@ -224,7 +224,7 @@ export async function recordHitches(
     await traceTable(tracePath, 'displayed-surfaces-interval'),
     seconds * 1000,
   );
-  // no frames is no reading, never "no hitches": measured with Xcode 27.1 on iOS 27.0.1
+  // no frames is no reading, never "no hitches": 3 of 5 recordings of a scroll with Xcode 27.1 on iOS 27.0.1
   if (summary.frames === 0)
     throw new DeviceError(
       'UNSUPPORTED',

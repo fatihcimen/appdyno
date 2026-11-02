@@ -8,6 +8,7 @@ import {
   learnCopies,
   sameContent,
   sameLayout,
+  sameTree,
   settle,
   stickingOut,
   toTree,
@@ -94,6 +95,17 @@ describe('the helper read in the runner shape', () => {
     expect('tree' in toTree(app({ a: 0, r: 1, f: [0, 0, 0, 0] }), 'a.b', SCREEN, 0)).toBe(true);
   });
 
+  it('refuses an alert: XCUI makes an Alert of it and leaves out what it covers', () => {
+    expect(
+      toTree(
+        app({ a: 3, e: '_UIAlertControllerPhoneTVMacView', f: [41, 375, 320, 152] }),
+        'a.b',
+        SCREEN,
+        0,
+      ),
+    ).toEqual({ refused: 'alert' });
+  });
+
   it('marks repeated controls; the runner verdict hides the copy out of reach, by its place', () => {
     const copy = (y: number) => ({ a: 9, i: 'close', f: [0, y, 40, 40] }) as RawAx;
     const raw = app(copy(0), copy(100));
@@ -175,7 +187,7 @@ describe('the settle compare', () => {
     const r = await run(['x', 'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y']);
     expect(r.settled).toBe(true);
     expect(r.last).toBe('y');
-    expect(r.elapsedMs).toBeGreaterThanOrEqual(130);
+    expect(r.elapsedMs).toBeGreaterThanOrEqual(60);
   });
 
   it('waits longer for a first reaction than for the end of one', async () => {
@@ -269,6 +281,32 @@ describe('the helpers prove themselves', () => {
     expect(d.checkRead(r.tree, structuredClone(r.tree))).toBe(true);
     expect(d.readProven).toBe(true);
     expect(d.touchesEnded).toBe(2);
+    // once believed, a screen it reads differently goes to the runner, the helper stays on
+    for (let i = 0; i < 4; i++) expect(d.checkRead(r.tree, other)).toBe(false);
+    expect('tree' in (await d.read('a.b'))).toBe(true);
+  });
+
+  it('gives up after three reads that never agreed', async () => {
+    const d = new DirectSim('u', { ax: async () => ax(), hid: async () => ax() }, undefined);
+    const r = await d.read('a.b');
+    if ('refused' in r) throw new Error(r.refused);
+    const other = tree(app(cell('B', 200))).tree;
+    for (let i = 0; i < 3; i++) d.checkRead(r.tree, other);
+    expect('refused' in (await d.read('a.b'))).toBe(true);
+    expect(d.status().read).toMatch(/differed/);
+  });
+
+  it('forgives a clock on screen when it compares', () => {
+    const rows = (t: string) =>
+      app(
+        cell('A', 0),
+        cell('B', 60),
+        cell('C', 120),
+        cell('D', 180),
+        cell('E', 240),
+        cell(t, 300),
+      );
+    expect(sameTree(tree(rows('12:00')).tree, tree(rows('12:01')).tree)).toBe(true);
   });
 
   it('sends a touch once the screen is known, and leaves input to the runner after a lost one', async () => {
