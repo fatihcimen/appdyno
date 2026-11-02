@@ -374,6 +374,8 @@ export class IosDevice implements Device {
 
 /** An iOS simulator: the simulator tool for apps, links and location; perf from the Mac. */
 export class IosSimulatorDevice extends IosDevice {
+  readonly virtual = true;
+
   constructor(
     serial: string,
     private readonly simctl: Simctl = new Simctl(),

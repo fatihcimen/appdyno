@@ -78,7 +78,7 @@ export function perfOps(ctx: ServerContext): Op[] {
     if (!pkg) throw new ToolError('give app (or select one with use_device)');
     return pkg;
   };
-  const virtual = (s: Session) => s.device.measure?.virtual === true;
+  const virtual = (s: Session) => (s.device.virtual ?? s.device.measure?.virtual) === true;
   const relative = (s: Session) =>
     virtual(s) ? ' (virtual device: relative, compare only with the same kind of device)' : '';
   const save = async (kind: string, m: Measured<unknown>[], value: unknown) =>

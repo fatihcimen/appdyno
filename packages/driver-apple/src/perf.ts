@@ -162,8 +162,6 @@ const median = (xs: number[]) => {
  * a CPU profile (the Mac's sampler).
  */
 export class IosSimulatorPerf implements MeasureSource {
-  readonly virtual = true;
-
   constructor(
     private readonly udid: string,
     private readonly simctl: Simctl,

@@ -8,7 +8,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { stateDir, type MeasureSource } from '@appdyno/core';
 import { IosDevice, type IosDeviceOps } from './device.js';
 import { IosRunnerLauncher, iosProducts, type RunnerTransport } from './runner.js';
-import { phoneSigningFromEnv, phoneXctestrun, signedRunner, type PhoneSigning } from './signing.js';
+import { findPhoneSigning, phoneXctestrun, signedRunner, type PhoneSigning } from './signing.js';
 import { assertBundle, xcodeEnv } from './simctl.js';
 import { connectPort, listDevices } from './usbmux.js';
 
@@ -172,19 +172,22 @@ const signedRunners = new Map<string, ReturnType<typeof signedRunner>>();
 /** A phone: the runner signed for the profile, a port on the phone, reached over USB. */
 export function phoneTransport(
   udid: string,
-  signing: PhoneSigning,
+  given?: PhoneSigning,
 ): RunnerTransport & { signed(): ReturnType<typeof signedRunner> } {
   const cache = join(homedir(), 'Library/Caches/appdyno/ios-phone');
   // the signed runner is looked up once per runner build and profile in this process (a reconnect
   // does not ask the keychain again)
+  let signing = given;
   const signed = async () => {
+    signing ??= await findPhoneSigning(udid);
+    const current = signing;
     const app = await phoneRunnerApp();
-    const key = [join(app, 'PlugIns/Runner.xctest/Runner'), signing.profile]
+    const key = [join(app, 'PlugIns/Runner.xctest/Runner'), current.profile]
       .map((f) => `${f}@${statSync(f).mtimeMs}`)
       .join(':');
     let result = signedRunners.get(key);
     if (!result) {
-      result = signedRunner(app, signing, cache);
+      result = signedRunner(app, current, cache);
       signedRunners.set(key, result);
       result.catch(() => signedRunners.delete(key));
     }
@@ -233,20 +236,18 @@ export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
  * has another build under that id (another tool's runner, an older one); apps and links via devicectl.
  */
 export class IosPhoneDevice extends IosDevice {
+  readonly virtual = false;
   private readonly transport: ReturnType<typeof phoneTransport>;
   private readonly ctl: Devicectl;
   /** A phone measures animation hitches so far. */
   readonly measure: MeasureSource = {
-    // shortcut: a phone still says what every iOS device said before these ports, to keep the tool's
-    // text; a phone is no virtual device, drop this when the text may change
-    virtual: true,
     frameTrace: async (bundle, seconds, during) => {
       const v = await this.hitches(bundle, seconds, during);
       return { value: { kind: 'hitches', ...v }, raw: v.tracePath, at: new Date().toISOString() };
     },
   };
 
-  constructor(serial: string, signing: PhoneSigning = phoneSigningFromEnv()) {
+  constructor(serial: string, signing?: PhoneSigning) {
     const transport = phoneTransport(serial, signing);
     const ctl = new Devicectl(serial);
     super(serial, phoneOps(serial, ctl), new IosRunnerLauncher(serial, transport));

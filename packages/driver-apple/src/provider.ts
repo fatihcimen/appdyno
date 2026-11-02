@@ -5,7 +5,7 @@ import type { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from './device.js';
 import { IosPhoneDevice, phoneRunnerApp } from './phone.js';
 import { iosProducts } from './runner.js';
-import { phoneSigningFromEnv, readProfile } from './signing.js';
+import { findPhoneSigning, phoneSigningFromEnv, readProfile } from './signing.js';
 import { Simctl, xcodeEnv, type Simulator } from './simctl.js';
 import { listPhones } from './usbmux.js';
 
@@ -54,42 +54,40 @@ export async function iosChecks(now = Date.now()): Promise<Check[]> {
           'built once on first use (a few minutes), or build it now from ios/ (README)',
         ),
   );
-  let signing;
-  try {
-    signing = phoneSigningFromEnv();
-  } catch (e) {
-    out.push(warn('iPhone signing', 'not set (needed for iPhones only)', (e as DeviceError).hint));
-    return out;
-  }
-  try {
-    const profile = await readProfile(signing.profile);
-    const days = profile.expires
-      ? Math.floor((Date.parse(profile.expires) - now) / 86_400_000)
-      : undefined;
-    const ids = (
-      await run('security', ['find-identity', '-v', '-p', 'codesigning', signing.keychain])
-    ).stdout;
-    const identity = profile.certSha1.some((h) => ids.includes(h));
-    out.push({
-      name: 'iPhone signing',
-      ok: identity && (days === undefined || days > 0),
-      ...(days !== undefined && days < 30 && { warn: true }),
-      detail: `${profile.appId} (team ${profile.team}), ${days === undefined ? 'no expiry' : `expires in ${days} days`}, ${identity ? 'identity in the keychain' : 'no identity of the profile in the keychain'}`,
-      ...(!identity && { fix: "import the profile's development certificate into the keychain" }),
-    });
-    for (const udid of await listPhones().catch(() => [] as string[]))
+  const phones = await listPhones().catch(() => [] as string[]);
+  const explicit = phoneSigningFromEnv();
+  if (!phones.length && !explicit)
+    out.push(warn('iPhone signing', 'chosen when a phone is connected (needed for iPhones only)'));
+  for (const udid of phones.length ? phones : explicit ? [undefined] : []) {
+    const name = udid ? `iPhone ${udid}` : 'iPhone signing';
+    try {
+      const signing = udid ? await findPhoneSigning(udid) : explicit!;
+      const profile = await readProfile(signing.profile);
+      const days = profile.expires
+        ? Math.floor((Date.parse(profile.expires) - now) / 86_400_000)
+        : undefined;
+      const ids = (
+        await run('security', [
+          'find-identity',
+          '-v',
+          '-p',
+          'codesigning',
+          ...(signing.keychain ? [signing.keychain] : []),
+        ])
+      ).stdout;
+      const identity = profile.certSha1.some((h) => ids.includes(h));
+      const inProfile = !udid || profile.devices.includes(udid);
       out.push({
-        name: `iPhone ${udid}`,
-        ok: profile.devices.includes(udid),
-        detail: profile.devices.includes(udid)
-          ? 'connected by USB, in the profile'
-          : 'connected by USB, not in the profile',
-        ...(!profile.devices.includes(udid) && {
-          fix: "add the phone's UDID to the profile and download it again",
-        }),
+        name,
+        ok: identity && inProfile && (days === undefined || days > 0),
+        ...(days !== undefined && days < 30 && { warn: true }),
+        detail: `${profile.appId} (team ${profile.team}), ${days === undefined ? 'no expiry' : `expires in ${days} days`}, ${identity ? 'identity in the keychain' : 'no identity of the profile in the keychain'}${inProfile ? '' : ', phone not in the profile'}`,
+        ...(!identity && { fix: "import the profile's development certificate into the keychain" }),
+        ...(!inProfile && { fix: "add the phone's UDID to the profile and download it again" }),
       });
-  } catch (e) {
-    out.push({ name: 'iPhone signing', ok: false, detail: (e as Error).message });
+    } catch (e) {
+      out.push(warn(name, (e as DeviceError).message, (e as DeviceError).hint));
+    }
   }
   return out;
 }
