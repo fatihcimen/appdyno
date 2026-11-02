@@ -17,6 +17,16 @@ const run = promisify(execFile);
 /** A first start installs the runner (on a phone, UI automation may wait for an approval): allow for it. */
 const START_MS = 180_000;
 const POLL_MS = 250;
+const PROGRESS_MS = 5_000;
+
+/** Where a runner's start has got to, by the last milestone of xcodebuild's log. */
+export function startPhase(log: string): string {
+  if (/Test Suite .* started|Test Case .* started/.test(log))
+    return 'the runner is running: waiting for its port to answer';
+  if (/Testing started|Test session results|Writing result bundle/.test(log))
+    return 'xcodebuild started testing: the runner is launching';
+  return 'xcodebuild is preparing the device (installing the runner)';
+}
 export const RUNNER_TEST = 'Runner/RunnerTests/testServe';
 
 const buildIds = new Map<string, { mtime: number; sha256: string }>();
@@ -305,7 +315,21 @@ export class IosRunnerLauncher {
     child.once('exit', (code) => (exited = code));
     const s: State = { port, token, sha256: build.sha256, ...(child.pid && { pid: child.pid }) };
     const deadline = Date.now() + START_MS;
+    const startedAt = Date.now();
+    const say = (line: string) =>
+      process.stderr.write(
+        `${JSON.stringify({ runner: this.udid, startingMs: Date.now() - startedAt, line })}\n`,
+      );
+    say('starting the iOS runner: xcodebuild connects, installs and launches it');
+    let told = startedAt;
+    let reached = '';
     for (;;) {
+      if (Date.now() - told >= PROGRESS_MS) {
+        told = Date.now();
+        const now = startPhase(await readFile(this.logPath, 'utf8').catch(() => ''));
+        if (now !== reached) reached = now;
+        say(reached);
+      }
       const c = await this.tryConnect(s).catch((e: unknown) =>
         e instanceof Error ? e : new Error(String(e)),
       );

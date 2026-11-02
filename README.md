@@ -98,10 +98,10 @@ Appium, `uiautomator`) is never stopped. The error names the holder and gives th
 ## Reaching a phone
 
 - Android: turn on USB debugging, connect, and check `adb devices`.
-- iPhone: turn on developer mode. A phone needs a development signing identity and a provisioning profile
-  whose app id is a UI test runner (`*.xctrunner`). This is the exception to the one-command install. Set
-  `APPDYNO_IOS_PROFILE=<profile.mobileprovision>`, `APPDYNO_IOS_KEYCHAIN=<keychain-db>` and
-  `APPDYNO_IOS_KEYCHAIN_PASSWORD=<password>` (an unlocked keychain), then run `appdyno doctor`. The phone is
+- iPhone: turn on developer mode. A phone needs a development signing identity and a provisioning profile that names it. An
+  installed profile for a wildcard app id, with its identity in the unlocked login keychain, is found by itself. To choose another,
+  set `APPDYNO_IOS_PROFILE=<profile.mobileprovision>`, `APPDYNO_IOS_KEYCHAIN=<keychain-db>` and
+  `APPDYNO_IOS_KEYCHAIN_PASSWORD=<password>`. Run `appdyno doctor` to see what it found. The phone is
   reached over USB, never the network. On a phone the runner cannot reach the clipboard, so text goes in as keys.
 
 ## Speed

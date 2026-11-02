@@ -156,11 +156,9 @@ export class Simctl {
   install(udid: string, appPath: string) {
     return this.exec(['install', assertUdid(udid), appPath], 300_000);
   }
+  /** Starts the app, or brings it forward as it is when it runs. */
   launch(udid: string, bundle: string) {
-    return this.exec(
-      ['launch', '--terminate-running-process', assertUdid(udid), assertBundle(bundle)],
-      60_000,
-    );
+    return this.exec(['launch', assertUdid(udid), assertBundle(bundle)], 60_000);
   }
   async terminate(udid: string, bundle: string) {
     await this.exec(['terminate', assertUdid(udid), assertBundle(bundle)], 60_000).catch(

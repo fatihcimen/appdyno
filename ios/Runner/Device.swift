@@ -54,7 +54,7 @@ final class Device {
         var nodes: [Node] = []
         var truncated = false
         var busy = false
-        let screen = UIScreen.main.bounds
+        var screen = CGRect.zero
         func add(_ root: XCUIElementSnapshot, window: Int) {
             var queue: [(XCUIElementSnapshot, Int, Int)] = [(root, -1, 0)]
             var head = 0
@@ -74,6 +74,8 @@ final class Device {
         do { snap = try app.snapshot() } catch {
             throw AgentError("APP_NOT_RUNNING", "the screen could not be read: \(error.localizedDescription)")
         }
+        // the app's frame, not UIScreen's: a runner without a launch screen is told 320 x 480 on a bigger one
+        screen = snap.frame
         windows.append(["type": 1, "pkg": id, "layer": 0, "b": Device.rect(snap.frame), "active": true, "focused": true])
         add(snap, window: 0)
         // `exists` answers at once; a snapshot of a missing element waits for it to appear
@@ -89,6 +91,7 @@ final class Device {
         // a scroll view's bars are no control: shown only while it scrolls, they would name the screen's
         // nameless controls differently than the app's own elements do
         for i in scrollIndicators(nodes) { nodes[i].flags &= ~Flag.visible }
+        for i in containerBars(nodes, screenW: Int(screen.width), screenH: Int(screen.height)) { nodes[i].flags &= ~Flag.visible }
         return Capture(windows: windows, nodes: nodes, truncated: truncated, busy: busy)
     }
 
@@ -166,7 +169,7 @@ final class Device {
     /// UIKit takes no touches while a view animates (a sheet sliding in, a button fading in), and the tree
     /// shows the view where it ends from the start, so the settle cannot see it: a touch first waits for
     /// the app under it to report its animations over. Milliseconds waited (nil: the app cannot say).
-    private func animationsOver(_ x: Double, _ y: Double) -> Int? {
+    func animationsOver(_ x: Double, _ y: Double) -> Int? {
         IdleShim.waitForAnimations(of: app(at: x, y), within: Device.animationWaitS)
     }
 

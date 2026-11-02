@@ -142,7 +142,7 @@ export type FrameTrace =
 
 /** What a device can measure: each has what it has, and `ops` names what it lacks. */
 export interface MeasureSource {
-  /** An emulator or simulator: numbers compare only with the same kind of device. */
+  /** The device says it itself (`Device.virtual`) where it knows without asking the device. */
   readonly virtual?: boolean;
   cpu?(app: string, windowMs?: number): Promise<Measured<CpuReading>>;
   memory?(app: string): Promise<Measured<MemoryReading>>;
@@ -172,6 +172,8 @@ export type Capability = Exclude<keyof MeasureSource, 'virtual'>;
 export interface Device {
   readonly serial: string;
   readonly platform: 'android' | 'ios';
+  /** An emulator or simulator: numbers compare only with the same kind of device. */
+  readonly virtual?: boolean;
   readonly hello: Hello | undefined;
   /** Whether the last connect started a new agent. */
   lastStartWasCold: boolean;

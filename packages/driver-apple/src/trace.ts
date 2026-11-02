@@ -1,9 +1,11 @@
 import { callSignal, throwIfCancelled } from '@appdyno/core';
 import { execFile, spawn } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import type { HitchSummary } from '@appdyno/core';
+import type { CpuProfile, HitchSummary, ProfileEntry } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { xcodeEnv } from './simctl.js';
 
@@ -49,7 +51,7 @@ export function parseTraceTable(xml: string): Record<string, Cell>[] {
         }
         // nested elements (a process's pid) carry ids too
         for (const n of el.matchAll(
-          /<[\w-]+[^>]*\bid="([^"]+)"[^>]*\bfmt="([^"]*)"[^>]*>([^<]*)</g,
+          /<[\w-]+[^>]*\bid="([^"]+)"[^>]*\bfmt="([^"]*)"[^>]*>([^<]*)(?=<)/g,
         ))
           if (!ids.has(n[1]!)) ids.set(n[1]!, { value: n[3]!, fmt: n[2]! });
         cells.push(cell);
@@ -86,80 +88,253 @@ export function hitchSummary(
   };
 }
 
+/** How long a recording may take to stop after its time limit before it is ended (a phone took 14 s). */
+const STOP_MS = 60_000;
+/** The whole recording is cut at this, whatever the tool does. */
+const CAP_MS = 180_000;
+
+export type TraceRecording = {
+  template: string;
+  device: string;
+  /** A process to attach to; none, or one the tool cannot find: every process. */
+  attach?: () => Promise<number>;
+  seconds: number;
+  dir: string;
+  during?: () => Promise<unknown>;
+};
+
 /**
- * Animation hitches of a process on a phone or simulator: the trace tool records the Animation Hitches
- * template for `seconds` while `during` runs; the trace stays at `dir` for Instruments.
+ * Records one trace with Xcode's trace tool: `during` starts when the tool says the recording has
+ * started, and the stop is bounded. The trace stays at `dir` for Instruments.
  */
-export async function recordHitches(
-  device: string,
-  pid: number,
-  seconds: number,
-  dir: string,
-  during?: () => Promise<unknown>,
-): Promise<HitchSummary & { tracePath: string }> {
-  await mkdir(dir, { recursive: true });
-  const tracePath = join(dir, `hitches-${Date.now()}.trace`);
-  const env = xcodeEnv();
+export async function recordTrace(r: TraceRecording): Promise<string> {
+  const pid = await r.attach?.();
+  return recordOnce(r, pid).catch((e: Error) => {
+    // a phone's tool stops finding running processes at times, whichever way they are named (measured
+    // on iOS 27.0.1, with the tool's service restarted too); every process is still recorded
+    if (!pid || !/Cannot find process/.test(e.message)) throw e;
+    return recordOnce(r, undefined);
+  });
+}
+
+async function recordOnce(r: TraceRecording, attach: number | undefined): Promise<string> {
+  await mkdir(r.dir, { recursive: true });
+  const tracePath = join(
+    r.dir,
+    `${r.template.toLowerCase().replace(/\W+/g, '-')}-${Date.now()}.trace`,
+  );
+  const note = `dev.appdyno.trace.${randomBytes(6).toString('hex')}`;
+  const watcher = spawn('notifyutil', ['-w', note], { stdio: 'ignore' });
+  const started = new Promise<void>((resolve) => {
+    watcher.once('exit', () => resolve());
+    watcher.once('error', () => resolve());
+    // a tool that never says: `during` runs anyway, and the result shows what it caught
+    setTimeout(resolve, 30_000).unref();
+  });
   const rec = spawn(
     'xcrun',
     [
       'xctrace',
       'record',
       '--template',
-      'Animation Hitches',
+      r.template,
       '--device',
-      device,
-      '--attach',
-      String(pid),
+      r.device,
+      ...(attach ? ['--attach', String(attach)] : ['--all-processes']),
       '--time-limit',
-      `${seconds}s`,
+      `${r.seconds}s`,
+      '--notify-tracing-started',
+      note,
       '--output',
       tracePath,
       '--no-prompt',
     ],
-    { env, ...(callSignal() && { signal: callSignal()! }) },
+    { env: xcodeEnv(), ...(callSignal() && { signal: callSignal()! }) },
   );
   let log = '';
   rec.stdout.on('data', (b: Buffer) => (log += String(b)));
   rec.stderr.on('data', (b: Buffer) => (log += String(b)));
-  const exited = new Promise<number | null>((r) => {
-    rec.on('exit', r);
-    rec.on('error', () => r(null));
+  const exited = new Promise<number | null>((res) => {
+    rec.on('exit', res);
+    rec.on('error', () => res(-1));
   });
-  // the recording starts a moment after the tool does
-  await new Promise((r) => setTimeout(r, 2_000));
-  if (during) await during();
-  const code = await exited;
-  throwIfCancelled('the recording');
-  if (code !== 0)
+  const stop = setTimeout(() => rec.kill('SIGINT'), Math.min(r.seconds * 1000 + STOP_MS, CAP_MS));
+  const end = setTimeout(
+    () => rec.kill('SIGKILL'),
+    Math.min(r.seconds * 1000 + STOP_MS, CAP_MS) + 30_000,
+  );
+  try {
+    const atOnce = await Promise.race([started.then(() => false), exited.then(() => true)]);
+    if (r.during && !atOnce) await r.during();
+    const code = await exited;
+    throwIfCancelled('the recording');
+    // a stopped recording still has what it caught
+    if (code !== 0 && !existsSync(tracePath))
+      throw new DeviceError(
+        'UNSUPPORTED',
+        `the trace tool could not record: ${log.trim().split('\n').slice(-2).join(' ')}`,
+      );
+    if (code !== 0 && code !== null && /Recording failed/.test(log))
+      throw new DeviceError(
+        'UNSUPPORTED',
+        `the trace tool could not record: ${log.trim().split('\n').slice(0, 2).join(' ')}`,
+      );
+    return tracePath;
+  } finally {
+    clearTimeout(stop);
+    clearTimeout(end);
+    watcher.kill();
+  }
+}
+
+/** One table of a trace, as XML. */
+export async function traceTable(tracePath: string, schema: string): Promise<string> {
+  return (
+    await run(
+      'xcrun',
+      [
+        'xctrace',
+        'export',
+        '--input',
+        tracePath,
+        '--xpath',
+        `/trace-toc/run[@number="1"]/data/table[@schema="${schema}"]`,
+      ],
+      { env: xcodeEnv(), maxBuffer: 256 * 1024 * 1024, timeout: 300_000 },
+    )
+  ).stdout;
+}
+
+/** Animation hitches of a process on a phone: the Animation Hitches template while `during` runs. */
+export async function recordHitches(
+  device: string,
+  pid: () => Promise<number>,
+  seconds: number,
+  dir: string,
+  during?: () => Promise<unknown>,
+): Promise<HitchSummary & { tracePath: string }> {
+  const tracePath = await recordTrace({
+    template: 'Animation Hitches',
+    device,
+    attach: pid,
+    seconds,
+    dir,
+    ...(during && { during }),
+  });
+  const summary = hitchSummary(
+    await traceTable(tracePath, 'hitches'),
+    await traceTable(tracePath, 'displayed-surfaces-interval'),
+    seconds * 1000,
+  );
+  // no frames is no reading, never "no hitches": 3 of 5 recordings of a scroll with Xcode 27.1 on iOS 27.0.1
+  if (summary.frames === 0)
     throw new DeviceError(
       'UNSUPPORTED',
-      `the trace tool could not record: ${log.trim().split('\n').slice(-2).join(' ')}`,
+      'the trace tool recorded no frames on this device',
+      `the trace is at ${tracePath}`,
     );
-  const table = async (schema: string) =>
-    (
-      await run(
-        'xcrun',
-        [
-          'xctrace',
-          'export',
-          '--input',
-          tracePath,
-          '--xpath',
-          `/trace-toc/run[@number="1"]/data/table[@schema="${schema}"]`,
-        ],
-        {
-          env,
-          maxBuffer: 256 * 1024 * 1024,
-        },
-      )
-    ).stdout;
+  return { ...summary, tracePath };
+}
+
+/**
+ * The Time Profiler's samples: the busiest functions by the weight of the samples they were on top of,
+ * and the app's own functions (of a binary inside an .app) by the weight of the samples they were
+ * anywhere in. Only running threads are sampled, so there are no idle waits to leave out.
+ */
+export function parseTimeProfile(
+  xml: string,
+  pid?: number,
+  limit = 10,
+): CpuProfile & { appTop: ProfileEntry[] } {
+  type Frame = { name: string; binary: string };
+  const binaries = new Map<string, string>();
+  const frames = new Map<string, Frame>();
+  const stacks = new Map<string, Frame[]>();
+  const weights = new Map<string, number>();
+  const processes = new Map<string, number>();
+  const top = new Map<string, number>();
+  const app = new Map<string, number>();
+  let total = 0;
+  for (const row of xml.split('<row>').slice(1)) {
+    const w = /<weight (?:id="(\d+)"[^>]*>(\d+)|ref="(\d+)")/.exec(row);
+    if (w?.[1]) weights.set(w[1], Number(w[2]));
+    const weight = w ? (w[3] ? (weights.get(w[3]) ?? 0) : Number(w[2])) : 0;
+    const proc = /<process (?:id="(\d+)" fmt="[^"]*\((\d+)\)"|ref="(\d+)")/.exec(row);
+    if (proc?.[1]) processes.set(proc[1], Number(proc[2]));
+    const ofProcess = proc ? (proc[3] ? processes.get(proc[3]) : Number(proc[2])) : undefined;
+    const known = /<(?:tagged-)?backtrace ref="(\d+)"/.exec(row)?.[1];
+    let stack = known ? stacks.get(known) : undefined;
+    if (!stack) {
+      stack = [];
+      const frame =
+        /<frame (?:id="(\d+)" name="([^"]*)"[^>]*?(?:\/>|>\s*<binary (?:id="(\d+)" name="[^"]*"[^>]*? path="([^"]*)"[^>]*|ref="(\d+)")\/>)|ref="(\d+)"\/>)/g;
+      for (let m = frame.exec(row); m; m = frame.exec(row)) {
+        if (m[6]) {
+          const f = frames.get(m[6]);
+          if (f) stack.push(f);
+          continue;
+        }
+        if (m[3]) binaries.set(m[3], m[4]!);
+        const f = { name: m[2]!, binary: m[3] ? m[4]! : (binaries.get(m[5] ?? '') ?? '') };
+        frames.set(m[1]!, f);
+        stack.push(f);
+      }
+      const id = /<(?:tagged-)?backtrace id="(\d+)"/.exec(row)?.[1];
+      if (id) stacks.set(id, stack);
+    }
+    if (!stack.length || (pid !== undefined && ofProcess !== pid)) continue;
+    total += weight;
+    const head = stack[0]!.name.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    top.set(head, (top.get(head) ?? 0) + weight);
+    for (const name of new Set(stack.filter((f) => f.binary.includes('.app/')).map((f) => f.name)))
+      app.set(name, (app.get(name) ?? 0) + weight);
+  }
+  const entries = (m: Map<string, number>) =>
+    [...m]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([symbol, w]) => ({
+        symbol,
+        samples: Math.round(w / 1e6),
+        percent: total ? Math.round((w / total) * 1000) / 10 : 0,
+      }));
   return {
-    ...hitchSummary(
-      await table('hitches'),
-      await table('displayed-surfaces-interval'),
-      seconds * 1000,
-    ),
-    tracePath,
+    durationMs: 0,
+    samples: Math.round(total / 1e6),
+    top: entries(top),
+    appTop: entries(app),
+  };
+}
+
+/** Of Activity Monitor's table, one process: its footprint at the end, its CPU over the recording. */
+export function parseActivityMonitor(
+  xml: string,
+  pid: number,
+): { footprintBytes: number; cpuPercent?: number; windowMs?: number } | undefined {
+  const rows = parseTraceTable(xml).filter((r) => r.pid?.value === String(pid));
+  const last = rows[rows.length - 1];
+  if (!last) return undefined;
+  const first = rows[0]!;
+  const ns = Number(last.start?.value) - Number(first.start?.value);
+  const busy = Number(last['cpu-total']?.value) - Number(first['cpu-total']?.value);
+  return {
+    footprintBytes: Number(last['memory-physical-footprint']?.value),
+    ...(ns > 0 && { cpuPercent: Math.round((busy / ns) * 100), windowMs: Math.round(ns / 1e6) }),
+  };
+}
+
+/** The Time Profiler's report of the main thread's hangs (over 250 ms): how many and the worst. */
+export function parseHangs(
+  xml: string,
+  pid?: number,
+): { hangs: number; worstMs: number; totalMs: number } {
+  const ms = parseTraceTable(xml)
+    .filter((r) => pid === undefined || r.process?.fmt?.includes(`(${pid})`))
+    .map((r) => Number(r.duration?.value ?? 0) / 1e6);
+  const round = (x: number) => Math.round(x * 10) / 10;
+  return {
+    hangs: ms.length,
+    worstMs: round(Math.max(0, ...ms)),
+    totalMs: round(ms.reduce((a, b) => a + b, 0)),
   };
 }

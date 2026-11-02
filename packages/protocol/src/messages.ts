@@ -273,6 +273,11 @@ export const METHODS = {
   /** iOS (capability `app.target`): the app the runner reads and acts on while it is in front. */
   'app.target': { params: z.object({ pkg: z.string().min(1).max(255) }), result: z.object({}) },
   'clipboard.set': { params: z.object({ text: z.string().max(10_000) }), result: z.object({}) },
+  /** iOS: until the app under a point has no animation running (UIKit takes no touches during one). */
+  'animations.wait': {
+    params: z.object({ x: z.number(), y: z.number() }),
+    result: z.object({ ms: z.number().optional() }),
+  },
   'clipboard.get': { params: z.object({}), result: z.object({ text: z.string().optional() }) },
   'orientation.set': {
     params: z.object({

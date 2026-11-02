@@ -69,8 +69,47 @@ first sample and up together at their last) and `key {key}` (`back`, `home`, `en
 The runner is a UI test (`ios/Runner`) serving one TCP port on the loopback; the simulator shares the
 Mac's loopback. Coordinates are points (`screen.density` is the scale). It reads and acts on the
 `app.target` app while that app is in front, else on the home screen; a system alert over the app is a
-second window (type 3, `com.apple.springboard`). There is no back key; multi-finger gestures are not
-supported yet. iOS sends no accessibility events to a test, so the settle decides from reads alone.
+second window (type 3, `com.apple.springboard`). There is no back key. iOS sends no accessibility events to
+a test, so the settle decides from reads alone. The screen's size comes from the home screen app's frame:
+a runner without a launch screen is told 320 x 480 by `UIScreen` on a bigger screen, which marked everything
+below it as not visible.
+
+#### Simulators: direct input and reads
+
+A simulator's touches and reads go around the runner where two small helpers (`ios/SimHelper`, compiled with
+clang on first use, private API) prove themselves. The runner stays: for the hello, text, screenshots,
+clipboard and every case below. `APPDYNO_SIM_DIRECT=off` turns both off, `read` leaves the input to the runner.
+`appdyno doctor --serial <simulator>` says whether both answer.
+
+- **Input**, `SimHID` on the Mac: XPC to the simulator's `dtuhidd` (`com.apple.coredevice.feature.remote.hid.digitizer`).
+  Tap, long press, swipe, one- and two-finger gestures, and the home, enter, delete and tab keys. A barrier
+  after the last event proves a daemon received them; text stays with the runner for Unicode. A touch that
+  changed nothing, and that the app has not reported finished (`TouchEventsCompleted`), never got there (a
+  Device Hub in Resize Mode swallows touches and reports success): the runner does it again and takes
+  over for the session. Portrait only, as that is what was verified; other orientations go to the runner.
+- **Reads**, `SimAX` inside the simulator through `simctl spawn`: one request of `XCTAccessibilityFramework`
+  `userTestingSnapshotForElement:options:error:` per tree (a rejected depth is halved; children withheld at the
+  boundary are read again). The nodes are built as the runner builds them, so refs, hashes and diffs do not depend
+  on who read. An answer on a layout not seen yet is compared with the runner's read of it (about 100 ms, once
+  per layout): XCUI leaves out what a modal covers, and alone tells which copy of a repeated control a tap
+  reaches. Where they differ the runner's is the answer; three differences before a first agreement turn the
+  helper off for the session. The helper needs the automation mode a runner leaves
+  on: on a boot where no runner ever ran it answers `no-foreground`, after 3-13 s, and the doctor says so. The runner
+  is always started first, and a helper read works after it has stopped. `IgnoreAXServerEntitlements` was not needed.
+- **The runner answers a read** when the app named is not the primary app (a system alert over it, the home
+  screen, the app's launch), when the app shows an alert, when another process's content reaches the screen
+  (`AXRemoteElement`: a web page, an extension), when the window does not fill the screen, or when the helper fails.
+- **Settle on the host:** as below, each 20 ms and comparing what can be named or acted on, in any order, not the
+  system's nameless views: on iOS 26 a glass bar and scroll edge effects come and go for 200 ms after a
+  transition. A direct touch is over in 50 ms where XCTest's took 300-600 ms, in which the app had reacted
+  before the window began: while nothing has reacted, the window is 500 ms (an alert on screen: 1 s), and once
+  something has, 150 ms (120 ms answered with a search bar a push leaves for a moment; 150 and 200 ms did not). Nodes that
+  have newly come to stick out over the side of the screen count as busy (at most 1.2 s): a push leaves the old
+  page there with no change in the tree until it goes. An alert going away counts as busy for 600 ms, as one
+  coming up does for 450 ms. Before a touch the runner still answers `animations.wait`. The app's accessibility reports are
+  no settle signal: `RunLoopIsIdle` and `AnimationsNonActive` both answer within 3 ms during a push.
+- **`launch`** brings a running app forward as it is (`simctl launch`; `LSApplicationWorkspace` from inside the
+  simulator took 800 ms against about 180), and does nothing if it is in front; terminate it first for a fresh start.
 
 ### Tree
 

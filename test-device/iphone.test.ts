@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Devicectl, IosPhoneDevice, buildScreen, type Screen } from 'appdyno';
+import { DeviceError } from '@appdyno/protocol';
 
 /**
  * The runner on a real iPhone (APPDYNO_IPHONE_UDID; signing from APPDYNO_IOS_*), on the Settings
@@ -65,20 +66,82 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
       x: field.rect!.x + field.rect!.width / 2,
       y: field.rect!.y + field.rect!.height / 2,
     };
-    const r = await d.typeText('Kapı zili çalışmıyor', { at, replace: true });
+    // reports say iOS 27 delivers a few characters of a typed text and reports success: read back apart
+    const text = 'Kapı zili çalışmıyor';
+    const r = await d.typeText(text, { at, replace: true });
     expect(r.verified).toBe(true);
     expect(r.mode).toBe('keys');
+    expect((await d.tree()).nodes.some((n) => n.t === text)).toBe(true);
+  });
+
+  it('brings a running app forward as it is', async () => {
+    await settings();
+    const ctl = new Devicectl(udid!);
+    const pid = await ctl.pid(SETTINGS);
+    const t0 = performance.now();
+    await d.launch(SETTINGS);
+    expect(performance.now() - t0).toBeLessThan(10_000);
+    expect(await ctl.pid(SETTINGS)).toBe(pid);
+  });
+
+  describe('measures', () => {
+    it('reads memory and CPU through Activity Monitor', async () => {
+      await settings();
+      const m = await d.measure.memory!(SETTINGS);
+      expect(m.value.kind).toBe('footprint');
+      expect(m.value.kb).toBeGreaterThan(5_000);
+      const c = await d.measure.cpu!(SETTINGS, 3_000);
+      expect(c.value.percent).toBeGreaterThanOrEqual(0);
+      expect(c.value.windowMs).toBeGreaterThan(500);
+    }, 180_000);
+
+    it('profiles the CPU while the list scrolls, and counts its hangs', async () => {
+      await settings();
+      const { w, h } = d.hello!.screen;
+      const scroll = async () => {
+        for (let i = 0; i < 3; i++)
+          await d.swipe({ x: w / 2, y: h * 0.75 }, { x: w / 2, y: h * 0.25 }, 250, {
+            settle: false,
+          });
+      };
+      const p = await d.measure.cpuProfile!(SETTINGS, 4_000, scroll);
+      expect(p.value.samples).toBeGreaterThan(0);
+      expect(p.value.top.length).toBeGreaterThan(0);
+      const hangs = await d.measure.hangs(SETTINGS, 3, scroll);
+      expect(hangs.hangs).toBeGreaterThanOrEqual(0);
+      expect(hangs.tracePath).toMatch(/\.trace$/);
+    }, 240_000);
+
+    it('times a launch until its first screen reads', async () => {
+      const l = await d.measure.launch!(SETTINGS, { mode: 'cold', repeats: 1 });
+      expect(l.value.medianMs).toBeGreaterThan(100);
+      expect(l.value.until).toBe('the first screen is read');
+    }, 120_000);
+
+    it('is not a virtual device', () => {
+      expect(d.virtual).toBe(false);
+    });
   });
 
   it('records animation hitches while the list scrolls', async () => {
     await settings();
     const { w, h } = d.hello!.screen;
-    const v = await d.hitches(SETTINGS, 5, async () => {
-      for (let i = 0; i < 4; i++)
-        await d.swipe({ x: w / 2, y: h * 0.75 }, { x: w / 2, y: h * 0.25 }, 250, { settle: false });
-    });
-    expect(v.frames).toBeGreaterThan(30);
-    expect(v.tracePath).toMatch(/\.trace$/);
+    // Xcode 27.1 on iOS 27.0.1 records 0 to 26 displayed surfaces of a scroll: none must say so, never "no hitches"
+    const v = await d
+      .hitches(SETTINGS, 5, async () => {
+        for (let i = 0; i < 4; i++)
+          await d.swipe({ x: w / 2, y: h * 0.75 }, { x: w / 2, y: h * 0.25 }, 250, {
+            settle: false,
+          });
+      })
+      .catch((e: DeviceError) => e);
+    if (v instanceof DeviceError) {
+      expect(v.code).toBe('UNSUPPORTED');
+      expect(v.message).toMatch(/no frames/);
+    } else {
+      expect(v.frames).toBeGreaterThan(0);
+      expect(v.tracePath).toMatch(/\.trace$/);
+    }
   }, 120_000);
 
   it('opens a link in the running app, its state kept (no new launch)', async () => {
