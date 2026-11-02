@@ -62,7 +62,7 @@ for (const { platform, serial, form } of targets)
 
     it('starts as appdyno and lists its tools', async () => {
       expect(client.getServerVersion()?.title).toBe('appdyno');
-      expect((await client.listTools()).tools.length).toBe(27);
+      expect((await client.listTools()).tools.length).toBe(30);
     });
 
     it('drives the fixture: launch, read, tap by ref with a diff, type, screenshot', async () => {

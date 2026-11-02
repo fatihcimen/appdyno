@@ -94,7 +94,11 @@ describe.skipIf(!serial)('android: logs and crashes of the fixture', () => {
     call = caller(ctx);
     await call('launch_app', { read: 'none' });
   });
-  afterAll(() => ctx.close());
+  afterAll(async () => {
+    ctx.close();
+    // a crash dialog left up would cover the next suite's screens
+    await adb.exec(serial!, `am force-stop ${APP}`);
+  });
 
   it('reads the log since the last action, at the level asked', async () => {
     const marker = `appdyno-mark-${Date.now()}`;
