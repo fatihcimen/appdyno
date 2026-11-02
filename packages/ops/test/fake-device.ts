@@ -1,4 +1,11 @@
-import type { ActOptions, Device, MeasureSource } from '@appdyno/core';
+import type {
+  ActOptions,
+  CrashesQuery,
+  CrashReport,
+  Device,
+  LogsQuery,
+  MeasureSource,
+} from '@appdyno/core';
 import {
   DeviceError,
   type ActParams,
@@ -205,6 +212,29 @@ export class FakeDevice implements Device {
     return { engine: 'rules', issues: [], truncated: false, elapsedMs: 1 };
   }
   async stopAgent() {}
+  /** What `logs` finds, and what it was asked. */
+  logLines: string[] = [];
+  logNote: string | undefined;
+  logAsked: LogsQuery | undefined;
+  async logs(q: LogsQuery) {
+    this.logAsked = q;
+    return {
+      lines: this.logLines,
+      source: 'fake log',
+      ...(this.logNote && { note: this.logNote }),
+    };
+  }
+  crashReports: CrashReport[] = [];
+  async crashes(q: CrashesQuery) {
+    return {
+      reports: this.crashReports.slice(0, q.limit),
+      source: 'fake reports',
+    };
+  }
+  running = true;
+  async appRunning() {
+    return this.running;
+  }
   close() {}
 
   /** Canned measurements; `jank` sets the share of janky frames, `memKb` the PSS per read. */

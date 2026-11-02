@@ -49,9 +49,13 @@ export class Session {
     return this.latest && this.latest.at === this.version ? this.latest.screen : undefined;
   }
 
+  /** When the last device action ended (epoch ms): `logs` starts here. */
+  lastActionAt: number | undefined;
+
   /** A device action happened: refs read before it are resolved on a new read. */
   acted() {
     this.version++;
+    this.lastActionAt = Date.now();
   }
 }
 
@@ -67,7 +71,7 @@ export function refused(err: unknown): never {
           : err.code === 'NO_FOCUS'
             ? 'no editable field has the focus: tap the field first (or give type_text a ref)'
             : (err.hint ?? 'the device refused the command');
-    throw new ToolError(`${err.message} (${err.code}): ${hint}`);
+    throw new ToolError(`${err.message} (${err.code}): ${hint}`, err.code, hint);
   }
   throw err;
 }

@@ -1,8 +1,17 @@
 import type { Capability } from '@appdyno/core';
+import type { ErrorCode } from '@appdyno/protocol';
 import type { z } from 'zod';
 
 /** A refusal the agent can act on (shown as the tool's error text, never a stack). */
-export class ToolError extends Error {}
+export class ToolError extends Error {
+  constructor(
+    message: string,
+    readonly code: ErrorCode = 'INVALID_ARGUMENT',
+    readonly hint?: string,
+  ) {
+    super(message);
+  }
+}
 
 export type Block =
   { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };

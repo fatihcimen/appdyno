@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { promisify } from 'node:util';
+import { callSignal, cancelled } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 
 const run = promisify(execFile);
@@ -45,10 +46,12 @@ export class Simctl {
         timeout: timeoutMs,
         maxBuffer: 64 * 1024 * 1024,
         env: this.env,
+        ...(callSignal() && { signal: callSignal()! }),
       });
       return stdout;
     } catch (e) {
-      const err = e as { stderr?: string; message: string; killed?: boolean };
+      const err = e as { stderr?: string; message: string; killed?: boolean; name?: string };
+      if (err.name === 'AbortError') throw cancelled(`simctl ${args[0]}`);
       if (err.killed)
         throw new DeviceError('TIMEOUT', `simctl ${args[0]} took over ${timeoutMs} ms`);
       const msg = (err.stderr || err.message).trim().split('\n').slice(-2).join(' ').slice(0, 300);

@@ -55,11 +55,14 @@ describe('tool list', () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toMatchInlineSnapshot(`
       [
+        "audit",
+        "crashes",
         "device_info",
         "dismiss_alert",
         "find",
         "launch_app",
         "list_devices",
+        "logs",
         "long_press",
         "open_link",
         "perf_heap",
@@ -86,7 +89,7 @@ describe('tool list', () => {
     `);
     for (const t of tools) {
       expect(t.annotations, t.name).toBeDefined();
-      expect(t.outputSchema, t.name).toBeDefined();
+      expect(t.outputSchema, t.name).toBeUndefined();
       expect(t.title, t.name).toBeTruthy();
       expect(t.description!.length, t.name).toBeLessThan(400);
     }
@@ -96,9 +99,12 @@ describe('tool list', () => {
         .map((t) => t.name)
         .sort(),
     ).toEqual([
+      'audit',
+      'crashes',
       'device_info',
       'find',
       'list_devices',
+      'logs',
       'perf_heap',
       'perf_profile',
       'perf_snapshot',

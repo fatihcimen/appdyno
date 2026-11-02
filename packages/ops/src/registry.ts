@@ -3,6 +3,7 @@ import { answersFor } from './answers.js';
 import { appOps } from './apps.js';
 import type { ServerContext } from './context.js';
 import { deviceOps } from './device.js';
+import { diagnoseOps } from './diagnose.js';
 import { perfOps } from './perf.js';
 import { readOps } from './read.js';
 import { stepsFor } from './steps.js';
@@ -17,6 +18,7 @@ export function opsFor(ctx: ServerContext): Record<string, Op> {
     ...readOps(ctx, answers),
     ...actOps(ctx, answers, steps),
     ...appOps(ctx, answers),
+    ...diagnoseOps(ctx, answers),
     ...perfOps(ctx),
   ];
   return Object.fromEntries(ops.map((op) => [op.name, op]));

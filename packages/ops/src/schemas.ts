@@ -19,7 +19,15 @@ export const ActionOut = z.object({
   elements: z.number().int().optional(),
   foreground: z.string().optional(),
   settled: z.boolean().optional(),
+  /** Whether the screen differs from before the action, layout or text; absent when unknown. */
+  changed: z.boolean().optional(),
+  /** What is known to keep the screen busy, when it did not settle. */
+  busy: z.array(z.string()).optional(),
+  /** The app's process ended during the action. */
+  appDied: z.object({ reason: z.string(), file: z.string().optional() }).optional(),
   warnings: z.array(z.string()),
+  code: z.string().optional(),
+  hint: z.string().optional(),
 });
 export type ActionOut = z.infer<typeof ActionOut>;
 
@@ -81,6 +89,41 @@ export const ScreenshotOut = z.object({
 });
 
 export const DoneOut = z.object({ done: z.string() });
+
+export const AuditOut = z.object({
+  engine: z.string(),
+  truncated: z.boolean(),
+  issues: z.array(
+    z.object({
+      type: z.string(),
+      rule: z.string(),
+      message: z.string(),
+      label: z.string().optional(),
+      x: z.number().optional(),
+      y: z.number().optional(),
+    }),
+  ),
+});
+
+export const LogsOut = z.object({
+  lines: z.number(),
+  dropped: z.number(),
+  source: z.string(),
+  note: z.string().optional(),
+});
+
+export const CrashesOut = z.object({
+  reports: z.array(
+    z.object({
+      at: z.string(),
+      reason: z.string(),
+      detail: z.string().optional(),
+      file: z.string().optional(),
+    }),
+  ),
+  source: z.string(),
+  note: z.string().optional(),
+});
 
 const Measurement = { id: z.string(), raw: z.string(), virtualDevice: z.boolean() };
 

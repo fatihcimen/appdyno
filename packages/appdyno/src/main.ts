@@ -3,19 +3,21 @@
 // on stderr; in `mcp` stdout is the MCP channel, so logs go to stderr only.
 import { writeFile } from 'node:fs/promises';
 import { loadavg } from 'node:os';
+import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Adb, androidProvider, installTools } from '@appdyno/driver-android';
 import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
 import { createServer } from '@appdyno/mcp';
-import { commandsFor } from '@appdyno/cli';
+import { commandsFor, listOf, takeFlag } from '@appdyno/cli';
+import { stateDir } from '@appdyno/core';
 import { DEFAULT_POLICY, ServerContext, opsFor, type Policy } from '@appdyno/ops';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
-const providers = () => [androidProvider(), appleProvider()];
+const providers = (takeover = false) => [androidProvider(new Adb(), { takeover }), appleProvider()];
 
 type Settings = {
   device?: string;
@@ -24,10 +26,12 @@ type Settings = {
   'allow-apps'?: string;
   'allow-urls'?: string;
   'no-home'?: boolean;
+  takeover?: boolean;
+  measurements?: string;
 };
 
 /** The operations' context, from flags and the environment. */
-function contextFrom(values: Settings) {
+function contextFrom(values: Settings, remember?: string) {
   const env = process.env;
   const list = (s: string | undefined) =>
     (s ?? '')
@@ -47,9 +51,11 @@ function contextFrom(values: Settings) {
   };
   const device = values.device ?? env.APPDYNO_SERIAL;
   const app = values.app ?? env.APPDYNO_APP;
-  return new ServerContext(policy, providers(), {
+  return new ServerContext(policy, providers(values.takeover), {
     ...(device && { device }),
     ...(app && { app }),
+    ...(values.measurements && { measurements: values.measurements }),
+    ...(remember && { remember }),
   });
 }
 
@@ -64,6 +70,7 @@ async function serveMcp(args: string[]) {
       'allow-apps': { type: 'string' },
       'allow-urls': { type: 'string' },
       'no-home': { type: 'boolean' },
+      takeover: { type: 'boolean' },
       measurements: { type: 'string' },
     },
   });
@@ -158,14 +165,30 @@ async function main(): Promise<number> {
       return 0;
     }
     default: {
-      const ctx = contextFrom({});
-      const commands = commandsFor(opsFor(ctx));
+      const device = takeFlag(rest, 'device');
+      const ctx = contextFrom(device ? { device } : {}, join(stateDir(), 'cli-session.json'));
+      const ops = opsFor(ctx);
+      const commands = commandsFor(ops);
       const op = command === undefined ? undefined : commands[command];
       if (!op) {
-        err(
-          `usage: appdyno <mcp [flags] | devices | doctor [--serial S] | ios build | tools install | bench --serial S [--driver appdyno|<module>]... [--n 50] [--out file] | <operation> [--flag value]... [--json '{...}'] [--out file]>\noperations: ${Object.keys(commands).join(', ')}`,
+        const asked = command === undefined || ['--help', '-h', 'help'].includes(command);
+        (asked ? console.log : err)(
+          `usage: appdyno <command> [flags]; appdyno <command> --help for its flags
+
+commands:
+  mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--measurements dir]
+                   the MCP server over stdio
+  devices          the connected Android devices
+  doctor [--serial S]
+                   what this machine and that device lack
+  ios build        build the iOS runners now
+  tools install    download the trace tools
+  bench --serial S [--driver appdyno|<module>]... [--n 50] [--out file]
+
+operations (--device S selects the device, also for the next commands):
+${listOf(ops)}`,
         );
-        return 2;
+        return asked ? 0 : 2;
       }
       try {
         return await op.run(rest, { out: (s) => console.log(s), err });

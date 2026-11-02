@@ -1,3 +1,5 @@
+import { phoneCrashes } from './crashes.js';
+import { phoneLogs } from './logs.js';
 import { execFile } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -223,6 +225,8 @@ export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
     },
     setLocation: (lat, lon) => ctl.setLocation(lat, lon),
     linkPrompt: false,
+    logs: phoneLogs,
+    crashes: (q) => phoneCrashes(udid, q),
     name: `iPhone ${udid}`,
     pid: (b) => ctl.pid(b),
   };

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { connect, type Socket } from 'node:net';
+import { callSignal, cancelled } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 
 /**
@@ -149,6 +150,15 @@ export class Adb {
         resolve(Buffer.concat(chunks));
       });
       socket.on('error', () => undefined);
+      const signal = callSignal();
+      const abort = () => {
+        clearTimeout(timer);
+        socket.destroy();
+        reject(cancelled(`adb: ${command.slice(0, 40)}`));
+      };
+      if (signal?.aborted) abort();
+      else signal?.addEventListener('abort', abort, { once: true });
+      socket.once('close', () => signal?.removeEventListener('abort', abort));
     });
   }
 

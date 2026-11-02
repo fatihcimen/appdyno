@@ -200,8 +200,40 @@ export interface Device {
   terminate(pkg: string): Promise<void>;
   setLocation(lat: number, lon: number): Promise<void>;
   stopAgent(): Promise<void>;
+  logs?(q: LogsQuery): Promise<LogsAnswer>;
+  crashes?(q: CrashesQuery): Promise<CrashesAnswer>;
+  /** Whether the app has a live process. */
+  appRunning?(app: string): Promise<boolean>;
   readonly measure?: MeasureSource;
 }
+
+export type LogLevel = 'verbose' | 'debug' | 'info' | 'warn' | 'error';
+export type LogsQuery = {
+  app: string;
+  /** Epoch ms; absent: the newest lines. */
+  since?: number;
+  level: LogLevel;
+  maxLines: number;
+};
+/** The app's log lines as the platform prints them, and what the platform could not give. */
+export type LogsAnswer = { lines: string[]; source: string; note?: string };
+
+export type CrashesQuery = {
+  app: string;
+  /** Epoch ms; absent: any time. */
+  since?: number;
+  limit: number;
+};
+export type CrashReport = {
+  /** When, as the platform says it. */
+  at: string;
+  reason: string;
+  /** The first lines of its stack or description. */
+  detail?: string;
+  /** The whole report on this machine. */
+  file?: string;
+};
+export type CrashesAnswer = { reports: CrashReport[]; source: string; note?: string };
 
 /** A doctor's finding. */
 export type Check = { name: string; ok: boolean; warn?: boolean; detail: string; fix?: string };

@@ -139,7 +139,10 @@ export async function androidChecks(adb: Adb, serial?: string): Promise<Check[]>
 }
 
 /** Android devices over adb, which takes any serial no later provider claims. */
-export function androidProvider(adb: Adb = new Adb()): DeviceProvider {
+export function androidProvider(
+  adb: Adb = new Adb(),
+  opts: { takeover?: boolean } = {},
+): DeviceProvider {
   return {
     list: async () =>
       (await adb.devices()).map((d) => ({
@@ -149,7 +152,7 @@ export function androidProvider(adb: Adb = new Adb()): DeviceProvider {
       })),
     handles: () => true,
     // a phone unplugged for a moment (or rebooting) is waited for, up to 30 s, on read-only calls
-    open: (serial) => new AndroidDevice(serial, new Adb(), 30_000),
+    open: (serial) => new AndroidDevice(serial, new Adb(), 30_000, opts.takeover),
     doctor: (serial) => androidChecks(adb, serial),
   };
 }

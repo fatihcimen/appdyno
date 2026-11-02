@@ -4,7 +4,7 @@ import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { expect, it } from 'vitest';
 import { createServer } from '../src/server.js';
 
-it('keeps the tool catalog within its budget (phase 2 lowers it)', async () => {
+it('keeps the tool catalog within its budget', async () => {
   const ctx = new ServerContext(DEFAULT_POLICY, []);
   const [a, b] = InMemoryTransport.createLinkedPair();
   await createServer(opsFor(ctx), () => undefined).connect(a);
@@ -12,5 +12,8 @@ it('keeps the tool catalog within its budget (phase 2 lowers it)', async () => {
   await client.connect(b);
   const { tools } = await client.listTools();
   expect(tools).toHaveLength(Object.keys(opsFor(ctx)).length);
-  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(40_000);
+  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(25_000);
+  expect(
+    tools.filter((t) => 'device' in (t.inputSchema.properties ?? {})).map((t) => t.name),
+  ).toEqual(['use_device']);
 });

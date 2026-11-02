@@ -5,8 +5,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DeviceError, PROTOCOL, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
-import { RpcClient, stateDir } from '@appdyno/core';
+import { pause, reportProgress, RpcClient, stateDir } from '@appdyno/core';
 import { type Adb, assertSerial, shq } from './adb.js';
+import { conflictHint, holdersIn, type Holder } from './holders.js';
 
 export const AGENT_MAIN = 'dev.appdyno.agent.Main';
 export const REMOTE_DIR = '/data/local/tmp/appdyno';
@@ -60,6 +61,8 @@ export class AndroidAgentLauncher {
   constructor(
     private readonly adb: Adb,
     readonly serial: string,
+    /** Stop another tool's helper that holds UI automation (the server's --takeover). */
+    private readonly takeover = false,
   ) {
     assertSerial(serial);
   }
@@ -82,10 +85,26 @@ export class AndroidAgentLauncher {
     } catch (e) {
       // our own agent from a lost state (another state folder, a cleared cache) holds the device: it
       // cannot be reached without its token, so it is replaced, once
-      if (!(e instanceof DeviceError) || e.code !== 'AGENT_CONFLICT' || !(await this.killOrphans()))
-        throw e;
+      if (!(e instanceof DeviceError) || e.code !== 'AGENT_CONFLICT') throw e;
+      if (!(await this.killOrphans())) {
+        const holders = await this.holders();
+        if (!this.takeover || holders.length === 0)
+          throw new DeviceError(e.code, e.message, conflictHint(holders, this.serial));
+        for (const h of holders) await this.stopHolder(h);
+      }
       return { ...(await this.start(apk)), started: true };
     }
+  }
+
+  /** Who holds UI automation, as the device's process list shows it. */
+  private async holders(): Promise<Holder[]> {
+    return holdersIn(await this.adb.exec(this.serial, 'ps -A -o PID,ARGS').catch(() => ''));
+  }
+
+  /** Only on --takeover: another tool's helper is stopped when its owner said so. */
+  private async stopHolder(h: Holder) {
+    await this.adb.exec(this.serial, h.shell).catch(() => undefined);
+    await pause(500);
   }
 
   /** Stops this device's agent (and forgets it). */
@@ -96,6 +115,7 @@ export class AndroidAgentLauncher {
   }
 
   private async start(apk: { path: string; sha256: string }) {
+    reportProgress('starting the Android agent');
     const remote = `${REMOTE_DIR}/agent-${apk.sha256.slice(0, 16)}.apk`;
     const have = await this.adb.exec(this.serial, `sha256sum ${shq(remote)} 2>/dev/null`);
     if (!have.startsWith(apk.sha256)) {

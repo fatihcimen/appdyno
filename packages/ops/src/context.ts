@@ -1,8 +1,30 @@
-import { join } from 'node:path';
-import { stateDir, type Device, type DeviceProvider } from '@appdyno/core';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import {
+  reportProgress,
+  stateDir,
+  type Device,
+  type DeviceProvider,
+  type ScreenElement,
+} from '@appdyno/core';
 import { checkApp, checkDevice, type Policy } from './policy.js';
 import { refused, Session } from './session.js';
 import { ToolError } from './tool.js';
+
+type Saved = {
+  serial: string;
+  app?: string;
+  shown?: ScreenElement[];
+  lastActionAt?: number;
+};
+
+function recall(file: string): Saved | undefined {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8')) as Saved;
+  } catch {
+    return undefined;
+  }
+}
 
 /** The server's devices: the sessions opened so far and which one tools act on by default. */
 export class ServerContext {
@@ -13,8 +35,18 @@ export class ServerContext {
     readonly policy: Policy,
     /** Listed in this order; of those that handle a serial, the last one opens it. */
     readonly providers: DeviceProvider[],
-    private readonly defaults: { device?: string; app?: string; measurements?: string } = {},
-  ) {}
+    private readonly defaults: {
+      device?: string;
+      app?: string;
+      measurements?: string;
+      /** A file to keep the selection and the diff baseline in between processes (the command line). */
+      remember?: string;
+    } = {},
+  ) {
+    this.saved = defaults.remember ? recall(defaults.remember) : undefined;
+  }
+
+  private readonly saved: Saved | undefined;
 
   /** Where measurements and their raw outputs are stored (this machine only). */
   get measurementsDir(): string {
@@ -32,7 +64,8 @@ export class ServerContext {
 
   private async open(serial: string): Promise<Device> {
     const provider = this.providers.findLast((p) => p.handles(serial));
-    if (!provider) throw new ToolError(`no driver takes the device ${serial}`);
+    if (!provider) throw new ToolError(`no driver takes the device ${serial}`, 'NOT_FOUND');
+    reportProgress(`connecting to ${serial}`);
     const device = provider.open(serial);
     await device.open();
     return device;
@@ -44,7 +77,13 @@ export class ServerContext {
     if (app) checkApp(this.policy, app);
     let s = this.sessions.get(serial);
     if (!s) {
-      s = new Session(await this.open(serial).catch(refused), app ?? this.defaults.app);
+      const saved = this.saved?.serial === serial ? this.saved : undefined;
+      s = new Session(
+        await this.open(serial).catch(refused),
+        app ?? this.defaults.app ?? saved?.app,
+      );
+      s.shown = saved?.shown;
+      s.lastActionAt = saved?.lastActionAt;
       this.sessions.set(serial, s);
     } else if (app) s.appId = app;
     this.currentSerial = serial;
@@ -55,7 +94,8 @@ export class ServerContext {
   async session(serial?: string): Promise<Session> {
     if (serial) return this.sessions.get(serial) ?? this.use(serial);
     if (this.currentSerial) return this.sessions.get(this.currentSerial)!;
-    if (this.defaults.device) return this.use(this.defaults.device);
+    const named = this.defaults.device ?? this.saved?.serial;
+    if (named) return this.use(named);
     const ready = (await this.devices().catch(refused)).filter(
       (d) => d.state === 'device' && this.allowed(d.serial),
     );
@@ -64,10 +104,22 @@ export class ServerContext {
       ready.length === 0
         ? 'no connected device this server may drive (list_devices)'
         : 'more than one device: pick one with use_device',
+      ready.length === 0 ? 'DEVICE_GONE' : 'INVALID_ARGUMENT',
     );
   }
 
   close() {
-    for (const s of this.sessions.values()) s.device.close();
+    const s = this.currentSerial ? this.sessions.get(this.currentSerial) : undefined;
+    if (s && this.defaults.remember) {
+      const saved: Saved = {
+        serial: s.device.serial,
+        ...(s.appId && { app: s.appId }),
+        ...(s.shown && { shown: s.shown }),
+        ...(s.lastActionAt && { lastActionAt: s.lastActionAt }),
+      };
+      mkdirSync(dirname(this.defaults.remember), { recursive: true, mode: 0o700 });
+      writeFileSync(this.defaults.remember, JSON.stringify(saved), { mode: 0o600 });
+    }
+    for (const x of this.sessions.values()) x.device.close();
   }
 }

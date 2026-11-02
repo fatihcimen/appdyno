@@ -3,7 +3,7 @@ import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { DeviceOut, DevicesOut, ActionOut, DoneOut } from './schemas.js';
 import { refused } from './session.js';
-import { Device, Read } from './steps.js';
+import { Read } from './steps.js';
 import { ACT, defineOp, READ, reply, ToolError, type Op } from './tool.js';
 
 export function deviceOps(ctx: ServerContext, { info, osName, afterChange }: Answers): Op[] {
@@ -63,11 +63,11 @@ export function deviceOps(ctx: ServerContext, { info, osName, afterChange }: Ans
       title: 'Device info',
       description:
         "The selected device's model, OS version, screen, agent capabilities and the app in the foreground.",
-      input: z.object({ device: Device }).strict(),
+      input: z.object({}).strict(),
       output: DeviceOut,
       annotations: READ,
-      run: async ({ device }) => {
-        const s = await ctx.session(device);
+      run: async () => {
+        const s = await ctx.session();
         const h = s.device.hello!;
         const fg = await s.device.foreground().catch(refused);
         return reply(
@@ -86,13 +86,11 @@ export function deviceOps(ctx: ServerContext, { info, osName, afterChange }: Ans
       title: 'Orientation',
       description:
         'Screen orientation: portrait or landscape (the rotation stays fixed; go back to portrait afterwards).',
-      input: z
-        .object({ device: Device, orientation: z.enum(['portrait', 'landscape']), read: Read })
-        .strict(),
+      input: z.object({ orientation: z.enum(['portrait', 'landscape']), read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
-      run: async ({ device, orientation, read }) => {
-        const s = await ctx.session(device);
+      run: async ({ orientation, read }) => {
+        const s = await ctx.session();
         await s.device.setOrientation(orientation === 'portrait' ? 0 : 1).catch(refused);
         return afterChange(s, `orientation: ${orientation}`, read);
       },
@@ -101,13 +99,13 @@ export function deviceOps(ctx: ServerContext, { info, osName, afterChange }: Ans
       name: 'set_clipboard',
       title: 'Set clipboard',
       description: 'Put a text on the clipboard (for paste tests).',
-      input: z.object({ device: Device, text: z.string().min(1).max(2_000) }).strict(),
+      input: z.object({ text: z.string().min(1).max(2_000) }).strict(),
       output: DoneOut,
       annotations: ACT,
-      run: async ({ device, text: value }) => {
+      run: async ({ text: value }) => {
         if (policy.secrets.some((x) => x && value.includes(x)))
           throw new ToolError('a secret is never put on the clipboard');
-        const s = await ctx.session(device);
+        const s = await ctx.session();
         await s.device.setClipboard(value).catch(refused);
         const done = `on the clipboard (${Array.from(value).length} characters)`;
         return reply(done, { done });
@@ -119,15 +117,14 @@ export function deviceOps(ctx: ServerContext, { info, osName, afterChange }: Ans
       description: "Fix the device's GPS position (latitude, longitude).",
       input: z
         .object({
-          device: Device,
           lat: z.number().min(-90).max(90),
           lon: z.number().min(-180).max(180),
         })
         .strict(),
       output: DoneOut,
       annotations: ACT,
-      run: async ({ device, lat, lon }) => {
-        const s = await ctx.session(device);
+      run: async ({ lat, lon }) => {
+        const s = await ctx.session();
         await s.device.setLocation(lat, lon).catch(refused);
         const done = `location: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
         return reply(done, { done });

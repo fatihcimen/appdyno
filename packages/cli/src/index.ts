@@ -7,6 +7,55 @@ import { z } from 'zod';
 
 export type Io = { out: (line: string) => void; err: (line: string) => void };
 
+const dashed = (key: string) => key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+
+type FlagSchema = {
+  type?: string;
+  enum?: unknown[];
+  description?: string;
+  default?: unknown;
+  minimum?: number;
+  maximum?: number;
+};
+
+const schemaOf = (op: Op) =>
+  z.toJSONSchema(op.input) as {
+    properties?: Record<string, FlagSchema>;
+    required?: string[];
+  };
+
+/** An op's flags in words, from its schema. */
+export function helpOf(op: Op): string {
+  const { properties = {}, required = [] } = schemaOf(op);
+  const flags = Object.entries(properties).map(([key, p]) => {
+    const value = p.enum ? p.enum.join('|') : (p.type ?? 'json');
+    const notes = [
+      required.includes(key) ? 'required' : undefined,
+      p.description,
+      p.default !== undefined ? `default ${JSON.stringify(p.default)}` : undefined,
+    ].filter(Boolean);
+    return `  --${dashed(key)}${p.type === 'boolean' ? '' : ` <${value}>`}${notes.length ? `  ${notes.join('; ')}` : ''}`;
+  });
+  return [
+    `appdyno ${op.name.replaceAll('_', '-')} [flags]`,
+    op.description,
+    '',
+    'flags:',
+    ...flags,
+    `  --json '{...}'  the arguments as JSON`,
+    '  --out <file>  where an image goes',
+    '  --device <serial>  the device, for this command and the next ones',
+  ].join('\n');
+}
+
+/** Removes `--flag value` from the words; the value. */
+export function takeFlag(argv: string[], flag: string): string | undefined {
+  const i = argv.indexOf(`--${flag}`);
+  if (i < 0) return undefined;
+  const [, value] = argv.splice(i, 2);
+  return value;
+}
+
 /** One operation on the command line: exit code 0, 1 when refused, 2 when the words make no call. */
 export type Command = {
   name: string;
@@ -18,9 +67,7 @@ const camel = (flag: string) => flag.replace(/-([a-z])/g, (_, c: string) => c.to
 
 /** `--flag value` and `--json '{...}'` as the op's arguments, typed by its input schema. */
 function parse(op: Op, argv: string[]) {
-  const { properties = {} } = z.toJSONSchema(op.input) as {
-    properties?: Record<string, { type?: string }>;
-  };
+  const { properties = {} } = schemaOf(op);
   const json = (flag: string, word: string) => {
     try {
       return JSON.parse(word) as unknown;
@@ -44,7 +91,7 @@ function parse(op: Op, argv: string[]) {
     if (flag !== 'json' && flag !== 'out' && !properties[key])
       throw new ToolError(
         `no --${flag} here; flags: ${Object.keys(properties)
-          .map((k) => `--${k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`)
+          .map((k) => `--${dashed(k)}`)
           .join(' ')}`,
       );
     const value = argv[++i];
@@ -73,6 +120,10 @@ export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
       name,
       description: op.description,
       run: async (argv, io) => {
+        if (argv.includes('--help') || argv.includes('-h')) {
+          io.out(helpOf(op));
+          return 0;
+        }
         let call;
         try {
           call = parse(op, argv);
@@ -108,3 +159,13 @@ export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
   });
   return Object.fromEntries(commands.map((c) => [c.name, c]));
 }
+
+/** Every command, one line each: its first sentence. */
+export const listOf = (ops: Record<string, Op>) =>
+  Object.values(ops)
+    .map((op) => {
+      const name = op.name.replaceAll('_', '-');
+      const first = /^.*?[.:](?:\s|$)/.exec(op.description)?.[0]?.trim() ?? op.description;
+      return `  ${name.padEnd(16)} ${first}`;
+    })
+    .join('\n');

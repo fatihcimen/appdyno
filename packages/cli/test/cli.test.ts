@@ -8,7 +8,7 @@ import { createServer } from '@appdyno/mcp';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { FakeDevice } from '../../ops/test/fake-device.js';
-import { commandsFor } from '../src/index.js';
+import { commandsFor, listOf, takeFlag } from '../src/index.js';
 
 describe('commands from the operations', () => {
   let device: FakeDevice;
@@ -79,7 +79,7 @@ describe('commands from the operations', () => {
   it('says what is wrong with the words, without calling the device', async () => {
     const calls = () => device.calls.length;
     for (const [argv, why] of [
-      [['--nope', '1'], /no --nope here; flags: --device --ref --x --y --read/],
+      [['--nope', '1'], /no --nope here; flags: --ref --x --y --read/],
       [['--x'], /--x needs a value/],
       [['--x', 'left'], /--x: /],
       [['--read', 'some'], /--read: /],
@@ -92,6 +92,71 @@ describe('commands from the operations', () => {
       expect(r.err.join()).toMatch(why);
       expect(calls()).toBe(before);
     }
+  });
+
+  it('lists flags from the schema on --help, and does not call the device', async () => {
+    const before = device.calls.length;
+    const r = await run('wait-for', '--help');
+    expect(r.code).toBe(0);
+    const help = r.out.join('\n');
+    expect(help).toContain('appdyno wait-for');
+    for (const flag of [
+      '--text',
+      '--id',
+      '--ref',
+      '--gone',
+      '--timeout-ms',
+      '--read <diff|full|none>',
+    ])
+      expect(help).toContain(flag);
+    expect(help).toContain('default "diff"');
+    expect(device.calls.length).toBe(before);
+    expect(listOf(ops)).toContain('perf-snapshot');
+    expect(listOf(ops).split('\n')).toHaveLength(Object.keys(ops).length);
+  });
+
+  it('removes a flag from the words and gives its value', () => {
+    const words = ['--x', '1', '--device', 'emulator-5612', '--y', '2'];
+    expect(takeFlag(words, 'device')).toBe('emulator-5612');
+    expect(words).toEqual(['--x', '1', '--y', '2']);
+    expect(takeFlag(words, 'device')).toBeUndefined();
+  });
+
+  it('keeps the selection and the diff baseline between processes in a small file', async () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 'state', 'cli-session.json');
+    const provider: DeviceProvider = {
+      list: async () => [
+        { serial: 'other', state: 'device' },
+        { serial: device.serial, state: 'device' },
+      ],
+      handles: () => true,
+      open: () => device,
+    };
+    const process = async (name: string, ...argv: string[]) => {
+      const ctx = new ServerContext(DEFAULT_POLICY, [provider], { remember: file });
+      const out: string[] = [];
+      const code = await commandsFor(opsFor(ctx))[name]!.run(argv, {
+        out: (s) => out.push(s),
+        err: (s) => out.push(s),
+      });
+      ctx.close();
+      return { code, out: out.join('\n') };
+    };
+    expect((await process('use-device', '--device', device.serial, '--app', 'dev.app')).code).toBe(
+      0,
+    );
+    const screen = await process('screen');
+    expect(screen.out).toContain('Form');
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toMatchObject({
+      serial: device.serial,
+      app: 'dev.app',
+    });
+    expect(readFileSync(file, 'utf8').length).toBeLessThan(2_000);
+    // a new process diffs against what the last one showed
+    const again = await process('tap', '--x', '5', '--y', '2390');
+    expect(again.code).toBe(0);
+    expect(again.out).toContain('screen unchanged');
+    expect(again.out).toContain('no change seen in');
   });
 
   it('prints a refusal and exits 1', async () => {

@@ -13,6 +13,7 @@ import {
   type ResultOf,
 } from '@appdyno/protocol';
 import { z } from 'zod';
+import { callSignal, cancelled } from './call.js';
 
 /** Extra time the host gives a request over the agent's own deadline before it gives up itself. */
 export const DEADLINE_SLACK_MS = 1_000;
@@ -93,18 +94,41 @@ export class RpcClient {
 
   private callRaw(method: string, params: object, timeoutMs: number) {
     if (this.closedWith) return Promise.reject(this.closedWith);
+    const signal = callSignal();
+    if (signal?.aborted) return Promise.reject(cancelled(method));
     const id = this.nextId++;
     return new Promise<{ result: unknown; binary?: Buffer }>((resolve, reject) => {
-      const timer = setTimeout(() => {
+      // fire and forget: the agent stops the work if it is still running
+      const giveUp = (why: DeviceError) => {
         this.pending.delete(id);
-        // fire and forget: the agent stops the work if it is still running
         if (!this.closedWith)
           this.stream.write(
             encodeJson({ jsonrpc: '2.0', id: this.nextId++, method: 'cancel', params: { id } }),
           );
-        reject(new DeviceError('TIMEOUT', `${method} did not answer within ${timeoutMs} ms`));
-      }, timeoutMs + DEADLINE_SLACK_MS);
-      this.pending.set(id, { method, resolve, reject, timer });
+        reject(why);
+      };
+      const timer = setTimeout(
+        () => giveUp(new DeviceError('TIMEOUT', `${method} did not answer within ${timeoutMs} ms`)),
+        timeoutMs + DEADLINE_SLACK_MS,
+      );
+      const abort = () => {
+        clearTimeout(timer);
+        giveUp(cancelled(method));
+      };
+      signal?.addEventListener('abort', abort, { once: true });
+      const off = () => signal?.removeEventListener('abort', abort);
+      this.pending.set(id, {
+        method,
+        resolve: (v) => {
+          off();
+          resolve(v);
+        },
+        reject: (e) => {
+          off();
+          reject(e);
+        },
+        timer,
+      });
       this.stream.write(encodeJson({ jsonrpc: '2.0', id, method, params }));
     });
   }

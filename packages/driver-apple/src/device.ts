@@ -1,3 +1,6 @@
+import type { CrashesAnswer, CrashesQuery, LogsAnswer, LogsQuery } from '@appdyno/core';
+import { simulatorCrashes } from './crashes.js';
+import { simulatorLogs } from './logs.js';
 import {
   DeviceError,
   type ActParams,
@@ -72,6 +75,8 @@ export type IosDeviceOps = {
   name: string;
   /** The process id of a running app (for the trace tool). */
   pid(bundle: string): Promise<number>;
+  logs(q: LogsQuery): Promise<LogsAnswer>;
+  crashes(q: CrashesQuery): Promise<CrashesAnswer>;
 };
 
 export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
@@ -86,6 +91,8 @@ export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
       await simctl.setLocation(udid, lat, lon);
     },
     linkPrompt: true,
+    logs: (q) => simulatorLogs(simctl, udid, q),
+    crashes: (q) => simulatorCrashes(udid, q),
     name: `simulator ${udid}`,
     pid: async (b) => {
       const out = await simctl.exec(['spawn', udid, 'launchctl', 'list']);
@@ -123,6 +130,14 @@ export class IosDevice implements Device {
     protected readonly ops: IosDeviceOps,
     private readonly launcher: IosRunnerLauncher,
   ) {}
+
+  logs = (q: LogsQuery) => this.ops.logs(q);
+  crashes = (q: CrashesQuery) => this.ops.crashes(q);
+  appRunning = (app: string) =>
+    this.ops.pid(app).then(
+      () => true,
+      () => false,
+    );
 
   /** Before a new runner starts: the device must be up (a new runner would boot a shut-down simulator). */
   protected async prepareStart(): Promise<void> {

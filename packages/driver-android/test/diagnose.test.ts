@@ -1,0 +1,154 @@
+import { describe, expect, it } from 'vitest';
+import { crashReports, parseDropbox, parseExitInfo } from '../src/crashes.js';
+import { conflictHint, holdersIn } from '../src/holders.js';
+import { logcatCommand } from '../src/logs.js';
+
+const line = (pid: number, command: string) => `${String(pid).padStart(6)} ${command}`;
+
+describe('who holds UI automation', () => {
+  it.each([
+    ['com.example.automation.Server --idle-timeout-ms=1800000', 'another-server', /^kill 901$/],
+    ['app_process /system/bin com.example.automation.Server', 'another-server', /^kill 901$/],
+    [
+      'am instrument -w -r -e session s1 dev.tools.another-tool.test/androidx.test.runner.AndroidJUnitRunner',
+      'another-tool',
+      /^kill 901$/,
+    ],
+    [
+      'com.example.automation.test',
+      'another-tool',
+      /^am force-stop com\.another-vendor\.another-tool$/,
+    ],
+    [
+      'io.appium.uiautomator2.server.test',
+      'Appium',
+      /^am force-stop io\.appium\.uiautomator2\.server$/,
+    ],
+    ['uiautomator events', 'uiautomator', /^kill 901$/],
+    ['/system/bin/uiautomator dump', 'uiautomator', /^kill 901$/],
+    [
+      'app_process /system/bin com.android.commands.uiautomator.Launcher events',
+      'uiautomator',
+      /^kill 901$/,
+    ],
+  ])('recognises %s', (command, tool, stop) => {
+    const ps = ['  PID ARGS', line(1, 'init second_stage'), line(901, command)].join('\n');
+    const [h] = holdersIn(ps);
+    expect(h).toMatchObject({ tool, pid: 901, command });
+    expect(h!.shell).toMatch(stop);
+  });
+
+  it('leaves out what holds nothing: others, our agent, the shell that started it, ps itself', () => {
+    expect(
+      holdersIn(
+        [
+          line(1, 'init second_stage'),
+          line(2, 'zygote64'),
+          line(3, 'app_process / dev.appdyno.agent.Main --socket s'),
+          line(4, 'sh -c uiautomator events > /dev/null'),
+          line(5, 'ps -A -o PID,ARGS'),
+          line(6, 'grep uiautomator'),
+          line(7, 'com.example.uiautomatorish'),
+        ].join('\n'),
+      ),
+    ).toEqual([]);
+  });
+
+  it('names one holder once per way to stop it', () => {
+    const hs = holdersIn(
+      [
+        line(10, 'com.example.automation.test'),
+        line(11, 'sh -c am instrument -w com.example.automation.test/.R'),
+      ].join('\n'),
+    );
+    expect(hs.map((h) => h.shell)).toEqual(['am force-stop com.example.automation']);
+  });
+
+  it('says the exact command, and what to do when no holder is known', () => {
+    const hint = conflictHint(holdersIn(line(77, 'uiautomator events')), 'emulator-5612');
+    expect(hint).toContain('uiautomator (pid 77)');
+    expect(hint).toContain('`adb -s emulator-5612 shell kill 77`');
+    expect(hint).toContain('--takeover');
+    expect(conflictHint([], 'emulator-5612')).toContain(
+      'adb -s emulator-5612 shell ps -A -o PID,ARGS',
+    );
+  });
+});
+
+describe('logs', () => {
+  it('asks logcat for the app, the level and the time', () => {
+    expect(logcatCommand('42', { since: 1_730_000_000_123, level: 'warn', maxLines: 5 })).toBe(
+      "logcat -d --pid=42 -v threadtime -t 1730000000.123 '*:W'",
+    );
+    expect(logcatCommand('42', { level: 'info', maxLines: 5 })).toContain('-t 5 ');
+  });
+});
+
+// as `dumpsys activity exit-info` and `dumpsys dropbox --print` print on API 34
+const EXIT_INFO = `ACTIVITY MANAGER PROCESS EXIT INFO (dumpsys activity exit-info)
+Last Timestamp of Persistence Into Persistent Storage: 1970-01-01 02:00:00.000
+  package: dev.appdyno.fixture
+    Historical Process Exit for uid=10193
+        ApplicationExitInfo #0:
+          timestamp=2026-11-02 23:59:33.030 pid=6374 realUid=10193 packageUid=10193 definingUid=10193 user=0
+          process=dev.appdyno.fixture reason=4 (APP CRASH(EXCEPTION)) subreason=0 (UNKNOWN) status=0
+          importance=100 pss=0.00 rss=0.00 description=crash state=empty trace=null
+        ApplicationExitInfo #1:
+          timestamp=2026-11-02 23:50:01.000 pid=6000 realUid=10193 packageUid=10193 definingUid=10193 user=0
+          process=dev.appdyno.fixture reason=10 (USER REQUESTED) subreason=0 (UNKNOWN) status=0
+          importance=100 pss=0.00 rss=0.00 description=stop state=empty trace=null
+`;
+const DROPBOX = `Drop box contents: 57 entries
+Max entries: 1000
+Searching for: data_app_crash
+
+========================================
+2026-11-02 23:59:34 data_app_crash (text, 1097 bytes)
+Process: dev.appdyno.fixture
+PID: 6374
+Flags: 0x2088be46
+Package: dev.appdyno.fixture v1 (0.1.0)
+Foreground: Yes
+
+android.app.RemoteServiceException$CrashedByAdbException: shell-induced crash
+	at android.app.ActivityThread.throwRemoteServiceException(ActivityThread.java:2090)
+	at android.os.Looper.loop(Looper.java:294)
+
+========================================
+2026-11-02 23:00:00 data_app_crash (text, 900 bytes)
+Process: com.other.app
+PID: 1
+
+java.lang.RuntimeException: not ours
+`;
+
+describe('crashes', () => {
+  it('reads the exits that are deaths, not a stop someone asked for', () => {
+    expect(parseExitInfo(EXIT_INFO)).toEqual([
+      expect.objectContaining({
+        at: '2026-11-02 23:59:33.030',
+        reason: 'APP CRASH(EXCEPTION)',
+        detail: 'crash',
+      }),
+    ]);
+  });
+
+  it('reads the dropbox entries of this app only', () => {
+    const drops = parseDropbox(DROPBOX, 'dev.appdyno.fixture');
+    expect(drops).toHaveLength(1);
+    expect(drops[0]!.tag).toBe('data_app_crash');
+  });
+
+  it('joins an exit with its stack and keeps to the time asked', () => {
+    const q = { app: 'dev.appdyno.fixture', limit: 5 };
+    const [r] = crashReports(EXIT_INFO, DROPBOX, q);
+    expect(r!.reason).toBe('APP CRASH(EXCEPTION)');
+    expect(r!.detail).toContain('shell-induced crash');
+    expect(
+      crashReports(EXIT_INFO, DROPBOX, {
+        ...q,
+        since: new Date('2026-11-03T00:00:00').getTime(),
+      }),
+    ).toEqual([]);
+  });
+});

@@ -8,15 +8,10 @@ import { ToolError } from './tool.js';
 
 export const STALE = 'stale ref, read the screen again';
 
-export const Device = z
-  .string()
-  .max(64)
-  .optional()
-  .describe('device (list_devices); default: the selected device');
 export const Read = z
   .enum(['diff', 'full', 'none'])
   .default('diff')
-  .describe('the screen after the action: diff (what changed, default), full (whole screen), none');
+  .describe('screen after: diff (default), full, none');
 export const Ref = z
   .string()
   .regex(/^@[a-z0-9]{1,10}(-\d{1,3})?$/, 'a ref as the screen shows it (@k3f9)');
@@ -109,7 +104,7 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers) {
   const target = async (s: Session, a: { ref?: string; x?: number; y?: number }) => {
     if (a.ref) {
       const e = (await s.current()).list.find((x) => x.ref === a.ref);
-      if (!e) throw new ToolError(`${STALE}: ${a.ref} is not on this screen`);
+      if (!e) throw new ToolError(`${STALE}: ${a.ref} is not on this screen`, 'STALE');
       return { point: { x: e.x, y: e.y }, name: `${a.ref} ${JSON.stringify(clean(e.label))}` };
     }
     if (a.x === undefined || a.y === undefined) throw new ToolError('give a ref, or x and y');

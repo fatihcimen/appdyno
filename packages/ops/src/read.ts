@@ -2,6 +2,8 @@ import {
   diffScreens,
   diffText,
   fold,
+  pause,
+  throwIfCancelled,
   renderScreen,
   screenStructure,
   UNCHANGED,
@@ -12,7 +14,7 @@ import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { FindOut, ScreenOut, ScreenshotOut, WaitOut } from './schemas.js';
 import { refused } from './session.js';
-import { Device, Read, Ref } from './steps.js';
+import { Read, Ref } from './steps.js';
 import { defineOp, READ, reply, ToolError, type Op } from './tool.js';
 
 const WAIT_MS = 5_000;
@@ -27,11 +29,11 @@ export function readOps(ctx: ServerContext, { clean, foreground, header, show }:
       title: 'Read screen',
       description:
         'The elements on the screen (ref role "label" x,y flags). Use refs with tap/type_text; a ref keeps naming the same element when the screen changes.',
-      input: z.object({ device: Device }).strict(),
+      input: z.object({}).strict(),
       output: ScreenOut,
       annotations: READ,
-      run: async ({ device }) => {
-        const s = await ctx.session(device);
+      run: async () => {
+        const s = await ctx.session();
         const screen = await s.read();
         s.shown = screen.list;
         const fg = foreground(s, screen);
@@ -49,16 +51,15 @@ export function readOps(ctx: ServerContext, { clean, foreground, header, show }:
         'The elements whose text contains `text` or whose id is `id`, without sending the whole screen.',
       input: z
         .object({
-          device: Device,
           text: z.string().min(1).max(200).optional(),
           id: z.string().min(1).max(200).optional(),
         })
         .strict(),
       output: FindOut,
       annotations: READ,
-      run: async ({ device, text: want, id }) => {
+      run: async ({ text: want, id }) => {
         if (!want && !id) throw new ToolError('give text or id');
-        const s = await ctx.session(device);
+        const s = await ctx.session();
         const screen = await s.read();
         const w = want && fold(want);
         const hits = screen.list.filter(
@@ -83,7 +84,6 @@ export function readOps(ctx: ServerContext, { clean, foreground, header, show }:
       description: `Wait until an element shows (gone: until it is gone): text, id or ref; timeoutMs default ${WAIT_MS}, at most ${MAX_WAIT_MS}. Use this instead of fixed sleeps.`,
       input: z
         .object({
-          device: Device,
           text: z.string().min(1).max(200).optional(),
           id: z.string().min(1).max(200).optional(),
           ref: Ref.optional(),
@@ -94,9 +94,9 @@ export function readOps(ctx: ServerContext, { clean, foreground, header, show }:
         .strict(),
       output: WaitOut,
       annotations: READ,
-      run: async ({ device, text: want, id, ref, gone, timeoutMs, read }) => {
+      run: async ({ text: want, id, ref, gone, timeoutMs, read }) => {
         if (!want && !id && !ref) throw new ToolError('give text, id or ref');
-        const s = await ctx.session(device);
+        const s = await ctx.session();
         const w = want && fold(want);
         const match = (e: Screen['list'][number]) =>
           (!w || fold(e.label).includes(w)) && (!id || e.id === id) && (!ref || e.ref === ref);
@@ -105,6 +105,7 @@ export function readOps(ctx: ServerContext, { clean, foreground, header, show }:
         let last: Screen | undefined;
         let met = false;
         for (;;) {
+          throwIfCancelled('wait_for');
           const now = await s.read().catch(() => undefined);
           // a failed read is no answer: never "gone"
           if (now) {
@@ -112,7 +113,7 @@ export function readOps(ctx: ServerContext, { clean, foreground, header, show }:
             met = now.list.some(match) !== gone;
           }
           if (met || Date.now() >= end) break;
-          await new Promise((r) => setTimeout(r, WAIT_GAP_MS));
+          await pause(WAIT_GAP_MS).catch(refused);
         }
         if (!last) throw new ToolError('the screen could not be read: nothing to look in');
         show(s, last);
@@ -142,11 +143,11 @@ export function readOps(ctx: ServerContext, { clean, foreground, header, show }:
       name: 'screenshot',
       title: 'Screenshot',
       description: `An image of the screen (at most ${SHOT_PX} px) and the scale from image pixels to tap units. Only for a visual judgement; read the screen with screen first. A second image of an unchanged screen is refused.`,
-      input: z.object({ device: Device }).strict(),
+      input: z.object({}).strict(),
       output: ScreenshotOut,
       annotations: READ,
-      run: async ({ device }) => {
-        const s = await ctx.session(device);
+      run: async () => {
+        const s = await ctx.session();
         const layout = s.fresh ? screenStructure(s.fresh.list) : undefined;
         if (s.shot && s.shot.at === s.version && layout !== undefined && s.shot.hash === layout)
           throw new ToolError(

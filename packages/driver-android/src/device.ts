@@ -21,8 +21,12 @@ import {
   type Device,
   type RpcClient,
   type Screen,
+  type CrashesQuery,
+  type LogsQuery,
 } from '@appdyno/core';
 import { Adb, assertSerial, shq } from './adb.js';
+import { androidCrashes } from './crashes.js';
+import { androidLogs } from './logs.js';
 import { auditAndroid, decodePng } from './audit.js';
 import { AndroidAgentLauncher, REMOTE_DIR } from './agent.js';
 import { AndroidPerf } from './perf.js';
@@ -62,10 +66,16 @@ export class AndroidDevice implements Device {
     private readonly adb: Adb = new Adb(),
     /** How long a read-only call waits for an unplugged or rebooting device to come back (0: not at all). */
     private readonly reconnectWaitMs = 0,
+    takeover = false,
   ) {
     assertSerial(serial);
-    this.launcher = new AndroidAgentLauncher(adb, serial);
+    this.launcher = new AndroidAgentLauncher(adb, serial, takeover);
   }
+
+  logs = (q: LogsQuery) => androidLogs(this.adb, this.serial, q);
+  crashes = (q: CrashesQuery) => androidCrashes(this.adb, this.serial, q);
+  appRunning = async (app: string) =>
+    !!(await this.adb.exec(this.serial, `pidof ${shq(assertPkg(app))}`)).trim();
 
   /** Connects (starting the agent when needed); the agent's hello. */
   async open(): Promise<Hello> {

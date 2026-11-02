@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DeviceError } from '@appdyno/protocol';
+import { inCall } from '../src/call.js';
 import { HELLO, TOKEN, fakeAgent, wireTree } from './fake-agent.js';
 
 describe('rpc client', () => {
@@ -38,6 +39,21 @@ describe('rpc client', () => {
     });
     expect(Date.now() - t).toBeGreaterThanOrEqual(50);
     expect(seen.at(-1)?.method).toBe('cancel');
+  }, 5_000);
+
+  it('gives up a call when the client cancels, and tells the agent', async () => {
+    const { rpc, seen } = fakeAgent({ 'tree.get': () => new Promise(() => undefined) });
+    const abort = new AbortController();
+    const call = inCall({ signal: abort.signal }, () =>
+      rpc.call('tree.get', {}, { timeoutMs: 60_000 }),
+    );
+    setTimeout(() => abort.abort(), 10);
+    await expect(call).rejects.toMatchObject({ code: 'CANCELLED' });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(seen.at(-1)?.method).toBe('cancel');
+    await expect(
+      inCall({ signal: abort.signal }, () => rpc.call('tree.get', {}, { timeoutMs: 1000 })),
+    ).rejects.toMatchObject({ code: 'CANCELLED' });
   }, 5_000);
 
   it('fails every pending call when the stream ends, and later calls at once', async () => {

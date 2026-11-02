@@ -2,10 +2,13 @@ import {
   alertButton,
   diffScreens,
   diffText,
+  pause,
   renderScreen,
+  reportProgress,
   UNCHANGED,
   type ActOptions,
   type Screen,
+  type ScreenDiff,
 } from '@appdyno/core';
 import type { ActResult, TextResult } from '@appdyno/protocol';
 import type { ServerContext } from './context.js';
@@ -17,6 +20,29 @@ import { reply } from './tool.js';
 /** After an action: quiet window and cap of the on-device settle (the window: docs/protocol.md, measured). */
 export const SETTLE = { quietMs: 200, maxMs: 3_000 } as const;
 const MAYBE_MOVING = 'the screen may still be changing';
+/** A report can be stamped a moment before the host's clock says the action began. */
+const CLOCK_SLACK_MS = 2_000;
+/** A crash report is written within moments of the death. */
+const REPORT_TRIES = 4;
+const REPORT_GAP_MS = 700;
+
+const noChange = (ms: number) =>
+  `no change seen in ${ms} ms; if a slow reaction is expected, use wait_for`;
+const differs = (d: ScreenDiff) => d.added.length + d.removed.length + d.changed.length > 0;
+
+/** What is known to keep a screen busy: the agent's own reasons, the wait its settle took, a spinner on the screen. */
+export function busyReasons(r: ActResult | undefined, screen: Screen): string[] {
+  const spinner = screen.list.find((e) => /progress|spinner|activity.?indicator/i.test(e.role));
+  return [
+    ...(r?.settle?.quietMs && r.settle.quietMs > SETTLE.quietMs
+      ? [`the device is loaded (quiet window stretched to ${r.settle.quietMs} ms)`]
+      : []),
+    ...(r?.animationWaitMs ? [`the app's animations ran ${Math.round(r.animationWaitMs)} ms`] : []),
+    ...(spinner
+      ? [`a progress indicator is showing${spinner.label ? ` (${spinner.label})` : ''}`]
+      : []),
+  ];
+}
 
 export type ReadMode = 'diff' | 'full' | 'none';
 
@@ -56,32 +82,104 @@ export function answersFor(ctx: ServerContext) {
     s.shown = screen.list;
   };
 
+  /** The app's end, when its process is gone: its report's reason, or that none says why. */
+  const death = async (s: Session, since: number) => {
+    const { appRunning, crashes } = s.device;
+    if (!s.appId || !appRunning) return undefined;
+    if (await appRunning.call(s.device, s.appId).catch(() => true)) return undefined;
+    reportProgress('the app is gone: looking for its crash report');
+    for (let i = 0; crashes && i < REPORT_TRIES; i++) {
+      const { reports } = await crashes
+        .call(s.device, { app: s.appId, since: since - CLOCK_SLACK_MS, limit: 1 })
+        .catch(() => ({ reports: [] }));
+      const r = reports[0];
+      if (r) return { reason: clean(r.reason), ...(r.file && { file: r.file }) };
+      await pause(REPORT_GAP_MS).catch(() => undefined);
+    }
+    return { reason: 'its process is gone and no crash report says why' };
+  };
+
+  /** What every action says of the screen after it: changed or not, what kept it busy, the app's fate. */
+  const after = async (
+    s: Session,
+    done: string,
+    read: ReadMode,
+    screen: Screen,
+    o: {
+      before: Session['shown'];
+      base: Session['shown'];
+      settled: boolean | undefined;
+      ms: number;
+      busy: string[];
+      started: number;
+    },
+  ) => {
+    show(s, screen);
+    const d = read === 'diff' && o.before ? diffScreens(o.before, screen.list) : undefined;
+    const diff = d && diffText(d, screen.list.length, clean);
+    const fg = foreground(s, screen);
+    const appDied =
+      fg && s.appId && screen.foreground !== s.appId ? await death(s, o.started) : undefined;
+    const changed = o.base ? differs(diffScreens(o.base, screen.list)) : undefined;
+    const busy = o.settled === false ? o.busy : [];
+    const moving =
+      o.settled === false ? ` (${MAYBE_MOVING}${busy.length ? `: ${busy.join('; ')}` : ''})` : '';
+    const notes = [
+      ...(appDied
+        ? [`the app died: ${appDied.reason}${appDied.file ? ` (${appDied.file})` : ''}`]
+        : []),
+      ...(changed === false ? [noChange(o.ms)] : []),
+    ];
+    return reply(
+      [`${done}${fg}${moving}`, ...notes, diff ?? header(s, screen)].join('\n'),
+      summary(done, screen, {
+        diff,
+        d,
+        fg,
+        settled: o.settled,
+        changed,
+        busy,
+        appDied,
+        notes,
+      }),
+    );
+  };
+
   /** The answer of an action: what was done, the app check and the screen after it. */
   const answer = (
     s: Session,
     done: string,
     read: ReadMode,
     before: Session['shown'],
+    base: Session['shown'],
+    started: number,
     r?: ActResult,
   ) => {
     if (read === 'none' || !r?.tree) return reply(done, summary(done));
-    const screen = s.screenOf(r.tree);
-    show(s, screen);
-    const moving = r.settle && !r.settle.settled ? ` (${MAYBE_MOVING})` : '';
-    const d = read === 'diff' && before ? diffScreens(before, screen.list) : undefined;
-    const diff = d && diffText(d, screen.list.length, clean);
-    const fg = foreground(s, screen);
-    return reply(
-      `${done}${fg}${moving}\n${diff ?? header(s, screen)}`,
-      summary(done, screen, { diff, d, fg, settled: r.settle?.settled }),
-    );
+    return after(s, done, read, s.screenOf(r.tree), {
+      before,
+      base,
+      settled: r.settle?.settled,
+      ms: r.settle?.ms ?? Date.now() - started,
+      busy: busyReasons(r, s.screenOf(r.tree)),
+      started,
+    });
   };
 
   /** The structured answer of an action (ActionOut). */
   const summary = (
     done: string,
     screen?: Screen,
-    o: { diff?: string; d?: ReturnType<typeof diffScreens>; fg?: string; settled?: boolean } = {},
+    o: {
+      diff?: string | undefined;
+      d?: ScreenDiff | undefined;
+      fg?: string;
+      settled?: boolean | undefined;
+      changed?: boolean | undefined;
+      busy?: string[];
+      appDied?: ActionOut['appDied'];
+      notes?: string[];
+    } = {},
   ): ActionOut => ({
     done: clean(done),
     screen: !screen
@@ -101,7 +199,14 @@ export function answersFor(ctx: ServerContext) {
     ...(screen && { elements: screen.list.length }),
     ...(screen?.foreground && { foreground: screen.foreground }),
     ...(o.settled !== undefined && { settled: o.settled }),
-    warnings: [...(o.fg ? [o.fg.trim()] : []), ...(o.settled === false ? [MAYBE_MOVING] : [])],
+    ...(o.changed !== undefined && { changed: o.changed }),
+    ...(o.busy?.length && { busy: o.busy }),
+    ...(o.appDied && { appDied: o.appDied }),
+    warnings: [
+      ...(o.fg ? [o.fg.trim()] : []),
+      ...(o.settled === false ? [MAYBE_MOVING] : []),
+      ...(o.notes ?? []),
+    ],
   });
 
   /** Runs a device action with the settle and read `read` asks for. */
@@ -111,14 +216,17 @@ export function answersFor(ctx: ServerContext) {
     run: (o: ActOptions) => Promise<ActResult | TextResult>,
     done: string | ((r: ActResult | TextResult) => string),
   ) => {
+    const started = Date.now();
     const before = s.shown;
     const opts: ActOptions =
       read === 'none'
         ? { settle: false, read: 'none' }
         : { settle: SETTLE, read: 'tree', ...(s.fresh && { before: s.fresh.hash }) };
     const r = await run(opts).catch(refused);
+    // the last read before the action, which a ref's lookup may have just made
+    const base = s.fresh?.list ?? before;
     s.acted();
-    return answer(s, typeof done === 'string' ? done : done(r), read, before, r);
+    return answer(s, typeof done === 'string' ? done : done(r), read, before, base, started, r);
   };
 
   /** Reads until two reads in a row have the same layout, at most `maxMs` (after a link or a launch). */
@@ -126,7 +234,7 @@ export function answersFor(ctx: ServerContext) {
     const end = Date.now() + maxMs;
     let screen = await s.read();
     while (Date.now() < end) {
-      await new Promise((r) => setTimeout(r, 200));
+      await pause(200).catch(refused);
       const next = await s.read();
       if (next.hash === screen.hash) return { screen: next, settled: true };
       screen = next;
@@ -135,18 +243,21 @@ export function answersFor(ctx: ServerContext) {
   };
 
   const afterChange = async (s: Session, done: string, read: ReadMode) => {
+    const started = Date.now();
     const before = s.shown;
+    const base = s.fresh?.list ?? before;
     s.acted();
     if (read === 'none') return reply(done, summary(done));
+    reportProgress('waiting for the screen to settle');
     const { screen, settled } = await settleRead(s);
-    show(s, screen);
-    const d = read === 'diff' && before ? diffScreens(before, screen.list) : undefined;
-    const diff = d && diffText(d, screen.list.length, clean);
-    const fg = foreground(s, screen);
-    return reply(
-      `${done}${fg}${settled ? '' : ` (${MAYBE_MOVING})`}\n${diff ?? header(s, screen)}`,
-      summary(done, screen, { diff, d, fg, settled }),
-    );
+    return after(s, done, read, screen, {
+      before,
+      base,
+      settled,
+      ms: Date.now() - started,
+      busy: busyReasons(undefined, screen),
+      started,
+    });
   };
 
   return {

@@ -1,8 +1,15 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { INSTRUCTIONS, SERVER_INFO } from './brand.js';
-import { ToolError, text, type Op } from '@appdyno/ops';
+import { inCall, ToolError, text, type Op } from '@appdyno/ops';
 
-/** The MCP server, one tool per op; an unexpected failure is logged to stderr by its message only. */
+/** How often a call with a progress token says it is still working. */
+const BEAT_MS = 5_000;
+
+/**
+ * The MCP server, one tool per op; an unexpected failure is logged to stderr by its message only. No
+ * output schemas in the catalog: 16,000 characters that a client's validator would also hold against a
+ * failed answer's code and hint. Structured content goes out all the same.
+ */
 export function createServer(ops: Record<string, Op>, log: (line: object) => void): McpServer {
   const server = new McpServer(SERVER_INFO, { instructions: INSTRUCTIONS });
   for (const { name, ...t } of Object.values(ops)) {
@@ -12,19 +19,43 @@ export function createServer(ops: Record<string, Op>, log: (line: object) => voi
         title: t.title,
         description: t.description,
         inputSchema: t.input,
-        outputSchema: t.output,
         annotations: t.annotations,
       },
-      async (args) => {
+      async (args, extra) => {
         const started = Date.now();
+        const token = extra._meta?.progressToken;
+        let sent = 0;
+        const progress =
+          token === undefined
+            ? undefined
+            : (message: string) =>
+                void extra
+                  .sendNotification({
+                    method: 'notifications/progress',
+                    params: { progressToken: token, progress: ++sent, message },
+                  })
+                  .catch(() => undefined);
+        const beat =
+          progress &&
+          setInterval(
+            () =>
+              progress(`${name}: still working (${Math.round((Date.now() - started) / 1000)} s)`),
+            BEAT_MS,
+          );
         try {
-          const r = await t.handler(args as Record<string, unknown>);
+          const r = await inCall({ signal: extra.signal, ...(progress && { progress }) }, () =>
+            t.handler(args as Record<string, unknown>),
+          );
           log({ tool: name, ms: Date.now() - started, outcome: 'ok' });
           return { content: r.blocks, structuredContent: r.data };
         } catch (e) {
           if (e instanceof ToolError) {
-            log({ tool: name, ms: Date.now() - started, outcome: 'refused' });
-            return { isError: true, content: text(e.message) };
+            log({ tool: name, ms: Date.now() - started, outcome: 'refused', code: e.code });
+            return {
+              isError: true,
+              content: text(e.message),
+              structuredContent: { code: e.code, ...(e.hint && { hint: e.hint }) },
+            };
           }
           // never the arguments: they may hold typed text
           log({
@@ -33,7 +64,13 @@ export function createServer(ops: Record<string, Op>, log: (line: object) => voi
             outcome: 'error',
             error: (e as Error)?.message ?? String(e),
           });
-          return { isError: true, content: text(`${name} failed with an internal error`) };
+          return {
+            isError: true,
+            content: text(`${name} failed with an internal error`),
+            structuredContent: { code: 'INTERNAL', hint: 'see the server log' },
+          };
+        } finally {
+          clearInterval(beat);
         }
       },
     );

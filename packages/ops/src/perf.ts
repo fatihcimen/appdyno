@@ -1,7 +1,14 @@
 import { randomBytes } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { Capability, HeapReading, Measured, MeasureSource } from '@appdyno/core';
+import {
+  pause,
+  reportProgress,
+  type Capability,
+  type HeapReading,
+  type Measured,
+  type MeasureSource,
+} from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { checkApp } from './policy.js';
@@ -10,11 +17,6 @@ import { HeapOut, LaunchOut, ProfileOut, ScrollOut, SnapshotOut, TraceOut } from
 import { swipeLine } from './steps.js';
 import { ACT, defineOp, DESTRUCTIVE, READ, reply, ToolError, type Op } from './tool.js';
 
-const Device = z
-  .string()
-  .max(64)
-  .optional()
-  .describe('device (list_devices); default: the selected device');
 const App = z
   .string()
   .max(200)
@@ -88,7 +90,7 @@ export function perfOps(ctx: ServerContext): Op[] {
     const h = s.device.hello!;
     const size = (await s.current()).window ?? { w: h.screen.w, h: h.screen.h };
     return async () => {
-      await new Promise((x) => setTimeout(x, waitMs));
+      await pause(waitMs).catch(refused);
       for (let i = 0; i < 4; i++) {
         const { from, to } = swipeLine(size, { direction, distance: size.h * 0.4 });
         await s.device.swipe(from, to, 300, { settle: false });
@@ -104,7 +106,6 @@ export function perfOps(ctx: ServerContext): Op[] {
         "The app's CPU now (2 s), its memory, its frames since the last measure and the device's state (load, heat). The measurement id and the raw output are kept.",
       input: z
         .object({
-          device: Device,
           app: App,
           cpuWindowMs: z.number().int().min(500).max(10_000).default(2_000),
         })
@@ -112,8 +113,8 @@ export function perfOps(ctx: ServerContext): Op[] {
       output: SnapshotOut,
       annotations: READ,
       needs: 'cpu',
-      run: async ({ device, app, cpuWindowMs }) => {
-        const s = await ctx.session(device);
+      run: async ({ app, cpuWindowMs }) => {
+        const s = await ctx.session();
         const pkg = appOf(s, app);
         const readCpu = measure(s, 'cpu');
         const readMemory = measure(s, 'memory');
@@ -188,7 +189,6 @@ export function perfOps(ctx: ServerContext): Op[] {
         'Measure frames and memory while scrolling a list: each round resets the frames, swipes `swipes` times, and reads frames and memory once the list stops. Up or down only.',
       input: z
         .object({
-          device: Device,
           app: App,
           direction: z.enum(['up', 'down']).default('up'),
           swipes: z.number().int().min(1).max(10).default(5),
@@ -198,8 +198,8 @@ export function perfOps(ctx: ServerContext): Op[] {
       output: ScrollOut,
       annotations: ACT,
       needs: 'frames',
-      run: async ({ device, app, direction, swipes, repeats }) => {
-        const s = await ctx.session(device);
+      run: async ({ app, direction, swipes, repeats }) => {
+        const s = await ctx.session();
         const pkg = appOf(s, app);
         const readFrames = measure(s, 'frames');
         const resetFrames = measure(s, 'resetFrames');
@@ -216,6 +216,7 @@ export function perfOps(ctx: ServerContext): Op[] {
           memEndKb: number;
         }[] = [];
         for (let r = 0; r < repeats; r++) {
+          reportProgress(`scroll round ${r + 1} of ${repeats}`);
           const m0 = await readMemory(pkg).catch(refused);
           await resetFrames(pkg).catch(refused);
           for (let i = 0; i < swipes; i++) {
@@ -293,7 +294,6 @@ export function perfOps(ctx: ServerContext): Op[] {
         "The app's launch time: cold (stopped, then started) or warm (back from the background); the first launch warms up, then `repeats` launches, median. The app restarts.",
       input: z
         .object({
-          device: Device,
           app: App,
           mode: z.enum(['cold', 'warm']).default('cold'),
           repeats: z.number().int().min(1).max(10).default(3),
@@ -302,8 +302,8 @@ export function perfOps(ctx: ServerContext): Op[] {
       output: LaunchOut,
       annotations: DESTRUCTIVE,
       needs: 'launch',
-      run: async ({ device, app, mode, repeats }) => {
-        const s = await ctx.session(device);
+      run: async ({ app, mode, repeats }) => {
+        const s = await ctx.session();
         const pkg = appOf(s, app);
         const m = await measure(s, 'launch')(pkg, { mode, repeats }).catch(refused);
         s.acted();
@@ -341,7 +341,6 @@ export function perfOps(ctx: ServerContext): Op[] {
         "Where the app's CPU time goes: sampling for `seconds` (the app must be debuggable or profileable), the functions that take the most. Optionally scrolls during the recording.",
       input: z
         .object({
-          device: Device,
           app: App,
           seconds: z.number().int().min(1).max(30).default(3),
           scroll: z.enum(['up', 'down']).optional(),
@@ -350,8 +349,8 @@ export function perfOps(ctx: ServerContext): Op[] {
       output: ProfileOut,
       annotations: READ,
       needs: 'cpuProfile',
-      run: async ({ device, app, seconds, scroll }) => {
-        const s = await ctx.session(device);
+      run: async ({ app, seconds, scroll }) => {
+        const s = await ctx.session();
         const pkg = appOf(s, app);
         const profile = measure(s, 'cpuProfile');
         const during = scroll ? await scroller(s, scroll, 300) : undefined;
@@ -389,12 +388,12 @@ export function perfOps(ctx: ServerContext): Op[] {
       title: 'Heap dump',
       description:
         "The app's heap into a file on this machine (Android: Java HPROF, opened with a memory analyser; iOS simulator: an Xcode memory graph and the leak count). For a suspected leak, after perf_scroll.",
-      input: z.object({ device: Device, app: App }).strict(),
+      input: z.object({ app: App }).strict(),
       output: HeapOut,
       annotations: READ,
       needs: 'heap',
-      run: async ({ device, app }) => {
-        const s = await ctx.session(device);
+      run: async ({ app }) => {
+        const s = await ctx.session();
         const pkg = appOf(s, app);
         const dump = measure(s, 'heap');
         await mkdir(ctx.measurementsDir, { recursive: true });
@@ -414,7 +413,6 @@ export function perfOps(ctx: ServerContext): Op[] {
         "Record the frame timeline (Android 12+: each frame's time and why it was late; iOS: animation hitches, their ratio and causes, an Instruments trace). Optionally scrolls during the recording.",
       input: z
         .object({
-          device: Device,
           app: App,
           seconds: z.number().min(1).max(30).default(5),
           scroll: z.enum(['up', 'down']).optional(),
@@ -423,8 +421,8 @@ export function perfOps(ctx: ServerContext): Op[] {
       output: TraceOut,
       annotations: ACT,
       needs: 'frameTrace',
-      run: async ({ device, app, seconds, scroll }) => {
-        const s = await ctx.session(device);
+      run: async ({ app, seconds, scroll }) => {
+        const s = await ctx.session();
         const pkg = appOf(s, app);
         const record = measure(s, 'frameTrace');
         const during = scroll ? await scroller(s, scroll, 500) : undefined;
