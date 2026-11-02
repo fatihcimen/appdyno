@@ -201,6 +201,8 @@ describe.skipIf(!serial)('android agent on a device', () => {
       text: '5321234569',
       verified: true,
     });
+    // the stall is an ANR to the system: its dialog would cover the next tests
+    await d.shell(`am force-stop ${APP}`);
   }, 60_000);
 
   // the app replaced its screen (a new activity) between the read and the tap: the tap is refused as stale,
@@ -262,7 +264,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('reads a dialog and answers it', async () => {
     const s = await open('DIALOG');
-    const r = await d.tap(find(s, 'OPEN DIALOG') ?? find(s, /DIYALO/)!, {
+    const r = await d.tap(find(s, 'OPEN DIALOG')!, {
       settle: SETTLE,
       read: 'tree',
     });
@@ -271,7 +273,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(labels(dlg)).toEqual(
       expect.arrayContaining(['Emin misiniz?', 'The basket will be emptied.']),
     );
-    const ok = find(dlg, /^TAMAM$/i)!;
+    const ok = find(dlg, /^OK$/i)!;
     await d.tap(ok, { settle: SETTLE, read: 'none' });
     expect(labels(await screen())).toContain('Confirmed');
   });
@@ -326,7 +328,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('waits for content that arrives after a spinner', async () => {
     const s = await open('DELAYED');
-    const load = s.list.find((e) => e.label === 'YÜKLE')!;
+    const load = s.list.find((e) => e.label === 'LOAD')!;
     const r = await d.tap(load, { settle: SETTLE, read: 'tree', before: s.hash });
     expect(r.settle!.settled).toBe(true);
     expect(r.tree!.nodes.some((n) => n.t === 'RESULT 1' || n.t === 'Result 1')).toBe(true);
@@ -337,7 +339,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
       `pm revoke ${APP} android.permission.ACCESS_FINE_LOCATION; pm revoke ${APP} android.permission.ACCESS_COARSE_LOCATION`,
     );
     const s = await open('PERMISSION');
-    await d.tap(find(s, 'REQUEST LOCATION') ?? find(s, /KONUM/)!, { settle: SETTLE, read: 'none' });
+    await d.tap(find(s, 'REQUEST LOCATION')!, { settle: SETTLE, read: 'none' });
     let prompt: Screen | undefined;
     for (let i = 0; i < 20 && !prompt; i++) {
       const now = await screen();
@@ -419,7 +421,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     // (an earlier test's screen changes when that ends), and a screenshot taken a moment after the
     // read has the icons elsewhere than the read's boxes. Its Compose view starts the first time on
     // this screen: up to 10 s on a slow emulator.
-    await settledOn(/^devam$/i, 60);
+    await settledOn(/^continue$/i, 60);
     const r = await d.audit();
     const of = (id: string) =>
       r.issues.filter((i) => i.element?.id === `${APP}:id/${id}`).map((i) => i.type);
@@ -441,7 +443,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     // the tree says what a screen reader skips or reads as one unit: Compose's text is read, as one unit
     // (its ellipsis is not found: Compose reports its characters' places at another scale, a known gap)
     const t = await d.tree();
-    const compose = t.nodes.find((n) => n.t?.startsWith('Compose ile'))!;
+    const compose = t.nodes.find((n) => n.t?.startsWith('A very long product name in Compose'))!;
     expect(compose.f & NODE_FLAGS.notImportant).toBe(0);
     expect(compose.f & NODE_FLAGS.screenReaderFocusable).toBe(NODE_FLAGS.screenReaderFocusable);
   });

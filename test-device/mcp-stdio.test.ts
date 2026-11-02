@@ -73,7 +73,7 @@ for (const { platform, serial, form } of targets)
       const home = await call('screen');
       expect(home.text).toContain(`foreground: ${APP}`);
       const tapped = await call('tap', { ref: ref(home.text, form) });
-      expect(tapped.text).toMatch(new RegExp(`^dokunuldu @\\w+ "${form}"`));
+      expect(tapped.text).toMatch(new RegExp(`^tapped @\\w+ "${form}"`));
       expect(tapped.text).toContain('Your name');
       const typed = await call('type_text', {
         ref: ref(tapped.text, 'Your name'),
