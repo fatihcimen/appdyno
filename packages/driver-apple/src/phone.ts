@@ -10,6 +10,7 @@ import { IosDevice, type IosDeviceOps } from './device.js';
 import { IosRunnerLauncher, iosProducts, type RunnerTransport } from './runner.js';
 import { findPhoneSigning, phoneXctestrun, signedRunner, type PhoneSigning } from './signing.js';
 import { assertBundle, xcodeEnv } from './simctl.js';
+import { parseActivityMonitor, parseHangs, parseTimeProfile, recordTrace, traceTable } from './trace.js';
 import { connectPort, listDevices } from './usbmux.js';
 
 const run = promisify(execFile);
@@ -87,7 +88,7 @@ export class Devicectl {
     await this.json(['device', 'install', 'app', '--device', this.udid, appPath], 600_000);
   }
 
-  /** Starts the app afresh; with `url`, hands the link to the app as it runs (its state kept). */
+  /** Starts the app, or brings it forward as it is; with `url`, hands the link to it (its state kept). */
   async launch(bundle: string, url?: string) {
     return this.json([
       'device',
@@ -95,7 +96,7 @@ export class Devicectl {
       'launch',
       '--device',
       this.udid,
-      ...(url ? ['--payload-url', url] : ['--terminate-existing']),
+      ...(url ? ['--payload-url', url] : []),
       assertBundle(bundle),
     ]);
   }
@@ -240,11 +241,64 @@ export class IosPhoneDevice extends IosDevice {
   private readonly transport: ReturnType<typeof phoneTransport>;
   private readonly ctl: Devicectl;
   /** A phone measures animation hitches so far. */
-  readonly measure: MeasureSource = {
+  readonly measure: MeasureSource & { hangs: IosPhoneDevice['hangs'] } = {
     frameTrace: async (bundle, seconds, during) => {
       const v = await this.hitches(bundle, seconds, during);
       return { value: { kind: 'hitches', ...v }, raw: v.tracePath, at: new Date().toISOString() };
     },
+    memory: async (bundle) => {
+      const { value, raw } = await this.activity(bundle, 2_000);
+      const kb = Math.round(value.footprintBytes / 1024);
+      return { value: { kb, kind: 'footprint' }, raw, at: new Date().toISOString() };
+    },
+    cpu: async (bundle, windowMs = 3_000) => {
+      const { value, raw } = await this.activity(bundle, windowMs);
+      if (value.cpuPercent === undefined)
+        throw new DeviceError('UNSUPPORTED', `the trace has one reading of ${bundle}: no CPU share`);
+      return {
+        value: { percent: value.cpuPercent, windowMs: value.windowMs! },
+        raw,
+        at: new Date().toISOString(),
+      };
+    },
+    cpuProfile: async (bundle, ms, during) => {
+      const { trace, profile } = await this.profile(bundle, ms, during);
+      return {
+        value: { ...profile, durationMs: Math.round(ms / 1000) * 1000 },
+        raw: trace,
+        at: new Date().toISOString(),
+      };
+    },
+    launch: async (bundle, opts) => {
+      const samples: number[] = [];
+      for (let i = 0; i < opts.repeats + 1; i++) {
+        if (opts.mode === 'cold') await this.terminate(bundle);
+        else await this.ctl.launch('com.apple.Preferences').catch(() => undefined);
+        await new Promise((r) => setTimeout(r, 500));
+        const t = performance.now();
+        await this.launch(bundle);
+        const end = t + 20_000;
+        while (performance.now() < end) {
+          const tree = await this.tree().catch(() => undefined);
+          if (tree?.windows[0]?.pkg === bundle && tree.nodes.filter((n) => n.w === 0).length > 3)
+            break;
+        }
+        // the first warms up
+        if (i > 0) samples.push(Math.round(performance.now() - t));
+      }
+      const sorted = [...samples].sort((a, b) => a - b);
+      return {
+        value: {
+          mode: opts.mode,
+          samples: samples.map((totalMs) => ({ totalMs })),
+          ...(sorted.length && { medianMs: sorted[Math.floor((sorted.length - 1) / 2)]! }),
+          until: 'the first screen is read',
+        },
+        raw: samples.join(' '),
+        at: new Date().toISOString(),
+      };
+    },
+    hangs: (bundle, seconds, during) => this.hangs(bundle, seconds, during),
   };
 
   constructor(serial: string, signing?: PhoneSigning) {
@@ -253,6 +307,38 @@ export class IosPhoneDevice extends IosDevice {
     super(serial, phoneOps(serial, ctl), new IosRunnerLauncher(serial, transport));
     this.transport = transport;
     this.ctl = ctl;
+  }
+
+  /** Activity Monitor over every process (no attach: a system app has no get-task-allow), one process read. */
+  private async activity(bundle: string, windowMs: number) {
+    const pid = await this.ctl.pid(assertBundle(bundle));
+    const trace = await recordTrace({
+      template: 'Activity Monitor',
+      device: this.serial,
+      seconds: Math.min(Math.max(Math.round(windowMs / 1000), 2), 30),
+      dir: join(stateDir(), 'traces'),
+    });
+    const value = parseActivityMonitor(await traceTable(trace, 'activity-monitor-process-live'), pid);
+    if (!value) throw new DeviceError('UNSUPPORTED', `no reading of ${bundle} in the trace`);
+    return { value, raw: trace };
+  }
+
+  private async profile(bundle: string, ms: number, during?: () => Promise<unknown>) {
+    const trace = await recordTrace({
+      template: 'Time Profiler',
+      device: this.serial,
+      attach: await this.ctl.pid(assertBundle(bundle)),
+      seconds: Math.min(Math.max(Math.round(ms / 1000), 1), 30),
+      dir: join(stateDir(), 'traces'),
+      ...(during && { during }),
+    });
+    return { trace, profile: parseTimeProfile(await traceTable(trace, 'time-profile')) };
+  }
+
+  /** The main thread's hangs (over 250 ms) while `during` runs: part of the Time Profiler's recording. */
+  async hangs(bundle: string, seconds = 5, during?: () => Promise<unknown>) {
+    const { trace } = await this.profile(bundle, seconds * 1000, during);
+    return { ...parseHangs(await traceTable(trace, 'potential-hangs')), tracePath: trace };
   }
 
   /** Ends the phone's simulated position (setLocation's). */

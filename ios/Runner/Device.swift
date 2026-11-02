@@ -54,7 +54,7 @@ final class Device {
         var nodes: [Node] = []
         var truncated = false
         var busy = false
-        let screen = UIScreen.main.bounds
+        var screen = CGRect.zero
         func add(_ root: XCUIElementSnapshot, window: Int) {
             var queue: [(XCUIElementSnapshot, Int, Int)] = [(root, -1, 0)]
             var head = 0
@@ -74,6 +74,8 @@ final class Device {
         do { snap = try app.snapshot() } catch {
             throw AgentError("APP_NOT_RUNNING", "the screen could not be read: \(error.localizedDescription)")
         }
+        // the app's frame, not UIScreen's: a runner without a launch screen is told 320 x 480 on a bigger one
+        screen = snap.frame
         windows.append(["type": 1, "pkg": id, "layer": 0, "b": Device.rect(snap.frame), "active": true, "focused": true])
         add(snap, window: 0)
         // `exists` answers at once; a snapshot of a missing element waits for it to appear

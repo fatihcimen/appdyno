@@ -226,6 +226,9 @@ export class IosRunnerLauncher {
           TEST_RUNNER_APPDYNO_PORT: String(port),
           TEST_RUNNER_APPDYNO_TOKEN: token,
           ...(target && { TEST_RUNNER_APPDYNO_TARGET: target }),
+          ...(process.env.APPDYNO_RUNNER_DEFAULTS && {
+            TEST_RUNNER_APPDYNO_RUNNER_DEFAULTS: process.env.APPDYNO_RUNNER_DEFAULTS,
+          }),
           // APPDYNO_FAST_TAP=0: taps through XCUI instead of XCTest's event synthesizer (the runner's EventShim)
           ...(process.env.APPDYNO_FAST_TAP && {
             TEST_RUNNER_APPDYNO_FAST_TAP: process.env.APPDYNO_FAST_TAP,

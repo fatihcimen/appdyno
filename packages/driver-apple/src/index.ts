@@ -13,3 +13,4 @@ export { Simctl, xcodeEnv, type Simulator } from './simctl.js';
 export { listPhones } from './usbmux.js';
 export * from './perf.js';
 export * from './trace.js';
+export { DirectSim, type DirectStatus } from './simdirect.js';

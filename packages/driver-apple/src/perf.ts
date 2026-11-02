@@ -12,7 +12,9 @@ import type {
   MemoryReading,
   ProfileEntry,
 } from '@appdyno/core';
+import { stateDir } from '@appdyno/core';
 import { assertBundle, type Simctl } from './simctl.js';
+import { parseTimeProfile, recordTrace, traceTable } from './trace.js';
 
 const run = promisify(execFile);
 const at = () => new Date().toISOString();
@@ -251,7 +253,11 @@ export class IosSimulatorPerf implements MeasureSource {
     };
   }
 
-  /** The Mac's sampler on the app for `durationMs`; `during` runs while it samples. */
+  /**
+   * Xcode's Time Profiler on the app for `durationMs` (`sample` sees no busy samples of a simulator app
+   * under macOS 27); `during` runs while it records. `sample` stays for a Mac where the tool cannot
+   * attach.
+   */
   async cpuProfile(
     bundle: string,
     durationMs = 3_000,
@@ -259,11 +265,33 @@ export class IosSimulatorPerf implements MeasureSource {
   ): Promise<Measured<CpuProfile & { appTop: ProfileEntry[] }>> {
     const pid = await this.pid(bundle);
     const s = Math.min(Math.max(Math.round(durationMs / 1000), 1), 30);
+    let ran = false;
+    const once = during && (() => ((ran = true), during()));
+    const traced = await recordTrace({
+      template: 'Time Profiler',
+      device: this.udid,
+      attach: pid,
+      seconds: s,
+      dir: join(stateDir(), 'traces'),
+      ...(once && { during: once }),
+    }).then(
+      async (trace) => {
+        const xml = await traceTable(trace, 'time-profile');
+        return { trace, profile: parseTimeProfile(xml) };
+      },
+      () => undefined,
+    );
+    if (traced && traced.profile.samples > 0)
+      return {
+        value: { ...traced.profile, durationMs: s * 1000 },
+        raw: traced.trace,
+        at: at(),
+      };
     const rec = run('sample', [String(pid), String(s), '-mayDie'], {
       timeout: (s + 60) * 1000,
       maxBuffer: 64 * 1024 * 1024,
     });
-    if (during) await during();
+    if (during && !ran) await during();
     const { stdout } = await rec;
     const file = /written to file (\S+)/.exec(stdout)?.[1];
     const report = file

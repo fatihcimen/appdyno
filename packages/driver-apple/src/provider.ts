@@ -5,6 +5,7 @@ import type { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from './device.js';
 import { IosPhoneDevice, phoneRunnerApp } from './phone.js';
 import { iosProducts } from './runner.js';
+import { DirectSim } from './simdirect.js';
 import { findPhoneSigning, phoneSigningFromEnv, readProfile } from './signing.js';
 import { Simctl, xcodeEnv, type Simulator } from './simctl.js';
 import { listPhones } from './usbmux.js';
@@ -92,6 +93,19 @@ export async function iosChecks(now = Date.now()): Promise<Check[]> {
   return out;
 }
 
+/** The simulator's direct input and read: answering, else the runner does the work (slower, still right). */
+export async function directChecks(udid: string, direct = new DirectSim(udid)): Promise<Check[]> {
+  const check = (name: string, how: string): Check =>
+    how === 'ok'
+      ? { name, ok: true, detail: 'answers' }
+      : { name, ok: false, warn: true, detail: `${how}; the runner does this instead` };
+  const r = await direct.probe().catch((e: Error) => ({
+    input: e.message.slice(0, 200),
+    read: e.message.slice(0, 200),
+  }));
+  return [check(`simulator ${udid} direct input`, r.input), check(`simulator ${udid} direct read`, r.read)];
+}
+
 /** Booted simulators (none when Xcode is missing). */
 const bootedSimulators = (): Promise<Simulator[]> =>
   new Simctl()
@@ -122,13 +136,15 @@ export function appleProvider(
     handles: (serial) => SIMULATOR_ID.test(serial) || PHONE_ID.test(serial),
     open: (serial) =>
       SIMULATOR_ID.test(serial) ? new IosSimulatorDevice(serial) : new IosPhoneDevice(serial),
-    doctor: async () => [
+    doctor: async (serial) => [
       ...(await iosChecks()),
       ...(await bootedSimulators()).map((s) => ({
         name: `simulator ${s.udid}`,
         ok: true,
         detail: `${s.name}, booted`,
       })),
+      // a named simulator only: the helpers run inside it
+      ...(serial && SIMULATOR_ID.test(serial) ? await directChecks(serial) : []),
     ],
   };
 }

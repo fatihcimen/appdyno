@@ -27,6 +27,7 @@ final class RunnerTests: XCTestCase {
         guard let port = env["APPDYNO_PORT"].flatMap(UInt16.init), let token = env["APPDYNO_TOKEN"], token.count >= 16 else {
             throw AgentError("INVALID_ARGUMENT", "APPDYNO_PORT and APPDYNO_TOKEN (16+ characters) are required")
         }
+        for key in (env["APPDYNO_RUNNER_DEFAULTS"] ?? "").split(separator: ",") { UserDefaults.standard.set(true, forKey: String(key)) }
         if env["APPDYNO_IDLE_WAITS"] != "1" { IdleShim.install() }
         let device = Device()
         if let target = env["APPDYNO_TARGET"], !target.isEmpty { device.setTarget(target) }
@@ -49,7 +50,8 @@ final class RunnerTests: XCTestCase {
     }
 
     static func hello(_ env: [String: String]) -> [String: Any] {
-        let b = UIScreen.main.bounds
+        // the home screen app's frame, not UIScreen's: a runner without a launch screen is told 320 x 480
+        let b = XCUIApplication(bundleIdentifier: Device.springboardId).frame
         let rotation: Int = {
             switch XCUIDevice.shared.orientation {
             case .landscapeLeft: return 1

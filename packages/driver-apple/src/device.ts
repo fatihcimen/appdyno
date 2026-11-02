@@ -26,6 +26,16 @@ import {
   type Screen,
 } from '@appdyno/core';
 import { IosSimulatorPerf } from './perf.js';
+import {
+  actionable,
+  DirectSim,
+  hasAlert,
+  learnCopies,
+  sameContent,
+  sameLayout,
+  settle,
+  withoutCopies,
+} from './simdirect.js';
 import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
@@ -113,9 +123,9 @@ export class IosDevice implements Device {
   private rpc: RpcClient | undefined;
   private connecting: Promise<RpcClient> | undefined;
   private helloInfo: Hello | undefined;
-  private readonly queue = new DeviceQueue();
+  protected readonly queue = new DeviceQueue();
   /** The app the runner reads and acts on (set by launch, openUrl with a bundle, or target). */
-  private targetApp: string | undefined;
+  protected targetApp: string | undefined;
   lastStartWasCold = false;
 
   constructor(
@@ -160,20 +170,23 @@ export class IosDevice implements Device {
   }
 
   private call<M extends Method>(method: M, params: ParamsOf<M>, timeoutMs: number) {
-    return this.queue.run(async () => {
-      let rpc: RpcClient | undefined;
-      try {
-        rpc = await this.ensure();
-        return await rpc.call(method, params, { timeoutMs });
-      } catch (e) {
-        const lost = e instanceof DeviceError && e.code === 'AGENT_UNAVAILABLE';
-        // the runner works on its main thread, one job at a time: a stuck job holds every later one
-        if (!lost) throw await afterTimeout(e, rpc, () => this.restartStuck(rpc!));
-        if (!RETRY_SAFE.has(method)) throw e;
-        this.rpc = undefined;
-        return (await this.ensure()).call(method, params, { timeoutMs });
-      }
-    });
+    return this.queue.run(() => this.callNow(method, params, timeoutMs));
+  }
+
+  /** The runner's method, for one already in the queue. */
+  protected async callNow<M extends Method>(method: M, params: ParamsOf<M>, timeoutMs: number) {
+    let rpc: RpcClient | undefined;
+    try {
+      rpc = await this.ensure();
+      return await rpc.call(method, params, { timeoutMs });
+    } catch (e) {
+      const lost = e instanceof DeviceError && e.code === 'AGENT_UNAVAILABLE';
+      // the runner works on its main thread, one job at a time: a stuck job holds every later one
+      if (!lost) throw await afterTimeout(e, rpc, () => this.restartStuck(rpc!));
+      if (!RETRY_SAFE.has(method)) throw e;
+      this.rpc = undefined;
+      return (await this.ensure()).call(method, params, { timeoutMs });
+    }
   }
 
   /** A runner whose main thread stays stuck: stopped (its xcodebuild ends), the next call starts one. */
@@ -185,7 +198,12 @@ export class IosDevice implements Device {
 
   async tree(opts: { maxDepth?: number; maxNodes?: number } = {}): Promise<Tree> {
     const t = (await this.call('tree.get', opts, TIMEOUTS.read)).result;
-    // diagnostics: while the flag file exists, every read is kept (this machine only)
+    await this.keepDump(t);
+    return t;
+  }
+
+  /** Diagnostics: while the flag file exists, every read is kept (this machine only). */
+  protected async keepDump(t: Tree) {
     if (existsSync(DUMP_FLAG))
       await mkdir(DUMP_DIR, { recursive: true, mode: 0o700 })
         .then(() =>
@@ -196,7 +214,6 @@ export class IosDevice implements Device {
           ),
         )
         .catch(() => undefined);
-    return t;
   }
 
   async read(appId?: string): Promise<Screen> {
@@ -204,10 +221,15 @@ export class IosDevice implements Device {
   }
 
   async act(action: ActParams, opts: ActOptions = {}): Promise<ActResult> {
+    return this.queue.run(() => this.actByRunner(action, opts));
+  }
+
+  /** The action done by the runner, for one already in the queue. */
+  protected async actByRunner(action: ActParams, opts: ActOptions): Promise<ActResult> {
     const settle = opts.settle === false ? undefined : (opts.settle ?? {});
     const cap = settle ? (settle.maxMs ?? 3_000) : 0;
     const extra = action.kind === 'longPress' || action.kind === 'swipe' ? action.durationMs : 0;
-    const { result } = await this.call(
+    const { result } = await this.callNow(
       'act',
       {
         action,
@@ -372,15 +394,193 @@ export class IosDevice implements Device {
   }
 }
 
+type Node = Tree['nodes'][number];
+type Capture = { tree: Tree; busy: boolean; byRunner?: boolean };
+const nodesBusy = (t: Tree) => t.nodes.some((n) => n.c === 'ActivityIndicator' && (n.f & 1) !== 0);
+/** Reads cost about 30 ms here: the settle can look far more often than the runner's 80 ms. */
+const POLL_MS = 20;
+const INERT_QUIET_MS = 80;
+const ALERT_WATCH_MS = 800;
+const ALERT_APPEAR_MS = 450;
+const ANIMATION_WAIT_MS = 1_000;
+
 /** An iOS simulator: the simulator tool for apps, links and location; perf from the Mac. */
 export class IosSimulatorDevice extends IosDevice {
   readonly virtual = true;
+  readonly direct: DirectSim;
+  /** Layouts recently answered, by hash: what an action's `before` names. */
+  private readonly recent = new Map<string, Node[]>();
+  private readonly copyVerdicts = new Map<string, Set<string>>();
+  private readMismatches = 0;
 
   constructor(
     serial: string,
     private readonly simctl: Simctl = new Simctl(),
+    direct?: DirectSim,
   ) {
     super(serial, simulatorOps(serial, simctl), new IosRunnerLauncher(serial));
+    this.direct = direct ?? new DirectSim(serial);
+  }
+
+  private remember(t: Tree) {
+    this.recent.delete(t.hash);
+    this.recent.set(t.hash, t.nodes);
+    if (this.recent.size > 8) this.recent.delete(this.recent.keys().next().value!);
+    return t;
+  }
+
+  /**
+   * The helper's read of the app in front, when it can say what the runner would; for one in the queue.
+   * `final`: this read is an answer, not one of a settle's looks, and the runner is asked what only it
+   * can tell. Its verdict on a screen's repeated controls is kept by the layout's digest.
+   */
+  private async readDirect(final: boolean): Promise<Capture | undefined> {
+    const r = await this.direct.read(this.targetApp).catch(() => ({ refused: 'failed' }));
+    if ('refused' in r) return undefined;
+    let hidden = this.copyVerdicts.get(r.tree.hash);
+    const proven = this.direct.readProven;
+    if ((!hidden && r.copies && final) || !proven) {
+      const runner = (await this.callNow('tree.get', {}, TIMEOUTS.read)).result;
+      const verdict = learnCopies(r.tree, runner);
+      if (!proven) {
+        const believed = verdict && this.direct.checkRead(withoutCopies(r.tree, verdict), runner);
+        if (!believed && ++this.readMismatches >= 3)
+          this.direct.turnReadOff('its read differed from the runner');
+        if (!believed) return { tree: runner, busy: nodesBusy(runner), byRunner: true };
+      }
+      // the screen moved between the two reads: the runner's is the answer
+      if (!verdict) return { tree: runner, busy: nodesBusy(runner), byRunner: true };
+      hidden = verdict;
+      this.copyVerdicts.delete(r.tree.hash);
+      this.copyVerdicts.set(r.tree.hash, hidden);
+      if (this.copyVerdicts.size > 8) this.copyVerdicts.delete(this.copyVerdicts.keys().next().value!);
+    }
+    return { tree: hidden ? withoutCopies(r.tree, hidden) : r.tree, busy: r.busy };
+  }
+
+  /** A read for one in the queue: the helper's, else the runner's (a system alert, a web page). */
+  private async readNow(final = true): Promise<Capture> {
+    const d = await this.readDirect(final);
+    if (d) return d;
+    const tree = (await this.callNow('tree.get', {}, TIMEOUTS.read)).result;
+    return { tree, busy: nodesBusy(tree), byRunner: true };
+  }
+
+  override async tree(opts: { maxDepth?: number; maxNodes?: number } = {}): Promise<Tree> {
+    if (opts.maxDepth !== undefined || opts.maxNodes !== undefined) return super.tree(opts);
+    const { tree } = await this.queue.run(() => this.readNow());
+    await this.keepDump(tree);
+    return this.remember(tree);
+  }
+
+  override async act(action: ActParams, opts: ActOptions = {}): Promise<ActResult> {
+    return this.queue.run(async () => {
+      // the first read tells the helper the screen's size
+      if (!this.direct.status().input.startsWith('runner') && !this.direct.readProven)
+        await this.readDirect(true);
+      const touch = action.kind !== 'key';
+      const waitStart = Date.now();
+      // UIKit takes no touches while a view animates, and the tree already shows where it ends
+      if (touch) await this.direct.animationsOver(ANIMATION_WAIT_MS);
+      const animationWaitMs = Date.now() - waitStart;
+      const touchesBefore = this.direct.touchesEnded;
+      if (!(await this.direct.send(action))) return this.actByRunner(action, opts);
+      const out = await this.settleAfter(action, opts);
+      // nothing moved and the app has not seen the touch finish: it never got it
+      if (touch && out.untouched && touchesBefore === this.direct.touchesEnded) {
+        this.direct.touchLost();
+        return this.actByRunner(action, opts);
+      }
+      return { ...out.result, ...(touch && { animationWaitMs }) };
+    });
+  }
+
+  private async settleAfter(action: ActParams, opts: ActOptions) {
+    const want = opts.read ?? 'none';
+    const answer = (c: Capture | undefined) => {
+      if (c) this.remember(c.tree);
+      return {
+        ...(want !== 'none' && c && { hash: c.tree.hash }),
+        ...(want === 'tree' && c && { tree: c.tree }),
+      };
+    };
+    if (opts.settle === false) {
+      const c = want === 'none' ? undefined : await this.readNow();
+      return { untouched: false, result: answer(c) };
+    }
+    const s = opts.settle ?? {};
+    const actionAt = Date.now();
+    const before = opts.before ? this.recent.get(opts.before) : undefined;
+    const tap = action.kind === 'tap' ? action : undefined;
+    const inert = !!tap && !!before && !actionable(before, tap.x, tap.y);
+    const quietMs = inert ? Math.min(s.quietMs ?? 200, INERT_QUIET_MS) : (s.quietMs ?? 200);
+    const maxMs = s.maxMs ?? 3_000;
+    // an alert or sheet that came up during the settle is still animating in: a tap on it then is lost
+    let alertSince: number | undefined = before && hasAlert(before) ? 0 : undefined;
+    const r = await settle<Capture | { tree: { nodes: Node[] }; busy: false }>({
+      actionAt,
+      quietMs,
+      maxMs,
+      pollMs: POLL_MS,
+      before: before && { tree: { nodes: before }, busy: false },
+      read: async () => {
+        const c = await this.readNow(false);
+        if (hasAlert(c.tree.nodes)) {
+          alertSince ??= Date.now();
+          if (Date.now() - alertSince < ALERT_APPEAR_MS) return { ...c, busy: true };
+        } else alertSince = undefined;
+        return c;
+      },
+      same: (a, b) => sameContent(a.tree.nodes, b.tree.nodes),
+      busy: (c) => c.busy,
+    });
+    let last = r.last as Capture;
+    let extraMs = 0;
+    const unchanged =
+      !!before && sameLayout(before, last.tree.nodes) && !hasAlert(last.tree.nodes);
+    // an actionable tap that changed nothing in the app may have asked the system for something: its
+    // alert comes a moment later, while the app is idle
+    if (tap && !inert && unchanged) {
+      const idleAt = Date.now();
+      while (Date.now() - idleAt < ALERT_WATCH_MS) {
+        await new Promise((res) => setTimeout(res, 100));
+        const c = await this.readNow(false);
+        last = c;
+        if (c.byRunner || !sameLayout(before, c.tree.nodes)) break;
+      }
+      extraMs = Date.now() - idleAt;
+    }
+    const untouched = unchanged && sameLayout(before, last.tree.nodes);
+    // the last look may have left to the runner what only it can tell
+    if (want !== 'none' && !last.byRunner && !untouched) last = await this.readNow(true);
+    return {
+      untouched,
+      result: {
+        settle: { settled: r.settled, ms: r.elapsedMs + extraMs, reads: r.reads, quietMs },
+        ...answer(last),
+      },
+    };
+  }
+
+  override async foreground(): Promise<string | undefined> {
+    return (await this.direct.front().catch(() => undefined)) ?? super.foreground();
+  }
+
+  /** A running app comes forward as it is; to start it afresh, terminate it first. */
+  override async launch(pkg: string): Promise<string> {
+    if (this.targetApp === pkg && (await this.direct.front().catch(() => undefined)) === pkg)
+      return 'in front';
+    return super.launch(pkg);
+  }
+
+  override async setOrientation(rotation: 0 | 1 | 2 | 3) {
+    this.direct.setRotation(rotation);
+    await super.setOrientation(rotation);
+  }
+
+  override close() {
+    this.direct.close();
+    super.close();
   }
 
   /** The trace tool's Animation Hitches recording fails on simulators (measured on Xcode 27.1). */
