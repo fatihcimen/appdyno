@@ -80,20 +80,31 @@ export class AndroidAgentLauncher {
       if (c) return { ...c, started: false };
     }
     if (state?.pid) await this.kill(state.pid);
+    const start = async () => ({ ...(await this.start(apk)), started: true });
+    const unlessConflict = (e: unknown): DeviceError => {
+      if (e instanceof DeviceError && e.code === 'AGENT_CONFLICT') return e;
+      throw e;
+    };
+    let conflict: DeviceError;
     try {
-      return { ...(await this.start(apk)), started: true };
+      return await start();
     } catch (e) {
-      // our own agent from a lost state (another state folder, a cleared cache) holds the device: it
-      // cannot be reached without its token, so it is replaced, once
-      if (!(e instanceof DeviceError) || e.code !== 'AGENT_CONFLICT') throw e;
-      if (!(await this.killOrphans())) {
-        const holders = await this.holders();
-        if (!this.takeover || holders.length === 0)
-          throw new DeviceError(e.code, e.message, conflictHint(holders, this.serial));
-        for (const h of holders) await this.stopHolder(h);
-      }
-      return { ...(await this.start(apk)), started: true };
+      conflict = unlessConflict(e);
     }
+    // our own agent from a lost state (another state folder, a cleared cache) holds the device: it
+    // cannot be reached without its token, so it is replaced, once
+    if (await this.killOrphans()) {
+      try {
+        return await start();
+      } catch (e) {
+        conflict = unlessConflict(e);
+      }
+    }
+    const holders = await this.holders();
+    if (!this.takeover || holders.length === 0)
+      throw new DeviceError(conflict.code, conflict.message, conflictHint(holders, this.serial));
+    for (const h of holders) await this.stopHolder(h);
+    return start();
   }
 
   /** Who holds UI automation, as the device's process list shows it. */

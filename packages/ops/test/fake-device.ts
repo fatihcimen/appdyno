@@ -235,6 +235,10 @@ export class FakeDevice implements Device {
   async appRunning() {
     return this.running;
   }
+  /** Set: the fake reports this process id, as Android does. */
+  pid: string | undefined;
+  appPid: FakeDevice['fakePid'] | undefined;
+  fakePid = async () => this.pid;
   close() {}
 
   /** Canned measurements; `jank` sets the share of janky frames, `memKb` the PSS per read. */

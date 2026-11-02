@@ -49,6 +49,8 @@ export class Session {
     return this.latest && this.latest.at === this.version ? this.latest.screen : undefined;
   }
 
+  /** The app's process when last looked: another one means it went down and came back. */
+  appPid: string | undefined;
   /** When the last device action ended (epoch ms): `logs` starts here. */
   lastActionAt: number | undefined;
 

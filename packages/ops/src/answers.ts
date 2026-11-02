@@ -82,13 +82,10 @@ export function answersFor(ctx: ServerContext) {
     s.shown = screen.list;
   };
 
-  /** The app's end, when its process is gone: its report's reason, or that none says why. */
-  const death = async (s: Session, since: number) => {
-    const { appRunning, crashes } = s.device;
-    if (!s.appId || !appRunning) return undefined;
-    if (await appRunning.call(s.device, s.appId).catch(() => true)) return undefined;
-    reportProgress('the app is gone: looking for its crash report');
-    for (let i = 0; crashes && i < REPORT_TRIES; i++) {
+  /** What a report says of the app's end since `since`; a new process with no report is no death. */
+  const reportOf = async (s: Session, since: number) => {
+    const { crashes } = s.device;
+    for (let i = 0; crashes && s.appId && i < REPORT_TRIES; i++) {
       const { reports } = await crashes
         .call(s.device, { app: s.appId, since: since - CLOCK_SLACK_MS, limit: 1 })
         .catch(() => ({ reports: [] }));
@@ -96,7 +93,30 @@ export function answersFor(ctx: ServerContext) {
       if (r) return { reason: clean(r.reason), ...(r.file && { file: r.file }) };
       await pause(REPORT_GAP_MS).catch(() => undefined);
     }
-    return { reason: 'its process is gone and no crash report says why' };
+    return undefined;
+  };
+
+  /**
+   * The app's end during an action: its process is gone from the front, or another one has taken over
+   * (Android restarts a crashed app at once, so the screen alone would not tell).
+   */
+  const death = async (s: Session, screen: Screen, wasPid: string | undefined, since: number) => {
+    const { appPid, appRunning } = s.device;
+    if (!s.appId) return undefined;
+    if (appPid) {
+      const pid = await appPid.call(s.device, s.appId).catch(() => wasPid);
+      s.appPid = pid;
+      if (wasPid && pid && pid !== wasPid) {
+        reportProgress('the app has a new process: looking for its crash report');
+        return reportOf(s, since);
+      }
+    }
+    if (!screen.foreground || screen.foreground === s.appId || !appRunning) return undefined;
+    if (await appRunning.call(s.device, s.appId).catch(() => true)) return undefined;
+    reportProgress('the app is gone: looking for its crash report');
+    return (
+      (await reportOf(s, since)) ?? { reason: 'its process is gone and no crash report says why' }
+    );
   };
 
   /** What every action says of the screen after it: changed or not, what kept it busy, the app's fate. */
@@ -112,14 +132,14 @@ export function answersFor(ctx: ServerContext) {
       ms: number;
       busy: string[];
       started: number;
+      pid: string | undefined;
     },
   ) => {
     show(s, screen);
     const d = read === 'diff' && o.before ? diffScreens(o.before, screen.list) : undefined;
     const diff = d && diffText(d, screen.list.length, clean);
     const fg = foreground(s, screen);
-    const appDied =
-      fg && s.appId && screen.foreground !== s.appId ? await death(s, o.started) : undefined;
+    const appDied = await death(s, screen, o.pid, o.started);
     const changed = o.base ? differs(diffScreens(o.base, screen.list)) : undefined;
     const busy = o.settled === false ? o.busy : [];
     const moving =
@@ -153,10 +173,12 @@ export function answersFor(ctx: ServerContext) {
     before: Session['shown'],
     base: Session['shown'],
     started: number,
+    pid: string | undefined,
     r?: ActResult,
   ) => {
     if (read === 'none' || !r?.tree) return reply(done, summary(done));
     return after(s, done, read, s.screenOf(r.tree), {
+      pid,
       before,
       base,
       settled: r.settle?.settled,
@@ -222,11 +244,24 @@ export function answersFor(ctx: ServerContext) {
       read === 'none'
         ? { settle: false, read: 'none' }
         : { settle: SETTLE, read: 'tree', ...(s.fresh && { before: s.fresh.hash }) };
+    // alongside the action, so that it costs the answer no time
+    const pid =
+      s.appPid ??
+      (read !== 'none' && s.appId ? s.device.appPid?.(s.appId).catch(() => undefined) : undefined);
     const r = await run(opts).catch(refused);
     // the last read before the action, which a ref's lookup may have just made
     const base = s.fresh?.list ?? before;
     s.acted();
-    return answer(s, typeof done === 'string' ? done : done(r), read, before, base, started, r);
+    return answer(
+      s,
+      typeof done === 'string' ? done : done(r),
+      read,
+      before,
+      base,
+      started,
+      await pid,
+      r,
+    );
   };
 
   /** Reads until two reads in a row have the same layout, at most `maxMs` (after a link or a launch). */
@@ -247,6 +282,8 @@ export function answersFor(ctx: ServerContext) {
     const before = s.shown;
     const base = s.fresh?.list ?? before;
     s.acted();
+    // a launch or a link may start a new process on purpose
+    s.appPid = undefined;
     if (read === 'none') return reply(done, summary(done));
     reportProgress('waiting for the screen to settle');
     const { screen, settled } = await settleRead(s);
@@ -257,6 +294,7 @@ export function answersFor(ctx: ServerContext) {
       ms: Date.now() - started,
       busy: busyReasons(undefined, screen),
       started,
+      pid: undefined,
     });
   };
 

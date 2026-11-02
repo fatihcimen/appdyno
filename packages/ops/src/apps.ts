@@ -58,6 +58,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers): Op[] {
         if (!pkg) throw new ToolError(NO_APP);
         await s.device.terminate(pkg).catch(refused);
         s.acted();
+        s.appPid = undefined;
         return reply(`stopped ${pkg}`, { done: `stopped ${pkg}` });
       },
     }),

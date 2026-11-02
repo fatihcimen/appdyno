@@ -115,6 +115,7 @@ export function perfOps(ctx: ServerContext): Op[] {
       needs: 'cpu',
       run: async ({ app, cpuWindowMs }) => {
         const s = await ctx.session();
+        s.appPid = undefined;
         const pkg = appOf(s, app);
         const readCpu = measure(s, 'cpu');
         const readMemory = measure(s, 'memory');
@@ -200,6 +201,7 @@ export function perfOps(ctx: ServerContext): Op[] {
       needs: 'frames',
       run: async ({ app, direction, swipes, repeats }) => {
         const s = await ctx.session();
+        s.appPid = undefined;
         const pkg = appOf(s, app);
         const readFrames = measure(s, 'frames');
         const resetFrames = measure(s, 'resetFrames');
@@ -304,6 +306,7 @@ export function perfOps(ctx: ServerContext): Op[] {
       needs: 'launch',
       run: async ({ app, mode, repeats }) => {
         const s = await ctx.session();
+        s.appPid = undefined;
         const pkg = appOf(s, app);
         const m = await measure(s, 'launch')(pkg, { mode, repeats }).catch(refused);
         s.acted();
@@ -351,6 +354,7 @@ export function perfOps(ctx: ServerContext): Op[] {
       needs: 'cpuProfile',
       run: async ({ app, seconds, scroll }) => {
         const s = await ctx.session();
+        s.appPid = undefined;
         const pkg = appOf(s, app);
         const profile = measure(s, 'cpuProfile');
         const during = scroll ? await scroller(s, scroll, 300) : undefined;
@@ -394,6 +398,7 @@ export function perfOps(ctx: ServerContext): Op[] {
       needs: 'heap',
       run: async ({ app }) => {
         const s = await ctx.session();
+        s.appPid = undefined;
         const pkg = appOf(s, app);
         const dump = measure(s, 'heap');
         await mkdir(ctx.measurementsDir, { recursive: true });
@@ -423,6 +428,7 @@ export function perfOps(ctx: ServerContext): Op[] {
       needs: 'frameTrace',
       run: async ({ app, seconds, scroll }) => {
         const s = await ctx.session();
+        s.appPid = undefined;
         const pkg = appOf(s, app);
         const record = measure(s, 'frameTrace');
         const during = scroll ? await scroller(s, scroll, 500) : undefined;

@@ -269,6 +269,24 @@ describe('crashes', () => {
     expect(again.text).toContain('the app died: its process is gone and no crash report says why');
   });
 
+  it('says so when the system restarted the app at once, only with a report to go by', async () => {
+    const device = new FakeDevice();
+    device.pid = '100';
+    device.appPid = device.fakePid;
+    const { call } = await connect(device);
+    await call('screen');
+    expect((await call('tap', { x: 5, y: 2390 })).text).not.toContain('the app died');
+    device.pid = '200';
+    device.crashReports = [{ at: 'now', reason: 'APP CRASH(NATIVE)' }];
+    const r = await call('tap', { x: 5, y: 2390 });
+    expect(r.structuredContent).toMatchObject({ appDied: { reason: 'APP CRASH(NATIVE)' } });
+    // a launch starts a new process on purpose, and no report means no death
+    device.crashReports = [];
+    await call('launch_app');
+    device.pid = '300';
+    expect((await call('tap', { x: 5, y: 2390 })).text).not.toContain('the app died');
+  });
+
   it('says nothing of the sort when the app only went to the background', async () => {
     const device = new FakeDevice();
     const { call } = await connect(device);

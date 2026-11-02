@@ -204,6 +204,8 @@ export interface Device {
   crashes?(q: CrashesQuery): Promise<CrashesAnswer>;
   /** Whether the app has a live process. */
   appRunning?(app: string): Promise<boolean>;
+  /** Its process id, where reading it is cheap enough to do on every action. */
+  appPid?(app: string): Promise<string | undefined>;
   readonly measure?: MeasureSource;
 }
 

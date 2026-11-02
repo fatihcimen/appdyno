@@ -6,6 +6,8 @@ import { type Adb, shq } from './adb.js';
 /** Reasons that are the app's end as nobody asked for it; the rest (a user's stop, a new install) are left out. */
 const DEATHS = /CRASH|ANR|LOW.?MEMORY|SIGNALED|EXCESSIVE|INITIALIZATION|FREEZER/i;
 
+const TAGS = ['data_app_crash', 'data_app_native_crash', 'data_app_anr'];
+
 type Exit = { at: string; time: number; reason: string; detail?: string };
 
 /**
@@ -93,9 +95,10 @@ export async function androidCrashes(
   q: CrashesQuery,
 ): Promise<CrashesAnswer> {
   const exitInfo = await adb.exec(serial, `dumpsys activity exit-info ${shq(q.app)}`);
+  // one tag per command: given several, dumpsys dropbox looks for entries that are all of them
   const dropbox = await adb.exec(
     serial,
-    'dumpsys dropbox --print data_app_crash data_app_native_crash data_app_anr',
+    TAGS.map((t) => `dumpsys dropbox --print ${t}`).join('; '),
   );
   const reports = crashReports(exitInfo, dropbox, q);
   if (reports.length === 0)

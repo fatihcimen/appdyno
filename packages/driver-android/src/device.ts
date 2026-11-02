@@ -74,8 +74,10 @@ export class AndroidDevice implements Device {
 
   logs = (q: LogsQuery) => androidLogs(this.adb, this.serial, q);
   crashes = (q: CrashesQuery) => androidCrashes(this.adb, this.serial, q);
-  appRunning = async (app: string) =>
-    !!(await this.adb.exec(this.serial, `pidof ${shq(assertPkg(app))}`)).trim();
+  appPid = async (app: string) =>
+    (await this.adb.exec(this.serial, `pidof ${shq(assertPkg(app))}`)).trim().split(/\s+/)[0] ||
+    undefined;
+  appRunning = async (app: string) => !!(await this.appPid(app));
 
   /** Connects (starting the agent when needed); the agent's hello. */
   async open(): Promise<Hello> {
