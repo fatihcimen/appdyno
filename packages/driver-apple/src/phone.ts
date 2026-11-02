@@ -3,7 +3,6 @@ import { phoneLogs } from './logs.js';
 import { execFile } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { DeviceError } from '@appdyno/protocol';
@@ -176,7 +175,7 @@ export function phoneTransport(
   udid: string,
   signing: PhoneSigning,
 ): RunnerTransport & { signed(): ReturnType<typeof signedRunner> } {
-  const cache = join(homedir(), 'Library/Caches/appdyno/ios-phone');
+  const cache = join(stateDir(), 'ios-phone');
   // the signed runner is looked up once per runner build and profile in this process (a reconnect
   // does not ask the keychain again)
   const signed = async () => {

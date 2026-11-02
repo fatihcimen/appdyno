@@ -3,14 +3,14 @@ import { createHash, randomBytes } from 'node:crypto';
 import { closeSync, existsSync, openSync, readdirSync, statSync } from 'node:fs';
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { connect, createServer, type Socket } from 'node:net';
-import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { DeviceError, PROTOCOL, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
-import { RpcClient, stateDir } from '@appdyno/core';
-import { brandSimulatorRunner } from './brand.js';
+import { reportProgress, RpcClient, stateDir } from '@appdyno/core';
+import { brandSimulatorRunner, checkoutIos } from './brand.js';
 import { assertUdid, xcodeEnv } from './simctl.js';
 
 const run = promisify(execFile);
@@ -35,7 +35,8 @@ export async function iosProducts(
   const sdk = kind === 'simulator' ? 'iphonesimulator' : 'iphoneos';
   const has = (dir: string) =>
     existsSync(dir) && readdirSync(dir).some((f) => f.includes(sdk) && f.endsWith('.xctestrun'));
-  const found = [env, join(here, `../../../ios/${derived}/Build/Products`)].find(
+  const repo = checkoutIos();
+  const found = [env, repo && join(repo, derived, 'Build/Products')].find(
     (d): d is string => !!d && has(d),
   );
   if (found) return found;
@@ -44,36 +45,92 @@ export async function iosProducts(
   const id = (await readFile(join(src, 'sources.sha256'), 'utf8').catch(() => 'unknown'))
     .trim()
     .slice(0, 16);
-  const out = join(homedir(), 'Library/Caches/appdyno/ios-build', id, kind);
+  const out = join(stateDir(), 'ios-build', id, kind);
   const products = join(out, 'Build/Products');
   if (has(products) || !build) return has(products) ? products : undefined;
-  process.stderr.write(`building the iOS runner for the ${kind} once (a few minutes)\n`);
-  await run(
-    'xcodebuild',
-    [
-      'build-for-testing',
-      '-project',
-      join(src, 'Appdyno.xcodeproj'),
-      '-scheme',
-      'Runner',
-      '-destination',
-      kind === 'simulator' ? 'generic/platform=iOS Simulator' : 'generic/platform=iOS',
-      '-derivedDataPath',
-      out,
-      '-quiet',
-      ...(kind === 'device'
-        ? ['CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_REQUIRED=NO', 'CODE_SIGN_IDENTITY=']
-        : []),
-    ],
-    { env: xcodeEnv(), timeout: 1_800_000, maxBuffer: 64 * 1024 * 1024 },
-  ).catch((e: { stderr?: string; message: string }) => {
-    throw new DeviceError(
-      'UNSUPPORTED',
-      `the iOS runner did not build: ${(e.stderr ?? e.message).trim().split('\n').slice(-3).join(' ').slice(0, 300)}`,
-      'see appdyno doctor',
-    );
-  });
+  // one build per folder: a client that timed out and asks again joins it (xcodebuild would refuse a second)
+  let building = builds.get(out);
+  if (!building) {
+    building = xcodebuildTelling(
+      [
+        'build-for-testing',
+        '-project',
+        join(src, 'Appdyno.xcodeproj'),
+        '-scheme',
+        'Runner',
+        '-destination',
+        kind === 'simulator' ? 'generic/platform=iOS Simulator' : 'generic/platform=iOS',
+        '-derivedDataPath',
+        out,
+        ...(kind === 'device'
+          ? ['CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_REQUIRED=NO', 'CODE_SIGN_IDENTITY=']
+          : []),
+      ],
+      `building the iOS runner for the ${kind} once (a few minutes)`,
+    ).finally(() => builds.delete(out));
+    builds.set(out, building);
+  }
+  await building;
   return products;
+}
+
+const builds = new Map<string, Promise<void>>();
+
+/** The phase a line of xcodebuild's output starts, if any. */
+export function buildPhase(line: string): string | undefined {
+  const target = /^=== BUILD TARGET (\S+)/.exec(line);
+  if (target) return `target ${target[1]}`;
+  if (/^(SwiftCompile|CompileSwift|SwiftEmitModule|CompileC)\b/.test(line)) return 'compiling';
+  if (/^Ld\b/.test(line)) return 'linking';
+  if (/^CodeSign\b/.test(line)) return 'signing';
+  return undefined;
+}
+
+/** Runs xcodebuild, telling each phase once and where it stands every 10 s: someone waits on it for minutes. */
+export function xcodebuildTelling(args: string[], what: string): Promise<void> {
+  const started = Date.now();
+  const phases = new Set<string>();
+  let phase = 'starting';
+  const tell = () => {
+    const line = `${what}: ${phase}, ${Math.round((Date.now() - started) / 1000)} s`;
+    process.stderr.write(`${line}\n`);
+    reportProgress(line);
+  };
+  const last: string[] = [];
+  const onLine = (line: string) => {
+    if (line.trim()) last.push(line.trim());
+    last.splice(0, last.length - 3);
+    const p = buildPhase(line);
+    if (p && !phases.has(p)) {
+      phases.add(p);
+      phase = p;
+      tell();
+    }
+  };
+  const child = spawn('xcodebuild', args, {
+    env: xcodeEnv(),
+    stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 1_800_000,
+  });
+  createInterface({ input: child.stdout }).on('line', onLine);
+  createInterface({ input: child.stderr }).on('line', onLine);
+  tell();
+  const beat = setInterval(tell, 10_000);
+  return new Promise<void>((resolve, reject) => {
+    const failed = (why: string) =>
+      reject(
+        new DeviceError(
+          'UNSUPPORTED',
+          `the iOS runner did not build: ${why.slice(0, 300)}`,
+          'see appdyno doctor',
+        ),
+      );
+    child.once('error', (e) => failed(e.message));
+    child.once('close', (code, signal) => {
+      if (code === 0) resolve();
+      else failed(signal ? `xcodebuild stopped by ${signal}` : last.join(' '));
+    });
+  }).finally(() => clearInterval(beat));
 }
 
 /** Removes the runner builds of other packaged sources than the installed ones; how many were removed. */
@@ -84,7 +141,7 @@ export async function pruneIosBuilds(): Promise<number> {
   )
     .trim()
     .slice(0, 16);
-  const root = join(homedir(), 'Library/Caches/appdyno/ios-build');
+  const root = join(stateDir(), 'ios-build');
   if (!id || !existsSync(root)) return 0;
   let n = 0;
   for (const d of readdirSync(root))

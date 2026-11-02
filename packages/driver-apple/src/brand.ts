@@ -13,11 +13,21 @@ export const RUNNER_NAME = 'appdyno';
 export const BRAND_VERSION = '1';
 const ICONS = ['AppIcon60x60@2x.png', 'AppIcon60x60@3x.png'];
 
+/**
+ * The repository's ios folder when this code runs from a checkout. An installed package sits at the same
+ * depth, so a folder that merely is at that place must not count.
+ */
+export function checkoutIos(): string | undefined {
+  const ios = join(dirname(fileURLToPath(import.meta.url)), '../../../ios');
+  return existsSync(join(ios, 'Appdyno.xcodeproj')) ? ios : undefined;
+}
+
 /** The runner's icons: the repository's, else the packaged copy. */
 export function brandingDir(): string | undefined {
   const here = dirname(fileURLToPath(import.meta.url));
-  return [join(here, '../../../ios/Branding'), join(here, '../agents/ios-src/Branding')].find((d) =>
-    existsSync(join(d, ICONS[0]!)),
+  const repo = checkoutIos();
+  return [repo && join(repo, 'Branding'), join(here, '../agents/ios-src/Branding')].find(
+    (d): d is string => !!d && existsSync(join(d, ICONS[0]!)),
   );
 }
 
