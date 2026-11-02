@@ -345,7 +345,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
       const r = await d.tap(ask, { settle: SETTLE, read: 'tree', before: s.hash });
       const alert = r.tree!.windows.find((w) => w.type === 3);
       expect(alert, 'the alert is in the answer').toBeDefined();
-      const allow = r.tree!.nodes.filter((n) => n.w === 1 && n.c === 'Button').pop()!;
+      const allow = r.tree!.nodes.find((n) => n.w === 1 && n.c === 'Button')!;
       await new Promise((res) => setTimeout(res, 500));
       const gone = await d.tap(center(allow), {
         settle: SETTLE,
@@ -359,10 +359,14 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
       await open('Form');
       const pid = await d.measure.pid(APP);
       await simctl.exec(['launch', udid!, 'com.apple.Preferences']);
-      await new Promise((r) => setTimeout(r, 1_000));
+      await expect.poll(() => d.direct.front(), { timeout: 20_000 }).toBe('com.apple.Preferences');
       await d.launch(APP);
       expect(await d.measure.pid(APP)).toBe(pid);
-      expect(byId(await d.read(APP), 'submit')).toBeDefined();
+      await expect
+        .poll(async () => (await d.tree()).nodes.some((n) => n.id === 'name_input'), {
+          timeout: 3_000,
+        })
+        .toBe(true);
       await d.launch(APP);
       expect(await d.measure.pid(APP)).toBe(pid);
       const s = await home();
@@ -388,7 +392,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
       await other.launch(APP);
       const s = await other.read(APP);
       const r = await other.tap(find(s, 'Form')!, { settle: SETTLE, read: 'tree', before: s.hash });
-      expect(r.tree!.nodes.some((n) => n.id === 'submit')).toBe(true);
+      expect(r.tree!.nodes.some((n) => n.id === 'name_input')).toBe(true);
       expect(other.direct.status().input).toMatch(/did not reach the app/);
       other.close();
     });
@@ -407,7 +411,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
       await other.launch(APP);
       const s = await other.read(APP);
       const r = await other.tap(find(s, 'Form')!, { settle: SETTLE, read: 'tree', before: s.hash });
-      expect(r.tree!.nodes.some((n) => n.id === 'submit')).toBe(true);
+      expect(r.tree!.nodes.some((n) => n.id === 'name_input')).toBe(true);
       expect(other.direct.status().read).toMatch(/did not start/);
       other.close();
     });
