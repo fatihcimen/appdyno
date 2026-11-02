@@ -19,7 +19,7 @@ describe('adb helpers', () => {
 
   it('quotes shell arguments so nothing in them runs', () => {
     expect(shq("a'b; rm -rf /")).toBe(`'a'\\''b; rm -rf /'`);
-    expect(shq('appdyno://x?a=1&b=2')).toBe(`'appdyno://x?a=1&b=2'`);
+    expect(shq('demo://x?a=1&b=2')).toBe(`'demo://x?a=1&b=2'`);
   });
 
   it('refuses a serial that could inject into the adb request', () => {

@@ -71,7 +71,7 @@ const cut = (text: string) => {
   const chars = Array.from(text); // code points: never half a surrogate pair
   return chars.length > MAX_LABEL ? `${chars.slice(0, MAX_LABEL - 1).join('')}…` : text;
 };
-/** `com.appdyno:id/basket_btn` → `basket_btn`; iOS identifiers stay as they are. */
+/** `com.example.shop:id/basket_btn` → `basket_btn`; iOS identifiers stay as they are. */
 const idOf = (identifier: string | undefined) =>
   identifier?.replace(/^[A-Za-z][\w.]*:id\//, '').trim() || undefined;
 const round10 = (n: number) => Math.round(n / 10) * 10;

@@ -10,7 +10,7 @@
 | build                                  | `pnpm build` (packages the agent)                                                     |
 | fixture-install, device-functional     | with `--device <serial>`: the fixture app, then the contract, smoke and stdio suites  |
 | device-perf                            | the measurement accuracy suite (a measuring step)                                     |
-| latency, regression-gate               | with `--nightly`: the latency suite (`appdyno bench`, n = 30) and the gate       |
+| latency, regression-gate               | with `--nightly`: the latency suite (`appdyno bench`, n = 30) and the gate            |
 | runner-core                            | the iOS runner's Swift core (`swift test`), where Xcode is                            |
 | ios-build, ios-functional, ios-perf    | with `--ios <simulator id>`: the runner, the contract and stdio suites, perf accuracy |
 | iphone-build, iphone-functional        | with `--iphone <UDID>`: the runner for phones, the iPhone suites (signing variables)  |

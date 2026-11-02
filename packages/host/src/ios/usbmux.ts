@@ -108,9 +108,7 @@ async function request(message: Record<string, Plist>, path = USBMUXD, timeoutMs
         );
       });
       socket.on('connect', () =>
-        socket.write(
-          frame({ ClientVersionString: 'appdyno', ProgName: 'appdyno', ...message }, 1),
-        ),
+        socket.write(frame({ ClientVersionString: 'appdyno', ProgName: 'appdyno', ...message }, 1)),
       );
       const onData = (chunk: Buffer) => {
         buf = Buffer.concat([buf, chunk]);

@@ -7,7 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@appdyno/protocol': src('protocol'),
-      'appdyno': src('host'),
+      appdyno: src('host'),
       'appdyno-mcp': src('mcp'),
     },
   },

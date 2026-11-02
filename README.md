@@ -18,16 +18,16 @@ Status: Android (emulators and phones) and iOS (simulators and iPhones) work end
 
 ## Layout
 
-| path                | what                                                                                                                                               |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/protocol` | wire format (frames, JSON-RPC messages, error codes) — see `docs/protocol.md`                                                                      |
+| path                | what                                                                                                                                          |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/protocol` | wire format (frames, JSON-RPC messages, error codes) — see `docs/protocol.md`                                                                 |
 | `packages/host`     | the library: adb protocol client, agent launcher, device API, screen model (stable refs, diffs), `appdyno` CLI (`devices`, `doctor`, `bench`) |
-| `packages/mcp`      | the MCP server: device tools with act-and-read answers and a local policy                                                                          |
-| `android/agent`     | the on-device agent (Kotlin)                                                                                                                       |
-| `android/fixture`   | a deterministic test app (Views and Compose)                                                                                                       |
-| `ios/Runner`        | the iOS runner: a UI test serving the protocol on a loopback port (Swift); `ios/RunnerCore` its tested core                                        |
-| `ios/Fixture`       | the iOS test app (SwiftUI)                                                                                                                         |
-| `test-device`       | tests on a real emulator or device (`APPDYNO_ANDROID_SERIAL`) or simulator (`APPDYNO_IOS_UDID`)                                                              |
+| `packages/mcp`      | the MCP server: device tools with act-and-read answers and a local policy                                                                     |
+| `android/agent`     | the on-device agent (Kotlin)                                                                                                                  |
+| `android/fixture`   | a deterministic test app (Views and Compose)                                                                                                  |
+| `ios/Runner`        | the iOS runner: a UI test serving the protocol on a loopback port (Swift); `ios/RunnerCore` its tested core                                   |
+| `ios/Fixture`       | the iOS test app (SwiftUI)                                                                                                                    |
+| `test-device`       | tests on a real emulator or device (`APPDYNO_ANDROID_SERIAL`) or simulator (`APPDYNO_IOS_UDID`)                                               |
 
 ## Build and test
 

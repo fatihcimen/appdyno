@@ -73,8 +73,7 @@ async function main(): Promise<number> {
       const results: BenchResult[] = [];
       const drivers = values.driver?.length ? values.driver : ['appdyno'];
       for (const name of drivers) {
-        const driver =
-          name === 'appdyno' ? appdynoDriver(serial) : await loadDriver(name, serial);
+        const driver = name === 'appdyno' ? appdynoDriver(serial) : await loadDriver(name, serial);
         err(`driver ${driver.name}`);
         results.push(await benchmark(driver, serial, { n: Number(values.n ?? 50), log: err }));
       }

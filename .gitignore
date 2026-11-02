@@ -11,3 +11,4 @@ packages/host/agents/
 ios/*/.build/
 ios/.derived/
 ios/.derived-device/
+.DS_Store
