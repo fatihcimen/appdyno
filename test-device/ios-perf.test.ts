@@ -1,8 +1,7 @@
-import { spawn, spawnSync } from 'node:child_process';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { IosSimulatorDevice, Simctl, buildScreen, parseSampleTop } from 'appdyno';
+import { IosSimulatorDevice, Simctl, buildScreen } from 'appdyno';
 import { mkdtempSync, statSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { release, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 /**
@@ -16,21 +15,10 @@ const PRODUCTS = join(import.meta.dirname, '../ios/.derived/Build/Products/Debug
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * macOS 27's `sample` leaves out a thread running user code (measured: a plain busy loop is not in its
- * report), which is what a profile through it is for.
+ * On macOS 27 (Darwin 27) `sample` leaves out a simulator app's running thread: no busy sample while `ps`
+ * shows that app at 85 % of a core. A Mac process's running thread is still there.
  */
-const sampleSeesRunningThreads = () => {
-  const busy = spawn(process.execPath, [
-    '-e',
-    'for (const e = Date.now() + 15e3; Date.now() < e; );',
-  ]);
-  try {
-    const { stdout } = spawnSync('sample', [String(busy.pid), '1'], { encoding: 'utf8' });
-    return parseSampleTop(stdout).samples > 100;
-  } finally {
-    busy.kill();
-  }
-};
+const sampleMissesRunningThreads = Number(release().split('.')[0]) >= 27;
 
 describe.skipIf(!udid)('ios simulator perf accuracy', () => {
   let d: IosSimulatorDevice;
@@ -77,7 +65,6 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
   });
 
   it('CPU profile: the busy loop is the top function', async (t) => {
-    if (!sampleSeesRunningThreads()) return t.skip();
     const s = await open('cpu');
     const prof = (
       await d.iosPerf.cpuProfile(APP, 2_000, async () => {
@@ -85,6 +72,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
         await d.tap(byId(s, 'cpu_load'), { settle: false });
       })
     ).value;
+    if (prof.samples === 0 && sampleMissesRunningThreads) return t.skip();
     expect(prof.samples).toBeGreaterThan(100);
     // a debug build spends the loop's own time in runtime helpers: the app's functions rank by busy inclusive time
     expect(prof.appTop[0]?.symbol).toMatch(/CpuScreen/);
