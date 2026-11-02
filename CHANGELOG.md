@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Packages by module (`core`, `driver-android`, `driver-apple`, `ops`, `mcp`, `cli`, `appdyno`), the import rules enforced by a test. Commands: `appdyno` (with `appdyno mcp`) and `appdyno-mcp`.
+- One definition per operation: every MCP tool is also a command (`appdyno screen`, `appdyno long-press --x 1 --y 2`, `--json`, `--out`).
+- Device ports and measure sources: a device without a measure says which one it lacks. `perf_snapshot` answers `memoryKb` and `memoryKind` instead of `pssKb` and `footprintKb`.
+- A device failing at open reaches the client with its cause and hint, not as an internal error.
+- The iOS runner reads its port and token again (`TEST_RUNNER_APPDYNO_*`).
+- `screen.window` is known in landscape with the navigation bar on the left, so swipes there use the real screen.
 - Accessibility audit (`device.audit()`): the iOS platform audit through the runner (`audit`), and on
   Android the host's checks of a tree, a screenshot and the characters each text does not show
   (`a11y.read`, which also brings the nodes' traversal hints): touch targets, text and icon contrast, names, duplicate names, clipped text.
