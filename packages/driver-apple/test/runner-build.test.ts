@@ -27,6 +27,9 @@ describe('the runner build', () => {
       buildPhase('=== BUILD TARGET Runner OF PROJECT Appdyno WITH CONFIGURATION Debug ==='),
     ).toBe('target Runner');
     expect(buildPhase('SwiftCompile normal arm64 /x/A.swift')).toBe('compiling');
+    expect(buildPhase('SwiftExplicitDependencyGeneratePcm arm64 /x/Foundation.pcm')).toBe(
+      'compiling',
+    );
     expect(buildPhase('Ld /x/Runner normal')).toBe('linking');
     expect(buildPhase('CodeSign /x/Runner.app')).toBe('signing');
     expect(buildPhase('    cd /x')).toBeUndefined();

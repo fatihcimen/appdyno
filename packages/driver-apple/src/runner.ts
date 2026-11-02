@@ -80,7 +80,11 @@ const builds = new Map<string, Promise<void>>();
 export function buildPhase(line: string): string | undefined {
   const target = /^=== BUILD TARGET (\S+)/.exec(line);
   if (target) return `target ${target[1]}`;
-  if (/^(SwiftCompile|CompileSwift|SwiftEmitModule|CompileC)\b/.test(line)) return 'compiling';
+  // SwiftExplicitDependency…: the system's modules, the long part of a first build
+  if (
+    /^(SwiftExplicitDependency\w*|SwiftCompile|CompileSwift|SwiftEmitModule|CompileC)\b/.test(line)
+  )
+    return 'compiling';
   if (/^Ld\b/.test(line)) return 'linking';
   if (/^CodeSign\b/.test(line)) return 'signing';
   return undefined;
