@@ -93,9 +93,9 @@ clipboard and every case below. `APPDYNO_SIM_DIRECT=off` turns both off, `read` 
   on who read. An answer on a layout not seen yet is compared with the runner's read of it (about 100 ms, once
   per layout): XCUI leaves out what a modal covers, and alone tells which copy of a repeated control a tap
   reaches. Where they differ the runner's is the answer; three differences before a first agreement turn the
-  helper off for the session. `IgnoreAXServerEntitlements`
-  was not needed: the runner, always started first, leaves automation mode on, and the helper reads with it
-  stopped (not on a boot where no runner ever ran).
+  helper off for the session. The helper needs the automation mode a runner leaves
+  on: on a boot where no runner ever ran it answers `no-foreground`, after 3-13 s, and the doctor says so. The runner
+  is always started first, and a helper read works after it has stopped. `IgnoreAXServerEntitlements` was not needed.
 - **The runner answers a read** when the app named is not the primary app (a system alert over it, the home
   screen, the app's launch), when the app shows an alert, when another process's content reaches the screen
   (`AXRemoteElement`: a web page, an extension), when the window does not fill the screen, or when the helper fails.
