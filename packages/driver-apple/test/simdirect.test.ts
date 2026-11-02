@@ -6,6 +6,7 @@ import {
   DirectSim,
   layoutHash,
   learnCopies,
+  onKeyboard,
   sameContent,
   sameLayout,
   sameTree,
@@ -325,6 +326,37 @@ describe('the helpers prove themselves', () => {
     d.touchLost();
     expect(await d.send({ kind: 'tap', x: 1, y: 1 })).toBe(false);
     expect(d.status().input).toMatch(/did not reach the app/);
+  });
+
+  it('leaves input to the runner when the app cannot report touches, not when one app says no', async () => {
+    const refusing = (refused: string) =>
+      helper((q) =>
+        q.op === 'read'
+          ? { ok: true, tree: app(cell('A', 0)), screen: [402, 874], touchesEnded: 0 }
+          : { ok: false, refused },
+      );
+    const blind = new DirectSim(
+      'u',
+      { ax: async () => refusing('the observer did not start'), hid: async () => ax() },
+      undefined,
+    );
+    await blind.read('a.b');
+    expect(await blind.arm()).toBe(false);
+    expect(await blind.send({ kind: 'tap', x: 1, y: 1 })).toBe(false);
+    const other = new DirectSim(
+      'u',
+      { ax: async () => refusing('no-report'), hid: async () => ax() },
+      undefined,
+    );
+    await other.read('a.b');
+    expect(await other.arm()).toBe(false);
+    expect(await other.send({ kind: 'tap', x: 1, y: 1 })).toBe(true);
+  });
+
+  it('knows a point on the keyboard', () => {
+    const n = tree(app({ a: 19, f: [0, 500, 402, 374] }, cell('Row', 0))).tree.nodes;
+    expect(onKeyboard(n, 10, 600)).toBe(true);
+    expect(onKeyboard(n, 10, 10)).toBe(false);
   });
 
   it('leaves input to the runner when the daemon stops answering', async () => {

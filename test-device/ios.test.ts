@@ -4,7 +4,13 @@ import type { Tree } from '@appdyno/protocol';
 import { join } from 'node:path';
 import { IosDevice } from '../packages/driver-apple/src/device.js';
 import { directChecks } from '../packages/driver-apple/src/provider.js';
-import { learnCopies, sameTree, withoutCopies } from '../packages/driver-apple/src/simdirect.js';
+import {
+  DirectSim,
+  learnCopies,
+  sameTree,
+  withoutCopies,
+} from '../packages/driver-apple/src/simdirect.js';
+import { startSimAx, type HelperProcess } from '../packages/driver-apple/src/simhelper.js';
 
 /**
  * The iOS runner against the fixture app on our own simulator (APPDYNO_IOS_UDID; never a default: other
@@ -362,6 +368,48 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
       const s = await home();
       expect(await d.measure.pid(APP)).not.toBe(pid);
       expect(find(s, 'Form')).toBeDefined();
+    });
+
+    it('gives a swallowed touch to the runner, which keeps the input from then on', async () => {
+      // what a Device Hub in Resize Mode does: every send reports success, nothing arrives
+      const swallow = async () =>
+        ({
+          closed: false,
+          call: async () => ({ ok: true }),
+          close: () => undefined,
+        }) as unknown as HelperProcess;
+      const other = new IosSimulatorDevice(
+        udid!,
+        simctl,
+        new DirectSim(udid!, { ax: startSimAx, hid: swallow }),
+      );
+      await other.open();
+      await other.terminate(APP);
+      await other.launch(APP);
+      const s = await other.read(APP);
+      const r = await other.tap(find(s, 'Form')!, { settle: SETTLE, read: 'tree', before: s.hash });
+      expect(r.tree!.nodes.some((n) => n.id === 'submit')).toBe(true);
+      expect(other.direct.status().input).toMatch(/did not reach the app/);
+      other.close();
+    });
+
+    it('reads and touches through the runner when the helpers do not start', async () => {
+      const broken = async (): Promise<HelperProcess> => {
+        throw new Error('no clang here');
+      };
+      const other = new IosSimulatorDevice(
+        udid!,
+        simctl,
+        new DirectSim(udid!, { ax: broken, hid: broken }),
+      );
+      await other.open();
+      await other.terminate(APP);
+      await other.launch(APP);
+      const s = await other.read(APP);
+      const r = await other.tap(find(s, 'Form')!, { settle: SETTLE, read: 'tree', before: s.hash });
+      expect(r.tree!.nodes.some((n) => n.id === 'submit')).toBe(true);
+      expect(other.direct.status().read).toMatch(/did not start/);
+      other.close();
     });
 
     it('says hello with the size of the screen', () => {

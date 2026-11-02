@@ -31,6 +31,7 @@ import {
   DirectSim,
   hasAlert,
   learnCopies,
+  onKeyboard,
   sameContent,
   sameLayout,
   settle,
@@ -334,7 +335,8 @@ export class IosDevice implements Device {
     while (Date.now() < end) {
       const open = promptButton(await this.tree());
       if (open) {
-        await this.tap(open, { settle: false });
+        // returns once the link's screen has come
+        await this.tap(open, { settle: {} });
         return;
       }
       await new Promise((r) => setTimeout(r, 150));
@@ -491,8 +493,10 @@ export class IosSimulatorDevice extends IosDevice {
         await this.readDirect(true);
       const touch = action.kind !== 'key';
       const at = touch ? firstPoint(action) : undefined;
-      if (!this.direct.status().input.startsWith('runner') && this.direct.readProven && at)
-        await this.direct.arm().catch(() => undefined);
+      const armed =
+        !this.direct.status().input.startsWith('runner') &&
+        !!at &&
+        (await this.direct.arm().catch(() => false));
       // UIKit takes no touches while a view animates, and the tree already shows where it ends
       const waited =
         at && !this.direct.status().input.startsWith('runner')
@@ -502,7 +506,8 @@ export class IosSimulatorDevice extends IosDevice {
       if (!(await this.direct.send(action))) return this.actByRunner(action, opts);
       const out = await this.settleAfter(action, opts);
       // nothing moved and the app has not seen the touch finish: it never got it
-      if (touch && out.untouched && touchesBefore === this.direct.touchesEnded) {
+      const reports = armed && !onKeyboard([...this.recent.values()].pop() ?? [], at!.x, at!.y);
+      if (reports && out.untouched && touchesBefore === this.direct.touchesEnded) {
         this.direct.touchLost();
         return this.actByRunner(action, opts);
       }

@@ -323,6 +323,19 @@ export function stickingOut(nodes: Node[], width: number): Set<string> {
   );
 }
 
+/** A point on the keyboard: another process may draw it, and its touches are not the app's to report. */
+export function onKeyboard(nodes: Node[], x: number, y: number): boolean {
+  return nodes.some(
+    (n) =>
+      (n.c === 'Keyboard' || n.c === 'Key') &&
+      shown(n) &&
+      x >= n.b[0] &&
+      x < n.b[2] &&
+      y >= n.b[1] &&
+      y < n.b[3],
+  );
+}
+
 export const hasAlert = (nodes: Node[]) =>
   nodes.some((n) => (n.c === 'Alert' || n.c === 'Sheet') && (n.f & F.visible) !== 0);
 
@@ -512,9 +525,17 @@ export class DirectSim {
     return a.ok && typeof a.bundle === 'string' ? a.bundle : undefined;
   }
 
-  /** Asks the app in front to report: its touches finishing are the proof that one got there. */
-  async arm(): Promise<void> {
-    if (!this.readOff) this.note(await (await this.helperAx()).call({ op: 'arm' }, 3_000));
+  /**
+   * Asks the app in front to report: its touches finishing are the proof that one got there. Whether that
+   * proof can come; a helper that cannot observe at all leaves the input to the runner, unproven touches
+   * being what must not happen.
+   */
+  async arm(): Promise<boolean> {
+    if (this.readOff) return false;
+    const a = this.note(await (await this.helperAx()).call({ op: 'arm' }, 3_000));
+    if (!a.ok && a.refused !== 'no-report' && a.refused !== 'helper-gone')
+      this.inputOff = `the app's reports cannot be observed: ${a.refused}`;
+    return a.ok;
   }
 
   /** Sends the action straight to the simulator; false when the runner must do it. */
