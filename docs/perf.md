@@ -36,19 +36,39 @@ line (within 50 ms).
 
 ## iOS
 
-A simulator app is a Mac process: its measures come from the Mac's own tools. A phone's frames come
-from Xcode's trace tool.
+A simulator app is a Mac process: its measures come from the Mac's own tools. A phone's come from Xcode's trace
+tool (`xctrace`), which says when a recording has started (`--notify-tracing-started`, so a scroll runs inside it,
+not after a guessed sleep) and is stopped at most 60 s past its limit. A start took 14-19 s and a stop 4-14 s on
+a phone connected by USB, whatever the recording's length.
 
-| measure     | simulator                                                         | iPhone                                                    | notes                                                                                                                                                                                                                  |
-| ----------- | ----------------------------------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| memory      | `footprint <pid>` (physical footprint)                            | –                                                         | the pid from the simulator's `launchctl list`                                                                                                                                                                          |
-| CPU         | `ps -o time=` before and after a window                           | –                                                         | % of one core                                                                                                                                                                                                          |
-| launch      | `simctl launch` until the runner reads the app's first screen     | –                                                         | cold: terminated first; warm: another app in between. One warm-up left out, the median of the rest; includes the runner's read (about 60 ms)                                                                           |
-| CPU profile | `sample <pid>`                                                    | –                                                         | the busiest functions by self time, idle waits left out, and the app's own functions by busy inclusive time (a debug build spends a loop's time in runtime helpers; waiting threads do not count)                      |
-| heap        | `leaks --outputGraph` (a memory graph for Xcode), the leaks found | –                                                         | the summary is read from the saved graph                                                                                                                                                                               |
-| hitches     | –                                                                 | `xctrace record --template 'Animation Hitches'`, exported | frames shown, the app's hitches (system ones left out), their total and worst time, the hitch ratio (ms per second) and the likely causes; the trace stays for Instruments. On a simulator the tool's recording fails. |
+| measure     | simulator                                                                                                                                 | iPhone                                                       | notes                                                                                                                                                                                                                                                                           |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| memory      | `footprint <pid>` (physical footprint)                                                                                                    | Activity Monitor, every process, `memory-physical-footprint` | the phone's footprint at the end of the recording; no attach, so a system app can be read                                                                                                                                                                                       |
+| CPU         | `ps -o time=` before and after a window                                                                                                   | Activity Monitor, `cpu-total` first and last reading         | % of one core                                                                                                                                                                                                                                                                   |
+| launch      | `simctl launch` until the first screen reads                                                                                              | `devicectl` until the runner reads the first screen          | cold: terminated first; warm: another app in between. One warm-up left out, the median of the rest; includes a read. xctrace's App Launch needs `get-task-allow`: denied for Settings                                                                                           |
+| CPU profile | Time Profiler, attached (`sample` sees no busy samples of a simulator app under macOS 27, and stays only for a Mac where attaching fails) | Time Profiler, attached (no `get-task-allow` needed)         | the busiest functions by the weight of the samples on top of their stacks, and the app's own functions (of a binary inside an .app) by inclusive weight; the trace stays for Instruments                                                                                        |
+| heap        | `leaks --outputGraph` (a memory graph for Xcode), the leaks found                                                                         | –                                                            | the summary is read from the saved graph                                                                                                                                                                                                                                        |
+| hangs       | –                                                                                                                                         | Time Profiler's `potential-hangs`                            | library only (`measure.hangs`): there is no Hangs template in Xcode 27.1, the Time Profiler has the table                                                                                                                                                                       |
+| hitches     | –                                                                                                                                         | `xctrace record --template 'Animation Hitches'`, exported    | frames shown, the app's hitches, their total and worst time, the hitch ratio and the likely causes. **Xcode 27.1 on iOS 27.0.1 records no displayed surfaces while scrolling (0 of 3 recordings): UNSUPPORTED, never "no hitches".** On a simulator the tool's recording fails. |
+
+A simulator's numbers are relative: `Device.virtual` is true there, false on a phone, and the tools say so.
 
 `test-device/ios-perf.test.ts` checks the simulator measures on the fixture: 50 MB held (memory, within
-15 %), one busy thread (CPU, 80–125 %, and the profile's top app function), a memory graph with its leaks
-summary, cold launches slower than warm. `test-device/iphone.test.ts` records hitches while Settings
-scrolls (frames counted, the trace written); a cost-known frames check needs an app signed for the phone.
+15 %), one busy thread (CPU, 80–125 %, and the profile's top app function, from a trace), a memory graph with
+its leaks summary, cold launches slower than warm. `test-device/iphone.test.ts` reads memory, CPU, a profile, the
+hangs and a launch of Settings; a cost-known check of them needs an app signed for the phone.
+
+## iOS simulator speed
+
+Measured with the Settings scenario on an iPhone 17 Pro simulator, iOS 26.5, on a Mac with other builds running
+(load in the table). Median of 10-15 rounds, in ms, alternating tools.
+
+SPEED_TABLE
+
+What each change did, the rest of the scenario held still:
+
+LEVER_TABLE
+
+Tried and dropped:
+
+DROPPED_LIST

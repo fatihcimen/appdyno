@@ -9,6 +9,7 @@ import {
   sameContent,
   sameLayout,
   settle,
+  stickingOut,
   toTree,
   touchEvents,
   withoutCopies,
@@ -33,7 +34,9 @@ const tree = (raw: RawAx) => {
 
 describe('the helper read in the runner shape', () => {
   it('builds the nodes breadth first, as the runner does', () => {
-    const { tree: t } = tree(app({ a: 0, f: [0, 0, 402, 874], k: [cell('Deep', 100)] }, cell('Near', 50)));
+    const { tree: t } = tree(
+      app({ a: 0, f: [0, 0, 402, 874], k: [cell('Deep', 100)] }, cell('Near', 50)),
+    );
     expect(t.nodes.map((n) => [n.c, n.p])).toEqual([
       ['Application', -1],
       ['Other', 0],
@@ -119,6 +122,17 @@ describe('the settle compare', () => {
     expect(sameContent(a, nodes(app(cell('A', 0))))).toBe(false);
   });
 
+  it('names what sticks out over the side of the screen', () => {
+    const n = nodes(
+      app(
+        { a: 48, l: 'Old title', f: [-105, 78, 149, 26] },
+        { a: 48, l: 'New title', f: [170, 74, 62, 20] },
+        { a: 0, f: [-120, 0, 402, 874] },
+      ),
+    );
+    expect([...stickingOut(n, 402)]).toEqual(['StaticText#@-105,78,44,104']);
+  });
+
   it('knows an inert point from one that can react', () => {
     const n = nodes(app(cell('A', 0), { a: 48, l: 'Text', f: [0, 200, 100, 20] }));
     expect(actionable(n, 20, 10)).toBe(true);
@@ -132,6 +146,7 @@ describe('the settle compare', () => {
     return settle<string>({
       actionAt: 1000,
       quietMs,
+      firstMs: 200,
       maxMs: 500,
       pollMs: 20,
       before: 'x',
@@ -153,6 +168,14 @@ describe('the settle compare', () => {
     expect(r.settled).toBe(true);
     expect(r.last).toBe('y');
     expect(r.elapsedMs).toBeGreaterThanOrEqual(130);
+  });
+
+  it('waits longer for a first reaction than for the end of one', async () => {
+    const still = await run(['x']);
+    expect(still.settled).toBe(true);
+    expect(still.elapsedMs).toBeGreaterThanOrEqual(200);
+    const reacted = await run(['y', 'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y']);
+    expect(reacted.elapsedMs).toBeLessThan(200);
   });
 
   it('says not settled at the cap: a screen that keeps changing or stays busy', async () => {
@@ -200,7 +223,10 @@ describe('the digitizer events', () => {
     )!;
     expect(e[e.length - 1]).toMatchObject({ p: 2, x: 0, x2: 1 });
     expect(
-      touchEvents({ kind: 'gesture', pointers: [finger(0, 1), finger(0, 1), finger(0, 1)] }, SCREEN),
+      touchEvents(
+        { kind: 'gesture', pointers: [finger(0, 1), finger(0, 1), finger(0, 1)] },
+        SCREEN,
+      ),
     ).toBeUndefined();
   });
 });
@@ -216,7 +242,7 @@ describe('the helpers prove themselves', () => {
     helper((q) =>
       q.op === 'read'
         ? { ok: true, tree: app(cell('A', 0)), screen: [402, 874], touchesEnded: 2, ms: 3 }
-        : { ok: true, reported: true },
+        : { ok: true },
     );
 
   it('keeps away from a read until asked, and off when told', async () => {
@@ -243,7 +269,10 @@ describe('the helpers prove themselves', () => {
     expect(await d.send({ kind: 'tap', x: 1, y: 1 })).toBe(false);
     await d.read('a.b');
     expect(await d.send({ kind: 'tap', x: 1, y: 1 })).toBe(true);
-    expect(hid.call).toHaveBeenCalledWith(expect.objectContaining({ op: 'touch' }), expect.any(Number));
+    expect(hid.call).toHaveBeenCalledWith(
+      expect.objectContaining({ op: 'touch' }),
+      expect.any(Number),
+    );
     expect(await d.send({ kind: 'key', key: 'enter' })).toBe(true);
     expect(hid.call).toHaveBeenCalledWith({ op: 'key', page: 7, usage: 0x28 }, expect.any(Number));
     expect(await d.send({ kind: 'key', key: 'back' })).toBe(false);

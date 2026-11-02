@@ -168,7 +168,7 @@ final class Device {
     /// UIKit takes no touches while a view animates (a sheet sliding in, a button fading in), and the tree
     /// shows the view where it ends from the start, so the settle cannot see it: a touch first waits for
     /// the app under it to report its animations over. Milliseconds waited (nil: the app cannot say).
-    private func animationsOver(_ x: Double, _ y: Double) -> Int? {
+    func animationsOver(_ x: Double, _ y: Double) -> Int? {
         IdleShim.waitForAnimations(of: app(at: x, y), within: Device.animationWaitS)
     }
 

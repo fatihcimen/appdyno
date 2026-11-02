@@ -10,7 +10,13 @@ import { IosDevice, type IosDeviceOps } from './device.js';
 import { IosRunnerLauncher, iosProducts, type RunnerTransport } from './runner.js';
 import { findPhoneSigning, phoneXctestrun, signedRunner, type PhoneSigning } from './signing.js';
 import { assertBundle, xcodeEnv } from './simctl.js';
-import { parseActivityMonitor, parseHangs, parseTimeProfile, recordTrace, traceTable } from './trace.js';
+import {
+  parseActivityMonitor,
+  parseHangs,
+  parseTimeProfile,
+  recordTrace,
+  traceTable,
+} from './trace.js';
 import { connectPort, listDevices } from './usbmux.js';
 
 const run = promisify(execFile);
@@ -141,8 +147,10 @@ export class Devicectl {
     return pid;
   }
 
+  /** Stops the app and waits until it is gone: a launch right after must not bring the dying one forward. */
   async terminate(bundle: string) {
-    for (const pid of await this.pids(bundle))
+    const pids = await this.pids(bundle);
+    for (const pid of pids)
       await this.json([
         'device',
         'process',
@@ -152,6 +160,11 @@ export class Devicectl {
         '--pid',
         String(pid),
       ]).catch(() => undefined);
+    const end = Date.now() + 5_000;
+    while (pids.length && Date.now() < end) {
+      const left = await this.pids(bundle).catch(() => [] as number[]);
+      if (!left.some((p) => pids.includes(p))) break;
+    }
   }
 }
 
@@ -254,7 +267,10 @@ export class IosPhoneDevice extends IosDevice {
     cpu: async (bundle, windowMs = 3_000) => {
       const { value, raw } = await this.activity(bundle, windowMs);
       if (value.cpuPercent === undefined)
-        throw new DeviceError('UNSUPPORTED', `the trace has one reading of ${bundle}: no CPU share`);
+        throw new DeviceError(
+          'UNSUPPORTED',
+          `the trace has one reading of ${bundle}: no CPU share`,
+        );
       return {
         value: { percent: value.cpuPercent, windowMs: value.windowMs! },
         raw,
@@ -318,7 +334,10 @@ export class IosPhoneDevice extends IosDevice {
       seconds: Math.min(Math.max(Math.round(windowMs / 1000), 2), 30),
       dir: join(stateDir(), 'traces'),
     });
-    const value = parseActivityMonitor(await traceTable(trace, 'activity-monitor-process-live'), pid);
+    const value = parseActivityMonitor(
+      await traceTable(trace, 'activity-monitor-process-live'),
+      pid,
+    );
     if (!value) throw new DeviceError('UNSUPPORTED', `no reading of ${bundle} in the trace`);
     return { value, raw: trace };
   }

@@ -60,8 +60,10 @@ APPDYNO_IOS_UDID=<udid> pnpm test:device test-device/ios.test.ts
 # id is a UI test runner (*.xctrunner), with that profile's identity from a keychain (only unlocked)
 (cd ios && xcodebuild build-for-testing -project Appdyno.xcodeproj -scheme Runner \
   -destination 'generic/platform=iOS' -derivedDataPath .derived-device CODE_SIGNING_ALLOWED=NO)
-export APPDYNO_IOS_PROFILE=<profile.mobileprovision> APPDYNO_IOS_KEYCHAIN=<keychain-db> \
-  APPDYNO_IOS_KEYCHAIN_PASSWORD=<password>
+# signing is found by itself: an installed development profile that names the phone, for a wildcard app id, with
+# its identity in the unlocked login keychain. Else name it (a keychain and its password only if locked):
+# export APPDYNO_IOS_PROFILE=<profile.mobileprovision> APPDYNO_IOS_KEYCHAIN=<keychain-db> APPDYNO_IOS_KEYCHAIN_PASSWORD=<password>
+# or let Xcode provision the runner from its account: export APPDYNO_IOS_TEAM=<team id>
 node packages/appdyno/dist/main.js doctor   # Xcode, runner builds, signing, connected iPhones in the profile
 APPDYNO_IPHONE_UDID=<udid> pnpm test:device test-device/iphone.test.ts test-device/iphone-mcp.test.ts
 ```
@@ -80,7 +82,7 @@ appdyno doctor     # Android SDK and adb, Xcode, runner builds, iPhone signing, 
 
 The package is self-contained (`~/.local/share/appdyno`, or `APPDYNO_HOME`): the Android
 agent is prebuilt; `install.sh` builds both iOS runners where Xcode is (`appdyno ios build`;
-they are otherwise built once on first use, a few minutes); an iPhone also needs the signing variables (above). `CHANGELOG.md` lists the releases.
+they are otherwise built once on first use, a few minutes); an iPhone finds its signing by itself where a wildcard profile and its identity are installed (above). `CHANGELOG.md` lists the releases.
 
 ## Command line
 

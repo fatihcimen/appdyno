@@ -103,7 +103,10 @@ export async function directChecks(udid: string, direct = new DirectSim(udid)): 
     input: e.message.slice(0, 200),
     read: e.message.slice(0, 200),
   }));
-  return [check(`simulator ${udid} direct input`, r.input), check(`simulator ${udid} direct read`, r.read)];
+  return [
+    check(`simulator ${udid} direct input`, r.input),
+    check(`simulator ${udid} direct read`, r.read),
+  ];
 }
 
 /** Booted simulators (none when Xcode is missing). */

@@ -58,7 +58,7 @@ describe.skipIf(!udid)('appdyno-mcp over stdio (iPhone)', () => {
     const home = await call('screen');
     expect(home.text).toContain(`foreground: ${APP}`);
     const tapped = await call('tap', { ref: ref(home.text, 'Genel') });
-    expect(tapped.text).toMatch(/^dokunuldu @[\w-]+ "Genel"/);
+    expect(tapped.text).toMatch(/^tapped @[\w-]+ "Genel"/);
     expect(tapped.text).toContain('Hakkında');
     const shot = await call('screenshot');
     expect(shot.content.map((c) => c.type)).toEqual(['text', 'image']);

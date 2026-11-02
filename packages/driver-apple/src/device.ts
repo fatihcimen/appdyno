@@ -34,6 +34,7 @@ import {
   sameContent,
   sameLayout,
   settle,
+  stickingOut,
   withoutCopies,
 } from './simdirect.js';
 import { existsSync } from 'node:fs';
@@ -400,9 +401,21 @@ const nodesBusy = (t: Tree) => t.nodes.some((n) => n.c === 'ActivityIndicator' &
 /** Reads cost about 30 ms here: the settle can look far more often than the runner's 80 ms. */
 const POLL_MS = 20;
 const INERT_QUIET_MS = 80;
+const FIRST_REACTION_MS = 500;
+const ALERT_REACTION_MS = 1_000;
+/** A carousel on the new screen sticks out for good: a push's old page is gone well before this. */
+const SLIDE_CAP_MS = 1_200;
 const ALERT_WATCH_MS = 800;
 const ALERT_APPEAR_MS = 450;
-const ANIMATION_WAIT_MS = 1_000;
+const ALERT_GONE_MS = 600;
+const firstPoint = (a: ActParams) =>
+  a.kind === 'tap' || a.kind === 'longPress'
+    ? { x: a.x, y: a.y }
+    : a.kind === 'swipe'
+      ? a.from
+      : a.kind === 'gesture'
+        ? { x: a.pointers[0]![0]!.x, y: a.pointers[0]![0]!.y }
+        : undefined;
 
 /** An iOS simulator: the simulator tool for apps, links and location; perf from the Mac. */
 export class IosSimulatorDevice extends IosDevice {
@@ -453,7 +466,8 @@ export class IosSimulatorDevice extends IosDevice {
       hidden = verdict;
       this.copyVerdicts.delete(r.tree.hash);
       this.copyVerdicts.set(r.tree.hash, hidden);
-      if (this.copyVerdicts.size > 8) this.copyVerdicts.delete(this.copyVerdicts.keys().next().value!);
+      if (this.copyVerdicts.size > 8)
+        this.copyVerdicts.delete(this.copyVerdicts.keys().next().value!);
     }
     return { tree: hidden ? withoutCopies(r.tree, hidden) : r.tree, busy: r.busy };
   }
@@ -479,10 +493,14 @@ export class IosSimulatorDevice extends IosDevice {
       if (!this.direct.status().input.startsWith('runner') && !this.direct.readProven)
         await this.readDirect(true);
       const touch = action.kind !== 'key';
-      const waitStart = Date.now();
+      const at = touch ? firstPoint(action) : undefined;
+      if (!this.direct.status().input.startsWith('runner') && this.direct.readProven && at)
+        await this.direct.arm().catch(() => undefined);
       // UIKit takes no touches while a view animates, and the tree already shows where it ends
-      if (touch) await this.direct.animationsOver(ANIMATION_WAIT_MS);
-      const animationWaitMs = Date.now() - waitStart;
+      const waited =
+        at && !this.direct.status().input.startsWith('runner')
+          ? (await this.callNow('animations.wait', at, TIMEOUTS.action)).result.ms
+          : undefined;
       const touchesBefore = this.direct.touchesEnded;
       if (!(await this.direct.send(action))) return this.actByRunner(action, opts);
       const out = await this.settleAfter(action, opts);
@@ -491,7 +509,7 @@ export class IosSimulatorDevice extends IosDevice {
         this.direct.touchLost();
         return this.actByRunner(action, opts);
       }
-      return { ...out.result, ...(touch && { animationWaitMs }) };
+      return { ...out.result, ...(waited !== undefined && { animationWaitMs: waited }) };
     });
   }
 
@@ -511,24 +529,46 @@ export class IosSimulatorDevice extends IosDevice {
     const s = opts.settle ?? {};
     const actionAt = Date.now();
     const before = opts.before ? this.recent.get(opts.before) : undefined;
+    const seen = before ?? [...this.recent.values()].pop() ?? [];
     const tap = action.kind === 'tap' ? action : undefined;
     const inert = !!tap && !!before && !actionable(before, tap.x, tap.y);
     const quietMs = inert ? Math.min(s.quietMs ?? 200, INERT_QUIET_MS) : (s.quietMs ?? 200);
     const maxMs = s.maxMs ?? 3_000;
-    // an alert or sheet that came up during the settle is still animating in: a tap on it then is lost
-    let alertSince: number | undefined = before && hasAlert(before) ? 0 : undefined;
+    // an alert or sheet that came up during the settle is still animating in: a tap on it then is lost;
+    // one going away is animating out, and the app's reaction to its button comes after that
+    const hadAlert = hasAlert(seen);
+    let alertSince: number | undefined = hadAlert ? 0 : undefined;
+    let alertGoneAt: number | undefined;
+    const width = this.hello?.screen.w ?? Infinity;
+    const stuckBefore = stickingOut(seen, width);
+    let slideSince: number | undefined;
     const r = await settle<Capture | { tree: { nodes: Node[] }; busy: false }>({
       actionAt,
       quietMs,
+      // XCTest's tap took 300-600 ms, in which the app reacted before the window began; a direct touch is
+      // over in 50 ms, and an alert's button shows its effect only after about 300 ms
+      firstMs: inert ? 0 : hadAlert ? ALERT_REACTION_MS : FIRST_REACTION_MS,
       maxMs,
       pollMs: POLL_MS,
       before: before && { tree: { nodes: before }, busy: false },
       read: async () => {
         const c = await this.readNow(false);
+        const now = Date.now();
         if (hasAlert(c.tree.nodes)) {
-          alertSince ??= Date.now();
-          if (Date.now() - alertSince < ALERT_APPEAR_MS) return { ...c, busy: true };
-        } else alertSince = undefined;
+          alertSince ??= now;
+          alertGoneAt = undefined;
+          if (now - alertSince < ALERT_APPEAR_MS) return { ...c, busy: true };
+        } else {
+          if (alertSince !== undefined) alertGoneAt = now;
+          alertSince = undefined;
+          if (alertGoneAt !== undefined && now - alertGoneAt < ALERT_GONE_MS)
+            return { ...c, busy: true };
+        }
+        const sliding = [...stickingOut(c.tree.nodes, width)].some((k) => !stuckBefore.has(k));
+        if (sliding) {
+          slideSince ??= now;
+          if (now - slideSince < SLIDE_CAP_MS) return { ...c, busy: true };
+        } else slideSince = undefined;
         return c;
       },
       same: (a, b) => sameContent(a.tree.nodes, b.tree.nodes),
@@ -536,8 +576,7 @@ export class IosSimulatorDevice extends IosDevice {
     });
     let last = r.last as Capture;
     let extraMs = 0;
-    const unchanged =
-      !!before && sameLayout(before, last.tree.nodes) && !hasAlert(last.tree.nodes);
+    const unchanged = !!before && sameLayout(before, last.tree.nodes) && !hasAlert(last.tree.nodes);
     // an actionable tap that changed nothing in the app may have asked the system for something: its
     // alert comes a moment later, while the app is idle
     if (tap && !inert && unchanged) {

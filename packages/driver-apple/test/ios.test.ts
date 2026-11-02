@@ -1,3 +1,4 @@
+import { startPhase } from '../src/runner.js';
 import { describe, expect, it } from 'vitest';
 import type { Tree } from '@appdyno/protocol';
 import { assertBundle, assertUdid } from '../src/simctl.js';
@@ -81,5 +82,13 @@ describe('the link prompt', () => {
     expect(
       promptButton({ ...prompt([]), windows: prompt([]).windows.slice(0, 1) }),
     ).toBeUndefined();
+  });
+});
+
+describe('a starting runner', () => {
+  it("says where it has got to, by xcodebuild's log", () => {
+    expect(startPhase('Command line invocation:\n')).toMatch(/preparing/);
+    expect(startPhase('Testing started\n')).toMatch(/launching/);
+    expect(startPhase("Test Suite 'Runner' started at 2026\n")).toMatch(/port/);
   });
 });

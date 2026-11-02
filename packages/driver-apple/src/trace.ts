@@ -50,7 +50,7 @@ export function parseTraceTable(xml: string): Record<string, Cell>[] {
         }
         // nested elements (a process's pid) carry ids too
         for (const n of el.matchAll(
-          /<[\w-]+[^>]*\bid="([^"]+)"[^>]*\bfmt="([^"]*)"[^>]*>([^<]*)</g,
+          /<[\w-]+[^>]*\bid="([^"]+)"[^>]*\bfmt="([^"]*)"[^>]*>([^<]*)(?=<)/g,
         ))
           if (!ids.has(n[1]!)) ids.set(n[1]!, { value: n[3]!, fmt: n[2]! });
         cells.push(cell);
@@ -148,7 +148,10 @@ export async function recordTrace(r: TraceRecording): Promise<string> {
     rec.on('error', () => res(-1));
   });
   const stop = setTimeout(() => rec.kill('SIGINT'), Math.min(r.seconds * 1000 + STOP_MS, CAP_MS));
-  const end = setTimeout(() => rec.kill('SIGKILL'), Math.min(r.seconds * 1000 + STOP_MS, CAP_MS) + 30_000);
+  const end = setTimeout(
+    () => rec.kill('SIGKILL'),
+    Math.min(r.seconds * 1000 + STOP_MS, CAP_MS) + 30_000,
+  );
   try {
     await Promise.race([started, exited]);
     if (r.during) await r.during();
@@ -206,14 +209,19 @@ export async function recordHitches(
     dir,
     ...(during && { during }),
   });
-  return {
-    ...hitchSummary(
-      await traceTable(tracePath, 'hitches'),
-      await traceTable(tracePath, 'displayed-surfaces-interval'),
-      seconds * 1000,
-    ),
-    tracePath,
-  };
+  const summary = hitchSummary(
+    await traceTable(tracePath, 'hitches'),
+    await traceTable(tracePath, 'displayed-surfaces-interval'),
+    seconds * 1000,
+  );
+  // no frames is no reading, never "no hitches": measured with Xcode 27.1 on iOS 27.0.1
+  if (summary.frames === 0)
+    throw new DeviceError(
+      'UNSUPPORTED',
+      'the trace tool recorded no frames on this device',
+      `the trace is at ${tracePath}`,
+    );
+  return { ...summary, tracePath };
 }
 
 /**
@@ -270,7 +278,12 @@ export function parseTimeProfile(xml: string, limit = 10): CpuProfile & { appTop
         samples: Math.round(w / 1e6),
         percent: total ? Math.round((w / total) * 1000) / 10 : 0,
       }));
-  return { durationMs: 0, samples: Math.round(total / 1e6), top: entries(top), appTop: entries(app) };
+  return {
+    durationMs: 0,
+    samples: Math.round(total / 1e6),
+    top: entries(top),
+    appTop: entries(app),
+  };
 }
 
 /** Of Activity Monitor's table, one process: its footprint at the end, its CPU over the recording. */

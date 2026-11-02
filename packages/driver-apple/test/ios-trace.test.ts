@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseActivityMonitor, parseHangs, parseTimeProfile, hitchSummary, parseTraceTable } from '../src/trace.js';
+import {
+  parseActivityMonitor,
+  parseHangs,
+  parseTimeProfile,
+  hitchSummary,
+  parseTraceTable,
+} from '../src/trace.js';
 
 const fixture = (f: string) => readFileSync(join(import.meta.dirname, 'fixtures', f), 'utf8');
 
@@ -42,7 +48,11 @@ describe('iOS trace export', () => {
 <row><t>0</t><pid id="1" fmt="7">7</pid><c>100000000</c><m>4096</m></row>
 <row><t>0</t><pid id="2" fmt="8">8</pid><c>1</c><m>1</m></row>
 <row><t>2000000000</t><pid ref="1"/><c>600000000</c><m>8192</m></row>`;
-    expect(parseActivityMonitor(am, 7)).toEqual({ footprintBytes: 8192, cpuPercent: 25, windowMs: 2000 });
+    expect(parseActivityMonitor(am, 7)).toEqual({
+      footprintBytes: 8192,
+      cpuPercent: 25,
+      windowMs: 2000,
+    });
     expect(parseActivityMonitor(am, 9)).toBeUndefined();
   });
 

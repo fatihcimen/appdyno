@@ -67,7 +67,7 @@ final class RunnerTests: XCTestCase {
             "osVersion": UIDevice.current.systemVersion,
             "model": env["SIMULATOR_MODEL_IDENTIFIER"] ?? UIDevice.current.model,
             "screen": ["w": b.width, "h": b.height, "density": UIScreen.main.scale, "rotation": rotation],
-            "capabilities": ["tree", "act", "settle", "text", "screenshot", "clipboard", "orientation", "app.target", "audit"]
+            "capabilities": ["tree", "act", "settle", "text", "screenshot", "clipboard", "orientation", "app.target", "audit", "animations.wait"]
                 + (IdleShim.applied.isEmpty ? [] : ["noIdleWait"]) + (EventShim.available ? ["fastTap"] : []),
             "pid": Int(ProcessInfo.processInfo.processIdentifier),
             "idleWaitsOff": IdleShim.applied,
@@ -104,6 +104,9 @@ final class RunnerTests: XCTestCase {
             var out = try d.after(p, job: job, actionAt: at, tapAt: tap)
             if let waited { out["animationWaitMs"] = waited }
             return Reply(result: out)
+        case "animations.wait":
+            let waited = d.animationsOver((p["x"] as? NSNumber)?.doubleValue ?? 0, (p["y"] as? NSNumber)?.doubleValue ?? 0)
+            return Reply(result: waited.map { ["ms": $0] } ?? [:])
         case "text.set":
             return Reply(result: try d.setText(p, job: job))
         case "screenshot":

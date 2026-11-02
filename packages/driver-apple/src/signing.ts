@@ -254,13 +254,7 @@ export async function signedRunner(
   await cp(builtApp, tmpApp, { recursive: true, verbatimSymlinks: true });
   const xctest = join(tmpApp, 'PlugIns/Runner.xctest');
   const plutil = (args: string[]) => run('plutil', args);
-  await plutil([
-    '-replace',
-    'CFBundleIdentifier',
-    '-string',
-    appId,
-    join(tmpApp, 'Info.plist'),
-  ]);
+  await plutil(['-replace', 'CFBundleIdentifier', '-string', appId, join(tmpApp, 'Info.plist')]);
   await plutil(['-replace', 'CFBundleVersion', '-string', stamp, join(tmpApp, 'Info.plist')]);
   await plutil([
     '-replace',

@@ -177,7 +177,8 @@ function toNode(raw: RawAx, parent: number, screen: { w: number; h: number }): N
   const a = raw.a ?? 0;
   const c = SERVER_TYPES[a] ?? TYPES[a] ?? `Type${a}`;
   const traits = BigInt(raw.t ?? '0');
-  const value = raw.v === undefined ? undefined : raw.v === true ? '1' : raw.v === false ? '0' : String(raw.v);
+  const value =
+    raw.v === undefined ? undefined : raw.v === true ? '1' : raw.v === false ? '0' : String(raw.v);
   let f = 0;
   if (w > 0 && h > 0 && x < screen.w && y < screen.h && x + w > 0 && y + h > 0) f |= F.visible;
   if (CLICKABLE.has(c)) f |= F.clickable;
@@ -274,7 +275,14 @@ export function toTree(
     copies: [...copies.values()].some((count) => count === 2 || count === 3),
     tree: {
       windows: [
-        { type: 1, pkg: bundle, layer: 0, b: nodes[0]?.b ?? [0, 0, 0, 0], active: true, focused: true },
+        {
+          type: 1,
+          pkg: bundle,
+          layer: 0,
+          b: nodes[0]?.b ?? [0, 0, 0, 0],
+          active: true,
+          focused: true,
+        },
       ],
       nodes,
       truncated,
@@ -291,10 +299,29 @@ export function sameTree(a: Tree, b: Tree): boolean {
   return a.nodes.filter(shown).every((n, i) => n.d === y[i]!.d && n.t === y[i]!.t);
 }
 
+/**
+ * What sticks out over the side of the screen and has a name: during a push the old page does, drawn part
+ * way out, with no change in the tree until it goes (the app's own animation reports say nothing of it).
+ */
+export function stickingOut(nodes: Node[], width: number): Set<string> {
+  return new Set(
+    nodes
+      .filter((n) => shown(n) && !!(n.id ?? n.d ?? n.t) && (n.b[0] < 0 || n.b[2] > width))
+      .map(copyKey),
+  );
+}
+
 export const hasAlert = (nodes: Node[]) =>
   nodes.some((n) => (n.c === 'Alert' || n.c === 'Sheet') && (n.f & F.visible) !== 0);
 
-export type TouchEvent = { p: 0 | 1 | 2; x: number; y: number; x2?: number; y2?: number; at: number };
+export type TouchEvent = {
+  p: 0 | 1 | 2;
+  x: number;
+  y: number;
+  x2?: number;
+  y2?: number;
+  at: number;
+};
 
 /** A finger's hold on a tap: as long as a person's, enough for UIKit to see a tap, not a press. */
 const TAP_MS = 50;
@@ -393,6 +420,7 @@ export class DirectSim {
   private inputOff: string | undefined;
   private screen: { w: number; h: number } | undefined;
   private rotated = false;
+  private axDeaths = 0;
   /** How many touches the app in front has reported finished, as of the last answer. */
   touchesEnded: number | undefined;
 
@@ -418,9 +446,16 @@ export class DirectSim {
   }
 
   private async helperAx() {
-    this.ax ??= this.start.ax(this.udid);
+    this.ax ??= this.start.ax(this.udid).catch((e: Error) => {
+      this.turnReadOff(`the read helper did not start: ${e.message.slice(0, 120)}`);
+      throw e;
+    });
     const h = await this.ax;
-    if (h.closed) this.ax = undefined;
+    // a helper that keeps dying is not asked again
+    if (h.closed) {
+      this.ax = undefined;
+      if (++this.axDeaths >= 3) this.turnReadOff('the read helper keeps ending');
+    }
     return h;
   }
 
@@ -457,18 +492,14 @@ export class DirectSim {
 
   /** The app in front, without a snapshot. */
   async front(): Promise<string | undefined> {
-    if (this.readOff) return undefined;
+    if (this.readOff || this.rotated) return undefined;
     const a = this.note(await (await this.helperAx()).call({ op: 'front' }, 5_000));
     return a.ok && typeof a.bundle === 'string' ? a.bundle : undefined;
   }
 
-  /** The app in front has no animation running; waits at most `timeoutMs`. */
-  async animationsOver(timeoutMs: number): Promise<boolean> {
-    if (this.readOff) return false;
-    const a = this.note(
-      await (await this.helperAx()).call({ op: 'signal', signal: 'animations', timeoutMs }, timeoutMs + 2_000),
-    );
-    return a.ok && a.reported === true;
+  /** Asks the app in front to report: its touches finishing are the proof that one got there. */
+  async arm(): Promise<void> {
+    if (!this.readOff) this.note(await (await this.helperAx()).call({ op: 'arm' }, 3_000));
   }
 
   /** Sends the action straight to the simulator; false when the runner must do it. */
@@ -488,10 +519,7 @@ export class DirectSim {
       return false;
     }
     const last = events?.[events.length - 1]?.at ?? 0;
-    const a = await hid.call(
-      key ? { op: 'key', ...key } : { op: 'touch', events },
-      last + 5_000,
-    );
+    const a = await hid.call(key ? { op: 'key', ...key } : { op: 'touch', events }, last + 5_000);
     if (!a.ok) this.inputOff = a.error ?? a.refused ?? 'the input helper failed';
     return a.ok;
   }
@@ -516,8 +544,14 @@ export class DirectSim {
   }
 
   close() {
-    void this.ax?.then((h) => h.close(), () => undefined);
-    void this.hid?.then((h) => h.close(), () => undefined);
+    void this.ax?.then(
+      (h) => h.close(),
+      () => undefined,
+    );
+    void this.hid?.then(
+      (h) => h.close(),
+      () => undefined,
+    );
     this.ax = this.hid = undefined;
   }
 }
@@ -526,6 +560,8 @@ export class DirectSim {
 export async function settle<S>(o: {
   actionAt: number;
   quietMs: number;
+  /** How long stillness must last while nothing has reacted yet. */
+  firstMs: number;
   maxMs: number;
   pollMs: number;
   before: S | undefined;
@@ -541,6 +577,7 @@ export async function settle<S>(o: {
   let reads = 0;
   let last = o.before;
   let changedAt = o.actionAt;
+  let reacted = false;
   for (;;) {
     const readStart = clock();
     const next = await o.read();
@@ -548,8 +585,12 @@ export async function settle<S>(o: {
     const now = clock();
     const busy = o.busy(next);
     // a read shows the layout as it was when it began: stillness is proven up to its start only
-    if (last === undefined || !o.same(next, last) || busy) changedAt = readStart;
-    const settled = last !== undefined && !busy && readStart - changedAt >= o.quietMs;
+    if (last === undefined || !o.same(next, last) || busy) {
+      changedAt = readStart;
+      reacted ||= last !== undefined;
+    }
+    const window = reacted ? o.quietMs : Math.max(o.quietMs, o.firstMs);
+    const settled = last !== undefined && !busy && readStart - changedAt >= window;
     last = next;
     if (settled || now >= deadline)
       return { settled, reads, last: next, elapsedMs: now - o.actionAt };

@@ -165,12 +165,10 @@ static NSDictionary *readApp(NSDictionary *q) {
   return @{@"ok": @YES, @"bundle": bundle, @"pid": @(pid), @"tree": tree, @"requests": @(c.requests), @"screen": @[@(CGRectGetWidth(screen)), @(CGRectGetHeight(screen))]};
 }
 
-// The app's own reports (private, from the accessibility runtime): sent to the observer of the system-wide
-// element once asked for with an action, or by the runtime when touches end.
-static const uint32_t kUserTesting = 4002, kAskIdle = 0x7fa, kAskAnimations = 0x7fb;
+// The app's reports to an observer of the system-wide element (private, from the accessibility runtime).
+static const uint32_t kUserTesting = 4002, kAskIdle = 0x7fa;
 static int32_t (*gPerform)(void *, uint32_t, const void *);
 static long gTouchesEnded;
-static NSMutableArray<NSDictionary *> *gWaits;
 static NSString *gBlind;
 
 static void answer(NSDictionary *a, id ident, uint64_t t0) {
@@ -188,11 +186,6 @@ static void observed(void *observer, void *element, uint32_t notification, const
   id report = (__bridge id)info;
   id event = notification == kUserTesting && [report isKindOfClass:NSDictionary.class] ? report[@"event"] : nil;
   if ([event isEqual:@"TouchEventsCompleted"]) gTouchesEnded++;
-  for (NSDictionary *w in [gWaits copy])
-    if ([w[@"event"] isEqual:event]) {
-      [gWaits removeObject:w];
-      answer(@{@"ok": @YES, @"reported": @YES}, w[@"id"], [w[@"t0"] unsignedLongLongValue]);
-    }
 }
 
 static NSString *observe(void) {
@@ -209,25 +202,12 @@ static NSString *observe(void) {
   return nil;
 }
 
-// Answers when the app in front reports it, or `timeoutMs` later with reported: false.
-static void askApp(NSDictionary *q, uint64_t t0) {
-  BOOL animations = [q[@"signal"] isEqual:@"animations"];
+// The app in front reports to the observer from now on (its touches finishing, among others).
+static NSDictionary *arm(void) {
   pid_t pid = [[(id<AX>)gAXElement primaryApp] pid];
-  // the element owns `raw`: it stays alive as long as `raw` is used
   __attribute__((objc_precise_lifetime)) id<AX> root = [(id<AX>)gElementClass elementWithProcessIdentifier:pid];
   void *raw = [root AXUIElement];
-  if (!raw || gPerform(raw, animations ? kAskAnimations : kAskIdle, NULL) != 0) {
-    answer(refuse(@"signal-refused"), q[@"id"], t0);
-    return;
-  }
-  NSDictionary *wait = @{@"event": animations ? @"AnimationsNonActive" : @"RunLoopIsIdle", @"id": q[@"id"] ?: @0, @"t0": @(t0)};
-  [gWaits addObject:wait];
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, [q[@"timeoutMs"] longLongValue] * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
-    if ([gWaits containsObject:wait]) {
-      [gWaits removeObject:wait];
-      answer(@{@"ok": @YES, @"reported": @NO}, wait[@"id"], t0);
-    }
-  });
+  return raw && gPerform(raw, kAskIdle, NULL) == 0 ? @{@"ok": @YES} : refuse(@"no-report");
 }
 
 static void handle(NSData *line) {
@@ -236,11 +216,8 @@ static void handle(NSData *line) {
     uint64_t t0 = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
     NSDictionary *a;
     @try {
-      if ([q[@"op"] isEqual:@"signal"] && !gBlind) {
-        askApp(q, t0);
-        return;
-      }
       if ([q[@"op"] isEqual:@"read"]) a = readApp(q);
+      else if ([q[@"op"] isEqual:@"arm"]) a = gBlind ? refuse(gBlind) : arm();
       else if ([q[@"op"] isEqual:@"front"]) {
         NSString *front = [(id<AX>)[(id<AX>)gAXElement primaryApp] bundleId];
         a = front ? @{@"ok": @YES, @"bundle": front} : refuse(@"no-foreground");
@@ -255,7 +232,6 @@ static void handle(NSData *line) {
 
 int main(void) {
   @autoreleasepool {
-    gWaits = [NSMutableArray array];
     NSString *problem = setup();
     gBlind = problem ?: observe();
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), ^{
