@@ -228,6 +228,22 @@ describe('wire tree to screen', () => {
     expect(s.window).toEqual({ w: 1080, h: 2400 });
   });
 
+  it('knows the screen in landscape, the app window beside a navigation bar on the left', () => {
+    const tree = wireTree([], {
+      windows: [
+        { type: 1, pkg: 'dev.app', layer: 1, b: [128, 0, 2400, 1080], active: true, focused: true },
+      ],
+    });
+    tree.nodes[0]!.b = [128, 0, 2400, 1080];
+    expect(buildScreen(tree, { platform: 'android' }).window).toEqual({ w: 2400, h: 1080 });
+  });
+
+  it('takes no dialog for the screen', () => {
+    const tree = wireTree([]);
+    tree.nodes[0]!.b = [54, 900, 1026, 1500];
+    expect(buildScreen(tree, { platform: 'android' }).window).toBeUndefined();
+  });
+
   it('leaves out an element mostly off the screen (a pager page)', () => {
     const tree = wireTree([
       { t: 'görünen', b: [0, 100, 500, 200] },

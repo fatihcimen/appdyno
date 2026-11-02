@@ -35,6 +35,6 @@ export function buildScreen(tree: Tree, opts: { platform: Platform; appId?: stri
     list,
     hash: tree.hash,
     ...(active?.pkg && { foreground: active.pkg }),
-    ...(win && { window: { w: win.width, h: win.height } }),
+    ...(win && { window: { w: win.x + win.width, h: win.height } }),
   };
 }

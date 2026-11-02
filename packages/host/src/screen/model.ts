@@ -86,8 +86,9 @@ type Item = {
 
 /**
  * The screen in tap units: the largest root when it sits at the origin (the decor view, an iOS
- * application node), else on iOS the width of a navigation or tab bar at x 0 with no height limit;
- * undefined (nothing filtered) when neither is there.
+ * application node) or, on Android in landscape, beside a navigation bar on the left; else on iOS the
+ * width of a navigation or tab bar at x 0 with no height limit; undefined (nothing filtered) when
+ * neither is there.
  */
 export function windowRect(elements: UiElement[], platform: Platform): Rect | undefined {
   const area = (r: Rect) => r.width * r.height;
@@ -95,8 +96,14 @@ export function windowRect(elements: UiElement[], platform: Platform): Rect | un
   const [big, next] = roots.map((e) => e.rect!).sort((a, b) => area(b) - area(a));
   const same = (a: Rect, b: Rect) =>
     a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+  const sideBar = platform !== 'ios' && !!big && big.width > big.height;
   // an activity in transition shows two full-screen roots: equal ones are still the window
-  if (big && big.x === 0 && big.y === 0 && (!next || area(big) > area(next) || same(big, next)))
+  if (
+    big &&
+    (big.x === 0 || sideBar) &&
+    big.y === 0 &&
+    (!next || area(big) > area(next) || same(big, next))
+  )
     return big;
   if (platform !== 'ios') return undefined;
   const bar = elements.find(
