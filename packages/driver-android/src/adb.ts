@@ -189,6 +189,10 @@ export class Adb {
       p.stdout.on('data', (b) => (out += b));
       p.stderr.on('data', (b) => (out += b));
       const timer = setTimeout(() => p.kill('SIGKILL'), timeoutMs);
+      const signal = callSignal();
+      const abort = () => p.kill('SIGKILL');
+      signal?.addEventListener('abort', abort, { once: true });
+      p.once('close', () => signal?.removeEventListener('abort', abort));
       p.on('error', (e) => {
         clearTimeout(timer);
         reject(

@@ -16,6 +16,6 @@ export const SERVER_INFO = {
 };
 
 export const INSTRUCTIONS =
-  'Drives a mobile device. Read the screen first; act on elements by ref (tap, type_text). ' +
-  'Every action returns the settled screen after it (read: diff by default), no extra read needed. ' +
-  'No fixed sleeps: use wait_for. Take a screenshot only for a visual judgement.';
+  'Drives a mobile device: the one use_device selected, or the only one connected. Read the screen first; act on elements by ref (tap, type_text). ' +
+  'Every action returns the settled screen after it (read: diff by default), no extra read needed, with changed: false when nothing moved and settled: false when it kept moving. ' +
+  'No fixed sleeps: use wait_for. Take a screenshot only for a visual judgement. A failed answer has code and hint. When the app misbehaves: logs and crashes.';

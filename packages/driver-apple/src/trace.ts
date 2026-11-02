@@ -1,3 +1,4 @@
+import { callSignal, throwIfCancelled } from '@appdyno/core';
 import { execFile, spawn } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -116,16 +117,20 @@ export async function recordHitches(
       tracePath,
       '--no-prompt',
     ],
-    { env },
+    { env, ...(callSignal() && { signal: callSignal()! }) },
   );
   let log = '';
   rec.stdout.on('data', (b: Buffer) => (log += String(b)));
   rec.stderr.on('data', (b: Buffer) => (log += String(b)));
-  const exited = new Promise<number | null>((r) => rec.on('exit', r));
+  const exited = new Promise<number | null>((r) => {
+    rec.on('exit', r);
+    rec.on('error', () => r(null));
+  });
   // the recording starts a moment after the tool does
   await new Promise((r) => setTimeout(r, 2_000));
   if (during) await during();
   const code = await exited;
+  throwIfCancelled('the recording');
   if (code !== 0)
     throw new DeviceError(
       'UNSUPPORTED',

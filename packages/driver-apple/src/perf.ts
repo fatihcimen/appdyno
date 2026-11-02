@@ -1,3 +1,4 @@
+import { callSignal } from '@appdyno/core';
 import { execFile } from 'node:child_process';
 import { readFile, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -264,6 +265,7 @@ export class IosSimulatorPerf implements MeasureSource {
     const rec = run('sample', [String(pid), String(s), '-mayDie'], {
       timeout: (s + 60) * 1000,
       maxBuffer: 64 * 1024 * 1024,
+      ...(callSignal() && { signal: callSignal()! }),
     });
     if (during) await during();
     const { stdout } = await rec;
