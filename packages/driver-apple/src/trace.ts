@@ -2,6 +2,7 @@ import { execFile, spawn } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import type { HitchSummary } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { xcodeEnv } from './simctl.js';
 
@@ -58,19 +59,6 @@ export function parseTraceTable(xml: string): Record<string, Cell>[] {
   }
   return rows;
 }
-
-export type HitchSummary = {
-  durationMs: number;
-  /** Frames the display showed (all surfaces). */
-  frames: number;
-  /** The app's hitches (system ones left out). */
-  hitches: number;
-  hitchMs: number;
-  worstMs: number;
-  /** Hitch time per second of recording (Apple's hitch ratio, ms/s). */
-  hitchRatio: number;
-  causes: Record<string, number>;
-};
 
 export function hitchSummary(
   hitchesXml: string,

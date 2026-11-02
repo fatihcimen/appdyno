@@ -1,3 +1,4 @@
+import type { Capability } from '@appdyno/core';
 import type { z } from 'zod';
 
 /** A refusal the agent can act on (shown as the tool's error text, never a stack). */
@@ -23,6 +24,27 @@ export interface Tool {
   output: z.ZodObject;
   annotations: ToolAnnotations;
   handler: (args: Record<string, unknown>) => Promise<ToolResult>;
+}
+
+/** One operation: a tool on the MCP surface and a command on the CLI. */
+export type Op = Tool & {
+  name: string;
+  /** The measure it cannot do without. */
+  needs?: Capability;
+};
+
+export function defineOp<S extends z.ZodObject>(def: {
+  name: string;
+  title: string;
+  description: string;
+  input: S;
+  output: z.ZodObject;
+  annotations: ToolAnnotations;
+  needs?: Capability;
+  run: (args: z.infer<S>) => Promise<ToolResult>;
+}): Op {
+  const { run, ...rest } = def;
+  return { ...rest, handler: run as Tool['handler'] };
 }
 
 export const text = (t: string): Block[] => [{ type: 'text', text: t }];

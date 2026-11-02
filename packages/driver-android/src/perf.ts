@@ -4,8 +4,18 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { randomBytes } from 'node:crypto';
+import type {
+  CpuProfile,
+  DeviceVitals,
+  FrameStats,
+  FrameTimeline,
+  FrameTrace,
+  HeapReading,
+  Measured,
+  MeasureSource,
+  MemoryReading,
+} from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import type { CpuProfile, Measured } from '@appdyno/core';
 import { traceProcessor } from './tools.js';
 import type { AndroidDevice } from './device.js';
 import {
@@ -15,9 +25,6 @@ import {
   parseMeminfo,
   parseProcStatTicks,
   parseVitals,
-  type DeviceVitals,
-  type FrameStats,
-  type FrameTimeline,
   type LaunchSample,
   type MemoryStats,
   parseSimpleperfReport,
@@ -59,8 +66,12 @@ const median = (xs: number[]) => {
  * device's state while measuring (load, CPU pressure, memory, thermal status, battery temperature).
  * Commands run in the C locale (a localized device writes `0,0`).
  */
-export class AndroidPerf {
+export class AndroidPerf implements MeasureSource {
   constructor(private readonly device: AndroidDevice) {}
+
+  get virtual() {
+    return /^emulator-/.test(this.device.serial);
+  }
 
   private sh(cmd: string, timeoutMs?: number) {
     return this.device.shell(`LC_ALL=C ${cmd}`, timeoutMs);
@@ -81,12 +92,13 @@ export class AndroidPerf {
     await this.sh(`dumpsys gfxinfo ${assertPkg(pkg)} reset > /dev/null`);
   }
 
-  async memory(pkg: string): Promise<Measured<MemoryStats>> {
+  async memory(pkg: string): Promise<Measured<MemoryStats & MemoryReading>> {
     assertPkg(pkg);
     const raw = await this.sh(`dumpsys meminfo ${pkg}`);
     if (/No process found/i.test(raw))
       throw new DeviceError('APP_NOT_RUNNING', `${pkg} is not running`);
-    return { value: parseMeminfo(raw), raw, at: at() };
+    const stats = parseMeminfo(raw);
+    return { value: { ...stats, kb: stats.pssKb, kind: 'pss' }, raw, at: at() };
   }
 
   async pid(pkg: string): Promise<number> {
@@ -304,5 +316,21 @@ export class AndroidPerf {
     } finally {
       await this.device.shell(`rm -f ${remote}`).catch(() => undefined);
     }
+  }
+
+  /** The Java heap into a new HPROF file under `dir`. */
+  async heap(pkg: string, dir: string): Promise<Measured<HeapReading>> {
+    const m = await this.heapDump(pkg, join(dir, `heap-${pkg}-${Date.now()}.hprof`));
+    return { ...m, value: { ...m.value, kind: 'hprof' } };
+  }
+
+  /** The frame timeline over `seconds`. */
+  async frameTrace(
+    pkg: string,
+    seconds: number,
+    during?: () => Promise<unknown>,
+  ): Promise<Measured<FrameTrace>> {
+    const m = await this.frameTimeline(pkg, seconds * 1000, during);
+    return { value: { kind: 'timeline', ...m.value }, raw: m.raw, at: m.at };
   }
 }

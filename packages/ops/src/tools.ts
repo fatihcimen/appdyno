@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { checkApp, checkUrl, redact, type Policy } from './policy.js';
 import type { ServerContext } from './context.js';
 import { refused, type Session } from './session.js';
-import { perfTools } from './perf-tools.js';
+import { perfOps } from './perf.js';
 import {
   ActionOut,
   DeviceOut,
@@ -359,23 +359,7 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       z.object({}).strict(),
       READ,
       async () => {
-        const all = await ctx.adb.devices().catch(refused);
-        const sims = await ctx.simulators();
-        const phones = await ctx.phones();
-        const devices = [
-          ...all.map((d) => ({
-            serial: d.serial,
-            state: d.state,
-            ...(d.props.model && { model: d.props.model }),
-          })),
-          // booted iOS simulators, named by their id
-          ...sims.map((d) => ({
-            serial: d.udid,
-            state: 'booted',
-            model: `iOS simulator ${d.name}`,
-          })),
-          ...phones.map((udid) => ({ serial: udid, state: 'usb', model: 'iPhone' })),
-        ].map((d) => ({
+        const devices = (await ctx.devices().catch(refused)).map((d) => ({
           ...d,
           allowed: ctx.allowed(d.serial),
           selected: d.serial === ctx.currentSerial,
@@ -802,7 +786,7 @@ export function createTools(ctx: ServerContext): Record<string, Tool> {
       },
       DoneOut,
     ),
-    ...perfTools(ctx, ctx.measurementsDir),
+    ...Object.fromEntries(perfOps(ctx).map((o) => [o.name, o])),
   };
   return tools;
 }

@@ -45,10 +45,10 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
 
   it('memory: 50 MB held shows in the footprint (within 15 %)', async () => {
     const s = await open('memory');
-    const before = (await d.iosPerf.memory(APP)).value.footprintKb;
+    const before = (await d.measure.memory(APP)).value.footprintKb;
     await d.tap(byId(s, 'memory_alloc'), { settle: false });
     await pause(1_500);
-    const after = (await d.iosPerf.memory(APP)).value.footprintKb;
+    const after = (await d.measure.memory(APP)).value.footprintKb;
     await d.tap(byId(s, 'memory_free'), { settle: false });
     expect((after - before) / 1024).toBeGreaterThan(50 * 0.85);
     expect((after - before) / 1024).toBeLessThan(50 * 1.15);
@@ -58,7 +58,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
     const s = await open('cpu');
     await d.tap(byId(s, 'cpu_load'), { settle: false });
     await pause(200);
-    const cpu = (await d.iosPerf.cpu(APP, 2_000)).value;
+    const cpu = (await d.measure.cpu(APP, 2_000)).value;
     expect(cpu.percent).toBeGreaterThan(80);
     expect(cpu.percent).toBeLessThan(125);
     await pause(1_500);
@@ -67,7 +67,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
   it('CPU profile: the busy loop is the top function', async (t) => {
     const s = await open('cpu');
     const prof = (
-      await d.iosPerf.cpuProfile(APP, 2_000, async () => {
+      await d.measure.cpuProfile(APP, 2_000, async () => {
         await pause(200);
         await d.tap(byId(s, 'cpu_load'), { settle: false });
       })
@@ -89,7 +89,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
     await d.tap(byId(s, 'memory_alloc'), { settle: false });
     await pause(1_000);
     const file = join(mkdtempSync(join(tmpdir(), 'appdyno-heap-')), 'heap.memgraph');
-    const g = (await d.iosPerf.heapGraph(APP, file)).value;
+    const g = (await d.measure.heapGraph(APP, file)).value;
     await d.tap(byId(s, 'memory_free'), { settle: false });
     expect(statSync(file).size).toBe(g.bytes);
     expect(g.bytes).toBeGreaterThan(100 * 1024);
@@ -97,8 +97,8 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
   }, 180_000);
 
   it('launch: a cold start takes longer than a warm one', async () => {
-    const cold = (await d.iosPerf.launch(APP, { mode: 'cold', repeats: 3 })).value;
-    const warm = (await d.iosPerf.launch(APP, { mode: 'warm', repeats: 3 })).value;
+    const cold = (await d.measure.launch(APP, { mode: 'cold', repeats: 3 })).value;
+    const warm = (await d.measure.launch(APP, { mode: 'warm', repeats: 3 })).value;
     expect(cold.samplesMs).toHaveLength(3);
     expect(cold.medianMs).toBeLessThan(10_000);
     expect(warm.medianMs).toBeLessThan(cold.medianMs);

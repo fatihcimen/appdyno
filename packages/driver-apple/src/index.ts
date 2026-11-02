@@ -1,3 +1,4 @@
+export { appleProvider, iosChecks } from './provider.js';
 export {
   IosDevice,
   IosSimulatorDevice,

@@ -21,6 +21,7 @@ import {
   stateDir,
   TIMEOUTS,
   type ActOptions,
+  type Device,
   type RpcClient,
   type Screen,
 } from '@appdyno/core';
@@ -107,7 +108,7 @@ export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
  * failures are typed DeviceErrors. App lifecycle, links and location go through the device's own
  * tool (`ops`). Coordinates are points.
  */
-export class IosDevice {
+export class IosDevice implements Device {
   readonly platform = 'ios' as const;
   private rpc: RpcClient | undefined;
   private connecting: Promise<RpcClient> | undefined;
@@ -390,7 +391,7 @@ export class IosSimulatorDevice extends IosDevice {
   }
 
   /** The app's performance, measured from the Mac (memory, CPU, launch, CPU profile). */
-  get iosPerf(): IosSimulatorPerf {
+  get measure(): IosSimulatorPerf {
     return (this.perfTools ??= new IosSimulatorPerf(this.serial, this.simctl, async (bundle) => {
       const t = await this.tree().catch(() => undefined);
       return !!t && t.windows[0]?.pkg === bundle && t.nodes.filter((n) => n.w === 0).length > 3;

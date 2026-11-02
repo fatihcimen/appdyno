@@ -20,7 +20,7 @@ const RULES: Record<string, string[]> = {
   core: [PROTOCOL],
   'driver-android': [CORE, PROTOCOL],
   'driver-apple': [CORE, PROTOCOL],
-  ops: [CORE, PROTOCOL, ANDROID, APPLE], // until the ports are in: the next commit
+  ops: [CORE, PROTOCOL],
   mcp: [OPS, CORE, PROTOCOL],
   cli: [OPS, CORE, PROTOCOL],
   appdyno: [PROTOCOL, CORE, ANDROID, APPLE, OPS, MCP, CLI],
@@ -72,7 +72,7 @@ describe('module boundaries', () => {
   it('catches what it is there to catch', () => {
     const file = (pkg: string) => join(packages, pkg, 'src/x.ts');
     const flagged = (pkg: string, line: string) => violations(pkg, file(pkg), line).length > 0;
-    expect(flagged('mcp', `import { AndroidDevice } from '${ANDROID}';`)).toBe(true);
+    expect(flagged('ops', `import { AndroidDevice } from '${ANDROID}';`)).toBe(true);
     expect(flagged('driver-apple', `import type { Adb } from "${ANDROID}";`)).toBe(true);
     expect(flagged('driver-android', `export * from '${APPLE}';`)).toBe(true);
     expect(flagged('core', `const x = await import('${OPS}');`)).toBe(true);

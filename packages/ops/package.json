@@ -17,8 +17,6 @@
   },
   "dependencies": {
     "@appdyno/core": "workspace:*",
-    "@appdyno/driver-android": "workspace:*",
-    "@appdyno/driver-apple": "workspace:*",
     "@appdyno/protocol": "workspace:*",
     "zod": "^4.6.7"
   }

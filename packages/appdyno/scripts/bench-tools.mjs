@@ -4,7 +4,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '@appdyno/mcp';
 import { createTools, DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
-import { Adb, stats } from '../dist/index.js';
+import { Adb, androidProvider, stats } from '../dist/index.js';
 
 const [serial, nArg] = process.argv.slice(2);
 if (!serial) {
@@ -14,10 +14,14 @@ if (!serial) {
 const n = Number(nArg ?? 30);
 const APP = 'dev.appdyno.fixture';
 const adb = new Adb();
-const ctx = new ServerContext({ ...DEFAULT_POLICY, devices: new RegExp(`^${serial}$`) }, adb, {
-  device: serial,
-  app: APP,
-});
+const ctx = new ServerContext(
+  { ...DEFAULT_POLICY, devices: new RegExp(`^${serial}$`) },
+  [androidProvider(adb)],
+  {
+    device: serial,
+    app: APP,
+  },
+);
 const server = createServer(createTools(ctx), () => undefined);
 const [a, b] = InMemoryTransport.createLinkedPair();
 await server.connect(a);

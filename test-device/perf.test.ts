@@ -30,13 +30,13 @@ describe.skipIf(!serial)('android perf accuracy', () => {
 
   it('frames: a light animation is smooth, a 40 ms draw misses every deadline', async () => {
     const s = await open('frames');
-    await d.perf.resetFrames(APP);
+    await d.measure.resetFrames(APP);
     await d.tap(byId(s, 'frames_light'), { settle: false });
     await pause(2_500);
-    const light = (await d.perf.frames(APP)).value;
+    const light = (await d.measure.frames(APP)).value;
     await d.tap(byId(s, 'frames_heavy'), { settle: false });
     await pause(2_500);
-    const heavy = (await d.perf.frames(APP)).value;
+    const heavy = (await d.measure.frames(APP)).value;
     expect(light.totalFrames).toBeGreaterThanOrEqual(60);
     expect(light.jankyPercent).toBeLessThan(25);
     expect(light.frames!.slowPercent).toBeLessThan(20);
@@ -51,10 +51,10 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     const s = await open('memory');
     await d.tap(byId(s, 'memory_free'), { settle: false });
     await pause(1_500);
-    const before = (await d.perf.memory(APP)).value;
+    const before = (await d.measure.memory(APP)).value;
     await d.tap(byId(s, 'memory_alloc'), { settle: false });
     await pause(1_500);
-    const after = (await d.perf.memory(APP)).value;
+    const after = (await d.measure.memory(APP)).value;
     const delta = after.javaHeapKb! - before.javaHeapKb!;
     expect(delta).toBeGreaterThan(50 * 1024 * 0.85);
     expect(delta).toBeLessThan(50 * 1024 * 1.15);
@@ -66,7 +66,7 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     const s = await open('cpu');
     await d.tap(byId(s, 'cpu_load'), { settle: false });
     await pause(300);
-    const cpu = (await d.perf.cpu(APP, 2_000)).value;
+    const cpu = (await d.measure.cpu(APP, 2_000)).value;
     expect(cpu.percent).toBeGreaterThan(80);
     expect(cpu.percent).toBeLessThan(125);
     await pause(1_000);
@@ -74,7 +74,7 @@ describe.skipIf(!serial)('android perf accuracy', () => {
 
   it('launch: cold starts are COLD and match the system log; warm starts are faster', async () => {
     await d.shell('logcat -c');
-    const cold = (await d.perf.launch(APP, { mode: 'cold', repeats: 3 })).value;
+    const cold = (await d.measure.launch(APP, { mode: 'cold', repeats: 3 })).value;
     // under memory pressure the system may kill or keep a process: most launches are in the asked state
     expect(cold.samples.filter((x) => x.state === 'COLD').length).toBeGreaterThanOrEqual(2);
     expect(cold.medianMs).toBeGreaterThan(0);
@@ -87,7 +87,7 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     const last = cold.samples.at(-1)!.totalMs!;
     expect(displayed.length).toBeGreaterThan(0);
     expect(Math.min(...displayed.map((x) => Math.abs(x - last)))).toBeLessThanOrEqual(50);
-    const warm = (await d.perf.launch(APP, { mode: 'warm', repeats: 3 })).value;
+    const warm = (await d.measure.launch(APP, { mode: 'warm', repeats: 3 })).value;
     expect(
       warm.samples.filter((x) => x.state === 'WARM' || x.state === 'HOT').length,
     ).toBeGreaterThanOrEqual(2);
@@ -97,7 +97,7 @@ describe.skipIf(!serial)('android perf accuracy', () => {
   it('CPU profile: the busy loop of the fixture is the top function', async () => {
     const s = await open('cpu');
     const prof = (
-      await d.perf.cpuProfile(APP, 2_000, async () => {
+      await d.measure.cpuProfile(APP, 2_000, async () => {
         await pause(200);
         await d.tap(byId(s, 'cpu_load'), { settle: false });
       })
@@ -114,14 +114,14 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     await d.tap(byId(s, 'memory_alloc'), { settle: false });
     await pause(1_000);
     const file = join(mkdtempSync(join(tmpdir(), 'appdyno-heap-')), 'heap.hprof');
-    const dump = (await d.perf.heapDump(APP, file)).value;
+    const dump = (await d.measure.heapDump(APP, file)).value;
     expect(dump.bytes).toBeGreaterThan(50 * 1024 * 1024);
     expect(statSync(file).size).toBe(dump.bytes);
     await d.tap(byId(s, 'memory_free'), { settle: false });
   }, 180_000);
 
   it('vitals: load, memory and thermal state of the device', async () => {
-    const v = (await d.perf.vitals()).value;
+    const v = (await d.measure.vitals()).value;
     expect(v.load).toHaveLength(3);
     expect(v.memAvailableKb).toBeGreaterThan(0);
     expect(v.memTotalKb).toBeGreaterThan(v.memAvailableKb!);
@@ -132,13 +132,13 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     if (!tp) return; // the trace processor is not installed (doctor says so)
     const s = await open('frames');
     const heavy = (
-      await d.perf.frameTimeline(APP, 4_000, async () => {
+      await d.measure.frameTimeline(APP, 4_000, async () => {
         await pause(500);
         await d.tap(byId(s, 'frames_heavy'), { settle: false });
       })
     ).value;
     const light = (
-      await d.perf.frameTimeline(APP, 4_000, async () => {
+      await d.measure.frameTimeline(APP, 4_000, async () => {
         await pause(500);
         await d.tap(byId(s, 'frames_light'), { settle: false });
       })

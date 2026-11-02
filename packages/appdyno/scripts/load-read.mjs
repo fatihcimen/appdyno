@@ -26,7 +26,7 @@ const stress = await adb.startDetached(
 );
 await new Promise((r) => setTimeout(r, 3_000));
 stress.close();
-const vitalsBefore = (await d.perf.vitals()).value;
+const vitalsBefore = (await d.measure.vitals()).value;
 let shots = 0;
 let shotFailures = 0;
 const shooter = setInterval(() => {
@@ -77,7 +77,7 @@ try {
   clearInterval(shooter);
   await adb.exec(serial, "pkill -f 'while :; do :; done'; true").catch(() => undefined);
 }
-const vitalsAfter = (await d.perf.vitals()).value;
+const vitalsAfter = (await d.measure.vitals()).value;
 d.close();
 console.log(
   JSON.stringify(

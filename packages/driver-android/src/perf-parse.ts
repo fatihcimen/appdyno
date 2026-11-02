@@ -1,4 +1,10 @@
-import type { ProfileEntry } from '@appdyno/core';
+import type {
+  DeviceVitals,
+  FrameStats,
+  FrameSummary,
+  FrameTimeline,
+  ProfileEntry,
+} from '@appdyno/core';
 
 /**
  * Parsers of the platform's own measurement output (pure; unit tested on recorded outputs). Every number
@@ -13,21 +19,6 @@ export const MIN_FRAMES = 60;
 const num = (re: RegExp, text: string) => {
   const v = re.exec(text)?.[1];
   return v === undefined ? undefined : Number(v);
-};
-
-export type FrameSummary = {
-  totalFrames: number;
-  jankyFrames: number;
-  jankyPercent: number;
-  p50Ms?: number;
-  p90Ms?: number;
-  p95Ms?: number;
-  p99Ms?: number;
-  slowUiThread?: number;
-  deadlineMissed?: number;
-  /** Frames over FROZEN_FRAME_MS (histogram buckets from 700 ms on). */
-  frozenFrames: number;
-  fewFrames: boolean;
 };
 
 /** The first (process) summary of `dumpsys gfxinfo <pkg>`. */
@@ -92,20 +83,6 @@ export function parseFramestats(text: string): FrameRow[] {
   }
   return out;
 }
-
-export type FrameStats = FrameSummary & {
-  /** From the per-frame rows (the last ~120 frames). */
-  frames?: {
-    count: number;
-    slow: number;
-    slowPercent: number;
-    p50Ms: number;
-    p95Ms: number;
-    worstMs: number;
-    /** The worst second: the one-second window of frames with the most slow frames. */
-    worstWindow?: { frames: number; slow: number; avgMs: number };
-  };
-};
 
 const pct = (xs: number[], p: number) => {
   const s = [...xs].sort((a, b) => a - b);
@@ -207,17 +184,6 @@ export function parseProcStatTicks(text: string): number {
   return ticks;
 }
 
-export type DeviceVitals = {
-  load?: number[];
-  /** `/proc/pressure/cpu` some avg10. */
-  cpuPressure?: number;
-  memAvailableKb?: number;
-  memTotalKb?: number;
-  /** `dumpsys thermalservice` Thermal Status (0 none … 6 shutdown). */
-  thermalStatus?: number;
-  batteryTempC?: number;
-};
-
 /** One shell read of the device's own state (sections separated by marker lines). */
 export function parseVitals(text: string): DeviceVitals {
   const section = (name: string) =>
@@ -238,21 +204,6 @@ export function parseVitals(text: string): DeviceVitals {
   if (temp !== undefined) out.batteryTempC = temp / 10;
   return out;
 }
-
-export type FrameTimeline = {
-  frames: number;
-  /** Frames with any jank type (on an emulator nearly all: its display's prediction errors). */
-  janky: number;
-  jankyPercent: number;
-  appDeadlineMissed: number;
-  /** The app's own share: frames whose type says the app missed its deadline. */
-  appJankPercent: number;
-  bufferStuffing: number;
-  surfaceFlinger: number;
-  p50Ms: number;
-  p95Ms: number;
-  worstMs: number;
-};
 
 /**
  * The frame-timeline query's CSV (trace processor output): one row per frame of the app's process with

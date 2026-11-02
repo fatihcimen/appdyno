@@ -5,8 +5,8 @@ import { writeFile } from 'node:fs/promises';
 import { loadavg } from 'node:os';
 import { parseArgs } from 'node:util';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { Adb, installTools } from '@appdyno/driver-android';
-import { iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
+import { Adb, androidProvider, installTools } from '@appdyno/driver-android';
+import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
 import { createServer } from '@appdyno/mcp';
 import { DEFAULT_POLICY, ServerContext, createTools, type Policy } from '@appdyno/ops';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
@@ -14,6 +14,7 @@ import { doctor } from './doctor.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
+const providers = () => [androidProvider(), appleProvider()];
 
 /** The MCP server over stdio, until its client closes stdin. */
 async function serveMcp(args: string[]) {
@@ -48,7 +49,7 @@ async function serveMcp(args: string[]) {
   };
   const device = values.device ?? env.APPDYNO_SERIAL;
   const app = values.app ?? env.APPDYNO_APP;
-  const ctx = new ServerContext(policy, undefined, {
+  const ctx = new ServerContext(policy, providers(), {
     ...(device && { device }),
     ...(app && { app }),
   });
@@ -93,7 +94,10 @@ async function main(): Promise<number> {
     }
     case 'doctor': {
       const { values } = parseArgs({ args: rest, options: { serial: { type: 'string' } } });
-      const checks = await doctor({ ...(values.serial && { serial: values.serial }) });
+      const checks = await doctor({
+        providers: providers(),
+        ...(values.serial && { serial: values.serial }),
+      });
       for (const c of checks)
         console.log(
           `${c.ok ? 'ok  ' : c.warn ? 'warn' : 'FAIL'} ${c.name}: ${c.detail}${c.fix ? `\n     fix: ${c.fix}` : ''}`,

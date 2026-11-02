@@ -18,6 +18,7 @@ import {
   DeviceQueue,
   TIMEOUTS,
   type ActOptions,
+  type Device,
   type RpcClient,
   type Screen,
 } from '@appdyno/core';
@@ -46,7 +47,7 @@ const assertPkg = (p: string) => {
  * overlap, failures are typed DeviceErrors. App lifecycle, links and location go through adb's own
  * protocol (no adb process per call).
  */
-export class AndroidDevice {
+export class AndroidDevice implements Device {
   readonly platform = 'android' as const;
   private rpc: RpcClient | undefined;
   private connecting: Promise<RpcClient> | undefined;
@@ -420,7 +421,7 @@ export class AndroidDevice {
   }
 
   /** The app's and the device's performance (frames, memory, CPU, launch, device state). */
-  get perf(): AndroidPerf {
+  get measure(): AndroidPerf {
     return (this.perfTools ??= new AndroidPerf(this));
   }
   private perfTools: AndroidPerf | undefined;

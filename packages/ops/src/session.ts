@@ -1,40 +1,6 @@
-import { buildScreen, type Screen, type ScreenElement } from '@appdyno/core';
-import type { AndroidDevice } from '@appdyno/driver-android';
-import type { IosDevice, IosSimulatorPerf } from '@appdyno/driver-apple';
+import { buildScreen, type Device, type Screen, type ScreenElement } from '@appdyno/core';
 import { DeviceError, type Tree } from '@appdyno/protocol';
 import { ToolError } from './tool.js';
-
-/** What the tools need of a device: an Android device or an iOS simulator (no perf tools there yet). */
-export type DriveableDevice = Pick<
-  AndroidDevice,
-  | 'serial'
-  | 'hello'
-  | 'lastStartWasCold'
-  | 'open'
-  | 'tree'
-  | 'act'
-  | 'tap'
-  | 'longPress'
-  | 'swipe'
-  | 'key'
-  | 'typeText'
-  | 'screenshot'
-  | 'foreground'
-  | 'setClipboard'
-  | 'setOrientation'
-  | 'openUrl'
-  | 'launch'
-  | 'terminate'
-  | 'setLocation'
-  | 'close'
-> & {
-  readonly platform: 'android' | 'ios';
-  readonly perf?: AndroidDevice['perf'];
-  /** iOS simulator: measured from the Mac. */
-  readonly iosPerf?: IosSimulatorPerf;
-  /** iOS: animation hitches through Xcode's trace tool. */
-  hitches?: IosDevice['hitches'];
-};
 
 /**
  * One device the server drives and what its agent was shown: the screen the diffs are against, the
@@ -50,7 +16,7 @@ export class Session {
   shot: { at: number; hash: string } | undefined;
 
   constructor(
-    readonly device: DriveableDevice,
+    readonly device: Device,
     public appId: string | undefined,
   ) {}
 

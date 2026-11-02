@@ -87,13 +87,12 @@ const Measurement = { id: z.string(), raw: z.string(), virtualDevice: z.boolean(
 export const SnapshotOut = z.object({
   ...Measurement,
   cpuPercent: z.number(),
-  /** Android. */
-  pssKb: z.number().optional(),
+  memoryKb: z.number(),
+  /** What memoryKb counts: Android's PSS, or Apple's physical footprint. */
+  memoryKind: z.enum(['pss', 'footprint']),
+  peakKb: z.number().optional(),
   javaHeapKb: z.number().optional(),
   nativeHeapKb: z.number().optional(),
-  /** iOS simulator: the app's physical footprint. */
-  footprintKb: z.number().optional(),
-  /** Android. */
   frames: z
     .object({
       total: z.number(),

@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { DeviceError, type Tree } from 'appdyno';
+import type { DeviceProvider } from '@appdyno/core';
+import { DeviceError, type Tree } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY, type Policy } from '../src/policy.js';
@@ -18,21 +19,18 @@ const MEASUREMENTS = mkdtempSync(join(tmpdir(), 'appdyno-measure-'));
 async function connect(
   policy: Partial<Policy> = {},
   device: FakeDevice = new FakeDevice(),
-  simulators: ServerContext['simulators'] = async () => [],
-  phones: ServerContext['phones'] = async () => [],
+  others: Awaited<ReturnType<DeviceProvider['list']>> = [],
 ) {
   const logs: object[] = [];
-  const adb = {
-    devices: async () => [{ serial: device.serial, state: 'device', props: { model: 'Fake' } }],
+  const provider: DeviceProvider = {
+    list: async () => [{ serial: device.serial, state: 'device', model: 'Fake' }, ...others],
+    handles: () => true,
+    open: () => device,
   };
-  const ctx = new ServerContext(
-    { ...DEFAULT_POLICY, ...policy },
-    adb,
-    { app: 'dev.app', measurements: MEASUREMENTS },
-    () => device,
-    simulators,
-    phones,
-  );
+  const ctx = new ServerContext({ ...DEFAULT_POLICY, ...policy }, [provider], {
+    app: 'dev.app',
+    measurements: MEASUREMENTS,
+  });
   const server = createServer(createTools(ctx), (l) => logs.push(l));
   const [a, b] = InMemoryTransport.createLinkedPair();
   await server.connect(a);
@@ -494,29 +492,49 @@ describe('iOS simulators', () => {
     expect(t.device.permissionUp).toBe(false);
   });
 
-  it('lists a booted simulator by its id, under the device policy', async () => {
+  it('lists what the providers list, in their order', async () => {
     const udid = '75505767-61E2-40F2-8FC6-8AFE20EE25C9';
-    const t = await connect({}, new FakeDevice(), async () => [
-      { udid, name: 'appdyno-iphone', state: 'Booted', runtime: 'iOS-27-0' },
+    const t = await connect({}, new FakeDevice(), [
+      { serial: udid, state: 'booted', model: 'iOS simulator appdyno-iphone' },
+      { serial: '00001234-0123456789ABCDEF', state: 'usb', model: 'iPhone' },
     ]);
-    const r = await t.textOf('list_devices');
-    expect(r.text).toContain(`${udid} booted iOS simulator appdyno-iphone`);
-    const p = await connect(
-      {},
-      new FakeDevice(),
-      async () => [],
-      async () => ['00001234-0123456789ABCDEF'],
+    expect((await t.textOf('list_devices')).text).toBe(
+      [
+        'emulator-5580 device Fake',
+        `${udid} booted iOS simulator appdyno-iphone`,
+        '00001234-0123456789ABCDEF usb iPhone',
+      ].join('\n'),
     );
-    expect((await p.textOf('list_devices')).text).toContain('00001234-0123456789ABCDEF usb iPhone');
   });
 
-  it('answers a perf tool on a device without perf tools with a plain error', async () => {
+  it('says which measure a device lacks', async () => {
+    const none = new FakeDevice();
+    Object.defineProperty(none, 'measure', { value: undefined });
+    const r = await (await connect({}, none)).textOf('perf_snapshot');
+    expect(r).toEqual({ error: true, text: 'emulator-5580 cannot measure CPU' });
+    const part = new FakeDevice();
+    Object.defineProperty(part, 'measure', { value: { cpu: part.measure.cpu } });
+    const t = await connect({}, part);
+    expect((await t.textOf('perf_snapshot')).text).toBe('emulator-5580 cannot measure memory');
+    expect((await t.textOf('perf_trace')).text).toBe('emulator-5580 cannot measure a frame trace');
+    expect((await t.textOf('perf_heap')).text).toBe('emulator-5580 cannot measure a heap dump');
+  });
+
+  it('brings a failure at open to the client with its cause and hint', async () => {
     const device = new FakeDevice();
-    Object.defineProperty(device, 'platform', { value: 'ios' });
-    Object.defineProperty(device, 'perf', { value: undefined });
+    device.openError = new DeviceError(
+      'AGENT_CONFLICT',
+      'another client holds UI automation',
+      'stop it first',
+    );
     const t = await connect({}, device);
-    const r = await t.textOf('perf_snapshot');
-    expect(r.error).toBe(true);
-    expect(r.text).toMatch(/no performance measures on iOS here yet/);
+    for (const r of [
+      await t.textOf('screen'),
+      await t.textOf('use_device', { device: device.serial }),
+    ])
+      expect(r).toEqual({
+        error: true,
+        text: 'another client holds UI automation (AGENT_CONFLICT): stop it first',
+      });
   });
 });

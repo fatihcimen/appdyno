@@ -116,12 +116,6 @@ importers:
       '@appdyno/core':
         specifier: workspace:*
         version: link:../core
-      '@appdyno/driver-android':
-        specifier: workspace:*
-        version: link:../driver-android
-      '@appdyno/driver-apple':
-        specifier: workspace:*
-        version: link:../driver-apple
       '@appdyno/protocol':
         specifier: workspace:*
         version: link:../protocol

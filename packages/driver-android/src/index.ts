@@ -1,3 +1,4 @@
+export { androidChecks, androidProvider } from './provider.js';
 export { Adb, assertSerial, parseDevices, shq, type AdbDevice } from './adb.js';
 export { AndroidDevice, TEST_LOCATION, TEST_TAG, mockedProviders } from './device.js';
 export { AndroidAgentLauncher, agentApk } from './agent.js';

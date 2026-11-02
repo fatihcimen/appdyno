@@ -1,14 +1,12 @@
+import type { ActOptions, Device, MeasureSource } from '@appdyno/core';
 import {
   DeviceError,
-  type ActOptions,
   type ActParams,
-  type AndroidPerf,
   type Hello,
   type Point,
   type Tree,
   type WireNode,
-} from 'appdyno';
-import type { DriveableDevice } from '../src/session.js';
+} from '@appdyno/protocol';
 
 type Node = Partial<WireNode> & { b: [number, number, number, number]; go?: string };
 
@@ -61,7 +59,7 @@ export const SCREENS: Record<string, Node[]> = {
   ],
 };
 
-export class FakeDevice implements DriveableDevice {
+export class FakeDevice implements Device {
   readonly platform = 'android' as const;
   lastStartWasCold = true;
   hello: Hello = {
@@ -79,6 +77,8 @@ export class FakeDevice implements DriveableDevice {
   calls: { name: string; args: unknown[] }[] = [];
   typed: string[] = [];
   fail: DeviceError | undefined;
+  /** Thrown by open: a device that cannot start its agent. */
+  openError: DeviceError | undefined;
 
   constructor(readonly serial = 'emulator-5580') {}
 
@@ -116,6 +116,7 @@ export class FakeDevice implements DriveableDevice {
   }
 
   async open() {
+    if (this.openError) throw this.openError;
     return this.hello;
   }
   async tree() {
@@ -155,7 +156,7 @@ export class FakeDevice implements DriveableDevice {
   swipe(from: Point, to: Point, durationMs = 300, opts?: ActOptions) {
     return this.act({ kind: 'swipe', from, to, durationMs }, opts);
   }
-  key(key: Parameters<DriveableDevice['key']>[0], opts?: ActOptions) {
+  key(key: Parameters<Device['key']>[0], opts?: ActOptions) {
     return this.act({ kind: 'key', key }, opts);
   }
   async typeText(
@@ -197,15 +198,23 @@ export class FakeDevice implements DriveableDevice {
   async setLocation(lat: number, lon: number) {
     this.record('setLocation', lat, lon);
   }
+  async getClipboard() {
+    return undefined;
+  }
+  async audit(): ReturnType<Device['audit']> {
+    return { engine: 'rules', issues: [], truncated: false, elapsedMs: 1 };
+  }
+  async stopAgent() {}
   close() {}
 
   /** Canned measurements; `jank` sets the share of janky frames, `memKb` the PSS per read. */
   jank = 4;
   memKb = [100_000, 110_000, 112_000, 113_000, 114_000, 115_000, 116_000];
   private memRead = 0;
-  get perf(): AndroidPerf {
+  get measure(): MeasureSource {
     const m = <T>(value: T, raw: string) => ({ value, raw, at: '2026-10-25T00:00:00.000Z' });
     return {
+      virtual: true,
       cpu: async () => {
         this.record('perf.cpu');
         return m(
@@ -217,7 +226,7 @@ export class FakeDevice implements DriveableDevice {
         this.record('perf.memory');
         const pssKb = this.memKb[Math.min(this.memRead++, this.memKb.length - 1)]!;
         return m(
-          { pssKb, javaHeapKb: 20_000, nativeHeapKb: 30_000, graphicsKb: 10_000 },
+          { kb: pssKb, kind: 'pss', javaHeapKb: 20_000, nativeHeapKb: 30_000, graphicsKb: 10_000 },
           `TOTAL PSS: ${pssKb}`,
         );
       },
@@ -265,10 +274,12 @@ export class FakeDevice implements DriveableDevice {
           },
           'Samples: 2997',
         ),
-      heapDump: async (_pkg: string, file: string) => m({ file, bytes: 60 * 1048576 }, 'dumpheap'),
-      frameTimeline: async () => {
+      heap: async (pkg: string, dir: string) =>
+        m({ file: `${dir}/heap-${pkg}-1.hprof`, bytes: 60 * 1048576, kind: 'hprof' }, 'dumpheap'),
+      frameTrace: async () => {
         return m(
           {
+            kind: 'timeline',
             frames: 50,
             janky: 5,
             jankyPercent: 10,
@@ -283,6 +294,6 @@ export class FakeDevice implements DriveableDevice {
           '"ts","dur","jank_type"',
         );
       },
-    } as unknown as AndroidPerf;
+    } as unknown as MeasureSource;
   }
 }

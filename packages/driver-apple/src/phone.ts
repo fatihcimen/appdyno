@@ -5,7 +5,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { DeviceError } from '@appdyno/protocol';
-import { stateDir } from '@appdyno/core';
+import { stateDir, type MeasureSource } from '@appdyno/core';
 import { IosDevice, type IosDeviceOps } from './device.js';
 import { IosRunnerLauncher, iosProducts, type RunnerTransport } from './runner.js';
 import { phoneSigningFromEnv, phoneXctestrun, signedRunner, type PhoneSigning } from './signing.js';
@@ -235,6 +235,16 @@ export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
 export class IosPhoneDevice extends IosDevice {
   private readonly transport: ReturnType<typeof phoneTransport>;
   private readonly ctl: Devicectl;
+  /** A phone measures animation hitches so far. */
+  readonly measure: MeasureSource = {
+    // shortcut: a phone still says what every iOS device said before these ports, to keep the tool's
+    // text; a phone is no virtual device, drop this when the text may change
+    virtual: true,
+    frameTrace: async (bundle, seconds, during) => {
+      const v = await this.hitches(bundle, seconds, during);
+      return { value: { kind: 'hitches', ...v }, raw: v.tracePath, at: new Date().toISOString() };
+    },
+  };
 
   constructor(serial: string, signing: PhoneSigning = phoneSigningFromEnv()) {
     const transport = phoneTransport(serial, signing);

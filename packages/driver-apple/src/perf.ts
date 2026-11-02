@@ -1,8 +1,17 @@
 import { execFile } from 'node:child_process';
 import { readFile, rm, stat } from 'node:fs/promises';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { DeviceError } from '@appdyno/protocol';
-import type { CpuProfile, Measured, ProfileEntry } from '@appdyno/core';
+import type {
+  CpuProfile,
+  HeapReading,
+  LaunchReading,
+  Measured,
+  MeasureSource,
+  MemoryReading,
+  ProfileEntry,
+} from '@appdyno/core';
 import { assertBundle, type Simctl } from './simctl.js';
 
 const run = promisify(execFile);
@@ -19,8 +28,7 @@ export function parseLeaks(out: string): { leaks?: number; leakedBytes?: number 
   return m ? { leaks: Number(m[1]), leakedBytes: Number(m[2]) } : {};
 }
 
-export type IosLaunch = {
-  mode: 'cold' | 'warm';
+export type IosLaunch = LaunchReading & {
   repeats: number;
   samplesMs: number[];
   medianMs: number;
@@ -153,7 +161,9 @@ const median = (xs: number[]) => {
  * memory (physical footprint), CPU over a window, launch time (until the app's first screen reads),
  * a CPU profile (the Mac's sampler).
  */
-export class IosSimulatorPerf {
+export class IosSimulatorPerf implements MeasureSource {
+  readonly virtual = true;
+
   constructor(
     private readonly udid: string,
     private readonly simctl: Simctl,
@@ -172,14 +182,18 @@ export class IosSimulatorPerf {
     return pid;
   }
 
-  async memory(bundle: string): Promise<Measured<IosMemory>> {
+  async memory(bundle: string): Promise<Measured<IosMemory & MemoryReading>> {
     const pid = await this.pid(bundle);
     const { stdout } = await run('footprint', [String(pid)], {
       timeout: 30_000,
     }).catch(() => run('vmmap', ['--summary', String(pid)], { timeout: 60_000 }));
     const value = parseFootprint(stdout);
     if (!value) throw new DeviceError('UNSUPPORTED', `no memory reading for ${bundle}`);
-    return { value, raw: stdout, at: at() };
+    return {
+      value: { ...value, kb: value.footprintKb, kind: 'footprint' },
+      raw: stdout,
+      at: at(),
+    };
   }
 
   async cpu(bundle: string, windowMs = 2_000): Promise<Measured<IosCpu>> {
@@ -226,7 +240,14 @@ export class IosSimulatorPerf {
       if (i > 0) samples.push(Math.round(performance.now() - t)); // the first warms up
     }
     return {
-      value: { mode, repeats, samplesMs: samples, medianMs: median(samples) },
+      value: {
+        mode,
+        repeats,
+        samplesMs: samples,
+        samples: samples.map((totalMs) => ({ totalMs })),
+        medianMs: median(samples),
+        until: 'the first screen is read',
+      },
       raw: raw.join('\n'),
       at: at(),
     };
@@ -256,6 +277,12 @@ export class IosSimulatorPerf {
       raw: report,
       at: at(),
     };
+  }
+
+  /** A memory graph under `dir`, with the leaks it found. */
+  async heap(bundle: string, dir: string): Promise<Measured<HeapReading>> {
+    const m = await this.heapGraph(bundle, join(dir, `heap-${bundle}-${Date.now()}.memgraph`));
+    return { ...m, value: { ...m.value, kind: 'memgraph' } };
   }
 
   /**
