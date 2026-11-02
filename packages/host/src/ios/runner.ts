@@ -224,16 +224,16 @@ export class IosRunnerLauncher {
         stdio: ['ignore', out, out],
         env: {
           ...xcodeEnv(),
-          TEST_RUNNER_GD_PORT: String(port),
-          TEST_RUNNER_GD_TOKEN: token,
-          ...(target && { TEST_RUNNER_GD_TARGET: target }),
+          TEST_RUNNER_APPDYNO_PORT: String(port),
+          TEST_RUNNER_APPDYNO_TOKEN: token,
+          ...(target && { TEST_RUNNER_APPDYNO_TARGET: target }),
           // APPDYNO_FAST_TAP=0: taps through XCUI instead of XCTest's event synthesizer (the runner's EventShim)
           ...(process.env.APPDYNO_FAST_TAP && {
-            TEST_RUNNER_GD_FAST_TAP: process.env.APPDYNO_FAST_TAP,
+            TEST_RUNNER_APPDYNO_FAST_TAP: process.env.APPDYNO_FAST_TAP,
           }),
           // APPDYNO_ANIMATION_WAIT=0: a touch goes out without waiting for the app's animations to end
           ...(process.env.APPDYNO_ANIMATION_WAIT && {
-            TEST_RUNNER_GD_ANIMATION_WAIT: process.env.APPDYNO_ANIMATION_WAIT,
+            TEST_RUNNER_APPDYNO_ANIMATION_WAIT: process.env.APPDYNO_ANIMATION_WAIT,
           }),
         },
       },
