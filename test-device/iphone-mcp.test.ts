@@ -7,7 +7,7 @@ import { IosPhoneDevice } from 'appdyno';
 /** The built MCP server over stdio on a real iPhone (APPDYNO_IPHONE_UDID), on Settings: read, open General, screenshot. */
 const udid = process.env.APPDYNO_IPHONE_UDID;
 const APP = 'com.apple.Preferences';
-const MAIN = fileURLToPath(new URL('../packages/mcp/dist/main.js', import.meta.url));
+const MAIN = fileURLToPath(new URL('../packages/appdyno/dist/mcp-bin.js', import.meta.url));
 
 describe.skipIf(!udid)('appdyno-mcp over stdio (iPhone)', () => {
   let client: Client;

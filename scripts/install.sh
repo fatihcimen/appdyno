@@ -25,7 +25,7 @@ pnpm build
 rm -rf "$dest" "$dest.deploy"
 # a copy with its own node_modules (the workspace packages included), not links into this checkout: deploy
 # hard-links the workspace's own files, so a later build here rewrote the installed library in place
-pnpm --filter appdyno-mcp deploy --legacy --prod "$dest.deploy"
+pnpm --filter appdyno deploy --legacy --prod "$dest.deploy"
 cp -R "$dest.deploy" "$dest"
 rm -rf "$dest.deploy"
 if [[ -n $(find "$dest" -type f -links +1 -print -quit) ]]; then echo "the installed files still share inodes" >&2; exit 1; fi
@@ -33,10 +33,10 @@ prefix=()
 [[ -n ${APPDYNO_PREFIX:-} ]] && prefix=(--prefix "$APPDYNO_PREFIX")
 npm install -g "${prefix[@]}" "$dest"
 # the two commands must be executable where npm linked them
-for f in "$dest/dist/main.js" "$dest/dist/cli.js"; do [[ -x $f ]] || { echo "not executable: $f" >&2; exit 1; }; done
+for f in "$dest/dist/main.js" "$dest/dist/mcp-bin.js"; do [[ -x $f ]] || { echo "not executable: $f" >&2; exit 1; }; done
 # the iOS runners built now (a device session never waits for a build); older builds removed
 if [[ -d ${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer} ]]; then
-  node "$dest/dist/cli.js" ios build
+  node "$dest/dist/main.js" ios build
 fi
 echo "installed $(node -p "require('$dest/package.json').version") at $dest"
 echo "next: appdyno doctor"

@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { INSTRUCTIONS, SERVER_INFO } from './brand.js';
-import { ToolError, text, type Tool } from './tool.js';
+import { ToolError, text, type Tool } from '@appdyno/ops';
 
 /** The MCP server with `tools`; an unexpected failure is logged to stderr by its message only. */
 export function createServer(tools: Record<string, Tool>, log: (line: object) => void): McpServer {

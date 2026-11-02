@@ -18,16 +18,21 @@ Status: Android (emulators and phones) and iOS (simulators and iPhones) work end
 
 ## Layout
 
-| path                | what                                                                                                                                          |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/protocol` | wire format (frames, JSON-RPC messages, error codes) — see `docs/protocol.md`                                                                 |
-| `packages/host`     | the library: adb protocol client, agent launcher, device API, screen model (stable refs, diffs), `appdyno` CLI (`devices`, `doctor`, `bench`) |
-| `packages/mcp`      | the MCP server: device tools with act-and-read answers and a local policy                                                                     |
-| `android/agent`     | the on-device agent (Kotlin)                                                                                                                  |
-| `android/fixture`   | a deterministic test app (Views and Compose)                                                                                                  |
-| `ios/Runner`        | the iOS runner: a UI test serving the protocol on a loopback port (Swift); `ios/RunnerCore` its tested core                                   |
-| `ios/Fixture`       | the iOS test app (SwiftUI)                                                                                                                    |
-| `test-device`       | tests on a real emulator or device (`APPDYNO_ANDROID_SERIAL`) or simulator (`APPDYNO_IOS_UDID`)                                               |
+| path                      | what                                                                                                        |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `packages/protocol`       | wire format (frames, JSON-RPC messages, error codes) — see `docs/protocol.md`                               |
+| `packages/core`           | device ports, screen model (stable refs, diffs), the agent connection; no platform knowledge                |
+| `packages/driver-android` | adb protocol client, agent launcher, Android device and measures, the audit                                 |
+| `packages/driver-apple`   | simctl, usbmux, runner, signing, simulator and iPhone devices and measures                                  |
+| `packages/ops`            | the operations (one definition each): act-and-read answers, measures, the local policy                      |
+| `packages/cli`            | one command per operation                                                                                   |
+| `packages/mcp`            | the MCP server: one tool per operation                                                                      |
+| `packages/appdyno`        | the composition root: the `appdyno` and `appdyno-mcp` commands, doctor, bench, the library                  |
+| `android/agent`           | the on-device agent (Kotlin)                                                                                |
+| `android/fixture`         | a deterministic test app (Views and Compose)                                                                |
+| `ios/Runner`              | the iOS runner: a UI test serving the protocol on a loopback port (Swift); `ios/RunnerCore` its tested core |
+| `ios/Fixture`             | the iOS test app (SwiftUI)                                                                                  |
+| `test-device`             | tests on a real emulator or device (`APPDYNO_ANDROID_SERIAL`) or simulator (`APPDYNO_IOS_UDID`)             |
 
 ## Build and test
 
@@ -41,8 +46,8 @@ pnpm build
 # on an emulator or device you name (never a default: other devices may be attached)
 adb -s <serial> install -r -g android/fixture/build/outputs/apk/debug/fixture-debug.apk
 APPDYNO_ANDROID_SERIAL=<serial> pnpm test:device
-node packages/host/dist/cli.js doctor --serial <serial>
-node packages/host/dist/cli.js bench --serial <serial> --n 50 --out bench.json
+node packages/appdyno/dist/main.js doctor --serial <serial>
+node packages/appdyno/dist/main.js bench --serial <serial> --n 50 --out bench.json
 
 # iOS: the runner core on the Mac, then the runner and fixture for the simulator (Xcode 27)
 (cd ios/RunnerCore && swift test)
@@ -57,7 +62,7 @@ APPDYNO_IOS_UDID=<udid> pnpm test:device test-device/ios.test.ts
   -destination 'generic/platform=iOS' -derivedDataPath .derived-device CODE_SIGNING_ALLOWED=NO)
 export APPDYNO_IOS_PROFILE=<profile.mobileprovision> APPDYNO_IOS_KEYCHAIN=<keychain-db> \
   APPDYNO_IOS_KEYCHAIN_PASSWORD=<password>
-node packages/host/dist/cli.js doctor   # Xcode, runner builds, signing, connected iPhones in the profile
+node packages/appdyno/dist/main.js doctor   # Xcode, runner builds, signing, connected iPhones in the profile
 APPDYNO_IPHONE_UDID=<udid> pnpm test:device test-device/iphone.test.ts test-device/iphone-mcp.test.ts
 ```
 
@@ -100,7 +105,7 @@ Cursor (`~/.cursor/mcp.json`) or any client that takes a JSON server list:
 
 `--device` takes an adb serial, a simulator id or an iPhone's UDID; without it the server drives the
 only connected device it is allowed. From a checkout without installing, the command is
-`node /path/to/appdyno/packages/mcp/dist/main.js`.
+`node /path/to/appdyno/packages/appdyno/dist/mcp-bin.js`.
 
 Options (or environment variables): `--device` (`APPDYNO_SERIAL`), `--app` (`APPDYNO_APP`),
 `--allow-devices <regex>` (`APPDYNO_ALLOW_DEVICES`), `--allow-apps a,b`

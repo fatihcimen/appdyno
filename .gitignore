@@ -6,7 +6,7 @@ android/build/
 android/*/build/
 android/local.properties
 .bench/
-packages/host/agents/
+packages/*/agents/
 .ci/
 ios/*/.build/
 ios/.derived/

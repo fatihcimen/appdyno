@@ -1,0 +1,33 @@
+{
+  "name": "appdyno",
+  "version": "0.5.0",
+  "private": true,
+  "description": "Drive and measure iOS and Android devices: an MCP stdio server, a command line and a TypeScript library.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "bin": {
+    "appdyno": "dist/main.js",
+    "appdyno-mcp": "dist/mcp-bin.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && chmod +x dist/main.js dist/mcp-bin.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@appdyno/cli": "workspace:*",
+    "@appdyno/core": "workspace:*",
+    "@appdyno/driver-android": "workspace:*",
+    "@appdyno/driver-apple": "workspace:*",
+    "@appdyno/mcp": "workspace:*",
+    "@appdyno/ops": "workspace:*",
+    "@appdyno/protocol": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.32.1"
+  }
+}

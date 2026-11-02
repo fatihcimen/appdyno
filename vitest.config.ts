@@ -7,8 +7,13 @@ export default defineConfig({
   resolve: {
     alias: {
       '@appdyno/protocol': src('protocol'),
-      appdyno: src('host'),
-      'appdyno-mcp': src('mcp'),
+      '@appdyno/core': src('core'),
+      '@appdyno/driver-android': src('driver-android'),
+      '@appdyno/driver-apple': src('driver-apple'),
+      '@appdyno/ops': src('ops'),
+      '@appdyno/mcp': src('mcp'),
+      '@appdyno/cli': src('cli'),
+      appdyno: src('appdyno'),
     },
   },
   test: {

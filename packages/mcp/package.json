@@ -1,25 +1,22 @@
 {
-  "name": "appdyno-mcp",
+  "name": "@appdyno/mcp",
   "version": "0.5.0",
   "private": true,
-  "description": "appdyno: an MCP stdio server that drives and measures mobile devices.",
   "type": "module",
   "main": "dist/index.js",
-  "bin": {
-    "appdyno-mcp": "dist/main.js",
-    "appdyno": "dist/cli.js"
-  },
-  "scripts": {
-    "build": "tsc -p tsconfig.build.json && chmod +x dist/main.js dist/cli.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
-  },
-  "dependencies": {
-    "@appdyno/protocol": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.32.1",
-    "appdyno": "workspace:*",
-    "zod": "^4.6.7"
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
   },
   "files": [
     "dist"
-  ]
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@appdyno/ops": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.32.1"
+  }
 }

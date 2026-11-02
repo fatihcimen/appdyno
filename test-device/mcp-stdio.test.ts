@@ -9,7 +9,7 @@ import { IosSimulatorDevice } from 'appdyno';
  * device APPDYNO_ANDROID_SERIAL names and on the simulator APPDYNO_IOS_UDID names (each when given).
  */
 const APP = 'dev.appdyno.fixture';
-const MAIN = fileURLToPath(new URL('../packages/mcp/dist/main.js', import.meta.url));
+const MAIN = fileURLToPath(new URL('../packages/appdyno/dist/mcp-bin.js', import.meta.url));
 const targets = [
   { platform: 'android', serial: process.env.APPDYNO_ANDROID_SERIAL, form: 'FORM' },
   { platform: 'ios', serial: process.env.APPDYNO_IOS_UDID, form: 'Form' },

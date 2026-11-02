@@ -66,7 +66,7 @@ if [[ -n $serial ]]; then
   step device-functional mise exec -- npx vitest run --config vitest.device.config.ts test-device/android.test.ts test-device/smoke.test.ts test-device/mcp-stdio.test.ts
   measuring device-perf mise exec -- npx vitest run --config vitest.device.config.ts test-device/perf.test.ts
   if (( nightly )); then
-    measuring latency mise exec -- node packages/host/dist/cli.js bench --serial $serial --n 30 --max-load 8 --out .ci/runs/$stamp-latency.json
+    measuring latency mise exec -- node packages/appdyno/dist/main.js bench --serial $serial --n 30 --max-load 8 --out .ci/runs/$stamp-latency.json
     if [[ -e .ci/runs/$stamp-latency.json ]]; then
       step regression-gate mise exec -- node scripts/ci-gate.mjs .ci/runs/$stamp-latency.json .ci/history.jsonl
     fi
