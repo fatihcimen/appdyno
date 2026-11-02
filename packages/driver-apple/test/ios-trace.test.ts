@@ -43,6 +43,16 @@ describe('iOS trace export', () => {
     expect(p.appTop[1]!.symbol).toBe('spin');
   });
 
+  it('reads one process of a recording of every process', () => {
+    const all = `<schema><col><mnemonic>process</mnemonic></col><col><mnemonic>weight</mnemonic></col><col><mnemonic>stack</mnemonic></col></schema>
+<row><process id="1" fmt="App (7)"><pid>7</pid></process><weight id="2">1000000</weight><tagged-backtrace id="3"><frame id="4" name="mine" addr="0x1"/></tagged-backtrace></row>
+<row><process id="5" fmt="Other (8)"><pid>8</pid></process><weight ref="2"/><tagged-backtrace id="6"><frame id="7" name="theirs" addr="0x1"/></tagged-backtrace></row>
+<row><process ref="1"/><weight ref="2"/><tagged-backtrace ref="3"/></row>`;
+    const p = parseTimeProfile(all, 7);
+    expect(p.samples).toBe(2);
+    expect(p.top.map((e) => e.symbol)).toEqual(['mine']);
+  });
+
   it('reads one process of Activity Monitor: footprint at the end, CPU over the window', () => {
     const am = `<schema><col><mnemonic>start</mnemonic></col><col><mnemonic>pid</mnemonic></col><col><mnemonic>cpu-total</mnemonic></col><col><mnemonic>memory-physical-footprint</mnemonic></col></schema>
 <row><t>0</t><pid id="1" fmt="7">7</pid><c>100000000</c><m>4096</m></row>

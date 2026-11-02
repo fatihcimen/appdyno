@@ -95,8 +95,8 @@ const CAP_MS = 180_000;
 export type TraceRecording = {
   template: string;
   device: string;
-  /** A process id to attach to; none: every process. */
-  attach?: number;
+  /** A process to attach to; none, or one the tool cannot find: every process. */
+  attach?: () => Promise<number>;
   seconds: number;
   dir: string;
   during?: () => Promise<unknown>;
@@ -107,6 +107,16 @@ export type TraceRecording = {
  * started, and the stop is bounded. The trace stays at `dir` for Instruments.
  */
 export async function recordTrace(r: TraceRecording): Promise<string> {
+  const pid = await r.attach?.();
+  return recordOnce(r, pid).catch((e: Error) => {
+    // a phone's tool stops finding running processes at times, whichever way they are named (measured
+    // on iOS 27.0.1, with the tool's service restarted too); every process is still recorded
+    if (!pid || !/Cannot find process/.test(e.message)) throw e;
+    return recordOnce(r, undefined);
+  });
+}
+
+async function recordOnce(r: TraceRecording, attach: number | undefined): Promise<string> {
   await mkdir(r.dir, { recursive: true });
   const tracePath = join(
     r.dir,
@@ -129,7 +139,7 @@ export async function recordTrace(r: TraceRecording): Promise<string> {
       r.template,
       '--device',
       r.device,
-      ...(r.attach ? ['--attach', String(r.attach)] : ['--all-processes']),
+      ...(attach ? ['--attach', String(attach)] : ['--all-processes']),
       '--time-limit',
       `${r.seconds}s`,
       '--notify-tracing-started',
@@ -153,8 +163,8 @@ export async function recordTrace(r: TraceRecording): Promise<string> {
     Math.min(r.seconds * 1000 + STOP_MS, CAP_MS) + 30_000,
   );
   try {
-    await Promise.race([started, exited]);
-    if (r.during) await r.during();
+    const atOnce = await Promise.race([started.then(() => false), exited.then(() => true)]);
+    if (r.during && !atOnce) await r.during();
     const code = await exited;
     // a stopped recording still has what it caught
     if (code !== 0 && !existsSync(tracePath))
@@ -196,7 +206,7 @@ export async function traceTable(tracePath: string, schema: string): Promise<str
 /** Animation hitches of a process on a phone: the Animation Hitches template while `during` runs. */
 export async function recordHitches(
   device: string,
-  pid: number,
+  pid: () => Promise<number>,
   seconds: number,
   dir: string,
   during?: () => Promise<unknown>,
@@ -229,12 +239,17 @@ export async function recordHitches(
  * and the app's own functions (of a binary inside an .app) by the weight of the samples they were
  * anywhere in. Only running threads are sampled, so there are no idle waits to leave out.
  */
-export function parseTimeProfile(xml: string, limit = 10): CpuProfile & { appTop: ProfileEntry[] } {
+export function parseTimeProfile(
+  xml: string,
+  pid?: number,
+  limit = 10,
+): CpuProfile & { appTop: ProfileEntry[] } {
   type Frame = { name: string; binary: string };
   const binaries = new Map<string, string>();
   const frames = new Map<string, Frame>();
   const stacks = new Map<string, Frame[]>();
   const weights = new Map<string, number>();
+  const processes = new Map<string, number>();
   const top = new Map<string, number>();
   const app = new Map<string, number>();
   let total = 0;
@@ -242,6 +257,9 @@ export function parseTimeProfile(xml: string, limit = 10): CpuProfile & { appTop
     const w = /<weight (?:id="(\d+)"[^>]*>(\d+)|ref="(\d+)")/.exec(row);
     if (w?.[1]) weights.set(w[1], Number(w[2]));
     const weight = w ? (w[3] ? (weights.get(w[3]) ?? 0) : Number(w[2])) : 0;
+    const proc = /<process (?:id="(\d+)" fmt="[^"]*\((\d+)\)"|ref="(\d+)")/.exec(row);
+    if (proc?.[1]) processes.set(proc[1], Number(proc[2]));
+    const ofProcess = proc ? (proc[3] ? processes.get(proc[3]) : Number(proc[2])) : undefined;
     const known = /<(?:tagged-)?backtrace ref="(\d+)"/.exec(row)?.[1];
     let stack = known ? stacks.get(known) : undefined;
     if (!stack) {
@@ -262,7 +280,7 @@ export function parseTimeProfile(xml: string, limit = 10): CpuProfile & { appTop
       const id = /<(?:tagged-)?backtrace id="(\d+)"/.exec(row)?.[1];
       if (id) stacks.set(id, stack);
     }
-    if (!stack.length) continue;
+    if (!stack.length || (pid !== undefined && ofProcess !== pid)) continue;
     total += weight;
     const head = stack[0]!.name.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
     top.set(head, (top.get(head) ?? 0) + weight);
@@ -304,8 +322,13 @@ export function parseActivityMonitor(
 }
 
 /** The Time Profiler's report of the main thread's hangs (over 250 ms): how many and the worst. */
-export function parseHangs(xml: string): { hangs: number; worstMs: number; totalMs: number } {
-  const ms = parseTraceTable(xml).map((r) => Number(r.duration?.value ?? 0) / 1e6);
+export function parseHangs(
+  xml: string,
+  pid?: number,
+): { hangs: number; worstMs: number; totalMs: number } {
+  const ms = parseTraceTable(xml)
+    .filter((r) => pid === undefined || r.process?.fmt?.includes(`(${pid})`))
+    .map((r) => Number(r.duration?.value ?? 0) / 1e6);
   const round = (x: number) => Math.round(x * 10) / 10;
   return {
     hangs: ms.length,

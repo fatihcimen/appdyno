@@ -371,10 +371,10 @@ export class IosDevice implements Device {
    * shown, the app's hitches, their time; the trace is kept for Instruments.
    */
   async hitches(bundle: string, seconds = 5, during?: () => Promise<unknown>) {
-    const pid = await this.ops.pid(assertBundle(bundle));
+    assertBundle(bundle);
     return recordHitches(
       this.serial,
-      pid,
+      () => this.ops.pid(bundle),
       Math.min(Math.max(Math.round(seconds), 1), 30),
       join(stateDir(), 'traces'),
       during,

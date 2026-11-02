@@ -137,7 +137,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
       .catch((e: DeviceError) => e);
     if (v instanceof DeviceError) {
       expect(v.code).toBe('UNSUPPORTED');
-      expect(v.hint).toMatch(/\.trace$/);
+      expect(v.message).toMatch(/no frames/);
     } else {
       expect(v.frames).toBeGreaterThan(30);
       expect(v.tracePath).toMatch(/\.trace$/);

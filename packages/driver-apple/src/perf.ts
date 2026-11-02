@@ -270,7 +270,7 @@ export class IosSimulatorPerf implements MeasureSource {
     const traced = await recordTrace({
       template: 'Time Profiler',
       device: this.udid,
-      attach: pid,
+      attach: async () => pid,
       seconds: s,
       dir: join(stateDir(), 'traces'),
       ...(once && { during: once }),

@@ -137,7 +137,11 @@ export class Devicectl {
         j.result as
           { runningProcesses?: { processIdentifier: number; executable?: string }[] } | undefined
       )?.runningProcesses ?? [];
-    return procs.filter((x) => x.executable?.startsWith(app.url!)).map((x) => x.processIdentifier);
+    // the app's own process, not an extension inside its bundle (Settings has some)
+    const base = app.url.endsWith('/') ? app.url : `${app.url}/`;
+    return procs
+      .filter((x) => x.executable?.startsWith(base) && !x.executable.slice(base.length).includes('/'))
+      .map((x) => x.processIdentifier);
   }
 
   /** The newest process of the app (right after a relaunch the old one may still be listed). */
@@ -342,22 +346,23 @@ export class IosPhoneDevice extends IosDevice {
     return { value, raw: trace };
   }
 
+  /** The Time Profiler over every process (attaching fails at times on a phone), one process read. */
   private async profile(bundle: string, ms: number, during?: () => Promise<unknown>) {
+    const pid = await this.ctl.pid(assertBundle(bundle));
     const trace = await recordTrace({
       template: 'Time Profiler',
       device: this.serial,
-      attach: await this.ctl.pid(assertBundle(bundle)),
       seconds: Math.min(Math.max(Math.round(ms / 1000), 1), 30),
       dir: join(stateDir(), 'traces'),
       ...(during && { during }),
     });
-    return { trace, profile: parseTimeProfile(await traceTable(trace, 'time-profile')) };
+    return { trace, pid, profile: parseTimeProfile(await traceTable(trace, 'time-profile'), pid) };
   }
 
   /** The main thread's hangs (over 250 ms) while `during` runs: part of the Time Profiler's recording. */
   async hangs(bundle: string, seconds = 5, during?: () => Promise<unknown>) {
-    const { trace } = await this.profile(bundle, seconds * 1000, during);
-    return { ...parseHangs(await traceTable(trace, 'potential-hangs')), tracePath: trace };
+    const { trace, pid } = await this.profile(bundle, seconds * 1000, during);
+    return { ...parseHangs(await traceTable(trace, 'potential-hangs'), pid), tracePath: trace };
   }
 
   /** Ends the phone's simulated position (setLocation's). */
