@@ -1,11 +1,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { INSTRUCTIONS, SERVER_INFO } from './brand.js';
-import { ToolError, text, type Tool } from '@appdyno/ops';
+import { ToolError, text, type Op } from '@appdyno/ops';
 
-/** The MCP server with `tools`; an unexpected failure is logged to stderr by its message only. */
-export function createServer(tools: Record<string, Tool>, log: (line: object) => void): McpServer {
+/** The MCP server, one tool per op; an unexpected failure is logged to stderr by its message only. */
+export function createServer(ops: Record<string, Op>, log: (line: object) => void): McpServer {
   const server = new McpServer(SERVER_INFO, { instructions: INSTRUCTIONS });
-  for (const [name, t] of Object.entries(tools)) {
+  for (const { name, ...t } of Object.values(ops)) {
     server.registerTool(
       name,
       {

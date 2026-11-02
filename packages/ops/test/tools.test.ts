@@ -9,7 +9,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY, type Policy } from '../src/policy.js';
 import { createServer } from '@appdyno/mcp';
-import { createTools, pinchPaths, swipeLine } from '../src/tools.js';
+import { opsFor } from '../src/registry.js';
+import { pinchPaths, swipeLine } from '../src/steps.js';
 import { FakeDevice } from './fake-device.js';
 
 type Result = { isError?: boolean; content: { type: string; text?: string; data?: string }[] };
@@ -31,7 +32,7 @@ async function connect(
     app: 'dev.app',
     measurements: MEASUREMENTS,
   });
-  const server = createServer(createTools(ctx), (l) => logs.push(l));
+  const server = createServer(opsFor(ctx), (l) => logs.push(l));
   const [a, b] = InMemoryTransport.createLinkedPair();
   await server.connect(a);
   const client = new Client({ name: 'test', version: '0' });

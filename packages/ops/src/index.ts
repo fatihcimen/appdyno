@@ -1,4 +1,6 @@
-export { createTools, swipeLine, pinchPaths, SETTLE } from './tools.js';
+export { opsFor } from './registry.js';
+export { swipeLine, pinchPaths } from './steps.js';
+export { SETTLE } from './answers.js';
 export { ServerContext } from './context.js';
 export { Session, refused } from './session.js';
 export * from './policy.js';

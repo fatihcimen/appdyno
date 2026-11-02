@@ -8,7 +8,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { Adb, androidProvider, installTools } from '@appdyno/driver-android';
 import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
 import { createServer } from '@appdyno/mcp';
-import { DEFAULT_POLICY, ServerContext, createTools, type Policy } from '@appdyno/ops';
+import { commandsFor } from '@appdyno/cli';
+import { DEFAULT_POLICY, ServerContext, opsFor, type Policy } from '@appdyno/ops';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
 
@@ -16,20 +17,17 @@ const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
 const providers = () => [androidProvider(), appleProvider()];
 
-/** The MCP server over stdio, until its client closes stdin. */
-async function serveMcp(args: string[]) {
-  const { values } = parseArgs({
-    args,
-    options: {
-      device: { type: 'string' },
-      app: { type: 'string' },
-      'allow-devices': { type: 'string' },
-      'allow-apps': { type: 'string' },
-      'allow-urls': { type: 'string' },
-      'no-home': { type: 'boolean' },
-      measurements: { type: 'string' },
-    },
-  });
+type Settings = {
+  device?: string;
+  app?: string;
+  'allow-devices'?: string;
+  'allow-apps'?: string;
+  'allow-urls'?: string;
+  'no-home'?: boolean;
+};
+
+/** The operations' context, from flags and the environment. */
+function contextFrom(values: Settings) {
   const env = process.env;
   const list = (s: string | undefined) =>
     (s ?? '')
@@ -49,17 +47,34 @@ async function serveMcp(args: string[]) {
   };
   const device = values.device ?? env.APPDYNO_SERIAL;
   const app = values.app ?? env.APPDYNO_APP;
-  const ctx = new ServerContext(policy, providers(), {
+  return new ServerContext(policy, providers(), {
     ...(device && { device }),
     ...(app && { app }),
   });
+}
+
+/** The MCP server over stdio, until its client closes stdin. */
+async function serveMcp(args: string[]) {
+  const { values } = parseArgs({
+    args,
+    options: {
+      device: { type: 'string' },
+      app: { type: 'string' },
+      'allow-devices': { type: 'string' },
+      'allow-apps': { type: 'string' },
+      'allow-urls': { type: 'string' },
+      'no-home': { type: 'boolean' },
+      measurements: { type: 'string' },
+    },
+  });
+  const ctx = contextFrom(values);
   const log = (line: object) =>
     process.stderr.write(`${JSON.stringify({ t: new Date().toISOString(), ...line })}\n`);
   process.stdin.once('close', () => {
     ctx.close();
     process.exit(0);
   });
-  await createServer(createTools(ctx), log).connect(new StdioServerTransport());
+  await createServer(opsFor(ctx), log).connect(new StdioServerTransport());
 }
 
 async function main(): Promise<number> {
@@ -142,11 +157,22 @@ async function main(): Promise<number> {
         );
       return 0;
     }
-    default:
-      err(
-        'usage: appdyno <mcp [flags] | devices | doctor [--serial S] | ios build | tools install | bench --serial S [--driver appdyno|<module>]... [--n 50] [--out file]>',
-      );
-      return 2;
+    default: {
+      const ctx = contextFrom({});
+      const commands = commandsFor(opsFor(ctx));
+      const op = command === undefined ? undefined : commands[command];
+      if (!op) {
+        err(
+          `usage: appdyno <mcp [flags] | devices | doctor [--serial S] | ios build | tools install | bench --serial S [--driver appdyno|<module>]... [--n 50] [--out file] | <operation> [--flag value]... [--json '{...}'] [--out file]>\noperations: ${Object.keys(commands).join(', ')}`,
+        );
+        return 2;
+      }
+      try {
+        return await op.run(rest, { out: (s) => console.log(s), err });
+      } finally {
+        ctx.close();
+      }
+    }
   }
 }
 

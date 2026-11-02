@@ -3,7 +3,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '@appdyno/mcp';
-import { createTools, DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
+import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { Adb, androidProvider, stats } from '../dist/index.js';
 
 const [serial, nArg] = process.argv.slice(2);
@@ -22,7 +22,7 @@ const ctx = new ServerContext(
     app: APP,
   },
 );
-const server = createServer(createTools(ctx), () => undefined);
+const server = createServer(opsFor(ctx), () => undefined);
 const [a, b] = InMemoryTransport.createLinkedPair();
 await server.connect(a);
 const client = new Client({ name: 'bench', version: '0' });

@@ -7,7 +7,7 @@ import type { ServerContext } from './context.js';
 import { checkApp } from './policy.js';
 import { refused, type Session } from './session.js';
 import { HeapOut, LaunchOut, ProfileOut, ScrollOut, SnapshotOut, TraceOut } from './schemas.js';
-import { swipeLine } from './tools.js';
+import { swipeLine } from './steps.js';
 import { ACT, defineOp, DESTRUCTIVE, READ, reply, ToolError, type Op } from './tool.js';
 
 const Device = z

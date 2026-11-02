@@ -82,6 +82,20 @@ The package is self-contained (`~/.local/share/appdyno`, or `APPDYNO_HOME`): the
 agent is prebuilt; `install.sh` builds both iOS runners where Xcode is (`appdyno ios build`;
 they are otherwise built once on first use, a few minutes); an iPhone also needs the signing variables (above). `CHANGELOG.md` lists the releases.
 
+## Command line
+
+`appdyno` runs the server (`appdyno mcp [flags]`, the same as `appdyno-mcp`), `devices`, `doctor`, `bench`,
+`tools install`, `ios build`, and every MCP tool as a command, its name with dashes:
+
+```sh
+appdyno screen --device emulator-5554
+appdyno long-press --x 100 --y 350 --duration-ms 500
+appdyno steps --json '{"steps":[{"action":"tap","x":100,"y":350}]}'
+appdyno screenshot --out shot.jpg   # without --out: a temporary file, its path printed
+```
+
+`APPDYNO_SERIAL` and `APPDYNO_APP` set the default device and app; a device is not kept between commands.
+
 ## MCP client configuration
 
 Claude Code:
