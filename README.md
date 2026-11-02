@@ -1,128 +1,137 @@
 # appdyno
 
-A local device automation server for mobile QA: one MCP stdio server (`appdyno-mcp`) and a
-TypeScript host library (`appdyno`) that drive devices through our own on-device agents and
-measure them.
-
-Status: Android (emulators and phones) and iOS (simulators and iPhones) work end to end, with performance measurement.
-
-- Runs only on the machine it is started on: the MCP client starts it over stdio; it opens no network
-  listener. The Android agent listens on an abstract unix socket on the device, reached through adb,
-  and accepts a connection only with its launch token.
-- Android: a Kotlin agent started with `app_process` as the shell user (nothing is installed) on the
-  platform's UI automation: screen trees, touch and key input, Turkish text, screenshots, an on-device
-  settle after every action.
-- Performance: frames (gfxinfo, Perfetto frame timeline), memory, CPU, cold and warm launch and the
-  device's own state, each stored with its raw output — see `docs/perf.md`. `appdyno tools install`
-  fetches the pinned Perfetto trace processor.
-
-## Layout
-
-| path                      | what                                                                                                        |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `packages/protocol`       | wire format (frames, JSON-RPC messages, error codes) — see `docs/protocol.md`                               |
-| `packages/core`           | device ports, screen model (stable refs, diffs), the agent connection; no platform knowledge                |
-| `packages/driver-android` | adb protocol client, agent launcher, Android device and measures, the audit                                 |
-| `packages/driver-apple`   | simctl, usbmux, runner, signing, simulator and iPhone devices and measures                                  |
-| `packages/ops`            | the operations (one definition each): act-and-read answers, measures, the local policy                      |
-| `packages/cli`            | one command per operation                                                                                   |
-| `packages/mcp`            | the MCP server: one tool per operation                                                                      |
-| `packages/appdyno`        | the composition root: the `appdyno` and `appdyno-mcp` commands, doctor, bench, the library                  |
-| `android/agent`           | the on-device agent (Kotlin)                                                                                |
-| `android/fixture`         | a deterministic test app (Views and Compose)                                                                |
-| `ios/Runner`              | the iOS runner: a UI test serving the protocol on a loopback port (Swift); `ios/RunnerCore` its tested core |
-| `ios/Fixture`             | the iOS test app (SwiftUI)                                                                                  |
-| `test-device`             | tests on a real emulator or device (`APPDYNO_ANDROID_SERIAL`) or simulator (`APPDYNO_IOS_UDID`)             |
-
-## Build and test
-
-```sh
-mise install                                   # Node 22, pnpm, JDK 21
-(cd android && ./gradlew :agent:assembleDebug :agent:testDebugUnitTest :fixture:assembleDebug)
-pnpm install
-pnpm lint && pnpm typecheck && pnpm test       # unit tests, no device
-pnpm build
-
-# on an emulator or device you name (never a default: other devices may be attached)
-adb -s <serial> install -r -g android/fixture/build/outputs/apk/debug/fixture-debug.apk
-APPDYNO_ANDROID_SERIAL=<serial> pnpm test:device
-node packages/appdyno/dist/main.js doctor --serial <serial>
-node packages/appdyno/dist/main.js bench --serial <serial> --n 50 --out bench.json
-
-# iOS: the runner core on the Mac, then the runner and fixture for the simulator (Xcode 27)
-(cd ios/RunnerCore && swift test)
-(cd ios && xcodebuild build-for-testing -project Appdyno.xcodeproj -scheme Runner \
-  -destination 'generic/platform=iOS Simulator' -derivedDataPath .derived)
-# on a booted simulator you name by its id (never "booted": other simulators may run)
-APPDYNO_IOS_UDID=<udid> pnpm test:device test-device/ios.test.ts
-
-# iPhone: the runner built unsigned, then re-signed at first use for a development profile whose app
-# id is a UI test runner (*.xctrunner), with that profile's identity from a keychain (only unlocked)
-(cd ios && xcodebuild build-for-testing -project Appdyno.xcodeproj -scheme Runner \
-  -destination 'generic/platform=iOS' -derivedDataPath .derived-device CODE_SIGNING_ALLOWED=NO)
-export APPDYNO_IOS_PROFILE=<profile.mobileprovision> APPDYNO_IOS_KEYCHAIN=<keychain-db> \
-  APPDYNO_IOS_KEYCHAIN_PASSWORD=<password>
-node packages/appdyno/dist/main.js doctor   # Xcode, runner builds, signing, connected iPhones in the profile
-APPDYNO_IPHONE_UDID=<udid> pnpm test:device test-device/iphone.test.ts test-device/iphone-mcp.test.ts
-```
-
-The phone is reached over USB (the Mac's USB multiplexer), never the network. The runner is installed
-when the phone has another build under the profile's id (stamped in `CFBundleVersion`); another tool
-using the same id finds a different version and installs its own again. On a phone the runner cannot
-reach the clipboard (only the app in front can), so text goes in as keys there.
+appdyno drives and measures iOS and Android devices: simulators, emulators and phones. It is an MCP
+server (stdio), a command line and a TypeScript library, on macOS. It talks to the device through its
+own on-device agents, and it reads performance numbers (frames, memory, CPU, launch time) from the
+device itself.
 
 ## Install
 
 ```sh
-scripts/install.sh      # builds this checkout, installs appdyno-mcp and appdyno
-appdyno doctor     # Android SDK and adb, Xcode, runner builds, iPhone signing, connected devices
+claude mcp add appdyno -- npx -y appdyno mcp
 ```
 
-The package is self-contained (`~/.local/share/appdyno`, or `APPDYNO_HOME`): the Android
-agent is prebuilt; `install.sh` builds both iOS runners where Xcode is (`appdyno ios build`;
-they are otherwise built once on first use, a few minutes); an iPhone also needs the signing variables (above). `CHANGELOG.md` lists the releases.
+You need Node 22+, and `adb` for Android or Xcode for iOS. No JDK, no pnpm. The package is one
+download with no runtime dependencies.
 
-## Command line
-
-`appdyno` runs the server (`appdyno mcp [flags]`, the same as `appdyno-mcp`), `devices`, `doctor`, `bench`,
-`tools install`, `ios build`, and every MCP tool as a command, its name with dashes:
+appdyno is not published to the registry yet. Until it is, install from a checkout (needs pnpm and a
+JDK for the Android agent):
 
 ```sh
-appdyno screen --device emulator-5554
-appdyno long-press --x 100 --y 350 --duration-ms 500
-appdyno steps --json '{"steps":[{"action":"tap","x":100,"y":350}]}'
-appdyno screenshot --out shot.jpg   # without --out: a temporary file, its path printed
+sh scripts/install.sh      # npm pack, then npm install -g of the tarball
+appdyno doctor             # what is installed, what is missing, which devices are connected
 ```
 
-`APPDYNO_SERIAL` and `APPDYNO_APP` set the default device and app; a device is not kept between commands.
+The first use of a simulator builds the iOS runner once. It takes a few minutes and shows progress.
+The result is cached under `~/Library/Caches/appdyno` (the state directory, `APPDYNO_STATE_DIR`).
 
-## MCP client configuration
-
-Claude Code:
-
-```sh
-claude mcp add appdyno -- appdyno-mcp --device emulator-5554 --app com.example.app
-```
-
-Cursor (`~/.cursor/mcp.json`) or any client that takes a JSON server list:
+Cursor or any client with a JSON server list:
 
 ```json
 {
   "mcpServers": {
-    "appdyno": {
-      "command": "appdyno-mcp",
-      "args": ["--device", "emulator-5554", "--app", "com.example.app"]
-    }
+    "appdyno": { "command": "npx", "args": ["-y", "appdyno", "mcp", "--device", "emulator-5554"] }
   }
 }
 ```
 
-`--device` takes an adb serial, a simulator id or an iPhone's UDID; without it the server drives the
-only connected device it is allowed. From a checkout without installing, the command is
-`node /path/to/appdyno/packages/appdyno/dist/mcp-bin.js`.
+## Tools
 
-Options (or environment variables): `--device` (`APPDYNO_SERIAL`), `--app` (`APPDYNO_APP`),
-`--allow-devices <regex>` (`APPDYNO_ALLOW_DEVICES`), `--allow-apps a,b`
-(`APPDYNO_ALLOW_APPS`), `--allow-urls <regex>` (`APPDYNO_ALLOW_URLS`), `--no-home`;
-`--measurements <dir>` (`APPDYNO_MEASUREMENTS`; default `~/Library/Caches/appdyno/measurements`);
-`APPDYNO_SECRETS=a,b` are never shown back or put on the clipboard.
+Tools take no `device` parameter. The device is the server's `--device`, else the only connected one,
+else the one `use_device` selected.
+
+| purpose | tools                                                                                           |
+| ------- | ----------------------------------------------------------------------------------------------- |
+| devices | `list_devices`, `use_device`, `device_info`, `set_orientation`, `set_clipboard`, `set_location` |
+| read    | `screen`, `find`, `wait_for`, `screenshot`                                                      |
+| act     | `tap`, `long_press`, `swipe`, `pinch`, `type_text`, `press_key`, `steps`, `dismiss_alert`       |
+| apps    | `open_link`, `launch_app`, `terminate_app`                                                      |
+| check   | `audit` (accessibility), `logs`, `crashes`                                                      |
+| measure | `perf_snapshot`, `perf_scroll`, `perf_launch`, `perf_profile`, `perf_heap`, `perf_trace`        |
+
+An action answers with the settled screen. `settled` means the screen was still for the window.
+`changed` means the screen differs from before the action, in layout or text; it does not say the action
+caused it. If nothing changed the answer says "no change seen in N ms; if a slow reaction is expected,
+use wait_for". A failed call is an `isError` answer with a `code` and a `hint`. Cancelling a request
+reaches the device, and long operations report progress.
+
+`logs` reads logcat for the app on Android and the simulator log on a simulator. For an iPhone,
+`devicectl` cannot read the log of a running app, and the answer says so. `crashes` collects the
+system's crash records for the app (Android exit info and dropbox, the simulator's DiagnosticReports,
+an iPhone's system crash logs) as a bounded summary and a file path. Secrets are redacted.
+
+## Command line
+
+Every tool is also a command, with dashes:
+
+```sh
+appdyno devices
+appdyno screen --device emulator-5554
+appdyno wait-for --text Done
+appdyno tap --help
+appdyno --help
+```
+
+Other commands: `doctor [--serial S]`, `ios build`, `tools install` (fetches the pinned Perfetto trace
+processor), `bench`. Exit code 1 means the call was refused, 2 means wrong arguments. A diff baseline
+between CLI processes is kept in a small file in the state directory.
+
+## Server options
+
+`appdyno mcp [flags]`. Each flag has an environment variable.
+
+| flag                 | environment             | what                                                         |
+| -------------------- | ----------------------- | ------------------------------------------------------------ |
+| `--device S`         | `APPDYNO_SERIAL`        | adb serial, simulator id or iPhone UDID                      |
+| `--app A`            | `APPDYNO_APP`           | default app (bundle or package id)                           |
+| `--allow-devices RE` | `APPDYNO_ALLOW_DEVICES` | only devices whose id matches                                |
+| `--allow-apps a,b`   | `APPDYNO_ALLOW_APPS`    | only these apps                                              |
+| `--allow-urls RE`    | `APPDYNO_ALLOW_URLS`    | only links that match                                        |
+| `--no-home`          |                         | block the home key                                           |
+| `--measurements dir` | `APPDYNO_MEASUREMENTS`  | where measurements are stored (default: the state directory) |
+| `--takeover`         |                         | stop another tool that holds UI automation on Android        |
+|                      | `APPDYNO_SECRETS=a,b`   | values never shown back or put on the clipboard              |
+
+Without `--takeover`, a second tool holding UI automation on Android (`another-server`, `another-tool`,
+Appium, `uiautomator`) is never stopped. The error names the holder and gives the exact command to stop it.
+
+## Reaching a phone
+
+- Android: turn on USB debugging, connect, and check `adb devices`.
+- iPhone: turn on developer mode. A phone needs a development signing identity and a provisioning profile
+  whose app id is a UI test runner (`*.xctrunner`). This is the exception to the one-command install. Set
+  `APPDYNO_IOS_PROFILE=<profile.mobileprovision>`, `APPDYNO_IOS_KEYCHAIN=<keychain-db>` and
+  `APPDYNO_IOS_KEYCHAIN_PASSWORD=<password>` (an unlocked keychain), then run `appdyno doctor`. The phone is
+  reached over USB, never the network. On a phone the runner cannot reach the clipboard, so text goes in as keys.
+
+## Speed
+
+How appdyno compares with other servers on the same device is measured, not claimed. The table is filled
+by `scripts/compare.mjs`. It writes JSON and a Markdown table under `.compare/`, and it refuses a device
+you did not name:
+
+```sh
+node scripts/compare.mjs --device <id> --tools appdyno,another-tool,another-server --runs 3
+```
+
+| scenario        | appdyno             | another-tool        | another-server          |
+| --------------- | ------------------- | ------------------- | ------------------- |
+| read the screen | run scripts/compare | run scripts/compare | run scripts/compare |
+| tap and settle  | run scripts/compare | run scripts/compare | run scripts/compare |
+| type text       | run scripts/compare | run scripts/compare | run scripts/compare |
+| answer size     | run scripts/compare | run scripts/compare | run scripts/compare |
+
+Measurement methods and raw outputs are described in `docs/perf.md`.
+
+## Security
+
+Local only: no network listener, no telemetry, and you decide which devices, apps and links it may touch.
+See [SECURITY.md](SECURITY.md).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). `CHANGELOG.md` lists the releases.
+
+## License
+
+The license is to be chosen by the owner. Until then no license is granted.
