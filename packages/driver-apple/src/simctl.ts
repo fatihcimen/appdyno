@@ -1,5 +1,6 @@
-import { execFile } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { execFile, execFileSync } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { callSignal, cancelled } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
@@ -7,13 +8,52 @@ import { DeviceError } from '@appdyno/protocol';
 const run = promisify(execFile);
 
 /**
- * The environment for Xcode's tools: DEVELOPER_DIR when set, else the installed Xcode (the selected
- * developer folder may be the command line tools, which have no simulator tool).
+ * The developer folder for Xcode's tools without DEVELOPER_DIR: the selected one when it is a full
+ * Xcode (it may be the command line tools, which have no simulator tool), else the newest installed.
  */
+export function chooseDeveloperDir(
+  selected: string | undefined,
+  installed: { dir: string; version: string }[],
+): string | undefined {
+  if (selected && /\.app\/Contents\/Developer\/?$/.test(selected)) return selected;
+  return installed
+    .toSorted((a, b) => a.version.localeCompare(b.version, undefined, { numeric: true }))
+    .at(-1)?.dir;
+}
+
+function selectedDeveloperDir(): string | undefined {
+  try {
+    return execFileSync('xcode-select', ['-p'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return undefined;
+  }
+}
+
+/** Xcode*.app in /Applications that are Xcodes (Xcodes.app, a version manager, has no developer folder). */
+function installedXcodes(): { dir: string; version: string }[] {
+  const apps = '/Applications';
+  if (!existsSync(apps)) return [];
+  return readdirSync(apps)
+    .filter((f) => /^Xcode.*\.app$/.test(f) && existsSync(join(apps, f, 'Contents/Developer')))
+    .map((f) => {
+      const plist = join(apps, f, 'Contents/version.plist');
+      const version = existsSync(plist)
+        ? /CFBundleShortVersionString<\/key>\s*<string>([^<]*)/.exec(readFileSync(plist, 'utf8'))
+        : null;
+      return { dir: join(apps, f, 'Contents/Developer'), version: version?.[1] ?? '' };
+    });
+}
+
+let developerDir: { dir: string | undefined } | undefined;
+
+/** The environment for Xcode's tools; without any Xcode it is unchanged, and doctor says so. */
 export function xcodeEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
   if (env.DEVELOPER_DIR) return env;
-  const xcode = '/Applications/Xcode.app/Contents/Developer';
-  return existsSync(xcode) ? { ...env, DEVELOPER_DIR: xcode } : env;
+  developerDir ??= { dir: chooseDeveloperDir(selectedDeveloperDir(), installedXcodes()) };
+  return developerDir.dir ? { ...env, DEVELOPER_DIR: developerDir.dir } : env;
 }
 
 const UDID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;
