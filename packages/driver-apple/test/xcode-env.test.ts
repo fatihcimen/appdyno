@@ -7,9 +7,9 @@ const CLT = '/Library/Developer/CommandLineTools';
 describe('the developer folder', () => {
   it('is the selected one when it is a full Xcode, wherever it lives', () => {
     const selected = '/Users/me/Applications/Xcode-26.0.app/Contents/Developer';
-    expect(
-      chooseDeveloperDir(selected, [{ dir: dev('Xcode-27.1.app'), version: '27.1' }]),
-    ).toBe(selected);
+    expect(chooseDeveloperDir(selected, [{ dir: dev('Xcode-27.1.app'), version: '27.1' }])).toBe(
+      selected,
+    );
   });
 
   it('is the newest installed when the command line tools are selected', () => {

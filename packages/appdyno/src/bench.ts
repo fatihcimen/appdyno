@@ -181,7 +181,9 @@ export async function benchmark(
   const shell = (c: string) => adb.exec(serial, c, { timeoutMs: 30_000 });
   const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const openScreen = async (screen: string) => {
-    await shell(`am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/${screen} ${APP}`);
+    await shell(
+      `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/${screen} ${APP}`,
+    );
     await pause(1_200);
   };
   const home = async () => {
