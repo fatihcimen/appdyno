@@ -91,6 +91,7 @@ final class Device {
         // a scroll view's bars are no control: shown only while it scrolls, they would name the screen's
         // nameless controls differently than the app's own elements do
         for i in scrollIndicators(nodes) { nodes[i].flags &= ~Flag.visible }
+        for i in containerBars(nodes, screenW: Int(screen.width), screenH: Int(screen.height)) { nodes[i].flags &= ~Flag.visible }
         return Capture(windows: windows, nodes: nodes, truncated: truncated, busy: busy)
     }
 

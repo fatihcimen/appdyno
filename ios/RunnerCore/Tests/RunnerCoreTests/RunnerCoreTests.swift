@@ -134,4 +134,13 @@ final class ErrorTests: XCTestCase {
         XCTAssertFalse(sameToken("abcdefghijklmnop", "abcdefghijklmnoq"))
         XCTAssertFalse(sameToken("abc", "abcd"))
     }
+
+    func testAToolbarOverTheWholeScreenIsAContainer() {
+        let bar = Node(parent: 0, window: 0, type: "Toolbar", left: 0, top: 0, right: 428, bottom: 926, flags: Flag.visible)
+        var resting = bar
+        resting.top = 880
+        var other = bar
+        other.type = "Other"
+        XCTAssertEqual(containerBars([resting, other, bar], screenW: 428, screenH: 926), [2])
+    }
 }

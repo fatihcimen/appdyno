@@ -100,7 +100,8 @@ clipboard and every case below. `APPDYNO_SIM_DIRECT=off` turns both off, `read` 
 - **Settle on the host:** as below, each 20 ms and comparing what can be named or acted on, in any order, not the
   system's nameless views: on iOS 26 a glass bar and scroll edge effects come and go for 200 ms after a
   transition. A direct touch is over in 50 ms where XCTest's took 300-600 ms, in which the app had reacted
-  before the window began: while nothing has reacted, the window is 500 ms (an alert on screen: 1 s). Nodes that
+  before the window began: while nothing has reacted, the window is 500 ms (an alert on screen: 1 s), and once
+  something has, 150 ms (120 ms answered with a search bar a push leaves for a moment; 150 and 200 ms did not). Nodes that
   have newly come to stick out over the side of the screen count as busy (at most 1.2 s): a push leaves the old
   page there with no change in the tree until it goes. An alert going away counts as busy for 600 ms, as one
   coming up does for 450 ms. Before a touch the runner still answers `animations.wait`. The app's accessibility reports are

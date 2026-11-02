@@ -75,6 +75,13 @@ describe('the helper read in the runner shape', () => {
     expect(t.nodes[3]!.f & 1).toBe(1);
   });
 
+  it('leaves out a toolbar as large as the screen', () => {
+    const { tree: t } = tree(app({ a: 24, l: 'Toolbar', f: [0, 0, 402, 874] }));
+    expect(t.nodes[1]!.f & 1).toBe(0);
+    const { tree: bar } = tree(app({ a: 24, l: 'Toolbar', f: [0, 800, 402, 74] }));
+    expect(bar.nodes[1]!.f & 1).toBe(1);
+  });
+
   it('says busy for a progress indicator on screen', () => {
     expect(tree(app({ a: 36, f: [0, 0, 20, 20] })).busy).toBe(true);
     expect(tree(app(cell('Row', 0))).busy).toBe(false);
@@ -147,6 +154,7 @@ describe('the settle compare', () => {
       actionAt: 1000,
       quietMs,
       firstMs: 200,
+      reactedMs: 60,
       maxMs: 500,
       pollMs: 20,
       before: 'x',

@@ -264,6 +264,10 @@ export function toTree(
     for (const k of r.k ?? []) queue.push([k, index]);
   }
   hideScrollBars(nodes);
+  // a toolbar as large as the screen is the system's container, no bar (RunnerCore's `containerBars`)
+  for (const n of nodes)
+    if (n.c === 'Toolbar' && n.b[2] - n.b[0] >= screen.w && n.b[3] - n.b[1] >= screen.h)
+      n.f &= ~F.visible;
   const copies = new Map<string, number>();
   for (const n of nodes)
     if (n.id !== undefined && (n.f & F.visible) !== 0) {
@@ -306,7 +310,8 @@ export function sameTree(a: Tree, b: Tree): boolean {
 export function stickingOut(nodes: Node[], width: number): Set<string> {
   return new Set(
     nodes
-      .filter((n) => shown(n) && !!(n.id ?? n.d ?? n.t) && (n.b[0] < 0 || n.b[2] > width))
+      // over one side only: what spans the whole screen (a dimming overlay) is not on its way anywhere
+      .filter((n) => shown(n) && !!(n.id ?? n.d ?? n.t) && n.b[0] < 0 !== n.b[2] > width)
       .map(copyKey),
   );
 }
@@ -562,6 +567,8 @@ export async function settle<S>(o: {
   quietMs: number;
   /** How long stillness must last while nothing has reacted yet. */
   firstMs: number;
+  /** And once something has: the reaction has begun, only its end is awaited. */
+  reactedMs: number;
   maxMs: number;
   pollMs: number;
   before: S | undefined;
@@ -589,7 +596,7 @@ export async function settle<S>(o: {
       changedAt = readStart;
       reacted ||= last !== undefined;
     }
-    const window = reacted ? o.quietMs : Math.max(o.quietMs, o.firstMs);
+    const window = reacted ? Math.min(o.quietMs, o.reactedMs) : Math.max(o.quietMs, o.firstMs);
     const settled = last !== undefined && !busy && readStart - changedAt >= window;
     last = next;
     if (settled || now >= deadline)

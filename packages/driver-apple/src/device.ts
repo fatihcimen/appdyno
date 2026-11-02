@@ -396,12 +396,18 @@ export class IosDevice implements Device {
 }
 
 type Node = Tree['nodes'][number];
-type Capture = { tree: Tree; busy: boolean; byRunner?: boolean };
+type Capture = { tree: Tree; busy: boolean; byRunner?: boolean; askRunner?: boolean };
 const nodesBusy = (t: Tree) => t.nodes.some((n) => n.c === 'ActivityIndicator' && (n.f & 1) !== 0);
 /** Reads cost about 30 ms here: the settle can look far more often than the runner's 80 ms. */
 const POLL_MS = 20;
 const INERT_QUIET_MS = 80;
 const FIRST_REACTION_MS = 500;
+/**
+ * Once something has reacted, stillness for this long ends the wait. A sliding page holds the settle by
+ * itself (`stickingOut`), so the window only has to outlast the gaps within a reaction: 120 ms answered with
+ * the search bar a push leaves for a moment, 150 and 200 ms did not (0 of 16 answers each).
+ */
+const REACTED_QUIET_MS = 150;
 const ALERT_REACTION_MS = 1_000;
 /** A carousel on the new screen sticks out for good: a push's old page is gone well before this. */
 const SLIDE_CAP_MS = 1_200;
@@ -469,7 +475,11 @@ export class IosSimulatorDevice extends IosDevice {
       if (this.copyVerdicts.size > 8)
         this.copyVerdicts.delete(this.copyVerdicts.keys().next().value!);
     }
-    return { tree: hidden ? withoutCopies(r.tree, hidden) : r.tree, busy: r.busy };
+    return {
+      tree: hidden ? withoutCopies(r.tree, hidden) : r.tree,
+      busy: r.busy,
+      askRunner: !hidden && r.copies,
+    };
   }
 
   /** A read for one in the queue: the helper's, else the runner's (a system alert, a web page). */
@@ -548,6 +558,7 @@ export class IosSimulatorDevice extends IosDevice {
       // XCTest's tap took 300-600 ms, in which the app reacted before the window began; a direct touch is
       // over in 50 ms, and an alert's button shows its effect only after about 300 ms
       firstMs: inert ? 0 : hadAlert ? ALERT_REACTION_MS : FIRST_REACTION_MS,
+      reactedMs: REACTED_QUIET_MS,
       maxMs,
       pollMs: POLL_MS,
       before: before && { tree: { nodes: before }, busy: false },
@@ -591,7 +602,7 @@ export class IosSimulatorDevice extends IosDevice {
     }
     const untouched = unchanged && sameLayout(before, last.tree.nodes);
     // the last look may have left to the runner what only it can tell
-    if (want !== 'none' && !last.byRunner && !untouched) last = await this.readNow(true);
+    if (want !== 'none' && last.askRunner) last = await this.readNow(true);
     return {
       untouched,
       result: {
@@ -602,7 +613,9 @@ export class IosSimulatorDevice extends IosDevice {
   }
 
   override async foreground(): Promise<string | undefined> {
-    return (await this.direct.front().catch(() => undefined)) ?? super.foreground();
+    // the system's alert over an app makes the home screen the primary one: only the runner can tell
+    const front = await this.direct.front().catch(() => undefined);
+    return front && front === this.targetApp ? front : super.foreground();
   }
 
   /** A running app comes forward as it is; to start it afresh, terminate it first. */

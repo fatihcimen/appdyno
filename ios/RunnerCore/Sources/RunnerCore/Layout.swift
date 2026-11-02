@@ -86,6 +86,15 @@ public func actionable(_ nodes: [Node]?, x: Int, y: Int) -> Bool {
     return !hit
 }
 
+/// A toolbar as large as the screen is the system's container, no bar (iOS 27 on a phone: XCUI calls it
+/// hittable during a transition and not at rest, so it came and went in the answers).
+public func containerBars(_ nodes: [Node], screenW: Int, screenH: Int) -> [Int] {
+    nodes.indices.filter { i in
+        let n = nodes[i]
+        return n.type == "Toolbar" && n.right - n.left >= screenW && n.bottom - n.top >= screenH
+    }
+}
+
 /// Containers that draw scroll indicators.
 private let scrollers: Set<String> = ["ScrollView", "Table", "CollectionView", "WebView", "TextView"]
 

@@ -140,7 +140,9 @@ export class Devicectl {
     // the app's own process, not an extension inside its bundle (Settings has some)
     const base = app.url.endsWith('/') ? app.url : `${app.url}/`;
     return procs
-      .filter((x) => x.executable?.startsWith(base) && !x.executable.slice(base.length).includes('/'))
+      .filter(
+        (x) => x.executable?.startsWith(base) && !x.executable.slice(base.length).includes('/'),
+      )
       .map((x) => x.processIdentifier);
   }
 
