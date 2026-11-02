@@ -9,7 +9,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { Adb, androidProvider, installTools } from '@appdyno/driver-android';
 import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
 import { createServer } from '@appdyno/mcp';
-import { commandsFor, listOf, takeFlag } from '@appdyno/cli';
+import { commandsFor, deviceFlag, listOf } from '@appdyno/cli';
 import { stateDir } from '@appdyno/core';
 import { DEFAULT_POLICY, ServerContext, opsFor, type Policy } from '@appdyno/ops';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
@@ -165,7 +165,7 @@ async function main(): Promise<number> {
       return 0;
     }
     default: {
-      const device = takeFlag(rest, 'device');
+      const device = deviceFlag(command, rest);
       const ctx = contextFrom(device ? { device } : {}, join(stateDir(), 'cli-session.json'));
       const ops = opsFor(ctx);
       const commands = commandsFor(ops);

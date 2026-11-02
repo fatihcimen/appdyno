@@ -56,6 +56,10 @@ export function takeFlag(argv: string[], flag: string): string | undefined {
   return value;
 }
 
+/** The device a command's words name for the whole process; `use-device` takes its own as an argument. */
+export const deviceFlag = (command: string | undefined, argv: string[]) =>
+  command === 'use-device' ? undefined : takeFlag(argv, 'device');
+
 /** One operation on the command line: exit code 0, 1 when refused, 2 when the words make no call. */
 export type Command = {
   name: string;

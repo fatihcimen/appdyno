@@ -8,7 +8,7 @@ import { createServer } from '@appdyno/mcp';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { FakeDevice } from '../../ops/test/fake-device.js';
-import { commandsFor, listOf, takeFlag } from '../src/index.js';
+import { commandsFor, deviceFlag, listOf, takeFlag } from '../src/index.js';
 
 describe('commands from the operations', () => {
   let device: FakeDevice;
@@ -120,6 +120,15 @@ describe('commands from the operations', () => {
     expect(takeFlag(words, 'device')).toBe('emulator-5612');
     expect(words).toEqual(['--x', '1', '--y', '2']);
     expect(takeFlag(words, 'device')).toBeUndefined();
+  });
+
+  it('leaves use-device its own --device, and takes it off every other command', () => {
+    const own = ['--device', 'emulator-5612'];
+    expect(deviceFlag('use-device', own)).toBeUndefined();
+    expect(own).toEqual(['--device', 'emulator-5612']);
+    const other = ['--device', 'emulator-5612'];
+    expect(deviceFlag('screen', other)).toBe('emulator-5612');
+    expect(other).toEqual([]);
   });
 
   it('keeps the selection and the diff baseline between processes in a small file', async () => {
