@@ -36,7 +36,7 @@ describe('iPhone runner signing', () => {
     >;
     expect(x.Runner!.UITargetAppPath).toBe('/x/R.app');
     expect(x.Runner!.SystemAttachmentLifetime).toBe('keepNever');
-    expect(stampOf('abcdef0123456789')).toBe('gd-abcdef012345');
+    expect(stampOf('abcdef0123456789')).toBe('appdyno-abcdef012345');
   });
 
   it('says what to set when signing is not configured', () => {

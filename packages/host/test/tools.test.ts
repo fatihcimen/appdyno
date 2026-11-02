@@ -11,7 +11,7 @@ describe('pinned host tools', () => {
   });
 
   it('never unpacks a download whose sha256 is not the pinned one', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'gd-tools-'));
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-tools-'));
     vi.stubEnv('APPDYNO_STATE_DIR', dir);
     vi.stubGlobal('fetch', async () => new Response(Buffer.from('not the release')));
     const e = await installTools().catch((x: unknown) => x);
@@ -20,7 +20,7 @@ describe('pinned host tools', () => {
   });
 
   it('says how to install the trace processor when it is missing, and honours an explicit path', async () => {
-    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'gd-tools-')));
+    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-tools-')));
     vi.stubEnv('APPDYNO_TRACE_PROCESSOR', '');
     await expect(traceProcessor()).rejects.toMatchObject({ code: 'UNSUPPORTED' });
     vi.stubEnv('APPDYNO_TRACE_PROCESSOR', '/opt/tp');

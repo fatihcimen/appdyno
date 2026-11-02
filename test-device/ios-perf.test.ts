@@ -81,7 +81,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
     const s = await open('memory');
     await d.tap(byId(s, 'memory_alloc'), { settle: false });
     await pause(1_000);
-    const file = join(mkdtempSync(join(tmpdir(), 'gd-heap-')), 'heap.memgraph');
+    const file = join(mkdtempSync(join(tmpdir(), 'appdyno-heap-')), 'heap.memgraph');
     const g = (await d.iosPerf.heapGraph(APP, file)).value;
     await d.tap(byId(s, 'memory_free'), { settle: false });
     expect(statSync(file).size).toBe(g.bytes);

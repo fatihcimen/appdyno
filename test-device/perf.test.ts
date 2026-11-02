@@ -113,7 +113,7 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     const s = await open('memory');
     await d.tap(byId(s, 'memory_alloc'), { settle: false });
     await pause(1_000);
-    const file = join(mkdtempSync(join(tmpdir(), 'gd-heap-')), 'heap.hprof');
+    const file = join(mkdtempSync(join(tmpdir(), 'appdyno-heap-')), 'heap.hprof');
     const dump = (await d.perf.heapDump(APP, file)).value;
     expect(dump.bytes).toBeGreaterThan(50 * 1024 * 1024);
     expect(statSync(file).size).toBe(dump.bytes);

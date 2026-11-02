@@ -68,7 +68,7 @@ export function runnerEntitlements(team: string, appId: string): string {
 }
 
 /** The stamp in CFBundleVersion: tells our build apart from any other runner with the same id. */
-export const stampOf = (key: string) => `gd-${key.slice(0, 12)}`;
+export const stampOf = (key: string) => `appdyno-${key.slice(0, 12)}`;
 
 /**
  * The runner, re-signed for the phone: its bundle ids become the profile's (the test bundle's is the

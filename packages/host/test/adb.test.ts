@@ -35,7 +35,7 @@ describe('adb server', () => {
     const { tmpdir } = await import('node:os');
     const { join } = await import('node:path');
     const { createServer } = await import('node:net');
-    const dir = mkdtempSync(join(tmpdir(), 'gd-adb-'));
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-adb-'));
     const count = join(dir, 'starts');
     // a stand-in adb whose start-server is only counted; nothing listens, so every dial fails
     const bin = join(dir, 'adb');

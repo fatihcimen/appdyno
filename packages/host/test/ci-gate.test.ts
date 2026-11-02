@@ -9,7 +9,7 @@ const run = (
   ops: Record<string, { p50: number; p95?: number; failed?: number }>,
   history: object[],
 ) => {
-  const dir = mkdtempSync(join(tmpdir(), 'gd-gate-'));
+  const dir = mkdtempSync(join(tmpdir(), 'appdyno-gate-'));
   const cur = join(dir, 'latency.json');
   const hist = join(dir, 'history.jsonl');
   writeFileSync(

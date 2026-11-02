@@ -7,7 +7,7 @@ import { brandRunner, branded, RUNNER_NAME } from '../src/ios/brand.js';
 
 describe('runner branding', () => {
   it('names the runner appdyno and gives it its icon', async () => {
-    const app = join(mkdtempSync(join(tmpdir(), 'gd-brand-')), 'Runner-Runner.app');
+    const app = join(mkdtempSync(join(tmpdir(), 'appdyno-brand-')), 'Runner-Runner.app');
     mkdirSync(app);
     writeFileSync(
       join(app, 'Info.plist'),

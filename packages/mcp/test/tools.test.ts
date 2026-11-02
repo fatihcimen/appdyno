@@ -13,7 +13,7 @@ import { FakeDevice } from './fake-device.js';
 
 type Result = { isError?: boolean; content: { type: string; text?: string; data?: string }[] };
 
-const MEASUREMENTS = mkdtempSync(join(tmpdir(), 'gd-measure-'));
+const MEASUREMENTS = mkdtempSync(join(tmpdir(), 'appdyno-measure-'));
 
 async function connect(
   policy: Partial<Policy> = {},
@@ -497,10 +497,10 @@ describe('iOS simulators', () => {
   it('lists a booted simulator by its id, under the device policy', async () => {
     const udid = '75505767-61E2-40F2-8FC6-8AFE20EE25C9';
     const t = await connect({}, new FakeDevice(), async () => [
-      { udid, name: 'gd-iphone', state: 'Booted', runtime: 'iOS-27-0' },
+      { udid, name: 'appdyno-iphone', state: 'Booted', runtime: 'iOS-27-0' },
     ]);
     const r = await t.textOf('list_devices');
-    expect(r.text).toContain(`${udid} booted iOS simulator gd-iphone`);
+    expect(r.text).toContain(`${udid} booted iOS simulator appdyno-iphone`);
     const p = await connect(
       {},
       new FakeDevice(),

@@ -25,7 +25,7 @@ describe('usbmux', () => {
   });
 
   it('lists devices and connects to a port in network byte order, USB only', async () => {
-    const path = join(mkdtempSync(join(tmpdir(), 'gd-mux-')), 'mux.sock');
+    const path = join(mkdtempSync(join(tmpdir(), 'appdyno-mux-')), 'mux.sock');
     const seen: Record<string, unknown>[] = [];
     const server = createServer((s) => {
       let buf = Buffer.alloc(0);
