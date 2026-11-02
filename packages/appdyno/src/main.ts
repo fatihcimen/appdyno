@@ -108,7 +108,7 @@ async function main(): Promise<number> {
         err('usage: appdyno ios build');
         return 2;
       }
-      // both runners now, so a device session never waits for a build (install.sh calls this)
+      // both runners now, so a device session never waits for a build
       for (const kind of ['simulator', 'device'] as const)
         console.log(`${kind}: ${(await iosProducts(kind)) ?? 'no packaged sources'}`);
       console.log(`older builds removed: ${await pruneIosBuilds()}`);

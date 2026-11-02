@@ -55,7 +55,7 @@ step agent zsh -c 'cd android && mise exec -- ./gradlew --console=plain :agent:t
 step build mise exec -- pnpm build
 # the runner's platform-independent core (Xcode's Swift: the command line tools have no XCTest; skipped
 # where there is no Xcode)
-xcode=${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}
+xcode=${DEVELOPER_DIR:-$(xcode-select -p)}
 if [[ -d $xcode ]]; then
   step runner-core env DEVELOPER_DIR=$xcode zsh -c 'cd ios/RunnerCore && swift test -j 2'
 fi
@@ -74,7 +74,7 @@ if [[ -n $serial ]]; then
 fi
 
 if [[ -n $ios || -n $iphone ]]; then
-  export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}
+  export DEVELOPER_DIR=${DEVELOPER_DIR:-$(xcode-select -p)}
   xb() { xcodebuild build-for-testing -project ios/Appdyno.xcodeproj -scheme Runner -jobs 2 -quiet "$@"; }
 fi
 if [[ -n $ios ]]; then

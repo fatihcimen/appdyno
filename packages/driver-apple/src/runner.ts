@@ -265,6 +265,7 @@ export class IosRunnerLauncher {
   }
 
   private async start(build: { xctestrun: string; sha256: string }, target?: string) {
+    reportProgress('starting the iOS runner');
     const port = await this.transport.port();
     const token = randomBytes(24).toString('hex');
     await mkdir(stateDir(), { recursive: true, mode: 0o700 });

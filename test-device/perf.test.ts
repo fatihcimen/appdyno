@@ -15,7 +15,9 @@ const APP = 'dev.appdyno.fixture';
 describe.skipIf(!serial)('android perf accuracy', () => {
   let d: AndroidDevice;
   const open = async (screen: string): Promise<Screen> => {
-    await d.shell(`am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/${screen} ${APP}`);
+    await d.shell(
+      `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/${screen} ${APP}`,
+    );
     await new Promise((r) => setTimeout(r, 1_200));
     return d.read(APP);
   };
