@@ -1,26 +1,41 @@
 {
   "name": "appdyno",
   "version": "0.5.0",
-  "private": true,
+  "private": false,
   "description": "Drive and measure iOS and Android devices: an MCP stdio server, a command line and a TypeScript library.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
   "bin": {
     "appdyno": "dist/main.js",
     "appdyno-mcp": "dist/mcp-bin.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "agents"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && chmod +x dist/main.js dist/mcp-bin.js",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/bundle.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "dependencies": {
+  "peerDependencies": {
+    "zod": "^4.6.7"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
     "@appdyno/cli": "workspace:*",
     "@appdyno/core": "workspace:*",
     "@appdyno/driver-android": "workspace:*",
@@ -28,6 +43,8 @@
     "@appdyno/mcp": "workspace:*",
     "@appdyno/ops": "workspace:*",
     "@appdyno/protocol": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.32.1"
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "esbuild": "^0.28.2",
+    "zod": "^4.6.7"
   }
 }
