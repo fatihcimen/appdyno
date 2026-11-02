@@ -56,7 +56,7 @@ describe.skipIf(!udid)('appdyno-mcp over stdio (iPhone)', () => {
     expect((await call('list_devices')).text).toContain(`${udid} usb iPhone`);
     expect((await call('launch_app')).error).toBe(false);
     const home = await call('screen');
-    expect(home.text).toContain(`ön planda: ${APP}`);
+    expect(home.text).toContain(`foreground: ${APP}`);
     const tapped = await call('tap', { ref: ref(home.text, 'Genel') });
     expect(tapped.text).toMatch(/^dokunuldu @[\w-]+ "Genel"/);
     expect(tapped.text).toContain('Hakkında');

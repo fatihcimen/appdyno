@@ -23,10 +23,10 @@ let late = await read();
 const find = (s, label) =>
   s.list.find((e) => e.label === label.toUpperCase() || e.label === label || e.id === label);
 const clean = async () => {
-  await d.tap(find(late, 'Temizle'), { settle: SETTLE, read: 'none' });
+  await d.tap(find(late, 'Clear'), { settle: SETTLE, read: 'none' });
   await pause(200);
   late = await read();
-  if (late.tree.nodes.some((x) => x.t?.startsWith('Tepki') || x.t === 'Dokunuş tepkisi'))
+  if (late.tree.nodes.some((x) => x.t?.startsWith('Tepki') || x.t === 'Touch reaction'))
     throw new Error('not clean');
 };
 const out = { n, quietMs: SETTLE.quietMs, actionable: {}, touch: {}, unchanged: {} };
@@ -53,12 +53,12 @@ for (const delay of DELAYS) {
   const quiet = [];
   for (let i = 0; i < n; i++) {
     await clean();
-    const r = await d.tap(find(late, 'Dokunma alanı'), {
+    const r = await d.tap(find(late, 'Touch area'), {
       settle: SETTLE,
       read: 'tree',
       before: late.hash,
     });
-    if (!r.tree.nodes.some((x) => x.t === 'Dokunuş tepkisi')) missed++;
+    if (!r.tree.nodes.some((x) => x.t === 'Touch reaction')) missed++;
     ms.push(r.settle.ms);
     quiet.push(r.settle.quietMs);
     await pause(200);
@@ -69,7 +69,7 @@ for (const delay of DELAYS) {
 await clean();
 for (const [name, label] of [
   ['inert (empty space)', undefined],
-  ['actionable (nothing to clear)', 'Temizle'],
+  ['actionable (nothing to clear)', 'Clear'],
 ]) {
   const ms = [];
   const quiet = [];

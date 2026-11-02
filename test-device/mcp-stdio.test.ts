@@ -71,16 +71,16 @@ for (const { platform, serial, form } of targets)
       const launched = await call('launch_app', { read: 'full' });
       expect(launched.error).toBe(false);
       const home = await call('screen');
-      expect(home.text).toContain(`ön planda: ${APP}`);
+      expect(home.text).toContain(`foreground: ${APP}`);
       const tapped = await call('tap', { ref: ref(home.text, form) });
       expect(tapped.text).toMatch(new RegExp(`^dokunuldu @\\w+ "${form}"`));
-      expect(tapped.text).toContain('Adınız');
+      expect(tapped.text).toContain('Your name');
       const typed = await call('type_text', {
-        ref: ref(tapped.text, 'Adınız'),
+        ref: ref(tapped.text, 'Your name'),
         text: 'gizli-kod-9911',
         replace: true,
       });
-      expect(typed.text).toMatch(/^yazıldı \(14 karakter\)/);
+      expect(typed.text).toMatch(/^typed \(14 characters/);
       // the typed secret is never shown back, in the answer or a later read
       const after = await call('screen');
       expect(after.text).not.toContain('gizli-kod-9911');

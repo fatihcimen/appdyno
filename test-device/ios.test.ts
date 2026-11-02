@@ -61,7 +61,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(r.verified).toBe(true);
     const send = byId(await d.read(APP), 'submit')!;
     await d.tap(send, { settle: SETTLE });
-    expect(byId(await d.read(APP), 'result')?.label).toBe('Gönderildi: Kapı zili çalışmıyor');
+    expect(byId(await d.read(APP), 'result')?.label).toBe('Sent: Kapı zili çalışmıyor');
   });
 
   it('reports the field the keyboard types into as focused', async () => {
@@ -113,13 +113,13 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
   });
 
   it('answers an alert', async () => {
-    const s = await open('Diyalog');
+    const s = await open('Dialog');
     await d.tap(byId(s, 'open_dialog')!, { settle: SETTLE });
     const alert = await d.read(APP);
-    const ok = find(alert, 'Tamam')!;
+    const ok = find(alert, 'OK')!;
     expect(ok).toBeDefined();
     await d.tap(ok, { settle: SETTLE });
-    expect(labels(await d.read(APP))).toContain('Onaylandı');
+    expect(labels(await d.read(APP))).toContain('Confirmed');
   });
 
   it('catches a reaction 300 ms after the tap, with and without the screen before it (10 of 10)', async () => {
@@ -168,20 +168,20 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
   }, 120_000);
 
   it('settles on a screen whose text keeps ticking', async () => {
-    const s = await open('Sayaç');
+    const s = await open('Ticker');
     expect(s.settle!.settled).toBe(true);
   });
 
   it('waits for a spinner to go', async () => {
-    const s = await open('Gecikmeli');
+    const s = await open('Delayed');
     expect(s.settle!.settled).toBe(true);
-    expect(labels(s)).toContain('Yüklendi');
+    expect(labels(s)).toContain('Loaded');
   });
 
   it('opens a deep link into the app', async () => {
     await d.openUrl('gdfixture://open/late', APP);
     await new Promise((r) => setTimeout(r, 1_000));
-    expect(labels(await d.read(APP))).toContain('Temizle');
+    expect(labels(await d.read(APP))).toContain('Clear');
   });
 
   // a code entry that takes keys without being a text field: no element reports the focus (XCUI's own
@@ -196,7 +196,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     // no element reports the focus: typed as key events, not read back (no verdict)
     expect(r.mode).toBe('keys');
     expect(r.verified).toBeUndefined();
-    expect(byId(await d.read(APP), 'code_value')?.label).toBe('Kod: 123456');
+    expect(byId(await d.read(APP), 'code_value')?.label).toBe('Code: 123456');
     expect(await d.foreground()).toBe(APP); // the runner still answers
   });
 

@@ -38,7 +38,7 @@ while (Date.now() < end) {
   if (field) {
     await timed('tap', () => d.tap(field, { settle: { quietMs: 200, maxMs: 3000 }, read: 'hash' }));
     await timed('type', () =>
-      d.typeText(`Deneme ${i} çğış`, { at: field, replace: true, settle: false }),
+      d.typeText(`Sample ${i} çğış`, { at: field, replace: true, settle: false }),
     );
   }
   if (i % 10 === 0) await timed('shot', () => d.screenshot({ maxPx: 1024 }));

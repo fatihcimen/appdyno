@@ -71,15 +71,15 @@ private fun LinearLayout.button(text: String, viewId: Int = View.NO_ID, onClick:
 
 private val SCREENS = linkedMapOf(
     "form" to ("Form" to FormActivity::class.java),
-    "list" to ("Liste" to ListActivity::class.java),
-    "dialog" to ("Diyalog" to DialogActivity::class.java),
+    "list" to ("List" to ListActivity::class.java),
+    "dialog" to ("Dialog" to DialogActivity::class.java),
     "compose" to ("Compose" to ComposeActivity::class.java),
-    "ticker" to ("Sayaç" to TickerActivity::class.java),
-    "delayed" to ("Gecikmeli" to DelayedActivity::class.java),
-    "permission" to ("İzin" to PermissionActivity::class.java),
-    "slowfocus" to ("Yavaş odak" to SlowFocusActivity::class.java),
+    "ticker" to ("Ticker" to TickerActivity::class.java),
+    "delayed" to ("Delayed" to DelayedActivity::class.java),
+    "permission" to ("Permission" to PermissionActivity::class.java),
+    "slowfocus" to ("Slow focus" to SlowFocusActivity::class.java),
     "web" to ("Web" to WebActivity::class.java),
-    "showcase" to ("Vitrin" to ShowcaseActivity::class.java),
+    "showcase" to ("Showcase" to ShowcaseActivity::class.java),
 )
 
 /** Screens opened by link only (gdfixture://open/<key>): measurement fixtures. */
@@ -99,8 +99,8 @@ class MainActivity : Activity() {
         column {
             label("appdyno fixture", R.id.title)
             for (v in SCREENS.values) button(v.first) { startActivity(Intent(this@MainActivity, v.second)) }
-            button("Çökert") { throw IllegalStateException("fixture crash") }
-            button("Donmuş") { Thread.sleep(12_000) }
+            button("Crash") { throw IllegalStateException("fixture crash") }
+            button("Freeze") { Thread.sleep(12_000) }
         }
         route(intent)
         // the start's "fully drawn" mark (time to full display) once the first frame is up
@@ -122,11 +122,11 @@ class FormActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         column {
-            label("Bilgilerinizi girin")
-            val name = EditText(context).apply { id = R.id.name_input; hint = "Adınız"; addView(this) }
+            label("Enter your details")
+            val name = EditText(context).apply { id = R.id.name_input; hint = "Your name"; addView(this) }
             EditText(context).apply {
                 id = R.id.phone_input
-                hint = "Telefon"
+                hint = "Phone"
                 inputType = InputType.TYPE_CLASS_PHONE
                 addView(this)
             }
@@ -135,14 +135,14 @@ class FormActivity : Activity() {
             LinearLayout(context).apply {
                 id = R.id.gsm_layout
                 orientation = LinearLayout.VERTICAL
-                TextView(context).apply { text = "Cep telefonu"; addView(this) }
+                TextView(context).apply { text = "Mobile phone"; addView(this) }
                 EditText(context).apply {
                     id = R.id.gsm_input
                     inputType = InputType.TYPE_CLASS_PHONE
                     addView(this)
                 }
                 TextView(context).apply {
-                    text = "Size bu numaradan ulaşacağız"
+                    text = "We will reach you at this number"
                     minHeight = 240
                     addView(this)
                 }
@@ -150,12 +150,12 @@ class FormActivity : Activity() {
             }
             EditText(context).apply {
                 id = R.id.password_input
-                hint = "Şifre"
+                hint = "Password"
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
                 addView(this)
             }
             val result = TextView(context)
-            button("Gönder", R.id.submit) { result.text = "Gönderildi: ${name.text}" }
+            button("Send", R.id.submit) { result.text = "Sent: ${name.text}" }
             result.id = R.id.result
             addView(result)
         }
@@ -176,19 +176,19 @@ class ListActivity : Activity() {
                 val row = LinearLayout(this@ListActivity).apply { orientation = LinearLayout.HORIZONTAL; setPadding(24, 24, 24, 24) }
                 TextView(this@ListActivity).apply {
                     id = R.id.row_name
-                    text = "Ürün ${position + 1}"
+                    text = "Product ${position + 1}"
                     layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                     row.addView(this)
                 }
                 val count = TextView(this@ListActivity).apply {
                     id = R.id.row_count
-                    text = "Sepette: ${counts[position]}"
+                    text = "In basket: ${counts[position]}"
                     row.addView(this)
                 }
                 Button(this@ListActivity).apply {
                     id = R.id.add_button
-                    text = "Ekle"
-                    setOnClickListener { counts[position]++; count.text = "Sepette: ${counts[position]}" }
+                    text = "Add"
+                    setOnClickListener { counts[position]++; count.text = "In basket: ${counts[position]}" }
                     row.addView(this)
                 }
                 return row
@@ -203,27 +203,27 @@ class DialogActivity : Activity() {
         super.onCreate(savedInstanceState)
         column {
             val result = TextView(context)
-            button("Diyaloğu aç", R.id.open_dialog) {
+            button("Open dialog", R.id.open_dialog) {
                 AlertDialog.Builder(this@DialogActivity)
                     .setTitle("Emin misiniz?")
-                    .setMessage("Sepet boşaltılacak.")
-                    .setPositiveButton("Tamam") { _, _ -> result.text = "Onaylandı" }
-                    .setNegativeButton("İptal") { _, _ -> result.text = "Vazgeçildi" }
+                    .setMessage("The basket will be emptied.")
+                    .setPositiveButton("OK") { _, _ -> result.text = "Confirmed" }
+                    .setNegativeButton("Cancel") { _, _ -> result.text = "Cancelled" }
                     .show()
             }
             // a sheet as a login builds one: its own window, the field focused and the keyboard asked for as it
             // opens (typing goes into it with no tap; seen: the focus not found there, the number lost)
-            button("Alanlı pencere", R.id.open_field_dialog) {
+            button("Dialog with field", R.id.open_field_dialog) {
                 val field = EditText(this@DialogActivity).apply {
                     id = R.id.sheet_input
-                    hint = "Telefon numarası"
+                    hint = "Phone number"
                     inputType = InputType.TYPE_CLASS_PHONE
                 }
                 Dialog(this@DialogActivity).apply {
                     setContentView(LinearLayout(context).apply {
                         orientation = LinearLayout.VERTICAL
                         setPadding(48, 48, 48, 48)
-                        addView(TextView(context).apply { text = "Telefon numaranı gir" })
+                        addView(TextView(context).apply { text = "Enter your phone number" })
                         addView(field)
                     })
                     window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
@@ -233,10 +233,10 @@ class DialogActivity : Activity() {
             }
             // the same sheet on an app (or device) that answers nothing for 6 s before its field takes the focus:
             // a starved emulator froze 4 s while a login typed into its sheet, and the wait for the focus ran out
-            button("Meşgul pencere", R.id.open_busy_dialog) {
+            button("Busy dialog", R.id.open_busy_dialog) {
                 val field = EditText(this@DialogActivity).apply {
                     id = R.id.busy_input
-                    hint = "Telefon numarası"
+                    hint = "Phone number"
                     inputType = InputType.TYPE_CLASS_PHONE
                 }
                 Dialog(this@DialogActivity).apply {
@@ -263,12 +263,12 @@ class ComposeActivity : ComponentActivity() {
             var value by remember { mutableStateOf("") }
             var saved by remember { mutableStateOf("") }
             Column(Modifier.fillMaxSize().padding(16.dp).semantics { testTagsAsResourceId = true }) {
-                Text("Compose ekranı", Modifier.testTag("compose_title").padding(top = 32.dp))
+                Text("Compose screen", Modifier.testTag("compose_title").padding(top = 32.dp))
                 TextField(value = value, onValueChange = { value = it }, label = { Text("Not") }, modifier = Modifier.testTag("compose_input"))
-                Button(onClick = { saved = value }, modifier = Modifier.testTag("compose_save")) { Text("Kaydet") }
-                Text(if (saved.isEmpty()) "Kayıt yok" else "Kaydedildi: $saved", Modifier.testTag("compose_result"))
+                Button(onClick = { saved = value }, modifier = Modifier.testTag("compose_save")) { Text("Save") }
+                Text(if (saved.isEmpty()) "Nothing saved" else "Saved: $saved", Modifier.testTag("compose_result"))
                 LazyColumn(Modifier.testTag("compose_list")) {
-                    items(50) { i -> Text("Satır ${i + 1}", Modifier.testTag("row_$i").padding(12.dp)) }
+                    items(50) { i -> Text("Row ${i + 1}", Modifier.testTag("row_$i").padding(12.dp)) }
                 }
             }
         }
@@ -284,7 +284,7 @@ class TickerActivity : Activity() {
         super.onCreate(savedInstanceState)
         column {
             val ticker = label("", R.id.ticker)
-            button("Dur", R.id.stop) { }
+            button("Stop", R.id.stop) { }
             this@TickerActivity.handler.post(object : Runnable {
                 override fun run() {
                     ticker.text = "Kalan: ${left--}"
@@ -302,8 +302,8 @@ class DelayedActivity : Activity() {
         column {
             val progress = ProgressBar(context).apply { visibility = View.GONE; addView(this) }
             val loaded = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; id = R.id.loaded; visibility = View.GONE }
-            for (i in 1..5) loaded.addView(Button(context).apply { text = "Sonuç $i" })
-            button("Yükle", R.id.load) {
+            for (i in 1..5) loaded.addView(Button(context).apply { text = "Result $i" })
+            button("Load", R.id.load) {
                 progress.visibility = View.VISIBLE
                 Handler(Looper.getMainLooper()).postDelayed({
                     progress.visibility = View.GONE
@@ -321,7 +321,7 @@ class PermissionActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         column {
-            button("Konum izni iste", R.id.ask_permission) {
+            button("Request location", R.id.ask_permission) {
                 requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 1)
             }
         }
@@ -333,10 +333,10 @@ class SlowFocusActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         column {
-            label("Yavaş alan")
+            label("Slow field")
             EditText(context).apply {
                 id = R.id.slow_input
-                hint = "Kod"
+                hint = "Code"
                 isFocusableInTouchMode = false
                 setOnClickListener {
                     postDelayed({
@@ -356,7 +356,7 @@ class WebActivity : Activity() {
         val web = WebView(this).apply { id = R.id.web }
         web.loadDataWithBaseURL(
             null,
-            "<html><body><h1>Web içerik</h1><p>Ödeme sayfası</p><button>Öde</button><input placeholder='Kart'></body></html>",
+            "<html><body><h1>Web content</h1><p>Payment page</p><button>Pay</button><input placeholder='Card'></body></html>",
             "text/html",
             "utf-8",
             null,
@@ -385,7 +385,7 @@ class ShowcaseActivity : Activity() {
         })
         banner.addView(banners)
         page.addView(banner)
-        val categories = listOf("Meyve", "Sebze", "Süt", "Kahvaltılık", "Atıştırmalık", "İçecek", "Temizlik", "Kişisel bakım")
+        val categories = listOf("Fruit", "Vegetables", "Milk", "Breakfast", "Snacks", "Drinks", "Cleaning", "Personal care")
         for ((c, category) in categories.withIndex()) {
             page.addView(TextView(this).apply { text = category; textSize = 20f; setPadding(32, 32, 32, 8) })
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
@@ -394,7 +394,7 @@ class ShowcaseActivity : Activity() {
                 card.addView(View(this).apply { layoutParams = LinearLayout.LayoutParams(220, 160); setBackgroundColor(0xFFEEE8FF.toInt()) })
                 card.addView(TextView(this).apply { text = "$category ${c * 10 + i}" })
                 card.addView(TextView(this).apply { text = "₺${(c * 10 + i) * 7},90" })
-                card.addView(Button(this).apply { text = "Ekle" })
+                card.addView(Button(this).apply { text = "Add" })
                 row.addView(card)
             }
             page.addView(HorizontalScrollView(this).apply { addView(row) })
@@ -410,8 +410,8 @@ class ShowcaseActivity : Activity() {
 }
 
 /**
- * Frames of a known cost: a 2 s animation redrawn every frame, its draw taking about 1 ms ("HAFİF") or
- * 40 ms ("AĞIR", every frame misses a 60 Hz deadline).
+ * Frames of a known cost: a 2 s animation redrawn every frame, its draw taking about 1 ms ("LIGHT") or
+ * 40 ms ("HEAVY", every frame misses a 60 Hz deadline).
  */
 class FramesActivity : Activity() {
     private class Animated(ctx: Activity) : View(ctx) {
@@ -435,8 +435,8 @@ class FramesActivity : Activity() {
                 view.until = android.os.SystemClock.uptimeMillis() + 2_000
                 view.postInvalidateOnAnimation()
             }
-            button("Hafif", R.id.frames_light) { run(0) }
-            button("Ağır", R.id.frames_heavy) { run(40) }
+            button("Light", R.id.frames_light) { run(0) }
+            button("Heavy", R.id.frames_heavy) { run(40) }
             addView(view)
         }
     }
@@ -451,15 +451,15 @@ class MemoryActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         column {
-            val status = label("Ayrılan: ${held.size} MB", R.id.memory_status)
-            button("50 MB ayır", R.id.memory_alloc) {
+            val status = label("Held: ${held.size} MB", R.id.memory_status)
+            button("Hold 50 MB", R.id.memory_alloc) {
                 repeat(50) { held += ByteArray(1 shl 20).also { a -> for (i in a.indices step 4096) a[i] = 1 } }
-                status.text = "Ayrılan: ${held.size} MB"
+                status.text = "Held: ${held.size} MB"
             }
-            button("Bırak", R.id.memory_free) {
+            button("Release", R.id.memory_free) {
                 held.clear()
                 Runtime.getRuntime().gc()
-                status.text = "Ayrılan: 0 MB"
+                status.text = "Held: 0 MB"
             }
         }
     }
@@ -470,7 +470,7 @@ class CpuActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         column {
-            button("3 sn yük", R.id.cpu_load) {
+            button("Load 3 s", R.id.cpu_load) {
                 Thread {
                     val end = android.os.SystemClock.uptimeMillis() + 3_000
                     var x = 0L
@@ -498,15 +498,15 @@ class LateActivity : Activity() {
                     handler.postDelayed({ result.addView(TextView(context).apply { text = "Tepki $delay" }) }, delay.toLong())
                 }.tag = "late_$delay"
             }
-            button("Temizle", R.id.late_clear) { result.removeAllViews() }
+            button("Clear", R.id.late_clear) { result.removeAllViews() }
             // not clickable: only a touch listener reacts (as a gesture area does), 30 ms after the touch
             TextView(context).apply {
-                text = "Dokunma alanı"
+                text = "Touch area"
                 id = R.id.late_touch
                 setPadding(0, 48, 0, 48)
                 setOnTouchListener { v, e ->
                     if (e.action == android.view.MotionEvent.ACTION_UP)
-                        handler.postDelayed({ result.addView(TextView(context).apply { text = "Dokunuş tepkisi" }) }, 30)
+                        handler.postDelayed({ result.addView(TextView(context).apply { text = "Touch reaction" }) }, 30)
                     true
                 }
                 addView(this)
@@ -524,14 +524,14 @@ class CodeActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         column {
-            label("Doğrulama kodu")
+            label("Verification code")
             val result = TextView(context).apply { id = R.id.result }
             val boxes = mutableListOf<EditText>()
             val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
             for (i in 0 until 4) {
                 val box = EditText(context).apply {
                     tag = "code_box_$i"
-                    contentDescription = if (i == 0) "Kod" else null
+                    contentDescription = if (i == 0) "Code" else null
                     inputType = InputType.TYPE_CLASS_NUMBER
                     filters = arrayOf(android.text.InputFilter.LengthFilter(1))
                     layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
@@ -540,7 +540,7 @@ class CodeActivity : Activity() {
                     override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
                     override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
                     override fun afterTextChanged(e: android.text.Editable?) {
-                        result.text = "Kod: " + boxes.joinToString("") { it.text.toString() }
+                        result.text = "Code: " + boxes.joinToString("") { it.text.toString() }
                         if (!e.isNullOrEmpty() && i < 3) boxes[i + 1].requestFocus()
                     }
                 })
@@ -558,7 +558,7 @@ class CodeActivity : Activity() {
  * Known accessibility problems, one of each, for the audit's device tests: faint text, a small target, an
  * unnamed icon button, a faint icon, two buttons read alike, text cut by its frame, ellipsized text (a
  * view's and Compose's), and a price read before the name above it (a traversal hint: the platform sorts
- * a view's children by place). "Devam" has none of them.
+ * a view's children by place). "Continue" has none of them.
  */
 class A11yActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -568,11 +568,11 @@ class A11yActivity : ComponentActivity() {
         val white = android.graphics.Color.WHITE
         column {
             setBackgroundColor(white)
-            label("Erişilebilirlik", R.id.title).setTextColor(android.graphics.Color.BLACK)
-            label("Soluk metin", R.id.a11y_faint).setTextColor(android.graphics.Color.parseColor("#C8C8C8"))
+            label("Accessibility", R.id.title).setTextColor(android.graphics.Color.BLACK)
+            label("Faint text", R.id.a11y_faint).setTextColor(android.graphics.Color.parseColor("#C8C8C8"))
             addView(View(context).apply {
                 id = R.id.a11y_small
-                contentDescription = "Küçük"
+                contentDescription = "Small"
                 setBackgroundColor(android.graphics.Color.parseColor("#1F3A93"))
                 setOnClickListener {}
             }, LinearLayout.LayoutParams(px(24), px(24)))
@@ -583,7 +583,7 @@ class A11yActivity : ComponentActivity() {
             }, LinearLayout.LayoutParams(px(56), px(56)))
             addView(android.widget.ImageView(context).apply {
                 id = R.id.a11y_faint_icon
-                contentDescription = "Soluk simge"
+                contentDescription = "Faint icon"
                 setImageDrawable(android.graphics.drawable.InsetDrawable(
                     android.graphics.drawable.GradientDrawable().apply {
                         shape = android.graphics.drawable.GradientDrawable.OVAL
@@ -593,18 +593,18 @@ class A11yActivity : ComponentActivity() {
                 ))
                 setOnClickListener {}
             }, LinearLayout.LayoutParams(px(48), px(48)))
-            button("Ekle", R.id.a11y_add_1) {}
-            button("Ekle", R.id.a11y_add_2) {}
+            button("Add", R.id.a11y_add_1) {}
+            button("Add", R.id.a11y_add_2) {}
             // three lines of text in a frame one line tall
             addView(TextView(context).apply {
                 id = R.id.a11y_cut
-                text = "Bu metin çerçevesine sığmayacak kadar uzun ve alttaki satırları görünmüyor"
+                text = "This text is too long for its frame and its lower lines do not show"
                 textSize = 16f
                 setTextColor(android.graphics.Color.BLACK)
             }, LinearLayout.LayoutParams(px(160), px(24)))
             addView(TextView(context).apply {
                 id = R.id.a11y_ellipsized
-                text = "Kaçmaz Fiyatlar ve Haftanın Fırsatları"
+                text = "Unmissable Prices and Deals of the Week"
                 textSize = 16f
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
@@ -615,7 +615,7 @@ class A11yActivity : ComponentActivity() {
                     // in a column: the view's exact width would override the text's own
                     Column {
                         Text(
-                            "Compose ile çok uzun bir ürün adı burada kesiliyor",
+                            "A very long product name in Compose is cut here",
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                             modifier = Modifier.width(120.dp),
@@ -638,7 +638,7 @@ class A11yActivity : ComponentActivity() {
                     setTextColor(android.graphics.Color.BLACK)
                 }, android.widget.FrameLayout.LayoutParams(-2, -2))
             }, LinearLayout.LayoutParams(px(200), px(64)))
-            button("Devam", R.id.a11y_ok) {}
+            button("Continue", R.id.a11y_ok) {}
         }
     }
 }

@@ -36,7 +36,7 @@ for (const quietMs of QUIETS) {
     let missed = 0;
     const ms = [];
     for (let i = 0; i < n; i++) {
-      const clear = button(late, 'Temizle');
+      const clear = button(late, 'Clear');
       await d.tap(clear, { settle: { quietMs: 250, maxMs: 3_000 }, read: 'none' });
       await pause(300);
       late = await read();
@@ -59,7 +59,7 @@ for (const quietMs of QUIETS) {
     );
   }
   // an unchanged screen and a navigation at this quiet window
-  const title = button(late, 'Temizle');
+  const title = button(late, 'Clear');
   const unchanged = [];
   for (let i = 0; i < n; i++) {
     const before = await read();
@@ -86,7 +86,7 @@ for (const quietMs of QUIETS) {
     const s = buildScreen(r.tree, { platform: 'android', appId: APP });
     const later = await read();
     const key = (x) => x.list.map((e) => `${e.id ?? e.label}@${e.x},${e.y}`).join(' ');
-    if (!s.list.some((e) => e.label === 'Bilgilerinizi girin') || key(s) !== key(later)) wrong++;
+    if (!s.list.some((e) => e.label === 'Enter your details') || key(s) !== key(later)) wrong++;
   }
   row.navigateMs = stats(nav, 0);
   row.navigateWrong = wrong;

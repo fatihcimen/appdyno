@@ -70,7 +70,7 @@ try {
     const settled = await import('../dist/index.js').then((m) =>
       m.buildScreen(r.tree, { platform: 'android', appId: APP }),
     );
-    if (!settled.list.some((e) => e.label === 'Bilgilerinizi girin') || key(settled) !== key(now))
+    if (!settled.list.some((e) => e.label === 'Enter your details') || key(settled) !== key(now))
       navWrong++;
   }
 } finally {

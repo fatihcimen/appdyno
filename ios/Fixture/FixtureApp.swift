@@ -43,8 +43,8 @@ struct FixtureApp: App {
 }
 
 let screens: [(key: String, title: String)] = [
-    ("form", "Form"), ("list", "Liste"), ("dialog", "Diyalog"), ("ticker", "Sayaç"), ("delayed", "Gecikmeli"),
-    ("permission", "İzin"),
+    ("form", "Form"), ("list", "List"), ("dialog", "Dialog"), ("ticker", "Ticker"), ("delayed", "Delayed"),
+    ("permission", "Permission"),
 ]
 
 struct Home: View {
@@ -57,7 +57,7 @@ struct Home: View {
             ForEach(screens, id: \.key) { s in
                 Button(s.title) { path.append(s.key) }.accessibilityIdentifier("open_\(s.key)")
             }
-            if !lastLink.isEmpty { Text("Bağlantı: \(lastLink)").accessibilityIdentifier("last_link") }
+            if !lastLink.isEmpty { Text("Link: \(lastLink)").accessibilityIdentifier("last_link") }
             Spacer()
         }
         .padding()
@@ -86,19 +86,19 @@ struct FormScreen: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Bilgilerinizi girin")
-            TextField("Adınız", text: $name).accessibilityIdentifier("name_input")
-            TextField("Telefon", text: $phone).keyboardType(.phonePad).accessibilityIdentifier("phone_input")
-            SecureField("Şifre", text: $password).accessibilityIdentifier("password_input")
+            Text("Enter your details")
+            TextField("Your name", text: $name).accessibilityIdentifier("name_input")
+            TextField("Phone", text: $phone).keyboardType(.phonePad).accessibilityIdentifier("phone_input")
+            SecureField("Password", text: $password).accessibilityIdentifier("password_input")
             // formats the digits as they come, as phone fields do: "(599) 999-9900"
-            TextField("Cep telefonu", text: $gsm)
+            TextField("Mobile phone", text: $gsm)
                 .keyboardType(.phonePad)
                 .accessibilityIdentifier("gsm_input")
                 .onChange(of: gsm) { _, v in
                     let f = Self.phone(v)
                     if f != v { gsm = f }
                 }
-            Button("Gönder") { result = "Gönderildi: \(name)" }.accessibilityIdentifier("submit")
+            Button("Send") { result = "Sent: \(name)" }.accessibilityIdentifier("submit")
             // the same control twice, one copy drawn under another control (as an overlay's spare bubble
             // under a header): only the one in the open can be tapped
             HStack {
@@ -122,10 +122,10 @@ struct ListScreen: View {
     var body: some View {
         List(0 ..< 60, id: \.self) { i in
             HStack {
-                Text("Ürün \(i + 1)").accessibilityIdentifier("row_name")
+                Text("Product \(i + 1)").accessibilityIdentifier("row_name")
                 Spacer()
-                Text("Sepette: \(counts[i])").accessibilityIdentifier("row_count")
-                Button("Ekle") { counts[i] += 1 }.buttonStyle(.bordered).accessibilityIdentifier("add_button")
+                Text("In basket: \(counts[i])").accessibilityIdentifier("row_count")
+                Button("Add") { counts[i] += 1 }.buttonStyle(.bordered).accessibilityIdentifier("add_button")
             }
         }
         .accessibilityIdentifier("list")
@@ -138,16 +138,16 @@ struct DialogScreen: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Button("Diyaloğu aç") { shown = true }.accessibilityIdentifier("open_dialog")
+            Button("Open dialog") { shown = true }.accessibilityIdentifier("open_dialog")
             Text(result).accessibilityIdentifier("result")
             Spacer()
         }
         .padding()
         .alert("Emin misiniz?", isPresented: $shown) {
-            Button("Tamam") { result = "Onaylandı" }
-            Button("İptal", role: .cancel) { result = "Vazgeçildi" }
+            Button("OK") { result = "Confirmed" }
+            Button("Cancel", role: .cancel) { result = "Cancelled" }
         } message: {
-            Text("Sepet boşaltılacak.")
+            Text("The basket will be emptied.")
         }
     }
 }
@@ -160,8 +160,8 @@ struct TickerScreen: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Text("Sayaç: \(n)").monospacedDigit().accessibilityIdentifier("ticker")
-            Button(running ? "DUR" : "BAŞLAT") { running.toggle() }.accessibilityIdentifier("ticker_toggle")
+            Text("Ticker: \(n)").monospacedDigit().accessibilityIdentifier("ticker")
+            Button(running ? "STOP" : "START") { running.toggle() }.accessibilityIdentifier("ticker_toggle")
             Spacer()
         }
         .padding()
@@ -175,7 +175,7 @@ struct DelayedScreen: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            if loaded { Text("Yüklendi").accessibilityIdentifier("loaded") } else { ProgressView() }
+            if loaded { Text("Loaded").accessibilityIdentifier("loaded") } else { ProgressView() }
             Spacer()
         }
         .padding()
@@ -198,9 +198,9 @@ struct PermissionScreen: View {
 
         func locationManagerDidChangeAuthorization(_ m: CLLocationManager) {
             switch m.authorizationStatus {
-            case .authorizedWhenInUse, .authorizedAlways: status = "İzin verildi"
-            case .denied, .restricted: status = "İzin reddedildi"
-            default: status = "Sorulmadı"
+            case .authorizedWhenInUse, .authorizedAlways: status = "Allowed"
+            case .denied, .restricted: status = "Denied"
+            default: status = "Not asked"
             }
         }
     }
@@ -209,7 +209,7 @@ struct PermissionScreen: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Button("Konum izni iste") { asker.manager.requestWhenInUseAuthorization() }.accessibilityIdentifier("ask_location")
+            Button("Request location") { asker.manager.requestWhenInUseAuthorization() }.accessibilityIdentifier("ask_location")
             Text(asker.status).accessibilityIdentifier("permission_status")
             Spacer()
         }
@@ -230,7 +230,7 @@ struct LateScreen: View {
                 }
                 .accessibilityIdentifier("late_\(d)")
             }
-            Button("Temizle") { lines.removeAll() }.accessibilityIdentifier("late_clear")
+            Button("Clear") { lines.removeAll() }.accessibilityIdentifier("late_clear")
             ForEach(Array(lines.enumerated()), id: \.offset) { _, l in Text(l) }
             Spacer()
         }
@@ -244,9 +244,9 @@ struct MemoryScreen: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Button("50 MB ayır") { held = [UInt8](repeating: 7, count: 50 * 1024 * 1024) }.accessibilityIdentifier("memory_alloc")
-            Button("Bırak") { held = [] }.accessibilityIdentifier("memory_free")
-            Text(held.isEmpty ? "Boş" : "50 MB tutuluyor").accessibilityIdentifier("memory_state")
+            Button("Hold 50 MB") { held = [UInt8](repeating: 7, count: 50 * 1024 * 1024) }.accessibilityIdentifier("memory_alloc")
+            Button("Release") { held = [] }.accessibilityIdentifier("memory_free")
+            Text(held.isEmpty ? "Empty" : "Holding 50 MB").accessibilityIdentifier("memory_state")
             Spacer()
         }
         .padding()
@@ -259,7 +259,7 @@ struct CpuScreen: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Button("3 sn yük") {
+            Button("Load 3 s") {
                 busy = true
                 DispatchQueue.global(qos: .userInitiated).async {
                     let end = Date().addingTimeInterval(3)
@@ -271,7 +271,7 @@ struct CpuScreen: View {
                 }
             }
             .accessibilityIdentifier("cpu_load")
-            Text(busy ? "Yükte" : "Boşta").accessibilityIdentifier("cpu_state")
+            Text(busy ? "Busy" : "Idle").accessibilityIdentifier("cpu_state")
             Spacer()
         }
         .padding()
@@ -285,7 +285,7 @@ struct CodeScreen: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("Doğrulama kodu").font(.headline)
+            Text("Verification code").font(.headline)
             ZStack {
                 // hidden from accessibility: XCUI sees no element with the focus while the keyboard is up
                 HiddenField(text: $code).frame(width: 1, height: 1).opacity(0.01).accessibilityHidden(true)
@@ -298,14 +298,14 @@ struct CodeScreen: View {
                     }
                 }
             }
-            Text("Kod: \(code)").accessibilityIdentifier("code_value")
+            Text("Code: \(code)").accessibilityIdentifier("code_value")
             Spacer()
         }
         .padding()
     }
 }
 
-/// A button that slides and fades in over 300 ms after "Göster", as a sheet comes up: UIKit's animation
+/// A button that slides and fades in over 300 ms after "Show", as a sheet comes up: UIKit's animation
 /// (default options) takes no touches while it runs, though the tree shows the button where it ends at once.
 struct SlideScreen: View {
     @State private var taps = 0
@@ -330,7 +330,7 @@ struct SlidePanel: UIViewRepresentable {
 
         override init(frame: CGRect) {
             super.init(frame: frame)
-            show.setTitle("Göster", for: .normal)
+            show.setTitle("Show", for: .normal)
             show.accessibilityIdentifier = "slide_show"
             show.addAction(UIAction { [weak self] _ in self?.slideIn() }, for: .touchUpInside)
             confirm.setTitle("Onayla", for: .normal)
@@ -410,17 +410,17 @@ struct HiddenField: UIViewRepresentable {
 
 /// Known accessibility problems for the platform audit's device tests: faint text, a small target, a
 /// control without a name, a fixed font size, text cut by its frame, and a price read before the name above
-/// it. "Devam" has none of them.
+/// it. "Continue" has none of them.
 struct A11yScreen: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Erişilebilirlik").font(.title2).accessibilityIdentifier("title")
-            Text("Soluk metin").foregroundColor(Color(white: 0.85)).accessibilityIdentifier("a11y_faint")
+            Text("Accessibility").font(.title2).accessibilityIdentifier("title")
+            Text("Faint text").foregroundColor(Color(white: 0.85)).accessibilityIdentifier("a11y_faint")
             Button(action: {}) { Color.blue.frame(width: 18, height: 18) }
-                .accessibilityLabel("Küçük").accessibilityIdentifier("a11y_small")
+                .accessibilityLabel("Small").accessibilityIdentifier("a11y_small")
             Button(action: {}) { Color.blue.frame(width: 44, height: 44) }.accessibilityIdentifier("a11y_unnamed")
-            Text("Sabit yazı boyutu").font(.system(size: 15)).accessibilityIdentifier("a11y_fixed")
-            Text("Bu metin çerçevesine sığmayacak kadar uzun ve kesiliyor")
+            Text("Fixed text size").font(.system(size: 15)).accessibilityIdentifier("a11y_fixed")
+            Text("This text is too long for its frame and is cut")
                 .lineLimit(1).frame(width: 120, alignment: .leading).accessibilityIdentifier("a11y_cut")
             // the price comes first in the view tree, though it sits below the name
             ZStack(alignment: .topLeading) {
@@ -432,7 +432,7 @@ struct A11yScreen: View {
             // frame (a frame around the button does not widen it): 44 pt tall, whatever the text size (a
             // bare text label is 19 pt at the "medium" size, a hit area the audit reports)
             Button(action: {}) {
-                Text("Devam").padding(.horizontal, 16).frame(minHeight: 44).contentShape(Rectangle())
+                Text("Continue").padding(.horizontal, 16).frame(minHeight: 44).contentShape(Rectangle())
             }
             .tint(Color(red: 0, green: 0.25, blue: 0.6)).accessibilityIdentifier("a11y_ok")
             Spacer()

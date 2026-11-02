@@ -71,7 +71,7 @@ await measure(
 await adb.exec(serial, `am start -W -a android.intent.action.VIEW -d gdfixture://open/form ${APP}`);
 await pause(1_200);
 screen = await call('screen');
-const field = ref(screen, 'Adınız');
+const field = ref(screen, 'Your name');
 await measure('tool.type_text.20tr', () =>
   call('type_text', { ref: field, text: 'Çağrı İşgüzar Öğün Ş', replace: true }),
 );

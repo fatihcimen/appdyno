@@ -73,7 +73,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     const s = await home();
     expect(s.foreground).toBe(APP);
     expect(labels(s)).toEqual(
-      expect.arrayContaining(['appdyno fixture', 'FORM', 'LISTE', 'COMPOSE']),
+      expect.arrayContaining(['appdyno fixture', 'FORM', 'LIST', 'COMPOSE']),
     );
     expect(s.tree.truncated).toBe(false);
     expect(s.window).toEqual({ w: d.hello!.screen.w, h: d.hello!.screen.h });
@@ -82,7 +82,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
   it('taps into another screen and settles there in one call', async () => {
     const s = await open('FORM');
     expect(s.settle!.settled).toBe(true);
-    expect(labels(s)).toContain('Bilgilerinizi girin');
+    expect(labels(s)).toContain('Enter your details');
   });
 
   it('an unchanged screen settles after one quiet window', async () => {
@@ -133,9 +133,9 @@ describe.skipIf(!serial)('android agent on a device', () => {
     const pw = after.list.find((e) => e.id === 'password_input')!;
     // a password field reports no readable text: typed, no verdict
     expect((await d.typeText('Gizli123!', { at: pw, replace: true })).verified).toBeUndefined();
-    const submit = (await screen()).list.find((e) => e.label === 'GÖNDER')!;
+    const submit = (await screen()).list.find((e) => e.label === 'SEND')!;
     const done = await d.tap(submit, { settle: SETTLE, read: 'tree' });
-    expect(done.tree!.nodes.some((n) => n.t === 'Gönderildi: Çağrı İşgüzar öğün')).toBe(true);
+    expect(done.tree!.nodes.some((n) => n.t === 'Sent: Çağrı İşgüzar öğün')).toBe(true);
   });
 
   // a loaded Mac starves the emulator: an A/B run's device stopped for 3.5 s while a phone number was
@@ -182,8 +182,8 @@ describe.skipIf(!serial)('android agent on a device', () => {
   // runs 3b9df4d5 and 64985b2a: the focus was not found there and the number was typed into nothing)
   it('types into the field a sheet focuses as it opens, without a tap (3 of 3)', async () => {
     for (const n of ['5321234561', '5321234562', '5321234563']) {
-      const s = await open('DIYALOG');
-      await d.tap(find(s, /ALANLI PENCERE|Alanlı pencere/)!, { settle: SETTLE });
+      const s = await open('DIALOG');
+      await d.tap(find(s, /DIALOG WITH FIELD|Dialog with field/)!, { settle: SETTLE });
       const r = await d.typeText(n, { replace: true, settle: false });
       const field = (await d.tree()).nodes.find((x) => x.id?.endsWith(':id/sheet_input'));
       expect({ text: field?.t, verified: r.verified }).toEqual({ text: n, verified: true });
@@ -193,8 +193,8 @@ describe.skipIf(!serial)('android agent on a device', () => {
   // the app (or a starved emulator) answers nothing for 6 s before its sheet's field takes the focus: the
   // wait for the focus must not run out meanwhile (A/B runs 3b9df4d5, 64985b2a: a 4 s stall ended it)
   it('types into a sheet whose field takes the focus after the app stalled for 6 s', async () => {
-    const s = await open('DIYALOG');
-    await d.tap(find(s, /MEŞGUL PENCERE|Meşgul pencere/)!, { settle: false });
+    const s = await open('DIALOG');
+    await d.tap(find(s, /BUSY DIALOG|Busy dialog/)!, { settle: false });
     const r = await d.typeText('5321234569', { replace: true, settle: false });
     const field = (await d.tree()).nodes.find((x) => x.id?.endsWith(':id/busy_input'));
     expect({ text: field?.t, verified: r.verified }).toEqual({
@@ -213,7 +213,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     const e = await d.tap(form, { settle: SETTLE, before: s.hash }).catch((x: unknown) => x);
     expect((e as DeviceError).code).toBe('STALE');
     // nothing was tapped: still the list
-    expect(labels(await screen())).not.toContain('Bilgilerinizi girin');
+    expect(labels(await screen())).not.toContain('Enter your details');
     await home();
   });
 
@@ -225,7 +225,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
   });
 
   it('waits for a field that takes focus late (a slow phone)', async () => {
-    const s = await open('YAVAŞ ODAK');
+    const s = await open('SLOW FOCUS');
     const field = s.list.find((e) => e.id === 'slow_input')!;
     const r = await d.typeText('482913', { at: field, replace: true, settle: false });
     expect(r.verified).toBe(true);
@@ -233,27 +233,27 @@ describe.skipIf(!serial)('android agent on a device', () => {
   });
 
   it('gives identical buttons their row and keeps the ref on the same row after a scroll', async () => {
-    const s = await open('LISTE');
-    const add = s.list.filter((e) => e.label === 'EKLE');
+    const s = await open('LIST');
+    const add = s.list.filter((e) => e.label === 'ADD');
     expect(add.length).toBeGreaterThan(5);
-    const third = add.find((e) => e.refContext === 'Ürün 3')!;
+    const third = add.find((e) => e.refContext === 'Product 3')!;
     expect(third).toBeDefined();
-    const fifth = add.find((e) => e.refContext === 'Ürün 5')!;
+    const fifth = add.find((e) => e.refContext === 'Product 5')!;
     const r = await d.tap(third, { settle: SETTLE, read: 'tree' });
-    expect(r.tree!.nodes.filter((n) => n.t === 'Sepette: 1')).toHaveLength(1);
+    expect(r.tree!.nodes.filter((n) => n.t === 'In basket: 1')).toHaveLength(1);
     const w = d.hello!.screen;
     await d.swipe({ x: w.w / 2, y: w.h * 0.6 }, { x: w.w / 2, y: w.h * 0.45 }, 400, {
       settle: SETTLE,
       read: 'none',
     });
     const moved = await screen();
-    const fifthAfter = moved.list.find((e) => e.label === 'EKLE' && e.refContext === 'Ürün 5');
+    const fifthAfter = moved.list.find((e) => e.label === 'ADD' && e.refContext === 'Product 5');
     expect(fifthAfter?.ref).toBe(fifth.ref);
     expect(fifthAfter!.y).toBeLessThan(fifth.y);
   });
 
   it('sends a node off the screen with an empty box, never a negative one', async () => {
-    await open('LISTE');
+    await open('LIST');
     const nodes = (await d.tree()).nodes;
     // the list runs on below the screen: its rows there come clipped to the screen's edge
     expect(nodes.length).toBeGreaterThan(20);
@@ -261,17 +261,19 @@ describe.skipIf(!serial)('android agent on a device', () => {
   });
 
   it('reads a dialog and answers it', async () => {
-    const s = await open('DIYALOG');
-    const r = await d.tap(find(s, 'DİYALOĞU AÇ') ?? find(s, /DIYALO/)!, {
+    const s = await open('DIALOG');
+    const r = await d.tap(find(s, 'OPEN DIALOG') ?? find(s, /DIYALO/)!, {
       settle: SETTLE,
       read: 'tree',
     });
     expect(r.settle!.settled).toBe(true);
     const dlg = await screen();
-    expect(labels(dlg)).toEqual(expect.arrayContaining(['Emin misiniz?', 'Sepet boşaltılacak.']));
+    expect(labels(dlg)).toEqual(
+      expect.arrayContaining(['Emin misiniz?', 'The basket will be emptied.']),
+    );
     const ok = find(dlg, /^TAMAM$/i)!;
     await d.tap(ok, { settle: SETTLE, read: 'none' });
-    expect(labels(await screen())).toContain('Onaylandı');
+    expect(labels(await screen())).toContain('Confirmed');
   });
 
   it('types a code into one-character fields key by key (the app moves from box to box)', async () => {
@@ -279,10 +281,10 @@ describe.skipIf(!serial)('android agent on a device', () => {
       'am start -W -a android.intent.action.VIEW -d gdfixture://open/code dev.appdyno.fixture',
     );
     await new Promise((r) => setTimeout(r, 1_000));
-    const first = (await screen()).list.find((e) => e.label === 'Kod')!;
+    const first = (await screen()).list.find((e) => e.label === 'Code')!;
     const r = await d.typeText('9643', { at: first });
     expect(r.mode).toBe('keys');
-    expect(labels(await screen())).toContain('Kod: 9643');
+    expect(labels(await screen())).toContain('Code: 9643');
   });
 
   it('reads Compose test tags as ids and types into a Compose field', async () => {
@@ -290,7 +292,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(
       s.list.find((e) => e.id === 'compose_title')?.label,
       JSON.stringify({ settle: s.settle, labels: labels(s).slice(0, 8) }),
-    ).toBe('Compose ekranı');
+    ).toBe('Compose screen');
     const input = s.list.find((e) => e.id === 'compose_input')!;
     expect(input).toBeDefined();
     expect((await d.typeText('Kapı zili çalışmıyor', { at: input, replace: true })).verified).toBe(
@@ -299,12 +301,12 @@ describe.skipIf(!serial)('android agent on a device', () => {
     const save = (await screen()).list.find((e) => e.id === 'compose_save')!;
     await d.tap(save, { settle: SETTLE, read: 'none' });
     expect((await screen()).list.find((e) => e.id === 'compose_result')?.label).toBe(
-      'Kaydedildi: Kapı zili çalışmıyor',
+      'Saved: Kapı zili çalışmıyor',
     );
   });
 
   it('settles on a screen whose text keeps ticking', async () => {
-    const opened = await open('SAYAÇ');
+    const opened = await open('TICKER');
     expect(opened.settle!.settled).toBe(true);
     // the tap below is measured once the activity is in: a loaded emulator ends its slide-in after the open
     // tap's settle, and a tap during it counts that motion (seen: DUR not there yet, 10 reads). The ticking
@@ -313,9 +315,9 @@ describe.skipIf(!serial)('android agent on a device', () => {
     for (let seen = 0, i = 0; seen < 3 && i < 40; i++) {
       await new Promise((r) => setTimeout(r, 200));
       s = await screen();
-      seen = find(s, 'DUR') ? seen + 1 : 0;
+      seen = find(s, 'STOP') ? seen + 1 : 0;
     }
-    const stop = s.list.find((e) => e.label === 'DUR')!;
+    const stop = s.list.find((e) => e.label === 'STOP')!;
     const r = await d.tap(stop, { settle: SETTLE, read: 'none', before: s.hash });
     // the ticking text never held it to the cap: settled within one window of reads
     expect(r.settle!.settled).toBe(true);
@@ -323,19 +325,19 @@ describe.skipIf(!serial)('android agent on a device', () => {
   });
 
   it('waits for content that arrives after a spinner', async () => {
-    const s = await open('GECIKMELI');
+    const s = await open('DELAYED');
     const load = s.list.find((e) => e.label === 'YÜKLE')!;
     const r = await d.tap(load, { settle: SETTLE, read: 'tree', before: s.hash });
     expect(r.settle!.settled).toBe(true);
-    expect(r.tree!.nodes.some((n) => n.t === 'SONUÇ 1' || n.t === 'Sonuç 1')).toBe(true);
+    expect(r.tree!.nodes.some((n) => n.t === 'RESULT 1' || n.t === 'Result 1')).toBe(true);
   });
 
   it('finds the system permission prompt and answers it', async () => {
     await d.shell(
       `pm revoke ${APP} android.permission.ACCESS_FINE_LOCATION; pm revoke ${APP} android.permission.ACCESS_COARSE_LOCATION`,
     );
-    const s = await open('İZIN');
-    await d.tap(find(s, 'KONUM İZNİ İSTE') ?? find(s, /KONUM/)!, { settle: SETTLE, read: 'none' });
+    const s = await open('PERMISSION');
+    await d.tap(find(s, 'REQUEST LOCATION') ?? find(s, /KONUM/)!, { settle: SETTLE, read: 'none' });
     let prompt: Screen | undefined;
     for (let i = 0; i < 20 && !prompt; i++) {
       const now = await screen();
@@ -357,7 +359,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     let found = false;
     for (let i = 0; i < 25 && !found; i++) {
       const s = await screen();
-      found = s.tree.nodes.some((n) => n.t === 'Web içerik' || n.d === 'Web içerik');
+      found = s.tree.nodes.some((n) => n.t === 'Web content' || n.d === 'Web content');
       if (!found) await new Promise((r) => setTimeout(r, 200));
     }
     expect(found).toBe(true);
@@ -404,7 +406,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     await d.openUrl('gdfixture://open/form', APP);
     let ok = false;
     for (let i = 0; i < 15 && !ok; i++) {
-      ok = labels(await screen()).includes('Bilgilerinizi girin');
+      ok = labels(await screen()).includes('Enter your details');
       if (!ok) await new Promise((r) => setTimeout(r, 200));
     }
     expect(ok).toBe(true);
@@ -477,7 +479,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('sees the app leave the foreground when it crashes, and starts it again', async () => {
     const s = await home();
-    await d.tap(find(s, 'ÇÖKERT')!, { settle: SETTLE, read: 'none' });
+    await d.tap(find(s, 'CRASH')!, { settle: SETTLE, read: 'none' });
     let fg: string | undefined = APP;
     for (let i = 0; i < 20 && fg === APP; i++) {
       await new Promise((r) => setTimeout(r, 200));
@@ -572,7 +574,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('stays answerable while the app hangs its main thread', async () => {
     const s = await home();
-    await d.tap(find(s, 'DONMUŞ')!, { settle: false });
+    await d.tap(find(s, 'FREEZE')!, { settle: false });
     const t = Date.now();
     const r = await d.tree().then(
       (x) => ({ ok: true as const, truncated: x.truncated }),
