@@ -17,7 +17,7 @@ const d = new AndroidDevice(serial, adb);
 await d.open();
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 const read = async () => buildScreen(await d.tree(), { platform: 'android', appId: APP });
-await adb.exec(serial, `am start -W -a android.intent.action.VIEW -d gdfixture://open/late ${APP}`);
+await adb.exec(serial, `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/late ${APP}`);
 await pause(1_500);
 let late = await read();
 const find = (s, label) =>

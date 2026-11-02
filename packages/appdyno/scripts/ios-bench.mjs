@@ -55,7 +55,7 @@ try {
   await d.open();
   await home();
   await measure('read.home', n, () => d.tree());
-  await d.openUrl('gdfixture://open/list', APP);
+  await d.openUrl('appdyno-fixture://open/list', APP);
   await pause(800);
   await measure('read.list', n, () => d.tree());
   await home();
@@ -86,7 +86,7 @@ try {
   );
   // the first read after the app starts
   await measure('read.afterLaunch', 10, () => d.tree(), home);
-  await d.openUrl('gdfixture://open/form', APP);
+  await d.openUrl('appdyno-fixture://open/form', APP);
   await pause(800);
   const field = await find((e) => e.id === 'name_input');
   await measure('type.20tr', n, async () => {

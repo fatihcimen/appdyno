@@ -27,7 +27,7 @@ try {
   for (const quietMs of windows) {
     const settle = { quietMs, maxMs: 3_000 };
     const r = { late: {}, navigate: { missed: 0, ms: [] } };
-    await d.openUrl('gdfixture://open/late', APP);
+    await d.openUrl('appdyno-fixture://open/late', APP);
     await new Promise((x) => setTimeout(x, 800));
     for (const delay of [0, 100, 300, 450, 700]) {
       let missed = 0;

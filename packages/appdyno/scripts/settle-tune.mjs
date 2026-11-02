@@ -20,7 +20,7 @@ const read = async () => buildScreen(await d.tree(), { platform: 'android', appI
 const open = async (screen) => {
   await adb.exec(
     serial,
-    `am start -W -a android.intent.action.VIEW -d gdfixture://open/${screen} ${APP}`,
+    `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/${screen} ${APP}`,
   );
   await pause(1_200);
   return read();

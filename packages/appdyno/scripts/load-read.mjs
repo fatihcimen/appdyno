@@ -15,7 +15,7 @@ const d = new AndroidDevice(serial, adb);
 await d.open();
 await adb.exec(
   serial,
-  `am start -W -a android.intent.action.VIEW -d gdfixture://open/showcase ${APP}`,
+  `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/showcase ${APP}`,
 );
 await new Promise((r) => setTimeout(r, 1_500));
 // two busy device cores (the emulator has four), stopped at the end; detached like the agent (a background

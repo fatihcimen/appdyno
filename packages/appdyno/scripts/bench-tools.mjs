@@ -73,7 +73,7 @@ await measure(
     await pause(800);
   },
 );
-await adb.exec(serial, `am start -W -a android.intent.action.VIEW -d gdfixture://open/form ${APP}`);
+await adb.exec(serial, `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/form ${APP}`);
 await pause(1_200);
 screen = await call('screen');
 const field = ref(screen, 'Your name');

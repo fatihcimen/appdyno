@@ -29,7 +29,7 @@ const timed = async (k, fn) => {
     failures.push(`${k}: ${e.code ?? ''} ${e.message}`);
   }
 };
-await adb.exec(serial, `am start -W -a android.intent.action.VIEW -d gdfixture://open/form ${APP}`);
+await adb.exec(serial, `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/form ${APP}`);
 const start = Date.now();
 while (Date.now() < end) {
   const s = await d.read(APP).catch(() => undefined);

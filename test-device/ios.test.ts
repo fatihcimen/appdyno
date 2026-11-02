@@ -102,7 +102,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
 
   it("leaves a scroll view's bars out of the screen, and the app's name too", async () => {
     await home();
-    await d.openUrl('gdfixture://open/list', APP);
+    await d.openUrl('appdyno-fixture://open/list', APP);
     const t = await d.tree();
     const shown = t.nodes.filter((n) => n.f & 1);
     // the list's scroll bars are elements to XCUI: they stay in the tree, never shown
@@ -124,7 +124,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
 
   it('catches a reaction 300 ms after the tap, with and without the screen before it (10 of 10)', async () => {
     await home();
-    await d.openUrl('gdfixture://open/late', APP);
+    await d.openUrl('appdyno-fixture://open/late', APP);
     for (const withBefore of [true, false]) {
       let caught = 0;
       for (let i = 0; i < 10; i++) {
@@ -148,7 +148,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
   // start: a tap sent then is lost unless the runner waits for the animation (an A/B run lost one so)
   it('taps a button that is still sliding in, once (5 of 5)', async () => {
     await home();
-    await d.openUrl('gdfixture://open/slide', APP);
+    await d.openUrl('appdyno-fixture://open/slide', APP);
     await new Promise((r) => setTimeout(r, 1_000));
     const show = byId(await d.read(APP), 'slide_show')!;
     const waits: number[] = [];
@@ -179,7 +179,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
   });
 
   it('opens a deep link into the app', async () => {
-    await d.openUrl('gdfixture://open/late', APP);
+    await d.openUrl('appdyno-fixture://open/late', APP);
     await new Promise((r) => setTimeout(r, 1_000));
     expect(labels(await d.read(APP))).toContain('Clear');
   });
@@ -189,7 +189,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
   it('types into a code entry no element of which reports the focus', async () => {
     await d.terminate(APP);
     await d.launch(APP);
-    await d.openUrl('gdfixture://open/code', APP);
+    await d.openUrl('appdyno-fixture://open/code', APP);
     await new Promise((r) => setTimeout(r, 1_000));
     // full, the entry gives up the focus at once: the runner must not read a field that is gone
     const r = await d.typeText('123456', { settle: SETTLE, submit: true });
@@ -203,7 +203,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
   it('runs the platform accessibility audit on the accessibility fixture', async () => {
     await d.terminate(APP);
     await d.launch(APP);
-    await d.openUrl('gdfixture://open/a11y', APP);
+    await d.openUrl('appdyno-fixture://open/a11y', APP);
     await new Promise((r) => setTimeout(r, 1_000));
     expect(byId(await d.read(APP), 'a11y_ok')).toBeDefined();
     const r = await d.audit();

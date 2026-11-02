@@ -4,7 +4,7 @@ import SwiftUI
 import UIKit
 
 /// The iOS fixture: the same screens as the Android one, where the platform has them.
-/// `gdfixture://open/<screen>` opens a screen directly.
+/// `appdyno-fixture://open/<screen>` opens a screen directly.
 @main
 struct FixtureApp: App {
     @State private var path: [String] = []

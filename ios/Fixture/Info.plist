@@ -9,7 +9,7 @@
 			<string>dev.appdyno.fixture</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>gdfixture</string>
+				<string>appdyno-fixture</string>
 			</array>
 		</dict>
 	</array>

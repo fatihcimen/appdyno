@@ -12,7 +12,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="gdfixture" android:host="open" />
+                <data android:scheme="appdyno-fixture" android:host="open" />
             </intent-filter>
         </activity>
         <activity android:name=".FormActivity" android:windowSoftInputMode="adjustResize" />

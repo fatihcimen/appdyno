@@ -210,7 +210,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
   it('refuses a tap aimed at a screen another window has replaced since it was read', async () => {
     const s = await home();
     const form = find(s, 'FORM')!;
-    await d.openUrl('gdfixture://open/list', APP);
+    await d.openUrl('appdyno-fixture://open/list', APP);
     await new Promise((r) => setTimeout(r, 1_500));
     const e = await d.tap(form, { settle: SETTLE, before: s.hash }).catch((x: unknown) => x);
     expect((e as DeviceError).code).toBe('STALE');
@@ -280,7 +280,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('types a code into one-character fields key by key (the app moves from box to box)', async () => {
     await d.shell(
-      'am start -W -a android.intent.action.VIEW -d gdfixture://open/code dev.appdyno.fixture',
+      'am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/code dev.appdyno.fixture',
     );
     await new Promise((r) => setTimeout(r, 1_000));
     const first = (await screen()).list.find((e) => e.label === 'Code')!;
@@ -405,7 +405,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
   });
 
   it('opens a deep link in the app', async () => {
-    await d.openUrl('gdfixture://open/form', APP);
+    await d.openUrl('appdyno-fixture://open/form', APP);
     let ok = false;
     for (let i = 0; i < 15 && !ok; i++) {
       ok = labels(await screen()).includes('Enter your details');
@@ -416,7 +416,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('audits the accessibility fixture: each known problem, nothing on the clean button', async () => {
     await home();
-    await d.openUrl('gdfixture://open/a11y', APP);
+    await d.openUrl('appdyno-fixture://open/a11y', APP);
     // the audit samples a still screen: the tree shows the screen while its window still slides in
     // (an earlier test's screen changes when that ends), and a screenshot taken a moment after the
     // read has the icons elsewhere than the read's boxes. Its Compose view starts the first time on

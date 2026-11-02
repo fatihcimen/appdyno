@@ -25,7 +25,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
   const open = async (screen: string) => {
     await d.terminate(APP);
     await d.launch(APP);
-    await d.openUrl(`gdfixture://open/${screen}`, APP);
+    await d.openUrl(`appdyno-fixture://open/${screen}`, APP);
     await pause(800);
     return buildScreen(await d.tree(), { platform: 'ios', appId: APP });
   };

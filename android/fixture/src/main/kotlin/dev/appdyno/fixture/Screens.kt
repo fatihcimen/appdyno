@@ -82,7 +82,7 @@ private val SCREENS = linkedMapOf(
     "showcase" to ("Showcase" to ShowcaseActivity::class.java),
 )
 
-/** Screens opened by link only (gdfixture://open/<key>): measurement fixtures. */
+/** Screens opened by link only (appdyno-fixture://open/<key>): measurement fixtures. */
 private val LINKED = mapOf(
     "frames" to FramesActivity::class.java,
     "memory" to MemoryActivity::class.java,
@@ -92,7 +92,7 @@ private val LINKED = mapOf(
     "a11y" to A11yActivity::class.java,
 )
 
-/** The home screen; `gdfixture://open/<screen>` opens a screen directly. */
+/** The home screen; `appdyno-fixture://open/<screen>` opens a screen directly. */
 class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
