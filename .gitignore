@@ -8,6 +8,7 @@ android/local.properties
 .bench/
 .compare/
 packages/*/agents/
+*.tgz
 .ci/
 ios/*/.build/
 ios/.derived/
