@@ -1,5 +1,6 @@
+import { spawn, spawnSync } from 'node:child_process';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { IosSimulatorDevice, Simctl, buildScreen } from 'appdyno';
+import { IosSimulatorDevice, Simctl, buildScreen, parseSampleTop } from 'appdyno';
 import { mkdtempSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -13,6 +14,23 @@ const udid = process.env.APPDYNO_IOS_UDID;
 const APP = 'dev.appdyno.fixture';
 const PRODUCTS = join(import.meta.dirname, '../ios/.derived/Build/Products/Debug-iphonesimulator');
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * macOS 27's `sample` leaves out a thread running user code (measured: a plain busy loop is not in its
+ * report), which is what a profile through it is for.
+ */
+const sampleSeesRunningThreads = () => {
+  const busy = spawn(process.execPath, [
+    '-e',
+    'for (const e = Date.now() + 15e3; Date.now() < e; );',
+  ]);
+  try {
+    const { stdout } = spawnSync('sample', [String(busy.pid), '1'], { encoding: 'utf8' });
+    return parseSampleTop(stdout).samples > 100;
+  } finally {
+    busy.kill();
+  }
+};
 
 describe.skipIf(!udid)('ios simulator perf accuracy', () => {
   let d: IosSimulatorDevice;
@@ -58,7 +76,8 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
     await pause(1_500);
   });
 
-  it('CPU profile: the busy loop is the top function', async () => {
+  it('CPU profile: the busy loop is the top function', async (t) => {
+    if (!sampleSeesRunningThreads()) return t.skip();
     const s = await open('cpu');
     const prof = (
       await d.iosPerf.cpuProfile(APP, 2_000, async () => {
