@@ -521,6 +521,78 @@ describe('iOS simulators', () => {
     expect((await t.textOf('perf_heap')).text).toBe('emulator-5580 cannot measure a heap dump');
   });
 
+  describe('each measure in its own terms', () => {
+    const m = <T>(value: T) => ({ value, raw: 'raw', at: '2026-11-02T00:00:00.000Z' });
+    const onDevice = (measure: object) => {
+      const device = new FakeDevice();
+      Object.defineProperty(device, 'measure', { value: { virtual: true, ...measure } });
+      return connect({}, device);
+    };
+
+    it('a simulator: physical footprint, launch until the first read, a memory graph', async () => {
+      const t = await onDevice({
+        cpu: async () => m({ percent: 5, windowMs: 2_000 }),
+        memory: async () => m({ kb: 52_429, kind: 'footprint', peakKb: 62_464 }),
+        launch: async (_: string, o: { mode: 'cold' | 'warm' }) =>
+          m({
+            mode: o.mode,
+            samples: [{ totalMs: 100 }, { totalMs: 9_000 }, { totalMs: 8_000 }],
+            medianMs: 8_000,
+            until: 'the first screen is read',
+          }),
+        heap: async (_: string, dir: string) =>
+          m({
+            file: `${dir}/x.memgraph`,
+            bytes: 1_048_576,
+            leaks: 3,
+            leakedBytes: 192,
+            kind: 'memgraph',
+          }),
+      });
+      const snap = (await t.textOf('perf_snapshot')).text.split('\n');
+      expect(snap.slice(1, -1)).toEqual([
+        'CPU: 5% (of one core, 2000 ms)',
+        'memory: physical footprint 51.2 MB (peak 61.0 MB)',
+        'no frame measure on a simulator',
+      ]);
+      const launch = (await t.textOf('perf_launch')).text.split('\n');
+      expect(launch.slice(1, -1)).toEqual([
+        'cold launch (until the first screen is read): 100 ms, 9000 ms, 8000 ms',
+        'median: 8000 ms',
+      ]);
+      expect((await t.textOf('perf_heap')).text).toMatch(
+        /^measurement pm-\w+\nmemory graph \(Xcode\): .*x\.memgraph \(1\.0 MB\); 3 leaks, 192 bytes$/,
+      );
+      expect((await t.textOf('perf_scroll')).text).toBe('emulator-5580 cannot measure frames');
+      expect((await t.textOf('perf_trace')).text).toBe(
+        'emulator-5580 cannot measure a frame trace',
+      );
+    });
+
+    it('a phone: animation hitches and nothing else yet', async () => {
+      const t = await onDevice({
+        frameTrace: async () =>
+          m({
+            kind: 'hitches',
+            durationMs: 5_000,
+            frames: 300,
+            hitches: 2,
+            hitchMs: 30,
+            worstMs: 20,
+            hitchRatio: 6,
+            causes: { 'expensive commit': 2 },
+            tracePath: '/t/h.trace',
+          }),
+      });
+      expect((await t.textOf('perf_trace')).text.split('\n').slice(1)).toEqual([
+        '300 frames; 2 hitches of the app, 30 ms in all, worst 20 ms; hitch ratio 6 ms/s',
+        'likely causes: 2× expensive commit',
+        'trace (Instruments): /t/h.trace',
+      ]);
+      expect((await t.textOf('perf_snapshot')).text).toBe('emulator-5580 cannot measure CPU');
+    });
+  });
+
   it('brings a failure at open to the client with its cause and hint', async () => {
     const device = new FakeDevice();
     device.openError = new DeviceError(
