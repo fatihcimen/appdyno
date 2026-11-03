@@ -348,6 +348,8 @@ export type SettingName = (typeof SETTINGS)[number];
  * a per-app setting (Android's locale) is about.
  */
 export interface DeviceSettings {
+  /** Before a condition is written down and changed: whatever else holds it lets go, so that the old value read is the user's. */
+  willChange?(name: SettingName): Promise<void>;
   get(name: SettingName, app?: string): Promise<string>;
   set(name: SettingName, value: string, app?: string): Promise<void>;
   push(app: string | undefined, title: string, body: string): Promise<void>;

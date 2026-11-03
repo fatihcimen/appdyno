@@ -50,6 +50,7 @@ export async function setCondition(s: Session, name: SettingName, value: string,
   const changes = readChanges(serial);
   const first = !changes[name];
   if (first) {
+    await settings.willChange?.(name);
     changes[name] = { was: await settings.get(name, app), ...(app && { app }) };
     writeChanges(serial, changes);
   }
@@ -81,7 +82,8 @@ export async function restoreConditions(s: Session) {
   const changes = readChanges(serial);
   const restored: string[] = [];
   const failed: string[] = [];
-  for (const [name, c] of Object.entries(changes)) {
+  // the newest first: two names can hold one thing (Android's animations and reduce_motion), and the older holds the user's value
+  for (const [name, c] of Object.entries(changes).reverse()) {
     try {
       await s.device.settings!.set(name as SettingName, c.was, c.app);
       delete changes[name];

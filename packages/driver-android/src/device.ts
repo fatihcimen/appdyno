@@ -72,7 +72,7 @@ export class AndroidDevice implements Device {
     assertSerial(serial);
     this.launcher = new AndroidAgentLauncher(adb, serial, takeover);
     this.apps = new AndroidApps(adb, serial);
-    this.settings = new AndroidSettings(adb, serial);
+    this.settings = new AndroidSettings(adb, serial, () => this.releaseAnimations());
     this.recorder = new AndroidRecorder(adb, serial);
     this.network = new AndroidNetwork(adb, serial);
     this.web = new AndroidWeb(adb, serial);
@@ -463,12 +463,16 @@ export class AndroidDevice implements Device {
    * and the transition an answer can come before has ended (its frames are not the app's).
    */
   async readyToMeasure() {
-    if (this.animations === 'off') {
-      this.animations = 'on';
-      if (this.rpc && !this.rpc.closed)
-        await this.call('animations.set', { off: false }, TIMEOUTS.action);
-    }
+    await this.releaseAnimations();
     await this.call('rest.wait', {}, TIMEOUTS.action + 5_000);
+  }
+
+  /** The session's animations-off option ends here, for the rest of the session. */
+  private async releaseAnimations() {
+    if (this.animations !== 'off') return;
+    this.animations = 'on';
+    if (this.rpc && !this.rpc.closed)
+      await this.call('animations.set', { off: false }, TIMEOUTS.action);
   }
 
   /** The app's and the device's performance (frames, memory, CPU, launch, device state). */

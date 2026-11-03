@@ -10,6 +10,7 @@ import {
   AndroidEmulators,
   androidProvider,
   appleProvider,
+  Devicectl,
   Simctl,
 } from 'appdyno';
 
@@ -65,6 +66,8 @@ function shared(
     delayed: { start?: string; shows: string };
     /** A step that goes back a screen. */
     back: Record<string, unknown>;
+    /** A phone's runner cannot reach the clipboard: iOS would ask the user. */
+    noClipboard?: boolean;
   },
 ) {
   const call = (n: string, a?: Record<string, unknown>) => get().call(n, a);
@@ -202,13 +205,16 @@ function shared(
     ok(r);
   });
 
-  it('reads the clipboard it set, then types without asking the user about it', async () => {
-    await open('form');
-    ok(await call('clipboard', { text: 'pano içeriği' }));
-    expect(ok(await call('clipboard')).text).toBe('pano içeriği');
-    ok(await call('type_text', { text: 'x', selector: names.field }));
-    ok(await call('assert', { ...names.field, check: 'text', equals: 'x' }));
-  });
+  it.skipIf(names.noClipboard)(
+    'reads the clipboard it set, then types without asking the user about it',
+    async () => {
+      await open('form');
+      ok(await call('clipboard', { text: 'pano içeriği' }));
+      expect(ok(await call('clipboard')).text).toBe('pano içeriği');
+      ok(await call('type_text', { text: 'x', selector: names.field }));
+      ok(await call('assert', { ...names.field, check: 'text', equals: 'x' }));
+    },
+  );
 
   it('leaves the app’s own dialog alone', async () => {
     await open('dialog');
@@ -309,14 +315,17 @@ describe.skipIf(!android)('driving on Android', () => {
   });
 
   it('presses volume, lock and power; the next read wakes the screen', async () => {
+    await open('home');
     const volume = async () => (await sh('dumpsys audio')).match(/Current: [^\n]*/g)?.join();
     const before = await volume();
     expect(before).toBeDefined();
-    // the first press only brings up the volume panel
-    ok(await h.call('press_key', { key: 'volume_up' }));
-    ok(await h.call('press_key', { key: 'volume_up' }));
-    await expect.poll(volume, { timeout: 5_000 }).not.toBe(before);
+    // presses are ignored until the volume panel shows, which can take more than one
+    let presses = 0;
+    while ((await volume()) === before && presses++ < 6)
+      ok(await h.call('press_key', { key: 'volume_up' }));
+    expect(await volume()).not.toBe(before);
     ok(await h.call('press_key', { key: 'volume_down' }));
+    await expect.poll(volume, { timeout: 5_000 }).toBe(before);
     ok(await h.call('press_key', { key: 'lock' }));
     await expect
       .poll(async () => /mWakefulness=(\w+)/.exec(await sh('dumpsys power'))?.[1])
@@ -387,6 +396,46 @@ describe.skipIf(!android)('driving on Android', () => {
     expect(await get(`cmd locale get-app-locales ${APP}`)).not.toContain('tr-TR');
     expect(ok(await h.call('device_setting', { name: 'restore' })).text).toContain('nothing');
   });
+
+  it('has one owner for the animations: the session option gives way to a setting', async () => {
+    const scales = () =>
+      sh(
+        'settings get global window_animation_scale; settings get global transition_animation_scale; settings get global animator_duration_scale',
+      );
+    const before = await scales();
+    const session = () => {
+      const ctx = new ServerContext(DEFAULT_POLICY, [androidProvider(adb, { animations: 'off' })], {
+        device: android!,
+        app: APP,
+        share: true,
+      });
+      const ops = opsFor(ctx);
+      const set = async (args: Record<string, unknown>) => {
+        const op = ops.device_setting as Op;
+        return op.handler(op.input.parse(args) as Record<string, unknown>);
+      };
+      return { ctx, set };
+    };
+    // the option, then a setting: the setting's old value is the user's, not the option's zeros
+    const a = session();
+    await a.ctx.use(android!);
+    expect((await scales()).replace(/\s+/g, ' ').trim()).toBe('0 0 0');
+    await a.set({ name: 'animations', value: 'on' });
+    expect((await scales()).replace(/\s+/g, ' ').trim()).toBe('1 1 1');
+    await a.ctx.end();
+    a.ctx.close();
+    await expect.poll(scales, { timeout: 15_000, interval: 500 }).toBe(before);
+
+    // a setting, then a session with the option that dies and comes back: as the user had them, whichever came last
+    ok(await h.call('device_setting', { name: 'animations', value: 'off' }));
+    const b = session();
+    await b.ctx.use(android!);
+    await b.set({ name: 'restore' });
+    await b.ctx.end();
+    b.ctx.close();
+    ok(await h.call('device_setting', { name: 'restore' }));
+    await expect.poll(scales, { timeout: 15_000, interval: 500 }).toBe(before);
+  }, 120_000);
 
   it('posts a notification, and says biometrics are not here', async () => {
     ok(await h.call('device_setting', { name: 'push', value: 'merhaba', title: 'appdyno' }));
@@ -555,6 +604,120 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     ok(await h.call('device_setting', { name: 'push', value: 'merhaba', title: 'appdyno' }));
     ok(await h.call('device_setting', { name: 'biometric', value: 'match' }));
   });
+});
+
+const iphone = process.env.APPDYNO_IPHONE_UDID;
+const iphoneFixture = process.env.APPDYNO_IPHONE_FIXTURE_APP;
+describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
+  let h: ReturnType<typeof harness>;
+  const open = async (screen: string) => {
+    await h.call('terminate_app');
+    ok(await h.call('launch_app'));
+    if (screen !== 'home')
+      ok(await h.call('open_link', { url: `appdyno-fixture://open/${screen}` }));
+  };
+
+  beforeAll(async () => {
+    await new Devicectl(iphone!).install(iphoneFixture!);
+    h = harness(iphone!, appleProvider());
+    ok(await h.call('use_device', { device: iphone!, app: APP }));
+    ok(await h.call('launch_app'));
+  }, 300_000);
+  afterAll(async () => {
+    await h.ctx.end();
+    h.ctx.close();
+  }, 60_000);
+
+  shared(() => h, open, {
+    field: { id: 'name_input' },
+    row: (n) => `Product ${n}`,
+    delayed: { shows: 'Loaded' },
+    back: { action: 'tap', selector: { text: 'Back' } },
+    noClipboard: true,
+  });
+
+  it('lists apps and their state, launches with an environment, uninstalls and installs', async () => {
+    const mine = ok(await h.call('app', { action: 'list' }));
+    expect(mine.text).toContain(APP);
+    expect(ok(await h.call('app', { action: 'list', all: true })).text).toContain(
+      'com.apple.Preferences',
+    );
+    ok(
+      await h.call('app', { action: 'launch', args: ['-mode', 'test'], env: { FIXTURE_VAR: '1' } }),
+    );
+    expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('foreground');
+    ok(await h.call('terminate_app'));
+    expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');
+    ok(await h.call('app', { action: 'uninstall' }));
+    expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('not_installed');
+    ok(await h.call('app', { action: 'install', path: iphoneFixture! }));
+    expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');
+    expect((await h.call('app', { action: 'install', path: '/tmp/none.app' })).error).toBe(true);
+  }, 240_000);
+
+  it('says what an iPhone cannot do, and why', async () => {
+    for (const [action, why] of [
+      ['clear', /uninstall/],
+      ['grant', /alert/],
+      ['revoke', /alert/],
+    ] as const) {
+      const r = await h.call('app', { action, service: 'camera' });
+      expect(r.data.code, action).toBe('UNSUPPORTED');
+      expect(r.text).toMatch(why);
+    }
+    for (const name of ['animations', 'locale', 'network', 'proxy', 'battery']) {
+      const r = await h.call('device_setting', { name, value: name === 'battery' ? '50' : 'on' });
+      expect(r.data.code, name).toBe('UNSUPPORTED');
+    }
+    for (const [name, value] of [
+      ['push', 'x'],
+      ['biometric', 'match'],
+      ['fold', 'open'],
+      ['call', '5551234'],
+      ['sms', 'x'],
+    ] as const)
+      expect((await h.call('device_setting', { name, value })).data.code, name).toBe('UNSUPPORTED');
+  });
+
+  it('changes and restores dark mode, text size and reduce motion', async () => {
+    const read = async (name: string) =>
+      ok(await h.call('device_setting', { name })).data.value as string;
+    const before = {
+      dark: await read('dark_mode'),
+      size: await read('text_size'),
+      motion: await read('reduce_motion'),
+    };
+    expect(before.dark).toMatch(/^(light|dark)$/);
+    expect(before.motion).toMatch(/^(on|off)$/);
+    const other = before.dark === 'dark' ? 'off' : 'on';
+    ok(await h.call('device_setting', { name: 'dark_mode', value: other }));
+    expect(await read('dark_mode')).toBe(before.dark === 'dark' ? 'light' : 'dark');
+    const size = before.size === 'extra-large' ? 'large' : 'extra-large';
+    ok(await h.call('device_setting', { name: 'text_size', value: size }));
+    expect(await read('text_size')).toBe(size);
+    ok(
+      await h.call('device_setting', {
+        name: 'reduce_motion',
+        value: before.motion === 'on' ? 'off' : 'on',
+      }),
+    );
+    expect(await read('reduce_motion')).not.toBe(before.motion);
+    const restored = ok(await h.call('device_setting', { name: 'restore' }));
+    expect(restored.text).toContain('dark_mode');
+    expect(await read('dark_mode')).toBe(before.dark);
+    expect(await read('text_size')).toBe(before.size);
+    expect(await read('reduce_motion')).toBe(before.motion);
+  }, 120_000);
+
+  it('presses volume, then locks and comes back', async () => {
+    await open('home');
+    ok(await h.call('press_key', { key: 'volume_up' }));
+    ok(await h.call('press_key', { key: 'volume_down' }));
+    ok(await h.call('press_key', { key: 'lock', read: 'none' }));
+    // the next launch must find the phone usable again
+    await open('home');
+    ok(await h.call('assert', { text: 'appdyno fixture' }));
+  }, 120_000);
 });
 
 /** Last of all: it stops the emulator it names and starts its AVD again (read-only flags from the caller). */

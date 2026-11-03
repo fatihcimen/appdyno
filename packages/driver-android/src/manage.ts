@@ -123,6 +123,8 @@ export class AndroidSettings implements DeviceSettings {
   constructor(
     private readonly adb: Adb,
     private readonly serial: string,
+    /** The session's animations-off option lets go: the agent puts the scales back and holds nothing. */
+    private readonly releaseAnimations: () => Promise<void> = async () => undefined,
   ) {}
 
   private sh = (c: string) => this.adb.exec(this.serial, `${c} 2>&1`, { timeoutMs: TIMEOUTS.app });
@@ -137,15 +139,21 @@ export class AndroidSettings implements DeviceSettings {
     return out;
   }
 
+  async willChange(name: SettingName) {
+    if (name === 'animations' || name === 'reduce_motion') await this.releaseAnimations();
+  }
+
   /**
-   * The seam for the session's animations-off option: all three scales, on (1), off (0) or as they were
-   * (three values, `null` for a scale never set).
+   * All three scales, on (1), off (0) or as they were (three values, `null` for a scale never set). The agent's
+   * animations-off option gives way first: only one holds the scales' old value at a time, or each would
+   * restore over the other.
    */
   async setAnimations(value: string) {
     const v =
       value === 'on' ? ['1', '1', '1'] : value === 'off' ? ['0', '0', '0'] : value.split(',');
     if (v.length !== 3 || v.some((x) => x !== 'null' && !/^\d+(\.\d+)?$/.test(x)))
       throw new DeviceError('INVALID_ARGUMENT', `animations: on or off, not ${value}`);
+    await this.releaseAnimations();
     for (const [i, key] of ANIMATION_SCALES.entries())
       await this.sh(
         v[i] === 'null' ? `settings delete global ${key}` : `settings put global ${key} ${v[i]}`,
