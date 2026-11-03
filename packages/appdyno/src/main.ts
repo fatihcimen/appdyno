@@ -15,7 +15,10 @@ import { doctor } from './doctor.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
-const providers = () => [androidProvider(), appleProvider()];
+const providers = (animations?: 'on' | 'off') => [
+  androidProvider(undefined, { ...(animations && { animations }) }),
+  appleProvider(),
+];
 
 type Settings = {
   device?: string;
@@ -24,6 +27,7 @@ type Settings = {
   'allow-apps'?: string;
   'allow-urls'?: string;
   'no-home'?: boolean;
+  animations?: string;
 };
 
 /** The operations' context, from flags and the environment. */
@@ -47,7 +51,10 @@ function contextFrom(values: Settings) {
   };
   const device = values.device ?? env.APPDYNO_SERIAL;
   const app = values.app ?? env.APPDYNO_APP;
-  return new ServerContext(policy, providers(), {
+  const animations = values.animations ?? env.APPDYNO_ANIMATIONS;
+  if (animations !== undefined && animations !== 'on' && animations !== 'off')
+    throw new Error(`--animations takes on or off, not ${animations}`);
+  return new ServerContext(policy, providers(animations), {
     ...(device && { device }),
     ...(app && { app }),
   });
@@ -64,6 +71,7 @@ async function serveMcp(args: string[]) {
       'allow-apps': { type: 'string' },
       'allow-urls': { type: 'string' },
       'no-home': { type: 'boolean' },
+      animations: { type: 'string' },
       measurements: { type: 'string' },
     },
   });
