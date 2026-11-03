@@ -164,7 +164,7 @@ export class RpcClient {
         const code = (ERROR_CODES as readonly string[]).includes(e.data?.code ?? '')
           ? (e.data!.code as ErrorCode)
           : codeOfRpc(e.code);
-        p.reject(new DeviceError(code, `${p.method}: ${e.message}`, e.data?.hint));
+        p.reject(new DeviceError(code, e.message, e.data?.hint));
       } else {
         p.resolve({ result: msg.data.result, ...(p.binary && { binary: p.binary }) });
       }

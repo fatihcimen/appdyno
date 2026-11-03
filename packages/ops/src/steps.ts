@@ -2,6 +2,7 @@ import {
   attributesOf,
   nearest,
   pause,
+  keyboardOpen,
   reportProgress,
   selectIn,
   type ActOptions,
@@ -557,6 +558,12 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
           submit: st.submit ?? false,
           ...opts,
         });
+        // iOS takes keys with no field reporting the focus (a hidden field does not): with no keyboard, nothing took them
+        if (!at && r.verified === false && r.tree && !keyboardOpen(r.tree, s.device.platform))
+          throw new ToolError(
+            'no editable field has the focus: tap the field first (or give type_text a ref)',
+            'NO_FOCUS',
+          );
         // never the text itself (it may be a phone number or a code)
         return {
           r,

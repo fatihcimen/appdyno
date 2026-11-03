@@ -359,12 +359,16 @@ describe.skipIf(!android)('driving on Android', () => {
     const apk = join(ROOT, 'android/fixture/build/outputs/apk/debug/fixture-debug.apk');
     // a Xiaomi asks on its screen before an install, and says no by itself after 10 s
     const answerPrompt = async () => {
+      let tapped = false;
       for (let i = 0; i < 40 && !android!.startsWith('emulator-'); i++) {
         await new Promise((r) => setTimeout(r, 500));
         const prompt = await h.call('find', { text: 'Tercihimi hatırla' });
-        if (!(prompt.data.matches as unknown[] | undefined)?.length) continue;
+        if (!(prompt.data.matches as unknown[] | undefined)?.length) {
+          if (tapped) return;
+          continue;
+        }
         ok(await h.call('tap', { selector: { text: 'Yükle' }, read: 'none' }));
-        return;
+        tapped = true;
       }
     };
     expect(existsSync(apk)).toBe(true);

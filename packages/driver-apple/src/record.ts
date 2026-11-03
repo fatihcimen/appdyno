@@ -19,6 +19,11 @@ const START_MS = 15_000;
 /** Writing a long recording out takes a while. */
 const STOP_MS = 120_000;
 const logOf = (h: RecordingHandle) => String(h.log);
+/** What a tool says, without the dump it adds for its own log. */
+const firstLine = (text: string) =>
+  (text.trim().split('\n')[0] ?? '')
+    .replace(/^ERROR:\s*/, '')
+    .replace(/\s*\(com\.apple[^)]*\)/, '');
 
 /**
  * A tool on the Mac that records until SIGINT. It runs detached, as a command line's `stop` is another
@@ -82,7 +87,7 @@ class ToolRecorder implements ScreenRecorder {
         rmSync(log, { force: true });
         throw new DeviceError(
           'UNSUPPORTED',
-          `the recording did not start (${exited ?? `no word in ${START_MS} ms`}): ${text.trim().slice(0, 300)}`,
+          `the recording did not start (${exited ?? `no word in ${START_MS} ms`}): ${firstLine(text)}`,
           this.refusedHint,
         );
       }

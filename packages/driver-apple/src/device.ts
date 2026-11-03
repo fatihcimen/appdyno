@@ -520,6 +520,7 @@ const firstPoint = (a: ActParams) =>
 
 /** An iOS simulator: the simulator tool for apps, links and location; perf from the Mac. */
 const WAKE_GAP_MS = 400;
+const WAKE_PRESSES = 6;
 
 export class IosSimulatorDevice extends IosDevice {
   readonly virtual = true;
@@ -732,10 +733,25 @@ export class IosSimulatorDevice extends IosDevice {
   private async wake() {
     if (!this.locked) return;
     this.locked = false;
-    for (let i = 0; i < 2; i++) {
+    // the lock comes a moment after its press; a press during its animation does nothing; and a read under the lock
+    // holds the runner up for 15 s
+    for (let i = 0; i < WAKE_PRESSES && !(await this.lockedNow()); i++)
+      await pause(WAKE_GAP_MS / 2);
+    for (let i = 0; i < WAKE_PRESSES && (await this.lockedNow()); i++) {
       await super.key('home', { settle: false, read: 'none' });
       await pause(WAKE_GAP_MS);
     }
+  }
+
+  private async lockedNow() {
+    const state = await this.simctl.exec([
+      'spawn',
+      this.serial,
+      'notifyutil',
+      '-g',
+      'com.apple.springboard.lockstate',
+    ]);
+    return state.trim().endsWith(' 1');
   }
 
   /** From the Mac: the runner may read only what it wrote itself, or a system prompt holds it up. */
