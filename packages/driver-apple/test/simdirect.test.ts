@@ -1,22 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Tree } from '@appdyno/protocol';
 import { directChecks } from '../src/provider.js';
+import { DirectSim, settle } from '../src/simdirect.js';
 import {
   actionable,
-  DirectSim,
   layoutHash,
   learnCopies,
   onKeyboard,
   sameContent,
   sameLayout,
   sameTree,
-  settle,
   stickingOut,
   toTree,
-  touchEvents,
   withoutCopies,
   type RawAx,
-} from '../src/simdirect.js';
+} from '../src/simtree.js';
+import { touchEvents } from '../src/simtouch.js';
 import type { HelperProcess } from '../src/simhelper.js';
 
 const SCREEN = { w: 402, h: 874 };

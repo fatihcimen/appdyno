@@ -4,12 +4,8 @@ import type { Tree } from '@appdyno/protocol';
 import { join } from 'node:path';
 import { IosDevice } from '../packages/driver-apple/src/device.js';
 import { directChecks } from '../packages/driver-apple/src/provider.js';
-import {
-  DirectSim,
-  learnCopies,
-  sameTree,
-  withoutCopies,
-} from '../packages/driver-apple/src/simdirect.js';
+import { DirectSim } from '../packages/driver-apple/src/simdirect.js';
+import { learnCopies, sameTree, withoutCopies } from '../packages/driver-apple/src/simtree.js';
 import { startSimAx, type HelperProcess } from '../packages/driver-apple/src/simhelper.js';
 
 /**

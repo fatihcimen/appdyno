@@ -14,18 +14,17 @@ import { SimulatorNetwork } from './network.js';
 import { IosSimulatorPerf } from './perf.js';
 import { simulatorRecorder } from './record.js';
 import { SimulatorWeb } from './webinspector.js';
+import { DirectSim, settle } from './simdirect.js';
 import {
-  DirectSim,
-  withoutCopies,
-  learnCopies,
-  onKeyboard,
   actionable,
   hasAlert,
-  stickingOut,
-  settle,
+  learnCopies,
+  onKeyboard,
   sameContent,
   sameLayout,
-} from './simdirect.js';
+  stickingOut,
+  withoutCopies,
+} from './simtree.js';
 import { IosRunnerLauncher } from './runner.js';
 import { Simctl, xcodeEnv } from './simctl.js';
 import { type IosDeviceOps, IosDevice } from './device.js';
