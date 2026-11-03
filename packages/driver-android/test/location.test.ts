@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import {
+  clearStaleTestLocation,
+  clearTestLocation,
   locationScript,
   mockedProviders,
   parseLocationRun,
@@ -84,5 +86,43 @@ describe('test location bookkeeping', () => {
       pid: 4242,
       providers: ['gps', 'fused/plain'],
     });
+  });
+});
+
+describe('clearing the test location', () => {
+  const dumpsys = `    gps provider [mock]:
+      extra attribution tags={appdyno}
+`;
+  /** A device's shell with this marker file; what it was told to do comes back in `ran`. */
+  const shellWith = (marker: string) => {
+    const ran: string[] = [];
+    return {
+      ran,
+      shell: async (command: string) => {
+        ran.push(command);
+        if (command.startsWith('cat ')) return marker;
+        return command === 'dumpsys location' ? dumpsys : '';
+      },
+    };
+  };
+  const removal = (ran: string[]) => ran.filter((c) => c.includes('remove-test-provider'));
+  const GONE = 999_999;
+
+  it('removes what is still ours, and the marker', async () => {
+    const { ran, shell } = shellWith(`${process.pid} gps`);
+    await clearTestLocation(shell);
+    expect(removal(ran)[0]).toMatch(/remove-test-provider gps; rm -f /);
+  });
+
+  it('at a new agent, leaves the providers of a host that still runs', async () => {
+    const { ran, shell } = shellWith(`${process.pid} gps`);
+    await clearStaleTestLocation(shell);
+    expect(removal(ran)).toEqual([]);
+  });
+
+  it('at a new agent, removes the providers of a host that has gone', async () => {
+    const { ran, shell } = shellWith(`${GONE} gps`);
+    await clearStaleTestLocation(shell);
+    expect(removal(ran)).toHaveLength(1);
   });
 });

@@ -28,6 +28,12 @@ export const TOKEN = 'a'.repeat(32);
  * built in); a handler may return a promise to simulate a slow device.
  */
 export function fakeAgent(handlers: Record<string, FakeHandler> = {}) {
+  const { host, agent, seen } = fakeAgentStream(handlers);
+  return { rpc: new RpcClient(host), agent, seen };
+}
+
+/** As fakeAgent, with the host's end of the connection yet to be used; `hello` may be answered otherwise. */
+export function fakeAgentStream(handlers: Record<string, FakeHandler> = {}) {
   const [host, agent] = streamPair();
   const decoder = new FrameDecoder();
   const seen: { method: string; params: Record<string, unknown> }[] = [];
@@ -42,7 +48,7 @@ export function fakeAgent(handlers: Record<string, FakeHandler> = {}) {
         m.params.token === TOKEN
           ? { result: HELLO }
           : { error: 'POLICY_DENIED', message: 'bad token' };
-      const h = m.method === 'hello' ? hello : handlers[m.method];
+      const h = handlers[m.method] ?? (m.method === 'hello' ? hello : undefined);
       const r: FakeReply = h
         ? await h(m.params)
         : { error: 'INVALID_ARGUMENT', message: `no ${m.method}` };
@@ -65,7 +71,7 @@ export function fakeAgent(handlers: Record<string, FakeHandler> = {}) {
       }
     }
   });
-  return { rpc: new RpcClient(host), agent, seen };
+  return { host, agent, seen };
 }
 
 export const HELLO = {

@@ -90,6 +90,7 @@ export class AndroidDevice extends RpcDevice implements Device {
   dismissKeyboard = async () => {
     await this.key('back', { settle: false, read: 'none' });
   };
+
   protected async connect(): Promise<RpcClient> {
     const { rpc, hello, started } = await this.launcher.connect();
     this.rpc = rpc;

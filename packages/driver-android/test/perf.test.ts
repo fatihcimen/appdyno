@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseExitInfo } from '../src/crashes.js';
+import { AndroidPerf } from '../src/perf/index.js';
 import { assertReadOnlySql, queryTrace } from '../src/perf/perfetto.js';
 import {
   parseAmStart,
@@ -455,5 +456,34 @@ describe('profile and frame windows', () => {
       row(1800, 12),
     ];
     expect(worstWindow(rows)).toMatchObject({ slow: 3 });
+  });
+});
+
+describe('the measures of a device', () => {
+  const on = (serial: string, answer: string) =>
+    new AndroidPerf({
+      serial,
+      shell: async () => answer,
+      shellAlongside: async () => answer,
+      shellBuffer: async () => Buffer.from(answer),
+      pull: async () => undefined,
+      readyToMeasure: async () => undefined,
+      ensureAwake: async () => ({ woke: false, unlocked: false, locked: false }),
+    });
+
+  it('says an emulator is virtual and a phone is not', () => {
+    expect(on('emulator-5554', '').virtual).toBe(true);
+    expect(on('R58M', '').virtual).toBe(false);
+  });
+
+  it('reaches the device from a measure taken off the object, as the operations do', async () => {
+    const { pid } = on('R58M', '4242\n');
+    await expect(pid('dev.app')).resolves.toBe(4242);
+  });
+
+  it('refuses a measure of an app that is not running', async () => {
+    await expect(on('R58M', 'No process found').frames('dev.app')).rejects.toMatchObject({
+      code: 'APP_NOT_RUNNING',
+    });
   });
 });
