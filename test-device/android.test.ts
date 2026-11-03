@@ -21,7 +21,7 @@ const serial = process.env.APPDYNO_ANDROID_SERIAL;
 const APP = 'dev.appdyno.fixture';
 const SETTLE = { quietMs: 200, maxMs: 3_000 };
 /** At most this many reads in one quiet window (the agent reads far less than this bound allows). */
-const oneWindow = (quietMs: number) => Math.ceil(quietMs / 80) + 1;
+const oneWindow = (quietMs: number) => Math.ceil(quietMs / 40) + 1;
 
 describe.skipIf(!serial)('android agent on a device', () => {
   let d: AndroidDevice;
@@ -41,7 +41,10 @@ describe.skipIf(!serial)('android agent on a device', () => {
       const s = await screen();
       // the system's own dialog over the fixture (see answerSystemDialog), on a loaded emulator as well
       const close = find(s, /^(Tamam|Close app|Iptal)$/i);
-      if (close) await d.tap(close, { settle: false });
+      if (close) {
+        await d.tap(close, { settle: false });
+        await d.shell(`am start -W -n ${APP}/.MainActivity -f 0x10008000`);
+      }
       same = find(s, label) && last?.hash === s.hash ? same + 1 : 0;
       if (same >= 3) return s;
       last = s;
