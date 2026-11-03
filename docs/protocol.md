@@ -263,6 +263,49 @@ the read that woke it, 6 of 14 were lost, up to 1.5 s after and none at 4 s, wit
 the button did not show at all. Once the host waited for the focus to hold for 600 ms, 15 of 15 reached the app and every round had its button. These
 are small counts. A long measure wakes it too: a dark phone starts no app, and `am start` reads `UNKNOWN (0)`.
 
+### A phone's install prompts
+
+`app install` watches the phone's focused window with a plain `dumpsys` while `adb install` runs, and does nothing else until one of two windows has the
+focus, so where no prompt comes it starts no agent and adds no wait. Only during that call, on that device, and only for the app in the file: its names
+are read from the `.apk`, and a prompt that names another is left alone. With `--allow-apps` an install stays off altogether, as it always was. Neither option is a
+tool argument: only the person who runs the server sets them. Seen on a Xiaomi 25078RA3EY (HyperOS 3, Android 16, tr-TR, Play Store 53.8):
+
+| window                                                                      | what it is                         | what is read                                                                   | answer                                            |
+| --------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------- |
+| `com.miui.securitycenter/...permcenter.install.AdbInstallActivity`          | "install over USB?", no after 10 s | ids: `android:id/button2` accepts, `android:id/button1` denies and counts down | `button2`; never `do_not_ask_checkbox`            |
+| `com.android.vending/...protectdialogs.activity.PlayProtectDialogsActivity` | "send app for a security check?"   | no ids: "Don't send", beside "Send this time" and "Always send unknown apps"   | "Don't send", with or without any flag            |
+| the same                                                                    | "unsafe app blocked"               | no ids: "More details", then a text whose last line is "Install anyway"        | left alone; `--accept-install-warnings` passes it |
+
+The Xiaomi's prompt is known in any language. Play Protect's dialogs have no ids, so its buttons can only be told apart by their words, and a wrong guess could
+send a private build to Google. Its words here are from the Play Store's own resources, in English and Turkish; only the Turkish ones were seen on a screen. A
+dialog in another language, or any other dialog of that window, is quoted and left for a person. So an install on, say, a German phone stops at that prompt
+when it comes, and says so.
+
+The warning was seen on an app built for `targetSdk` 24 (`-PoldTarget` on the fixture), the only warning this phone could be made to show with a harmless app, and
+was passed by the host all the way to an installed app (`test-device/install-consent.test.ts`). Others, such as "harmful app blocked" or "app scan recommended", are in those resources, were not seen, and
+their "Install without scanning" is not taken. Other makers' USB install prompts were not seen and are left alone: the install then ends as it does on its own.
+
+With no person, uninstalling and installing the fixture each round, it took 14 of 14 rounds, 6 of 6 more with a report open, a cold agent or a screen put to sleep as the
+prompt opened, and 3 of 3 through the built command line and server. These are small counts on one phone.
+
+What it took on that phone:
+
+- The prompt slides up over 0.3 to 0.7 s, its button already read at its last place. A touch then reached the window and did nothing, and the prompt said no 10 s
+  later. A touch above the dialog, where a read's place can fall during the slide, cancels the install at once. The windows must read the same twice, 200 ms
+  apart, once the focus has held.
+- Its deny button counts down, but accept takes a touch from the start. Injected touches are not blocked here, where `persist.security.adbinput` reads 1. Where
+  they are, the answer says so and names "USB debugging (Security settings)", which this tool never changes. That case was not seen.
+- `KEYCODE_WAKEUP` does not restart a screen's timeout: the phone slept 5 s after it as the prompt opened, and then said no in the dark. The watcher wakes it
+  again whenever it goes dark while the install is pending.
+- "Install anyway" took no instant tap the one time that was tried, and has taken a touch held for 150 ms each time since, so all these touches are held. It has no
+  node of its own: the touch goes to the last line of its text.
+- Play Protect does not always ask to send. It asked on the first two installs each of the fixture and of its old-target build, was told no each time, and on the 50 or
+  so installs since has not asked, for new package names either (`upload_requested=false` in its log). So the host's own answer to that prompt has run only on the
+  recorded trees. On the phone, the agent's tap and a held touch by hand both took it. It did not time out in 3 minutes.
+- When a person must answer, the host ends `adb install` and answers at once. The prompt stays on the phone, and a person's answer still installs the app (seen once).
+- A prompt still open from an earlier call refuses the next install before it starts. A touch on it answers the earlier install, which the verifier then lets through,
+  and it holds back the new install's own prompt: in one run that new install waited 77 s for the verifier to reject it.
+
 ## Errors
 
 ```json

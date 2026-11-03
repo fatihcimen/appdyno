@@ -297,18 +297,20 @@ between CLI processes is kept in a small file in the state directory.
 
 `appdyno mcp [flags]`. Each flag has an environment variable.
 
-| flag                 | environment             | what                                                         |
-| -------------------- | ----------------------- | ------------------------------------------------------------ |
-| `--device S`         | `APPDYNO_SERIAL`        | adb serial, simulator id or iPhone UDID                      |
-| `--app A`            | `APPDYNO_APP`           | default app (bundle or package id)                           |
-| `--allow-devices RE` | `APPDYNO_ALLOW_DEVICES` | only devices whose id matches                                |
-| `--allow-apps a,b`   | `APPDYNO_ALLOW_APPS`    | only these apps                                              |
-| `--allow-urls RE`    | `APPDYNO_ALLOW_URLS`    | only links that match                                        |
-| `--no-home`          |                         | block the home key                                           |
-| `--measurements dir` | `APPDYNO_MEASUREMENTS`  | where measurements are stored (default: the state directory) |
-| `--takeover`         |                         | stop another tool that holds UI automation on Android        |
-| `--share`            | `APPDYNO_SHARE=1`       | use a device another process holds                           |
-|                      | `APPDYNO_SECRETS=a,b`   | values never shown back or put on the clipboard              |
+| flag                        | environment                         | what                                                                          |
+| --------------------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
+| `--device S`                | `APPDYNO_SERIAL`                    | adb serial, simulator id or iPhone UDID                                       |
+| `--app A`                   | `APPDYNO_APP`                       | default app (bundle or package id)                                            |
+| `--allow-devices RE`        | `APPDYNO_ALLOW_DEVICES`             | only devices whose id matches                                                 |
+| `--allow-apps a,b`          | `APPDYNO_ALLOW_APPS`                | only these apps                                                               |
+| `--allow-urls RE`           | `APPDYNO_ALLOW_URLS`                | only links that match                                                         |
+| `--no-home`                 |                                     | block the home key                                                            |
+| `--measurements dir`        | `APPDYNO_MEASUREMENTS`              | where measurements are stored (default: the state directory)                  |
+| `--takeover`                |                                     | stop another tool that holds UI automation on Android                         |
+| `--no-install-consent`      | `APPDYNO_NO_INSTALL_CONSENT=1`      | `app install` touches no prompt on the phone: a person answers them all       |
+| `--accept-install-warnings` | `APPDYNO_ACCEPT_INSTALL_WARNINGS=1` | `app install` passes a Play Protect warning, and always says so and quotes it |
+| `--share`                   | `APPDYNO_SHARE=1`                   | use a device another process holds                                            |
+|                             | `APPDYNO_SECRETS=a,b`               | values never shown back or put on the clipboard                               |
 
 Without `--takeover`, a second tool holding UI automation on Android is never stopped. The error names
 the holder by its pid and command line and gives the exact command to stop it.
@@ -316,7 +318,10 @@ the holder by its pid and command line and gives the exact command to stop it.
 ## Reaching a phone
 
 - Android: turn on USB debugging, connect, and check `adb devices`. A Xiaomi asks on its screen before each new install over USB and
-  says no by itself after 10 s: `app install` wakes it and says so if no one answered. Ticking its remember box stops it asking.
+  says no by itself after 10 s: `app install` wakes it and taps yes, and only that, during the install it started, and the answer and `report`
+  say so (`--no-install-consent` leaves it to you). Play Protect's prompt to send the app to Google is always answered no: a private build stays
+  here. A Play Protect warning is left alone, quoted, unless the server runs with `--accept-install-warnings`. See `docs/protocol.md`,
+  "A phone's install prompts", for what was seen on which phone.
 - iPhone: turn on developer mode. A phone needs a development signing identity and a provisioning profile that names it. An
   installed profile for a wildcard app id, with its identity in the unlocked login keychain, is found by itself. To choose another,
   set `APPDYNO_IOS_PROFILE=<profile.mobileprovision>`, `APPDYNO_IOS_KEYCHAIN=<keychain-db>` and
