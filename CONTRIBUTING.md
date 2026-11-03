@@ -44,6 +44,10 @@ Each package under `packages/` may import only the packages its rule allows. For
 and the test that enforces them are in `packages/appdyno/test/boundaries.test.ts`. Change the rule there
 if the architecture needs it, not around it.
 
+`packages/appdyno/test/structure.test.ts` keeps a file in `packages/*/src` to one job and to 430 lines, but for
+the ones it names with a reason, and refuses a run of 8 lines that appears twice. What both drivers do belongs
+in `core`.
+
 ## Commits
 
 One change per commit, with a short message in the style of `git log --oneline -15`: `type: what changed`,
