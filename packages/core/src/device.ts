@@ -338,6 +338,8 @@ export const SETTINGS = [
   'animations',
   'locale',
   'network',
+  'proxy',
+  'battery',
 ] as const;
 export type SettingName = (typeof SETTINGS)[number];
 
@@ -350,6 +352,11 @@ export interface DeviceSettings {
   set(name: SettingName, value: string, app?: string): Promise<void>;
   push(app: string | undefined, title: string, body: string): Promise<void>;
   biometric(match: boolean): Promise<void>;
+  /** A foldable's pose. */
+  fold(closed: boolean): Promise<void>;
+  /** A call coming in from `number`, or that call ended. */
+  call(number: string, end: boolean): Promise<void>;
+  sms(from: string, text: string): Promise<void>;
 }
 
 /** A simulator or emulator that can be started, whatever its state. */
@@ -363,10 +370,65 @@ export interface VirtualDevices {
   shutdown(id: string): Promise<void>;
 }
 
+/** What `stop` needs: plain values, as the stop may be another process. */
+export type RecordingHandle = Record<string, string | number>;
+/** One file; several, in order, only when segments could not be joined. */
+export type RecordingFiles = { files: string[]; note?: string };
+
+/** Screen video. A recording outlives the process that started it. */
+export interface ScreenRecorder {
+  readonly extension: 'mp4' | 'mov';
+  start(file: string, opts: { maxSeconds: number }): Promise<RecordingHandle>;
+  stop(handle: RecordingHandle): Promise<RecordingFiles>;
+}
+
+export type NetworkVia = 'proxy' | 'probe' | 'packets' | 'bytes';
+/** One way of seeing traffic on this device: what it sees, or why it cannot. */
+export type NetworkPath = { via: NetworkVia; sees?: string; refused?: string };
+/** A request, or a count, whichever the way sees. */
+export type NetworkEntry = {
+  at?: string;
+  method?: string;
+  url?: string;
+  status?: number;
+  ms?: number;
+  /** A count: which way, and what it was counted against (a port, a uid). */
+  direction?: string;
+  host?: string;
+  packets?: number;
+  bytes?: number;
+  /** The export holds its response body. */
+  body?: boolean;
+  error?: string;
+};
+export type NetworkAnswer = { entries: NetworkEntry[]; note?: string };
+/** What later calls need: plain values, as they may be other processes. */
+export type NetworkHandle = Record<string, string | number>;
+
+/** The traffic a device can tell about by itself; a local proxy is the operations' own, through settings. */
+export interface NetworkSource {
+  paths(): Promise<NetworkPath[]>;
+  start(via: NetworkVia, app: string | undefined): Promise<NetworkHandle>;
+  read(handle: NetworkHandle): Promise<NetworkAnswer>;
+  stop(handle: NetworkHandle): Promise<NetworkAnswer>;
+}
+
+export type WebPage = { id: string; title: string; url: string; app?: string; visible?: boolean };
+
+/** The web views of debuggable apps, as DevTools or the Safari inspector shows them. */
+export interface WebInspector {
+  pages(app: string | undefined): Promise<WebPage[]>;
+  /** Runs a script on the page, its value back; a thrown error is a refusal with its text. */
+  evaluate(page: WebPage, script: string): Promise<unknown>;
+}
+
 /** One device, whichever platform: what the operations are written against. */
 export interface Device {
   readonly apps?: AppManager;
   readonly settings?: DeviceSettings;
+  readonly recorder?: ScreenRecorder;
+  readonly network?: NetworkSource;
+  readonly web?: WebInspector;
   /** One attempt to close an open keyboard; the caller reads whether it went. */
   dismissKeyboard?(): Promise<void>;
   /**

@@ -33,6 +33,14 @@ describe('commands from the operations', () => {
     ops = opsFor(new ServerContext(DEFAULT_POLICY, [provider], { app: 'dev.app' }));
   });
 
+  it('takes the first bare word of an op with actions as its action', async () => {
+    const r = await run('report', 'stop');
+    expect(r.code).toBe(1);
+    expect(r.err.join('')).toMatch(/no report is open/);
+    expect((await run('report', 'nothing')).err.join('')).toMatch(/unexpected word: nothing/);
+    expect((await run('report', 'stop', 'stop')).err.join('')).toMatch(/unexpected word: stop/);
+  });
+
   it('has one command per operation, named with dashes', () => {
     const names = Object.keys(commandsFor(ops));
     expect(names).toHaveLength(Object.keys(ops).length);

@@ -17,7 +17,6 @@
   },
   "dependencies": {
     "@appdyno/ops": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.32.1",
-    "zod": "^4.6.7"
+    "@modelcontextprotocol/sdk": "^1.32.1"
   }
 }

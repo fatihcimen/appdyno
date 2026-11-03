@@ -1,8 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
 import { INSTRUCTIONS, SERVER_INFO } from './brand.js';
-import { inCall, ToolError, text, type Op } from '@appdyno/ops';
+import { inCall, inputSchemaOf, ToolError, text, type Op } from '@appdyno/ops';
 
 /** How often a call with a progress token says it is still working. */
 const BEAT_MS = 5_000;
@@ -88,14 +87,16 @@ export function createServer(ops: Record<string, Op>, log: (line: object) => voi
       },
     );
   }
-  // the SDK's own list adds a schema dialect and a task setting to every tool: 3,300 characters of every session
-  const tools = Object.values(ops).map((t) => ({
-    name: t.name,
-    title: t.title,
-    description: t.description,
-    inputSchema: slim(z.toJSONSchema(t.input, { target: 'draft-7', io: 'input' })),
-    annotations: t.annotations,
+  // the SDK's own list adds a schema dialect and a task setting to every tool, and closed-object markers that
+  // cost thousands of characters in every session: arguments are still checked strictly when they arrive
+  server.server.setRequestHandler(ListToolsRequestSchema, () => ({
+    tools: Object.values(ops).map((op) => ({
+      name: op.name,
+      title: op.title,
+      description: op.description,
+      inputSchema: slim(inputSchemaOf(op)) as ReturnType<typeof inputSchemaOf>,
+      annotations: op.annotations,
+    })),
   }));
-  server.server.setRequestHandler(ListToolsRequestSchema, () => ({ tools }) as never);
   return server;
 }

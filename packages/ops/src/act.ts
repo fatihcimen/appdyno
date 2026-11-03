@@ -49,7 +49,7 @@ export function actOps(
       name: 'tap',
       title: 'Tap',
       description:
-        'Tap an element; answers the settled screen (read). A target, here and in gesture, type_text and steps: ref, x,y, or selector { text, id, role, index } on a fresh read. Several matches refuse, listing refs; no match waits briefly, then refuses with the nearest labels.',
+        'Tap an element; answers the settled screen (read). A target, here and in gesture, type_text and steps: ref, x,y, or selector { text, id, role, index }. Several matches refuse, listing refs; no match waits briefly, then refuses with the nearest labels.',
       input: z.object({ ...Target, read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
@@ -190,7 +190,7 @@ export function actOps(
     defineOp({
       name: 'steps',
       title: 'Steps',
-      description: `Run a sequence, also across screens, in one call: at most ${MAX_STEPS} steps, each { action, ...the arguments of the tool of that name }: tap, swipe, type_text, press_key, wait_for, assert, scroll_to; double_tap, long_press, drag as gesture's. A selector or ref is looked for at its step. Stops at the first failure, saying which step and why, with the screen. One read at the end.`,
+      description: `A sequence, also across screens, in one call: at most ${MAX_STEPS} steps, each { action, ...the arguments of the tool of that name }: tap, swipe, type_text, press_key, wait_for, assert, scroll_to; double_tap, long_press, drag as gesture's. A selector or ref is looked for at its step. Stops at the first failure, saying which and why. One read at the end.`,
       input: z
         .object({
           steps: z

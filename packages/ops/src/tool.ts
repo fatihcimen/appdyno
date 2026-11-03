@@ -1,6 +1,6 @@
 import type { Capability } from '@appdyno/core';
 import type { ErrorCode } from '@appdyno/protocol';
-import type { z } from 'zod';
+import { z } from 'zod';
 
 /** A refusal the agent can act on (shown as the tool's error text, never a stack). */
 export class ToolError extends Error {
@@ -55,6 +55,25 @@ export function defineOp<S extends z.ZodObject>(def: {
 }): Op {
   const { run, ...rest } = def;
   return { ...rest, handler: run as Tool['handler'] };
+}
+
+const withoutLengths = (v: unknown): unknown => {
+  if (Array.isArray(v)) return v.map(withoutLengths);
+  if (!v || typeof v !== 'object') return v;
+  return Object.fromEntries(
+    Object.entries(v)
+      .filter(([k, x]) => k !== 'maxLength' || typeof x !== 'number')
+      .map(([k, x]) => [k, withoutLengths(x)]),
+  );
+};
+
+/**
+ * An op's arguments as a client's catalog holds them: what has a default is optional. A length limit is
+ * the server's to refuse and no client's to know: left out, as a catalog is read on every session.
+ */
+export function inputSchemaOf(op: Pick<Tool, 'input'>) {
+  const { $schema: _, ...schema } = z.toJSONSchema(op.input, { io: 'input', target: 'draft-7' });
+  return withoutLengths(schema) as { type: 'object'; [k: string]: unknown };
 }
 
 export const text = (t: string): Block[] => [{ type: 'text', text: t }];

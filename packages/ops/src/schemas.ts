@@ -108,6 +108,99 @@ export const ScreenshotOut = z.object({
 
 export const DoneOut = z.object({ done: z.string() });
 
+export const VisualOut = z.object({
+  done: z.string(),
+  file: z.string(),
+  same: z.boolean().optional(),
+  percent: z.number().optional(),
+  differing: z.number().optional(),
+});
+
+export const ReactNativeOut = z.object({
+  done: z.string(),
+  targets: z.array(z.object({ id: z.string(), title: z.string().optional() })).optional(),
+  lines: z.number().int().optional(),
+  dropped: z.number().int().optional(),
+});
+
+export const WebOut = z.object({
+  done: z.string().optional(),
+  page: z.string().optional(),
+  pages: z
+    .array(
+      z.object({
+        id: z.string(),
+        title: z.string(),
+        url: z.string(),
+        app: z.string().optional(),
+        visible: z.boolean().optional(),
+      }),
+    )
+    .optional(),
+  elements: z
+    .array(
+      z.object({
+        tag: z.string(),
+        text: z.string(),
+        role: z.string().optional(),
+        selector: z.string().optional(),
+        x: z.number(),
+        y: z.number(),
+      }),
+    )
+    .optional(),
+});
+
+export const NetworkOut = z.object({
+  done: z.string().optional(),
+  paths: z
+    .array(
+      z.object({
+        via: z.string(),
+        sees: z.string().optional(),
+        refused: z.string().optional(),
+      }),
+    )
+    .optional(),
+  entries: z
+    .array(
+      z.object({
+        at: z.string().optional(),
+        method: z.string().optional(),
+        url: z.string().optional(),
+        status: z.number().optional(),
+        ms: z.number().optional(),
+        direction: z.string().optional(),
+        host: z.string().optional(),
+        packets: z.number().optional(),
+        bytes: z.number().optional(),
+        body: z.boolean().optional(),
+        error: z.string().optional(),
+      }),
+    )
+    .optional(),
+  dropped: z.number().int().optional(),
+  source: z.string().optional(),
+  bodies: z.string().optional(),
+  note: z.string().optional(),
+});
+
+export const ReportOut = z.object({
+  done: z.string(),
+  dir: z.string(),
+  file: z.string().optional(),
+  steps: z.number().int().optional(),
+});
+
+export const RecordOut = z.object({
+  done: z.string(),
+  files: z.array(z.string()),
+  since: z.string().optional(),
+  durationMs: z.number().optional(),
+  frames: z.number().int().optional(),
+  note: z.string().optional(),
+});
+
 export const FlowOut = z.object({
   done: z.string(),
   steps: z.number().int().optional(),

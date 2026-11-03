@@ -13,6 +13,7 @@ import { FindOut, ScreenOut, ScreenshotOut, WaitOut } from './schemas.js';
 import { refused } from './session.js';
 import { MAX_WAIT_MS, Read, Selector, WAIT_MS, WaitStep, type Steps } from './steps.js';
 import { defineOp, READ, reply, ToolError, type Op } from './tool.js';
+import { webLines } from './web.js';
 
 const SHOT_PX = 1024;
 
@@ -35,7 +36,8 @@ export function readOps(
         const screen = await s.read();
         s.shown = screen.list;
         const fg = foreground(s, screen);
-        return reply(`${header(s, screen)}${fg}`, {
+        const web = await webLines(s, screen, clean);
+        return reply(`${header(s, screen)}${web ? `\n${web}` : ''}${fg}`, {
           elements: screen.list.length,
           ...(screen.foreground && { foreground: screen.foreground }),
           warnings: fg ? [fg.trim()] : [],

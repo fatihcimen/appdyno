@@ -30,8 +30,12 @@ import {
   type Device,
   type RpcClient,
   type Screen,
+  type ScreenRecorder,
 } from '@appdyno/core';
+import { SimulatorNetwork } from './network.js';
 import { IosSimulatorPerf } from './perf.js';
+import { simulatorRecorder } from './record.js';
+import { SimulatorWeb } from './webinspector.js';
 import {
   actionable,
   DirectSim,
@@ -533,8 +537,14 @@ export class IosSimulatorDevice extends IosDevice {
     this.direct = direct ?? new DirectSim(serial);
     this.apps = new SimulatorApps(simctl, serial);
     this.settings = new SimulatorSettings(simctl, serial);
+    this.recorder = simulatorRecorder(serial);
+    this.network = new SimulatorNetwork(simctl, serial);
+    this.web = new SimulatorWeb(simctl, serial);
   }
 
+  readonly recorder: ScreenRecorder;
+  readonly network: SimulatorNetwork;
+  readonly web: SimulatorWeb;
   readonly apps: SimulatorApps;
   readonly settings: SimulatorSettings;
 

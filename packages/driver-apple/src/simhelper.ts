@@ -25,7 +25,7 @@ const SDK_FLAGS = {
     '-framework',
     'CoreGraphics',
   ],
-  // a library, injected into a simulator app when it is launched
+  // libraries, injected into a simulator app when it is launched
   SimProbe: [
     '--sdk',
     'iphonesimulator',
@@ -41,6 +41,18 @@ const SDK_FLAGS = {
     'QuartzCore',
     '-framework',
     'UIKit',
+  ],
+  NetProbe: [
+    '--sdk',
+    'iphonesimulator',
+    'clang',
+    '-fobjc-arc',
+    '-dynamiclib',
+    '-arch',
+    'arm64',
+    '-mios-simulator-version-min=17.0',
+    '-framework',
+    'Foundation',
   ],
 };
 

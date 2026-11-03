@@ -7,8 +7,9 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { DeviceError } from '@appdyno/protocol';
-import { stateDir, type MeasureSource } from '@appdyno/core';
+import { stateDir, type MeasureSource, type ScreenRecorder } from '@appdyno/core';
 import { IosDevice, type IosDeviceOps } from './device.js';
+import { phoneRecorder } from './record.js';
 import { IosRunnerLauncher, iosProducts, type RunnerTransport } from './runner.js';
 import { findPhoneSigning, phoneXctestrun, signedRunner, type PhoneSigning } from './signing.js';
 import { assertBundle, xcodeEnv } from './simctl.js';
@@ -398,8 +399,10 @@ export class IosPhoneDevice extends IosDevice {
     this.ctl = ctl;
     this.apps = new PhoneApps(ctl);
     this.settings = new PhoneSettings(ctl);
+    this.recorder = phoneRecorder(serial);
   }
 
+  readonly recorder: ScreenRecorder;
   readonly apps: PhoneApps;
   readonly settings: PhoneSettings;
 

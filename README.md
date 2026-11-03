@@ -40,15 +40,17 @@ Cursor or any client with a JSON server list:
 Tools take no `device` parameter. The device is the server's `--device`, else the only connected one,
 else the one `use_device` selected.
 
-| purpose | tools                                                                                                                      |
-| ------- | -------------------------------------------------------------------------------------------------------------------------- |
-| devices | `list_devices`, `use_device`, `device_info`, `set_orientation`, `set_location`, `clipboard`, `device_setting`, `simulator` |
-| read    | `screen`, `find`, `wait_for`, `assert`, `screenshot`                                                                       |
-| act     | `tap`, `gesture`, `swipe`, `scroll_to`, `type_text`, `press_key`, `keyboard`, `steps`, `alert`                             |
-| apps    | `open_link`, `launch_app`, `terminate_app`, `app`                                                                          |
-| check   | `audit` (accessibility), `logs`, `crashes`                                                                                 |
-| measure | `perf_snapshot`, `perf_scroll`, `perf_launch`, `perf_profile`, `perf_heap`, `perf_trace`                                   |
-| replay  | `flow`                                                                                                                     |
+| purpose  | tools                                                                                                                      |
+| -------- | -------------------------------------------------------------------------------------------------------------------------- |
+| devices  | `list_devices`, `use_device`, `device_info`, `set_orientation`, `set_location`, `clipboard`, `device_setting`, `simulator` |
+| read     | `screen`, `find`, `wait_for`, `assert`, `screenshot`                                                                       |
+| act      | `tap`, `gesture`, `swipe`, `scroll_to`, `type_text`, `press_key`, `keyboard`, `steps`, `alert`                             |
+| apps     | `open_link`, `launch_app`, `terminate_app`, `app`                                                                          |
+| check    | `audit` (accessibility), `logs`, `crashes`, `visual`                                                                       |
+| evidence | `record`, `report`, `network`                                                                                              |
+| inside   | `webview`, `react_native`                                                                                                  |
+| measure  | `perf_snapshot`, `perf_scroll`, `perf_launch`, `perf_profile`, `perf_heap`, `perf_trace`                                   |
+| replay   | `flow`                                                                                                                     |
 
 A target is a `ref`, `x` and `y`, or a `selector` `{ text, id, role, index }`, resolved on a fresh read
 just before the action. Text matches as `find` does, without case or accents ("İstanbul", "istanbul"),
@@ -62,7 +64,7 @@ wait on the device, so the tree crosses the wire only when the screen changed.
 `gesture` holds `double_tap`, `long_press`, `drag`, `pinch` and a free `plan`. `press_key` holds the
 hardware buttons. `app` holds `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke` and
 `launch` with arguments and environment. `device_setting` holds `dark_mode`, `text_size`,
-`reduce_motion`, `animations`, `locale`, `network`, `push` and `biometric`.
+`reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `push`, `biometric`, `fold`, `call` and `sms`.
 
 What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 
@@ -78,6 +80,10 @@ What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 | slow network               | emulator only              | no                        | no                          |
 | push                       | a shell notification       | to the app                | no: needs Apple credentials |
 | biometrics                 | no                         | yes                       | no                          |
+| fold pose                  | a foldable emulator        | no: `simctl` has none     | no                          |
+| incoming call, SMS         | emulator only              | no: no telephony          | no                          |
+| battery level              | yes                        | no: it only draws one     | no                          |
+| proxy                      | yes, put back              | follows the Mac's         | no: its Wi-Fi settings      |
 
 Changing a condition writes the old value down first. It goes back when the session ends, or with
 `device_setting` name `restore`. A session that died leaves the file, and the next one on that device
@@ -104,6 +110,79 @@ reaches the device, and long operations report progress.
 `devicectl` cannot read the log of a running app, and the answer says so. `crashes` collects the
 system's crash records for the app (Android exit info and dropbox, the simulator's DiagnosticReports,
 an iPhone's system crash logs) as a bounded summary and a file path. Secrets are redacted.
+
+## Evidence
+
+### Video
+
+`record` with `action` `start` (`file`, `maxSeconds`, default 1,800) and `stop`, one recording per device. It
+outlives the process that started it, so `appdyno record start` and `appdyno record stop` work as two commands. A session's
+end stops a recording it left running.
+
+`stop` reads the file, and a file that does not play is a refusal saying why (a recorder killed before it ended leaves no
+index). The answer gives the length, frames and size.
+
+|           | how                                                      | what to know                                                                                                                                                                                                  |
+| --------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Android   | `screenrecord` on the device, 3 minutes a run, 4 Mbps    | runs are joined into one video by copying their frames, with no dependency; a moment is lost at each join. Runs an encoder change makes unjoinable stay as `name-1.mp4`, `name-2.mp4`, and the answer says so |
+| simulator | `simctl io recordVideo --codec=h264`, a QuickTime `.mov` | a frame is written only when the screen changes, so a still screen gives a very short video, and the answer says so                                                                                           |
+| iPhone    | `devicectl device capture screen-record`                 | not yet run on a phone                                                                                                                                                                                        |
+
+### Report
+
+`report` `start` (`dir`) keeps every call from then on: its arguments, its answer and, after anything that is not a plain read,
+the screen and an image of it. `stop` writes `index.html` in that folder, with the video recorded meanwhile, the app's log, its
+crashes and the measurements taken. So does the end of a session. `write` writes it at any moment, and with no `start` it is a report
+of the screen as it is.
+
+The page loads nothing: it has no script, and its content policy allows only its own folder. Listed secrets and what looks
+like a credential are hidden in all text. Typed text is shown by its length. An image is painted over where an
+element holds a secret or is a password field, and left out if it cannot be painted over. Text drawn with no element behind it cannot be told, and a video is not painted over.
+
+### Network
+
+`network` `paths` says what each way sees on this device, and why not. `start` picks one, `read` and `stop` give a bounded list.
+
+| way       | where                                                                                                                                                                                                 | sees                                                                                                              | bodies                                              |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `proxy`   | Android: `settings put global http_proxy`, through `adb reverse` for one on this Mac, put back at `stop` or the session's end. Simulator: follows the Mac's proxy, and this tool does not change that | every HTTP request of an app that keeps the system proxy; for HTTPS only the host unless your proxy decrypts it   | only in the proxy's export, only where it decrypted |
+| `probe`   | simulator: an `NSURLProtocol` injected into the app, which restarts                                                                                                                                   | URLSession requests: method, URL, status, time, size. Not background sessions, `WKWebView` or `Network.framework` | no                                                  |
+| `bytes`   | Android: `dumpsys netstats`                                                                                                                                                                           | an app's bytes and packets; not the loopback                                                                      | no                                                  |
+| `packets` | Android 14+: Perfetto's `android.network_packets`                                                                                                                                                     | an app's packets by remote port and direction, read at `stop`                                                     | no                                                  |
+
+The proxy is one you run. `read` lists a running Proxyman by its own export, and any proxy from a file: `har`, from Charles (File,
+Export Session) or mitmproxy (`--set hardump=file`). A list holds what went through the proxy from any client, since `start`. No
+certificate is ever installed: to see HTTPS through a proxy, install its certificate yourself. An iPhone has only `read` with `har`: its proxy is in its Wi-Fi settings.
+
+### Web views
+
+`webview`: `pages`, `elements` (the DOM at tap coordinates, to read where the accessibility tree does not), `click` (a CSS
+selector), `eval` (a script). On Android it speaks the DevTools protocol to the `webview_devtools_remote_<pid>` socket of a debuggable
+app, through `adb forward`. On a simulator it speaks to the socket Safari's Web Inspector uses, and from iOS 16.4 a page shows only if the app set
+`isInspectable`. An iPhone is not reached this way.
+
+`screen` marks what a web view shows as `web`, and adds what the page holds and the accessibility tree does not, by coordinates and
+selector. An app that is not debuggable still shows what its web view tells accessibility.
+
+### Flutter
+
+A Flutter app's semantics are in the accessibility tree, so `screen`, selectors and taps work on it. The richer tree of the Dart VM
+service is not built: this tool's rule is to test what it ships, and the Mac this was written on has no Flutter SDK to build a test app with.
+It would go as `webview` does: find the `Observatory` or `Dart VM service` line in the log of a debug build, forward its
+port, and call `ext.flutter.inspector.getRootWidgetSummaryTree` over its WebSocket.
+
+### React Native
+
+`react_native` talks to Metro on this Mac and needs no device: `targets`, `logs` (the JS console over the Hermes
+runtime's DevTools protocol, for `ms`, secrets hidden) and `reload` (Metro's route, else the runtime's). Tested against a stand-in for Metro only, not a real app. Left out: the
+component tree and JS profiles. On Android, a device reaches Metro through your own `adb reverse tcp:8081 tcp:8081`.
+
+### Visual comparison
+
+`visual` `baseline` saves the screen as `name` under `dir` (default `./appdyno-baselines`, to commit with your project). `compare` refuses
+with `CHECK_FAILED` past `tolerance` (percent of pixels, default 0.1; a pixel counts if a channel differs by more than 16), and writes
+`name.diff.png` (what differs in red, masks in blue) and `name.actual.png`. `masks` are `x,y,w,h` in tap units or `text`, `id`, `role`; the status bar is always left out.
+A baseline holds for one size of screen, and the refusal says so.
 
 ## Flows
 
@@ -199,7 +278,7 @@ appdyno tap --help
 appdyno --help
 ```
 
-Other commands: `doctor [--serial S]`, `ios build`, `test` (see Flows), `tools install` (fetches the pinned
+An op with `action` takes it as its first word: `appdyno record start`, `appdyno network stop`. Other commands: `doctor [--serial S]`, `ios build`, `test` (see Flows), `tools install` (fetches the pinned
 Perfetto trace processor), `bench`. Exit code 1 means the call was refused, 2 means wrong arguments. A diff baseline
 between CLI processes is kept in a small file in the state directory.
 

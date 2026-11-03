@@ -14,9 +14,15 @@ import {
   type ReplayOptions,
   type TestOptions,
 } from './flow.js';
+import { networkOps } from './network.js';
 import { perfOps } from './perf.js';
+import { reactNativeOps } from './reactnative.js';
 import { readOps } from './read.js';
+import { recordOps } from './record.js';
+import { reportFor } from './report.js';
 import { stepsFor } from './steps.js';
+import { visualOps } from './visual.js';
+import { webOps } from './web.js';
 import type { Op } from './tool.js';
 
 function build(ctx: ServerContext) {
@@ -25,6 +31,7 @@ function build(ctx: ServerContext) {
   const steps = stepsFor(ctx, answers, recorder.through);
   let raw: Record<string, Op> = {};
   const runner = flowRunner(ctx, () => raw, answers, steps);
+  const report = reportFor(ctx);
   raw = Object.fromEntries(
     [
       ...deviceOps(ctx, answers),
@@ -33,9 +40,15 @@ function build(ctx: ServerContext) {
       ...appOps(ctx, answers),
       ...controlOps(ctx, answers),
       ...diagnoseOps(ctx, answers),
+      ...recordOps(ctx),
+      ...report.ops(),
+      ...networkOps(ctx),
+      ...webOps(ctx),
+      ...reactNativeOps(ctx),
+      ...visualOps(ctx),
       ...perfOps(ctx),
       ...flowOps(ctx, runner),
-    ].map((op) => [op.name, op]),
+    ].map((op) => [op.name, report.wrap(op)]),
   );
   const ops = Object.fromEntries(Object.values(raw).map((op) => [op.name, recorder.wrap(op)]));
   return { ops, runner };

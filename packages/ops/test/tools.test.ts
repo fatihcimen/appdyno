@@ -76,6 +76,7 @@ describe('tool list', () => {
         "launch_app",
         "list_devices",
         "logs",
+        "network",
         "open_link",
         "perf_compare",
         "perf_heap",
@@ -86,6 +87,9 @@ describe('tool list', () => {
         "perf_snapshot",
         "perf_trace",
         "press_key",
+        "react_native",
+        "record",
+        "report",
         "screen",
         "screenshot",
         "scroll_to",
@@ -98,7 +102,9 @@ describe('tool list', () => {
         "terminate_app",
         "type_text",
         "use_device",
+        "visual",
         "wait_for",
+        "webview",
       ]
     `);
     for (const t of tools) {
@@ -127,9 +133,10 @@ describe('tool list', () => {
       'perf_snapshot',
       'screen',
       'screenshot',
+      'visual',
       'wait_for',
     ]);
-    expect(tools.length).toBeLessThanOrEqual(38);
+    expect(tools.length).toBeLessThanOrEqual(44);
   });
 
   it('reports the server as appdyno with an icon', async () => {

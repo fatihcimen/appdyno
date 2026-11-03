@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { crc32, deflateSync } from 'node:zlib';
 import { NODE_FLAGS, type Tree, type WireNode } from '@appdyno/protocol';
-import { auditAndroid, contrastRatio, decodePng, type Image } from '../src/audit.js';
+import { decodePng, type Image } from '@appdyno/core';
+import { auditAndroid, contrastRatio } from '../src/audit.js';
 
 /** A 1080×2400 screen at 2.625 px/dp (420 dpi), white, every pixel `fill` until painted. */
 const W = 1080;

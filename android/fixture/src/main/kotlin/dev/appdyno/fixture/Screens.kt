@@ -97,6 +97,7 @@ private val LINKED = mapOf(
     "gestures" to GesturesActivity::class.java,
     "code" to CodeActivity::class.java,
     "a11y" to A11yActivity::class.java,
+    "network" to NetworkActivity::class.java,
 )
 
 /** A number a test wrote into the app's files, as a known cost; absent, none. */
@@ -430,15 +431,41 @@ class SlowFocusActivity : Activity() {
 class WebActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val web = WebView(this).apply { id = R.id.web }
+        val web = WebView(this).apply { id = R.id.web; settings.javaScriptEnabled = true }
         web.loadDataWithBaseURL(
             null,
-            "<html><body><h1>Web content</h1><p>Payment page</p><button>Pay</button><input placeholder='Card'></body></html>",
+            "<html><head><title>Fixture web</title></head><body><h1>Web content</h1><p>Payment page</p><button id='pay' onclick=\"document.getElementById('paid').textContent='Paid'\">Pay</button><input id='card' placeholder='Card'><p id='paid'></p><canvas id='drawn' width='10' height='10'></canvas><script>console.log('fixture web page loaded')</script></body></html>",
             "text/html",
             "utf-8",
             null,
         )
         setContentView(web)
+    }
+}
+
+/** One request through the platform's own client, so that it takes the system proxy as an app does. */
+class NetworkActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        column {
+            val url = EditText(context).apply { id = R.id.url_input; hint = "URL"; inputType = InputType.TYPE_TEXT_VARIATION_URI; addView(this) }
+            val result = TextView(context)
+            button("Fetch", R.id.fetch) {
+                val address = url.text.toString()
+                Thread {
+                    val text = try {
+                        val c = java.net.URL(address).openConnection() as java.net.HttpURLConnection
+                        val body = c.inputStream.use { it.readBytes() }
+                        "fetched ${c.responseCode} ${body.size}"
+                    } catch (e: Exception) {
+                        "failed: ${e.message}"
+                    }
+                    runOnUiThread { result.text = text }
+                }.start()
+            }
+            result.id = R.id.fetch_result
+            addView(result)
+        }
     }
 }
 
