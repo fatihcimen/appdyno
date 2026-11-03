@@ -74,6 +74,13 @@ Found when the parallel branches ran together:
   (`a11y.read`, which also brings the nodes' traversal hints): touch targets, text and icon contrast, names, duplicate names, clipped text.
 - Android tree flags: not important for accessibility, and read as one unit by a screen reader.
 
+Still open:
+
+- The gate on a Xiaomi takes no baseline: its device load stays over the limit of 8.
+- `network` `packets` records nothing on a Xiaomi with Android 16; why was not looked into. The answer says so.
+- `record` on an iPhone 13 Pro Max with iOS 27.0.1: `devicectl` has no such capability. It has not been seen working on any phone.
+- HyperOS's install prompt needs a person: see "Reaching a phone".
+
 ## 0.5.0
 
 - Packaging: `scripts/install.sh` installs the MCP server and the `appdyno` command from this

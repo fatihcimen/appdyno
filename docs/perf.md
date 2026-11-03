@@ -77,7 +77,9 @@ of 3 runs, 6 unchanged runs, then the fixture's start made slower by a known amo
 | iOS simulator     | 1,673 ms        | 1,659-1,787 ms, floor 251 ms | 0 of 6       | 1,000 ms          | regression, +983 ms, exit 1 |
 | iPhone 13 Pro Max | 563 ms          | 553-620 ms, floor 84 ms      | 0 of 6       | 400 ms            | regression, +471 ms, exit 1 |
 
-On 2026-11-03 the iPhone's gate passed once and, at host load 10-38 with other work on the Mac, called one unchanged run in another: 623 ms against 540.5, a shift of 83.5 over a floor of 81. So 0 of 6 is what those runs show, not a rate. The floor was left as it is.
+On 2026-11-03 the iPhone's gate passed once and, at host load 10-38 with other work on the Mac, called one unchanged run in another: 623 ms against 540.5, a shift of 83.5 over a floor of 81. A third run had 5 of 5 unchanged runs ok, then reached its hour's limit at host load over 100. So 0 of 6 is what those runs show, not a rate. The floor was left as it is.
+
+On a Xiaomi the gate gave no verdict: its device load read 14-16 each time, over the limit of 8 (`DEVICE_LOAD` in `packages/perf/src/record.ts`), and its run answered `new`, with no baseline. That limit does not suit such a phone, and is open.
 
 An injected change has to clear what that device's runs do by themselves, so a smaller one on a loaded simulator is not called: it is
 reported as `ok`, with the floor beside it. On an emulator a sleep at the start of a very fast launch shows only partly: 400 ms added
