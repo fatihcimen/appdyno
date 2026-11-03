@@ -315,6 +315,32 @@ describe('scroll_to', () => {
     expect(g.pointers[0]!.at(-1)!.y).toBe(g.pointers[0]!.at(-2)!.y);
   });
 
+  it('answers once a list still coasting has stopped, with where the row ended', async () => {
+    class Coasting extends ListDevice {
+      coast = 0;
+      override async act(action: ActParams, opts = {}) {
+        const r = await super.act(action, opts);
+        if (action.kind === 'gesture') this.coast = 4;
+        return r;
+      }
+      override async tree() {
+        if (this.coast > 0) {
+          this.coast--;
+          this.offset += 20;
+        }
+        return super.tree();
+      }
+    }
+    const d = new Coasting();
+    const { call } = await connect(d);
+    const r = await call('scroll_to', { selector: { text: 'Row 20' }, read: 'full' });
+    expect(r.error).toBe(false);
+    expect(d.coast).toBe(0);
+    const y = 200 * 20 - d.offset + 90;
+    expect(r.text).toContain(`found`);
+    expect(r.text).toMatch(new RegExp(`"Row 20" 540,${y}`));
+  });
+
   it('stops at the list’s end when nothing moved', async () => {
     const d = new ListDevice();
     const { call } = await connect(d);

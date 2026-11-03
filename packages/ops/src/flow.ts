@@ -2,7 +2,6 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 import { basename, dirname, extname, join } from 'node:path';
 import {
   nearest,
-  pause,
   reportProgress,
   selectIn,
   stateDir,
@@ -40,7 +39,7 @@ import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { checkApp } from './policy.js';
 import { FlowOut } from './schemas.js';
-import { refused, type Session } from './session.js';
+import type { Session } from './session.js';
 import { WAIT_MS, type Step, type Steps } from './steps.js';
 import { DESTRUCTIVE, defineOp, reply, ToolError, type Op, type ToolResult } from './tool.js';
 
@@ -50,16 +49,6 @@ import { DESTRUCTIVE, defineOp, reply, ToolError, type Op, type ToolResult } fro
  * for nothing. A miss costs this long and then stops.
  */
 const REPLAY_WAIT_MS = 10_000;
-/**
- * How long a target holds its place before a replay touches it, and the most that is waited for that. A
- * list coasting after a scroll is not caught by the settle on a simulator (its content is the same), and
- * UIKit takes a touch on a coasting list as "stop", not as a press: measured, half of the taps right after
- * a `scroll_to` were lost, none of 9 after 500 ms. Rects come in whole points, so one equal pair of reads
- * does not show it stopped.
- */
-const STILL_MS = 300;
-const STILL_CAP_MS = 2_500;
-const READ_GAP_MS = 50;
 /** While recording: how long a selector's element may take to come, as `steps` allows. */
 const AIM_WAIT_MS = 1_500;
 const FLOW_FILE = /\.flow$/;
@@ -521,24 +510,6 @@ export function flowRunner(
     }
   };
 
-  /** Until the selector's element has kept its place for a while; it may be gone or moving at the cap. */
-  const holdsStill = async (s: Session, sel: FlowSelector) => {
-    const end = Date.now() + STILL_CAP_MS;
-    let place: string | undefined;
-    let since = 0;
-    for (;;) {
-      const r = selectIn((await s.read()).list, sel)[sel.index ?? 0]?.rect;
-      if (!r) return;
-      const now = `${r.x},${r.y},${r.width},${r.height}`;
-      if (now !== place) {
-        place = now;
-        since = Date.now();
-      } else if (Date.now() - since >= STILL_MS) return;
-      if (Date.now() >= end) return;
-      await pause(READ_GAP_MS).catch(refused);
-    }
-  };
-
   const executor = (s: Session): Executor => ({
     prepare: async (st) => {
       if (st.args.screen) {
@@ -551,7 +522,7 @@ export function flowRunner(
       if (!st.selector || READS_ONLY.has(st.action) || st.action === 'scroll_to') return;
       // no error here: if it never comes, the op itself refuses, with the nearest candidates
       await steps.waitFor(s, { ...st.selector, gone: false, timeoutMs: REPLAY_WAIT_MS });
-      await holdsStill(s, st.selector);
+      await steps.holdsStill(s, st.selector);
     },
     act: async (st): Promise<StepOutcome> => {
       const [name, args] = opCall(st);

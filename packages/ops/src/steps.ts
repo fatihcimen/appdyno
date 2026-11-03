@@ -1,6 +1,7 @@
 import {
   attributesOf,
   nearest,
+  pause,
   reportProgress,
   selectIn,
   type ActOptions,
@@ -78,6 +79,16 @@ const SCROLL_MAX = 10;
 /** A scroll's finger travels this share of the list either way from its middle. */
 const SCROLL_REACH = 0.35;
 const DRAG_HOLD_MS = 150;
+/**
+ * How long a target holds its place before it counts as still, and the most that is waited for that. A
+ * list coasting after a scroll is not caught by the settle on a simulator (its content is the same, its
+ * places within a tolerance), and UIKit takes a touch on a coasting list as "stop", not as a press:
+ * measured, half of the taps right after a scroll were lost, none of 9 after 500 ms. Rects come in whole
+ * points, so one equal pair of reads does not show it stopped.
+ */
+const STILL_MS = 300;
+const STILL_CAP_MS = 2_500;
+const STILL_GAP_MS = 50;
 
 export const Check = z.enum(['exists', 'absent', 'text', 'enabled', 'checked', 'focused']);
 
@@ -385,6 +396,25 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
     return boxes[0] ?? { x: 0, y: 0, width: w.w, height: w.h };
   };
 
+  /** Reads until the selector's element has kept its place for a while, the last read with it; it may be gone or still moving at the cap. */
+  const holdsStill = async (s: Session, sel: SelectorOf): Promise<Screen> => {
+    const end = Date.now() + STILL_CAP_MS;
+    let place: string | undefined;
+    let since = 0;
+    for (;;) {
+      const screen = await s.read();
+      const r = selectIn(screen.list, sel)[sel.index ?? 0]?.rect;
+      if (!r) return screen;
+      const now = `${r.x},${r.y},${r.width},${r.height}`;
+      if (now !== place) {
+        place = now;
+        since = Date.now();
+      } else if (Date.now() - since >= STILL_MS) return screen;
+      if (Date.now() >= end) return screen;
+      await pause(STILL_GAP_MS).catch(refused);
+    }
+  };
+
   /** Scrolls until the selector's element is on the screen; a list that did not move has ended. */
   const scrollTo = async (
     s: Session,
@@ -400,7 +430,13 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
     let last: ActResult = { tree: screen.tree };
     const what = showSelector(a.selector);
     for (let swipes = 0; ; swipes++) {
-      const hits = selectIn(screen.list, a.selector);
+      let hits = selectIn(screen.list, a.selector);
+      if (hits.length > 0 && swipes > 0) {
+        // the answer says where it is: not while the list still carries it along
+        screen = await holdsStill(s, a.selector);
+        last = { ...last, ...(last.tree && { tree: screen.tree }) };
+        hits = selectIn(screen.list, a.selector);
+      }
       if (hits.length > 0)
         return { r: last, done: `found ${line(pick(hits, a.selector))} after ${swipes} swipes` };
       if (swipes >= a.maxSwipes)
@@ -561,7 +597,7 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
     );
   };
 
-  return { target, windowSize, step, one, checkNow, waitFor, line };
+  return { target, windowSize, step, one, checkNow, waitFor, holdsStill, line };
 }
 
 export type Steps = ReturnType<typeof stepsFor>;
