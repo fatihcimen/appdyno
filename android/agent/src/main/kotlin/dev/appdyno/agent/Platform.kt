@@ -106,6 +106,7 @@ object Platform {
                 c.getField("logicalHeight").getInt(info),
                 c.getField("logicalDensityDpi").getInt(info),
                 c.getField("rotation").getInt(info),
+                c.getField("state").getInt(info) != android.view.Display.STATE_OFF,
             )
         } catch (_: Throwable) {
             val m = android.content.res.Resources.getSystem().displayMetrics
@@ -114,4 +115,4 @@ object Platform {
     }
 }
 
-class DisplayInfo(val width: Int, val height: Int, val densityDpi: Int, val rotation: Int)
+class DisplayInfo(val width: Int, val height: Int, val densityDpi: Int, val rotation: Int, val on: Boolean = true)

@@ -54,6 +54,7 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 | `app.target` (iOS)                | `pkg` (bundle id)                                                              | –                                                                                |
 | `clipboard.set` / `clipboard.get` | `text` / –                                                                     | – / `text?`                                                                      |
 | `orientation.set`                 | `rotation` 0–3 (frozen)                                                        | –                                                                                |
+| `animations.set`                  | `off`                                                                          | –                                                                                |
 | `audit` (iOS)                     | `types?`, `maxIssues` (50)                                                     | `issues`, `truncated`, `elapsedMs`                                               |
 | `a11y.read` (Android)             | `maxNodes` (60)                                                                | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`) |
 | `cancel`                          | `id`                                                                           | –                                                                                |
@@ -78,7 +79,8 @@ supported yet. iOS sends no accessibility events to a test, so the settle decide
 `pkg`, `layer`, `b` (`[left, top, right, bottom]`), `active`, `focused`.
 
 `nodes[]` in breadth-first order: `p` (parent index, −1 for a window root), `w` (window index), `c`
-(class), `id` (resource id), `t` (text; absent while a field shows its hint), `d` (content
+(class), `id` (resource id; on Android a Compose `testTag` from the node's extras when it has none, no app
+change needed), `t` (text; absent while a field shows its hint), `d` (content
 description), `h` (hint), `b` (bounds on screen), `f` (flags: visible 1, clickable 2, focusable 4,
 focused 8, enabled 16, checked 32, selected 64, editable 128, scrollable 256, password 512, checkable
 1024, long-clickable 2048).
@@ -92,18 +94,40 @@ nodes of the app's and the system dialogs' windows; text left out, a plain text 
 
 ### Settle
 
-With `settle {quietMs (200), maxMs (3000)}` the agent, after the action, reads the layout every 80 ms
-and calls the screen settled once it has been still for `quietMs`:
+With `settle {quietMs (200), maxMs (3000)}` the agent, after the action, calls the screen settled once it
+has been still for `quietMs`:
 
 - no layout change between two reads ("the same layout": the same visible nodes, class and id, in the
   same order, each within 8 pixels of its place; a plain text node vertically only);
 - no layout-moving accessibility event for `quietMs` (focus and text-only events do not count; events
   alone hold the settle for at most twice `quietMs`, as an endless animation never goes quiet);
-- nothing busy: no visible progress indicator, and no application window sticking out of the display (a
-  window sliding in is reported frozen at a midway place until its animation ends).
+- nothing busy: there is a screen (between two screens only the status bar exists, for 100 to 500 ms), no
+  visible progress indicator, and no application window off the display whose resting place is not known.
+
+Reads load the app, so one happens only when it can decide something. On Android: while there is no screen,
+or a window transition runs and has not shown its new window, none at all (the transition comes from WMS,
+`syncInputTransactions(true)`, API 31+, asked before a read and again after one that would end the settle, as
+a read runs on the app's UI thread after a click it was busy with; this keeps an old window that has no events
+yet from passing for a still screen); after a read that saw a change another 40 ms later, as a move without
+events shows only in reads; else when the window would be over, or sooner if a layout-moving event arrives.
+With `before` known the first read is at the end of the window; after a hold it comes 90 ms later, as a new
+window's first layout passes are still landing. A window only changing its bounds is not a layout-moving event
+on API 34+.
+
+**Answers during a slide.** On API 34+ an application window of the display's size comes to rest filling the
+display, so its nodes' places are given from `getBoundsInWindow`, wherever the window is at the moment: the
+answer's content and places are those of the screen at rest. Its visibility is that of the rest as well: a
+node wholly past the display's edge counts as visible, one under a window above as not. `settled` keeps its
+meaning (the content has been still for the window). `settle.moving` (and `moving` on a tree) says a transition
+is still running. Every action and screenshot waits on the device for a running transition to end. Any other window shape, a
+visible virtual node on the sliding window (Compose, a web view: no place in the window) and API 33 and below
+get no such answer: the agent waits for the end of the slide, then for the window.
 
 On a loaded device the window stretches (up to 4×) by how much slower the agent's own reads are than
 their recent best, per node read: a slow device also starts its reaction later.
+
+An answer never shows an empty screen: a read asked for between two screens waits for the next one (2 s on a
+display that is on), else the request fails with `NOT_FOUND`, after an action as well.
 
 The window counts from the end of the action, not its start: on iOS a synthesized tap alone takes
 300–600 ms, and a window counted from its start was spent before the app had the touch (reactions 300 ms
@@ -117,17 +141,27 @@ A tap whose point hits nothing that can react on the screen named by `before` (p
 empty space; not a clickable, long-clickable, editable or checkable node or anything inside one, not a
 web, map or surface view, not a point over the keyboard or another window) uses an 80 ms window.
 
-What the window catches, measured on the fixture's late-reaction screen (50 taps per delay, emulator):
+What the window catches, measured on the fixture's late-reaction screen (emulator; the 200 ms row with today's
+settle at 15 taps per delay, the others with the earlier one at 50):
 
-| window           | reactions caught         | missed          |
-| ---------------- | ------------------------ | --------------- |
-| 200 ms (default) | every delay up to 200 ms | 47/50 at 250 ms |
-| 250 ms           | up to 250 ms             | 10/50 at 300 ms |
-| 300 ms           | up to 300 ms             | 49/50 at 350 ms |
+| window           | reactions caught         | missed                       |
+| ---------------- | ------------------------ | ---------------------------- |
+| 200 ms (default) | every delay up to 200 ms | 1/15 at 250, 15/15 at 300 ms |
+| 250 ms           | up to 250 ms             | 10/50 at 300 ms              |
+| 300 ms           | up to 300 ms             | 49/50 at 350 ms              |
 
 A reaction that starts later than the window (a network answer, a timer) is not waited for: wait for
 the element instead. A touch listener on a view that is not marked clickable is treated as inert; one
 reacting within 80 ms is caught (0/50 missed at 30 ms), a slower one is not.
+
+### Animations
+
+`animations.set {off}` (capability `animations`; host: `--animations off`, `APPDYNO_ANIMATIONS=off`, the
+fourth `AndroidDevice` argument) sets the three system animation scales to 0. They come back as they were when
+the last connection that asked has gone, and if the agent dies first, by a separate shell process watching
+it (within a second). The first performance measurement of a session puts them back for the rest of that
+session, as a measurement must see what a user sees. `doctor --serial` warns about scales left at 0 (a reboot
+in a session leaves them so).
 
 ### Accessibility audit
 

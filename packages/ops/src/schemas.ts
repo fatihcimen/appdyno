@@ -19,6 +19,7 @@ export const ActionOut = z.object({
   elements: z.number().int().optional(),
   foreground: z.string().optional(),
   settled: z.boolean().optional(),
+  moving: z.boolean().optional(),
   warnings: z.array(z.string()),
 });
 export type ActionOut = z.infer<typeof ActionOut>;

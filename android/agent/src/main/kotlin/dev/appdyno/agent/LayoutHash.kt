@@ -9,11 +9,11 @@ class CNode(
     val text: String?,
     val desc: String?,
     val hint: String?,
-    val left: Int,
-    val top: Int,
-    val right: Int,
-    val bottom: Int,
-    val flags: Int,
+    var left: Int,
+    var top: Int,
+    var right: Int,
+    var bottom: Int,
+    var flags: Int,
 )
 
 object Flags {

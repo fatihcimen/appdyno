@@ -73,7 +73,7 @@ export function answersFor(ctx: ServerContext) {
     const fg = foreground(s, screen);
     return reply(
       `${done}${fg}${moving}\n${diff ?? header(s, screen)}`,
-      summary(done, screen, { diff, d, fg, settled: r.settle?.settled }),
+      summary(done, screen, { diff, d, fg, settled: r.settle?.settled, moving: r.settle?.moving }),
     );
   };
 
@@ -81,7 +81,13 @@ export function answersFor(ctx: ServerContext) {
   const summary = (
     done: string,
     screen?: Screen,
-    o: { diff?: string; d?: ReturnType<typeof diffScreens>; fg?: string; settled?: boolean } = {},
+    o: {
+      diff?: string;
+      d?: ReturnType<typeof diffScreens>;
+      fg?: string;
+      settled?: boolean;
+      moving?: boolean | undefined;
+    } = {},
   ): ActionOut => ({
     done: clean(done),
     screen: !screen
@@ -101,6 +107,7 @@ export function answersFor(ctx: ServerContext) {
     ...(screen && { elements: screen.list.length }),
     ...(screen?.foreground && { foreground: screen.foreground }),
     ...(o.settled !== undefined && { settled: o.settled }),
+    ...(o.moving && { moving: true }),
     warnings: [...(o.fg ? [o.fg.trim()] : []), ...(o.settled === false ? [MAYBE_MOVING] : [])],
   });
 

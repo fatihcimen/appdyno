@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Protocol major (breaking changes) and minor (additive, announced by capabilities). */
-export const PROTOCOL = { major: 1, minor: 2 } as const;
+export const PROTOCOL = { major: 1, minor: 3 } as const;
 
 /** Node flags (bit mask `f` of a wire node). */
 export const NODE_FLAGS = {
@@ -62,6 +62,8 @@ export const Tree = z.object({
   elapsedMs: z.number(),
   /** Layout digest (class, id, bounds; no text): equal digests are the same settled layout. */
   hash: z.string(),
+  /** A window is still sliding to its place: places given are those it comes to rest at. */
+  moving: z.boolean().optional(),
 });
 export type Tree = z.infer<typeof Tree>;
 
@@ -80,6 +82,8 @@ export const SettleResult = z.object({
   /** The quiet window in effect: shorter after a tap on something that cannot react (plain text, empty
    * space), stretched on a loaded device. */
   quietMs: z.number().int().optional(),
+  /** The content is still but a window transition runs: places given are those it comes to rest at. */
+  moving: z.boolean().optional(),
 });
 export type SettleResult = z.infer<typeof SettleResult>;
 
@@ -297,6 +301,8 @@ export const METHODS = {
     params: z.object({ maxNodes: z.number().int().min(1).max(200).default(60) }),
     result: z.object({ tree: Tree, clips: z.array(TextClip), traversal: z.array(Traversal) }),
   },
+  /** Android (capability `animations`): the device's animation scales off, back when the last host leaves. */
+  'animations.set': { params: z.object({ off: z.boolean() }), result: z.object({}) },
   cancel: { params: z.object({ id: z.number().int() }), result: z.object({}) },
   shutdown: { params: z.object({}), result: z.object({}) },
 } as const;
