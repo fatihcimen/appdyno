@@ -9,7 +9,7 @@ import {
   type CrashesQuery,
   type CrashReport,
 } from '@appdyno/core';
-import type { Devicectl } from './phone.js';
+import type { Devicectl } from './devicectl.js';
 
 /** A folder holds every app's reports: only so many are opened per query. */
 const MAX_OPENED = 200;

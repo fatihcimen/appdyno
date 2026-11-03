@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { type ScreenRecorder, TIMEOUTS, type ActOptions, pause } from '@appdyno/core';
 import { simulatorCrashes } from './crashes.js';
 import { simulatorLogs } from './logs.js';
-import { SimulatorApps, SimulatorSettings } from './manage.js';
+import { SimulatorApps, SimulatorSettings } from './simulator-manage.js';
 import {
   DeviceError,
   type Tree,

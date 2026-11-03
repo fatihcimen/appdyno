@@ -1,7 +1,7 @@
 import type { Check, DeviceProvider } from '@appdyno/core';
 import type { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from './simulator.js';
-import { Simulators } from './manage.js';
+import { Simulators } from './simulator-manage.js';
 import { IosPhoneDevice, phoneRunnerApp } from './phone.js';
 import { iosProducts } from './runner.js';
 import { DirectSim } from './simdirect.js';

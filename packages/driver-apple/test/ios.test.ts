@@ -21,7 +21,7 @@ describe('simulator inputs', () => {
 
 describe('iPhone inputs', () => {
   it('takes an iPhone UDID in either form, nothing else', async () => {
-    const { assertPhoneUdid } = await import('../src/phone.js');
+    const { assertPhoneUdid } = await import('../src/devicectl.js');
     expect(assertPhoneUdid('00001234-0123456789ABCDEF')).toBeTruthy();
     expect(assertPhoneUdid('0123456789abcdef0123456789abcdef01234567')).toBeTruthy();
     for (const bad of [

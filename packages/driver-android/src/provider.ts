@@ -3,7 +3,7 @@ import type { DeviceError } from '@appdyno/protocol';
 import { Adb } from './adb.js';
 import { agentApk } from './agent.js';
 import { AndroidDevice } from './device.js';
-import { AndroidEmulators } from './manage.js';
+import { AndroidEmulators } from './emulators.js';
 import { queryTrace } from './perf/perfetto.js';
 import { traceProcessor } from './tools.js';
 import { run } from '@appdyno/core';
