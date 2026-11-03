@@ -693,7 +693,8 @@ export class AndroidPerf implements MeasureSource {
   /** The device's own state: load, CPU pressure, memory, thermal status, battery temperature. */
   async vitals(): Promise<Measured<DeviceVitals>> {
     const raw = await this.sh(
-      'echo ==load==; cat /proc/loadavg; echo ==pressure==; cat /proc/pressure/cpu 2>/dev/null; ' +
+      'echo ==load==; cat /proc/loadavg; echo ==parked==; ps -A -o STAT,PID,PPID,WCHAN:24,NAME 2>/dev/null | grep "^D"; ' +
+        'echo ==pressure==; cat /proc/pressure/cpu 2>/dev/null; ' +
         'echo ==mem==; head -3 /proc/meminfo; echo ==thermal==; dumpsys thermalservice 2>/dev/null | head -5; ' +
         'echo ==battery==; dumpsys battery 2>/dev/null',
     );

@@ -75,6 +75,8 @@ export type FrameStats = FrameSummary & {
 
 export type DeviceVitals = {
   load?: number[];
+  /** Kernel threads in uninterruptible sleep: Linux counts each as load, though none uses the CPU. */
+  parkedKernelThreads?: number;
   /** `/proc/pressure/cpu` some avg10. */
   cpuPressure?: number;
   memAvailableKb?: number;

@@ -37,7 +37,14 @@ export type PerfRecord = {
   build: Build;
   /** Android's compile state, or what else makes launches comparable. */
   compile?: string;
-  load: { host: number[]; hostCpus: number; device?: number[]; devicePressure?: number };
+  load: {
+    host: number[];
+    hostCpus: number;
+    device?: number[];
+    devicePressure?: number;
+    /** What of the device's load is kernel threads asleep, using no CPU. */
+    deviceParked?: number;
+  };
   thermal?: number;
   batteryTempC?: number;
   tool: string;
@@ -110,7 +117,10 @@ export function noiseOf(r: Pick<PerfRecord, 'load' | 'thermal' | 'build' | 'devi
   const out: Noise[] = [];
   if (r.device.virtual && (r.load.host[0] ?? 0) > r.load.hostCpus * HOST_LOAD_PER_CORE)
     out.push('high-host-load');
-  if ((r.load.device?.[0] ?? 0) > DEVICE_LOAD || (r.load.devicePressure ?? 0) > CPU_PRESSURE)
+  // shortcut: the parked count is of this moment and the load a minute's average, so a burst of kernel I/O
+  // reads low; judge by the CPU's busy share if a busy phone ever passes
+  const working = (r.load.device?.[0] ?? 0) - (r.load.deviceParked ?? 0);
+  if (working > DEVICE_LOAD || (r.load.devicePressure ?? 0) > CPU_PRESSURE)
     out.push('high-device-load');
   if ((r.thermal ?? 0) >= THERMAL_STATUS) out.push('hot-device');
   if (r.build === 'debug') out.push('debuggable-build');

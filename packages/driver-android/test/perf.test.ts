@@ -107,6 +107,19 @@ describe('android perf parsers on recorded outputs', () => {
     });
   });
 
+  it('counts the kernel threads a Xiaomi keeps parked, not a parked app', () => {
+    const v = parseVitals(
+      `==load==\n14.31 14.85 15.34 1/6605 9249\n==parked==\n${fx('xiaomi-parked.txt')}D       4242  1683 0                        dev.appdyno.fixture\n==pressure==\n==mem==\nMemTotal: 2000000 kB\n`,
+    );
+    expect(v.load).toEqual([14.31, 14.85, 15.34]);
+    expect(v.parkedKernelThreads).toBe(14);
+  });
+
+  it('counts none when nothing is parked, and does not read on into the next section', () => {
+    const v = parseVitals('==load==\n1 1 1 1/9 9\n==parked==\n==mem==\nMemTotal: 2 kB\n');
+    expect(v.parkedKernelThreads).toBe(0);
+  });
+
   it('reads the frame timeline query output with its jank types', () => {
     expect(parseFrameTimelineCsv(fx('frame-timeline.csv'))).toEqual({
       frames: 5,

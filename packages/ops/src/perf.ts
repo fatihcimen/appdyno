@@ -197,6 +197,9 @@ export async function keepRun(
         host: loadavg(),
         hostCpus: cpus().length,
         ...(vitals?.load && { device: vitals.load }),
+        ...(vitals?.parkedKernelThreads !== undefined && {
+          deviceParked: vitals.parkedKernelThreads,
+        }),
         ...(vitals?.cpuPressure !== undefined && { devicePressure: vitals.cpuPressure }),
       },
       ...(vitals?.thermalStatus !== undefined && { thermal: vitals.thermalStatus }),
@@ -388,7 +391,7 @@ export function perfOps(ctx: ServerContext): Op[] {
             ...(f?.limits ? [f.limits] : []),
             ...(v
               ? [
-                  `device: load ${v.load?.join(' ') ?? '?'}, CPU pressure ${v.cpuPressure ?? '?'}, thermal ${v.thermalStatus ?? '?'}`,
+                  `device: load ${v.load?.join(' ') ?? '?'}${v.parkedKernelThreads ? ` (${v.parkedKernelThreads} of it kernel threads asleep, no CPU)` : ''}, CPU pressure ${v.cpuPressure ?? '?'}, thermal ${v.thermalStatus ?? '?'}`,
                 ]
               : []),
             ...(threads

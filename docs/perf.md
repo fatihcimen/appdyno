@@ -79,7 +79,7 @@ of 3 runs, 6 unchanged runs, then the fixture's start made slower by a known amo
 
 On 2026-11-03 the iPhone's gate passed once and, at host load 10-38 with other work on the Mac, called one unchanged run in another: 623 ms against 540.5, a shift of 83.5 over a floor of 81. A third run had 5 of 5 unchanged runs ok, then reached its hour's limit at host load over 100. So 0 of 6 is what those runs show, not a rate. The floor was left as it is.
 
-On a Xiaomi the gate gave no verdict: its device load read 14-16 each time, over the limit of 8 (`DEVICE_LOAD` in `packages/perf/src/record.ts`), and its run answered `new`, with no baseline. That limit does not suit such a phone, and is open.
+On a Xiaomi the gate gave no verdict: its device load read 14-16 each time, over the limit of 8 (`DEVICE_LOAD` in `packages/perf/src/record.ts`), and its run answered `new`, with no baseline. At rest it read 14.31 with one task running and `procs_blocked` 0: the load was 14 kernel threads in uninterruptible sleep (`wdtk-0` to `wdtk-7`, `hang_detect`, `ccci_poll` and others), which Linux counts though they use no CPU, and `/proc/pressure/cpu` is closed to the shell there. A record now keeps that count, and the limit is applied to the load without it. The gate has not been run again on the phone since.
 
 An injected change has to clear what that device's runs do by themselves, so a smaller one on a loaded simulator is not called: it is
 reported as `ok`, with the floor beside it. On an emulator a sleep at the start of a very fast launch shows only partly: 400 ms added

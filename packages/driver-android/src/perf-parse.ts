@@ -209,6 +209,9 @@ export function parseVitals(text: string): DeviceVitals {
   const out: DeviceVitals = {};
   const load = section('load').trim().split(/\s+/).slice(0, 3).map(Number);
   if (load.length === 3 && load.every(Number.isFinite)) out.load = load;
+  // a kernel thread's parent is kthreadd, process 2
+  if (text.includes('==parked=='))
+    out.parkedKernelThreads = [...section('parked').matchAll(/^D\S*\s+\d+\s+2\s/gm)].length;
   const pressure = num(/some avg10=([\d.]+)/, section('pressure'));
   if (pressure !== undefined) out.cpuPressure = pressure;
   const mem = section('mem');
