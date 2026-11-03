@@ -5,13 +5,19 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { DeviceProvider } from '@appdyno/core';
 import { DeviceError, type Tree } from '@appdyno/protocol';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY, type Policy } from '../src/policy.js';
 import { createServer } from '@appdyno/mcp';
 import { opsFor } from '../src/registry.js';
 import { pinchPaths, swipeLine } from '../src/steps.js';
 import { FakeDevice } from './fake-device.js';
+
+// a virtual device's numbers are noisy under host load: these answers must not depend on this Mac's
+vi.mock('node:os', async (original) => ({
+  ...(await original<typeof import('node:os')>()),
+  loadavg: () => [0, 0, 0],
+}));
 
 type Result = { isError?: boolean; content: { type: string; text?: string; data?: string }[] };
 

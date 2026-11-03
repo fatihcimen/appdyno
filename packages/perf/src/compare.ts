@@ -151,17 +151,17 @@ export function compareMetric(
       note: `${n.current} against ${n.baseline} samples: at least ${MIN_SAMPLES} each are needed to call it`,
     };
   const p = rankTest(samples, current.samples);
-  if (p >= ALPHA) return { ...stats, p: r3(p), verdict: 'ok' };
+  if (p >= ALPHA) return { ...stats, p: Math.round(p * 1e5) / 1e5, verdict: 'ok' };
   const worse = better === 'lower' ? moved > 0 : moved < 0;
   const loud = [...blocks(current.noise), ...base.runs.flatMap((r) => blocks(r.noise))];
   if (worse && loud.length)
     return {
       ...stats,
-      p: r3(p),
+      p: Math.round(p * 1e5) / 1e5,
       verdict: 'noisy',
       note: `measured with ${[...new Set(loud)].join(', ')}: measure again`,
     };
-  return { ...stats, p: r3(p), verdict: worse ? 'regression' : 'improvement' };
+  return { ...stats, p: Math.round(p * 1e5) / 1e5, verdict: worse ? 'regression' : 'improvement' };
 }
 
 /** A baseline's metrics with one more run added (or, `replace`, this run only). */
