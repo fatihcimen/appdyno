@@ -129,7 +129,7 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
     if (a.ref) {
       const has = (x: Screen | undefined) => x?.list.find((e) => e.ref === a.ref);
       const e =
-        has(await s.current()) ??
+        has(await s.justNow()) ??
         (patient ? has((await s.until((x) => !!has(x), NO_MATCH_WAIT_MS)).screen) : undefined);
       if (!e) throw new ToolError(`${STALE}: ${a.ref} is not on this screen`, 'STALE');
       return { point: { x: e.x, y: e.y }, name: `${a.ref} ${JSON.stringify(clean(e.label))}` };

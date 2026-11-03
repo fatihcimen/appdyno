@@ -10,6 +10,9 @@ import type { Tree } from '@appdyno/protocol';
 
 const WAIT_GAP_MS = 300;
 
+/** A read this recent is what the device shows: a client that reads and at once acts pays for one read. */
+const FRESH_MS = 150;
+
 /**
  * One device the server drives and what its agent was shown: the screen the diffs are against, the
  * newest read (refs resolve on it while no action came after it) and a count of actions.
@@ -63,7 +66,7 @@ export class Session {
   shown: ScreenElement[] | undefined;
   /** Device actions so far. */
   version = 0;
-  private latest: { screen: Screen; at: number } | undefined;
+  private latest: { screen: Screen; at: number; taken: number } | undefined;
   /** The version and layout of the last screenshot sent. */
   shot: { at: number; hash: string } | undefined;
 
@@ -87,13 +90,22 @@ export class Session {
   }
 
   remember(screen: Screen) {
-    this.latest = { screen, at: this.version };
+    this.latest = { screen, at: this.version, taken: Date.now() };
   }
 
   /** The newest read when no action came after it, else a fresh one. */
   async current(): Promise<Screen> {
     if (this.latest && this.latest.at === this.version) return this.latest.screen;
     return this.read();
+  }
+
+  /**
+   * What a touch aims by: the screen just now. An app may move things with no action of ours (a row it adds
+   * seconds after its launch), and an element is touched where it is, not where an older answer had it.
+   */
+  async justNow(): Promise<Screen> {
+    const l = this.latest;
+    return l && l.at === this.version && Date.now() - l.taken < FRESH_MS ? l.screen : this.read();
   }
 
   /** The newest read when it is still the device's screen (no action since), else undefined. */

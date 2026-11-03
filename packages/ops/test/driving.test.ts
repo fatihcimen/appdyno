@@ -269,6 +269,38 @@ describe('waiting on the device', () => {
   });
 });
 
+describe('a ref on a screen an app moved by itself', () => {
+  it('is touched where the element is now, not where the last answer had it', async () => {
+    const d = new FakeDevice();
+    d.screen = 'settings';
+    const { call } = await connect(d);
+    const line = /(@\w+) "Wi-Fi On" (\d+)/.exec((await call('screen')).text)!;
+    expect(line[2]).toBe('350');
+    // the app adds a row above it, with no action of ours
+    withScreen('settingsMoved', [
+      { b: [0, 200, 1080, 300], c: 'android.widget.LinearLayout', d: 'Added', f: 19 },
+      ...SCREENS.settings!.map((n) => ({
+        ...n,
+        b: [n.b[0], n.b[1] + 100, n.b[2], n.b[3] + 100] as typeof n.b,
+      })),
+    ]);
+    d.screen = 'settingsMoved';
+    await new Promise((r) => setTimeout(r, 200));
+    expect((await call('tap', { ref: line[1] })).error).toBe(false);
+    expect(act(d)).toMatchObject([{ kind: 'tap', x: 540, y: 450 }]);
+  });
+
+  it('costs no second read when the client acts at once on what it just read', async () => {
+    const d = new FakeDevice();
+    d.screen = 'settings';
+    const { call } = await connect(d);
+    const line = /(@\w+) "Wi-Fi On"/.exec((await call('screen')).text)!;
+    const reads = d.calls.filter((c) => c.name === 'tree').length;
+    await call('tap', { ref: line[1], read: 'none' });
+    expect(d.calls.filter((c) => c.name === 'tree').length).toBe(reads);
+  });
+});
+
 describe('a first call that launches', () => {
   it('names the app before the device opens, and only then', async () => {
     const d = new FakeDevice();
