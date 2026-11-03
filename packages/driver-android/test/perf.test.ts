@@ -127,6 +127,7 @@ describe('android perf parsers on recorded outputs', () => {
       janky: 3,
       jankyPercent: 60,
       appDeadlineMissed: 2,
+      frozen: 0,
       appResynced: 0,
       appJankPercent: 40,
       bufferStuffing: 1,

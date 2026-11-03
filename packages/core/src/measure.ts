@@ -1,6 +1,12 @@
 /** A measurement and the raw output it was read from (kept as its proof). */
 export type Measured<T> = { value: T; raw: string; at: string };
 
+/** A frame this long stood still for the user (Android vitals' frozen frame); every source counts by it. */
+export const FROZEN_FRAME_MS = 700;
+
+/** Below this many frames the shares say little (a few launch frames). */
+export const MIN_FRAMES = 60;
+
 export type ProfileEntry = { percent: number; samples: number; symbol: string };
 
 export type CpuProfile = {
@@ -21,8 +27,10 @@ export type FrameSummary = {
   p99Ms?: number;
   slowUiThread?: number;
   deadlineMissed?: number;
-  /** Frames over FROZEN_FRAME_MS (histogram buckets from 700 ms on). */
+  /** Frames of FROZEN_FRAME_MS or longer. */
   frozenFrames: number;
+  /** The longest hitch, where the source counts hitches. */
+  worstHitchMs?: number;
   fewFrames: boolean;
   /** What the numbers can and cannot see, where the source has limits (the simulator's frame probe). */
   limits?: string;
@@ -63,6 +71,8 @@ export type FrameTimeline = {
   janky: number;
   jankyPercent: number;
   appDeadlineMissed: number;
+  /** Frames of FROZEN_FRAME_MS or longer. */
+  frozen: number;
   /** Frames late for the app's own timing: "App Resynced Jitter". */
   appResynced?: number;
   /** The app's own share: frames whose type says the app was at fault (deadline missed, resynced). */
@@ -88,6 +98,8 @@ export type ProbeSummary = {
   p50Ms: number;
   p95Ms: number;
   worstMs: number;
+  /** Intervals of FROZEN_FRAME_MS or longer. */
+  frozen: number;
   /** Intervals over 100 ms. */
   stalls: { count: number; worstMs: number; totalMs: number };
   /** When the app last finished handling a touch, as ms before the window's end. */
@@ -103,6 +115,8 @@ export type HitchSummary = {
   hitches: number;
   hitchMs: number;
   worstMs: number;
+  /** The app's hitches of FROZEN_FRAME_MS or longer. */
+  frozen: number;
   /** Hitch time per second of recording (Apple's hitch ratio, ms/s). */
   hitchRatio: number;
   causes: Record<string, number>;
@@ -239,6 +253,12 @@ export interface MeasureSource {
   cpu?(app: string, windowMs?: number): Promise<Measured<CpuReading>>;
   memory?(app: string): Promise<Measured<MemoryReading>>;
   frames?(app: string, opts?: { reset?: boolean }): Promise<Measured<FrameStats>>;
+  /** Frames of what `during` does, on a device with no counter to read before and after: it records around it. */
+  framesDuring?(
+    app: string,
+    seconds: number,
+    during: () => Promise<unknown>,
+  ): Promise<Measured<FrameStats>>;
   resetFrames?(app: string): Promise<void>;
   vitals?(): Promise<Measured<DeviceVitals>>;
   launch?(

@@ -20,15 +20,16 @@ const SNAPSHOT: Call = {
   args: { also: ['threads', 'network', 'energy', 'exits', 'size'] },
 };
 const SCROLL: Call = { op: 'perf_scroll' };
-const SCROLL_PROBE: Call = { op: 'perf_scroll', args: { probe: true } };
+const TRACE: Call = { op: 'perf_trace', args: { scroll: 'up' } };
 
 /** What reads each row, tried in turn until the row has a number. Names no device: each says what it cannot do. */
 const READS: Record<MeasureId, Call[]> = {
   launch: [{ op: 'perf_launch' }],
   // its own scenario: a traced launch is not comparable with the plain ones
   'launch-why': [{ op: 'perf_launch', args: { repeats: 1, trace: true, scenario: 'launch-why' } }],
-  frames: [SCROLL, { op: 'perf_trace', args: { scroll: 'up' } }, SCROLL_PROBE],
-  stalls: [SCROLL, { op: 'perf_trace', args: { what: 'hangs', scroll: 'up' } }, SCROLL_PROBE],
+  frames: [SCROLL, TRACE],
+  frozen: [SCROLL, TRACE],
+  stalls: [SCROLL, TRACE, { op: 'perf_trace', args: { what: 'hangs', scroll: 'up' } }],
   memory: [SNAPSHOT],
   leaks: [{ op: 'perf_heap' }],
   cpu: [SNAPSHOT],

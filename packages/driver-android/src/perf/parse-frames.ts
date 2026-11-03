@@ -1,16 +1,16 @@
-import type { FrameSummary, FrameStats, FrameTimeline } from '@appdyno/core';
+import {
+  FROZEN_FRAME_MS,
+  MIN_FRAMES,
+  type FrameSummary,
+  type FrameStats,
+  type FrameTimeline,
+} from '@appdyno/core';
 import { num, parseCsv, cellNum, nsToMs } from './parse-common.js';
 
 /**
  * Parsers of the platform's own measurement output (pure; unit tested on recorded outputs). Every number
  * a measurement reports comes from one of these and travels with the raw text it was read from.
  */
-
-/** A frame longer than this stood still for the user (Android vitals' frozen frame). */
-export const FROZEN_FRAME_MS = 700;
-
-/** Below this many frames the shares say little (a few launch frames). */
-export const MIN_FRAMES = 60;
 
 /** The first (process) summary of `dumpsys gfxinfo <pkg>`. */
 export function parseGfxSummary(text: string): FrameSummary {
@@ -151,6 +151,7 @@ export function parseFrameTimelineCsv(csv: string): FrameTimeline {
     janky,
     jankyPercent: rows.length ? Math.round((janky / rows.length) * 1000) / 10 : 0,
     appDeadlineMissed: rows.filter((r) => has(r.jank, /App Deadline Missed/)).length,
+    frozen: ms.filter((x) => x >= FROZEN_FRAME_MS).length,
     appResynced: rows.filter((r) => has(r.jank, /App Resynced Jitter/)).length,
     appJankPercent: rows.length ? Math.round((appJank / rows.length) * 1000) / 10 : 0,
     bufferStuffing: rows.filter((r) => has(r.jank, /Buffer Stuffing/)).length,

@@ -37,6 +37,7 @@ describe('the frame probe', () => {
       stalls: { count: 1, worstMs: 923, totalMs: 923 },
     });
     expect(f.limits).toBeTruthy();
+    expect(probeSummary(lines, T, T + 2000).frozen).toBe(1);
   });
 
   it('counts a stall still running at the end of the window', () => {

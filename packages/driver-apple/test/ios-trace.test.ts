@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  hitchFrames,
   hitchSummary,
   parseActivityMonitor,
   parseHangs,
@@ -30,6 +31,26 @@ describe('iOS trace export', () => {
     expect(s.hitches).toBeGreaterThan(0);
     expect(s.worstMs).toBe(62.5);
     expect(s.hitchRatio).toBeCloseTo(s.hitchMs / 6, 0);
+    expect(s.frozen).toBe(0);
+  });
+
+  it('counts a hitch of 700 ms or longer as a frozen frame, and reads as frames of any platform', () => {
+    const hitch = (ns: number) => `<row><duration fmt="x">${ns}</duration></row>`;
+    const table = `<node><schema name="hitches"><col><mnemonic>duration</mnemonic></col></schema>${[
+      hitch(699e6),
+      hitch(700e6),
+      hitch(1_000e6),
+    ].join('')}</node>`;
+    const s = hitchSummary(table, fixture('ios-surfaces.xml'), 6_000);
+    expect(s).toMatchObject({ hitches: 3, frozen: 2, worstMs: 1_000 });
+    expect(hitchFrames(s)).toMatchObject({
+      totalFrames: 40,
+      jankyFrames: 3,
+      jankyPercent: 7.5,
+      frozenFrames: 2,
+      worstHitchMs: 1_000,
+      fewFrames: true,
+    });
   });
 
   const profile = `<trace-query-result><node><schema name="time-profile"><col><mnemonic>weight</mnemonic></col><col><mnemonic>stack</mnemonic></col></schema>

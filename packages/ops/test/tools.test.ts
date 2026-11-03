@@ -433,6 +433,7 @@ describe('perf tools', () => {
     const t = await connect();
     const r = await t.textOf('perf_trace', { seconds: 2 });
     expect(r.text).toContain('50 frames; late by the app 4 (8%)');
+    expect(r.text).toContain('frozen frames: 1');
     expect(r.text).toContain("on a virtual device the compositor's jank");
   });
 });
@@ -607,13 +608,14 @@ describe('iOS simulators', () => {
             hitches: 2,
             hitchMs: 30,
             worstMs: 20,
+            frozen: 0,
             hitchRatio: 6,
             causes: { 'expensive commit': 2 },
             tracePath: '/t/h.trace',
           }),
       });
       expect((await t.textOf('perf_trace')).text.split('\n').slice(1)).toEqual([
-        '300 frames; 2 hitches of the app, 30 ms in all, worst 20 ms; hitch ratio 6 ms/s',
+        '300 frames; 2 hitches of the app, 30 ms in all, worst 20 ms, 0 frozen; hitch ratio 6 ms/s',
         'likely causes: 2× expensive commit',
         'trace (Instruments): /t/h.trace',
       ]);

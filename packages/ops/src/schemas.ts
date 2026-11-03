@@ -372,6 +372,7 @@ export const TraceOut = z.object({
   p50Ms: z.number().optional(),
   p95Ms: z.number().optional(),
   worstMs: z.number(),
+  frozen: z.number().optional(),
   /** iOS: the app's animation hitches, their time and ratio (ms per second), and the trace. */
   hitches: z.number().optional(),
   hitchMs: z.number().optional(),

@@ -1,12 +1,10 @@
 import type { FrameStats, ProbeSummary } from '@appdyno/core';
-import { round1 } from '@appdyno/core';
+import { FROZEN_FRAME_MS, MIN_FRAMES, round1 } from '@appdyno/core';
 
 export const PROBE_LIMITS =
   "The probe sees the app's main-thread pacing, not the render server or GPU, and the speed is the Mac's: it finds stalls and regressions on this machine and does not predict a phone's frame rate.";
 
 const STALL_MS = 100;
-const FROZEN_MS = 700;
-const MIN_FRAMES = 60;
 
 type Line = {
   loaded?: string;
@@ -83,6 +81,7 @@ function stats(windowText: string, fromMs: number, toMs: number) {
     frames: intervals.length,
     missed,
     missedPercent: intervals.length ? round1((missed / intervals.length) * 100) : 0,
+    frozen: intervals.filter((x) => x >= FROZEN_FRAME_MS).length,
     p50Ms: round1(at(0.5)),
     p95Ms: round1(at(0.95)),
     worstMs: round1(sorted.at(-1) ?? 0),
@@ -103,7 +102,7 @@ export const probeSummary = (windowText: string, fromMs: number, toMs: number): 
 
 /** The same as the frame reading every platform gives. */
 export function probeFrames(windowText: string, fromMs: number, toMs: number): FrameStats {
-  const { summary: s, p90Ms, p99Ms, sorted } = stats(windowText, fromMs, toMs);
+  const { summary: s, p90Ms, p99Ms } = stats(windowText, fromMs, toMs);
   return {
     totalFrames: s.frames,
     jankyFrames: s.missed,
@@ -112,7 +111,7 @@ export function probeFrames(windowText: string, fromMs: number, toMs: number): F
     p90Ms,
     p95Ms: s.p95Ms,
     p99Ms,
-    frozenFrames: sorted.filter((x) => x >= FROZEN_MS).length,
+    frozenFrames: s.frozen,
     fewFrames: s.frames < MIN_FRAMES,
     limits: s.limits,
     stalls: s.stalls,

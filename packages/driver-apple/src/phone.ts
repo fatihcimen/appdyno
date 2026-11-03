@@ -12,6 +12,7 @@ import { iosProducts, type RunnerTransport, IosRunnerLauncher } from './runner.j
 import { signedRunner, type PhoneSigning, findPhoneSigning, phoneXctestrun } from './signing.js';
 import { assertBundle } from './simctl.js';
 import {
+  hitchFrames,
   parsePowerImpact,
   parseActivityMonitor,
   parseTimeProfile,
@@ -113,6 +114,10 @@ export class IosPhoneDevice extends IosDevice {
     frameTrace: async (bundle, seconds, during) => {
       const v = await this.hitches(bundle, seconds, during);
       return { value: { kind: 'hitches', ...v }, raw: v.tracePath, at: new Date().toISOString() };
+    },
+    framesDuring: async (bundle, seconds, during) => {
+      const v = await this.hitches(bundle, seconds, during);
+      return { value: hitchFrames(v), raw: v.tracePath, at: new Date().toISOString() };
     },
     memory: async (bundle) => {
       const { value, raw } = await this.activity(bundle, 2_000);

@@ -1,4 +1,11 @@
-import { sleep, type Measured, reportProgress, median } from '@appdyno/core';
+import {
+  FROZEN_FRAME_MS,
+  MIN_FRAMES,
+  sleep,
+  type Measured,
+  reportProgress,
+  median,
+} from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { refused } from '../session.js';
@@ -9,6 +16,10 @@ import { perfTools, App, Probe, Scenario, measure, kb, virtual } from './shared.
 
 /** Jank above this share of frames is worth a finding (Android vitals counts a session slow above 25 %). */
 const JANK_PERCENT = 10;
+
+/** What a recording around the swipes gives each, and the list's coasting after them. */
+const SECONDS_A_SWIPE = 1.5;
+const COAST_SECONDS = 2;
 
 const OBJECTS = [
   ['activities', 'Activities'],
@@ -54,8 +65,6 @@ export function perfScrollOp(ctx: ServerContext): Op {
       s.appPid = undefined;
       const pkg = appOf(s, app);
       await withProbe(s, pkg, probe);
-      const readFrames = measure(s, 'frames');
-      const resetFrames = measure(s, 'resetFrames');
       const readMemory = measure(s, 'memory');
       const h = s.device.hello!;
       const size = (await s.current()).window ?? { w: h.screen.w, h: h.screen.h };
@@ -73,16 +82,32 @@ export function perfScrollOp(ctx: ServerContext): Op {
       }[] = [];
       let limits: string | undefined;
       const stalls: number[] = [];
-      for (let r = 0; r < repeats; r++) {
-        reportProgress(`scroll round ${r + 1} of ${repeats}`);
-        const m0 = await readMemory(pkg).catch(refused);
-        await resetFrames(pkg).catch(refused);
+      const hitches: number[] = [];
+      const swipeAll = async () => {
         for (let i = 0; i < swipes; i++) {
           const { from, to } = swipeLine(size, { direction, distance: size.h * 0.4 });
           await s.device.swipe(from, to, 300, { settle: false }).catch(refused);
         }
-        await sleep(1_500);
-        const f = await readFrames(pkg).catch(refused);
+      };
+      const recorded = s.device.measure?.framesDuring;
+      /** The counter read before and after the swipes, or, where a device has none, a recording around them. */
+      const framesOfRound = recorded
+        ? () =>
+            measure(s, 'framesDuring')(
+              pkg,
+              Math.ceil(swipes * SECONDS_A_SWIPE) + COAST_SECONDS,
+              swipeAll,
+            ).catch(refused)
+        : async () => {
+            await measure(s, 'resetFrames')(pkg).catch(refused);
+            await swipeAll();
+            await sleep(1_500);
+            return measure(s, 'frames')(pkg).catch(refused);
+          };
+      for (let r = 0; r < repeats; r++) {
+        reportProgress(`scroll round ${r + 1} of ${repeats}`);
+        const m0 = await readMemory(pkg).catch(refused);
+        const f = await framesOfRound();
         const m1 = await readMemory(pkg).catch(refused);
         all.push(m0, f, m1);
         rounds.push({
@@ -98,9 +123,10 @@ export function perfScrollOp(ctx: ServerContext): Op {
         });
         limits = f.value.limits;
         if (f.value.stalls) stalls.push(f.value.stalls.worstMs);
+        if (f.value.worstHitchMs !== undefined) hitches.push(f.value.worstHitchMs);
       }
       s.acted();
-      const counted = rounds.filter((x) => x.frames >= 60);
+      const counted = rounds.filter((x) => x.frames >= MIN_FRAMES);
       const jank = counted.length ? median(counted.map((x) => x.jankyPercent)) : undefined;
       const frozen = rounds.reduce((a, x) => a + x.frozen, 0);
       // steady state: the second round's end to the last one's (the first loads images and caches)
@@ -121,7 +147,7 @@ export function perfScrollOp(ctx: ServerContext): Op {
         ...(jank !== undefined && jank > JANK_PERCENT
           ? [`high jank: median ${jank}% (threshold ${JANK_PERCENT}%)`]
           : []),
-        ...(frozen > 0 ? [`frozen frames: ${frozen} (over 700 ms)`] : []),
+        ...(frozen > 0 ? [`frozen frames: ${frozen} (of ${FROZEN_FRAME_MS} ms or longer)`] : []),
         ...(growth !== undefined && growth > 0.3
           ? [`memory grows: ${Math.round(growth * 100)}% (from round 2 to the last)`]
           : []),
@@ -144,7 +170,9 @@ export function perfScrollOp(ctx: ServerContext): Op {
             unit: 'ms',
             samples: rounds.flatMap((x) => (x.p95Ms === undefined ? [] : [x.p95Ms])),
           },
-          { kind: 'frames.frozen', unit: 'count', samples: rounds.map((x) => x.frozen) },
+          // the whole run's: one frozen frame in one round is not a median of none
+          { kind: 'frames.frozen', unit: 'count', samples: [frozen] },
+          { kind: 'hitches.worst_ms', unit: 'ms', samples: hitches },
           { kind: 'memory.end_kb', unit: 'kb', samples: rounds.map((x) => x.memEndKb) },
           { kind: 'stalls.worst_ms', unit: 'ms', samples: stalls },
         ],
@@ -156,7 +184,7 @@ export function perfScrollOp(ctx: ServerContext): Op {
             (x, i) =>
               `round ${i + 1}: ${x.frames} frames, janky ${x.jankyPercent}%${x.p95Ms !== undefined ? `, p95 ${x.p95Ms} ms` : ''}, frozen ${x.frozen}, memory ${kb(x.memStartKb)} → ${kb(x.memEndKb)}`,
           ),
-          `median jank: ${jank === undefined ? 'not enough frames' : `${jank}%`}`,
+          `median jank: ${jank === undefined ? 'not enough frames' : `${jank}%`}; frozen frames: ${frozen}`,
           ...(notes.length ? notes : ['no threshold exceeded']),
           ...(limits ? [limits] : []),
           ...noisy(noise),

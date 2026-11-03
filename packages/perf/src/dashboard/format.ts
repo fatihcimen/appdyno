@@ -98,6 +98,7 @@ export const MEASURE_TITLE: Record<MeasureId, string> = {
   launch: 'Launch',
   'launch-why': 'Why launch was slow',
   frames: 'Frames',
+  frozen: 'Frozen frames',
   stalls: 'Main-thread stalls',
   memory: 'Memory',
   leaks: 'Leaks',

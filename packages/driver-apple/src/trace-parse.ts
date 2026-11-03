@@ -1,4 +1,7 @@
 import {
+  FROZEN_FRAME_MS,
+  MIN_FRAMES,
+  type FrameStats,
   type HitchSummary,
   round1,
   type TraceDigest,
@@ -77,10 +80,22 @@ export function hitchSummary(
     hitches: hitches.length,
     hitchMs: round1(total),
     worstMs: round1(Math.max(0, ...ms)),
+    frozen: ms.filter((x) => x >= FROZEN_FRAME_MS).length,
     hitchRatio: round1(total / (durationMs / 1000)),
     causes,
   };
 }
+
+/** The same as the frame reading every platform gives: a janky frame is a hitch of the app. */
+export const hitchFrames = (h: HitchSummary): FrameStats => ({
+  totalFrames: h.frames,
+  jankyFrames: h.hitches,
+  jankyPercent: h.frames ? round1((h.hitches / h.frames) * 100) : 0,
+  frozenFrames: h.frozen,
+  worstHitchMs: h.worstMs,
+  fewFrames: h.frames < MIN_FRAMES,
+  limits: 'Janky here is a hitch of the app, as Animation Hitches counts it.',
+});
 
 /** A test's readings from `xcresulttool get test-results metrics`, by the metric's id. */
 export function parseXctMetrics(json: string): Record<string, number[]> {

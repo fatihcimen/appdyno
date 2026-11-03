@@ -33,7 +33,8 @@ const noEnergy = async () => {
   throw new DeviceError('UNSUPPORTED', 'batterystats is all zero here');
 };
 
-describe('perf survey', () => {
+// a scroll waits for real, on whatever else the Mac is doing
+describe('perf survey', { timeout: 60_000 }, () => {
   it('prints a line per measure, goes on after a refusal, and writes the page', async () => {
     const { ctx, measurements } = context({ energy: noEnergy });
     const lines: string[] = [];
@@ -66,6 +67,7 @@ describe('perf survey', () => {
         raw: '',
         at: new Date().toISOString(),
       }),
+      frameTrace: undefined,
     });
     const lines: string[] = [];
     await survey(ctx, 'dev.app', (l) => lines.push(l));

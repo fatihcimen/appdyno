@@ -38,6 +38,7 @@ const MEASURE_NAME: Record<Capability, string> = {
   cpu: 'CPU',
   memory: 'memory',
   frames: 'frames',
+  framesDuring: 'frames',
   resetFrames: 'frames',
   vitals: 'the device state',
   launch: 'launch time',

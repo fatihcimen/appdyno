@@ -107,11 +107,12 @@ export function perfTraceOp(ctx: ServerContext): Op {
           { kind: 'probe.missed_percent', unit: 'percent', samples: [v.missedPercent] },
           { kind: 'probe.p95_ms', unit: 'ms', samples: [v.p95Ms] },
           { kind: 'probe.stall_worst_ms', unit: 'ms', samples: [v.stalls.worstMs] },
+          { kind: 'frames.frozen', unit: 'count', samples: [v.frozen] },
         ]);
         return reply(
           [
             `measurement ${saved.id}${virtualNote(s)}`,
-            `${v.frames} frames in ${v.durationMs} ms; ${v.missed} missed (${v.missedPercent}%); interval p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms`,
+            `${v.frames} frames in ${v.durationMs} ms; ${v.missed} missed (${v.missedPercent}%), ${v.frozen} frozen; interval p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms`,
             `stalls over 100 ms: ${v.stalls.count}, ${v.stalls.totalMs} ms in all, worst ${v.stalls.worstMs} ms`,
             ...(v.lastInputMsAgo !== undefined
               ? [`last touch handled ${v.lastInputMsAgo} ms before the end`]
@@ -129,6 +130,7 @@ export function perfTraceOp(ctx: ServerContext): Op {
             p95Ms: v.p95Ms,
             worstMs: v.worstMs,
             missed: v.missed,
+            frozen: v.frozen,
             stalls: v.stalls.count,
             tracePath: v.tracePath,
             limits: v.limits,
@@ -141,6 +143,8 @@ export function perfTraceOp(ctx: ServerContext): Op {
         const noise = await keep(s, pkg, name, 'xctrace Animation Hitches', saved.txt, [
           { kind: 'hitches.count', unit: 'count', samples: [v.hitches] },
           { kind: 'hitches.ratio', unit: 'ratio', samples: [v.hitchRatio] },
+          { kind: 'hitches.worst_ms', unit: 'ms', samples: [v.worstMs] },
+          { kind: 'frames.frozen', unit: 'count', samples: [v.frozen] },
         ]);
         const causes = Object.entries(v.causes)
           .map(([c, k]) => `${k}× ${c}`)
@@ -148,7 +152,7 @@ export function perfTraceOp(ctx: ServerContext): Op {
         return reply(
           [
             `measurement ${saved.id}${virtualNote(s)}`,
-            `${v.frames} frames; ${v.hitches} hitches of the app, ${v.hitchMs} ms in all, worst ${v.worstMs} ms; hitch ratio ${v.hitchRatio} ms/s`,
+            `${v.frames} frames; ${v.hitches} hitches of the app, ${v.hitchMs} ms in all, worst ${v.worstMs} ms, ${v.frozen} frozen; hitch ratio ${v.hitchRatio} ms/s`,
             ...(causes ? [`likely causes: ${causes}`] : []),
             ...noisy(noise),
             `trace (Instruments): ${v.tracePath}`,
@@ -161,6 +165,7 @@ export function perfTraceOp(ctx: ServerContext): Op {
             hitches: v.hitches,
             hitchMs: v.hitchMs,
             worstMs: v.worstMs,
+            frozen: v.frozen,
             hitchRatio: v.hitchRatio,
             tracePath: v.tracePath,
             noise,
@@ -171,6 +176,9 @@ export function perfTraceOp(ctx: ServerContext): Op {
       const noise = await keep(s, pkg, name, 'perfetto frame timeline', saved.txt, [
         { kind: 'frames.app_jank_percent', unit: 'percent', samples: [v.appJankPercent] },
         { kind: 'frames.p95_ms', unit: 'ms', samples: [v.p95Ms] },
+        { kind: 'frames.frozen', unit: 'count', samples: [v.frozen] },
+        // the longest frame of the app's process: what a stall of its main thread becomes
+        { kind: 'stalls.worst_ms', unit: 'ms', samples: [v.worstMs] },
         ...(v.stats
           ? [
               {
@@ -191,7 +199,7 @@ export function perfTraceOp(ctx: ServerContext): Op {
                 "on a virtual device the compositor's jank is the display's prediction error, not the app's: look at the app's share",
               ]
             : []),
-          `frame time p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms`,
+          `frame time p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms; frozen frames: ${v.frozen}`,
           ...(v.stats
             ? [
                 `overrun p95 ${v.stats.overrunP95Ms} ms, worst ${v.stats.overrunWorstMs} ms; CPU p95 ${v.stats.cpuP95Ms} ms`,
@@ -206,6 +214,7 @@ export function perfTraceOp(ctx: ServerContext): Op {
           raw: saved.txt,
           virtualDevice: virtual(s),
           frames: v.frames,
+          frozen: v.frozen,
           appDeadlineMissed: v.appDeadlineMissed,
           appJankPercent: v.appJankPercent,
           jankyPercent: v.jankyPercent,

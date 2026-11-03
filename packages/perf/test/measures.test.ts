@@ -10,6 +10,8 @@ describe('the rows of the performance table', () => {
     ['launch.phase.dyld_ms', 'launch-why'],
     ['frames.jank_percent', 'frames'],
     ['hitches.ratio', 'frames'],
+    ['hitches.worst_ms', 'frames'],
+    ['frames.frozen', 'frozen'],
     ['probe.missed_percent', 'frames'],
     ['probe.p95_ms', 'frames'],
     ['stalls.worst_ms', 'stalls'],

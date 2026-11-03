@@ -357,6 +357,7 @@ export class FakeDevice extends DeviceActions implements Device {
             p50Ms: 9,
             p95Ms: 30,
             worstMs: 45,
+            frozen: 1,
           },
           '"ts","dur","jank_type"',
         );
