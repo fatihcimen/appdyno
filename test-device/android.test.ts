@@ -68,9 +68,9 @@ describe.skipIf(!serial)('android agent on a device', () => {
   };
 
   /**
-   * A phone answers the fixture's stalls and crashes with a system dialog ("not responding", "keeps stopping"), some
-   * seconds later, which a force-stop does not close and which takes the touches of whatever runs next (an emulator
-   * shows none). Waits up to `waitMs` for it and closes it ("wait" brings it back).
+   * The system answers the fixture's stalls and crashes with a dialog ("not responding", "keeps stopping"), some seconds
+   * later, which a force-stop does not close on a phone and which takes the touches of whatever runs next. Waits up
+   * to `waitMs` for it and closes it ("wait" brings it back on a phone).
    */
   const answerSystemDialog = async (waitMs = 0) => {
     const end = Date.now() + waitMs;
@@ -88,7 +88,6 @@ describe.skipIf(!serial)('android agent on a device', () => {
       await new Promise((r) => setTimeout(r, 500));
     }
   };
-  const onPhone = !serial?.startsWith('emulator-');
 
   beforeEach(() => answerSystemDialog());
 
@@ -316,13 +315,16 @@ describe.skipIf(!serial)('android agent on a device', () => {
     const s = await open('DIALOG');
     await d.tap(find(s, /BUSY DIALOG|Busy dialog/)!, { settle: false });
     const r = await d.typeText('5321234569', { replace: true, settle: false });
+    // the stall can bring the system's dialog up already: "wait" keeps the sheet
+    const wait = find(await d.read(), /^(Wait|Bekle)$/);
+    if (wait) await d.tap(wait, { settle: SETTLE });
     const field = (await d.tree()).nodes.find((x) => x.id?.endsWith(':id/busy_input'));
     expect({ text: field?.t, verified: r.verified }).toEqual({
       text: '5321234569',
       verified: true,
     });
     // the stall is an ANR to the system: its dialog would cover the next tests
-    if (onPhone) await answerSystemDialog(15_000);
+    await answerSystemDialog(serial?.startsWith('emulator-') ? 8_000 : 15_000);
     await d.shell(`am force-stop ${APP}`);
   }, 60_000);
 
@@ -612,7 +614,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
       fg = (await screen()).foreground;
     }
     expect(fg).not.toBe(APP);
-    if (onPhone) await answerSystemDialog(8_000);
+    await answerSystemDialog(8_000);
     await d.shell('input keyevent KEYCODE_BACK');
     await d.launch(APP);
     let back: string | undefined;
@@ -721,7 +723,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
       if (ok) break;
       await new Promise((r) => setTimeout(r, 1_000));
     }
-    if (onPhone) await answerSystemDialog(15_000);
+    await answerSystemDialog(serial?.startsWith('emulator-') ? 8_000 : 15_000);
     await d.shell('input keyevent KEYCODE_BACK');
     await home();
   }, 90_000);
