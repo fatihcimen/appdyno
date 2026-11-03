@@ -1,9 +1,22 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
 import { INSTRUCTIONS, SERVER_INFO } from './brand.js';
 import { inCall, ToolError, text, type Op } from '@appdyno/ops';
 
 /** How often a call with a progress token says it is still working. */
 const BEAT_MS = 5_000;
+
+/** A JSON schema without what every tool would repeat: arguments are checked strictly when they arrive. */
+function slim(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(slim);
+  if (typeof schema !== 'object' || schema === null) return schema;
+  return Object.fromEntries(
+    Object.entries(schema)
+      .filter(([k, v]) => k !== '$schema' && !(k === 'additionalProperties' && v === false))
+      .map(([k, v]) => [k, slim(v)]),
+  );
+}
 
 /**
  * The MCP server, one tool per op; an unexpected failure is logged to stderr by its message only. No
@@ -75,5 +88,14 @@ export function createServer(ops: Record<string, Op>, log: (line: object) => voi
       },
     );
   }
+  // the SDK's own list adds a schema dialect and a task setting to every tool: 3,300 characters of every session
+  const tools = Object.values(ops).map((t) => ({
+    name: t.name,
+    title: t.title,
+    description: t.description,
+    inputSchema: slim(z.toJSONSchema(t.input, { target: 'draft-7', io: 'input' })),
+    annotations: t.annotations,
+  }));
+  server.server.setRequestHandler(ListToolsRequestSchema, () => ({ tools }) as never);
   return server;
 }

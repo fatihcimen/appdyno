@@ -13,6 +13,8 @@ it('keeps the tool catalog within its budget', async () => {
   const { tools } = await client.listTools();
   expect(tools).toHaveLength(Object.keys(opsFor(ctx)).length);
   expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(25_000);
+  expect(JSON.stringify(tools)).not.toMatch(/\$schema|taskSupport|"additionalProperties":false/);
+  expect(tools.every((t) => t.inputSchema.type === 'object')).toBe(true);
   expect(
     tools.filter((t) => 'device' in (t.inputSchema.properties ?? {})).map((t) => t.name),
   ).toEqual(['use_device']);
