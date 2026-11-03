@@ -10,6 +10,7 @@ import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY, type Policy } from '../src/policy.js';
 import { createServer } from '@appdyno/mcp';
 import { opsFor } from '../src/registry.js';
+import { iosScreen } from '../../driver-apple/src/platform-screen.js';
 import { pinchPaths, swipeLine } from '../src/gesture-paths.js';
 import { FakeDevice } from './fake-device.js';
 
@@ -445,6 +446,7 @@ class FakeIos extends FakeDevice {
   constructor() {
     super('75505767-61E2-40F2-8FC6-8AFE20EE25C9');
     Object.defineProperty(this, 'platform', { value: 'ios' });
+    Object.defineProperty(this, 'platformScreen', { value: iosScreen });
     this.hello = {
       ...this.hello,
       platform: 'ios',
