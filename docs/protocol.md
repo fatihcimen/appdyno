@@ -258,9 +258,10 @@ engine's `rule`, a `message`, the element's box `b` in tap units and the element
 ### A phone's screen goes off
 
 A touch on a dark screen reaches no window, and nothing says so: the agent refuses it first and the host wakes the phone and
-asks again. Once woken, the app is on the screen before it can take a touch: a Xiaomi (HyperOS, Android 16) passed through no
-focus and its launcher for up to 3 s, and of 24 touches right after a wake 8 were lost, none of 15 once the host waited for the
-focus to hold for 600 ms. A long measure wakes it too: a dark phone starts no app, and `am start` reads `UNKNOWN (0)`.
+asks again. Once woken, the app is on the screen before it can take a touch. On a Xiaomi (HyperOS, Android 16), with touches 0 to 4 s after
+the read that woke it, 6 of 14 were lost, up to 1.5 s after and none at 4 s, with its focus at times on nothing or its launcher; in 10 more rounds
+the button did not show at all. Once the host waited for the focus to hold for 600 ms, 15 of 15 reached the app and every round had its button. These
+are small counts. A long measure wakes it too: a dark phone starts no app, and `am start` reads `UNKNOWN (0)`.
 
 ## Errors
 

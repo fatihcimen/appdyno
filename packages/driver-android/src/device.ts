@@ -215,7 +215,7 @@ export class AndroidDevice implements Device {
 
   /**
    * A phone just woken has the app on its screen before the app can take a touch: a Xiaomi passes through no focus
-   * and its launcher for up to 3 s, and a touch meanwhile reaches no window. Until the focus has held for a moment.
+   * and its launcher, and a touch meanwhile reaches no window. Until the focus has held for a moment.
    */
   private async focusSteady() {
     const end = Date.now() + WAKE_FOCUS_MS;

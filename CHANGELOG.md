@@ -14,7 +14,7 @@ Found when the parallel branches ran together:
 - iPhone: a signing profile that cannot be read says so, not an internal error; `record` says this phone has no recording capability and what to do.
 - A locked simulator is opened by its lock state: a read under the lock held the runner up for 15 s.
 - With an app selected and another in front, the answer shows what is in front, not 0 elements.
-- The Xiaomi's lost first touch, found: its screen goes off by itself after 60 s, and once woken the app reads as on the screen before it can take a touch, for up to 3 s (8 of 24 touches lost). The host now waits for the focus to hold (0 of 15), and the agent refuses a touch on a dark screen so that the host wakes it first. A long measure wakes the phone too: a dark one starts no app, and `am start` reads `UNKNOWN (0)`.
+- The Xiaomi's lost first touch, found: its screen goes off by itself after 60 s, and once woken the app reads as on the screen before it can take a touch (6 of 14 touches lost, up to 1.5 s after the wake). The host now waits for the focus to hold (0 of 15), and the agent refuses a touch on a dark screen so that the host wakes it first. A long measure wakes the phone too: a dark one starts no app, and `am start` reads `UNKNOWN (0)`.
 - A simulator's clipboard is set from the Mac: the runner's own call at times held it up for 15 s.
 - Energy reads Android 16's row, whose parts follow on the next line.
 - A packet trace with nothing in it says so, not "0 of 0": on a Xiaomi with Android 16 the source records nothing for any app.

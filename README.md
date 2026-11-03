@@ -345,6 +345,8 @@ node scripts/compare.mjs --device <id> --platform android --tools appdyno,anothe
 | Xiaomi 25078RA3EY, Android 16 (tr-TR) | 105 / 121 | 896 / 941     | 739 / 980     | 111 / 134  | 1,438              |
 | iPhone 13 Pro Max, iOS 27.0.1 (tr-TR) | 308 / 313 | 2,017 / 2,025 | 1,988 / 2,089 | 189 / 199  | 2,272              |
 
+The Android tables predate the agent's check for a dark screen before a touch, which was not measured apart.
+
 **Where appdyno loses.**
 
 - Simulator tap: `another-server` is 31 ms faster, by answering during the push: 1,470 elements of its answers were gone 1.5 s later, and 2 answers were stale.
