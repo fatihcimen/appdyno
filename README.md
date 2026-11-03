@@ -22,7 +22,7 @@ sh scripts/install.sh      # npm pack, then npm install -g of the tarball
 appdyno doctor             # what is installed, what is missing, which devices are connected
 ```
 
-The first use of a simulator builds the iOS runner once. It takes a few minutes and shows progress.
+A simulator opens, reads and takes touches with no runner. The first thing only the runner does (a system alert, text entry, an image, an audit) builds it once, which takes a few minutes and shows progress, and starts it.
 The result is cached under `~/Library/Caches/appdyno` (the state directory, `APPDYNO_STATE_DIR`).
 
 Cursor or any client with a JSON server list:

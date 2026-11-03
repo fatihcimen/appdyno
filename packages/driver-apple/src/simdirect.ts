@@ -7,6 +7,9 @@ export type DirectStatus = { input: string; read: string };
 
 const HELPER_VERSION = 'helper';
 
+/** Just after a boot on a loaded Mac the helper took 15 s to answer, and a runner takes longer. */
+const HELLO_MS = 30_000;
+
 /** UIKit's sheet comes up in about 0.5 s; an animation that never ends costs this once per touch. */
 const ANIMATION_WAIT_MS = 1_000;
 
@@ -64,9 +67,9 @@ export class DirectSim {
    */
   async hello(): Promise<Hello | undefined> {
     if (this.readOff) return undefined;
-    const a = this.note(await (await this.helperAx()).call({ op: 'hello' }, 10_000));
+    const a = this.note(await (await this.helperAx()).call({ op: 'hello' }, HELLO_MS));
     const size = a.screen as [number, number] | undefined;
-    if (!a.ok || !size || size[0] > size[1]) return undefined;
+    if (!a.ok || !size?.[0] || !size[1] || size[0] > size[1]) return undefined;
     this.screen = { w: size[0], h: size[1] };
     return {
       agentVersion: HELPER_VERSION,

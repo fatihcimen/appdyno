@@ -255,13 +255,16 @@ static NSDictionary *animationsOver(NSTimeInterval within, long touches) {
 
 // What the host says of this simulator before any test runner is there.
 static NSDictionary *hello(void) {
-  CGRect screen = [[(id<AX>)gAXElement systemApplication] frame];
+  // just after a boot the home screen is not up and has no frame yet; the simulator's own size is portrait
+  CGRect frame = [[(id<AX>)gAXElement systemApplication] frame];
   NSDictionary<NSString *, NSString *> *env = NSProcessInfo.processInfo.environment;
+  double scale = [env[@"SIMULATOR_MAINSCREEN_SCALE"] doubleValue];
+  double w = CGRectGetWidth(frame) > 0 ? CGRectGetWidth(frame) : [env[@"SIMULATOR_MAINSCREEN_WIDTH"] doubleValue] / scale;
+  double h = CGRectGetHeight(frame) > 0 ? CGRectGetHeight(frame) : [env[@"SIMULATOR_MAINSCREEN_HEIGHT"] doubleValue] / scale;
   NSOperatingSystemVersion v = NSProcessInfo.processInfo.operatingSystemVersion;
   NSString *os = v.patchVersion ? [NSString stringWithFormat:@"%ld.%ld.%ld", (long)v.majorVersion, (long)v.minorVersion, (long)v.patchVersion]
                                 : [NSString stringWithFormat:@"%ld.%ld", (long)v.majorVersion, (long)v.minorVersion];
-  return @{@"ok": @YES, @"osVersion": os, @"model": env[@"SIMULATOR_MODEL_IDENTIFIER"] ?: @"iPhone", @"scale": @([env[@"SIMULATOR_MAINSCREEN_SCALE"] doubleValue]),
-           @"screen": @[@(CGRectGetWidth(screen)), @(CGRectGetHeight(screen))]};
+  return @{@"ok": @YES, @"osVersion": os, @"model": env[@"SIMULATOR_MODEL_IDENTIFIER"] ?: @"iPhone", @"scale": @(scale), @"screen": @[@(w), @(h)]};
 }
 
 static void handle(NSData *line) {

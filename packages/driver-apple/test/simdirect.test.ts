@@ -346,6 +346,8 @@ describe('the helpers prove themselves', () => {
     expect(d.screenKnown).toBe(true);
     const wide = new DirectSim('u', { ax: async () => answer([874, 402]), hid: async () => ax() });
     expect(await wide.hello()).toBeUndefined();
+    const none = new DirectSim('u', { ax: async () => answer([0, 0]), hid: async () => ax() });
+    expect(await none.hello()).toBeUndefined();
     const off = new DirectSim('u', { ax: async () => ax(), hid: async () => ax() }, 'off');
     expect(await off.hello()).toBeUndefined();
   });
