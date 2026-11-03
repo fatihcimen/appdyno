@@ -3,6 +3,7 @@
 // Usage: node scripts/ios-bench.mjs <simulator id> [n]   (build first; a quiet host; prints JSON)
 import { loadavg } from 'node:os';
 import { IosSimulatorDevice, buildScreen, stats } from '../dist/index.js';
+import { timedCalls } from './timed.mjs';
 
 const [udid, nArg] = process.argv.slice(2);
 if (!udid) {
@@ -20,19 +21,7 @@ const ops = {};
 const only = process.env.APPDYNO_ONLY?.split(',');
 const measure = async (name, count, fn, between) => {
   if (only && !only.includes(name)) return;
-  const ms = [];
-  let failed = 0;
-  for (let i = 0; i < count + 3; i++) {
-    const t = performance.now();
-    try {
-      await fn();
-      if (i >= 3) ms.push(performance.now() - t);
-    } catch (e) {
-      if (i >= 3) failed++;
-      console.error(`${name}: ${e.message}`);
-    }
-    if (between) await between();
-  }
+  const { ms, failed } = await timedCalls(count, fn, between, `${name}: `);
   ops[name] = stats(ms, failed);
   console.error(`${name}: ${JSON.stringify(ops[name])}`);
 };

@@ -1,7 +1,8 @@
 // Settle tuning on the fixture: for each quiet window, how often a late reaction (a line added N ms
 // after the tap, nothing in between) is missed, and how long an unchanged screen and a navigation take.
 // Usage: node scripts/settle-tune.mjs <serial> [n per cell]  (build first; a quiet machine)
-import { Adb, AndroidDevice, buildScreen, stats } from '../dist/index.js';
+import { buildScreen, stats } from '../dist/index.js';
+import { APP, openFixture } from './settle-fixture.mjs';
 
 const [serial, nArg] = process.argv.slice(2);
 if (!serial) {
@@ -9,14 +10,9 @@ if (!serial) {
   process.exit(2);
 }
 const n = Number(nArg ?? 10);
-const APP = 'dev.appdyno.fixture';
 const QUIETS = [100, 150, 200, 250];
 const DELAYS = [0, 50, 100, 150, 200, 300, 450, 700];
-const adb = new Adb();
-const d = new AndroidDevice(serial, adb);
-await d.open();
-const pause = (ms) => new Promise((r) => setTimeout(r, ms));
-const read = async () => buildScreen(await d.tree(), { platform: 'android', appId: APP });
+const { adb, d, pause, read } = await openFixture(serial);
 const open = async (screen) => {
   await adb.exec(
     serial,

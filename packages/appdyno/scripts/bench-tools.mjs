@@ -5,6 +5,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '@appdyno/mcp';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { Adb, androidProvider, stats } from '../dist/index.js';
+import { timedCalls } from './timed.mjs';
 
 const [serial, nArg] = process.argv.slice(2);
 if (!serial) {
@@ -41,19 +42,7 @@ const home = async () => {
 };
 const out = {};
 const measure = async (name, fn, between) => {
-  const ms = [];
-  let failed = 0;
-  for (let i = 0; i < n + 3; i++) {
-    const t = performance.now();
-    try {
-      await fn();
-      if (i >= 3) ms.push(performance.now() - t);
-    } catch (e) {
-      if (i >= 3) failed++;
-      console.error(e.message);
-    }
-    if (between) await between();
-  }
+  const { ms, failed } = await timedCalls(n, fn, between);
   out[name] = stats(ms, failed);
   console.error(name, JSON.stringify(out[name]));
 };

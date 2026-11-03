@@ -1,7 +1,8 @@
 // Proof of the settle: late reactions to an actionable tap (0–300 ms after it) and a 30 ms touch reaction
 // on a non-clickable view are never missed; an unchanged screen ends quickly on an inert target.
 // Usage: node scripts/settle-proof.mjs <serial> [n]  (build first; a quiet machine)
-import { Adb, AndroidDevice, buildScreen, stats } from '../dist/index.js';
+import { stats } from '../dist/index.js';
+import { APP, openFixture } from './settle-fixture.mjs';
 
 const [serial, nArg] = process.argv.slice(2);
 if (!serial) {
@@ -9,14 +10,9 @@ if (!serial) {
   process.exit(2);
 }
 const n = Number(nArg ?? 50);
-const APP = 'dev.appdyno.fixture';
 const SETTLE = { quietMs: Number(process.env.QUIET ?? 200), maxMs: 3_000 };
 const DELAYS = (process.env.DELAYS ?? '0,50,100,150,200,300').split(',').map(Number);
-const adb = new Adb();
-const d = new AndroidDevice(serial, adb);
-await d.open();
-const pause = (ms) => new Promise((r) => setTimeout(r, ms));
-const read = async () => buildScreen(await d.tree(), { platform: 'android', appId: APP });
+const { adb, d, pause, read } = await openFixture(serial);
 await adb.exec(
   serial,
   `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/late ${APP}`,
