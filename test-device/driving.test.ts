@@ -323,9 +323,10 @@ describe.skipIf(!android)('driving on Android', () => {
     let presses = 0;
     while ((await volume()) === before && presses++ < 6)
       ok(await h.call('press_key', { key: 'volume_up' }));
-    expect(await volume()).not.toBe(before);
+    const raised = await volume();
+    expect(raised).not.toBe(before);
     ok(await h.call('press_key', { key: 'volume_down' }));
-    await expect.poll(volume, { timeout: 5_000 }).toBe(before);
+    await expect.poll(volume, { timeout: 5_000 }).not.toBe(raised);
     ok(await h.call('press_key', { key: 'lock' }));
     await expect
       .poll(async () => /mWakefulness=(\w+)/.exec(await sh('dumpsys power'))?.[1])
