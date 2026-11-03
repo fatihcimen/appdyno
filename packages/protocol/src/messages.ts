@@ -301,6 +301,8 @@ export const METHODS = {
     params: z.object({ maxNodes: z.number().int().min(1).max(200).default(60) }),
     result: z.object({ tree: Tree, clips: z.array(TextClip), traversal: z.array(Traversal) }),
   },
+  /** Android (capability `rest.wait`): until a running window transition has ended (an answer can come before that). */
+  'rest.wait': { params: z.object({}), result: z.object({}) },
   /** Android (capability `animations`): the device's animation scales off, back when the last host leaves. */
   'animations.set': { params: z.object({ off: z.boolean() }), result: z.object({}) },
   cancel: { params: z.object({ id: z.number().int() }), result: z.object({}) },

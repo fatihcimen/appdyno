@@ -424,12 +424,17 @@ export class AndroidDevice implements Device {
     await this.queue.run(() => this.adb.run(['-s', this.serial, 'pull', remote, local], 300_000));
   }
 
-  /** A measurement must see what a user sees: animations are back on for the rest of the session. */
-  async animationsOn() {
-    if (this.animations === 'on') return;
-    this.animations = 'on';
-    if (this.rpc && !this.rpc.closed)
-      await this.call('animations.set', { off: false }, TIMEOUTS.action);
+  /**
+   * A measurement must see what a user sees, and only that: animations are back on for the rest of the session,
+   * and the transition an answer can come before has ended (its frames are not the app's).
+   */
+  async readyToMeasure() {
+    if (this.animations === 'off') {
+      this.animations = 'on';
+      if (this.rpc && !this.rpc.closed)
+        await this.call('animations.set', { off: false }, TIMEOUTS.action);
+    }
+    await this.call('rest.wait', {}, TIMEOUTS.action + 5_000);
   }
 
   /** The app's and the device's performance (frames, memory, CPU, launch, device state). */

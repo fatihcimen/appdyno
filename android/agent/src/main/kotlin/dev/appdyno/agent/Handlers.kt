@@ -72,6 +72,10 @@ class Handlers(private val automation: Automation, private val token: String) {
             Reply(JSONObject())
         }
         "clipboard.get" -> Reply(JSONObject().apply { clipboard.get()?.let { put("text", it) } })
+        "rest.wait" -> {
+            awaitRest()
+            Reply(JSONObject())
+        }
         "animations.set" -> {
             if (p.getBoolean("off")) animations.off() else animations.restore()
             Reply(JSONObject())
@@ -395,7 +399,7 @@ class Handlers(private val automation: Automation, private val token: String) {
 
         val CAPABILITIES = listOf(
             "tree", "tap", "longPress", "swipe", "gesture", "key", "text", "screenshot", "foreground",
-            "clipboard", "orientation", "settle", "a11y.read", "animations",
+            "clipboard", "orientation", "settle", "a11y.read", "animations", "rest.wait",
         )
     }
 }

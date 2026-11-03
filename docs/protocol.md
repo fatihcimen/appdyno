@@ -55,6 +55,7 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 | `clipboard.set` / `clipboard.get` | `text` / –                                                                     | – / `text?`                                                                      |
 | `orientation.set`                 | `rotation` 0–3 (frozen)                                                        | –                                                                                |
 | `animations.set`                  | `off`                                                                          | –                                                                                |
+| `rest.wait`                       | –                                                                              | –                                                                                |
 | `audit` (iOS)                     | `types?`, `maxIssues` (50)                                                     | `issues`, `truncated`, `elapsedMs`                                               |
 | `a11y.read` (Android)             | `maxNodes` (60)                                                                | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`) |
 | `cancel`                          | `id`                                                                           | –                                                                                |
@@ -141,13 +142,13 @@ A tap whose point hits nothing that can react on the screen named by `before` (p
 empty space; not a clickable, long-clickable, editable or checkable node or anything inside one, not a
 web, map or surface view, not a point over the keyboard or another window) uses an 80 ms window.
 
-What the window catches, measured on the fixture's late-reaction screen (emulator; the 200 ms row with today's
-settle at 15 taps per delay and a host at load 14 rising to 100, which stretches the window; the others with
-the earlier settle at 50):
+What the window catches, measured on the fixture's late-reaction screen (emulator, host load about 10; the 200 ms
+row with today's settle at 15 taps per delay, the others with the earlier settle at 50; the window stretches on a
+loaded host):
 
 | window           | reactions caught         | missed          |
 | ---------------- | ------------------------ | --------------- |
-| 200 ms (default) | every delay up to 250 ms | 1/15 at 300 ms  |
+| 200 ms (default) | every delay up to 250 ms | 15/15 at 300 ms |
 | 250 ms           | up to 250 ms             | 10/50 at 300 ms |
 | 300 ms           | up to 300 ms             | 49/50 at 350 ms |
 
