@@ -128,6 +128,21 @@ describe('the page and the measures', () => {
     }
   });
 
+  it('a heap dump with no count of leaks says so in the row', async () => {
+    const { ctx, measurements } = context({
+      heap: async () => ({
+        value: { file: '/h.hprof', bytes: 1, kind: 'hprof' },
+        raw: '',
+        at: new Date().toISOString(),
+      }),
+    });
+    await op(ctx, 'perf_heap');
+    expect((await kept(measurements)).leaks).toMatch(/no count of leaks/);
+    const lines: string[] = [];
+    await survey(ctx, 'dev.app', (l) => lines.push(l));
+    expect(lines.find((l) => l.startsWith('leaks'))).toContain('cannot be read: a heap dump');
+  }, 60_000);
+
   it('takes no refusal for what the caller turned off, or a way the device has another of', async () => {
     const off = context({ frames: says('runs without the probe') });
     await op(off.ctx, 'perf_scroll', { probe: false }).catch(() => undefined);

@@ -1,5 +1,5 @@
 import {
-  FROZEN_FRAME_MS,
+  frozenMoments,
   MIN_FRAMES,
   type FrameStats,
   type HitchSummary,
@@ -69,19 +69,6 @@ const spansOf = (rows: Record<string, Cell>[]): Span[] =>
     ms: Number(r.duration?.value ?? 0) / 1e6,
   }));
 
-/** How many times the screen stood still long enough, a hitch and a hang of the same moment being one. */
-function frozenCount(spans: Span[]) {
-  let count = 0;
-  let until = -Infinity;
-  for (const { start, ms } of spans
-    .filter((s) => s.ms >= FROZEN_FRAME_MS)
-    .sort((a, b) => a.start - b.start)) {
-    if (start >= until) count++;
-    until = Math.max(until, start + ms);
-  }
-  return count;
-}
-
 /** The main thread's hangs of a process in the template's table: what it only suspects is no hang. */
 const hangRows = (xml: string, pid?: number) =>
   parseTraceTable(xml)
@@ -117,7 +104,7 @@ export function hitchSummary(
     hitches: hitches.length,
     hitchMs: round1(total),
     worstMs: round1(Math.max(0, ...ms)),
-    frozen: frozenCount([...spans, ...spansOf(hangs)]),
+    frozen: frozenMoments([...spans, ...spansOf(hangs)]),
     stalls: {
       count: stalled.length,
       worstMs: round1(Math.max(0, ...stalled)),

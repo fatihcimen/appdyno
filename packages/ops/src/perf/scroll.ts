@@ -92,7 +92,7 @@ export function perfScrollOp(ctx: ServerContext): Op {
         }
       };
       const recorded = s.device.measure?.framesDuring;
-      /** The counter read before and after the swipes, or, where a device has none, a recording around them. */
+      /** What the device has for the frames around the swipes, or its counter read before and after them. */
       const framesOfRound = recorded
         ? () =>
             measure(s, 'framesDuring', row)(

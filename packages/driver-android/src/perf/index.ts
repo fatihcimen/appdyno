@@ -1,6 +1,6 @@
 import type { MeasureSource } from '@appdyno/core';
 import { type PerfDevice, isVirtual, pidOf } from './shared.js';
-import { frames, resetFrames, frameTimeline, frameTrace } from './frames.js';
+import { frames, framesDuring, resetFrames, frameTimeline, frameTrace } from './frames.js';
 import { memory, heapDump, heap, heapProfile } from './memory.js';
 import { cpu, threads, cpuProfile } from './cpu.js';
 import { launch } from './launch.js';
@@ -26,6 +26,7 @@ export class AndroidPerf implements MeasureSource {
 
   pid = this.on(pidOf);
   frames = this.on(frames);
+  framesDuring = this.on(framesDuring);
   resetFrames = this.on(resetFrames);
   frameTimeline = this.on(frameTimeline);
   frameTrace = this.on(frameTrace);

@@ -1,8 +1,21 @@
-import type { Measured, FrameStats, FrameTimeline, FrameTrace } from '@appdyno/core';
+import {
+  frozenMoments,
+  sleep,
+  type Measured,
+  type FrameStats,
+  type FrameTimeline,
+  type FrameTrace,
+} from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg } from '../adb.js';
 import { traceProcessor } from '../tools.js';
-import { parseFrameStats, parseAndroidFrameStats, parseFrameTimelineCsv } from './parse.js';
+import {
+  parseFrameStats,
+  parseFramestats,
+  parseAndroidFrameStats,
+  parseFrameTimelineCsv,
+  type FrameRow,
+} from './parse.js';
 import { type PerfDevice, sh, at } from './shared.js';
 import { recordTrace, NAME_NEW_PROCESSES, PROCESS_STATS, queryFile } from './perfetto.js';
 
@@ -32,6 +45,53 @@ export async function frames(
 export async function resetFrames(d: PerfDevice, pkg: string) {
   await d.readyToMeasure();
   await sh(d, `dumpsys gfxinfo ${assertPkg(pkg)} reset > /dev/null`);
+}
+
+/** Often enough that the ring of the last ~120 frames loses none at 120 Hz. */
+const RING_READ_MS = 300;
+/** What a list coasts on after its swipes. */
+const COAST_MS = 1_500;
+
+/**
+ * The frames of what `during` does. Frozen frames come from the rows, read as it goes: one stall of 1 s reads as 4 in
+ * the summary of a Xiaomi with Android 16, as a stall holds up the next frame too, and its summary counts each frame
+ * twice (142 frames rendered for 71 rows).
+ */
+export async function framesDuring(
+  d: PerfDevice,
+  pkg: string,
+  _seconds: number,
+  during: () => Promise<unknown>,
+): Promise<Measured<FrameStats>> {
+  await resetFrames(d, pkg);
+  const rows = new Map<number, FrameRow>();
+  const keep = (text: string) => {
+    for (const r of parseFramestats(text)) rows.set(r.startNs!, r);
+  };
+  let on = true;
+  const reading = (async () => {
+    while (on) {
+      await d
+        .shellAlongside(`LC_ALL=C dumpsys gfxinfo ${pkg} framestats`, 10_000)
+        .then(keep, () => undefined);
+      await sleep(RING_READ_MS);
+    }
+  })();
+  try {
+    await during();
+    await sleep(COAST_MS);
+  } finally {
+    on = false;
+    await reading;
+  }
+  const m = await frames(d, pkg);
+  keep(m.raw);
+  const moments = frozenMoments(
+    [...rows.values()].map((r) => ({ start: r.startNs! / 1e6, ms: r.durationMs })),
+  );
+  // the summary saw one the rows did not: at least that
+  const frozenFrames = m.value.frozenFrames > 0 ? Math.max(moments, 1) : moments;
+  return { ...m, value: { ...m.value, frozenFrames } };
 }
 
 /**

@@ -7,6 +7,22 @@ export const FROZEN_FRAME_MS = 700;
 /** Below this many frames the shares say little (a few launch frames). */
 export const MIN_FRAMES = 60;
 
+/**
+ * How many times the screen stood still that long: what covers the same moment is one, as a stall gives a frame and
+ * the next one, due meanwhile, on Android, and a hitch and a hang on iOS. `start` and `ms` in milliseconds.
+ */
+export function frozenMoments(spans: { start: number; ms: number }[]) {
+  let count = 0;
+  let until = -Infinity;
+  for (const { start, ms } of spans
+    .filter((s) => s.ms >= FROZEN_FRAME_MS)
+    .sort((a, b) => a.start - b.start)) {
+    if (start >= until) count++;
+    until = Math.max(until, start + ms);
+  }
+  return count;
+}
+
 export type ProfileEntry = { percent: number; samples: number; symbol: string };
 
 export type CpuProfile = {

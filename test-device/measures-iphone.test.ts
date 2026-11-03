@@ -120,6 +120,7 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
     const none = (await d.measure.heap!(APP, dir)).value;
     console.log('leaks at rest', JSON.stringify(none));
     expect(none.leaks).toBe(0);
+    await d.inFront(APP);
     for (let i = 0; i < 10; i++) await d.tap(byId(s, 'leak_make'), { settle: false });
     const ten = (await d.measure.heap!(APP, dir)).value;
     console.log('leaks of 10 cycles', JSON.stringify(ten));
@@ -154,7 +155,10 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
         APPDYNO_FIXTURE_NO_PROXY: '1',
       });
       const n = (
-        await d.measure.network!(APP, 3_000, () => d.tap(byId(s, 'fetch'), { settle: false }))
+        await d.measure.network!(APP, 3_000, async () => {
+          await d.inFront(APP);
+          await d.tap(byId(s, 'fetch'), { settle: false });
+        })
       ).value;
       const shown = buildScreen(await d.tree(), { platform: 'ios', appId: APP });
       const said = shown.list.find((e) => /^(fetched|failed)/.test(e.label))?.label ?? '';
@@ -179,6 +183,7 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
     const s = await open('cpu');
     const idle = await t.call('perf_snapshot', { also: ['energy'], cpuWindowMs: 8_000 });
     let on = true;
+    await d.inFront(APP);
     const loop = (async () => {
       while (on) {
         await d.tap(byId(s, 'cpu_load'), { settle: false }).catch(() => undefined);

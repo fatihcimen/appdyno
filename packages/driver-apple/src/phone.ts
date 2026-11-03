@@ -32,6 +32,9 @@ export async function phoneRunnerApp(build = true): Promise<string> {
   return app;
 }
 
+/** What the phone's lock screen shows, in any language. */
+const LOCK_SCREEN = 'lockscreen-date-view';
+
 const signedRunners = new Map<string, ReturnType<typeof signedRunner>>();
 
 /** A phone: the runner signed for the profile, a port on the phone, reached over USB. */
@@ -224,8 +227,18 @@ export class IosPhoneDevice extends IosDevice {
   readonly apps: PhoneApps;
   readonly settings: PhoneSettings;
 
-  /** A phone's screen goes off by itself, and what the lock screen hides shows no frames: this wakes it, the app as it is. */
-  private readonly inFront = (bundle: string) => this.launch(assertBundle(bundle));
+  /**
+   * The app in front on a screen that is on. A phone locks itself about a minute after the last touch; a launch only
+   * lights its lock screen, where a swipe or a tap goes to the system (with no passcode, the home button gets past it).
+   */
+  async inFront(bundle: string) {
+    assertBundle(bundle);
+    const { windows, nodes } = await this.tree();
+    const locked = nodes.some((n) => n.id === LOCK_SCREEN);
+    if (windows[0]?.pkg === bundle && !locked) return;
+    if (locked) await this.key('home', { settle: false });
+    await this.launch(bundle);
+  }
 
   /** Activity Monitor over every process (no attach: a system app has no get-task-allow), one process read. */
   private async activity(bundle: string, windowMs: number) {

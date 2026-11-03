@@ -80,9 +80,18 @@ describe.skipIf(!serial)('measures on Android, through the operations', () => {
     const counted = await onBattery();
     await pause(1_000);
     const idle = await t.call('perf_snapshot', { also: ['energy'], cpuWindowMs: 3_000 });
-    await d.tap(cpuLoad, { settle: false });
+    // its loop lasts 3 s, and the snapshot reads the CPU before the energy
+    let on = true;
+    const loop = (async () => {
+      while (on) {
+        await d.tap(cpuLoad, { settle: false }).catch(() => undefined);
+        await pause(1_500);
+      }
+    })();
+    await pause(500);
     const busy = await t.call('perf_snapshot', { also: ['energy'], cpuWindowMs: 3_000 });
-    await pause(1_000);
+    on = false;
+    await loop;
     console.log('energy', idle.text, '\n', busy.text);
     expect(busy.data.energyModelled).toBe(true);
     if (serial!.startsWith('emulator-')) {
@@ -93,6 +102,7 @@ describe.skipIf(!serial)('measures on Android, through the operations', () => {
     } else {
       expect(busy.text).toMatch(/model-based/);
       expect(busy.data.energyMah as number).toBeGreaterThan(idle.data.energyMah as number);
+      expect(busy.text).toMatch(/energy \(a model\)/);
     }
     expect(await d.shell('dumpsys battery')).not.toMatch(/UPDATES STOPPED/);
     // the count since the last charge goes on, whatever the level

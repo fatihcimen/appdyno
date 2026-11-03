@@ -99,14 +99,14 @@ export async function survey(ctx: ServerContext, app: string, log: (line: string
       continue;
     }
     const lacks = (o: Outcome) => o.lacking?.some((what) => measureOf(`${what}.`) === row);
-    // a call that ran is the device not refusing, whatever the other ways to read this row said
-    if (said.some((o) => !o.refused && !lacks(o))) {
-      line(row, 'answered with no number to keep');
-      continue;
-    }
     const kept = (await loadRefusals(dir)).find(
       (r) => r.deviceClass === cls && r.app === app && r.measure === row && since(r.at),
     );
+    // a call that ran is the device not refusing, whatever the other ways to read this row said
+    if (!kept && said.some((o) => !o.refused && !lacks(o))) {
+      line(row, 'answered with no number to keep');
+      continue;
+    }
     const reason =
       kept?.reason ??
       ([...new Set(said.flatMap((o) => o.refused ?? []))].join('; ') ||

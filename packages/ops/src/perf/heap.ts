@@ -5,7 +5,7 @@ import type { ServerContext } from '../context.js';
 import { refused } from '../session.js';
 import { HeapOut } from '../schemas.js';
 import { type Op, defineOp, READ, reply } from '../tool.js';
-import { perfTools, App } from './shared.js';
+import { keepRefusal, perfTools, App } from './shared.js';
 
 const HEAP: Record<HeapReading['kind'], { store: string; label: string }> = {
   hprof: { store: 'heap-dump', label: 'heap dump' },
@@ -60,6 +60,14 @@ export function perfHeapOp(ctx: ServerContext): Op {
         await keep(s, pkg, 'heap', 'perf_heap', saved.txt, [
           { kind: 'heap.leaks', unit: 'count', samples: [v.leaks] },
         ]);
+      else
+        await keepRefusal(
+          ctx,
+          s,
+          pkg,
+          'leaks',
+          "a heap dump has no count of leaks: read it in a memory analyser, or watch Activities rise in perf_scroll's rounds",
+        );
       return reply(
         `measurement ${saved.id}\n${HEAP[v.kind].label}: ${v.file} (${(v.bytes / 1048576).toFixed(1)} MB)${v.leaks !== undefined ? `; ${v.leaks} leaks, ${v.leakedBytes} bytes` : ''}${v.note ? `\n${v.note}` : ''}`,
         {

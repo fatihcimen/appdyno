@@ -18,11 +18,14 @@ import { DeviceError } from '@appdyno/protocol';
 import { xcodeEnv } from './simctl.js';
 import { parseXctMetrics, traceDigest, hitchSummary } from './trace-parse.js';
 
-/** How long a recording may take to stop after its time limit before it is ended (a phone took 14 s). */
-const STOP_MS = 60_000;
+/**
+ * How long a recording may take to stop after its time limit before it is ended (a phone took 14 s; a signal at 60 s
+ * on a Mac at load 200 left a trace that reads "instrument run data is missing").
+ */
+const STOP_MS = 120_000;
 
 /** The whole recording is cut at this, whatever the tool does. */
-const CAP_MS = 180_000;
+const CAP_MS = 240_000;
 
 /** How long the tool may take to say it has started before `during` runs without it. */
 const START_MS = 90_000;
@@ -169,6 +172,10 @@ const exported = async (tracePath: string, xpath: string) =>
       env: xcodeEnv(),
       maxBuffer: 256 * 1024 * 1024,
       timeout: 300_000,
+    }).catch((e: { stderr?: string; message: string }) => {
+      // says nothing of what the device can do: a recording cut short on a loaded Mac reads so
+      const said = (e.stderr ?? e.message).trim().split('\n').slice(0, 2).join(' ');
+      throw new DeviceError('TIMEOUT', `the trace tool cannot read its own trace: ${said}`);
     })
   ).stdout;
 
