@@ -107,6 +107,21 @@ export const ScreenshotOut = z.object({
 
 export const DoneOut = z.object({ done: z.string() });
 
+export const VisualOut = z.object({
+  done: z.string(),
+  file: z.string(),
+  same: z.boolean().optional(),
+  percent: z.number().optional(),
+  differing: z.number().optional(),
+});
+
+export const ReactNativeOut = z.object({
+  done: z.string(),
+  targets: z.array(z.object({ id: z.string(), title: z.string().optional() })).optional(),
+  lines: z.number().int().optional(),
+  dropped: z.number().int().optional(),
+});
+
 export const WebOut = z.object({
   done: z.string().optional(),
   page: z.string().optional(),

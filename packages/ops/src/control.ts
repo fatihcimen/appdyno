@@ -19,6 +19,8 @@ import { Read } from './steps.js';
 import { ACT, defineOp, DESTRUCTIVE, reply, ToolError, type Op } from './tool.js';
 
 const NO_APP = 'give app (or select one with use_device)';
+const PHONE_NUMBER = /^\+?\d{3,20}$/;
+const DEFAULT_SENDER = '5551234';
 
 /** The conditions this tool changed on a device and what to put back. Survives its process. */
 type Changes = Record<string, { was: string; app?: string }>;
@@ -307,7 +309,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
         "Device conditions; no value reads one. name: dark_mode, reduce_motion, animations (on, off); text_size (Android 1.3; iOS large…); locale (tr-TR; Android per app); network (emulator: slow, full, edge…). Put back at the session's end or by name restore (command line: only so). One-shot: push (value: text; title), biometric (simulator; match, nomatch). A device that cannot refuses and says why.",
       input: z
         .object({
-          name: z.enum([...SETTINGS, 'restore', 'push', 'biometric']),
+          name: z.enum([...SETTINGS, 'restore', 'push', 'biometric', 'fold', 'call', 'sms']),
           value: z.string().max(500).optional(),
           title: z.string().max(200).optional(),
           app: z.string().max(200).optional(),
@@ -339,6 +341,30 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
             throw new ToolError('biometric needs value: match or nomatch');
           await settings.biometric(value === 'match').catch(refused);
           return reply(`biometric: ${value}`, { done: `biometric: ${value}` });
+        }
+        if (name === 'fold') {
+          if (value !== 'open' && value !== 'closed')
+            throw new ToolError('fold needs value: open or closed');
+          await settings.fold(value === 'closed').catch(refused);
+          s.acted();
+          return reply(`fold: ${value}`, { done: `fold: ${value}` });
+        }
+        if (name === 'call') {
+          const m = /^(end )?(\+?\d{3,20})$/.exec(value ?? '');
+          if (!m) throw new ToolError('call needs value: a phone number; end and the number hangs up');
+          await settings.call(m[2]!, !!m[1]).catch(refused);
+          s.acted();
+          const t = m[1] ? `the call from ${m[2]} ended` : `a call from ${m[2]} is coming in`;
+          return reply(t, { done: t });
+        }
+        if (name === 'sms') {
+          const from = title ?? DEFAULT_SENDER;
+          if (!value) throw new ToolError('sms needs value: the text');
+          if (!PHONE_NUMBER.test(from))
+            throw new ToolError('sms needs title: the phone number it comes from');
+          await settings.sms(from, value).catch(refused);
+          s.acted();
+          return reply(`an SMS came from ${from}`, { done: `an SMS came from ${from}` });
         }
         const pkg = app ?? (name === 'locale' ? s.appId : undefined);
         if (pkg) checkApp(policy, pkg);

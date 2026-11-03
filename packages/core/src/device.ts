@@ -192,6 +192,7 @@ export const SETTINGS = [
   'locale',
   'network',
   'proxy',
+  'battery',
 ] as const;
 export type SettingName = (typeof SETTINGS)[number];
 
@@ -204,6 +205,11 @@ export interface DeviceSettings {
   set(name: SettingName, value: string, app?: string): Promise<void>;
   push(app: string | undefined, title: string, body: string): Promise<void>;
   biometric(match: boolean): Promise<void>;
+  /** A foldable's pose. */
+  fold(closed: boolean): Promise<void>;
+  /** A call coming in from `number`, or that call ended. */
+  call(number: string, end: boolean): Promise<void>;
+  sms(from: string, text: string): Promise<void>;
 }
 
 /** A simulator or emulator that can be started, whatever its state. */

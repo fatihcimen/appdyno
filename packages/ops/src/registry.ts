@@ -16,10 +16,12 @@ import {
 } from './flow.js';
 import { networkOps } from './network.js';
 import { perfOps } from './perf.js';
+import { reactNativeOps } from './reactnative.js';
 import { readOps } from './read.js';
 import { recordOps } from './record.js';
 import { reportFor } from './report.js';
 import { stepsFor } from './steps.js';
+import { visualOps } from './visual.js';
 import { webOps } from './web.js';
 import type { Op } from './tool.js';
 
@@ -42,6 +44,8 @@ function build(ctx: ServerContext) {
       ...report.ops(),
       ...networkOps(ctx),
       ...webOps(ctx),
+      ...reactNativeOps(ctx),
+      ...visualOps(ctx),
       ...perfOps(ctx),
       ...flowOps(ctx, runner),
     ].map((op) => [op.name, report.wrap(op)]),

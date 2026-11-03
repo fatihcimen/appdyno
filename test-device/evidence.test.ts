@@ -506,6 +506,197 @@ for (const { platform, serial, provider, pageId, other } of [
     }, 60_000);
   });
 
+for (const { platform, serial, provider } of targets)
+  describe.skipIf(!serial)(`visual comparison on ${platform}`, () => {
+    let h: ReturnType<typeof harness>;
+    const baselines = join(dir, `baselines-${platform}`);
+    const open = async (screen: string, label: string) => {
+      await h.ok('open_link', { url: `appdyno-fixture://open/${screen}` });
+      await h.ok('wait_for', { text: label });
+    };
+    beforeAll(async () => {
+      h = harness(serial!, provider());
+      await h.ok('terminate_app');
+      await h.ok('launch_app');
+      await open('dialog', 'Open dialog');
+    }, 240_000);
+    afterAll(() => h?.ctx.close());
+
+    it('finds a screen the same as its baseline', async () => {
+      const saved = await h.ok('visual', { action: 'baseline', name: 'dialog', dir: baselines });
+      expect(saved.text).toMatch(/saved .*dialog\.png \(\d+x\d+\)/);
+      const r = await h.ok('visual', { action: 'compare', name: 'dialog', dir: baselines });
+      expect(r.data.same).toBe(true);
+      expect(existsSync(join(baselines, 'dialog.diff.png'))).toBe(false);
+    }, 60_000);
+
+    it('refuses what has changed, with a diff image a person can open', async () => {
+      await open('list', 'Product 1');
+      const r = await h.call('visual', { action: 'compare', name: 'dialog', dir: baselines });
+      expect(r.error).toBe(true);
+      expect(r.data.code).toBe('CHECK_FAILED');
+      expect(r.text).toMatch(/[\d.]+ percent of pixels differ .* tolerance 0\.1: diff /);
+      const diff = decodePng(readFileSync(join(baselines, 'dialog.diff.png')))!;
+      expect(diff).not.toBeNull();
+      const red = diff.data.filter(
+        (_, i) => i % 3 === 0 && diff.data[i] === 230 && diff.data[i + 1] === 30,
+      ).length;
+      expect(red).toBeGreaterThan(1_000);
+      expect(existsSync(join(baselines, 'dialog.actual.png'))).toBe(true);
+      // the file a person opens is one any viewer takes
+      if (ffprobe)
+        expect(
+          execFileSync(
+            'ffprobe',
+            ['-v', 'error', '-show_entries', 'stream=codec_name', '-of', 'csv=p=0', join(baselines, 'dialog.diff.png')],
+            { encoding: 'utf8' },
+          ).trim(),
+        ).toBe('png');
+    }, 60_000);
+
+    it('takes a bigger tolerance, a mask by selector and one by rect', async () => {
+      await open('dialog', 'Open dialog');
+      const full = await h.ok('visual', { action: 'baseline', name: 'masked', dir: baselines });
+      expect(full.error).toBe(false);
+      await h.ok('tap', { selector: { id: 'open_dialog' } });
+      const seen = await h.call('visual', { action: 'compare', name: 'masked', dir: baselines });
+      expect(seen.error).toBe(true);
+      const percent = Number(/([\d.]+) percent/.exec(seen.text)![1]);
+      const loose = await h.ok('visual', {
+        action: 'compare',
+        name: 'masked',
+        dir: baselines,
+        tolerance: Math.min(100, percent + 1),
+      });
+      expect(loose.data.same).toBe(true);
+      const window = await h.ok('device_info');
+      const size = window.data.screen as { w: number; h: number };
+      const masked = await h.ok('visual', {
+        action: 'compare',
+        name: 'masked',
+        dir: baselines,
+        tolerance: 0,
+        masks: [{ x: 0, y: 0, w: size.w, h: size.h }],
+      });
+      expect(masked.data.percent).toBe(0);
+      const none = await h.call('visual', {
+        action: 'compare',
+        name: 'masked',
+        dir: baselines,
+        masks: [{ text: 'nothing like this' }],
+      });
+      expect(none.text).toMatch(/nothing to mask/);
+    }, 90_000);
+
+    it('says when there is no baseline, and from the command line', async () => {
+      const r = await h.call('visual', { action: 'compare', name: 'never', dir: baselines });
+      expect(r.error).toBe(true);
+      expect(r.text).toMatch(/no baseline/);
+      const c = await cli(serial!, 'visual', 'compare', '--name', 'never', '--dir', baselines);
+      expect(c.code).toBe(1);
+      expect(c.err).toMatch(/no baseline/);
+    }, 60_000);
+  });
+
+describe.skipIf(!android)('visual comparison leaves the status bar out', () => {
+  it('holds when only the clock moves', async () => {
+    const adb = new Adb();
+    const h = harness(android!, androidProvider(adb));
+    const demo = (args: string) =>
+      adb.exec(android!, `am broadcast -a com.android.systemui.demo ${args}`);
+    try {
+      await adb.exec(android!, 'settings put global sysui_demo_allowed 1');
+      await demo('-e command enter');
+      await demo('-e command clock -e hhmm 0101');
+      await h.ok('open_link', { url: 'appdyno-fixture://open/dialog' });
+      await h.ok('wait_for', { text: 'Open dialog' });
+      const b = join(dir, 'clock');
+      await h.ok('visual', { action: 'baseline', name: 'clock', dir: b });
+      await demo('-e command clock -e hhmm 2359');
+      const r = await h.ok('visual', { action: 'compare', name: 'clock', dir: b, tolerance: 0 });
+      expect(r.data.same).toBe(true);
+    } finally {
+      await demo('-e command exit');
+      await adb.exec(android!, 'settings delete global sysui_demo_allowed');
+      h.ctx.close();
+    }
+  }, 120_000);
+});
+
+describe.skipIf(!android)('emulator events on Android', () => {
+  let h: ReturnType<typeof harness>;
+  const adb = new Adb();
+  const callState = async () =>
+    /mCallState=(\d)/.exec(await adb.exec(android!, 'dumpsys telephony.registry'))?.[1];
+  const until = async (met: () => Promise<boolean>) => {
+    const end = Date.now() + 15_000;
+    while (!(await met()) && Date.now() < end) await new Promise((r) => setTimeout(r, 250));
+    expect(await met()).toBe(true);
+  };
+  beforeAll(async () => {
+    h = harness(android!, androidProvider(adb));
+    await h.ok('launch_app');
+  }, 240_000);
+  afterAll(() => h?.ctx.close());
+
+  it('sets the battery and puts it back', async () => {
+    const level = async () => /level: (\d+)/.exec(await adb.exec(android!, 'dumpsys battery'))?.[1];
+    const was = await h.ok('device_setting', { name: 'battery' });
+    expect(was.text).toMatch(/battery: default \(now \d+\)/);
+    const before = await level();
+    await h.ok('device_setting', { name: 'battery', value: '17' });
+    expect(await level()).toBe('17');
+    expect((await h.call('device_setting', { name: 'battery', value: '170' })).error).toBe(true);
+    await h.ok('device_setting', { name: 'restore' });
+    expect(await level()).toBe(before);
+    expect(await adb.exec(android!, 'dumpsys battery')).not.toContain('UPDATES STOPPED');
+  }, 60_000);
+
+  it('brings a call in and ends it', async () => {
+    await h.ok('device_setting', { name: 'call', value: '5551212' });
+    await until(async () => (await callState()) === '1');
+    await h.ok('device_setting', { name: 'call', value: 'end 5551212' });
+    await until(async () => (await callState()) === '0');
+    await h.ok('launch_app');
+  }, 60_000);
+
+  it('brings an SMS in', async () => {
+    const text = `Merhaba ${Date.now()}`;
+    await h.ok('device_setting', { name: 'sms', title: '5553434', value: text });
+    await until(async () =>
+      (await adb.exec(android!, 'content query --uri content://sms/inbox --projection body')).includes(
+        text,
+      ),
+    );
+    await h.ok('launch_app');
+  }, 60_000);
+
+  it('says when an emulator cannot fold', async () => {
+    const r = await h.call('device_setting', { name: 'fold', value: 'closed' });
+    expect(r.error).toBe(true);
+    expect(r.data.code).toBe('UNSUPPORTED');
+    expect(r.text).toMatch(/refused fold pose: Device is not foldable/);
+  });
+});
+
+describe.skipIf(!simulator)('emulator events on a simulator', () => {
+  it('says why it has none', async () => {
+    const h = harness(simulator!, appleProvider());
+    for (const [args, why] of [
+      [{ name: 'fold', value: 'closed' }, /simctl has no fold pose/],
+      [{ name: 'call', value: '5551212' }, /no telephony/],
+      [{ name: 'sms', value: 'x' }, /no telephony/],
+      [{ name: 'battery', value: '10' }, /no battery to set/],
+    ] as const) {
+      const r = await h.call('device_setting', args);
+      expect(r.error).toBe(true);
+      expect(r.data.code).toBe('UNSUPPORTED');
+      expect(r.text).toMatch(why);
+    }
+    h.ctx.close();
+  }, 120_000);
+});
+
 describe.skipIf(!android)('recording on Android', () => {
   let h: ReturnType<typeof harness>;
   const adb = new Adb();

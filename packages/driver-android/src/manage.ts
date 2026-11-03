@@ -127,13 +127,14 @@ export class AndroidSettings implements DeviceSettings {
 
   private sh = (c: string) => this.adb.exec(this.serial, `${c} 2>&1`, { timeoutMs: TIMEOUTS.app });
 
-  private async emu(...words: string[]) {
+  private async emu(what: string, ...words: string[]) {
     if (!this.serial.startsWith('emulator-'))
-      throw new DeviceError(
-        'UNSUPPORTED',
-        'a phone has no network shaping: only an emulator console has',
-      );
-    return this.adb.run(['-s', this.serial, 'emu', ...words], 30_000);
+      throw new DeviceError('UNSUPPORTED', `a phone has no ${what}: only an emulator console has`);
+    const out = await this.adb.run(['-s', this.serial, 'emu', ...words], 30_000);
+    // the console answers OK or KO; adb says nothing of it in its exit code
+    const ko = /^KO:?\s*(.*)$/m.exec(out);
+    if (ko) throw new DeviceError('UNSUPPORTED', `this emulator refused ${what}: ${ko[1]}`);
+    return out;
   }
 
   /**
@@ -179,8 +180,13 @@ export class AndroidSettings implements DeviceSettings {
         return /are \[([^\]]*)\]/.exec(out)?.[1] ?? '';
       }
       case 'network':
-        await this.emu('network', 'status');
+        await this.emu('network shaping', 'network', 'status');
         return 'full';
+      case 'battery': {
+        const out = await this.sh('dumpsys battery');
+        const level = /^\s*level: (\d+)/m.exec(out)?.[1] ?? '?';
+        return /UPDATES STOPPED/.test(out) ? level : `default (now ${level})`;
+      }
       case 'proxy': {
         const v = (await this.sh('settings get global http_proxy')).trim();
         return v === 'null' || v === ':0' || v === '' ? 'none' : v;
@@ -237,14 +243,38 @@ export class AndroidSettings implements DeviceSettings {
             'INVALID_ARGUMENT',
             `network: slow, full or a speed name, not ${value}`,
           );
-        await this.emu('network', 'speed', value === 'slow' ? 'edge' : value);
-        await this.emu('network', 'delay', ...(value === 'slow' ? ['40', '100'] : ['none']));
+        await this.emu('network shaping', 'network', 'speed', value === 'slow' ? 'edge' : value);
+        await this.emu(
+          'network shaping',
+          'network',
+          'delay',
+          ...(value === 'slow' ? ['40', '100'] : ['none']),
+        );
         return;
       }
       case 'proxy':
         await this.setProxy(value);
         return;
+      case 'battery':
+        if (value.startsWith('default')) await this.sh('dumpsys battery reset');
+        else if (/^\d{1,3}$/.test(value) && Number(value) <= 100)
+          await this.sh(`dumpsys battery set level ${value}`);
+        else
+          throw new DeviceError('INVALID_ARGUMENT', `battery: a level 0 to 100, not ${value}`);
+        return;
     }
+  }
+
+  async fold(closed: boolean) {
+    await this.emu('fold pose', closed ? 'fold' : 'unfold');
+  }
+
+  async call(number: string, end: boolean) {
+    await this.emu('calls', 'gsm', end ? 'cancel' : 'call', number);
+  }
+
+  async sms(from: string, text: string) {
+    await this.emu('SMS', 'sms', 'send', from, text.replace(/\s+/g, ' '));
   }
 
   /**

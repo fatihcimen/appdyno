@@ -702,7 +702,29 @@ describe('device conditions', () => {
     biometric = async () => {
       throw new DeviceError('UNSUPPORTED', 'simulator only');
     };
+    events: unknown[] = [];
+    fold = async (closed: boolean) => void this.events.push(['fold', closed]);
+    call = async (number: string, end: boolean) => void this.events.push(['call', number, end]);
+    sms = async (from: string, text: string) => void this.events.push(['sms', from, text]);
   }
+
+  it('takes one-shot events, and refuses what is not one', async () => {
+    const settings = new Settings();
+    const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
+    await call('device_setting', { name: 'fold', value: 'closed' });
+    await call('device_setting', { name: 'call', value: '+905551112233' });
+    await call('device_setting', { name: 'call', value: 'end +905551112233' });
+    await call('device_setting', { name: 'sms', title: '5553434', value: 'Merhaba' });
+    expect(settings.events).toEqual([
+      ['fold', true],
+      ['call', '+905551112233', false],
+      ['call', '+905551112233', true],
+      ['sms', '5553434', 'Merhaba'],
+    ]);
+    expect((await call('device_setting', { name: 'fold', value: 'half' })).text).toMatch(/open or closed/);
+    expect((await call('device_setting', { name: 'call', value: 'someone' })).text).toMatch(/phone number/);
+    expect((await call('device_setting', { name: 'sms', title: 'x', value: 'y' })).text).toMatch(/phone number/);
+  });
 
   it('changes a condition and puts it back at the end of the session', async () => {
     const settings = new Settings();

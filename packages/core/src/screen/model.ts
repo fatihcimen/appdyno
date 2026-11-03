@@ -1,3 +1,4 @@
+import type { Tree } from '@appdyno/protocol';
 import type { Rect, UiElement } from './elements.js';
 
 export type Platform = 'ios' | 'android';
@@ -54,6 +55,9 @@ const ROLES: Record<string, Role> = {
 
 /** iOS status bar items are root elements in this band. */
 const IOS_STATUS_BAR_PT = 50;
+/** As tall as it gets, on a phone with a Dynamic Island: a pixel comparison leaves it out. */
+const IOS_STATUS_BAND_PT = 64;
+const ANDROID_STATUS_BAND_DP = 56;
 /** Less of an element than this on the screen: a hidden pager page or a scrolled-away carousel item. */
 const MIN_ON_SCREEN = 0.5;
 const MAX_LABEL = 60;
@@ -118,6 +122,16 @@ const onScreen = (r: Rect, w: Rect) => {
   const ih = Math.min(r.y + r.height, w.y + w.height) - Math.max(r.y, w.y);
   return iw > 0 && ih > 0 && (iw * ih) / (r.width * r.height) >= MIN_ON_SCREEN;
 };
+
+/**
+ * What the status bar takes at the top of the screen, in tap units, for what compares pixels: its clock
+ * moves. Android: the first app window's top when it leaves room for the bar, else a tall bar's height.
+ */
+export function statusBand(tree: Tree, platform: Platform, density = 160): number {
+  if (platform === 'ios') return IOS_STATUS_BAND_PT;
+  const app = tree.windows.find((w) => w.type === 1 && w.b[1] > 0);
+  return app ? app.b[1] : Math.round((ANDROID_STATUS_BAND_DP * density) / 160);
+}
 
 /**
  * The app's part of the tree: Android drops the system UI's nodes and, with an app id, other packages'

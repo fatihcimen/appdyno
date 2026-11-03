@@ -118,6 +118,12 @@ export class SimulatorApps implements AppManager {
 
 const on = (v: string, yes: string, no: string) => ({ on: yes, off: no })[v] ?? v;
 
+const SIM_CANNOT = {
+  fold: 'simctl has no fold pose (its ui and io options name none)',
+  call: 'a simulator has no telephony: it cannot take a call',
+  sms: 'a simulator has no telephony: it cannot take an SMS',
+} as const;
+
 export class SimulatorSettings implements DeviceSettings {
   constructor(
     private readonly simctl: Simctl,
@@ -154,6 +160,11 @@ export class SimulatorSettings implements DeviceSettings {
         );
       case 'proxy':
         return macProxy();
+      case 'battery':
+        throw new DeviceError(
+          'UNSUPPORTED',
+          'a simulator has no battery to set: simctl status_bar only draws one',
+        );
     }
   }
 
@@ -223,6 +234,18 @@ export class SimulatorSettings implements DeviceSettings {
     await this.spawn('notifyutil', '-p', `com.apple.BiometricKit_Sim.pearl.${result}`);
     await this.spawn('notifyutil', '-p', `com.apple.BiometricKit_Sim.fingerTouch.${result}`);
   }
+
+  async fold(): Promise<void> {
+    throw new DeviceError('UNSUPPORTED', SIM_CANNOT.fold);
+  }
+
+  async call(): Promise<void> {
+    throw new DeviceError('UNSUPPORTED', SIM_CANNOT.call);
+  }
+
+  async sms(): Promise<void> {
+    throw new DeviceError('UNSUPPORTED', SIM_CANNOT.sms);
+  }
 }
 
 const PHONE_CANNOT = {
@@ -230,6 +253,9 @@ const PHONE_CANNOT = {
   permission: 'no tool grants an iPhone app a permission: answer its prompt with the alert tool',
   push: 'a push to an iPhone needs Apple push credentials, which this tool does not hold',
   biometric: 'an iPhone takes biometrics only from a person',
+  fold: 'an iPhone folds only in a hand',
+  call: 'an iPhone takes calls only from the network',
+  sms: 'an iPhone takes messages only from the network',
 } as const;
 
 export class PhoneApps implements AppManager {
@@ -247,7 +273,7 @@ export class PhoneApps implements AppManager {
     );
   }
 
-  clearData(): Promise<void> {
+  async clearData(): Promise<void> {
     throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.clear);
   }
 
@@ -275,7 +301,7 @@ export class PhoneApps implements AppManager {
     return (await this.ctl.pids(app)).length > 0 ? 'running' : 'stopped';
   }
 
-  permission(): Promise<void> {
+  async permission(): Promise<void> {
     throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.permission);
   }
 
@@ -323,12 +349,24 @@ export class PhoneSettings implements DeviceSettings {
       throw new DeviceError('UNSUPPORTED', `an iPhone has no ${name} switch this tool can reach`);
   }
 
-  push(): Promise<void> {
+  async push(): Promise<void> {
     throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.push);
   }
 
-  biometric(): Promise<void> {
+  async biometric(): Promise<void> {
     throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.biometric);
+  }
+
+  async fold(): Promise<void> {
+    throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.fold);
+  }
+
+  async call(): Promise<void> {
+    throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.call);
+  }
+
+  async sms(): Promise<void> {
+    throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.sms);
   }
 }
 
