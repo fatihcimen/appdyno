@@ -41,8 +41,9 @@ export class AndroidRecorder implements ScreenRecorder {
     const dir = `${REMOTE_DIR}/video-${randomBytes(4).toString('hex')}`;
     const segment = segmentSeconds();
     const loop =
-      `cd ${dir}; i=0; while [ ! -e stop ] && [ $i -lt ${Math.ceil(maxSeconds / segment)} ]; do i=$((i+1)); ` +
-      `screenrecord --time-limit ${segment} --bit-rate ${BIT_RATE} seg$i.mp4 >>log 2>&1 & echo $! > pid; wait $!; ` +
+      `cd ${dir}; i=0; left=${maxSeconds}; while [ ! -e stop ] && [ $left -gt 0 ]; do i=$((i+1)); ` +
+      `t=${segment}; [ $left -lt $t ] && t=$left; left=$((left-t)); ` +
+      `screenrecord --time-limit $t --bit-rate ${BIT_RATE} seg$i.mp4 >>log 2>&1 & echo $! > pid; wait $!; ` +
       `c=$?; [ $c -eq 0 ] || { echo "screenrecord exited with $c" >> log; break; }; done; touch done`;
     const session = await this.adb.startDetached(
       this.serial,

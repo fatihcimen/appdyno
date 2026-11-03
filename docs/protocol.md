@@ -107,6 +107,8 @@ indicator's slow drag up. The volume, lock and power keys go through direct inpu
   changed nothing, and that the app has not reported finished (`TouchEventsCompleted`), never got there (a
   Device Hub in Resize Mode swallows touches and reports success): the runner does it again and takes
   over for the session. Portrait only, as that is what was verified; other orientations go to the runner.
+- **Traffic**, `NetProbe` injected into the app with `DYLD_INSERT_LIBRARIES`: an `NSURLProtocol` that writes a JSON line per finished request to the file `APPDYNO_NET_LOG` names. A simulator's app writes to the Mac's files as they are.
+- **Web pages**, the socket `simctl getenv <udid> RWI_LISTEN_SOCKET` names: binary property lists, each after its 4-byte length. `_rpc_reportIdentifier:` brings the applications, `_rpc_forwardGetListing:` a page list, `_rpc_forwardSocketSetup:` a `Target.targetCreated`, and `Target.sendMessageToTarget` wraps what goes to the page.
 - **Reads**, `SimAX` inside the simulator through `simctl spawn`: one request of `XCTAccessibilityFramework`
   `userTestingSnapshotForElement:options:error:` per tree (a rejected depth is halved; children withheld at the
   boundary are read again). The nodes are built as the runner builds them, so refs, hashes and diffs do not depend

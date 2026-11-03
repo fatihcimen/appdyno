@@ -27,19 +27,35 @@ const logOf = (h: RecordingHandle) => String(h.log);
 class ToolRecorder implements ScreenRecorder {
   constructor(
     readonly extension: 'mp4' | 'mov',
-    private readonly args: (file: string) => string[],
+    private readonly args: (file: string, maxSeconds: number) => string[],
     /** What the tool prints once it records; absent: it is up if it is still there after QUIET_MS. */
     private readonly started: RegExp | undefined,
     private readonly mark: string,
+    /** The tool has no limit of its own: a sleeper ends it. */
+    private readonly limits: boolean,
     private readonly stillNote?: string,
   ) {}
 
-  async start(file: string): Promise<RecordingHandle> {
+  /** Asks the recorder to end after `seconds`, if it is still that recorder; ends with `stop` too. */
+  private sleeper(pid: number, seconds: number) {
+    const child = spawn(
+      'sh',
+      [
+        '-c',
+        `sleep ${seconds}; ps -o command= -p ${pid} | grep -q ${this.mark} && kill -INT ${pid}`,
+      ],
+      { detached: true, stdio: 'ignore' },
+    );
+    child.unref();
+    return child.pid!;
+  }
+
+  async start(file: string, { maxSeconds }: { maxSeconds: number }): Promise<RecordingHandle> {
     const dir = join(stateDir(), 'video');
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     const log = join(dir, `${randomBytes(4).toString('hex')}.log`);
     const fd = openSync(log, 'w', 0o600);
-    const child = spawn('xcrun', this.args(file), {
+    const child = spawn('xcrun', this.args(file, maxSeconds), {
       detached: true,
       stdio: ['ignore', fd, fd],
       env: xcodeEnv(),
@@ -50,11 +66,17 @@ class ToolRecorder implements ScreenRecorder {
     child.on('exit', (code, signal) => (exited = `exit ${code ?? signal}`));
     child.on('error', (e) => (exited = e.message));
     const end = Date.now() + (this.started ? START_MS : QUIET_MS);
+    const up = () => ({
+      pid: child.pid!,
+      log,
+      file,
+      ...(this.limits ? {} : { sleeper: this.sleeper(child.pid!, maxSeconds) }),
+    });
     for (;;) {
       const text = readFileSync(log, 'utf8');
-      if (this.started?.test(text)) return { pid: child.pid!, log, file };
+      if (this.started?.test(text)) return up();
       if (exited || Date.now() > end) {
-        if (!exited && !this.started) return { pid: child.pid!, log, file };
+        if (!exited && !this.started) return up();
         if (!exited) child.kill('SIGKILL');
         rmSync(log, { force: true });
         throw new DeviceError(
@@ -78,6 +100,13 @@ class ToolRecorder implements ScreenRecorder {
     const pid = Number(h.pid);
     const file = String(h.file);
     const wasAlive = await this.alive(pid);
+    if (h.sleeper) {
+      try {
+        process.kill(Number(h.sleeper));
+      } catch {
+        // its time came, and it has gone
+      }
+    }
     if (wasAlive) process.kill(pid, 'SIGINT');
     const end = Date.now() + STOP_MS;
     while ((await this.alive(pid)) && Date.now() < end) await pause(100);
@@ -106,6 +135,7 @@ export const simulatorRecorder = (udid: string): ScreenRecorder =>
     (file) => ['simctl', 'io', assertUdid(udid), 'recordVideo', '--codec=h264', '--force', file],
     /Recording started/,
     'recordVideo',
+    false,
     'a simulator writes a frame only when the screen changes, so a still screen gives a very short video',
   );
 
@@ -114,7 +144,7 @@ export const simulatorRecorder = (udid: string): ScreenRecorder =>
 export const phoneRecorder = (udid: string): ScreenRecorder =>
   new ToolRecorder(
     'mp4',
-    (file) => [
+    (file, maxSeconds) => [
       'devicectl',
       'device',
       'capture',
@@ -125,7 +155,10 @@ export const phoneRecorder = (udid: string): ScreenRecorder =>
       file,
       '--codec',
       'h264',
+      '--duration',
+      String(maxSeconds),
     ],
     undefined,
     'screen-record',
+    true,
   );

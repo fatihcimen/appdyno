@@ -306,7 +306,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
       name: 'device_setting',
       title: 'Device conditions',
       description:
-        "Device conditions; no value reads one. name: dark_mode, reduce_motion, animations (on, off); text_size (1.3; iOS large); locale (tr-TR); network (emulator: slow, full); proxy (host:port, none); battery (0-100). Put back at the session's end or by name restore. One-shot: push (value; title), biometric (match, nomatch), fold (open, closed), call (number; end number), sms (value; title: number). What cannot, says why.",
+        "Device conditions; no value reads one. name: dark_mode, reduce_motion, animations (on, off); text_size (1.3; iOS large); locale (tr-TR); network (emulator: slow, full); proxy (host:port, none); battery (0-100). Put back at the session's end or by name restore. One-shot: push (value; title), biometric (match, nomatch), fold (open, closed), call (number; end number), sms (value; title: number).",
       input: z
         .object({
           name: z.enum([...SETTINGS, 'restore', 'push', 'biometric', 'fold', 'call', 'sms']),

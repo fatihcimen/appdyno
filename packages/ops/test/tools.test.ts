@@ -123,9 +123,10 @@ describe('tool list', () => {
       'perf_snapshot',
       'screen',
       'screenshot',
+      'visual',
       'wait_for',
     ]);
-    expect(tools.length).toBeLessThanOrEqual(36);
+    expect(tools.length).toBeLessThanOrEqual(42);
   });
 
   it('reports the server as appdyno with an icon', async () => {

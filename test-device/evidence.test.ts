@@ -177,6 +177,18 @@ for (const { platform, serial, provider } of targets)
         assertPlayable(to, 0.1);
       }, 180_000);
 
+      it('ends by itself at its limit, and stop still finds the video', async () => {
+        const to = file(platform === 'ios' ? 'limit.mov' : 'limit.mp4');
+        await h.ok('record', { action: 'start', file: to, maxSeconds: 2 });
+        await stir(h.ok, 1);
+        // past the limit, whatever the stirring took
+        await new Promise((r) => setTimeout(r, 3_000));
+        const stopped = await h.ok('record', { action: 'stop' });
+        expect(stopped.data.files).toEqual([to]);
+        assertPlayable(to, 0.05);
+        expect(Number(stopped.data.durationMs)).toBeLessThan(3_500);
+      }, 120_000);
+
       it('says a recording failed when its file cannot be written', async () => {
         const r = await h.call('record', { action: 'start', file: '/dev/null/x/video.mp4' });
         expect(r.error).toBe(true);
