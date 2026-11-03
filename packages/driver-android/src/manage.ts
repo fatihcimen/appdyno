@@ -263,7 +263,8 @@ const sdkDir = () =>
   join(homedir(), 'Library/Android/sdk');
 
 const BOOT_MS = 300_000;
-const FIRST_PORT = 5554;
+/** Where the search for a free console port starts: a Mac shared with other work may keep some. */
+const firstPort = () => Number(process.env.APPDYNO_EMULATOR_FIRST_PORT ?? 5554);
 const LAST_PORT = 5680;
 
 /** The AVDs of this machine, started by the SDK's own `emulator`. */
@@ -319,7 +320,7 @@ export class AndroidEmulators implements VirtualDevices {
   async boot(id: string): Promise<string> {
     if (id.startsWith('emulator-')) return id;
     const taken = new Set((await this.adb.devices()).map((d) => d.serial));
-    let port = FIRST_PORT;
+    let port = firstPort();
     while (taken.has(`emulator-${port}`) && port < LAST_PORT) port += 2;
     const serial = `emulator-${port}`;
     // APPDYNO_EMULATOR_ARGS: for instance -no-window on a machine with no screen to spare

@@ -25,7 +25,7 @@ import {
 } from './steps.js';
 import { ACT, defineOp, READ, reply, ToolError, type Op } from './tool.js';
 
-// 20 took 37 s at worst on a loaded emulator (1.1 to 1.9 s a step): within a client's usual 60 s
+// measured on a loaded Mac: 20 took 10 s on an emulator, 19 s on a simulator; 30 took up to 56 s, near a client's usual 60 s
 const MAX_STEPS = 20;
 const PINCH_MS = 400;
 const KEYBOARD_GONE_MS = 1_500;

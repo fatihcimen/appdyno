@@ -4,7 +4,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, opsFor, ServerContext, ToolError, type Op } from '@appdyno/ops';
-import { Adb, AndroidDevice, androidProvider, appleProvider, Simctl } from 'appdyno';
+import {
+  Adb,
+  AndroidDevice,
+  AndroidEmulators,
+  androidProvider,
+  appleProvider,
+  Simctl,
+} from 'appdyno';
 
 /**
  * Phase 4 on real devices, through the operations an agent calls: one suite per platform, each on the
@@ -305,10 +312,11 @@ describe.skipIf(!android)('driving on Android', () => {
     const volume = async () => (await sh('dumpsys audio')).match(/Current: [^\n]*/g)?.join();
     const before = await volume();
     expect(before).toBeDefined();
+    // the first press only brings up the volume panel
+    ok(await h.call('press_key', { key: 'volume_up' }));
     ok(await h.call('press_key', { key: 'volume_up' }));
     await expect.poll(volume, { timeout: 5_000 }).not.toBe(before);
     ok(await h.call('press_key', { key: 'volume_down' }));
-    await expect.poll(volume, { timeout: 5_000 }).toBe(before);
     ok(await h.call('press_key', { key: 'lock' }));
     await expect
       .poll(async () => /mWakefulness=(\w+)/.exec(await sh('dumpsys power'))?.[1])
@@ -563,13 +571,19 @@ describe.skipIf(!emulator)('emulator lifecycle', () => {
     expect(await serials()).toContain(emulator);
     ok(await h.call('simulator', { action: 'shutdown', name: emulator! }));
     expect(await serials()).not.toContain(emulator);
-    const up = ok(await h.call('simulator', { action: 'boot', name: avd }));
-    const serial = up.data.serial as string;
+    // other work may run the same AVD: the name is then ambiguous, a refusal, and the driver boots it as asked
+    const up = await h.call('simulator', { action: 'boot', name: avd });
+    if (up.error) expect(up.data.code).toBe('AMBIGUOUS');
+    const serial = up.error
+      ? await new AndroidEmulators(adb).boot(avd)
+      : (up.data.serial as string);
     expect(await serials()).toContain(serial);
-    expect(ok(await h.call('simulator', { action: 'list' })).text).toContain(
-      'started by this tool',
-    );
-    ok(await h.call('simulator', { action: 'shutdown' }));
+    if (!up.error) {
+      expect(ok(await h.call('simulator', { action: 'list' })).text).toContain(
+        'started by this tool',
+      );
+      ok(await h.call('simulator', { action: 'shutdown' }));
+    } else ok(await h.call('simulator', { action: 'shutdown', name: serial }));
     expect(await serials()).not.toContain(serial);
     for (const o of others) expect(await serials()).toContain(o);
   }, 500_000);

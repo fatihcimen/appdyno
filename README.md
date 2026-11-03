@@ -91,7 +91,7 @@ to share: `use_device` with `share: true`, `--share` on either command line, or 
 `list_devices` shows who holds what. There is no daemon.
 
 `simulator` boots and shuts down simulators and emulators, on request only. With no name, shutdown
-touches only what this tool started. `APPDYNO_EMULATOR_ARGS` replaces the emulator's default flags.
+touches only what this tool started. `APPDYNO_EMULATOR_ARGS` replaces the emulator's default flags, and `APPDYNO_EMULATOR_FIRST_PORT` is where the search for a free port starts.
 
 An action answers with the settled screen. `settled` means the screen was still for the window.
 `changed` means the screen differs from before the action, in layout or text; it does not say the action
