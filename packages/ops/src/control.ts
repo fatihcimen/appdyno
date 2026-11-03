@@ -306,7 +306,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
       name: 'device_setting',
       title: 'Device conditions',
       description:
-        "Device conditions; no value reads one. name: dark_mode, reduce_motion, animations (on, off); text_size (Android 1.3; iOS large…); locale (tr-TR; Android per app); network (emulator: slow, full, edge…). Put back at the session's end or by name restore (command line: only so). One-shot: push (value: text; title), biometric (simulator; match, nomatch). A device that cannot refuses and says why.",
+        "Device conditions; no value reads one. name: dark_mode, reduce_motion, animations (on, off); text_size (1.3; iOS large); locale (tr-TR); network (emulator: slow, full); proxy (host:port, none); battery (0-100). Put back at the session's end or by name restore. One-shot: push (value; title), biometric (match, nomatch), fold (open, closed), call (number; end number), sms (value; title: number). What cannot, says why.",
       input: z
         .object({
           name: z.enum([...SETTINGS, 'restore', 'push', 'biometric', 'fold', 'call', 'sms']),
@@ -351,7 +351,8 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
         }
         if (name === 'call') {
           const m = /^(end )?(\+?\d{3,20})$/.exec(value ?? '');
-          if (!m) throw new ToolError('call needs value: a phone number; end and the number hangs up');
+          if (!m)
+            throw new ToolError('call needs value: a phone number; end and the number hangs up');
           await settings.call(m[2]!, !!m[1]).catch(refused);
           s.acted();
           const t = m[1] ? `the call from ${m[2]} ended` : `a call from ${m[2]} is coming in`;

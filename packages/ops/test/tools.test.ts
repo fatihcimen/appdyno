@@ -70,6 +70,7 @@ describe('tool list', () => {
         "launch_app",
         "list_devices",
         "logs",
+        "network",
         "open_link",
         "perf_heap",
         "perf_launch",
@@ -78,6 +79,9 @@ describe('tool list', () => {
         "perf_snapshot",
         "perf_trace",
         "press_key",
+        "react_native",
+        "record",
+        "report",
         "screen",
         "screenshot",
         "scroll_to",
@@ -90,7 +94,9 @@ describe('tool list', () => {
         "terminate_app",
         "type_text",
         "use_device",
+        "visual",
         "wait_for",
+        "webview",
       ]
     `);
     for (const t of tools) {

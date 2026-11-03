@@ -721,9 +721,15 @@ describe('device conditions', () => {
       ['call', '+905551112233', true],
       ['sms', '5553434', 'Merhaba'],
     ]);
-    expect((await call('device_setting', { name: 'fold', value: 'half' })).text).toMatch(/open or closed/);
-    expect((await call('device_setting', { name: 'call', value: 'someone' })).text).toMatch(/phone number/);
-    expect((await call('device_setting', { name: 'sms', title: 'x', value: 'y' })).text).toMatch(/phone number/);
+    expect((await call('device_setting', { name: 'fold', value: 'half' })).text).toMatch(
+      /open or closed/,
+    );
+    expect((await call('device_setting', { name: 'call', value: 'someone' })).text).toMatch(
+      /phone number/,
+    );
+    expect((await call('device_setting', { name: 'sms', title: 'x', value: 'y' })).text).toMatch(
+      /phone number/,
+    );
   });
 
   it('changes a condition and puts it back at the end of the session', async () => {

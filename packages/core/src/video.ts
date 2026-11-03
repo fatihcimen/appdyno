@@ -23,7 +23,7 @@ type Box = { type: string; start: number; end: number; body: number };
 async function fileBoxes(f: FileHandle, end: number): Promise<Box[]> {
   const boxes: Box[] = [];
   const head = Buffer.alloc(16);
-  for (let p = 0; p + 8 <= end; ) {
+  for (let p = 0; p + 8 <= end;) {
     await f.read(head, 0, 16, p);
     let size = head.readUInt32BE(0);
     let body = p + 8;
@@ -42,7 +42,7 @@ async function fileBoxes(f: FileHandle, end: number): Promise<Box[]> {
 
 function boxesIn(b: Buffer, parent: { body: number; end: number }): Box[] {
   const boxes: Box[] = [];
-  for (let p = parent.body; p + 8 <= parent.end; ) {
+  for (let p = parent.body; p + 8 <= parent.end;) {
     const size = b.readUInt32BE(p);
     if (size < 8 || p + size > parent.end) throw new Error('a box inside moov is cut');
     boxes.push({ type: b.toString('latin1', p + 4, p + 8), start: p, end: p + size, body: p + 8 });
@@ -231,7 +231,9 @@ export async function joinVideos(files: string[], out: string): Promise<void> {
     stts.push(...words(x, need(x, s.stbl, 'stts'), 2));
     if (has(s, 'ctts')) ctts.push(...words(x, need(x, s.stbl, 'ctts'), 2));
     if (has(s, 'stss')) stss.push(...words(x, need(x, s.stbl, 'stss'), 1).map((v) => v + frames));
-    stsc.push(...words(x, need(x, s.stbl, 'stsc'), 3).map((v, i) => (i % 3 === 0 ? v + chunks : v)));
+    stsc.push(
+      ...words(x, need(x, s.stbl, 'stsc'), 3).map((v, i) => (i % 3 === 0 ? v + chunks : v)),
+    );
     const stsz = need(x, s.stbl, 'stsz');
     const n = x.readUInt32BE(stsz.body + 8);
     for (let i = 0; i < n; i++) sizes.push(x.readUInt32BE(stsz.body + 12 + i * 4));
@@ -293,11 +295,7 @@ export async function joinVideos(files: string[], out: string): Promise<void> {
             : raw(x),
       ),
   );
-  const moovOut = box(
-    'moov',
-    withDuration(m, need(m, first.root, 'mvhd'), movieDuration),
-    trakOut,
-  );
+  const moovOut = box('moov', withDuration(m, need(m, first.root, 'mvhd'), movieDuration), trakOut);
 
   const mdatHead = Buffer.alloc(16);
   mdatHead.writeUInt32BE(1);

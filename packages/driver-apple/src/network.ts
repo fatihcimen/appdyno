@@ -45,7 +45,10 @@ export class SimulatorNetwork implements NetworkSource {
 
   async start(via: NetworkVia, app: string | undefined): Promise<NetworkHandle> {
     if (via !== 'probe')
-      throw new DeviceError('UNSUPPORTED', `${via} is not a way of a simulator: use probe or proxy`);
+      throw new DeviceError(
+        'UNSUPPORTED',
+        `${via} is not a way of a simulator: use probe or proxy`,
+      );
     if (!app) throw new DeviceError('INVALID_ARGUMENT', 'the probe goes into one app: give app');
     const dir = join(stateDir(), 'network');
     mkdirSync(dir, { recursive: true, mode: 0o700 });

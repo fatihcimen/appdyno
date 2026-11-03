@@ -34,7 +34,8 @@ const Mask = z
 async function shot(s: Session): Promise<{ png: Buffer; image: Image }> {
   const { data } = await s.device.screenshot({ format: 'png', quality: 100 }).catch(refused);
   const image = decodePng(data);
-  if (!image) throw new ToolError('the screenshot is a kind of PNG this tool cannot read', 'INTERNAL');
+  if (!image)
+    throw new ToolError('the screenshot is a kind of PNG this tool cannot read', 'INTERNAL');
   return { png: data, image };
 }
 
@@ -44,7 +45,7 @@ export function visualOps(ctx: ServerContext): Op[] {
     defineOp({
       name: 'visual',
       title: 'Visual comparison',
-      description: `A screen against a saved image of it. action: baseline saves it as name under dir (default ./${DEFAULT_DIR}); compare refuses (CHECK_FAILED) past tolerance (percent of pixels, default ${DEFAULT_TOLERANCE}), writing a diff image. masks: left out, each x,y,w,h in tap units or text, id or role; the status bar always is.`,
+      description: `The screen against a saved image. action: baseline saves it as name under dir (default ./${DEFAULT_DIR}); compare refuses (CHECK_FAILED) past tolerance (percent of pixels, default ${DEFAULT_TOLERANCE}), with a diff image. masks: x,y,w,h or text, id, role; the status bar is left out.`,
       input: z
         .object({
           action: z.enum(['baseline', 'compare']),
@@ -99,7 +100,10 @@ export function visualOps(ctx: ServerContext): Op[] {
           return [rect({ x: m.x, y: m.y, width: m.w, height: m.h })];
         });
         const band = statusBand(screen.tree, s.device.platform, s.device.hello?.screen.density);
-        const all = [...left, ...(band > 0 ? [rect({ x: 0, y: 0, width: units, height: band })] : [])];
+        const all = [
+          ...left,
+          ...(band > 0 ? [rect({ x: 0, y: 0, width: units, height: band })] : []),
+        ];
         if (baseline.width !== image.width || baseline.height !== image.height)
           throw new ToolError(
             `the baseline is ${baseline.width}x${baseline.height}, the screen ${image.width}x${image.height}: not the same device or orientation`,

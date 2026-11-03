@@ -109,7 +109,11 @@ const cli = (serial: string, ...args: string[]) =>
     execFile(
       process.execPath,
       [CLI, args[0]!, ...args.slice(1), '--device', serial, '--share'],
-      { env: { ...process.env, APPDYNO_STATE_DIR: stateDir }, timeout: LONG_MS, maxBuffer: 1 << 24 },
+      {
+        env: { ...process.env, APPDYNO_STATE_DIR: stateDir },
+        timeout: LONG_MS,
+        maxBuffer: 1 << 24,
+      },
       (e, out, err) => resolve({ code: e ? ((e as { code?: number }).code ?? 1) : 0, out, err }),
     );
   });
@@ -223,7 +227,9 @@ for (const { platform, serial, provider } of targets)
         expect(painted.length, 'an image with the secret in it').toBeGreaterThan(0);
         const img = decodePng(readFileSync(join(folder, painted[0]!)))!;
         expect(img).not.toBeNull();
-        const blacks = img.data.filter((_, i) => i % img.channels === 0 && img.data[i] === 0).length;
+        const blacks = img.data.filter(
+          (_, i) => i % img.channels === 0 && img.data[i] === 0,
+        ).length;
         expect(blacks / (img.width * img.height)).toBeGreaterThan(0.005);
 
         // the video is in the folder, and plays
@@ -285,7 +291,8 @@ describe.skipIf(!android)('network on Android', () => {
   let h: ReturnType<typeof harness>;
   let web: Awaited<ReturnType<typeof localWeb>>;
   const adb = new Adb();
-  const proxySetting = async () => (await adb.exec(android!, 'settings get global http_proxy')).trim();
+  const proxySetting = async () =>
+    (await adb.exec(android!, 'settings get global http_proxy')).trim();
   beforeAll(async () => {
     web = await localWeb();
     h = harness(android!, androidProvider(adb));
@@ -315,7 +322,9 @@ describe.skipIf(!android)('network on Android', () => {
     const proxy = `127.0.0.1:${web.proxyPort}`;
     await h.ok('network', { action: 'start', via: 'proxy', proxy });
     expect(await proxySetting()).toBe(proxy);
-    expect((await h.call('network', { action: 'start', via: 'bytes' })).text).toMatch(/stop it first/);
+    expect((await h.call('network', { action: 'start', via: 'bytes' })).text).toMatch(
+      /stop it first/,
+    );
     await fetchIn(h.ok, 'http://proxied.test/hello?token=abc123');
     const har = join(dir, 'proxy.har');
     writeFileSync(har, web.har());
@@ -548,7 +557,15 @@ for (const { platform, serial, provider } of targets)
         expect(
           execFileSync(
             'ffprobe',
-            ['-v', 'error', '-show_entries', 'stream=codec_name', '-of', 'csv=p=0', join(baselines, 'dialog.diff.png')],
+            [
+              '-v',
+              'error',
+              '-show_entries',
+              'stream=codec_name',
+              '-of',
+              'csv=p=0',
+              join(baselines, 'dialog.diff.png'),
+            ],
             { encoding: 'utf8' },
           ).trim(),
         ).toBe('png');
@@ -664,9 +681,9 @@ describe.skipIf(!android)('emulator events on Android', () => {
     const text = `Merhaba ${Date.now()}`;
     await h.ok('device_setting', { name: 'sms', title: '5553434', value: text });
     await until(async () =>
-      (await adb.exec(android!, 'content query --uri content://sms/inbox --projection body')).includes(
-        text,
-      ),
+      (
+        await adb.exec(android!, 'content query --uri content://sms/inbox --projection body')
+      ).includes(text),
     );
     await h.ok('launch_app');
   }, 60_000);

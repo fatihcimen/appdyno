@@ -26,7 +26,10 @@ function connect(device = new FakeDevice()) {
   const call = async (name: string, args: Record<string, unknown> = {}) => {
     const op = ops[name] as Op;
     const r = await op.handler(op.input.parse(args) as Record<string, unknown>);
-    return { text: r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'), data: r.data };
+    return {
+      text: r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'),
+      data: r.data,
+    };
   };
   return { ctx, call, device };
 }
@@ -76,9 +79,12 @@ describe('report', () => {
     await call('report', { action: 'start', dir });
     await call('tap', { selector: { text: 'Form' } });
     await call('type_text', { selector: { text: 'Adınız' }, text: 'hidden-words' });
-    await call('open_link', { url: `app://x?token=abc123&secret=${SECRET}` }).catch(() => undefined);
+    await call('open_link', { url: `app://x?token=abc123&secret=${SECRET}` }).catch(
+      () => undefined,
+    );
     await ctx.end();
-    const all = readFileSync(join(dir, 'index.html'), 'utf8') + readFileSync(join(dir, 'steps.jsonl'));
+    const all =
+      readFileSync(join(dir, 'index.html'), 'utf8') + readFileSync(join(dir, 'steps.jsonl'));
     expect(all).not.toContain(SECRET);
     expect(all).not.toContain('abc123');
     expect(all).not.toContain('hidden-words');

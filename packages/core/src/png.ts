@@ -117,7 +117,11 @@ const clip = (img: Image, r: PixelRect) => ({
 });
 
 /** Paints rects over the image, in place. */
-export function paintRects(img: Image, rects: PixelRect[], rgb: [number, number, number] = [0, 0, 0]) {
+export function paintRects(
+  img: Image,
+  rects: PixelRect[],
+  rgb: [number, number, number] = [0, 0, 0],
+) {
   for (const r of rects) {
     const { x0, y0, x1, y1 } = clip(img, r);
     for (let y = y0; y < y1; y++)

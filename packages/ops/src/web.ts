@@ -129,7 +129,7 @@ export function webOps(ctx: ServerContext): Op[] {
       name: 'webview',
       title: 'Web views',
       description:
-        'Inside a debuggable app\'s web view. action: pages; elements (the DOM as elements, at tap coordinates); click (selector: CSS); eval (js). page: id or part of a title or URL. An element can also be tapped by x,y.',
+        "Inside a debuggable app's web view. action: pages; elements (the DOM, at tap coordinates); click (selector: CSS); eval (js). page: id or part of a title or URL.",
       input: z
         .object({
           action: z.enum(['pages', 'elements', 'click', 'eval']),

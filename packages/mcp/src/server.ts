@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { INSTRUCTIONS, SERVER_INFO } from './brand.js';
-import { inCall, ToolError, text, type Op } from '@appdyno/ops';
+import { inCall, inputSchemaOf, ToolError, text, type Op } from '@appdyno/ops';
 
 /** How often a call with a progress token says it is still working. */
 const BEAT_MS = 5_000;
@@ -75,5 +76,15 @@ export function createServer(ops: Record<string, Op>, log: (line: object) => voi
       },
     );
   }
+  // the SDK's own list has a schema URL and a task setting on every tool, 3,900 characters that say nothing
+  server.server.setRequestHandler(ListToolsRequestSchema, () => ({
+    tools: Object.values(ops).map((op) => ({
+      name: op.name,
+      title: op.title,
+      description: op.description,
+      inputSchema: inputSchemaOf(op),
+      annotations: op.annotations,
+    })),
+  }));
   return server;
 }

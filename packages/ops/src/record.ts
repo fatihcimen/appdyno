@@ -34,7 +34,8 @@ export async function endRecording(s: Session) {
     // the next start must not be refused for a recording that has ended, however it ended; a device
     // that went away may come back, and its recording with it
     const code = (e as DeviceError).code;
-    if (code !== 'DEVICE_GONE' && code !== 'TIMEOUT') rmSync(stateOf(s.device.serial), { force: true });
+    if (code !== 'DEVICE_GONE' && code !== 'TIMEOUT')
+      rmSync(stateOf(s.device.serial), { force: true });
     return refused(e);
   });
   rmSync(stateOf(s.device.serial), { force: true });
@@ -61,7 +62,7 @@ export function recordOps(ctx: ServerContext): Op[] {
     defineOp({
       name: 'record',
       title: 'Screen video',
-      description: `Screen video, one per device. action: start (file; maxSeconds, default ${DEFAULT_S}); stop checks the file plays, or says why not. A session's end stops it; on the command line stop does.`,
+      description: `Screen video, one per device. action: start (file; maxSeconds, default ${DEFAULT_S}); stop checks that it plays or says why not. A session's end stops it too.`,
       input: z
         .object({
           action: z.enum(['start', 'stop']),

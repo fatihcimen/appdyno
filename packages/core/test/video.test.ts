@@ -28,7 +28,12 @@ function video(frames: Buffer[], opts: { stsd?: string; torn?: boolean; timescal
   const n = frames.length;
   const hdlr = (kind: string) => box('hdlr', u32(0, 0), Buffer.from(kind), Buffer.alloc(12));
   const mdhd = box('mdhd', u32(0, 0, 0, scale, n * 3_000), Buffer.alloc(4));
-  const tkhd = box('tkhd', u32(0, 0, 0, 1, 0, n * 33), Buffer.alloc(52), u32(1080 << 16, 2400 << 16));
+  const tkhd = box(
+    'tkhd',
+    u32(0, 0, 0, 1, 0, n * 33),
+    Buffer.alloc(52),
+    u32(1080 << 16, 2400 << 16),
+  );
   const stsd = box(
     'stsd',
     u32(0, 1),
@@ -49,11 +54,7 @@ function video(frames: Buffer[], opts: { stsd?: string; torn?: boolean; timescal
     box('edts', box('elst', u32(0, 0))),
     box('mdia', mdhd, hdlr('vide'), box('minf', box('vmhd', u32(1, 0, 0)), stbl)),
   );
-  const meta = box(
-    'trak',
-    tkhd,
-    box('mdia', mdhd, hdlr('meta'), box('minf', box('nmhd', u32(0)))),
-  );
+  const meta = box('trak', tkhd, box('mdia', mdhd, hdlr('meta'), box('minf', box('nmhd', u32(0)))));
   const mvhd = box('mvhd', u32(0, 0, 0, 1_000, n * 33), Buffer.alloc(80));
   return Buffer.concat([ftyp, mdat, box('moov', mvhd, trak, meta)]);
 }
@@ -69,7 +70,7 @@ const write = (name: string, b: Buffer) => {
 function framesOf(file: string) {
   const b = readFileSync(file);
   const find = (type: string, from = 0, to = b.length): [number, number] => {
-    for (let p = from; p + 8 <= to; ) {
+    for (let p = from; p + 8 <= to;) {
       const size = b.readUInt32BE(p) || to - p;
       if (b.toString('latin1', p + 4, p + 8) === type) return [p + 8, p + size];
       const inner = ['moov', 'trak', 'mdia', 'minf', 'stbl'].includes(
@@ -121,7 +122,9 @@ describe('readVideo', () => {
     await expect(
       readVideo(write('torn.mp4', video([Buffer.from('frame')], { torn: true }))),
     ).rejects.toThrow(/not a playable video: the mdat box runs past/);
-    await expect(readVideo(write('empty.mp4', Buffer.alloc(0)))).rejects.toThrow(/the file is empty/);
+    await expect(readVideo(write('empty.mp4', Buffer.alloc(0)))).rejects.toThrow(
+      /the file is empty/,
+    );
     await expect(readVideo(join(dir, 'none.mp4'))).rejects.toThrow(/not a playable video/);
     const noMoov = Buffer.concat([box('ftyp', Buffer.from('isom')), box('mdat', Buffer.from('x'))]);
     await expect(readVideo(write('nomoov.mp4', noMoov))).rejects.toThrow(/did not end properly/);
@@ -143,9 +146,10 @@ describe('joinVideos', () => {
     expect(bytes.match(/trak/g)).toHaveLength(1);
     expect(bytes).not.toContain('edts');
     const at = bytes.indexOf('stss') + 4;
-    expect([readFileSync(out).readUInt32BE(at + 4), readFileSync(out).readUInt32BE(at + 8)]).toEqual([
-      2, 1,
-    ]);
+    expect([
+      readFileSync(out).readUInt32BE(at + 4),
+      readFileSync(out).readUInt32BE(at + 8),
+    ]).toEqual([2, 1]);
     expect(readFileSync(out).readUInt32BE(at + 12)).toBe(3);
   });
 

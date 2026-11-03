@@ -75,7 +75,10 @@ async function fakeMetro(opts: { reloadRoute: boolean; targets?: number }) {
               method: 'Runtime.consoleAPICalled',
               params: {
                 type: 'warn',
-                args: [{ type: 'string', value: 'token=abc123 is here' }, { type: 'number', value: 3 }],
+                args: [
+                  { type: 'string', value: 'token=abc123 is here' },
+                  { type: 'number', value: 3 },
+                ],
               },
             }),
           ),
@@ -107,8 +110,12 @@ describe('react_native', () => {
   afterEach(() => metro?.close());
 
   it('says when no Metro answers, and asks for no device', async () => {
-    await expect(call({ action: 'targets', metro: '127.0.0.1:1' })).rejects.toThrow(/no Metro answers/);
-    await expect(call({ action: 'targets', metro: '127.0.0.1:1' })).rejects.toBeInstanceOf(ToolError);
+    await expect(call({ action: 'targets', metro: '127.0.0.1:1' })).rejects.toThrow(
+      /no Metro answers/,
+    );
+    await expect(call({ action: 'targets', metro: '127.0.0.1:1' })).rejects.toBeInstanceOf(
+      ToolError,
+    );
   });
 
   it('lists targets', async () => {

@@ -259,8 +259,7 @@ export class AndroidSettings implements DeviceSettings {
         if (value.startsWith('default')) await this.sh('dumpsys battery reset');
         else if (/^\d{1,3}$/.test(value) && Number(value) <= 100)
           await this.sh(`dumpsys battery set level ${value}`);
-        else
-          throw new DeviceError('INVALID_ARGUMENT', `battery: a level 0 to 100, not ${value}`);
+        else throw new DeviceError('INVALID_ARGUMENT', `battery: a level 0 to 100, not ${value}`);
         return;
     }
   }

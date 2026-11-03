@@ -44,7 +44,9 @@ export function readBplist(b: Buffer): Plist {
       }
       case 6: {
         const n = size();
-        return Buffer.from(b.subarray(p, p + n * 2)).swap16().toString('utf16le');
+        return Buffer.from(b.subarray(p, p + n * 2))
+          .swap16()
+          .toString('utf16le');
       }
       case 10:
         return refs(size(), 0);
@@ -75,9 +77,11 @@ export function writeBplist(root: Plist): Buffer {
   const add = (v: Plist): number => {
     const i = objects.length;
     if (typeof v === 'string') {
-      const ascii = /^[\x00-\x7f]*$/.test(v);
+      const ascii = Buffer.byteLength(v) === v.length;
       const body = ascii ? Buffer.from(v, 'latin1') : Buffer.from(v, 'utf16le').swap16();
-      objects.push({ own: Buffer.concat([sized(ascii ? 5 : 6, ascii ? v.length : body.length / 2), body]) });
+      objects.push({
+        own: Buffer.concat([sized(ascii ? 5 : 6, ascii ? v.length : body.length / 2), body]),
+      });
     } else if (typeof v === 'number') {
       const n = Buffer.alloc(9);
       n[0] = 0x13;
@@ -217,7 +221,9 @@ export class SimulatorWeb implements WebInspector {
   ) {}
 
   private async talking<T>(f: (c: Conversation, apps: App[]) => Promise<T>): Promise<T> {
-    const path = (await this.simctl.exec(['getenv', assertUdid(this.udid), 'RWI_LISTEN_SOCKET'])).trim();
+    const path = (
+      await this.simctl.exec(['getenv', assertUdid(this.udid), 'RWI_LISTEN_SOCKET'])
+    ).trim();
     const c = await Conversation.open(path);
     try {
       const list = await c.until(
@@ -225,7 +231,10 @@ export class SimulatorWeb implements WebInspector {
         CONNECT_MS,
       );
       if (!list) throw new DeviceError('TIMEOUT', 'the Safari inspector said nothing');
-      return await f(c, Object.values(list.__argument.WIRApplicationDictionaryKey as Record<string, App>));
+      return await f(
+        c,
+        Object.values(list.__argument.WIRApplicationDictionaryKey as Record<string, App>),
+      );
     } finally {
       c.close();
     }
@@ -249,7 +258,10 @@ export class SimulatorWeb implements WebInspector {
             x.__argument.WIRApplicationIdentifierKey === idOf(a),
           LISTING_MS,
         );
-        const listing = (m?.__argument.WIRListingKey ?? {}) as Record<string, Record<string, Plist>>;
+        const listing = (m?.__argument.WIRListingKey ?? {}) as Record<
+          string,
+          Record<string, Plist>
+        >;
         for (const p of Object.values(listing))
           if (p.WIRTypeKey === 'WIRTypeWebPage' || p.WIRTypeKey === 'WIRTypeWeb')
             pages.push({
@@ -280,12 +292,15 @@ export class SimulatorWeb implements WebInspector {
         WIRMessageDataTypeChunkSupportedKey: 0,
         WIRAutomaticallyPause: false,
       });
-      const fromPage = async (met: (j: { method?: string; params?: Record<string, never> }) => boolean) => {
+      const fromPage = async (
+        met: (j: { method?: string; params?: Record<string, never> }) => boolean,
+      ) => {
         const m = await c.until((x) => {
           if (x.__selector !== '_rpc_applicationSentData:') return false;
           return met(JSON.parse(String(x.__argument.WIRMessageDataKey)) as never);
         }, ANSWER_MS);
-        if (!m) throw new DeviceError('TIMEOUT', `the page ${page.title || page.id} did not answer`);
+        if (!m)
+          throw new DeviceError('TIMEOUT', `the page ${page.title || page.id} did not answer`);
         return JSON.parse(String(m.__argument.WIRMessageDataKey)) as {
           params: { targetInfo: { targetId: string }; message: string };
         };
@@ -312,14 +327,13 @@ export class SimulatorWeb implements WebInspector {
       const answer = await fromPage(
         (j) =>
           j.method === 'Target.dispatchMessageFromTarget' &&
-          (JSON.parse((j.params as unknown as { message: string }).message) as { id?: number }).id === 2,
+          (JSON.parse((j.params as unknown as { message: string }).message) as { id?: number })
+            .id === 2,
       );
-      const r = (
-        JSON.parse(answer.params.message) as {
-          result?: { result?: { value?: unknown; description?: string }; wasThrown?: boolean };
-          error?: { message?: string };
-        }
-      );
+      const r = JSON.parse(answer.params.message) as {
+        result?: { result?: { value?: unknown; description?: string }; wasThrown?: boolean };
+        error?: { message?: string };
+      };
       if (r.error) throw new DeviceError('INTERNAL', `the page refused: ${r.error.message}`);
       if (r.result?.wasThrown)
         throw new DeviceError(

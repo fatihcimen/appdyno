@@ -258,7 +258,7 @@ export function networkOps(ctx: ServerContext): Op[] {
       name: 'network',
       title: 'Network',
       description:
-        "An app's traffic as a bounded list. action: paths (what each way sees here and why not), start (via: proxy with proxy host:port on this Mac, put back at stop; probe, restarts the app; packets; bytes), read (har: a proxy's export; contains; limit), stop. Says when bodies are unavailable. Installs no certificate.",
+        "An app's traffic, bounded. action: paths (what each way sees here, or why not); start (via: proxy, with proxy host:port; probe, restarts the app; packets; bytes); read (har: a proxy's export; contains; limit); stop. Says when bodies are unavailable; installs no certificate.",
       input: z
         .object({
           action: z.enum(['paths', 'start', 'read', 'stop']),
@@ -278,9 +278,7 @@ export function networkOps(ctx: ServerContext): Op[] {
         const now = captureOf(serial);
         if (action === 'paths') {
           const ways = await paths(s);
-          const t = ways
-            .map((p) => `${p.via}: ${p.sees ?? `no: ${p.refused}`}`)
-            .join('\n');
+          const t = ways.map((p) => `${p.via}: ${p.sees ?? `no: ${p.refused}`}`).join('\n');
           return reply(clean(t), { done: clean(t), paths: ways });
         }
         if (action === 'start') {

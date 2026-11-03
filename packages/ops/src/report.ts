@@ -83,8 +83,7 @@ function shownArgs(op: string, args: unknown, clean: (s: string) => string): unk
   return walk(args, op === 'type_text' || op === 'clipboard');
 }
 
-const esc = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 const pre = (s: string) => `<pre>${esc(s)}</pre>`;
 
@@ -239,7 +238,9 @@ export function reportFor(ctx: ServerContext) {
         pre(JSON.stringify(st.args)),
         pre(st.answer),
         ...(st.shot ? [`<img alt="the screen after step ${i + 1}" src="${esc(st.shot)}">`] : []),
-        ...(st.screen ? [`<details><summary>the screen after it</summary>${pre(st.screen)}</details>`] : []),
+        ...(st.screen
+          ? [`<details><summary>the screen after it</summary>${pre(st.screen)}</details>`]
+          : []),
       );
     });
 
@@ -331,7 +332,7 @@ export function reportFor(ctx: ServerContext) {
       name: 'report',
       title: 'Session report',
       description:
-        "A folder with index.html: steps, the screen and an image after each, video, logs, crashes, measurements. Secrets hidden, loads nothing from the network. action: start (dir) keeps steps until stop or the session's end; write writes it now (with no start, of the screen as it is); stop writes it and ends.",
+        "A folder with index.html: steps, the screen and an image after each, video, logs, crashes, measurements; secrets hidden, nothing from the network. action: start (dir) keeps steps until stop or the session's end; write writes it now; stop.",
       input: z
         .object({
           action: z.enum(['start', 'write', 'stop']),
