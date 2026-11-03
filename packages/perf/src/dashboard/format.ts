@@ -1,3 +1,4 @@
+import { osName } from '@appdyno/core';
 import type { MeasureId, Unit } from '../record.js';
 import { keyName } from '../record.js';
 
@@ -82,7 +83,7 @@ export function deviceName(cls: string, model?: string): DeviceName {
   if (!m) return { name: cls, detail: '', virtual: false };
   const [, platform, where, safeModel, os] = m;
   const name = KINDS[`${platform}-${where}`]!;
-  const version = `${platform === 'ios' ? 'iOS' : 'Android'} ${os}`;
+  const version = osName(platform!, os!);
   const shown = model ?? safeModel;
   return {
     name,

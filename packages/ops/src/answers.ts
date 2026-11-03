@@ -1,4 +1,5 @@
 import {
+  osName,
   diffScreens,
   diffText,
   pause,
@@ -60,16 +61,12 @@ export function answersFor(ctx: ServerContext) {
     return `\nWARNING: the app is not in the foreground (${screen.foreground}): if it crashed, bring it back with launch_app`;
   };
 
-  /** The OS as people name it: Android 14, iOS 18.2. */
-  const osName = (s: Session) =>
-    `${s.device.platform === 'ios' ? 'iOS' : 'Android'} ${s.device.hello!.osVersion}`;
-
   const info = (s: Session) => {
     const h = s.device.hello!;
     return {
       serial: s.device.serial,
       model: h.model,
-      os: osName(s),
+      os: osName(s.device.platform, s.device.hello!.osVersion),
       ...(h.sdk !== undefined && { sdk: h.sdk }),
       screen: h.screen,
       agentVersion: h.agentVersion,
@@ -313,7 +310,6 @@ export function answersFor(ctx: ServerContext) {
     clean,
     header,
     foreground,
-    osName,
     info,
     show,
     answer,

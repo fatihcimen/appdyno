@@ -1,3 +1,4 @@
+import { osName } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
@@ -6,7 +7,7 @@ import { refused } from './session.js';
 import { Read } from './step-schemas.js';
 import { ACT, defineOp, READ, reply, type Op } from './tool.js';
 
-export function deviceOps(ctx: ServerContext, { info, osName, afterChange }: Answers): Op[] {
+export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers): Op[] {
   return [
     defineOp({
       name: 'list_devices',
@@ -66,7 +67,7 @@ export function deviceOps(ctx: ServerContext, { info, osName, afterChange }: Ans
           : '';
         const h = s.device.hello!;
         return reply(
-          `selected ${device}: ${h.model}, ${osName(s)}, screen ${h.screen.w}x${h.screen.h}` +
+          `selected ${device}: ${h.model}, ${osName(s.device.platform, h.osVersion)}, screen ${h.screen.w}x${h.screen.h}` +
             `${s.device.lastStartWasCold ? ' (agent started)' : ''}${s.appId ? `; app ${s.appId}` : ''}${note}`,
           {
             ...info(s),
@@ -89,7 +90,7 @@ export function deviceOps(ctx: ServerContext, { info, osName, afterChange }: Ans
         const fg = await s.device.foreground().catch(refused);
         return reply(
           [
-            `${s.device.serial}: ${h.model}, ${osName(s)}${h.sdk !== undefined ? ` (SDK ${h.sdk})` : ''}`,
+            `${s.device.serial}: ${h.model}, ${osName(s.device.platform, h.osVersion)}${h.sdk !== undefined ? ` (SDK ${h.sdk})` : ''}`,
             `screen ${h.screen.w}x${h.screen.h}, density ${h.screen.density}, rotation ${h.screen.rotation}`,
             `agent ${h.agentVersion}, protocol ${h.protocol.major}.${h.protocol.minor}, capabilities: ${h.capabilities.join(', ')}`,
             `foreground: ${fg ?? 'unknown'}`,

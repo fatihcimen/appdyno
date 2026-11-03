@@ -148,6 +148,10 @@ export interface WebInspector {
   evaluate(page: WebPage, script: string): Promise<unknown>;
 }
 
+/** The OS as people name it: Android 14, iOS 18.2. */
+export const osName = (platform: string, version: string) =>
+  `${platform === 'ios' ? 'iOS' : 'Android'} ${version}`;
+
 /** What only a platform knows about what its screen shows. */
 export interface PlatformScreen {
   /** The system alert on the screen, whatever it asks. */
