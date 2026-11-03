@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Report it privately. Do not open a public issue. When this repository is public, use GitHub private
-vulnerability reporting on it (the Security tab). Until then, send the report to the owner directly.
+vulnerability reporting on it (the Security tab). Until then, send the report to the maintainer directly.
 Say what you did, what happened, and the version or commit.
 
 ## Nothing leaves the machine

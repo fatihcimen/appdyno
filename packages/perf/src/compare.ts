@@ -77,6 +77,7 @@ const FLOOR: Record<Unit, { percent: number; absolute: number }> = {
   bytes: { percent: 10, absolute: 1 << 20 },
   count: { percent: 25, absolute: 1 },
   mah: { percent: 25, absolute: 0.1 },
+  mj: { percent: 25, absolute: 1 },
   ratio: { percent: 25, absolute: 0.05 },
 };
 

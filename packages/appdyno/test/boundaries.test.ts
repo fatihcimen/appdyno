@@ -93,11 +93,11 @@ describe('module boundaries', () => {
 });
 
 describe('the name', () => {
-  it('has no trace of the old one outside docs/design', () => {
+  it('has no trace of the old one', () => {
     const old = 'get' + 'ir'; // built here so that this file passes itself
     const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' })
       .split('\0')
-      .filter((f) => f && !f.startsWith('docs/design/'));
+      .filter(Boolean);
     expect(tracked.length).toBeGreaterThan(100);
     const hits = tracked.filter((f) => {
       if (f.toLowerCase().includes(old)) return true;

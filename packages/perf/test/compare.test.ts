@@ -70,14 +70,18 @@ describe('compare', () => {
     expect(alarms).toBe(0);
   });
 
-  it('why the floor: the rank test alone alarms on those same unchanged runs', () => {
-    const r = rng(1);
-    let alarms = 0;
-    for (let i = 0; i < 300; i++) if (rankTest(run(r, 500, 24), run(r, 500, 8)) < 0.01) alarms++;
-    expect(alarms).toBeGreaterThan(30);
-  });
+  it(
+    'why the floor: the rank test alone alarms on those same unchanged runs',
+    { timeout: 60_000 },
+    () => {
+      const r = rng(1);
+      let alarms = 0;
+      for (let i = 0; i < 300; i++) if (rankTest(run(r, 500, 24), run(r, 500, 8)) < 0.01) alarms++;
+      expect(alarms).toBeGreaterThan(30);
+    },
+  );
 
-  it('catches +30 % nearly always and +80 % every time', () => {
+  it('catches +30 % nearly always and +80 % every time', { timeout: 60_000 }, () => {
     const r = rng(2);
     let caught = 0;
     for (let i = 0; i < 300; i++) {

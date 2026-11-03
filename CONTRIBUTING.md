@@ -42,7 +42,7 @@ every gate locally and records the results.
 Each package under `packages/` may import only the packages its rule allows. For example `core` may import
 `protocol` and nothing else, and `driver-android` and `driver-apple` never import each other. The rules
 and the test that enforces them are in `packages/appdyno/test/boundaries.test.ts`. Change the rule there
-if the design needs it, not around it.
+if the architecture needs it, not around it.
 
 ## Commits
 

@@ -17,17 +17,22 @@ import {
   latestRuns,
   loadBaseline,
   loadBudgets,
+  deviceClass,
+  measureOf,
   newId,
   recordsOf,
   reportKey,
   runKeys,
   saveBaseline,
+  saveRefusal,
   saveRun,
   store,
   toJson,
   toJUnit,
   toText,
   type KeyReport,
+  type DeviceInfo,
+  type MeasureId,
   type Metric,
 } from '@appdyno/perf';
 import { DeviceError } from '@appdyno/protocol';
@@ -104,10 +109,14 @@ const median = (xs: number[]) => {
 const kb = (n?: number) => (n === undefined ? '?' : `${(n / 1024).toFixed(1)} MB`);
 
 /** A measure the platform may lack: its answer, or nothing when it says UNSUPPORTED. */
-const unlessUnsupported = async <T>(p: Promise<T>): Promise<T | undefined> =>
-  p.catch((e: unknown) => {
-    if (e instanceof DeviceError && e.code === 'UNSUPPORTED') return undefined;
-    return refused(e);
+const unlessUnsupported = async <T>(
+  p: Promise<T>,
+  saidNo?: (reason: string) => Promise<void>,
+): Promise<T | undefined> =>
+  p.catch(async (e: unknown) => {
+    if (!(e instanceof DeviceError && e.code === 'UNSUPPORTED')) return refused(e);
+    await saidNo?.(e.message);
+    return undefined;
   });
 
 const OBJECTS = [
@@ -139,6 +148,23 @@ function measure<K extends Capability>(s: Session, k: K): NonNullable<MeasureSou
 
 const virtual = (s: Session) => (s.device.virtual ?? s.device.measure?.virtual) === true;
 
+const deviceInfo = (s: Session): DeviceInfo => ({
+  serial: s.device.serial,
+  platform: s.device.platform,
+  model: s.device.hello?.model ?? 'unknown',
+  os: s.device.hello?.osVersion ?? 'unknown',
+  virtual: virtual(s),
+});
+
+/** That this device said it cannot give a measure, and why, for the dashboard. */
+export const keepRefusal = (ctx: ServerContext, s: Session, measure: MeasureId, reason: string) =>
+  saveRefusal(ctx.measurementsDir, {
+    deviceClass: deviceClass(deviceInfo(s)),
+    measure,
+    reason,
+    at: new Date().toISOString(),
+  });
+
 /**
  * A run's records, with the context each number is judged by; read after the measured window, so it does not
  * disturb it. Whatever measures next (a flow's journey, step by step) keeps its numbers here and perf_compare
@@ -164,13 +190,7 @@ export async function keepRun(
       scenario,
       source,
       raw,
-      device: {
-        serial: s.device.serial,
-        platform: s.device.platform,
-        model: h?.model ?? 'unknown',
-        os: h?.osVersion ?? 'unknown',
-        virtual: virtual(s),
-      },
+      device: deviceInfo(s),
       build: (await m?.buildType?.(app).catch(() => undefined)) ?? 'unknown',
       ...(compile && { compile }),
       load: {
@@ -262,7 +282,12 @@ export function perfOps(ctx: ServerContext): Op[] {
         const lacking: string[] = [];
         const extra = async <T>(what: string, get: (() => Promise<T>) | undefined) => {
           if (!also.includes(what as (typeof also)[number])) return undefined;
-          const got = get && (await unlessUnsupported(get()));
+          const row = measureOf(`${what}.`);
+          const got =
+            get &&
+            (await unlessUnsupported(get(), async (why) => {
+              if (row) await keepRefusal(ctx, s, row, why);
+            }));
           if (!got) lacking.push(what);
           return got;
         };

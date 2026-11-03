@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { Baseline, BudgetRule } from './compare.js';
-import type { PerfRecord } from './record.js';
+import type { MeasureId, PerfRecord } from './record.js';
 
 export const newId = (prefix: string) => `${prefix}-${randomBytes(4).toString('hex')}`;
 
@@ -59,6 +59,29 @@ export async function latestRuns(dir: string, k: RunKey, last = 1): Promise<Perf
   return Promise.all(
     files.map(async (f) => JSON.parse(await readFile(join(d, f), 'utf8')) as PerfRecord[]),
   );
+}
+
+/** A device saying it cannot give a measure, and why: the dashboard's answer until a reading is newer. */
+export type Refusal = { deviceClass: string; measure: MeasureId; reason: string; at: string };
+
+const refusalFile = (dir: string, r: Pick<Refusal, 'deviceClass' | 'measure'>) =>
+  join(dir, 'refusals', r.deviceClass, `${r.measure}.json`);
+
+export async function saveRefusal(dir: string, r: Refusal): Promise<void> {
+  const file = refusalFile(dir, r);
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, JSON.stringify(r, null, 2));
+}
+
+/** The newest refusal of each device class and measure. */
+export async function loadRefusals(dir: string): Promise<Refusal[]> {
+  const root = join(dir, 'refusals');
+  const out: Refusal[] = [];
+  for (const deviceClass of await list(root))
+    for (const f of await list(join(root, deviceClass)))
+      if (f.endsWith('.json'))
+        out.push(JSON.parse(await readFile(join(root, deviceClass, f), 'utf8')) as Refusal);
+  return out;
 }
 
 const baselineFile = (projectDir: string, k: RunKey) =>

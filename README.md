@@ -369,4 +369,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). `CHANGELOG.md` lists the releases.
 
 ## License
 
-The license is to be chosen by the owner. Until then no license is granted.
+No license is granted yet.

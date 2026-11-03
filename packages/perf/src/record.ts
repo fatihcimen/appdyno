@@ -1,6 +1,6 @@
 import { median, spread, type Spread } from './stats.js';
 
-export type Unit = 'ms' | 'percent' | 'kb' | 'bytes' | 'count' | 'mah' | 'ratio';
+export type Unit = 'ms' | 'percent' | 'kb' | 'bytes' | 'count' | 'mah' | 'mj' | 'ratio';
 
 export type Build = 'debug' | 'profileable' | 'release' | 'unknown';
 
@@ -43,7 +43,49 @@ export type PerfRecord = {
   tool: string;
   at: string;
   noise: Noise[];
+  /** An estimate from a model, not a reading of the thing itself; always shown as one. */
+  modelled?: boolean;
 };
+
+/** The rows of the performance table: what a device can be asked. */
+export const MEASURES = [
+  'launch',
+  'launch-why',
+  'frames',
+  'stalls',
+  'memory',
+  'leaks',
+  'cpu',
+  'network',
+  'energy',
+  'crashes',
+  'size',
+] as const;
+export type MeasureId = (typeof MEASURES)[number];
+
+/** Which row a kind answers. A launch's phases are kinds of the form `launch.phase.<name>_ms`. */
+export function measureOf(kind: string): MeasureId | undefined {
+  if (kind.startsWith('launch.phase.')) return 'launch-why';
+  if (kind === 'heap.leaks') return 'leaks';
+  if (kind === 'probe.missed_percent') return 'frames';
+  if (kind === 'probe.stall_worst_ms') return 'stalls';
+  const byPrefix: Record<string, MeasureId> = {
+    launch: 'launch',
+    frames: 'frames',
+    hitches: 'frames',
+    stalls: 'stalls',
+    hangs: 'stalls',
+    memory: 'memory',
+    heap: 'memory',
+    cpu: 'cpu',
+    threads: 'cpu',
+    network: 'network',
+    energy: 'energy',
+    exits: 'crashes',
+    size: 'size',
+  };
+  return byPrefix[kind.split('.')[0] ?? ''];
+}
 
 const safe = (s: string) => s.replace(/[^\w.-]+/g, '_');
 
@@ -58,7 +100,7 @@ export const deviceClass = (d: DeviceInfo) =>
  * cold start doubled, 350 ms to 700 ms, between load 11 and 16 on 15 cores (docs/perf.md).
  */
 const HOST_LOAD_PER_CORE = 0.8;
-/** Above this a device is busy with more than the app (the design's limit for a timed run is 3). */
+/** Above this a device is busy with more than the app. */
 const DEVICE_LOAD = 8;
 const CPU_PRESSURE = 40;
 /** Android's thermal status "moderate" and up throttles. */
@@ -80,6 +122,7 @@ export type Metric = {
   unit: Unit;
   samples: number[];
   better?: 'lower' | 'higher';
+  modelled?: boolean;
 };
 
 export type RunContext = Omit<
@@ -115,6 +158,7 @@ export function recordsOf(ctx: RunContext, metrics: Metric[]): PerfRecord[] {
         spread: spread(samples),
         deviceClass: deviceClass(ctx.device),
         noise,
+        ...(m.modelled && { modelled: true }),
       },
     ];
   });

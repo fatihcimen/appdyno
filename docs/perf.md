@@ -41,7 +41,7 @@ appdyno perf compare --app A [--format text|json|junit]  exit 1 on a regression 
 appdyno perf budget --app A                              budgets only
 ```
 
-The same comes through `perf_compare`. A journey (phase 5) keeps its numbers with `keepRun` from `packages/ops`: a scenario and
+The same comes through `perf_compare`. A journey keeps its numbers with `keepRun` from `packages/ops`: a scenario and
 metrics, and the comparison reads them like any other.
 
 **How a change is called.** All of: at least 5 samples each side and 3 baseline runs, else `few-samples`, which is no alarm; a rank
