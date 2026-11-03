@@ -1,12 +1,24 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { parseExitInfo } from '../src/crashes.js';
+import { assertReadOnlySql, queryTrace } from '../src/perf.js';
 import {
   parseAmStart,
+  parseAndroidFrameStats,
+  parseBatteryUsage,
+  parseBuildType,
+  parseCompileStatus,
+  parseCsv,
+  parseDiskstats,
   parseFrameStats,
   parseFrameTimelineCsv,
   parseFramestats,
+  parseFullyDrawn,
   parseMeminfo,
+  parseNetstatsUid,
   parseProcStatTicks,
+  parseStartup,
+  parseThreadReads,
   parseVitals,
 } from '../src/perf-parse.js';
 
@@ -93,6 +105,7 @@ describe('android perf parsers on recorded outputs', () => {
       janky: 3,
       jankyPercent: 60,
       appDeadlineMissed: 2,
+      appResynced: 0,
       appJankPercent: 40,
       bufferStuffing: 1,
       surfaceFlinger: 1,
@@ -100,6 +113,267 @@ describe('android perf parsers on recorded outputs', () => {
       p95Ms: 45,
       worstMs: 45,
     });
+  });
+
+  it('counts app resynced jitter as the app jank', () => {
+    const csv =
+      '"ts","dur","jank_type"\n1,1000000,"App Resynced Jitter"\n2,1000000,"None"\n3,1000000,"App Deadline Missed"\n4,1000000,"None"\n';
+    expect(parseFrameTimelineCsv(csv)).toMatchObject({
+      appDeadlineMissed: 1,
+      appResynced: 1,
+      appJankPercent: 50,
+    });
+  });
+
+  it('reads the objects of meminfo', () => {
+    expect(parseMeminfo(fx('android-meminfo.txt'))).toMatchObject({
+      viewRootImpl: 1,
+      appContexts: 11,
+      activities: 1,
+    });
+  });
+
+  it('reads android_frame_stats, nanoseconds to ms', () => {
+    const s = parseAndroidFrameStats(fx('frame-stats.csv'))!;
+    expect(s.frames).toBe(32);
+    expect(s.overrunWorstMs).toBeGreaterThanOrEqual(s.overrunP95Ms);
+    expect(s.overrunWorstMs).toBeCloseTo(316.5, 0);
+    expect(s.cpuP95Ms).toBeGreaterThan(40);
+    expect(parseAndroidFrameStats('"overrun","cpu_time"\n')).toBeUndefined();
+  });
+
+  it('reads the app-s fully drawn time, the last one, with seconds and minutes', () => {
+    const log = fx('android-logcat-launch.txt');
+    expect(parseFullyDrawn(log, 'dev.appdyno.fixture')).toBe(123);
+    expect(parseFullyDrawn(log, 'other.app')).toBeUndefined();
+    expect(parseFullyDrawn('Fully drawn a.b/.Main: +1m2s13ms\n', 'a.b')).toBe(62_013);
+  });
+
+  it('reads the compile state the device reports', () => {
+    expect(
+      parseCompileStatus(
+        '  [dev.appdyno.fixture]\n    path: /data/app/base.apk\n      arm64: [status=verify] [reason=cmdline] [primary-abi]\n',
+      ),
+    ).toBe('status=verify reason=cmdline');
+    expect(parseCompileStatus('nothing')).toBeUndefined();
+  });
+
+  it('reads a startup trace: type, times, the platform-s reasons, breakdown, findings, odex', () => {
+    const s = parseStartup(
+      fx('startup-query.csv'),
+      fx('startup-metric.json'),
+      'dev.appdyno.fixture',
+      '/traces/x.pftrace',
+    );
+    expect(s).toMatchObject({
+      tracePath: '/traces/x.pftrace',
+      startupType: 'cold',
+      durMs: 1867.5,
+      ttidMs: 1878.6,
+      ttfdMs: 2139.5,
+      reasons: [
+        'No baseline or cloud profiles',
+        'App in debuggable mode',
+        'Time spent in bindApplication',
+      ],
+      findings: ['bindApplication took 1533 ms (limit 1250 ms)'],
+    });
+    expect(s.breakdown[0]!.reason).toBe('bind_application');
+    expect(s.breakdown[0]!.ms).toBeGreaterThan(1500);
+    expect(s.odex).toMatch(
+      /^location=.*base\.odex status=up-to-date filter=verify reason=install$/,
+    );
+  });
+
+  it('finds a slow hot launch and nothing else on empty metrics', () => {
+    const s = parseStartup(
+      '"k","a","b"\n"type","hot",1600000000\n',
+      '{"android_startup":{"startup":[]}}',
+      'a.b',
+      '/t.pftrace',
+    );
+    expect(s.findings).toEqual(['hot launch took 1600 ms (limit 1500 ms)']);
+    expect(s.reasons).toEqual([]);
+    expect(s.breakdown).toEqual([]);
+    expect(s.ttidMs).toBeUndefined();
+  });
+
+  it('reads each thread between reads, a new one from zero', () => {
+    const line = (tid: number, name: string, ticks: number) =>
+      `${tid} (${name}) R 1 2 3 4 5 6 7 8 9 10 ${ticks} 0 0 0`;
+    const text = [
+      'hz 100',
+      '== 1000000000',
+      line(1, 'main a', 0),
+      line(2, 'idle', 100),
+      '== 1500000000',
+      line(1, 'main a', 50),
+      line(2, 'idle', 101),
+      line(3, 'Thread-5', 40),
+      '== 2000000000',
+      line(1, 'main a', 60),
+      line(2, 'idle', 101),
+      line(3, 'Thread-5', 90),
+    ].join('\n');
+    expect(parseThreadReads(text)).toEqual({
+      windowMs: 1000,
+      reads: 3,
+      threads: [
+        // 500 ms above the limit, and what it ran in the step next to it
+        { tid: 3, name: 'Thread-5', percent: 90, over90Ms: 900 },
+        { tid: 1, name: 'main a', percent: 60, over90Ms: 600 },
+        { tid: 2, name: 'idle', percent: 1, over90Ms: 0 },
+      ],
+      worstOver90Ms: 900,
+    });
+  });
+
+  it('reads thread stats recorded from a busy app', () => {
+    const m = parseThreadReads(fx('android-threads.txt'));
+    expect(m.reads).toBe(5);
+    expect(m.windowMs).toBe(2061);
+    expect(m.threads.length).toBeGreaterThan(5);
+    // it ran through the 2 s of the reads, the first step (88 %) on the way up
+    expect(m.threads[0]).toMatchObject({ name: 'Thread-3', over90Ms: 2000 });
+    expect(m.worstOver90Ms).toBe(2000);
+  });
+
+  it('adds up one uid in netstats, no other uid and no tag', () => {
+    const m = parseNetstatsUid(fx('android-netstats-uid.txt'), 10193);
+    expect(m).toEqual({ rxBytes: 10777544, txBytes: 94378 });
+    expect(parseNetstatsUid(fx('android-netstats-uid.txt'), 99999)).toEqual({
+      rxBytes: 0,
+      txBytes: 0,
+    });
+    const tagged = [
+      'ident=[{type=1}] uid=7 set=DEFAULT tag=0x0',
+      '  NetworkStatsHistory: bucketDuration=7200',
+      '    st=1 rb=10 rp=1 tb=20 tp=1 op=0',
+      '    st=2 rb=1 rp=1 tb=2 tp=1 op=0',
+      'ident=[{type=1}] uid=7 set=FOREGROUND tag=0x0',
+      '    st=1 rb=100 rp=1 tb=200 tp=1 op=0',
+      'ident=[{type=1}] uid=7 set=DEFAULT tag=0xffff',
+      '    st=1 rb=1000 rp=1 tb=2000 tp=1 op=0',
+    ].join('\n');
+    expect(parseNetstatsUid(tagged, 7)).toEqual({ rxBytes: 111, txBytes: 222 });
+  });
+
+  it('reads the app-s estimated charge; an emulator-s zeros are no estimate', () => {
+    expect(parseBatteryUsage(fx('android-batterystats-charged.txt'), 10193)).toEqual({});
+    // the row as a phone prints it (not recorded: there is no phone for these tests)
+    const phone = [
+      '  Estimated power use (mAh):',
+      '    Capacity: 4355, Computed drain: 25.2, actual drain: 0-35.1',
+      '    Global',
+      '      screen: 5.00 apps: 5.00 duration: 5m 0s 0ms',
+      '    UID u0a193: 1.23 fg: 1.10 ( cpu=1.00 (1s 123ms) screen=0.230 (5m 0s 0ms) ) ',
+      '    UID 1000: 0.500 ( cpu=0.500 ) ',
+      '',
+      '  Resource Power Manager Stats',
+    ].join('\n');
+    expect(parseBatteryUsage(phone, 10193)).toEqual({
+      mah: 1.23,
+      breakdown: { cpu: 1, screen: 0.23 },
+    });
+    expect(parseBatteryUsage(phone, 10194)).toEqual({ mah: 0 });
+    expect(parseBatteryUsage('', 10193)).toEqual({});
+  });
+
+  it('tells the build from the package flags', () => {
+    expect(parseBuildType(fx('android-package-flags-debug.txt'))).toBe('debug');
+    expect(parseBuildType(fx('android-package-flags-release.txt'))).toBe('release');
+    // Android 14 does not print this one (the driver asks Perfetto); kept for releases that do
+    expect(parseBuildType('    privateFlags=[ PROFILEABLE_BY_SHELL ]\n')).toBe('profileable');
+    expect(parseBuildType('Unable to find package: no.such.app\n')).toBe('unknown');
+  });
+
+  it('finds the app in dumpsys diskstats where it lists apps', () => {
+    // the emulator's own: no list
+    expect(parseDiskstats(fx('android-diskstats.txt'), 'dev.appdyno.fixture')).toEqual({});
+    // the documented format (a phone's daily count; not recorded here)
+    const listed = [
+      'Package Names: ["a.b","dev.appdyno.fixture"]',
+      'App Sizes: [1,2]',
+      'App Data Sizes: [3,4]',
+      'Cache Sizes: [5,6]',
+    ].join('\n');
+    expect(parseDiskstats(listed, 'dev.appdyno.fixture')).toEqual({ code: 2, data: 4, cache: 6 });
+    expect(parseDiskstats(`${listed}\nApp Sizes: [broken`, 'other')).toEqual({});
+  });
+
+  it('reads the trace processor-s csv: quotes, commas, doubled quotes, line breaks, NULL', () => {
+    expect(parseCsv('"a","b"\n1,"x, ""y"""\n"line\nbreak",[NULL]\n\n')).toEqual({
+      columns: ['a', 'b'],
+      rows: [
+        ['1', 'x, "y"'],
+        ['line\nbreak', '[NULL]'],
+      ],
+    });
+    expect(parseCsv('')).toEqual({ columns: [], rows: [] });
+  });
+
+  it('counts crashes and ANRs from a recorded exit list', () => {
+    // the force stop in the same list is nobody's fault: not a death
+    expect(parseExitInfo(fx('android-exit-info.txt'))).toMatchObject([
+      { at: '2026-11-03 03:41:06.868', reason: 'APP CRASH(EXCEPTION)', detail: 'crash' },
+    ]);
+  });
+});
+
+describe('the read-only guard of trace queries', () => {
+  const ok = [
+    'SELECT 1',
+    'SELECT 1;',
+    '  select name from process ;  ',
+    'WITH a AS (SELECT 1 AS x) SELECT x FROM a;',
+    'INCLUDE PERFETTO MODULE android.startup.startups; SELECT * FROM android_startups',
+    'include perfetto module a.b;\nINCLUDE PERFETTO MODULE c.*;\nSELECT 1;',
+    "SELECT 'DROP TABLE x; DELETE FROM y' AS a",
+    "SELECT \"update\", replace(name, 'a', 'b') FROM t -- ; DROP TABLE t\n",
+    '/* INSERT; */ SELECT [create] FROM t',
+  ];
+  it.each(ok)('passes %s', (sql) => {
+    expect(() => assertReadOnlySql(sql)).not.toThrow();
+  });
+
+  const bad = [
+    '',
+    'DROP TABLE slice',
+    'INSERT INTO t VALUES (1)',
+    'PRAGMA table_info(slice)',
+    'CREATE PERFETTO TABLE t AS SELECT 1',
+    'SELECT 1; SELECT 2',
+    'SELECT 1; DROP TABLE slice',
+    'SELECT 1;;',
+    'WITH a AS (SELECT 1) DELETE FROM t',
+    'WITH a AS (SELECT 1) INSERT INTO t SELECT * FROM a',
+    'WITH a AS (SELECT 1) REPLACE INTO t SELECT * FROM a',
+    'WITH a AS (SELECT 1) UPDATE t SET x = 1',
+    'INCLUDE PERFETTO MODULE a.b; DROP TABLE t',
+    'INCLUDE PERFETTO MODULE a.b',
+    "INCLUDE PERFETTO MODULE a'; SELECT 1",
+    'SELECT 1 /* never closed',
+    "SELECT 'never closed",
+    "SELECT 'a'; ATTACH 'x' AS y",
+  ];
+  it.each(bad)('refuses %s', (sql) => {
+    let code: string | undefined;
+    try {
+      assertReadOnlySql(sql);
+    } catch (e) {
+      code = (e as { code?: string }).code;
+    }
+    expect(code).toBe('INVALID_ARGUMENT');
+  });
+
+  it('leaves other trace kinds to their own driver', async () => {
+    await expect(queryTrace('/t/x.trace', { sql: 'SELECT 1', limit: 1 })).resolves.toBeUndefined();
+    await expect(queryTrace('/t/x.pftrace', { limit: 1 })).rejects.toMatchObject({
+      code: 'INVALID_ARGUMENT',
+    });
+    await expect(
+      queryTrace('/t/x.perfetto-trace', { sql: 'DROP TABLE t', limit: 1 }),
+    ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
   });
 });
 

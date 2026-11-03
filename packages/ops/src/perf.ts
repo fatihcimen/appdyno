@@ -240,7 +240,7 @@ export function perfOps(ctx: ServerContext): Op[] {
             .array(z.enum(['threads', 'network', 'energy', 'exits', 'size']))
             .optional()
             .describe(
-              'threads: each thread and its time above 90 %; network: bytes in the window; energy: an estimate; exits: crashes and ANRs; size: on disk',
+              'threads: each thread and its time above 90 %; network: bytes in the window; energy: a model's estimate (Android: resets the battery history); exits: crashes and ANRs; size: on disk',
             ),
           scenario: Scenario,
         })
@@ -576,16 +576,18 @@ export function perfOps(ctx: ServerContext): Op[] {
           repeats: z.number().int().min(1).max(30).default(5),
           compile: z.enum(['speed', 'speed-profile', 'verify']).optional(),
           trace: z.boolean().optional(),
+          probe: Probe,
           scenario: Scenario,
         })
         .strict(),
       output: LaunchOut,
       annotations: DESTRUCTIVE,
       needs: 'launch',
-      run: async ({ app, mode, repeats, compile, trace, scenario }) => {
+      run: async ({ app, mode, repeats, compile, trace, probe, scenario }) => {
         const s = await ctx.session();
         s.appPid = undefined;
         const pkg = appOf(s, app);
+        await withProbe(s, pkg, probe);
         const m = await measure(s, 'launch')(pkg, {
           mode,
           repeats,
@@ -605,7 +607,11 @@ export function perfOps(ctx: ServerContext): Op[] {
           saved.txt,
           [
             {
-              kind: until ? 'launch.until_ms' : 'launch.ttid_ms',
+              kind: !until
+                ? 'launch.ttid_ms'
+                : until.includes('first frame')
+                  ? 'launch.first_frame_ms'
+                  : 'launch.until_ms',
               unit: 'ms',
               samples: samples.flatMap((x) => (x.totalMs === undefined ? [] : [x.totalMs])),
             },

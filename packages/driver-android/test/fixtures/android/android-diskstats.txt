@@ -1,0 +1,7 @@
+Latency: 1ms [512B Data Write]
+Recent Disk Write Speed data unavailable
+Data-Free: 4525432K / 6082144K total = 74% free
+Cache-Free: 4525432K / 6082144K total = 74% free
+System-Free: 49384K / 808320K total = 6% free
+Metadata-Free: 10632K / 11248K total = 94% free
+File-based Encryption: true

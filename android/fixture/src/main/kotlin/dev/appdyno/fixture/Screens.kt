@@ -3,14 +3,18 @@ package dev.appdyno.fixture
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.Application
 import android.app.Dialog
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
+import android.view.FrameMetrics
 import android.view.View
 import android.view.ViewGroup
+import android.view.Window
 import android.view.WindowManager
 import android.webkit.WebView
 import android.widget.BaseAdapter
@@ -44,6 +48,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
+import java.io.File
+import java.net.URL
 
 private fun Activity.column(build: LinearLayout.() -> Unit): LinearLayout =
     LinearLayout(this).apply {
@@ -87,10 +93,23 @@ private val LINKED = mapOf(
     "frames" to FramesActivity::class.java,
     "memory" to MemoryActivity::class.java,
     "cpu" to CpuActivity::class.java,
+    "leak" to LeakActivity::class.java,
+    "network" to NetworkActivity::class.java,
     "late" to LateActivity::class.java,
     "code" to CodeActivity::class.java,
     "a11y" to A11yActivity::class.java,
 )
+
+/** A number a test wrote into the app's files, as a known cost; absent, none. */
+private fun Context.costMs(name: String) = File(filesDir, name).takeIf { it.exists() }?.readText()?.trim()?.toLongOrNull()
+
+/** A slow start of a known cost: `files/startup_ms` holds how long `onCreate` takes. */
+class FixtureApp : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        costMs("startup_ms")?.let { Thread.sleep(it) }
+    }
+}
 
 /** The home screen; `appdyno-fixture://open/<screen>` opens a screen directly. */
 class MainActivity : Activity() {
@@ -103,8 +122,18 @@ class MainActivity : Activity() {
             button("Freeze") { Thread.sleep(12_000) }
         }
         route(intent)
-        // the start's "fully drawn" mark (time to full display) once the first frame is up
-        window.decorView.post { reportFullyDrawn() }
+        // the start's "fully drawn" mark (time to full display) `files/ttfd_ms` after the first frame is up;
+        // a post from here runs at the first traversal, a good 100 ms before that frame is on screen
+        window.addOnFrameMetricsAvailableListener(object : Window.OnFrameMetricsAvailableListener {
+            var seen = false
+            override fun onFrameMetricsAvailable(w: Window, metrics: FrameMetrics, dropped: Int) {
+                // frames delivered together each call this, also after the listener is gone
+                if (seen) return
+                seen = true
+                w.removeOnFrameMetricsAvailableListener(this)
+                w.decorView.postDelayed({ reportFullyDrawn() }, costMs("ttfd_ms") ?: 0)
+            }
+        }, Handler(Looper.getMainLooper()))
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -114,7 +143,7 @@ class MainActivity : Activity() {
 
     private fun route(intent: Intent?) {
         val key = intent?.data?.lastPathSegment ?: return
-        (SCREENS[key]?.second ?: LINKED[key])?.let { startActivity(Intent(this, it)) }
+        (SCREENS[key]?.second ?: LINKED[key])?.let { startActivity(Intent(this, it).setData(intent.data)) }
     }
 }
 
@@ -479,6 +508,47 @@ class CpuActivity : Activity() {
                     if (x == 42L) println(x)
                 }.start()
             }
+        }
+    }
+}
+
+/** A leak of a known size: each open leaves one Activity alive after it closed itself. */
+class LeakActivity : Activity() {
+    companion object {
+        val leaked = ArrayList<Activity>()
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        leaked += this
+        finish()
+    }
+}
+
+/** Reads the link's `url` once on a thread, and shows how many bytes came. */
+class NetworkActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val url = intent.data?.getQueryParameter("url")
+        column {
+            val result = label("Reading $url", R.id.result)
+            Thread {
+                val text = try {
+                    val buffer = ByteArray(64 * 1024)
+                    var total = 0L
+                    URL(url).openStream().use { s ->
+                        while (true) {
+                            val n = s.read(buffer)
+                            if (n < 0) break
+                            total += n
+                        }
+                    }
+                    "Read $total bytes"
+                } catch (e: java.io.IOException) {
+                    "Failed: $e"
+                }
+                runOnUiThread { result.text = text }
+            }.start()
         }
     }
 }

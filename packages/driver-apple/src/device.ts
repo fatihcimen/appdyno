@@ -668,6 +668,8 @@ export class IosSimulatorDevice extends IosDevice {
       this.serial,
       this.simctl,
       async (bundle) => {
+        // nothing may have named this app yet; a warm-up launch comes first, so this is not timed
+        if (this.targetApp !== bundle) await this.target(bundle).catch(() => undefined);
         const t = await this.tree().catch(() => undefined);
         return !!t && t.windows[0]?.pkg === bundle && t.nodes.filter((n) => n.w === 0).length > 3;
       },
