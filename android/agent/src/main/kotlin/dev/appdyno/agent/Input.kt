@@ -38,6 +38,21 @@ object Paths {
 /** Touch and key input injected as the shell user, timed on the device's uptime clock. */
 class Input(private val automation: Automation) {
     fun tap(x: Float, y: Float) {
+        // a phone that has dimmed its screen takes the first touch to undim it (a Xiaomi): the finger-up then has no
+        // finger-down to go with and is refused, nothing has reached the app, and the tap can be made again
+        repeat(TAP_TRIES - 1) {
+            try {
+                touchOnce(x, y)
+                return
+            } catch (e: AgentFailure) {
+                if (e.code != "INTERNAL") throw e
+                Thread.sleep(TAP_RETRY_MS)
+            }
+        }
+        touchOnce(x, y)
+    }
+
+    private fun touchOnce(x: Float, y: Float) {
         val down = SystemClock.uptimeMillis()
         automation.inject(touch(down, down, MotionEvent.ACTION_DOWN, x, y))
         automation.inject(touch(down, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y))
@@ -134,6 +149,9 @@ class Input(private val automation: Automation) {
     }
 
     companion object {
+        private const val TAP_TRIES = 3
+        private const val TAP_RETRY_MS = 100L
+
         val KEYS = mapOf(
             "back" to KeyEvent.KEYCODE_BACK,
             "home" to KeyEvent.KEYCODE_HOME,
