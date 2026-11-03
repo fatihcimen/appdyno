@@ -23,7 +23,7 @@ Found when the parallel branches ran together:
 - A pulled recording waits in the state folder, not beside the video.
 - Answers: a control and its own text with the same words are one target; a launch or a found scroll carries no "no change seen"; refusals have no filler and no wire method's name; keys typed with no keyboard on iOS are refused as on Android.
 
-- Phase 6, evidence and reach, with no new dependency. Each answer says what a device cannot do and why.
+- Evidence and reach, with no new dependency. Each answer says what a device cannot do and why.
 - `record`: screen video on Android (segments of `screenrecord`, joined with no dependency), simulators (`simctl`) and iPhones (`devicectl`, not yet run on one). It outlives its process, one per device. `stop` reads the file: one that does not play is a refusal.
 - `report`: a folder with `index.html`: steps, the screen and an image after each, video, logs, crashes, measurements. Secrets hidden, images painted over where an element holds one, nothing loaded from the network.
 - `network`: a bounded list of an app's traffic, through a proxy you run (`http_proxy` on Android, put back; the Mac's on a simulator; read from Proxyman's export or a HAR file), an injected `NSURLProtocol` on a simulator, `dumpsys netstats` and Perfetto's packets on Android. `paths` says what each sees, and no certificate is installed.
@@ -35,12 +35,12 @@ Found when the parallel branches ran together:
 - A device's refusals are async: a phone's `push`, `biometric`, `clear` and `grant` reached a client as an internal error.
 - An op with `action` takes it as its first word on the command line: `appdyno record stop`.
 
-- Phase 5, flows. `flow` records what a session does to a readable file (`start`, `stop`, `save`), replays it with no model (`run`, `--from`, `--param`) and exports it to Maestro YAML, refusing what has no form there. `appdyno test` runs flows on each `--device` in turn: JUnit, a failure's screenshot and tree, exit code 1. A miss or several matches stop the run with the nearest candidates, the step and the file's line; nothing is guessed. Passwords and `APPDYNO_SECRETS` become named parameters and are in no file. New package `flows`. `flowsFor(ctx).replay` takes `onStep`, for measuring each step.
+- Flows. `flow` records what a session does to a readable file (`start`, `stop`, `save`), replays it with no model (`run`, `--from`, `--param`) and exports it to Maestro YAML, refusing what has no form there. `appdyno test` runs flows on each `--device` in turn: JUnit, a failure's screenshot and tree, exit code 1. A miss or several matches stop the run with the nearest candidates, the step and the file's line; nothing is guessed. Passwords and `APPDYNO_SECRETS` become named parameters and are in no file. New package `flows`. `flowsFor(ctx).replay` takes `onStep`, for measuring each step.
 - `scroll_to` answers once the list has stopped: on a simulator a tap right after it was often lost, as the settle does not see a list coasting and UIKit takes a touch on one as "stop". Measured: 3 of 6 lost before.
 - `ActionOut.settleMs`: from the action to the settled screen, as the device timed it.
 - The nearest elements of a refusal are also judged by their ids, so a mistyped id finds its neighbour.
 
-- Phase 4, driving. Every action takes a ref, coordinates or a selector; `steps` runs across screens with `wait_for`,
+- Driving. Every action takes a ref, coordinates or a selector; `steps` runs across screens with `wait_for`,
   `assert` and `scroll_to`; `scroll_to`, `assert`, `gesture` (double tap, long press, drag, pinch, free plan), `keyboard`,
   `alert` (any system alert), hardware buttons in `press_key`, `app`, `simulator`, `device_setting`, `clipboard`.
 - Device claims for parallel agents, with no daemon. Conditions the tool changed are put back.
