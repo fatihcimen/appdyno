@@ -8,6 +8,7 @@
       "@appdyno/driver-android": ["../driver-android/src/index.ts"],
       "@appdyno/driver-apple": ["../driver-apple/src/index.ts"],
       "@appdyno/flows": ["../flows/src/index.ts"],
+      "@appdyno/perf": ["../perf/src/index.ts"],
       "@appdyno/ops": ["../ops/src/index.ts"],
       "@appdyno/mcp": ["../mcp/src/index.ts"],
       "@appdyno/cli": ["../cli/src/index.ts"],

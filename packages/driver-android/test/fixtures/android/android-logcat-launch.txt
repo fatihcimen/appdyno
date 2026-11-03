@@ -1,0 +1,6 @@
+         1793664860.842   536   553 I ActivityTaskManager: Displayed dev.appdyno.fixture/.MainActivity for user 0: +516ms
+         1793664860.842   536   553 I ActivityTaskManager: Fully drawn dev.appdyno.fixture/.MainActivity: +518ms
+         1793664865.044   536   553 I ActivityTaskManager: Displayed dev.appdyno.fixture/.MainActivity for user 0: +85ms
+         1793664865.044   536   553 I ActivityTaskManager: Fully drawn dev.appdyno.fixture/.MainActivity: +86ms
+         1793664867.220   536   553 I ActivityTaskManager: Displayed dev.appdyno.fixture/.MainActivity for user 0: +107ms
+         1793664867.221   536   553 I ActivityTaskManager: Fully drawn dev.appdyno.fixture/.MainActivity: +123ms

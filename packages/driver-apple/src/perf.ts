@@ -1,24 +1,71 @@
 import { callSignal } from '@appdyno/core';
 import { execFile } from 'node:child_process';
-import { readFile, rm, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { existsSync } from 'node:fs';
+import { appendFile, lstat, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { dirname, join, relative, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { DeviceError } from '@appdyno/protocol';
 import type {
+  BuildType,
   CpuProfile,
+  FrameStats,
+  FrameTrace,
   HeapReading,
+  LaunchMode,
   LaunchReading,
   Measured,
   MeasureSource,
   MemoryReading,
+  NetworkReading,
   ProfileEntry,
+  SizeReading,
+  XctMetrics,
 } from '@appdyno/core';
 import { stateDir } from '@appdyno/core';
+import { probeFrames, probeHead, probeSummary, probeWindow } from './probe.js';
 import { assertBundle, type Simctl } from './simctl.js';
+import { helperBinary } from './simhelper.js';
 import { parseTimeProfile, recordTrace, traceTable } from './trace.js';
 
 const run = promisify(execFile);
 const at = () => new Date().toISOString();
+const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** The probe's file shows what happened only after its next write (every 250 ms). */
+const PROBE_FLUSH_MS = 350;
+
+/** The app's first and last counts of `nettop -L`: what it has before the first are not the window's. */
+export function parseNettop(csv: string): { rxBytes: number; txBytes: number } {
+  const samples = csv
+    .split(/^,bytes_in,bytes_out,\s*$/m)
+    .slice(1)
+    .map((s) => /^.+\.\d+,(\d+),(\d+),/m.exec(s));
+  const count = (m: RegExpExecArray | null | undefined, i: 1 | 2) => Number(m?.[i] ?? 0);
+  const first = samples[0];
+  const last = samples.findLast((s) => s);
+  return {
+    rxBytes: count(last, 1) - count(first, 1),
+    txBytes: count(last, 2) - count(first, 2),
+  };
+}
+
+/** A bundle on disk: its bytes, its folders apart and the rest of its files together. */
+export async function bundleSize(
+  app: string,
+): Promise<{ bytes: number; parts: Record<string, number> }> {
+  const parts: Record<string, number> = {};
+  let bytes = 0;
+  for (const e of await readdir(app, { recursive: true, withFileTypes: true })) {
+    if (e.isDirectory()) continue;
+    const path = join(e.parentPath, e.name);
+    const { size } = await lstat(path);
+    const [top, ...rest] = relative(app, path).split(sep);
+    const part = rest.length ? top! : 'files';
+    parts[part] = (parts[part] ?? 0) + size;
+    bytes += size;
+  }
+  return { bytes, parts };
+}
 
 /** A simulator app's memory: its physical footprint as the Mac's memory tool counts it. */
 export type IosMemory = { footprintKb: number; peakKb?: number };
@@ -162,7 +209,7 @@ const median = (xs: number[]) => {
 /**
  * Performance of an app on a simulator, measured from the Mac (a simulator app is a Mac process):
  * memory (physical footprint), CPU over a window, launch time (until the app's first screen reads),
- * a CPU profile (the Mac's sampler).
+ * a CPU profile (the Mac's sampler), network bytes, its bundle, and frames through the frame probe.
  */
 export class IosSimulatorPerf implements MeasureSource {
   constructor(
@@ -170,6 +217,11 @@ export class IosSimulatorPerf implements MeasureSource {
     private readonly simctl: Simctl,
     /** Reads the screen once; true when the app's window shows content. */
     private readonly appShown: (bundle: string) => Promise<boolean>,
+    /** XCTest's `measure()` in a test of its own, on this simulator. */
+    readonly xctMetrics?: (
+      bundle: string,
+      test: 'launch' | 'hitches',
+    ) => Promise<Measured<XctMetrics>>,
   ) {}
 
   /** The app's process id (it must be running). */
@@ -214,16 +266,179 @@ export class IosSimulatorPerf implements MeasureSource {
     };
   }
 
-  /** Time from the launch request until the app's screen first reads with content; median of `repeats`. */
+  private probeFile(bundle: string) {
+    return join(stateDir(), 'probes', `${this.udid}-${assertBundle(bundle)}.jsonl`);
+  }
+
+  /** Whether the app's running process is the one writing the probe's file. */
+  private async probed(bundle: string): Promise<boolean> {
+    const text = await readFile(this.probeFile(bundle), 'utf8').catch(() => '');
+    const { pid } = probeHead(text);
+    return pid !== undefined && pid === (await this.pid(bundle).catch(() => undefined));
+  }
+
+  private async requireProbe(bundle: string) {
+    if (!(await this.probed(bundle)))
+      throw new DeviceError(
+        'UNSUPPORTED',
+        `${bundle} runs without the frame probe`,
+        'opt in with `probe: true`: it relaunches the app with the probe in it',
+      );
+  }
+
+  /** The app started afresh with the probe in it; the time its process took to its first frame. */
+  private async launchProbed(bundle: string, vars: Record<string, string> = {}): Promise<number> {
+    const file = this.probeFile(bundle);
+    await mkdir(dirname(file), { recursive: true, mode: 0o700 });
+    await this.simctl.terminate(this.udid, bundle);
+    await rm(file, { force: true });
+    const out = await this.simctl.launch(this.udid, bundle, {
+      DYLD_INSERT_LIBRARIES: await helperBinary('SimProbe'),
+      APPDYNO_PROBE_OUT: file,
+      ...vars,
+    });
+    const pid = Number(/:\s*(\d+)/.exec(out)?.[1]);
+    for (const end = Date.now() + 20_000; Date.now() < end; await pause(50)) {
+      const head = probeHead(await readFile(file, 'utf8').catch(() => ''));
+      if (head.pid === pid && head.launchMs !== undefined) return head.launchMs;
+    }
+    throw new DeviceError(
+      'UNSUPPORTED',
+      `the frame probe in ${bundle} reported no first frame within 20 s`,
+      `its file is at ${file}`,
+    );
+  }
+
+  /** Relaunches the app with the frame probe unless it runs under it already. */
+  async attachProbe(bundle: string): Promise<void> {
+    if (!(await this.probed(bundle))) await this.launchProbed(bundle);
+  }
+
+  async resetFrames(bundle: string): Promise<void> {
+    await this.requireProbe(bundle);
+    await appendFile(this.probeFile(bundle), `${JSON.stringify({ reset: Date.now() })}\n`);
+  }
+
+  /** The frames since the last reset, or since the app started under the probe. */
+  async frames(bundle: string, opts: { reset?: boolean } = {}): Promise<Measured<FrameStats>> {
+    await this.requireProbe(bundle);
+    const to = Date.now();
+    await pause(PROBE_FLUSH_MS);
+    const text = await readFile(this.probeFile(bundle), 'utf8');
+    const head = probeHead(text);
+    const from = head.resetAt ?? head.loadedAt!;
+    const raw = probeWindow(text, from, to);
+    if (opts.reset) await this.resetFrames(bundle);
+    return { value: probeFrames(raw, from, to), raw, at: at() };
+  }
+
+  /** The probe's lines for a window of `seconds`, and `during` too if it takes longer. */
+  async frameTrace(
+    bundle: string,
+    seconds: number,
+    during?: () => Promise<unknown>,
+  ): Promise<Measured<FrameTrace>> {
+    await this.requireProbe(bundle);
+    const from = Date.now();
+    await Promise.all([during?.(), pause(seconds * 1000)]);
+    const to = Date.now();
+    await pause(PROBE_FLUSH_MS);
+    const raw = probeWindow(await readFile(this.probeFile(bundle), 'utf8'), from, to);
+    const dir = join(stateDir(), 'traces');
+    await mkdir(dir, { recursive: true });
+    const tracePath = join(dir, `probe-${to}.jsonl`);
+    await writeFile(tracePath, `${raw}\n`);
+    return {
+      value: { kind: 'probe', tracePath, ...probeSummary(raw, from, to) },
+      raw: tracePath,
+      at: at(),
+    };
+  }
+
+  /** The bytes of the app's sockets, counted by the Mac (a simulator app is a Mac process). */
+  async network(
+    bundle: string,
+    windowMs: number,
+    during?: () => Promise<unknown>,
+  ): Promise<Measured<NetworkReading>> {
+    const pid = await this.pid(bundle);
+    const seconds = Math.max(Math.ceil(windowMs / 1000), 1);
+    // into a pipe it says nothing until it ends by itself, and a signal loses what it holds
+    const nettop = run(
+      'nettop',
+      [
+        '-P',
+        '-x',
+        '-n',
+        '-L',
+        String(seconds + 2),
+        '-s',
+        '1',
+        '-J',
+        'bytes_in,bytes_out',
+        '-p',
+        String(pid),
+      ],
+      { timeout: (seconds + 30) * 1000 },
+    ).catch((e: Error) => {
+      throw new DeviceError('UNSUPPORTED', `nettop: ${e.message.slice(0, 200)}`);
+    });
+    // its first sample, what counts from: `during` starts after it
+    const [{ stdout: raw }] = await Promise.all([nettop, pause(1_000).then(() => during?.())]);
+    return {
+      value: {
+        // from its first sample to its last
+        windowMs: (seconds + 1) * 1000,
+        ...parseNettop(raw),
+        note: "The app's own sockets, as the Mac's nettop counts them, loopback included.",
+      },
+      raw,
+      at: at(),
+    };
+  }
+
+  /** The app's bundle on disk: a simulator build, not what a user downloads. */
+  async size(bundle: string): Promise<Measured<SizeReading>> {
+    const size = await bundleSize(await this.simctl.appContainer(this.udid, bundle));
+    return {
+      value: {
+        ...size,
+        note: 'The bundle of a simulator build on disk, not what a user downloads.',
+      },
+      raw: JSON.stringify(size),
+      at: at(),
+    };
+  }
+
+  /** A debug dylib beside the executable or the debugger's entitlement says debug. */
+  async buildType(bundle: string): Promise<BuildType> {
+    try {
+      const app = await this.simctl.appContainer(this.udid, bundle);
+      const exe = (
+        await run('plutil', ['-extract', 'CFBundleExecutable', 'raw', join(app, 'Info.plist')])
+      ).stdout.trim();
+      if (existsSync(join(app, `${exe}.debug.dylib`))) return 'debug';
+      const ent = await run('codesign', ['-d', '--entitlements', '-', '--xml', app]);
+      return ent.stdout.includes('get-task-allow') ? 'debug' : 'release';
+    } catch {
+      return 'unknown';
+    }
+  }
+
+  /**
+   * Time from the launch request until the app's screen first reads with content, or, for a cold start of
+   * an app already under the frame probe, from its process start to its first frame; median of `repeats`.
+   */
   async launch(
     bundle: string,
-    opts: { mode?: 'cold' | 'warm'; repeats?: number } = {},
+    opts: { mode?: LaunchMode; repeats?: number; env?: Record<string, string> } = {},
   ): Promise<Measured<IosLaunch>> {
     assertBundle(bundle);
     const mode = opts.mode ?? 'cold';
     const repeats = Math.min(Math.max(opts.repeats ?? 5, 1), 10);
     const samples: number[] = [];
     const raw: string[] = [];
+    const probe = mode === 'cold' && (await this.probed(bundle));
     for (let i = 0; i < repeats + 1; i++) {
       if (mode === 'cold') await this.simctl.terminate(this.udid, bundle);
       else
@@ -231,8 +446,14 @@ export class IosSimulatorPerf implements MeasureSource {
           .exec(['launch', this.udid, 'com.apple.Preferences'])
           .catch(() => undefined);
       await new Promise((r) => setTimeout(r, 500));
+      if (probe) {
+        const ms = Math.round(await this.launchProbed(bundle, opts.env));
+        raw.push(String(ms));
+        if (i > 0) samples.push(ms); // the first warms up
+        continue;
+      }
       const t = performance.now();
-      raw.push(await this.simctl.exec(['launch', this.udid, bundle]));
+      raw.push(await this.simctl.launch(this.udid, bundle, opts.env));
       const end = t + 20_000;
       while (!(await this.appShown(bundle))) {
         if (performance.now() > end)
@@ -247,7 +468,7 @@ export class IosSimulatorPerf implements MeasureSource {
         samplesMs: samples,
         samples: samples.map((totalMs) => ({ totalMs })),
         medianMs: median(samples),
-        until: 'the first screen is read',
+        until: probe ? 'first frame (probe)' : 'the first screen is read',
       },
       raw: raw.join('\n'),
       at: at(),

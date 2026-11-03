@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { reportProgress, RpcClient, stateDir } from '@appdyno/core';
 import { brandSimulatorRunner, checkoutIos } from './brand.js';
 import { assertUdid, xcodeEnv } from './simctl.js';
+import { recordXctMetrics } from './trace.js';
 
 const run = promisify(execFile);
 /** A first start installs the runner (on a phone, UI automation may wait for an approval): allow for it. */
@@ -272,6 +273,12 @@ export class IosRunnerLauncher {
     const state = await this.readState();
     if (state?.pid) await this.kill(state.pid);
     await rm(this.statePath, { force: true });
+  }
+
+  /** The runner's product running one `measure()` test of `PerfMetricsTests` instead of serving. */
+  async xctMetrics(bundle: string, test: 'launch' | 'hitches') {
+    const { xctestrun } = await this.transport.build();
+    return recordXctMetrics(this.udid, xctestrun, bundle, test);
   }
 
   private async start(build: { xctestrun: string; sha256: string }, target?: string) {

@@ -4,9 +4,13 @@ import { describe, expect, it } from 'vitest';
 import {
   parseActivityMonitor,
   parseHangs,
+  parsePowerImpact,
   parseTimeProfile,
+  parseXctMetrics,
   hitchSummary,
   parseTraceTable,
+  queryTraceFile,
+  traceDigest,
 } from '../src/trace.js';
 
 const fixture = (f: string) => readFileSync(join(import.meta.dirname, 'fixtures', f), 'utf8');
@@ -43,6 +47,18 @@ describe('iOS trace export', () => {
     expect(p.appTop[1]!.symbol).toBe('spin');
   });
 
+  it('ranks the app’s named functions over the addresses, addresses when all are', () => {
+    const binary =
+      '<binary id="9" name="F" UUID="X" arch="arm64" load-addr="0x0" path="/x/F.app/F"/>';
+    const row = (
+      first: string,
+      second: string,
+    ) => `<schema><col><mnemonic>weight</mnemonic></col><col><mnemonic>stack</mnemonic></col></schema>
+<row><weight id="1">1000000</weight><tagged-backtrace id="2"><frame id="3" name="${first}" addr="0x1">${binary}</frame><frame id="5" name="${second}" addr="0x2"><binary ref="9"/></frame></tagged-backtrace></row>`;
+    expect(parseTimeProfile(row('0xabc', 'spin')).appTop.map((e) => e.symbol)).toEqual(['spin']);
+    expect(parseTimeProfile(row('0xabc', '0xdef')).appTop).toHaveLength(2);
+  });
+
   it('reads one process of a recording of every process', () => {
     const all = `<schema><col><mnemonic>process</mnemonic></col><col><mnemonic>weight</mnemonic></col><col><mnemonic>stack</mnemonic></col></schema>
 <row><process id="1" fmt="App (7)"><pid>7</pid></process><weight id="2">1000000</weight><tagged-backtrace id="3"><frame id="4" name="mine" addr="0x1"/></tagged-backtrace></row>
@@ -70,5 +86,54 @@ describe('iOS trace export', () => {
     const hangs = `<schema><col><mnemonic>start</mnemonic></col><col><mnemonic>duration</mnemonic></col></schema>
 <row><t>1</t><d>300000000</d></row><row><t>2</t><d>500000000</d></row>`;
     expect(parseHangs(hangs)).toEqual({ hangs: 2, worstMs: 500, totalMs: 800 });
+  });
+
+  // columns as Xcode 27.1 names them; on a charging phone the table comes empty, so these rows are written by hand
+  it('sums one process of the Power Profiler by subsystem', () => {
+    const cols = ['process', 'cpu-impact', 'display-impact', 'gpu-impact', 'networking-impact']
+      .map((c) => `<col><mnemonic>${c}</mnemonic></col>`)
+      .join('');
+    const xml = `<schema>${cols}</schema>
+<row><process id="1" fmt="App (7)"><pid>7</pid></process><i>2</i><i>1</i><i>0</i><i>0.5</i></row>
+<row><process id="2" fmt="Other (8)"><pid>8</pid></process><i>9</i><i>9</i><i>9</i><i>9</i></row>
+<row><process ref="1"/><i>3</i><i>1</i><sentinel/><i>0.5</i></row>`;
+    expect(parsePowerImpact(xml, 7)).toEqual({ cpu: 5, display: 2, gpu: 0, networking: 1 });
+    expect(parsePowerImpact(xml, 9)).toBeUndefined();
+  });
+
+  it('digests a table: the heaviest rows first, cells cut, the rest counted', () => {
+    const d = traceDigest('/t.trace', 'hitches', fixture('ios-hitches.xml'), 2);
+    expect(d.columns).toContain('duration');
+    expect(d.rows).toHaveLength(2);
+    expect(d.dropped).toBe(3);
+    const i = d.columns.indexOf('duration');
+    expect(d.rows[0]![i]).toBe('62.50 ms');
+    const long = `<schema><col><mnemonic>weight</mnemonic></col><col><mnemonic>name</mnemonic></col></schema>
+<row><w fmt="1 ms">1000000</w><n>a</n></row><row><w fmt="3 ms">3000000</w><n>${'x'.repeat(500)}</n></row>`;
+    const w = traceDigest('/t.trace', 'x', long, 10);
+    expect(w.rows[0]![0]).toBe('3 ms');
+    expect(w.rows[0]![1]).toHaveLength(200);
+    expect(w.dropped).toBe(0);
+    // no duration or weight: the rows stay in their order
+    const plain = `<schema><col><mnemonic>name</mnemonic></col></schema><row><n>b</n></row><row><n>a</n></row>`;
+    expect(traceDigest('/t.trace', 'x', plain, 10).rows).toEqual([['b'], ['a']]);
+  });
+
+  it('reads the metrics of a result bundle', () => {
+    const m = parseXctMetrics(fixture('ios-xct-launch.json'));
+    const durations = m['com.apple.dt.XCTMetric_ApplicationLaunch-AppLaunch.duration'];
+    expect(durations).toHaveLength(5);
+    expect(durations![0]).toBeCloseTo(1.1223, 3);
+    expect(parseXctMetrics('[{"testRuns":[{"metrics":[]}]}]')).toEqual({});
+  });
+
+  it('a trace of another kind is not this driver’s', async () => {
+    await expect(queryTraceFile('/t/probe.jsonl', { limit: 5 })).resolves.toBeUndefined();
+    await expect(queryTraceFile('/t/x.trace', { sql: 'select 1', limit: 5 })).rejects.toThrow(
+      /SQL/,
+    );
+    await expect(queryTraceFile('/t/x.trace', { table: 'a"b', limit: 5 })).rejects.toThrow(
+      /not a table/,
+    );
   });
 });

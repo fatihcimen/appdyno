@@ -6,6 +6,7 @@ import { Adb } from './adb.js';
 import { agentApk } from './agent.js';
 import { AndroidDevice } from './device.js';
 import { AndroidEmulators } from './manage.js';
+import { queryTrace } from './perf.js';
 import { traceProcessor } from './tools.js';
 
 const run = promisify(execFile);
@@ -156,5 +157,6 @@ export function androidProvider(
     // a phone unplugged for a moment (or rebooting) is waited for, up to 30 s, on read-only calls
     open: (serial) => new AndroidDevice(serial, new Adb(), 30_000, opts.takeover),
     doctor: (serial) => androidChecks(adb, serial),
+    queryTrace,
   };
 }

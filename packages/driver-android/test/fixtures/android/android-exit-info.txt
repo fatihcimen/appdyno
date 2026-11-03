@@ -1,0 +1,12 @@
+ACTIVITY MANAGER PROCESS EXIT INFO (dumpsys activity exit-info)
+Last Timestamp of Persistence Into Persistent Storage: 2026-11-03 03:41:05.167
+  package: dev.appdyno.fixture
+    Historical Process Exit for uid=10193
+        ApplicationExitInfo #0:
+          timestamp=2026-11-03 03:41:06.868 pid=14695 realUid=10193 packageUid=10193 definingUid=10193 user=0
+          process=dev.appdyno.fixture reason=4 (APP CRASH(EXCEPTION)) subreason=0 (UNKNOWN) status=0
+          importance=100 pss=0.00 rss=0.00 description=crash state=empty trace=null
+        ApplicationExitInfo #1:
+          timestamp=2026-11-03 03:41:05.196 pid=14424 realUid=10193 packageUid=10193 definingUid=10193 user=0
+          process=dev.appdyno.fixture reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+          importance=100 pss=52MB rss=131MB description=stop dev.appdyno.fixture due to from pid 14682 state=empty trace=null

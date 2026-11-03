@@ -473,6 +473,17 @@ export class IosDevice implements Device {
     await this.launcher.stop(rpc);
     rpc?.close();
   }
+
+  /**
+   * XCTest's `measure()` in a test of its own: it needs the runner's place on the device, so the runner
+   * stops and the next command starts it again.
+   */
+  xctMetrics(bundle: string, test: 'launch' | 'hitches') {
+    return this.queue.run(async () => {
+      await this.stopAgent();
+      return this.launcher.xctMetrics(bundle, test);
+    });
+  }
 }
 
 type Node = Tree['nodes'][number];
@@ -753,12 +764,19 @@ export class IosSimulatorDevice extends IosDevice {
     );
   }
 
-  /** The app's performance, measured from the Mac (memory, CPU, launch, CPU profile). */
+  /** The app's performance, measured from the Mac; frames through the frame probe, if asked for. */
   get measure(): IosSimulatorPerf {
-    return (this.perfTools ??= new IosSimulatorPerf(this.serial, this.simctl, async (bundle) => {
-      const t = await this.tree().catch(() => undefined);
-      return !!t && t.windows[0]?.pkg === bundle && t.nodes.filter((n) => n.w === 0).length > 3;
-    }));
+    return (this.perfTools ??= new IosSimulatorPerf(
+      this.serial,
+      this.simctl,
+      async (bundle) => {
+        // nothing may have named this app yet; a warm-up launch comes first, so this is not timed
+        if (this.targetApp !== bundle) await this.target(bundle).catch(() => undefined);
+        const t = await this.tree().catch(() => undefined);
+        return !!t && t.windows[0]?.pkg === bundle && t.nodes.filter((n) => n.w === 0).length > 3;
+      },
+      (bundle, test) => this.xctMetrics(bundle, test),
+    ));
   }
   private perfTools: IosSimulatorPerf | undefined;
 }

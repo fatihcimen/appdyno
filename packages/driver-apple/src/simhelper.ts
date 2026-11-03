@@ -25,6 +25,23 @@ const SDK_FLAGS = {
     '-framework',
     'CoreGraphics',
   ],
+  // a library, injected into a simulator app when it is launched
+  SimProbe: [
+    '--sdk',
+    'iphonesimulator',
+    'clang',
+    '-fobjc-arc',
+    '-arch',
+    'arm64',
+    '-mios-simulator-version-min=17.0',
+    '-dynamiclib',
+    '-framework',
+    'Foundation',
+    '-framework',
+    'QuartzCore',
+    '-framework',
+    'UIKit',
+  ],
 };
 
 /** The helper's binary, compiled once per source (a Mac without Xcode's tools has no simulator either). */

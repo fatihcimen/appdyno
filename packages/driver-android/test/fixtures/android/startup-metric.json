@@ -1,0 +1,247 @@
+{
+  "android_startup": {
+    "startup": [
+      {
+        "startup_id": 3,
+        "startup_type": "cold",
+        "cpu_count": 4,
+        "package_name": "dev.appdyno.fixture",
+        "process_name": "dev.appdyno.fixture",
+        "process": {
+          "name": "dev.appdyno.fixture",
+          "uid": 10193,
+          "android_user_id": 0,
+          "pid": 6471,
+          "is_kernel_task": false,
+          "package": {
+            "package_name": "dev.appdyno.fixture",
+            "apk_version_code": 1,
+            "debuggable": true
+          }
+        },
+        "zygote_new_process": true,
+        "activity_hosting_process_count": 1,
+        "time_to_initial_display": 1878620001,
+        "event_timestamps": {
+          "intent_received": 1048798642916,
+          "first_frame": 1050666094542
+        },
+        "to_first_frame": {
+          "dur_ns": 1867451626,
+          "dur_ms": 1867.451626,
+          "main_thread_by_task_state": {
+            "running_dur_ns": 120056912,
+            "runnable_dur_ns": 40395711,
+            "uninterruptible_sleep_dur_ns": 55492915,
+            "interruptible_sleep_dur_ns": 1620385546,
+            "uninterruptible_io_sleep_dur_ns": 0,
+            "uninterruptible_non_io_sleep_dur_ns": 52422790
+          },
+          "to_post_fork": {
+            "dur_ns": 101790000,
+            "dur_ms": 101.79
+          },
+          "to_activity_thread_main": {
+            "dur_ns": 108073417,
+            "dur_ms": 108.073417
+          },
+          "to_bind_application": {
+            "dur_ns": 140282833,
+            "dur_ms": 140.282833
+          },
+          "time_activity_manager": {
+            "dur_ns": 21769583,
+            "dur_ms": 21.769583
+          },
+          "time_post_fork": {
+            "dur_ns": 1382167,
+            "dur_ms": 1.382167
+          },
+          "time_activity_thread_main": {
+            "dur_ns": 31157875,
+            "dur_ms": 31.157875
+          },
+          "time_bind_application": {
+            "dur_ns": 1532572043,
+            "dur_ms": 1532.572043
+          },
+          "time_activity_start": {
+            "dur_ns": 41291750,
+            "dur_ms": 41.29175
+          },
+          "time_activity_resume": {
+            "dur_ns": 20085583,
+            "dur_ms": 20.085583
+          },
+          "time_choreographer": {
+            "dur_ns": 257052000,
+            "dur_ms": 257.052
+          },
+          "time_inflate": {
+            "dur_ns": 668208,
+            "dur_ms": 0.668208
+          },
+          "time_get_resources": {
+            "dur_ns": 1716375,
+            "dur_ms": 1.716375
+          },
+          "time_dex_open": {
+            "dur_ns": 1306208,
+            "dur_ms": 1.306208
+          },
+          "time_verify_class": {
+            "dur_ns": 2584,
+            "dur_ms": 0.002584
+          },
+          "time_dex_open_thread_main": {
+            "dur_ns": 1306208,
+            "dur_ms": 1.306208
+          },
+          "time_lock_contention_thread_main": {
+            "dur_ns": 256791,
+            "dur_ms": 0.256791
+          },
+          "time_before_start_process": {
+            "dur_ns": 24360750,
+            "dur_ms": 24.36075
+          },
+          "time_to_running_state": {
+            "dur_ns": 31178583,
+            "dur_ms": 31.178583
+          },
+          "time_jit_thread_pool_on_cpu": {
+            "dur_ns": 239833,
+            "dur_ms": 0.239833
+          },
+          "time_during_start_process": {
+            "dur_ns": 7136542,
+            "dur_ms": 7.136542
+          },
+          "other_processes_spawned_count": 0
+        },
+        "report_fully_drawn": {
+          "dur_ns": 2139479668,
+          "dur_ms": 2139.479668
+        },
+        "optimization_status": [
+          {
+            "location": "/data/app/~~dYZPqZ8Ils9_Rg8SQQcIIQ==/dev.appdyno.fixture-Oji1v2UqqlwBj3_pRp_toA==/oat/arm64/base.odex",
+            "odex_status": "up-to-date",
+            "compilation_filter": "verify",
+            "compilation_reason": "install",
+            "summary": "dev.appdyno.fixture/.../base.odex: up-to-date/verify/install"
+          }
+        ],
+        "system_state": {
+          "dex2oat_running": false,
+          "installd_running": false,
+          "broadcast_dispatched_count": 0,
+          "broadcast_received_count": 2,
+          "most_active_non_launch_processes": [
+            "system_server",
+            "/system/bin/surfaceflinger",
+            "com.google.android.apps.nexuslauncher",
+            "com.android.systemui",
+            "/system/bin/init"
+          ],
+          "installd_dur_ns": 0,
+          "dex2oat_dur_ns": 0
+        },
+        "slow_start_reason": [
+          "No baseline or cloud profiles",
+          "App in debuggable mode",
+          "Time spent in bindApplication"
+        ],
+        "slow_start_reason_with_details": [
+          {
+            "reason_id": "NO_BASELINE_OR_CLOUD_PROFILES",
+            "reason": "No baseline or cloud profiles",
+            "severity": "ERROR",
+            "launch_dur": 1867451626,
+            "expected_value": {
+              "value": 0,
+              "unit": "TRUE_OR_FALSE"
+            },
+            "actual_value": {
+              "value": 1
+            },
+            "trace_slice_sections": {
+              "slice_section": [
+                {
+                  "thread_tid": 6471,
+                  "process_pid": 6471,
+                  "start_timestamp": 1048948831499,
+                  "end_timestamp": 1048949051124,
+                  "slice_id": 4134,
+                  "slice_name": "location=/data/app/~~dYZPqZ8Ils9_Rg8SQQcIIQ==/dev.appdyno.fixture-Oji1v2UqqlwBj3_pRp_toA==/oat/arm64/base.odex status=up-to-date filter=verify reason=install"
+                }
+              ],
+              "start_timestamp": 1048948831499,
+              "end_timestamp": 1048949051124
+            }
+          },
+          {
+            "reason_id": "APP_IN_DEBUGGABLE_MODE",
+            "reason": "App in debuggable mode",
+            "severity": "ERROR",
+            "launch_dur": 1867451626,
+            "expected_value": {
+              "value": 0,
+              "unit": "TRUE_OR_FALSE"
+            },
+            "actual_value": {
+              "value": 1
+            }
+          },
+          {
+            "reason_id": "TIME_SPENT_IN_BIND_APPLICATION",
+            "reason": "Time spent in bindApplication",
+            "severity": "WARNING",
+            "launch_dur": 1867451626,
+            "expected_value": {
+              "value": 1250000000,
+              "unit": "NS",
+              "higher_expected": false
+            },
+            "actual_value": {
+              "value": 1532572043
+            },
+            "trace_slice_sections": {
+              "slice_section": [
+                {
+                  "thread_tid": 6471,
+                  "process_pid": 6471,
+                  "start_timestamp": 1048938925749,
+                  "end_timestamp": 1050471497792,
+                  "slice_id": 3807,
+                  "slice_name": "bindApplication"
+                }
+              ],
+              "start_timestamp": 1048938925749,
+              "end_timestamp": 1050471497792
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "__annotations": {
+    "android_startup": {
+      "startup": {
+        "system_state": {
+          "installd_running": {
+            "__field_options": {
+              "deprecated": true
+            }
+          },
+          "dex2oat_running": {
+            "__field_options": {
+              "deprecated": true
+            }
+          }
+        },
+        "__repeated": true
+      }
+    }
+  }
+}

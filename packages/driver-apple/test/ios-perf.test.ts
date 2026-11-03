@@ -3,11 +3,32 @@ import {
   parseCpuTime,
   parseFootprint,
   parseLeaks,
+  parseNettop,
   parseSampleApp,
   parseSampleTop,
 } from '../src/perf.js';
 
 describe('iOS simulator perf parsing', () => {
+  it('reads the bytes of the window from nettop', () => {
+    const header = ',bytes_in,bytes_out,\n';
+    expect(
+      parseNettop(
+        `${header}Fixture.42,1000,100,\n${header}Fixture.42,1000,100,\n${header}Fixture.42,6000,300,\n`,
+      ),
+    ).toEqual({ rxBytes: 5000, txBytes: 200 });
+    // a first socket during the window: no row before it
+    expect(parseNettop(`${header}${header}Fixture.42,7000,700,\n`)).toEqual({
+      rxBytes: 7000,
+      txBytes: 700,
+    });
+    // a sample without the row (all sockets gone) keeps the last counts
+    expect(parseNettop(`${header}${header}Fixture.42,7000,700,\n${header}`)).toEqual({
+      rxBytes: 7000,
+      txBytes: 700,
+    });
+    expect(parseNettop(`${header}${header}`)).toEqual({ rxBytes: 0, txBytes: 0 });
+  });
+
   it('reads the physical footprint and its peak', () => {
     expect(
       parseFootprint('Physical footprint:         52.3M\nPhysical footprint (peak):  60M\n'),

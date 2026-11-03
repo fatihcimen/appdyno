@@ -2,7 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <application android:label="appdyno fixture" android:theme="@android:style/Theme.Material.Light.NoActionBar">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <application android:name=".FixtureApp" android:label="appdyno fixture" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:usesCleartextTraffic="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -28,6 +29,8 @@
         <activity android:name=".FramesActivity" />
         <activity android:name=".MemoryActivity" />
         <activity android:name=".CpuActivity" />
+        <activity android:name=".LeakActivity" />
+        <activity android:name=".NetworkActivity" />
         <activity android:name=".LateActivity" />
         <activity android:name=".GesturesActivity" />
         <activity android:name=".A11yActivity" />

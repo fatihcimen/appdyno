@@ -1,5 +1,6 @@
 export { opsFor, flowsFor } from './registry.js';
 export { flowFiles, paramsOf, type ReplayOptions, type TestOptions } from './flow.js';
+export { keepRun } from './perf.js';
 export { swipeLine, pinchPaths } from './steps.js';
 export { SETTLE } from './answers.js';
 export { ServerContext } from './context.js';

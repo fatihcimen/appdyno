@@ -1,0 +1,10 @@
+  Estimated power use (mAh):
+    Capacity: 3000, Computed drain: 0, actual drain: 0
+    Global
+      screen: 0.000128 apps: 0.000128 duration: 3s 77ms 
+      mobile_radio: 0.0000833 [energy consumption] apps: 0
+      sensors: 0.00256 apps: 0.00256
+      idle: 0.0000855 apps: 0 duration: 3s 77ms 
+      GPU: 0.0000833 apps: 0
+    UID 1000: 0.00256 ( cpu=0 (63ms) sensors=0.00256 (3s 77ms) ) 
+

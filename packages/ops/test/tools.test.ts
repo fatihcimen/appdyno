@@ -5,13 +5,19 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { DeviceProvider } from '@appdyno/core';
 import { DeviceError, type Tree } from '@appdyno/protocol';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY, type Policy } from '../src/policy.js';
 import { createServer } from '@appdyno/mcp';
 import { opsFor } from '../src/registry.js';
 import { pinchPaths, swipeLine } from '../src/steps.js';
 import { FakeDevice } from './fake-device.js';
+
+// a virtual device's numbers are noisy under host load: these answers must not depend on this Mac's
+vi.mock('node:os', async (original) => ({
+  ...(await original<typeof import('node:os')>()),
+  loadavg: () => [0, 0, 0],
+}));
 
 type Result = { isError?: boolean; content: { type: string; text?: string; data?: string }[] };
 
@@ -71,9 +77,11 @@ describe('tool list', () => {
         "list_devices",
         "logs",
         "open_link",
+        "perf_compare",
         "perf_heap",
         "perf_launch",
         "perf_profile",
+        "perf_query",
         "perf_scroll",
         "perf_snapshot",
         "perf_trace",
@@ -112,14 +120,16 @@ describe('tool list', () => {
       'find',
       'list_devices',
       'logs',
+      'perf_compare',
       'perf_heap',
       'perf_profile',
+      'perf_query',
       'perf_snapshot',
       'screen',
       'screenshot',
       'wait_for',
     ]);
-    expect(tools.length).toBeLessThanOrEqual(36);
+    expect(tools.length).toBeLessThanOrEqual(38);
   });
 
   it('reports the server as appdyno with an icon', async () => {
@@ -566,7 +576,7 @@ describe('iOS simulators', () => {
       expect(snap.slice(1, -1)).toEqual([
         'CPU: 5% (of one core, 2000 ms)',
         'memory: physical footprint 51.2 MB (peak 61.0 MB)',
-        'no frame measure on a simulator',
+        'no frame measure on a simulator without the probe',
       ]);
       const launch = (await t.textOf('perf_launch')).text.split('\n');
       expect(launch.slice(1, -1)).toEqual([

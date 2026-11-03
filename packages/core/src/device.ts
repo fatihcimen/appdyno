@@ -53,6 +53,10 @@ export type FrameSummary = {
   /** Frames over FROZEN_FRAME_MS (histogram buckets from 700 ms on). */
   frozenFrames: number;
   fewFrames: boolean;
+  /** What the numbers can and cannot see, where the source has limits (the simulator's frame probe). */
+  limits?: string;
+  /** The main thread's stalls, where the source sees them. */
+  stalls?: { count: number; worstMs: number; totalMs: number };
 };
 
 export type FrameStats = FrameSummary & {
@@ -86,13 +90,36 @@ export type FrameTimeline = {
   janky: number;
   jankyPercent: number;
   appDeadlineMissed: number;
-  /** The app's own share: frames whose type says the app missed its deadline. */
+  /** Frames late for the app's own timing: "App Resynced Jitter". */
+  appResynced?: number;
+  /** The app's own share: frames whose type says the app was at fault (deadline missed, resynced). */
   appJankPercent: number;
   bufferStuffing: number;
   surfaceFlinger: number;
   p50Ms: number;
   p95Ms: number;
   worstMs: number;
+  /** `android_frame_stats`, where the trace has doFrame and DrawFrame slices. */
+  stats?: { frames: number; overrunP95Ms: number; overrunWorstMs: number; cpuP95Ms: number };
+  /** The kept trace, for perf_query. */
+  tracePath?: string;
+};
+
+/** The simulator's frame probe over a window (main-thread pacing, on the Mac's speed). */
+export type ProbeSummary = {
+  durationMs: number;
+  frames: number;
+  /** Intervals over 1.5 vsync. */
+  missed: number;
+  missedPercent: number;
+  p50Ms: number;
+  p95Ms: number;
+  worstMs: number;
+  /** Intervals over 100 ms. */
+  stalls: { count: number; worstMs: number; totalMs: number };
+  /** When the app last finished handling a touch, as ms before the window's end. */
+  lastInputMsAgo?: number;
+  limits: string;
 };
 
 export type HitchSummary = {
@@ -118,15 +145,104 @@ export type MemoryReading = {
   javaHeapKb?: number;
   nativeHeapKb?: number;
   graphicsKb?: number;
+  /** Android's live objects: growing across rounds with no change on screen is a leak signal. */
+  viewRootImpl?: number;
+  appContexts?: number;
+  activities?: number;
+};
+
+export type LaunchMode = 'cold' | 'warm' | 'hot';
+
+/** How the app's code is compiled for a launch (Android). */
+export type CompileMode = 'speed' | 'speed-profile' | 'verify';
+
+/** Why a start took what it took, from a Perfetto startup trace. */
+export type StartupAnalysis = {
+  tracePath: string;
+  /** `android_startups`. */
+  startupType?: string;
+  durMs?: number;
+  ttidMs?: number;
+  ttfdMs?: number;
+  /** The metric's `slow_start_reason`: what the platform names. */
+  reasons: string[];
+  /** `android_startup_opinionated_breakdown`: where the time went, largest first. */
+  breakdown: { reason: string; ms: number }[];
+  /** Over the platform's limits (bindApplication 1250 ms, inflate 450 ms, getResources 130 ms, hot 1.5 s). */
+  findings: string[];
+  /** The compiler filter and status the trace saw (`location=* status=* filter=* reason=*`). */
+  odex?: string;
 };
 
 export type LaunchReading = {
-  mode: 'cold' | 'warm';
+  mode: LaunchMode;
   /** The launches measured (a first one, a warm-up, is left out). */
-  samples: { totalMs?: number; state?: string }[];
+  samples: { totalMs?: number; state?: string; fullyDrawnMs?: number }[];
   medianMs?: number;
+  fullyDrawnMedianMs?: number;
   /** The mark a sample counts up to when it is not the platform's own launch report. */
   until?: string;
+  /** The compile state asked for and restored afterwards, with what the device says it was. */
+  compile?: { asked: CompileMode; status?: string };
+  startup?: StartupAnalysis;
+};
+
+export type BuildType = 'debug' | 'profileable' | 'release' | 'unknown';
+
+export type ThreadReading = {
+  windowMs: number;
+  /** How many times every thread was read in the window. */
+  reads: number;
+  /** Busiest first. `over90Ms`: the time the thread stayed above 90 percent of a core. */
+  threads: { tid: number; name: string; percent: number; over90Ms: number }[];
+  worstOver90Ms: number;
+};
+
+export type NetworkReading = {
+  windowMs: number;
+  rxBytes: number;
+  txBytes: number;
+  /** What the numbers count and do not (loopback, other apps). */
+  note?: string;
+};
+
+export type EnergyReading = {
+  /** Estimated charge. Model-based: a formula over time in each state, not a power meter. */
+  mah?: number;
+  note: string;
+  breakdown?: Record<string, number>;
+};
+
+export type ExitReading = {
+  crashes: number;
+  anrs: number;
+  total: number;
+  recent: { at: string; reason: string; description?: string }[];
+};
+
+export type SizeReading = { bytes: number; parts: Record<string, number>; note?: string };
+
+export type HeapProfileKind = 'java_hprof' | 'heapprofd';
+export type HeapProfile = {
+  kind: HeapProfileKind;
+  tracePath: string;
+  /** The largest classes (java_hprof) or allocation sites (heapprofd). */
+  top: { name: string; bytes: number; count: number }[];
+  totalBytes: number;
+};
+
+export type HangReading = { hangs: number; worstMs: number; totalMs: number; tracePath: string };
+
+/** An XCTest metric's readings under `measure()`, from the result bundle. */
+export type XctMetrics = { metrics: Record<string, number[]>; resultBundle: string; note?: string };
+
+export type TraceDigest = {
+  tracePath: string;
+  source: string;
+  columns: string[];
+  rows: string[][];
+  /** Rows left out by the bound. */
+  dropped: number;
 };
 
 export type HeapReading = {
@@ -138,7 +254,9 @@ export type HeapReading = {
 };
 
 export type FrameTrace =
-  ({ kind: 'hitches'; tracePath: string } & HitchSummary) | ({ kind: 'timeline' } & FrameTimeline);
+  | ({ kind: 'hitches'; tracePath: string } & HitchSummary)
+  | ({ kind: 'timeline' } & FrameTimeline)
+  | ({ kind: 'probe'; tracePath: string } & ProbeSummary);
 
 /** What a device can measure: each has what it has, and `ops` names what it lacks. */
 export interface MeasureSource {
@@ -151,8 +269,37 @@ export interface MeasureSource {
   vitals?(): Promise<Measured<DeviceVitals>>;
   launch?(
     app: string,
-    opts: { mode: 'cold' | 'warm'; repeats: number },
+    opts: {
+      mode: LaunchMode;
+      repeats: number;
+      compile?: CompileMode;
+      trace?: boolean;
+      /** Goes into the app's environment (iOS): a slow start of a known length, in a test. */
+      env?: Record<string, string>;
+    },
   ): Promise<Measured<LaunchReading>>;
+  /** Debuggable, profileable or neither: what a number of this build can be compared with. */
+  buildType?(app: string): Promise<BuildType>;
+  /** Relaunches the app with the frame probe unless it runs under it already (simulator, opt-in). */
+  attachProbe?(app: string): Promise<void>;
+  threads?(app: string, windowMs: number): Promise<Measured<ThreadReading>>;
+  network?(
+    app: string,
+    windowMs: number,
+    during?: () => Promise<unknown>,
+  ): Promise<Measured<NetworkReading>>;
+  energy?(app: string, windowMs: number): Promise<Measured<EnergyReading>>;
+  exits?(app: string): Promise<Measured<ExitReading>>;
+  size?(app: string): Promise<Measured<SizeReading>>;
+  heapProfile?(
+    app: string,
+    kind: HeapProfileKind,
+    seconds: number,
+    during?: () => Promise<unknown>,
+  ): Promise<Measured<HeapProfile>>;
+  hangs?(app: string, seconds: number, during?: () => Promise<unknown>): Promise<HangReading>;
+  /** XCTest's `measure()` in a test of its own: launch, hitches, memory, CPU. */
+  xctMetrics?(app: string, test: 'launch' | 'hitches'): Promise<Measured<XctMetrics>>;
   cpuProfile?(
     app: string,
     ms: number,
@@ -310,4 +457,9 @@ export interface DeviceProvider {
   readonly virtual?: VirtualDevices;
   /** What this driver needs of this machine and, with `serial`, of that device. */
   doctor?(serial?: string): Promise<Check[]>;
+  /** A bounded table from a kept trace of this driver's kind: no device needed. */
+  queryTrace?(
+    tracePath: string,
+    q: { sql?: string; table?: string; limit: number },
+  ): Promise<TraceDigest | undefined>;
 }

@@ -1,9 +1,13 @@
 import type {
+  BuildType,
   DeviceVitals,
+  EnergyReading,
   FrameStats,
   FrameSummary,
   FrameTimeline,
   ProfileEntry,
+  StartupAnalysis,
+  ThreadReading,
 } from '@appdyno/core';
 
 /**
@@ -138,9 +142,13 @@ export type MemoryStats = {
   nativeHeapKb?: number;
   graphicsKb?: number;
   privateDirtyKb?: number;
+  /** Live objects from the Objects section: growing across rounds with no other change is a leak. */
+  viewRootImpl?: number;
+  appContexts?: number;
+  activities?: number;
 };
 
-/** `dumpsys meminfo <pkg>`: the App Summary and the TOTAL line. */
+/** `dumpsys meminfo <pkg>`: the App Summary, the TOTAL line and the Objects section. */
 export function parseMeminfo(text: string): MemoryStats {
   const pss = num(/TOTAL PSS:\s*(\d+)/, text) ?? num(/^\s*TOTAL\s+(\d+)/m, text);
   if (pss === undefined) throw new Error('no TOTAL PSS in meminfo output');
@@ -152,12 +160,21 @@ export function parseMeminfo(text: string): MemoryStats {
     graphicsKb: num(/^\s*Graphics:\s*(\d+)/m, text),
     // the TOTAL row of the table: Pss Total, Private Dirty, …
     privateDirtyKb: num(/^\s*TOTAL\s+\d+\s+(\d+)/m, text),
+    viewRootImpl: num(/ViewRootImpl:\s*(\d+)/, text),
+    appContexts: num(/AppContexts:\s*(\d+)/, text),
+    activities: num(/Activities:\s*(\d+)/, text),
   };
   for (const [k, v] of Object.entries(opt)) if (v !== undefined) Object.assign(out, { [k]: v });
   return out;
 }
 
-export type LaunchSample = { totalMs?: number; waitMs?: number; state?: string; status?: string };
+export type LaunchSample = {
+  totalMs?: number;
+  waitMs?: number;
+  state?: string;
+  status?: string;
+  fullyDrawnMs?: number;
+};
 
 /** `am start -W`: TotalTime (the launch as the system saw it), WaitTime (includes am's own cost), LaunchState. */
 export function parseAmStart(text: string): LaunchSample {
@@ -228,16 +245,14 @@ export function parseFrameTimelineCsv(csv: string): FrameTimeline {
   const has = (j: string, kind: RegExp) => kind.test(j);
   const janky = rows.filter((r) => r.jank && r.jank !== 'None').length;
   const ms = rows.map((r) => r.durMs);
+  const appJank = rows.filter((r) => has(r.jank, /App Deadline Missed|App Resynced Jitter/)).length;
   return {
     frames: rows.length,
     janky,
     jankyPercent: rows.length ? Math.round((janky / rows.length) * 1000) / 10 : 0,
     appDeadlineMissed: rows.filter((r) => has(r.jank, /App Deadline Missed/)).length,
-    appJankPercent: rows.length
-      ? Math.round(
-          (rows.filter((r) => has(r.jank, /App Deadline Missed/)).length / rows.length) * 1000,
-        ) / 10
-      : 0,
+    appResynced: rows.filter((r) => has(r.jank, /App Resynced Jitter/)).length,
+    appJankPercent: rows.length ? Math.round((appJank / rows.length) * 1000) / 10 : 0,
     bufferStuffing: rows.filter((r) => has(r.jank, /Buffer Stuffing/)).length,
     surfaceFlinger: rows.filter((r) => has(r.jank, /SurfaceFlinger|Display HAL|Prediction Error/))
       .length,
@@ -258,4 +273,246 @@ export function parseSimpleperfReport(text: string, limit = 15): ProfileEntry[] 
     if (m) out.push({ percent: Number(m[1]), samples: Number(m[2]), symbol: m[3]! });
   }
   return out.sort((a, b) => b.percent - a.percent).slice(0, limit);
+}
+
+/** The trace processor's CSV: strings quoted (doubled quotes inside, line breaks allowed), numbers bare. */
+export function parseCsv(csv: string): { columns: string[]; rows: string[][] } {
+  const table: string[][] = [];
+  let row: string[] = [];
+  for (const m of csv.matchAll(/("(?:[^"]|"")*"|[^,\n]*)(,|\n|$)/g)) {
+    const raw = m[1]!;
+    row.push(raw.startsWith('"') ? raw.slice(1, -1).replace(/""/g, '"') : raw);
+    if (m[2] !== ',') {
+      if (row.some(Boolean)) table.push(row);
+      row = [];
+    }
+    if (m[2] === '') break;
+  }
+  const [columns = [], ...rows] = table;
+  return { columns, rows };
+}
+
+/** A cell as a number; the trace processor's NULL is none. */
+const cellNum = (cell: string | undefined) => {
+  const v = cell === undefined || cell === '' || cell === '[NULL]' ? NaN : Number(cell);
+  return Number.isFinite(v) ? v : undefined;
+};
+const nsToMs = (ns: number) => Math.round(ns / 1e5) / 10;
+
+/** `android_frame_stats` rows (`overrun`, `cpu_time`, ns) of one app; none when the trace lacks the slices. */
+export function parseAndroidFrameStats(csv: string): FrameTimeline['stats'] {
+  const { columns, rows } = parseCsv(csv);
+  const col = (name: string) =>
+    rows.flatMap((r) => cellNum(r[columns.indexOf(name)]) ?? []).map(nsToMs);
+  const overrun = col('overrun');
+  if (overrun.length === 0) return undefined;
+  return {
+    frames: rows.length,
+    overrunP95Ms: pct(overrun, 0.95),
+    overrunWorstMs: Math.max(...overrun),
+    cpuP95Ms: pct(col('cpu_time'), 0.95),
+  };
+}
+
+/** The app's last "Fully drawn" line of an `ActivityTaskManager` log: `... .MainActivity: +1s13ms`. */
+export function parseFullyDrawn(log: string, pkg: string): number | undefined {
+  const line = [...log.matchAll(/Fully drawn (\S+?)\/\S+: \+(?:(\d+)m)?(?:(\d+)s)?(\d+)ms/g)]
+    .filter((m) => m[1] === pkg)
+    .at(-1);
+  if (!line) return undefined;
+  return Number(line[2] ?? 0) * 60_000 + Number(line[3] ?? 0) * 1000 + Number(line[4]);
+}
+
+/** The compiler state in `dumpsys package dexopt`: `arm64: [status=verify] [reason=cmdline]`. */
+export function parseCompileStatus(text: string): string | undefined {
+  const m = /status=([\w-]+)\]?\s*\[reason=([\w-]+)/.exec(text);
+  return m ? `status=${m[1]} reason=${m[2]}` : undefined;
+}
+
+const LIMITS: [name: string, metric: string, ms: number][] = [
+  ['bindApplication', 'time_bind_application', 1250],
+  ['inflate', 'time_inflate', 450],
+  ['getResources', 'time_get_resources', 130],
+];
+const HOT_LIMIT_MS = 1500;
+
+type StartupMetric = {
+  package_name?: string;
+  report_fully_drawn?: { dur_ms?: number };
+  to_first_frame?: Record<string, { dur_ms?: number } | number | undefined>;
+  slow_start_reason?: string[];
+};
+
+/**
+ * What a startup trace says, from the query in `AndroidPerf` (rows of `k,a,b`: `type`, `display`,
+ * `reason`, `odex`) and the `android_startup` metric's JSON. TTFD falls back to the metric: the display
+ * table leaves it empty when no frame follows `reportFullyDrawn`.
+ */
+export function parseStartup(
+  csv: string,
+  metricJson: string,
+  pkg: string,
+  tracePath: string,
+): StartupAnalysis {
+  const { rows } = parseCsv(csv);
+  const find = (k: string) => rows.find((r) => r[0] === k);
+  const startups = (JSON.parse(metricJson) as { android_startup?: { startup?: StartupMetric[] } })
+    .android_startup?.startup;
+  const metric = startups?.filter((s) => s.package_name === pkg).at(-1);
+  const type = find('type');
+  const display = find('display');
+  const durNs = cellNum(type?.[2]);
+  const ttidNs = cellNum(display?.[1]);
+  const ttfdNs = cellNum(display?.[2]);
+  const drawnMs = metric?.report_fully_drawn?.dur_ms;
+  const ttfdMs = ttfdNs !== undefined ? nsToMs(ttfdNs) : drawnMs && Math.round(drawnMs * 10) / 10;
+  const odex = find('odex')?.[1];
+  const findings = LIMITS.flatMap(([name, key, limit]) => {
+    const part = metric?.to_first_frame?.[key];
+    const ms = typeof part === 'object' ? part.dur_ms : undefined;
+    return ms !== undefined && ms > limit
+      ? [`${name} took ${Math.round(ms)} ms (limit ${limit} ms)`]
+      : [];
+  });
+  if (type?.[1] === 'hot' && durNs !== undefined && durNs / 1e6 > HOT_LIMIT_MS)
+    findings.push(`hot launch took ${Math.round(durNs / 1e6)} ms (limit ${HOT_LIMIT_MS} ms)`);
+  return {
+    tracePath,
+    ...(type?.[1] && { startupType: type[1] }),
+    ...(durNs !== undefined && { durMs: nsToMs(durNs) }),
+    ...(ttidNs !== undefined && { ttidMs: nsToMs(ttidNs) }),
+    ...(ttfdMs !== undefined && { ttfdMs }),
+    reasons: metric?.slow_start_reason ?? [],
+    breakdown: rows
+      .filter((r) => r[0] === 'reason')
+      .map((r) => ({ reason: r[1]!, ms: nsToMs(cellNum(r[2]) ?? 0) }))
+      .sort((a, b) => b.ms - a.ms),
+    findings,
+    ...(odex && { odex }),
+  };
+}
+
+const THREAD_LIMIT_PERCENT = 90;
+
+/**
+ * The shell loop's reads of every thread's `stat` under `/proc/<pid>/task`: a `== <ns>` line, then one stat
+ * line per thread; the first line is `hz <clock ticks per second>`. A thread new since the last read started
+ * from zero. `over90Ms` adds up the time above the limit, as Flashlight does.
+ */
+export function parseThreadReads(text: string): ThreadReading {
+  const hz = num(/^hz (\d+)/m, text) || 100;
+  const reads = text
+    .split(/^== /m)
+    .slice(1)
+    .map((block) => {
+      const [time, ...lines] = block.trim().split('\n');
+      const ticks = new Map<number, { name: string; ticks: number }>();
+      for (const line of lines) {
+        const m = /^(\d+) \((.*)\) /.exec(line);
+        if (m) ticks.set(Number(m[1]), { name: m[2]!, ticks: parseProcStatTicks(line) });
+      }
+      return { ms: Number(time) / 1e6, ticks };
+    });
+  const windowMs = reads.length > 1 ? Math.round(reads.at(-1)!.ms - reads[0]!.ms) : 0;
+  const seen = new Map<number, { name: string; steps: { ms: number; busyMs: number }[] }>();
+  reads.slice(1).forEach((read, i) => {
+    const before = reads[i]!;
+    for (const [tid, t] of read.ticks) {
+      const busyMs = ((t.ticks - (before.ticks.get(tid)?.ticks ?? 0)) / hz) * 1000;
+      const row = seen.get(tid) ?? { name: t.name, steps: [] };
+      row.steps.push({ ms: read.ms - before.ms, busyMs });
+      seen.set(tid, row);
+    }
+  });
+  const high = (s?: { ms: number; busyMs: number }) =>
+    s !== undefined && (s.busyMs / s.ms) * 100 > THREAD_LIMIT_PERCENT;
+  const threads = [...seen]
+    .map(([tid, t]) => {
+      const busyMs = t.steps.reduce((a, s) => a + s.busyMs, 0);
+      // the steps a busy stretch begins and ends in count for what it ran: else the 500 ms between reads
+      // cut up to a read's worth from each end
+      const over90Ms = t.steps.reduce((a, s, i) => {
+        if (high(s)) return a + s.ms;
+        return high(t.steps[i - 1]) || high(t.steps[i + 1]) ? a + s.busyMs : a;
+      }, 0);
+      return {
+        tid,
+        name: t.name,
+        percent: windowMs ? Math.round((busyMs * 1000) / windowMs) / 10 : 0,
+        over90Ms: Math.round(over90Ms),
+      };
+    })
+    .sort((a, b) => b.percent - a.percent);
+  return {
+    windowMs,
+    reads: reads.length,
+    threads,
+    worstOver90Ms: Math.max(0, ...threads.map((t) => t.over90Ms)),
+  };
+}
+
+/** Bytes of one uid in `dumpsys netstats --uid`, every network and foreground state, tag 0 (all of it). */
+export function parseNetstatsUid(text: string, uid: number): { rxBytes: number; txBytes: number } {
+  let mine = false;
+  let rxBytes = 0;
+  let txBytes = 0;
+  for (const line of text.split('\n')) {
+    const head = /\buid=(-?\d+) set=\S+ tag=(\S+)/.exec(line);
+    if (head) mine = Number(head[1]) === uid && head[2] === '0x0';
+    const bucket = mine && /^\s*st=\d+ rb=(\d+) rp=\d+ tb=(\d+)/.exec(line);
+    if (bucket) {
+      rxBytes += Number(bucket[1]);
+      txBytes += Number(bucket[2]);
+    }
+  }
+  return { rxBytes, txBytes };
+}
+
+/**
+ * `dumpsys batterystats --charged <pkg>`: the "Estimated power use (mAh)" section. Global `Computed drain`
+ * and the app's `UID u0a193: 1.23 fg: 1.1 ( cpu=1.00 (1s 123ms) screen=0.2 )` row (no row when it drew
+ * nothing). `mah` is absent when the device computes nothing at all: it has no power model.
+ */
+export function parseBatteryUsage(text: string, uid: number): Omit<EnergyReading, 'note'> {
+  const section = /Estimated power use \(mAh\):\n([\s\S]*?)(?:\n\s*\n|$)/.exec(text)?.[1] ?? '';
+  const computed = num(/Computed drain: ([\d.]+)/, section) ?? 0;
+  const name = uid >= 10_000 ? `u0a${uid - 10_000}` : String(uid);
+  const row = new RegExp(`^\\s*UID ${name}: ([\\d.]+)[^(]*\\((.*)\\)\\s*$`, 'mi').exec(section);
+  if (!row) return computed > 0 ? { mah: 0 } : {};
+  const breakdown: Record<string, number> = {};
+  for (const m of row[2]!.matchAll(/(\w+)=([\d.]+)/g)) breakdown[m[1]!] = Number(m[2]);
+  return { mah: Number(row[1]), breakdown };
+}
+
+/** The flags of `dumpsys package <pkg>`. */
+export function parseBuildType(text: string): BuildType {
+  const flags = [...text.matchAll(/^\s*(?:pkg|private|privatePkg)?[fF]lags=\[(.*)\]/gm)].map(
+    (m) => m[1]!,
+  );
+  if (flags.length === 0) return 'unknown';
+  if (flags.some((f) => /\bDEBUGGABLE\b/.test(f))) return 'debug';
+  return flags.some((f) => /\bPROFILEABLE/.test(f)) ? 'profileable' : 'release';
+}
+
+/** One app's row in `dumpsys diskstats`, where it lists apps: arrays in the order of `Package Names`. */
+export function parseDiskstats(text: string, pkg: string): Record<string, number> {
+  const list = (name: string): unknown[] => {
+    try {
+      return JSON.parse(new RegExp(`^${name}: (\\[.*\\])`, 'm').exec(text)?.[1] ?? '[]');
+    } catch {
+      return [];
+    }
+  };
+  const i = list('Package Names').indexOf(pkg);
+  if (i < 0) return {};
+  const out: Record<string, number> = {};
+  for (const [part, name] of [
+    ['code', 'App Sizes'],
+    ['data', 'App Data Sizes'],
+    ['cache', 'Cache Sizes'],
+  ] as const) {
+    const v = list(name)[i];
+    if (typeof v === 'number') out[part] = v;
+  }
+  return out;
 }

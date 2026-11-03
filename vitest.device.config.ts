@@ -12,6 +12,7 @@ export default defineConfig({
       '@appdyno/driver-android': src('driver-android'),
       '@appdyno/driver-apple': src('driver-apple'),
       '@appdyno/flows': src('flows'),
+      '@appdyno/perf': src('perf'),
       '@appdyno/ops': src('ops'),
       '@appdyno/mcp': src('mcp'),
       '@appdyno/cli': src('cli'),

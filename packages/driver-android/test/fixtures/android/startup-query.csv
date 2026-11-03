@@ -1,0 +1,20 @@
+"k","a","b"
+"type","cold",1867451626
+"display",1878620001,"[NULL]"
+"reason","D",54892290
+"reason","R",3447002
+"reason","R+",450459
+"reason","Running",40768997
+"reason","S",1893959
+"reason","activity_resume",8240001
+"reason","activity_start",32017374
+"reason","art_lock_contention",256791
+"reason","bind_application",1523866752
+"reason","binder",46757294
+"reason","choreographer_do_frame",120049374
+"reason","inflate",668208
+"reason","launch_delay",31120542
+"reason","open_dex_files_from_oat",1303624
+"reason","resources_manager_get_resources",1716375
+"reason","verify_class",2584
+"odex","location=/data/app/~~dYZPqZ8Ils9_Rg8SQQcIIQ==/dev.appdyno.fixture-Oji1v2UqqlwBj3_pRp_toA==/oat/arm64/base.odex status=up-to-date filter=verify reason=install","[NULL]"

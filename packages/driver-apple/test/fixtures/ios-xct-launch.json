@@ -1,0 +1,32 @@
+[
+  {
+    "testIdentifier": "PerfMetricsTests/testLaunch()",
+    "testIdentifierURL": "test://com.apple.xcode/Appdyno/Runner/PerfMetricsTests/testLaunch",
+    "testRuns": [
+      {
+        "device": { "deviceId": "2EB7B5A9-0041-425C-8AFE-7D8C2134E0FB", "deviceName": "appdyno-p" },
+        "metrics": [
+          {
+            "baselineAverage": 0,
+            "baselineName": "",
+            "displayName": "Duration (AppLaunch)",
+            "identifier": "com.apple.dt.XCTMetric_ApplicationLaunch-AppLaunch.duration",
+            "maxPercentRegression": 10,
+            "maxPercentRelativeStandardDeviation": 10,
+            "maxRegression": 0,
+            "maxStandardDeviation": 10,
+            "measurements": [
+              1.122300917, 1.208634417, 1.1215926250000001, 1.1142216660000002, 1.247922417
+            ],
+            "polarity": "prefers smaller",
+            "unitOfMeasurement": "s"
+          }
+        ],
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ]
+  }
+]
