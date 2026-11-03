@@ -2,6 +2,7 @@ package dev.appdyno.agent
 
 import android.graphics.Rect
 import android.os.Build
+import android.os.Bundle
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
@@ -18,7 +19,14 @@ class CWindow(
     val bounds: Rect,
     val active: Boolean,
     val focused: Boolean,
-)
+    /** Fills the display at rest, on a release with getBoundsInWindow: `bounds` is that place. */
+    val fills: Boolean = false,
+) {
+    /** How far from its resting place it is: as reported, then as the walk finds it (a node's place on the screen against its place in the window). */
+    var offsetX = 0
+    var offsetY = 0
+    val sliding: Boolean get() = offsetX != 0 || offsetY != 0
+}
 
 private const val TYPE_IME = 2
 private const val TYPE_SYSTEM = 3
@@ -31,7 +39,28 @@ class Capture(
     val truncated: Boolean,
     val elapsedMs: Long,
     private val display: DisplayInfo,
+    /** Visible nodes of a sliding window whose resting place could not be worked out. */
+    val unplaced: Int = 0,
+    private val tagged: List<Pair<Int, AccessibilityNodeInfo>> = emptyList(),
 ) {
+    /**
+     * Compose test tags by node, for nodes with no resource id: not layout, and each is a call to the app, so
+     * only an answer asks for them, within TAGS_MS.
+     */
+    val tags: Map<Int, String> by lazy {
+        val end = SystemClock.uptimeMillis() + TreeCapture.TAGS_MS
+        val out = HashMap<Int, String>()
+        for ((i, n) in tagged) {
+            if (SystemClock.uptimeMillis() > end) break
+            try {
+                if (n.refreshWithExtraData(TreeCapture.TEST_TAG, Bundle())) n.extras.getCharSequence(TreeCapture.TEST_TAG)?.let { out[i] = it.toString() }
+            } catch (_: RuntimeException) {
+                // a node gone meanwhile has no tag to give
+            }
+        }
+        out
+    }
+
     /** The digest of the app's and the system dialogs' windows (status bar, keyboard and overlays left out). */
     val hash: String by lazy { LayoutHash.of(appNodes) }
 
@@ -39,6 +68,15 @@ class Capture(
 
     /** A node of the app's or a system dialog's window (not the status bar, the keyboard, an overlay). */
     fun inApp(n: CNode) = appWindow(windows[n.window])
+
+    /** Nothing read of a screen's window: between two screens, a dark screen, an app that does not answer. */
+    val noApp: Boolean by lazy { nodes.none { n -> windows[n.window].let { Slide.hasScreen(it.type, it.bounds.top, it.bounds.bottom, display) } } }
+
+    /** Some window on it is still on its way to the place the answer gives. */
+    val sliding: Boolean get() = windows.any { it.sliding }
+
+    /** In a transition the places in this read may not be those at rest: another shape of window, or virtual nodes. */
+    val restUnknown: Boolean get() = unplaced > 0 || windows.any { it.type == AccessibilityWindowInfo.TYPE_APPLICATION && !it.fills }
 
     /** A point on a window that is not the app's (a key of the keyboard, the status bar). */
     fun onOtherWindow(x: Int, y: Int) = windows.any { !appWindow(it) && it.bounds.contains(x, y) }
@@ -49,17 +87,41 @@ class Capture(
     fun sameLayout(other: Capture) = LayoutHash.same(appNodes, other.appNodes)
 
     /**
-     * The screen is not done: a progress indicator shows (a spinner, a loading bar), or an app window
-     * sticks out of the display (a window sliding in or out: its reported place stays at a midway point
-     * until the animation ends).
+     * The screen is not done: no app window, a progress indicator shows (a spinner, a loading bar), or an
+     * app window sticks out of the display and its nodes' resting places are not known (a window sliding in
+     * or out: its reported place stays at a midway point until the animation ends).
      */
     val busy: Boolean by lazy {
-        nodes.any { it.flags and Flags.VISIBLE != 0 && it.cls.endsWith("ProgressBar") } ||
-            windows.any { w ->
-                w.type == AccessibilityWindowInfo.TYPE_APPLICATION &&
-                    (w.bounds.left < 0 || w.bounds.top < 0 || w.bounds.right > display.width || w.bounds.bottom > display.height)
-            }
+        noApp || unplaced > 0 || nodes.any { it.flags and Flags.VISIBLE != 0 && it.cls.endsWith("ProgressBar") } ||
+            windows.any { w -> w.type == AccessibilityWindowInfo.TYPE_APPLICATION && Slide.outside(w.bounds.left, w.bounds.top, w.bounds.right, w.bounds.bottom, display) }
     }
+}
+
+/** Windows in a transition (pure, unit tested). */
+object Slide {
+    /**
+     * A window that is a screen: an application's, or a system one (a shade, a keyguard, a dialog such as "not
+     * responding") that is not a low strip at an edge of the display (the status bar, a gesture handle). Between
+     * two screens only the strips are there, for 100 to 500 ms.
+     */
+    fun hasScreen(type: Int, top: Int, bottom: Int, d: DisplayInfo) =
+        type == AccessibilityWindowInfo.TYPE_APPLICATION ||
+            (type == AccessibilityWindowInfo.TYPE_SYSTEM && !(bottom - top < d.height / 8 && (top == 0 || bottom == d.height)))
+
+    /** A node at this place in a window `dx`, `dy` off its own: wholly past the display, so its visibility cannot be known now. */
+    fun pushedOff(left: Int, top: Int, right: Int, bottom: Int, dx: Int, dy: Int, d: DisplayInfo) =
+        right + dx <= 0 || bottom + dy <= 0 || left + dx >= d.width || top + dy >= d.height
+
+    fun outside(left: Int, top: Int, right: Int, bottom: Int, d: DisplayInfo) =
+        left < 0 || top < 0 || right > d.width || bottom > d.height
+
+    /**
+     * An application window of the display's size: it slides at most, and comes to rest filling the display, where a place in the window is the place on the screen. Not known
+     * for any other shape, nor without `getBoundsInWindow` (API 34).
+     */
+    fun fills(type: Int, width: Int, height: Int, d: DisplayInfo, sdk: Int = Build.VERSION.SDK_INT) =
+        sdk >= 34 && type == AccessibilityWindowInfo.TYPE_APPLICATION &&
+            kotlin.math.abs(width - d.width) <= 2 && kotlin.math.abs(height - d.height) <= 2
 }
 
 /**
@@ -70,6 +132,7 @@ class Capture(
  * instead). The cache is cleared first: an in-place screen swap does not always invalidate it.
  */
 class TreeCapture(private val automation: Automation) {
+
     private val pool: ExecutorService = Executors.newFixedThreadPool(PARALLEL) { r ->
         Thread(r, "appdyno-tree").apply { isDaemon = true }
     }
@@ -92,6 +155,7 @@ class TreeCapture(private val automation: Automation) {
     ): Capture {
         val start = SystemClock.uptimeMillis()
         val ua = automation.ua
+        val display = Platform.display()
         automation.clearCache()
         val prefetch = if (yielding) PREFETCH_YIELDING else PREFETCH
         val windows = mutableListOf<CWindow>()
@@ -104,7 +168,15 @@ class TreeCapture(private val automation: Automation) {
         for (w in list) {
             val root = (if (Build.VERSION.SDK_INT >= 33) w.getRoot(prefetch) else w.root) ?: continue
             val b = Rect().also { w.getBoundsInScreen(it) }
-            windows += CWindow(w.id, w.type, root.packageName?.toString(), w.layer, b, w.isActive, w.isFocused)
+            // by its root's place in it: the window's own bounds are its touchable region, some other shape at times
+            val inIt = Rect().also { if (Build.VERSION.SDK_INT >= 34) root.getBoundsInWindow(it) }
+            val fills = Slide.fills(w.type, inIt.width(), inIt.height(), display)
+            val window = CWindow(w.id, w.type, root.packageName?.toString(), w.layer, if (fills) Rect(0, 0, display.width, display.height) else b, w.isActive, w.isFocused, fills)
+            if (fills) {
+                window.offsetX = b.left
+                window.offsetY = b.top
+            }
+            windows += window
             roots += root to windows.size - 1
         }
         if (roots.isEmpty()) {
@@ -116,6 +188,8 @@ class TreeCapture(private val automation: Automation) {
         }
 
         failedReads = 0
+        inWindow.clear()
+        tagged.clear()
         val nodes = ArrayList<CNode>(512)
         var truncated = false
         var level: List<Triple<AccessibilityNodeInfo, Int, Int>> = roots.map { (n, w) -> Triple(n, -1, w) }
@@ -129,7 +203,8 @@ class TreeCapture(private val automation: Automation) {
                 }
                 indices[i] = nodes.size
                 onNode?.invoke(nodes.size, item.first)
-                nodes += copy(item.first, item.second, item.third)
+                if (item.first.viewIdResourceName == null && TEST_TAG in item.first.availableExtraData) tagged += nodes.size to item.first
+                nodes += copy(item.first, item.second, item.third, windows[item.third])
             }
             if (truncated || ++depth >= maxDepth || SystemClock.uptimeMillis() - start > budgetMs) {
                 truncated = truncated || level.any { it.first.childCount > 0 }
@@ -137,7 +212,8 @@ class TreeCapture(private val automation: Automation) {
             }
             level = children(level, indices, prefetch)
         }
-        return Capture(windows, nodes, truncated || failedReads > 0, SystemClock.uptimeMillis() - start, Platform.display())
+        val unplaced = toRest(windows, nodes, display)
+        return Capture(windows, nodes, truncated || failedReads > 0, SystemClock.uptimeMillis() - start, display, unplaced, tagged.toList())
     }
 
     private class Want(val node: AccessibilityNodeInfo, val child: Int, val parent: Int, val window: Int)
@@ -172,12 +248,63 @@ class TreeCapture(private val automation: Automation) {
         return out
     }
 
-    private fun copy(n: AccessibilityNodeInfo, parent: Int, window: Int): CNode {
+    private val tagged = ArrayList<Pair<Int, AccessibilityNodeInfo>>()
+
+    /** The walk's nodes' places in their windows, by index (null: their window does not fill the display). */
+    private val inWindow = ArrayList<Rect?>()
+
+    /**
+     * Sliding windows' nodes, from where they are now to where they come to rest: the place in the window, and the
+     * visibility the rest will give. How many visible nodes have no such place (virtual ones: Compose, a web view).
+     */
+    private fun toRest(windows: List<CWindow>, nodes: List<CNode>, d: DisplayInfo): Int {
+        // a keyboard panning the window moves it up with no transition running
+        if (windows.any { it.type == TYPE_IME }) for (w in windows) if (w.offsetX == 0) w.offsetY = 0
+        if (windows.none { it.sliding }) return 0
+        var unplaced = 0
+        for ((i, n) in nodes.withIndex()) {
+            val w = windows[n.window]
+            if (!w.sliding) continue
+            val p = inWindow[i]!!
+            val visible = n.flags and Flags.VISIBLE != 0
+            if (p.left == 0 && p.top == 0 && p.right == 0 && p.bottom == 0) {
+                if (visible && n.right > n.left && n.bottom > n.top) unplaced++
+                continue
+            }
+            // clipped away it comes with its edges crossed: empty, as the walk sends it (the screen's matrix uncrosses them)
+            n.left = p.left
+            n.top = p.top
+            n.right = maxOf(p.right, p.left)
+            n.bottom = maxOf(p.bottom, p.top)
+            val empty = n.right == n.left || n.bottom == n.top
+            n.flags = when {
+                // under a window above (the status bar's background) it will not be visible
+                visible && windows.drop(n.window + 1).any { it.bounds.contains(n.left, n.top, n.right, n.bottom) } -> n.flags and Flags.VISIBLE.inv()
+                !visible && !empty && Slide.pushedOff(n.left, n.top, n.right, n.bottom, w.offsetX, w.offsetY, d) -> n.flags or Flags.VISIBLE
+                else -> n.flags
+            }
+        }
+        return unplaced
+    }
+
+    private fun copy(n: AccessibilityNodeInfo, parent: Int, windowIndex: Int, w: CWindow): CNode {
         // a node below or beside the screen comes back with its far edge clipped to the screen, before its
         // near one (top 2453, bottom 2400): it is sent as empty there, never with a negative size
         val r = Rect().also { n.getBoundsInScreen(it) }
         var f = 0
         if (n.isVisibleToUser) f = f or Flags.VISIBLE
+        if (w.fills) {
+            val p = Rect().also { n.getBoundsInWindow(it) }
+            inWindow += p
+            // one node whole on the display says how far the window is from its place (its matrix may round a pixel);
+            // the slide can end during a walk, its later nodes at rest: any node still off its place counts
+            if (!p.isEmpty && kotlin.math.abs(r.width() - p.width()) <= 2 && kotlin.math.abs(r.height() - p.height()) <= 2 && (r.left != p.left || r.top != p.top)) {
+                w.offsetX = r.left - p.left
+                w.offsetY = r.top - p.top
+            }
+        } else {
+            inWindow += null
+        }
         if (n.isClickable) f = f or Flags.CLICKABLE
         if (n.isLongClickable) f = f or Flags.LONG_CLICKABLE
         if (n.isFocusable) f = f or Flags.FOCUSABLE
@@ -196,13 +323,15 @@ class TreeCapture(private val automation: Automation) {
         // a field showing its hint reports the hint as its text: it has no text of its own
         val text = if (n.isShowingHintText) null else n.text?.toString()
         return CNode(
-            parent, window, n.className?.toString() ?: "", n.viewIdResourceName, text,
+            parent, windowIndex, n.className?.toString() ?: "", n.viewIdResourceName, text,
             n.contentDescription?.toString(), hint, r.left, r.top, maxOf(r.right, r.left), maxOf(r.bottom, r.top), f,
         )
     }
 
     companion object {
         const val PARALLEL = 8
+        const val TEST_TAG = "androidx.compose.ui.semantics.testTag"
+        const val TAGS_MS = 500L
         private const val PREFETCH =
             AccessibilityNodeInfo.FLAG_PREFETCH_DESCENDANTS_BREADTH_FIRST or
                 AccessibilityNodeInfo.FLAG_PREFETCH_UNINTERRUPTIBLE

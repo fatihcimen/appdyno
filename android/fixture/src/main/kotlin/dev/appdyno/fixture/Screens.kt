@@ -45,8 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import java.io.File
 import java.net.URL
@@ -149,6 +147,12 @@ class MainActivity : Activity() {
 }
 
 class FormActivity : Activity() {
+    // a device's password manager would offer to save the form over the next screens, importance flags or not
+    override fun onPause() {
+        getSystemService(android.view.autofill.AutofillManager::class.java)?.cancel()
+        super.onPause()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         column {
@@ -335,7 +339,7 @@ class ComposeActivity : ComponentActivity() {
         setContent {
             var value by remember { mutableStateOf("") }
             var saved by remember { mutableStateOf("") }
-            Column(Modifier.fillMaxSize().padding(16.dp).semantics { testTagsAsResourceId = true }) {
+            Column(Modifier.fillMaxSize().padding(16.dp)) {
                 Text("Compose screen", Modifier.testTag("compose_title").padding(top = 32.dp))
                 TextField(value = value, onValueChange = { value = it }, label = { Text("Not") }, modifier = Modifier.testTag("compose_input"))
                 Button(onClick = { saved = value }, modifier = Modifier.testTag("compose_save")) { Text("Save") }

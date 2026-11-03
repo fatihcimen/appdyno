@@ -26,6 +26,13 @@ const fx = (name: string) =>
   readFileSync(new URL(`./fixtures/android/${name}`, import.meta.url), 'utf8');
 
 describe('android perf parsers on recorded outputs', () => {
+  it('counts a frame with the bit Android 16 sets on ordinary frames, not a window change', () => {
+    const rows = parseFramestats(
+      `---PROFILEDATA---\nFlags,IntendedVsync,FrameCompleted,\n32,1000000,17000000,\n33,1000000,17000000,\n2,1000000,17000000,\n---PROFILEDATA---\n`,
+    );
+    expect(rows.map((r) => r.durationMs)).toEqual([16]);
+  });
+
   it('reads the gfxinfo summary and the per-frame rows', () => {
     const s = parseFrameStats(fx('android-gfxinfo-framestats.txt'));
     expect(s).toMatchObject({

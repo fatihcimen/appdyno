@@ -37,6 +37,9 @@ class Server(private val opts: Options, private val handlers: Handlers) {
     private val actions = WorkLane(timers)
     private val jobs = ConcurrentHashMap<Int, Job>()
 
+    /** The connections that asked for the animations off. */
+    private val animationsOff = HashSet<LocalSocket>()
+
     @Volatile
     private var lastActivity = SystemClock.uptimeMillis()
 
@@ -85,6 +88,14 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                         jobs[params.optInt("id")]?.cancelled = true
                         writer.json(result(id, JSONObject()))
                     }
+                    "animations.set" -> {
+                        val off = params.getBoolean("off")
+                        synchronized(animationsOff) {
+                            if (off) animationsOff += socket else animationsOff -= socket
+                            params.put("off", animationsOff.isNotEmpty())
+                        }
+                        submit(id, method, params, writer)
+                    }
                     "shutdown" -> {
                         writer.json(result(id, JSONObject()))
                         exitProcess(0)
@@ -98,6 +109,10 @@ class Server(private val opts: Options, private val handlers: Handlers) {
             try {
                 socket.close()
             } catch (_: Throwable) {
+            }
+            // the host that wanted them off is gone, however it went
+            if (synchronized(animationsOff) { animationsOff.remove(socket) && animationsOff.isEmpty() }) {
+                actions.submit(Job(-1), 60_000, {}) { handlers.restoreAnimations() }
             }
             val idle = synchronized(this) { --connections == 0 }
             lastActivity = SystemClock.uptimeMillis()

@@ -231,6 +231,7 @@ export class AndroidPerf implements MeasureSource {
 
   /** Frames since the stats were last reset, then a reset (the next read starts a new window). */
   async frames(pkg: string, opts: { reset?: boolean } = {}): Promise<Measured<FrameStats>> {
+    await this.device.readyToMeasure();
     assertPkg(pkg);
     const raw = await this.sh(
       `dumpsys gfxinfo ${pkg} framestats${opts.reset === false ? '' : `; dumpsys gfxinfo ${pkg} reset > /dev/null`}`,
@@ -241,6 +242,7 @@ export class AndroidPerf implements MeasureSource {
   }
 
   async resetFrames(pkg: string) {
+    await this.device.readyToMeasure();
     await this.sh(`dumpsys gfxinfo ${assertPkg(pkg)} reset > /dev/null`);
   }
 
@@ -291,6 +293,7 @@ export class AndroidPerf implements MeasureSource {
     pkg: string,
     opts: { mode?: LaunchMode; repeats?: number; compile?: CompileMode; trace?: boolean } = {},
   ): Promise<Measured<LaunchStats>> {
+    await this.device.readyToMeasure();
     assertPkg(pkg);
     const mode = opts.mode ?? 'cold';
     const repeats = Math.min(Math.max(opts.repeats ?? 3, 1), 10);
@@ -702,6 +705,7 @@ export class AndroidPerf implements MeasureSource {
     durationMs = 3_000,
     during?: () => Promise<unknown>,
   ): Promise<Measured<CpuProfile>> {
+    await this.device.readyToMeasure();
     assertPkg(pkg);
     await this.pid(pkg);
     const s = Math.min(Math.max(Math.round(durationMs / 1000), 1), 30);
@@ -770,7 +774,8 @@ export class AndroidPerf implements MeasureSource {
     pkg: string,
     durationMs: number,
     during?: () => Promise<unknown>,
-  ): Promise<Measured<FrameTimeline>> {
+  ): Promise<Measured<FrameTimeline> & { tracePath?: string }> {
+    await this.device.readyToMeasure();
     assertPkg(pkg);
     await traceProcessor();
     const ms = Math.min(Math.max(Math.round(durationMs), 500), 60_000);
@@ -810,6 +815,7 @@ export class AndroidPerf implements MeasureSource {
     seconds: number,
     during?: () => Promise<unknown>,
   ): Promise<Measured<FrameTrace>> {
+    await this.device.readyToMeasure();
     const m = await this.frameTimeline(pkg, seconds * 1000, during);
     return { value: { kind: 'timeline', ...m.value }, raw: m.raw, at: m.at };
   }

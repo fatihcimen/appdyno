@@ -13,6 +13,8 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityWindowInfo
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * The device's one UI automation connection, opened from this shell-user process (no instrumentation),
@@ -60,6 +62,35 @@ class Automation private constructor(private val looper: Looper) {
         null
     }
 
+    private val eventLock = Object()
+
+    private fun wakeOnEvent() = synchronized(eventLock) {
+        events++
+        eventLock.notifyAll()
+    }
+
+    @Volatile
+    private var wakes = 0L
+
+    /** Ends awaitEvent's waits. */
+    fun wake() = synchronized(eventLock) {
+        wakes++
+        eventLock.notifyAll()
+    }
+
+    /** Sleeps for `ms`, or until a layout-moving event arrives or wake() is called. */
+    fun awaitEvent(ms: Long) {
+        val end = SystemClock.uptimeMillis() + ms
+        synchronized(eventLock) {
+            val seen = events + wakes
+            while (events + wakes == seen) {
+                val left = end - SystemClock.uptimeMillis()
+                if (left <= 0) return
+                eventLock.wait(left)
+            }
+        }
+    }
+
     /** Closes the connection (accessibility goes off in the apps); the next use opens it again. */
     fun release() = synchronized(this) {
         val ua = current ?: return@synchronized
@@ -90,7 +121,7 @@ class Automation private constructor(private val looper: Looper) {
         ua.setOnAccessibilityEventListener { e: AccessibilityEvent ->
             if (movesLayout(e)) {
                 lastEventAt = SystemClock.uptimeMillis()
-                events++
+                wakeOnEvent()
             }
         }
         // a fresh connection learns the windows over a moment, and the apps turn their accessibility on: a
@@ -116,6 +147,8 @@ class Automation private constructor(private val looper: Looper) {
         -> false
         AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ->
             e.contentChangeTypes != AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT
+        // a window only moving (a slide): reads tell its place; a sliding window's content has not moved
+        AccessibilityEvent.TYPE_WINDOWS_CHANGED -> android.os.Build.VERSION.SDK_INT < 34 || e.windowChanges and WINDOW_APPEARS != 0
         else -> true
     }
 
@@ -150,6 +183,9 @@ class Automation private constructor(private val looper: Looper) {
 
         /** A new connection is ready once the apps sent no layout event for this long. */
         const val OPEN_QUIET_MS = 150L
+
+        private const val WINDOW_APPEARS = AccessibilityEvent.WINDOWS_CHANGE_ADDED or
+            AccessibilityEvent.WINDOWS_CHANGE_REMOVED or AccessibilityEvent.WINDOWS_CHANGE_ACTIVE
 
         /** The events that can mean the layout moved (movesLayout reads them). */
         const val LAYOUT_EVENTS = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
@@ -207,6 +243,64 @@ class Automation private constructor(private val looper: Looper) {
                 throw t
             }
         }
+    }
+}
+
+/**
+ * Whether a window transition runs, from WMS itself: `syncInputTransactions(true)` (hidden, by reflection) returns
+ * when nothing animates and no transition is running, 5 s at most, and never calls the app. It returns at once
+ * if the transition has not started, and it cannot see animations inside the app. Where the release lacks it
+ * (API 30 and below) none is ever reported. The call blocks, so it runs on a thread of its own; its return wakes
+ * the settle's sleep.
+ */
+class Transitions(private val automation: Automation) {
+    private val method: Method? = try {
+        UiAutomation::class.java.getDeclaredMethod("syncInputTransactions", Boolean::class.javaPrimitiveType).apply { isAccessible = true }
+    } catch (_: Throwable) {
+        null
+    }
+
+    private var question: CountDownLatch? = null
+
+    /** The last question is still unanswered: a transition runs. */
+    val open: Boolean get() = (question?.count ?: 0L) > 0
+
+    /** Asks WMS unless the last question is still out; the answer comes on its own. */
+    fun ask(): CountDownLatch? {
+        if (open) return question
+        val m = method ?: return null
+        val done = CountDownLatch(1)
+        question = done
+        Thread({
+            try {
+                m.invoke(automation.ua, true)
+            } catch (_: Throwable) {
+                // no answer from WMS: as if nothing ran
+            } finally {
+                done.countDown()
+                automation.wake()
+            }
+        }, "appdyno-transition").apply { isDaemon = true }.start()
+        return done
+    }
+
+    /**
+     * Does one run? `again`: ask anew if nothing was running at the last question. An idle WMS answers within
+     * ANSWER_MS; a slow one reads as running until it answers, which delays a read and no more.
+     */
+    fun running(again: Boolean): Boolean {
+        if (open) return true
+        if (!again) return false
+        return ask()?.await(ANSWER_MS, TimeUnit.MILLISECONDS) == false
+    }
+
+    /** Until the running one ended, at most `maxMs`. */
+    fun awaitEnd(maxMs: Long) {
+        ask()?.await(maxMs, TimeUnit.MILLISECONDS)
+    }
+
+    private companion object {
+        const val ANSWER_MS = 30L
     }
 }
 

@@ -62,6 +62,8 @@ export class AndroidDevice implements Device {
     /** How long a read-only call waits for an unplugged or rebooting device to come back (0: not at all). */
     private readonly reconnectWaitMs = 0,
     takeover = false,
+    /** Off: the device's animations are off while this host is connected (docs/protocol.md "Animations"). */
+    private animations: 'on' | 'off' = 'on',
   ) {
     assertSerial(serial);
     this.launcher = new AndroidAgentLauncher(adb, serial, takeover);
@@ -109,6 +111,8 @@ export class AndroidDevice implements Device {
         this.rpc = rpc;
         this.helloInfo = hello;
         this.lastStartWasCold = started;
+        if (this.animations === 'off')
+          await rpc.call('animations.set', { off: true }, { timeoutMs: TIMEOUTS.action });
         // a new agent: a host that died without stopping its own may have left test providers
         if (started) await this.clearStaleLocation().catch(() => undefined);
         return rpc;
@@ -442,6 +446,19 @@ export class AndroidDevice implements Device {
   /** Copies a file from the device (adb's file transfer). */
   async pull(remote: string, local: string): Promise<void> {
     await this.queue.run(() => this.adb.run(['-s', this.serial, 'pull', remote, local], 300_000));
+  }
+
+  /**
+   * A measurement must see what a user sees, and only that: animations are back on for the rest of the session,
+   * and the transition an answer can come before has ended (its frames are not the app's).
+   */
+  async readyToMeasure() {
+    if (this.animations === 'off') {
+      this.animations = 'on';
+      if (this.rpc && !this.rpc.closed)
+        await this.call('animations.set', { off: false }, TIMEOUTS.action);
+    }
+    await this.call('rest.wait', {}, TIMEOUTS.action + 5_000);
   }
 
   /** The app's and the device's performance (frames, memory, CPU, launch, device state). */

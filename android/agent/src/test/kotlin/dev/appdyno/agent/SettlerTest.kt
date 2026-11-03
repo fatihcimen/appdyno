@@ -114,6 +114,113 @@ class SettlerTest {
     }
 
     @Test
+    fun nothingIsReadOrProvenWhileHeld() {
+        // between two screens for 500 ms: no read of the empty screen, and the window starts after it
+        val start = now
+        val o = Settler({ now }, { now += it }, { lastEvent }).run(
+            start, 200, 3_000, R("A"), { now += 10; R("B") }, { a, b -> a.hash == b.hash }, { it.busy }, { false },
+            hold = { now - start < 500 },
+        )
+        assertTrue(o.settled)
+        assertEquals("B", o.last.hash)
+        assertEquals(3, o.reads)
+        assertTrue("settled ${o.elapsedMs}", o.elapsedMs in 700..900)
+    }
+
+    @Test
+    fun aTransitionKnownOnlyAfterTheReadHoldsTheAnswer() {
+        // the old screen, still, at the end of the window; the read lets the busy app run the click, whose transition
+        // then shows in `hold` until 400 ms, after which the new screen is there
+        val start = now
+        val o = Settler({ now }, { now += it }, { lastEvent }).run(
+            start, 200, 3_000, R("A"), { now += 10; R(if (now - start < 400) "A" else "B") }, { a, b -> a.hash == b.hash }, { it.busy }, { false },
+            hold = { now - start in 201..399 },
+        )
+        assertTrue(o.settled)
+        assertEquals("B", o.last.hash)
+    }
+
+    @Test
+    fun aReadOvertakenByANewWindowIsReadAgain() {
+        // still the old screen when read at the end of the window; a new window appeared meanwhile
+        val start = now
+        val o = Settler({ now }, { now += it }, { lastEvent }).run(
+            start, 200, 3_000, R("A"), { now += 60; R(if (now - start < 300) "A" else "B") }, { a, b -> a.hash == b.hash }, { it.busy }, { false },
+            outdated = { it.hash == "A" },
+        )
+        assertTrue(o.settled)
+        assertEquals("B", o.last.hash)
+    }
+
+    @Test
+    fun aHoldThatNeverEndsAnswersOnceAtTheCapUnsettled() {
+        val o = Settler({ now }, { now += it }, { lastEvent }).run(
+            now, 200, 1_000, R("A"), { now += 10; R("gap", true) }, { a, b -> a.hash == b.hash }, { it.busy }, { false },
+            hold = { true },
+        )
+        assertFalse(o.settled)
+        assertEquals(1, o.reads)
+    }
+
+    @Test
+    fun aScreenWithNoWindowNeverSettles() {
+        // two reads of nothing look the same: without "busy" that was a settled screen with 0 elements
+        val o = go(100, 1_000, null, layoutAt = { r("empty", true) })
+        assertFalse(o.settled)
+    }
+
+    @Test
+    fun anUnchangedScreenTakesOneReadWhenTheCallerSawIt() {
+        val o = go(200, 3_000, "A", layoutAt = { r("A") })
+        assertTrue(o.settled)
+        assertEquals(1, o.reads)
+    }
+
+    @Test
+    fun anEventBringsTheReadForward() {
+        // the reaction comes with an event at 60 ms: it is read then, not at the end of the window
+        val start = now
+        var seen = false
+        val at = mutableListOf<Long>()
+        val s = Settler({ now }, { ms ->
+            if (!seen && now + ms > start + 60) {
+                seen = true
+                now = start + 60
+                lastEvent = now
+            } else now += ms
+        }, { lastEvent })
+        val o = s.run(start, 200, 3_000, R("A"), { at += now - start; now += 10; R(if (now - start < 60) "A" else "B") },
+            { a, b -> a.hash == b.hash }, { it.busy }, { false })
+        assertTrue(o.settled)
+        assertEquals("B", o.last.hash)
+        assertTrue("reads at $at", at.first() in 60..60 + Settler.POLL_MS)
+        assertTrue("settled ${o.elapsedMs}", o.elapsedMs in 260..420)
+    }
+
+    @Test
+    fun aMoveWithoutEventsIsFollowedAtThePollRate() {
+        val at = mutableListOf<Long>()
+        val start = now
+        val o = Settler({ now }, { now += it }, { lastEvent }).run(
+            start, 200, 3_000, null, { at += now - start; now += 10; R(if (now - start < 500) "m${now - start}" else "B") },
+            { a, b -> a.hash == b.hash }, { it.busy }, { false },
+        )
+        assertTrue(o.settled)
+        assertTrue("reads at $at", at.zipWithNext { a, b -> b - a }.take(4).all { it <= Settler.POLL_MS + 10 })
+    }
+
+    @Test
+    fun aReadSlowerThanTheWindowIsNoProof() {
+        // reads taking 300 ms against a 200 ms window: one such read may be all of the "still" time
+        var n = 0
+        val s = Settler({ now }, { now += it }, { lastEvent })
+        val o = s.run(now, 200, 3_000, R("A"), { n++; now += if (n == 1) 300 else 5; R("A") },
+            { a, b -> a.hash == b.hash }, { it.busy }, { false })
+        assertTrue(o.settled)
+        assertEquals(2, o.reads)
+    }
+
+    @Test
     fun cancelStopsTheLoop() {
         var n = 0
         val o = go(50, 10_000, null, layoutAt = { t -> r("h$t") }, cancelled = { ++n >= 2 })

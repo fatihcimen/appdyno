@@ -36,6 +36,7 @@ export const ActionOut = z.object({
       buttons: z.array(z.object({ label: z.string(), x: z.number(), y: z.number() })),
     })
     .optional(),
+  moving: z.boolean().optional(),
   warnings: z.array(z.string()),
   code: z.string().optional(),
   hint: z.string().optional(),

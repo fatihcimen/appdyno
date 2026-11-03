@@ -129,6 +129,7 @@ export function answersFor(ctx: ServerContext) {
       before: Session['shown'];
       base: Session['shown'];
       settled: boolean | undefined;
+      moving?: boolean | undefined;
       ms: number;
       busy: string[];
       started: number;
@@ -158,6 +159,7 @@ export function answersFor(ctx: ServerContext) {
         d,
         fg,
         settled: o.settled,
+        moving: o.moving,
         changed,
         busy,
         appDied,
@@ -184,6 +186,7 @@ export function answersFor(ctx: ServerContext) {
       before,
       base,
       settled: r.settle?.settled,
+      moving: r.settle?.moving,
       ms: r.settle?.ms ?? Date.now() - started,
       busy: busyReasons(r, s.screenOf(r.tree)),
       started,
@@ -205,6 +208,7 @@ export function answersFor(ctx: ServerContext) {
       appDied?: ActionOut['appDied'];
       notes?: string[];
       settleMs?: number | undefined;
+      moving?: boolean | undefined;
     } = {},
   ): ActionOut => ({
     done: clean(done),
@@ -225,6 +229,7 @@ export function answersFor(ctx: ServerContext) {
     ...(screen && { elements: screen.list.length }),
     ...(screen?.foreground && { foreground: screen.foreground }),
     ...(o.settled !== undefined && { settled: o.settled }),
+    ...(o.moving && { moving: true }),
     ...(o.settleMs !== undefined && { settleMs: o.settleMs }),
     ...(o.changed !== undefined && { changed: o.changed }),
     ...(o.busy?.length && { busy: o.busy }),

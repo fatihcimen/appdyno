@@ -111,6 +111,7 @@ export async function androidChecks(adb: Adb, serial?: string): Promise<Check[]>
       // no ps: nothing to say
     }
   }
+  checks.push(await animationsCheck(adb, serial));
   const d = new AndroidDevice(serial, adb);
   try {
     const t = Date.now();
@@ -140,10 +141,29 @@ export async function androidChecks(adb: Adb, serial?: string): Promise<Check[]>
   return checks;
 }
 
+const SCALES = ['window_animation_scale', 'transition_animation_scale', 'animator_duration_scale'];
+
+/** Animations left off (a session with `--animations off` that could not put them back) make timing lie. */
+async function animationsCheck(adb: Adb, serial: string): Promise<Check> {
+  const out = await adb
+    .exec(serial, SCALES.map((k) => `settings get global ${k}`).join('; '))
+    .catch(() => '');
+  const off = out.split(/\s+/).some((v) => Number(v) === 0 && v !== '');
+  return {
+    name: 'animations',
+    ok: !off,
+    warn: off,
+    detail: off ? `off (${out.trim().replace(/\s+/g, ', ')})` : 'on',
+    ...(off && {
+      fix: `unless a session with --animations off is running: adb -s ${serial} shell settings put global window_animation_scale 1 (and transition_animation_scale, animator_duration_scale)`,
+    }),
+  };
+}
+
 /** Android devices over adb, which takes any serial no later provider claims. */
 export function androidProvider(
   adb: Adb = new Adb(),
-  opts: { takeover?: boolean } = {},
+  opts: { takeover?: boolean; animations?: 'on' | 'off' } = {},
 ): DeviceProvider {
   return {
     list: async () =>
@@ -155,7 +175,7 @@ export function androidProvider(
     handles: () => true,
     virtual: new AndroidEmulators(adb),
     // a phone unplugged for a moment (or rebooting) is waited for, up to 30 s, on read-only calls
-    open: (serial) => new AndroidDevice(serial, new Adb(), 30_000, opts.takeover),
+    open: (serial) => new AndroidDevice(serial, new Adb(), 30_000, opts.takeover, opts.animations),
     doctor: (serial) => androidChecks(adb, serial),
     queryTrace,
   };
