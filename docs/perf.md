@@ -96,7 +96,7 @@ appdyno perf dashboard [--app A] [--out dir] [--open]  the page alone, from what
 
 `perf_compare` with `action: dashboard` writes the page too, in its usual place: `<measurements dir>/dashboard/index.html`. `--out` and `--open` are the command line's alone. The page is rewritten after each kept run and each baseline, and an open page reloads itself every minute, which closes a table left open. A failure to write it never fails a measurement.
 
-`perf survey` calls the same operations anyone can, and names no device: what reads each measure is tried in turn until the measure has a number, a refusal is kept as that measure's answer on that kind of device, and the next measure still runs. A call that fails for another reason, such as a timeout, is printed and not kept: it says nothing of what the device can do. One line per measure.
+`perf survey` calls the same operations anyone can, and names no device: what reads each measure is tried in turn until the measure has a number, a refusal is kept as that measure's answer on that kind of device, and the next measure still runs. A call that ran and kept no number for that measure, or failed for another reason such as a timeout, is printed and not kept: neither says what the device cannot do. One line per measure.
 
 There is no server, and the page is one file with no script, which loads nothing: its content policy allows only its own style. Everything from the store is escaped. It follows the system's light or dark, and prints as ink on paper with no tooltips or tables. An app has a section of its own, with an anchor. In order:
 

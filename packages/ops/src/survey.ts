@@ -97,18 +97,19 @@ export async function survey(ctx: ServerContext, app: string, log: (line: string
       line(row, `failed: ${[...new Set(failed)].join('; ')}`);
       continue;
     }
-    const kept = (await loadRefusals(dir)).find(
-      (r) => r.deviceClass === cls && r.measure === row && since(r.at),
-    );
-    const lacking = said.some((o) => o.lacking?.some((what) => measureOf(`${what}.`) === row));
-    const reason =
-      kept?.reason ??
-      ([...new Set(said.flatMap((o) => o.refused ?? []))].join('; ') ||
-        (lacking ? `${session.device.serial} gives no reading of this` : undefined));
-    if (!reason) {
+    const lacks = (o: Outcome) => o.lacking?.some((what) => measureOf(`${what}.`) === row);
+    // a call that ran is the device not refusing, whatever the other ways to read this row said
+    if (said.some((o) => !o.refused && !lacks(o))) {
       line(row, 'answered with no number to keep');
       continue;
     }
+    const kept = (await loadRefusals(dir)).find(
+      (r) => r.deviceClass === cls && r.measure === row && since(r.at),
+    );
+    const reason =
+      kept?.reason ??
+      ([...new Set(said.flatMap((o) => o.refused ?? []))].join('; ') ||
+        `${session.device.serial} gives no reading of this`);
     if (!kept) await keepRefusal(ctx, session, row, reason);
     line(row, `cannot be read: ${reason}`);
   }

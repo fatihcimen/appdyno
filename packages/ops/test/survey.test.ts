@@ -59,6 +59,28 @@ describe('perf survey', () => {
     expect((await loadRefusals(measurements)).map((r) => r.measure)).toContain('leaks');
   });
 
+  it('does not take a call that ran and kept no number for a device that cannot', async () => {
+    const { ctx, measurements } = context({
+      frames: async () => ({
+        value: { totalFrames: 120, jankyFrames: 1, jankyPercent: 1, frozenFrames: 0 },
+        raw: '',
+        at: new Date().toISOString(),
+      }),
+    });
+    const lines: string[] = [];
+    await survey(ctx, 'dev.app', (l) => lines.push(l));
+    expect(lines.find((l) => l.startsWith('stalls'))).toContain('answered with no number to keep');
+    expect((await loadRefusals(measurements)).map((r) => r.measure)).not.toContain('stalls');
+  });
+
+  it('says a device has no reading of what its driver lacks', async () => {
+    const { ctx, measurements } = context({ network: undefined });
+    const lines: string[] = [];
+    await survey(ctx, 'dev.app', (l) => lines.push(l));
+    expect(lines.find((l) => l.startsWith('network'))).toContain('gives no reading of this');
+    expect((await loadRefusals(measurements)).map((r) => r.measure)).toContain('network');
+  });
+
   it('does not take a failure for a device that cannot', async () => {
     const { ctx, measurements } = context({
       heap: async () => {
