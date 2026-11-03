@@ -5,15 +5,11 @@ import type { ServerContext } from './context.js';
 import { controlOps } from './control.js';
 import { deviceOps } from './device.js';
 import { diagnoseOps } from './diagnose.js';
-import {
-  flowOps,
-  flowRecorder,
-  flowRunner,
-  readFlow,
-  runTests,
-  type ReplayOptions,
-  type TestOptions,
-} from './flow.js';
+import { flowOps } from './flow/ops.js';
+import { flowRecorder } from './flow/recorder.js';
+import { flowRunner, type ReplayOptions } from './flow/runner.js';
+import { readFlow } from './flow/shared.js';
+import { runTests, type TestOptions } from './flow/test-run.js';
 import { networkOps } from './network.js';
 import { perfOps } from './perf.js';
 import { reactNativeOps } from './reactnative.js';

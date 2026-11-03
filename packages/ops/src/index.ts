@@ -1,5 +1,7 @@
 export { opsFor, flowsFor } from './registry.js';
-export { flowFiles, paramsOf, type ReplayOptions, type TestOptions } from './flow.js';
+export { paramsOf } from './flow/ops.js';
+export type { ReplayOptions } from './flow/runner.js';
+export { flowFiles, type TestOptions } from './flow/test-run.js';
 export { keepRun } from './perf.js';
 export { survey } from './survey.js';
 export { swipeLine, pinchPaths } from './gesture-paths.js';
