@@ -15,6 +15,7 @@ import {
   runKeys,
   saveBaseline,
   saveRun,
+  seededRandom,
   shift,
   toJUnit,
   toJson,
@@ -25,12 +26,7 @@ import {
 } from '../src/index.js';
 
 /** The same draw every time: a failure here is never flaky. */
-const rng = (seed: number) => () => {
-  seed = (seed + 0x6d2b79f5) | 0;
-  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-  return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
-};
+const rng = seededRandom;
 const gauss = (r: () => number) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r());
 
 /** Launch-like samples: a run-wide shift (its load and heat), then each launch's own noise, in whole ms. */

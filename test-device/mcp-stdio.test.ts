@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { refIn, toolCaller } from './helpers.js';
 import { IosSimulatorDevice } from 'appdyno';
 
 /**
@@ -19,19 +20,8 @@ for (const { platform, serial, form } of targets)
   describe.skipIf(!serial)(`appdyno-mcp over stdio (${platform})`, () => {
     let client: Client;
     const stderr: string[] = [];
-    const call = async (name: string, args: Record<string, unknown> = {}) => {
-      const r = (await client.callTool({ name, arguments: args })) as {
-        isError?: boolean;
-        content: { type: string; text?: string }[];
-      };
-      return {
-        error: r.isError === true,
-        text: r.content.map((c) => c.text ?? '').join('\n'),
-        content: r.content,
-      };
-    };
-    const ref = (text: string, label: string) =>
-      new RegExp(`(@[a-z0-9-]+) (?:\\w+ )?"${label}"`).exec(text)?.[1];
+    const call = toolCaller(() => client);
+    const ref = refIn;
 
     beforeAll(async () => {
       const transport = new StdioClientTransport({

@@ -1,18 +1,15 @@
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { DeviceProvider } from '@appdyno/core';
 import { DeviceError, type Tree } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY, type Policy } from '../src/policy.js';
-import { createServer } from '@appdyno/mcp';
-import { opsFor } from '../src/registry.js';
 import { iosScreen } from '../../driver-apple/src/platform-screen.js';
 import { pinchPaths, swipeLine } from '../src/gesture-paths.js';
 import { FakeDevice } from './fake-device.js';
+import { linkedClient } from './helpers.js';
 
 // a virtual device's numbers are noisy under host load: these answers must not depend on this Mac's
 vi.mock('node:os', async (original) => ({
@@ -39,11 +36,7 @@ async function connect(
     app: 'dev.app',
     measurements: MEASUREMENTS,
   });
-  const server = createServer(opsFor(ctx), (l) => logs.push(l));
-  const [a, b] = InMemoryTransport.createLinkedPair();
-  await server.connect(a);
-  const client = new Client({ name: 'test', version: '0' });
-  await client.connect(b);
+  const client = await linkedClient(ctx, (l) => logs.push(l));
   const call = async (name: string, args: Record<string, unknown> = {}) =>
     (await client.callTool({ name, arguments: args })) as Result;
   const textOf = async (name: string, args: Record<string, unknown> = {}) => {

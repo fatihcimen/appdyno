@@ -125,7 +125,7 @@ export async function readVideo(file: string): Promise<VideoInfo> {
   }
 }
 
-const box = (type: string, ...parts: Buffer[]) => {
+export const box = (type: string, ...parts: Buffer[]) => {
   const body = Buffer.concat(parts);
   const head = Buffer.alloc(8);
   head.writeUInt32BE(body.length + 8);
@@ -133,7 +133,7 @@ const box = (type: string, ...parts: Buffer[]) => {
   return Buffer.concat([head, body]);
 };
 
-const u32s = (values: number[]) => {
+export const u32s = (values: number[]) => {
   const b = Buffer.alloc(values.length * 4);
   values.forEach((v, i) => b.writeUInt32BE(v, i * 4));
   return b;

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { Devicectl, IosPhoneDevice, buildScreen, type Screen } from 'appdyno';
+import { Devicectl, IosPhoneDevice, buildScreen, sleep as pause, type Screen } from 'appdyno';
 import { DeviceError } from '@appdyno/protocol';
 
 /**
@@ -11,7 +11,6 @@ const SETTINGS = 'com.apple.Preferences';
 const APP = 'dev.appdyno.fixture';
 const FIXTURE_APP = process.env.APPDYNO_IPHONE_FIXTURE_APP;
 const SETTLE = { quietMs: 200, maxMs: 3_000 };
-const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 describe.skipIf(!udid)('ios runner on an iPhone', () => {
   let d: IosPhoneDevice;

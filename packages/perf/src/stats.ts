@@ -31,6 +31,14 @@ const midranks = (values: number[]) => {
   return ranks;
 };
 
+/** The same draw every time for the same seed. */
+export const seededRandom = (seed: number) => () => {
+  seed = (seed + 0x6d2b79f5) | 0;
+  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
+};
+
 /**
  * Two-sided p of a rank-sum (Mann-Whitney) test, by permuting the ranks: integer milliseconds tie often, and
  * permutation needs no correction for that. A fixed seed keeps a gate's answer the same on a re-run.
@@ -40,13 +48,7 @@ export function rankTest(a: number[], b: number[], draws = 20_000): number {
   const n = a.length;
   const expected = (n * (ranks.length + 1)) / 2;
   const observed = Math.abs(ranks.slice(0, n).reduce((s, r) => s + r, 0) - expected);
-  let seed = 0x9e3779b9;
-  const random = () => {
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
-  };
+  const random = seededRandom(0x9e3779b9);
   let extreme = 0;
   for (let d = 0; d < draws; d++) {
     let sum = 0;

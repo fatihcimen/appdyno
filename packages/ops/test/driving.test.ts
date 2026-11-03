@@ -12,12 +12,10 @@ import type {
   VirtualDevices,
 } from '@appdyno/core';
 import { DeviceError, type ActParams, type Tree } from '@appdyno/protocol';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createServer } from '../../mcp/src/server.js';
-import { DEFAULT_POLICY, opsFor, ServerContext, type Policy } from '../src/index.js';
+import { DEFAULT_POLICY, ServerContext, type Policy } from '../src/index.js';
 import { FakeDevice, SCREENS } from './fake-device.js';
+import { linkedClient } from './helpers.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each test knows its tool's answer
 type Result = { isError?: boolean; content: { text?: string }[]; structuredContent?: any };
@@ -40,10 +38,7 @@ async function connect(
     app: 'dev.app',
     ...o.defaults,
   });
-  const [a, b] = InMemoryTransport.createLinkedPair();
-  await createServer(opsFor(ctx), () => undefined).connect(a);
-  const client = new Client({ name: 'test', version: '0' });
-  await client.connect(b);
+  const client = await linkedClient(ctx);
   const call = async (name: string, args: Record<string, unknown> = {}) => {
     const r = (await client.callTool({ name, arguments: args })) as Result;
     return {

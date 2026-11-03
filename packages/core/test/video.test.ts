@@ -2,20 +2,9 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { joinVideos, readVideo } from '../src/video.js';
+import { box, joinVideos, readVideo, u32s } from '../src/video.js';
 
-const box = (type: string, ...parts: Buffer[]) => {
-  const body = Buffer.concat(parts);
-  const head = Buffer.alloc(8);
-  head.writeUInt32BE(body.length + 8);
-  head.write(type, 4, 'latin1');
-  return Buffer.concat([head, body]);
-};
-const u32 = (...v: number[]) => {
-  const b = Buffer.alloc(v.length * 4);
-  v.forEach((x, i) => b.writeUInt32BE(x, i * 4));
-  return b;
-};
+const u32 = (...v: number[]) => u32s(v);
 
 /** A small file as a recorder writes it: ftyp, mdat, moov with a video track and a metadata track. */
 function video(frames: Buffer[], opts: { stsd?: string; torn?: boolean; timescale?: number } = {}) {

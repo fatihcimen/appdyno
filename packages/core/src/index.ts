@@ -10,6 +10,6 @@ export * from './device.js';
 export * from './measure.js';
 export * from './screen/index.js';
 export * from './cdp.js';
-export * from './video.js';
+export { joinVideos, readVideo, type VideoInfo } from './video.js';
 export * from './png.js';
 export * from './html.js';

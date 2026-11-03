@@ -1,5 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { IosSimulatorDevice, Simctl, appleProvider, buildScreen, recordTrace } from 'appdyno';
+import {
+  IosSimulatorDevice,
+  Simctl,
+  appleProvider,
+  buildScreen,
+  sleep as pause,
+  recordTrace,
+} from 'appdyno';
 import { DeviceError } from '@appdyno/protocol';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -16,7 +23,6 @@ import { join } from 'node:path';
 const udid = process.env.APPDYNO_IOS_UDID;
 const APP = 'dev.appdyno.fixture';
 const PRODUCTS = join(import.meta.dirname, '../ios/.derived/Build/Products/Debug-iphonesimulator');
-const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * On macOS 27 (Darwin 27) `sample` leaves out a simulator app's running thread: no busy sample while `ps`

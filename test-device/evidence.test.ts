@@ -6,18 +6,17 @@ import { homedir, networkInterfaces, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { DEFAULT_POLICY, opsFor, ServerContext, ToolError, type Op } from '@appdyno/ops';
+import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
+import { opCaller } from './helpers.js';
 import { Adb, androidProvider, appleProvider, decodePng, Devicectl, PERFETTO } from 'appdyno';
 
 /**
- * Phase 6 on real devices, through the operations an agent calls and, where a recording must outlive its
+ * Evidence on real devices, through the operations an agent calls and, where a recording must outlive its
  * process, the built command line: one suite per platform, each on the device its variable names.
  */
 const APP = 'dev.appdyno.fixture';
 const CLI = fileURLToPath(new URL('../packages/appdyno/dist/main.js', import.meta.url));
 const LONG_MS = 300_000;
-
-type Answer = { error: boolean; text: string; data: Record<string, unknown> };
 
 const dir = mkdtempSync(join(tmpdir(), 'appdyno-evidence-'));
 const stateDir = join(dir, 'state');
@@ -81,21 +80,7 @@ function harness(serial: string, provider: ConstructorParameters<typeof ServerCo
     app: APP,
     share: true,
   });
-  const ops = opsFor(ctx);
-  const call = async (name: string, args: Record<string, unknown> = {}): Promise<Answer> => {
-    const op = ops[name] as Op;
-    try {
-      const r = await op.handler(op.input.parse(args) as Record<string, unknown>);
-      return {
-        error: false,
-        text: r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'),
-        data: r.data,
-      };
-    } catch (e) {
-      if (!(e instanceof ToolError)) throw e;
-      return { error: true, text: e.message, data: { code: e.code } };
-    }
-  };
+  const call = opCaller(opsFor(ctx));
   const ok = async (name: string, args: Record<string, unknown> = {}) => {
     const r = await call(name, args);
     expect(r.error ? r.text : '').toBe('');

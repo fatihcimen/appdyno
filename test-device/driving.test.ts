@@ -3,7 +3,8 @@ import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_POLICY, opsFor, ServerContext, ToolError, type Op } from '@appdyno/ops';
+import { DEFAULT_POLICY, opsFor, ServerContext, type Op } from '@appdyno/ops';
+import { opCaller, type Answer } from './helpers.js';
 import {
   Adb,
   AndroidDevice,
@@ -15,13 +16,11 @@ import {
 } from 'appdyno';
 
 /**
- * Phase 4 on real devices, through the operations an agent calls: one suite per platform, each on the
+ * Driving on real devices, through the operations an agent calls: one suite per platform, each on the
  * device its variable names (never a default).
  */
 const APP = 'dev.appdyno.fixture';
 const ROOT = join(import.meta.dirname, '..');
-
-type Answer = { error: boolean; text: string; data: Record<string, unknown> };
 
 function harness(serial: string, provider: ConstructorParameters<typeof ServerContext>[1][number]) {
   const ctx = new ServerContext(DEFAULT_POLICY, [provider], {
@@ -29,21 +28,7 @@ function harness(serial: string, provider: ConstructorParameters<typeof ServerCo
     app: APP,
     claims: true,
   });
-  const ops = opsFor(ctx);
-  const call = async (name: string, args: Record<string, unknown> = {}): Promise<Answer> => {
-    const op = ops[name] as Op;
-    try {
-      const r = await op.handler(op.input.parse(args) as Record<string, unknown>);
-      return {
-        error: false,
-        text: r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'),
-        data: r.data,
-      };
-    } catch (e) {
-      if (!(e instanceof ToolError)) throw e;
-      return { error: true, text: e.message, data: { code: e.code } };
-    }
-  };
+  const call = opCaller(opsFor(ctx));
   return { ctx, call };
 }
 

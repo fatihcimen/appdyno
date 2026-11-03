@@ -78,6 +78,20 @@ function store() {
   };
 }
 
+/** A baseline of three launches around 400 ms and a budget of 600. */
+async function baselineAndBudget(project: string) {
+  let baseline;
+  for (const [i, ms] of [400, 402, 398].entries()) {
+    const key = { app: 'dev.app', scenario: 'launch-cold', deviceClass: PHONE_CLASS };
+    baseline = addToBaseline(key, baseline, records(ago(100 - i), [launch(ms)]));
+  }
+  await saveBaseline(project, baseline!);
+  writeFileSync(
+    join(project, 'budgets.json'),
+    JSON.stringify([{ kind: 'launch.ttid_ms', max: 600 }]),
+  );
+}
+
 const textOf = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
 describe('the page', () => {
@@ -212,16 +226,7 @@ describe('the page', () => {
 
   it('calls a regression and a broken budget, and names them', async () => {
     const s = store();
-    let baseline;
-    for (const [i, ms] of [400, 402, 398].entries()) {
-      const key = { app: 'dev.app', scenario: 'launch-cold', deviceClass: PHONE_CLASS };
-      baseline = addToBaseline(key, baseline, records(ago(100 - i), [launch(ms)]));
-    }
-    await saveBaseline(s.project, baseline!);
-    writeFileSync(
-      join(s.project, 'budgets.json'),
-      JSON.stringify([{ kind: 'launch.ttid_ms', max: 600 }]),
-    );
+    await baselineAndBudget(s.project);
     await s.run(1, [launch(900)]);
     const text = textOf(await s.page());
     expect(text).toContain('1 regression');
@@ -242,16 +247,7 @@ describe('the page', () => {
 
   it('draws the band and the budget of a chart with one scale, and a table for it', async () => {
     const s = store();
-    let baseline;
-    for (const [i, ms] of [400, 402, 398].entries()) {
-      const key = { app: 'dev.app', scenario: 'launch-cold', deviceClass: PHONE_CLASS };
-      baseline = addToBaseline(key, baseline, records(ago(100 - i), [launch(ms)]));
-    }
-    await saveBaseline(s.project, baseline!);
-    writeFileSync(
-      join(s.project, 'budgets.json'),
-      JSON.stringify([{ kind: 'launch.ttid_ms', max: 600 }]),
-    );
+    await baselineAndBudget(s.project);
     await s.run(2, [launch(400)]);
     await s.run(1, [launch(410)]);
     const html = await s.page();

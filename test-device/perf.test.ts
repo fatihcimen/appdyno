@@ -4,7 +4,13 @@ import type { AddressInfo } from 'node:net';
 import { networkInterfaces, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { AndroidDevice, androidProvider, traceProcessor, type Screen } from 'appdyno';
+import {
+  AndroidDevice,
+  androidProvider,
+  sleep as pause,
+  traceProcessor,
+  type Screen,
+} from 'appdyno';
 
 /**
  * Measurement accuracy against fixture screens of known cost (APPDYNO_ANDROID_SERIAL; run on a quiet
@@ -30,7 +36,6 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     return d.read(APP);
   };
   const byId = (s: Screen, id: string) => s.list.find((e) => e.id === id)!;
-  const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   beforeAll(async () => {
     d = new AndroidDevice(serial!);

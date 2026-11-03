@@ -1,16 +1,13 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { reportProgress, type Device, type DeviceProvider } from '@appdyno/core';
-import { createServer } from '@appdyno/mcp';
 import { DeviceError } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
 import { busyReasons } from '../src/answers.js';
 import { ServerContext } from '../src/context.js';
 import { boundLines } from '../src/diagnose.js';
 import { DEFAULT_POLICY, redactLog, type Policy } from '../src/policy.js';
-import { opsFor } from '../src/registry.js';
 import { ActionOut, CrashesOut, LogsOut } from '../src/schemas.js';
 import { FakeDevice } from './fake-device.js';
+import { linkedClient } from './helpers.js';
 
 type Result = {
   isError?: boolean;
@@ -25,10 +22,7 @@ async function connect(device: Device = new FakeDevice(), policy: Partial<Policy
     open: () => device,
   };
   const ctx = new ServerContext({ ...DEFAULT_POLICY, ...policy }, [provider], { app: 'dev.app' });
-  const [a, b] = InMemoryTransport.createLinkedPair();
-  await createServer(opsFor(ctx), () => undefined).connect(a);
-  const client = new Client({ name: 'test', version: '0' });
-  await client.connect(b);
+  const client = await linkedClient(ctx);
   const call = async (name: string, args: Record<string, unknown> = {}) => {
     const r = (await client.callTool({ name, arguments: args })) as Result;
     return { ...r, text: r.content.map((c) => c.text ?? '').join('\n') };

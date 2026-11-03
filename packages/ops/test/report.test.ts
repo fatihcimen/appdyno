@@ -6,9 +6,9 @@ import { decodePng, encodePng } from '@appdyno/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
-import { opsFor } from '../src/registry.js';
-import { ToolError, type Op } from '../src/tool.js';
+import { ToolError } from '../src/tool.js';
 import { FakeDevice } from './fake-device.js';
+import { callerOf } from './helpers.js';
 
 const SECRET = 's3cr3t-pass';
 
@@ -22,15 +22,7 @@ function connect(device = new FakeDevice()) {
     app: 'dev.app',
     measurements: mkdtempSync(join(tmpdir(), 'appdyno-measure-')),
   });
-  const ops = opsFor(ctx);
-  const call = async (name: string, args: Record<string, unknown> = {}) => {
-    const op = ops[name] as Op;
-    const r = await op.handler(op.input.parse(args) as Record<string, unknown>);
-    return {
-      text: r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'),
-      data: r.data,
-    };
-  };
+  const call = callerOf(ctx);
   return { ctx, call, device };
 }
 

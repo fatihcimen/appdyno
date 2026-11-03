@@ -10,6 +10,7 @@ import {
   Devicectl,
   holdersIn,
   inCall,
+  sleep as pause,
   Simctl,
 } from 'appdyno';
 import { DEFAULT_POLICY, opsFor, ServerContext, type ToolResult } from '@appdyno/ops';
@@ -20,7 +21,6 @@ const APP = 'dev.appdyno.fixture';
 const serial = process.env.APPDYNO_ANDROID_SERIAL;
 const udid = process.env.APPDYNO_IOS_UDID;
 const textOf = (r: ToolResult) => r.blocks.map((b) => (b.type === 'text' ? b.text : '')).join('\n');
-const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 type Call = (name: string, args?: Record<string, unknown>) => Promise<ToolResult>;
 /** An operation as its tool calls it: through its input schema. */
 const caller = (ctx: ServerContext): Call => {

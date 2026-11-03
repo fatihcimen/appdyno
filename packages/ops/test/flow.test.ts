@@ -8,13 +8,12 @@ import {
   DEFAULT_POLICY,
   flowFiles,
   flowsFor,
-  opsFor,
   paramsOf,
   ServerContext,
   ToolError,
-  type Op,
 } from '../src/index.js';
 import { FakeDevice, SCREENS } from './fake-device.js';
+import { callerOf } from './helpers.js';
 
 const SECRET = 's3cr3t-pass';
 
@@ -28,17 +27,6 @@ describe('flows', () => {
       open: () => device,
     };
     return new ServerContext({ ...DEFAULT_POLICY, secrets }, [provider], { app: 'dev.app' });
-  };
-  const caller = (ctx: ServerContext) => {
-    const ops = opsFor(ctx);
-    return async (name: string, args: Record<string, unknown> = {}) => {
-      const op = ops[name] as Op;
-      const r = await op.handler(op.input.parse(args) as Record<string, unknown>);
-      return {
-        text: r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'),
-        data: r.data,
-      };
-    };
   };
   const refusal = async (p: Promise<unknown>) => {
     try {
@@ -60,7 +48,7 @@ describe('flows', () => {
   afterEach(() => vi.unstubAllEnvs());
 
   const recorded = async (
-    call: ReturnType<typeof caller>,
+    call: ReturnType<typeof callerOf>,
     actions: () => Promise<unknown>,
     name = 'a.flow',
   ) => {
@@ -74,7 +62,7 @@ describe('flows', () => {
 
   describe('recording', () => {
     it('records a tap on what an answer folded into its row, by its own text', async () => {
-      const call = caller(context());
+      const call = callerOf(context());
       device.screen = 'settings';
       const { text } = await recorded(call, async () => {
         const { data } = await call('find', { text: 'Wi-Fi' });
@@ -85,7 +73,7 @@ describe('flows', () => {
     });
 
     it('logs each action with the best selector, whatever named its target', async () => {
-      const call = caller(context());
+      const call = callerOf(context());
       const { text } = await recorded(call, async () => {
         await call('launch_app');
         const home = await call('screen');
@@ -110,20 +98,20 @@ swipe up
     });
 
     it('turns a tap at a point into the selector of what is there', async () => {
-      const call = caller(context());
+      const call = callerOf(context());
       const { text } = await recorded(call, () => call('tap', { x: 500, y: 350 }));
       expect(text).toContain('tap role=button text="Form"\n');
     });
 
     it('flags coordinates when nothing is there, with the screen they hold for', async () => {
-      const call = caller(context());
+      const call = callerOf(context());
       const { text } = await recorded(call, () => call('tap', { x: 500, y: 2000 }));
       expect(text).toContain('tap x=500 y=2000 screen=1080x2400 !coordinates\n');
     });
 
     it('records an ambiguous target with its index, flagged, and says so', async () => {
       device.screen = 'login';
-      const call = caller(context());
+      const call = callerOf(context());
       await call('flow', { action: 'start' });
       const s = await call('screen');
       const second = [...s.text.matchAll(/(@[a-z0-9-]+) button "Add"/g)][1]![1];
@@ -135,7 +123,7 @@ swipe up
     });
 
     it('keeps out of the file what is not an action, or did not happen', async () => {
-      const call = caller(context());
+      const call = callerOf(context());
       const { text } = await recorded(call, async () => {
         await call('screen');
         await call('find', { text: 'Form' });
@@ -150,7 +138,7 @@ swipe up
     });
 
     it('logs every step of a `steps` call, each named on its own screen', async () => {
-      const call = caller(context());
+      const call = callerOf(context());
       const { text } = await recorded(call, () =>
         call('steps', {
           steps: [
@@ -173,7 +161,7 @@ assert id=result check=text equals="Gönderildi"
     });
 
     it('keeps the steps of a `steps` call that ran before one failed', async () => {
-      const call = caller(context());
+      const call = callerOf(context());
       await call('flow', { action: 'start' });
       await refusal(
         call('steps', {
@@ -189,24 +177,24 @@ assert id=result check=text equals="Gönderildi"
     });
 
     it('marks an action with no step, so that a replay cannot pass without it', async () => {
-      const call = caller(context());
+      const call = callerOf(context());
       const { text } = await recorded(call, () => call('gesture', { kind: 'pinch', scale: 2 }));
       expect(text).toContain('unrecorded "gesture pinch"');
     });
 
     it('holds across the processes of a command line, on the device it began on', async () => {
-      await caller(context())('flow', { action: 'start' });
-      await caller(context())('tap', { selector: { text: 'Form' } });
+      await callerOf(context())('flow', { action: 'start' });
+      await callerOf(context())('tap', { selector: { text: 'Form' } });
       device = new FakeDevice('emulator-9999');
       device.screen = 'form';
-      await caller(context())('assert', { text: 'Bilgiler' });
+      await callerOf(context())('assert', { text: 'Bilgiler' });
       device = new FakeDevice();
-      const stop = await caller(context())('flow', { action: 'stop' });
+      const stop = await callerOf(context())('flow', { action: 'stop' });
       expect(stop.data.steps).toBe(1);
     });
 
     it('refuses a second start, a replay during a recording, and an empty or unnamed save', async () => {
-      const call = caller(context());
+      const call = callerOf(context());
       const stopped = await refusal(call('flow', { action: 'stop' }));
       expect(stopped.message).toContain('no recording');
       await call('flow', { action: 'start' });
@@ -226,7 +214,7 @@ assert id=result check=text equals="Gönderildi"
     });
 
     it('does not replace a saved flow unless told to', async () => {
-      const call = caller(context());
+      const call = callerOf(context());
       const { file, text } = await recorded(call, () => call('launch_app'));
       expect((await refusal(call('flow', { action: 'save', file }))).message).toContain('exists');
       expect(readFileSync(file, 'utf8')).toBe(text);
@@ -237,7 +225,7 @@ assert id=result check=text equals="Gönderildi"
   describe('secrets', () => {
     it('a password field, and any later echo, become a name; no value reaches the disk', async () => {
       device.screen = 'login';
-      const call = caller(context());
+      const call = callerOf(context());
       const { text } = await recorded(call, async () => {
         await call('type_text', { text: SECRET, selector: { id: 'pass' } });
         await call('assert', { id: 'greeting', check: 'text', equals: `Merhaba ${SECRET}` });
@@ -262,7 +250,7 @@ tap id=greeting
       const was = node.f;
       node.f = was! | 8;
       try {
-        const call = caller(context());
+        const call = callerOf(context());
         const { text } = await recorded(call, () => call('type_text', { text: 'p4ss' }));
         expect(text).not.toContain('p4ss');
         expect(text).toContain('type "${PASS}"');
@@ -272,7 +260,7 @@ tap id=greeting
     });
 
     it('text matching APPDYNO_SECRETS becomes a name in any field', async () => {
-      const call = caller(context(['kod-9911']));
+      const call = callerOf(context(['kod-9911']));
       const { text } = await recorded(call, async () => {
         await call('tap', { selector: { text: 'Form' } });
         await call('type_text', { text: 'kod-9911', selector: { id: 'name' } });
@@ -298,7 +286,7 @@ assert id=result check=text equals="Gönderildi"
 `;
 
     it('runs a recording back on the device through the same operations, with its timings', async () => {
-      const call = caller(context());
+      const call = callerOf(context());
       const { file } = await recorded(call, async () => {
         await call('launch_app');
         await call('tap', { selector: { text: 'Form' } });
@@ -330,7 +318,7 @@ assert id=result check=text equals="Gönderildi"
         return tree();
       };
       try {
-        await caller(context())('flow', {
+        await callerOf(context())('flow', {
           action: 'run',
           file: flowFile('app dev.app\ntap text="Gönder"\n'),
         });
@@ -342,7 +330,7 @@ assert id=result check=text equals="Gönderildi"
     });
 
     it('settles every action', async () => {
-      await caller(context())('flow', { action: 'run', file: flowFile(FORM) });
+      await callerOf(context())('flow', { action: 'run', file: flowFile(FORM) });
       const acts = device.calls.filter((c) => c.name === 'act');
       expect(acts.length).toBeGreaterThan(2);
       for (const a of acts) expect((a.args[1] as { settle?: unknown }).settle).toBeTruthy();
@@ -352,7 +340,7 @@ assert id=result check=text equals="Gönderildi"
       const ctx = context();
       const file = flowFile(`app dev.app\n\n# the form\ntap text="Formm"\ntap text="Form"\n`);
       vi.useFakeTimers();
-      const p = refusal(caller(ctx)('flow', { action: 'run', file }));
+      const p = refusal(callerOf(ctx)('flow', { action: 'run', file }));
       await vi.advanceTimersByTimeAsync(30_000);
       const e = await p;
       vi.useRealTimers();
@@ -370,7 +358,7 @@ assert id=result check=text equals="Gönderildi"
     it('refuses several matches rather than take the first', async () => {
       device.screen = 'login';
       const e = await refusal(
-        caller(context())('flow', { action: 'run', file: flowFile('tap text="Add"\n') }),
+        callerOf(context())('flow', { action: 'run', file: flowFile('tap text="Add"\n') }),
       );
       expect(e.code).toBe('AMBIGUOUS');
       expect(device.calls.filter((c) => c.name === 'act')).toEqual([]);
@@ -378,7 +366,7 @@ assert id=result check=text equals="Gönderildi"
 
     it('resumes at --from', async () => {
       device.screen = 'form';
-      const r = await caller(context())('flow', {
+      const r = await callerOf(context())('flow', {
         action: 'run',
         file: flowFile(FORM),
         from: 3,
@@ -387,7 +375,7 @@ assert id=result check=text equals="Gönderildi"
       expect(r.text).toContain('passed: 3 steps');
       expect(device.calls.some((c) => c.name === 'launch')).toBe(false);
       const out = await refusal(
-        caller(context())('flow', { action: 'run', file: flowFile(FORM), from: 99 }),
+        callerOf(context())('flow', { action: 'run', file: flowFile(FORM), from: 99 }),
       );
       expect(out.message).toContain('steps 1 to 5');
     });
@@ -395,12 +383,12 @@ assert id=result check=text equals="Gönderildi"
     it('takes parameters from the call, then the environment; a missing one runs nothing', async () => {
       device.screen = 'form';
       const file = flowFile(`app dev.app\nparam WHO\ntype "\${WHO}" id=name\n`);
-      const missing = await refusal(caller(context())('flow', { action: 'run', file }));
+      const missing = await refusal(callerOf(context())('flow', { action: 'run', file }));
       expect(missing.message).toContain('no value for WHO');
       expect(device.calls.filter((c) => c.name === 'typeText')).toEqual([]);
       vi.stubEnv('WHO', 'env-person');
-      await caller(context())('flow', { action: 'run', file });
-      await caller(context())('flow', { action: 'run', file, params: ['WHO=param-person'] });
+      await callerOf(context())('flow', { action: 'run', file });
+      await callerOf(context())('flow', { action: 'run', file, params: ['WHO=param-person'] });
       expect(device.typed).toEqual(['env-person', 'param-person']);
     });
 
@@ -411,7 +399,7 @@ secret CODE
 assert id=greeting check=text equals="\${CODE}" timeoutMs=300
 `);
       const e = await refusal(
-        caller(context())('flow', { action: 'run', file, params: [`CODE=${SECRET}`] }),
+        callerOf(context())('flow', { action: 'run', file, params: [`CODE=${SECRET}`] }),
       );
       expect(e.code).toBe('CHECK_FAILED');
       expect(e.message).not.toContain(SECRET);
@@ -420,14 +408,14 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
 
     it('checks every line before the first step acts', async () => {
       const file = flowFile('launch\npress_key warp\n');
-      const e = await refusal(caller(context())('flow', { action: 'run', file }));
+      const e = await refusal(callerOf(context())('flow', { action: 'run', file }));
       expect(e.message).toContain(`${file}:2`);
       expect(device.calls.some((c) => c.name === 'launch')).toBe(false);
     });
 
     it('stops at an action that was not recorded, naming it', async () => {
       const e = await refusal(
-        caller(context())('flow', {
+        callerOf(context())('flow', {
           action: 'run',
           file: flowFile('launch\nunrecorded "gesture pinch"\nlaunch\n'),
         }),
@@ -439,10 +427,10 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
 
     it('refuses coordinates on a screen of another size, and takes them on their own', async () => {
       const file = flowFile('tap x=500 y=350 screen=720x1280 !coordinates\n');
-      const e = await refusal(caller(context())('flow', { action: 'run', file }));
+      const e = await refusal(callerOf(context())('flow', { action: 'run', file }));
       expect(e.message).toContain('720x1280');
       expect(device.calls.filter((c) => c.name === 'act')).toEqual([]);
-      await caller(context())('flow', {
+      await callerOf(context())('flow', {
         action: 'run',
         file: flowFile('tap x=500 y=350 screen=1080x2400 !coordinates\n', 's.flow'),
       });
@@ -458,7 +446,7 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
         return was;
       };
       const e = await refusal(
-        caller(context())('flow', { action: 'run', file: flowFile('tap text="Form"\n') }),
+        callerOf(context())('flow', { action: 'run', file: flowFile('tap text="Form"\n') }),
       );
       expect(e.message).toContain('the app died: NullPointerException');
     });
@@ -485,7 +473,7 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
   describe('export', () => {
     it('gives Maestro YAML with no device, and refuses a step it has no form for', async () => {
       const ctx = new ServerContext(DEFAULT_POLICY, []);
-      const call = caller(ctx);
+      const call = callerOf(ctx);
       const ok = join(dir, 'ok.flow');
       writeFileSync(ok, 'app dev.app\nlaunch\ntap id=x\n');
       expect((await call('flow', { action: 'export', file: ok })).text).toContain('tapOn:');
@@ -603,7 +591,7 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
 
   it('writes a flow its own parser reads back', async () => {
     device.screen = 'login';
-    const call = caller(context());
+    const call = callerOf(context());
     const { text } = await recorded(call, async () => {
       await call('type_text', {
         text: SECRET,
