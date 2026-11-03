@@ -408,88 +408,103 @@ describe.skipIf(!simulator)('network on a simulator', () => {
   }, 180_000);
 });
 
-describe.skipIf(!android)('web views on Android', () => {
-  let h: ReturnType<typeof harness>;
-  beforeAll(async () => {
-    h = harness(android!, androidProvider(new Adb()));
-    await h.ok('launch_app');
-    await h.ok('open_link', { url: 'appdyno-fixture://open/web' });
-    await h.ok('wait_for', { text: 'Web content' });
-  }, 240_000);
-  afterAll(() => h?.ctx.close());
+for (const { platform, serial, provider, pageId, other } of [
+  { ...targets[0]!, pageId: 'webview_devtools_remote_\\d+/\\S+', other: 'com.android.settings' },
+  { ...targets[1]!, pageId: 'PID:\\d+/\\d+', other: 'com.apple.Preferences' },
+])
+  describe.skipIf(!serial)(`web views on ${platform}`, () => {
+    let h: ReturnType<typeof harness>;
+    beforeAll(async () => {
+      h = harness(serial!, provider());
+      await h.ok('terminate_app');
+      await h.ok('launch_app');
+      await h.ok('open_link', { url: 'appdyno-fixture://open/web' });
+      await h.ok('wait_for', { text: 'Web content' });
+    }, 240_000);
+    afterAll(() => h?.ctx.close());
 
-  it('marks what a web view shows in the screen', async () => {
-    const s = await h.ok('screen');
-    expect(s.text).toMatch(/button "Pay" \d+,\d+ clickable web/);
-    expect(s.text).toMatch(/text "Web content" \d+,\d+ web/);
-  });
-
-  it('lists the page of a debuggable app, and none of an app that is not', async () => {
-    const r = await h.ok('webview', { action: 'pages' });
-    expect(r.text).toMatch(/webview_devtools_remote_\d+\/\S+ "Fixture web" .* in dev\.appdyno\.fixture \(showing\)/);
-    const none = await h.call('webview', { action: 'elements', app: 'com.android.settings' });
-    expect(none.error).toBe(true);
-    expect(none.text).toMatch(/no web page to inspect in com\.android\.settings/);
-  });
-
-  it('reads the DOM as elements where the accessibility tree sees them', async () => {
-    const r = await h.ok('webview', { action: 'elements' });
-    expect(r.text).toMatch(/^"Fixture web" /);
-    expect(r.text).toMatch(/button "Pay" \d+,\d+ #pay/);
-    expect(r.text).toMatch(/input "Card" \d+,\d+ #card/);
-    const pay = (r.data.elements as { text: string; x: number; y: number }[]).find(
-      (e) => e.text === 'Pay',
-    )!;
-    const found = await h.ok('find', { text: 'Pay' });
-    const inTree = (found.data.matches as { x: number; y: number }[])[0]!;
-    expect(Math.abs(pay.x - inTree.x)).toBeLessThan(40);
-    expect(Math.abs(pay.y - inTree.y)).toBeLessThan(40);
-  });
-
-  it('clicks by selector and evaluates a script', async () => {
-    const paid = "document.getElementById('paid').textContent";
-    expect((await h.ok('webview', { action: 'eval', js: paid })).text).toBe('""');
-    const click = await h.ok('webview', { action: 'click', selector: '#pay' });
-    expect(click.text).toBe('clicked button "Pay"');
-    expect((await h.ok('webview', { action: 'eval', js: paid })).text).toBe('"Paid"');
-    expect((await h.ok('wait_for', { text: 'Paid' })).data.met).toBe(true);
-
-    const none = await h.call('webview', { action: 'click', selector: '#nothing' });
-    expect(none.error).toBe(true);
-    expect(none.text).toMatch(/nothing on the page matches/);
-    const thrown = await h.call('webview', { action: 'eval', js: 'no.such.thing' });
-    expect(thrown.error).toBe(true);
-    expect(thrown.text).toMatch(/the script threw: ReferenceError/);
-  });
-
-  it('a page coordinate takes a real touch', async () => {
-    await h.ok('webview', {
-      action: 'eval',
-      js: "document.getElementById('paid').textContent = ''",
+    it('marks what a web view shows in the screen', async () => {
+      const s = await h.ok('screen');
+      expect(s.text).toMatch(/button "Pay" \d+,\d+ clickable( focused)? web/);
+      expect(s.text).toMatch(/"Web content" \d+,\d+ .*web/);
     });
-    const r = await h.ok('webview', { action: 'elements' });
-    const pay = (r.data.elements as { text: string; x: number; y: number }[]).find(
-      (e) => e.text === 'Pay',
-    )!;
-    await h.ok('tap', { x: pay.x, y: pay.y });
-    expect((await h.ok('wait_for', { text: 'Paid' })).data.met).toBe(true);
-  });
 
-  it('adds to the screen what the tree does not hold', async () => {
-    await h.ok('webview', {
-      action: 'eval',
-      js: "const b = document.createElement('button'); b.id = 'silent'; b.setAttribute('aria-hidden', 'true'); b.textContent = 'Hidden from readers'; document.body.appendChild(b); true",
-    });
-    const s = await h.ok('screen');
-    expect(s.text).toMatch(/not in the accessibility tree:\nweb button "Hidden from readers" \d+,\d+ #silent/);
-  });
+    it('lists the page of a debuggable app, and none of an app that is not', async () => {
+      const r = await h.ok('webview', { action: 'pages' });
+      expect(r.text).toMatch(
+        new RegExp(`${pageId} "Fixture web" .* in dev\\.appdyno\\.fixture \\(showing\\)`),
+      );
+      const none = await h.call('webview', { action: 'elements', app: other });
+      expect(none.error).toBe(true);
+      expect(none.text).toMatch(/no web page to inspect in /);
+    }, 60_000);
 
-  it('works from the command line', async () => {
-    const r = await cli(android!, 'webview', 'pages', '--app', APP);
-    expect(r.err).toBe('');
-    expect(r.out).toContain('"Fixture web"');
-  }, 60_000);
-});
+    it('reads the DOM as elements where the accessibility tree sees them', async () => {
+      const r = await h.ok('webview', { action: 'elements' });
+      expect(r.text).toMatch(/^"Fixture web" /);
+      expect(r.text).toMatch(/button "Pay" \d+,\d+ #pay/);
+      expect(r.text).toMatch(/input "Card" \d+,\d+ #card/);
+      const pay = (r.data.elements as { text: string; x: number; y: number }[]).find(
+        (e) => e.text === 'Pay',
+      )!;
+      const found = await h.ok('find', { text: 'Pay' });
+      const inTree = (found.data.matches as { x: number; y: number }[])[0]!;
+      expect(Math.abs(pay.x - inTree.x)).toBeLessThan(40);
+      expect(Math.abs(pay.y - inTree.y)).toBeLessThan(40);
+    }, 60_000);
+
+    it('clicks by selector and evaluates a script', async () => {
+      const paid = "document.getElementById('paid').textContent";
+      expect((await h.ok('webview', { action: 'eval', js: paid })).text).toBe('""');
+      const click = await h.ok('webview', { action: 'click', selector: '#pay' });
+      expect(click.text).toBe('clicked button "Pay"');
+      expect((await h.ok('webview', { action: 'eval', js: paid })).text).toBe('"Paid"');
+      expect((await h.ok('wait_for', { text: 'Paid' })).data.met).toBe(true);
+
+      const none = await h.call('webview', { action: 'click', selector: '#nothing' });
+      expect(none.error).toBe(true);
+      expect(none.text).toMatch(/nothing on the page matches/);
+      const thrown = await h.call('webview', { action: 'eval', js: 'no.such.thing' });
+      expect(thrown.error).toBe(true);
+      expect(thrown.text).toMatch(/the script threw: ReferenceError/);
+    }, 60_000);
+
+    it('brings back a long answer whole', async () => {
+      const r = await h.ok('webview', { action: 'eval', js: "'x'.repeat(100000)" });
+      // an answer stops at 20,000 characters; the socket's framing is what this reads across
+      expect(r.text).toHaveLength(20_000);
+    }, 60_000);
+
+    it('a page coordinate takes a real touch', async () => {
+      await h.ok('webview', {
+        action: 'eval',
+        js: "document.getElementById('paid').textContent = ''",
+      });
+      const r = await h.ok('webview', { action: 'elements' });
+      const pay = (r.data.elements as { text: string; x: number; y: number }[]).find(
+        (e) => e.text === 'Pay',
+      )!;
+      await h.ok('tap', { x: pay.x, y: pay.y });
+      expect((await h.ok('wait_for', { text: 'Paid' })).data.met).toBe(true);
+    }, 60_000);
+
+    it('adds to the screen what the tree does not hold', async () => {
+      await h.ok('webview', {
+        action: 'eval',
+        js: "const b = document.createElement('button'); b.id = 'silent'; b.setAttribute('aria-hidden', 'true'); b.textContent = 'Hidden from readers'; document.body.appendChild(b); true",
+      });
+      const s = await h.ok('screen');
+      expect(s.text).toMatch(
+        /not in the accessibility tree:\nweb button "Hidden from readers" \d+,\d+ #silent/,
+      );
+    }, 60_000);
+
+    it('works from the command line', async () => {
+      const r = await cli(serial!, 'webview', 'pages', '--app', APP);
+      expect(r.err).toBe('');
+      expect(r.out).toContain('"Fixture web"');
+    }, 60_000);
+  });
 
 describe.skipIf(!android)('recording on Android', () => {
   let h: ReturnType<typeof harness>;
