@@ -88,8 +88,11 @@ export async function webLines(
   const dom = (await web.evaluate(page, READ_DOM).catch(() => undefined)) as Dom | undefined;
   if (!dom) return undefined;
   const known = screen.list.map((e) => fold(e.label));
+  const ids = new Set(screen.list.map((e) => e.id && `#${e.id}`));
   const more = placed(dom, view)
-    .filter((e) => !e.text || !known.some((k) => k.includes(fold(e.text))))
+    .filter(
+      (e) => !ids.has(e.selector) && (!e.text || !known.some((k) => k.includes(fold(e.text)))),
+    )
     .map(
       (e) =>
         `web ${e.role ?? e.tag} ${quoted(clean(e.text))} ${e.x},${e.y}${e.selector ? ` ${e.selector}` : ''}`,

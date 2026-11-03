@@ -14,6 +14,11 @@ Found when the parallel branches ran together:
 - iPhone: a signing profile that cannot be read says so, not an internal error; `record` says this phone has no recording capability and what to do.
 - A locked simulator is opened by its lock state: a read under the lock held the runner up for 15 s.
 - With an app selected and another in front, the answer shows what is in front, not 0 elements.
+- The Xiaomi's lost first touch, found: its screen goes off by itself after 60 s, and once woken the app reads as on the screen before it can take a touch, for up to 3 s (8 of 24 touches lost). The host now waits for the focus to hold (0 of 15), and the agent refuses a touch on a dark screen so that the host wakes it first. A long measure wakes the phone too: a dark one starts no app, and `am start` reads `UNKNOWN (0)`.
+- A simulator's clipboard is set from the Mac: the runner's own call at times held it up for 15 s.
+- Energy reads Android 16's row, whose parts follow on the next line.
+- A packet trace with nothing in it says so, not "0 of 0": on a Xiaomi with Android 16 the source records nothing for any app.
+- A web page's element that the tree has by id is not listed again as missing from it.
 - `app install` wakes the phone, and names HyperOS's on-screen question when no one answered it.
 - A pulled recording waits in the state folder, not beside the video.
 - Answers: a control and its own text with the same words are one target; a launch or a found scroll carries no "no change seen"; refusals have no filler and no wire method's name; keys typed with no keyboard on iOS are refused as on Android.
