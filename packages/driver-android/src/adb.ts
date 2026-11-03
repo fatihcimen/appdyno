@@ -41,6 +41,17 @@ export const assertPkg = (p: string) => {
 /** What a command said, for a refusal. */
 export const shortFirstLine = (s: string) => s.trim().split('\n')[0]?.slice(0, 200) ?? '';
 
+/**
+ * What `am start -W` said went wrong. `Status: timeout` is no failure: the activity was started and had not
+ * drawn when the wait ended (seen at load 500), and a read will tell what is on the screen.
+ */
+export const amStartError = (out: string) =>
+  out
+    .split('\n')
+    .find((line) => /^Error|Exception/.test(line))
+    ?.trim()
+    .slice(0, 200);
+
 export const shq = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
 class Reader {

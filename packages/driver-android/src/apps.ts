@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { type AppManager, TIMEOUTS, type AppEntry, type LaunchOptions } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { type Adb, assertPkg, shq } from './adb.js';
+import { type Adb, amStartError, assertPkg, shq } from './adb.js';
 import { apkNames } from './apk-names.js';
 import {
   answerInstallPrompts,
@@ -127,6 +127,11 @@ export class AndroidApps implements AppManager {
         throw new DeviceError('INVALID_ARGUMENT', `an Android launch argument is key=value: ${a}`);
       return `--es ${shq(a.slice(0, eq))} ${shq(a.slice(eq + 1))}`;
     });
+    await this.start(app, ['-S', ...extras]);
+  }
+
+  /** Starts the app's launcher activity and waits for it (`am start -W`); returns its output. */
+  async start(app: string, args: string[] = []): Promise<string> {
     const activity = (
       await this.sh(
         `cmd package resolve-activity --brief -c android.intent.category.LAUNCHER ${assertPkg(app)}`,
@@ -140,8 +145,9 @@ export class AndroidApps implements AppManager {
         'APP_NOT_RUNNING',
         `${app} is not installed or has no launcher activity`,
       );
-    const out = await this.sh(`am start -W -S -n ${shq(activity)} ${extras.join(' ')}`);
-    if (/^Error|Status: (?!ok)/m.test(out))
-      throw new DeviceError('APP_NOT_RUNNING', `${app} did not start: ${out.split('\n')[0]}`);
+    const out = await this.sh(`am start -W -n ${shq(activity)} ${args.join(' ')}`);
+    const error = amStartError(out);
+    if (error) throw new DeviceError('APP_NOT_RUNNING', `${app} did not start: ${error}`);
+    return out;
   }
 }
