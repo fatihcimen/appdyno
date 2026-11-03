@@ -19,6 +19,8 @@ export const ActionOut = z.object({
   elements: z.number().int().optional(),
   foreground: z.string().optional(),
   settled: z.boolean().optional(),
+  /** From the action to the settled screen, as the device timed it. */
+  settleMs: z.number().optional(),
   /** Whether the screen differs from before the action, layout or text; absent when unknown. */
   changed: z.boolean().optional(),
   /** What is known to keep the screen busy, when it did not settle. */
@@ -104,6 +106,26 @@ export const ScreenshotOut = z.object({
 });
 
 export const DoneOut = z.object({ done: z.string() });
+
+export const FlowOut = z.object({
+  done: z.string(),
+  steps: z.number().int().optional(),
+  flagged: z.array(z.string()).optional(),
+  timings: z
+    .array(
+      z.object({
+        n: z.number().int(),
+        line: z.number().int(),
+        step: z.string(),
+        ms: z.number(),
+        settledMs: z.number().optional(),
+        settled: z.boolean().optional(),
+        changed: z.boolean().optional(),
+        warnings: z.array(z.string()).optional(),
+      }),
+    )
+    .optional(),
+});
 
 export const AppOut = z.object({
   done: z.string(),

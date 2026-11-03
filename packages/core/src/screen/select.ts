@@ -32,10 +32,11 @@ export function nearest(list: ScreenElement[], want: string | undefined, n = 5):
   const named = list.filter((e) => e.label || e.id);
   if (!want) return named.slice(0, n);
   const a = pairs(want);
-  const score = (e: ScreenElement) => {
-    const b = pairs(e.label || e.id || '');
+  const like = (name: string) => {
+    const b = pairs(name);
     return ([...a].filter((p) => b.has(p)).length * 2) / (a.size + b.size || 1);
   };
+  const score = (e: ScreenElement) => Math.max(like(e.label), like(e.id ?? ''));
   return named
     .map((e) => ({ e, s: score(e) }))
     .sort((x, y) => y.s - x.s)

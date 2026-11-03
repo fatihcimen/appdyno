@@ -116,6 +116,32 @@ function parse(op: Op, argv: string[]) {
   return { args: checked.data as Record<string, unknown>, out };
 }
 
+const FLOW_VALUES = new Set([
+  '--action',
+  '--app',
+  '--file',
+  '--from',
+  '--params',
+  '--json',
+  '--out',
+]);
+
+/** `flow run a.flow --from 3 --param A=1` as the op's flags: action, file, then the rest. */
+export function flowWords(argv: string[]): string[] {
+  const out: string[] = [];
+  const params: string[] = [];
+  const named = ['--action', '--file'];
+  for (let i = 0; i < argv.length; i++) {
+    const word = argv[i]!;
+    if (word === '--param') params.push(argv[++i] ?? '');
+    else if (FLOW_VALUES.has(word)) out.push(word, argv[++i] ?? '');
+    else if (word.startsWith('--')) out.push(word);
+    else if (named.length > 0) out.push(named.shift()!, word);
+    else throw new ToolError(`unexpected word: ${word}`);
+  }
+  return params.length > 0 ? [...out, '--params', JSON.stringify(params)] : out;
+}
+
 /** One command per op, named with dashes: its text blocks are printed; an image goes to a file. */
 export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
   const commands = Object.values(ops).map((op): Command => {
@@ -130,7 +156,7 @@ export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
         }
         let call;
         try {
-          call = parse(op, argv);
+          call = parse(op, op.name === 'flow' ? flowWords(argv) : argv);
         } catch (e) {
           if (!(e instanceof ToolError)) throw e;
           io.err(`${name}: ${e.message}`);

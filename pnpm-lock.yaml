@@ -108,6 +108,15 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
 
+  packages/flows:
+    dependencies:
+      '@appdyno/core':
+        specifier: workspace:*
+        version: link:../core
+      '@appdyno/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
   packages/mcp:
     dependencies:
       '@appdyno/ops':
@@ -122,6 +131,9 @@ importers:
       '@appdyno/core':
         specifier: workspace:*
         version: link:../core
+      '@appdyno/flows':
+        specifier: workspace:*
+        version: link:../flows
       '@appdyno/protocol':
         specifier: workspace:*
         version: link:../protocol

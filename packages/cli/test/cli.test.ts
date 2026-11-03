@@ -8,7 +8,7 @@ import { createServer } from '@appdyno/mcp';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { FakeDevice } from '../../ops/test/fake-device.js';
-import { commandsFor, deviceFlag, listOf, takeFlag } from '../src/index.js';
+import { commandsFor, deviceFlag, flowWords, listOf, takeFlag } from '../src/index.js';
 
 describe('commands from the operations', () => {
   let device: FakeDevice;
@@ -194,5 +194,31 @@ describe('commands from the operations', () => {
     const temp = await run('screenshot');
     expect(temp.out[1]).toMatch(/appdyno-[0-9a-f]{8}\.jpeg$/);
     expect(existsSync(temp.out[1]!)).toBe(true);
+  });
+});
+
+describe('flow on the command line', () => {
+  it('takes its action and file as words, and repeats --param', () => {
+    expect(
+      flowWords(['run', 'a.flow', '--from', '3', '--param', 'A=1', '--param', 'B=x=y']),
+    ).toEqual([
+      '--action',
+      'run',
+      '--file',
+      'a.flow',
+      '--from',
+      '3',
+      '--params',
+      '["A=1","B=x=y"]',
+    ]);
+    expect(flowWords(['save', 'a.flow', '--overwrite'])).toEqual([
+      '--action',
+      'save',
+      '--file',
+      'a.flow',
+      '--overwrite',
+    ]);
+    expect(flowWords(['--action', 'start'])).toEqual(['--action', 'start']);
+    expect(() => flowWords(['run', 'a.flow', 'extra'])).toThrow(/unexpected word: extra/);
   });
 });

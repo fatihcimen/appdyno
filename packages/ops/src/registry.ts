@@ -5,23 +5,51 @@ import type { ServerContext } from './context.js';
 import { controlOps } from './control.js';
 import { deviceOps } from './device.js';
 import { diagnoseOps } from './diagnose.js';
+import {
+  flowOps,
+  flowRecorder,
+  flowRunner,
+  readFlow,
+  runTests,
+  type ReplayOptions,
+  type TestOptions,
+} from './flow.js';
 import { perfOps } from './perf.js';
 import { readOps } from './read.js';
 import { stepsFor } from './steps.js';
 import type { Op } from './tool.js';
 
-/** Every operation over this context, by name: what the MCP tools and CLI commands are made from. */
-export function opsFor(ctx: ServerContext): Record<string, Op> {
+function build(ctx: ServerContext) {
   const answers = answersFor(ctx);
-  const steps = stepsFor(ctx, answers);
-  const ops = [
-    ...deviceOps(ctx, answers),
-    ...readOps(ctx, answers, steps),
-    ...actOps(ctx, answers, steps),
-    ...appOps(ctx, answers),
-    ...controlOps(ctx, answers),
-    ...diagnoseOps(ctx, answers),
-    ...perfOps(ctx),
-  ];
-  return Object.fromEntries(ops.map((op) => [op.name, op]));
+  const recorder = flowRecorder(ctx);
+  const steps = stepsFor(ctx, answers, recorder.through);
+  let raw: Record<string, Op> = {};
+  const runner = flowRunner(ctx, () => raw, answers, steps);
+  raw = Object.fromEntries(
+    [
+      ...deviceOps(ctx, answers),
+      ...readOps(ctx, answers, steps),
+      ...actOps(ctx, answers, steps),
+      ...appOps(ctx, answers),
+      ...controlOps(ctx, answers),
+      ...diagnoseOps(ctx, answers),
+      ...perfOps(ctx),
+      ...flowOps(ctx, runner),
+    ].map((op) => [op.name, op]),
+  );
+  const ops = Object.fromEntries(Object.values(raw).map((op) => [op.name, recorder.wrap(op)]));
+  return { ops, runner };
+}
+
+/** Every operation over this context, by name: what the MCP tools and CLI commands are made from. */
+export const opsFor = (ctx: ServerContext): Record<string, Op> => build(ctx).ops;
+
+/** Flows run from code: a file on the context's device (with per-step hooks), or a test run. */
+export function flowsFor(ctx: ServerContext) {
+  const { runner } = build(ctx);
+  return {
+    replay: async (file: string, o?: ReplayOptions) =>
+      runner.run(await ctx.session(), readFlow(file), file, o),
+    test: (o: TestOptions) => runTests(ctx, runner, o),
+  };
 }

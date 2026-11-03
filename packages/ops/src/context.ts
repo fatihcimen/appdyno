@@ -33,8 +33,11 @@ export class ServerContext {
   private readonly sessions = new Map<string, Session>();
   currentSerial: string | undefined;
 
+  /** Its own copy: a replay's secrets join the list for as long as it runs. */
+  readonly policy: Policy;
+
   constructor(
-    readonly policy: Policy,
+    policy: Policy,
     /** Listed in this order; of those that handle a serial, the last one opens it. */
     readonly providers: DeviceProvider[],
     private readonly defaults: {
@@ -50,7 +53,17 @@ export class ServerContext {
       share?: boolean;
     } = {},
   ) {
+    this.policy = { ...policy, secrets: [...policy.secrets] };
     this.saved = defaults.remember ? recall(defaults.remember) : undefined;
+  }
+
+  /** These texts are not shown back until the returned function is called. */
+  hide(values: string[]) {
+    const added = values.filter((v) => !this.policy.secrets.includes(v));
+    this.policy.secrets.push(...added);
+    return () => {
+      for (const v of added) this.policy.secrets.splice(this.policy.secrets.indexOf(v), 1);
+    };
   }
 
   private readonly saved: Saved | undefined;

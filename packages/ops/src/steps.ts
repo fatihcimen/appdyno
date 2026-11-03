@@ -30,7 +30,8 @@ export const Selector = z
     text: z.string().optional(),
     id: z.string().optional(),
     role: z.string().optional(),
-    index: z.number().int().optional(),
+    // a check, not .int(): its safe-integer bounds would cost the catalog on every tool with a selector
+    index: z.number().refine(Number.isInteger, 'a whole number').optional(),
   })
   .strict();
 export const Target = {
@@ -231,8 +232,11 @@ type Judged = SelectorOf & {
   expect: boolean;
 };
 
+/** What every step passes through on its way to the device (the recorder). */
+export type StepSeam = <T>(s: Session, st: Step, run: () => Promise<T>) => Promise<T>;
+
 /** One step's device call and the action around it, shared by the tools that act on a target. */
-export function stepsFor(ctx: ServerContext, { act, clean }: Answers) {
+export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: StepSeam) {
   const policy = ctx.policy;
   const line = (e: ScreenElement) =>
     `${e.ref} ${e.role} ${JSON.stringify(clean(e.label || e.id || ''))} ${e.x},${e.y}`;
@@ -446,11 +450,14 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers) {
   };
 
   /** One step's device call. `patient`: in a sequence, a ref may need a moment to come. */
-  const step = async (
+  const step = (s: Session, st: Step, opts: ActOptions, patient = false) =>
+    through(s, st, () => call(s, st, opts, patient));
+
+  const call = async (
     s: Session,
     st: Step,
     opts: ActOptions,
-    patient = false,
+    patient: boolean,
   ): Promise<{ r: ActResult | TextResult; done: string }> => {
     const treeIfAsked = (screen: Screen): ActResult =>
       opts.read === 'tree' ? { tree: screen.tree } : {};

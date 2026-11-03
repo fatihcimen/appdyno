@@ -36,6 +36,33 @@ const tree = (nodes: Node[], pkg = 'dev.app', hash?: string): Tree => ({
 });
 
 export const SCREENS: Record<string, Node[]> = {
+  login: [
+    {
+      c: 'android.widget.EditText',
+      id: 'dev.app:id/user',
+      h: 'User',
+      b: [0, 100, 1080, 200],
+      f: 149,
+    },
+    {
+      c: 'android.widget.EditText',
+      id: 'dev.app:id/pass',
+      h: 'Password',
+      b: [0, 300, 1080, 400],
+      f: 1 | 4 | 16 | 128 | 512,
+    },
+    { c: 'android.widget.Button', t: 'Add', b: [0, 500, 500, 600], f: 19 },
+    { c: 'android.widget.Button', t: 'Add', b: [500, 500, 1080, 600], f: 19 },
+    {
+      c: 'android.widget.Button',
+      id: 'android:id/button1',
+      t: 'OK',
+      b: [0, 700, 1080, 800],
+      f: 19,
+      go: 'home',
+    },
+    { t: 'Merhaba s3cr3t-pass', id: 'dev.app:id/greeting', b: [0, 900, 1080, 1000] },
+  ],
   home: [
     { t: 'Ana sayfa', b: [0, 100, 1080, 200] },
     { c: 'android.widget.Button', t: 'Form', b: [0, 300, 1080, 400], f: 19, go: 'form' },

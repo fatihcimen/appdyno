@@ -10,6 +10,7 @@ const PROTOCOL = '@appdyno/protocol';
 const CORE = '@appdyno/core';
 const ANDROID = '@appdyno/driver-android';
 const APPLE = '@appdyno/driver-apple';
+const FLOWS = '@appdyno/flows';
 const OPS = '@appdyno/ops';
 const MCP = '@appdyno/mcp';
 const CLI = '@appdyno/cli';
@@ -20,7 +21,8 @@ const RULES: Record<string, string[]> = {
   core: [PROTOCOL],
   'driver-android': [CORE, PROTOCOL],
   'driver-apple': [CORE, PROTOCOL],
-  ops: [CORE, PROTOCOL],
+  flows: [CORE, PROTOCOL],
+  ops: [CORE, PROTOCOL, FLOWS],
   mcp: [OPS, CORE, PROTOCOL],
   cli: [OPS, CORE, PROTOCOL],
   appdyno: [PROTOCOL, CORE, ANDROID, APPLE, OPS, MCP, CLI],

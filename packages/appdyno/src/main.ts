@@ -11,7 +11,15 @@ import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-appl
 import { createServer } from '@appdyno/mcp';
 import { commandsFor, deviceFlag, listOf } from '@appdyno/cli';
 import { stateDir } from '@appdyno/core';
-import { DEFAULT_POLICY, ServerContext, opsFor, type Policy } from '@appdyno/ops';
+import {
+  DEFAULT_POLICY,
+  ServerContext,
+  flowFiles,
+  flowsFor,
+  opsFor,
+  paramsOf,
+  type Policy,
+} from '@appdyno/ops';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
 
@@ -138,6 +146,41 @@ async function main(): Promise<number> {
         );
       return checks.some((c) => !c.ok && !c.warn) ? 1 : 0;
     }
+    case 'test': {
+      const { values, positionals } = parseArgs({
+        args: rest,
+        allowPositionals: true,
+        options: {
+          device: { type: 'string', multiple: true },
+          param: { type: 'string', multiple: true },
+          artifacts: { type: 'string' },
+          junit: { type: 'string' },
+          share: { type: 'boolean' },
+        },
+      });
+      if (positionals.length === 0) {
+        err(
+          'usage: appdyno test <dir or files> [--device S]... [--param NAME=value]... [--artifacts dir] [--junit file]',
+        );
+        return 2;
+      }
+      const artifacts = values.artifacts ?? 'appdyno-artifacts';
+      const ctx = contextFrom({ ...(values.share && { share: true }) });
+      try {
+        const { passed } = await flowsFor(ctx).test({
+          files: flowFiles(positionals),
+          devices: values.device ?? [],
+          artifacts,
+          junit: values.junit ?? join(artifacts, 'junit.xml'),
+          params: paramsOf(values.param),
+          log: (line) => console.log(line),
+        });
+        return passed ? 0 : 1;
+      } finally {
+        await ctx.end().catch(() => []);
+        ctx.close();
+      }
+    }
     case 'bench': {
       const { values } = parseArgs({
         args: rest,
@@ -197,13 +240,15 @@ commands:
   mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--measurements dir]
                    the MCP server over stdio
   devices          the connected Android devices
+  test <dir or files> [--device S]... [--param NAME=value]... [--artifacts dir] [--junit file]
+                   replay flows, one after another, on each device
   doctor [--serial S]
                    what this machine and that device lack
   ios build        build the iOS runners now
   tools install    download the trace tools
   bench --serial S [--driver appdyno|<module>]... [--n 50] [--out file]
 
-operations (--device S selects the device, also for the next commands):
+operations (--device S selects the device, also for the next commands; flow: appdyno flow run a.flow --from 3 --param NAME=value):
 ${listOf(ops)}`,
         );
         return asked ? 0 : 2;
