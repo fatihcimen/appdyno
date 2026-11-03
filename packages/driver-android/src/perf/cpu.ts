@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { type Measured, pause, type ThreadReading, type CpuProfile } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg } from '../adb.js';
-import { parseProcStatTicks, parseThreadReads, parseSimpleperfReport } from '../perf-parse.js';
+import { parseProcStatTicks, parseThreadReads, parseSimpleperfReport } from './parse.js';
 import { type PerfDevice, pidOf, sh, at } from './shared.js';
 
 export type CpuStats = {

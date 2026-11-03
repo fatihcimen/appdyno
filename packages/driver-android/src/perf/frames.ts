@@ -2,7 +2,7 @@ import type { Measured, FrameStats, FrameTimeline, FrameTrace } from '@appdyno/c
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg } from '../adb.js';
 import { traceProcessor } from '../tools.js';
-import { parseFrameStats, parseAndroidFrameStats, parseFrameTimelineCsv } from '../perf-parse.js';
+import { parseFrameStats, parseAndroidFrameStats, parseFrameTimelineCsv } from './parse.js';
 import { type PerfDevice, sh, at } from './shared.js';
 import { recordTrace, NAME_NEW_PROCESSES, PROCESS_STATS, queryFile } from './perfetto.js';
 

@@ -11,7 +11,7 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg } from '../adb.js';
 import { traceProcessor } from '../tools.js';
-import { type MemoryStats, parseMeminfo, parseCsv } from '../perf-parse.js';
+import { type MemoryStats, parseMeminfo, parseCsv } from './parse.js';
 import { type PerfDevice, sh, at, pidOf } from './shared.js';
 import { buildType } from './app.js';
 import { recordTrace, queryFile } from './perfetto.js';

@@ -5,7 +5,7 @@ import { randomBytes } from 'node:crypto';
 import { run, type TraceDigest, pause, stateDir } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { traceProcessor } from '../tools.js';
-import { parseCsv } from '../perf-parse.js';
+import { parseCsv } from './parse.js';
 import type { PerfDevice } from './shared.js';
 
 /**

@@ -13,5 +13,5 @@ export { AndroidPerf } from './perf/index.js';
 export type { CpuStats } from './perf/cpu.js';
 export type { LaunchStats } from './perf/launch.js';
 export type { HeapDump } from './perf/memory.js';
-export * from './perf-parse.js';
+export * from './perf/parse.js';
 export { installTools, traceProcessor, PERFETTO } from './tools.js';

@@ -21,7 +21,7 @@ import {
   parseStartup,
   parseThreadReads,
   parseVitals,
-} from '../src/perf-parse.js';
+} from '../src/perf/parse.js';
 
 const fx = (name: string) =>
   readFileSync(new URL(`./fixtures/android/${name}`, import.meta.url), 'utf8');
@@ -423,7 +423,7 @@ describe('the read-only guard of trace queries', () => {
 
 describe('profile and frame windows', () => {
   it('reads the simpleperf symbol report, most first', async () => {
-    const { parseSimpleperfReport } = await import('../src/perf-parse.js');
+    const { parseSimpleperfReport } = await import('../src/perf/parse.js');
     const report = [
       'Cmdline: /system/bin/simpleperf record --app dev.app',
       'Samples: 2997',
@@ -444,7 +444,7 @@ describe('profile and frame windows', () => {
   });
 
   it('finds the worst second of frames', async () => {
-    const { worstWindow } = await import('../src/perf-parse.js');
+    const { worstWindow } = await import('../src/perf/parse.js');
     const row = (s: number, ms: number) => ({ startNs: s * 1e6, durationMs: ms, intervalMs: 16.7 });
     // a smooth second, then a second with three missed frames
     const rows = [

@@ -17,7 +17,7 @@ import {
   parseFullyDrawn,
   parseCompileStatus,
   parseStartup,
-} from '../perf-parse.js';
+} from './parse.js';
 import { NAME_NEW_PROCESSES, PROCESS_STATS, recordTrace, queryFile } from './perfetto.js';
 import { type PerfDevice, sh, at } from './shared.js';
 

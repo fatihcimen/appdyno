@@ -22,7 +22,7 @@ import {
   usageSince,
   parseDiskstats,
   parseVitals,
-} from '../perf-parse.js';
+} from './parse.js';
 import { type PerfDevice, sh, uidOf, at, isVirtual } from './shared.js';
 import { recordTrace, queryFile } from './perfetto.js';
 
