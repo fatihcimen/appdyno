@@ -242,8 +242,8 @@ export function withoutCopies(t: Tree, hidden: Set<string>): Tree {
 /**
  * The helper's tree in the runner's shape: nodes breadth first, flags as XCUI gives them, so refs and
  * diffs do not depend on who read. Refused when it would not say the same as the runner: content of
- * another process on screen, or an alert. `copies`: a control found twice, and only XCUI can tell which one
- * a tap reaches (`learnCopies`).
+ * another process on screen, or an alert. `copies`: a control found twice at different places, and only XCUI
+ * can tell which one a tap reaches (`learnCopies`).
  */
 export function toTree(
   raw: RawAx,
@@ -271,15 +271,18 @@ export function toTree(
   for (const n of nodes)
     if (n.c === 'Toolbar' && n.b[2] - n.b[0] >= screen.w && n.b[3] - n.b[1] >= screen.h)
       n.f &= ~F.visible;
-  const copies = new Map<string, number>();
+  const places = new Map<string, string[]>();
   for (const n of nodes)
     if (n.id !== undefined && (n.f & F.visible) !== 0) {
       const key = `${n.c}#${n.id}`;
-      copies.set(key, (copies.get(key) ?? 0) + 1);
+      places.set(key, [...(places.get(key) ?? []), n.b.join()]);
     }
   return {
     busy,
-    copies: [...copies.values()].some((count) => count === 2 || count === 3),
+    // at one place a touch has nothing to choose; an id repeated more is a list's rows
+    copies: [...places.values()].some(
+      (at) => (at.length === 2 || at.length === 3) && new Set(at).size > 1,
+    ),
     tree: {
       windows: [
         {

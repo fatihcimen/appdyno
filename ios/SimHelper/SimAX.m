@@ -39,6 +39,20 @@ static NSArray *gNumbers;
 static NSDictionary<NSNumber *, NSString *> *gShortNames;
 static NSNumber *gFrameNumber, *gChildrenNumber;
 
+// The switches XCTest turns on for its run and off at its end: with them off an app tells the accessibility
+// server nothing, not even its name. On while this helper is asked to read; off again on `leave`, if it was
+// this helper that turned them on and the host starts no runner that needs them.
+static BOOL gTurnedOn;
+static int (*gAppAXOn)(void), (*gAutomationOn)(void);
+static void (*gSetAppAX)(int), (*gSetAutomation)(int);
+
+static void accessibilityOn(void) {
+  if (gAppAXOn() && gAutomationOn()) return;
+  gSetAppAX(1);
+  gSetAutomation(1);
+  gTurnedOn = YES;
+}
+
 static NSString *setup(void) {
   dlopen("/System/Library/PrivateFrameworks/AXRuntime.framework/AXRuntime", RTLD_NOW);
   dlopen("/System/Library/PrivateFrameworks/AccessibilityUtilities.framework/AccessibilityUtilities", RTLD_NOW);
@@ -54,6 +68,12 @@ static NSString *setup(void) {
   gValueType = dlsym(RTLD_DEFAULT, "AXValueGetType");
   gValueGet = dlsym(RTLD_DEFAULT, "AXValueGetValue");
   if (!gDefaultParameters || !gNumbersForNames || !gValueType || !gValueGet) return @"the conversion calls are missing";
+  dlopen("/usr/lib/libAccessibility.dylib", RTLD_NOW);
+  gAppAXOn = dlsym(RTLD_DEFAULT, "_AXSApplicationAccessibilityEnabled");
+  gAutomationOn = dlsym(RTLD_DEFAULT, "_AXSAutomationEnabled");
+  gSetAppAX = dlsym(RTLD_DEFAULT, "_AXSApplicationAccessibilitySetEnabled");
+  gSetAutomation = dlsym(RTLD_DEFAULT, "_AXSSetAutomationEnabled");
+  if (!gAppAXOn || !gAutomationOn || !gSetAppAX || !gSetAutomation) return @"the accessibility switches are missing";
   NSDictionary<NSString *, NSString *> *names = @{
     @"XC_kAXXCAttributeAutomationType": @"a", @"XC_kAXXCAttributeElementType": @"e", @"XC_kAXXCAttributeLabel": @"l",
     @"XC_kAXXCAttributeValue": @"v", @"XC_kAXXCAttributePlaceholderValue": @"h", @"XC_kAXXCAttributeIdentifier": @"i",
@@ -166,9 +186,10 @@ static NSDictionary *readApp(NSDictionary *q) {
 }
 
 // The app's reports to an observer of the system-wide element (private, from the accessibility runtime).
-static const uint32_t kUserTesting = 4002, kAskIdle = 0x7fa;
+static const uint32_t kUserTesting = 4002, kAskIdle = 0x7fa, kAskAnimations = 0x7fb;
+static const NSTimeInterval kTouchReportS = 0.3;
 static int32_t (*gPerform)(void *, uint32_t, const void *);
-static long gTouchesEnded;
+static long gTouchesEnded, gAnimationsOver;
 static NSString *gBlind;
 
 static void answer(NSDictionary *a, id ident, uint64_t t0) {
@@ -186,6 +207,7 @@ static void observed(void *observer, void *element, uint32_t notification, const
   id report = (__bridge id)info;
   id event = notification == kUserTesting && [report isKindOfClass:NSDictionary.class] ? report[@"event"] : nil;
   if ([event isEqual:@"TouchEventsCompleted"]) gTouchesEnded++;
+  if ([event isEqual:@"AnimationsNonActive"]) gAnimationsOver++;
 }
 
 static NSString *observe(void) {
@@ -202,12 +224,44 @@ static NSString *observe(void) {
   return nil;
 }
 
-// The app in front reports to the observer from now on (its touches finishing, among others).
-static NSDictionary *arm(void) {
+static NSDictionary *ask(uint32_t action) {
   pid_t pid = [[(id<AX>)gAXElement primaryApp] pid];
   __attribute__((objc_precise_lifetime)) id<AX> root = [(id<AX>)gElementClass elementWithProcessIdentifier:pid];
   void *raw = [root AXUIElement];
-  return raw && gPerform(raw, kAskIdle, NULL) == 0 ? @{@"ok": @YES} : refuse(@"no-report");
+  return raw && gPerform(raw, action, NULL) == 0 ? @{@"ok": @YES} : refuse(@"no-report");
+}
+
+// The app in front reports to the observer from now on (its touches finishing, among others).
+static NSDictionary *arm(void) { return ask(kAskIdle); }
+
+// Turns the run loop, which is what brings the app's reports, until `done` or `seconds` have gone.
+static void turnUntil(BOOL (^done)(void), NSTimeInterval seconds) {
+  uint64_t end = clock_gettime_nsec_np(CLOCK_UPTIME_RAW) + (uint64_t)(seconds * NSEC_PER_SEC);
+  while (!done() && clock_gettime_nsec_np(CLOCK_UPTIME_RAW) < end) CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.005, true);
+}
+
+// UIKit takes no touches while a view animates: until the app in front reports no animation running, the
+// report XCTest waits for before an event. An animation a touch starts has not begun until the app has handled
+// that touch, and the report would say all is still: `touches` is how many touch reports must be in first
+// (another process may draw what was touched and report nothing, hence the short limit).
+static NSDictionary *animationsOver(NSTimeInterval within, long touches) {
+  turnUntil(^{ return (BOOL)(gTouchesEnded >= touches); }, kTouchReportS);
+  long seen = gAnimationsOver;
+  NSDictionary *asked = ask(kAskAnimations);
+  if (![asked[@"ok"] boolValue]) return asked;
+  turnUntil(^{ return (BOOL)(gAnimationsOver != seen); }, within);
+  return @{@"ok": @YES, @"over": @(gAnimationsOver != seen)};
+}
+
+// What the host says of this simulator before any test runner is there.
+static NSDictionary *hello(void) {
+  CGRect screen = [[(id<AX>)gAXElement systemApplication] frame];
+  NSDictionary<NSString *, NSString *> *env = NSProcessInfo.processInfo.environment;
+  NSOperatingSystemVersion v = NSProcessInfo.processInfo.operatingSystemVersion;
+  NSString *os = v.patchVersion ? [NSString stringWithFormat:@"%ld.%ld.%ld", (long)v.majorVersion, (long)v.minorVersion, (long)v.patchVersion]
+                                : [NSString stringWithFormat:@"%ld.%ld", (long)v.majorVersion, (long)v.minorVersion];
+  return @{@"ok": @YES, @"osVersion": os, @"model": env[@"SIMULATOR_MODEL_IDENTIFIER"] ?: @"iPhone", @"scale": @([env[@"SIMULATOR_MAINSCREEN_SCALE"] doubleValue]),
+           @"screen": @[@(CGRectGetWidth(screen)), @(CGRectGetHeight(screen))]};
 }
 
 static void handle(NSData *line) {
@@ -216,8 +270,20 @@ static void handle(NSData *line) {
     uint64_t t0 = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
     NSDictionary *a;
     @try {
+      if (![q[@"op"] isEqual:@"leave"]) accessibilityOn();
       if ([q[@"op"] isEqual:@"read"]) a = readApp(q);
       else if ([q[@"op"] isEqual:@"arm"]) a = gBlind ? refuse(gBlind) : arm();
+      else if ([q[@"op"] isEqual:@"animations"]) a = gBlind ? refuse(gBlind) : animationsOver([q[@"within"] doubleValue], [q[@"touches"] longValue]);
+      else if ([q[@"op"] isEqual:@"leave"]) {
+        if (gTurnedOn) { gSetAppAX(0); gSetAutomation(0); }
+        gTurnedOn = NO;
+        answer(@{@"ok": @YES}, q[@"id"], t0);
+        exit(0);
+      } else if ([q[@"op"] isEqual:@"touched"]) {
+        long touches = [q[@"touches"] longValue];
+        turnUntil(^{ return (BOOL)(gTouchesEnded >= touches); }, kTouchReportS);
+        a = @{@"ok": @YES};
+      } else if ([q[@"op"] isEqual:@"hello"]) a = hello();
       else if ([q[@"op"] isEqual:@"front"]) {
         NSString *front = [(id<AX>)[(id<AX>)gAXElement primaryApp] bundleId];
         a = front ? @{@"ok": @YES, @"bundle": front} : refuse(@"no-foreground");

@@ -66,14 +66,40 @@ export abstract class RpcDevice extends DeviceActions {
     return { sig: result.sig, ...(result.tree && { tree: result.tree }) };
   };
 
+  /** Ready to be driven; the device's hello. */
+  open(): Promise<Hello> {
+    return this.connected();
+  }
+
   /** Connects (starting the agent when needed); the agent's hello. */
-  async open(): Promise<Hello> {
+  protected async connected(): Promise<Hello> {
     await this.queue.run(() => this.ensure());
     return this.helloInfo!;
   }
 
   get hello(): Hello | undefined {
     return this.helloInfo;
+  }
+
+  /** The app a first call will launch, on its way while the device opens: each takes about as long. */
+  private alongside: { pkg: string; out: Promise<string | undefined> } | undefined;
+
+  launchAlongside(pkg: string) {
+    const out = this.startAlongside(pkg);
+    out.catch(() => undefined);
+    this.alongside = { pkg, out };
+  }
+
+  /** Begins the app's launch, where nothing can go wrong for that; undefined: `launch` does it. */
+  protected startAlongside(_pkg: string): Promise<string | undefined> {
+    return Promise.resolve(undefined);
+  }
+
+  /** What the launch that began alongside said, if one did for this app; `launch` takes it up once. */
+  protected async launchedAlongside(pkg: string): Promise<string | undefined> {
+    const began = this.alongside;
+    this.alongside = undefined;
+    return began?.pkg === pkg ? began.out : undefined;
   }
 
   private ensure(): Promise<RpcClient> {

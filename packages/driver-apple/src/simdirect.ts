@@ -1,19 +1,29 @@
-import type { Tree, ActParams } from '@appdyno/protocol';
+import { PROTOCOL, type Hello, type Tree, type ActParams } from '@appdyno/protocol';
 import { type HelperProcess, startSimAx, startSimHid, type HelperAnswer } from './simhelper.js';
 import { type DirectRead, type Refusal, toTree, type RawAx, sameTree } from './simtree.js';
 import { HID_KEYS, touchEvents } from './simtouch.js';
 
 export type DirectStatus = { input: string; read: string };
 
+const HELPER_VERSION = 'helper';
+
+/** UIKit's sheet comes up in about 0.5 s; an animation that never ends costs this once per touch. */
+const ANIMATION_WAIT_MS = 1_000;
+
 type Starters = {
   ax: (udid: string) => Promise<HelperProcess>;
   hid: (udid: string) => Promise<HelperProcess>;
 };
 
+const leave = async (ax: HelperProcess) => {
+  await ax.call({ op: 'leave' }, 2_000);
+  ax.close();
+};
+
 /**
- * One simulator's helpers, used where they prove themselves: their reads are compared with the runner's
- * before the first is believed, and a touch that the app did not report is given to the runner, which
- * then keeps every later one (a Device Hub in Resize Mode swallows touches and reports success).
+ * One simulator's helpers, used where they prove themselves: while a runner is up their reads are compared
+ * with its own, and a touch that the app did not report is given to the runner, which then keeps every later
+ * one (a Device Hub in Resize Mode swallows touches and reports success).
  * APPDYNO_SIM_DIRECT: `off`, `read` (no direct input), else both.
  */
 export class DirectSim {
@@ -28,6 +38,9 @@ export class DirectSim {
   private misreads = 0;
   /** How many touches the app in front has reported finished, as of the last answer. */
   touchesEnded: number | undefined;
+  /** The count of those reports once the last touch sent has been handled: a tap makes two. */
+  private touchesDue = 0;
+  private reporting = false;
 
   constructor(
     private readonly udid: string,
@@ -41,7 +54,28 @@ export class DirectSim {
   status(): DirectStatus {
     return {
       input: this.inputOff ? `runner: ${this.inputOff}` : this.hid ? 'direct' : 'not used yet',
-      read: this.readOff ? `runner: ${this.readOff}` : this.readChecked ? 'direct' : 'not used yet',
+      read: this.readOff ? `runner: ${this.readOff}` : this.screen ? 'direct' : 'not used yet',
+    };
+  }
+
+  /**
+   * What a host needs to know of this simulator, from the read helper: no test runner has to start for it.
+   * Undefined when the helper cannot say, or in landscape, where it is not verified.
+   */
+  async hello(): Promise<Hello | undefined> {
+    if (this.readOff) return undefined;
+    const a = this.note(await (await this.helperAx()).call({ op: 'hello' }, 10_000));
+    const size = a.screen as [number, number] | undefined;
+    if (!a.ok || !size || size[0] > size[1]) return undefined;
+    this.screen = { w: size[0], h: size[1] };
+    return {
+      agentVersion: HELPER_VERSION,
+      protocol: { major: PROTOCOL.major, minor: PROTOCOL.minor },
+      platform: 'ios',
+      osVersion: String(a.osVersion),
+      model: String(a.model),
+      screen: { ...this.screen, density: Number(a.scale), rotation: 0 },
+      capabilities: ['tree', 'act', 'settle'],
     };
   }
 
@@ -93,8 +127,14 @@ export class DirectSim {
     this.inputOff ??= 'the direct read is off';
   }
 
-  get readProven() {
-    return this.readChecked;
+  /** Whether a read or a look at what is in front can be asked of the helper. */
+  get reads() {
+    return !this.readOff && !this.rotated;
+  }
+
+  /** A touch is sent in the screen's points, which a read or the hello tell. */
+  get screenKnown() {
+    return !!this.screen;
   }
 
   /** The app in front, without a snapshot. */
@@ -114,7 +154,35 @@ export class DirectSim {
     const a = this.note(await (await this.helperAx()).call({ op: 'arm' }, 3_000));
     if (!a.ok && a.refused !== 'no-report' && a.refused !== 'helper-gone')
       this.inputOff = `the app's reports cannot be observed: ${a.refused}`;
+    this.reporting = a.ok;
     return a.ok;
+  }
+
+  /**
+   * UIKit takes no touches while a view animates, and the tree shows it where it ends from the start: waits
+   * until the app in front says no animation runs, at most ANIMATION_WAIT_MS. Milliseconds waited, if it can
+   * say (APPDYNO_ANIMATION_WAIT=0: not asked). Asked right after a touch, it first waits for the app to report
+   * that touch: an animation the touch starts has not begun before that, and the report would say all is still.
+   */
+  async animationsOver(): Promise<number | undefined> {
+    if (process.env.APPDYNO_ANIMATION_WAIT === '0') return undefined;
+    const a = this.note(
+      await (
+        await this.helperAx()
+      ).call(
+        { op: 'animations', within: ANIMATION_WAIT_MS / 1_000, touches: this.touchesDue },
+        ANIMATION_WAIT_MS + 3_000,
+      ),
+    );
+    return a.ok ? a.ms : undefined;
+  }
+
+  /** Until the app has handled the last touch sent, as far as it reports that: a read before then misses its effect. */
+  async touchHandled() {
+    if ((this.touchesEnded ?? 0) >= this.touchesDue) return;
+    this.note(
+      await (await this.helperAx()).call({ op: 'touched', touches: this.touchesDue }, 3_000),
+    );
   }
 
   /** Sends the action straight to the simulator; false when the runner must do it. */
@@ -136,6 +204,8 @@ export class DirectSim {
     const last = events?.[events.length - 1]?.at ?? 0;
     const a = await hid.call(key ? { op: 'key', ...key } : { op: 'touch', events }, last + 5_000);
     if (!a.ok) this.inputOff = a.error ?? a.refused ?? 'the input helper failed';
+    else if (events && this.reporting)
+      this.touchesDue = (this.touchesEnded ?? 0) + (action.kind === 'tap' ? 2 : 1);
     return a.ok;
   }
 
@@ -151,16 +221,17 @@ export class DirectSim {
     hid.close();
     const ax = await this.start.ax(this.udid);
     const a = await ax.call({ op: 'read' }, 10_000);
-    ax.close();
+    await leave(ax);
     return {
       input: h.ok ? 'ok' : (h.error ?? h.refused ?? 'no answer'),
       read: a.ok ? 'ok' : (a.refused ?? 'no answer'),
     };
   }
 
-  close() {
+  /** `runnerStays`: accessibility stays on for it; else the simulator is left as this helper found it. */
+  close(runnerStays = false) {
     void this.ax?.then(
-      (h) => h.close(),
+      (h) => (runnerStays ? h.close() : leave(h)),
       () => undefined,
     );
     void this.hid?.then(

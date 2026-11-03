@@ -114,12 +114,18 @@ indicator's slow drag up. The volume, lock and power keys go through direct inpu
 - **Reads**, `SimAX` inside the simulator through `simctl spawn`: one request of `XCTAccessibilityFramework`
   `userTestingSnapshotForElement:options:error:` per tree (a rejected depth is halved; children withheld at the
   boundary are read again). The nodes are built as the runner builds them, so refs, hashes and diffs do not depend
-  on who read. An answer on a layout not seen yet is compared with the runner's read of it (about 100 ms, once
-  per layout): XCUI leaves out what a modal covers, and alone tells which copy of a repeated control a tap
-  reaches. Where they differ the runner's is the answer; three differences before a first agreement turn the
-  helper off for the session. The helper needs the automation mode a runner leaves
-  on: on a boot where no runner ever ran it answers `no-foreground`, after 3-13 s, and the doctor says so. The runner
-  is always started first, and a helper read works after it has stopped. `IgnoreAXServerEntitlements` was not needed.
+  on who read. Only XCUI tells which copy of a control a tap reaches: a layout with a control found at two or three
+  different places goes to the runner once, and its verdict is kept by the layout's digest. Any other layout needs no
+  runner. Once one is up for something else, a layout not seen yet is also compared with its read (about 100 ms, once per
+  layout): where they differ the runner's is the answer, and three differences before a first agreement turn the helper
+  off for the session. An app tells the accessibility server nothing while the switches XCTest turns on for its run are
+  off, and XCTest turns them off at its end, so that the helper answered `no-foreground` for as long as it was asked:
+  it turns them on (`_AXSApplicationAccessibilitySetEnabled`, `_AXSSetAutomationEnabled`) and, if it was the one to do so
+  and no runner stays, off again when it leaves. `IgnoreAXServerEntitlements` was not needed.
+- **Hello**, from the same helper: model, OS version, screen and scale, in the same shape. `capabilities` says what the
+  helper does (`tree`, `act`, `settle`) and `agentVersion` is `helper`, until a runner starts and says its own. The runner
+  starts on the first thing only it does: an alert, a system prompt, text entry, an image, an audit, or a read of a control
+  found at different places.
 - **The runner answers a read** when the app named is not the primary app (a system alert over it, the home
   screen, the app's launch), when the app shows an alert, when another process's content reaches the screen
   (`AXRemoteElement`: a web page, an extension), when the window does not fill the screen, or when the helper fails.
@@ -130,10 +136,21 @@ indicator's slow drag up. The volume, lock and power keys go through direct inpu
   something has, 150 ms (120 ms answered with a search bar a push leaves for a moment; 150 and 200 ms did not). Nodes that
   have newly come to stick out over the side of the screen count as busy (at most 1.2 s): a push leaves the old
   page there with no change in the tree until it goes. An alert going away counts as busy for 600 ms, as one
-  coming up does for 450 ms. Before a touch the runner still answers `animations.wait`. The app's accessibility reports are
-  no settle signal: `RunLoopIsIdle` and `AnimationsNonActive` both answer within 3 ms during a push.
+  coming up does for 450 ms. The app's accessibility reports are no settle signal: `RunLoopIsIdle` and `AnimationsNonActive`
+  both answer within 3 ms during a push.
+- **Before a touch** the helper asks the app for `AnimationsNonActive`, at most 1 s: UIKit takes no touches while a view
+  animates, and the tree shows it where it ends from the start. A report asked for right after a touch comes before the
+  animation that touch starts, and once lost the next tap (1 of 3 on the fixture), so it is asked for only once the app has
+  reported that touch handled (`TouchEventsCompleted`, two to a tap, at most 300 ms: another process may draw what was
+  touched). A read asked for with no settle waits for the same report. No report covers a push or a pop: the tree is final
+  and the reports say all is still well before UIKit takes touches again, and a tap under 560 ms after the touch that went
+  back was lost, 7 of 30, with the app reporting it handled. So a touch waits until 650 ms after the one that changed the
+  screen; an answer does not.
 - **`launch`** brings a running app forward as it is (`simctl launch`; `LSApplicationWorkspace` from inside the
   simulator took 800 ms against about 180), and does nothing if it is in front; terminate it first for a fresh start.
+  It returns once the app is the primary one. During a launch none is, for seconds on a loaded Mac; the home screen staying
+  so for 3 s means a system alert over the app, which only the runner can tell. An app may add content after that: a ref
+  from the answer still reaches its element, as a touch aims on a read at most 150 ms old.
 
 ### Tree
 

@@ -273,23 +273,16 @@ export class AndroidDevice extends RpcDevice implements Device {
     if (error) throw new DeviceError('NOT_FOUND', `the link did not open: ${error}`);
   }
 
-  /** The app a first call will launch, on its way while the agent starts: each takes about as long. */
-  private alongside: { pkg: string; out: Promise<string | undefined> } | undefined;
-
-  launchAlongside(pkg: string) {
-    // over another tool's automation this session is refused, and must have left the device alone
-    const out = this.launcher
+  /** Over another tool's automation this session is refused, and must have left the device alone. */
+  protected override startAlongside(pkg: string) {
+    return this.launcher
       .holders()
       .then((others) => (others.length > 0 ? undefined : this.apps.start(pkg)));
-    out.catch(() => undefined);
-    this.alongside = { pkg, out };
   }
 
   /** Starts the app's launcher activity and waits for it (`am start -W`); returns its output. */
   async launch(pkg: string): Promise<string> {
-    const early = this.alongside?.pkg === pkg ? await this.alongside.out : undefined;
-    this.alongside = undefined;
-    return early ?? this.queue.run(() => this.apps.start(pkg));
+    return (await this.launchedAlongside(pkg)) ?? this.queue.run(() => this.apps.start(pkg));
   }
 
   async terminate(pkg: string) {

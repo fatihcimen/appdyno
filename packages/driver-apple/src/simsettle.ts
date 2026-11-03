@@ -83,9 +83,16 @@ export type SettleOn = {
   /** Layouts recently answered, by hash, the last the newest: what an action's `before` names. */
   recent: Map<string, Node[]>;
   width: number;
+  /** Time as a settle counts it. */
+  clock: () => number;
+  /** Until the app has handled the touch just sent. */
+  handled: () => Promise<void>;
 };
 
-/** The settle and the read an action asked for; `untouched`: nothing moved after an actionable tap. */
+/**
+ * The settle and the read an action asked for. `untouched`: nothing moved after an actionable tap; `moved`: the
+ * screen is another than before the action.
+ */
 export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOptions) {
   const want = opts.read ?? 'none';
   const answer = (c: Capture | undefined) => {
@@ -96,11 +103,12 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
     };
   };
   if (opts.settle === false) {
-    const c = want === 'none' ? undefined : await on.read(true);
-    return { untouched: false, result: answer(c) };
+    if (want === 'none') return { untouched: false, result: answer(undefined) };
+    await on.handled();
+    return { untouched: false, moved: false, result: answer(await on.read(true)) };
   }
   const s = opts.settle ?? {};
-  const actionAt = Date.now();
+  const actionAt = on.clock();
   const before = opts.before ? on.recent.get(opts.before) : undefined;
   const seen = before ?? [...on.recent.values()].pop() ?? [];
   const tap = action.kind === 'tap' ? action : undefined;
@@ -116,6 +124,7 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
   let slideSince: number | undefined;
   const r = await settle<Capture | { tree: { nodes: Node[] }; busy: false }>({
     actionAt,
+    clock: on.clock,
     quietMs,
     // XCTest's tap took 300-600 ms, in which the app reacted before the window began; a direct touch is
     // over in 50 ms, and an alert's button shows its effect only after about 300 ms
@@ -126,7 +135,7 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
     before: before && { tree: { nodes: before }, busy: false },
     read: async () => {
       const c = await on.read(false);
-      const now = Date.now();
+      const now = on.clock();
       if (hasAlert(c.tree.nodes)) {
         alertSince ??= now;
         alertGoneAt = undefined;
@@ -167,6 +176,7 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
   if (want !== 'none' && last.askRunner) last = await on.read(true);
   return {
     untouched,
+    moved: !sameContent(seen, last.tree.nodes),
     result: {
       settle: { settled: r.settled, ms: r.elapsedMs + extraMs, reads: r.reads, quietMs },
       ...answer(last),

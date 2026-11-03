@@ -223,7 +223,7 @@ export class IosDevice extends RpcDevice implements Device {
    * UNSUPPORTED from a runner built without it or where the platform cannot run it.
    */
   async audit(opts: { types?: AuditType[]; maxIssues?: number } = {}): Promise<AuditResult> {
-    const hello = await this.open();
+    const hello = await this.connected();
     if (!hello.capabilities.includes('audit'))
       throw new DeviceError(
         'UNSUPPORTED',
@@ -262,20 +262,30 @@ export class IosDevice extends RpcDevice implements Device {
   }
 
   async launch(pkg: string): Promise<string> {
-    const out = await this.queue.run(() => this.ops.launch(assertBundle(pkg)));
+    const out =
+      (await this.launchedAlongside(pkg)) ??
+      (await this.queue.run(() => this.ops.launch(assertBundle(pkg))));
     await this.target(pkg);
-    // returns once the app is in front: a read during the launch would get the home screen, slowly
+    await this.untilFront(pkg);
+    return out;
+  }
+
+  /** A read during a launch would get the home screen, slowly. */
+  protected async untilFront(pkg: string) {
     const end = Date.now() + 10_000;
     while ((await this.foreground()) !== pkg && Date.now() < end) await sleep(20);
-    return out;
+  }
+
+  /** The app in front, if it can be told without starting anything. */
+  protected async frontNow(): Promise<string | undefined> {
+    return this.rpc && !this.rpc.closed ? this.foreground() : undefined;
   }
 
   async terminate(pkg: string) {
     await this.queue.run(() => this.ops.terminate(assertBundle(pkg)));
     // returns once the app has left the front (the runner may see it there for a moment)
-    if (!this.rpc || this.rpc.closed) return;
     const end = Date.now() + 3_000;
-    while ((await this.foreground()) === pkg && Date.now() < end) await sleep(100);
+    while ((await this.frontNow()) === pkg && Date.now() < end) await sleep(100);
   }
 
   async setLocation(lat: number, lon: number) {

@@ -44,9 +44,24 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
   // the runner does not stay on a shared simulator after the run
   afterAll(() => d?.stopAgent());
 
-  it('says hello as iOS in points', () => {
+  it('launches, reads and taps with no runner, from the first touch on', async () => {
+    expect(d.hello!.agentVersion).toBe('helper');
+    const s = await home();
+    // not Form: its control found twice at different places is the runner's to tell apart
+    const r = await d.tap(find(s, 'Dialog')!, { settle: SETTLE, read: 'tree', before: s.hash });
+    expect(r.tree!.nodes.some((n) => n.id === 'open_dialog')).toBe(true);
+    expect(d.lastStartWasCold).toBe(false);
+    expect(d.hello!.agentVersion).toBe('helper');
+  });
+
+  it('says hello as iOS in points, from the helper and then from the runner', async () => {
     expect(d.hello).toMatchObject({ platform: 'ios', protocol: { major: 1 } });
-    expect(d.hello!.screen.density).toBeGreaterThanOrEqual(2);
+    const size = d.hello!.screen;
+    expect(size.density).toBeGreaterThanOrEqual(2);
+    expect(d.hello!.capabilities).not.toContain('wait');
+    await IosDevice.prototype.tree.call(d, { maxNodes: 5000 });
+    expect(d.hello!.agentVersion).not.toBe('helper');
+    expect(d.hello!.screen).toEqual(size);
     expect(d.hello!.capabilities).toContain('app.target');
     // the idle shim's replacements were each called at start with a BOOL in every slot (a crash otherwise)
     expect(d.hello!.idleShimChecked).toBe(true);
@@ -302,6 +317,25 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
         expect(moved(out.tree!, await d.tree()), `back from ${title}`).toEqual([]);
       }
       expect(d.direct.status().input).toBe('direct');
+    }, 120_000);
+
+    // the tree is final and the app's reports say all is still well before a pop has ended
+    it('takes a tap right after going back, as UIKit takes none during the pop (10 of 10)', async () => {
+      let s = await home();
+      for (let i = 0; i < 10; i++) {
+        const there = await d.tap(find(s, 'Form')!, {
+          settle: SETTLE,
+          read: 'tree',
+          before: s.hash,
+        });
+        expect(
+          there.tree!.nodes.some((n) => n.id === 'name_input'),
+          `round ${i}`,
+        ).toBe(true);
+        const back = there.tree!.nodes.find((n) => n.c === 'Button' && n.b[1] < 120)!;
+        await d.tap(center(back), { settle: SETTLE, read: 'none', before: there.tree!.hash });
+        s = await d.read(APP);
+      }
     }, 120_000);
 
     it('swipes, long-presses and pinches without the runner', async () => {

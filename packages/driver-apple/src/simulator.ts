@@ -1,10 +1,11 @@
 import { spawn } from 'node:child_process';
-import { type ScreenRecorder, TIMEOUTS, type ActOptions, pause } from '@appdyno/core';
+import { sleep, type ScreenRecorder, TIMEOUTS, type ActOptions, pause } from '@appdyno/core';
 import { simulatorCrashes } from './crashes.js';
 import { simulatorLogs } from './logs.js';
 import { SimulatorApps, SimulatorSettings } from './simulator-manage.js';
 import {
   DeviceError,
+  type Hello,
   type Tree,
   type ActParams,
   type ActResult,
@@ -18,7 +19,7 @@ import { DirectSim } from './simdirect.js';
 import { type Capture, settleAfter } from './simsettle.js';
 import { learnCopies, onKeyboard, withoutCopies } from './simtree.js';
 import { IosRunnerLauncher } from './runner.js';
-import { Simctl, xcodeEnv } from './simctl.js';
+import { assertBundle, Simctl, xcodeEnv } from './simctl.js';
 import { type IosDeviceOps, IosDevice } from './device.js';
 
 export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
@@ -70,6 +71,18 @@ const WAKE_GAP_MS = 400;
 
 const WAKE_PRESSES = 6;
 
+/**
+ * UIKit takes no touches during a push or a pop. The tree is final and the app's reports say all is still well
+ * before it ends: a tap under 560 ms after the touch that went back was lost, 7 of 30, with the app reporting it.
+ */
+const TRANSITION_MS = 650;
+
+const LAUNCH_FRONT_MS = 15_000;
+
+const HOME_FRONT_MS = 3_000;
+
+const SPRINGBOARD = 'com.apple.springboard';
+
 export class IosSimulatorDevice extends IosDevice {
   readonly virtual = true;
   readonly direct: DirectSim;
@@ -97,6 +110,44 @@ export class IosSimulatorDevice extends IosDevice {
   readonly apps: SimulatorApps;
   readonly settings: SimulatorSettings;
 
+  private get runnerUp() {
+    return !!this.rpc && !this.rpc.closed;
+  }
+
+  /** The helper's hello: the runner starts for what needs it, a system alert, text, an image or a control found twice. */
+  override async open(): Promise<Hello> {
+    if (this.hello) return this.hello;
+    const hello = await this.queue.run(() => this.direct.hello()).catch(() => undefined);
+    if (!hello) return super.open();
+    this.helloInfo = hello;
+    return hello;
+  }
+
+  /** When the transition the last touch started has ended. */
+  private transitionEnds = 0;
+
+  /** What starting the runner has taken: no settle running meanwhile counts it. */
+  private startingMs = 0;
+
+  protected override async connect() {
+    const at = Date.now();
+    try {
+      return await super.connect();
+    } finally {
+      this.startingMs += Date.now() - at;
+    }
+  }
+
+  protected override startAlongside(pkg: string) {
+    return this.ops.launch(assertBundle(pkg));
+  }
+
+  /** A runner that starts later is told by `connect`. */
+  override async target(bundle: string) {
+    if (this.runnerUp) return super.target(bundle);
+    this.targetApp = assertBundle(bundle);
+  }
+
   private remember(t: Tree) {
     this.recent.delete(t.hash);
     this.recent.set(t.hash, t.nodes);
@@ -106,15 +157,16 @@ export class IosSimulatorDevice extends IosDevice {
 
   /**
    * The helper's read of the app in front, when it can say what the runner would; for one in the queue.
-   * `final`: this read is an answer, not one of a settle's looks. Each layout is believed once the runner has
-   * read it alike (XCUI leaves out what a modal covers, and alone tells which copy of a control a tap
-   * reaches), and that verdict is kept by the layout's digest.
+   * `final`: this read is an answer, not one of a settle's looks. Only XCUI tells which copy of a control a
+   * tap reaches, so a layout with repeated controls is believed once the runner has read it alike, and that
+   * verdict is kept by the layout's digest. Any other layout needs no runner, and is checked once one is up.
    */
   private async readDirect(final: boolean): Promise<Capture | undefined> {
     const r = await this.direct.read(this.targetApp).catch(() => ({ refused: 'failed' }));
     if ('refused' in r) return undefined;
     const known = this.verdicts.get(r.tree.hash);
     if (known) return { tree: withoutCopies(r.tree, known), busy: r.busy };
+    if (!r.copies && !this.runnerUp) return { tree: r.tree, busy: r.busy };
     if (!final) return { tree: r.tree, busy: r.busy, askRunner: true };
     const runner = (await this.callNow('tree.get', {}, TIMEOUTS.read)).result;
     const verdict = learnCopies(r.tree, runner);
@@ -145,8 +197,7 @@ export class IosSimulatorDevice extends IosDevice {
   override async act(action: ActParams, opts: ActOptions = {}): Promise<ActResult> {
     await this.wake();
     return this.queue.run(async () => {
-      // the first read tells the helper the screen's size
-      if (!this.direct.status().input.startsWith('runner') && !this.direct.readProven)
+      if (!this.direct.status().input.startsWith('runner') && !this.direct.screenKnown)
         await this.readDirect(true);
       const touch = action.kind !== 'key';
       const at = touch ? firstPoint(action) : undefined;
@@ -154,12 +205,13 @@ export class IosSimulatorDevice extends IosDevice {
         !this.direct.status().input.startsWith('runner') &&
         !!at &&
         (await this.direct.arm().catch(() => false));
-      // UIKit takes no touches while a view animates, and the tree already shows where it ends
       const waited =
         at && !this.direct.status().input.startsWith('runner')
-          ? (await this.callNow('animations.wait', at, TIMEOUTS.action)).result.ms
+          ? await this.direct.animationsOver().catch(() => undefined)
           : undefined;
+      if (at) await sleep(Math.max(0, this.transitionEnds - Date.now()));
       const touchesBefore = this.direct.touchesEnded;
+      const touchedAt = Date.now();
       if (!(await this.direct.send(action))) return this.actByRunner(action, opts);
       const out = await settleAfter(
         {
@@ -167,6 +219,8 @@ export class IosSimulatorDevice extends IosDevice {
           remember: (t) => this.remember(t),
           recent: this.recent,
           width: this.hello?.screen.w ?? Infinity,
+          clock: () => Date.now() - this.startingMs,
+          handled: () => this.direct.touchHandled().catch(() => undefined),
         },
         action,
         opts,
@@ -177,6 +231,7 @@ export class IosSimulatorDevice extends IosDevice {
         this.direct.touchLost();
         return this.actByRunner(action, opts);
       }
+      this.transitionEnds = out.moved ? touchedAt + TRANSITION_MS : 0;
       return { ...out.result, ...(waited !== undefined && { animationWaitMs: waited }) };
     });
   }
@@ -256,13 +311,34 @@ export class IosSimulatorDevice extends IosDevice {
     return super.launch(pkg);
   }
 
+  /**
+   * During a launch no app is primary, for seconds on a loaded Mac. The home screen stays so under a system
+   * alert over the app, and only the runner can tell that apart.
+   */
+  protected override async untilFront(pkg: string) {
+    const end = Date.now() + LAUNCH_FRONT_MS;
+    let homeSince: number | undefined;
+    while (this.direct.reads && Date.now() < end) {
+      const front = await this.direct.front().catch(() => undefined);
+      if (front === pkg) return;
+      homeSince = front === SPRINGBOARD ? (homeSince ?? Date.now()) : undefined;
+      if (homeSince !== undefined && Date.now() - homeSince > HOME_FRONT_MS) break;
+      await sleep(20);
+    }
+    await super.untilFront(pkg);
+  }
+
+  protected override async frontNow() {
+    return (await this.direct.front().catch(() => undefined)) ?? super.frontNow();
+  }
+
   override async setOrientation(rotation: 0 | 1 | 2 | 3) {
     this.direct.setRotation(rotation);
     await super.setOrientation(rotation);
   }
 
   override close() {
-    this.direct.close();
+    this.direct.close(this.runnerUp);
     super.close();
   }
 

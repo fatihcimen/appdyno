@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Tree } from '@appdyno/protocol';
 import { directChecks } from '../src/provider.js';
 import { DirectSim } from '../src/simdirect.js';
-import { settle } from '../src/simsettle.js';
+import { settle, settleAfter, type SettleOn } from '../src/simsettle.js';
 import {
   actionable,
   layoutHash,
@@ -120,6 +120,12 @@ describe('the helper read in the runner shape', () => {
     expect(without.nodes[1]!.f & 1).toBe(1);
     expect(without.hash).toBe(layoutHash(runner.nodes));
     expect(learnCopies(tree(app(copy(0))).tree, runner)).toBeUndefined();
+  });
+
+  it('has nothing for the runner to tell of a control twice at one place, or of a list’s rows', () => {
+    const copy = (y: number) => ({ a: 9, i: 'close', f: [0, y, 40, 40] }) as RawAx;
+    expect(tree(app(copy(0), copy(0))).copies).toBe(false);
+    expect(tree(app(copy(0), copy(50), copy(100), copy(150))).copies).toBe(false);
   });
 
   it('computes the digest the runner computes', () => {
@@ -252,6 +258,56 @@ describe('the digitizer events', () => {
   });
 });
 
+describe('an action with no settle', () => {
+  it('reads what it was asked to only after the app has handled the touch', async () => {
+    const order: string[] = [];
+    const t = tree(app(cell('A', 0))).tree;
+    const on: SettleOn = {
+      read: async () => {
+        order.push('read');
+        return { tree: t, busy: false };
+      },
+      remember: () => undefined,
+      recent: new Map(),
+      width: 402,
+      clock: Date.now,
+      handled: async () => {
+        order.push('handled');
+      },
+    };
+    const tap = { kind: 'tap', x: 1, y: 1 } as const;
+    await settleAfter(on, tap, { settle: false, read: 'none' });
+    expect(order).toEqual([]);
+    const r = await settleAfter(on, tap, { settle: false, read: 'tree' });
+    expect(order).toEqual(['handled', 'read']);
+    expect(r.result).toMatchObject({ hash: t.hash, tree: t });
+  });
+});
+
+describe('what a settle says of the screen', () => {
+  const on = (now: Tree, was: Tree): SettleOn => ({
+    read: async () => ({ tree: now, busy: false }),
+    remember: () => undefined,
+    recent: new Map([[was.hash, was.nodes]]),
+    width: 402,
+    clock: Date.now,
+    handled: async () => undefined,
+  });
+  const a = tree(app(cell('A', 0))).tree;
+  const b = tree(app(cell('B', 200))).tree;
+  const settled = (t: Tree) =>
+    settleAfter(
+      on(t, a),
+      { kind: 'swipe', from: { x: 1, y: 1 }, to: { x: 1, y: 50 }, durationMs: 50 },
+      { settle: { quietMs: 10, maxMs: 100 }, before: a.hash },
+    );
+
+  it('calls another screen moved, and the same one not', async () => {
+    expect((await settled(b)).moved).toBe(true);
+    expect((await settled(a)).moved).toBe(false);
+  });
+});
+
 describe('the helpers prove themselves', () => {
   const helper = (answer: (q: Record<string, unknown>) => Record<string, unknown>) =>
     ({
@@ -272,15 +328,95 @@ describe('the helpers prove themselves', () => {
     expect(await off.send({ kind: 'tap', x: 1, y: 1 })).toBe(false);
   });
 
+  it('says hello from the helper, in portrait only, and knows the screen from it', async () => {
+    const answer = (size: number[]) =>
+      helper((q) =>
+        q.op === 'hello'
+          ? { ok: true, osVersion: '26.5', model: 'iPhone18,1', scale: 3, screen: size }
+          : { ok: true },
+      );
+    const d = new DirectSim('u', { ax: async () => answer([402, 874]), hid: async () => ax() });
+    expect(d.screenKnown).toBe(false);
+    expect(await d.hello()).toMatchObject({
+      platform: 'ios',
+      osVersion: '26.5',
+      model: 'iPhone18,1',
+      screen: { w: 402, h: 874, density: 3, rotation: 0 },
+    });
+    expect(d.screenKnown).toBe(true);
+    const wide = new DirectSim('u', { ax: async () => answer([874, 402]), hid: async () => ax() });
+    expect(await wide.hello()).toBeUndefined();
+    const off = new DirectSim('u', { ax: async () => ax(), hid: async () => ax() }, 'off');
+    expect(await off.hello()).toBeUndefined();
+  });
+
+  it('asks the app when its animations are over, and tells what that took', async () => {
+    const asked: unknown[] = [];
+    const answer = helper((q) => {
+      asked.push(q);
+      return { ok: true, ms: 473, over: 1 };
+    });
+    const d = new DirectSim('u', { ax: async () => answer, hid: async () => ax() });
+    expect(await d.animationsOver()).toBe(473);
+    expect(asked).toMatchObject([{ op: 'animations', within: 1 }]);
+    const refused = helper(() => ({ ok: false, refused: 'no-report' }));
+    const none = new DirectSim('u', { ax: async () => refused, hid: async () => ax() });
+    expect(await none.animationsOver()).toBeUndefined();
+    vi.stubEnv('APPDYNO_ANIMATION_WAIT', '0');
+    expect(await d.animationsOver()).toBeUndefined();
+    expect(asked).toHaveLength(1);
+    vi.unstubAllEnvs();
+  });
+
+  it('after a touch, asks for the app to have handled it before anything counts as still', async () => {
+    const asked: Record<string, unknown>[] = [];
+    const answer = helper((q) => {
+      asked.push(q);
+      return { ok: true, touchesEnded: q.op === 'arm' ? 4 : 6, ms: 300, screen: [402, 874] };
+    });
+    const hid = helper(() => ({ ok: true }));
+    const d = new DirectSim('u', { ax: async () => answer, hid: async () => hid });
+    await d.hello();
+    await d.touchHandled();
+    expect(asked.map((q) => q.op)).toEqual(['hello']);
+    await d.arm();
+    expect(await d.send({ kind: 'tap', x: 1, y: 1 })).toBe(true);
+    await d.touchHandled();
+    expect(asked.at(-1)).toMatchObject({ op: 'touched', touches: 6 });
+    // handled now: nothing to ask, and the next wait has nothing to wait for first
+    await d.touchHandled();
+    expect(asked.filter((q) => q.op === 'touched')).toHaveLength(1);
+    await d.animationsOver();
+    expect(asked.at(-1)).toMatchObject({ op: 'animations', touches: 6 });
+  });
+
+  it('leaves the simulator as it found it, unless a runner stays and needs it so', async () => {
+    const asked: unknown[] = [];
+    const answer = () =>
+      helper((q) => {
+        asked.push(q.op);
+        return { ok: true, screen: [402, 874], osVersion: '26.5', model: 'x', scale: 3 };
+      });
+    const gone = new DirectSim('u', { ax: async () => answer(), hid: async () => ax() });
+    await gone.hello();
+    gone.close();
+    await vi.waitFor(() => expect(asked).toEqual(['hello', 'leave']));
+    asked.length = 0;
+    const stays = new DirectSim('u', { ax: async () => answer(), hid: async () => ax() });
+    await stays.hello();
+    stays.close(true);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(asked).toEqual(['hello']);
+  });
+
   it('believes a read that says what the runner says, and not one that does not', async () => {
     const d = new DirectSim('u', { ax: async () => ax(), hid: async () => ax() }, undefined);
     const r = await d.read('a.b');
     if ('refused' in r) throw new Error(r.refused);
-    expect(d.readProven).toBe(false);
+    expect(d.screenKnown).toBe(true);
     const other = tree(app(cell('B', 200))).tree;
     expect(d.checkRead(r.tree, other)).toBe(false);
     expect(d.checkRead(r.tree, structuredClone(r.tree))).toBe(true);
-    expect(d.readProven).toBe(true);
     expect(d.touchesEnded).toBe(2);
     // once believed, a screen it reads differently goes to the runner, the helper stays on
     for (let i = 0; i < 4; i++) expect(d.checkRead(r.tree, other)).toBe(false);
