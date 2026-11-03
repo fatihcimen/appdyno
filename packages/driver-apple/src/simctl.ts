@@ -80,12 +80,12 @@ export type Simulator = {
 export class Simctl {
   constructor(private readonly env: NodeJS.ProcessEnv = xcodeEnv()) {}
 
-  async exec(args: string[], timeoutMs = 60_000): Promise<string> {
+  async exec(args: string[], timeoutMs = 60_000, env = this.env): Promise<string> {
     try {
       const { stdout } = await run('xcrun', ['simctl', ...args], {
         timeout: timeoutMs,
         maxBuffer: 64 * 1024 * 1024,
-        env: this.env,
+        env,
         ...(callSignal() && { signal: callSignal()! }),
       });
       return stdout;
@@ -156,9 +156,13 @@ export class Simctl {
   install(udid: string, appPath: string) {
     return this.exec(['install', assertUdid(udid), appPath], 300_000);
   }
-  /** Starts the app, or brings it forward as it is when it runs. */
-  launch(udid: string, bundle: string) {
-    return this.exec(['launch', assertUdid(udid), assertBundle(bundle)], 60_000);
+  /** Starts the app (`vars` go into its environment), or brings it forward as it is when it runs. */
+  launch(udid: string, bundle: string, vars: Record<string, string> = {}) {
+    const child = Object.entries(vars).map(([k, v]) => [`SIMCTL_CHILD_${k}`, v]);
+    return this.exec(['launch', assertUdid(udid), assertBundle(bundle)], 60_000, {
+      ...this.env,
+      ...Object.fromEntries(child),
+    });
   }
   async terminate(udid: string, bundle: string) {
     await this.exec(['terminate', assertUdid(udid), assertBundle(bundle)], 60_000).catch(

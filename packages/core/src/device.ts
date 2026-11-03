@@ -269,7 +269,14 @@ export interface MeasureSource {
   vitals?(): Promise<Measured<DeviceVitals>>;
   launch?(
     app: string,
-    opts: { mode: LaunchMode; repeats: number; compile?: CompileMode; trace?: boolean },
+    opts: {
+      mode: LaunchMode;
+      repeats: number;
+      compile?: CompileMode;
+      trace?: boolean;
+      /** Goes into the app's environment (iOS): a slow start of a known length, in a test. */
+      env?: Record<string, string>;
+    },
   ): Promise<Measured<LaunchReading>>;
   /** Debuggable, profileable or neither: what a number of this build can be compared with. */
   buildType?(app: string): Promise<BuildType>;
@@ -290,11 +297,7 @@ export interface MeasureSource {
     seconds: number,
     during?: () => Promise<unknown>,
   ): Promise<Measured<HeapProfile>>;
-  hangs?(
-    app: string,
-    seconds: number,
-    during?: () => Promise<unknown>,
-  ): Promise<HangReading>;
+  hangs?(app: string, seconds: number, during?: () => Promise<unknown>): Promise<HangReading>;
   /** XCTest's `measure()` in a test of its own: launch, hitches, memory, CPU. */
   xctMetrics?(app: string, test: 'launch' | 'hitches'): Promise<Measured<XctMetrics>>;
   cpuProfile?(

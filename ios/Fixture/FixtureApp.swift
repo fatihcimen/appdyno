@@ -10,6 +10,11 @@ struct FixtureApp: App {
     @State private var path: [String] = []
     @State private var lastLink = ""
 
+    /// A slow start of a known length: a launch reading must rise by it.
+    init() {
+        if let ms = ProcessInfo.processInfo.environment["APPDYNO_FIXTURE_STARTUP_MS"].flatMap(UInt32.init) { usleep(ms * 1000) }
+    }
+
     var body: some Scene {
         WindowGroup {
             NavigationStack(path: $path) {
@@ -34,6 +39,10 @@ struct FixtureApp: App {
         case "late": LateScreen()
         case "memory": MemoryScreen()
         case "cpu": CpuScreen()
+        case "stall": StallScreen()
+        case "frames": FramesScreen()
+        case "leak": LeakScreen()
+        case "network": NetworkScreen()
         case "code": CodeScreen()
         case "slide": SlideScreen()
         case "a11y": A11yScreen()
@@ -272,6 +281,116 @@ struct CpuScreen: View {
             }
             .accessibilityIdentifier("cpu_load")
             Text(busy ? "Busy" : "Idle").accessibilityIdentifier("cpu_state")
+            Spacer()
+        }
+        .padding()
+    }
+}
+
+/// Blocks the main thread for a known time: a stall reading must show it. "Light" does next to nothing.
+struct StallScreen: View {
+    @State private var taps = 0
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Button("Stall 500 ms") {
+                usleep(500_000)
+                taps += 1
+            }
+            .accessibilityIdentifier("stall_500")
+            Button("Light") { taps += 1 }.accessibilityIdentifier("stall_light")
+            Text("Taps: \(taps)").accessibilityIdentifier("stall_taps")
+            Spacer()
+        }
+        .padding()
+    }
+}
+
+/// An animation of 2 s whose frames each cost a known time on the main thread: a frame reading must tell
+/// about 1 ms from 40 ms.
+struct FramesScreen: View {
+    final class Animator: NSObject, ObservableObject {
+        @Published var x: CGFloat = 0
+        private var link: CADisplayLink?
+        private var workMs = 0.0
+        private var end: CFTimeInterval = 0
+
+        func run(workMs: Double) {
+            self.workMs = workMs
+            end = CACurrentMediaTime() + 2
+            link?.invalidate()
+            link = CADisplayLink(target: self, selector: #selector(tick))
+            link?.add(to: .main, forMode: .common)
+        }
+
+        @objc private func tick(_ l: CADisplayLink) {
+            // spins, as real work does: a sleep would leave the CPU free
+            let stop = CACurrentMediaTime() + workMs / 1000
+            while CACurrentMediaTime() < stop {}
+            x = CGFloat(l.timestamp.truncatingRemainder(dividingBy: 1)) * 200
+            if l.timestamp > end {
+                l.invalidate()
+                link = nil
+            }
+        }
+    }
+
+    @StateObject private var animator = Animator()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Button("Light frames") { animator.run(workMs: 1) }.accessibilityIdentifier("frames_light")
+            Button("Heavy frames") { animator.run(workMs: 40) }.accessibilityIdentifier("frames_heavy")
+            Circle().frame(width: 30, height: 30).offset(x: animator.x)
+            Spacer()
+        }
+        .padding()
+    }
+}
+
+/// Each tap makes a retain cycle nothing else reaches: a leaks count must rise.
+final class LeakNode {
+    var other: LeakNode?
+}
+
+struct LeakScreen: View {
+    @State private var made = 0
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Button("Make a leak") {
+                let a = LeakNode()
+                let b = LeakNode()
+                a.other = b
+                b.other = a
+                made += 1
+            }
+            .accessibilityIdentifier("leak_make")
+            Text("Made: \(made)").accessibilityIdentifier("leak_made")
+            Spacer()
+        }
+        .padding()
+    }
+}
+
+/// Fetches a known number of bytes from APPDYNO_FIXTURE_FETCH_URL (else a public server): a network reading
+/// must show them.
+struct NetworkScreen: View {
+    @State private var got = "Idle"
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Button("Fetch") {
+                let env = ProcessInfo.processInfo.environment["APPDYNO_FIXTURE_FETCH_URL"]
+                let url = URL(string: env ?? "https://speed.cloudflare.com/__down?bytes=5000000")!
+                got = "Fetching"
+                URLSession(configuration: .ephemeral).dataTask(with: url) { data, _, error in
+                    let text = error.map { "Error: \($0.localizedDescription)" } ?? "Got \(data?.count ?? 0)"
+                    DispatchQueue.main.async { got = text }
+                }.resume()
+            }
+            .accessibilityIdentifier("network_fetch")
+            Text(got).accessibilityIdentifier("network_state")
             Spacer()
         }
         .padding()

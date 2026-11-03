@@ -14,6 +14,7 @@ import { assertBundle, xcodeEnv } from './simctl.js';
 import {
   parseActivityMonitor,
   parseHangs,
+  parsePowerImpact,
   parseTimeProfile,
   recordTrace,
   traceTable,
@@ -26,6 +27,14 @@ const PHONE_UDID = /^[0-9A-F]{8}-[0-9A-F]{16}$|^[0-9a-f]{40}$/;
 export const assertPhoneUdid = (u: string) => {
   if (!PHONE_UDID.test(u)) throw new DeviceError('INVALID_ARGUMENT', `not an iPhone UDID: ${u}`);
   return u;
+};
+
+type PhoneApp = {
+  bundleIdentifier?: string;
+  version?: string;
+  bundleVersion?: string;
+  url?: string;
+  builtByDeveloper?: boolean;
 };
 
 /** Xcode's device tool for one phone; JSON results. */
@@ -71,9 +80,7 @@ export class Devicectl {
   }
 
   /** The installed app with this bundle id (version, build, path), if any. */
-  async app(
-    bundle: string,
-  ): Promise<{ version?: string; bundleVersion?: string; url?: string } | undefined> {
+  async app(bundle: string): Promise<PhoneApp | undefined> {
     // system apps (Settings, Safari) are listed only with --include-all-apps
     const j = await this.json([
       'device',
@@ -85,7 +92,7 @@ export class Devicectl {
       '--bundle-id',
       assertBundle(bundle),
     ]);
-    const apps = ((j.result as { apps?: Record<string, string>[] } | undefined)?.apps ?? []).filter(
+    const apps = ((j.result as { apps?: PhoneApp[] } | undefined)?.apps ?? []).filter(
       (a) => a.bundleIdentifier === bundle,
     );
     return apps[0];
@@ -95,8 +102,11 @@ export class Devicectl {
     await this.json(['device', 'install', 'app', '--device', this.udid, appPath], 600_000);
   }
 
-  /** Starts the app, or brings it forward as it is; with `url`, hands the link to it (its state kept). */
-  async launch(bundle: string, url?: string) {
+  /**
+   * Starts the app (`env` goes into its environment), or brings it forward as it is; with `url`, hands
+   * the link to it (its state kept).
+   */
+  async launch(bundle: string, url?: string, env?: Record<string, string>) {
     return this.json([
       'device',
       'process',
@@ -104,6 +114,7 @@ export class Devicectl {
       '--device',
       this.udid,
       ...(url ? ['--payload-url', url] : []),
+      ...(env ? ['--environment-variables', JSON.stringify(env)] : []),
       assertBundle(bundle),
     ]);
   }
@@ -262,7 +273,7 @@ export class IosPhoneDevice extends IosDevice {
   readonly virtual = false;
   private readonly transport: ReturnType<typeof phoneTransport>;
   private readonly ctl: Devicectl;
-  /** A phone measures animation hitches so far. */
+  /** What Instruments and XCTest can read from a phone: what they cannot says why. */
   readonly measure: MeasureSource & { hangs: IosPhoneDevice['hangs'] } = {
     frameTrace: async (bundle, seconds, during) => {
       const v = await this.hitches(bundle, seconds, during);
@@ -301,7 +312,10 @@ export class IosPhoneDevice extends IosDevice {
         else await this.ctl.launch('com.apple.Preferences').catch(() => undefined);
         await new Promise((r) => setTimeout(r, 500));
         const t = performance.now();
-        await this.launch(bundle);
+        if (opts.env) {
+          await this.ctl.launch(bundle, undefined, opts.env);
+          await this.target(bundle);
+        } else await this.launch(bundle);
         const end = t + 20_000;
         while (performance.now() < end) {
           const tree = await this.tree().catch(() => undefined);
@@ -324,6 +338,55 @@ export class IosPhoneDevice extends IosDevice {
       };
     },
     hangs: (bundle, seconds, during) => this.hangs(bundle, seconds, during),
+    network: async () => {
+      // measured with Xcode 27.1 on iOS 27.0.1. The HTTP Traffic instrument alone records, but on a simulator
+      // it had no rows for an attached app's known fetch; this phone had no network to try it on
+      throw new DeviceError(
+        'UNSUPPORTED',
+        "the trace tool's Network template crashes when it stops (EXC_BREAKPOINT in NetworkConnectionStatsModeling), no trace is written",
+      );
+    },
+    energy: async (bundle, windowMs) => {
+      const pid = await this.ctl.pid(assertBundle(bundle));
+      // the instrument alone: the Power Profiler template crashes as the Network one does
+      const trace = await recordTrace({
+        template: 'Power Profiler',
+        instrument: true,
+        device: this.serial,
+        seconds: Math.min(Math.max(Math.round(windowMs / 1000), 2), 30),
+        dir: join(stateDir(), 'traces'),
+      });
+      const breakdown = parsePowerImpact(
+        await traceTable(trace, 'ProcessSubsystemPowerImpact'),
+        pid,
+      );
+      if (!breakdown)
+        throw new DeviceError(
+          'UNSUPPORTED',
+          `the Power Profiler recorded no power for ${bundle}: its per-process table came empty, as it did for every recording of a phone on USB`,
+          `the trace is at ${trace}`,
+        );
+      return {
+        value: {
+          note: "Instruments' estimate of the app's power impact by subsystem, not a meter: no mAh.",
+          breakdown,
+        },
+        raw: trace,
+        at: new Date().toISOString(),
+      };
+    },
+    size: async () => {
+      throw new DeviceError(
+        'UNSUPPORTED',
+        "devicectl lists no size of an app, and a phone's app bundle cannot be read from the Mac",
+      );
+    },
+    // a Release build signed for development has the debugger's entitlement too, and its bundle cannot be read here
+    buildType: async (bundle) => {
+      const app = await this.ctl.app(bundle);
+      return app?.builtByDeveloper === false ? 'release' : 'unknown';
+    },
+    xctMetrics: (bundle, test) => this.xctMetrics(bundle, test),
   };
 
   constructor(serial: string, signing?: PhoneSigning) {

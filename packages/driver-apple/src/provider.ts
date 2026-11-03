@@ -8,6 +8,7 @@ import { iosProducts } from './runner.js';
 import { DirectSim } from './simdirect.js';
 import { findPhoneSigning, phoneSigningFromEnv, readProfile } from './signing.js';
 import { Simctl, xcodeEnv, type Simulator } from './simctl.js';
+import { queryTraceFile } from './trace.js';
 import { listPhones } from './usbmux.js';
 
 const run = promisify(execFile);
@@ -149,5 +150,6 @@ export function appleProvider(
       // a named simulator only: the helpers run inside it
       ...(serial && SIMULATOR_ID.test(serial) ? await directChecks(serial) : []),
     ],
+    queryTrace: queryTraceFile,
   };
 }

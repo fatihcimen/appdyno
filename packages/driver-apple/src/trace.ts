@@ -1,11 +1,18 @@
-import { callSignal, throwIfCancelled } from '@appdyno/core';
+import { callSignal, stateDir, throwIfCancelled } from '@appdyno/core';
 import { execFile, spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import type { CpuProfile, HitchSummary, ProfileEntry } from '@appdyno/core';
+import type {
+  CpuProfile,
+  HitchSummary,
+  Measured,
+  ProfileEntry,
+  TraceDigest,
+  XctMetrics,
+} from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { xcodeEnv } from './simctl.js';
 
@@ -95,6 +102,8 @@ const CAP_MS = 180_000;
 
 export type TraceRecording = {
   template: string;
+  /** `template` names one instrument: for when the whole template cannot record. */
+  instrument?: boolean;
   device: string;
   /** A process to attach to; none, or one the tool cannot find: every process. */
   attach?: () => Promise<number>;
@@ -124,8 +133,10 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
     `${r.template.toLowerCase().replace(/\W+/g, '-')}-${Date.now()}.trace`,
   );
   const note = `dev.appdyno.trace.${randomBytes(6).toString('hex')}`;
-  const watcher = spawn('notifyutil', ['-w', note], { stdio: 'ignore' });
+  const watcher = spawn('notifyutil', ['-w', note], { stdio: ['ignore', 'pipe', 'ignore'] });
   const started = new Promise<void>((resolve) => {
+    // it prints the name when the note comes, and goes on waiting
+    watcher.stdout.once('data', () => resolve());
     watcher.once('exit', () => resolve());
     watcher.once('error', () => resolve());
     // a tool that never says: `during` runs anyway, and the result shows what it caught
@@ -136,7 +147,7 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
     [
       'xctrace',
       'record',
-      '--template',
+      r.instrument ? '--instrument' : '--template',
       r.template,
       '--device',
       r.device,
@@ -205,6 +216,147 @@ export async function traceTable(tracePath: string, schema: string): Promise<str
   ).stdout;
 }
 
+/** A test's readings from `xcresulttool get test-results metrics`, by the metric's id. */
+export function parseXctMetrics(json: string): Record<string, number[]> {
+  const out: Record<string, number[]> = {};
+  const tests = JSON.parse(json) as {
+    testRuns?: { metrics?: { identifier: string; measurements: number[] }[] }[];
+  }[];
+  for (const m of tests.flatMap((t) => t.testRuns ?? []).flatMap((r) => r.metrics ?? []))
+    (out[m.identifier] ??= []).push(...m.measurements);
+  return out;
+}
+
+/** One `measure()` test of the runner's bundle in a run of its own, and what its result bundle holds. */
+export async function recordXctMetrics(
+  udid: string,
+  xctestrun: string,
+  bundle: string,
+  test: 'launch' | 'hitches',
+): Promise<Measured<XctMetrics>> {
+  const name = test === 'hitches' ? 'testHitches' : 'testLaunch';
+  const dir = join(stateDir(), 'traces');
+  await mkdir(dir, { recursive: true });
+  const resultBundle = join(dir, `xct-${test}-${Date.now()}.xcresult`);
+  const failed = (why: string) =>
+    new DeviceError(
+      'UNSUPPORTED',
+      `XCTest's ${test} metric: ${why}`,
+      `the result bundle is at ${resultBundle}`,
+    );
+  await run(
+    'xcodebuild',
+    [
+      'test-without-building',
+      '-xctestrun',
+      xctestrun,
+      '-destination',
+      `id=${udid}`,
+      `-only-testing:Runner/PerfMetricsTests/${name}`,
+      '-resultBundlePath',
+      resultBundle,
+    ],
+    {
+      env: { ...xcodeEnv(), TEST_RUNNER_APPDYNO_METRICS_APP: bundle },
+      maxBuffer: 256 * 1024 * 1024,
+      timeout: 600_000,
+      ...(callSignal() && { signal: callSignal()! }),
+    },
+  ).catch((e: { stdout?: string; message: string }) => {
+    throw failed((e.stdout ?? e.message).trim().split('\n').slice(-3).join(' ').slice(0, 300));
+  });
+  const { stdout } = await run(
+    'xcrun',
+    [
+      'xcresulttool',
+      'get',
+      'test-results',
+      'metrics',
+      '--path',
+      resultBundle,
+      '--test-id',
+      `PerfMetricsTests/${name}()`,
+      '--compact',
+    ],
+    { env: xcodeEnv(), maxBuffer: 64 * 1024 * 1024, timeout: 60_000 },
+  );
+  const metrics = parseXctMetrics(stdout);
+  if (!Object.keys(metrics).length) throw failed('the test ran and recorded no value');
+  return { value: { metrics, resultBundle }, raw: stdout, at: new Date().toISOString() };
+}
+
+/** An exported table as strings, the heaviest rows first where it has a duration or a weight. */
+export function traceDigest(
+  tracePath: string,
+  source: string,
+  xml: string,
+  limit: number,
+): TraceDigest {
+  const columns = [...xml.matchAll(/<col><mnemonic>([^<]+)<\/mnemonic>/g)].map((m) => m[1]!);
+  const rows = parseTraceTable(xml);
+  const key = ['duration', 'weight'].find((k) => columns.includes(k));
+  if (key) rows.sort((a, b) => Number(b[key]?.value ?? 0) - Number(a[key]?.value ?? 0));
+  return {
+    tracePath,
+    source,
+    columns,
+    rows: rows
+      .slice(0, limit)
+      .map((r) => columns.map((c) => (r[c]?.fmt ?? r[c]?.value ?? '').slice(0, 200))),
+    dropped: Math.max(0, rows.length - limit),
+  };
+}
+
+/** What a kept trace holds: one table with `table`, the list of its tables without. */
+export async function queryTraceFile(
+  tracePath: string,
+  q: { sql?: string; table?: string; limit: number },
+): Promise<TraceDigest | undefined> {
+  if (!tracePath.endsWith('.trace')) return undefined;
+  if (q.sql)
+    throw new DeviceError(
+      'INVALID_ARGUMENT',
+      'an Instruments trace has tables, not SQL',
+      'name a table',
+    );
+  if (q.table && !/^[\w-]+$/.test(q.table))
+    throw new DeviceError('INVALID_ARGUMENT', `not a table name: ${q.table}`);
+  const refused = (e: Error) => {
+    throw new DeviceError(
+      'UNSUPPORTED',
+      `the trace tool could not read the trace: ${e.message.slice(0, 200)}`,
+    );
+  };
+  if (q.table) {
+    const digest = traceDigest(
+      tracePath,
+      `xctrace export, table ${q.table}`,
+      await traceTable(tracePath, q.table).catch(refused),
+      q.limit,
+    );
+    if (!digest.columns.length)
+      throw new DeviceError(
+        'INVALID_ARGUMENT',
+        `the trace has no table ${q.table}`,
+        'leave out the table to list them',
+      );
+    return digest;
+  }
+  const { stdout } = await run('xcrun', ['xctrace', 'export', '--input', tracePath, '--toc'], {
+    env: xcodeEnv(),
+    maxBuffer: 64 * 1024 * 1024,
+    timeout: 120_000,
+  }).catch(refused);
+  const schemas = [...new Set([...stdout.matchAll(/\bschema="([^"]+)"/g)].map((m) => m[1]!))];
+  return {
+    tracePath,
+    source: 'xctrace export --toc',
+    columns: ['table'],
+    rows: schemas.slice(0, q.limit).map((s) => [s]),
+    dropped: Math.max(0, schemas.length - q.limit),
+  };
+}
+
 /** Animation hitches of a process on a phone: the Animation Hitches template while `during` runs. */
 export async function recordHitches(
   device: string,
@@ -226,7 +378,7 @@ export async function recordHitches(
     await traceTable(tracePath, 'displayed-surfaces-interval'),
     seconds * 1000,
   );
-  // no frames is no reading, never "no hitches": 3 of 5 recordings of a scroll with Xcode 27.1 on iOS 27.0.1
+  // no frames is no reading, never "no hitches"
   if (summary.frames === 0)
     throw new DeviceError(
       'UNSUPPORTED',
@@ -298,11 +450,13 @@ export function parseTimeProfile(
         samples: Math.round(w / 1e6),
         percent: total ? Math.round((w / total) * 1000) / 10 : 0,
       }));
+  // an address (a thunk with no symbol) ties with the function around it: the name says more
+  const named = [...app].filter(([name]) => !name.startsWith('0x'));
   return {
     durationMs: 0,
     samples: Math.round(total / 1e6),
     top: entries(top),
-    appTop: entries(app),
+    appTop: entries(named.length ? new Map(named) : app),
   };
 }
 
@@ -320,6 +474,19 @@ export function parseActivityMonitor(
   return {
     footprintBytes: Number(last['memory-physical-footprint']?.value),
     ...(ns > 0 && { cpuPercent: Math.round((busy / ns) * 100), windowMs: Math.round(ns / 1e6) }),
+  };
+}
+
+/** The Power Profiler's impact of one process by subsystem, summed over the recording; none without rows. */
+export function parsePowerImpact(xml: string, pid: number): Record<string, number> | undefined {
+  const rows = parseTraceTable(xml).filter((r) => r.process?.fmt?.includes(`(${pid})`));
+  if (!rows.length) return undefined;
+  const sum = (c: string) => rows.reduce((a, r) => a + (Number(r[c]?.value) || 0), 0);
+  return {
+    cpu: sum('cpu-impact'),
+    display: sum('display-impact'),
+    gpu: sum('gpu-impact'),
+    networking: sum('networking-impact'),
   };
 }
 
