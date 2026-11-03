@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { crashReports, parseDropbox, parseExitInfo } from '../src/crashes.js';
-import { conflictHint, holdersIn } from '../src/holders.js';
+import { conflictHint, holdersIn, PROCESS_LIST } from '../src/holders.js';
 import { logcatCommand } from '../src/logs.js';
 
-const line = (pid: number, command: string) => `${String(pid).padStart(6)} ${command}`;
+const line = (pid: number, command: string, user = 'shell') =>
+  `${String(pid).padStart(6)} ${user} ${command}`;
 
 describe('who holds UI automation', () => {
   it.each([
@@ -41,7 +42,9 @@ describe('who holds UI automation', () => {
       /^kill 901$/,
     ],
   ])('recognises %s', (command, tool, stop) => {
-    const ps = ['  PID ARGS', line(1, 'init second_stage'), line(901, command)].join('\n');
+    const ps = ['  PID USER ARGS', line(1, 'init second_stage', 'root'), line(901, command)].join(
+      '\n',
+    );
     const [h] = holdersIn(ps);
     expect(h).toMatchObject({ tool, pid: 901, command });
     expect(h!.shell).toMatch(stop);
@@ -66,6 +69,23 @@ describe('who holds UI automation', () => {
     ).toEqual([]);
   });
 
+  it('an instrumented package counts under its own user, as it runs as the app it tests', () => {
+    expect(holdersIn(line(901, 'com.example.automation.test', 'u0_a123'))[0]).toMatchObject({
+      tool: 'instrumentation',
+      shell: 'am force-stop com.example.automation',
+    });
+  });
+
+  it.each([
+    ['an app whose process name looks like a class', 'com.example.games.Puzzle', 'u0_a123'],
+    ['an app that runs app_process', 'app_process / com.example.Server', 'u0_a123'],
+    ['a system service', 'app_process64 /system/bin com.vendor.daemon.Main', 'root'],
+    ['the system', 'com.android.server.Helper', 'system'],
+    ['a screen mirror', 'app_process / com.genymobile.scrcpy.Server 2.7', 'shell'],
+  ])('--takeover never stops %s', (_, command, user) => {
+    expect(holdersIn(line(901, command, user))).toEqual([]);
+  });
+
   it('names one holder once per way to stop it', () => {
     const hs = holdersIn(
       [
@@ -83,7 +103,7 @@ describe('who holds UI automation', () => {
     expect(hint).toContain('`adb -s emulator-5612 shell kill 77`');
     expect(hint).toContain('--takeover');
     expect(conflictHint([], 'emulator-5612')).toContain(
-      'adb -s emulator-5612 shell ps -A -o PID,ARGS',
+      `adb -s emulator-5612 shell ${PROCESS_LIST}`,
     );
   });
 });

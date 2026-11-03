@@ -9,6 +9,7 @@ import {
   appleProvider,
   Devicectl,
   holdersIn,
+  PROCESS_LIST,
   inCall,
   sleep as pause,
   Simctl,
@@ -32,7 +33,7 @@ describe.skipIf(!serial)('android: another tool holds UI automation', () => {
   const adb = new Adb();
   const shell = (cmd: string) => adb.exec(serial!, cmd);
   const holderRunning = async () =>
-    holdersIn(await shell('ps -A -o PID,ARGS')).find((h) => h.tool === 'uiautomator');
+    holdersIn(await shell(PROCESS_LIST)).find((h) => h.tool === 'uiautomator');
   let holder: ChildProcess;
 
   beforeAll(async () => {

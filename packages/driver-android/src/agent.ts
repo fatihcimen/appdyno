@@ -17,7 +17,7 @@ import {
   type RpcClient,
 } from '@appdyno/core';
 import { type Adb, assertSerial, shq } from './adb.js';
-import { conflictHint, holdersIn, type Holder } from './holders.js';
+import { conflictHint, holdersIn, PROCESS_LIST, type Holder } from './holders.js';
 
 export const AGENT_MAIN = 'dev.appdyno.agent.Main';
 export const REMOTE_DIR = '/data/local/tmp/appdyno';
@@ -119,7 +119,7 @@ export class AndroidAgentLauncher {
 
   /** Who holds UI automation, as the device's process list shows it. */
   private async holders(): Promise<Holder[]> {
-    return holdersIn(await this.adb.exec(this.serial, 'ps -A -o PID,ARGS').catch(() => ''));
+    return holdersIn(await this.adb.exec(this.serial, PROCESS_LIST).catch(() => ''));
   }
 
   /** Only on --takeover: another tool's helper is stopped when its owner said so. */
