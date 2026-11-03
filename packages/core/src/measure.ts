@@ -115,8 +115,10 @@ export type HitchSummary = {
   hitches: number;
   hitchMs: number;
   worstMs: number;
-  /** The app's hitches of FROZEN_FRAME_MS or longer. */
+  /** The screen stood still for FROZEN_FRAME_MS or longer: a hitch, or a hang of the main thread, of that length. */
   frozen: number;
+  /** The main thread's hangs in the same recording. */
+  stalls: { count: number; worstMs: number; totalMs: number };
   /** Hitch time per second of recording (Apple's hitch ratio, ms/s). */
   hitchRatio: number;
   causes: Record<string, number>;
@@ -194,15 +196,22 @@ export type NetworkReading = {
 };
 
 export type EnergyReading = {
-  /** Estimated charge. Model-based: a formula over time in each state, not a power meter. */
+  /** Estimated charge: Android's own, a formula over time in each state, not a power meter. */
   mah?: number;
+  /** Millijoules, counted (a simulator app, on the Mac) or from this tool's model. */
+  mj?: number;
+  /** Instruments' power impact: iOS's relative score, no unit of energy. */
+  impact?: number;
+  /** A number worked out from others, by a model, and not read from the platform's count of it. */
+  modelled?: boolean;
   note: string;
   breakdown?: Record<string, number>;
 };
 
 export type ExitReading = {
   crashes: number;
-  anrs: number;
+  /** Android's; iOS has no such count, and its hangs are a measure of their own. */
+  anrs?: number;
   total: number;
   recent: { at: string; reason: string; description?: string }[];
 };
@@ -238,7 +247,9 @@ export type HeapReading = {
   bytes: number;
   leaks?: number;
   leakedBytes?: number;
-  kind: 'hprof' | 'memgraph';
+  kind: 'hprof' | 'memgraph' | 'trace';
+  /** What the count counts, where it can be taken for something else. */
+  note?: string;
 };
 
 export type FrameTrace =
@@ -268,14 +279,16 @@ export interface MeasureSource {
       repeats: number;
       compile?: CompileMode;
       trace?: boolean;
+      /** Each cold start under the frame probe, to its first frame (iOS simulator). */
+      probe?: boolean;
       /** Goes into the app's environment (iOS): a slow start of a known length, in a test. */
       env?: Record<string, string>;
     },
   ): Promise<Measured<LaunchReading>>;
   /** Debuggable, profileable or neither: what a number of this build can be compared with. */
   buildType?(app: string): Promise<BuildType>;
-  /** Relaunches the app with the frame probe unless it runs under it already (simulator, opt-in). */
-  attachProbe?(app: string): Promise<void>;
+  /** Relaunches the app with the frame probe unless it runs under it already (simulator): true if it did. */
+  attachProbe?(app: string): Promise<boolean>;
   threads?(app: string, windowMs: number): Promise<Measured<ThreadReading>>;
   network?(
     app: string,

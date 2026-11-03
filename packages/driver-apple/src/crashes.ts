@@ -8,6 +8,8 @@ import {
   type CrashesAnswer,
   type CrashesQuery,
   type CrashReport,
+  type ExitReading,
+  type Measured,
 } from '@appdyno/core';
 import type { Devicectl } from './devicectl.js';
 
@@ -138,6 +140,27 @@ export function endReports(files: PhoneFile[], q: CrashesQuery): PhoneFile[] {
  * list: `devicectl device copy from` of the folder stops at the first file it cannot take, and iOS leaves such
  * files there (`19:24.spindump.txt`).
  */
+/** A device's crash reports as the reading every platform gives: how the app's processes ended. */
+export async function crashExits(
+  crashes: (q: CrashesQuery) => Promise<CrashesAnswer>,
+  bundle: string,
+): Promise<Measured<ExitReading>> {
+  const { reports, source } = await crashes({ app: bundle, limit: 100 });
+  return {
+    value: {
+      crashes: reports.length,
+      total: reports.length,
+      recent: reports.slice(0, 10).map((r) => ({
+        at: r.at,
+        reason: r.reason,
+        ...(r.detail && { description: r.detail }),
+      })),
+    },
+    raw: source,
+    at: new Date().toISOString(),
+  };
+}
+
 export async function phoneCrashes(ctl: Devicectl, q: CrashesQuery): Promise<CrashesAnswer> {
   const dir = join(stateDir(), 'crashes', ctl.udid);
   await mkdir(dir, { recursive: true, mode: 0o700 });

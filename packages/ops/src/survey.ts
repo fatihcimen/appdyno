@@ -105,13 +105,13 @@ export async function survey(ctx: ServerContext, app: string, log: (line: string
       continue;
     }
     const kept = (await loadRefusals(dir)).find(
-      (r) => r.deviceClass === cls && r.measure === row && since(r.at),
+      (r) => r.deviceClass === cls && r.app === app && r.measure === row && since(r.at),
     );
     const reason =
       kept?.reason ??
       ([...new Set(said.flatMap((o) => o.refused ?? []))].join('; ') ||
         `${session.device.serial} gives no reading of this`);
-    if (!kept) await keepRefusal(ctx, session, row, reason);
+    if (!kept) await keepRefusal(ctx, session, app, row, reason);
     line(row, `cannot be read: ${reason}`);
   }
   const file = await writeDashboard(dir, ctx.perfDir, { app });

@@ -1,7 +1,8 @@
 // The frame probe: injected into a simulator app when it is launched (no change to the app). A display
 // link on the main run loop records every frame interval; a timer on another queue writes them to the
 // file named by APPDYNO_PROBE_OUT as JSON lines, so a stalled main thread does not hold the file back
-// and a stall still running shows.
+// and a stall still running shows. A start's phases go there too: process start, this library's first code, UIKit's
+// application object made, did finish launching, first frame.
 #import <Foundation/Foundation.h>
 #import <QuartzCore/QuartzCore.h>
 #import <UIKit/UIKit.h>
@@ -23,9 +24,9 @@ static const double OPEN_STALL_MS = 100;
 
 static Frame frames[CAPACITY];
 static _Atomic uint64_t written;
-static _Atomic double lastTick, lastInput, launchMs;
+static _Atomic double lastTick, lastInput, launchMs, uikitAt, finishedAt;
 static FILE *out;
-static double processStart;
+static double processStart, firstCode;
 static CADisplayLink *displayLink;
 
 static double nowMs(void) {
@@ -69,6 +70,15 @@ static void sendEventTimed(id self, SEL cmd, UIEvent *event) {
   if (event.type == UIEventTypeTouches) atomic_store(&lastInput, nowMs());
 }
 
+static id (*initOriginal)(id, SEL);
+static id initTimed(id self, SEL cmd) {
+  if (atomic_load(&uikitAt) == 0) atomic_store(&uikitAt, nowMs());
+  return initOriginal(self, cmd);
+}
+
+/** Whichever of the phases has not come yet reads as nothing, not as less than nothing. */
+static double since(double from, double to) { return to > from && from > 0 ? to - from : 0; }
+
 static void flush(void) {
   static uint64_t flushed;
   static double seenInput, seenLaunch;
@@ -79,7 +89,15 @@ static void flush(void) {
     fprintf(out, "{\"t\":%.1f,\"dt\":%.1f,\"v\":%.1f}\n", f.t, f.dt, f.vsync);
   }
   double launch = atomic_load(&launchMs), input = atomic_load(&lastInput);
-  if (launch != seenLaunch) fprintf(out, "{\"launchMs\":%.1f}\n", seenLaunch = launch);
+  if (launch != seenLaunch) {
+    double uikit = atomic_load(&uikitAt), finished = atomic_load(&finishedAt);
+    double frame = processStart + launch;
+    fprintf(out,
+            "{\"phases\":{\"load\":%.1f,\"main\":%.1f,\"uikit\":%.1f,\"first_frame\":%.1f}}\n",
+            since(processStart, firstCode), since(firstCode, uikit), since(uikit, finished),
+            since(finished, frame));
+    fprintf(out, "{\"launchMs\":%.1f}\n", seenLaunch = launch);
+  }
   if (input != seenInput) fprintf(out, "{\"input\":%.1f}\n", seenInput = input);
   double tick = atomic_load(&lastTick), now = nowMs();
   if (tick > 0 && now - tick > OPEN_STALL_MS)
@@ -90,6 +108,7 @@ static void flush(void) {
 __attribute__((constructor)) static void start(void) {
   const char *path = getenv("APPDYNO_PROBE_OUT");
   if (!path || !(out = fopen(path, "a"))) return;
+  firstCode = nowMs();
   struct kinfo_proc proc;
   size_t size = sizeof proc;
   int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()};
@@ -101,6 +120,18 @@ __attribute__((constructor)) static void start(void) {
 
   Method send = class_getInstanceMethod(UIApplication.class, @selector(sendEvent:));
   sendEventOriginal = (void *)method_setImplementation(send, (IMP)sendEventTimed);
+  // its own method, or one added to it: the one it inherits is every object's
+  Method init = class_getInstanceMethod(UIApplication.class, @selector(init));
+  initOriginal = (void *)method_getImplementation(init);
+  if (!class_addMethod(UIApplication.class, @selector(init), (IMP)initTimed,
+                       method_getTypeEncoding(init)))
+    method_setImplementation(init, (IMP)initTimed);
+  [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidFinishLaunchingNotification
+                                                  object:nil
+                                                   queue:nil
+                                              usingBlock:^(NSNotification *n) {
+                                                atomic_store(&finishedAt, nowMs());
+                                              }];
 
   dispatch_async(dispatch_get_main_queue(), ^{
     AppdynoProbe *probe = [AppdynoProbe new];

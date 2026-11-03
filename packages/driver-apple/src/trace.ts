@@ -1,5 +1,6 @@
 import {
   callSignal,
+  sleep,
   throwIfCancelled,
   run,
   type Measured,
@@ -23,6 +24,9 @@ const STOP_MS = 60_000;
 /** The whole recording is cut at this, whatever the tool does. */
 const CAP_MS = 180_000;
 
+const FIND_PROCESS_MS = 180_000;
+const FIND_RETRY_MS = 5_000;
+
 export type TraceRecording = {
   template: string;
   /** `template` names one instrument: for when the whole template cannot record. */
@@ -30,6 +34,10 @@ export type TraceRecording = {
   device: string;
   /** A process to attach to; none, or one the tool cannot find: every process. */
   attach?: () => Promise<number>;
+  /** What every process cannot answer: a process the tool cannot find is looked up once more instead. */
+  attachedOnly?: boolean;
+  /** Started by the tool itself, with this environment, in place of an attach. */
+  launch?: { app: string; env?: Record<string, string> };
   seconds: number;
   dir: string;
   during?: () => Promise<unknown>;
@@ -40,14 +48,34 @@ export type TraceRecording = {
  * started, and the stop is bounded. The trace stays at `dir` for Instruments.
  */
 export async function recordTrace(r: TraceRecording): Promise<string> {
-  const pid = await r.attach?.();
-  return recordOnce(r, pid).catch((e: Error) => {
-    // a phone's tool stops finding running processes at times, whichever way they are named (measured
-    // on iOS 27.0.1, with the tool's service restarted too); every process is still recorded
-    if (!pid || !/Cannot find process/.test(e.message)) throw e;
-    return recordOnce(r, undefined);
-  });
+  const givenUp = Date.now() + FIND_PROCESS_MS;
+  for (;;) {
+    const pid = await r.attach?.();
+    try {
+      return await recordOnce(r, pid);
+    } catch (e) {
+      // a phone's tool stops finding running processes at times, whichever way they are named (measured on iOS
+      // 27.0.1: the same live process not found for 100 s, then found, with the tool's service restarted too)
+      if (!pid || !/Cannot find process/.test((e as Error).message)) throw e;
+      // every process is still recorded, where that has what is asked
+      if (!r.attachedOnly) return recordOnce(r, undefined);
+      if (Date.now() > givenUp)
+        throw new DeviceError(
+          'TIMEOUT',
+          `the trace tool did not find process ${pid} for ${FIND_PROCESS_MS / 1000} s, though it runs`,
+        );
+      await sleep(FIND_RETRY_MS);
+      throwIfCancelled('the recording');
+    }
+  }
 }
+
+/** What the tool said of a failed recording: its errors, else how its output ends. */
+const failure = (log: string) => {
+  const lines = log.trim().split('\n');
+  const errors = lines.flatMap((l) => /\[Error\]\s*(.*)/.exec(l)?.[1] ?? []);
+  return (errors.length ? errors : lines.slice(-2)).join(' ');
+};
 
 async function recordOnce(r: TraceRecording, attach: number | undefined): Promise<string> {
   await mkdir(r.dir, { recursive: true });
@@ -74,7 +102,6 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
       r.template,
       '--device',
       r.device,
-      ...(attach ? ['--attach', String(attach)] : ['--all-processes']),
       '--time-limit',
       `${r.seconds}s`,
       '--notify-tracing-started',
@@ -82,6 +109,17 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
       '--output',
       tracePath,
       '--no-prompt',
+      // what is launched takes the rest of the line
+      ...(r.launch
+        ? [
+            ...Object.entries(r.launch.env ?? {}).flatMap(([k, v]) => ['--env', `${k}=${v}`]),
+            '--launch',
+            '--',
+            r.launch.app,
+          ]
+        : attach
+          ? ['--attach', String(attach)]
+          : ['--all-processes']),
     ],
     { env: xcodeEnv(), ...(callSignal() && { signal: callSignal()! }) },
   );
@@ -103,16 +141,8 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
     const code = await exited;
     throwIfCancelled('the recording');
     // a stopped recording still has what it caught
-    if (code !== 0 && !existsSync(tracePath))
-      throw new DeviceError(
-        'UNSUPPORTED',
-        `the trace tool could not record: ${log.trim().split('\n').slice(-2).join(' ')}`,
-      );
-    if (code !== 0 && code !== null && /Recording failed/.test(log))
-      throw new DeviceError(
-        'UNSUPPORTED',
-        `the trace tool could not record: ${log.trim().split('\n').slice(0, 2).join(' ')}`,
-      );
+    if (code !== 0 && (!existsSync(tracePath) || (code !== null && /Recording failed/.test(log))))
+      throw new DeviceError('UNSUPPORTED', `the trace tool could not record: ${failure(log)}`);
     return tracePath;
   } finally {
     clearTimeout(stop);
@@ -121,23 +151,25 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
   }
 }
 
-/** One table of a trace, as XML. */
-export async function traceTable(tracePath: string, schema: string): Promise<string> {
-  return (
-    await run(
-      'xcrun',
-      [
-        'xctrace',
-        'export',
-        '--input',
-        tracePath,
-        '--xpath',
-        `/trace-toc/run[@number="1"]/data/table[@schema="${schema}"]`,
-      ],
-      { env: xcodeEnv(), maxBuffer: 256 * 1024 * 1024, timeout: 300_000 },
-    )
+const exported = async (tracePath: string, xpath: string) =>
+  (
+    await run('xcrun', ['xctrace', 'export', '--input', tracePath, '--xpath', xpath], {
+      env: xcodeEnv(),
+      maxBuffer: 256 * 1024 * 1024,
+      timeout: 300_000,
+    })
   ).stdout;
-}
+
+/** One table of a trace, as XML. */
+export const traceTable = (tracePath: string, schema: string) =>
+  exported(tracePath, `/trace-toc/run[@number="1"]/data/table[@schema="${schema}"]`);
+
+/** What an instrument keeps under its track and not as a table (Leaks, Allocations), as XML. */
+export const traceDetail = (tracePath: string, track: string, detail: string) =>
+  exported(
+    tracePath,
+    `/trace-toc/run[@number="1"]/tracks/track[@name="${track}"]/details/detail[@name="${detail}"]`,
+  );
 
 /** One `measure()` test of the runner's bundle in a run of its own, and what its result bundle holds. */
 export async function recordXctMetrics(
@@ -255,10 +287,11 @@ export async function recordHitches(
   dir: string,
   during?: () => Promise<unknown>,
 ): Promise<HitchSummary & { tracePath: string }> {
+  const known = await pid();
   const tracePath = await recordTrace({
     template: 'Animation Hitches',
     device,
-    attach: pid,
+    attach: async () => known,
     seconds,
     dir,
     ...(during && { during }),
@@ -267,13 +300,15 @@ export async function recordHitches(
     await traceTable(tracePath, 'hitches'),
     await traceTable(tracePath, 'displayed-surfaces-interval'),
     seconds * 1000,
+    await traceTable(tracePath, 'potential-hangs'),
+    known,
   );
-  // no frames is no reading, never "no hitches"
+  // no frames is no reading, never "no hitches"; and it is this screen's, not the device's
   if (summary.frames === 0)
     throw new DeviceError(
-      'UNSUPPORTED',
-      'the trace tool recorded no frames on this device',
-      `the trace is at ${tracePath}`,
+      'CHECK_FAILED',
+      'the trace tool recorded no frames: nothing moved on the screen',
+      `open a screen that scrolls or animates, in front; the trace is at ${tracePath}`,
     );
   return { ...summary, tracePath };
 }

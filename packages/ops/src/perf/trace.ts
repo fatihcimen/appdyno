@@ -4,15 +4,15 @@ import type { ServerContext } from '../context.js';
 import { refused } from '../session.js';
 import { TraceOut } from '../schemas.js';
 import { type Op, defineOp, ACT, reply } from '../tool.js';
-import { perfTools, App, Probe, Scenario, measure, virtual } from './shared.js';
+import { perfTools, App, Probe, Scenario, virtual } from './shared.js';
 
 export function perfTraceOp(ctx: ServerContext): Op {
-  const { appOf, virtualNote, save, keep, noisy, withProbe, scroller } = perfTools(ctx);
+  const { measure, appOf, virtualNote, save, keep, noisy, withProbe, scroller } = perfTools(ctx);
   return defineOp({
     name: 'perf_trace',
     title: 'Frame trace',
     description:
-      "Record frames (Android 12+: each frame's time and why it was late; iPhone: animation hitches, their ratio and causes; iOS simulator with `probe`: main-thread pacing). `scroll` scrolls meanwhile. `what`: hangs (iPhone), or XCTest's own hitch or launch metric. The trace is kept for perf_query.",
+      "Record frames (Android 12+: each frame's time and why it was late; iPhone: animation hitches, their ratio and causes; iOS simulator: main-thread pacing, through a probe). `scroll` scrolls meanwhile. `what`: hangs (iPhone), or XCTest's own hitch or launch metric. The trace is kept for perf_query.",
     input: z
       .object({
         app: App,
@@ -95,8 +95,8 @@ export function perfTraceOp(ctx: ServerContext): Op {
           },
         );
       }
-      const record = measure(s, 'frameTrace');
-      await withProbe(s, pkg, probe);
+      const record = measure(s, 'frameTrace', probe === false ? false : 'frames');
+      const relaunched = await withProbe(s, pkg, probe);
       const during = scroll ? await scroller(s, scroll, 500) : undefined;
       const m = await record(pkg, seconds, during).catch(refused);
       if (scroll) s.acted();
@@ -112,6 +112,7 @@ export function perfTraceOp(ctx: ServerContext): Op {
         return reply(
           [
             `measurement ${saved.id}${virtualNote(s)}`,
+            ...relaunched,
             `${v.frames} frames in ${v.durationMs} ms; ${v.missed} missed (${v.missedPercent}%), ${v.frozen} frozen; interval p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms`,
             `stalls over 100 ms: ${v.stalls.count}, ${v.stalls.totalMs} ms in all, worst ${v.stalls.worstMs} ms`,
             ...(v.lastInputMsAgo !== undefined
@@ -145,6 +146,7 @@ export function perfTraceOp(ctx: ServerContext): Op {
           { kind: 'hitches.ratio', unit: 'ratio', samples: [v.hitchRatio] },
           { kind: 'hitches.worst_ms', unit: 'ms', samples: [v.worstMs] },
           { kind: 'frames.frozen', unit: 'count', samples: [v.frozen] },
+          { kind: 'stalls.worst_ms', unit: 'ms', samples: [v.stalls.worstMs] },
         ]);
         const causes = Object.entries(v.causes)
           .map(([c, k]) => `${k}× ${c}`)
@@ -152,7 +154,8 @@ export function perfTraceOp(ctx: ServerContext): Op {
         return reply(
           [
             `measurement ${saved.id}${virtualNote(s)}`,
-            `${v.frames} frames; ${v.hitches} hitches of the app, ${v.hitchMs} ms in all, worst ${v.worstMs} ms, ${v.frozen} frozen; hitch ratio ${v.hitchRatio} ms/s`,
+            `${v.frames} frames; ${v.hitches} hitches of the app, ${v.hitchMs} ms in all, worst ${v.worstMs} ms; hitch ratio ${v.hitchRatio} ms/s`,
+            `frozen frames: ${v.frozen}; main thread stalled ${v.stalls.count} times, worst ${v.stalls.worstMs} ms`,
             ...(causes ? [`likely causes: ${causes}`] : []),
             ...noisy(noise),
             `trace (Instruments): ${v.tracePath}`,
@@ -166,6 +169,7 @@ export function perfTraceOp(ctx: ServerContext): Op {
             hitchMs: v.hitchMs,
             worstMs: v.worstMs,
             frozen: v.frozen,
+            stalls: v.stalls.count,
             hitchRatio: v.hitchRatio,
             tracePath: v.tracePath,
             noise,

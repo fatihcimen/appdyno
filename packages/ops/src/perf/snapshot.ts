@@ -1,24 +1,34 @@
-import type { Measured } from '@appdyno/core';
-import { measureOf } from '@appdyno/perf';
+import type { EnergyReading, Measured } from '@appdyno/core';
+import type { Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { holdingCondition } from '../control.js';
 import { refused } from '../session.js';
 import { SnapshotOut } from '../schemas.js';
 import { type Op, defineOp, READ, reply } from '../tool.js';
-import {
-  perfTools,
-  App,
-  Scenario,
-  measure,
-  unlessUnsupported,
-  keepRefusal,
-  kb,
-  virtual,
-} from './shared.js';
+import { perfTools, App, Scenario, unlessUnsupported, kb, virtual } from './shared.js';
+
+/** A device's energy in the unit it has it in: a charge, a count of energy, or a score. */
+const ENERGY_KINDS = [
+  { field: 'mah', kind: 'energy.mah', unit: 'mah', says: 'mAh' },
+  { field: 'mj', kind: 'energy.mj', unit: 'mj', says: 'mJ' },
+  { field: 'impact', kind: 'energy.impact', unit: 'ratio', says: 'power impact' },
+] as const;
+
+const energyMetrics = (v: EnergyReading): Metric[] =>
+  ENERGY_KINDS.flatMap(({ field, kind, unit }) =>
+    v[field] === undefined
+      ? []
+      : [{ kind, unit, samples: [v[field]], ...(v.modelled && { modelled: true }) }],
+  );
+
+const energyText = (v: EnergyReading) =>
+  `energy${v.modelled ? ' (a model)' : ''}: ${ENERGY_KINDS.flatMap(({ field, says }) =>
+    v[field] === undefined ? [] : [`${v[field]} ${says}`],
+  ).join(', ')}; ${v.note}`;
 
 export function perfSnapshotOp(ctx: ServerContext): Op {
-  const { appOf, virtualNote, save, keep, noisy } = perfTools(ctx);
+  const { measure, appOf, virtualNote, save, keep, noisy } = perfTools(ctx);
   return defineOp({
     name: 'perf_snapshot',
     title: 'Performance snapshot',
@@ -32,7 +42,7 @@ export function perfSnapshotOp(ctx: ServerContext): Op {
           .array(z.enum(['threads', 'network', 'energy', 'exits', 'size']))
           .optional()
           .describe(
-            'threads: each with its time above 90 %; network: bytes; energy: modelled; exits: crashes, ANRs; size: on disk',
+            'threads: each with its time above 90 %; network: bytes; energy: says if a model; exits: crashes, ANRs; size: on disk',
           ),
         scenario: Scenario,
       })
@@ -54,34 +64,29 @@ export function perfSnapshotOp(ctx: ServerContext): Op {
       const lacking: string[] = [];
       const extra = async <T>(what: string, get: (() => Promise<T>) | undefined) => {
         if (!also.includes(what as (typeof also)[number])) return undefined;
-        const row = measureOf(`${what}.`);
-        const got =
-          get &&
-          (await unlessUnsupported(get(), async (why) => {
-            if (row) await keepRefusal(ctx, s, row, why);
-          }));
+        const got = get && (await unlessUnsupported(get()));
         if (!got) lacking.push(what);
         return got;
       };
       const threads = await extra(
         'threads',
-        source.threads && (() => source.threads!(pkg, cpuWindowMs)),
+        source.threads && (() => measure(s, 'threads')(pkg, cpuWindowMs)),
       );
       const network = await extra(
         'network',
-        source.network && (() => source.network!(pkg, cpuWindowMs)),
+        source.network && (() => measure(s, 'network')(pkg, cpuWindowMs)),
       );
       const energy = await extra(
         'energy',
         source.energy &&
           (() => {
-            const read = () => source.energy!(pkg, cpuWindowMs);
+            const read = () => measure(s, 'energy')(pkg, cpuWindowMs);
             // Android reads it told it runs on battery; no other platform has this condition
             return s.device.platform === 'android' ? holdingCondition(s, 'battery', read) : read();
           }),
       );
-      const exits = await extra('exits', source.exits && (() => source.exits!(pkg)));
-      const size = await extra('size', source.size && (() => source.size!(pkg)));
+      const exits = await extra('exits', source.exits && (() => measure(s, 'exits')(pkg)));
+      const size = await extra('size', source.size && (() => measure(s, 'size')(pkg)));
       const saved = await save(
         'snapshot',
         [cpu, mem, frames, vitals, threads, network, energy, exits, size].filter(
@@ -125,20 +130,15 @@ export function perfSnapshotOp(ctx: ServerContext): Op {
               },
             ]
           : []),
-        ...(energy?.value.mah !== undefined
-          ? [
-              {
-                kind: 'energy.mah',
-                unit: 'mah' as const,
-                samples: [energy.value.mah],
-                modelled: true,
-              },
-            ]
-          : []),
+        ...(energy ? energyMetrics(energy.value) : []),
         ...(exits
           ? [
               { kind: 'exits.crashes', unit: 'count' as const, samples: [exits.value.crashes] },
-              { kind: 'exits.anrs', unit: 'count' as const, samples: [exits.value.anrs] },
+              {
+                kind: 'exits.anrs',
+                unit: 'count' as const,
+                samples: exits.value.anrs === undefined ? [] : [exits.value.anrs],
+              },
             ]
           : []),
         ...(size
@@ -167,7 +167,7 @@ export function perfSnapshotOp(ctx: ServerContext): Op {
             : [
                 virtual(s)
                   ? 'no frame measure on a simulator without the probe'
-                  : 'no frame counter on a phone: perf_trace records its hitches',
+                  : 'no frame counter on a phone: perf_scroll and perf_trace record its hitches',
               ]),
           ...(f?.limits ? [f.limits] : []),
           ...(v
@@ -191,10 +191,10 @@ export function perfSnapshotOp(ctx: ServerContext): Op {
                 `network: ${network.value.rxBytes} bytes in, ${network.value.txBytes} out${network.value.note ? ` (${network.value.note})` : ''}`,
               ]
             : []),
-          ...(energy ? [`energy: ${energy.value.mah ?? '?'} mAh; ${energy.value.note}`] : []),
+          ...(energy ? [energyText(energy.value)] : []),
           ...(exits
             ? [
-                `exits: ${exits.value.crashes} crashes, ${exits.value.anrs} ANRs of ${exits.value.total}`,
+                `exits: ${exits.value.crashes} crashes${exits.value.anrs === undefined ? '' : `, ${exits.value.anrs} ANRs`} of ${exits.value.total}`,
               ]
             : []),
           ...(size ? [`size: ${(size.value.bytes / 1048576).toFixed(1)} MB`] : []),
@@ -224,6 +224,9 @@ export function perfSnapshotOp(ctx: ServerContext): Op {
           ...(threads && { threads: threads.value.threads.slice(0, 10) }),
           ...(network && { rxBytes: network.value.rxBytes, txBytes: network.value.txBytes }),
           ...(energy?.value.mah !== undefined && { energyMah: energy.value.mah }),
+          ...(energy?.value.mj !== undefined && { energyMj: energy.value.mj }),
+          ...(energy?.value.impact !== undefined && { energyImpact: energy.value.impact }),
+          ...(energy && { energyModelled: energy.value.modelled === true }),
           ...(exits && { crashes: exits.value.crashes, anrs: exits.value.anrs }),
           ...(size && { sizeBytes: size.value.bytes }),
           ...(lacking.length && { lacking }),

@@ -8,6 +8,7 @@ export * from './stats.js';
 export * from './call.js';
 export * from './device.js';
 export * from './measure.js';
+export * from './energy-model.js';
 export * from './screen/index.js';
 export * from './cdp.js';
 export { joinVideos, readVideo, type VideoInfo } from './video.js';

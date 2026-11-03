@@ -188,12 +188,12 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
       return buildScreen(await d.tree(), { platform: 'ios', appId: APP });
     };
 
-    it('without the probe, frames say how to opt in', async () => {
+    it('without the probe, frames say how to have it', async () => {
       await open('stall');
       const e = await d.measure.frames(APP).catch((x: DeviceError) => x);
       expect(e).toBeInstanceOf(DeviceError);
       expect((e as DeviceError).code).toBe('UNSUPPORTED');
-      expect((e as DeviceError).hint).toMatch(/probe: true/);
+      expect((e as DeviceError).hint).toMatch(/leave `probe` on/);
     });
 
     it('attaches once: a running probe is not relaunched', async () => {
@@ -271,11 +271,12 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
 
     it('a 500 ms slow start raises the launch by that (within 25 %)', async () => {
       await openProbed('stall');
-      const base = (await d.measure.launch(APP, { mode: 'cold', repeats: 5 })).value;
+      const base = (await d.measure.launch(APP, { mode: 'cold', repeats: 5, probe: true })).value;
       const slow = (
         await d.measure.launch(APP, {
           mode: 'cold',
           repeats: 5,
+          probe: true,
           env: { APPDYNO_FIXTURE_STARTUP_MS: '500' },
         })
       ).value;

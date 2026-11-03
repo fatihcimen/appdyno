@@ -16,12 +16,19 @@ import {
   type ProfileEntry,
   callSignal,
   type HeapReading,
+  type EnergyReading,
+  type StartupAnalysis,
 } from '@appdyno/core';
 import { existsSync } from 'node:fs';
-import { readdir, lstat, readFile, mkdir, rm, appendFile, writeFile, stat } from 'node:fs/promises';
+import { readdir, lstat, readFile, mkdir, rm, appendFile, writeFile } from 'node:fs/promises';
 import { join, relative, sep, dirname } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
-import { probeHead, probeWindow, probeFrames, probeSummary } from './probe.js';
+import { probeHead, probeWindow, probeFrames, probeSummary, PROBE_LIMITS } from './probe.js';
+import { crashExits, simulatorCrashes } from './crashes.js';
+import { nettopBytes } from './sim-network.js';
+import { simulatorEnergy } from './sim-energy.js';
+import { memoryGraph } from './sim-heap.js';
+import { profileStart } from './sim-launch.js';
 import { type Simctl, assertBundle } from './simctl.js';
 import { helperBinary } from './simhelper.js';
 import { parseTimeProfile } from './trace-parse.js';
@@ -31,12 +38,10 @@ import {
   parseFootprint,
   type IosCpu,
   parseCpuTime,
-  parseNettop,
   type IosLaunch,
   parseSampleTop,
   parseSampleApp,
   type IosHeap,
-  parseLeaks,
 } from './perf-parse.js';
 
 const at = () => new Date().toISOString();
@@ -144,7 +149,7 @@ export class IosSimulatorPerf implements MeasureSource {
       throw new DeviceError(
         'UNSUPPORTED',
         `${bundle} runs without the frame probe`,
-        'opt in with `probe: true`: it relaunches the app with the probe in it',
+        'leave `probe` on: it relaunches the app with the probe in it',
       );
   }
 
@@ -171,9 +176,42 @@ export class IosSimulatorPerf implements MeasureSource {
     );
   }
 
-  /** Relaunches the app with the frame probe unless it runs under it already. */
-  async attachProbe(bundle: string): Promise<void> {
-    if (!(await this.probed(bundle))) await this.launchProbed(bundle);
+  /** Relaunches the app with the frame probe unless it runs under it already: true if it did. */
+  async attachProbe(bundle: string): Promise<boolean> {
+    if (await this.probed(bundle)) return false;
+    await this.launchProbed(bundle);
+    return true;
+  }
+
+  /** Where a start's time went: one start under the probe by its phases, one from its first instruction profiled. */
+  private async whySlow(bundle: string, env?: Record<string, string>): Promise<StartupAnalysis> {
+    await this.launchProbed(bundle, env);
+    const file = this.probeFile(bundle);
+    const phases = probeHead(await readFile(file, 'utf8')).phases ?? {};
+    const breakdown = Object.entries(phases).map(([reason, ms]) => ({ reason, ms }));
+    const top = await profileStart(this.udid, this.simctl, bundle, env).catch(() => []);
+    return {
+      tracePath: file,
+      startupType: 'cold',
+      durMs: Math.round(breakdown.reduce((a, b) => a + b.ms, 0)),
+      reasons: [],
+      breakdown,
+      findings: [
+        PROBE_LIMITS,
+        ...(top.length
+          ? [`busiest in the start: ${top.map((t) => `${t.symbol} ${t.percent}%`).join(', ')}`]
+          : []),
+      ],
+    };
+  }
+
+  exits(bundle: string) {
+    return crashExits((q) => simulatorCrashes(this.udid, q), bundle);
+  }
+
+  /** What this Mac counts for the app's process: its energy, not a phone's. */
+  async energy(bundle: string, windowMs: number): Promise<Measured<EnergyReading>> {
+    return simulatorEnergy(await this.pid(bundle), windowMs);
   }
 
   async resetFrames(bundle: string): Promise<void> {
@@ -223,40 +261,7 @@ export class IosSimulatorPerf implements MeasureSource {
     windowMs: number,
     during?: () => Promise<unknown>,
   ): Promise<Measured<NetworkReading>> {
-    const pid = await this.pid(bundle);
-    const seconds = Math.max(Math.ceil(windowMs / 1000), 1);
-    // into a pipe it says nothing until it ends by itself, and a signal loses what it holds
-    const nettop = run(
-      'nettop',
-      [
-        '-P',
-        '-x',
-        '-n',
-        '-L',
-        String(seconds + 2),
-        '-s',
-        '1',
-        '-J',
-        'bytes_in,bytes_out',
-        '-p',
-        String(pid),
-      ],
-      { timeout: (seconds + 30) * 1000 },
-    ).catch((e: Error) => {
-      throw new DeviceError('UNSUPPORTED', `nettop: ${e.message.slice(0, 200)}`);
-    });
-    // its first sample, what counts from: `during` starts after it
-    const [{ stdout: raw }] = await Promise.all([nettop, sleep(1_000).then(() => during?.())]);
-    return {
-      value: {
-        // from its first sample to its last
-        windowMs: (seconds + 1) * 1000,
-        ...parseNettop(raw),
-        note: "The app's own sockets, as the Mac's nettop counts them, loopback included.",
-      },
-      raw,
-      at: at(),
-    };
+    return nettopBytes(await this.pid(bundle), windowMs, during);
   }
 
   /** The app's bundle on disk: a simulator build, not what a user downloads. */
@@ -293,14 +298,21 @@ export class IosSimulatorPerf implements MeasureSource {
    */
   async launch(
     bundle: string,
-    opts: { mode?: LaunchMode; repeats?: number; env?: Record<string, string> } = {},
+    opts: {
+      mode?: LaunchMode;
+      repeats?: number;
+      trace?: boolean;
+      probe?: boolean;
+      env?: Record<string, string>;
+    } = {},
   ): Promise<Measured<IosLaunch>> {
     assertBundle(bundle);
     const mode = opts.mode ?? 'cold';
     const repeats = Math.min(Math.max(opts.repeats ?? 5, 1), 10);
     const samples: number[] = [];
     const raw: string[] = [];
-    const probe = mode === 'cold' && (await this.probed(bundle));
+    const probe = mode === 'cold' && opts.probe === true;
+    const startup = opts.trace ? await this.whySlow(bundle, opts.env) : undefined;
     for (let i = 0; i < repeats + 1; i++) {
       if (mode === 'cold') await this.simctl.terminate(this.udid, bundle);
       else
@@ -331,6 +343,7 @@ export class IosSimulatorPerf implements MeasureSource {
         samples: samples.map((totalMs) => ({ totalMs })),
         medianMs: lowerMedian(samples),
         until: probe ? 'first frame (probe)' : 'the first screen is read',
+        ...(startup && { startup }),
       },
       raw: raw.join('\n'),
       at: at(),
@@ -397,32 +410,10 @@ export class IosSimulatorPerf implements MeasureSource {
   }
 
   /**
-   * A memory graph of the app (the Mac's leaks tool), saved at `path` for Xcode's memory graph viewer,
-   * and the leaks it found. The file stays on this machine.
+   * A memory graph of the app, saved at `path` for Xcode's memory graph viewer, and the leaks it found. The file stays
+   * on this machine.
    */
   async heapGraph(bundle: string, path: string): Promise<Measured<IosHeap>> {
-    const pid = await this.pid(bundle);
-    // leaks exits 1 when it found leaks: its answer, not a failure
-    const r = await run('leaks', [`--outputGraph=${path}`, String(pid)], {
-      timeout: 300_000,
-      maxBuffer: 64 * 1024 * 1024,
-    }).catch((e: { stdout?: string; code?: number }) => {
-      if (e.code === 1 && e.stdout) return { stdout: e.stdout };
-      throw new DeviceError('UNSUPPORTED', `no memory graph of ${bundle}`);
-    });
-    const { size } = await stat(path);
-    // with a graph written the tool prints no summary: the saved graph is read again, offline
-    const summary = await run('leaks', [path], {
-      timeout: 300_000,
-      maxBuffer: 64 * 1024 * 1024,
-    }).then(
-      (x) => x.stdout,
-      (e: { stdout?: string }) => e.stdout ?? '',
-    );
-    return {
-      value: { file: path, bytes: size, ...parseLeaks(summary) },
-      raw: `${r.stdout}\n---\n${summary}`,
-      at: at(),
-    };
+    return memoryGraph(await this.pid(bundle), bundle, path);
   }
 }

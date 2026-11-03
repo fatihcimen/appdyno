@@ -5,20 +5,21 @@ import type { ServerContext } from '../context.js';
 import { refused } from '../session.js';
 import { HeapOut } from '../schemas.js';
 import { type Op, defineOp, READ, reply } from '../tool.js';
-import { perfTools, App, measure } from './shared.js';
+import { perfTools, App } from './shared.js';
 
 const HEAP: Record<HeapReading['kind'], { store: string; label: string }> = {
   hprof: { store: 'heap-dump', label: 'heap dump' },
   memgraph: { store: 'heap-graph', label: 'memory graph (Xcode)' },
+  trace: { store: 'heap-leaks', label: 'Leaks trace (Instruments)' },
 };
 
 export function perfHeapOp(ctx: ServerContext): Op {
-  const { appOf, save, keep } = perfTools(ctx);
+  const { measure, appOf, save, keep } = perfTools(ctx);
   return defineOp({
     name: 'perf_heap',
     title: 'Heap dump',
     description:
-      "The app's heap into a local file (Android: Java HPROF, for a memory analyser; iOS simulator: an Xcode memory graph and the leak count). For a suspected leak, after perf_scroll. Android `profile`: a Perfetto trace, top classes or sites, for a debuggable or profileable build.",
+      "The app's heap into a local file (Android: Java HPROF, for a memory analyser; iOS simulator: an Xcode memory graph; iPhone, an app signed for development: a Leaks trace; on iOS the leak count). For a suspected leak, after perf_scroll. Android `profile`: a Perfetto trace, top classes or sites, for a debuggable or profileable build.",
     input: z
       .object({
         app: App,
@@ -60,8 +61,13 @@ export function perfHeapOp(ctx: ServerContext): Op {
           { kind: 'heap.leaks', unit: 'count', samples: [v.leaks] },
         ]);
       return reply(
-        `measurement ${saved.id}\n${HEAP[v.kind].label}: ${v.file} (${(v.bytes / 1048576).toFixed(1)} MB)${v.leaks !== undefined ? `; ${v.leaks} leaks, ${v.leakedBytes} bytes` : ''}`,
-        { id: saved.id, file: v.file, bytes: v.bytes },
+        `measurement ${saved.id}\n${HEAP[v.kind].label}: ${v.file} (${(v.bytes / 1048576).toFixed(1)} MB)${v.leaks !== undefined ? `; ${v.leaks} leaks, ${v.leakedBytes} bytes` : ''}${v.note ? `\n${v.note}` : ''}`,
+        {
+          id: saved.id,
+          file: v.file,
+          bytes: v.bytes,
+          ...(v.leaks !== undefined && { leaks: v.leaks }),
+        },
       );
     },
   });

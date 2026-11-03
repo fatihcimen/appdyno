@@ -12,7 +12,7 @@ import { refused } from '../session.js';
 import { ScrollOut } from '../schemas.js';
 import { swipeLine } from '../gesture-paths.js';
 import { type Op, defineOp, ACT, reply } from '../tool.js';
-import { perfTools, App, Probe, Scenario, measure, kb, virtual } from './shared.js';
+import { perfTools, App, Probe, Scenario, kb, virtual } from './shared.js';
 
 /** Jank above this share of frames is worth a finding (Android vitals counts a session slow above 25 %). */
 const JANK_PERCENT = 10;
@@ -41,12 +41,12 @@ export function leakSignal(
 }
 
 export function perfScrollOp(ctx: ServerContext): Op {
-  const { appOf, virtualNote, save, keep, noisy, withProbe } = perfTools(ctx);
+  const { measure, appOf, virtualNote, save, keep, noisy, withProbe } = perfTools(ctx);
   return defineOp({
     name: 'perf_scroll',
     title: 'Scroll performance',
     description:
-      'Frames and memory while scrolling a list: each round resets the frames, swipes `swipes` times, and reads both once the list stops.',
+      'Frames, frozen frames and memory while scrolling a list: each round resets the frames (an iPhone: records), swipes `swipes` times, and reads both once the list stops.',
     input: z
       .object({
         app: App,
@@ -64,7 +64,9 @@ export function perfScrollOp(ctx: ServerContext): Op {
       const s = await ctx.session();
       s.appPid = undefined;
       const pkg = appOf(s, app);
-      await withProbe(s, pkg, probe);
+      const relaunched = await withProbe(s, pkg, probe);
+      // turned off by the caller, which says nothing of the device
+      const row = probe === false ? false : 'frames';
       const readMemory = measure(s, 'memory');
       const h = s.device.hello!;
       const size = (await s.current()).window ?? { w: h.screen.w, h: h.screen.h };
@@ -93,16 +95,16 @@ export function perfScrollOp(ctx: ServerContext): Op {
       /** The counter read before and after the swipes, or, where a device has none, a recording around them. */
       const framesOfRound = recorded
         ? () =>
-            measure(s, 'framesDuring')(
+            measure(s, 'framesDuring', row)(
               pkg,
               Math.ceil(swipes * SECONDS_A_SWIPE) + COAST_SECONDS,
               swipeAll,
             ).catch(refused)
         : async () => {
-            await measure(s, 'resetFrames')(pkg).catch(refused);
+            await measure(s, 'resetFrames', row)(pkg).catch(refused);
             await swipeAll();
             await sleep(1_500);
-            return measure(s, 'frames')(pkg).catch(refused);
+            return measure(s, 'frames', row)(pkg).catch(refused);
           };
       for (let r = 0; r < repeats; r++) {
         reportProgress(`scroll round ${r + 1} of ${repeats}`);
@@ -180,6 +182,7 @@ export function perfScrollOp(ctx: ServerContext): Op {
       return reply(
         [
           `measurement ${saved.id}${virtualNote(s)}`,
+          ...relaunched,
           ...rounds.map(
             (x, i) =>
               `round ${i + 1}: ${x.frames} frames, janky ${x.jankyPercent}%${x.p95Ms !== undefined ? `, p95 ${x.p95Ms} ms` : ''}, frozen ${x.frozen}, memory ${kb(x.memStartKb)} → ${kb(x.memEndKb)}`,

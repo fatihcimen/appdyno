@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadRefusals, MEASURES } from '@appdyno/perf';
+import { latestRuns, loadRefusals, MEASURES, runKeys } from '@appdyno/perf';
 import { DeviceError } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, opsFor, ServerContext, survey } from '../src/index.js';
@@ -101,6 +101,87 @@ describe('the page and the measures', () => {
     const o = opsFor(ctx)[name]!;
     return o.handler(o.input.parse(args) as Record<string, unknown>);
   };
+  const says = (why: string) => async () => {
+    throw new DeviceError('UNSUPPORTED', why);
+  };
+  const kept = async (measurements: string) =>
+    Object.fromEntries((await loadRefusals(measurements)).map((r) => [r.measure, r.reason]));
+
+  it('keeps the refusal of every measure, under its row', async () => {
+    for (const [name, args, row, measure] of [
+      ['perf_launch', {}, 'launch', { launch: says('no launch') }],
+      ['perf_launch', { trace: true }, 'launch-why', { launch: says('needs get-task-allow') }],
+      ['perf_scroll', {}, 'frames', { frames: says('no frames') }],
+      ['perf_trace', {}, 'frames', { frameTrace: says('no trace') }],
+      ['perf_trace', { what: 'hangs' }, 'stalls', { hangs: says('no hangs') }],
+      ['perf_heap', {}, 'leaks', { heap: says('needs get-task-allow') }],
+      ['perf_snapshot', {}, 'cpu', { cpu: says('no cpu') }],
+      ['perf_snapshot', {}, 'memory', { memory: says('no memory') }],
+      ['perf_snapshot', { also: ['network'] }, 'network', { network: says('no bytes') }],
+      ['perf_snapshot', { also: ['energy'] }, 'energy', { energy: says('no energy') }],
+      ['perf_snapshot', { also: ['exits'] }, 'crashes', { exits: says('no exits') }],
+      ['perf_snapshot', { also: ['size'] }, 'size', { size: says('no size') }],
+    ] as const) {
+      const { ctx, measurements } = context(measure);
+      await op(ctx, name, args).catch(() => undefined);
+      expect(Object.keys(await kept(measurements)), `${name} ${row}`).toEqual([row]);
+    }
+  });
+
+  it('takes no refusal for what the caller turned off, or a way the device has another of', async () => {
+    const off = context({ frames: says('runs without the probe') });
+    await op(off.ctx, 'perf_scroll', { probe: false }).catch(() => undefined);
+    expect(await kept(off.measurements)).toEqual({});
+    // a device with no such way, with another: it reads stalls by a frame trace
+    const other = context({ hangs: undefined });
+    await op(other.ctx, 'perf_trace', { what: 'hangs' }).catch(() => undefined);
+    expect(await kept(other.measurements)).toEqual({});
+    // a part of a row is not the row
+    const part = context({ threads: says('no threads') });
+    const { data } = await op(part.ctx, 'perf_snapshot', { also: ['threads'] });
+    expect(data.lacking).toEqual(['threads']);
+    expect(await kept(part.measurements)).toEqual({});
+  });
+
+  it('keeps a start why by its phases, and a measure in the unit it has', async () => {
+    const { ctx, measurements } = context({
+      launch: async () => ({
+        value: {
+          mode: 'cold',
+          samples: [{ totalMs: 300 }],
+          medianMs: 300,
+          until: 'the first screen is read',
+          startup: {
+            tracePath: '/t',
+            reasons: [],
+            findings: [],
+            breakdown: [
+              { reason: 'main', ms: 500 },
+              { reason: 'first frame', ms: 20 },
+            ],
+          },
+        },
+        raw: '',
+        at: new Date().toISOString(),
+      }),
+      energy: async () => ({
+        value: { mj: 12, modelled: true, note: 'A model, not a reading' },
+        raw: '',
+        at: new Date().toISOString(),
+      }),
+    });
+    await op(ctx, 'perf_launch', { trace: true });
+    const { data, blocks } = await op(ctx, 'perf_snapshot', { also: ['energy'] });
+    expect(data).toMatchObject({ energyMj: 12, energyModelled: true });
+    expect(blocks[0]).toMatchObject({ text: expect.stringContaining('energy (a model): 12 mJ') });
+    const keys = await runKeys(measurements, { app: 'dev.app' });
+    const kinds = (await Promise.all(keys.map((k) => latestRuns(measurements, k, 1))))
+      .flat(2)
+      .map((r) => [r.kind, r.modelled === true]);
+    expect(kinds).toContainEqual(['launch.phase.main_ms', false]);
+    expect(kinds).toContainEqual(['launch.phase.first_frame_ms', false]);
+    expect(kinds).toContainEqual(['energy.mj', true]);
+  });
 
   it('is rewritten after each kept run', async () => {
     const { ctx, measurements } = context();

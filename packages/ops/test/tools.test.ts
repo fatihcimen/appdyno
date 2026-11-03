@@ -609,13 +609,15 @@ describe('iOS simulators', () => {
             hitchMs: 30,
             worstMs: 20,
             frozen: 0,
+            stalls: { count: 0, worstMs: 0, totalMs: 0 },
             hitchRatio: 6,
             causes: { 'expensive commit': 2 },
             tracePath: '/t/h.trace',
           }),
       });
       expect((await t.textOf('perf_trace')).text.split('\n').slice(1)).toEqual([
-        '300 frames; 2 hitches of the app, 30 ms in all, worst 20 ms, 0 frozen; hitch ratio 6 ms/s',
+        '300 frames; 2 hitches of the app, 30 ms in all, worst 20 ms; hitch ratio 6 ms/s',
+        'frozen frames: 0; main thread stalled 0 times, worst 0 ms',
         'likely causes: 2× expensive commit',
         'trace (Instruments): /t/h.trace',
       ]);

@@ -13,6 +13,7 @@ type Line = {
   dt?: number;
   v?: number;
   launchMs?: number;
+  phases?: Record<string, number>;
   input?: number;
   open?: number;
   ms?: number;
@@ -36,15 +37,18 @@ export function probeHead(text: string): {
   bundle?: string;
   loadedAt?: number;
   launchMs?: number;
+  phases?: Record<string, number>;
   resetAt?: number;
 } {
   const all = lines(text);
   const head = all.findLast((l) => l.loaded !== undefined);
   const launchMs = all.findLast((l) => l.launchMs !== undefined)?.launchMs;
   const resetAt = all.findLast((l) => l.reset !== undefined)?.reset;
+  const phases = all.findLast((l) => l.phases !== undefined)?.phases;
   return {
     ...(head && { pid: head.pid!, bundle: head.loaded!, loadedAt: head.t! }),
     ...(launchMs !== undefined && { launchMs }),
+    ...(phases && { phases }),
     ...(resetAt !== undefined && { resetAt }),
   };
 }

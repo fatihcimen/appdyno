@@ -18,10 +18,10 @@ const localeApp = (app: string | undefined) => {
 };
 
 /**
- * What an energy reading changes for its time: told it runs on battery, and the count since the last charge kept
- * from resetting, which an unplug at a high level would do (seen on an emulator at level 100: 8 s back to 1 s).
+ * What an energy reading changes for its time: the count since the last charge kept from resetting, which an unplug at
+ * a high level would do (seen on an emulator at level 100: 8 s back to 1 s), and only then told it runs on battery.
  */
-export const BATTERY_UNPLUG = 'dumpsys batterystats enable no-auto-reset; dumpsys battery unplug';
+export const BATTERY_GUARD = 'dumpsys batterystats enable no-auto-reset';
 export const BATTERY_BACK = 'dumpsys battery reset; dumpsys batterystats disable no-auto-reset';
 
 export class AndroidSettings implements DeviceSettings {

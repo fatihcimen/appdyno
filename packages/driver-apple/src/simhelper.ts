@@ -9,8 +9,9 @@ import { assertUdid, xcodeEnv } from './simctl.js';
 import { run } from '@appdyno/core';
 
 const SDK_FLAGS = {
-  // SimHID runs on the Mac, SimAX inside the simulator
+  // SimHID and SimEnergy run on the Mac, SimAX inside the simulator
   SimHID: ['clang', '-fobjc-arc', '-framework', 'Foundation'],
+  SimEnergy: ['clang'],
   SimAX: [
     '--sdk',
     'iphonesimulator',

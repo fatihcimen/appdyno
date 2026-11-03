@@ -3,10 +3,10 @@ import type { ServerContext } from '../context.js';
 import { refused } from '../session.js';
 import { ProfileOut } from '../schemas.js';
 import { type Op, defineOp, READ, reply } from '../tool.js';
-import { perfTools, App, measure, virtual } from './shared.js';
+import { perfTools, App, virtual } from './shared.js';
 
 export function perfProfileOp(ctx: ServerContext): Op {
-  const { appOf, virtualNote, save, scroller } = perfTools(ctx);
+  const { measure, appOf, virtualNote, save, scroller } = perfTools(ctx);
   return defineOp({
     name: 'perf_profile',
     title: 'CPU profile',

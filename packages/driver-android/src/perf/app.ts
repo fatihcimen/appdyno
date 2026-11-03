@@ -1,6 +1,7 @@
 import { rm } from 'node:fs/promises';
 import { basename } from 'node:path';
 import {
+  modelledEnergy,
   sleep,
   type BuildType,
   type Measured,
@@ -13,7 +14,7 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg, shq } from '../adb.js';
 import { parseExitInfo } from '../crashes.js';
-import { BATTERY_BACK, BATTERY_UNPLUG } from '../settings.js';
+import { BATTERY_BACK, BATTERY_GUARD } from '../settings.js';
 import { traceProcessor } from '../tools.js';
 import {
   parseBuildType,
@@ -24,7 +25,8 @@ import {
   parseDiskstats,
   parseVitals,
 } from './parse.js';
-import { type PerfDevice, sh, uidOf, at, isVirtual } from './shared.js';
+import { cpu } from './cpu.js';
+import { type PerfDevice, sh, uidOf, at } from './shared.js';
 import { recordTrace, queryFile } from './perfetto.js';
 
 /**
@@ -94,7 +96,8 @@ export async function network(
 /**
  * The charge batterystats estimates for the app over the window: the difference of its count since the last
  * charge, whose history is left alone. It counts on battery only, so the phone is told it is unplugged for the
- * time (and told the truth after). An estimate from the power profile's model, not a measure.
+ * time (and told the truth after). An estimate from the power profile's model, not a measure. A device whose power
+ * profile computes nothing (an emulator's is all zeros: a core busy for seconds reads cpu=0) gets this tool's model.
  */
 export async function energy(
   d: PerfDevice,
@@ -102,21 +105,27 @@ export async function energy(
   windowMs: number,
 ): Promise<Measured<EnergyReading>> {
   const uid = await uidOf(d, pkg);
-  const noModel = (why: string) =>
-    new DeviceError('UNSUPPORTED', `no energy estimate on ${d.serial}: ${why}`);
-  // the emulator's power profile is all zeros: even a core busy for seconds reads cpu=0
-  if (isVirtual(d)) throw noModel('an emulator has no power model, it computes zero');
   try {
-    await sh(d, BATTERY_UNPLUG);
-    const read = () => sh(d, `dumpsys batterystats --charged ${pkg}`, 60_000);
+    // a build that does not take the guard is never told it is unplugged: that could reset its history
+    const guarded = /Enabled: no-auto-reset/.test(await sh(d, BATTERY_GUARD));
+    if (guarded) await sh(d, 'dumpsys battery unplug');
+    // Android 15 and later collect their samples first for this one, and it prints no more than the estimate
+    const read = () => sh(d, 'dumpsys batterystats --usage', 60_000);
     const before = parseBatteryUsage(await read(), uid);
-    await sleep(windowMs);
+    const [used, moved] = await Promise.all([cpu(d, pkg, windowMs), network(d, pkg, windowMs)]);
     const raw = await read();
     const after = parseBatteryUsage(raw, uid);
-    if (after.mah === undefined) throw noModel('batterystats computed no drain at all');
+    const cpuMs = (used.value.percent / 100) * used.value.windowMs;
+    if (!guarded || after.mah === undefined || (cpuMs > 0 && !after.breakdown?.cpu))
+      return {
+        value: modelledEnergy(cpuMs, moved.value.rxBytes + moved.value.txBytes),
+        raw: `${raw}\n---\n${used.raw}\n---\n${moved.raw}`,
+        at: at(),
+      };
     return {
       value: {
         ...usageSince(before, after),
+        modelled: true,
         note: 'model-based: batterystats multiplies time in each state by the power profile, it does not read a power meter',
       },
       raw,

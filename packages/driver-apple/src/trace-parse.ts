@@ -61,13 +61,50 @@ export function parseTraceTable(xml: string): Record<string, Cell>[] {
   return rows;
 }
 
+type Span = { start: number; ms: number };
+
+const spansOf = (rows: Record<string, Cell>[]): Span[] =>
+  rows.map((r) => ({
+    start: Number(r.start?.value ?? 0) / 1e6,
+    ms: Number(r.duration?.value ?? 0) / 1e6,
+  }));
+
+/** How many times the screen stood still long enough, a hitch and a hang of the same moment being one. */
+function frozenCount(spans: Span[]) {
+  let count = 0;
+  let until = -Infinity;
+  for (const { start, ms } of spans
+    .filter((s) => s.ms >= FROZEN_FRAME_MS)
+    .sort((a, b) => a.start - b.start)) {
+    if (start >= until) count++;
+    until = Math.max(until, start + ms);
+  }
+  return count;
+}
+
+/** The main thread's hangs of a process in the template's table: what it only suspects is no hang. */
+const hangRows = (xml: string, pid?: number) =>
+  parseTraceTable(xml)
+    .filter((r) => pid === undefined || r.process?.fmt?.includes(`(${pid})`))
+    .filter((r) => !/Interaction Delay/.test(r['hang-type']?.value ?? ''));
+
+/**
+ * The app's hitches over a recording. A main thread blocked during a scroll may show in no hitch, as no frame was on
+ * its way (a 1 s stall read 50 ms in the hitch table and 1.02 s in the hang table of one recording), so what froze the
+ * screen is read from both.
+ */
 export function hitchSummary(
   hitchesXml: string,
   surfacesXml: string,
   durationMs: number,
+  hangsXml = '',
+  pid?: number,
 ): HitchSummary {
   const hitches = parseTraceTable(hitchesXml).filter((r) => r['is-system']?.value !== '1');
-  const ms = hitches.map((r) => Number(r.duration?.value ?? 0) / 1e6);
+  const spans = spansOf(hitches);
+  const hangs = hangRows(hangsXml, pid);
+  const ms = spans.map((s) => s.ms);
+  const stalled = spansOf(hangs).map((s) => s.ms);
   const causes: Record<string, number> = {};
   for (const r of hitches) {
     const c = r['narrative-description']?.value || 'unknown';
@@ -80,7 +117,12 @@ export function hitchSummary(
     hitches: hitches.length,
     hitchMs: round1(total),
     worstMs: round1(Math.max(0, ...ms)),
-    frozen: ms.filter((x) => x >= FROZEN_FRAME_MS).length,
+    frozen: frozenCount([...spans, ...spansOf(hangs)]),
+    stalls: {
+      count: stalled.length,
+      worstMs: round1(Math.max(0, ...stalled)),
+      totalMs: round1(stalled.reduce((a, b) => a + b, 0)),
+    },
     hitchRatio: round1(total / (durationMs / 1000)),
     causes,
   };
@@ -93,6 +135,7 @@ export const hitchFrames = (h: HitchSummary): FrameStats => ({
   jankyPercent: h.frames ? round1((h.hitches / h.frames) * 100) : 0,
   frozenFrames: h.frozen,
   worstHitchMs: h.worstMs,
+  stalls: h.stalls,
   fewFrames: h.frames < MIN_FRAMES,
   limits: 'Janky here is a hitch of the app, as Animation Hitches counts it.',
 });
@@ -219,17 +262,44 @@ export function parseActivityMonitor(
   };
 }
 
-/** The Power Profiler's impact of one process by subsystem, summed over the recording; none without rows. */
+const powerRows = (xml: string, pid: number) =>
+  parseTraceTable(xml).filter((r) => r.process?.fmt?.includes(`(${pid})`));
+
+/** The Power Profiler's impact of one process by subsystem, the mean of each one's rows; none without rows. */
 export function parsePowerImpact(xml: string, pid: number): Record<string, number> | undefined {
-  const rows = parseTraceTable(xml).filter((r) => r.process?.fmt?.includes(`(${pid})`));
+  const rows = powerRows(xml, pid);
   if (!rows.length) return undefined;
-  const sum = (c: string) => rows.reduce((a, r) => a + (Number(r[c]?.value) || 0), 0);
-  return {
-    cpu: sum('cpu-impact'),
-    display: sum('display-impact'),
-    gpu: sum('gpu-impact'),
-    networking: sum('networking-impact'),
+  // a row holds the subsystems of its period, and an empty cell for the others
+  const mean = (c: string) => {
+    const xs = rows.flatMap((r) => (r[c]?.value ? [Number(r[c]!.value)] : []));
+    return xs.length ? round1(xs.reduce((a, b) => a + b, 0) / xs.length) : 0;
   };
+  return {
+    cpu: mean('cpu-impact'),
+    display: mean('display-impact'),
+    gpu: mean('gpu-impact'),
+    networking: mean('networking-impact'),
+  };
+}
+
+/** The bytes of one process in the Power Profiler's table: its rows of network periods, added up. */
+export function parsePowerBytes(xml: string, pid: number) {
+  const periods = powerRows(xml, pid).filter((r) => r['row-kind']?.value === '1');
+  const sum = (...cols: string[]) =>
+    periods.reduce((a, r) => a + cols.reduce((b, c) => b + (Number(r[c]?.value) || 0), 0), 0);
+  return {
+    windowMs: Math.round(sum('duration') / 1e6),
+    rxBytes: sum('wifi-received', 'cellular-received'),
+    txBytes: sum('wifi-transmitted', 'cellular-transmitted'),
+  };
+}
+
+/** The Leaks instrument's rows, each a leaked object; what it says of them is in their attributes. */
+export function parseLeakRows(xml: string) {
+  const attr = (row: string, name: string) => new RegExp(`\\b${name}="([^"]*)"`).exec(row)?.[1];
+  const rows = xml.match(/<row\b[^>]*>/g) ?? [];
+  const sum = (name: string) => rows.reduce((a, r) => a + (Number(attr(r, name)) || 0), 0);
+  return { leaks: sum('count'), leakedBytes: sum('size') };
 }
 
 /** The Time Profiler's report of the main thread's hangs (over 250 ms): how many and the worst. */
@@ -237,9 +307,7 @@ export function parseHangs(
   xml: string,
   pid?: number,
 ): { hangs: number; worstMs: number; totalMs: number } {
-  const ms = parseTraceTable(xml)
-    .filter((r) => pid === undefined || r.process?.fmt?.includes(`(${pid})`))
-    .map((r) => Number(r.duration?.value ?? 0) / 1e6);
+  const ms = spansOf(hangRows(xml, pid)).map((s) => s.ms);
   return {
     hangs: ms.length,
     worstMs: round1(Math.max(0, ...ms)),

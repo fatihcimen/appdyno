@@ -1,4 +1,4 @@
-import { phoneCrashes } from './crashes.js';
+import { crashExits, phoneCrashes } from './crashes.js';
 import { phoneLogs } from './logs.js';
 import { PhoneApps, PhoneSettings } from './phone-manage.js';
 import { existsSync, statSync } from 'node:fs';
@@ -11,13 +11,10 @@ import { phoneRecorder } from './record.js';
 import { iosProducts, type RunnerTransport, IosRunnerLauncher } from './runner.js';
 import { signedRunner, type PhoneSigning, findPhoneSigning, phoneXctestrun } from './signing.js';
 import { assertBundle } from './simctl.js';
-import {
-  hitchFrames,
-  parsePowerImpact,
-  parseActivityMonitor,
-  parseTimeProfile,
-  parseHangs,
-} from './trace-parse.js';
+import { hitchFrames, parseActivityMonitor, parseTimeProfile, parseHangs } from './trace-parse.js';
+import { appLaunchPhases } from './phone-launch.js';
+import { phoneLeaks } from './phone-leaks.js';
+import { phoneEnergy, phoneNetwork } from './phone-power.js';
 import { recordTrace, traceTable } from './trace.js';
 import { connectPort, listDevices } from './usbmux.js';
 import { Devicectl } from './devicectl.js';
@@ -112,10 +109,12 @@ export class IosPhoneDevice extends IosDevice {
   /** What Instruments and XCTest can read from a phone: what they cannot says why. */
   readonly measure: MeasureSource & { hangs: IosPhoneDevice['hangs'] } = {
     frameTrace: async (bundle, seconds, during) => {
+      await this.inFront(bundle);
       const v = await this.hitches(bundle, seconds, during);
       return { value: { kind: 'hitches', ...v }, raw: v.tracePath, at: new Date().toISOString() };
     },
     framesDuring: async (bundle, seconds, during) => {
+      await this.inFront(bundle);
       const v = await this.hitches(bundle, seconds, during);
       return { value: hitchFrames(v), raw: v.tracePath, at: new Date().toISOString() };
     },
@@ -146,6 +145,10 @@ export class IosPhoneDevice extends IosDevice {
       };
     },
     launch: async (bundle, opts) => {
+      // first: a system app is refused at once, before the launches
+      const startup = opts.trace
+        ? await this.terminate(bundle).then(() => appLaunchPhases(this.serial, bundle, opts.env))
+        : undefined;
       const samples: number[] = [];
       for (let i = 0; i < opts.repeats + 1; i++) {
         if (opts.mode === 'cold') await this.terminate(bundle);
@@ -172,48 +175,25 @@ export class IosPhoneDevice extends IosDevice {
           samples: samples.map((totalMs) => ({ totalMs })),
           ...(sorted.length && { medianMs: sorted[Math.floor((sorted.length - 1) / 2)]! }),
           until: 'the first screen is read',
+          ...(startup && { startup: { startupType: opts.mode, ...startup } }),
         },
         raw: samples.join(' '),
         at: new Date().toISOString(),
       };
     },
     hangs: (bundle, seconds, during) => this.hangs(bundle, seconds, during),
-    network: async () => {
-      // measured with Xcode 27.1 on iOS 27.0.1. The HTTP Traffic instrument alone records, but on a simulator
-      // it had no rows for an attached app's known fetch; this phone had no network to try it on
-      throw new DeviceError(
-        'UNSUPPORTED',
-        "the trace tool's Network template crashes when it stops (EXC_BREAKPOINT in NetworkConnectionStatsModeling), no trace is written",
-      );
+    network: async (bundle, windowMs, during) => {
+      await this.inFront(bundle);
+      return phoneNetwork(this.serial, bundle, () => this.ctl.pid(bundle), windowMs, during);
     },
     energy: async (bundle, windowMs) => {
-      const pid = await this.ctl.pid(assertBundle(bundle));
-      // the instrument alone: the Power Profiler template crashes as the Network one does
-      const trace = await recordTrace({
-        template: 'Power Profiler',
-        instrument: true,
-        device: this.serial,
-        seconds: Math.min(Math.max(Math.round(windowMs / 1000), 2), 30),
-        dir: join(stateDir(), 'traces'),
-      });
-      const breakdown = parsePowerImpact(
-        await traceTable(trace, 'ProcessSubsystemPowerImpact'),
-        pid,
-      );
-      if (!breakdown)
-        throw new DeviceError(
-          'UNSUPPORTED',
-          `the Power Profiler recorded no power for ${bundle}: its per-process table came empty, as it did for every recording of a phone on USB`,
-          `the trace is at ${trace}`,
-        );
-      return {
-        value: {
-          note: "Instruments' estimate of the app's power impact by subsystem, not a meter: no mAh.",
-          breakdown,
-        },
-        raw: trace,
-        at: new Date().toISOString(),
-      };
+      await this.inFront(bundle);
+      return phoneEnergy(this.serial, bundle, () => this.ctl.pid(bundle), windowMs);
+    },
+    exits: (bundle) => crashExits(this.crashes, bundle),
+    heap: async (bundle, dir) => {
+      await this.inFront(bundle);
+      return phoneLeaks(this.serial, bundle, () => this.ctl.pid(bundle), dir);
     },
     size: async () => {
       throw new DeviceError(
@@ -243,6 +223,9 @@ export class IosPhoneDevice extends IosDevice {
   readonly recorder: ScreenRecorder;
   readonly apps: PhoneApps;
   readonly settings: PhoneSettings;
+
+  /** A phone's screen goes off by itself, and what the lock screen hides shows no frames: this wakes it, the app as it is. */
+  private readonly inFront = (bundle: string) => this.launch(assertBundle(bundle));
 
   /** Activity Monitor over every process (no attach: a system app has no get-task-allow), one process read. */
   private async activity(bundle: string, windowMs: number) {

@@ -423,7 +423,7 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     expect(await d.measure.buildType('no.such.app')).toBe('unknown');
   });
 
-  it('energy: an emulator says it has no power model; a phone estimates, and its history stays', async () => {
+  it('energy: an emulator answers a model and says so; a phone estimates, and its history stays', async () => {
     const onBattery = async () =>
       Number(
         /Time on battery: (?:(\d+)h )?(?:(\d+)m )?/
@@ -431,19 +431,13 @@ describe.skipIf(!serial)('android perf accuracy', () => {
           ?.slice(1, 3)
           .reduce((a, b, i) => a + Number(b ?? 0) * (i === 0 ? 60 : 1), 0) ?? 0,
       );
-    if (serial!.startsWith('emulator-')) {
-      await expect(d.measure.energy(APP, 500)).rejects.toMatchObject({
-        code: 'UNSUPPORTED',
-        message: /power model/,
-      });
-      return;
-    }
     const before = await onBattery();
     await open('cpu');
     const m = (await d.measure.energy(APP, 5_000)).value;
     console.log('energy:', JSON.stringify(m));
-    expect(m.mah).toBeGreaterThanOrEqual(0);
-    expect(m.note).toMatch(/model/);
+    expect(m.modelled).toBe(true);
+    expect(m.mah ?? m.mj).toBeGreaterThanOrEqual(0);
+    expect(m.note).toMatch(/model/i);
     // a reset would take the time on battery back to nothing
     expect(await onBattery()).toBeGreaterThanOrEqual(before);
     expect(await d.shell('dumpsys battery')).not.toMatch(/UPDATES STOPPED/);

@@ -157,10 +157,14 @@ export class Simctl {
   install(udid: string, appPath: string) {
     return this.exec(['install', assertUdid(udid), appPath], 300_000);
   }
-  /** Starts the app (`vars` go into its environment), or brings it forward as it is when it runs. */
-  launch(udid: string, bundle: string, vars: Record<string, string> = {}) {
+  /**
+   * Starts the app (`vars` go into its environment), or brings it forward as it is when it runs. `stopped`: it waits
+   * before its first instruction, as for a debugger.
+   */
+  launch(udid: string, bundle: string, vars: Record<string, string> = {}, stopped = false) {
     const child = Object.entries(vars).map(([k, v]) => [`SIMCTL_CHILD_${k}`, v]);
-    return this.exec(['launch', assertUdid(udid), assertBundle(bundle)], 60_000, {
+    const wait = stopped ? ['--wait-for-debugger'] : [];
+    return this.exec(['launch', ...wait, assertUdid(udid), assertBundle(bundle)], 60_000, {
       ...this.env,
       ...Object.fromEntries(child),
     });

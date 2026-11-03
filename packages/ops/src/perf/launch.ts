@@ -3,15 +3,15 @@ import type { ServerContext } from '../context.js';
 import { refused } from '../session.js';
 import { LaunchOut } from '../schemas.js';
 import { type Op, defineOp, DESTRUCTIVE, reply } from '../tool.js';
-import { perfTools, App, Probe, Scenario, measure, virtual } from './shared.js';
+import { perfTools, App, Probe, Scenario, virtual } from './shared.js';
 
 export function perfLaunchOp(ctx: ServerContext): Op {
-  const { appOf, virtualNote, save, keep, noisy, withProbe } = perfTools(ctx);
+  const { measure, appOf, virtualNote, save, keep, noisy, withProbe } = perfTools(ctx);
   return defineOp({
     name: 'perf_launch',
     title: 'Launch time',
     description:
-      'Launch time: cold (stopped first), warm (process alive, activity new) or hot (back from the background); a warm-up, then `repeats` launches, median. Android: `compile` sets the compile state (then reset), `trace` adds a Perfetto trace naming why it was slow. The app restarts.',
+      'Launch time: cold (stopped first), warm (process alive, activity new) or hot (back from the background); a warm-up, then `repeats` launches, median. `trace` adds one start that names why it was slow, by its phases. Android: `compile` sets the compile state (then reset). The app restarts.',
     input: z
       .object({
         app: App,
@@ -30,12 +30,18 @@ export function perfLaunchOp(ctx: ServerContext): Op {
       const s = await ctx.session();
       s.appPid = undefined;
       const pkg = appOf(s, app);
-      await withProbe(s, pkg, probe);
-      const m = await measure(s, 'launch')(pkg, {
+      // not by default: a kept launch stays one kind, whatever else measured this app
+      await withProbe(s, pkg, probe ?? false);
+      const m = await measure(
+        s,
+        'launch',
+        trace ? 'launch-why' : 'launch',
+      )(pkg, {
         mode,
         repeats,
         ...(compile && { compile }),
         ...(trace && { trace }),
+        ...(probe && { probe }),
       }).catch(refused);
       s.acted();
       const saved = await save('launch', [m], m.value);
@@ -63,6 +69,11 @@ export function perfLaunchOp(ctx: ServerContext): Op {
             unit: 'ms',
             samples: samples.flatMap((x) => (x.fullyDrawnMs === undefined ? [] : [x.fullyDrawnMs])),
           },
+          ...(startup?.breakdown ?? []).map((b) => ({
+            kind: `launch.phase.${b.reason.replace(/\W+/g, '_').toLowerCase()}_ms`,
+            unit: 'ms' as const,
+            samples: [b.ms],
+          })),
         ],
         m.value.compile?.asked,
       );

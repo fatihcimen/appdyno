@@ -5,6 +5,8 @@ import {
   hitchFrames,
   hitchSummary,
   parseActivityMonitor,
+  parseLeakRows,
+  parsePowerBytes,
   parseHangs,
   parsePowerImpact,
   parseTimeProfile,
@@ -35,14 +37,30 @@ describe('iOS trace export', () => {
   });
 
   it('counts a hitch of 700 ms or longer as a frozen frame, and reads as frames of any platform', () => {
-    const hitch = (ns: number) => `<row><duration fmt="x">${ns}</duration></row>`;
-    const table = `<node><schema name="hitches"><col><mnemonic>duration</mnemonic></col></schema>${[
-      hitch(699e6),
-      hitch(700e6),
-      hitch(1_000e6),
+    const hitch = (at: number, ns: number) =>
+      `<row><start fmt="x">${at * 1e9}</start><duration fmt="x">${ns}</duration></row>`;
+    const table = `<node><schema name="hitches"><col><mnemonic>start</mnemonic></col><col><mnemonic>duration</mnemonic></col></schema>${[
+      hitch(1, 699e6),
+      hitch(2, 700e6),
+      hitch(3, 1_000e6),
     ].join('')}</node>`;
     const s = hitchSummary(table, fixture('ios-surfaces.xml'), 6_000);
     expect(s).toMatchObject({ hitches: 3, frozen: 2, worstMs: 1_000 });
+    // a blocked main thread may show as no hitch: the same recording's hang table has it, once
+    const hang = (at: number, ms: number, type: string) =>
+      `<row><start fmt="x">${at * 1e6}</start><duration fmt="x">${ms * 1e6}</duration><hang-type fmt="x">${type}</hang-type></row>`;
+    const hangs = `<node><schema><col><mnemonic>start</mnemonic></col><col><mnemonic>duration</mnemonic></col><col><mnemonic>hang-type</mnemonic></col></schema>${[
+      hang(100, 1_020, 'Hang'),
+      hang(5_000, 60, 'Potential Interaction Delay'),
+    ].join('')}</node>`;
+    const none = '<node><schema><col><mnemonic>duration</mnemonic></col></schema></node>';
+    expect(hitchSummary(none, fixture('ios-surfaces.xml'), 6_000, hangs)).toMatchObject({
+      hitches: 0,
+      frozen: 1,
+      stalls: { count: 1, worstMs: 1_020 },
+    });
+    const overlapping = `<node><schema><col><mnemonic>start</mnemonic></col><col><mnemonic>duration</mnemonic></col></schema><row><start fmt="x">${200e6}</start><duration fmt="x">${900e6}</duration></row></node>`;
+    expect(hitchSummary(overlapping, fixture('ios-surfaces.xml'), 6_000, hangs).frozen).toBe(1);
     expect(hitchFrames(s)).toMatchObject({
       totalFrames: 40,
       jankyFrames: 3,
@@ -118,8 +136,31 @@ describe('iOS trace export', () => {
 <row><process id="1" fmt="App (7)"><pid>7</pid></process><i>2</i><i>1</i><i>0</i><i>0.5</i></row>
 <row><process id="2" fmt="Other (8)"><pid>8</pid></process><i>9</i><i>9</i><i>9</i><i>9</i></row>
 <row><process ref="1"/><i>3</i><i>1</i><sentinel/><i>0.5</i></row>`;
-    expect(parsePowerImpact(xml, 7)).toEqual({ cpu: 5, display: 2, gpu: 0, networking: 1 });
+    expect(parsePowerImpact(xml, 7)).toEqual({ cpu: 2.5, display: 1, gpu: 0, networking: 0.5 });
     expect(parsePowerImpact(xml, 9)).toBeUndefined();
+  });
+
+  it('reads a recording of a 5,000,000 byte fetch, its bytes by process', () => {
+    const xml = fixture('ios-power-network.xml');
+    expect(parsePowerBytes(xml, 10217)).toEqual({
+      windowMs: 16_059,
+      rxBytes: 5_322_769,
+      txBytes: 10_432,
+    });
+    expect(parsePowerBytes(xml, 1)).toEqual({ windowMs: 0, rxBytes: 0, txBytes: 0 });
+  });
+
+  it('counts each leaked object, and none in an empty table', () => {
+    const row =
+      '<row leaked-object="Node" size="32" responsible-frame="f" count="1" address="0x1"/>';
+    const xml = `<?xml version="1.0"?><trace-query-result><node xpath='x'>${row}\n${row}\n</node></trace-query-result>`;
+    expect(parseLeakRows(xml)).toEqual({ leaks: 2, leakedBytes: 64 });
+    expect(
+      parseLeakRows("<trace-query-result><node xpath='x'></node></trace-query-result>"),
+    ).toEqual({
+      leaks: 0,
+      leakedBytes: 0,
+    });
   });
 
   it('digests a table: the heaviest rows first, cells cut, the rest counted', () => {

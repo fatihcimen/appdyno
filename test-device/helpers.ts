@@ -1,4 +1,8 @@
-import { ToolError, type Op } from '@appdyno/ops';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { DeviceProvider } from '@appdyno/core';
+import { DEFAULT_POLICY, opsFor, ServerContext, ToolError, type Op } from '@appdyno/ops';
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 
 export type Answer = { error: boolean; text: string; data: Record<string, unknown> };
@@ -20,6 +24,14 @@ export const opCaller =
       return { error: true, text: e.message, data: { code: e.code } };
     }
   };
+
+/** The operations on one device with stores of their own, as a client calls them. */
+export function opsOn(provider: DeviceProvider, device: string, app: string) {
+  const measurements = mkdtempSync(join(tmpdir(), 'appdyno-measures-'));
+  const perf = mkdtempSync(join(tmpdir(), 'appdyno-perf-'));
+  const ctx = new ServerContext(DEFAULT_POLICY, [provider], { device, app, measurements, perf });
+  return { ctx, measurements, call: opCaller(opsFor(ctx)) };
+}
 
 /** Calls a tool over the client `get` gives, which connects after this is made. */
 export const toolCaller =

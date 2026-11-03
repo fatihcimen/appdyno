@@ -137,7 +137,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
       })
       .catch((e: DeviceError) => e);
     if (v instanceof DeviceError) {
-      expect(v.code).toBe('UNSUPPORTED');
+      expect(v.code).toBe('CHECK_FAILED');
       expect(v.message).toMatch(/no frames/);
     } else {
       expect(v.frames).toBeGreaterThan(0);
@@ -254,20 +254,8 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
         .catch((e: DeviceError) => e);
       console.log('hitches', v instanceof Error ? v.message : JSON.stringify(v));
       expect(s.list.length).toBeGreaterThan(0);
-      if (v instanceof DeviceError) expect(v.code).toBe('UNSUPPORTED');
+      if (v instanceof DeviceError) expect(v.code).toBe('CHECK_FAILED');
       else expect(v.frames).toBeGreaterThan(0);
-    }, 180_000);
-
-    it('network: says why not, never a zero', async () => {
-      await expect(d.measure.network!(APP, 1_000)).rejects.toMatchObject({ code: 'UNSUPPORTED' });
-    });
-
-    it("energy: Instruments' estimate, or says why not", async () => {
-      await open('cpu');
-      const e = await d.measure.energy!(APP, 5_000).catch((x: DeviceError) => x);
-      console.log('energy', e instanceof Error ? e.message : JSON.stringify(e.value));
-      if (e instanceof DeviceError) expect(e.code).toBe('UNSUPPORTED');
-      else expect(e.value.note).toMatch(/estimate/i);
     }, 180_000);
 
     it('launch: a 500 ms slow start raises it by that (within 25 %)', async () => {

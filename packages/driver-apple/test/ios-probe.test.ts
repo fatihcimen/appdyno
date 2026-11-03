@@ -40,6 +40,20 @@ describe('the frame probe', () => {
     expect(probeSummary(lines, T, T + 2000).frozen).toBe(1);
   });
 
+  it('reads the start of its process by phases', () => {
+    const lines = [
+      `{"loaded":"dev.app","pid":7,"t":${T}}`,
+      '{"phases":{"load":40.5,"main":515,"uikit":30,"first_frame":12}}',
+      '{"launchMs":597.5}',
+    ].join('\n');
+    expect(probeHead(lines)).toMatchObject({
+      pid: 7,
+      launchMs: 597.5,
+      phases: { load: 40.5, main: 515, uikit: 30, first_frame: 12 },
+    });
+    expect(probeHead(frame(10)).phases).toBeUndefined();
+  });
+
   it('counts a stall still running at the end of the window', () => {
     const lines = [frame(10), frame(27), `{"open":${T + 327},"ms":300}`].join('\n');
     const s = probeSummary(lines, T, T + 527);

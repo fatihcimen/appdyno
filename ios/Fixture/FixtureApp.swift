@@ -65,17 +65,19 @@ struct Home: View {
     @Binding var path: [String]
     var lastLink = ""
 
+    /// It scrolls, though all of it fits: what records a scroll has frames to read here too.
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("appdyno fixture").font(.title2).accessibilityIdentifier("title")
-            ForEach(screens, id: \.key) { s in
-                Button(s.title) { path.append(s.key) }.accessibilityIdentifier("open_\(s.key)")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("appdyno fixture").font(.title2).accessibilityIdentifier("title")
+                ForEach(screens, id: \.key) { s in
+                    Button(s.title) { path.append(s.key) }.accessibilityIdentifier("open_\(s.key)")
+                }
+                if !lastLink.isEmpty { Text("Link: \(lastLink)").accessibilityIdentifier("last_link") }
             }
-            if !lastLink.isEmpty { Text("Link: \(lastLink)").accessibilityIdentifier("last_link") }
-            Spacer()
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
