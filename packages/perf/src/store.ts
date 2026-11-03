@@ -49,16 +49,17 @@ export async function runKeys(dir: string, f: Partial<RunKey> = {}): Promise<Run
   return out;
 }
 
+/** A key's run files, oldest first. */
+export const runFiles = async (dir: string, k: RunKey) =>
+  (await list(runsDir(dir, k))).filter((f) => f.endsWith('.json'));
+
+export const readRun = async (dir: string, k: RunKey, file: string) =>
+  JSON.parse(await readFile(join(runsDir(dir, k), file), 'utf8')) as PerfRecord[];
+
 /** The newest `last` runs of a key, newest first. */
 export async function latestRuns(dir: string, k: RunKey, last = 1): Promise<PerfRecord[][]> {
-  const d = runsDir(dir, k);
-  const files = (await list(d))
-    .filter((f) => f.endsWith('.json'))
-    .slice(-last)
-    .reverse();
-  return Promise.all(
-    files.map(async (f) => JSON.parse(await readFile(join(d, f), 'utf8')) as PerfRecord[]),
-  );
+  const files = (await runFiles(dir, k)).slice(-last).reverse();
+  return Promise.all(files.map((f) => readRun(dir, k, f)));
 }
 
 /** A device saying it cannot give a measure, and why: the dashboard's answer until a reading is newer. */

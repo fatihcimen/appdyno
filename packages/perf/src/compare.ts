@@ -202,23 +202,28 @@ export type BudgetRule = {
 
 export type BudgetResult = { kind: string; value: number; ok: boolean; limit: string };
 
+/** The rules that hold for a record. */
+export const rulesFor = (
+  r: Pick<PerfRecord, 'kind' | 'app' | 'scenario' | 'deviceClass'>,
+  rules: BudgetRule[],
+) =>
+  rules.filter(
+    (b) =>
+      b.kind === r.kind &&
+      (b.app ?? r.app) === r.app &&
+      (b.scenario ?? r.scenario) === r.scenario &&
+      (b.deviceClass ?? r.deviceClass) === r.deviceClass,
+  );
+
 export function checkBudgets(records: PerfRecord[], rules: BudgetRule[]): BudgetResult[] {
   return records.flatMap((r) =>
-    rules
-      .filter(
-        (b) =>
-          b.kind === r.kind &&
-          (b.app ?? r.app) === r.app &&
-          (b.scenario ?? r.scenario) === r.scenario &&
-          (b.deviceClass ?? r.deviceClass) === r.deviceClass,
-      )
-      .map((b) => ({
-        kind: r.kind,
-        value: r.value,
-        ok: (b.max === undefined || r.value <= b.max) && (b.min === undefined || r.value >= b.min),
-        limit: [b.max !== undefined && `max ${b.max}`, b.min !== undefined && `min ${b.min}`]
-          .filter(Boolean)
-          .join(', '),
-      })),
+    rulesFor(r, rules).map((b) => ({
+      kind: r.kind,
+      value: r.value,
+      ok: (b.max === undefined || r.value <= b.max) && (b.min === undefined || r.value >= b.min),
+      limit: [b.max !== undefined && `max ${b.max}`, b.min !== undefined && `min ${b.min}`]
+        .filter(Boolean)
+        .join(', '),
+    })),
   );
 }

@@ -405,6 +405,7 @@ export const CompareOut = z.object({
   exitCode: z.number(),
   reports: z.array(z.record(z.string(), z.unknown())),
   baselines: z.array(z.string()).optional(),
+  file: z.string().optional(),
 });
 
 export const QueryOut = z.object({

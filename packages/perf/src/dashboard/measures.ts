@@ -1,0 +1,90 @@
+import { esc } from '@appdyno/core';
+import type { Refusal } from '../store.js';
+import { age, formatValue, measureTitle, time, type DeviceName } from './format.js';
+import { chip } from './marks.js';
+import {
+  cellKey,
+  changeText,
+  isPhase,
+  limitText,
+  loud,
+  nameOf,
+  phaseName,
+  phasesOf,
+  rowsOf,
+  type AppView,
+  type Reading,
+} from './view.js';
+
+const verdictChips = ({ record, run, scenario }: Reading) => {
+  if (run !== scenario.runs[0]) return [];
+  const c = scenario.report.comparisons.find((x) => x.kind === record.kind);
+  const broken = scenario.report.budgets.filter((b) => b.kind === record.kind && !b.ok);
+  return [
+    ...(c?.verdict === 'regression' ? [chip('critical', `regression ${changeText(c)}`)] : []),
+    ...(c?.verdict === 'improvement' ? [chip('good', `improved ${changeText(c)}`)] : []),
+    ...(c?.verdict === 'noisy' ? [chip('warning', 'a change under noise: measure again')] : []),
+    ...broken.map((b) => chip('critical', `over budget, ${limitText(b, scenario)}`)),
+  ];
+};
+
+const valueOf = ({ record, run }: Reading) =>
+  formatValue(
+    isPhase(record.kind) ? phasesOf(run).reduce((a, p) => a + p.value, 0) : record.value,
+    record.unit,
+  );
+
+const detailOf = ({ record, run }: Reading) => {
+  if (!isPhase(record.kind)) return record.kind;
+  const phases = phasesOf(run);
+  const longest = phases.reduce((a, p) => (p.value > a.value ? p : a), record);
+  return `${phases.length} phases, longest ${phaseName(longest.kind)} ${formatValue(longest.value, longest.unit)}`;
+};
+
+const readingCell = (r: Reading, now: number) => {
+  const { record, scenario } = r;
+  const noise = loud(record.noise);
+  const notes = [
+    ...verdictChips(r),
+    ...(record.modelled ? [chip('model', 'estimate, from a model')] : []),
+    ...(noise.length ? [chip('warning', `noise: ${noise.join(', ')}`)] : []),
+    ...(record.noise.includes('debuggable-build') ? ['<span class="m">debug build</span>'] : []),
+  ];
+  return `<div class="v">${record.modelled ? '~' : ''}${esc(valueOf(r))}</div><div class="m">${esc(detailOf(r))}, ${esc(scenario.key.scenario)}, ${esc(age(record.at, now))}</div>${notes.join('')}`;
+};
+
+const refusedCell = (r: Refusal, now: number) =>
+  `${chip('no', 'cannot be read')}<div class="m">${esc(r.reason)}, ${esc(age(r.at, now))}</div>`;
+
+/** A refusal is the answer only until a reading is newer. */
+function cell(v: AppView, row: string, cls: string) {
+  const reading = v.cells.get(cellKey(row, cls));
+  const refusal = v.refusals.find((r) => r.measure === row && r.deviceClass === cls);
+  if (refusal && (!reading || time(refusal.at) > time(reading.record.at)))
+    return refusedCell(refusal, v.now);
+  return reading ? readingCell(reading, v.now) : '<span class="none">not measured yet</span>';
+}
+
+const header = (d: DeviceName) =>
+  `<th scope="col"><div>${esc(d.name)}</div><div class="m">${esc(d.detail)}</div>${d.virtual ? '<div class="m">relative</div>' : ''}</th>`;
+
+const rowTitle = (row: string) => {
+  const title = measureTitle(row);
+  return title ? esc(title) : `other<div class="m">${esc(row)}</div>`;
+};
+
+/** The page's core: what each device can read of this app, and how it last read. */
+export function measuresTable(v: AppView): string {
+  const rows = rowsOf(v.scenarios).map((row) => {
+    const cells = v.classes.map(
+      (cls) => `<td data-device="${esc(nameOf(v, cls).name)}">${cell(v, row, cls)}</td>`,
+    );
+    return `<tr><th scope="row">${rowTitle(row)}</th>${cells.join('')}</tr>`;
+  });
+  const anyVirtual = v.classes.some((c) => nameOf(v, c).virtual);
+  return `<div class="tw"><table class="matrix" style="--cols:${v.classes.length}"><thead><tr><th scope="col">Measure</th>${v.classes.map((c) => header(nameOf(v, c))).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>${
+    anyVirtual
+      ? '<p class="note">Emulators and simulators read as relative: their numbers depend on the load of this Mac, so compare them only with the same kind of device.</p>'
+      : ''
+  }`;
+}

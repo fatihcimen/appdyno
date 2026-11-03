@@ -30,6 +30,7 @@ import {
   toJson,
   toJUnit,
   toText,
+  writeDashboard,
   type KeyReport,
   type DeviceInfo,
   type MeasureId,
@@ -142,13 +143,14 @@ export function leakSignal(
 function measure<K extends Capability>(s: Session, k: K): NonNullable<MeasureSource[K]> {
   const source = s.device.measure;
   const f = source?.[k] as ((...a: unknown[]) => unknown) | undefined;
-  if (!f) throw new ToolError(`${s.device.serial} cannot measure ${MEASURE_NAME[k]}`);
+  if (!f)
+    throw new ToolError(`${s.device.serial} cannot measure ${MEASURE_NAME[k]}`, 'UNSUPPORTED');
   return f.bind(source) as NonNullable<MeasureSource[K]>;
 }
 
 const virtual = (s: Session) => (s.device.virtual ?? s.device.measure?.virtual) === true;
 
-const deviceInfo = (s: Session): DeviceInfo => ({
+export const deviceInfo = (s: Session): DeviceInfo => ({
   serial: s.device.serial,
   platform: s.device.platform,
   model: s.device.hello?.model ?? 'unknown',
@@ -164,6 +166,15 @@ export const keepRefusal = (ctx: ServerContext, s: Session, measure: MeasureId, 
     reason,
     at: new Date().toISOString(),
   });
+
+/** The page an open browser reloads; a number is kept whatever becomes of it. */
+const rewriteDashboard = async (ctx: ServerContext) => {
+  try {
+    await writeDashboard(ctx.measurementsDir, ctx.perfDir);
+  } catch {
+    // the next kept run, or `perf dashboard`, writes it again and says what is wrong
+  }
+};
 
 /**
  * A run's records, with the context each number is judged by; read after the measured window, so it does not
@@ -210,6 +221,7 @@ export async function keepRun(
     metrics,
   );
   await saveRun(ctx.measurementsDir, records);
+  await rewriteDashboard(ctx);
   return records[0]?.noise ?? [];
 }
 
@@ -1036,10 +1048,10 @@ export function perfOps(ctx: ServerContext): Op[] {
       name: 'perf_compare',
       title: 'Compare with the baseline',
       description:
-        'The newest measured runs against the baseline and budgets in .appdyno/perf/; a change counts only when statistically and practically significant. `action`: compare; budget (budgets only); baseline (adds the newest run to the baseline, `replace` starts it over). No device needed.',
+        'The newest measured runs against the baseline and budgets in .appdyno/perf/; a change counts only when statistically and practically significant. `action`: compare; budget (budgets only); baseline (adds the newest run to the baseline, `replace` starts it over); dashboard (writes the page, answers its path). No device needed.',
       input: z
         .object({
-          action: z.enum(['compare', 'budget', 'baseline']).default('compare'),
+          action: z.enum(['compare', 'budget', 'baseline', 'dashboard']).default('compare'),
           app: z.string().max(200).optional(),
           scenario: Scenario,
           deviceClass: z.string().max(200).optional(),
@@ -1053,6 +1065,10 @@ export function perfOps(ctx: ServerContext): Op[] {
       run: async ({ action, app, scenario, deviceClass, last, replace, format }) => {
         const dir = ctx.measurementsDir;
         const project = ctx.perfDir;
+        if (action === 'dashboard') {
+          const file = await writeDashboard(dir, project, app ? { app } : {});
+          return reply(`dashboard: ${file}`, { failed: false, exitCode: 0, reports: [], file });
+        }
         const keys = await runKeys(dir, {
           ...(app && { app }),
           ...(scenario && { scenario }),
@@ -1080,6 +1096,7 @@ export function perfOps(ctx: ServerContext): Op[] {
             files.push(file);
             lines.push(`baseline: ${file}`);
           }
+          await rewriteDashboard(ctx);
           return reply(lines.join('\n'), {
             failed: left > 0,
             exitCode: left > 0 ? 1 : 0,

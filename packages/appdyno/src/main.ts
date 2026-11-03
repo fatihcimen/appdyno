@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // appdyno: the MCP server over stdio (`appdyno mcp`), devices, doctor, bench. Output on stdout, diagnostics
 // on stderr; in `mcp` stdout is the MCP channel, so logs go to stderr only.
+import { execFileSync } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
 import { loadavg } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Adb, androidProvider, installTools } from '@appdyno/driver-android';
@@ -11,6 +12,7 @@ import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-appl
 import { createServer } from '@appdyno/mcp';
 import { commandsFor, deviceFlag, listOf, takeFlag } from '@appdyno/cli';
 import { stateDir } from '@appdyno/core';
+import { writeDashboard } from '@appdyno/perf';
 import {
   DEFAULT_POLICY,
   ServerContext,
@@ -18,6 +20,7 @@ import {
   flowsFor,
   opsFor,
   paramsOf,
+  survey,
   type Policy,
 } from '@appdyno/ops';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
@@ -110,6 +113,53 @@ async function serveMcp(args: string[]) {
     });
   });
   await createServer(opsFor(ctx), log).connect(new StdioServerTransport());
+}
+
+/** `perf dashboard`: no device; `--out` and `--open` are this command's alone, not the tool's. */
+async function dashboardCommand(args: string[]) {
+  const { values } = parseArgs({
+    args,
+    options: {
+      app: { type: 'string' },
+      out: { type: 'string' },
+      open: { type: 'boolean' },
+      measurements: { type: 'string' },
+    },
+  });
+  const ctx = contextFrom(values);
+  const file = await writeDashboard(ctx.measurementsDir, ctx.perfDir, {
+    ...(values.app && { app: values.app }),
+    ...(values.out && { out: resolve(values.out) }),
+  });
+  ctx.close();
+  console.log(file);
+  if (values.open) execFileSync('open', [file]);
+  return 0;
+}
+
+/** `perf survey`: every measure on one device, then the page; exit 1 only when nothing could be read. */
+async function surveyCommand(args: string[]) {
+  const { values } = parseArgs({
+    args,
+    options: {
+      app: { type: 'string' },
+      device: { type: 'string' },
+      measurements: { type: 'string' },
+      share: { type: 'boolean' },
+    },
+  });
+  if (!values.app) {
+    err('usage: appdyno perf survey --app A [--device S] [--measurements dir] [--share]');
+    return 2;
+  }
+  const ctx = contextFrom(values, join(stateDir(), 'cli-session.json'));
+  try {
+    const { read } = await survey(ctx, values.app, (line) => console.log(line));
+    return read > 0 ? 0 : 1;
+  } finally {
+    await ctx.end().catch(() => []);
+    ctx.close();
+  }
 }
 
 async function main(): Promise<number> {
@@ -228,11 +278,13 @@ async function main(): Promise<number> {
       return 0;
     }
     default: {
+      if (command === 'perf' && rest[0] === 'dashboard') return dashboardCommand(rest.slice(1));
+      if (command === 'perf' && rest[0] === 'survey') return surveyCommand(rest.slice(1));
       // `perf compare|baseline|budget [flags]`: the gate's names for one operation
       const gate = command === 'perf' ? rest.shift() : undefined;
       if (command === 'perf' && !['compare', 'baseline', 'budget'].includes(gate ?? '')) {
         err(
-          'usage: appdyno perf compare|baseline|budget [--app A] [--scenario S] [--device-class C] [--last N] [--replace] [--format text|json|junit]',
+          'usage: appdyno perf compare|baseline|budget [--app A] [--scenario S] [--device-class C] [--last N] [--replace] [--format text|json|junit]\n       appdyno perf dashboard [--app A] [--out dir] [--open]\n       appdyno perf survey --app A [--device S]',
         );
         return 2;
       }
@@ -272,6 +324,10 @@ commands:
   bench --serial S [--driver appdyno|<module>]... [--n 50] [--out file]
   perf compare|baseline|budget [--app A] [--scenario S] [--format text|json|junit] [--measurements dir]
                    the performance gate: non-zero on a regression or a broken budget
+  perf dashboard [--app A] [--out dir] [--open] [--measurements dir]
+                   one page: what can be read on each device, what changed, what needs attention
+  perf survey --app A [--device S] [--measurements dir]
+                   every measure on that device in turn, then the page
 
 operations (--device S selects the device, also for the next commands; flow: appdyno flow run a.flow --from 3 --param NAME=value):
 ${listOf(ops)}`,
