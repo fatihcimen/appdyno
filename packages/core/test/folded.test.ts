@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { insideRows, renderFolded, type ScreenElement } from '../src/index.js';
+import {
+  diffText,
+  insideRows,
+  renderFolded,
+  renderScreen,
+  type ScreenElement,
+} from '../src/index.js';
 
 const element = (
   ref: string,
@@ -115,6 +121,21 @@ describe('what repeats in an answer', () => {
     expect(lines[2]).toBe('@b button "" id=x 200,60 — Search');
     expect(lines[3]).toBe('@c button "Add" 200,80 — Milk');
     expect(lines[4]).toBe(`@d button "Add" 200,90 — ${'long '.repeat(8).slice(0, 39)}…`);
+  });
+
+  it('hides a secret in a context before cutting it, and leaves a context whole outside an answer', () => {
+    const secret = 'x'.repeat(50);
+    const list = [
+      element('@c', 'button', 'Add', 80, { refContext: `the ${secret} one` }),
+      element('@d', 'button', 'Add', 90, { refContext: 'Milk' }),
+    ];
+    const text = renderFolded(list, (s) => s.replace(secret, '•••'));
+    expect(text).toContain('— the ••• one');
+    expect(text).not.toContain('xxx');
+    expect(renderScreen(list)).toContain(`— the ${secret} one`);
+    expect(diffText({ added: [list[0]!], removed: [], changed: [] }, 9)).toContain(
+      `— the ${secret} one`,
+    );
   });
 
   it('puts rows under one header when their context is the same and so tells nothing', () => {

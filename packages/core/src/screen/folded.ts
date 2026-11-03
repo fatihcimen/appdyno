@@ -1,6 +1,6 @@
 import { elementLine, screenHeader } from './diff.js';
 import type { Rect } from './elements.js';
-import type { ScreenElement } from './model.js';
+import { cutContext, type ScreenElement } from './model.js';
 
 /** Fewer rows than this save nothing over the line their header takes. */
 const MIN_RUN = 3;
@@ -80,10 +80,13 @@ export function renderFolded(
   const rows = list.filter((e) => !inside.has(e));
   const named = (e: Pick<ScreenElement, 'role' | 'label'>) => `${e.role} ${e.label}`;
   const names = rows.map(named);
-  // a context tells apart what is shown together; a nameless element has nothing else to go by
-  const line = ({ refContext: _told, ...bare }: ScreenElement, i: number, run: ScreenElement[]) =>
+  // a context tells apart what is shown together, and needs few words for that; a nameless element has
+  // nothing else to go by. Redacted before it is cut, or part of a secret would stay
+  const line = ({ refContext, ...bare }: ScreenElement) =>
     elementLine(
-      !bare.label || names.indexOf(named(bare)) !== names.lastIndexOf(named(bare)) ? run[i]! : bare,
+      refContext && (!bare.label || names.indexOf(named(bare)) !== names.lastIndexOf(named(bare)))
+        ? { ...bare, refContext: cutContext(clean(refContext)) }
+        : bare,
       say,
     );
   const lines = [
@@ -94,7 +97,7 @@ export function renderFolded(
     end = i + 1;
     while (first.label && end < rows.length && alike(first, rows[end]!)) end++;
     const run = rows.slice(i, end);
-    if (run.length < MIN_RUN) lines.push(...run.map(line));
+    if (run.length < MIN_RUN) lines.push(...run.map((e) => line(e)));
     else
       lines.push(
         `${[first.role, `x=${first.x}`, ...first.flags].join(' ')}: ref "label" y`,
