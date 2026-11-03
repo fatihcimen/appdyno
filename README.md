@@ -315,20 +315,37 @@ Appium, `uiautomator`) is never stopped. The error names the holder and gives th
 
 ## Speed
 
-How appdyno compares with other servers on the same device is measured, not claimed. The table is filled
-by `scripts/compare.mjs`. It writes JSON and a Markdown table under `.compare/`, and it refuses a device
-you did not name:
+Measured, not claimed: the Settings scenario, one server at a time on one boot, three alternating runs of 10 rounds, by `scripts/compare.mjs`, which
+also reads each answer's positions against a read 1.5 s later. Medians in ms, p50 / p90. A number is relative to this Mac at this load.
 
 ```sh
-node scripts/compare.mjs --device <id> --tools appdyno,another-tool,another-server --runs 3
+node scripts/compare.mjs --device <id> --platform android --tools appdyno,another-tool,another-server --runs 3 --another-tool-bin <path>
 ```
 
-| scenario        | appdyno             | another-tool        | another-server          |
-| --------------- | ------------------- | ------------------- | ------------------- |
-| read the screen | run scripts/compare | run scripts/compare | run scripts/compare |
-| tap and settle  | run scripts/compare | run scripts/compare | run scripts/compare |
-| type text       | run scripts/compare | run scripts/compare | run scripts/compare |
-| answer size     | run scripts/compare | run scripts/compare | run scripts/compare |
+**Android 14 emulator** (`sdk_gphone64_arm64`), 2026-11-03, appdyno 0.6.0, another-tool 0.21.36, another-server latest, host load 10-11 on 15 cores, device load 1-2:
+
+| tool         | read      | tap and see   | back and see  | screenshot | read answer, chars | catalog chars (tools) | first open | position error, px, median / p95 / max | stale | errors |
+| ------------ | --------- | ------------- | ------------- | ---------- | ------------------ | --------------------- | ---------- | -------------------------------------- | ----- | ------ |
+| appdyno      | 64 / 82   | 819 / 948     | 550 / 577     | 50 / 71    | 1,405              | 26,587 (44)           | 1,922      | 0 / 0 / 0                              | 0     | 0      |
+| another-tool | 63 / 66   | 1,079 / 1,401 | 978 / 999     | 76 / 92    | 808 (rows folded)  | 263,519 (62)          | 1,693      | 0 / 40 / 79                            | 0     | 0      |
+| another-server   | 243 / 388 | 2,005 / 2,100 | 1,194 / 1,271 | 106 / 179  | 6,997              | 30,276 (34)           | 593        | 0 / 0 / 0                              | 0     | 0      |
+
+**iOS 26.5 simulator** (iPhone 17 Pro), same date and versions, host load 6-8:
+
+| tool         | read      | tap and see   | back and see  | screenshot | read answer, chars | catalog chars (tools) | first open | position error, points, median / p95 / max; missing | stale | errors |
+| ------------ | --------- | ------------- | ------------- | ---------- | ------------------ | --------------------- | ---------- | --------------------------------------------------- | ----- | ------ |
+| appdyno      | 57 / 64   | 909 / 1,073   | 674 / 713     | 85 / 97    | 2,050              | 26,587 (44)           | 7,428      | 0 / 0 / 1; 4                                        | 0     | 0      |
+| another-tool | 63 / 78   | 1,154 / 1,481 | 1,509 / 1,624 | 597 / 644  | 689 (rows folded)  | 263,519 (62)          | 2,099      | 0 / 0 / 0; 0                                        | 0     | 0      |
+| another-server   | 241 / 266 | 878 / 953     | 870 / 954     | 348 / 442  | 4,306              | 30,276 (34)           | 876        | 0 / 0 / 1; 1,470                                    | 2     | 1      |
+
+**Where appdyno loses.**
+
+- Simulator tap: `another-server` is 31 ms faster, by answering during the push: 1,470 elements of its answers were gone 1.5 s later, and 2 answers were stale.
+- First open: slowest on the simulator by far (7.4 s against 0.9-2.1 s) as it starts its runner, and on the emulator behind both, which answer with less: `another-server` before the app's first screen.
+- Read answer size: `another-tool`'s is smaller on both, with list rows folded.
+- Emulator read: `another-tool` 63 ms against 64, which is no difference.
+- Screenshot size: `another-server`'s is smaller on both (33,172 against 39,344 characters on the emulator; 49,900 against 82,466 on the simulator), and `another-tool`'s on the simulator (70,776).
+- Catalog: 26,587 characters, over this project's own aim of 25,000, though under both of theirs.
 
 Measurement methods and raw outputs are described in `docs/perf.md`.
 
