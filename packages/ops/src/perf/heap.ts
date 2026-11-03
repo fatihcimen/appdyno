@@ -1,0 +1,68 @@
+import { mkdir } from 'node:fs/promises';
+import type { HeapReading } from '@appdyno/core';
+import { z } from 'zod';
+import type { ServerContext } from '../context.js';
+import { refused } from '../session.js';
+import { HeapOut } from '../schemas.js';
+import { type Op, defineOp, READ, reply } from '../tool.js';
+import { perfTools, App, measure } from './shared.js';
+
+const HEAP: Record<HeapReading['kind'], { store: string; label: string }> = {
+  hprof: { store: 'heap-dump', label: 'heap dump' },
+  memgraph: { store: 'heap-graph', label: 'memory graph (Xcode)' },
+};
+
+export function perfHeapOp(ctx: ServerContext): Op {
+  const { appOf, save, keep } = perfTools(ctx);
+  return defineOp({
+    name: 'perf_heap',
+    title: 'Heap dump',
+    description:
+      "The app's heap into a local file (Android: Java HPROF, for a memory analyser; iOS simulator: an Xcode memory graph and the leak count). For a suspected leak, after perf_scroll. Android `profile`: a Perfetto trace, top classes or sites, for a debuggable or profileable build.",
+    input: z
+      .object({
+        app: App,
+        profile: z.enum(['java_hprof', 'heapprofd']).optional(),
+        seconds: z.number().int().min(1).max(60).default(5),
+      })
+      .strict(),
+    output: HeapOut,
+    annotations: READ,
+    needs: 'heap',
+    run: async ({ app, profile, seconds }) => {
+      const s = await ctx.session();
+      s.appPid = undefined;
+      const pkg = appOf(s, app);
+      if (profile) {
+        const m = await measure(s, 'heapProfile')(pkg, profile, seconds).catch(refused);
+        const v = m.value;
+        const saved = await save('heap-profile', [m], v);
+        await keep(s, pkg, `heap-${profile}`, 'perf_heap', saved.txt, [
+          { kind: 'heap.bytes', unit: 'bytes', samples: [v.totalBytes] },
+        ]);
+        return reply(
+          [
+            `measurement ${saved.id}`,
+            `${profile}: ${v.totalBytes} bytes`,
+            ...v.top.slice(0, 10).map((e) => `${e.bytes} bytes, ${e.count}× ${e.name}`),
+            `trace (perf_query): ${v.tracePath}`,
+          ].join('\n'),
+          { id: saved.id, file: v.tracePath, bytes: v.totalBytes, top: v.top.slice(0, 20) },
+        );
+      }
+      const dump = measure(s, 'heap');
+      await mkdir(ctx.measurementsDir, { recursive: true });
+      const m = await dump(pkg, ctx.measurementsDir).catch(refused);
+      const v = m.value;
+      const saved = await save(HEAP[v.kind].store, [m], v);
+      if (v.leaks !== undefined)
+        await keep(s, pkg, 'heap', 'perf_heap', saved.txt, [
+          { kind: 'heap.leaks', unit: 'count', samples: [v.leaks] },
+        ]);
+      return reply(
+        `measurement ${saved.id}\n${HEAP[v.kind].label}: ${v.file} (${(v.bytes / 1048576).toFixed(1)} MB)${v.leaks !== undefined ? `; ${v.leaks} leaks, ${v.leakedBytes} bytes` : ''}`,
+        { id: saved.id, file: v.file, bytes: v.bytes },
+      );
+    },
+  });
+}

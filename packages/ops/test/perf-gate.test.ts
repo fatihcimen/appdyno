@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { stateDir, type MeasureSource } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
-import { leakSignal } from '../src/perf.js';
+import { leakSignal } from '../src/perf/scroll.js';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '../src/index.js';
 import { FakeDevice } from './fake-device.js';
 

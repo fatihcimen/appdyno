@@ -11,7 +11,7 @@ import { flowRunner, type ReplayOptions } from './flow/runner.js';
 import { readFlow } from './flow/shared.js';
 import { runTests, type TestOptions } from './flow/test-run.js';
 import { networkOps } from './network.js';
-import { perfOps } from './perf.js';
+import { perfOps } from './perf/index.js';
 import { reactNativeOps } from './reactnative.js';
 import { readOps } from './read.js';
 import { recordOps } from './record.js';

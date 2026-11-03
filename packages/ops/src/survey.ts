@@ -10,7 +10,7 @@ import {
   type MeasureId,
 } from '@appdyno/perf';
 import type { ServerContext } from './context.js';
-import { deviceInfo, keepRefusal } from './perf.js';
+import { deviceInfo, keepRefusal } from './perf/shared.js';
 import { opsFor } from './registry.js';
 
 type Call = { op: string; args?: Record<string, unknown> };
