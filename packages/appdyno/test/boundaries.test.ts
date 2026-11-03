@@ -92,22 +92,45 @@ describe('module boundaries', () => {
   });
 });
 
+// joined here so that this file passes itself
+const FORBIDDEN = [
+  ['get', 'ir'],
+  ['mobile', '-mcp'],
+  ['mobile', 'cli'],
+  ['mobile', 'next'],
+  ['agent', '-device'],
+  ['agent', 'device'],
+  ['call', 'stack'],
+  ['device', 'kit'],
+  ['anth', 'ropic'],
+  ['co', '-authored'],
+  ['super', 'powers'],
+  ['sub', 'agent'],
+  ['worktree', '-agent'],
+].map((parts) => parts.join(''));
+
+const forbiddenIn = (text: string) => {
+  const lower = text.toLowerCase();
+  return FORBIDDEN.filter((name) => lower.includes(name));
+};
+
 describe('the name', () => {
-  it('has no trace of the old one', () => {
-    const old = 'get' + 'ir'; // built here so that this file passes itself
+  it('has no trace of the old one, or of any other', () => {
     const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' })
       .split('\0')
       .filter(Boolean);
     expect(tracked.length).toBeGreaterThan(100);
-    const hits = tracked.filter((f) => {
-      if (f.toLowerCase().includes(old)) return true;
+    expect(tracked).toContain('pnpm-lock.yaml');
+    const hits = tracked.flatMap((f) => {
       const p = join(root, f);
-      return (
-        existsSync(p) &&
-        statSync(p).isFile() &&
-        readFileSync(p, 'latin1').toLowerCase().includes(old)
-      );
+      const content = existsSync(p) && statSync(p).isFile() ? readFileSync(p, 'latin1') : '';
+      return forbiddenIn(`${f}\n${content}`).map((name) => `${f}: ${name}`);
     });
     expect(hits).toEqual([]);
+  });
+
+  it('catches a name in any case', () => {
+    expect(forbiddenIn('uses ' + FORBIDDEN[1]!.toUpperCase() + ' here')).toEqual([FORBIDDEN[1]]);
+    expect(forbiddenIn('claude mcp add appdyno')).toEqual([]);
   });
 });
