@@ -320,6 +320,9 @@ export class PhoneApps implements AppManager {
   }
 }
 
+/** `devicectl` shows "Extra Large" where it is told extra-large. */
+export const phoneTextSize = (shown: string) => shown.trim().toLowerCase().replace(/\s+/g, '-');
+
 /** A phone's appearance through `devicectl`; what it has no switch for says so. */
 export class PhoneSettings implements DeviceSettings {
   constructor(private readonly ctl: Devicectl) {}
@@ -329,16 +332,17 @@ export class PhoneSettings implements DeviceSettings {
   }
 
   async get(name: SettingName): Promise<string> {
-    const key = {
-      dark_mode: 'mode',
-      text_size: 'textSize',
-      reduce_motion: 'reduceMotion',
-    } as const;
     if (name !== 'dark_mode' && name !== 'text_size' && name !== 'reduce_motion')
       throw new DeviceError('UNSUPPORTED', `an iPhone has no ${name} switch this tool can reach`);
     const j = await this.ctl.json(['device', 'info', 'appearance', '--device', this.ctl.udid]);
-    const v = (j.result as Record<string, unknown> | undefined)?.[key[name]];
-    return typeof v === 'boolean' ? (v ? 'on' : 'off') : String(v ?? '');
+    const a = (j.result ?? {}) as {
+      userInterfaceStyle?: string;
+      textSize?: string;
+      reduceMotion?: { enabled?: boolean };
+    };
+    if (name === 'dark_mode') return a.userInterfaceStyle ?? '';
+    if (name === 'reduce_motion') return a.reduceMotion?.enabled ? 'on' : 'off';
+    return phoneTextSize(a.textSize ?? '');
   }
 
   async set(name: SettingName, value: string) {

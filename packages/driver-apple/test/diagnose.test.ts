@@ -2,7 +2,7 @@ import { mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseIps, reportsIn, simulatorCrashes } from '../src/crashes.js';
+import { endReports, parseIps, reportsIn, simulatorCrashes } from '../src/crashes.js';
 import { logShowArgs } from '../src/logs.js';
 
 const UDID = '8BC57F11-901C-4DF6-A2B9-2A3B7DE1B79D';
@@ -34,6 +34,31 @@ const ips = (bundle: string, device = UDID) =>
   ].join('\n');
 
 describe('crash reports', () => {
+  it('copies from a phone what can say how an app ended, newest first, not what devicectl cannot take', () => {
+    const file = (relativePath: string, lastModDate: string, bug_type?: string) => ({
+      relativePath,
+      metadata: { lastModDate, ...(bug_type && { extendedAttributes: { bug_type } }) },
+    });
+    const files = [
+      file('19:24.spindump.txt', '2026-11-03T10:00:00Z'),
+      file('Analytics-1.ips.ca.synced', '2026-11-03T10:00:00Z', '211'),
+      file('SiriSearchFeedback-1.ips', '2026-11-03T10:00:00Z', '211'),
+      file('Fixture-old.ips', '2026-11-01T10:00:00Z', '309'),
+      file('Fixture-new.ips', '2026-11-03T10:00:00Z', '309'),
+      file('Retired/App-cpu.ips', '2026-11-02T10:00:00Z', '385'),
+    ];
+    expect(endReports(files, { app: 'a', limit: 5 }).map((f) => f.relativePath)).toEqual([
+      'Fixture-new.ips',
+      'Retired/App-cpu.ips',
+      'Fixture-old.ips',
+    ]);
+    expect(
+      endReports(files, { app: 'a', limit: 5, since: Date.parse('2026-11-02T12:00:00Z') }).map(
+        (f) => f.relativePath,
+      ),
+    ).toEqual(['Fixture-new.ips']);
+  });
+
   it('reads what a .ips says', () => {
     expect(parseIps(ips('dev.app'))).toMatchObject({
       bundle: 'dev.app',

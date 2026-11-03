@@ -1,9 +1,7 @@
-import { execFile } from 'node:child_process';
-import { readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { mkdir, readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
-import { promisify } from 'node:util';
+import { dirname, join } from 'node:path';
 import {
   callSignal,
   stateDir,
@@ -11,9 +9,8 @@ import {
   type CrashesQuery,
   type CrashReport,
 } from '@appdyno/core';
-import { xcodeEnv } from './simctl.js';
+import type { Devicectl } from './phone.js';
 
-const run = promisify(execFile);
 /** A folder holds every app's reports: only so many are opened per query. */
 const MAX_OPENED = 200;
 const FRAMES = 6;
@@ -112,32 +109,56 @@ export async function simulatorCrashes(
   return { reports, source: SIM_SOURCE };
 }
 
-/** Copies the phone's crash logs here (a folder per phone), then reads them as a simulator's. */
-export async function phoneCrashes(udid: string, q: CrashesQuery): Promise<CrashesAnswer> {
-  const dir = join(stateDir(), 'crashes', udid);
+type PhoneFile = {
+  relativePath: string;
+  metadata?: { lastModDate?: string; extendedAttributes?: { bug_type?: string } };
+};
+
+/** What an app's end leaves on a phone: a crash (309, once 109), a resource limit (385). */
+const END_TYPES = new Set(['109', '309', '385']);
+
+/** Of the phone's crash folder, what can say how an app ended, newest first. */
+export function endReports(files: PhoneFile[], q: CrashesQuery): PhoneFile[] {
+  const at = (f: PhoneFile) => Date.parse(f.metadata?.lastModDate ?? '') || 0;
+  return files
+    .filter((f) => {
+      const type = f.metadata?.extendedAttributes?.bug_type;
+      return (
+        f.relativePath.endsWith('.ips') &&
+        (!type || END_TYPES.has(type)) &&
+        (!q.since || at(f) >= q.since)
+      );
+    })
+    .sort((a, b) => at(b) - at(a))
+    .slice(0, MAX_OPENED);
+}
+
+/**
+ * Copies the phone's reports here (a folder per phone), then reads them as a simulator's. One by one, from a
+ * list: `devicectl device copy from` of the folder stops at the first file it cannot take, and iOS leaves such
+ * files there (`19:24.spindump.txt`).
+ */
+export async function phoneCrashes(ctl: Devicectl, q: CrashesQuery): Promise<CrashesAnswer> {
+  const dir = join(stateDir(), 'crashes', ctl.udid);
   await mkdir(dir, { recursive: true, mode: 0o700 });
-  await run(
-    'xcrun',
-    [
-      'devicectl',
+  const on = ['--device', ctl.udid, '--domain-type', 'systemCrashLogs'];
+  const listed = await ctl.json(['device', 'info', 'files', ...on]);
+  const files = (listed.result as { files?: PhoneFile[] } | undefined)?.files ?? [];
+  for (const f of endReports(files, q)) {
+    callSignal()?.throwIfAborted();
+    const local = join(dir, f.relativePath);
+    if (existsSync(local)) continue;
+    await mkdir(dirname(local), { recursive: true, mode: 0o700 });
+    await ctl.json([
       'device',
       'copy',
       'from',
-      '--device',
-      udid,
-      '--domain-type',
-      'systemCrashLogs',
+      ...on,
       '--source',
-      '.',
+      f.relativePath,
       '--destination',
-      dir,
-      '--quiet',
-    ],
-    {
-      timeout: 120_000,
-      env: xcodeEnv(),
-      ...(callSignal() && { signal: callSignal()! }),
-    },
-  );
+      local,
+    ]);
+  }
   return { reports: await reportsIn(dir, q), source: 'devicectl systemCrashLogs' };
 }

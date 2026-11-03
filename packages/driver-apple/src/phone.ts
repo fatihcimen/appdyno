@@ -261,7 +261,7 @@ export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
     setLocation: (lat, lon) => ctl.setLocation(lat, lon),
     linkPrompt: false,
     logs: phoneLogs,
-    crashes: (q) => phoneCrashes(udid, q),
+    crashes: (q) => phoneCrashes(ctl, q),
     name: `iPhone ${udid}`,
     pid: (b) => ctl.pid(b),
   };
