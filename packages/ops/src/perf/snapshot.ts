@@ -2,6 +2,7 @@ import type { Measured } from '@appdyno/core';
 import { measureOf } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
+import { holdingCondition } from '../control.js';
 import { refused } from '../session.js';
 import { SnapshotOut } from '../schemas.js';
 import { type Op, defineOp, READ, reply } from '../tool.js';
@@ -72,7 +73,12 @@ export function perfSnapshotOp(ctx: ServerContext): Op {
       );
       const energy = await extra(
         'energy',
-        source.energy && (() => source.energy!(pkg, cpuWindowMs)),
+        source.energy &&
+          (() => {
+            const read = () => source.energy!(pkg, cpuWindowMs);
+            // Android reads it told it runs on battery; no other platform has this condition
+            return s.device.platform === 'android' ? holdingCondition(s, 'battery', read) : read();
+          }),
       );
       const exits = await extra('exits', source.exits && (() => source.exits!(pkg)));
       const size = await extra('size', source.size && (() => source.size!(pkg)));

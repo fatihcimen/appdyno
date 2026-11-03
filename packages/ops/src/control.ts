@@ -5,6 +5,7 @@ import {
   reportProgress,
   SETTINGS,
   stateDir,
+  type DeviceSettings,
   type SettingName,
   type Startable,
   type VirtualDevices,
@@ -42,27 +43,45 @@ function writeChanges(serial: string, c: Changes) {
   writeFileSync(file, JSON.stringify(c), { mode: 0o600 });
 }
 
+/** Writes a condition's old value down, once: true when this call did. */
+async function writeDown(s: Session, settings: DeviceSettings, name: SettingName, app?: string) {
+  const serial = s.device.serial;
+  const changes = readChanges(serial);
+  if (changes[name]) return false;
+  await settings.willChange?.(name);
+  changes[name] = { was: await settings.get(name, app), ...(app && { app }) };
+  writeChanges(serial, changes);
+  return true;
+}
+
+const forget = (s: Session, name: SettingName) => {
+  const changes = readChanges(s.device.serial);
+  delete changes[name];
+  writeChanges(s.device.serial, changes);
+};
+
 /** Sets a condition, the old value written down first so a crash cannot lose it. */
 export async function setCondition(s: Session, name: SettingName, value: string, app?: string) {
   const settings = s.device.settings;
   if (!settings) throw new ToolError('this device has no settings to change', 'UNSUPPORTED');
-  const serial = s.device.serial;
-  const changes = readChanges(serial);
-  const first = !changes[name];
-  if (first) {
-    await settings.willChange?.(name);
-    changes[name] = { was: await settings.get(name, app), ...(app && { app }) };
-    writeChanges(serial, changes);
-  }
+  const first = await writeDown(s, settings, name, app);
   try {
     await settings.set(name, value, app);
   } catch (e) {
     // nothing changed, so nothing to put back
-    if (first) {
-      delete changes[name];
-      writeChanges(serial, changes);
-    }
+    if (first) forget(s, name);
     throw e;
+  }
+}
+
+/** `during` changes a condition for its time and puts it back itself: only a process dying meanwhile leaves it. */
+export async function holdingCondition<T>(s: Session, name: SettingName, during: () => Promise<T>) {
+  const settings = s.device.settings;
+  const first = settings ? await writeDown(s, settings, name) : false;
+  try {
+    return await during();
+  } finally {
+    if (first) forget(s, name);
   }
 }
 

@@ -17,6 +17,13 @@ const localeApp = (app: string | undefined) => {
   return assertPkg(app);
 };
 
+/**
+ * What an energy reading changes for its time: told it runs on battery, and the count since the last charge kept
+ * from resetting, which an unplug at a high level would do (seen on an emulator at level 100: 8 s back to 1 s).
+ */
+export const BATTERY_UNPLUG = 'dumpsys batterystats enable no-auto-reset; dumpsys battery unplug';
+export const BATTERY_BACK = 'dumpsys battery reset; dumpsys batterystats disable no-auto-reset';
+
 export class AndroidSettings implements DeviceSettings {
   constructor(
     private readonly adb: Adb,
@@ -152,7 +159,7 @@ export class AndroidSettings implements DeviceSettings {
         await this.setProxy(value);
         return;
       case 'battery':
-        if (value.startsWith('default')) await this.sh('dumpsys battery reset');
+        if (value.startsWith('default')) await this.sh(BATTERY_BACK);
         else if (/^\d{1,3}$/.test(value) && Number(value) <= 100)
           await this.sh(`dumpsys battery set level ${value}`);
         else throw new DeviceError('INVALID_ARGUMENT', `battery: a level 0 to 100, not ${value}`);

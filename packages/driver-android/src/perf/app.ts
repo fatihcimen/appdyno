@@ -13,6 +13,7 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg, shq } from '../adb.js';
 import { parseExitInfo } from '../crashes.js';
+import { BATTERY_BACK, BATTERY_UNPLUG } from '../settings.js';
 import { traceProcessor } from '../tools.js';
 import {
   parseBuildType,
@@ -106,7 +107,7 @@ export async function energy(
   // the emulator's power profile is all zeros: even a core busy for seconds reads cpu=0
   if (isVirtual(d)) throw noModel('an emulator has no power model, it computes zero');
   try {
-    await sh(d, 'dumpsys battery unplug');
+    await sh(d, BATTERY_UNPLUG);
     const read = () => sh(d, `dumpsys batterystats --charged ${pkg}`, 60_000);
     const before = parseBatteryUsage(await read(), uid);
     await sleep(windowMs);
@@ -122,7 +123,7 @@ export async function energy(
       at: at(),
     };
   } finally {
-    await sh(d, 'dumpsys battery reset');
+    await sh(d, BATTERY_BACK);
   }
 }
 
