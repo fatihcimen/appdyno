@@ -63,6 +63,16 @@ export async function setCondition(s: Session, name: SettingName, value: string,
   }
 }
 
+/** Puts back one condition, if this tool changed it. */
+export async function restoreCondition(s: Session, name: SettingName) {
+  const changes = readChanges(s.device.serial);
+  const c = changes[name];
+  if (!c) return;
+  await s.device.settings!.set(name, c.was, c.app);
+  delete changes[name];
+  writeChanges(s.device.serial, changes);
+}
+
 /** Puts back what this tool changed; the names it could not, with why, stay written down. */
 export async function restoreConditions(s: Session) {
   const serial = s.device.serial;

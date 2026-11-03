@@ -2,6 +2,7 @@ import Combine
 import CoreLocation
 import SwiftUI
 import UIKit
+import WebKit
 
 /// The iOS fixture: the same screens as the Android one, where the platform has them.
 /// `appdyno-fixture://open/<screen>` opens a screen directly.
@@ -38,6 +39,8 @@ struct FixtureApp: App {
         case "code": CodeScreen()
         case "slide": SlideScreen()
         case "a11y": A11yScreen()
+        case "web": WebScreen()
+        case "network": NetworkScreen()
         default: Text("Bilinmeyen ekran: \(key)")
         }
     }
@@ -63,6 +66,45 @@ struct Home: View {
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// A web view on the page the Android fixture shows, open to the Safari inspector.
+struct WebScreen: UIViewRepresentable {
+    func makeUIView(context: Context) -> WKWebView {
+        let web = WKWebView()
+        web.isInspectable = true
+        web.loadHTMLString("<html><head><title>Fixture web</title></head><body><h1>Web content</h1><p>Payment page</p><button id='pay' onclick=\"document.getElementById('paid').textContent='Paid'\">Pay</button><input id='card' placeholder='Card'><p id='paid'></p><canvas id='drawn' width='10' height='10'></canvas><script>console.log('fixture web page loaded')</script></body></html>", baseURL: nil)
+        return web
+    }
+    func updateUIView(_ view: WKWebView, context: Context) {}
+}
+
+/// One request through a session of its own, as most apps make it.
+struct NetworkScreen: View {
+    @State private var url = ""
+    @State private var result = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            TextField("URL", text: $url)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .accessibilityIdentifier("url_input")
+            Button("Fetch") {
+                guard let address = URL(string: url) else { result = "failed: not a URL"; return }
+                let session = URLSession(configuration: .default)
+                session.dataTask(with: address) { data, response, error in
+                    let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                    let text = error.map { "failed: \($0.localizedDescription)" }
+                        ?? "fetched \(code) \(data?.count ?? 0)"
+                    DispatchQueue.main.async { result = text }
+                }.resume()
+            }.accessibilityIdentifier("fetch")
+            Text(result).accessibilityIdentifier("fetch_result")
+            Spacer()
+        }
+        .padding()
     }
 }
 

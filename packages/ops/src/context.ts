@@ -9,6 +9,7 @@ import {
 } from '@appdyno/core';
 import { claim, holder, release } from './claims.js';
 import { restoreConditions } from './control.js';
+import { endCapture } from './network.js';
 import { checkApp, checkDevice, type Policy } from './policy.js';
 import { endRecording } from './record.js';
 import { reportFor } from './report.js';
@@ -134,6 +135,7 @@ export class ServerContext {
     const failed: string[] = [];
     for (const s of this.sessions.values()) {
       await endRecording(s).catch((e: Error) => failed.push(`recording: ${e.message}`));
+      await endCapture(s).catch((e: Error) => failed.push(`network: ${e.message}`));
       await reportFor(this)
         .close(s)
         .catch((e: Error) => failed.push(`report: ${e.message}`));

@@ -107,6 +107,40 @@ export const ScreenshotOut = z.object({
 
 export const DoneOut = z.object({ done: z.string() });
 
+export const NetworkOut = z.object({
+  done: z.string().optional(),
+  paths: z
+    .array(
+      z.object({
+        via: z.string(),
+        sees: z.string().optional(),
+        refused: z.string().optional(),
+      }),
+    )
+    .optional(),
+  entries: z
+    .array(
+      z.object({
+        at: z.string().optional(),
+        method: z.string().optional(),
+        url: z.string().optional(),
+        status: z.number().optional(),
+        ms: z.number().optional(),
+        direction: z.string().optional(),
+        host: z.string().optional(),
+        packets: z.number().optional(),
+        bytes: z.number().optional(),
+        body: z.boolean().optional(),
+        error: z.string().optional(),
+      }),
+    )
+    .optional(),
+  dropped: z.number().int().optional(),
+  source: z.string().optional(),
+  bodies: z.string().optional(),
+  note: z.string().optional(),
+});
+
 export const ReportOut = z.object({
   done: z.string(),
   dir: z.string(),

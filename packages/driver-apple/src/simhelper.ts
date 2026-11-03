@@ -25,6 +25,19 @@ const SDK_FLAGS = {
     '-framework',
     'CoreGraphics',
   ],
+  // injected into an app on the simulator
+  NetProbe: [
+    '--sdk',
+    'iphonesimulator',
+    'clang',
+    '-fobjc-arc',
+    '-dynamiclib',
+    '-arch',
+    'arm64',
+    '-mios-simulator-version-min=17.0',
+    '-framework',
+    'Foundation',
+  ],
 };
 
 /** The helper's binary, compiled once per source (a Mac without Xcode's tools has no simulator either). */

@@ -31,6 +31,7 @@ import { androidLogs } from './logs.js';
 import { auditAndroid } from './audit.js';
 import { AndroidAgentLauncher, REMOTE_DIR } from './agent.js';
 import { AndroidApps, AndroidSettings, assertPkg } from './manage.js';
+import { AndroidNetwork } from './network.js';
 import { AndroidPerf } from './perf.js';
 import { AndroidRecorder } from './record.js';
 
@@ -70,9 +71,11 @@ export class AndroidDevice implements Device {
     this.apps = new AndroidApps(adb, serial);
     this.settings = new AndroidSettings(adb, serial);
     this.recorder = new AndroidRecorder(adb, serial);
+    this.network = new AndroidNetwork(adb, serial);
   }
 
   readonly recorder: AndroidRecorder;
+  readonly network: AndroidNetwork;
   logs = (q: LogsQuery) => androidLogs(this.adb, this.serial, q);
   crashes = (q: CrashesQuery) => androidCrashes(this.adb, this.serial, q);
   appPid = async (app: string) =>

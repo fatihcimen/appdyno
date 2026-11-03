@@ -13,6 +13,7 @@ import type {
   VirtualDevices,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import { macProxy } from './network.js';
 import type { Devicectl } from './phone.js';
 import { assertBundle, type Simctl } from './simctl.js';
 
@@ -151,6 +152,8 @@ export class SimulatorSettings implements DeviceSettings {
           'UNSUPPORTED',
           "a simulator uses the Mac's network: shape it with the Network Link Conditioner on the Mac",
         );
+      case 'proxy':
+        return macProxy();
     }
   }
 
@@ -189,6 +192,11 @@ export class SimulatorSettings implements DeviceSettings {
           await this.spawn('defaults', 'delete', '-g', 'AppleLanguages').catch(() => undefined);
         }
         return;
+      case 'proxy':
+        throw new DeviceError(
+          'UNSUPPORTED',
+          `a simulator follows the Mac's proxy, now ${await macProxy()}: set it on the Mac (in the proxy's own settings)`,
+        );
       default:
         await this.get(name);
     }

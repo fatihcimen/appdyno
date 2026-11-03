@@ -14,6 +14,7 @@ import {
   type ReplayOptions,
   type TestOptions,
 } from './flow.js';
+import { networkOps } from './network.js';
 import { perfOps } from './perf.js';
 import { readOps } from './read.js';
 import { recordOps } from './record.js';
@@ -38,6 +39,7 @@ function build(ctx: ServerContext) {
       ...diagnoseOps(ctx, answers),
       ...recordOps(ctx),
       ...report.ops(),
+      ...networkOps(ctx),
       ...perfOps(ctx),
       ...flowOps(ctx, runner),
     ].map((op) => [op.name, report.wrap(op)]),

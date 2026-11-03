@@ -1,11 +1,13 @@
 import { execFile, execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, opsFor, ServerContext, ToolError, type Op } from '@appdyno/ops';
-import { Adb, androidProvider, appleProvider, decodePng } from 'appdyno';
+import { Adb, androidProvider, appleProvider, decodePng, PERFETTO } from 'appdyno';
 
 /**
  * Phase 6 on real devices, through the operations an agent calls and, where a recording must outlive its
@@ -19,6 +21,12 @@ type Answer = { error: boolean; text: string; data: Record<string, unknown> };
 
 const dir = mkdtempSync(join(tmpdir(), 'appdyno-evidence-'));
 const stateDir = join(dir, 'state');
+// the suite has a state folder of its own, the tools downloaded for this machine stay in theirs
+const tools = join(
+  homedir(),
+  `Library/Caches/appdyno/tools/perfetto-${PERFETTO.version}/mac-arm64/trace_processor_shell`,
+);
+if (existsSync(tools)) process.env.APPDYNO_TRACE_PROCESSOR ??= tools;
 process.env.APPDYNO_STATE_DIR = stateDir;
 
 const ffprobe = (() => {
@@ -236,6 +244,169 @@ for (const { platform, serial, provider } of targets)
       }, 120_000);
     });
   });
+
+/** A local web server and a forward proxy with a list it writes as HAR, as Charles or mitmproxy would. */
+async function localWeb() {
+  const web = createServer((req, res) => res.end(Buffer.alloc(200_000, 7)));
+  await new Promise<void>((r) => web.listen(0, '0.0.0.0', r));
+  const entries: unknown[] = [];
+  const proxy = createServer((req, res) => {
+    const body = 'through the proxy';
+    entries.push({
+      startedDateTime: new Date().toISOString(),
+      time: 5,
+      request: { method: req.method, url: req.url },
+      response: { status: 200, content: { size: body.length, text: body } },
+    });
+    res.end(body);
+  });
+  await new Promise<void>((r) => proxy.listen(0, '127.0.0.1', r));
+  const port = (s: typeof web) => (s.address() as AddressInfo).port;
+  return {
+    webPort: port(web),
+    proxyPort: port(proxy),
+    har: () => JSON.stringify({ log: { version: '1.2', entries } }),
+    close: () => {
+      web.close();
+      proxy.close();
+    },
+  };
+}
+
+const fetchIn = async (ok: ReturnType<typeof harness>['ok'], url: string) => {
+  await ok('open_link', { url: 'appdyno-fixture://open/network' });
+  await ok('type_text', { selector: { id: 'url_input' }, text: url, replace: true });
+  await ok('tap', { selector: { id: 'fetch' } });
+  const r = await ok('wait_for', { text: 'fetched', timeoutMs: 15_000 });
+  expect(r.data.met).toBe(true);
+};
+
+describe.skipIf(!android)('network on Android', () => {
+  let h: ReturnType<typeof harness>;
+  let web: Awaited<ReturnType<typeof localWeb>>;
+  const adb = new Adb();
+  const proxySetting = async () => (await adb.exec(android!, 'settings get global http_proxy')).trim();
+  beforeAll(async () => {
+    web = await localWeb();
+    h = harness(android!, androidProvider(adb));
+    await h.ok('launch_app');
+  }, 240_000);
+  afterAll(() => {
+    h?.ctx.close();
+    web?.close();
+  });
+
+  it('says what each way sees', async () => {
+    const r = await h.ok('network', { action: 'paths' });
+    expect(r.text).toMatch(/^proxy: .*Now: none/m);
+    expect(r.text).toMatch(/^bytes: .*no URLs, no bodies/m);
+    expect(r.text).toMatch(/^packets: .*no URLs, no bodies/m);
+    expect(r.text).toMatch(/^probe: no:/m);
+  });
+
+  it('refuses a proxy nothing listens on, leaving the device as it was', async () => {
+    const r = await h.call('network', { action: 'start', via: 'proxy', proxy: '127.0.0.1:1' });
+    expect(r.error).toBe(true);
+    expect(r.text).toMatch(/nothing listens/);
+    expect(await proxySetting()).toBe('null');
+  });
+
+  it('sends an app through a proxy on this Mac, lists it from the export and puts it back', async () => {
+    const proxy = `127.0.0.1:${web.proxyPort}`;
+    await h.ok('network', { action: 'start', via: 'proxy', proxy });
+    expect(await proxySetting()).toBe(proxy);
+    expect((await h.call('network', { action: 'start', via: 'bytes' })).text).toMatch(/stop it first/);
+    await fetchIn(h.ok, 'http://proxied.test/hello?token=abc123');
+    const har = join(dir, 'proxy.har');
+    writeFileSync(har, web.har());
+    const read = await h.ok('network', { action: 'read', har });
+    expect(read.text).toMatch(/GET http:\/\/proxied\.test\/hello\?token=••• 200/);
+    expect(read.text).not.toContain('abc123');
+    expect(read.text).toMatch(/bodies: 1 of 1 in the export/);
+    const none = await h.call('network', { action: 'read' });
+    expect(none.error).toBe(true);
+    expect(none.text).toMatch(/export it as HAR/);
+    await h.ok('network', { action: 'stop' });
+    expect(await proxySetting()).toBe('null');
+    expect(await adb.run(['-s', android!, 'reverse', '--list'])).not.toContain(`${web.proxyPort}`);
+  }, 120_000);
+
+  it('counts an app by its bytes, with no URL and no body', async () => {
+    await h.ok('network', { action: 'start', via: 'bytes' });
+    await fetchIn(h.ok, `http://10.0.2.2:${web.webPort}/big`);
+    const r = await h.ok('network', { action: 'stop' });
+    const got = (r.data.entries as { direction: string; bytes: number }[]).find(
+      (e) => e.direction === 'Received',
+    )!;
+    expect(got.bytes).toBeGreaterThan(200_000);
+    expect(r.text).toMatch(/bodies: not by this way/);
+  }, 120_000);
+
+  it('traces an app by its packets, read at the end', async () => {
+    await h.ok('network', { action: 'start', via: 'packets' });
+    await fetchIn(h.ok, `http://10.0.2.2:${web.webPort}/big`);
+    expect((await h.ok('network', { action: 'read' })).text).toMatch(/can be read when it ends/);
+    const r = await h.ok('network', { action: 'stop' });
+    const port = (r.data.entries as { direction: string; host: string; bytes: number }[]).find(
+      (e) => e.direction === 'Received' && e.host === `TCP port ${web.webPort}`,
+    );
+    expect(port?.bytes).toBeGreaterThan(200_000);
+    expect(r.text).toMatch(/bodies: not by this way/);
+  }, 120_000);
+
+  it('works from the command line, one process per step', async () => {
+    const start = await cli(android!, 'network', 'start', '--via', 'bytes', '--app', APP);
+    expect(start.err).toBe('');
+    const read = await cli(android!, 'network', 'read');
+    expect(read.err).toBe('');
+    expect(read.out).toMatch(/Received uid \d+/);
+    expect((await cli(android!, 'network', 'stop')).code).toBe(0);
+  }, 120_000);
+});
+
+describe.skipIf(!simulator)('network on a simulator', () => {
+  let h: ReturnType<typeof harness>;
+  let web: Awaited<ReturnType<typeof localWeb>>;
+  beforeAll(async () => {
+    web = await localWeb();
+    h = harness(simulator!, appleProvider());
+    await h.ok('launch_app');
+  }, 240_000);
+  afterAll(() => {
+    h?.ctx.close();
+    web?.close();
+  });
+
+  it('says what each way sees and what it follows', async () => {
+    const r = await h.ok('network', { action: 'paths' });
+    expect(r.text).toMatch(/^proxy: .*Now: /m);
+    expect(r.text).toMatch(/^probe: .*Not background sessions, WKWebView or Network.framework/m);
+    expect(r.text).toMatch(/^packets: no:/m);
+    expect(r.text).toMatch(/^bytes: no:/m);
+  });
+
+  it("will not change the Mac's proxy", async () => {
+    const r = await h.call('network', {
+      action: 'start',
+      via: 'proxy',
+      proxy: `127.0.0.1:${web.proxyPort}`,
+    });
+    expect(r.error).toBe(true);
+    expect(r.text).toMatch(/follows the Mac's proxy/);
+  });
+
+  it('lists the requests of an app with the probe in it', async () => {
+    await h.ok('network', { action: 'start', via: 'probe' });
+    await fetchIn(h.ok, `http://127.0.0.1:${web.webPort}/seen?token=abc123`);
+    const read = await h.ok('network', { action: 'read' });
+    expect(read.text).toMatch(/GET http:\/\/127\.0\.0\.1:\d+\/seen\?token=••• 200 \d+ ms 200000 B/);
+    expect(read.text).not.toContain('abc123');
+    const stop = await h.ok('network', { action: 'stop' });
+    expect(stop.text).toMatch(/stays in the app until it next starts/);
+    await h.ok('terminate_app');
+    await h.ok('launch_app');
+  }, 180_000);
+});
 
 describe.skipIf(!android)('recording on Android', () => {
   let h: ReturnType<typeof harness>;

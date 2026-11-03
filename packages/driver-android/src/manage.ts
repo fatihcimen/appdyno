@@ -181,6 +181,10 @@ export class AndroidSettings implements DeviceSettings {
       case 'network':
         await this.emu('network', 'status');
         return 'full';
+      case 'proxy': {
+        const v = (await this.sh('settings get global http_proxy')).trim();
+        return v === 'null' || v === ':0' || v === '' ? 'none' : v;
+      }
     }
   }
 
@@ -237,7 +241,31 @@ export class AndroidSettings implements DeviceSettings {
         await this.emu('network', 'delay', ...(value === 'slow' ? ['40', '100'] : ['none']));
         return;
       }
+      case 'proxy':
+        await this.setProxy(value);
+        return;
     }
+  }
+
+  /**
+   * A proxy on this Mac by its loopback address, through `adb reverse`, so that an emulator and a phone
+   * reach it the same way and it need not listen on the network. `:0` takes effect at once where deleting
+   * the setting alone would not.
+   */
+  private async setProxy(value: string) {
+    const was = await this.get('proxy');
+    const loopback = (v: string) => /^(127\.0\.0\.1|localhost):(\d+)$/.exec(v)?.[2];
+    if (value !== 'none' && !/^[\w.-]+:\d+$/.test(value))
+      throw new DeviceError('INVALID_ARGUMENT', `proxy: host:port or none, not ${value}`);
+    const port = loopback(value);
+    if (port) await this.adb.run(['-s', this.serial, 'reverse', `tcp:${port}`, `tcp:${port}`]);
+    await this.sh(`settings put global http_proxy ${value === 'none' ? ':0' : shq(value)}`);
+    if (value === 'none') await this.sh('settings delete global http_proxy');
+    const old = loopback(was);
+    if (old && old !== port)
+      await this.adb
+        .run(['-s', this.serial, 'reverse', '--remove', `tcp:${old}`])
+        .catch(() => undefined);
   }
 
   /** Posted by the shell user: Android has no way to post as the app without its own code. */

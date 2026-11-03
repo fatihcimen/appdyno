@@ -191,6 +191,7 @@ export const SETTINGS = [
   'animations',
   'locale',
   'network',
+  'proxy',
 ] as const;
 export type SettingName = (typeof SETTINGS)[number];
 
@@ -228,11 +229,43 @@ export interface ScreenRecorder {
   stop(handle: RecordingHandle): Promise<RecordingFiles>;
 }
 
+export type NetworkVia = 'proxy' | 'probe' | 'packets' | 'bytes';
+/** One way of seeing traffic on this device: what it sees, or why it cannot. */
+export type NetworkPath = { via: NetworkVia; sees?: string; refused?: string };
+/** A request, or a count, whichever the way sees. */
+export type NetworkEntry = {
+  at?: string;
+  method?: string;
+  url?: string;
+  status?: number;
+  ms?: number;
+  /** A count: which way, and what it was counted against (a port, a uid). */
+  direction?: string;
+  host?: string;
+  packets?: number;
+  bytes?: number;
+  /** The export holds its response body. */
+  body?: boolean;
+  error?: string;
+};
+export type NetworkAnswer = { entries: NetworkEntry[]; note?: string };
+/** What later calls need: plain values, as they may be other processes. */
+export type NetworkHandle = Record<string, string | number>;
+
+/** The traffic a device can tell about by itself; a local proxy is the operations' own, through settings. */
+export interface NetworkSource {
+  paths(): Promise<NetworkPath[]>;
+  start(via: NetworkVia, app: string | undefined): Promise<NetworkHandle>;
+  read(handle: NetworkHandle): Promise<NetworkAnswer>;
+  stop(handle: NetworkHandle): Promise<NetworkAnswer>;
+}
+
 /** One device, whichever platform: what the operations are written against. */
 export interface Device {
   readonly apps?: AppManager;
   readonly settings?: DeviceSettings;
   readonly recorder?: ScreenRecorder;
+  readonly network?: NetworkSource;
   /** One attempt to close an open keyboard; the caller reads whether it went. */
   dismissKeyboard?(): Promise<void>;
   /**

@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <application android:label="appdyno fixture" android:theme="@android:style/Theme.Material.Light.NoActionBar">
+    <application android:label="appdyno fixture" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:usesCleartextTraffic="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -24,6 +25,7 @@
         <activity android:name=".PermissionActivity" />
         <activity android:name=".SlowFocusActivity" />
         <activity android:name=".WebActivity" />
+        <activity android:name=".NetworkActivity" />
         <activity android:name=".ShowcaseActivity" />
         <activity android:name=".FramesActivity" />
         <activity android:name=".MemoryActivity" />
