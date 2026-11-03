@@ -360,7 +360,14 @@ export function perfOps(ctx: ServerContext): Op[] {
               ]
             : []),
           ...(energy?.value.mah !== undefined
-            ? [{ kind: 'energy.mah', unit: 'mah' as const, samples: [energy.value.mah], modelled: true }]
+            ? [
+                {
+                  kind: 'energy.mah',
+                  unit: 'mah' as const,
+                  samples: [energy.value.mah],
+                  modelled: true,
+                },
+              ]
             : []),
           ...(exits
             ? [

@@ -11,6 +11,7 @@ describe('the rows of the performance table', () => {
     ['frames.jank_percent', 'frames'],
     ['hitches.ratio', 'frames'],
     ['probe.missed_percent', 'frames'],
+    ['probe.p95_ms', 'frames'],
     ['stalls.worst_ms', 'stalls'],
     ['hangs.worst_ms', 'stalls'],
     ['probe.stall_worst_ms', 'stalls'],

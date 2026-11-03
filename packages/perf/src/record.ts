@@ -74,7 +74,7 @@ export type MeasureId = (typeof MEASURES)[number];
 export function measureOf(kind: string): MeasureId | undefined {
   if (kind.startsWith('launch.phase.')) return 'launch-why';
   if (kind === 'heap.leaks') return 'leaks';
-  if (kind === 'probe.missed_percent') return 'frames';
+  if (kind === 'probe.missed_percent' || kind === 'probe.p95_ms') return 'frames';
   if (kind === 'probe.stall_worst_ms') return 'stalls';
   const byPrefix: Record<string, MeasureId> = {
     launch: 'launch',
