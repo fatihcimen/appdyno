@@ -52,7 +52,7 @@ import {
   SnapshotOut,
   TraceOut,
 } from './schemas.js';
-import { swipeLine } from './steps.js';
+import { swipeLine } from './gesture-paths.js';
 import { ACT, defineOp, DESTRUCTIVE, READ, reply, ToolError, type Op } from './tool.js';
 
 const App = z.string().max(200).optional().describe('default: the selected app');

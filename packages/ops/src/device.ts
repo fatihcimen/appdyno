@@ -3,7 +3,7 @@ import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { DeviceOut, DevicesOut, ActionOut, DoneOut } from './schemas.js';
 import { refused } from './session.js';
-import { Read } from './steps.js';
+import { Read } from './step-schemas.js';
 import { ACT, defineOp, READ, reply, type Op } from './tool.js';
 
 export function deviceOps(ctx: ServerContext, { info, osName, afterChange }: Answers): Op[] {

@@ -41,7 +41,8 @@ import type { ServerContext } from './context.js';
 import { checkApp } from './policy.js';
 import { FlowOut } from './schemas.js';
 import type { Session } from './session.js';
-import { WAIT_MS, type Step, type Steps } from './steps.js';
+import { WAIT_MS, type Step } from './step-schemas.js';
+import type { Steps } from './steps.js';
 import { DESTRUCTIVE, defineOp, reply, ToolError, type Op, type ToolResult } from './tool.js';
 
 /**

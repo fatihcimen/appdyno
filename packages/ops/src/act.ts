@@ -10,19 +10,19 @@ import { SETTLE, type Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { ActionOut } from './schemas.js';
 import { refused } from './session.js';
+import { pinchPaths } from './gesture-paths.js';
 import {
   AssertStep,
   Coord,
   Keys,
-  pinchPaths,
   Read,
   ScrollStep,
   Step,
   SwipeStep,
   Target,
   TypeStep,
-  type Steps,
-} from './steps.js';
+} from './step-schemas.js';
+import type { Steps } from './steps.js';
 import { ACT, defineOp, READ, reply, ToolError, type Op } from './tool.js';
 
 // measured on a loaded Mac: 20 took 10 s on an emulator, 19 s on a simulator; 30 took up to 56 s, near a client's usual 60 s

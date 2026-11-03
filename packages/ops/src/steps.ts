@@ -1,60 +1,26 @@
 import {
-  attributesOf,
-  nearest,
-  pause,
-  keyboardOpen,
-  reportProgress,
-  selectIn,
-  type ActOptions,
-  type Screen,
-  type ScreenElement,
   type Selector as SelectorOf,
+  type ScreenElement,
+  nearest,
+  selectIn,
+  type Screen,
+  attributesOf,
+  pause,
+  reportProgress,
+  type ActOptions,
+  keyboardOpen,
 } from '@appdyno/core';
-import type { ActResult, Point, TextResult } from '@appdyno/protocol';
+import type { ActResult, TextResult } from '@appdyno/protocol';
 import { z } from 'zod';
-import { SETTLE, type Answers, type ReadMode } from './answers.js';
+import { type Answers, SETTLE, type ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
-import { refused, type Session } from './session.js';
+import { type Session, refused } from './session.js';
 import { ToolError } from './tool.js';
+import { Check, Step, Direction } from './step-schemas.js';
+import { dragPath, swipeLine } from './gesture-paths.js';
 
 export const STALE = 'stale ref, read the screen again';
 
-/** The screen in the answer after an action: its changes, all of it, or nothing. */
-export const Read = z.enum(['diff', 'full', 'none']).default('diff');
-// a check, not a pattern: a pattern in the schema costs the catalog on every tool that takes a ref
-export const Ref = z
-  .string()
-  .refine((r) => /^@[a-z0-9]{1,10}(-\d{1,3})?$/.test(r), 'a ref as the screen shows it (@k3f9)');
-// a check, not a schema bound, for the same reason as Ref
-export const Coord = z.number().refine((v) => v >= 0 && v <= 10_000, 'a point on the screen');
-export const Selector = z
-  .object({
-    text: z.string().optional(),
-    id: z.string().optional(),
-    role: z.string().optional(),
-    // a check, not .int(): its safe-integer bounds would cost the catalog on every tool with a selector
-    index: z.number().refine(Number.isInteger, 'a whole number').optional(),
-  })
-  .strict();
-export const Target = {
-  ref: Ref.optional(),
-  x: Coord.optional(),
-  y: Coord.optional(),
-  selector: Selector.optional(),
-};
-export const Direction = z.enum(['up', 'down', 'left', 'right']);
-export const Keys = z.enum([
-  'back',
-  'enter',
-  'home',
-  'delete',
-  'tab',
-  'app_switch',
-  'volume_up',
-  'volume_down',
-  'power',
-  'lock',
-]);
 const WIRE_KEY = {
   back: 'back',
   enter: 'enter',
@@ -67,19 +33,21 @@ const WIRE_KEY = {
   power: 'power',
   lock: 'lock',
 } as const;
+
 /** These leave the app, as the home key does. */
 const LEAVES_APP = new Set(['home', 'app_switch', 'power', 'lock']);
+
 /** The screen goes dark: nothing to wait for or read. */
 const DARKENS = new Set(['power', 'lock']);
 
-export const WAIT_MS = 5_000;
-export const MAX_WAIT_MS = 15_000;
 /** How long a selector with no match waits for its element, as a screen may still be coming. */
 const NO_MATCH_WAIT_MS = 1_500;
-const SCROLL_MAX = 10;
+
 /** A scroll's finger travels this share of the list either way from its middle. */
 const SCROLL_REACH = 0.35;
+
 const DRAG_HOLD_MS = 150;
+
 /**
  * How long a target holds its place before it counts as still, and the most that is waited for that. A
  * list coasting after a scroll is not caught by the settle on a simulator (its content is the same, its
@@ -88,137 +56,10 @@ const DRAG_HOLD_MS = 150;
  * points, so one equal pair of reads does not show it stopped.
  */
 const STILL_MS = 300;
+
 const STILL_CAP_MS = 2_500;
+
 const STILL_GAP_MS = 50;
-
-export const Check = z.enum(['exists', 'absent', 'text', 'enabled', 'checked', 'focused']);
-
-const TapStep = z.object({ action: z.literal('tap'), ...Target }).strict();
-export const LongPressStep = z
-  .object({
-    action: z.literal('long_press'),
-    ...Target,
-    durationMs: z.number().int().min(100).max(5_000).optional(),
-  })
-  .strict();
-export const SwipeStep = z
-  .object({
-    action: z.literal('swipe'),
-    direction: Direction,
-    ...Target,
-    distance: z.number().min(10).max(5_000).optional(),
-    durationMs: z.number().int().min(50).max(5_000).optional(),
-  })
-  .strict();
-export const TypeStep = z
-  .object({
-    action: z.literal('type_text'),
-    text: z.string().max(500),
-    ...Target,
-    replace: z.boolean().optional(),
-    submit: z.boolean().optional(),
-  })
-  .strict();
-const KeyStep = z.object({ action: z.literal('press_key'), key: Keys }).strict();
-export const DoubleTapStep = z.object({ action: z.literal('double_tap'), ...Target }).strict();
-export const DragStep = z
-  .object({
-    action: z.literal('drag'),
-    ...Target,
-    to: z.object(Target).strict(),
-    durationMs: z.number().int().min(50).max(10_000).optional(),
-  })
-  .strict();
-export const WaitStep = z
-  .object({
-    action: z.literal('wait_for'),
-    ref: Ref.optional(),
-    ...Selector.shape,
-    gone: z.boolean().default(false),
-    timeoutMs: z.number().int().min(300).max(MAX_WAIT_MS).default(WAIT_MS),
-  })
-  .strict();
-export const AssertStep = z
-  .object({
-    action: z.literal('assert'),
-    ref: Ref.optional(),
-    ...Selector.shape,
-    check: Check.default('exists'),
-    equals: z.string().max(2_000).optional(),
-    expect: z.boolean().default(true),
-    timeoutMs: z.number().int().min(0).max(MAX_WAIT_MS).default(0),
-  })
-  .strict();
-export const ScrollStep = z
-  .object({
-    action: z.literal('scroll_to'),
-    selector: Selector,
-    direction: Direction.default('up'),
-    maxSwipes: z.number().int().min(1).max(50).default(SCROLL_MAX),
-    x: Coord.optional(),
-    y: Coord.optional(),
-  })
-  .strict();
-export const Step = z.discriminatedUnion('action', [
-  TapStep,
-  LongPressStep,
-  DoubleTapStep,
-  DragStep,
-  SwipeStep,
-  TypeStep,
-  KeyStep,
-  WaitStep,
-  AssertStep,
-  ScrollStep,
-]);
-export type Step = z.infer<typeof Step>;
-
-/**
- * A swipe's start and end on a screen of `size`: from x,y (the centre) by `distance` (40 % of the
- * screen), both points inside the screen (an edge point would start a system gesture).
- */
-export function swipeLine(
-  size: { w: number; h: number },
-  s: { direction: z.infer<typeof Direction>; x?: number; y?: number; distance?: number },
-): { from: Point; to: Point } {
-  const horizontal = s.direction === 'left' || s.direction === 'right';
-  const from = { x: s.x ?? size.w / 2, y: s.y ?? size.h / 2 };
-  const dist = s.distance ?? (horizontal ? size.w : size.h) * 0.4;
-  // the finger's way: `up` moves the content up (the list scrolls on)
-  const sign = s.direction === 'up' || s.direction === 'left' ? -1 : 1;
-  const to = horizontal
-    ? { x: from.x + sign * dist, y: from.y }
-    : { x: from.x, y: from.y + sign * dist };
-  const clamp = (p: Point) => ({
-    x: Math.round(Math.min(Math.max(p.x, 1), size.w - 1)),
-    y: Math.round(Math.min(Math.max(p.y, 1), size.h - 1)),
-  });
-  return { from: clamp(from), to: clamp(to) };
-}
-
-/** Two fingers from the point outwards (scale > 1, zoom in) or inwards (scale < 1). */
-export function pinchPaths(
-  c: Point,
-  scale: number,
-  durationMs: number,
-  size: { w: number; h: number },
-) {
-  const r0 = Math.min(size.w, size.h) * (scale >= 1 ? 0.1 : 0.3);
-  const r1 = Math.min(Math.max(r0 * scale, 10), Math.min(size.w, size.h) * 0.45);
-  const finger = (sign: number) => [
-    { x: c.x + sign * r0, y: c.y, t: 0 },
-    { x: c.x + sign * r1, y: c.y, t: durationMs },
-  ];
-  return [finger(-1), finger(1)];
-}
-
-/** A finger from one point to another with no flick: held at the start, if asked, and at the end. */
-export const dragPath = (from: Point, to: Point, durationMs: number, holdMs = 0) => [
-  { ...from, t: 0 },
-  ...(holdMs ? [{ ...from, t: holdMs }] : []),
-  { ...to, t: holdMs + durationMs },
-  { ...to, t: holdMs + durationMs + 80 },
-];
 
 /** The selector in flat arguments (the tools that only look at the screen take it that way). */
 const selectorOf = (a: SelectorOf): SelectorOf | undefined =>

@@ -10,7 +10,7 @@ import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY, type Policy } from '../src/policy.js';
 import { createServer } from '@appdyno/mcp';
 import { opsFor } from '../src/registry.js';
-import { pinchPaths, swipeLine } from '../src/steps.js';
+import { pinchPaths, swipeLine } from '../src/gesture-paths.js';
 import { FakeDevice } from './fake-device.js';
 
 // a virtual device's numbers are noisy under host load: these answers must not depend on this Mac's

@@ -5,7 +5,7 @@ import type { ServerContext } from './context.js';
 import { checkApp, checkUrl } from './policy.js';
 import { ActionOut, DoneOut } from './schemas.js';
 import { refused } from './session.js';
-import { Read } from './steps.js';
+import { Read } from './step-schemas.js';
 import { ACT, defineOp, DESTRUCTIVE, reply, ToolError, type Op } from './tool.js';
 
 const NO_APP = 'give app (or select one with use_device)';
