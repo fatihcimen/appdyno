@@ -15,7 +15,9 @@ import type { Steps } from './steps.js';
 import { defineOp, READ, reply, ToolError } from './tool.js';
 import { webLines } from './web.js';
 
-const SHOT_PX = 1024;
+/** The fixtures' and Settings' smallest text still reads at this size and quality, and an answer costs half as much. */
+const SHOT_PX = 800;
+const SHOT_QUALITY = 60;
 
 export function readOps(
   ctx: ServerContext,
@@ -138,7 +140,7 @@ export function readOps(
           );
         const { meta, data } = await s.device.screenshot({
           format: 'jpeg',
-          quality: 80,
+          quality: SHOT_QUALITY,
           maxPx: SHOT_PX,
         });
         const w = s.device.hello?.screen.w;
