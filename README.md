@@ -338,6 +338,13 @@ node scripts/compare.mjs --device <id> --platform android --tools appdyno,anothe
 | another-tool | 63 / 78   | 1,154 / 1,481 | 1,509 / 1,624 | 597 / 644  | 689 (rows folded)  | 263,519 (62)          | 2,099      | 0 / 0 / 0; 0                                        | 0     | 0      |
 | another-server   | 241 / 266 | 878 / 953     | 870 / 954     | 348 / 442  | 4,306              | 30,276 (34)           | 876        | 0 / 0 / 1; 1,470                                    | 2     | 1      |
 
+**Phones, appdyno alone: no competitor was run on them.** The same 10 rounds on each phone's own Settings through the MCP server, p50 / p90 in ms, the same date, host load 12-36 with other work on the Mac:
+
+| phone                                 | read      | tap and see   | back and see  | screenshot | read answer, chars |
+| ------------------------------------- | --------- | ------------- | ------------- | ---------- | ------------------ |
+| Xiaomi 25078RA3EY, Android 16 (tr-TR) | 105 / 121 | 896 / 941     | 739 / 980     | 111 / 134  | 1,438              |
+| iPhone 13 Pro Max, iOS 27.0.1 (tr-TR) | 308 / 313 | 2,017 / 2,025 | 1,988 / 2,089 | 189 / 199  | 2,272              |
+
 **Where appdyno loses.**
 
 - Simulator tap: `another-server` is 31 ms faster, by answering during the push: 1,470 elements of its answers were gone 1.5 s later, and 2 answers were stale.
