@@ -269,6 +269,20 @@ describe('waiting on the device', () => {
   });
 });
 
+describe('a first call that launches', () => {
+  it('names the app before the device opens, and only then', async () => {
+    const d = new FakeDevice();
+    const began: string[] = [];
+    (d as { launchAlongside?: (pkg: string) => void }).launchAlongside = (pkg) => {
+      began.push(`${pkg} with hello ${d.calls.some((c) => c.name === 'open')}`);
+    };
+    const { call } = await connect(d);
+    expect((await call('launch_app', { app: 'dev.app' })).error).toBe(false);
+    await call('launch_app', { app: 'dev.app' });
+    expect(began).toEqual(['dev.app with hello false']);
+  });
+});
+
 describe('a folded answer', () => {
   const folded = async () => {
     const d = new FakeDevice();

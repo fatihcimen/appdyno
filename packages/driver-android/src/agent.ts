@@ -118,7 +118,7 @@ export class AndroidAgentLauncher {
   }
 
   /** Who holds UI automation, as the device's process list shows it. */
-  private async holders(): Promise<Holder[]> {
+  async holders(): Promise<Holder[]> {
     return holdersIn(await this.adb.exec(this.serial, PROCESS_LIST).catch(() => ''));
   }
 

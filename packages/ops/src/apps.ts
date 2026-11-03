@@ -36,7 +36,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers) {
       output: ActionOut,
       annotations: DESTRUCTIVE,
       run: async ({ app, read }) => {
-        const s = await ctx.session();
+        const s = await ctx.sessionToLaunch(app);
         const pkg = checkApp(policy, app ?? s.appId ?? '');
         if (!pkg) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
         reportProgress(`launching ${pkg}`);

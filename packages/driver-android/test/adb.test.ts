@@ -1,5 +1,65 @@
 import { describe, expect, it } from 'vitest';
 import { Adb, assertSerial, parseDevices, shq } from '../src/adb.js';
+import { AndroidDevice } from '../src/device.js';
+
+describe('launching an app', () => {
+  const STARTED = 'Starting: Intent { cmp=a.b/.Main }\n';
+  /** A device whose `am start` answers `answer`; what it was told to run is kept. */
+  const device = (answer: string, ps = '') => {
+    const ran: string[] = [];
+    const adb = {
+      exec: async (_serial: string, command: string) => {
+        ran.push(command);
+        return command.startsWith('ps ')
+          ? ps
+          : command.includes('resolve-activity')
+            ? 'priority=0\na.b/.Main\n'
+            : answer;
+      },
+    } as unknown as Adb;
+    return { d: new AndroidDevice('emulator-5640', adb), ran };
+  };
+  const starts = (ran: string[]) => ran.filter((c) => c.startsWith('am start'));
+
+  it('takes a start still drawing when the wait ended for a start: a read tells what is on the screen', async () => {
+    const out = `${STARTED}Status: timeout\nLaunchState: UNKNOWN (0)\nWaitTime: 10001\nComplete\n`;
+    expect(await device(out).d.launch('a.b')).toBe(out);
+  });
+
+  it('says what went wrong, not what it was starting', async () => {
+    await expect(
+      device(`${STARTED}Error: Activity class {a.b/.Main} does not exist.\n`).d.launch('a.b'),
+    ).rejects.toMatchObject({
+      code: 'APP_NOT_RUNNING',
+      message: 'a.b did not start: Error: Activity class {a.b/.Main} does not exist.',
+    });
+  });
+
+  it('refuses an app with no launcher activity', async () => {
+    const adb = { exec: async () => 'No activity found\n' } as unknown as Adb;
+    await expect(new AndroidDevice('emulator-5640', adb).launch('a.b')).rejects.toMatchObject({
+      code: 'APP_NOT_RUNNING',
+    });
+  });
+
+  it('starts it once when the start began alongside the agent', async () => {
+    const { d, ran } = device(`${STARTED}Status: ok\n`);
+    d.launchAlongside('a.b');
+    await d.launch('a.b');
+    expect(starts(ran)).toHaveLength(1);
+    await d.launch('a.b');
+    expect(starts(ran)).toHaveLength(2);
+  });
+
+  it('leaves the device alone alongside another tool’s automation: that session may be refused', async () => {
+    const { d, ran } = device(`${STARTED}Status: ok\n`, '1234 shell uiautomator runtest x.jar\n');
+    d.launchAlongside('a.b');
+    await new Promise((r) => setTimeout(r, 10));
+    expect(starts(ran)).toHaveLength(0);
+    await d.launch('a.b');
+    expect(starts(ran)).toHaveLength(1);
+  });
+});
 
 describe('adb helpers', () => {
   it('parses the device list with its properties', () => {

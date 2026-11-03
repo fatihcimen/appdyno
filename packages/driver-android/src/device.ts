@@ -18,7 +18,7 @@ import {
   type LogsQuery,
   type RpcClient,
 } from '@appdyno/core';
-import { Adb, assertPkg, assertSerial, shortFirstLine, shq } from './adb.js';
+import { Adb, amStartError, assertPkg, assertSerial, shq } from './adb.js';
 import { androidCrashes } from './crashes.js';
 import { androidLogs } from './logs.js';
 import { auditAndroid } from './audit.js';
@@ -269,31 +269,27 @@ export class AndroidDevice extends RpcDevice implements Device {
       `am start -W -a android.intent.action.VIEW -d ${shq(url)}${pkg ? ` -p ${assertPkg(pkg)}` : ''} 2>&1`,
       TIMEOUTS.app,
     );
-    if (/^Error|Exception|Status: (?!ok)/m.test(out))
-      throw new DeviceError('NOT_FOUND', `the link did not open: ${shortFirstLine(out)}`);
+    const error = amStartError(out);
+    if (error) throw new DeviceError('NOT_FOUND', `the link did not open: ${error}`);
+  }
+
+  /** The app a first call will launch, on its way while the agent starts: each takes about as long. */
+  private alongside: { pkg: string; out: Promise<string | undefined> } | undefined;
+
+  launchAlongside(pkg: string) {
+    // over another tool's automation this session is refused, and must have left the device alone
+    const out = this.launcher
+      .holders()
+      .then((others) => (others.length > 0 ? undefined : this.apps.start(pkg)));
+    out.catch(() => undefined);
+    this.alongside = { pkg, out };
   }
 
   /** Starts the app's launcher activity and waits for it (`am start -W`); returns its output. */
   async launch(pkg: string): Promise<string> {
-    assertPkg(pkg);
-    const resolved = (
-      await this.shell(
-        `cmd package resolve-activity --brief -c android.intent.category.LAUNCHER ${pkg} 2>&1`,
-        TIMEOUTS.app,
-      )
-    )
-      .trim()
-      .split('\n')
-      .pop()!;
-    if (!resolved.includes('/'))
-      throw new DeviceError(
-        'APP_NOT_RUNNING',
-        `${pkg} is not installed or has no launcher activity`,
-      );
-    const out = await this.shell(`am start -W -n ${shq(resolved)} 2>&1`, TIMEOUTS.app);
-    if (/^Error|Status: (?!ok)/m.test(out))
-      throw new DeviceError('APP_NOT_RUNNING', `${pkg} did not start: ${shortFirstLine(out)}`);
-    return out;
+    const early = this.alongside?.pkg === pkg ? await this.alongside.out : undefined;
+    this.alongside = undefined;
+    return early ?? this.queue.run(() => this.apps.start(pkg));
   }
 
   async terminate(pkg: string) {

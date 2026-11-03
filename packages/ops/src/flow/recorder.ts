@@ -340,7 +340,13 @@ export function flowRecorder(ctx: ServerContext) {
         handler: async (args): Promise<ToolResult> => {
           // no device: the op itself says what is wrong; Metro needs none, so none is opened for it
           const s =
-            op.name === 'react_native' ? undefined : await ctx.session().catch(() => undefined);
+            op.name === 'react_native'
+              ? undefined
+              : await (
+                  op.name === 'launch_app'
+                    ? ctx.sessionToLaunch((args as { app?: string }).app)
+                    : ctx.session()
+                ).catch(() => undefined);
           const r = active(s?.device.serial ?? ctx.selected);
           if (!r) return op.handler(args);
           let record: (() => FlowStep | undefined) | undefined;

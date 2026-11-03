@@ -94,17 +94,27 @@ export class ServerContext {
     return (await Promise.all(this.providers.map((p) => p.list()))).flat();
   }
 
-  private async open(serial: string): Promise<Device> {
+  private async open(serial: string, launching: string | undefined): Promise<Device> {
     const provider = this.providers.findLast((p) => p.handles(serial));
     if (!provider) throw new ToolError(`no driver takes the device ${serial}`, 'NOT_FOUND');
     reportProgress(`connecting to ${serial}`);
     const device = provider.open(serial);
+    if (launching) device.launchAlongside?.(launching);
     await device.open();
     return device;
   }
 
-  /** Opens `serial` (starting its agent) and makes it the default device. */
-  async use(serial: string, app?: string, share = false): Promise<Session> {
+  /** The session a launch runs on; when it is the first call, the app starts alongside the agent. */
+  sessionToLaunch(app: string | undefined) {
+    const wanted = app ?? this.defaults.app ?? this.saved?.app;
+    return this.session(undefined, wanted && checkApp(this.policy, wanted));
+  }
+
+  /**
+   * Opens `serial` (starting its agent) and makes it the default device. `launching`: the app a first call
+   * goes on to launch.
+   */
+  async use(serial: string, app?: string, share = false, launching?: string): Promise<Session> {
     checkDevice(this.policy, serial);
     if (app) checkApp(this.policy, app);
     let s = this.sessions.get(serial);
@@ -114,7 +124,7 @@ export class ServerContext {
       if (holds) claim(serial, this.defaults.owner ?? 'appdyno');
       s = new Session(
         // a replay, a test run and a survey ask for a session outside any op
-        await this.open(serial).catch((e: unknown) => {
+        await this.open(serial, launching).catch((e: unknown) => {
           if (holds) release(serial);
           return refused(e);
         }),
@@ -171,14 +181,14 @@ export class ServerContext {
   }
 
   /** The session of `serial`, else the default device (the configured one, or the only allowed one). */
-  async session(serial?: string): Promise<Session> {
-    if (serial) return this.sessions.get(serial) ?? this.use(serial);
+  async session(serial?: string, launching?: string): Promise<Session> {
+    if (serial) return this.sessions.get(serial) ?? this.use(serial, undefined, false, launching);
     if (this.currentSerial) return this.sessions.get(this.currentSerial)!;
-    if (this.selected) return this.use(this.selected);
+    if (this.selected) return this.use(this.selected, undefined, false, launching);
     const ready = (await this.devices().catch(refused)).filter(
       (d) => d.ready && this.allowed(d.serial),
     );
-    if (ready.length === 1) return this.use(ready[0]!.serial);
+    if (ready.length === 1) return this.use(ready[0]!.serial, undefined, false, launching);
     throw new ToolError(
       ready.length === 0
         ? 'no connected device this server may drive (list_devices)'

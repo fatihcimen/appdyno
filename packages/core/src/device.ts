@@ -215,6 +215,8 @@ export interface Device {
   setOrientation(rotation: 0 | 1 | 2 | 3): Promise<void>;
   openUrl(url: string, pkg?: string): Promise<void>;
   launch(pkg: string): Promise<string>;
+  /** Before `open`, when a first call is to launch this app: `launch` then takes up what began here. */
+  launchAlongside?(pkg: string): void;
   terminate(pkg: string): Promise<void>;
   setLocation(lat: number, lon: number): Promise<void>;
   stopAgent(): Promise<void>;
