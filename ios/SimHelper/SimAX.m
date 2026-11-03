@@ -20,13 +20,13 @@
 - (CGRect)frame;
 @end
 
-static NSString *const kAttributes = @"UIAccessibilitySnapshotKeyAttributes";
-static NSString *const kChildren = @"UIAccessibilitySnapshotKeyChildren";
-static NSString *const kChildCount = @"UIAccessibilitySnapshotKeyChildrenCount";
-static NSString *const kElement = @"UIAccessibilitySnapshotKeyElement";
+static NSString *const SnapshotAttributesKey = @"UIAccessibilitySnapshotKeyAttributes";
+static NSString *const SnapshotChildrenKey = @"UIAccessibilitySnapshotKeyChildren";
+static NSString *const SnapshotChildCountKey = @"UIAccessibilitySnapshotKeyChildrenCount";
+static NSString *const SnapshotElementKey = @"UIAccessibilitySnapshotKeyElement";
 // The AX server rejects a request of more than about 62 levels on a deep tree.
-static const NSUInteger kFirstLevels = 60;
-static const int kMaxRequests = 64;
+static const NSUInteger FirstRequestLevels = 60;
+static const int RequestLimit = 64;
 
 static id<AX> gFramework;
 static Class gElementClass, gAXElement;
@@ -75,7 +75,7 @@ typedef struct { int requests; int rejected; NSUInteger levels; } Capture;
 
 static NSDictionary *request(id element, NSUInteger maxNodes, Capture *c, NSError **error) {
   for (;;) {
-    if (c->requests++ >= kMaxRequests) return nil;
+    if (c->requests++ >= RequestLimit) return nil;
     NSMutableDictionary *options = [gDefaultParameters() mutableCopy] ?: [NSMutableDictionary dictionary];
     options[@"attributes"] = gNumbers;
     options[@"maxDepth"] = @(c->levels);
@@ -97,7 +97,7 @@ static NSDictionary *request(id element, NSUInteger maxNodes, Capture *c, NSErro
 
 // To JSON, in the order the snapshot gives; a boundary node whose children were withheld is read again.
 static NSDictionary *build(NSDictionary *snapshot, NSUInteger left, NSUInteger *count, NSUInteger maxNodes, Capture *c, NSError **error) {
-  NSDictionary *attributes = snapshot[kAttributes];
+  NSDictionary *attributes = snapshot[SnapshotAttributesKey];
   NSMutableDictionary *node = [NSMutableDictionary dictionaryWithCapacity:8];
   for (NSNumber *number in attributes) {
     NSString *name = gShortNames[number];
@@ -114,14 +114,14 @@ static NSDictionary *build(NSDictionary *snapshot, NSUInteger left, NSUInteger *
       node[name] = [name isEqualToString:@"t"] ? [value stringValue] : value;
     }
   }
-  NSArray *children = snapshot[kChildren];
-  NSNumber *known = snapshot[kChildCount];
+  NSArray *children = snapshot[SnapshotChildrenKey];
+  NSNumber *known = snapshot[SnapshotChildCountKey];
   if ([known isKindOfClass:NSNumber.class] && known.unsignedIntegerValue > children.count && *count < maxNodes) {
-    id element = snapshot[kElement];
+    id element = snapshot[SnapshotElementKey];
     if (!element) return nil;
     NSDictionary *more = request(element, maxNodes - *count, c, error);
     if (!more) return nil;
-    children = more[kChildren];
+    children = more[SnapshotChildrenKey];
   }
   if (children.count) {
     NSMutableArray *built = [NSMutableArray arrayWithCapacity:children.count];
@@ -153,12 +153,12 @@ static NSDictionary *readApp(NSDictionary *q) {
   void *raw = [root AXUIElement];
   if (!raw) return refuse(@"no-element");
   NSUInteger maxNodes = [q[@"maxNodes"] unsignedIntegerValue] ?: 5000;
-  Capture c = {0, 0, kFirstLevels};
+  Capture c = {0, 0, FirstRequestLevels};
   NSError *error = nil;
   NSDictionary *snapshot = request((__bridge id)raw, maxNodes, &c, &error);
   if (!snapshot) return @{@"ok": @NO, @"refused": @"read-failed", @"error": error.localizedDescription ?: @"", @"requests": @(c.requests)};
   NSUInteger count = 1;
-  NSDictionary *tree = build(snapshot, kFirstLevels, &count, maxNodes, &c, &error);
+  NSDictionary *tree = build(snapshot, FirstRequestLevels, &count, maxNodes, &c, &error);
   if (!tree) return @{@"ok": @NO, @"refused": @"read-failed", @"error": error.localizedDescription ?: @"cut short", @"requests": @(c.requests)};
   // a change of owner during the read: its tree may be neither's
   if ([[(id<AX>)gAXElement primaryApp] pid] != pid) return refuse(@"owner-changed");
