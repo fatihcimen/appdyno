@@ -17,7 +17,7 @@ type Result = {
 
 async function connect(device: Device = new FakeDevice(), policy: Partial<Policy> = {}) {
   const provider: DeviceProvider = {
-    list: async () => [{ serial: device.serial, state: 'device' }],
+    list: async () => [{ serial: device.serial, state: 'device', ready: true }],
     handles: () => true,
     open: () => device,
   };

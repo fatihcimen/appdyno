@@ -28,7 +28,10 @@ async function connect(
 ) {
   const logs: object[] = [];
   const provider: DeviceProvider = {
-    list: async () => [{ serial: device.serial, state: 'device', model: 'Fake' }, ...others],
+    list: async () => [
+      { serial: device.serial, state: 'device', ready: true, model: 'Fake' },
+      ...others,
+    ],
     handles: () => true,
     open: () => device,
   };
@@ -521,8 +524,8 @@ describe('iOS simulators', () => {
   it('lists what the providers list, in their order', async () => {
     const udid = '75505767-61E2-40F2-8FC6-8AFE20EE25C9';
     const t = await connect({}, new FakeDevice(), [
-      { serial: udid, state: 'booted', model: 'iOS simulator appdyno-iphone' },
-      { serial: '00001234-0123456789ABCDEF', state: 'usb', model: 'iPhone' },
+      { serial: udid, state: 'booted', ready: true, model: 'iOS simulator appdyno-iphone' },
+      { serial: '00001234-0123456789ABCDEF', state: 'usb', ready: true, model: 'iPhone' },
     ]);
     expect((await t.textOf('list_devices')).text).toBe(
       [

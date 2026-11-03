@@ -127,11 +127,13 @@ export function appleProvider(
       ...(await connected.simulators()).map((d) => ({
         serial: d.udid,
         state: 'booted',
+        ready: true,
         model: `iOS simulator ${d.name}`,
       })),
       ...(await connected.phones()).map((udid) => ({
         serial: udid,
         state: 'usb',
+        ready: true,
         model: 'iPhone',
       })),
     ],

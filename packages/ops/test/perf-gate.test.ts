@@ -40,7 +40,7 @@ function context(
     DEFAULT_POLICY,
     [
       {
-        list: async () => [{ serial: device.serial, state: 'device' }],
+        list: async () => [{ serial: device.serial, state: 'device', ready: true }],
         handles: () => true,
         open: () => device,
       },

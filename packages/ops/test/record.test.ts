@@ -13,7 +13,7 @@ import { FakeDevice } from './fake-device.js';
 function connect(recorder: ScreenRecorder | undefined) {
   const device = Object.assign(new FakeDevice(), recorder ? { recorder } : {});
   const provider: DeviceProvider = {
-    list: async () => [{ serial: device.serial, state: 'device' }],
+    list: async () => [{ serial: device.serial, state: 'device', ready: true }],
     handles: () => true,
     open: () => device,
   };

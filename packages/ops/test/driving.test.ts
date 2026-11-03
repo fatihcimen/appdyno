@@ -29,7 +29,7 @@ async function connect(
   } = {},
 ) {
   const provider: DeviceProvider = {
-    list: async () => [{ serial: device.serial, state: 'device', model: 'Fake' }],
+    list: async () => [{ serial: device.serial, state: 'device', ready: true, model: 'Fake' }],
     handles: () => true,
     open: () => device,
     ...(o.virtual && { virtual: o.virtual }),

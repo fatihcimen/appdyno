@@ -22,7 +22,7 @@ describe('flows', () => {
   let device: FakeDevice;
   const context = (secrets: string[] = []) => {
     const provider: DeviceProvider = {
-      list: async () => [{ serial: device.serial, state: 'device' }],
+      list: async () => [{ serial: device.serial, state: 'device', ready: true }],
       handles: () => true,
       open: () => device,
     };
@@ -563,7 +563,8 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
         ['two', new FakeDevice('two')],
       ]);
       const provider: DeviceProvider = {
-        list: async () => [...devices.keys()].map((serial) => ({ serial, state: 'device' })),
+        list: async () =>
+          [...devices.keys()].map((serial) => ({ serial, state: 'device', ready: true })),
         handles: (serial) => devices.has(serial),
         open: (serial) => devices.get(serial)!,
       };

@@ -13,8 +13,8 @@ describe('the Apple provider', () => {
       phones: async () => [phone],
     });
     expect(await p.list()).toEqual([
-      { serial: udid, state: 'booted', model: 'iOS simulator appdyno-iphone' },
-      { serial: phone, state: 'usb', model: 'iPhone' },
+      { serial: udid, state: 'booted', ready: true, model: 'iOS simulator appdyno-iphone' },
+      { serial: phone, state: 'usb', ready: true, model: 'iPhone' },
     ]);
   });
 

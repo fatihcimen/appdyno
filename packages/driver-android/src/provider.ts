@@ -1,5 +1,5 @@
 import type { Check, DeviceProvider } from '@appdyno/core';
-import type { DeviceError } from '@appdyno/protocol';
+import { DeviceError } from '@appdyno/protocol';
 import { Adb } from './adb.js';
 import { agentApk } from './agent.js';
 import { AndroidDevice } from './device.js';
@@ -158,15 +158,22 @@ async function animationsCheck(adb: Adb, serial: string): Promise<Check> {
 }
 
 /** Android devices over adb, which takes any serial no later provider claims. */
+/** A Mac set up for iOS alone has no adb, which is no failure of the list. */
+const noAdbNoDevices = (e: unknown): never[] => {
+  if (e instanceof DeviceError && e.code === 'UNSUPPORTED') return [];
+  throw e;
+};
+
 export function androidProvider(
   adb: Adb = new Adb(),
   opts: { takeover?: boolean; animations?: 'on' | 'off' } = {},
 ): DeviceProvider {
   return {
     list: async () =>
-      (await adb.devices()).map((d) => ({
+      (await adb.devices().catch(noAdbNoDevices)).map((d) => ({
         serial: d.serial,
         state: d.state,
+        ready: d.state === 'device',
         ...(d.props.model && { model: d.props.model }),
       })),
     handles: () => true,

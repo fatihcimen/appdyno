@@ -171,7 +171,7 @@ export class ServerContext {
     const named = this.defaults.device ?? this.saved?.serial;
     if (named) return this.use(named);
     const ready = (await this.devices().catch(refused)).filter(
-      (d) => d.state === 'device' && this.allowed(d.serial),
+      (d) => d.ready && this.allowed(d.serial),
     );
     if (ready.length === 1) return this.use(ready[0]!.serial);
     throw new ToolError(

@@ -263,7 +263,8 @@ export type Check = { name: string; ok: boolean; warn?: boolean; detail: string;
 
 /** The devices of one driver. */
 export interface DeviceProvider {
-  list(): Promise<{ serial: string; state: string; model?: string }[]>;
+  /** `state` is the driver's own word; `ready` says whether the device can be driven now. */
+  list(): Promise<{ serial: string; state: string; ready: boolean; model?: string }[]>;
   handles(serial: string): boolean;
   open(serial: string): Device;
   readonly virtual?: VirtualDevices;

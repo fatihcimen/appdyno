@@ -169,8 +169,9 @@ async function main(): Promise<number> {
       return 0;
     }
     case 'devices': {
-      for (const d of await new Adb().devices())
-        console.log(`${d.serial}\t${d.state}\t${d.props.model ?? ''}`);
+      for (const provider of providers())
+        for (const d of await provider.list())
+          console.log(`${d.serial}\t${d.state}\t${d.model ?? ''}`);
       return 0;
     }
     case 'tools': {

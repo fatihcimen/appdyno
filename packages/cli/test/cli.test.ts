@@ -26,7 +26,7 @@ describe('commands from the operations', () => {
   beforeEach(() => {
     device = new FakeDevice();
     const provider: DeviceProvider = {
-      list: async () => [{ serial: device.serial, state: 'device' }],
+      list: async () => [{ serial: device.serial, state: 'device', ready: true }],
       handles: () => true,
       open: () => device,
     };
@@ -155,8 +155,8 @@ describe('commands from the operations', () => {
     const file = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 'state', 'cli-session.json');
     const provider: DeviceProvider = {
       list: async () => [
-        { serial: 'other', state: 'device' },
-        { serial: device.serial, state: 'device' },
+        { serial: 'other', state: 'device', ready: true },
+        { serial: device.serial, state: 'device', ready: true },
       ],
       handles: () => true,
       open: () => device,
