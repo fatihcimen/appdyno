@@ -23,6 +23,7 @@ import {
   buildScreen,
   DeviceQueue,
   fold,
+  pause,
   stateDir,
   TIMEOUTS,
   type ActOptions,
@@ -502,6 +503,8 @@ const firstPoint = (a: ActParams) =>
         : undefined;
 
 /** An iOS simulator: the simulator tool for apps, links and location; perf from the Mac. */
+const WAKE_GAP_MS = 400;
+
 export class IosSimulatorDevice extends IosDevice {
   readonly virtual = true;
   readonly direct: DirectSim;
@@ -561,6 +564,7 @@ export class IosSimulatorDevice extends IosDevice {
   }
 
   override async tree(opts: { maxDepth?: number; maxNodes?: number } = {}): Promise<Tree> {
+    await this.wake();
     if (opts.maxDepth !== undefined || opts.maxNodes !== undefined) return super.tree(opts);
     const { tree } = await this.queue.run(() => this.readNow());
     await this.keepDump(tree);
@@ -568,6 +572,7 @@ export class IosSimulatorDevice extends IosDevice {
   }
 
   override async act(action: ActParams, opts: ActOptions = {}): Promise<ActResult> {
+    await this.wake();
     return this.queue.run(async () => {
       // the first read tells the helper the screen's size
       if (!this.direct.status().input.startsWith('runner') && !this.direct.readProven)
@@ -692,7 +697,32 @@ export class IosSimulatorDevice extends IosDevice {
   }
 
   /** A running app comes forward as it is; to start it afresh, terminate it first. */
+  /** Locked by this tool: a screen under the lock still reads, and an app will not come forward. */
+  private locked = false;
+
+  override async key(key: Key, opts?: ActOptions) {
+    const r = await super.key(key, opts);
+    if (key === 'lock' || key === 'power') this.locked = true;
+    return r;
+  }
+
+  /** The next read or action wakes it, as on Android: one press wakes it, one more opens it (no passcode here). */
+  private async wake() {
+    if (!this.locked) return;
+    this.locked = false;
+    for (let i = 0; i < 2; i++) {
+      await super.key('home', { settle: false, read: 'none' });
+      await pause(WAKE_GAP_MS);
+    }
+  }
+
+  override async openUrl(url: string, pkg?: string) {
+    await this.wake();
+    return super.openUrl(url, pkg);
+  }
+
   override async launch(pkg: string): Promise<string> {
+    await this.wake();
     if (this.targetApp === pkg && (await this.direct.front().catch(() => undefined)) === pkg)
       return 'in front';
     return super.launch(pkg);

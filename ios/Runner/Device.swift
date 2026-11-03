@@ -411,6 +411,12 @@ final class Device {
             if replace { field.typeKey("a", modifierFlags: .command) }
             field.typeKey("v", modifierFlags: .command)
             verified = check()
+            // on a loaded device the paste lands after the key returns: a second one would double the text
+            let pasteEnd = Date().addingTimeInterval(1.5)
+            while verified == false, currentText(field) == before, Date() < pasteEnd, !job.over {
+                Thread.sleep(forTimeInterval: 0.05)
+                verified = check()
+            }
             // a paste that changed nothing is tried once more; one that changed the text is not repeated
             if verified == false, currentText(field) != before { break }
         }

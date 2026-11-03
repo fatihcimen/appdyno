@@ -115,7 +115,7 @@ export function actOps(
       name: 'swipe',
       title: 'Swipe',
       description:
-        'Swipe. direction: up (content moves up, a list scrolls on), down, left, right; optional start x,y and distance.',
+        'Swipe. direction: up (content moves up, a list scrolls on), down, left, right; optional start (a target) and distance.',
       input: z.object({ ...SwipeStep.omit({ action: true }).shape, read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
@@ -135,7 +135,7 @@ export function actOps(
       name: 'type_text',
       title: 'Type text',
       description:
-        "Type into the focused field. With a ref or selector the field is tapped first and its focus waited for; replace: replaces the field's text; submit: enter afterwards. Any Unicode text.",
+        "Type into the focused field. With a target the field is tapped first and its focus waited for; replace: replaces the field's text; submit: enter afterwards. Any Unicode text.",
       input: z.object({ ...TypeStep.omit({ action: true }).shape, read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,

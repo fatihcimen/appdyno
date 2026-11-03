@@ -46,11 +46,21 @@ export async function setCondition(s: Session, name: SettingName, value: string,
   if (!settings) throw new ToolError('this device has no settings to change', 'UNSUPPORTED');
   const serial = s.device.serial;
   const changes = readChanges(serial);
-  if (!changes[name]) {
+  const first = !changes[name];
+  if (first) {
     changes[name] = { was: await settings.get(name, app), ...(app && { app }) };
     writeChanges(serial, changes);
   }
-  await settings.set(name, value, app);
+  try {
+    await settings.set(name, value, app);
+  } catch (e) {
+    // nothing changed, so nothing to put back
+    if (first) {
+      delete changes[name];
+      writeChanges(serial, changes);
+    }
+    throw e;
+  }
 }
 
 /** Puts back what this tool changed; the names it could not, with why, stay written down. */
@@ -109,7 +119,10 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
   };
   const named = async (id: string) => {
     const all = await virtuals();
-    const hits = all.filter((x) => x.d.id === id || x.d.name === id || x.d.serial === id);
+    const hits = all.filter(
+      (x) =>
+        x.d.id === id || x.d.serial === id || x.d.name === id || x.d.name.startsWith(`${id} (`),
+    );
     if (hits.length === 1) return hits[0]!;
     throw new ToolError(
       hits.length === 0

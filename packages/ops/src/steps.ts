@@ -91,8 +91,7 @@ export const SwipeStep = z
   .object({
     action: z.literal('swipe'),
     direction: Direction,
-    x: Coord.optional(),
-    y: Coord.optional(),
+    ...Target,
     distance: z.number().min(10).max(5_000).optional(),
     durationMs: z.number().int().min(50).max(5_000).optional(),
   })
@@ -101,8 +100,7 @@ export const TypeStep = z
   .object({
     action: z.literal('type_text'),
     text: z.string().max(500),
-    ref: Ref.optional(),
-    selector: Selector.optional(),
+    ...Target,
     replace: z.boolean().optional(),
     submit: z.boolean().optional(),
   })
@@ -489,7 +487,8 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers) {
         };
       }
       case 'swipe': {
-        const { from, to } = swipeLine(await windowSize(s), st);
+        const start = st.ref || st.selector ? (await target(s, st, patient)).point : undefined;
+        const { from, to } = swipeLine(await windowSize(s), { ...st, ...start });
         return {
           r: await s.device.swipe(from, to, st.durationMs ?? 300, opts),
           done: `swiped (${st.direction})`,
@@ -497,14 +496,8 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers) {
       }
       case 'type_text': {
         const at =
-          st.ref || st.selector
-            ? (
-                await target(
-                  s,
-                  { ...(st.ref && { ref: st.ref }), ...(st.selector && { selector: st.selector }) },
-                  patient,
-                )
-              ).point
+          st.ref || st.selector || st.x !== undefined
+            ? (await target(s, st, patient)).point
             : undefined;
         const r = await s.device.typeText(st.text, {
           ...(at && { at }),

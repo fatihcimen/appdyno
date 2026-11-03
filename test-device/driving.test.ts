@@ -46,7 +46,10 @@ const ok = (r: Answer) => {
 
 /** What both platforms must do, given how each opens the fixture and names its parts. */
 function shared(
-  get: () => { call: (name: string, args?: Record<string, unknown>) => Promise<Answer> },
+  get: () => {
+    call: (name: string, args?: Record<string, unknown>) => Promise<Answer>;
+    ctx: ServerContext;
+  },
   open: (screen: string) => Promise<void>,
   names: {
     field: { id?: string; role?: string; index?: number };
@@ -90,6 +93,21 @@ function shared(
     expect(fail.error).toBe(true);
     expect(fail.text).toContain('2. assert failed');
     expect(fail.text).toMatch(/@\w+/);
+  });
+
+  it('waits on the device: at once with no baseline, then only for a change', async () => {
+    await open('home');
+    const { device } = await get().ctx.session();
+    const first = await device.waitChange!(undefined, 0);
+    expect(first?.tree).toBeDefined();
+    // a clock may tick once: of two waits on a still screen one answers with nothing
+    const quiet = await device.waitChange!(first!.sig, 800);
+    const again = quiet?.tree ? await device.waitChange!(quiet.sig, 800) : quiet;
+    expect(again?.tree).toBeUndefined();
+    ok(await call('tap', { selector: { text: 'Form' }, read: 'none' }));
+    const moved = await device.waitChange!(again!.sig, 8_000);
+    expect(moved?.tree).toBeDefined();
+    expect(moved?.sig).not.toBe(again!.sig);
   });
 
   it('waits on the device, whichever way the screen comes', async () => {
@@ -285,10 +303,11 @@ describe.skipIf(!android)('driving on Android', () => {
     const volume = async () =>
       /STREAM_MUSIC[\s\S]*?Current: ([^\n]*)/.exec(await sh('dumpsys audio'))?.[1];
     const before = await volume();
-    ok(await h.call('press_key', { key: 'volume_down' }));
-    ok(await h.call('press_key', { key: 'volume_up' }));
-    expect(await volume()).toBeDefined();
     expect(before).toBeDefined();
+    ok(await h.call('press_key', { key: 'volume_up' }));
+    await expect.poll(volume).not.toBe(before);
+    ok(await h.call('press_key', { key: 'volume_down' }));
+    await expect.poll(volume).toBe(before);
     ok(await h.call('press_key', { key: 'lock' }));
     await expect
       .poll(async () => /mWakefulness=(\w+)/.exec(await sh('dumpsys power'))?.[1])
@@ -454,9 +473,15 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     await open('home');
     ok(await h.call('press_key', { key: 'app_switch' }));
     ok(await h.call('press_key', { key: 'home' }));
-    expect((ok(await h.call('device_info')).data as { foreground?: string }).foreground).not.toBe(
-      APP,
-    );
+    // the home screen may come later than the settle's window
+    await expect
+      .poll(
+        async () => (ok(await h.call('device_info')).data as { foreground?: string }).foreground,
+        {
+          timeout: 8_000,
+        },
+      )
+      .not.toBe(APP);
   });
 
   it('volume and lock answer, or say why not', async () => {

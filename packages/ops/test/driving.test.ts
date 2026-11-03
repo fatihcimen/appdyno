@@ -121,6 +121,19 @@ describe('targeting', () => {
     expect(r.text).toMatch(/nearest: @\w+ button "Form"/);
   });
 
+  it('swipes from an element, and types at coordinates', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    await call('swipe', { direction: 'left', selector: { text: 'Form' }, distance: 100 });
+    expect(act(d).at(-1)).toMatchObject({
+      kind: 'swipe',
+      from: { x: 540, y: 350 },
+      to: { x: 440, y: 350 },
+    });
+    await call('type_text', { text: 'x', x: 5, y: 6 });
+    expect(d.typed).toEqual(['x']);
+  });
+
   it('types into a field a selector names', async () => {
     const d = new FakeDevice();
     d.screen = 'form';
