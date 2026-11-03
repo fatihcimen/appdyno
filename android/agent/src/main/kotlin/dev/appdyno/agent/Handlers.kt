@@ -239,7 +239,7 @@ class Handlers(private val automation: Automation, private val token: String) {
                 { hold(then, last, !asked).also { asked = true } },
                 { c -> WindowIds.replaced(WindowIds.app(c.windows.map { w -> w.id to w.type }), appWindows()) },
             )
-            val moving = last?.sliding == true || transitions.open
+            val moving = last?.sliding == true || transitions.runningNow()
             out.put(
                 "settle",
                 JSONObject().put("settled", o.settled).put("ms", o.elapsedMs).put("reads", o.reads).put("quietMs", o.quietMs)

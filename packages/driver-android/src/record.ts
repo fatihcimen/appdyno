@@ -1,10 +1,11 @@
 import { randomBytes } from 'node:crypto';
-import { mkdtemp, rename, rm } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { copyFile, mkdir, mkdtemp, rename, rm } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
   joinVideos,
   pause,
   readVideo,
+  stateDir,
   type RecordingFiles,
   type RecordingHandle,
   type ScreenRecorder,
@@ -19,6 +20,13 @@ const SEGMENT_S = 180;
 const BIT_RATE = 4_000_000;
 const START_MS = 15_000;
 const PULL_MS = 600_000;
+
+/** The state folder may be on another volume than the video. */
+const move = (from: string, to: string) =>
+  rename(from, to).catch(async (e: NodeJS.ErrnoException) => {
+    if (e.code !== 'EXDEV') throw e;
+    await copyFile(from, to);
+  });
 
 const segmentSeconds = () => Number(process.env.APPDYNO_RECORD_SEGMENT_S ?? SEGMENT_S);
 
@@ -95,7 +103,9 @@ export class AndroidRecorder implements ScreenRecorder {
       .filter((l) => l.trim() && l !== 'stopped' && !/^seg\d+\.mp4$/.test(l.trim()))
       .join(' ')
       .slice(0, 300);
-    const here = await mkdtemp(join(dirname(file), '.appdyno-video-'));
+    // not beside the video: a session's end may be cut short while this copies, and leaves it
+    await mkdir(join(stateDir(), 'video'), { recursive: true, mode: 0o700 });
+    const here = await mkdtemp(join(stateDir(), 'video', 'pull-'));
     try {
       const good: string[] = [];
       const torn: string[] = [];
@@ -129,7 +139,7 @@ export class AndroidRecorder implements ScreenRecorder {
   /** One file: the only segment, or all of them joined; else the segments, next to it, in order. */
   private async finish(good: string[], file: string, notes: string[]) {
     if (good.length === 1) {
-      await rename(good[0]!, file);
+      await move(good[0]!, file);
       return [file];
     }
     try {
@@ -141,7 +151,7 @@ export class AndroidRecorder implements ScreenRecorder {
       return Promise.all(
         good.map(async (g, i) => {
           const to = file.replace(/(\.\w+)?$/, `-${i + 1}$1`);
-          await rename(g, to);
+          await move(g, to);
           return to;
         }),
       );

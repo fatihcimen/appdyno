@@ -261,6 +261,7 @@ class Transitions(private val automation: Automation) {
     }
 
     private var question: CountDownLatch? = null
+    private var askedAt = 0L
 
     /** The last question is still unanswered: a transition runs. */
     val open: Boolean get() = (question?.count ?: 0L) > 0
@@ -271,6 +272,7 @@ class Transitions(private val automation: Automation) {
         val m = method ?: return null
         val done = CountDownLatch(1)
         question = done
+        askedAt = SystemClock.uptimeMillis()
         Thread({
             try {
                 m.invoke(automation.ua, true)
@@ -294,6 +296,17 @@ class Transitions(private val automation: Automation) {
         return ask()?.await(ANSWER_MS, TimeUnit.MILLISECONDS) == false
     }
 
+    /**
+     * For an answer's `moving`: the question is out for longer than an idle WMS takes, up to the time left of that.
+     * An answer comes right after a read that asked, so a question merely not back yet says nothing.
+     */
+    fun runningNow(): Boolean {
+        val q = question ?: return false
+        val left = askedAt + IDLE_ANSWER_MS - SystemClock.uptimeMillis()
+        if (left > 0) q.await(left, TimeUnit.MILLISECONDS)
+        return q.count > 0
+    }
+
     /** Until the running one ended, at most `maxMs`. */
     fun awaitEnd(maxMs: Long) {
         ask()?.await(maxMs, TimeUnit.MILLISECONDS)
@@ -301,6 +314,7 @@ class Transitions(private val automation: Automation) {
 
     private companion object {
         const val ANSWER_MS = 30L
+        const val IDLE_ANSWER_MS = 80L
     }
 }
 
