@@ -10,5 +10,7 @@ export { parseIps, phoneCrashes, reportsIn, simulatorCrashes } from './crashes.j
 export { Simctl, xcodeEnv, type Simulator } from './simctl.js';
 export { listPhones } from './usbmux.js';
 export * from './perf.js';
+export * from './perf-parse.js';
 export * from './trace.js';
+export * from './trace-parse.js';
 export { DirectSim, type DirectStatus } from './simdirect.js';

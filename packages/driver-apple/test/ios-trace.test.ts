@@ -2,16 +2,16 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  hitchSummary,
   parseActivityMonitor,
   parseHangs,
   parsePowerImpact,
   parseTimeProfile,
-  parseXctMetrics,
-  hitchSummary,
   parseTraceTable,
-  queryTraceFile,
+  parseXctMetrics,
   traceDigest,
-} from '../src/trace.js';
+} from '../src/trace-parse.js';
+import { queryTraceFile } from '../src/trace.js';
 
 const fixture = (f: string) => readFileSync(join(import.meta.dirname, 'fixtures', f), 'utf8');
 

@@ -16,9 +16,8 @@ import {
   parseHangs,
   parsePowerImpact,
   parseTimeProfile,
-  recordTrace,
-  traceTable,
-} from './trace.js';
+} from './trace-parse.js';
+import { recordTrace, traceTable } from './trace.js';
 import { connectPort, listDevices } from './usbmux.js';
 
 const PHONE_UDID = /^[0-9A-F]{8}-[0-9A-F]{16}$|^[0-9a-f]{40}$/;

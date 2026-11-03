@@ -1,4 +1,4 @@
-import { parseTraceTable } from './trace.js';
+import { parseTraceTable } from './trace-parse.js';
 
 export type LaunchPhase = { name: string; ms: number };
 

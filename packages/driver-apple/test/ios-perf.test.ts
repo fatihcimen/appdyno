@@ -6,7 +6,7 @@ import {
   parseNettop,
   parseSampleApp,
   parseSampleTop,
-} from '../src/perf.js';
+} from '../src/perf-parse.js';
 
 describe('iOS simulator perf parsing', () => {
   it('reads the bytes of the window from nettop', () => {
