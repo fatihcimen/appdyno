@@ -95,10 +95,13 @@ export class IosSimulatorPerf implements MeasureSource {
   async pid(bundle: string): Promise<number> {
     assertBundle(bundle);
     const out = await this.simctl.exec(['spawn', this.udid, 'launchctl', 'list']);
-    const line = out.split('\n').find((l) => l.includes(`UIKitApplication:${bundle}[`));
-    const pid = Number(line?.trim().split(/\s+/)[0]);
-    if (!Number.isInteger(pid) || pid <= 0)
-      throw new DeviceError('APP_NOT_RUNNING', `${bundle} is not running`);
+    // a process just ended stays listed for a while, with no pid, beside the one that runs now
+    const pid = out
+      .split('\n')
+      .filter((l) => l.includes(`UIKitApplication:${bundle}[`))
+      .map((l) => Number(l.trim().split(/\s+/)[0]))
+      .find((n) => Number.isInteger(n) && n > 0);
+    if (!pid) throw new DeviceError('APP_NOT_RUNNING', `${bundle} is not running`);
     return pid;
   }
 

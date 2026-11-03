@@ -201,6 +201,8 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
     it('memory: 50 MB held shows in the footprint (within 15 %)', async () => {
       const s = await open('memory');
       const before = (await d.measure.memory!(APP)).value.kb;
+      // a recording can outlast a phone's auto-lock, and a tap behind the lock does nothing
+      await d.launch(APP);
       await d.tap(byId(s, 'memory_alloc'), { settle: false });
       await pause(1_500);
       const after = (await d.measure.memory!(APP)).value.kb;

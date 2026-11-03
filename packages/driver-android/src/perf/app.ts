@@ -93,6 +93,9 @@ export async function network(
   };
 }
 
+/** Less CPU than this may round to nothing in the count, on any device. */
+const NOTICED_CPU_MS = 200;
+
 /**
  * The charge batterystats estimates for the app over the window: the difference of its count since the last
  * charge, whose history is left alone. It counts on battery only, so the phone is told it is unplugged for the
@@ -116,7 +119,11 @@ export async function energy(
     const raw = await read();
     const after = parseBatteryUsage(raw, uid);
     const cpuMs = (used.value.percent / 100) * used.value.windowMs;
-    if (!guarded || after.mah === undefined || (cpuMs > 0 && !after.breakdown?.cpu))
+    const usage = usageSince(before, after);
+    // what it counts of the window, not since the last charge: a core busy for seconds that grew nothing is no estimate
+    const none =
+      after.mah === undefined || !usage.mah || (cpuMs > NOTICED_CPU_MS && !usage.breakdown?.cpu);
+    if (!guarded || none)
       return {
         value: modelledEnergy(cpuMs, moved.value.rxBytes + moved.value.txBytes),
         raw: `${raw}\n---\n${used.raw}\n---\n${moved.raw}`,
@@ -124,7 +131,7 @@ export async function energy(
       };
     return {
       value: {
-        ...usageSince(before, after),
+        ...usage,
         modelled: true,
         note: 'model-based: batterystats multiplies time in each state by the power profile, it does not read a power meter',
       },

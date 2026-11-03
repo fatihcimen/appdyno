@@ -24,6 +24,10 @@ const STOP_MS = 60_000;
 /** The whole recording is cut at this, whatever the tool does. */
 const CAP_MS = 180_000;
 
+/** How long the tool may take to say it has started before `during` runs without it. */
+const START_MS = 90_000;
+const KILL_MS = 30_000;
+
 const FIND_PROCESS_MS = 180_000;
 const FIND_RETRY_MS = 5_000;
 
@@ -91,7 +95,7 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
     watcher.once('exit', () => resolve());
     watcher.once('error', () => resolve());
     // a tool that never says: `during` runs anyway, and the result shows what it caught
-    setTimeout(resolve, 30_000).unref();
+    setTimeout(resolve, START_MS).unref();
   });
   const rec = spawn(
     'xcrun',
@@ -130,11 +134,18 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
     rec.on('exit', res);
     rec.on('error', () => res(-1));
   });
-  const stop = setTimeout(() => rec.kill('SIGINT'), Math.min(r.seconds * 1000 + STOP_MS, CAP_MS));
-  const end = setTimeout(
-    () => rec.kill('SIGKILL'),
-    Math.min(r.seconds * 1000 + STOP_MS, CAP_MS) + 30_000,
-  );
+  let stop = setTimeout(() => rec.kill('SIGINT'), CAP_MS);
+  let end = setTimeout(() => rec.kill('SIGKILL'), CAP_MS + KILL_MS);
+  // its limit counts from its start, which took more than a minute on a Mac at load 200
+  let over = false;
+  void started.then(() => {
+    if (over) return;
+    const limit = Math.min(r.seconds * 1000 + STOP_MS, CAP_MS);
+    clearTimeout(stop);
+    clearTimeout(end);
+    stop = setTimeout(() => rec.kill('SIGINT'), limit);
+    end = setTimeout(() => rec.kill('SIGKILL'), limit + KILL_MS);
+  });
   try {
     const atOnce = await Promise.race([started.then(() => false), exited.then(() => true)]);
     if (r.during && !atOnce) await r.during();
@@ -145,6 +156,7 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
       throw new DeviceError('UNSUPPORTED', `the trace tool could not record: ${failure(log)}`);
     return tracePath;
   } finally {
+    over = true;
     clearTimeout(stop);
     clearTimeout(end);
     watcher.kill();

@@ -18,8 +18,10 @@ describe.skipIf(!serial)('measures on Android, through the operations', () => {
     await d.shell(
       `am start -W -a android.intent.action.VIEW -d 'appdyno-fixture://open/${screen}?n=${Date.now()}' ${APP}`,
     );
+    // on a loaded Mac it comes when it comes, and a moment has no window at all
     for (let i = 0; i < 50; i++) {
-      if ((await d.read(APP)).list.some((e) => e.id === id)) break;
+      const s = await d.read(APP).catch(() => undefined);
+      if (s?.list.some((e) => e.id === id)) break;
       await pause(200);
     }
     await pause(1_200);

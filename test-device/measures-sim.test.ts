@@ -84,7 +84,8 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     await t.call('perf_trace', { seconds: 1 });
     const s = await open('stall');
     const [r] = await Promise.all([
-      t.call('perf_trace', { seconds: 3 }),
+      // the window has room for a tap slowed by a loaded Mac
+      t.call('perf_trace', { seconds: 8 }),
       pause(1_000).then(() => d.tap(byId(s, 'stall_500'), { settle: false })),
     ]);
     console.log(r.text);
@@ -118,7 +119,9 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     const base = await phases();
     const slow = await phases({ APPDYNO_FIXTURE_STARTUP_MS: '500' });
     within(ms(slow, 'main') - ms(base, 'main'), 500, 0.15);
-    expect(slow.toSorted((a, b) => b.ms - a.ms)[0]!.reason).toBe('main');
+    // what rose is `main`; on a loaded Mac another phase can be longer, and rise by a little
+    const rises = slow.map((p) => ({ name: p.reason, by: p.ms - ms(base, p.reason) }));
+    expect(rises.toSorted((a, b) => b.by - a.by)[0]!.name).toBe('main');
   }, 600_000);
 
   it('why slow: an operation keeps the phases for the dashboard', async () => {

@@ -56,7 +56,7 @@ export async function simulatorLogs(
 
 /** The whole of what devicectl offers about a running app's log. */
 export const PHONE_LOGS_NOTE =
-  "devicectl cannot read a running app's log on an iPhone. It can restart the app and follow what it prints: `xcrun devicectl device process launch --console --terminate-existing --device <udid> <bundle>`. The system log is in Console.app; crashes works here.";
+  "devicectl cannot read a running app's log on an iPhone. It can restart the app and follow what it prints: `xcrun devicectl device process launch --console --terminate-existing --device <udid> <bundle>`. The system log is in Console.app; crashes works here. A person can collect the phone's log with `sudo log collect --device-udid <udid> --last 5m --output x.logarchive`: it needs root, so this tool does not.";
 
 export const phoneLogs = async (): Promise<LogsAnswer> => ({
   lines: [],

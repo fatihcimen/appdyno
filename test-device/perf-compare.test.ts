@@ -104,8 +104,10 @@ for (const t of targets)
       perf: project,
     });
     const ops = opsFor(ctx);
+    // what runs on this Mac waits out its load; a phone's own numbers hardly depend on it
+    const onThisMac = t.name === 'ios simulator' || t.serial?.startsWith('emulator-');
     const launch = async () => {
-      await quiet();
+      if (onThisMac) await quiet();
       await ops.perf_launch!.handler({ mode: 'cold', repeats: REPEATS });
     };
     const compare = async () => {
