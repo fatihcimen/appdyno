@@ -198,7 +198,13 @@ export function parseProfile(xml: string): Profile {
 }
 
 export async function readProfile(path: string): Promise<Profile> {
-  const { stdout } = await run('security', ['cms', '-D', '-i', path]);
+  const { stdout } = await run('security', ['cms', '-D', '-i', path]).catch((e: Error) => {
+    throw new DeviceError(
+      'UNSUPPORTED',
+      `cannot read the signing profile ${path}: ${e.message.split('\n')[1] ?? e.message}`,
+      'it needs your login keychain: `security default-keychain` says which is in use for this HOME',
+    );
+  });
   return parseProfile(stdout);
 }
 

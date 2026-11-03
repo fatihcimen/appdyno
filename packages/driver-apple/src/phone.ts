@@ -254,7 +254,7 @@ export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
         throw new DeviceError(
           'UNSUPPORTED',
           'on an iPhone a link is opened in a named app',
-          'give the app',
+          'select the app first: use_device with app, or the --app of the server',
         );
       await ctl.launch(b, url);
     },
