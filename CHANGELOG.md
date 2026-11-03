@@ -10,7 +10,7 @@
 - `react_native`: targets, the JS console and reload, through Metro. Flutter's Dart VM service is not built: no SDK here to test it on; see the README.
 - `visual`: a baseline, a comparison with a tolerance and masks, a diff image. The PNG decoder moves to `core`, with an encoder.
 - `device_setting`: `proxy`, `battery` (put back), `fold`, `call`, `sms`.
-- The catalog leaves out what says nothing to a client: each tool's schema URL and task setting, and length limits, which the server still enforces. 42 tools, 24,800 characters.
+- The catalog leaves out what says nothing to a client: each tool's schema URL and task setting, and length limits, which the server still enforces. 42 tools, 24,814 characters.
 - A device's refusals are async: a phone's `push`, `biometric`, `clear` and `grant` reached a client as an internal error.
 - An op with `action` takes it as its first word on the command line: `appdyno record stop`.
 

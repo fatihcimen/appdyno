@@ -310,7 +310,9 @@ describe.skipIf(!android)('network on Android', () => {
     h = harness(android!, androidProvider(adb));
     await h.ok('launch_app');
   }, 240_000);
-  afterAll(() => {
+  afterAll(async () => {
+    // a test that failed half way must not leave the device on a proxy that is about to close
+    await h?.ctx.end();
     h?.ctx.close();
     web?.close();
   });
@@ -340,7 +342,8 @@ describe.skipIf(!android)('network on Android', () => {
     await fetchIn(h.ok, 'http://proxied.test/hello?token=abc123');
     const har = join(dir, 'proxy.har');
     writeFileSync(har, web.har());
-    const read = await h.ok('network', { action: 'read', har });
+    // a proxy on the device takes every app's traffic, the system's own checks too
+    const read = await h.ok('network', { action: 'read', har, contains: 'proxied.test' });
     expect(read.text).toMatch(/GET http:\/\/proxied\.test\/hello\?token=••• 200/);
     expect(read.text).not.toContain('abc123');
     expect(read.text).toMatch(/bodies: 1 of 1 in the export/);

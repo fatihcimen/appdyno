@@ -379,7 +379,10 @@ describe.skipIf(!android)('driving on Android', () => {
     const restored = ok(await h.call('device_setting', { name: 'restore' }));
     expect(restored.text).toContain('dark_mode');
     expect(await get('cmd uimode night')).toBe(dark);
-    expect(await get('settings get system font_scale')).toBe(font);
+    // Android writes 1.0 back by itself once a scale has been set and deleted
+    expect(font === 'null' ? ['null', '1.0'] : [font]).toContain(
+      await get('settings get system font_scale'),
+    );
     expect(await get('settings get global animator_duration_scale')).toBe(anim);
     expect(await get(`cmd locale get-app-locales ${APP}`)).not.toContain('tr-TR');
     expect(ok(await h.call('device_setting', { name: 'restore' })).text).toContain('nothing');
