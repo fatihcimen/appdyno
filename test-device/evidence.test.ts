@@ -329,8 +329,16 @@ describe.skipIf(!android)('network on Android', () => {
   let h: ReturnType<typeof harness>;
   let web: Awaited<ReturnType<typeof localWeb>>;
   const adb = new Adb();
+  // no proxy reads either way: a device that once had one keeps `:0`
   const proxySetting = async () =>
     (await adb.exec(android!, 'settings get global http_proxy')).trim().replace(/^:0$/, 'null');
+  // the count needs real traffic, not `adb reverse`: an emulator reaches this Mac at 10.0.2.2, a phone at its address
+  const macHost = () =>
+    android!.startsWith('emulator-')
+      ? '10.0.2.2'
+      : Object.values(networkInterfaces())
+          .flat()
+          .find((a) => a?.family === 'IPv4' && !a.internal)?.address;
   beforeAll(async () => {
     web = await localWeb();
     h = harness(android!, androidProvider(adb));
