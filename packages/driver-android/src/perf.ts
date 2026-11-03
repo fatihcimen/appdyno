@@ -172,7 +172,11 @@ const WRITES =
 /** Module includes, then one SELECT or WITH that writes nothing, or a DeviceError. */
 export function assertReadOnlySql(sql: string): void {
   const refuse = (why: string) =>
-    new DeviceError('INVALID_ARGUMENT', `not a read-only query: ${why}`);
+    new DeviceError(
+      'INVALID_ARGUMENT',
+      `not a read-only query: ${why}`,
+      'INCLUDE PERFETTO MODULE lines, then one SELECT or WITH',
+    );
   let rest = sql.replace(LITERALS, ' ');
   if (/['"`]|\/\*/.test(rest)) throw refuse('an unclosed string or comment');
   while (INCLUDE.test(rest)) rest = rest.replace(INCLUDE, '');

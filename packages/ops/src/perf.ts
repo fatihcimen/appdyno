@@ -355,7 +355,11 @@ export function perfOps(ctx: ServerContext): Op[] {
                       ]
                     : []),
                 ]
-              : ['no frame measure on a simulator without the probe']),
+              : [
+                  virtual(s)
+                    ? 'no frame measure on a simulator without the probe'
+                    : 'no frame counter on a phone: perf_trace records its hitches',
+                ]),
             ...(f?.limits ? [f.limits] : []),
             ...(v
               ? [
