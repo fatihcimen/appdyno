@@ -344,12 +344,8 @@ describe.skipIf(!android)('driving on Android', () => {
     ok(await h.call('app', { action: 'clear' }));
     const apk = join(ROOT, 'android/fixture/build/outputs/apk/debug/fixture-debug.apk');
     expect(existsSync(apk)).toBe(true);
-    // a Xiaomi asks a person before a new install, not before one over the app: its fixture stays
-    const asks = (await sh('getprop persist.security.adbinstall')).trim() === '1';
-    if (!asks) {
-      ok(await h.call('app', { action: 'uninstall' }));
-      expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('not_installed');
-    }
+    ok(await h.call('app', { action: 'uninstall' }));
+    expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('not_installed');
     ok(await h.call('app', { action: 'install', path: apk }));
     expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');
     expect((await h.call('app', { action: 'install', path: '/tmp/none.apk' })).error).toBe(true);

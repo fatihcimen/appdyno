@@ -11,9 +11,11 @@ android {
     compileSdk = 35
     buildToolsVersion = "35.0.0"
     defaultConfig {
-        applicationId = "dev.appdyno.fixture"
-        minSdk = 26
-        targetSdk = 35
+        // -PoldTarget: built for an old Android, a harmless app that Play Protect warns about on a real phone
+        val oldTarget = project.hasProperty("oldTarget")
+        applicationId = if (oldTarget) "dev.appdyno.fixture.oldtarget" else "dev.appdyno.fixture"
+        minSdk = if (oldTarget) 24 else 26
+        targetSdk = if (oldTarget) 24 else 35
         versionCode = 1
         versionName = "0.1.0"
     }
