@@ -65,9 +65,11 @@ describe('tool list', () => {
         "logs",
         "long_press",
         "open_link",
+        "perf_compare",
         "perf_heap",
         "perf_launch",
         "perf_profile",
+        "perf_query",
         "perf_scroll",
         "perf_snapshot",
         "perf_trace",
@@ -105,14 +107,16 @@ describe('tool list', () => {
       'find',
       'list_devices',
       'logs',
+      'perf_compare',
       'perf_heap',
       'perf_profile',
+      'perf_query',
       'perf_snapshot',
       'screen',
       'screenshot',
       'wait_for',
     ]);
-    expect(tools.length).toBeLessThanOrEqual(30);
+    expect(tools.length).toBeLessThanOrEqual(32);
   });
 
   it('reports the server as appdyno with an icon', async () => {
@@ -559,7 +563,7 @@ describe('iOS simulators', () => {
       expect(snap.slice(1, -1)).toEqual([
         'CPU: 5% (of one core, 2000 ms)',
         'memory: physical footprint 51.2 MB (peak 61.0 MB)',
-        'no frame measure on a simulator',
+        'no frame measure on a simulator without the probe',
       ]);
       const launch = (await t.textOf('perf_launch')).text.split('\n');
       expect(launch.slice(1, -1)).toEqual([

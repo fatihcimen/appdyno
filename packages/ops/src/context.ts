@@ -39,6 +39,8 @@ export class ServerContext {
       device?: string;
       app?: string;
       measurements?: string;
+      /** The project's baselines and budgets. */
+      perf?: string;
       /** A file to keep the selection and the diff baseline in between processes (the command line). */
       remember?: string;
     } = {},
@@ -51,6 +53,13 @@ export class ServerContext {
   /** Where measurements and their raw outputs are stored (this machine only). */
   get measurementsDir(): string {
     return this.defaults.measurements ?? join(stateDir(), 'measurements');
+  }
+
+  /** Baselines and budgets, under the project (committable). */
+  get perfDir(): string {
+    return (
+      this.defaults.perf ?? process.env.APPDYNO_PERF_DIR ?? join(process.cwd(), '.appdyno/perf')
+    );
   }
 
   allowed(serial: string) {

@@ -137,7 +137,7 @@ export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
           return 2;
         }
         try {
-          const { blocks } = await op.handler(call.args);
+          const { blocks, data } = await op.handler(call.args);
           for (const b of blocks) {
             if (b.type === 'text') {
               io.out(b.text);
@@ -152,7 +152,8 @@ export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
             await writeFile(file, Buffer.from(b.data, 'base64'));
             io.out(file);
           }
-          return 0;
+          // a gate says so with its exit code
+          return typeof data.exitCode === 'number' ? data.exitCode : 0;
         } catch (e) {
           if (!(e instanceof ToolError)) throw e;
           io.err(e.message);

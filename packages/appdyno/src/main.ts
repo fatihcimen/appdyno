@@ -9,7 +9,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { Adb, androidProvider, installTools } from '@appdyno/driver-android';
 import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
 import { createServer } from '@appdyno/mcp';
-import { commandsFor, deviceFlag, listOf } from '@appdyno/cli';
+import { commandsFor, deviceFlag, listOf, takeFlag } from '@appdyno/cli';
 import { stateDir } from '@appdyno/core';
 import { DEFAULT_POLICY, ServerContext, opsFor, type Policy } from '@appdyno/ops';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
@@ -165,11 +165,25 @@ async function main(): Promise<number> {
       return 0;
     }
     default: {
+      // `perf compare|baseline|budget [flags]`: the gate's names for one operation
+      const gate = command === 'perf' ? rest.shift() : undefined;
+      if (command === 'perf' && !['compare', 'baseline', 'budget'].includes(gate ?? '')) {
+        err(
+          'usage: appdyno perf compare|baseline|budget [--app A] [--scenario S] [--device-class C] [--last N] [--replace] [--format text|json|junit]',
+        );
+        return 2;
+      }
+      if (gate) rest.push('--action', gate);
+      const name = gate ? 'perf-compare' : command;
       const device = deviceFlag(command, rest);
-      const ctx = contextFrom(device ? { device } : {}, join(stateDir(), 'cli-session.json'));
+      const measurements = takeFlag(rest, 'measurements');
+      const ctx = contextFrom(
+        { ...(device && { device }), ...(measurements && { measurements }) },
+        join(stateDir(), 'cli-session.json'),
+      );
       const ops = opsFor(ctx);
       const commands = commandsFor(ops);
-      const op = command === undefined ? undefined : commands[command];
+      const op = name === undefined ? undefined : commands[name];
       if (!op) {
         const asked = command === undefined || ['--help', '-h', 'help'].includes(command);
         (asked ? console.log : err)(
@@ -184,6 +198,8 @@ commands:
   ios build        build the iOS runners now
   tools install    download the trace tools
   bench --serial S [--driver appdyno|<module>]... [--n 50] [--out file]
+  perf compare|baseline|budget [--app A] [--scenario S] [--format text|json|junit] [--measurements dir]
+                   the performance gate: non-zero on a regression or a broken budget
 
 operations (--device S selects the device, also for the next commands):
 ${listOf(ops)}`,

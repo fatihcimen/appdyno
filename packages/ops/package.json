@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@appdyno/core": "workspace:*",
+    "@appdyno/perf": "workspace:*",
     "@appdyno/protocol": "workspace:*",
     "zod": "^4.6.7"
   }

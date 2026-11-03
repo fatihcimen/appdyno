@@ -125,7 +125,12 @@ export const CrashesOut = z.object({
   note: z.string().optional(),
 });
 
-const Measurement = { id: z.string(), raw: z.string(), virtualDevice: z.boolean() };
+const Measurement = {
+  id: z.string(),
+  raw: z.string(),
+  virtualDevice: z.boolean(),
+  noise: z.array(z.string()),
+};
 
 export const SnapshotOut = z.object({
   ...Measurement,
@@ -145,6 +150,18 @@ export const SnapshotOut = z.object({
     })
     .optional(),
   deviceLoad: z.array(z.number()).optional(),
+  threads: z
+    .array(
+      z.object({ tid: z.number(), name: z.string(), percent: z.number(), over90Ms: z.number() }),
+    )
+    .optional(),
+  rxBytes: z.number().optional(),
+  txBytes: z.number().optional(),
+  energyMah: z.number().optional(),
+  crashes: z.number().optional(),
+  anrs: z.number().optional(),
+  sizeBytes: z.number().optional(),
+  lacking: z.array(z.string()).optional(),
 });
 
 export const ScrollOut = z.object({
@@ -157,6 +174,9 @@ export const ScrollOut = z.object({
       p95Ms: z.number().optional(),
       memStartKb: z.number(),
       memEndKb: z.number(),
+      activities: z.number().optional(),
+      appContexts: z.number().optional(),
+      viewRootImpl: z.number().optional(),
     }),
   ),
   jankMedianPercent: z.number().optional(),
@@ -167,10 +187,15 @@ export const ScrollOut = z.object({
 
 export const LaunchOut = z.object({
   ...Measurement,
-  mode: z.enum(['cold', 'warm']),
+  mode: z.enum(['cold', 'warm', 'hot']),
   samples: z.array(z.object({ totalMs: z.number().optional(), state: z.string().optional() })),
   medianMs: z.number().optional(),
   excessive: z.boolean(),
+  fullyDrawnMedianMs: z.number().optional(),
+  compile: z.string().optional(),
+  tracePath: z.string().optional(),
+  reasons: z.array(z.string()).optional(),
+  findings: z.array(z.string()).optional(),
 });
 
 export const TraceOut = z.object({
@@ -188,6 +213,12 @@ export const TraceOut = z.object({
   hitchMs: z.number().optional(),
   hitchRatio: z.number().optional(),
   tracePath: z.string().optional(),
+  /** Simulator probe. */
+  missed: z.number().optional(),
+  stalls: z.number().optional(),
+  limits: z.string().optional(),
+  hangs: z.number().optional(),
+  metrics: z.record(z.string(), z.array(z.number())).optional(),
 });
 
 export const ProfileOut = z.object({
@@ -198,4 +229,23 @@ export const ProfileOut = z.object({
   appTop: z.array(z.object({ percent: z.number(), symbol: z.string() })).optional(),
 });
 
-export const HeapOut = z.object({ id: z.string(), file: z.string(), bytes: z.number() });
+export const HeapOut = z.object({
+  id: z.string(),
+  file: z.string(),
+  bytes: z.number(),
+  top: z.array(z.object({ name: z.string(), bytes: z.number(), count: z.number() })).optional(),
+});
+
+export const CompareOut = z.object({
+  failed: z.boolean(),
+  exitCode: z.number(),
+  reports: z.array(z.record(z.string(), z.unknown())),
+  baselines: z.array(z.string()).optional(),
+});
+
+export const QueryOut = z.object({
+  columns: z.array(z.string()),
+  rows: z.array(z.array(z.string())),
+  dropped: z.number(),
+  trace: z.string(),
+});

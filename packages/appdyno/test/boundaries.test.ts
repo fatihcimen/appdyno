@@ -10,6 +10,7 @@ const PROTOCOL = '@appdyno/protocol';
 const CORE = '@appdyno/core';
 const ANDROID = '@appdyno/driver-android';
 const APPLE = '@appdyno/driver-apple';
+const PERF = '@appdyno/perf';
 const OPS = '@appdyno/ops';
 const MCP = '@appdyno/mcp';
 const CLI = '@appdyno/cli';
@@ -20,10 +21,11 @@ const RULES: Record<string, string[]> = {
   core: [PROTOCOL],
   'driver-android': [CORE, PROTOCOL],
   'driver-apple': [CORE, PROTOCOL],
-  ops: [CORE, PROTOCOL],
+  perf: [CORE, PROTOCOL],
+  ops: [CORE, PROTOCOL, PERF],
   mcp: [OPS, CORE, PROTOCOL],
   cli: [OPS, CORE, PROTOCOL],
-  appdyno: [PROTOCOL, CORE, ANDROID, APPLE, OPS, MCP, CLI],
+  appdyno: [PROTOCOL, CORE, ANDROID, APPLE, PERF, OPS, MCP, CLI],
 };
 
 const IMPORT = /\b(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g;
@@ -77,6 +79,9 @@ describe('module boundaries', () => {
     expect(flagged('driver-android', `export * from '${APPLE}';`)).toBe(true);
     expect(flagged('core', `const x = await import('${OPS}');`)).toBe(true);
     expect(flagged('protocol', `import '${CORE}';`)).toBe(true);
+    expect(flagged('perf', `import { x } from '${OPS}';`)).toBe(true);
+    expect(flagged('perf', `import { x } from '${ANDROID}';`)).toBe(true);
+    expect(flagged('ops', `import { x } from '${PERF}';`)).toBe(false);
     expect(flagged('mcp', `import { x } from 'appdyno';`)).toBe(true);
     expect(flagged('cli', `import { x } from '../../driver-android/src/adb.js';`)).toBe(true);
     expect(flagged('core', `import { x } from './screen/index.js';`)).toBe(false);

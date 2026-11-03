@@ -53,6 +53,9 @@ importers:
       '@appdyno/ops':
         specifier: workspace:*
         version: link:../ops
+      '@appdyno/perf':
+        specifier: workspace:*
+        version: link:../perf
       '@appdyno/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -122,12 +125,24 @@ importers:
       '@appdyno/core':
         specifier: workspace:*
         version: link:../core
+      '@appdyno/perf':
+        specifier: workspace:*
+        version: link:../perf
       '@appdyno/protocol':
         specifier: workspace:*
         version: link:../protocol
       zod:
         specifier: ^4.6.7
         version: 4.6.7
+
+  packages/perf:
+    dependencies:
+      '@appdyno/core':
+        specifier: workspace:*
+        version: link:../core
+      '@appdyno/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/protocol:
     dependencies:
