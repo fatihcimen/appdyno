@@ -1,6 +1,6 @@
 import { freemem, loadavg, totalmem } from 'node:os';
 import { pathToFileURL } from 'node:url';
-import { pause, run, buildScreen } from '@appdyno/core';
+import { sleep, run, buildScreen } from '@appdyno/core';
 import { Adb, AndroidDevice } from '@appdyno/driver-android';
 
 /** An element a benchmark looks up: its label or id, and its centre in tap units. */
@@ -179,11 +179,11 @@ export async function benchmark(
     await shell(
       `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/${screen} ${APP}`,
     );
-    await pause(1_200);
+    await sleep(1_200);
   };
   const home = async () => {
     await shell(`am start -W -n ${APP}/.MainActivity -f 0x10008000`);
-    await pause(1_200);
+    await sleep(1_200);
   };
   const measure = async (
     name: string,
@@ -214,7 +214,7 @@ export async function benchmark(
         typeof label === 'string' ? x.label === label || x.id === label : label.test(x.label),
       );
       if (e) return e;
-      await pause(300);
+      await sleep(300);
     }
     throw new Error(`no ${label} on the screen`);
   };
@@ -246,7 +246,7 @@ export async function benchmark(
       },
       async () => {
         await shell('input keyevent KEYCODE_BACK');
-        await pause(800);
+        await sleep(800);
         await driver.read();
       },
     );

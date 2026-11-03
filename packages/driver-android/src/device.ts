@@ -7,9 +7,9 @@ import {
   type Tree,
 } from '@appdyno/protocol';
 import {
+  sleep,
   assertLatLon,
   decodePng,
-  pause,
   RpcDevice,
   TIMEOUTS,
   type ActOptions,
@@ -123,7 +123,7 @@ export class AndroidDevice extends RpcDevice implements Device {
     while (Date.now() < end) {
       const d = (await this.adb.devices().catch(() => [])).find((x) => x.serial === this.serial);
       if (d?.state === 'device') return;
-      await pause(1_000);
+      await sleep(1_000);
     }
     throw cause;
   }
@@ -147,20 +147,20 @@ export class AndroidDevice extends RpcDevice implements Device {
     let unlocked = false;
     if (!s.awake) {
       await this.shell('input keyevent KEYCODE_WAKEUP');
-      await pause(400);
+      await sleep(400);
       woke = true;
       s = await state();
     }
     if (s.locked) {
       await this.shell('wm dismiss-keyguard');
-      await pause(600);
+      await sleep(600);
       s = await state();
       if (s.locked) {
         const w = this.helloInfo?.screen ?? { w: 1080, h: 2400 };
         await this.shell(
           `input swipe ${Math.round(w.w / 2)} ${Math.round(w.h * 0.9)} ${Math.round(w.w / 2)} ${Math.round(w.h * 0.3)} 250`,
         );
-        await pause(600);
+        await sleep(600);
         s = await state();
       }
       unlocked = !s.locked;
@@ -185,7 +185,7 @@ export class AndroidDevice extends RpcDevice implements Device {
         last = focus ?? '';
         since = Date.now();
       } else if (Date.now() - since >= WAKE_STEADY_MS) return;
-      await pause(150);
+      await sleep(150);
     }
   }
 

@@ -1,4 +1,4 @@
-import { type Measured, reportProgress, pause, median } from '@appdyno/core';
+import { sleep, type Measured, reportProgress, median } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { refused } from '../session.js';
@@ -81,7 +81,7 @@ export function perfScrollOp(ctx: ServerContext): Op {
           const { from, to } = swipeLine(size, { direction, distance: size.h * 0.4 });
           await s.device.swipe(from, to, 300, { settle: false }).catch(refused);
         }
-        await pause(1_500).catch(refused);
+        await sleep(1_500);
         const f = await readFrames(pkg).catch(refused);
         const m1 = await readMemory(pkg).catch(refused);
         all.push(m0, f, m1);

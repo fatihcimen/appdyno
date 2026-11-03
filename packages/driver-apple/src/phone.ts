@@ -5,7 +5,7 @@ import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
-import { stateDir, type MeasureSource, pause, type ScreenRecorder } from '@appdyno/core';
+import { sleep, stateDir, type MeasureSource, type ScreenRecorder } from '@appdyno/core';
 import { type IosDeviceOps, IosDevice } from './device.js';
 import { phoneRecorder } from './record.js';
 import { iosProducts, type RunnerTransport, IosRunnerLauncher } from './runner.js';
@@ -145,7 +145,7 @@ export class IosPhoneDevice extends IosDevice {
       for (let i = 0; i < opts.repeats + 1; i++) {
         if (opts.mode === 'cold') await this.terminate(bundle);
         else await this.ctl.launch('com.apple.Preferences').catch(() => undefined);
-        await pause(500);
+        await sleep(500);
         const t = performance.now();
         if (opts.env) {
           await this.ctl.launch(bundle, undefined, opts.env);

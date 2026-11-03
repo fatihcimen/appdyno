@@ -38,3 +38,6 @@ export function pause(ms: number): Promise<void> {
     else signal?.addEventListener('abort', stop, { once: true });
   });
 }
+
+/** A wait no cancel ends: what comes after it decides, as a start that must finish or clean up after itself. */
+export const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));

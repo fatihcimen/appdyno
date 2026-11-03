@@ -9,8 +9,8 @@ import { fileURLToPath } from 'node:url';
 import { DeviceError, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
 import {
+  sleep,
   greet,
-  pause,
   readStateFile,
   reportProgress,
   run,
@@ -362,7 +362,7 @@ export class IosRunnerLauncher {
           log.trim().split('\n').slice(-6).join(' ').slice(0, 500) || undefined,
         );
       }
-      await pause(POLL_MS);
+      await sleep(POLL_MS);
     }
   }
 

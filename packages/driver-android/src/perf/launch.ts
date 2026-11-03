@@ -1,10 +1,10 @@
 import {
+  sleep,
   type LaunchReading,
   median,
   type LaunchMode,
   type CompileMode,
   type Measured,
-  pause,
   type StartupAnalysis,
   run,
 } from '@appdyno/core';
@@ -91,7 +91,7 @@ export async function launch(
     if (mode === 'cold') await sh(d, `am force-stop ${pkg}`);
     else {
       await sh(d, 'input keyevent KEYCODE_HOME');
-      await pause(800);
+      await sleep(800);
     }
   };
   const raws: string[] = [];
@@ -105,14 +105,14 @@ export async function launch(
     let log: string;
     let drawn: number | undefined;
     do {
-      await pause(200);
+      await sleep(200);
       log = await sh(
         d,
         `logcat -v epoch -d -T ${since} -s ActivityTaskManager:I ActivityManager:I`,
       );
       drawn = parseFullyDrawn(log, pkg);
     } while (drawn === undefined && Date.now() - started < drawnWaitMs);
-    await pause(Math.max(0, 1_000 - (Date.now() - started)));
+    await sleep(Math.max(0, 1_000 - (Date.now() - started)));
     raws.push(
       raw,
       log

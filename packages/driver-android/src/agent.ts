@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { DeviceError, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
 import {
+  sleep,
   greet,
   pause,
   readStateFile,
@@ -201,7 +202,7 @@ export class AndroidAgentLauncher {
           `the Android agent did not start within ${START_MS} ms`,
           out.trim().slice(0, 300) || undefined,
         );
-      await pause(POLL_MS);
+      await sleep(POLL_MS);
     }
   }
 
@@ -230,7 +231,7 @@ export class AndroidAgentLauncher {
       .map(Number)
       .filter((n) => Number.isInteger(n) && n > 0);
     for (const pid of pids) await this.kill(pid);
-    if (pids.length > 0) await pause(500);
+    if (pids.length > 0) await sleep(500);
     return pids.length > 0;
   }
 

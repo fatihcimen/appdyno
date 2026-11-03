@@ -1,10 +1,10 @@
 import {
+  sleep,
   type MeasureSource,
   type Measured,
   type XctMetrics,
   type MemoryReading,
   run,
-  pause,
   stateDir,
   type FrameStats,
   type FrameTrace,
@@ -117,7 +117,7 @@ export class IosSimulatorPerf implements MeasureSource {
       parseCpuTime((await run('ps', ['-o', 'time=', '-p', String(pid)])).stdout);
     const t0 = performance.now();
     const c0 = await time();
-    await pause(windowMs);
+    await sleep(windowMs);
     const c1 = await time();
     const wall = performance.now() - t0;
     const cpuMs = c1 - c0;
@@ -160,7 +160,7 @@ export class IosSimulatorPerf implements MeasureSource {
       ...vars,
     });
     const pid = Number(/:\s*(\d+)/.exec(out)?.[1]);
-    for (const end = Date.now() + 20_000; Date.now() < end; await pause(50)) {
+    for (const end = Date.now() + 20_000; Date.now() < end; await sleep(50)) {
       const head = probeHead(await readFile(file, 'utf8').catch(() => ''));
       if (head.pid === pid && head.launchMs !== undefined) return head.launchMs;
     }
@@ -185,7 +185,7 @@ export class IosSimulatorPerf implements MeasureSource {
   async frames(bundle: string, opts: { reset?: boolean } = {}): Promise<Measured<FrameStats>> {
     await this.requireProbe(bundle);
     const to = Date.now();
-    await pause(PROBE_FLUSH_MS);
+    await sleep(PROBE_FLUSH_MS);
     const text = await readFile(this.probeFile(bundle), 'utf8');
     const head = probeHead(text);
     const from = head.resetAt ?? head.loadedAt!;
@@ -202,9 +202,9 @@ export class IosSimulatorPerf implements MeasureSource {
   ): Promise<Measured<FrameTrace>> {
     await this.requireProbe(bundle);
     const from = Date.now();
-    await Promise.all([during?.(), pause(seconds * 1000)]);
+    await Promise.all([during?.(), sleep(seconds * 1000)]);
     const to = Date.now();
-    await pause(PROBE_FLUSH_MS);
+    await sleep(PROBE_FLUSH_MS);
     const raw = probeWindow(await readFile(this.probeFile(bundle), 'utf8'), from, to);
     const dir = join(stateDir(), 'traces');
     await mkdir(dir, { recursive: true });
@@ -246,7 +246,7 @@ export class IosSimulatorPerf implements MeasureSource {
       throw new DeviceError('UNSUPPORTED', `nettop: ${e.message.slice(0, 200)}`);
     });
     // its first sample, what counts from: `during` starts after it
-    const [{ stdout: raw }] = await Promise.all([nettop, pause(1_000).then(() => during?.())]);
+    const [{ stdout: raw }] = await Promise.all([nettop, sleep(1_000).then(() => during?.())]);
     return {
       value: {
         // from its first sample to its last
@@ -307,7 +307,7 @@ export class IosSimulatorPerf implements MeasureSource {
         await this.simctl
           .exec(['launch', this.udid, 'com.apple.Preferences'])
           .catch(() => undefined);
-      await pause(500);
+      await sleep(500);
       if (probe) {
         const ms = Math.round(await this.launchProbed(bundle, opts.env));
         raw.push(String(ms));

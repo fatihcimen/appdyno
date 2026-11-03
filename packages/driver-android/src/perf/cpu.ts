@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { type Measured, pause, type ThreadReading, type CpuProfile } from '@appdyno/core';
+import { sleep, type Measured, type ThreadReading, type CpuProfile } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg } from '../adb.js';
 import { parseProcStatTicks, parseThreadReads, parseSimpleperfReport } from './parse.js';
@@ -22,7 +22,7 @@ export async function cpu(
   const read = () => sh(d, `cat /proc/${pid}/stat; getconf CLK_TCK`);
   const a = await read();
   const t0 = Date.now();
-  await pause(windowMs);
+  await sleep(windowMs);
   const b = await read();
   const ms = Date.now() - t0;
   const hz = Number(b.trim().split('\n').pop()) || 100;

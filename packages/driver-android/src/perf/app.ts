@@ -1,10 +1,10 @@
 import { rm } from 'node:fs/promises';
 import { basename } from 'node:path';
 import {
+  sleep,
   type BuildType,
   type Measured,
   type NetworkReading,
-  pause,
   type EnergyReading,
   type ExitReading,
   type SizeReading,
@@ -75,7 +75,7 @@ export async function network(
   };
   const a = await read();
   const t0 = Date.now();
-  await Promise.all([during?.(), pause(windowMs)]);
+  await Promise.all([during?.(), sleep(windowMs)]);
   const b = await read();
   const [before, after] = [parseNetstatsUid(a, uid), parseNetstatsUid(b, uid)];
   return {
@@ -109,7 +109,7 @@ export async function energy(
     await sh(d, 'dumpsys battery unplug');
     const read = () => sh(d, `dumpsys batterystats --charged ${pkg}`, 60_000);
     const before = parseBatteryUsage(await read(), uid);
-    await pause(windowMs);
+    await sleep(windowMs);
     const raw = await read();
     const after = parseBatteryUsage(raw, uid);
     if (after.mah === undefined) throw noModel('batterystats computed no drain at all');

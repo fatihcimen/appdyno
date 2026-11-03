@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { pause, run, callSignal, cancelled } from '@appdyno/core';
+import { sleep, run, callSignal, cancelled } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 
 /**
@@ -150,7 +150,7 @@ export class Simctl {
       });
       if (Date.now() > end)
         throw new DeviceError('TIMEOUT', `simulator ${udid} did not shut down (state ${state})`);
-      await pause(2_000);
+      await sleep(2_000);
     }
   }
 

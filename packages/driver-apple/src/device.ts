@@ -1,4 +1,5 @@
 import {
+  sleep,
   fold,
   type LogsQuery,
   type LogsAnswer,
@@ -9,7 +10,6 @@ import {
   type RpcClient,
   TIMEOUTS,
   type ActOptions,
-  pause,
   assertLatLon,
   stateDir,
 } from '@appdyno/core';
@@ -257,7 +257,7 @@ export class IosDevice extends RpcDevice implements Device {
         await this.tap(open, { settle: {} });
         return;
       }
-      await pause(150);
+      await sleep(150);
     }
   }
 
@@ -266,7 +266,7 @@ export class IosDevice extends RpcDevice implements Device {
     await this.target(pkg);
     // returns once the app is in front: a read during the launch would get the home screen, slowly
     const end = Date.now() + 10_000;
-    while ((await this.foreground()) !== pkg && Date.now() < end) await pause(20);
+    while ((await this.foreground()) !== pkg && Date.now() < end) await sleep(20);
     return out;
   }
 
@@ -275,7 +275,7 @@ export class IosDevice extends RpcDevice implements Device {
     // returns once the app has left the front (the runner may see it there for a moment)
     if (!this.rpc || this.rpc.closed) return;
     const end = Date.now() + 3_000;
-    while ((await this.foreground()) === pkg && Date.now() < end) await pause(100);
+    while ((await this.foreground()) === pkg && Date.now() < end) await sleep(100);
   }
 
   async setLocation(lat: number, lon: number) {

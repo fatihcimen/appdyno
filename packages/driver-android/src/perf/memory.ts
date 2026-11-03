@@ -1,11 +1,11 @@
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import {
+  sleep,
   type Measured,
   type MemoryReading,
   type HeapProfileKind,
   type HeapProfile,
-  pause,
   type HeapReading,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
@@ -68,7 +68,7 @@ export async function heapProfile(
     );
   await pidOf(d, pkg);
   const s = Math.min(Math.max(Math.round(seconds), 1), 120);
-  if (kind === 'java_hprof') await Promise.all([during?.(), pause(s * 1000)]);
+  if (kind === 'java_hprof') await Promise.all([during?.(), sleep(s * 1000)]);
   const trace = await recordTrace(
     d,
     pkg,
@@ -130,7 +130,7 @@ export async function heapDump(
       const size = Number((await d.shell(`stat -c %s ${remote} 2>/dev/null`)).trim() || -1);
       if (size > 0 && size === last) break;
       last = size;
-      await pause(500);
+      await sleep(500);
     }
     if (last <= 0)
       throw new DeviceError('UNSUPPORTED', `no heap dump of ${pkg}: ${out.trim().slice(0, 200)}`);

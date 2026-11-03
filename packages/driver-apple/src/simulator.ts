@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { type ScreenRecorder, TIMEOUTS, type ActOptions, pause } from '@appdyno/core';
+import { sleep, type ScreenRecorder, TIMEOUTS, type ActOptions, pause } from '@appdyno/core';
 import { simulatorCrashes } from './crashes.js';
 import { simulatorLogs } from './logs.js';
 import { SimulatorApps, SimulatorSettings } from './simulator-manage.js';
@@ -277,7 +277,7 @@ export class IosSimulatorDevice extends IosDevice {
     if (tap && !inert && unchanged) {
       const idleAt = Date.now();
       while (Date.now() - idleAt < ALERT_WATCH_MS) {
-        await pause(100);
+        await sleep(100);
         const c = await this.readNow(false);
         last = c;
         if (c.byRunner || !sameLayout(before, c.tree.nodes)) break;
