@@ -14,7 +14,7 @@ import {
   ToolError,
   type Op,
 } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
+import { FakeDevice, SCREENS } from './fake-device.js';
 
 const SECRET = 's3cr3t-pass';
 
@@ -247,7 +247,7 @@ tap id=greeting
 
     it('tells a password field by the focus, when text goes to no target', async () => {
       device.screen = 'login';
-      const node = (await import('./fake-device.js')).SCREENS.login![1]!;
+      const node = SCREENS.login![1]!;
       const was = node.f;
       node.f = was! | 8;
       try {
@@ -304,6 +304,30 @@ assert id=result check=text equals="Gönderildi"
       const timings = r.data.timings as { settledMs?: number; settled?: boolean; line: number }[];
       expect(timings[1]).toMatchObject({ settledMs: 120, settled: true, line: 4 });
       expect(timings[0]!.settledMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it('touches a target only once it has stopped moving', async () => {
+      device.screen = 'form';
+      const send = SCREENS.form!.find((n) => n.t === 'Gönder')!;
+      const home = send.b;
+      const tree = device.tree.bind(device);
+      let reads = 0;
+      // a list still coasting: the first reads each find it somewhere else
+      device.tree = async () => {
+        const drift = Math.max(0, 6 - ++reads) * 40;
+        send.b = [home[0], home[1] + drift, home[2], home[3] + drift];
+        return tree();
+      };
+      try {
+        await caller(context())('flow', {
+          action: 'run',
+          file: flowFile('app dev.app\ntap text="Gönder"\n'),
+        });
+      } finally {
+        send.b = home;
+      }
+      const tap = device.calls.find((c) => c.name === 'act')!.args[0] as { y: number };
+      expect(tap.y).toBe((home[1] + home[3]) / 2);
     });
 
     it('settles every action', async () => {

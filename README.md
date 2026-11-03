@@ -165,7 +165,8 @@ recording kept between commands, which holds a salted digest. `param` and `secre
 is hidden from a replay's answers, report and saved tree. A screenshot shows what the screen shows, so a
 secret typed into a plain field can be seen in it.
 
-**Replay** runs each step through the same operation an agent calls, with its settle. A target gets 10 s to
+**Replay** runs each step through the same operation an agent calls, with its settle. A target must hold its
+place for 300 ms before it is touched, as a list still coasting takes a touch as "stop". A target gets 10 s to
 come, an `assert` 10 s to hold (`timeoutMs=` changes it); then the run stops, as a second try or a near match
 would be a guess. A failure gives `file:line`, the step number, the nearest candidates and the screen. Several
 matches refuse too. A step during which the app died fails with the crash's reason. A flow's lines are all

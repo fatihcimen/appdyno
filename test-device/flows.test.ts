@@ -310,7 +310,10 @@ for (const { platform, serial, form } of targets)
         await run('flow', 'stop');
         await run('flow', 'save', flow);
         const text = readFileSync(flow, 'utf8');
-        expect(text).toContain(`role=button text="${form}"`);
+        // Android's home buttons have no id; iOS's do, and an id goes first
+        expect(text).toContain(
+          platform === 'ios' ? 'tap id=open_form' : 'tap role=button text="FORM"',
+        );
         expect(text).toContain('assert id=name_input');
         const again = await run('flow', 'run', flow);
         expect(again.out).toContain('passed: 4 steps');
