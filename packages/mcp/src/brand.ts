@@ -5,7 +5,7 @@ export const DEVICE_ICON_SVG =
 export const SERVER_INFO = {
   name: 'appdyno',
   title: 'appdyno',
-  version: '0.5.0',
+  version: '0.6.0',
   icons: [
     {
       src: `data:image/svg+xml;base64,${Buffer.from(DEVICE_ICON_SVG).toString('base64')}`,

@@ -1,6 +1,22 @@
 # Changelog
 
-## Unreleased
+## 0.6.0
+
+The first version run on all four kinds of device together: an emulator, a simulator, an Android phone and an iPhone.
+
+Found when the parallel branches ran together:
+
+- Neither fixture built: two branches had each added a network screen. One screen now, on each.
+- `moving` read true in every answer with animations off, as the system's answer was merely not back yet.
+- `--animations off` and `device_setting animations` could restore over each other: only one holds the scales' old value at a time. With `reduce_motion` as well, the newest is put back first.
+- `perf_snapshot` `also: energy` on Android no longer resets the battery history: a window is what the count since the last charge grew by.
+- iPhone: dark mode and reduce motion read empty or as an object, so a restore put back nothing; `crashes` always refused, as `devicectl` stops copying the folder at a file it cannot take (`19:24.spindump.txt`), and reports now copy one by one.
+- iPhone: a signing profile that cannot be read says so, not an internal error; `record` says this phone has no recording capability and what to do.
+- A locked simulator is opened by its lock state: a read under the lock held the runner up for 15 s.
+- With an app selected and another in front, the answer shows what is in front, not 0 elements.
+- `app install` wakes the phone, and names HyperOS's on-screen question when no one answered it.
+- A pulled recording waits in the state folder, not beside the video.
+- Answers: a control and its own text with the same words are one target; a launch or a found scroll carries no "no change seen"; refusals have no filler and no wire method's name; keys typed with no keyboard on iOS are refused as on Android.
 
 - Phase 6, evidence and reach, with no new dependency. Each answer says what a device cannot do and why.
 - `record`: screen video on Android (segments of `screenrecord`, joined with no dependency), simulators (`simctl`) and iPhones (`devicectl`, not yet run on one). It outlives its process, one per device. `stop` reads the file: one that does not play is a refusal.
@@ -14,14 +30,10 @@
 - A device's refusals are async: a phone's `push`, `biometric`, `clear` and `grant` reached a client as an internal error.
 - An op with `action` takes it as its first word on the command line: `appdyno record stop`.
 
-## Unreleased
-
 - Phase 5, flows. `flow` records what a session does to a readable file (`start`, `stop`, `save`), replays it with no model (`run`, `--from`, `--param`) and exports it to Maestro YAML, refusing what has no form there. `appdyno test` runs flows on each `--device` in turn: JUnit, a failure's screenshot and tree, exit code 1. A miss or several matches stop the run with the nearest candidates, the step and the file's line; nothing is guessed. Passwords and `APPDYNO_SECRETS` become named parameters and are in no file. New package `flows`. `flowsFor(ctx).replay` takes `onStep`, for measuring each step.
 - `scroll_to` answers once the list has stopped: on a simulator a tap right after it was often lost, as the settle does not see a list coasting and UIKit takes a touch on one as "stop". Measured: 3 of 6 lost before.
 - `ActionOut.settleMs`: from the action to the settled screen, as the device timed it.
 - The nearest elements of a refusal are also judged by their ids, so a mistyped id finds its neighbour.
-
-## Unreleased
 
 - Phase 4, driving. Every action takes a ref, coordinates or a selector; `steps` runs across screens with `wait_for`,
   `assert` and `scroll_to`; `scroll_to`, `assert`, `gesture` (double tap, long press, drag, pinch, free plan), `keyboard`,
@@ -29,8 +41,6 @@
 - Device claims for parallel agents, with no daemon. Conditions the tool changed are put back.
 - Protocol 1.3: the agent's `wait`.
 - `long_press` and `pinch` are now kinds of `gesture`, `dismiss_alert` is `alert`, `set_clipboard` is `clipboard`.
-
-## Unreleased
 
 - Performance: `packages/perf` keeps every measure with its context; baselines and budgets under `.appdyno/perf/`; `perf_compare` and `appdyno perf compare|baseline|budget` as a gate; `perf_query` on a kept trace; Android launch by state with compile control and a start trace, frame stats, threads, network, energy, exits, size and heap profiles; an opt-in frame probe on iOS simulators; hitches, hangs and launch on an iPhone on an app of our own. `docs/perf.md` has what works where.
 - Docs: a README for new users, CONTRIBUTING, SECURITY and a CI workflow (lint, typecheck, unit tests, agent unit tests).
