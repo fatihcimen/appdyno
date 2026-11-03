@@ -142,13 +142,14 @@ empty space; not a clickable, long-clickable, editable or checkable node or anyt
 web, map or surface view, not a point over the keyboard or another window) uses an 80 ms window.
 
 What the window catches, measured on the fixture's late-reaction screen (emulator; the 200 ms row with today's
-settle at 15 taps per delay, the others with the earlier one at 50):
+settle at 15 taps per delay and a host at load 14 rising to 100, which stretches the window; the others with
+the earlier settle at 50):
 
-| window           | reactions caught         | missed                       |
-| ---------------- | ------------------------ | ---------------------------- |
-| 200 ms (default) | every delay up to 200 ms | 1/15 at 250, 15/15 at 300 ms |
-| 250 ms           | up to 250 ms             | 10/50 at 300 ms              |
-| 300 ms           | up to 300 ms             | 49/50 at 350 ms              |
+| window           | reactions caught         | missed          |
+| ---------------- | ------------------------ | --------------- |
+| 200 ms (default) | every delay up to 250 ms | 1/15 at 300 ms  |
+| 250 ms           | up to 250 ms             | 10/50 at 300 ms |
+| 300 ms           | up to 300 ms             | 49/50 at 350 ms |
 
 A reaction that starts later than the window (a network answer, a timer) is not waited for: wait for
 the element instead. A touch listener on a view that is not marked clickable is treated as inert; one

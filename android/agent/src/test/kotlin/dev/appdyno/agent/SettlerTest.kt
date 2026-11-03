@@ -141,6 +141,18 @@ class SettlerTest {
     }
 
     @Test
+    fun aReadOvertakenByANewWindowIsReadAgain() {
+        // still the old screen when read at the end of the window; a new window appeared meanwhile
+        val start = now
+        val o = Settler({ now }, { now += it }, { lastEvent }).run(
+            start, 200, 3_000, R("A"), { now += 60; R(if (now - start < 300) "A" else "B") }, { a, b -> a.hash == b.hash }, { it.busy }, { false },
+            outdated = { it.hash == "A" },
+        )
+        assertTrue(o.settled)
+        assertEquals("B", o.last.hash)
+    }
+
+    @Test
     fun aHoldThatNeverEndsAnswersOnceAtTheCapUnsettled() {
         val o = Settler({ now }, { now += it }, { lastEvent }).run(
             now, 200, 1_000, R("A"), { now += 10; R("gap", true) }, { a, b -> a.hash == b.hash }, { it.busy }, { false },

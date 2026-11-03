@@ -39,6 +39,9 @@ describe.skipIf(!serial)('android agent on a device', () => {
     let same = 0;
     for (let i = 0; i < reads; i++) {
       const s = await screen();
+      // the system's own dialog over the fixture (see answerSystemDialog), on a loaded emulator as well
+      const close = find(s, /^(Tamam|Close app|Iptal)$/i);
+      if (close) await d.tap(close, { settle: false });
       same = find(s, label) && last?.hash === s.hash ? same + 1 : 0;
       if (same >= 3) return s;
       last = s;
@@ -114,7 +117,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
   it('taps into another screen and settles there in one call', async () => {
     const s = await open('FORM');
     expect(s.settle!.settled).toBe(true);
-    expect(labels(s)).toContain('Enter your details');
+    expect(labels(s), JSON.stringify(s.settle)).toContain('Enter your details');
   });
 
   it('an answer between two screens is never an empty screen, and every place in it is final', async () => {

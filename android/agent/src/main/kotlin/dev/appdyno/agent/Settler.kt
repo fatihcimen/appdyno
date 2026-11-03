@@ -71,6 +71,8 @@ class Settler(
         size: (S) -> Int = { 100 },
         /** Nothing worth reading now (cheap, no call to the app): no read, and nothing is proven meanwhile. */
         hold: () -> Boolean = { false },
+        /** A read already overtaken (cheap, no call to the app): the screen it shows has been replaced. */
+        outdated: (S) -> Boolean = { false },
     ): SettleOutcome<S> {
         val deadline = actionAt + maxMs
         var reads = 0
@@ -121,7 +123,7 @@ class Settler(
                 ((stillLayout >= quiet && quietEvents >= quiet) || stillLayout >= 2 * quiet)
             // a read is answered on the app's UI thread, after a click it was still busy with: what that click started
             // shows only now
-            if (settled && now < deadline && hold()) {
+            if (settled && now < deadline && (outdated(next) || hold())) {
                 changedAt = now
                 nextRead = now
                 continue

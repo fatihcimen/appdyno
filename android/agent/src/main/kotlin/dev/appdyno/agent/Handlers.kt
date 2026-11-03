@@ -204,27 +204,34 @@ class Handlers(private val automation: Automation, private val token: String) {
     }
 
     /** The settle and the read an action asked for, into its result. `then`: the app's windows before it. */
-    private fun after(p: JSONObject, at: Long, job: Job, out: JSONObject, then: Set<Int>, inert: Boolean = false): Reply {
+    private fun after(p: JSONObject, at: Long, job: Job, out: JSONObject, windowsBefore: Set<Int>, inert: Boolean = false): Reply {
         val read = p.optString("read", "none")
         val settle = p.optJSONObject("settle")
         var last: Capture? = null
         if (settle != null) {
             val quiet = settle.optLong("quietMs", 200).let { if (inert) minOf(it, INERT_QUIET_MS) else it }
             var asked = false
+            val before = if (p.has("before")) recent[p.getString("before")] else null
+            var then = windowsBefore
             val o = settler.run(
                 at,
                 quiet,
                 settle.optLong("maxMs", 3_000),
-                if (p.has("before")) recent[p.getString("before")] else null,
+                before,
                 {
                     asked = false
-                    readSettling().also { last = it }
+                    readSettling().also {
+                        last = it
+                        // the list of windows can lag a screen just opened: what still shows the old layout is the old window
+                        if (before != null && it.sameLayout(before)) then = WindowIds.app(it.windows.map { w -> w.id to w.type })
+                    }
                 },
                 { x, y -> x.sameLayout(y) },
                 { it.busy },
                 { job.cancelled },
                 { it.nodes.size },
                 { hold(then, last, !asked).also { asked = true } },
+                { c -> WindowIds.replaced(WindowIds.app(c.windows.map { w -> w.id to w.type }), appWindows()) },
             )
             val moving = last?.sliding == true || transitions.open
             out.put(
