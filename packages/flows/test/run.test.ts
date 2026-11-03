@@ -169,6 +169,13 @@ stop`),
 `);
   });
 
+  it('takes a check given time to hold as a wait', () => {
+    expect(yaml('assert id=a timeoutMs=800')).toContain(
+      '- extendedWaitUntil:\n    visible:\n      id: "a"\n    timeout: 800\n',
+    );
+    expect(yaml('assert id=a check=absent timeoutMs=800')).toContain('notVisible:');
+  });
+
   it('leaves placeholders for Maestro to fill, and says what it could not keep', () => {
     const out = toMaestro(
       parseFlow('app a\nsecret S\ntype "${S}"\ntap text="x ${S}."\ntap role=button text="B"\n'),
@@ -188,6 +195,7 @@ stop`),
     fails('swipe up distance=300', /step 1 .*distance/);
     fails('scroll_to text="x" maxSwipes=3', /step 1 .*maxSwipes/);
     fails('type "cost $${A}"', /step 1 .*literal/);
+    fails('assert id=r check=text equals="a" timeoutMs=9', /step 1 .*timeoutMs/);
     fails('unrecorded "gesture pinch"', /step 1 .*gesture pinch/);
     expect(() => yaml('alert allow\nlaunch\nunrecorded "x"')).toThrow(/step 1[^]*step 3/);
     expect(() => toMaestro(parseFlow('launch'))).toThrow(/needs an app/);

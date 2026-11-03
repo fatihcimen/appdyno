@@ -177,6 +177,20 @@ describe('secrets in a recording', () => {
     expect(r.state.known.map((k) => k.name)).toEqual(['PIN', 'PIN_2', 'PASSWORD']);
   });
 
+  it("takes the first app named as the flow's, and keeps another on its step", () => {
+    const r = new Recording(state());
+    const launch = (app: string): FlowStep => ({
+      action: 'launch',
+      line: 0,
+      args: { app },
+      flags: [],
+    });
+    r.add(launch('dev.one'));
+    r.add(launch('dev.two'));
+    r.add(launch('dev.one'));
+    expect(r.text()).toBe('app dev.one\n\nlaunch\nlaunch "dev.two"\nlaunch\n');
+  });
+
   it('leaves a literal ${ typed by the agent a literal', () => {
     const r = new Recording(state());
     r.add(type('a ${B} c'));

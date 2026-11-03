@@ -114,12 +114,23 @@ function commands(st: FlowStep): Yaml[] {
         },
       ];
     case 'assert': {
-      none(st, 'timeoutMs');
       const yes = a.expect !== false;
       const check = a.check ?? 'exists';
       const sel = selectorOf(st.selector);
-      if (check === 'exists' || check === 'absent')
-        return [{ [(check === 'exists') === yes ? 'assertVisible' : 'assertNotVisible']: sel }];
+      if (check === 'exists' || check === 'absent') {
+        const shows = (check === 'exists') === yes;
+        return a.timeoutMs === undefined
+          ? [{ [shows ? 'assertVisible' : 'assertNotVisible']: sel }]
+          : [
+              {
+                extendedWaitUntil: {
+                  [shows ? 'visible' : 'notVisible']: sel,
+                  timeout: a.timeoutMs,
+                },
+              },
+            ];
+      }
+      none(st, 'timeoutMs');
       if (check === 'text') {
         if (!yes) unsupported('Maestro has no check that a text is another');
         return [{ assertVisible: { ...sel, text: literal(plain(a.equals as string)) } }];

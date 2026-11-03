@@ -114,7 +114,7 @@ export function flowRecorder(ctx: ServerContext) {
     (await s.current()).window ??
     (s.device.hello && { w: s.device.hello.screen.w, h: s.device.hello.screen.h });
 
-  /** A target as the screen it is on names it: a selector when anything does, else flagged coordinates. */
+  /** A target named for later, and the screen it was named on. */
   type Aim = {
     screen?: Screen | undefined;
     element?: ScreenElement | undefined;
@@ -123,7 +123,6 @@ export function flowRecorder(ctx: ServerContext) {
     flags?: Flag[];
   };
 
-  /** A target named for later: a selector when anything names it, else flagged coordinates. */
   const named = (screen: Screen, e: ScreenElement) => {
     const c = bestSelector(screen, e);
     return {
@@ -140,7 +139,7 @@ export function flowRecorder(ctx: ServerContext) {
     };
   };
 
-  /** What a target comes to on the screen the action is about to act on; undefined when it is not on it. */
+  /** A target on the screen the action is about to act on: a selector when anything names it, else flagged coordinates. */
   const aim = async (s: Session, t: Target): Promise<Aim> => {
     let screen: Screen | undefined;
     let e: ScreenElement | undefined;
@@ -183,13 +182,14 @@ export function flowRecorder(ctx: ServerContext) {
   ): Promise<() => FlowStep | undefined> => {
     switch (st.action) {
       case 'tap':
-      case 'double_tap': {
-        const a = await aim(s, st);
-        return () => stepOf(st.action, a);
-      }
+      case 'double_tap':
       case 'long_press': {
         const a = await aim(s, st);
-        return () => stepOf('long_press', a, { durationMs: st.durationMs });
+        const durationMs = st.action === 'long_press' ? st.durationMs : undefined;
+        return () =>
+          a.selector || a.args
+            ? stepOf(st.action, a, { durationMs })
+            : unrecorded(`${st.action} of an element gone from the screen`);
       }
       case 'drag':
         return () => unrecorded('gesture drag');
@@ -370,8 +370,6 @@ export function flowRecorder(ctx: ServerContext) {
   };
 }
 
-export type FlowRecorder = ReturnType<typeof flowRecorder>;
-
 const flagged = (flow: Flow) =>
   flow.steps.flatMap((st, i) => {
     const why = [
@@ -480,8 +478,8 @@ function opCall(st: FlowStep): [string, Record<string, unknown>] {
   }
 }
 
-/** No lookup comes before their action, or several actions make them up: all of the step is the time. */
-const WHOLE_STEP = new Set(['launch', 'open_link', 'scroll_to', 'stop', 'set_location']);
+/** They end on a settled screen with no time from the device (no lookup before, or several actions): all of the step is the time. */
+const WHOLE_STEP = new Set(['launch', 'open_link', 'scroll_to']);
 const READS_ONLY = new Set(['wait_for', 'assert']);
 
 export type ReplayOptions = Pick<RunOptions, 'from' | 'onStep'> & {

@@ -16,7 +16,6 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@appdyno/core": "workspace:*",
-    "@appdyno/protocol": "workspace:*"
+    "@appdyno/core": "workspace:*"
   }
 }

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Phase 5, flows. `flow` records what a session does to a readable file (`start`, `stop`, `save`), replays it with no model (`run`, `--from`, `--param`) and exports it to Maestro YAML, refusing what has no form there. `appdyno test` runs flows on each `--device` in turn: JUnit, a failure's screenshot and tree, exit code 1. A miss or several matches stop the run with the nearest candidates, the step and the file's line; nothing is guessed. Passwords and `APPDYNO_SECRETS` become named parameters and are in no file. New package `flows`. `flowsFor(ctx).replay` takes `onStep`, for measuring each step.
+- `ActionOut.settleMs`: from the action to the settled screen, as the device timed it.
+- The nearest elements of a refusal are also judged by their ids, so a mistyped id finds its neighbour.
+
+## Unreleased
+
 - Phase 4, driving. Every action takes a ref, coordinates or a selector; `steps` runs across screens with `wait_for`,
   `assert` and `scroll_to`; `scroll_to`, `assert`, `gesture` (double tap, long press, drag, pinch, free plan), `keyboard`,
   `alert` (any system alert), hardware buttons in `press_key`, `app`, `simulator`, `device_setting`, `clipboard`.

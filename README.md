@@ -48,6 +48,7 @@ else the one `use_device` selected.
 | apps    | `open_link`, `launch_app`, `terminate_app`, `app`                                                                          |
 | check   | `audit` (accessibility), `logs`, `crashes`                                                                                 |
 | measure | `perf_snapshot`, `perf_scroll`, `perf_launch`, `perf_profile`, `perf_heap`, `perf_trace`                                   |
+| replay  | `flow`                                                                                                                     |
 
 A target is a `ref`, `x` and `y`, or a `selector` `{ text, id, role, index }`, resolved on a fresh read
 just before the action. Text matches as `find` does, without case or accents ("İstanbul", "istanbul"),
@@ -104,6 +105,87 @@ reaches the device, and long operations report progress.
 system's crash records for the app (Android exit info and dropbox, the simulator's DiagnosticReports,
 an iPhone's system crash logs) as a bounded summary and a file path. Secrets are redacted.
 
+## Flows
+
+What an agent does once can run again with no model, on this device or another, and in CI.
+
+```sh
+appdyno flow start            # or the flow tool, action start: every action from here on is logged
+appdyno tap --json '{"selector":{"text":"Form"}}'
+appdyno flow stop             # prints the flow, and any step to look at
+appdyno flow save login.flow
+appdyno flow run login.flow --param PASSWORD_INPUT=... --from 3
+appdyno test flows/ --device emulator-5554 --device <udid> --artifacts out --junit out/junit.xml
+appdyno flow export login.flow > login.yaml
+```
+
+A flow is a text file, one step per line:
+
+```text
+app dev.appdyno.fixture
+param NAME
+secret PASSWORD_INPUT
+
+stop
+launch
+tap role=button text="Form"
+type "${NAME}" id=name_input replace
+type "${PASSWORD_INPUT}" id=password_input
+tap id=submit
+assert id=result check=text equals="Sent: ${NAME}"
+tap id=add_button index=1 !ambiguous
+```
+
+| step                                                                        | runs                          |
+| --------------------------------------------------------------------------- | ----------------------------- |
+| `launch`, `stop`                                                            | `launch_app`, `terminate_app` |
+| `tap`, `long_press durationMs=`, `double_tap`                               | `tap`, `gesture`              |
+| `type "text" [target] [replace] [submit]`                                   | `type_text`                   |
+| `press_key back`, `swipe up [target]`, `scroll_to <selector> [direction=]`  | the tool of that name         |
+| `wait_for <selector> [gone] [timeoutMs=]`                                   | `wait_for`                    |
+| `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`          | `assert`                      |
+| `open_link "url"`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard` | their tools                   |
+
+A selector is any of `id=`, `role=`, `text=`, `index=`; text matches as it does in the tools.
+
+**Recording** logs each action that succeeded, with a selector that finds its target alone on that
+screen at that moment: the id, else role and text, else text. Refs never reach the file. What nothing
+finds alone keeps its index and is flagged `!ambiguous`. Only a point on no element, a slider or a large
+area stays as coordinates, flagged `!coordinates` with the screen size they hold for; a screen of another
+size refuses that step. A role is kept when both platforms name it alike (`button`, `textField`...), and
+Android's own ids (`android:id/button1`) are not kept. An action with no step (a pinch, a device setting)
+is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. `flow stop` and
+`flow save` list every step to look at.
+
+**Secrets.** Text typed into a password field, and text in `APPDYNO_SECRETS`, become a `secret` by name:
+the field's id, or `SECRET_1` for the first of `APPDYNO_SECRETS`. From then on the same text anywhere else,
+such as a label that shows it back, becomes that name too. The file never holds a value. Neither does the
+recording kept between commands, which holds a salted digest. `param` and `secret` values come from
+`--param` (`params` in the tool) or the environment variable of that name; `$${` is a literal `${`. A secret
+is hidden from a replay's answers, report and saved tree. A screenshot shows what the screen shows, so a
+secret typed into a plain field can be seen in it.
+
+**Replay** runs each step through the same operation an agent calls, with its settle. A target gets 10 s to
+come, an `assert` 10 s to hold (`timeoutMs=` changes it); then the run stops, as a second try or a near match
+would be a guess. A failure gives `file:line`, the step number, the nearest candidates and the screen. Several
+matches refuse too. A step during which the app died fails with the crash's reason. A flow's lines are all
+checked before its first step acts, and a missing value is refused by name before anything runs. Each step's
+time from action to settled is in the answer and the report: the device's own time for a tap or a key, all of
+the step for `launch`, `open_link` and `scroll_to`.
+
+**`appdyno test`** runs files or directories of `.flow` one at a time on each `--device` in turn. It writes
+JUnit (a suite per device, a case per file; default `appdyno-artifacts/junit.xml`), saves `screen.jpg` and
+`tree.json` under `<artifacts>/<device>/<file>/` at a failure, goes on to the next file, and exits 1 if any
+failed or if there was nothing to run. Assertions are steps.
+
+**Export** writes Maestro YAML, or refuses and names every step it has no form for (an `alert`, `replace`,
+coordinates, a role with no id or text). A role beside a text is left out, as Maestro has none, and the YAML
+says so in a comment. Maestro's text matches a whole label where ours also takes a part of one. There is no
+import.
+
+From code, `flowsFor(ctx).replay(file, { onStep })` calls `onStep` around each step's action, awaited:
+`before` once its target is on the screen, `after` with its time once the screen settled.
+
 ## Command line
 
 Every tool is also a command, with dashes:
@@ -116,8 +198,8 @@ appdyno tap --help
 appdyno --help
 ```
 
-Other commands: `doctor [--serial S]`, `ios build`, `tools install` (fetches the pinned Perfetto trace
-processor), `bench`. Exit code 1 means the call was refused, 2 means wrong arguments. A diff baseline
+Other commands: `doctor [--serial S]`, `ios build`, `test` (see Flows), `tools install` (fetches the pinned
+Perfetto trace processor), `bench`. Exit code 1 means the call was refused, 2 means wrong arguments. A diff baseline
 between CLI processes is kept in a small file in the state directory.
 
 ## Server options

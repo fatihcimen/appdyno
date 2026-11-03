@@ -78,9 +78,13 @@ export class Recording {
   add(step: FlowStep) {
     const clean = (v: string | number | boolean) => (typeof v === 'string' ? this.scrub(v) : v);
     const s = step.selector;
+    // the first app named is the flow's, when the session had none selected; a step need not repeat it
+    const { app, ...rest } = step.args;
+    if (typeof app === 'string') this.state.app ??= app;
+    const args = app === undefined || app === this.state.app ? rest : step.args;
     this.state.steps.push({
       ...step,
-      args: Object.fromEntries(Object.entries(step.args).map(([k, v]) => [k, clean(v)])),
+      args: Object.fromEntries(Object.entries(args).map(([k, v]) => [k, clean(v)])),
       ...(s && {
         selector: {
           ...(s.id !== undefined && { id: this.scrub(s.id) }),
