@@ -73,7 +73,8 @@ export function parseFramestats(text: string): FrameRow[] {
       const ns = Number(v[end]) - Number(v[start]);
       const iv =
         intervalCols.map((i) => Number(v[i])).find((x) => x > 1e6 && x < 1e9) ?? 16_666_667;
-      if (v[flags] === '0' && Number.isFinite(ns) && ns > 0)
+      // Android 16 (seen on a Xiaomi) sets bit 32 on ordinary frames, which a 0 alone would leave out
+      if ((Number(v[flags]) & ~32) === 0 && Number.isFinite(ns) && ns > 0)
         out.push({
           durationMs: Math.round(ns / 1e5) / 10,
           intervalMs: Math.round(iv / 1e5) / 10,
