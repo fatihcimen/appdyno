@@ -226,7 +226,7 @@ describe('steps across screens', () => {
     expect(bad.text).toContain('step 2');
     expect(act(d)).toEqual([]);
     const long = await call('steps', {
-      steps: Array(31).fill({ action: 'press_key', key: 'tab' }),
+      steps: Array(21).fill({ action: 'press_key', key: 'tab' }),
     });
     expect(long.error).toBe(true);
   });

@@ -347,6 +347,12 @@ final class Device {
         return v == s.placeholderValue ? "" : v
     }
 
+    /// Reading what another app put on the pasteboard asks the user, whom this thread would wait for
+    /// forever. Only the count of changes can be read without asking, so that is what tells whose it is.
+    private static var pasteboardMark = -1
+    static var ownsPasteboard: Bool { UIPasteboard.general.changeCount == pasteboardMark }
+    static func markPasteboard() { pasteboardMark = UIPasteboard.general.changeCount }
+
     func setText(_ p: [String: Any], job: Job) throws -> [String: Any] {
         guard let text = p["text"] as? String else { throw AgentError("INVALID_ARGUMENT", "text is required") }
         let t0 = Date()
@@ -395,34 +401,14 @@ final class Device {
             let n = Device.plain(now), t = Device.plain(text)
             return replace ? n == t : n == Device.plain(before) + t || n.contains(t)
         }
-        // paste first (one event for the whole text), keys when the field did not take it
-        var mode = "paste"
-        let saved = UIPasteboard.general.string
-        UIPasteboard.general.string = text
-        // on a phone the runner (not the app in front) cannot reach the clipboard: keys then, at once
-        let pasteable = UIPasteboard.general.string == text
+        // keys, not a paste: a paste the user did not make brings up iOS's "Allow Paste" alert, which no one
+        // answers here and which holds the text up (a timeout, or text doubled once it goes)
         // a field that just took the focus may not take key commands before its keyboard is up
         let keyboard = app.keyboards.firstMatch
-        let kbEnd = Date().addingTimeInterval(pasteable ? 1 : 0)
+        let kbEnd = Date().addingTimeInterval(1)
         while !keyboard.exists, Date() < kbEnd, !job.over { Thread.sleep(forTimeInterval: 0.05) }
         var verified: Bool? = false
-        for _ in 0 ..< (pasteable ? 2 : 0) where verified == false {
-            guard field.exists else { verified = nil; break }
-            if replace { field.typeKey("a", modifierFlags: .command) }
-            field.typeKey("v", modifierFlags: .command)
-            verified = check()
-            // on a loaded device the paste lands after the key returns: a second one would double the text
-            let pasteEnd = Date().addingTimeInterval(1.5)
-            while verified == false, currentText(field) == before, Date() < pasteEnd, !job.over {
-                Thread.sleep(forTimeInterval: 0.05)
-                verified = check()
-            }
-            // a paste that changed nothing is tried once more; one that changed the text is not repeated
-            if verified == false, currentText(field) != before { break }
-        }
-        if let saved { UIPasteboard.general.string = saved } else { UIPasteboard.general.items = [] }
         if verified == false, field.exists {
-            mode = "keys"
             if replace {
                 // all of it selected and deleted at once: deleting a formatting field's characters one by one
                 // moves its cursor and scrambles what is typed after (live: a phone number typed out of order)
@@ -441,7 +427,7 @@ final class Device {
         // a field that is gone has taken the text and submitted it already
         if p["submit"] as? Bool == true, field.exists { field.typeText("\n") }
         var out = try after(p, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
-        out["mode"] = mode
+        out["mode"] = "keys"
         // no verdict when the field cannot be read back: gone (it took the text and submitted), or secure
         if let verified, !secure { out["verified"] = verified }
         out["focusMs"] = focusMs

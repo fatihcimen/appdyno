@@ -54,7 +54,7 @@ just before the action. Text matches as `find` does, without case or accents ("Ä
 and an exact match beats a partial one. Several matches refuse and list them with their refs; no match
 waits a moment, then refuses with the nearest labels.
 
-`steps` runs up to 30 steps across screens. A ref or selector need exist only when its step runs. It
+`steps` runs up to 20 steps across screens. A ref or selector need exist only when its step runs. It
 stops at the first failure, says which step and why, and shows the screen. `wait_for` and selectors
 wait on the device, so the tree crosses the wire only when the screen changed.
 
@@ -147,7 +147,8 @@ Appium, `uiautomator`) is never stopped. The error names the holder and gives th
   installed profile for a wildcard app id, with its identity in the unlocked login keychain, is found by itself. To choose another,
   set `APPDYNO_IOS_PROFILE=<profile.mobileprovision>`, `APPDYNO_IOS_KEYCHAIN=<keychain-db>` and
   `APPDYNO_IOS_KEYCHAIN_PASSWORD=<password>`. Run `appdyno doctor` to see what it found. The phone is
-  reached over USB, never the network. On a phone the runner cannot reach the clipboard, so text goes in as keys.
+  reached over USB, never the network. On a phone the runner cannot reach the clipboard or read what another app put there:
+  iOS would ask the user. A simulator's clipboard is read from the Mac. Text goes in as keys on iOS: a paste brings up iOS's "Allow Paste" alert.
 
 ## Speed
 

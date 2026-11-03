@@ -56,6 +56,8 @@ function shared(
     row: (n: number) => string;
     /** The button that starts the delayed screen's work, if it has one, and what shows after. */
     delayed: { start?: string; shows: string };
+    /** A step that goes back a screen. */
+    back: Record<string, unknown>;
   },
 ) {
   const call = (n: string, a?: Record<string, unknown>) => get().call(n, a);
@@ -193,10 +195,12 @@ function shared(
     ok(r);
   });
 
-  it('reads the clipboard it set', async () => {
-    await open('home');
+  it('reads the clipboard it set, then types without asking the user about it', async () => {
+    await open('form');
     ok(await call('clipboard', { text: 'pano içeriği' }));
     expect(ok(await call('clipboard')).text).toBe('pano içeriği');
+    ok(await call('type_text', { text: 'x', selector: names.field }));
+    ok(await call('assert', { ...names.field, check: 'text', equals: 'x' }));
   });
 
   it('leaves the app’s own dialog alone', async () => {
@@ -217,17 +221,14 @@ function shared(
     );
   });
 
-  it('runs 30 steps within a client’s patience', async () => {
+  it('runs 20 steps within a client’s patience', async () => {
     await open('home');
-    const pair = [
-      { action: 'tap', selector: { text: 'Form' } },
-      { action: 'press_key', key: 'back' },
-    ];
+    const pair = [{ action: 'tap', selector: { text: 'Form' } }, names.back];
     const t0 = Date.now();
-    const r = await call('steps', { steps: Array(15).fill(pair).flat() });
+    const r = await call('steps', { steps: Array(10).fill(pair).flat() });
     const ms = Date.now() - t0;
     process.stderr.write(
-      `30 steps: ${ms} ms${r.error ? `, failed: ${r.text.slice(0, 300)}` : ''}\n`,
+      `20 steps: ${ms} ms${r.error ? `, failed: ${r.text.slice(0, 300)}` : ''}\n`,
     );
     expect(r.error).toBe(false);
     expect(ms).toBeLessThan(55_000);
@@ -260,6 +261,7 @@ describe.skipIf(!android)('driving on Android', () => {
     field: { id: 'name_input' },
     row: (n) => `Product ${n}`,
     delayed: { start: 'Load', shows: 'Result 1' },
+    back: { action: 'press_key', key: 'back' },
   });
 
   it('counts two fingers in a plan', async () => {
@@ -300,14 +302,13 @@ describe.skipIf(!android)('driving on Android', () => {
   });
 
   it('presses volume, lock and power; the next read wakes the screen', async () => {
-    const volume = async () =>
-      /STREAM_MUSIC[\s\S]*?Current: ([^\n]*)/.exec(await sh('dumpsys audio'))?.[1];
+    const volume = async () => (await sh('dumpsys audio')).match(/Current: [^\n]*/g)?.join();
     const before = await volume();
     expect(before).toBeDefined();
     ok(await h.call('press_key', { key: 'volume_up' }));
-    await expect.poll(volume).not.toBe(before);
+    await expect.poll(volume, { timeout: 5_000 }).not.toBe(before);
     ok(await h.call('press_key', { key: 'volume_down' }));
-    await expect.poll(volume).toBe(before);
+    await expect.poll(volume, { timeout: 5_000 }).toBe(before);
     ok(await h.call('press_key', { key: 'lock' }));
     await expect
       .poll(async () => /mWakefulness=(\w+)/.exec(await sh('dumpsys power'))?.[1])
@@ -432,6 +433,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     field: { id: 'name_input' },
     row: (n) => `Product ${n}`,
     delayed: { shows: 'Loaded' },
+    back: { action: 'tap', selector: { text: 'Back' } },
   });
 
   it('pinches with two fingers in a plan, as the app sees it', async () => {

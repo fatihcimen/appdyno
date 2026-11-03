@@ -23,7 +23,8 @@ export const Read = z.enum(['diff', 'full', 'none']).default('diff');
 export const Ref = z
   .string()
   .refine((r) => /^@[a-z0-9]{1,10}(-\d{1,3})?$/.test(r), 'a ref as the screen shows it (@k3f9)');
-export const Coord = z.number().min(0).max(10_000);
+// a check, not a schema bound, for the same reason as Ref
+export const Coord = z.number().refine((v) => v >= 0 && v <= 10_000, 'a point on the screen');
 export const Selector = z
   .object({
     text: z.string().optional(),

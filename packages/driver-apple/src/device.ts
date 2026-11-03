@@ -73,6 +73,7 @@ const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
   'tree.get',
   'screenshot',
   'app.foreground',
+  'app.target',
   'clipboard.get',
 ]);
 
@@ -714,6 +715,11 @@ export class IosSimulatorDevice extends IosDevice {
       await super.key('home', { settle: false, read: 'none' });
       await pause(WAKE_GAP_MS);
     }
+  }
+
+  /** From the Mac: the runner may read only what it wrote itself, or a system prompt holds it up. */
+  override async getClipboard() {
+    return (await this.simctl.exec(['pbpaste', this.serial])) || undefined;
   }
 
   override async openUrl(url: string, pkg?: string) {

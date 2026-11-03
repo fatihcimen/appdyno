@@ -122,11 +122,15 @@ final class RunnerTests: XCTestCase {
         case "clipboard.set":
             let text = p["text"] as? String ?? ""
             UIPasteboard.general.string = text
+            Device.markPasteboard()
             guard UIPasteboard.general.string == text else {
                 throw AgentError("UNSUPPORTED", "the runner cannot reach the clipboard here (on a phone only the app in front can)")
             }
             return Reply(result: [:])
         case "clipboard.get":
+            guard Device.ownsPasteboard else {
+                throw AgentError("UNSUPPORTED", "the clipboard holds another app's text: reading it here would ask the user")
+            }
             return Reply(result: UIPasteboard.general.string.map { ["text": $0] } ?? [:])
         case "orientation.set":
             d.orientation((p["rotation"] as? NSNumber)?.intValue ?? 0)

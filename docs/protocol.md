@@ -92,6 +92,10 @@ clang on first use, private API) prove themselves. The runner stays: for the hel
 clipboard and every case below. `APPDYNO_SIM_DIRECT=off` turns both off, `read` leaves the input to the runner.
 `appdyno doctor --serial <simulator>` says whether both answer.
 
+`text.set` goes in as keys on iOS (`mode: keys`): a paste the user did not make brings up the "Allow Paste" alert, which holds it up.
+`clipboard.get` answers only what the runner wrote itself, as reading another app's text asks the user; a simulator's is read with
+`simctl pbpaste` instead.
+
 iOS has no key to close a keyboard or to open the app switcher. `dismissKeyboard` taps the keyboard's hide key where it
 shows one, else a place with no control; the host then reads whether it went and refuses if it did not. `appSwitch` is the home
 indicator's slow drag up. The volume, lock and power keys go through direct input on a simulator and through
