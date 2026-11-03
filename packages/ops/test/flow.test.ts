@@ -73,6 +73,17 @@ describe('flows', () => {
   };
 
   describe('recording', () => {
+    it('records a tap on what an answer folded into its row, by its own text', async () => {
+      const call = caller(context());
+      device.screen = 'settings';
+      const { text } = await recorded(call, async () => {
+        const { data } = await call('find', { text: 'Wi-Fi' });
+        await call('tap', { ref: (data.matches as { ref: string }[])[0]!.ref });
+      });
+      expect(text).toContain('text="Wi-Fi"');
+      expect(text).not.toMatch(/@\w/);
+    });
+
     it('logs each action with the best selector, whatever named its target', async () => {
       const call = caller(context());
       const { text } = await recorded(call, async () => {

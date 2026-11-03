@@ -273,6 +273,58 @@ describe('waiting on the device', () => {
   });
 });
 
+describe('a folded answer', () => {
+  const folded = async () => {
+    const d = new FakeDevice();
+    d.screen = 'settings';
+    return { d, ...(await connect(d)) };
+  };
+
+  it('puts rows under one header and counts what they hold', async () => {
+    const { call } = await folded();
+    const r = await call('screen');
+    expect(r.data.elements).toBe(10);
+    expect(r.text.split('\n').slice(1)).toEqual([
+      '10 elements: ref role "label" x,y flags; 6 inside rows, by find',
+      expect.stringMatching(/^@\w+ text "Ayarlar" 540,150$/),
+      'tappable x=540 clickable: ref "label" y',
+      expect.stringMatching(/^@\w+ "Wi-Fi On" 350$/),
+      expect.stringMatching(/^@\w+ "Bluetooth Off" 450$/),
+      expect.stringMatching(/^@\w+ "Hotspot Off" 550$/),
+    ]);
+  });
+
+  it('leaves what a row holds to find, a selector and the ref find gives', async () => {
+    const { d, call } = await folded();
+    await call('screen');
+    const { matches } = (await call('find', { text: 'Bluetooth' })).data;
+    expect(matches).toMatchObject([{ role: 'text', label: 'Bluetooth', x: 300, y: 430 }]);
+    expect((await call('tap', { selector: { text: 'Hotspot' } })).error).toBe(false);
+    expect((await call('tap', { ref: matches[0].ref })).error).toBe(false);
+    expect(act(d)).toMatchObject([
+      { kind: 'tap', x: 300, y: 530 },
+      { kind: 'tap', x: 300, y: 430 },
+    ]);
+  });
+
+  it('acts on a folded row by the ref its line gives', async () => {
+    const { d, call } = await folded();
+    const line = /(@\w+) "Wi-Fi On"/.exec((await call('screen')).text)!;
+    await call('tap', { ref: line[1] });
+    expect(act(d)).toMatchObject([{ kind: 'tap', x: 540, y: 350 }]);
+    expect(d.screen).toBe('settingsOff');
+  });
+
+  it('names in the diff what changed inside a row', async () => {
+    const { call } = await folded();
+    await call('screen');
+    const r = await call('tap', { selector: { text: 'Wi-Fi' } });
+    expect(r.data.screen).toBe('diff');
+    expect(r.text).toContain('"Wi-Fi Off"');
+    expect(r.text).toMatch(/text "Off" 300,370/);
+  });
+});
+
 describe('scroll_to', () => {
   /** A list of 30 rows: a swipe up moves it by the finger's way, down to its end. */
   class ListDevice extends FakeDevice {

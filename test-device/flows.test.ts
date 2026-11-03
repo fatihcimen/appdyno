@@ -83,7 +83,7 @@ for (const { platform, serial, form } of targets)
       return r;
     };
     const refOf = (text: string, label: string) =>
-      new RegExp(`(@[a-z0-9-]+) \\w+ "${label}"`).exec(text)?.[1];
+      new RegExp(`(@[a-z0-9-]+) (?:\\w+ )?"${label}"`).exec(text)?.[1];
 
     beforeAll(async () => {
       if (platform === 'iphone') await new Devicectl(serial!).install(iphoneFixture!);

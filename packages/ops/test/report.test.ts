@@ -74,6 +74,18 @@ describe('report', () => {
     await expect(call('report', { action: 'stop' })).rejects.toThrow(/no report is open/);
   });
 
+  it('keeps every element of a screen an answer folds', async () => {
+    const device = new FakeDevice();
+    const { call } = connect(device);
+    device.screen = 'settings';
+    await call('report', { action: 'start', dir });
+    await call('report', { action: 'write' });
+    const html = readFileSync(join(dir, 'index.html'), 'utf8');
+    expect(html).toMatch(/10 elements/);
+    expect(html).toContain('text &#34;Bluetooth&#34; 300,430');
+    expect(html).not.toContain('inside rows');
+  });
+
   it('hides secrets in every text, and never writes what was typed', async () => {
     const { call, ctx } = connect();
     await call('report', { action: 'start', dir });

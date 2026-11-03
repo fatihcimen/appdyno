@@ -3,7 +3,7 @@ import {
   diffScreens,
   diffText,
   pause,
-  renderScreen,
+  renderFolded,
   reportProgress,
   UNCHANGED,
   type ActOptions,
@@ -51,7 +51,7 @@ export function answersFor(ctx: ServerContext) {
   const clean = (s: string) => redact(ctx.policy, s);
 
   const header = (s: Session, screen: Screen) =>
-    `${screen.foreground ? `foreground: ${screen.foreground}\n` : ''}${renderScreen(screen.list, clean)}`;
+    `${screen.foreground ? `foreground: ${screen.foreground}\n` : ''}${renderFolded(screen.list, clean)}`;
 
   /** The app check: a permission prompt points to alert; another app in front is said. */
   const foreground = (s: Session, screen: Screen) => {

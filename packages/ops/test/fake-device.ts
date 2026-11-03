@@ -35,7 +35,28 @@ const tree = (nodes: Node[], pkg = 'dev.app', hash?: string): Tree => ({
   hash: hash ?? JSON.stringify(nodes.map((n) => [n.c, n.id, n.b])),
 });
 
+/** A row that holds its name and state as texts of their own, as a settings list does. */
+const row = (name: string, state: string, y: number, go?: string): Node[] => [
+  {
+    c: 'android.widget.LinearLayout',
+    d: `${name} ${state}`,
+    b: [0, y, 1080, y + 100],
+    f: 19,
+    ...(go && { go }),
+  },
+  { t: name, b: [100, y + 10, 500, y + 50] },
+  { t: state, b: [100, y + 50, 500, y + 90] },
+];
+const settings = (wifi: string, go?: string): Node[] => [
+  { t: 'Ayarlar', b: [0, 100, 1080, 200] },
+  ...row('Wi-Fi', wifi, 300, go),
+  ...row('Bluetooth', 'Off', 400),
+  ...row('Hotspot', 'Off', 500),
+];
+
 export const SCREENS: Record<string, Node[]> = {
+  settings: settings('On', 'settingsOff'),
+  settingsOff: settings('Off'),
   login: [
     {
       c: 'android.widget.EditText',

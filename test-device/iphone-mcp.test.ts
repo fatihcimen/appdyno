@@ -23,7 +23,7 @@ describe.skipIf(!udid)('appdyno-mcp over stdio (iPhone)', () => {
     };
   };
   const ref = (text: string, label: string) =>
-    new RegExp(`(@[a-z0-9-]+) \\w+ "${label}"`).exec(text)?.[1];
+    new RegExp(`(@[a-z0-9-]+) (?:\\w+ )?"${label}"`).exec(text)?.[1];
 
   beforeAll(async () => {
     const transport = new StdioClientTransport({
