@@ -58,11 +58,11 @@ const Scenario = z
   .string()
   .regex(/^[\w.-]{1,60}$/)
   .optional()
-  .describe('the name this run is kept under for perf_compare; default: by operation');
+  .describe('the name perf_compare keeps this run under');
 const Probe = z
   .boolean()
   .optional()
-  .describe('iOS simulator: measure through the injected frame probe (relaunches the app once)');
+  .describe('iOS simulator: the injected frame probe (relaunches the app once)');
 
 /** Jank above this share of frames is worth a finding (Android vitals counts a session slow above 25 %). */
 const JANK_PERCENT = 10;
@@ -240,7 +240,7 @@ export function perfOps(ctx: ServerContext): Op[] {
             .array(z.enum(['threads', 'network', 'energy', 'exits', 'size']))
             .optional()
             .describe(
-              'threads: each thread and its time above 90 %; network: bytes in the window; energy: a model's estimate (Android: resets the battery history); exits: crashes and ANRs; size: on disk',
+              'threads: each thread and its time above 90 %; network: bytes in the window; energy: a modelled estimate (Android: resets the battery history); exits: crashes and ANRs; size: on disk',
             ),
           scenario: Scenario,
         })
