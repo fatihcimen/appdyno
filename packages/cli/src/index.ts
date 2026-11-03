@@ -83,6 +83,11 @@ function parse(op: Op, argv: string[]) {
   let out: string | undefined;
   for (let i = 0; i < argv.length; i++) {
     const word = argv[i]!;
+    // `record start`: the first bare word of an op with actions
+    if (i === 0 && !word.startsWith('--') && properties.action?.enum?.includes(word)) {
+      args.action = word;
+      continue;
+    }
     if (!word.startsWith('--')) throw new ToolError(`unexpected word: ${word}`);
     const flag = word.slice(2);
     const key = camel(flag);

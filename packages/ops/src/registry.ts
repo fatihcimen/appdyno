@@ -16,6 +16,7 @@ import {
 } from './flow.js';
 import { perfOps } from './perf.js';
 import { readOps } from './read.js';
+import { recordOps } from './record.js';
 import { stepsFor } from './steps.js';
 import type { Op } from './tool.js';
 
@@ -33,6 +34,7 @@ function build(ctx: ServerContext) {
       ...appOps(ctx, answers),
       ...controlOps(ctx, answers),
       ...diagnoseOps(ctx, answers),
+      ...recordOps(ctx),
       ...perfOps(ctx),
       ...flowOps(ctx, runner),
     ].map((op) => [op.name, op]),

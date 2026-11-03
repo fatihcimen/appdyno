@@ -31,6 +31,7 @@ import { auditAndroid, decodePng } from './audit.js';
 import { AndroidAgentLauncher, REMOTE_DIR } from './agent.js';
 import { AndroidApps, AndroidSettings, assertPkg } from './manage.js';
 import { AndroidPerf } from './perf.js';
+import { AndroidRecorder } from './record.js';
 
 /** Read-only requests are retried once on a fresh connection when the agent went away. */
 const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
@@ -67,8 +68,10 @@ export class AndroidDevice implements Device {
     this.launcher = new AndroidAgentLauncher(adb, serial, takeover);
     this.apps = new AndroidApps(adb, serial);
     this.settings = new AndroidSettings(adb, serial);
+    this.recorder = new AndroidRecorder(adb, serial);
   }
 
+  readonly recorder: AndroidRecorder;
   logs = (q: LogsQuery) => androidLogs(this.adb, this.serial, q);
   crashes = (q: CrashesQuery) => androidCrashes(this.adb, this.serial, q);
   appPid = async (app: string) =>

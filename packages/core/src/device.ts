@@ -216,10 +216,23 @@ export interface VirtualDevices {
   shutdown(id: string): Promise<void>;
 }
 
+/** What `stop` needs: plain values, as the stop may be another process. */
+export type RecordingHandle = Record<string, string | number>;
+/** One file; several, in order, only when segments could not be joined. */
+export type RecordingFiles = { files: string[]; note?: string };
+
+/** Screen video. A recording outlives the process that started it. */
+export interface ScreenRecorder {
+  readonly extension: 'mp4' | 'mov';
+  start(file: string, opts: { maxSeconds: number }): Promise<RecordingHandle>;
+  stop(handle: RecordingHandle): Promise<RecordingFiles>;
+}
+
 /** One device, whichever platform: what the operations are written against. */
 export interface Device {
   readonly apps?: AppManager;
   readonly settings?: DeviceSettings;
+  readonly recorder?: ScreenRecorder;
   /** One attempt to close an open keyboard; the caller reads whether it went. */
   dismissKeyboard?(): Promise<void>;
   /**

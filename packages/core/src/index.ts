@@ -5,3 +5,4 @@ export { stateDir } from './state.js';
 export * from './call.js';
 export * from './device.js';
 export * from './screen/index.js';
+export * from './video.js';
