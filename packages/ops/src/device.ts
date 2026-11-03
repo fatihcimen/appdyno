@@ -12,7 +12,7 @@ export function deviceOps(ctx: ServerContext, { info, osName, afterChange }: Ans
       name: 'list_devices',
       title: 'Devices',
       description:
-        'Connected devices (serial, state, model), which of them this server may drive and who holds each. To start one, see simulator.',
+        'Connected devices (serial, state, model), which this server may drive, who holds each. To start one: simulator.',
       input: z.object({}).strict(),
       output: DevicesOut,
       annotations: READ,
@@ -43,7 +43,7 @@ export function deviceOps(ctx: ServerContext, { info, osName, afterChange }: Ans
       name: 'use_device',
       title: 'Use device',
       description:
-        'Drive this device (starts its agent or connects to it); app: the package or bundle id of the app under test. A device another process holds refuses, naming it; share: true uses it anyway.',
+        'Drive this device, starting its agent if needed; app: package or bundle id under test. One another process holds refuses, naming it; share: true uses it anyway.',
       input: z
         .object({
           device: z.string().max(64),
@@ -79,8 +79,7 @@ export function deviceOps(ctx: ServerContext, { info, osName, afterChange }: Ans
     defineOp({
       name: 'device_info',
       title: 'Device info',
-      description:
-        "The selected device's model, OS version, screen, agent capabilities and the app in the foreground.",
+      description: 'Model, OS version, screen, agent capabilities and the app in front.',
       input: z.object({}).strict(),
       output: DeviceOut,
       annotations: READ,
@@ -102,8 +101,7 @@ export function deviceOps(ctx: ServerContext, { info, osName, afterChange }: Ans
     defineOp({
       name: 'set_orientation',
       title: 'Orientation',
-      description:
-        'Screen orientation: portrait or landscape (the rotation stays fixed; go back to portrait afterwards).',
+      description: 'The rotation stays fixed: go back to portrait afterwards.',
       input: z.object({ orientation: z.enum(['portrait', 'landscape']), read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
@@ -116,7 +114,7 @@ export function deviceOps(ctx: ServerContext, { info, osName, afterChange }: Ans
     defineOp({
       name: 'set_location',
       title: 'Set location',
-      description: "Fix the device's GPS position (latitude, longitude).",
+      description: 'Fix the GPS position.',
       input: z
         .object({
           lat: z.number().min(-90).max(90),

@@ -45,7 +45,7 @@ export function visualOps(ctx: ServerContext): Op[] {
     defineOp({
       name: 'visual',
       title: 'Visual comparison',
-      description: `The screen against a saved image. action: baseline saves it as name under dir (default ./${DEFAULT_DIR}); compare refuses (CHECK_FAILED) past tolerance (percent of pixels, default ${DEFAULT_TOLERANCE}), with a diff image. masks: x,y,w,h or text, id, role; the status bar is left out.`,
+      description: `The screen against a saved image. baseline saves it as name under dir (default ./${DEFAULT_DIR}); compare refuses (CHECK_FAILED) past tolerance (percent of pixels), with a diff image. masks and the status bar are left out.`,
       input: z
         .object({
           action: z.enum(['baseline', 'compare']),

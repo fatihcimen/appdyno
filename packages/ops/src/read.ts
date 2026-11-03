@@ -11,7 +11,7 @@ import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { FindOut, ScreenOut, ScreenshotOut, WaitOut } from './schemas.js';
 import { refused } from './session.js';
-import { MAX_WAIT_MS, Read, Selector, WAIT_MS, WaitStep, type Steps } from './steps.js';
+import { Read, Selector, WaitStep, type Steps } from './steps.js';
 import { defineOp, READ, reply, ToolError, type Op } from './tool.js';
 import { webLines } from './web.js';
 
@@ -27,7 +27,7 @@ export function readOps(
       name: 'screen',
       title: 'Read screen',
       description:
-        'The elements on the screen (ref role "label" x,y flags). Use refs with tap/type_text; a ref keeps naming the same element when the screen changes.',
+        'The elements on the screen (ref role "label" x,y flags). A ref keeps naming its element when the screen changes.',
       input: z.object({}).strict(),
       output: ScreenOut,
       annotations: READ,
@@ -48,7 +48,7 @@ export function readOps(
       name: 'find',
       title: 'Find',
       description:
-        'The elements that match text, id or role, with role, enabled, checked, focused, value and bounds, without sending the whole screen. For a pass or fail: assert.',
+        'Elements matching text, id or role, with enabled, checked, focused, value and bounds; no whole screen. For a pass or fail: assert.',
       input: Selector,
       output: FindOut,
       annotations: READ,
@@ -89,7 +89,7 @@ export function readOps(
     defineOp({
       name: 'wait_for',
       title: 'Wait for',
-      description: `Wait until an element shows (gone: until it is gone): text, id, role or ref; timeoutMs default ${WAIT_MS}, at most ${MAX_WAIT_MS}. Use this instead of fixed sleeps.`,
+      description: `Wait until an element shows (gone: until it is gone): text, id, role or ref. Use this instead of fixed sleeps.`,
       input: z.object({ ...WaitStep.omit({ action: true }).shape, read: Read }).strict(),
       output: WaitOut,
       annotations: READ,
@@ -123,7 +123,7 @@ export function readOps(
     defineOp({
       name: 'screenshot',
       title: 'Screenshot',
-      description: `An image of the screen (at most ${SHOT_PX} px) and the scale from image pixels to tap units. Only for a visual judgement; read the screen with screen first. A second image of an unchanged screen is refused.`,
+      description: `An image of the screen (at most ${SHOT_PX} px) and the scale from its pixels to tap units; only for a visual judgement. A second one of an unchanged screen is refused.`,
       input: z.object({}).strict(),
       output: ScreenshotOut,
       annotations: READ,

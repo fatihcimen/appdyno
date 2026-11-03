@@ -659,7 +659,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner): Op[] {
       name: 'flow',
       title: 'Flow',
       description:
-        'Record your actions; replay them with no model. action: start, stop, save (file, overwrite), run (file, from: a step, params: NAME=value; a miss stops with the nearest), export (file, to Maestro YAML).',
+        'Record your actions; replay them with no model. save (file, overwrite), run (file, from: a step, params: NAME=value; a miss stops with the nearest), export (file, to Maestro YAML).',
       input: z
         .object({
           action: z.enum(['start', 'stop', 'save', 'run', 'export']),

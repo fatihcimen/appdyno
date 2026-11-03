@@ -151,7 +151,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
       name: 'app',
       title: 'App management',
       description:
-        'Manage apps. action: list (all: with system apps), state, install (path: local .apk or .app), uninstall, clear (its data), grant, revoke (service: such as camera), launch (restarts it with args, env; Android args are key=value extras). Default app: the selected one. A device that cannot refuses and says why.',
+        'list (all: with system apps), state, install (path: local .apk or .app), uninstall, clear (its data), grant, revoke (service: such as camera), launch (restarts it with args, env; Android args are key=value extras). Default app: the selected one.',
       input: z
         .object({
           action: z.enum([
@@ -243,7 +243,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
       name: 'simulator',
       title: 'Simulators and emulators',
       description:
-        'Simulators and emulators, only on request. action: list (what can be started), boot (name: its id or name), shutdown (name; none: only those this tool started).',
+        'Only on request. list (what can be started), boot (name: its id or name), shutdown (name; none: only those this tool started).',
       input: z
         .object({
           action: z.enum(['list', 'boot', 'shutdown']),
@@ -308,7 +308,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
       name: 'device_setting',
       title: 'Device conditions',
       description:
-        "Device conditions; no value reads one. name: dark_mode, reduce_motion, animations (on, off); text_size (1.3; iOS large); locale (tr-TR); network (emulator: slow, full); proxy (host:port, none); battery (0-100). Put back at the session's end or by name restore. One-shot: push (value; title), biometric (match, nomatch), fold (open, closed), call (number; end number), sms (value; title: number).",
+        "No value reads one. dark_mode, reduce_motion, animations: on, off; text_size: 1.3, iOS large; locale: tr-TR; network (emulator): slow, full; proxy: host:port, none; battery: 0-100. Put back at the session's end or by restore. One-shot: push (value; title), biometric (match, nomatch), fold (open, closed), call (number; end number), sms (value; title: number).",
       input: z
         .object({
           name: z.enum([...SETTINGS, 'restore', 'push', 'biometric', 'fold', 'call', 'sms']),

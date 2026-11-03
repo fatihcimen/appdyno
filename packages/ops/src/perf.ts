@@ -54,21 +54,17 @@ import {
 import { swipeLine } from './steps.js';
 import { ACT, defineOp, DESTRUCTIVE, READ, reply, ToolError, type Op } from './tool.js';
 
-const App = z
-  .string()
-  .max(200)
-  .optional()
-  .describe('package or bundle id; default: the selected app');
+const App = z.string().max(200).optional().describe('default: the selected app');
 
 const Scenario = z
   .string()
   .regex(/^[\w.-]{1,60}$/)
   .optional()
-  .describe('the name perf_compare keeps this run under');
+  .describe('name to keep this run under');
 const Probe = z
   .boolean()
   .optional()
-  .describe('iOS simulator: the injected frame probe (relaunches the app once)');
+  .describe('iOS simulator: frame probe, relaunches the app once');
 
 /** Jank above this share of frames is worth a finding (Android vitals counts a session slow above 25 %). */
 const JANK_PERCENT = 10;
@@ -266,7 +262,7 @@ export function perfOps(ctx: ServerContext): Op[] {
       name: 'perf_snapshot',
       title: 'Performance snapshot',
       description:
-        "The app's CPU now (2 s), its memory, its frames since the last measure and the device's state (load, heat). The measurement id and the raw output are kept.",
+        "The app's CPU now, memory, frames since the last measure and the device's load and heat. The measurement id and raw output are kept.",
       input: z
         .object({
           app: App,
@@ -275,7 +271,7 @@ export function perfOps(ctx: ServerContext): Op[] {
             .array(z.enum(['threads', 'network', 'energy', 'exits', 'size']))
             .optional()
             .describe(
-              'threads: each thread and its time above 90 %; network: bytes in the window; energy: a modelled estimate; exits: crashes and ANRs; size: on disk',
+              'threads: each with its time above 90 %; network: bytes; energy: modelled; exits: crashes, ANRs; size: on disk',
             ),
           scenario: Scenario,
         })
@@ -364,7 +360,7 @@ export function perfOps(ctx: ServerContext): Op[] {
               ]
             : []),
           ...(energy?.value.mah !== undefined
-            ? [{ kind: 'energy.mah', unit: 'mah' as const, samples: [energy.value.mah] }]
+            ? [{ kind: 'energy.mah', unit: 'mah' as const, samples: [energy.value.mah], modelled: true }]
             : []),
           ...(exits
             ? [
@@ -467,7 +463,7 @@ export function perfOps(ctx: ServerContext): Op[] {
       name: 'perf_scroll',
       title: 'Scroll performance',
       description:
-        'Measure frames and memory while scrolling a list: each round resets the frames, swipes `swipes` times, and reads frames and memory once the list stops. Up or down only.',
+        'Frames and memory while scrolling a list: each round resets the frames, swipes `swipes` times, and reads both once the list stops.',
       input: z
         .object({
           app: App,
@@ -612,7 +608,7 @@ export function perfOps(ctx: ServerContext): Op[] {
       name: 'perf_launch',
       title: 'Launch time',
       description:
-        "The app's launch time: cold (stopped first), warm (process alive, activity new) or hot (back from the background); a warm-up, then `repeats` launches, median. Android: `compile` sets the compile state (reset afterwards), `trace` adds a Perfetto start trace naming why it was slow. The app restarts.",
+        'Launch time: cold (stopped first), warm (process alive, activity new) or hot (back from the background); a warm-up, then `repeats` launches, median. Android: `compile` sets the compile state (then reset), `trace` adds a Perfetto trace naming why it was slow. The app restarts.',
       input: z
         .object({
           app: App,
@@ -730,7 +726,7 @@ export function perfOps(ctx: ServerContext): Op[] {
       name: 'perf_profile',
       title: 'CPU profile',
       description:
-        "Where the app's CPU time goes: sampling for `seconds` (the app must be debuggable or profileable), the functions that take the most. Optionally scrolls during the recording.",
+        "Where the app's CPU time goes: sampled for `seconds` (a debuggable or profileable app), the top functions. `scroll` scrolls meanwhile.",
       input: z
         .object({
           app: App,
@@ -780,7 +776,7 @@ export function perfOps(ctx: ServerContext): Op[] {
       name: 'perf_heap',
       title: 'Heap dump',
       description:
-        "The app's heap into a file on this machine (Android: Java HPROF, opened with a memory analyser; iOS simulator: an Xcode memory graph and the leak count). For a suspected leak, after perf_scroll. Android `profile`: a Perfetto java_hprof or heapprofd trace, top classes or sites, for a debuggable or profileable build.",
+        "The app's heap into a local file (Android: Java HPROF, for a memory analyser; iOS simulator: an Xcode memory graph and the leak count). For a suspected leak, after perf_scroll. Android `profile`: a Perfetto trace, top classes or sites, for a debuggable or profileable build.",
       input: z
         .object({
           app: App,
@@ -831,7 +827,7 @@ export function perfOps(ctx: ServerContext): Op[] {
       name: 'perf_trace',
       title: 'Frame trace',
       description:
-        "Record frames (Android 12+: each frame's time and why it was late; iPhone: animation hitches, their ratio and causes; iOS simulator with `probe`: main-thread pacing). Optionally scrolls during the recording. `what`: hangs (iPhone), or XCTest's own hitch or launch metric. The trace is kept for perf_query.",
+        "Record frames (Android 12+: each frame's time and why it was late; iPhone: animation hitches, their ratio and causes; iOS simulator with `probe`: main-thread pacing). `scroll` scrolls meanwhile. `what`: hangs (iPhone), or XCTest's own hitch or launch metric. The trace is kept for perf_query.",
       input: z
         .object({
           app: App,
@@ -1048,7 +1044,7 @@ export function perfOps(ctx: ServerContext): Op[] {
       name: 'perf_compare',
       title: 'Compare with the baseline',
       description:
-        'The newest measured runs against the baseline and budgets in .appdyno/perf/; a change counts only when statistically and practically significant. `action`: compare; budget (budgets only); baseline (adds the newest run to the baseline, `replace` starts it over); dashboard (writes the page, answers its path). No device needed.',
+        'The newest runs against the baseline and budgets in .appdyno/perf/; a change counts only when statistically and practically significant. budget: budgets only; baseline: adds the newest run to the baseline, `replace` starts it over; dashboard: writes the page, answers its path. No device needed.',
       input: z
         .object({
           action: z.enum(['compare', 'budget', 'baseline', 'dashboard']).default('compare'),
@@ -1130,7 +1126,7 @@ export function perfOps(ctx: ServerContext): Op[] {
       name: 'perf_query',
       title: 'Query a kept trace',
       description:
-        'A bounded table from a kept trace, no new recording: Perfetto (.pftrace): read-only SQL; Instruments (.trace): a table digested to its top rows (`table`; none lists the tables).',
+        'A bounded table from a kept trace: Perfetto (.pftrace): read-only SQL; Instruments (.trace): its top rows (`table`; none lists the tables).',
       input: z
         .object({
           trace: z.string().max(1000).describe('the path a perf_ answer gave'),

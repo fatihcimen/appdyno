@@ -333,7 +333,7 @@ export function reportFor(ctx: ServerContext) {
       name: 'report',
       title: 'Session report',
       description:
-        "A folder with index.html: steps, the screen and an image after each, video, logs, crashes, measurements; secrets hidden, nothing from the network. action: start (dir) keeps steps until stop or the session's end; write writes it now; stop.",
+        "A folder with index.html: steps, the screen and an image after each, video, logs, crashes, measurements; secrets hidden, loads nothing. start (dir) keeps steps until stop or the session's end; write: now.",
       input: z
         .object({
           action: z.enum(['start', 'write', 'stop']),

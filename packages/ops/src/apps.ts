@@ -17,7 +17,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers): Op[] {
       name: 'open_link',
       title: 'Open link',
       description:
-        'Open a link (https:// or an app scheme) and return the screen it opened; with an app selected the link opens in it.',
+        'Open a link (https:// or an app scheme) and answer its screen; with an app selected it opens there.',
       input: z.object({ url: z.string().min(3).max(2_000), read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
@@ -32,7 +32,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers): Op[] {
       name: 'launch_app',
       title: 'Launch app',
       description:
-        'Launch the app (brings it to the front when it runs) and return its screen; default: the selected app.',
+        'Launch the app (to the front if it runs) and answer its screen; default: the selected app.',
       input: z.object({ app: z.string().max(200).optional(), read: Read }).strict(),
       output: ActionOut,
       annotations: DESTRUCTIVE,

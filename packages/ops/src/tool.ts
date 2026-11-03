@@ -57,23 +57,26 @@ export function defineOp<S extends z.ZodObject>(def: {
   return { ...rest, handler: run as Tool['handler'] };
 }
 
-const withoutLengths = (v: unknown): unknown => {
-  if (Array.isArray(v)) return v.map(withoutLengths);
+const SERVER_CHECKS = new Set(['maxLength', 'minLength', 'maxItems', 'minItems', 'pattern']);
+
+const withoutChecks = (v: unknown): unknown => {
+  if (Array.isArray(v)) return v.map(withoutChecks);
   if (!v || typeof v !== 'object') return v;
   return Object.fromEntries(
     Object.entries(v)
-      .filter(([k, x]) => k !== 'maxLength' || typeof x !== 'number')
-      .map(([k, x]) => [k, withoutLengths(x)]),
+      // an object under such a name is an argument called that
+      .filter(([k, x]) => !SERVER_CHECKS.has(k) || typeof x === 'object')
+      .map(([k, x]) => [k, withoutChecks(x)]),
   );
 };
 
 /**
- * An op's arguments as a client's catalog holds them: what has a default is optional. A length limit is
- * the server's to refuse and no client's to know: left out, as a catalog is read on every session.
+ * An op's arguments as a client's catalog holds them: what has a default is optional. A length limit or a
+ * pattern is the server's to refuse and no client's to know: left out, as a catalog is read on every session.
  */
 export function inputSchemaOf(op: Pick<Tool, 'input'>) {
   const { $schema: _, ...schema } = z.toJSONSchema(op.input, { io: 'input', target: 'draft-7' });
-  return withoutLengths(schema) as { type: 'object'; [k: string]: unknown };
+  return withoutChecks(schema) as { type: 'object'; [k: string]: unknown };
 }
 
 export const text = (t: string): Block[] => [{ type: 'text', text: t }];
