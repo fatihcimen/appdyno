@@ -6,3 +6,4 @@ export * from './call.js';
 export * from './device.js';
 export * from './screen/index.js';
 export * from './video.js';
+export * from './png.js';

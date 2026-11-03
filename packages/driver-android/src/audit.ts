@@ -1,80 +1,11 @@
-import { inflateSync } from 'node:zlib';
 import type { AuditIssue, AuditResult, AuditType, TextClip, Tree } from '@appdyno/protocol';
-import { elementsOf, type UiElement } from '@appdyno/core';
+import { elementsOf, type Image, type UiElement } from '@appdyno/core';
 
 /**
  * Android's accessibility checks, computed on the host from the agent's tree, a screenshot and the
  * characters each text node does not show (`a11y.read`). iOS has the platform's own audit (the runner's
  * `audit`); these checks are named after its types where they check the same thing.
  */
-
-/** A decoded screenshot: 8-bit RGB or RGBA rows, top to bottom. */
-export type Image = { width: number; height: number; channels: 3 | 4; data: Uint8Array };
-
-const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-
-/**
- * The agent's PNG screenshots as pixels (zlib and the five row filters, no dependency).
- * shortcut: 8-bit RGB/RGBA, non-interlaced only (what the agent's encoder writes); anything else is null
- * and the screen gets no colour checks
- */
-export function decodePng(buf: Buffer): Image | null {
-  try {
-    if (buf.length < 33 || !buf.subarray(0, 8).equals(PNG)) return null;
-    let p = 8;
-    let width = 0;
-    let height = 0;
-    let c: 3 | 4 | undefined;
-    const idat: Buffer[] = [];
-    while (p + 8 <= buf.length) {
-      const len = buf.readUInt32BE(p);
-      const type = buf.toString('latin1', p + 4, p + 8);
-      const data = buf.subarray(p + 8, p + 8 + len);
-      if (type === 'IHDR') {
-        width = data.readUInt32BE(0);
-        height = data.readUInt32BE(4);
-        const [depth, color, , , interlace] = data.subarray(8, 13);
-        if (depth !== 8 || interlace !== 0 || (color !== 2 && color !== 6)) return null;
-        c = color === 6 ? 4 : 3;
-      } else if (type === 'IDAT') idat.push(data);
-      else if (type === 'IEND') break;
-      p += 12 + len;
-    }
-    if (!c || width === 0 || height === 0 || width * height > 16e6) return null;
-    const stride = width * c;
-    const raw = inflateSync(Buffer.concat(idat), { maxOutputLength: height * (stride + 1) });
-    if (raw.length < height * (stride + 1)) return null;
-    const out = new Uint8Array(height * stride);
-    const left = (dst: number, x: number) => (x >= c ? out[dst + x - c]! : 0);
-    for (let y = 0; y < height; y++) {
-      const f = raw[y * (stride + 1)];
-      const src = y * (stride + 1) + 1;
-      const dst = y * stride;
-      const up = (x: number) => (y > 0 ? out[dst - stride + x]! : 0);
-      // one loop per filter type: a branch per byte would double the decode time
-      if (f === 0) out.set(raw.subarray(src, src + stride), dst);
-      else if (f === 1)
-        for (let x = 0; x < stride; x++) out[dst + x] = raw[src + x]! + left(dst, x);
-      else if (f === 2) for (let x = 0; x < stride; x++) out[dst + x] = raw[src + x]! + up(x);
-      else if (f === 3)
-        for (let x = 0; x < stride; x++)
-          out[dst + x] = raw[src + x]! + ((left(dst, x) + up(x)) >> 1);
-      else if (f === 4)
-        for (let x = 0; x < stride; x++) {
-          const a = left(dst, x);
-          const b = up(x);
-          const d = x >= c && y > 0 ? out[dst - stride + x - c]! : 0;
-          const q = a + b - d;
-          const [pa, pb, pc] = [Math.abs(q - a), Math.abs(q - b), Math.abs(q - d)];
-          out[dst + x] = raw[src + x]! + (pa <= pb && pa <= pc ? a : pb <= pc ? b : d);
-        }
-      else return null;
-    }
-    return { width, height, channels: c, data: out };
-  } catch {
-    return null;
-  }
-}
 
 type Rgb = [number, number, number];
 /** WCAG relative luminance and contrast ratio. */

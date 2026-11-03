@@ -4,6 +4,7 @@ import { readVideo, reportProgress, stateDir, type RecordingHandle } from '@appd
 import type { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
+import { reportVideoDir } from './report.js';
 import { RecordOut } from './schemas.js';
 import { refused, type Session } from './session.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError, type Op } from './tool.js';
@@ -88,8 +89,7 @@ export function recordOps(ctx: ServerContext): Op[] {
         const to = resolve(
           file ??
             join(
-              stateDir(),
-              'video',
+              reportVideoDir(s.device.serial) ?? join(stateDir(), 'video'),
               `${s.device.serial.replace(/[^\w.-]/g, '_')}-${since.replace(/\W/g, '')}.${recorder.extension}`,
             ),
         );

@@ -15,6 +15,7 @@ import {
 import {
   afterTimeout,
   buildScreen,
+  decodePng,
   DeviceQueue,
   TIMEOUTS,
   type ActOptions,
@@ -27,7 +28,7 @@ import {
 import { Adb, assertSerial, shq } from './adb.js';
 import { androidCrashes } from './crashes.js';
 import { androidLogs } from './logs.js';
-import { auditAndroid, decodePng } from './audit.js';
+import { auditAndroid } from './audit.js';
 import { AndroidAgentLauncher, REMOTE_DIR } from './agent.js';
 import { AndroidApps, AndroidSettings, assertPkg } from './manage.js';
 import { AndroidPerf } from './perf.js';

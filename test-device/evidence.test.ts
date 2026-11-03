@@ -1,11 +1,11 @@
 import { execFile, execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, opsFor, ServerContext, ToolError, type Op } from '@appdyno/ops';
-import { Adb, androidProvider, appleProvider } from 'appdyno';
+import { Adb, androidProvider, appleProvider, decodePng } from 'appdyno';
 
 /**
  * Phase 6 on real devices, through the operations an agent calls and, where a recording must outlive its
@@ -171,6 +171,69 @@ for (const { platform, serial, provider } of targets)
         expect(r.text).toMatch(/cannot write|did not start/);
         expect((await h.call('record', { action: 'stop' })).text).toMatch(/no recording runs/);
       });
+    });
+
+    describe('report', () => {
+      const SECRET = 'gizli-kod-9911';
+      const PASSWORD = 'p4ss-w0rd-7788';
+
+      it('is one folder with the steps, a screen and an image after each, and hides secrets', async () => {
+        const folder = file('report');
+        await h.ok('report', { action: 'start', dir: folder });
+        await h.ok('open_link', { url: 'appdyno-fixture://open/form' });
+        await h.ok('type_text', { selector: { id: 'name_input' }, text: SECRET });
+        await h.ok('type_text', { selector: { id: 'password_input' }, text: PASSWORD });
+        await h.ok('keyboard', { action: 'dismiss' }).catch(() => undefined);
+        const fg = await h.call('perf_snapshot');
+        await h.ok('record', { action: 'start' });
+        await stir(h.ok, 1);
+        await h.ok('record', { action: 'stop' });
+        const done = await h.ok('report', { action: 'stop' });
+        expect(done.data.file).toBe(join(folder, 'index.html'));
+
+        const html = readFileSync(join(folder, 'index.html'), 'utf8');
+        const journal = readFileSync(join(folder, 'steps.jsonl'), 'utf8');
+        for (const text of [html, journal]) {
+          expect(text).not.toContain(SECRET);
+          expect(text).not.toContain(PASSWORD);
+        }
+        // nothing on the network: no script, no remote image; the only addresses are in the text
+        expect(html).not.toMatch(/<script|<link|<iframe/i);
+        expect(html).not.toMatch(/(src|href)="https?:/i);
+        expect(html).toMatch(/type_text/);
+        expect(html).toContain('<h2>Log</h2>');
+        expect(html).toContain('<h2>Crashes</h2>');
+        if (!fg.error) expect(html).toMatch(/Measurements \([1-9]/);
+
+        // every image it names is there, and is one
+        const shots = [...html.matchAll(/<img [^>]*src="([^"]+)"/g)].map((m) => m[1]!);
+        expect(shots.length).toBeGreaterThan(2);
+        for (const shot of shots) expect(statSync(join(folder, shot)).size).toBeGreaterThan(100);
+
+        // the steps that show the secret: an image painted over where the secret stands
+        const painted = shots.filter((s) => s.endsWith('.png'));
+        expect(painted.length, 'an image with the secret in it').toBeGreaterThan(0);
+        const img = decodePng(readFileSync(join(folder, painted[0]!)))!;
+        expect(img).not.toBeNull();
+        const blacks = img.data.filter((_, i) => i % img.channels === 0 && img.data[i] === 0).length;
+        expect(blacks / (img.width * img.height)).toBeGreaterThan(0.005);
+
+        // the video is in the folder, and plays
+        const video = /<video controls src="([^"]+)"/.exec(html)?.[1];
+        expect(video).toBeDefined();
+        assertPlayable(join(folder, video!), 0.05);
+      }, 240_000);
+
+      it('works from the command line, one process per step', async () => {
+        const folder = file('report-cli');
+        expect((await cli(serial!, 'report', 'start', '--dir', folder)).code).toBe(0);
+        const open = await cli(serial!, 'open-link', '--url', 'appdyno-fixture://open/list');
+        expect(open.err).toBe('');
+        const r = await cli(serial!, 'report', 'stop');
+        expect(r.err).toBe('');
+        expect(r.out).toContain('1 steps');
+        expect(readFileSync(join(folder, 'index.html'), 'utf8')).toMatch(/1\. open_link/);
+      }, 120_000);
     });
   });
 

@@ -202,10 +202,10 @@ export class FakeDevice implements Device {
     const r = await this.act({ kind: 'key', key: 'tab' }, opts);
     return { ...r, mode: 'setText' as const, verified: true, focusMs: 5 };
   }
-  async screenshot() {
+  async screenshot(): ReturnType<Device['screenshot']> {
     this.record('screenshot');
     return {
-      meta: { w: 460, h: 1024, format: 'jpeg' as const, bytes: 3 },
+      meta: { w: 460, h: 1024, format: 'jpeg', bytes: 3 },
       data: Buffer.from([1, 2, 3]),
     };
   }

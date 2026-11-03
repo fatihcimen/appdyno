@@ -107,6 +107,13 @@ export const ScreenshotOut = z.object({
 
 export const DoneOut = z.object({ done: z.string() });
 
+export const ReportOut = z.object({
+  done: z.string(),
+  dir: z.string(),
+  file: z.string().optional(),
+  steps: z.number().int().optional(),
+});
+
 export const RecordOut = z.object({
   done: z.string(),
   files: z.array(z.string()),
