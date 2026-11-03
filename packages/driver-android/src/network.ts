@@ -60,6 +60,16 @@ export function packetEntries(csv: string): NetworkEntry[] {
     });
 }
 
+/**
+ * Perfetto's list of its sources, when this build has it: a Xiaomi's `user` build on Android 16 has no packet source,
+ * so a trace of it holds nothing, while the emulator's `userdebug` build has.
+ */
+export const registersPackets = (query: string) =>
+  !query.includes('DATA SOURCES REGISTERED') || query.includes('android.network_packets');
+
+const NOT_REGISTERED =
+  'this build does not register android.network_packets, so a trace would hold no packet: use bytes. A `user` build registers it only behind a flag (`device_config put tethering enable_network_tracing 1` and a reboot, not tried here, and this tool never sets it)';
+
 /** Android's own counts of an app's traffic: `dumpsys netstats`, and Perfetto's packet trace on 14+. */
 export class AndroidNetwork implements NetworkSource {
   constructor(
@@ -71,14 +81,20 @@ export class AndroidNetwork implements NetworkSource {
 
   async paths(): Promise<NetworkPath[]> {
     const sdk = Number((await this.sh('getprop ro.build.version.sdk')).trim());
+    const refused =
+      sdk < PACKETS_SDK
+        ? `the packet trace needs Android 14; this is SDK ${sdk}`
+        : !registersPackets(await this.sh('perfetto --query 2>/dev/null').catch(() => ''))
+          ? NOT_REGISTERED
+          : undefined;
     return [
       { via: 'bytes', sees: `an app's bytes and packets over the window; ${NO_BODIES}` },
-      sdk >= PACKETS_SDK
-        ? {
+      refused
+        ? { via: 'packets', refused }
+        : {
             via: 'packets',
             sees: `an app's packets by remote port and direction, read at stop; ${NO_BODIES}`,
-          }
-        : { via: 'packets', refused: `the packet trace needs Android 14; this is SDK ${sdk}` },
+          },
       {
         via: 'probe',
         refused: 'the probe is for a simulator: an Android app takes no injected library here',

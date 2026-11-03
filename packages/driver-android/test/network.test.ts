@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { uidBytes, packetEntries } from '../src/network.js';
+import { packetEntries, registersPackets, uidBytes } from '../src/network.js';
 
 describe('Android counts', () => {
   it('adds up a uid in the UID section only, untagged', () => {
@@ -23,6 +23,13 @@ InterfaceMapUpdater:
 `;
     expect(uidBytes(dump, '10193')).toEqual({ rx: 150, tx: 15, packets: 5 });
     expect(uidBytes(dump, '1')).toEqual({ rx: 0, tx: 0, packets: 0 });
+  });
+
+  it('tells a build with the packet source from one without, and takes no list for neither', () => {
+    const list = 'DATA SOURCES REGISTERED:\nandroid.packages_list  perfetto.traced_probes (2)\n';
+    expect(registersPackets(list)).toBe(false);
+    expect(registersPackets(`${list}android.network_packets  system_server (4)\n`)).toBe(true);
+    expect(registersPackets('')).toBe(true);
   });
 
   it("reads the trace processor's rows", () => {

@@ -386,17 +386,17 @@ describe.skipIf(!android)('network on Android', () => {
   }, 120_000);
 
   it('traces an app by its packets, read at the end', async () => {
-    await h.ok('network', { action: 'start', via: 'packets' });
+    const started = await h.call('network', { action: 'start', via: 'packets' });
+    // a Xiaomi's user build has no packet source, and says so before it records
+    if (started.error && !android!.startsWith('emulator-'))
+      return expect(started.text).toMatch(/does not register android.network_packets/);
     await fetchIn(h.ok, `http://${macHost()}:${web.webPort}/big`);
     expect((await h.ok('network', { action: 'read' })).text).toMatch(/can be read when it ends/);
     const r = await h.ok('network', { action: 'stop' });
     const port = (r.data.entries as { direction: string; host: string; bytes: number }[]).find(
       (e) => e.direction === 'Received' && e.host === `TCP port ${web.webPort}`,
     );
-    // Android 16 on a Xiaomi traces no packets at all, and the answer says so rather than "0 of 0"
-    if ((r.data.entries as unknown[]).length === 0 && !android!.startsWith('emulator-'))
-      expect(r.text).toMatch(/recorded no packets of any app/);
-    else expect(port?.bytes).toBeGreaterThan(200_000);
+    expect(port?.bytes).toBeGreaterThan(200_000);
     expect(r.text).toMatch(/bodies: not by this way/);
   }, 120_000);
 
