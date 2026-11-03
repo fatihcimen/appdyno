@@ -5,9 +5,11 @@ import {
   FRAME_JSON,
   FrameDecoder,
   METHODS,
+  PROTOCOL,
   codeOfRpc,
   encodeJson,
   type ErrorCode,
+  type Hello,
   type Method,
   type ParamsOf,
   type ResultOf,
@@ -180,5 +182,28 @@ export class RpcClient {
       p.reject(e);
     }
     for (const fn of this.closeListeners) fn(e);
+  }
+}
+
+/** A new connection, once the agent took the token and speaks this protocol; closed if not. */
+export async function greet(
+  socket: ConstructorParameters<typeof RpcClient>[0],
+  rest: Buffer | undefined,
+  who: 'agent' | 'runner',
+  token: string,
+  timeoutMs: number,
+): Promise<{ rpc: RpcClient; hello: Hello }> {
+  const rpc = new RpcClient(socket, rest);
+  try {
+    const { result } = await rpc.call('hello', { token, protocol: PROTOCOL.major }, { timeoutMs });
+    if (result.protocol.major !== PROTOCOL.major)
+      throw new DeviceError(
+        'AGENT_VERSION_MISMATCH',
+        `${who} protocol ${result.protocol.major}, host ${PROTOCOL.major}`,
+      );
+    return { rpc, hello: result };
+  } catch (e) {
+    rpc.close();
+    throw e;
   }
 }

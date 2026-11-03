@@ -1,14 +1,23 @@
 import { spawn } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { closeSync, existsSync, openSync, readdirSync, statSync } from 'node:fs';
-import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm } from 'node:fs/promises';
 import { connect, createServer, type Socket } from 'node:net';
 import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
-import { DeviceError, PROTOCOL, type Hello } from '@appdyno/protocol';
+import { DeviceError, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
-import { pause, run, reportProgress, RpcClient, stateDir } from '@appdyno/core';
+import {
+  greet,
+  pause,
+  readStateFile,
+  reportProgress,
+  run,
+  stateDir,
+  writeStateFile,
+  type RpcClient,
+} from '@appdyno/core';
 import { brandSimulatorRunner, checkoutIos } from './brand.js';
 import { assertUdid, xcodeEnv } from './simctl.js';
 import { recordXctMetrics } from './trace.js';
@@ -360,23 +369,7 @@ export class IosRunnerLauncher {
   private async tryConnect(s: State): Promise<{ rpc: RpcClient; hello: Hello }> {
     const { socket, rest } = await this.transport.open(s.port);
     socket.setNoDelay(true);
-    const rpc = new RpcClient(socket, rest);
-    try {
-      const { result } = await rpc.call(
-        'hello',
-        { token: s.token, protocol: PROTOCOL.major },
-        { timeoutMs: 5_000 },
-      );
-      if (result.protocol.major !== PROTOCOL.major)
-        throw new DeviceError(
-          'AGENT_VERSION_MISMATCH',
-          `runner protocol ${result.protocol.major}, host ${PROTOCOL.major}`,
-        );
-      return { rpc, hello: result };
-    } catch (e) {
-      rpc.close();
-      throw e;
-    }
+    return greet(socket, rest, 'runner', s.token, 5_000);
   }
 
   private async kill(pid: number) {
@@ -394,16 +387,11 @@ export class IosRunnerLauncher {
     }
   }
 
-  private async readState(): Promise<State | undefined> {
-    try {
-      return State.parse(JSON.parse(await readFile(this.statePath, 'utf8')));
-    } catch {
-      return undefined;
-    }
+  private readState() {
+    return readStateFile(this.statePath, State);
   }
 
-  private async writeState(s: State) {
-    await writeFile(this.statePath, JSON.stringify(s), { mode: 0o600 });
-    await chmod(this.statePath, 0o600);
+  private writeState(s: State) {
+    return writeStateFile(this.statePath, s);
   }
 }

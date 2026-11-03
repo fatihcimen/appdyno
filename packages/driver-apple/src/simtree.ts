@@ -1,4 +1,4 @@
-import type { Tree } from '@appdyno/protocol';
+import { NODE_FLAGS, type Tree } from '@appdyno/protocol';
 
 type Node = Tree['nodes'][number];
 
@@ -25,20 +25,7 @@ const CHECKABLE = new Set(['Switch', 'Toggle', 'CheckBox']);
 
 const SCROLLERS = new Set(['ScrollView', 'Table', 'CollectionView', 'WebView', 'TextView']);
 
-const F = {
-  visible: 1,
-  clickable: 2,
-  focusable: 4,
-  focused: 8,
-  enabled: 16,
-  checked: 32,
-  selected: 64,
-  editable: 128,
-  scrollable: 256,
-  password: 512,
-  checkable: 1024,
-  longClickable: 2048,
-};
+const F = NODE_FLAGS;
 
 const TRAIT_SELECTED = 1n << 3n;
 

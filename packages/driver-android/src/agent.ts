@@ -1,11 +1,20 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DeviceError, PROTOCOL, type Hello } from '@appdyno/protocol';
+import { DeviceError, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
-import { safeName, pause, reportProgress, RpcClient, stateDir } from '@appdyno/core';
+import {
+  greet,
+  pause,
+  readStateFile,
+  reportProgress,
+  safeName,
+  stateDir,
+  writeStateFile,
+  type RpcClient,
+} from '@appdyno/core';
 import { type Adb, assertSerial, shq } from './adb.js';
 import { conflictHint, holdersIn, type Holder } from './holders.js';
 
@@ -208,23 +217,7 @@ export class AndroidAgentLauncher {
 
   private async tryConnect(state: State): Promise<{ rpc: RpcClient; hello: Hello }> {
     const { socket, rest } = await this.adb.open(this.serial, `localabstract:${state.socket}`);
-    const rpc = new RpcClient(socket, rest);
-    try {
-      const { result } = await rpc.call(
-        'hello',
-        { token: state.token, protocol: PROTOCOL.major },
-        { timeoutMs: 3_000 },
-      );
-      if (result.protocol.major !== PROTOCOL.major)
-        throw new DeviceError(
-          'AGENT_VERSION_MISMATCH',
-          `agent protocol ${result.protocol.major}, host ${PROTOCOL.major}`,
-        );
-      return { rpc, hello: result };
-    } catch (e) {
-      rpc.close();
-      throw e;
-    }
+    return greet(socket, rest, 'agent', state.token, 3_000);
   }
 
   /** Stops every agent process of ours on the device; true when there was one. */
@@ -254,17 +247,12 @@ export class AndroidAgentLauncher {
       .catch(() => undefined);
   }
 
-  private async readState(): Promise<State | undefined> {
-    try {
-      return State.parse(JSON.parse(await readFile(this.statePath, 'utf8')));
-    } catch {
-      return undefined;
-    }
+  private readState() {
+    return readStateFile(this.statePath, State);
   }
 
   private async writeState(s: State) {
     await mkdir(stateDir(), { recursive: true, mode: 0o700 });
-    await writeFile(this.statePath, JSON.stringify(s), { mode: 0o600 });
-    await chmod(this.statePath, 0o600);
+    await writeStateFile(this.statePath, s);
   }
 }

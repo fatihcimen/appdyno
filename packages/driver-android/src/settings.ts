@@ -8,6 +8,15 @@ const ANIMATION_SCALES = [
   'animator_duration_scale',
 ];
 
+const localeApp = (app: string | undefined) => {
+  if (!app)
+    throw new DeviceError(
+      'INVALID_ARGUMENT',
+      'on Android the locale is per app (API 33+): give app; the whole device has no shell switch',
+    );
+  return assertPkg(app);
+};
+
 export class AndroidSettings implements DeviceSettings {
   constructor(
     private readonly adb: Adb,
@@ -68,12 +77,7 @@ export class AndroidSettings implements DeviceSettings {
       case 'animations':
         return this.getAnimations();
       case 'locale': {
-        if (!app)
-          throw new DeviceError(
-            'INVALID_ARGUMENT',
-            'on Android the locale is per app (API 33+): give app; the whole device has no shell switch',
-          );
-        const out = await this.sh(`cmd locale get-app-locales ${assertPkg(app)}`);
+        const out = await this.sh(`cmd locale get-app-locales ${localeApp(app)}`);
         return /are \[([^\]]*)\]/.exec(out)?.[1] ?? '';
       }
       case 'network':
@@ -119,13 +123,8 @@ export class AndroidSettings implements DeviceSettings {
         await this.setAnimations(value);
         return;
       case 'locale': {
-        if (!app)
-          throw new DeviceError(
-            'INVALID_ARGUMENT',
-            'on Android the locale is per app (API 33+): give app; the whole device has no shell switch',
-          );
         const out = await this.sh(
-          `cmd locale set-app-locales ${assertPkg(app)} --locales ${shq(value)}`,
+          `cmd locale set-app-locales ${localeApp(app)} --locales ${shq(value)}`,
         );
         if (/Unknown|Exception|Error/.test(out))
           throw new DeviceError(

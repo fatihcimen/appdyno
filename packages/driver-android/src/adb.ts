@@ -123,13 +123,7 @@ export class Adb {
    */
   async open(serial: string, service: string): Promise<{ socket: Socket; rest: Buffer }> {
     const { socket, reader } = await this.request(`host:transport:${assertSerial(serial)}`, serial);
-    try {
-      await this.send(socket, service);
-      await this.okay(reader, serial);
-    } catch (e) {
-      socket.destroy();
-      throw e;
-    }
+    await this.ask(socket, reader, service, serial);
     return { socket, rest: reader.detach() };
   }
 
@@ -221,6 +215,11 @@ export class Adb {
   private async request(service: string, serial?: string) {
     const socket = await this.connectServer();
     const reader = new Reader(socket);
+    await this.ask(socket, reader, service, serial);
+    return { socket, reader };
+  }
+
+  private async ask(socket: Socket, reader: Reader, service: string, serial?: string) {
     try {
       await this.send(socket, service);
       await this.okay(reader, serial);
@@ -228,7 +227,6 @@ export class Adb {
       socket.destroy();
       throw e;
     }
-    return { socket, reader };
   }
 
   private async connectServer(): Promise<Socket> {
