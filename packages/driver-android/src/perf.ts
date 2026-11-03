@@ -317,7 +317,7 @@ export class AndroidPerf implements MeasureSource {
       const raw = await this.sh(`am start -W ${flags}-n ${component}`, 60_000);
       const s = parseAmStart(raw);
       const started = Date.now();
-      let log = '';
+      let log: string;
       let drawn: number | undefined;
       do {
         await pause(200);

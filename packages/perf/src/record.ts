@@ -53,8 +53,11 @@ export const deviceClass = (d: DeviceInfo) =>
     `${d.platform}-${d.virtual ? 'virtual' : 'physical'}-${d.model}-${d.os.split('.')[0] ?? d.os}`,
   );
 
-/** Host load per core over this: a virtual device shares the host's cores with whatever else runs. */
-const HOST_LOAD_PER_CORE = 1;
+/**
+ * Host load per core over this: a virtual device shares the host's cores with whatever else runs. An emulator's
+ * cold start doubled, 350 ms to 700 ms, between load 11 and 16 on 15 cores (docs/perf.md).
+ */
+const HOST_LOAD_PER_CORE = 0.8;
 /** Above this a device is busy with more than the app (the design's limit for a timed run is 3). */
 const DEVICE_LOAD = 8;
 const CPU_PRESSURE = 40;

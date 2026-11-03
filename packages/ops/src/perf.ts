@@ -1029,26 +1029,31 @@ export function perfOps(ctx: ServerContext): Op[] {
         if (keys.length === 0)
           throw new ToolError('no measured runs: run a perf_ operation first', 'NOT_FOUND');
         if (action === 'baseline') {
-          const files = await Promise.all(
-            keys.map(async (k) => {
-              const [newest] = await latestRuns(dir, k);
-              return {
-                noise: newest?.[0]?.noise ?? [],
-                file: await saveBaseline(
-                  project,
-                  addToBaseline(k, await loadBaseline(project, k), newest ?? [], replace),
-                ),
-              };
-            }),
-          );
-          const loud = files.flatMap((f) => f.noise);
-          return reply(
-            [
-              ...files.map((f) => `baseline: ${f.file}`),
-              ...(loud.length ? [`measured with noise: ${[...new Set(loud)].join(', ')}`] : []),
-            ].join('\n'),
-            { failed: false, exitCode: 0, reports: [], baselines: files.map((f) => f.file) },
-          );
+          const lines: string[] = [];
+          const files: string[] = [];
+          let left = 0;
+          for (const k of keys) {
+            const [newest = []] = await latestRuns(dir, k);
+            // a reference taken under load would hide every later change
+            const loud = (newest[0]?.noise ?? []).filter((n) => n !== 'debuggable-build');
+            if (loud.length) {
+              left++;
+              lines.push(`not added, ${loud.join(', ')}: measure ${k.scenario} again`);
+              continue;
+            }
+            const file = await saveBaseline(
+              project,
+              addToBaseline(k, await loadBaseline(project, k), newest, replace),
+            );
+            files.push(file);
+            lines.push(`baseline: ${file}`);
+          }
+          return reply(lines.join('\n'), {
+            failed: left > 0,
+            exitCode: left > 0 ? 1 : 0,
+            reports: [],
+            baselines: files,
+          });
         }
         const rules = await loadBudgets(project);
         const reports: KeyReport[] = await Promise.all(

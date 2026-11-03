@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { stateDir, type MeasureSource } from '@appdyno/core';
@@ -10,13 +10,21 @@ import { FakeDevice } from './fake-device.js';
 const fresh = () => mkdtempSync(join(tmpdir(), 'appdyno-gate-'));
 
 /** Launches of a set length, as a device's measure would answer them. */
-function context(startup: { ms: number }, measurements: string, perf: string) {
+function context(
+  startup: { ms: number },
+  measurements: string,
+  perf: string,
+  vitals: Record<string, unknown> = {},
+) {
   const device = new FakeDevice();
   const m = device.measure;
   Object.defineProperty(device, 'measure', {
     value: {
       ...m,
+      // a physical device: the host's load, whatever it is right now, does not make its numbers noisy
+      virtual: false,
       buildType: async () => 'release',
+      vitals: async () => ({ value: vitals, raw: '', at: new Date().toISOString() }),
       launch: async () => ({
         value: {
           mode: 'cold',
@@ -80,6 +88,16 @@ describe('the gate', () => {
     expect(budget.data.exitCode).toBe(1);
   });
 
+  it('adds no run measured with noise to a baseline', async () => {
+    const project = fresh();
+    const ops = context({ ms: 500 }, fresh(), project, { thermalStatus: 3 });
+    await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
+    const r = await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
+    expect(text(r)).toMatch(/not added, hot-device: measure launch-cold again/);
+    expect(r.data.exitCode).toBe(1);
+    expect(existsSync(join(project, 'baselines'))).toBe(false);
+  });
+
   it('says when there is nothing measured', async () => {
     const ops = context({ ms: 1 }, fresh(), fresh());
     await expect(
@@ -99,7 +117,7 @@ describe('the gate', () => {
     });
     const [r] = JSON.parse(text(json)).reports;
     expect(r.scenario).toBe('first-open');
-    expect(r.deviceClass).toMatch(/virtual/);
+    expect(r.deviceClass).toMatch(/physical/);
     expect(r.comparisons[0].verdict).toBe('new');
   });
 });

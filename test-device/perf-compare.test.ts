@@ -43,7 +43,8 @@ const targets: Target[] = [
     name: 'android',
     serial: process.env.APPDYNO_ANDROID_SERIAL,
     kind: 'launch.ttid_ms',
-    injectMs: 400,
+    // a start this fast hides part of a shorter sleep behind the system's own start work
+    injectMs: 800,
     provider: () => androidProvider(new Adb(), {}),
     inject: async (ms, serial) => {
       await run('adb', [
@@ -88,7 +89,7 @@ const targets: Target[] = [
 /** Waits out other agents' builds: under high load the gate is right to say "noisy", and proves nothing. */
 const quiet = async () => {
   const end = Date.now() + 15 * 60_000;
-  while (loadavg()[0]! > cpus().length * 0.8 && Date.now() < end)
+  while (loadavg()[0]! > cpus().length * 0.7 && Date.now() < end)
     await new Promise((r) => setTimeout(r, 15_000));
 };
 
@@ -123,9 +124,11 @@ for (const t of targets)
       if (t.name === 'ios simulator')
         await new Simctl().launch(t.serial!, APP).catch(() => undefined);
       await t.clear(t.serial!);
-      for (let i = 0; i < BASELINE_RUNS; i++) {
+      // a run measured under load is refused; another is measured in its place
+      for (let added = 0, tries = 0; added < BASELINE_RUNS && tries < 12; tries++) {
         await launch();
-        await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
+        const b = await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
+        if (b.data.exitCode === 0) added++;
       }
       const verdicts: Comparison[] = [];
       for (let i = 0; i < UNCHANGED_RUNS; i++) {
@@ -139,7 +142,9 @@ for (const t of targets)
       }
 
       const [key] = await runKeys(dir, { app: APP });
-      const runs = await latestRuns(dir, key!, BASELINE_RUNS + UNCHANGED_RUNS);
+      const runs = (await latestRuns(dir, key!, 100)).filter(
+        (r) => !r[0]!.noise.some((n) => n !== 'debuggable-build'),
+      );
       const samples = runs.map((r) => r.find((x) => x.kind === t.kind)!.samples);
       const medians = samples.map((x) => [...x].sort((a, b) => a - b)[x.length >> 1]!);
       let pairs = 0;
