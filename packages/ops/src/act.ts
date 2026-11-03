@@ -1,10 +1,4 @@
-import {
-  alertAnswer,
-  keyboardOpen,
-  reportProgress,
-  systemAlert,
-  throwIfCancelled,
-} from '@appdyno/core';
+import { alertAnswer, reportProgress, throwIfCancelled } from '@appdyno/core';
 import { z } from 'zod';
 import { SETTLE, type Answers } from './answers.js';
 import type { ServerContext } from './context.js';
@@ -164,7 +158,7 @@ export function actOps(
         const s = await ctx.session();
         if (action === 'enter') return one(s, { action: 'press_key', key: 'enter' }, read);
         const screen = await s.read();
-        const open = keyboardOpen(screen.tree, s.device.platform);
+        const open = s.device.platformScreen.keyboardOpen(screen.tree);
         if (action === 'status') {
           const t = `the keyboard is ${open ? 'open' : 'closed'}`;
           return reply(t, { ...summary(t), open });
@@ -175,7 +169,7 @@ export function actOps(
         await s.device.dismissKeyboard().catch(refused);
         s.acted();
         const gone = await s.until(
-          (x) => !keyboardOpen(x.tree, s.device.platform),
+          (x) => !s.device.platformScreen.keyboardOpen(x.tree),
           KEYBOARD_GONE_MS,
         );
         if (!gone.met)
@@ -285,8 +279,8 @@ export function actOps(
       run: async ({ answer, read }) => {
         const s = await ctx.session();
         const screen = await s.read();
-        const platform = s.device.platform;
-        const a = systemAlert(screen.tree, screen.elements, platform);
+        const facts = s.device.platformScreen;
+        const a = facts.systemAlert(screen.tree, screen.elements);
         if (!a) {
           const t = "no system alert is open (the app's own dialogs are not touched)";
           return reply(t, summary(t));
@@ -296,7 +290,7 @@ export function actOps(
           const t = `system alert: ${a.texts.map(clean).join(' / ')}\nbuttons: ${buttons}`;
           return reply(t, { ...summary(t), alert: { ...a, texts: a.texts.map(clean) } });
         }
-        const { hit, many } = alertAnswer(a, screen.elements, platform, answer);
+        const { hit, many } = alertAnswer(a, (x) => facts.alertButton(screen.elements, x), answer);
         if (!hit)
           throw new ToolError(
             many

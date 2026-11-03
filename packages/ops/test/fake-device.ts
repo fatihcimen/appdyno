@@ -16,6 +16,8 @@ import {
   type WireNode,
 } from '@appdyno/protocol';
 
+import { androidScreen } from '../../driver-android/src/platform-screen.js';
+
 type Node = Partial<WireNode> & { b: [number, number, number, number]; go?: string };
 
 /** A screen of the fake app: its nodes (a tap inside a node with `go` opens that screen). */
@@ -108,6 +110,7 @@ export const SCREENS: Record<string, Node[]> = {
 
 export class FakeDevice extends DeviceActions implements Device {
   readonly platform = 'android' as const;
+  readonly platformScreen = androidScreen;
   lastStartWasCold = true;
   hello: Hello = {
     agentVersion: '0.1.0',

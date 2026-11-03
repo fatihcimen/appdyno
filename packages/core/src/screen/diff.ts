@@ -1,6 +1,4 @@
-import type { UiElement } from './elements.js';
-import { fold } from './fold.js';
-import type { Platform, ScreenElement } from './model.js';
+import type { ScreenElement } from './model.js';
 
 /** One element as the screen view shows it: ref, role, "label", id=<id> without a label, x,y, flags. */
 export function elementLine(e: ScreenElement, clean: (s: string) => string = (s) => s): string {
@@ -94,74 +92,4 @@ export function diffText(
         `~ ${elementLine(now, clean)}${was.label !== now.label ? ` (was ${JSON.stringify(clean(was.label))})` : ''}`,
     ),
   ].join('\n');
-}
-
-export type AlertAction = 'allow' | 'deny';
-
-/**
- * The words of a system prompt's allow and deny buttons (the device's language), matched on the label
- * as `fold` gives it. English by default; a caller testing in another language passes its own. Without
- * a match the button is picked by its place in the prompt (see alertButton).
- */
-export type AlertWords = { allow: RegExp; deny: RegExp };
-export const ALERT_WORDS: AlertWords = {
-  allow:
-    /^(allow|allow while using( the)? app|allow once|allow full access|while using the app|only this time)$/,
-  deny: /^(don[’']t allow|ask app not to track)$/,
-};
-const PERMISSION_PACKAGES = /^com\.(google\.)?android\.permissioncontroller$/;
-const ANDROID_ALLOW = /:id\/permission_allow(_foreground_only|_one_time)?_button$/;
-const ANDROID_DENY = /:id\/permission_deny(_and_dont_ask_again)?_button$/;
-/** The home screen app, whose alerts are the system's (permission prompts), never the app's own. */
-const IOS_SYSTEM = 'com.apple.springboard';
-
-/**
- * The button of a system permission prompt for `action`: on Android a permission controller's allow or
- * deny button (by id, any language); on iOS a button of an Alert of the home screen app (never an app's
- * own dialog), by `words`, else by its place: of two buttons deny is the first and allow the last; of
- * three or more (location, photos: once / while using / don't) allow is the second and deny the last.
- * Undefined when no such prompt is up.
- */
-// shortcut: ids of the stock permission controller; add an OEM's when a device shows another
-export function alertButton(
-  elements: UiElement[],
-  platform: Platform,
-  action: AlertAction,
-  words: AlertWords = ALERT_WORDS,
-): { label: string; x: number; y: number } | undefined {
-  const text = (e: UiElement) => (e.label || e.text || e.name || '').trim();
-  const at = (e: UiElement | undefined) =>
-    e?.rect && {
-      label: text(e),
-      x: Math.round(e.rect.x + e.rect.width / 2),
-      y: Math.round(e.rect.y + e.rect.height / 2),
-    };
-  if (platform === 'android')
-    return at(
-      elements.find((e) => {
-        const id = e.identifier ?? '';
-        const pkg = /^([\w.]+):id\//.exec(id)?.[1] ?? '';
-        return (
-          !!e.rect &&
-          PERMISSION_PACKAGES.test(pkg) &&
-          (action === 'allow' ? ANDROID_ALLOW : ANDROID_DENY).test(id)
-        );
-      }),
-    );
-  const isUnder = (i: number, p: number): boolean => {
-    for (let q = elements[i]!.parent; q !== undefined; q = elements[q]!.parent)
-      if (q === p) return true;
-    return false;
-  };
-  const alert = elements.findIndex((e) => /alert$/i.test(e.type) && e.pkg === IOS_SYSTEM);
-  if (alert < 0) return undefined;
-  const buttons = elements.filter(
-    (e, i) => /button$/i.test(e.type) && !!e.rect && isUnder(i, alert),
-  );
-  const re = action === 'allow' ? words.allow : words.deny;
-  const byWord = buttons.find((b) => re.test(fold(text(b))));
-  if (byWord) return at(byWord);
-  if (buttons.length < 2) return undefined;
-  // allow is the second button either way; deny the first of two, the last of more
-  return at(action === 'allow' ? buttons[1] : buttons.length === 2 ? buttons[0] : buttons.at(-1));
 }

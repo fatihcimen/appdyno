@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  alertButton,
   buildScreen,
   diffScreens,
   diffText,
@@ -201,7 +200,6 @@ describe('wire tree to screen', () => {
     const els = elementsOf(tree);
     expect(els.map((e) => e.text).filter(Boolean)).toEqual(['Uygulama', 'İzin ver']);
     expect(els.at(-1)!.parent).toBe(2);
-    expect(alertButton(els, 'android', 'allow')).toEqual({ label: 'İzin ver', x: 500, y: 1050 });
     const s = buildScreen(tree, { platform: 'android', appId: 'dev.app' });
     expect(s.foreground).toBe('com.google.android.permissioncontroller');
     expect(s.list.map((e) => e.label)).toContain('İzin ver');
@@ -252,103 +250,6 @@ describe('wire tree to screen', () => {
     expect(buildScreen(tree, { platform: 'android' }).list.map((e) => e.label)).toEqual([
       'görünen',
     ]);
-  });
-});
-
-describe('system alerts', () => {
-  /** An app screen with its own "Tamam" button and a system Alert (the home screen app's) over it. */
-  const promptOver = (buttons: string[], alertPkg = 'com.apple.springboard'): UiElement[] => [
-    { ...root, pkg: 'com.example.app' },
-    {
-      type: 'Button',
-      label: 'Tamam',
-      ref: '@e2',
-      parent: 0,
-      pkg: 'com.example.app',
-      rect: { x: 0, y: 0, width: 50, height: 50 },
-    },
-    {
-      type: 'Alert',
-      label: 'Konum',
-      ref: '@e3',
-      pkg: alertPkg,
-      rect: { x: 50, y: 300, width: 300, height: 200 },
-    },
-    ...buttons.map((label, i): UiElement => ({
-      type: 'Button',
-      label,
-      ref: `@b${i}`,
-      parent: 2,
-      pkg: alertPkg,
-      rect: { x: 50, y: 400 + i * 50, width: 300, height: 44 },
-    })),
-  ];
-
-  it('answers an iOS system alert by the words the caller gives (Turkish here)', () => {
-    // words are matched on the folded label (fold: no accents, dotless ı as i)
-    const tr = {
-      allow: /^(izin ver|uygulamayi kullanirken izin ver|bir kez izin ver)$/,
-      deny: /^izin verme$/,
-    };
-    const els = promptOver(['Uygulamayı Kullanırken İzin Ver', 'İzin Verme']);
-    expect(alertButton(els, 'ios', 'allow', tr)).toEqual({
-      label: 'Uygulamayı Kullanırken İzin Ver',
-      x: 200,
-      y: 422,
-    });
-    expect(alertButton(els, 'ios', 'deny', tr)?.label).toBe('İzin Verme');
-    expect(alertButton(els.slice(0, 2), 'ios', 'allow')).toBeUndefined();
-  });
-
-  it('answers an iOS system alert in English by default and by place in any language', () => {
-    expect(alertButton(promptOver(['Don’t Allow', 'Allow']), 'ios', 'allow')?.label).toBe('Allow');
-    // two buttons (notifications, tracking): deny first, allow last
-    const two = promptOver(['Nicht erlauben', 'Erlauben']);
-    expect(alertButton(two, 'ios', 'allow')?.label).toBe('Erlauben');
-    expect(alertButton(two, 'ios', 'deny')?.label).toBe('Nicht erlauben');
-    // three (location, photos): once, while using, don't
-    const three = promptOver([
-      'Einmal erlauben',
-      'Beim Verwenden der App erlauben',
-      'Nicht erlauben',
-    ]);
-    expect(alertButton(three, 'ios', 'allow')?.label).toBe('Beim Verwenden der App erlauben');
-    expect(alertButton(three, 'ios', 'deny')?.label).toBe('Nicht erlauben');
-  });
-
-  it("never answers an app's own alert on iOS", () => {
-    expect(
-      alertButton(promptOver(['Don’t Allow', 'Allow'], 'com.example.app'), 'ios', 'allow'),
-    ).toBeUndefined();
-  });
-
-  it('on Android only the permission controller, never a dialog button of the app or the system', () => {
-    const win: UiElement = {
-      type: 'android.widget.FrameLayout',
-      ref: '@e1',
-      rect: { x: 0, y: 0, width: 1080, height: 2400 },
-    };
-    const btn = (identifier: string, text: string): UiElement => ({
-      type: 'android.widget.Button',
-      ref: '@e2',
-      text,
-      identifier,
-      parent: 0,
-      rect: { x: 0, y: 1000, width: 200, height: 100 },
-    });
-    expect(
-      alertButton([win, btn('android:id/button1', 'TAMAM')], 'android', 'allow'),
-    ).toBeUndefined();
-    expect(
-      alertButton([win, btn('com.example:id/button1', 'İzin ver')], 'android', 'allow'),
-    ).toBeUndefined();
-    expect(
-      alertButton(
-        [win, btn('com.android.permissioncontroller:id/permission_deny_button', 'İzin verme')],
-        'android',
-        'deny',
-      ),
-    ).toMatchObject({ label: 'İzin verme' });
   });
 });
 

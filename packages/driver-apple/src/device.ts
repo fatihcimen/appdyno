@@ -31,6 +31,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { IosRunnerLauncher } from './runner.js';
 import { recordHitches } from './trace.js';
+import { iosScreen } from './platform-screen.js';
 import { assertBundle } from './simctl.js';
 
 /** Diagnostics: while this file exists, iOS tree reads are written to DUMP_DIR. */
@@ -99,6 +100,7 @@ export function inertPoint(t: Tree): Point {
  */
 export class IosDevice extends RpcDevice implements Device {
   readonly platform = 'ios' as const;
+  readonly platformScreen = iosScreen;
   protected readonly retrySafe = RETRY_SAFE;
   /** The app the runner reads and acts on (set by launch, openUrl with a bundle, or target). */
   protected targetApp: string | undefined;

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import {
   Adb,
-  alertButton,
+  androidScreen,
   AndroidDevice,
   androidProvider,
   DeviceError,
@@ -474,14 +474,14 @@ describe.skipIf(!serial)('android agent on a device', () => {
     let prompt: Screen | undefined;
     for (let i = 0; i < 20 && !prompt; i++) {
       const now = await screen();
-      if (alertButton(now.elements, 'android', 'allow')) prompt = now;
+      if (androidScreen.alertButton(now.elements, 'allow')) prompt = now;
       else await new Promise((r) => setTimeout(r, 200));
     }
     expect(prompt, 'permission prompt').toBeDefined();
     expect(prompt!.foreground).toMatch(/permissioncontroller/);
-    const allow = alertButton(prompt!.elements, 'android', 'allow')!;
+    const allow = androidScreen.alertButton(prompt!.elements, 'allow')!;
     await d.tap(allow, { settle: SETTLE, read: 'none' });
-    expect(alertButton((await screen()).elements, 'android', 'allow')).toBeUndefined();
+    expect(androidScreen.alertButton((await screen()).elements, 'allow')).toBeUndefined();
     expect(await d.shell(`dumpsys package ${APP} | grep ACCESS_FINE_LOCATION`)).toMatch(
       /granted=true/,
     );

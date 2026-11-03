@@ -8,7 +8,6 @@ import {
   pause,
   reportProgress,
   type ActOptions,
-  keyboardOpen,
 } from '@appdyno/core';
 import type { ActResult, TextResult } from '@appdyno/protocol';
 import { z } from 'zod';
@@ -400,7 +399,7 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
           ...opts,
         });
         // iOS takes keys with no field reporting the focus (a hidden field does not): with no keyboard, nothing took them
-        if (!at && r.verified === false && r.tree && !keyboardOpen(r.tree, s.device.platform))
+        if (!at && r.verified === false && r.tree && !s.device.platformScreen.keyboardOpen(r.tree))
           throw new ToolError(
             'no editable field has the focus: tap the field first (or give type_text a ref)',
             'NO_FOCUS',

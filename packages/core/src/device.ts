@@ -14,6 +14,8 @@ import type {
   AuditResult,
 } from '@appdyno/protocol';
 import type { MeasureSource, TraceDigest } from './measure.js';
+import type { AlertAction, AlertButton, AlertWords, SystemAlert } from './screen/alert.js';
+import type { UiElement } from './screen/elements.js';
 
 /** Per-command limits (ms); the settle cap is added to an action's. */
 export const TIMEOUTS = {
@@ -146,8 +148,24 @@ export interface WebInspector {
   evaluate(page: WebPage, script: string): Promise<unknown>;
 }
 
+/** What only a platform knows about what its screen shows. */
+export interface PlatformScreen {
+  /** The system alert on the screen, whatever it asks. */
+  systemAlert(tree: Tree, elements: UiElement[]): SystemAlert | undefined;
+  /** The button of a system permission prompt for `action`; undefined when no such prompt is up. */
+  alertButton(
+    elements: UiElement[],
+    action: AlertAction,
+    words?: AlertWords,
+  ): AlertButton | undefined;
+  keyboardOpen(tree: Tree): boolean;
+  /** What the status bar takes at the top of the screen, in tap units, for what compares pixels: its clock moves. */
+  statusBand(tree: Tree, density?: number): number;
+}
+
 /** One device, whichever platform: what the operations are written against. */
 export interface Device {
+  readonly platformScreen: PlatformScreen;
   readonly apps?: AppManager;
   readonly settings?: DeviceSettings;
   readonly recorder?: ScreenRecorder;

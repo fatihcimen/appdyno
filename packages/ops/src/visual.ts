@@ -5,7 +5,6 @@ import {
   diffImages,
   encodePng,
   selectIn,
-  statusBand,
   type Image,
   type PixelRect,
 } from '@appdyno/core';
@@ -99,7 +98,10 @@ export function visualOps(ctx: ServerContext): Op[] {
             throw new ToolError('a mask is x, y, w and h, or text, id or role');
           return [rect({ x: m.x, y: m.y, width: m.w, height: m.h })];
         });
-        const band = statusBand(screen.tree, s.device.platform, s.device.hello?.screen.density);
+        const band = s.device.platformScreen.statusBand(
+          screen.tree,
+          s.device.hello?.screen.density,
+        );
         const all = [
           ...left,
           ...(band > 0 ? [rect({ x: 0, y: 0, width: units, height: band })] : []),

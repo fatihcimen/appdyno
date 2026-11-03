@@ -4,6 +4,7 @@ export { androidLogs, logcatCommand } from './logs.js';
 export { androidCrashes, crashReports, parseDropbox, parseExitInfo } from './crashes.js';
 export { Adb, assertSerial, parseDevices, shq, type AdbDevice } from './adb.js';
 export { AndroidDevice } from './device.js';
+export { androidScreen } from './platform-screen.js';
 export { TEST_LOCATION, TEST_TAG, mockedProviders } from './location.js';
 export { AndroidEmulators } from './manage.js';
 export { AndroidAgentLauncher, agentApk } from './agent.js';

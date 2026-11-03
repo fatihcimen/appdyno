@@ -6,6 +6,7 @@ import { withStableRefs } from './refs.js';
 export * from './elements.js';
 export * from './model.js';
 export * from './refs.js';
+export * from './alert.js';
 export * from './diff.js';
 export * from './fold.js';
 export * from './folded.js';

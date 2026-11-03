@@ -27,6 +27,7 @@ import { clearStaleTestLocation, clearTestLocation, setTestLocation } from './lo
 import { AndroidApps, AndroidSettings } from './manage.js';
 import { AndroidNetwork } from './network.js';
 import { AndroidPerf } from './perf.js';
+import { androidScreen } from './platform-screen.js';
 import { AndroidRecorder } from './record.js';
 import { AndroidWeb } from './web.js';
 
@@ -50,6 +51,7 @@ const WAKE_STEADY_MS = 600;
  */
 export class AndroidDevice extends RpcDevice implements Device {
   readonly platform = 'android' as const;
+  readonly platformScreen = androidScreen;
   protected readonly retrySafe = RETRY_SAFE;
   private readonly launcher: AndroidAgentLauncher;
 

@@ -1,5 +1,6 @@
 export { appleProvider, iosChecks } from './provider.js';
 export { IosDevice, promptButton, type IosDeviceOps } from './device.js';
+export { ALERT_WORDS, iosScreen } from './platform-screen.js';
 export { IosSimulatorDevice, simulatorOps } from './simulator.js';
 export { Devicectl, IosPhoneDevice, assertPhoneUdid, phoneRunnerApp } from './phone.js';
 export { phoneSigningFromEnv, readProfile, signedRunner, type PhoneSigning } from './signing.js';
