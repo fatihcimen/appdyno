@@ -91,7 +91,7 @@ for (const { platform, serial, form } of targets)
     });
 
     it('refuses another device and an unsafe link', async () => {
-      expect((await call('use_device', { device: 'EXAMPLE0SERIAL00' })).error).toBe(true);
+      expect((await call('use_device', { device: 'another-device' })).error).toBe(true);
       expect((await call('open_link', { url: 'file:///sdcard/x' })).error).toBe(true);
       expect((await call('launch_app', { app: 'com.android.settings' })).error).toBe(true);
     });
