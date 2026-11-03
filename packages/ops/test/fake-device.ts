@@ -1,10 +1,11 @@
-import type {
-  ActOptions,
-  CrashesQuery,
-  CrashReport,
-  Device,
-  LogsQuery,
-  MeasureSource,
+import {
+  DeviceActions,
+  type ActOptions,
+  type CrashesQuery,
+  type CrashReport,
+  type Device,
+  type LogsQuery,
+  type MeasureSource,
 } from '@appdyno/core';
 import {
   DeviceError,
@@ -54,6 +55,18 @@ const settings = (wifi: string, go?: string): Node[] => [
   ...row('Hotspot', 'Off', 500),
 ];
 
+const FORM: Node[] = [
+  { t: 'Bilgiler', b: [0, 100, 1080, 200] },
+  {
+    c: 'android.widget.EditText',
+    id: 'dev.app:id/name',
+    h: 'Adınız',
+    b: [0, 300, 1080, 400],
+    f: 1 | 4 | 16 | 128,
+  },
+  { c: 'android.widget.Button', t: 'Gönder', b: [0, 500, 1080, 600], f: 19, go: 'sent' },
+];
+
 export const SCREENS: Record<string, Node[]> = {
   settings: settings('On', 'settingsOff'),
   settingsOff: settings('Off'),
@@ -89,32 +102,11 @@ export const SCREENS: Record<string, Node[]> = {
     { c: 'android.widget.Button', t: 'Form', b: [0, 300, 1080, 400], f: 19, go: 'form' },
     { c: 'android.widget.Button', t: 'İzin', b: [0, 500, 1080, 600], f: 19, go: 'permission' },
   ],
-  form: [
-    { t: 'Bilgiler', b: [0, 100, 1080, 200] },
-    {
-      c: 'android.widget.EditText',
-      id: 'dev.app:id/name',
-      h: 'Adınız',
-      b: [0, 300, 1080, 400],
-      f: 1 | 4 | 16 | 128,
-    },
-    { c: 'android.widget.Button', t: 'Gönder', b: [0, 500, 1080, 600], f: 19, go: 'sent' },
-  ],
-  sent: [
-    { t: 'Bilgiler', b: [0, 100, 1080, 200] },
-    {
-      c: 'android.widget.EditText',
-      id: 'dev.app:id/name',
-      h: 'Adınız',
-      b: [0, 300, 1080, 400],
-      f: 1 | 4 | 16 | 128,
-    },
-    { c: 'android.widget.Button', t: 'Gönder', b: [0, 500, 1080, 600], f: 19, go: 'sent' },
-    { t: 'Gönderildi', id: 'dev.app:id/result', b: [0, 700, 1080, 800] },
-  ],
+  form: FORM,
+  sent: [...FORM, { t: 'Gönderildi', id: 'dev.app:id/result', b: [0, 700, 1080, 800] }],
 };
 
-export class FakeDevice implements Device {
+export class FakeDevice extends DeviceActions implements Device {
   readonly platform = 'android' as const;
   lastStartWasCold = true;
   hello: Hello = {
@@ -135,7 +127,9 @@ export class FakeDevice implements Device {
   /** Thrown by open: a device that cannot start its agent. */
   openError: DeviceError | undefined;
 
-  constructor(readonly serial = 'emulator-5580') {}
+  constructor(readonly serial = 'emulator-5580') {
+    super();
+  }
 
   private record(name: string, ...args: unknown[]) {
     this.calls.push({ name, args });
@@ -201,18 +195,6 @@ export class FakeDevice implements Device {
       ...(opts.read === 'tree' && { tree: t }),
       ...(opts.read === 'hash' && { hash: t.hash }),
     };
-  }
-  tap(p: Point, opts?: ActOptions) {
-    return this.act({ kind: 'tap', x: p.x, y: p.y }, opts);
-  }
-  longPress(p: Point, durationMs = 800, opts?: ActOptions) {
-    return this.act({ kind: 'longPress', x: p.x, y: p.y, durationMs }, opts);
-  }
-  swipe(from: Point, to: Point, durationMs = 300, opts?: ActOptions) {
-    return this.act({ kind: 'swipe', from, to, durationMs }, opts);
-  }
-  key(key: Parameters<Device['key']>[0], opts?: ActOptions) {
-    return this.act({ kind: 'key', key }, opts);
   }
   async typeText(
     text: string,

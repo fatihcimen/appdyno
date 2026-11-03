@@ -7,7 +7,7 @@ import {
   parseTestLocation,
   processAlive,
   removableProviders,
-} from '../src/device.js';
+} from '../src/location.js';
 
 describe('test location bookkeeping', () => {
   it('reads the mock providers from dumpsys location', () => {

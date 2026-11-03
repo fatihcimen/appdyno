@@ -1,4 +1,5 @@
 export { RpcClient } from './rpc.js';
+export { assertLatLon, DeviceActions, RpcDevice } from './rpc-device.js';
 export { DeviceQueue } from './queue.js';
 export { afterTimeout } from './stuck.js';
 export { stateDir, safeName, deviceStateFile } from './state.js';

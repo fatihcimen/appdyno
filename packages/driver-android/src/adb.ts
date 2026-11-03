@@ -38,6 +38,9 @@ export const assertPkg = (p: string) => {
   return p;
 };
 
+/** What a command said, for a refusal. */
+export const shortFirstLine = (s: string) => s.trim().split('\n')[0]?.slice(0, 200) ?? '';
+
 export const shq = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
 class Reader {

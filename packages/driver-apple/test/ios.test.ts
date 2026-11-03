@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { IosSimulatorDevice } from '../src/device.js';
+import { IosSimulatorDevice } from '../src/simulator.js';
 import { IosPhoneDevice } from '../src/phone.js';
 import { startPhase } from '../src/runner.js';
 import type { Tree } from '@appdyno/protocol';

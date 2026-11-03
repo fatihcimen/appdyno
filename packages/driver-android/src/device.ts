@@ -3,34 +3,27 @@ import {
   type ActParams,
   type ActResult,
   type AuditResult,
-  type Hello,
-  type Key,
   type Method,
-  type ParamsOf,
-  type Point,
-  type ResultOf,
-  type TextResult,
   type Tree,
 } from '@appdyno/protocol';
 import {
-  pause,
-  afterTimeout,
-  buildScreen,
+  assertLatLon,
   decodePng,
-  DeviceQueue,
+  pause,
+  RpcDevice,
   TIMEOUTS,
   type ActOptions,
-  type Device,
-  type RpcClient,
-  type Screen,
   type CrashesQuery,
+  type Device,
   type LogsQuery,
+  type RpcClient,
 } from '@appdyno/core';
-import { Adb, assertPkg, assertSerial, shq } from './adb.js';
+import { Adb, assertPkg, assertSerial, shortFirstLine, shq } from './adb.js';
 import { androidCrashes } from './crashes.js';
 import { androidLogs } from './logs.js';
 import { auditAndroid } from './audit.js';
-import { AndroidAgentLauncher, REMOTE_DIR } from './agent.js';
+import { AndroidAgentLauncher } from './agent.js';
+import { clearStaleTestLocation, clearTestLocation, setTestLocation } from './location.js';
 import { AndroidApps, AndroidSettings } from './manage.js';
 import { AndroidNetwork } from './network.js';
 import { AndroidPerf } from './perf.js';
@@ -55,15 +48,10 @@ const WAKE_STEADY_MS = 600;
  * overlap, failures are typed DeviceErrors. App lifecycle, links and location go through adb's own
  * protocol (no adb process per call).
  */
-export class AndroidDevice implements Device {
+export class AndroidDevice extends RpcDevice implements Device {
   readonly platform = 'android' as const;
-  private rpc: RpcClient | undefined;
-  private connecting: Promise<RpcClient> | undefined;
-  private helloInfo: Hello | undefined;
-  private readonly queue = new DeviceQueue();
+  protected readonly retrySafe = RETRY_SAFE;
   private readonly launcher: AndroidAgentLauncher;
-  /** Whether the last connect started a new agent (a cold start), for measurements. */
-  lastStartWasCold = false;
 
   constructor(
     readonly serial: string,
@@ -74,6 +62,7 @@ export class AndroidDevice implements Device {
     /** Off: the device's animations are off while this host is connected (docs/protocol.md "Animations"). */
     private animations: 'on' | 'off' = 'on',
   ) {
+    super();
     assertSerial(serial);
     this.launcher = new AndroidAgentLauncher(adb, serial, takeover);
     this.apps = new AndroidApps(adb, serial);
@@ -98,65 +87,28 @@ export class AndroidDevice implements Device {
   dismissKeyboard = async () => {
     await this.key('back', { settle: false, read: 'none' });
   };
-  waitChange = async (since: string | undefined, timeoutMs: number) => {
-    if (!this.helloInfo?.capabilities.includes('wait')) return undefined;
-    const { result } = await this.call(
-      'wait',
-      { ...(since && { since }), timeoutMs },
-      TIMEOUTS.read + timeoutMs,
-    );
-    return { sig: result.sig, ...(result.tree && { tree: result.tree }) };
-  };
-
-  /** Connects (starting the agent when needed); the agent's hello. */
-  async open(): Promise<Hello> {
-    await this.queue.run(() => this.ensure());
-    return this.helloInfo!;
+  protected async connect(): Promise<RpcClient> {
+    const { rpc, hello, started } = await this.launcher.connect();
+    this.rpc = rpc;
+    this.helloInfo = hello;
+    this.lastStartWasCold = started;
+    if (this.animations === 'off')
+      await rpc.call('animations.set', { off: true }, { timeoutMs: TIMEOUTS.action });
+    // a new agent: a host that died without stopping its own may have left test providers
+    if (started) await this.clearStaleLocation().catch(() => undefined);
+    return rpc;
   }
 
-  get hello(): Hello | undefined {
-    return this.helloInfo;
+  protected override connectionLost(e: unknown) {
+    return super.connectionLost(e) || (e instanceof DeviceError && e.code === 'DEVICE_GONE');
   }
 
-  private ensure(): Promise<RpcClient> {
-    if (this.rpc && !this.rpc.closed) return Promise.resolve(this.rpc);
-    this.connecting ??= this.launcher
-      .connect()
-      .then(async ({ rpc, hello, started }) => {
-        this.rpc = rpc;
-        this.helloInfo = hello;
-        this.lastStartWasCold = started;
-        if (this.animations === 'off')
-          await rpc.call('animations.set', { off: true }, { timeoutMs: TIMEOUTS.action });
-        // a new agent: a host that died without stopping its own may have left test providers
-        if (started) await this.clearStaleLocation().catch(() => undefined);
-        return rpc;
-      })
-      .finally(() => (this.connecting = undefined));
-    return this.connecting;
+  /** An unplugged cable or a reboot: the agent may still run on the device, its state file finds it. */
+  protected override async beforeRetry(lost: unknown) {
+    if ((lost as DeviceError).code === 'DEVICE_GONE') await this.waitForDevice(lost);
   }
 
-  private call<M extends Method>(method: M, params: ParamsOf<M>, timeoutMs: number) {
-    return this.queue.run(async () => {
-      let rpc: RpcClient | undefined;
-      try {
-        rpc = await this.ensure();
-        return await rpc.call(method, params, { timeoutMs });
-      } catch (e) {
-        const lost =
-          e instanceof DeviceError && (e.code === 'AGENT_UNAVAILABLE' || e.code === 'DEVICE_GONE');
-        if (!lost) throw await afterTimeout(e, rpc, () => this.restartStuck(rpc!));
-        if (!RETRY_SAFE.has(method)) throw e;
-        this.rpc = undefined;
-        // an unplugged cable or a reboot: the agent may still run on the device, its state file finds it
-        if ((e as DeviceError).code === 'DEVICE_GONE') await this.waitForDevice(e);
-        return (await this.ensure()).call(method, params, { timeoutMs });
-      }
-    });
-  }
-
-  /** An agent whose work lane stays stuck: stopped, so the next call starts a new one. */
-  private async restartStuck(rpc: RpcClient) {
+  protected async restartStuck(rpc: RpcClient) {
     if (this.rpc === rpc) this.rpc = undefined;
     rpc.close();
     await this.launcher.stop();
@@ -254,74 +206,14 @@ export class AndroidDevice implements Device {
     return read();
   }
 
-  /** The current screen with stable refs. */
-  async read(appId?: string): Promise<Screen> {
-    return buildScreen(await this.tree(), { platform: 'android', ...(appId && { appId }) });
-  }
-
   async act(action: ActParams, opts: ActOptions = {}): Promise<ActResult> {
-    const settle = opts.settle === false ? undefined : (opts.settle ?? {});
-    const cap = settle ? (settle.maxMs ?? 3_000) : 0;
-    const once = () =>
-      this.call(
-        'act',
-        {
-          action,
-          ...(settle && { settle }),
-          read: opts.read ?? 'none',
-          ...(opts.before && { before: opts.before }),
-        },
-        TIMEOUTS.action + cap + durationOf(action),
-      );
-    const { result } = await once().catch(async (e: unknown) => {
+    const once = () => this.queue.run(() => this.actNow(action, opts, durationOf(action)));
+    return once().catch(async (e: unknown) => {
       // the agent refuses a touch on a dark screen before it is made: it would reach nothing
       if (!(e instanceof DeviceError && /the screen is off/.test(e.message))) throw e;
       await this.ensureAwake();
       return once();
     });
-    return result;
-  }
-
-  tap(p: Point, opts?: ActOptions) {
-    return this.act({ kind: 'tap', x: p.x, y: p.y }, opts);
-  }
-  longPress(p: Point, durationMs = 800, opts?: ActOptions) {
-    return this.act({ kind: 'longPress', x: p.x, y: p.y, durationMs }, opts);
-  }
-  swipe(from: Point, to: Point, durationMs = 300, opts?: ActOptions) {
-    return this.act({ kind: 'swipe', from, to, durationMs }, opts);
-  }
-  key(key: Key, opts?: ActOptions) {
-    return this.act({ kind: 'key', key }, opts);
-  }
-
-  /** Types into the focused field (or the field at `at`, tapped first); `replace` sets its whole text. */
-  async typeText(
-    text: string,
-    opts: { at?: Point; replace?: boolean; submit?: boolean } & ActOptions = {},
-  ): Promise<TextResult> {
-    const settle = opts.settle === false ? undefined : (opts.settle ?? {});
-    const { result } = await this.call(
-      'text.set',
-      {
-        text,
-        replace: opts.replace ?? false,
-        submit: opts.submit ?? false,
-        ...(opts.at && { at: opts.at }),
-        ...(settle && { settle }),
-        read: opts.read ?? 'none',
-      },
-      TIMEOUTS.text + (settle?.maxMs ?? 3_000),
-    );
-    return result;
-  }
-
-  async screenshot(
-    opts: ParamsOf<'screenshot'> = {},
-  ): Promise<{ meta: ResultOf<'screenshot'>; data: Buffer }> {
-    const r = await this.call('screenshot', opts, TIMEOUTS.screenshot);
-    if (!r.binary) throw new DeviceError('INTERNAL', 'the screenshot came without its image');
-    return { meta: r.result, data: r.binary };
   }
 
   /**
@@ -344,22 +236,6 @@ export class AndroidDevice implements Device {
     });
     // an older agent's read has no traversal hints: no reading order is worked out from it
     return { ...r, ...(full && { read: { tree, traversal } }) };
-  }
-
-  async foreground(): Promise<string | undefined> {
-    return (await this.call('app.foreground', {}, TIMEOUTS.read)).result.pkg;
-  }
-
-  async setClipboard(text: string) {
-    await this.call('clipboard.set', { text }, TIMEOUTS.action);
-  }
-  async getClipboard(): Promise<string | undefined> {
-    return (await this.call('clipboard.get', {}, TIMEOUTS.action)).result.text;
-  }
-
-  /** 0 portrait, 1 landscape (90°), 2 upside down, 3 landscape (270°); the rotation stays frozen. */
-  async setOrientation(rotation: 0 | 1 | 2 | 3) {
-    await this.call('orientation.set', { rotation }, TIMEOUTS.action);
   }
 
   /** Opens a link (`am start -W` with VIEW); `pkg` keeps it in that app. */
@@ -399,72 +275,19 @@ export class AndroidDevice implements Device {
     await this.shell(`am force-stop ${assertPkg(pkg)}`, TIMEOUTS.app);
   }
 
-  /**
-   * A fixed position through test location providers (gps, network, fused: apps read fused as often as
-   * gps; the shell user's mock-location right). A provider is ours only when our own add created it: a
-   * provider that is already a test provider (the probe of its state succeeds) is used and never added
-   * or listed, whatever a snapshot of the device's providers showed. Ours carry the tag TEST_TAG and are
-   * listed on the device (TEST_LOCATION, with this host's process); clearLocation, stopAgent and the next
-   * agent start once this process is gone remove them, each only after reading again that the provider
-   * is still a test provider with our tag.
-   */
   async setLocation(lat: number, lon: number) {
-    if (!(Math.abs(lat) <= 90 && Math.abs(lon) <= 180))
-      throw new DeviceError('INVALID_ARGUMENT', 'latitude/longitude out of range');
-    const at = `${lat.toFixed(6)},${lon.toFixed(6)}`;
-    const before = parseTestLocation(await this.shell(`cat ${TEST_LOCATION} 2>/dev/null`));
-    const out = await this.shell(locationScript(at), TIMEOUTS.app);
-    if (!out.trim().endsWith('done') || /Unknown command|No shell command/i.test(out))
-      throw new DeviceError(
-        'UNSUPPORTED',
-        `this device refused the test location: ${shortFirstLine(out)}`,
-      );
-    const run = parseLocationRun(out);
-    // still ours: what this call created, and what an earlier call of this process created that is still there
-    const kept =
-      before.pid === process.pid
-        ? before.providers.filter((e) => run.had.includes(e.split('/')[0]!))
-        : [];
-    await this.shell(
-      `mkdir -p ${REMOTE_DIR}; echo ${process.pid} ${[...kept, ...run.made].join(' ')} > ${TEST_LOCATION}`,
-    );
+    assertLatLon(lat, lon);
+    await setTestLocation((c, ms) => this.shell(c, ms), lat, lon);
   }
 
-  /** Removes the test location providers setLocation created, and only those still ours on a fresh read. */
   async clearLocation() {
-    const marker = parseTestLocation(await this.shell(`cat ${TEST_LOCATION} 2>/dev/null`));
-    const ours = removableProviders(
-      marker.providers,
-      await this.shell('dumpsys location', TIMEOUTS.app),
-    );
-    await this.shell(
-      [
-        ...ours.map((p) => `cmd location providers remove-test-provider ${p}`),
-        `rm -f ${TEST_LOCATION}`,
-      ].join('; '),
-      TIMEOUTS.app,
-    );
+    await clearTestLocation((c, ms) => this.shell(c, ms));
   }
 
-  /** At a new agent's start: the test providers of a host process that is gone (it died before clearing). */
-  private async clearStaleLocation() {
-    const marker = parseTestLocation(
-      await this.adb.exec(this.serial, `cat ${TEST_LOCATION} 2>/dev/null`, {
-        timeoutMs: TIMEOUTS.action,
-      }),
-    );
-    if (marker.pid === undefined || processAlive(marker.pid)) return;
-    const ours = removableProviders(
-      marker.providers,
-      await this.adb.exec(this.serial, 'dumpsys location', { timeoutMs: TIMEOUTS.app }),
-    );
-    await this.adb.exec(
-      this.serial,
-      [
-        ...ours.map((p) => `cmd location providers remove-test-provider ${p}`),
-        `rm -f ${TEST_LOCATION}`,
-      ].join('; '),
-      { timeoutMs: TIMEOUTS.app },
+  /** Not through `shell`: it runs while connecting, inside the queue. */
+  private clearStaleLocation() {
+    return clearStaleTestLocation((c, ms = TIMEOUTS.action) =>
+      this.adb.exec(this.serial, c, { timeoutMs: ms }),
     );
   }
 
@@ -515,120 +338,11 @@ export class AndroidDevice implements Device {
   }
   private perfTools: AndroidPerf | undefined;
 
-  /** Closes the connection; the agent keeps running for the next host. */
-  close() {
-    this.rpc?.close();
-    this.rpc = undefined;
-  }
-
   /** Stops the agent on the device (the UI automation connection is released); its test providers go. */
   async stopAgent() {
     this.close();
     await this.clearLocation().catch(() => undefined);
     await this.launcher.stop();
-  }
-}
-
-const shortFirstLine = (s: string) => s.trim().split('\n')[0]?.slice(0, 200) ?? '';
-
-const TEST_PROVIDERS = ['gps', 'network', 'fused'];
-/** The attribution tag of our test providers (dumpsys location shows it in the provider's block). */
-export const TEST_TAG = 'appdyno';
-
-/**
- * The device side of setLocation: per provider, a probe of its test state (it fails unless the provider is
- * already a test provider: then it is used, `had`), else our add with our tag (`made`; `/plain` where this
- * release takes no tag), then the position.
- */
-export function locationScript(at: string): string {
-  const add = (p: string) =>
-    `if cmd location providers add-test-provider ${p} --extraAttributionTags ${TEST_TAG} >/dev/null 2>&1; then echo "made ${p}"; ` +
-    `elif cmd location providers add-test-provider ${p} >/dev/null 2>&1; then echo "made ${p}/plain"; fi`;
-  return [
-    'appops set com.android.shell android:mock_location allow',
-    'cmd location set-location-enabled true',
-    ...TEST_PROVIDERS.map(
-      (p) =>
-        `if cmd location providers set-test-provider-enabled ${p} true >/dev/null 2>&1; then echo "had ${p}"; else ${add(p)}; ` +
-        `cmd location providers set-test-provider-enabled ${p} true; fi; ` +
-        `cmd location providers set-test-provider-location ${p} --location ${at}`,
-    ),
-    'echo done',
-  ].join('; ');
-}
-
-/** What locationScript said: the providers that were test providers already, and the ones it created. */
-export function parseLocationRun(out: string): { had: string[]; made: string[] } {
-  const had: string[] = [];
-  const made: string[] = [];
-  for (const m of out.matchAll(/^(had|made) (\w+(?:\/plain)?)\s*$/gm)) {
-    const [, kind, entry] = m;
-    if (!TEST_PROVIDERS.includes(entry!.split('/')[0]!)) continue;
-    (kind === 'had' ? had : made).push(entry!);
-  }
-  return { had, made };
-}
-
-/** Each test provider's block in `dumpsys location` (`    gps provider [mock]:` and its indented lines). */
-function mockBlocks(dumpsys: string): Map<string, string> {
-  const blocks = new Map<string, string>();
-  let current: string | undefined;
-  for (const line of dumpsys.split(/\r?\n/)) {
-    const head = /^(\s*)(\w+) provider( \[mock\])?:\s*$/.exec(line);
-    if (head) {
-      current = head[3] ? head[2] : undefined;
-      if (current) blocks.set(current, '');
-      continue;
-    }
-    if (current && /^\s{5,}\S/.test(line)) blocks.set(current, blocks.get(current)! + line + '\n');
-    else if (current && line.trim()) current = undefined;
-  }
-  return blocks;
-}
-
-/**
- * Of the listed providers (`gps`, or `gps/plain` where no tag was taken), the ones that may be removed now:
- * still a test provider, and carrying our tag when it was created with one (a provider replaced since
- * by someone else's is not ours any more).
- */
-export function removableProviders(listed: string[], dumpsys: string): string[] {
-  const blocks = mockBlocks(dumpsys);
-  const tagged = new RegExp(`extra attribution tags=\\{[^}]*\\b${TEST_TAG}\\b`);
-  return listed.flatMap((entry) => {
-    const [p, kind] = entry.split('/');
-    const block = blocks.get(p!);
-    if (block === undefined) return [];
-    return kind === 'plain' || tagged.test(block) ? [p!] : [];
-  });
-}
-/** The test location providers this library added: `<host pid> <provider>…`. */
-export const TEST_LOCATION = `${REMOTE_DIR}/test-location`;
-
-/** Providers `dumpsys location` shows with a mock (`  gps provider [mock]:`). */
-export function mockedProviders(dumpsys: string): Set<string> {
-  return new Set([...dumpsys.matchAll(/^\s*(\w+) provider \[mock\]/gm)].map((m) => m[1]!));
-}
-
-/** The host process and the providers of a TEST_LOCATION file; nothing when it is missing or not ours. */
-export function parseTestLocation(text: string): { pid?: number; providers: string[] } {
-  const [pid, ...rest] = text.trim().split(/\s+/);
-  if (!pid || !/^\d+$/.test(pid)) return { providers: [] };
-  return {
-    pid: Number(pid),
-    providers: rest.filter(
-      (e) => /^\w+(\/plain)?$/.test(e) && TEST_PROVIDERS.includes(e.split('/')[0]!),
-    ),
-  };
-}
-
-/** Whether a process of this Mac still runs (a host that set the location and has not gone). */
-export function processAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    // EPERM: it runs, as another user
-    return (e as NodeJS.ErrnoException).code === 'EPERM';
   }
 }
 
