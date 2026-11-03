@@ -107,6 +107,34 @@ export const ScreenshotOut = z.object({
 
 export const DoneOut = z.object({ done: z.string() });
 
+export const WebOut = z.object({
+  done: z.string().optional(),
+  page: z.string().optional(),
+  pages: z
+    .array(
+      z.object({
+        id: z.string(),
+        title: z.string(),
+        url: z.string(),
+        app: z.string().optional(),
+        visible: z.boolean().optional(),
+      }),
+    )
+    .optional(),
+  elements: z
+    .array(
+      z.object({
+        tag: z.string(),
+        text: z.string(),
+        role: z.string().optional(),
+        selector: z.string().optional(),
+        x: z.number(),
+        y: z.number(),
+      }),
+    )
+    .optional(),
+});
+
 export const NetworkOut = z.object({
   done: z.string().optional(),
   paths: z

@@ -64,6 +64,7 @@ const bare = (type: string) => {
   const name = t.slice(t.lastIndexOf('.') + 1);
   return name.startsWith('xcuielementtype') ? name.slice('xcuielementtype'.length) : name;
 };
+const isWebView = (type: string) => /^web.?view$/.test(bare(type));
 /** `com.android.systemui:id/clock` → `com.android.systemui`. */
 const packageOf = (id: string | undefined) => /^([A-Za-z][\w.]*):id\//.exec(id ?? '')?.[1];
 const ownName = (el: UiElement) => (el.label || el.text || '').trim();
@@ -209,7 +210,7 @@ export type ScreenElement = {
   /** Centre in tap units. */
   x: number;
   y: number;
-  flags: ('clickable' | 'checked' | 'focused')[];
+  flags: ('clickable' | 'checked' | 'focused' | 'web')[];
 };
 
 /**
@@ -286,7 +287,13 @@ export function screenElements(
       ...(i.el.refContext && { refContext: i.el.refContext }),
       x,
       y,
-      flags: (['clickable', 'checked', 'focused'] as const).filter((f) => i.el[f]),
+      flags: [
+        ...(['clickable', 'checked', 'focused'] as const).filter((f) => i.el[f]),
+        // what a web view shows: its coordinates hold, its text is the page's
+        ...([i.index, ...ancestors(i.index)].some((a) => isWebView(elements[a]!.type))
+          ? (['web'] as const)
+          : []),
+      ],
     });
   }
   return out;
