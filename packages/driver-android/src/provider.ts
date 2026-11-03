@@ -4,7 +4,7 @@ import { Adb } from './adb.js';
 import { agentApk } from './agent.js';
 import { AndroidDevice } from './device.js';
 import { AndroidEmulators } from './manage.js';
-import { queryTrace } from './perf.js';
+import { queryTrace } from './perf/perfetto.js';
 import { traceProcessor } from './tools.js';
 import { run } from '@appdyno/core';
 

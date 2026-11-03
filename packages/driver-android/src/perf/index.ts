@@ -1,0 +1,46 @@
+import type { MeasureSource } from '@appdyno/core';
+import { type PerfDevice, isVirtual, pidOf } from './shared.js';
+import { frames, resetFrames, frameTimeline, frameTrace } from './frames.js';
+import { memory, heapDump, heap, heapProfile } from './memory.js';
+import { cpu, threads, cpuProfile } from './cpu.js';
+import { launch } from './launch.js';
+import { buildType, network, energy, exits, size, vitals } from './app.js';
+
+/**
+ * The app's and the device's performance on Android, from the platform's own tools: frames (gfxinfo,
+ * Perfetto's frame timeline), memory (meminfo), CPU (/proc), launch time (`am start -W`) and the
+ * device's state while measuring (load, CPU pressure, memory, thermal status, battery temperature).
+ * Commands run in the C locale (a localized device writes `0,0`).
+ */
+export class AndroidPerf implements MeasureSource {
+  constructor(private readonly device: PerfDevice) {}
+
+  private readonly on =
+    <A extends unknown[], R>(measure: (d: PerfDevice, ...a: A) => R) =>
+    (...a: A) =>
+      measure(this.device, ...a);
+
+  get virtual() {
+    return isVirtual(this.device);
+  }
+
+  pid = this.on(pidOf);
+  frames = this.on(frames);
+  resetFrames = this.on(resetFrames);
+  frameTimeline = this.on(frameTimeline);
+  frameTrace = this.on(frameTrace);
+  memory = this.on(memory);
+  heapDump = this.on(heapDump);
+  heap = this.on(heap);
+  heapProfile = this.on(heapProfile);
+  cpu = this.on(cpu);
+  threads = this.on(threads);
+  cpuProfile = this.on(cpuProfile);
+  launch = this.on(launch);
+  buildType = this.on(buildType);
+  network = this.on(network);
+  energy = this.on(energy);
+  exits = this.on(exits);
+  size = this.on(size);
+  vitals = this.on(vitals);
+}

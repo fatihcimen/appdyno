@@ -26,7 +26,7 @@ import { AndroidAgentLauncher } from './agent.js';
 import { clearStaleTestLocation, clearTestLocation, setTestLocation } from './location.js';
 import { AndroidApps, AndroidSettings } from './manage.js';
 import { AndroidNetwork } from './network.js';
-import { AndroidPerf } from './perf.js';
+import { AndroidPerf } from './perf/index.js';
 import { androidScreen } from './platform-screen.js';
 import { AndroidRecorder } from './record.js';
 import { AndroidWeb } from './web.js';

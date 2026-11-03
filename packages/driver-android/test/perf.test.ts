@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseExitInfo } from '../src/crashes.js';
-import { assertReadOnlySql, queryTrace } from '../src/perf.js';
+import { assertReadOnlySql, queryTrace } from '../src/perf/perfetto.js';
 import {
   parseAmStart,
   parseAndroidFrameStats,
