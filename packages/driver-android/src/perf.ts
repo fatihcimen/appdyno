@@ -38,6 +38,7 @@ import {
   parseAmStart,
   parseAndroidFrameStats,
   parseBatteryUsage,
+  usageSince,
   parseBuildType,
   parseCompileStatus,
   parseCsv,
@@ -488,9 +489,9 @@ export class AndroidPerf implements MeasureSource {
   }
 
   /**
-   * The charge batterystats estimates for the app over the window. It counts on battery only, so the phone
-   * is told it is unplugged for the time (and told the truth after); its battery history since the last
-   * charge is reset. An estimate from the power profile's model, not a measure.
+   * The charge batterystats estimates for the app over the window: the difference of its count since the last
+   * charge, whose history is left alone. It counts on battery only, so the phone is told it is unplugged for the
+   * time (and told the truth after). An estimate from the power profile's model, not a measure.
    */
   async energy(pkg: string, windowMs: number): Promise<Measured<EnergyReading>> {
     const uid = await this.uid(pkg);
@@ -500,14 +501,15 @@ export class AndroidPerf implements MeasureSource {
     if (this.virtual) throw noModel('an emulator has no power model, it computes zero');
     try {
       await this.sh('dumpsys battery unplug');
-      await this.sh('dumpsys batterystats --reset');
+      const read = () => this.sh(`dumpsys batterystats --charged ${pkg}`, 60_000);
+      const before = parseBatteryUsage(await read(), uid);
       await pause(windowMs);
-      const raw = await this.sh(`dumpsys batterystats --charged ${pkg}`, 60_000);
-      const usage = parseBatteryUsage(raw, uid);
-      if (usage.mah === undefined) throw noModel('batterystats computed no drain at all');
+      const raw = await read();
+      const after = parseBatteryUsage(raw, uid);
+      if (after.mah === undefined) throw noModel('batterystats computed no drain at all');
       return {
         value: {
-          ...usage,
+          ...usageSince(before, after),
           note: 'model-based: batterystats multiplies time in each state by the power profile, it does not read a power meter',
         },
         raw,

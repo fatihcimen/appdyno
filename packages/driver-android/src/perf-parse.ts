@@ -485,6 +485,20 @@ export function parseBatteryUsage(text: string, uid: number): Omit<EnergyReading
   return { mah: Number(row[1]), breakdown };
 }
 
+/** What a count since the last charge grew by; what fell (a charge reset it meanwhile) counts from zero. */
+export function usageSince(
+  before: Omit<EnergyReading, 'note'>,
+  after: Omit<EnergyReading, 'note'>,
+): Omit<EnergyReading, 'note'> {
+  const grew = (a = 0, b = 0) => Math.max(0, Math.round((a - b) * 1e4) / 1e4);
+  return {
+    mah: grew(after.mah, before.mah),
+    breakdown: Object.fromEntries(
+      Object.entries(after.breakdown ?? {}).map(([k, v]) => [k, grew(v, before.breakdown?.[k])]),
+    ),
+  };
+}
+
 /** The flags of `dumpsys package <pkg>`. */
 export function parseBuildType(text: string): BuildType {
   const flags = [...text.matchAll(/^\s*(?:pkg|private|privatePkg)?[fF]lags=\[(.*)\]/gm)].map(

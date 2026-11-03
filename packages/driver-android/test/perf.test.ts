@@ -6,6 +6,7 @@ import {
   parseAmStart,
   parseAndroidFrameStats,
   parseBatteryUsage,
+  usageSince,
   parseBuildType,
   parseCompileStatus,
   parseCsv,
@@ -263,6 +264,17 @@ describe('android perf parsers on recorded outputs', () => {
       '    st=1 rb=1000 rp=1 tb=2000 tp=1 op=0',
     ].join('\n');
     expect(parseNetstatsUid(tagged, 7)).toEqual({ rxBytes: 111, txBytes: 222 });
+  });
+
+  it('takes the energy of a window as what the count since the last charge grew by', () => {
+    expect(
+      usageSince(
+        { mah: 1.5, breakdown: { cpu: 1, screen: 0.5 } },
+        { mah: 1.75, breakdown: { cpu: 1.25, screen: 0.5, wifi: 0.01 } },
+      ),
+    ).toEqual({ mah: 0.25, breakdown: { cpu: 0.25, screen: 0, wifi: 0.01 } });
+    // a charge reset it meanwhile
+    expect(usageSince({ mah: 2 }, { mah: 0.1 })).toEqual({ mah: 0, breakdown: {} });
   });
 
   it('reads the app-s estimated charge; an emulator-s zeros are no estimate', () => {

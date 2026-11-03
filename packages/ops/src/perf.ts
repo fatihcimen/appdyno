@@ -240,7 +240,7 @@ export function perfOps(ctx: ServerContext): Op[] {
             .array(z.enum(['threads', 'network', 'energy', 'exits', 'size']))
             .optional()
             .describe(
-              'threads: each thread and its time above 90 %; network: bytes in the window; energy: a modelled estimate (Android: resets the battery history); exits: crashes and ANRs; size: on disk',
+              'threads: each thread and its time above 90 %; network: bytes in the window; energy: a modelled estimate; exits: crashes and ANRs; size: on disk',
             ),
           scenario: Scenario,
         })
