@@ -87,6 +87,32 @@ about 230 ms, because the system's own start work runs alongside it.
 
 Kept traces and runs stay on this machine until removed; nothing prunes them.
 
+## The dashboard
+
+```text
+appdyno perf survey --app A [--device S]               every measure on that device in turn, then the page
+appdyno perf dashboard [--app A] [--out dir] [--open]  the page alone, from what is kept; no device needed
+```
+
+`perf_compare` with `action: dashboard` writes the page too, in its usual place: `<measurements dir>/dashboard/index.html`. `--out` and `--open` are the command line's alone. The page is rewritten after each kept run and each baseline, and an open page reloads itself every minute, which closes a table left open. A failure to write it never fails a measurement.
+
+`perf survey` calls the same operations anyone can, and names no device: what reads each measure is tried in turn until the measure has a number, a refusal is kept as that measure's answer on that kind of device, and the next measure still runs. A call that fails for another reason, such as a timeout, is printed and not kept: it says nothing of what the device can do. One line per measure.
+
+There is no server, and the page is one file with no script, which loads nothing: its content policy allows only its own style. Everything from the store is escaped. It follows the system's light or dark, and prints as ink on paper with no tooltips or tables. An app has a section of its own, with an anchor. In order:
+
+1. **What needs attention**, across every app, for the newest run of each scenario: regressions and broken budgets as `perf compare` calls them, and runs under high load or heat. A debuggable build is said beside its number but is no alarm. It says how many scenarios have a baseline and how many budget rules there are, since "nothing needs attention" means little without them, and which files could not be read.
+2. **Measures by device.** A cell holds the newest reading of that measure on that kind of device, with its unit, kind, scenario and age; an estimate from a model is marked; so is a reading under noise. A refusal newer than any reading gives its reason instead. Otherwise "not measured yet". A kind no measure answers has a row of its own under "other". Emulators and simulators read as relative, and the page says so.
+3. **Trends**, for a kind with more than one run on a device: one small chart per kind, scenario and device, each with one y-scale, from zero, with the runs evenly spaced. The shaded band is the baseline's median plus and minus the floor of the gate above: a run outside it has moved past the floor, though the call needs the rank test as well. A budget is a dashed line, drawn when within twice the data's top and otherwise said in words. A hollow point was taken under noise, and a dashed line is an estimate. The newest launch phases (`launch.phase.*`) are one bar split into phases, up to six with the smallest folded into "other". Every chart has a table under it.
+4. **An empty store** shows the one command that fills it.
+
+A trend reads a key's newest 30 runs and says how many there are. Times are UTC. What it costs each kept run, the median of 7 rewrites of 1,000 runs of 5 kinds each, at host load 44-47 on 15 cores (a measure takes seconds):
+
+| runs by key           | rewrite | page     |
+| --------------------- | ------- | -------- |
+| 1,000 in 1 key        | 5 ms    | 84 KB    |
+| 25 in each of 40 keys | 101 ms  | 2,365 KB |
+| 5 in each of 200 keys | 207 ms  | 3,547 KB |
+
 ## Asking a kept trace
 
 `perf_query` answers from a kept trace with no new recording: read-only SQL on a `.pftrace` through the pinned trace processor (optional

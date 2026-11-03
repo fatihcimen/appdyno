@@ -139,6 +139,15 @@ The page loads nothing: it has no script, and its content policy allows only its
 like a credential are hidden in all text. Typed text is shown by its length. An image is painted over where an
 element holds a secret or is a password field, and left out if it cannot be painted over. Text drawn with no element behind it cannot be told, and a video is not painted over.
 
+### Dashboard
+
+```sh
+appdyno perf survey --app A [--device S]               # every measure on that device in turn, then the page
+appdyno perf dashboard [--app A] [--out dir] [--open]  # the page alone, from what is kept
+```
+
+One page of an app's performance on all your devices: what needs attention, each measure by device (its newest value, marked if it is an estimate or was taken under noise, or why that device cannot read it), and a trend of each with its baseline's band and budget. It is `<measurements dir>/dashboard/index.html`, rewritten after each kept run, and an open page reloads itself. There is no server: one file with no script, which loads nothing. `perf_compare` with `action: dashboard` writes it too. See [docs/perf.md](docs/perf.md#the-dashboard).
+
 ### Network
 
 `network` `paths` says what each way sees on this device, and why not. `start` picks one, `read` and `stop` give a bounded list.
