@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "paths": {
+      "@appdyno/protocol": ["./packages/protocol/src/index.ts"],
+      "@appdyno/core": ["./packages/core/src/index.ts"],
+      "@appdyno/driver-android": ["./packages/driver-android/src/index.ts"],
+      "@appdyno/driver-apple": ["./packages/driver-apple/src/index.ts"],
+      "@appdyno/flows": ["./packages/flows/src/index.ts"],
+      "@appdyno/perf": ["./packages/perf/src/index.ts"],
+      "@appdyno/ops": ["./packages/ops/src/index.ts"],
+      "@appdyno/mcp": ["./packages/mcp/src/index.ts"],
+      "@appdyno/cli": ["./packages/cli/src/index.ts"],
+      "appdyno": ["./packages/appdyno/src/index.ts"]
+    }
+  }
+}
