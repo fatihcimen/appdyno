@@ -126,7 +126,7 @@ index). The answer gives the length, frames and size.
 | --------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Android   | `screenrecord` on the device, 3 minutes a run, 4 Mbps    | runs are joined into one video by copying their frames, with no dependency; a moment is lost at each join. Runs an encoder change makes unjoinable stay as `name-1.mp4`, `name-2.mp4`, and the answer says so |
 | simulator | `simctl io recordVideo --codec=h264`, a QuickTime `.mov` | a frame is written only when the screen changes, so a still screen gives a very short video, and the answer says so                                                                                           |
-| iPhone    | `devicectl device capture screen-record`                 | not every phone offers it: an iPhone 13 Pro Max on iOS 27.0.1 has no such capability, and `record` refuses and says what to do. It has not been seen working on a phone                                      |
+| iPhone    | `devicectl device capture screen-record`                 | not every phone offers it: an iPhone 13 Pro Max on iOS 27.0.1 has no such capability, and `record` refuses and says what to do. It has not been seen working on a phone                                       |
 
 ### Report
 
