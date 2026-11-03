@@ -89,6 +89,7 @@ private val SCREENS = linkedMapOf(
 /** Screens opened by link only (appdyno-fixture://open/<key>): measurement fixtures. */
 private val LINKED = mapOf(
     "frames" to FramesActivity::class.java,
+    "list_stall" to StallListActivity::class.java,
     "memory" to MemoryActivity::class.java,
     "cpu" to CpuActivity::class.java,
     "leak" to LeakActivity::class.java,
@@ -239,17 +240,22 @@ class GesturesActivity : Activity() {
     }
 }
 
-class ListActivity : Activity() {
+open class ListActivity : Activity() {
     private val counts = IntArray(60)
+    protected open val listId = R.id.list
+
+    /** When a row comes into the list, for a screen that makes it cost something. */
+    protected open fun onRow(position: Int) = Unit
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val list = ListView(this).apply { id = R.id.list }
+        val list = ListView(this).apply { id = listId }
         list.adapter = object : BaseAdapter() {
             override fun getCount() = counts.size
             override fun getItem(position: Int) = position
             override fun getItemId(position: Int) = position.toLong()
             override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
+                onRow(position)
                 val row = LinearLayout(this@ListActivity).apply { orientation = LinearLayout.HORIZONTAL; setPadding(24, 24, 24, 24) }
                 TextView(this@ListActivity).apply {
                     id = R.id.row_name
@@ -272,6 +278,19 @@ class ListActivity : Activity() {
             }
         }
         setContentView(list)
+    }
+}
+
+/** Stalls once for 1 s as its rows come in: what a scroll's frozen frames must read. */
+class StallListActivity : ListActivity() {
+    override val listId = R.id.list_stall
+    private var stalled = false
+
+    override fun onRow(position: Int) {
+        if (position == 20 && !stalled) {
+            stalled = true
+            Thread.sleep(1_000)
+        }
     }
 }
 

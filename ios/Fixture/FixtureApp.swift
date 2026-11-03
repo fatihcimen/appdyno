@@ -33,6 +33,8 @@ struct FixtureApp: App {
         switch key {
         case "form": FormScreen()
         case "list": ListScreen()
+        case "list_heavy": CostListScreen(drawMs: 40)
+        case "list_stall": CostListScreen(stallMs: 1000)
         case "dialog": DialogScreen()
         case "ticker": TickerScreen()
         case "delayed": DelayedScreen()
@@ -89,6 +91,7 @@ struct WebScreen: UIViewRepresentable {
 }
 
 /// One request through a session of its own, as most apps make it: what is typed, else APPDYNO_FIXTURE_FETCH_URL.
+/// APPDYNO_FIXTURE_NO_PROXY: past the proxy a phone's Wi-Fi may name, which only the phone's owner can change.
 struct NetworkScreen: View {
     @State private var url = ProcessInfo.processInfo.environment["APPDYNO_FIXTURE_FETCH_URL"] ?? ""
     @State private var result = ""
@@ -101,7 +104,11 @@ struct NetworkScreen: View {
                 .accessibilityIdentifier("url_input")
             Button("Fetch") {
                 guard let address = URL(string: url) else { result = "failed: not a URL"; return }
-                let session = URLSession(configuration: .default)
+                let configuration = URLSessionConfiguration.default
+                if ProcessInfo.processInfo.environment["APPDYNO_FIXTURE_NO_PROXY"] != nil {
+                    configuration.connectionProxyDictionary = [:]
+                }
+                let session = URLSession(configuration: configuration)
                 session.dataTask(with: address) { data, response, error in
                     let code = (response as? HTTPURLResponse)?.statusCode ?? 0
                     let text = error.map { "failed: \($0.localizedDescription)" }
@@ -378,9 +385,9 @@ struct FramesScreen: View {
         private var workMs = 0.0
         private var end: CFTimeInterval = 0
 
-        func run(workMs: Double) {
+        func run(workMs: Double, seconds: Double = 2) {
             self.workMs = workMs
-            end = CACurrentMediaTime() + 2
+            end = CACurrentMediaTime() + seconds
             link?.invalidate()
             link = CADisplayLink(target: self, selector: #selector(tick))
             link?.add(to: .main, forMode: .common)
@@ -408,6 +415,26 @@ struct FramesScreen: View {
             Spacer()
         }
         .padding()
+    }
+}
+
+/// A list whose frames each cost a known time, or that stalls once as its rows come in: what a scroll must read.
+struct CostListScreen: View {
+    var drawMs = 0.0
+    var stallMs: UInt32 = 0
+    @StateObject private var animator = FramesScreen.Animator()
+    @State private var stalled = false
+
+    var body: some View {
+        List(0 ..< 60, id: \.self) { i in
+            Text("Row \(i + 1)").onAppear {
+                guard i == 20, stallMs > 0, !stalled else { return }
+                stalled = true
+                usleep(stallMs * 1000)
+            }
+        }
+        .accessibilityIdentifier("list")
+        .onAppear { if drawMs > 0 { animator.run(workMs: drawMs, seconds: 3600) } }
     }
 }
 

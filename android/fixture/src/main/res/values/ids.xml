@@ -29,6 +29,7 @@
     <item name="fetch_result" type="id" />
     <item name="frames_light" type="id" />
     <item name="frames_heavy" type="id" />
+    <item name="list_stall" type="id" />
     <item name="memory_status" type="id" />
     <item name="memory_alloc" type="id" />
     <item name="memory_free" type="id" />
