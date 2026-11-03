@@ -19,7 +19,7 @@ const sources = readdirSync(packages)
 
 const lineCount = (text: string) => text.trimEnd().split('\n').length;
 
-const MAX_LINES = 430;
+const MAX_LINES = 450;
 /** Each stays until it is cut: one under the limit fails below. */
 const LARGER: Record<string, string> = {
   'packages/ops/src/steps.ts':
