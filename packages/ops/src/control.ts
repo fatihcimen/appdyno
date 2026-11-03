@@ -269,9 +269,10 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
               'DEVICE_CLAIMED',
             );
           reportProgress(`shutting down ${d.name}`);
+          await ctx.forget(d.serial ?? d.id);
           await on.shutdown(d.id).catch(refused);
         }
-        writeStarted(mine.filter((id) => !targets.some((x) => x.d.id === id)));
+        writeStarted(mine.filter((id) => !targets.some((x) => x.d.id === id || x.d.name === id)));
         const t = `shut down ${targets.map((x) => x.d.name).join(', ')}`;
         return reply(t, { done: t });
       },

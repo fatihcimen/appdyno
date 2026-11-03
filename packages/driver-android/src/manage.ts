@@ -164,7 +164,7 @@ export class AndroidSettings implements DeviceSettings {
         return /Night mode: (\w+)/.exec(await this.sh('cmd uimode night'))?.[1] ?? 'no';
       case 'text_size': {
         const v = (await this.sh('settings get system font_scale')).trim();
-        return v === 'null' ? '1.0' : v;
+        return v === 'null' ? 'default' : v;
       }
       case 'reduce_motion':
       case 'animations':
@@ -194,6 +194,10 @@ export class AndroidSettings implements DeviceSettings {
         return;
       }
       case 'text_size':
+        if (value === 'default') {
+          await this.sh('settings delete system font_scale');
+          return;
+        }
         if (!/^\d+(\.\d+)?$/.test(value))
           throw new DeviceError(
             'INVALID_ARGUMENT',

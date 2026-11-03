@@ -88,6 +88,7 @@ private val LINKED = mapOf(
     "memory" to MemoryActivity::class.java,
     "cpu" to CpuActivity::class.java,
     "late" to LateActivity::class.java,
+    "gestures" to GesturesActivity::class.java,
     "code" to CodeActivity::class.java,
     "a11y" to A11yActivity::class.java,
 )
@@ -158,6 +159,49 @@ class FormActivity : Activity() {
             button("Send", R.id.submit) { result.text = "Sent: ${name.text}" }
             result.id = R.id.result
             addView(result)
+        }
+    }
+}
+
+/** Says what a finger did on the pad: double taps, how far the last path went, how many fingers. */
+class GesturesActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        column {
+            val out = label("double taps: 0")
+            var doubles = 0
+            var fingers = 0
+            var travel = 0
+            var startY = 0f
+            val show = { out.text = "double taps: $doubles; travel: $travel; fingers: $fingers" }
+            val detector = android.view.GestureDetector(context, object : android.view.GestureDetector.SimpleOnGestureListener() {
+                override fun onDown(e: android.view.MotionEvent) = true
+                override fun onDoubleTap(e: android.view.MotionEvent): Boolean {
+                    doubles++
+                    show()
+                    return true
+                }
+            })
+            View(context).apply {
+                contentDescription = "Gesture pad"
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1400)
+                setOnTouchListener { _, e ->
+                    detector.onTouchEvent(e)
+                    when (e.actionMasked) {
+                        android.view.MotionEvent.ACTION_DOWN -> {
+                            startY = e.y
+                            fingers = 1
+                        }
+                        android.view.MotionEvent.ACTION_POINTER_DOWN -> fingers = maxOf(fingers, e.pointerCount)
+                        android.view.MotionEvent.ACTION_UP -> {
+                            travel = (e.y - startY).toInt()
+                            show()
+                        }
+                    }
+                    true
+                }
+                addView(this)
+            }
         }
     }
 }

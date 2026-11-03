@@ -215,7 +215,10 @@ export function actOps(
             throwIfCancelled('steps');
             reportProgress(`step ${i + 1} of ${steps.length}: ${st.action}`);
             if (!last) {
-              const opts = readsScreen(steps[i + 1])
+              // only typing into a field stays on its screen: a key after a tap that opened a
+              // screen must reach that screen, not the transition
+              const stays = st.action === 'type_text' && !st.submit && !readsScreen(steps[i + 1]);
+              const opts = !stays
                 ? ({
                     settle: SETTLE,
                     read: 'none',

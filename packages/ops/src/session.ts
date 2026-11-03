@@ -41,8 +41,11 @@ export class Session {
         else {
           sig = r.sig;
           if (r.tree) {
-            now = this.screenOf(r.tree);
-            this.remember(now);
+            // no app window: a dark screen, which only the device's own read wakes
+            now = r.tree.windows.some((w) => w.type === 1)
+              ? this.screenOf(r.tree)
+              : await this.read().catch(() => undefined);
+            if (now) this.remember(now);
           } else if (last) return { screen: last, met: false };
         }
       }

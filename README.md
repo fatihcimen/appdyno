@@ -40,14 +40,58 @@ Cursor or any client with a JSON server list:
 Tools take no `device` parameter. The device is the server's `--device`, else the only connected one,
 else the one `use_device` selected.
 
-| purpose | tools                                                                                           |
-| ------- | ----------------------------------------------------------------------------------------------- |
-| devices | `list_devices`, `use_device`, `device_info`, `set_orientation`, `set_clipboard`, `set_location` |
-| read    | `screen`, `find`, `wait_for`, `screenshot`                                                      |
-| act     | `tap`, `long_press`, `swipe`, `pinch`, `type_text`, `press_key`, `steps`, `dismiss_alert`       |
-| apps    | `open_link`, `launch_app`, `terminate_app`                                                      |
-| check   | `audit` (accessibility), `logs`, `crashes`                                                      |
-| measure | `perf_snapshot`, `perf_scroll`, `perf_launch`, `perf_profile`, `perf_heap`, `perf_trace`        |
+| purpose | tools                                                                                                                      |
+| ------- | -------------------------------------------------------------------------------------------------------------------------- |
+| devices | `list_devices`, `use_device`, `device_info`, `set_orientation`, `set_location`, `clipboard`, `device_setting`, `simulator` |
+| read    | `screen`, `find`, `wait_for`, `assert`, `screenshot`                                                                       |
+| act     | `tap`, `gesture`, `swipe`, `scroll_to`, `type_text`, `press_key`, `keyboard`, `steps`, `alert`                             |
+| apps    | `open_link`, `launch_app`, `terminate_app`, `app`                                                                          |
+| check   | `audit` (accessibility), `logs`, `crashes`                                                                                 |
+| measure | `perf_snapshot`, `perf_scroll`, `perf_launch`, `perf_profile`, `perf_heap`, `perf_trace`                                   |
+
+A target is a `ref`, `x` and `y`, or a `selector` `{ text, id, role, index }`, resolved on a fresh read
+just before the action. Text matches as `find` does, without case or accents ("İstanbul", "istanbul"),
+and an exact match beats a partial one. Several matches refuse and list them with their refs; no match
+waits a moment, then refuses with the nearest labels.
+
+`steps` runs up to 30 steps across screens. A ref or selector need exist only when its step runs. It
+stops at the first failure, says which step and why, and shows the screen. `wait_for` and selectors
+wait on the device, so the tree crosses the wire only when the screen changed.
+
+`gesture` holds `double_tap`, `long_press`, `drag`, `pinch` and a free `plan`. `press_key` holds the
+hardware buttons. `app` holds `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke` and
+`launch` with arguments and environment. `device_setting` holds `dark_mode`, `text_size`,
+`reduce_motion`, `animations`, `locale`, `network`, `push` and `biometric`.
+
+What a platform cannot do is refused with the reason (`UNSUPPORTED`):
+
+| what                       | Android                    | simulator                 | iPhone                      |
+| -------------------------- | -------------------------- | ------------------------- | --------------------------- |
+| volume buttons             | yes                        | yes (no way to read back) | the runner                  |
+| clear an app's data        | `pm clear`                 | empties its container     | no: uninstall and install   |
+| grant, revoke a permission | `pm grant`, `pm revoke`    | `simctl privacy`          | no: answer with `alert`     |
+| launch environment         | no: args are intent extras | yes                       | yes                         |
+| dark mode, text, motion    | yes                        | yes                       | `devicectl`                 |
+| animations                 | yes                        | no: use `reduce_motion`   | no                          |
+| locale                     | per app, API 33+           | whole simulator           | no                          |
+| slow network               | emulator only              | no                        | no                          |
+| push                       | a shell notification       | to the app                | no: needs Apple credentials |
+| biometrics                 | no                         | yes                       | no                          |
+
+Changing a condition writes the old value down first. It goes back when the session ends, or with
+`device_setting` name `restore`. A session that died leaves the file, and the next one on that device
+puts it back and says so; what cannot be put back is reported. A command line is one process per
+command, so its changes stay until `restore`.
+
+## Parallel agents
+
+A process that drives a device holds it: a file in the state directory with its pid and start time.
+A dead owner's claim is free. A second process is refused with the owner's pid and name unless it asks
+to share: `use_device` with `share: true`, `--share` on either command line, or `APPDYNO_SHARE=1`.
+`list_devices` shows who holds what. There is no daemon.
+
+`simulator` boots and shuts down simulators and emulators, on request only. With no name, shutdown
+touches only what this tool started. `APPDYNO_EMULATOR_ARGS` replaces the emulator's default flags.
 
 An action answers with the settled screen. `settled` means the screen was still for the window.
 `changed` means the screen differs from before the action, in layout or text; it does not say the action
@@ -90,6 +134,7 @@ between CLI processes is kept in a small file in the state directory.
 | `--no-home`          |                         | block the home key                                           |
 | `--measurements dir` | `APPDYNO_MEASUREMENTS`  | where measurements are stored (default: the state directory) |
 | `--takeover`         |                         | stop another tool that holds UI automation on Android        |
+| `--share`            | `APPDYNO_SHARE=1`       | use a device another process holds                           |
 |                      | `APPDYNO_SECRETS=a,b`   | values never shown back or put on the clipboard              |
 
 Without `--takeover`, a second tool holding UI automation on Android (`another-server`, `another-tool`,

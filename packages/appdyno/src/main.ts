@@ -178,7 +178,13 @@ async function main(): Promise<number> {
     }
     default: {
       const device = deviceFlag(command, rest);
-      const ctx = contextFrom(device ? { device } : {}, join(stateDir(), 'cli-session.json'));
+      // use-device has its own flag of that name
+      const shareAt = command === 'use-device' ? -1 : rest.indexOf('--share');
+      if (shareAt >= 0) rest.splice(shareAt, 1);
+      const ctx = contextFrom(
+        { ...(device && { device }), ...(shareAt >= 0 && { share: true }) },
+        join(stateDir(), 'cli-session.json'),
+      );
       const ops = opsFor(ctx);
       const commands = commandsFor(ops);
       const op = command === undefined ? undefined : commands[command];
@@ -188,7 +194,7 @@ async function main(): Promise<number> {
           `usage: appdyno <command> [flags]; appdyno <command> --help for its flags
 
 commands:
-  mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--measurements dir]
+  mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--measurements dir]
                    the MCP server over stdio
   devices          the connected Android devices
   doctor [--serial S]

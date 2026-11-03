@@ -56,13 +56,24 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 | `orientation.set`                 | `rotation` 0–3 (frozen)                                                        | –                                                                                |
 | `audit` (iOS)                     | `types?`, `maxIssues` (50)                                                     | `issues`, `truncated`, `elapsedMs`                                               |
 | `a11y.read` (Android)             | `maxNodes` (60)                                                                | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`) |
+| `wait` (minor 3)                  | `since?`, `timeoutMs`, `minMs?` (300)                                          | `sig`, `changed`, `reads`, `elapsedMs`, `tree?`                                  |
 | `cancel`                          | `id`                                                                           | –                                                                                |
 | `shutdown`                        | –                                                                              | – (the agent exits)                                                              |
 
-`action` is one of `tap {x,y}`, `longPress {x,y,durationMs}`, `swipe {from,to,durationMs}`,
+`action` is one of `tap {x,y}`, `doubleTap {x,y}`, `longPress {x,y,durationMs}`, `swipe {from,to,durationMs}`,
 `gesture {pointers}` (1–5 fingers, each a list of `{x,y,t}` samples; fingers go down together at their
 first sample and up together at their last) and `key {key}` (`back`, `home`, `enter`, `delete`, `tab`,
-`appSwitch`). Coordinates are device pixels.
+`appSwitch`, `volumeUp`, `volumeDown`, `power`, `lock`). Coordinates are device pixels.
+
+### Wait
+
+`wait` reads the screen as the settle does, every 80 ms, and answers when its digest `sig` (every node's
+class, id, text, description, bounds and flags, and the windows) differs from `since`, no sooner than
+`minMs`, with the `tree`. No `since`: it answers after the first read. At `timeoutMs` it answers
+`changed: false` with no tree. The host matches on what comes back, so one matcher serves every
+selector, ref and check, and a still screen costs one answer. An endless animation answers every `minMs`,
+which is no worse than polling. An agent whose capabilities lack `wait` is polled with `tree.get` every
+300 ms, as is one whose `wait` fails.
 
 ### iOS
 
@@ -80,6 +91,11 @@ A simulator's touches and reads go around the runner where two small helpers (`i
 clang on first use, private API) prove themselves. The runner stays: for the hello, text, screenshots,
 clipboard and every case below. `APPDYNO_SIM_DIRECT=off` turns both off, `read` leaves the input to the runner.
 `appdyno doctor --serial <simulator>` says whether both answer.
+
+iOS has no key to close a keyboard or to open the app switcher. `dismissKeyboard` taps the keyboard's hide key where it
+shows one, else a place with no control; the host then reads whether it went and refuses if it did not. `appSwitch` is the home
+indicator's slow drag up. The volume, lock and power keys go through direct input on a simulator and through
+`XCUIDevice` on a phone, where lock and power use the private `pressLockButton`.
 
 - **Input**, `SimHID` on the Mac: XPC to the simulator's `dtuhidd` (`com.apple.coredevice.feature.remote.hid.digitizer`).
   Tap, long press, swipe, one- and two-finger gestures, and the home, enter, delete and tab keys. A barrier
@@ -201,8 +217,8 @@ engine's `rule`, a `message`, the element's box `b` in tap units and the element
 
 `data.code` is one of `TIMEOUT`, `CANCELLED`, `DEVICE_GONE`, `AGENT_UNAVAILABLE`, `AGENT_CONFLICT`,
 `AGENT_VERSION_MISMATCH`, `UNSUPPORTED`, `PERMISSION_REQUIRED`, `NOT_FOUND`, `NO_FOCUS`,
-`APP_NOT_RUNNING`, `POLICY_DENIED`, `INVALID_ARGUMENT`, `INTERNAL`; the JSON-RPC code is −32000 minus its
-index in that list. `TIMEOUT`, `DEVICE_GONE` and `AGENT_UNAVAILABLE` are worth one retry; the host
+`APP_NOT_RUNNING`, `POLICY_DENIED`, `INVALID_ARGUMENT`, `STALE`, `INTERNAL`; the JSON-RPC code is −32000 minus its
+index in that list. `AMBIGUOUS`, `CHECK_FAILED` and `DEVICE_CLAIMED` come after those and are the host's own, never on the wire. `TIMEOUT`, `DEVICE_GONE` and `AGENT_UNAVAILABLE` are worth one retry; the host
 retries read-only requests itself once on a fresh connection, never an action (it may have happened).
 
 ## Android agent lifecycle

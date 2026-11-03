@@ -168,12 +168,12 @@ describe('steps across screens', () => {
     expect(d.screen).toBe('sent');
   });
 
-  it('settles before a step that reads the screen, not before a blind one', async () => {
+  it('settles after a step that may change the screen, not between typing', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
     await call('steps', {
       steps: [
-        { action: 'tap', x: 1, y: 1 },
+        { action: 'type_text', text: 'a' },
         { action: 'tap', x: 2, y: 2 },
         { action: 'tap', selector: { text: 'Form' } },
       ],
@@ -181,8 +181,8 @@ describe('steps across screens', () => {
     const opts = d.calls
       .filter((c) => c.name === 'act')
       .map((c) => c.args[1] as { settle: unknown });
-    expect(opts[0]!.settle).toBe(false);
-    expect(opts[1]!.settle).toBeTruthy();
+    expect(opts.at(-3)!.settle).toBe(false);
+    expect(opts.at(-2)!.settle).toBeTruthy();
   });
 
   it('stops at a failure, saying which step and why, with the screen', async () => {

@@ -134,7 +134,11 @@ export class Simctl {
 
   /** Boots and waits until the simulator has finished booting. */
   async boot(udid: string) {
-    if ((await this.state(udid)) !== 'Booted') await this.exec(['boot', assertUdid(udid)], 120_000);
+    if ((await this.state(udid)) !== 'Booted')
+      // a runner still alive on it may boot it first
+      await this.exec(['boot', assertUdid(udid)], 120_000).catch((e: unknown) => {
+        if (!(e instanceof DeviceError && /current state: Booted/i.test(e.message))) throw e;
+      });
     await this.exec(['bootstatus', udid, '-b'], 300_000);
   }
 

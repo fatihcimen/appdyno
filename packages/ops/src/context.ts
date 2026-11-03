@@ -122,6 +122,17 @@ export class ServerContext {
     return failed;
   }
 
+  /** Its device is going away: the agent stops first, as a runner left alive would boot a simulator again. */
+  async forget(serial: string) {
+    const s = this.sessions.get(serial);
+    if (!s) return;
+    await s.device.stopAgent().catch(() => undefined);
+    s.device.close();
+    this.sessions.delete(serial);
+    if (this.defaults.claims) release(serial);
+    if (this.currentSerial === serial) this.currentSerial = undefined;
+  }
+
   /** The session of `serial`, else the default device (the configured one, or the only allowed one). */
   async session(serial?: string): Promise<Session> {
     if (serial) return this.sessions.get(serial) ?? this.use(serial);

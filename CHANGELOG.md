@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Phase 4, driving. Every action takes a ref, coordinates or a selector; `steps` runs across screens with `wait_for`,
+  `assert` and `scroll_to`; `scroll_to`, `assert`, `gesture` (double tap, long press, drag, pinch, free plan), `keyboard`,
+  `alert` (any system alert), hardware buttons in `press_key`, `app`, `simulator`, `device_setting`, `clipboard`.
+- Device claims for parallel agents, with no daemon. Conditions the tool changed are put back.
+- Protocol 1.3: the agent's `wait`.
+- `long_press` and `pinch` are now kinds of `gesture`, `dismiss_alert` is `alert`, `set_clipboard` is `clipboard`.
+
+## Unreleased
+
 - Docs: a README for new users, CONTRIBUTING, SECURITY and a CI workflow (lint, typecheck, unit tests, agent unit tests).
 - iOS simulators take their touches and answer their reads directly: `SimHID` (the simulator's `dtuhidd`, from the Mac) and `SimAX` (accessibility snapshots, inside it), compiled on first use, checked against the runner, which answers whatever they refuse. `docs/protocol.md`, `docs/perf.md`. `appdyno doctor --serial <simulator>` reports them; `APPDYNO_SIM_DIRECT=off|read`.
 - Two-finger gestures on simulators.
