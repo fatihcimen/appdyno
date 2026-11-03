@@ -168,8 +168,68 @@ export interface MeasureSource {
 
 export type Capability = Exclude<keyof MeasureSource, 'virtual'>;
 
+export type AppEntry = { id: string; name?: string; version?: string };
+export type AppState = 'not_installed' | 'stopped' | 'running' | 'foreground';
+export type LaunchOptions = { args?: string[]; env?: Record<string, string> };
+
+/** Apps on a device; what a device cannot do answers UNSUPPORTED with the reason. */
+export interface AppManager {
+  install(path: string): Promise<void>;
+  uninstall(app: string): Promise<void>;
+  clearData(app: string): Promise<void>;
+  listApps(all: boolean): Promise<AppEntry[]>;
+  /** Installed and running; `foreground` is told by the caller, which has the screen. */
+  appState(app: string): Promise<Exclude<AppState, 'foreground'>>;
+  permission(app: string, grant: boolean, service: string): Promise<void>;
+  launchWith(app: string, opts: LaunchOptions): Promise<void>;
+}
+
+export const SETTINGS = [
+  'dark_mode',
+  'text_size',
+  'reduce_motion',
+  'animations',
+  'locale',
+  'network',
+] as const;
+export type SettingName = (typeof SETTINGS)[number];
+
+/**
+ * The device's conditions. `get` answers what `set` takes, so a change can be put back; `app` is the app
+ * a per-app setting (Android's locale) is about.
+ */
+export interface DeviceSettings {
+  get(name: SettingName, app?: string): Promise<string>;
+  set(name: SettingName, value: string, app?: string): Promise<void>;
+  push(app: string | undefined, title: string, body: string): Promise<void>;
+  biometric(match: boolean): Promise<void>;
+}
+
+/** A simulator or emulator that can be started, whatever its state. */
+export type Startable = { id: string; name: string; state: 'running' | 'stopped'; serial?: string };
+
+/** Starting and stopping the virtual devices of a driver. */
+export interface VirtualDevices {
+  startable(): Promise<Startable[]>;
+  /** Starts it and answers its serial once it can be driven. */
+  boot(id: string): Promise<string>;
+  shutdown(id: string): Promise<void>;
+}
+
 /** One device, whichever platform: what the operations are written against. */
 export interface Device {
+  readonly apps?: AppManager;
+  readonly settings?: DeviceSettings;
+  /** One attempt to close an open keyboard; the caller reads whether it went. */
+  dismissKeyboard?(): Promise<void>;
+  /**
+   * Waits on the device until the screen differs from `since` (no `since`: answers at once with it);
+   * undefined from an agent without `wait`, which the caller polls instead.
+   */
+  waitChange?(
+    since: string | undefined,
+    timeoutMs: number,
+  ): Promise<{ sig: string; tree?: Tree } | undefined>;
   readonly serial: string;
   readonly platform: 'android' | 'ios';
   /** An emulator or simulator: numbers compare only with the same kind of device. */
@@ -247,6 +307,7 @@ export interface DeviceProvider {
   list(): Promise<{ serial: string; state: string; model?: string }[]>;
   handles(serial: string): boolean;
   open(serial: string): Device;
+  readonly virtual?: VirtualDevices;
   /** What this driver needs of this machine and, with `serial`, of that device. */
   doctor?(serial?: string): Promise<Check[]>;
 }

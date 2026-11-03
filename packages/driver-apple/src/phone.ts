@@ -1,5 +1,6 @@
 import { phoneCrashes } from './crashes.js';
 import { phoneLogs } from './logs.js';
+import { PhoneApps, PhoneSettings } from './manage.js';
 import { execFile } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -332,7 +333,12 @@ export class IosPhoneDevice extends IosDevice {
     super(serial, phoneOps(serial, ctl), new IosRunnerLauncher(serial, transport));
     this.transport = transport;
     this.ctl = ctl;
+    this.apps = new PhoneApps(ctl);
+    this.settings = new PhoneSettings(ctl);
   }
+
+  readonly apps: PhoneApps;
+  readonly settings: PhoneSettings;
 
   /** Activity Monitor over every process (no attach: a system app has no get-task-allow), one process read. */
   private async activity(bundle: string, windowMs: number) {

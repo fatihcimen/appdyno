@@ -55,15 +55,20 @@ describe('tool list', () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toMatchInlineSnapshot(`
       [
+        "alert",
+        "app",
+        "assert",
         "audit",
+        "clipboard",
         "crashes",
         "device_info",
-        "dismiss_alert",
+        "device_setting",
         "find",
+        "gesture",
+        "keyboard",
         "launch_app",
         "list_devices",
         "logs",
-        "long_press",
         "open_link",
         "perf_heap",
         "perf_launch",
@@ -71,13 +76,13 @@ describe('tool list', () => {
         "perf_scroll",
         "perf_snapshot",
         "perf_trace",
-        "pinch",
         "press_key",
         "screen",
         "screenshot",
-        "set_clipboard",
+        "scroll_to",
         "set_location",
         "set_orientation",
+        "simulator",
         "steps",
         "swipe",
         "tap",
@@ -99,6 +104,7 @@ describe('tool list', () => {
         .map((t) => t.name)
         .sort(),
     ).toEqual([
+      'assert',
       'audit',
       'crashes',
       'device_info',
@@ -112,7 +118,7 @@ describe('tool list', () => {
       'screenshot',
       'wait_for',
     ]);
-    expect(tools.length).toBeLessThanOrEqual(30);
+    expect(tools.length).toBeLessThanOrEqual(35);
   });
 
   it('reports the server as appdyno with an icon', async () => {
@@ -247,11 +253,11 @@ describe('act and read', () => {
 
   it('answers only a system permission prompt', async () => {
     const home = (await t.textOf('screen')).text;
-    const none = await t.textOf('dismiss_alert');
-    expect(none.text).toContain('no system permission prompt is open');
+    const none = await t.textOf('alert', { answer: 'allow' });
+    expect(none.text).toContain('no system alert is open');
     const asked = await t.textOf('tap', { ref: refOf(home, 'İzin') });
-    expect(asked.text).toContain('answer it with dismiss_alert');
-    const r = await t.textOf('dismiss_alert');
+    expect(asked.text).toContain('answer it with alert');
+    const r = await t.textOf('alert', { answer: 'allow' });
     expect(r.text).toContain('"Uygulamayı kullanırken"');
     expect(t.device.permissionUp).toBe(false);
   });
@@ -313,7 +319,7 @@ describe('policy', () => {
 
   it('hides secrets in what it shows and keeps them off the clipboard', async () => {
     const t = await connect({ secrets: ['Gönderildi'] });
-    expect((await t.textOf('set_clipboard', { text: 'xGönderildix' })).error).toBe(true);
+    expect((await t.textOf('clipboard', { text: 'xGönderildix' })).error).toBe(true);
     const home = (await t.textOf('screen')).text;
     const form = (await t.textOf('tap', { ref: refOf(home, 'Form') })).text;
     const sent = (await t.textOf('tap', { ref: refOf(form, 'Gönder'), read: 'full' })).text;
@@ -493,8 +499,8 @@ describe('iOS simulators', () => {
     const t = await connect({}, new FakeIos());
     const home = (await t.textOf('screen')).text;
     const asked = await t.textOf('tap', { ref: refOf(home, 'İzin') });
-    expect(asked.text).toContain('answer it with dismiss_alert');
-    const r = await t.textOf('dismiss_alert');
+    expect(asked.text).toContain('answer it with alert');
+    const r = await t.textOf('alert', { answer: 'allow' });
     expect(r.text).toContain('"Erlauben"');
     expect(t.device.permissionUp).toBe(false);
   });

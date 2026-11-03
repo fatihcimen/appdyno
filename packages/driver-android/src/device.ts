@@ -29,6 +29,7 @@ import { androidCrashes } from './crashes.js';
 import { androidLogs } from './logs.js';
 import { auditAndroid, decodePng } from './audit.js';
 import { AndroidAgentLauncher, REMOTE_DIR } from './agent.js';
+import { AndroidApps, AndroidSettings, assertPkg } from './manage.js';
 import { AndroidPerf } from './perf.js';
 
 /** Read-only requests are retried once on a fresh connection when the agent went away. */
@@ -39,12 +40,6 @@ const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
   'app.foreground',
   'clipboard.get',
 ]);
-
-const PKG = /^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/;
-const assertPkg = (p: string) => {
-  if (!PKG.test(p)) throw new DeviceError('INVALID_ARGUMENT', `not a package name: ${p}`);
-  return p;
-};
 
 /**
  * An Android device or emulator driven through its agent: every command has a timeout, commands never
@@ -70,6 +65,8 @@ export class AndroidDevice implements Device {
   ) {
     assertSerial(serial);
     this.launcher = new AndroidAgentLauncher(adb, serial, takeover);
+    this.apps = new AndroidApps(adb, serial);
+    this.settings = new AndroidSettings(adb, serial);
   }
 
   logs = (q: LogsQuery) => androidLogs(this.adb, this.serial, q);
@@ -78,6 +75,21 @@ export class AndroidDevice implements Device {
     (await this.adb.exec(this.serial, `pidof ${shq(assertPkg(app))}`)).trim().split(/\s+/)[0] ||
     undefined;
   appRunning = async (app: string) => !!(await this.appPid(app));
+
+  readonly apps: AndroidApps;
+  readonly settings: AndroidSettings;
+  dismissKeyboard = async () => {
+    await this.key('back', { settle: false, read: 'none' });
+  };
+  waitChange = async (since: string | undefined, timeoutMs: number) => {
+    if (!this.helloInfo?.capabilities.includes('wait')) return undefined;
+    const { result } = await this.call(
+      'wait',
+      { ...(since && { since }), timeoutMs },
+      TIMEOUTS.read + timeoutMs,
+    );
+    return { sig: result.sig, ...(result.tree && { tree: result.tree }) };
+  };
 
   /** Connects (starting the agent when needed); the agent's hello. */
   async open(): Promise<Hello> {

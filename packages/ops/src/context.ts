@@ -7,6 +7,8 @@ import {
   type DeviceProvider,
   type ScreenElement,
 } from '@appdyno/core';
+import { claim, holder, release } from './claims.js';
+import { restoreConditions } from './control.js';
 import { checkApp, checkDevice, type Policy } from './policy.js';
 import { refused, Session } from './session.js';
 import { ToolError } from './tool.js';
@@ -41,6 +43,11 @@ export class ServerContext {
       measurements?: string;
       /** A file to keep the selection and the diff baseline in between processes (the command line). */
       remember?: string;
+      /** Hold a device for the session, refusing one another live process holds (`owner`: this tool, as it is shown). */
+      claims?: boolean;
+      owner?: string;
+      /** Use a device another process holds. */
+      share?: boolean;
     } = {},
   ) {
     this.saved = defaults.remember ? recall(defaults.remember) : undefined;
@@ -72,22 +79,47 @@ export class ServerContext {
   }
 
   /** Opens `serial` (starting its agent) and makes it the default device. */
-  async use(serial: string, app?: string): Promise<Session> {
+  async use(serial: string, app?: string, share = false): Promise<Session> {
     checkDevice(this.policy, serial);
     if (app) checkApp(this.policy, app);
     let s = this.sessions.get(serial);
     if (!s) {
       const saved = this.saved?.serial === serial ? this.saved : undefined;
+      const holds = this.defaults.claims && !share && !this.defaults.share;
+      if (holds) claim(serial, this.defaults.owner ?? 'appdyno');
       s = new Session(
-        await this.open(serial).catch(refused),
+        await this.open(serial).catch((e: unknown) => {
+          if (holds) release(serial);
+          return refused(e);
+        }),
         app ?? this.defaults.app ?? saved?.app,
       );
       s.shown = saved?.shown;
       s.lastActionAt = saved?.lastActionAt;
       this.sessions.set(serial, s);
+      // a holder that died left its changes behind; a command line's stay until asked
+      if (holds && !this.defaults.remember && s.device.settings)
+        this.leftovers.set(serial, await restoreConditions(s));
     } else if (app) s.appId = app;
     this.currentSerial = serial;
     return s;
+  }
+
+  /** What the start of a session put back or could not, by device. */
+  readonly leftovers = new Map<string, { restored: string[]; failed: string[] }>();
+
+  /** Who holds a device, when this server keeps to claims. */
+  heldBy(serial: string) {
+    return this.defaults.claims ? holder(serial) : undefined;
+  }
+
+  /** The end of a session: conditions it changed go back (a command line's stay until asked). */
+  async end(): Promise<string[]> {
+    if (this.defaults.remember) return [];
+    const failed: string[] = [];
+    for (const s of this.sessions.values())
+      if (s.device.settings) failed.push(...(await restoreConditions(s)).failed);
+    return failed;
   }
 
   /** The session of `serial`, else the default device (the configured one, or the only allowed one). */
@@ -121,5 +153,6 @@ export class ServerContext {
       writeFileSync(this.defaults.remember, JSON.stringify(saved), { mode: 0o600 });
     }
     for (const x of this.sessions.values()) x.device.close();
+    if (this.defaults.claims) for (const serial of this.sessions.keys()) release(serial);
   }
 }

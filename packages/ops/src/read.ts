@@ -1,28 +1,26 @@
 import {
+  attributesOf,
   diffScreens,
   diffText,
-  fold,
-  pause,
-  throwIfCancelled,
-  renderScreen,
   screenStructure,
+  selectIn,
   UNCHANGED,
-  type Screen,
 } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { FindOut, ScreenOut, ScreenshotOut, WaitOut } from './schemas.js';
 import { refused } from './session.js';
-import { Read, Ref } from './steps.js';
+import { MAX_WAIT_MS, Read, Selector, WAIT_MS, WaitStep, type Steps } from './steps.js';
 import { defineOp, READ, reply, ToolError, type Op } from './tool.js';
 
-const WAIT_MS = 5_000;
-const MAX_WAIT_MS = 15_000;
-const WAIT_GAP_MS = 300;
 const SHOT_PX = 1024;
 
-export function readOps(ctx: ServerContext, { clean, foreground, header, show }: Answers): Op[] {
+export function readOps(
+  ctx: ServerContext,
+  { clean, foreground, header, show }: Answers,
+  { waitFor }: Steps,
+): Op[] {
   return [
     defineOp({
       name: 'screen',
@@ -48,76 +46,57 @@ export function readOps(ctx: ServerContext, { clean, foreground, header, show }:
       name: 'find',
       title: 'Find',
       description:
-        'The elements whose text contains `text` or whose id is `id`, without sending the whole screen.',
-      input: z
-        .object({
-          text: z.string().min(1).max(200).optional(),
-          id: z.string().min(1).max(200).optional(),
-        })
-        .strict(),
+        'The elements that match text, id or role, with role, enabled, checked, focused, value and bounds, without sending the whole screen. For a pass or fail: assert.',
+      input: Selector,
       output: FindOut,
       annotations: READ,
-      run: async ({ text: want, id }) => {
-        if (!want && !id) throw new ToolError('give text or id');
+      run: async ({ index, ...sel }) => {
+        if (!sel.text && !sel.id && !sel.role) throw new ToolError('give text, id or role');
         const s = await ctx.session();
         const screen = await s.read();
-        const w = want && fold(want);
-        const hits = screen.list.filter(
-          (e) => (!w || fold(e.label).includes(w)) && (!id || e.id === id),
-        );
-        const matches = hits.map((e) => ({
-          ref: e.ref,
-          role: e.role,
-          label: clean(e.label),
-          ...(e.id && { id: e.id }),
-          x: e.x,
-          y: e.y,
-        }));
+        const all = selectIn(screen.list, sel);
+        const hits = index === undefined ? all : all.slice(index, index + 1);
+        const matches = hits.map((e) => {
+          const { text: _whole, value, ...at } = attributesOf(screen.elements, e);
+          return {
+            ref: e.ref,
+            role: e.role,
+            label: clean(e.label),
+            ...(e.id && { id: e.id }),
+            x: e.x,
+            y: e.y,
+            ...at,
+            ...(value !== undefined && { value: clean(value) }),
+          };
+        });
         if (hits.length === 0)
           return reply(`not found (${screen.list.length} elements)`, { matches });
-        return reply(renderScreen(hits, clean), { matches });
+        return reply(
+          matches
+            .map(
+              (m) =>
+                `${m.ref} ${m.role} ${JSON.stringify(m.label)} ${m.x},${m.y} ${m.bounds.w}x${m.bounds.h}` +
+                `${m.enabled ? '' : ' disabled'}${m.checked ? ' checked' : ''}${m.focused ? ' focused' : ''}` +
+                `${m.value !== undefined ? ` value=${JSON.stringify(m.value)}` : ''}`,
+            )
+            .join('\n'),
+          { matches },
+        );
       },
     }),
     defineOp({
       name: 'wait_for',
       title: 'Wait for',
-      description: `Wait until an element shows (gone: until it is gone): text, id or ref; timeoutMs default ${WAIT_MS}, at most ${MAX_WAIT_MS}. Use this instead of fixed sleeps.`,
-      input: z
-        .object({
-          text: z.string().min(1).max(200).optional(),
-          id: z.string().min(1).max(200).optional(),
-          ref: Ref.optional(),
-          gone: z.boolean().default(false),
-          timeoutMs: z.number().int().min(300).max(MAX_WAIT_MS).default(WAIT_MS),
-          read: Read,
-        })
-        .strict(),
+      description: `Wait until an element shows (gone: until it is gone): text, id, role or ref; timeoutMs default ${WAIT_MS}, at most ${MAX_WAIT_MS}. Use this instead of fixed sleeps.`,
+      input: z.object({ ...WaitStep.omit({ action: true }).shape, read: Read }).strict(),
       output: WaitOut,
       annotations: READ,
-      run: async ({ text: want, id, ref, gone, timeoutMs, read }) => {
-        if (!want && !id && !ref) throw new ToolError('give text, id or ref');
+      run: async ({ read, ...a }) => {
         const s = await ctx.session();
-        const w = want && fold(want);
-        const match = (e: Screen['list'][number]) =>
-          (!w || fold(e.label).includes(w)) && (!id || e.id === id) && (!ref || e.ref === ref);
         const before = s.shown;
-        const end = Date.now() + timeoutMs;
-        let last: Screen | undefined;
-        let met = false;
-        for (;;) {
-          throwIfCancelled('wait_for');
-          const now = await s.read().catch(() => undefined);
-          // a failed read is no answer: never "gone"
-          if (now) {
-            last = now;
-            met = now.list.some(match) !== gone;
-          }
-          if (met || Date.now() >= end) break;
-          await pause(WAIT_GAP_MS).catch(refused);
-        }
-        if (!last) throw new ToolError('the screen could not be read: nothing to look in');
+        const { screen: last, met, found } = await waitFor(s, a);
+        const { gone, timeoutMs } = a;
         show(s, last);
-        const found = last.list.find(match);
         const head = met
           ? gone
             ? 'gone'

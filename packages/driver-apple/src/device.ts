@@ -1,8 +1,10 @@
 import type { CrashesAnswer, CrashesQuery, LogsAnswer, LogsQuery } from '@appdyno/core';
 import { simulatorCrashes } from './crashes.js';
 import { simulatorLogs } from './logs.js';
+import { SimulatorApps, SimulatorSettings } from './manage.js';
 import {
   DeviceError,
+  NODE_FLAGS,
   type ActParams,
   type ActResult,
   type AuditResult,
@@ -122,6 +124,21 @@ export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
   };
 }
 
+/** A point above the keyboard with no control or field on it; else near the top. */
+export function inertPoint(t: Tree): Point {
+  const screen = t.windows[0]?.b ?? [0, 0, 400, 800];
+  const keyboard = t.nodes.find((n) => /keyboard$/i.test(n.c));
+  const bottom = keyboard ? keyboard.b[1] : screen[3];
+  const x = Math.round((screen[0] + screen[2]) / 2);
+  const reacts = NODE_FLAGS.clickable | NODE_FLAGS.editable | NODE_FLAGS.checkable;
+  const taken = (y: number) =>
+    t.nodes.some(
+      (n) => (n.f & reacts) !== 0 && x >= n.b[0] && x <= n.b[2] && y >= n.b[1] && y <= n.b[3],
+    );
+  for (let y = 120; y < bottom - 10; y += 40) if (!taken(y)) return { x, y };
+  return { x, y: 120 };
+}
+
 /**
  * An iOS device driven through the runner: every command has a timeout, commands never overlap,
  * failures are typed DeviceErrors. App lifecycle, links and location go through the device's own
@@ -150,6 +167,32 @@ export class IosDevice implements Device {
       () => true,
       () => false,
     );
+
+  waitChange = async (since: string | undefined, timeoutMs: number) => {
+    if (!this.helloInfo?.capabilities.includes('wait')) return undefined;
+    const { result } = await this.call(
+      'wait',
+      { ...(since && { since }), timeoutMs },
+      TIMEOUTS.read + timeoutMs,
+    );
+    return { sig: result.sig, ...(result.tree && { tree: result.tree }) };
+  };
+
+  /**
+   * iOS has no call to close a keyboard: its own hide key where it shows one, else a touch on a place
+   * with no control, which closes it in an app that takes that as leaving the field.
+   */
+  dismissKeyboard = async () => {
+    const t = await this.tree();
+    const hide = t.nodes.find(
+      (n) => /button$/i.test(n.c) && /^(hide keyboard|dismiss keyboard)$/i.test(n.d ?? n.t ?? ''),
+    );
+    const point =
+      hide && hide.b
+        ? { x: (hide.b[0] + hide.b[2]) / 2, y: (hide.b[1] + hide.b[3]) / 2 }
+        : inertPoint(t);
+    await this.tap(point, { settle: false, read: 'none' });
+  };
 
   /** Before a new runner starts: the device must be up (a new runner would boot a shut-down simulator). */
   protected async prepareStart(): Promise<void> {
@@ -269,6 +312,24 @@ export class IosDevice implements Device {
     return this.act({ kind: 'swipe', from, to, durationMs }, opts);
   }
   key(key: Key, opts?: ActOptions) {
+    if (key === 'appSwitch') {
+      // iOS has no such key: the home indicator's slow drag up, held until the switcher shows
+      const { w, h } = this.helloInfo!.screen;
+      const [x, y] = [Math.round(w / 2), Math.round(h * 0.55)];
+      return this.act(
+        {
+          kind: 'gesture',
+          pointers: [
+            [
+              { x, y: h - 4, t: 0 },
+              { x, y, t: 400 },
+              { x, y, t: 900 },
+            ],
+          ],
+        },
+        opts,
+      );
+    }
     return this.act({ kind: 'key', key }, opts);
   }
 
@@ -455,7 +516,12 @@ export class IosSimulatorDevice extends IosDevice {
   ) {
     super(serial, simulatorOps(serial, simctl), new IosRunnerLauncher(serial));
     this.direct = direct ?? new DirectSim(serial);
+    this.apps = new SimulatorApps(simctl, serial);
+    this.settings = new SimulatorSettings(simctl, serial);
   }
+
+  readonly apps: SimulatorApps;
+  readonly settings: SimulatorSettings;
 
   private remember(t: Tree) {
     this.recent.delete(t.hash);

@@ -27,6 +27,7 @@ type Settings = {
   'allow-urls'?: string;
   'no-home'?: boolean;
   takeover?: boolean;
+  share?: boolean;
   measurements?: string;
 };
 
@@ -56,8 +57,14 @@ function contextFrom(values: Settings, remember?: string) {
     ...(app && { app }),
     ...(values.measurements && { measurements: values.measurements }),
     ...(remember && { remember }),
+    claims: true,
+    owner: remember ? 'appdyno cli' : 'appdyno mcp',
+    ...((values.share || env.APPDYNO_SHARE === '1') && { share: true }),
   });
 }
+
+/** How long putting a session's conditions back may hold up the end of the server. */
+const END_MS = 20_000;
 
 /** The MCP server over stdio, until its client closes stdin. */
 async function serveMcp(args: string[]) {
@@ -71,6 +78,7 @@ async function serveMcp(args: string[]) {
       'allow-urls': { type: 'string' },
       'no-home': { type: 'boolean' },
       takeover: { type: 'boolean' },
+      share: { type: 'boolean' },
       measurements: { type: 'string' },
     },
   });
@@ -78,8 +86,12 @@ async function serveMcp(args: string[]) {
   const log = (line: object) =>
     process.stderr.write(`${JSON.stringify({ t: new Date().toISOString(), ...line })}\n`);
   process.stdin.once('close', () => {
-    ctx.close();
-    process.exit(0);
+    const giveUp = new Promise<string[]>((r) => setTimeout(() => r(['timed out']), END_MS));
+    void Promise.race([ctx.end().catch((e: Error) => [e.message]), giveUp]).then((failed) => {
+      for (const f of failed) log({ conditionNotRestored: f });
+      ctx.close();
+      process.exit(0);
+    });
   });
   await createServer(opsFor(ctx), log).connect(new StdioServerTransport());
 }

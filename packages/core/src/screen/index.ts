@@ -8,6 +8,7 @@ export * from './model.js';
 export * from './refs.js';
 export * from './diff.js';
 export * from './fold.js';
+export * from './select.js';
 
 /** One read of the screen: the agent's tree, its elements with stable refs, and the list a tester sees. */
 export type Screen = {

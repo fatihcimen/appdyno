@@ -5,6 +5,7 @@ import type { DeviceError } from '@appdyno/protocol';
 import { Adb } from './adb.js';
 import { agentApk } from './agent.js';
 import { AndroidDevice } from './device.js';
+import { AndroidEmulators } from './manage.js';
 import { traceProcessor } from './tools.js';
 
 const run = promisify(execFile);
@@ -151,6 +152,7 @@ export function androidProvider(
         ...(d.props.model && { model: d.props.model }),
       })),
     handles: () => true,
+    virtual: new AndroidEmulators(adb),
     // a phone unplugged for a moment (or rebooting) is waited for, up to 30 s, on read-only calls
     open: (serial) => new AndroidDevice(serial, new Adb(), 30_000, opts.takeover),
     doctor: (serial) => androidChecks(adb, serial),

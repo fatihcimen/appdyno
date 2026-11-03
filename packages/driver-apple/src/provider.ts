@@ -3,6 +3,7 @@ import { promisify } from 'node:util';
 import type { Check, DeviceProvider } from '@appdyno/core';
 import type { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from './device.js';
+import { Simulators } from './manage.js';
 import { IosPhoneDevice, phoneRunnerApp } from './phone.js';
 import { iosProducts } from './runner.js';
 import { DirectSim } from './simdirect.js';
@@ -137,6 +138,7 @@ export function appleProvider(
       })),
     ],
     handles: (serial) => SIMULATOR_ID.test(serial) || PHONE_ID.test(serial),
+    virtual: new Simulators(new Simctl()),
     open: (serial) =>
       SIMULATOR_ID.test(serial) ? new IosSimulatorDevice(serial) : new IosPhoneDevice(serial),
     doctor: async (serial) => [

@@ -1,12 +1,62 @@
-import { buildScreen, type Device, type Screen, type ScreenElement } from '@appdyno/core';
+import {
+  buildScreen,
+  pause,
+  throwIfCancelled,
+  type Device,
+  type Screen,
+  type ScreenElement,
+} from '@appdyno/core';
 import { DeviceError, type Tree } from '@appdyno/protocol';
 import { ToolError } from './tool.js';
+
+const WAIT_GAP_MS = 300;
 
 /**
  * One device the server drives and what its agent was shown: the screen the diffs are against, the
  * newest read (refs resolve on it while no action came after it) and a count of actions.
  */
 export class Session {
+  /**
+   * Reads until `met` holds or the time is up, the last read with it. On the device where the agent has
+   * `wait`, so the tree crosses only when the screen changed; else a read every WAIT_GAP_MS.
+   */
+  async until(
+    met: (s: Screen) => boolean,
+    timeoutMs: number,
+  ): Promise<{ screen?: Screen; met: boolean }> {
+    const end = Date.now() + timeoutMs;
+    let last: Screen | undefined;
+    let sig: string | undefined;
+    let onDevice = !!this.device.waitChange;
+    for (;;) {
+      throwIfCancelled('wait');
+      let now: Screen | undefined;
+      if (onDevice) {
+        const left = Math.max(0, end - Date.now());
+        // a failed or absent wait: poll for the rest of this call
+        const r = await this.device.waitChange!(sig, sig === undefined ? 0 : left).catch(
+          () => undefined,
+        );
+        if (r === undefined) onDevice = false;
+        else {
+          sig = r.sig;
+          if (r.tree) {
+            now = this.screenOf(r.tree);
+            this.remember(now);
+          } else if (last) return { screen: last, met: false };
+        }
+      }
+      // a failed read is no answer: never "gone"
+      if (!onDevice) now = await this.read().catch(() => undefined);
+      if (now) {
+        last = now;
+        if (met(now)) return { screen: now, met: true };
+      }
+      if (Date.now() >= end) return { ...(last && { screen: last }), met: false };
+      if (!onDevice) await pause(WAIT_GAP_MS).catch(refused);
+    }
+  }
+
   /** The screen the agent was shown last: diffs are against it. */
   shown: ScreenElement[] | undefined;
   /** Device actions so far. */

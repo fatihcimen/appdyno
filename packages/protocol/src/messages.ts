@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Protocol major (breaking changes) and minor (additive, announced by capabilities). */
-export const PROTOCOL = { major: 1, minor: 2 } as const;
+export const PROTOCOL = { major: 1, minor: 3 } as const;
 
 /** Node flags (bit mask `f` of a wire node). */
 export const NODE_FLAGS = {
@@ -92,11 +92,23 @@ export type Point = z.infer<typeof Point>;
 /** One finger's path: points with their time offset from the gesture start (ms). */
 const Pointer = z.array(z.object({ x: z.number(), y: z.number(), t: z.number().min(0) })).min(1);
 
-export const KEYS = ['back', 'home', 'enter', 'delete', 'tab', 'appSwitch'] as const;
+export const KEYS = [
+  'back',
+  'home',
+  'enter',
+  'delete',
+  'tab',
+  'appSwitch',
+  'volumeUp',
+  'volumeDown',
+  'power',
+  'lock',
+] as const;
 export type Key = (typeof KEYS)[number];
 
 export const ActParams = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('tap'), ...Point.shape }),
+  z.object({ kind: z.literal('doubleTap'), ...Point.shape }),
   z.object({
     kind: z.literal('longPress'),
     ...Point.shape,
@@ -298,6 +310,21 @@ export const METHODS = {
    * nodes' traversal hints, and for up to `maxNodes` text nodes how many characters have no visible place
    * on the screen (the platform's character locations).
    */
+  /** Blocks on the device until the screen's digest differs from `since`; no `since`: answers at once. */
+  wait: {
+    params: z.object({
+      since: z.string().optional(),
+      timeoutMs: z.number().int().min(0).max(60_000),
+      minMs: z.number().int().min(0).max(60_000).optional(),
+    }),
+    result: z.object({
+      sig: z.string(),
+      changed: z.boolean(),
+      reads: z.number().int(),
+      elapsedMs: z.number(),
+      tree: Tree.optional(),
+    }),
+  },
   'a11y.read': {
     params: z.object({ maxNodes: z.number().int().min(1).max(200).default(60) }),
     result: z.object({ tree: Tree, clips: z.array(TextClip), traversal: z.array(Traversal) }),

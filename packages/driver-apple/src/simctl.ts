@@ -80,12 +80,12 @@ export type Simulator = {
 export class Simctl {
   constructor(private readonly env: NodeJS.ProcessEnv = xcodeEnv()) {}
 
-  async exec(args: string[], timeoutMs = 60_000): Promise<string> {
+  async exec(args: string[], timeoutMs = 60_000, env?: NodeJS.ProcessEnv): Promise<string> {
     try {
       const { stdout } = await run('xcrun', ['simctl', ...args], {
         timeout: timeoutMs,
         maxBuffer: 64 * 1024 * 1024,
-        env: this.env,
+        env: { ...this.env, ...env },
         ...(callSignal() && { signal: callSignal()! }),
       });
       return stdout;

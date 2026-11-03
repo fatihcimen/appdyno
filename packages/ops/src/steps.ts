@@ -1,24 +1,83 @@
-import type { ActOptions } from '@appdyno/core';
+import {
+  attributesOf,
+  nearest,
+  reportProgress,
+  selectIn,
+  type ActOptions,
+  type Screen,
+  type ScreenElement,
+  type Selector as SelectorOf,
+} from '@appdyno/core';
 import type { ActResult, Point, TextResult } from '@appdyno/protocol';
 import { z } from 'zod';
-import type { Answers, ReadMode } from './answers.js';
+import { SETTLE, type Answers, type ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
-import type { Session } from './session.js';
+import { refused, type Session } from './session.js';
 import { ToolError } from './tool.js';
 
 export const STALE = 'stale ref, read the screen again';
 
-export const Read = z
-  .enum(['diff', 'full', 'none'])
-  .default('diff')
-  .describe('screen after: diff (default), full, none');
+/** The screen in the answer after an action: its changes, all of it, or nothing. */
+export const Read = z.enum(['diff', 'full', 'none']).default('diff');
+// a check, not a pattern: a pattern in the schema costs the catalog on every tool that takes a ref
 export const Ref = z
   .string()
-  .regex(/^@[a-z0-9]{1,10}(-\d{1,3})?$/, 'a ref as the screen shows it (@k3f9)');
+  .refine((r) => /^@[a-z0-9]{1,10}(-\d{1,3})?$/.test(r), 'a ref as the screen shows it (@k3f9)');
 export const Coord = z.number().min(0).max(10_000);
-export const Target = { ref: Ref.optional(), x: Coord.optional(), y: Coord.optional() };
+export const Selector = z
+  .object({
+    text: z.string().optional(),
+    id: z.string().optional(),
+    role: z.string().optional(),
+    index: z.number().int().optional(),
+  })
+  .strict();
+export const Target = {
+  ref: Ref.optional(),
+  x: Coord.optional(),
+  y: Coord.optional(),
+  selector: Selector.optional(),
+};
 export const Direction = z.enum(['up', 'down', 'left', 'right']);
-export const Keys = z.enum(['back', 'enter', 'home', 'delete', 'tab']);
+export const Keys = z.enum([
+  'back',
+  'enter',
+  'home',
+  'delete',
+  'tab',
+  'app_switch',
+  'volume_up',
+  'volume_down',
+  'power',
+  'lock',
+]);
+const WIRE_KEY = {
+  back: 'back',
+  enter: 'enter',
+  home: 'home',
+  delete: 'delete',
+  tab: 'tab',
+  app_switch: 'appSwitch',
+  volume_up: 'volumeUp',
+  volume_down: 'volumeDown',
+  power: 'power',
+  lock: 'lock',
+} as const;
+/** These leave the app, as the home key does. */
+const LEAVES_APP = new Set(['home', 'app_switch', 'power', 'lock']);
+/** The screen goes dark: nothing to wait for or read. */
+const DARKENS = new Set(['power', 'lock']);
+
+export const WAIT_MS = 5_000;
+export const MAX_WAIT_MS = 15_000;
+/** How long a selector with no match waits for its element, as a screen may still be coming. */
+const NO_MATCH_WAIT_MS = 1_500;
+const SCROLL_MAX = 10;
+/** A scroll's finger travels this share of the list either way from its middle. */
+const SCROLL_REACH = 0.35;
+const DRAG_HOLD_MS = 150;
+
+export const Check = z.enum(['exists', 'absent', 'text', 'enabled', 'checked', 'focused']);
 
 const TapStep = z.object({ action: z.literal('tap'), ...Target }).strict();
 export const LongPressStep = z
@@ -43,17 +102,62 @@ export const TypeStep = z
     action: z.literal('type_text'),
     text: z.string().max(500),
     ref: Ref.optional(),
+    selector: Selector.optional(),
     replace: z.boolean().optional(),
     submit: z.boolean().optional(),
   })
   .strict();
 const KeyStep = z.object({ action: z.literal('press_key'), key: Keys }).strict();
+export const DoubleTapStep = z.object({ action: z.literal('double_tap'), ...Target }).strict();
+export const DragStep = z
+  .object({
+    action: z.literal('drag'),
+    ...Target,
+    to: z.object(Target).strict(),
+    durationMs: z.number().int().min(50).max(10_000).optional(),
+  })
+  .strict();
+export const WaitStep = z
+  .object({
+    action: z.literal('wait_for'),
+    ref: Ref.optional(),
+    ...Selector.shape,
+    gone: z.boolean().default(false),
+    timeoutMs: z.number().int().min(300).max(MAX_WAIT_MS).default(WAIT_MS),
+  })
+  .strict();
+export const AssertStep = z
+  .object({
+    action: z.literal('assert'),
+    ref: Ref.optional(),
+    ...Selector.shape,
+    check: Check.default('exists'),
+    equals: z.string().max(2_000).optional(),
+    expect: z.boolean().default(true),
+    timeoutMs: z.number().int().min(0).max(MAX_WAIT_MS).default(0),
+  })
+  .strict();
+export const ScrollStep = z
+  .object({
+    action: z.literal('scroll_to'),
+    selector: Selector,
+    direction: Direction.default('up'),
+    maxSwipes: z.number().int().min(1).max(50).default(SCROLL_MAX),
+    x: Coord.optional(),
+    y: Coord.optional(),
+  })
+  .strict();
 export const Step = z.discriminatedUnion('action', [
   TapStep,
   LongPressStep,
+  DoubleTapStep,
+  DragStep,
   SwipeStep,
   TypeStep,
   KeyStep,
+  WaitStep,
+  AssertStep,
+  ScrollStep,
 ]);
 export type Step = z.infer<typeof Step>;
 
@@ -96,18 +200,96 @@ export function pinchPaths(
   return [finger(-1), finger(1)];
 }
 
+/** A finger from one point to another with no flick: held at the start, if asked, and at the end. */
+export const dragPath = (from: Point, to: Point, durationMs: number, holdMs = 0) => [
+  { ...from, t: 0 },
+  ...(holdMs ? [{ ...from, t: holdMs }] : []),
+  { ...to, t: holdMs + durationMs },
+  { ...to, t: holdMs + durationMs + 80 },
+];
+
+/** The selector in flat arguments (the tools that only look at the screen take it that way). */
+const selectorOf = (a: SelectorOf): SelectorOf | undefined =>
+  a.text || a.id || a.role
+    ? {
+        ...(a.text && { text: a.text }),
+        ...(a.id && { id: a.id }),
+        ...(a.role && { role: a.role }),
+        ...(a.index !== undefined && { index: a.index }),
+      }
+    : undefined;
+
+const showSelector = (sel: SelectorOf) =>
+  Object.entries(sel)
+    .filter(([, v]) => v !== undefined)
+    .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+    .join(' ');
+
+type Judged = SelectorOf & {
+  ref?: string;
+  check: z.infer<typeof Check>;
+  equals?: string;
+  expect: boolean;
+};
+
 /** One step's device call and the action around it, shared by the tools that act on a target. */
 export function stepsFor(ctx: ServerContext, { act, clean }: Answers) {
   const policy = ctx.policy;
+  const line = (e: ScreenElement) =>
+    `${e.ref} ${e.role} ${JSON.stringify(clean(e.label || e.id || ''))} ${e.x},${e.y}`;
+  const offer = (list: ScreenElement[], want?: string) => {
+    const near = nearest(list, want).map(line);
+    return near.length > 0 ? `; nearest: ${near.join('; ')}` : '';
+  };
 
-  /** The point of a ref (on the device's current screen) or of x,y. */
-  const target = async (s: Session, a: { ref?: string; x?: number; y?: number }) => {
+  /** One element of a selector's matches, or a refusal listing them. */
+  const pick = (hits: ScreenElement[], sel: SelectorOf): ScreenElement => {
+    const hit =
+      sel.index === undefined ? (hits.length === 1 ? hits[0] : undefined) : hits[sel.index];
+    if (hit) return hit;
+    throw new ToolError(
+      `${hits.length} elements match ${showSelector(sel)}: ${hits.slice(0, 10).map(line).join('; ')}`,
+      'AMBIGUOUS',
+      'give the selector an index, or use a ref',
+    );
+  };
+
+  /** A selector on a fresh read; no match waits a moment, as the screen may still be coming. */
+  const resolve = async (s: Session, sel: SelectorOf): Promise<ScreenElement> => {
+    const { screen, met } = await s.until(
+      (x) => selectIn(x.list, sel).length > 0,
+      NO_MATCH_WAIT_MS,
+    );
+    if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND');
+    if (!met)
+      throw new ToolError(
+        `no element matches ${showSelector(sel)} after ${NO_MATCH_WAIT_MS} ms${offer(screen.list, sel.text ?? sel.id)}`,
+        'NOT_FOUND',
+        'read the screen, or use scroll_to if it may be further along a list',
+      );
+    return pick(selectIn(screen.list, sel), sel);
+  };
+
+  /** The point of a ref (on the device's current screen), a selector or x,y. */
+  const target = async (
+    s: Session,
+    a: { ref?: string; x?: number; y?: number; selector?: SelectorOf },
+    patient = false,
+  ) => {
     if (a.ref) {
-      const e = (await s.current()).list.find((x) => x.ref === a.ref);
+      const has = (x: Screen | undefined) => x?.list.find((e) => e.ref === a.ref);
+      const e =
+        has(await s.current()) ??
+        (patient ? has((await s.until((x) => !!has(x), NO_MATCH_WAIT_MS)).screen) : undefined);
       if (!e) throw new ToolError(`${STALE}: ${a.ref} is not on this screen`, 'STALE');
       return { point: { x: e.x, y: e.y }, name: `${a.ref} ${JSON.stringify(clean(e.label))}` };
     }
-    if (a.x === undefined || a.y === undefined) throw new ToolError('give a ref, or x and y');
+    if (a.selector) {
+      const e = await resolve(s, a.selector);
+      return { point: { x: e.x, y: e.y }, name: `${e.ref} ${JSON.stringify(clean(e.label))}` };
+    }
+    if (a.x === undefined || a.y === undefined)
+      throw new ToolError('give a ref, a selector, or x and y');
     return { point: { x: a.x, y: a.y }, name: `${a.x},${a.y}` };
   };
 
@@ -119,22 +301,191 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers) {
     return w;
   };
 
-  /** One step's device call (a ref resolved on the current screen right before it). */
+  /** Whether a check holds on this screen, and why or why not in words. */
+  const judge = (screen: Screen, a: Judged): { pass: boolean; why: string } => {
+    const sel = selectorOf(a) ?? {};
+    const what = a.ref ?? showSelector(sel);
+    const all = a.ref ? screen.list.filter((e) => e.ref === a.ref) : selectIn(screen.list, sel);
+    const hits = sel.index === undefined ? all : all.slice(sel.index, sel.index + 1);
+    const missing = `${what} is not on the screen${offer(screen.list, sel.text ?? sel.id)}`;
+    if (a.check === 'exists' || a.check === 'absent') {
+      const want = a.check === 'absent' ? !a.expect : a.expect;
+      if (hits.length > 0 === want)
+        return { pass: true, why: `${what} is ${want ? 'on' : 'not on'} the screen` };
+      return {
+        pass: false,
+        why: want ? missing : `${what} is on the screen: ${hits.slice(0, 5).map(line).join('; ')}`,
+      };
+    }
+    if (hits.length !== 1)
+      return {
+        pass: false,
+        why:
+          hits.length === 0
+            ? missing
+            : `${hits.length} elements match ${what}: ${hits.slice(0, 5).map(line).join('; ')}`,
+      };
+    const at = attributesOf(screen.elements, hits[0]!);
+    if (a.check === 'text') {
+      if (a.equals === undefined) throw new ToolError('check text needs equals');
+      return at.text === a.equals || at.value === a.equals
+        ? { pass: true, why: `${what} reads ${JSON.stringify(clean(a.equals))}` }
+        : {
+            pass: false,
+            why: `${what} reads ${JSON.stringify(clean(at.value ?? at.text))}, not ${JSON.stringify(clean(a.equals))}`,
+          };
+    }
+    return {
+      pass: at[a.check] === a.expect,
+      why: `${what} is ${at[a.check] ? '' : 'not '}${a.check}`,
+    };
+  };
+
+  /** A check on a fresh read, given `timeoutMs` to come true; a refusal when it does not. */
+  const checkNow = async (s: Session, a: Judged & { timeoutMs: number }) => {
+    if (!a.ref && !selectorOf(a)) throw new ToolError('give a ref, text, id or role');
+    const { screen } = await s.until((x) => judge(x, a).pass, a.timeoutMs);
+    if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND');
+    const v = judge(screen, a);
+    if (!v.pass) throw new ToolError(`check failed: ${v.why}`, 'CHECK_FAILED');
+    return { screen, done: `check passed: ${v.why}` };
+  };
+
+  /** Waits for an element to show or go, on the device where its agent can. */
+  const waitFor = async (
+    s: Session,
+    a: SelectorOf & { ref?: string; gone: boolean; timeoutMs: number },
+  ) => {
+    const sel = selectorOf(a);
+    if (!a.ref && !sel) throw new ToolError('give text, id, role or ref');
+    const found = (x: Screen) =>
+      (a.ref ? x.list.filter((e) => e.ref === a.ref) : selectIn(x.list, sel!))[sel?.index ?? 0];
+    const { screen, met } = await s.until((x) => !!found(x) !== a.gone, a.timeoutMs);
+    if (!screen) throw new ToolError('the screen could not be read: nothing to look in');
+    return { screen, met, found: found(screen) };
+  };
+
+  /** The biggest scrolling container, the one under x,y if given; else the whole window. */
+  const scrollArea = (
+    screen: Screen,
+    a: { x?: number; y?: number },
+    w: { w: number; h: number },
+  ) => {
+    const under = (r: { x: number; y: number; width: number; height: number }) =>
+      a.x === undefined ||
+      a.y === undefined ||
+      (a.x >= r.x && a.x <= r.x + r.width && a.y >= r.y && a.y <= r.y + r.height);
+    const boxes = screen.elements
+      .filter((e) => e.scrollable && e.rect && e.visible !== false && under(e.rect))
+      .map((e) => e.rect!)
+      .sort((p, q) => q.width * q.height - p.width * p.height);
+    return boxes[0] ?? { x: 0, y: 0, width: w.w, height: w.h };
+  };
+
+  /** Scrolls until the selector's element is on the screen; a list that did not move has ended. */
+  const scrollTo = async (
+    s: Session,
+    a: {
+      selector: SelectorOf;
+      direction: z.infer<typeof Direction>;
+      maxSwipes: number;
+      x?: number;
+      y?: number;
+    },
+  ) => {
+    let screen = await s.read();
+    let last: ActResult = { tree: screen.tree };
+    const what = showSelector(a.selector);
+    for (let swipes = 0; ; swipes++) {
+      const hits = selectIn(screen.list, a.selector);
+      if (hits.length > 0)
+        return { r: last, done: `found ${line(pick(hits, a.selector))} after ${swipes} swipes` };
+      if (swipes >= a.maxSwipes)
+        throw new ToolError(
+          `${what} not found after ${swipes} swipes; the list can still move${offer(screen.list, a.selector.text)}`,
+          'NOT_FOUND',
+          'raise maxSwipes',
+        );
+      const box = scrollArea(screen, a, await windowSize(s));
+      const inner = (e: ScreenElement) =>
+        e.x >= box.x && e.x <= box.x + box.width && e.y >= box.y && e.y <= box.y + box.height;
+      const sign = a.direction === 'up' || a.direction === 'left' ? -1 : 1;
+      const cx = Math.round(box.x + box.width / 2);
+      const cy = Math.round(box.y + box.height / 2);
+      const vertical = a.direction === 'up' || a.direction === 'down';
+      const dx = vertical ? 0 : Math.round(sign * box.width * SCROLL_REACH);
+      const dy = vertical ? Math.round(sign * box.height * SCROLL_REACH) : 0;
+      reportProgress(`scrolling (${swipes + 1} of ${a.maxSwipes})`);
+      last = await s.device
+        .act(
+          {
+            kind: 'gesture',
+            pointers: [dragPath({ x: cx - dx, y: cy - dy }, { x: cx + dx, y: cy + dy }, 400)],
+          },
+          { settle: SETTLE, read: 'tree', before: screen.hash },
+        )
+        .catch(refused);
+      s.acted();
+      const next = last.tree ? s.screenOf(last.tree) : await s.read();
+      s.remember(next);
+      const was = screen.list.filter(inner);
+      const now = next.list.filter(inner);
+      const moved =
+        was.length !== now.length ||
+        was.some((e, i) => {
+          const o = now[i]!;
+          return e.label !== o.label || Math.abs(e.y - o.y) >= 8 || Math.abs(e.x - o.x) >= 8;
+        });
+      if (!moved)
+        throw new ToolError(
+          `${what} not found: the list did not move after ${swipes + 1} swipes, so this is its end${offer(next.list, a.selector.text)}`,
+          'NOT_FOUND',
+          'try the other direction',
+        );
+      screen = next;
+    }
+  };
+
+  /** One step's device call. `patient`: in a sequence, a ref may need a moment to come. */
   const step = async (
     s: Session,
     st: Step,
     opts: ActOptions,
+    patient = false,
   ): Promise<{ r: ActResult | TextResult; done: string }> => {
+    const treeIfAsked = (screen: Screen): ActResult =>
+      opts.read === 'tree' ? { tree: screen.tree } : {};
     switch (st.action) {
       case 'tap': {
-        const t = await target(s, st);
+        const t = await target(s, st, patient);
         return { r: await s.device.tap(t.point, opts), done: `tapped ${t.name}` };
       }
       case 'long_press': {
-        const t = await target(s, st);
+        const t = await target(s, st, patient);
         return {
           r: await s.device.longPress(t.point, st.durationMs ?? 800, opts),
           done: `long-pressed ${t.name}`,
+        };
+      }
+      case 'double_tap': {
+        const t = await target(s, st, patient);
+        return {
+          r: await s.device.act({ kind: 'doubleTap', ...t.point }, opts),
+          done: `double-tapped ${t.name}`,
+        };
+      }
+      case 'drag': {
+        const from = await target(s, st, patient);
+        const to = await target(s, st.to);
+        return {
+          r: await s.device.act(
+            {
+              kind: 'gesture',
+              pointers: [dragPath(from.point, to.point, st.durationMs ?? 500, DRAG_HOLD_MS)],
+            },
+            opts,
+          ),
+          done: `dragged ${from.name} to ${to.name}`,
         };
       }
       case 'swipe': {
@@ -145,7 +496,16 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers) {
         };
       }
       case 'type_text': {
-        const at = st.ref ? (await target(s, { ref: st.ref })).point : undefined;
+        const at =
+          st.ref || st.selector
+            ? (
+                await target(
+                  s,
+                  { ...(st.ref && { ref: st.ref }), ...(st.selector && { selector: st.selector }) },
+                  patient,
+                )
+              ).point
+            : undefined;
         const r = await s.device.typeText(st.text, {
           ...(at && { at }),
           replace: st.replace ?? false,
@@ -159,10 +519,30 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers) {
         };
       }
       case 'press_key': {
-        if (st.key === 'home' && !policy.allowHome)
-          throw new ToolError('home is off on this server: the app may not be left');
-        return { r: await s.device.key(st.key, opts), done: `pressed ${st.key}` };
+        if (LEAVES_APP.has(st.key) && !policy.allowHome)
+          throw new ToolError(`${st.key} is off on this server: the app may not be left`);
+        const dark = DARKENS.has(st.key);
+        return {
+          r: await s.device.key(WIRE_KEY[st.key], dark ? { settle: false, read: 'none' } : opts),
+          done: `pressed ${st.key}${dark ? ' (the screen was not read: it may be dark)' : ''}`,
+        };
       }
+      case 'wait_for': {
+        const w = await waitFor(s, st);
+        const what = st.ref ?? showSelector(selectorOf(st) ?? {});
+        if (!w.met)
+          throw new ToolError(
+            `${what} ${st.gone ? 'still there' : 'not shown'} after ${st.timeoutMs} ms`,
+            'TIMEOUT',
+          );
+        return { r: treeIfAsked(w.screen), done: `${what} ${st.gone ? 'gone' : 'shown'}` };
+      }
+      case 'assert': {
+        const c = await checkNow(s, st);
+        return { r: treeIfAsked(c.screen), done: c.done };
+      }
+      case 'scroll_to':
+        return scrollTo(s, st);
     }
   };
 
@@ -180,7 +560,7 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers) {
     );
   };
 
-  return { target, windowSize, step, one };
+  return { target, windowSize, step, one, checkNow, waitFor, line };
 }
 
 export type Steps = ReturnType<typeof stepsFor>;

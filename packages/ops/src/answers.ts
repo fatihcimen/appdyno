@@ -53,10 +53,10 @@ export function answersFor(ctx: ServerContext) {
   const header = (s: Session, screen: Screen) =>
     `${screen.foreground ? `foreground: ${screen.foreground}\n` : ''}${renderScreen(screen.list, clean)}`;
 
-  /** The app check: a permission prompt points to dismiss_alert; another app in front is said. */
+  /** The app check: a permission prompt points to alert; another app in front is said. */
   const foreground = (s: Session, screen: Screen) => {
     if (alertButton(screen.elements, s.device.platform, 'allow'))
-      return '\na system permission prompt is open: answer it with dismiss_alert';
+      return '\na system permission prompt is open: answer it with alert';
     if (!s.appId || !screen.foreground || screen.foreground === s.appId) return '';
     return `\nWARNING: the app is not in the foreground (${screen.foreground}): if it crashed, bring it back with launch_app`;
   };

@@ -16,6 +16,12 @@ export const ERROR_CODES = [
   /** A touch aimed at a screen another window has replaced since it was read: read it again. */
   'STALE',
   'INTERNAL',
+  /** More than one element matches a selector. Host only, never on the wire. */
+  'AMBIGUOUS',
+  /** An `assert` that does not hold. Host only, never on the wire. */
+  'CHECK_FAILED',
+  /** Another live process holds the device. Host only, never on the wire. */
+  'DEVICE_CLAIMED',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 

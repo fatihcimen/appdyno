@@ -56,9 +56,21 @@ describe('commands from the operations', () => {
   });
 
   it('types flags by the input schema, with dashes for capitals', async () => {
-    expect((await run('long-press', '--x', '100', '--y', '350', '--duration-ms', '500')).code).toBe(
-      0,
-    );
+    expect(
+      (
+        await run(
+          'gesture',
+          '--kind',
+          'long_press',
+          '--x',
+          '100',
+          '--y',
+          '350',
+          '--duration-ms',
+          '500',
+        )
+      ).code,
+    ).toBe(0);
     expect(device.calls.at(-1)?.args[0]).toEqual({
       kind: 'longPress',
       x: 100,
@@ -79,7 +91,7 @@ describe('commands from the operations', () => {
   it('says what is wrong with the words, without calling the device', async () => {
     const calls = () => device.calls.length;
     for (const [argv, why] of [
-      [['--nope', '1'], /no --nope here; flags: --ref --x --y --read/],
+      [['--nope', '1'], /no --nope here; flags: --ref --x --y --selector --read/],
       [['--x'], /--x needs a value/],
       [['--x', 'left'], /--x: /],
       [['--read', 'some'], /--read: /],
@@ -170,7 +182,7 @@ describe('commands from the operations', () => {
 
   it('prints a refusal and exits 1', async () => {
     const r = await run('tap');
-    expect(r).toEqual({ code: 1, out: [], err: ['give a ref, or x and y'] });
+    expect(r).toEqual({ code: 1, out: [], err: ['give a ref, a selector, or x and y'] });
   });
 
   it('writes an image to --out, or to a temporary file it names', async () => {

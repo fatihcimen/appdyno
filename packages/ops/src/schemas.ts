@@ -25,6 +25,15 @@ export const ActionOut = z.object({
   busy: z.array(z.string()).optional(),
   /** The app's process ended during the action. */
   appDied: z.object({ reason: z.string(), file: z.string().optional() }).optional(),
+  /** `keyboard status`. */
+  open: z.boolean().optional(),
+  /** `alert` with no answer. */
+  alert: z
+    .object({
+      texts: z.array(z.string()),
+      buttons: z.array(z.object({ label: z.string(), x: z.number(), y: z.number() })),
+    })
+    .optional(),
   warnings: z.array(z.string()),
   code: z.string().optional(),
   hint: z.string().optional(),
@@ -46,6 +55,11 @@ export const FindOut = z.object({
       id: z.string().optional(),
       x: z.number(),
       y: z.number(),
+      enabled: z.boolean(),
+      checked: z.boolean(),
+      focused: z.boolean(),
+      value: z.string().optional(),
+      bounds: z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }),
     }),
   ),
 });
@@ -65,6 +79,7 @@ export const DevicesOut = z.object({
       model: z.string().optional(),
       allowed: z.boolean(),
       selected: z.boolean(),
+      heldBy: z.object({ pid: z.number(), tool: z.string(), since: z.string() }).optional(),
     }),
   ),
 });
@@ -89,6 +104,39 @@ export const ScreenshotOut = z.object({
 });
 
 export const DoneOut = z.object({ done: z.string() });
+
+export const AppOut = z.object({
+  done: z.string(),
+  apps: z
+    .array(
+      z.object({ id: z.string(), name: z.string().optional(), version: z.string().optional() }),
+    )
+    .optional(),
+  state: z.enum(['not_installed', 'stopped', 'running', 'foreground']).optional(),
+});
+
+export const VirtualOut = z.object({
+  done: z.string(),
+  devices: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        state: z.enum(['running', 'stopped']),
+        serial: z.string().optional(),
+        startedHere: z.boolean(),
+      }),
+    )
+    .optional(),
+  serial: z.string().optional(),
+});
+
+export const SettingOut = z.object({
+  done: z.string(),
+  value: z.string().optional(),
+  changed: z.record(z.string(), z.string()).optional(),
+  notRestored: z.array(z.string()).optional(),
+});
 
 export const AuditOut = z.object({
   engine: z.string(),

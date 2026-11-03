@@ -2,6 +2,7 @@ import { actOps } from './act.js';
 import { answersFor } from './answers.js';
 import { appOps } from './apps.js';
 import type { ServerContext } from './context.js';
+import { controlOps } from './control.js';
 import { deviceOps } from './device.js';
 import { diagnoseOps } from './diagnose.js';
 import { perfOps } from './perf.js';
@@ -15,9 +16,10 @@ export function opsFor(ctx: ServerContext): Record<string, Op> {
   const steps = stepsFor(ctx, answers);
   const ops = [
     ...deviceOps(ctx, answers),
-    ...readOps(ctx, answers),
+    ...readOps(ctx, answers, steps),
     ...actOps(ctx, answers, steps),
     ...appOps(ctx, answers),
+    ...controlOps(ctx, answers),
     ...diagnoseOps(ctx, answers),
     ...perfOps(ctx),
   ];

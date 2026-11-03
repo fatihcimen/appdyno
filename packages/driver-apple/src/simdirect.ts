@@ -351,6 +351,7 @@ export type TouchEvent = {
 /** A finger's hold on a tap: as long as a person's, enough for UIKit to see a tap, not a press. */
 const TAP_MS = 50;
 const STEP_MS = 16;
+const DOUBLE_TAP_GAP_MS = 80;
 
 /** The digitizer's events for a touch action, in normalized coordinates; undefined when none applies. */
 export function touchEvents(
@@ -393,6 +394,15 @@ export function touchEvents(
           { x: action.x, y: action.y, t: TAP_MS },
         ],
       ]).filter((e) => e.p !== 1);
+    case 'doubleTap': {
+      const press = walk([
+        [
+          { x: action.x, y: action.y, t: 0 },
+          { x: action.x, y: action.y, t: TAP_MS },
+        ],
+      ]).filter((e) => e.p !== 1);
+      return [...press, ...press.map((e) => ({ ...e, at: e.at + TAP_MS + DOUBLE_TAP_GAP_MS }))];
+    }
     case 'longPress':
       return walk([
         [
@@ -422,6 +432,10 @@ const KEYS: Partial<Record<Key, { page: number; usage: number }>> = {
   enter: { page: 7, usage: 0x28 },
   delete: { page: 7, usage: 0x2a },
   tab: { page: 7, usage: 0x2b },
+  volumeUp: { page: 12, usage: 0xe9 },
+  volumeDown: { page: 12, usage: 0xea },
+  lock: { page: 12, usage: 0x30 },
+  power: { page: 12, usage: 0x30 },
 };
 
 export type DirectStatus = { input: string; read: string };
