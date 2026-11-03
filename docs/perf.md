@@ -185,29 +185,23 @@ hangs and a launch of Settings; a cost-known check of them needs an app signed f
 
 iPhone 13 Pro Max, iOS 27.0.1, the Settings scenario through the library: read 240, tap and see 1,523, back 1,682,
 screenshot 140, app in front 240, cold launch 279 ms until in front (819 until its first screen reads), a runner's start
-3-5 s. No stale answer, nothing moved in 4 checks. No other tool was run on the phone. A measure costs 8-13 s, nearly
-all the trace tool's start and stop.
+3-5 s. No stale answer, nothing moved in 4 checks. A measure costs 8-13 s, nearly all the trace tool's start and stop.
 
 ## iOS simulator speed
 
 Measured with the Settings scenario on an iPhone 17 Pro simulator, iOS 26.5, on a Mac with other builds running
-(load in the table). Median of 10-15 rounds, in ms, alternating tools.
+(load in the table). Median of 10-15 rounds, in ms.
 
-| tool         | read    | tap and see | back and see | screenshot | app in front, with its screen | app behind, no screen |
-| ------------ | ------- | ----------- | ------------ | ---------- | ----------------------------- | --------------------- |
-| appdyno      | 54-56   | 894-916     | 733-776      | 84-88      | 292-359                       | 179-183               |
-| another-server   | 220-255 | 848-909     | 848-888      | 334-403    | no screen: 116-133            | 133-137               |
-| another-tool | 55-74   | 1,210-1,335 | 1,128-1,189  | 545-548    | no screen: 167-219            | 1,328-1,362           |
+| read  | tap and see | back and see | screenshot | app in front, with its screen | app behind, no screen |
+| ----- | ----------- | ------------ | ---------- | ----------------------------- | --------------------- |
+| 54-56 | 894-916     | 733-776      | 84-88      | 292-359                       | 179-183               |
 
-Three runs of appdyno, two of each other, alternating, host load 4-14. appdyno's read follows its own back there, with the
-app still busy: at rest it took 31-32 ms, 25 ms of it in the helper for 167 elements. No stale answer in any run.
+Three runs, host load 4-14. The read follows a back there, with the app still busy: at rest it took 31-32 ms, 25 ms of it
+in the helper for 167 elements. No stale answer in any run.
 
-Tap and see is not beaten: `another-server` is as fast or up to 50 ms faster, but it answers during the push. 11-15 lines of
-its answer were not in a read 1.5 s later in all 8 checks, the old page's rows at their sliding places. appdyno's
-answers against a read 1.5 s later: nothing moved, missing or extra in 20 answers (`test-device/ios.test.ts` keeps this
-check). The same check on `another-tool` was not valid (its answer is a diff). Opening an app is not beaten either:
-`another-server` returns when `simctl launch` does, with no screen; appdyno also waits for the app to be in front, and with
-a screen it reads twice around the 200 ms `launch_app` waits for stillness in `packages/ops`.
+Answers against a read 1.5 s later: nothing moved, missing or extra in 20 answers (`test-device/ios.test.ts` keeps this
+check). Opening an app waits for it to be in front, and with a screen it reads twice around the 200 ms `launch_app` waits
+for stillness in `packages/ops`.
 
 What each change did, the rest of the scenario held still:
 

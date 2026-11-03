@@ -326,30 +326,21 @@ the holder by its pid and command line and gives the exact command to stop it.
 
 ## Speed
 
-Measured, not claimed: the Settings scenario, one server at a time on one boot, three alternating runs of 10 rounds, by `scripts/compare.mjs`, which
-also reads each answer's positions against a read 1.5 s later. Medians in ms, p50 / p90. A number is relative to this Mac at this load.
+Measured, not claimed: the Settings scenario, on one boot, three runs of 10 rounds, which also read each answer's positions against a read 1.5 s later. Medians in ms, p50 / p90. A number is relative to this Mac at this load.
 
-```sh
-node scripts/compare.mjs --device <id> --platform android --tools appdyno,another-tool,another-server --runs 3 --another-tool-bin <path>
-```
+**Android 14 emulator** (`sdk_gphone64_arm64`), 2026-11-03, appdyno 0.6.0, host load 10-11 on 15 cores, device load 1-2:
 
-**Android 14 emulator** (`sdk_gphone64_arm64`), 2026-11-03, appdyno 0.6.0, another-tool 0.21.36, another-server latest, host load 10-11 on 15 cores, device load 1-2:
+| read    | tap and see | back and see | screenshot | read answer, chars | catalog chars (tools) | first open | position error, px, median / p95 / max | stale | errors |
+| ------- | ----------- | ------------ | ---------- | ------------------ | --------------------- | ---------- | -------------------------------------- | ----- | ------ |
+| 64 / 82 | 819 / 948   | 550 / 577    | 50 / 71    | 1,405              | 26,587 (44)           | 1,922      | 0 / 0 / 0                              | 0     | 0      |
 
-| tool         | read      | tap and see   | back and see  | screenshot | read answer, chars | catalog chars (tools) | first open | position error, px, median / p95 / max | stale | errors |
-| ------------ | --------- | ------------- | ------------- | ---------- | ------------------ | --------------------- | ---------- | -------------------------------------- | ----- | ------ |
-| appdyno      | 64 / 82   | 819 / 948     | 550 / 577     | 50 / 71    | 1,405              | 26,587 (44)           | 1,922      | 0 / 0 / 0                              | 0     | 0      |
-| another-tool | 63 / 66   | 1,079 / 1,401 | 978 / 999     | 76 / 92    | 808 (rows folded)  | 263,519 (62)          | 1,693      | 0 / 40 / 79                            | 0     | 0      |
-| another-server   | 243 / 388 | 2,005 / 2,100 | 1,194 / 1,271 | 106 / 179  | 6,997              | 30,276 (34)           | 593        | 0 / 0 / 0                              | 0     | 0      |
+**iOS 26.5 simulator** (iPhone 17 Pro), same date and version, host load 6-8:
 
-**iOS 26.5 simulator** (iPhone 17 Pro), same date and versions, host load 6-8:
+| read    | tap and see | back and see | screenshot | read answer, chars | catalog chars (tools) | first open | position error, points, median / p95 / max; missing | stale | errors |
+| ------- | ----------- | ------------ | ---------- | ------------------ | --------------------- | ---------- | --------------------------------------------------- | ----- | ------ |
+| 57 / 64 | 909 / 1,073 | 674 / 713    | 85 / 97    | 2,050              | 26,587 (44)           | 7,428      | 0 / 0 / 1; 4                                        | 0     | 0      |
 
-| tool         | read      | tap and see   | back and see  | screenshot | read answer, chars | catalog chars (tools) | first open | position error, points, median / p95 / max; missing | stale | errors |
-| ------------ | --------- | ------------- | ------------- | ---------- | ------------------ | --------------------- | ---------- | --------------------------------------------------- | ----- | ------ |
-| appdyno      | 57 / 64   | 909 / 1,073   | 674 / 713     | 85 / 97    | 2,050              | 26,587 (44)           | 7,428      | 0 / 0 / 1; 4                                        | 0     | 0      |
-| another-tool | 63 / 78   | 1,154 / 1,481 | 1,509 / 1,624 | 597 / 644  | 689 (rows folded)  | 263,519 (62)          | 2,099      | 0 / 0 / 0; 0                                        | 0     | 0      |
-| another-server   | 241 / 266 | 878 / 953     | 870 / 954     | 348 / 442  | 4,306              | 30,276 (34)           | 876        | 0 / 0 / 1; 1,470                                    | 2     | 1      |
-
-**Phones, appdyno alone: no competitor was run on them.** The same 10 rounds on each phone's own Settings through the MCP server, p50 / p90 in ms, the same date, host load 12-36 with other work on the Mac:
+**Phones.** The same 10 rounds on each phone's own Settings through the MCP server, p50 / p90 in ms, the same date, host load 12-36 with other work on the Mac:
 
 | phone                                 | read      | tap and see   | back and see  | screenshot | read answer, chars |
 | ------------------------------------- | --------- | ------------- | ------------- | ---------- | ------------------ |
@@ -357,15 +348,6 @@ node scripts/compare.mjs --device <id> --platform android --tools appdyno,anothe
 | iPhone 13 Pro Max, iOS 27.0.1 (tr-TR) | 308 / 313 | 2,017 / 2,025 | 1,988 / 2,089 | 189 / 199  | 2,272              |
 
 The Android tables predate the agent's check for a dark screen before a touch, which was not measured apart.
-
-**Where appdyno loses.**
-
-- Simulator tap: `another-server` is 31 ms faster, by answering during the push: 1,470 elements of its answers were gone 1.5 s later, and 2 answers were stale.
-- First open: slowest on the simulator by far (7.4 s against 0.9-2.1 s) as it starts its runner, and on the emulator behind both, which answer with less: `another-server` before the app's first screen.
-- Read answer size: `another-tool`'s is smaller on both, with list rows folded.
-- Emulator read: `another-tool` 63 ms against 64, which is no difference.
-- Screenshot size: `another-server`'s is smaller on both (33,172 against 39,344 characters on the emulator; 49,900 against 82,466 on the simulator), and `another-tool`'s on the simulator (70,776).
-- Catalog: 26,587 characters, over this project's own aim of 25,000, though under both of theirs.
 
 Measurement methods and raw outputs are described in `docs/perf.md`.
 
