@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdtempSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync } from 'node:fs';
 import { cpus, loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -17,13 +17,19 @@ const APP = 'dev.appdyno.fixture';
 const REPEATS = Number(process.env.APPDYNO_GATE_REPEATS ?? 6);
 const BASELINE_RUNS = 3;
 const UNCHANGED_RUNS = Number(process.env.APPDYNO_GATE_RUNS ?? 6);
-const INJECTED_MS = 400;
 const run = promisify(execFile);
+/** Printed and kept: a passing test's output is not shown. */
+const note = (line: string) => {
+  mkdirSync('.ci', { recursive: true });
+  appendFileSync('.ci/perf-gate.txt', `${line}\n`);
+};
 
 type Target = {
   name: string;
   serial: string | undefined;
   kind: string;
+  /** Past what this device's runs move by themselves. */
+  injectMs: number;
   provider: () => ReturnType<typeof androidProvider>;
   inject: (ms: number, serial: string) => Promise<void>;
   clear: (serial: string) => Promise<void>;
@@ -37,6 +43,7 @@ const targets: Target[] = [
     name: 'android',
     serial: process.env.APPDYNO_ANDROID_SERIAL,
     kind: 'launch.ttid_ms',
+    injectMs: 400,
     provider: () => androidProvider(new Adb(), {}),
     inject: async (ms, serial) => {
       await run('adb', [
@@ -54,6 +61,7 @@ const targets: Target[] = [
     name: 'ios simulator',
     serial: process.env.APPDYNO_IOS_UDID,
     kind: 'launch.until_ms',
+    injectMs: 1_000,
     provider: () => appleProvider() as ReturnType<typeof androidProvider>,
     inject: async (ms) => {
       process.env[ENV_SIM] = String(ms);
@@ -66,6 +74,7 @@ const targets: Target[] = [
     name: 'iphone',
     serial: process.env.APPDYNO_IPHONE_UDID,
     kind: 'launch.until_ms',
+    injectMs: 400,
     provider: () => appleProvider() as ReturnType<typeof androidProvider>,
     inject: async (ms) => {
       process.env[ENV_PHONE] = String(ms);
@@ -123,7 +132,7 @@ for (const t of targets)
         await launch();
         const { c, code } = await compare();
         verdicts.push(c);
-        console.log(
+        note(
           `${t.name} unchanged ${i + 1}: ${c.verdict} ${c.current} ms against ${c.baseline}, shift ${c.shift}, floor ${c.floor}, load ${loadavg()[0]!.toFixed(1)}`,
         );
         expect(code).toBe(0);
@@ -143,11 +152,11 @@ for (const t of targets)
           if (rankTest(samples[i]!, samples[j]!) < 0.01) rankAlarms++;
           if (Math.abs(medians[j]! - medians[i]!) > 0.1 * medians[i]!) percentAlarms++;
         }
-      console.log(
+      note(
         `${t.name} run medians: ${medians.join(' ')}; across ${pairs} ordered pairs of unchanged runs: rank test alone alarms ${rankAlarms}, a 10 % difference of medians alone ${percentAlarms}`,
       );
 
-      await t.inject(INJECTED_MS, t.serial!);
+      await t.inject(t.injectMs, t.serial!);
       let caught = await (async () => {
         await launch();
         return compare();
@@ -158,10 +167,10 @@ for (const t of targets)
         caught = await compare();
       }
       await t.clear(t.serial!);
-      console.log(
-        `${t.name} injected ${INJECTED_MS} ms: ${caught.c.verdict} ${caught.c.current} ms against ${caught.c.baseline}, shift ${caught.c.shift}, p ${caught.c.p}`,
+      note(
+        `${t.name} injected ${t.injectMs} ms: ${caught.c.verdict} ${caught.c.current} ms against ${caught.c.baseline}, shift ${caught.c.shift}, p ${caught.c.p}`,
       );
-      console.log(caught.text);
+      note(caught.text);
 
       const alarms = verdicts.filter(
         (c) => c.verdict === 'regression' || c.verdict === 'improvement',
@@ -169,6 +178,6 @@ for (const t of targets)
       expect(alarms).toEqual([]);
       expect(caught.c.verdict).toBe('regression');
       expect(caught.code).toBe(1);
-      expect(Math.abs(caught.c.shift! - INJECTED_MS)).toBeLessThan(INJECTED_MS * 0.5);
+      expect(Math.abs(caught.c.shift! - t.injectMs)).toBeLessThan(t.injectMs * 0.5);
     }, 3_600_000);
   });

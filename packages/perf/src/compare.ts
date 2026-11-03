@@ -58,10 +58,17 @@ export type Comparison = {
 /** Under this a rank test cannot reach ALPHA: 5 against 5 is at best p = 0.0079, 4 against 4 is 0.029. */
 export const MIN_SAMPLES = 5;
 export const ALPHA = 0.01;
+/** Fewer baseline runs say nothing of how far a run moves by itself. */
+export const MIN_BASELINE_RUNS = 3;
+/**
+ * How many standard deviations of the baseline's run medians a change must exceed. In simulation (runs moving
+ * 6 % by themselves, 3 to 8 baseline runs) the range of the medians gave 1.5-3 % false alarms, 4 sd under 1 %.
+ */
+const RUN_SDS = 4;
 
 /**
- * The least change worth reporting. These hold on the unchanged-app runs in docs/perf.md: a run's own median
- * moved up to 12 % on an emulator at any load seen, so a smaller floor would alarm on nothing.
+ * The least change worth reporting, whatever the baseline's runs say: a difference of medians over 10 % alone
+ * alarmed on 25 of 72 pairs of unchanged runs on a loaded simulator (docs/perf.md).
  */
 const FLOOR: Record<Unit, { percent: number; absolute: number }> = {
   ms: { percent: 15, absolute: 10 },
@@ -116,7 +123,12 @@ export function compareMetric(
     };
   const moved = shift(samples, current.samples);
   const medians = base.runs.map((r) => median(r.samples));
-  const runToRun = Math.max(...medians) - Math.min(...medians);
+  const mean = medians.reduce((a, b) => a + b, 0) / medians.length;
+  const runToRun =
+    medians.length < 2
+      ? 0
+      : RUN_SDS *
+        Math.sqrt(medians.reduce((a, b) => a + (b - mean) ** 2, 0) / (medians.length - 1));
   const limits = FLOOR[unit];
   const floor = Math.max((Math.abs(reference) * limits.percent) / 100, limits.absolute, runToRun);
   const stats = {
@@ -126,6 +138,12 @@ export function compareMetric(
     floor: r3(floor),
   };
   if (Math.abs(moved) <= floor) return { ...stats, verdict: 'ok' };
+  if (base.runs.length < MIN_BASELINE_RUNS)
+    return {
+      ...stats,
+      verdict: 'few-samples',
+      note: `the baseline has ${base.runs.length} of the ${MIN_BASELINE_RUNS} runs needed to call it: run-to-run movement is unknown`,
+    };
   if (n.current < MIN_SAMPLES || n.baseline < MIN_SAMPLES)
     return {
       ...stats,

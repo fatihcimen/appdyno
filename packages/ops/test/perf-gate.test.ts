@@ -53,6 +53,8 @@ describe('the gate', () => {
     await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
     const b = await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
     expect(text(b)).toMatch(/baselines\/dev\.appdyno\.fixture\/launch-cold\//);
+    for (let i = 0; i < 2; i++)
+      await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
 
     await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
     const same = await ops.perf_compare!.handler({ action: 'compare', format: 'text', last: 1 });

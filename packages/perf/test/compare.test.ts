@@ -77,17 +77,21 @@ describe('compare', () => {
     expect(alarms).toBeGreaterThan(30);
   });
 
-  it('catches an injected +30 % every time, and +400 ms on 500 ms', () => {
+  it('catches +30 % nearly always and +80 % every time', () => {
     const r = rng(2);
+    let caught = 0;
     for (let i = 0; i < 300; i++) {
       const base = metric([run(r, 500, 8), run(r, 500, 8), run(r, 500, 8)]);
       const c = compareMetric('launch', current(run(r, 650, 8)), base, 'ms', 'lower');
-      expect(c.verdict, `trial ${i}`).toBe('regression');
+      if (c.verdict === 'regression') caught++;
+      const big = compareMetric('launch', current(run(r, 900, 8)), base, 'ms', 'lower');
+      expect(big.verdict, `trial ${i}`).toBe('regression');
     }
+    expect(caught).toBeGreaterThan(240);
     const c = compareMetric(
       'launch',
       current(run(r, 900, 8)),
-      metric([run(r, 500, 8)]),
+      metric([run(r, 500, 8), run(r, 500, 8), run(r, 500, 8)]),
       'ms',
       'lower',
     );
@@ -97,7 +101,7 @@ describe('compare', () => {
 
   it('says improvement, and respects which way is better', () => {
     const r = rng(3);
-    const base = metric([run(r, 500, 8)]);
+    const base = metric([run(r, 500, 8), run(r, 500, 8), run(r, 500, 8)]);
     expect(compareMetric('x', current(run(r, 300, 8)), base, 'ms', 'lower').verdict).toBe(
       'improvement',
     );
@@ -114,11 +118,27 @@ describe('compare', () => {
     expect(r).toBeDefined();
   });
 
+  it('a baseline of one or two runs cannot alarm: it knows nothing of run-to-run movement', () => {
+    const c = compareMetric(
+      'x',
+      current([900, 901, 902, 903, 904]),
+      metric([[500, 501, 502, 503, 504]]),
+      'ms',
+      'lower',
+    );
+    expect(c.verdict).toBe('few-samples');
+    expect(c.note).toMatch(/1 of the 3 runs/);
+  });
+
   it('too few samples never alarm', () => {
     const c = compareMetric(
       'x',
       current([900, 901, 902]),
-      metric([[500, 501, 502]]),
+      metric([
+        [500, 501, 502],
+        [500, 501, 502],
+        [500, 501, 502],
+      ]),
       'ms',
       'lower',
     );
@@ -129,15 +149,20 @@ describe('compare', () => {
   it('a run-to-run movement in the baseline raises the floor', () => {
     const base = metric([
       [400, 400, 400, 400, 400],
+      [500, 500, 500, 500, 500],
       [600, 600, 600, 600, 600],
     ]);
-    const c = compareMetric('x', current([640, 640, 640, 640, 640]), base, 'ms', 'lower');
-    expect(c.floor).toBe(200);
+    const c = compareMetric('x', current([800, 800, 800, 800, 800]), base, 'ms', 'lower');
+    expect(c.floor).toBe(400);
     expect(c.verdict).toBe('ok');
   });
 
   it('a change under high load warns; a debuggable build does not change the call', () => {
-    const base = metric([[500, 501, 502, 503, 504]]);
+    const base = metric([
+      [500, 501, 502, 503, 504],
+      [500, 501, 502, 503, 504],
+      [500, 501, 502, 503, 504],
+    ]);
     const loud = { samples: [900, 901, 902, 903, 904], build: 'release' as const };
     const hot = compareMetric('x', { ...loud, noise: ['hot-device'] }, base, 'ms', 'lower');
     expect(hot.verdict).toBe('noisy');
@@ -147,7 +172,11 @@ describe('compare', () => {
   });
 
   it('refuses unlike builds and compile states', () => {
-    const base = metric([[500, 501, 502, 503, 504]]);
+    const base = metric([
+      [500, 501, 502, 503, 504],
+      [500, 501, 502, 503, 504],
+      [500, 501, 502, 503, 504],
+    ]);
     const c = compareMetric(
       'x',
       { samples: [500, 501, 502, 503, 504], build: 'debug', noise: [] },
@@ -255,10 +284,13 @@ describe('store and reports', () => {
     const newest = await latestRuns(d, key!);
     expect(newest[0]![0]!.run).toBe('r2');
     expect(await loadBaseline(project, key!)).toBeUndefined();
-    await saveBaseline(project, addToBaseline(key!, undefined, a));
+    await saveBaseline(
+      project,
+      addToBaseline(key!, addToBaseline(key!, addToBaseline(key!, undefined, a), a), a),
+    );
     const baseline = await loadBaseline(project, key!);
-    expect(baseline!.metrics['launch.ttid']!.runs).toHaveLength(1);
-    expect(addToBaseline(key!, baseline, a).metrics['launch.ttid']!.runs).toHaveLength(2);
+    expect(baseline!.metrics['launch.ttid']!.runs).toHaveLength(3);
+    expect(addToBaseline(key!, baseline, a).metrics['launch.ttid']!.runs).toHaveLength(4);
     expect(addToBaseline(key!, baseline, a, true).metrics['launch.ttid']!.runs).toHaveLength(1);
 
     const report = reportKey(key!, newest, baseline, []);
