@@ -385,7 +385,9 @@ export const readFlow = (file: string): Flow => {
   try {
     text = readFileSync(file, 'utf8');
   } catch (e) {
-    throw new ToolError(`cannot read ${file}: ${(e as Error).message}`, 'NOT_FOUND');
+    const why =
+      (e as NodeJS.ErrnoException).code === 'ENOENT' ? 'no such file' : (e as Error).message;
+    throw new ToolError(`cannot read ${file}: ${why}`, 'NOT_FOUND');
   }
   try {
     return parseFlow(text);

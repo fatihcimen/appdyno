@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { IosSimulatorDevice } from 'appdyno';
+import { Devicectl, IosSimulatorDevice } from 'appdyno';
 
 /**
  * Flows on real devices: what an agent does through the MCP tools of the built server, replayed with no
@@ -48,9 +48,11 @@ const cli = (...args: string[]) =>
     );
   });
 
+const iphoneFixture = process.env.APPDYNO_IPHONE_FIXTURE_APP;
 const targets = [
   { platform: 'android', serial: process.env.APPDYNO_ANDROID_SERIAL, form: 'FORM' },
   { platform: 'ios', serial: process.env.APPDYNO_IOS_UDID, form: 'Form' },
+  { platform: 'iphone', serial: iphoneFixture && process.env.APPDYNO_IPHONE_UDID, form: 'Form' },
 ];
 
 let androidRecording: string | undefined;
@@ -84,6 +86,7 @@ for (const { platform, serial, form } of targets)
       new RegExp(`(@[a-z0-9-]+) \\w+ "${label}"`).exec(text)?.[1];
 
     beforeAll(async () => {
+      if (platform === 'iphone') await new Devicectl(serial!).install(iphoneFixture!);
       const transport = new StdioClientTransport({
         command: process.execPath,
         args: [BIN, '--device', serial!, '--app', APP, '--allow-devices', `^${serial}$`],
@@ -312,7 +315,7 @@ for (const { platform, serial, form } of targets)
         const text = readFileSync(flow, 'utf8');
         // Android's home buttons have no id; iOS's do, and an id goes first
         expect(text).toContain(
-          platform === 'ios' ? 'tap id=open_form' : 'tap role=button text="FORM"',
+          platform === 'android' ? 'tap role=button text="FORM"' : 'tap id=open_form',
         );
         expect(text).toContain('assert id=name_input');
         const again = await run('flow', 'run', flow);

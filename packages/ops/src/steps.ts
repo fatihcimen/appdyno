@@ -258,8 +258,16 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
 
   /** One element of a selector's matches, or a refusal listing them. */
   const pick = (hits: ScreenElement[], sel: SelectorOf): ScreenElement => {
+    // a control and its own text inside it, with the same words (an Android row), are one target
+    const inside = (a: ScreenElement, b: ScreenElement) =>
+      a !== b &&
+      a.rect.x >= b.rect.x &&
+      a.rect.y >= b.rect.y &&
+      a.rect.x + a.rect.w <= b.rect.x + b.rect.w &&
+      a.rect.y + a.rect.h <= b.rect.y + b.rect.h;
+    const outer = hits.filter((a) => !hits.some((b) => inside(a, b)));
     const hit =
-      sel.index === undefined ? (hits.length === 1 ? hits[0] : undefined) : hits[sel.index];
+      sel.index === undefined ? (outer.length === 1 ? outer[0] : undefined) : hits[sel.index];
     if (hit) return hit;
     throw new ToolError(
       `${hits.length} elements match ${showSelector(sel)}: ${hits.slice(0, 10).map(line).join('; ')}`,

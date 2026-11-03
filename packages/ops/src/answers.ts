@@ -142,7 +142,9 @@ export function answersFor(ctx: ServerContext) {
     const diff = d && diffText(d, screen.list.length, clean);
     const fg = foreground(s, screen);
     const appDied = await death(s, screen, o.pid, o.started);
-    const changed = o.base ? differs(diffScreens(o.base, screen.list)) : undefined;
+    // a launch of what is in front, and a scroll that compares with its own last swipe, expect no change
+    const expected = !/^(found|launched) /.test(done);
+    const changed = o.base && expected ? differs(diffScreens(o.base, screen.list)) : undefined;
     const busy = o.settled === false ? o.busy : [];
     const moving =
       o.settled === false ? ` (${MAYBE_MOVING}${busy.length ? `: ${busy.join('; ')}` : ''})` : '';

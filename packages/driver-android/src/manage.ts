@@ -49,7 +49,16 @@ export class AndroidApps implements AppManager {
   async install(path: string) {
     if (!path.endsWith('.apk') || !existsSync(path))
       throw new DeviceError('INVALID_ARGUMENT', `not a local .apk file: ${path}`);
-    await this.adb.run(['-s', this.serial, 'install', '-r', path], 300_000);
+    // a Xiaomi asks on its screen, and asleep it would not say no by itself
+    await this.sh('input keyevent KEYCODE_WAKEUP');
+    await this.adb.run(['-s', this.serial, 'install', '-r', path], 300_000).catch((e: Error) => {
+      if (!/INSTALL_FAILED_USER_RESTRICTED/.test(e.message)) throw e;
+      throw new DeviceError(
+        'PERMISSION_REQUIRED',
+        'the phone asked on its screen whether to install over USB, and no one said yes in time',
+        'install again and answer it on the phone within 10 s; ticking its remember box stops it asking',
+      );
+    });
   }
 
   async uninstall(app: string) {

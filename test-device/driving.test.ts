@@ -357,10 +357,24 @@ describe.skipIf(!android)('driving on Android', () => {
     );
     ok(await h.call('app', { action: 'clear' }));
     const apk = join(ROOT, 'android/fixture/build/outputs/apk/debug/fixture-debug.apk');
+    // a Xiaomi asks on its screen before an install, and says no by itself after 10 s
+    const answerPrompt = async () => {
+      for (let i = 0; i < 40 && !android!.startsWith('emulator-'); i++) {
+        await new Promise((r) => setTimeout(r, 500));
+        const prompt = await h.call('find', { text: 'Tercihimi hatırla' });
+        if (!(prompt.data.matches as unknown[] | undefined)?.length) continue;
+        ok(await h.call('tap', { selector: { text: 'Yükle' }, read: 'none' }));
+        return;
+      }
+    };
     expect(existsSync(apk)).toBe(true);
     ok(await h.call('app', { action: 'uninstall' }));
     expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('not_installed');
-    ok(await h.call('app', { action: 'install', path: apk }));
+    const [installed] = await Promise.all([
+      h.call('app', { action: 'install', path: apk }),
+      answerPrompt(),
+    ]);
+    ok(installed);
     expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');
     expect((await h.call('app', { action: 'install', path: '/tmp/none.apk' })).error).toBe(true);
   });

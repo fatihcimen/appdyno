@@ -34,6 +34,7 @@ class ToolRecorder implements ScreenRecorder {
     /** The tool has no limit of its own: a sleeper ends it. */
     private readonly limits: boolean,
     private readonly stillNote?: string,
+    private readonly refusedHint?: string,
   ) {}
 
   /** Asks the recorder to end after `seconds`, if it is still that recorder; ends with `stop` too. */
@@ -82,6 +83,7 @@ class ToolRecorder implements ScreenRecorder {
         throw new DeviceError(
           'UNSUPPORTED',
           `the recording did not start (${exited ?? `no word in ${START_MS} ms`}): ${text.trim().slice(0, 300)}`,
+          this.refusedHint,
         );
       }
       await pause(100);
@@ -139,8 +141,9 @@ export const simulatorRecorder = (udid: string): ScreenRecorder =>
     'a simulator writes a frame only when the screen changes, so a still screen gives a very short video',
   );
 
-// shortcut: what `devicectl` prints once it records has not been seen (no free phone); a process still
-// there after QUIET_MS counts as recording. Read its output on a phone and wait for that instead.
+// shortcut: what `devicectl` prints once it records has not been seen, as the one phone tried (iPhone 13 Pro Max,
+// iOS 27.0.1) lacks the capability and refuses at once; a process still there after QUIET_MS counts as recording.
+// Read its output on a phone that has it and wait for that instead.
 export const phoneRecorder = (udid: string): ScreenRecorder =>
   new ToolRecorder(
     'mp4',
@@ -161,4 +164,6 @@ export const phoneRecorder = (udid: string): ScreenRecorder =>
     undefined,
     'screen-record',
     true,
+    undefined,
+    'this phone does not offer it to devicectl: record on the phone (Control Center, Screen Recording), or with QuickTime Player on this Mac',
   );

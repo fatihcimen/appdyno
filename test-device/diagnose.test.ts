@@ -7,6 +7,7 @@ import {
   IosSimulatorDevice,
   androidProvider,
   appleProvider,
+  Devicectl,
   holdersIn,
   inCall,
   Simctl,
@@ -244,4 +245,57 @@ describe.skipIf(!udid)('simulator: logs and crashes of the fixture', () => {
     await expect(wait).rejects.toMatchObject({ code: 'CANCELLED' });
     expect(textOf(await call('screen'))).toContain('elements');
   });
+});
+
+const iphone = process.env.APPDYNO_IPHONE_UDID;
+const iphoneFixture = process.env.APPDYNO_IPHONE_FIXTURE_APP;
+describe.skipIf(!iphone || !iphoneFixture)('iPhone: logs and crashes of the fixture', () => {
+  let ctx: ServerContext;
+  let call: Call;
+  const ctl = new Devicectl(iphone ?? '00000000-0000000000000000');
+
+  beforeAll(async () => {
+    await ctl.install(iphoneFixture!);
+    ctx = new ServerContext(DEFAULT_POLICY, [appleProvider()], { device: iphone!, app: APP });
+    call = caller(ctx);
+    await call('launch_app', { read: 'none' });
+  }, 240_000);
+  afterAll(() => ctx?.close());
+
+  it('says what it cannot read of a phone log, and how to read it', async () => {
+    const r = await call('logs');
+    expect(r.data.source).toBe('devicectl');
+    expect(r.data.lines).toBe(0);
+    expect(textOf(r)).toMatch(/process launch --console/);
+  });
+
+  it('says an action killed the app, and copies its crash report from the phone', async () => {
+    await call('screen');
+    await ctl.json([
+      'device',
+      'process',
+      'signal',
+      '--device',
+      iphone!,
+      '--pid',
+      String(await ctl.pid(APP)),
+      '--signal',
+      'SIGSEGV',
+    ]);
+    await pause(1_000);
+    const r = await call('press_key', { key: 'enter', read: 'diff' }).catch((e: unknown) => e);
+    if (!(r instanceof Error)) expect(textOf(r as ToolResult)).toMatch(/the app died: /);
+    let reports: { reason: string; file?: string }[] = [];
+    // the phone writes the report a moment after the death
+    for (let i = 0; i < 20 && reports.length === 0; i++) {
+      const c = await call('crashes', {
+        since: new Date(Date.now() - 120_000).toISOString(),
+        limit: 2,
+      });
+      reports = (c.data as { reports: typeof reports }).reports;
+      if (reports.length === 0) await pause(3_000);
+    }
+    expect(reports[0]?.reason).toMatch(/SIGSEGV|EXC_/);
+    expect(reports[0]?.file).toMatch(/\.ips$/);
+  }, 240_000);
 });

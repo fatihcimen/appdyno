@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, opsFor, ServerContext, ToolError, type Op } from '@appdyno/ops';
-import { Adb, androidProvider, appleProvider, decodePng, PERFETTO } from 'appdyno';
+import { Adb, androidProvider, appleProvider, decodePng, Devicectl, PERFETTO } from 'appdyno';
 
 /**
  * Phase 6 on real devices, through the operations an agent calls and, where a recording must outlive its
@@ -130,9 +130,11 @@ const stir = async (ok: ReturnType<typeof harness>['ok'], rounds = 3) => {
 
 const android = process.env.APPDYNO_ANDROID_SERIAL;
 const simulator = process.env.APPDYNO_IOS_UDID;
+const iphone = process.env.APPDYNO_IPHONE_FIXTURE_APP ? process.env.APPDYNO_IPHONE_UDID : undefined;
 const targets = [
   { platform: 'android', serial: android, provider: () => androidProvider(new Adb()) },
   { platform: 'ios', serial: simulator, provider: () => appleProvider() },
+  { platform: 'iphone', serial: iphone, provider: () => appleProvider() },
 ];
 
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -143,15 +145,27 @@ for (const { platform, serial, provider } of targets)
     const file = (name: string) => join(dir, `${platform}-${name}`);
 
     beforeAll(async () => {
+      if (platform === 'iphone')
+        await new Devicectl(serial!).install(process.env.APPDYNO_IPHONE_FIXTURE_APP!);
       h = harness(serial!, provider());
       await h.ok('launch_app');
     }, 240_000);
     afterAll(() => h?.ctx.close());
 
+    // devicectl offers no recording on some phones (an iPhone 13 Pro Max on iOS 27.0.1): then it says so, with what to do
+    let noRecorder = false;
+
     describe('record', () => {
-      it('records a video that plays, and refuses a second one', async () => {
+      it('records a video that plays, and refuses a second one', async (ctx) => {
         const to = file(platform === 'ios' ? 'one.mov' : 'one.mp4');
-        const started = await h.ok('record', { action: 'start', file: to });
+        const first = await h.call('record', { action: 'start', file: to });
+        if (platform === 'iphone' && first.error) {
+          expect(first.data.code).toBe('UNSUPPORTED');
+          expect(first.text).toMatch(/Screen Recording/);
+          noRecorder = true;
+          return ctx.skip();
+        }
+        const started = first;
         expect(started.text).toContain(to);
         const again = await h.call('record', { action: 'start', file: file('two.mp4') });
         expect(again.error).toBe(true);
@@ -164,7 +178,8 @@ for (const { platform, serial, provider } of targets)
         expect((await h.call('record', { action: 'stop' })).text).toMatch(/no recording runs/);
       }, 120_000);
 
-      it('starts in one process and stops in another', async () => {
+      it('starts in one process and stops in another', async (ctx) => {
+        if (noRecorder) return ctx.skip();
         const to = file(platform === 'ios' ? 'cli.mov' : 'cli.mp4');
         const start = await cli(serial!, 'record', 'start', '--file', to);
         expect(start.err).toBe('');
@@ -177,7 +192,8 @@ for (const { platform, serial, provider } of targets)
         assertPlayable(to, 0.1);
       }, 180_000);
 
-      it('ends by itself at its limit, and stop still finds the video', async () => {
+      it('ends by itself at its limit, and stop still finds the video', async (ctx) => {
+        if (noRecorder) return ctx.skip();
         const to = file(platform === 'ios' ? 'limit.mov' : 'limit.mp4');
         await h.ok('record', { action: 'start', file: to, maxSeconds: 2 });
         await stir(h.ok, 1);
@@ -209,9 +225,9 @@ for (const { platform, serial, provider } of targets)
         await h.ok('type_text', { selector: { id: 'password_input' }, text: PASSWORD });
         await h.ok('keyboard', { action: 'dismiss' }).catch(() => undefined);
         const fg = await h.call('perf_snapshot');
-        await h.ok('record', { action: 'start' });
+        if (!noRecorder) await h.ok('record', { action: 'start' });
         await stir(h.ok, 1);
-        await h.ok('record', { action: 'stop' });
+        if (!noRecorder) await h.ok('record', { action: 'stop' });
         const done = await h.ok('report', { action: 'stop' });
         expect(done.data.file).toBe(join(folder, 'index.html'));
 
@@ -246,6 +262,7 @@ for (const { platform, serial, provider } of targets)
 
         // the video is in the folder, and plays
         const video = /<video controls src="([^"]+)"/.exec(html)?.[1];
+        if (noRecorder) return;
         expect(video).toBeDefined();
         assertPlayable(join(folder, video!), 0.05);
       }, 240_000);

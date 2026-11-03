@@ -125,8 +125,13 @@ export function refused(err: unknown): never {
           ? 'the device is not connected or its agent stopped; try once more'
           : err.code === 'NO_FOCUS'
             ? 'no editable field has the focus: tap the field first (or give type_text a ref)'
-            : (err.hint ?? 'the device refused the command');
-    throw new ToolError(`${err.message} (${err.code}): ${hint}`, err.code, hint);
+            : err.hint;
+    if (err.code === 'NO_FOCUS') throw new ToolError(hint!, err.code, hint);
+    throw new ToolError(
+      `${err.message} (${err.code})${hint ? `: ${hint}` : ''}`,
+      err.code,
+      ...(hint ? [hint] : []),
+    );
   }
   throw err;
 }

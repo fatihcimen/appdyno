@@ -143,9 +143,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
       await pause(800);
       const s = buildScreen(await d.tree(), { platform: 'ios', appId: APP });
       const n = (
-        await d.measure.network(APP, 3_000, () =>
-          d.tap(byId(s, 'fetch'), { settle: false }),
-        )
+        await d.measure.network(APP, 3_000, () => d.tap(byId(s, 'fetch'), { settle: false }))
       ).value;
       console.log('network', JSON.stringify(n));
       expect(n.rxBytes).toBeGreaterThan(bytes * 0.85);
