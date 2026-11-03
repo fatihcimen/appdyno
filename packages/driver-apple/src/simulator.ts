@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { sleep, type ScreenRecorder, TIMEOUTS, type ActOptions, pause } from '@appdyno/core';
+import { type ScreenRecorder, TIMEOUTS, type ActOptions, pause } from '@appdyno/core';
 import { simulatorCrashes } from './crashes.js';
 import { simulatorLogs } from './logs.js';
 import { SimulatorApps, SimulatorSettings } from './simulator-manage.js';
@@ -14,17 +14,9 @@ import { SimulatorNetwork } from './network.js';
 import { IosSimulatorPerf } from './perf.js';
 import { simulatorRecorder } from './record.js';
 import { SimulatorWeb } from './webinspector.js';
-import { DirectSim, settle } from './simdirect.js';
-import {
-  actionable,
-  hasAlert,
-  learnCopies,
-  onKeyboard,
-  sameContent,
-  sameLayout,
-  stickingOut,
-  withoutCopies,
-} from './simtree.js';
+import { DirectSim } from './simdirect.js';
+import { type Capture, settleAfter } from './simsettle.js';
+import { learnCopies, onKeyboard, withoutCopies } from './simtree.js';
 import { IosRunnerLauncher } from './runner.js';
 import { Simctl, xcodeEnv } from './simctl.js';
 import { type IosDeviceOps, IosDevice } from './device.js';
@@ -62,34 +54,7 @@ export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
 
 type Node = Tree['nodes'][number];
 
-type Capture = { tree: Tree; busy: boolean; byRunner?: boolean; askRunner?: boolean };
-
 const nodesBusy = (t: Tree) => t.nodes.some((n) => n.c === 'ActivityIndicator' && (n.f & 1) !== 0);
-
-/** Reads cost about 30 ms here: the settle can look far more often than the runner's 80 ms. */
-const POLL_MS = 20;
-
-const INERT_QUIET_MS = 80;
-
-const FIRST_REACTION_MS = 500;
-
-/**
- * Once something has reacted, stillness for this long ends the wait. A sliding page holds the settle by
- * itself (`stickingOut`), so the window only has to outlast the gaps within a reaction: 120 ms answered with
- * the search bar a push leaves for a moment, 150 and 200 ms did not (0 of 16 answers each).
- */
-const REACTED_QUIET_MS = 150;
-
-const ALERT_REACTION_MS = 1_000;
-
-/** A carousel on the new screen sticks out for good: a push's old page is gone well before this. */
-const SLIDE_CAP_MS = 1_200;
-
-const ALERT_WATCH_MS = 800;
-
-const ALERT_APPEAR_MS = 450;
-
-const ALERT_GONE_MS = 600;
 
 const firstPoint = (a: ActParams) =>
   a.kind === 'tap' || a.kind === 'longPress'
@@ -196,7 +161,16 @@ export class IosSimulatorDevice extends IosDevice {
           : undefined;
       const touchesBefore = this.direct.touchesEnded;
       if (!(await this.direct.send(action))) return this.actByRunner(action, opts);
-      const out = await this.settleAfter(action, opts);
+      const out = await settleAfter(
+        {
+          read: (final) => this.readNow(final),
+          remember: (t) => this.remember(t),
+          recent: this.recent,
+          width: this.hello?.screen.w ?? Infinity,
+        },
+        action,
+        opts,
+      );
       // nothing moved and the app has not seen the touch finish: it never got it
       const reports = armed && !onKeyboard([...this.recent.values()].pop() ?? [], at!.x, at!.y);
       if (reports && out.untouched && touchesBefore === this.direct.touchesEnded) {
@@ -205,95 +179,6 @@ export class IosSimulatorDevice extends IosDevice {
       }
       return { ...out.result, ...(waited !== undefined && { animationWaitMs: waited }) };
     });
-  }
-
-  private async settleAfter(action: ActParams, opts: ActOptions) {
-    const want = opts.read ?? 'none';
-    const answer = (c: Capture | undefined) => {
-      if (c) this.remember(c.tree);
-      return {
-        ...(want !== 'none' && c && { hash: c.tree.hash }),
-        ...(want === 'tree' && c && { tree: c.tree }),
-      };
-    };
-    if (opts.settle === false) {
-      const c = want === 'none' ? undefined : await this.readNow();
-      return { untouched: false, result: answer(c) };
-    }
-    const s = opts.settle ?? {};
-    const actionAt = Date.now();
-    const before = opts.before ? this.recent.get(opts.before) : undefined;
-    const seen = before ?? [...this.recent.values()].pop() ?? [];
-    const tap = action.kind === 'tap' ? action : undefined;
-    const inert = !!tap && !!before && !actionable(before, tap.x, tap.y);
-    const quietMs = inert ? Math.min(s.quietMs ?? 200, INERT_QUIET_MS) : (s.quietMs ?? 200);
-    const maxMs = s.maxMs ?? 3_000;
-    // an alert or sheet that came up during the settle is still animating in: a tap on it then is lost;
-    // one going away is animating out, and the app's reaction to its button comes after that
-    const hadAlert = hasAlert(seen);
-    let alertSince: number | undefined = hadAlert ? 0 : undefined;
-    let alertGoneAt: number | undefined;
-    const width = this.hello?.screen.w ?? Infinity;
-    const stuckBefore = stickingOut(seen, width);
-    let slideSince: number | undefined;
-    const r = await settle<Capture | { tree: { nodes: Node[] }; busy: false }>({
-      actionAt,
-      quietMs,
-      // XCTest's tap took 300-600 ms, in which the app reacted before the window began; a direct touch is
-      // over in 50 ms, and an alert's button shows its effect only after about 300 ms
-      firstMs: inert ? 0 : hadAlert ? ALERT_REACTION_MS : FIRST_REACTION_MS,
-      reactedMs: REACTED_QUIET_MS,
-      maxMs,
-      pollMs: POLL_MS,
-      before: before && { tree: { nodes: before }, busy: false },
-      read: async () => {
-        const c = await this.readNow(false);
-        const now = Date.now();
-        if (hasAlert(c.tree.nodes)) {
-          alertSince ??= now;
-          alertGoneAt = undefined;
-          if (now - alertSince < ALERT_APPEAR_MS) return { ...c, busy: true };
-        } else {
-          if (alertSince !== undefined) alertGoneAt = now;
-          alertSince = undefined;
-          if (alertGoneAt !== undefined && now - alertGoneAt < ALERT_GONE_MS)
-            return { ...c, busy: true };
-        }
-        const sliding = [...stickingOut(c.tree.nodes, width)].some((k) => !stuckBefore.has(k));
-        if (sliding) {
-          slideSince ??= now;
-          if (now - slideSince < SLIDE_CAP_MS) return { ...c, busy: true };
-        } else slideSince = undefined;
-        return c;
-      },
-      same: (a, b) => sameContent(a.tree.nodes, b.tree.nodes),
-      busy: (c) => c.busy,
-    });
-    let last = r.last as Capture;
-    let extraMs = 0;
-    const unchanged = !!before && sameLayout(before, last.tree.nodes) && !hasAlert(last.tree.nodes);
-    // an actionable tap that changed nothing in the app may have asked the system for something: its
-    // alert comes a moment later, while the app is idle
-    if (tap && !inert && unchanged) {
-      const idleAt = Date.now();
-      while (Date.now() - idleAt < ALERT_WATCH_MS) {
-        await sleep(100);
-        const c = await this.readNow(false);
-        last = c;
-        if (c.byRunner || !sameLayout(before, c.tree.nodes)) break;
-      }
-      extraMs = Date.now() - idleAt;
-    }
-    const untouched = unchanged && sameLayout(before, last.tree.nodes);
-    // the last look may have left to the runner what only it can tell
-    if (want !== 'none' && last.askRunner) last = await this.readNow(true);
-    return {
-      untouched,
-      result: {
-        settle: { settled: r.settled, ms: r.elapsedMs + extraMs, reads: r.reads, quietMs },
-        ...answer(last),
-      },
-    };
   }
 
   override async foreground(): Promise<string | undefined> {

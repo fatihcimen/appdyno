@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Tree } from '@appdyno/protocol';
 import { directChecks } from '../src/provider.js';
-import { DirectSim, settle } from '../src/simdirect.js';
+import { DirectSim } from '../src/simdirect.js';
+import { settle } from '../src/simsettle.js';
 import {
   actionable,
   layoutHash,
