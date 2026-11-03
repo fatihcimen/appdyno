@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { AndroidDevice, androidProvider, traceProcessor, type Screen } from 'appdyno';
+import { Adb, AndroidDevice, androidProvider, traceProcessor, type Screen } from 'appdyno';
 
 /**
  * Measurement accuracy against fixture screens of known cost (APPDYNO_ANDROID_SERIAL; run on a quiet
@@ -321,8 +321,9 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     await new Promise<void>((r) => server.listen(0, '0.0.0.0', r));
     const port = (server.address() as AddressInfo).port;
     try {
-      // the emulator reaches this machine at 10.0.2.2
-      const url = `appdyno-fixture://open/network?url=http://10.0.2.2:${port}/x`;
+      // this machine, from an emulator and a phone alike
+      await new Adb().run(['-s', serial!, 'reverse', `tcp:${port}`, `tcp:${port}`]);
+      const url = `appdyno-fixture://open/network?url=http://127.0.0.1:${port}/x`;
       const m = (
         await d.measure.network(APP, 1_000, async () => {
           await d.shell(`am start -W -a android.intent.action.VIEW -d '${url}' ${APP}`);
@@ -405,10 +406,29 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     expect(await d.measure.buildType('no.such.app')).toBe('unknown');
   });
 
-  it('energy: an emulator says it has no power model, and the battery stays as it was', async () => {
-    await expect(d.measure.energy(APP, 500)).rejects.toMatchObject({
-      code: 'UNSUPPORTED',
-      message: /power model/,
-    });
-  });
+  it('energy: an emulator says it has no power model; a phone estimates, and its history stays', async () => {
+    const onBattery = async () =>
+      Number(
+        /Time on battery: (?:(\d+)h )?(?:(\d+)m )?/
+          .exec(await d.shell('dumpsys batterystats --charged | head -20'))
+          ?.slice(1, 3)
+          .reduce((a, b, i) => a + Number(b ?? 0) * (i === 0 ? 60 : 1), 0) ?? 0,
+      );
+    if (serial!.startsWith('emulator-')) {
+      await expect(d.measure.energy(APP, 500)).rejects.toMatchObject({
+        code: 'UNSUPPORTED',
+        message: /power model/,
+      });
+      return;
+    }
+    const before = await onBattery();
+    await open('cpu');
+    const m = (await d.measure.energy(APP, 5_000)).value;
+    console.log('energy:', JSON.stringify(m));
+    expect(m.mah).toBeGreaterThanOrEqual(0);
+    expect(m.note).toMatch(/model/);
+    // a reset would take the time on battery back to nothing
+    expect(await onBattery()).toBeGreaterThanOrEqual(before);
+    expect(await d.shell('dumpsys battery')).not.toMatch(/UPDATES STOPPED/);
+  }, 120_000);
 });

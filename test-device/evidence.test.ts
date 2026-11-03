@@ -104,6 +104,13 @@ function harness(serial: string, provider: ConstructorParameters<typeof ServerCo
   return { ctx, call, ok };
 }
 
+/** A runner's start says how far it has got on stderr: anything else there is a fault. */
+const faults = (err: string) =>
+  err
+    .split('\n')
+    .filter((l) => l && !l.startsWith('{"runner"'))
+    .join('\n');
+
 const cli = (serial: string, ...args: string[]) =>
   new Promise<{ code: number; out: string; err: string }>((resolve) => {
     execFile(
@@ -182,12 +189,12 @@ for (const { platform, serial, provider } of targets)
         if (noRecorder) return ctx.skip();
         const to = file(platform === 'ios' ? 'cli.mov' : 'cli.mp4');
         const start = await cli(serial!, 'record', 'start', '--file', to);
-        expect(start.err).toBe('');
+        expect(faults(start.err)).toBe('');
         expect(start.code).toBe(0);
         // the starter is gone; only the recording remains
         await stir(h.ok, 2);
         const stop = await cli(serial!, 'record', 'stop');
-        expect(stop.err).toBe('');
+        expect(faults(stop.err)).toBe('');
         expect(stop.out).toContain(to);
         assertPlayable(to, 0.1);
       }, 180_000);
@@ -273,9 +280,9 @@ for (const { platform, serial, provider } of targets)
         expect((await cli(serial!, 'use-device', '--app', APP)).code).toBe(0);
         expect((await cli(serial!, 'report', 'start', '--dir', folder)).code).toBe(0);
         const open = await cli(serial!, 'open-link', '--url', 'appdyno-fixture://open/list');
-        expect(open.err).toBe('');
+        expect(faults(open.err)).toBe('');
         const r = await cli(serial!, 'report', 'stop');
-        expect(r.err).toBe('');
+        expect(faults(r.err)).toBe('');
         expect(r.out).toContain('1 steps');
         expect(readFileSync(join(folder, 'index.html'), 'utf8')).toMatch(/1\. open_link/);
       }, 120_000);
@@ -399,7 +406,7 @@ describe.skipIf(!android)('network on Android', () => {
 
   it('works from the command line, one process per step', async () => {
     const start = await cli(android!, 'network', 'start', '--via', 'bytes', '--app', APP);
-    expect(start.err).toBe('');
+    expect(faults(start.err)).toBe('');
     const read = await cli(android!, 'network', 'read');
     expect(read.err).toBe('');
     expect(read.out).toMatch(/Received uid \d+/);
@@ -544,7 +551,7 @@ for (const { platform, serial, provider, pageId, other } of [
 
     it('works from the command line', async () => {
       const r = await cli(serial!, 'webview', 'pages', '--app', APP);
-      expect(r.err).toBe('');
+      expect(faults(r.err)).toBe('');
       expect(r.out).toContain('"Fixture web"');
     }, 60_000);
   });

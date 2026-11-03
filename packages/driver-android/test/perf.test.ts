@@ -277,6 +277,18 @@ describe('android perf parsers on recorded outputs', () => {
     expect(usageSince({ mah: 2 }, { mah: 0.1 })).toEqual({ mah: 0, breakdown: {} });
   });
 
+  it('reads the row as Android 16 prints it, its parts on the next line', () => {
+    const android16 = [
+      '  Estimated power use (mAh):',
+      '    Capacity: 6000, Computed drain: 0, actual drain: 0',
+      '  UID u0a404: 5.19 fg: 4.05 (4m 49s 572ms) bg: 0.901 (13s 585ms) cached: 0.246 (13s 432ms)',
+      '      cpu=5.19 (3m 6s 935ms) cpu:fg=4.05 (2m 25s 235ms) cpu:bg=0.901 (32s 865ms)',
+      '      (not on battery, screen on) cpu=4.50 (2m 41s 553ms)',
+      '',
+    ].join('\n');
+    expect(parseBatteryUsage(android16, 10404)).toEqual({ mah: 5.19, breakdown: { cpu: 5.19 } });
+  });
+
   it('reads the app-s estimated charge; an emulator-s zeros are no estimate', () => {
     expect(parseBatteryUsage(fx('android-batterystats-charged.txt'), 10193)).toEqual({});
     // the row as a phone prints it (not recorded: there is no phone for these tests)

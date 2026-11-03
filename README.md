@@ -49,7 +49,7 @@ else the one `use_device` selected.
 | check    | `audit` (accessibility), `logs`, `crashes`, `visual`                                                                       |
 | evidence | `record`, `report`, `network`                                                                                              |
 | inside   | `webview`, `react_native`                                                                                                  |
-| measure  | `perf_snapshot`, `perf_scroll`, `perf_launch`, `perf_profile`, `perf_heap`, `perf_trace`                                   |
+| measure  | `perf_snapshot`, `perf_scroll`, `perf_launch`, `perf_profile`, `perf_heap`, `perf_trace`, `perf_compare`, `perf_query`     |
 | replay   | `flow`                                                                                                                     |
 
 A target is a `ref`, `x` and `y`, or a `selector` `{ text, id, role, index }`, resolved on a fresh read
@@ -126,7 +126,7 @@ index). The answer gives the length, frames and size.
 | --------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Android   | `screenrecord` on the device, 3 minutes a run, 4 Mbps    | runs are joined into one video by copying their frames, with no dependency; a moment is lost at each join. Runs an encoder change makes unjoinable stay as `name-1.mp4`, `name-2.mp4`, and the answer says so |
 | simulator | `simctl io recordVideo --codec=h264`, a QuickTime `.mov` | a frame is written only when the screen changes, so a still screen gives a very short video, and the answer says so                                                                                           |
-| iPhone    | `devicectl device capture screen-record`                 | not yet run on a phone                                                                                                                                                                                        |
+| iPhone    | `devicectl device capture screen-record`                 | not every phone offers it: an iPhone 13 Pro Max on iOS 27.0.1 has no such capability, and `record` refuses and says what to do. It has not been seen working on a phone                                      |
 
 ### Report
 
@@ -304,7 +304,8 @@ Appium, `uiautomator`) is never stopped. The error names the holder and gives th
 
 ## Reaching a phone
 
-- Android: turn on USB debugging, connect, and check `adb devices`.
+- Android: turn on USB debugging, connect, and check `adb devices`. A Xiaomi asks on its screen before each new install over USB and
+  says no by itself after 10 s: `app install` wakes it and says so if no one answered. Ticking its remember box stops it asking.
 - iPhone: turn on developer mode. A phone needs a development signing identity and a provisioning profile that names it. An
   installed profile for a wildcard app id, with its identity in the unlocked login keychain, is found by itself. To choose another,
   set `APPDYNO_IOS_PROFILE=<profile.mobileprovision>`, `APPDYNO_IOS_KEYCHAIN=<keychain-db>` and

@@ -478,10 +478,14 @@ export function parseBatteryUsage(text: string, uid: number): Omit<EnergyReading
   const section = /Estimated power use \(mAh\):\n([\s\S]*?)(?:\n\s*\n|$)/.exec(text)?.[1] ?? '';
   const computed = num(/Computed drain: ([\d.]+)/, section) ?? 0;
   const name = uid >= 10_000 ? `u0a${uid - 10_000}` : String(uid);
-  const row = new RegExp(`^\\s*UID ${name}: ([\\d.]+)[^(]*\\((.*)\\)\\s*$`, 'mi').exec(section);
+  // the parts follow on the same line, or (Android 16) on the next, then again by state
+  const row = new RegExp(`^\\s*UID ${name}: ([\\d.]+)(.*)(?:\\n\\s+(\\w+=.*))?$`, 'mi').exec(
+    section,
+  );
   if (!row) return computed > 0 ? { mah: 0 } : {};
   const breakdown: Record<string, number> = {};
-  for (const m of row[2]!.matchAll(/(\w+)=([\d.]+)/g)) breakdown[m[1]!] = Number(m[2]);
+  for (const m of `${row[2]} ${row[3] ?? ''}`.matchAll(/(?:^|\s)(\w+)=([\d.]+)/g))
+    breakdown[m[1]!] = Number(m[2]);
   return { mah: Number(row[1]), breakdown };
 }
 
