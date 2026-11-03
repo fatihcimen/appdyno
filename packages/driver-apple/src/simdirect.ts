@@ -427,7 +427,7 @@ export function touchEvents(
 }
 
 /** USB HID usages of the keys that have one; page 12 is the consumer page of hardware buttons. */
-const KEYS: Partial<Record<Key, { page: number; usage: number }>> = {
+const HID_KEYS: Partial<Record<Key, { page: number; usage: number }>> = {
   home: { page: 12, usage: 0x40 },
   enter: { page: 7, usage: 0x28 },
   delete: { page: 7, usage: 0x2a },
@@ -561,7 +561,7 @@ export class DirectSim {
       return undefined;
     });
     if (!hid) return false;
-    const key = action.kind === 'key' ? KEYS[action.key] : undefined;
+    const key = action.kind === 'key' ? HID_KEYS[action.key] : undefined;
     const events = touchEvents(action, this.screen);
     if (!key && !events) return false;
     if (hid.closed) {

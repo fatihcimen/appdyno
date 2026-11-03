@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { stateDir } from '@appdyno/core';
+import { deviceStateFile } from '@appdyno/core';
 import { ToolError } from './tool.js';
 
 export type Claim = { pid: number; started: string; tool: string; since: string };
@@ -9,8 +9,7 @@ export type Claim = { pid: number; started: string; tool: string; since: string 
 const LOCK_STALE_MS = 5_000;
 const LOCK_WAIT_MS = 2_000;
 
-const fileOf = (serial: string) =>
-  join(stateDir(), 'claims', `${serial.replace(/[^\w.-]/g, '_')}.json`);
+const fileOf = (serial: string) => deviceStateFile('claims', serial);
 
 const startOf = (pid: number) => {
   try {

@@ -13,6 +13,7 @@ import {
   type Tree,
 } from '@appdyno/protocol';
 import {
+  pause,
   afterTimeout,
   buildScreen,
   decodePng,
@@ -25,12 +26,12 @@ import {
   type CrashesQuery,
   type LogsQuery,
 } from '@appdyno/core';
-import { Adb, assertSerial, shq } from './adb.js';
+import { Adb, assertPkg, assertSerial, shq } from './adb.js';
 import { androidCrashes } from './crashes.js';
 import { androidLogs } from './logs.js';
 import { auditAndroid } from './audit.js';
 import { AndroidAgentLauncher, REMOTE_DIR } from './agent.js';
-import { AndroidApps, AndroidSettings, assertPkg } from './manage.js';
+import { AndroidApps, AndroidSettings } from './manage.js';
 import { AndroidNetwork } from './network.js';
 import { AndroidPerf } from './perf.js';
 import { AndroidRecorder } from './record.js';
@@ -167,7 +168,7 @@ export class AndroidDevice implements Device {
     while (Date.now() < end) {
       const d = (await this.adb.devices().catch(() => [])).find((x) => x.serial === this.serial);
       if (d?.state === 'device') return;
-      await new Promise((r) => setTimeout(r, 1_000));
+      await pause(1_000);
     }
     throw cause;
   }
@@ -191,20 +192,20 @@ export class AndroidDevice implements Device {
     let unlocked = false;
     if (!s.awake) {
       await this.shell('input keyevent KEYCODE_WAKEUP');
-      await new Promise((r) => setTimeout(r, 400));
+      await pause(400);
       woke = true;
       s = await state();
     }
     if (s.locked) {
       await this.shell('wm dismiss-keyguard');
-      await new Promise((r) => setTimeout(r, 600));
+      await pause(600);
       s = await state();
       if (s.locked) {
         const w = this.helloInfo?.screen ?? { w: 1080, h: 2400 };
         await this.shell(
           `input swipe ${Math.round(w.w / 2)} ${Math.round(w.h * 0.9)} ${Math.round(w.w / 2)} ${Math.round(w.h * 0.3)} 250`,
         );
-        await new Promise((r) => setTimeout(r, 600));
+        await pause(600);
         s = await state();
       }
       unlocked = !s.locked;
@@ -229,7 +230,7 @@ export class AndroidDevice implements Device {
         last = focus ?? '';
         since = Date.now();
       } else if (Date.now() - since >= WAKE_STEADY_MS) return;
-      await new Promise((r) => setTimeout(r, 150));
+      await pause(150);
     }
   }
 
@@ -368,7 +369,7 @@ export class AndroidDevice implements Device {
       TIMEOUTS.app,
     );
     if (/^Error|Exception|Status: (?!ok)/m.test(out))
-      throw new DeviceError('NOT_FOUND', `the link did not open: ${firstLine(out)}`);
+      throw new DeviceError('NOT_FOUND', `the link did not open: ${shortFirstLine(out)}`);
   }
 
   /** Starts the app's launcher activity and waits for it (`am start -W`); returns its output. */
@@ -390,7 +391,7 @@ export class AndroidDevice implements Device {
       );
     const out = await this.shell(`am start -W -n ${shq(resolved)} 2>&1`, TIMEOUTS.app);
     if (/^Error|Status: (?!ok)/m.test(out))
-      throw new DeviceError('APP_NOT_RUNNING', `${pkg} did not start: ${firstLine(out)}`);
+      throw new DeviceError('APP_NOT_RUNNING', `${pkg} did not start: ${shortFirstLine(out)}`);
     return out;
   }
 
@@ -416,7 +417,7 @@ export class AndroidDevice implements Device {
     if (!out.trim().endsWith('done') || /Unknown command|No shell command/i.test(out))
       throw new DeviceError(
         'UNSUPPORTED',
-        `this device refused the test location: ${firstLine(out)}`,
+        `this device refused the test location: ${shortFirstLine(out)}`,
       );
     const run = parseLocationRun(out);
     // still ours: what this call created, and what an earlier call of this process created that is still there
@@ -528,7 +529,7 @@ export class AndroidDevice implements Device {
   }
 }
 
-const firstLine = (s: string) => s.trim().split('\n')[0]?.slice(0, 200) ?? '';
+const shortFirstLine = (s: string) => s.trim().split('\n')[0]?.slice(0, 200) ?? '';
 
 const TEST_PROVIDERS = ['gps', 'network', 'fused'];
 /** The attribution tag of our test providers (dumpsys location shows it in the provider's block). */

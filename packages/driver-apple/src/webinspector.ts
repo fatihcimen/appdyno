@@ -208,7 +208,7 @@ class Conversation {
 }
 
 const bundleOf = (a: App) => a.WIRApplicationBundleIdentifierKey as string | undefined;
-const idOf = (a: App) => a.WIRApplicationIdentifierKey as string;
+const appKeyOf = (a: App) => a.WIRApplicationIdentifierKey as string;
 
 /**
  * Web views on a simulator, through the socket Safari's Web Inspector uses (`RWI_LISTEN_SOCKET`). From
@@ -247,15 +247,15 @@ export class SimulatorWeb implements WebInspector {
       // a page in another process may hang off the app as its proxy
       const asked = [
         ...mine,
-        ...apps.filter((a) => !mine.includes(a) && mine.some((m) => idOf(m) === host(a))),
+        ...apps.filter((a) => !mine.includes(a) && mine.some((m) => appKeyOf(m) === host(a))),
       ];
       const pages: WebPage[] = [];
       for (const a of asked) {
-        c.send('_rpc_forwardGetListing:', { WIRApplicationIdentifierKey: idOf(a) });
+        c.send('_rpc_forwardGetListing:', { WIRApplicationIdentifierKey: appKeyOf(a) });
         const m = await c.until(
           (x) =>
             x.__selector === '_rpc_applicationSentListing:' &&
-            x.__argument.WIRApplicationIdentifierKey === idOf(a),
+            x.__argument.WIRApplicationIdentifierKey === appKeyOf(a),
           LISTING_MS,
         );
         const listing = (m?.__argument.WIRListingKey ?? {}) as Record<
@@ -265,7 +265,7 @@ export class SimulatorWeb implements WebInspector {
         for (const p of Object.values(listing))
           if (p.WIRTypeKey === 'WIRTypeWebPage' || p.WIRTypeKey === 'WIRTypeWeb')
             pages.push({
-              id: `${idOf(a)}/${String(p.WIRPageIdentifierKey)}`,
+              id: `${appKeyOf(a)}/${String(p.WIRPageIdentifierKey)}`,
               title: String(p.WIRTitleKey ?? ''),
               url: String(p.WIRURLKey ?? ''),
               ...(bundleOf(a) && { app: bundleOf(a)! }),

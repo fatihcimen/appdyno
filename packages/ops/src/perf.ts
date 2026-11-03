@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import { cpus, loadavg } from 'node:os';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import {
+  median,
   pause,
   reportProgress,
   stateDir,
@@ -97,12 +98,6 @@ const HEAP: Record<HeapReading['kind'], { store: string; label: string }> = {
   memgraph: { store: 'heap-graph', label: 'memory graph (Xcode)' },
 };
 
-const median = (xs: number[]) => {
-  const s = [...xs].sort((a, b) => a - b);
-  if (s.length === 0) return undefined;
-  const m = Math.floor(s.length / 2);
-  return s.length % 2 ? s[m] : (s[m - 1]! + s[m]!) / 2;
-};
 const kb = (n?: number) => (n === undefined ? '?' : `${(n / 1024).toFixed(1)} MB`);
 
 /** A measure the platform may lack: its answer, or nothing when it says UNSUPPORTED. */
@@ -516,7 +511,7 @@ export function perfOps(ctx: ServerContext): Op[] {
             const { from, to } = swipeLine(size, { direction, distance: size.h * 0.4 });
             await s.device.swipe(from, to, 300, { settle: false }).catch(refused);
           }
-          await new Promise((x) => setTimeout(x, 1_500));
+          await pause(1_500).catch(refused);
           const f = await readFrames(pkg).catch(refused);
           const m1 = await readMemory(pkg).catch(refused);
           all.push(m0, f, m1);
@@ -536,7 +531,7 @@ export function perfOps(ctx: ServerContext): Op[] {
         }
         s.acted();
         const counted = rounds.filter((x) => x.frames >= 60);
-        const jank = median(counted.map((x) => x.jankyPercent));
+        const jank = counted.length ? median(counted.map((x) => x.jankyPercent)) : undefined;
         const frozen = rounds.reduce((a, x) => a + x.frozen, 0);
         // steady state: the second round's end to the last one's (the first loads images and caches)
         const growth =

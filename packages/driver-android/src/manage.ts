@@ -14,13 +14,7 @@ import {
   type VirtualDevices,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { shq, type Adb } from './adb.js';
-
-const PKG = /^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/;
-export const assertPkg = (p: string) => {
-  if (!PKG.test(p)) throw new DeviceError('INVALID_ARGUMENT', `not a package name: ${p}`);
-  return p;
-};
+import { assertPkg, shq, type Adb } from './adb.js';
 
 /** `pm` prints Success, or the reason, and exits 0 on some versions either way. */
 const success = (out: string, what: string) => {

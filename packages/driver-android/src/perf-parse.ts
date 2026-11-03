@@ -89,7 +89,7 @@ export function parseFramestats(text: string): FrameRow[] {
   return out;
 }
 
-const pct = (xs: number[], p: number) => {
+const nearestRank = (xs: number[], p: number) => {
   const s = [...xs].sort((a, b) => a - b);
   return s[Math.min(s.length - 1, Math.max(0, Math.ceil(p * s.length) - 1))] ?? 0;
 };
@@ -107,8 +107,8 @@ export function parseFrameStats(text: string): FrameStats {
       count: rows.length,
       slow,
       slowPercent: Math.round((slow / rows.length) * 1000) / 10,
-      p50Ms: pct(ms, 0.5),
-      p95Ms: pct(ms, 0.95),
+      p50Ms: nearestRank(ms, 0.5),
+      p95Ms: nearestRank(ms, 0.95),
       worstMs: Math.max(...ms),
       ...(worstWindow(rows) && { worstWindow: worstWindow(rows)! }),
     };
@@ -260,8 +260,8 @@ export function parseFrameTimelineCsv(csv: string): FrameTimeline {
     bufferStuffing: rows.filter((r) => has(r.jank, /Buffer Stuffing/)).length,
     surfaceFlinger: rows.filter((r) => has(r.jank, /SurfaceFlinger|Display HAL|Prediction Error/))
       .length,
-    p50Ms: Math.round(pct(ms, 0.5) * 10) / 10,
-    p95Ms: Math.round(pct(ms, 0.95) * 10) / 10,
+    p50Ms: Math.round(nearestRank(ms, 0.5) * 10) / 10,
+    p95Ms: Math.round(nearestRank(ms, 0.95) * 10) / 10,
     worstMs: Math.round((ms.length ? Math.max(...ms) : 0) * 10) / 10,
   };
 }
@@ -312,9 +312,9 @@ export function parseAndroidFrameStats(csv: string): FrameTimeline['stats'] {
   if (overrun.length === 0) return undefined;
   return {
     frames: rows.length,
-    overrunP95Ms: pct(overrun, 0.95),
+    overrunP95Ms: nearestRank(overrun, 0.95),
     overrunWorstMs: Math.max(...overrun),
-    cpuP95Ms: pct(col('cpu_time'), 0.95),
+    cpuP95Ms: nearestRank(col('cpu_time'), 0.95),
   };
 }
 

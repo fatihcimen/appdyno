@@ -1,5 +1,6 @@
 import { connect, type Socket } from 'node:net';
 import { DeviceError } from '@appdyno/protocol';
+import { xmlText } from '@appdyno/core';
 
 /**
  * The USB multiplexer of the Mac (`/var/run/usbmuxd`): lists the connected phones and opens a raw
@@ -10,17 +11,15 @@ export const USBMUXD = '/var/run/usbmuxd';
 
 type Plist = string | number | boolean | Plist[] | { [k: string]: Plist };
 
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
 export function plistXml(v: Plist): string {
   const enc = (x: Plist): string => {
-    if (typeof x === 'string') return `<string>${esc(x)}</string>`;
+    if (typeof x === 'string') return `<string>${xmlText(x)}</string>`;
     if (typeof x === 'number')
       return Number.isInteger(x) ? `<integer>${x}</integer>` : `<real>${x}</real>`;
     if (typeof x === 'boolean') return x ? '<true/>' : '<false/>';
     if (Array.isArray(x)) return `<array>${x.map(enc).join('')}</array>`;
     return `<dict>${Object.entries(x)
-      .map(([k, val]) => `<key>${esc(k)}</key>${enc(val)}`)
+      .map(([k, val]) => `<key>${xmlText(k)}</key>${enc(val)}`)
       .join('')}</dict>`;
   };
   return `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">${enc(v)}</plist>\n`;

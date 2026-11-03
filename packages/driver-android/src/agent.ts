@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DeviceError, PROTOCOL, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
-import { pause, reportProgress, RpcClient, stateDir } from '@appdyno/core';
+import { safeName, pause, reportProgress, RpcClient, stateDir } from '@appdyno/core';
 import { type Adb, assertSerial, shq } from './adb.js';
 import { conflictHint, holdersIn, type Holder } from './holders.js';
 
@@ -68,7 +68,7 @@ export class AndroidAgentLauncher {
   }
 
   private get statePath() {
-    return join(stateDir(), `android-${this.serial.replace(/[^\w.-]/g, '_')}.json`);
+    return join(stateDir(), `android-${safeName(this.serial)}.json`);
   }
 
   /** A connected client to a running agent of this build: the one already there, else a new one. */
@@ -192,7 +192,7 @@ export class AndroidAgentLauncher {
           `the Android agent did not start within ${START_MS} ms`,
           out.trim().slice(0, 300) || undefined,
         );
-      await new Promise((r) => setTimeout(r, POLL_MS));
+      await pause(POLL_MS);
     }
   }
 
@@ -237,7 +237,7 @@ export class AndroidAgentLauncher {
       .map(Number)
       .filter((n) => Number.isInteger(n) && n > 0);
     for (const pid of pids) await this.kill(pid);
-    if (pids.length > 0) await new Promise((r) => setTimeout(r, 500));
+    if (pids.length > 0) await pause(500);
     return pids.length > 0;
   }
 

@@ -422,7 +422,7 @@ export class IosDevice implements Device {
         await this.tap(open, { settle: {} });
         return;
       }
-      await new Promise((r) => setTimeout(r, 150));
+      await pause(150);
     }
   }
 
@@ -431,8 +431,7 @@ export class IosDevice implements Device {
     await this.target(pkg);
     // returns once the app is in front: a read during the launch would get the home screen, slowly
     const end = Date.now() + 10_000;
-    while ((await this.foreground()) !== pkg && Date.now() < end)
-      await new Promise((r) => setTimeout(r, 20));
+    while ((await this.foreground()) !== pkg && Date.now() < end) await pause(20);
     return out;
   }
 
@@ -441,8 +440,7 @@ export class IosDevice implements Device {
     // returns once the app has left the front (the runner may see it there for a moment)
     if (!this.rpc || this.rpc.closed) return;
     const end = Date.now() + 3_000;
-    while ((await this.foreground()) === pkg && Date.now() < end)
-      await new Promise((r) => setTimeout(r, 100));
+    while ((await this.foreground()) === pkg && Date.now() < end) await pause(100);
   }
 
   async setLocation(lat: number, lon: number) {
@@ -695,7 +693,7 @@ export class IosSimulatorDevice extends IosDevice {
     if (tap && !inert && unchanged) {
       const idleAt = Date.now();
       while (Date.now() - idleAt < ALERT_WATCH_MS) {
-        await new Promise((res) => setTimeout(res, 100));
+        await pause(100);
         const c = await this.readNow(false);
         last = c;
         if (c.byRunner || !sameLayout(before, c.tree.nodes)) break;

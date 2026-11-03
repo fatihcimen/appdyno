@@ -1,10 +1,9 @@
-import { callSignal, stateDir, throwIfCancelled } from '@appdyno/core';
-import { execFile, spawn } from 'node:child_process';
+import { round1, run, callSignal, stateDir, throwIfCancelled } from '@appdyno/core';
+import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
 import type {
   CpuProfile,
   HitchSummary,
@@ -15,8 +14,6 @@ import type {
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { xcodeEnv } from './simctl.js';
-
-const run = promisify(execFile);
 
 /** One cell of an exported trace table: its value and the tool's formatted text. */
 export type Cell = { value: string; fmt?: string };
@@ -83,14 +80,13 @@ export function hitchSummary(
     causes[c] = (causes[c] ?? 0) + 1;
   }
   const total = ms.reduce((a, b) => a + b, 0);
-  const round = (x: number) => Math.round(x * 10) / 10;
   return {
     durationMs,
     frames: parseTraceTable(surfacesXml).length,
     hitches: hitches.length,
-    hitchMs: round(total),
-    worstMs: round(Math.max(0, ...ms)),
-    hitchRatio: round(total / (durationMs / 1000)),
+    hitchMs: round1(total),
+    worstMs: round1(Math.max(0, ...ms)),
+    hitchRatio: round1(total / (durationMs / 1000)),
     causes,
   };
 }
@@ -498,10 +494,9 @@ export function parseHangs(
   const ms = parseTraceTable(xml)
     .filter((r) => pid === undefined || r.process?.fmt?.includes(`(${pid})`))
     .map((r) => Number(r.duration?.value ?? 0) / 1e6);
-  const round = (x: number) => Math.round(x * 10) / 10;
   return {
     hangs: ms.length,
-    worstMs: round(Math.max(0, ...ms)),
-    totalMs: round(ms.reduce((a, b) => a + b, 0)),
+    worstMs: round1(Math.max(0, ...ms)),
+    totalMs: round1(ms.reduce((a, b) => a + b, 0)),
   };
 }

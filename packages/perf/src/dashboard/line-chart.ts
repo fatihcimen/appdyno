@@ -1,4 +1,4 @@
-import { esc } from '@appdyno/core';
+import { round1, esc } from '@appdyno/core';
 import type { Unit } from '../record.js';
 import { inScale, scaleOf, when, withDigits, type Scale } from './format.js';
 import { tooltip } from './marks.js';
@@ -38,8 +38,6 @@ const niceStep = (span: number, wholeOnly: boolean) => {
 const tickText = (v: number, step: number, s: Scale) =>
   withDigits(v / s.per, Math.max(0, -Math.floor(Math.log10(step / s.per))));
 
-const px = (n: number) => Math.round(n * 10) / 10;
-
 const dayOf = (at: string) => new Date(at).toISOString().slice(0, 10);
 
 const DAY = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
@@ -58,15 +56,15 @@ export function lineChart(c: LineChart): string {
   const step = niceStep(highest - lowest, c.unit === 'count');
   const low = Math.floor(lowest / step) * step;
   const high = Math.max(Math.ceil(highest / step), 1) * step;
-  const y = (v: number) => px(Y1 - ((v - low) / (high - low)) * (Y1 - Y0));
-  const x = (i: number) => px(X0 + (i / (c.points.length - 1)) * (X1 - X0));
+  const y = (v: number) => round1(Y1 - ((v - low) / (high - low)) * (Y1 - Y0));
+  const x = (i: number) => round1(X0 + (i / (c.points.length - 1)) * (X1 - X0));
 
   const ticks = Array.from({ length: Math.round((high - low) / step) + 1 }, (_, i) => {
     const v = low + i * step;
     return `<line class="grid" x1="${X0}" x2="${X1}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${X0 - 6}" y="${y(v) + 4}" text-anchor="end">${esc(tickText(v, step, scale))}</text>`;
   });
   const band = c.band
-    ? `<rect class="band" x="${X0}" width="${X1 - X0}" y="${y(Math.min(c.band.high, high))}" height="${px(y(Math.max(c.band.low, low)) - y(Math.min(c.band.high, high)))}"/>`
+    ? `<rect class="band" x="${X0}" width="${X1 - X0}" y="${y(Math.min(c.band.high, high))}" height="${round1(y(Math.max(c.band.low, low)) - y(Math.min(c.band.high, high)))}"/>`
     : '';
   const limitLines = limits
     .map((l) => `<line class="limit" x1="${X0}" x2="${X1}" y1="${y(l)}" y2="${y(l)}"/>`)
@@ -92,7 +90,7 @@ export function lineChart(c: LineChart): string {
       ...(p.noisy ? ['taken under noise'] : []),
       ...(p.modelled ? ['an estimate, from a model'] : []),
     ];
-    return `<g class="pt${i === last ? ' newest' : ''}"><rect class="hit" x="${px(x(i) - halfStep)}" y="${Y0}" width="${px(halfStep * 2)}" height="${Y1 - Y0}"/><line class="cross" x1="${x(i)}" x2="${x(i)}" y1="${Y0}" y2="${Y1}"/><circle class="hot" cx="${x(i)}" cy="${y(p.value)}" r="4"/>${tooltip(x(i), Y0, lines, W)}</g>`;
+    return `<g class="pt${i === last ? ' newest' : ''}"><rect class="hit" x="${round1(x(i) - halfStep)}" y="${Y0}" width="${round1(halfStep * 2)}" height="${Y1 - Y0}"/><line class="cross" x1="${x(i)}" x2="${x(i)}" y1="${Y0}" y2="${Y1}"/><circle class="hot" cx="${x(i)}" cy="${y(p.value)}" r="4"/>${tooltip(x(i), Y0, lines, W)}</g>`;
   });
 
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(

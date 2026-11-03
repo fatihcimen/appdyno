@@ -1,9 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
-import { execFile } from 'node:child_process';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
 import {
+  run,
   stateDir,
   type NetworkAnswer,
   type NetworkEntry,
@@ -15,8 +14,6 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import { helperBinary } from './simhelper.js';
 import { assertBundle, type Simctl } from './simctl.js';
-
-const run = promisify(execFile);
 
 /** The Mac's HTTP proxy as `host:port`, or `none`: what a simulator's apps go through. */
 export async function macProxy(): Promise<string> {

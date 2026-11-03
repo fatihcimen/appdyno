@@ -1,4 +1,5 @@
 import type { FrameStats, ProbeSummary } from '@appdyno/core';
+import { round1 } from '@appdyno/core';
 
 export const PROBE_LIMITS =
   "The probe sees the app's main-thread pacing, not the render server or GPU, and the speed is the Mac's: it finds stalls and regressions on this machine and does not predict a phone's frame rate.";
@@ -63,8 +64,6 @@ export function probeWindow(text: string, fromMs: number, toMs: number): string 
     .join('\n');
 }
 
-const round = (x: number) => Math.round(x * 10) / 10;
-
 function stats(windowText: string, fromMs: number, toMs: number) {
   const all = lines(windowText);
   const frames = all.filter((l) => l.dt !== undefined);
@@ -83,19 +82,19 @@ function stats(windowText: string, fromMs: number, toMs: number) {
     durationMs: Math.round(toMs - fromMs),
     frames: intervals.length,
     missed,
-    missedPercent: intervals.length ? round((missed / intervals.length) * 100) : 0,
-    p50Ms: round(at(0.5)),
-    p95Ms: round(at(0.95)),
-    worstMs: round(sorted.at(-1) ?? 0),
+    missedPercent: intervals.length ? round1((missed / intervals.length) * 100) : 0,
+    p50Ms: round1(at(0.5)),
+    p95Ms: round1(at(0.95)),
+    worstMs: round1(sorted.at(-1) ?? 0),
     stalls: {
       count: stalled.length,
-      worstMs: round(Math.max(0, ...stalled)),
-      totalMs: round(stalled.reduce((a, b) => a + b, 0)),
+      worstMs: round1(Math.max(0, ...stalled)),
+      totalMs: round1(stalled.reduce((a, b) => a + b, 0)),
     },
     ...(lastInput !== undefined && { lastInputMsAgo: Math.round(toMs - lastInput) }),
     limits: PROBE_LIMITS,
   };
-  return { summary, p90Ms: round(at(0.9)), p99Ms: round(at(0.99)), sorted };
+  return { summary, p90Ms: round1(at(0.9)), p99Ms: round1(at(0.99)), sorted };
 }
 
 /** A window of the probe's lines (`probeWindow`), summed up. */

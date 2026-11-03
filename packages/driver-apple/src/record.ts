@@ -1,9 +1,9 @@
-import { execFile, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
 import {
+  run,
   pause,
   readVideo,
   stateDir,
@@ -14,13 +14,12 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import { assertUdid, xcodeEnv } from './simctl.js';
 
-const run = promisify(execFile);
 const START_MS = 15_000;
 /** Writing a long recording out takes a while. */
 const STOP_MS = 120_000;
 const logOf = (h: RecordingHandle) => String(h.log);
 /** What a tool says, without the dump it adds for its own log. */
-const firstLine = (text: string) =>
+const whatToolSaid = (text: string) =>
   (text.trim().split('\n')[0] ?? '')
     .replace(/^ERROR:\s*/, '')
     .replace(/\s*\(com\.apple[^)]*\)/, '');
@@ -87,7 +86,7 @@ class ToolRecorder implements ScreenRecorder {
         rmSync(log, { force: true });
         throw new DeviceError(
           'UNSUPPORTED',
-          `the recording did not start (${exited ?? `no word in ${START_MS} ms`}): ${firstLine(text)}`,
+          `the recording did not start (${exited ?? `no word in ${START_MS} ms`}): ${whatToolSaid(text)}`,
           this.refusedHint,
         );
       }

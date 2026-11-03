@@ -1,11 +1,8 @@
-import { execFile, execFileSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
-import { callSignal, cancelled } from '@appdyno/core';
+import { pause, run, callSignal, cancelled } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-
-const run = promisify(execFile);
 
 /**
  * The developer folder for Xcode's tools without DEVELOPER_DIR: the selected one when it is a full
@@ -153,7 +150,7 @@ export class Simctl {
       });
       if (Date.now() > end)
         throw new DeviceError('TIMEOUT', `simulator ${udid} did not shut down (state ${state})`);
-      await new Promise((r) => setTimeout(r, 2_000));
+      await pause(2_000);
     }
   }
 

@@ -1,8 +1,6 @@
-import { execFile } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
 import type {
   AppEntry,
   AppManager,
@@ -16,8 +14,8 @@ import { DeviceError } from '@appdyno/protocol';
 import { macProxy } from './network.js';
 import type { Devicectl } from './phone.js';
 import { assertBundle, type Simctl } from './simctl.js';
+import { run } from '@appdyno/core';
 
-const run = promisify(execFile);
 const SIMULATOR_ID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;
 
 const assertAppBundle = (path: string) => {

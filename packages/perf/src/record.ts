@@ -94,11 +94,12 @@ export function measureOf(kind: string): MeasureId | undefined {
   return byPrefix[kind.split('.')[0] ?? ''];
 }
 
-const safe = (s: string) => s.replace(/[^\w.-]+/g, '_');
+/** A run of odd characters as one: stored runs and baselines already have these names. */
+export const keyName = (s: string) => s.replace(/[^\w.-]+/g, '_');
 
 /** The key of a baseline: the same kind of device, its model and OS's major version. */
 export const deviceClass = (d: DeviceInfo) =>
-  safe(
+  keyName(
     `${d.platform}-${d.virtual ? 'virtual' : 'physical'}-${d.model}-${d.os.split('.')[0] ?? d.os}`,
   );
 

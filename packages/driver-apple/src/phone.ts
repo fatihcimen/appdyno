@@ -1,13 +1,11 @@
 import { phoneCrashes } from './crashes.js';
 import { phoneLogs } from './logs.js';
 import { PhoneApps, PhoneSettings } from './manage.js';
-import { execFile } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
 import { DeviceError } from '@appdyno/protocol';
-import { stateDir, type MeasureSource, type ScreenRecorder } from '@appdyno/core';
+import { pause, run, stateDir, type MeasureSource, type ScreenRecorder } from '@appdyno/core';
 import { IosDevice, type IosDeviceOps } from './device.js';
 import { phoneRecorder } from './record.js';
 import { IosRunnerLauncher, iosProducts, type RunnerTransport } from './runner.js';
@@ -22,8 +20,6 @@ import {
   traceTable,
 } from './trace.js';
 import { connectPort, listDevices } from './usbmux.js';
-
-const run = promisify(execFile);
 
 const PHONE_UDID = /^[0-9A-F]{8}-[0-9A-F]{16}$|^[0-9a-f]{40}$/;
 export const assertPhoneUdid = (u: string) => {
@@ -312,7 +308,7 @@ export class IosPhoneDevice extends IosDevice {
       for (let i = 0; i < opts.repeats + 1; i++) {
         if (opts.mode === 'cold') await this.terminate(bundle);
         else await this.ctl.launch('com.apple.Preferences').catch(() => undefined);
-        await new Promise((r) => setTimeout(r, 500));
+        await pause(500);
         const t = performance.now();
         if (opts.env) {
           await this.ctl.launch(bundle, undefined, opts.env);

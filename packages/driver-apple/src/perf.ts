@@ -1,9 +1,7 @@
-import { callSignal } from '@appdyno/core';
-import { execFile } from 'node:child_process';
+import { pause, run, callSignal } from '@appdyno/core';
 import { existsSync } from 'node:fs';
 import { appendFile, lstat, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
-import { promisify } from 'node:util';
 import { DeviceError } from '@appdyno/protocol';
 import type {
   BuildType,
@@ -27,9 +25,7 @@ import { assertBundle, type Simctl } from './simctl.js';
 import { helperBinary } from './simhelper.js';
 import { parseTimeProfile, recordTrace, traceTable } from './trace.js';
 
-const run = promisify(execFile);
 const at = () => new Date().toISOString();
-const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** The probe's file shows what happened only after its next write (every 250 ms). */
 const PROBE_FLUSH_MS = 350;
@@ -201,7 +197,8 @@ export function parseSampleApp(report: string, limit = 10): ProfileEntry[] {
     }));
 }
 
-const median = (xs: number[]) => {
+/** A launch that really took place: of two in the middle, the lower. */
+const lowerMedian = (xs: number[]) => {
   const s = [...xs].sort((a, b) => a - b);
   return s.length ? s[Math.floor((s.length - 1) / 2)]! : 0;
 };
@@ -255,7 +252,7 @@ export class IosSimulatorPerf implements MeasureSource {
       parseCpuTime((await run('ps', ['-o', 'time=', '-p', String(pid)])).stdout);
     const t0 = performance.now();
     const c0 = await time();
-    await new Promise((r) => setTimeout(r, windowMs));
+    await pause(windowMs);
     const c1 = await time();
     const wall = performance.now() - t0;
     const cpuMs = c1 - c0;
@@ -445,7 +442,7 @@ export class IosSimulatorPerf implements MeasureSource {
         await this.simctl
           .exec(['launch', this.udid, 'com.apple.Preferences'])
           .catch(() => undefined);
-      await new Promise((r) => setTimeout(r, 500));
+      await pause(500);
       if (probe) {
         const ms = Math.round(await this.launchProbed(bundle, opts.env));
         raw.push(String(ms));
@@ -467,7 +464,7 @@ export class IosSimulatorPerf implements MeasureSource {
         repeats,
         samplesMs: samples,
         samples: samples.map((totalMs) => ({ totalMs })),
-        medianMs: median(samples),
+        medianMs: lowerMedian(samples),
         until: probe ? 'first frame (probe)' : 'the first screen is read',
       },
       raw: raw.join('\n'),

@@ -1,10 +1,9 @@
-import { execFile } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
 import {
+  run,
   pause,
   type NetworkAnswer,
   type NetworkEntry,
@@ -14,11 +13,9 @@ import {
   type NetworkVia,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { shq, type Adb } from './adb.js';
-import { assertPkg } from './manage.js';
+import { assertPkg, shq, type Adb } from './adb.js';
 import { traceProcessor } from './tools.js';
 
-const run = promisify(execFile);
 /** `android.network_packets` has no data before Android 14. */
 const PACKETS_SDK = 34;
 /** A capture no one stops ends by itself. */

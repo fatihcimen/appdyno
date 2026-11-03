@@ -1,10 +1,11 @@
-import { execFile } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
-import { promisify } from 'node:util';
 import { randomBytes } from 'node:crypto';
 import {
+  median,
+  pause,
+  run,
   stateDir,
   type BuildType,
   type CompileMode,
@@ -30,7 +31,7 @@ import {
   type TraceDigest,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { shq } from './adb.js';
+import { assertPkg, shq } from './adb.js';
 import { parseExitInfo } from './crashes.js';
 import { traceProcessor } from './tools.js';
 import type { AndroidDevice } from './device.js';
@@ -57,8 +58,6 @@ import {
   parseSimpleperfReport,
 } from './perf-parse.js';
 
-const run = promisify(execFile);
-
 export type HeapDump = { file: string; bytes: number };
 
 export type CpuStats = {
@@ -69,19 +68,9 @@ export type CpuStats = {
 };
 export type LaunchStats = LaunchReading & { samples: LaunchSample[] };
 
-const PKG = /^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/;
-const assertPkg = (p: string) => {
-  if (!PKG.test(p)) throw new DeviceError('INVALID_ARGUMENT', `not a package name: ${p}`);
-  return p;
-};
 const at = () => new Date().toISOString();
-const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const median = (xs: number[]) => {
-  const s = [...xs].sort((a, b) => a - b);
-  if (s.length === 0) return undefined;
-  const m = Math.floor(s.length / 2);
-  return s.length % 2 ? s[m] : Math.round((s[m - 1]! + s[m]!) / 2);
-};
+/** In whole milliseconds, as the system reports a launch; nothing for no samples. */
+const medianMs = (xs: number[]) => (xs.length ? Math.round(median(xs)) : undefined);
 
 /** How long a launch's first run waits for "Fully drawn": an app that never reports it costs this once. */
 const FULLY_DRAWN_WAIT_MS = 5_000;
@@ -270,7 +259,7 @@ export class AndroidPerf implements MeasureSource {
     const read = () => this.sh(`cat /proc/${pid}/stat; getconf CLK_TCK`);
     const a = await read();
     const t0 = Date.now();
-    await new Promise((r) => setTimeout(r, windowMs));
+    await pause(windowMs);
     const b = await read();
     const ms = Date.now() - t0;
     const hz = Number(b.trim().split('\n').pop()) || 100;
@@ -381,8 +370,8 @@ export class AndroidPerf implements MeasureSource {
     }
     const want = mode.toUpperCase();
     const ok = samples.filter((s) => s.totalMs !== undefined && s.state === want);
-    const m = median(ok.map((s) => s.totalMs!));
-    const drawn = median(ok.flatMap((s) => s.fullyDrawnMs ?? []));
+    const m = medianMs(ok.map((s) => s.totalMs!));
+    const drawn = medianMs(ok.flatMap((s) => s.fullyDrawnMs ?? []));
     return {
       value: {
         mode,
@@ -758,7 +747,7 @@ export class AndroidPerf implements MeasureSource {
         );
         if (size > 0 && size === last) break;
         last = size;
-        await new Promise((r) => setTimeout(r, 500));
+        await pause(500);
       }
       if (last <= 0)
         throw new DeviceError('UNSUPPORTED', `no heap dump of ${pkg}: ${out.trim().slice(0, 200)}`);

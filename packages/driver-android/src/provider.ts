@@ -1,5 +1,3 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import type { Check, DeviceProvider } from '@appdyno/core';
 import type { DeviceError } from '@appdyno/protocol';
 import { Adb } from './adb.js';
@@ -8,8 +6,7 @@ import { AndroidDevice } from './device.js';
 import { AndroidEmulators } from './manage.js';
 import { queryTrace } from './perf.js';
 import { traceProcessor } from './tools.js';
-
-const run = promisify(execFile);
+import { run } from '@appdyno/core';
 
 /**
  * What this machine (and, with `serial`, that device) needs: adb, the agent build; on the device the agent

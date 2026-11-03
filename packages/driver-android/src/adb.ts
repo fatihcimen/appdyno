@@ -30,6 +30,14 @@ export function assertSerial(serial: string): string {
 }
 
 /** One argument for the device's `sh -c`: single-quoted, quotes inside escaped. */
+const PACKAGE_NAME = /^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/;
+
+/** An Android package name, checked before it goes in a shell command. */
+export const assertPkg = (p: string) => {
+  if (!PACKAGE_NAME.test(p)) throw new DeviceError('INVALID_ARGUMENT', `not a package name: ${p}`);
+  return p;
+};
+
 export const shq = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
 class Reader {

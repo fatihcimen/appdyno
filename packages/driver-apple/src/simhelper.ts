@@ -1,14 +1,13 @@
-import { execFile, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { chmod, mkdir, readFile, rename } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
 import { assertUdid, xcodeEnv } from './simctl.js';
+import { run } from '@appdyno/core';
 
-const run = promisify(execFile);
 const SDK_FLAGS = {
   // SimHID runs on the Mac, SimAX inside the simulator
   SimHID: ['clang', '-fobjc-arc', '-framework', 'Foundation'],

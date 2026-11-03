@@ -1,14 +1,8 @@
+import { median, quantile } from '@appdyno/core';
+
 /** The statistics of a comparison: pure, and the same answer every time for the same samples. */
 
-export const quantile = (xs: number[], q: number) => {
-  const s = [...xs].sort((a, b) => a - b);
-  if (s.length === 0) return Number.NaN;
-  const i = (s.length - 1) * q;
-  const low = Math.floor(i);
-  return s[low]! + (s[Math.min(low + 1, s.length - 1)]! - s[low]!) * (i - low);
-};
-
-export const median = (xs: number[]) => quantile(xs, 0.5);
+export { median, quantile };
 
 export type Spread = { min: number; max: number; mad: number };
 

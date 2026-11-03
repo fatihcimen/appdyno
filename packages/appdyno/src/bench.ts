@@ -1,11 +1,7 @@
-import { execFile } from 'node:child_process';
 import { freemem, loadavg, totalmem } from 'node:os';
-import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
-import { buildScreen } from '@appdyno/core';
+import { pause, run, buildScreen } from '@appdyno/core';
 import { Adb, AndroidDevice } from '@appdyno/driver-android';
-
-const run = promisify(execFile);
 
 /** An element a benchmark looks up: its label or id, and its centre in tap units. */
 export type BenchElement = { label: string; id?: string; x: number; y: number };
@@ -179,7 +175,6 @@ export async function benchmark(
   const n = opts.n ?? 50;
   const ops: BenchResult['ops'] = {};
   const shell = (c: string) => adb.exec(serial, c, { timeoutMs: 30_000 });
-  const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const openScreen = async (screen: string) => {
     await shell(
       `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/${screen} ${APP}`,

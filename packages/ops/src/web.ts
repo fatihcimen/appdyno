@@ -50,11 +50,11 @@ const CLICK = (selector: string) => `(() => {
   return { tag: e.tagName.toLowerCase(), text: (e.innerText || e.value || '').trim().slice(0, 80) };
 })()`;
 
-const isWebView = (type: string) => /web.?view$/i.test(type.slice(type.lastIndexOf('.') + 1));
+const endsInWebView = (type: string) => /web.?view$/i.test(type.slice(type.lastIndexOf('.') + 1));
 
 /** Where a web view stands on the screen, for a page's coordinates in tap units. */
 function webViewRect(screen: Screen): Rect | undefined {
-  return screen.elements.find((e) => e.rect && isWebView(e.type))?.rect;
+  return screen.elements.find((e) => e.rect && endsInWebView(e.type))?.rect;
 }
 
 /** A page's elements in tap units: on the screen, when the web view shows on it. */

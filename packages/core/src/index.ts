@@ -1,7 +1,9 @@
 export { RpcClient } from './rpc.js';
 export { DeviceQueue } from './queue.js';
 export { afterTimeout } from './stuck.js';
-export { stateDir } from './state.js';
+export { stateDir, safeName, deviceStateFile } from './state.js';
+export { run } from './run.js';
+export * from './stats.js';
 export * from './call.js';
 export * from './device.js';
 export * from './screen/index.js';

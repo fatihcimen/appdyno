@@ -83,7 +83,7 @@ const FLOOR: Record<Unit, { percent: number; absolute: number }> = {
 
 const BLOCKING: Noise[] = ['high-host-load', 'high-device-load', 'hot-device'];
 const blocks = (noise: Noise[]) => noise.filter((n) => BLOCKING.includes(n));
-const pct = (d: number, base: number) =>
+const percentChange = (d: number, base: number) =>
   base === 0 ? undefined : Math.round((d / Math.abs(base)) * 1000) / 10;
 const r3 = (x: number) => Math.round(x * 1000) / 1000;
 
@@ -135,7 +135,9 @@ export function compareMetric(
   const stats = {
     ...head,
     shift: r3(moved),
-    ...(pct(moved, reference) !== undefined && { percent: pct(moved, reference)! }),
+    ...(percentChange(moved, reference) !== undefined && {
+      percent: percentChange(moved, reference)!,
+    }),
     floor: r3(floor),
   };
   if (Math.abs(moved) <= floor) return { ...stats, verdict: 'ok' };

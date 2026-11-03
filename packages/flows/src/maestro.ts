@@ -2,7 +2,7 @@ import { FlowError, type Flow, type FlowSelector, type FlowStep } from './format
 
 type Yaml = string | number | boolean | { [k: string]: Yaml | undefined };
 
-const KEYS: Record<string, string> = {
+const MAESTRO_KEYS: Record<string, string> = {
   enter: 'Enter',
   home: 'Home',
   delete: 'Backspace',
@@ -35,7 +35,7 @@ const plain = (value: string) => {
 };
 
 /** Maestro has no role: role and text become text, which may match more than the two did. */
-function selectorOf(s: FlowSelector | undefined): Record<string, Yaml> {
+function maestroSelector(s: FlowSelector | undefined): Record<string, Yaml> {
   if (!s?.id && !s?.text) return unsupported('Maestro has no selector by role alone');
   return {
     ...(s.id && { id: literal(plain(s.id)) }),
@@ -47,7 +47,7 @@ function selectorOf(s: FlowSelector | undefined): Record<string, Yaml> {
 const targetOf = (st: FlowStep): Record<string, Yaml> =>
   st.args.x !== undefined
     ? unsupported('coordinates are for one screen size: name the target')
-    : selectorOf(st.selector);
+    : maestroSelector(st.selector);
 
 const none = (st: FlowStep, ...args: string[]) => {
   for (const a of args)
@@ -80,7 +80,7 @@ function commands(st: FlowStep): Yaml[] {
       ];
     case 'press_key': {
       if (a.key === 'back') return ['back'];
-      const key = KEYS[a.key as string];
+      const key = MAESTRO_KEYS[a.key as string];
       return key ? [{ pressKey: key }] : unsupported(`Maestro has no key ${String(a.key)}`);
     }
     case 'swipe':
@@ -89,7 +89,7 @@ function commands(st: FlowStep): Yaml[] {
         {
           swipe: {
             direction: (a.direction as string).toUpperCase(),
-            ...(st.selector && { from: selectorOf(st.selector) }),
+            ...(st.selector && { from: maestroSelector(st.selector) }),
             ...(a.durationMs !== undefined && { duration: a.durationMs }),
           },
         },
@@ -99,7 +99,7 @@ function commands(st: FlowStep): Yaml[] {
       return [
         {
           scrollUntilVisible: {
-            element: selectorOf(st.selector),
+            element: maestroSelector(st.selector),
             direction: SCROLL[(a.direction ?? 'up') as keyof typeof SCROLL],
           },
         },
@@ -108,7 +108,7 @@ function commands(st: FlowStep): Yaml[] {
       return [
         {
           extendedWaitUntil: {
-            [a.gone ? 'notVisible' : 'visible']: selectorOf(st.selector),
+            [a.gone ? 'notVisible' : 'visible']: maestroSelector(st.selector),
             timeout: a.timeoutMs ?? 10_000,
           },
         },
@@ -116,7 +116,7 @@ function commands(st: FlowStep): Yaml[] {
     case 'assert': {
       const yes = a.expect !== false;
       const check = a.check ?? 'exists';
-      const sel = selectorOf(st.selector);
+      const sel = maestroSelector(st.selector);
       if (check === 'exists' || check === 'absent') {
         const shows = (check === 'exists') === yes;
         return a.timeoutMs === undefined

@@ -9,6 +9,8 @@ import {
 } from 'node:fs';
 import { basename, join, relative, resolve } from 'node:path';
 import {
+  safeName,
+  deviceStateFile,
   decodePng,
   encodePng,
   esc,
@@ -46,8 +48,7 @@ type Step = {
   files?: string[];
 };
 
-const openFile = (serial: string) =>
-  join(stateDir(), 'reports', `${serial.replace(/[^\w.-]/g, '_')}.json`);
+const openFile = (serial: string) => deviceStateFile('reports', serial);
 
 const opened = (serial: string): Open | undefined => {
   try {
@@ -352,7 +353,7 @@ export function reportFor(ctx: ServerContext) {
               join(
                 stateDir(),
                 'reports',
-                `${serial.replace(/[^\w.-]/g, '_')}-${new Date().toISOString().replace(/\W/g, '')}`,
+                `${safeName(serial)}-${new Date().toISOString().replace(/\W/g, '')}`,
               ),
           );
         if (action === 'start') {

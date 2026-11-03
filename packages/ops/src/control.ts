@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import {
+  deviceStateFile,
   reportProgress,
   SETTINGS,
   stateDir,
@@ -25,8 +26,7 @@ const DEFAULT_SENDER = '5551234';
 /** The conditions this tool changed on a device and what to put back. Survives its process. */
 type Changes = Record<string, { was: string; app?: string }>;
 
-const changesFile = (serial: string) =>
-  join(stateDir(), 'conditions', `${serial.replace(/[^\w.-]/g, '_')}.json`);
+const changesFile = (serial: string) => deviceStateFile('conditions', serial);
 
 function readChanges(serial: string): Changes {
   try {

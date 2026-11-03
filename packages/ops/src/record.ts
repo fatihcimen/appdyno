@@ -1,6 +1,13 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { readVideo, reportProgress, stateDir, type RecordingHandle } from '@appdyno/core';
+import {
+  safeName,
+  deviceStateFile,
+  readVideo,
+  reportProgress,
+  stateDir,
+  type RecordingHandle,
+} from '@appdyno/core';
 import type { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
@@ -14,8 +21,7 @@ const MAX_S = 3_600;
 
 type Running = { handle: RecordingHandle; since: string; file: string };
 
-const stateOf = (serial: string) =>
-  join(stateDir(), 'video', `${serial.replace(/[^\w.-]/g, '_')}.json`);
+const stateOf = (serial: string) => deviceStateFile('video', serial);
 
 const running = (serial: string): Running | undefined => {
   try {
@@ -91,7 +97,7 @@ export function recordOps(ctx: ServerContext): Op[] {
           file ??
             join(
               reportVideoDir(s.device.serial) ?? join(stateDir(), 'video'),
-              `${s.device.serial.replace(/[^\w.-]/g, '_')}-${since.replace(/\W/g, '')}.${recorder.extension}`,
+              `${safeName(s.device.serial)}-${since.replace(/\W/g, '')}.${recorder.extension}`,
             ),
         );
         // a folder that cannot be written is said now, not after the recording

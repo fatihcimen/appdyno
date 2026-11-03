@@ -1,10 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join } from 'node:path';
 import {
+  safeName,
+  deviceStateFile,
   nearest,
   reportProgress,
   selectIn,
-  stateDir,
   throwIfCancelled,
   type Screen,
   type ScreenElement,
@@ -57,8 +58,7 @@ const DEFAULT_SWIPES = 10;
 /** A target as the flat form the ops take. */
 type Target = { ref?: string; x?: number; y?: number; selector?: FlowSelector };
 
-const recordingFile = (serial: string) =>
-  join(stateDir(), 'recordings', `${serial.replace(/[^\w.-]/g, '_')}.json`);
+const recordingFile = (serial: string) => deviceStateFile('recordings', serial);
 
 function loadRecording(ctx: ServerContext, serial: string): Recording | undefined {
   try {
@@ -786,7 +786,6 @@ export type TestOptions = {
 };
 
 /** A path's part from a serial or a file's name, which may hold any character. */
-const safe = (s: string) => s.replace(/[^\w.-]/g, '_');
 const firstLine = (s: string) => s.split('\n')[0]!;
 
 /**
@@ -820,7 +819,7 @@ export async function runTests(
       if (s) {
         try {
           result = await runner.run(s, readFlow(file), file, {
-            evidence: join(o.artifacts, safe(name), safe(label)),
+            evidence: join(o.artifacts, safeName(name), safeName(label)),
             ...(o.params && { params: o.params }),
           });
         } catch (e) {

@@ -1,4 +1,3 @@
-import { execFile } from 'node:child_process';
 import {
   createReadStream,
   existsSync,
@@ -11,8 +10,9 @@ import {
 import { connect } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
 import {
+  deviceStateFile,
+  run,
   reportProgress,
   stateDir,
   type NetworkAnswer,
@@ -30,7 +30,6 @@ import { NetworkOut } from './schemas.js';
 import { refused, type Session } from './session.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError, type Op } from './tool.js';
 
-const run = promisify(execFile);
 const MAX_ENTRIES = 200;
 const DEFAULT_ENTRIES = 50;
 const VIA = ['proxy', 'probe', 'packets', 'bytes'] as const;
@@ -40,8 +39,7 @@ const SEES_PROXY =
 
 type Capture = { via: NetworkVia; since: number; handle?: NetworkHandle; proxy?: string };
 
-const fileOf = (serial: string) =>
-  join(stateDir(), 'network', `${serial.replace(/[^\w.-]/g, '_')}.json`);
+const fileOf = (serial: string) => deviceStateFile('network', serial);
 
 const captureOf = (serial: string): Capture | undefined => {
   try {

@@ -1,14 +1,10 @@
-import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { arch, platform, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
 import { DeviceError } from '@appdyno/protocol';
-import { stateDir } from '@appdyno/core';
-
-const run = promisify(execFile);
+import { run, stateDir } from '@appdyno/core';
 
 /**
  * Host tools some measurements need, pinned by version and sha256 (the digests the release publishes);

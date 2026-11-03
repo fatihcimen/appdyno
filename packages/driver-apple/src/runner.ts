@@ -1,4 +1,4 @@
-import { spawn, execFile } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { closeSync, existsSync, openSync, readdirSync, statSync } from 'node:fs';
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
@@ -6,15 +6,13 @@ import { connect, createServer, type Socket } from 'node:net';
 import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
 import { DeviceError, PROTOCOL, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
-import { reportProgress, RpcClient, stateDir } from '@appdyno/core';
+import { pause, run, reportProgress, RpcClient, stateDir } from '@appdyno/core';
 import { brandSimulatorRunner, checkoutIos } from './brand.js';
 import { assertUdid, xcodeEnv } from './simctl.js';
 import { recordXctMetrics } from './trace.js';
 
-const run = promisify(execFile);
 /** A first start installs the runner (on a phone, UI automation may wait for an approval): allow for it. */
 const START_MS = 180_000;
 const POLL_MS = 250;
@@ -355,7 +353,7 @@ export class IosRunnerLauncher {
           log.trim().split('\n').slice(-6).join(' ').slice(0, 500) || undefined,
         );
       }
-      await new Promise((r) => setTimeout(r, POLL_MS));
+      await pause(POLL_MS);
     }
   }
 

@@ -1,5 +1,3 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import type { Check, DeviceProvider } from '@appdyno/core';
 import type { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from './device.js';
@@ -11,8 +9,7 @@ import { findPhoneSigning, phoneSigningFromEnv, readProfile } from './signing.js
 import { Simctl, xcodeEnv, type Simulator } from './simctl.js';
 import { queryTraceFile } from './trace.js';
 import { listPhones } from './usbmux.js';
-
-const run = promisify(execFile);
+import { run } from '@appdyno/core';
 
 /** A simulator is named by its id. */
 const SIMULATOR_ID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;

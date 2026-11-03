@@ -1,11 +1,8 @@
-import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { copyFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
-
-const run = promisify(execFile);
+import { run } from '@appdyno/core';
 
 /** What the runner shows on the home screen. */
 export const RUNNER_NAME = 'appdyno';

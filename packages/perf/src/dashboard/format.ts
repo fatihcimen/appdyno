@@ -1,4 +1,5 @@
 import type { MeasureId, Unit } from '../record.js';
+import { keyName } from '../record.js';
 
 /** From which size a value reads in which unit. */
 export const UNIT_STEPS: Record<Unit, [from: number, per: number, suffix: string][]> = {
@@ -111,4 +112,4 @@ export const measureTitle = (row: string) =>
   Object.hasOwn(MEASURE_TITLE, row) ? MEASURE_TITLE[row as MeasureId] : undefined;
 
 /** The anchor of an app's section. */
-export const appAnchor = (app: string) => `app-${app.replace(/[^\w.-]+/g, '_')}`;
+export const appAnchor = (app: string) => `app-${keyName(app)}`;
