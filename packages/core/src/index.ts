@@ -6,6 +6,7 @@ export { run } from './run.js';
 export * from './stats.js';
 export * from './call.js';
 export * from './device.js';
+export * from './measure.js';
 export * from './screen/index.js';
 export * from './cdp.js';
 export * from './video.js';
