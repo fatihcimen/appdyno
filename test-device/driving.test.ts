@@ -388,7 +388,9 @@ describe.skipIf(!android)('driving on Android', () => {
     ok(await h.call('device_setting', { name: 'reduce_motion', value: 'on' }));
     ok(await h.call('device_setting', { name: 'locale', value: 'tr-TR' }));
     expect(await get(`cmd locale get-app-locales ${APP}`)).toContain('tr-TR');
-    ok(await h.call('device_setting', { name: 'network', value: 'slow' }));
+    const slow = await h.call('device_setting', { name: 'network', value: 'slow' });
+    if (android!.startsWith('emulator-')) ok(slow);
+    else expect(slow.data.code).toBe('UNSUPPORTED');
     const restored = ok(await h.call('device_setting', { name: 'restore' }));
     expect(restored.text).toContain('dark_mode');
     expect(await get('cmd uimode night')).toBe(dark);
