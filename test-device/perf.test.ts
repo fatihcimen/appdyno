@@ -1,10 +1,10 @@
 import { mkdtempSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { tmpdir } from 'node:os';
+import { networkInterfaces, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { Adb, AndroidDevice, androidProvider, traceProcessor, type Screen } from 'appdyno';
+import { AndroidDevice, androidProvider, traceProcessor, type Screen } from 'appdyno';
 
 /**
  * Measurement accuracy against fixture screens of known cost (APPDYNO_ANDROID_SERIAL; run on a quiet
@@ -309,7 +309,8 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     expect(m.worstOver90Ms).toBeLessThanOrEqual(3_000 * 1.3);
   }, 60_000);
 
-  it('network: a 5 MB download reads 5 MB received', async () => {
+  it('network: a 5 MB download reads 5 MB received', async (ctx) => {
+    let reached = false;
     const size = 5 * 1024 * 1024;
     const body = Buffer.alloc(size, 7);
     let served!: () => void;
@@ -321,17 +322,23 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     await new Promise<void>((r) => server.listen(0, '0.0.0.0', r));
     const port = (server.address() as AddressInfo).port;
     try {
-      // this machine, from an emulator and a phone alike
-      await new Adb().run(['-s', serial!, 'reverse', `tcp:${port}`, `tcp:${port}`]);
-      const url = `appdyno-fixture://open/network?url=http://127.0.0.1:${port}/x`;
+      // the count leaves out the loopback, so not by `adb reverse`: an emulator reaches this machine at 10.0.2.2,
+      // and a phone on this network at its address
+      const lan = Object.values(networkInterfaces())
+        .flat()
+        .find((a) => a?.family === 'IPv4' && !a.internal)?.address;
+      const host = serial!.startsWith('emulator-') ? '10.0.2.2' : lan;
+      const url = `appdyno-fixture://open/network?url=http://${host}:${port}/x`;
       const m = (
         await d.measure.network(APP, 1_000, async () => {
           await d.shell(`am start -W -a android.intent.action.VIEW -d '${url}' ${APP}`);
-          await done;
+          reached = await Promise.race([done.then(() => true), pause(20_000).then(() => false)]);
           await pause(1_000);
         })
       ).value;
       console.log('network:', m);
+      // a phone on another network never asked
+      if (!reached && !serial!.startsWith('emulator-')) return ctx.skip();
       expect(m.rxBytes).toBeGreaterThan(size * 0.85);
       expect(m.rxBytes).toBeLessThan(size * 1.15);
       expect(m.txBytes).toBeGreaterThan(0);

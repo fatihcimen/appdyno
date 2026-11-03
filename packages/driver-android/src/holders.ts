@@ -63,7 +63,7 @@ export function holdersIn(ps: string): Holder[] {
 /** The holders in words: who, and the exact command that stops each. */
 export function conflictHint(holders: Holder[], serial: string): string {
   if (holders.length === 0)
-    return `another UI automation client holds this device and is none this tool knows: look with \`adb -s ${serial} shell ps -A -o PID,ARGS\`, stop it, then retry`;
+    return `it is none this tool knows: look with \`adb -s ${serial} shell ps -A -o PID,ARGS\`, stop it, then retry`;
   const named = holders.map(
     (h) => `${h.tool} (pid ${h.pid}): stop it with \`adb -s ${serial} shell ${h.shell}\``,
   );

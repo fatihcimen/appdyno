@@ -357,28 +357,14 @@ describe.skipIf(!android)('driving on Android', () => {
     );
     ok(await h.call('app', { action: 'clear' }));
     const apk = join(ROOT, 'android/fixture/build/outputs/apk/debug/fixture-debug.apk');
-    // a Xiaomi asks on its screen before an install, and says no by itself after 10 s
-    const answerPrompt = async () => {
-      let tapped = false;
-      for (let i = 0; i < 40 && !android!.startsWith('emulator-'); i++) {
-        await new Promise((r) => setTimeout(r, 500));
-        const prompt = await h.call('find', { text: 'Tercihimi hatırla' });
-        if (!(prompt.data.matches as unknown[] | undefined)?.length) {
-          if (tapped) return;
-          continue;
-        }
-        ok(await h.call('tap', { selector: { text: 'Yükle' }, read: 'none' }));
-        tapped = true;
-      }
-    };
     expect(existsSync(apk)).toBe(true);
-    ok(await h.call('app', { action: 'uninstall' }));
-    expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('not_installed');
-    const [installed] = await Promise.all([
-      h.call('app', { action: 'install', path: apk }),
-      answerPrompt(),
-    ]);
-    ok(installed);
+    // a Xiaomi asks a person before a new install, not before one over the app: its fixture stays
+    const asks = (await sh('getprop persist.security.adbinstall')).trim() === '1';
+    if (!asks) {
+      ok(await h.call('app', { action: 'uninstall' }));
+      expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('not_installed');
+    }
+    ok(await h.call('app', { action: 'install', path: apk }));
     expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');
     expect((await h.call('app', { action: 'install', path: '/tmp/none.apk' })).error).toBe(true);
   });

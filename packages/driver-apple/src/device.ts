@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import type { CrashesAnswer, CrashesQuery, LogsAnswer, LogsQuery } from '@appdyno/core';
 import { simulatorCrashes } from './crashes.js';
 import { simulatorLogs } from './logs.js';
@@ -54,7 +55,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { IosRunnerLauncher } from './runner.js';
 import { recordHitches } from './trace.js';
-import { assertBundle, Simctl } from './simctl.js';
+import { assertBundle, Simctl, xcodeEnv } from './simctl.js';
 
 /** Diagnostics: while this file exists, iOS tree reads are written to DUMP_DIR. */
 const DUMP_FLAG = join(homedir(), 'Library/Caches/appdyno/dump-trees');
@@ -752,6 +753,23 @@ export class IosSimulatorDevice extends IosDevice {
       'com.apple.springboard.lockstate',
     ]);
     return state.trim().endsWith(' 1');
+  }
+
+  /** From the Mac: at times the runner's own pasteboard call held it up for its 15 s. */
+  override setClipboard(text: string) {
+    return new Promise<void>((resolve, reject) => {
+      const p = spawn('xcrun', ['simctl', 'pbcopy', this.serial], {
+        env: xcodeEnv(),
+        stdio: ['pipe', 'ignore', 'ignore'],
+      });
+      p.on('error', reject);
+      p.on('close', (code) =>
+        code === 0
+          ? resolve()
+          : reject(new DeviceError('INTERNAL', `simctl pbcopy exited with ${code}`)),
+      );
+      p.stdin.end(text);
+    });
   }
 
   /** From the Mac: the runner may read only what it wrote itself, or a system prompt holds it up. */
