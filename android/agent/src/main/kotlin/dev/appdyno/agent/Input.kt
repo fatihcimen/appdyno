@@ -43,6 +43,13 @@ class Input(private val automation: Automation) {
         automation.inject(touch(down, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y))
     }
 
+    fun doubleTap(x: Float, y: Float) {
+        tap(x, y)
+        // the platform takes a second touch sooner than 40 ms after the first as a separate tap
+        Thread.sleep(40)
+        tap(x, y)
+    }
+
     fun longPress(x: Float, y: Float, durationMs: Long, cancelled: () -> Boolean) {
         val down = SystemClock.uptimeMillis()
         automation.inject(touch(down, down, MotionEvent.ACTION_DOWN, x, y))
@@ -141,6 +148,10 @@ class Input(private val automation: Automation) {
             "delete" to KeyEvent.KEYCODE_DEL,
             "tab" to KeyEvent.KEYCODE_TAB,
             "appSwitch" to KeyEvent.KEYCODE_APP_SWITCH,
+            "volumeUp" to KeyEvent.KEYCODE_VOLUME_UP,
+            "volumeDown" to KeyEvent.KEYCODE_VOLUME_DOWN,
+            "power" to KeyEvent.KEYCODE_POWER,
+            "lock" to KeyEvent.KEYCODE_SLEEP,
         )
     }
 }

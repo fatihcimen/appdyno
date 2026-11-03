@@ -50,6 +50,27 @@ public func layoutHash(_ nodes: [Node]) -> String {
     return String(h, radix: 16)
 }
 
+/// All a caller sees of a screen, texts too, unlike the layout digest; `windows` a string each. FNV-1a 64, hex.
+public func screenSig(_ nodes: [Node], windows: [String]) -> String {
+    var h: UInt64 = 0xcbf2_9ce4_8422_2325
+    func mix(_ s: String?) {
+        for u in (s ?? "\0").utf16 {
+            h ^= UInt64(u)
+            h = h &* 0x100_0000_01b3
+        }
+        // a field's end: "ab","c" is not "a","bc"
+        h ^= 1
+        h = h &* 0x100_0000_01b3
+    }
+    mix("\(windows.count)")
+    for w in windows { mix(w) }
+    for n in nodes {
+        mix(n.type); mix(n.id); mix(n.text); mix(n.label)
+        mix("\(n.left),\(n.top),\(n.right),\(n.bottom),\(n.flags)")
+    }
+    return String(h, radix: 16)
+}
+
 /// Moves up to this many points are no layout change.
 public let layoutTolerance = 4
 

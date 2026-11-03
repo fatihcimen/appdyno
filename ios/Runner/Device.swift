@@ -185,6 +185,11 @@ final class Device {
             let waited = animationsOver(x, y)
             if !EventShim.tap(CGPoint(x: x, y: y), orientation: Device.interfaceOrientation()) { point(x, y).tap() }
             return waited
+        case "doubleTap":
+            let x = try num("x"), y = try num("y")
+            let waited = animationsOver(x, y)
+            point(x, y).doubleTap()
+            return waited
         case "longPress":
             let x = try num("x"), y = try num("y"), ms = try num("durationMs")
             let waited = animationsOver(x, y)
@@ -199,13 +204,26 @@ final class Device {
             try drag(x0, y0, x1, y1, ms: ms)
             return waited
         case "gesture":
-            guard let pointers = a["pointers"] as? [[[String: Any]]], pointers.count == 1, let path = pointers.first,
+            guard let pointers = a["pointers"] as? [[[String: Any]]], let path = pointers.first,
                   let first = path.first, let last = path.last
-            else { throw AgentError("UNSUPPORTED", "only one-finger gestures on iOS for now") }
+            else { throw AgentError("INVALID_ARGUMENT", "pointers need a finger with samples") }
             let (x0, y0, x1, y1) = (try num("x", first), try num("y", first), try num("x", last), try num("y", last))
-            let ms = max(20, try num("t", last) - num("t", first))
+            if pointers.count == 1, path.count <= 2 {
+                let ms = max(20, try num("t", last) - num("t", first))
+                let waited = animationsOver(x0, y0)
+                if x0 == x1, y0 == y1 { point(x0, y0).press(forDuration: ms / 1000) } else { try drag(x0, y0, x1, y1, ms: ms) }
+                return waited
+            }
+            let plan = try gestureTimeline(try pointers.map { f in
+                try f.map { s in (x: try num("x", s), y: try num("y", s), t: try num("t", s)) }
+            })
+            guard EventShim.gestureAvailable else {
+                throw AgentError("UNSUPPORTED", "this XCTest has no event synthesizer for a gesture of \(pointers.count) fingers and \(path.count) samples")
+            }
             let waited = animationsOver(x0, y0)
-            if x0 == x1, y0 == y1 { point(x0, y0).press(forDuration: ms / 1000) } else { try drag(x0, y0, x1, y1, ms: ms) }
+            guard EventShim.gesture(plan.fingers, liftAt: plan.liftAt, orientation: Device.interfaceOrientation()) else {
+                throw AgentError("UNSUPPORTED", "XCTest's event synthesizer refused a gesture of \(pointers.count) fingers and \(path.count) samples")
+            }
             return waited
         case "key":
             try key(a["key"] as? String ?? "")
@@ -229,6 +247,18 @@ final class Device {
             if !EventShim.type("\n", orientation: Device.interfaceOrientation()) { front().0.typeText("\n") }
         case "delete": front().0.typeText(XCUIKeyboardKey.delete.rawValue)
         case "tab": front().0.typeText("\t")
+        case "volumeUp", "volumeDown":
+            #if targetEnvironment(simulator)
+            throw AgentError("UNSUPPORTED", "a simulator has no \(k) button: XCTest offers it on a phone only")
+            #else
+            XCUIDevice.shared.press(k == "volumeUp" ? .volumeUp : .volumeDown)
+            #endif
+        case "lock", "power":
+            let press = NSSelectorFromString("pressLockButton")
+            guard XCUIDevice.shared.responds(to: press) else {
+                throw AgentError("UNSUPPORTED", "this XCTest cannot press the lock button (it has no pressLockButton)")
+            }
+            _ = XCUIDevice.shared.perform(press)
         default: throw AgentError("UNSUPPORTED", "no \(k) key on iOS", hint: "tap the screen's own back control")
         }
     }

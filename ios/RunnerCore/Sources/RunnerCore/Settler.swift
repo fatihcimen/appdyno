@@ -47,3 +47,34 @@ public final class Settler {
         }
     }
 }
+
+public struct WaitOutcome<S> {
+    public let sig: String
+    public let changed: Bool
+    public let reads: Int
+    public let elapsedMs: Int
+    /// The read to answer with; nil when the screen stayed the one `since` named.
+    public let last: S?
+}
+
+/// Reads every `pollMs` until the screen differs from `since` and `minMs` has passed, at most `timeoutMs`;
+/// without `since`, the first read is the answer. `stop` says why the caller no longer waits.
+public func waitForChange<S>(since: String?, timeoutMs: Int, minMs: Int, pollMs: Int = 80, clock: () -> Int,
+                             sleep: (Int) -> Void, stop: () -> AgentError?, read: () throws -> S,
+                             sig: (S) -> String) throws -> WaitOutcome<S> {
+    let start = clock()
+    var reads = 0
+    while true {
+        if let e = stop() { throw e }
+        let next = try read()
+        reads += 1
+        let s = sig(next)
+        let elapsed = clock() - start
+        // a timeout shorter than minMs still tells of the change it saw
+        guard let since, s == since || elapsed < min(minMs, timeoutMs) else {
+            return WaitOutcome(sig: s, changed: true, reads: reads, elapsedMs: elapsed, last: next)
+        }
+        if elapsed >= timeoutMs { return WaitOutcome(sig: since, changed: false, reads: reads, elapsedMs: elapsed, last: nil) }
+        sleep(max(1, min(pollMs, timeoutMs - elapsed)))
+    }
+}

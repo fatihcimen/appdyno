@@ -39,7 +39,7 @@ class Handlers(private val automation: Automation, private val token: String) {
         val d = Platform.display()
         return JSONObject()
             .put("agentVersion", BuildConfig.VERSION_NAME)
-            .put("protocol", JSONObject().put("major", 1).put("minor", 2))
+            .put("protocol", JSONObject().put("major", 1).put("minor", 3))
             .put("platform", "android")
             .put("osVersion", Build.VERSION.RELEASE)
             .put("sdk", Build.VERSION.SDK_INT)
@@ -56,6 +56,7 @@ class Handlers(private val automation: Automation, private val token: String) {
             val quiet = idle(job)
             Reply(treeJson(capture.capture(p.optInt("maxDepth", 128), p.optInt("maxNodes", 5_000), yielding = !quiet)))
         }
+        "wait" -> WaitFor.handle(p, job, { capture.capture(yielding = !idle(job)) }, ::treeJson)
         "act" -> act(p, job)
         "a11y.read" -> a11yRead(p, job)
         "text.set" -> textSet(p, job)
@@ -88,6 +89,7 @@ class Handlers(private val automation: Automation, private val token: String) {
         val at = SystemClock.uptimeMillis()
         when (a.getString("kind")) {
             "tap" -> input.tap(a.getDouble("x").toFloat(), a.getDouble("y").toFloat())
+            "doubleTap" -> input.doubleTap(a.getDouble("x").toFloat(), a.getDouble("y").toFloat())
             "longPress" -> input.longPress(a.getDouble("x").toFloat(), a.getDouble("y").toFloat(), a.getLong("durationMs"), cancelled)
             "swipe" -> {
                 val from = a.getJSONObject("from")
@@ -292,7 +294,7 @@ class Handlers(private val automation: Automation, private val token: String) {
 
         val CAPABILITIES = listOf(
             "tree", "tap", "longPress", "swipe", "gesture", "key", "text", "screenshot", "foreground",
-            "clipboard", "orientation", "settle", "a11y.read",
+            "clipboard", "orientation", "settle", "a11y.read", "wait", "doubleTap",
         )
     }
 }

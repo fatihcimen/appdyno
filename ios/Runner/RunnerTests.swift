@@ -61,12 +61,12 @@ final class RunnerTests: XCTestCase {
         }()
         return [
             "agentVersion": agentVersion,
-            "protocol": ["major": 1, "minor": 2],
+            "protocol": ["major": 1, "minor": 3],
             "platform": "ios",
             "osVersion": UIDevice.current.systemVersion,
             "model": env["SIMULATOR_MODEL_IDENTIFIER"] ?? UIDevice.current.model,
             "screen": ["w": b.width, "h": b.height, "density": UIScreen.main.scale, "rotation": rotation],
-            "capabilities": ["tree", "act", "settle", "text", "screenshot", "clipboard", "orientation", "app.target", "audit", "animations.wait"]
+            "capabilities": ["tree", "act", "settle", "text", "screenshot", "clipboard", "orientation", "app.target", "audit", "animations.wait", "wait", "doubleTap"]
                 + (IdleShim.applied.isEmpty ? [] : ["noIdleWait"]) + (EventShim.available ? ["fastTap"] : []),
             "pid": Int(ProcessInfo.processInfo.processIdentifier),
             "idleWaitsOff": IdleShim.applied,
@@ -92,6 +92,7 @@ final class RunnerTests: XCTestCase {
             d.hideUnreachableCopies(&c)
             d.remember(c)
             return Reply(result: d.treeJSON(c, elapsedMs: Int(Date().timeIntervalSince(t0) * 1000)))
+        case "wait": return Reply(result: try d.wait(p, job: job))
         case "act":
             guard let a = p["action"] as? [String: Any] else { throw AgentError("INVALID_ARGUMENT", "action is required") }
             let waited = try d.perform(a)

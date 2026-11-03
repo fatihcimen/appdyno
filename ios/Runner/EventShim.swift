@@ -10,6 +10,7 @@ enum EventShim {
     private typealias InitRecord = @convention(c) (AnyObject, Selector, NSString, Int) -> AnyObject
     private typealias InitPath = @convention(c) (AnyObject, Selector, CGPoint, Double) -> AnyObject
     private typealias Lift = @convention(c) (AnyObject, Selector, Double) -> Void
+    private typealias MoveTo = @convention(c) (AnyObject, Selector, CGPoint, Double) -> Void
     private typealias AddPath = @convention(c) (AnyObject, Selector, AnyObject) -> Void
     private typealias Getter = @convention(c) (AnyObject, Selector) -> AnyObject?
     private typealias Synthesize = @convention(c) (AnyObject, Selector, AnyObject, AnyObject) -> Void
@@ -21,6 +22,7 @@ enum EventShim {
     private static let selInitRecord = NSSelectorFromString("initWithName:interfaceOrientation:")
     private static let selInitPath = NSSelectorFromString("initForTouchAtPoint:offset:")
     private static let selLift = NSSelectorFromString("liftUpAtOffset:")
+    private static let selMove = NSSelectorFromString("moveToPoint:atOffset:")
     private static let selAdd = NSSelectorFromString("addPointerEventPath:")
     private static let selSynth = NSSelectorFromString("eventSynthesizer")
     private static let selSynthesize = NSSelectorFromString("synthesizeEvent:completion:")
@@ -32,6 +34,20 @@ enum EventShim {
         guard let r = recordClass, let p = pathClass,
               class_getInstanceMethod(r, selInitRecord) != nil, class_getInstanceMethod(r, selAdd) != nil,
               class_getInstanceMethod(p, selInitText) != nil, class_getInstanceMethod(p, selTypeText) != nil,
+              XCUIDevice.shared.responds(to: selSynth),
+              let s = XCUIDevice.shared.perform(selSynth)?.takeUnretainedValue(),
+              s.responds(to: selSynthesize)
+        else { return false }
+        return true
+    }()
+
+    /// Everything a gesture along its samples needs exists. No public call can do one, so APPDYNO_FAST_TAP=0
+    /// does not turn this off.
+    static let gestureAvailable: Bool = {
+        guard let r = recordClass, let p = pathClass,
+              class_getInstanceMethod(r, selInitRecord) != nil, class_getInstanceMethod(r, selAdd) != nil,
+              class_getInstanceMethod(p, selInitPath) != nil, class_getInstanceMethod(p, selMove) != nil,
+              class_getInstanceMethod(p, selLift) != nil,
               XCUIDevice.shared.responds(to: selSynth),
               let s = XCUIDevice.shared.perform(selSynth)?.takeUnretainedValue(),
               s.responds(to: selSynthesize)
@@ -67,6 +83,21 @@ enum EventShim {
         imp(path, selLift, Lift.self)(path, selLift, 0.05)
         imp(record, selAdd, AddPath.self)(record, selAdd, path)
         return synthesize(record, within: 5)
+    }
+
+    /// One path per finger on a `gestureTimeline`, all in one record; false when the synthesizer refused it.
+    static func gesture(_ fingers: [[GesturePoint]], liftAt: Double, orientation: Int) -> Bool {
+        guard gestureAvailable, let r = recordClass, let pc = pathClass else { return false }
+        let rawRecord = r.alloc() as AnyObject
+        let record = imp(rawRecord, selInitRecord, InitRecord.self)(rawRecord, selInitRecord, "gesture" as NSString, orientation)
+        for f in fingers {
+            let rawPath = pc.alloc() as AnyObject
+            let path = imp(rawPath, selInitPath, InitPath.self)(rawPath, selInitPath, CGPoint(x: f[0].x, y: f[0].y), f[0].t)
+            for s in f.dropFirst() { imp(path, selMove, MoveTo.self)(path, selMove, CGPoint(x: s.x, y: s.y), s.t) }
+            imp(path, selLift, Lift.self)(path, selLift, liftAt)
+            imp(record, selAdd, AddPath.self)(record, selAdd, path)
+        }
+        return synthesize(record, within: 5 + liftAt)
     }
 
     /// Types `text` as key events, `perSecond` of them a second (the synthesizer spaces them itself); false
