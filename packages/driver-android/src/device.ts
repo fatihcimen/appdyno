@@ -45,6 +45,10 @@ const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
   'clipboard.get',
 ]);
 
+/** How long a phone just woken gets for its focus to hold, and how long it must hold. */
+const WAKE_FOCUS_MS = 5_000;
+const WAKE_STEADY_MS = 600;
+
 /**
  * An Android device or emulator driven through its agent: every command has a timeout, commands never
  * overlap, failures are typed DeviceErrors. App lifecycle, links and location go through adb's own
@@ -205,7 +209,28 @@ export class AndroidDevice implements Device {
       }
       unlocked = !s.locked;
     }
+    if (woke || unlocked) await this.focusSteady();
     return { woke, unlocked, locked: s.locked };
+  }
+
+  /**
+   * A phone just woken has the app on its screen before the app can take a touch: a Xiaomi passes through no focus
+   * and its launcher for up to 3 s, and a touch meanwhile reaches no window. Until the focus has held for a moment.
+   */
+  private async focusSteady() {
+    const end = Date.now() + WAKE_FOCUS_MS;
+    let last = '';
+    let since = Date.now();
+    while (Date.now() < end) {
+      const focus = /mCurrentFocus=(.*)/.exec(
+        await this.shell('dumpsys window | grep -m1 mCurrentFocus'),
+      )?.[1];
+      if (focus === undefined || focus === 'null' || focus !== last) {
+        last = focus ?? '';
+        since = Date.now();
+      } else if (Date.now() - since >= WAKE_STEADY_MS) return;
+      await new Promise((r) => setTimeout(r, 150));
+    }
   }
 
   async tree(opts: { maxDepth?: number; maxNodes?: number } = {}): Promise<Tree> {
@@ -236,16 +261,23 @@ export class AndroidDevice implements Device {
   async act(action: ActParams, opts: ActOptions = {}): Promise<ActResult> {
     const settle = opts.settle === false ? undefined : (opts.settle ?? {});
     const cap = settle ? (settle.maxMs ?? 3_000) : 0;
-    const { result } = await this.call(
-      'act',
-      {
-        action,
-        ...(settle && { settle }),
-        read: opts.read ?? 'none',
-        ...(opts.before && { before: opts.before }),
-      },
-      TIMEOUTS.action + cap + durationOf(action),
-    );
+    const once = () =>
+      this.call(
+        'act',
+        {
+          action,
+          ...(settle && { settle }),
+          read: opts.read ?? 'none',
+          ...(opts.before && { before: opts.before }),
+        },
+        TIMEOUTS.action + cap + durationOf(action),
+      );
+    const { result } = await once().catch(async (e: unknown) => {
+      // the agent refuses a touch on a dark screen before it is made: it would reach nothing
+      if (!(e instanceof DeviceError && /the screen is off/.test(e.message))) throw e;
+      await this.ensureAwake();
+      return once();
+    });
     return result;
   }
 
@@ -464,6 +496,7 @@ export class AndroidDevice implements Device {
    */
   async readyToMeasure() {
     await this.releaseAnimations();
+    await this.ensureAwake();
     await this.call('rest.wait', {}, TIMEOUTS.action + 5_000);
   }
 

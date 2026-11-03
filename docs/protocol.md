@@ -255,6 +255,13 @@ engine's `rule`, a `message`, the element's box `b` in tap units and the element
   scale, all inside the text);
   colours of text over a picture or a gradient are not measured (no clean sample).
 
+### A phone's screen goes off
+
+A touch on a dark screen reaches no window, and nothing says so: the agent refuses it first and the host wakes the phone and
+asks again. Once woken, the app is on the screen before it can take a touch: a Xiaomi (HyperOS, Android 16) passed through no
+focus and its launcher for up to 3 s, and of 24 touches right after a wake 8 were lost, none of 15 once the host waited for the
+focus to hold for 600 ms. A long measure wakes it too: a dark phone starts no app, and `am start` reads `UNKNOWN (0)`.
+
 ## Errors
 
 ```json

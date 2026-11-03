@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { networkInterfaces, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AndroidDevice, androidProvider, traceProcessor, type Screen } from 'appdyno';
 
 /**
@@ -34,8 +34,13 @@ describe.skipIf(!serial)('android perf accuracy', () => {
 
   beforeAll(async () => {
     d = new AndroidDevice(serial!);
+    // an agent another suite started from its own state folder holds UI automation for a moment yet
+    await d.stopAgent();
+    await d.shell('pkill -f dev.appdyno.agent.Main || true');
     await d.open();
   });
+  // these tests go by shell, and a phone's screen goes off by itself meanwhile
+  beforeEach(() => d.ensureAwake());
   afterAll(() => d?.close());
 
   it('frames: a light animation is smooth, a 40 ms draw misses every deadline', async () => {

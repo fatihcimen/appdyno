@@ -38,8 +38,8 @@ object Paths {
 /** Touch and key input injected as the shell user, timed on the device's uptime clock. */
 class Input(private val automation: Automation) {
     fun tap(x: Float, y: Float) {
-        // a Xiaomi at times refuses the finger-up, its finger-down having reached no window (cause not known): nothing
-        // has reached the app, and the tap can be made again
+        // a Xiaomi just woken may refuse the finger-up, its finger-down having reached no window: nothing has reached
+        // the app, and the tap can be made again
         repeat(TAP_TRIES - 1) {
             try {
                 touchOnce(x, y)

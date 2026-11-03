@@ -2,7 +2,7 @@ import { execFile, execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { homedir, tmpdir } from 'node:os';
+import { homedir, networkInterfaces, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -330,7 +330,7 @@ describe.skipIf(!android)('network on Android', () => {
   let web: Awaited<ReturnType<typeof localWeb>>;
   const adb = new Adb();
   const proxySetting = async () =>
-    (await adb.exec(android!, 'settings get global http_proxy')).trim();
+    (await adb.exec(android!, 'settings get global http_proxy')).trim().replace(/^:0$/, 'null');
   beforeAll(async () => {
     web = await localWeb();
     h = harness(android!, androidProvider(adb));
@@ -383,7 +383,7 @@ describe.skipIf(!android)('network on Android', () => {
 
   it('counts an app by its bytes, with no URL and no body', async () => {
     await h.ok('network', { action: 'start', via: 'bytes' });
-    await fetchIn(h.ok, `http://10.0.2.2:${web.webPort}/big`);
+    await fetchIn(h.ok, `http://${macHost()}:${web.webPort}/big`);
     const r = await h.ok('network', { action: 'stop' });
     const got = (r.data.entries as { direction: string; bytes: number }[]).find(
       (e) => e.direction === 'Received',
@@ -394,7 +394,7 @@ describe.skipIf(!android)('network on Android', () => {
 
   it('traces an app by its packets, read at the end', async () => {
     await h.ok('network', { action: 'start', via: 'packets' });
-    await fetchIn(h.ok, `http://10.0.2.2:${web.webPort}/big`);
+    await fetchIn(h.ok, `http://${macHost()}:${web.webPort}/big`);
     expect((await h.ok('network', { action: 'read' })).text).toMatch(/can be read when it ends/);
     const r = await h.ok('network', { action: 'stop' });
     const port = (r.data.entries as { direction: string; host: string; bytes: number }[]).find(
@@ -681,7 +681,7 @@ describe.skipIf(!android)('visual comparison leaves the status bar out', () => {
   }, 120_000);
 });
 
-describe.skipIf(!android)('emulator events on Android', () => {
+describe.skipIf(!android || !android.startsWith('emulator-'))('emulator events on Android', () => {
   let h: ReturnType<typeof harness>;
   const adb = new Adb();
   const callState = async () =>

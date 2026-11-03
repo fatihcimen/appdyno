@@ -89,8 +89,10 @@ class Handlers(private val automation: Automation, private val token: String) {
     }
 
     private fun act(p: JSONObject, job: Job): Reply {
-        awaitRest()
         val a = p.getJSONObject("action")
+        // on a dark screen a touch reaches no window, and nothing says so: the host wakes it and asks again
+        if (a.getString("kind") != "key" && !Platform.display().on) throw AgentFailure("NOT_FOUND", "the screen is off")
+        awaitRest()
         val cancelled = { job.cancelled }
         // a touch aimed at a screen that another window has replaced since it was read lands on the wrong one (A/B
         // run 8559e13f: the app restarted into its splash between the read and the tap, and the tap was lost)

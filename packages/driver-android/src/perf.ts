@@ -311,6 +311,8 @@ export class AndroidPerf implements MeasureSource {
       throw new DeviceError('APP_NOT_RUNNING', `${pkg} has no launcher activity`);
     const flags = mode === 'warm' ? `-f ${RECREATE_ACTIVITY} ` : '';
     const prepare = async () => {
+      // measuring takes longer than a phone's screen stays on, and a dark one starts nothing: it reads UNKNOWN (0)
+      await this.device.ensureAwake();
       if (mode === 'cold') await this.sh(`am force-stop ${pkg}`);
       else {
         await this.sh('input keyevent KEYCODE_HOME');
