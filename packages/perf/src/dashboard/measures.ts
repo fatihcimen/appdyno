@@ -1,4 +1,5 @@
 import { esc } from '@appdyno/core';
+import { measureOf, type MeasureId, type PerfRecord } from '../record.js';
 import type { Refusal } from '../store.js';
 import { age, formatValue, measureTitle, time, type DeviceName } from './format.js';
 import { chip } from './marks.js';
@@ -41,12 +42,27 @@ const detailOf = ({ record, run }: Reading) => {
   return `${phases.length} phases, longest ${phaseName(longest.kind)} ${formatValue(longest.value, longest.unit)}`;
 };
 
+/** What a number is on a device where it is not what the same row is on a phone. */
+const ON_A_SIMULATOR: Partial<Record<MeasureId, string>> = {
+  frames: 'main-thread pacing, on this Mac',
+  frozen: 'main-thread pacing, on this Mac',
+  stalls: 'main-thread pacing, on this Mac',
+  energy: "this Mac's energy, not a phone's",
+};
+
+const meaningOf = ({ device, kind }: PerfRecord) => {
+  const row = measureOf(kind);
+  return row && device.platform === 'ios' && device.virtual ? ON_A_SIMULATOR[row] : undefined;
+};
+
 const readingCell = (r: Reading, now: number) => {
   const { record, scenario } = r;
   const noise = loud(record.noise);
+  const meaning = meaningOf(record);
   const notes = [
     ...verdictChips(r),
     ...(record.modelled ? [chip('model', 'estimate, from a model')] : []),
+    ...(meaning ? [`<div class="m">${esc(meaning)}</div>`] : []),
     ...(noise.length ? [chip('warning', `noise: ${noise.join(', ')}`)] : []),
     ...(record.noise.includes('debuggable-build') ? ['<span class="m">debug build</span>'] : []),
   ];
@@ -59,7 +75,9 @@ const refusedCell = (r: Refusal, now: number) =>
 /** A refusal is the answer only until a reading is newer. */
 function cell(v: AppView, row: string, cls: string) {
   const reading = v.cells.get(cellKey(row, cls));
-  const refusal = v.refusals.find((r) => r.measure === row && r.deviceClass === cls);
+  const refusal = v.refusals.find(
+    (r) => r.measure === row && r.deviceClass === cls && (!r.app || !v.app || r.app === v.app),
+  );
   if (refusal && (!reading || time(refusal.at) > time(reading.record.at)))
     return refusedCell(refusal, v.now);
   return reading ? readingCell(reading, v.now) : '<span class="none">not measured yet</span>';
@@ -73,6 +91,18 @@ const rowTitle = (row: string) => {
   return title ? esc(title) : `other<div class="m">${esc(row)}</div>`;
 };
 
+const VIRTUAL_IS_RELATIVE =
+  'Numbers from an emulator or simulator are relative to this Mac; real frame rates, frozen frames, hitches and energy need a phone.';
+
+/** Said above the table: it is why the columns are not alike, and an app with no phone has no real numbers yet. */
+function realDeviceNote(v: AppView) {
+  const onAPhone = v.scenarios.some((s) => !nameOf(v, s.key.deviceClass).virtual);
+  const noPhone = onAPhone
+    ? ''
+    : `<div class="card nophone">${chip('warning', `No phone has been measured for ${v.app}.`)}<pre><code>${esc(`appdyno perf survey --app ${v.app} --device <id>`)}</code></pre></div>`;
+  return `<p class="note">${esc(VIRTUAL_IS_RELATIVE)}</p>${v.app ? noPhone : ''}`;
+}
+
 /** The page's core: what each device can read of this app, and how it last read. */
 export function measuresTable(v: AppView): string {
   const rows = rowsOf(v.scenarios).map((row) => {
@@ -81,10 +111,5 @@ export function measuresTable(v: AppView): string {
     );
     return `<tr><th scope="row">${rowTitle(row)}</th>${cells.join('')}</tr>`;
   });
-  const anyVirtual = v.classes.some((c) => nameOf(v, c).virtual);
-  return `<div class="tw"><table class="matrix" style="--cols:${v.classes.length}"><thead><tr><th scope="col">Measure</th>${v.classes.map((c) => header(nameOf(v, c))).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>${
-    anyVirtual
-      ? '<p class="note">Emulators and simulators read as relative: their numbers depend on the load of this Mac, so compare them only with the same kind of device.</p>'
-      : ''
-  }`;
+  return `${realDeviceNote(v)}<div class="tw"><table class="matrix" style="--cols:${v.classes.length}"><thead><tr><th scope="col">Measure</th>${v.classes.map((c) => header(nameOf(v, c))).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
 }

@@ -211,7 +211,78 @@ describe('the page', () => {
     expect(text).toContain('not measured yet');
     expect(text).toContain('Android emulator');
     expect(text).toContain('Android phone');
-    expect(text).toContain('read as relative');
+    expect(text).toContain(
+      'relative to this Mac; real frame rates, frozen frames, hitches and energy need a phone',
+    );
+  });
+
+  const SIMULATOR: DeviceInfo = {
+    serial: 's',
+    platform: 'ios',
+    model: 'iPhone 17 Pro',
+    os: '26.5',
+    virtual: true,
+  };
+  const SURVEY_COMMAND = 'appdyno perf survey --app dev.app --device &#60;id&#62;';
+
+  it("a refusal of one app does not stand for another's cell", async () => {
+    const s = store();
+    await s.run(1, [{ kind: 'heap.leaks', unit: 'count', samples: [20] }], { scenario: 'heap' });
+    await s.run(1, [{ kind: 'heap.leaks', unit: 'count', samples: [3] }], {
+      scenario: 'heap',
+      app: 'other.app',
+    });
+    await saveRefusal(s.dir, {
+      deviceClass: PHONE_CLASS,
+      measure: 'leaks',
+      app: 'other.app',
+      reason: 'it needs get-task-allow',
+      at: ago(0),
+    });
+    const text = textOf(await s.page());
+    expect(text.match(/it needs get-task-allow/g)).toHaveLength(1);
+    expect(text).toContain('20');
+  });
+
+  it('with no phone measured for an app, says so with the command for one', async () => {
+    const s = store();
+    await s.run(1, [launch(700)], { device: EMULATOR });
+    const page = await s.page();
+    expect(textOf(page)).toContain('No phone has been measured for dev.app.');
+    expect(page).toContain(SURVEY_COMMAND);
+  });
+
+  it('with a phone measured, says only that a virtual device is relative', async () => {
+    const s = store();
+    await s.run(1, [launch(400)]);
+    await s.run(1, [launch(700)], { device: EMULATOR });
+    const page = await s.page();
+    expect(textOf(page)).not.toContain('No phone has been measured');
+    expect(page).not.toContain(SURVEY_COMMAND);
+    expect(textOf(page)).toContain('need a phone');
+  });
+
+  it('says in a cell what a number means on a simulator, and not on a phone', async () => {
+    const s = store();
+    const pacing: Metric[] = [
+      { kind: 'frames.jank_percent', unit: 'percent', samples: [3] },
+      { kind: 'frames.frozen', unit: 'count', samples: [1] },
+      { kind: 'stalls.worst_ms', unit: 'ms', samples: [500] },
+    ];
+    await s.run(2, [...pacing, { kind: 'energy.mj', unit: 'mj', samples: [207] }], {
+      device: SIMULATOR,
+    });
+    await s.run(1, pacing);
+    const page = await s.page();
+    const text = textOf(page);
+    expect(text).toContain('this Mac&#39;s energy, not a phone&#39;s');
+    expect(text.match(/main-thread pacing, on this Mac/g)).toHaveLength(3);
+    expect(text).toContain('Frozen frames');
+    // an estimate is said on any device
+    await s.run(0, [{ kind: 'energy.mj', unit: 'mj', samples: [5], modelled: true }], {
+      device: EMULATOR,
+    });
+    expect(textOf(await s.page())).toContain('estimate, from a model');
   });
 
   it('shows a kind no measure answers under other', async () => {

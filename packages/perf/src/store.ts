@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { Baseline, BudgetRule } from './compare.js';
-import type { MeasureId, PerfRecord } from './record.js';
+import { keyName, type MeasureId, type PerfRecord } from './record.js';
 
 export const newId = (prefix: string) => `${prefix}-${randomBytes(4).toString('hex')}`;
 
@@ -63,10 +63,17 @@ export async function latestRuns(dir: string, k: RunKey, last = 1): Promise<Perf
 }
 
 /** A device saying it cannot give a measure, and why: the dashboard's answer until a reading is newer. */
-export type Refusal = { deviceClass: string; measure: MeasureId; reason: string; at: string };
+export type Refusal = {
+  deviceClass: string;
+  measure: MeasureId;
+  /** Whose: a phone may refuse a system app what it gives an app signed for development. */
+  app?: string;
+  reason: string;
+  at: string;
+};
 
-const refusalFile = (dir: string, r: Pick<Refusal, 'deviceClass' | 'measure'>) =>
-  join(dir, 'refusals', r.deviceClass, `${r.measure}.json`);
+const refusalFile = (dir: string, r: Pick<Refusal, 'deviceClass' | 'measure' | 'app'>) =>
+  join(dir, 'refusals', r.deviceClass, `${r.app ? `${keyName(r.app)}.` : ''}${r.measure}.json`);
 
 export async function saveRefusal(dir: string, r: Refusal): Promise<void> {
   const file = refusalFile(dir, r);
@@ -74,7 +81,7 @@ export async function saveRefusal(dir: string, r: Refusal): Promise<void> {
   await writeFile(file, JSON.stringify(r, null, 2));
 }
 
-/** The newest refusal of each device class and measure. */
+/** The newest refusal of each device class, app and measure. */
 export async function loadRefusals(dir: string): Promise<Refusal[]> {
   const root = join(dir, 'refusals');
   const out: Refusal[] = [];

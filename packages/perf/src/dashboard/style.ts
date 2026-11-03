@@ -15,7 +15,7 @@ a{color:inherit}pre{background:var(--surface);border:1px solid var(--edge);borde
 .card{background:var(--surface);border:1px solid var(--edge);border-radius:8px;padding:.85rem}
 .note,.m,.cap{color:var(--ink2)}.m,.cap{font-size:.8rem;font-weight:400}.note{font-size:.85rem;margin:.6rem 0 0}.none{color:var(--ink2)}
 .head{display:flex;flex-wrap:wrap;gap:.25rem 1rem;align-items:baseline;margin-bottom:1rem}.head nav{display:flex;flex-wrap:wrap;gap:.25rem .75rem}
-.app{margin-top:2rem}.app>h2{font-size:1.25rem;margin:0}
+.nophone{margin:.6rem 0}.nophone .chip{font-size:.9rem;font-weight:600;margin-top:0}.nophone pre{margin-bottom:0}.note+.tw{margin-top:.6rem}.nophone+.tw{margin-top:.6rem}.app{margin-top:2rem}.app>h2{font-size:1.25rem;margin:0}
 .m{font-variant-numeric:tabular-nums}`;
 
 const MARKS = `.defs{position:absolute;width:0;height:0}
