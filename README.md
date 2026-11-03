@@ -310,8 +310,8 @@ between CLI processes is kept in a small file in the state directory.
 | `--share`            | `APPDYNO_SHARE=1`       | use a device another process holds                           |
 |                      | `APPDYNO_SECRETS=a,b`   | values never shown back or put on the clipboard              |
 
-Without `--takeover`, a second tool holding UI automation on Android (`another-server`, `another-tool`,
-Appium, `uiautomator`) is never stopped. The error names the holder and gives the exact command to stop it.
+Without `--takeover`, a second tool holding UI automation on Android is never stopped. The error names
+the holder by its pid and command line and gives the exact command to stop it.
 
 ## Reaching a phone
 

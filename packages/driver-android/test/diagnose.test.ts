@@ -7,21 +7,30 @@ const line = (pid: number, command: string) => `${String(pid).padStart(6)} ${com
 
 describe('who holds UI automation', () => {
   it.each([
-    ['com.example.automation.Server --idle-timeout-ms=1800000', 'another-server', /^kill 901$/],
-    ['app_process /system/bin com.example.automation.Server', 'another-server', /^kill 901$/],
+    ['com.example.automation.Server --idle-timeout-ms=1800000', 'app_process', /^kill 901$/],
+    ['com.example.automation.Server', 'app_process', /^kill 901$/],
+    ['app_process /system/bin com.example.automation.Server', 'app_process', /^kill 901$/],
+    ['/system/bin/app_process64 / com.example.automation.Server', 'app_process', /^kill 901$/],
     [
-      'am instrument -w -r -e session s1 dev.tools.another-tool.test/androidx.test.runner.AndroidJUnitRunner',
-      'another-tool',
-      /^kill 901$/,
+      'am instrument -w -r -e session s1 com.example.automation.test/androidx.test.runner.AndroidJUnitRunner',
+      'instrumentation',
+      /^am force-stop com\.example\.automation$/,
     ],
+    ['am instrument -w', 'instrumentation', /^kill 901$/],
+    ['com.example.automation.test', 'instrumentation', /^am force-stop com\.example\.automation$/],
     [
-      'com.example.automation.test',
-      'another-tool',
-      /^am force-stop com\.another-vendor\.another-tool$/,
+      'com.example.automation.test:remote',
+      'instrumentation',
+      /^am force-stop com\.example\.automation$/,
     ],
     [
       'io.appium.uiautomator2.server.test',
-      'Appium',
+      'instrumentation',
+      /^am force-stop io\.appium\.uiautomator2\.server$/,
+    ],
+    [
+      'io.appium.uiautomator2.server',
+      'instrumentation',
       /^am force-stop io\.appium\.uiautomator2\.server$/,
     ],
     ['uiautomator events', 'uiautomator', /^kill 901$/],
@@ -49,6 +58,9 @@ describe('who holds UI automation', () => {
           line(5, 'ps -A -o PID,ARGS'),
           line(6, 'grep uiautomator'),
           line(7, 'com.example.uiautomatorish'),
+          line(8, 'com.example.shop'),
+          line(9, 'com.Company.Game'),
+          line(10, 'com.android.systemui:ui'),
         ].join('\n'),
       ),
     ).toEqual([]);
@@ -67,6 +79,7 @@ describe('who holds UI automation', () => {
   it('says the exact command, and what to do when no holder is known', () => {
     const hint = conflictHint(holdersIn(line(77, 'uiautomator events')), 'emulator-5612');
     expect(hint).toContain('uiautomator (pid 77)');
+    expect(hint).toContain('`uiautomator events`');
     expect(hint).toContain('`adb -s emulator-5612 shell kill 77`');
     expect(hint).toContain('--takeover');
     expect(conflictHint([], 'emulator-5612')).toContain(
