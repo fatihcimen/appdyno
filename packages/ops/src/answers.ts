@@ -142,9 +142,9 @@ export function answersFor(ctx: ServerContext) {
     const diff = d && diffText(d, screen.list.length, clean);
     const fg = foreground(s, screen);
     const appDied = await death(s, screen, o.pid, o.started);
-    // a launch of what is in front, and a scroll that compares with its own last swipe, expect no change
-    const expected = !/^(found|launched) /.test(done);
-    const changed = o.base && expected ? differs(diffScreens(o.base, screen.list)) : undefined;
+    // a scroll compares with its own last swipe, and a launch of what is in front expects no change
+    const changed =
+      o.base && !done.startsWith('found ') ? differs(diffScreens(o.base, screen.list)) : undefined;
     const busy = o.settled === false ? o.busy : [];
     const moving =
       o.settled === false ? ` (${MAYBE_MOVING}${busy.length ? `: ${busy.join('; ')}` : ''})` : '';
@@ -152,7 +152,7 @@ export function answersFor(ctx: ServerContext) {
       ...(appDied
         ? [`the app died: ${appDied.reason}${appDied.file ? ` (${appDied.file})` : ''}`]
         : []),
-      ...(changed === false ? [noChange(o.ms)] : []),
+      ...(changed === false && !done.startsWith('launched ') ? [noChange(o.ms)] : []),
     ];
     return reply(
       [`${done}${fg}${moving}`, ...notes, diff ?? header(s, screen)].join('\n'),
