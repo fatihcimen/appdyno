@@ -1,4 +1,5 @@
 export { opsFor } from './registry.js';
+export { keepRun } from './perf.js';
 export { swipeLine, pinchPaths } from './steps.js';
 export { SETTLE } from './answers.js';
 export { ServerContext } from './context.js';

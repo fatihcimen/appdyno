@@ -137,19 +137,70 @@ function measure<K extends Capability>(s: Session, k: K): NonNullable<MeasureSou
   return f.bind(source) as NonNullable<MeasureSource[K]>;
 }
 
+const virtual = (s: Session) => (s.device.virtual ?? s.device.measure?.virtual) === true;
+
+/**
+ * A run's records, with the context each number is judged by; read after the measured window, so it does not
+ * disturb it. Whatever measures next (a flow's journey, step by step) keeps its numbers here and perf_compare
+ * reads them like any other: name the scenario and the metrics.
+ */
+export async function keepRun(
+  ctx: ServerContext,
+  s: Session,
+  app: string,
+  scenario: string,
+  source: string,
+  raw: string,
+  metrics: Metric[],
+  compile?: string,
+) {
+  const m = s.device.measure;
+  const vitals = (await m?.vitals?.().catch(() => undefined))?.value;
+  const h = s.device.hello;
+  const records = recordsOf(
+    {
+      run: newId('run'),
+      app,
+      scenario,
+      source,
+      raw,
+      device: {
+        serial: s.device.serial,
+        platform: s.device.platform,
+        model: h?.model ?? 'unknown',
+        os: h?.osVersion ?? 'unknown',
+        virtual: virtual(s),
+      },
+      build: (await m?.buildType?.(app).catch(() => undefined)) ?? 'unknown',
+      ...(compile && { compile }),
+      load: {
+        host: loadavg(),
+        hostCpus: cpus().length,
+        ...(vitals?.load && { device: vitals.load }),
+        ...(vitals?.cpuPressure !== undefined && { devicePressure: vitals.cpuPressure }),
+      },
+      ...(vitals?.thermalStatus !== undefined && { thermal: vitals.thermalStatus }),
+      ...(vitals?.batteryTempC !== undefined && { batteryTempC: vitals.batteryTempC }),
+      tool: h?.agentVersion ?? 'unknown',
+      at: new Date().toISOString(),
+    },
+    metrics,
+  );
+  await saveRun(ctx.measurementsDir, records);
+  return records[0]?.noise ?? [];
+}
+
 export function perfOps(ctx: ServerContext): Op[] {
   const appOf = (s: Session, app?: string) => {
     const pkg = checkApp(ctx.policy, app ?? s.appId ?? '');
     if (!pkg) throw new ToolError('give app (or select one with use_device)');
     return pkg;
   };
-  const virtual = (s: Session) => (s.device.virtual ?? s.device.measure?.virtual) === true;
   const virtualNote = (s: Session) =>
     virtual(s) ? ' (virtual device: relative, compare only with the same kind of device)' : '';
   const save = async (kind: string, m: Measured<unknown>[], value: unknown) =>
     store(ctx.measurementsDir, kind, value, m.map((x) => `## ${x.at}\n${x.raw}`).join('\n\n'));
-  /** The run's records, with the context each number is judged by; read after the measured window. */
-  const keep = async (
+  const keep = (
     s: Session,
     app: string,
     scenario: string,
@@ -157,42 +208,7 @@ export function perfOps(ctx: ServerContext): Op[] {
     raw: string,
     metrics: Metric[],
     compile?: string,
-  ) => {
-    const m = s.device.measure;
-    const vitals = (await m?.vitals?.().catch(() => undefined))?.value;
-    const h = s.device.hello;
-    const records = recordsOf(
-      {
-        run: newId('run'),
-        app,
-        scenario,
-        source,
-        raw,
-        device: {
-          serial: s.device.serial,
-          platform: s.device.platform,
-          model: h?.model ?? 'unknown',
-          os: h?.osVersion ?? 'unknown',
-          virtual: virtual(s),
-        },
-        build: (await m?.buildType?.(app).catch(() => undefined)) ?? 'unknown',
-        ...(compile && { compile }),
-        load: {
-          host: loadavg(),
-          hostCpus: cpus().length,
-          ...(vitals?.load && { device: vitals.load }),
-          ...(vitals?.cpuPressure !== undefined && { devicePressure: vitals.cpuPressure }),
-        },
-        ...(vitals?.thermalStatus !== undefined && { thermal: vitals.thermalStatus }),
-        ...(vitals?.batteryTempC !== undefined && { batteryTempC: vitals.batteryTempC }),
-        tool: h?.agentVersion ?? 'unknown',
-        at: new Date().toISOString(),
-      },
-      metrics,
-    );
-    await saveRun(ctx.measurementsDir, records);
-    return records[0]?.noise ?? [];
-  };
+  ) => keepRun(ctx, s, app, scenario, source, raw, metrics, compile);
   const noisy = (noise: string[]) => (noise.length ? [`noise: ${noise.join(', ')}`] : []);
   const withProbe = async (s: Session, pkg: string, probe?: boolean) => {
     if (probe) await measure(s, 'attachProbe')(pkg).catch(refused);

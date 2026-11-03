@@ -40,7 +40,7 @@ await build({ ...options, entryPoints: ['src/mcp-bin.ts'] });
 for (const bin of ['main.js', 'mcp-bin.js']) chmodSync(join(dist, bin), 0o755);
 
 // what dist/index.d.ts reaches; the other workspace packages are inlined and show no types
-const TYPED = ['protocol', 'core', 'driver-android', 'driver-apple'];
+const TYPED = ['protocol', 'core', 'perf', 'driver-android', 'driver-apple'];
 const types = join(dist, 'types');
 for (const name of TYPED)
   cpSync(join(pkg, '..', name, 'dist'), join(types, name), {
