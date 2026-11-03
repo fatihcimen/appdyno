@@ -8,3 +8,4 @@ export * from './screen/index.js';
 export * from './cdp.js';
 export * from './video.js';
 export * from './png.js';
+export * from './html.js';

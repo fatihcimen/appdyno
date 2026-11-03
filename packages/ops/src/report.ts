@@ -11,9 +11,11 @@ import { basename, join, relative, resolve } from 'node:path';
 import {
   decodePng,
   encodePng,
+  esc,
   paintRects,
   renderScreen,
   reportProgress,
+  selfContainedPage,
   stateDir,
   type Screen,
 } from '@appdyno/core';
@@ -83,8 +85,6 @@ function shownArgs(op: string, args: unknown, clean: (s: string) => string): unk
   return walk(args, op === 'type_text' || op === 'clipboard');
 }
 
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-
 const pre = (s: string) => `<pre>${esc(s)}</pre>`;
 
 const STYLE = `body{font:14px -apple-system,system-ui,sans-serif;margin:2rem auto;max-width:60rem;padding:0 1rem;color:#222}
@@ -93,12 +93,13 @@ pre{background:#f5f5f5;padding:.5rem;overflow:auto;white-space:pre-wrap;word-bre
 img,video{max-height:30rem;max-width:100%;border:1px solid #ccc;display:block;margin:.3rem 0}
 .bad{color:#b00020}.note{color:#666}`;
 
-/** A page that loads nothing it did not bring: a label from the app could hold anything. */
 const page = (title: string, body: string) =>
-  `<!doctype html>\n<html lang="en"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' file:; media-src 'self' file:; style-src 'unsafe-inline'">
-<title>${esc(title)}</title><style>${STYLE}</style></head>
-<body>${body}</body></html>\n`;
+  selfContainedPage({
+    title,
+    body,
+    style: STYLE,
+    sources: "img-src 'self' file:; media-src 'self' file:; ",
+  });
 
 export function reportFor(ctx: ServerContext) {
   const clean = (s: string) => redactLog(ctx.policy, s);
