@@ -140,6 +140,8 @@ export function statusBand(tree: Tree, platform: Platform, density = 160): numbe
  */
 function appTree(elements: UiElement[], opts: { platform: Platform; appId?: string }) {
   const { platform } = opts;
+  // an app not on the screen has nothing to keep apart from: what is in front is what must be seen
+  const inFront = opts.appId !== undefined && elements.some((el) => el.pkg === opts.appId);
   const dropped = new Set<number>();
   const systemUi = new Set<number>();
   const children = new Map<number, number[]>();
@@ -150,10 +152,7 @@ function appTree(elements: UiElement[], opts: { platform: Platform; appId?: stri
       platform === 'android' &&
       pkg !== undefined &&
       (pkg === 'com.android.systemui' ||
-        (opts.appId !== undefined &&
-          pkg !== opts.appId &&
-          pkg !== 'android' &&
-          !isSystemDialog(el.pkg)));
+        (inFront && pkg !== opts.appId && pkg !== 'android' && !isSystemDialog(el.pkg)));
     const statusBar =
       platform === 'ios' &&
       el.parent === undefined &&

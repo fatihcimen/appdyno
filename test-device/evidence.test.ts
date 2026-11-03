@@ -270,7 +270,14 @@ for (const { platform, serial, provider } of targets)
       it('works from the command line, one process per step', async () => {
         const folder = file('report-cli');
         expect((await cli(serial!, 'report', 'start', '--dir', folder)).code).toBe(0);
-        const open = await cli(serial!, 'open-link', '--url', 'appdyno-fixture://open/list');
+        const open = await cli(
+          serial!,
+          'open-link',
+          '--url',
+          'appdyno-fixture://open/list',
+          '--app',
+          APP,
+        );
         expect(open.err).toBe('');
         const r = await cli(serial!, 'report', 'stop');
         expect(r.err).toBe('');

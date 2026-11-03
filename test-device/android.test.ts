@@ -183,7 +183,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(await scales()).toEqual(['0', '0', '0']);
     expect((await off.tree()).nodes.length).toBeGreaterThan(0);
     // nothing slides with animations off: a question to the system that is not back yet is no slide
-    const before2 = buildScreen(await off.tree(), { platform: 'android', appId: APP });
+    const before2 = await off.read(APP);
     const form = before2.list.find((e) => /^form$/i.test(e.label));
     if (form) {
       const r = await off.tap(form, { settle: SETTLE, read: 'none', before: before2.hash });

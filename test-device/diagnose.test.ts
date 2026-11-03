@@ -39,6 +39,8 @@ describe.skipIf(!serial)('android: another tool holds UI automation', () => {
     const first = new AndroidDevice(serial!);
     await first.stopAgent();
     first.close();
+    // an agent another suite started from its own state folder holds UI automation for a moment yet
+    await shell('pkill -f dev.appdyno.agent.Main || true');
     // a real client of UI automation, as long as this adb session lives
     holder = spawn(adb.bin, ['-s', serial!, 'shell', 'uiautomator', 'events'], {
       stdio: 'ignore',
