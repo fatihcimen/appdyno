@@ -72,9 +72,13 @@ describe('changed', () => {
   it('holds for an action settled on the host, too', async () => {
     const { call } = await connect();
     await call('screen');
-    const r = await call('launch_app');
+    const r = await call('open_link', { url: 'https://example.test/' });
     expect(r.structuredContent).toMatchObject({ changed: false, settled: true });
     expect(r.text).toContain('no change seen');
+    // a launch often finds what the last read showed: it says the screen is unchanged, and no more
+    const launch = await call('launch_app');
+    expect(launch.structuredContent).toMatchObject({ changed: false, settled: true });
+    expect(launch.text).not.toContain('no change seen');
   });
 
   it('names what kept the screen busy, where known', () => {
