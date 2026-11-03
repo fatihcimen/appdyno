@@ -160,11 +160,29 @@ SELECT direction, packet_transport, remote_port, sum(packet_count), sum(packet_l
 FROM android_network_packets WHERE socket_uid = ${Number(h.uid)}
 GROUP BY 1, 2, 3 ORDER BY 5 DESC LIMIT 200;`,
       );
-      const { stdout } = await run(await traceProcessor(), ['-q', query, file], {
-        timeout: 120_000,
-        maxBuffer: 64 * 1024 * 1024,
-      });
-      return { entries: packetEntries(stdout) };
+      const ask = async () =>
+        (
+          await run(await traceProcessor(), ['-q', query, file], {
+            timeout: 120_000,
+            maxBuffer: 64 * 1024 * 1024,
+          })
+        ).stdout;
+      const entries = packetEntries(await ask());
+      if (entries.length > 0) return { entries };
+      // no row is not "no traffic" until the trace is known to hold any
+      await writeFile(
+        query,
+        `INCLUDE PERFETTO MODULE android.network_packets;
+SELECT count(*) FROM android_network_packets;`,
+      );
+      const any = /\d+/.exec((await ask()).split('\n').slice(1).join('\n'))?.[0];
+      return {
+        entries,
+        note:
+          any === '0' || any === undefined
+            ? "this device's trace recorded no packets of any app, so this says nothing of the traffic: use bytes"
+            : `the trace holds ${any} packet rows of other apps and none of this one`,
+      };
     } finally {
       await rm(dir, { recursive: true, force: true });
       await this.sh(`rm -f ${remote}`).catch(() => undefined);

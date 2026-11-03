@@ -408,7 +408,10 @@ describe.skipIf(!android)('network on Android', () => {
     const port = (r.data.entries as { direction: string; host: string; bytes: number }[]).find(
       (e) => e.direction === 'Received' && e.host === `TCP port ${web.webPort}`,
     );
-    expect(port?.bytes).toBeGreaterThan(200_000);
+    // Android 16 on a Xiaomi traces no packets at all, and the answer says so rather than "0 of 0"
+    if ((r.data.entries as unknown[]).length === 0 && !android!.startsWith('emulator-'))
+      expect(r.text).toMatch(/recorded no packets of any app/);
+    else expect(port?.bytes).toBeGreaterThan(200_000);
     expect(r.text).toMatch(/bodies: not by this way/);
   }, 120_000);
 
@@ -553,7 +556,8 @@ for (const { platform, serial, provider, pageId, other } of [
       });
       const s = await h.ok('screen');
       expect(s.text).toMatch(
-        /not in the accessibility tree:\nweb button "Hidden from readers" \d+,\d+ #silent/,
+        // a phone's web view may name less than an emulator's: other lines can come first
+        /not in the accessibility tree:\n(?:web .*\n)*web button "Hidden from readers" \d+,\d+ #silent/,
       );
     }, 60_000);
 
@@ -776,6 +780,8 @@ describe.skipIf(!android)('recording on Android', () => {
     process.env.APPDYNO_RECORD_SEGMENT_S = '5';
     try {
       const to = join(dir, 'joined.mp4');
+      // something moves all along: a still phone's screen gives no frames, so little video
+      await h.ok('open_link', { url: 'appdyno-fixture://open/ticker' });
       await h.ok('record', { action: 'start', file: to });
       await new Promise((r) => setTimeout(r, 12_000));
       await stirOnce(h.ok);
