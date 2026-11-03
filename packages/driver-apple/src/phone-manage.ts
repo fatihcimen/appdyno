@@ -26,6 +26,7 @@ export class PhoneApps implements AppManager {
   async install(path: string) {
     assertAppBundle(path);
     await this.ctl.install(path);
+    return [];
   }
 
   async uninstall(app: string) {

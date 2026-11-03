@@ -27,6 +27,7 @@ export class SimulatorApps implements AppManager {
   async install(path: string) {
     assertAppBundle(path);
     await this.simctl.install(this.udid, path);
+    return [];
   }
 
   async uninstall(app: string) {

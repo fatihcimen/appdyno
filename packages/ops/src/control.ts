@@ -210,8 +210,10 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
                 'POLICY_DENIED',
               );
             reportProgress(`installing ${path}`);
-            await apps.install(path).catch(refused);
-            return done(`installed ${path}`);
+            const said = await apps.install(path).catch(refused);
+            if (said.length > 0) s.acted();
+            // what it answered on the device is part of what happened: no read mode shortens this
+            return done([`installed ${path}`, ...said].join('\n'));
           }
           case 'launch': {
             const pkg = appOf(s, app);

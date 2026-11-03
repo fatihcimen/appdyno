@@ -4,6 +4,7 @@ import { Adb } from './adb.js';
 import { agentApk } from './agent.js';
 import { AndroidDevice } from './device.js';
 import { AndroidEmulators } from './emulators.js';
+import type { InstallAnswers } from './install-consent.js';
 import { queryTrace } from './perf/perfetto.js';
 import { traceProcessor } from './tools.js';
 import { run } from '@appdyno/core';
@@ -166,7 +167,7 @@ const noAdbNoDevices = (e: unknown): never[] => {
 
 export function androidProvider(
   adb: Adb = new Adb(),
-  opts: { takeover?: boolean; animations?: 'on' | 'off' } = {},
+  opts: { takeover?: boolean; animations?: 'on' | 'off'; installAnswers?: InstallAnswers } = {},
 ): DeviceProvider {
   return {
     list: async () =>
@@ -179,7 +180,15 @@ export function androidProvider(
     handles: () => true,
     virtual: new AndroidEmulators(adb),
     // a phone unplugged for a moment (or rebooting) is waited for, up to 30 s, on read-only calls
-    open: (serial) => new AndroidDevice(serial, new Adb(), 30_000, opts.takeover, opts.animations),
+    open: (serial) =>
+      new AndroidDevice(
+        serial,
+        new Adb(),
+        30_000,
+        opts.takeover,
+        opts.animations,
+        opts.installAnswers,
+      ),
     doctor: (serial) => androidChecks(adb, serial),
     queryTrace,
   };

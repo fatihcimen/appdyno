@@ -7,7 +7,7 @@ import { loadavg } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { Adb, androidProvider, installTools } from '@appdyno/driver-android';
+import { Adb, androidProvider, installTools, type InstallAnswers } from '@appdyno/driver-android';
 import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
 import { createServer } from '@appdyno/mcp';
 import { commandsFor, deviceFlag, listOf, takeFlag } from '@appdyno/cli';
@@ -28,8 +28,16 @@ import { doctor } from './doctor.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
-const providers = (takeover = false, animations?: 'on' | 'off') => [
-  androidProvider(new Adb(), { takeover, ...(animations && { animations }) }),
+const providers = (
+  takeover = false,
+  animations?: 'on' | 'off',
+  installAnswers?: InstallAnswers,
+) => [
+  androidProvider(new Adb(), {
+    takeover,
+    ...(animations && { animations }),
+    ...(installAnswers && { installAnswers }),
+  }),
   appleProvider(),
 ];
 
@@ -44,6 +52,8 @@ type Settings = {
   share?: boolean;
   measurements?: string;
   animations?: string;
+  'no-install-consent'?: boolean;
+  'accept-install-warnings'?: boolean;
 };
 
 /** The operations' context, from flags and the environment. */
@@ -70,7 +80,12 @@ function contextFrom(values: Settings, remember?: string) {
   const animations = values.animations ?? env.APPDYNO_ANIMATIONS;
   if (animations !== undefined && animations !== 'on' && animations !== 'off')
     throw new Error(`--animations takes on or off, not ${animations}`);
-  return new ServerContext(policy, providers(values.takeover, animations), {
+  const installAnswers = {
+    prompts: !(values['no-install-consent'] || env.APPDYNO_NO_INSTALL_CONSENT === '1'),
+    warnings:
+      values['accept-install-warnings'] === true || env.APPDYNO_ACCEPT_INSTALL_WARNINGS === '1',
+  };
+  return new ServerContext(policy, providers(values.takeover, animations, installAnswers), {
     ...(device && { device }),
     ...(app && { app }),
     ...(values.measurements && { measurements: values.measurements }),
@@ -99,6 +114,8 @@ async function serveMcp(args: string[]) {
       share: { type: 'boolean' },
       animations: { type: 'string' },
       measurements: { type: 'string' },
+      'no-install-consent': { type: 'boolean' },
+      'accept-install-warnings': { type: 'boolean' },
     },
   });
   const ctx = contextFrom(values);
@@ -313,7 +330,7 @@ async function main(): Promise<number> {
           `usage: appdyno <command> [flags]; appdyno <command> --help for its flags
 
 commands:
-  mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--measurements dir]
+  mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--measurements dir] [--no-install-consent] [--accept-install-warnings]
                    the MCP server over stdio
   devices          the connected Android devices
   test <dir or files> [--device S]... [--param NAME=value]... [--artifacts dir] [--junit file]

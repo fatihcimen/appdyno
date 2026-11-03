@@ -39,7 +39,8 @@ export type LaunchOptions = { args?: string[]; env?: Record<string, string> };
 
 /** Apps on a device; what a device cannot do answers UNSUPPORTED with the reason. */
 export interface AppManager {
-  install(path: string): Promise<void>;
+  /** Installs the file; what it answered on the device along the way, for the caller to keep in its answer. */
+  install(path: string): Promise<string[]>;
   uninstall(app: string): Promise<void>;
   clearData(app: string): Promise<void>;
   listApps(all: boolean): Promise<AppEntry[]>;

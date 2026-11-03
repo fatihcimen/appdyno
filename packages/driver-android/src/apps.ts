@@ -2,6 +2,14 @@ import { existsSync } from 'node:fs';
 import { type AppManager, TIMEOUTS, type AppEntry, type LaunchOptions } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { type Adb, assertPkg, shq } from './adb.js';
+import { apkNames } from './apk-names.js';
+import {
+  answerInstallPrompts,
+  CONSENT_TAPPED,
+  readyForInstall,
+  type InstallAnswers,
+  type InstallScreen,
+} from './install-consent.js';
 
 /** `pm` prints Success, or the reason, and exits 0 on some versions either way. */
 const success = (out: string, what: string) => {
@@ -22,24 +30,59 @@ export class AndroidApps implements AppManager {
   constructor(
     private readonly adb: Adb,
     private readonly serial: string,
+    private readonly screen: InstallScreen,
+    private readonly answers: InstallAnswers = { prompts: true, warnings: false },
   ) {}
 
   private sh = (c: string, ms: number = TIMEOUTS.app) =>
     this.adb.exec(this.serial, `${c} 2>&1`, { timeoutMs: ms });
 
-  async install(path: string) {
+  /** Installs the file; what it answered on the phone along the way, in words for the caller to keep. */
+  async install(path: string): Promise<string[]> {
     if (!path.endsWith('.apk') || !existsSync(path))
       throw new DeviceError('INVALID_ARGUMENT', `not a local .apk file: ${path}`);
+    const { screen, answers } = this;
+    if (answers.prompts) await readyForInstall(screen);
     // a Xiaomi asks on its screen, and asleep it would not say no by itself
-    await this.sh('input keyevent KEYCODE_WAKEUP');
-    await this.adb.run(['-s', this.serial, 'install', '-r', path], 300_000).catch((e: Error) => {
-      if (!/INSTALL_FAILED_USER_RESTRICTED/.test(e.message)) throw e;
-      throw new DeviceError(
-        'PERMISSION_REQUIRED',
-        'the phone asked on its screen whether to install over USB, and no one said yes in time',
-        'install again and answer it on the phone within 10 s; ticking its remember box stops it asking',
-      );
+    else await this.sh('input keyevent KEYCODE_WAKEUP');
+    const said: string[] = [];
+    const stop = new AbortController();
+    let pending = true;
+    const installing = this.adb
+      .run(['-s', this.serial, 'install', '-r', path], 300_000, stop.signal)
+      .finally(() => (pending = false));
+    // settles only by refusing: an install that ends waits for no last look at the phone
+    const refusal = new Promise<never>((_, refuse) => {
+      if (answers.prompts)
+        answerInstallPrompts(
+          screen,
+          () => apkNames(path),
+          answers.warnings,
+          () => pending,
+          said,
+        ).catch(refuse);
     });
+    try {
+      await Promise.race([installing, refusal]);
+      return said;
+    } catch (e) {
+      stop.abort();
+      const also = said.length > 0 ? `. ${said.join('. ')}` : '';
+      if (/INSTALL_FAILED_USER_RESTRICTED/.test((e as Error).message))
+        throw said.some((s) => s.includes(CONSENT_TAPPED))
+          ? new DeviceError(
+              'PERMISSION_REQUIRED',
+              `the phone said no to the install over USB though its prompt was tapped${also}`,
+              'the system can block injected touches on that window: see "USB debugging (Security settings)" in Developer options, or answer it on the phone within 10 s',
+            )
+          : new DeviceError(
+              'PERMISSION_REQUIRED',
+              `the phone asked on its screen whether to install over USB, and no one said yes in time${also}`,
+              'install again and answer it on the phone within 10 s; ticking its remember box stops it asking',
+            );
+      if (e instanceof DeviceError) throw new DeviceError(e.code, `${e.message}${also}`, e.hint);
+      throw e;
+    }
   }
 
   async uninstall(app: string) {

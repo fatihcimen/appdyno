@@ -186,8 +186,8 @@ export class Adb {
     return { close: () => socket.destroy() };
   }
 
-  /** Runs the adb binary (push, install). */
-  run(args: string[], timeoutMs = 120_000): Promise<string> {
+  /** Runs the adb binary (push, install); `stop` ends it early, as the call's own signal does. */
+  run(args: string[], timeoutMs = 120_000, stop?: AbortSignal): Promise<string> {
     return new Promise((resolve, reject) => {
       const p = spawn(this.bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
       let out = '';
@@ -196,8 +196,10 @@ export class Adb {
       const timer = setTimeout(() => p.kill('SIGKILL'), timeoutMs);
       const signal = callSignal();
       const abort = () => p.kill('SIGKILL');
-      signal?.addEventListener('abort', abort, { once: true });
-      p.once('close', () => signal?.removeEventListener('abort', abort));
+      for (const s of [signal, stop]) s?.addEventListener('abort', abort, { once: true });
+      p.once('close', () => {
+        for (const s of [signal, stop]) s?.removeEventListener('abort', abort);
+      });
       p.on('error', (e) => {
         clearTimeout(timer);
         reject(

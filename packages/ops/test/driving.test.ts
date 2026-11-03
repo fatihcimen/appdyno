@@ -640,7 +640,10 @@ describe('app management', () => {
       };
     return {
       log,
-      install: rec('install'),
+      install: async (...a: unknown[]) => {
+        log.push(['install', ...a]);
+        return [];
+      },
       uninstall: rec('uninstall'),
       clearData: rec('clear'),
       listApps: async () => [{ id: 'dev.app', name: 'App', version: '1' }],
@@ -672,6 +675,34 @@ describe('app management', () => {
       ['permission', 'dev.app', false, 'camera'],
       ['launch', 'dev.app', { args: ['a=1'], env: { B: '2' } }],
     ]);
+  });
+
+  it('keeps what an install answered on the phone in its answer, whatever the read mode', async () => {
+    const apps = manager({
+      install: async () => ['passed a Play Protect warning for dev.app: "Unsafe app blocked"'],
+    });
+    const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
+    for (const read of ['none', 'diff', 'full', undefined]) {
+      const r = await call('app', {
+        action: 'install',
+        path: '/tmp/a.apk',
+        ...(read && { read }),
+      });
+      expect(r.text).toContain('passed a Play Protect warning for dev.app: "Unsafe app blocked"');
+      expect(r.data.done).toContain('Unsafe app blocked');
+    }
+  });
+
+  it('takes no tool argument that could accept a warning', async () => {
+    const apps = manager();
+    const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
+    const r = await call('app', {
+      action: 'install',
+      path: '/tmp/a.apk',
+      accept_install_warnings: true,
+    });
+    expect(r.error).toBe(true);
+    expect(apps.log).toEqual([]);
   });
 
   it('refuses what the policy forbids and passes on a driver’s reason', async () => {

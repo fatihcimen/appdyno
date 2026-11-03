@@ -5,6 +5,7 @@ export { androidCrashes, crashReports, parseDropbox, parseExitInfo } from './cra
 export { Adb, assertSerial, parseDevices, shq, type AdbDevice } from './adb.js';
 export { AndroidDevice } from './device.js';
 export { apkNames, type ApkNames } from './apk-names.js';
+export type { InstallAnswers } from './install-consent.js';
 export { androidScreen } from './platform-screen.js';
 export { TEST_LOCATION, TEST_TAG, mockedProviders } from './location.js';
 export { AndroidEmulators } from './emulators.js';

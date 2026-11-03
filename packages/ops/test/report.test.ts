@@ -66,6 +66,20 @@ describe('report', () => {
     await expect(call('report', { action: 'stop' })).rejects.toThrow(/no report is open/);
   });
 
+  it('keeps what an install answered on the phone', async () => {
+    const device = Object.assign(new FakeDevice(), {
+      apps: { install: async () => ['passed a Play Protect warning for dev.app'] },
+    });
+    const { call } = connect(device);
+    await call('report', { action: 'start', dir });
+    await call('app', { action: 'install', path: '/tmp/a.apk' });
+    await call('report', { action: 'stop' });
+    for (const f of ['index.html', 'steps.jsonl'])
+      expect(readFileSync(join(dir, f), 'utf8')).toContain(
+        'passed a Play Protect warning for dev.app',
+      );
+  });
+
   it('keeps every element of a screen an answer folds', async () => {
     const device = new FakeDevice();
     const { call } = connect(device);

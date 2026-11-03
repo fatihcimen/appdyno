@@ -25,6 +25,7 @@ import { auditAndroid } from './audit.js';
 import { AndroidAgentLauncher } from './agent.js';
 import { clearStaleTestLocation, clearTestLocation, setTestLocation } from './location.js';
 import { AndroidApps } from './apps.js';
+import type { InstallAnswers } from './install-consent.js';
 import { AndroidSettings } from './settings.js';
 import { AndroidNetwork } from './network.js';
 import { AndroidPerf } from './perf/index.js';
@@ -64,11 +65,25 @@ export class AndroidDevice extends RpcDevice implements Device {
     takeover = false,
     /** Off: the device's animations are off while this host is connected (docs/protocol.md "Animations"). */
     private animations: 'on' | 'off' = 'on',
+    /** What `app install` may answer on the phone (docs/protocol.md "A phone's install prompts"). */
+    installAnswers?: InstallAnswers,
   ) {
     super();
     assertSerial(serial);
     this.launcher = new AndroidAgentLauncher(adb, serial, takeover);
-    this.apps = new AndroidApps(adb, serial);
+    this.apps = new AndroidApps(
+      adb,
+      serial,
+      {
+        currentFocus: () => this.currentFocus(),
+        focusSteady: () => this.focusSteady(),
+        ensureAwake: () => this.ensureAwake(),
+        tree: () => this.tree(),
+        press: (p, ms) => this.longPress(p, ms, { settle: false }),
+        shell: (c) => this.shell(c),
+      },
+      installAnswers,
+    );
     this.settings = new AndroidSettings(adb, serial, () => this.releaseAnimations());
     this.recorder = new AndroidRecorder(adb, serial);
     this.network = new AndroidNetwork(adb, serial);
@@ -179,15 +194,21 @@ export class AndroidDevice extends RpcDevice implements Device {
     let last = '';
     let since = Date.now();
     while (Date.now() < end) {
-      const focus = /mCurrentFocus=(.*)/.exec(
-        await this.shell('dumpsys window | grep -m1 mCurrentFocus'),
-      )?.[1];
-      if (focus === undefined || focus === 'null' || focus !== last) {
-        last = focus ?? '';
+      const focus = await this.currentFocus();
+      if (!focus || focus !== last) {
+        last = focus;
         since = Date.now();
       } else if (Date.now() - since >= WAKE_STEADY_MS) return;
       await sleep(150);
     }
+  }
+
+  /** The window that has the focus; none between windows and on a dark screen. */
+  private async currentFocus(): Promise<string> {
+    const focus = /mCurrentFocus=(.*)/.exec(
+      await this.shell('dumpsys window | grep -m1 mCurrentFocus'),
+    )?.[1];
+    return focus === undefined || focus === 'null' ? '' : focus;
   }
 
   async tree(opts: { maxDepth?: number; maxNodes?: number } = {}): Promise<Tree> {
