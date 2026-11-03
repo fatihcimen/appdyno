@@ -311,6 +311,20 @@ describe('a folded answer', () => {
     expect(d.screen).toBe('settingsOff');
   });
 
+  it('says a row once when a control of its name stands at its place, which find still gives and which acts', async () => {
+    const d = new FakeDevice();
+    d.screen = 'doubled';
+    const { call } = await connect(d);
+    const { text } = await call('screen');
+    expect(text.match(/General/g)).toHaveLength(1);
+    expect(text).toContain('; 3 inside rows, by find');
+    const { matches } = (await call('find', { role: 'button', text: 'General' })).data;
+    expect(matches).toMatchObject([{ role: 'button', label: 'General', y: 350 }]);
+    await call('tap', { ref: matches[0].ref });
+    expect(act(d)).toMatchObject([{ kind: 'tap', x: 540, y: 350 }]);
+    expect(d.screen).toBe('home');
+  });
+
   it('names in the diff what changed inside a row', async () => {
     const { call } = await folded();
     await call('screen');

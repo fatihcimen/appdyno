@@ -1,4 +1,4 @@
-import type { ScreenElement } from './model.js';
+import { cutContext, type ScreenElement } from './model.js';
 
 /** One element as the screen view shows it: ref, role, "label", id=<id> without a label, x,y, flags. */
 export function elementLine(e: ScreenElement, clean: (s: string) => string = (s) => s): string {
@@ -9,7 +9,7 @@ export function elementLine(e: ScreenElement, clean: (s: string) => string = (s)
     ...(!e.label && e.id ? [`id=${clean(e.id)}`] : []),
     `${e.x},${e.y}`,
     ...e.flags,
-    ...(e.refContext ? [`— ${clean(e.refContext)}`] : []),
+    ...(e.refContext ? [`— ${cutContext(clean(e.refContext))}`] : []),
   ].join(' ');
 }
 

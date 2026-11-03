@@ -92,6 +92,11 @@ describe('report', () => {
     expect(html).toMatch(/10 elements/);
     expect(html).toContain('text &#34;Bluetooth&#34; 300,430');
     expect(html).not.toContain('inside rows');
+    device.screen = 'doubled';
+    await call('report', { action: 'write' });
+    expect(readFileSync(join(dir, 'index.html'), 'utf8')).toMatch(
+      /button &#34;General&#34; 540,350/,
+    );
   });
 
   it('hides secrets in every text, and never writes what was typed', async () => {

@@ -78,6 +78,16 @@ describe('flows', () => {
       expect(text).not.toMatch(/@\w/);
     });
 
+    it('records a tap on a control an answer said once with its row, by its role', async () => {
+      const call = callerOf(context());
+      device.screen = 'doubled';
+      const { text } = await recorded(call, async () => {
+        const { data } = await call('find', { role: 'button', text: 'Camera' });
+        await call('tap', { ref: (data.matches as { ref: string }[])[0]!.ref });
+      });
+      expect(text).toContain('tap role=button text="Camera"');
+    });
+
     it('logs each action with the best selector, whatever named its target', async () => {
       const call = callerOf(context());
       const { text } = await recorded(call, async () => {

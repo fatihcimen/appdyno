@@ -52,7 +52,7 @@ else the one `use_device` selected.
 | measure  | `perf_snapshot`, `perf_scroll`, `perf_launch`, `perf_profile`, `perf_heap`, `perf_trace`, `perf_compare`, `perf_query`     |
 | replay   | `flow`                                                                                                                     |
 
-A whole screen in an answer folds what repeats. A plain text or image inside a row whose label holds it gets no line, and the first line counts them. Three or more rows alike in a row share one header (`cell x=201 clickable: ref "label" y`). A label given twice over is said once. Only the text is folded: `find`, selectors, refs, diffs, flows and `report` still reach every element.
+A whole screen in an answer folds what repeats. A plain text or image inside a row whose label holds it gets no line, nor does a control of the row's name at the row's very place, and the first line counts them. Three or more rows alike in a row share one header (`cell x=201 clickable: ref "label" y`). A label given twice over is said once, and what tells alike elements apart only when another line shows the same name. Only the text is folded: `find`, selectors, refs, diffs, flows and `report` still reach every element.
 
 A target is a `ref`, `x` and `y`, or a `selector` `{ text, id, role, index }`, resolved on a fresh read
 just before the action. Text matches as `find` does, without case or accents ("İstanbul", "istanbul"),

@@ -57,6 +57,16 @@ const settings = (wifi: string, go?: string): Node[] => [
   ...row('Hotspot', 'Off', 500),
 ];
 
+/** A row and a control of its name at its very place, as a phone's list draws them. */
+const doubled = (name: string, y: number, go?: string): Node[] =>
+  ['android.widget.LinearLayout', 'android.widget.Button'].map((c) => ({
+    c,
+    t: name,
+    b: [0, y, 1080, y + 100],
+    f: 19,
+    ...(go && { go }),
+  }));
+
 const FORM: Node[] = [
   { t: 'Bilgiler', b: [0, 100, 1080, 200] },
   {
@@ -72,6 +82,11 @@ const FORM: Node[] = [
 export const SCREENS: Record<string, Node[]> = {
   settings: settings('On', 'settingsOff'),
   settingsOff: settings('Off'),
+  doubled: [
+    ...doubled('General', 300, 'home'),
+    ...doubled('Camera', 400),
+    ...doubled('Fonts', 500),
+  ],
   login: [
     {
       c: 'android.widget.EditText',

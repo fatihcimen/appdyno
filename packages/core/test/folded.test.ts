@@ -50,6 +50,87 @@ describe('what repeats in an answer', () => {
     expect(insideRows([row('@a', 'Online status', 100), ...kept]).size).toBe(0);
   });
 
+  it('leaves out a control of the row’s name at its place, not one elsewhere in it or with a state', () => {
+    const at = { rect: { x: 0, y: 80, width: 400, height: 40 } };
+    const list = [
+      row('@a', 'General', 100),
+      element('@same', 'button', 'General', 100, { ...at, flags: ['clickable'] }),
+      element('@twice', 'button', 'General General', 100, { ...at, flags: ['clickable'] }),
+      element('@elsewhere', 'button', 'General', 100, {
+        rect: { x: 300, y: 80, width: 40, height: 40 },
+        x: 320,
+        flags: ['clickable'],
+      }),
+      element('@other', 'button', 'More', 100, { ...at, flags: ['clickable'] }),
+      element('@on', 'switch', 'General', 100, { ...at, flags: ['clickable', 'checked'] }),
+    ];
+    expect([...insideRows(list)].map((e) => e.ref)).toEqual(['@same', '@twice']);
+  });
+
+  it('keeps the first of two alike at the same place', () => {
+    const twice = [
+      element('@one', 'button', 'Dictate', 100, { flags: ['clickable'] }),
+      element('@two', 'button', 'Dictate', 100, { flags: ['clickable'] }),
+    ];
+    expect([...insideRows(twice)].map((e) => e.ref)).toEqual(['@two']);
+  });
+
+  it('knows a long text cut short in the row and in what it holds', () => {
+    const list = [
+      row('@a', 'Apple Account, Sign in to access your iCloud data, the App …', 100),
+      element(
+        '@b',
+        'text',
+        'Sign in to access your iCloud data, the App Store, Apple se…',
+        90,
+        inner({ y: 85 }),
+      ),
+      element(
+        '@c',
+        'text',
+        'Sign in to something else entirely that is also rather lon…',
+        90,
+        inner({ y: 85 }),
+      ),
+    ];
+    expect([...insideRows(list)].map((e) => e.ref)).toEqual(['@b']);
+  });
+
+  it('leaves out what is inside a text field and its own name says', () => {
+    const list = [
+      element('@f', 'textField', 'Search', 100),
+      element('@i', 'image', 'Search', 90, inner({ y: 85 })),
+    ];
+    expect([...insideRows(list)].map((e) => e.ref)).toEqual(['@i']);
+  });
+
+  it('says a context only for what it tells apart, and only so far', () => {
+    const lines = renderFolded([
+      element('@a', 'text', 'General', 40, { refContext: 'Settings' }),
+      element('@b', 'button', '', 60, { id: 'x', refContext: 'Search' }),
+      element('@c', 'button', 'Add', 80, { refContext: 'Milk' }),
+      element('@d', 'button', 'Add', 90, { refContext: `${'long '.repeat(20)}end` }),
+    ]).split('\n');
+    expect(lines[1]).toBe('@a text "General" 200,40');
+    expect(lines[2]).toBe('@b button "" id=x 200,60 — Search');
+    expect(lines[3]).toBe('@c button "Add" 200,80 — Milk');
+    expect(lines[4]).toBe(`@d button "Add" 200,90 — ${'long '.repeat(8).slice(0, 39)}…`);
+  });
+
+  it('puts rows under one header when their context is the same and so tells nothing', () => {
+    const lines = renderFolded(
+      [418, 471, 559].map((y, i) =>
+        element(`@c${i}`, 'button', 'chevron', y, { refContext: 'Manage it' }),
+      ),
+    ).split('\n');
+    expect(lines.slice(1)).toEqual([
+      'button x=200: ref "label" y',
+      '@c0 "chevron" 418',
+      '@c1 "chevron" 471',
+      '@c2 "chevron" 559',
+    ]);
+  });
+
   it('says a label given twice over once', () => {
     const lines = renderFolded([row('@a', 'General General', 100)]).split('\n');
     expect(lines[1]).toBe('@a cell "General" 200,100 clickable');

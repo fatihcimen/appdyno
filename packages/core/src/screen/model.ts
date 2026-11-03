@@ -68,10 +68,13 @@ const isWebView = (type: string) => /^web.?view$/.test(bare(type));
 /** `com.android.systemui:id/clock` → `com.android.systemui`. */
 const packageOf = (id: string | undefined) => /^([A-Za-z][\w.]*):id\//.exec(id ?? '')?.[1];
 const ownName = (el: UiElement) => (el.label || el.text || '').trim();
-const cut = (text: string) => {
+const cutAt = (text: string, max: number) => {
   const chars = Array.from(text); // code points: never half a surrogate pair
-  return chars.length > MAX_LABEL ? `${chars.slice(0, MAX_LABEL - 1).join('')}…` : text;
+  return chars.length > max ? `${chars.slice(0, max - 1).join('')}…` : text;
 };
+const cut = (text: string) => cutAt(text, MAX_LABEL);
+/** What tells an element apart is said only so far: the rest of a paragraph tells nothing more. */
+export const cutContext = (text: string) => cutAt(text, MAX_CONTEXT);
 /** `com.example.shop:id/basket_btn` → `basket_btn`; iOS identifiers stay as they are. */
 const idOf = (identifier: string | undefined) =>
   identifier?.replace(/^[A-Za-z][\w.]*:id\//, '').trim() || undefined;
@@ -246,11 +249,7 @@ export function screenElements(
       .filter((o) => o.index !== i.index)
       .map((o) => ({ o, k: rank(o) }))
       .sort((a, b) => a.k[0] - b.k[0] || a.k[1] - b.k[1])[0];
-    const text = best && Array.from(ownName(best.o.el));
-    return (
-      text &&
-      (text.length > MAX_CONTEXT ? `${text.slice(0, MAX_CONTEXT - 1).join('')}…` : text.join(''))
-    );
+    return best && cutContext(ownName(best.o.el));
   };
   const out: ScreenElement[] = [];
   for (const i of items.values()) {
