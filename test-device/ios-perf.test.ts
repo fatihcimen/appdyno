@@ -144,7 +144,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
       const s = buildScreen(await d.tree(), { platform: 'ios', appId: APP });
       const n = (
         await d.measure.network(APP, 3_000, () =>
-          d.tap(byId(s, 'network_fetch'), { settle: false }),
+          d.tap(byId(s, 'fetch'), { settle: false }),
         )
       ).value;
       console.log('network', JSON.stringify(n));

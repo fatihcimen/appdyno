@@ -97,7 +97,6 @@ private val LINKED = mapOf(
     "gestures" to GesturesActivity::class.java,
     "code" to CodeActivity::class.java,
     "a11y" to A11yActivity::class.java,
-    "network" to NetworkActivity::class.java,
 )
 
 /** A number a test wrote into the app's files, as a known cost; absent, none. */
@@ -443,28 +442,27 @@ class WebActivity : Activity() {
     }
 }
 
-/** One request through the platform's own client, so that it takes the system proxy as an app does. */
+/** One request through the platform's own client, so that it takes the system proxy as an app does: the link's `url` at once, else what is typed. */
 class NetworkActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         column {
             val url = EditText(context).apply { id = R.id.url_input; hint = "URL"; inputType = InputType.TYPE_TEXT_VARIATION_URI; addView(this) }
             val result = TextView(context)
-            button("Fetch", R.id.fetch) {
-                val address = url.text.toString()
-                Thread {
-                    val text = try {
-                        val c = java.net.URL(address).openConnection() as java.net.HttpURLConnection
-                        val body = c.inputStream.use { it.readBytes() }
-                        "fetched ${c.responseCode} ${body.size}"
-                    } catch (e: Exception) {
-                        "failed: ${e.message}"
-                    }
-                    runOnUiThread { result.text = text }
-                }.start()
-            }
+            fun fetch(address: String) = Thread {
+                val text = try {
+                    val c = URL(address).openConnection() as java.net.HttpURLConnection
+                    val body = c.inputStream.use { it.readBytes() }
+                    "fetched ${c.responseCode} ${body.size}"
+                } catch (e: Exception) {
+                    "failed: ${e.message}"
+                }
+                runOnUiThread { result.text = text }
+            }.start()
+            button("Fetch", R.id.fetch) { fetch(url.text.toString()) }
             result.id = R.id.fetch_result
             addView(result)
+            intent.data?.getQueryParameter("url")?.let(::fetch)
         }
     }
 }
@@ -597,34 +595,6 @@ class LeakActivity : Activity() {
         super.onCreate(savedInstanceState)
         leaked += this
         finish()
-    }
-}
-
-/** Reads the link's `url` once on a thread, and shows how many bytes came. */
-class NetworkActivity : Activity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val url = intent.data?.getQueryParameter("url")
-        column {
-            val result = label("Reading $url", R.id.result)
-            Thread {
-                val text = try {
-                    val buffer = ByteArray(64 * 1024)
-                    var total = 0L
-                    URL(url).openStream().use { s ->
-                        while (true) {
-                            val n = s.read(buffer)
-                            if (n < 0) break
-                            total += n
-                        }
-                    }
-                    "Read $total bytes"
-                } catch (e: java.io.IOException) {
-                    "Failed: $e"
-                }
-                runOnUiThread { result.text = text }
-            }.start()
-        }
     }
 }
 

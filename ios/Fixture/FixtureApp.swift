@@ -49,7 +49,6 @@ struct FixtureApp: App {
         case "slide": SlideScreen()
         case "a11y": A11yScreen()
         case "web": WebScreen()
-        case "network": NetworkScreen()
         default: Text("Bilinmeyen ekran: \(key)")
         }
     }
@@ -89,9 +88,9 @@ struct WebScreen: UIViewRepresentable {
     func updateUIView(_ view: WKWebView, context: Context) {}
 }
 
-/// One request through a session of its own, as most apps make it.
+/// One request through a session of its own, as most apps make it: what is typed, else APPDYNO_FIXTURE_FETCH_URL.
 struct NetworkScreen: View {
-    @State private var url = ""
+    @State private var url = ProcessInfo.processInfo.environment["APPDYNO_FIXTURE_FETCH_URL"] ?? ""
     @State private var result = ""
 
     var body: some View {
@@ -431,30 +430,6 @@ struct LeakScreen: View {
             }
             .accessibilityIdentifier("leak_make")
             Text("Made: \(made)").accessibilityIdentifier("leak_made")
-            Spacer()
-        }
-        .padding()
-    }
-}
-
-/// Fetches a known number of bytes from APPDYNO_FIXTURE_FETCH_URL (else a public server): a network reading
-/// must show them.
-struct NetworkScreen: View {
-    @State private var got = "Idle"
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Button("Fetch") {
-                let env = ProcessInfo.processInfo.environment["APPDYNO_FIXTURE_FETCH_URL"]
-                let url = URL(string: env ?? "https://speed.cloudflare.com/__down?bytes=5000000")!
-                got = "Fetching"
-                URLSession(configuration: .ephemeral).dataTask(with: url) { data, _, error in
-                    let text = error.map { "Error: \($0.localizedDescription)" } ?? "Got \(data?.count ?? 0)"
-                    DispatchQueue.main.async { got = text }
-                }.resume()
-            }
-            .accessibilityIdentifier("network_fetch")
-            Text(got).accessibilityIdentifier("network_state")
             Spacer()
         }
         .padding()
