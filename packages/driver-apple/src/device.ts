@@ -55,6 +55,9 @@ export function promptButton(t: Tree, words: RegExp = /^open$/): Point | undefin
   return b && { x: (b.b[0] + b.b[2]) / 2, y: (b.b[1] + b.b[3]) / 2 };
 }
 
+/** How long a field has to report the focus before the keys go to whatever has the keyboard. */
+const KEYS_AFTER_MS = 2_000;
+
 /** Read-only requests are retried once on a fresh connection when the runner went away. */
 const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
   'tree.get',
@@ -222,6 +225,11 @@ export abstract class IosDevice extends RpcDevice implements Device {
       );
     }
     return super.key(key, opts);
+  }
+
+  /** A code entry's hidden field never reports the focus, so its keys wait this out each time. */
+  override typeText(text: string, opts: Parameters<RpcDevice['typeText']>[1] = {}) {
+    return super.typeText(text, { focusTimeoutMs: KEYS_AFTER_MS, ...opts });
   }
 
   /**

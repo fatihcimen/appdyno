@@ -11,7 +11,34 @@ describe('rpc client', () => {
     ).toEqual(HELLO);
     const { result } = await rpc.call('tree.get', {}, { timeoutMs: 2500 });
     expect(result.nodes).toHaveLength(2);
-    expect(seen[1]).toEqual({ method: 'tree.get', params: { _deadlineMs: 2500 } });
+    expect(seen[1]).toEqual({
+      method: 'tree.get',
+      params: { maxDepth: 128, maxNodes: 5_000, _deadlineMs: 2500 },
+    });
+  });
+
+  it('sends what the schema makes of the params: its defaults, and no word it does not know', async () => {
+    const { rpc, seen } = fakeAgent({
+      'text.set': () => ({ result: { mode: 'keys', focusMs: 1 } }),
+    });
+    const text = { text: 'a', extra: 1 } as Parameters<typeof rpc.call<'text.set'>>[1];
+    await rpc.call('text.set', text, { timeoutMs: 1000 });
+    expect(seen[0]!.params).toEqual({
+      text: 'a',
+      replace: false,
+      submit: false,
+      focusTimeoutMs: 5_000,
+      read: 'none',
+      _deadlineMs: 1000,
+    });
+  });
+
+  it('refuses params the protocol does not allow, before anything is sent', async () => {
+    const { rpc, seen } = fakeAgent();
+    await expect(
+      rpc.call('wait', { timeoutMs: 60_001 }, { timeoutMs: 1000 }),
+    ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
+    expect(seen).toEqual([]);
   });
 
   it('returns a typed error with its code and hint', async () => {

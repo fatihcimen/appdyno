@@ -1,5 +1,5 @@
 import { sleep as wait, type ActOptions } from '@appdyno/core';
-import type { ActParams, Tree } from '@appdyno/protocol';
+import { Settle, type ActParams, type Tree } from '@appdyno/protocol';
 import { actionable, hasAlert, sameContent, sameLayout, stickingOut } from './simtree.js';
 
 type Node = Tree['nodes'][number];
@@ -107,14 +107,13 @@ export async function settleAfter(on: SettleOn, action: ActParams, opts: ActOpti
     await on.handled();
     return { untouched: false, moved: false, result: answer(await on.read(true)) };
   }
-  const s = opts.settle ?? {};
+  const { quietMs: asked, maxMs } = Settle.parse(opts.settle ?? {});
   const actionAt = on.clock();
   const before = opts.before ? on.recent.get(opts.before) : undefined;
   const seen = before ?? [...on.recent.values()].pop() ?? [];
   const tap = action.kind === 'tap' ? action : undefined;
   const inert = !!tap && !!before && !actionable(before, tap.x, tap.y);
-  const quietMs = inert ? Math.min(s.quietMs ?? 200, INERT_QUIET_MS) : (s.quietMs ?? 200);
-  const maxMs = s.maxMs ?? 3_000;
+  const quietMs = inert ? Math.min(asked, INERT_QUIET_MS) : asked;
   // an alert or sheet that came up during the settle is still animating in: a tap on it then is lost;
   // one going away is animating out, and the app's reaction to its button comes after that
   const hadAlert = hasAlert(seen);

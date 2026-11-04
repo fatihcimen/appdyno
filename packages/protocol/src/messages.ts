@@ -239,7 +239,10 @@ export const AuditResult = z.object({
 });
 export type AuditResult = z.infer<typeof AuditResult>;
 
-/** Requests the host sends, with their params and result schemas (the agent validates its side). */
+/**
+ * Requests the host sends, with their params and result schemas. `RpcClient.call` parses the params, so
+ * a default here is what goes on the wire and an agent has none of its own.
+ */
 export const METHODS = {
   hello: {
     params: z.object({ token: z.string(), protocol: z.number().int() }),
@@ -248,8 +251,8 @@ export const METHODS = {
   ping: { params: z.object({}), result: z.object({ uptimeMs: z.number() }) },
   'tree.get': {
     params: z.object({
-      maxDepth: z.number().int().min(1).max(500).optional(),
-      maxNodes: z.number().int().min(1).max(20_000).optional(),
+      maxDepth: z.number().int().min(1).max(500).default(128),
+      maxNodes: z.number().int().min(1).max(20_000).default(5_000),
     }),
     result: Tree,
   },
@@ -323,7 +326,7 @@ export const METHODS = {
     params: z.object({
       since: z.string().optional(),
       timeoutMs: z.number().int().min(0).max(60_000),
-      minMs: z.number().int().min(0).max(60_000).optional(),
+      minMs: z.number().int().min(0).max(60_000).default(300),
     }),
     result: z.object({
       sig: z.string(),

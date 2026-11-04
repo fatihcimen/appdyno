@@ -80,9 +80,12 @@ export class RpcClient {
     params: ParamsOf<M>,
     opts: { timeoutMs: number },
   ): Promise<{ result: ResultOf<M>; binary?: Buffer }> {
+    const asked = (METHODS[method].params as z.ZodType<object>).safeParse(params);
+    if (!asked.success)
+      throw new DeviceError('INVALID_ARGUMENT', `${method}: ${z.prettifyError(asked.error)}`);
     const raw = await this.callRaw(
       method,
-      { ...(params as object), _deadlineMs: opts.timeoutMs },
+      { ...asked.data, _deadlineMs: opts.timeoutMs },
       opts.timeoutMs,
     );
     const parsed = (METHODS[method].result as z.ZodType).safeParse(raw.result);

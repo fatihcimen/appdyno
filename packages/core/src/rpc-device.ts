@@ -1,5 +1,6 @@
 import {
   DeviceError,
+  Settle,
   type ActParams,
   type ActResult,
   type Hello,
@@ -150,8 +151,7 @@ export abstract class RpcDevice extends DeviceActions {
 
   /** The agent's `act`, for one already in the queue; `extraMs` is what the action itself takes. */
   protected async actNow(action: ActParams, opts: ActOptions, extraMs: number): Promise<ActResult> {
-    const settle = opts.settle === false ? undefined : (opts.settle ?? {});
-    const cap = settle ? (settle.maxMs ?? 3_000) : 0;
+    const settle = opts.settle === false ? undefined : Settle.parse(opts.settle ?? {});
     const { result } = await this.callNow(
       'act',
       {
@@ -160,7 +160,7 @@ export abstract class RpcDevice extends DeviceActions {
         read: opts.read ?? 'none',
         ...(opts.before && { before: opts.before }),
       },
-      TIMEOUTS.action + cap + extraMs,
+      TIMEOUTS.action + (settle?.maxMs ?? 0) + extraMs,
     );
     return result;
   }
@@ -168,9 +168,14 @@ export abstract class RpcDevice extends DeviceActions {
   /** Types into the focused field (or the field at `at`, tapped first); `replace` sets its whole text. */
   async typeText(
     text: string,
-    opts: { at?: Point; replace?: boolean; submit?: boolean } & ActOptions = {},
+    opts: {
+      at?: Point;
+      replace?: boolean;
+      submit?: boolean;
+      focusTimeoutMs?: number;
+    } & ActOptions = {},
   ): Promise<TextResult> {
-    const settle = opts.settle === false ? undefined : (opts.settle ?? {});
+    const settle = opts.settle === false ? undefined : Settle.parse(opts.settle ?? {});
     const { result } = await this.call(
       'text.set',
       {
@@ -178,10 +183,11 @@ export abstract class RpcDevice extends DeviceActions {
         replace: opts.replace ?? false,
         submit: opts.submit ?? false,
         ...(opts.at && { at: opts.at }),
+        ...(opts.focusTimeoutMs !== undefined && { focusTimeoutMs: opts.focusTimeoutMs }),
         ...(settle && { settle }),
         read: opts.read ?? 'none',
       },
-      TIMEOUTS.text + (settle?.maxMs ?? 3_000),
+      TIMEOUTS.text + (settle?.maxMs ?? 0),
     );
     return result;
   }
