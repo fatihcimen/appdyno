@@ -138,10 +138,9 @@ describe('a starting runner', () => {
 });
 
 describe('the kind of device', () => {
-  it('calls a simulator virtual, and a phone not, nor its measures', () => {
+  it('calls a simulator virtual, and a phone not', () => {
     expect(new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951').virtual).toBe(true);
     const phone = new IosPhoneDevice('00001234-0123456789ABCDEF', { profile: '/p' });
     expect(phone.virtual).toBe(false);
-    expect(phone.measure.virtual).toBeUndefined();
   });
 });

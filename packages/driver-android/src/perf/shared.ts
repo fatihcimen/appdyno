@@ -9,8 +9,6 @@ export type PerfDevice = Pick<
   'serial' | 'shell' | 'shellAlongside' | 'shellBuffer' | 'pull' | 'readyToMeasure' | 'ensureAwake'
 >;
 
-export const isVirtual = (d: PerfDevice) => /^emulator-/.test(d.serial);
-
 /** Commands run in the C locale: a localized device writes `0,0`. */
 export const sh = (d: PerfDevice, cmd: string, timeoutMs?: number) =>
   d.shell(`LC_ALL=C ${cmd}`, timeoutMs);

@@ -27,10 +27,10 @@ function phone(until?: string) {
     raw: '3000',
     at: new Date().toISOString(),
   });
+  device.virtual = false;
   Object.defineProperty(device, 'measure', {
     value: {
       ...device.measure,
-      virtual: false,
       buildType: async () => 'release',
       vitals: async () => ({ value: {}, raw: '', at: new Date().toISOString() }),
       launch,

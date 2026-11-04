@@ -126,6 +126,7 @@ export const SCREENS: Record<string, Node[]> = {
 export class FakeDevice extends DeviceActions implements Device {
   readonly platform = 'android' as const;
   readonly platformScreen = androidScreen;
+  virtual = true;
   lastStartWasCold = true;
   hello: Hello = {
     agentVersion: '0.1.0',
@@ -296,7 +297,6 @@ export class FakeDevice extends DeviceActions implements Device {
   get measure() {
     const m = <T>(value: T, raw: string) => ({ value, raw, at: '2026-10-25T00:00:00.000Z' });
     return {
-      virtual: true,
       cpu: async () => {
         this.record('perf.cpu');
         return m(

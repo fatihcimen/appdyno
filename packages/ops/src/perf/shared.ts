@@ -123,8 +123,6 @@ export const unlessUnsupported = async <T>(p: Promise<T>): Promise<T | undefined
     return undefined;
   });
 
-export const virtual = (s: Session) => (s.device.virtual ?? s.device.measure?.virtual) === true;
-
 const probeByDefault = (s: Session) => !!s.device.measure?.attachProbe;
 
 export const deviceInfo = (s: Session): DeviceInfo => ({
@@ -132,7 +130,7 @@ export const deviceInfo = (s: Session): DeviceInfo => ({
   platform: s.device.platform,
   model: s.device.hello?.model ?? 'unknown',
   os: s.device.hello?.osVersion ?? 'unknown',
-  virtual: virtual(s),
+  virtual: s.device.virtual,
 });
 
 /** That this device said it cannot give a measure, and why, for the dashboard. */
@@ -292,7 +290,9 @@ export function perfTools(ctx: ServerContext) {
     return pkg;
   };
   const virtualNote = (s: Session) =>
-    virtual(s) ? ' (virtual device: relative, compare only with the same kind of device)' : '';
+    s.device.virtual
+      ? ' (virtual device: relative, compare only with the same kind of device)'
+      : '';
   const save = async (kind: string, m: Measured<unknown>[], value: unknown) =>
     store(ctx.measurementsDir, kind, value, m.map((x) => `## ${x.at}\n${x.raw}`).join('\n\n'));
   const keep = (

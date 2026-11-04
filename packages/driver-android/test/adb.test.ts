@@ -42,6 +42,12 @@ describe('launching an app', () => {
     });
   });
 
+  it('says an emulator is virtual and a phone is not', () => {
+    const adb = {} as Adb;
+    expect(new AndroidDevice('emulator-5640', adb).virtual).toBe(true);
+    expect(new AndroidDevice('R58M', adb).virtual).toBe(false);
+  });
+
   it('starts it once when the start began alongside the agent', async () => {
     const { d, ran } = device(`${STARTED}Status: ok\n`);
     d.launchAlongside('a.b');

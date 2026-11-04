@@ -19,11 +19,11 @@ function context(
 ) {
   const device = new FakeDevice();
   const m = device.measure;
+  device.virtual = false;
   Object.defineProperty(device, 'measure', {
     value: {
       ...m,
       // a physical device: the host's load, whatever it is right now, does not make its numbers noisy
-      virtual: false,
       buildType: async () => 'release',
       vitals: async () => ({ value: vitals, raw: '', at: new Date().toISOString() }),
       launch: async () => ({

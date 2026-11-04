@@ -12,7 +12,7 @@ import type { ServerContext } from '../context.js';
 import { ScrollOut } from './schemas.js';
 import { swipeLine } from '../gesture-paths.js';
 import { defineOp, ACT, reply } from '../tool.js';
-import { perfTools, App, Probe, Scenario, kb, virtual } from './shared.js';
+import { perfTools, App, Probe, Scenario, kb } from './shared.js';
 import { frameVitals } from './vitals.js';
 
 /** Jank above this share of frames is worth a finding (Android vitals counts a session slow above 25 %). */
@@ -201,7 +201,7 @@ export function perfScrollOp(ctx: ServerContext) {
         {
           id: saved.id,
           raw: saved.txt,
-          virtualDevice: virtual(s),
+          virtualDevice: s.device.virtual,
           ...(relaunched.length && { relaunched: true }),
           rounds,
           ...(jank !== undefined && { jankMedianPercent: jank }),

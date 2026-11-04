@@ -38,10 +38,10 @@ class TimedPhone extends FakeDevice {
 
 function phone(overrides: Partial<MeasureSource> = {}) {
   const device = new TimedPhone();
+  device.virtual = false;
   Object.defineProperty(device, 'measure', {
     value: {
       ...device.measure,
-      virtual: false,
       buildType: async () => 'release',
       vitals: async () => ({ value: {}, raw: '', at: new Date().toISOString() }),
       ...overrides,

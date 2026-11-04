@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { TraceOut } from './schemas.js';
 import { defineOp, ACT, reply } from '../tool.js';
-import { perfTools, App, Dsym, Probe, Scenario, symbolsOf, virtual } from './shared.js';
+import { perfTools, App, Dsym, Probe, Scenario, symbolsOf } from './shared.js';
 
 const CAUSE_WORDS: Record<FrameCause, string> = {
   lock: 'waiting for a monitor lock',
@@ -75,7 +75,7 @@ export function perfTraceOp(ctx: ServerContext) {
             ...noisy(noise),
             ...o.after(saved.txt),
           ].join('\n'),
-          { id: saved.id, raw: saved.txt, virtualDevice: virtual(s), ...o.data, noise },
+          { id: saved.id, raw: saved.txt, virtualDevice: s.device.virtual, ...o.data, noise },
         );
       };
       if (what === 'xct_hitches' || what === 'xct_launch') {
@@ -229,7 +229,7 @@ export function perfTraceOp(ctx: ServerContext) {
         {
           lines: [
             `${v.frames} frames; late by the app ${v.appDeadlineMissed + (v.appResynced ?? 0)} (${v.appJankPercent}%); any jank ${v.janky} (${v.jankyPercent}%: buffer stuffing ${v.bufferStuffing}, compositor ${v.surfaceFlinger})`,
-            ...(virtual(s)
+            ...(s.device.virtual
               ? [
                   "on a virtual device the compositor's jank is the display's prediction error, not the app's: look at the app's share",
                 ]

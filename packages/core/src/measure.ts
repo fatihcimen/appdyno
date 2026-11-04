@@ -276,8 +276,6 @@ export type Symbols = { dsym?: string };
 
 /** What a device can measure: each has what it has, and `ops` names what it lacks. */
 export interface MeasureSource {
-  /** The device says it itself (`Device.virtual`) where it knows without asking the device. */
-  readonly virtual?: boolean;
   /** What takes a recording of seconds here, so a journey does not read it between two steps. */
   readonly slowReads?: readonly Capability[];
   cpu?(app: string, windowMs?: number): Promise<Measured<CpuReading>>;
@@ -350,4 +348,4 @@ export interface MeasureSource {
   ): Promise<Measured<FrameTrace>>;
 }
 
-export type Capability = Exclude<keyof MeasureSource, 'virtual' | 'slowReads'>;
+export type Capability = Exclude<keyof MeasureSource, 'slowReads'>;

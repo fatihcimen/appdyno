@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { LaunchOut } from './schemas.js';
 import { defineOp, DESTRUCTIVE, reply } from '../tool.js';
-import { perfTools, App, Probe, Scenario, deviceInfo, virtual } from './shared.js';
+import { perfTools, App, Probe, Scenario, deviceInfo } from './shared.js';
 import { baselineLines, baselineVerdict } from './baseline.js';
 import { dayLongest, playLine } from './vitals.js';
 
@@ -61,7 +61,7 @@ export function perfLaunchOp(ctx: ServerContext) {
           {
             id: saved.id,
             raw: saved.txt,
-            virtualDevice: virtual(s),
+            virtualDevice: s.device.virtual,
             mode: 'cold' as const,
             samples: withMs.map((totalMs) => ({ totalMs })),
             excessive: false,
@@ -178,7 +178,7 @@ export function perfLaunchOp(ctx: ServerContext) {
         {
           id: saved.id,
           raw: saved.txt,
-          virtualDevice: virtual(s),
+          virtualDevice: s.device.virtual,
           mode,
           samples: samples.map((x) => ({
             ...(x.totalMs !== undefined && { totalMs: x.totalMs }),

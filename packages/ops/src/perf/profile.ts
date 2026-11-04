@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { ProfileOut } from './schemas.js';
 import { defineOp, READ, reply } from '../tool.js';
-import { perfTools, App, Dsym, symbolsOf, virtual } from './shared.js';
+import { perfTools, App, Dsym, symbolsOf } from './shared.js';
 
 /** What an answer holds; the measurement keeps them all, for a diff of two runs. */
 const SHOWN = 15;
@@ -52,7 +52,7 @@ export function perfProfileOp(ctx: ServerContext) {
         {
           id: saved.id,
           raw: saved.txt,
-          virtualDevice: virtual(s),
+          virtualDevice: s.device.virtual,
           samples: m.value.samples,
           top: shortList(m.value.top),
           ...(m.value.appTop && { appTop: shortList(m.value.appTop) }),

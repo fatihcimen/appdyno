@@ -556,7 +556,7 @@ describe('iOS simulators', () => {
     const m = <T>(value: T) => ({ value, raw: 'raw', at: '2026-11-02T00:00:00.000Z' });
     const onDevice = (measure: object) => {
       const device = new FakeDevice();
-      Object.defineProperty(device, 'measure', { value: { virtual: true, ...measure } });
+      Object.defineProperty(device, 'measure', { value: measure });
       return connect({}, device);
     };
 

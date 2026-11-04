@@ -6,7 +6,7 @@ import { holdingCondition } from '../settings.js';
 import { SnapshotOut } from './schemas.js';
 import type { Session } from '../session.js';
 import { defineOp, READ, reply } from '../tool.js';
-import { perfTools, App, Scenario, unlessUnsupported, kb, virtual } from './shared.js';
+import { perfTools, App, Scenario, unlessUnsupported, kb } from './shared.js';
 import { frameVitals, playLine } from './vitals.js';
 
 /** A device's energy in the unit it has it in: a charge, a count of energy, or a score. */
@@ -345,7 +345,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
                   : []),
               ]
             : [
-                virtual(s)
+                s.device.virtual
                   ? 'no frame measure on a simulator without the probe'
                   : 'no frame counter on a phone: perf_scroll and perf_trace record its hitches',
               ]),
@@ -364,7 +364,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
         {
           id: saved.id,
           raw: saved.txt,
-          virtualDevice: virtual(s),
+          virtualDevice: s.device.virtual,
           cpuPercent: cpu.value.percent,
           memoryKb: m.kb,
           memoryKind: m.kind,

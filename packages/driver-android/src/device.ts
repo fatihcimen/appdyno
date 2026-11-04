@@ -92,7 +92,11 @@ export class AndroidDevice extends RpcDevice implements Device {
     this.network = new AndroidNetwork(adb, serial);
     this.web = new AndroidWeb(adb, serial);
     const mirror = new AndroidMirror(adb, serial, this.launcher);
-    this.mirror = serial.startsWith('emulator-') ? new EmulatorMirror(serial, mirror) : mirror;
+    this.mirror = this.virtual ? new EmulatorMirror(serial, mirror) : mirror;
+  }
+
+  get virtual() {
+    return this.serial.startsWith('emulator-');
   }
 
   readonly mirror: Mirror;

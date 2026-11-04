@@ -200,7 +200,7 @@ export interface Device {
   readonly serial: string;
   readonly platform: 'android' | 'ios';
   /** An emulator or simulator: numbers compare only with the same kind of device. */
-  readonly virtual?: boolean;
+  readonly virtual: boolean;
   readonly hello: Hello | undefined;
   /** Whether the last connect started a new agent. */
   lastStartWasCold: boolean;

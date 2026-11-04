@@ -98,9 +98,10 @@ export function inertPoint(t: Tree): Point {
  * failures are typed DeviceErrors. App lifecycle, links and location go through the device's own
  * tool (`ops`). Coordinates are points.
  */
-export class IosDevice extends RpcDevice implements Device {
+export abstract class IosDevice extends RpcDevice implements Device {
   readonly platform = 'ios' as const;
   readonly platformScreen = iosScreen;
+  abstract readonly virtual: boolean;
   protected readonly retrySafe = RETRY_SAFE;
   /** The app the runner reads and acts on (set by launch, openUrl with a bundle, or target). */
   protected targetApp: string | undefined;

@@ -472,11 +472,6 @@ describe('the measures of a device', () => {
       ensureAwake: async () => ({ woke: false, unlocked: false, locked: false }),
     });
 
-  it('says an emulator is virtual and a phone is not', () => {
-    expect(on('emulator-5554', '').virtual).toBe(true);
-    expect(on('R58M', '').virtual).toBe(false);
-  });
-
   it('reaches the device from a measure taken off the object, as the operations do', async () => {
     const { pid } = on('R58M', '4242\n');
     await expect(pid('dev.app')).resolves.toBe(4242);

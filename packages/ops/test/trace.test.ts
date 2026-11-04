@@ -25,8 +25,9 @@ async function traced(
   kept: { kind: string; value: number; source: string }[];
 }> {
   const device = new FakeDevice();
+  device.virtual = false;
   Object.defineProperty(device, 'measure', {
-    value: { ...device.measure, virtual: false, ...measures },
+    value: { ...device.measure, ...measures },
   });
   const measurements = mkdtempSync(join(tmpdir(), 'appdyno-trace-'));
   const ctx = new ServerContext(
