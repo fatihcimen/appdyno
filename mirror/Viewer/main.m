@@ -37,6 +37,9 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   BOOL _behind;
   id<MVSource> _source;
   NSString *_lastSized;
+  NSString *_codec;
+  CGSize _sourceSize;
+  int _turns;
   NSDictionary *_pendingStatus;
 }
 
@@ -153,6 +156,8 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   [source stop];
   [_stats reset];
   _lastSized = nil;
+  _codec = nil;
+  _turns = 0;
 }
 
 - (void)attach:(NSDictionary *)m {
@@ -198,13 +203,22 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 - (void)source:(id)from size:(CGSize)size codec:(NSString *)codec {
   dispatch_async(dispatch_get_main_queue(), ^{
     if (![self isCurrent:from]) return;
-    NSString *sized = [NSString stringWithFormat:@"%.0fx%.0f %@", size.width, size.height, codec];
-    if ([sized isEqual:self->_lastSized]) return;
-    self->_lastSized = sized;
-    self->_stats.size = size;
-    [self->_window setPicture:size];
-    MVEmit(@{@"op": @"first", @"w": @(size.width), @"h": @(size.height), @"codec": codec});
+    self->_sourceSize = size;
+    self->_codec = codec;
+    [self sayShape];
   });
+}
+
+/// What is told of the picture is its shape stood up, whatever kind of source turned it.
+- (void)sayShape {
+  CGSize size = _turns % 2 ? CGSizeMake(_sourceSize.height, _sourceSize.width) : _sourceSize;
+  NSString *sized = [NSString stringWithFormat:@"%.0fx%.0f %@", size.width, size.height, _codec];
+  if (!_codec || [sized isEqual:_lastSized]) return;
+  _lastSized = sized;
+  _stats.size = size;
+  [_window setTurns:_turns];
+  [_window setPicture:size];
+  MVEmit(@{@"op": @"first", @"w": @(size.width), @"h": @(size.height), @"codec": _codec});
 }
 
 - (void)source:(id)from surface:(IOSurfaceRef)surface {
@@ -229,7 +243,9 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 
 - (void)source:(id)from turns:(int)turns {
   dispatch_async(dispatch_get_main_queue(), ^{
-    if ([self isCurrent:from]) [self->_window setTurns:turns];
+    if (![self isCurrent:from]) return;
+    self->_turns = turns;
+    [self sayShape];
   });
 }
 

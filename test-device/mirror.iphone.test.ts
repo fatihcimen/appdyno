@@ -155,6 +155,36 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     );
   }, 120_000);
 
+  it('a turned phone stands its picture up, and a tap lands on what it shows', async () => {
+    await device.setOrientation(0);
+    show('list');
+    await new Promise((r) => setTimeout(r, 2_000));
+    // what the runner reads is the app it last launched, and this is a new process of it
+    await device.launch(FIXTURE);
+    await until('the list', async () =>
+      (await read()).list.some((e: { id?: string }) => e.id === 'add_button'),
+    );
+    const { w, h } = status().picture!;
+    await device.setOrientation(1);
+    await until('its side', () => status().picture?.w === h && status().picture?.h === w);
+    // a tap during the turn's animation goes nowhere
+    await new Promise((r) => setTimeout(r, 2_500));
+    const screen = await read();
+    expect(screen.window.w).toBeGreaterThan(screen.window.h);
+    const add = screen.list.find((e: { id?: string }) => e.id === 'add_button');
+    const [x, y] = [add.x / screen.window.w, add.y / screen.window.h];
+    if (headless) {
+      session.send({ kind: 'touch', p: 0, x, y });
+      await new Promise((r) => setTimeout(r, 80));
+      session.send({ kind: 'touch', p: 2, x, y });
+    } else session.poke(x, y);
+    await until('a count', async () =>
+      (await read()).list.some((e: { label: string }) => e.label === 'In basket: 1'),
+    );
+    await device.setOrientation(0);
+    await until('upright', () => status().picture?.w === w && status().picture?.h === h);
+  }, 120_000);
+
   it('a viewer killed comes back, with a new key for its picture', async () => {
     const pid = viewerProcess!.pid!;
     process.kill(pid, 'SIGKILL');

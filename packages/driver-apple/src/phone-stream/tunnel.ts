@@ -24,6 +24,8 @@ export class PhoneRefusal extends Error {
 
 const LOCKDOWN_PORT = 62_078;
 const PROXY_SERVICE = 'com.apple.internal.devicecompute.CoreDeviceProxy';
+const SPRINGBOARD_SERVICE = 'com.apple.springboardservices';
+const ORIENTATION_REQUEST = { command: 'getInterfaceOrientation' };
 const LABEL = 'appdyno';
 const ANSWER_MS = 8_000;
 const TUNNEL_MAGIC = 'CDTunnel';
@@ -103,7 +105,10 @@ class Lockdown {
     if (!this.waiting || this.buffer.length < 4) return;
     const n = this.buffer.readUInt32BE(0);
     if (this.buffer.length < 4 + n) return;
-    const m = parsePlist(this.buffer.toString('utf8', 4, 4 + n)) as Record<string, unknown>;
+    const body = this.buffer.subarray(4, 4 + n);
+    const m = (
+      body.toString('latin1', 0, 6) === 'bplist' ? readBplist(body) : parsePlist(body.toString())
+    ) as Record<string, unknown>;
     this.buffer = this.buffer.subarray(4 + n);
     this.waiting(m);
   }
@@ -141,7 +146,7 @@ class Lockdown {
 }
 
 /** The service's port on the phone: one session, one question, and the connection closed. */
-async function startProxyService(udid: string, record: PairRecord) {
+async function startService(udid: string, record: PairRecord, name: string) {
   const { socket } = await connectPort(udid, LOCKDOWN_PORT);
   const plain = new Lockdown(socket);
   try {
@@ -155,7 +160,7 @@ async function startProxyService(udid: string, record: PairRecord) {
     plain.release();
     const secure = session.EnableSessionSSL ? await withTls(socket, record) : socket;
     const asking = new Lockdown(secure);
-    const service = await asking.ask({ Request: 'StartService', Service: PROXY_SERVICE });
+    const service = await asking.ask({ Request: 'StartService', Service: name });
     secure.destroy();
     return { port: Number(service.Port), secure: service.EnableServiceSSL === true };
   } finally {
@@ -198,11 +203,24 @@ export function tunnelRequest(): Buffer {
   return Buffer.concat([head, body]);
 }
 
+/** Asks SpringBoard how the app in front is drawn; a closed connection is a refusal the caller takes as none. */
+export async function orientationReader(udid: string) {
+  const record = await readPairRecord(udid);
+  const service = await startService(udid, record, SPRINGBOARD_SERVICE);
+  const { socket } = await connectPort(udid, service.port);
+  const stream = service.secure ? await withTls(socket, record) : socket;
+  const lockdown = new Lockdown(stream);
+  return {
+    read: async () => Number((await lockdown.ask(ORIENTATION_REQUEST)).interfaceOrientation),
+    close: () => stream.destroy(),
+  };
+}
+
 export type Tunnel = { stack: IpStack; rsdPort: number };
 
 export async function openTunnel(udid: string): Promise<Tunnel> {
   const record = await readPairRecord(udid);
-  const service = await startProxyService(udid, record);
+  const service = await startService(udid, record, PROXY_SERVICE);
   const { socket } = await connectPort(udid, service.port);
   const stream = service.secure ? await withTls(socket, record) : socket;
   stream.write(tunnelRequest());

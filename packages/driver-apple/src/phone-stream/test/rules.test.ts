@@ -61,6 +61,9 @@ describe('what this folder must never do', () => {
       }
     }
     expect([...asked].sort()).toEqual(['QueryType', 'StartService', 'StartSession']);
+    // and the one thing it asks SpringBoard
+    const springboard = sources().flatMap((s) => [...s.text.matchAll(/command: '(\w+)'/g)]);
+    expect(springboard.map((m) => m[1])).toEqual(['getInterfaceOrientation']);
     const usbmuxd = sources().flatMap((s) =>
       [...s.text.matchAll(/MessageType: '(\w+)'/g)].map((m) => m[1]),
     );

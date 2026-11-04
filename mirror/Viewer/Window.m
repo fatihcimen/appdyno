@@ -69,6 +69,7 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
     _plain.autoresizingMask = kCALayerNotSizable;
     _plain.contentsGravity = kCAGravityResizeAspect;
     _video = (AVSampleBufferDisplayLayer *)[self fill:[AVSampleBufferDisplayLayer layer]];
+    _video.autoresizingMask = kCALayerNotSizable;
     _video.videoGravity = AVLayerVideoGravityResizeAspect;
     _dim = [self fill:[CALayer layer]];
     _dim.backgroundColor = [NSColor colorWithWhite:0 alpha:0.6].CGColor;
@@ -131,6 +132,7 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
   [CATransaction begin];
   [CATransaction setDisableActions:YES];
   MVLayoutTurned(_plain, _view.bounds.size, _turns);
+  MVLayoutTurned(_video, _view.bounds.size, _turns);
   [CATransaction commit];
 }
 

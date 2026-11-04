@@ -440,4 +440,11 @@ Thirty minutes of a picture that keeps moving, by `--soak 30`, with the viewer's
 | Android 14 emulator, gRPC `MMAP`     | 49.2 to 49.3 | 45, 45      | 399                     | 86              |
 | iPhone 17 Pro simulator, iOS 27.0    | 26.4 to 15.5 | 45, 45      | 606                     | 42              |
 
+An iPhone 13 Pro Max, iOS 27.2, mode 7, on a screen of noise, 167 Mbit/s at 60 frames/s, with the viewer's memory and what the stream counted:
+
+| minutes, load             | RSS, MB      | packets lost         | pictures held          | freezes                       | stop           |
+| ------------------------- | ------------ | -------------------- | ---------------------- | ----------------------------- | -------------- |
+| 15, load 6 to 8           | 20.9 to 17.3 | 1,504 of 16,027,627  | 129 of 54,715          | 1, 1.1 s, in its first minute | the phone says |
+| 30, load 361 falling to 8 | 17.3 to 15.8 | 80,398 of 32,038,280 | 9,425 of about 108,000 | not yet counted               | the phone says |
+
 A simulator's turns are read four times a second by the helper that reads its screen, which a mirror starts if it is not running: 0.3 % of a core and 98 MB resident on a still screen at load 94.

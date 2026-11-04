@@ -1,6 +1,6 @@
 import type { InputEvent } from '@appdyno/core';
 import type { Key } from '@appdyno/protocol';
-import { usageOf } from '../mirror-sim.js';
+import { onSurface, usageOf } from '../mirror-sim.js';
 import { HID_KEYS } from '../simtouch.js';
 import type { RemoteXpc } from './remotexpc.js';
 
@@ -39,6 +39,9 @@ export function touchReport(state: number, x: number, y: number, now: bigint): B
 }
 
 export class PhoneHid {
+  /** Quarter turns of the picture from the screen: a touch is turned back on its way down. */
+  turns = 0;
+
   constructor(
     private readonly indigo: RemoteXpc,
     private readonly universal: RemoteXpc,
@@ -46,7 +49,8 @@ export class PhoneHid {
       new Promise((r) => setTimeout(r, ms)),
   ) {}
 
-  private touch(state: number, x: number, y: number) {
+  private touch(state: number, fx: number, fy: number) {
+    const { x, y } = onSurface(fx, fy, this.turns);
     this.universal.send(
       {
         featureIdentifier: UNIVERSAL_FEATURE,

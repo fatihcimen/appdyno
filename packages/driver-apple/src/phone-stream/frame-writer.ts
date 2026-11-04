@@ -23,6 +23,7 @@ export class FrameWriter {
   private socket: Socket | undefined;
   private waiting = 0;
   private info: Record<string, unknown> | undefined;
+  private turns: Record<string, unknown> | undefined;
   private opening: NodeJS.Timeout | undefined;
   dropped = 0;
 
@@ -59,6 +60,7 @@ export class FrameWriter {
     this.socket = socket;
     this.waiting = 0;
     if (this.info) this.writeJson(this.info);
+    if (this.turns) this.writeJson(this.turns);
     this.needKey();
   }
 
@@ -80,6 +82,12 @@ export class FrameWriter {
   setInfo(params: Record<string, unknown>) {
     this.info = { method: 'stream.info', params };
     this.writeJson(this.info);
+  }
+
+  /** How to stand the picture up, now and for a new viewer. */
+  setTurns(turns: number) {
+    this.turns = { method: 'stream.turns', params: { turns } };
+    this.writeJson(this.turns);
   }
 
   /** Since the stream began, for the viewer's stats. */

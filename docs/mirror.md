@@ -80,8 +80,10 @@ so a start stops one that was left over; any other client's reads as `taken-over
 
 A phone turned dark by its side button keeps its stream at a picture a second, and the mirror says `waiting asleep`
 while it stays: a new stream would light the screen and undo what a person did. It comes back with the pictures. A
-press of `home` on a dark phone lights its lock screen, and a second opens a phone with no passcode; a swipe sent to
+press of `home` on a dark phone lights its lock screen, and a second opens a phone with no passcode. A click on the window is the one thing that presses it, on a dark phone only. Input is opened anew after a dark screen, as a finger sent on a connection from before it goes nowhere; a swipe sent to
 a phone does not open a lock screen.
+
+A phone that turns keeps sending a picture of the same shape with the app on its side. SpringBoard says how the app in front is drawn, four times a second, over a lockdown service of its own, so the window stands the picture up and a touch is turned back on its way down.
 
 ## The keyboard
 
@@ -123,12 +125,10 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 
 ## Stated limits
 
-- An iPhone is experimental: it rests on undocumented services, and the two lines below are open.
-- An iPhone that turns stays sideways: the picture keeps its portrait shape while the app goes landscape, and a touch lands where the portrait has it, so not on what a turned app shows.
-- A person's click on a window fed by a pipe has been run with no phone behind it: all of it to the phone itself is still to run.
+- An iPhone is experimental: it rests on undocumented services, which may change.
 - An iPhone's lock screen: a swipe sent to it does not open it, so with nothing on the window to press `home`, a phone turned dark stays at its lock screen until a person opens it by hand.
 - An iPhone at `--quality standard` sends a picture of 1296x2816, larger than its screen, which is not yet cropped.
-- An iPhone on the heaviest picture: a stream of 167 Mbit/s lost 0.25 % of its packets over 30 minutes, part of them at load 361, and each loss freezes the picture until a key.
+- An iPhone on the heaviest picture, 167 Mbit/s, under load: 0.25 % of its packets lost over 30 minutes that began at load 361, each loss freezing the picture until a key. At load 8 over 15 minutes it lost 0.01 %, once, as the picture went heavy, for a freeze of 1.1 s.
 - On a window a person has not clicked, keys go nowhere: typing into a window needs a hand run, as a test's window never holds the keyboard.
 - A simulator's fold: no control that folds one was found, so a new surface at a fold is untested.
 - The window does not yet show a secure Android window's content, as no shell can have it from Android 12: it is black, with the status bar still there. Not run on Android 12 and 13, or on 10, for which no image is here.

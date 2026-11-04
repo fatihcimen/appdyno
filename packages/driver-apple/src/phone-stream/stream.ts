@@ -21,8 +21,9 @@ import {
   readServices,
   type ServiceList,
 } from './services.js';
+import { turnsOf } from '../mirror-sim.js';
 import { audioOffer, thisMac, videoOffer, type StreamMode } from './stream-offer.js';
-import { openTunnel, PhoneRefusal } from './tunnel.js';
+import { openTunnel, orientationReader, PhoneRefusal } from './tunnel.js';
 import { XpcInt64, XpcUuid, type Decoded, type DecodedDict } from './xpc-codec.js';
 
 const FEATURE = 'com.apple.coredevice.feature.';
@@ -35,6 +36,7 @@ const STREAM_TIMEOUT_S = 30n;
 const SUPPORTED_FEATURES = 140n;
 const RATE_CONTROL_MS = 50;
 const LAG_RESOLUTION_MS = 5;
+const TURNS_CHECK_MS = 250;
 const ALIVE_MS = 1_000;
 const WATCH_MS = 2_000;
 /** A dark phone keeps its stream at a picture a second, and a lit one still sends about twenty. */
@@ -89,6 +91,7 @@ export interface StreamSink {
   picture(p: Picture): void;
   state(s: DeviceState): void;
   counters(c: Record<string, number>): void;
+  turns(turns: number): void;
   lost(why: string, need?: Need): void;
 }
 
@@ -142,6 +145,8 @@ export class PhoneStream {
   private stack: IpStack | undefined;
   private stopped = false;
   private readonly dark = new DarkWatch();
+  private turns = 0;
+  private closeOrientation: (() => void) | undefined;
   private videoPort = 0;
   private audioPort = 0;
   private receiver: RtpReceiver | undefined;
@@ -294,9 +299,40 @@ export class PhoneStream {
       lag.reset();
       const changed = this.dark.tick(receiver.stats.pictures);
       if (changed) this.sink.state(changed);
+      if (changed === 'ok') this.dropInput();
     });
     every(WATCH_MS, () => void this.watchServer());
+    void this.watchTurns();
     this.toPhone(rtcp.alive(receiver.sender, receiver.highestSeq));
+  }
+
+  /** A turned phone sends the same shape, with the app on its side: nothing in the stream says so. */
+  private async watchTurns() {
+    const reader = await orientationReader(this.udid).catch(() => undefined);
+    if (!reader || this.stopped) {
+      reader?.close();
+      return;
+    }
+    this.closeOrientation = reader.close;
+    let reading = false;
+    this.timers.push(
+      setInterval(() => {
+        if (reading) return;
+        reading = true;
+        reader
+          .read()
+          .then((orientation) => {
+            const turns = turnsOf(orientation);
+            if (turns === undefined || turns === this.turns) return;
+            this.turns = turns;
+            if (this.hid) this.hid.turns = turns;
+            this.sink.turns(turns);
+          })
+          // an upright window, and a touch that may miss, is all that is lost
+          .catch(() => undefined)
+          .finally(() => (reading = false));
+      }, TURNS_CHECK_MS),
+    );
   }
 
   /** The phone can end a stream by itself, for a call or the camera: a new start then says why. */
@@ -332,6 +368,17 @@ export class PhoneStream {
     this.receiver?.needKey();
   }
 
+  /** A finger sent on a connection from before a dark screen goes nowhere, with no word: the next input opens anew. */
+  private dropInput() {
+    this.inputs = this.inputs
+      .catch(() => undefined)
+      .then(() => {
+        this.indigo?.close();
+        this.universal?.close();
+        this.hid = undefined;
+      });
+  }
+
   /** The services for input are opened on the first input: a window only watched needs none. */
   private async inputService() {
     if (this.hid) return this.hid;
@@ -343,6 +390,7 @@ export class PhoneStream {
     this.indigo = RemoteXpc.start(await stack.connect(indigo));
     this.universal = RemoteXpc.start(await stack.connect(universal));
     this.hid = new PhoneHid(this.indigo, this.universal);
+    this.hid.turns = this.turns;
     return this.hid;
   }
 
@@ -375,6 +423,7 @@ export class PhoneStream {
   private release() {
     for (const t of this.timers) clearInterval(t);
     this.timers = [];
+    this.closeOrientation?.();
     this.indigo?.close();
     this.universal?.close();
     this.display?.close();

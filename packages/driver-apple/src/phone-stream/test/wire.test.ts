@@ -358,6 +358,18 @@ describe('a finger, as a report', () => {
     expect(touchReport(2, -1, 0, 0n).readUInt16LE(4)).toBe(0);
   });
 
+  it('a touch on a stood-up picture is turned back to where the phone has that point', async () => {
+    const universal = { send: vi.fn() };
+    const hid = new PhoneHid({ send: vi.fn() } as never, universal as never, async () => undefined);
+    hid.turns = 1;
+    await hid.send({ kind: 'touch', p: 0, x: 0.25, y: 0.5 });
+    const { _0: report } = (
+      universal.send.mock.calls[0]![0] as { payload: { send: { _0: Buffer } } }
+    ).payload.send;
+    expect(report.readUInt16LE(4)).toBe(32_768);
+    expect(report.readUInt16LE(6)).toBe(16_384);
+  });
+
   it('a touch goes to one service, a button and a key to the other', async () => {
     const indigo = { send: vi.fn() };
     const universal = { send: vi.fn() };

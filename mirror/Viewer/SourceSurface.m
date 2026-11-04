@@ -140,7 +140,7 @@ enum { kBooted = 3 };
   size_t w = IOSurfaceGetWidth(s), h = IOSurfaceGetHeight(s);
   id<MVSink> sink = _sink;
   [sink source:self turns:_turns];
-  [sink source:self size:_turns % 2 ? CGSizeMake(h, w) : CGSizeMake(w, h) codec:@"surface"];
+  [sink source:self size:CGSizeMake(w, h) codec:@"surface"];
 }
 
 - (void)setTurns:(int)turns {

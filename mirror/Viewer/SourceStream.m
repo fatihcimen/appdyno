@@ -350,6 +350,7 @@ static NSString *askAdb(int fd, NSString *request) {
     [sink source:self size:CGSizeMake([info[@"w"] doubleValue], [info[@"h"] doubleValue]) codec:_decoder.hevc ? @"hevc" : @"h264"];
   }
   if ([m[@"method"] isEqual:@"stream.counters"]) sink.stats.counters = m[@"params"];
+  if ([m[@"method"] isEqual:@"stream.turns"]) [sink source:self turns:[m[@"params"][@"turns"] intValue] & 3];
   if ([m[@"method"] isEqual:@"stream.end"]) {
     [sink source:self lost:[NSString stringWithFormat:@"%@", m[@"params"][@"why"]] fatal:YES];
     return YES;
