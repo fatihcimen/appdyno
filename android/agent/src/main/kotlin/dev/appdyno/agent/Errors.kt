@@ -58,3 +58,11 @@ fun errorJson(id: Int, f: AgentFailure): String {
     val err = JSONObject().put("code", rpcCode(f.code)).put("message", f.message ?: f.code).put("data", data)
     return JSONObject().put("jsonrpc", "2.0").put("id", id).put("error", err).toString()
 }
+
+/** Constant-time comparison of the launch token. */
+fun sameToken(given: String, token: String): Boolean {
+    if (given.length != token.length) return false
+    var diff = 0
+    for (i in given.indices) diff = diff or (given[i].code xor token[i].code)
+    return diff == 0
+}
