@@ -1,10 +1,34 @@
-import type { Measured } from '@appdyno/core';
+import type { FrameCause, Measured, SlowFrameCauses } from '@appdyno/core';
 import type { Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { TraceOut } from './schemas.js';
 import { defineOp, ACT, reply } from '../tool.js';
 import { perfTools, App, Probe, Scenario, virtual } from './shared.js';
+
+const CAUSE_WORDS: Record<FrameCause, string> = {
+  lock: 'waiting for a monitor lock',
+  binder: 'in binder calls',
+  gc: 'waiting for the garbage collector',
+  busy: 'at work on the main thread',
+  starved: 'waiting for a CPU',
+  io: 'blocked in the kernel, as on disk',
+  sleeping: 'asleep, with nothing named holding it',
+};
+
+/** Why the slow frames were slow, or that the trace cannot say: never a guess. */
+const causeLines = (c: SlowFrameCauses | undefined) => {
+  if (!c?.slowFrames) return [];
+  const named = (x: SlowFrameCauses['causes'][number]) =>
+    `${CAUSE_WORDS[x.cause]}, ${x.msPerFrame} ms a frame (${x.share} %)${x.detail ? `: ${x.detail}` : ''}`;
+  const [first, ...rest] = c.causes;
+  return [
+    c.top && first
+      ? `why the ${c.slowFrames} slow frames were slow: ${named(first)}`
+      : `the ${c.slowFrames} slow frames are unexplained: no cause holds the main thread long enough to name`,
+    ...rest.slice(0, 3).map((x) => `then ${named(x)}`),
+  ];
+};
 
 export function perfTraceOp(ctx: ServerContext) {
   const { measure, appOf, virtualNote, save, keep, noisy, withProbe, scroller } = perfTools(ctx);
@@ -206,6 +230,7 @@ export function perfTraceOp(ctx: ServerContext) {
                   `overrun p95 ${v.stats.overrunP95Ms} ms, worst ${v.stats.overrunWorstMs} ms; CPU p95 ${v.stats.cpuP95Ms} ms`,
                 ]
               : []),
+            ...causeLines(v.causes),
           ],
           after: (raw) => [
             ...(v.tracePath ? [`trace (perf_query): ${v.tracePath}`] : []),
@@ -217,6 +242,10 @@ export function perfTraceOp(ctx: ServerContext) {
             appDeadlineMissed: v.appDeadlineMissed,
             appJankPercent: v.appJankPercent,
             jankyPercent: v.jankyPercent,
+            ...(v.causes && {
+              slowFrames: v.causes.slowFrames,
+              ...(v.causes.top && { slowBecause: v.causes.top }),
+            }),
             p50Ms: v.p50Ms,
             p95Ms: v.p95Ms,
             worstMs: v.worstMs,

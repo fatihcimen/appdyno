@@ -123,6 +123,23 @@ about 230 ms, because the system's own start work runs alongside it.
 
 Kept traces and runs stay on this machine until removed; nothing prunes them.
 
+## Why a slow frame was slow
+
+On Android, `perf_trace` records what each frame's main thread did and answers for the frames that missed their deadline (`android_frame_stats`, `overrun` over 0): how long a frame it spent waiting for a monitor (`android_monitor_contention`), in binder calls (`android_binder_txns`), waiting for the collector (`GC: Wait For Completion`), and from `thread_state` at work, waiting for a CPU, blocked in the kernel or asleep with nothing named holding it. A wait is also a sleep, so it is taken out of the sleep. One is named only at 10 ms a frame or more and 40 % of the time or more; otherwise the frames are unexplained, which is said, not guessed at. The window is the frame's `doFrame`, so a stall before it began, or on the render thread, reads as unexplained.
+
+Each frame given a known 100 ms on the fixture, by `test-device/frame-cause.test.ts`, on the Xiaomi, Android 16, host load 19-22 (the phone's own trace):
+
+| known cost in each frame                      | named                                     | read                   |
+| --------------------------------------------- | ----------------------------------------- | ---------------------- |
+| a monitor another thread holds for 100 ms     | a monitor lock, the holder and its method | 91.6 ms a frame, 96 %  |
+| a synchronous call to a process taking 100 ms | binder calls, to that process             | 102.3 ms a frame, 97 % |
+| allocating for 100 ms                         | the garbage collector                     | 93.9 ms a frame, 84 %  |
+| a loop of 100 ms                              | at work on the main thread                | 101 ms a frame, 99 %   |
+| a sleep of 40 ms                              | asleep, with nothing named holding it     | 40.4 ms a frame, 94 %  |
+| none                                          | nothing: no frame missed                  |                        |
+
+A first version of the binder case spent 100 ms in a framework call, and the answer named work on the main thread: 89 ms was the client's own, 14 ms the binder call. So a framework call that is slow in the app's process is named as work, which is what it is.
+
 ## A journey
 
 `appdyno test <flow> --measure` or `flow` `run` with `iterations`. A first run is left out, as a measured launch leaves out its warm-up, and the iterations (5 by default: the gate calls nothing under 5 samples a side) make one kept run of the scenario `journey-<file>`:

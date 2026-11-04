@@ -113,6 +113,8 @@ export const TraceOut = z.object({
   appDeadlineMissed: z.number().optional(),
   appJankPercent: z.number().optional(),
   jankyPercent: z.number().optional(),
+  slowFrames: z.number().optional(),
+  slowBecause: z.string().optional(),
   p50Ms: z.number().optional(),
   p95Ms: z.number().optional(),
   worstMs: z.number(),

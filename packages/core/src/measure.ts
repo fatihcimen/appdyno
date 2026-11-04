@@ -96,6 +96,23 @@ export type DeviceVitals = {
   batteryTempC?: number;
 };
 
+/** Where a frame's main thread went: what it waited for, or that it was at work. */
+export type FrameCause = 'lock' | 'binder' | 'gc' | 'busy' | 'starved' | 'io' | 'sleeping';
+
+/** Why the frames that missed did, longest first; `top` only where one clears a floor, else it is unexplained. */
+export type SlowFrameCauses = {
+  slowFrames: number;
+  causes: {
+    cause: FrameCause;
+    msPerFrame: number;
+    /** Percent of the main thread's time in those frames. */
+    share: number;
+    frames: number;
+    detail?: string;
+  }[];
+  top?: FrameCause;
+};
+
 export type FrameTimeline = {
   frames: number;
   /** Frames with any jank type (on an emulator nearly all: its display's prediction errors). */
@@ -115,6 +132,8 @@ export type FrameTimeline = {
   worstMs: number;
   /** `android_frame_stats`, where the trace has doFrame and DrawFrame slices. */
   stats?: { frames: number; overrunP95Ms: number; overrunWorstMs: number; cpuP95Ms: number };
+  /** Why the frames that missed did, where the trace can say. */
+  causes?: SlowFrameCauses;
   /** The kept trace, for perf_query. */
   tracePath?: string;
 };

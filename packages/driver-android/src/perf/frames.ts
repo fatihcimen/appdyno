@@ -9,6 +9,7 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg } from '../adb.js';
 import { traceProcessor } from '../tools.js';
+import { frameCauseSql, parseFrameCauses } from './frame-cause.js';
 import {
   parseFrameStats,
   parseFramestats,
@@ -115,9 +116,10 @@ export async function frameTimeline(
     pkg,
     'frames',
     [
-      'buffers { size_kb: 32768 fill_policy: RING_BUFFER }',
+      'buffers { size_kb: 65536 fill_policy: RING_BUFFER }',
       'data_sources { config { name: "android.surfaceflinger.frametimeline" } }',
-      `data_sources { config { name: "linux.ftrace" ftrace_config { ${NAME_NEW_PROCESSES} atrace_categories: "view" atrace_categories: "gfx" atrace_apps: "${pkg}" } } }`,
+      // what a frame waited for: a monitor and the collector (dalvik), a binder call, and the main thread's state
+      `data_sources { config { name: "linux.ftrace" ftrace_config { ${NAME_NEW_PROCESSES} ftrace_events: "sched/sched_switch" ftrace_events: "sched/sched_waking" ftrace_events: "binder/binder_transaction" ftrace_events: "binder/binder_transaction_received" atrace_categories: "view" atrace_categories: "gfx" atrace_categories: "dalvik" atrace_categories: "binder_driver" atrace_apps: "${pkg}" } } }`,
       PROCESS_STATS,
       `duration_ms: ${ms}`,
     ],
@@ -128,8 +130,14 @@ export async function frameTimeline(
     `SELECT a.ts, a.dur, a.jank_type FROM actual_frame_timeline_slice a JOIN process p USING (upid) WHERE p.name = '${pkg}' ORDER BY a.ts;`,
   );
   const stats = parseAndroidFrameStats(await queryFile(file, frameStatsSql(pkg)));
+  const causes = parseFrameCauses(await queryFile(file, frameCauseSql(pkg)));
   return {
-    value: { ...parseFrameTimelineCsv(raw), ...(stats && { stats }), tracePath: file },
+    value: {
+      ...parseFrameTimelineCsv(raw),
+      ...(stats && { stats }),
+      ...(causes && { causes }),
+      tracePath: file,
+    },
     raw,
     at: at(),
   };
