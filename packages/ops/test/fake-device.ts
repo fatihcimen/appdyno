@@ -290,6 +290,9 @@ export class FakeDevice extends DeviceActions implements Device {
       data: Buffer.from([1, 2, 3]),
     };
   }
+  async clearLocation() {
+    this.record('clearLocation');
+  }
   async openView(view: SystemView) {
     this.record('openView', view);
   }

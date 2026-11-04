@@ -4,7 +4,7 @@ import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { DeviceOut, DevicesOut, ActionOut, DoneOut } from './schemas.js';
 import { Read } from './step-schemas.js';
-import { ACT, defineOp, READ, reply } from './tool.js';
+import { ACT, defineOp, READ, reply, ToolError } from './tool.js';
 
 /** In the order of the device's own rotations, a quarter turn each. */
 const ROTATIONS = ['portrait', 'landscape_left', 'upside_down', 'landscape_right'] as const;
@@ -121,17 +121,24 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
     defineOp({
       name: 'set_location',
       title: 'Set location',
-      description: 'Fix the GPS position.',
+      description: 'Fix the GPS position; clear: true ends it.',
       input: z
         .object({
-          lat: z.number().min(-90).max(90),
-          lon: z.number().min(-180).max(180),
+          lat: z.number().min(-90).max(90).optional(),
+          lon: z.number().min(-180).max(180).optional(),
+          clear: z.boolean().optional(),
         })
         .strict(),
       output: DoneOut,
       annotations: ACT,
-      run: async ({ lat, lon }) => {
+      run: async ({ lat, lon, clear }) => {
         const s = await ctx.session();
+        if (clear) {
+          await s.device.clearLocation();
+          return reply('the location is the real one', { done: 'the location is the real one' });
+        }
+        if (lat === undefined || lon === undefined)
+          throw new ToolError('give lat and lon, or clear: true', 'INVALID_ARGUMENT');
         await s.device.setLocation(lat, lon);
         const done = `location: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
         return reply(done, { done });

@@ -781,6 +781,14 @@ describe('gestures, keys, clipboard', () => {
     expect(usual[1]!.t).toBe(150);
   });
 
+  it('ends a fixed location, and wants a position or that', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    expect((await call('set_location', { clear: true })).text).toContain('real one');
+    expect(d.calls.some((c) => c.name === 'clearLocation')).toBe(true);
+    expect((await call('set_location', { lat: 1 })).error).toBe(true);
+  });
+
   it('reads the clipboard and keeps a secret off it', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d, { policy: { secrets: ['hunter2'] } });

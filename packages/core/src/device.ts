@@ -320,6 +320,8 @@ export interface Device {
   launchAlongside(pkg: string): void;
   terminate(pkg: string): Promise<void>;
   setLocation(lat: number, lon: number): Promise<void>;
+  /** The device goes back to its real position. */
+  clearLocation(): Promise<void>;
   /** Up now: a simulator starts its agent only for what needs it, and what is read goes another way once it is. */
   readonly agentUp: boolean;
   stopAgent(): Promise<void>;

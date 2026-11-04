@@ -100,6 +100,7 @@ export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
       await ctl.launch(b, url);
     },
     setLocation: (lat, lon) => ctl.setLocation(lat, lon),
+    clearLocation: () => ctl.clearLocation(),
     linkPrompt: false,
     settingsLinks: PHONE_LINKS,
     openSettings: async (link) => {
@@ -217,11 +218,6 @@ export class IosPhoneDevice extends IosDevice {
   async inFront(bundle: string) {
     await this.launch(assertBundle(bundle));
     await this.tree();
-  }
-
-  /** Ends the phone's simulated position (setLocation's). */
-  async clearLocation() {
-    await this.ctl.clearLocation();
   }
 
   /** Our runner on the phone: installed when the phone has another build under the profile's id. */

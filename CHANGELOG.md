@@ -10,6 +10,7 @@
 - `appdyno perf reference`, `perf_compare` `action: reference`: the other side of a function or phase diff, taken on the baseline's build and kept beside the baseline, as only one build is installed once a regression is there.
 - `appdyno perf comment --out file`: the gate's newest answers as Markdown in a file, with no device. Nothing is posted: `docs/perf-gate.yml` is a job to copy, which posts the file with the repository's own token.
 - The gate's comparisons keep a modelled number and one timed through the host marked, in every format.
+- `set_location` `clear: true` ends a fixed position, on every kind of device.
 - `gesture` `drag` takes `holdMs`: a press before it moves, which lifts a list row or an icon.
 - `device_setting` takes `increase_contrast` and `reduce_transparency`, read back and put back at the end. On Android the first is high contrast text, and the second refuses: it has no such switch.
 - `set_orientation` takes `landscape_left`, `landscape_right` and `upside_down`, where `landscape` was. An iPhone with Face ID does not turn upside down: the answer says no change was seen.

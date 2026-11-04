@@ -84,6 +84,7 @@ export type IosDeviceOps = {
   terminate(bundle: string): Promise<void>;
   openUrl(url: string, bundle?: string): Promise<void>;
   setLocation(lat: number, lon: number): Promise<void>;
+  clearLocation(): Promise<void>;
   /** A link to an app first asks "Open in …?" (the simulator does, a link given to the app does not). */
   linkPrompt: boolean;
   /** The device, for messages. */
@@ -387,6 +388,10 @@ export abstract class IosDevice extends RpcDevice implements Device {
   async setLocation(lat: number, lon: number) {
     assertLatLon(lat, lon);
     await this.queue.run(() => this.ops.setLocation(lat, lon));
+  }
+
+  clearLocation() {
+    return this.queue.run(() => this.ops.clearLocation());
   }
 
   /** Stops the runner (its xcodebuild ends). */

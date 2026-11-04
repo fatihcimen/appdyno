@@ -46,6 +46,9 @@ export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
     setLocation: async (lat, lon) => {
       await simctl.setLocation(udid, lat, lon);
     },
+    clearLocation: async () => {
+      await simctl.exec(['location', udid, 'clear']);
+    },
     linkPrompt: true,
     settingsLinks: SIMULATOR_LINKS,
     openSettings: async (link) => {

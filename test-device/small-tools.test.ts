@@ -34,6 +34,13 @@ describe.skipIf(!ANDROID)('small tools on an emulator', () => {
     o.ctx.close();
   });
 
+  it('fixes a position and ends it, with no test provider left', async () => {
+    ok(await call('set_location', { lat: 41.01, lon: 28.97 }));
+    expect(shell('dumpsys', 'location')).toContain('[mock]');
+    ok(await call('set_location', { clear: true }));
+    expect(shell('dumpsys', 'location')).not.toContain('[mock]');
+  });
+
   it('turns to each of the four rotations, as the device says', async () => {
     for (const [i, orientation] of ['landscape_left', 'upside_down', 'landscape_right'].entries()) {
       ok(await call('set_orientation', { orientation, read: 'none' }));
@@ -93,6 +100,11 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
     ok(await call('device_setting', { name: 'restore' }));
     for (const name of ['increase_contrast', 'reduce_transparency'])
       expect((await call('device_setting', { name })).data.value).toBe('off');
+  });
+
+  it('fixes a position and ends it, as the simulator takes both', async () => {
+    ok(await call('set_location', { lat: 41.01, lon: 28.97 }));
+    ok(await call('set_location', { clear: true }));
   });
 
   it('holds a drag before it moves: the pad sees the same travel, later', async () => {
