@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
 const USAGE = `usage: appdyno mirror [open] [--device S]... [--all [--watch]] [--max N] [--detach]
@@ -44,5 +45,24 @@ export function mirrorArgs(args: string[]) {
     codec: codec as 'h264' | 'hevc' | undefined,
     help: values.help ? USAGE : undefined,
     usage: wrong && !values.help ? USAGE : undefined,
+  };
+}
+
+/** What a run of windows takes of these words. */
+export function mirrorRun({ values, quality, codec }: ReturnType<typeof mirrorArgs>) {
+  return {
+    serials: values.device ?? [],
+    all: values.all ?? false,
+    watch: values.watch ?? false,
+    max: Number(values.max ?? 8),
+    options: { quality, ...(codec && { codec }) },
+    headless: values.headless ?? false,
+    noInput: values['no-input'] ?? false,
+    ...(values.seconds && { seconds: Number(values.seconds) }),
+    ...(values.record && { record: resolve(values.record) }),
+    share: values.share ?? false,
+    focus: values.focus ?? false,
+    inputOnClick: values['input-on-click'] ?? false,
+    log: (line: string) => console.log(line),
   };
 }

@@ -1,9 +1,8 @@
 import { spawn } from 'node:child_process';
 import { closeSync, mkdirSync, openSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { NEEDS, pause, reportProgress } from '@appdyno/core';
+import { NEEDS, pause, reportProgress, isAlive } from '@appdyno/core';
 import { z } from 'zod';
-import { alive } from '../claims.js';
 import type { ServerContext } from '../context.js';
 import { checkDevice } from '../policy.js';
 import { MirrorOut } from '../schemas.js';
@@ -121,8 +120,8 @@ export function mirrorOps(ctx: ServerContext) {
     // only its own parent, as the file names it with its start time
     process.kill(f.pid, 'SIGTERM');
     const end = Date.now() + CLOSE_MS;
-    while (alive(f) && Date.now() < end) await pause(POLL_MS);
-    if (alive(f)) throw new ToolError(`the mirror of ${f.serial} did not end`, 'TIMEOUT');
+    while (isAlive(f) && Date.now() < end) await pause(POLL_MS);
+    if (isAlive(f)) throw new ToolError(`the mirror of ${f.serial} did not end`, 'TIMEOUT');
     const t = `closed the mirror of ${f.serial}`;
     return reply(t, { done: t, mirrors: [] });
   };

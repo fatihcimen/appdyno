@@ -32,7 +32,7 @@ import { alertPerson } from './alert.js';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
 import { endWithClient } from './lifetime.js';
-import { mirrorArgs } from './mirror-args.js';
+import { mirrorArgs, mirrorRun } from './mirror-args.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
@@ -195,13 +195,13 @@ async function surveyCommand(args: string[]) {
 
 /** `appdyno mirror`: stays with its windows until they close; its other words are the tool's. */
 async function mirrorCommand(args: string[]) {
-  const { values, action, quality, codec, help, usage } = mirrorArgs(args);
+  const words = mirrorArgs(args);
+  const { values, action, quality, help, usage } = words;
   if (help) console.log(help);
   if (usage) err(usage);
   if (help || usage) return help ? 0 : 2;
-  const device = values.device?.[0];
   const ctx = contextFrom({
-    ...(device && { device }),
+    ...(values.device?.[0] && { device: values.device[0] }),
     ...(values['allow-devices'] && { 'allow-devices': values['allow-devices'] }),
     ...(values.takeover && { takeover: true }),
   });
@@ -210,21 +210,7 @@ async function mirrorCommand(args: string[]) {
       const op = commandsFor(opsFor(ctx)).mirror!;
       return await op.run([action, '--quality', quality], { out: (s) => console.log(s), err });
     }
-    return await runMirrors(ctx, {
-      serials: values.device ?? [],
-      all: values.all ?? false,
-      watch: values.watch ?? false,
-      max: Number(values.max ?? 8),
-      options: { quality, ...(codec && { codec }) },
-      headless: values.headless ?? false,
-      noInput: values['no-input'] ?? false,
-      ...(values.seconds && { seconds: Number(values.seconds) }),
-      ...(values.record && { record: resolve(values.record) }),
-      share: values.share ?? false,
-      focus: values.focus ?? false,
-      inputOnClick: values['input-on-click'] ?? false,
-      log: (line) => console.log(line),
-    });
+    return await runMirrors(ctx, mirrorRun(words));
   } finally {
     ctx.close();
   }

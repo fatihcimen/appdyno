@@ -1,8 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { deviceStateFile, stateDir, type MirrorStatus } from '@appdyno/core';
-import { alive } from '../claims.js';
+import { deviceStateFile, stateDir, type MirrorStatus, isAlive } from '@appdyno/core';
 
 /** A mirror's parent, as other processes find it: no socket, one file per device. */
 export type MirrorFile = {
@@ -48,7 +47,7 @@ function read(path: string): MirrorFile | undefined {
 export function liveMirror(serial: string): MirrorFile | undefined {
   const f = read(fileOf(serial));
   if (!f) return undefined;
-  if (alive(f)) return f;
+  if (isAlive(f)) return f;
   removeMirrorFile(serial);
   return undefined;
 }

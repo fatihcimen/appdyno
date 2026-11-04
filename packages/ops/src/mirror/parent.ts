@@ -1,6 +1,12 @@
 import { randomBytes } from 'node:crypto';
-import { MirrorSession, startViewer, type MirrorOptions, type MirrorStatus } from '@appdyno/core';
-import { claim, release, startOf } from '../claims.js';
+import {
+  MirrorSession,
+  startViewer,
+  type MirrorOptions,
+  type MirrorStatus,
+  startOf,
+} from '@appdyno/core';
+import { claim, release } from '../claims.js';
 import type { ServerContext } from '../context.js';
 import { ToolError } from '../tool.js';
 import { followDevice } from './follow.js';

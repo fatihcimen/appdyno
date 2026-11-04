@@ -14,7 +14,8 @@ export const Owner = z.object({
 });
 export type Owner = z.infer<typeof Owner>;
 
-const startOf = (pid: number) => {
+/** When a process started, as `ps` says it; empty when it has gone. */
+export const startOf = (pid: number) => {
   try {
     return execFileSync('ps', ['-o', 'lstart=', '-p', String(pid)], {
       encoding: 'utf8',
@@ -37,7 +38,8 @@ export const thisOwner = (tool: string): Owner => ({
   since: new Date().toISOString(),
 });
 
-export const isAlive = (o: Owner) => o.started !== '' && startOf(o.pid) === o.started;
+export const isAlive = (o: Pick<Owner, 'pid' | 'started'>) =>
+  o.started !== '' && startOf(o.pid) === o.started;
 
 /** No owner is a command line's: its process ends with the command, and what it set stays until asked. */
 export const isThisProcess = (o: Owner | undefined) =>

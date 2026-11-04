@@ -5,7 +5,7 @@ import type { Device, DeviceProvider } from '@appdyno/core';
 import { noiseOf } from '@appdyno/perf';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { activityFollower, activityFor, appendActivity } from '../src/activity.js';
-import { startOf } from '../src/claims.js';
+import { startOf } from '@appdyno/core';
 import { ServerContext } from '../src/context.js';
 import { followDevice } from '../src/mirror/follow.js';
 import { handoffDone, handoffOps, handoffRequest } from '../src/mirror/handoff.js';

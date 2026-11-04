@@ -10,7 +10,8 @@ import {
   type MirrorSource,
 } from '@appdyno/core';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { holder, startOf } from '../src/claims.js';
+import { startOf } from '@appdyno/core';
+import { holder } from '../src/claims.js';
 import { ServerContext } from '../src/context.js';
 import { checkedOps } from './helpers.js';
 import { runMirrors, type MirrorRun } from '../src/mirror/parent.js';

@@ -31,7 +31,8 @@ export async function nativeBinary(build: NativeBuild): Promise<string> {
     hash.update(await readFile(file));
   const id = hash.update(build.flags.join(' ')).digest('hex').slice(0, 16);
   // whatever the state directory: a build is the same build for every one of them
-  const dir = join(homedir(), 'Library/Caches/appdyno/native', id);
+  const root = process.env.APPDYNO_NATIVE_DIR ?? join(homedir(), 'Library/Caches/appdyno/native');
+  const dir = join(root, id);
   const binary = join(dir, build.name);
   if (existsSync(binary)) return binary;
   await mkdir(dir, { recursive: true, mode: 0o700 });
