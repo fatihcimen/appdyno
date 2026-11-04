@@ -168,8 +168,6 @@ export function actOps(
           return reply(t, { ...summary(t), open });
         }
         if (!open) return reply('no keyboard is open', summary('no keyboard is open'));
-        if (!s.device.dismissKeyboard)
-          throw new ToolError('this device cannot close its keyboard', 'UNSUPPORTED');
         await s.device.dismissKeyboard();
         s.acted();
         const gone = await s.until(

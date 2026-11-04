@@ -106,7 +106,7 @@ export class ServerContext {
   private async open(serial: string, launching: string | undefined): Promise<Device> {
     const device = this.deviceFor(serial);
     reportProgress(`connecting to ${serial}`);
-    if (launching) device.launchAlongside?.(launching);
+    if (launching) device.launchAlongside(launching);
     await device.open();
     return device;
   }

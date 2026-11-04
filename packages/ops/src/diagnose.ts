@@ -101,7 +101,6 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
       annotations: READ,
       run: async ({ app, since, level, maxLines }) => {
         const s = await ctx.session();
-        if (!s.device.logs) throw new ToolError('this device gives no app log', 'UNSUPPORTED');
         const pkg = appOf(s, ctx, app);
         const from = sinceOf(since, s);
         const { lines, source, note } = await s.device.logs({
@@ -145,8 +144,6 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
       annotations: READ,
       run: async ({ app, since, limit, symbols }) => {
         const s = await ctx.session();
-        if (!s.device.crashes)
-          throw new ToolError('this device gives no crash reports', 'UNSUPPORTED');
         const pkg = appOf(s, ctx, app);
         const from = since ? sinceOf(since, s) : undefined;
         const { reports, source, note, exits } = await s.device.crashes({

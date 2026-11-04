@@ -74,8 +74,6 @@ class Parent {
       );
     }
     const device = this.ctx.deviceFor(serial);
-    if (!device.mirror)
-      throw new ToolError(`no mirror on this kind of device: ${serial}`, 'UNSUPPORTED');
     const file = {
       pid: process.pid,
       started: startOf(process.pid),

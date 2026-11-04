@@ -180,20 +180,20 @@ export interface PlatformScreen {
 /** One device, whichever platform: what the operations are written against. */
 export interface Device {
   readonly platformScreen: PlatformScreen;
-  readonly apps?: AppManager;
-  readonly settings?: DeviceSettings;
-  readonly recorder?: ScreenRecorder;
+  readonly apps: AppManager;
+  readonly settings: DeviceSettings;
+  readonly recorder: ScreenRecorder;
   readonly network?: NetworkSource;
   readonly web?: WebInspector;
   /** A live picture of the device: nothing of it starts until asked, and no agent needs to be up first. */
-  readonly mirror?: Mirror;
+  readonly mirror: Mirror;
   /** One attempt to close an open keyboard; the caller reads whether it went. */
-  dismissKeyboard?(): Promise<void>;
+  dismissKeyboard(): Promise<void>;
   /**
    * Waits on the device until the screen differs from `since` (no `since`: answers at once with it);
    * undefined from an agent without `wait`, which the caller polls instead.
    */
-  waitChange?(
+  waitChange(
     since: string | undefined,
     timeoutMs: number,
   ): Promise<{ sig: string; tree?: Tree } | undefined>;
@@ -227,14 +227,14 @@ export interface Device {
   openUrl(url: string, pkg?: string): Promise<void>;
   launch(pkg: string): Promise<string>;
   /** Before `open`, when a first call is to launch this app: `launch` then takes up what began here. */
-  launchAlongside?(pkg: string): void;
+  launchAlongside(pkg: string): void;
   terminate(pkg: string): Promise<void>;
   setLocation(lat: number, lon: number): Promise<void>;
   stopAgent(): Promise<void>;
-  logs?(q: LogsQuery): Promise<LogsAnswer>;
-  crashes?(q: CrashesQuery): Promise<CrashesAnswer>;
+  logs(q: LogsQuery): Promise<LogsAnswer>;
+  crashes(q: CrashesQuery): Promise<CrashesAnswer>;
   /** Whether the app has a live process. */
-  appRunning?(app: string): Promise<boolean>;
+  appRunning(app: string): Promise<boolean>;
   /** Its process id, where reading it is cheap enough to do on every action. */
   appPid?(app: string): Promise<string | undefined>;
   readonly measure?: MeasureSource;

@@ -10,8 +10,8 @@ import type { Op } from '../src/tool.js';
 import { FakeDevice } from './fake-device.js';
 import { checkedOps } from './helpers.js';
 
-function connect(recorder: ScreenRecorder | undefined) {
-  const device = Object.assign(new FakeDevice(), recorder ? { recorder } : {});
+function connect(recorder: ScreenRecorder) {
+  const device = Object.assign(new FakeDevice(), { recorder });
   const provider: DeviceProvider = {
     list: async () => [{ serial: device.serial, state: 'device', ready: true }],
     handles: () => true,
@@ -34,10 +34,6 @@ describe('record', () => {
     extension: 'mp4',
     start: async (to) => ({ file: to }),
     stop,
-  });
-
-  it('says what a device without a recorder cannot do', async () => {
-    await expect(connect(undefined).call({ action: 'start' })).rejects.toThrow(/cannot record/);
   });
 
   it('refuses a file that does not play, and lets the next recording start', async () => {

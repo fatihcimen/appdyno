@@ -186,7 +186,10 @@ describe('failed answers', () => {
   });
 
   it('say a policy as one, and what a device lacks as that, not as a wrong argument', async () => {
-    const device = Object.assign(new FakeDevice(), { logs: undefined, crashes: undefined });
+    const lacks = async (): Promise<never> => {
+      throw new DeviceError('UNSUPPORTED', 'no such thing here');
+    };
+    const device = Object.assign(new FakeDevice(), { logs: lacks, crashes: lacks });
     const { call } = await connect(device, { allowHome: false, secrets: ['s3cr3t'] });
     const code = async (name: string, args: Record<string, unknown> = {}) =>
       (await call(name, args)).structuredContent?.code;

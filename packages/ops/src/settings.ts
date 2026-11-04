@@ -55,7 +55,6 @@ const forget = (s: Session, name: string) =>
 /** Sets a condition, the old value written down first so a crash cannot lose it. */
 export async function setCondition(s: Session, name: SettingName, value: string, app?: string) {
   const settings = s.device.settings;
-  if (!settings) throw new ToolError('this device has no settings to change', 'UNSUPPORTED');
   await s.conditions.run(async () => {
     const first = await writeDown(s, settings, name, app);
     try {
@@ -71,7 +70,7 @@ export async function setCondition(s: Session, name: SettingName, value: string,
 /** `during` changes a condition for its time and puts it back itself: only a process dying meanwhile leaves it. */
 export async function holdingCondition<T>(s: Session, name: SettingName, during: () => Promise<T>) {
   const settings = s.device.settings;
-  const first = settings ? await s.conditions.run(() => writeDown(s, settings, name)) : false;
+  const first = await s.conditions.run(() => writeDown(s, settings, name));
   try {
     return await during();
   } finally {
@@ -84,7 +83,7 @@ export async function restoreCondition(s: Session, name: SettingName) {
   await s.conditions.run(async () => {
     const c = conditions.read(s.device.serial)?.[name];
     if (!c || heldElsewhere(c.owner)) return;
-    await s.device.settings!.set(name, c.was, c.app);
+    await s.device.settings.set(name, c.was, c.app);
     forget(s, name);
   });
 }
@@ -96,7 +95,7 @@ export function restoreConditions(s: Session, whose: Whose) {
     const failed: string[] = [];
     const left: string[] = [];
     const settings = s.device.settings;
-    const changes = (settings && conditions.read(s.device.serial)) ?? {};
+    const changes = conditions.read(s.device.serial) ?? {};
     // the newest first: two names can hold one thing (Android's animations and reduce_motion), and the older holds the user's value
     for (const [name, c] of Object.entries(changes).reverse()) {
       if (!whose(c.owner)) {
@@ -104,7 +103,7 @@ export function restoreConditions(s: Session, whose: Whose) {
         continue;
       }
       try {
-        await settings!.set(name as SettingName, c.was, c.app);
+        await settings.set(name as SettingName, c.was, c.app);
         forget(s, name);
         restored.push(`${name}: ${c.was}`);
       } catch (e) {
@@ -136,7 +135,6 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
       run: async ({ name, value, title, app }) => {
         const s = await ctx.session();
         const settings = s.device.settings;
-        if (!settings) throw new ToolError('this device has no settings to change', 'UNSUPPORTED');
         if (name === 'restore') {
           const { restored, failed, left } = await restoreConditions(
             s,

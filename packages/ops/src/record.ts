@@ -22,7 +22,7 @@ export const filming = deviceState(
 export async function endRecording(s: Session) {
   const serial = s.device.serial;
   const r = filming.read(serial);
-  if (!r || !s.device.recorder) return undefined;
+  if (!r) return undefined;
   reportProgress('ending the recording');
   const { files, note } = await s.device.recorder.stop(r.handle).catch((e: unknown) => {
     // the next start must not be refused for a recording that has ended, however it ended; a device
@@ -68,7 +68,6 @@ export function recordOps(ctx: ServerContext) {
       run: async ({ action, file, maxSeconds }) => {
         const s = await ctx.session();
         const recorder = s.device.recorder;
-        if (!recorder) throw new ToolError('this device cannot record its screen', 'UNSUPPORTED');
         if (action === 'stop') {
           const end = await endRecording(s);
           if (!end) throw new ToolError(`no recording runs on ${s.device.serial}`, 'NOT_FOUND');

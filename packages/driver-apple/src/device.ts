@@ -6,7 +6,11 @@ import {
   type CrashesQuery,
   type CrashesAnswer,
   RpcDevice,
+  type AppManager,
   type Device,
+  type DeviceSettings,
+  type Mirror,
+  type ScreenRecorder,
   type RpcClient,
   TIMEOUTS,
   type ActOptions,
@@ -102,6 +106,10 @@ export abstract class IosDevice extends RpcDevice implements Device {
   readonly platform = 'ios' as const;
   readonly platformScreen = iosScreen;
   abstract readonly virtual: boolean;
+  abstract readonly apps: AppManager;
+  abstract readonly settings: DeviceSettings;
+  abstract readonly recorder: ScreenRecorder;
+  abstract readonly mirror: Mirror;
   protected readonly retrySafe = RETRY_SAFE;
   /** The app the runner reads and acts on (set by launch, openUrl with a bundle, or target). */
   protected targetApp: string | undefined;

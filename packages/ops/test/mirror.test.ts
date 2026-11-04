@@ -60,17 +60,11 @@ function pixelsDevice(serial: string) {
   return { serial, mirror, close: vi.fn() } as unknown as Device;
 }
 
-function context(
-  serials: string[],
-  over: { noMirror?: boolean; policy?: object; command?: string[] } = {},
-) {
+function context(serials: string[], over: { policy?: object; command?: string[] } = {}) {
   const provider: DeviceProvider = {
     list: async () => serials.map((serial) => ({ serial, state: 'device', ready: true })),
     handles: () => true,
-    open: (serial) => {
-      const d = pixelsDevice(serial);
-      return over.noMirror ? ({ ...d, mirror: undefined } as unknown as Device) : d;
-    },
+    open: pixelsDevice,
   };
   return new ServerContext({ ...DEFAULT_POLICY, ...over.policy }, [provider], {
     ...(over.command && { mirrorCommand: over.command }),
@@ -148,10 +142,7 @@ describe('a mirror parent', () => {
     }
   }, 120_000);
 
-  it('a device with no mirror, or not allowed, is refused by name', async () => {
-    const none = run(context(['device-c'], { noMirror: true }), { serials: ['device-c'] });
-    await expect(none.done).resolves.toBe(1);
-    expect(none.lines.join()).toContain('no mirror on this kind of device');
+  it('a device not allowed is refused by name', async () => {
     const barred = run(context(['device-d'], { policy: { devices: /^other/ } }), {
       serials: ['device-d'],
     });

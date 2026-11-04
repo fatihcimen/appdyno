@@ -33,16 +33,16 @@ export class Session {
     const end = Date.now() + timeoutMs;
     let last: Screen | undefined;
     let sig: string | undefined;
-    let onDevice = !!this.device.waitChange;
+    let onDevice = true;
     for (;;) {
       throwIfCancelled('wait');
       let now: Screen | undefined;
       if (onDevice) {
         const left = Math.max(0, end - Date.now());
         // a failed or absent wait: poll for the rest of this call
-        const r = await this.device.waitChange!(sig, sig === undefined ? 0 : left).catch(
-          () => undefined,
-        );
+        const r = await this.device
+          .waitChange(sig, sig === undefined ? 0 : left)
+          .catch(() => undefined);
         if (r === undefined) onDevice = false;
         else {
           sig = r.sig;

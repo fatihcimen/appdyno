@@ -192,11 +192,11 @@ export function networkOps(ctx: ServerContext) {
 
   const paths = async (s: Session): Promise<NetworkPath[]> => {
     const own = (await s.device.network?.paths()) ?? [];
-    const proxy = await s.device.settings?.get('proxy').then(
+    const proxy = await s.device.settings.get('proxy').then(
       (now) => ({ via: 'proxy' as const, sees: `${SEES_PROXY}. Now: ${now}` }),
       (e: Error) => ({ via: 'proxy' as const, refused: e.message }),
     );
-    return [...(proxy ? [proxy] : []), ...own];
+    return [proxy, ...own];
   };
 
   const answer = (
@@ -274,8 +274,6 @@ export function networkOps(ctx: ServerContext) {
           const target = app ?? s.appId;
           if (target) checkApp(ctx.policy, target);
           if (via === 'proxy') {
-            if (!s.device.settings)
-              throw new ToolError('this device has no proxy setting', 'UNSUPPORTED');
             const was = await s.device.settings.get('proxy');
             const want = proxy ?? was;
             if (want === 'none')

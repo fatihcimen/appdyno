@@ -2,12 +2,16 @@ import { androidScreen } from '@appdyno/driver-android';
 import {
   DeviceActions,
   type ActOptions,
+  type AppManager,
   type CrashesQuery,
   type CrashReport,
   type Device,
+  type DeviceSettings,
   type LaunchMode,
   type LogsQuery,
   type MeasureSource,
+  type Mirror,
+  type ScreenRecorder,
 } from '@appdyno/core';
 import {
   DeviceError,
@@ -123,11 +127,28 @@ export const SCREENS: Record<string, Node[]> = {
   sent: [...FORM, { t: 'Gönderildi', id: 'dev.app:id/result', b: [0, 700, 1080, 800] }],
 };
 
+/** A part of the port a test did not give: whatever is asked of it, it refuses. */
+const notGiven = <T extends object>(what: string) =>
+  new Proxy({} as T, {
+    get: () => async () => {
+      throw new DeviceError('UNSUPPORTED', `this fake has no ${what}`);
+    },
+  });
+
 export class FakeDevice extends DeviceActions implements Device {
   readonly platform = 'android' as const;
   readonly platformScreen = androidScreen;
   virtual = true;
   lastStartWasCold = true;
+  apps = notGiven<AppManager>('apps');
+  recorder = notGiven<ScreenRecorder>('recorder');
+  mirror = notGiven<Mirror>('mirror');
+  settings = { get: async () => 'none', set: async () => undefined } as Partial<DeviceSettings> &
+    Pick<DeviceSettings, 'get' | 'set'> as DeviceSettings;
+  /** An agent without `wait`: the caller polls. */
+  waitChange: Device['waitChange'] = async () => undefined;
+  dismissKeyboard: Device['dismissKeyboard'] = async () => undefined;
+  launchAlongside(_pkg: string) {}
   hello: Hello = {
     agentVersion: '0.1.0',
     protocol: { major: 1, minor: 0 },

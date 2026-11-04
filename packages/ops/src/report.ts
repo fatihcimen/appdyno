@@ -307,7 +307,6 @@ export function reportFor(ctx: ServerContext) {
 
     out.push(`<h2>Log</h2>`);
     if (!app) out.push(`<p class="note">no app selected: no log</p>`);
-    else if (!s.device.logs) out.push(`<p class="note">this device gives no app log</p>`);
     else {
       const logs = await s.device
         .logs({
@@ -325,7 +324,6 @@ export function reportFor(ctx: ServerContext) {
 
     out.push(`<h2>Crashes</h2>`);
     if (!app) out.push(`<p class="note">no app selected: no crash reports</p>`);
-    else if (!s.device.crashes) out.push(`<p class="note">this device gives no crash reports</p>`);
     else {
       const c = await s.device
         .crashes({ app, limit: MAX_CRASHES, ...(since !== undefined && { since }) })

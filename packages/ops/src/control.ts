@@ -29,10 +29,6 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
     if (!pkg) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
     return pkg;
   };
-  const appsOf = (s: Session) => {
-    if (!s.device.apps) throw new ToolError('this device has no app management', 'UNSUPPORTED');
-    return s.device.apps;
-  };
 
   /** Every virtual device of every driver, with the driver that has it. */
   const virtuals = async () => {
@@ -90,7 +86,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
       annotations: DESTRUCTIVE,
       run: async ({ action, app, path, service, args, env, all, read }) => {
         const s = await ctx.session();
-        const apps = appsOf(s);
+        const { apps } = s.device;
         const done = (t: string, extra: Record<string, unknown> = {}) =>
           reply(t, { done: t, ...extra });
         switch (action) {

@@ -83,10 +83,9 @@ export function answersFor(ctx: ServerContext) {
 
   /** What a report says of the app's end since `since`; a new process with no report is no death. */
   const reportOf = async (s: Session, since: number) => {
-    const { crashes } = s.device;
-    for (let i = 0; crashes && s.appId && i < REPORT_TRIES; i++) {
-      const { reports } = await crashes
-        .call(s.device, { app: s.appId, since: since - CLOCK_SLACK_MS, limit: 1 })
+    for (let i = 0; s.appId && i < REPORT_TRIES; i++) {
+      const { reports } = await s.device
+        .crashes({ app: s.appId, since: since - CLOCK_SLACK_MS, limit: 1 })
         .catch(() => ({ reports: [] }));
       const r = reports[0];
       if (r) return { reason: clean(r.reason), ...(r.file && { file: r.file }) };
@@ -100,7 +99,7 @@ export function answersFor(ctx: ServerContext) {
    * (Android restarts a crashed app at once, so the screen alone would not tell).
    */
   const death = async (s: Session, screen: Screen, wasPid: string | undefined, since: number) => {
-    const { appPid, appRunning } = s.device;
+    const { appPid } = s.device;
     if (!s.appId) return undefined;
     if (appPid) {
       const pid = await appPid.call(s.device, s.appId).catch(() => wasPid);
@@ -110,8 +109,8 @@ export function answersFor(ctx: ServerContext) {
         return reportOf(s, since);
       }
     }
-    if (!screen.foreground || screen.foreground === s.appId || !appRunning) return undefined;
-    if (await appRunning.call(s.device, s.appId).catch(() => true)) return undefined;
+    if (!screen.foreground || screen.foreground === s.appId) return undefined;
+    if (await s.device.appRunning(s.appId).catch(() => true)) return undefined;
     reportProgress('the app is gone: looking for its crash report');
     return (
       (await reportOf(s, since)) ?? { reason: 'its process is gone and no crash report says why' }
