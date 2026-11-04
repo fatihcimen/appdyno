@@ -1,0 +1,112 @@
+# A performance gate on a pull request: copy this file to .github/workflows/perf-gate.yml and set the values under `env`.
+#
+# REAL MEASUREMENT NEEDS A REAL DEVICE. This job runs on a simulator: its numbers are relative to the runner they were
+# read on, and real frame rates, frozen frames, hitches and energy need a phone. What it can do is catch a change between
+# two builds measured on one machine, and say why. For a phone's numbers: `appdyno perf survey --app <app> --device <id>`.
+#
+# It measures the pull request's base and its head in this one job, as a baseline from another machine does not compare.
+# appdyno has no service and no token: it writes a file, and this job posts that file with the repository's own token.
+# A pull request from a fork gets a token that cannot comment: the comment is then only in the job's artifacts.
+#
+# A run under load says `noisy` and fails nothing: the comment says so, and it is no pass. Measure again.
+#
+# An Android emulator needs a hypervisor, which GitHub's arm64 macOS runners do not give, and `macos-latest` is one of
+# those. For Android use an Intel macOS label or a Mac of your own, boot an AVD with `-gpu host` where this boots a
+# simulator, and install with `adb install`.
+name: perf-gate
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  # Until appdyno is on the registry, install your own `npm pack` of it and set this to `appdyno`.
+  APPDYNO: npx -y appdyno
+  APP: com.example.app
+  FLOW: flows/checkout.flow
+  SIMULATOR: iPhone 17
+  BUILD: xcodebuild -scheme Example -sdk iphonesimulator -configuration Release -derivedDataPath build build
+  BUILT: build/Build/Products/Release-iphonesimulator/Example.app
+
+jobs:
+  gate:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: A simulator of this job's own
+        run: |
+          echo "APPDYNO_PERF_DIR=$RUNNER_TEMP/appdyno-perf" >> "$GITHUB_ENV"
+          UDID=$(xcrun simctl create perf-gate "$SIMULATOR")
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID"
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+          # A new simulator works by itself for its first minutes: wait, up to 10, for the load the gate takes.
+          for wait in $(seq 1 60); do
+            load=$(sysctl -n vm.loadavg | awk '{print int($2 * 10)}')
+            if [ "$load" -lt "$(($(sysctl -n hw.ncpu) * 8))" ]; then break; fi
+            sleep 10
+          done
+
+      # A run under load is refused as a baseline, by a non-zero exit: over 2.4 on a runner of 3 cores, as a build leaves.
+      # So it measures until three are in, and stops the job if it cannot get them.
+      - name: The base, three runs, and the other side of a later diff
+        run: |
+          $BUILD
+          xcrun simctl install "$UDID" "$BUILT"
+          added=0
+          for try in 1 2 3 4 5 6 7 8; do
+            $APPDYNO test "$FLOW" --device "$UDID" --measure
+            if $APPDYNO perf baseline --app "$APP"; then added=$((added + 1)); fi
+            if [ "$added" -eq 3 ]; then break; fi
+          done
+          [ "$added" -eq 3 ]
+          $APPDYNO perf reference --app "$APP" --device "$UDID"
+
+      # This cleans the workspace: the baseline is in $RUNNER_TEMP and the runs in the home folder, and both stay.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: The pull request, measured
+        run: |
+          $BUILD
+          xcrun simctl install "$UDID" "$BUILT"
+          $APPDYNO test "$FLOW" --device "$UDID" --measure
+
+      - name: The gate, and on a regression its cause
+        id: gate
+        continue-on-error: true
+        run: $APPDYNO perf why --app "$APP" --device "$UDID"
+
+      - name: The comment, as a file
+        if: always()
+        run: $APPDYNO perf comment --app "$APP" --out perf-comment.md
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: perf-comment
+          path: perf-comment.md
+
+      # A new comment each time: `--edit-last` edits the token's last comment, which may be another workflow's.
+      - name: Post it, with this repository's token
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file perf-comment.md
+
+      - name: Fail on a regression or a broken budget
+        if: steps.gate.outcome == 'failure'
+        run: exit 1

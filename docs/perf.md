@@ -104,9 +104,10 @@ appdyno perf-launch --app A --mode cold --repeats 6      a measured run, kept
 appdyno perf baseline --app A                            adds the newest run to the baseline; at least 3 runs are needed
 appdyno perf compare --app A [--format text|json|junit]  exit 1 on a regression or a broken budget
 appdyno perf budget --app A                              budgets only
+appdyno perf why --app A                                 the same as compare, and on a regression its cause
 ```
 
-The same comes through `perf_compare`.
+The same comes through `perf_compare`. [Why it got worse](#why-it-got-worse) says what `perf why` runs.
 
 **How a change is called.** All of: at least 5 samples each side and 3 baseline runs, else `few-samples`, which is no alarm; a rank
 test on all baseline samples against the run, p under 0.01 (by permutation, because whole milliseconds tie; 4 against 4 cannot reach
@@ -184,6 +185,66 @@ A first version of the binder case spent 100 ms in a framework call, and the ans
 
 **A function-level diff.** `perf_compare` `action: functions` with two ids of `perf_profile`, or `appdyno perf functions --from pm-a --to pm-b`: what moved, in ms of CPU in each second so that windows of other lengths compare, the app's own functions where the profile has them. A function must move 20 ms a second and a quarter of itself, so two runs of the same work name nothing. A profile keeps 200 functions, and an answer shows 15. Android's names are what simpleperf finds on the device: Java functions of a debuggable build, once compiled, and the first run of a screen may read as the interpreter. By `test-device/function-diff.test.ts`, on the Xiaomi, host load 13: two runs of the same work named nothing, and 300 ms a second put into one function read `+296 knownCost`, first of the diff.
 
+## Why it got worse
+
+`appdyno perf why` is the gate, and on a regression it looks for the cause by itself, on the same device, the same build and the same journey, and writes one answer: what got worse and by how much, how sure the gate is, against which baseline and which run, and the likeliest cause with what shows it. The same comes through `perf_compare` with `action: why`, in `answers`, and on the dashboard. It fails as `perf compare` does: exit 1 on a regression or a broken budget.
+
+```text
+appdyno perf reference --app A [--scenario S] [--device S]  on the baseline's build: the other side of a later diff
+appdyno perf why --app A [--scenario S] [--device S]        the gate, and on a regression its cause
+appdyno perf comment --app A --out comment.md               the answers as Markdown in a file; no device
+```
+
+**Only a regression is looked at.** Every call is the gate's own, with its rank test, floors and run-to-run limit. A run with no regression touches no device, and `noisy`, `few-samples` and `refused` are said and nothing runs: noise is not a regression. What a look reads is kept as a measurement and never as a run, so it cannot become the newest run the gate compares.
+
+**A look leaves the device as it found it.** A look can bring up a simulator's runner, and with one up the same `assert` read from 11 ms to 39 ms, as a read then goes another way: a first version had the gate rightly call that on the next run of an unchanged app. So a look stops what it started, and a runner that was up before it stays up.
+
+**What runs, by the number that moved.**
+
+| number                                 | what runs                                                                         | what it can name                                     |
+| -------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| a start                                | one traced start, as `perf_launch` `trace`                                        | the phase that rose, against the reference           |
+| a journey's step                       | the flow replayed, a first time left out, with a recording around that step alone | the function that rose, and what the main thread did |
+| frames, frozen frames, stalls          | the swipes the run did, recorded twice: a CPU profile, and a frame or hang trace  | the same                                             |
+| CPU                                    | a CPU profile of what the app does                                                | the function that rose                               |
+| memory, network, energy and the others | nothing                                                                           | that no measure here explains it                     |
+
+A journey's whole goes with the step that moved most. A step that starts the app is looked at as a start, and in a step that stops it the app does not run, which is said.
+
+**Why a reference.** A function diff needs both builds, and once a regression is there only one is installed. `perf reference`, with the baseline's build installed, keeps a CPU profile of each step of the journey and the phases of a start in `.appdyno/perf/references/`, beside the baseline, so that it can be committed. One of another build type or compile state is not used, and the answer says so. With none, the answer says what it would take; what needs no other side, a frame's cause or a hang's, is still read.
+
+**A cause is named only with what shows it.**
+
+- A function, by the same diff as `perf_compare` `functions`, in ms of CPU in the step: it must pass the diff's floors and account for 40 % of the change or more, the bar a frame's cause is held to. Below that it is evidence, and no cause is named.
+- A profile that counts callers in, as a simulator's does, has a caller rise as far as what it called, so `main` rises with everything. Of those that rose about as far, the deepest is named.
+- A phase by the gate's floor for a time, and the same 40 %.
+- A frame's cause and a hang are read straight from the run's trace: [why a slow frame was slow](#why-a-slow-frame-was-slow).
+- A profile sees what is on the CPU, and a frame trace what the main thread did in its frames. A sleep in a touch's handler holds up no frame in flight, so it shows in neither, as a timer or a wait for the network does not: the answer says no cause was found and why, not the nearest thing that moved.
+- If the change does not show again while it is looked at, that is said: what was read may not be that change.
+
+**How sure.** The gate's own numbers beside each answer: p, the samples on each side, the baseline's runs, and how many times its floor the change is. A modelled number stays `(modelled)` and one timed on this Mac `(timed through the host)` on every surface, and a virtual device's answer says what the dashboard says of one.
+
+**A replay's values** come from the environment. A value given by `--param` is not kept, as it may be a secret, so a flow that needs one has it set, or the answer says which it lacks. A flow changed so that a step is no longer that step is said, and not timed.
+
+**The comment.** `perf comment` reads what `perf why` kept of the newest run of each scenario, and an answer of an older run is not used. All that comes from the app is escaped, as a pull request can name a function anything and an `@name` would notify someone. A body is cut at 60,000 characters. [`perf-gate.yml`](perf-gate.yml) is a job to copy: see [`ci.md`](ci.md).
+
+Against what was put there on purpose, by `test-device/gate-why.test.ts`, on 2026-11-04, each on a baseline of 3 runs of 5 iterations, 6 launches for a start, and a reference, on an emulator with API 34 and an iPhone 17 simulator with iOS 26.5, each made for the test, host load 6-10 on 15 cores. The cost is 800 ms in one step or at the start, read from a file or the environment by the same fixture build:
+
+| device    | put there                                 | the gate                                           | the answer                                                    |
+| --------- | ----------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------- |
+| emulator  | nothing                                   | no regression, exit 0                              | nothing looked at                                             |
+| emulator  | the main thread at work, in `knownCost`   | +616 ms, p 0.0002, exit 1                          | `CpuActivity.knownCost`, +710 ms of CPU in the step, 0 to 710 |
+| emulator  | the main thread asleep, in a touch        | +616 ms, p 0.0002, exit 1                          | no function, no frame missed: no cause was found              |
+| emulator  | a sleep in `Application.onCreate`         | +815.5 ms, p 0.00005, exit 1                       | the phase `bind_application`, +810.5 ms, 8.8 to 819.3         |
+| simulator | nothing                                   | no regression, exit 0                              | nothing looked at                                             |
+| simulator | the main thread at work, in `knownCost()` | +318 ms, p 0.0002, just past its floor, exit 1     | `knownCost()`, +800 ms of CPU in the step, 0 to 800           |
+| simulator | the main thread asleep, in a touch        | +327 ms, p 0.0002, just past its floor, exit 1     | no function: no cause was found, and a probe sees no why      |
+| simulator | a sleep in the app's `init`               | +792 ms, p 0.00005, exit 1, timed through the host | the phase `main`, +805.6 ms, 13.7 to 819.3                    |
+
+A step's time rose by less than the 800 ms put in, on the simulator by 318 ms, while the profile read nearly all of it: why the two differ was not looked into. **Not run:** on an iPhone or an Android phone, so a hang's cause in an answer has only met a fake, as has a look at a scroll or at CPU.
+
+[`perf-gate.yml`](perf-gate.yml) was run by its own `run:` blocks, in order, on this Mac and an iPhone 17 simulator with iOS 27.2, at load 7 to 13, with `gh` stubbed and the `actions/*` steps skipped: three runs into the baseline, 800 ms put into the head's run only, the gate failed the job on +797 ms, and the comment was written and handed to `gh` all the same. As the cost was in the measured run and not in the look, the answer said it did not show again and named nothing, which is the honest answer to that. An earlier go on a simulator just booted stopped at the base, 8 of 8 runs refused for load, and still wrote its comment, "1 of 1 scenario not called". The wait for load that this added to the job ran by itself and not within the job. **Not run:** on a GitHub runner, and the Android job on an Intel runner.
+
 ## Why an app started
 
 On Android 15 and later, `perf_snapshot` with `also: startInfo` reads `dumpsys activity start-info`, with no trace: the reason of the newest start, its type, whether it followed a force stop, and where its time went, for the starts the system keeps (16 here). Each phase also goes to the row "Why launch was slow". Before Android 15 it is listed as not measurable here, with the reason kept. Index 2 of the dump is when `Application.onCreate` began, so the time inside `onCreate` is in `oncreate_to_first_frame`, not before it: a known 500 ms there took that phase from 386.9 to 874.8 ms on the Xiaomi, +488 ms, host load 5-108, by `test-device/start-info.test.ts`. On an emulator with API 36, at host load 170-340, the same sleep showed in part, as a sleep does there. A launcher start read `LAUNCHER`, and a service in a process of its own `SERVICE`. A broadcast to a stopped app read `BROADCAST` on the emulator; HyperOS completes that broadcast and starts nothing, so a Xiaomi has no such record. Reading it needs the app running, as `perf_snapshot` does: a process up for a broadcast counts, and reads 0 frames.
@@ -230,7 +291,7 @@ appdyno perf dashboard [--app A] [--out dir] [--open]  the page alone, from what
 
 There is no server, and the page is one file with no script, which loads nothing: its content policy allows only its own style. Everything from the store is escaped. It follows the system's light or dark, and prints as ink on paper with no tooltips or tables. An app has a section of its own, with an anchor. In order:
 
-1. **What needs attention**, across every app, for the newest run of each scenario: regressions and broken budgets as `perf compare` calls them, and runs under high load or heat. A debuggable build is said beside its number but is no alarm. It says how many scenarios have a baseline and how many budget rules there are, since "nothing needs attention" means little without them, and which files could not be read.
+1. **What needs attention**, across every app, for the newest run of each scenario: regressions and broken budgets as `perf compare` calls them, with the cause `perf why` named of that very run, and runs under high load or heat. An app with a regression opens with **Why it got worse**, the same answer the command line gives. A debuggable build is said beside its number but is no alarm. It says how many scenarios have a baseline and how many budget rules there are, since "nothing needs attention" means little without them, and which files could not be read.
 2. **Measures by device.** The row `Journeys` holds the newest journey on that device, its whole time, its slowest step and the steps the gate calls slower. Above the table: that an emulator's or a simulator's numbers are relative to this Mac and that real frame rates, frozen frames, hitches and energy need a phone, and, with no phone measured for the app, the command for one. A cell holds the newest reading of that measure on that kind of device, with its unit, kind, scenario and age; an estimate from a model is marked; so is a reading under noise; and on a simulator it says when the number is something else: main-thread pacing for frames, frozen frames and stalls, this Mac's energy. A refusal newer than any reading gives its reason instead. Otherwise "not measured yet". A kind no measure answers has a row of its own under "other". Emulators and simulators read as relative, and the page says so.
 3. **Trends**, for a kind with more than one run on a device: one small chart per kind, scenario and device, each with one y-scale, from zero, with the runs evenly spaced. The shaded band is the baseline's median plus and minus the floor of the gate above: a run outside it has moved past the floor, though the call needs the rank test as well. A budget is a dashed line, drawn when within twice the data's top and otherwise said in words. A hollow point was taken under noise, and a dashed line is an estimate. The newest launch phases (`launch.phase.*`) are one bar split into phases, up to six with the smallest folded into "other", and each journey's newest run one bar split by step, with a table of each step's time, verdict, frames and memory; a journey's whole has a trend, and so has a step the gate calls slower. Every chart has a table under it.
 4. **An empty store** shows the one command that fills it.
