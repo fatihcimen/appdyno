@@ -107,6 +107,8 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
     };
     await session.start();
     await until('picture', () => session.status.state === 'live');
+    // an app closes to the page its icon is on: what these clicks aim at is on Settings' page, whatever ran before
+    execFileSync('xcrun', ['simctl', 'launch', udid!, 'com.apple.Preferences']);
   }, 120_000);
 
   afterAll(async () => {
@@ -138,7 +140,7 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
   it(
     'opens an app from a click on its icon, as a mouse does',
     async () => {
-      const before = await picture();
+      const before = await steady();
       // Settings, where a new simulator's home screen has it
       session.poke(0.845, 0.483);
       await screenBecomes((now) => changedShare(before, now) > 0.5);
@@ -151,7 +153,7 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
   it(
     'opens the App Switcher by Home pressed twice',
     async () => {
-      const before = await picture();
+      const before = await steady();
       control('appSwitch');
       await screenBecomes((now) => changedShare(before, now) > 0.1);
       control('home');
@@ -163,7 +165,7 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
   it(
     'holds a right click down as a long press, and the device sees one',
     async () => {
-      const before = await picture();
+      const before = await steady();
       inputs.length = 0;
       // on an icon, whose menu comes at once: bare wallpaper waits longer than a press does
       session.tell({ op: 'poke', x: SETTINGS.x, y: SETTINGS.y, right: true });
