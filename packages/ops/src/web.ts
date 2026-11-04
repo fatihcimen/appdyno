@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { checkApp, redactLog } from './policy.js';
 import { WebOut } from './schemas.js';
-import { refused, type Session } from './session.js';
+import type { Session } from './session.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError, type Op } from './tool.js';
 
 const MAX_ELEMENTS = 200;
@@ -114,7 +114,7 @@ export function webOps(ctx: ServerContext): Op[] {
 
   /** The page asked for, else the one showing; an app that has none says what that means. */
   const pageOf = async (s: Session, app: string | undefined, wanted: string | undefined) => {
-    const pages = await inspector(s).pages(app).catch(refused);
+    const pages = await inspector(s).pages(app);
     const hits = wanted
       ? pages.filter((p) => p.id === wanted || p.title.includes(wanted) || p.url.includes(wanted))
       : pages;
@@ -148,7 +148,7 @@ export function webOps(ctx: ServerContext): Op[] {
         const s = await ctx.session();
         const target = checkApp(ctx.policy, app ?? s.appId ?? '') || undefined;
         if (action === 'pages') {
-          const pages = await inspector(s).pages(target).catch(refused);
+          const pages = await inspector(s).pages(target);
           const t =
             pages
               .map(
@@ -162,7 +162,7 @@ export function webOps(ctx: ServerContext): Op[] {
         const on = await pageOf(s, target, page);
         const web = inspector(s);
         if (action === 'elements') {
-          const dom = (await web.evaluate(on, READ_DOM).catch(refused)) as Dom;
+          const dom = (await web.evaluate(on, READ_DOM)) as Dom;
           const list = placed(dom, webViewRect(await s.current())).map((e) => ({
             ...e,
             text: clean(e.text),
@@ -179,7 +179,7 @@ export function webOps(ctx: ServerContext): Op[] {
         }
         if (action === 'click') {
           if (!selector) throw new ToolError('click needs selector: a CSS selector');
-          const hit = (await web.evaluate(on, CLICK(selector)).catch(refused)) as {
+          const hit = (await web.evaluate(on, CLICK(selector))) as {
             tag: string;
             text: string;
           } | null;
@@ -189,7 +189,7 @@ export function webOps(ctx: ServerContext): Op[] {
           return reply(t, { done: t, page: on.id });
         }
         if (!js) throw new ToolError('eval needs js');
-        const value = await web.evaluate(on, js).catch(refused);
+        const value = await web.evaluate(on, js);
         s.acted();
         const t = clean(value === undefined ? 'undefined' : JSON.stringify(value)).slice(
           0,

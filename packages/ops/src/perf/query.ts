@@ -2,7 +2,6 @@ import { resolve, join, relative, isAbsolute } from 'node:path';
 import { stateDir, type TraceDigest } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { refused } from '../session.js';
 import { QueryOut } from '../schemas.js';
 import { type Op, defineOp, READ, ToolError, reply } from '../tool.js';
 
@@ -31,9 +30,11 @@ export function perfQueryOp(ctx: ServerContext): Op {
       if (!inside) throw new ToolError(`not a kept trace: ${trace}`, 'POLICY_DENIED');
       let digest: TraceDigest | undefined;
       for (const p of ctx.providers) {
-        digest = await p
-          .queryTrace?.(path, { ...(sql && { sql }), ...(table && { table }), limit })
-          .catch(refused);
+        digest = await p.queryTrace?.(path, {
+          ...(sql && { sql }),
+          ...(table && { table }),
+          limit,
+        });
         if (digest) break;
       }
       if (!digest) throw new ToolError(`no driver reads this trace: ${trace}`, 'UNSUPPORTED');

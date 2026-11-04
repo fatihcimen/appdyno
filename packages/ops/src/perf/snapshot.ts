@@ -3,7 +3,6 @@ import type { Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { holdingCondition } from '../control.js';
-import { refused } from '../session.js';
 import { SnapshotOut } from '../schemas.js';
 import { type Op, defineOp, READ, reply } from '../tool.js';
 import { perfTools, App, Scenario, unlessUnsupported, kb, virtual } from './shared.js';
@@ -56,11 +55,11 @@ export function perfSnapshotOp(ctx: ServerContext): Op {
       const pkg = appOf(s, app);
       const readCpu = measure(s, 'cpu');
       const readMemory = measure(s, 'memory');
-      const cpu = await readCpu(pkg, cpuWindowMs).catch(refused);
-      const mem = await readMemory(pkg).catch(refused);
+      const cpu = await readCpu(pkg, cpuWindowMs);
+      const mem = await readMemory(pkg);
       const source = s.device.measure!;
       const frames = source.frames && (await unlessUnsupported(source.frames(pkg)));
-      const vitals = await source.vitals?.().catch(refused);
+      const vitals = await source.vitals?.();
       const lacking: string[] = [];
       const extra = async <T>(what: string, get: (() => Promise<T>) | undefined) => {
         if (!also.includes(what as (typeof also)[number])) return undefined;

@@ -16,7 +16,7 @@ import { holder } from './claims.js';
 import type { ServerContext } from './context.js';
 import { checkApp, checkDevice } from './policy.js';
 import { AppOut, DoneOut, SettingOut, VirtualOut } from './schemas.js';
-import { refused, type Session } from './session.js';
+import type { Session } from './session.js';
 import { Read } from './step-schemas.js';
 import { ACT, defineOp, DESTRUCTIVE, reply, ToolError, type Op } from './tool.js';
 
@@ -201,7 +201,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
           reply(t, { done: t, ...extra });
         switch (action) {
           case 'list': {
-            const list = await apps.listApps(all).catch(refused);
+            const list = await apps.listApps(all);
             return done(
               list
                 .map(
@@ -217,7 +217,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
             const state =
               (await s.device.foreground().catch(() => undefined)) === pkg
                 ? 'foreground'
-                : await apps.appState(pkg).catch(refused);
+                : await apps.appState(pkg);
             return done(`${pkg}: ${state}`, { state });
           }
           case 'install': {
@@ -229,7 +229,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
                 'POLICY_DENIED',
               );
             reportProgress(`installing ${path}`);
-            const said = await apps.install(path).catch(refused);
+            const said = await apps.install(path);
             if (said.length > 0) s.acted();
             // what it answered on the device is part of what happened: no read mode shortens this
             return done([`installed ${path}`, ...said].join('\n'));
@@ -237,22 +237,20 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
           case 'launch': {
             const pkg = appOf(s, app);
             reportProgress(`launching ${pkg}`);
-            await apps
-              .launchWith(pkg, { ...(args && { args }), ...(env && { env }) })
-              .catch(refused);
+            await apps.launchWith(pkg, { ...(args && { args }), ...(env && { env }) });
             return afterChange(s, `launched ${pkg}`, read);
           }
           case 'grant':
           case 'revoke': {
             const pkg = appOf(s, app);
             if (!service) throw new ToolError(`${action} needs service`);
-            await apps.permission(pkg, action === 'grant', service).catch(refused);
+            await apps.permission(pkg, action === 'grant', service);
             return done(`${action === 'grant' ? 'granted' : 'revoked'} ${service} for ${pkg}`);
           }
           case 'uninstall':
           case 'clear': {
             const pkg = appOf(s, app);
-            await (action === 'clear' ? apps.clearData(pkg) : apps.uninstall(pkg)).catch(refused);
+            await (action === 'clear' ? apps.clearData(pkg) : apps.uninstall(pkg));
             s.acted();
             s.appPid = undefined;
             return done(`${action === 'clear' ? 'cleared the data of' : 'uninstalled'} ${pkg}`);
@@ -295,7 +293,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
           checkDevice(policy, d.id);
           reportProgress(`starting ${d.name}`);
           const wasStopped = d.state === 'stopped';
-          const serial = await on.boot(d.id).catch(refused);
+          const serial = await on.boot(d.id);
           // an emulator is listed by its serial once it runs
           if (wasStopped) writeStarted([...mine, d.id, serial]);
           const t = `${d.name} is up as ${serial}`;
@@ -318,7 +316,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
             );
           reportProgress(`shutting down ${d.name}`);
           await ctx.forget(d.serial ?? d.id);
-          await on.shutdown(d.id).catch(refused);
+          await on.shutdown(d.id);
         }
         writeStarted(mine.filter((id) => !targets.some((x) => x.d.id === id || x.d.name === id)));
         const t = `shut down ${targets.map((x) => x.d.name).join(', ')}`;
@@ -356,19 +354,19 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
           if (!value) throw new ToolError('push needs value: the text');
           const pkg = app ?? s.appId;
           if (pkg) checkApp(policy, pkg);
-          await settings.push(pkg, title ?? 'appdyno', value).catch(refused);
+          await settings.push(pkg, title ?? 'appdyno', value);
           return reply(`posted a notification`, { done: 'posted a notification' });
         }
         if (name === 'biometric') {
           if (value !== 'match' && value !== 'nomatch')
             throw new ToolError('biometric needs value: match or nomatch');
-          await settings.biometric(value === 'match').catch(refused);
+          await settings.biometric(value === 'match');
           return reply(`biometric: ${value}`, { done: `biometric: ${value}` });
         }
         if (name === 'fold') {
           if (value !== 'open' && value !== 'closed')
             throw new ToolError('fold needs value: open or closed');
-          await settings.fold(value === 'closed').catch(refused);
+          await settings.fold(value === 'closed');
           s.acted();
           return reply(`fold: ${value}`, { done: `fold: ${value}` });
         }
@@ -376,7 +374,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
           const m = /^(end )?(\+?\d{3,20})$/.exec(value ?? '');
           if (!m)
             throw new ToolError('call needs value: a phone number; end and the number hangs up');
-          await settings.call(m[2]!, !!m[1]).catch(refused);
+          await settings.call(m[2]!, !!m[1]);
           s.acted();
           const t = m[1] ? `the call from ${m[2]} ended` : `a call from ${m[2]} is coming in`;
           return reply(t, { done: t });
@@ -386,18 +384,18 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
           if (!value) throw new ToolError('sms needs value: the text');
           if (!PHONE_NUMBER.test(from))
             throw new ToolError('sms needs title: the phone number it comes from');
-          await settings.sms(from, value).catch(refused);
+          await settings.sms(from, value);
           s.acted();
           return reply(`an SMS came from ${from}`, { done: `an SMS came from ${from}` });
         }
         const pkg = app ?? (name === 'locale' ? s.appId : undefined);
         if (pkg) checkApp(policy, pkg);
         if (value === undefined) {
-          const now = await settings.get(name, pkg).catch(refused);
+          const now = await settings.get(name, pkg);
           const t = `${name}: ${now}`;
           return reply(clean(t), { done: clean(t), value: now });
         }
-        await setCondition(s, name, value, pkg).catch(refused);
+        await setCondition(s, name, value, pkg);
         s.acted();
         const t = `${name}: ${value}`;
         return reply(t, { done: t, value, changed: { [name]: value } });
@@ -413,13 +411,13 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
       run: async ({ text: value }) => {
         const s = await ctx.session();
         if (value === undefined) {
-          const now = await s.device.getClipboard().catch(refused);
+          const now = await s.device.getClipboard();
           const shown = now === undefined ? 'the clipboard is empty' : clean(now);
           return reply(shown, { done: shown });
         }
         if (policy.secrets.some((x) => x && value.includes(x)))
           throw new ToolError('a secret is never put on the clipboard');
-        await s.device.setClipboard(value).catch(refused);
+        await s.device.setClipboard(value);
         const done = `on the clipboard (${Array.from(value).length} characters)`;
         return reply(done, { done });
       },

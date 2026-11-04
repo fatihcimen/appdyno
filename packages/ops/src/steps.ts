@@ -13,7 +13,7 @@ import type { ActResult, TextResult } from '@appdyno/protocol';
 import { z } from 'zod';
 import { type Answers, SETTLE, type ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
-import { type Session, refused } from './session.js';
+import type { Session } from './session.js';
 import { ToolError } from './tool.js';
 import { Check, Step, Direction } from './step-schemas.js';
 import { dragPath, swipeLine } from './gesture-paths.js';
@@ -260,7 +260,7 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
         since = Date.now();
       } else if (Date.now() - since >= STILL_MS) return screen;
       if (Date.now() >= end) return screen;
-      await pause(STILL_GAP_MS).catch(refused);
+      await pause(STILL_GAP_MS);
     }
   };
 
@@ -304,15 +304,13 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
       const dx = vertical ? 0 : Math.round(sign * box.width * SCROLL_REACH);
       const dy = vertical ? Math.round(sign * box.height * SCROLL_REACH) : 0;
       reportProgress(`scrolling (${swipes + 1} of ${a.maxSwipes})`);
-      last = await s.device
-        .act(
-          {
-            kind: 'gesture',
-            pointers: [dragPath({ x: cx - dx, y: cy - dy }, { x: cx + dx, y: cy + dy }, 400)],
-          },
-          { settle: SETTLE, read: 'tree', before: screen.hash },
-        )
-        .catch(refused);
+      last = await s.device.act(
+        {
+          kind: 'gesture',
+          pointers: [dragPath({ x: cx - dx, y: cy - dy }, { x: cx + dx, y: cy + dy }, 400)],
+        },
+        { settle: SETTLE, read: 'tree', before: screen.hash },
+      );
       s.acted();
       const next = last.tree ? s.screenOf(last.tree) : await s.read();
       s.remember(next);

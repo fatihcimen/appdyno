@@ -1,7 +1,6 @@
 import { store } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { refused } from '../session.js';
 import { TraceOut } from '../schemas.js';
 import { type Op, defineOp, ACT, reply } from '../tool.js';
 import { perfTools, App, Probe, Scenario, virtual } from './shared.js';
@@ -33,7 +32,7 @@ export function perfTraceOp(ctx: ServerContext): Op {
       const name = scenario ?? (what === 'frames' ? 'trace' : what);
       if (what === 'xct_hitches' || what === 'xct_launch') {
         const test = what === 'xct_hitches' ? 'hitches' : 'launch';
-        const m = await measure(s, 'xctMetrics')(pkg, test).catch(refused);
+        const m = await measure(s, 'xctMetrics')(pkg, test);
         const saved = await save(what, [m], m.value);
         const noise = await keep(
           s,
@@ -69,7 +68,7 @@ export function perfTraceOp(ctx: ServerContext): Op {
       }
       if (what === 'hangs') {
         const during = scroll ? await scroller(s, scroll, 500) : undefined;
-        const v = await measure(s, 'hangs')(pkg, seconds, during).catch(refused);
+        const v = await measure(s, 'hangs')(pkg, seconds, during);
         if (scroll) s.acted();
         const saved = await store(ctx.measurementsDir, 'hangs', v, v.tracePath);
         const noise = await keep(s, pkg, name, 'xctrace Time Profiler potential-hangs', saved.txt, [
@@ -98,7 +97,7 @@ export function perfTraceOp(ctx: ServerContext): Op {
       const record = measure(s, 'frameTrace', probe === false ? false : 'frames');
       const relaunched = await withProbe(s, pkg, probe);
       const during = scroll ? await scroller(s, scroll, 500) : undefined;
-      const m = await record(pkg, seconds, during).catch(refused);
+      const m = await record(pkg, seconds, during);
       if (scroll) s.acted();
       const v = m.value;
       if (v.kind === 'probe') {

@@ -7,7 +7,7 @@ export { survey } from './survey.js';
 export { swipeLine, pinchPaths } from './gesture-paths.js';
 export { SETTLE } from './answers.js';
 export { ServerContext } from './context.js';
-export { Session, refused } from './session.js';
+export { Session } from './session.js';
 export * from './policy.js';
 export * from './tool.js';
 export { inCall } from '@appdyno/core';

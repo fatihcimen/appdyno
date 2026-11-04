@@ -16,7 +16,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { checkApp } from '../policy.js';
-import { refused, type Session } from '../session.js';
+import type { Session } from '../session.js';
 import { swipeLine } from '../gesture-paths.js';
 import { ToolError } from '../tool.js';
 
@@ -86,7 +86,7 @@ export const kb = (n?: number) => (n === undefined ? '?' : `${(n / 1024).toFixed
 /** A measure the platform may lack: its answer, or nothing when it says UNSUPPORTED. */
 export const unlessUnsupported = async <T>(p: Promise<T>): Promise<T | undefined> =>
   p.catch((e: unknown) => {
-    if (!(e instanceof DeviceError && e.code === 'UNSUPPORTED')) return refused(e);
+    if (!(e instanceof DeviceError && e.code === 'UNSUPPORTED')) throw e;
     return undefined;
   });
 
@@ -229,7 +229,7 @@ export function perfTools(ctx: ServerContext) {
   /** Frames on a simulator come through the probe unless told otherwise: what it cost is said in the answer. */
   const withProbe = async (s: Session, pkg: string, probe = probeByDefault(s)) => {
     if (!probe) return [];
-    const relaunched = await measure(s, 'attachProbe')(pkg).catch(refused);
+    const relaunched = await measure(s, 'attachProbe')(pkg);
     return relaunched
       ? ['the app was relaunched with the frame probe in it; probe: false turns it off']
       : [];
@@ -239,7 +239,7 @@ export function perfTools(ctx: ServerContext) {
     const h = s.device.hello!;
     const size = (await s.current()).window ?? { w: h.screen.w, h: h.screen.h };
     return async () => {
-      await pause(waitMs).catch(refused);
+      await pause(waitMs);
       for (let i = 0; i < 4; i++) {
         const { from, to } = swipeLine(size, { direction, distance: size.h * 0.4 });
         await s.device.swipe(from, to, 300, { settle: false });

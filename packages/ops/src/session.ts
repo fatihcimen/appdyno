@@ -6,8 +6,7 @@ import {
   type Screen,
   type ScreenElement,
 } from '@appdyno/core';
-import { DeviceError, type Tree } from '@appdyno/protocol';
-import { ToolError } from './tool.js';
+import type { Tree } from '@appdyno/protocol';
 
 const WAIT_GAP_MS = 300;
 
@@ -56,7 +55,7 @@ export class Session {
         if (met(now)) return { screen: now, met: true };
       }
       if (Date.now() >= end) return { ...(last && { screen: last }), met: false };
-      if (!onDevice) await pause(WAIT_GAP_MS).catch(refused);
+      if (!onDevice) await pause(WAIT_GAP_MS);
     }
   }
 
@@ -82,7 +81,7 @@ export class Session {
 
   /** A fresh read of the device, remembered as the newest. */
   async read(): Promise<Screen> {
-    const screen = this.screenOf(await this.device.tree().catch(refused));
+    const screen = this.screenOf(await this.device.tree());
     this.remember(screen);
     return screen;
   }
@@ -112,26 +111,4 @@ export class Session {
     this.version++;
     this.lastActionAt = Date.now();
   }
-}
-
-/** A device failure as the agent's error: what failed and what to do. */
-export function refused(err: unknown): never {
-  if (err instanceof ToolError) throw err;
-  if (err instanceof DeviceError) {
-    const hint =
-      err.code === 'TIMEOUT'
-        ? 'the device did not answer; read the screen and try again'
-        : err.code === 'DEVICE_GONE' || err.code === 'AGENT_UNAVAILABLE'
-          ? 'the device is not connected or its agent stopped; try once more'
-          : err.code === 'NO_FOCUS'
-            ? 'no editable field has the focus: tap the field first (or give type_text a ref)'
-            : err.hint;
-    if (err.code === 'NO_FOCUS') throw new ToolError(hint!, err.code, hint);
-    throw new ToolError(
-      `${err.message} (${err.code})${hint ? `: ${hint}` : ''}`,
-      err.code,
-      ...(hint ? [hint] : []),
-    );
-  }
-  throw err;
 }

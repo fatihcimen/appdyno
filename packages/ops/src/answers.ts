@@ -14,7 +14,7 @@ import type { ActResult, TextResult } from '@appdyno/protocol';
 import type { ServerContext } from './context.js';
 import { redact } from './policy.js';
 import type { ActionOut } from './schemas.js';
-import { refused, type Session } from './session.js';
+import type { Session } from './session.js';
 import { reply } from './tool.js';
 
 /** After an action: quiet window and cap of the on-device settle (the window: docs/protocol.md, measured). */
@@ -256,7 +256,7 @@ export function answersFor(ctx: ServerContext) {
     const pid =
       s.appPid ??
       (read !== 'none' && s.appId ? s.device.appPid?.(s.appId).catch(() => undefined) : undefined);
-    const r = await run(opts).catch(refused);
+    const r = await run(opts);
     // the last read before the action, which a ref's lookup may have just made
     const base = s.fresh?.list ?? before;
     s.acted();
@@ -277,7 +277,7 @@ export function answersFor(ctx: ServerContext) {
     const end = Date.now() + maxMs;
     let screen = await s.read();
     while (Date.now() < end) {
-      await pause(200).catch(refused);
+      await pause(200);
       const next = await s.read();
       if (next.hash === screen.hash) return { screen: next, settled: true };
       screen = next;

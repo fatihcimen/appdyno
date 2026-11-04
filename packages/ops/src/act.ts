@@ -1,9 +1,8 @@
-import { alertAnswer, reportProgress, throwIfCancelled } from '@appdyno/core';
+import { alertAnswer, reportProgress, throwIfCancelled, type ActOptions } from '@appdyno/core';
 import { z } from 'zod';
 import { SETTLE, type Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { ActionOut } from './schemas.js';
-import { refused } from './session.js';
 import { pinchPaths } from './gesture-paths.js';
 import {
   AssertStep,
@@ -17,7 +16,7 @@ import {
   TypeStep,
 } from './step-schemas.js';
 import type { Steps } from './steps.js';
-import { ACT, defineOp, READ, reply, ToolError, type Op } from './tool.js';
+import { ACT, defineOp, READ, refused, reply, ToolError, type Op } from './tool.js';
 
 // measured on a loaded Mac: 20 took 10 s on an emulator, 19 s on a simulator; 30 took up to 56 s, near a client's usual 60 s
 const MAX_STEPS = 20;
@@ -166,7 +165,7 @@ export function actOps(
         if (!open) return reply('no keyboard is open', summary('no keyboard is open'));
         if (!s.device.dismissKeyboard)
           throw new ToolError('this device cannot close its keyboard', 'UNSUPPORTED');
-        await s.device.dismissKeyboard().catch(refused);
+        await s.device.dismissKeyboard();
         s.acted();
         const gone = await s.until(
           (x) => !s.device.platformScreen.keyboardOpen(x.tree),
@@ -206,6 +205,8 @@ export function actOps(
         const done: string[] = [];
         for (const [i, st] of steps.entries()) {
           const last = i === steps.length - 1;
+          // a refusal here, not at the op's end: the catch below says which step it was
+          const attempt = (o: ActOptions) => step(s, st, o, true).catch(refused);
           try {
             throwIfCancelled('steps');
             reportProgress(`step ${i + 1} of ${steps.length}: ${st.action}`);
@@ -220,7 +221,7 @@ export function actOps(
                     ...(s.fresh && { before: s.fresh.hash }),
                   } as const)
                 : ({ settle: false, read: 'none' } as const);
-              const x = await step(s, st, opts, true).catch(refused);
+              const x = await attempt(opts);
               s.acted();
               done.push(`${i + 1}. ${x.done}`);
               continue;
@@ -230,7 +231,7 @@ export function actOps(
               s,
               read,
               async (o) => {
-                const x = await step(s, st, o, true);
+                const x = await attempt(o);
                 lastDone = x.done;
                 return x.r;
               },

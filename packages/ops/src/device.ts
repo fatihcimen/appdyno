@@ -3,7 +3,6 @@ import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { DeviceOut, DevicesOut, ActionOut, DoneOut } from './schemas.js';
-import { refused } from './session.js';
 import { Read } from './step-schemas.js';
 import { ACT, defineOp, READ, reply, type Op } from './tool.js';
 
@@ -18,7 +17,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers): O
       output: DevicesOut,
       annotations: READ,
       run: async () => {
-        const devices = (await ctx.devices().catch(refused)).map((d) => {
+        const devices = (await ctx.devices()).map((d) => {
           const h = ctx.heldBy(d.serial);
           return {
             ...d,
@@ -87,7 +86,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers): O
       run: async () => {
         const s = await ctx.session();
         const h = s.device.hello!;
-        const fg = await s.device.foreground().catch(refused);
+        const fg = await s.device.foreground();
         return reply(
           [
             `${s.device.serial}: ${h.model}, ${osName(s.device.platform, h.osVersion)}${h.sdk !== undefined ? ` (SDK ${h.sdk})` : ''}`,
@@ -108,7 +107,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers): O
       annotations: ACT,
       run: async ({ orientation, read }) => {
         const s = await ctx.session();
-        await s.device.setOrientation(orientation === 'portrait' ? 0 : 1).catch(refused);
+        await s.device.setOrientation(orientation === 'portrait' ? 0 : 1);
         return afterChange(s, `orientation: ${orientation}`, read);
       },
     }),
@@ -126,7 +125,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers): O
       annotations: ACT,
       run: async ({ lat, lon }) => {
         const s = await ctx.session();
-        await s.device.setLocation(lat, lon).catch(refused);
+        await s.device.setLocation(lat, lon);
         const done = `location: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
         return reply(done, { done });
       },

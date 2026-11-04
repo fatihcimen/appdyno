@@ -13,7 +13,7 @@ import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { reportVideoDir } from './report.js';
 import { RecordOut } from './schemas.js';
-import { refused, type Session } from './session.js';
+import type { Session } from './session.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError, type Op } from './tool.js';
 
 const DEFAULT_S = 1_800;
@@ -42,10 +42,10 @@ export async function endRecording(s: Session) {
     const code = (e as DeviceError).code;
     if (code !== 'DEVICE_GONE' && code !== 'TIMEOUT')
       rmSync(stateOf(s.device.serial), { force: true });
-    return refused(e);
+    throw e;
   });
   rmSync(stateOf(s.device.serial), { force: true });
-  const videos = await Promise.all(files.map((f) => readVideo(f).catch(refused)));
+  const videos = await Promise.all(files.map((f) => readVideo(f)));
   const lines = files.map((f, i) => {
     const v = videos[i]!;
     return `${f}: ${(v.durationMs / 1000).toFixed(1)} s, ${v.frames} frames, ${v.width}x${v.height}, ${v.codec}`;
@@ -106,7 +106,7 @@ export function recordOps(ctx: ServerContext): Op[] {
         } catch (e) {
           throw new ToolError(`cannot write ${to}: ${(e as Error).message}`);
         }
-        const handle = await recorder.start(to, { maxSeconds }).catch(refused);
+        const handle = await recorder.start(to, { maxSeconds });
         mkdirSync(dirname(stateOf(s.device.serial)), { recursive: true, mode: 0o700 });
         writeFileSync(stateOf(s.device.serial), JSON.stringify({ handle, since, file: to }), {
           mode: 0o600,

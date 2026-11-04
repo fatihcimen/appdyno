@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { refused } from '../session.js';
 import { LaunchOut } from '../schemas.js';
 import { type Op, defineOp, DESTRUCTIVE, reply } from '../tool.js';
 import { perfTools, App, Probe, Scenario, virtual } from './shared.js';
@@ -42,7 +41,7 @@ export function perfLaunchOp(ctx: ServerContext): Op {
         ...(compile && { compile }),
         ...(trace && { trace }),
         ...(probe && { probe }),
-      }).catch(refused);
+      });
       s.acted();
       const saved = await save('launch', [m], m.value);
       // Android vitals: excessive cold ≥ 5 s, warm ≥ 2 s, hot ≥ 1.5 s

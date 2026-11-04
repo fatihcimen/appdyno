@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { DeviceProvider } from '@appdyno/core';
 import { parseFlow, type StepEvent } from '@appdyno/flows';
+import { DeviceError } from '@appdyno/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_POLICY,
@@ -449,6 +450,20 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
         callerOf(context())('flow', { action: 'run', file: flowFile('tap text="Form"\n') }),
       );
       expect(e.message).toContain('the app died: NullPointerException');
+    });
+
+    it('says a device failure while a step waits for its target, with no op around it', async () => {
+      const real = device.tree.bind(device);
+      let reads = 0;
+      device.tree = async () => {
+        if (++reads === 2) throw new DeviceError('TIMEOUT', 'tree.get did not answer');
+        return real();
+      };
+      const r = await flowsFor(context()).replay(flowFile('tap text="Form"\n'));
+      expect(r.failure).toMatchObject({
+        code: 'TIMEOUT',
+        message: expect.stringContaining('tree.get did not answer (TIMEOUT)'),
+      });
     });
 
     it('gives a measure each step around its action, in order', async () => {

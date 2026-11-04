@@ -11,7 +11,7 @@ import {
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { VisualOut } from './schemas.js';
-import { refused, type Session } from './session.js';
+import type { Session } from './session.js';
 import { defineOp, READ, reply, ToolError, type Op } from './tool.js';
 
 const DEFAULT_DIR = 'appdyno-baselines';
@@ -31,7 +31,7 @@ const Mask = z
   .strict();
 
 async function shot(s: Session): Promise<{ png: Buffer; image: Image }> {
-  const { data } = await s.device.screenshot({ format: 'png', quality: 100 }).catch(refused);
+  const { data } = await s.device.screenshot({ format: 'png', quality: 100 });
   const image = decodePng(data);
   if (!image)
     throw new ToolError('the screenshot is a kind of PNG this tool cannot read', 'INTERNAL');

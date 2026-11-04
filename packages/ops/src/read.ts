@@ -10,7 +10,6 @@ import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { FindOut, ScreenOut, ScreenshotOut, WaitOut } from './schemas.js';
-import { refused } from './session.js';
 import { Read, Selector, WaitStep } from './step-schemas.js';
 import type { Steps } from './steps.js';
 import { defineOp, READ, reply, ToolError, type Op } from './tool.js';
@@ -135,9 +134,11 @@ export function readOps(
           throw new ToolError(
             'the screen has not changed since the last image: that image still holds',
           );
-        const { meta, data } = await s.device
-          .screenshot({ format: 'jpeg', quality: 80, maxPx: SHOT_PX })
-          .catch(refused);
+        const { meta, data } = await s.device.screenshot({
+          format: 'jpeg',
+          quality: 80,
+          maxPx: SHOT_PX,
+        });
         const w = s.device.hello?.screen.w;
         s.shot = { at: s.version, hash: layout ?? '' };
         const scale = w ? Math.round((w / meta.w) * 1000) / 1000 : undefined;

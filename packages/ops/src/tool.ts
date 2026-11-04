@@ -1,5 +1,5 @@
 import type { Capability } from '@appdyno/core';
-import type { ErrorCode } from '@appdyno/protocol';
+import { DeviceError, type ErrorCode } from '@appdyno/protocol';
 import { z } from 'zod';
 
 /** A refusal the agent can act on (shown as the tool's error text, never a stack). */
@@ -11,6 +11,28 @@ export class ToolError extends Error {
   ) {
     super(message);
   }
+}
+
+/** A device failure as the agent's error: what failed and what to do. */
+export function refused(err: unknown): never {
+  if (err instanceof ToolError) throw err;
+  if (err instanceof DeviceError) {
+    const hint =
+      err.code === 'TIMEOUT'
+        ? 'the device did not answer; read the screen and try again'
+        : err.code === 'DEVICE_GONE' || err.code === 'AGENT_UNAVAILABLE'
+          ? 'the device is not connected or its agent stopped; try once more'
+          : err.code === 'NO_FOCUS'
+            ? 'no editable field has the focus: tap the field first (or give type_text a ref)'
+            : err.hint;
+    if (err.code === 'NO_FOCUS') throw new ToolError(hint!, err.code, hint);
+    throw new ToolError(
+      `${err.message} (${err.code})${hint ? `: ${hint}` : ''}`,
+      err.code,
+      ...(hint ? [hint] : []),
+    );
+  }
+  throw err;
 }
 
 export type Block =
@@ -43,6 +65,7 @@ export type Op = Tool & {
   needs?: Capability;
 };
 
+/** An op, whose device failures reach the surfaces as refusals wherever in its `run` they came from. */
 export function defineOp<S extends z.ZodObject>(def: {
   name: string;
   title: string;
@@ -54,7 +77,16 @@ export function defineOp<S extends z.ZodObject>(def: {
   run: (args: z.infer<S>) => Promise<ToolResult>;
 }): Op {
   const { run, ...rest } = def;
-  return { ...rest, handler: run as Tool['handler'] };
+  return {
+    ...rest,
+    handler: async (args) => {
+      try {
+        return await (run as Tool['handler'])(args);
+      } catch (e) {
+        return refused(e);
+      }
+    },
+  };
 }
 
 const SERVER_CHECKS = new Set(['maxLength', 'minLength', 'maxItems', 'minItems', 'pattern']);

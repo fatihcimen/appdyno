@@ -13,8 +13,8 @@ import { endCapture } from './network.js';
 import { checkApp, checkDevice, type Policy } from './policy.js';
 import { endRecording } from './record.js';
 import { reportFor } from './report.js';
-import { refused, Session } from './session.js';
-import { ToolError } from './tool.js';
+import { Session } from './session.js';
+import { refused, ToolError } from './tool.js';
 
 type Saved = {
   serial: string;
@@ -113,6 +113,7 @@ export class ServerContext {
       const holds = this.defaults.claims && !share && !this.defaults.share;
       if (holds) claim(serial, this.defaults.owner ?? 'appdyno');
       s = new Session(
+        // a replay, a test run and a survey ask for a session outside any op
         await this.open(serial).catch((e: unknown) => {
           if (holds) release(serial);
           return refused(e);

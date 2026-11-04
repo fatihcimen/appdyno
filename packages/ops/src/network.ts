@@ -27,7 +27,7 @@ import { restoreCondition, setCondition } from './control.js';
 import { boundLines } from './diagnose.js';
 import { checkApp, redactLog } from './policy.js';
 import { NetworkOut } from './schemas.js';
-import { refused, type Session } from './session.js';
+import type { Session } from './session.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError, type Op } from './tool.js';
 
 const MAX_ENTRIES = 200;
@@ -206,7 +206,7 @@ export function networkOps(ctx: ServerContext): Op[] {
   const clean = (t: string) => redactLog(ctx.policy, t);
 
   const paths = async (s: Session): Promise<NetworkPath[]> => {
-    const own = (await s.device.network?.paths().catch(refused)) ?? [];
+    const own = (await s.device.network?.paths()) ?? [];
     const proxy = await s.device.settings?.get('proxy').then(
       (now) => ({ via: 'proxy' as const, sees: `${SEES_PROXY}. Now: ${now}` }),
       (e: Error) => ({ via: 'proxy' as const, refused: e.message }),
@@ -290,7 +290,7 @@ export function networkOps(ctx: ServerContext): Op[] {
           if (via === 'proxy') {
             if (!s.device.settings)
               throw new ToolError('this device has no proxy setting', 'UNSUPPORTED');
-            const was = await s.device.settings.get('proxy').catch(refused);
+            const was = await s.device.settings.get('proxy');
             const want = proxy ?? was;
             if (want === 'none')
               throw new ToolError(`give proxy: host:port (this device has none set)`);
@@ -298,17 +298,17 @@ export function networkOps(ctx: ServerContext): Op[] {
             // a device left on a dead proxy has no network at all
             if (/^(127\.0\.0\.1|localhost):/.test(want) && !(await listening(want)))
               throw new ToolError(`nothing listens on ${want}: start your proxy first`);
-            if (was !== want) await setCondition(s, 'proxy', want).catch(refused);
+            if (was !== want) await setCondition(s, 'proxy', want);
             keep(serial, { via, since: Date.now(), proxy: want });
             const t = `traffic goes through ${want}${was === want ? ' (it already did)' : `, ${was} before`}. ${SEES_PROXY}`;
             return reply(t, { done: t });
           }
           if (!s.device.network)
             throw new ToolError(`this device has no ${via} way: use proxy`, 'UNSUPPORTED');
-          const way = (await s.device.network.paths().catch(refused)).find((p) => p.via === via);
+          const way = (await s.device.network.paths()).find((p) => p.via === via);
           if (way?.refused) throw new ToolError(way.refused, 'UNSUPPORTED');
           reportProgress(`starting ${via}`);
-          const handle = await s.device.network.start(via, target).catch(refused);
+          const handle = await s.device.network.start(via, target);
           keep(serial, { via, since: Date.now(), handle });
           if (via === 'probe') s.acted();
           const t = `${via}: ${way?.sees ?? 'started'}`;
@@ -316,7 +316,7 @@ export function networkOps(ctx: ServerContext): Op[] {
         }
         if (action === 'stop') {
           if (!now) throw new ToolError(`no capture runs on ${serial}`, 'NOT_FOUND');
-          const end = await endCapture(s).catch(refused);
+          const end = await endCapture(s);
           return answer(now, end ?? { entries: [] }, contains, limit, now.via);
         }
         // read
@@ -339,7 +339,7 @@ export function networkOps(ctx: ServerContext): Op[] {
             'UNSUPPORTED',
           );
         }
-        const read = await s.device.network!.read(now.handle!).catch(refused);
+        const read = await s.device.network!.read(now.handle!);
         return answer(now, read, contains, limit, now.via);
       },
     }),

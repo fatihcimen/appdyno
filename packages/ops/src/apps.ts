@@ -4,7 +4,6 @@ import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { checkApp, checkUrl } from './policy.js';
 import { ActionOut, DoneOut } from './schemas.js';
-import { refused } from './session.js';
 import { Read } from './step-schemas.js';
 import { ACT, defineOp, DESTRUCTIVE, reply, ToolError, type Op } from './tool.js';
 
@@ -24,7 +23,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers): Op[] {
       run: async ({ url, read }) => {
         const s = await ctx.session();
         const href = checkUrl(policy, url);
-        await s.device.openUrl(href, s.appId).catch(refused);
+        await s.device.openUrl(href, s.appId);
         return afterChange(s, `opened ${href}`, read);
       },
     }),
@@ -41,7 +40,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers): Op[] {
         const pkg = checkApp(policy, app ?? s.appId ?? '');
         if (!pkg) throw new ToolError(NO_APP);
         reportProgress(`launching ${pkg}`);
-        await s.device.launch(pkg).catch(refused);
+        await s.device.launch(pkg);
         return afterChange(s, `launched ${pkg}`, read);
       },
     }),
@@ -56,7 +55,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers): Op[] {
         const s = await ctx.session();
         const pkg = checkApp(policy, app ?? s.appId ?? '');
         if (!pkg) throw new ToolError(NO_APP);
-        await s.device.terminate(pkg).catch(refused);
+        await s.device.terminate(pkg);
         s.acted();
         s.appPid = undefined;
         return reply(`stopped ${pkg}`, { done: `stopped ${pkg}` });

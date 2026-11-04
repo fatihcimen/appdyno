@@ -1,11 +1,13 @@
 import { reportProgress, type Device, type DeviceProvider } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { busyReasons } from '../src/answers.js';
 import { ServerContext } from '../src/context.js';
 import { boundLines } from '../src/diagnose.js';
 import { DEFAULT_POLICY, redactLog, type Policy } from '../src/policy.js';
 import { ActionOut, CrashesOut, LogsOut } from '../src/schemas.js';
+import { defineOp, READ, ToolError } from '../src/tool.js';
 import { FakeDevice } from './fake-device.js';
 import { linkedClient } from './helpers.js';
 
@@ -104,6 +106,46 @@ describe('failed answers', () => {
       code: 'TIMEOUT',
       hint: 'the device did not answer; read the screen and try again',
     });
+  });
+
+  it('are refusals from anywhere in an op, with nothing written for it there', async () => {
+    const op = defineOp({
+      name: 'x',
+      title: 'x',
+      description: 'x',
+      input: z.object({}),
+      output: z.object({}),
+      annotations: READ,
+      run: () => Promise.reject(new DeviceError('DEVICE_GONE', 'it left')),
+    });
+    const e = await op.handler({}).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(ToolError);
+    expect(e).toMatchObject({ code: 'DEVICE_GONE', message: expect.stringContaining('it left') });
+    // what is no device's failure stays what it is: the server logs it as an internal error
+    const bug = defineOp({ ...op, run: () => Promise.reject(new TypeError('a bug')) });
+    await expect(bug.handler({})).rejects.toBeInstanceOf(TypeError);
+  });
+
+  it('of the last of several steps still say which step it was and show the screen', async () => {
+    const device = new FakeDevice();
+    const { call } = await connect(device);
+    await call('screen');
+    const real = device.act.bind(device);
+    let acts = 0;
+    device.act = async (action, opts) => {
+      if (++acts === 2) throw new DeviceError('TIMEOUT', 'act did not answer');
+      return real(action, opts);
+    };
+    const r = await call('steps', {
+      steps: [
+        { action: 'tap', x: 5, y: 2390 },
+        { action: 'tap', x: 6, y: 2390 },
+      ],
+    });
+    expect(r.isError).toBe(true);
+    expect(r.text).toContain('2. tap failed, the rest were not run: act did not answer (TIMEOUT)');
+    expect(r.text).toContain('Form');
+    expect(r.structuredContent).toMatchObject({ code: 'TIMEOUT' });
   });
 
   it('name a conflict at open, not "internal error"', async () => {

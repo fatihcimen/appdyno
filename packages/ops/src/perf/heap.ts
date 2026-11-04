@@ -2,7 +2,6 @@ import { mkdir } from 'node:fs/promises';
 import type { HeapReading } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { refused } from '../session.js';
 import { HeapOut } from '../schemas.js';
 import { type Op, defineOp, READ, reply } from '../tool.js';
 import { keepRefusal, perfTools, App } from './shared.js';
@@ -35,7 +34,7 @@ export function perfHeapOp(ctx: ServerContext): Op {
       s.appPid = undefined;
       const pkg = appOf(s, app);
       if (profile) {
-        const m = await measure(s, 'heapProfile')(pkg, profile, seconds).catch(refused);
+        const m = await measure(s, 'heapProfile')(pkg, profile, seconds);
         const v = m.value;
         const saved = await save('heap-profile', [m], v);
         await keep(s, pkg, `heap-${profile}`, 'perf_heap', saved.txt, [
@@ -53,7 +52,7 @@ export function perfHeapOp(ctx: ServerContext): Op {
       }
       const dump = measure(s, 'heap');
       await mkdir(ctx.measurementsDir, { recursive: true });
-      const m = await dump(pkg, ctx.measurementsDir).catch(refused);
+      const m = await dump(pkg, ctx.measurementsDir);
       const v = m.value;
       const saved = await save(HEAP[v.kind].store, [m], v);
       if (v.leaks !== undefined)

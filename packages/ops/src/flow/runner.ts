@@ -19,7 +19,7 @@ import type { ServerContext } from '../context.js';
 import { checkApp } from '../policy.js';
 import type { Session } from '../session.js';
 import type { Steps } from '../steps.js';
-import { ToolError, type Op } from '../tool.js';
+import { refused, ToolError, type Op } from '../tool.js';
 import { defined, loadRecording } from './shared.js';
 
 /**
@@ -134,52 +134,57 @@ export function flowRunner(
     }
   };
 
+  const prepare = async (s: Session, st: FlowStep) => {
+    if (st.args.screen) {
+      const w = await steps.windowSize(s);
+      if (st.args.screen !== `${w.w}x${w.h}`)
+        throw new ToolError(
+          `this step is for a ${String(st.args.screen)} screen and this one is ${w.w}x${w.h}: name its target in the flow`,
+        );
+    }
+    if (!st.selector || READS_ONLY.has(st.action) || st.action === 'scroll_to') return;
+    // no error here: if it never comes, the op itself refuses, with the nearest candidates
+    await steps.waitFor(s, { ...st.selector, gone: false, timeoutMs: REPLAY_WAIT_MS });
+    await steps.holdsStill(s, st.selector);
+  };
+
+  const act = async (s: Session, st: FlowStep): Promise<StepOutcome> => {
+    const [name, args] = opCall(st);
+    const t0 = Date.now();
+    const { data } = await ops()[name]!.handler(opInput(name, args, st.action));
+    const whole = Date.now() - t0;
+    if (data.met === false) {
+      const screen = await s.read();
+      const near = nearest(screen.list, st.selector?.text ?? st.selector?.id).map(steps.line);
+      throw new ToolError(
+        `${st.args.gone ? 'still there' : 'not shown'} after ${String(st.args.timeoutMs ?? REPLAY_WAIT_MS)} ms${near.length > 0 ? `; nearest: ${near.join('; ')}` : ''}`,
+        'TIMEOUT',
+      );
+    }
+    const died = data.appDied as { reason: string; file?: string } | undefined;
+    if (died)
+      throw new ToolError(
+        `the app died: ${died.reason}${died.file ? ` (${died.file})` : ''}`,
+        'APP_NOT_RUNNING',
+      );
+    const settledMs = WHOLE_STEP.has(st.action)
+      ? whole
+      : READS_ONLY.has(st.action)
+        ? undefined
+        : (data.settleMs as number | undefined);
+    const warnings = data.warnings as string[] | undefined;
+    return {
+      ...(settledMs !== undefined && { settledMs }),
+      ...(data.settled !== undefined && { settled: data.settled as boolean }),
+      ...(data.changed !== undefined && { changed: data.changed as boolean }),
+      ...(warnings?.length && { warnings }),
+    };
+  };
+
+  // the run's failure is read from what these throw, and a replay from code has no op around it
   const executor = (s: Session): Executor => ({
-    prepare: async (st) => {
-      if (st.args.screen) {
-        const w = await steps.windowSize(s);
-        if (st.args.screen !== `${w.w}x${w.h}`)
-          throw new ToolError(
-            `this step is for a ${String(st.args.screen)} screen and this one is ${w.w}x${w.h}: name its target in the flow`,
-          );
-      }
-      if (!st.selector || READS_ONLY.has(st.action) || st.action === 'scroll_to') return;
-      // no error here: if it never comes, the op itself refuses, with the nearest candidates
-      await steps.waitFor(s, { ...st.selector, gone: false, timeoutMs: REPLAY_WAIT_MS });
-      await steps.holdsStill(s, st.selector);
-    },
-    act: async (st): Promise<StepOutcome> => {
-      const [name, args] = opCall(st);
-      const t0 = Date.now();
-      const { data } = await ops()[name]!.handler(opInput(name, args, st.action));
-      const whole = Date.now() - t0;
-      if (data.met === false) {
-        const screen = await s.read();
-        const near = nearest(screen.list, st.selector?.text ?? st.selector?.id).map(steps.line);
-        throw new ToolError(
-          `${st.args.gone ? 'still there' : 'not shown'} after ${String(st.args.timeoutMs ?? REPLAY_WAIT_MS)} ms${near.length > 0 ? `; nearest: ${near.join('; ')}` : ''}`,
-          'TIMEOUT',
-        );
-      }
-      const died = data.appDied as { reason: string; file?: string } | undefined;
-      if (died)
-        throw new ToolError(
-          `the app died: ${died.reason}${died.file ? ` (${died.file})` : ''}`,
-          'APP_NOT_RUNNING',
-        );
-      const settledMs = WHOLE_STEP.has(st.action)
-        ? whole
-        : READS_ONLY.has(st.action)
-          ? undefined
-          : (data.settleMs as number | undefined);
-      const warnings = data.warnings as string[] | undefined;
-      return {
-        ...(settledMs !== undefined && { settledMs }),
-        ...(data.settled !== undefined && { settled: data.settled as boolean }),
-        ...(data.changed !== undefined && { changed: data.changed as boolean }),
-        ...(warnings?.length && { warnings }),
-      };
-    },
+    prepare: (st) => prepare(s, st).catch(refused),
+    act: (st) => act(s, st).catch(refused),
   });
 
   /** The failure's moment on disk; what cannot be had is left out, the failure already says enough. */

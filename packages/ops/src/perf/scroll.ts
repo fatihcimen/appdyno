@@ -8,7 +8,6 @@ import {
 } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { refused } from '../session.js';
 import { ScrollOut } from '../schemas.js';
 import { swipeLine } from '../gesture-paths.js';
 import { type Op, defineOp, ACT, reply } from '../tool.js';
@@ -88,7 +87,7 @@ export function perfScrollOp(ctx: ServerContext): Op {
       const swipeAll = async () => {
         for (let i = 0; i < swipes; i++) {
           const { from, to } = swipeLine(size, { direction, distance: size.h * 0.4 });
-          await s.device.swipe(from, to, 300, { settle: false }).catch(refused);
+          await s.device.swipe(from, to, 300, { settle: false });
         }
       };
       const recorded = s.device.measure?.framesDuring;
@@ -99,18 +98,18 @@ export function perfScrollOp(ctx: ServerContext): Op {
               pkg,
               Math.ceil(swipes * SECONDS_A_SWIPE) + COAST_SECONDS,
               swipeAll,
-            ).catch(refused)
+            )
         : async () => {
-            await measure(s, 'resetFrames', row)(pkg).catch(refused);
+            await measure(s, 'resetFrames', row)(pkg);
             await swipeAll();
             await sleep(1_500);
-            return measure(s, 'frames', row)(pkg).catch(refused);
+            return measure(s, 'frames', row)(pkg);
           };
       for (let r = 0; r < repeats; r++) {
         reportProgress(`scroll round ${r + 1} of ${repeats}`);
-        const m0 = await readMemory(pkg).catch(refused);
+        const m0 = await readMemory(pkg);
         const f = await framesOfRound();
-        const m1 = await readMemory(pkg).catch(refused);
+        const m1 = await readMemory(pkg);
         all.push(m0, f, m1);
         rounds.push({
           jankyPercent: f.value.jankyPercent,

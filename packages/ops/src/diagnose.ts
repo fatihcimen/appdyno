@@ -5,7 +5,7 @@ import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { checkApp, redactLog } from './policy.js';
 import { AuditOut, CrashesOut, LogsOut } from './schemas.js';
-import { refused, type Session } from './session.js';
+import type { Session } from './session.js';
 import { defineOp, READ, reply, ToolError, type Op } from './tool.js';
 
 const MAX_LINES = 1_000;
@@ -59,7 +59,7 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers): Op[] {
       annotations: READ,
       run: async ({ types, maxIssues }) => {
         const s = await ctx.session();
-        const r = await s.device.audit({ ...(types && { types }), maxIssues }).catch(refused);
+        const r = await s.device.audit({ ...(types && { types }), maxIssues });
         const issues = r.issues.map((i) => ({
           type: i.type,
           rule: i.rule,
@@ -103,14 +103,12 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers): Op[] {
         if (!s.device.logs) throw new ToolError('this device gives no app log');
         const pkg = appOf(s, ctx, app);
         const from = sinceOf(since, s);
-        const { lines, source, note } = await s.device
-          .logs({
-            app: pkg,
-            level: level as LogLevel,
-            maxLines,
-            ...(from !== undefined && { since: from }),
-          })
-          .catch(refused);
+        const { lines, source, note } = await s.device.logs({
+          app: pkg,
+          level: level as LogLevel,
+          maxLines,
+          ...(from !== undefined && { since: from }),
+        });
         const { kept, dropped } = boundLines(lines, maxLines);
         const shown = kept.map((l) => redactLog(ctx.policy, l));
         const head = [
@@ -144,9 +142,11 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers): Op[] {
         if (!s.device.crashes) throw new ToolError('this device gives no crash reports');
         const pkg = appOf(s, ctx, app);
         const from = since ? sinceOf(since, s) : undefined;
-        const { reports, source, note } = await s.device
-          .crashes({ app: pkg, limit, ...(from !== undefined && { since: from }) })
-          .catch(refused);
+        const { reports, source, note } = await s.device.crashes({
+          app: pkg,
+          limit,
+          ...(from !== undefined && { since: from }),
+        });
         const shown = reports.map((r) => ({
           ...r,
           reason: clean(r.reason),

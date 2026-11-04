@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { refused } from '../session.js';
 import { ProfileOut } from '../schemas.js';
 import { type Op, defineOp, READ, reply } from '../tool.js';
 import { perfTools, App, virtual } from './shared.js';
@@ -28,7 +27,7 @@ export function perfProfileOp(ctx: ServerContext): Op {
       const pkg = appOf(s, app);
       const profile = measure(s, 'cpuProfile');
       const during = scroll ? await scroller(s, scroll, 300) : undefined;
-      const m = await profile(pkg, seconds * 1000, during).catch(refused);
+      const m = await profile(pkg, seconds * 1000, during);
       if (scroll) s.acted();
       const saved = await save('cpu-profile', [m], m.value);
       return reply(
