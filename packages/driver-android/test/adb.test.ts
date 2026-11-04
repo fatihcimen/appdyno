@@ -158,3 +158,50 @@ describe('adb server', () => {
     ]);
   });
 });
+
+describe('what a window calls a device', () => {
+  const answers = (table: Record<string, string>) =>
+    ({
+      exec: async (_s: string, command: string) => table[command] ?? '',
+    }) as unknown as Adb;
+  const PROPS = /^getprop ro\.product\.marketname;/;
+  const withProps = (out: string, rest: Record<string, string>) =>
+    ({
+      exec: async (_s: string, command: string) =>
+        PROPS.test(command) ? out : (rest[command] ?? ''),
+    }) as unknown as Adb;
+
+  it('is plainly an emulator, whatever its model says', async () => {
+    const adb = answers({ 'getprop ro.product.model': 'sdk_gphone64_arm64\n' });
+    expect(await new AndroidDevice('emulator-5640', adb).hardware()).toMatchObject({
+      model: 'sdk_gphone64_arm64',
+      name: 'Android emulator',
+    });
+  });
+
+  it('is what a phone is sold as, where its maker says, and its model picks the frame', async () => {
+    const adb = withProps('\n\nRedmi Note 13\n', { 'getprop ro.product.model': '23129RAA4G\n' });
+    expect(await new AndroidDevice('R58M', adb).hardware()).toMatchObject({
+      model: '23129RAA4G',
+      name: 'Redmi Note 13',
+    });
+  });
+
+  it("is the phone's own name where no property has it", async () => {
+    const adb = withProps('\n', {
+      'getprop ro.product.model': 'SM-S918B\n',
+      'settings get global device_name': 'Galaxy S23 Ultra\n',
+    });
+    expect((await new AndroidDevice('R58M', adb).hardware()).name).toBe('Galaxy S23 Ultra');
+  });
+
+  it('is its model where it says nothing', async () => {
+    const adb = withProps('\n', {
+      'getprop ro.product.model': 'Pixel 7\n',
+      'settings get global device_name': 'null\n',
+    });
+    const hardware = await new AndroidDevice('R58M', adb).hardware();
+    expect(hardware.model).toBe('Pixel 7');
+    expect(hardware.name).toBeUndefined();
+  });
+});

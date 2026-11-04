@@ -195,7 +195,10 @@ export type DeviceHardware = {
   controls: string[];
   /** A window lists the system's apps too: its own list may otherwise be empty. */
   systemApps?: boolean;
+  /** What picks its frame: a maker's own word for it, such as a part number. */
   model?: string;
+  /** What a person calls it, where that is not its model. */
+  name?: string;
   color?: string;
 };
 

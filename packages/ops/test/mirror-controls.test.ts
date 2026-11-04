@@ -53,6 +53,16 @@ describe("a window's look", () => {
     expect(look.frame.model).toBe('Test Phone');
     expect(windowLook(undefined).controls).toEqual([]);
   });
+
+  it('names a device as a person does, and frames it by its model', () => {
+    const look = windowLook({
+      platform: 'android',
+      controls: [],
+      model: 'SM-S918B',
+      name: 'Galaxy S23 Ultra',
+    });
+    expect(look).toMatchObject({ name: 'Galaxy S23 Ultra', frame: { model: 'SM-S918B' } });
+  });
 });
 
 describe("a window's controls", () => {

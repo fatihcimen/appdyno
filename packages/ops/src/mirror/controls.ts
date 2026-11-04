@@ -32,10 +32,11 @@ const stamp = () =>
 
 /** How a device looks on a window: its frame and the controls it has. */
 export function windowLook(hardware: DeviceHardware | undefined) {
+  const name = hardware?.name ?? hardware?.model;
   return {
     frame: { model: hardware?.model, platform: hardware?.platform, color: hardware?.color },
     controls: hardware?.controls ?? [],
-    ...(hardware?.model && { name: hardware.model }),
+    ...(name && { name }),
   };
 }
 
@@ -50,7 +51,7 @@ export function windowControls(
   hardware: DeviceHardware | undefined,
   session: () => WindowSession,
 ) {
-  const name = () => safeName(hardware?.model ?? device.serial);
+  const name = () => safeName(hardware?.name ?? hardware?.model ?? device.serial);
   let opened: Promise<unknown> | undefined;
   let rotation: 0 | 1 | 2 | 3 = 0;
   let stopRecording: (() => Promise<string>) | undefined;
