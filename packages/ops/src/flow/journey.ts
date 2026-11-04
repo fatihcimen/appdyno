@@ -40,9 +40,9 @@ function journeyReader(s: Session) {
   };
   const source = s.device.measure;
   /** What a device reads in a moment: a read that takes a recording of seconds has no place between two steps. */
-  const quick = (k: Capability) => !!source?.[k] && !source.slowReads?.includes(k);
+  const quick = (k: Capability) => !source.slowReads.includes(k);
   /** A step after which the app does not run (`stop`), or a read that failed, has no reading: the run goes on. */
-  const read = async <T>(k: Capability, get: () => Promise<Measured<T>> | undefined) => {
+  const read = async <T>(k: Capability, get: () => Promise<Measured<T>>) => {
     if (!quick(k)) return undefined;
     const m = await Promise.resolve()
       .then(get)
@@ -52,7 +52,7 @@ function journeyReader(s: Session) {
   };
   const onStep = async (e: StepEvent, app: string) => {
     if (e.phase === 'before') {
-      if (quick('resetFrames')) await source?.resetFrames?.(app).catch(() => undefined);
+      if (quick('resetFrames')) await source.resetFrames(app).catch(() => undefined);
       return;
     }
     const line = e.result.step;
@@ -60,12 +60,12 @@ function journeyReader(s: Session) {
     const { ms, throughHost } = stepTime(e.step.action, e.result);
     add(kind('ms'), 'ms', ms, throughHost);
     raw.push(`# ${line}: ${ms} ms`);
-    const frames = await read('frames', () => source?.frames?.(app));
+    const frames = await read('frames', () => source.frames(app));
     if (frames?.totalFrames) {
       if (frames.p95Ms !== undefined) add(kind('frames_p95_ms'), 'ms', frames.p95Ms);
       if (frames.frames) add(kind('frames_worst_ms'), 'ms', frames.frames.worstMs);
     }
-    const memory = await read('memory', () => source?.memory?.(app));
+    const memory = await read('memory', () => source.memory(app));
     if (memory) add(kind('memory_kb'), 'kb', memory.kb);
   };
   return { held, raw, add, onStep, quick };

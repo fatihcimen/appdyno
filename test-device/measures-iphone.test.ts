@@ -117,7 +117,7 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
   it('why slow: a 500 ms slow start is named in `main`, within 15 %', async () => {
     const phases = async (env?: Record<string, string>) => {
       const { startup } = (
-        await d.measure.launch!(APP, { mode: 'cold', repeats: 1, trace: true, ...(env && { env }) })
+        await d.measure.launch(APP, { mode: 'cold', repeats: 1, trace: true, ...(env && { env }) })
       ).value;
       console.log(JSON.stringify(startup));
       return startup!.breakdown;
@@ -143,12 +143,12 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
   it('leaks: 10 retain cycles of two objects read as 20 objects, a screen with none as 0', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-leaks-'));
     const s = await open('leak');
-    const none = (await d.measure.heap!(APP, dir)).value;
+    const none = (await d.measure.heap(APP, dir)).value;
     console.log('leaks at rest', JSON.stringify(none));
     expect(none.leaks).toBe(0);
     await d.inFront(APP);
     for (let i = 0; i < 10; i++) await d.tap(byId(s, 'leak_make'), { settle: false });
-    const ten = (await d.measure.heap!(APP, dir)).value;
+    const ten = (await d.measure.heap(APP, dir)).value;
     console.log('leaks of 10 cycles', JSON.stringify(ten));
     expect(ten.leaks).toBe(20);
     expect(ten.note).toMatch(/two objects counts as two/);
@@ -156,7 +156,7 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
 
   it('leaks: a system app refuses and says what would work', async () => {
     await d.launch(SETTINGS);
-    const e = await d.measure.heap!(SETTINGS, tmpdir()).catch((x: DeviceError) => x);
+    const e = await d.measure.heap(SETTINGS, tmpdir()).catch((x: DeviceError) => x);
     console.log(e instanceof Error ? `${e.message} / ${(e as DeviceError).hint}` : e);
     expect(e).toBeInstanceOf(DeviceError);
     expect((e as DeviceError).code).toBe('UNSUPPORTED');
@@ -181,7 +181,7 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
         APPDYNO_FIXTURE_NO_PROXY: '1',
       });
       const n = (
-        await d.measure.network!(APP, 3_000, async () => {
+        await d.measure.network(APP, 3_000, async () => {
           await d.inFront(APP);
           await d.tap(byId(s, 'fetch'), { settle: false });
         })
@@ -199,7 +199,7 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
 
   it('network: a system app is read too, attached with no debugger', async () => {
     await d.launch(SETTINGS);
-    const n = (await d.measure.network!(SETTINGS, 1_000)).value;
+    const n = (await d.measure.network(SETTINGS, 1_000)).value;
     console.log('network of Settings', JSON.stringify(n));
     expect(n.rxBytes).toBeGreaterThanOrEqual(0);
     expect(n.windowMs).toBeGreaterThan(0);

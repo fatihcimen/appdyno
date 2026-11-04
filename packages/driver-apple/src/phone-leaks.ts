@@ -1,6 +1,6 @@
 import type { HeapReading, Measured } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { bundleSize } from './perf.js';
+import { bundleSize } from './bundle-size.js';
 import { parseLeakRows } from './trace-parse.js';
 import { recordTrace, traceDetail } from './trace.js';
 

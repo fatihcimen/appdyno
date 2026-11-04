@@ -88,10 +88,10 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
   describe('measures', () => {
     it('reads memory and CPU through Activity Monitor', async () => {
       await settings();
-      const m = await d.measure.memory!(SETTINGS);
+      const m = await d.measure.memory(SETTINGS);
       expect(m.value.kind).toBe('footprint');
       expect(m.value.kb).toBeGreaterThan(5_000);
-      const c = await d.measure.cpu!(SETTINGS, 3_000);
+      const c = await d.measure.cpu(SETTINGS, 3_000);
       expect(c.value.percent).toBeGreaterThanOrEqual(0);
       expect(c.value.windowMs).toBeGreaterThan(500);
     }, 180_000);
@@ -105,7 +105,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
             settle: false,
           });
       };
-      const p = await d.measure.cpuProfile!(SETTINGS, 4_000, scroll);
+      const p = await d.measure.cpuProfile(SETTINGS, 4_000, scroll);
       expect(p.value.samples).toBeGreaterThan(0);
       expect(p.value.top.length).toBeGreaterThan(0);
       const hangs = await d.hangs(SETTINGS, 3, scroll);
@@ -114,7 +114,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
     }, 240_000);
 
     it('times a launch until its first screen reads', async () => {
-      const l = await d.measure.launch!(SETTINGS, { mode: 'cold', repeats: 1 });
+      const l = await d.measure.launch(SETTINGS, { mode: 'cold', repeats: 1 });
       expect(l.value.medianMs).toBeGreaterThan(100);
       expect(l.value.until).toBe('the first screen is read');
     }, 120_000);
@@ -200,12 +200,12 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
 
     it('memory: 50 MB held shows in the footprint (within 15 %)', async () => {
       const s = await open('memory');
-      const before = (await d.measure.memory!(APP)).value.kb;
+      const before = (await d.measure.memory(APP)).value.kb;
       // a recording can outlast a phone's auto-lock, and a tap on the lock screen goes to the system
       await d.inFront(APP);
       await d.tap(byId(s, 'memory_alloc'), { settle: false });
       await pause(1_500);
-      const after = (await d.measure.memory!(APP)).value.kb;
+      const after = (await d.measure.memory(APP)).value.kb;
       console.log('memory', before, after);
       await d.tap(byId(s, 'memory_free'), { settle: false });
       expect((after - before) / 1024).toBeGreaterThan(50 * 0.85);
@@ -215,7 +215,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
     it('CPU profile: the busy loop is the top function', async () => {
       const s = await open('cpu');
       const p = (
-        await d.measure.cpuProfile!(APP, 3_000, async () => {
+        await d.measure.cpuProfile(APP, 3_000, async () => {
           await pause(200);
           await d.tap(byId(s, 'cpu_load'), { settle: false });
         })
@@ -262,9 +262,9 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
 
     it('launch: a 500 ms slow start raises it by that (within 25 %)', async () => {
       await d.terminate(APP);
-      const base = (await d.measure.launch!(APP, { mode: 'cold', repeats: 5 })).value;
+      const base = (await d.measure.launch(APP, { mode: 'cold', repeats: 5 })).value;
       const slow = (
-        await d.measure.launch!(APP, {
+        await d.measure.launch(APP, {
           mode: 'cold',
           repeats: 5,
           env: { APPDYNO_FIXTURE_STARTUP_MS: '500' },
@@ -277,20 +277,20 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
     }, 240_000);
 
     it('build type and size say what a phone can tell', async () => {
-      expect(await d.measure.buildType!(APP)).toBe('unknown');
-      await expect(d.measure.size!(APP)).rejects.toMatchObject({ code: 'UNSUPPORTED' });
-      expect(await d.measure.buildType!(SETTINGS)).toBe('release');
+      expect(await d.measure.buildType(APP)).toBe('unknown');
+      await expect(d.measure.size(APP)).rejects.toMatchObject({ code: 'UNSUPPORTED' });
+      expect(await d.measure.buildType(SETTINGS)).toBe('release');
     });
 
     // the runner gives way to the test and the next command starts it again
     it("XCTest's metrics: launch and hitches", async () => {
-      const launch = await d.measure.xctMetrics!(APP, 'launch').catch((e: DeviceError) => e);
+      const launch = await d.measure.xctMetrics(APP, 'launch').catch((e: DeviceError) => e);
       console.log(
         'xct launch',
         launch instanceof Error ? launch.message : JSON.stringify(launch.value.metrics),
       );
       await open('list');
-      const hitches = await d.measure.xctMetrics!(APP, 'hitches').catch((e: DeviceError) => e);
+      const hitches = await d.measure.xctMetrics(APP, 'hitches').catch((e: DeviceError) => e);
       console.log(
         'xct hitches',
         hitches instanceof Error ? hitches.message : JSON.stringify(hitches.value.metrics),

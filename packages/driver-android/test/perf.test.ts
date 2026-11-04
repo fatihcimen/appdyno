@@ -472,6 +472,14 @@ describe('the measures of a device', () => {
       ensureAwake: async () => ({ woke: false, unlocked: false, locked: false }),
     });
 
+  it('says what it has no way of measuring', async () => {
+    const perf = on('R58M', '');
+    expect(perf.framesByProbe).toBe(false);
+    await expect(perf.attachProbe()).rejects.toThrow('cannot measure through a frame probe');
+    await expect(perf.hangs()).rejects.toThrow('cannot measure hangs');
+    await expect(perf.xctMetrics()).rejects.toThrow("cannot measure XCTest's metrics");
+  });
+
   it('reaches the device from a measure taken off the object, as the operations do', async () => {
     const { pid } = on('R58M', '4242\n');
     await expect(pid('dev.app')).resolves.toBe(4242);

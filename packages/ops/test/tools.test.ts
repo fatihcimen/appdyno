@@ -8,7 +8,7 @@ import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY, type Policy } from '../src/policy.js';
 import { iosScreen } from '@appdyno/driver-apple';
 import { pinchPaths, swipeLine } from '../src/gesture-paths.js';
-import { FakeDevice } from './fake-device.js';
+import { FakeDevice, LACKS } from './fake-device.js';
 import { linkedClient } from './helpers.js';
 
 // a virtual device's numbers are noisy under host load: these answers must not depend on this Mac's
@@ -541,11 +541,11 @@ describe('iOS simulators', () => {
 
   it('says which measure a device lacks', async () => {
     const none = new FakeDevice();
-    Object.defineProperty(none, 'measure', { value: undefined });
+    Object.defineProperty(none, 'measure', { value: LACKS });
     const r = await (await connect({}, none)).textOf('perf_snapshot');
     expect(r).toEqual({ error: true, text: 'emulator-5580 cannot measure CPU' });
     const part = new FakeDevice();
-    Object.defineProperty(part, 'measure', { value: { cpu: part.measure.cpu } });
+    Object.defineProperty(part, 'measure', { value: { ...LACKS, cpu: part.measure.cpu } });
     const t = await connect({}, part);
     expect((await t.textOf('perf_snapshot')).text).toBe('emulator-5580 cannot measure memory');
     expect((await t.textOf('perf_trace')).text).toBe('emulator-5580 cannot measure a frame trace');
@@ -568,7 +568,7 @@ describe('iOS simulators', () => {
     const m = <T>(value: T) => ({ value, raw: 'raw', at: '2026-11-02T00:00:00.000Z' });
     const onDevice = (measure: object) => {
       const device = new FakeDevice();
-      Object.defineProperty(device, 'measure', { value: measure });
+      Object.defineProperty(device, 'measure', { value: { ...LACKS, ...measure } });
       return connect({}, device);
     };
 

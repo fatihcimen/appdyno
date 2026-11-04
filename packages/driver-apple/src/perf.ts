@@ -1,4 +1,5 @@
 import {
+  cannot,
   sleep,
   type MeasureSource,
   type Measured,
@@ -21,9 +22,10 @@ import {
   type StartupAnalysis,
 } from '@appdyno/core';
 import { existsSync } from 'node:fs';
-import { readdir, lstat, readFile, mkdir, rm, appendFile, writeFile } from 'node:fs/promises';
-import { join, relative, sep, dirname } from 'node:path';
+import { readFile, mkdir, rm, appendFile, writeFile } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
+import { bundleSize } from './bundle-size.js';
 import { probeHead, probeWindow, probeFrames, probeSummary, PROBE_LIMITS } from './probe.js';
 import { crashExits, simulatorCrashes } from './crashes.js';
 import { nettopBytes } from './sim-network.js';
@@ -51,23 +53,8 @@ const at = () => new Date().toISOString();
 /** The probe's file shows what happened only after its next write (every 250 ms). */
 const PROBE_FLUSH_MS = 350;
 
-/** A bundle on disk: its bytes, its folders apart and the rest of its files together. */
-export async function bundleSize(
-  app: string,
-): Promise<{ bytes: number; parts: Record<string, number> }> {
-  const parts: Record<string, number> = {};
-  let bytes = 0;
-  for (const e of await readdir(app, { recursive: true, withFileTypes: true })) {
-    if (e.isDirectory()) continue;
-    const path = join(e.parentPath, e.name);
-    const { size } = await lstat(path);
-    const [top, ...rest] = relative(app, path).split(sep);
-    const part = rest.length ? top! : 'files';
-    parts[part] = (parts[part] ?? 0) + size;
-    bytes += size;
-  }
-  return { bytes, parts };
-}
+/** What a list coasts on after its swipes. */
+const COAST_MS = 1_500;
 
 /** A launch that really took place: of two in the middle, the lower. */
 const lowerMedian = (xs: number[]) => {
@@ -81,13 +68,25 @@ const lowerMedian = (xs: number[]) => {
  * a CPU profile (the Mac's sampler), network bytes, its bundle, and frames through the frame probe.
  */
 export class IosSimulatorPerf implements MeasureSource {
+  readonly slowReads = [];
+  readonly framesByProbe = true;
+  anonMemory = cannot('anonymous memory by process state');
+  surfaceFrames = cannot("a surface's frames");
+  vitals = cannot('the device state');
+  baselineProfile = cannot('a Baseline Profile');
+  threads = cannot('per-thread CPU');
+  battery = cannot('wake locks, wakeups and jobs');
+  startInfo = cannot('start info');
+  heapProfile = cannot('a heap profile');
+  hangs = cannot('hangs');
+
   constructor(
     private readonly udid: string,
     private readonly simctl: Simctl,
     /** Reads the screen once; true when the app's window shows content. */
     private readonly appShown: (bundle: string) => Promise<boolean>,
     /** XCTest's `measure()` in a test of its own, on this simulator. */
-    readonly xctMetrics?: (
+    readonly xctMetrics: (
       bundle: string,
       test: 'launch' | 'hitches',
     ) => Promise<Measured<XctMetrics>>,
@@ -235,6 +234,14 @@ export class IosSimulatorPerf implements MeasureSource {
     const raw = probeWindow(text, from, to);
     if (opts.reset) await this.resetFrames(bundle);
     return { value: probeFrames(raw, from, to), raw, at: at() };
+  }
+
+  /** What the probe counts from a reset to the end of what a list coasts on after `during`. */
+  async framesDuring(bundle: string, _seconds: number, during: () => Promise<unknown>) {
+    await this.resetFrames(bundle);
+    await during();
+    await sleep(COAST_MS);
+    return this.frames(bundle);
   }
 
   /** The probe's lines for a window of `seconds`, and `during` too if it takes longer. */

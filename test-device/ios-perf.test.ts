@@ -290,7 +290,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
   // the runner gives way to the test and the next command starts it again: these come last
   describe("XCTest's metrics", () => {
     it('launch', async () => {
-      const m = (await d.measure.xctMetrics!(APP, 'launch')).value;
+      const m = (await d.measure.xctMetrics(APP, 'launch')).value;
       console.log('xct launch', JSON.stringify(m.metrics));
       const durations = Object.values(m.metrics)[0]!;
       expect(durations.length).toBeGreaterThanOrEqual(5);
@@ -300,7 +300,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
 
     it('hitches: says plainly when a simulator records none', async () => {
       await open('list');
-      const r = await d.measure.xctMetrics!(APP, 'hitches').catch((e: DeviceError) => e);
+      const r = await d.measure.xctMetrics(APP, 'hitches').catch((e: DeviceError) => e);
       console.log('xct hitches', r instanceof Error ? r.message : JSON.stringify(r.value.metrics));
       if (r instanceof DeviceError) {
         expect(r.code).toBe('UNSUPPORTED');

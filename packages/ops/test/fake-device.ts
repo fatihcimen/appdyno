@@ -1,5 +1,6 @@
 import { androidScreen } from '@appdyno/driver-android';
 import {
+  cannot,
   DeviceActions,
   type ActOptions,
   type AppManager,
@@ -126,6 +127,37 @@ export const SCREENS: Record<string, Node[]> = {
   ],
   form: FORM,
   sent: [...FORM, { t: 'Gönderildi', id: 'dev.app:id/result', b: [0, 700, 1080, 800] }],
+};
+
+/** A device with no measure at all, for what a test takes from a working one or gives to this. */
+export const LACKS: MeasureSource = {
+  slowReads: [],
+  framesByProbe: false,
+  cpu: cannot('CPU'),
+  memory: cannot('memory'),
+  anonMemory: cannot('anonymous memory by process state'),
+  surfaceFrames: cannot("a surface's frames"),
+  frames: cannot('frames'),
+  framesDuring: cannot('frames'),
+  resetFrames: cannot('frames'),
+  vitals: cannot('the device state'),
+  launch: cannot('launch time'),
+  buildType: cannot('the build type'),
+  baselineProfile: cannot('a Baseline Profile'),
+  attachProbe: cannot('through a frame probe'),
+  threads: cannot('per-thread CPU'),
+  network: cannot('network bytes'),
+  energy: cannot('energy'),
+  battery: cannot('wake locks, wakeups and jobs'),
+  exits: cannot('crash and ANR exits'),
+  startInfo: cannot('start info'),
+  size: cannot('app size'),
+  heapProfile: cannot('a heap profile'),
+  hangs: cannot('hangs'),
+  xctMetrics: cannot("XCTest's metrics"),
+  cpuProfile: cannot('a CPU profile'),
+  heap: cannot('a heap dump'),
+  frameTrace: cannot('a frame trace'),
 };
 
 /** A part of the port a test did not give: whatever is asked of it, it refuses. */
@@ -318,6 +350,7 @@ export class FakeDevice extends DeviceActions implements Device {
   get measure() {
     const m = <T>(value: T, raw: string) => ({ value, raw, at: '2026-10-25T00:00:00.000Z' });
     return {
+      ...LACKS,
       cpu: async () => {
         this.record('perf.cpu');
         return m(
@@ -349,6 +382,12 @@ export class FakeDevice extends DeviceActions implements Device {
       },
       resetFrames: async () => {
         this.record('perf.reset');
+      },
+      /** A counter read before and after, by whatever a test made of the two. */
+      async framesDuring(this: MeasureSource, app: string, _s: number, during) {
+        await this.resetFrames(app);
+        await during();
+        return this.frames(app);
       },
       vitals: async () => {
         return m({ load: [1, 1, 1], cpuPressure: 2, thermalStatus: 0 }, '==load==');

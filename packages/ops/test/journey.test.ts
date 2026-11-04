@@ -183,10 +183,8 @@ describe('a journey as a performance scenario', () => {
 
   it('a read that takes a recording of seconds is not made between two steps, and the answer says so', async () => {
     const { device, call, measurements } = phone({
-      slowReads: ['memory'],
-      frames: undefined,
-      resetFrames: undefined,
-    } as Partial<MeasureSource>);
+      slowReads: ['memory', 'frames', 'resetFrames'],
+    });
     const r = await call('flow', { action: 'run', file: flowFile(), iterations: 1 });
     expect(r.data.journey!.note).toMatch(/time only for frames and memory/);
     expect(device.calls.some((c) => c.name === 'perf.memory')).toBe(false);

@@ -1,7 +1,6 @@
 import {
   FROZEN_FRAME_MS,
   MIN_FRAMES,
-  sleep,
   type FrameHistogram,
   type Measured,
   reportProgress,
@@ -92,21 +91,12 @@ export function perfScrollOp(ctx: ServerContext) {
           await s.device.swipe(from, to, 300, { settle: false });
         }
       };
-      const recorded = s.device.measure?.framesDuring;
-      /** What the device has for the frames around the swipes, or its counter read before and after them. */
-      const framesOfRound = recorded
-        ? () =>
-            measure(s, 'framesDuring', row)(
-              pkg,
-              Math.ceil(swipes * SECONDS_A_SWIPE) + COAST_SECONDS,
-              swipeAll,
-            )
-        : async () => {
-            await measure(s, 'resetFrames', row)(pkg);
-            await swipeAll();
-            await sleep(1_500);
-            return measure(s, 'frames', row)(pkg);
-          };
+      const framesOfRound = () =>
+        measure(s, 'framesDuring', row)(
+          pkg,
+          Math.ceil(swipes * SECONDS_A_SWIPE) + COAST_SECONDS,
+          swipeAll,
+        );
       for (let r = 0; r < repeats; r++) {
         reportProgress(`scroll round ${r + 1} of ${repeats}`);
         const m0 = await readMemory(pkg);

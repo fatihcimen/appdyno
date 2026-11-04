@@ -1,7 +1,14 @@
 import { stat, writeFile } from 'node:fs/promises';
 import { loadavg, cpus } from 'node:os';
 import { join } from 'node:path';
-import { type Capability, type MeasureSource, type Measured, pause, stateDir } from '@appdyno/core';
+import {
+  Cannot,
+  type Capability,
+  type MeasureSource,
+  type Measured,
+  pause,
+  stateDir,
+} from '@appdyno/core';
 import {
   type DeviceInfo,
   type MeasureId,
@@ -74,56 +81,17 @@ export const ROW_OF: Partial<Record<Capability, MeasureId>> = {
   size: 'size',
 };
 
-/** A row with more than one way to read it: a device lacking one of them is no device that cannot. */
-const ROUTES: Partial<Record<MeasureId, Capability[]>> = {
-  'launch-why': ['launch', 'startInfo'],
-  memory: ['memory', 'anonMemory'],
-  frames: ['frames', 'framesDuring', 'frameTrace'],
-  stalls: ['frames', 'frameTrace', 'hangs'],
-};
-
-/** What a device without the measure is told it lacks. */
-const MEASURE_NAME: Record<Capability, string> = {
-  baselineProfile: 'a Baseline Profile',
-  surfaceFrames: "a surface's frames",
-  cpu: 'CPU',
-  memory: 'memory',
-  anonMemory: 'anonymous memory by process state',
-  frames: 'frames',
-  framesDuring: 'frames',
-  resetFrames: 'frames',
-  vitals: 'the device state',
-  launch: 'launch time',
-  cpuProfile: 'a CPU profile',
-  heap: 'a heap dump',
-  frameTrace: 'a frame trace',
-  buildType: 'the build type',
-  attachProbe: 'through a frame probe',
-  threads: 'per-thread CPU',
-  network: 'network bytes',
-  energy: 'energy',
-  battery: 'wake locks, wakeups and jobs',
-  exits: 'crash and ANR exits',
-  startInfo: 'start info',
-  size: 'app size',
-  heapProfile: 'a heap profile',
-  hangs: 'hangs',
-  xctMetrics: "XCTest's metrics",
-};
-
 export const kb = (n?: number) => (n === undefined ? '?' : `${(n / 1024).toFixed(1)} MB`);
 
 /** How far a measure that records during a scroll swipes. */
 export const SCROLLER_SWIPES = 4;
 
-/** A measure the platform may lack: its answer, or nothing when it says UNSUPPORTED. */
+/** A measure the platform may lack: its answer, or nothing when it says UNSUPPORTED, in whatever words. */
 export const unlessUnsupported = async <T>(p: Promise<T>): Promise<T | undefined> =>
   p.catch((e: unknown) => {
-    if (!(e instanceof DeviceError && e.code === 'UNSUPPORTED')) throw e;
+    if ((e as { code?: string }).code !== 'UNSUPPORTED') throw e;
     return undefined;
   });
-
-const probeByDefault = (s: Session) => !!s.device.measure?.attachProbe;
 
 export const deviceInfo = (s: Session): DeviceInfo => ({
   serial: s.device.serial,
@@ -218,7 +186,7 @@ export async function keepRun(
   compile?: string,
 ) {
   const m = s.device.measure;
-  const vitals = (await m?.vitals?.().catch(() => undefined))?.value;
+  const vitals = (await m.vitals().catch(() => undefined))?.value;
   const h = s.device.hello;
   const records = recordsOf(
     {
@@ -228,7 +196,7 @@ export async function keepRun(
       source,
       raw,
       device: deviceInfo(s),
-      build: (await m?.buildType?.(app).catch(() => undefined)) ?? 'unknown',
+      build: (await m.buildType(app).catch(() => undefined)) ?? 'unknown',
       ...(compile && { compile }),
       load: {
         host: loadavg(),
@@ -255,34 +223,28 @@ export async function keepRun(
 
 export function perfTools(ctx: ServerContext) {
   /**
-   * The device's measure, or a refusal that names what it lacks. Every refusal goes through here and is kept as that
-   * row's answer on this kind of device; `row: false` for one that says nothing of the device (the caller chose it).
+   * The device's measure. A refusal goes through here and is kept as that row's answer on this kind of device; `row:
+   * false` for one that says nothing of the device (the caller chose it). What a device has no way of measuring says
+   * so by its name, and is no row's answer: a row may have another way, and a survey says it of the row.
    */
   const measure = <K extends Capability>(
     s: Session,
     k: K,
     row: MeasureId | false = ROW_OF[k] ?? false,
-  ): NonNullable<MeasureSource[K]> => {
+  ): MeasureSource[K] => {
     const source = s.device.measure;
-    const f = source?.[k] as ((...a: unknown[]) => Promise<unknown>) | undefined;
-    const run = async (...a: unknown[]) => {
-      const keep = async (why: string) => {
-        if (!row) return;
-        await keepRefusal(ctx, s, a[0] as string, row, why);
-        await rewriteDashboard(ctx);
-      };
-      if (!f) {
-        const elsewhere = row && ROUTES[row]?.some((r) => r !== k && source?.[r]);
-        const why = `${s.device.serial} cannot measure ${MEASURE_NAME[k]}`;
-        if (!elsewhere) await keep(why);
-        throw new ToolError(why, 'UNSUPPORTED');
-      }
-      return f.apply(source, a).catch(async (e: unknown) => {
-        if (e instanceof DeviceError && e.code === 'UNSUPPORTED') await keep(e.message);
+    const f = source[k] as (...a: unknown[]) => Promise<unknown>;
+    const run = async (...a: unknown[]) =>
+      f.apply(source, a).catch(async (e: unknown) => {
+        if (e instanceof Cannot)
+          throw new ToolError(`${s.device.serial} ${e.message}`, 'UNSUPPORTED');
+        if (row && e instanceof DeviceError && e.code === 'UNSUPPORTED') {
+          await keepRefusal(ctx, s, a[0] as string, row, e.message);
+          await rewriteDashboard(ctx);
+        }
         throw e;
       });
-    };
-    return run as unknown as NonNullable<MeasureSource[K]>;
+    return run as unknown as MeasureSource[K];
   };
   const appOf = (s: Session, app?: string) => {
     const pkg = checkApp(ctx.policy, app ?? s.appId ?? '');
@@ -306,7 +268,7 @@ export function perfTools(ctx: ServerContext) {
   ) => keepRun(ctx, s, app, scenario, source, raw, metrics, compile);
   const noisy = (noise: string[]) => (noise.length ? [`noise: ${noise.join(', ')}`] : []);
   /** Frames on a simulator come through the probe unless told otherwise: what it cost is said in the answer. */
-  const withProbe = async (s: Session, pkg: string, probe = probeByDefault(s)) => {
+  const withProbe = async (s: Session, pkg: string, probe = s.device.measure.framesByProbe) => {
     if (!probe) return [];
     const relaunched = await measure(s, 'attachProbe')(pkg);
     return relaunched

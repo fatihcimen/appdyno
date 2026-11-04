@@ -1,3 +1,4 @@
+import { DeviceError } from '@appdyno/protocol';
 import type {
   FrameStats,
   FrameTimeline,
@@ -274,24 +275,36 @@ export type FrameTrace =
 /** Where a build's names are, for a trace of addresses: a `.dSYM`, or a folder of them. */
 export type Symbols = { dsym?: string };
 
-/** What a device can measure: each has what it has, and `ops` names what it lacks. */
+/** What a device has no way of measuring, as against a measure that refused this time: no row is about it. */
+export class Cannot extends DeviceError {
+  constructor(what: string) {
+    super('UNSUPPORTED', `cannot measure ${what}`);
+  }
+}
+
+/** A member of `MeasureSource` a device does not have, naming what that takes away. */
+export const cannot = (what: string) => (): Promise<never> => Promise.reject(new Cannot(what));
+
+/** What a device can measure: every member answers, by `cannot` where this device has no way. */
 export interface MeasureSource {
-  /** What takes a recording of seconds here, so a journey does not read it between two steps. */
-  readonly slowReads?: readonly Capability[];
-  cpu?(app: string, windowMs?: number): Promise<Measured<CpuReading>>;
-  memory?(app: string): Promise<Measured<MemoryReading>>;
-  anonMemory?(app: string): Promise<Measured<AnonMemory>>;
-  frames?(app: string, opts?: { reset?: boolean }): Promise<Measured<FrameStats>>;
-  /** Frames of what `during` does, on a device with no counter to read before and after: it records around it. */
-  framesDuring?(
+  /** What has no quick read here, so a journey does not read it between two steps. */
+  readonly slowReads: readonly Capability[];
+  /** Its frames come through a probe in the app, which `attachProbe` puts there unless a caller says no. */
+  readonly framesByProbe: boolean;
+  cpu(app: string, windowMs?: number): Promise<Measured<CpuReading>>;
+  memory(app: string): Promise<Measured<MemoryReading>>;
+  anonMemory(app: string): Promise<Measured<AnonMemory>>;
+  frames(app: string, opts?: { reset?: boolean }): Promise<Measured<FrameStats>>;
+  /** Frames of what `during` does: recorded around it, or a counter read before and after it. */
+  framesDuring(
     app: string,
     seconds: number,
     during: () => Promise<unknown>,
   ): Promise<Measured<FrameStats>>;
-  resetFrames?(app: string): Promise<void>;
-  surfaceFrames?(app: string): Promise<Measured<SurfaceFrames>>;
-  vitals?(): Promise<Measured<DeviceVitals>>;
-  launch?(
+  resetFrames(app: string): Promise<void>;
+  surfaceFrames(app: string): Promise<Measured<SurfaceFrames>>;
+  vitals(): Promise<Measured<DeviceVitals>>;
+  launch(
     app: string,
     opts: {
       mode: LaunchMode;
@@ -305,47 +318,47 @@ export interface MeasureSource {
     },
   ): Promise<Measured<LaunchReading>>;
   /** Debuggable, profileable or neither: what a number of this build can be compared with. */
-  buildType?(app: string): Promise<BuildType>;
-  baselineProfile?(app: string, opts: { repeats: number }): Promise<Measured<BaselineReading>>;
+  buildType(app: string): Promise<BuildType>;
+  baselineProfile(app: string, opts: { repeats: number }): Promise<Measured<BaselineReading>>;
   /** Relaunches the app with the frame probe unless it runs under it already (simulator): true if it did. */
-  attachProbe?(app: string): Promise<boolean>;
-  threads?(app: string, windowMs: number): Promise<Measured<ThreadReading>>;
-  network?(
+  attachProbe(app: string): Promise<boolean>;
+  threads(app: string, windowMs: number): Promise<Measured<ThreadReading>>;
+  network(
     app: string,
     windowMs: number,
     during?: () => Promise<unknown>,
   ): Promise<Measured<NetworkReading>>;
-  energy?(app: string, windowMs: number): Promise<Measured<EnergyReading>>;
-  battery?(app: string, windowMs: number): Promise<Measured<BatterySignals>>;
-  exits?(app: string): Promise<Measured<ExitReading>>;
-  startInfo?(app: string): Promise<Measured<StartInfo>>;
-  size?(app: string): Promise<Measured<SizeReading>>;
-  heapProfile?(
+  energy(app: string, windowMs: number): Promise<Measured<EnergyReading>>;
+  battery(app: string, windowMs: number): Promise<Measured<BatterySignals>>;
+  exits(app: string): Promise<Measured<ExitReading>>;
+  startInfo(app: string): Promise<Measured<StartInfo>>;
+  size(app: string): Promise<Measured<SizeReading>>;
+  heapProfile(
     app: string,
     kind: HeapProfileKind,
     seconds: number,
     during?: () => Promise<unknown>,
   ): Promise<Measured<HeapProfile>>;
-  hangs?(
+  hangs(
     app: string,
     seconds: number,
     during?: () => Promise<unknown>,
     symbols?: Symbols,
   ): Promise<Measured<HangReading>>;
   /** XCTest's `measure()` in a test of its own: launch, hitches, memory, CPU. */
-  xctMetrics?(app: string, test: 'launch' | 'hitches'): Promise<Measured<XctMetrics>>;
-  cpuProfile?(
+  xctMetrics(app: string, test: 'launch' | 'hitches'): Promise<Measured<XctMetrics>>;
+  cpuProfile(
     app: string,
     ms: number,
     during?: () => Promise<unknown>,
     symbols?: Symbols,
   ): Promise<Measured<CpuProfile>>;
-  heap?(app: string, dir: string): Promise<Measured<HeapReading>>;
-  frameTrace?(
+  heap(app: string, dir: string): Promise<Measured<HeapReading>>;
+  frameTrace(
     app: string,
     seconds: number,
     during?: () => Promise<unknown>,
   ): Promise<Measured<FrameTrace>>;
 }
 
-export type Capability = Exclude<keyof MeasureSource, 'slowReads'>;
+export type Capability = Exclude<keyof MeasureSource, 'slowReads' | 'framesByProbe'>;

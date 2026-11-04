@@ -1,6 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { cannot } from '@appdyno/core';
 import { latestRuns, loadRefusals, MEASURES, runKeys } from '@appdyno/perf';
 import { DeviceError } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
@@ -54,7 +55,7 @@ describe('perf survey', { timeout: 60_000 }, () => {
   });
 
   it('keeps a refusal the whole operation gave', async () => {
-    const { ctx, measurements } = context({ heap: undefined });
+    const { ctx, measurements } = context({ heap: cannot('a heap dump') });
     const lines: string[] = [];
     await survey(ctx, 'dev.app', (l) => lines.push(l));
     expect(lines.find((l) => l.startsWith('leaks'))).toContain('cannot be read');
@@ -68,7 +69,7 @@ describe('perf survey', { timeout: 60_000 }, () => {
         raw: '',
         at: new Date().toISOString(),
       }),
-      frameTrace: undefined,
+      frameTrace: cannot('a frame trace'),
     });
     const lines: string[] = [];
     await survey(ctx, 'dev.app', (l) => lines.push(l));
@@ -77,7 +78,7 @@ describe('perf survey', { timeout: 60_000 }, () => {
   });
 
   it('says a device has no reading of what its driver lacks', async () => {
-    const { ctx, measurements } = context({ network: undefined });
+    const { ctx, measurements } = context({ network: cannot('network bytes') });
     const lines: string[] = [];
     await survey(ctx, 'dev.app', (l) => lines.push(l));
     expect(lines.find((l) => l.startsWith('network'))).toContain('gives no reading of this');
@@ -151,7 +152,7 @@ describe('the page and the measures', () => {
     await op(off.ctx, 'perf_scroll', { probe: false }).catch(() => undefined);
     expect(await kept(off.measurements)).toEqual({});
     // a device with no such way, with another: it reads stalls by a frame trace
-    const other = context({ hangs: undefined });
+    const other = context({ hangs: cannot('hangs') });
     await op(other.ctx, 'perf_trace', { what: 'hangs' }).catch(() => undefined);
     expect(await kept(other.measurements)).toEqual({});
     // a part of a row is not the row

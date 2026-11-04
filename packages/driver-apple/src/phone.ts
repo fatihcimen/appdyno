@@ -7,6 +7,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DeviceError, type Tree } from '@appdyno/protocol';
 import {
+  cannot,
   sleep,
   stateDir,
   type MeasureSource,
@@ -132,7 +133,18 @@ export class IosPhoneDevice extends IosDevice {
   readonly ctl: Devicectl;
   /** What Instruments and XCTest can read from a phone: what they cannot says why. */
   readonly measure: MeasureSource = {
-    slowReads: ['memory'],
+    slowReads: ['memory', 'frames', 'resetFrames'],
+    framesByProbe: false,
+    anonMemory: cannot('anonymous memory by process state'),
+    surfaceFrames: cannot("a surface's frames"),
+    frames: cannot('frames'),
+    resetFrames: cannot('frames'),
+    baselineProfile: cannot('a Baseline Profile'),
+    attachProbe: cannot('through a frame probe'),
+    threads: cannot('per-thread CPU'),
+    battery: cannot('wake locks, wakeups and jobs'),
+    startInfo: cannot('start info'),
+    heapProfile: cannot('a heap profile'),
     // no tool answers this by itself: every recording holds it, so it costs what the recording cost
     vitals: async () => {
       const trace = recentTrace(this.serial);

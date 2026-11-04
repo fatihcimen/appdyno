@@ -242,7 +242,7 @@ export interface Device {
   appRunning(app: string): Promise<boolean>;
   /** Its process id, where reading it is cheap enough to do on every action. */
   appPid?(app: string): Promise<string | undefined>;
-  readonly measure?: MeasureSource;
+  readonly measure: MeasureSource;
 }
 
 export type LogLevel = 'verbose' | 'debug' | 'info' | 'warn' | 'error';

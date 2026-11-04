@@ -1,4 +1,4 @@
-import type { AnonMemory, Capability, EnergyReading, Measured } from '@appdyno/core';
+import type { AnonMemory, EnergyReading, Measured } from '@appdyno/core';
 import { ramTier, vitalsCall, type Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
@@ -36,10 +36,6 @@ type Asked = {
   measure: ReturnType<typeof perfTools>['measure'];
 };
 
-/** The device's read of this, if it has one. */
-const reads = <K extends Capability>(k: K, a: Asked) =>
-  a.s.device.measure?.[k] && a.measure(a.s, k);
-
 type Answered = Partial<z.infer<typeof SnapshotOut>>;
 
 type Got = {
@@ -52,14 +48,13 @@ type Got = {
 /** One thing `also` can ask for: how it is read, then what is kept of it, said of it and answered. */
 const extra =
   <T>(x: {
-    read: (a: Asked) => Promise<Measured<T>> | undefined;
+    read: (a: Asked) => Promise<Measured<T>>;
     metrics: (v: T) => Metric[];
     line: (v: T) => string;
     data: (v: T) => Answered;
   }) =>
   async (a: Asked): Promise<Got | undefined> => {
-    const read = x.read(a);
-    const m = read && (await unlessUnsupported(read));
+    const m = await unlessUnsupported(x.read(a));
     return (
       m && {
         measured: m,
@@ -100,7 +95,7 @@ const anonLines = (v: AnonMemory) => {
 
 const EXTRAS = {
   threads: extra({
-    read: (a) => reads('threads', a)?.(a.pkg, a.windowMs),
+    read: (a) => a.measure(a.s, 'threads')(a.pkg, a.windowMs),
     metrics: (v) => [{ kind: 'threads.over90_ms', unit: 'ms', samples: [v.worstOver90Ms] }],
     line: (v) =>
       `threads: ${v.threads
@@ -110,7 +105,7 @@ const EXTRAS = {
     data: (v) => ({ threads: v.threads.slice(0, 10) }),
   }),
   network: extra({
-    read: (a) => reads('network', a)?.(a.pkg, a.windowMs),
+    read: (a) => a.measure(a.s, 'network')(a.pkg, a.windowMs),
     metrics: (v) => [
       { kind: 'network.rx_bytes', unit: 'bytes', samples: [v.rxBytes] },
       { kind: 'network.tx_bytes', unit: 'bytes', samples: [v.txBytes] },
@@ -120,9 +115,7 @@ const EXTRAS = {
   }),
   energy: extra({
     read: (a) => {
-      const read = reads('energy', a);
-      if (!read) return undefined;
-      const now = () => read(a.pkg, a.windowMs);
+      const now = () => a.measure(a.s, 'energy')(a.pkg, a.windowMs);
       // Android reads it told it runs on battery; no other platform has this condition
       return a.s.device.platform === 'android' ? holdingCondition(a.s, 'battery', now) : now();
     },
@@ -136,7 +129,7 @@ const EXTRAS = {
     }),
   }),
   anonMemory: extra({
-    read: (a) => reads('anonMemory', a)?.(a.pkg),
+    read: (a) => a.measure(a.s, 'anonMemory')(a.pkg),
     metrics: (v) => anonMetrics(v),
     line: (v) =>
       [
@@ -152,7 +145,7 @@ const EXTRAS = {
     }),
   }),
   startInfo: extra({
-    read: (a) => reads('startInfo', a)?.(a.pkg),
+    read: (a) => a.measure(a.s, 'startInfo')(a.pkg),
     metrics: (v) =>
       Object.entries(v.newest.phases).map(([phase, ms]) => ({
         kind: `launch.phase.${phase}_ms` as const,
@@ -183,7 +176,7 @@ const EXTRAS = {
     }),
   }),
   surface: extra({
-    read: (a) => reads('surfaceFrames', a)?.(a.pkg),
+    read: (a) => a.measure(a.s, 'surfaceFrames')(a.pkg),
     metrics: (v) =>
       v.frames === 0
         ? []
@@ -203,7 +196,7 @@ const EXTRAS = {
     data: (v) => ({ surface: v }),
   }),
   battery: extra({
-    read: (a) => reads('battery', a)?.(a.pkg, a.batteryMs),
+    read: (a) => a.measure(a.s, 'battery')(a.pkg, a.batteryMs),
     metrics: (v) => [
       { kind: 'wakelocks.ms', unit: 'ms', samples: [v.wakeLockMs] },
       { kind: 'wakelocks.percent', unit: 'percent', samples: [v.wakeLockPercent] },
@@ -230,7 +223,7 @@ const EXTRAS = {
     }),
   }),
   exits: extra({
-    read: (a) => reads('exits', a)?.(a.pkg),
+    read: (a) => a.measure(a.s, 'exits')(a.pkg),
     metrics: (v) => [
       { kind: 'exits.crashes', unit: 'count', samples: [v.crashes] },
       { kind: 'exits.anrs', unit: 'count', samples: v.anrs === undefined ? [] : [v.anrs] },
@@ -252,7 +245,7 @@ const EXTRAS = {
     }),
   }),
   size: extra({
-    read: (a) => reads('size', a)?.(a.pkg),
+    read: (a) => a.measure(a.s, 'size')(a.pkg),
     metrics: (v) => [{ kind: 'size.bytes', unit: 'bytes', samples: [v.bytes] }],
     line: (v) => `size: ${(v.bytes / 1048576).toFixed(1)} MB`,
     data: (v) => ({ sizeBytes: v.bytes }),
@@ -295,9 +288,9 @@ export function perfSnapshotOp(ctx: ServerContext) {
       const readMemory = measure(s, 'memory');
       const cpu = await readCpu(pkg, cpuWindowMs);
       const mem = await readMemory(pkg);
-      const source = s.device.measure!;
-      const frames = source.frames && (await unlessUnsupported(source.frames(pkg)));
-      const vitals = await source.vitals?.();
+      const source = s.device.measure;
+      const frames = await unlessUnsupported(source.frames(pkg));
+      const vitals = await unlessUnsupported(source.vitals());
       const asked = { s, pkg, windowMs: cpuWindowMs, batteryMs: batteryWindowMs, measure };
       const lacking: ExtraName[] = [];
       const got: (Got & { name: ExtraName })[] = [];

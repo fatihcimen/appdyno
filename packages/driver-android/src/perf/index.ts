@@ -1,4 +1,4 @@
-import type { MeasureSource } from '@appdyno/core';
+import { cannot, type MeasureSource } from '@appdyno/core';
 import { type PerfDevice, pidOf } from './shared.js';
 import { frames, framesDuring, resetFrames, frameTimeline, frameTrace } from './frames.js';
 import { memory, anonMemory, heapDump, heap, heapProfile } from './memory.js';
@@ -23,6 +23,12 @@ export class AndroidPerf implements MeasureSource {
     <A extends unknown[], R>(measure: (d: PerfDevice, ...a: A) => R) =>
     (...a: A) =>
       measure(this.device, ...a);
+
+  readonly slowReads = [];
+  readonly framesByProbe = false;
+  attachProbe = cannot('through a frame probe');
+  hangs = cannot('hangs');
+  xctMetrics = cannot("XCTest's metrics");
 
   pid = this.on(pidOf);
   frames = this.on(frames);

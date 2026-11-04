@@ -137,6 +137,50 @@ describe('a starting runner', () => {
   });
 });
 
+describe('what a device measures', () => {
+  const simulator = () => new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951').measure;
+  const phone = () => new IosPhoneDevice('00001234-0123456789ABCDEF', { profile: '/p' }).measure;
+  const says = async (read: () => Promise<unknown>, what: string) =>
+    expect(read()).rejects.toThrow(`cannot measure ${what}`);
+
+  it('a simulator comes through its probe, and has no recording of its frames to wait for', () => {
+    expect(simulator().framesByProbe).toBe(true);
+    expect(phone().framesByProbe).toBe(false);
+  });
+
+  it('a phone has no quick read of frames or memory between two steps', () => {
+    expect(simulator().slowReads).toEqual([]);
+    expect(phone().slowReads).toEqual(['memory', 'frames', 'resetFrames']);
+  });
+
+  it('a simulator counts from a reset, through what it is given, to its read', async () => {
+    const perf = simulator();
+    const seen: string[] = [];
+    const frames = { value: {}, raw: '', at: '' } as Awaited<ReturnType<typeof perf.frames>>;
+    Object.assign(perf, {
+      resetFrames: async () => void seen.push('reset'),
+      frames: async () => (seen.push('read'), frames),
+    });
+    await expect(perf.framesDuring('a.b', 1, async () => seen.push('during'))).resolves.toBe(
+      frames,
+    );
+    expect(seen).toEqual(['reset', 'during', 'read']);
+  });
+
+  it('each says what it has no way of measuring', async () => {
+    const sim = simulator();
+    await says(sim.hangs, 'hangs');
+    await says(sim.heapProfile, 'a heap profile');
+    await says(sim.baselineProfile, 'a Baseline Profile');
+    await says(sim.vitals, 'the device state');
+    const iphone = phone();
+    await says(() => iphone.frames('a.b'), 'frames');
+    await says(() => iphone.attachProbe('a.b'), 'through a frame probe');
+    await says(() => iphone.heapProfile('a.b', 'heapprofd', 1), 'a heap profile');
+    await says(() => iphone.baselineProfile('a.b', { repeats: 1 }), 'a Baseline Profile');
+  });
+});
+
 describe('the kind of device', () => {
   it('calls a simulator virtual, and a phone not', () => {
     expect(new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951').virtual).toBe(true);

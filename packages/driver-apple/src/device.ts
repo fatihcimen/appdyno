@@ -10,6 +10,7 @@ import {
   type Device,
   type DeviceEvents,
   type DeviceSettings,
+  type MeasureSource,
   type Mirror,
   type ScreenRecorder,
   type RpcClient,
@@ -112,6 +113,7 @@ export abstract class IosDevice extends RpcDevice implements Device {
   abstract readonly events: DeviceEvents;
   abstract readonly recorder: ScreenRecorder;
   abstract readonly mirror: Mirror;
+  abstract readonly measure: MeasureSource;
   protected readonly retrySafe = RETRY_SAFE;
   /** The app the runner reads and acts on (set by launch, openUrl with a bundle, or target). */
   protected targetApp: string | undefined;
