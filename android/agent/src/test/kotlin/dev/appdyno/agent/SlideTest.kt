@@ -13,12 +13,13 @@ class SlideTest {
 
     @Test
     fun theStatusBarIsNoScreen() {
-        assertFalse(Slide.hasScreen(TYPE_SYSTEM, 0, 128, d))
-        assertFalse(Slide.hasScreen(TYPE_SYSTEM, 2355, 2400, d)) // a gesture handle
-        assertTrue(Slide.hasScreen(TYPE_SYSTEM, 1000, 1300, d)) // a small system dialog
-        assertTrue(Slide.hasScreen(TYPE_SYSTEM, 0, 2400, d)) // a shade, a keyguard
-        assertTrue(Slide.hasScreen(TYPE_APPLICATION, 0, 128, d))
-        assertFalse(Slide.hasScreen(TYPE_INPUT_METHOD, 1500, 2400, d))
+        assertFalse(Slide.hasScreen(TYPE_SYSTEM, 0, 0, 1080, 128, d))
+        assertFalse(Slide.hasScreen(TYPE_SYSTEM, 0, 2355, 1080, 2400, d)) // a gesture handle
+        assertFalse(Slide.hasScreen(TYPE_SYSTEM, 1038, 458, 1080, 800, d)) // the edge panel handle of a Samsung SM-A525F
+        assertTrue(Slide.hasScreen(TYPE_SYSTEM, 100, 1000, 980, 1300, d)) // a small system dialog
+        assertTrue(Slide.hasScreen(TYPE_SYSTEM, 0, 0, 1080, 2400, d)) // a shade, a keyguard
+        assertTrue(Slide.hasScreen(TYPE_APPLICATION, 0, 0, 1080, 128, d))
+        assertFalse(Slide.hasScreen(TYPE_INPUT_METHOD, 0, 1500, 1080, 2400, d))
     }
 
     @Test

@@ -310,7 +310,7 @@ class Handlers(private val automation: Automation, private val token: String) {
         var screen = false
         for (w in windows) {
             w.getBoundsInScreen(b)
-            if (Slide.hasScreen(w.type, b.top, b.bottom, d)) screen = true
+            if (Slide.hasScreen(w.type, b.left, b.top, b.right, b.bottom, d)) screen = true
             // no resting places on this release: a window off the display has nothing final to read
             if (Build.VERSION.SDK_INT < 34 && w.type == AccessibilityWindowInfo.TYPE_APPLICATION && Slide.outside(b.left, b.top, b.right, b.bottom, d)) return true
         }

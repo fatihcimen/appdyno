@@ -64,13 +64,14 @@ class Capture(
     /** The digest of the app's and the system dialogs' windows (status bar, keyboard and overlays left out). */
     val hash: String by lazy { LayoutHash.of(appNodes) }
 
-    private fun appWindow(w: CWindow) = w.type != TYPE_IME && w.type != TYPE_OVERLAY && !(w.type == TYPE_SYSTEM && w.pkg == SYSTEM_UI)
+    private fun appWindow(w: CWindow) = w.type != TYPE_IME && w.type != TYPE_OVERLAY &&
+        !(w.type == TYPE_SYSTEM && (w.pkg == SYSTEM_UI || w.bounds.let { Slide.strip(it.left, it.top, it.right, it.bottom, display) }))
 
     /** A node of the app's or a system dialog's window (not the status bar, the keyboard, an overlay). */
     fun inApp(n: CNode) = appWindow(windows[n.window])
 
     /** Nothing read of a screen's window: between two screens, a dark screen, an app that does not answer. */
-    val noApp: Boolean by lazy { nodes.none { n -> windows[n.window].let { Slide.hasScreen(it.type, it.bounds.top, it.bounds.bottom, display) } } }
+    val noApp: Boolean by lazy { nodes.none { n -> windows[n.window].let { Slide.hasScreen(it.type, it.bounds.left, it.bounds.top, it.bounds.right, it.bounds.bottom, display) } } }
 
     /** Some window on it is still on its way to the place the answer gives. */
     val sliding: Boolean get() = windows.any { it.sliding }
@@ -99,14 +100,18 @@ class Capture(
 
 /** Windows in a transition (pure, unit tested). */
 object Slide {
+    /** A band along an edge of the display: the status bar, a gesture handle, the handle of a maker's edge panel. */
+    fun strip(left: Int, top: Int, right: Int, bottom: Int, d: DisplayInfo) =
+        (bottom - top < d.height / 8 && (top == 0 || bottom == d.height)) ||
+            (right - left < d.width / 8 && (left == 0 || right == d.width))
+
     /**
      * A window that is a screen: an application's, or a system one (a shade, a keyguard, a dialog such as "not
-     * responding") that is not a low strip at an edge of the display (the status bar, a gesture handle). Between
-     * two screens only the strips are there, for 100 to 500 ms.
+     * responding") that is not a strip. Between two screens only the strips are there, for 100 to 500 ms.
      */
-    fun hasScreen(type: Int, top: Int, bottom: Int, d: DisplayInfo) =
+    fun hasScreen(type: Int, left: Int, top: Int, right: Int, bottom: Int, d: DisplayInfo) =
         type == AccessibilityWindowInfo.TYPE_APPLICATION ||
-            (type == AccessibilityWindowInfo.TYPE_SYSTEM && !(bottom - top < d.height / 8 && (top == 0 || bottom == d.height)))
+            (type == AccessibilityWindowInfo.TYPE_SYSTEM && !strip(left, top, right, bottom, d))
 
     /** A node at this place in a window `dx`, `dy` off its own: wholly past the display, so its visibility cannot be known now. */
     fun pushedOff(left: Int, top: Int, right: Int, bottom: Int, dx: Int, dy: Int, d: DisplayInfo) =
