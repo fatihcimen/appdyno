@@ -94,6 +94,18 @@ object Platform {
         else -> t
     }
 
+    /** The rate the default display runs at, for the encoder to expect. */
+    fun refreshRate(): Float = try {
+        val global = Class.forName("android.hardware.display.DisplayManagerGlobal")
+        val instance = global.getDeclaredMethod("getInstance").invoke(null)
+        val info = global.getDeclaredMethod("getDisplayInfo", Int::class.javaPrimitiveType).invoke(instance, 0)!!
+        (info.javaClass.getMethod("getRefreshRate").invoke(info) as Float).takeIf { it >= 1f } ?: DEFAULT_RATE
+    } catch (_: Throwable) {
+        DEFAULT_RATE
+    }
+
+    private const val DEFAULT_RATE = 60f
+
     /** The default display's logical size, density and rotation (falls back to the resources' metrics). */
     fun display(): DisplayInfo {
         try {

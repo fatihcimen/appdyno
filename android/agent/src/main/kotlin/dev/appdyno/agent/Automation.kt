@@ -171,6 +171,19 @@ class Automation private constructor(private val looper: Looper) {
         if (!ok) throw AgentFailure("INTERNAL", "the input event was not delivered")
     }
 
+    /** As `inject`, with no wait for the app: a live finger's next move must not queue behind a busy app. */
+    fun injectLive(event: InputEvent) {
+        val ok = try {
+            if (injectNoWait != null) injectNoWait.invoke(ua, event, false, false) as Boolean
+            else ua.injectInputEvent(event, false)
+        } catch (e: InvocationTargetException) {
+            throw injectFailure(e.targetException)
+        } catch (e: SecurityException) {
+            throw injectFailure(e)
+        }
+        if (!ok) throw AgentFailure("INTERNAL", "the input event was not delivered")
+    }
+
     private fun injectFailure(t: Throwable): Throwable =
         if (t is SecurityException) AgentFailure(
             "PERMISSION_REQUIRED",

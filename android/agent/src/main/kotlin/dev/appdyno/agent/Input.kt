@@ -115,6 +115,52 @@ class Input(private val automation: Automation) {
         automation.inject(multi(down, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, 1, props, coords))
     }
 
+    private var liveDownAt = 0L
+    private var liveFingers = 0
+    private val liveProps = Array(2) { i -> MotionEvent.PointerProperties().apply { id = i; toolType = MotionEvent.TOOL_TYPE_FINGER } }
+    private val liveCoords = Array(2) { MotionEvent.PointerCoords().apply { pressure = 1f; size = 1f } }
+
+    /**
+     * One phase of a person's touch, in fractions of the screen as it is now: `p` 0 down, 1 moved, 2 up. A
+     * second finger comes and goes by the presence of `x2`. Nothing waits for the app, so that a busy app
+     * cannot hold up the next move; moves are in order, as the dispatcher keeps them.
+     */
+    @Synchronized
+    fun liveTouch(p: Int, x: Float, y: Float, x2: Float?, y2: Float?) {
+        val screen = Platform.display()
+        liveCoords[0].x = x * screen.width
+        liveCoords[0].y = y * screen.height
+        if (x2 != null && y2 != null) {
+            liveCoords[1].x = x2 * screen.width
+            liveCoords[1].y = y2 * screen.height
+        }
+        val fingers = if (x2 != null && y2 != null) 2 else 1
+        val now = SystemClock.uptimeMillis()
+        fun send(action: Int, count: Int) =
+            automation.injectLive(multi(liveDownAt, now, action, count, liveProps, liveCoords))
+        val second = 1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT
+        when (p) {
+            0 -> {
+                liveDownAt = now
+                send(MotionEvent.ACTION_DOWN, 1)
+                if (fingers == 2) send(MotionEvent.ACTION_POINTER_DOWN or second, 2)
+                liveFingers = fingers
+            }
+            1 -> if (liveFingers > 0) {
+                if (fingers == 2 && liveFingers == 1) send(MotionEvent.ACTION_POINTER_DOWN or second, 2)
+                if (fingers == 1 && liveFingers == 2) send(MotionEvent.ACTION_POINTER_UP or second, 2)
+                liveFingers = fingers
+                send(MotionEvent.ACTION_MOVE, fingers)
+            }
+            2 -> if (liveFingers > 0) {
+                if (liveFingers == 2) send(MotionEvent.ACTION_POINTER_UP or second, 2)
+                send(MotionEvent.ACTION_UP, 1)
+                liveFingers = 0
+            }
+            else -> throw AgentFailure("INVALID_ARGUMENT", "a touch has no phase $p")
+        }
+    }
+
     fun key(code: Int) {
         val now = SystemClock.uptimeMillis()
         automation.inject(keyEvent(now, KeyEvent.ACTION_DOWN, code))

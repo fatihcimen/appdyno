@@ -17,3 +17,5 @@ export type { LaunchStats } from './perf/launch.js';
 export type { HeapDump } from './perf/memory.js';
 export * from './perf/parse.js';
 export { installTools, traceProcessor, PERFETTO } from './tools.js';
+export { AndroidMirror } from './mirror.js';
+export { EmulatorMirror, findGrpc } from './mirror-emulator.js';

@@ -16,6 +16,7 @@ import {
   type CrashesQuery,
   type Device,
   type LogsQuery,
+  type Mirror,
   type RpcClient,
 } from '@appdyno/core';
 import { Adb, amStartError, assertPkg, assertSerial, shq } from './adb.js';
@@ -29,6 +30,8 @@ import type { InstallAnswers } from './install-consent.js';
 import { AndroidSettings } from './settings.js';
 import { AndroidNetwork } from './network.js';
 import { AndroidPerf } from './perf/index.js';
+import { AndroidMirror } from './mirror.js';
+import { EmulatorMirror } from './mirror-emulator.js';
 import { androidScreen } from './platform-screen.js';
 import { AndroidRecorder } from './record.js';
 import { AndroidWeb } from './web.js';
@@ -88,8 +91,11 @@ export class AndroidDevice extends RpcDevice implements Device {
     this.recorder = new AndroidRecorder(adb, serial);
     this.network = new AndroidNetwork(adb, serial);
     this.web = new AndroidWeb(adb, serial);
+    const mirror = new AndroidMirror(adb, serial, this.launcher);
+    this.mirror = serial.startsWith('emulator-') ? new EmulatorMirror(serial, mirror) : mirror;
   }
 
+  readonly mirror: Mirror;
   readonly recorder: AndroidRecorder;
   readonly network: AndroidNetwork;
   readonly web: AndroidWeb;

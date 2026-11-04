@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { type VirtualDevices, type Startable, pause } from '@appdyno/core';
@@ -16,6 +17,24 @@ const BOOT_MS = 300_000;
 const firstPort = () => Number(process.env.APPDYNO_EMULATOR_FIRST_PORT ?? 5554);
 
 const LAST_PORT = 5680;
+
+/** A port nothing here listens on now; the emulator takes it a moment later. */
+const freePort = () =>
+  new Promise<number>((resolve, reject) => {
+    const s = createServer();
+    s.once('error', reject);
+    s.listen(0, '127.0.0.1', () => {
+      const { port } = s.address() as { port: number };
+      s.close(() => resolve(port));
+    });
+  });
+
+/**
+ * The emulator's own gRPC port, not ours, behind a token it writes to a file only this user reads: a window's
+ * picture comes by it, with nothing in the guest. Whoever names `-grpc` has their own way.
+ */
+export const grpcArgs = (extra: string[], port: number) =>
+  extra.includes('-grpc') ? [] : ['-grpc', String(port), '-grpc-use-token'];
 
 /** The AVDs of this machine, started by the SDK's own `emulator`. */
 export class AndroidEmulators implements VirtualDevices {
@@ -78,9 +97,10 @@ export class AndroidEmulators implements VirtualDevices {
       '-no-snapshot-save',
       '-no-boot-anim',
     ];
+    const grpc = grpcArgs(extra, extra.includes('-grpc') ? 0 : await freePort());
     const child = spawn(
       join(sdkDir(), 'emulator/emulator'),
-      ['-avd', id, '-port', String(port), ...extra],
+      ['-avd', id, '-port', String(port), ...extra, ...grpc],
       {
         detached: true,
         stdio: 'ignore',

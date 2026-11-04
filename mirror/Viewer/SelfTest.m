@@ -364,6 +364,21 @@ static void checkPixels(void) {
     IOSurfaceUnlock(surface, kIOSurfaceLockReadOnly, NULL);
   }
   check(@"pixels: its size", sink.lastSize.width == w && sink.lastSize.height == h, nil);
+  // a quarter turn: the frame's size swaps, and its top left corner comes to the bottom left
+  ((uint8_t *)pixels.mutableBytes)[0] = 200;
+  [pixels writeToFile:file atomically:NO];
+  int shown = sink.surfaces;
+  [source tick:@{@"w": @(w), @"h": @(h), @"turns": @1}];
+  for (int i = 0; i < 300 && sink.surfaces == shown; i++) usleep(10000);
+  check(@"pixels: a turn swaps the size", sink.lastSize.width == h && sink.lastSize.height == w, nil);
+  surface = (__bridge IOSurfaceRef)sink.lastSurface;
+  if (surface) {
+    IOSurfaceLock(surface, kIOSurfaceLockReadOnly, NULL);
+    uint8_t *turned = IOSurfaceGetBaseAddress(surface);
+    size_t row = IOSurfaceGetBytesPerRow(surface);
+    check(@"pixels: a turn moves the corner", turned[row * (w - 1) + 2] == 200 && turned[2] == 10, nil);
+    IOSurfaceUnlock(surface, kIOSurfaceLockReadOnly, NULL);
+  }
   [source tick:@{@"w": @(w * 100), @"h": @(h * 100)}];
   check(@"pixels: a size past the file is refused, unread", [sink waitForLost], sink.lost);
   [source stop];

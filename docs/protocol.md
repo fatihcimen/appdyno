@@ -16,6 +16,7 @@ of the agent opened through the adb server (`localabstract:<name>`), later on iO
 | ---- | --------------------------------------------------------------------------------------------------- |
 | 0    | one JSON-RPC 2.0 message, UTF-8                                                                     |
 | 1    | a binary attachment: `[u32 BE request id][bytes]`, sent right before the JSON response with that id |
+| 2    | a video frame, device to host only: `[u64 BE capture us][u64 BE sent ns][u32 BE flags][bytes]`      |
 
 A frame larger than 64 MiB, an unknown type or a JSON frame that does not parse ends the connection.
 
@@ -42,25 +43,28 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 
 ## Methods
 
-| method                            | params                                                                         | result                                                                           |
-| --------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| `hello`                           | `token`, `protocol`                                                            | agent and device description                                                     |
-| `ping`                            | –                                                                              | `uptimeMs`                                                                       |
-| `tree.get`                        | `maxDepth?` (128), `maxNodes?` (5000)                                          | `Tree`                                                                           |
-| `act`                             | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`                  | `settle?`, `hash?`, `tree?`                                                      |
-| `text.set`                        | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (2000), `settle?`, `read` | as `act`, plus `mode` (`setText`/`paste`/`keys`), `verified`, `focusMs`          |
-| `screenshot`                      | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                              | `w`, `h`, `format`, `bytes`, plus the image as an attachment                     |
-| `app.foreground`                  | –                                                                              | `pkg?`                                                                           |
-| `app.target` (iOS)                | `pkg` (bundle id)                                                              | –                                                                                |
-| `clipboard.set` / `clipboard.get` | `text` / –                                                                     | – / `text?`                                                                      |
-| `orientation.set`                 | `rotation` 0–3 (frozen)                                                        | –                                                                                |
-| `animations.set`                  | `off`                                                                          | –                                                                                |
-| `rest.wait`                       | –                                                                              | –                                                                                |
-| `audit` (iOS)                     | `types?`, `maxIssues` (50)                                                     | `issues`, `truncated`, `elapsedMs`                                               |
-| `a11y.read` (Android)             | `maxNodes` (60)                                                                | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`) |
-| `wait` (minor 3)                  | `since?`, `timeoutMs`, `minMs?` (300)                                          | `sig`, `changed`, `reads`, `elapsedMs`, `tree?`                                  |
-| `cancel`                          | `id`                                                                           | –                                                                                |
-| `shutdown`                        | –                                                                              | – (the agent exits)                                                              |
+| method                                                            | params                                                                                  | result                                                                           |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `hello`                                                           | `token`, `protocol`                                                                     | agent and device description                                                     |
+| `ping`                                                            | –                                                                                       | `uptimeMs`                                                                       |
+| `tree.get`                                                        | `maxDepth?` (128), `maxNodes?` (5000)                                                   | `Tree`                                                                           |
+| `act`                                                             | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`                           | `settle?`, `hash?`, `tree?`                                                      |
+| `text.set`                                                        | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (2000), `settle?`, `read`          | as `act`, plus `mode` (`setText`/`paste`/`keys`), `verified`, `focusMs`          |
+| `screenshot`                                                      | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                                       | `w`, `h`, `format`, `bytes`, plus the image as an attachment                     |
+| `app.foreground`                                                  | –                                                                                       | `pkg?`                                                                           |
+| `app.target` (iOS)                                                | `pkg` (bundle id)                                                                       | –                                                                                |
+| `clipboard.set` / `clipboard.get`                                 | `text` / –                                                                              | – / `text?`                                                                      |
+| `orientation.set`                                                 | `rotation` 0–3 (frozen)                                                                 | –                                                                                |
+| `animations.set`                                                  | `off`                                                                                   | –                                                                                |
+| `rest.wait`                                                       | –                                                                                       | –                                                                                |
+| `audit` (iOS)                                                     | `types?`, `maxIssues` (50)                                                              | `issues`, `truncated`, `elapsedMs`                                               |
+| `a11y.read` (Android)                                             | `maxNodes` (60)                                                                         | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`) |
+| `touch` (Android, minor 4)                                        | `p` (0 down, 1 moved, 2 up), `x`, `y`, `x2?`, `y2?`: fractions of the screen, no settle |
+| `stream.start` (Android, minor 4)                                 | `codec` (`h264`), `quality`, `maxSize?`, `failFirst?`                                   |
+| `stream.clock`, `stream.sync`, `stream.status` (Android, minor 4) | –                                                                                       |
+| `wait` (minor 3)                                                  | `since?`, `timeoutMs`, `minMs?` (300)                                                   | `sig`, `changed`, `reads`, `elapsedMs`, `tree?`                                  |
+| `cancel`                                                          | `id`                                                                                    | –                                                                                |
+| `shutdown`                                                        | –                                                                                       | – (the agent exits)                                                              |
 
 `action` is one of `tap {x,y}`, `doubleTap {x,y}`, `longPress {x,y,durationMs}`, `swipe {from,to,durationMs}`,
 `gesture {pointers}` (1–5 fingers, each a list of `{x,y,t}` samples; fingers go down together at their
@@ -272,6 +276,28 @@ engine's `rule`, a `message`, the element's box `b` in tap units and the element
 - Limits: Compose's ellipsized text is not found (Compose reports its characters' places at another
   scale, all inside the text);
   colours of text over a picture or a gradient are not measured (no clean sample).
+
+### A stream (Android)
+
+A connection that asks `stream.start` gets video frames (type 2) until it ends, however it ends: the display and the
+codec are released with it. It comes with the same token as any connection, and it counts as a connection for the
+agent's idle exit. `touch`, `stream.clock`, `stream.sync` and `stream.status` are answered on the connection's own
+thread, not the one lane of device work: a person's finger waits for no settle.
+
+- `stream.info {w, h, codec, mode}` is the agent's own message, with no id, before the first frame of each encoder: its
+  size, and in `mode` the encoder and the step of the ladder.
+- `stream.end {why}` says it will not go on: every step of the ladder failed.
+- Flags: 1 a keyframe, 2 parameter sets. The capture time is the display's own, on `System.nanoTime`'s clock, which
+  `stream.clock` answers in `now` for the host to find the offset by its shortest round trip.
+
+**The ladder**, when an encoder fails: the same step again three times, 500 ms apart; each size down from
+`{2560, 1920, 1600, 1280, 1024, 800}`; the other codec, at each size; a software encoder of the first codec, at each
+size. An encoder that ran 10 s and then failed keeps its step. `failFirst: n` makes the next n fail, for a test.
+
+**Backpressure**: three frames wait at most. With the socket full a frame is dropped, and every frame up to the next
+keyframe, which is asked for: the picture freezes for a moment and is never wrong.
+
+An emulator's guest encoder runs as this does, and lags by seconds: see [mirror.md](mirror.md).
 
 ### A phone's screen goes off
 

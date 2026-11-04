@@ -43,7 +43,7 @@ class Handlers(private val automation: Automation, private val token: String) {
         val d = Platform.display()
         return JSONObject()
             .put("agentVersion", BuildConfig.VERSION_NAME)
-            .put("protocol", JSONObject().put("major", 1).put("minor", 3))
+            .put("protocol", JSONObject().put("major", 1).put("minor", 4))
             .put("platform", "android")
             .put("osVersion", Build.VERSION.RELEASE)
             .put("sdk", Build.VERSION.SDK_INT)
@@ -52,6 +52,15 @@ class Handlers(private val automation: Automation, private val token: String) {
             .put("capabilities", JSONArray(CAPABILITIES))
             .put("pid", android.os.Process.myPid())
     }
+
+    /** A person's finger on a mirror's window: one event, now, with no settle. On a connection's thread. */
+    fun touch(p: JSONObject) = input.liveTouch(
+        p.getInt("p"),
+        p.getDouble("x").toFloat(),
+        p.getDouble("y").toFloat(),
+        if (p.has("x2")) p.getDouble("x2").toFloat() else null,
+        if (p.has("y2")) p.getDouble("y2").toFloat() else null,
+    )
 
     fun ping() = JSONObject().put("uptimeMs", SystemClock.uptimeMillis() - startedAt)
 
@@ -404,6 +413,7 @@ class Handlers(private val automation: Automation, private val token: String) {
         val CAPABILITIES = listOf(
             "tree", "tap", "longPress", "swipe", "gesture", "key", "text", "screenshot", "foreground",
             "clipboard", "orientation", "settle", "a11y.read", "wait", "doubleTap", "animations", "rest.wait",
+            "touch", "stream",
         )
     }
 }

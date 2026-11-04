@@ -128,6 +128,11 @@ export class AndroidAgentLauncher {
     await pause(500);
   }
 
+  /** Where a running agent listens, and its token: for a connection of its own, such as a viewer's. */
+  async address(): Promise<{ socket: string; token: string } | undefined> {
+    return this.readState();
+  }
+
   /** Stops this device's agent (and forgets it). */
   async stop(): Promise<void> {
     const state = await this.readState();

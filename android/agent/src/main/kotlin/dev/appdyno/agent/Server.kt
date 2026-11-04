@@ -36,6 +36,7 @@ class Server(private val opts: Options, private val handlers: Handlers) {
     private val timers = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "appdyno-timers").apply { isDaemon = true } }
     private val actions = WorkLane(timers)
     private val jobs = ConcurrentHashMap<Int, Job>()
+    private val streams = Streams()
 
     /** The connections that asked for the animations off. */
     private val animationsOff = HashSet<LocalSocket>()
@@ -62,6 +63,7 @@ class Server(private val opts: Options, private val handlers: Handlers) {
 
     private fun serve(socket: LocalSocket) {
         synchronized(this) { connections++ }
+        var stream: Stream? = null
         try {
             val reader = FrameReader(socket.inputStream)
             val writer = FrameWriter(socket.outputStream)
@@ -96,6 +98,22 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                         }
                         submit(id, method, params, writer)
                     }
+                    // on this thread, not the work lane: a person's finger and a stream wait for nothing
+                    "touch" -> {
+                        handlers.touch(params)
+                        writer.json(result(id, JSONObject()))
+                    }
+                    "stream.start" -> {
+                        stream?.let { streams.end(it) }
+                        stream = streams.start(StreamRequest.from(params), ConnectionOutput(writer))
+                        writer.json(result(id, JSONObject()))
+                    }
+                    "stream.clock" -> writer.json(result(id, JSONObject().put("now", System.nanoTime())))
+                    "stream.sync" -> {
+                        streams.requestKey()
+                        writer.json(result(id, JSONObject()))
+                    }
+                    "stream.status" -> writer.json(result(id, streams.status()))
                     "shutdown" -> {
                         writer.json(result(id, JSONObject()))
                         exitProcess(0)
@@ -106,6 +124,8 @@ class Server(private val opts: Options, private val handlers: Handlers) {
         } catch (e: Throwable) {
             System.err.println("connection closed: $e")
         } finally {
+            // the display and the codec go with the host, however it went
+            stream?.let { streams.end(it) }
             try {
                 socket.close()
             } catch (_: Throwable) {

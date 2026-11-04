@@ -106,7 +106,8 @@ class Reader {
 
 export class Adb {
   private readonly host: string;
-  private readonly port: number;
+  /** The adb server's port, for what connects to it by itself. */
+  readonly port: number;
   readonly bin: string;
   private started: Promise<void> | undefined;
 

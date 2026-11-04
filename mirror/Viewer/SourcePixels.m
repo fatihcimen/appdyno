@@ -1,5 +1,6 @@
 // An emulator's screen: the emulator writes RGBA into a shared file, the parent says so with a `tick`, and
-// each tick is copied into an IOSurface. The emulator's own notes warn of tearing, accepted for a copy.
+// each tick is copied into an IOSurface. The emulator's own notes warn of tearing, accepted for a copy. A
+// guest that rotates draws sideways in a frame of the same shape, so `turns` says how to stand it up.
 #import "Viewer.h"
 #import <Accelerate/Accelerate.h>
 #import <os/lock.h>
@@ -29,8 +30,10 @@ static IOSurfaceRef newSurface(size_t w, size_t h) {
   int _next;
   os_unfair_lock _lock;
   size_t _pendingW, _pendingH;
+  int _pendingTurns;
   BOOL _busy, _hidden, _stopped;
   size_t _lastW, _lastH;
+  int _lastTurns;
 }
 
 - (instancetype)initWithOptions:(NSDictionary *)options sink:(id<MVSink>)sink {
@@ -71,12 +74,14 @@ static IOSurfaceRef newSurface(size_t w, size_t h) {
 - (void)tick:(NSDictionary *)message {
   size_t w = [message[@"w"] unsignedLongValue], h = [message[@"h"] unsignedLongValue];
   id<MVSink> sink = _sink;
-  [sink.stats arrived:w * h * 4 captureMs:-1];
+  // the frame's bytes crossed nothing to get here: no bit rate to speak of
+  [sink.stats arrived:0 captureMs:-1];
   os_unfair_lock_lock(&_lock);
   // only the newest can be shown: a tick that comes during a copy replaces the one before it
   BOOL replaced = _pendingW != 0;
   _pendingW = w;
   _pendingH = h;
+  _pendingTurns = [message[@"turns"] intValue] & 3;
   BOOL start = !_busy;
   if (start) _busy = YES;
   os_unfair_lock_unlock(&_lock);
@@ -90,39 +95,52 @@ static IOSurfaceRef newSurface(size_t w, size_t h) {
   for (;;) {
     os_unfair_lock_lock(&_lock);
     size_t w = _pendingW, h = _pendingH;
+    int turns = _pendingTurns;
     _pendingW = _pendingH = 0;
     if (!w || _stopped) _busy = NO;
     BOOL go = w && !_stopped;
     os_unfair_lock_unlock(&_lock);
     if (!go) return;
-    [self copyWidth:w height:h];
+    [self copyWidth:w height:h turns:turns];
   }
 }
 
-- (void)copyWidth:(size_t)w height:(size_t)h {
+- (void)copyWidth:(size_t)w height:(size_t)h turns:(int)turns {
   if (!_map) return;
   // the sizes come from a message: they are checked against what is mapped before a byte is read
   if (w > kMaxSide || h > kMaxSide || w * h * 4 > _mapped) return [self lost:@"a frame larger than the pixel file"];
   id<MVSink> sink = _sink;
-  if (w != _lastW || h != _lastH) {
+  size_t outW = turns % 2 ? h : w, outH = turns % 2 ? w : h;
+  if (w != _lastW || h != _lastH || turns != _lastTurns) {
+    BOOL shape = !_lastW || outW != (_lastTurns % 2 ? _lastH : _lastW) || outH != (_lastTurns % 2 ? _lastW : _lastH);
     _lastW = w;
     _lastH = h;
-    for (int i = 0; i < kSurfaces; i++) _surfaces[i] = nil;
-    [sink source:self size:CGSizeMake(w, h) codec:@"pixels"];
+    _lastTurns = turns;
+    if (shape) {
+      for (int i = 0; i < kSurfaces; i++) _surfaces[i] = nil;
+      [sink source:self size:CGSizeMake(outW, outH) codec:@"pixels"];
+    }
   }
   if (_hidden) {
     [sink.stats dropped:1];
     return;
   }
-  if (!_surfaces[_next]) _surfaces[_next] = (__bridge_transfer id)newSurface(w, h);
+  if (!_surfaces[_next]) _surfaces[_next] = (__bridge_transfer id)newSurface(outW, outH);
   IOSurfaceRef surface = (__bridge IOSurfaceRef)_surfaces[_next];
   if (!surface) return [self lost:@"no memory for a surface"];
   double started = MVNowMs();
   IOSurfaceLock(surface, 0, NULL);
   vImage_Buffer from = {(void *)_map, h, w, w * 4};
-  vImage_Buffer to = {IOSurfaceGetBaseAddress(surface), h, w, IOSurfaceGetBytesPerRow(surface)};
+  vImage_Buffer to = {IOSurfaceGetBaseAddress(surface), outH, outW, IOSurfaceGetBytesPerRow(surface)};
   const uint8_t rgbaToBgra[4] = {2, 1, 0, 3};
-  vImagePermuteChannels_ARGB8888(&from, &to, rgbaToBgra, kvImageNoFlags);
+  if (turns) {
+    const Pixel_8888 black = {0, 0, 0, 255};
+    // counterclockwise, which is what a turn of the guest's display takes back
+    vImageRotate90_ARGB8888(&from, &to, (uint8_t)turns, black, kvImageNoFlags);
+    vImagePermuteChannels_ARGB8888(&to, &to, rgbaToBgra, kvImageNoFlags);
+  } else {
+    vImagePermuteChannels_ARGB8888(&from, &to, rgbaToBgra, kvImageNoFlags);
+  }
   IOSurfaceUnlock(surface, 0, NULL);
   [sink.stats decodedMs:MVNowMs() - started];
   [sink source:self surface:surface];
@@ -133,7 +151,7 @@ static IOSurfaceRef newSurface(size_t w, size_t h) {
   dispatch_async(_queue, ^{
     self->_hidden = hidden;
     // nothing to ask of the far end: the file already holds the screen as it is
-    if (!hidden && self->_lastW) [self copyWidth:self->_lastW height:self->_lastH];
+    if (!hidden && self->_lastW) [self copyWidth:self->_lastW height:self->_lastH turns:self->_lastTurns];
   });
 }
 

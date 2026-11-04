@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Protocol major (breaking changes) and minor (additive, announced by capabilities). */
-export const PROTOCOL = { major: 1, minor: 3 } as const;
+export const PROTOCOL = { major: 1, minor: 4 } as const;
 
 /** Node flags (bit mask `f` of a wire node). */
 export const NODE_FLAGS = {
@@ -337,6 +337,33 @@ export const METHODS = {
   'rest.wait': { params: z.object({}), result: z.object({}) },
   /** Android (capability `animations`): the device's animation scales off, back when the last host leaves. */
   'animations.set': { params: z.object({ off: z.boolean() }), result: z.object({}) },
+  /** Android (capability `touch`): one phase of a person's touch, in fractions of the screen, with no settle. */
+  touch: {
+    params: z.object({
+      p: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+      x: z.number(),
+      y: z.number(),
+      x2: z.number().optional(),
+      y2: z.number().optional(),
+    }),
+    result: z.object({}),
+  },
+  /** Android (capability `stream`): a fresh keyframe from each stream of this agent. */
+  'stream.sync': { params: z.object({}), result: z.object({}) },
+  /** Android (capability `stream`): how many streams run, and whether the screen is on. */
+  'stream.status': {
+    params: z.object({}),
+    result: z.object({
+      active: z.number().int(),
+      on: z.boolean(),
+      /** The screen as apps see it now, and its quarter turns from how it was built. */
+      w: z.number().int(),
+      h: z.number().int(),
+      rotation: z.number().int(),
+      modes: z.array(z.string()),
+      dropped: z.number(),
+    }),
+  },
   cancel: { params: z.object({ id: z.number().int() }), result: z.object({}) },
   shutdown: { params: z.object({}), result: z.object({}) },
 } as const;

@@ -7,10 +7,13 @@ import java.io.OutputStream
 
 /**
  * The host wire: `[u32 BE payload length][u8 type][payload]`; type 0 is one JSON-RPC message (UTF-8),
- * type 1 a binary attachment `[u32 BE request id][bytes]` sent right before its JSON response.
+ * type 1 a binary attachment `[u32 BE request id][bytes]` sent right before its JSON response; type 2 a
+ * video frame of a stream `[u64 BE capture us][u64 BE sent ns][u32 BE flags][bytes]`, to the host only.
  */
 const val FRAME_JSON = 0
 const val FRAME_BINARY = 1
+const val FRAME_VIDEO = 2
+const val VIDEO_HEADER_BYTES = 20
 const val MAX_FRAME_BYTES = 64 * 1024 * 1024
 
 class FrameException(message: String) : Exception(message)
@@ -59,6 +62,18 @@ class FrameWriter(private val out: OutputStream) {
         out.write(u32(id))
         out.write(data)
         writeJson(text)
+        out.flush()
+    }
+
+    @Synchronized
+    fun video(frame: VideoFrame) {
+        val head = java.nio.ByteBuffer.allocate(5 + VIDEO_HEADER_BYTES)
+        val length = VIDEO_HEADER_BYTES + frame.data.size
+        if (length > MAX_FRAME_BYTES) throw FrameException("frame of $length bytes is over the limit")
+        head.putInt(length).put(FRAME_VIDEO.toByte())
+        head.putLong(frame.ptsUs).putLong(frame.sentNanos).putInt(frame.flags)
+        out.write(head.array())
+        out.write(frame.data)
         out.flush()
     }
 
