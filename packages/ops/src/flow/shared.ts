@@ -1,37 +1,41 @@
-import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
-import { deviceStateFile } from '@appdyno/core';
+import { deviceState, Owner } from '@appdyno/core';
 import {
   Recording,
   type RecordingState,
   type Flow,
+  type FlowStep,
   composeFlow,
   parseFlow,
   FlowError,
 } from '@appdyno/flows';
+import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { ToolError } from '../tool.js';
 
 export const FLOW_FILE = /\.flow$/;
 
-const recordingFile = (serial: string) => deviceStateFile('recordings', serial);
-
-export function loadRecording(ctx: ServerContext, serial: string): Recording | undefined {
-  try {
-    const state = JSON.parse(readFileSync(recordingFile(serial), 'utf8')) as RecordingState;
-    return new Recording(state, ctx.policy.secrets);
-  } catch {
-    return undefined;
-  }
-}
+const Kept: z.ZodType<RecordingState> = z.object({
+  serial: z.string(),
+  app: z.string().optional(),
+  running: z.boolean(),
+  steps: z.array(z.custom<FlowStep>()),
+  known: z.array(
+    z.object({ name: z.string(), length: z.number(), salt: z.string(), digest: z.string() }),
+  ),
+  owner: Owner.optional(),
+});
 
 /** A file per device, so that the commands of a recording may be separate processes; no secret is in it. */
-export function keepRecording(r: Recording) {
-  const file = recordingFile(r.state.serial);
-  mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
-  writeFileSync(file, JSON.stringify(r.state), { mode: 0o600 });
+export const flowRecordings = deviceState('recordings', Kept);
+
+export function loadRecording(ctx: ServerContext, serial: string): Recording | undefined {
+  const state = flowRecordings.read(serial);
+  return state && new Recording(state, ctx.policy.secrets);
 }
+
+export const keepRecording = (r: Recording) => flowRecordings.write(r.state.serial, r.state);
 
 export const defined = <T extends object>(o: T) =>
   Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as {

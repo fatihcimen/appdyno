@@ -41,7 +41,7 @@ async function writeDown(s: Session, settings: DeviceSettings, name: SettingName
   conditions.update(serial, (now = {}) => {
     if (now[name]) return now;
     first = true;
-    return { ...now, [name]: { was, ...(app && { app }), ...(s.owner && { owner: s.owner }) } };
+    return { ...now, [name]: { was, ...(app && { app }), owner: s.owner } };
   });
   return first;
 }

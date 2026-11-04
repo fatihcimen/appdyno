@@ -102,6 +102,10 @@ back only what a dead process left, and says so; what cannot be put back is repo
 cannot be read is kept beside it as `.bad`. A command line is one process per command, so its changes
 stay until `restore`, whatever sessions come and go.
 
+A recording, a network capture, an open report and a flow recording go the same way. The next session
+ends what a dead process left and says so (a flow recording stops with its steps kept), leaves what a
+live one runs, and leaves what a command line started for its next command.
+
 ## Parallel agents
 
 A process that drives a device holds it: a file in the state directory with its pid and start time.

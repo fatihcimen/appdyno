@@ -84,7 +84,14 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
             const pkg = s.appId;
             keepRecording(
               new Recording(
-                { serial, running: true, steps: [], known: [], ...(pkg && { app: pkg }) },
+                {
+                  serial,
+                  running: true,
+                  steps: [],
+                  known: [],
+                  ...(pkg && { app: pkg }),
+                  owner: s.owner,
+                },
                 ctx.policy.secrets,
               ),
             );

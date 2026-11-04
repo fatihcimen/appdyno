@@ -254,3 +254,220 @@ describe('tool calls in parallel', () => {
     ctx.close();
   });
 });
+
+describe('what a process leaves running', () => {
+  const stops = { recording: vi.fn(), network: vi.fn() };
+  beforeEach(() => {
+    stops.recording.mockReset().mockResolvedValue({ files: [] });
+    stops.network.mockReset().mockResolvedValue({ entries: [] });
+  });
+
+  const equipped = () =>
+    Object.assign(new FakeDevice(), {
+      recorder: {
+        extension: 'mp4' as const,
+        start: async () => ({ id: 'r' }),
+        stop: stops.recording,
+      },
+      network: {
+        paths: async () => [{ via: 'bytes' as const, sees: 'bytes' }],
+        start: async () => ({ id: 'n' }),
+        read: async () => ({ entries: [] }),
+        stop: stops.network,
+      },
+    });
+
+  const KINDS = [
+    {
+      kind: 'a recording',
+      folder: 'video',
+      left: { handle: { id: 'r' }, since: 'then', file: '/nowhere/a.mp4' },
+      says: 'recording stopped',
+      stop: () => stops.recording,
+    },
+    {
+      kind: 'a network capture',
+      folder: 'network',
+      left: { via: 'bytes', since: 1, handle: { id: 'n' } },
+      says: 'network capture stopped',
+      stop: () => stops.network,
+    },
+    {
+      kind: 'an open report',
+      folder: 'reports',
+      left: { since: 1 },
+      says: 'report written',
+      stop: undefined,
+    },
+  ];
+
+  const held = (k: (typeof KINDS)[number], owner?: unknown) => ({
+    ...k.left,
+    ...(k.folder === 'reports' && { dir: mkdtempSync(join(tmpdir(), 'appdyno-report-')) }),
+    ...(owner !== undefined && { owner }),
+  });
+
+  it.each(KINDS)('ends $kind a dead process left, and says so', async (k) => {
+    const device = equipped();
+    const left = held(k, await killedProcess());
+    const file = leave(k.folder, device.serial, left);
+    const { ctx, call } = connect(device);
+    const used = await call('use_device', { device: device.serial });
+    expect(used.text).toContain(k.says);
+    expect(existsSync(file)).toBe(false);
+    if (k.stop) expect(k.stop()).toHaveBeenCalledWith({ id: k.folder === 'video' ? 'r' : 'n' });
+    else expect(existsSync(join((left as { dir: string }).dir, 'index.html'))).toBe(true);
+    ctx.close();
+  });
+
+  it.each(KINDS)('leaves $kind a live process runs, through a session and its end', async (k) => {
+    const device = equipped();
+    const other = liveProcess();
+    try {
+      const file = leave(k.folder, device.serial, held(k, other.owner));
+      const { ctx, call } = connect(device);
+      expect((await call('use_device', { device: device.serial })).text).not.toContain(k.says);
+      expect(await ctx.end()).toEqual([]);
+      expect(existsSync(file)).toBe(true);
+      if (k.stop) expect(k.stop()).not.toHaveBeenCalled();
+      ctx.close();
+    } finally {
+      await other.kill();
+    }
+  });
+
+  it.each(KINDS)('leaves $kind a command line started, for its next command', async (k) => {
+    const device = equipped();
+    const file = leave(k.folder, device.serial, held(k));
+    const { ctx, call } = connect(device);
+    expect((await call('use_device', { device: device.serial })).text).not.toContain(k.says);
+    expect(await ctx.end()).toEqual([]);
+    expect(existsSync(file)).toBe(true);
+    ctx.close();
+  });
+
+  it.each([
+    ['video', 'recording'],
+    ['network', 'network'],
+    ['reports', 'report'],
+    ['recordings', 'flow recording'],
+  ])('says a %s file that cannot be read, and keeps it', async (folder, what) => {
+    const device = equipped();
+    const file = leave(folder, device.serial, '{"cut":');
+    const { ctx, call } = connect(device);
+    const { text } = await call('use_device', { device: device.serial });
+    expect(text).toContain(`could not restore ${what}: unreadable, kept as ${file}.bad`);
+    expect(existsSync(file)).toBe(false);
+    ctx.close();
+  });
+
+  it('puts the proxy of a dead process’s capture back', async () => {
+    const { settings, device } = withSettings();
+    settings.values.proxy = 'localhost:9090';
+    const owner = await killedProcess();
+    leave('network', device.serial, { via: 'proxy', since: 1, proxy: 'localhost:9090', owner });
+    leave('conditions', device.serial, { proxy: { was: 'none', owner } });
+    const { ctx, call } = connect(device);
+    await call('use_device', { device: device.serial });
+    expect(settings.values.proxy).toBe('none');
+    ctx.close();
+  });
+
+  it('does not put a proxy back that a live process set', async () => {
+    const { settings, device } = withSettings();
+    settings.values.proxy = 'localhost:9090';
+    const other = liveProcess();
+    try {
+      leave('network', device.serial, {
+        via: 'proxy',
+        since: 1,
+        proxy: 'localhost:9090',
+        owner: await killedProcess(),
+      });
+      leave('conditions', device.serial, { proxy: { was: 'none', owner: other.owner } });
+      const { ctx, call } = connect(device);
+      await call('use_device', { device: device.serial });
+      expect(settings.values.proxy).toBe('localhost:9090');
+      ctx.close();
+    } finally {
+      await other.kill();
+    }
+  });
+
+  it('a session’s end stops its own recording and capture', async () => {
+    const device = equipped();
+    const { ctx, call } = connect(device);
+    await call('record', { action: 'start', file: join(tmpdir(), 'appdyno-own.mp4') });
+    await call('network', { action: 'start', via: 'bytes' });
+    expect(await ctx.end()).toEqual([]);
+    expect(stops.recording).toHaveBeenCalledOnce();
+    expect(stops.network).toHaveBeenCalledOnce();
+  });
+
+  it('a command line’s recording outlives a session, and its next command stops it', async () => {
+    const device = equipped();
+    const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 's');
+    const start = connect(device, { remember });
+    await start.call('record', { action: 'start', file: join(tmpdir(), 'appdyno-cli.mp4') });
+    start.ctx.close();
+    const session = connect(device);
+    await session.call('use_device', { device: device.serial });
+    expect(await session.ctx.end()).toEqual([]);
+    expect(stops.recording).not.toHaveBeenCalled();
+    const stop = connect(device, { remember });
+    await stop.call('record', { action: 'stop' });
+    expect(stops.recording).toHaveBeenCalledOnce();
+  });
+});
+
+describe('a flow recording', () => {
+  const recording = (serial: string) =>
+    JSON.parse(readFileSync(stateFile('recordings', serial), 'utf8')) as {
+      running: boolean;
+      steps: unknown[];
+      owner?: { pid: number };
+    };
+
+  it('a dead process left is stopped with its steps kept', async () => {
+    const device = new FakeDevice();
+    await connect(device).call('flow', { action: 'start' });
+    expect(recording(device.serial).owner?.pid).toBe(process.pid);
+    const left = {
+      ...recording(device.serial),
+      steps: [{ action: 'launch', line: 0, args: {}, flags: [] }],
+      owner: await killedProcess(),
+    };
+    leave('recordings', device.serial, left);
+    const { ctx, call } = connect(device);
+    const used = await call('use_device', { device: device.serial });
+    expect(used.text).toContain('flow recording stopped');
+    expect(recording(device.serial)).toMatchObject({ running: false, steps: left.steps });
+    ctx.close();
+  });
+
+  it('a live process runs is left going', async () => {
+    const device = new FakeDevice();
+    const other = liveProcess();
+    try {
+      await connect(device).call('flow', { action: 'start' });
+      leave('recordings', device.serial, { ...recording(device.serial), owner: other.owner });
+      const { ctx, call } = connect(device);
+      await call('use_device', { device: device.serial });
+      expect(recording(device.serial).running).toBe(true);
+      ctx.close();
+    } finally {
+      await other.kill();
+    }
+  });
+
+  it('a command line started has no owner, and goes on across its commands', async () => {
+    const device = new FakeDevice();
+    const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 's');
+    await connect(device, { remember }).call('flow', { action: 'start' });
+    expect(recording(device.serial).owner).toBeUndefined();
+    const { ctx, call } = connect(device);
+    await call('use_device', { device: device.serial });
+    expect(recording(device.serial).running).toBe(true);
+    ctx.close();
+  });
+});

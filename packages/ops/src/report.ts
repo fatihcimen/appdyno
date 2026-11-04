@@ -4,16 +4,16 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
-  rmSync,
   writeFileSync,
 } from 'node:fs';
 import { basename, join, relative, resolve } from 'node:path';
 import {
   safeName,
-  deviceStateFile,
   decodePng,
+  deviceState,
   encodePng,
   esc,
+  Owner,
   paintRects,
   renderScreen,
   reportProgress,
@@ -35,7 +35,6 @@ const MAX_CRASHES = 20;
 /** Calls that say nothing about the app. */
 export const NOT_STEPS = new Set(['report', 'list_devices', 'simulator']);
 
-type Open = { dir: string; since: number };
 type Step = {
   at: string;
   op: string;
@@ -48,19 +47,15 @@ type Step = {
   files?: string[];
 };
 
-const openFile = (serial: string) => deviceStateFile('reports', serial);
-
-const opened = (serial: string): Open | undefined => {
-  try {
-    return JSON.parse(readFileSync(openFile(serial), 'utf8')) as Open;
-  } catch {
-    return undefined;
-  }
-};
+/** The device's open report. */
+export const openReports = deviceState(
+  'reports',
+  z.object({ dir: z.string(), since: z.number(), owner: Owner.optional() }),
+);
 
 /** The open report's folder for videos, so that a report is one folder. */
 export const reportVideoDir = (serial: string) => {
-  const o = opened(serial);
+  const o = openReports.read(serial);
   return o && join(o.dir, 'video');
 };
 
@@ -170,7 +165,7 @@ export function reportFor(ctx: ServerContext) {
   /** One call in the journal, with the screen after it when it may have changed something. */
   const note = async (op: Op, args: unknown, out: ToolResult | undefined, err: unknown) => {
     const serial = ctx.currentSerial;
-    const open = serial && opened(serial);
+    const open = serial && openReports.read(serial);
     if (!serial || !open || NOT_STEPS.has(op.name)) return;
     const answer = out
       ? out.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n')
@@ -354,10 +349,10 @@ export function reportFor(ctx: ServerContext) {
 
   /** A session is over: its open report is written. */
   const close = async (s: Session) => {
-    const open = opened(s.device.serial);
+    const open = openReports.read(s.device.serial);
     if (!open) return undefined;
     const r = await write(s, open.dir, open.since);
-    rmSync(openFile(s.device.serial), { force: true });
+    openReports.remove(s.device.serial);
     return r;
   };
 
@@ -378,7 +373,7 @@ export function reportFor(ctx: ServerContext) {
       run: async ({ action, dir }) => {
         const s = await ctx.session();
         const serial = s.device.serial;
-        const open = opened(serial);
+        const open = openReports.read(serial);
         const named = () =>
           resolve(
             dir ??
@@ -396,17 +391,14 @@ export function reportFor(ctx: ServerContext) {
             );
           const to = named();
           mkdirSync(to, { recursive: true });
-          mkdirSync(join(stateDir(), 'reports'), { recursive: true, mode: 0o700 });
-          writeFileSync(openFile(serial), JSON.stringify({ dir: to, since: Date.now() }), {
-            mode: 0o600,
-          });
+          openReports.write(serial, { dir: to, since: Date.now(), owner: s.owner });
           const t = `keeping steps for a report in ${to}`;
           return reply(t, { done: t, dir: to });
         }
         if (action === 'stop' && !open)
           throw new ToolError(`no report is open on ${serial}`, 'NOT_FOUND');
         const r = await write(s, open?.dir ?? named(), open?.since);
-        if (action === 'stop') rmSync(openFile(serial), { force: true });
+        if (action === 'stop') openReports.remove(serial);
         const t = `report: ${r.file} (${r.steps} steps, ${r.measurements} measurements)`;
         return reply(t, { done: t, dir: dirOf(r.file), file: r.file, steps: r.steps });
       },

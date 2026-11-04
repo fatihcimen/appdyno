@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
+import type { Owner } from '@appdyno/core';
 import { escapeLiteral, flowText, namesOf, type Flow, type FlowStep } from './format.js';
 
 /** A secret by its salted digest: the recording, on disk and in memory, never holds the value. */
@@ -11,6 +12,8 @@ export type RecordingState = {
   running: boolean;
   steps: FlowStep[];
   known: Known[];
+  /** The session it runs in; none is a command line's, and goes on across its commands. */
+  owner?: Owner | undefined;
 };
 
 const digestOf = (salt: string, value: string) =>

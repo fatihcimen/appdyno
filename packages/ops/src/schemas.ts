@@ -11,6 +11,9 @@ const Changes = z.object({
   changed: z.number().int(),
 });
 
+/** What a recorder or a capture needs to find its own again, from another process. */
+export const Handle = z.record(z.string(), z.union([z.string(), z.number()]));
+
 export const ActionOut = z.object({
   done: z.string(),
   /** How the screen after the action is given in the text. */

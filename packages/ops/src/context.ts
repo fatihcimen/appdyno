@@ -13,10 +13,7 @@ import { DEFAULT_TRACE_LIMIT_GB } from '@appdyno/perf';
 import { z } from 'zod';
 import { claim, holder, release } from './claims.js';
 import { endSession, sweep, type Taken } from './leftovers.js';
-import { endCapture } from './network.js';
 import { checkApp, checkDevice, type Policy } from './policy.js';
-import { endRecording } from './record.js';
-import { reportFor } from './report.js';
 import { Session } from './session.js';
 import { refused, ToolError } from './tool.js';
 
@@ -164,7 +161,7 @@ export class ServerContext {
     s.shown = saved?.shown;
     s.lastActionAt = saved?.lastActionAt;
     this.sessions.set(serial, s);
-    if (owner) this.leftovers.set(serial, await sweep(s));
+    if (owner) this.leftovers.set(serial, await sweep(this, s));
     return s;
   }
 
@@ -180,14 +177,7 @@ export class ServerContext {
   async end(): Promise<string[]> {
     if (this.defaults.remember) return [];
     const failed: string[] = [];
-    for (const s of this.sessions.values()) {
-      await endRecording(s).catch((e: Error) => failed.push(`recording: ${e.message}`));
-      await endCapture(s).catch((e: Error) => failed.push(`network: ${e.message}`));
-      await reportFor(this)
-        .close(s)
-        .catch((e: Error) => failed.push(`report: ${e.message}`));
-      failed.push(...(await endSession(s)).failed);
-    }
+    for (const s of this.sessions.values()) failed.push(...(await endSession(this, s)).failed);
     return failed;
   }
 

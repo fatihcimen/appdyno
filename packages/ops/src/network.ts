@@ -1,32 +1,22 @@
-import {
-  createReadStream,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { createReadStream, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { connect } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  deviceStateFile,
+  deviceState,
+  Owner,
   run,
   reportProgress,
-  stateDir,
   type NetworkAnswer,
   type NetworkEntry,
-  type NetworkHandle,
   type NetworkPath,
-  type NetworkVia,
 } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { restoreCondition, setCondition } from './settings.js';
 import { boundLines } from './diagnose.js';
 import { checkApp, redactLog } from './policy.js';
-import { NetworkOut } from './schemas.js';
+import { Handle, NetworkOut } from './schemas.js';
 import type { Session } from './session.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
@@ -37,22 +27,17 @@ const VIA = ['proxy', 'probe', 'packets', 'bytes'] as const;
 const SEES_PROXY =
   "every HTTP request of an app that keeps the system proxy, through a proxy you run; HTTPS shows only its host unless the proxy decrypts it, with its own CA on the device (this tool installs none). Bodies: only in the proxy's export, only where it decrypted. Pinned apps and apps that set no proxy do not show";
 
-type Capture = { via: NetworkVia; since: number; handle?: NetworkHandle; proxy?: string };
+const Capture = z.object({
+  via: z.enum(VIA),
+  since: z.number(),
+  handle: Handle.optional(),
+  proxy: z.string().optional(),
+  owner: Owner.optional(),
+});
+type Capture = z.infer<typeof Capture>;
 
-const fileOf = (serial: string) => deviceStateFile('network', serial);
-
-const captureOf = (serial: string): Capture | undefined => {
-  try {
-    return JSON.parse(readFileSync(fileOf(serial), 'utf8')) as Capture;
-  } catch {
-    return undefined;
-  }
-};
-
-const keep = (serial: string, c: Capture) => {
-  mkdirSync(join(stateDir(), 'network'), { recursive: true, mode: 0o700 });
-  writeFileSync(fileOf(serial), JSON.stringify(c), { mode: 0o600 });
-};
+/** The device's capture. */
+export const captures = deviceState('network', Capture);
 
 type HarEntry = {
   _id?: unknown;
@@ -190,14 +175,14 @@ const line = (e: NetworkEntry) =>
 /** Ends a device's capture, its proxy put back; what the way saw to the end. */
 export async function endCapture(s: Session): Promise<NetworkAnswer | undefined> {
   const serial = s.device.serial;
-  const c = captureOf(serial);
+  const c = captures.read(serial);
   if (!c) return undefined;
   let answer: NetworkAnswer = { entries: [] };
   try {
     if (c.handle && s.device.network) answer = await s.device.network.stop(c.handle);
   } finally {
     if (c.via === 'proxy') await restoreCondition(s, 'proxy');
-    rmSync(fileOf(serial), { force: true });
+    captures.remove(serial);
   }
   return answer;
 }
@@ -273,7 +258,7 @@ export function networkOps(ctx: ServerContext) {
       run: async ({ action, via, proxy, app, har, contains, limit }) => {
         const s = await ctx.session();
         const serial = s.device.serial;
-        const now = captureOf(serial);
+        const now = captures.read(serial);
         if (action === 'paths') {
           const ways = await paths(s);
           const t = ways.map((p) => `${p.via}: ${p.sees ?? `no: ${p.refused}`}`).join('\n');
@@ -307,7 +292,7 @@ export function networkOps(ctx: ServerContext) {
                 'NOT_FOUND',
               );
             if (was !== want) await setCondition(s, 'proxy', want);
-            keep(serial, { via, since: Date.now(), proxy: want });
+            captures.write(serial, { via, since: Date.now(), proxy: want, owner: s.owner });
             const t = `traffic goes through ${want}${was === want ? ' (it already did)' : `, ${was} before`}. ${SEES_PROXY}`;
             return reply(t, { done: t });
           }
@@ -317,7 +302,7 @@ export function networkOps(ctx: ServerContext) {
           if (way?.refused) throw new ToolError(way.refused, 'UNSUPPORTED');
           reportProgress(`starting ${via}`);
           const handle = await s.device.network.start(via, target);
-          keep(serial, { via, since: Date.now(), handle });
+          captures.write(serial, { via, since: Date.now(), handle, owner: s.owner });
           if (via === 'probe') s.acted();
           const t = `${via}: ${way?.sees ?? 'started'}`;
           return reply(t, { done: t });

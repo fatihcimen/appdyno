@@ -1,50 +1,37 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import {
-  safeName,
-  deviceStateFile,
-  readVideo,
-  reportProgress,
-  stateDir,
-  type RecordingHandle,
-} from '@appdyno/core';
+import { safeName, deviceState, Owner, readVideo, reportProgress, stateDir } from '@appdyno/core';
 import type { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { reportVideoDir } from './report.js';
-import { RecordOut } from './schemas.js';
+import { Handle, RecordOut } from './schemas.js';
 import type { Session } from './session.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const DEFAULT_S = 1_800;
 const MAX_S = 3_600;
 
-type Running = { handle: RecordingHandle; since: string; file: string };
-
-const stateOf = (serial: string) => deviceStateFile('video', serial);
-
-const running = (serial: string): Running | undefined => {
-  try {
-    return JSON.parse(readFileSync(stateOf(serial), 'utf8')) as Running;
-  } catch {
-    return undefined;
-  }
-};
+/** The device's recording: it outlives the process, so that a command line can start and stop one. */
+export const filming = deviceState(
+  'video',
+  z.object({ handle: Handle, since: z.string(), file: z.string(), owner: Owner.optional() }),
+);
 
 /** Ends the device's recording and checks what came of it; a file that does not play is a refusal. */
 export async function endRecording(s: Session) {
-  const r = running(s.device.serial);
+  const serial = s.device.serial;
+  const r = filming.read(serial);
   if (!r || !s.device.recorder) return undefined;
   reportProgress('ending the recording');
   const { files, note } = await s.device.recorder.stop(r.handle).catch((e: unknown) => {
     // the next start must not be refused for a recording that has ended, however it ended; a device
     // that went away may come back, and its recording with it
     const code = (e as DeviceError).code;
-    if (code !== 'DEVICE_GONE' && code !== 'TIMEOUT')
-      rmSync(stateOf(s.device.serial), { force: true });
+    if (code !== 'DEVICE_GONE' && code !== 'TIMEOUT') filming.remove(serial);
     throw e;
   });
-  rmSync(stateOf(s.device.serial), { force: true });
+  filming.remove(serial);
   const videos = await Promise.all(files.map((f) => readVideo(f)));
   const lines = files.map((f, i) => {
     const v = videos[i]!;
@@ -87,7 +74,7 @@ export function recordOps(ctx: ServerContext) {
           if (!end) throw new ToolError(`no recording runs on ${s.device.serial}`, 'NOT_FOUND');
           return reply(end.text, end.data);
         }
-        const now = running(s.device.serial);
+        const now = filming.read(s.device.serial);
         if (now)
           throw new ToolError(
             `a recording has run on ${s.device.serial} since ${now.since} (to ${now.file}): stop it first`,
@@ -108,10 +95,7 @@ export function recordOps(ctx: ServerContext) {
           throw new ToolError(`cannot write ${to}: ${(e as Error).message}`, 'INVALID_ARGUMENT');
         }
         const handle = await recorder.start(to, { maxSeconds });
-        mkdirSync(dirname(stateOf(s.device.serial)), { recursive: true, mode: 0o700 });
-        writeFileSync(stateOf(s.device.serial), JSON.stringify({ handle, since, file: to }), {
-          mode: 0o600,
-        });
+        filming.write(s.device.serial, { handle, since, file: to, owner: s.owner });
         const t = `recording to ${to}, at most ${maxSeconds} s`;
         return reply(t, { done: t, files: [to], since });
       },

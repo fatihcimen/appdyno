@@ -224,7 +224,7 @@ assert id=result check=text equals="Gönderildi"
         },
         network: {
           paths: async () => [{ via: 'bytes', sees: 'bytes' }],
-          start: async () => 'handle',
+          start: async () => ({ id: 'handle' }),
           read: async () => ({ entries: [] }),
           stop: async () => ({ entries: [] }),
         },
@@ -274,7 +274,7 @@ assert id=result check=text equals="Gönderildi"
       device = Object.assign(new FakeDevice(), {
         recorder: {
           extension: 'mp4',
-          start: async () => 'handle',
+          start: async () => ({ id: 'handle' }),
           stop: async () => ({ files: [] }),
         },
       });
