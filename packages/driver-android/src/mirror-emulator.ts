@@ -9,7 +9,7 @@ import {
 } from 'node:fs';
 import http2, { type ClientHttp2Session } from 'node:http2';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import {
   deviceStateFile,
   type DeviceState,
@@ -114,10 +114,21 @@ export class EmulatorMirror implements Mirror {
     };
   }
 
-  /** The screen's file: only this user reads it, and it holds one frame, as the emulator wants it. */
+  /**
+   * The screen's file: only this user reads it, it holds one frame, as the emulator wants it, and it goes with
+   * its process. A frame a process that died left behind goes with the next start.
+   */
   private makeFile(w: number, h: number): string {
-    const file = deviceStateFile('mirror', this.serial).replace(/\.json$/, '.rgba');
-    mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
+    const stem = deviceStateFile('mirror', this.serial).replace(/\.json$/, '');
+    const folder = dirname(stem);
+    mkdirSync(folder, { recursive: true, mode: 0o700 });
+    for (const name of readdirSync(folder)) {
+      const pid = name.startsWith(`${basename(stem)}-`)
+        ? /-(\d+)\.rgba$/.exec(name)?.[1]
+        : undefined;
+      if (pid && !processAlive(Number(pid))) rmSync(join(folder, name), { force: true });
+    }
+    const file = `${stem}-${process.pid}.rgba`;
     const fd = openSync(file, 'w', 0o600);
     ftruncateSync(fd, w * h * 4);
     closeSync(fd);

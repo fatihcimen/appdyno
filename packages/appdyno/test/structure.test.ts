@@ -55,7 +55,8 @@ function logicLines(text: string): string[] {
     // a native file opens with the framework imports every other one has
     if (/^#(import|include|pragma)\b/.test(line)) continue;
     if (/^import\b/.test(line)) {
-      inImport = !/\bfrom '|^import '/.test(line);
+      // a Kotlin import is whole on its line, and has no `from`
+      inImport = !/\bfrom '|^import '|^import\s+[\w.*]+(\s+as\s+\w+)?$/.test(line);
       continue;
     }
     if (line && !/^(\/\/|\/\*|\*)/.test(line)) out.push(line);
@@ -118,6 +119,13 @@ describe('repeated code', () => {
       { name: 'b.m', text: `${imports}\n${body}` },
     ];
     expect(repeatedRuns(twice, RUN_LINES)).toHaveLength(1);
+  });
+
+  it('reads on past a Kotlin import', () => {
+    expect(logicLines('import a.b.c\nimport a.b.d as e\nimport a.f.*\nval x = 1')).toEqual([
+      'val x = 1',
+    ]);
+    expect(logicLines("import {\n  a,\n} from 'b';\nconst x = 1;")).toEqual(['const x = 1;']);
   });
 
   it('takes in the viewer', () => {

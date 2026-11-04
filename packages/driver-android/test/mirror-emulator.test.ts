@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import http2 from 'node:http2';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -211,6 +211,24 @@ describe('an emulator mirror', () => {
     expect(stream.includes(Buffer.from(`file://${file}`))).toBe(true);
     await mirror.close();
     expect(existsSync(file)).toBe(false);
+  });
+
+  it('a frame a dead process left goes with the next start, and one of a live process stays', async () => {
+    const emulator = await fakeEmulator((s) => {
+      s.respond({ ':status': 200 });
+    });
+    close = emulator.close;
+    mkdirSync(join(dir, 'mirror'), { recursive: true });
+    const dead = join(dir, 'mirror/emulator-5720-999999.rgba');
+    const other = join(dir, 'mirror/emulator-5722-999999.rgba');
+    const live = join(dir, `mirror/emulator-5720-${process.ppid}.rgba`);
+    for (const f of [dead, other, live]) writeFileSync(f, 'x');
+    const mirror = new EmulatorMirror('emulator-5720', phone(), () => ({ port: emulator.port }));
+    await mirror.open({ quality: 'auto' }, signal, () => undefined);
+    expect(existsSync(dead)).toBe(false);
+    expect(existsSync(other)).toBe(true);
+    expect(existsSync(live)).toBe(true);
+    await mirror.close();
   });
 
   it('a guest that turns draws sideways in the same frame: the file keeps its shape, and a tick says so', async () => {

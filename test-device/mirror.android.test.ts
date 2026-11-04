@@ -308,7 +308,8 @@ describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () =>
     const child = parent();
     await until('its file', () => existsSync(stateFile), 60_000);
     await until('a stream', () => stateText().includes('"state":"live"'), 120_000);
-    expect(await displaysOf(adb, serial!)).toBeGreaterThan(0);
+    // an emulator's picture comes by its own port, with no display of ours
+    if (!emulator) expect(await displaysOf(adb, serial!)).toBeGreaterThan(0);
     const viewer = spawnSync('pgrep', ['-P', String(child.pid)])
       .stdout.toString()
       .trim();
@@ -375,7 +376,7 @@ describe.runIf(emulator)('an emulator picture by gRPC', () => {
     expect(session.status.note).toBeUndefined();
     await sleep(3_000);
     const { w, h } = session.status.picture!;
-    const file = deviceStateFile('mirror', serial!).replace(/\.json$/, '.rgba');
+    const file = deviceStateFile('mirror', serial!).replace(/\.json$/, `-${process.pid}.rgba`);
     const pixels = readFileSync(file).subarray(0, w * h * 4);
     const png = decodePng(await adb.execBuffer(serial!, 'screencap -p'))!;
     expect([png.width, png.height]).toEqual([w, h]);
