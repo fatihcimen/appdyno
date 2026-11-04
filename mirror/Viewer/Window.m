@@ -112,19 +112,21 @@ static NSTextField *label(CGFloat size, NSFontWeight weight) {
   [CATransaction commit];
 }
 
-- (void)showImage:(CVImageBufferRef)image {
+- (BOOL)showImage:(CVImageBufferRef)image {
   CMVideoFormatDescriptionRef format = NULL;
-  if (CMVideoFormatDescriptionCreateForImageBuffer(NULL, image, &format) != noErr) return;
+  if (CMVideoFormatDescriptionCreateForImageBuffer(NULL, image, &format) != noErr) return NO;
   CMSampleTimingInfo timing = {.duration = kCMTimeInvalid, .presentationTimeStamp = CMClockGetTime(CMClockGetHostTimeClock()), .decodeTimeStamp = kCMTimeInvalid};
   CMSampleBufferRef sample = NULL;
   OSStatus status = CMSampleBufferCreateReadyWithImageBuffer(NULL, image, format, &timing, &sample);
   CFRelease(format);
-  if (status != noErr) return;
+  if (status != noErr) return NO;
   CFMutableDictionaryRef attachments = (CFMutableDictionaryRef)CFArrayGetValueAtIndex(CMSampleBufferGetSampleAttachmentsArray(sample, YES), 0);
   CFDictionarySetValue(attachments, kCMSampleAttachmentKey_DisplayImmediately, kCFBooleanTrue);
-  if (_video.status == AVQueuedSampleBufferRenderingStatusFailed) [_video flush];
+  BOOL failed = _video.status == AVQueuedSampleBufferRenderingStatusFailed;
+  if (failed) [_video flush];
   [_video enqueueSampleBuffer:sample];
   CFRelease(sample);
+  return !failed;
 }
 
 - (void)setStatus:(NSDictionary *)message {

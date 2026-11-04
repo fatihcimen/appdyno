@@ -205,9 +205,13 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_RESTART === '1')(
   },
 );
 
-/** It needs the runner, which sets the orientation, and so its build. */
+/**
+ * It needs the runner, which sets the orientation, and so its build, and an app that turns in front. A guest that
+ * turns draws sideways in the same surface and no callback says so: this holds that fact, for the day it changes.
+ */
 describe.runIf(udid && process.env.APPDYNO_MIRROR_ROTATE === '1')('a simulator that turns', () => {
-  it('follows by its surface, at the new size, with no new session', async () => {
+  it('keeps its surface and its session', async () => {
+    execFileSync('xcrun', ['simctl', 'launch', udid!, 'dev.appdyno.fixture']);
     const device = new IosSimulatorDevice(udid!);
     await device.open();
     const session = new MirrorSession({
@@ -221,11 +225,10 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_ROTATE === '1')('a simulator t
       await until('picture', () => session.status.state === 'live');
       const { w, h } = session.status.picture!;
       await device.setOrientation(1);
-      await until('a turned picture', () => session.status.picture!.w !== w, 30_000);
-      expect(session.status.picture).toMatchObject({ w: h, h: w });
+      await new Promise((r) => setTimeout(r, 4_000));
+      expect(session.status.picture).toMatchObject({ w, h });
       expect(session.status.state).toBe('live');
       await device.setOrientation(0);
-      await until('upright again', () => session.status.picture!.w === w, 30_000);
     } finally {
       await session.stop('the test ended');
       await device.stopAgent().catch(() => undefined);

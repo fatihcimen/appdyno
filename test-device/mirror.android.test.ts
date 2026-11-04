@@ -7,6 +7,7 @@ import {
   decodePng,
   deviceStateFile,
   MirrorSession,
+  startViewer,
   viewerBinary,
   ViewerProcess,
   type Mirror,
@@ -226,6 +227,48 @@ describe.runIf(serial)('the agent stream', () => {
     await until('portrait', () => session.status.picture!.h === portrait.h, 30_000);
     await session.stop('the test ended');
   }, 120_000);
+});
+
+describe.runIf(serial && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real window', () => {
+  it('shows the agent stream by its layer, and a click on the picture moves the fixture', async () => {
+    const adb = new Adb();
+    const device = new AndroidDevice(serial!, adb);
+    const { screen } = await device.open();
+    await adb.exec(serial!, 'am force-stop dev.appdyno.fixture');
+    await adb.exec(
+      serial!,
+      'am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/frames dev.appdyno.fixture',
+    );
+    let node;
+    for (let i = 0; i < 40 && !node; i++) {
+      node = (await device.tree()).nodes.find((n) => n.id?.endsWith('frames_light'));
+      if (!node) await sleep(500);
+    }
+    device.close();
+    expect(node).toBeDefined();
+    const [left, top, right, bottom] = node!.b;
+    const session = new MirrorSession({
+      mirror: device.mirror,
+      viewer: startViewer(false),
+      options: { quality: 'auto' },
+      title: 'a test window',
+    });
+    await session.start();
+    try {
+      await until('picture', () => session.status.state === 'live');
+      await sleep(2_000);
+      const marked = session.mark();
+      session.poke((left + right) / 2 / screen.w, (top + bottom) / 2 / screen.h);
+      const ms = await Promise.race([marked, sleep(5_000).then(() => -1)]);
+      console.log(`a click on the window to the next frame: ${ms} ms`);
+      expect(ms).toBeGreaterThan(0);
+      await sleep(1_500);
+      expect(session.status.stats?.layer).toBe('ok');
+      expect(Number(session.status.stats?.shown)).toBeGreaterThan(5);
+    } finally {
+      await session.stop('the test ended');
+    }
+  }, 180_000);
 });
 
 /** The command line itself, where the package is built: a parent is a process of its own. */

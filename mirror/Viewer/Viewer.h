@@ -19,6 +19,8 @@ void MVEmit(NSDictionary *message);
 @property(atomic, copy) NSString *source;
 @property(atomic, copy) NSString *mode;
 @property(atomic, copy) NSString *decoder;
+/// What became of the last picture a window's layer was given: empty with no layer.
+@property(atomic, copy) NSString *layer;
 @property(atomic) CGSize size;
 - (void)arrived:(size_t)bytes captureMs:(double)ms;
 - (void)decodedMs:(double)ms;
@@ -107,7 +109,8 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags);
 - (void)configure:(NSDictionary *)attach;
 - (void)setPicture:(CGSize)size;
 - (void)showSurface:(IOSurfaceRef)surface;
-- (void)showImage:(CVImageBufferRef)image;
+/// Whether the layer took it.
+- (BOOL)showImage:(CVImageBufferRef)image;
 - (void)setStatus:(NSDictionary *)message;
 - (void)focus;
 /// A click at this fraction of the picture, by the window's own event queue: needs no permission to post.

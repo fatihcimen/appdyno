@@ -63,6 +63,7 @@ static int openDescriptors(void) {
     _source = @"";
     _mode = @"";
     _decoder = @"";
+    _layer = @"";
   }
   return self;
 }
@@ -148,6 +149,7 @@ static int openDescriptors(void) {
   full[@"source"] = self.source;
   full[@"mode"] = self.mode;
   full[@"decoder"] = self.decoder;
+  full[@"layer"] = self.layer;
   full[@"rssMb"] = @(residentMb());
   full[@"fds"] = @(openDescriptors());
   return full;

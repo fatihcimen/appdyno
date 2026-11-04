@@ -417,3 +417,17 @@ Nothing moved and no answer was stale in any run, and a first open's answer hold
 `am start -W` take about 500 ms each at load 8-9, and the first read about 450 while the app is still coming up: the first open
 went down by starting the app alongside the agent. It does not do so over another tool's UI automation, where the session may be
 refused and must have left the device alone.
+
+## Mirror
+
+`packages/appdyno/scripts/mirror-bench.mjs <device>`, headless: the fixture's frames screen on Android, a flick along Settings on a simulator. All arrive-on-Mac figures, not glass: a window adds about a display tick. It waits for two still seconds before each touch, so that the next frame is the touch's own. Measured 2026-11-04 on an M5 Pro with 15 cores, on the same Mac as other work, with the host's load beside each. Each is one run; a number is relative to this Mac at this load.
+
+| device, picture                                       | frames/s while moving (target)               | capture to arrival p50, p95, ms (target) | touch to first changed frame p50, ms (target) | decode or copy p95, ms (target) | still screen: viewer CPU, RSS | host load |
+| ----------------------------------------------------- | -------------------------------------------- | ---------------------------------------- | --------------------------------------------- | ------------------------------- | ----------------------------- | --------- |
+| Xiaomi 25078RA3EY, Android 16, H.264, 720x1600        | 60, best 62 (59)                             | 30.7, 38.7 (35, 50)                      | **85.7, a miss** (80)                         | 5.7 (8)                         | 0 %, 15 MB                    | 23-31     |
+| Android 14 emulator, gRPC `MMAP`, 1080x2400           | 43, best 54 (40.3: 90 % of the guest's 44.8) | not measured by this path                | 41.4 (120)                                    | 0.6 (8)                         | 0 %, 40 MB                    | 24-31     |
+| iPhone 17 Pro simulator, iOS 27.0, surface, 1206x2622 | 91, best 114 (58)                            | no encode                                | 55 (80)                                       | no decode; frame gap 18.8 (20)  | 0 %, 24 MB                    | 25-31     |
+
+The phone's touch stays about one display tick over its target: 98 ms by way of UI automation with two round trips per tap, 86 to 91 ms as it is now, with 7 ms of it a round trip to the agent. The simulator's touches come in two sizes, about 70 ms up a list and about 20 ms back down it. Its frame rate is its panel's 120 Hz at the start of a flick and falls as the list coasts; only seconds with 30 frames or more are counted. A real window of the viewer has about 86 MB, against 24 headless.
+
+Under other work, nothing but the load differs: on the phone at load 325 to 369, 51 frames/s, capture to arrival 33.8, 48.4 ms, touch 103 ms, decode 9.6 ms.

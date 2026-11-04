@@ -193,7 +193,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   CVBufferRetain(image);
   dispatch_async(dispatch_get_main_queue(), ^{
     if ([self isCurrent:from]) {
-      [self->_window showImage:image];
+      if (self->_window) self->_stats.layer = [self->_window showImage:image] ? @"ok" : @"failed";
       [self->_stats shown];
     }
     CVBufferRelease(image);
