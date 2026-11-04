@@ -28,6 +28,7 @@ import {
 } from '@appdyno/ops';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
+import { endWithClient } from './lifetime.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
@@ -107,10 +108,7 @@ function contextFrom(values: Settings, remember?: string) {
   });
 }
 
-/** How long putting a session's conditions back may hold up the end of the server. */
-const END_MS = 20_000;
-
-/** The MCP server over stdio, until its client closes stdin. */
+/** The MCP server over stdio, until its client closes stdin or a signal ends it. */
 async function serveMcp(args: string[]) {
   const { values } = parseArgs({
     args,
@@ -133,14 +131,7 @@ async function serveMcp(args: string[]) {
   const ctx = contextFrom(values);
   const log = (line: object) =>
     process.stderr.write(`${JSON.stringify({ t: new Date().toISOString(), ...line })}\n`);
-  process.stdin.once('close', () => {
-    const giveUp = new Promise<string[]>((r) => setTimeout(() => r(['timed out']), END_MS));
-    void Promise.race([ctx.end().catch((e: Error) => [e.message]), giveUp]).then((failed) => {
-      for (const f of failed) log({ conditionNotRestored: f });
-      ctx.close();
-      process.exit(0);
-    });
-  });
+  endWithClient(ctx, log);
   await createServer(opsFor(ctx), log).connect(new StdioServerTransport());
 }
 
