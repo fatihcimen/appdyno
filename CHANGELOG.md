@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Android memory as Play judges it: `perf_snapshot` `also: anonMemory` reads anon RSS and swap by process state, and bitmaps, against Play's table for the device's RAM, and says a device is no P90.
 - Android battery signals with no power model: `perf_snapshot` `also: battery` reads wake locks by tag, the longest one, wakeups and jobs over a window, on a phone on a cable and on an emulator. Nothing is reset and the phone is never told it is unplugged.
 - Numbers against Play's definitions, in the answers and on the dashboard: slow frames over 16 ms (a session above 50 %), frozen frames (above 0.1 %, from 1,000 frames), a state's longest start of the day, user-perceived ANRs. A local run says "this session would count", never a rate.
 - A journey measured and gated: `appdyno test <flow> --measure [--iterations N]`, or `flow` `run` with `iterations`, keeps a flow as a scenario with a time and what the device reads for each step. `perf compare` names the step that got slower, and the dashboard has a row `Journeys`, with one bar split by step.

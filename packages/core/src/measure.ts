@@ -171,6 +171,21 @@ export type MemoryReading = {
   activities?: number;
 };
 
+/** What Android vitals' memory metric reads: the process's anonymous memory and swap, in the state it is in. */
+export type ProcessMemoryState = 'foreground' | 'service' | 'background' | 'cached';
+
+export type AnonMemory = {
+  /** `RssAnon` + `VmSwap` of the main process. */
+  kb: number;
+  rssAnonKb: number;
+  swapKb: number;
+  state: ProcessMemoryState;
+  processState: number;
+  /** Malloced and not, as `dumpsys meminfo` lists them; none where this Android lists no such row. */
+  bitmapKb?: number;
+  ramMb: number;
+};
+
 export type LaunchMode = 'cold' | 'warm' | 'hot';
 
 /** How the app's code is compiled for a launch (Android). */
@@ -315,6 +330,7 @@ export interface MeasureSource {
   readonly slowReads?: readonly Capability[];
   cpu?(app: string, windowMs?: number): Promise<Measured<CpuReading>>;
   memory?(app: string): Promise<Measured<MemoryReading>>;
+  anonMemory?(app: string): Promise<Measured<AnonMemory>>;
   frames?(app: string, opts?: { reset?: boolean }): Promise<Measured<FrameStats>>;
   /** Frames of what `during` does, on a device with no counter to read before and after: it records around it. */
   framesDuring?(

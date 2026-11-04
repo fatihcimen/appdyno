@@ -127,12 +127,18 @@ export const KINDS = {
  * which answer `journey`; XCTest's own metrics, which answer no row and show as rows of their own.
  */
 export type Kind =
-  keyof typeof KINDS | `launch.phase.${string}_ms` | `journey.${string}` | `xct.${string}`;
+  | keyof typeof KINDS
+  | `launch.phase.${string}_ms`
+  | `journey.${string}`
+  | `xct.${string}`
+  | `memory.anon_swap.${string}`
+  | `memory.bitmap.${string}`;
 
 /** Which row a kept kind answers, if any: a record may have been kept by another version. */
 export function measureOf(kind: string): MeasureId | undefined {
   if (kind.startsWith('launch.phase.')) return 'launch-why';
   if (kind.startsWith('journey.')) return 'journey';
+  if (kind.startsWith('memory.anon_swap.') || kind.startsWith('memory.bitmap.')) return 'memory';
   return Object.hasOwn(KINDS, kind) ? KINDS[kind as keyof typeof KINDS] : undefined;
 }
 

@@ -12,6 +12,11 @@ const PlayShares = {
 
 export const SnapshotOut = z.object({
   ...Measurement,
+  anonSwapKb: z.number().optional(),
+  rssAnonKb: z.number().optional(),
+  swapKb: z.number().optional(),
+  processState: z.string().optional(),
+  bitmapKb: z.number().optional(),
   wakeLocks: z
     .array(
       z.object({

@@ -92,6 +92,57 @@ const RULES: Record<string, Rule> = {
   },
 };
 
+/** RAM in MB to the tier Play's table has it under; below 4 GB and above 16 GB it has none. */
+const RAM_TIERS = [
+  { from: 3_200, to: 4_800, gb: 4 },
+  { from: 4_800, to: 6_800, gb: 6 },
+  { from: 6_800, to: 9_216, gb: 8 },
+  { from: 9_216, to: 14_336, gb: 12 },
+  { from: 14_336, to: 18_432, gb: 16 },
+];
+
+export const ramTier = (ramMb: number) =>
+  RAM_TIERS.find((t) => ramMb >= t.from && ramMb < t.to)?.gb;
+
+/** Anon RSS and swap in GB, apps, by tier and state; a cached process has no limit. A game's are higher. */
+const ANON_SWAP_GB: Record<number, Record<string, number>> = {
+  4: { foreground: 2, service: 1, background: 1 },
+  6: { foreground: 2.25, service: 1.25, background: 1.25 },
+  8: { foreground: 2.25, service: 1.5, background: 1.5 },
+  12: { foreground: 3.25, service: 1.75, background: 1.75 },
+  16: { foreground: 4.25, service: 2, background: 2 },
+};
+
+/** Bitmaps in MB by state; a process in the foreground has no limit. */
+const BITMAP_MB: Record<string, number> = { service: 200, background: 200, cached: 400 };
+
+const MEMORY_NOTE = 'Play judges the P90 of its fleet from February 2027, a device is one reading';
+const mb = (kb: number) => Math.round(kb / 1024);
+
+/** A kind with its state, and its tier, in its name: what the limit depends on stays with the number. */
+function memoryRule(kind: string): Rule | undefined {
+  const anon = /^memory\.anon_swap\.(\w+)\.(\d+)gb_kb$/.exec(kind);
+  const limit = anon && ANON_SWAP_GB[Number(anon[2])]?.[anon[1]!];
+  if (limit)
+    return {
+      limit: limit * 1024 * 1024,
+      name: 'over the memory limit',
+      reads: (value) =>
+        `anon RSS and swap ${mb(value)} MB in ${anon[1]}, the limit ${limit} GB with ${anon[2]} GB of RAM`,
+      note: MEMORY_NOTE,
+    };
+  const state = /^memory\.bitmap\.(\w+)_kb$/.exec(kind)?.[1];
+  const bitmaps = state && BITMAP_MB[state];
+  if (bitmaps)
+    return {
+      limit: bitmaps * 1024,
+      name: 'over the bitmap limit',
+      reads: (value) => `bitmaps ${mb(value)} MB in ${state}, the limit ${bitmaps} MB`,
+      note: MEMORY_NOTE,
+    };
+  return undefined;
+}
+
 /** What Play's definition says of one number. */
 export type VitalsCall = { kind: string; counts: boolean; says: string };
 
@@ -99,7 +150,7 @@ export type VitalsCall = { kind: string; counts: boolean; says: string };
 export function vitalsCall(
   r: Pick<PerfRecord, 'kind' | 'value'> & { device: Pick<PerfRecord['device'], 'platform'> },
 ): VitalsCall | undefined {
-  const rule = RULES[r.kind];
+  const rule = RULES[r.kind] ?? memoryRule(r.kind);
   if (!rule || r.device.platform !== 'android') return undefined;
   const counts = rule.from ? r.value >= rule.limit : r.value > rule.limit;
   return {

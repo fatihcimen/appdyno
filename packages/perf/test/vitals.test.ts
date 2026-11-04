@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { playDay, vitalsCall } from '../src/index.js';
+import { playDay, ramTier, vitalsCall } from '../src/index.js';
 
 const android = { device: { platform: 'android' as const } };
 const says = (kind: string, value: number) => vitalsCall({ kind, value, ...android });
@@ -27,6 +27,33 @@ describe("a number against Play's definitions", () => {
   it('counts any user-perceived ANR', () => {
     expect(says('exits.user_anrs', 0)!.counts).toBe(false);
     expect(says('exits.user_anrs', 1)!.counts).toBe(true);
+  });
+
+  it('judges memory by the state and the RAM in its kind, and says one device is no P90', () => {
+    const limit = 2.25 * 1024 * 1024;
+    expect(says('memory.anon_swap.foreground.8gb_kb', limit)!.counts).toBe(false);
+    const over = says('memory.anon_swap.foreground.8gb_kb', limit + 1)!;
+    expect(over.counts).toBe(true);
+    expect(over.says).toContain('the limit 2.25 GB with 8 GB of RAM');
+    expect(over.says).toContain('P90');
+    expect(says('memory.anon_swap.background.4gb_kb', 1024 * 1024 + 1)!.counts).toBe(true);
+    // a cached process has no limit, and a device outside the table none either
+    expect(says('memory.anon_swap.cached.8gb_kb', 9e9)).toBeUndefined();
+    expect(says('memory.anon_swap.foreground.other_gb_kb', 9e9)).toBeUndefined();
+  });
+
+  it('judges bitmaps by the state, and not in the foreground', () => {
+    expect(says('memory.bitmap.foreground_kb', 9e9)).toBeUndefined();
+    expect(says('memory.bitmap.background_kb', 201 * 1024)!.counts).toBe(true);
+    expect(says('memory.bitmap.cached_kb', 201 * 1024)!.counts).toBe(false);
+    expect(says('memory.bitmap.cached_kb', 401 * 1024)!.counts).toBe(true);
+  });
+
+  it('finds the tier of a device’s RAM, and none outside the table', () => {
+    expect(ramTier(7_665)).toBe(8);
+    expect(ramTier(3_199)).toBeUndefined();
+    expect(ramTier(3_200)).toBe(4);
+    expect(ramTier(18_432)).toBeUndefined();
   });
 
   it('says what this session would do, and never a rate', () => {

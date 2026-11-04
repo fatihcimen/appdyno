@@ -118,6 +118,7 @@ describe('the page and the measures', () => {
       ['perf_heap', {}, 'leaks', { heap: says('needs get-task-allow') }],
       ['perf_snapshot', {}, 'cpu', { cpu: says('no cpu') }],
       ['perf_snapshot', {}, 'memory', { memory: says('no memory') }],
+      ['perf_snapshot', { also: ['anonMemory'] }, 'memory', { anonMemory: says('no anon') }],
       ['perf_snapshot', { also: ['network'] }, 'network', { network: says('no bytes') }],
       ['perf_snapshot', { also: ['energy'] }, 'energy', { energy: says('no energy') }],
       ['perf_snapshot', { also: ['battery'] }, 'battery', { battery: says('no signals') }],

@@ -1,5 +1,5 @@
-import type { Capability, EnergyReading, Measured } from '@appdyno/core';
-import type { Metric } from '@appdyno/perf';
+import type { AnonMemory, Capability, EnergyReading, Measured } from '@appdyno/core';
+import { ramTier, vitalsCall, type Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { holdingCondition } from '../control.js';
@@ -70,6 +70,34 @@ const extra =
     );
   };
 
+/** A tier and a state in the kind: the limit it is judged by depends on both. */
+const anonMetrics = (v: AnonMemory): Metric[] => [
+  {
+    kind: `memory.anon_swap.${v.state}.${ramTier(v.ramMb) ?? 'other_'}gb_kb`,
+    unit: 'kb',
+    samples: [v.kb],
+  },
+  {
+    kind: `memory.bitmap.${v.state}_kb`,
+    unit: 'kb',
+    samples: v.bitmapKb === undefined ? [] : [v.bitmapKb],
+  },
+];
+
+/** What Play's table says of each, and that it says nothing where it has no limit for this state or this RAM. */
+const anonLines = (v: AnonMemory) => {
+  const judged = anonMetrics(v).flatMap((m) =>
+    m.samples.flatMap((value) =>
+      vitalsCall({ kind: m.kind, value, device: { platform: 'android' } })
+        ? [playLine(m.kind, value)]
+        : [],
+    ),
+  );
+  return judged.length
+    ? judged
+    : [`Play: no limit for a ${v.state} process with ${v.ramMb} MB of RAM`];
+};
+
 const EXTRAS = {
   threads: extra({
     read: (a) => reads('threads', a)?.(a.pkg, a.windowMs),
@@ -105,6 +133,22 @@ const EXTRAS = {
       ...(v.mj !== undefined && { energyMj: v.mj }),
       ...(v.impact !== undefined && { energyImpact: v.impact }),
       energyModelled: v.modelled === true,
+    }),
+  }),
+  anonMemory: extra({
+    read: (a) => reads('anonMemory', a)?.(a.pkg),
+    metrics: (v) => anonMetrics(v),
+    line: (v) =>
+      [
+        `anon RSS and swap: ${kb(v.kb)} (anon ${kb(v.rssAnonKb)}, swap ${kb(v.swapKb)}), ${v.state}, process state ${v.processState}; bitmaps ${v.bitmapKb === undefined ? 'not listed by this Android' : kb(v.bitmapKb)}; RAM ${v.ramMb} MB`,
+        ...anonLines(v),
+      ].join('\n'),
+    data: (v) => ({
+      anonSwapKb: v.kb,
+      rssAnonKb: v.rssAnonKb,
+      swapKb: v.swapKb,
+      processState: v.state,
+      ...(v.bitmapKb !== undefined && { bitmapKb: v.bitmapKb }),
     }),
   }),
   battery: extra({
@@ -184,7 +228,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
           .array(z.enum(EXTRA_NAMES))
           .optional()
           .describe(
-            'threads; network: bytes; energy: says if a model; battery: wake locks, wakeups, jobs; exits: crashes, ANRs; size: on disk',
+            'threads; network: bytes; energy: says if a model; anonMemory: anon RSS and swap by process state, bitmaps; battery: wake locks, wakeups, jobs; exits: crashes, ANRs; size: on disk',
           ),
         batteryWindowMs: z.number().int().min(1_000).max(600_000).default(30_000),
         scenario: Scenario,

@@ -55,4 +55,6 @@
     <item name="battery_lock" type="id" />
     <item name="battery_alarms" type="id" />
     <item name="battery_job" type="id" />
+    <item name="memory_native" type="id" />
+    <item name="memory_bitmap" type="id" />
 </resources>

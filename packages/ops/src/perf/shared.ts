@@ -37,6 +37,7 @@ export const Probe = z
 export const ROW_OF: Partial<Record<Capability, MeasureId>> = {
   cpu: 'cpu',
   memory: 'memory',
+  anonMemory: 'memory',
   heap: 'leaks',
   frames: 'frames',
   framesDuring: 'frames',
@@ -54,6 +55,7 @@ export const ROW_OF: Partial<Record<Capability, MeasureId>> = {
 
 /** A row with more than one way to read it: a device lacking one of them is no device that cannot. */
 const ROUTES: Partial<Record<MeasureId, Capability[]>> = {
+  memory: ['memory', 'anonMemory'],
   frames: ['frames', 'framesDuring', 'frameTrace'],
   stalls: ['frames', 'frameTrace', 'hangs'],
 };
@@ -62,6 +64,7 @@ const ROUTES: Partial<Record<MeasureId, Capability[]>> = {
 const MEASURE_NAME: Record<Capability, string> = {
   cpu: 'CPU',
   memory: 'memory',
+  anonMemory: 'anonymous memory by process state',
   frames: 'frames',
   framesDuring: 'frames',
   resetFrames: 'frames',

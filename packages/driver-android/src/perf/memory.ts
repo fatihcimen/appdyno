@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import {
   sleep,
+  type AnonMemory,
   type Measured,
   type MemoryReading,
   type HeapProfileKind,
@@ -11,7 +12,7 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg } from '../adb.js';
 import { traceProcessor } from '../tools.js';
-import { type MemoryStats, parseMeminfo, parseCsv } from './parse.js';
+import { type MemoryStats, parseAnonMemory, parseMeminfo, parseCsv } from './parse.js';
 import { type PerfDevice, sh, at, pidOf } from './shared.js';
 import { buildType } from './app.js';
 import { recordTrace, queryFile } from './perfetto.js';
@@ -43,6 +44,19 @@ export async function memory(
     throw new DeviceError('APP_NOT_RUNNING', `${pkg} is not running`);
   const stats = parseMeminfo(raw);
   return { value: { ...stats, kb: stats.pssKb, kind: 'pss' }, raw, at: at() };
+}
+
+/**
+ * The memory Play judges (docs/perf.md): `RssAnon` + `VmSwap` from the process's own status, the state the system holds
+ * it in, its bitmaps, and the device's RAM, which picks the limit.
+ */
+export async function anonMemory(d: PerfDevice, pkg: string): Promise<Measured<AnonMemory>> {
+  const pid = await pidOf(d, pkg);
+  const raw = await sh(
+    d,
+    `grep -E '^(RssAnon|VmSwap):' /proc/${pid}/status; grep MemTotal /proc/meminfo; dumpsys activity processes ${pkg} | grep -m1 -o 'curProcState=[0-9]*'; dumpsys meminfo ${pkg} | grep -E 'Bitmap \\((non)?malloced\\)'`,
+  );
+  return { value: parseAnonMemory(raw), raw, at: at() };
 }
 
 /**

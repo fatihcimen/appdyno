@@ -1,5 +1,7 @@
 import type {
+  AnonMemory,
   DeviceVitals,
+  ProcessMemoryState,
   ProfileEntry,
   ThreadReading,
   EnergyReading,
@@ -39,6 +41,38 @@ export function parseMeminfo(text: string): MemoryStats {
   };
   for (const [k, v] of Object.entries(opt)) if (v !== undefined) Object.assign(out, { [k]: v });
   return out;
+}
+
+/**
+ * ActivityManager's process states, as Android vitals' memory table groups them: what is on the screen; a service the
+ * user knows of; the rest of what is at work; and what is only kept in case.
+ */
+const stateOf = (procState: number): ProcessMemoryState => {
+  if (procState <= 3) return 'foreground';
+  if (procState <= 6) return 'service';
+  return procState >= 16 ? 'cached' : 'background';
+};
+
+/** The lines `anonMemory` asks for: `RssAnon:`, `VmSwap:`, `MemTotal:`, `curProcState=`, `Bitmap (malloced):`. */
+export function parseAnonMemory(text: string): AnonMemory {
+  const rssAnonKb = num(/^RssAnon:\s*(\d+)/m, text);
+  const memTotalKb = num(/^MemTotal:\s*(\d+)/m, text);
+  const processState = num(/curProcState=(\d+)/, text);
+  if (rssAnonKb === undefined || memTotalKb === undefined || processState === undefined)
+    throw new Error('no RssAnon, MemTotal or process state in the memory read');
+  const swapKb = num(/^VmSwap:\s*(\d+)/m, text) ?? 0;
+  const bitmaps = ['malloced', 'nonmalloced'].flatMap(
+    (name) => num(new RegExp(`Bitmap \\(${name}\\):\\s+\\d+\\s+(\\d+)`), text) ?? [],
+  );
+  return {
+    kb: rssAnonKb + swapKb,
+    rssAnonKb,
+    swapKb,
+    state: stateOf(processState),
+    processState,
+    ...(bitmaps.length && { bitmapKb: bitmaps.reduce((x, y) => x + y, 0) }),
+    ramMb: Math.round(memTotalKb / 1024),
+  };
 }
 
 /** utime + stime (clock ticks) of `/proc/<pid>/stat`, fields counted after the `(comm)` (which may hold spaces). */
