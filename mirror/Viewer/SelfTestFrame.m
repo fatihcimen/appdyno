@@ -66,12 +66,14 @@ static void checkControls(void) {
 }
 
 static void checkLive(void) {
-  MVCheck(@"hud: a smooth screen is good, a slow one poor", MVStateOf(@"fps", 60) == MVLiveGood && MVStateOf(@"fps", 40) == MVLiveWarning && MVStateOf(@"fps", 12) == MVLiveCritical, nil);
+  MVCheck(@"hud: a low rate with every frame on time is no fault", MVFramesState(@{@"fps": @20, @"framesDrawn": @20, @"jankyFrames": @0}) == MVLiveGood, nil);
+  MVCheck(@"hud: a rate is judged by what came late", MVFramesState(@{@"framesDrawn": @20, @"jankyFrames": @4}) == MVLiveWarning && MVFramesState(@{@"framesDrawn": @12, @"jankyFrames": @10}) == MVLiveCritical, nil);
+  MVCheck(@"hud: with no count of late frames there is no verdict", MVFramesState(@{@"fps": @12}) == MVLiveNeutral, nil);
   MVCheck(@"hud: one frozen frame is poor", MVStateOf(@"frozenFrames", 1) == MVLiveCritical && MVStateOf(@"frozenFrames", 0) == MVLiveGood, nil);
   MVCheck(@"hud: memory has no threshold to be judged by", MVStateOf(@"memoryMb", 4000) == MVLiveNeutral, nil);
   MVHud *hud = [[MVHud alloc] initWithFrame:NSMakeRect(0, 0, 180, 600)];
   [hud show:@{@"sample": @{@"at": @1, @"fps": @0, @"absent": @{@"cpuPercent": @"cannot measure CPU"}}, @"noise": @[@"mirrored"]}];
-  MVCheck(@"hud: a reading of 0 says 0", [[hud shownFor:@"fps"] hasPrefix:@"0"], [hud shownFor:@"fps"]);
+  MVCheck(@"hud: a device that counted no frames shows a still screen, no fault", [[hud shownFor:@"fps"] isEqual:@"Still"], [hud shownFor:@"fps"]);
   [hud setPictureRate:0];
   [hud show:@{@"sample": @{@"at": @2}}];
   MVCheck(@"hud: a still picture is still, and no fault", [[hud shownFor:@"fps"] isEqual:@"Still"], [hud shownFor:@"fps"]);

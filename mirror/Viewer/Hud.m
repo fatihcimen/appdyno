@@ -6,6 +6,9 @@ enum { kHistory = 60 };
 static const double kCardHeight = 92, kLineHeight = 26;
 // a frame this long is seen as a stutter, and marked where it fell
 static const double kStutterMs = 100;
+// the share of frames that may come late: past the first `perf_scroll` has a finding, past the second Android vitals calls
+// a session slow
+static const double kLateWatch = 0.10, kLatePoor = 0.25;
 
 /// What each card shows, in the order it stands.
 typedef struct {
@@ -22,11 +25,18 @@ static const MVMeasureRow kCards[] = {
 };
 
 MVLiveState MVStateOf(NSString *field, double value) {
-  if ([field isEqual:@"fps"]) return value >= 55 ? MVLiveGood : value >= 30 ? MVLiveWarning : MVLiveCritical;
   if ([field isEqual:@"jankyFrames"]) return value <= 0 ? MVLiveGood : value <= 3 ? MVLiveWarning : MVLiveCritical;
   if ([field isEqual:@"frozenFrames"]) return value <= 0 ? MVLiveGood : MVLiveCritical;
   if ([field isEqual:@"cpuPercent"]) return value < 60 ? MVLiveGood : value < 90 ? MVLiveWarning : MVLiveCritical;
   return MVLiveNeutral;
+}
+
+MVLiveState MVFramesState(NSDictionary *sample) {
+  double drawn = [sample[@"framesDrawn"] doubleValue];
+  id late = sample[@"jankyFrames"];
+  if (drawn <= 0 || ![late isKindOfClass:NSNumber.class]) return MVLiveNeutral;
+  double share = [late doubleValue] / drawn;
+  return share <= kLateWatch ? MVLiveGood : share <= kLatePoor ? MVLiveWarning : MVLiveCritical;
 }
 
 /// The words of a state: a state is never a colour alone.
@@ -149,7 +159,6 @@ static MVMeasureCard *cardOf(const MVMeasureRow *row) {
   card.number.font = MVRoundedFont(24, NSFontWeightSemibold);
   card.spark = [MVSpark new];
   card.spark.hidden = YES;
-  card.spark.usual = [card.field isEqual:@"fps"] ? 60 : 0;
   [card.spark.heightAnchor constraintEqualToConstant:kLineHeight].active = YES;
   card.why = small(@"");
   card.why.lineBreakMode = NSLineBreakByTruncatingTail;
@@ -241,8 +250,8 @@ static MVMeasureCard *cardOf(const MVMeasureRow *row) {
     card.why.hidden = YES;
     card.pane.toolTip = nil;
     // a still screen sends nothing to count, and is no fault
-    BOOL still = picture && value.doubleValue <= 0;
-    MVLiveState state = still ? MVLiveNeutral : MVStateOf(card.field, value.doubleValue);
+    BOOL still = [card.field isEqual:@"fps"] && value.doubleValue <= 0;
+    MVLiveState state = still ? MVLiveNeutral : [card.field isEqual:@"fps"] ? MVFramesState(sample) : MVStateOf(card.field, value.doubleValue);
     double v = value.doubleValue;
     card.number.stringValue = still ? @"Still" : [NSString stringWithFormat:@"%@ %@", v >= 100 || v == round(v) ? [NSString stringWithFormat:@"%.0f", v] : [NSString stringWithFormat:@"%.1f", v], card.unit];
     card.state.stringValue = wordsOf(state);

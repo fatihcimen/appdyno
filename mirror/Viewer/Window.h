@@ -88,6 +88,9 @@ NSMenu *MVMainMenu(NSArray<NSString *> *_Nullable names);
 typedef NS_ENUM(NSInteger, MVLiveState) { MVLiveNeutral, MVLiveGood, MVLiveWarning, MVLiveCritical };
 /// How a reading stands: what a card says in words and a symbol, as well as a colour.
 MVLiveState MVStateOf(NSString *field, double value);
+/// How a frame rate stands. It has no right value, as a screen draws what it has to: what can be judged is whether what it
+/// drew came on time, and where that is not counted it stands neutral.
+MVLiveState MVFramesState(NSDictionary *sample);
 /// The system's rounded face, for numbers.
 NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight);
 

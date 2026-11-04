@@ -23,6 +23,8 @@ export type LiveSample = Partial<Record<LiveField, number>> & {
   app?: string;
   /** Why each measure this source cannot give is missing, in words for a person. */
   absent?: Partial<Record<LiveField, string>>;
+  /** The frames behind `fps` and `jankyFrames`, where a source counts late ones: how many of what came, came on time. */
+  framesDrawn?: number;
   /** The longest frame of this second, in ms, where a source sees frames: what a window marks as a stutter. */
   worstFrameMs?: number;
 };

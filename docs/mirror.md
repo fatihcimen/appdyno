@@ -116,7 +116,7 @@ While an agent drives, a ring of the accent colour runs around the edge of the s
 
 **Show Performance** (⌥⌘P) opens a card for each measure beside the device: frame rate, jank, frozen frames, CPU, memory and network, each with its last minute as a line, and a state in words and a symbol as well as a colour. Nothing is read until it is open, and nothing after it closes. They are the app in front, named beneath them, and are marked as read with a stream running, as `perf_*` marks a mirrored device.
 
-A device gives each second what its own measures read, by the same readers `perf_*` uses. What it cannot give is a dash with the reason, and never a 0. Where a device counts no frames, the frame rate is what the window itself shows, and a still screen says Still.
+A device gives each second what its own measures read, by the same readers `perf_*` uses. What it cannot give is a dash with the reason, and never a 0. Where a device counts no frames, the frame rate is what the window itself shows, and a still screen says Still. A frame rate has no right value, as a screen draws what it has to: it is judged only by the share of its frames that came late, and where late frames are not counted it stands with no verdict.
 
 | device           | frame rate   | jank, frozen               | CPU, memory, network |
 | ---------------- | ------------ | -------------------------- | -------------------- |

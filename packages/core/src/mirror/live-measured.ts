@@ -8,13 +8,22 @@ const SECOND_MS = 1_000;
 const CPU_WINDOW_MS = 500;
 
 const NOT_EACH_SECOND = 'too slow to read each second here';
+const FRAME_FIELDS: LiveField[] = ['fps', 'jankyFrames', 'frozenFrames'];
+const COUNT_BEGINS = 'counting begins';
+
+/** Which app's frames have been counted since when: a count covers the time from the last reset, whatever a reading took. */
+type FrameCount = { app?: string; since?: number };
 
 /** Whatever is missing is missing for one reason, said once for each measure it takes away. */
 const allAbsent = (fields: readonly LiveField[], why: string) =>
   Object.fromEntries(fields.map((f) => [f, why]));
 
 /** One second of `app`, by the readers the device's measures already use: nothing here parses anything. */
-async function sampleOf(device: Pick<Device, 'measure'>, app: string): Promise<LiveSample> {
+async function sampleOf(
+  device: Pick<Device, 'measure'>,
+  app: string,
+  count: FrameCount,
+): Promise<LiveSample> {
   const { measure } = device;
   const sample: LiveSample = { at: Date.now(), app };
   const absent: LiveSample['absent'] = {
@@ -35,7 +44,6 @@ async function sampleOf(device: Pick<Device, 'measure'>, app: string): Promise<L
     }
     return undefined;
   };
-  const began = Date.now();
   await Promise.all([
     read(
       ['cpuPercent'],
@@ -60,13 +68,19 @@ async function sampleOf(device: Pick<Device, 'measure'>, app: string): Promise<L
       },
     ),
     read(
-      ['fps', 'jankyFrames', 'frozenFrames'],
+      FRAME_FIELDS,
       'frames',
       () => measure.frames(app, { reset: true }),
       (v) => {
-        sample.fps = Math.round(
-          v.totalFrames / (Math.max(Date.now() - began, SECOND_MS) / SECOND_MS),
-        );
+        const now = Date.now();
+        const since = count.app === app ? count.since : undefined;
+        count.app = app;
+        count.since = now;
+        // what was counted before the first reset belongs to no second
+        if (since === undefined)
+          return void Object.assign(absent, allAbsent(FRAME_FIELDS, COUNT_BEGINS));
+        sample.fps = Math.round(v.totalFrames / ((now - since) / SECOND_MS));
+        sample.framesDrawn = v.totalFrames;
         sample.jankyFrames = v.jankyFrames;
         sample.frozenFrames = v.frozenFrames;
         if (v.frames) sample.worstFrameMs = v.frames.worstMs;
@@ -84,12 +98,13 @@ export function measuredLive(device: Pick<Device, 'measure' | 'foreground'>): Li
   return {
     async start(onSample, app) {
       let on = true;
+      const count: FrameCount = {};
       void (async () => {
         while (on) {
           const began = Date.now();
           const front = app ?? (await device.foreground().catch(() => undefined));
           const sample = front
-            ? await sampleOf(device, front)
+            ? await sampleOf(device, front, count)
             : { at: began, absent: allAbsent(LIVE_FIELDS, 'waiting for the app in front') };
           if (on) onSample(sample);
           await pause(Math.max(0, SECOND_MS - (Date.now() - began)));

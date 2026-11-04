@@ -19,25 +19,33 @@ function device(over: Record<string, unknown> = {}) {
   } as unknown as Pick<Device, 'measure' | 'foreground'>;
 }
 
-/** The first sample of a source, which is then stopped. */
-async function first(d: Pick<Device, 'measure' | 'foreground'>, app?: string) {
+/** The first samples of a source, which is then stopped. */
+async function samples(d: Pick<Device, 'measure' | 'foreground'>, count: number, app?: string) {
+  const seen: LiveSample[] = [];
   let stop = () => {};
-  const sample = await new Promise<LiveSample>((resolve) => {
+  await new Promise<void>((done) => {
     void measuredLive(d)
-      .start(resolve, app)
+      .start((sample) => {
+        seen.push(sample);
+        if (seen.length === count) done();
+      }, app)
       .then((s) => (stop = s));
   });
   stop();
-  return sample;
+  return seen;
 }
+
+const first = async (d: Pick<Device, 'measure' | 'foreground'>, app?: string) =>
+  (await samples(d, 1, app))[0]!;
 
 describe("a device's numbers each second", () => {
   it('come from the measures it already has', async () => {
-    const sample = await first(device());
+    const sample = (await samples(device(), 2))[1]!;
     expect(sample).toMatchObject({
       app: 'dev.app',
       cpuPercent: 12.5,
       memoryMb: 200,
+      framesDrawn: 58,
       jankyFrames: 2,
       frozenFrames: 0,
       worstFrameMs: 41,
@@ -45,6 +53,34 @@ describe("a device's numbers each second", () => {
       networkOutKbps: 10,
     });
     expect(sample.fps).toBeGreaterThan(0);
+  });
+
+  it('count no frames at first: what came before the first reset belongs to no second', async () => {
+    const sample = await first(device());
+    expect(sample).not.toHaveProperty('fps');
+    expect(sample.absent?.fps).toBe('counting begins');
+  });
+
+  it('count frames over the time since the last count, however long the reading took', async () => {
+    const slow = () =>
+      new Promise((r) => setTimeout(r, 1_500)).then(() => ({
+        value: { kb: 1024, kind: 'pss' },
+        raw: '',
+        at: '',
+      }));
+    const frames = () => reading({ totalFrames: 150, jankyFrames: 0, frozenFrames: 0 });
+    const sample = (await samples(device({ memory: slow, frames }), 2))[1]!;
+    // 150 frames in the second and a half the memory read holds a turn for, and not in a second
+    expect(sample.fps).toBeGreaterThan(90);
+    expect(sample.fps).toBeLessThan(110);
+  });
+
+  it('start counting again for an app newly in front', async () => {
+    const d = device();
+    vi.mocked(d.foreground).mockResolvedValueOnce('dev.app').mockResolvedValue('dev.other');
+    const [, second] = await samples(d, 2);
+    expect(second).not.toHaveProperty('fps');
+    expect(second!.absent?.fps).toBe('counting begins');
   });
 
   it('keep a refusal as its reason, and never as a 0', async () => {
