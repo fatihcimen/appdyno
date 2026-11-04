@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
+import { CLIENTS } from '@appdyno/cli';
 import { describe, expect, it } from 'vitest';
 
 const root = join(import.meta.dirname, '../../..');
@@ -137,30 +138,66 @@ const FORBIDDEN = [
   ['super', 'powers'],
   ['sub', 'agent'],
   ['worktree', '-agent'],
+  ['clau', 'de'],
 ].map((parts) => parts.join(''));
+
+/** What the clients on a Mac are called has to be written somewhere, and only there. */
+const CLIENT_DATA = 'packages/cli/src/clients.ts';
+const IN_CLIENT_DATA = FORBIDDEN.at(-1);
 
 const forbiddenIn = (text: string) => {
   const lower = text.toLowerCase();
   return FORBIDDEN.filter((name) => lower.includes(name));
 };
 
+const hitsIn = (file: string, text: string) =>
+  forbiddenIn(`${file}\n${text}`)
+    .filter((name) => !(file === CLIENT_DATA && name === IN_CLIENT_DATA))
+    .map((name) => `${file}: ${name}`);
+
+const trackedFiles = () =>
+  execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' })
+    .split('\0')
+    .filter(Boolean)
+    .filter((f) => existsSync(join(root, f)) && statSync(join(root, f)).isFile());
+
 describe('the name', () => {
   it('has no trace of the old one, or of any other', () => {
-    const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' })
-      .split('\0')
-      .filter(Boolean);
+    const tracked = trackedFiles();
     expect(tracked.length).toBeGreaterThan(100);
     expect(tracked).toContain('pnpm-lock.yaml');
-    const hits = tracked.flatMap((f) => {
-      const p = join(root, f);
-      const content = existsSync(p) && statSync(p).isFile() ? readFileSync(p, 'latin1') : '';
-      return forbiddenIn(`${f}\n${content}`).map((name) => `${f}: ${name}`);
-    });
+    expect(tracked).toContain(CLIENT_DATA);
+    const hits = tracked.flatMap((f) => hitsIn(f, readFileSync(join(root, f), 'latin1')));
     expect(hits).toEqual([]);
   });
 
   it('catches a name in any case', () => {
     expect(forbiddenIn('uses ' + FORBIDDEN[1]!.toUpperCase() + ' here')).toEqual([FORBIDDEN[1]]);
-    expect(forbiddenIn('claude mcp add appdyno')).toEqual([]);
+    expect(forbiddenIn('npx -y appdyno mcp')).toEqual([]);
+  });
+
+  it('lets the clients’ data file alone name a client, and nothing else in it', () => {
+    const client = `uses ${IN_CLIENT_DATA}`;
+    expect(hitsIn(CLIENT_DATA, client)).toEqual([]);
+    expect(hitsIn('README.md', client)).toEqual([`README.md: ${IN_CLIENT_DATA}`]);
+    expect(hitsIn('packages/cli/src/install.ts', client)).not.toEqual([]);
+    expect(hitsIn(CLIENT_DATA, `uses ${FORBIDDEN[1]}`)).toEqual([
+      `${CLIENT_DATA}: ${FORBIDDEN[1]}`,
+    ]);
+  });
+
+  it('keeps a client’s name and folders in that one file', () => {
+    const marks = CLIENTS.flatMap((c) => [
+      new RegExp(`\\b${c.name}\\b`),
+      ...c.files.map((f) => new RegExp(f.replaceAll('.', '\\.'))),
+    ]);
+    expect(marks.length).toBeGreaterThan(CLIENTS.length);
+    const hits = trackedFiles()
+      .filter((f) => f !== CLIENT_DATA && !f.endsWith('.apk') && !/\.(png|jpg|jar)$/.test(f))
+      .flatMap((f) => {
+        const text = readFileSync(join(root, f), 'latin1');
+        return marks.filter((m) => m.test(text)).map((m) => `${f}: ${m.source}`);
+      });
+    expect(hits).toEqual([]);
   });
 });

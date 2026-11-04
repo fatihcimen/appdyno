@@ -8,8 +8,26 @@ device itself.
 ## Install
 
 ```sh
-claude mcp add appdyno -- npx -y appdyno mcp
+npx -y appdyno install
 ```
+
+`appdyno install` finds the MCP clients on this Mac and adds the server to the ones you pick, or to all
+of them with `--yes`. It changes that one entry and nothing else: other entries, formatting and comments
+stay, and a backup is written beside the file first. It does nothing when the entry is already right,
+and flags or variables you added to it stay. A file it cannot read is refused and left as it is.
+`--dry-run` shows the change and writes nothing, and `appdyno install --remove` takes the entry out.
+
+For any other client, add this to its server list:
+
+```json
+{
+  "mcpServers": {
+    "appdyno": { "command": "npx", "args": ["-y", "appdyno", "mcp"] }
+  }
+}
+```
+
+Add `--device`, `--app` and the other [server options](#server-options) to `args`.
 
 You need Node 22+, and `adb` for Android or Xcode for iOS. No JDK, no pnpm. The package is one
 download with no runtime dependencies.
@@ -19,21 +37,12 @@ JDK for the Android agent):
 
 ```sh
 sh scripts/install.sh      # npm pack, then npm install -g of the tarball
+appdyno install            # adds the server to the MCP clients on this Mac
 appdyno doctor             # what is installed, what is missing, which devices are connected
 ```
 
 A simulator opens, reads and takes touches with no runner. The first thing only the runner does (a system alert, text entry, an image, an audit) builds it once, which takes a few minutes and shows progress, and starts it.
 The result is cached under `~/Library/Caches/appdyno` (the state directory, `APPDYNO_STATE_DIR`).
-
-Cursor or any client with a JSON server list:
-
-```json
-{
-  "mcpServers": {
-    "appdyno": { "command": "npx", "args": ["-y", "appdyno", "mcp", "--device", "emulator-5554"] }
-  }
-}
-```
 
 ## Tools
 
