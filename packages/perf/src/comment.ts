@@ -43,12 +43,18 @@ export async function gateAnswers(
   return answers.toSorted((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status));
 }
 
+/** Only what the gate called reads as called: a run under noise or with no baseline is no pass, here of all places. */
 const headline = (answers: GateAnswer[]) => {
-  const worse = answers.filter((a) => a.status === 'regression').length;
-  if (worse) return `${worse} of ${answers.length} scenarios got worse`;
-  const over = answers.filter((a) => a.status === 'over-budget').length;
-  if (over) return `${over} of ${answers.length} scenarios over budget`;
-  return answers.length ? `no regression in ${answers.length} scenarios` : 'no measured run';
+  const all = answers.length;
+  const scenarios = all === 1 ? 'scenario' : 'scenarios';
+  const count = (status: GateStatus) => answers.filter((a) => a.status === status).length;
+  if (all === 0) return 'no measured run';
+  if (count('regression')) return `${count('regression')} of ${all} ${scenarios} got worse`;
+  if (count('over-budget')) return `${count('over-budget')} of ${all} ${scenarios} over budget`;
+  const open = all - count('clear');
+  return open
+    ? `${open} of ${all} ${scenarios} not called`
+    : `no regression in ${all} ${scenarios}`;
 };
 
 /** A pull request's comment as Markdown: every word that comes from the app is escaped by `answerMarkdown`. */

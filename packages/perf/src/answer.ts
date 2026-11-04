@@ -129,7 +129,7 @@ export const UNEXPLAINED_FRAMES =
   'are unexplained: no cause holds the main thread long enough to name';
 
 const NOTHING_NAMED =
-  'no cause was found. A profile sees what is on the CPU and a frame trace what the main thread did, so a wait elsewhere (a timer, the network) shows in neither';
+  'no cause was found. A profile sees what is on the CPU and a frame trace what the main thread did in its frames, so a wait outside both (a sleep in a touch, a timer, the network) shows in neither';
 
 const statusOf = (r: KeyReport): GateStatus => {
   const says = (v: Comparison['verdict']) => r.comparisons.some((c) => c.verdict === v);
@@ -246,7 +246,9 @@ function byMainThread(seen: Seen): Part {
     : {};
   const { frames } = seen;
   if (!frames) return hang;
-  if (frames.slowFrames === 0) return { ...hang, evidence: ['no frame missed its deadline'] };
+  // a stall in a touch's handler holds up no frame in flight: the trace is right, and says nothing of that stall
+  if (frames.slowFrames === 0)
+    return { ...hang, evidence: ['no frame missed its deadline, so a frame trace names nothing'] };
   const [top] = frames.causes;
   return frames.top && top
     ? {
@@ -317,7 +319,7 @@ function findingOf(
 }
 
 const NOTE_OF: Partial<Record<Comparison['verdict'], (c: Comparison) => string>> = {
-  noisy: (c) => `a change under noise, no regression: ${c.kind}: ${c.note}`,
+  noisy: (c) => `a change under noise, not called: ${c.kind}: ${c.note}`,
   'few-samples': (c) => `a change with too little to call it: ${c.kind}: ${c.note}`,
   refused: (c) => `not comparable: ${c.kind}: ${c.note}`,
   improvement: (c) => `improved: ${c.kind}`,

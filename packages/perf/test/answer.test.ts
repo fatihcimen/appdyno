@@ -240,7 +240,7 @@ describe('a cause', () => {
     );
     expect(f.causes).toEqual([]);
     expect(f.cannot.join()).toContain('no cause was found');
-    expect(f.cannot.join()).toContain('a wait elsewhere');
+    expect(f.cannot.join()).toContain('a wait outside both');
   });
 
   it('never calls a function that fell a cause', () => {
@@ -345,7 +345,7 @@ describe('how sure', () => {
     );
     expect(a.status).toBe('noisy');
     expect(a.findings).toEqual([]);
-    expect(a.notes.join()).toContain('a change under noise, no regression');
+    expect(a.notes.join()).toContain('a change under noise, not called');
   });
 
   it('keeps too few samples, unlike builds and a budget apart from a regression', () => {
@@ -411,8 +411,18 @@ describe('the answer, written once', () => {
   it('heads a comment with what most needs saying, and cuts it under what can be posted', () => {
     const clear = answerOf(report([worse('a', { verdict: 'ok' })]), run, baseline);
     expect(commentOf([full, clear]).split('\n')[0]).toBe('## appdyno: 1 of 2 scenarios got worse');
-    expect(commentOf([clear]).split('\n')[0]).toBe('## appdyno: no regression in 1 scenarios');
+    expect(commentOf([clear]).split('\n')[0]).toBe('## appdyno: no regression in 1 scenario');
     expect(commentOf([])).toBe('## appdyno: no measured run\n');
+    // what the gate did not call is no pass, in the line read first
+    const noisy = answerOf(
+      report([worse('a', { verdict: 'noisy', note: 'measure again' })]),
+      run,
+      baseline,
+    );
+    expect(commentOf([clear, noisy]).split('\n')[0]).toBe(
+      '## appdyno: 1 of 2 scenarios not called',
+    );
+    expect(commentOf([noisy])).not.toContain('no regression:');
     const long = { ...full, notes: Array.from({ length: 3_000 }, () => 'x'.repeat(40)) };
     const cut = commentOf([long]);
     expect(cut.length).toBeLessThan(65_536);
@@ -471,7 +481,7 @@ describe('what is kept of an answer', () => {
     await saveRun(dir, records('run-1', 100));
     const out = join(fresh(), 'in/a/folder/comment.md');
     expect(await writeComment(dir, project, out)).toBe(out);
-    expect(readFileSync(out, 'utf8')).toContain('## appdyno: no regression in 1 scenarios');
+    expect(readFileSync(out, 'utf8')).toContain('## appdyno: 1 of 1 scenario not called');
   });
 
   it('keeps a reference where a project can commit it, and reads it back', async () => {

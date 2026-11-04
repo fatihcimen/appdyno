@@ -469,7 +469,7 @@ describe('the gate, asked why', () => {
     const r = await why(t);
     expect(r.data.exitCode).toBe(0);
     expect(answers(r.data)[0]!.status).toBe('noisy');
-    expect(answers(r.data)[0]!.notes.join()).toContain('a change under noise, no regression');
+    expect(answers(r.data)[0]!.notes.join()).toContain('a change under noise, not called');
     expect(t.looks).toEqual([]);
   });
 
