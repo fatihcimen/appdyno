@@ -39,6 +39,8 @@ export type UiElement = {
   parent?: number;
   /** Package of the window the element is in (Android). */
   pkg?: string;
+  /** In a system UI window that holds the focus: what is on the screen (Android). */
+  prompt?: boolean;
   /** The stable refs' context: the text that tells this element from identical ones. */
   refContext?: string;
   name?: string;
@@ -53,14 +55,14 @@ const SYSTEM_UI = 'com.android.systemui';
 /**
  * The agent's tree as screen elements: the keyboard, accessibility overlays and the system UI's own
  * windows (status bar, navigation bar, notification shade) are left out; system dialogs (permission
- * prompts, "app isn't responding") stay, as they are what the user sees and answers.
+ * prompts, "app isn't responding") stay, as they are what the user sees and answers, and so does a system
+ * UI window with the focus: a biometric prompt is one, and with it gone an app's prompt reads as nothing.
  */
 export function elementsOf(tree: Tree, traversal: Traversal[] = []): UiElement[] {
+  const systemUi = (w: Tree['windows'][number]) => w.type === SYSTEM && w.pkg === SYSTEM_UI;
   const keep = tree.windows.map(
     (w) =>
-      w.type !== INPUT_METHOD &&
-      w.type !== ACCESSIBILITY_OVERLAY &&
-      !(w.type === SYSTEM && w.pkg === SYSTEM_UI),
+      w.type !== INPUT_METHOD && w.type !== ACCESSIBILITY_OVERLAY && !(systemUi(w) && !w.focused),
   );
   const index = new Map<number, number>();
   const out: UiElement[] = [];
@@ -91,6 +93,7 @@ export function elementsOf(tree: Tree, traversal: Traversal[] = []): UiElement[]
       ...(has('screenReaderFocusable') && { screenReaderFocusable: true }),
       ...(parent !== undefined && { parent }),
       ...(tree.windows[n.w]?.pkg && { pkg: tree.windows[n.w]!.pkg }),
+      ...(tree.windows[n.w] && systemUi(tree.windows[n.w]!) && { prompt: true }),
     };
     index.set(i, out.length);
     out.push(el);

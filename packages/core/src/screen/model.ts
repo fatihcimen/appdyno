@@ -140,6 +140,7 @@ function appTree(elements: UiElement[], opts: { platform: Platform; appId?: stri
     const foreign =
       platform === 'android' &&
       pkg !== undefined &&
+      !el.prompt &&
       (pkg === 'com.android.systemui' ||
         (inFront && pkg !== opts.appId && pkg !== 'android' && !isSystemDialog(el.pkg)));
     const statusBar =

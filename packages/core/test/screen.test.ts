@@ -205,6 +205,43 @@ describe('wire tree to screen', () => {
     expect(s.list.map((e) => e.label)).toContain('İzin ver');
   });
 
+  it('keeps a system UI window that holds the focus: a biometric prompt is on the screen', () => {
+    const tree = wireTree([]);
+    tree.windows = [
+      {
+        type: 3,
+        pkg: 'com.android.systemui',
+        layer: 1,
+        b: [0, 0, 1080, 2400],
+        active: true,
+        focused: true,
+      },
+    ];
+    tree.nodes = [
+      { p: -1, w: 0, c: 'android.widget.FrameLayout', b: [0, 0, 1080, 2400], f: 1 },
+      {
+        p: 0,
+        w: 0,
+        c: 'android.widget.TextView',
+        id: 'com.android.systemui:id/title',
+        t: 'Fixture sign-in',
+        b: [100, 1500, 980, 1600],
+        f: 1,
+      },
+      {
+        p: 0,
+        w: 0,
+        c: 'android.widget.Button',
+        id: 'com.android.systemui:id/button_negative',
+        t: 'Cancel',
+        b: [100, 2000, 400, 2100],
+        f: 1 | 2 | 16,
+      },
+    ];
+    const s = buildScreen(tree, { platform: 'android', appId: 'dev.app' });
+    expect(s.list.map((e) => e.label)).toEqual(['Fixture sign-in', 'Cancel']);
+  });
+
   it('names an empty field by its placeholder and keeps flags', () => {
     const tree = wireTree([
       {
