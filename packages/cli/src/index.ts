@@ -6,6 +6,9 @@ import { deviceStateFile } from '@appdyno/core';
 import { ToolError, type Op } from '@appdyno/ops';
 import { z } from 'zod';
 
+export { CLIENTS } from './clients.js';
+export { install } from './install.js';
+
 export type Io = { out: (line: string) => void; err: (line: string) => void };
 
 /** Where a command line keeps its device and diff baseline: by folder, so two terminals are two sessions. */

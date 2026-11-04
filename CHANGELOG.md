@@ -13,6 +13,13 @@
 - No silent success: a failed action says whether its touch went out (`dispatched`); a touch reads a screen nobody has seen first; a locked phone refuses by name (`DEVICE_LOCKED`); two recordings at once refuse by name, not an empty trace; an iPhone's thermal state is read from what it recorded.
 - Android 15 and later: `perf_snapshot` `also: startInfo` says why the app last started, and where the start went, with no trace.
 - `perf_snapshot` on a process with no window, up for a broadcast or a job, reads 0 frames: it failed on the summary such a process does not print.
+- `appdyno install` adds the server to the MCP clients on this Mac: the ones you pick, or all with `--yes`. It changes that one entry and keeps every other byte, writes a backup first, does nothing when the entry is already right, and refuses a file it cannot read. `--dry-run` shows the change and `--remove` takes it out.
+- Conditions go back only for their owner. Each entry records its process: the start of a session puts back only what a dead one left, and its end only its own, so a new session no longer undoes what a live `--share` process or the command line set. A command line's change stays until `restore`, even across sessions, which is new. `restore` leaves alone what another live process changed, and says so.
+- A recording, a network capture, an open report and a flow recording that a dead process left are ended at the next session and said, not left running. What a live process runs, or a command line started, stays.
+- State files are whole or not at all: written to a temp file and renamed, and checked by a schema. One that cannot be read is said at the start of a session and kept as `.bad`, where it was once silently written over.
+- Tool calls in parallel can no longer lose a condition's old value, and open a device once.
+- SIGTERM and SIGINT end the server as the client closing stdin does, so a killed server puts its conditions back.
+- The command line's selected device and diff baseline are kept per working directory: two terminals in two folders no longer share one. The old `cli-session.json` is no longer read.
 - iPhone: `perf_trace` `what: hangs` says whether each hang was busy or blocked, in which function, from what a Time Profiler trace holds already; `dsym` names the functions of a build with no symbols, on `perf_trace` and `perf_profile`.
 - `perf_compare` `action: functions` and `appdyno perf functions`: which functions moved between two profiles.
 - Android: `perf_trace` says why the slow frames were slow: a monitor lock and who holds it, a binder call and to whom, the garbage collector, work, a starved or blocked thread, or that they are unexplained.

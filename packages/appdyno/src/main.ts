@@ -3,14 +3,15 @@
 // on stderr; in `mcp` stdout is the MCP channel, so logs go to stderr only.
 import { execFileSync } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
-import { loadavg } from 'node:os';
+import { homedir, loadavg } from 'node:os';
 import { join, resolve } from 'node:path';
+import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Adb, androidProvider, installTools, type InstallAnswers } from '@appdyno/driver-android';
 import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
 import { createServer } from '@appdyno/mcp';
-import { cliSessionFile, commandsFor, deviceFlag, listOf, takeFlag } from '@appdyno/cli';
+import { cliSessionFile, commandsFor, deviceFlag, install, listOf, takeFlag } from '@appdyno/cli';
 import { writeDashboard } from '@appdyno/perf';
 import {
   DEFAULT_POLICY,
@@ -212,6 +213,32 @@ async function main(): Promise<number> {
       console.log(`older builds removed: ${await pruneIosBuilds()}`);
       return 0;
     }
+    case 'install': {
+      const { values } = parseArgs({
+        args: rest,
+        options: {
+          yes: { type: 'boolean', short: 'y' },
+          remove: { type: 'boolean' },
+          'dry-run': { type: 'boolean' },
+        },
+      });
+      const { stdin: input, stdout: output } = process;
+      const terminal = input.isTTY ? createInterface({ input, output }) : undefined;
+      try {
+        return await install({
+          home: homedir(),
+          env: process.env,
+          yes: values.yes,
+          remove: values.remove,
+          dryRun: values['dry-run'],
+          ask: terminal && ((question) => terminal.question(question)),
+          out: (line) => console.log(line),
+          err,
+        });
+      } finally {
+        terminal?.close();
+      }
+    }
     case 'doctor': {
       const { values } = parseArgs({ args: rest, options: { serial: { type: 'string' } } });
       const checks = await doctor({
@@ -360,6 +387,8 @@ async function main(): Promise<number> {
 commands:
   mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--animations on|off] [--measurements dir] [--trace-limit-gb N] [--no-install-consent] [--accept-install-warnings]
                    the MCP server over stdio
+  install [--yes] [--dry-run] [--remove]
+                   add this server to the MCP clients on this Mac, or take it out
   devices          the connected Android devices
   test <dir or files> [--device S]... [--param NAME=value]... [--env-file F] [--tag T]... [--exclude-tag T]... [--artifacts dir] [--junit file] [--retries N] [--measure [--iterations N]]
                    replay flows, one after another, on each device; --retries runs a failed file again and calls it flaky; --measure keeps each as a scenario, by step
