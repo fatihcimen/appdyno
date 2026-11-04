@@ -95,6 +95,22 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
       expect((await call('device_setting', { name })).data.value).toBe('off');
   });
 
+  it('holds a drag before it moves: the pad sees the same travel, later', async () => {
+    ok(await call('open_link', { url: 'appdyno-fixture://open/gestures' }));
+    const at = Date.now();
+    ok(
+      await call('gesture', {
+        kind: 'drag',
+        selector: { text: 'Gesture pad' },
+        to: { x: 200, y: 700 },
+        holdMs: 1_500,
+      }),
+    );
+    expect(Date.now() - at).toBeGreaterThan(1_500);
+    expect(ok(await call('find', { id: 'travel' })).data.matches[0]!.label).not.toBe('travel: 0');
+    ok(await call('launch_app'));
+  });
+
   it('turns to a landscape and back, and the app lays out for it', async () => {
     const y = async () => ok(await call('find', { text: 'Permission' })).data.matches[0]!.y;
     const upright = await y();

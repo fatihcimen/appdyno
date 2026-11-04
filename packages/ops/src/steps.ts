@@ -249,7 +249,9 @@ export function stepsFor(
           r: await s.device.act(
             {
               kind: 'gesture',
-              pointers: [dragPath(from.point, to.point, st.durationMs ?? 500, DRAG_HOLD_MS)],
+              pointers: [
+                dragPath(from.point, to.point, st.durationMs ?? 500, st.holdMs ?? DRAG_HOLD_MS),
+              ],
             },
             opts,
           ),

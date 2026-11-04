@@ -770,6 +770,17 @@ describe('gestures, keys, clipboard', () => {
     expect((await locked.call('open_link', { settings: 'about' })).data.code).toBe('POLICY_DENIED');
   });
 
+  it('holds a drag at its start for as long as it is told', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    await call('gesture', { kind: 'drag', x: 10, y: 10, to: { x: 10, y: 500 }, holdMs: 900 });
+    const path = (act(d).at(-1) as Extract<ActParams, { kind: 'gesture' }>).pointers[0]!;
+    expect(path[1]).toEqual({ x: 10, y: 10, t: 900 });
+    await call('gesture', { kind: 'drag', x: 10, y: 10, to: { x: 10, y: 500 } });
+    const usual = (act(d).at(-1) as Extract<ActParams, { kind: 'gesture' }>).pointers[0]!;
+    expect(usual[1]!.t).toBe(150);
+  });
+
   it('reads the clipboard and keeps a secret off it', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d, { policy: { secrets: ['hunter2'] } });

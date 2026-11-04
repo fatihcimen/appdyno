@@ -132,6 +132,7 @@ export const DragStep = z
     ...Target,
     to: z.object(Target).strict(),
     durationMs: z.number().int().min(50).max(10_000).optional(),
+    holdMs: z.number().int().min(0).max(5_000).optional(),
   })
   .strict();
 

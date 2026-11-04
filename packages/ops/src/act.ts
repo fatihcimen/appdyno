@@ -94,7 +94,7 @@ export function actOps(
       name: 'gesture',
       title: 'Gesture',
       description:
-        'double_tap, long_press: at the target. drag: from the target to `to` over durationMs, no flick. pinch: scale > 1 zooms in, < 1 out, at x,y or the middle. plan: free paths in `pointers`, one per finger, t in ms.',
+        'double_tap, long_press: at the target. drag: from the target to `to` over durationMs, no flick; holdMs first lifts a row or an icon. pinch: scale > 1 zooms in, < 1 out, at x,y or the middle. plan: free paths in `pointers`, one per finger, t in ms.',
       input: z
         .object({
           kind: z.enum(['double_tap', 'long_press', 'drag', 'pinch', 'plan']),
@@ -102,6 +102,7 @@ export function actOps(
           to: z.object(Target).strict().optional(),
           scale: z.number().min(0.2).max(5).optional(),
           durationMs: z.number().int().min(50).max(10_000).optional(),
+          holdMs: z.number().int().min(0).max(5_000).optional(),
           pointers: z
             .array(z.array(z.object({ x: Coord, y: Coord, t: z.number().min(0) })))
             .optional(),
@@ -110,7 +111,7 @@ export function actOps(
         .strict(),
       output: ActionOut,
       annotations: ACT,
-      run: async ({ kind, to, pointers, scale, durationMs, read, ...a }) => {
+      run: async ({ kind, to, pointers, scale, durationMs, holdMs, read, ...a }) => {
         const s = await ctx.session();
         const during = durationMs !== undefined && { durationMs };
         switch (kind) {
@@ -120,7 +121,11 @@ export function actOps(
             return one(s, { action: 'long_press', ...a, ...during }, read);
           case 'drag':
             if (!to) throw new ToolError('drag needs to', 'INVALID_ARGUMENT');
-            return one(s, { action: 'drag', ...a, to, ...during }, read);
+            return one(
+              s,
+              { action: 'drag', ...a, to, ...during, ...(holdMs !== undefined && { holdMs }) },
+              read,
+            );
           case 'pinch': {
             if (scale === undefined) throw new ToolError('pinch needs scale', 'INVALID_ARGUMENT');
             await s.beforeTouch();
