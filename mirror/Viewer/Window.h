@@ -66,6 +66,12 @@ BOOL MVWriteWindow(NSWindow *window, NSString *file);
 
 /// A few cells of a picture's own colours, for a layer to stretch into a soft mesh with no blur pass. Caller owns it.
 CGImageRef _Nullable MVPictureMood(IOSurfaceRef surface, BOOL dark);
+/// What is behind everything in a window: the picture's own colours, so that glass has something of the device to bend.
+@interface MVBackdrop : NSObject
+- (instancetype)initInView:(NSView *)view window:(NSWindow *)window;
+- (void)followSurface:(IOSurfaceRef)surface;
+@end
+
 /// A control's button, however deep in glass it sits.
 NSButton *_Nullable MVFindControl(NSView *view, NSString *name);
 

@@ -8,25 +8,11 @@ static const double kFitScreen = 0.85;
 // far from every screen a Mac can have
 static const double kOffscreenAt = -30000;
 static const double kMargin = 30, kTop = 60, kBottom = 22, kInspector = 300, kInset = 10;
-// the rate a backdrop follows its picture: it is mood, and costs nothing for being slow
-static const double kBackdropSeconds = 2;
 static const double kClickSeconds = 0.08;
 static const CGSize kSmallest = {380, 420};
 // wide enough that a toolbar shows all it has; a person can go narrower, and it folds into its own menu
 static const double kOpensWide = 640;
 static NSString *const kFrameDefault = @"showsDeviceFrame";
-
-@implementation MVOffscreenWindow
-- (NSRect)constrainFrameRect:(NSRect)rect toScreen:(NSScreen *)screen {
-  return self.offscreen ? rect : [super constrainFrameRect:rect toScreen:screen];
-}
-- (BOOL)isKeyWindow {
-  return self.poses || super.isKeyWindow;
-}
-- (BOOL)isMainWindow {
-  return self.poses || super.isMainWindow;
-}
-@end
 
 MVShow MVShowOf(BOOL focus, BOOL behind) {
   if (behind) return MVShowBehind;
@@ -43,8 +29,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   MVHud *_hud;
   BOOL _hudding;
   NSView *_root;
-  CALayer *_backdrop;
-  double _backdropAt;
+  MVBackdrop *_backdrop;
   MVStatusLine *_line;
   MVPictureLayers *_layers;
   CGSize _picture;
@@ -67,13 +52,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
     _window.contentMinSize = kSmallest;
     NSView *root = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, frame.size.width, frame.size.height)];
     root.wantsLayer = YES;
-    _backdrop = [CALayer layer];
-    _backdrop.backgroundColor = NSColor.windowBackgroundColor.CGColor;
-    _backdrop.contentsGravity = kCAGravityResize;
-    _backdrop.magnificationFilter = kCAFilterLinear;
-    _backdrop.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
-    _backdrop.frame = root.bounds;
-    [root.layer addSublayer:_backdrop];
+    _backdrop = [[MVBackdrop alloc] initInView:root window:_window];
     _root = root;
     _window.contentView = root;
     _stage = [[NSView alloc] initWithFrame:root.bounds];
@@ -186,21 +165,6 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   [CATransaction commit];
 }
 
-/// The window takes on the picture's colours, so that glass has something of the device to bend.
-- (void)followPicture:(IOSurfaceRef)surface {
-  double now = MVNowMs();
-  if (now - _backdropAt < kBackdropSeconds * 1000) return;
-  _backdropAt = now;
-  BOOL dark = [[_window.effectiveAppearance bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]] isEqual:NSAppearanceNameDarkAqua];
-  CGImageRef mood = MVPictureMood(surface, dark);
-  if (!mood) return;
-  [CATransaction begin];
-  [CATransaction setDisableActions:YES];
-  _backdrop.contents = (__bridge id)mood;
-  [CATransaction commit];
-  CGImageRelease(mood);
-}
-
 - (void)applySpec {
   NSDictionary *look = _look[@"frame"];
   _frame.spec = MVFrameSpecOf(look[@"model"], look[@"platform"], look[@"color"], _picture);
@@ -272,7 +236,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 
 - (void)showSurface:(IOSurfaceRef)surface {
   [_layers showSurface:surface];
-  [self followPicture:surface];
+  [_backdrop followSurface:surface];
 }
 
 - (BOOL)showImage:(CVImageBufferRef)image {
