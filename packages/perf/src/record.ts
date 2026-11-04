@@ -58,24 +58,25 @@ export type PerfRecord = {
   modelled?: boolean;
 };
 
-/** The rows of the performance table: what a device can be asked. */
-export const MEASURES = [
-  'launch',
-  'launch-why',
-  'frames',
-  'frozen',
-  'stalls',
-  'memory',
-  'leaks',
-  'cpu',
-  'network',
-  'energy',
-  'battery',
-  'crashes',
-  'size',
-  'journey',
-] as const;
-export type MeasureId = (typeof MEASURES)[number];
+/** The rows of the performance table, in its order: what a device can be asked, and what the page calls it. */
+export const MEASURE_TITLE = {
+  launch: 'Launch',
+  'launch-why': 'Why launch was slow',
+  frames: 'Frames',
+  frozen: 'Frozen frames',
+  stalls: 'Main-thread stalls',
+  memory: 'Memory',
+  leaks: 'Leaks',
+  cpu: 'CPU',
+  network: 'Network bytes',
+  energy: 'Energy',
+  battery: 'Battery signals',
+  crashes: 'Crashes, ANRs',
+  size: 'App size',
+  journey: 'Journeys',
+} as const;
+export type MeasureId = keyof typeof MEASURE_TITLE;
+export const MEASURES = Object.keys(MEASURE_TITLE) as MeasureId[];
 
 /** The row each kind answers: `Metric` takes no other, so a new number cannot miss the table. */
 export const KINDS = {

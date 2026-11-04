@@ -1,7 +1,7 @@
 import { osName } from '@appdyno/core';
 import { PLATFORMS, type Platform } from '@appdyno/protocol';
-import type { MeasureId, Unit } from '../record.js';
-import { keyName } from '../record.js';
+import type { Unit } from '../record.js';
+import { keyName, MEASURE_TITLE, type MeasureId } from '../record.js';
 
 /** From which size a value reads in which unit. */
 export const UNIT_STEPS: Record<Unit, [from: number, per: number, suffix: string][]> = {
@@ -96,23 +96,6 @@ export function deviceName(cls: string, model?: string): DeviceName {
 }
 
 export const deviceLabel = (d: DeviceName) => (d.detail ? `${d.name} (${d.detail})` : d.name);
-
-export const MEASURE_TITLE: Record<MeasureId, string> = {
-  launch: 'Launch',
-  'launch-why': 'Why launch was slow',
-  frames: 'Frames',
-  frozen: 'Frozen frames',
-  stalls: 'Main-thread stalls',
-  memory: 'Memory',
-  leaks: 'Leaks',
-  cpu: 'CPU',
-  network: 'Network bytes',
-  energy: 'Energy',
-  battery: 'Battery signals',
-  crashes: 'Crashes, ANRs',
-  size: 'App size',
-  journey: 'Journeys',
-};
 
 /** A row's title, when it is one of the measures. */
 export const measureTitle = (row: string) =>
