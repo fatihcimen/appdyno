@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// appdyno: the MCP server over stdio (`appdyno mcp`), devices, doctor, bench. Output on stdout, diagnostics
-// on stderr; in `mcp` stdout is the MCP channel, so logs go to stderr only.
+// appdyno: the MCP server (`appdyno mcp`), devices, doctor, bench. Output on stdout, diagnostics on stderr; in
+// `mcp` stdout is the MCP channel, so logs go to stderr only.
 import { execFileSync } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
 import { homedir, loadavg } from 'node:os';
@@ -8,10 +8,8 @@ import { join, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Adb, androidProvider, installTools, type InstallAnswers } from '@appdyno/driver-android';
 import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
-import { createServer } from '@appdyno/mcp';
 import { cliSessionFile, commandsFor, deviceFlag, install, listOf, takeFlag } from '@appdyno/cli';
 import { writeDashboard } from '@appdyno/perf';
 import {
@@ -31,8 +29,8 @@ import {
 import { alertPerson } from './alert.js';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
-import { endWithClient } from './lifetime.js';
 import { mirrorCommand } from './mirror-args.js';
+import { serveCommand } from './serve.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
@@ -119,33 +117,6 @@ function contextFrom(values: Settings, remember?: string) {
   });
 }
 
-/** The MCP server over stdio, until its client closes stdin or a signal ends it. */
-async function serveMcp(args: string[]) {
-  const { values } = parseArgs({
-    args,
-    options: {
-      device: { type: 'string' },
-      app: { type: 'string' },
-      'allow-devices': { type: 'string' },
-      'allow-apps': { type: 'string' },
-      'allow-urls': { type: 'string' },
-      'no-home': { type: 'boolean' },
-      takeover: { type: 'boolean' },
-      share: { type: 'boolean' },
-      animations: { type: 'string' },
-      measurements: { type: 'string' },
-      'trace-limit-gb': { type: 'string' },
-      'no-install-consent': { type: 'boolean' },
-      'accept-install-warnings': { type: 'boolean' },
-    },
-  });
-  const ctx = contextFrom(values);
-  const log = (line: object) =>
-    process.stderr.write(`${JSON.stringify({ t: new Date().toISOString(), ...line })}\n`);
-  endWithClient(ctx, log);
-  await createServer(opsFor(ctx), log).connect(new StdioServerTransport());
-}
-
 /** `perf dashboard`: no device; `--out` and `--open` are this command's alone, not the tool's. */
 async function dashboardCommand(args: string[]) {
   const { values } = parseArgs({
@@ -203,7 +174,7 @@ async function main(): Promise<number> {
         windows: runMirrors,
       });
     case 'mcp': {
-      await serveMcp(rest);
+      await serveCommand(rest, contextFrom);
       return 0;
     }
     case 'devices': {
@@ -403,8 +374,8 @@ async function main(): Promise<number> {
           `usage: appdyno <command> [flags]; appdyno <command> --help for its flags
 
 commands:
-  mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--animations on|off] [--measurements dir] [--trace-limit-gb N] [--no-install-consent] [--accept-install-warnings]
-                   the MCP server over stdio
+  mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--animations on|off] [--measurements dir] [--trace-limit-gb N] [--no-install-consent] [--accept-install-warnings] [--http 127.0.0.1:PORT]
+                   the MCP server over stdio; with --http, on this Mac's loopback behind a token
   install [--yes] [--dry-run] [--remove]
                    add this server to the MCP clients on this Mac, or take it out
   devices          the connected Android devices

@@ -62,6 +62,17 @@ describe('the end of the server', () => {
     drain();
   });
 
+  it('with no stdin to watch, as over HTTP, goes on until a signal', async () => {
+    const end = vi.fn(async () => []);
+    const exit = vi.fn();
+    endWithClient({ end, close: () => undefined }, vi.fn(), exit, null);
+    await new Promise((r) => setTimeout(r, 5));
+    expect(end).not.toHaveBeenCalled();
+    process.emit('SIGTERM');
+    await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(0));
+    drain();
+  });
+
   it('ends once, however many ask', async () => {
     const s = serving();
     await s.call('device_setting', { name: 'dark_mode', value: 'yes' });
