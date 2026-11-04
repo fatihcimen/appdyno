@@ -2,7 +2,14 @@ import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { parseEnv } from 'node:util';
 import { deviceStateFile } from '@appdyno/core';
-import { Recording, type RecordingState, type Flow, parseFlow, FlowError } from '@appdyno/flows';
+import {
+  Recording,
+  type RecordingState,
+  type Flow,
+  composeFlow,
+  parseFlow,
+  FlowError,
+} from '@appdyno/flows';
 import type { ServerContext } from '../context.js';
 import { ToolError } from '../tool.js';
 
@@ -44,7 +51,7 @@ const textOf = (file: string) => {
 /** A file of `NAME=value` lines, as a flow's values. What it holds is never said back. */
 export const envValues = (file: string) => parseEnv(textOf(file)) as Record<string, string>;
 
-export const readFlow = (file: string): Flow => {
+const parsedFile = (file: string): Flow => {
   if (!FLOW_FILE.test(file))
     throw new ToolError(`a flow's file ends in .flow: ${file}`, 'INVALID_ARGUMENT');
   const text = textOf(file);
@@ -52,6 +59,16 @@ export const readFlow = (file: string): Flow => {
     return parseFlow(text);
   } catch (e) {
     if (e instanceof FlowError) throw new ToolError(`${file}: ${e.message}`, 'INVALID_ARGUMENT');
+    throw e;
+  }
+};
+
+/** A flow file with the flows it runs in place: all a run, a test or an export is given. */
+export const readFlow = (file: string): Flow => {
+  try {
+    return composeFlow(file, parsedFile);
+  } catch (e) {
+    if (e instanceof FlowError) throw new ToolError(e.message, 'INVALID_ARGUMENT');
     throw e;
   }
 };

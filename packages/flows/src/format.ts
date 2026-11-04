@@ -14,6 +14,7 @@
  *   tap role=button text="Send"
  *   assert id=result check=text equals="Sent: ${NAME}"
  *   tap id=add_button index=2 !ambiguous
+ *   run shared/logout.flow
  *
  * Values of `param` and `secret` come from `--param` or the environment and are never in the file. `$${`
  * is a literal `${`. `!flag` marks a step a person should look at.
@@ -30,6 +31,8 @@ export type FlowStep = {
   action: Action;
   /** The file's line, 1-based; 0 for a step not read from a file. */
   line: number;
+  /** The file it was written in, when another flow runs it: see `composeFlow`. */
+  file?: string;
   selector?: FlowSelector;
   args: Record<string, Scalar>;
   flags: Flag[];
@@ -91,6 +94,8 @@ const SPECS = {
   hide_keyboard: {},
   /** An action the format has no step for: replay stops here rather than go on without it. */
   unrecorded: { words: ['what'] },
+  /** Another flow's steps go here: `composeFlow` replaces it before anything runs. */
+  run: { words: ['file'] },
 } as const satisfies Record<string, Spec>;
 
 export type Action = keyof typeof SPECS;

@@ -236,6 +236,7 @@ tap id=add_button index=1 !ambiguous
 | `wait_for <selector> [gone] [timeoutMs=]`                                   | `wait_for`                    |
 | `assert <selector> [check=] [equals=] [expect=false] [timeoutMs=]`          | `assert`                      |
 | `open_link "url"`, `set_location 41.0 29.0`, `alert allow`, `hide_keyboard` | their tools                   |
+| `run shared/login.flow`                                                     | that file's steps, in place   |
 
 A selector is any of `id=`, `role=`, `text=`, `index=`; text matches as it does in the tools.
 
@@ -271,6 +272,8 @@ JUnit (a suite per device, a case per file; default `appdyno-artifacts/junit.xml
 failed or if there was nothing to run. Assertions are steps.
 
 **Tags.** `tag smoke login` before the steps; `--tag smoke` runs the files with any of the tags named, `--exclude-tag slow` leaves out those with any of these. A file that cannot be read stays, to fail, as nobody can tell what it was tagged, and selecting nothing exits 1, as a job that ran nothing has not passed.
+
+**One flow running another.** `run shared/login.flow` puts that file's steps in its place, its path taken from the file that names it. They are read before the first step acts, so a missing file, a bad line or a file that runs itself, by any way round, is refused with the way round named, and nothing runs. A name means one thing in all of them, as all take their values from one place: there is no passing of a value to one run, and a name secret in one file is secret in all. A file for another app is refused. A failure names the file and line it is on, and steps are counted as they run, for `--from`, the report and a journey's kinds. An export writes the steps in place. A tag belongs to the file it is in.
 
 **A retry.** `--retries N` runs a file that failed on a step again, whole, from its first step, on a run of its own: within a run a failed step stays failed. A file that passes on a retry is flaky, not passed. The line reads `FLAKY login.flow: passed on attempt 2 of 3`, the run ends by naming it, the JUnit case holds each failed attempt as `<flakyFailure>` and its suite has `flakes="1"`, and each failed attempt's evidence stays, the later ones under `attempt-<n>/`. A flaky file exits 0, as a retry would otherwise be for nothing: to stop on one, read `flakes` or leave `--retries` out. A file that fails every attempt has the attempts as `<rerunFailure>`. What kept a file from running at all (a line that does not parse, a value missing) is not run again, and `--measure` refuses `--retries`, as the gate would compare what a failed go left with what a later one read.
 

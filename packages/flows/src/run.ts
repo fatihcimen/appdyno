@@ -15,6 +15,8 @@ export type StepResult = StepOutcome & {
   /** 1-based, as `--from` takes it. */
   n: number;
   line: number;
+  /** The file of `line`, when another flow ran this one. */
+  file?: string;
   /** The line of the file, with its placeholders: never a value. */
   step: string;
   /** All of the step, its lookup included. */
@@ -28,6 +30,7 @@ export type StepEvent =
 export type RunFailure = {
   n: number;
   line: number;
+  file?: string;
   step: string;
   message: string;
   code?: string;
@@ -80,7 +83,12 @@ export async function runSteps(
   for (let n = from; n <= total; n++) {
     const written = flow.steps[n - 1]!;
     const step = fillStep(written, values);
-    const shown = stepLine(written);
+    const at = {
+      n,
+      line: written.line,
+      ...(written.file && { file: written.file }),
+      step: stepLine(written),
+    };
     checkpoint?.(n, total, written);
     const t0 = Date.now();
     let outcome: StepOutcome;
@@ -94,22 +102,14 @@ export async function runSteps(
         passed: false,
         steps,
         failure: {
-          n,
-          line: written.line,
-          step: shown,
+          ...at,
           message: err.message,
           ...(err.code && { code: err.code }),
           ...(err.hint && { hint: err.hint }),
         },
       };
     }
-    const result: StepResult = {
-      n,
-      line: written.line,
-      step: shown,
-      ms: Date.now() - t0,
-      ...outcome,
-    };
+    const result: StepResult = { ...at, ms: Date.now() - t0, ...outcome };
     steps.push(result);
     await onStep?.({ phase: 'after', n, total, step: written, result });
   }

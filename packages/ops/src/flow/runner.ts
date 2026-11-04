@@ -101,6 +101,11 @@ function opCall(st: FlowStep): [string, Record<string, unknown>] {
         `this action has no step and was not recorded: ${String(a.what)}. Replace or delete this line`,
         'UNSUPPORTED',
       );
+    case 'run':
+      throw new ToolError(
+        `${String(a.file)} was not read in: run a flow from its file`,
+        'INVALID_ARGUMENT',
+      );
   }
 }
 
@@ -140,7 +145,7 @@ export function flowRunner(
     for (const st of flow.steps) {
       if (st.action === 'unrecorded') continue;
       const [name, args] = opCall(st);
-      opInput(name, args, `${file}:${st.line}`);
+      opInput(name, args, `${st.file ?? file}:${st.line}`);
     }
   };
 
@@ -286,7 +291,7 @@ export function flowRunner(
 
   const failureText = (file: string, f: RunFailure) =>
     [
-      `${file}:${f.line}: step ${f.n} failed: ${f.step}`,
+      `${f.file ?? file}:${f.line}: step ${f.n} failed: ${f.step}`,
       f.message,
       ...(f.screen ? [f.screen] : []),
       `to go on from here: appdyno flow run ${file} --from ${f.n}`,

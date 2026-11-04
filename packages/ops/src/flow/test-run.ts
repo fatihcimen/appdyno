@@ -112,7 +112,7 @@ export async function runTests(
     const f = result?.failure;
     return {
       message: f
-        ? `line ${f.line}, step ${f.n}: ${firstLine(f.message)}`
+        ? `${f.file ? `${basename(f.file)} ` : ''}line ${f.line}, step ${f.n}: ${firstLine(f.message)}`
         : firstLine(error?.message ?? 'failed'),
       detail: [
         f ? runner.failureText(file, f) : (error?.message ?? ''),

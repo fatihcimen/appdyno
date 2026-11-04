@@ -534,6 +534,76 @@ assert id=result check=text equals="Gönderildi"
       expect(e.message).not.toContain(SECRET);
     });
 
+    describe('a flow that runs another', () => {
+      const write = (name: string, text: string) => {
+        writeFileSync(join(dir, name), text);
+        return join(dir, name);
+      };
+
+      it('runs its steps in place, and a failure names the file they are in', async () => {
+        const inner = write('inner.flow', 'launch\n\nassert id=none timeoutMs=200\n');
+        const file = write('outer.flow', 'app dev.app\nlaunch\nrun inner.flow\nlaunch\n');
+        const e = await refusal(callerOf(context())('flow', { action: 'run', file }));
+        expect(e.message).toContain(`${inner}:3: step 3 failed: assert id=none`);
+        expect(e.message).toContain(`appdyno flow run ${file} --from 3`);
+        expect(device.calls.filter((c) => c.name === 'launch')).toHaveLength(2);
+      });
+
+      it('counts steps as they run, for --from and in its timings', async () => {
+        const inner = write('inner.flow', 'launch\nassert text="Ana sayfa"\n');
+        const file = write('outer.flow', 'app dev.app\nrun inner.flow\nlaunch\n');
+        const { data } = await callerOf(context())('flow', { action: 'run', file, from: 2 });
+        expect(data.timings!.map((t) => [t.n, t.file])).toEqual([
+          [2, inner],
+          [3, undefined],
+        ]);
+      });
+
+      it('asks for the values of the file it runs, and hides its secrets', async () => {
+        device.screen = 'login';
+        write(
+          'inner.flow',
+          'secret CODE\nassert id=none check=text equals="${CODE}" timeoutMs=200\n',
+        );
+        const file = write('outer.flow', 'app dev.app\nrun inner.flow\n');
+        const missing = await refusal(callerOf(context())('flow', { action: 'run', file }));
+        expect(missing.message).toContain('no value for CODE');
+        const params = [`CODE=${SECRET}`];
+        const e = await refusal(callerOf(context())('flow', { action: 'run', file, params }));
+        expect(e.message).toContain('Merhaba •••');
+        expect(e.message).not.toContain(SECRET);
+      });
+
+      it('refuses before its first step what is wrong in any file', async () => {
+        const run = (text: string) => {
+          const file = write('outer.flow', `app dev.app\nlaunch\n${text}`);
+          return refusal(callerOf(context())('flow', { action: 'run', file }));
+        };
+        write('broken.flow', 'launch\nfly\n');
+        write('loop.flow', 'run outer.flow\n');
+        expect((await run('run none.flow\n')).code).toBe('NOT_FOUND');
+        expect((await run('run broken.flow\n')).message).toContain(
+          'broken.flow: line 2: no step fly',
+        );
+        const cycle = await run('run loop.flow\n');
+        expect(cycle.code).toBe('INVALID_ARGUMENT');
+        expect(cycle.message).toContain('a flow cannot run itself');
+        expect((await run('run outer.txt\n')).message).toContain('ends in .flow');
+        expect(device.calls.filter((c) => c.name === 'launch')).toEqual([]);
+      });
+
+      it('exports the steps it holds, and a test run names the file of a failure', async () => {
+        write('inner.flow', 'assert id=none timeoutMs=200\n');
+        const file = write('outer.flow', 'app dev.app\nlaunch\nrun inner.flow\n');
+        const { text } = await callerOf(context())('flow', { action: 'export', file });
+        expect(text).toContain('launchApp');
+        expect(text).toContain('id: "none"');
+        const junit = join(dir, 'j.xml');
+        await flowsFor(context()).test({ files: [file], devices: [], artifacts: dir, junit });
+        expect(readFileSync(junit, 'utf8')).toContain('message="inner.flow line 1, step 2:');
+      });
+    });
+
     it('hides a secret from the failure it may show up in', async () => {
       device.screen = 'login';
       const file = flowFile(`app dev.app

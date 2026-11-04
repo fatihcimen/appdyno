@@ -216,6 +216,7 @@ export const FlowOut = z.object({
       z.object({
         n: z.number().int(),
         line: z.number().int(),
+        file: z.string().optional(),
         step: z.string(),
         ms: z.number(),
         settledMs: z.number().optional(),

@@ -147,6 +147,8 @@ function commands(st: FlowStep): Yaml[] {
       return unsupported('Maestro answers a system alert by its words, in one language');
     case 'unrecorded':
       return unsupported(`not recorded: ${String(a.what)}`);
+    case 'run':
+      return unsupported(`${String(a.file)} was not read in`);
   }
 }
 
