@@ -325,6 +325,20 @@ describe('a mirror, whatever the device', () => {
     expect(mirror.opens).toBe(2);
   });
 
+  it('a start wakes the screen, and so does a click on a dark window', async () => {
+    const { session, mirror, viewer, live } = setup();
+    await live();
+    expect(mirror.wakes).toBe(1);
+    viewer().say('touch', { p: 0, x: 0, y: 0 });
+    expect(mirror.wakes).toBe(1);
+    mirror.checkAnswer = { ok: false, need: 'asleep' };
+    mirror.push!('asleep');
+    await flush();
+    viewer().say('touch', { p: 0, x: 0, y: 0 });
+    expect(mirror.wakes).toBe(2);
+    expect(session.status).toMatchObject({ state: 'waiting', need: 'asleep' });
+  });
+
   it('stops whatever it was doing; twice is once', async () => {
     const { session, mirror, viewer, live } = setup();
     await live();

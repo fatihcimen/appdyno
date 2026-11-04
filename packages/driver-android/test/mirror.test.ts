@@ -130,6 +130,17 @@ describe('an Android mirror', () => {
     expect(calls[0]![1]).toMatchObject({ text: 'ş', focusTimeoutMs: 0 });
   });
 
+  it('turns the screen on by the key that does nothing to a lit one', async () => {
+    const exec = vi.fn(async () => '');
+    const mirror = new AndroidMirror(
+      { exec } as unknown as Adb,
+      SERIAL,
+      {} as AndroidAgentLauncher,
+    );
+    await mirror.wake();
+    expect(exec).toHaveBeenCalledWith(SERIAL, 'input keyevent KEYCODE_WAKEUP');
+  });
+
   it('asks for a keyframe', async () => {
     const { mirror, calls } = setup();
     await mirror.keyframe();

@@ -105,6 +105,10 @@ export class AndroidMirror implements Mirror {
     };
   }
 
+  async wake() {
+    await this.adb.exec(this.serial, 'input keyevent KEYCODE_WAKEUP');
+  }
+
   async keyframe() {
     await (await this.agent()).call('stream.sync', {}, { timeoutMs: STATUS_MS });
   }

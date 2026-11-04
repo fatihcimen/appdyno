@@ -92,6 +92,7 @@ export class FakeMirror implements Mirror {
   opens = 0;
   closes = 0;
   keyframes = 0;
+  wakes = 0;
   openFails: Error | undefined;
   inputs: InputEvent[] = [];
   inputWait: Promise<void> | undefined;
@@ -118,6 +119,10 @@ export class FakeMirror implements Mirror {
 
   async keyframe() {
     this.keyframes++;
+  }
+
+  async wake() {
+    this.wakes++;
   }
 
   async input(e: InputEvent) {

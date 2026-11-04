@@ -87,6 +87,7 @@ export class EmulatorMirror implements Mirror {
 
   check = () => this.phone.check();
   keyframe = () => this.phone.keyframe();
+  wake = () => this.phone.wake();
   input = (e: InputEvent) => this.phone.input(e);
 
   async open(

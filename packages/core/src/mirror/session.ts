@@ -101,6 +101,7 @@ export class MirrorSession {
 
   async start() {
     this.unwatch = this.o.mirror.watch((s) => this.onDevice(s));
+    await this.o.mirror.wake?.().catch(() => undefined);
     await this.openViewer();
     if (this.current.state !== 'stopped') void this.connect();
   }
@@ -324,6 +325,9 @@ export class MirrorSession {
 
   private onInput(e: InputEvent) {
     this.touchedAt = this.clock.now();
+    // a click on a dark window is a person who wants the screen back
+    if (this.current.state === 'waiting' && this.current.need === 'asleep' && e.kind === 'touch')
+      void this.o.mirror.wake?.().catch(() => undefined);
     if (!this.o.noInput && this.current.state === 'live') this.input.add(e);
     else this.input.dropped++;
   }

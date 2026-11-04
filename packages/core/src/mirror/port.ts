@@ -55,6 +55,8 @@ export interface Mirror {
   close(): Promise<void>;
   /** Pushes what the device's state became: locked, unplugged, taken over. */
   watch(onChange: (s: DeviceState) => void): () => void;
+  /** Turns a dark screen on, where this kind of device can be asked to: at a start, and at a person's click. */
+  wake?(): Promise<void>;
   /** No first picture in this time means this, rather than a failed stream. */
   readonly noFirstFrame?: { ms: number; need: Need };
 }

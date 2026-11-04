@@ -200,12 +200,14 @@ await still().catch(() =>
 
 if (values.soak) {
   const act = () => (isUdid ? drag() : tapAt(prepared.x, prepared.y));
-  const end = Date.now() + Number(values.soak) * 60_000;
-  await pause(60_000);
-  const early = seconds.slice(-30);
+  const begun = Date.now();
+  const end = begun + Number(values.soak) * 60_000;
+  let early;
   while (Date.now() < end) {
+    // from the start: a phone left alone for its minute goes dark
     await act();
     await pause(5_000);
+    if (!early && Date.now() - begun > 60_000) early = seconds.slice(-30);
   }
   const late = seconds.slice(-30);
   const top = (list, key) => Math.max(...list.map((n) => Number(n[key])));
