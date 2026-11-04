@@ -39,7 +39,7 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
     else await d.launch(APP);
     await d.openUrl(`appdyno-fixture://open/${screen}`, APP);
     await pause(1_000);
-    return buildScreen(await d.tree(), { platform: 'ios', appId: APP });
+    return buildScreen(await d.tree(), { port: d.platformScreen, appId: APP });
   };
   const byId = (s: Screen, id: string) => {
     const e = s.list.find((x) => x.id === id);
@@ -186,7 +186,7 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
           await d.tap(byId(s, 'fetch'), { settle: false });
         })
       ).value;
-      const shown = buildScreen(await d.tree(), { platform: 'ios', appId: APP });
+      const shown = buildScreen(await d.tree(), { port: d.platformScreen, appId: APP });
       const said = shown.list.find((e) => /^(fetched|failed)/.test(e.label))?.label ?? '';
       console.log('network', JSON.stringify(n), said);
       if (!said.startsWith('fetched')) return ctx.skip();

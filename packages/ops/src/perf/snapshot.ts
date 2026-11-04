@@ -1,5 +1,5 @@
 import type { AnonMemory, EnergyReading, Measured } from '@appdyno/core';
-import { ramTier, vitalsCall, type Metric } from '@appdyno/perf';
+import { playCall, ramTier, type Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { holdingCondition } from '../settings.js';
@@ -82,11 +82,7 @@ const anonMetrics = (v: AnonMemory): Metric[] => [
 /** What Play's table says of each, and that it says nothing where it has no limit for this state or this RAM. */
 const anonLines = (v: AnonMemory) => {
   const judged = anonMetrics(v).flatMap((m) =>
-    m.samples.flatMap((value) =>
-      vitalsCall({ kind: m.kind, value, device: { platform: 'android' } })
-        ? [playLine(m.kind, value)]
-        : [],
-    ),
+    m.samples.flatMap((value) => (playCall(m.kind, value) ? [playLine(m.kind, value)] : [])),
   );
   return judged.length
     ? judged
@@ -116,8 +112,8 @@ const EXTRAS = {
   energy: extra({
     read: (a) => {
       const now = () => a.measure(a.s, 'energy')(a.pkg, a.windowMs);
-      // Android reads it told it runs on battery; no other platform has this condition
-      return a.s.device.platform === 'android' ? holdingCondition(a.s, 'battery', now) : now();
+      const held = a.s.device.measure.energyHolds;
+      return held ? holdingCondition(a.s, held, now) : now();
     },
     metrics: energyMetrics,
     line: energyText,
@@ -338,9 +334,11 @@ export function perfSnapshotOp(ctx: ServerContext) {
                   : []),
               ]
             : [
-                s.device.virtual
+                source.framesByProbe
                   ? 'no frame measure on a simulator without the probe'
-                  : 'no frame counter on a phone: perf_scroll and perf_trace record its hitches',
+                  : s.device.virtual
+                    ? 'no frame counter on this virtual device'
+                    : 'no frame counter on a phone: perf_scroll and perf_trace record its hitches',
               ]),
           ...(f?.limits ? [f.limits] : []),
           ...play.lines,

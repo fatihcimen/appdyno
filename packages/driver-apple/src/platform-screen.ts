@@ -1,6 +1,7 @@
 import {
   alertButtonOf,
   alertOf,
+  bare,
   fold,
   type AlertWords,
   type PlatformScreen,
@@ -11,6 +12,8 @@ import {
 const HOME_SCREEN_APP = 'com.apple.springboard';
 /** As tall as it gets, on a phone with a Dynamic Island: a pixel comparison leaves it out. */
 const STATUS_BAND_PT = 64;
+/** Status bar items are root elements in this band. */
+const STATUS_BAR_PT = 50;
 
 /** A caller testing in another language passes its own. */
 export const ALERT_WORDS: AlertWords = {
@@ -61,4 +64,21 @@ export const iosScreen: PlatformScreen = {
   keyboardOpen: (tree) => tree.nodes.some((n) => /keyboard$/i.test(n.c)),
 
   statusBand: () => STATUS_BAND_PT,
+
+  notTheApp: (el) =>
+    el.parent === undefined && el.rect !== undefined && el.rect.y + el.rect.height <= STATUS_BAR_PT,
+
+  isSystemUi: () => false,
+
+  barBesideWindow: false,
+
+  /** The width of a navigation or tab bar at x 0, with no height limit. */
+  windowByBars(elements) {
+    const bar = elements.find(
+      (e) => /^(navigationbar|tabbar)$/.test(bare(e.type)) && e.rect?.x === 0,
+    );
+    return bar && { x: 0, y: -1e9, width: bar.rect!.width, height: 2e9 };
+  },
+
+  listsByIdAlone: true,
 };

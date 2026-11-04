@@ -1,4 +1,5 @@
 import { osName } from '@appdyno/core';
+import { PLATFORMS, type Platform } from '@appdyno/protocol';
 import type { MeasureId, Unit } from '../record.js';
 import { keyName } from '../record.js';
 
@@ -68,22 +69,24 @@ export const when = (at: string) => {
   return `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
 };
 
-const KINDS: Record<string, string> = {
+const KINDS: Record<`${Platform}-${'virtual' | 'physical'}`, string> = {
   'android-virtual': 'Android emulator',
   'android-physical': 'Android phone',
   'ios-virtual': 'iOS simulator',
   'ios-physical': 'iPhone',
 };
 
+const DEVICE_CLASS = new RegExp(`^(${PLATFORMS.join('|')})-(virtual|physical)-(.+)-([^-]+)$`);
+
 export type DeviceName = { name: string; detail: string; virtual: boolean };
 
 /** A device class in words; `model` is the record's own spelling, where the class has only a safe one. */
 export function deviceName(cls: string, model?: string): DeviceName {
-  const m = /^(android|ios)-(virtual|physical)-(.+)-([^-]+)$/.exec(cls);
+  const m = DEVICE_CLASS.exec(cls);
   if (!m) return { name: cls, detail: '', virtual: false };
   const [, platform, where, safeModel, os] = m;
-  const name = KINDS[`${platform}-${where}`]!;
-  const version = osName(platform!, os!);
+  const name = KINDS[`${platform}-${where}` as keyof typeof KINDS];
+  const version = osName(platform as Platform, os!);
   const shown = model ?? safeModel;
   return {
     name,

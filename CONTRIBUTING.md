@@ -48,6 +48,14 @@ to its rule too, but for the few the test names. Change the rule there if the ar
 the ones it names with a reason, and refuses a run of 8 lines that appears twice. What both drivers do belongs
 in `core`.
 
+## A new platform
+
+A platform is one driver package: a `DeviceProvider`, a `Device`, a `PlatformScreen` and a `MeasureSource`, each of
+which the compiler holds to the whole port, with `cannot` for what it has no way of measuring. Outside the package it
+takes `PLATFORMS` in `packages/protocol/src/messages.ts`, the tables keyed by it in `packages/core/src/device.ts` and
+`packages/perf/src/dashboard/format.ts`, its provider in `packages/appdyno/src/main.ts` and its rule in
+`boundaries.test.ts`. `packages/appdyno/test/platforms.test.ts` holds the list.
+
 ## Commits
 
 One change per commit, with a short message in the style of `git log --oneline -15`: `type: what changed`,

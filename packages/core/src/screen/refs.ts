@@ -1,5 +1,6 @@
 import type { UiElement } from './elements.js';
-import { screenElements, type Platform } from './model.js';
+import { screenElements } from './model.js';
+import type { ScreenOptions } from './port.js';
 
 /** FNV-1a of `text` in base36, always 7 characters (the 32-bit range): the long form of a ref. */
 export function refHash(text: string): string {
@@ -57,10 +58,7 @@ function contextOf(
  * Identities that still repeat get `-2`, `-3` in tree order; two identities with the same 4 characters
  * both take the 7-character form. Elements the app's screen does not show keep no ref.
  */
-export function withStableRefs(
-  elements: UiElement[],
-  opts: { platform: Platform; appId?: string },
-): UiElement[] {
+export function withStableRefs(elements: UiElement[], opts: ScreenOptions): UiElement[] {
   const list = screenElements(elements, opts, true);
   const index = new Map(elements.map((e, i) => [e.ref, i]));
   const children = new Map<number, number[]>();

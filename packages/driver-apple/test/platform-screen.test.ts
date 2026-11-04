@@ -102,7 +102,7 @@ describe('what the screen shows', () => {
 });
 
 describe('what a tester sees of a tree', () => {
-  const ios = { platform: 'ios' as const };
+  const ios = { port: iosScreen };
   const seen = (els: UiElement[]) =>
     screenElements(withStableRefs([root, ...els], ios), ios).map((e) => e.label || e.id);
   const bar = (height: number): UiElement => ({
@@ -136,12 +136,17 @@ describe('what a tester sees of a tree', () => {
       parent: 0,
       rect: { x: 0, y: 40, width: 402, height: 44 },
     };
-    expect(windowRect([offset, nav], 'ios')).toEqual({ x: 0, y: -1e9, width: 402, height: 2e9 });
-    expect(windowRect([offset], 'ios')).toBeUndefined();
+    expect(windowRect([offset, nav], iosScreen)).toEqual({
+      x: 0,
+      y: -1e9,
+      width: 402,
+      height: 2e9,
+    });
+    expect(windowRect([offset], iosScreen)).toBeUndefined();
   });
 
   it('has no navigation bar beside a window in landscape', () => {
     const wide: UiElement = { ...root, rect: { x: 60, y: 0, width: 800, height: 400 } };
-    expect(windowRect([wide], 'ios')).toBeUndefined();
+    expect(windowRect([wide], iosScreen)).toBeUndefined();
   });
 });

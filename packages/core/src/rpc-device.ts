@@ -6,6 +6,7 @@ import {
   type Key,
   type Method,
   type ParamsOf,
+  type Platform,
   type Point,
   type ResultOf,
   type TextResult,
@@ -14,7 +15,7 @@ import {
 import { TIMEOUTS, type ActOptions } from './device.js';
 import { DeviceQueue } from './queue.js';
 import type { RpcClient } from './rpc.js';
-import { buildScreen, type Screen } from './screen/index.js';
+import { buildScreen, type PlatformScreen, type Screen } from './screen/index.js';
 import { afterTimeout } from './stuck.js';
 
 /** The touches and keys every device words as one `act`. */
@@ -40,7 +41,8 @@ export abstract class DeviceActions {
  * failures are typed DeviceErrors. A platform's driver says how to connect and how to read.
  */
 export abstract class RpcDevice extends DeviceActions {
-  abstract readonly platform: 'android' | 'ios';
+  abstract readonly platform: Platform;
+  abstract readonly platformScreen: PlatformScreen;
   protected rpc: RpcClient | undefined;
   private connecting: Promise<RpcClient> | undefined;
   protected helloInfo: Hello | undefined;
@@ -135,7 +137,7 @@ export abstract class RpcDevice extends DeviceActions {
 
   /** The screen with stable refs. */
   async read(appId?: string): Promise<Screen> {
-    return buildScreen(await this.tree(), { platform: this.platform, ...(appId && { appId }) });
+    return buildScreen(await this.tree(), { port: this.platformScreen, ...(appId && { appId }) });
   }
 
   /** The agent's `act`, for one already in the queue; `extraMs` is what the action itself takes. */

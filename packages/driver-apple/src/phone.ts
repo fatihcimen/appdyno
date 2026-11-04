@@ -109,7 +109,7 @@ export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
         throw new DeviceError(
           'UNSUPPORTED',
           'on an iPhone a link is opened in a named app',
-          'select the app first: use_device with app, or the --app of the server',
+          'select the app first',
         );
       await ctl.launch(b, url);
     },
@@ -135,6 +135,7 @@ export class IosPhoneDevice extends IosDevice {
   readonly measure: MeasureSource = {
     slowReads: ['memory', 'frames', 'resetFrames'],
     framesByProbe: false,
+    symbolFiles: true,
     anonMemory: cannot('anonymous memory by process state'),
     surfaceFrames: cannot("a surface's frames"),
     frames: cannot('frames'),

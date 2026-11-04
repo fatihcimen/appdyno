@@ -1,4 +1,4 @@
-import { alertButtonOf, alertOf, type PlatformScreen } from '@appdyno/core';
+import { alertButtonOf, alertOf, packageOf, type PlatformScreen } from '@appdyno/core';
 
 const INPUT_METHOD_WINDOW = 2;
 const SYSTEM_WINDOW = 3;
@@ -53,4 +53,20 @@ export const androidScreen: PlatformScreen = {
     const app = tree.windows.find((w) => w.type === 1 && w.b[1] > 0);
     return app ? app.b[1] : Math.round((STATUS_BAND_DP * density) / 160);
   },
+
+  /** By resource id: the system UI's, and another package's while the app is in front, but for a system dialog. */
+  notTheApp(el, front) {
+    const pkg = packageOf(el.identifier);
+    if (pkg === undefined || el.prompt) return false;
+    if (pkg === SYSTEM_UI) return true;
+    return !!front && pkg !== front && pkg !== 'android' && !SYSTEM_DIALOGS.test(el.pkg ?? '');
+  },
+
+  isSystemUi: (el) => packageOf(el.identifier) === SYSTEM_UI,
+
+  barBesideWindow: true,
+
+  windowByBars: () => undefined,
+
+  listsByIdAlone: false,
 };

@@ -302,7 +302,7 @@ export class IosSimulatorDevice extends IosDevice {
       throw new DeviceError(
         'UNSUPPORTED',
         `this simulator's clipboard did not take the text: simctl pbcopy wrote nothing and the runner's call stalled`,
-        'try again once the Mac is less busy, or give the text to type_text',
+        'try again once the Mac is less busy, or type the text instead',
         { cause: e, retryable: true },
       );
     });

@@ -23,9 +23,11 @@ import { mkdtempSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { z } from 'zod';
+import { plainScreen } from './plain-screen.js';
 
 class TestDevice extends RpcDevice {
   readonly platform = 'android' as const;
+  readonly platformScreen = plainScreen;
   protected readonly retrySafe = new Set<Method>(['tree.get']);
   connects = 0;
 

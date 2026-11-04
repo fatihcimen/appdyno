@@ -1,8 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { screenElements, windowRect, withStableRefs, type UiElement } from '@appdyno/core';
+import {
+  buildScreen,
+  elementsOf,
+  screenElements,
+  windowRect,
+  withStableRefs,
+  type UiElement,
+} from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
+import { wireTree } from '../../core/test/fake-agent.js';
 import { androidScreen } from '../src/platform-screen.js';
 
 const window = (type: number, b: [number, number, number, number], pkg = 'dev.app') => ({
@@ -122,7 +130,7 @@ describe('what the screen shows', () => {
 });
 
 describe('what a tester sees of a tree', () => {
-  const app = { platform: 'android' as const, appId: 'dev.app' };
+  const app = { port: androidScreen, appId: 'dev.app' };
   const root: UiElement = {
     type: 'android.widget.FrameLayout',
     ref: 'n0',
@@ -147,7 +155,7 @@ describe('what a tester sees of a tree', () => {
     const other = node('reklam', 'other.app:id/ad');
     expect(seen([clock, other, node('kendi', 'dev.app:id/own')])).toEqual(['kendi']);
     // an app not on the screen has nothing to keep apart from
-    expect(seen([clock, other], { platform: 'android', appId: 'not.here' })).toEqual(['reklam']);
+    expect(seen([clock, other], { port: androidScreen, appId: 'not.here' })).toEqual(['reklam']);
   });
 
   it("keeps the framework's nodes, a system dialog's and a prompt's", () => {
@@ -175,7 +183,7 @@ describe('what a tester sees of a tree', () => {
 
   it('takes a wide root beside a navigation bar for the window, and no bar for one', () => {
     const wide: UiElement = { ...root, rect: { x: 128, y: 0, width: 2272, height: 1080 } };
-    expect(windowRect([wide], 'android')).toEqual(wide.rect);
+    expect(windowRect([wide], androidScreen)).toEqual(wide.rect);
     const tall: UiElement = { ...root, rect: { x: 50, y: 0, width: 300, height: 874 } };
     const nav: UiElement = {
       type: 'NavigationBar',
@@ -183,6 +191,105 @@ describe('what a tester sees of a tree', () => {
       parent: 0,
       rect: { x: 0, y: 40, width: 402, height: 44 },
     };
-    expect(windowRect([tall, nav], 'android')).toBeUndefined();
+    expect(windowRect([tall, nav], androidScreen)).toBeUndefined();
+  });
+});
+
+describe('wire tree to screen', () => {
+  it('drops the keyboard, overlays and the system bars, keeps system dialogs', () => {
+    const tree = wireTree([{ t: 'Uygulama', b: [0, 100, 500, 200] }]);
+    tree.windows.push(
+      {
+        type: 2,
+        pkg: 'com.google.android.inputmethod.latin',
+        layer: 5,
+        b: [0, 1600, 1080, 2400],
+        active: false,
+        focused: false,
+      },
+      {
+        type: 3,
+        pkg: 'com.android.systemui',
+        layer: 6,
+        b: [0, 0, 1080, 80],
+        active: false,
+        focused: false,
+      },
+      {
+        type: 1,
+        pkg: 'com.google.android.permissioncontroller',
+        layer: 7,
+        b: [0, 800, 1080, 1600],
+        active: true,
+        focused: true,
+      },
+    );
+    tree.nodes.push(
+      { p: -1, w: 1, c: 'android.widget.FrameLayout', t: 'klavye', b: [0, 1600, 1080, 2400], f: 1 },
+      { p: -1, w: 2, c: 'android.widget.TextView', t: '12:00', b: [0, 0, 100, 80], f: 1 },
+      { p: -1, w: 3, c: 'android.widget.FrameLayout', b: [0, 800, 1080, 1600], f: 1 },
+      {
+        p: 4,
+        w: 3,
+        c: 'android.widget.Button',
+        id: 'com.google.android.permissioncontroller:id/permission_allow_button',
+        t: 'İzin ver',
+        b: [100, 1000, 900, 1100],
+        f: 1 | 2 | 16,
+      },
+    );
+    const els = elementsOf(tree);
+    expect(els.map((e) => e.text).filter(Boolean)).toEqual(['Uygulama', 'İzin ver']);
+    expect(els.at(-1)!.parent).toBe(2);
+    const s = buildScreen(tree, { port: androidScreen, appId: 'dev.app' });
+    expect(s.foreground).toBe('com.google.android.permissioncontroller');
+    expect(s.list.map((e) => e.label)).toContain('İzin ver');
+  });
+
+  it('keeps a system UI window that holds the focus: a biometric prompt is on the screen', () => {
+    const tree = wireTree([]);
+    tree.windows = [
+      {
+        type: 3,
+        pkg: 'com.android.systemui',
+        layer: 1,
+        b: [0, 0, 1080, 2400],
+        active: true,
+        focused: true,
+      },
+    ];
+    tree.nodes = [
+      { p: -1, w: 0, c: 'android.widget.FrameLayout', b: [0, 0, 1080, 2400], f: 1 },
+      {
+        p: 0,
+        w: 0,
+        c: 'android.widget.TextView',
+        id: 'com.android.systemui:id/title',
+        t: 'Fixture sign-in',
+        b: [100, 1500, 980, 1600],
+        f: 1,
+      },
+      {
+        p: 0,
+        w: 0,
+        c: 'android.widget.Button',
+        id: 'com.android.systemui:id/button_negative',
+        t: 'Cancel',
+        b: [100, 2000, 400, 2100],
+        f: 1 | 2 | 16,
+      },
+    ];
+    const s = buildScreen(tree, { port: androidScreen, appId: 'dev.app' });
+    expect(s.list.map((e) => e.label)).toEqual(['Fixture sign-in', 'Cancel']);
+  });
+
+  it('knows the screen in landscape, the app window beside a navigation bar on the left', () => {
+    const tree = wireTree([], {
+      windows: [
+        { type: 1, pkg: 'dev.app', layer: 1, b: [128, 0, 2400, 1080], active: true, focused: true },
+      ],
+    });
+    tree.nodes[0]!.b = [128, 0, 2400, 1080];
+    expect(buildScreen(tree, { port: androidScreen }).window).toEqual({ w: 2400, h: 1080 });
   });
 });

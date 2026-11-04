@@ -12,10 +12,10 @@ import type {
   ResultOf,
   AuditType,
   AuditResult,
+  Platform,
 } from '@appdyno/protocol';
 import type { MeasureSource, TraceDigest } from './measure.js';
-import type { AlertAction, AlertButton, AlertWords, SystemAlert } from './screen/alert.js';
-import type { UiElement } from './screen/elements.js';
+import type { PlatformScreen } from './screen/port.js';
 import type { Mirror } from './mirror/port.js';
 
 /** Per-command limits (ms); the settle cap is added to an action's. */
@@ -162,24 +162,11 @@ export interface WebInspector {
   evaluate(page: WebPage, script: string): Promise<unknown>;
 }
 
-/** The OS as people name it: Android 14, iOS 18.2. */
-export const osName = (platform: string, version: string) =>
-  `${platform === 'ios' ? 'iOS' : 'Android'} ${version}`;
+/** The OS by name, for a stored record too, which has no device to ask. */
+const OS_NAMES: Record<Platform, string> = { android: 'Android', ios: 'iOS' };
 
-/** What only a platform knows about what its screen shows. */
-export interface PlatformScreen {
-  /** The system alert on the screen, whatever it asks. */
-  systemAlert(tree: Tree, elements: UiElement[]): SystemAlert | undefined;
-  /** The button of a system permission prompt for `action`; undefined when no such prompt is up. */
-  alertButton(
-    elements: UiElement[],
-    action: AlertAction,
-    words?: AlertWords,
-  ): AlertButton | undefined;
-  keyboardOpen(tree: Tree): boolean;
-  /** What the status bar takes at the top of the screen, in tap units, for what compares pixels: its clock moves. */
-  statusBand(tree: Tree, density?: number): number;
-}
+/** The OS as people name it: Android 14, iOS 18.2. */
+export const osName = (platform: Platform, version: string) => `${OS_NAMES[platform]} ${version}`;
 
 /** One device, whichever platform: what the operations are written against. */
 export interface Device {
@@ -203,7 +190,7 @@ export interface Device {
     timeoutMs: number,
   ): Promise<{ sig: string; tree?: Tree } | undefined>;
   readonly serial: string;
-  readonly platform: 'android' | 'ios';
+  readonly platform: Platform;
   /** An emulator or simulator: numbers compare only with the same kind of device. */
   readonly virtual: boolean;
   readonly hello: Hello | undefined;

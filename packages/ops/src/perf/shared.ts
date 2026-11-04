@@ -52,7 +52,7 @@ export const Dsym = z
 
 /** A dSYM's path as the driver takes it; on Android simpleperf reads what the device holds, and one would do nothing. */
 export const symbolsOf = (s: Session, dsym?: string) => {
-  if (dsym && s.device.platform !== 'ios')
+  if (dsym && !s.device.measure.symbolFiles)
     throw new ToolError(
       'dsym is for iOS: on Android the names come from the device',
       'UNSUPPORTED',

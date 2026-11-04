@@ -3,7 +3,7 @@ import {
   FROZEN_MIN_FRAMES,
   latestRuns,
   playDay,
-  vitalsCall,
+  playCall,
   type Metric,
   type PerfRecord,
   type RunKey,
@@ -12,10 +12,7 @@ import {
 const percentOf = (part: number, whole: number) =>
   whole ? Math.round((part / whole) * 10_000) / 100 : 0;
 
-const onAndroid = { device: { platform: 'android' as const } };
-
-const worded = (kind: string, value: number) =>
-  vitalsCall({ kind, value, ...onAndroid })?.says ?? '';
+const worded = (kind: string, value: number) => playCall(kind, value)?.says ?? '';
 
 /**
  * Play's two shares of frames, from each round's histogram: slow frames round by round, as the gate takes them, and

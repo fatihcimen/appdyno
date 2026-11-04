@@ -133,6 +133,7 @@ export const SCREENS: Record<string, Node[]> = {
 export const LACKS: MeasureSource = {
   slowReads: [],
   framesByProbe: false,
+  symbolFiles: false,
   cpu: cannot('CPU'),
   memory: cannot('memory'),
   anonMemory: cannot('anonymous memory by process state'),

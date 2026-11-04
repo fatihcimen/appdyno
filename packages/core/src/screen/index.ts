@@ -1,10 +1,12 @@
 import type { Tree } from '@appdyno/protocol';
 import { elementsOf, type UiElement } from './elements.js';
-import { screenElements, windowRect, type Platform, type ScreenElement } from './model.js';
+import { screenElements, windowRect, type ScreenElement } from './model.js';
+import type { ScreenOptions } from './port.js';
 import { withStableRefs } from './refs.js';
 
 export * from './elements.js';
 export * from './model.js';
+export * from './port.js';
 export * from './refs.js';
 export * from './alert.js';
 export * from './diff.js';
@@ -25,13 +27,13 @@ export type Screen = {
   window?: { w: number; h: number };
 };
 
-export function buildScreen(tree: Tree, opts: { platform: Platform; appId?: string }): Screen {
+export function buildScreen(tree: Tree, opts: ScreenOptions): Screen {
   const elements = withStableRefs(elementsOf(tree), opts);
   const list = screenElements(elements, opts);
   // the topmost active application window (a dialog activity over the app), else the topmost
   const app = tree.windows.filter((w) => w.type === 1).sort((a, b) => b.layer - a.layer);
   const active = app.find((w) => w.active) ?? app[0];
-  const win = windowRect(elements, opts.platform);
+  const win = windowRect(elements, opts.port);
   return {
     tree,
     elements,

@@ -1,6 +1,5 @@
 import type { Rect, UiElement } from './elements.js';
-
-export type Platform = 'ios' | 'android';
+import type { PlatformScreen, ScreenOptions } from './port.js';
 
 type Role =
   | 'button'
@@ -52,21 +51,19 @@ const ROLES: Record<string, Role> = {
   shapeableimageview: 'image',
 };
 
-/** iOS status bar items are root elements in this band. */
-const IOS_STATUS_BAR_PT = 50;
 /** Less of an element than this on the screen: a hidden pager page or a scrolled-away carousel item. */
 const MIN_ON_SCREEN = 0.5;
 const MAX_LABEL = 60;
 const MAX_CONTEXT = 40;
 
-const bare = (type: string) => {
+export const bare = (type: string) => {
   const t = type.toLowerCase();
   const name = t.slice(t.lastIndexOf('.') + 1);
   return name.startsWith('xcuielementtype') ? name.slice('xcuielementtype'.length) : name;
 };
 const isWebView = (type: string) => /^web.?view$/.test(bare(type));
 /** `com.android.systemui:id/clock` → `com.android.systemui`. */
-const packageOf = (id: string | undefined) => /^([A-Za-z][\w.]*):id\//.exec(id ?? '')?.[1];
+export const packageOf = (id: string | undefined) => /^([A-Za-z][\w.]*):id\//.exec(id ?? '')?.[1];
 const ownName = (el: UiElement) => (el.label || el.text || '').trim();
 const cutAt = (text: string, max: number) => {
   const chars = Array.from(text); // code points: never half a surrogate pair
@@ -89,18 +86,17 @@ type Item = {
 };
 
 /**
- * The screen in tap units: the largest root when it sits at the origin (the decor view, an iOS
- * application node) or, on Android in landscape, beside a navigation bar on the left; else on iOS the
- * width of a navigation or tab bar at x 0 with no height limit; undefined (nothing filtered) when
- * neither is there.
+ * The screen in tap units: the largest root when it sits at the origin (the decor view, an application
+ * node) or beside a navigation bar on the left, where the platform has one there; else what the
+ * platform's bars tell; undefined (nothing filtered) when neither is there.
  */
-export function windowRect(elements: UiElement[], platform: Platform): Rect | undefined {
+export function windowRect(elements: UiElement[], port: PlatformScreen): Rect | undefined {
   const area = (r: Rect) => r.width * r.height;
   const roots = elements.filter((e) => e.parent === undefined && e.rect && area(e.rect) > 0);
   const [big, next] = roots.map((e) => e.rect!).sort((a, b) => area(b) - area(a));
   const same = (a: Rect, b: Rect) =>
     a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
-  const sideBar = platform !== 'ios' && !!big && big.width > big.height;
+  const sideBar = port.barBesideWindow && !!big && big.width > big.height;
   // an activity in transition shows two full-screen roots: equal ones are still the window
   if (
     big &&
@@ -109,11 +105,7 @@ export function windowRect(elements: UiElement[], platform: Platform): Rect | un
     (!next || area(big) > area(next) || same(big, next))
   )
     return big;
-  if (platform !== 'ios') return undefined;
-  const bar = elements.find(
-    (e) => /^(navigationbar|tabbar)$/.test(bare(e.type)) && e.rect?.x === 0,
-  );
-  return bar && { x: 0, y: -1e9, width: bar.rect!.width, height: 2e9 };
+  return port.windowByBars(elements);
 }
 
 const onScreen = (r: Rect, w: Rect) => {
@@ -123,43 +115,28 @@ const onScreen = (r: Rect, w: Rect) => {
 };
 
 /**
- * The app's part of the tree: Android drops the system UI's nodes and, with an app id, other packages'
- * nodes (by resource id) except those carrying the app's own id; iOS drops the status bar band.
- * Elements mostly off the screen are left out.
+ * The app's part of the tree: what the platform says is none of the app's goes, with what it holds but
+ * for what carries the app's own id. Elements mostly off the screen are left out.
  */
-function appTree(elements: UiElement[], opts: { platform: Platform; appId?: string }) {
-  const { platform } = opts;
+function appTree(elements: UiElement[], opts: ScreenOptions) {
+  const { port } = opts;
   // an app not on the screen has nothing to keep apart from: what is in front is what must be seen
-  const inFront = opts.appId !== undefined && elements.some((el) => el.pkg === opts.appId);
+  const front = elements.some((el) => el.pkg === opts.appId) ? opts.appId : undefined;
   const dropped = new Set<number>();
   const systemUi = new Set<number>();
   const children = new Map<number, number[]>();
   elements.forEach((el, i) => {
     if (el.parent !== undefined) children.set(el.parent, [...(children.get(el.parent) ?? []), i]);
     const pkg = packageOf(el.identifier);
-    const foreign =
-      platform === 'android' &&
-      pkg !== undefined &&
-      !el.prompt &&
-      (pkg === 'com.android.systemui' ||
-        (inFront && pkg !== opts.appId && pkg !== 'android' && !isSystemDialog(el.pkg)));
-    const statusBar =
-      platform === 'ios' &&
-      el.parent === undefined &&
-      el.rect !== undefined &&
-      el.rect.y + el.rect.height <= IOS_STATUS_BAR_PT;
     const own = opts.appId !== undefined && pkg === opts.appId && !systemUi.has(el.parent ?? -1);
     const inherited = el.parent !== undefined && dropped.has(el.parent) && !own;
-    if (foreign || statusBar || inherited) dropped.add(i);
-    if (
-      platform === 'android' &&
-      (pkg === 'com.android.systemui' || (el.parent !== undefined && systemUi.has(el.parent)))
-    )
+    if (port.notTheApp(el, front) || inherited) dropped.add(i);
+    if (port.isSystemUi(el) || (el.parent !== undefined && systemUi.has(el.parent)))
       systemUi.add(i);
   });
 
   const items = new Map<number, Item>();
-  const win = windowRect(elements, platform);
+  const win = windowRect(elements, port);
   elements.forEach((el, index) => {
     if (dropped.has(index) || !el.rect || el.rect.width <= 0 || el.rect.height <= 0) return;
     if (el.visible === false || (win && !onScreen(el.rect, win))) return;
@@ -192,10 +169,6 @@ function appTree(elements: UiElement[], opts: { platform: Platform; appId?: stri
   return { items, descendants, ancestors, nameOf, win };
 }
 
-/** Packages whose windows are the system's dialogs (they stay on the app's screen). */
-export const isSystemDialog = (pkg: string | undefined) =>
-  !!pkg && /^(android|com\.(google\.)?android\.(permissioncontroller|packageinstaller))$/.test(pkg);
-
 export type ScreenElement = {
   ref: string;
   role: string;
@@ -217,13 +190,13 @@ export type ScreenElement = {
 };
 
 /**
- * The elements a tester reads or taps: controls, elements with a label or text, and on iOS an `Other`
- * named only by its id; system UI excluded. A control's label falls back to the text inside it. `all`:
+ * The elements a tester reads or taps: controls, elements with a label or text, and where the platform
+ * says so an untyped one named only by its id; system UI excluded. A control's label falls back to the text inside it. `all`:
  * every app element with a ref.
  */
 export function screenElements(
   elements: UiElement[],
-  opts: { platform: Platform; appId?: string },
+  opts: ScreenOptions,
   all = false,
 ): ScreenElement[] {
   const { items, nameOf, ancestors, descendants, win } = appTree(elements, opts);
@@ -258,7 +231,7 @@ export function screenElements(
     const control = i.role !== undefined && i.role !== 'image';
     const label = cut(control ? nameOf(i) : ownName(i.el));
     const id = idOf(i.el.identifier);
-    const idOnly = opts.platform === 'ios' && i.type === 'other' && id !== undefined;
+    const idOnly = opts.port.listsByIdAlone && i.type === 'other' && id !== undefined;
     const field = i.role === 'textField';
     if (!all && !control && !label && !idOnly && !i.el.focused && !i.el.checked) continue;
     const x = Math.round(i.r.x + i.r.w / 2);

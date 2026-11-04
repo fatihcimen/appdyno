@@ -1,4 +1,4 @@
-import { deviceClass, SLOW_LAUNCH_MS, type Metric } from '@appdyno/perf';
+import { deviceClass, ratedByPlay, SLOW_LAUNCH_MS, type Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { LaunchOut } from './schemas.js';
@@ -132,9 +132,8 @@ export function perfLaunchOp(ctx: ServerContext) {
         ],
         m.value.compile?.asked,
       );
-      const onAndroid = s.device.platform === 'android';
       const longest =
-        worst === undefined || !onAndroid
+        worst === undefined || !ratedByPlay(s.device.platform)
           ? undefined
           : await dayLongest(
               ctx.measurementsDir,

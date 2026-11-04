@@ -1,3 +1,4 @@
+import type { Platform } from '@appdyno/protocol';
 import type { PerfRecord } from './record.js';
 
 /**
@@ -161,6 +162,9 @@ function memoryRule(kind: string): Rule | undefined {
   return undefined;
 }
 
+/** Play's definitions are of Android's numbers. */
+export const ratedByPlay = (platform: Platform) => platform === 'android';
+
 /** What Play's definition says of one number. */
 export type VitalsCall = { kind: string; counts: boolean; says: string };
 
@@ -169,7 +173,7 @@ export function vitalsCall(
   r: Pick<PerfRecord, 'kind' | 'value'> & { device: Pick<PerfRecord['device'], 'platform'> },
 ): VitalsCall | undefined {
   const rule = RULES[r.kind] ?? memoryRule(r.kind);
-  if (!rule || r.device.platform !== 'android') return undefined;
+  if (!rule || !ratedByPlay(r.device.platform)) return undefined;
   const counts = rule.from ? r.value >= rule.limit : r.value > rule.limit;
   return {
     kind: r.kind,
@@ -177,6 +181,10 @@ export function vitalsCall(
     says: `this session ${counts ? 'would count' : 'would not count'} as ${rule.name}: ${rule.reads(r.value, rule)}${rule.note ? ` (${rule.note})` : ''}`,
   };
 }
+
+/** What Play says of a number just read, wherever that was. */
+export const playCall = (kind: string, value: number) =>
+  vitalsCall({ kind, value, device: { platform: 'android' } });
 
 /** The day a kept time falls in: Play's session runs from midnight, Pacific. */
 export const playDay = (at: string) =>

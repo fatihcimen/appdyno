@@ -86,7 +86,7 @@ export class Session {
 
   screenOf(tree: Tree): Screen {
     return buildScreen(tree, {
-      platform: this.device.platform,
+      port: this.device.platformScreen,
       ...(this.appId && { appId: this.appId }),
     });
   }

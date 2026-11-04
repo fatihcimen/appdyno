@@ -30,7 +30,7 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
   const open = async (screen: string): Promise<Screen> => {
     await d.openUrl(`appdyno-fixture://open/${screen}`, APP);
     await pause(800);
-    return buildScreen(await d.tree(), { platform: 'ios', appId: APP });
+    return buildScreen(await d.tree(), { port: d.platformScreen, appId: APP });
   };
   const byId = (s: Screen, id: string) => {
     const e = s.list.find((x) => x.id === id);

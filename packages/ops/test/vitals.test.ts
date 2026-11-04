@@ -56,6 +56,7 @@ describe('why a hang was a hang, in an answer', () => {
     Object.defineProperty(d, 'measure', {
       value: {
         ...d.measure,
+        symbolFiles: platform === 'ios',
         hangs: async (_app, _seconds, _during, symbols) => {
           asked.push(symbols);
           return {

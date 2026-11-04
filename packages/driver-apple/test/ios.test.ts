@@ -47,7 +47,7 @@ describe("a simulator's clipboard", () => {
     await expect(device('').setClipboard('pano')).rejects.toMatchObject({
       code: 'UNSUPPORTED',
       message: expect.stringMatching(/did not take the text.*stalled/),
-      hint: expect.stringMatching(/type_text/),
+      hint: expect.stringMatching(/type the text/),
       retryable: true,
     });
     expect(set).toHaveBeenCalledOnce();

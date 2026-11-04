@@ -40,7 +40,7 @@ export function appdynoDriver(serial: string, adb = new Adb()): BenchDriver {
       await d.stopAgent();
     },
     async read() {
-      const s = buildScreen(await d.tree(), { platform: 'android' });
+      const s = buildScreen(await d.tree(), { port: d.platformScreen });
       lastHash = s.hash;
       return s.list.map((e) => ({ label: e.label, ...(e.id && { id: e.id }), x: e.x, y: e.y }));
     },
@@ -53,7 +53,7 @@ export function appdynoDriver(serial: string, adb = new Adb()): BenchDriver {
         read: 'tree',
         ...(lastHash && { before: lastHash }),
       });
-      const s = buildScreen(r.tree!, { platform: 'android' });
+      const s = buildScreen(r.tree!, { port: d.platformScreen });
       lastHash = s.hash;
       return { reads: r.settle?.reads ?? 0, settled: r.settle?.settled ?? false };
     },

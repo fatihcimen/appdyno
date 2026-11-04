@@ -1,3 +1,4 @@
+import type { Platform } from '@appdyno/protocol';
 import { median, spread, type Spread } from './stats.js';
 
 export type Unit = 'ms' | 'percent' | 'kb' | 'bytes' | 'count' | 'mah' | 'mj' | 'ratio';
@@ -6,7 +7,7 @@ export type Build = 'debug' | 'profileable' | 'release' | 'unknown';
 
 export type DeviceInfo = {
   serial: string;
-  platform: 'android' | 'ios';
+  platform: Platform;
   model: string;
   os: string;
   virtual: boolean;

@@ -129,10 +129,14 @@ export const ActParams = z.discriminatedUnion('kind', [
 ]);
 export type ActParams = z.infer<typeof ActParams>;
 
+/** Each has a driver; what a new one touches outside it is named in `packages/appdyno/test/platforms.test.ts`. */
+export const PLATFORMS = ['android', 'ios'] as const;
+export type Platform = (typeof PLATFORMS)[number];
+
 export const Hello = z.object({
   agentVersion: z.string(),
   protocol: z.object({ major: z.number().int(), minor: z.number().int() }),
-  platform: z.enum(['android', 'ios']),
+  platform: z.enum(PLATFORMS),
   osVersion: z.string(),
   sdk: z.number().int().optional(),
   model: z.string(),

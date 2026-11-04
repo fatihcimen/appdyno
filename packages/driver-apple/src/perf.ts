@@ -70,6 +70,7 @@ const lowerMedian = (xs: number[]) => {
 export class IosSimulatorPerf implements MeasureSource {
   readonly slowReads = [];
   readonly framesByProbe = true;
+  readonly symbolFiles = true;
   anonMemory = cannot('anonymous memory by process state');
   surfaceFrames = cannot("a surface's frames");
   vitals = cannot('the device state');
@@ -153,7 +154,7 @@ export class IosSimulatorPerf implements MeasureSource {
       throw new DeviceError(
         'UNSUPPORTED',
         `${bundle} runs without the frame probe`,
-        'leave `probe` on: it relaunches the app with the probe in it',
+        'the probe takes a relaunch of the app with it inside',
       );
   }
 

@@ -26,6 +26,8 @@ export class AndroidPerf implements MeasureSource {
 
   readonly slowReads = [];
   readonly framesByProbe = false;
+  readonly symbolFiles = false;
+  readonly energyHolds = 'battery';
   attachProbe = cannot('through a frame probe');
   hangs = cannot('hangs');
   xctMetrics = cannot("XCTest's metrics");

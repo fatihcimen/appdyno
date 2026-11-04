@@ -574,6 +574,8 @@ describe('iOS simulators', () => {
 
     it('a simulator: physical footprint, launch until the first read, a memory graph', async () => {
       const t = await onDevice({
+        framesByProbe: true,
+        attachProbe: async () => false,
         cpu: async () => m({ percent: 5, windowMs: 2_000 }),
         memory: async () => m({ kb: 52_429, kind: 'footprint', peakKb: 62_464 }),
         launch: async (_: string, o: { mode: 'cold' | 'warm' }) =>

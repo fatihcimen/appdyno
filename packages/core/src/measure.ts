@@ -1,4 +1,5 @@
 import { DeviceError } from '@appdyno/protocol';
+import type { SettingName } from './device.js';
 import type {
   FrameStats,
   FrameTimeline,
@@ -291,6 +292,10 @@ export interface MeasureSource {
   readonly slowReads: readonly Capability[];
   /** Its frames come through a probe in the app, which `attachProbe` puts there unless a caller says no. */
   readonly framesByProbe: boolean;
+  /** Names in a build's frames come from files on this Mac (`Symbols`), not from the device. */
+  readonly symbolFiles: boolean;
+  /** The condition reading energy changes for its time, where it changes one. */
+  readonly energyHolds?: SettingName;
   cpu(app: string, windowMs?: number): Promise<Measured<CpuReading>>;
   memory(app: string): Promise<Measured<MemoryReading>>;
   anonMemory(app: string): Promise<Measured<AnonMemory>>;
@@ -361,4 +366,8 @@ export interface MeasureSource {
   ): Promise<Measured<FrameTrace>>;
 }
 
-export type Capability = Exclude<keyof MeasureSource, 'slowReads' | 'framesByProbe'>;
+/** The measures, as against what a source says of itself. */
+export type Capability = Exclude<
+  keyof MeasureSource,
+  'slowReads' | 'framesByProbe' | 'symbolFiles' | 'energyHolds'
+>;

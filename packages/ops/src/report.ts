@@ -13,6 +13,7 @@ import {
   deviceState,
   encodePng,
   esc,
+  osName,
   Owner,
   paintRects,
   renderScreen,
@@ -245,7 +246,7 @@ export function reportFor(ctx: ServerContext) {
       '<h1>appdyno report</h1>',
       `<p>${esc(
         [
-          `${s.device.serial}${hello ? `: ${hello.model}, ${s.device.platform} ${hello.osVersion}` : ''}`,
+          `${s.device.serial}${hello ? `: ${hello.model}, ${osName(s.device.platform, hello.osVersion)}` : ''}`,
           app ? `app ${app}` : 'no app selected',
           since ? `from ${new Date(since).toISOString()}` : undefined,
           `to ${new Date().toISOString()}`,

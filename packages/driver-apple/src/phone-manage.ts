@@ -14,7 +14,7 @@ import { assertAppBundle, on } from './manage.js';
 
 const PHONE_CANNOT = {
   clear: "an iPhone's app data can only go with the app: uninstall and install it again",
-  permission: 'no tool grants an iPhone app a permission: answer its prompt with the alert tool',
+  permission: 'no tool grants an iPhone app a permission: its prompt has to be answered',
   push: 'a push to an iPhone needs Apple push credentials, which this tool does not hold',
   // seen on one iPhone with no face enrolled: `devicectl device simulate biometrics` says so and exits 0, so it proves nothing
   biometric:

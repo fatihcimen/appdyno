@@ -80,7 +80,7 @@ export type FrameTimeline = {
   stats?: { frames: number; overrunP95Ms: number; overrunWorstMs: number; cpuP95Ms: number };
   /** Why the frames that missed did, where the trace can say. */
   causes?: SlowFrameCauses;
-  /** The kept trace, for perf_query. */
+  /** The kept trace. */
   tracePath?: string;
 };
 

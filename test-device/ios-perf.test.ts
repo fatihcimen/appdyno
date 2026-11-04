@@ -37,7 +37,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
     await d.launch(APP);
     await d.openUrl(`appdyno-fixture://open/${screen}`, APP);
     await pause(800);
-    return buildScreen(await d.tree(), { platform: 'ios', appId: APP });
+    return buildScreen(await d.tree(), { port: d.platformScreen, appId: APP });
   };
   const byId = (s: Awaited<ReturnType<typeof open>>, id: string) => {
     const e = s.list.find((x) => x.id === id);
@@ -147,7 +147,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
       });
       await d.openUrl('appdyno-fixture://open/network', APP);
       await pause(800);
-      const s = buildScreen(await d.tree(), { platform: 'ios', appId: APP });
+      const s = buildScreen(await d.tree(), { port: d.platformScreen, appId: APP });
       const n = (
         await d.measure.network(APP, 3_000, () => d.tap(byId(s, 'fetch'), { settle: false }))
       ).value;
@@ -185,7 +185,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
       await d.measure.attachProbe(APP);
       await d.openUrl(`appdyno-fixture://open/${screen}`, APP);
       await pause(800);
-      return buildScreen(await d.tree(), { platform: 'ios', appId: APP });
+      return buildScreen(await d.tree(), { port: d.platformScreen, appId: APP });
     };
 
     it('without the probe, frames say how to have it', async () => {

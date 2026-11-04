@@ -15,7 +15,7 @@ const SETTLE = { quietMs: 200, maxMs: 3_000 };
 describe.skipIf(!udid)('ios runner on an iPhone', () => {
   let d: IosPhoneDevice;
   const screen = async (): Promise<Screen> =>
-    buildScreen(await d.tree(), { platform: 'ios', appId: SETTINGS });
+    buildScreen(await d.tree(), { port: d.platformScreen, appId: SETTINGS });
   const settings = async () => {
     await d.terminate(SETTINGS);
     await d.launch(SETTINGS);
@@ -50,7 +50,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
     const r = await d.tap(general, { settle: SETTLE, read: 'tree', before: s.hash });
     expect(r.settle!.settled).toBe(true);
     expect(
-      buildScreen(r.tree!, { platform: 'ios' }).list.some((e) =>
+      buildScreen(r.tree!, { port: d.platformScreen }).list.some((e) =>
         /^(About|Hakkında)$/.test(e.label),
       ),
     ).toBe(true);
@@ -183,7 +183,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
       else await d.launch(APP);
       await d.openUrl(`appdyno-fixture://open/${screen}`, APP);
       await pause(1_000);
-      return buildScreen(await d.tree(), { platform: 'ios', appId: APP });
+      return buildScreen(await d.tree(), { port: d.platformScreen, appId: APP });
     };
     const byId = (s: Screen, id: string) => {
       const e = s.list.find((x) => x.id === id);

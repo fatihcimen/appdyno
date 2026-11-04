@@ -157,7 +157,8 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
           read: 'tree',
           ...(withBefore && { before: s.hash }),
         });
-        if (labels(buildScreen(r.tree!, { platform: 'ios' })).includes('Tepki 300')) caught++;
+        if (labels(buildScreen(r.tree!, { port: d.platformScreen })).includes('Tepki 300'))
+          caught++;
         // a missed reaction lands before the next trial
         await new Promise((x) => setTimeout(x, 400));
       }
@@ -176,7 +177,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     for (let i = 0; i < 5; i++) {
       // no settle: the next tap goes out while the button still moves
       const r = await d.tap(show, { settle: false, read: 'tree' });
-      const confirm = byId(buildScreen(r.tree!, { platform: 'ios' }), 'slide_confirm')!;
+      const confirm = byId(buildScreen(r.tree!, { port: d.platformScreen }), 'slide_confirm')!;
       expect(confirm).toBeDefined();
       waits.push((await d.tap(confirm, { settle: SETTLE })).animationWaitMs ?? 0);
     }
