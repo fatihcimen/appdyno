@@ -47,6 +47,13 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)say:(NSString *)note;
 @end
 
+/// A pane of glass around `content`: the system's where it has one, its nearest material where it has not.
+NSView *MVGlass(NSView *content, double radius, NSColor *_Nullable tint);
+/// Panes that merge as they near each other, and share one pass.
+NSView *MVGlassGroup(NSView *content);
+/// A row of glass groups of buttons, each named as a control.
+NSView *MVGlassBar(NSArray<NSArray<NSString *> *> *groups, id target, SEL action);
+
 /// A window kept off every screen: it never shows, and the window server still composites it.
 @interface MVOffscreenWindow : NSWindow
 @property(nonatomic) BOOL offscreen;
@@ -56,6 +63,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// A window as the window server composites it, to a PNG; NO if it cannot.
 BOOL MVWriteWindow(NSWindow *window, NSString *file);
+
+/// A few cells of a picture's own colours, for a layer to stretch into a soft mesh with no blur pass. Caller owns it.
+CGImageRef _Nullable MVPictureMood(IOSurfaceRef surface, BOOL dark);
+/// A control's button, however deep in glass it sits.
+NSButton *_Nullable MVFindControl(NSView *view, NSString *name);
 
 /// An image file on the Mac's pasteboard.
 void MVCopyImage(NSString *file);
@@ -67,13 +79,39 @@ NSImage *_Nullable MVControlImage(NSString *name);
 NSMenu *MVControlMenu(NSString *title, NSArray<NSString *> *_Nullable names);
 NSMenu *MVMainMenu(NSArray<NSString *> *_Nullable names);
 
-/// The toolbar's items, for the controls this kind of device has.
-@interface MVToolbar : NSObject <NSToolbarDelegate>
-- (instancetype)initWithControls:(NSArray<NSString *> *)names target:(id)target;
+/// One line of a list.
+@interface MVRow : NSObject
+@property(nonatomic, copy) NSString *title;
+@property(nonatomic, copy) NSString *detail;
+@property(nonatomic, copy, nullable) NSString *symbol;
+@property(nonatomic, nullable) NSColor *tint;
+@property(nonatomic, copy, nullable) NSString *key;
+/// A heading over the rows beneath it, which cannot be chosen.
+@property(nonatomic) BOOL header;
++ (instancetype)headerNamed:(NSString *)title;
 @end
 
-/// The right-hand pane: Stats, Activity and Apps.
-@interface MVInspector : NSVisualEffectView
+@interface MVList : NSScrollView <NSTableViewDataSource, NSTableViewDelegate>
+@property(nonatomic, copy) NSArray<MVRow *> *rows;
+@property(nonatomic, copy, nullable) void (^onSelect)(MVRow *_Nullable row);
+@property(nonatomic, readonly, nullable) MVRow *selected;
+- (void)scrollToEnd;
+- (void)useSidebarStyle;
+@end
+
+/// The layers of a device's screen: a surface's or a stream's picture, a cutout where it has none, and a dimming.
+@interface MVPictureLayers : NSObject
+- (instancetype)initInView:(NSView *)view;
+- (void)showSurface:(IOSurfaceRef)surface;
+/// Whether the layer took it.
+- (BOOL)showImage:(CVImageBufferRef)image;
+- (void)setDimmed:(BOOL)dimmed;
+/// `cutout` is in a portrait screen's flipped coordinates; empty for none.
+- (void)layOut:(CGSize)screen turns:(int)turns cutout:(CGRect)cutout;
+@end
+
+/// The right-hand pane: Stats, Activity and Apps. Glass is around it: all it has inside is fills.
+@interface MVInspector : NSView
 - (void)showPane:(NSInteger)pane;
 - (void)showStats:(NSDictionary *)stats;
 - (void)addActivity:(NSDictionary *)call;

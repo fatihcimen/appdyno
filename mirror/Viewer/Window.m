@@ -1,20 +1,19 @@
-// The window: a stage in the system's own material, the device on it, a line beneath saying how it is, and the
-// Inspector beside it. The picture's view is exactly the device's screen, so its maths never hear of a frame.
+// The window: the device on a backdrop drawn from its own picture, full bleed, with glass floating over it: its status,
+// its controls and the Inspector. The picture's view is exactly the device's screen, so its maths never hear of a frame.
 #import "Viewer.h"
 #import "Window.h"
-
-// what replaces the layer's own enqueue and flush needs macOS 14, and these still work
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 // a new window takes at most this much of the screen
 static const double kFitScreen = 0.85;
 // far from every screen a Mac can have
 static const double kOffscreenAt = -30000;
-static const double kMargin = 30, kLine = 26, kInspector = 300;
+static const double kMargin = 30, kTop = 60, kBottom = 22, kInspector = 300, kInset = 10;
+// the rate a backdrop follows its picture: it is mood, and costs nothing for being slow
+static const double kBackdropSeconds = 2;
 static const double kClickSeconds = 0.08;
 static const CGSize kSmallest = {380, 420};
 // wide enough that a toolbar shows all it has; a person can go narrower, and it folds into its own menu
-static const double kOpensWide = 600;
+static const double kOpensWide = 640;
 static NSString *const kFrameDefault = @"showsDeviceFrame";
 
 @implementation MVOffscreenWindow
@@ -34,25 +33,18 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   return focus ? MVShowFocused : MVShowFront;
 }
 
-void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
-  BOOL sideways = turns % 2;
-  layer.bounds = CGRectMake(0, 0, sideways ? parent.height : parent.width, sideways ? parent.width : parent.height);
-  layer.position = CGPointMake(parent.width / 2, parent.height / 2);
-  layer.transform = CATransform3DMakeRotation(turns * M_PI_2, 0, 0, 1);
-}
-
 @implementation MVWindow {
   MVOffscreenWindow *_window;
   NSView *_stage;
   MVFrameView *_frame;
   MVView *_view;
   MVInspector *_inspector;
-  MVToolbar *_toolbarItems;
+  NSView *_panel, *_bar;
+  NSView *_root;
+  CALayer *_backdrop;
+  double _backdropAt;
   MVStatusLine *_line;
-  CALayer *_plain;
-  AVSampleBufferDisplayLayer *_video;
-  CALayer *_dim;
-  CALayer *_cutout;
+  MVPictureLayers *_layers;
   CGSize _picture;
   double _zoom;
   int _turns;
@@ -71,10 +63,16 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
     _window.titlebarAppearsTransparent = YES;
     _window.titleVisibility = NSWindowTitleHidden;
     _window.contentMinSize = kSmallest;
-    NSVisualEffectView *root = [[NSVisualEffectView alloc] initWithFrame:NSMakeRect(0, 0, frame.size.width, frame.size.height)];
-    root.material = NSVisualEffectMaterialUnderWindowBackground;
-    root.blendingMode = NSVisualEffectBlendingModeBehindWindow;
-    root.state = NSVisualEffectStateFollowsWindowActiveState;
+    NSView *root = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, frame.size.width, frame.size.height)];
+    root.wantsLayer = YES;
+    _backdrop = [CALayer layer];
+    _backdrop.backgroundColor = NSColor.windowBackgroundColor.CGColor;
+    _backdrop.contentsGravity = kCAGravityResize;
+    _backdrop.magnificationFilter = kCAFilterLinear;
+    _backdrop.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
+    _backdrop.frame = root.bounds;
+    [root.layer addSublayer:_backdrop];
+    _root = root;
     _window.contentView = root;
     _stage = [[NSView alloc] initWithFrame:root.bounds];
     [root addSubview:_stage];
@@ -86,35 +84,30 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
     _frame.showsFrame = ![NSUserDefaults.standardUserDefaults objectForKey:kFrameDefault] || [NSUserDefaults.standardUserDefaults boolForKey:kFrameDefault];
     [_stage addSubview:_frame];
     [_frame addSubview:_view];
-    _plain = [self fill:[CALayer layer]];
-    // laid out by hand: a layer turned on its side has no place in its parent's resizing
-    _plain.autoresizingMask = kCALayerNotSizable;
-    _plain.contentsGravity = kCAGravityResizeAspect;
-    _video = (AVSampleBufferDisplayLayer *)[self fill:[AVSampleBufferDisplayLayer layer]];
-    _video.autoresizingMask = kCALayerNotSizable;
-    _video.videoGravity = AVLayerVideoGravityResizeAspect;
-    _cutout = [self fill:[CALayer layer]];
-    _cutout.autoresizingMask = kCALayerNotSizable;
-    _cutout.backgroundColor = NSColor.blackColor.CGColor;
-    _cutout.hidden = YES;
-    _dim = [self fill:[CALayer layer]];
-    _dim.backgroundColor = [NSColor colorWithWhite:0 alpha:0.6].CGColor;
-    _dim.hidden = YES;
+    _layers = [[MVPictureLayers alloc] initInView:_view];
     _overlay = [[MVOverlay alloc] initInView:_view];
     _line = [[MVStatusLine alloc] initWithFrame:NSZeroRect];
-    [_stage addSubview:_line];
+    _line.translatesAutoresizingMaskIntoConstraints = NO;
+    NSView *padded = [NSView new];
+    [padded addSubview:_line];
+    NSView *pill = MVGlass(padded, 17, nil);
+    [root addSubview:pill];
+    [NSLayoutConstraint activateConstraints:@[
+      [_line.leadingAnchor constraintEqualToAnchor:padded.leadingAnchor constant:14],
+      [_line.trailingAnchor constraintEqualToAnchor:padded.trailingAnchor constant:-14],
+      [_line.centerYAnchor constraintEqualToAnchor:padded.centerYAnchor],
+      [padded.heightAnchor constraintEqualToConstant:34],
+      [pill.leadingAnchor constraintEqualToAnchor:root.leadingAnchor constant:84],
+      [pill.topAnchor constraintEqualToAnchor:root.topAnchor constant:12],
+      [pill.widthAnchor constraintLessThanOrEqualToConstant:230],
+    ]];
     _inspector = [[MVInspector alloc] initWithFrame:NSZeroRect];
-    _inspector.hidden = YES;
-    [root addSubview:_inspector];
+    _panel = MVGlass(_inspector, 22, nil);
+    _panel.translatesAutoresizingMaskIntoConstraints = YES;
+    _panel.hidden = YES;
+    [root addSubview:_panel];
   }
   return self;
-}
-
-- (CALayer *)fill:(CALayer *)layer {
-  layer.frame = _view.bounds;
-  layer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
-  [_view.layer addSublayer:layer];
-  return layer;
 }
 
 - (void)configure:(NSDictionary *)attach {
@@ -123,8 +116,8 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
   _look = [attach[@"look"] isKindOfClass:NSDictionary.class] ? attach[@"look"] : @{};
   _kind = attach[@"source"][@"kind"];
   _view.controls = _look[@"controls"] ?: @[@"home", @"lock", @"volumeUp", @"volumeDown"];
-  if (!_window.toolbar) {
-    [self addToolbar];
+  if (!_bar) {
+    [self addControls];
     NSApp.mainMenu = MVMainMenu(_view.controls);
   }
   _window.poses = self.poses;
@@ -138,52 +131,67 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
   [self show:MVShowOf([attach[@"focus"] boolValue], self.behind)];
 }
 
-- (void)addToolbar {
-  NSToolbar *toolbar = [[NSToolbar alloc] initWithIdentifier:@"device"];
-  _toolbarItems = [[MVToolbar alloc] initWithControls:_view.controls target:self];
-  toolbar.delegate = _toolbarItems;
-  toolbar.displayMode = NSToolbarDisplayModeIconOnly;
-  toolbar.allowsUserCustomization = NO;
-  _window.toolbar = toolbar;
-  _window.toolbarStyle = NSWindowToolbarStyleUnifiedCompact;
+/// What is always there, and the rest a click away: a window is for its device, not its controls.
+- (void)addControls {
+  NSMutableArray *device = [NSMutableArray array];
+  for (NSString *name in @[@"back", @"home", @"appSwitch", @"lock"])
+    if ([_view.controls containsObject:name]) [device addObject:name];
+  _bar = MVGlassBar(@[device, @[@"screenshot", @"record"], @[@"more", @"inspector"]], self, @selector(control:));
+  [_root addSubview:_bar];
+  [NSLayoutConstraint activateConstraints:@[
+    [_bar.trailingAnchor constraintEqualToAnchor:_root.trailingAnchor constant:-12],
+    [_bar.topAnchor constraintEqualToAnchor:_root.topAnchor constant:10],
+  ]];
+}
+
+- (void)showMore:(NSView *)anchor {
+  NSMenu *menu = [[NSMenu alloc] initWithTitle:@"More"];
+  NSArray<NSString *> *shown = @[@"back", @"home", @"appSwitch", @"lock"];
+  for (NSMenuItem *item in [_view deviceMenu].itemArray)
+    if (![shown containsObject:item.representedObject]) [menu addItem:[item copy]];
+  [menu addItem:NSMenuItem.separatorItem];
+  for (NSMenuItem *item in MVControlMenu(@"View", nil).itemArray)
+    if (![item.representedObject isEqual:@"inspector"]) [menu addItem:[item copy]];
+  [menu popUpMenuPositioningItem:nil atLocation:NSMakePoint(0, anchor.bounds.size.height + 6) inView:anchor];
 }
 
 /// Everything laid out once, from the window's size: the device takes the room there is.
 - (void)layoutPicture {
   NSRect all = _window.contentView.bounds;
-  double side = _inspecting ? kInspector : 0;
-  double top = _window.contentView.safeAreaInsets.top;
+  double side = _inspecting ? kInspector + kInset : 0;
   _stage.frame = NSMakeRect(0, 0, all.size.width - side, all.size.height);
-  _inspector.frame = NSMakeRect(all.size.width - side, 0, side, all.size.height);
-  _line.frame = NSMakeRect(8, 6, _stage.frame.size.width - 16, kLine - 10);
+  _panel.frame = NSMakeRect(all.size.width - kInspector - kInset, kInset, kInspector, all.size.height - kTop - kInset);
   if (_picture.width <= 0) return;
   [CATransaction begin];
   [CATransaction setDisableActions:YES];
   double margin = _frame.showsFrame ? kMargin : 0;
-  CGSize room = CGSizeMake(_stage.frame.size.width - 2 * margin, all.size.height - top - kLine - margin);
+  CGSize room = CGSizeMake(_stage.frame.size.width - 2 * margin, all.size.height - kTop - kBottom);
   CGSize body = [_frame bodyFor:_picture turns:_turns];
   double scale = MVFitScale(body, room);
   CGSize screen = CGSizeMake(_picture.width * scale, _picture.height * scale);
   CGSize drawn = [_frame bodyFor:screen turns:_turns];
-  double bottom = kLine + (room.height - drawn.height) / 2;
+  double bottom = kBottom + (room.height - drawn.height) / 2;
   NSRect place = NSMakeRect(round((_stage.frame.size.width - drawn.width) / 2), round(bottom), drawn.width, drawn.height);
   [_frame layOutScreen:screen in:place turns:_turns];
-  MVLayoutTurned(_plain, screen, _turns);
-  MVLayoutTurned(_video, screen, _turns);
-  [self placeCutout:screen];
+  BOOL drawsItsOwn = [_kind isEqual:@"surface"] || [_kind isEqual:@"pixels"];
+  CGSize portrait = screen.width > screen.height ? CGSizeMake(screen.height, screen.width) : screen;
+  [_layers layOut:screen turns:_turns cutout:_frame.showsFrame && !drawsItsOwn ? MVCutoutRect(_frame.spec, portrait) : CGRectZero];
   [CATransaction commit];
 }
 
-/// Over the picture only where the picture lacks one: a simulator draws its own.
-- (void)placeCutout:(CGSize)screen {
-  BOOL sideways = screen.width > screen.height;
-  CGSize portrait = sideways ? CGSizeMake(screen.height, screen.width) : screen;
-  CGRect cut = MVCutoutRect(_frame.spec, portrait);
-  _cutout.hidden = !_frame.showsFrame || [_kind isEqual:@"surface"] || [_kind isEqual:@"pixels"] || CGRectIsEmpty(cut);
-  // the layer's origin is at the bottom left; a turned device has its top at the window's left
-  _cutout.frame = sideways ? CGRectMake(cut.origin.y, portrait.width - CGRectGetMaxX(cut), cut.size.height, cut.size.width)
-                           : CGRectMake(cut.origin.x, portrait.height - CGRectGetMaxY(cut), cut.size.width, cut.size.height);
-  _cutout.cornerRadius = MIN(cut.size.width, cut.size.height) / 2;
+/// The window takes on the picture's colours, so that glass has something of the device to bend.
+- (void)followPicture:(IOSurfaceRef)surface {
+  double now = MVNowMs();
+  if (now - _backdropAt < kBackdropSeconds * 1000) return;
+  _backdropAt = now;
+  BOOL dark = [[_window.effectiveAppearance bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]] isEqual:NSAppearanceNameDarkAqua];
+  CGImageRef mood = MVPictureMood(surface, dark);
+  if (!mood) return;
+  [CATransaction begin];
+  [CATransaction setDisableActions:YES];
+  _backdrop.contents = (__bridge id)mood;
+  [CATransaction commit];
+  CGImageRelease(mood);
 }
 
 - (void)applySpec {
@@ -213,16 +221,14 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
 - (CGSize)windowSizeAt:(double)zoom {
   CGSize body = [_frame bodyFor:CGSizeMake(_picture.width * zoom, _picture.height * zoom) turns:_turns];
   double margin = _frame.showsFrame ? kMargin : 0;
-  double top = _window.contentView.safeAreaInsets.top;
-  double side = _inspecting ? kInspector : 0;
-  return CGSizeMake(MAX(body.width + 2 * margin, kOpensWide) + side, MAX(body.height + top + kLine + margin, kSmallest.height));
+  double side = _inspecting ? kInspector + kInset : 0;
+  return CGSizeMake(MAX(body.width + 2 * margin, kOpensWide) + side, MAX(body.height + kTop + kBottom, kSmallest.height));
 }
 
 - (double)fitZoom {
   NSRect visible = (_window.screen ?: NSScreen.mainScreen).visibleFrame;
-  double top = _window.contentView.safeAreaInsets.top;
   CGSize body = [_frame bodyFor:_picture turns:_turns];
-  CGSize room = CGSizeMake(visible.size.width * kFitScreen - 2 * kMargin, visible.size.height * kFitScreen - top - kLine - kMargin);
+  CGSize room = CGSizeMake(visible.size.width * kFitScreen - 2 * kMargin, visible.size.height * kFitScreen - kTop - kBottom);
   return MVFitScale(body, room);
 }
 
@@ -254,39 +260,19 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
 }
 
 - (void)showSurface:(IOSurfaceRef)surface {
-  [CATransaction begin];
-  [CATransaction setDisableActions:YES];
-  // the same surface again shows nothing new unless the layer is told it changed
-  _plain.contents = nil;
-  _plain.contents = (__bridge id)surface;
-  [CATransaction commit];
+  [_layers showSurface:surface];
+  [self followPicture:surface];
 }
 
 - (BOOL)showImage:(CVImageBufferRef)image {
-  CMVideoFormatDescriptionRef format = NULL;
-  if (CMVideoFormatDescriptionCreateForImageBuffer(NULL, image, &format) != noErr) return NO;
-  CMSampleTimingInfo timing = {.duration = kCMTimeInvalid, .presentationTimeStamp = CMClockGetTime(CMClockGetHostTimeClock()), .decodeTimeStamp = kCMTimeInvalid};
-  CMSampleBufferRef sample = NULL;
-  OSStatus status = CMSampleBufferCreateReadyWithImageBuffer(NULL, image, format, &timing, &sample);
-  CFRelease(format);
-  if (status != noErr) return NO;
-  CFMutableDictionaryRef attachments = (CFMutableDictionaryRef)CFArrayGetValueAtIndex(CMSampleBufferGetSampleAttachmentsArray(sample, YES), 0);
-  CFDictionarySetValue(attachments, kCMSampleAttachmentKey_DisplayImmediately, kCFBooleanTrue);
-  BOOL failed = _video.status == AVQueuedSampleBufferRenderingStatusFailed;
-  if (failed) [_video flush];
-  [_video enqueueSampleBuffer:sample];
-  CFRelease(sample);
-  return !failed;
+  return [_layers showImage:image];
 }
 
 - (void)setStatus:(NSDictionary *)message {
   NSString *state = message[@"state"];
   BOOL live = [state isEqual:@"live"];
   _line.state = live ? @"Live" : message[@"title"] ?: state;
-  [CATransaction begin];
-  [CATransaction setDisableActions:YES];
-  _dim.hidden = live;
-  [CATransaction commit];
+  [_layers setDimmed:!live];
   [_overlay showState:live ? nil : state title:message[@"title"] fix:message[@"fix"]];
   _window.title = live ? _name : [NSString stringWithFormat:@"%@: %@", _name, message[@"title"] ?: state];
 }
@@ -325,7 +311,7 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
 - (void)toggleInspector {
   double zoom = _zoom;
   _inspecting = !_inspecting;
-  _inspector.hidden = !_inspecting;
+  _panel.hidden = !_inspecting;
   [self setZoom:zoom > 0 ? zoom : 1];
 }
 
@@ -348,8 +334,9 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
 
 /// The toolbar's record button says a movie is being made.
 - (void)setRecording:(BOOL)on {
-  for (NSToolbarItem *item in _window.toolbar.items)
-    if ([item.itemIdentifier isEqual:@"record"]) item.image = [NSImage imageWithSystemSymbolName:on ? @"stop.circle.fill" : @"record.circle" accessibilityDescription:on ? @"Stop Recording" : @"Record Screen"];
+  NSButton *button = MVFindControl(_bar, @"record");
+  button.image = [NSImage imageWithSystemSymbolName:on ? @"stop.circle.fill" : @"record.circle" accessibilityDescription:on ? @"Stop Recording" : @"Record Screen"];
+  button.contentTintColor = on ? NSColor.systemRedColor : NSColor.labelColor;
 }
 
 - (void)setFrameShown:(BOOL)shown {
@@ -360,8 +347,8 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
 }
 
 - (void)control:(id)sender {
-  NSString *name = [sender respondsToSelector:@selector(representedObject)] ? [sender representedObject] : nil;
-  if (![name isKindOfClass:NSString.class]) name = [sender respondsToSelector:@selector(itemIdentifier)] ? [sender itemIdentifier] : sender;
+  NSString *name = [sender respondsToSelector:@selector(representedObject)] ? [sender representedObject] : [sender identifier];
+  if ([name isEqual:@"more"]) return [self showMore:sender];
   [self perform:name];
 }
 

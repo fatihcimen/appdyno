@@ -3,107 +3,10 @@
 #import "Window.h"
 
 enum { kActivityRows = 200, kHistory = 60, kPaneStats = 0, kPaneActivity = 1, kPaneApps = 2 };
+static const double kUsualRate = 60, kSparkHeight = 56;
 
-/// One line of a list.
-@interface MVRow : NSObject
-@property(nonatomic, copy) NSString *title;
-@property(nonatomic, copy) NSString *detail;
-@property(nonatomic, copy, nullable) NSString *symbol;
-@property(nonatomic, nullable) NSColor *tint;
-@property(nonatomic, copy, nullable) NSString *key;
-@end
-
-@implementation MVRow
-@end
-
-/// Rows of a title and a line beneath, with a symbol: the Activity pane's and the Apps pane's.
-@interface MVList : NSScrollView <NSTableViewDataSource, NSTableViewDelegate>
-@property(nonatomic, copy) NSArray<MVRow *> *rows;
-@property(nonatomic, copy, nullable) void (^onSelect)(MVRow *_Nullable row);
-@property(nonatomic, readonly, nullable) MVRow *selected;
-- (void)scrollToEnd;
-@end
-
-@implementation MVList {
-  NSTableView *_table;
-}
-
-- (instancetype)initWithFrame:(NSRect)frame {
-  if ((self = [super initWithFrame:frame])) {
-    _rows = @[];
-    _table = [NSTableView new];
-    _table.style = NSTableViewStyleInset;
-    _table.rowHeight = 38;
-    _table.headerView = nil;
-    _table.backgroundColor = NSColor.clearColor;
-    _table.intercellSpacing = NSMakeSize(0, 2);
-    [_table addTableColumn:[[NSTableColumn alloc] initWithIdentifier:@"row"]];
-    _table.columnAutoresizingStyle = NSTableViewUniformColumnAutoresizingStyle;
-    _table.dataSource = self;
-    _table.delegate = self;
-    self.documentView = _table;
-    self.hasVerticalScroller = YES;
-    self.autohidesScrollers = YES;
-    self.drawsBackground = NO;
-  }
-  return self;
-}
-
-- (void)setRows:(NSArray<MVRow *> *)rows {
-  _rows = [rows copy];
-  [_table reloadData];
-}
-
-- (void)scrollToEnd {
-  if (_rows.count) [_table scrollRowToVisible:_rows.count - 1];
-}
-
-- (nullable MVRow *)selected {
-  return _table.selectedRow >= 0 && (NSUInteger)_table.selectedRow < _rows.count ? _rows[_table.selectedRow] : nil;
-}
-
-- (NSInteger)numberOfRowsInTableView:(NSTableView *)table {
-  return _rows.count;
-}
-
-- (void)tableViewSelectionDidChange:(NSNotification *)notification {
-  if (self.onSelect) self.onSelect(self.selected);
-}
-
-- (NSView *)tableView:(NSTableView *)table viewForTableColumn:(NSTableColumn *)column row:(NSInteger)at {
-  MVRow *row = _rows[at];
-  NSTableCellView *cell = [NSTableCellView new];
-  NSImageView *icon = [NSImageView new];
-  icon.image = row.symbol ? [NSImage imageWithSystemSymbolName:row.symbol accessibilityDescription:nil] : nil;
-  icon.contentTintColor = row.tint ?: NSColor.secondaryLabelColor;
-  NSTextField *title = [NSTextField labelWithString:row.title];
-  title.font = [NSFont systemFontOfSize:12 weight:NSFontWeightMedium];
-  title.lineBreakMode = NSLineBreakByTruncatingTail;
-  NSTextField *detail = [NSTextField labelWithString:row.detail];
-  detail.font = [NSFont systemFontOfSize:10.5];
-  detail.textColor = NSColor.secondaryLabelColor;
-  detail.lineBreakMode = NSLineBreakByTruncatingMiddle;
-  NSStackView *lines = [NSStackView stackViewWithViews:@[title, detail]];
-  lines.orientation = NSUserInterfaceLayoutOrientationVertical;
-  lines.alignment = NSLayoutAttributeLeading;
-  lines.spacing = 1;
-  [lines setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
-  NSStackView *stack = [NSStackView stackViewWithViews:@[icon, lines]];
-  stack.spacing = 8;
-  stack.translatesAutoresizingMaskIntoConstraints = NO;
-  [cell addSubview:stack];
-  [NSLayoutConstraint activateConstraints:@[
-    [icon.widthAnchor constraintEqualToConstant:18],
-    [stack.leadingAnchor constraintEqualToAnchor:cell.leadingAnchor constant:4],
-    [stack.trailingAnchor constraintLessThanOrEqualToAnchor:cell.trailingAnchor constant:-4],
-    [stack.centerYAnchor constraintEqualToAnchor:cell.centerYAnchor],
-  ]];
-  return cell;
-}
-
-@end
-
-/// A line of the last minute's frames, and nothing else: its height is what the eye reads.
+/// The last minute's frames: a baseline, a line at the rate a screen usually has, and the rate. Nothing at all until
+/// something has moved, as a screen that stayed still has no line to show.
 @interface MVSpark : NSView
 - (void)add:(double)value;
 @end
@@ -117,26 +20,51 @@ enum { kActivityRows = 200, kHistory = 60, kPaneStats = 0, kPaneActivity = 1, kP
   memmove(_values, _values + 1, sizeof(double) * (kHistory - 1));
   _values[kHistory - 1] = value;
   if (_count < kHistory) _count++;
+  BOOL moved = NO;
+  for (int i = 0; i < kHistory; i++) moved = moved || _values[i] > 0;
+  self.hidden = !moved;
   self.needsDisplay = YES;
 }
 
 - (void)drawRect:(NSRect)dirty {
-  double top = 60;
+  double top = kUsualRate;
   for (int i = 0; i < kHistory; i++) top = MAX(top, _values[i]);
+  NSRect box = self.bounds;
+  double height = box.size.height - 2, step = box.size.width / (kHistory - 1);
+  double (^level)(double) = ^(double v) {
+    return 1 + v / top * height;
+  };
+  [NSColor.separatorColor setStroke];
+  NSBezierPath *base = [NSBezierPath bezierPath];
+  [base moveToPoint:NSMakePoint(0, 0.5)];
+  [base lineToPoint:NSMakePoint(box.size.width, 0.5)];
+  [base stroke];
+  NSBezierPath *usual = [NSBezierPath bezierPath];
+  [usual moveToPoint:NSMakePoint(0, level(kUsualRate))];
+  [usual lineToPoint:NSMakePoint(box.size.width, level(kUsualRate))];
+  CGFloat dashes[] = {3, 3};
+  [usual setLineDash:dashes count:2 phase:0];
+  [usual stroke];
+  [@"60" drawAtPoint:NSMakePoint(0, level(kUsualRate) - 13) withAttributes:@{NSFontAttributeName: [NSFont systemFontOfSize:9], NSForegroundColorAttributeName: NSColor.tertiaryLabelColor}];
   NSBezierPath *line = [NSBezierPath bezierPath];
-  double step = self.bounds.size.width / (kHistory - 1), height = self.bounds.size.height - 3;
   for (int i = kHistory - _count; i < kHistory; i++) {
-    NSPoint p = NSMakePoint(i * step, 1.5 + _values[i] / top * height);
+    NSPoint p = NSMakePoint(i * step, level(_values[i]));
     if (line.isEmpty) [line moveToPoint:p];
     else [line lineToPoint:p];
   }
-  [[NSColor.controlAccentColor colorWithAlphaComponent:0.9] setStroke];
-  line.lineWidth = 1.5;
+  [NSColor.controlAccentColor setStroke];
+  line.lineWidth = 2;
   line.lineJoinStyle = NSLineJoinStyleRound;
+  line.lineCapStyle = NSLineCapStyleRound;
   [line stroke];
 }
 
 @end
+
+static NSFont *roundedFont(CGFloat size, NSFontWeight weight) {
+  NSFontDescriptor *rounded = [[NSFont systemFontOfSize:size weight:weight].fontDescriptor fontDescriptorWithDesign:NSFontDescriptorSystemDesignRounded];
+  return [NSFont fontWithDescriptor:rounded size:size] ?: [NSFont systemFontOfSize:size weight:weight];
+}
 
 static NSTextField *caption(NSString *text) {
   NSTextField *field = [NSTextField labelWithString:text];
@@ -158,9 +86,12 @@ static NSString *ms(id v) {
 }
 
 @implementation MVInspector {
-  NSSegmentedControl *_tabs;
+  NSStackView *_tabs;
+  NSArray<NSButton *> *_pills;
   NSView *_panes[3];
-  NSTextField *_fps;
+  NSTextField *_fps, *_fpsNote;
+  NSMutableDictionary<NSString *, NSTextField *> *_tiles;
+  double _lastRate;
   MVSpark *_spark;
   NSDictionary<NSString *, NSTextField *> *_values;
   MVList *_activity, *_apps;
@@ -174,25 +105,29 @@ static NSString *ms(id v) {
 
 - (instancetype)initWithFrame:(NSRect)frame {
   if ((self = [super initWithFrame:frame])) {
-    self.material = NSVisualEffectMaterialSidebar;
-    self.blendingMode = NSVisualEffectBlendingModeBehindWindow;
-    self.state = NSVisualEffectStateFollowsWindowActiveState;
     _calls = [NSMutableArray array];
-    NSBox *edge = [NSBox new];
-    edge.boxType = NSBoxSeparator;
-    edge.frame = NSMakeRect(0, 0, 1, 1);
-    edge.autoresizingMask = NSViewHeightSizable | NSViewMaxXMargin;
-    [self addSubview:edge];
-    _tabs = [NSSegmentedControl segmentedControlWithLabels:@[@"Stats", @"Activity", @"Apps"] trackingMode:NSSegmentSwitchTrackingSelectOne target:self action:@selector(tabChosen:)];
-    _tabs.selectedSegment = kPaneStats;
-    _tabs.segmentDistribution = NSSegmentDistributionFillEqually;
+    NSMutableArray *pills = [NSMutableArray array];
+    for (NSString *title in @[@"Stats", @"Activity", @"Apps"]) {
+      NSButton *pill = [NSButton buttonWithTitle:title target:self action:@selector(tabChosen:)];
+      pill.bordered = NO;
+      pill.wantsLayer = YES;
+      pill.layer.cornerRadius = 13;
+      pill.font = [NSFont systemFontOfSize:12 weight:NSFontWeightSemibold];
+      pill.tag = pills.count;
+      [pill.heightAnchor constraintEqualToConstant:26].active = YES;
+      [pills addObject:pill];
+    }
+    _pills = pills;
+    _tabs = [NSStackView stackViewWithViews:pills];
+    _tabs.distribution = NSStackViewDistributionFillEqually;
+    _tabs.spacing = 2;
     _tabs.translatesAutoresizingMaskIntoConstraints = NO;
     [self addSubview:_tabs];
     _panes[kPaneStats] = [self statsPane];
     _panes[kPaneActivity] = [self activityPane];
     _panes[kPaneApps] = [self appsPane];
     NSMutableArray *rules = [NSMutableArray arrayWithArray:@[
-      [_tabs.topAnchor constraintEqualToAnchor:self.safeAreaLayoutGuide.topAnchor constant:10],
+      [_tabs.topAnchor constraintEqualToAnchor:self.topAnchor constant:12],
       [_tabs.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:12],
       [_tabs.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-12],
     ]];
@@ -209,35 +144,73 @@ static NSString *ms(id v) {
       ]];
     }
     [NSLayoutConstraint activateConstraints:rules];
+    [self showPane:kPaneStats];
   }
   return self;
 }
 
-- (NSView *)statsPane {
-  _fps = [NSTextField labelWithString:@"–"];
-  _fps.font = [NSFont monospacedDigitSystemFontOfSize:34 weight:NSFontWeightSemibold];
-  NSTextField *unit = caption(@"frames shown a second");
-  _spark = [MVSpark new];
-  _spark.translatesAutoresizingMaskIntoConstraints = NO;
-  [_spark.heightAnchor constraintEqualToConstant:44].active = YES;
-  NSMutableDictionary *values = [NSMutableDictionary dictionary];
-  NSMutableArray *rows = [NSMutableArray array];
-  for (NSArray *row in @[@[@"source", @"Source"], @[@"mode", @"Mode"], @[@"size", @"Picture"], @[@"mbps", @"Bit rate"], @[@"capture", @"Capture to arrival"], @[@"decode", @"Decode, p95"], @[@"dropped", @"Dropped"], @[@"cpu", @"Viewer CPU"], @[@"rss", @"Viewer memory"]]) {
+/// One figure of the three a person came for.
+- (NSView *)tile:(NSString *)name value:(NSString *)key {
+  NSTextField *number = value();
+  number.font = roundedFont(20, NSFontWeightSemibold);
+  number.alignment = NSTextAlignmentLeft;
+  _tiles[key] = number;
+  NSStackView *stack = [NSStackView stackViewWithViews:@[number, caption(name)]];
+  stack.orientation = NSUserInterfaceLayoutOrientationVertical;
+  stack.alignment = NSLayoutAttributeLeading;
+  stack.spacing = 1;
+  return stack;
+}
+
+/// Rows of a name and a value under a heading, each value kept by its key. A kind of number that comes later, such
+/// as the device's own CPU and memory, is one more of these.
+- (NSView *)group:(NSString *)title rows:(NSArray<NSArray<NSString *> *> *)rows into:(NSMutableDictionary *)values {
+  NSTextField *heading = caption(title);
+  heading.font = [NSFont systemFontOfSize:11 weight:NSFontWeightSemibold];
+  NSMutableArray *cells = [NSMutableArray array];
+  for (NSArray<NSString *> *row in rows) {
     values[row[0]] = value();
-    [rows addObject:@[caption(row[1]), values[row[0]]]];
+    [cells addObject:@[caption(row[1]), values[row[0]]]];
   }
-  _values = values;
-  NSGridView *grid = [NSGridView gridViewWithViews:rows];
-  grid.rowSpacing = 7;
+  NSGridView *grid = [NSGridView gridViewWithViews:cells];
+  grid.rowSpacing = 6;
   grid.columnSpacing = 8;
   [grid columnAtIndex:1].xPlacement = NSGridCellPlacementTrailing;
-  NSStackView *stack = [NSStackView stackViewWithViews:@[_fps, unit, _spark, grid]];
+  NSBox *rule = [NSBox new];
+  rule.boxType = NSBoxSeparator;
+  NSStackView *stack = [NSStackView stackViewWithViews:@[rule, heading, grid]];
+  stack.orientation = NSUserInterfaceLayoutOrientationVertical;
+  stack.alignment = NSLayoutAttributeLeading;
+  stack.spacing = 7;
+  [rule.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
+  [grid.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
+  return stack;
+}
+
+- (NSView *)statsPane {
+  _fps = [NSTextField labelWithString:@"\u2013"];
+  _fps.font = roundedFont(44, NSFontWeightBold);
+  _fpsNote = caption(@"waiting for a picture");
+  _spark = [MVSpark new];
+  _spark.hidden = YES;
+  _spark.translatesAutoresizingMaskIntoConstraints = NO;
+  [_spark.heightAnchor constraintEqualToConstant:kSparkHeight].active = YES;
+  _tiles = [NSMutableDictionary dictionary];
+  NSStackView *tiles = [NSStackView stackViewWithViews:@[[self tile:@"frames" value:@"frames"], [self tile:@"dropped" value:@"dropped"], [self tile:@"latency" value:@"latency"]]];
+  tiles.distribution = NSStackViewDistributionFillEqually;
+  NSMutableDictionary *values = [NSMutableDictionary dictionary];
+  NSView *stream = [self group:@"Stream" rows:@[@[@"source", @"Source"], @[@"mode", @"Mode"], @[@"size", @"Picture"], @[@"mbps", @"Bit rate"], @[@"decode", @"Decode, p95"]] into:values];
+  NSView *viewer = [self group:@"Viewer" rows:@[@[@"cpu", @"CPU"], @[@"rss", @"Memory"]] into:values];
+  _values = values;
+  NSStackView *stack = [NSStackView stackViewWithViews:@[_fps, _fpsNote, _spark, tiles, stream, viewer]];
   stack.orientation = NSUserInterfaceLayoutOrientationVertical;
   stack.alignment = NSLayoutAttributeLeading;
   stack.spacing = 4;
-  [stack setCustomSpacing:14 afterView:_spark];
-  [_spark.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
-  [grid.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
+  [stack setCustomSpacing:12 afterView:_fpsNote];
+  [stack setCustomSpacing:12 afterView:_spark];
+  [stack setCustomSpacing:16 afterView:tiles];
+  [stack setCustomSpacing:14 afterView:stream];
+  for (NSView *wide in @[_spark, tiles, stream, viewer]) [wide.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
   NSView *pane = [NSView new];
   stack.translatesAutoresizingMaskIntoConstraints = NO;
   [pane addSubview:stack];
@@ -285,12 +258,22 @@ static NSString *ms(id v) {
   _launch.enabled = _quit.enabled = _remove.enabled = on;
 }
 
-- (void)tabChosen:(NSSegmentedControl *)sender {
-  [self showPane:sender.selectedSegment];
+- (void)tabChosen:(NSButton *)sender {
+  [self showPane:sender.tag];
 }
 
 - (void)showPane:(NSInteger)pane {
-  _tabs.selectedSegment = pane;
+  for (NSButton *pill in _pills) {
+    BOOL chosen = pill.tag == pane;
+    pill.layer.backgroundColor = chosen ? NSColor.controlAccentColor.CGColor : NSColor.clearColor.CGColor;
+    // a title's own colour: a borderless button's tint leaves its words dim in a window that is not key
+    NSDictionary *words = @{NSFontAttributeName: pill.font, NSForegroundColorAttributeName: chosen ? NSColor.whiteColor : NSColor.labelColor};
+    NSMutableParagraphStyle *middle = [NSMutableParagraphStyle new];
+    middle.alignment = NSTextAlignmentCenter;
+    NSMutableAttributedString *title = [[NSMutableAttributedString alloc] initWithString:pill.title attributes:words];
+    [title addAttribute:NSParagraphStyleAttributeName value:middle range:NSMakeRange(0, title.length)];
+    pill.attributedTitle = title;
+  }
   for (int i = 0; i < 3; i++) _panes[i].hidden = i != pane;
   if (pane == kPaneApps && !_asked) {
     _asked = YES;
@@ -300,15 +283,19 @@ static NSString *ms(id v) {
 
 - (void)showStats:(NSDictionary *)s {
   double shown = [s[@"shown"] doubleValue];
-  _fps.stringValue = [NSString stringWithFormat:@"%.0f", shown];
   [_spark add:shown];
-  _values[@"source"].stringValue = [s[@"source"] length] ? s[@"source"] : @"–";
-  _values[@"mode"].stringValue = [s[@"mode"] length] ? s[@"mode"] : @"–";
-  _values[@"size"].stringValue = [NSString stringWithFormat:@"%@ × %@", s[@"w"], s[@"h"]];
+  // a still screen is a good state, and sends nothing to count
+  if (shown > 0) _lastRate = shown;
+  _fps.stringValue = shown > 0 ? [NSString stringWithFormat:@"%.0f", shown] : @"Still";
+  _fpsNote.stringValue = shown > 0 ? @"frames a second" : _lastRate > 0 ? [NSString stringWithFormat:@"last moved at %.0f frames a second", _lastRate] : @"nothing has moved yet";
+  _tiles[@"frames"].stringValue = [NSString stringWithFormat:@"%.0f", shown];
+  _tiles[@"dropped"].stringValue = [NSString stringWithFormat:@"%@", s[@"dropped"] ?: @0];
+  _tiles[@"latency"].stringValue = ms(s[@"captureP50"]);
+  _values[@"source"].stringValue = [s[@"source"] length] ? s[@"source"] : @"\u2013";
+  _values[@"mode"].stringValue = [s[@"mode"] length] ? s[@"mode"] : @"\u2013";
+  _values[@"size"].stringValue = [NSString stringWithFormat:@"%@ \u00D7 %@", s[@"w"], s[@"h"]];
   _values[@"mbps"].stringValue = [NSString stringWithFormat:@"%.1f Mbit/s", [s[@"mbps"] doubleValue]];
-  _values[@"capture"].stringValue = ms(s[@"captureP50"]);
   _values[@"decode"].stringValue = ms(s[@"decodeP95"]);
-  _values[@"dropped"].stringValue = [NSString stringWithFormat:@"%@", s[@"dropped"] ?: @0];
   _values[@"cpu"].stringValue = [NSString stringWithFormat:@"%.1f %%", [s[@"cpu"] doubleValue]];
   _values[@"rss"].stringValue = [NSString stringWithFormat:@"%.0f MB", [s[@"rssMb"] doubleValue]];
 }

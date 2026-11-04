@@ -159,7 +159,7 @@ static NSString *symbolOf(NSString *state) {
     self.drawsBackground = NO;
     self.selectable = NO;
     self.font = [NSFont systemFontOfSize:11 weight:NSFontWeightMedium];
-    self.textColor = NSColor.secondaryLabelColor;
+    self.textColor = NSColor.labelColor;
     self.alignment = NSTextAlignmentCenter;
     self.lineBreakMode = NSLineBreakByTruncatingMiddle;
   }
@@ -204,7 +204,7 @@ static NSString *symbolOf(NSString *state) {
   NSString *state = _state ?: @"Connecting";
   NSColor *dot = [state isEqual:@"Live"] ? NSColor.systemGreenColor : NSColor.systemOrangeColor;
   NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithString:@"\u25CF  " attributes:@{NSFontAttributeName: [NSFont systemFontOfSize:8], NSForegroundColorAttributeName: dot, NSBaselineOffsetAttributeName: @1}];
-  NSDictionary *plain = @{NSFontAttributeName: self.font, NSForegroundColorAttributeName: NSColor.secondaryLabelColor};
+  NSDictionary *plain = @{NSFontAttributeName: self.font, NSForegroundColorAttributeName: NSColor.labelColor};
   [text appendAttributedString:[[NSAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@  \u00B7  %@", _name ?: @"", state] attributes:plain]];
   if (_tool) {
     NSString *agent = _tool.length ? [NSString stringWithFormat:@"  \u00B7  Agent driving: %@", _tool] : @"  \u00B7  Agent driving";

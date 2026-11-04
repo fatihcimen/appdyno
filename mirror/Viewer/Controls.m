@@ -1,4 +1,4 @@
-// Every control of a window, once: its name, its words, its symbol and its shortcut. The menus and the toolbar
+// Every control of a window, once: its name, its words, its symbol and its shortcut. The menus and the glass bar
 // are both made from this table, so that a control cannot be in one and missing from the other.
 #import "Window.h"
 
@@ -22,6 +22,7 @@ static const MVControlRow kControls[] = {
     {"zoomOut", "Zoom Out", "minus.magnifyingglass", '-', kCmd, "View"},
     {"frame", "Show Device Frame", "iphone", 'f', kCmd | kOpt, "View"},
     {"inspector", "Show Inspector", "sidebar.trailing", 'i', kCmd | kOpt, "View"},
+    {"more", "More Controls", "ellipsis", 0, 0, "None"},
     {"reconnect", "Reconnect", "arrow.clockwise", 'r', kCmd | kShift, "View"},
     {"back", "Back", "chevron.backward", '[', kCmd, "Device"},
     {"home", "Home", "house", 'h', kCmd | kShift, "Device"},
@@ -99,62 +100,3 @@ NSMenu *MVMainMenu(NSArray<NSString *> *_Nullable names) {
   NSApp.windowsMenu = window;
   return bar;
 }
-
-// the order a toolbar has; a kind's own list says which of them it shows
-static NSArray<NSString *> *toolbarOrder(void) {
-  return @[@"back", @"home", @"appSwitch", NSToolbarSpaceItemIdentifier, @"lock", @"volumeUp", @"volumeDown", @"siri", @"controlCenter", @"quickSettings", NSToolbarFlexibleSpaceItemIdentifier, @"rotate", @"screenshot", @"record", @"zoom", @"inspector"];
-}
-
-@implementation MVToolbar {
-  NSArray<NSString *> *_names;
-  __weak id _target;
-}
-
-- (instancetype)initWithControls:(NSArray<NSString *> *)names target:(id)target {
-  if ((self = [super init])) {
-    _names = names;
-    _target = target;
-  }
-  return self;
-}
-
-- (NSArray<NSToolbarItemIdentifier> *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar {
-  NSMutableArray *shown = [NSMutableArray array];
-  for (NSString *name in toolbarOrder())
-    if ([name hasPrefix:@"NS"] || [@[@"rotate", @"zoom", @"inspector", @"screenshot", @"record"] containsObject:name] || [_names containsObject:name]) [shown addObject:name];
-  return shown;
-}
-
-- (NSArray<NSToolbarItemIdentifier> *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar {
-  return [self toolbarDefaultItemIdentifiers:toolbar];
-}
-
-- (nullable NSToolbarItem *)toolbar:(NSToolbar *)toolbar itemForItemIdentifier:(NSToolbarItemIdentifier)name willBeInsertedIntoToolbar:(BOOL)flag {
-  if ([name isEqual:@"zoom"]) return [self menuItem:name title:@"Zoom" symbol:@"plus.magnifyingglass" of:@[@"zoomFit", @"zoomActual", @"zoomIn", @"zoomOut"]];
-  if ([name isEqual:@"rotate"]) return [self menuItem:name title:@"Rotate" symbol:@"rotate.right" of:@[@"rotateLeft", @"rotateRight"]];
-  NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:name];
-  item.label = MVControlTitle(name);
-  item.paletteLabel = item.label;
-  item.toolTip = item.label;
-  item.image = MVControlImage(name);
-  item.bordered = YES;
-  item.target = _target;
-  item.action = @selector(control:);
-  return item;
-}
-
-- (NSToolbarItem *)menuItem:(NSString *)name title:(NSString *)title symbol:(NSString *)symbol of:(NSArray<NSString *> *)names {
-  NSMenuToolbarItem *item = [[NSMenuToolbarItem alloc] initWithItemIdentifier:name];
-  item.label = title;
-  item.paletteLabel = title;
-  item.toolTip = title;
-  item.image = [NSImage imageWithSystemSymbolName:symbol accessibilityDescription:title];
-  item.showsIndicator = NO;
-  NSMenu *menu = [[NSMenu alloc] initWithTitle:title];
-  for (NSString *entry in names) [menu addItem:itemFor(rowNamed(entry))];
-  for (NSMenuItem *entry in menu.itemArray) entry.target = _target;
-  item.menu = menu;
-  return item;
-}
-
-@end

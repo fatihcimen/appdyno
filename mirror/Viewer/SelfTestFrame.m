@@ -65,6 +65,40 @@ static void checkControls(void) {
   MVCheck(@"menu: every control has its symbol", MVControlImage(@"home") && MVControlImage(@"rotateLeft") && MVControlImage(@"controlCenter"), nil);
 }
 
+static void checkGlass(void) {
+  NSView *content = [NSView new];
+  NSView *pane = MVGlass(content, 20, nil);
+  BOOL system = NSClassFromString(@"NSGlassEffectView") != nil;
+  // the glass or its stand-in, and what it holds is in it either way
+  MVCheck(@"glass: a pane holds its content", system ? [pane valueForKey:@"contentView"] == content : content.superview == pane, nil);
+  NSView *bar = MVGlassBar(@[@[@"home"], @[@"record"]], pane, @selector(description));
+  MVCheck(@"glass: a bar's button is found however deep it sits", MVFindControl(bar, @"record") != nil && MVFindControl(bar, @"lock") == nil, nil);
+  MVCheck(@"glass: each button says what it does", [MVFindControl(bar, @"home").accessibilityLabel isEqual:@"Home"], nil);
+}
+
+static void checkMood(void) {
+  NSDictionary *shape = @{(id)kIOSurfaceWidth: @64, (id)kIOSurfaceHeight: @64, (id)kIOSurfaceBytesPerElement: @4, (id)kIOSurfacePixelFormat: @(kCVPixelFormatType_32BGRA)};
+  IOSurfaceRef surface = IOSurfaceCreate((__bridge CFDictionaryRef)shape);
+  IOSurfaceLock(surface, 0, NULL);
+  memset(IOSurfaceGetBaseAddress(surface), 255, IOSurfaceGetAllocSize(surface));
+  IOSurfaceUnlock(surface, 0, NULL);
+  CGImageRef dark = MVPictureMood(surface, YES), light = MVPictureMood(surface, NO);
+  MVCheck(@"backdrop: a picture gives a mood, light and dark", dark && light, nil);
+  uint8_t px[2][4];
+  CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+  for (int i = 0; i < 2; i++) {
+    CGContextRef c = CGBitmapContextCreate(px[i], 1, 1, 8, 4, space, (CGBitmapInfo)kCGImageAlphaNoneSkipLast);
+    CGContextDrawImage(c, CGRectMake(0, 0, 1, 1), i ? light : dark);
+    CGContextRelease(c);
+  }
+  CGColorSpaceRelease(space);
+  // a white screen must not lift a dark window to white: what floats over it has to stay readable
+  MVCheck(@"backdrop: a white picture stays dim in dark, and light in light", px[0][0] < 160 && px[1][0] > 230, nil);
+  if (dark) CGImageRelease(dark);
+  if (light) CGImageRelease(light);
+  CFRelease(surface);
+}
+
 static void checkGestures(void) {
   MVCheck(@"pinch: fingers spread with the magnification", near(MVPinchGap(100, 0.5, 400), 150), nil);
   MVCheck(@"pinch: never onto each other, nor off the screen", near(MVPinchGap(10, -0.9, 400), 8) && near(MVPinchGap(390, 0.5, 400), 400), nil);
@@ -80,5 +114,7 @@ void MVCheckFrame(void) {
   checkLayout();
   checkZoom();
   checkControls();
+  checkGlass();
+  checkMood();
   checkGestures();
 }
