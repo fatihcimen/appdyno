@@ -9,6 +9,13 @@
 - The gate's comparisons keep a modelled number and one timed through the host marked, in every format.
 - `press_key` takes `escape`, `space`, the arrows, and a letter or digit, with what is held during it (`command+a`, `shift+arrow_left`), and `count`, with one settle after the last press. On Android `command` is Ctrl. A server with home off refuses the shortcuts that leave the app as well.
 - `list_devices` says what blocks each device, with the fix, in the words `mirror` uses: a lock behind a credential, a phone that does not trust this Mac, Developer Mode off, an OS too old for the agent. It only reads.
+- A mirror on a phone runs on its hardware encoder where it was refused for a key that is a decoder's: on a Samsung's `OMX.qcom` encoders every step of the ladder failed down to software, and its 90 Hz panel now gets 89 frames/s.
+- Android reads of the window dump skip its last ANR section: after any ANR they read a dead window's focus and a stale lock, until the next one.
+- `tap` on plain text settles where a read outlasts the quiet window with no load: on a Samsung each such tap waited out its 3 s.
+- A system window with no focus is no alert, and a strip at a side of the display is no screen: a Samsung's edge panel handle was both, on every screen.
+- `record` joins a segment of one frame, as a near-still screen gives.
+- A device's load of three zeros reads as not known, and the thermal status is read wherever the dump has it, which on a phone it was not.
+
 - `inspector`: an iPhone with no signing identity lists what is on its screen, by its words and ids, and presses it by name, through the phone's own accessibility service, with nothing installed.
 - `appdyno mirror`: a window with the device in a frame drawn in code, by model, with buttons that press, off by a setting. It stands on a backdrop of its own picture's colours, with its status, controls and Inspector on Liquid Glass; before macOS 26 a material stands in.
 - A window's controls: Home, App Switcher, Lock, volume, Siri, Control Center, Notifications, Spotlight, rotation, screenshot, recording and zoom, in one table for its bar and menus, each kind of device showing only what it has. The Inspector has Stats, Activity and Apps, which lists, launches, quits and removes.

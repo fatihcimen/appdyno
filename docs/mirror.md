@@ -182,6 +182,7 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 - A stream's picture gives the backdrop no colours: only a surface is read so far, so a phone's window has a plain one.
 - Text an iPhone's keyboard has no key for goes by its pasteboard: the phone asks a person to allow the paste, and what it held comes back after, if that was text. In a secure field it does not go at all, and the window says so.
 - More's menu, the frame's hover, a window's remembered size and place, and a trackpad's pinch or a dead key on a real keyboard have not been run by hand; their maths are checked by the self test.
+- A large picture on a slow encoder: a Samsung SM-A525F's 1080x2400 at 90 Hz reads touch 217 ms and capture to arrival 69 ms, over the targets of 80 and 35, at any load. 720x1600 halves both and gives 65 frames/s for 89, and `auto` keeps the display's size. See [perf.md](perf.md#mirror).
 - Input by `key`: Android has only the keys the agent has (no arrows). On a simulator a keyboard's characters go as US keys; any other text by its pasteboard and command V.
 
 ## Left out, for now

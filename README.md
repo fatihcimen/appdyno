@@ -406,7 +406,7 @@ A request needs the token, as `Authorization: Bearer <token>` on `/mcp`, or as `
   says no by itself after 10 s: `app install` wakes it and taps yes, and only that, during the install it started, and the answer and `report`
   say so (`--no-install-consent` leaves it to you). Play Protect's prompt to send the app to Google is always answered no: a private build stays
   here. A Play Protect warning is left alone, quoted, unless the server runs with `--accept-install-warnings`. See `docs/protocol.md`,
-  "A phone's install prompts", for what was seen on which phone.
+  "A phone's install prompts", for what was seen on which phone. A Samsung with One UI has no prompt of its own, and Play Protect's come only with "Verify apps over USB" on. What else differs between the two is in `docs/perf.md`, "One UI against HyperOS".
 - iPhone: turn on developer mode. A phone needs a development signing identity and a provisioning profile that names it. An
   installed profile for a wildcard app id, with its identity in the unlocked login keychain, is found by itself. To choose another,
   set `APPDYNO_IOS_PROFILE=<profile.mobileprovision>`, `APPDYNO_IOS_KEYCHAIN=<keychain-db>` and
