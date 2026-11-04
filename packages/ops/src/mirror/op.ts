@@ -95,10 +95,20 @@ export function mirrorOps(ctx: ServerContext): Op[] {
   };
 
   const close = async () => {
-    const serial = ctx.currentSerial ?? liveMirrors().find((f) => ctx.allowed(f.serial))?.serial;
-    const f = serial ? liveMirror(serial) : undefined;
-    if (!f) throw new ToolError('no mirror is open', 'NOT_FOUND');
-    checkDevice(ctx.policy, f.serial);
+    const named = await ctx.defaultSerial().catch(() => undefined);
+    const open = liveMirrors().filter((m) => ctx.allowed(m.serial));
+    const f = named
+      ? open.find((m) => m.serial === named)
+      : open.length === 1
+        ? open[0]
+        : undefined;
+    if (!f)
+      throw new ToolError(
+        open.length > 0
+          ? `no mirror to close here; open on ${open.map((m) => m.serial).join(', ')}`
+          : 'no mirror is open',
+        'NOT_FOUND',
+      );
     // only its own parent, as the file names it with its start time
     process.kill(f.pid, 'SIGTERM');
     const end = Date.now() + CLOSE_MS;

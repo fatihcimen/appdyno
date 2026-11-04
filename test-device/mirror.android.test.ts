@@ -1,4 +1,6 @@
-import { readFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   decodePng,
@@ -178,6 +180,26 @@ describe.runIf(serial)('the agent stream', () => {
     await session.stop('the test ended');
   }, 180_000);
 
+  it('a screen put to sleep is named, and the picture comes back when it wakes', async () => {
+    const { session, seen } = start(stream);
+    await session.start();
+    await until('picture', () => session.status.state === 'live');
+    const before = seen.length;
+    try {
+      await adb.exec(serial!, 'input keyevent KEYCODE_SLEEP');
+      await until(
+        'its need',
+        () => session.status.state === 'waiting' && session.status.need === 'asleep',
+        20_000,
+      );
+    } finally {
+      await adb.exec(serial!, 'input keyevent KEYCODE_WAKEUP');
+    }
+    await until('a new picture', () => seen.slice(before).some((s) => s.state === 'live'), 40_000);
+    await adb.exec(serial!, 'wm dismiss-keyguard');
+    await session.stop('the test ended');
+  }, 120_000);
+
   it('rotation: the picture restarts at the new size, with no new session', async () => {
     const device = new AndroidDevice(serial!, adb);
     await device.open();
@@ -196,6 +218,93 @@ describe.runIf(serial)('the agent stream', () => {
     await until('portrait', () => session.status.picture!.h === portrait.h, 30_000);
     await session.stop('the test ended');
   }, 120_000);
+});
+
+/** The command line itself, where the package is built: a parent is a process of its own. */
+const MAIN = join(import.meta.dirname, '../packages/appdyno/dist/main.js');
+
+describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () => {
+  const adb = new Adb();
+  const launcher = new AndroidAgentLauncher(adb, serial!);
+  const stateFile = deviceStateFile('mirror', serial!);
+  const displays = async () =>
+    (await adb.exec(serial!, 'dumpsys display')).match(/appdyno-mirror/g)?.length ?? 0;
+  const pidsOf = (pattern: string) =>
+    spawnSync('pgrep', ['-f', pattern]).stdout.toString().trim().split('\n').filter(Boolean);
+
+  const parent = () => {
+    const child = spawn(
+      process.execPath,
+      [MAIN, 'mirror', '--device', serial!, '--headless', '--share'],
+      {
+        stdio: 'ignore',
+      },
+    );
+    return child;
+  };
+
+  it('killed outright: its viewer goes, the agent lets go of the display, and the next start is clean', async () => {
+    const child = parent();
+    await until('its file', () => existsSync(stateFile), 60_000);
+    await until(
+      'a stream',
+      () => readFileSync(stateFile, 'utf8').includes('"state":"live"'),
+      120_000,
+    );
+    await expect(displays()).resolves.toBeGreaterThan(0);
+    const viewer = spawnSync('pgrep', ['-P', String(child.pid)])
+      .stdout.toString()
+      .trim();
+    expect(viewer).not.toBe('');
+    child.kill('SIGKILL');
+    await until('the viewer gone', () => !pidsOf('appdyno-viewer').includes(viewer), 20_000);
+    const { rpc } = await launcher.connect();
+    const end = Date.now() + 15_000;
+    let active = 1;
+    while (active > 0 && Date.now() < end) {
+      active = (await rpc.call('stream.status', {}, { timeoutMs: 5_000 })).result.active;
+      await sleep(200);
+    }
+    expect(active).toBe(0);
+    rpc.close();
+    await expect(displays()).resolves.toBe(0);
+    // its file is left, and is no mirror: the next start does not take it for one
+    expect(existsSync(stateFile)).toBe(true);
+    const next = parent();
+    await until(
+      'the next start',
+      () => readFileSync(stateFile, 'utf8').includes(`"pid":${next.pid}`),
+      60_000,
+    );
+    await until(
+      'its picture',
+      () => readFileSync(stateFile, 'utf8').includes('"state":"live"'),
+      120_000,
+    );
+    // a second window on the device: refused, naming the first
+    const second = spawnSync(
+      process.execPath,
+      [MAIN, 'mirror', '--device', serial!, '--headless', '--share'],
+      {
+        encoding: 'utf8',
+        timeout: 60_000,
+      },
+    );
+    expect(second.status).toBe(1);
+    expect(second.stdout).toContain(`already has a window: pid ${next.pid}`);
+    // asked to end, it ends what it opened, and leaves no file
+    const status = spawnSync(process.execPath, [MAIN, 'mirror', 'status'], {
+      encoding: 'utf8',
+      timeout: 60_000,
+    });
+    expect(status.stdout).toContain(`${serial}: live`);
+    const closed = spawnSync(process.execPath, [MAIN, 'mirror', 'close', '--device', serial!], {
+      encoding: 'utf8',
+      timeout: 60_000,
+    });
+    expect(closed.stdout + closed.stderr).toContain('closed the mirror');
+    await until('its file gone', () => !existsSync(stateFile), 20_000);
+  }, 300_000);
 });
 
 describe.runIf(emulator)('an emulator picture by gRPC', () => {
@@ -252,6 +361,18 @@ describe.runIf(emulator)('an emulator picture by gRPC', () => {
       await device.setOrientation(0);
     }
     await until('upright again', () => session.status.picture!.w === w, 30_000);
+    await session.stop('the test ended');
+  }, 120_000);
+
+  it('a viewer killed: the picture comes back from the same emulator, with no agent restarted', async () => {
+    const { session, seen, viewerPid } = start(device.mirror);
+    await session.start();
+    await until('picture', () => session.status.state === 'live');
+    const pid = viewerPid()!;
+    const before = seen.length;
+    process.kill(pid, 'SIGKILL');
+    await until('a new picture', () => seen.slice(before).some((s) => s.state === 'live'));
+    expect(viewerPid()).not.toBe(pid);
     await session.stop('the test ended');
   }, 120_000);
 

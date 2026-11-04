@@ -45,7 +45,7 @@ const describe = (serial: string, s: MirrorStatus) => {
 class Parent {
   readonly sessions = new Map<string, MirrorSession>();
   readonly done = new Map<string, Promise<MirrorStatus>>();
-  private stopping = false;
+  stopping = false;
   failed = false;
 
   constructor(
@@ -123,11 +123,11 @@ export async function runMirrors(ctx: ServerContext, o: MirrorRun): Promise<numb
   process.on('SIGINT', onStop);
   process.on('SIGTERM', onStop);
   process.on(FOCUS_SIGNAL, onFocus);
-  const refusals: string[] = [];
+  const refusals = new Map<string, string>();
   const open = (serial: string) =>
     parent.open(serial).catch((e: Error) => {
-      refusals.push(`${serial}: ${e.message}`);
-      o.log(`${serial}: ${e.message}`);
+      if (refusals.get(serial) !== e.message) o.log(`${serial}: ${e.message}`);
+      refusals.set(serial, e.message);
     });
   const ready = async () =>
     (await ctx.devices()).filter((d) => d.ready && ctx.allowed(d.serial)).map((d) => d.serial);
@@ -136,6 +136,7 @@ export async function runMirrors(ctx: ServerContext, o: MirrorRun): Promise<numb
     : o.serials.length
       ? o.serials
       : [await ctx.defaultSerial()];
+  if (serials.length === 0 && !o.watch) o.log('no device to mirror');
   for (const serial of serials.slice(0, o.max)) await open(serial);
   if (serials.length > o.max)
     o.log(`${serials.length - o.max} more devices left out: --max ${o.max}`);
@@ -143,18 +144,20 @@ export async function runMirrors(ctx: ServerContext, o: MirrorRun): Promise<numb
   const timer = o.seconds
     ? setTimeout(() => void parent.stopAll('time is up'), o.seconds * 1000)
     : undefined;
-  let watching = o.watch && o.all;
+  const watching = o.watch === true && o.all === true;
+  // a device is new once: a window a person closed stays closed until its device has gone and come back
+  const known = new Set(serials);
   const watcher = watching
     ? setInterval(() => {
         void ready()
           .then(async (now) => {
-            for (const serial of now)
-              if (
-                !parent.sessions.has(serial) &&
-                parent.sessions.size < o.max &&
-                !liveMirror(serial)
-              )
-                await open(serial);
+            for (const serial of known) if (!now.includes(serial)) known.delete(serial);
+            for (const serial of now) {
+              if (known.has(serial) || parent.sessions.has(serial)) continue;
+              if (parent.sessions.size >= o.max || parent.stopping) break;
+              known.add(serial);
+              await open(serial);
+            }
           })
           .catch(() => undefined);
       }, WATCH_MS)
@@ -163,9 +166,8 @@ export async function runMirrors(ctx: ServerContext, o: MirrorRun): Promise<numb
     // a watcher stays with no window, for the next device; anything else ends with its last one
     for (;;) {
       await Promise.all(parent.done.values());
-      if (parent.sessions.size === 0 && !watching) break;
-      if (parent.sessions.size === 0) await new Promise((r) => setTimeout(r, WATCH_MS));
-      watching = o.watch && o.all;
+      if (!watching || parent.stopping) break;
+      await new Promise((r) => setTimeout(r, WATCH_MS));
     }
   } finally {
     clearTimeout(timer);
@@ -174,5 +176,6 @@ export async function runMirrors(ctx: ServerContext, o: MirrorRun): Promise<numb
     process.off('SIGTERM', onStop);
     process.off(FOCUS_SIGNAL, onFocus);
   }
-  return parent.failed || (refusals.length > 0 && refusals.length === serials.length) ? 1 : 0;
+  const nothingRan = serials.length === 0 ? !watching : refusals.size >= serials.length;
+  return parent.failed || nothingRan ? 1 : 0;
 }
