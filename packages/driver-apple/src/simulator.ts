@@ -281,9 +281,14 @@ export class IosSimulatorDevice extends IosDevice {
     return state.trim().endsWith(' 1');
   }
 
-  /** From the Mac: at times the runner's own pasteboard call held it up for its 15 s. */
-  override setClipboard(text: string) {
-    return new Promise<void>((resolve, reject) => {
+  private readonly pasteOnMac = () => this.simctl.exec(['pbpaste', this.serial]);
+
+  /**
+   * From the Mac: at times the runner's own pasteboard call held it up for its 15 s. Where the Mac's call writes
+   * nothing, as `simctl pbcopy` on a new iOS 26.5 simulator with Xcode 27.1, the runner's it is.
+   */
+  override async setClipboard(text: string) {
+    await new Promise<void>((resolve, reject) => {
       const p = spawn('xcrun', ['simctl', 'pbcopy', this.serial], {
         env: xcodeEnv(),
         stdio: ['pipe', 'ignore', 'ignore'],
@@ -296,11 +301,12 @@ export class IosSimulatorDevice extends IosDevice {
       );
       p.stdin.end(text);
     });
+    if ((await this.pasteOnMac()) !== text) await super.setClipboard(text);
   }
 
   /** From the Mac: the runner may read only what it wrote itself, or a system prompt holds it up. */
   override async getClipboard() {
-    return (await this.simctl.exec(['pbpaste', this.serial])) || undefined;
+    return (await this.pasteOnMac()) || (this.runnerUp ? super.getClipboard() : undefined);
   }
 
   override async openUrl(url: string, pkg?: string) {
