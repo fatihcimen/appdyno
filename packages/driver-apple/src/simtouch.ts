@@ -1,4 +1,4 @@
-import type { ActParams, Key } from '@appdyno/protocol';
+import type { ActParams, Modifier } from '@appdyno/protocol';
 
 export type TouchEvent = {
   p: 0 | 1 | 2;
@@ -90,13 +90,56 @@ export function touchEvents(
 }
 
 /** USB HID usages of the keys that have one; page 12 is the consumer page of hardware buttons. */
-export const HID_KEYS: Partial<Record<Key, { page: number; usage: number }>> = {
+export const HID_KEYS: Record<string, { page: number; usage: number } | undefined> = {
   home: { page: 12, usage: 0x40 },
   enter: { page: 7, usage: 0x28 },
   delete: { page: 7, usage: 0x2a },
   tab: { page: 7, usage: 0x2b },
+  escape: { page: 7, usage: 0x29 },
+  space: { page: 7, usage: 0x2c },
+  arrowRight: { page: 7, usage: 0x4f },
+  arrowLeft: { page: 7, usage: 0x50 },
+  arrowDown: { page: 7, usage: 0x51 },
+  arrowUp: { page: 7, usage: 0x52 },
   volumeUp: { page: 12, usage: 0xe9 },
   volumeDown: { page: 12, usage: 0xea },
   lock: { page: 12, usage: 0x30 },
   power: { page: 12, usage: 0x30 },
 };
+
+/** The keyboard's usages of what is held during a key. */
+export const HID_MODIFIERS: Record<Modifier, number> = {
+  control: 0xe0,
+  shift: 0xe1,
+  option: 0xe2,
+  command: 0xe3,
+};
+
+const UNSHIFTED = "-=[]\\;'`,./";
+const SHIFTED = '_+{}|:"~<>?';
+const UNSHIFTED_USAGES = [0x2d, 0x2e, 0x2f, 0x30, 0x31, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38];
+const SHIFTED_DIGITS = '!@#$%^&*()';
+
+/** The usage and shift of a character a US keyboard types; undefined for any other. */
+export function usageOf(c: string): { usage: number; shift: boolean } | undefined {
+  const code = c.charCodeAt(0);
+  if (c >= 'a' && c <= 'z') return { usage: 0x04 + code - 97, shift: false };
+  if (c >= 'A' && c <= 'Z') return { usage: 0x04 + code - 65, shift: true };
+  if (c >= '1' && c <= '9') return { usage: 0x1e + code - 49, shift: false };
+  if (c === '0') return { usage: 0x27, shift: false };
+  if (c === ' ') return { usage: 0x2c, shift: false };
+  if (c === '\n') return { usage: 0x28, shift: false };
+  const digit = SHIFTED_DIGITS.indexOf(c);
+  if (digit >= 0) return { usage: 0x1e + digit, shift: true };
+  const plain = UNSHIFTED.indexOf(c);
+  if (plain >= 0) return { usage: UNSHIFTED_USAGES[plain]!, shift: false };
+  const shifted = SHIFTED.indexOf(c);
+  if (shifted >= 0) return { usage: UNSHIFTED_USAGES[shifted]!, shift: true };
+  return undefined;
+}
+
+/** A key by its name, or the letter or digit a keyboard has it under. */
+export function hidKey(key: string) {
+  const typed = key.length === 1 ? usageOf(key) : undefined;
+  return typed ? { page: 7, usage: typed.usage } : HID_KEYS[key];
+}

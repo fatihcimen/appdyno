@@ -7,6 +7,7 @@
 - `appdyno perf reference`, `perf_compare` `action: reference`: the other side of a function or phase diff, taken on the baseline's build and kept beside the baseline, as only one build is installed once a regression is there.
 - `appdyno perf comment --out file`: the gate's newest answers as Markdown in a file, with no device. Nothing is posted: `docs/perf-gate.yml` is a job to copy, which posts the file with the repository's own token.
 - The gate's comparisons keep a modelled number and one timed through the host marked, in every format.
+- `press_key` takes `escape`, `space`, the arrows, and a letter or digit, with what is held during it (`command+a`, `shift+arrow_left`), and `count`, with one settle after the last press. On Android `command` is Ctrl. A server with home off refuses the shortcuts that leave the app as well.
 - `list_devices` says what blocks each device, with the fix, in the words `mirror` uses: a lock behind a credential, a phone that does not trust this Mac, Developer Mode off, an OS too old for the agent. It only reads.
 - `inspector`: an iPhone with no signing identity lists what is on its screen, by its words and ids, and presses it by name, through the phone's own accessibility service, with nothing installed.
 - `appdyno mirror`: a window with the device in a frame drawn in code, by model, with buttons that press, off by a setting. It stands on a backdrop of its own picture's colours, with its status, controls and Inspector on Liquid Glass; before macOS 26 a material stands in.

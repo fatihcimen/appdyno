@@ -16,7 +16,7 @@ import {
   type Need,
 } from '@appdyno/core';
 import { applePress, pasteKeys } from './mirror-press.js';
-import { usageOf } from './mirror-sim.js';
+import { usageOf } from './simtouch.js';
 import type { PhoneStreamHandle, PhoneStreamModule } from './phone-stream-port.js';
 
 const run = promisify(execFile);

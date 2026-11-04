@@ -14,7 +14,7 @@ import type { Key } from '@appdyno/protocol';
 import { applePress } from './mirror-press.js';
 import { Simctl, xcodeEnv } from './simctl.js';
 import { startSimAx, startSimHid, type HelperProcess } from './simhelper.js';
-import { HID_KEYS } from './simtouch.js';
+import { HID_KEYS, usageOf } from './simtouch.js';
 
 const KEYBOARD = 7;
 const SHIFT = 0xe1;
@@ -25,29 +25,6 @@ const SHOT_MS = 30_000;
 const TURNS_CHECK_MS = 250;
 /** How long a read helper that failed is left alone: at the slow end of a simulator shut down or a busy Mac. */
 const TURNS_RETRY_MS = 5_000;
-
-const UNSHIFTED = "-=[]\\;'`,./";
-const SHIFTED = '_+{}|:"~<>?';
-const UNSHIFTED_USAGES = [0x2d, 0x2e, 0x2f, 0x30, 0x31, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38];
-const SHIFTED_DIGITS = '!@#$%^&*()';
-
-/** The usage and shift of a character a US keyboard types; undefined for any other. */
-export function usageOf(c: string): { usage: number; shift: boolean } | undefined {
-  const code = c.charCodeAt(0);
-  if (c >= 'a' && c <= 'z') return { usage: 0x04 + code - 97, shift: false };
-  if (c >= 'A' && c <= 'Z') return { usage: 0x04 + code - 65, shift: true };
-  if (c >= '1' && c <= '9') return { usage: 0x1e + code - 49, shift: false };
-  if (c === '0') return { usage: 0x27, shift: false };
-  if (c === ' ') return { usage: 0x2c, shift: false };
-  if (c === '\n') return { usage: 0x28, shift: false };
-  const digit = SHIFTED_DIGITS.indexOf(c);
-  if (digit >= 0) return { usage: 0x1e + digit, shift: true };
-  const plain = UNSHIFTED.indexOf(c);
-  if (plain >= 0) return { usage: UNSHIFTED_USAGES[plain]!, shift: false };
-  const shifted = SHIFTED.indexOf(c);
-  if (shifted >= 0) return { usage: UNSHIFTED_USAGES[shifted]!, shift: true };
-  return undefined;
-}
 
 /**
  * The quarter turns, counterclockwise, that stand up the surface of a simulator whose app in front has this

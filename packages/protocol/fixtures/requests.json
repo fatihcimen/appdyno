@@ -64,6 +64,13 @@
     "method": "act",
     "params": { "action": { "kind": "key", "key": "enter" }, "read": "none" }
   },
+  "act.shortcut": {
+    "method": "act",
+    "params": {
+      "action": { "kind": "key", "key": "a", "modifiers": ["command", "shift"] },
+      "read": "none"
+    }
+  },
   "text.set": {
     "method": "text.set",
     "input": { "text": "merhaba dünya" },

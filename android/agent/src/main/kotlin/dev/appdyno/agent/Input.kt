@@ -8,6 +8,9 @@ import android.view.MotionEvent
 
 class Sample(val t: Long, val x: Float, val y: Float)
 
+/** A key that is held during another, and what it sets on it. */
+class Held(val code: Int, val meta: Int)
+
 /** Pure gesture timing (unit tested): one finger's path resampled every `stepMs`. */
 object Paths {
     const val STEP_MS = 10L
@@ -161,10 +164,20 @@ class Input(private val automation: Automation) {
         }
     }
 
-    fun key(code: Int) {
+    /** A press, with `held` going down before it: a text field selects by the Shift key it saw, not by a flag on the arrow. */
+    fun key(code: Int, held: List<Held> = emptyList()) {
         val now = SystemClock.uptimeMillis()
-        automation.inject(keyEvent(now, KeyEvent.ACTION_DOWN, code))
-        automation.inject(keyEvent(now, KeyEvent.ACTION_UP, code))
+        var meta = 0
+        for (h in held) {
+            meta = meta or h.meta
+            automation.inject(keyEvent(now, KeyEvent.ACTION_DOWN, h.code, meta))
+        }
+        automation.inject(keyEvent(now, KeyEvent.ACTION_DOWN, code, meta))
+        automation.inject(keyEvent(now, KeyEvent.ACTION_UP, code, meta))
+        for (h in held.reversed()) {
+            meta = meta and h.meta.inv()
+            automation.inject(keyEvent(now, KeyEvent.ACTION_UP, h.code, meta))
+        }
     }
 
     /** ASCII text as the virtual keyboard's key events; null when a character has no key. */
@@ -175,8 +188,8 @@ class Input(private val automation: Automation) {
         return true
     }
 
-    private fun keyEvent(time: Long, action: Int, code: Int) =
-        KeyEvent(time, time, action, code, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD)
+    private fun keyEvent(time: Long, action: Int, code: Int, meta: Int) =
+        KeyEvent(time, time, action, code, 0, meta, KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD)
 
     private fun touch(down: Long, time: Long, action: Int, x: Float, y: Float): MotionEvent =
         MotionEvent.obtain(down, time, action, x, y, 0).apply { source = InputDevice.SOURCE_TOUCHSCREEN }
@@ -216,6 +229,35 @@ class Input(private val automation: Automation) {
             "volumeDown" to KeyEvent.KEYCODE_VOLUME_DOWN,
             "power" to KeyEvent.KEYCODE_POWER,
             "lock" to KeyEvent.KEYCODE_SLEEP,
+            "escape" to KeyEvent.KEYCODE_ESCAPE,
+            "space" to KeyEvent.KEYCODE_SPACE,
+            "arrowUp" to KeyEvent.KEYCODE_DPAD_UP,
+            "arrowDown" to KeyEvent.KEYCODE_DPAD_DOWN,
+            "arrowLeft" to KeyEvent.KEYCODE_DPAD_LEFT,
+            "arrowRight" to KeyEvent.KEYCODE_DPAD_RIGHT,
         )
+
+        private val CTRL = Held(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.META_CTRL_ON or KeyEvent.META_CTRL_LEFT_ON)
+
+        /** Android has no command key: its text fields take Ctrl for it. */
+        private val HELD = mapOf(
+            "command" to CTRL,
+            "control" to CTRL,
+            "option" to Held(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.META_ALT_ON or KeyEvent.META_ALT_LEFT_ON),
+            "shift" to Held(KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON),
+        )
+
+        /** A key by its name, or the letter or digit it types. */
+        fun codeOf(key: String): Int {
+            val c = key.singleOrNull()
+            return when (c) {
+                in 'a'..'z' -> KeyEvent.KEYCODE_A + (c!! - 'a')
+                in '0'..'9' -> KeyEvent.KEYCODE_0 + (c!! - '0')
+                else -> KEYS[key] ?: throw AgentFailure("INVALID_ARGUMENT", "unknown key")
+            }
+        }
+
+        fun heldOf(modifiers: List<String>): List<Held> =
+            modifiers.map { HELD[it] ?: throw AgentFailure("INVALID_ARGUMENT", "unknown modifier") }
     }
 }

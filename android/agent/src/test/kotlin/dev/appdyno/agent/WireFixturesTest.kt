@@ -74,6 +74,10 @@ class WireFixturesTest {
         assertEquals(listOf(2, 1), gesture.pointers.map { it.size })
         assertEquals(100L, gesture.pointers[0][1].t)
         assertEquals("enter", (action("act.key") as Action.Key).key)
+        assertEquals(emptyList<String>(), (action("act.key") as Action.Key).modifiers)
+        val shortcut = action("act.shortcut") as Action.Key
+        assertEquals("a", shortcut.key)
+        assertEquals(listOf("command", "shift"), shortcut.modifiers)
         assertNull(AfterRequest.from(params("act.doubleTap")).settle)
         assertEquals("tree", AfterRequest.from(params("act.longPress")).read)
     }

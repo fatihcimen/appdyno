@@ -1,7 +1,6 @@
 import type { InputEvent } from '@appdyno/core';
-import type { Key } from '@appdyno/protocol';
-import { onSurface, usageOf } from '../mirror-sim.js';
-import { HID_KEYS } from '../simtouch.js';
+import { onSurface } from '../mirror-sim.js';
+import { HID_KEYS, usageOf } from '../simtouch.js';
 import type { RemoteXpc } from './remotexpc.js';
 
 /**
@@ -102,7 +101,7 @@ export class PhoneHid {
         await this.type(e.s);
         return;
       case 'button': {
-        const key = HID_KEYS[e.name as Key];
+        const key = HID_KEYS[e.name];
         if (key) await this.press(key.page, key.usage);
       }
     }

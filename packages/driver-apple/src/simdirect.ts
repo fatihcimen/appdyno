@@ -1,7 +1,7 @@
 import { PROTOCOL, type Hello, type Tree, type ActParams } from '@appdyno/protocol';
 import { type HelperProcess, startSimAx, startSimHid, type HelperAnswer } from './simhelper.js';
 import { type DirectRead, type Refusal, toTree, type RawAx, sameTree } from './simtree.js';
-import { HID_KEYS, touchEvents } from './simtouch.js';
+import { hidKey, HID_MODIFIERS, touchEvents } from './simtouch.js';
 
 export type DirectStatus = { input: string; read: string };
 
@@ -204,7 +204,8 @@ export class DirectSim {
       return undefined;
     });
     if (!hid) return false;
-    const key = action.kind === 'key' ? HID_KEYS[action.key] : undefined;
+    const key = action.kind === 'key' ? hidKey(action.key) : undefined;
+    const held = action.kind === 'key' ? action.modifiers?.map((m) => HID_MODIFIERS[m]) : undefined;
     const events = touchEvents(action, this.screen);
     if (!key && !events) return false;
     if (hid.closed) {
@@ -212,7 +213,10 @@ export class DirectSim {
       return false;
     }
     const last = events?.[events.length - 1]?.at ?? 0;
-    const a = await hid.call(key ? { op: 'key', ...key } : { op: 'touch', events }, last + 5_000);
+    const a = await hid.call(
+      key ? { op: 'key', ...key, ...(held && { modifiers: held }) } : { op: 'touch', events },
+      last + 5_000,
+    );
     if (!a.ok) this.inputOff = a.error ?? a.refused ?? 'the input helper failed';
     else if (events && this.reporting)
       this.touchesDue = (this.touchesEnded ?? 0) + (action.kind === 'tap' ? 2 : 1);

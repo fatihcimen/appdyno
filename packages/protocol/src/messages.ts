@@ -107,8 +107,21 @@ export const KEYS = [
   'volumeDown',
   'power',
   'lock',
+  'escape',
+  'space',
+  'arrowUp',
+  'arrowDown',
+  'arrowLeft',
+  'arrowRight',
 ] as const;
 export type Key = (typeof KEYS)[number];
+
+/** What is held during a keyboard key. Android has no command key: there it is Ctrl, which its text fields take. */
+export const MODIFIERS = ['command', 'control', 'option', 'shift'] as const;
+export type Modifier = (typeof MODIFIERS)[number];
+
+/** A key by its name, or the letter or digit it types. */
+export const KeyName = z.union([z.enum(KEYS), z.string().regex(/^[a-z0-9]$/)]);
 
 export const ActParams = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('tap'), ...Point.shape }),
@@ -125,7 +138,11 @@ export const ActParams = z.discriminatedUnion('kind', [
     durationMs: z.number().int().min(20).max(10_000),
   }),
   z.object({ kind: z.literal('gesture'), pointers: z.array(Pointer).min(1).max(5) }),
-  z.object({ kind: z.literal('key'), key: z.enum(KEYS) }),
+  z.object({
+    kind: z.literal('key'),
+    key: KeyName,
+    modifiers: z.array(z.enum(MODIFIERS)).optional(),
+  }),
 ]);
 export type ActParams = z.infer<typeof ActParams>;
 

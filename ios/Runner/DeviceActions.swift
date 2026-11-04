@@ -58,8 +58,8 @@ extension Device {
                 throw AgentError("UNSUPPORTED", "XCTest's event synthesizer refused a gesture of \(pointers.count) fingers and \(path.count) samples")
             }
             return waited
-        case let .key(k):
-            try key(k)
+        case let .key(k, modifiers):
+            try key(k, modifiers)
             return nil
         }
     }
@@ -70,7 +70,22 @@ extension Device {
         point(x0, y0).press(forDuration: 0.05, thenDragTo: point(x1, y1), withVelocity: velocity, thenHoldForDuration: 0)
     }
 
-    private func key(_ k: String) throws {
+    /// A key of a hardware keyboard, by XCTest's words for it.
+    private static let keyboard: [String: XCUIKeyboardKey] = [
+        "escape": .escape, "space": .space, "enter": .enter, "delete": .delete, "tab": .tab,
+        "arrowUp": .upArrow, "arrowDown": .downArrow, "arrowLeft": .leftArrow, "arrowRight": .rightArrow,
+    ]
+
+    private static let held: [String: XCUIElement.KeyModifierFlags] = [
+        "command": .command, "control": .control, "option": .option, "shift": .shift,
+    ]
+
+    private func key(_ k: String, _ modifiers: [String]) throws {
+        let flags = modifiers.reduce(into: XCUIElement.KeyModifierFlags()) { $0.formUnion(Device.held[$1] ?? []) }
+        if !flags.isEmpty || k.count == 1 || ["escape", "space", "arrowUp", "arrowDown", "arrowLeft", "arrowRight"].contains(k) {
+            front().0.typeKey(Device.keyboard[k]?.rawValue ?? k, modifierFlags: flags)
+            return
+        }
         switch k {
         case "home": XCUIDevice.shared.press(.home)
         case "enter":

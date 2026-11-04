@@ -1,4 +1,4 @@
-import { KEYS, type Key } from '@appdyno/protocol';
+import { KEYS, MODIFIERS, type Key, type Modifier } from '@appdyno/protocol';
 import { z } from 'zod';
 
 /** The screen in the answer after an action: its changes, all of it, or nothing. */
@@ -32,17 +32,38 @@ export const Target = {
 export const Direction = z.enum(['up', 'down', 'left', 'right']);
 
 /** A key as a tool takes it: the wire's `volumeUp` is `volume_up`. */
-type KeyName<K extends string> = K extends `${infer C}${infer Rest}`
-  ? `${C extends Lowercase<C> ? C : `_${Lowercase<C>}`}${KeyName<Rest>}`
-  : '';
+export const keyName = (k: Key) => k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
 
-const keyName = (k: Key) => k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) as KeyName<Key>;
+const WIRE_KEY: Record<string, Key | undefined> = Object.fromEntries(
+  KEYS.map((k) => [keyName(k), k]),
+);
 
-export const WIRE_KEY = Object.fromEntries(KEYS.map((k) => [keyName(k), k])) as {
-  [K in Key as KeyName<K>]: K;
-};
+/** What a key that is a button takes: nothing is held during it. */
+const BUTTONS: ReadonlySet<string> = new Set<Key>([
+  'back',
+  'home',
+  'appSwitch',
+  'volumeUp',
+  'volumeDown',
+  'power',
+  'lock',
+]);
 
-export const Keys = z.enum(KEYS.map(keyName) as [KeyName<Key>, ...KeyName<Key>[]]);
+/** `command+a` as the wire has it: what is held, then the key by its name, or a letter or digit. */
+export function keyPress(words: string): { key: string; modifiers: Modifier[] } | undefined {
+  const parts = words.split('+');
+  const last = parts.pop()!;
+  const key = WIRE_KEY[last] ?? (/^[a-z0-9]$/.test(last) ? last : undefined);
+  const modifiers = parts.filter((m): m is Modifier => MODIFIERS.includes(m as Modifier));
+  if (!key || modifiers.length !== parts.length || (parts.length > 0 && BUTTONS.has(key)))
+    return undefined;
+  return { key, modifiers };
+}
+
+// a check, not an enum: 36 more words would cost the catalog more than the names in the description
+const KeyWords = z
+  .string()
+  .refine((k) => !!keyPress(k), `a key as press_key lists it, or a letter or digit: command+a`);
 
 export const WAIT_MS = 5_000;
 
@@ -82,7 +103,13 @@ export const TypeStep = z
   })
   .strict();
 
-const KeyStep = z.object({ action: z.literal('press_key'), key: Keys }).strict();
+export const KeyStep = z
+  .object({
+    action: z.literal('press_key'),
+    key: KeyWords,
+    count: z.number().int().min(1).max(100).optional(),
+  })
+  .strict();
 
 export const DoubleTapStep = z.object({ action: z.literal('double_tap'), ...Target }).strict();
 

@@ -455,6 +455,11 @@ describe('the helpers prove themselves', () => {
     );
     expect(await d.send({ kind: 'key', key: 'enter' })).toBe(true);
     expect(hid.call).toHaveBeenCalledWith({ op: 'key', page: 7, usage: 0x28 }, expect.any(Number));
+    expect(await d.send({ kind: 'key', key: 'a', modifiers: ['command', 'shift'] })).toBe(true);
+    expect(hid.call).toHaveBeenLastCalledWith(
+      { op: 'key', page: 7, usage: 0x04, modifiers: [0xe3, 0xe1] },
+      expect.any(Number),
+    );
     expect(await d.send({ kind: 'key', key: 'back' })).toBe(false);
     d.touchLost();
     expect(await d.send({ kind: 'tap', x: 1, y: 1 })).toBe(false);

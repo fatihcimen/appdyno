@@ -7,7 +7,7 @@ import { pinchPaths } from './gesture-paths.js';
 import {
   AssertStep,
   Coord,
-  Keys,
+  KeyStep,
   Read,
   ScrollStep,
   Step,
@@ -144,11 +144,11 @@ export function actOps(
       name: 'press_key',
       title: 'Press key',
       description:
-        'A key or hardware button. home, app_switch, power and lock leave the app (off when the server turned home off). A platform without it refuses and says why.',
-      input: z.object({ key: Keys, read: Read }).strict(),
+        'A key or button: back, home, enter, delete, tab, escape, space, arrow_up, arrow_down, arrow_left, arrow_right, app_switch, volume_up, volume_down, power, lock; or a letter or digit. Held first: command+a, shift+arrow_left (Android: command is Ctrl). count: presses. What leaves the app is off when the server turned home off. A platform without it refuses and says why.',
+      input: z.object({ ...KeyStep.omit({ action: true }).shape, read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
-      run: async ({ key, read }) => one(await ctx.session(), { action: 'press_key', key }, read),
+      run: async ({ read, ...a }) => one(await ctx.session(), { action: 'press_key', ...a }, read),
     }),
     defineOp({
       name: 'keyboard',

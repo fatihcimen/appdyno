@@ -59,7 +59,7 @@ function opCall(st: FlowStep): [string, Record<string, unknown>] {
         { text: a.text, ...target, ...defined({ replace: a.replace, submit: a.submit }) },
       ];
     case 'press_key':
-      return ['press_key', { key: a.key }];
+      return ['press_key', { key: a.key, ...defined({ count: a.count }) }];
     case 'swipe':
       return [
         'swipe',

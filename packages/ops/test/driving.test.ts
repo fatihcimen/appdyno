@@ -14,7 +14,7 @@ import type {
 import { DeviceError, KEYS, type ActParams, type Tree } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext, type Policy } from '../src/index.js';
-import { Keys } from '../src/step-schemas.js';
+import { keyName, keyPress } from '../src/step-schemas.js';
 import { FakeDevice, SCREENS, WithKeyboard } from './fake-device.js';
 import { linkedClient } from './helpers.js';
 
@@ -570,10 +570,46 @@ describe('gestures, keys, clipboard', () => {
   it('takes every key of the wire, under the name a tool gives it', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
-    for (const key of Keys.options) expect((await call('press_key', { key })).error).toBe(false);
+    const names = KEYS.map(keyName);
+    for (const key of names) expect((await call('press_key', { key })).error).toBe(false);
     const sent = act(d).map((a) => (a as Extract<ActParams, { kind: 'key' }>).key);
     expect([...sent].sort()).toEqual([...KEYS].sort());
-    expect(Keys.options).toContain('app_switch');
+    expect(names).toContain('app_switch');
+  });
+
+  it('holds keys during a letter, a digit or a named key, and only a keyboard key', async () => {
+    expect(keyPress('command+a')).toEqual({ key: 'a', modifiers: ['command'] });
+    expect(keyPress('control+shift+arrow_left')).toEqual({
+      key: 'arrowLeft',
+      modifiers: ['control', 'shift'],
+    });
+    expect(keyPress('7')).toEqual({ key: '7', modifiers: [] });
+    for (const bad of ['command+home', 'alt+a', 'command+', 'A', 'warp'])
+      expect(keyPress(bad)).toBeUndefined();
+
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    expect((await call('press_key', { key: 'command+a' })).text).toMatch(/^pressed command\+a/);
+    expect(act(d).at(-1)).toEqual({ kind: 'key', key: 'a', modifiers: ['command'] });
+    const refused = await call('press_key', { key: 'alt+a' });
+    expect(refused).toMatchObject({ error: true });
+    expect(refused.text).toContain('command+a');
+  });
+
+  it('presses count times with one settle, the last', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    await call('screen');
+    d.calls.length = 0;
+    const r = await call('press_key', { key: 'delete', count: 3 });
+    expect(r.text).toMatch(/^pressed delete 3 times/);
+    const acts = d.calls.filter((c) => c.name === 'act');
+    expect(acts.map((c) => c.args[1])).toEqual([
+      { settle: false, read: 'none' },
+      { settle: false, read: 'none' },
+      expect.objectContaining({ read: 'tree' }),
+    ]);
+    expect((await call('press_key', { key: 'delete', count: 0 })).error).toBe(true);
   });
 
   it('presses hardware buttons, and a server without home refuses what leaves the app', async () => {
@@ -584,9 +620,10 @@ describe('gestures, keys, clipboard', () => {
     await call('press_key', { key: 'lock' });
     expect(act(d).at(-1)).toEqual({ kind: 'key', key: 'lock' });
     const locked = await connect(new FakeDevice(), { policy: { allowHome: false } });
-    for (const key of ['home', 'app_switch', 'power', 'lock'])
+    for (const key of ['home', 'app_switch', 'power', 'lock', 'command+h', 'command+space'])
       expect((await locked.call('press_key', { key })).error).toBe(true);
     expect((await locked.call('press_key', { key: 'volume_down' })).error).toBe(false);
+    expect((await locked.call('press_key', { key: 'command+a' })).error).toBe(false);
   });
 
   it('reads the clipboard and keeps a secret off it', async () => {

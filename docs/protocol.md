@@ -71,8 +71,10 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 
 `action` is one of `tap {x,y}`, `doubleTap {x,y}`, `longPress {x,y,durationMs}`, `swipe {from,to,durationMs}`,
 `gesture {pointers}` (1–5 fingers, each a list of `{x,y,t}` samples; fingers go down together at their
-first sample and up together at their last) and `key {key}` (`back`, `home`, `enter`, `delete`, `tab`,
-`appSwitch`, `volumeUp`, `volumeDown`, `power`, `lock`). Coordinates are device pixels.
+first sample and up together at their last) and `key {key, modifiers?}` (`back`, `home`, `enter`, `delete`, `tab`,
+`appSwitch`, `volumeUp`, `volumeDown`, `power`, `lock`, `escape`, `space`, `arrowUp`, `arrowDown`, `arrowLeft`,
+`arrowRight`, or a letter or digit; `modifiers` of `command`, `control`, `option`, `shift` are held during it, and on
+Android `command` is Ctrl, which its text fields take). Coordinates are device pixels.
 
 ### Wait
 
@@ -111,7 +113,7 @@ indicator's slow drag up. The volume, lock and power keys go through direct inpu
 `XCUIDevice` on a phone, where lock and power use the private `pressLockButton`.
 
 - **Input**, `SimHID` on the Mac: XPC to the simulator's `dtuhidd` (`com.apple.coredevice.feature.remote.hid.digitizer`).
-  Tap, long press, swipe, one- and two-finger gestures, and the home, enter, delete and tab keys. A barrier
+  Tap, long press, swipe, one- and two-finger gestures, and the keys that have a HID usage, with what is held during them. A barrier
   after the last event proves a daemon received them; text stays with the runner for Unicode. A touch that
   changed nothing, and that the app has not reported finished (`TouchEventsCompleted`) within 4 s of the settle, never
   got there (a Device Hub in Resize Mode swallows touches and reports success): the runner does it again and takes

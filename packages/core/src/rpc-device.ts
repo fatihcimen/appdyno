@@ -4,8 +4,8 @@ import {
   type ActParams,
   type ActResult,
   type Hello,
-  type Key,
   type Method,
+  type Modifier,
   type ParamsOf,
   type Platform,
   type Point,
@@ -32,8 +32,8 @@ export abstract class DeviceActions {
   swipe(from: Point, to: Point, durationMs = 300, opts?: ActOptions) {
     return this.act({ kind: 'swipe', from, to, durationMs }, opts);
   }
-  key(key: Key, opts?: ActOptions): Promise<ActResult> {
-    return this.act({ kind: 'key', key }, opts);
+  key(key: string, opts?: ActOptions, modifiers: Modifier[] = []): Promise<ActResult> {
+    return this.act({ kind: 'key', key, ...(modifiers.length > 0 && { modifiers }) }, opts);
   }
 }
 

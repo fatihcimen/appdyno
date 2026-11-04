@@ -6,7 +6,7 @@ import type {
   ActParams,
   ActResult,
   Point,
-  Key,
+  Modifier,
   TextResult,
   ParamsOf,
   ResultOf,
@@ -238,7 +238,8 @@ export interface Device {
   tap(p: Point, opts?: ActOptions): Promise<ActResult>;
   longPress(p: Point, durationMs?: number, opts?: ActOptions): Promise<ActResult>;
   swipe(from: Point, to: Point, durationMs?: number, opts?: ActOptions): Promise<ActResult>;
-  key(key: Key, opts?: ActOptions): Promise<ActResult>;
+  /** A key by its name, or a letter or digit, with what is held during it. */
+  key(key: string, opts?: ActOptions, modifiers?: Modifier[]): Promise<ActResult>;
   typeText(
     text: string,
     opts?: { at?: Point; replace?: boolean; submit?: boolean } & ActOptions,

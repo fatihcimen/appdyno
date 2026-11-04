@@ -57,8 +57,12 @@ final class WireFixtureTests: XCTestCase {
         guard case let .gesture(pointers) = try action("act.gesture") else { return XCTFail("gesture") }
         XCTAssertEqual(pointers.map(\.count), [2, 1])
         XCTAssertEqual(pointers[0][1].t, 100)
-        guard case let .key(key) = try action("act.key") else { return XCTFail("key") }
+        guard case let .key(key, none) = try action("act.key") else { return XCTFail("key") }
         XCTAssertEqual(key, "enter")
+        XCTAssertEqual(none, [])
+        guard case let .key(letter, held) = try action("act.shortcut") else { return XCTFail("shortcut") }
+        XCTAssertEqual(letter, "a")
+        XCTAssertEqual(held, ["command", "shift"])
         XCTAssertNil(try AfterRequest(params("act.doubleTap")).settle)
     }
 

@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Simctl } from '../src/simctl.js';
 import type { HelperProcess } from '../src/simhelper.js';
-import { onSurface, SimulatorMirror, turnsOf, usageOf } from '../src/mirror-sim.js';
+import { onSurface, SimulatorMirror, turnsOf } from '../src/mirror-sim.js';
+import { hidKey, HID_MODIFIERS, usageOf } from '../src/simtouch.js';
 
 const UDID = '11111111-2222-3333-4444-555555555555';
 
@@ -226,5 +227,13 @@ describe('a US keyboard', () => {
     expect(usageOf('/')).toEqual({ usage: 0x38, shift: false });
     expect(usageOf('?')).toEqual({ usage: 0x38, shift: true });
     expect(usageOf('ş')).toBeUndefined();
+  });
+
+  it('presses a letter, a digit or a named key, and holds what a shortcut holds', () => {
+    expect(hidKey('a')).toEqual({ page: 7, usage: 0x04 });
+    expect(hidKey('0')).toEqual({ page: 7, usage: 0x27 });
+    expect(hidKey('arrowUp')).toEqual({ page: 7, usage: 0x52 });
+    expect(hidKey('back')).toBeUndefined();
+    expect(HID_MODIFIERS.command).toBe(0xe3);
   });
 });

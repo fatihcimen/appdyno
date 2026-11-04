@@ -78,7 +78,7 @@ const SPECS = {
     target: 'point',
     bool: ['replace', 'submit'],
   },
-  press_key: { words: ['key'] },
+  press_key: { words: ['key'], number: ['count'] },
   swipe: { words: ['direction'], target: 'point', number: ['distance', 'durationMs'] },
   scroll_to: { target: 'needed', text: ['direction'], number: ['maxSwipes'] },
   wait_for: { target: 'needed', bool: ['gone'], number: ['timeoutMs'] },

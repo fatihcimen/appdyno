@@ -64,7 +64,7 @@ public enum Action {
     case longPress(x: Double, y: Double, durationMs: Double)
     case swipe(x0: Double, y0: Double, x1: Double, y1: Double, durationMs: Double)
     case gesture(pointers: [[Sample]])
-    case key(String)
+    case key(String, modifiers: [String])
 
     public init(_ a: Wire) throws {
         func x(_ d: Wire = a) throws -> Double { try requiredNumber(d, "x") }
@@ -81,7 +81,7 @@ public enum Action {
             self = .gesture(pointers: try pointers.map { f in
                 try f.map { s in (x: try x(s), y: try y(s), t: try requiredNumber(s, "t")) }
             })
-        case "key": self = .key(try requiredString(a, "key"))
+        case "key": self = .key(try requiredString(a, "key"), modifiers: a["modifiers"] as? [String] ?? [])
         default: throw AgentError("INVALID_ARGUMENT", "unknown action \(a["kind"] ?? "nil")")
         }
     }

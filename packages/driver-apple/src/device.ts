@@ -28,7 +28,7 @@ import {
   DeviceError,
   type ActParams,
   type ActResult,
-  type Key,
+  type Modifier,
   type AuditType,
   type AuditResult,
 } from '@appdyno/protocol';
@@ -207,7 +207,7 @@ export abstract class IosDevice extends RpcDevice implements Device {
     return this.actNow(action, opts, extra);
   }
 
-  override key(key: Key, opts?: ActOptions) {
+  override key(key: string, opts?: ActOptions, modifiers?: Modifier[]) {
     if (key === 'appSwitch') {
       // iOS has no such key: the home indicator's slow drag up, held until the switcher shows
       const { w, h } = this.helloInfo!.screen;
@@ -226,7 +226,7 @@ export abstract class IosDevice extends RpcDevice implements Device {
         opts,
       );
     }
-    return super.key(key, opts);
+    return super.key(key, opts, modifiers);
   }
 
   /** A code entry's hidden field never reports the focus, so its keys wait this out each time. */

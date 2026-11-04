@@ -113,11 +113,13 @@ static void sendKeyState(uint64_t page, uint64_t usage, uint64_t state) {
   xpc_connection_send_message(gConnection, message(page == 7 ? "IndigoKeyboardButtonEvent" : "IndigoButtonEvent", payload, false));
 }
 
-// One press.
-static NSString *sendKey(uint64_t page, uint64_t usage) {
+// One press, with the keyboard's `modifiers` held during it.
+static NSString *sendKey(uint64_t page, uint64_t usage, NSArray<NSNumber *> *modifiers) {
+  for (NSNumber *m in modifiers) sendKeyState(7, m.unsignedLongLongValue, 1);
   sendKeyState(page, usage, 1);
   usleep(40000);
   sendKeyState(page, usage, 2);
+  for (NSNumber *m in modifiers.reverseObjectEnumerator) sendKeyState(7, m.unsignedLongLongValue, 2);
   return barrier(2000) ? nil : @"dtuhidd did not answer after the key";
 }
 
@@ -136,7 +138,7 @@ int main(int argc, char **argv) {
         if ([op isEqual:@"ping"]) error = barrier([q[@"timeoutMs"] longLongValue] ?: 4000) ? nil : @"dtuhidd did not answer";
         else if ([op isEqual:@"touch"]) error = sendTouches(q[@"events"], [q[@"quick"] boolValue]);
         else if ([op isEqual:@"keyState"]) sendKeyState([q[@"page"] unsignedLongLongValue], [q[@"usage"] unsignedLongLongValue], [q[@"state"] unsignedLongLongValue]);
-        else if ([op isEqual:@"key"]) error = sendKey([q[@"page"] unsignedLongLongValue], [q[@"usage"] unsignedLongLongValue]);
+        else if ([op isEqual:@"key"]) error = sendKey([q[@"page"] unsignedLongLongValue], [q[@"usage"] unsignedLongLongValue], q[@"modifiers"]);
         else error = @"unknown request";
         NSMutableDictionary *a = [@{@"id": q[@"id"] ?: @0, @"ok": @(error == nil), @"ms": @((clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - t0) / 1000000)} mutableCopy];
         if (error) a[@"error"] = error;

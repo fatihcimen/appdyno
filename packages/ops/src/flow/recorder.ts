@@ -191,7 +191,7 @@ export function flowRecorder(ctx: ServerContext) {
           });
       }
       case 'press_key':
-        return () => stepOf('press_key', {}, { key: st.key });
+        return () => stepOf('press_key', {}, { key: st.key, count: st.count });
       case 'wait_for':
         return waitStep(s, st);
       case 'assert':

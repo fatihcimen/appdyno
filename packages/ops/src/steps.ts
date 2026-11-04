@@ -15,13 +15,16 @@ import { type Answers, SETTLE, type ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
-import { Check, Step, Direction, WIRE_KEY } from './step-schemas.js';
+import { Check, Step, Direction, keyPress } from './step-schemas.js';
 import { dragPath, swipeLine } from './gesture-paths.js';
 
 export const STALE = 'stale ref, read the screen again';
 
 /** These leave the app, as the home key does. */
-const LEAVES_APP = new Set(['home', 'app_switch', 'power', 'lock']);
+const LEAVES_APP = new Set(['home', 'appSwitch', 'power', 'lock']);
+
+/** A keyboard's way to the same: to the home screen, the switcher and search. */
+const SHORTCUT_LEAVES = new Set(['h', 'tab', 'space']);
 
 /** The screen goes dark: nothing to wait for or read. */
 const DARKENS = new Set(['power', 'lock']);
@@ -414,15 +417,20 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
         };
       }
       case 'press_key': {
-        if (LEAVES_APP.has(st.key) && !policy.allowHome)
+        const { key, modifiers } = keyPress(st.key)!;
+        const leaves = LEAVES_APP.has(key) || (modifiers.length > 0 && SHORTCUT_LEAVES.has(key));
+        if (leaves && !policy.allowHome)
           throw new ToolError(
             `${st.key} is off on this server: the app may not be left`,
             'POLICY_DENIED',
           );
-        const dark = DARKENS.has(st.key);
+        const dark = DARKENS.has(key);
+        const quiet = { settle: false, read: 'none' } as const;
+        const count = st.count ?? 1;
+        for (let i = 1; i < count; i++) await s.device.key(key, quiet, modifiers);
         return {
-          r: await s.device.key(WIRE_KEY[st.key], dark ? { settle: false, read: 'none' } : opts),
-          done: `pressed ${st.key}${dark ? ' (the screen was not read: it may be dark)' : ''}`,
+          r: await s.device.key(key, dark ? quiet : opts, modifiers),
+          done: `pressed ${st.key}${count > 1 ? ` ${count} times` : ''}${dark ? ' (the screen was not read: it may be dark)' : ''}`,
         };
       }
       case 'wait_for': {

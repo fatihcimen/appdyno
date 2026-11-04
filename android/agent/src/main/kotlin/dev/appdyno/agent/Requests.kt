@@ -33,7 +33,7 @@ sealed class Action {
     class LongPress(val x: Float, val y: Float, val durationMs: Long) : Action()
     class Swipe(val from: Pair<Float, Float>, val to: Pair<Float, Float>, val durationMs: Long) : Action()
     class Gesture(val pointers: List<List<Sample>>) : Action()
-    class Key(val key: String) : Action()
+    class Key(val key: String, val modifiers: List<String>) : Action()
 
     companion object {
         fun from(a: JSONObject): Action = when (a.getString("kind")) {
@@ -53,7 +53,10 @@ sealed class Action {
                     },
                 )
             }
-            "key" -> Key(a.getString("key"))
+            "key" -> {
+                val held = a.optJSONArray("modifiers")
+                Key(a.getString("key"), (0 until (held?.length() ?: 0)).map { held!!.getString(it) })
+            }
             else -> throw AgentFailure("INVALID_ARGUMENT", "unknown action")
         }
     }

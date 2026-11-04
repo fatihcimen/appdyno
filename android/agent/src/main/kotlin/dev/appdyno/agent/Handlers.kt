@@ -100,7 +100,7 @@ class Handlers(private val automation: Automation, private val token: String) {
             is Action.LongPress -> input.longPress(a.x, a.y, a.durationMs, cancelled)
             is Action.Swipe -> input.path(Paths.line(a.from.first, a.from.second, a.to.first, a.to.second, a.durationMs), cancelled)
             is Action.Gesture -> input.gesture(a.pointers, cancelled)
-            is Action.Key -> input.key(Input.KEYS[a.key] ?: throw AgentFailure("INVALID_ARGUMENT", "unknown key"))
+            is Action.Key -> input.key(Input.codeOf(a.key), Input.heldOf(a.modifiers))
         }
         // the window counts from here: injection returns once the app has handled the event, however busy it was
         val at = SystemClock.uptimeMillis()

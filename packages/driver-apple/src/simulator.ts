@@ -8,7 +8,7 @@ import {
   type Tree,
   type ActParams,
   type ActResult,
-  type Key,
+  type Modifier,
 } from '@appdyno/protocol';
 import { SimulatorMirror } from './mirror-sim.js';
 import { SimulatorNetwork } from './network.js';
@@ -249,8 +249,8 @@ export class IosSimulatorDevice extends IosDevice {
   /** Locked by this tool: a screen under the lock still reads, and an app will not come forward. */
   private locked = false;
 
-  override async key(key: Key, opts?: ActOptions) {
-    const r = await super.key(key, opts);
+  override async key(key: string, opts?: ActOptions, modifiers?: Modifier[]) {
+    const r = await super.key(key, opts, modifiers);
     if (key === 'lock' || key === 'power') this.locked = true;
     return r;
   }
