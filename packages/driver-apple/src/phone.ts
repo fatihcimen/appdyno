@@ -228,15 +228,15 @@ export class IosPhoneDevice extends IosDevice {
   readonly settings: PhoneSettings;
 
   /**
-   * The app in front on a screen that is on. A phone locks itself about a minute after the last touch; a launch only
-   * lights its lock screen, where a swipe or a tap goes to the system (with no passcode, the home button gets past it).
+   * The app in front on a screen that is on. A phone locks itself about a minute after the last touch, with the app
+   * still reading as in front for a moment. A launch brings a running app forward as it is and lights a dark screen,
+   * but leaves a lock screen up, where a swipe or a tap goes to the system: with no passcode, the home button gets past it.
    */
   async inFront(bundle: string) {
-    assertBundle(bundle);
-    const { windows, nodes } = await this.tree();
-    const locked = nodes.some((n) => n.id === LOCK_SCREEN);
-    if (windows[0]?.pkg === bundle && !locked) return;
-    if (locked) await this.key('home', { settle: false });
+    await this.launch(assertBundle(bundle));
+    const { nodes } = await this.tree();
+    if (!nodes.some((n) => n.id === LOCK_SCREEN)) return;
+    await this.key('home', { settle: false });
     await this.launch(bundle);
   }
 

@@ -76,7 +76,9 @@ export async function survey(ctx: ServerContext, app: string, log: (line: string
   const readingOf = async (row: MeasureId) => {
     const keys = await runKeys(dir, { app, deviceClass: cls });
     const newest = await Promise.all(keys.map((k) => latestRuns(dir, k, 1)));
-    return newest.flat(2).find((r) => since(r.at) && measureOf(r.kind) === row);
+    const got = newest.flat(2).filter((r) => since(r.at) && measureOf(r.kind) === row);
+    // of a start's phases, the longest is the one to say
+    return row === 'launch-why' ? got.toSorted((a, b) => b.value - a.value)[0] : got[0];
   };
   const line = (row: MeasureId, what: string) => log(`${row.padEnd(NAME_WIDTH)}${what}`);
 

@@ -10,21 +10,34 @@ const MOST_PARTS = 6;
 /** The distinct colors of the categorical order. */
 const SLOTS = 8;
 const FOLD_SLOT = 0;
+const OTHER = 'other';
 
-/** The largest parts in their recorded order, with the rest folded. */
+/** A name's color where it has one and no other part here took it; else one no name has; else any free here. */
+function slotOf(name: string, slots: Map<string, number>, taken: Set<number>) {
+  const free = Array.from({ length: SLOTS }, (_, i) => i + 1).filter((s) => !taken.has(s));
+  const given = new Set(slots.values());
+  const held = slots.get(name);
+  const slot =
+    held !== undefined && !taken.has(held) ? held : (free.find((s) => !given.has(s)) ?? free[0]!);
+  if (held === undefined) slots.set(name, slot);
+  taken.add(slot);
+  return slot;
+}
+
+/** The largest parts in their recorded order, each its own color, with the rest and any phase called other folded. */
 function partsOf(phases: PerfRecord[], slots: Map<string, number>): Part[] {
-  const named = phases.map((p) => {
-    const name = phaseName(p.kind);
-    if (!slots.has(name)) slots.set(name, slots.size + 1);
-    const slot = slots.get(name)!;
-    return { name, value: p.value, slot: slot > SLOTS ? FOLD_SLOT : slot };
-  });
-  if (named.length <= MOST_PARTS) return named;
-  const kept = new Set([...named].sort((a, b) => b.value - a.value).slice(0, MOST_PARTS - 1));
+  const named = phases.map((p) => ({ name: phaseName(p.kind), value: p.value }));
+  const own = named.filter((p) => p.name !== OTHER);
+  const room =
+    own.length === named.length && named.length <= MOST_PARTS ? MOST_PARTS : MOST_PARTS - 1;
+  const kept = new Set([...own].sort((a, b) => b.value - a.value).slice(0, room));
   const rest = named.filter((p) => !kept.has(p));
+  const taken = new Set<number>();
   return [
-    ...named.filter((p) => kept.has(p)),
-    { name: 'other', value: rest.reduce((a, p) => a + p.value, 0), slot: FOLD_SLOT },
+    ...named.filter((p) => kept.has(p)).map((p) => ({ ...p, slot: slotOf(p.name, slots, taken) })),
+    ...(rest.length
+      ? [{ name: OTHER, value: rest.reduce((a, p) => a + p.value, 0), slot: FOLD_SLOT }]
+      : []),
   ];
 }
 

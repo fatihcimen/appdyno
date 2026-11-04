@@ -104,10 +104,11 @@ for (const t of targets)
       perf: project,
     });
     const ops = opsFor(ctx);
-    // what runs on this Mac waits out its load; a phone's own numbers hardly depend on it
-    const onThisMac = t.name === 'ios simulator' || t.serial?.startsWith('emulator-');
+    // what goes through this Mac waits out its load: a read on an iPhone does too, while what an Android phone's
+    // `am start -W` reports is its own
+    const ownNumbers = t.name === 'android' && !t.serial?.startsWith('emulator-');
     const launch = async () => {
-      if (onThisMac) await quiet();
+      if (!ownNumbers) await quiet();
       await ops.perf_launch!.handler({ mode: 'cold', repeats: REPEATS });
     };
     const compare = async () => {

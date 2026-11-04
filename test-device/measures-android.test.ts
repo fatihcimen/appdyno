@@ -38,6 +38,8 @@ describe.skipIf(!serial)('measures on Android, through the operations', () => {
   beforeAll(async () => {
     d = (await t.ctx.session()).device as AndroidDevice;
     await d.open();
+    // a dialog an earlier run left, as a loaded Mac makes an emulator's app not respond
+    await d.shell(`am force-stop ${APP}`);
   });
   beforeEach(() => d.ensureAwake());
   afterAll(() => t.ctx.close());

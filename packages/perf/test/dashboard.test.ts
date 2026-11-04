@@ -244,6 +244,25 @@ describe('the page', () => {
     expect(text).toContain('20');
   });
 
+  it('gives each phase of a bar a color of its own, on every device, and one other', async () => {
+    const s = store();
+    const start = (names: string[]): Metric[] =>
+      names.map((n, i) => ({ kind: `launch.phase.${n}_ms`, unit: 'ms', samples: [100 + i] }));
+    const many = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
+    await s.run(2, start(many), { scenario: 'launch-why', device: EMULATOR });
+    await s.run(1, start(['main', 'uikit', 'frame', 'other', 'load']), { scenario: 'launch-why' });
+    const page = await s.page();
+    const legends = page.match(/<ul class="legend">.*?<\/ul>/g) ?? [];
+    expect(legends).toHaveLength(2);
+    for (const legend of legends) {
+      const slots = [...legend.matchAll(/class="key s(\d)"/g)].map((m) => m[1]!);
+      const painted = slots.filter((c) => c !== '0');
+      expect(new Set(painted).size).toBe(painted.length);
+      expect(slots.filter((c) => c === '0').length).toBeLessThanOrEqual(1);
+      expect(legend.match(/other/g)?.length ?? 0).toBeLessThanOrEqual(1);
+    }
+  });
+
   it('with no phone measured for an app, says so with the command for one', async () => {
     const s = store();
     await s.run(1, [launch(700)], { device: EMULATOR });
