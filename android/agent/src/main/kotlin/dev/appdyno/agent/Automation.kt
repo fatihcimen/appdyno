@@ -171,10 +171,27 @@ class Automation private constructor(private val looper: Looper) {
         if (!ok) throw AgentFailure("INTERNAL", "the input event was not delivered")
     }
 
-    /** As `inject`, with no wait for the app: a live finger's next move must not queue behind a busy app. */
+    /** The input manager's own injection, which a shell user may call: no accessibility connection on its way. */
+    private val direct: Pair<Any, Method>? = try {
+        val c = try {
+            Class.forName("android.hardware.input.InputManagerGlobal")
+        } catch (_: ClassNotFoundException) {
+            Class.forName("android.hardware.input.InputManager")
+        }
+        c.getMethod("getInstance").invoke(null)!! to
+            c.getMethod("injectInputEvent", InputEvent::class.java, Int::class.javaPrimitiveType)
+    } catch (_: ReflectiveOperationException) {
+        null
+    }
+
+    /**
+     * For a person's finger on a mirror's window. Waits for nothing: the next move must not queue behind a busy
+     * app. Directly where the release allows: measured on a Xiaomi, the way by UI automation cost a tap 30 ms.
+     */
     fun injectLive(event: InputEvent) {
         val ok = try {
-            if (injectNoWait != null) injectNoWait.invoke(ua, event, false, false) as Boolean
+            if (direct != null) direct.second.invoke(direct.first, event, INJECT_ASYNC) as Boolean
+            else if (injectNoWait != null) injectNoWait.invoke(ua, event, false, false) as Boolean
             else ua.injectInputEvent(event, false)
         } catch (e: InvocationTargetException) {
             throw injectFailure(e.targetException)
@@ -193,6 +210,9 @@ class Automation private constructor(private val looper: Looper) {
         ) else t
 
     companion object {
+        /** InputManager's INJECT_INPUT_EVENT_MODE_ASYNC. */
+        private const val INJECT_ASYNC = 0
+
         /** The longest a new connection is given to learn the windows on screen and go quiet. */
         const val WINDOWS_WAIT_MS = 2_000L
 

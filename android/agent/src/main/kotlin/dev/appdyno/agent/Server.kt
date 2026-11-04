@@ -47,6 +47,10 @@ class Server(private val opts: Options, private val handlers: Handlers) {
     @Volatile
     private var connections = 0
 
+    /** Those that asked for device work: a connection with only a stream and touches needs no UI automation. */
+    @Volatile
+    private var drivers = 0
+
     fun run() {
         val server = LocalServerSocket(opts.socket)
         timers.scheduleWithFixedDelay({
@@ -64,6 +68,7 @@ class Server(private val opts: Options, private val handlers: Handlers) {
     private fun serve(socket: LocalSocket) {
         synchronized(this) { connections++ }
         var stream: Stream? = null
+        var drives = false
         try {
             val reader = FrameReader(socket.inputStream)
             val writer = FrameWriter(socket.outputStream)
@@ -107,6 +112,7 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                         stream?.let { streams.end(it) }
                         stream = streams.start(StreamRequest.from(params), ConnectionOutput(writer))
                         writer.json(result(id, JSONObject()))
+                        releaseIfNoDrivers()
                     }
                     "stream.clock" -> writer.json(result(id, JSONObject().put("now", System.nanoTime())))
                     "stream.sync" -> {
@@ -118,7 +124,13 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                         writer.json(result(id, JSONObject()))
                         exitProcess(0)
                     }
-                    else -> submit(id, method, params, writer)
+                    else -> {
+                        if (!drives) {
+                            drives = true
+                            synchronized(this) { drivers++ }
+                        }
+                        submit(id, method, params, writer)
+                    }
                 }
             }
         } catch (e: Throwable) {
@@ -134,14 +146,24 @@ class Server(private val opts: Options, private val handlers: Handlers) {
             if (synchronized(animationsOff) { animationsOff.remove(socket) && animationsOff.isEmpty() }) {
                 actions.submit(Job(-1), 60_000, {}) { handlers.restoreAnimations() }
             }
-            val idle = synchronized(this) { --connections == 0 }
+            synchronized(this) {
+                connections--
+                if (drives) drivers--
+            }
             lastActivity = SystemClock.uptimeMillis()
-            // no host: accessibility off in the apps until the next one (an app starting meanwhile starts
-            // without its cost); after a short grace, so a host that reconnects at once keeps it
-            if (idle) timers.schedule({
-                if (connections == 0) actions.submit(Job(-1), 60_000, {}) { if (connections == 0) handlers.release() }
-            }, RELEASE_GRACE_MS, TimeUnit.MILLISECONDS)
+            releaseIfNoDrivers()
         }
+    }
+
+    /**
+     * No host driving: accessibility off in the apps until the next one (an app starting meanwhile starts without
+     * its cost, and a mirrored app is not slowed by it); after a short grace, so a host that reconnects at once keeps it.
+     */
+    private fun releaseIfNoDrivers() {
+        if (drivers > 0) return
+        timers.schedule({
+            if (drivers == 0) actions.submit(Job(-1), 60_000, {}) { if (drivers == 0) handlers.release() }
+        }, RELEASE_GRACE_MS, TimeUnit.MILLISECONDS)
     }
 
     private fun submit(id: Int, method: String, params: JSONObject, writer: FrameWriter) {

@@ -259,7 +259,8 @@ export class Adb {
 
   private dial(): Promise<Socket> {
     return new Promise((resolve, reject) => {
-      const s = connect({ host: this.host, port: this.port });
+      // a person's next touch must not wait for an answer to the one before it
+      const s = connect({ host: this.host, port: this.port, noDelay: true });
       s.once('connect', () => resolve(s));
       s.once('error', reject);
     });

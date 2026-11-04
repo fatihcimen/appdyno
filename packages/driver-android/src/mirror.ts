@@ -42,6 +42,7 @@ export const fatal = (e: unknown) => {
 export class AndroidMirror implements Mirror {
   private rpc: RpcClient | undefined;
   private sdk: number | undefined;
+  private lostTouch: unknown;
 
   constructor(
     private readonly adb: Adb,
@@ -115,15 +116,27 @@ export class AndroidMirror implements Mirror {
   }
 
   async input(e: InputEvent) {
+    if (this.lostTouch) {
+      const failure = this.lostTouch;
+      this.lostTouch = undefined;
+      throw failure;
+    }
     const rpc = await this.agent();
     switch (e.kind) {
       case 'touch': {
         const { p, x, y, x2, y2 } = e;
-        await rpc.call(
+        const sent = rpc.call(
           'touch',
           { p, x, y, ...(x2 !== undefined && { x2, y2 }) },
           { timeoutMs: INPUT_MS },
         );
+        // a move waits, so that a slow device gets the newest and not the path; a finger down or up goes on
+        // a round trip sooner, the socket keeping the order, and a failure is said by the next event
+        if (p === 1) await sent;
+        else
+          sent.catch((failure: unknown) => {
+            this.lostTouch = failure;
+          });
         return;
       }
       case 'key': {

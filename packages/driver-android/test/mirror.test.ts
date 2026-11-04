@@ -94,6 +94,25 @@ describe('an Android mirror', () => {
     expect(launcher.connect).toHaveBeenCalledTimes(1);
   });
 
+  it('a finger down or up waits for no answer, a move does, and a failure is said by the next', async () => {
+    const { mirror, rpc } = setup();
+    let answer!: (v: { result: object }) => void;
+    rpc.call.mockImplementationOnce(() => new Promise((r) => (answer = r)) as never);
+    await mirror.input({ kind: 'touch', p: 0, x: 0, y: 0 });
+    rpc.call.mockImplementationOnce(() => new Promise((r) => (answer = r)) as never);
+    let moved = false;
+    const move = mirror.input({ kind: 'touch', p: 1, x: 0, y: 0 }).then(() => (moved = true));
+    await new Promise((r) => setTimeout(r, 5));
+    expect(moved).toBe(false);
+    answer({ result: {} });
+    await move;
+    rpc.call.mockRejectedValueOnce(new DeviceError('AGENT_UNAVAILABLE', 'gone'));
+    await mirror.input({ kind: 'touch', p: 2, x: 0, y: 0 });
+    await new Promise((r) => setTimeout(r, 5));
+    await expect(mirror.input({ kind: 'touch', p: 0, x: 0, y: 0 })).rejects.toThrow('gone');
+    await expect(mirror.input({ kind: 'touch', p: 2, x: 0, y: 0 })).resolves.toBeUndefined();
+  });
+
   it('keys it has go down once; those it has not are passed over', async () => {
     const { mirror, calls } = setup();
     await mirror.input({ kind: 'key', page: 7, usage: 0x28, state: 1 });
