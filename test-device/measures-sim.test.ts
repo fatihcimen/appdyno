@@ -84,9 +84,9 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     await t.call('perf_trace', { seconds: 1 });
     const s = await open('stall');
     const [r] = await Promise.all([
-      // the window has room for a tap slowed by a loaded Mac
+      // the window has room for its start and for a tap slowed by a loaded Mac
       t.call('perf_trace', { seconds: 8 }),
-      pause(1_000).then(() => d.tap(byId(s, 'stall_500'), { settle: false })),
+      pause(3_000).then(() => d.tap(byId(s, 'stall_500'), { settle: false })),
     ]);
     console.log(r.text);
     within(r.data.worstMs as number, 500, 0.1);

@@ -95,6 +95,8 @@ export async function network(
 
 /** Less CPU than this may round to nothing in the count, on any device. */
 const NOTICED_CPU_MS = 200;
+/** A Xiaomi's profile counts about 0.03 mAh for a second of a busy core; an emulator's about 0.00004, or nothing. */
+const LEAST_MAH_A_CPU_SECOND = 0.001;
 
 /**
  * The charge batterystats estimates for the app over the window: the difference of its count since the last
@@ -120,9 +122,12 @@ export async function energy(
     const after = parseBatteryUsage(raw, uid);
     const cpuMs = (used.value.percent / 100) * used.value.windowMs;
     const usage = usageSince(before, after);
-    // what it counts of the window, not since the last charge: a core busy for seconds that grew nothing is no estimate
+    // what it counts of the window: a busy core that grew next to nothing is no estimate of it
+    const cpuGrew = usage.breakdown?.cpu ?? 0;
     const none =
-      after.mah === undefined || !usage.mah || (cpuMs > NOTICED_CPU_MS && !usage.breakdown?.cpu);
+      after.mah === undefined ||
+      !usage.mah ||
+      (cpuMs > NOTICED_CPU_MS && cpuGrew < (cpuMs / 1000) * LEAST_MAH_A_CPU_SECOND);
     if (!guarded || none)
       return {
         value: modelledEnergy(cpuMs, moved.value.rxBytes + moved.value.txBytes),
