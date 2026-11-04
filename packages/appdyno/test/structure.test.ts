@@ -12,10 +12,24 @@ const sourcesIn = (dir: string): string[] =>
     return p.endsWith('.ts') ? [p] : [];
   });
 
-const sources = readdirSync(packages)
-  .filter((p) => statSync(join(packages, p)).isDirectory())
-  .flatMap((p) => sourcesIn(join(packages, p, 'src')))
-  .map((file) => ({ name: relative(root, file), text: readFileSync(file, 'utf8') }));
+/** Native code that is ours and grows: the viewer, and what the agent streams with. */
+const AGENT = join(root, 'android/agent/src/main/kotlin/dev/appdyno/agent');
+const nativeIn = (dir: string, name: RegExp) =>
+  readdirSync(dir)
+    .filter((f) => name.test(f))
+    .map((f) => join(dir, f));
+
+const native = [
+  ...nativeIn(join(root, 'mirror/Viewer'), /\.(m|h)$/),
+  ...nativeIn(AGENT, /^(Stream|DisplayMirror)/),
+];
+
+const sources = [
+  ...readdirSync(packages)
+    .filter((p) => statSync(join(packages, p)).isDirectory())
+    .flatMap((p) => sourcesIn(join(packages, p, 'src'))),
+  ...native,
+].map((file) => ({ name: relative(root, file), text: readFileSync(file, 'utf8') }));
 
 const lineCount = (text: string) => text.trimEnd().split('\n').length;
 
@@ -38,6 +52,8 @@ function logicLines(text: string): string[] {
       if (/\bfrom '/.test(line)) inImport = false;
       continue;
     }
+    // a native file opens with the framework imports every other one has
+    if (/^#(import|include|pragma)\b/.test(line)) continue;
     if (/^import\b/.test(line)) {
       inImport = !/\bfrom '|^import '/.test(line);
       continue;
@@ -91,6 +107,21 @@ describe('repeated code', () => {
     const b = { name: 'b.ts', text: `// a comment\n\n${body('    ')}\n` };
     expect(repeatedRuns([a, b], RUN_LINES)).toHaveLength(1);
     expect(repeatedRuns([a, { name: 'c.ts', text: 'const other = 1;' }], RUN_LINES)).toEqual([]);
+  });
+
+  it('counts the imports of a native file as nothing, and its code as code', () => {
+    const imports = Array.from({ length: RUN_LINES + 1 }, (_, i) => `#import <F${i}.h>`).join('\n');
+    expect(logicLines(imports)).toEqual([]);
+    const body = Array.from({ length: RUN_LINES }, (_, i) => `  int v${i} = ${i};`).join('\n');
+    const twice = [
+      { name: 'a.m', text: `${imports}\n${body}` },
+      { name: 'b.m', text: `${imports}\n${body}` },
+    ];
+    expect(repeatedRuns(twice, RUN_LINES)).toHaveLength(1);
+  });
+
+  it('takes in the viewer', () => {
+    expect(sources.some((f) => f.name.endsWith('mirror/Viewer/main.m'))).toBe(true);
   });
 
   it('counts neither a long import nor a comment as code', () => {

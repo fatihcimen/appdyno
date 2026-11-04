@@ -1,0 +1,150 @@
+import { spawn } from 'node:child_process';
+import { existsSync, readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { nativeBinary } from '../native.js';
+import { NeedError } from './need.js';
+
+export const VIEWER_FLAGS = [
+  'clang',
+  '-fobjc-arc',
+  '-O2',
+  '-framework',
+  'AppKit',
+  '-framework',
+  'AVFoundation',
+  '-framework',
+  'CoreMedia',
+  '-framework',
+  'CoreVideo',
+  '-framework',
+  'VideoToolbox',
+  '-framework',
+  'IOSurface',
+  '-framework',
+  'QuartzCore',
+  '-framework',
+  'Accelerate',
+  '-framework',
+  'Carbon',
+];
+
+/** The viewer's sources: beside the repository's packages, or inside the published one. */
+function viewerSources(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const dir = [join(here, '../../../../mirror/Viewer'), join(here, '../agents/mirror-src')].find(
+    (p) => existsSync(join(p, 'main.m')),
+  );
+  if (!dir) throw new Error('the sources of the viewer are missing');
+  return dir;
+}
+
+/** Compiled on first use; a Mac with no compiler has no viewer, and is told so. */
+export async function viewerBinary(env?: NodeJS.ProcessEnv): Promise<string> {
+  const dir = viewerSources();
+  const inDir = (ext: string) =>
+    readdirSync(dir)
+      .filter((f) => f.endsWith(ext))
+      .sort()
+      .map((f) => join(dir, f));
+  return nativeBinary({
+    name: 'appdyno-viewer',
+    sources: inDir('.m'),
+    headers: inDir('.h'),
+    flags: VIEWER_FLAGS,
+    ...(env && { env }),
+  }).catch((e: Error) => {
+    if (/ENOENT|invalid active developer path|xcrun: error/.test(e.message))
+      throw new NeedError('no-compiler');
+    throw new Error(`the viewer did not compile: ${e.message.slice(0, 500)}`, { cause: e });
+  });
+}
+
+export type ViewerMessage = { op: string } & Record<string, unknown>;
+
+/** The viewer as a session sees it, a process or a test's stand-in. */
+export interface ViewerLink {
+  send(message: Record<string, unknown>): void;
+  onMessage(listener: (m: ViewerMessage) => void): void;
+  /** Once, however it ended; what it last said on stderr. */
+  onExit(listener: (tail: string) => void): void;
+  kill(): void;
+}
+
+/** What is kept of what a viewer says on stderr, for a stop's reason. */
+const STDERR_TAIL = 2_000;
+
+/** One viewer process: JSON lines each way, and it ends with its stdin. */
+export class ViewerProcess implements ViewerLink {
+  private readonly listeners: ((m: ViewerMessage) => void)[] = [];
+  private readonly exits: ((tail: string) => void)[] = [];
+  private tail = '';
+  private buffered = '';
+  private ended = false;
+  private readonly child;
+
+  constructor(binary: string, args: string[], env?: NodeJS.ProcessEnv) {
+    this.child = spawn(binary, args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      ...(env && { env }),
+    });
+    this.child.stdin.on('error', () => undefined);
+    this.child.stdout.setEncoding('utf8').on('data', (s: string) => this.onData(s));
+    this.child.stderr.setEncoding('utf8').on('data', (s: string) => {
+      this.tail = (this.tail + s).slice(-STDERR_TAIL);
+    });
+    this.child.on('error', (e) => this.end(e.message));
+    this.child.on('close', () => this.end());
+  }
+
+  get pid() {
+    return this.child.pid;
+  }
+
+  private onData(s: string) {
+    this.buffered += s;
+    for (let at = this.buffered.indexOf('\n'); at >= 0; at = this.buffered.indexOf('\n')) {
+      const line = this.buffered.slice(0, at);
+      this.buffered = this.buffered.slice(at + 1);
+      let m: unknown;
+      try {
+        m = JSON.parse(line);
+      } catch {
+        continue; // a framework's print on its stdout is no message
+      }
+      if (m && typeof (m as ViewerMessage).op === 'string')
+        for (const l of this.listeners) l(m as ViewerMessage);
+    }
+  }
+
+  private end(extra?: string) {
+    if (this.ended) return;
+    this.ended = true;
+    for (const l of this.exits) l([this.tail, extra].filter(Boolean).join('\n').trim());
+  }
+
+  send(message: Record<string, unknown>) {
+    if (!this.ended) this.child.stdin.write(`${JSON.stringify(message)}\n`);
+  }
+
+  onMessage(listener: (m: ViewerMessage) => void) {
+    this.listeners.push(listener);
+  }
+
+  onExit(listener: (tail: string) => void) {
+    this.exits.push(listener);
+  }
+
+  kill() {
+    this.child.stdin.end();
+    this.child.kill('SIGTERM');
+  }
+}
+
+export type ViewerStart = () => Promise<ViewerLink>;
+
+/** Starts viewers for a session. */
+export const startViewer =
+  (headless: boolean, env?: NodeJS.ProcessEnv): ViewerStart =>
+  async () =>
+    new ViewerProcess(await viewerBinary(env), headless ? ['--headless'] : [], env);
