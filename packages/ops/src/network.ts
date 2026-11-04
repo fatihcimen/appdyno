@@ -23,7 +23,7 @@ import {
 } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
-import { restoreCondition, setCondition } from './control.js';
+import { restoreCondition, setCondition } from './settings.js';
 import { boundLines } from './diagnose.js';
 import { checkApp, redactLog } from './policy.js';
 import { NetworkOut } from './schemas.js';

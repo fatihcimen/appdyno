@@ -2,7 +2,7 @@ import type { AnonMemory, Capability, EnergyReading, Measured } from '@appdyno/c
 import { ramTier, vitalsCall, type Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { holdingCondition } from '../control.js';
+import { holdingCondition } from '../settings.js';
 import { SnapshotOut } from './schemas.js';
 import type { Session } from '../session.js';
 import { defineOp, READ, reply } from '../tool.js';

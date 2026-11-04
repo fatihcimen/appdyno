@@ -1,121 +1,17 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import {
-  deviceStateFile,
-  reportProgress,
-  SETTINGS,
-  stateDir,
-  type DeviceSettings,
-  type SettingName,
-  type Startable,
-  type VirtualDevices,
-} from '@appdyno/core';
+import { reportProgress, stateDir, type Startable, type VirtualDevices } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import { holder } from './claims.js';
 import type { ServerContext } from './context.js';
 import { checkApp, checkDevice } from './policy.js';
-import { AppOut, DoneOut, SettingOut, VirtualOut } from './schemas.js';
+import { AppOut, DoneOut, VirtualOut } from './schemas.js';
 import type { Session } from './session.js';
 import { Read } from './step-schemas.js';
 import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const NO_APP = 'give app (or select one with use_device)';
-const PHONE_NUMBER = /^\+?\d{3,20}$/;
-const DEFAULT_SENDER = '5551234';
-const BIOMETRIC = ['match', 'nomatch', 'enroll'] as const;
-const ONE_SHOT = ['restore', 'push', 'biometric', 'fold', 'call', 'sms', 'keychain'] as const;
-
-/** The conditions this tool changed on a device and what to put back. Survives its process. */
-type Changes = Record<string, { was: string; app?: string }>;
-
-const changesFile = (serial: string) => deviceStateFile('conditions', serial);
-
-function readChanges(serial: string): Changes {
-  try {
-    return JSON.parse(readFileSync(changesFile(serial), 'utf8')) as Changes;
-  } catch {
-    return {};
-  }
-}
-
-function writeChanges(serial: string, c: Changes) {
-  const file = changesFile(serial);
-  mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
-  writeFileSync(file, JSON.stringify(c), { mode: 0o600 });
-}
-
-/** Writes a condition's old value down, once: true when this call did. */
-async function writeDown(s: Session, settings: DeviceSettings, name: SettingName, app?: string) {
-  const serial = s.device.serial;
-  const changes = readChanges(serial);
-  if (changes[name]) return false;
-  await settings.willChange?.(name);
-  changes[name] = { was: await settings.get(name, app), ...(app && { app }) };
-  writeChanges(serial, changes);
-  return true;
-}
-
-const forget = (s: Session, name: SettingName) => {
-  const changes = readChanges(s.device.serial);
-  delete changes[name];
-  writeChanges(s.device.serial, changes);
-};
-
-/** Sets a condition, the old value written down first so a crash cannot lose it. */
-export async function setCondition(s: Session, name: SettingName, value: string, app?: string) {
-  const settings = s.device.settings;
-  if (!settings) throw new ToolError('this device has no settings to change', 'UNSUPPORTED');
-  const first = await writeDown(s, settings, name, app);
-  try {
-    await settings.set(name, value, app);
-  } catch (e) {
-    // nothing changed, so nothing to put back
-    if (first) forget(s, name);
-    throw e;
-  }
-}
-
-/** `during` changes a condition for its time and puts it back itself: only a process dying meanwhile leaves it. */
-export async function holdingCondition<T>(s: Session, name: SettingName, during: () => Promise<T>) {
-  const settings = s.device.settings;
-  const first = settings ? await writeDown(s, settings, name) : false;
-  try {
-    return await during();
-  } finally {
-    if (first) forget(s, name);
-  }
-}
-
-/** Puts back one condition, if this tool changed it. */
-export async function restoreCondition(s: Session, name: SettingName) {
-  const changes = readChanges(s.device.serial);
-  const c = changes[name];
-  if (!c) return;
-  await s.device.settings!.set(name, c.was, c.app);
-  delete changes[name];
-  writeChanges(s.device.serial, changes);
-}
-
-/** Puts back what this tool changed; the names it could not, with why, stay written down. */
-export async function restoreConditions(s: Session) {
-  const serial = s.device.serial;
-  const changes = readChanges(serial);
-  const restored: string[] = [];
-  const failed: string[] = [];
-  // the newest first: two names can hold one thing (Android's animations and reduce_motion), and the older holds the user's value
-  for (const [name, c] of Object.entries(changes).reverse()) {
-    try {
-      await s.device.settings!.set(name as SettingName, c.was, c.app);
-      delete changes[name];
-      restored.push(`${name}: ${c.was}`);
-    } catch (e) {
-      failed.push(`${name} (was ${c.was}): ${(e as Error).message}`);
-    }
-  }
-  if (restored.length > 0) writeChanges(serial, changes);
-  return { restored, failed };
-}
 
 const startedFile = () => join(stateDir(), 'started.json');
 function startedHere(): string[] {
@@ -327,100 +223,6 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
         writeStarted(mine.filter((id) => !targets.some((x) => x.d.id === id || x.d.name === id)));
         const t = `shut down ${targets.map((x) => x.d.name).join(', ')}`;
         return reply(t, { done: t });
-      },
-    }),
-    defineOp({
-      name: 'device_setting',
-      title: 'Device conditions',
-      description:
-        'No value reads one. dark_mode, reduce_motion, animations, airplane, wifi, mobile_data: on, off; text_size: 1.3, iOS large; locale: tr-TR; network: slow, full; proxy: host:port, none; battery: 0-100. Put back at the end or by restore. One-shot: push (value; title), biometric (match, nomatch, enroll), fold (open, closed), call (number; end number), sms (value; title: number), keychain (reset).',
-      input: z
-        .object({
-          name: z.enum([...SETTINGS, ...ONE_SHOT]),
-          value: z.string().max(500).optional(),
-          title: z.string().max(200).optional(),
-          app: z.string().max(200).optional(),
-        })
-        .strict(),
-      output: SettingOut,
-      annotations: DESTRUCTIVE,
-      run: async ({ name, value, title, app }) => {
-        const s = await ctx.session();
-        const settings = s.device.settings;
-        if (!settings) throw new ToolError('this device has no settings to change', 'UNSUPPORTED');
-        if (name === 'restore') {
-          const { restored, failed } = await restoreConditions(s);
-          const t = [
-            restored.length > 0 ? `restored ${restored.join('; ')}` : 'nothing was changed',
-            ...failed.map((f) => `could not restore ${f}`),
-          ].join('\n');
-          return reply(t, { done: t, ...(failed.length > 0 && { notRestored: failed }) });
-        }
-        if (name === 'push') {
-          if (!value) throw new ToolError('push needs value: the text', 'INVALID_ARGUMENT');
-          const pkg = app ?? s.appId;
-          if (pkg) checkApp(policy, pkg);
-          await settings.push(pkg, title ?? 'appdyno', value);
-          return reply(`posted a notification`, { done: 'posted a notification' });
-        }
-        if (name === 'biometric') {
-          const answer = BIOMETRIC.find((b) => b === value);
-          if (!answer)
-            throw new ToolError(
-              `biometric needs value: ${BIOMETRIC.join(', ')}`,
-              'INVALID_ARGUMENT',
-            );
-          await settings.biometric(answer);
-          return reply(`biometric: ${value}`, { done: `biometric: ${value}` });
-        }
-        if (name === 'keychain') {
-          if (value !== 'reset')
-            throw new ToolError('keychain needs value: reset', 'INVALID_ARGUMENT');
-          const t = `the keychain is empty: it held ${await settings.resetKeychain()} items`;
-          return reply(t, { done: t });
-        }
-        if (name === 'fold') {
-          if (value !== 'open' && value !== 'closed')
-            throw new ToolError('fold needs value: open or closed', 'INVALID_ARGUMENT');
-          await settings.fold(value === 'closed');
-          s.acted();
-          return reply(`fold: ${value}`, { done: `fold: ${value}` });
-        }
-        if (name === 'call') {
-          const m = /^(end )?(\+?\d{3,20})$/.exec(value ?? '');
-          if (!m)
-            throw new ToolError(
-              'call needs value: a phone number; end and the number hangs up',
-              'INVALID_ARGUMENT',
-            );
-          await settings.call(m[2]!, !!m[1]);
-          s.acted();
-          const t = m[1] ? `the call from ${m[2]} ended` : `a call from ${m[2]} is coming in`;
-          return reply(t, { done: t });
-        }
-        if (name === 'sms') {
-          const from = title ?? DEFAULT_SENDER;
-          if (!value) throw new ToolError('sms needs value: the text', 'INVALID_ARGUMENT');
-          if (!PHONE_NUMBER.test(from))
-            throw new ToolError(
-              'sms needs title: the phone number it comes from',
-              'INVALID_ARGUMENT',
-            );
-          await settings.sms(from, value);
-          s.acted();
-          return reply(`an SMS came from ${from}`, { done: `an SMS came from ${from}` });
-        }
-        const pkg = app ?? (name === 'locale' ? s.appId : undefined);
-        if (pkg) checkApp(policy, pkg);
-        if (value === undefined) {
-          const now = await settings.get(name, pkg);
-          const t = `${name}: ${now}`;
-          return reply(clean(t), { done: clean(t), value: now });
-        }
-        await setCondition(s, name, value, pkg);
-        s.acted();
-        const t = `${name}: ${value}`;
-        return reply(t, { done: t, value, changed: { [name]: value } });
       },
     }),
     defineOp({

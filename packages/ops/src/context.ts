@@ -9,7 +9,7 @@ import {
 } from '@appdyno/core';
 import { DEFAULT_TRACE_LIMIT_GB } from '@appdyno/perf';
 import { claim, holder, release } from './claims.js';
-import { restoreConditions } from './control.js';
+import { restoreConditions } from './settings.js';
 import { endCapture } from './network.js';
 import { checkApp, checkDevice, type Policy } from './policy.js';
 import { endRecording } from './record.js';
