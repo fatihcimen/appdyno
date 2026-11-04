@@ -219,7 +219,7 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_ROTATE === '1')('a simulator t
     device.mirror.open = (opts, signal, tell) =>
       open(opts, signal, (m) => {
         if (m.op === 'turns') told.push(m.turns);
-        tell(m);
+        tell?.(m);
       });
     const binary = await viewerBinary();
     let viewer: ViewerProcess | undefined;

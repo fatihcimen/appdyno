@@ -5,7 +5,7 @@ import { deviceStateFile, pause, reportProgress } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { HandOffOut } from '../schemas.js';
-import { ACT, defineOp, reply, type Op } from '../tool.js';
+import { ACT, defineOp, reply } from '../tool.js';
 import { liveMirror } from './state.js';
 
 const POLL_MS = 250;
@@ -37,7 +37,7 @@ export const handoffRequest = (serial: string) => read<Request>(requestFile(seri
 /** A person said they are done, by the window. */
 export const handoffDone = (serial: string, id: string) => write(doneFile(serial), { id });
 
-export function handoffOps(ctx: ServerContext): Op[] {
+export function handoffOps(ctx: ServerContext) {
   return [
     defineOp({
       name: 'hand_off',

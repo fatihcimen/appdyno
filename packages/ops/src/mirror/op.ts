@@ -7,7 +7,7 @@ import { alive } from '../claims.js';
 import type { ServerContext } from '../context.js';
 import { checkDevice } from '../policy.js';
 import { MirrorOut } from '../schemas.js';
-import { ACT, defineOp, reply, ToolError, type Op } from '../tool.js';
+import { ACT, defineOp, reply, ToolError } from '../tool.js';
 import { FOCUS_SIGNAL, liveMirror, liveMirrors, mirrorLog, type MirrorFile } from './state.js';
 
 /** A first use compiles the viewer: 25 s was measured at load 270. */
@@ -47,7 +47,7 @@ function lastWord(serial: string): string {
   }
 }
 
-export function mirrorOps(ctx: ServerContext): Op[] {
+export function mirrorOps(ctx: ServerContext) {
   const open = async (quality: string) => {
     const serial = await ctx.defaultSerial();
     checkDevice(ctx.policy, serial);

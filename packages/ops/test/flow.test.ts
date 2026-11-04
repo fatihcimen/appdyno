@@ -199,6 +199,16 @@ assert id=result check=text equals="Gönderildi"
       expect(text).toContain('unrecorded "gesture pinch"');
     });
 
+    it('leaves a window and a person out: neither is a step of the app, nor stops a replay', async () => {
+      const call = callerOf(context());
+      await expect(
+        recorded(call, async () => {
+          await call('mirror', { action: 'status' });
+          await call('hand_off', { reason: 'Face ID', timeoutS: 1 });
+        }),
+      ).rejects.toThrow('nothing was recorded yet');
+    });
+
     it('records an answered alert and a closed keyboard, and neither where nothing was there', async () => {
       device = new WithKeyboard();
       device.permissionUp = true;
