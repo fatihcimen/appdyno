@@ -66,3 +66,33 @@ export function mirrorRun({ values, quality, codec }: ReturnType<typeof mirrorAr
     log: (line: string) => console.log(line),
   };
 }
+
+type Settings = { device?: string; 'allow-devices'?: string; takeover?: boolean };
+
+/** `appdyno mirror`: stays with its windows until they close; its other words are the tool's. */
+export async function mirrorCommand<Context extends { close(): void }>(
+  args: string[],
+  use: {
+    context(settings: Settings): Context;
+    tool(ctx: Context, words: string[]): Promise<number>;
+    windows(ctx: Context, run: ReturnType<typeof mirrorRun>): Promise<number>;
+  },
+) {
+  const words = mirrorArgs(args);
+  const { values, action, quality, help, usage } = words;
+  if (help) console.log(help);
+  if (usage) console.error(usage);
+  if (help || usage) return help ? 0 : 2;
+  const ctx = use.context({
+    ...(values.device?.[0] && { device: values.device[0] }),
+    ...(values['allow-devices'] && { 'allow-devices': values['allow-devices'] }),
+    ...(values.takeover && { takeover: true }),
+  });
+  try {
+    return await (action !== 'open' || values.detach
+      ? use.tool(ctx, [action, '--quality', quality])
+      : use.windows(ctx, mirrorRun(words)));
+  } finally {
+    ctx.close();
+  }
+}

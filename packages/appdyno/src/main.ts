@@ -32,7 +32,7 @@ import { alertPerson } from './alert.js';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
 import { endWithClient } from './lifetime.js';
-import { mirrorArgs, mirrorRun } from './mirror-args.js';
+import { mirrorCommand } from './mirror-args.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
@@ -193,33 +193,15 @@ async function surveyCommand(args: string[]) {
   }
 }
 
-/** `appdyno mirror`: stays with its windows until they close; its other words are the tool's. */
-async function mirrorCommand(args: string[]) {
-  const words = mirrorArgs(args);
-  const { values, action, quality, help, usage } = words;
-  if (help) console.log(help);
-  if (usage) err(usage);
-  if (help || usage) return help ? 0 : 2;
-  const ctx = contextFrom({
-    ...(values.device?.[0] && { device: values.device[0] }),
-    ...(values['allow-devices'] && { 'allow-devices': values['allow-devices'] }),
-    ...(values.takeover && { takeover: true }),
-  });
-  try {
-    if (action !== 'open' || values.detach) {
-      const op = commandsFor(opsFor(ctx)).mirror!;
-      return await op.run([action, '--quality', quality], { out: (s) => console.log(s), err });
-    }
-    return await runMirrors(ctx, mirrorRun(words));
-  } finally {
-    ctx.close();
-  }
-}
-
 async function main(): Promise<number> {
   switch (command) {
     case 'mirror':
-      return mirrorCommand(rest);
+      return mirrorCommand(rest, {
+        context: contextFrom,
+        tool: (ctx, words) =>
+          commandsFor(opsFor(ctx)).mirror!.run(words, { out: (s) => console.log(s), err }),
+        windows: runMirrors,
+      });
     case 'mcp': {
       await serveMcp(rest);
       return 0;
