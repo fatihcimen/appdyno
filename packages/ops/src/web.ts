@@ -35,8 +35,10 @@ const READ_DOM = `(() => {
     const value = e.type === 'password' ? '' : e.value;
     const text = (e.getAttribute('aria-label') || e.innerText || value || e.placeholder || e.alt || '').trim().slice(0, 80);
     if (!text && !control) continue;
-    out.push({ tag: e.tagName.toLowerCase(), text, role: e.getAttribute('role') || undefined,
-      selector: e.id ? '#' + CSS.escape(e.id) : undefined, x: r.left, y: r.top, w: r.width, h: r.height });
+    // no key at all for what it lacks: WebKit's inspector sends an undefined as null
+    const role = e.getAttribute('role');
+    out.push({ tag: e.tagName.toLowerCase(), text, ...(role && { role }),
+      ...(e.id && { selector: '#' + CSS.escape(e.id) }), x: r.left, y: r.top, w: r.width, h: r.height });
     if (out.length >= ${MAX_ELEMENTS}) break;
   }
   return { title: document.title, url: location.href, width: innerWidth, elements: out };
