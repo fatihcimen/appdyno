@@ -243,7 +243,7 @@ screen at that moment: the id, else role and text, else text. Refs never reach t
 finds alone keeps its index and is flagged `!ambiguous`. Only a point on no element, a slider or a large
 area stays as coordinates, flagged `!coordinates` with the screen size they hold for; a screen of another
 size refuses that step. A role is kept when both platforms name it alike (`button`, `textField`...), and
-Android's own ids (`android:id/button1`) are not kept. An action with no step (a pinch, a device setting)
+Android's own ids (`android:id/button1`) are not kept. An action with no step (a pinch, a device setting, a click in a web view, a measure that restarts the app)
 is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. `flow stop` and
 `flow save` list every step to look at.
 

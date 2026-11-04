@@ -165,12 +165,16 @@ export class ServerContext {
     if (this.currentSerial === serial) this.currentSerial = undefined;
   }
 
+  /** The device in use or named, known with nothing opened. */
+  get selected(): string | undefined {
+    return this.currentSerial ?? this.defaults.device ?? this.saved?.serial;
+  }
+
   /** The session of `serial`, else the default device (the configured one, or the only allowed one). */
   async session(serial?: string): Promise<Session> {
     if (serial) return this.sessions.get(serial) ?? this.use(serial);
     if (this.currentSerial) return this.sessions.get(this.currentSerial)!;
-    const named = this.defaults.device ?? this.saved?.serial;
-    if (named) return this.use(named);
+    if (this.selected) return this.use(this.selected);
     const ready = (await this.devices().catch(refused)).filter(
       (d) => d.ready && this.allowed(d.serial),
     );

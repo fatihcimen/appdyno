@@ -8,6 +8,7 @@ import {
   Recording,
 } from '@appdyno/flows';
 import type { ServerContext } from '../context.js';
+import { NOT_STEPS } from '../report.js';
 import type { Session } from '../session.js';
 import { type Step, WAIT_MS } from '../step-schemas.js';
 import type { Op, ToolResult } from '../tool.js';
@@ -28,6 +29,20 @@ const unrecorded = (what: string): FlowStep => ({
   flags: [],
 });
 
+/** No action of a flow, as they pick the device, film it or run the recording; nor is what a report leaves out. */
+const NOT_ACTIONS = new Set([...NOT_STEPS, 'use_device', 'record', 'flow']);
+
+/** Each step these run passes `through`. */
+const BY_STEP = new Set(['tap', 'swipe', 'scroll_to', 'type_text', 'press_key', 'steps']);
+
+/** What an op that can change things does when it only looks. */
+const LOOKS: Record<string, string[]> = {
+  app: ['list', 'state'],
+  network: ['paths', 'read'],
+  webview: ['pages', 'elements'],
+  react_native: ['targets', 'logs'],
+};
+
 type FlatSelector = {
   text?: string | undefined;
   id?: string | undefined;
@@ -45,8 +60,8 @@ const flatSelector = (a: FlatSelector): FlowSelector | undefined =>
  * other op passes `wrap`. Nothing is written unless the action succeeded.
  */
 export function flowRecorder(ctx: ServerContext) {
-  const active = (s: Session) => {
-    const r = loadRecording(ctx, s.device.serial);
+  const active = (serial: string | undefined) => {
+    const r = serial === undefined ? undefined : loadRecording(ctx, serial);
     return r?.state.running ? r : undefined;
   };
 
@@ -243,7 +258,7 @@ export function flowRecorder(ctx: ServerContext) {
     keepRecording(r);
   };
 
-  /** An op with no step of its own, as a flow step; a read or a refused action is none. */
+  /** An op with no step of its own, as a flow step; a refused action is none, and any other op stops a replay. */
   const OPS: Record<
     string,
     (a: Record<string, unknown>, data: Record<string, unknown>) => FlowStep | undefined
@@ -263,16 +278,17 @@ export function flowRecorder(ctx: ServerContext) {
       a.value !== undefined || a.name === 'restore'
         ? unrecorded(`device_setting ${String(a.name)}`)
         : undefined,
-    app: (a) =>
-      a.action === 'list' || a.action === 'state'
-        ? undefined
-        : unrecorded(`app ${String(a.action)}`),
   };
+
+  const unknownOp = (name: string) => (a: Record<string, unknown>) =>
+    LOOKS[name]?.includes(String(a.action))
+      ? undefined
+      : unrecorded(a.action ? `${name} ${String(a.action)}` : name);
 
   return {
     /** Around one step of `tap`, `steps` and the like. */
     through: async <T>(s: Session, st: Step, run: () => Promise<T>): Promise<T> => {
-      const r = active(s);
+      const r = active(s.device.serial);
       if (!r) return run();
       const record = await prepared(r, s, st);
       const out = await run();
@@ -282,22 +298,24 @@ export function flowRecorder(ctx: ServerContext) {
 
     /** The op as the surfaces see it. */
     wrap: (op: Op): Op => {
-      const toStep = OPS[op.name];
       const checks = op.name === 'wait_for' || op.name === 'assert';
-      if (!toStep && !checks) return op;
+      const elsewhere = BY_STEP.has(op.name) || NOT_ACTIONS.has(op.name);
+      if (!checks && (elsewhere || op.annotations.readOnlyHint)) return op;
+      const toStep = OPS[op.name] ?? unknownOp(op.name);
       return {
         ...op,
         handler: async (args): Promise<ToolResult> => {
-          // no device: the op itself says what is wrong
-          const s = await ctx.session().catch(() => undefined);
-          const r = s && active(s);
-          if (!s || !r) return op.handler(args);
+          // no device: the op itself says what is wrong; Metro needs none, so none is opened for it
+          const s =
+            op.name === 'react_native' ? undefined : await ctx.session().catch(() => undefined);
+          const r = active(s?.device.serial ?? ctx.selected);
+          if (!r) return op.handler(args);
           let record: (() => FlowStep | undefined) | undefined;
-          if (op.name === 'wait_for') record = await waitStep(s, args as never);
-          if (op.name === 'assert') record = await assertStep(s, args as never);
+          if (s && op.name === 'wait_for') record = await waitStep(s, args as never);
+          if (s && op.name === 'assert') record = await assertStep(s, args as never);
           const out = await op.handler(args);
           if (out.data.met === false) return out;
-          add(r, record ? record() : toStep!(args, out.data));
+          add(r, record ? record() : toStep(args, out.data));
           return out;
         },
       };

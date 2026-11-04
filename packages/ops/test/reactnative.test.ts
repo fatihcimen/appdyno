@@ -1,11 +1,17 @@
 import { createHash } from 'node:crypto';
+import { mkdtempSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo, Socket } from 'node:net';
-import { afterEach, describe, expect, it } from 'vitest';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { DeviceProvider } from '@appdyno/core';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
 import { opsFor } from '../src/registry.js';
 import { ToolError, type Op } from '../src/tool.js';
+import { FakeDevice } from './fake-device.js';
+import { callerOf } from './helpers.js';
 
 /** One text frame from the server. */
 const frame = (text: string) => {
@@ -141,6 +147,51 @@ describe('react_native', () => {
     metro = await fakeMetro({ reloadRoute: false });
     expect(await call({ action: 'reload', metro: metro.metro })).toBe('reloaded device-0');
     expect(metro.calls).toContain('Page.reload');
+  });
+
+  describe('during a recording', () => {
+    let opens: number;
+    const device = new FakeDevice();
+    const provider: DeviceProvider = {
+      list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+      handles: () => true,
+      open: () => {
+        opens++;
+        return device;
+      },
+    };
+    beforeEach(() => {
+      opens = 0;
+      vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-rn-')));
+    });
+    afterEach(() => vi.unstubAllEnvs());
+
+    it('marks a reload, by no more than its name, and opens no device to find out', async () => {
+      metro = await fakeMetro({ reloadRoute: true });
+      // the recording began in an earlier process, on the device a command line remembers
+      const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-rn-')), 'session.json');
+      const start = new ServerContext(DEFAULT_POLICY, [provider], { remember });
+      await callerOf(start)('flow', { action: 'start' });
+      start.close();
+      opens = 0;
+
+      const ctx = new ServerContext(DEFAULT_POLICY, [provider], { remember });
+      const call = callerOf(ctx);
+      await call('react_native', { action: 'targets', metro: metro.metro });
+      await call('react_native', { action: 'reload', metro: metro.metro });
+      expect(opens).toBe(0);
+      const stop = await call('flow', { action: 'stop' });
+      expect(stop.text.split('\n').filter((l) => l.startsWith('unrecorded'))).toEqual([
+        'unrecorded "react_native reload"',
+      ]);
+    });
+
+    it('with a device attached and none named, opens none and marks nothing', async () => {
+      metro = await fakeMetro({ reloadRoute: true });
+      const call = callerOf(new ServerContext(DEFAULT_POLICY, [provider]));
+      await call('react_native', { action: 'reload', metro: metro.metro });
+      expect(opens).toBe(0);
+    });
   });
 
   it('says when no app is connected', async () => {

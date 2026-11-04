@@ -5,11 +5,16 @@ import type { DeviceProvider } from '@appdyno/core';
 import { parseFlow, type StepEvent } from '@appdyno/flows';
 import { DeviceError } from '@appdyno/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
+import { flowRecorder } from '../src/flow/recorder.js';
 import {
+  ACT,
+  defineOp,
   DEFAULT_POLICY,
   flowFiles,
   flowsFor,
   paramsOf,
+  reply,
   ServerContext,
   ToolError,
 } from '../src/index.js';
@@ -197,6 +202,86 @@ assert id=result check=text equals="Gönderildi"
       expect(text.match(/^alert /gm)).toHaveLength(1);
       expect(text).toContain('alert "allow"');
       expect(text.match(/^hide_keyboard$/gm)).toHaveLength(1);
+    });
+
+    it('marks whatever else changes things, so that a replay stops there', async () => {
+      const page = { id: 'p', title: 't', url: 'https://x.test/', visible: true };
+      device = Object.assign(new FakeDevice(), {
+        web: {
+          pages: async () => [page],
+          evaluate: async () => ({ tag: 'a', text: 'Go', title: 't', url: page.url, elements: [] }),
+        },
+        network: {
+          paths: async () => [{ via: 'bytes', sees: 'bytes' }],
+          start: async () => 'handle',
+          read: async () => ({ entries: [] }),
+          stop: async () => ({ entries: [] }),
+        },
+      });
+      const call = callerOf(context());
+      const { text } = await recorded(call, async () => {
+        await call('webview', { action: 'pages' });
+        await call('webview', { action: 'elements' });
+        await call('webview', { action: 'click', selector: '#go' });
+        await call('webview', { action: 'eval', js: 'secretWork()' });
+        await call('network', { action: 'paths' });
+        await call('network', { action: 'start', via: 'bytes' });
+        await call('network', { action: 'read' });
+        await call('network', { action: 'stop' });
+        await call('perf_launch', { repeats: 1 });
+      });
+      const unrecorded = text.split('\n').filter((l) => l.startsWith('unrecorded'));
+      expect(unrecorded).toEqual([
+        'unrecorded "webview click"',
+        'unrecorded "webview eval"',
+        'unrecorded "network start"',
+        'unrecorded "network stop"',
+        'unrecorded "perf_launch"',
+      ]);
+      expect(text).not.toContain('secretWork');
+    });
+
+    it('marks an op that no list knows yet, by its name alone', async () => {
+      const ctx = context();
+      const call = callerOf(ctx);
+      const op = flowRecorder(ctx).wrap(
+        defineOp({
+          name: 'new_op',
+          title: 'x',
+          description: 'x',
+          input: z.object({}).loose(),
+          output: z.object({}),
+          annotations: ACT,
+          run: async () => reply('done', {}),
+        }),
+      );
+      const { text } = await recorded(call, () => op.handler({ words: 'typed words' }));
+      expect(text).toContain('unrecorded "new_op"');
+      expect(text).not.toContain('typed words');
+    });
+
+    it('marks nothing for what only looks, picks the device, films it or runs the recording', async () => {
+      device = Object.assign(new FakeDevice(), {
+        recorder: {
+          extension: 'mp4',
+          start: async () => 'handle',
+          stop: async () => ({ files: [] }),
+        },
+      });
+      const call = callerOf(context());
+      const { text } = await recorded(call, async () => {
+        await call('list_devices');
+        await call('use_device', { device: device.serial });
+        await call('simulator', { action: 'list' });
+        await call('record', { action: 'start', file: join(dir, 'a.mp4') });
+        await call('record', { action: 'stop' });
+        await call('report', { action: 'write', dir: join(dir, 'report') });
+        await call('screen');
+        await call('perf_snapshot');
+        await call('app', { action: 'state' }).catch(() => undefined);
+        await call('launch_app');
+      });
+      expect(text.split('\n').filter((l) => l && !l.startsWith('app '))).toEqual(['launch']);
     });
 
     it('holds across the processes of a command line, on the device it began on', async () => {
