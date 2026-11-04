@@ -371,17 +371,32 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   return YES;
 }
 
-- (void)pokeX:(double)x y:(double)y right:(BOOL)right {
+- (void)postMouse:(NSEventType)type x:(double)x y:(double)y {
   NSPoint inView = NSMakePoint(x * _view.bounds.size.width, (1 - y) * _view.bounds.size.height);
   NSPoint at = [_view convertPoint:inView toView:nil];
-  NSInteger number = _window.windowNumber;
-  void (^post)(NSEventType) = ^(NSEventType type) {
-    [NSApp postEvent:[NSEvent mouseEventWithType:type location:at modifierFlags:0 timestamp:0 windowNumber:number context:nil eventNumber:0 clickCount:1 pressure:1] atStart:NO];
-  };
-  post(right ? NSEventTypeRightMouseDown : NSEventTypeLeftMouseDown);
+  [NSApp postEvent:[NSEvent mouseEventWithType:type location:at modifierFlags:0 timestamp:0 windowNumber:_window.windowNumber context:nil eventNumber:0 clickCount:1 pressure:1] atStart:NO];
+}
+
+- (void)pokeX:(double)x y:(double)y right:(BOOL)right {
+  [self postMouse:right ? NSEventTypeRightMouseDown : NSEventTypeLeftMouseDown x:x y:y];
   // as long as a mouse's: a touch that lifts in the instant it lands is no tap to a device
   dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kClickSeconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-    post(right ? NSEventTypeRightMouseUp : NSEventTypeLeftMouseUp);
+    [self postMouse:right ? NSEventTypeRightMouseUp : NSEventTypeLeftMouseUp x:x y:y];
+  });
+}
+
+/// A button held, or drawn from one place to another, by the events a mouse sends: a step a display's tick apart.
+- (void)pokeX:(double)x y:(double)y toX:(double)x2 toY:(double)y2 seconds:(double)seconds {
+  [self postMouse:NSEventTypeLeftMouseDown x:x y:y];
+  int steps = x == x2 && y == y2 ? 0 : MAX(1, (int)(seconds / 0.016));
+  for (int i = 1; i <= steps; i++) {
+    double at = (double)i / steps;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(at * seconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+      [self postMouse:NSEventTypeLeftMouseDragged x:x + (x2 - x) * at y:y + (y2 - y) * at];
+    });
+  }
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)((seconds + 0.02) * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    [self postMouse:NSEventTypeLeftMouseUp x:x2 y:y2];
   });
 }
 
@@ -391,6 +406,11 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 
 - (void)pokeButton:(NSString *)name {
   [_view pressButton:name];
+}
+
+- (void)pokeText:(NSString *)text {
+  // what a keyboard's letters end in: a window kept behind is never the key window, so no real key gets this far
+  [_view insertText:text replacementRange:NSMakeRange(NSNotFound, 0)];
 }
 
 - (void)pokeKey:(NSString *)characters {

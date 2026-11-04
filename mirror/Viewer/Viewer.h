@@ -157,6 +157,8 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 @property(nonatomic) BOOL poses;
 /// A click at this fraction of the picture, by the window's own event queue: needs no permission to post.
 - (void)pokeX:(double)x y:(double)y right:(BOOL)right;
+- (void)pokeText:(NSString *)text;
+- (void)pokeX:(double)x y:(double)y toX:(double)x2 toY:(double)y2 seconds:(double)seconds;
 - (void)pokeKey:(NSString *)characters;
 - (void)pokeButton:(NSString *)name;
 /// The window as it looks now, to a PNG.

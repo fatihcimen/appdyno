@@ -148,11 +148,14 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   if ([op isEqual:@"copied"]) return MVCopyImage(m[@"file"]);
   if ([op isEqual:@"poke"]) {
     if (m[@"key"]) return [_window pokeKey:m[@"key"]];
+    if (m[@"text"]) return [_window pokeText:m[@"text"]];
     if (m[@"button"]) return [_window pokeButton:m[@"button"]];
     if ([m[@"done"] boolValue]) return [_window.overlay done:self];
     if (m[@"pane"]) return [_window showPane:[m[@"pane"] integerValue]];
     if (m[@"control"]) return [_window perform:m[@"control"]];
-    return [_window pokeX:[m[@"x"] doubleValue] y:[m[@"y"] doubleValue] right:[m[@"right"] boolValue]];
+    double x = [m[@"x"] doubleValue], y = [m[@"y"] doubleValue];
+    if (m[@"seconds"]) return [_window pokeX:x y:y toX:[(m[@"x2"] ?: m[@"x"]) doubleValue] toY:[(m[@"y2"] ?: m[@"y"]) doubleValue] seconds:[m[@"seconds"] doubleValue]];
+    return [_window pokeX:x y:y right:[m[@"right"] boolValue]];
   }
   if ([op isEqual:@"snapshot"]) return MVEmit(@{@"op": @"snapped", @"file": m[@"file"] ?: @"", @"ok": @([_window snapshot:m[@"file"]])});
   if ([op isEqual:@"mark"]) return [_stats mark:[m[@"bigger"] boolValue]];
