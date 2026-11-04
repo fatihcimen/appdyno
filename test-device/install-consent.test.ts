@@ -11,10 +11,11 @@ import { opCaller } from './helpers.js';
 /**
  * `app install` and the phone's own prompts, with no person: APPDYNO_ANDROID_SERIAL names the device. On a phone that
  * asks (a Xiaomi with its USB install prompt) it installs with no one there; where nothing asks, as on an emulator, it
- * installs as before. APPDYNO_WARNED_APK is an app that Play Protect warns about, such as the fixture built with
- * `./gradlew :fixture:assembleDebug -PoldTarget` and copied somewhere: without it the warning's tests are skipped.
- * APPDYNO_UNSEEN_APK is an app Play Protect has not seen, as its prompt to send
- * an app comes only for some: without it that test is skipped.
+ * installs as before. Play Protect is a prompt of its own, the same on any maker's phone, and comes only with "Verify
+ * apps over USB" on (`settings get global verifier_verify_adb_installs` reads 1). APPDYNO_WARNED_APK is an app it warns
+ * about, such as the fixture built with `./gradlew :fixture:assembleDebug -PoldTarget` and copied somewhere: without it
+ * the warning's tests are skipped. APPDYNO_UNSEEN_APK is an app it has not seen, as its prompt to send an app comes only
+ * for some: without it that test is skipped.
  */
 const serial = process.env.APPDYNO_ANDROID_SERIAL;
 const WARNED_APK = process.env.APPDYNO_WARNED_APK;
@@ -31,6 +32,7 @@ const adb = new Adb();
 const sh = (c: string, s = serial!) =>
   execFileSync(adb.bin, ['-s', s, 'shell', c], { encoding: 'utf8' }).trim();
 const asks = !!serial && sh('getprop persist.security.adbinstall') === '1';
+const verifies = !!serial && sh('settings get global verifier_verify_adb_installs') === '1';
 const installed = (app: string) => sh(`pm path ${app} 2>&1; true`).includes('package:');
 const gone = (app: string) => sh(`pm uninstall ${app} >/dev/null 2>&1; true`);
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -50,34 +52,33 @@ const off = { prompts: false, warnings: false };
 const on = { prompts: true, warnings: false };
 const withWarnings = { prompts: true, warnings: true };
 
+let open: ReturnType<typeof harness>[] = [];
+const started = (a: InstallAnswers) => {
+  const h = harness(a);
+  open.push(h);
+  return h;
+};
+/** What a person does at the phone: this suite's own touch, for what the tool must leave alone. */
+const person = async (h: ReturnType<typeof harness>, words: RegExp) => {
+  const { device } = await h.ctx.session();
+  const t = await device.tree();
+  const n = t.nodes.find((x) => x.t && words.test(x.t));
+  if (!n) return false;
+  const [l, top, r, b] = n.b;
+  await device.longPress({ x: (l + r) / 2, y: (top + b) / 2 }, 150, { settle: false });
+  return true;
+};
+
+afterEach(async () => {
+  for (const h of open) {
+    await h.ctx.end().catch(() => []);
+    h.ctx.close();
+  }
+  open = [];
+});
+
 describe.skipIf(!asks)('a phone that asks before an install', () => {
-  let open: ReturnType<typeof harness>[] = [];
-  const started = (a: InstallAnswers) => {
-    const h = harness(a);
-    open.push(h);
-    return h;
-  };
-  /** What a person does at the phone: this suite's own touch, for what the tool must leave alone. */
-  const person = async (h: ReturnType<typeof harness>, words: RegExp) => {
-    const { device } = await h.ctx.session();
-    const t = await device.tree();
-    const n = t.nodes.find((x) => x.t && words.test(x.t));
-    if (!n) return false;
-    const [l, top, r, b] = n.b;
-    await device.longPress({ x: (l + r) / 2, y: (top + b) / 2 }, 150, { settle: false });
-    return true;
-  };
-
-  afterEach(async () => {
-    for (const h of open) {
-      await h.ctx.end().catch(() => []);
-      h.ctx.close();
-    }
-    open = [];
-  });
-
   afterAll(async () => {
-    if (WARNED_APK) gone(WARNED_APP);
     // the fixture goes back on the phone, whatever failed
     if (!installed(APP)) await started(on).call('app', { action: 'install', path: APK });
     for (const h of open) h.ctx.close();
@@ -107,19 +108,6 @@ describe.skipIf(!asks)('a phone that asks before an install', () => {
       expect(rounds.filter((r) => r.ok)).toHaveLength(ROUNDS);
     },
     120_000 * ROUNDS,
-  );
-
-  it.skipIf(!UNSEEN_APK)(
-    'answers no when asked to send the app to Google',
-    async () => {
-      gone(UNSEEN_APP);
-      const r = await started(on).call('app', { action: 'install', path: UNSEEN_APK! });
-      console.log(r.text);
-      expect(r.text).toMatch(/^answered ".+" to Play Protect's prompt .+ stayed on this machine$/m);
-      expect(r.text).toMatch(/^tapped "/m);
-      expect(installed(UNSEEN_APP)).toBe(true);
-    },
-    120_000,
   );
 
   it('keeps what it tapped in the report', async () => {
@@ -183,8 +171,27 @@ describe.skipIf(!asks)('a phone that asks before an install', () => {
     expect(r.text).not.toContain('tapped');
     expect(installed(APP)).toBe(false);
   }, 120_000);
+});
 
-  describe.skipIf(!WARNED_APK || !existsSync(WARNED_APK))('and a Play Protect warning', () => {
+describe.skipIf(!verifies)('Play Protect on a USB install', () => {
+  afterAll(() => {
+    if (WARNED_APK) gone(WARNED_APP);
+  });
+
+  it.skipIf(!UNSEEN_APK)(
+    'answers no when asked to send the app to Google',
+    async () => {
+      gone(UNSEEN_APP);
+      const r = await started(on).call('app', { action: 'install', path: UNSEEN_APK! });
+      console.log(r.text);
+      expect(r.text).toMatch(/^answered ".+" to Play Protect's prompt .+ stayed on this machine$/m);
+      if (asks) expect(r.text).toMatch(/^tapped "/m);
+      expect(installed(UNSEEN_APP)).toBe(true);
+    },
+    120_000,
+  );
+
+  describe.skipIf(!WARNED_APK || !existsSync(WARNED_APK))('and a warning', () => {
     it('is left alone without the flag, and quoted, and waits for a person', async () => {
       gone(WARNED_APP);
       const h = started(on);

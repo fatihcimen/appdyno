@@ -327,7 +327,9 @@ when it comes, and says so.
 
 The warning was seen on an app built for `targetSdk` 24 (`-PoldTarget` on the fixture), the only warning this phone could be made to show with a harmless app, and
 was passed by the host all the way to an installed app (`test-device/install-consent.test.ts`). Others, such as "harmful app blocked" or "app scan recommended", are in those resources, were not seen, and
-their "Install without scanning" is not taken. Other makers' USB install prompts were not seen and are left alone: the install then ends as it does on its own.
+their "Install without scanning" is not taken. Any other maker's USB install prompt is left alone: the install then ends as it does on its own.
+
+A Samsung SM-A525F (One UI 6.1, Android 14, en-US) has no USB install prompt of its own: its `persist.security.adbinstall` is empty and installs took 1.1 s with nothing on the screen. Play Protect looked at them only with "Verify apps over USB" on (`verifier_verify_adb_installs`, 0 on this phone as found). With it on, its dialogs were the Xiaomi's, in the same window, in English: the warning, "More details" and "Install anyway" passed with the flag and left alone without it, and "Send app for a security check?" answered "Don't send" by the host itself, by `test-device/install-consent.test.ts`, 3 of 3.
 
 With no person, uninstalling and installing the fixture each round, it took 14 of 14 rounds, 6 of 6 more with a report open, a cold agent or a screen put to sleep as the
 prompt opened, and 3 of 3 through the built command line and server. These are small counts on one phone.
@@ -344,7 +346,7 @@ What it took on that phone:
 - "Install anyway" took no instant tap the one time that was tried, and has taken a touch held for 150 ms each time since, so all these touches are held. It has no
   node of its own: the touch goes to the last line of its text.
 - Play Protect does not always ask to send. It asked on the first two installs each of the fixture and of its old-target build, was told no each time, and on the 50 or
-  so installs since has not asked, for new package names either (`upload_requested=false` in its log). So the host's own answer to that prompt has run only on the
+  so installs since has not asked, for new package names either (`upload_requested=false` in its log). So on that phone the host's own answer to that prompt has run only on the
   recorded trees. On the phone, the agent's tap and a held touch by hand both took it. It did not time out in 3 minutes.
 - When a person must answer, the host ends `adb install` and answers at once. The prompt stays on the phone, and a person's answer still installs the app (seen once).
 - A prompt still open from an earlier call refuses the next install before it starts. A touch on it answers the earlier install, which the verifier then lets through,
