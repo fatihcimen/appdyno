@@ -1,7 +1,7 @@
 import { DeviceError } from '@appdyno/protocol';
 import { parsePlist, plistXml } from '../usbmux.js';
 import { readBplist } from '../webinspector.js';
-import { DtxClient, type DtxMessage } from './dtx.js';
+import { greeted, within, type DtxClient } from './dtx.js';
 import type { IpStack, TcpConnection } from './ipstack.js';
 import type { Archived } from './keyed-archive.js';
 import type { ServiceList } from './services.js';
@@ -13,7 +13,6 @@ const NEXT = 4;
 const MOST_ELEMENTS = 300;
 const MOVE_MS = 1_000;
 const READY_MS = 300;
-const OPEN_MS = 5_000;
 const SHOWN = 20;
 
 type Dict = { [k: string]: Archived };
@@ -100,15 +99,7 @@ export class Audit {
     if (!port) throw new Error('the phone lists no accessibility service');
     const connection = await stack.connect(port);
     const rest = await within(checkIn(connection));
-    const dtx = new DtxClient(connection);
-    const first = new Promise<DtxMessage>((resolve) => {
-      dtx.onPush = resolve;
-    });
-    dtx.feed(rest);
-    const hello = await within(first);
-    dtx.onPush = () => undefined;
-    // it opens by saying what it can: said back, it goes on
-    dtx.tell('_notifyOfPublishedCapabilities:', hello.args);
+    const dtx = await greeted(connection, rest);
     return new Audit(connection, dtx);
   }
 
@@ -156,17 +147,6 @@ export class Audit {
     await this.dtx.call('devicePerformFinalCleanup').catch(() => undefined);
     this.connection.close();
   }
-}
-
-function within<T>(work: Promise<T>) {
-  let timer: NodeJS.Timeout;
-  const late = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error('the accessibility service did not answer')),
-      OPEN_MS,
-    );
-  });
-  return Promise.race([work, late]).finally(() => clearTimeout(timer));
 }
 
 /** A service reached over the tunnel is told who calls, in lockdown's framing, and answers twice; what follows is its own. */

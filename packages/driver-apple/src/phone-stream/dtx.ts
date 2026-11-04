@@ -11,6 +11,7 @@ const AUX_ARCHIVE = 2;
 const AUX_INT = 3;
 const AUX_DOUBLE = 9;
 const ANSWER_MS = 5_000;
+const OPEN_MS = 5_000;
 
 type Link = { write(b: Buffer): unknown; onData(f: (d: Buffer) => void): unknown };
 
@@ -150,6 +151,27 @@ export class DtxReader {
       args: argsOf(body.subarray(BODY_HEAD, BODY_HEAD + auxLength)),
     };
   }
+}
+
+export function within<T>(work: Promise<T>) {
+  let timer: NodeJS.Timeout;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('the phone service did not answer')), OPEN_MS);
+  });
+  return Promise.race([work, late]).finally(() => clearTimeout(timer));
+}
+
+/** A service opens by saying what it can, and goes on once told what this side can: its own words, if none are given. */
+export async function greeted(link: Link, rest: Buffer = Buffer.alloc(0), capabilities?: Archived) {
+  const dtx = new DtxClient(link);
+  const first = new Promise<DtxMessage>((resolve) => {
+    dtx.onPush = resolve;
+  });
+  dtx.feed(rest);
+  const hello = await within(first);
+  dtx.onPush = () => undefined;
+  dtx.tell('_notifyOfPublishedCapabilities:', capabilities ? [capabilities] : hello.args);
+  return dtx;
 }
 
 /** Calls on a connection to a DTX service, and what it sends by itself. */

@@ -11,6 +11,7 @@ import { type IosDeviceOps, IosDevice } from './device.js';
 import { phoneRecorder } from './record.js';
 import { iosProducts, type RunnerTransport, IosRunnerLauncher } from './runner.js';
 import { PhoneInspector } from './phone-inspector.js';
+import { PhoneLive } from './phone-live.js';
 import { signedRunner, type PhoneSigning, findPhoneSigning, phoneXctestrun } from './signing.js';
 import { assertBundle } from './simctl.js';
 import { IosPhonePerf } from './phone-perf.js';
@@ -127,6 +128,7 @@ export class IosPhoneDevice extends IosDevice {
     this.settings = new PhoneSettings(ctl);
     this.events = new PhoneEvents();
     this.inspector = new PhoneInspector(ctl);
+    this.liveMetrics = new PhoneLive(serial);
     this.recorder = phoneRecorder(serial);
   }
 
@@ -140,6 +142,7 @@ export class IosPhoneDevice extends IosDevice {
   readonly settings: PhoneSettings;
   readonly events: PhoneEvents;
   readonly inspector: PhoneInspector;
+  readonly liveMetrics: PhoneLive;
 
   /**
    * A phone locks itself about a minute after the last touch, and a swipe or a tap on its lock screen goes to the system

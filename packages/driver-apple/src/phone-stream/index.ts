@@ -1,5 +1,5 @@
 import { Worker } from 'node:worker_threads';
-import type { InputEvent, MirrorQuality } from '@appdyno/core';
+import type { InputEvent, LiveSample, MirrorQuality } from '@appdyno/core';
 import type {
   PhoneStreamCheck,
   PhoneStreamEvent,
@@ -8,6 +8,7 @@ import type {
 } from '../phone-stream-port.js';
 import { listDevices } from '../usbmux.js';
 import { Audit, elementNamed, type AuditElement } from './audit.js';
+import { LiveReader, NO_HUB, unreadable } from './live.js';
 import { readServices, takeScreenshot } from './services.js';
 import { openTunnel, PhoneRefusal, readPairRecord } from './tunnel.js';
 import type { ToWorker } from './worker.js';
@@ -68,6 +69,31 @@ const press = (udid: string, name: string) =>
     return told(element);
   });
 
+async function live(
+  udid: string,
+  app: string | undefined,
+  onSample: (s: LiveSample) => void,
+): Promise<() => void> {
+  const { stack, rsdPort } = await openTunnel(udid);
+  const reader = await LiveReader.open(
+    stack,
+    await readServices(stack, rsdPort),
+    app,
+    onSample,
+  ).catch((e: Error) => {
+    onSample(unreadable(e.message, app));
+  });
+  if (reader === null) onSample(unreadable(NO_HUB, app));
+  if (!reader) {
+    stack.close();
+    return () => undefined;
+  }
+  return () => {
+    reader.stop();
+    stack.close();
+  };
+}
+
 function start(
   udid: string,
   options: { quality: MirrorQuality },
@@ -121,5 +147,5 @@ function start(
   };
 }
 
-const phoneStream: PhoneStreamModule = { check, screenshot, elements, press, start };
+const phoneStream: PhoneStreamModule = { check, screenshot, elements, press, live, start };
 export default phoneStream;

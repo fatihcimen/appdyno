@@ -15,6 +15,7 @@ import type {
   Platform,
 } from '@appdyno/protocol';
 import type { MeasureSource, TraceDigest } from './measure.js';
+import type { LiveMetrics } from './mirror/live-metrics.js';
 import type { PlatformScreen } from './screen/port.js';
 import type { Mirror } from './mirror/port.js';
 
@@ -199,6 +200,8 @@ export interface Device {
   readonly inspector?: ScreenInspector;
   /** A live picture of the device: nothing of it starts until asked, and no agent needs to be up first. */
   readonly mirror: Mirror;
+  /** Numbers a second, for a person watching: none where this kind of device has no source. */
+  readonly liveMetrics?: LiveMetrics;
   /** One attempt to close an open keyboard; the caller reads whether it went. */
   dismissKeyboard(): Promise<void>;
   /**

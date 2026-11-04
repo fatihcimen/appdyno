@@ -1,4 +1,11 @@
-import type { DeviceState, InputEvent, InspectedElement, MirrorQuality, Need } from '@appdyno/core';
+import type {
+  DeviceState,
+  InputEvent,
+  InspectedElement,
+  LiveSample,
+  MirrorQuality,
+  Need,
+} from '@appdyno/core';
 
 /**
  * What the phone's stream offers this package, and all it knows of it. What speaks to the phone lives in
@@ -31,6 +38,12 @@ export interface PhoneStreamModule {
   elements(udid: string): Promise<InspectedElement[]>;
   /** Activates what the screen, read now, has by that id or those words. */
   press(udid: string, name: string): Promise<InspectedElement>;
+  /** A sample a second from the phone's own instruments until the answer is called. */
+  live(
+    udid: string,
+    app: string | undefined,
+    onSample: (s: LiveSample) => void,
+  ): Promise<() => void>;
   /** What can be known with no stream started. */
   check(udid: string): Promise<PhoneStreamCheck>;
   start(

@@ -477,4 +477,6 @@ An iPhone 13 Pro Max, iOS 27.2, mode 7, on a screen of noise, 167 Mbit/s at 60 f
 
 All the quiet run's loss is in the stream's first second. On that noise the first key comes as a burst of about 330 Mbit/s, twice the steady rate: 1,506 of the 3,457 packets in its heaviest 100 ms were lost, and the first whole picture was the next key, 1.56 s from the start, at load 27. A still screen shows its first picture in 459 ms, at load 18 to 20.
 
+An iPhone's live numbers come from its instruments service, a sample a second, on the same 13 Pro Max under a held stream at load about 370: 36 KB/s, 0.6 to 1.5 % of a Mac core to read, and about 6 % of a phone core for `DTServiceHub` itself while they run. Frames count the display, not the app: 59 to 60 on the noise screen, 19 to 20 on a still one under a stream, 0 on a dark phone.
+
 A simulator's turns are read four times a second by the helper that reads its screen, which a mirror starts if it is not running: 0.3 % of a core and 98 MB resident on a still screen at load 94.

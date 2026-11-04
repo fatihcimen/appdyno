@@ -27,6 +27,7 @@ function fake(check: Awaited<ReturnType<PhoneStreamModule['check']>> = { ok: tru
     }),
     elements: async () => [],
     press: async () => ({ caption: '' }),
+    live: async () => () => undefined,
     start: vi.fn((_udid, _options, listener) => {
       onEvent = listener;
       return handle;
