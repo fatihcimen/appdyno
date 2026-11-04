@@ -53,7 +53,8 @@ static int openDescriptors(void) {
   os_unfair_lock _lock;
   uint64_t _arrived, _decoded, _shown, _dropped, _bytes;
   Samples _capture, _decode, _gap;
-  double _lastShown, _markAt, _since, _cpuAt;
+  double _lastShown, _markAt, _since, _cpuAt, _quietBytes;
+  BOOL _markBigger;
 }
 
 - (instancetype)init {
@@ -70,13 +71,18 @@ static int openDescriptors(void) {
 
 - (void)arrived:(size_t)bytes captureMs:(double)ms {
   double now = MVNowMs(), markedAt = 0;
+  static const double kWellOverBytes = 3000;
   os_unfair_lock_lock(&_lock);
   _arrived++;
   _bytes += bytes;
   if (ms >= 0) add(&_capture, ms);
   if (_markAt > 0) {
-    markedAt = _markAt;
-    _markAt = 0;
+    if (!_markBigger || bytes > MAX(_quietBytes * 2, _quietBytes + kWellOverBytes)) {
+      markedAt = _markAt;
+      _markAt = 0;
+    }
+  } else {
+    _quietBytes = _quietBytes > 0 ? _quietBytes * 0.9 + bytes * 0.1 : bytes;
   }
   os_unfair_lock_unlock(&_lock);
   if (markedAt > 0) MVEmit(@{@"op": @"marked", @"ms": @(round((now - markedAt) * 10) / 10)});
@@ -104,9 +110,10 @@ static int openDescriptors(void) {
   os_unfair_lock_unlock(&_lock);
 }
 
-- (void)mark {
+- (void)mark:(BOOL)bigger {
   os_unfair_lock_lock(&_lock);
   _markAt = MVNowMs();
+  _markBigger = bigger;
   os_unfair_lock_unlock(&_lock);
 }
 

@@ -32,7 +32,9 @@ export type MirrorSource =
       /** What a person should know of this picture. */
       note?: string;
     }
-  | { kind: 'pixels'; file: string; w: number; h: number };
+  | { kind: 'pixels'; file: string; w: number; h: number }
+  /** Frames as an agent's stream has them, on a named pipe; what writes them holds the device. */
+  | { kind: 'pipe'; file: string; codec: 'hevc' };
 
 /** One touch, key or text. A touch is in fractions of the screen, whatever its size or rotation. */
 export type InputEvent =
@@ -63,6 +65,8 @@ export interface Mirror {
   watch(onChange: (s: DeviceState) => void): () => void;
   /** Turns a dark screen on, where this kind of device can be asked to: at a start, and at a person's click. */
   wake?(): Promise<void>;
+  /** A still screen keeps sending frames, so that only a larger one tells that something changed. */
+  readonly sendsWhenStill?: boolean;
   /** No first picture in this time means this, rather than a failed stream. */
   readonly noFirstFrame?: { ms: number; need: Need };
 }

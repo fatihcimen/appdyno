@@ -54,6 +54,8 @@ static void onDecoded(void *owner, void *refcon, OSStatus status, VTDecodeInfoFl
   free(startedAt);
 }
 
+static const double kRecorderAskMs = 1000;
+
 @implementation MVDecoder {
   __weak id<MVSink> _sink;
   __weak id _source;
@@ -65,6 +67,8 @@ static void onDecoded(void *owner, void *refcon, OSStatus status, VTDecodeInfoFl
   BOOL _awaitingKey;
   int _inFlight, _failures;
   BOOL _closed;
+  BOOL _pixelsTold;
+  double _recorderAskedAt;
 }
 
 - (instancetype)initWithSink:(id<MVSink>)sink from:(id)source {
@@ -148,6 +152,7 @@ static void onDecoded(void *owner, void *refcon, OSStatus status, VTDecodeInfoFl
   VTSessionCopyProperty(_session, kVTDecompressionPropertyKey_UsingHardwareAcceleratedVideoDecoder, NULL, &hardware);
   id<MVSink> sink = _sink;
   sink.stats.decoder = hardware == kCFBooleanTrue ? @"hardware" : @"software";
+  _pixelsTold = NO;
   if (hardware) CFRelease(hardware);
   CMVideoDimensions size = CMVideoFormatDescriptionGetDimensions(_format);
   id from = _source;
@@ -188,7 +193,8 @@ static void onDecoded(void *owner, void *refcon, OSStatus status, VTDecodeInfoFl
   if (behind) _awaitingKey = YES;
   if (key) _awaitingKey = NO;
   os_unfair_lock_unlock(&_lock);
-  if (skip || behind) {
+  MVRecorder *recorder = self.recorder;
+  if ((skip || behind) && !recorder) {
     [sink.stats dropped:1];
     if (behind) [self askForKey:0];
     return NO;
@@ -204,6 +210,21 @@ static void onDecoded(void *owner, void *refcon, OSStatus status, VTDecodeInfoFl
   size_t size = slices.length;
   OSStatus status = CMBlockBufferCreateWithMemoryBlock(NULL, copy, size, kCFAllocatorMalloc, NULL, 0, size, 0, &block);
   if (status == noErr) status = CMSampleBufferCreateReady(NULL, block, _format, 1, 0, NULL, 1, &size, &sample);
+  if (status == noErr && recorder) {
+    [recorder append:sample format:_format key:key];
+    if (recorder.wantsKey && MVNowMs() - _recorderAskedAt > kRecorderAskMs) {
+      _recorderAskedAt = MVNowMs();
+      [self askForKey:0];
+    }
+  }
+  if (skip || behind) {
+    // a movie goes on with what the picture cannot show yet
+    [sink.stats dropped:1];
+    if (behind) [self askForKey:0];
+    if (sample) CFRelease(sample);
+    if (block) CFRelease(block);
+    return NO;
+  }
   if (status == noErr) {
     double *startedAt = malloc(sizeof(double));
     *startedAt = MVNowMs();
@@ -240,6 +261,11 @@ static void onDecoded(void *owner, void *refcon, OSStatus status, VTDecodeInfoFl
   id<MVSink> sink = _sink;
   [sink.stats decodedMs:MVNowMs() - startedAt];
   id from = _source;
+  if (image && !_pixelsTold) {
+    _pixelsTold = YES;
+    OSType f = CFSwapInt32HostToBig(CVPixelBufferGetPixelFormatType(image));
+    sink.stats.decoder = [NSString stringWithFormat:@"%@ %.4s", sink.stats.decoder, (const char *)&f];
+  }
   if (show && from) [sink source:from image:image];
 }
 

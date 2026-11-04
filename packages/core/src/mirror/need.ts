@@ -63,6 +63,10 @@ export const NEEDS = {
     title: 'Camera permission is needed for this path',
     fix: 'Allow it in System Settings, Privacy & Security, Camera.',
   },
+  'no-phone-stream': {
+    title: 'This build has no iPhone stream',
+    fix: 'The runner still drives the phone, by screenshots and its own input.',
+  },
   'not-connected': {
     title: 'The device is not connected',
     fix: 'Connect it. The picture comes back by itself.',

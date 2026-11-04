@@ -23,6 +23,8 @@ export type MirrorRun = {
   share: boolean;
   /** A person asked for this window, rather than an agent's call. */
   activate: boolean;
+  /** From its first picture, this movie of what the stream sends. */
+  record?: string;
   log: (line: string) => void;
 };
 
@@ -47,6 +49,7 @@ const describe = (serial: string, s: MirrorStatus) => {
 class Parent {
   readonly sessions = new Map<string, MirrorSession>();
   readonly done = new Map<string, Promise<MirrorStatus>>();
+  private readonly recording = new Map<string, string>();
   stopping = false;
   failed = false;
 
@@ -85,6 +88,11 @@ class Parent {
       activate: this.o.activate,
       onDone: (id) => handoffDone(serial, id),
       onChange: (status) => {
+        if (this.o.record && status.state === 'live' && !this.recording.has(serial)) {
+          this.recording.set(serial, this.o.record);
+          session.startRecording(this.o.record);
+          this.o.log(`${serial}: recording to ${this.o.record}`);
+        }
         // a stop is the end of its file; a status written after would look like a mirror
         if (status.state !== 'stopped') writeMirrorFile({ ...file, status });
         const line = describe(serial, status);
@@ -112,7 +120,17 @@ class Parent {
 
   async stopAll(why: string) {
     this.stopping = true;
-    await Promise.all([...this.sessions.values()].map((s) => s.stop(why)));
+    await Promise.all(
+      [...this.sessions.entries()].map(async ([serial, s]) => {
+        if (this.recording.has(serial)) {
+          const r = await s.stopRecording();
+          this.o.log(
+            `${serial}: recorded ${r.frames} frames${r.seconds ? ` in ${r.seconds.toFixed(1)} s` : ''}${r.why ? `: ${r.why}` : ''}`,
+          );
+        }
+        await s.stop(why);
+      }),
+    );
   }
 }
 

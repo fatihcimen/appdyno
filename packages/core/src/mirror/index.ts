@@ -10,3 +10,4 @@ export {
   type ViewerMessage,
   type ViewerStart,
 } from './viewer.js';
+export type { RecordingResult } from './recording.js';

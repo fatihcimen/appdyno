@@ -15,6 +15,7 @@ import { parseArgs } from 'node:util';
 import {
   Adb,
   AndroidDevice,
+  IosPhoneDevice,
   IosSimulatorDevice,
   MirrorSession,
   startViewer,
@@ -50,10 +51,21 @@ const percentile = (values, p) => {
 };
 const median = (values) => percentile(values, 0.5);
 
-const isUdid = /^[0-9A-F]{8}-/.test(serial);
-const kind = isUdid ? 'simulator' : serial.startsWith('emulator-') ? 'emulator' : 'phone';
+const isIphone = /^[0-9A-F]{8}-[0-9A-F]{16}$/.test(serial);
+const isUdid = !isIphone && /^[0-9A-F]{8}-/.test(serial);
+const kind = isIphone
+  ? 'iphone'
+  : isUdid
+    ? 'simulator'
+    : serial.startsWith('emulator-')
+      ? 'emulator'
+      : 'phone';
 const adb = new Adb();
-const device = isUdid ? new IosSimulatorDevice(serial) : new AndroidDevice(serial, adb);
+const device = isIphone
+  ? new IosPhoneDevice(serial)
+  : isUdid
+    ? new IosSimulatorDevice(serial)
+    : new AndroidDevice(serial, adb);
 
 const seconds = [];
 const session = new MirrorSession({
@@ -131,6 +143,49 @@ async function prepareSimulator() {
   return { on: 'Settings' };
 }
 
+/**
+ * An iPhone: the fixture's List, known to be on the screen before any touch, as a phone left alone may lock and a
+ * blind flick on its home screen opens Spotlight. The runner reads the screen, and is let go of after.
+ */
+async function showOnIphone(screen, wanted) {
+  execFileSync(
+    'xcrun',
+    [
+      'devicectl',
+      'device',
+      'process',
+      'launch',
+      '--device',
+      serial,
+      '--terminate-existing',
+      '--payload-url',
+      `appdyno-fixture://open/${screen}`,
+      FIXTURE,
+    ],
+    { encoding: 'utf8', timeout: 60_000 },
+  );
+  await pause(1_500);
+  if (!wanted) return;
+  await device.open();
+  // what the runner reads is the app it was told of
+  await device.launch(FIXTURE);
+  // the app's launch is on the screen for a moment first
+  const end = Date.now() + 20_000;
+  for (;;) {
+    const { list } = await device.read(FIXTURE);
+    if (list.some(wanted)) return;
+    if (Date.now() > end) throw new Error(`the fixture's ${screen} is not on the phone's screen`);
+    await pause(500);
+  }
+}
+
+const isRow = (e) => e.id === 'row_name';
+
+async function prepareIphone() {
+  await showOnIphone('list', isRow);
+  return { on: 'the fixture list' };
+}
+
 const tapAt = (x, y) => {
   session.send({ kind: 'touch', p: 0, x, y });
   session.send({ kind: 'touch', p: 2, x, y });
@@ -188,26 +243,46 @@ note('picture', `${picture.w}x${picture.h} ${picture.codec}`);
 await pause(3_000);
 const quiet = await during(5_000);
 const cpu = median(quiet.map((n) => Number(n.cpu)));
-note('still screen, viewer CPU', `${cpu} % of a core`, '<= 2', cpu <= 2);
+const cpuLimit = isIphone ? 10 : 2;
+note('still screen, viewer CPU', `${cpu} % of a core`, `<= ${cpuLimit}`, cpu <= cpuLimit);
 const rss = Math.max(...quiet.map((n) => Number(n.rssMb)));
 note('viewer RSS', `${rss} MB`, '< 150', rss < 150);
 
-const prepared = isUdid ? await prepareSimulator() : await prepareAndroid();
+const prepared = isIphone
+  ? await prepareIphone()
+  : isUdid
+    ? await prepareSimulator()
+    : await prepareAndroid();
 if (prepared.on) note('on', prepared.on);
-await still().catch(() =>
+const settled = isIphone ? () => pause(1_500) : still;
+await settled().catch(() =>
   note('still screen', 'never: a moving screen makes the touch figure mean nothing'),
 );
 
 if (values.soak) {
-  const act = () => (isUdid ? drag() : tapAt(prepared.x, prepared.y));
+  // the heaviest a phone sends: nothing touches it, and a held stream was seen to keep it awake
+  if (isIphone) await showOnIphone('noise');
+  const act = async () => {
+    if (isIphone) return;
+    await (isUdid ? drag() : tapAt(prepared.x, prepared.y));
+  };
   const begun = Date.now();
   const end = begun + Number(values.soak) * 60_000;
   let early;
+  let soakMark = 0;
   while (Date.now() < end) {
     // from the start: a phone left alone for its minute goes dark
     await act();
     await pause(5_000);
     if (!early && Date.now() - begun > 60_000) early = seconds.slice(-30);
+    const last = seconds.at(-1);
+    if (isIphone && last && Math.floor((Date.now() - begun) / 300_000) !== soakMark) {
+      soakMark = Math.floor((Date.now() - begun) / 300_000);
+      note(
+        `at ${soakMark * 5} min`,
+        `${last.arrived} frames/s, ${last.mbps} Mbit/s, viewer ${last.rssMb} MB, this process ${Math.round(process.memoryUsage().rss / 1e6)} MB`,
+      );
+    }
   }
   const late = seconds.slice(-30);
   const top = (list, key) => Math.max(...list.map((n) => Number(n[key])));
@@ -239,14 +314,14 @@ if (values.soak) {
 // touch to first changed frame: from a still screen, so that the next frame is the touch's own
 const touches = [];
 for (let i = 0; i < TAPS; i++) {
-  await still();
+  await settled();
   const marked = session.mark();
-  if (isUdid) void drag();
+  if (isUdid || isIphone) void drag();
   else tapAt(prepared.x, prepared.y);
   touches.push(await Promise.race([marked, pause(5_000).then(() => -1)]));
-  await pause(isUdid ? 1_000 : prepared.animateMs);
+  await pause(isUdid || isIphone ? 1_000 : prepared.animateMs);
 }
-const touchTarget = { phone: 80, emulator: 120, simulator: 80 }[kind];
+const touchTarget = { phone: 80, emulator: 120, simulator: 80, iphone: 150 }[kind];
 const touch = median(touches);
 note(
   'touch to first changed frame, p50',
@@ -256,13 +331,16 @@ note(
 );
 
 // frames per second while it moves: on Android the animation is kept going, so that every second is motion
-await still();
+if (isIphone) await showOnIphone('noise');
+await settled();
 const moved = [];
 const guestBefore = kind === 'emulator' ? await guestFrames() : 0;
 const start = Date.now();
 while (Date.now() - start < SECONDS * 1000) {
   const from = seconds.length;
-  if (isUdid) {
+  if (isIphone) {
+    await pause(1_000);
+  } else if (isUdid) {
     await drag();
     await pause(200);
   } else {
@@ -284,10 +362,11 @@ const fpsTarget =
     ? guest
       ? `>= ${(guest * 0.9).toFixed(1)} (90 % of the guest's ${guest.toFixed(1)})`
       : ''
-    : kind === 'simulator'
+    : kind === 'simulator' || kind === 'iphone'
       ? '>= 58'
       : '>= 59 at a 60 Hz display';
-const fpsNeeded = kind === 'emulator' ? (guest ?? 0) * 0.9 : kind === 'simulator' ? 58 : 59;
+const fpsNeeded =
+  kind === 'emulator' ? (guest ?? 0) * 0.9 : kind === 'simulator' || kind === 'iphone' ? 58 : 59;
 note(
   'frames/s while moving, median',
   `${fps} (best ${best}; ${fullSeconds.length} s counted)`,
@@ -310,7 +389,10 @@ if (kind !== 'simulator') {
   if (decode >= 0) note('decode p95', `${decode} ms`, '<= 8', decode <= 8);
 }
 note('Mbit/s', median(fullSeconds.map((n) => Number(n.mbps))));
-note('mode', `${fullSeconds.at(-1)?.source} ${fullSeconds.at(-1)?.mode}`);
+note(
+  'mode',
+  `${fullSeconds.at(-1)?.source} ${fullSeconds.at(-1)?.mode}, ${fullSeconds.at(-1)?.decoder}`,
+);
 note('inputs', `${session.status.inputFailed} failed, ${session.status.inputDropped} moves merged`);
 
 await session.stop('the bench ended');

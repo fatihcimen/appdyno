@@ -488,6 +488,7 @@ describe('the table of needs', () => {
         'no-compiler',
         'no-hardware-decoder',
         'camera-permission',
+        'no-phone-stream',
         'not-connected',
         'simulator-off',
         'no-grpc',

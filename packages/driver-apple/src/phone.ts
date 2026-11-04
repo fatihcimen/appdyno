@@ -1,5 +1,6 @@
 import { crashExits, phoneCrashes } from './crashes.js';
 import { phoneLogs } from './logs.js';
+import { PhoneMirror } from './mirror-phone.js';
 import { PhoneApps, PhoneSettings } from './phone-manage.js';
 import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -124,6 +125,7 @@ export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
  */
 export class IosPhoneDevice extends IosDevice {
   readonly virtual = false;
+  readonly mirror: PhoneMirror;
   private readonly transport: ReturnType<typeof phoneTransport>;
   readonly ctl: Devicectl;
   /** What Instruments and XCTest can read from a phone: what they cannot says why. */
@@ -261,12 +263,18 @@ export class IosPhoneDevice extends IosDevice {
     super(serial, phoneOps(serial, ctl), new IosRunnerLauncher(serial, transport));
     this.transport = transport;
     this.ctl = ctl;
+    this.mirror = new PhoneMirror(serial);
     this.apps = new PhoneApps(ctl);
     this.settings = new PhoneSettings(ctl);
     this.recorder = phoneRecorder(serial);
   }
 
   readonly recorder: ScreenRecorder;
+
+  /** By the phone's own service where it has it, which needs no runner; else as any device. */
+  override async screenshot(opts: Parameters<IosDevice['screenshot']>[0] = {}) {
+    return (await this.mirror.screenshot(opts.format ?? 'jpeg')) ?? super.screenshot(opts);
+  }
   readonly apps: PhoneApps;
   readonly settings: PhoneSettings;
 

@@ -3,6 +3,7 @@
 import {
   chmodSync,
   cpSync,
+  existsSync,
   readdirSync,
   readFileSync,
   rmSync,
@@ -35,6 +36,21 @@ await build({
     js: "import { createRequire as __createRequire } from 'node:module';\nconst require = __createRequire(import.meta.url);",
   },
 });
+// their own files, found at run time: what a build with this folder gone simply does not have
+const stream = '../driver-apple/src/phone-stream';
+if (existsSync(stream)) {
+  await build({
+    ...options,
+    entryPoints: ['index', 'worker'].map((f) => ({
+      in: `${stream}/${f}.ts`,
+      out: `phone-stream/${f}`,
+    })),
+    bundle: true,
+    banner: {
+      js: "import { createRequire as __createRequire } from 'node:module';\nconst require = __createRequire(import.meta.url);",
+    },
+  });
+}
 // not bundled: its import of ./main.js stays, so that there is one copy
 await build({ ...options, entryPoints: ['src/mcp-bin.ts'] });
 for (const bin of ['main.js', 'mcp-bin.js']) chmodSync(join(dist, bin), 0o755);

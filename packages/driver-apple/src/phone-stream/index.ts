@@ -1,0 +1,103 @@
+import { Worker } from 'node:worker_threads';
+import type { InputEvent, MirrorQuality } from '@appdyno/core';
+import type {
+  PhoneStreamCheck,
+  PhoneStreamEvent,
+  PhoneStreamHandle,
+  PhoneStreamModule,
+} from '../phone-stream-port.js';
+import { listDevices } from '../usbmux.js';
+import { RemoteXpc } from './remotexpc.js';
+import { invoke, readServices, SCREEN_CAPTURE } from './services.js';
+import { openTunnel, PhoneRefusal, readPairRecord } from './tunnel.js';
+import type { ToWorker } from './worker.js';
+
+/** This folder's one way in. All it holds speaks a phone's private services; see `phone-stream-port.ts`. */
+
+const STOP_MS = 12_000;
+
+async function check(udid: string): Promise<PhoneStreamCheck> {
+  const same = (a: string, b: string) => a.replace(/-/g, '') === b.replace(/-/g, '');
+  const usb = (await listDevices()).some((d) => d.connection === 'USB' && same(d.serial, udid));
+  if (!usb) return { ok: false, need: 'not-connected' };
+  try {
+    await readPairRecord(udid);
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof PhoneRefusal) return { ok: false, need: e.need, detail: e.message };
+    throw e;
+  }
+}
+
+async function screenshot(udid: string, format: 'png' | 'jpeg'): Promise<Buffer> {
+  const { stack, rsdPort } = await openTunnel(udid);
+  try {
+    const services = await readServices(stack, rsdPort);
+    const port = services.ports[SCREEN_CAPTURE];
+    if (!port) throw new Error('the phone lists no screenshot service');
+    const service = RemoteXpc.start(await stack.connect(port));
+    const answer = await invoke(
+      service,
+      'com.apple.coredevice.feature.capturescreenshot',
+      { requestedFormat: format },
+      'com.apple.coredevice.action.capturescreenshot',
+    );
+    if (!Buffer.isBuffer(answer.image)) throw new Error('the screenshot came without its image');
+    return answer.image;
+  } finally {
+    stack.close();
+  }
+}
+
+function start(
+  udid: string,
+  options: { quality: MirrorQuality },
+  onEvent: (e: PhoneStreamEvent) => void,
+): PhoneStreamHandle {
+  const worker = new Worker(new URL('./worker.js', import.meta.url), {
+    workerData: { udid, quality: options.quality },
+  });
+  let onEnded: ((proved: boolean) => void) | undefined;
+  let ended = false;
+  const end = (proved: boolean) => {
+    if (ended) return;
+    ended = true;
+    onEnded?.(proved);
+    onEvent({ kind: 'ended', proved });
+  };
+  worker.on('message', (e: PhoneStreamEvent) => {
+    if (e.kind === 'ended') end(e.proved);
+    else onEvent(e);
+  });
+  worker.on('error', (e) => {
+    onEvent({ kind: 'lost', why: `the stream's thread failed: ${e.message}` });
+    end(false);
+  });
+  worker.on('exit', () => end(false));
+  worker.unref();
+  const send = (m: ToWorker) => worker.postMessage(m);
+  return {
+    attach: (file) => send({ op: 'attach', file }),
+    input: (e: InputEvent) => send({ op: 'input', e }),
+    keyframe: () => send({ op: 'keyframe' }),
+    stop: () =>
+      new Promise<boolean>((resolve) => {
+        if (ended) {
+          resolve(false);
+          return;
+        }
+        const timer = setTimeout(() => {
+          void worker.terminate();
+          resolve(false);
+        }, STOP_MS);
+        onEnded = (proved) => {
+          clearTimeout(timer);
+          resolve(proved);
+        };
+        send({ op: 'stop' });
+      }),
+  };
+}
+
+const phoneStream: PhoneStreamModule = { check, screenshot, start };
+export default phoneStream;

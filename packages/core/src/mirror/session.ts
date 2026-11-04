@@ -1,3 +1,4 @@
+import { MirrorRecording } from './recording.js';
 import { inputOf, InputQueue } from './input-queue.js';
 import { NEEDS, NeedError, type Need } from './need.js';
 import type { DeviceState, InputEvent, Mirror, MirrorOptions } from './port.js';
@@ -61,6 +62,7 @@ export class MirrorSession {
   private note: string | undefined;
   private readonly input: InputQueue;
   private unwatch: (() => void) | undefined;
+  private readonly recording = new MirrorRecording();
   private closedByPerson = false;
   private refusedNeed: Need | undefined;
   private asleep = false;
@@ -134,8 +136,18 @@ export class MirrorSession {
 
   /** The time from now to the next frame to arrive; for the bench, around an input. */
   mark(): Promise<number> {
-    this.viewer?.send({ op: 'mark' });
+    this.viewer?.send({ op: 'mark', bigger: this.o.mirror.sendsWhenStill === true });
     return new Promise((r) => this.marks.push(r));
+  }
+
+  /** From the next key frame on, the stream's own frames into this movie: a stream's source only. */
+  startRecording(file: string) {
+    this.viewer?.send({ op: 'record', file });
+  }
+
+  /** Ends the movie; what it came to. */
+  stopRecording(timeoutMs?: number) {
+    return this.recording.stop(this.viewer, timeoutMs);
   }
 
   /** The same way a person's touch goes. */
@@ -284,6 +296,9 @@ export class MirrorSession {
         break;
       case 'needKey':
         this.onNeedKey(Number(m.consecutive ?? 0));
+        break;
+      case 'recorded':
+        this.recording.onMessage(m);
         break;
       case 'touch':
       case 'key':

@@ -150,11 +150,14 @@ appdyno mirror open --detach       # a window that outlives this command
 appdyno mirror close | status | stats
 ```
 
-| device    | the picture                                                    | still screen  |
-| --------- | -------------------------------------------------------------- | ------------- |
-| simulator | its framebuffer itself, no encode                              | costs nothing |
-| phone     | the agent's H.264 or HEVC, straight to the viewer, not by Node | costs nothing |
-| emulator  | the emulator's own gRPC port, its screen in a shared file      | costs nothing |
+| device    | the picture                                                    | still screen                                              |
+| --------- | -------------------------------------------------------------- | --------------------------------------------------------- |
+| simulator | its framebuffer itself, no encode                              | costs nothing                                             |
+| phone     | the agent's H.264 or HEVC, straight to the viewer, not by Node | costs nothing                                             |
+| emulator  | the emulator's own gRPC port, its screen in a shared file      | costs nothing                                             |
+| iPhone    | iOS 27's display service, by USB, nothing on the phone         | under 1 % of a core; about 20 frames a second keep coming |
+
+An iPhone's stream rests on undocumented Apple services that may change: it is named, gated by what the phone lists, and the runner stays. Nothing of it opens a port on this Mac: its packets are inside a stream through `usbmuxd`.
 
 `hand_off` asks your person for what an agent cannot do, and waits. While an agent drives, a pill on the window says so, and its Activity panel lists each call. The viewer is compiled by `clang` on first use: Command Line Tools are enough, and `doctor` says if there is none. What stands in the way is named with its fix, and the window goes on by itself when it clears. See [docs/mirror.md](docs/mirror.md).
 

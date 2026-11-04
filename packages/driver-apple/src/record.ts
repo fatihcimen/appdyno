@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   run,
   pause,
@@ -39,6 +40,7 @@ class ToolRecorder implements ScreenRecorder {
     private readonly limits: boolean,
     private readonly stillNote?: string,
     private readonly refusedHint?: string,
+    private readonly tool: string = 'xcrun',
   ) {}
 
   /** Asks the recorder to end after `seconds`, if it is still that recorder; ends with `stop` too. */
@@ -60,7 +62,7 @@ class ToolRecorder implements ScreenRecorder {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     const log = join(dir, `${randomBytes(4).toString('hex')}.log`);
     const fd = openSync(log, 'w', 0o600);
-    const child = spawn('xcrun', this.args(file, maxSeconds), {
+    const child = spawn(this.tool, this.args(file, maxSeconds), {
       detached: true,
       stdio: ['ignore', fd, fd],
       env: xcodeEnv(),
@@ -148,7 +150,7 @@ export const simulatorRecorder = (udid: string): ScreenRecorder =>
 // shortcut: what `devicectl` prints once it records has not been seen, as the one phone tried (iPhone 13 Pro Max,
 // iOS 27.0.1) lacks the capability and refuses at once; a process still there after QUIET_MS counts as recording.
 // Read its output on a phone that has it and wait for that instead.
-export const phoneRecorder = (udid: string): ScreenRecorder =>
+const devicectlRecorder = (udid: string): ScreenRecorder =>
   new ToolRecorder(
     'mp4',
     (file, maxSeconds) => [
@@ -171,3 +173,50 @@ export const phoneRecorder = (udid: string): ScreenRecorder =>
     undefined,
     'this phone does not offer it to devicectl: record on the phone (Control Center, Screen Recording), or with QuickTime Player on this Mac',
   );
+
+/** This command's own file, beside what is built or in the published package. */
+function mainFile(): string | undefined {
+  return [
+    new URL('./main.js', import.meta.url),
+    new URL('../../appdyno/dist/main.js', import.meta.url),
+  ]
+    .map((u) => fileURLToPath(u))
+    .find((f) => existsSync(f));
+}
+
+/**
+ * A phone's own stream into a movie, by a mirror with no window, in a process of its own as a command line's `stop` is
+ * another. It writes what the phone sends, with no second encode.
+ */
+const streamRecorder = (udid: string, main: string): ScreenRecorder =>
+  new ToolRecorder(
+    'mp4',
+    (file, maxSeconds) => [
+      main,
+      'mirror',
+      '--device',
+      udid,
+      '--headless',
+      '--share',
+      '--no-input',
+      '--record',
+      file,
+      '--seconds',
+      String(maxSeconds),
+    ],
+    /recording to /,
+    `mirror --device ${udid}`,
+    true,
+    undefined,
+    undefined,
+    process.execPath,
+  );
+
+/** By its stream where this build has one; else as `devicectl` can, which not every phone offers. */
+export function phoneRecorder(udid: string): ScreenRecorder {
+  const main = mainFile();
+  const stream = new URL('./phone-stream/index.js', import.meta.url);
+  return main && existsSync(fileURLToPath(stream))
+    ? streamRecorder(udid, main)
+    : devicectlRecorder(udid);
+}

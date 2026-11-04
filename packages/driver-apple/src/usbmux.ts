@@ -91,7 +91,11 @@ export function frame(message: Record<string, Plist>, tag: number): Buffer {
 export type MuxDevice = { deviceId: number; serial: string; connection: string };
 
 /** One request on a fresh multiplexer connection; resolves with the reply and the socket (left open). */
-async function request(message: Record<string, Plist>, path = USBMUXD, timeoutMs = 5_000) {
+export async function muxRequest(
+  message: Record<string, Plist>,
+  path = USBMUXD,
+  timeoutMs = 5_000,
+) {
   return new Promise<{ reply: Record<string, Plist>; socket: Socket; rest: Buffer }>(
     (resolve, reject) => {
       const socket = connect(path);
@@ -134,7 +138,7 @@ async function request(message: Record<string, Plist>, path = USBMUXD, timeoutMs
 }
 
 export async function listDevices(path = USBMUXD): Promise<MuxDevice[]> {
-  const { reply, socket } = await request({ MessageType: 'ListDevices' }, path);
+  const { reply, socket } = await muxRequest({ MessageType: 'ListDevices' }, path);
   socket.destroy();
   const list = (reply.DeviceList as Record<string, Plist>[] | undefined) ?? [];
   return list.map((d) => {
@@ -161,7 +165,7 @@ export async function connectPort(
   );
   if (!d) throw new DeviceError('DEVICE_GONE', `iPhone ${udid} is not connected by USB`);
   // the port goes in network byte order
-  const { reply, socket, rest } = await request(
+  const { reply, socket, rest } = await muxRequest(
     {
       MessageType: 'Connect',
       DeviceID: d.deviceId,

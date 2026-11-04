@@ -18,11 +18,12 @@ and `record`. `hand_off` asks a person for what an agent cannot do.
 
 ## What feeds it
 
-| device    | how                                                                                         | what to know                                                                                                             |
-| --------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| simulator | CoreSimulator's own surface, no encode: the framebuffer itself, called back on each present | a still screen costs nothing. Private API, loaded at run time; what fails says so                                        |
-| phone     | the agent's stream on a connection of its own: nothing passes through Node                  | H.264 by default, HEVC at your word. Android 10 and up. A secure window is black, as in `screencap` (seen on Android 16) |
-| emulator  | the emulator's own gRPC port, its screen in a shared file, nothing in the guest             | the emulator's port, not ours. Where it has none, the guest encodes, which lags by seconds, and it says so               |
+| device    | how                                                                                         | what to know                                                                                                                                                                                                                       |
+| --------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| simulator | CoreSimulator's own surface, no encode: the framebuffer itself, called back on each present | a still screen costs nothing. Private API, loaded at run time; what fails says so                                                                                                                                                  |
+| phone     | the agent's stream on a connection of its own: nothing passes through Node                  | H.264 by default, HEVC at your word. Android 10 and up. A secure window is black, as in `screencap` (seen on Android 16)                                                                                                           |
+| iPhone    | iOS 27's display service over a tunnel of this process's own, by USB, nothing on the phone  | undocumented, and may change. 4:4:4 at the phone's own size, up to its screen's rate. A still screen keeps sending, so its window is not free as the others are, though under 1 % of a core. It stays awake while a stream is held |
+| emulator  | the emulator's own gRPC port, its screen in a shared file, nothing in the guest             | the emulator's port, not ours. Where it has none, the guest encodes, which lags by seconds, and it says so                                                                                                                         |
 
 The emulator's frame is RGBA in a file of exactly its size, top row first (the proto's comment says bottom up, and
 a frame compared with `screencap` says not). Asked with no size or into a larger file, it answers every frame and writes
@@ -53,6 +54,27 @@ its words and its fix. A wait asks again each second and goes on by itself when 
 | second window on a device     | the first comes forward, and the refusal says who has it                                                                 | parent unit; two runs on the Xiaomi                       |
 | several devices               | one viewer each, `--max`; one failing leaves the others                                                                  | parent unit; three devices with one killed                |
 | no compiler, no window server | `stopped` by its need, before anything opens                                                                             | session unit                                              |
+
+## An iPhone
+
+Everything that speaks to a phone's services is in `packages/driver-apple/src/phone-stream/`, with one way in: delete
+that folder and the rest builds and passes its tests, an iPhone keeps its runner, and its mirror is refused as
+`no-phone-stream`. A test holds that nothing else reaches into it.
+
+It makes its own tunnel: `usbmuxd`, lockdown with this Mac's pair record, `CoreDeviceProxy`, then IPv6, TCP and UDP in a
+thread of this process. It never connects to the discovery port of Apple's own tunnel, which takes one client and
+would throw `remoted` off it; a test holds that too. The pair record is read and never written; pairing is never asked
+for, and any refusal stops with what a person must do. No socket opens on this Mac for any of it, so the README's
+line on listeners stands.
+
+The stream asks for the remote desktop profile first, 20 to 60 Mbit/s in 4:4:4, and takes the lower one, up to 6 Mbit/s
+in 4:2:0, if a phone refuses it or `--quality standard` asks. Pictures go to the viewer by a named pipe, `0600`, off the
+disk as soon as both ends hold it. A gap in the packets holds the picture until a key picture comes: a freeze, never
+garbage. Three pictures wait at most, and past them one is dropped.
+
+A stream's offer asks the phone to end it after 30 s with no report from us, in place of its default hour: so a process
+that dies leaves the phone's stream, and its purple indicator, for 30 s. Streams we started are remembered, so a start
+stops one that was left over; any other client's reads as `taken-over`, and is never stopped.
 
 ## Sharing a device
 
@@ -93,5 +115,5 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 
 ## Left out, for now
 
-An iPhone, which is a later adapter adding one kind of source. Wi-Fi. Recording through the stream. The toolbar,
+Wi-Fi, which needs an identity of our own paired with the phone. Recording through the stream. The toolbar,
 shortcuts and device menu. Audio. A device frame.

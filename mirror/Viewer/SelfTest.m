@@ -8,28 +8,17 @@
 
 static int gFailed;
 
-static void check(NSString *name, BOOL ok, NSString *_Nullable detail) {
+void MVCheck(NSString *name, BOOL ok, NSString *_Nullable detail) {
   if (!ok) gFailed++;
   NSMutableDictionary *line = [@{@"check": name, @"ok": @(ok)} mutableCopy];
   if (detail) line[@"detail"] = detail;
   MVEmit(line);
 }
 
-static void skip(NSString *name, NSString *why) {
+void MVSkip(NSString *name, NSString *why) {
   MVEmit(@{@"check": name, @"skipped": why});
 }
 
-/// A sink that counts, and lets a check wait until a count is reached.
-@interface MVTestSink : NSObject <MVSink>
-@property(atomic) int images, surfaces, sizes;
-@property(atomic, copy, nullable) NSString *lost;
-@property(atomic) CGSize lastSize;
-@property(atomic, copy, nullable) NSString *lastCodec;
-@property(atomic) OSType lastFormat;
-@property(atomic, nullable) id lastImage;
-@property(atomic, nullable) id lastSurface;
-@property(atomic) int keyRequests, lastFailures;
-@end
 
 @implementation MVTestSink {
   MVStats *_stats;
@@ -159,7 +148,7 @@ static void checkNals(void) {
     else second = length;
     count++;
   });
-  check(@"nal: three- and four-byte starts", count == 2 && first == 2 && second == 5, nil);
+  MVCheck(@"nal: three- and four-byte starts", count == 2 && first == 2 && second == 5, nil);
   count = 0;
   MVForEachNal(two, 0, ^(const uint8_t *nal, size_t length) {
     count++;
@@ -168,7 +157,7 @@ static void checkNals(void) {
   MVForEachNal(cut, sizeof cut, ^(const uint8_t *nal, size_t length) {
     count++;
   });
-  check(@"nal: empty and cut input", count == 0, nil);
+  MVCheck(@"nal: empty and cut input", count == 0, nil);
   // bytes as an enemy would send them: the checks are in the bounds, and a crash fails the whole run
   enum { kNoise = 4096 };
   uint8_t bytes[kNoise];
@@ -182,7 +171,7 @@ static void checkNals(void) {
       else gFailed++;
     });
   }
-  check(@"nal: random bytes stay in bounds", gFailed == 0 && seen > 0, nil);
+  MVCheck(@"nal: random bytes stay in bounds", gFailed == 0 && seen > 0, nil);
 }
 
 /// Where the surface's corner that upright has at its top left comes to in the picture's parent.
@@ -202,50 +191,55 @@ static void checkTurns(void) {
   // a guest turned once draws its top left at the surface's top right: a turn stands that at the picture's
   CGSize wide = {200, 100};
   NSPoint a = uprightTopLeft(1, wide);
-  check(@"turns: one, the corner comes to the top left", fabs(a.x) < 1e-6 && fabs(a.y - 100) < 1e-6, NSStringFromPoint(a));
+  MVCheck(@"turns: one, the corner comes to the top left", fabs(a.x) < 1e-6 && fabs(a.y - 100) < 1e-6, NSStringFromPoint(a));
   NSPoint b = uprightTopLeft(3, wide);
-  check(@"turns: three, the corner comes to the top left", fabs(b.x) < 1e-6 && fabs(b.y - 100) < 1e-6, NSStringFromPoint(b));
+  MVCheck(@"turns: three, the corner comes to the top left", fabs(b.x) < 1e-6 && fabs(b.y - 100) < 1e-6, NSStringFromPoint(b));
   CGSize tall = {100, 200};
   NSPoint c = uprightTopLeft(2, tall);
-  check(@"turns: two, the corner comes to the top left", fabs(c.x) < 1e-6 && fabs(c.y - 200) < 1e-6, NSStringFromPoint(c));
+  MVCheck(@"turns: two, the corner comes to the top left", fabs(c.x) < 1e-6 && fabs(c.y - 200) < 1e-6, NSStringFromPoint(c));
   NSPoint d = uprightTopLeft(0, tall);
-  check(@"turns: none, it stays", fabs(d.x) < 1e-6 && fabs(d.y - 200) < 1e-6, NSStringFromPoint(d));
+  MVCheck(@"turns: none, it stays", fabs(d.x) < 1e-6 && fabs(d.y - 200) < 1e-6, NSStringFromPoint(d));
 }
 
 static void checkInputMaths(void) {
   double x, y;
   CGSize device = {1080, 2400};
   BOOL inside = MVNormalize(NSMakePoint(135, 300), NSMakeSize(270, 600), device, &x, &y);
-  check(@"map: the middle is the middle", inside && fabs(x - 0.5) < 1e-6 && fabs(y - 0.5) < 1e-6, nil);
+  MVCheck(@"map: the middle is the middle", inside && fabs(x - 0.5) < 1e-6 && fabs(y - 0.5) < 1e-6, nil);
   MVNormalize(NSMakePoint(0, 600), NSMakeSize(270, 600), device, &x, &y);
-  check(@"map: the view's top left is the device's", fabs(x) < 1e-6 && fabs(y) < 1e-6, nil);
+  MVCheck(@"map: the view's top left is the device's", fabs(x) < 1e-6 && fabs(y) < 1e-6, nil);
   // a picture narrower than the view: the bars at its sides are no part of the device
   BOOL bar = MVNormalize(NSMakePoint(10, 300), NSMakeSize(600, 600), device, &x, &y);
-  check(@"map: nothing outside the picture", !bar, nil);
+  MVCheck(@"map: nothing outside the picture", !bar, nil);
   inside = MVNormalize(NSMakePoint(300, 300), NSMakeSize(600, 600), device, &x, &y);
-  check(@"map: inside a picture with bars", inside && fabs(x - 0.5) < 1e-6, nil);
-  check(@"map: no picture yet is no touch", !MVNormalize(NSMakePoint(1, 1), NSMakeSize(10, 10), CGSizeZero, &x, &y), nil);
-  check(@"keys: return, delete, arrows", MVUsageOfKeyCode(kVK_Return) == 0x28 && MVUsageOfKeyCode(kVK_Delete) == 0x2a && MVUsageOfKeyCode(kVK_UpArrow) == 0x52 && MVUsageOfKeyCode(kVK_ANSI_A) == 0, nil);
-  check(@"keys: typed text", MVIsTypedText(@"a", 0) && MVIsTypedText(@"ş", 0) && !MVIsTypedText(@"a", NSEventModifierFlagCommand) && !MVIsTypedText(@"\r", 0) && !MVIsTypedText(@"", 0), nil);
+  MVCheck(@"map: inside a picture with bars", inside && fabs(x - 0.5) < 1e-6, nil);
+  MVCheck(@"map: no picture yet is no touch", !MVNormalize(NSMakePoint(1, 1), NSMakeSize(10, 10), CGSizeZero, &x, &y), nil);
+  MVCheck(@"keys: return, delete, arrows", MVUsageOfKeyCode(kVK_Return) == 0x28 && MVUsageOfKeyCode(kVK_Delete) == 0x2a && MVUsageOfKeyCode(kVK_UpArrow) == 0x52 && MVUsageOfKeyCode(kVK_ANSI_A) == 0, nil);
+  MVCheck(@"keys: typed text", MVIsTypedText(@"a", 0) && MVIsTypedText(@"ş", 0) && !MVIsTypedText(@"a", NSEventModifierFlagCommand) && !MVIsTypedText(@"\r", 0) && !MVIsTypedText(@"", 0), nil);
 }
 
 static void checkCodec(BOOL hevc) {
   NSString *name = hevc ? @"hevc" : @"h264";
   NSArray<MVTestFrame *> *frames = MVEncodeFrames(hevc, 30, 10);
-  if (frames.count < 15) return skip(name, @"no encoder on this Mac");
+  if (frames.count < 15) return MVSkip(name, @"no encoder on this Mac");
   MVTestSink *sink = [MVTestSink new];
   __block BOOL started = NO;
   Connection c = connectStream(sink, hevc, ^{
     started = YES;
   });
   for (int i = 0; i < 100 && !started; i++) usleep(10000);
-  check([name stringByAppendingString:@": asks to start"], started, nil);
-  for (MVTestFrame *frame in frames) sendVideo(c.agent, frame.data);
-  BOOL all = [sink waitForImages:(int)frames.count];
-  check([name stringByAppendingString:@": every frame decoded"], all, [NSString stringWithFormat:@"%d of %lu", sink.images, (unsigned long)frames.count]);
-  check([name stringByAppendingString:@": its size"], sink.lastSize.width == 320 && sink.lastSize.height == 240, nil);
+  MVCheck([name stringByAppendingString:@": asks to start"], started, nil);
+  BOOL all = YES;
+  int sent = 0;
+  // one at a time, as a stream comes: a burst is dropped to its next key, as it should be
+  for (MVTestFrame *frame in frames) {
+    sendVideo(c.agent, frame.data);
+    all = all && [sink waitForImages:++sent];
+  }
+  MVCheck([name stringByAppendingString:@": every frame decoded"], all, [NSString stringWithFormat:@"%d of %lu", sink.images, (unsigned long)frames.count]);
+  MVCheck([name stringByAppendingString:@": its size"], sink.lastSize.width == 320 && sink.lastSize.height == 240, nil);
   NSDictionary *report = sink.stats.report;
-  check([name stringByAppendingString:@": counted"], [report[@"arrived"] intValue] == (int)frames.count, [report description]);
+  MVCheck([name stringByAppendingString:@": counted"], [report[@"arrived"] intValue] == (int)frames.count, [report description]);
 
   // a keyframe whose slices are broken: the decoder fails or says nothing, and the picture never shows it
   int requests = sink.keyRequests;
@@ -258,10 +252,10 @@ static void checkCodec(BOOL hevc) {
   for (size_t i = sliceAt + 6; i < broken.length; i++) bytes[i] = (uint8_t)(i * 31);
   sendVideo(c.agent, broken);
   usleep(300000);
-  check([name stringByAppendingString:@": a broken keyframe asks for another"], sink.keyRequests > requests && sink.lastFailures > 0, nil);
+  MVCheck([name stringByAppendingString:@": a broken keyframe asks for another"], sink.keyRequests > requests && sink.lastFailures > 0, nil);
   int shownBefore = sink.images;
   sendVideo(c.agent, frames[0].data);
-  check([name stringByAppendingString:@": a good keyframe after it shows"], [sink waitForImages:shownBefore + 1], nil);
+  MVCheck([name stringByAppendingString:@": a good keyframe after it shows"], [sink waitForImages:shownBefore + 1], nil);
 
   // a loss: the picture freezes, until a keyframe
   int before = sink.images;
@@ -276,10 +270,10 @@ static void checkCodec(BOOL hevc) {
   sendVideo(c.agent, garbage);
   sendVideo(c.agent, frames[2].data);
   usleep(200000);
-  check([name stringByAppendingString:@": no picture before a keyframe"], sink.images == before, [NSString stringWithFormat:@"%d then %d", before, sink.images]);
+  MVCheck([name stringByAppendingString:@": no picture before a keyframe"], sink.images == before, [NSString stringWithFormat:@"%d then %d", before, sink.images]);
   if (firstKey != NSNotFound) {
     sendVideo(c.agent, frames[firstKey].data);
-    check([name stringByAppendingString:@": a keyframe brings it back"], [sink waitForImages:before + 1], nil);
+    MVCheck([name stringByAppendingString:@": a keyframe brings it back"], [sink waitForImages:before + 1], nil);
   }
   // a covered window reads frames and draws none
   before = sink.images;
@@ -287,12 +281,12 @@ static void checkCodec(BOOL hevc) {
   usleep(20000);
   sendVideo(c.agent, frames[0].data);
   usleep(200000);
-  check([name stringByAppendingString:@": hidden draws nothing"], sink.images == before, nil);
+  MVCheck([name stringByAppendingString:@": hidden draws nothing"], sink.images == before, nil);
   [c.source setHidden:NO];
   sendVideo(c.agent, frames[0].data);
-  check([name stringByAppendingString:@": back with a keyframe"], [sink waitForImages:before + 1], nil);
+  MVCheck([name stringByAppendingString:@": back with a keyframe"], [sink waitForImages:before + 1], nil);
   close(c.agent);
-  check([name stringByAppendingString:@": the end of the connection is seen"], [sink waitForLost], sink.lost);
+  MVCheck([name stringByAppendingString:@": the end of the connection is seen"], [sink waitForLost], sink.lost);
   [c.source stop];
 }
 
@@ -303,7 +297,7 @@ static void checkBroken(void) {
   uint8_t type = 2;
   writeBytes(c.agent, &huge, 4);
   writeBytes(c.agent, &type, 1);
-  check(@"stream: a frame over the limit ends it", [sink waitForLost] && [sink.lost containsString:@"limit"], sink.lost);
+  MVCheck(@"stream: a frame over the limit ends it", [sink waitForLost] && [sink.lost containsString:@"limit"], sink.lost);
   [c.source stop];
   close(c.agent);
 
@@ -315,16 +309,16 @@ static void checkBroken(void) {
   sendFrame(c.agent, 0, junk, sizeof junk);
   sendVideo(c.agent, [NSData dataWithBytes:junk length:sizeof junk]);
   usleep(100000);
-  check(@"stream: short and unknown frames are passed over", sink.lost == nil && sink.images == 0, sink.lost);
+  MVCheck(@"stream: short and unknown frames are passed over", sink.lost == nil && sink.images == 0, sink.lost);
   sendJson(c.agent, @{@"id": @0, @"error": @{@"message": @"no encoder took this display"}});
-  check(@"stream: a refusal says why", [sink waitForLost] && [sink.lost containsString:@"encoder"], sink.lost);
+  MVCheck(@"stream: a refusal says why", [sink waitForLost] && [sink.lost containsString:@"encoder"], sink.lost);
   [c.source stop];
   close(c.agent);
 }
 
 /// Whether the layer a window uses takes a picture of this kind; it needs no window to say so.
 static void checkLayerTakes444(CVImageBufferRef _Nullable image) {
-  if (!image) return skip(@"4:4:4: the layer", @"no picture to show it");
+  if (!image) return MVSkip(@"4:4:4: the layer", @"no picture to show it");
   CMVideoFormatDescriptionRef format = NULL;
   CMVideoFormatDescriptionCreateForImageBuffer(NULL, image, &format);
   CMSampleTimingInfo timing = {.duration = kCMTimeInvalid, .presentationTimeStamp = kCMTimeZero, .decodeTimeStamp = kCMTimeInvalid};
@@ -336,7 +330,7 @@ static void checkLayerTakes444(CVImageBufferRef _Nullable image) {
   AVSampleBufferDisplayLayer *layer = [AVSampleBufferDisplayLayer layer];
   [layer enqueueSampleBuffer:sample];
   usleep(200000);
-  check(@"4:4:4: the layer takes it", layer.status != AVQueuedSampleBufferRenderingStatusFailed, layer.error.description);
+  MVCheck(@"4:4:4: the layer takes it", layer.status != AVQueuedSampleBufferRenderingStatusFailed, layer.error.description);
 #pragma clang diagnostic pop
   if (sample) CFRelease(sample);
 }
@@ -344,8 +338,8 @@ static void checkLayerTakes444(CVImageBufferRef _Nullable image) {
 static void checkHevc444(NSString *_Nullable fixtures) {
   NSString *file = [fixtures stringByAppendingPathComponent:@"hevc444.hevc"];
   NSData *stream = file ? [NSData dataWithContentsOfFile:file] : nil;
-  if (!stream) return skip(@"4:4:4", @"no fixture given");
-  if (!VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)) return skip(@"4:4:4", @"no hardware HEVC decoder on this Mac");
+  if (!stream) return MVSkip(@"4:4:4", @"no fixture given");
+  if (!VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)) return MVSkip(@"4:4:4", @"no hardware HEVC decoder on this Mac");
   // the fixture's frames, one by one: each VCL unit with what comes before it
   MVTestSink *sink = [MVTestSink new];
   MVDecoder *decoder = [[MVDecoder alloc] initWithSink:sink from:sink];
@@ -359,65 +353,12 @@ static void checkHevc444(NSString *_Nullable fixtures) {
     [decoder decode:unit.bytes length:unit.length];
   });
   BOOL decoded = [sink waitForImages:pictures];
-  check(@"4:4:4: every frame decoded", pictures > 0 && decoded, [NSString stringWithFormat:@"%d of %d", sink.images, pictures]);
+  MVCheck(@"4:4:4: every frame decoded", pictures > 0 && decoded, [NSString stringWithFormat:@"%d of %d", sink.images, pictures]);
   OSType format = sink.lastFormat;
   BOOL full = format == kCVPixelFormatType_444YpCbCr8BiPlanarVideoRange || format == kCVPixelFormatType_444YpCbCr8BiPlanarFullRange || format == kCVPixelFormatType_444YpCbCr10BiPlanarVideoRange || format == kCVPixelFormatType_444YpCbCr10BiPlanarFullRange;
-  check(@"4:4:4: stays 4:4:4 out of the decoder", full, [NSString stringWithFormat:@"%c%c%c%c", (char)(format >> 24), (char)(format >> 16), (char)(format >> 8), (char)format]);
+  MVCheck(@"4:4:4: stays 4:4:4 out of the decoder", full, [NSString stringWithFormat:@"%c%c%c%c", (char)(format >> 24), (char)(format >> 16), (char)(format >> 8), (char)format]);
   [decoder close];
   checkLayerTakes444((__bridge CVImageBufferRef)sink.lastImage);
-}
-
-static void checkPixels(void) {
-  NSString *file = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID.UUID.UUIDString stringByAppendingString:@".rgba"]];
-  const int w = 16, h = 8;
-  NSMutableData *pixels = [NSMutableData dataWithLength:w * h * 4];
-  uint8_t *p = pixels.mutableBytes;
-  for (int i = 0; i < w * h; i++) {
-    p[i * 4] = 10;
-    p[i * 4 + 1] = 20;
-    p[i * 4 + 2] = 30;
-    p[i * 4 + 3] = 255;
-  }
-  [pixels writeToFile:file atomically:NO];
-  chmod(file.fileSystemRepresentation, 0600);
-  MVTestSink *sink = [MVTestSink new];
-  MVSourcePixels *source = [[MVSourcePixels alloc] initWithOptions:@{@"file": file} sink:sink];
-  [source start];
-  [source tick:@{@"w": @(w), @"h": @(h)}];
-  for (int i = 0; i < 300 && !sink.surfaces; i++) usleep(10000);
-  check(@"pixels: a tick shows a frame", sink.surfaces > 0, nil);
-  IOSurfaceRef surface = (__bridge IOSurfaceRef)sink.lastSurface;
-  if (surface) {
-    IOSurfaceLock(surface, kIOSurfaceLockReadOnly, NULL);
-    uint8_t *bgra = IOSurfaceGetBaseAddress(surface);
-    check(@"pixels: red and blue swapped, nothing else", bgra[0] == 30 && bgra[1] == 20 && bgra[2] == 10 && bgra[3] == 255, nil);
-    IOSurfaceUnlock(surface, kIOSurfaceLockReadOnly, NULL);
-  }
-  check(@"pixels: its size", sink.lastSize.width == w && sink.lastSize.height == h, nil);
-  // a quarter turn: the frame's size swaps, and its top left corner comes to the bottom left
-  ((uint8_t *)pixels.mutableBytes)[0] = 200;
-  [pixels writeToFile:file atomically:NO];
-  int shown = sink.surfaces;
-  [source tick:@{@"w": @(w), @"h": @(h), @"turns": @1}];
-  for (int i = 0; i < 300 && sink.surfaces == shown; i++) usleep(10000);
-  check(@"pixels: a turn swaps the size", sink.lastSize.width == h && sink.lastSize.height == w, nil);
-  surface = (__bridge IOSurfaceRef)sink.lastSurface;
-  if (surface) {
-    IOSurfaceLock(surface, kIOSurfaceLockReadOnly, NULL);
-    uint8_t *turned = IOSurfaceGetBaseAddress(surface);
-    size_t row = IOSurfaceGetBytesPerRow(surface);
-    check(@"pixels: a turn moves the corner", turned[row * (w - 1) + 2] == 200 && turned[2] == 10, nil);
-    IOSurfaceUnlock(surface, kIOSurfaceLockReadOnly, NULL);
-  }
-  [source tick:@{@"w": @(w * 100), @"h": @(h * 100)}];
-  check(@"pixels: a size past the file is refused, unread", [sink waitForLost], sink.lost);
-  [source stop];
-  [[NSFileManager defaultManager] removeItemAtPath:file error:NULL];
-  sink = [MVTestSink new];
-  source = [[MVSourcePixels alloc] initWithOptions:@{@"file": @"/no/such/file"} sink:sink];
-  [source start];
-  check(@"pixels: a missing file says so", [sink waitForLost], sink.lost);
-  [source stop];
 }
 
 static void checkStats(void) {
@@ -425,11 +366,11 @@ static void checkStats(void) {
   for (int i = 1; i <= 100; i++) [stats arrived:1000 captureMs:i];
   [stats dropped:2];
   NSDictionary *r = stats.report;
-  check(@"stats: counts and percentiles", [r[@"arrived"] intValue] == 100 && [r[@"dropped"] intValue] == 2 && [r[@"captureP50"] doubleValue] == 51 && [r[@"captureP95"] doubleValue] == 96 && [r[@"decodeP50"] doubleValue] == -1, r.description);
-  check(@"stats: start anew", [stats.report[@"arrived"] intValue] == 0, nil);
-  check(@"stats: what it costs", [r[@"rssMb"] doubleValue] > 0 && [r[@"fds"] intValue] > 0, nil);
+  MVCheck(@"stats: counts and percentiles", [r[@"arrived"] intValue] == 100 && [r[@"dropped"] intValue] == 2 && [r[@"captureP50"] doubleValue] == 51 && [r[@"captureP95"] doubleValue] == 96 && [r[@"decodeP50"] doubleValue] == -1, r.description);
+  MVCheck(@"stats: start anew", [stats.report[@"arrived"] intValue] == 0, nil);
+  MVCheck(@"stats: what it costs", [r[@"rssMb"] doubleValue] > 0 && [r[@"fds"] intValue] > 0, nil);
   for (int i = 0; i < 10000; i++) [stats arrived:1 captureMs:i];
-  check(@"stats: bounded", [stats.report[@"arrived"] intValue] == 10000, nil);
+  MVCheck(@"stats: bounded", [stats.report[@"arrived"] intValue] == 10000, nil);
 }
 
 int MVSelfTest(NSString *fixtures) {
@@ -437,7 +378,9 @@ int MVSelfTest(NSString *fixtures) {
   checkInputMaths();
   checkTurns();
   checkStats();
-  checkPixels();
+  MVCheckPixels();
+  MVCheckPipe();
+  MVCheckRecorder();
   checkBroken();
   checkCodec(NO);
   checkCodec(YES);

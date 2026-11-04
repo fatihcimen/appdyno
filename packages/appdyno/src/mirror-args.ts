@@ -2,7 +2,7 @@ import { parseArgs } from 'node:util';
 
 const USAGE = `usage: appdyno mirror [open] [--device S]... [--all [--watch]] [--max N] [--detach]
                       [--quality auto|high|standard] [--codec h264|hevc]
-                      [--no-input] [--headless] [--seconds N] [--share] [--takeover]
+                      [--no-input] [--headless] [--seconds N] [--share] [--takeover] [--record file.mp4]
        appdyno mirror close|status|stats`;
 
 /** The words of `appdyno mirror`; `usage` when they make no call, `help` when it was asked for. */
@@ -23,6 +23,7 @@ export function mirrorArgs(args: string[]) {
       seconds: { type: 'string' },
       share: { type: 'boolean' },
       takeover: { type: 'boolean' },
+      record: { type: 'string' },
       'allow-devices': { type: 'string' },
       help: { type: 'boolean', short: 'h' },
     },

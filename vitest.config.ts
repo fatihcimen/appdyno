@@ -32,6 +32,10 @@ export default defineConfig({
     env: { APPDYNO_STATE_DIR: own },
     setupFiles: ['packages/appdyno/test/no-real-state.setup.ts'],
     globalSetup: ['packages/appdyno/test/no-real-state.teardown.ts'],
-    include: ['packages/*/test/**/*.test.ts'],
+    // the phone's stream keeps its tests in its folder, so that it can go whole
+    include: [
+      'packages/*/test/**/*.test.ts',
+      'packages/driver-apple/src/phone-stream/test/*.test.ts',
+    ],
   },
 });

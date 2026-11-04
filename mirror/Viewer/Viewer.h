@@ -26,8 +26,9 @@ void MVEmit(NSDictionary *message);
 - (void)decodedMs:(double)ms;
 - (void)shown;
 - (void)dropped:(int)count;
-/// The next frame to arrive answers `marked` with the time since this call.
-- (void)mark;
+/// The next frame to arrive answers `marked` with the time since this call; with `bigger`, the next that is well
+/// over the size of those before it, for a source that keeps sending on a still screen.
+- (void)mark:(BOOL)bigger;
 - (void)reset;
 /// This second's numbers, and starts the next.
 - (NSDictionary *)report;
@@ -59,6 +60,16 @@ void MVEmit(NSDictionary *message);
 - (void)setHidden:(BOOL)hidden;
 @end
 
+/// A stream's frames into a movie, with no second encode.
+@interface MVRecorder : NSObject
+- (instancetype)initWithFile:(NSString *)file;
+/// YES until its first frame: a key frame is what it can start from.
+- (BOOL)wantsKey;
+- (void)append:(CMSampleBufferRef)sample format:(CMFormatDescriptionRef)format key:(BOOL)key;
+/// Ends the file with what it holds: `frames`, `seconds`, `dropped`, and `why` if it ended early.
+- (NSDictionary *)finish;
+@end
+
 /// The sources by the `kind` of an `attach`.
 NSDictionary<NSString *, Class> *MVSourceClasses(void);
 
@@ -67,6 +78,7 @@ void MVForEachNal(const uint8_t *data, size_t length, void (^found)(const uint8_
 
 /// Compressed frames in, decoded images to the sink. A loss or a failure freezes the picture until a keyframe.
 @interface MVDecoder : NSObject
+@property(atomic, nullable) MVRecorder *recorder;
 - (instancetype)initWithSink:(id<MVSink>)sink from:(id)source;
 @property(atomic) BOOL hevc;
 /// One access unit; returns NO when it was dropped or failed.
@@ -80,6 +92,9 @@ void MVForEachNal(const uint8_t *data, size_t length, void (^found)(const uint8_
 @interface MVSourceStream : NSObject <MVSource>
 /// Runs on an open connection, with no adb in front of it.
 - (void)runOnDescriptor:(int)fd;
+- (void)startRecording:(NSString *)file;
+/// What the movie came to; nil if none was being made.
+- (nullable NSDictionary *)finishRecording;
 @end
 
 @interface MVSourceSurface : NSObject <MVSource>

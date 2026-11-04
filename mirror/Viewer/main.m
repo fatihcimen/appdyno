@@ -20,7 +20,7 @@ void MVEmit(NSDictionary *message) {
 }
 
 NSDictionary<NSString *, Class> *MVSourceClasses(void) {
-  return @{@"surface": MVSourceSurface.class, @"adb": MVSourceStream.class, @"pixels": MVSourcePixels.class};
+  return @{@"surface": MVSourceSurface.class, @"adb": MVSourceStream.class, @"pipe": MVSourceStream.class, @"pixels": MVSourcePixels.class};
 }
 
 @interface MVApp : NSObject <MVSink, NSApplicationDelegate>
@@ -108,6 +108,18 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
     if ([(id)_source respondsToSelector:@selector(setTurns:)]) [_source setTurns:[m[@"turns"] intValue] & 3];
     return;
   }
+  if ([op isEqual:@"record"]) {
+    if ([(id)_source respondsToSelector:@selector(startRecording:)]) [(MVSourceStream *)_source startRecording:m[@"file"]];
+    else MVEmit(@{@"op": @"recorded", @"why": @"this kind of picture is not recorded here", @"frames": @0});
+    return;
+  }
+  if ([op isEqual:@"recordStop"]) {
+    NSDictionary *told = [(id)_source respondsToSelector:@selector(finishRecording)] ? [(MVSourceStream *)_source finishRecording] : nil;
+    NSMutableDictionary *answer = [told ?: @{@"frames": @0, @"why": @"nothing was being recorded"} mutableCopy];
+    answer[@"op"] = @"recorded";
+    MVEmit(answer);
+    return;
+  }
   if ([op isEqual:@"agent"]) return [_window.overlay setDriving:[m[@"driving"] boolValue] tool:m[@"tool"] ?: @""];
   if ([op isEqual:@"banner"]) return m[@"id"] ? [_window.overlay showBanner:m] : [_window.overlay hideBanner];
   if ([op isEqual:@"activity"]) return [_window.overlay addActivity:m[@"line"] ?: @""];
@@ -117,7 +129,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
     if ([m[@"panel"] boolValue]) return [_window.overlay toggleActivity];
     return [_window pokeX:[m[@"x"] doubleValue] y:[m[@"y"] doubleValue]];
   }
-  if ([op isEqual:@"mark"]) return [_stats mark];
+  if ([op isEqual:@"mark"]) return [_stats mark:[m[@"bigger"] boolValue]];
   if ([op isEqual:@"quit"]) {
     [self detach];
     MVEmit(@{@"op": @"closed"});

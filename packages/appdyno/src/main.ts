@@ -219,6 +219,7 @@ async function mirrorCommand(args: string[]) {
       headless: values.headless ?? false,
       noInput: values['no-input'] ?? false,
       ...(values.seconds && { seconds: Number(values.seconds) }),
+      ...(values.record && { record: resolve(values.record) }),
       share: values.share ?? false,
       activate: process.stdin.isTTY === true,
       log: (line) => console.log(line),

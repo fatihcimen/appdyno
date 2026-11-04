@@ -2,8 +2,10 @@
 // then frames straight to the decoder. Nothing passes through the parent, so a reconnect needs no new viewer.
 #import "Viewer.h"
 #import <arpa/inet.h>
+#import <fcntl.h>
 #import <netinet/in.h>
 #import <netinet/tcp.h>
+#import <poll.h>
 #import <sys/socket.h>
 
 enum {
@@ -15,6 +17,7 @@ enum {
   kClockEverySeconds = 10,
   // pings answer in this time, whatever the screen does: past it the far end is gone
   kSilentSeconds = 25,
+  kPipePollMs = 200,
 };
 
 static BOOL readAll(int fd, void *into, size_t length) {
@@ -84,6 +87,7 @@ static NSString *askAdb(int fd, NSString *request) {
   int _nextId;
   BOOL _stopping;
   BOOL _hidden;
+  BOOL _pipe;
 }
 
 - (instancetype)initWithOptions:(NSDictionary *)options sink:(id<MVSink>)sink {
@@ -97,14 +101,19 @@ static NSString *askAdb(int fd, NSString *request) {
     _nextId = 1;
     _decoder = [[MVDecoder alloc] initWithSink:sink from:self];
     _decoder.hevc = [options[@"codec"] isEqual:@"hevc"];
+    _pipe = [options[@"kind"] isEqual:@"pipe"];
   }
   return self;
 }
 
 - (void)start {
   _thread = [[NSThread alloc] initWithBlock:^{
-    int fd = [self connectToAdb];
-    if (fd >= 0) [self serve:fd];
+    if (self->_pipe) {
+      [self servePipe];
+    } else {
+      int fd = [self connectToAdb];
+      if (fd >= 0) [self serve:fd];
+    }
     dispatch_semaphore_signal(self->_ended);
   }];
   _thread.qualityOfService = NSQualityOfServiceUserInteractive;
@@ -127,7 +136,20 @@ static NSString *askAdb(int fd, NSString *request) {
     if (_fd >= 0) shutdown(_fd, SHUT_RDWR);
   }
   if (_thread) dispatch_semaphore_wait(_ended, dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC));
+  [self finishRecording];
   [_decoder close];
+}
+
+- (void)startRecording:(NSString *)file {
+  MVRecorder *recorder = [[MVRecorder alloc] initWithFile:file];
+  _decoder.recorder = recorder;
+  [_decoder awaitKey];
+}
+
+- (NSDictionary *)finishRecording {
+  MVRecorder *recorder = _decoder.recorder;
+  _decoder.recorder = nil;
+  return [recorder finish];
 }
 
 - (void)setHidden:(BOOL)hidden {
@@ -163,6 +185,39 @@ static NSString *askAdb(int fd, NSString *request) {
     return -1;
   }
   return fd;
+}
+
+/// Held open both ways: what writes may come and go, and only a stop or its own last word ends this.
+- (void)servePipe {
+  int fd = open([_options[@"file"] fileSystemRepresentation], O_RDWR | O_NONBLOCK);
+  if (fd < 0) {
+    [self lost:[NSString stringWithFormat:@"the picture's pipe: %s", strerror(errno)] fatal:NO];
+    return;
+  }
+  NSString *why = [self readFrames:fd];
+  close(fd);
+  if (why) [self lost:why fatal:NO];
+}
+
+/// All of it, or NO at a stop or an error. A stop only ever comes between reads of a pipe that may stay silent.
+- (BOOL)readPipe:(int)fd into:(uint8_t *)into length:(size_t)length {
+  while (length) {
+    @synchronized(self) {
+      if (_stopping) return NO;
+    }
+    struct pollfd wanted = {.fd = fd, .events = POLLIN};
+    if (poll(&wanted, 1, kPipePollMs) <= 0) continue;
+    ssize_t got = read(fd, into, length);
+    if (got < 0 && (errno == EAGAIN || errno == EINTR)) continue;
+    if (got <= 0) return NO;
+    into += got;
+    length -= got;
+  }
+  return YES;
+}
+
+- (BOOL)read:(int)fd into:(uint8_t *)into length:(size_t)length {
+  return _pipe ? [self readPipe:fd into:into length:length] : readAll(fd, into, length);
 }
 
 - (BOOL)sendMethod:(NSString *)method params:(NSDictionary *)params id:(int)requestId {
@@ -226,7 +281,7 @@ static NSString *askAdb(int fd, NSString *request) {
     // this thread never returns to a run loop: what a frame leaves behind goes with the frame
     @autoreleasepool {
       uint8_t head[5];
-      if (!readAll(fd, head, 5)) {
+      if (![self read:fd into:head length:5]) {
         why = @"the stream ended";
         break;
       }
@@ -244,7 +299,7 @@ static NSString *askAdb(int fd, NSString *request) {
         buffer = grown;
         capacity = length;
       }
-      if (!readAll(fd, buffer, length)) {
+      if (![self read:fd into:buffer length:length]) {
         why = @"the stream ended";
         break;
       }
@@ -253,7 +308,7 @@ static NSString *askAdb(int fd, NSString *request) {
       } else if (head[4] == kFrameVideo && length >= kVideoHeader) {
         double capture = _haveOffset ? MVNowMs() - (big64(buffer) / 1000.0 - _offsetMs) : -1;
         [sink.stats arrived:length - kVideoHeader captureMs:capture];
-        if (_hidden) [sink.stats dropped:1];
+        if (_hidden && !_decoder.recorder) [sink.stats dropped:1];
         else [_decoder decode:buffer + kVideoHeader length:length - kVideoHeader];
       }
     }
