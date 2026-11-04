@@ -311,6 +311,8 @@ the read that woke it, 6 of 14 were lost, up to 1.5 s after and none at 4 s, wit
 the button did not show at all. Once the host waited for the focus to hold for 600 ms, 15 of 15 reached the app and every round had its button. These
 are small counts. A long measure wakes it too: a dark phone starts no app, and `am start` reads `UNKNOWN (0)`.
 
+A screen that has only dimmed is awake, and no refusal stops a touch there. Yet on that Xiaomi, 42 s after the last touch, with `dumpsys display` reading `policy=DIM`, the touch that brightened the screen reached no window: 3 of 3 were lost with the agent reporting a tap, and with 25 s of quiet none was. The system's focus was the app's and the phone was awake, so nothing on the way said so. The agent now tells the system a person is here just before any finger lands, and the same 3 reached the app. A test that fails only after a quiet stretch is usually this: one failed 4 of 4 in its file's order and passed alone.
+
 ### A phone's install prompts
 
 `app install` watches the phone's focused window with a plain `dumpsys` while `adb install` runs, and does nothing else until one of two windows has the

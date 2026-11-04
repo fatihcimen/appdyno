@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A person's touch reaches the app on a dimmed screen: on a Xiaomi the touch that brightened it was lost, with a tap reported.
+- `--quality auto` on a phone takes the largest size that keeps up with a person, by what its encoder takes on motion, and starts the next stream there. `high` and `standard` keep the display's size.
+- Reads of the window dump take the phone's own display: under a mirror they read its virtual display, with no focus and no lock.
 - An iPhone's numbers each second for a live panel, by its own instruments with no runner and no `xctrace`: frames, and the app's CPU, memory and threads. Nothing runs until a panel asks, as reading takes about 6 % of a phone core. Frames count the display, not the app, and a mirror keeps them near 20 on a still screen.
 - `appdyno perf why`, `perf_compare` `action: why`: on a regression the gate finds the cause by itself, on the same device, build and journey, and writes one answer: what got worse, how sure it is, against which baseline and run, and the likeliest cause with what shows it: a function by the diff of two profiles, a phase of a start, a frame's cause or a hang's. A cause is named only with the evidence that shows it; otherwise the answer says what is missing. Only a regression is looked at, so noise touches no device, and what a look reads never becomes a run. `perf_compare` is no longer marked read-only, as this replays a flow and restarts the app.
 - `appdyno perf reference`, `perf_compare` `action: reference`: the other side of a function or phase diff, taken on the baseline's build and kept beside the baseline, as only one build is installed once a regression is there.

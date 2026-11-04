@@ -172,6 +172,19 @@ a stream runs an encoder on the device.
 A mirror shows what the screen shows. `report`'s painted-over promise does not hold for a window. The agent's
 token goes to a viewer by its stdin, never by its arguments.
 
+## The size of a phone's picture
+
+`--quality auto`, the default, takes the largest size that keeps up with a person: a picture that holds its rate can still run late, and a touch waits for exactly that. The agent reads what the encoder took on each run of motion, five frames or more, past the key frame, as a clock's tick or a ripple says nothing of it. Over 40 ms on two runs in a row, it goes straight to the size its pixels say will fit, and the next stream starts there. No model is named anywhere, and a phone whose encoder keeps up stays at its display's size. `--quality high` and `standard` keep the display's size, and a size asked for is that size.
+
+| Samsung SM-A525F, 90 Hz | frames/s | capture to arrival p50, p95, ms | touch p50, ms |
+| ----------------------- | -------- | ------------------------------- | ------------- |
+| 1080x2400               | 89       | 69.3, 73.4                      | 217           |
+| 720x1600                | 65       | 36.6, 64.5                      | 107           |
+| 576x1280                | 69       | 26.4, 29.3                      | 94.8          |
+| 456x1024                | 81       | 23.6, 26.5                      | 93.8          |
+
+What an encoder publishes of itself could not decide this: scaled as Android scales them, its `measured-frame-rate` figures say the Samsung's 2400 lines are faster than a Xiaomi's 1600, where a touch is more than twice as quick.
+
 ## The numbers
 
 `packages/appdyno/scripts/mirror-bench.mjs <device>` runs the fixture's frames screen on Android and a list on
@@ -197,7 +210,8 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 - A stream's picture gives the backdrop no colours: only a surface is read so far, so a phone's window has a plain one.
 - Text an iPhone's keyboard has no key for goes by its pasteboard: the phone asks a person to allow the paste, and what it held comes back after, if that was text. In a secure field it does not go at all, and the window says so.
 - More's menu, the frame's hover, a window's remembered size and place, and a trackpad's pinch or a dead key on a real keyboard have not been run by hand; their maths are checked by the self test.
-- A large picture on a slow encoder: a Samsung SM-A525F's 1080x2400 at 90 Hz reads touch 217 ms and capture to arrival 69 ms, over the targets of 80 and 35, at any load. 720x1600 halves both and gives 65 frames/s for 89, and `auto` keeps the display's size. See [perf.md](perf.md#mirror).
+- `auto` on a phone starts at its display's size and changes it, once, on the first motion that shows the encoder falling behind, so a person may see the picture restart on their first touches. `--quality high` and `standard` keep the display's size.
+- A phone's touch has a floor below which no size goes: about 94 ms on a Samsung SM-A525F, over the target of 80, at 1280 lines and at 1024 alike.
 - Input by `key`: Android has only the keys the agent has (no arrows). On a simulator a keyboard's characters go as US keys; any other text by its pasteboard and command V.
 
 ## Left out, for now
