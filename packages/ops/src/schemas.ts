@@ -249,7 +249,8 @@ export const FlowOut = z.object({
     .optional(),
 });
 
-export const AppOut = z.object({
+/** `launch` answers with the screen it brings, as an action does. */
+export const AppOut = ActionOut.partial().extend({
   done: z.string(),
   apps: z
     .array(
