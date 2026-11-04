@@ -36,7 +36,11 @@ export const Probe = z
   .optional()
   .describe('iOS simulator: frame probe; relaunches the app');
 
-export const Dsym = z.string().max(1_000).optional().describe("iOS: the build's .dSYM");
+export const Dsym = z
+  .string()
+  .max(1_000)
+  .optional()
+  .describe("iOS: the build's .dSYM or a folder of them");
 
 /** A dSYM's path as the driver takes it; on Android simpleperf reads what the device holds, and one would do nothing. */
 export const symbolsOf = (s: Session, dsym?: string) => {

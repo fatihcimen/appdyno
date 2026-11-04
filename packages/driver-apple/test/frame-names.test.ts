@@ -26,7 +26,9 @@ describe('a build’s names for its frames', () => {
   });
 
   it('leaves an address the dSYM has no name for', () => {
-    expect(renamed(TABLE, '5', new Map())).toBe(TABLE);
+    const xml = renamed(TABLE, '5', new Map([['0x100391f00', 'busyMainThread()']]));
+    expect(xml).toContain('name="0x100391dc3" addr="0x100391dc3"');
+    expect(xml).toContain('name="busyMainThread()" addr="0x100391f00"');
   });
 
   it('reads through to the profile, escapes and all', () => {
