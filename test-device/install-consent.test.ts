@@ -5,7 +5,15 @@ import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { checkedOps } from '../packages/ops/test/helpers.js';
-import { Adb, AndroidDevice, androidProvider, apkNames, stats, type InstallAnswers } from 'appdyno';
+import {
+  Adb,
+  AndroidDevice,
+  androidProvider,
+  apkNames,
+  FOCUS_READ,
+  stats,
+  type InstallAnswers,
+} from 'appdyno';
 import { opCaller } from './helpers.js';
 
 /**
@@ -36,7 +44,7 @@ const verifies = !!serial && sh('settings get global verifier_verify_adb_install
 const installed = (app: string) => sh(`pm path ${app} 2>&1; true`).includes('package:');
 const gone = (app: string) => sh(`pm uninstall ${app} >/dev/null 2>&1; true`);
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const focus = () => sh('dumpsys window 2>/dev/null | grep -m1 mCurrentFocus');
+const focus = () => sh(FOCUS_READ);
 const PROTECT = /PlayProtectDialogsActivity/;
 const CONSENT = /AdbInstallActivity/;
 

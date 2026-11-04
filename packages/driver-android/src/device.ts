@@ -36,6 +36,7 @@ import { EmulatorMirror } from './mirror-emulator.js';
 import { androidScreen } from './platform-screen.js';
 import { AndroidRecorder } from './record.js';
 import { AndroidWeb } from './web.js';
+import { FOCUS_READ, KEYGUARD_READ } from './window-dump.js';
 
 /** Read-only requests are retried once on a fresh connection when the agent went away. */
 const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
@@ -165,9 +166,7 @@ export class AndroidDevice extends RpcDevice implements Device {
    */
   async ensureAwake(): Promise<{ woke: boolean; unlocked: boolean; locked: boolean }> {
     const state = async () => {
-      const out = await this.shell(
-        "dumpsys power | grep -m1 'mWakefulness='; dumpsys window | grep -m1 -E 'isKeyguardShowing=|mShowingLockscreen='",
-      );
+      const out = await this.shell(`dumpsys power | grep -m1 'mWakefulness='; ${KEYGUARD_READ}`);
       return {
         awake: /mWakefulness=Awake/.test(out),
         locked: /isKeyguardShowing=true|mShowingLockscreen=true/.test(out),
@@ -228,9 +227,7 @@ export class AndroidDevice extends RpcDevice implements Device {
 
   /** The window that has the focus; none between windows and on a dark screen. */
   private async currentFocus(): Promise<string> {
-    const focus = /mCurrentFocus=(.*)/.exec(
-      await this.shell('dumpsys window | grep -m1 mCurrentFocus'),
-    )?.[1];
+    const focus = /mCurrentFocus=(.*)/.exec(await this.shell(FOCUS_READ))?.[1];
     return focus === undefined || focus === 'null' ? '' : focus;
   }
 

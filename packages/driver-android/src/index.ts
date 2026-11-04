@@ -4,6 +4,7 @@ export { androidLogs, logcatCommand } from './logs.js';
 export { androidCrashes, crashReports, parseDropbox, parseExitInfo } from './crashes.js';
 export { Adb, assertSerial, parseDevices, shq, type AdbDevice } from './adb.js';
 export { AndroidDevice } from './device.js';
+export { FOCUS_READ, KEYGUARD_READ } from './window-dump.js';
 export { apkNames, type ApkNames } from './apk-names.js';
 export type { InstallAnswers } from './install-consent.js';
 export { androidScreen } from './platform-screen.js';

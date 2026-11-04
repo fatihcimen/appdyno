@@ -7,6 +7,7 @@ import {
   androidProvider,
   DeviceError,
   elementsOf,
+  FOCUS_READ,
   NODE_FLAGS,
   TEST_LOCATION,
   mockedProviders,
@@ -75,11 +76,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
   const answerSystemDialog = async (waitMs = 0) => {
     const end = Date.now() + waitMs;
     for (;;) {
-      if (
-        /Not Responding|Application Error/.test(
-          await d.shell('dumpsys window | grep -m1 mCurrentFocus'),
-        )
-      ) {
+      if (/Not Responding|Application Error/.test(await d.shell(FOCUS_READ))) {
         const close = find(await d.read(), /^(Tamam|OK|Close app|Iptal|Cancel)$/i);
         if (close) await d.tap(close, { settle: false });
         return;

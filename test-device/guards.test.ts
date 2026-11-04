@@ -4,6 +4,7 @@ import {
   Adb,
   androidProvider,
   appleProvider,
+  KEYGUARD_READ,
   sleep as pause,
   type AndroidDevice,
   type IosPhoneDevice,
@@ -50,11 +51,11 @@ describe.skipIf(!android)('guards on Android', () => {
     async () => {
       await d.shell('input keyevent KEYCODE_SLEEP');
       await pause(3_000);
-      expect(await d.shell('dumpsys window | grep -m1 isKeyguardShowing=')).toContain('true');
+      expect(await d.shell(KEYGUARD_READ)).toContain('true');
       const read = await t.call('screen');
       console.log(read.error, read.data.code, read.text.slice(0, 150));
       expect(read.error, read.text).toBe(false);
-      expect(await d.shell('dumpsys window | grep -m1 isKeyguardShowing=')).toContain('false');
+      expect(await d.shell(KEYGUARD_READ)).toContain('false');
       expect(await d.foreground()).toBe(APP);
     },
     60_000,
