@@ -110,11 +110,16 @@ export class IosPhoneDevice extends IosDevice {
   private readonly transport: ReturnType<typeof phoneTransport>;
   private readonly ctl: Devicectl;
   /** What Instruments and XCTest can read from a phone: what they cannot says why. */
-  readonly measure: MeasureSource & { hangs: IosPhoneDevice['hangs'] } = {
+  readonly measure: MeasureSource = {
     frameTrace: async (bundle, seconds, during) => {
       await this.inFront(bundle);
       const v = await this.hitches(bundle, seconds, during);
-      return { value: { kind: 'hitches', ...v }, raw: v.tracePath, at: new Date().toISOString() };
+      return {
+        value: { kind: 'hitches', ...v },
+        raw: v.tracePath,
+        at: new Date().toISOString(),
+        source: 'xctrace Animation Hitches',
+      };
     },
     framesDuring: async (bundle, seconds, during) => {
       await this.inFront(bundle);
@@ -184,7 +189,15 @@ export class IosPhoneDevice extends IosDevice {
         at: new Date().toISOString(),
       };
     },
-    hangs: (bundle, seconds, during) => this.hangs(bundle, seconds, during),
+    hangs: async (bundle, seconds, during) => {
+      const value = await this.hangs(bundle, seconds, during);
+      return {
+        value,
+        raw: value.tracePath,
+        at: new Date().toISOString(),
+        source: 'xctrace Time Profiler potential-hangs',
+      };
+    },
     network: async (bundle, windowMs, during) => {
       await this.inFront(bundle);
       return phoneNetwork(this.serial, bundle, () => this.ctl.pid(bundle), windowMs, during);

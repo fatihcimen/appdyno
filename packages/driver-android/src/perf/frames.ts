@@ -144,5 +144,10 @@ export async function frameTrace(
 ): Promise<Measured<FrameTrace>> {
   await d.readyToMeasure();
   const m = await frameTimeline(d, pkg, seconds * 1000, during);
-  return { value: { kind: 'timeline', ...m.value }, raw: m.raw, at: m.at };
+  return {
+    value: { kind: 'timeline', ...m.value },
+    raw: m.raw,
+    at: m.at,
+    source: 'perfetto frame timeline',
+  };
 }

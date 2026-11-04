@@ -1,5 +1,11 @@
 /** A measurement and the raw output it was read from (kept as its proof). */
-export type Measured<T> = { value: T; raw: string; at: string };
+export type Measured<T> = {
+  value: T;
+  raw: string;
+  at: string;
+  /** What read it, kept with its numbers: only the driver knows, and a device may have several ways. */
+  source?: string;
+};
 
 /** A frame this long stood still for the user (Android vitals' frozen frame); every source counts by it. */
 export const FROZEN_FRAME_MS = 700;
@@ -320,7 +326,11 @@ export interface MeasureSource {
     seconds: number,
     during?: () => Promise<unknown>,
   ): Promise<Measured<HeapProfile>>;
-  hangs?(app: string, seconds: number, during?: () => Promise<unknown>): Promise<HangReading>;
+  hangs?(
+    app: string,
+    seconds: number,
+    during?: () => Promise<unknown>,
+  ): Promise<Measured<HangReading>>;
   /** XCTest's `measure()` in a test of its own: launch, hitches, memory, CPU. */
   xctMetrics?(app: string, test: 'launch' | 'hitches'): Promise<Measured<XctMetrics>>;
   cpuProfile?(

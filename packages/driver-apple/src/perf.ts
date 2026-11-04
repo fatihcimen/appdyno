@@ -255,6 +255,7 @@ export class IosSimulatorPerf implements MeasureSource {
       value: { kind: 'probe', tracePath, ...probeSummary(raw, from, to) },
       raw: tracePath,
       at: at(),
+      source: 'CADisplayLink probe',
     };
   }
 

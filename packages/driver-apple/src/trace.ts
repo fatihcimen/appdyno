@@ -245,7 +245,12 @@ export async function recordXctMetrics(
   );
   const metrics = parseXctMetrics(stdout);
   if (!Object.keys(metrics).length) throw failed('the test ran and recorded no value');
-  return { value: { metrics, resultBundle }, raw: stdout, at: new Date().toISOString() };
+  return {
+    value: { metrics, resultBundle },
+    raw: stdout,
+    at: new Date().toISOString(),
+    source: 'XCTest measure()',
+  };
 }
 
 /** What a kept trace holds: one table with `table`, the list of its tables without. */

@@ -108,7 +108,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
       const p = await d.measure.cpuProfile!(SETTINGS, 4_000, scroll);
       expect(p.value.samples).toBeGreaterThan(0);
       expect(p.value.top.length).toBeGreaterThan(0);
-      const hangs = await d.measure.hangs(SETTINGS, 3, scroll);
+      const hangs = await d.hangs(SETTINGS, 3, scroll);
       expect(hangs.hangs).toBeGreaterThanOrEqual(0);
       expect(hangs.tracePath).toMatch(/\.trace$/);
     }, 240_000);
@@ -233,7 +233,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
 
     it('hangs: a 500 ms stall counts, a light tap does not', async () => {
       const s = await open('stall');
-      const h = await d.measure.hangs(APP, 5, async () => {
+      const h = await d.hangs(APP, 5, async () => {
         await pause(1_000);
         await d.tap(byId(s, 'stall_500'), { settle: false });
       });
