@@ -111,6 +111,14 @@ void MVCheckPipe(void) {
   MVCheck(@"pipe: every frame decoded", all, [NSString stringWithFormat:@"%d of %lu", sink.images, (unsigned long)frames.count]);
   MVCheck(@"pipe: the size it was told", sink.lastSize.width == 320 && sink.lastSize.height == 240, nil);
   MVCheck(@"pipe: the mode it was told", [sink.stats.mode isEqual:@"mode 7"], sink.stats.mode);
+  // a coded picture larger than the screen: what the stream says is what shows, from its top left
+  NSDictionary *cropped = @{@"method": @"stream.info", @"params": @{@"w": @300, @"h": @200, @"codec": @"hevc", @"mode": @"mode 5", @"crop": @YES}};
+  writeFrame(writer, 0, NULL, 0, [NSJSONSerialization dataWithJSONObject:cropped options:0 error:NULL]);
+  int before = sink.images;
+  writeFrame(writer, 2, zero, sizeof zero, frames[0].data);
+  [sink waitForImages:before + 1];
+  CGRect clean = CVImageBufferGetCleanRect((__bridge CVImageBufferRef)sink.lastImage);
+  MVCheck(@"pipe: a crop keeps the picture's top left", clean.size.width == 300 && clean.size.height == 200 && clean.origin.x == 0, NSStringFromRect(NSRectFromCGRect(clean)));
   NSDictionary *counters = @{@"method": @"stream.counters", @"params": @{@"lostPackets": @7}};
   writeFrame(writer, 0, NULL, 0, [NSJSONSerialization dataWithJSONObject:counters options:0 error:NULL]);
   for (int i = 0; i < 100 && !sink.stats.counters; i++) usleep(10000);

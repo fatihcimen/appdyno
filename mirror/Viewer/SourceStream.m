@@ -346,6 +346,7 @@ static NSString *askAdb(int fd, NSString *request) {
   if ([m[@"method"] isEqual:@"stream.info"]) {
     NSDictionary *info = m[@"params"];
     _decoder.hevc = [info[@"codec"] isEqual:@"hevc"];
+    if ([info[@"crop"] boolValue]) _decoder.crop = CGSizeMake([info[@"w"] doubleValue], [info[@"h"] doubleValue]);
     sink.stats.mode = [NSString stringWithFormat:@"%@", info[@"mode"] ?: @""];
     [sink source:self size:CGSizeMake([info[@"w"] doubleValue], [info[@"h"] doubleValue]) codec:_decoder.hevc ? @"hevc" : @"h264"];
   }

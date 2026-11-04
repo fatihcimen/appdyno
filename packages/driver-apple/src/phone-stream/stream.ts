@@ -11,8 +11,10 @@ import {
   HID_UNIVERSAL,
   invoke,
   readServices,
+  takeScreenshot,
   type ServiceList,
 } from './services.js';
+import { imageSize } from '../mirror-phone.js';
 import { turnsOf } from '../mirror-sim.js';
 import { audioOffer, thisMac, videoOffer, type StreamMode } from './stream-offer.js';
 import {
@@ -44,7 +46,7 @@ const ALIVE_MS = 1_000;
 const WATCH_MS = 2_000;
 
 export interface StreamSink {
-  live(info: { w: number; h: number; mode: string }): void;
+  live(info: { w: number; h: number; mode: string; crop: boolean }): void;
   picture(p: Picture): void;
   state(s: DeviceState): void;
   counters(c: Record<string, number>): void;
@@ -182,12 +184,21 @@ export class PhoneStream {
     const connection = dict(answer.connection);
     const config = dict(connection.streamConfig);
     this.videoPort ||= number(dict(connection.sender).port);
+    // the lower mode codes a larger picture, with the screen at its top left
+    const screen = mode === 5 ? await this.screenSize().catch(() => undefined) : undefined;
     this.sink.live({
-      w: number(config.CustomWidth),
-      h: number(config.CustomHeight),
+      w: screen?.w ?? number(config.CustomWidth),
+      h: screen?.h ?? number(config.CustomHeight),
       mode: `mode ${mode}`,
+      crop: screen !== undefined,
     });
     this.runTimers(rtcp, receiver);
+  }
+
+  private async screenSize() {
+    const size = imageSize(await takeScreenshot(this.stack!, this.services!, 'png'));
+    if (!size) throw new Error('a screenshot with no size');
+    return size;
   }
 
   private toPhone(packet: Buffer) {

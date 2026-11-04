@@ -7,8 +7,7 @@ import type {
   PhoneStreamModule,
 } from '../phone-stream-port.js';
 import { listDevices } from '../usbmux.js';
-import { RemoteXpc } from './remotexpc.js';
-import { invoke, readServices, SCREEN_CAPTURE } from './services.js';
+import { readServices, takeScreenshot } from './services.js';
 import { openTunnel, PhoneRefusal, readPairRecord } from './tunnel.js';
 import type { ToWorker } from './worker.js';
 
@@ -32,18 +31,7 @@ async function check(udid: string): Promise<PhoneStreamCheck> {
 async function screenshot(udid: string, format: 'png' | 'jpeg'): Promise<Buffer> {
   const { stack, rsdPort } = await openTunnel(udid);
   try {
-    const services = await readServices(stack, rsdPort);
-    const port = services.ports[SCREEN_CAPTURE];
-    if (!port) throw new Error('the phone lists no screenshot service');
-    const service = RemoteXpc.start(await stack.connect(port));
-    const answer = await invoke(
-      service,
-      'com.apple.coredevice.feature.capturescreenshot',
-      { requestedFormat: format },
-      'com.apple.coredevice.action.capturescreenshot',
-    );
-    if (!Buffer.isBuffer(answer.image)) throw new Error('the screenshot came without its image');
-    return answer.image;
+    return await takeScreenshot(stack, await readServices(stack, rsdPort), format);
   } finally {
     stack.close();
   }

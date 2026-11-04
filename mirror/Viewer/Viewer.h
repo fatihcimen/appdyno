@@ -83,6 +83,8 @@ void MVForEachNal(const uint8_t *data, size_t length, void (^found)(const uint8_
 @property(atomic, nullable) MVRecorder *recorder;
 - (instancetype)initWithSink:(id<MVSink>)sink from:(id)source;
 @property(atomic) BOOL hevc;
+/// What to show of each picture, from its top left, where the coded one is larger; zero: all of it.
+@property(atomic) CGSize crop;
 /// One access unit; returns NO when it was dropped or failed.
 - (BOOL)decode:(const uint8_t *)data length:(size_t)length;
 /// Nothing is decoded until a keyframe comes, and one is asked for.

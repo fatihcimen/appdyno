@@ -53,6 +53,29 @@ export async function readServices(stack: IpStack, rsdPort: number): Promise<Ser
   }
 }
 
+/** The screen as the phone's own service has it, with no stream. */
+export async function takeScreenshot(
+  stack: IpStack,
+  services: ServiceList,
+  format: 'png' | 'jpeg',
+): Promise<Buffer> {
+  const port = services.ports[SCREEN_CAPTURE];
+  if (!port) throw new Error('the phone lists no screenshot service');
+  const service = RemoteXpc.start(await stack.connect(port));
+  try {
+    const answer = await invoke(
+      service,
+      'com.apple.coredevice.feature.capturescreenshot',
+      { requestedFormat: format },
+      'com.apple.coredevice.action.capturescreenshot',
+    );
+    if (!Buffer.isBuffer(answer.image)) throw new Error('the screenshot came without its image');
+    return answer.image;
+  } finally {
+    service.close();
+  }
+}
+
 export type ServiceError = { text: string };
 
 /** The readable words of what a service refused with, wherever in its answer they are. */

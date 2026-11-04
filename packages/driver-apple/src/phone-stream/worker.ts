@@ -51,8 +51,8 @@ port.on('message', handle);
 
 try {
   stream = await PhoneStream.open(udid, quality, {
-    live: ({ w, h, mode }) => {
-      writer.setInfo({ w, h, codec: 'hevc', mode });
+    live: ({ w, h, mode, crop }) => {
+      writer.setInfo({ w, h, codec: 'hevc', mode, crop });
       tell({ kind: 'live', w, h, mode });
     },
     picture: (p) => writer.picture(p.annexB),

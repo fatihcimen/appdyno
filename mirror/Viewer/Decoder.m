@@ -156,7 +156,8 @@ static const double kRecorderAskMs = 1000;
   if (hardware) CFRelease(hardware);
   CMVideoDimensions size = CMVideoFormatDescriptionGetDimensions(_format);
   id from = _source;
-  if (from) [sink source:from size:CGSizeMake(size.width, size.height) codec:self.hevc ? @"hevc" : @"h264"];
+  CGSize shown = self.crop.width > 0 ? self.crop : CGSizeMake(size.width, size.height);
+  if (from) [sink source:from size:shown codec:self.hevc ? @"hevc" : @"h264"];
   return YES;
 }
 
@@ -265,6 +266,17 @@ static const double kRecorderAskMs = 1000;
     _pixelsTold = YES;
     OSType f = CFSwapInt32HostToBig(CVPixelBufferGetPixelFormatType(image));
     sink.stats.decoder = [NSString stringWithFormat:@"%@ %.4s", sink.stats.decoder, (const char *)&f];
+  }
+  CGSize crop = self.crop;
+  if (crop.width > 0) {
+    // the aperture's offsets are from the middle of the picture
+    NSDictionary *aperture = @{
+      (id)kCVImageBufferCleanApertureWidthKey: @(crop.width),
+      (id)kCVImageBufferCleanApertureHeightKey: @(crop.height),
+      (id)kCVImageBufferCleanApertureHorizontalOffsetKey: @((crop.width - CVPixelBufferGetWidth(image)) / 2),
+      (id)kCVImageBufferCleanApertureVerticalOffsetKey: @((crop.height - CVPixelBufferGetHeight(image)) / 2),
+    };
+    CVBufferSetAttachment(image, kCVImageBufferCleanApertureKey, (__bridge CFDictionaryRef)aperture, kCVAttachmentMode_ShouldPropagate);
   }
   if (show && from) [sink source:from image:image];
 }
