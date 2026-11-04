@@ -144,21 +144,28 @@ static void moodCorner(CGImageRef mood, uint8_t px[4]) {
   CGColorSpaceRelease(space);
 }
 
-static void checkStreamMood(void) {
+/// Red, as a stream carries it, in a kind of image of `lines` lines of colours.
+static BOOL redMood(OSType format, size_t lines, NSString *name) {
   CVPixelBufferRef image = NULL;
-  CVPixelBufferCreate(NULL, 64, 64, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange, NULL, &image);
+  CVPixelBufferCreate(NULL, 64, 64, format, NULL, &image);
   CVPixelBufferLockBaseAddress(image, 0);
-  // red, as a stream carries it
   memset(CVPixelBufferGetBaseAddressOfPlane(image, 0), 63, CVPixelBufferGetBytesPerRowOfPlane(image, 0) * 64);
   uint8_t *chroma = CVPixelBufferGetBaseAddressOfPlane(image, 1);
-  for (size_t i = 0; i < CVPixelBufferGetBytesPerRowOfPlane(image, 1) * 32; i += 2) chroma[i] = 102, chroma[i + 1] = 240;
+  for (size_t i = 0; i < CVPixelBufferGetBytesPerRowOfPlane(image, 1) * lines; i += 2) chroma[i] = 102, chroma[i + 1] = 240;
   CVPixelBufferUnlockBaseAddress(image, 0);
   CGImageRef mood = MVImageMood(image, NO);
   uint8_t px[4] = {0};
   if (mood) moodCorner(mood, px);
-  MVCheck(@"backdrop: a stream's own colours reach the window", mood && px[0] > px[1] + 40 && px[0] > px[2] + 40, [NSString stringWithFormat:@"%d %d %d", px[0], px[1], px[2]]);
+  BOOL red = mood && px[0] > px[1] + 40 && px[0] > px[2] + 40;
+  MVCheck(name, red, [NSString stringWithFormat:@"%d %d %d", px[0], px[1], px[2]]);
   if (mood) CGImageRelease(mood);
   CVPixelBufferRelease(image);
+  return red;
+}
+
+static void checkStreamMood(void) {
+  redMood(kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange, 32, @"backdrop: a stream's own colours reach the window");
+  redMood(kCVPixelFormatType_444YpCbCr8BiPlanarFullRange, 64, @"backdrop: an iPhone's 4:4:4 stream gives its colours too");
   CVPixelBufferRef ten = NULL;
   CVPixelBufferCreate(NULL, 64, 64, kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange, NULL, &ten);
   MVCheck(@"backdrop: a kind of image it cannot read leaves the window as it was", ten && !MVImageMood(ten, NO), nil);

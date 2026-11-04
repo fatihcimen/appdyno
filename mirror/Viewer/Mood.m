@@ -12,6 +12,8 @@ typedef struct {
   /// Its colours, where they are apart from its brightness.
   const uint8_t *chroma;
   size_t row, chromaRow, width, height;
+  /// How many of the picture's columns and lines one pair of colours covers.
+  size_t columnsApart, linesApart;
 } MVPixels;
 
 static double unit(double v) {
@@ -24,7 +26,7 @@ static void pixelAt(const MVPixels *p, size_t x, size_t y, double out[3]) {
     out[0] = px[2] / 255.0, out[1] = px[1] / 255.0, out[2] = px[0] / 255.0;
     return;
   }
-  const uint8_t *pair = p->chroma + y / 2 * p->chromaRow + (x & ~(size_t)1);
+  const uint8_t *pair = p->chroma + y / p->linesApart * p->chromaRow + x / p->columnsApart * 2;
   // BT.709, as a video's range: a mood has no need of more, and a phone's stream is near enough to it
   double luma = (p->base[y * p->row] - 16) / 219.0, cb = (pair[0] - 128) / 224.0, cr = (pair[1] - 128) / 224.0;
   out[0] = unit(luma + 1.5748 * cr), out[1] = unit(luma - 0.1873 * cb - 0.4681 * cr), out[2] = unit(luma + 1.8556 * cb);
@@ -75,11 +77,31 @@ CGImageRef MVPictureMood(IOSurfaceRef surface, BOOL dark) {
   return image;
 }
 
+/// The spacing of an 8-bit image's colours where they have a plane of their own: an iPhone's stream is 4:4:4.
+static BOOL spacingOf(OSType format, MVPixels *p) {
+  switch (format) {
+    case kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange:
+    case kCVPixelFormatType_420YpCbCr8BiPlanarFullRange:
+      p->columnsApart = 2, p->linesApart = 2;
+      return YES;
+    case kCVPixelFormatType_422YpCbCr8BiPlanarVideoRange:
+    case kCVPixelFormatType_422YpCbCr8BiPlanarFullRange:
+      p->columnsApart = 2, p->linesApart = 1;
+      return YES;
+    case kCVPixelFormatType_444YpCbCr8BiPlanarVideoRange:
+    case kCVPixelFormatType_444YpCbCr8BiPlanarFullRange:
+      p->columnsApart = 1, p->linesApart = 1;
+      return YES;
+    default:
+      return NO;
+  }
+}
+
 CGImageRef MVImageMood(CVImageBufferRef image, BOOL dark) {
   OSType format = CVPixelBufferGetPixelFormatType(image);
-  BOOL planes = format == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange || format == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange;
-  if ((!planes && format != kCVPixelFormatType_32BGRA) || CVPixelBufferLockBaseAddress(image, kCVPixelBufferLock_ReadOnly) != kCVReturnSuccess) return NULL;
   MVPixels pixels = {.width = CVPixelBufferGetWidth(image), .height = CVPixelBufferGetHeight(image)};
+  BOOL planes = spacingOf(format, &pixels);
+  if ((!planes && format != kCVPixelFormatType_32BGRA) || CVPixelBufferLockBaseAddress(image, kCVPixelBufferLock_ReadOnly) != kCVReturnSuccess) return NULL;
   pixels.base = planes ? CVPixelBufferGetBaseAddressOfPlane(image, 0) : CVPixelBufferGetBaseAddress(image);
   pixels.row = planes ? CVPixelBufferGetBytesPerRowOfPlane(image, 0) : CVPixelBufferGetBytesPerRow(image);
   if (planes) {
