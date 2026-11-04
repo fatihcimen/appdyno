@@ -1,7 +1,12 @@
 import { execFileSync, spawn } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { MirrorStatus, ViewerLink } from '../packages/core/src/index.js';
+import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
+import { windowControls } from '../packages/ops/src/mirror/controls.js';
+import { windowMeasures } from '../packages/ops/src/mirror/measures.js';
 
 /**
  * A mirror on our own iPhone (APPDYNO_IPHONE_UDID; never a default), through what is built: the stream's thread runs only
@@ -136,6 +141,64 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     );
   }, 90_000);
 
+  describe('text with no key on the keyboard', () => {
+    const pasteboard = (action: string, input?: string) =>
+      execFileSync('xcrun', ['devicectl', 'device', 'pasteboard', action, '--device', udid!], {
+        encoding: 'utf8',
+        ...(input && { input }),
+      });
+    const field = async (id: string) =>
+      (await read()).list.find((e: { id?: string }) => e.id === id);
+    const focus = async (id: string) => {
+      show('form');
+      await new Promise((r) => setTimeout(r, 2_000));
+      await device.launch(FIXTURE);
+      await device.openUrl('appdyno-fixture://open/form', FIXTURE);
+      await until('the field', async () => !!(await field(id)));
+      // a screen still sliding in takes no touch
+      await new Promise((r) => setTimeout(r, 1_500));
+      await until('its focus', async () => {
+        const { x, y, flags } = await field(id);
+        if (flags?.includes('focused')) return true;
+        const { w, h } = (await read()).window;
+        session.send({ kind: 'touch', p: 0, x: x / w, y: y / h });
+        await new Promise((r) => setTimeout(r, 80));
+        session.send({ kind: 'touch', p: 2, x: x / w, y: y / h });
+        await new Promise((r) => setTimeout(r, 1_500));
+        return false;
+      });
+    };
+
+    it('goes by the pasteboard, which gets back what it held', async () => {
+      pasteboard('copy', 'a person copied this');
+      await focus('name_input');
+      session.send({ kind: 'text', s: 'çay 12' });
+      await until('the prompt', async () => {
+        await new Promise((r) => setTimeout(r, 1_000));
+        return pasteboard('paste').startsWith('çay 12');
+      });
+      // the phone's own question sits outside the app, where nothing reads its buttons: a person's touch on the first,
+      // again until the words come, as it takes a moment to show and the form below takes such a touch harmlessly
+      await until('the words', async () => {
+        await new Promise((r) => setTimeout(r, 2_500));
+        session.send({ kind: 'touch', p: 0, x: 0.5, y: 0.54 });
+        await new Promise((r) => setTimeout(r, 80));
+        session.send({ kind: 'touch', p: 2, x: 0.5, y: 0.54 });
+        await new Promise((r) => setTimeout(r, 1_000));
+        return (await field('name_input'))?.label === 'çay 12';
+      });
+      await until('what it held', () => pasteboard('paste').startsWith('a person copied this'));
+    }, 120_000);
+
+    it('stays off a pasteboard for a secure field', async () => {
+      pasteboard('copy', 'still here');
+      await focus('password_input');
+      session.send({ kind: 'text', s: 'çay' });
+      await new Promise((r) => setTimeout(r, 6_000));
+      expect(pasteboard('paste')).not.toContain('çay');
+    }, 120_000);
+  });
+
   it('a side button turns it dark: the mirror says so, keeps its stream, and a click lights it', async () => {
     show('list');
     await until('the list', async () =>
@@ -222,6 +285,41 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     }
   }, 180_000);
 
+  it('the window screenshot button saves a picture and copies it, on a Desktop of its own', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'appdyno-button-'));
+    const desktop = join(home, 'Desktop');
+    mkdirSync(desktop);
+    const clipboard = () =>
+      execFileSync('osascript', ['-e', 'clipboard info'], { encoding: 'utf8' });
+    // only what can be put back is touched: anything but text stays where it is, and the copy is then only asked for
+    const plain = !/picture|PNGf|TIFF|furl/.test(clipboard());
+    const held = plain ? execFileSync('pbpaste', { encoding: 'utf8' }) : '';
+    const copies: unknown[] = [];
+    const told = plain
+      ? session
+      : {
+          ...session,
+          tell: (m: { op: string }) => (m.op === 'copied' ? copies.push(m) : session.tell(m)),
+        };
+    const realHome = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const measures = windowMeasures(new ServerContext(DEFAULT_POLICY, []), device);
+      const controls = windowControls(device, await device.hardware(), () => told, measures);
+      controls.onWindow({ op: 'control', name: 'screenshot' });
+      await until('its file', () => readdirSync(desktop).some((f) => f.endsWith('.png')));
+      const file = readdirSync(desktop).find((f) => f.endsWith('.png'))!;
+      await until('a whole picture', () => statSync(join(desktop, file)).size > 1_000);
+      expect(readFileSync(join(desktop, file))[0]).toBe(0x89);
+      if (plain) await until('the copy', () => /PNGf|TIFF|picture/.test(clipboard()));
+      else expect(copies).toHaveLength(1);
+    } finally {
+      process.env.HOME = realHome;
+      if (plain) execFileSync('pbcopy', { input: held });
+      rmSync(home, { recursive: true, force: true });
+    }
+  }, 60_000);
+
   it('a screenshot goes by the phone own service, in either format', async () => {
     for (const format of ['png', 'jpeg'] as const) {
       const { meta, data } = await device.screenshot({ format });
@@ -231,69 +329,6 @@ describe.runIf(udid)('mirror on an iPhone', () => {
       expect(data[0]).toBe(format === 'png' ? 0x89 : 0xff);
     }
   }, 60_000);
-
-  // alone, with APPDYNO_MIRROR_PASTE=1: after the phone's own prompt a lock press leaves its lock screen lit, and later in
-  // a run a touch has missed that prompt, so the tests around these would answer for them
-  describe.runIf(process.env.APPDYNO_MIRROR_PASTE === '1')(
-    'text with no key on the keyboard',
-    () => {
-      const pasteboard = (action: string, input?: string) =>
-        execFileSync('xcrun', ['devicectl', 'device', 'pasteboard', action, '--device', udid!], {
-          encoding: 'utf8',
-          ...(input && { input }),
-        });
-      const field = async (id: string) =>
-        (await read()).list.find((e: { id?: string }) => e.id === id);
-      const focus = async (id: string) => {
-        show('form');
-        await new Promise((r) => setTimeout(r, 2_000));
-        await device.launch(FIXTURE);
-        await device.openUrl('appdyno-fixture://open/form', FIXTURE);
-        await until('the field', async () => !!(await field(id)));
-        // a screen still sliding in takes no touch
-        await new Promise((r) => setTimeout(r, 1_500));
-        await until('its focus', async () => {
-          const { x, y, flags } = await field(id);
-          if (flags?.includes('focused')) return true;
-          const { w, h } = (await read()).window;
-          session.send({ kind: 'touch', p: 0, x: x / w, y: y / h });
-          await new Promise((r) => setTimeout(r, 80));
-          session.send({ kind: 'touch', p: 2, x: x / w, y: y / h });
-          await new Promise((r) => setTimeout(r, 1_500));
-          return false;
-        });
-      };
-
-      it('goes by the pasteboard, which gets back what it held', async () => {
-        pasteboard('copy', 'a person copied this');
-        await focus('name_input');
-        session.send({ kind: 'text', s: 'çay 12' });
-        await until('the prompt', async () => {
-          await new Promise((r) => setTimeout(r, 1_000));
-          return pasteboard('paste').startsWith('çay 12');
-        });
-        // the phone's own question sits outside the app, where nothing reads its buttons: a person's touch on the first,
-        // again until the words come, as it takes a moment to show and the form below takes such a touch harmlessly
-        await until('the words', async () => {
-          await new Promise((r) => setTimeout(r, 2_500));
-          session.send({ kind: 'touch', p: 0, x: 0.5, y: 0.54 });
-          await new Promise((r) => setTimeout(r, 80));
-          session.send({ kind: 'touch', p: 2, x: 0.5, y: 0.54 });
-          await new Promise((r) => setTimeout(r, 1_000));
-          return (await field('name_input'))?.label === 'çay 12';
-        });
-        await until('what it held', () => pasteboard('paste').startsWith('a person copied this'));
-      }, 120_000);
-
-      it('stays off a pasteboard for a secure field', async () => {
-        pasteboard('copy', 'still here');
-        await focus('password_input');
-        session.send({ kind: 'text', s: 'çay' });
-        await new Promise((r) => setTimeout(r, 6_000));
-        expect(pasteboard('paste')).toContain('still here');
-      }, 120_000);
-    },
-  );
 
   it('a viewer killed comes back, with a new key for its picture', async () => {
     const pid = viewerProcess!.pid!;

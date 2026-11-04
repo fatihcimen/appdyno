@@ -3,7 +3,8 @@ import {
   actionOf,
   childrenIn,
   elementNamed,
-  isSecureEditing,
+  isEditing,
+  isSecure,
   leafOf,
   plain,
   typed,
@@ -167,9 +168,9 @@ describe('what goes to the phone audit service', () => {
   });
 
   it('tells a secure field being typed in, by its traits as a phone gave them', () => {
-    expect(isSecureEditing(0x2201240000)).toBe(true);
-    expect(isSecureEditing(0x2201040000)).toBe(false);
-    expect(isSecureEditing(0x2200240000)).toBe(false);
+    expect(isEditing(0x2201240000) && isSecure(0x2201240000)).toBe(true);
+    expect(isEditing(0x2201040000)).toBe(false);
+    expect(isEditing(0x2200240000) && isSecure(0x2200240000)).toBe(false);
   });
 
   it('finds a name by id first, then by its words, and never guesses', () => {

@@ -42,6 +42,7 @@ const SUPPORTED_FEATURES = 140n;
 const RATE_CONTROL_MS = 50;
 const LAG_RESOLUTION_MS = 5;
 const TURNS_CHECK_MS = 250;
+const INPUT_IDLE_MS = 15_000;
 const ALIVE_MS = 1_000;
 const WATCH_MS = 2_000;
 
@@ -71,6 +72,7 @@ export class PhoneStream {
   private stopped = false;
   private readonly dark = new DarkWatch();
   private turns = 0;
+  private readonly lastInput = { touch: 0, keys: 0 };
   private closeOrientation: (() => void) | undefined;
   private videoPort = 0;
   private audioPort = 0;
@@ -311,14 +313,14 @@ export class PhoneStream {
   }
 
   /** A finger sent on a connection from before a dark screen goes nowhere, with no word: the next input opens anew. */
+  private closeInput() {
+    this.indigo?.close();
+    this.universal?.close();
+    this.hid = undefined;
+  }
+
   private dropInput() {
-    this.inputs = this.inputs
-      .catch(() => undefined)
-      .then(() => {
-        this.indigo?.close();
-        this.universal?.close();
-        this.hid = undefined;
-      });
+    this.inputs = this.inputs.catch(() => undefined).then(() => this.closeInput());
   }
 
   /** The services for input are opened on the first input: a window only watched needs none. */
@@ -339,7 +341,14 @@ export class PhoneStream {
   input(e: InputEvent): Promise<void> {
     this.inputs = this.inputs
       .catch(() => undefined)
-      .then(async () => (await this.inputService()).send(e));
+      .then(async () => {
+        // the phone lets go of an input connection left idle, and says nothing: what is sent on it is lost. A finger
+        // and a key go by different ones, so a press after a minute of touches finds its own gone
+        const way = e.kind === 'touch' ? 'touch' : 'keys';
+        if (Date.now() - this.lastInput[way] > INPUT_IDLE_MS) this.closeInput();
+        this.lastInput[way] = Date.now();
+        await (await this.inputService()).send(e);
+      });
     return this.inputs;
   }
 

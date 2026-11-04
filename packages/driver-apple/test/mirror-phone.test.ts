@@ -52,6 +52,42 @@ function fake(check: Awaited<ReturnType<PhoneStreamModule['check']>> = { ok: tru
   };
 }
 
+describe('text with no key on a phone', () => {
+  it('holds up no touch while it reads the screen, and keys wait their turn', async () => {
+    const { mirror, handle, module } = fake();
+    let answer: (secure: boolean) => void = () => undefined;
+    module.secureFocused = () => new Promise((resolve) => (answer = resolve));
+    const told: Record<string, unknown>[] = [];
+    await mirror.open({ quality: 'auto' }, undefined, (m) => told.push(m));
+    await mirror.input({ kind: 'text', s: 'çay' });
+    await mirror.input({ kind: 'touch', p: 0, x: 0.5, y: 0.5 });
+    expect(handle.input).toHaveBeenCalledTimes(1);
+    let keyed = false;
+    const key = mirror.input({ kind: 'key', page: 7, usage: 4, state: 1 }).then(() => {
+      keyed = true;
+    });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(keyed).toBe(false);
+    answer(true);
+    await key;
+    expect(handle.input).toHaveBeenCalledTimes(2);
+    expect(String(told[0]?.text)).toContain('secure');
+  });
+
+  it('sends nothing when it cannot tell whether a field is secure', async () => {
+    const { mirror, handle, module } = fake();
+    module.secureFocused = async () => {
+      throw new Error('no service');
+    };
+    const told: Record<string, unknown>[] = [];
+    await mirror.open({ quality: 'auto' }, undefined, (m) => told.push(m));
+    await mirror.input({ kind: 'text', s: 'çay' });
+    await mirror.input({ kind: 'key', page: 7, usage: 4, state: 2 });
+    expect(handle.input).toHaveBeenCalledTimes(1);
+    expect(String(told[0]?.text)).toContain('could not say');
+  });
+});
+
 describe('the phone stream, gone from a build', () => {
   const absent = new PhoneMirror(UDID, async () => undefined);
 

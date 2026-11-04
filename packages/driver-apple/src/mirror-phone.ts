@@ -74,6 +74,7 @@ const PROMPT_MS = 2_000;
 export class PhoneMirror implements Mirror {
   private say: (text: string) => void = () => undefined;
   private afterTouch: (() => void) | undefined;
+  private typing: Promise<void> = Promise.resolve();
   readonly sendsWhenStill = true;
   /** A start lights the screen: it would turn back on a phone a person has just turned off. */
   readonly holdsThrough = 'asleep' as const;
@@ -187,13 +188,20 @@ export class PhoneMirror implements Mirror {
    */
   private async paste(text: string) {
     const stream = await this.stream();
-    if (await stream?.secureFocused(this.udid).catch(() => false)) {
-      this.say('This field is secure and this text has no keys: type it on the phone.');
+    const secure = await stream?.secureFocused(this.udid).catch(() => undefined);
+    if (secure !== false) {
+      this.say(
+        secure
+          ? 'This field is secure and this text has no keys: type it on the phone.'
+          : 'The phone could not say if this field is secure, and this text has no keys: type it on the phone.',
+      );
       return;
     }
-    const held = (await this.pasteboard('paste').catch(() => ({ stdout: '' }))).stdout;
+    const { stdout } = await this.pasteboard('paste').catch(() => ({ stdout: '' }));
+    // with no text there, the tool says so on the same stream
+    const held = stdout.startsWith('No text content') ? '' : stdout;
     await this.writePasteboard(text);
-    await pasteKeys((next) => this.input(next));
+    await pasteKeys(async (next) => this.handle?.input(next));
     this.say(
       `This text has no keys, so it went by the phone's pasteboard: allow the paste on its screen.${held ? '' : ' It held no text to put back.'}`,
     );
@@ -216,7 +224,15 @@ export class PhoneMirror implements Mirror {
   async input(e: InputEvent) {
     if (e.kind === 'touch' && e.p === 2) this.afterTouch?.();
     if (e.kind === 'button' && (await applePress(e.name, (next) => this.input(next)))) return;
-    if (e.kind === 'text' && [...e.s].some((c) => !usageOf(c))) return this.paste(e.s);
+    // reading the screen and the pasteboard takes seconds, which must not hold up a touch: it may be the one that
+    // answers the phone's prompt. Keys wait, to stay in the order they were typed
+    if (e.kind === 'text' && [...e.s].some((c) => !usageOf(c))) {
+      this.typing = this.typing
+        .then(() => this.paste(e.s))
+        .catch((failed: Error) => this.say(`That text did not go in: ${failed.message}`));
+      return;
+    }
+    if (e.kind === 'text' || e.kind === 'key') await this.typing;
     this.handle?.input(e);
   }
 

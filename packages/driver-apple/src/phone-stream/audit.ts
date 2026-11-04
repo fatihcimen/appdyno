@@ -96,8 +96,8 @@ export function leafOf(node: Archived, label: Archived | undefined): AuditElemen
 const EDITING = 0x200000;
 const SECURE = 0x1000000;
 const hasBit = (traits: number, bit: number) => Math.floor(traits / bit) % 2 === 1;
-export const isSecureEditing = (traits: number) =>
-  hasBit(traits, EDITING) && hasBit(traits, SECURE);
+export const isEditing = (traits: number) => hasBit(traits, EDITING);
+export const isSecure = (traits: number) => hasBit(traits, SECURE);
 
 /** What a name means on a screen: an id first, then the words, whole or up to the first comma, as `Form` of `Form, Button`. */
 export function elementNamed(list: AuditElement[], name: string): AuditElement {
@@ -142,11 +142,14 @@ export class Audit {
   /** Any field being typed in that is secure, by its traits: reads the whole screen, so only when it matters. */
   secureFocused() {
     return this.inspecting(async () => {
-      for (const element of await this.walk()) {
+      let secure = false;
+      await this.walk(async (element) => {
         const traits = valueOf(await this.read(element.token, 'Traits'));
-        if (typeof traits === 'number' && isSecureEditing(traits)) return true;
-      }
-      return false;
+        if (typeof traits !== 'number' || !isEditing(traits)) return false;
+        secure = isSecure(traits);
+        return true;
+      });
+      return secure;
     });
   }
 
@@ -161,13 +164,15 @@ export class Audit {
     }
   }
 
-  private async walk(): Promise<AuditElement[]> {
+  /** Down the tree, each element once; `stop` ends it at the element it was looking for. */
+  private async walk(stop?: (element: AuditElement) => Promise<boolean>) {
     const start = await this.dtx.call('deviceFetchSpecialElement:', 0);
     const found: AuditElement[] = [];
     const seen = new Set<string>();
+    let done = false;
     const visit = async (node: Archived) => {
       const token = fieldsOf(node).AuditElementValue_v1;
-      if (!token || seen.has(idOf(token)) || found.length >= MOST_ELEMENTS) return;
+      if (done || !token || seen.has(idOf(token)) || found.length >= MOST_ELEMENTS) return;
       seen.add(idOf(token));
       const kids = childrenIn(await this.tree(token), token);
       if (kids.length) {
@@ -175,7 +180,9 @@ export class Audit {
         return;
       }
       const leaf = leafOf(node, await this.read(token, 'Label'));
-      if (leaf) found.push(leaf);
+      if (!leaf) return;
+      found.push(leaf);
+      done = (await stop?.(leaf)) ?? false;
     };
     await visit(await this.tree(start));
     return found;
