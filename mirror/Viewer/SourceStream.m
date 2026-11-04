@@ -249,7 +249,7 @@ static NSString *askAdb(int fd, NSString *request) {
   }
   struct timeval silent = {.tv_sec = kSilentSeconds};
   setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &silent, sizeof silent);
-  [self sendMethod:@"hello" params:@{@"token": _options[@"token"] ?: @"", @"protocol": @1} id:_nextId++];
+  [self sendMethod:@"hello" params:@{@"token": _options[@"token"] ?: @"", @"protocol": @2} id:_nextId++];
   for (int i = 0; i < kClockPings; i++) [self ping];
   NSMutableDictionary *start = [@{@"codec": _options[@"codec"] ?: @"h264"} mutableCopy];
   [start addEntriesFromDictionary:_options[@"start"] ?: @{}];

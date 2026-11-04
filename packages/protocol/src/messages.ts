@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-/** Protocol major (breaking changes) and minor (additive, announced by capabilities). */
-export const PROTOCOL = { major: 1, minor: 4 } as const;
+/** The wire's version: a host and an agent of another one do not talk. */
+export const PROTOCOL = { major: 2 } as const;
 
 /** Node flags (bit mask `f` of a wire node). */
 export const NODE_FLAGS = {
@@ -135,13 +135,12 @@ export type Platform = (typeof PLATFORMS)[number];
 
 export const Hello = z.object({
   agentVersion: z.string(),
-  protocol: z.object({ major: z.number().int(), minor: z.number().int() }),
+  protocol: z.object({ major: z.number().int() }),
   platform: z.enum(PLATFORMS),
   osVersion: z.string(),
   sdk: z.number().int().optional(),
   model: z.string(),
   screen: z.object({ w: z.number(), h: z.number(), density: z.number(), rotation: z.number() }),
-  capabilities: z.array(z.string()),
   pid: z.number().int().optional(),
   /** iOS: the runner's private shims checked at start (a replacement called with a BOOL in every slot). */
   idleShimChecked: z.boolean().optional(),
@@ -293,7 +292,7 @@ export const METHODS = {
     result: Screenshot,
   },
   'app.foreground': { params: z.object({}), result: Foreground },
-  /** iOS (capability `app.target`): the app the runner reads and acts on while it is in front. */
+  /** iOS: the app the runner reads and acts on while it is in front. */
   'app.target': { params: z.object({ pkg: z.string().min(1).max(255) }), result: z.object({}) },
   'clipboard.set': { params: z.object({ text: z.string().max(10_000) }), result: z.object({}) },
   /** iOS: until the app under a point has no animation running (UIKit takes no touches during one). */
@@ -308,7 +307,7 @@ export const METHODS = {
     }),
     result: z.object({}),
   },
-  /** iOS (capability `audit`): the platform accessibility audit of the app in front. */
+  /** iOS: the platform accessibility audit of the app in front. */
   audit: {
     params: z.object({
       types: z.array(z.enum(AUDIT_TYPES)).max(AUDIT_TYPES.length).optional(),
@@ -317,7 +316,7 @@ export const METHODS = {
     result: AuditResult.omit({ engine: true, read: true }),
   },
   /**
-   * Android (capability `a11y.read`): a tree read with what an accessibility audit needs besides: the
+   * Android: a tree read with what an accessibility audit needs besides: the
    * nodes' traversal hints, and for up to `maxNodes` text nodes how many characters have no visible place
    * on the screen (the platform's character locations).
    */
@@ -340,11 +339,11 @@ export const METHODS = {
     params: z.object({ maxNodes: z.number().int().min(1).max(200).default(60) }),
     result: z.object({ tree: Tree, clips: z.array(TextClip), traversal: z.array(Traversal) }),
   },
-  /** Android (capability `rest.wait`): until a running window transition has ended (an answer can come before that). */
+  /** Android: until a running window transition has ended (an answer can come before that). */
   'rest.wait': { params: z.object({}), result: z.object({}) },
-  /** Android (capability `animations`): the device's animation scales off, back when the last host leaves. */
+  /** Android: the device's animation scales off, back when the last host leaves. */
   'animations.set': { params: z.object({ off: z.boolean() }), result: z.object({}) },
-  /** Android (capability `touch`): one phase of a person's touch, in fractions of the screen, with no settle. */
+  /** Android: one phase of a person's touch, in fractions of the screen, with no settle. */
   touch: {
     params: z.object({
       p: z.union([z.literal(0), z.literal(1), z.literal(2)]),
@@ -355,9 +354,9 @@ export const METHODS = {
     }),
     result: z.object({}),
   },
-  /** Android (capability `stream`): a fresh keyframe from each stream of this agent. */
+  /** Android: a fresh keyframe from each stream of this agent. */
   'stream.sync': { params: z.object({}), result: z.object({}) },
-  /** Android (capability `stream`): how many streams run, and whether the screen is on. */
+  /** Android: how many streams run, and whether the screen is on. */
   'stream.status': {
     params: z.object({}),
     result: z.object({

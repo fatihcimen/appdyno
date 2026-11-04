@@ -1,4 +1,4 @@
-# Host ↔ agent protocol (v1)
+# Host ↔ agent protocol (v2)
 
 The host library talks to an on-device agent over one byte stream: on Android an abstract unix socket
 of the agent opened through the adb server (`localabstract:<name>`), later on iOS a TCP connection
@@ -26,12 +26,12 @@ The first request on a connection must be `hello` with the launch token the agen
 (`--token`, at least 16 characters, compared in constant time). Anything else closes the connection.
 
 ```json
-{ "jsonrpc": "2.0", "id": 1, "method": "hello", "params": { "token": "…", "protocol": 1 } }
+{ "jsonrpc": "2.0", "id": 1, "method": "hello", "params": { "token": "…", "protocol": 2 } }
 ```
 
-The result names the agent build, the protocol version (`major` must equal the host's; `minor` grows
-with additive changes), the platform, OS, model, screen (`w`, `h` in device pixels, `density`,
-`rotation`) and `capabilities`. The host only uses what `capabilities` lists.
+The result names the agent build, the protocol version (`major` must equal the host's), the platform, OS,
+model and screen (`w`, `h` in device pixels, `density`, `rotation`). A host only ever runs the agent of its own
+build, so an agent has no other versions to answer for.
 
 ## Deadlines and cancellation
 
@@ -43,28 +43,28 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 
 ## Methods
 
-| method                                                            | params                                                                                                   | result                                                                           |
-| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `hello`                                                           | `token`, `protocol`                                                                                      | agent and device description                                                     |
-| `ping`                                                            | –                                                                                                        | `uptimeMs`                                                                       |
-| `tree.get`                                                        | `maxDepth?` (128), `maxNodes?` (5000)                                                                    | `Tree`                                                                           |
-| `act`                                                             | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`                                            | `settle?`, `hash?`, `tree?`                                                      |
-| `text.set`                                                        | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (5000; the iOS driver asks 2000), `settle?`, `read` | as `act`, plus `mode` (`setText`/`paste`/`keys`), `verified`, `focusMs`          |
-| `screenshot`                                                      | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                                                        | `w`, `h`, `format`, `bytes`, plus the image as an attachment                     |
-| `app.foreground`                                                  | –                                                                                                        | `pkg?`                                                                           |
-| `app.target` (iOS)                                                | `pkg` (bundle id)                                                                                        | –                                                                                |
-| `clipboard.set` / `clipboard.get`                                 | `text` / –                                                                                               | – / `text?`                                                                      |
-| `orientation.set`                                                 | `rotation` 0–3 (frozen)                                                                                  | –                                                                                |
-| `animations.set`                                                  | `off`                                                                                                    | –                                                                                |
-| `rest.wait`                                                       | –                                                                                                        | –                                                                                |
-| `audit` (iOS)                                                     | `types?`, `maxIssues` (50)                                                                               | `issues`, `truncated`, `elapsedMs`                                               |
-| `a11y.read` (Android)                                             | `maxNodes` (60)                                                                                          | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`) |
-| `touch` (Android, minor 4)                                        | `p` (0 down, 1 moved, 2 up), `x`, `y`, `x2?`, `y2?`: fractions of the screen, no settle                  |
-| `stream.start` (Android, minor 4)                                 | `codec` (`h264`), `quality`, `maxSize?`, `failFirst?`                                                    |
-| `stream.clock`, `stream.sync`, `stream.status` (Android, minor 4) | –                                                                                                        |
-| `wait` (minor 3)                                                  | `since?`, `timeoutMs`, `minMs?` (300)                                                                    | `sig`, `changed`, `reads`, `elapsedMs`, `tree?`                                  |
-| `cancel`                                                          | `id`                                                                                                     | –                                                                                |
-| `shutdown`                                                        | –                                                                                                        | – (the agent exits)                                                              |
+| method                                                   | params                                                                                                   | result                                                                           |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `hello`                                                  | `token`, `protocol`                                                                                      | agent and device description                                                     |
+| `ping`                                                   | –                                                                                                        | `uptimeMs`                                                                       |
+| `tree.get`                                               | `maxDepth?` (128), `maxNodes?` (5000)                                                                    | `Tree`                                                                           |
+| `act`                                                    | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`                                            | `settle?`, `hash?`, `tree?`                                                      |
+| `text.set`                                               | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (5000; the iOS driver asks 2000), `settle?`, `read` | as `act`, plus `mode` (`setText`/`paste`/`keys`), `verified`, `focusMs`          |
+| `screenshot`                                             | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                                                        | `w`, `h`, `format`, `bytes`, plus the image as an attachment                     |
+| `app.foreground`                                         | –                                                                                                        | `pkg?`                                                                           |
+| `app.target` (iOS)                                       | `pkg` (bundle id)                                                                                        | –                                                                                |
+| `clipboard.set` / `clipboard.get`                        | `text` / –                                                                                               | – / `text?`                                                                      |
+| `orientation.set`                                        | `rotation` 0–3 (frozen)                                                                                  | –                                                                                |
+| `animations.set`                                         | `off`                                                                                                    | –                                                                                |
+| `rest.wait`                                              | –                                                                                                        | –                                                                                |
+| `audit` (iOS)                                            | `types?`, `maxIssues` (50)                                                                               | `issues`, `truncated`, `elapsedMs`                                               |
+| `a11y.read` (Android)                                    | `maxNodes` (60)                                                                                          | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`) |
+| `touch` (Android)                                        | `p` (0 down, 1 moved, 2 up), `x`, `y`, `x2?`, `y2?`: fractions of the screen, no settle                  |
+| `stream.start` (Android)                                 | `codec` (`h264`), `quality`, `maxSize?`, `failFirst?`                                                    |
+| `stream.clock`, `stream.sync`, `stream.status` (Android) | –                                                                                                        |
+| `wait`                                                   | `since?`, `timeoutMs`, `minMs?` (300)                                                                    | `sig`, `changed`, `reads`, `elapsedMs`, `tree?`                                  |
+| `cancel`                                                 | `id`                                                                                                     | –                                                                                |
+| `shutdown`                                               | –                                                                                                        | – (the agent exits)                                                              |
 
 `action` is one of `tap {x,y}`, `doubleTap {x,y}`, `longPress {x,y,durationMs}`, `swipe {from,to,durationMs}`,
 `gesture {pointers}` (1–5 fingers, each a list of `{x,y,t}` samples; fingers go down together at their
@@ -78,8 +78,8 @@ class, id, text, description, bounds and flags, and the windows) differs from `s
 `minMs`, with the `tree`. No `since`: it answers after the first read. At `timeoutMs` it answers
 `changed: false` with no tree. The host matches on what comes back, so one matcher serves every
 selector, ref and check, and a still screen costs one answer. An endless animation answers every `minMs`,
-which is no worse than polling. An agent whose capabilities lack `wait` is polled with `tree.get` every
-300 ms, as is one whose `wait` fails.
+which is no worse than polling. A simulator with no runner up is polled with `tree.get` every 300 ms, as is an
+agent whose `wait` fails.
 
 ### iOS
 
@@ -127,8 +127,8 @@ indicator's slow drag up. The volume, lock and power keys go through direct inpu
   off, and XCTest turns them off at its end, so that the helper answered `no-foreground` for as long as it was asked:
   it turns them on (`_AXSApplicationAccessibilitySetEnabled`, `_AXSSetAutomationEnabled`) and, if it was the one to do so
   and no runner stays, off again when it leaves. `IgnoreAXServerEntitlements` was not needed.
-- **Hello**, from the same helper: model, OS version, screen and scale, in the same shape. `capabilities` says what the
-  helper does (`tree`, `act`, `settle`) and `agentVersion` is `helper`, until a runner starts and says its own. The runner
+- **Hello**, from the same helper: model, OS version, screen and scale, in the same shape. `agentVersion` is `helper`,
+  until a runner starts and says its own. The runner
   starts on the first thing only it does: an alert, a system prompt, text entry, an image, an audit, or a read of a control
   found at different places.
 - **The runner answers a read** when the app named is not the primary app (a system alert over it, the home
@@ -241,7 +241,7 @@ reacting within 80 ms is caught (0/50 missed at 30 ms), a slower one is not.
 
 ### Animations
 
-`animations.set {off}` (capability `animations`; host: `--animations off`, `APPDYNO_ANIMATIONS=off`, the
+`animations.set {off}` (host: `--animations off`, `APPDYNO_ANIMATIONS=off`, the
 fifth `AndroidDevice` argument) sets the three system animation scales to 0. They come back as they were when
 the last connection that asked has gone, and if the agent dies first, by a separate shell process watching
 it (within a second). The first performance measurement of a session puts them back for the rest of that
@@ -260,8 +260,7 @@ engine's `rule`, a `message`, the element's box `b` in tap units and the element
 - iOS: the platform's own audit of the app in front (`performAccessibilityAudit`, Xcode 15+), types
   `contrast`, `elementDetection`, `hitRegion`, `sufficientElementDescription`, `dynamicType`,
   `textClipped`, `trait` (`types` picks some). The runner takes every issue itself, so none becomes a
-  test failure. A runner without the capability, or an audit the platform cannot run, answers
-  `UNSUPPORTED`.
+  test failure. An audit the platform cannot run answers `UNSUPPORTED`.
 - Android: the host's checks of one `a11y.read` (the tree; per text node, how many characters have no
   visible place: cut by the frame or replaced by an ellipsis, one call to the app per node, 1.5 s at
   most; the nodes' traversal hints, resolved after the walk, 300 ms at most) and a PNG screenshot: `hitRegion` (a control under 48×48 dp), `contrast` (text under

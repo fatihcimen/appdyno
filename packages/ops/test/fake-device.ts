@@ -185,13 +185,12 @@ export class FakeDevice extends DeviceActions implements Device {
   launchAlongside(_pkg: string) {}
   hello: Hello = {
     agentVersion: '0.1.0',
-    protocol: { major: 1, minor: 0 },
+    protocol: { major: 2 },
     platform: 'android',
     osVersion: '15',
     sdk: 35,
     model: 'Fake Phone',
     screen: { w: 1080, h: 2400, density: 420, rotation: 0 },
-    capabilities: ['tree'],
   };
   screen = 'home';
   permissionUp = false;

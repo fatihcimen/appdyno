@@ -137,7 +137,7 @@ describe('the hello on a new connection', () => {
   it('closes it when the other side speaks another protocol, and says who', async () => {
     const major = PROTOCOL.major + 1;
     const { host } = fakeAgentStream({
-      hello: () => ({ result: { ...HELLO, protocol: { major, minor: 0 } } }),
+      hello: () => ({ result: { ...HELLO, protocol: { major } } }),
     });
     await expect(greet(host, undefined, 'runner', TOKEN, 1_000)).rejects.toMatchObject({
       code: 'AGENT_VERSION_MISMATCH',

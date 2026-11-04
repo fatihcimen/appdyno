@@ -265,10 +265,7 @@ export class AndroidDevice extends RpcDevice implements Device {
   async audit(opts: { maxIssues?: number } = {}): Promise<AuditResult> {
     const startedAt = Date.now();
     const hello = await this.open();
-    const full = hello.capabilities.includes('a11y.read');
-    const { tree, clips, traversal } = full
-      ? (await this.call('a11y.read', {}, TIMEOUTS.read)).result
-      : { tree: await this.tree(), clips: [], traversal: [] };
+    const { tree, clips, traversal } = (await this.call('a11y.read', {}, TIMEOUTS.read)).result;
     const shot = await this.screenshot({ format: 'png' });
     const r = auditAndroid(tree, decodePng(shot.data), {
       scale: hello.screen.density / 160,
@@ -276,8 +273,7 @@ export class AndroidDevice extends RpcDevice implements Device {
       ...(opts.maxIssues && { maxIssues: opts.maxIssues }),
       startedAt,
     });
-    // an older agent's read has no traversal hints: no reading order is worked out from it
-    return { ...r, ...(full && { read: { tree, traversal } }) };
+    return { ...r, read: { tree, traversal } };
   }
 
   /** Opens a link (`am start -W` with VIEW); `pkg` keeps it in that app. */

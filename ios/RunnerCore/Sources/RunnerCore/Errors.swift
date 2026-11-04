@@ -1,5 +1,8 @@
 import Foundation
 
+/// The wire's version: `PROTOCOL.major`.
+public let protocolMajor = 2
+
 /// The protocol's error codes, in wire order: the JSON-RPC code is -32000 minus the index.
 public let errorCodes = [
     "TIMEOUT", "CANCELLED", "DEVICE_GONE", "AGENT_UNAVAILABLE", "AGENT_CONFLICT", "AGENT_VERSION_MISMATCH",

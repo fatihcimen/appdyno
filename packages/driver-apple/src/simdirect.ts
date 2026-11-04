@@ -76,12 +76,11 @@ export class DirectSim {
     this.screen = { w: size[0], h: size[1] };
     return {
       agentVersion: HELPER_VERSION,
-      protocol: { major: PROTOCOL.major, minor: PROTOCOL.minor },
+      protocol: PROTOCOL,
       platform: 'ios',
       osVersion: String(a.osVersion),
       model: String(a.model),
       screen: { ...this.screen, density: Number(a.scale), rotation: 0 },
-      capabilities: ['tree', 'act', 'settle'],
     };
   }
 

@@ -43,13 +43,12 @@ class Handlers(private val automation: Automation, private val token: String) {
         val d = Platform.display()
         return JSONObject()
             .put("agentVersion", BuildConfig.VERSION_NAME)
-            .put("protocol", JSONObject().put("major", 1).put("minor", 4))
+            .put("protocol", JSONObject().put("major", PROTOCOL_MAJOR))
             .put("platform", "android")
             .put("osVersion", Build.VERSION.RELEASE)
             .put("sdk", Build.VERSION.SDK_INT)
             .put("model", "${Build.MANUFACTURER} ${Build.MODEL}")
             .put("screen", JSONObject().put("w", d.width).put("h", d.height).put("density", d.densityDpi).put("rotation", d.rotation))
-            .put("capabilities", JSONArray(CAPABILITIES))
             .put("pid", android.os.Process.myPid())
     }
 
@@ -409,12 +408,6 @@ class Handlers(private val automation: Automation, private val token: String) {
         const val TEXT_CLIP_MS = 1_500L
         /** a11y.read's traversal hints are resolved for this long at most. */
         const val TRAVERSAL_MS = 300L
-
-        val CAPABILITIES = listOf(
-            "tree", "tap", "longPress", "swipe", "gesture", "key", "text", "screenshot", "foreground",
-            "clipboard", "orientation", "settle", "a11y.read", "wait", "doubleTap", "animations", "rest.wait",
-            "touch", "stream",
-        )
     }
 }
 

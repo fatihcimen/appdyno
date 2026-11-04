@@ -59,8 +59,13 @@ export abstract class RpcDevice extends DeviceActions {
   protected abstract restartStuck(rpc: RpcClient): Promise<void>;
   abstract tree(opts?: { maxDepth?: number; maxNodes?: number }): Promise<Tree>;
 
+  /** Whether the device can be asked to `wait`; where not, the caller polls. */
+  protected get waits() {
+    return true;
+  }
+
   waitChange = async (since: string | undefined, timeoutMs: number) => {
-    if (!this.helloInfo?.capabilities.includes('wait')) return undefined;
+    if (!this.waits) return undefined;
     const { result } = await this.call(
       'wait',
       { ...(since && { since }), timeoutMs },
@@ -69,13 +74,8 @@ export abstract class RpcDevice extends DeviceActions {
     return { sig: result.sig, ...(result.tree && { tree: result.tree }) };
   };
 
-  /** Ready to be driven; the device's hello. */
-  open(): Promise<Hello> {
-    return this.connected();
-  }
-
   /** Connects (starting the agent when needed); the agent's hello. */
-  protected async connected(): Promise<Hello> {
+  async open(): Promise<Hello> {
     await this.queue.run(() => this.ensure());
     return this.helloInfo!;
   }

@@ -98,9 +98,8 @@ describe.skipIf(!serial)('android agent on a device', () => {
   afterAll(() => d?.close());
 
   it('says hello with the device and the protocol', () => {
-    expect(d.hello).toMatchObject({ platform: 'android', protocol: { major: 1 } });
+    expect(d.hello).toMatchObject({ platform: 'android', protocol: { major: 2 } });
     expect(d.hello!.screen.w).toBeGreaterThan(0);
-    expect(d.hello!.capabilities).toContain('settle');
   });
 
   it('reads the home screen with the app in front', async () => {

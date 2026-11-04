@@ -76,13 +76,12 @@ export function fakeAgentStream(handlers: Record<string, FakeHandler> = {}) {
 
 export const HELLO = {
   agentVersion: '0.1.0',
-  protocol: { major: 1, minor: 0 },
+  protocol: { major: 2 },
   platform: 'android',
   osVersion: '15',
   sdk: 35,
   model: 'Fake',
   screen: { w: 1080, h: 2400, density: 420, rotation: 0 },
-  capabilities: ['tree'],
 };
 
 /** A wire tree: a full-screen root and the given nodes under it. */

@@ -55,14 +55,12 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
   });
 
   it('says hello as iOS in points, from the helper and then from the runner', async () => {
-    expect(d.hello).toMatchObject({ platform: 'ios', protocol: { major: 1 } });
+    expect(d.hello).toMatchObject({ platform: 'ios', protocol: { major: 2 } });
     const size = d.hello!.screen;
     expect(size.density).toBeGreaterThanOrEqual(2);
-    expect(d.hello!.capabilities).not.toContain('wait');
     await IosDevice.prototype.tree.call(d, { maxNodes: 5000 });
     expect(d.hello!.agentVersion).not.toBe('helper');
     expect(d.hello!.screen).toEqual(size);
-    expect(d.hello!.capabilities).toContain('app.target');
     // the idle shim's replacements were each called at start with a BOOL in every slot (a crash otherwise)
     expect(d.hello!.idleShimChecked).toBe(true);
   });

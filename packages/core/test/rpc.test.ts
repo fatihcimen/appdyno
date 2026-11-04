@@ -7,7 +7,7 @@ describe('rpc client', () => {
   it('validates results and passes the deadline to the agent', async () => {
     const { rpc, seen } = fakeAgent({ 'tree.get': () => ({ result: wireTree([{ t: 'x' }]) }) });
     expect(
-      (await rpc.call('hello', { token: TOKEN, protocol: 1 }, { timeoutMs: 1000 })).result,
+      (await rpc.call('hello', { token: TOKEN, protocol: 2 }, { timeoutMs: 1000 })).result,
     ).toEqual(HELLO);
     const { result } = await rpc.call('tree.get', {}, { timeoutMs: 2500 });
     expect(result.nodes).toHaveLength(2);

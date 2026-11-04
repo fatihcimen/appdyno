@@ -79,7 +79,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
     defineOp({
       name: 'device_info',
       title: 'Device info',
-      description: 'Model, OS version, screen, agent capabilities and the app in front.',
+      description: 'Model, OS version, screen, agent version and the app in front.',
       input: z.object({}).strict(),
       output: DeviceOut,
       annotations: READ,
@@ -91,10 +91,10 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
           [
             `${s.device.serial}: ${h.model}, ${osName(s.device.platform, h.osVersion)}${h.sdk !== undefined ? ` (SDK ${h.sdk})` : ''}`,
             `screen ${h.screen.w}x${h.screen.h}, density ${h.screen.density}, rotation ${h.screen.rotation}`,
-            `agent ${h.agentVersion}, protocol ${h.protocol.major}.${h.protocol.minor}, capabilities: ${h.capabilities.join(', ')}`,
+            `agent ${h.agentVersion}, protocol ${h.protocol.major}`,
             `foreground: ${fg ?? 'unknown'}`,
           ].join('\n'),
-          { ...info(s), capabilities: h.capabilities, ...(fg && { foreground: fg }) },
+          { ...info(s), ...(fg && { foreground: fg }) },
         );
       },
     }),

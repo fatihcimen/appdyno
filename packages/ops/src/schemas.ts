@@ -103,7 +103,6 @@ export const DeviceOut = z.object({
   sdk: z.number().int().optional(),
   screen: z.object({ w: z.number(), h: z.number(), density: z.number(), rotation: z.number() }),
   agentVersion: z.string(),
-  capabilities: z.array(z.string()).optional(),
   foreground: z.string().optional(),
   agentStarted: z.boolean().optional(),
   app: z.string().optional(),

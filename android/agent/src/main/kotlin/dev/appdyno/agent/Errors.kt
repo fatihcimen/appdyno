@@ -1,5 +1,8 @@
 package dev.appdyno.agent
 
+/** The wire's version: `PROTOCOL.major`. */
+const val PROTOCOL_MAJOR = 2
+
 /** The protocol's error codes, in the order that gives their JSON-RPC numbers (-32000 minus index). */
 val ERROR_CODES = listOf(
     "TIMEOUT",

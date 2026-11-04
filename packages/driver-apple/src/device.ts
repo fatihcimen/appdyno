@@ -234,16 +234,9 @@ export abstract class IosDevice extends RpcDevice implements Device {
 
   /**
    * The platform accessibility audit of the app in front (the runner's `audit`, Xcode's audit types);
-   * UNSUPPORTED from a runner built without it or where the platform cannot run it.
+   * UNSUPPORTED where the platform cannot run it.
    */
   async audit(opts: { types?: AuditType[]; maxIssues?: number } = {}): Promise<AuditResult> {
-    const hello = await this.connected();
-    if (!hello.capabilities.includes('audit'))
-      throw new DeviceError(
-        'UNSUPPORTED',
-        'this runner has no platform accessibility audit',
-        'rebuild the runner (appdyno ios build)',
-      );
     const { result } = await this.call('audit', opts, TIMEOUTS.audit);
     return { engine: 'platform', ...result };
   }

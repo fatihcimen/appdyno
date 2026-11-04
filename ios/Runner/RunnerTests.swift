@@ -61,17 +61,13 @@ final class RunnerTests: XCTestCase {
         }()
         return [
             "agentVersion": agentVersion,
-            "protocol": ["major": 1, "minor": 3],
+            "protocol": ["major": protocolMajor],
             "platform": "ios",
             "osVersion": UIDevice.current.systemVersion,
             "model": env["SIMULATOR_MODEL_IDENTIFIER"] ?? UIDevice.current.model,
             "screen": ["w": b.width, "h": b.height, "density": UIScreen.main.scale, "rotation": rotation],
-            "capabilities": ["tree", "act", "settle", "text", "screenshot", "clipboard", "orientation", "app.target", "audit", "animations.wait", "wait", "doubleTap"]
-                + (IdleShim.applied.isEmpty ? [] : ["noIdleWait"]) + (EventShim.available ? ["fastTap"] : []),
             "pid": Int(ProcessInfo.processInfo.processIdentifier),
-            "idleWaitsOff": IdleShim.applied,
             "idleShimChecked": IdleShim.selfChecked,
-            "fastTap": EventShim.available,
         ]
     }
 

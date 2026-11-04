@@ -203,7 +203,7 @@ export interface Device {
   dismissKeyboard(): Promise<void>;
   /**
    * Waits on the device until the screen differs from `since` (no `since`: answers at once with it);
-   * undefined from an agent without `wait`, which the caller polls instead.
+   * undefined where the device cannot wait itself, as a simulator with no runner up: the caller polls.
    */
   waitChange(
     since: string | undefined,
