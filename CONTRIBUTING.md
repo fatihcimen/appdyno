@@ -14,7 +14,7 @@ JDK 21 is for the Android agent only. Users of the published package do not need
 ## Checks
 
 ```sh
-pnpm ci      # lint, types, tests, build; no device
+pnpm run ci      # lint, types, tests, build; no device
 (cd android && ./gradlew --console=plain :agent:testDebugUnitTest)
 (cd ios/RunnerCore && swift test)             # the iOS runner's core
 ```
