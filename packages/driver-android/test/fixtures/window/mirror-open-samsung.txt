@@ -1,0 +1,23 @@
+WINDOW MANAGER LAST ANR (dumpsys window lastanr)
+WINDOW MANAGER EXTENSION (dumpsys window extension)
+WINDOW MANAGER DISPLAY CONTENTS (dumpsys window displays)
+  Display: mDisplayId=0 (organized)
+  mCurrentFocus=Window{3c43bf u0 dev.appdyno.fixture/dev.appdyno.fixture.MainActivity}
+    isKeyguardShowing=false
+WINDOW MANAGER POLICY STATE (dumpsys window policy)
+WINDOW MANAGER ANIMATOR STATE (dumpsys window animator)
+WINDOW MANAGER SESSIONS (dumpsys window sessions)
+WINDOW MANAGER DISPLAY CONTENTS (dumpsys window displays)
+  Display: mDisplayId=76
+  mCurrentFocus=null
+    isKeyguardShowing=false
+  Display: mDisplayId=0 (organized)
+  mCurrentFocus=Window{f961eb3 u0 dev.appdyno.fixture/dev.appdyno.fixture.FormActivity}
+    isKeyguardShowing=false
+WINDOW MANAGER TOKENS (dumpsys window tokens)
+WINDOW MANAGER WINDOWS (dumpsys window windows)
+WINDOW MANAGER EXTENSION (dumpsys window extension)
+WINDOW MANAGER TRACE (dumpsys window trace)
+WINDOW MANAGER LOGGING (dumpsys window logging)
+WINDOW MANAGER HIGH REFRESH RATE BLACKLIST (dumpsys window refresh)
+WINDOW MANAGER CONSTANTS (dumpsys window constants):
