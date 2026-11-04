@@ -15,7 +15,9 @@ const PHONE_CANNOT = {
   clear: "an iPhone's app data can only go with the app: uninstall and install it again",
   permission: 'no tool grants an iPhone app a permission: answer its prompt with the alert tool',
   push: 'a push to an iPhone needs Apple push credentials, which this tool does not hold',
-  biometric: 'an iPhone takes biometrics only from a person',
+  // seen on one iPhone with no face enrolled: `devicectl device simulate biometrics` says so and exits 0, so it proves nothing
+  biometric:
+    'an iPhone takes biometrics only from a person: devicectl reads it as supporting no simulation',
   keychain: "an iPhone's keychain is emptied only by erasing it",
   fold: 'an iPhone folds only in a hand',
   call: 'an iPhone takes calls only from the network',
