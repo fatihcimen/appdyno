@@ -709,6 +709,12 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(out).toMatch(/exit=3/);
   });
 
+  it('takes UI automation over from an agent killed a moment ago, which the system keeps for about 2 s', async () => {
+    await d.read(APP);
+    await d.shell(`kill -9 ${d.hello!.pid}`);
+    expect(labels(await d.read(APP)).length).toBeGreaterThan(0);
+  });
+
   it('stays answerable while the app hangs its main thread', async () => {
     const s = await home();
     await d.tap(find(s, 'FREEZE')!, { settle: false });

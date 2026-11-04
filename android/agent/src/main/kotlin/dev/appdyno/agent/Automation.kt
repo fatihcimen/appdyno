@@ -105,10 +105,12 @@ class Automation private constructor(private val looper: Looper) {
     private fun open(): UiAutomation {
         val start = SystemClock.uptimeMillis()
         val connClass = Class.forName("android.app.UiAutomationConnection")
-        val conn = connClass.getDeclaredConstructor().apply { isAccessible = true }.newInstance()
         val iface = Class.forName("android.app.IUiAutomationConnection")
-        val ua = construct(looper, conn, iface)
-        connect(ua)
+        val ua = pastConflict(RELEASE_WAIT_MS, RELEASE_PAUSE_MS, SystemClock::uptimeMillis, Thread::sleep) {
+            // one that was refused does not connect again
+            val conn = connClass.getDeclaredConstructor().apply { isAccessible = true }.newInstance()
+            construct(looper, conn, iface).also(::connect)
+        }
         val info = ua.serviceInfo ?: AccessibilityServiceInfo()
         // only the events the settle reads: an app sends only the event types some service asked for,
         // so every other kind (hover, touch, text, focus, announcements) costs its main thread nothing
@@ -183,6 +185,10 @@ class Automation private constructor(private val looper: Looper) {
 
         /** A new connection is ready once the apps sent no layout event for this long. */
         const val OPEN_QUIET_MS = 150L
+
+        /** How long a holder that was killed is waited out, about twice what the system keeps it. */
+        const val RELEASE_WAIT_MS = 4_000L
+        const val RELEASE_PAUSE_MS = 200L
 
         private const val WINDOW_APPEARS = AccessibilityEvent.WINDOWS_CHANGE_ADDED or
             AccessibilityEvent.WINDOWS_CHANGE_REMOVED or AccessibilityEvent.WINDOWS_CHANGE_ACTIVE
