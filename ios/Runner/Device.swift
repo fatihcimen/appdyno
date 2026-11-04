@@ -11,11 +11,6 @@ final class Device {
     private var recent: [(hash: String, nodes: [Node])] = []
     private let settler = Settler(clock: { Int(Date().timeIntervalSince1970 * 1000) },
                                   sleep: { Thread.sleep(forTimeInterval: Double($0) / 1000) })
-    static let inertQuietMs = 80
-    /// How long an actionable tap that changed nothing watches for a system alert on its way.
-    static let alertWatchS = 0.8
-    /// How long an alert or sheet takes to come up (UIKit's presentation is about 0.3–0.4 s).
-    static let alertAppearS = 0.45
     /// The longest a touch waits for the app's animations (UIKit's sheet comes up in about 0.5 s; an
     /// animation that never ends costs this once per touch).
     static let animationWaitS = 1.0
@@ -24,10 +19,6 @@ final class Device {
 
     /// Letters and digits only: a formatting field shows "(599) 999-9900" for "5999999900".
     static func plain(_ s: String) -> String { String(s.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init)) }
-
-    static func hasAlert(_ nodes: [Node]) -> Bool {
-        nodes.contains { ($0.type == "Alert" || $0.type == "Sheet") && $0.flags & Flag.visible != 0 }
-    }
 
     func setTarget(_ id: String) {
         targetId = id
@@ -260,20 +251,20 @@ final class Device {
             let before = a.before.flatMap { h in recent.last { $0.hash == h }?.nodes }
             var inert = false
             if let tapAt, let before, !actionable(before, x: Int(tapAt.x), y: Int(tapAt.y)) {
-                quiet = min(quiet, Device.inertQuietMs)
+                quiet = min(quiet, SettleTimes.inertQuietMs)
                 inert = true
             }
             // an alert or sheet that came up during the settle is still animating in: a tap on it then is
             // lost, so the screen counts as busy for its appear animation
-            var alertSince: Date? = before.flatMap { Device.hasAlert($0) ? Date.distantPast : nil }
+            var alertSince: Date? = before.flatMap { hasAlert($0) ? Date.distantPast : nil }
             let r = settler.run(actionAt: actionAt, quietMs: quiet, maxMs: s.maxMs,
                                 before: before.map { Capture(windows: [], nodes: $0, truncated: false, busy: false) },
                                 read: { () -> Capture in
                                     var c = (try? self.capture(job: job)) ?? Capture(windows: [], nodes: [], truncated: true, busy: true)
-                                    if Device.hasAlert(c.nodes) {
+                                    if hasAlert(c.nodes) {
                                         let since = alertSince ?? Date()
                                         alertSince = since
-                                        if Date().timeIntervalSince(since) < Device.alertAppearS { c.busy = true }
+                                        if Date().timeIntervalSince(since) < Double(SettleTimes.alertAppearMs) / 1000 { c.busy = true }
                                     } else {
                                         alertSince = nil
                                     }
@@ -285,8 +276,8 @@ final class Device {
             var idleMs = 0
             // an actionable tap that changed nothing in the app may have asked the system for something (a
             // permission): its alert comes from the home screen app a moment later, while the app is idle
-            if tapAt != nil, !inert, let before, let now = last, sameLayout(before, now.nodes), !Device.hasAlert(now.nodes) {
-                let end = Date().addingTimeInterval(Device.alertWatchS)
+            if tapAt != nil, !inert, let before, let now = last, sameLayout(before, now.nodes), !hasAlert(now.nodes) {
+                let end = Date().addingTimeInterval(Double(SettleTimes.alertWatchMs) / 1000)
                 while Date() < end, !job.over, !springboard.alerts.firstMatch.exists {
                     RunLoop.current.run(until: Date().addingTimeInterval(0.1))
                 }

@@ -18,70 +18,6 @@ final class FrameTests: XCTestCase {
     }
 }
 
-private func node(_ parent: Int, _ type: String, _ b: [Int], _ flags: Int = Flag.visible, text: String? = nil) -> Node {
-    Node(parent: parent, window: 0, type: type, text: text, left: b[0], top: b[1], right: b[2], bottom: b[3], flags: flags)
-}
-
-final class LayoutTests: XCTestCase {
-    func testTextWidthAndSmallMovesAreTheSameLayout() {
-        let a = [node(-1, "Other", [0, 0, 400, 800]), node(0, "StaticText", [10, 100, 200, 120], text: "1")]
-        let b = [node(-1, "Other", [0, 0, 400, 800]), node(0, "StaticText", [10, 102, 260, 122], text: "100")]
-        XCTAssertTrue(sameLayout(a, b))
-        XCTAssertEqual(layoutHash(a), layoutHash([a[0], node(0, "StaticText", [10, 100, 260, 120], text: "100")]))
-    }
-
-    func testANewNodeOrABigMoveIsAChange() {
-        let a = [node(-1, "Other", [0, 0, 400, 800])]
-        XCTAssertFalse(sameLayout(a, a + [node(0, "Button", [0, 0, 10, 10])]))
-        XCTAssertFalse(sameLayout(a, [node(-1, "Other", [0, 20, 400, 820])]))
-    }
-
-    func testHitTest() {
-        let nodes = [
-            node(-1, "Other", [0, 0, 400, 800]),
-            node(0, "Button", [0, 0, 400, 100], Flag.visible | Flag.clickable),
-            node(1, "StaticText", [10, 10, 100, 30], text: "Go"),
-            node(0, "StaticText", [0, 200, 400, 300], text: "Plain"),
-            node(0, "WebView", [0, 400, 400, 800]),
-        ]
-        XCTAssertTrue(actionable(nodes, x: 20, y: 20)) // text inside a button
-        XCTAssertFalse(actionable(nodes, x: 20, y: 250)) // plain text
-        XCTAssertFalse(actionable(nodes, x: 20, y: 350)) // empty space
-        XCTAssertTrue(actionable(nodes, x: 20, y: 500)) // web content
-        XCTAssertTrue(actionable(nil, x: 0, y: 0)) // no screen known: careful
-        XCTAssertTrue(actionable(nodes, x: 900, y: 900)) // off every node: careful
-        let overlaid = nodes + [node(0, "Other", [0, 0, 400, 800])] // a transparent overlay on top
-        XCTAssertTrue(actionable(overlaid, x: 20, y: 20))
-        XCTAssertFalse(actionable(overlaid, x: 20, y: 350))
-    }
-}
-
-final class ScrollIndicatorTests: XCTestCase {
-    func testTheBarsOfAScrollContainerAreFoundByTheirShape() {
-        let nodes = [
-            node(-1, "Application", [0, 0, 402, 874]),
-            node(0, "CollectionView", [0, 400, 402, 830]),
-            node(1, "Cell", [16, 403, 196, 568]),
-            node(1, "Other", [353, 403, 383, 812]),   // vertical bar along the right edge
-            node(1, "Other", [34, 797, 368, 827]),    // horizontal bar along the bottom
-            node(0, "Other", [380, 100, 402, 300]),   // a thin strip, but not in a scroll container
-            node(1, "Other", [16, 600, 46, 640]),     // small, not along an edge
-            node(3, "Image", [360, 403, 376, 500]),   // the bar's own drawing inside it
-        ]
-        XCTAssertEqual(scrollIndicators(nodes), [3, 4])
-    }
-
-    func testANamedOrParentNodeIsNoIndicator() {
-        var bar = node(1, "Other", [353, 403, 383, 812])
-        bar.id = "progress"
-        var letter = node(3, "StaticText", [355, 410, 380, 430])
-        letter.label = "A"
-        let nodes = [node(-1, "Application", [0, 0, 402, 874]), node(0, "ScrollView", [0, 400, 402, 830]), bar,
-                     node(1, "Other", [353, 403, 383, 812]), letter]
-        XCTAssertEqual(scrollIndicators(nodes), [])
-    }
-}
-
 final class SettlerTests: XCTestCase {
     final class Clock {
         var now = 0
@@ -243,14 +179,5 @@ final class ErrorTests: XCTestCase {
         XCTAssertTrue(sameToken("abcdefghijklmnop", "abcdefghijklmnop"))
         XCTAssertFalse(sameToken("abcdefghijklmnop", "abcdefghijklmnoq"))
         XCTAssertFalse(sameToken("abc", "abcd"))
-    }
-
-    func testAToolbarOverTheWholeScreenIsAContainer() {
-        let bar = Node(parent: 0, window: 0, type: "Toolbar", left: 0, top: 0, right: 428, bottom: 926, flags: Flag.visible)
-        var resting = bar
-        resting.top = 880
-        var other = bar
-        other.type = "Other"
-        XCTAssertEqual(containerBars([resting, other, bar], screenW: 428, screenH: 926), [2])
     }
 }

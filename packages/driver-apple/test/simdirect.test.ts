@@ -127,11 +127,6 @@ describe('the helper read in the runner shape', () => {
     expect(tree(app(copy(0), copy(0))).copies).toBe(false);
     expect(tree(app(copy(0), copy(50), copy(100), copy(150))).copies).toBe(false);
   });
-
-  it('computes the digest the runner computes', () => {
-    // FNV-1a 64 of nothing shown
-    expect(layoutHash([])).toBe('cbf29ce484222325');
-  });
 });
 
 describe('the settle compare', () => {

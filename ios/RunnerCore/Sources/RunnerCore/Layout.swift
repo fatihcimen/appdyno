@@ -88,6 +88,11 @@ public func sameLayout(_ a: [Node], _ b: [Node]) -> Bool {
     return true
 }
 
+/// An alert or a sheet is on the screen.
+public func hasAlert(_ nodes: [Node]) -> Bool {
+    nodes.contains { ($0.type == "Alert" || $0.type == "Sheet") && $0.flags & Flag.visible != 0 }
+}
+
 /// Can a tap at (x, y) start a reaction the screen does not show yet? Yes when any shown node there, or an
 /// ancestor of one, is actionable or draws its own content (a web view, a map): a touch passes through
 /// a non-interactive overlay. No on plain text and space; without a screen, always yes.

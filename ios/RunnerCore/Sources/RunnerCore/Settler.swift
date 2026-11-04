@@ -1,5 +1,15 @@
 import Foundation
 
+/// The settle's fixed times, which the host's settle of a simulator shares (`runner-rules.json`).
+public enum SettleTimes {
+    /// The quiet window after a tap on something that cannot react.
+    public static let inertQuietMs = 80
+    /// How long an actionable tap that changed nothing watches for a system alert on its way.
+    public static let alertWatchMs = 800
+    /// How long an alert or sheet takes to come up (UIKit's presentation is about 0.3–0.4 s).
+    public static let alertAppearMs = 450
+}
+
 public struct SettleOutcome<S> {
     public let settled: Bool
     public let reads: Int

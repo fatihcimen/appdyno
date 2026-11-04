@@ -2,8 +2,8 @@ import { NODE_FLAGS, type Tree } from '@appdyno/protocol';
 
 type Node = Tree['nodes'][number];
 
-/** XCUI's element types by raw value (the runner's names). */
-const TYPES =
+/** XCUI's element types by raw value (the runner's names): a test holds these tables to the runner's. */
+export const TYPES =
   'Any Other Application Group Window Sheet Drawer Alert Dialog Button RadioButton RadioGroup CheckBox DisclosureTriangle PopUpButton ComboBox MenuButton ToolbarButton Popover Keyboard Key NavigationBar TabBar TabGroup Toolbar StatusBar Table TableRow TableColumn Outline OutlineRow Browser CollectionView Slider PageIndicator ProgressIndicator ActivityIndicator SegmentedControl Picker PickerWheel Switch Toggle Link Image Icon SearchField ScrollView ScrollBar StaticText TextField SecureTextField DatePicker TextView Menu MenuItem MenuBar MenuBarItem Map WebView IncrementArrow DecrementArrow Timeline RatingIndicator ValueIndicator SplitGroup Splitter RelevanceIndicator ColorWell HelpTag Matte DockItem Ruler RulerMarker Grid LevelIndicator Cell LayoutArea LayoutItem Handle Stepper Tab TouchBar'.split(
     ' ',
   );
@@ -11,19 +11,19 @@ const TYPES =
 /** The accessibility server numbers the first few on its own; from Button on they are XCUI's. */
 const SERVER_TYPES: Record<number, string> = { 0: 'Other', 1: 'Application', 2: 'Window' };
 
-const CLICKABLE = new Set(
+export const CLICKABLE = new Set(
   'Button Cell Link Tab MenuItem SegmentedControl Switch Toggle Slider Stepper Picker PickerWheel Key Icon IncrementArrow DecrementArrow RadioButton CheckBox PopUpButton MenuButton DisclosureTriangle PageIndicator'.split(
     ' ',
   ),
 );
 
-const EDITABLE = new Set(['TextField', 'SecureTextField', 'SearchField', 'TextView']);
+export const EDITABLE = new Set(['TextField', 'SecureTextField', 'SearchField', 'TextView']);
 
-const SCROLLABLE = new Set(['ScrollView', 'Table', 'CollectionView', 'WebView']);
+export const SCROLLABLE = new Set(['ScrollView', 'Table', 'CollectionView', 'WebView']);
 
-const CHECKABLE = new Set(['Switch', 'Toggle', 'CheckBox']);
+export const CHECKABLE = new Set(['Switch', 'Toggle', 'CheckBox']);
 
-const SCROLLERS = new Set(['ScrollView', 'Table', 'CollectionView', 'WebView', 'TextView']);
+export const SCROLLERS = new Set(['ScrollView', 'Table', 'CollectionView', 'WebView', 'TextView']);
 
 const F = NODE_FLAGS;
 
@@ -81,7 +81,7 @@ export function layoutHash(nodes: Node[]): string {
   return h.toString(16);
 }
 
-const TOLERANCE = 4;
+export const TOLERANCE = 4;
 
 /** The same layout (RunnerCore's `sameLayout`). */
 export function sameLayout(a: Node[], b: Node[]): boolean {
@@ -147,26 +147,32 @@ export function actionable(nodes: Node[] | undefined, x: number, y: number): boo
 }
 
 /** A scroll view's bars: told by their shape (RunnerCore's `scrollIndicators`). */
-function hideScrollBars(nodes: Node[]) {
+export function scrollIndicators(nodes: Node[]): number[] {
   const named = nodes.map(() => false);
   for (let i = nodes.length - 1; i >= 0; i--) {
     const n = nodes[i]!;
     if ((n.id !== undefined || n.d !== undefined || named[i]) && n.p >= 0 && n.p < i)
       named[n.p] = true;
   }
-  nodes.forEach((n, i) => {
-    if (n.c !== 'Other' || n.id !== undefined || named[i] || n.p < 0) return;
+  return nodes.flatMap((n, i) => {
+    if (n.c !== 'Other' || n.id !== undefined || named[i] || n.p < 0) return [];
     const p = nodes[n.p]!;
-    if (!SCROLLERS.has(p.c)) return;
+    if (!SCROLLERS.has(p.c)) return [];
     const w = n.b[2] - n.b[0];
     const h = n.b[3] - n.b[1];
     const pw = p.b[2] - p.b[0];
     const ph = p.b[3] - p.b[1];
     const vertical = w > 0 && w <= 40 && h * 2 >= ph && Math.abs(p.b[2] - n.b[2]) <= 40;
     const horizontal = h > 0 && h <= 40 && w * 2 >= pw && Math.abs(p.b[3] - n.b[3]) <= 40;
-    if (vertical || horizontal) n.f &= ~F.visible;
+    return vertical || horizontal ? [i] : [];
   });
 }
+
+/** A toolbar as large as the screen is the system's container, no bar (RunnerCore's `containerBars`). */
+export const containerBars = (nodes: Node[], screen: { w: number; h: number }): number[] =>
+  nodes.flatMap((n, i) =>
+    n.c === 'Toolbar' && n.b[2] - n.b[0] >= screen.w && n.b[3] - n.b[1] >= screen.h ? [i] : [],
+  );
 
 const nonEmpty = (s: string | undefined) => (s ? s : undefined);
 
@@ -266,11 +272,8 @@ export function toTree(
     const index = nodes.push(n) - 1;
     for (const k of r.k ?? []) queue.push([k, index]);
   }
-  hideScrollBars(nodes);
-  // a toolbar as large as the screen is the system's container, no bar (RunnerCore's `containerBars`)
-  for (const n of nodes)
-    if (n.c === 'Toolbar' && n.b[2] - n.b[0] >= screen.w && n.b[3] - n.b[1] >= screen.h)
-      n.f &= ~F.visible;
+  for (const i of [...scrollIndicators(nodes), ...containerBars(nodes, screen)])
+    nodes[i]!.f &= ~F.visible;
   const places = new Map<string, string[]>();
   for (const n of nodes)
     if (n.id !== undefined && (n.f & F.visible) !== 0) {

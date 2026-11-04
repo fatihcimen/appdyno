@@ -10,7 +10,7 @@ export type Capture = { tree: Tree; busy: boolean; byRunner?: boolean; askRunner
 /** Reads cost about 30 ms here: the settle can look far more often than the runner's 80 ms. */
 const POLL_MS = 20;
 
-const INERT_QUIET_MS = 80;
+export const INERT_QUIET_MS = 80;
 
 const FIRST_REACTION_MS = 500;
 
@@ -26,9 +26,9 @@ const ALERT_REACTION_MS = 1_000;
 /** A carousel on the new screen sticks out for good: a push's old page is gone well before this. */
 const SLIDE_CAP_MS = 1_200;
 
-const ALERT_WATCH_MS = 800;
+export const ALERT_WATCH_MS = 800;
 
-const ALERT_APPEAR_MS = 450;
+export const ALERT_APPEAR_MS = 450;
 
 const ALERT_GONE_MS = 600;
 
