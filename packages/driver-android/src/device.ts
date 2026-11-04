@@ -252,7 +252,7 @@ export class AndroidDevice extends RpcDevice implements Device {
     const once = () => this.queue.run(() => this.actNow(action, opts, durationOf(action)));
     return once().catch(async (e: unknown) => {
       // the agent refuses a touch on a dark screen before it is made: it would reach nothing
-      if (!(e instanceof DeviceError && /the screen is off/.test(e.message))) throw e;
+      if (!(e instanceof DeviceError && e.code === 'SCREEN_OFF')) throw e;
       if ((await this.ensureAwake()).locked) throw this.lockedError();
       return once();
     });

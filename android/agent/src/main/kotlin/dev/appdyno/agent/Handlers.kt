@@ -94,13 +94,13 @@ class Handlers(private val automation: Automation, private val token: String) {
             automation.ua.setRotation(p.getInt("rotation"))
             Reply(JSONObject())
         }
-        else -> throw AgentFailure("INVALID_ARGUMENT", "unknown method $method")
+        else -> throw unknownMethod(method)
     }
 
     private fun act(p: JSONObject, job: Job): Reply {
         val a = p.getJSONObject("action")
         // on a dark screen a touch reaches no window, and nothing says so: the host wakes it and asks again
-        if (a.getString("kind") != "key" && !Platform.display().on) throw AgentFailure("NOT_FOUND", "the screen is off")
+        if (a.getString("kind") != "key" && !Platform.display().on) throw AgentFailure("SCREEN_OFF", "the screen is off")
         awaitRest()
         val cancelled = { job.cancelled }
         // a touch aimed at a screen that another window has replaced since it was read lands on the wrong one (A/B

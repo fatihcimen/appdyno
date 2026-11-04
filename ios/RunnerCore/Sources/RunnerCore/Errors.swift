@@ -4,7 +4,7 @@ import Foundation
 public let errorCodes = [
     "TIMEOUT", "CANCELLED", "DEVICE_GONE", "AGENT_UNAVAILABLE", "AGENT_CONFLICT", "AGENT_VERSION_MISMATCH",
     "UNSUPPORTED", "PERMISSION_REQUIRED", "NOT_FOUND", "NO_FOCUS", "APP_NOT_RUNNING", "POLICY_DENIED",
-    "INVALID_ARGUMENT", "STALE", "INTERNAL",
+    "INVALID_ARGUMENT", "STALE", "SCREEN_OFF", "INTERNAL",
 ]
 
 public struct AgentError: Error {
@@ -26,6 +26,8 @@ public struct AgentError: Error {
         return ["code": rpcCode, "message": message, "data": data]
     }
 }
+
+public func unknownMethod(_ method: String) -> AgentError { AgentError("UNSUPPORTED", "unknown method \(method)") }
 
 /// Constant-time comparison of the launch token.
 public func sameToken(_ a: String, _ b: String) -> Bool {

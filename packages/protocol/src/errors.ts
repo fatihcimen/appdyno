@@ -15,6 +15,8 @@ export const ERROR_CODES = [
   'INVALID_ARGUMENT',
   /** A touch aimed at a screen another window has replaced since it was read: read it again. */
   'STALE',
+  /** A touch refused on a dark screen, where it would reach no window: wake it and ask again. */
+  'SCREEN_OFF',
   'INTERNAL',
   /** More than one element matches a selector. Host only, never on the wire. */
   'AMBIGUOUS',

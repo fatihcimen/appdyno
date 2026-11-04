@@ -139,7 +139,7 @@ final class RunnerTests: XCTestCase {
             pump.stop()
             return Reply(result: [:])
         default:
-            throw AgentError("UNSUPPORTED", "unknown method \(job.method)")
+            throw unknownMethod(job.method)
         }
     }
 }

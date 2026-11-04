@@ -639,6 +639,14 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(find(s, 'appdyno fixture')).toBeDefined();
   });
 
+  it('a touch on a dark screen is refused by its code, and lands once the host has woken it', async () => {
+    const s = await home();
+    await d.shell('input keyevent KEYCODE_SLEEP');
+    await new Promise((r) => setTimeout(r, 1_500));
+    await d.tap(find(s, 'Form')!, { settle: {}, read: 'none' });
+    expect(find(await d.read(APP), 'Form')).toBeUndefined();
+  });
+
   it('a dropped adb connection: a read waits for the device and finds the running agent again', async () => {
     const back = new AndroidDevice(serial!, new Adb(), 30_000);
     await back.open();

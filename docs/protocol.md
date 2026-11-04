@@ -301,8 +301,8 @@ An emulator's guest encoder runs as this does, and lags by seconds: see [mirror.
 
 ### A phone's screen goes off
 
-A touch on a dark screen reaches no window, and nothing says so: the agent refuses it first and the host wakes the phone and
-asks again. Once woken, the app is on the screen before it can take a touch. On a Xiaomi (HyperOS, Android 16), with touches 0 to 4 s after
+A touch on a dark screen reaches no window, and nothing says so: the agent refuses it first with `SCREEN_OFF`, and the host wakes
+the phone and asks again. Once woken, the app is on the screen before it can take a touch. On a Xiaomi (HyperOS, Android 16), with touches 0 to 4 s after
 the read that woke it, 6 of 14 were lost, up to 1.5 s after and none at 4 s, with its focus at times on nothing or its launcher; in 10 more rounds
 the button did not show at all. Once the host waited for the focus to hold for 600 ms, 15 of 15 reached the app and every round had its button. These
 are small counts. A long measure wakes it too: a dark phone starts no app, and `am start` reads `UNKNOWN (0)`.
@@ -360,8 +360,8 @@ What it took on that phone:
 
 `data.code` is one of `TIMEOUT`, `CANCELLED`, `DEVICE_GONE`, `AGENT_UNAVAILABLE`, `AGENT_CONFLICT`,
 `AGENT_VERSION_MISMATCH`, `UNSUPPORTED`, `PERMISSION_REQUIRED`, `NOT_FOUND`, `NO_FOCUS`,
-`APP_NOT_RUNNING`, `POLICY_DENIED`, `INVALID_ARGUMENT`, `STALE`, `INTERNAL`; the JSON-RPC code is −32000 minus its
-index in that list. `AMBIGUOUS`, `CHECK_FAILED` and `DEVICE_CLAIMED` come after those and are the host's own, never on the wire. `TIMEOUT`, `DEVICE_GONE` and `AGENT_UNAVAILABLE` are worth one retry; the host
+`APP_NOT_RUNNING`, `POLICY_DENIED`, `INVALID_ARGUMENT`, `STALE`, `SCREEN_OFF`, `INTERNAL`; the JSON-RPC code is −32000
+minus its index in that list. An unknown method answers `UNSUPPORTED` on both platforms. `AMBIGUOUS`, `CHECK_FAILED` and `DEVICE_CLAIMED` come after those and are the host's own, never on the wire. `TIMEOUT`, `DEVICE_GONE` and `AGENT_UNAVAILABLE` are worth one retry; the host
 retries read-only requests itself once on a fresh connection, never an action (it may have happened).
 
 ## Android agent lifecycle

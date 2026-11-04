@@ -16,6 +16,7 @@ val ERROR_CODES = listOf(
     "POLICY_DENIED",
     "INVALID_ARGUMENT",
     "STALE",
+    "SCREEN_OFF",
     "INTERNAL",
 )
 
@@ -28,3 +29,5 @@ fun rpcCode(code: String): Int {
 /** A failure the host gets as a typed error (code, message, what to do). */
 class AgentFailure(val code: String, message: String, val hint: String? = null, cause: Throwable? = null) :
     Exception(message, cause)
+
+fun unknownMethod(method: String) = AgentFailure("UNSUPPORTED", "unknown method $method")
