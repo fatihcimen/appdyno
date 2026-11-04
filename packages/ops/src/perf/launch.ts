@@ -63,6 +63,8 @@ export function perfLaunchOp(ctx: ServerContext) {
                 : 'launch.until_ms',
             unit: 'ms',
             samples: samples.flatMap((x) => (x.totalMs === undefined ? [] : [x.totalMs])),
+            // a tool's own mark is counted on this Mac; what a platform reports is its own
+            ...(until && { throughHost: true }),
           },
           {
             kind: 'launch.ttfd_ms',

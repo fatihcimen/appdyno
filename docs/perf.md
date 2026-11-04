@@ -97,7 +97,7 @@ ordered pairs of unchanged runs, a rank test alone and a 10 % difference of medi
 
 Run medians of the unchanged app: emulator 371-667 ms, simulator 1,661-1,705 ms, iPhone 554-626 ms. On an emulator the same launch read
 350 ms and 700 ms minutes apart between load 11 and 16 on 15 cores, and one baseline run at load 41 read 1,661 ms; so a run with host load over
-0.8 per core is marked noisy and is refused as a baseline.
+0.8 per core is marked noisy and is refused as a baseline. So is a phone's number that is timed on the Mac (an iPhone's launch, to the first screen it reads), and not what a phone reports itself.
 
 Why 4 standard deviations of run medians rather than their range, from `scripts/perf-floor-sim.mjs` (a run moving 6 % by itself, 5 % noise per
 launch, 6 launches, 400 trials): false alarms 3.0 % with 3 baseline runs and 2.3 % with 5 for the range, 0.8 % and 0.5 % for 4 sd; +40 % caught

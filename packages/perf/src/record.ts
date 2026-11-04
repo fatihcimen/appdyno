@@ -131,8 +131,9 @@ export const deviceClass = (d: DeviceInfo) =>
   );
 
 /**
- * Host load per core over this: a virtual device shares the host's cores with whatever else runs. An emulator's
- * cold start doubled, 350 ms to 700 ms, between load 11 and 16 on 15 cores (docs/perf.md).
+ * Host load per core over this: a virtual device shares the host's cores with whatever else runs, and a number timed
+ * on the host waits for them, on any device. An emulator's cold start doubled, 350 ms to 700 ms, between load 11 and
+ * 16 on 15 cores, and an iPhone's launch swung between 550 ms and 3 s (docs/perf.md).
  */
 const HOST_LOAD_PER_CORE = 0.8;
 /** Above this a device is busy with more than the app. */
@@ -141,9 +142,15 @@ const CPU_PRESSURE = 40;
 /** Android's thermal status "moderate" and up throttles. */
 const THERMAL_STATUS = 2;
 
-export function noiseOf(r: Pick<PerfRecord, 'load' | 'thermal' | 'build' | 'device'>): Noise[] {
+export function noiseOf(
+  r: Pick<PerfRecord, 'load' | 'thermal' | 'build' | 'device'>,
+  throughHost = false,
+): Noise[] {
   const out: Noise[] = [];
-  if (r.device.virtual && (r.load.host[0] ?? 0) > r.load.hostCpus * HOST_LOAD_PER_CORE)
+  if (
+    (r.device.virtual || throughHost) &&
+    (r.load.host[0] ?? 0) > r.load.hostCpus * HOST_LOAD_PER_CORE
+  )
     out.push('high-host-load');
   // shortcut: the parked count is of this moment and the load a minute's average, so a burst of kernel I/O
   // reads low; judge by the CPU's busy share if a busy phone ever passes
@@ -161,6 +168,8 @@ export type Metric = {
   samples: number[];
   better?: 'lower' | 'higher';
   modelled?: boolean;
+  /** Timed on this Mac and not on the device, so its load is in the number on a phone too. */
+  throughHost?: boolean;
 };
 
 export type RunContext = Omit<
@@ -179,7 +188,6 @@ export type RunContext = Omit<
 
 /** The records of a run; a metric with no finite sample was not measured and has none. */
 export function recordsOf(ctx: RunContext, metrics: Metric[]): PerfRecord[] {
-  const noise = noiseOf(ctx);
   return metrics.flatMap((m, i) => {
     const samples = m.samples.filter(Number.isFinite);
     if (samples.length === 0) return [];
@@ -195,7 +203,7 @@ export function recordsOf(ctx: RunContext, metrics: Metric[]): PerfRecord[] {
         samples,
         spread: spread(samples),
         deviceClass: deviceClass(ctx.device),
-        noise,
+        noise: noiseOf(ctx, m.throughHost),
         ...(m.modelled && { modelled: true }),
       },
     ];

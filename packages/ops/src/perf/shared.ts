@@ -173,7 +173,7 @@ export async function keepRun(
   );
   await saveRun(ctx.measurementsDir, records);
   await rewriteDashboard(ctx);
-  return records[0]?.noise ?? [];
+  return [...new Set(records.flatMap((r) => r.noise))];
 }
 
 export function perfTools(ctx: ServerContext) {

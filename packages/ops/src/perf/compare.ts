@@ -59,7 +59,9 @@ export function perfCompareOp(ctx: ServerContext) {
         for (const k of keys) {
           const [newest = []] = await latestRuns(dir, k);
           // a reference taken under load would hide every later change
-          const loud = (newest[0]?.noise ?? []).filter((n) => n !== 'debuggable-build');
+          const loud = [...new Set(newest.flatMap((r) => r.noise))].filter(
+            (n) => n !== 'debuggable-build',
+          );
           if (loud.length) {
             left++;
             lines.push(`not added, ${loud.join(', ')}: measure ${k.scenario} again`);

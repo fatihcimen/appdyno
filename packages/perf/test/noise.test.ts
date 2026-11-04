@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { noiseOf, type DeviceInfo } from '../src/record.js';
+import { noiseOf, recordsOf, type DeviceInfo, type Metric } from '../src/record.js';
 
 const device: DeviceInfo = {
   serial: 'Y9',
@@ -19,6 +19,53 @@ const noise = (load: number, deviceParked?: number) =>
       ...(deviceParked !== undefined && { deviceParked }),
     },
   });
+
+describe('the load of the Mac', () => {
+  const run = (host: number, device_: DeviceInfo, metrics: Metric[]) =>
+    recordsOf(
+      {
+        run: 'r',
+        app: 'a',
+        scenario: 's',
+        source: 'x',
+        raw: '',
+        device: device_,
+        build: 'release',
+        load: { host: [host], hostCpus: 15 },
+        tool: 't',
+        at: '2026-11-04T00:00:00.000Z',
+      },
+      metrics,
+    );
+  const iphone = { ...device, platform: 'ios' as const, model: 'iPhone14,3', os: '27.0.1' };
+  const throughTheMac: Metric = {
+    kind: 'launch.until_ms',
+    unit: 'ms',
+    samples: [3_000],
+    throughHost: true,
+  };
+  const itsOwn: Metric = { kind: 'memory.kb', unit: 'kb', samples: [1_000] };
+
+  it('marks a phone’s reading through the Mac, at high load, and not its own', () => {
+    const [through, own] = run(100, iphone, [throughTheMac, itsOwn]);
+    expect(through).toMatchObject({ kind: 'launch.until_ms', noise: ['high-host-load'] });
+    expect(own).toMatchObject({ kind: 'memory.kb', noise: [] });
+  });
+
+  it('keeps the number it marks', () => {
+    expect(run(100, iphone, [throughTheMac])[0]).toMatchObject({ value: 3_000, samples: [3_000] });
+  });
+
+  it('marks nothing on a calm Mac, and nothing of a phone’s own however it is', () => {
+    expect(run(5, iphone, [throughTheMac, itsOwn]).flatMap((r) => r.noise)).toEqual([]);
+    expect(run(100, device, [{ ...throughTheMac, throughHost: false }])[0]!.noise).toEqual([]);
+  });
+
+  it('marks every reading of a virtual device at high load, as it did', () => {
+    const emulator = { ...device, virtual: true };
+    expect(run(100, emulator, [itsOwn])[0]!.noise).toEqual(['high-host-load']);
+  });
+});
 
 describe('the device load a run is judged by', () => {
   it('leaves out kernel threads asleep: a calm Xiaomi reads 14.31 with 14 of them', () => {
