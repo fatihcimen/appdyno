@@ -173,8 +173,6 @@ async function segmentOf(file: string): Promise<Segment> {
     await f.read(ftyp, 0, ftyp.length, ftypAt.start);
     const trak = videoTrack(moov, root);
     const stbl = need(moov, trak, 'mdia', 'minf', 'stbl');
-    if (moov.readUInt32BE(need(moov, stbl, 'stsz').body + 4) !== 0)
-      throw new Error(`${file}: its frames have one size`);
     return { file, moov, root, trak, stbl, mdat: mdats[0]!, ftyp };
   } finally {
     await f.close();
@@ -235,8 +233,10 @@ export async function joinVideos(files: string[], out: string): Promise<void> {
       ...words(x, need(x, s.stbl, 'stsc'), 3).map((v, i) => (i % 3 === 0 ? v + chunks : v)),
     );
     const stsz = need(x, s.stbl, 'stsz');
+    // a segment of one frame, as a near-still screen gives, holds its size here and no table
+    const oneSize = x.readUInt32BE(stsz.body + 4);
     const n = x.readUInt32BE(stsz.body + 8);
-    for (let i = 0; i < n; i++) sizes.push(x.readUInt32BE(stsz.body + 12 + i * 4));
+    for (let i = 0; i < n; i++) sizes.push(oneSize || x.readUInt32BE(stsz.body + 12 + i * 4));
     const stco = child(x, s.stbl, 'stco');
     const co64 = child(x, s.stbl, 'co64');
     const at = stco ?? co64;

@@ -7,7 +7,10 @@ import { box, joinVideos, readVideo, u32s } from '../src/video.js';
 const u32 = (...v: number[]) => u32s(v);
 
 /** A small file as a recorder writes it: ftyp, mdat, moov with a video track and a metadata track. */
-function video(frames: Buffer[], opts: { stsd?: string; torn?: boolean; timescale?: number } = {}) {
+function video(
+  frames: Buffer[],
+  opts: { stsd?: string; torn?: boolean; timescale?: number; oneSize?: boolean } = {},
+) {
   const ftyp = box('ftyp', Buffer.from('isom'), u32(0), Buffer.from('isom'));
   const payload = Buffer.concat(frames);
   const mdat = box('mdat', payload);
@@ -34,7 +37,9 @@ function video(frames: Buffer[], opts: { stsd?: string; torn?: boolean; timescal
     box('stts', u32(0, 1, n, 3_000)),
     box('stss', u32(0, 1, 1)),
     box('stsc', u32(0, 1, 1, n, 1)),
-    box('stsz', u32(0, 0, n), u32(...frames.map((f) => f.length))),
+    opts.oneSize
+      ? box('stsz', u32(0, frames[0]!.length, n))
+      : box('stsz', u32(0, 0, n), u32(...frames.map((f) => f.length))),
     box('stco', u32(0, 1, first)),
   );
   const trak = box(
@@ -140,6 +145,15 @@ describe('joinVideos', () => {
       readFileSync(out).readUInt32BE(at + 8),
     ]).toEqual([2, 1]);
     expect(readFileSync(out).readUInt32BE(at + 12)).toBe(3);
+  });
+
+  it('takes a segment of one frame, whose size stands alone with no table', async () => {
+    const a = write('one-a.mp4', video([Buffer.from('a1'), Buffer.from('a22')]));
+    const b = write('one-b.mp4', video([Buffer.from('b333')], { oneSize: true }));
+    const out = join(dir, 'one-joined.mp4');
+    await joinVideos([a, b], out);
+    expect((await readVideo(out)).frames).toBe(3);
+    expect(framesOf(out)).toEqual(['a1', 'a22', 'b333']);
   });
 
   it('refuses segments that do not go together, leaving no file', async () => {
