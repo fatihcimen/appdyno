@@ -1,8 +1,15 @@
 import { spawn } from 'node:child_process';
-import type { DeviceState, InputEvent, Mirror, MirrorCheck, MirrorSource } from '@appdyno/core';
+import type {
+  DeviceState,
+  InputEvent,
+  Mirror,
+  MirrorCheck,
+  MirrorOptions,
+  MirrorSource,
+} from '@appdyno/core';
 import type { Key } from '@appdyno/protocol';
 import { Simctl, xcodeEnv } from './simctl.js';
-import { startSimHid, type HelperProcess } from './simhelper.js';
+import { startSimAx, startSimHid, type HelperProcess } from './simhelper.js';
 import { HID_KEYS } from './simtouch.js';
 
 const KEYBOARD = 7;
@@ -10,6 +17,9 @@ const SHIFT = 0xe1;
 const COMMAND = 0xe3;
 const V = 0x19;
 const INPUT_MS = 8_000;
+const TURNS_CHECK_MS = 250;
+/** How long a read helper that failed is left alone: at the slow end of a simulator shut down or a busy Mac. */
+const TURNS_RETRY_MS = 5_000;
 
 const UNSHIFTED = "-=[]\\;'`,./";
 const SHIFTED = '_+{}|:"~<>?';
@@ -35,19 +45,46 @@ export function usageOf(c: string): { usage: number; shift: boolean } | undefine
 }
 
 /**
+ * The quarter turns, counterclockwise, that stand up the surface of a simulator whose app in front has this
+ * interface orientation; undefined for what says nothing of it.
+ */
+export function turnsOf(orientation: number): number | undefined {
+  return { 1: 0, 2: 2, 3: 1, 4: 3 }[orientation];
+}
+
+/** A point of a picture stood up by these turns, as a fraction of the surface beneath it: where a touch goes. */
+export function onSurface(x: number, y: number, turns: number): { x: number; y: number } {
+  switch (turns) {
+    case 1:
+      return { x: 1 - y, y: x };
+    case 2:
+      return { x: 1 - x, y: 1 - y };
+    case 3:
+      return { x: y, y: 1 - x };
+    default:
+      return { x, y };
+  }
+}
+
+/**
  * A simulator's mirror. The viewer reads its screen by itself, with nothing to ready here, so only input
- * goes through this process, by the helper that also sends a driven simulator's touches.
+ * goes through this process, by the helper that also sends a driven simulator's touches. A guest that turns
+ * draws sideways in the same surface and nothing on the Mac says so, so its turns are asked of the read helper.
  */
 export class SimulatorMirror implements Mirror {
   /** A still screen draws nothing, but the surface comes at once: silence means someone else has it. */
   readonly noFirstFrame = { ms: 3_000, need: 'presented-elsewhere' as const };
   private hid: Promise<HelperProcess> | undefined;
+  private reader: Promise<HelperProcess> | undefined;
+  private turns = 0;
+  private turnsTimer: NodeJS.Timeout | undefined;
 
   constructor(
     private readonly udid: string,
     private readonly simctl: Simctl = new Simctl(),
     private readonly startHid: (udid: string) => Promise<HelperProcess> = startSimHid,
     private readonly paste: (udid: string, text: string) => Promise<void> = pasteboard,
+    private readonly startReader: (udid: string) => Promise<HelperProcess> = startSimAx,
   ) {}
 
   async check(): Promise<MirrorCheck> {
@@ -56,12 +93,47 @@ export class SimulatorMirror implements Mirror {
       : { ok: false, need: 'simulator-off' };
   }
 
-  async open(): Promise<MirrorSource> {
+  /** One read at a time, and none for a while after one failed: the window then stays as it was last told. */
+  private followTurns(tell: (message: Record<string, unknown>) => void) {
+    clearInterval(this.turnsTimer);
+    let notBefore = 0;
+    this.turnsTimer = setInterval(() => {
+      if (Date.now() < notBefore) return;
+      notBefore = Infinity;
+      void this.readTurns(tell).then(
+        (ok) => (notBefore = ok ? 0 : Date.now() + TURNS_RETRY_MS),
+        () => (notBefore = Date.now() + TURNS_RETRY_MS),
+      );
+    }, TURNS_CHECK_MS);
+    this.turnsTimer.unref();
+  }
+
+  private async readTurns(tell: (message: Record<string, unknown>) => void) {
+    const running = await this.reader?.catch(() => undefined);
+    // closed meanwhile: a helper started now would have no one to end it
+    if (!this.turnsTimer) return true;
+    if (!running || running.closed) this.reader = this.startReader(this.udid);
+    const a = await (await this.reader!).call({ op: 'orientation' }, INPUT_MS);
+    const turns = turnsOf(a.orientation as number);
+    if (turns !== undefined && turns !== this.turns) {
+      this.turns = turns;
+      tell({ op: 'turns', turns });
+    }
+    return a.ok;
+  }
+
+  async open(
+    _opts?: MirrorOptions,
+    _signal?: AbortSignal,
+    tell: (message: Record<string, unknown>) => void = () => undefined,
+  ): Promise<MirrorSource> {
     // up before a person's first touch, which would otherwise wait over a second for it
     void this.helper().catch(() => undefined);
+    this.followTurns(tell);
     return {
       kind: 'surface',
       udid: this.udid,
+      turns: this.turns,
       ...(xcodeEnv().DEVELOPER_DIR && { developerDir: xcodeEnv().DEVELOPER_DIR! }),
     };
   }
@@ -110,9 +182,17 @@ export class SimulatorMirror implements Mirror {
 
   async input(e: InputEvent) {
     switch (e.kind) {
-      case 'touch':
-        await this.call({ op: 'touch', quick: true, events: [{ ...e, at: 0 }] });
+      case 'touch': {
+        const { x, y } = onSurface(e.x, e.y, this.turns);
+        const second =
+          e.x2 !== undefined && e.y2 !== undefined ? onSurface(e.x2, e.y2, this.turns) : undefined;
+        await this.call({
+          op: 'touch',
+          quick: true,
+          events: [{ ...e, x, y, ...(second && { x2: second.x, y2: second.y }), at: 0 }],
+        });
         return;
+      }
       case 'key':
         await this.keyState(e.page, e.usage, e.state);
         return;
@@ -127,9 +207,11 @@ export class SimulatorMirror implements Mirror {
   }
 
   async close() {
-    const hid = this.hid;
-    this.hid = undefined;
-    (await hid?.catch(() => undefined))?.close();
+    clearInterval(this.turnsTimer);
+    this.turnsTimer = undefined;
+    const helpers = [this.hid, this.reader];
+    this.hid = this.reader = undefined;
+    for (const h of helpers) (await h?.catch(() => undefined))?.close();
   }
 
   watch(_onChange: (s: DeviceState) => void) {

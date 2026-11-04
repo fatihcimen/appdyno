@@ -104,6 +104,10 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   if ([op isEqual:@"detach"]) return [self detach];
   if ([op isEqual:@"status"]) return [_window setStatus:m];
   if ([op isEqual:@"focus"]) return [_window focus];
+  if ([op isEqual:@"turns"]) {
+    if ([(id)_source respondsToSelector:@selector(setTurns:)]) [_source setTurns:[m[@"turns"] intValue] & 3];
+    return;
+  }
   if ([op isEqual:@"agent"]) return [_window.overlay setDriving:[m[@"driving"] boolValue] tool:m[@"tool"] ?: @""];
   if ([op isEqual:@"banner"]) return m[@"id"] ? [_window.overlay showBanner:m] : [_window.overlay hideBanner];
   if ([op isEqual:@"activity"]) return [_window.overlay addActivity:m[@"line"] ?: @""];
@@ -197,6 +201,12 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
       [self->_stats shown];
     }
     CVBufferRelease(image);
+  });
+}
+
+- (void)source:(id)from turns:(int)turns {
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if ([self isCurrent:from]) [self->_window setTurns:turns];
   });
 }
 

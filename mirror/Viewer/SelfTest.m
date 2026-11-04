@@ -58,6 +58,8 @@ static void skip(NSString *name, NSString *why) {
 - (void)source:(id)from lost:(NSString *)why fatal:(BOOL)fatal {
   self.lost = why;
 }
+- (void)source:(id)from turns:(int)turns {
+}
 - (void)source:(id)from needsKey:(int)failures {
   self.keyRequests++;
   self.lastFailures = failures;
@@ -181,6 +183,33 @@ static void checkNals(void) {
     });
   }
   check(@"nal: random bytes stay in bounds", gFailed == 0 && seen > 0, nil);
+}
+
+/// Where the surface's corner that upright has at its top left comes to in the picture's parent.
+static NSPoint uprightTopLeft(int turns, CGSize parent) {
+  CALayer *root = [CALayer layer];
+  root.frame = CGRectMake(0, 0, parent.width, parent.height);
+  CALayer *picture = [CALayer layer];
+  [root addSublayer:picture];
+  MVLayoutTurned(picture, parent, turns);
+  CGSize b = picture.bounds.size;
+  // in layer coordinates, y up: what is a turned surface's corner, as a sideways picture has it
+  CGPoint corner[4] = {{0, b.height}, {b.width, b.height}, {b.width, 0}, {0, 0}};
+  return [root convertPoint:corner[turns] fromLayer:picture];
+}
+
+static void checkTurns(void) {
+  // a guest turned once draws its top left at the surface's top right: a turn stands that at the picture's
+  CGSize wide = {200, 100};
+  NSPoint a = uprightTopLeft(1, wide);
+  check(@"turns: one, the corner comes to the top left", fabs(a.x) < 1e-6 && fabs(a.y - 100) < 1e-6, NSStringFromPoint(a));
+  NSPoint b = uprightTopLeft(3, wide);
+  check(@"turns: three, the corner comes to the top left", fabs(b.x) < 1e-6 && fabs(b.y - 100) < 1e-6, NSStringFromPoint(b));
+  CGSize tall = {100, 200};
+  NSPoint c = uprightTopLeft(2, tall);
+  check(@"turns: two, the corner comes to the top left", fabs(c.x) < 1e-6 && fabs(c.y - 200) < 1e-6, NSStringFromPoint(c));
+  NSPoint d = uprightTopLeft(0, tall);
+  check(@"turns: none, it stays", fabs(d.x) < 1e-6 && fabs(d.y - 200) < 1e-6, NSStringFromPoint(d));
 }
 
 static void checkInputMaths(void) {
@@ -406,6 +435,7 @@ static void checkStats(void) {
 int MVSelfTest(NSString *fixtures) {
   checkNals();
   checkInputMaths();
+  checkTurns();
   checkStats();
   checkPixels();
   checkBroken();

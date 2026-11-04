@@ -431,3 +431,13 @@ refused and must have left the device alone.
 The phone's touch stays about one display tick over its target: 98 ms by way of UI automation with two round trips per tap, 86 to 91 ms as it is now, with 7 ms of it a round trip to the agent. The simulator's touches come in two sizes, about 70 ms up a list and about 20 ms back down it. Its frame rate is its panel's 120 Hz at the start of a flick and falls as the list coasts; only seconds with 30 frames or more are counted. A real window of the viewer has about 86 MB, against 24 headless.
 
 Under other work, nothing but the load differs: on the phone at load 325 to 369, 51 frames/s, capture to arrival 33.8, 48.4 ms, touch 103 ms, decode 9.6 ms.
+
+Thirty minutes of a picture that keeps moving, by `--soak 30`, with the viewer's memory a minute in and at the end:
+
+| device                               | RSS, MB      | descriptors | frames in the last 30 s | load at the end |
+| ------------------------------------ | ------------ | ----------- | ----------------------- | --------------- |
+| Xiaomi 25078RA3EY, Android 16, H.264 | 14.1 to 12.4 | 45, 45      | 734                     | 224             |
+| Android 14 emulator, gRPC `MMAP`     | 49.2 to 49.3 | 45, 45      | 399                     | 86              |
+| iPhone 17 Pro simulator, iOS 27.0    | 26.4 to 15.5 | 45, 45      | 606                     | 42              |
+
+A simulator's turns are read four times a second by the helper that reads its screen, which a mirror starts if it is not running: 0.3 % of a core and 98 MB resident on a still screen at load 94.

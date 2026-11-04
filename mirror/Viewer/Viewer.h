@@ -40,6 +40,8 @@ void MVEmit(NSDictionary *message);
 - (void)source:(id)from surface:(IOSurfaceRef)surface;
 - (void)source:(id)from image:(CVImageBufferRef)image;
 - (void)source:(id)from lost:(NSString *)why fatal:(BOOL)fatal;
+/// A picture to show stood up by these quarter turns, counterclockwise, with no copy of it.
+- (void)source:(id)from turns:(int)turns;
 /// A keyframe is wanted; `failures` counts decoder failures in a row, none for a loss.
 - (void)source:(id)from needsKey:(int)failures;
 @end
@@ -51,6 +53,8 @@ void MVEmit(NSDictionary *message);
 - (void)stop;
 @optional
 - (void)tick:(NSDictionary *)message;
+/// The device's content is drawn this many quarter turns from upright, and nothing in the source says so.
+- (void)setTurns:(int)turns;
 /// The window is covered: nothing need be drawn, and what comes back asks for a fresh picture.
 - (void)setHidden:(BOOL)hidden;
 @end
@@ -103,11 +107,15 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags);
 - (void)done:(id)sender;
 @end
 
+/// Lays a layer out in its parent's size, stood up from its contents by these quarter turns, counterclockwise.
+void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
+
 /// The window. The app keeps none when it runs headless.
 @interface MVWindow : NSObject <NSWindowDelegate>
 @property(readonly) MVOverlay *overlay;
 - (void)configure:(NSDictionary *)attach;
 - (void)setPicture:(CGSize)size;
+- (void)setTurns:(int)turns;
 - (void)showSurface:(IOSurfaceRef)surface;
 /// Whether the layer took it.
 - (BOOL)showImage:(CVImageBufferRef)image;

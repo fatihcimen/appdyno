@@ -18,6 +18,7 @@
 - (pid_t)pid;
 - (NSString *)bundleId;
 - (CGRect)frame;
+- (long)applicationOrientation;
 @end
 
 static NSString *const SnapshotAttributesKey = @"UIAccessibilitySnapshotKeyAttributes";
@@ -296,6 +297,9 @@ static void handle(NSData *line) {
       else if ([q[@"op"] isEqual:@"front"]) {
         NSString *front = [(id<AX>)[(id<AX>)gAXElement primaryApp] bundleId];
         a = front ? @{@"ok": @YES, @"bundle": front} : refuse(@"no-foreground");
+      } else if ([q[@"op"] isEqual:@"orientation"]) {
+        // how the app in front is drawn: one that does not turn stays upright though the device has turned
+        a = @{@"ok": @YES, @"orientation": @([(id<AX>)[(id<AX>)gAXElement systemApplication] applicationOrientation])};
       } else if ([q[@"op"] isEqual:@"ping"]) a = gBlind ? @{@"ok": @YES, @"blind": gBlind} : @{@"ok": @YES};
       else a = refuse(@"unknown request");
     } @catch (NSException *e) {

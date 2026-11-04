@@ -205,30 +205,85 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_RESTART === '1')(
   },
 );
 
-/**
- * It needs the runner, which sets the orientation, and so its build, and an app that turns in front. A guest that
- * turns draws sideways in the same surface and no callback says so: this holds that fact, for the day it changes.
- */
+/** It needs the runner, which sets the orientation, and so its build, and an app that turns in front. */
 describe.runIf(udid && process.env.APPDYNO_MIRROR_ROTATE === '1')('a simulator that turns', () => {
-  it('keeps its surface and its session', async () => {
-    execFileSync('xcrun', ['simctl', 'launch', udid!, 'dev.appdyno.fixture']);
+  const APP = 'dev.appdyno.fixture';
+  const window = process.env.APPDYNO_MIRROR_WINDOW === '1';
+
+  it('stands its picture up, and a touch lands on what the picture shows', async () => {
     const device = new IosSimulatorDevice(udid!);
     await device.open();
+    await device.launch(APP);
+    const told: unknown[] = [];
+    const open = device.mirror.open.bind(device.mirror);
+    device.mirror.open = (opts, signal, tell) =>
+      open(opts, signal, (m) => {
+        if (m.op === 'turns') told.push(m.turns);
+        tell(m);
+      });
+    const binary = await viewerBinary();
+    let viewer: ViewerProcess | undefined;
     const session = new MirrorSession({
       mirror: device.mirror,
-      viewer: startViewer(true),
+      viewer: async () => (viewer = new ViewerProcess(binary, window ? [] : ['--headless'])),
       options: { quality: 'auto' },
       title: 'a test',
     });
+    const shaped = (w: number, h: number) =>
+      session.status.picture?.w === w && session.status.picture?.h === h;
     await session.start();
     try {
       await until('picture', () => session.status.state === 'live');
       const { w, h } = session.status.picture!;
-      await device.setOrientation(1);
-      await new Promise((r) => setTimeout(r, 4_000));
-      expect(session.status.picture).toMatchObject({ w, h });
-      expect(session.status.state).toBe('live');
+      expect(h).toBeGreaterThan(w);
+
+      for (const rotation of [1, 3] as const) {
+        await device.terminate(APP);
+        await device.launch(APP);
+        await device.setOrientation(rotation);
+        // the runner's two sides are the system's landscape right and left, which take one and three turns
+        await until('its turns', () => told.at(-1) === rotation);
+        await until('a picture on its side', () => shaped(h, w));
+        await new Promise((r) => setTimeout(r, 1_000));
+        // the button where the app has it on the turned screen, touched as a click on the picture would
+        const screen = await device.read(APP);
+        const button = screen.list.find((e) => e.id?.startsWith('open_'))!;
+        expect(screen.window!.w).toBeGreaterThan(screen.window!.h);
+        const x = button.x / screen.window!.w;
+        const y = button.y / screen.window!.h;
+        if (window) session.poke(x, y);
+        else {
+          session.send({ kind: 'touch', p: 0, x, y });
+          session.send({ kind: 'touch', p: 2, x, y });
+        }
+        const end = Date.now() + 15_000;
+        let gone = false;
+        while (!gone && Date.now() < end) {
+          gone = !(await device.read(APP)).list.some((e) => e.id === button.id);
+        }
+        expect(gone, `the touch at ${x}, ${y} with the device at ${rotation}`).toBe(true);
+      }
+
+      // a viewer that comes back starts turned
+      const pid = viewer!.pid!;
+      process.kill(pid, 'SIGKILL');
+      await until(
+        'a restart',
+        () => viewer!.pid !== pid && session.status.state === 'live',
+        60_000,
+      );
+      await until('the same shape', () => shaped(h, w));
+
+      // an app that does not turn is upright, though the device has turned
+      execFileSync('xcrun', ['simctl', 'launch', udid!, 'com.apple.Preferences']);
+      await until('an upright app', () => shaped(w, h));
+      await device.launch(APP);
+      await until('a turned app', () => shaped(h, w));
+
       await device.setOrientation(0);
+      await until('the picture upright again', () => shaped(w, h));
+      expect(session.status.state).toBe('live');
+      expect(session.status.inputFailed).toBe(0);
     } finally {
       await session.stop('the test ended');
       await device.stopAgent().catch(() => undefined);

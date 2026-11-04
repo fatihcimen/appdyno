@@ -18,6 +18,13 @@ static NSTextField *label(CGFloat size, NSFontWeight weight) {
   return field;
 }
 
+void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
+  BOOL sideways = turns % 2;
+  layer.bounds = CGRectMake(0, 0, sideways ? parent.height : parent.width, sideways ? parent.width : parent.height);
+  layer.position = CGPointMake(parent.width / 2, parent.height / 2);
+  layer.transform = CATransform3DMakeRotation(turns * M_PI_2, 0, 0, 1);
+}
+
 @implementation MVWindow {
   NSWindow *_window;
   MVView *_view;
@@ -27,6 +34,7 @@ static NSTextField *label(CGFloat size, NSFontWeight weight) {
   NSTextField *_title, *_fix;
   CGSize _picture;
   double _zoom;
+  int _turns;
   BOOL _activate;
   NSString *_name;
 }
@@ -43,6 +51,8 @@ static NSTextField *label(CGFloat size, NSFontWeight weight) {
     _view.layer.backgroundColor = NSColor.blackColor.CGColor;
     _window.contentView = _view;
     _plain = [self fill:[CALayer layer]];
+    // laid out by hand: a layer turned on its side has no place in its parent's resizing
+    _plain.autoresizingMask = kCALayerNotSizable;
     _plain.contentsGravity = kCAGravityResizeAspect;
     _video = (AVSampleBufferDisplayLayer *)[self fill:[AVSampleBufferDisplayLayer layer]];
     _video.videoGravity = AVLayerVideoGravityResizeAspect;
@@ -95,6 +105,23 @@ static NSTextField *label(CGFloat size, NSFontWeight weight) {
     _zoom = MIN(1 / scale, MIN(visible.size.width * kFitScreen / size.width, visible.size.height * kFitScreen / size.height));
   }
   [_window setContentSize:NSMakeSize(size.width * _zoom, size.height * _zoom)];
+  [self layoutPicture];
+}
+
+- (void)setTurns:(int)turns {
+  _turns = turns;
+  [self layoutPicture];
+}
+
+- (void)layoutPicture {
+  [CATransaction begin];
+  [CATransaction setDisableActions:YES];
+  MVLayoutTurned(_plain, _view.bounds.size, _turns);
+  [CATransaction commit];
+}
+
+- (void)windowDidResize:(NSNotification *)notification {
+  [self layoutPicture];
 }
 
 - (void)windowDidEndLiveResize:(NSNotification *)notification {

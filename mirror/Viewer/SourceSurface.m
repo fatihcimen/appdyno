@@ -32,6 +32,7 @@ enum { kBooted = 3 };
   id _surface;
   dispatch_source_t _watch;
   BOOL _stopped, _hidden, _stale;
+  int _turns;
 }
 
 - (instancetype)initWithOptions:(NSDictionary *)options sink:(id<MVSink>)sink {
@@ -39,6 +40,7 @@ enum { kBooted = 3 };
     _options = options;
     _sink = sink;
     _uuid = NSUUID.UUID;
+    _turns = [options[@"turns"] intValue] & 3;
     _screens = [NSMutableArray array];
   }
   return self;
@@ -126,11 +128,26 @@ enum { kBooted = 3 };
     [_screens addObject:screen];
   }
   if (screen != _chosen) return;
-  // a rotation or a fold: a new surface, with no reconnect
+  // a fold: a new surface, with no reconnect
   _surface = surface;
-  IOSurfaceRef s = (__bridge IOSurfaceRef)surface;
+  [self sayShape];
+  [self show];
+}
+
+/** A guest that turns draws sideways in the same surface and no callback says so: its turns come from the parent. */
+- (void)sayShape {
+  IOSurfaceRef s = (__bridge IOSurfaceRef)_surface;
+  size_t w = IOSurfaceGetWidth(s), h = IOSurfaceGetHeight(s);
   id<MVSink> sink = _sink;
-  [sink source:self size:CGSizeMake(IOSurfaceGetWidth(s), IOSurfaceGetHeight(s)) codec:@"surface"];
+  [sink source:self turns:_turns];
+  [sink source:self size:_turns % 2 ? CGSizeMake(h, w) : CGSizeMake(w, h) codec:@"surface"];
+}
+
+- (void)setTurns:(int)turns {
+  if (turns == _turns) return;
+  _turns = turns;
+  if (!_surface) return;
+  [self sayShape];
   [self show];
 }
 

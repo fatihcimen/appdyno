@@ -27,7 +27,7 @@ and `record`. `hand_off` asks a person for what an agent cannot do.
 The emulator's frame is RGBA in a file of exactly its size, top row first (the proto's comment says bottom up, and
 a frame compared with `screencap` says not). Asked with no size or into a larger file, it answers every frame and writes
 nothing. A guest that rotates draws sideways in a frame of the same shape, so the picture is stood up in the
-viewer, with no new session. An emulator booted by `simulator` gets `-grpc <free port> -grpc-use-token` beside `APPDYNO_EMULATOR_ARGS` (unless
+viewer, with no new session. A simulator does the same in its surface, with no callback: its read helper says how the app in front is drawn, four times a second, so an app that does not turn stays upright on a turned device, and a touch is turned back on its way down. An emulator booted by `simulator` gets `-grpc <free port> -grpc-use-token` beside `APPDYNO_EMULATOR_ARGS` (unless
 those name `-grpc`). The port is the emulator's own, as adb's is adb's. The picture's file is `0600` in the state
 directory and goes with the session.
 
@@ -37,22 +37,22 @@ directory and goes with the session.
 `NEEDS` in `packages/core/src/mirror/need.ts`, used by the window's banner, `mirror status` and a refusal, each with
 its words and its fix. A wait asks again each second and goes on by itself when it clears.
 
-| what happens                  | what it does                                                                                                                           | tested by                                                 |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| device gone mid-stream        | last picture dimmed, banner, `waiting not-connected`; back: live again                                                                 | an emulator killed under its stream; hand-run for a cable |
-| simulator shut down           | `waiting simulator-off`; booted: live again                                                                                            | a simulator shut down under its window                    |
-| screen off                    | `waiting asleep`, and on when a person wakes it                                                                                        | emulators and the Xiaomi                                  |
-| encoder fails                 | restart 3 times, 500 ms apart; smaller; the other codec; software; then `stopped` with the reason                                      | agent unit; `failFirst` on emulators and the Xiaomi       |
-| decoder fails                 | a keyframe is asked for and the picture held; three in a row, a new stream; then `stopped`                                             | viewer self test; session unit                            |
-| viewer dies                   | restarted at once, same zoom; twice in a minute, `stopped` with what it said                                                           | SIGKILL on each kind; session unit                        |
-| parent dies                   | the viewer's stdin ends, so it ends; the agent sees that and releases the display and codec                                            | SIGKILL of `appdyno mirror`, then `dumpsys`               |
-| agent stops                   | `reconnecting`, and the agent starts by the path every driver uses                                                                     | `shutdown` on emulators and the Xiaomi                    |
-| Mac sleeps, wakes             | the stream ends, and comes back on wake                                                                                                | session unit; hand-run                                    |
-| window covered                | frames are read and not decoded or drawn; back with a keyframe                                                                         | viewer self test                                          |
-| rotation, fold                | a new size with no new session: the agent's encoder restarts, an emulator's picture is stood up. A simulator stays sideways: see below | emulators; a simulator's by a suite                       |
-| second window on a device     | the first comes forward, and the refusal says who has it                                                                               | parent unit; two runs on the Xiaomi                       |
-| several devices               | one viewer each, `--max`; one failing leaves the others                                                                                | parent unit; three devices with one killed                |
-| no compiler, no window server | `stopped` by its need, before anything opens                                                                                           | session unit                                              |
+| what happens                  | what it does                                                                                                             | tested by                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| device gone mid-stream        | last picture dimmed, banner, `waiting not-connected`; back: live again                                                   | an emulator killed under its stream; hand-run for a cable |
+| simulator shut down           | `waiting simulator-off`; booted: live again                                                                              | a simulator shut down under its window                    |
+| screen off                    | `waiting asleep`, and on when a person wakes it                                                                          | emulators and the Xiaomi                                  |
+| encoder fails                 | restart 3 times, 500 ms apart; smaller; the other codec; software; then `stopped` with the reason                        | agent unit; `failFirst` on emulators and the Xiaomi       |
+| decoder fails                 | a keyframe is asked for and the picture held; three in a row, a new stream; then `stopped`                               | viewer self test; session unit                            |
+| viewer dies                   | restarted at once, same zoom; twice in a minute, `stopped` with what it said                                             | SIGKILL on each kind; session unit                        |
+| parent dies                   | the viewer's stdin ends, so it ends; the agent sees that and releases the display and codec                              | SIGKILL of `appdyno mirror`, then `dumpsys`               |
+| agent stops                   | `reconnecting`, and the agent starts by the path every driver uses                                                       | `shutdown` on emulators and the Xiaomi                    |
+| Mac sleeps, wakes             | the stream ends, and comes back on wake                                                                                  | session unit; hand-run                                    |
+| window covered                | frames are read and not decoded or drawn; back with a keyframe                                                           | viewer self test                                          |
+| rotation, fold                | a new size with no new session: the agent's encoder restarts, an emulator's picture is stood up, and so is a simulator's | emulators; a simulator's by a suite, touches included     |
+| second window on a device     | the first comes forward, and the refusal says who has it                                                                 | parent unit; two runs on the Xiaomi                       |
+| several devices               | one viewer each, `--max`; one failing leaves the others                                                                  | parent unit; three devices with one killed                |
+| no compiler, no window server | `stopped` by its need, before anything opens                                                                             | session unit                                              |
 
 ## Sharing a device
 
@@ -87,7 +87,7 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 
 ## Stated limits
 
-- A simulator that turns draws sideways in a surface of the same shape, and no callback says so: its window shows that, and a touch still lands where the picture shows it. `simctl`'s own screenshot stands it up, by what means was not found. A fold control was not found either.
+- A simulator's fold: no control that folds one was found, so a new surface at a fold is untested.
 - The window does not yet show a secure Android window's content, as no shell can have it from Android 12: it is black, with the status bar still there. Not run on Android 12 and 13, or on 10, for which no image is here.
 - Input by `key`: Android has only the keys the agent has (no arrows). On a simulator a keyboard's characters go as US keys; any other text by its pasteboard and command V.
 

@@ -13,7 +13,13 @@ export type MirrorCheck =
 
 /** What the viewer attaches to. A kind of device adds its kind here, and a source in the viewer. */
 export type MirrorSource =
-  | { kind: 'surface'; udid: string; developerDir?: string }
+  | {
+      kind: 'surface';
+      udid: string;
+      developerDir?: string;
+      /** Quarter turns, counterclockwise, that stand its picture up. */
+      turns?: number;
+    }
   | {
       kind: 'adb';
       serial: string;
