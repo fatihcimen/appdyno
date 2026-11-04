@@ -33,10 +33,11 @@ const everyOp = (
   steps: Steps,
   report: ReturnType<typeof reportFor>,
   runner: FlowRunner,
+  tools: () => Record<string, Op>,
 ) => [
   ...deviceOps(ctx, answers),
   ...readOps(ctx, answers, steps),
-  ...actOps(ctx, answers, steps),
+  ...actOps(ctx, answers, steps, tools),
   ...appOps(ctx, answers, steps),
   ...controlOps(ctx, answers),
   ...settingOps(ctx, answers),
@@ -59,13 +60,17 @@ function build(ctx: ServerContext) {
   const recorder = flowRecorder(ctx);
   const steps = stepsFor(ctx, answers, recorder.through);
   let raw: Record<string, Op> = {};
+  let ops: Record<string, Op> = {};
   const runner = flowRunner(ctx, () => raw, answers, steps);
   const report = reportFor(ctx);
   const activity = activityFor(ctx);
   raw = Object.fromEntries(
-    everyOp(ctx, answers, steps, report, runner).map((op) => [op.name, report.wrap(activity(op))]),
+    everyOp(ctx, answers, steps, report, runner, () => ops).map((op) => [
+      op.name,
+      report.wrap(activity(op)),
+    ]),
   );
-  const ops = Object.fromEntries(Object.values(raw).map((op) => [op.name, recorder.wrap(op)]));
+  ops = Object.fromEntries(Object.values(raw).map((op) => [op.name, recorder.wrap(op)]));
   return { ops, runner };
 }
 

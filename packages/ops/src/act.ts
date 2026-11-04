@@ -1,6 +1,6 @@
 import { alertAnswer, reportProgress, throwIfCancelled, type ActOptions } from '@appdyno/core';
 import { z } from 'zod';
-import { SETTLE, type Answers } from './answers.js';
+import { SETTLE, type Answers, type ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
 import { ActionOut } from './schemas.js';
 import { pinchPaths } from './gesture-paths.js';
@@ -16,12 +16,35 @@ import {
   TypeStep,
 } from './step-schemas.js';
 import type { Steps } from './steps.js';
-import { ACT, defineOp, READ, refusedAction, reply, ToolError } from './tool.js';
+import {
+  ACT,
+  defineOp,
+  READ,
+  refusedAction,
+  reply,
+  ToolError,
+  type Block,
+  type Op,
+  type ToolResult,
+} from './tool.js';
 
-// measured on a loaded Mac: 20 took 10 s on an emulator, 19 s on a simulator; 30 took up to 56 s, near a client's usual 60 s
-const MAX_STEPS = 20;
+// 30 took 13 s on an emulator and 21 s on a simulator at load 12, and up to 56 s on a loaded Mac, near a client's usual 60 s: each step says its progress
+const MAX_STEPS = 30;
 const PINCH_MS = 400;
 const KEYBOARD_GONE_MS = 1_500;
+
+/** What cannot be a step: `steps` in itself, and a flow's own sequence. */
+const NOT_A_STEP = new Set(['steps', 'flow']);
+
+/** One step, whole before anything acts: a touch of this file, or another tool's call. */
+type Planned =
+  | { st: Step; read?: ReadMode; op?: undefined }
+  | { op: Op; args: Record<string, unknown>; st?: undefined };
+
+const StepRead = z.enum(['diff', 'full', 'none']).optional();
+
+const answerText = (r: ToolResult) =>
+  r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n');
 
 /** Whether a step looks at the screen, so that the step before it must have settled. */
 const readsScreen = (st: Step | undefined) =>
@@ -36,7 +59,26 @@ export function actOps(
   ctx: ServerContext,
   { act, summary, header, show, clean, afterChange }: Answers,
   { one, step, windowSize, checkNow }: Steps,
+  tools: () => Record<string, Op>,
 ) {
+  const planned = (x: { action: string } & Record<string, unknown>, i: number): Planned => {
+    const { action, ...args } = x;
+    const op = tools()[action];
+    const fail = (why: string) => new ToolError(`step ${i + 1}: ${why}`, 'INVALID_ARGUMENT');
+    if (Step.options.some((o) => o.shape.action.value === action)) {
+      const { read: own, ...rest } = x;
+      const reads = StepRead.safeParse(own);
+      if (!reads.success) throw fail(z.prettifyError(reads.error));
+      const p = Step.safeParse(rest);
+      if (!p.success) throw fail(z.prettifyError(p.error));
+      return { st: p.data, ...(reads.data && { read: reads.data }) };
+    }
+    if (!op || NOT_A_STEP.has(action)) throw fail(`no step ${action}`);
+    const p = op.input.safeParse(args);
+    if (!p.success) throw fail(z.prettifyError(p.error));
+    return { op, args: p.data as Record<string, unknown> };
+  };
+
   return [
     defineOp({
       name: 'tap',
@@ -187,7 +229,7 @@ export function actOps(
     defineOp({
       name: 'steps',
       title: 'Steps',
-      description: `A sequence in one call, also across screens: at most ${MAX_STEPS}, each { action, ...the arguments of the tool of that name }: tap, swipe, type_text, press_key, wait_for, assert, scroll_to; double_tap, long_press, drag as gesture's. A selector or ref is looked for at its step. Stops at the first failure, saying which and why. One read at the end.`,
+      description: `A sequence in one call, also across screens: at most ${MAX_STEPS}, each { action, ...the arguments of the tool of that name }; any tool but steps and flow, and double_tap, long_press, drag as gesture's. A selector or ref is looked for at its step. Stops at the first failure, saying which and why. Each step's answer comes back, images too; a touch reads the screen only with read on its step, or last.`,
       input: z
         .object({
           steps: z
@@ -200,25 +242,36 @@ export function actOps(
       output: ActionOut,
       annotations: ACT,
       run: async ({ steps: raw, read }) => {
-        const steps = raw.map((x, i) => {
-          const p = Step.safeParse(x);
-          if (!p.success)
-            throw new ToolError(`step ${i + 1}: ${z.prettifyError(p.error)}`, 'INVALID_ARGUMENT');
-          return p.data;
-        });
-        const s = await ctx.session();
+        const plan = raw.map(planned);
+        let s = await ctx.session();
         const done: string[] = [];
-        for (const [i, st] of steps.entries()) {
-          const last = i === steps.length - 1;
-          // a refusal here, not at the op's end: the catch below says which step it was
-          const attempt = (o: ActOptions) => step(s, st, o, true).catch(refusedAction);
+        const images: Block[] = [];
+        let ending: ToolResult<ActionOut> | undefined;
+        for (const [i, p] of plan.entries()) {
+          const last = i === plan.length - 1;
+          const name = p.op?.name ?? p.st!.action;
           try {
             throwIfCancelled('steps');
-            reportProgress(`step ${i + 1} of ${steps.length}: ${st.action}`);
-            if (!last) {
+            reportProgress(`step ${i + 1} of ${plan.length}: ${name}`);
+            if (p.op) {
+              // an image asked for at a step is that step's evidence, even of a screen that has not changed
+              if (name === 'screenshot') s.shot = undefined;
+              const r = await p.op.handler(p.args);
+              done.push(`${i + 1}. ${answerText(r)}`);
+              images.push(...r.blocks.filter((b) => b.type === 'image'));
+              // it may have selected another device
+              s = await ctx.session();
+              continue;
+            }
+            const st = p.st;
+            // a refusal here, not at the op's end: the catch below says which step it was
+            const attempt = (o: ActOptions) => step(s, st, o, true).catch(refusedAction);
+            const reads = p.read ?? (last ? read : undefined);
+            if (!reads) {
               // only typing into a field stays on its screen: a key after a tap that opened a
               // screen must reach that screen, not the transition
-              const stays = st.action === 'type_text' && !st.submit && !readsScreen(steps[i + 1]);
+              const stays =
+                st.action === 'type_text' && !st.submit && !readsScreen(plan[i + 1]?.st);
               const opts = !stays
                 ? ({
                     settle: SETTLE,
@@ -231,17 +284,19 @@ export function actOps(
               done.push(`${i + 1}. ${x.done}`);
               continue;
             }
-            let lastDone = '';
-            return await act(
+            let stepDone = '';
+            const r = await act(
               s,
-              read,
+              reads,
               async (o) => {
                 const x = await attempt(o);
-                lastDone = x.done;
+                stepDone = x.done;
                 return x.r;
               },
-              () => [...done, `${i + 1}. ${lastDone}`].join('\n'),
+              () => stepDone,
             );
+            done.push(`${i + 1}. ${answerText(r)}`);
+            if (last) ending = r;
           } catch (e) {
             if (!(e instanceof ToolError)) throw e;
             const screen = await s.read().catch(() => undefined);
@@ -249,7 +304,7 @@ export function actOps(
             throw new ToolError(
               [
                 ...done,
-                `${i + 1}. ${st.action} failed, the rest were not run: ${e.message}`,
+                `${i + 1}. ${name} failed, the rest were not run: ${e.message}`,
                 ...(screen ? [header(s, screen)] : []),
               ].join('\n'),
               e.code,
@@ -258,7 +313,8 @@ export function actOps(
             );
           }
         }
-        return reply(done.join('\n'), summary(done.join('\n')));
+        const all = done.join('\n');
+        return reply(all, { ...(ending?.data ?? summary('')), done: clean(all) }, images);
       },
     }),
     defineOp({

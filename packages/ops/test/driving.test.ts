@@ -18,8 +18,12 @@ import { keyName, keyPress } from '../src/step-schemas.js';
 import { FakeDevice, SCREENS, WithKeyboard } from './fake-device.js';
 import { linkedClient } from './helpers.js';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- each test knows its tool's answer
-type Result = { isError?: boolean; content: { text?: string }[]; structuredContent?: any };
+type Result = {
+  isError?: boolean;
+  content: { type?: string; text?: string }[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each test knows its tool's answer
+  structuredContent?: any;
+};
 
 async function connect(
   device: Device,
@@ -46,6 +50,7 @@ async function connect(
       error: r.isError === true,
       text: r.content.map((c) => c.text ?? '').join('\n'),
       data: r.structuredContent,
+      images: r.content.filter((c) => c.type === 'image').length,
     };
   };
   return { call, ctx };
@@ -222,9 +227,76 @@ describe('steps across screens', () => {
     expect(bad.text).toContain('step 2');
     expect(act(d)).toEqual([]);
     const long = await call('steps', {
-      steps: Array(21).fill({ action: 'press_key', key: 'tab' }),
+      steps: Array(31).fill({ action: 'press_key', key: 'tab' }),
     });
     expect(long.error).toBe(true);
+    const most = await call('steps', {
+      steps: Array(30).fill({ action: 'press_key', key: 'tab' }),
+    });
+    expect(most.error).toBe(false);
+    expect(most.text.split('\n')).toContain('30. pressed tab');
+  });
+
+  it('takes any tool, with what each answers, images too', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    const r = await call('steps', {
+      steps: [
+        { action: 'find', text: 'Form' },
+        { action: 'screenshot' },
+        { action: 'tap', selector: { text: 'Form' } },
+        { action: 'screenshot' },
+        { action: 'device_info' },
+      ],
+    });
+    expect(r.error).toBe(false);
+    const lines = r.text.split('\n');
+    expect(lines[0]).toMatch(/^1\. @\w+ \w+ "Form"/);
+    expect(lines[1]).toMatch(/^2\. image 460x1024 px/);
+    expect(lines[2]).toMatch(/^3\. tapped @\w+ "Form"/);
+    expect(lines[3]).toMatch(/^4\. image /);
+    expect(lines.join('\n')).toContain('5. ');
+    expect(r.images).toBe(2);
+  });
+
+  it('gives an image at every step that asks, unchanged or not', async () => {
+    const { call } = await connect(new FakeDevice());
+    const r = await call('steps', {
+      steps: [{ action: 'screenshot' }, { action: 'screenshot' }],
+    });
+    expect(r.error).toBe(false);
+    expect(r.text).toContain('2. image');
+  });
+
+  it('reads a touch at its own step when the step says so, and refuses what is no step', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    const r = await call('steps', {
+      steps: [
+        { action: 'tap', selector: { text: 'Form' }, read: 'full' },
+        { action: 'press_key', key: 'tab' },
+      ],
+    });
+    expect(r.text.split('\n')[1]).toContain('foreground: dev.app');
+    for (const action of ['steps', 'flow', 'nothing']) {
+      const no = await call('steps', { steps: [{ action }] });
+      expect(no.error).toBe(true);
+      expect(no.text).toContain(`no step ${action}`);
+    }
+    const wrong = await call('steps', { steps: [{ action: 'find', nope: 1 }] });
+    expect(wrong.error).toBe(true);
+    expect(wrong.text).toContain('step 1');
+    const read = await call('steps', { steps: [{ action: 'tap', x: 1, y: 1, read: 'much' }] });
+    expect(read.text).toContain('step 1');
+  });
+
+  it('says which step failed, with what the others answered', async () => {
+    const { call } = await connect(new FakeDevice());
+    const r = await call('steps', {
+      steps: [{ action: 'device_info' }, { action: 'app', action2: 1 }],
+    });
+    expect(r.error).toBe(true);
+    expect(r.text).toContain('step 2');
   });
 });
 
