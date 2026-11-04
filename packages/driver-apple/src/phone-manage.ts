@@ -1,6 +1,7 @@
 import type {
   AppManager,
   AppEntry,
+  BiometricAnswer,
   LaunchOptions,
   DeviceSettings,
   SettingName,
@@ -15,6 +16,7 @@ const PHONE_CANNOT = {
   permission: 'no tool grants an iPhone app a permission: answer its prompt with the alert tool',
   push: 'a push to an iPhone needs Apple push credentials, which this tool does not hold',
   biometric: 'an iPhone takes biometrics only from a person',
+  keychain: "an iPhone's keychain is emptied only by erasing it",
   fold: 'an iPhone folds only in a hand',
   call: 'an iPhone takes calls only from the network',
   sms: 'an iPhone takes messages only from the network',
@@ -120,8 +122,12 @@ export class PhoneSettings implements DeviceSettings {
     throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.push);
   }
 
-  async biometric(): Promise<void> {
+  async biometric(_answer: BiometricAnswer): Promise<void> {
     throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.biometric);
+  }
+
+  async resetKeychain(): Promise<number> {
+    throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.keychain);
   }
 
   async fold(): Promise<void> {

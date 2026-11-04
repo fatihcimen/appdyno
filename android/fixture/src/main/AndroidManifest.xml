@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -40,6 +41,7 @@
         <activity android:name=".CpuActivity" />
         <activity android:name=".LeakActivity" />
         <activity android:name=".LateActivity" />
+        <activity android:name=".BiometricActivity" />
         <activity android:name=".GesturesActivity" />
         <activity android:name=".A11yActivity" />
         <activity android:name=".CodeActivity" android:windowSoftInputMode="stateVisible" />

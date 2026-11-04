@@ -1,5 +1,7 @@
 import Combine
 import CoreLocation
+import LocalAuthentication
+import Security
 import SwiftUI
 import UIKit
 import WebKit
@@ -36,6 +38,9 @@ struct FixtureApp: App {
         case "list_heavy": CostListScreen(drawMs: 40)
         case "list_stall": CostListScreen(stallMs: 1000)
         case "dialog": DialogScreen()
+        case "keychain": KeychainScreen()
+        case "crash": CrashScreen()
+        case "biometric": BiometricScreen()
         case "ticker": TickerScreen()
         case "delayed": DelayedScreen()
         case "permission": PermissionScreen()
@@ -189,6 +194,72 @@ struct ListScreen: View {
             }
         }
         .accessibilityIdentifier("list")
+    }
+}
+
+/// A crash in a function of its own that the optimizer keeps: what a symbolicated report must name.
+@inline(never) func fixtureCrash(_ why: String) -> Never { fatalError(why) }
+
+struct CrashScreen: View {
+    var body: some View {
+        Button("Crash") { fixtureCrash("fixture crash") }.accessibilityIdentifier("crash")
+    }
+}
+
+/** One item in the keychain, saved and read: what `device_setting keychain` empties. */
+struct KeychainScreen: View {
+    @State private var result = "Not read"
+    private let item: [String: Any] = [
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrService as String: "dev.appdyno.fixture",
+        kSecAttrAccount as String: "fixture",
+    ]
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Button("Save") {
+                SecItemDelete(item as CFDictionary)
+                var add = item
+                add[kSecValueData as String] = Data("kept".utf8)
+                let status = SecItemAdd(add as CFDictionary, nil)
+                result = status == errSecSuccess ? "Saved" : "Error \(status)"
+            }.accessibilityIdentifier("save")
+            Button("Read") {
+                var read = item
+                read[kSecReturnData as String] = true
+                var found: AnyObject?
+                let status = SecItemCopyMatching(read as CFDictionary, &found)
+                result = status == errSecSuccess
+                    ? "Found" : status == errSecItemNotFound ? "Not found" : "Error \(status)"
+            }.accessibilityIdentifier("read")
+            Text(result).accessibilityIdentifier("result")
+            Spacer()
+        }.padding()
+    }
+}
+
+/** Asks for Face ID or Touch ID and says what came back: what `device_setting biometric` answers. */
+struct BiometricScreen: View {
+    @State private var result = "Not asked"
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Button("Authenticate") {
+                let context = LAContext()
+                context.evaluatePolicy(
+                    .deviceOwnerAuthenticationWithBiometrics, localizedReason: "Fixture sign-in"
+                ) { ok, error in
+                    DispatchQueue.main.async {
+                        let code = (error as? LAError)?.code
+                        result = ok
+                            ? "Authenticated" : code == .authenticationFailed
+                            ? "Not recognized" : "Error: \(error?.localizedDescription ?? "")"
+                    }
+                }
+            }.accessibilityIdentifier("authenticate")
+            Text(result).accessibilityIdentifier("result")
+            Spacer()
+        }.padding()
     }
 }
 

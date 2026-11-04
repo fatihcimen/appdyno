@@ -839,6 +839,7 @@ describe('device conditions', () => {
     biometric = async () => {
       throw new DeviceError('UNSUPPORTED', 'simulator only');
     };
+    resetKeychain = async () => 3;
     events: unknown[] = [];
     fold = async (closed: boolean) => void this.events.push(['fold', closed]);
     call = async (number: string, end: boolean) => void this.events.push(['call', number, end]);
@@ -930,6 +931,9 @@ describe('device conditions', () => {
     const b = await call('device_setting', { name: 'biometric', value: 'match' });
     expect(b.data.code).toBe('UNSUPPORTED');
     expect((await call('device_setting', { name: 'biometric', value: 'x' })).error).toBe(true);
+    const keychain = await call('device_setting', { name: 'keychain', value: 'reset' });
+    expect(keychain.text).toBe('the keychain is empty: it held 3 items');
+    expect((await call('device_setting', { name: 'keychain' })).text).toMatch(/needs value: reset/);
   });
 });
 

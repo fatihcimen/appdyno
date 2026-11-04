@@ -59,9 +59,15 @@ export const SETTINGS = [
   'network',
   'proxy',
   'battery',
+  'airplane',
+  'wifi',
+  'mobile_data',
 ] as const;
 
 export type SettingName = (typeof SETTINGS)[number];
+
+/** `enroll`: a fingerprint or a face is known to the device; the others answer a request for one. */
+export type BiometricAnswer = 'match' | 'nomatch' | 'enroll';
 
 /**
  * The device's conditions. `get` answers what `set` takes, so a change can be put back; `app` is the app
@@ -73,7 +79,9 @@ export interface DeviceSettings {
   get(name: SettingName, app?: string): Promise<string>;
   set(name: SettingName, value: string, app?: string): Promise<void>;
   push(app: string | undefined, title: string, body: string): Promise<void>;
-  biometric(match: boolean): Promise<void>;
+  biometric(answer: BiometricAnswer): Promise<void>;
+  /** Empties a simulator's keychain, and answers how many items it held. */
+  resetKeychain(): Promise<number>;
   /** A foldable's pose. */
   fold(closed: boolean): Promise<void>;
   /** A call coming in from `number`, or that call ended. */

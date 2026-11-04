@@ -6,6 +6,7 @@ import {
   type AppEntry,
   run,
   type LaunchOptions,
+  type BiometricAnswer,
   type DeviceSettings,
   type SettingName,
   type VirtualDevices,
@@ -114,7 +115,13 @@ const SIM_CANNOT = {
   fold: 'simctl has no fold pose (its ui and io options name none)',
   call: 'a simulator has no telephony: it cannot take a call',
   sms: 'a simulator has no telephony: it cannot take an SMS',
+  radio: "a simulator has no radios: it uses the Mac's network",
 } as const;
+
+/** The rows of the keychain's tables that are not the system's own. */
+const APP_ITEMS = `select count(*) from (${['genp', 'inet', 'cert', 'keys']
+  .map((t) => `select agrp from ${t}`)
+  .join(' union all ')}) where agrp != 'apple' and agrp not like 'com.apple.%'`;
 
 export class SimulatorSettings implements DeviceSettings {
   constructor(
@@ -157,6 +164,10 @@ export class SimulatorSettings implements DeviceSettings {
           'UNSUPPORTED',
           'a simulator has no battery to set: simctl status_bar only draws one',
         );
+      case 'airplane':
+      case 'wifi':
+      case 'mobile_data':
+        throw new DeviceError('UNSUPPORTED', SIM_CANNOT.radio);
     }
   }
 
@@ -219,12 +230,29 @@ export class SimulatorSettings implements DeviceSettings {
   }
 
   /** Enrols if needed and answers the next biometric request: Face ID and Touch ID, whichever it has. */
-  async biometric(match: boolean) {
+  async biometric(answer: BiometricAnswer) {
     await this.spawn('notifyutil', '-s', 'com.apple.BiometricKit.enrollmentChanged', '1');
     await this.spawn('notifyutil', '-p', 'com.apple.BiometricKit.enrollmentChanged');
-    const result = match ? 'match' : 'nomatch';
-    await this.spawn('notifyutil', '-p', `com.apple.BiometricKit_Sim.pearl.${result}`);
-    await this.spawn('notifyutil', '-p', `com.apple.BiometricKit_Sim.fingerTouch.${result}`);
+    if (answer === 'enroll') return;
+    await this.spawn('notifyutil', '-p', `com.apple.BiometricKit_Sim.pearl.${answer}`);
+    await this.spawn('notifyutil', '-p', `com.apple.BiometricKit_Sim.fingerTouch.${answer}`);
+  }
+
+  /** What apps hold in the simulator's store: a reset leaves the system's own rows, and says nothing itself. */
+  private async keychainItems() {
+    const home = (await this.simctl.exec(['getenv', this.udid, 'HOME'])).trim();
+    const db = join(home, 'Library/Keychains/keychain-2-debug.db');
+    const { stdout } = await run('sqlite3', ['-readonly', db, APP_ITEMS]);
+    return Number(stdout.trim());
+  }
+
+  async resetKeychain() {
+    const held = await this.keychainItems();
+    await this.simctl.exec(['keychain', this.udid, 'reset']);
+    const left = await this.keychainItems();
+    if (left > 0)
+      throw new DeviceError('INTERNAL', `apps still hold ${left} keychain items after a reset`);
+    return held;
   }
 
   async fold(): Promise<void> {

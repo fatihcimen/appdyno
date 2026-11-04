@@ -6,9 +6,12 @@ import { inCall, inputSchemaOf, ToolError, text, type Op } from '@appdyno/ops';
 /** How often a call with a progress token says it is still working. */
 const BEAT_MS = 5_000;
 
+/** What many tools would each say of an argument: the server's instructions say it once. */
+const IN_INSTRUCTIONS = new Set(['default: the selected app', 'kept under this name']);
+
 /**
  * A JSON schema without what every tool would repeat: arguments are checked strictly when they arrive, and
- * the default of `read` and of `app` are in the server's instructions.
+ * the default of `read` is in the server's instructions.
  */
 function slim(schema: unknown): unknown {
   if (Array.isArray(schema)) return schema.map(slim);
@@ -20,7 +23,7 @@ function slim(schema: unknown): unknown {
           k !== '$schema' &&
           !(k === 'additionalProperties' && v === false) &&
           !(k === 'default' && v === 'diff') &&
-          !(k === 'description' && v === 'default: the selected app'),
+          !(k === 'description' && typeof v === 'string' && IN_INSTRUCTIONS.has(v)),
       )
       .map(([k, v]) => [k, slim(v)]),
   );

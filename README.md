@@ -66,26 +66,34 @@ wait on the device, so the tree crosses the wire only when the screen changed.
 `gesture` holds `double_tap`, `long_press`, `drag`, `pinch` and a free `plan`. `press_key` holds the
 hardware buttons. `app` holds `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke` and
 `launch` with arguments and environment. `device_setting` holds `dark_mode`, `text_size`,
-`reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `push`, `biometric`, `fold`, `call` and `sms`.
+`reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `push`, `biometric`, `fold`, `call`, `sms` and `keychain`.
 
 What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 
-| what                       | Android                    | simulator                 | iPhone                      |
-| -------------------------- | -------------------------- | ------------------------- | --------------------------- |
-| volume buttons             | yes                        | yes (no way to read back) | the runner                  |
-| clear an app's data        | `pm clear`                 | empties its container     | no: uninstall and install   |
-| grant, revoke a permission | `pm grant`, `pm revoke`    | `simctl privacy`          | no: answer with `alert`     |
-| launch environment         | no: args are intent extras | yes                       | yes                         |
-| dark mode, text, motion    | yes                        | yes                       | `devicectl`                 |
-| animations                 | yes                        | no: use `reduce_motion`   | no                          |
-| locale                     | per app, API 33+           | whole simulator           | no                          |
-| slow network               | emulator only              | no                        | no                          |
-| push                       | a shell notification       | to the app                | no: needs Apple credentials |
-| biometrics                 | no                         | yes                       | no                          |
-| fold pose                  | a foldable emulator        | no: `simctl` has none     | no                          |
-| incoming call, SMS         | emulator only              | no: no telephony          | no                          |
-| battery level              | yes                        | no: it only draws one     | no                          |
-| proxy                      | yes, put back              | follows the Mac's         | no: its Wi-Fi settings      |
+| what                         | Android                    | simulator                    | iPhone                      |
+| ---------------------------- | -------------------------- | ---------------------------- | --------------------------- |
+| volume buttons               | yes                        | yes (no way to read back)    | the runner                  |
+| clear an app's data          | `pm clear`                 | empties its container        | no: uninstall and install   |
+| grant, revoke a permission   | `pm grant`, `pm revoke`    | `simctl privacy`             | no: answer with `alert`     |
+| launch environment           | no: args are intent extras | yes                          | yes                         |
+| dark mode, text, motion      | yes                        | yes                          | `devicectl`                 |
+| animations                   | yes                        | no: use `reduce_motion`      | no                          |
+| locale                       | per app, API 33+           | whole simulator              | no                          |
+| slow network                 | emulator only              | no                           | no                          |
+| push                         | a shell notification       | to the app                   | no: needs Apple credentials |
+| biometrics                   | an emulator's fingerprint  | yes                          | no                          |
+| airplane, Wi-Fi, mobile data | yes, read back             | no: it has the Mac's network | no                          |
+| keychain                     | no: Android has none       | emptied, counted             | no                          |
+| fold pose                    | a foldable emulator        | no: `simctl` has none        | no                          |
+| incoming call, SMS           | emulator only              | no: no telephony             | no                          |
+| battery level                | yes                        | no: it only draws one        | no                          |
+| proxy                        | yes, put back              | follows the Mac's            | no: its Wi-Fi settings      |
+
+A radio is done when the device reads as asked, within 10 s: Wi-Fi by the state of the radio, as its setting changes first, and airplane mode and mobile data by the user's switch, so that a restore during airplane mode brings back what they chose. A device that does not change is refused with what it said. A device reached over its network (`adb connect`, wireless debugging) refuses `wifi off` and `airplane on`, as nothing could reach it to put them back. On an emulator, by `test-device/settings.test.ts`, data off or airplane mode on leaves the device with no way to this Mac, and `restore` brings it back. On a Xiaomi with Android 16 all three took effect and read back in 234 to 1,127 ms, its saved networks untouched; it rejoined its Wi-Fi a few seconds after the switch read on, as a switch says nothing of a connection.
+
+`biometric` on an emulator touches its sensor and is done only when the fingerprint service counted the touch: `match`, `nomatch`, each refused when no app is asking. A fresh emulator has no fingerprint: set a screen lock, open Settings' fingerprint enrolment, and `enroll` touches until the service holds one. A simulator's `enroll` turns Face ID or Touch ID on. An app's prompt on Android is the system's and holds the focus: it reads as elements like any screen, though a screenshot of it is blank, as it is a secure window.
+
+`keychain` `reset` empties a simulator's keychain, and says how many items apps held, from the store's own rows, which also prove it empty after. The system's own rows stay and are not counted. It is one-shot: nothing brings them back.
 
 Changing a condition writes the old value down first. It goes back when the session ends, or with
 `device_setting` name `restore`. A session that died leaves the file, and the next one on that device

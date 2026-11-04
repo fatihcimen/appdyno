@@ -14,6 +14,16 @@ it('keeps the tool catalog within its budget', async () => {
   expect(tools).toHaveLength(Object.keys(opsFor(ctx)).length);
   expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(25_000);
   expect(JSON.stringify(tools)).not.toMatch(/\$schema|taskSupport|"additionalProperties":false/);
+  // what the server's instructions say once, and a test that sees it if the words on the tools change
+  expect(JSON.stringify(tools)).not.toMatch(
+    /"description":"(default: the selected app|kept under this name)"/,
+  );
+  const flag = (op: string, name: string) =>
+    (opsFor(ctx)[op]!.input.toJSONSchema().properties as Record<string, { description?: string }>)[
+      name
+    ]!.description;
+  expect(flag('crashes', 'app')).toBe('default: the selected app');
+  expect(flag('perf_snapshot', 'scenario')).toBe('kept under this name');
   expect(tools.every((t) => t.inputSchema.type === 'object')).toBe(true);
   expect(
     tools.filter((t) => 'device' in (t.inputSchema.properties ?? {})).map((t) => t.name),

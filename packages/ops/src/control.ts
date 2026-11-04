@@ -23,6 +23,8 @@ import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 const NO_APP = 'give app (or select one with use_device)';
 const PHONE_NUMBER = /^\+?\d{3,20}$/;
 const DEFAULT_SENDER = '5551234';
+const BIOMETRIC = ['match', 'nomatch', 'enroll'] as const;
+const ONE_SHOT = ['restore', 'push', 'biometric', 'fold', 'call', 'sms', 'keychain'] as const;
 
 /** The conditions this tool changed on a device and what to put back. Survives its process. */
 type Changes = Record<string, { was: string; app?: string }>;
@@ -331,10 +333,10 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
       name: 'device_setting',
       title: 'Device conditions',
       description:
-        "No value reads one. dark_mode, reduce_motion, animations: on, off; text_size: 1.3, iOS large; locale: tr-TR; network (emulator): slow, full; proxy: host:port, none; battery: 0-100. Put back at the session's end or by restore. One-shot: push (value; title), biometric (match, nomatch), fold (open, closed), call (number; end number), sms (value; title: number).",
+        'No value reads one. dark_mode, reduce_motion, animations, airplane, wifi, mobile_data: on, off; text_size: 1.3, iOS large; locale: tr-TR; network: slow, full; proxy: host:port, none; battery: 0-100. Put back at the end or by restore. One-shot: push (value; title), biometric (match, nomatch, enroll), fold (open, closed), call (number; end number), sms (value; title: number), keychain (reset).',
       input: z
         .object({
-          name: z.enum([...SETTINGS, 'restore', 'push', 'biometric', 'fold', 'call', 'sms']),
+          name: z.enum([...SETTINGS, ...ONE_SHOT]),
           value: z.string().max(500).optional(),
           title: z.string().max(200).optional(),
           app: z.string().max(200).optional(),
@@ -362,10 +364,20 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
           return reply(`posted a notification`, { done: 'posted a notification' });
         }
         if (name === 'biometric') {
-          if (value !== 'match' && value !== 'nomatch')
-            throw new ToolError('biometric needs value: match or nomatch', 'INVALID_ARGUMENT');
-          await settings.biometric(value === 'match');
+          const answer = BIOMETRIC.find((b) => b === value);
+          if (!answer)
+            throw new ToolError(
+              `biometric needs value: ${BIOMETRIC.join(', ')}`,
+              'INVALID_ARGUMENT',
+            );
+          await settings.biometric(answer);
           return reply(`biometric: ${value}`, { done: `biometric: ${value}` });
+        }
+        if (name === 'keychain') {
+          if (value !== 'reset')
+            throw new ToolError('keychain needs value: reset', 'INVALID_ARGUMENT');
+          const t = `the keychain is empty: it held ${await settings.resetKeychain()} items`;
+          return reply(t, { done: t });
         }
         if (name === 'fold') {
           if (value !== 'open' && value !== 'closed')

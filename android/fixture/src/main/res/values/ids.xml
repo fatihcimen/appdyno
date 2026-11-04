@@ -8,6 +8,7 @@
     <item name="password_input" type="id" />
     <item name="submit" type="id" />
     <item name="result" type="id" />
+    <item name="authenticate" type="id" />
     <item name="list" type="id" />
     <item name="row_name" type="id" />
     <item name="row_count" type="id" />

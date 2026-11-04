@@ -100,6 +100,7 @@ private val LINKED = mapOf(
     "gestures" to GesturesActivity::class.java,
     "code" to CodeActivity::class.java,
     "a11y" to A11yActivity::class.java,
+    "biometric" to BiometricActivity::class.java,
 )
 
 /** A number a test wrote into the app's files, as a known cost; absent, none. */
@@ -806,6 +807,41 @@ class LeakActivity : Activity() {
  * Reactions that come late with nothing in between: a tap adds a line after the button's delay. A settle
  * that ends before the delay misses the change.
  */
+/** Asks for a fingerprint and says what came back: what `device_setting biometric` answers. */
+class BiometricActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        column {
+            val result = label("Not asked", R.id.result)
+            button("Authenticate", R.id.authenticate) {
+                android.hardware.biometrics.BiometricPrompt.Builder(context)
+                    .setTitle("Fixture sign-in")
+                    .setNegativeButton("Cancel", mainExecutor) { _, _ -> result.text = "Cancelled" }
+                    .build()
+                    .authenticate(
+                        android.os.CancellationSignal(),
+                        mainExecutor,
+                        object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+                            override fun onAuthenticationSucceeded(
+                                r: android.hardware.biometrics.BiometricPrompt.AuthenticationResult?,
+                            ) {
+                                result.text = "Authenticated"
+                            }
+
+                            override fun onAuthenticationFailed() {
+                                result.text = "Not recognized"
+                            }
+
+                            override fun onAuthenticationError(code: Int, message: CharSequence?) {
+                                result.text = "Error: $message"
+                            }
+                        },
+                    )
+            }
+        }
+    }
+}
+
 class LateActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
