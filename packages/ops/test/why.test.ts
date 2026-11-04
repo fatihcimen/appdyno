@@ -5,10 +5,12 @@ import type { ActOptions, MeasureSource, SlowFrameCauses } from '@appdyno/core';
 import {
   addToBaseline,
   loadAnswer,
+  loadReference,
   recordsOf,
   runFiles,
   runKeys,
   saveBaseline,
+  saveReference,
   saveRun,
   store,
   type Baseline,
@@ -72,7 +74,7 @@ class TimedPhone extends FakeDevice {
   }
 }
 
-function phone(overrides: Partial<MeasureSource> = {}) {
+function phone(overrides: Partial<MeasureSource> = {}, policy = DEFAULT_POLICY) {
   const device = new TimedPhone();
   device.virtual = false;
   const looks: string[] = [];
@@ -97,7 +99,7 @@ function phone(overrides: Partial<MeasureSource> = {}) {
   });
   const [measurements, perf] = [fresh(), fresh()];
   const ctx = new ServerContext(
-    DEFAULT_POLICY,
+    policy,
     [
       {
         list: async () => [{ serial: device.serial, state: 'device', ready: true }],
@@ -309,6 +311,27 @@ describe('the gate, asked why', () => {
     expect(t.looks).toEqual([]);
   });
 
+  it('says why a reference of another build was not used, and names nothing by it', async () => {
+    const t = phone();
+    await regressed(t, { reference: true });
+    const [key] = await runKeys(t.measurements);
+    await saveReference(t.perf, { ...(await loadReference(t.perf, key!))!, build: 'debug' });
+    t.costs.knownCost = 700;
+    const f = finding((await why(t)).data);
+    expect(f.causes).toEqual([]);
+    expect(f.cannot.join()).toContain('the reference is of a debug build');
+    expect(f.cannot.join()).toContain('it was not used');
+  });
+
+  it('keeps to an allowlist, and says so in the answer', async () => {
+    const t = phone({}, { ...DEFAULT_POLICY, apps: ['some.other.app'] });
+    await regressed(t);
+    const r = await why(t);
+    expect(r.data.exitCode).toBe(1);
+    expect(finding(r.data).cannot).toHaveLength(1);
+    expect(t.looks).toEqual([]);
+  });
+
   it('says a flow that is gone, and keeps the answer it has', async () => {
     const t = phone();
     const file = await regressed(t);
@@ -441,9 +464,12 @@ describe('a reference', () => {
     await regressed(t);
     const [key] = await runKeys(t.measurements);
     const before = await runFiles(t.measurements, key!);
+    t.device.calls.length = 0;
     const r = await t.call('perf_compare', { action: 'reference', scenario: SCENARIO });
     expect(r.data.exitCode).toBe(0);
     expect(await runFiles(t.measurements, key!)).toEqual(before);
+    // the flow twice, a first time left out: no more, as a replay costs a recording on a phone
+    expect(t.device.calls.filter((c) => c.name === 'act')).toHaveLength(2);
     const held = JSON.parse(readFileSync(r.data.references![0]!, 'utf8')) as {
       places: Record<string, { profile?: unknown }>;
     };

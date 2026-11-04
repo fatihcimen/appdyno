@@ -39,6 +39,8 @@ const MOST_SECONDS = 30;
 const RECORDER_START_MS = 300;
 /** A function under this cannot pass a diff's floor: what is committed beside a baseline stays small. */
 const LEAST_SAMPLES = 10;
+/** Of a step that stops the app: true of a slower stop, and nothing wrong with a reference that has no side for it. */
+const NOT_RUNNING = 'the app does not run in this step';
 
 type During = () => Promise<unknown>;
 type Place = { name: string; looks: Look[] };
@@ -237,7 +239,7 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner) {
       return [];
     });
     for (const p of steps.filter((x) => x.action === 'stop'))
-      seen[p.name]!.cannot.push('the app does not run in this step');
+      seen[p.name]!.cannot.push(NOT_RUNNING);
     for (const p of steps.filter((x) => x.action === 'launch'))
       await launch(s, app, seen[p.name]!, p.after === 'stop' ? 'cold' : 'warm', run[0]?.compile);
     const running = steps.filter((p) => p.action !== 'stop' && p.action !== 'launch');
@@ -258,6 +260,7 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner) {
       read: (seen: Seen, seconds: number, during: During) => Promise<void>,
     ) => {
       const wanted = running.filter((p) => p.looks.includes(look));
+      if (wanted.length === 0) return true;
       const at = (n: number) => wanted.find((p) => p.n === n);
       const result = await replay(
         wanted.map((p) => p.n),
@@ -311,7 +314,12 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner) {
       return `${s.device.serial} is ${here}, and the run was on ${key.deviceClass}`;
     if (loadRecording(ctx, s.device.serial)?.state.running)
       return 'a flow is being recorded on this device: stop it first';
-    const app = checkApp(ctx.policy, key.app);
+    let app: string;
+    try {
+      app = checkApp(ctx.policy, key.app);
+    } catch (e) {
+      return (e as Error).message;
+    }
     const build = await s.device.measure.buildType(app).catch(() => 'unknown');
     const measured = run[0]?.build;
     if (measured && build !== measured)
@@ -345,6 +353,11 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner) {
       typeof on === 'object'
         ? await gather(on.s, on.app, run, places)
         : Object.fromEntries(places.map((p) => [p.name, blank(on ? [on] : [])]));
+    if (reference && !fits)
+      for (const x of Object.values(seen))
+        x.cannot.push(
+          `the reference is of a ${reference.build} build${reference.compile ? `, compile ${reference.compile}` : ''}, and does not compare with this run: it was not used`,
+        );
     const answer = answerOf(report, run, baseline, seen, fits ? reference : undefined);
     await saveAnswer(ctx.measurementsDir, answer);
     return answer;
@@ -372,7 +385,7 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner) {
           ...(x.phases && { phases: x.phases }),
         };
     const missed = Object.entries(seen).flatMap(([name, x]) =>
-      x.cannot.map((c) => `${key.scenario} ${name}: ${c}`),
+      x.cannot.filter((c) => c !== NOT_RUNNING).map((c) => `${key.scenario} ${name}: ${c}`),
     );
     if (Object.keys(held).length === 0)
       return { line: [`${key.scenario}: nothing was read`, ...missed].join('\n'), ok: false };

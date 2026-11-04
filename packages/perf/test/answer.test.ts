@@ -169,6 +169,34 @@ describe('a cause', () => {
     expect(f.causes[0]!.says).toContain('+790 ms of CPU in the step (0 to 790)');
   });
 
+  it('names the innermost of a caller and a callee that read the same, as a simulator gave them', () => {
+    const counted = (entries: Record<string, number>) => {
+      const p = profile(entries);
+      return { ...p, appTop: p.top };
+    };
+    const f = only(
+      answer(
+        seen({
+          profile: counted({
+            'static FixtureApp.$main()': 1_012,
+            __debug_main_executable_dylib_entry_point: 1_012,
+            'knownCost()': 786,
+            'closure #3 in closure #1 in StallScreen.body.getter': 786,
+          }),
+        }),
+        reference({
+          [STEP]: {
+            profile: counted({
+              'static FixtureApp.$main()': 226,
+              __debug_main_executable_dylib_entry_point: 226,
+            }),
+          },
+        }),
+      ),
+    );
+    expect(f.causes[0]!.name).toBe('knownCost()');
+  });
+
   it('names no function that accounts for too little of the change, and says which it was', () => {
     const f = only(
       answer(
