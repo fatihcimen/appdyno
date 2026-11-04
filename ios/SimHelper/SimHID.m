@@ -86,7 +86,8 @@ static BOOL barrier(int64_t timeoutMs) {
 }
 
 // [{p: 0 start, 1 move, 2 end; x, y, x2?, y2? normalized; at: ms from the first}]
-static NSString *sendTouches(NSArray<NSDictionary *> *events) {
+// `quick`: a person's finger in a live window, where the next move is the proof, not a round trip
+static NSString *sendTouches(NSArray<NSDictionary *> *events, BOOL quick) {
   uint64_t start = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
   for (NSDictionary *e in events) {
     uint64_t due = start + (uint64_t)([e[@"at"] doubleValue] * NSEC_PER_MSEC);
@@ -100,19 +101,23 @@ static NSString *sendTouches(NSArray<NSDictionary *> *events) {
     xpc_dictionary_set_uint64(payload, "target", 0);
     xpc_connection_send_message(gConnection, message("IndigoDigitizerEvent", payload, false));
   }
-  return barrier(2000) ? nil : @"dtuhidd did not answer after the touches";
+  return quick || barrier(2000) ? nil : @"dtuhidd did not answer after the touches";
 }
 
-// One press of a keyboard key (page 7) or a hardware button (another page).
+// A key of a keyboard (page 7) or a hardware button (another page) going down (1) or up (2).
+static void sendKeyState(uint64_t page, uint64_t usage, uint64_t state) {
+  xpc_object_t payload = xpc_dictionary_create(NULL, NULL, 0);
+  if (page != 7) xpc_dictionary_set_uint64(payload, "usagePage", page);
+  xpc_dictionary_set_uint64(payload, "usageCode", usage);
+  xpc_dictionary_set_uint64(payload, "state", state);
+  xpc_connection_send_message(gConnection, message(page == 7 ? "IndigoKeyboardButtonEvent" : "IndigoButtonEvent", payload, false));
+}
+
+// One press.
 static NSString *sendKey(uint64_t page, uint64_t usage) {
-  for (uint64_t state = 1; state <= 2; state++) {
-    xpc_object_t payload = xpc_dictionary_create(NULL, NULL, 0);
-    if (page != 7) xpc_dictionary_set_uint64(payload, "usagePage", page);
-    xpc_dictionary_set_uint64(payload, "usageCode", usage);
-    xpc_dictionary_set_uint64(payload, "state", state);
-    xpc_connection_send_message(gConnection, message(page == 7 ? "IndigoKeyboardButtonEvent" : "IndigoButtonEvent", payload, false));
-    if (state == 1) usleep(40000);
-  }
+  sendKeyState(page, usage, 1);
+  usleep(40000);
+  sendKeyState(page, usage, 2);
   return barrier(2000) ? nil : @"dtuhidd did not answer after the key";
 }
 
@@ -129,7 +134,8 @@ int main(int argc, char **argv) {
         NSString *error = nil;
         uint64_t t0 = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
         if ([op isEqual:@"ping"]) error = barrier([q[@"timeoutMs"] longLongValue] ?: 4000) ? nil : @"dtuhidd did not answer";
-        else if ([op isEqual:@"touch"]) error = sendTouches(q[@"events"]);
+        else if ([op isEqual:@"touch"]) error = sendTouches(q[@"events"], [q[@"quick"] boolValue]);
+        else if ([op isEqual:@"keyState"]) sendKeyState([q[@"page"] unsignedLongLongValue], [q[@"usage"] unsignedLongLongValue], [q[@"state"] unsignedLongLongValue]);
         else if ([op isEqual:@"key"]) error = sendKey([q[@"page"] unsignedLongLongValue], [q[@"usage"] unsignedLongLongValue]);
         else error = @"unknown request";
         NSMutableDictionary *a = [@{@"id": q[@"id"] ?: @0, @"ok": @(error == nil), @"ms": @((clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - t0) / 1000000)} mutableCopy];

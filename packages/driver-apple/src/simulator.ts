@@ -10,6 +10,7 @@ import {
   type ActResult,
   type Key,
 } from '@appdyno/protocol';
+import { SimulatorMirror } from './mirror-sim.js';
 import { SimulatorNetwork } from './network.js';
 import { IosSimulatorPerf } from './perf.js';
 import { simulatorRecorder } from './record.js';
@@ -102,11 +103,13 @@ export class IosSimulatorDevice extends IosDevice {
     this.apps = new SimulatorApps(simctl, serial);
     this.settings = new SimulatorSettings(simctl, serial);
     this.recorder = simulatorRecorder(serial);
+    this.mirror = new SimulatorMirror(serial, simctl);
     this.network = new SimulatorNetwork(simctl, serial);
     this.web = new SimulatorWeb(simctl, serial);
   }
 
   readonly recorder: ScreenRecorder;
+  readonly mirror: SimulatorMirror;
   readonly network: SimulatorNetwork;
   readonly web: SimulatorWeb;
   readonly apps: SimulatorApps;
