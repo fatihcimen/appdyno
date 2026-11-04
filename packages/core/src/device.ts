@@ -16,6 +16,7 @@ import type {
 import type { MeasureSource, TraceDigest } from './measure.js';
 import type { AlertAction, AlertButton, AlertWords, SystemAlert } from './screen/alert.js';
 import type { UiElement } from './screen/elements.js';
+import type { Mirror } from './mirror/port.js';
 
 /** Per-command limits (ms); the settle cap is added to an action's. */
 export const TIMEOUTS = {
@@ -184,6 +185,8 @@ export interface Device {
   readonly recorder?: ScreenRecorder;
   readonly network?: NetworkSource;
   readonly web?: WebInspector;
+  /** A live picture of the device: nothing of it starts until asked, and no agent needs to be up first. */
+  readonly mirror?: Mirror;
   /** One attempt to close an open keyboard; the caller reads whether it went. */
   dismissKeyboard?(): Promise<void>;
   /**

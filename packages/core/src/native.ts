@@ -1,10 +1,10 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { chmod, mkdir, readFile, rename } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { Check } from './device.js';
 import { run } from './run.js';
-import { stateDir } from './state.js';
 
 /** How long a first compile may take on a loaded Mac: 25 s was measured at load 270. */
 const COMPILE_MS = 300_000;
@@ -29,7 +29,8 @@ export async function nativeBinary(build: NativeBuild): Promise<string> {
   for (const file of [...build.sources, ...(build.headers ?? [])])
     hash.update(await readFile(file));
   const id = hash.update(build.flags.join(' ')).digest('hex').slice(0, 16);
-  const dir = join(stateDir(), 'native', id);
+  // whatever the state directory: a build is the same build for every one of them
+  const dir = join(homedir(), 'Library/Caches/appdyno/native', id);
   const binary = join(dir, build.name);
   if (existsSync(binary)) return binary;
   await mkdir(dir, { recursive: true, mode: 0o700 });
