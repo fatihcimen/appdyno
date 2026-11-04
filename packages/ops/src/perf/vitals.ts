@@ -78,8 +78,5 @@ export async function dayLongest(
   );
 }
 
-/** A start in Play's words: the day's longest of its state. */
-export const launchVitals = (kind: string, longest: number) => `Play: ${worded(kind, longest)}`;
-
-/** The user-perceived ANRs of the exits read, in Play's words. */
-export const anrVitals = (count: number) => `Play: ${worded('exits.user_anrs', count)}`;
+/** A number in Play's words. */
+export const playLine = (kind: string, value: number) => `Play: ${worded(kind, value)}`;

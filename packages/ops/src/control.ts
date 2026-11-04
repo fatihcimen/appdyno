@@ -170,7 +170,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
       name: 'app',
       title: 'App management',
       description:
-        'list (all: with system apps), state, install (path: local .apk or .app), uninstall, clear (its data), grant, revoke (service: such as camera), launch (restarts it with args, env; Android args are key=value extras). Default app: the selected one.',
+        'list (all: with system apps), state, install (path: .apk or .app), uninstall, clear, grant, revoke (service: such as camera), launch (restarts it with args, env; Android args are key=value extras). Default: the selected app.',
       input: z
         .object({
           action: z.enum([

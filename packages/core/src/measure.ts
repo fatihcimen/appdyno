@@ -249,6 +249,23 @@ export type ExitReading = {
   recent: { at: string; reason: string; description?: string }[];
 };
 
+/** What a battery pays for, with no model in between: Android vitals' wake locks and wakeups, and jobs. */
+export type BatterySignals = {
+  windowMs: number;
+  /** By tag, longest first. `ms`: this window's. `longestMs`: how long one has been held at all, before the window too. */
+  wakeLocks: { tag: string; ms: number; longestMs: number; count: number; exempt?: string }[];
+  /** Those Play counts: not what the system holds for the app's audio or location. */
+  wakeLockMs: number;
+  wakeLockPercent: number;
+  longestLockMs: number;
+  wakeups: number;
+  wakeupsPerHour: number;
+  alarms: number;
+  alarmTags: { tag: string; alarms: number; wakeups: number }[];
+  jobs: number;
+  note: string;
+};
+
 export type SizeReading = { bytes: number; parts: Record<string, number>; note?: string };
 
 export type HeapProfileKind = 'java_hprof' | 'heapprofd';
@@ -331,6 +348,7 @@ export interface MeasureSource {
     during?: () => Promise<unknown>,
   ): Promise<Measured<NetworkReading>>;
   energy?(app: string, windowMs: number): Promise<Measured<EnergyReading>>;
+  battery?(app: string, windowMs: number): Promise<Measured<BatterySignals>>;
   exits?(app: string): Promise<Measured<ExitReading>>;
   size?(app: string): Promise<Measured<SizeReading>>;
   heapProfile?(

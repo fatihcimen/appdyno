@@ -120,6 +120,7 @@ describe('the page and the measures', () => {
       ['perf_snapshot', {}, 'memory', { memory: says('no memory') }],
       ['perf_snapshot', { also: ['network'] }, 'network', { network: says('no bytes') }],
       ['perf_snapshot', { also: ['energy'] }, 'energy', { energy: says('no energy') }],
+      ['perf_snapshot', { also: ['battery'] }, 'battery', { battery: says('no signals') }],
       ['perf_snapshot', { also: ['exits'] }, 'crashes', { exits: says('no exits') }],
       ['perf_snapshot', { also: ['size'] }, 'size', { size: says('no size') }],
     ] as const) {

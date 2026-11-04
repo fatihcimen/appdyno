@@ -4,7 +4,7 @@ import type { ServerContext } from '../context.js';
 import { LaunchOut } from './schemas.js';
 import { defineOp, DESTRUCTIVE, reply } from '../tool.js';
 import { perfTools, App, Probe, Scenario, deviceInfo, virtual } from './shared.js';
-import { dayLongest, launchVitals } from './vitals.js';
+import { dayLongest, playLine } from './vitals.js';
 
 export function perfLaunchOp(ctx: ServerContext) {
   const { measure, appOf, virtualNote, save, keep, noisy, withProbe } = perfTools(ctx);
@@ -100,7 +100,7 @@ export function perfLaunchOp(ctx: ServerContext) {
           `measurement ${saved.id}${virtualNote(s)}`,
           `${mode} launch${until ? ` (until ${until})` : ''}: ${samples.map((x) => `${x.totalMs ?? '?'} ms${until ? '' : ` (${x.state ?? '?'})`}`).join(', ')}`,
           `median: ${med === undefined ? 'not measured' : `${med} ms`}${worst === undefined ? '' : `, longest ${worst} ms`}`,
-          ...(longest === undefined ? [] : [launchVitals(worstKind, longest)]),
+          ...(longest === undefined ? [] : [playLine(worstKind, longest)]),
           ...(fullyDrawnMedianMs !== undefined ? [`fully drawn: ${fullyDrawnMedianMs} ms`] : []),
           ...(m.value.compile
             ? [

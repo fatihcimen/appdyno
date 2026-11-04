@@ -47,7 +47,7 @@ export function perfScrollOp(ctx: ServerContext) {
     name: 'perf_scroll',
     title: 'Scroll performance',
     description:
-      'Frames, frozen frames and memory while scrolling a list: each round resets the frames (an iPhone: records), swipes `swipes` times, and reads both once the list stops.',
+      'Frames, frozen frames and memory while scrolling a list: each round swipes `swipes` times, and reads both once the list stops.',
     input: z
       .object({
         app: App,

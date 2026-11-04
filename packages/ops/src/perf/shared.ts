@@ -47,6 +47,7 @@ export const ROW_OF: Partial<Record<Capability, MeasureId>> = {
   launch: 'launch',
   network: 'network',
   energy: 'energy',
+  battery: 'battery',
   exits: 'crashes',
   size: 'size',
 };
@@ -74,6 +75,7 @@ const MEASURE_NAME: Record<Capability, string> = {
   threads: 'per-thread CPU',
   network: 'network bytes',
   energy: 'energy',
+  battery: 'wake locks, wakeups and jobs',
   exits: 'crash and ANR exits',
   size: 'app size',
   heapProfile: 'a heap profile',

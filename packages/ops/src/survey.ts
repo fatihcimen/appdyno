@@ -34,6 +34,7 @@ const READS: Record<MeasureId, Call[]> = {
   cpu: [SNAPSHOT],
   network: [SNAPSHOT],
   energy: [SNAPSHOT],
+  battery: [SNAPSHOT],
   crashes: [SNAPSHOT],
   size: [SNAPSHOT],
   // a flow of the caller's: nothing here can make one up, and no device refuses it

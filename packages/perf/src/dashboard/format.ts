@@ -105,6 +105,7 @@ export const MEASURE_TITLE: Record<MeasureId, string> = {
   cpu: 'CPU',
   network: 'Network bytes',
   energy: 'Energy',
+  battery: 'Battery signals',
   crashes: 'Crashes, ANRs',
   size: 'App size',
   journey: 'Journeys',

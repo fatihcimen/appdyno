@@ -12,6 +12,23 @@ const PlayShares = {
 
 export const SnapshotOut = z.object({
   ...Measurement,
+  wakeLocks: z
+    .array(
+      z.object({
+        tag: z.string(),
+        ms: z.number(),
+        longestMs: z.number(),
+        count: z.number(),
+        exempt: z.string().optional(),
+      }),
+    )
+    .optional(),
+  wakeLockMs: z.number().optional(),
+  longestLockMs: z.number().optional(),
+  wakeups: z.number().optional(),
+  wakeupsPerHour: z.number().optional(),
+  alarms: z.number().optional(),
+  jobs: z.number().optional(),
   cpuPercent: z.number(),
   memoryKb: z.number(),
   /** What memoryKb counts: Android's PSS, or Apple's physical footprint. */

@@ -17,6 +17,11 @@ export const SLOW_LAUNCH_MS = { cold: 5_000, warm: 2_000, hot: 1_500 } as const;
 /** Play's two pages differ on a hot start, and its help page is out of date elsewhere too. */
 const HOT_NOTE = "Play's developer page says 1.5 s, its help page 1 s";
 
+/** Partial wake locks add up to 2 h in 24 h: Play's rule by the day, as a share of whatever a local window is. */
+const EXCESSIVE_LOCK_PERCENT = Math.round((2 / 24) * 10_000) / 100;
+const STUCK_LOCK_MS = 3_600_000;
+const EXCESSIVE_WAKEUPS_PER_HOUR = 10;
+
 type Rule = {
   limit: number;
   /** Counts from the limit itself, and not only above it. */
@@ -63,6 +68,22 @@ const RULES: Record<string, Rule> = {
     name: 'a slow hot start',
     reads: launch('hot'),
     note: HOT_NOTE,
+  },
+  'wakelocks.percent': {
+    limit: EXCESSIVE_LOCK_PERCENT,
+    name: 'excessive partial wake locks, at this pace',
+    reads: (value) => `held ${value} % of the time, the limit 2 h in 24 h`,
+  },
+  'wakelocks.longest_ms': {
+    limit: STUCK_LOCK_MS,
+    from: true,
+    name: 'a stuck partial wake lock',
+    reads: (value) => `one held for ${Math.round(value / 1_000)} s, the limit 1 h`,
+  },
+  'wakeups.per_hour': {
+    limit: EXCESSIVE_WAKEUPS_PER_HOUR,
+    name: 'excessive wakeups, at this pace',
+    reads: (value, { limit }) => `${value} an hour, the limit ${limit}`,
   },
   'exits.user_anrs': {
     limit: 0,

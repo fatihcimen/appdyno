@@ -7,7 +7,7 @@ import { SnapshotOut } from './schemas.js';
 import type { Session } from '../session.js';
 import { defineOp, READ, reply } from '../tool.js';
 import { perfTools, App, Scenario, unlessUnsupported, kb, virtual } from './shared.js';
-import { anrVitals, frameVitals } from './vitals.js';
+import { frameVitals, playLine } from './vitals.js';
 
 /** A device's energy in the unit it has it in: a charge, a count of energy, or a score. */
 const ENERGY_KINDS = [
@@ -32,6 +32,7 @@ type Asked = {
   s: Session;
   pkg: string;
   windowMs: number;
+  batteryMs: number;
   measure: ReturnType<typeof perfTools>['measure'];
 };
 
@@ -106,6 +107,33 @@ const EXTRAS = {
       energyModelled: v.modelled === true,
     }),
   }),
+  battery: extra({
+    read: (a) => reads('battery', a)?.(a.pkg, a.batteryMs),
+    metrics: (v) => [
+      { kind: 'wakelocks.ms', unit: 'ms', samples: [v.wakeLockMs] },
+      { kind: 'wakelocks.percent', unit: 'percent', samples: [v.wakeLockPercent] },
+      { kind: 'wakelocks.longest_ms', unit: 'ms', samples: [v.longestLockMs] },
+      { kind: 'wakeups.count', unit: 'count', samples: [v.wakeups] },
+      { kind: 'wakeups.per_hour', unit: 'count', samples: [v.wakeupsPerHour] },
+      { kind: 'jobs.count', unit: 'count', samples: [v.jobs] },
+    ],
+    line: (v) =>
+      [
+        `battery, ${v.windowMs} ms: wake locks ${v.wakeLockMs} ms${v.wakeLocks.length ? ` (${v.wakeLocks.map((l) => `${l.tag} ${l.ms} ms${l.exempt ? `, ${l.exempt}: exempt` : ''}`).join('; ')})` : ''}; ${v.wakeups} wakeups of ${v.alarms} alarms${v.alarmTags.length ? ` (${v.alarmTags.map((t) => `${t.tag} ${t.wakeups}`).join('; ')})` : ''}; ${v.jobs} jobs; ${v.note}`,
+        playLine('wakelocks.percent', v.wakeLockPercent),
+        playLine('wakelocks.longest_ms', v.longestLockMs),
+        playLine('wakeups.per_hour', v.wakeupsPerHour),
+      ].join('\n'),
+    data: (v) => ({
+      wakeLocks: v.wakeLocks,
+      wakeLockMs: v.wakeLockMs,
+      longestLockMs: v.longestLockMs,
+      wakeups: v.wakeups,
+      wakeupsPerHour: v.wakeupsPerHour,
+      alarms: v.alarms,
+      jobs: v.jobs,
+    }),
+  }),
   exits: extra({
     read: (a) => reads('exits', a)?.(a.pkg),
     metrics: (v) => [
@@ -120,7 +148,7 @@ const EXTRAS = {
     line: (v) =>
       [
         `exits: ${v.crashes} crashes${v.anrs === undefined ? '' : `, ${v.anrs} ANRs`} of ${v.total}`,
-        ...(v.userAnrs === undefined ? [] : [anrVitals(v.userAnrs)]),
+        ...(v.userAnrs === undefined ? [] : [playLine('exits.user_anrs', v.userAnrs)]),
       ].join('\n'),
     data: (v) => ({
       crashes: v.crashes,
@@ -147,7 +175,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
     name: 'perf_snapshot',
     title: 'Performance snapshot',
     description:
-      "The app's CPU now, memory, frames since the last measure and the device's load and heat. The measurement id and raw output are kept.",
+      "The app's CPU now, memory, frames since the last measure and the device's load and heat.",
     input: z
       .object({
         app: App,
@@ -156,15 +184,16 @@ export function perfSnapshotOp(ctx: ServerContext) {
           .array(z.enum(EXTRA_NAMES))
           .optional()
           .describe(
-            'threads: each with its time above 90 %; network: bytes; energy: says if a model; exits: crashes, ANRs; size: on disk',
+            'threads; network: bytes; energy: says if a model; battery: wake locks, wakeups, jobs; exits: crashes, ANRs; size: on disk',
           ),
+        batteryWindowMs: z.number().int().min(1_000).max(600_000).default(30_000),
         scenario: Scenario,
       })
       .strict(),
     output: SnapshotOut,
     annotations: READ,
     needs: 'cpu',
-    run: async ({ app, cpuWindowMs, also = [], scenario }) => {
+    run: async ({ app, cpuWindowMs, batteryWindowMs, also = [], scenario }) => {
       const s = await ctx.session();
       s.appPid = undefined;
       const pkg = appOf(s, app);
@@ -175,7 +204,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
       const source = s.device.measure!;
       const frames = source.frames && (await unlessUnsupported(source.frames(pkg)));
       const vitals = await source.vitals?.();
-      const asked = { s, pkg, windowMs: cpuWindowMs, measure };
+      const asked = { s, pkg, windowMs: cpuWindowMs, batteryMs: batteryWindowMs, measure };
       const lacking: ExtraName[] = [];
       const got: (Got & { name: ExtraName })[] = [];
       for (const name of EXTRA_NAMES) {
