@@ -163,7 +163,8 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
       await show('form');
       await focusIs('the form', (f) => f.includes('FormActivity'));
       control('home');
-      await focusIs('the launcher', (f) => !f.includes(APP));
+      // past the moment between two windows, when nothing has the focus
+      await focusIs('the launcher', (f) => f.includes('Window{') && !f.includes(APP));
       const launcher = now;
       // a window's token may change, its name does not
       const named = (f: string) => f.replace(/Window\{\w+ /, '');
