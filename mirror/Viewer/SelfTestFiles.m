@@ -184,7 +184,4 @@ void MVCheckKeyboard(void) {
   view.armed = YES;
   MVCheck(@"input: a pointer once armed", view.takesPointer, nil);
   MVCheck(@"input: no key reaches a device from a window that is not key", !view.takesKeys, nil);
-  NSMutableArray *names = [NSMutableArray array];
-  for (NSMenuItem *item in MVDeviceMenu().itemArray) [names addObject:item.representedObject];
-  MVCheck(@"menu: the device's own buttons, by their names", [names isEqual:(@[@"home", @"lock", @"volumeUp", @"volumeDown"])], names.description);
 }

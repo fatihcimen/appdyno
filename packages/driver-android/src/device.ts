@@ -295,6 +295,11 @@ export class AndroidDevice extends RpcDevice implements Device {
     });
   }
 
+  async hardware() {
+    const model = await this.adb.exec(this.serial, 'getprop ro.product.model').catch(() => '');
+    return { platform: 'android' as const, ...(model.trim() && { model: model.trim() }) };
+  }
+
   /** Starts the app's launcher activity and waits for it (`am start -W`). */
   async launch(pkg: string) {
     if (!(await this.launchedAlongside(pkg))) await this.queue.run(() => this.apps.start(pkg));

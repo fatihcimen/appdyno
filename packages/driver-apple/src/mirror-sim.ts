@@ -1,4 +1,7 @@
 import { spawn } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type {
   DeviceState,
   InputEvent,
@@ -17,6 +20,7 @@ const SHIFT = 0xe1;
 const COMMAND = 0xe3;
 const V = 0x19;
 const INPUT_MS = 8_000;
+const SHOT_MS = 30_000;
 const TURNS_CHECK_MS = 250;
 /** How long a read helper that failed is left alone: at the slow end of a simulator shut down or a busy Mac. */
 const TURNS_RETRY_MS = 5_000;
@@ -203,6 +207,18 @@ export class SimulatorMirror implements Mirror {
         const key = HID_KEYS[e.name as Key];
         if (key) await this.call({ op: 'key', ...key });
       }
+    }
+  }
+
+  /** Lossless and at once, where the runner's would first have to be built. */
+  async screenshot(format: 'png' | 'jpeg') {
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
+    const file = join(dir, `shot.${format}`);
+    try {
+      await this.simctl.exec(['io', this.udid, 'screenshot', `--type=${format}`, file], SHOT_MS);
+      return { data: readFileSync(file) };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   }
 

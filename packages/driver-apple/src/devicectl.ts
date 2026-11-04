@@ -99,6 +99,13 @@ export class Devicectl {
     ]);
   }
 
+  /** The phone's name as people know it. */
+  async marketingName() {
+    const r = await this.json(['device', 'info', 'details', '--device', this.udid]);
+    const result = (r.result ?? r) as { hardwareProperties?: { marketingName?: string } };
+    return result.hardwareProperties?.marketingName;
+  }
+
   /** Whether the phone wants its passcode now. */
   async lockState() {
     const r = await this.json(['device', 'info', 'lockState', '--device', this.udid]);

@@ -109,19 +109,20 @@ void MVForEachNal(const uint8_t *data, size_t length, void (^found)(const uint8_
 
 /// A point in a view, as a fraction of the picture inside it; NO outside the picture.
 BOOL MVNormalize(NSPoint point, NSSize bounds, CGSize picture, double *x, double *y);
+/// The half distance between two fingers after a trackpad's magnification, within what a screen can hold.
+double MVPinchGap(double gap, double magnification, double most);
 /// The USB usage (page 7) of a Mac key that types no character; 0 when it has none.
 uint16_t MVUsageOfKeyCode(uint16_t keyCode);
 /// Whether a key event's text is to be typed as text, rather than sent as a key.
 BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags);
 
-/// What sits over the picture and beside it, for a person's eyes.
+/// What sits over the picture, for a person's eyes.
 @interface MVOverlay : NSObject
 - (instancetype)initInView:(NSView *)view;
-- (void)setDriving:(BOOL)driving tool:(NSString *)tool;
+/// How the stream is, when it is not live; no `state` takes it away.
+- (void)showState:(nullable NSString *)state title:(nullable NSString *)title fix:(nullable NSString *)fix;
 - (void)showBanner:(NSDictionary *)message;
 - (void)hideBanner;
-- (void)addActivity:(NSString *)line;
-- (void)toggleActivity;
 /// The banner's button.
 - (void)done:(id)sender;
 @end
@@ -139,13 +140,27 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 /// Whether the layer took it.
 - (BOOL)showImage:(CVImageBufferRef)image;
 - (void)setStatus:(NSDictionary *)message;
+- (void)setDriving:(BOOL)driving tool:(NSString *)tool;
+/// Words beneath the device for a few seconds: what became of something a person asked for.
+- (void)sayNote:(NSString *)note;
+- (void)setRecording:(BOOL)on;
+- (void)showPane:(NSInteger)pane;
+- (void)showStats:(NSDictionary *)stats;
+- (void)addActivity:(NSDictionary *)call;
+- (void)showApps:(NSDictionary *)message;
+/// What a control of the window does, by its name.
+- (void)perform:(NSString *)name;
 /// Comes forward, with no keyboard: asked for by a second start, or an agent.
 - (void)raise;
 @property(nonatomic) BOOL behind;
+/// Drawn as the window in use, for a picture of it.
+@property(nonatomic) BOOL poses;
 /// A click at this fraction of the picture, by the window's own event queue: needs no permission to post.
-- (void)pokeX:(double)x y:(double)y;
+- (void)pokeX:(double)x y:(double)y right:(BOOL)right;
 - (void)pokeKey:(NSString *)characters;
 - (void)pokeButton:(NSString *)name;
+/// The window as it looks now, to a PNG.
+- (BOOL)snapshot:(NSString *)file;
 @property(nonatomic, copy, nullable) void (^onHidden)(BOOL hidden);
 @end
 

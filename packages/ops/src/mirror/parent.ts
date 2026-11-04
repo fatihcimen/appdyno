@@ -8,6 +8,7 @@ import {
 } from '@appdyno/core';
 import type { ServerContext } from '../context.js';
 import { ToolError } from '../tool.js';
+import { windowControls, windowLook } from './controls.js';
 import { followDevice } from './follow.js';
 import { handoffDone } from './handoff.js';
 import { FOCUS_SIGNAL, liveMirror, removeMirrorFile, writeMirrorFile } from './state.js';
@@ -83,9 +84,14 @@ class Parent {
       serial,
     };
     let said = '';
-    const session = new MirrorSession({
+    const hardware = await device.hardware?.().catch(() => undefined);
+    const controls = windowControls(device, hardware, () => session);
+    const session: MirrorSession = new MirrorSession({
       mirror: device.mirror,
       viewer: startViewer(this.o.headless),
+      look: windowLook(hardware),
+      press: controls.press,
+      onWindow: controls.onWindow,
       options: this.o.options,
       title: serial,
       noInput: this.o.noInput,
@@ -109,8 +115,9 @@ class Parent {
     const unfollow = followDevice(serial, session);
     this.done.set(
       serial,
-      session.stopped.then((status) => {
+      session.stopped.then(async (status) => {
         unfollow();
+        await controls.end();
         removeMirrorFile(serial);
         device.close();
         this.sessions.delete(serial);

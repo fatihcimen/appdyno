@@ -2,7 +2,8 @@
 // with its stdin, so a parent that dies, however it dies, takes its viewer with it.
 //   appdyno-viewer             a window
 //   appdyno-viewer --headless  the same, with no window and nothing that could raise one
-//   appdyno-viewer --behind    a real window kept behind all others, for a test on a Mac a person is using
+//   appdyno-viewer --behind    a real window kept off every screen, for a test on a Mac a person is using
+//   appdyno-viewer --behind --appearance light|dark   the same, drawn as in use, to be looked at by `snapshot`
 //   appdyno-viewer --selftest [fixtures dir]
 //   appdyno-viewer --encode <h264|hevc> <frames>
 #import "Viewer.h"
@@ -27,6 +28,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 
 @interface MVApp : NSObject <MVSink, NSApplicationDelegate>
 - (void)setBehind:(BOOL)behind;
+- (void)setPoses:(BOOL)poses;
 - (instancetype)initWithWindow:(BOOL)window;
 - (void)receive:(NSDictionary *)message;
 @end
@@ -35,7 +37,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   MVStats *_stats;
   MVWindow *_window;
   BOOL _headlessOnly;
-  BOOL _behind;
+  BOOL _behind, _poses;
   id<MVSource> _source;
   NSString *_lastSized;
   NSString *_codec;
@@ -70,20 +72,30 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   MVEmit(@{@"op": @"closed"});
 }
 
-- (void)toggleActivity:(id)sender {
-  [_window.overlay toggleActivity];
+/// A person's click brought it forward: only now has it a menu bar and a place in the Dock.
+- (void)applicationDidBecomeActive:(NSNotification *)notification {
+  if (!_behind) NSApp.activationPolicy = NSApplicationActivationPolicyRegular;
 }
 
 - (void)startClock {
   dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_global_queue(QOS_CLASS_UTILITY, 0));
   dispatch_source_set_timer(timer, dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), NSEC_PER_SEC, NSEC_PER_SEC / 10);
   MVStats *stats = _stats;
+  __weak MVApp *weak = self;
   dispatch_source_set_event_handler(timer, ^{
-    MVEmit(stats.report);
+    NSDictionary *report = stats.report;
+    MVEmit(report);
+    dispatch_async(dispatch_get_main_queue(), ^{
+      [weak showReport:report];
+    });
   });
   dispatch_resume(timer);
   // kept for the life of the process
   CFBridgingRetain(timer);
+}
+
+- (void)showReport:(NSDictionary *)report {
+  [_window showStats:report];
 }
 
 /// A `tick` comes up to 60 times a second and needs nothing of the main thread.
@@ -127,16 +139,22 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
     MVEmit(answer);
     return;
   }
-  if ([op isEqual:@"agent"]) return [_window.overlay setDriving:[m[@"driving"] boolValue] tool:m[@"tool"] ?: @""];
+  if ([op isEqual:@"agent"]) return [_window setDriving:[m[@"driving"] boolValue] tool:m[@"tool"] ?: @""];
   if ([op isEqual:@"banner"]) return m[@"id"] ? [_window.overlay showBanner:m] : [_window.overlay hideBanner];
-  if ([op isEqual:@"activity"]) return [_window.overlay addActivity:m[@"line"] ?: @""];
+  if ([op isEqual:@"activity"]) return [_window addActivity:m];
+  if ([op isEqual:@"apps"]) return [_window showApps:m];
+  if ([op isEqual:@"note"]) return [_window sayNote:m[@"text"] ?: @""];
+  if ([op isEqual:@"recording"]) return [_window setRecording:[m[@"on"] boolValue]];
+  if ([op isEqual:@"copied"]) return MVCopyImage(m[@"file"]);
   if ([op isEqual:@"poke"]) {
     if (m[@"key"]) return [_window pokeKey:m[@"key"]];
     if (m[@"button"]) return [_window pokeButton:m[@"button"]];
     if ([m[@"done"] boolValue]) return [_window.overlay done:self];
-    if ([m[@"panel"] boolValue]) return [_window.overlay toggleActivity];
-    return [_window pokeX:[m[@"x"] doubleValue] y:[m[@"y"] doubleValue]];
+    if (m[@"pane"]) return [_window showPane:[m[@"pane"] integerValue]];
+    if (m[@"control"]) return [_window perform:m[@"control"]];
+    return [_window pokeX:[m[@"x"] doubleValue] y:[m[@"y"] doubleValue] right:[m[@"right"] boolValue]];
   }
+  if ([op isEqual:@"snapshot"]) return MVEmit(@{@"op": @"snapped", @"file": m[@"file"] ?: @"", @"ok": @([_window snapshot:m[@"file"]])});
   if ([op isEqual:@"mark"]) return [_stats mark:[m[@"bigger"] boolValue]];
   if ([op isEqual:@"quit"]) {
     [self detach];
@@ -147,6 +165,10 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 
 - (void)setBehind:(BOOL)behind {
   _behind = behind;
+}
+
+- (void)setPoses:(BOOL)poses {
+  _poses = poses;
 }
 
 - (void)detach {
@@ -173,6 +195,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   if (!_headlessOnly && !_window) {
     _window = [MVWindow new];
     _window.behind = _behind;
+    _window.poses = _poses;
     __weak MVApp *weak = self;
     // a window kept behind the rest is covered by design: it still shows what it gets
     if (!_behind) {
@@ -311,16 +334,11 @@ int main(int argc, char **argv) {
     application.delegate = app;
     // not one a launch brings forward: the keyboard stays with what a person is using
     application.activationPolicy = NSApplicationActivationPolicyAccessory;
-    NSMenu *bar = [NSMenu new];
-    NSMenuItem *appItem = [bar addItemWithTitle:@"appdyno" action:NULL keyEquivalent:@""];
-    NSMenu *appMenu = [NSMenu new];
-    [appMenu addItemWithTitle:@"Close" action:@selector(performClose:) keyEquivalent:@"w"];
-    [appMenu addItemWithTitle:@"Activity" action:@selector(toggleActivity:) keyEquivalent:@"a"].target = app;
-    [appMenu addItemWithTitle:@"Quit" action:@selector(terminate:) keyEquivalent:@"q"];
-    appItem.submenu = appMenu;
-    NSMenuItem *deviceItem = [bar addItemWithTitle:@"Device" action:NULL keyEquivalent:@""];
-    deviceItem.submenu = MVDeviceMenu();
-    application.mainMenu = bar;
+    NSUInteger look = [args indexOfObject:@"--appearance"];
+    if (look != NSNotFound && args.count > look + 1) {
+      application.appearance = [NSAppearance appearanceNamed:[args[look + 1] isEqual:@"dark"] ? NSAppearanceNameDarkAqua : NSAppearanceNameAqua];
+      app.poses = YES;
+    }
     [application run];
   }
   return 0;

@@ -81,9 +81,9 @@ describe('the keyboard', () => {
     expect(window).toContain('MVShowOf([attach[@"focus"] boolValue]');
   });
 
-  it('the words across a window take no click', () => {
-    expect(source('Window.m')).toMatch(
-      /@implementation MVWords\n- \(NSView \*\)hitTest[^}]*return nil;/,
+  it('a card over the picture takes no click, but on its own button', () => {
+    expect(source('Overlay.m')).toMatch(
+      /@implementation MVCard\n- \(NSView \*\)hitTest[^}]*isKindOfClass:NSButton\.class\] \? hit : nil;/,
     );
   });
 

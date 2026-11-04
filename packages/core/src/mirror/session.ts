@@ -1,7 +1,8 @@
 import { MirrorRecording } from './recording.js';
 import { inputOf, InputQueue } from './input-queue.js';
 import { NEEDS, NeedError, type Need } from './need.js';
-import type { DeviceState, InputEvent, Mirror, MirrorOptions } from './port.js';
+import type { DeviceState, InputEvent } from './port.js';
+import type { MirrorSessionOptions } from './session-options.js';
 import {
   realClock,
   wordsOf,
@@ -10,7 +11,7 @@ import {
   type MirrorStats,
   type MirrorStatus,
 } from './state.js';
-import type { ViewerLink, ViewerMessage, ViewerStart } from './viewer.js';
+import type { ViewerLink, ViewerMessage } from './viewer.js';
 
 const WAITING_POLL_MS = 1_000;
 /** A viewer that goes on dying is not started a third time. */
@@ -23,23 +24,6 @@ const BACKOFF_MAX_MS = 5_000;
 const NO_FIRST_FRAME_MS = 15_000;
 const DECODER_FAILURES = 3;
 const QUIT_MS = 5_000;
-
-export type MirrorSessionOptions = {
-  mirror: Mirror;
-  viewer: ViewerStart;
-  options: MirrorOptions;
-  title: string;
-  /** The person's input is not passed on, and the viewer sends none. */
-  noInput?: boolean;
-  /** The keyboard, at the first attach and no other: a reconnect or a new viewer never takes it. */
-  focus?: boolean;
-  /** What a person does goes nowhere until they click it: a window an agent opened. */
-  inputOnClick?: boolean;
-  clock?: MirrorClock;
-  onChange?: (s: MirrorStatus) => void;
-  /** A person answered a banner. */
-  onDone?: (id: string) => void;
-};
 
 /**
  * One device's mirror: its states, retries, stats and input, written once. What a kind of device does is
@@ -69,6 +53,7 @@ export class MirrorSession {
   /** A movie of the stream's own frames, where its source has them. */
   readonly recording = new MirrorRecording(() => this.viewer);
   private closedByPerson = false;
+  private source: string | undefined;
   private refusedNeed: Need | undefined;
   private asleep = false;
   private readonly marks: ((ms: number) => void)[] = [];
@@ -140,6 +125,16 @@ export class MirrorSession {
     this.viewer?.send(message);
   }
 
+  /** Its frames are the stream's own, so a movie needs no second encoder. */
+  get streamsItsOwn() {
+    return this.source === 'adb' || this.source === 'pipe';
+  }
+
+  /** A person asked for a new stream. */
+  askAgain() {
+    if (this.current.state !== 'stopped') this.renew('a person asked');
+  }
+
   /** The time from now to the next frame to arrive; for the bench, around an input. */
   mark(): Promise<number> {
     this.viewer?.send({ op: 'mark', bigger: this.o.mirror.sendsWhenStill === true });
@@ -200,11 +195,13 @@ export class MirrorSession {
       );
       if (stale()) return;
       this.note = source.kind === 'adb' ? source.note : undefined;
+      this.source = source.kind;
       this.viewer?.send({
         op: 'attach',
         source,
         title: this.o.title,
         input: this.o.noInput ? false : this.o.inputOnClick ? 'click' : true,
+        ...(this.o.look && { look: this.o.look }),
         focus: this.o.focus === true && !this.focused,
         ...(this.zoom && { zoom: this.zoom }),
       });
@@ -306,6 +303,10 @@ export class MirrorSession {
       case 'zoom':
         this.zoom = Number(m.scale);
         break;
+      case 'control':
+      case 'app':
+        this.o.onWindow?.(m);
+        break;
       case 'done':
         this.o.onDone?.(String(m.id));
         break;
@@ -340,8 +341,8 @@ export class MirrorSession {
     // a click on a dark window is a person who wants the screen back
     if (this.current.state === 'waiting' && this.current.need === 'asleep' && e.kind === 'touch')
       void this.o.mirror.wake?.().catch(() => undefined);
-    if (!this.o.noInput && this.current.state === 'live') this.input.add(e);
-    else this.input.dropped++;
+    if (this.o.noInput || this.current.state !== 'live') this.input.dropped++;
+    else if (e.kind !== 'button' || !this.o.press?.(e.name)) this.input.add(e);
   }
 
   private onLost(why: string, fatal: boolean) {

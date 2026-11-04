@@ -136,8 +136,7 @@ describe('what a window is told', () => {
       appendActivity('guarded', { at: Date.now(), tool: 'tap', ms: 3, ok: true, args: {} });
       await vi.advanceTimersByTimeAsync(300);
       expect(told[0]).toEqual({ op: 'agent', driving: true, tool: 'tap' });
-      expect(told[1]).toMatchObject({ op: 'activity' });
-      expect(String(told[1]!.line)).toContain('tap 3 ms ok');
+      expect(told[1]).toMatchObject({ op: 'activity', tool: 'tap', ms: 3, ok: true, args: '{}' });
       await vi.advanceTimersByTimeAsync(1_500);
       expect(told.filter((m) => m.driving === false)).toEqual([]);
       await vi.advanceTimersByTimeAsync(600);

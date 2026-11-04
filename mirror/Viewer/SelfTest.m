@@ -395,6 +395,7 @@ int MVSelfTest(NSString *fixtures) {
   MVCheckPipe();
   MVCheckRecorder();
   MVCheckKeyboard();
+  MVCheckFrame();
   checkBroken();
   checkCodec(NO);
   checkCodec(YES);

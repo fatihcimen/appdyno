@@ -63,6 +63,8 @@ export interface Mirror {
   close(): Promise<void>;
   /** Pushes what the device's state became: locked, unplugged, taken over. */
   watch(onChange: (s: DeviceState) => void): () => void;
+  /** The device's own picture with no agent up, where its kind has a way; undefined leaves it to the agent. */
+  screenshot?(format: 'png' | 'jpeg'): Promise<{ data: Buffer } | undefined>;
   /** Turns a dark screen on, where this kind of device can be asked to: at a start, and at a person's click. */
   wake?(): Promise<void>;
   /** A still screen keeps sending frames, so that only a larger one tells that something changed. */

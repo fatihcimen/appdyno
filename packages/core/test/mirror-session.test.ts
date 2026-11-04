@@ -56,6 +56,83 @@ describe('a mirror, whatever the device', () => {
     expect(viewer().of('status').at(-1)).toMatchObject({ state: 'live' });
   });
 
+  it('gives a window how to draw its device', async () => {
+    const look = { frame: { model: 'iPhone 17 Pro' }, controls: ['home'] };
+    const { session, viewer } = setup({ look });
+    await session.start();
+    await flush();
+    expect(viewer().of('attach')[0]).toMatchObject({ look });
+  });
+
+  it('lets what is more than a key take a press, and leaves the rest to the device', async () => {
+    const taken: string[] = [];
+    const { viewer, mirror, live } = setup({
+      press: (name) => {
+        taken.push(name);
+        return name === 'siri';
+      },
+    });
+    await live();
+    viewer().say('button', { name: 'siri' });
+    viewer().say('button', { name: 'home' });
+    await flush();
+    expect(taken).toEqual(['siri', 'home']);
+    expect(mirror.inputs).toEqual([{ kind: 'button', name: 'home' }]);
+  });
+
+  it('holds a press while the stream is down, as it does a touch', async () => {
+    const taken: string[] = [];
+    const { viewer, session } = setup({
+      press: (name) => {
+        taken.push(name);
+        return true;
+      },
+    });
+    await session.start();
+    await flush();
+    viewer().say('button', { name: 'siri' });
+    expect(taken).toEqual([]);
+  });
+
+  it("passes a window's controls on, whether or not input is on", async () => {
+    const said: unknown[] = [];
+    const { viewer, live } = setup({ noInput: true, onWindow: (m) => said.push(m) });
+    await live();
+    viewer().say('control', { name: 'screenshot' });
+    viewer().say('app', { action: 'list' });
+    expect(said).toEqual([
+      expect.objectContaining({ op: 'control', name: 'screenshot' }),
+      expect.objectContaining({ op: 'app', action: 'list' }),
+    ]);
+  });
+
+  it('knows a stream records its own frames, and a surface does not', async () => {
+    const { session, viewer, mirror } = setup();
+    mirror.source = { kind: 'adb', serial: 's', socket: 'x', token: 't', codec: 'h264' };
+    await session.start();
+    await flush();
+    viewer().say('first', { w: 1080, h: 2400, codec: 'h264' });
+    expect(session.streamsItsOwn).toBe(true);
+    const other = setup();
+    await other.live();
+    expect(other.session.streamsItsOwn).toBe(false);
+  });
+
+  it('asks for a new stream at a word from a person, and not once stopped', async () => {
+    const { session, mirror, clock, live } = setup();
+    await live();
+    const opens = mirror.opens;
+    session.askAgain();
+    await flush();
+    await clock.advance(1_000);
+    expect(mirror.opens).toBe(opens + 1);
+    await session.stop('done');
+    session.askAgain();
+    await flush();
+    await clock.advance(1_000);
+    expect(mirror.opens).toBe(opens + 1);
+  });
+
   it('waits for what stands in the way, asks each second, and goes on by itself', async () => {
     const { session, mirror, clock, viewer } = setup();
     mirror.checkAnswer = { ok: false, need: 'not-connected' };

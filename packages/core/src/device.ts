@@ -187,6 +187,8 @@ export interface ScreenInspector {
   /** Activates what has that id or those words on the screen as read now, and says which it was. */
   press(name: string): Promise<InspectedElement>;
 }
+/** What a device is, for how a window draws it: nothing here starts anything on it. */
+export type DeviceHardware = { platform: 'ios' | 'android'; model?: string; color?: string };
 
 /** One device, whichever platform: what the operations are written against. */
 export interface Device {
@@ -202,6 +204,7 @@ export interface Device {
   readonly mirror: Mirror;
   /** Numbers a second, for a person watching: none where this kind of device has no source. */
   readonly liveMetrics?: LiveMetrics;
+  hardware(): Promise<DeviceHardware>;
   /** One attempt to close an open keyboard; the caller reads whether it went. */
   dismissKeyboard(): Promise<void>;
   /**

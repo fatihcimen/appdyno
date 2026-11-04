@@ -5,6 +5,8 @@
 #import "Window.h"
 #import <Carbon/Carbon.h>
 
+static const double kDot = 30, kLongPressSeconds = 0.7, kPinchStart = 0.14, kPinchLeast = 8;
+
 BOOL MVNormalize(NSPoint point, NSSize bounds, CGSize picture, double *x, double *y) {
   if (picture.width <= 0 || picture.height <= 0 || bounds.width <= 0 || bounds.height <= 0) return NO;
   NSRect shown = AVMakeRectWithAspectRatioInsideRect(picture, NSMakeRect(0, 0, bounds.width, bounds.height));
@@ -43,10 +45,33 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags) {
   return first >= 0x20 && first != 0x7f && !(first >= 0xf700 && first <= 0xf8ff);
 }
 
+double MVPinchGap(double gap, double magnification, double most) {
+  return MIN(MAX(gap * (1 + magnification), kPinchLeast), most);
+}
+
+static NSPoint clampTo(NSPoint p, NSSize size) {
+  return NSMakePoint(MIN(MAX(p.x, 0), size.width), MIN(MAX(p.y, 0), size.height));
+}
+
+static CALayer *dotLayer(CALayer *parent) {
+  CALayer *dot = [CALayer layer];
+  dot.bounds = CGRectMake(0, 0, kDot, kDot);
+  dot.cornerRadius = kDot / 2;
+  dot.backgroundColor = [NSColor colorWithWhite:1 alpha:0.42].CGColor;
+  dot.borderColor = [NSColor colorWithWhite:0 alpha:0.28].CGColor;
+  dot.borderWidth = 1;
+  dot.zPosition = 20;
+  [parent addSublayer:dot];
+  return dot;
+}
+
 @implementation MVView {
   BOOL _down;
   NSPoint _scrollAt;
   BOOL _scrolling;
+  NSPoint _pinchAt;
+  double _pinchGap;
+  CALayer *_dot, *_dot2;
 }
 
 - (BOOL)acceptsFirstResponder {
@@ -57,27 +82,8 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags) {
   return YES;
 }
 
-NSMenu *MVDeviceMenu(void) {
-  NSMenu *menu = [[NSMenu alloc] initWithTitle:@"Device"];
-  unichar up = NSUpArrowFunctionKey, down = NSDownArrowFunctionKey;
-  NSArray *rows = @[
-    @[@"Home", @"home", @"h", @(NSEventModifierFlagCommand | NSEventModifierFlagShift)],
-    @[@"Lock", @"lock", @"l", @(NSEventModifierFlagCommand)],
-    @[@"Volume Up", @"volumeUp", [NSString stringWithCharacters:&up length:1], @(NSEventModifierFlagCommand)],
-    @[@"Volume Down", @"volumeDown", [NSString stringWithCharacters:&down length:1], @(NSEventModifierFlagCommand)],
-  ];
-  for (NSArray *row in rows) {
-    NSMenuItem *item = [menu addItemWithTitle:row[0] action:@selector(pressButton:) keyEquivalent:row[2]];
-    item.keyEquivalentModifierMask = [row[3] unsignedIntegerValue];
-    item.representedObject = row[1];
-  }
-  return menu;
-}
-
-- (NSMenu *)menuForEvent:(NSEvent *)event {
-  NSMenu *menu = MVDeviceMenu();
-  for (NSMenuItem *item in menu.itemArray) item.target = self;
-  return menu;
+- (NSMenu *)deviceMenu {
+  return MVControlMenu(@"Device", self.controls);
 }
 
 /// A person's: a menu of a window is reached only by a click on it, or a shortcut in the key window.
@@ -95,16 +101,44 @@ NSMenu *MVDeviceMenu(void) {
 }
 
 - (BOOL)takesKeys {
-  return self.takesPointer && self.window.isKeyWindow;
+  return self.takesPointer && self.window && NSApp.keyWindow == self.window;
 }
 
 - (void)sendPhase:(int)phase at:(NSPoint)point clampToEdge:(BOOL)clamp {
+  [self sendPhase:phase at:point second:nil clampToEdge:clamp];
+}
+
+- (void)sendPhase:(int)phase at:(NSPoint)point second:(nullable NSValue *)second clampToEdge:(BOOL)clamp {
   if (!self.takesPointer) return;
-  double x, y;
+  double x, y, x2, y2;
   NSSize size = self.bounds.size;
-  NSPoint p = clamp ? NSMakePoint(MIN(MAX(point.x, 0), size.width), MIN(MAX(point.y, 0), size.height)) : point;
+  NSPoint p = clamp ? clampTo(point, size) : point;
   if (!MVNormalize(p, size, self.picture, &x, &y)) return;
-  MVEmit(@{@"op": @"touch", @"p": @(phase), @"x": @(x), @"y": @(y)});
+  NSMutableDictionary *touch = [NSMutableDictionary dictionaryWithDictionary:@{@"op": @"touch", @"p": @(phase), @"x": @(x), @"y": @(y)}];
+  NSPoint other = second ? clampTo(second.pointValue, size) : NSZeroPoint;
+  if (second && MVNormalize(other, size, self.picture, &x2, &y2)) {
+    touch[@"x2"] = @(x2);
+    touch[@"y2"] = @(y2);
+  }
+  MVEmit(touch);
+  [self showDot:phase == 2 ? nil : [NSValue valueWithPoint:p] second:second && phase != 2 ? [NSValue valueWithPoint:other] : nil];
+}
+
+/// The dot a finger leaves, where the window can see it.
+- (void)showDot:(nullable NSValue *)at second:(nullable NSValue *)second {
+  [CATransaction begin];
+  [CATransaction setDisableActions:YES];
+  if (at) {
+    if (!_dot) _dot = dotLayer(self.layer);
+    _dot.position = at.pointValue;
+  }
+  _dot.hidden = !at;
+  if (second) {
+    if (!_dot2) _dot2 = dotLayer(self.layer);
+    _dot2.position = second.pointValue;
+  }
+  _dot2.hidden = !second;
+  [CATransaction commit];
 }
 
 - (void)mouseDown:(NSEvent *)event {
@@ -112,10 +146,9 @@ NSMenu *MVDeviceMenu(void) {
     self.armed = YES;
     return;
   }
-  NSPoint p = [self convertPoint:event.locationInWindow fromView:nil];
-  double x, y;
-  _down = MVNormalize(p, self.bounds.size, self.picture, &x, &y);
-  if (_down) [self sendPhase:0 at:p clampToEdge:NO];
+  // from the bezel it starts at the screen's edge, as a finger does coming on from outside
+  [self sendPhase:0 at:[self convertPoint:event.locationInWindow fromView:nil] clampToEdge:YES];
+  _down = self.takesPointer;
 }
 
 - (void)mouseDragged:(NSEvent *)event {
@@ -125,6 +158,33 @@ NSMenu *MVDeviceMenu(void) {
 - (void)mouseUp:(NSEvent *)event {
   if (_down) [self sendPhase:2 at:[self convertPoint:event.locationInWindow fromView:nil] clampToEdge:YES];
   _down = NO;
+}
+
+/// A long press, however short the click: the finger lifts when it has been down long enough.
+- (void)rightMouseDown:(NSEvent *)event {
+  if (self.inputOn && !self.armed) {
+    self.armed = YES;
+    return;
+  }
+  NSPoint at = [self convertPoint:event.locationInWindow fromView:nil];
+  [self sendPhase:0 at:at clampToEdge:YES];
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kLongPressSeconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    [self sendPhase:2 at:at clampToEdge:YES];
+  });
+}
+
+/// A trackpad's pinch as two fingers either side of the pointer, moving as the fingers do.
+- (void)magnifyWithEvent:(NSEvent *)event {
+  if (!self.takesPointer || _down) return;
+  NSPoint at = [self convertPoint:event.locationInWindow fromView:nil];
+  if (event.phase == NSEventPhaseBegan) {
+    _pinchAt = clampTo(at, self.bounds.size);
+    _pinchGap = MIN(self.bounds.size.width, self.bounds.size.height) * kPinchStart;
+  }
+  _pinchGap = MVPinchGap(_pinchGap, event.magnification, MAX(self.bounds.size.width, self.bounds.size.height));
+  NSPoint a = NSMakePoint(_pinchAt.x - _pinchGap, _pinchAt.y), b = NSMakePoint(_pinchAt.x + _pinchGap, _pinchAt.y);
+  BOOL ended = event.phase == NSEventPhaseEnded || event.phase == NSEventPhaseCancelled;
+  [self sendPhase:event.phase == NSEventPhaseBegan ? 0 : ended ? 2 : 1 at:a second:[NSValue valueWithPoint:b] clampToEdge:YES];
 }
 
 // a trackpad's two fingers, or a wheel, as one finger dragging: the device scrolls as it does for a finger
@@ -149,23 +209,6 @@ NSMenu *MVDeviceMenu(void) {
     [self sendPhase:2 at:_scrollAt clampToEdge:YES];
     _scrolling = NO;
   }
-}
-
-- (void)keyDown:(NSEvent *)event {
-  if (!self.takesKeys) return;
-  NSString *characters = event.characters;
-  if (MVIsTypedText(characters, event.modifierFlags)) {
-    MVEmit(@{@"op": @"text", @"s": characters});
-    return;
-  }
-  uint16_t usage = MVUsageOfKeyCode(event.keyCode);
-  if (usage) MVEmit(@{@"op": @"key", @"page": @7, @"usage": @(usage), @"state": @1});
-}
-
-- (void)keyUp:(NSEvent *)event {
-  if (!self.takesKeys) return;
-  uint16_t usage = MVUsageOfKeyCode(event.keyCode);
-  if (usage) MVEmit(@{@"op": @"key", @"page": @7, @"usage": @(usage), @"state": @2});
 }
 
 @end

@@ -5,9 +5,16 @@ import { handoffRequest } from './handoff.js';
 const POLL_MS = 250;
 /** The pill goes this long after the last call. */
 const DRIVING_MS = 2_000;
+const ARGS_SHOWN = 200;
 
-const inWords = (l: ActivityLine) =>
-  `${new Date(l.at).toLocaleTimeString()} ${l.tool} ${l.ms} ms ${l.ok ? 'ok' : 'refused'} ${JSON.stringify(l.args).slice(0, 200)}`;
+const forWindow = ({ at, tool, ms, ok, args }: ActivityLine) => ({
+  op: 'activity',
+  time: new Date(at).toLocaleTimeString(),
+  tool,
+  ms,
+  ok,
+  args: JSON.stringify(args).slice(0, ARGS_SHOWN),
+});
 
 /** Tells a window what other processes do on its device: calls, and a request for a person. No socket. */
 export function followDevice(serial: string, session: Pick<MirrorSession, 'tell'>) {
@@ -21,7 +28,7 @@ export function followDevice(serial: string, session: Pick<MirrorSession, 'tell'
       lastCall = now;
       driving = true;
       session.tell({ op: 'agent', driving: true, tool: line.tool });
-      session.tell({ op: 'activity', line: inWords(line) });
+      session.tell(forWindow(line));
     }
     if (driving && now - lastCall >= DRIVING_MS) {
       driving = false;
