@@ -225,6 +225,20 @@ describe('the page', () => {
   };
   const SURVEY_COMMAND = 'appdyno perf survey --app dev.app --device &#60;id&#62;';
 
+  it('the Launch row holds a plain launch, not the one traced for its phases, if it has one', async () => {
+    const s = store();
+    await s.run(2, [launch(400)]);
+    const phase: Metric = { kind: 'launch.phase.main_ms', unit: 'ms', samples: [500] };
+    await s.run(1, [launch(9000), phase], { scenario: 'launch-why' });
+    const row = /Launch<\/th>.*?<\/tr>/.exec(await s.page())?.[0] ?? '';
+    expect(row).toContain('launch-cold');
+    expect(row).not.toContain('launch-why');
+    // with nothing else, it stands
+    const only = store();
+    await only.run(1, [launch(9000), phase], { scenario: 'launch-why' });
+    expect(/Launch<\/th>.*?<\/tr>/.exec(await only.page())?.[0]).toContain('launch-why');
+  });
+
   it("a refusal of one app does not stand for another's cell", async () => {
     const s = store();
     await s.run(1, [{ kind: 'heap.leaks', unit: 'count', samples: [20] }], { scenario: 'heap' });

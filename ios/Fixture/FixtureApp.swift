@@ -93,7 +93,7 @@ struct WebScreen: UIViewRepresentable {
 }
 
 /// One request through a session of its own, as most apps make it: what is typed, else APPDYNO_FIXTURE_FETCH_URL.
-/// APPDYNO_FIXTURE_NO_PROXY: past the proxy a phone's Wi-Fi may name, which only the phone's owner can change.
+/// APPDYNO_FIXTURE_NO_PROXY: past a proxy a phone's Wi-Fi may name, as a known download must reach its server.
 struct NetworkScreen: View {
     @State private var url = ProcessInfo.processInfo.environment["APPDYNO_FIXTURE_FETCH_URL"] ?? ""
     @State private var result = ""

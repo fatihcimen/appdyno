@@ -61,15 +61,21 @@ export function namesOf(data: DashboardData) {
   return new Map(classes.map((c) => [c, deviceName(c, models.get(c))]));
 }
 
+/** A launch counted beside a trace of why it was slow, not one of a measure's own launches. */
+const traced = (run: PerfRecord[], row: string) =>
+  row === 'launch' && run.some((r) => isPhase(r.kind));
+
 function newestCells(scenarios: Scenario[]) {
   const cells = new Map<string, Reading>();
   for (const scenario of scenarios)
     for (const run of scenario.runs)
       for (const record of run) {
-        const key = cellKey(rowOf(record.kind), scenario.key.deviceClass);
+        const row = rowOf(record.kind);
+        const key = cellKey(row, scenario.key.deviceClass);
         const held = cells.get(key);
+        const [was, is] = [held && traced(held.run, row), traced(run, row)];
         // a run's first record of a row is the one its operation leads with
-        if (!held || time(held.record.at) < time(record.at))
+        if (!held || (was === is ? time(held.record.at) < time(record.at) : was))
           cells.set(key, { record, run, scenario });
       }
   return cells;
