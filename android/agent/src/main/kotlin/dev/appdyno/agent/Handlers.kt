@@ -39,18 +39,14 @@ class Handlers(private val automation: Automation, private val token: String) {
         return diff == 0
     }
 
-    fun hello(): JSONObject {
-        val d = Platform.display()
-        return JSONObject()
-            .put("agentVersion", BuildConfig.VERSION_NAME)
-            .put("protocol", JSONObject().put("major", PROTOCOL_MAJOR))
-            .put("platform", "android")
-            .put("osVersion", Build.VERSION.RELEASE)
-            .put("sdk", Build.VERSION.SDK_INT)
-            .put("model", "${Build.MANUFACTURER} ${Build.MODEL}")
-            .put("screen", JSONObject().put("w", d.width).put("h", d.height).put("density", d.densityDpi).put("rotation", d.rotation))
-            .put("pid", android.os.Process.myPid())
-    }
+    fun hello() = Results.hello(
+        BuildConfig.VERSION_NAME,
+        Build.VERSION.RELEASE,
+        Build.VERSION.SDK_INT,
+        "${Build.MANUFACTURER} ${Build.MODEL}",
+        Platform.display(),
+        android.os.Process.myPid(),
+    )
 
     /** A person's finger on a mirror's window: one event, now, with no settle. On a connection's thread. */
     fun touch(p: JSONObject) = input.liveTouch(
@@ -66,15 +62,14 @@ class Handlers(private val automation: Automation, private val token: String) {
     fun handle(method: String, p: JSONObject, job: Job): Reply = when (method) {
         "tree.get" -> {
             val quiet = idle(job)
-            val maxDepth = p.optInt("maxDepth", 128)
-            val maxNodes = p.optInt("maxNodes", 5_000)
-            Reply(treeJson(aScreen(job) { capture.capture(maxDepth, maxNodes, yielding = !quiet) }))
+            val r = TreeRequest.from(p)
+            Reply(treeJson(aScreen(job) { capture.capture(r.maxDepth, r.maxNodes, yielding = !quiet) }))
         }
-        "wait" -> WaitFor.handle(p, job, { capture.capture(yielding = !idle(job)) }, ::treeJson)
-        "act" -> act(p, job)
-        "a11y.read" -> a11yRead(p, job)
-        "text.set" -> textSet(p, job)
-        "screenshot" -> screenshot(p)
+        "wait" -> WaitFor.handle(WaitRequest.from(p), job, { capture.capture(yielding = !idle(job)) }, ::treeJson)
+        "act" -> act(Action.from(p.getJSONObject("action")), AfterRequest.from(p), job)
+        "a11y.read" -> a11yRead(p.getInt("maxNodes"), job)
+        "text.set" -> textSet(TextRequest.from(p), job)
+        "screenshot" -> screenshot(ShotRequest.from(p))
         "app.foreground" -> Reply(JSONObject().apply { foreground()?.let { put("pkg", it) } })
         "clipboard.set" -> {
             clipboard.set(p.getString("text"))
@@ -96,15 +91,15 @@ class Handlers(private val automation: Automation, private val token: String) {
         else -> throw unknownMethod(method)
     }
 
-    private fun act(p: JSONObject, job: Job): Reply {
-        val a = p.getJSONObject("action")
+    private fun act(a: Action, r: AfterRequest, job: Job): Reply {
+        val touch = a !is Action.Key
         // on a dark screen a touch reaches no window, and nothing says so: the host wakes it and asks again
-        if (a.getString("kind") != "key" && !Platform.display().on) throw AgentFailure("SCREEN_OFF", "the screen is off")
+        if (touch && !Platform.display().on) throw AgentFailure("SCREEN_OFF", "the screen is off")
         awaitRest()
         val cancelled = { job.cancelled }
         // a touch aimed at a screen that another window has replaced since it was read lands on the wrong one (A/B
         // run 8559e13f: the app restarted into its splash between the read and the tap, and the tap was lost)
-        if (a.getString("kind") != "key" && p.has("before")) recent[p.getString("before")]?.let { read ->
+        if (touch && r.before != null) recent[r.before]?.let { read ->
             val then = WindowIds.app(read.windows.map { it.id to it.type })
             val now = WindowIds.app(automation.ua.windows.map { it.id to it.type })
             if (WindowIds.replaced(then, now)) {
@@ -112,48 +107,25 @@ class Handlers(private val automation: Automation, private val token: String) {
             }
         }
         val then = appWindows()
-        when (a.getString("kind")) {
-            "tap" -> input.tap(a.getDouble("x").toFloat(), a.getDouble("y").toFloat())
-            "doubleTap" -> input.doubleTap(a.getDouble("x").toFloat(), a.getDouble("y").toFloat())
-            "longPress" -> input.longPress(a.getDouble("x").toFloat(), a.getDouble("y").toFloat(), a.getLong("durationMs"), cancelled)
-            "swipe" -> {
-                val from = a.getJSONObject("from")
-                val to = a.getJSONObject("to")
-                input.path(
-                    Paths.line(
-                        from.getDouble("x").toFloat(), from.getDouble("y").toFloat(),
-                        to.getDouble("x").toFloat(), to.getDouble("y").toFloat(), a.getLong("durationMs"),
-                    ),
-                    cancelled,
-                )
-            }
-            "gesture" -> {
-                val pointers = a.getJSONArray("pointers")
-                input.gesture(
-                    (0 until pointers.length()).map { i ->
-                        val pts = pointers.getJSONArray(i)
-                        (0 until pts.length()).map { j ->
-                            val s = pts.getJSONObject(j)
-                            Sample(s.getLong("t"), s.getDouble("x").toFloat(), s.getDouble("y").toFloat())
-                        }
-                    },
-                    cancelled,
-                )
-            }
-            "key" -> input.key(Input.KEYS[a.getString("key")] ?: throw AgentFailure("INVALID_ARGUMENT", "unknown key"))
-            else -> throw AgentFailure("INVALID_ARGUMENT", "unknown action")
+        when (a) {
+            is Action.Tap -> input.tap(a.x, a.y)
+            is Action.DoubleTap -> input.doubleTap(a.x, a.y)
+            is Action.LongPress -> input.longPress(a.x, a.y, a.durationMs, cancelled)
+            is Action.Swipe -> input.path(Paths.line(a.from.first, a.from.second, a.to.first, a.to.second, a.durationMs), cancelled)
+            is Action.Gesture -> input.gesture(a.pointers, cancelled)
+            is Action.Key -> input.key(Input.KEYS[a.key] ?: throw AgentFailure("INVALID_ARGUMENT", "unknown key"))
         }
         // the window counts from here: injection returns once the app has handled the event, however busy it was
         val at = SystemClock.uptimeMillis()
         // a tap on something that cannot react (plain text, empty space) needs only a short look
-        val inert = a.getString("kind") == "tap" && p.has("before") &&
-            recent[p.getString("before")]?.let { c ->
-                val x = a.getDouble("x").toInt()
-                val y = a.getDouble("y").toInt()
+        val inert = a is Action.Tap && r.before != null &&
+            recent[r.before]?.let { c ->
+                val x = a.x.toInt()
+                val y = a.y.toInt()
                 // a key of the keyboard reacts like any control
                 !c.onOtherWindow(x, y) && !HitTest.actionable(c.nodes, x, y, c::inApp)
             } == true
-        return after(p, at, job, JSONObject(), then, inert)
+        return after(r, at, job, JSONObject(), then, inert)
     }
 
     /**
@@ -162,8 +134,7 @@ class Handlers(private val automation: Automation, private val token: String) {
      * text nodes, how many characters the screen does not show (one call to the app per node, within
      * TEXT_CLIP_MS).
      */
-    private fun a11yRead(p: JSONObject, job: Job): Reply {
-        val max = p.optInt("maxNodes", 60)
+    private fun a11yRead(max: Int, job: Job): Reply {
         val index = HashMap<android.view.accessibility.AccessibilityNodeInfo, Int>()
         val texts = ArrayList<Pair<Int, android.view.accessibility.AccessibilityNodeInfo>>()
         val c = capture.capture(yielding = !idle(job), onNode = { i, n ->
@@ -178,31 +149,28 @@ class Handlers(private val automation: Automation, private val token: String) {
             val before = n.traversalBefore?.let { index[it] }
             val after = n.traversalAfter?.let { index[it] }
             if (before == null && after == null) continue
-            traversal.put(JSONObject().put("n", i).apply { before?.let { put("before", it) }; after?.let { put("after", it) } })
+            traversal.put(Results.traversal(i, before, after))
         }
         val clips = JSONArray()
         val end = SystemClock.uptimeMillis() + TEXT_CLIP_MS
         for ((i, n) in texts) {
             if (job.cancelled || SystemClock.uptimeMillis() > end) break
             val (chars, hidden) = TextClip.of(n) ?: continue
-            clips.put(JSONObject().put("n", i).put("chars", chars).put("hidden", hidden))
+            clips.put(Results.clip(i, chars, hidden))
         }
         return Reply(JSONObject().put("tree", treeJson(c)).put("clips", clips).put("traversal", traversal))
     }
 
-    private fun textSet(p: JSONObject, job: Job): Reply {
+    private fun textSet(r: TextRequest, job: Job): Reply {
         awaitRest()
         val then = appWindows()
         val cancelled = { job.cancelled }
-        val point = p.optJSONObject("at")?.let { at -> at.getDouble("x").toFloat() to at.getDouble("y").toFloat() }
-        val tapAt = point?.let { (x, y) -> { input.tap(x, y) } }
+        val tapAt = r.at?.let { (x, y) -> { input.tap(x, y) } }
         tapAt?.invoke()
-        val o = text.set(p.getString("text"), p.optBoolean("replace"), p.optLong("focusTimeoutMs", 5_000), cancelled, tapAt, point)
-        if (p.optBoolean("submit")) input.key(android.view.KeyEvent.KEYCODE_ENTER)
+        val o = text.set(r.text, r.replace, r.focusTimeoutMs, cancelled, tapAt, r.at)
+        if (r.submit) input.key(android.view.KeyEvent.KEYCODE_ENTER)
         val at = SystemClock.uptimeMillis()
-        val out = JSONObject().put("mode", o.mode).put("focusMs", o.focusMs)
-        o.verified?.let { out.put("verified", it) }
-        return after(p, at, job, out, then)
+        return after(r.after, at, job, Results.text(o), then)
     }
 
     /**
@@ -220,19 +188,17 @@ class Handlers(private val automation: Automation, private val token: String) {
     }
 
     /** The settle and the read an action asked for, into its result. `then`: the app's windows before it. */
-    private fun after(p: JSONObject, at: Long, job: Job, out: JSONObject, windowsBefore: Set<Int>, inert: Boolean = false): Reply {
-        val read = p.optString("read", "none")
-        val settle = p.optJSONObject("settle")
+    private fun after(r: AfterRequest, at: Long, job: Job, out: JSONObject, windowsBefore: Set<Int>, inert: Boolean = false): Reply {
         var last: Capture? = null
-        if (settle != null) {
-            val quiet = settle.optLong("quietMs", 200).let { if (inert) minOf(it, INERT_QUIET_MS) else it }
+        if (r.settle != null) {
+            val quiet = r.settle.quietMs.let { if (inert) minOf(it, INERT_QUIET_MS) else it }
             var asked = false
-            val before = if (p.has("before")) recent[p.getString("before")] else null
+            val before = r.before?.let { recent[it] }
             var then = windowsBefore
             val o = settler.run(
                 at,
                 quiet,
-                settle.optLong("maxMs", 3_000),
+                r.settle.maxMs,
                 before,
                 {
                     asked = false
@@ -249,16 +215,11 @@ class Handlers(private val automation: Automation, private val token: String) {
                 { hold(then, last, !asked).also { asked = true } },
                 { c -> WindowIds.replaced(WindowIds.app(c.windows.map { w -> w.id to w.type }), appWindows()) },
             )
-            val moving = last?.sliding == true || transitions.runningNow()
-            out.put(
-                "settle",
-                JSONObject().put("settled", o.settled).put("ms", o.elapsedMs).put("reads", o.reads).put("quietMs", o.quietMs)
-                    .apply { if (moving) put("moving", true) },
-            )
+            out.put("settle", Results.settle(o, last?.sliding == true || transitions.runningNow()))
         }
-        if (read != "none") {
+        if (r.read != "none") {
             val c = last?.takeUnless { it.noApp } ?: aScreen(job) { capture.capture() }
-            if (read == "tree") out.put("tree", treeJson(c)) else if (read == "hash") out.put("hash", c.also { recent[it.hash] = it }.hash)
+            if (r.read == "tree") out.put("tree", treeJson(c)) else if (r.read == "hash") out.put("hash", c.also { recent[it.hash] = it }.hash)
         }
         return Reply(out)
     }
@@ -329,25 +290,23 @@ class Handlers(private val automation: Automation, private val token: String) {
      */
     private fun awaitRest() = transitions.awaitEnd(SLIDE_MAX_MS)
 
-    private fun screenshot(p: JSONObject): Reply {
+    private fun screenshot(r: ShotRequest): Reply {
         awaitRest()
         val shot = automation.ua.takeScreenshot() ?: throw AgentFailure("INTERNAL", "the screen could not be captured")
         // bitmaps live in native memory until a collection: each one is freed as soon as it is encoded
         val made = mutableListOf(shot)
         try {
             var bmp = if (shot.config == Bitmap.Config.HARDWARE) shot.copy(Bitmap.Config.ARGB_8888, false).also { made += it } else shot
-            val max = p.optInt("maxPx", 0)
-            if (max > 0 && maxOf(bmp.width, bmp.height) > max) {
+            val max = r.maxPx
+            if (max != null && maxOf(bmp.width, bmp.height) > max) {
                 val k = max.toFloat() / maxOf(bmp.width, bmp.height)
                 bmp = Bitmap.createScaledBitmap(bmp, (bmp.width * k).toInt().coerceAtLeast(1), (bmp.height * k).toInt().coerceAtLeast(1), true).also { made += it }
             }
-            val png = p.optString("format", "jpeg") == "png"
             val bytes = ByteArrayOutputStream().use { out ->
-                bmp.compress(if (png) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG, p.optInt("quality", 80), out)
+                bmp.compress(if (r.png) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG, r.quality, out)
                 out.toByteArray()
             }
-            val result = JSONObject().put("w", bmp.width).put("h", bmp.height).put("format", if (png) "png" else "jpeg").put("bytes", bytes.size)
-            return Reply(result, bytes)
+            return Reply(Results.shot(bmp.width, bmp.height, r.png, bytes.size), bytes)
         } finally {
             for (b in made.distinct()) b.recycle()
         }
@@ -371,28 +330,8 @@ class Handlers(private val automation: Automation, private val token: String) {
 
     private fun treeJson(c: Capture): JSONObject {
         recent[c.hash] = c
-        val windows = JSONArray()
-        for (w in c.windows) {
-            windows.put(
-                JSONObject().put("type", w.type).apply { w.pkg?.let { put("pkg", it) } }.put("layer", w.layer)
-                    .put("b", rect(w.bounds.left, w.bounds.top, w.bounds.right, w.bounds.bottom))
-                    .put("active", w.active).put("focused", w.focused),
-            )
-        }
-        val nodes = JSONArray()
-        for ((i, n) in c.nodes.withIndex()) {
-            val o = JSONObject().put("p", n.parent).put("w", n.window).put("c", n.cls)
-            (n.id ?: c.tags[i])?.let { o.put("id", it) }
-            n.text?.let { o.put("t", it) }
-            n.desc?.let { o.put("d", it) }
-            n.hint?.let { o.put("h", it) }
-            nodes.put(o.put("b", rect(n.left, n.top, n.right, n.bottom)).put("f", n.flags))
-        }
-        return JSONObject().put("windows", windows).put("nodes", nodes).put("truncated", c.truncated)
-            .put("elapsedMs", c.elapsedMs).put("hash", c.hash).apply { if (c.sliding) put("moving", true) }
+        return Results.tree(c)
     }
-
-    private fun rect(l: Int, t: Int, r: Int, b: Int) = JSONArray().put(l).put(t).put(r).put(b)
 
     companion object {
         /** The quiet window after a tap on something that cannot react (an immediate touch reaction still shows). */

@@ -28,6 +28,8 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+    // the wire as canonical JSON, read by the host's tests and the runner's as well
+    sourceSets["test"].resources.srcDir("../../packages/protocol/fixtures")
 }
 
 dependencies {

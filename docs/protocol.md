@@ -3,8 +3,11 @@
 The host library talks to an on-device agent over one byte stream: on Android an abstract unix socket
 of the agent opened through the adb server (`localabstract:<name>`), later on iOS a TCP connection
 (simulator loopback, or a usbmux connection to a phone). The source of truth for message shapes is
-`packages/protocol/src/messages.ts`; the Android agent implements the same names in
-`android/agent/src/main/kotlin/dev/appdyno/agent/`.
+`packages/protocol/src/messages.ts`. The host parses a request's params by it, so a default there is what goes on
+the wire and an agent has none of its own: a value missing is `INVALID_ARGUMENT`. `packages/protocol/fixtures` has
+every request, result and error as canonical JSON, which the protocol's tests hold to the schemas and the Android
+agent's and the iOS runner's tests read through their own code; `packages/protocol/test/native.test.ts` compares the
+error codes, node flags and version the three of them write down.
 
 ## Frames
 
@@ -35,7 +38,7 @@ build, so an agent has no other versions to answer for.
 
 ## Deadlines and cancellation
 
-Every request carries `params._deadlineMs`. The agent answers `TIMEOUT` when the work takes longer and
+Every request carries `params._deadlineMs`; one that goes to the device's work without it ends the connection. The agent answers `TIMEOUT` when the work takes longer and
 tells the work to stop (long loops poll a cancel flag; a call blocked inside the framework still returns
 when the framework gives up). The host waits one second longer than the deadline, then fails the call
 itself and sends `cancel {id}`. Device work runs on one thread in arrival order; `hello`, `ping` and
@@ -47,7 +50,7 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | `hello`                                                  | `token`, `protocol`                                                                                      | agent and device description                                                     |
 | `ping`                                                   | –                                                                                                        | `uptimeMs`                                                                       |
-| `tree.get`                                               | `maxDepth?` (128), `maxNodes?` (5000)                                                                    | `Tree`                                                                           |
+| `tree.get`                                               | `maxDepth` (128), `maxNodes` (5000)                                                                      | `Tree`                                                                           |
 | `act`                                                    | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`                                            | `settle?`, `hash?`, `tree?`                                                      |
 | `text.set`                                               | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (5000; the iOS driver asks 2000), `settle?`, `read` | as `act`, plus `mode` (`setText`/`paste`/`keys`), `verified`, `focusMs`          |
 | `screenshot`                                             | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                                                        | `w`, `h`, `format`, `bytes`, plus the image as an attachment                     |
@@ -62,7 +65,7 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 | `touch` (Android)                                        | `p` (0 down, 1 moved, 2 up), `x`, `y`, `x2?`, `y2?`: fractions of the screen, no settle                  |
 | `stream.start` (Android)                                 | `codec` (`h264`), `quality`, `maxSize?`, `failFirst?`                                                    |
 | `stream.clock`, `stream.sync`, `stream.status` (Android) | –                                                                                                        |
-| `wait`                                                   | `since?`, `timeoutMs`, `minMs?` (300)                                                                    | `sig`, `changed`, `reads`, `elapsedMs`, `tree?`                                  |
+| `wait`                                                   | `since?`, `timeoutMs`, `minMs` (300)                                                                     | `sig`, `changed`, `reads`, `elapsedMs`, `tree?`                                  |
 | `cancel`                                                 | `id`                                                                                                     | –                                                                                |
 | `shutdown`                                               | –                                                                                                        | – (the agent exits)                                                              |
 

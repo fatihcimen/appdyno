@@ -1,0 +1,27 @@
+{
+  "timeout": {
+    "code": -32000,
+    "message": "act took longer than 15000 ms",
+    "data": { "code": "TIMEOUT" }
+  },
+  "noFocus": {
+    "code": -32009,
+    "message": "no text field took the focus",
+    "data": { "code": "NO_FOCUS", "hint": "tap the field first" }
+  },
+  "unknownMethod": {
+    "code": -32006,
+    "message": "unknown method nope",
+    "data": { "code": "UNSUPPORTED" }
+  },
+  "screenOff": {
+    "code": -32014,
+    "message": "the screen is off",
+    "data": { "code": "SCREEN_OFF" }
+  },
+  "internal": {
+    "code": -32015,
+    "message": "the screen could not be captured",
+    "data": { "code": "INTERNAL" }
+  }
+}

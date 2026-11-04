@@ -52,6 +52,8 @@
 - The Android agent: a stream with an encoder ladder and bounded backpressure, on a connection of its own, and `touch`, with no settle.
 - `simulator` boots an emulator with `-grpc <free port> -grpc-use-token`, for a window's picture with nothing in the guest.
 
+- Protocol 2: the host parses every request by its schema, so the agents have no defaults of their own, and a value out of range is refused before it reaches a device. A dark screen is `SCREEN_OFF`, an unknown method `UNSUPPORTED` on both platforms. `device_info` no longer lists capabilities: there are none.
+
 ## 0.6.0
 
 The first version run on all four kinds of device together: an emulator, a simulator, an Android phone and an iPhone.

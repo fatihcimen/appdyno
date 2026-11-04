@@ -149,8 +149,7 @@ final class Device {
     }
 
     func treeJSON(_ c: Capture, elapsedMs: Int) -> [String: Any] {
-        ["windows": c.windows, "nodes": c.nodes.map(Device.wire), "truncated": c.truncated,
-         "elapsedMs": elapsedMs, "hash": c.hash]
+        treeWire(windows: c.windows, nodes: c.nodes, truncated: c.truncated, elapsedMs: elapsedMs, hash: c.hash)
     }
 
     // MARK: actions
@@ -176,49 +175,36 @@ final class Device {
     }
 
     /// Does the action; for a touch, the milliseconds it first waited for the app's animations.
-    func perform(_ a: [String: Any]) throws -> Int? {
-        func num(_ k: String, _ d: [String: Any] = a) throws -> Double {
-            guard let v = (d[k] as? NSNumber)?.doubleValue else { throw AgentError("INVALID_ARGUMENT", "\(k) is required") }
-            return v
-        }
-        switch a["kind"] as? String {
-        case "tap":
-            let x = try num("x"), y = try num("y")
+    func perform(_ a: Action) throws -> Int? {
+        switch a {
+        case let .tap(x, y):
             let waited = animationsOver(x, y)
             if !EventShim.tap(CGPoint(x: x, y: y), orientation: Device.interfaceOrientation()) { point(x, y).tap() }
             return waited
-        case "doubleTap":
-            let x = try num("x"), y = try num("y")
+        case let .doubleTap(x, y):
             let waited = animationsOver(x, y)
             point(x, y).doubleTap()
             return waited
-        case "longPress":
-            let x = try num("x"), y = try num("y"), ms = try num("durationMs")
+        case let .longPress(x, y, ms):
             let waited = animationsOver(x, y)
             point(x, y).press(forDuration: ms / 1000)
             return waited
-        case "swipe":
-            guard let f = a["from"] as? [String: Any], let t = a["to"] as? [String: Any] else {
-                throw AgentError("INVALID_ARGUMENT", "from and to are required")
-            }
-            let (x0, y0, x1, y1, ms) = (try num("x", f), try num("y", f), try num("x", t), try num("y", t), try num("durationMs"))
+        case let .swipe(x0, y0, x1, y1, ms):
             let waited = animationsOver(x0, y0)
             try drag(x0, y0, x1, y1, ms: ms)
             return waited
-        case "gesture":
-            guard let pointers = a["pointers"] as? [[[String: Any]]], let path = pointers.first,
-                  let first = path.first, let last = path.last
-            else { throw AgentError("INVALID_ARGUMENT", "pointers need a finger with samples") }
-            let (x0, y0, x1, y1) = (try num("x", first), try num("y", first), try num("x", last), try num("y", last))
+        case let .gesture(pointers):
+            guard let path = pointers.first, let first = path.first, let last = path.last else {
+                throw AgentError("INVALID_ARGUMENT", "pointers need a finger with samples")
+            }
+            let (x0, y0, x1, y1) = (first.x, first.y, last.x, last.y)
             if pointers.count == 1, path.count <= 2 {
-                let ms = max(20, try num("t", last) - num("t", first))
+                let ms = max(20, last.t - first.t)
                 let waited = animationsOver(x0, y0)
                 if x0 == x1, y0 == y1 { point(x0, y0).press(forDuration: ms / 1000) } else { try drag(x0, y0, x1, y1, ms: ms) }
                 return waited
             }
-            let plan = try gestureTimeline(try pointers.map { f in
-                try f.map { s in (x: try num("x", s), y: try num("y", s), t: try num("t", s)) }
-            })
+            let plan = try gestureTimeline(pointers)
             guard EventShim.gestureAvailable else {
                 throw AgentError("UNSUPPORTED", "this XCTest has no event synthesizer for a gesture of \(pointers.count) fingers and \(path.count) samples")
             }
@@ -227,11 +213,9 @@ final class Device {
                 throw AgentError("UNSUPPORTED", "XCTest's event synthesizer refused a gesture of \(pointers.count) fingers and \(path.count) samples")
             }
             return waited
-        case "key":
-            try key(a["key"] as? String ?? "")
+        case let .key(k):
+            try key(k)
             return nil
-        default:
-            throw AgentError("INVALID_ARGUMENT", "unknown action \(a["kind"] ?? "nil")")
         }
     }
 
@@ -268,22 +252,21 @@ final class Device {
     // MARK: settle
 
     /// After an action: settle (when asked) and read what the caller wants.
-    func after(_ p: [String: Any], job: Job, actionAt: Int, tapAt: (Double, Double)?) throws -> [String: Any] {
+    func after(_ a: AfterRequest, job: Job, actionAt: Int, tapAt: (x: Double, y: Double)?) throws -> [String: Any] {
         var out: [String: Any] = [:]
         var last: Capture?
-        if let s = p["settle"] as? [String: Any] {
-            var quiet = (s["quietMs"] as? NSNumber)?.intValue ?? 200
-            let maxMs = (s["maxMs"] as? NSNumber)?.intValue ?? 3000
-            let before = (p["before"] as? String).flatMap { h in recent.last { $0.hash == h }?.nodes }
+        if let s = a.settle {
+            var quiet = s.quietMs
+            let before = a.before.flatMap { h in recent.last { $0.hash == h }?.nodes }
             var inert = false
-            if let tapAt, let before, !actionable(before, x: Int(tapAt.0), y: Int(tapAt.1)) {
+            if let tapAt, let before, !actionable(before, x: Int(tapAt.x), y: Int(tapAt.y)) {
                 quiet = min(quiet, Device.inertQuietMs)
                 inert = true
             }
             // an alert or sheet that came up during the settle is still animating in: a tap on it then is
             // lost, so the screen counts as busy for its appear animation
             var alertSince: Date? = before.flatMap { Device.hasAlert($0) ? Date.distantPast : nil }
-            let r = settler.run(actionAt: actionAt, quietMs: quiet, maxMs: maxMs,
+            let r = settler.run(actionAt: actionAt, quietMs: quiet, maxMs: s.maxMs,
                                 before: before.map { Capture(windows: [], nodes: $0, truncated: false, busy: false) },
                                 read: { () -> Capture in
                                     var c = (try? self.capture(job: job)) ?? Capture(windows: [], nodes: [], truncated: true, busy: true)
@@ -311,16 +294,16 @@ final class Device {
                 last = (try? capture(job: job)) ?? last
                 idleMs = Int(Date().timeIntervalSince(idleAt) * 1000)
             }
-            out["settle"] = ["settled": r.settled, "ms": r.elapsedMs + idleMs, "reads": r.reads, "quietMs": quiet]
+            out["settle"] = settleWire(settled: r.settled, ms: r.elapsedMs + idleMs, reads: r.reads, quietMs: quiet)
         }
-        switch p["read"] as? String ?? "none" {
+        switch a.read {
         case "hash", "tree":
             let t0 = Date()
             var c = try last.flatMap { $0.windows.isEmpty ? nil : $0 } ?? capture(job: job)
             hideUnreachableCopies(&c)
             remember(c)
             out["hash"] = c.hash
-            if p["read"] as? String == "tree" { out["tree"] = treeJSON(c, elapsedMs: Int(Date().timeIntervalSince(t0) * 1000)) }
+            if a.read == "tree" { out["tree"] = treeJSON(c, elapsedMs: Int(Date().timeIntervalSince(t0) * 1000)) }
         default: break
         }
         return out
@@ -355,11 +338,11 @@ final class Device {
     static var ownsPasteboard: Bool { UIPasteboard.general.changeCount == pasteboardMark }
     static func markPasteboard() { pasteboardMark = UIPasteboard.general.changeCount }
 
-    func setText(_ p: [String: Any], job: Job) throws -> [String: Any] {
-        guard let text = p["text"] as? String else { throw AgentError("INVALID_ARGUMENT", "text is required") }
+    func setText(_ r: TextRequest, job: Job) throws -> [String: Any] {
+        let text = r.text
         let t0 = Date()
         let app = front().0
-        if let at = p["at"] as? [String: Any], let x = (at["x"] as? NSNumber)?.doubleValue, let y = (at["y"] as? NSNumber)?.doubleValue {
+        if let (x, y) = r.at {
             // a field that already has the focus there is not tapped again (each event costs about 350 ms)
             let focused = focusedField(app)
             if focused == nil || !(focused!.frame.contains(CGPoint(x: x, y: y))) {
@@ -367,7 +350,7 @@ final class Device {
                 point(x, y).tap()
             }
         }
-        let timeout = Double((p["focusTimeoutMs"] as? NSNumber)?.intValue ?? 2000) / 1000
+        let timeout = Double(r.focusTimeoutMs) / 1000
         var field = focusedField(app)
         while field == nil, Date().timeIntervalSince(t0) < timeout, !job.over {
             Thread.sleep(forTimeInterval: 0.08)
@@ -386,13 +369,11 @@ final class Device {
                 }
                 app.typeText(text)
             }
-            if p["submit"] as? Bool == true, !EventShim.type("\n", orientation: o) { app.typeText("\n") }
-            var out = try after(p, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
-            out["mode"] = "keys"
-            out["focusMs"] = focusMs
-            return out
+            if r.submit, !EventShim.type("\n", orientation: o) { app.typeText("\n") }
+            let out = try after(r.after, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
+            return out.merging(textWire(focusMs: focusMs, verified: nil)) { $1 }
         }
-        let replace = p["replace"] as? Bool == true
+        let replace = r.replace
         let secure = field.elementType == .secureTextField
         let before = currentText(field) ?? ""
         // nil: the field is gone (a code entry that submitted itself took the text)
@@ -433,21 +414,18 @@ final class Device {
             }
         }
         // a field that is gone has taken the text and submitted it already
-        if p["submit"] as? Bool == true, field.exists { field.typeText("\n") }
-        var out = try after(p, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
-        out["mode"] = "keys"
+        if r.submit, field.exists { field.typeText("\n") }
+        let out = try after(r.after, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
         // no verdict when the field cannot be read back: gone (it took the text and submitted), or secure
-        if let verified, !secure { out["verified"] = verified }
-        out["focusMs"] = focusMs
-        return out
+        return out.merging(textWire(focusMs: focusMs, verified: secure ? nil : verified)) { $1 }
     }
 
     // MARK: screen
 
-    func screenshot(_ p: [String: Any]) throws -> Reply {
+    func screenshot(_ r: ShotRequest) throws -> Reply {
         let shot = XCUIScreen.main.screenshot()
         var image = shot.image
-        if let maxPx = (p["maxPx"] as? NSNumber)?.doubleValue {
+        if let maxPx = r.maxPx {
             let px = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
             let k = maxPx / max(px.width, px.height)
             if k < 1 {
@@ -457,13 +435,11 @@ final class Device {
                 image = UIGraphicsImageRenderer(size: size, format: format).image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
             }
         }
-        let png = p["format"] as? String == "png"
-        let q = Double((p["quality"] as? NSNumber)?.intValue ?? 80) / 100
-        guard let data = png ? image.pngData() : image.jpegData(compressionQuality: q) else {
+        guard let data = r.png ? image.pngData() : image.jpegData(compressionQuality: Double(r.quality) / 100) else {
             throw AgentError("INTERNAL", "the screenshot could not be encoded")
         }
         let w = Int(image.size.width * image.scale), h = Int(image.size.height * image.scale)
-        return Reply(result: ["w": w, "h": h, "format": png ? "png" : "jpeg", "bytes": data.count], binary: data)
+        return Reply(result: shotWire(w: w, h: h, png: r.png, bytes: data.count), binary: data)
     }
 
     // MARK: accessibility audit
@@ -480,13 +456,11 @@ final class Device {
      * answers true (handled): an issue left to XCTest would be recorded as a test failure and fail the
      * request. An audit the platform cannot run is UNSUPPORTED (the caller goes on without it).
      */
-    func audit(_ p: [String: Any], job: Job) throws -> [String: Any] {
+    func audit(_ r: AuditRequest, job: Job) throws -> [String: Any] {
         let (app, id) = front()
         guard id != Device.springboardId else { throw AgentError("APP_NOT_RUNNING", "the target app is not in front") }
-        let wanted = p["types"] as? [String]
-        let maxIssues = (p["maxIssues"] as? NSNumber)?.intValue ?? 50
         var types: XCUIAccessibilityAuditType = []
-        for t in Device.auditTypes where wanted?.contains(t.name) ?? true { types.insert(t.type) }
+        for t in Device.auditTypes where r.types?.contains(t.name) ?? true { types.insert(t.type) }
         let t0 = Date()
         var issues: [[String: Any]] = []
         var truncated = false
@@ -494,7 +468,7 @@ final class Device {
             try app.performAccessibilityAudit(for: types) { issue in
                 // each issue's element is read once (a snapshot); past the limit only counted; a type this
                 // runner does not name (a newer Xcode's) is left out
-                if issues.count >= maxIssues || job.over { truncated = true } else if let i = Device.auditIssue(issue) { issues.append(i) }
+                if issues.count >= r.maxIssues || job.over { truncated = true } else if let i = Device.auditIssue(issue) { issues.append(i) }
                 return true
             }
         } catch {
@@ -505,16 +479,12 @@ final class Device {
 
     static func auditIssue(_ issue: XCUIAccessibilityAuditIssue) -> [String: Any]? {
         guard let name = auditTypes.first(where: { $0.type == issue.auditType })?.name else { return nil }
-        var out: [String: Any] = ["type": name, "rule": "XCUIAccessibilityAuditType.\(name)", "message": issue.compactDescription]
-        if let s = try? issue.element?.snapshot() {
-            out["b"] = rect(s.frame)
-            var el: [String: Any] = ["c": typeName(s.elementType)]
-            if !s.identifier.isEmpty { el["id"] = s.identifier }
-            if !s.label.isEmpty { el["d"] = s.label }
-            if let v = s.value as? String, !v.isEmpty { el["t"] = v }
-            out["element"] = el
-        }
-        return out
+        guard let s = try? issue.element?.snapshot() else { return auditIssueWire(type: name, message: issue.compactDescription, box: nil, element: nil) }
+        var el: [String: Any] = ["c": typeName(s.elementType)]
+        if !s.identifier.isEmpty { el["id"] = s.identifier }
+        if !s.label.isEmpty { el["d"] = s.label }
+        if let v = s.value as? String, !v.isEmpty { el["t"] = v }
+        return auditIssueWire(type: name, message: issue.compactDescription, box: rect(s.frame), element: el)
     }
 
     func foreground() -> [String: Any] {
@@ -595,15 +565,6 @@ final class Device {
         return Node(parent: parent, window: window, type: typeName(t), id: nonEmpty(s.identifier),
                     text: value == placeholder ? nil : nonEmpty(value), label: label, hint: placeholder,
                     left: b[0], top: b[1], right: b[2], bottom: b[3], flags: f)
-    }
-
-    static func wire(_ n: Node) -> [String: Any] {
-        var w: [String: Any] = ["p": n.parent, "w": n.window, "c": n.type, "b": [n.left, n.top, n.right, n.bottom], "f": n.flags]
-        if let v = n.id { w["id"] = v }
-        if let v = n.text { w["t"] = v }
-        if let v = n.label { w["d"] = v }
-        if let v = n.hint { w["h"] = v }
-        return w
     }
 
     private static let names: [XCUIElement.ElementType: String] = [

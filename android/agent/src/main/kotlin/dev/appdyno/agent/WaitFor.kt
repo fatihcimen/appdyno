@@ -64,19 +64,17 @@ object WaitFor {
         }
     }
 
-    fun handle(p: JSONObject, job: Job, read: () -> Capture, tree: (Capture) -> JSONObject): Reply {
+    fun handle(r: WaitRequest, job: Job, read: () -> Capture, tree: (Capture) -> JSONObject): Reply {
         val o = run(
-            if (p.isNull("since")) null else p.getString("since"),
-            p.optLong("timeoutMs", 5_000),
-            p.optLong("minMs", 300),
+            r.since,
+            r.timeoutMs,
+            r.minMs,
             { SystemClock.uptimeMillis() },
             { Thread.sleep(it) },
             { job.cancelled },
             read,
             { c -> sig(c.windows.map(::window), c.nodes) },
         )
-        val out = JSONObject().put("sig", o.sig).put("changed", o.changed).put("reads", o.reads).put("elapsedMs", o.elapsedMs)
-        o.last?.let { out.put("tree", tree(it)) }
-        return Reply(out)
+        return Reply(Results.wait(o, o.last?.let(tree)))
     }
 }

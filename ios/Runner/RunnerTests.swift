@@ -59,16 +59,10 @@ final class RunnerTests: XCTestCase {
             default: return 0
             }
         }()
-        return [
-            "agentVersion": agentVersion,
-            "protocol": ["major": protocolMajor],
-            "platform": "ios",
-            "osVersion": UIDevice.current.systemVersion,
-            "model": env["SIMULATOR_MODEL_IDENTIFIER"] ?? UIDevice.current.model,
-            "screen": ["w": b.width, "h": b.height, "density": UIScreen.main.scale, "rotation": rotation],
-            "pid": Int(ProcessInfo.processInfo.processIdentifier),
-            "idleShimChecked": IdleShim.selfChecked,
-        ]
+        return helloWire(agentVersion: agentVersion, osVersion: UIDevice.current.systemVersion,
+                         model: env["SIMULATOR_MODEL_IDENTIFIER"] ?? UIDevice.current.model,
+                         w: b.width, h: b.height, density: UIScreen.main.scale, rotation: rotation,
+                         pid: Int(ProcessInfo.processInfo.processIdentifier), idleShimChecked: IdleShim.selfChecked)
     }
 
     static func handle(_ job: Job, _ d: Device, _ pump: MainPump) throws -> Reply {
@@ -83,40 +77,37 @@ final class RunnerTests: XCTestCase {
         switch job.method {
         case "tree.get":
             let t0 = Date()
-            var c = try d.capture(maxDepth: (p["maxDepth"] as? NSNumber)?.intValue ?? 128,
-                                  maxNodes: (p["maxNodes"] as? NSNumber)?.intValue ?? 5000, job: job)
+            let r = try TreeRequest(p)
+            var c = try d.capture(maxDepth: r.maxDepth, maxNodes: r.maxNodes, job: job)
             d.hideUnreachableCopies(&c)
             d.remember(c)
             return Reply(result: d.treeJSON(c, elapsedMs: Int(Date().timeIntervalSince(t0) * 1000)))
-        case "wait": return Reply(result: try d.wait(p, job: job))
+        case "wait": return Reply(result: try d.wait(WaitRequest(p), job: job))
         case "act":
-            guard let a = p["action"] as? [String: Any] else { throw AgentError("INVALID_ARGUMENT", "action is required") }
+            let a = try Action(required(p, "action"))
             let waited = try d.perform(a)
             // the quiet window starts once the action has returned: a synthesized tap alone takes 300–600 ms,
             // and a window counted from its start would be spent before the app saw the touch
             let at = Int(Date().timeIntervalSince1970 * 1000)
-            let tap: (Double, Double)? = a["kind"] as? String == "tap"
-                ? ((a["x"] as? NSNumber)?.doubleValue ?? -1, (a["y"] as? NSNumber)?.doubleValue ?? -1) : nil
-            var out = try d.after(p, job: job, actionAt: at, tapAt: tap)
+            var out = try d.after(AfterRequest(p), job: job, actionAt: at, tapAt: a.tapPoint)
             if let waited { out["animationWaitMs"] = waited }
             return Reply(result: out)
         case "animations.wait":
-            let waited = d.animationsOver((p["x"] as? NSNumber)?.doubleValue ?? 0, (p["y"] as? NSNumber)?.doubleValue ?? 0)
+            let waited = d.animationsOver(try requiredNumber(p, "x"), try requiredNumber(p, "y"))
             return Reply(result: waited.map { ["ms": $0] } ?? [:])
         case "text.set":
-            return Reply(result: try d.setText(p, job: job))
+            return Reply(result: try d.setText(TextRequest(p), job: job))
         case "screenshot":
-            return try d.screenshot(p)
+            return try d.screenshot(ShotRequest(p))
         case "audit":
-            return Reply(result: try d.audit(p, job: job))
+            return Reply(result: try d.audit(AuditRequest(p), job: job))
         case "app.foreground":
             return Reply(result: d.foreground())
         case "app.target":
-            guard let id = p["pkg"] as? String, !id.isEmpty else { throw AgentError("INVALID_ARGUMENT", "pkg is required") }
-            d.setTarget(id)
+            d.setTarget(try requiredString(p, "pkg"))
             return Reply(result: [:])
         case "clipboard.set":
-            let text = p["text"] as? String ?? ""
+            let text = try requiredString(p, "text")
             UIPasteboard.general.string = text
             Device.markPasteboard()
             guard UIPasteboard.general.string == text else {
@@ -129,7 +120,7 @@ final class RunnerTests: XCTestCase {
             }
             return Reply(result: UIPasteboard.general.string.map { ["text": $0] } ?? [:])
         case "orientation.set":
-            d.orientation((p["rotation"] as? NSNumber)?.intValue ?? 0)
+            d.orientation(try requiredInt(p, "rotation"))
             return Reply(result: [:])
         case "shutdown":
             pump.stop()

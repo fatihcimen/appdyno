@@ -1,0 +1,191 @@
+{
+  "hello.android": {
+    "method": "hello",
+    "result": {
+      "agentVersion": "0.0.0",
+      "protocol": { "major": 2 },
+      "platform": "android",
+      "osVersion": "15",
+      "sdk": 35,
+      "model": "Google Pixel 8",
+      "screen": { "w": 1080, "h": 2400, "density": 420, "rotation": 0 },
+      "pid": 1234
+    }
+  },
+  "hello.ios": {
+    "method": "hello",
+    "result": {
+      "agentVersion": "0.0.0",
+      "protocol": { "major": 2 },
+      "platform": "ios",
+      "osVersion": "26.5",
+      "model": "iPhone17,3",
+      "screen": { "w": 402, "h": 874, "density": 3, "rotation": 0 },
+      "pid": 1234,
+      "idleShimChecked": true
+    }
+  },
+  "ping": { "method": "ping", "result": { "uptimeMs": 12 } },
+  "tree.android": {
+    "method": "tree.get",
+    "result": {
+      "windows": [
+        {
+          "type": 1,
+          "pkg": "dev.appdyno.fixture",
+          "layer": 2,
+          "b": [0, 0, 1080, 2400],
+          "active": true,
+          "focused": true
+        },
+        { "type": 3, "layer": 1, "b": [0, 0, 1080, 80], "active": false, "focused": false }
+      ],
+      "nodes": [
+        { "p": -1, "w": 0, "c": "android.widget.FrameLayout", "b": [0, 0, 1080, 2400], "f": 17 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "android.widget.Button",
+          "id": "dev.appdyno.fixture:id/go",
+          "t": "Git",
+          "d": "Başla",
+          "h": "ipucu",
+          "b": [10, 20, 110, 80],
+          "f": 19
+        }
+      ],
+      "truncated": false,
+      "elapsedMs": 12,
+      "hash": "e8388bafeaebbb77",
+      "moving": true
+    }
+  },
+  "tree.ios": {
+    "method": "tree.get",
+    "result": {
+      "windows": [
+        {
+          "type": 1,
+          "pkg": "dev.appdyno.fixture",
+          "layer": 0,
+          "b": [0, 0, 402, 874],
+          "active": true,
+          "focused": true
+        }
+      ],
+      "nodes": [
+        { "p": -1, "w": 0, "c": "Application", "b": [0, 0, 402, 874], "f": 17 },
+        {
+          "p": 0,
+          "w": 0,
+          "c": "Button",
+          "id": "go",
+          "t": "Git",
+          "d": "Başla",
+          "h": "ipucu",
+          "b": [10, 20, 110, 80],
+          "f": 19
+        }
+      ],
+      "truncated": true,
+      "elapsedMs": 12,
+      "hash": "4d98b04d8750e725"
+    }
+  },
+  "act.settled": {
+    "method": "act",
+    "result": {
+      "settle": { "settled": true, "ms": 240, "reads": 3, "quietMs": 200 },
+      "hash": "abc"
+    }
+  },
+  "act.moving": {
+    "method": "act",
+    "result": {
+      "settle": { "settled": false, "ms": 3000, "reads": 9, "quietMs": 400, "moving": true }
+    }
+  },
+  "act.animationWait": {
+    "method": "act",
+    "result": { "animationWaitMs": 120 }
+  },
+  "text.verified": {
+    "method": "text.set",
+    "result": { "mode": "setText", "focusMs": 40, "verified": true }
+  },
+  "text.keys": {
+    "method": "text.set",
+    "result": { "mode": "keys", "focusMs": 2000 }
+  },
+  "screenshot.jpeg": {
+    "method": "screenshot",
+    "result": { "w": 540, "h": 1200, "format": "jpeg", "bytes": 4096 }
+  },
+  "screenshot.png": {
+    "method": "screenshot",
+    "result": { "w": 540, "h": 1200, "format": "png", "bytes": 8192 }
+  },
+  "app.foreground": { "method": "app.foreground", "result": { "pkg": "dev.appdyno.fixture" } },
+  "app.target": { "method": "app.target", "result": {} },
+  "clipboard.set": { "method": "clipboard.set", "result": {} },
+  "clipboard.get": { "method": "clipboard.get", "result": { "text": "a" } },
+  "animations.wait": { "method": "animations.wait", "result": { "ms": 40 } },
+  "orientation.set": { "method": "orientation.set", "result": {} },
+  "audit": {
+    "method": "audit",
+    "result": {
+      "issues": [
+        {
+          "type": "contrast",
+          "rule": "XCUIAccessibilityAuditType.contrast",
+          "message": "Contrast failed",
+          "b": [1, 2, 3, 4],
+          "element": { "c": "StaticText", "id": "x", "d": "y", "t": "z" }
+        },
+        { "type": "hitRegion", "rule": "XCUIAccessibilityAuditType.hitRegion", "message": "m" }
+      ],
+      "truncated": false,
+      "elapsedMs": 100
+    }
+  },
+  "wait.changed": {
+    "method": "wait",
+    "result": {
+      "sig": "abc",
+      "changed": true,
+      "reads": 2,
+      "elapsedMs": 160,
+      "tree": { "windows": [], "nodes": [], "truncated": false, "elapsedMs": 1, "hash": "h" }
+    }
+  },
+  "wait.same": {
+    "method": "wait",
+    "result": { "sig": "abc", "changed": false, "reads": 12, "elapsedMs": 1000 }
+  },
+  "a11y.read": {
+    "method": "a11y.read",
+    "result": {
+      "tree": { "windows": [], "nodes": [], "truncated": false, "elapsedMs": 1, "hash": "h" },
+      "clips": [{ "n": 3, "chars": 20, "hidden": 4 }],
+      "traversal": [{ "n": 1, "before": 2 }, { "n": 2, "after": 1 }, { "n": 5 }]
+    }
+  },
+  "rest.wait": { "method": "rest.wait", "result": {} },
+  "animations.set": { "method": "animations.set", "result": {} },
+  "touch": { "method": "touch", "result": {} },
+  "stream.sync": { "method": "stream.sync", "result": {} },
+  "stream.status": {
+    "method": "stream.status",
+    "result": {
+      "active": 1,
+      "on": true,
+      "w": 1080,
+      "h": 2400,
+      "rotation": 0,
+      "modes": ["h264 1920"],
+      "dropped": 0
+    }
+  },
+  "cancel": { "method": "cancel", "result": {} },
+  "shutdown": { "method": "shutdown", "result": {} }
+}

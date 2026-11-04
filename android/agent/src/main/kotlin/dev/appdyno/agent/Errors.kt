@@ -1,5 +1,8 @@
 package dev.appdyno.agent
 
+import org.json.JSONObject
+import java.lang.reflect.InvocationTargetException
+
 /** The wire's version: `PROTOCOL.major`. */
 const val PROTOCOL_MAJOR = 2
 
@@ -34,3 +37,24 @@ class AgentFailure(val code: String, message: String, val hint: String? = null, 
     Exception(message, cause)
 
 fun unknownMethod(method: String) = AgentFailure("UNSUPPORTED", "unknown method $method")
+
+/** What a thrown failure tells the host. */
+fun failureOf(t: Throwable): AgentFailure = when (t) {
+    is AgentFailure -> t
+    is InvocationTargetException -> failureOf(t.targetException)
+    is IllegalArgumentException, is org.json.JSONException ->
+        AgentFailure("INVALID_ARGUMENT", t.message ?: t.toString(), cause = t)
+    else -> {
+        t.printStackTrace()
+        AgentFailure("INTERNAL", t.toString(), cause = t)
+    }
+}
+
+fun resultJson(id: Int, r: JSONObject): String = JSONObject().put("jsonrpc", "2.0").put("id", id).put("result", r).toString()
+
+fun errorJson(id: Int, f: AgentFailure): String {
+    val data = JSONObject().put("code", f.code)
+    f.hint?.let { data.put("hint", it) }
+    val err = JSONObject().put("code", rpcCode(f.code)).put("message", f.message ?: f.code).put("data", data)
+    return JSONObject().put("jsonrpc", "2.0").put("id", id).put("error", err).toString()
+}

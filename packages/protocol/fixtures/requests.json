@@ -1,0 +1,130 @@
+{
+  "hello": {
+    "method": "hello",
+    "params": { "token": "0123456789abcdef", "protocol": 2 }
+  },
+  "ping": { "method": "ping", "params": {} },
+  "tree.get": {
+    "method": "tree.get",
+    "input": {},
+    "params": { "maxDepth": 128, "maxNodes": 5000 }
+  },
+  "act.tap": {
+    "method": "act",
+    "input": { "action": { "kind": "tap", "x": 100.5, "y": 200 }, "settle": {}, "before": "abc" },
+    "params": {
+      "action": { "kind": "tap", "x": 100.5, "y": 200 },
+      "settle": { "quietMs": 200, "maxMs": 3000 },
+      "read": "none",
+      "before": "abc"
+    }
+  },
+  "act.doubleTap": {
+    "method": "act",
+    "input": { "action": { "kind": "doubleTap", "x": 10, "y": 20 } },
+    "params": { "action": { "kind": "doubleTap", "x": 10, "y": 20 }, "read": "none" }
+  },
+  "act.longPress": {
+    "method": "act",
+    "params": {
+      "action": { "kind": "longPress", "x": 10, "y": 20, "durationMs": 800 },
+      "settle": { "quietMs": 100, "maxMs": 1000 },
+      "read": "tree"
+    }
+  },
+  "act.swipe": {
+    "method": "act",
+    "params": {
+      "action": {
+        "kind": "swipe",
+        "from": { "x": 1, "y": 2 },
+        "to": { "x": 3, "y": 4 },
+        "durationMs": 300
+      },
+      "read": "hash"
+    }
+  },
+  "act.gesture": {
+    "method": "act",
+    "params": {
+      "action": {
+        "kind": "gesture",
+        "pointers": [
+          [
+            { "x": 1, "y": 2, "t": 0 },
+            { "x": 3, "y": 4, "t": 100 }
+          ],
+          [{ "x": 5, "y": 6, "t": 0 }]
+        ]
+      },
+      "read": "none"
+    }
+  },
+  "act.key": {
+    "method": "act",
+    "params": { "action": { "kind": "key", "key": "enter" }, "read": "none" }
+  },
+  "text.set": {
+    "method": "text.set",
+    "input": { "text": "merhaba dünya" },
+    "params": {
+      "text": "merhaba dünya",
+      "replace": false,
+      "submit": false,
+      "focusTimeoutMs": 5000,
+      "read": "none"
+    }
+  },
+  "text.set.at": {
+    "method": "text.set",
+    "params": {
+      "text": "a",
+      "replace": true,
+      "submit": true,
+      "at": { "x": 12.5, "y": 34 },
+      "focusTimeoutMs": 2000,
+      "settle": { "quietMs": 200, "maxMs": 3000 },
+      "read": "tree"
+    }
+  },
+  "screenshot": {
+    "method": "screenshot",
+    "input": {},
+    "params": { "format": "jpeg", "quality": 80 }
+  },
+  "screenshot.png": {
+    "method": "screenshot",
+    "params": { "format": "png", "quality": 100, "maxPx": 1024 }
+  },
+  "app.foreground": { "method": "app.foreground", "params": {} },
+  "app.target": { "method": "app.target", "params": { "pkg": "dev.appdyno.fixture" } },
+  "clipboard.set": { "method": "clipboard.set", "params": { "text": "a" } },
+  "clipboard.get": { "method": "clipboard.get", "params": {} },
+  "animations.wait": { "method": "animations.wait", "params": { "x": 10, "y": 20 } },
+  "orientation.set": { "method": "orientation.set", "params": { "rotation": 1 } },
+  "audit": { "method": "audit", "input": {}, "params": { "maxIssues": 50 } },
+  "audit.types": {
+    "method": "audit",
+    "params": { "types": ["contrast", "hitRegion"], "maxIssues": 10 }
+  },
+  "wait": {
+    "method": "wait",
+    "input": { "timeoutMs": 5000 },
+    "params": { "timeoutMs": 5000, "minMs": 300 }
+  },
+  "wait.since": {
+    "method": "wait",
+    "params": { "since": "abc", "timeoutMs": 1000, "minMs": 0 }
+  },
+  "a11y.read": { "method": "a11y.read", "input": {}, "params": { "maxNodes": 60 } },
+  "rest.wait": { "method": "rest.wait", "params": {} },
+  "animations.set": { "method": "animations.set", "params": { "off": true } },
+  "touch": {
+    "method": "touch",
+    "params": { "p": 1, "x": 0.5, "y": 0.25, "x2": 0.75, "y2": 0.125 }
+  },
+  "stream.sync": { "method": "stream.sync", "params": {} },
+  "stream.status": { "method": "stream.status", "params": {} },
+  "cancel": { "method": "cancel", "params": { "id": 7 } },
+  "shutdown": { "method": "shutdown", "params": {} }
+}

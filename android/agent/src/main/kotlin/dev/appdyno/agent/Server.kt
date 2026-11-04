@@ -83,17 +83,17 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                 val params = msg.optJSONObject("params") ?: JSONObject()
                 if (!authed) {
                     if (method != "hello" || !handlers.tokenMatches(params.optString("token"))) {
-                        writer.json(error(id, AgentFailure("POLICY_DENIED", "hello with the launch token first")))
+                        writer.json(errorJson(id, AgentFailure("POLICY_DENIED", "hello with the launch token first")))
                         break
                     }
                     authed = true
                 }
                 when (method) {
-                    "hello" -> writer.json(result(id, handlers.hello()))
-                    "ping" -> writer.json(result(id, handlers.ping()))
+                    "hello" -> writer.json(resultJson(id, handlers.hello()))
+                    "ping" -> writer.json(resultJson(id, handlers.ping()))
                     "cancel" -> {
                         jobs[params.optInt("id")]?.cancelled = true
-                        writer.json(result(id, JSONObject()))
+                        writer.json(resultJson(id, JSONObject()))
                     }
                     "animations.set" -> {
                         val off = params.getBoolean("off")
@@ -106,22 +106,22 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                     // on this thread, not the work lane: a person's finger and a stream wait for nothing
                     "touch" -> {
                         handlers.touch(params)
-                        writer.json(result(id, JSONObject()))
+                        writer.json(resultJson(id, JSONObject()))
                     }
                     "stream.start" -> {
                         stream?.let { streams.end(it) }
                         stream = streams.start(StreamRequest.from(params), ConnectionOutput(writer))
-                        writer.json(result(id, JSONObject()))
+                        writer.json(resultJson(id, JSONObject()))
                         releaseIfNoDrivers()
                     }
-                    "stream.clock" -> writer.json(result(id, JSONObject().put("now", System.nanoTime())))
+                    "stream.clock" -> writer.json(resultJson(id, JSONObject().put("now", System.nanoTime())))
                     "stream.sync" -> {
                         streams.requestKey()
-                        writer.json(result(id, JSONObject()))
+                        writer.json(resultJson(id, JSONObject()))
                     }
-                    "stream.status" -> writer.json(result(id, streams.status()))
+                    "stream.status" -> writer.json(resultJson(id, streams.status()))
                     "shutdown" -> {
-                        writer.json(result(id, JSONObject()))
+                        writer.json(resultJson(id, JSONObject()))
                         exitProcess(0)
                     }
                     else -> {
@@ -170,10 +170,10 @@ class Server(private val opts: Options, private val handlers: Handlers) {
         val job = Job(id)
         jobs[id] = job
         val replied = AtomicBoolean(false)
-        val deadlineMs = params.optLong("_deadlineMs", 30_000).coerceIn(100, 600_000)
+        val deadlineMs = params.getLong("_deadlineMs").coerceIn(100, 600_000)
         val timedOut = {
             if (replied.compareAndSet(false, true)) {
-                writer.safe { json(error(id, AgentFailure("TIMEOUT", "$method took longer than $deadlineMs ms"))) }
+                writer.safe { json(errorJson(id, AgentFailure("TIMEOUT", "$method took longer than $deadlineMs ms"))) }
             }
         }
         actions.submit(job, deadlineMs, timedOut) {
@@ -181,35 +181,15 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                 if (job.cancelled) throw AgentFailure("CANCELLED", "$method was cancelled before it started")
                 val reply = handlers.handle(method, params, job)
                 if (replied.compareAndSet(false, true)) {
-                    val text = result(id, reply.result)
+                    val text = resultJson(id, reply.result)
                     writer.safe { if (reply.binary != null) binaryThenJson(id, reply.binary, text) else json(text) }
                 }
             } catch (t: Throwable) {
-                if (replied.compareAndSet(false, true)) writer.safe { json(error(id, failure(t))) }
+                if (replied.compareAndSet(false, true)) writer.safe { json(errorJson(id, failureOf(t))) }
             } finally {
                 jobs.remove(id)
             }
         }
-    }
-
-    private fun failure(t: Throwable): AgentFailure = when (t) {
-        is AgentFailure -> t
-        is java.lang.reflect.InvocationTargetException -> failure(t.targetException)
-        is IllegalArgumentException, is org.json.JSONException ->
-            AgentFailure("INVALID_ARGUMENT", t.message ?: t.toString(), cause = t)
-        else -> {
-            t.printStackTrace()
-            AgentFailure("INTERNAL", t.toString(), cause = t)
-        }
-    }
-
-    private fun result(id: Int, r: JSONObject) = JSONObject().put("jsonrpc", "2.0").put("id", id).put("result", r).toString()
-
-    private fun error(id: Int, f: AgentFailure): String {
-        val data = JSONObject().put("code", f.code)
-        f.hint?.let { data.put("hint", it) }
-        val err = JSONObject().put("code", rpcCode(f.code)).put("message", f.message ?: f.code).put("data", data)
-        return JSONObject().put("jsonrpc", "2.0").put("id", id).put("error", err).toString()
     }
 
     private inline fun FrameWriter.safe(block: FrameWriter.() -> Unit) {

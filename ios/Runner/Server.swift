@@ -10,12 +10,11 @@ final class Job {
     private let lock = NSLock()
     private var _cancelled = false
 
-    init(id: Int, method: String, params: [String: Any]) {
+    init(id: Int, method: String, params: [String: Any]) throws {
         self.id = id
         self.method = method
         self.params = params
-        let ms = (params["_deadlineMs"] as? NSNumber)?.doubleValue ?? 30_000
-        deadline = Date().addingTimeInterval(ms / 1000)
+        deadline = Date().addingTimeInterval(try requiredNumber(params, "_deadlineMs") / 1000)
     }
 
     var cancelled: Bool {
@@ -156,7 +155,7 @@ final class Server {
             if let target = (params["id"] as? NSNumber)?.intValue { running[target]?.cancelled = true }
             send(s, id: id, Reply(result: [:]))
         default:
-            let job = Job(id: id, method: method, params: params)
+            let job = try Job(id: id, method: method, params: params)
             running[id] = job
             pump.submit { [weak self] in
                 guard let self else { return }
