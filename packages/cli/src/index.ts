@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 export { CLIENTS } from './clients.js';
 export { install } from './install.js';
+export { installCheck } from './installed.js';
 
 export type Io = { out: (line: string) => void; err: (line: string) => void };
 

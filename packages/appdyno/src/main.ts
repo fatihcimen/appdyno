@@ -2,6 +2,7 @@
 // appdyno: the MCP server (`appdyno mcp`), devices, doctor, bench. Output on stdout, diagnostics on stderr; in
 // `mcp` stdout is the MCP channel, so logs go to stderr only.
 import { execFileSync } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { homedir, loadavg } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -10,7 +11,15 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { Adb, androidProvider, installTools, type InstallAnswers } from '@appdyno/driver-android';
 import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
-import { cliSessionFile, commandsFor, deviceFlag, install, listOf, takeFlag } from '@appdyno/cli';
+import {
+  cliSessionFile,
+  commandsFor,
+  deviceFlag,
+  install,
+  installCheck,
+  listOf,
+  takeFlag,
+} from '@appdyno/cli';
 import { writeDashboard } from '@appdyno/perf';
 import {
   DEFAULT_POLICY,
@@ -35,6 +44,8 @@ import { serveCommand, type ServerFlags } from './serve.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
+/** This package's own folder: `dist` and `src` both sit in it. */
+const root = realpathSync(fileURLToPath(new URL('..', import.meta.url)));
 const providers = (
   takeover = false,
   animations?: 'on' | 'off',
@@ -192,10 +203,13 @@ async function main(): Promise<number> {
     }
     case 'doctor': {
       const { values } = parseArgs({ args: rest, options: COMMANDS.doctor.flags });
-      const checks = await doctor({
-        providers: providers(),
-        ...(values.serial && { serial: values.serial }),
-      });
+      const checks = [
+        installCheck(root),
+        ...(await doctor({
+          providers: providers(),
+          ...(values.serial && { serial: values.serial }),
+        })),
+      ];
       for (const c of checks)
         console.log(
           `${c.ok ? 'ok  ' : c.warn ? 'warn' : 'FAIL'} ${c.name}: ${c.detail}${c.fix ? `\n     fix: ${c.fix}` : ''}`,
