@@ -52,6 +52,7 @@ else the one `use_device` selected.
 | purpose  | tools                                                                                                                      |
 | -------- | -------------------------------------------------------------------------------------------------------------------------- |
 | devices  | `list_devices`, `use_device`, `device_info`, `set_orientation`, `set_location`, `clipboard`, `device_setting`, `simulator` |
+| window   | `mirror`                                                                                                                   |
 | read     | `screen`, `find`, `wait_for`, `assert`, `screenshot`                                                                       |
 | act      | `tap`, `gesture`, `swipe`, `scroll_to`, `type_text`, `press_key`, `keyboard`, `steps`, `alert`                             |
 | apps     | `open_link`, `launch_app`, `terminate_app`, `app`                                                                          |
@@ -137,6 +138,25 @@ system's crash records for the app (Android exit info and dropbox, the simulator
 an iPhone's system crash logs) as a bounded summary and a file path. Secrets are redacted.
 
 With `symbols`, it names the stack of a release build. On iOS that is a `.dSYM`, or a folder holding them such as the build's products, and an image is named with `atos` only from the dSYM whose UUID, by `dwarfdump`, is the crashed image's: any other would name the wrong functions and look right, so a report with none says which UUID it wanted and which the folder has. On Android it is a folder of libraries that keep their symbols, such as the `lib` folder of a build (`merged_native_libs/.../out/lib`, the ABI found from the tombstone), read by `ndk-stack` from the newest NDK in the SDK, which leaves a library of another build unread, and the answer says which ids differ. A tombstone comes a moment after the crash, and a Java crash has none. Android keeps few: on API 34 the first 6 native crashes of an app in some minutes left one and the next left none, and the answer says so, which a loop of crashing runs will meet. The whole stack is left in the file `named` gives. Optimized Swift may give a function with no line.
+
+## A live window
+
+`appdyno mirror` opens a native window on a device, driven by mouse, trackpad and keyboard, while an agent may drive the same device. One viewer process per device, with no server, no daemon and no port of ours. Android and simulators; an iPhone is not yet here.
+
+```sh
+appdyno mirror                     # this device's window, and stay
+appdyno mirror --all [--watch]     # every device, and new ones as they come
+appdyno mirror open --detach       # a window that outlives this command
+appdyno mirror close | status | stats
+```
+
+| device    | the picture                                                    | still screen  |
+| --------- | -------------------------------------------------------------- | ------------- |
+| simulator | its framebuffer itself, no encode                              | costs nothing |
+| phone     | the agent's H.264 or HEVC, straight to the viewer, not by Node | costs nothing |
+| emulator  | the emulator's own gRPC port, its screen in a shared file      | costs nothing |
+
+The viewer is compiled by `clang` on first use: Command Line Tools are enough, and `doctor` says if there is none. What stands in the way is named with its fix, and the window goes on by itself when it clears. See [docs/mirror.md](docs/mirror.md).
 
 ## Evidence
 
@@ -333,7 +353,7 @@ appdyno tap --help
 appdyno --help
 ```
 
-An op with `action` takes it as its first word: `appdyno record start`, `appdyno network stop`. Other commands: `doctor [--serial S]`, `ios build`, `test` (see Flows), `tools install` (fetches the pinned
+An op with `action` takes it as its first word: `appdyno record start`, `appdyno network stop`. Other commands: `mirror` (see A live window), `doctor [--serial S]`, `ios build`, `test` (see Flows), `tools install` (fetches the pinned
 Perfetto trace processor), `bench`. Exit code 1 means the call was refused, 2 means wrong arguments. The selected
 device and the diff baseline between CLI processes are kept in a small file in the state directory, one per working
 directory, so two terminals in two folders do not share a device.
@@ -405,7 +425,7 @@ Measurement methods and raw outputs are described in `docs/perf.md`.
 
 ## Security
 
-Local only: no network listener, no telemetry, and you decide which devices, apps and links it may touch.
+Local only: no network listener, no telemetry, and you decide which devices, apps and links it may touch. What listens on this Mac is others': adb's server on its port, and an emulator's gRPC port, the emulator's own, behind its token, for the picture of a window.
 See [SECURITY.md](SECURITY.md).
 
 ## Contributing

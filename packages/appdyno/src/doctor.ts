@@ -1,4 +1,4 @@
-import type { Check, DeviceProvider } from '@appdyno/core';
+import { compilerCheck, type Check, type DeviceProvider } from '@appdyno/core';
 
 /** What this machine needs: Node, then what each driver asks of it and, with `serial`, of that device. */
 export async function doctor(opts: {
@@ -14,6 +14,7 @@ export async function doctor(opts: {
       ...(major < 22 && { fix: 'install Node 22 or newer (mise use node@22)' }),
     },
   ];
+  checks.push(await compilerCheck());
   for (const p of opts.providers) if (p.doctor) checks.push(...(await p.doctor(opts.serial)));
   return checks;
 }

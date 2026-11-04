@@ -33,7 +33,7 @@ const MAX_ANSWER = 20_000;
 const MAX_LOG_LINES = 1_000;
 const MAX_CRASHES = 20;
 /** Calls that say nothing about the app. */
-export const NOT_STEPS = new Set(['report', 'list_devices', 'simulator']);
+export const NOT_STEPS = new Set(['report', 'list_devices', 'simulator', 'mirror']);
 
 type Step = {
   at: string;

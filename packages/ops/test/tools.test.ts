@@ -73,6 +73,7 @@ describe('tool list', () => {
         "launch_app",
         "list_devices",
         "logs",
+        "mirror",
         "network",
         "open_link",
         "perf_compare",
@@ -133,7 +134,7 @@ describe('tool list', () => {
       'visual',
       'wait_for',
     ]);
-    expect(tools.length).toBeLessThanOrEqual(44);
+    expect(tools.length).toBeLessThanOrEqual(45);
   });
 
   it('reports the server as appdyno with an icon', async () => {

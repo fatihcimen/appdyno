@@ -6,6 +6,7 @@ export { flowFiles, flowsTagged, type TestOptions } from './flow/test-run.js';
 export { JOURNEY_ITERATIONS } from './flow/journey.js';
 export { keepRun } from './perf/shared.js';
 export { survey } from './survey.js';
+export { runMirrors, type MirrorRun } from './mirror/parent.js';
 export { swipeLine, pinchPaths } from './gesture-paths.js';
 export { SETTLE } from './answers.js';
 export { ServerContext } from './context.js';

@@ -210,6 +210,11 @@ export const RecordOut = z.object({
   note: z.string().optional(),
 });
 
+export const MirrorOut = z.object({
+  done: z.string(),
+  mirrors: z.array(z.record(z.string(), z.unknown())),
+});
+
 export const FlowOut = z.object({
   done: z.string(),
   steps: z.number().int().optional(),

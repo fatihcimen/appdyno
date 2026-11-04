@@ -1,0 +1,178 @@
+import { randomBytes } from 'node:crypto';
+import { MirrorSession, startViewer, type MirrorOptions, type MirrorStatus } from '@appdyno/core';
+import { claim, release, startOf } from '../claims.js';
+import type { ServerContext } from '../context.js';
+import { ToolError } from '../tool.js';
+import { FOCUS_SIGNAL, liveMirror, removeMirrorFile, writeMirrorFile } from './state.js';
+
+export type MirrorRun = {
+  /** Named devices; none: the default device. */
+  serials: string[];
+  /** Every device, and with `watch` new ones as they come. */
+  all?: boolean;
+  watch?: boolean;
+  /** At most this many windows, so that a rack of phones does not bury a Mac. */
+  max: number;
+  options: MirrorOptions;
+  headless: boolean;
+  noInput: boolean;
+  seconds?: number;
+  /** Goes on past another's claim, and takes none: the window serves whoever holds the device. */
+  share: boolean;
+  /** A person asked for this window, rather than an agent's call. */
+  activate: boolean;
+  log: (line: string) => void;
+};
+
+const WATCH_MS = 2_000;
+
+const describe = (serial: string, s: MirrorStatus) => {
+  switch (s.state) {
+    case 'waiting':
+      return `${serial}: waiting ${s.need}`;
+    case 'reconnecting':
+      return `${serial}: reconnecting, try ${s.attempt}`;
+    case 'stopped':
+      return `${serial}: stopped: ${s.why}`;
+    case 'live':
+      return `${serial}: live${s.picture ? ` ${s.picture.w}x${s.picture.h} ${s.picture.codec}` : ''}`;
+    default:
+      return `${serial}: ${s.state}`;
+  }
+};
+
+/** The mirrors of one invocation, each with its own viewer; one failing leaves the others alone. */
+class Parent {
+  readonly sessions = new Map<string, MirrorSession>();
+  readonly done = new Map<string, Promise<MirrorStatus>>();
+  private stopping = false;
+  failed = false;
+
+  constructor(
+    private readonly ctx: ServerContext,
+    private readonly o: MirrorRun,
+  ) {}
+
+  async open(serial: string) {
+    const running = liveMirror(serial);
+    if (running) {
+      // the second window of a device is its first one, brought forward
+      if (running.pid !== process.pid) process.kill(running.pid, FOCUS_SIGNAL);
+      throw new ToolError(
+        `${serial} already has a window: pid ${running.pid}, which was brought forward`,
+        'DEVICE_CLAIMED',
+      );
+    }
+    const device = this.ctx.deviceFor(serial);
+    if (!device.mirror)
+      throw new ToolError(`no mirror on this kind of device: ${serial}`, 'UNSUPPORTED');
+    if (!this.o.share) claim(serial, 'appdyno mirror');
+    const file = {
+      pid: process.pid,
+      started: startOf(process.pid),
+      session: randomBytes(4).toString('hex'),
+      serial,
+    };
+    let said = '';
+    const session = new MirrorSession({
+      mirror: device.mirror,
+      viewer: startViewer(this.o.headless),
+      options: this.o.options,
+      title: serial,
+      noInput: this.o.noInput,
+      activate: this.o.activate,
+      onChange: (status) => {
+        // a stop is the end of its file; a status written after would look like a mirror
+        if (status.state !== 'stopped') writeMirrorFile({ ...file, status });
+        const line = describe(serial, status);
+        if (line !== said) this.o.log(line);
+        said = line;
+      },
+    });
+    this.sessions.set(serial, session);
+    this.done.set(
+      serial,
+      session.stopped.then((status) => {
+        removeMirrorFile(serial);
+        if (!this.o.share) release(serial);
+        device.close();
+        this.sessions.delete(serial);
+        if (status.state === 'stopped' && !this.stopping && status.why !== WINDOW_CLOSED)
+          this.failed = true;
+        return status;
+      }),
+    );
+    await session.start();
+  }
+
+  async stopAll(why: string) {
+    this.stopping = true;
+    await Promise.all([...this.sessions.values()].map((s) => s.stop(why)));
+  }
+}
+
+const WINDOW_CLOSED = 'the window was closed';
+
+/** Runs the mirrors until their windows close, or the time asked for ends. The exit code. */
+export async function runMirrors(ctx: ServerContext, o: MirrorRun): Promise<number> {
+  const parent = new Parent(ctx, o);
+  const onStop = () => void parent.stopAll('asked to stop');
+  const onFocus = () => {
+    for (const s of parent.sessions.values()) s.focus();
+  };
+  process.on('SIGINT', onStop);
+  process.on('SIGTERM', onStop);
+  process.on(FOCUS_SIGNAL, onFocus);
+  const refusals: string[] = [];
+  const open = (serial: string) =>
+    parent.open(serial).catch((e: Error) => {
+      refusals.push(`${serial}: ${e.message}`);
+      o.log(`${serial}: ${e.message}`);
+    });
+  const ready = async () =>
+    (await ctx.devices()).filter((d) => d.ready && ctx.allowed(d.serial)).map((d) => d.serial);
+  const serials = o.all
+    ? await ready()
+    : o.serials.length
+      ? o.serials
+      : [await ctx.defaultSerial()];
+  for (const serial of serials.slice(0, o.max)) await open(serial);
+  if (serials.length > o.max)
+    o.log(`${serials.length - o.max} more devices left out: --max ${o.max}`);
+
+  const timer = o.seconds
+    ? setTimeout(() => void parent.stopAll('time is up'), o.seconds * 1000)
+    : undefined;
+  let watching = o.watch && o.all;
+  const watcher = watching
+    ? setInterval(() => {
+        void ready()
+          .then(async (now) => {
+            for (const serial of now)
+              if (
+                !parent.sessions.has(serial) &&
+                parent.sessions.size < o.max &&
+                !liveMirror(serial)
+              )
+                await open(serial);
+          })
+          .catch(() => undefined);
+      }, WATCH_MS)
+    : undefined;
+  try {
+    // a watcher stays with no window, for the next device; anything else ends with its last one
+    for (;;) {
+      await Promise.all(parent.done.values());
+      if (parent.sessions.size === 0 && !watching) break;
+      if (parent.sessions.size === 0) await new Promise((r) => setTimeout(r, WATCH_MS));
+      watching = o.watch && o.all;
+    }
+  } finally {
+    clearTimeout(timer);
+    clearInterval(watcher);
+    process.off('SIGINT', onStop);
+    process.off('SIGTERM', onStop);
+    process.off(FOCUS_SIGNAL, onFocus);
+  }
+  return parent.failed || (refusals.length > 0 && refusals.length === serials.length) ? 1 : 0;
+}

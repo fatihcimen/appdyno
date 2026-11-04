@@ -6,6 +6,7 @@ import { writeFile } from 'node:fs/promises';
 import { homedir, loadavg } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
+import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Adb, androidProvider, installTools, type InstallAnswers } from '@appdyno/driver-android';
@@ -23,6 +24,7 @@ import {
   JOURNEY_ITERATIONS,
   opsFor,
   paramsOf,
+  runMirrors,
   survey,
   type Policy,
 } from '@appdyno/ops';
@@ -105,6 +107,12 @@ function contextFrom(values: Settings, remember?: string) {
     claims: true,
     tool: remember ? 'appdyno cli' : 'appdyno mcp',
     ...((values.share || env.APPDYNO_SHARE === '1') && { share: true }),
+    mirrorCommand: [
+      process.execPath,
+      fileURLToPath(import.meta.url),
+      'mirror',
+      ...(values.takeover ? ['--takeover'] : []),
+    ],
   });
 }
 
@@ -182,8 +190,78 @@ async function surveyCommand(args: string[]) {
   }
 }
 
+const MIRROR_USAGE = `usage: appdyno mirror [open] [--device S]... [--all [--watch]] [--max N] [--detach]
+                      [--quality auto|high|standard] [--codec h264|hevc]
+                      [--no-input] [--headless] [--seconds N] [--share] [--takeover]
+       appdyno mirror close|status|stats`;
+
+/** `appdyno mirror`: stays with its windows until they close; its other words are the tool's. */
+async function mirrorCommand(args: string[]) {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {
+      device: { type: 'string', multiple: true },
+      all: { type: 'boolean' },
+      watch: { type: 'boolean' },
+      max: { type: 'string' },
+      detach: { type: 'boolean' },
+      quality: { type: 'string' },
+      codec: { type: 'string' },
+      'no-input': { type: 'boolean' },
+      headless: { type: 'boolean' },
+      seconds: { type: 'string' },
+      share: { type: 'boolean' },
+      takeover: { type: 'boolean' },
+      'allow-devices': { type: 'string' },
+      help: { type: 'boolean', short: 'h' },
+    },
+  });
+  const action = positionals[0] ?? 'open';
+  const quality = values.quality ?? 'auto';
+  const codec = values.codec;
+  if (
+    values.help ||
+    !['open', 'close', 'status', 'stats'].includes(action) ||
+    !['auto', 'high', 'standard'].includes(quality) ||
+    (codec !== undefined && codec !== 'h264' && codec !== 'hevc')
+  ) {
+    (values.help ? console.log : err)(MIRROR_USAGE);
+    return values.help ? 0 : 2;
+  }
+  const device = values.device?.[0];
+  const ctx = contextFrom({
+    ...(device && { device }),
+    ...(values['allow-devices'] && { 'allow-devices': values['allow-devices'] }),
+    ...(values.takeover && { takeover: true }),
+  });
+  try {
+    if (action !== 'open' || values.detach) {
+      const op = commandsFor(opsFor(ctx)).mirror!;
+      return await op.run([action, '--quality', quality], { out: (s) => console.log(s), err });
+    }
+    return await runMirrors(ctx, {
+      serials: values.device ?? [],
+      all: values.all ?? false,
+      watch: values.watch ?? false,
+      max: Number(values.max ?? 8),
+      options: { quality: quality as 'auto', ...(codec && { codec: codec as 'h264' }) },
+      headless: values.headless ?? false,
+      noInput: values['no-input'] ?? false,
+      ...(values.seconds && { seconds: Number(values.seconds) }),
+      share: values.share ?? false,
+      activate: process.stdin.isTTY === true,
+      log: (line) => console.log(line),
+    });
+  } finally {
+    ctx.close();
+  }
+}
+
 async function main(): Promise<number> {
   switch (command) {
+    case 'mirror':
+      return mirrorCommand(rest);
     case 'mcp': {
       await serveMcp(rest);
       return 0;
@@ -397,6 +475,8 @@ commands:
   ios build        build the iOS runners now
   tools install    download the trace tools
   bench --serial S [--driver appdyno|<module>]... [--n 50] [--out file]
+  mirror [--device S] [--all] [--headless] [--seconds N]; mirror close|status|stats
+                   a live window on a device, driven by mouse and keyboard
   perf compare|baseline|budget [--app A] [--scenario S] [--format text|json|junit] [--measurements dir]
                    the performance gate: non-zero on a regression or a broken budget
   perf functions --from pm-a --to pm-b [--measurements dir]

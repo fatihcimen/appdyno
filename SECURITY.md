@@ -12,7 +12,9 @@ appdyno has no telemetry and sends nothing anywhere. The MCP server speaks over 
 started it and opens no network listener. Measurements are stored on the local disk, under the state
 directory or the `--measurements` directory. The Android agent listens on an abstract unix socket on the
 device, reached through adb, and accepts a connection only with its launch token. An iPhone is reached
-over USB.
+over USB. A window's picture comes from the same agent, with the same token, given to the viewer by its
+stdin; on an emulator booted by `simulator` from that emulator's own gRPC port, behind its token, into a
+file only this user can read.
 
 ## What the server can do
 
@@ -29,5 +31,7 @@ Limits you set:
   summaries are redacted of them.
 - The server stops another tool's UI automation on Android only with `--takeover`. Without it, it names
   the holder and does nothing.
+
+A window shows what the screen shows, to whoever sits at this Mac. `--no-input` makes it watch only.
 
 Use a test device and test accounts. Do not point the server at a device that holds real data.

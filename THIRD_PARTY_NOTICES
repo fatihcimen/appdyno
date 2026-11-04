@@ -1,5 +1,10 @@
+appdyno's Android agent (Stream*.kt, DisplayMirror.kt) makes its display and encoder as the platform behaves,
+which was read in the source of scrcpy (https://github.com/Genymobile/scrcpy, Apache License 2.0): which hidden
+calls exist on which release, the sizes an encoder refuses. No code of it is here.
+
 appdyno's simulator helpers (ios/SimHelper) follow the wire shape of idb's DTUHID transport and the
-accessibility calls, attribute names and retry of rejected depths of idb's SimulatorFrameworkBridge:
+accessibility calls, attribute names and retry of rejected depths of idb's SimulatorFrameworkBridge, and its
+viewer (mirror/Viewer/SourceSurface.m) the selectors of idb's public headers for a simulator's screen:
 
 idb (https://github.com/facebook/idb)
 

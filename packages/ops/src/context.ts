@@ -51,6 +51,8 @@ export class ServerContext {
       tool?: string;
       /** Use a device another process holds. */
       share?: boolean;
+      /** How to run this tool again, for a window that outlives the call that opened it. */
+      mirrorCommand?: string[];
     } = {},
   ) {
     this.policy = { ...policy, secrets: [...policy.secrets] };
@@ -100,10 +102,8 @@ export class ServerContext {
   }
 
   private async open(serial: string, launching: string | undefined): Promise<Device> {
-    const provider = this.providers.findLast((p) => p.handles(serial));
-    if (!provider) throw new ToolError(`no driver takes the device ${serial}`, 'NOT_FOUND');
+    const device = this.deviceFor(serial);
     reportProgress(`connecting to ${serial}`);
-    const device = provider.open(serial);
     if (launching) device.launchAlongside?.(launching);
     await device.open();
     return device;
@@ -197,15 +197,32 @@ export class ServerContext {
     return this.currentSerial ?? this.defaults.device ?? this.saved?.serial;
   }
 
+  get mirrorCommand() {
+    return this.defaults.mirrorCommand;
+  }
+
+  /** A device's driver object, cold: nothing on the device has started. */
+  deviceFor(serial: string): Device {
+    checkDevice(this.policy, serial);
+    const provider = this.providers.findLast((p) => p.handles(serial));
+    if (!provider) throw new ToolError(`no driver takes the device ${serial}`, 'NOT_FOUND');
+    return provider.open(serial);
+  }
+
   /** The session of `serial`, else the default device (the configured one, or the only allowed one). */
   async session(serial?: string, launching?: string): Promise<Session> {
     if (serial) return this.sessions.get(serial) ?? this.use(serial, undefined, false, launching);
     if (this.currentSerial) return this.sessions.get(this.currentSerial)!;
-    if (this.selected) return this.use(this.selected, undefined, false, launching);
+    return this.use(await this.defaultSerial(), undefined, false, launching);
+  }
+
+  /** The device a call means when it names none. Opens nothing. */
+  async defaultSerial(): Promise<string> {
+    if (this.selected) return this.selected;
     const ready = (await this.devices().catch(refused)).filter(
       (d) => d.ready && this.allowed(d.serial),
     );
-    if (ready.length === 1) return this.use(ready[0]!.serial, undefined, false, launching);
+    if (ready.length === 1) return ready[0]!.serial;
     throw new ToolError(
       ready.length === 0
         ? 'no connected device this server may drive (list_devices)'

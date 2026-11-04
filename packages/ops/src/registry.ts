@@ -12,6 +12,7 @@ import { flowRecorder } from './flow/recorder.js';
 import { flowRunner, type FlowRunner, type ReplayOptions } from './flow/runner.js';
 import { readFlow } from './flow/shared.js';
 import { runTests, type TestOptions } from './flow/test-run.js';
+import { mirrorOps } from './mirror/op.js';
 import { networkOps } from './network.js';
 import { perfOps } from './perf/index.js';
 import { reactNativeOps } from './reactnative.js';
@@ -38,6 +39,7 @@ const everyOp = (
   ...settingOps(ctx, answers),
   ...diagnoseOps(ctx, answers),
   ...recordOps(ctx),
+  ...mirrorOps(ctx),
   ...report.ops(),
   ...networkOps(ctx),
   ...webOps(ctx),
