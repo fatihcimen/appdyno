@@ -6,6 +6,9 @@ import { DeviceOut, DevicesOut, ActionOut, DoneOut } from './schemas.js';
 import { Read } from './step-schemas.js';
 import { ACT, defineOp, READ, reply } from './tool.js';
 
+/** In the order of the device's own rotations, a quarter turn each. */
+const ROTATIONS = ['portrait', 'landscape_left', 'upside_down', 'landscape_right'] as const;
+
 export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
   return [
     defineOp({
@@ -106,12 +109,12 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       name: 'set_orientation',
       title: 'Orientation',
       description: 'The rotation stays fixed: go back to portrait afterwards.',
-      input: z.object({ orientation: z.enum(['portrait', 'landscape']), read: Read }).strict(),
+      input: z.object({ orientation: z.enum(ROTATIONS), read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
       run: async ({ orientation, read }) => {
         const s = await ctx.session();
-        await s.device.setOrientation(orientation === 'portrait' ? 0 : 1);
+        await s.device.setOrientation(ROTATIONS.indexOf(orientation) as 0 | 1 | 2 | 3);
         return afterChange(s, `orientation: ${orientation}`, read);
       },
     }),
