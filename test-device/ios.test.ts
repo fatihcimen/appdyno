@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { IosSimulatorDevice, Simctl, buildScreen, type Screen } from 'appdyno';
-import type { Point, Tree } from '@appdyno/protocol';
+import type { Tree } from '@appdyno/protocol';
 import { join } from 'node:path';
 import { IosDevice } from '../packages/driver-apple/src/device.js';
 import { directChecks } from '../packages/driver-apple/src/provider.js';
@@ -58,9 +58,12 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(d.hello).toMatchObject({ platform: 'ios', protocol: { major: 2 } });
     const size = d.hello!.screen;
     expect(size.density).toBeGreaterThanOrEqual(2);
+    // only a runner waits on the device: the helper is read
+    expect(await d.waitChange(undefined, 0)).toBeUndefined();
     await IosDevice.prototype.tree.call(d, { maxNodes: 5000 });
     expect(d.hello!.agentVersion).not.toBe('helper');
     expect(d.hello!.screen).toEqual(size);
+    expect((await d.waitChange(undefined, 0))?.sig).toBeTruthy();
     // the idle shim's replacements were each called at start with a BOOL in every slot (a crash otherwise)
     expect(d.hello!.idleShimChecked).toBe(true);
   });
@@ -275,9 +278,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
 
     it('reads a typing field as the runner does: the focus and its text', async () => {
       const s = await open('Form');
-      const field = s.elements.find((e) => e.editable)!;
-      // shortcut: an element has no x and y, so the runner taps nothing here; take the point from s.list once this can run
-      await d.typeText('Çok', { at: field as unknown as Point, settle: SETTLE });
+      await d.typeText('Çok', { at: byId(s, 'name_input')!, settle: SETTLE });
       const runner = await IosDevice.prototype.tree.call(d, { maxNodes: 5000 });
       const direct = await d.direct.read(APP);
       if ('refused' in direct) throw new Error(direct.refused);

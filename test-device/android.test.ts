@@ -642,8 +642,8 @@ describe.skipIf(!serial)('android agent on a device', () => {
     const s = await home();
     await d.shell('input keyevent KEYCODE_SLEEP');
     await new Promise((r) => setTimeout(r, 1_500));
-    await d.tap(find(s, 'Form')!, { settle: {}, read: 'none' });
-    expect(find(await d.read(APP), 'Form')).toBeUndefined();
+    await d.tap(find(s, 'FORM')!, { settle: SETTLE, read: 'none' });
+    expect(labels(await d.read(APP))).toContain('Enter your details');
   });
 
   it('a dropped adb connection: a read waits for the device and finds the running agent again', async () => {
