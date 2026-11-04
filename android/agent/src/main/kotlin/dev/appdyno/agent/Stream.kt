@@ -82,14 +82,24 @@ class Stream(private val request: StreamRequest, private val out: StreamOutput) 
     private fun encodeAll() {
         if (Looper.myLooper() == null) Looper.prepare()
         val top = Platform.display()
-        val ladder = StreamLadder(request.codec, maxOf(top.width, top.height), request.maxSize)
+        // `high` and `standard` are the display's size, and an asked size is that size: `auto` answers a person's finger
+        var adapting = request.quality == "auto" && request.maxSize == null
+        val ladder = StreamLadder(request.codec, maxOf(top.width, top.height), request.maxSize ?: heldSize.takeIf { adapting && it > 0 })
         var step: EncoderStep? = ladder.current
         var lastFailure = ""
         while (!stopped.get() && step != null) {
             val started = SystemClock.uptimeMillis()
             try {
-                runEncoder(step)
-                // a new size or rotation: the same step, at once
+                val slowMs = runEncoder(step, adapting && !step.software)
+                // none: a new size or rotation, and the same step at once
+                if (slowMs != null) {
+                    val smaller = ladder.smaller(slowMs)
+                    if (smaller == null) adapting = false
+                    else {
+                        step = smaller
+                        heldSize = smaller.maxSize
+                    }
+                }
                 continue
             } catch (_: InterruptedException) {
                 return
@@ -110,8 +120,8 @@ class Stream(private val request: StreamRequest, private val out: StreamOutput) 
         if (!stopped.get()) out.end("no encoder took this display: $lastFailure")
     }
 
-    /** One encoder until it fails, is stopped, or the screen changes shape. */
-    private fun runEncoder(step: EncoderStep) {
+    /** One encoder until it fails, is stopped, or the screen changes shape; what its frames took, when that was too long. */
+    private fun runEncoder(step: EncoderStep, judged: Boolean): Long? {
         val screen = Platform.display()
         val (w, h) = streamSize(screen.width, screen.height, step.maxSize)
         if (failuresLeft > 0) {
@@ -133,19 +143,27 @@ class Stream(private val request: StreamRequest, private val out: StreamOutput) 
                     .put("mode", mode),
             )
             var checkedAt = SystemClock.uptimeMillis()
+            val pace = EncoderPace()
             while (!stopped.get()) {
                 if (keyWanted) {
                     keyWanted = false
                     encoder.requestKey()
                 }
-                encoder.next(POLL_US)?.let { queue.offer(it) }
+                encoder.next(POLL_US)?.let { frame ->
+                    queue.offer(frame)
+                    if (judged && !frame.isKey && !frame.isConfig) {
+                        val atMs = frame.sentNanos / 1_000_000
+                        pace.tooSlow(atMs - frame.ptsUs / 1_000, atMs)?.let { return it }
+                    }
+                }
                 val now = SystemClock.uptimeMillis()
                 if (now - checkedAt >= SHAPE_CHECK_MS) {
                     checkedAt = now
                     val shape = Platform.display()
-                    if (shape.width != screen.width || shape.height != screen.height) return
+                    if (shape.width != screen.width || shape.height != screen.height) return null
                 }
             }
+            return null
         } finally {
             runCatching { mirror?.release() }
             encoder.release()
@@ -157,6 +175,9 @@ class Stream(private val request: StreamRequest, private val out: StreamOutput) 
         /** A rotation or fold is seen within this; asked by a timer, as listeners differ from release to release. */
         private const val SHAPE_CHECK_MS = 100L
         private const val JOIN_MS = 3_000L
+
+        /** The size a stream settled on, for the next: a person should see that change at most once. */
+        @Volatile private var heldSize = 0
     }
 }
 

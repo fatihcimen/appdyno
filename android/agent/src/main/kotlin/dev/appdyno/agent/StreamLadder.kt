@@ -41,11 +41,66 @@ class StreamLadder(codec: String, displayMax: Int, askedMax: Int? = null) {
         return steps.getOrNull(at)
     }
 
+    /**
+     * A picture too slow for a person: the largest size of this codec that `ms` says will keep up, as what an encoder
+     * takes goes with its pixels. Null where none is left.
+     */
+    fun smaller(ms: Long): EncoderStep? {
+        val now = current
+        val fitting = steps.indices.drop(at + 1).firstOrNull { i ->
+            val s = steps[i]
+            val share = s.maxSize.toDouble() / now.maxSize
+            s.mime == now.mime && !s.software && s.maxSize < now.maxSize && ms * share * share <= FITS_MS
+        } ?: return null
+        at = fitting
+        return steps[fitting]
+    }
+
     companion object {
         const val RESTARTS = 3
+
+        /** Past `EncoderPace.TOO_SLOW_MS`, as a burst's first frames read more than it settles at: 150 ms for 67. */
+        private const val FITS_MS = 50L
         const val RESTART_PAUSE_MS = 500L
         const val RAN_WELL_MS = 10_000L
         val SIZES = listOf(2560, 1920, 1600, 1280, 1024, 800)
+    }
+}
+
+/**
+ * Whether a picture's size keeps up with a person, by what the encoder itself took on the first run of motion: it wakes
+ * slowly, and a touch on a still screen waits for exactly that. Only a run counts: a clock's tick or a ripple is a frame or
+ * three, read 29 to 49 ms on a Samsung whose motion read 150, and a key frame says nothing, a Xiaomi's taking 96 ms at a
+ * size it then held at 25. So this needs motion and no model's name. A size can hold its rate and still queue: a Samsung's
+ * 2400 lines held 89 frames/s, each 69 ms late, and a touch took 217 ms to show.
+ */
+class EncoderPace {
+    private val run = ArrayList<Long>()
+    private var lastAtMs = 0L
+    private var slowRuns = 0
+
+    /**
+     * A frame's time, and when it came; the middle of a run when runs in a row have been too slow. Each run is watched, as a
+     * first one may be small and bless a size too large; one alone is no proof, so a stall costs no one their picture.
+     */
+    fun tooSlow(ms: Long, atMs: Long): Long? {
+        if (ms !in 0..MOST_MS) return null
+        if (atMs - lastAtMs > STILL_GAP_MS) run.clear()
+        lastAtMs = atMs
+        if (run.size == FRAMES) return null
+        run += ms
+        if (run.size < FRAMES) return null
+        val middle = run.sorted()[FRAMES / 2]
+        slowRuns = if (middle > TOO_SLOW_MS) slowRuns + 1 else 0
+        return middle.takeIf { slowRuns >= RUNS }
+    }
+
+    companion object {
+        const val FRAMES = 5
+        const val RUNS = 2
+        const val TOO_SLOW_MS = 40L
+        private const val STILL_GAP_MS = 100L
+        private const val MOST_MS = 2_000L
     }
 }
 
