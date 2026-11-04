@@ -5,7 +5,7 @@ import type { TcpConnection } from '../ipstack.js';
 import { touchReport, PhoneHid } from '../phone-hid.js';
 import { RemoteXpc } from '../remotexpc.js';
 import { errorWords, invoke } from '../services.js';
-import { needOf } from '../stream.js';
+import { DarkWatch, needOf } from '../stream.js';
 import { audioOffer, thisMac, videoOffer } from '../stream-offer.js';
 import { readTunnelAnswer, tunnelRequest } from '../tunnel.js';
 import {
@@ -217,6 +217,33 @@ describe('a service connection', () => {
   });
 });
 
+describe('a dark phone, by its count of pictures', () => {
+  const run = (perSecond: number[]) => {
+    const watch = new DarkWatch();
+    let total = 0;
+    return perSecond.map((n) => watch.tick((total += n)));
+  };
+
+  it('is told after three seconds of a picture each, and once', () => {
+    expect(run([21, 1, 1, 1, 1, 1])).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      'asleep',
+      undefined,
+      undefined,
+    ]);
+  });
+
+  it('comes back with the pictures, once', () => {
+    expect(run([1, 1, 1, 3, 21, 21]).slice(2)).toEqual(['asleep', undefined, 'ok', undefined]);
+  });
+
+  it('a still lit screen, or a slow second among them, is not dark', () => {
+    expect(run([21, 2, 21, 2, 2, 21, 20]).filter(Boolean)).toEqual([]);
+  });
+});
+
 describe('what a phone says', () => {
   it('its reasons, as Apple words them, become what a person can act on', () => {
     expect(needOf('The device microphone or camera is currently in use.')).toBe('camera-or-mic');
@@ -349,6 +376,7 @@ describe('a finger, as a report', () => {
     indigo.send.mockClear();
     await hid.send({ kind: 'text', s: 'aB' });
     expect(indigo.send).toHaveBeenCalledTimes(6);
-    await expect(hid.send({ kind: 'text', s: 'ç' })).rejects.toThrow('US keyboard');
+    // what was typed may be a secret: the words never hold it
+    await expect(hid.send({ kind: 'text', s: 'ç' })).rejects.toThrow(/^[^ç]*US keyboard[^ç]*$/);
   });
 });

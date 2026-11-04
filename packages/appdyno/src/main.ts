@@ -221,7 +221,8 @@ async function mirrorCommand(args: string[]) {
       ...(values.seconds && { seconds: Number(values.seconds) }),
       ...(values.record && { record: resolve(values.record) }),
       share: values.share ?? false,
-      activate: process.stdin.isTTY === true,
+      focus: values.focus ?? false,
+      inputOnClick: values['input-on-click'] ?? false,
       log: (line) => console.log(line),
     });
   } finally {

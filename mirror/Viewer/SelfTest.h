@@ -31,5 +31,6 @@ void MVSkip(NSString *name, NSString *why);
 void MVCheckPixels(void);
 void MVCheckPipe(void);
 void MVCheckRecorder(void);
+void MVCheckKeyboard(void);
 
 NS_ASSUME_NONNULL_END

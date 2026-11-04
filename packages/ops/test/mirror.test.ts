@@ -85,7 +85,8 @@ const run = (ctx: ServerContext, o: Partial<MirrorRun> = {}) => {
     headless: true,
     noInput: false,
     share: false,
-    activate: false,
+    focus: false,
+    inputOnClick: false,
     log: (l) => lines.push(l),
     ...o,
   });

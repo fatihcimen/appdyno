@@ -2,6 +2,7 @@
 // with its stdin, so a parent that dies, however it dies, takes its viewer with it.
 //   appdyno-viewer             a window
 //   appdyno-viewer --headless  the same, with no window and nothing that could raise one
+//   appdyno-viewer --behind    a real window kept behind all others, for a test on a Mac a person is using
 //   appdyno-viewer --selftest [fixtures dir]
 //   appdyno-viewer --encode <h264|hevc> <frames>
 #import "Viewer.h"
@@ -24,6 +25,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 }
 
 @interface MVApp : NSObject <MVSink, NSApplicationDelegate>
+- (void)setBehind:(BOOL)behind;
 - (instancetype)initWithWindow:(BOOL)window;
 - (void)receive:(NSDictionary *)message;
 @end
@@ -32,6 +34,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   MVStats *_stats;
   MVWindow *_window;
   BOOL _headlessOnly;
+  BOOL _behind;
   id<MVSource> _source;
   NSString *_lastSized;
   NSDictionary *_pendingStatus;
@@ -103,7 +106,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   if ([op isEqual:@"attach"]) return [self attach:m];
   if ([op isEqual:@"detach"]) return [self detach];
   if ([op isEqual:@"status"]) return [_window setStatus:m];
-  if ([op isEqual:@"focus"]) return [_window focus];
+  if ([op isEqual:@"raise"]) return [_window raise];
   if ([op isEqual:@"turns"]) {
     if ([(id)_source respondsToSelector:@selector(setTurns:)]) [_source setTurns:[m[@"turns"] intValue] & 3];
     return;
@@ -137,6 +140,10 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   }
 }
 
+- (void)setBehind:(BOOL)behind {
+  _behind = behind;
+}
+
 - (void)detach {
   id<MVSource> source;
   @synchronized(self) {
@@ -158,10 +165,14 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   }
   if (!_headlessOnly && !_window) {
     _window = [MVWindow new];
+    _window.behind = _behind;
     __weak MVApp *weak = self;
-    _window.onHidden = ^(BOOL hidden) {
-      [weak setHidden:hidden];
-    };
+    // a window kept behind the rest is covered by design: it still shows what it gets
+    if (!_behind) {
+      _window.onHidden = ^(BOOL hidden) {
+        [weak setHidden:hidden];
+      };
+    }
   }
   [_window configure:m];
   _stats.source = options[@"kind"];
@@ -262,6 +273,7 @@ int main(int argc, char **argv) {
     if ([args containsObject:@"--encode"] && argc == 4) return MVEncodeFixture(args[2], args[3].intValue);
     BOOL headless = [args containsObject:@"--headless"];
     MVApp *app = [[MVApp alloc] initWithWindow:!headless];
+    app.behind = [args containsObject:@"--behind"];
     if (!headless) {
       // a window needs a window server: a session with none is refused by its need, with no crash
       CFDictionaryRef session = CGSessionCopyCurrentDictionary();
@@ -279,7 +291,8 @@ int main(int argc, char **argv) {
     if (headless) dispatch_main();
     NSApplication *application = NSApplication.sharedApplication;
     application.delegate = app;
-    application.activationPolicy = NSApplicationActivationPolicyRegular;
+    // not one a launch brings forward: the keyboard stays with what a person is using
+    application.activationPolicy = NSApplicationActivationPolicyAccessory;
     NSMenu *bar = [NSMenu new];
     NSMenuItem *appItem = [bar addItemWithTitle:@"appdyno" action:NULL keyEquivalent:@""];
     NSMenu *appMenu = [NSMenu new];

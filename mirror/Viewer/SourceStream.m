@@ -349,6 +349,7 @@ static NSString *askAdb(int fd, NSString *request) {
     sink.stats.mode = [NSString stringWithFormat:@"%@", info[@"mode"] ?: @""];
     [sink source:self size:CGSizeMake([info[@"w"] doubleValue], [info[@"h"] doubleValue]) codec:_decoder.hevc ? @"hevc" : @"h264"];
   }
+  if ([m[@"method"] isEqual:@"stream.counters"]) sink.stats.counters = m[@"params"];
   if ([m[@"method"] isEqual:@"stream.end"]) {
     [sink source:self lost:[NSString stringWithFormat:@"%@", m[@"params"][@"why"]] fatal:YES];
     return YES;

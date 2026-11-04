@@ -71,7 +71,15 @@ export function mirrorOps(ctx: ServerContext) {
     const out = openSync(log, 'w', 0o600);
     const child = spawn(
       command[0]!,
-      [...command.slice(1), '--device', serial, '--share', '--quality', quality],
+      [
+        ...command.slice(1),
+        '--device',
+        serial,
+        '--share',
+        '--input-on-click',
+        '--quality',
+        quality,
+      ],
       { detached: true, stdio: ['ignore', out, out] },
     );
     closeSync(out);

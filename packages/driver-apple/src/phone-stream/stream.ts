@@ -35,8 +35,10 @@ const SUPPORTED_FEATURES = 140n;
 const RATE_CONTROL_MS = 50;
 const ALIVE_MS = 1_000;
 const WATCH_MS = 2_000;
-/** A still screen still sends about 20 frames a second: this long with none is a dark one. */
-const SILENT_MS = 3_000;
+/** A dark phone keeps its stream at a picture a second, and a lit one still sends about twenty. */
+const DARK_PICTURES = 2;
+const DARK_SECONDS = 3;
+const LIT_PICTURES = 5;
 
 /** A reason of the phone's in a form a person can act on; what it said goes along. */
 export class StreamRefusal extends Error {
@@ -58,10 +60,33 @@ const WORDS: [RegExp, Need][] = [
 
 export const needOf = (words: string): Need | undefined => WORDS.find(([w]) => w.test(words))?.[1];
 
+/** Told the pictures so far each second, says when the screen went dark or came back. */
+export class DarkWatch {
+  private last = 0;
+  private low = 0;
+  private dark = false;
+
+  tick(pictures: number): DeviceState | undefined {
+    const inSecond = pictures - this.last;
+    this.last = pictures;
+    this.low = inSecond <= DARK_PICTURES ? this.low + 1 : 0;
+    if (!this.dark && this.low >= DARK_SECONDS) {
+      this.dark = true;
+      return 'asleep';
+    }
+    if (this.dark && inSecond >= LIT_PICTURES) {
+      this.dark = false;
+      return 'ok';
+    }
+    return undefined;
+  }
+}
+
 export interface StreamSink {
   live(info: { w: number; h: number; mode: string }): void;
   picture(p: Picture): void;
   state(s: DeviceState): void;
+  counters(c: Record<string, number>): void;
   lost(why: string, need?: Need): void;
 }
 
@@ -114,8 +139,7 @@ export class PhoneStream {
   private inputs: Promise<void> = Promise.resolve();
   private stack: IpStack | undefined;
   private stopped = false;
-  private lastPacket = 0;
-  private silent = false;
+  private readonly dark = new DarkWatch();
   private videoPort = 0;
   private audioPort = 0;
   private receiver: RtpReceiver | undefined;
@@ -219,14 +243,8 @@ export class PhoneStream {
       () => this.toPhone(rtcp.askForKey(receiver.sender)),
     );
     this.receiver = receiver;
-    this.lastPacket = performance.now();
     this.video.message = (m, from) => {
       this.videoPort = from;
-      this.lastPacket = performance.now();
-      if (this.silent) {
-        this.silent = false;
-        this.sink.state('ok');
-      }
       receiver.push(m);
     };
     this.audio.message = (_m, from) => {
@@ -257,10 +275,10 @@ export class PhoneStream {
       const alive = rtcp.alive(receiver.sender, receiver.highestSeq);
       this.toPhone(alive);
       if (this.audioPort) this.audio?.send(alive, this.audioPort);
-      if (!this.silent && performance.now() - this.lastPacket > SILENT_MS) {
-        this.silent = true;
-        this.sink.state('asleep');
-      }
+      const { packets, lost, late, held } = receiver.stats;
+      this.sink.counters({ packets, lostPackets: lost, latePackets: late, heldPictures: held });
+      const changed = this.dark.tick(receiver.stats.pictures);
+      if (changed) this.sink.state(changed);
     });
     every(WATCH_MS, () => void this.watchServer());
     this.toPhone(rtcp.alive(receiver.sender, receiver.highestSeq));

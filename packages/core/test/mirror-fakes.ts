@@ -97,6 +97,7 @@ export class FakeMirror implements Mirror {
   inputs: InputEvent[] = [];
   inputWait: Promise<void> | undefined;
   push: ((s: DeviceState) => void) | undefined;
+  holdsThrough: DeviceState | undefined;
   noFirstFrame: Mirror['noFirstFrame'];
   source: MirrorSource = { kind: 'pixels', file: '/x', w: 1, h: 1 };
   tell: ((m: Record<string, unknown>) => void) | undefined;

@@ -1,4 +1,4 @@
-import { closeSync, constants, openSync, unlinkSync } from 'node:fs';
+import { constants, openSync, unlinkSync } from 'node:fs';
 import { Socket } from 'node:net';
 
 /**
@@ -39,8 +39,7 @@ export class FrameWriter {
     const tryOpen = () => {
       this.opening = undefined;
       try {
-        const fd = openSync(file, constants.O_WRONLY | constants.O_NONBLOCK);
-        this.onOpen(fd);
+        this.onOpen(openSync(file, constants.O_WRONLY | constants.O_NONBLOCK));
         // both ends hold it now: nothing on disk is left for anyone else to open
         unlinkSync(file);
       } catch (e) {
@@ -54,13 +53,7 @@ export class FrameWriter {
   }
 
   private onOpen(fd: number) {
-    let socket: Socket;
-    try {
-      socket = new Socket({ fd, readable: false, writable: true });
-    } catch (e) {
-      closeSync(fd);
-      throw e;
-    }
+    const socket = new Socket({ fd, readable: false, writable: true });
     socket.on('error', () => this.detach(socket));
     socket.on('close', () => this.detach(socket));
     this.socket = socket;
@@ -87,6 +80,14 @@ export class FrameWriter {
   setInfo(params: Record<string, unknown>) {
     this.info = { method: 'stream.info', params };
     this.writeJson(this.info);
+  }
+
+  /** Since the stream began, for the viewer's stats. */
+  setCounters(counters: Record<string, number>) {
+    this.writeJson({
+      method: 'stream.counters',
+      params: { ...counters, droppedPictures: this.dropped },
+    });
   }
 
   picture(annexB: Buffer) {

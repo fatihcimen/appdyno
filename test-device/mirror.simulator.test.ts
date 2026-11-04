@@ -125,7 +125,7 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real 
     };
     const session = new MirrorSession({
       mirror: device.mirror,
-      viewer: startViewer(false),
+      viewer: async () => new ViewerProcess(await viewerBinary(), ['--behind']),
       options: { quality: 'auto' },
       title: 'a test window',
       onDone: (id) => answered.push(id),
@@ -142,9 +142,10 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real 
       expect((touches[0] as { x: number }).x).toBeCloseTo(0.5, 2);
       expect((touches[0] as { y: number }).y).toBeCloseTo(0.25, 2);
       expect(touches[1]).toMatchObject({ kind: 'touch', p: 2 });
-      // a key on the window: its text, as the window has it
+      // a key that reaches a window that is not key goes nowhere: what is typed elsewhere is no device's to have
       session.tell({ op: 'poke', key: 'a' });
-      await until('a key', () => touches.some((e) => e.kind === 'text' && e.s === 'a'), 10_000);
+      await new Promise((r) => setTimeout(r, 1_000));
+      expect(touches.filter((e) => e.kind === 'text')).toEqual([]);
       // what sits over the picture: a mark, a line of activity in its panel, a banner answered, and no sound
       session.tell({ op: 'agent', driving: true, tool: 'tap' });
       session.tell({ op: 'activity', line: 'tap 3 ms ok' });
@@ -225,7 +226,8 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_ROTATE === '1')('a simulator t
     let viewer: ViewerProcess | undefined;
     const session = new MirrorSession({
       mirror: device.mirror,
-      viewer: async () => (viewer = new ViewerProcess(binary, window ? [] : ['--headless'])),
+      viewer: async () =>
+        (viewer = new ViewerProcess(binary, [window ? '--behind' : '--headless'])),
       options: { quality: 'auto' },
       title: 'a test',
     });

@@ -18,6 +18,11 @@ static NSTextField *label(CGFloat size, NSFontWeight weight) {
   return field;
 }
 
+MVShow MVShowOf(BOOL focus, BOOL behind) {
+  if (behind) return MVShowBehind;
+  return focus ? MVShowFocused : MVShowFront;
+}
+
 void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
   BOOL sideways = turns % 2;
   layer.bounds = CGRectMake(0, 0, sideways ? parent.height : parent.width, sideways ? parent.width : parent.height);
@@ -35,7 +40,6 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
   CGSize _picture;
   double _zoom;
   int _turns;
-  BOOL _activate;
   NSString *_name;
 }
 
@@ -86,12 +90,12 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
   _name = attach[@"title"] ?: @"appdyno";
   _window.title = _name;
   _view.inputOn = ![attach[@"input"] isEqual:@NO];
-  _activate = [attach[@"activate"] boolValue];
+  // a click once given stands: a reconnect does not take it back
+  if (![attach[@"input"] isEqual:@"click"]) _view.armed = YES;
   // a restarted viewer keeps the zoom it had; a phone's picture size comes with its first frame
   if ([attach[@"zoom"] doubleValue] > 0) _zoom = [attach[@"zoom"] doubleValue];
-  [_window makeKeyAndOrderFront:nil];
   [_window makeFirstResponder:_view];
-  if (_activate) [NSApp activateIgnoringOtherApps:YES];
+  [self show:MVShowOf([attach[@"focus"] boolValue], self.behind)];
 }
 
 - (void)setPicture:(CGSize)size {
@@ -167,9 +171,24 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
   _window.title = live ? _name : [NSString stringWithFormat:@"%@: %@", _name, message[@"title"] ?: message[@"state"]];
 }
 
-- (void)focus {
-  [_window makeKeyAndOrderFront:nil];
-  [NSApp activateIgnoringOtherApps:YES];
+- (void)show:(MVShow)how {
+  switch (how) {
+    case MVShowBehind:
+      [_window orderBack:nil];
+      break;
+    case MVShowFront:
+      [_window orderFrontRegardless];
+      break;
+    case MVShowFocused:
+      NSApp.activationPolicy = NSApplicationActivationPolicyRegular;
+      [_window makeKeyAndOrderFront:nil];
+      [NSApp activateIgnoringOtherApps:YES];
+      break;
+  }
+}
+
+- (void)raise {
+  [self show:MVShowOf(NO, self.behind)];
 }
 
 - (void)pokeX:(double)x y:(double)y {

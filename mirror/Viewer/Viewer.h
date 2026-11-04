@@ -21,6 +21,8 @@ void MVEmit(NSDictionary *message);
 @property(atomic, copy) NSString *decoder;
 /// What became of the last picture a window's layer was given: empty with no layer.
 @property(atomic, copy) NSString *layer;
+/// What a source counts of its own, since it began, reported as it is.
+@property(atomic, copy, nullable) NSDictionary *counters;
 @property(atomic) CGSize size;
 - (void)arrived:(size_t)bytes captureMs:(double)ms;
 - (void)decodedMs:(double)ms;
@@ -135,7 +137,9 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 /// Whether the layer took it.
 - (BOOL)showImage:(CVImageBufferRef)image;
 - (void)setStatus:(NSDictionary *)message;
-- (void)focus;
+/// Comes forward, with no keyboard: asked for by a second start, or an agent.
+- (void)raise;
+@property(nonatomic) BOOL behind;
 /// A click at this fraction of the picture, by the window's own event queue: needs no permission to post.
 - (void)pokeX:(double)x y:(double)y;
 - (void)pokeKey:(NSString *)characters;

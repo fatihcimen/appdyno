@@ -77,7 +77,7 @@ export class PhoneHid {
   private async type(text: string) {
     for (const c of text) {
       const key = usageOf(c);
-      if (!key) throw new Error(`no key on a US keyboard types ${JSON.stringify(c)}`);
+      if (!key) throw new Error('a character with no key on a US keyboard');
       if (key.shift) this.button(KEYBOARD_PAGE, SHIFT, DOWN);
       this.button(KEYBOARD_PAGE, key.usage, DOWN);
       this.button(KEYBOARD_PAGE, key.usage, UP);

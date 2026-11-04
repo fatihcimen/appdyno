@@ -31,8 +31,10 @@ export type MirrorSessionOptions = {
   title: string;
   /** The person's input is not passed on, and the viewer sends none. */
   noInput?: boolean;
-  /** Bring the window to the front when it opens: a person asked for it, and no agent's call may do that. */
-  activate?: boolean;
+  /** The keyboard, at the first attach and no other: a reconnect or a new viewer never takes it. */
+  focus?: boolean;
+  /** What a person does goes nowhere until they click it: a window an agent opened. */
+  inputOnClick?: boolean;
   clock?: MirrorClock;
   onChange?: (s: MirrorStatus) => void;
   /** A person answered a banner. */
@@ -62,7 +64,10 @@ export class MirrorSession {
   private note: string | undefined;
   private readonly input: InputQueue;
   private unwatch: (() => void) | undefined;
-  private readonly recording = new MirrorRecording();
+  private held = false;
+  private focused = false;
+  /** A movie of the stream's own frames, where its source has them. */
+  readonly recording = new MirrorRecording(() => this.viewer);
   private closedByPerson = false;
   private refusedNeed: Need | undefined;
   private asleep = false;
@@ -91,6 +96,7 @@ export class MirrorSession {
   }
 
   private set(next: MirrorState) {
+    this.held = false;
     this.current = next;
     this.since = this.clock.now();
     this.tellViewerState();
@@ -125,8 +131,8 @@ export class MirrorSession {
     this.finish(this.status);
   }
 
-  focus() {
-    this.viewer?.send({ op: 'focus' });
+  raise() {
+    this.viewer?.send({ op: 'raise' });
   }
 
   /** A word for the window itself: the mark of an agent, a banner, a line of activity. */
@@ -138,16 +144,6 @@ export class MirrorSession {
   mark(): Promise<number> {
     this.viewer?.send({ op: 'mark', bigger: this.o.mirror.sendsWhenStill === true });
     return new Promise((r) => this.marks.push(r));
-  }
-
-  /** From the next key frame on, the stream's own frames into this movie: a stream's source only. */
-  startRecording(file: string) {
-    this.viewer?.send({ op: 'record', file });
-  }
-
-  /** Ends the movie; what it came to. */
-  stopRecording(timeoutMs?: number) {
-    return this.recording.stop(this.viewer, timeoutMs);
   }
 
   /** The same way a person's touch goes. */
@@ -208,10 +204,11 @@ export class MirrorSession {
         op: 'attach',
         source,
         title: this.o.title,
-        input: !this.o.noInput,
-        activate: this.o.activate ?? false,
+        input: this.o.noInput ? false : this.o.inputOnClick ? 'click' : true,
+        focus: this.o.focus === true && !this.focused,
         ...(this.zoom && { zoom: this.zoom }),
       });
+      this.focused = true;
       this.armFirstFrame(run);
     } catch (e) {
       if (!stale()) this.onCheckFailed(e);
@@ -434,8 +431,14 @@ export class MirrorSession {
   private onDevice(s: DeviceState) {
     const state = this.current.state;
     if (state === 'stopped' || this.asleep) return;
+    if (s === this.o.mirror.holdsThrough) {
+      if (state === 'live') this.set({ state: 'waiting', need: s as Need });
+      this.held = state === 'live' || this.held;
+      return;
+    }
     if (s === 'ok') {
-      if (state === 'waiting') void this.connect();
+      if (this.held) this.set({ state: 'live' });
+      else if (state === 'waiting') void this.connect();
       return;
     }
     if (state === 'waiting' && this.current.state === 'waiting' && this.current.need === s) return;

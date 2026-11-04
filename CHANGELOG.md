@@ -36,7 +36,7 @@
 - A `perf_*` call during a recording no longer stops a replay: what it did to the screen is written as the plain steps that do the same, and what left the screen alone writes nothing.
 - A baseline takes what a run measured clean and names what it left out, rather than refusing the whole run for one number that went through a loaded Mac.
 - `appdyno mirror`: a live native window on a simulator, an emulator or an Android phone, driven by mouse, trackpad and keyboard, with an agent on the same device if it shares. One viewer per device, compiled by `clang` on first use, with no server, daemon or port of ours. What stands in the way is named with its fix, and it goes on by itself when it clears. See `docs/mirror.md`.
-- An iPhone in `appdyno mirror`, on iOS 27 and by USB: its own display service in 4:4:4 at its own size, with touch, keys and buttons, nothing on the phone. It rests on undocumented services, so the runner stays, and its code can be left out of a build as a whole.
+- An iPhone in `appdyno mirror`, on iOS 27 and by USB: its own display service in 4:4:4 at its own size, with touch and buttons, nothing on the phone. It rests on undocumented services, so the runner stays, and its code can be left out of a build as a whole.
 - The `mirror` tool: open, close, status, stats. No frames over MCP.
 - `hand_off`: asks a person, and waits. A pill on a window while an agent drives, and an Activity panel of its calls.
 - `perf_*` on a mirrored device gets the noise mark `mirrored`, as a stream runs an encoder there.

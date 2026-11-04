@@ -57,8 +57,16 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags) {
   return YES;
 }
 
+- (BOOL)takesPointer {
+  return self.inputOn && self.armed;
+}
+
+- (BOOL)takesKeys {
+  return self.takesPointer && self.window.isKeyWindow;
+}
+
 - (void)sendPhase:(int)phase at:(NSPoint)point clampToEdge:(BOOL)clamp {
-  if (!self.inputOn) return;
+  if (!self.takesPointer) return;
   double x, y;
   NSSize size = self.bounds.size;
   NSPoint p = clamp ? NSMakePoint(MIN(MAX(point.x, 0), size.width), MIN(MAX(point.y, 0), size.height)) : point;
@@ -67,6 +75,10 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags) {
 }
 
 - (void)mouseDown:(NSEvent *)event {
+  if (self.inputOn && !self.armed) {
+    self.armed = YES;
+    return;
+  }
   NSPoint p = [self convertPoint:event.locationInWindow fromView:nil];
   double x, y;
   _down = MVNormalize(p, self.bounds.size, self.picture, &x, &y);
@@ -84,7 +96,7 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags) {
 
 // a trackpad's two fingers, or a wheel, as one finger dragging: the device scrolls as it does for a finger
 - (void)scrollWheel:(NSEvent *)event {
-  if (!self.inputOn || _down) return;
+  if (!self.takesPointer || _down) return;
   // the coasting after the fingers lift is the device's own to do
   if (event.momentumPhase != NSEventPhaseNone) return;
   NSPoint at = [self convertPoint:event.locationInWindow fromView:nil];
@@ -107,7 +119,7 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags) {
 }
 
 - (void)keyDown:(NSEvent *)event {
-  if (!self.inputOn) return;
+  if (!self.takesKeys) return;
   NSString *characters = event.characters;
   if (MVIsTypedText(characters, event.modifierFlags)) {
     MVEmit(@{@"op": @"text", @"s": characters});
@@ -118,7 +130,7 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags) {
 }
 
 - (void)keyUp:(NSEvent *)event {
-  if (!self.inputOn) return;
+  if (!self.takesKeys) return;
   uint16_t usage = MVUsageOfKeyCode(event.keyCode);
   if (usage) MVEmit(@{@"op": @"key", @"page": @7, @"usage": @(usage), @"state": @2});
 }

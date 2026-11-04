@@ -150,12 +150,12 @@ appdyno mirror open --detach       # a window that outlives this command
 appdyno mirror close | status | stats
 ```
 
-| device    | the picture                                                    | still screen                                              |
-| --------- | -------------------------------------------------------------- | --------------------------------------------------------- |
-| simulator | its framebuffer itself, no encode                              | costs nothing                                             |
-| phone     | the agent's H.264 or HEVC, straight to the viewer, not by Node | costs nothing                                             |
-| emulator  | the emulator's own gRPC port, its screen in a shared file      | costs nothing                                             |
-| iPhone    | iOS 27's display service, by USB, nothing on the phone         | under 1 % of a core; about 20 frames a second keep coming |
+| device    | the picture                                                    | still screen                         |
+| --------- | -------------------------------------------------------------- | ------------------------------------ |
+| simulator | its framebuffer itself, no encode                              | costs nothing                        |
+| phone     | the agent's H.264 or HEVC, straight to the viewer, not by Node | costs nothing                        |
+| emulator  | the emulator's own gRPC port, its screen in a shared file      | costs nothing                        |
+| iPhone    | iOS 27's display service, by USB, nothing on the phone         | about 20 frames a second keep coming |
 
 An iPhone's stream rests on undocumented Apple services that may change: it is named, gated by what the phone lists, and the runner stays. Nothing of it opens a port on this Mac: its packets are inside a stream through `usbmuxd`.
 
@@ -176,7 +176,7 @@ index). The answer gives the length, frames and size.
 | --------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Android   | `screenrecord` on the device, 3 minutes a run, 4 Mbps    | runs are joined into one video by copying their frames, with no dependency; a moment is lost at each join. Runs an encoder change makes unjoinable stay as `name-1.mp4`, `name-2.mp4`, and the answer says so |
 | simulator | `simctl io recordVideo --codec=h264`, a QuickTime `.mov` | a frame is written only when the screen changes, so a still screen gives a very short video, and the answer says so                                                                                           |
-| iPhone    | `devicectl device capture screen-record`                 | not every phone offers it: an iPhone 13 Pro Max on iOS 27.0.1 has no such capability, and `record` refuses and says what to do. It has not been seen working on a phone                                       |
+| iPhone    | its own stream into a movie, with no second encode       | HEVC 4:4:4 at the phone's own size, from a key picture on; a build without the stream uses `devicectl device capture screen-record`, which not every phone offers                                             |
 
 ### Report
 

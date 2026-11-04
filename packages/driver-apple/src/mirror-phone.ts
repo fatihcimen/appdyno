@@ -50,12 +50,18 @@ const RETRY_NEED_MS = 3_000;
 /** An iPhone's mirror: all it speaks is in the stream it loads, and only what a session asks is here. */
 export class PhoneMirror implements Mirror {
   readonly sendsWhenStill = true;
+  /** A start lights the screen: it would turn back on a phone a person has just turned off. */
+  readonly holdsThrough = 'asleep' as const;
+  private dark = false;
   private module: PhoneStreamModule | undefined;
   private handle: PhoneStreamHandle | undefined;
   private watchers: ((s: DeviceState) => void)[] = [];
   private blocked: { need: Need; detail: string; until: number } | undefined;
   private attaches = 0;
   private live: { w: number; h: number; mode: string } | undefined;
+  private pipe: string | undefined;
+  /** What the phone said of the last stop: that it ended, or nothing, leaving it to the phone's own timeout. */
+  stopProved: boolean | undefined;
 
   constructor(
     private readonly udid: string,
@@ -85,6 +91,7 @@ export class PhoneMirror implements Mirror {
   async check(): Promise<MirrorCheck> {
     const stream = await this.stream();
     if (!stream) return { ok: false, need: 'no-phone-stream' };
+    if (this.dark) return { ok: false, need: 'asleep' };
     if (this.blocked && this.now() < this.blocked.until) {
       return { ok: false, need: this.blocked.need, detail: this.blocked.detail };
     }
@@ -99,8 +106,14 @@ export class PhoneMirror implements Mirror {
   private begin(stream: PhoneStreamModule, options: MirrorOptions) {
     return stream.start(this.udid, { quality: options.quality }, (e) => {
       if (e.kind === 'live') this.live = { w: e.w, h: e.h, mode: e.mode };
-      if (e.kind === 'state') this.tell(e.state);
-      if (e.kind === 'lost' || e.kind === 'ended') this.handle = undefined;
+      if (e.kind === 'state') {
+        this.dark = e.state === 'asleep';
+        this.tell(e.state);
+      }
+      if (e.kind === 'lost' || e.kind === 'ended') {
+        this.handle = undefined;
+        this.dark = false;
+      }
       if (e.kind === 'lost') {
         if (e.need) {
           this.blocked = { need: e.need, detail: e.why, until: this.now() + RETRY_NEED_MS };
@@ -114,10 +127,17 @@ export class PhoneMirror implements Mirror {
     const stream = await this.stream();
     if (!stream) throw new NeedError('no-phone-stream');
     const file = deviceStateFile('mirror', `${this.udid}-frames-${process.pid}-${this.attaches++}`);
+    this.dropPipe();
     await this.makePipe(file);
+    this.pipe = file;
     this.handle ??= this.begin(stream, options);
     this.handle.attach(file);
     return { kind: 'pipe', file, codec: 'hevc' };
+  }
+
+  /** Only on a dark screen: the same press on a lit one goes to the home screen. */
+  async wake() {
+    if (this.dark) this.handle?.input({ kind: 'button', name: 'home' });
   }
 
   async keyframe() {
@@ -128,10 +148,17 @@ export class PhoneMirror implements Mirror {
     this.handle?.input(e);
   }
 
+  /** The stream takes a pipe off the disk once it holds it; one no viewer opened is still there. */
+  private dropPipe() {
+    if (this.pipe) rmSync(this.pipe, { force: true });
+    this.pipe = undefined;
+  }
+
   async close() {
     const handle = this.handle;
     this.handle = undefined;
-    if (handle) await handle.stop();
+    this.dropPipe();
+    if (handle) this.stopProved = await handle.stop();
   }
 
   watch(onChange: (s: DeviceState) => void) {

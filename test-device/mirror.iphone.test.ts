@@ -58,7 +58,7 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     session = new built.MirrorSession({
       mirror: device.mirror,
       viewer: async () =>
-        (viewerProcess = new built.ViewerProcess(binary, headless ? ['--headless'] : [])),
+        (viewerProcess = new built.ViewerProcess(binary, [headless ? '--headless' : '--behind'])),
       options: { quality: 'auto' },
       title: 'a test',
       onChange: (s: MirrorStatus) => seen.push(s),
@@ -87,6 +87,7 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     await until('frames', () => Number(status().stats?.arrived ?? 0) > 0);
     expect(status().stats?.mode).toBe('mode 7');
     expect(String(status().stats?.decoder)).toBe('hardware 444f');
+    if (!headless) await until('the window to show it', () => status().stats?.layer === 'ok');
   }, 60_000);
 
   it('a flick moves the list, read before and after', async () => {
@@ -128,6 +129,31 @@ describe.runIf(udid)('mirror on an iPhone', () => {
       (await read()).list.some((e: { label: string }) => e.label === 'In basket: 1'),
     );
   }, 90_000);
+
+  it('a side button turns it dark: the mirror says so, keeps its stream, and a click lights it', async () => {
+    show('list');
+    await until('the list', async () =>
+      (await read()).list.some((e: { id?: string }) => e.id === 'row_name'),
+    );
+    session.send({ kind: 'button', name: 'lock' });
+    const dark = () =>
+      status().state === 'waiting' && (status() as { need?: string }).need === 'asleep';
+    await until('its word', dark, 15_000);
+    // a new stream would light it again
+    await new Promise((r) => setTimeout(r, 8_000));
+    expect(dark()).toBe(true);
+    expect(Number(status().stats?.arrived)).toBeLessThanOrEqual(2);
+    // a click on a dark window is a person who wants the screen back; with no window, what it calls
+    if (headless) await device.mirror.wake();
+    else session.poke(0.5, 0.5);
+    await until('its picture back', () => status().state === 'live', 20_000);
+    // it stands at the lock screen, and a second press opens a phone with no passcode
+    await new Promise((r) => setTimeout(r, 1_000));
+    session.send({ kind: 'button', name: 'home' });
+    await until('the app again', async () =>
+      (await read()).list.some((e: { id?: string }) => e.id === 'row_name'),
+    );
+  }, 120_000);
 
   it('a viewer killed comes back, with a new key for its picture', async () => {
     const pid = viewerProcess!.pid!;

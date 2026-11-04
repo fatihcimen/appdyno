@@ -7,7 +7,6 @@ import {
   decodePng,
   deviceStateFile,
   MirrorSession,
-  startViewer,
   viewerBinary,
   ViewerProcess,
   type Mirror,
@@ -249,7 +248,7 @@ describe.runIf(serial && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one rea
     const [left, top, right, bottom] = node!.b;
     const session = new MirrorSession({
       mirror: device.mirror,
-      viewer: startViewer(false),
+      viewer: async () => new ViewerProcess(await viewerBinary(), ['--behind']),
       options: { quality: 'auto' },
       title: 'a test window',
     });

@@ -56,6 +56,9 @@ function start(
 ): PhoneStreamHandle {
   const worker = new Worker(new URL('./worker.js', import.meta.url), {
     workerData: { udid, quality: options.quality },
+    // the pipe's descriptor is the socket's to close: a thread that also closed it as it ended took the same number
+    // from whatever had it by then, a new viewer's output as seen
+    trackUnmanagedFds: false,
   });
   let onEnded: ((proved: boolean) => void) | undefined;
   let ended = false;

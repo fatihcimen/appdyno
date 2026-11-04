@@ -123,6 +123,7 @@ describe('a phone mirror', () => {
     await mirror.close();
     await mirror.close();
     expect(handle.stop).toHaveBeenCalledTimes(1);
+    expect(mirror.stopProved).toBe(true);
   });
 
   it('tells its watchers what the phone is doing', async () => {
@@ -136,6 +137,21 @@ describe('a phone mirror', () => {
     stop();
     say({ kind: 'state', state: 'asleep' });
     expect(seen).toHaveLength(2);
+  });
+
+  it('a dark phone keeps its stream, says so, and a press lights it, on a dark screen only', async () => {
+    const { mirror, handle, module, say } = fake();
+    await mirror.open(OPTIONS);
+    await mirror.wake();
+    expect(handle.input).not.toHaveBeenCalled();
+    say({ kind: 'state', state: 'asleep' });
+    await expect(mirror.check()).resolves.toMatchObject({ ok: false, need: 'asleep' });
+    await mirror.wake();
+    expect(handle.input).toHaveBeenCalledWith({ kind: 'button', name: 'home' });
+    say({ kind: 'state', state: 'ok' });
+    await expect(mirror.check()).resolves.toMatchObject({ ok: true });
+    expect(handle.stop).not.toHaveBeenCalled();
+    expect(module.start).toHaveBeenCalledTimes(1);
   });
 
   it('a stream lost for a reason waits on it, and then a new one starts', async () => {

@@ -11,6 +11,7 @@ appdyno mirror --all [--watch]     # every device, and new ones as they come; at
 appdyno mirror open --detach       # a window that outlives this command
 appdyno mirror close | status | stats
   --quality auto|high|standard  --codec h264|hevc  --no-input  --headless  --seconds N  --share  --takeover
+  --record file.mp4  --focus
 ```
 
 The `mirror` tool has `open`, `close`, `status` and `stats`. No frames pass over MCP: an agent has `screenshot`
@@ -18,12 +19,12 @@ and `record`. `hand_off` asks a person for what an agent cannot do.
 
 ## What feeds it
 
-| device    | how                                                                                         | what to know                                                                                                                                                                                                                       |
-| --------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| simulator | CoreSimulator's own surface, no encode: the framebuffer itself, called back on each present | a still screen costs nothing. Private API, loaded at run time; what fails says so                                                                                                                                                  |
-| phone     | the agent's stream on a connection of its own: nothing passes through Node                  | H.264 by default, HEVC at your word. Android 10 and up. A secure window is black, as in `screencap` (seen on Android 16)                                                                                                           |
-| iPhone    | iOS 27's display service over a tunnel of this process's own, by USB, nothing on the phone  | undocumented, and may change. 4:4:4 at the phone's own size, up to its screen's rate. A still screen keeps sending, so its window is not free as the others are, though under 1 % of a core. It stays awake while a stream is held |
-| emulator  | the emulator's own gRPC port, its screen in a shared file, nothing in the guest             | the emulator's port, not ours. Where it has none, the guest encodes, which lags by seconds, and it says so                                                                                                                         |
+| device    | how                                                                                         | what to know                                                                                                                                                                                                                                                      |
+| --------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| simulator | CoreSimulator's own surface, no encode: the framebuffer itself, called back on each present | a still screen costs nothing. Private API, loaded at run time; what fails says so                                                                                                                                                                                 |
+| phone     | the agent's stream on a connection of its own: nothing passes through Node                  | H.264 by default, HEVC at your word. Android 10 and up. A secure window is black, as in `screencap` (seen on Android 16)                                                                                                                                          |
+| iPhone    | iOS 27's display service over a tunnel of this process's own, by USB, nothing on the phone  | undocumented, and may change. 4:4:4 at the phone's own size, up to its screen's rate. A still screen keeps sending, about 20 frames a second, so its window is not free as the others are. A held stream kept a phone lit for 30 minutes with nothing touching it |
+| emulator  | the emulator's own gRPC port, its screen in a shared file, nothing in the guest             | the emulator's port, not ours. Where it has none, the guest encodes, which lags by seconds, and it says so                                                                                                                                                        |
 
 The emulator's frame is RGBA in a file of exactly its size, top row first (the proto's comment says bottom up, and
 a frame compared with `screencap` says not). Asked with no size or into a larger file, it answers every frame and writes
@@ -67,14 +68,27 @@ would throw `remoted` off it; a test holds that too. The pair record is read and
 for, and any refusal stops with what a person must do. No socket opens on this Mac for any of it, so the README's
 line on listeners stands.
 
-The stream asks for the remote desktop profile first, 20 to 60 Mbit/s in 4:4:4, and takes the lower one, up to 6 Mbit/s
+The stream asks for the remote desktop profile first, 20 to 60 Mbit/s as configured, in 4:4:4, and takes the lower one,
 in 4:2:0, if a phone refuses it or `--quality standard` asks. Pictures go to the viewer by a named pipe, `0600`, off the
 disk as soon as both ends hold it. A gap in the packets holds the picture until a key picture comes: a freeze, never
-garbage. Three pictures wait at most, and past them one is dropped.
+garbage. Three pictures wait at most, and past them one is dropped, which also holds the picture until a key.
+`mirror stats` has `lostPackets`, `latePackets`, `heldPictures` and `droppedPictures`, since the stream began.
 
-A stream's offer asks the phone to end it after 30 s with no report from us, in place of its default hour: so a process
-that dies leaves the phone's stream, and its purple indicator, for 30 s. Streams we started are remembered, so a start
-stops one that was left over; any other client's reads as `taken-over`, and is never stopped.
+A stream's offer asks the phone to end it after 30 s with no report from us, in place of its default hour: a process killed
+outright left the phone's stream for 28 to 30 s, one run, and its indicator with it. Streams we started are remembered,
+so a start stops one that was left over; any other client's reads as `taken-over`, and is never stopped.
+
+A phone turned dark by its side button keeps its stream at a picture a second, and the mirror says `waiting asleep`
+while it stays: a new stream would light the screen and undo what a person did. It comes back with the pictures. A
+press of `home` on a dark phone lights its lock screen, and a second opens a phone with no passcode; a swipe sent to
+a phone does not open a lock screen.
+
+## The keyboard
+
+A window never takes the keyboard by itself: not when it opens, reconnects or restarts, and not when an agent opens it.
+A person's click gives it, or `--focus` at the first opening. A key that reaches a window without the keyboard goes
+nowhere. A window an agent opened also holds all input until a person's click, and that click goes no further. What
+is typed reaches the device and nothing else: no log, the Activity panel or `report` holds it.
 
 ## Sharing a device
 

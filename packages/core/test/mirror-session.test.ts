@@ -46,7 +46,6 @@ describe('a mirror, whatever the device', () => {
         source: mirror.source,
         title: 'a device',
         input: true,
-        activate: false,
       }),
     ]);
     viewer().say('first', { w: 1080, h: 2400, codec: 'h264' });
@@ -323,6 +322,47 @@ describe('a mirror, whatever the device', () => {
     mirror.push!('ok');
     await flush();
     expect(mirror.opens).toBe(2);
+  });
+
+  it('a state its stream holds through changes what is said, and nothing else', async () => {
+    const { session, mirror, viewer, live } = setup();
+    await live();
+    mirror.holdsThrough = 'asleep';
+    mirror.push!('asleep');
+    mirror.push!('asleep');
+    await flush();
+    expect(session.status).toMatchObject({ state: 'waiting', need: 'asleep' });
+    expect(viewer().of('detach')).toHaveLength(0);
+    mirror.push!('ok');
+    await flush();
+    expect(session.status.state).toBe('live');
+    expect(mirror.opens).toBe(1);
+    // and a device gone from under it is a loss as ever
+    mirror.push!('asleep');
+    await flush();
+    mirror.checkAnswer = { ok: false, need: 'not-connected' };
+    mirror.push!('not-connected');
+    await flush();
+    expect(session.status).toMatchObject({ state: 'waiting', need: 'not-connected' });
+    expect(viewer().of('detach')).toHaveLength(1);
+  });
+
+  it('the keyboard goes with the first attach and no other, and only when asked for', async () => {
+    const { session, mirror, viewer, live } = setup({ focus: true, inputOnClick: true });
+    await live();
+    expect(viewer().of('attach')[0]).toMatchObject({ focus: true, input: 'click' });
+    mirror.checkAnswer = { ok: false, need: 'asleep' };
+    mirror.push!('asleep');
+    await flush();
+    mirror.checkAnswer = { ok: true, routes: ['x'] };
+    mirror.push!('ok');
+    await flush();
+    expect(viewer().of('attach')[1]).toMatchObject({ focus: false, input: 'click' });
+    session.raise();
+    expect(viewer().of('raise')).toHaveLength(1);
+    const plain = setup();
+    await plain.live();
+    expect(plain.viewer().of('attach')[0]).toMatchObject({ focus: false, input: true });
   });
 
   it('a start wakes the screen, and so does a click on a dark window', async () => {

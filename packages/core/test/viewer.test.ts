@@ -1,5 +1,13 @@
 import { execFile, spawn } from 'node:child_process';
-import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { createServer, type Server, type Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -49,6 +57,43 @@ function viewer() {
 }
 
 const exited = (v: ViewerProcess) => new Promise<string>((r) => v.onExit(r));
+
+describe('the keyboard', () => {
+  const viewer = join(import.meta.dirname, '../../../mirror/Viewer');
+  const source = (f: string) => readFileSync(join(viewer, f), 'utf8');
+
+  it('is taken in one place, and that one is what --focus asks for', () => {
+    const window = source('Window.m');
+    for (const taking of ['makeKeyAndOrderFront', 'activateIgnoringOtherApps']) {
+      const all = readdirSync(viewer)
+        .filter((f) => f.endsWith('.m'))
+        .flatMap((f) =>
+          source(f)
+            .split('\n')
+            .filter((l) => l.includes(taking)),
+        );
+      expect(all, taking).toHaveLength(1);
+      expect(window.indexOf(taking)).toBeGreaterThan(window.indexOf('case MVShowFocused:'));
+      expect(window.indexOf(taking)).toBeLessThan(window.indexOf('- (void)raise'));
+    }
+    expect(window).toContain('MVShowOf([attach[@"focus"] boolValue]');
+  });
+
+  it('no launch brings the viewer forward', () => {
+    expect(source('main.m')).toContain(
+      'application.activationPolicy = NSApplicationActivationPolicyAccessory',
+    );
+    expect(source('main.m')).not.toContain(
+      'application.activationPolicy = NSApplicationActivationPolicyRegular',
+    );
+  });
+
+  it('nothing the viewer writes as a log holds what was typed', () => {
+    for (const f of readdirSync(viewer).filter((n) => n.endsWith('.m'))) {
+      expect(source(f), f).not.toMatch(/NSLog|fprintf\(stderr/);
+    }
+  });
+});
 
 describe('the viewer, compiled by its first-use path', () => {
   it('passes its self test: real frames, bad input, the sums a window rests on', async () => {

@@ -56,6 +56,7 @@ try {
     },
     picture: (p) => writer.picture(p.annexB),
     state: (state) => tell({ kind: 'state', state }),
+    counters: (c) => writer.setCounters(c),
     lost: (why, need) => {
       writer.close();
       tell({ kind: 'lost', why, ...(need && { need }) });

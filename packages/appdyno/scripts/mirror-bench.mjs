@@ -19,6 +19,8 @@ import {
   IosSimulatorDevice,
   MirrorSession,
   startViewer,
+  ViewerProcess,
+  viewerBinary,
 } from '../dist/index.js';
 
 const { values, positionals } = parseArgs({
@@ -70,7 +72,10 @@ const device = isIphone
 const seconds = [];
 const session = new MirrorSession({
   mirror: device.mirror,
-  viewer: startViewer(!values.window),
+  // a real window stays behind the others, on a Mac someone is using
+  viewer: values.window
+    ? async () => new ViewerProcess(await viewerBinary(), ['--behind'])
+    : startViewer(true),
   options: { quality: 'auto' },
   title: `bench ${serial}`,
   onChange: (s) => {
@@ -232,6 +237,29 @@ const note = (name, value, target, ok) => {
   );
 };
 
+/** Ends it; of an iPhone, what its stream counted, and what the phone says of the stop. */
+const finish = async (why) => {
+  const last = seconds.at(-1);
+  if (isIphone && last) {
+    note(
+      'packets',
+      `${last.lostPackets} lost, ${last.latePackets} late of ${last.packets}; ${last.heldPictures} pictures held, ${last.droppedPictures} dropped`,
+    );
+  }
+  await session.stop(why);
+  if (isIphone) {
+    const proved = device.mirror.stopProved;
+    note(
+      'the stop',
+      proved ? 'the phone says it ended' : 'no word from the phone',
+      'proved',
+      proved === true,
+    );
+    await device.stopAgent().catch(() => undefined);
+  }
+  device.close?.();
+};
+
 await session.start();
 const opening = Date.now();
 await waitFor('picture', () => session.status.state === 'live');
@@ -305,8 +333,7 @@ if (values.soak) {
     top(late, 'arrived') > 0,
   );
   note('state', session.status.state, 'live', session.status.state === 'live');
-  await session.stop('the soak ended');
-  device.close?.();
+  await finish('the soak ended');
   if (values.out) writeFileSync(values.out, JSON.stringify(result, null, 2));
   process.exit(result.runs.some((r) => r.ok === false) ? 1 : 0);
 }
@@ -395,8 +422,7 @@ note(
 );
 note('inputs', `${session.status.inputFailed} failed, ${session.status.inputDropped} moves merged`);
 
-await session.stop('the bench ended');
-device.close?.();
+await finish('the bench ended');
 if (values.out) writeFileSync(values.out, JSON.stringify(result, null, 2));
 const misses = result.runs.filter((r) => r.ok === false);
 const proven = misses.filter((r) => r.load <= LOAD_LIMIT);

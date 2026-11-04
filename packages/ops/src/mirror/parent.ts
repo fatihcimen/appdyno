@@ -21,8 +21,10 @@ export type MirrorRun = {
   seconds?: number;
   /** Goes on past another's claim, and takes none: the window serves whoever holds the device. */
   share: boolean;
-  /** A person asked for this window, rather than an agent's call. */
-  activate: boolean;
+  /** A person asked for the keyboard with `--focus`. */
+  focus: boolean;
+  /** An agent opened this window: input waits for a person's click. */
+  inputOnClick: boolean;
   /** From its first picture, this movie of what the stream sends. */
   record?: string;
   log: (line: string) => void;
@@ -85,12 +87,13 @@ class Parent {
       options: this.o.options,
       title: serial,
       noInput: this.o.noInput,
-      activate: this.o.activate,
+      focus: this.o.focus,
+      inputOnClick: this.o.inputOnClick,
       onDone: (id) => handoffDone(serial, id),
       onChange: (status) => {
         if (this.o.record && status.state === 'live' && !this.recording.has(serial)) {
           this.recording.set(serial, this.o.record);
-          session.startRecording(this.o.record);
+          session.recording.start(this.o.record);
           this.o.log(`${serial}: recording to ${this.o.record}`);
         }
         // a stop is the end of its file; a status written after would look like a mirror
@@ -123,7 +126,7 @@ class Parent {
     await Promise.all(
       [...this.sessions.entries()].map(async ([serial, s]) => {
         if (this.recording.has(serial)) {
-          const r = await s.stopRecording();
+          const r = await s.recording.stop();
           this.o.log(
             `${serial}: recorded ${r.frames} frames${r.seconds ? ` in ${r.seconds.toFixed(1)} s` : ''}${r.why ? `: ${r.why}` : ''}`,
           );
@@ -141,7 +144,7 @@ export async function runMirrors(ctx: ServerContext, o: MirrorRun): Promise<numb
   const parent = new Parent(ctx, o);
   const onStop = () => void parent.stopAll('asked to stop');
   const onFocus = () => {
-    for (const s of parent.sessions.values()) s.focus();
+    for (const s of parent.sessions.values()) s.raise();
   };
   process.on('SIGINT', onStop);
   process.on('SIGTERM', onStop);

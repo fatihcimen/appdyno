@@ -159,6 +159,7 @@ static int openDescriptors(void) {
   full[@"layer"] = self.layer;
   full[@"rssMb"] = @(residentMb());
   full[@"fds"] = @(openDescriptors());
+  [full addEntriesFromDictionary:self.counters ?: @{}];
   return full;
 }
 

@@ -67,6 +67,8 @@ export interface Mirror {
   wake?(): Promise<void>;
   /** A still screen keeps sending frames, so that only a larger one tells that something changed. */
   readonly sendsWhenStill?: boolean;
+  /** In this state the stream stays and only what is said changes, as a new start would undo what a person did. */
+  readonly holdsThrough?: DeviceState;
   /** No first picture in this time means this, rather than a failed stream. */
   readonly noFirstFrame?: { ms: number; need: Need };
 }

@@ -1,5 +1,6 @@
 // The self test of the sources that read a file: an emulator's frame, and a stream on a named pipe.
 #import "SelfTest.h"
+#import "Window.h"
 #import <AVFoundation/AVFoundation.h>
 #import <Accelerate/Accelerate.h>
 #import <fcntl.h>
@@ -110,6 +111,10 @@ void MVCheckPipe(void) {
   MVCheck(@"pipe: every frame decoded", all, [NSString stringWithFormat:@"%d of %lu", sink.images, (unsigned long)frames.count]);
   MVCheck(@"pipe: the size it was told", sink.lastSize.width == 320 && sink.lastSize.height == 240, nil);
   MVCheck(@"pipe: the mode it was told", [sink.stats.mode isEqual:@"mode 7"], sink.stats.mode);
+  NSDictionary *counters = @{@"method": @"stream.counters", @"params": @{@"lostPackets": @7}};
+  writeFrame(writer, 0, NULL, 0, [NSJSONSerialization dataWithJSONObject:counters options:0 error:NULL]);
+  for (int i = 0; i < 100 && !sink.stats.counters; i++) usleep(10000);
+  MVCheck(@"pipe: what the stream counts is in the stats", [sink.stats.report[@"lostPackets"] intValue] == 7, nil);
   // with what writes still there and silent, as a viewer told to let go has it
   NSDate *began = [NSDate date];
   [source stop];
@@ -159,4 +164,16 @@ void MVCheckRecorder(void) {
   NSDictionary *refused = [nowhere finish];
   [second close];
   MVCheck(@"recorder: a place it cannot write says so", refused[@"why"] != nil, refused.description);
+}
+
+void MVCheckKeyboard(void) {
+  MVCheck(@"keyboard: a window comes up without it", MVShowOf(NO, NO) == MVShowFront, nil);
+  MVCheck(@"keyboard: only --focus takes it", MVShowOf(YES, NO) == MVShowFocused, nil);
+  MVCheck(@"keyboard: a window kept behind comes forward for nothing", MVShowOf(YES, YES) == MVShowBehind && MVShowOf(NO, YES) == MVShowBehind, nil);
+  MVView *view = [MVView new];
+  view.inputOn = YES;
+  MVCheck(@"input: none until a person's click, where a window starts so", !view.takesPointer && !view.takesKeys, nil);
+  view.armed = YES;
+  MVCheck(@"input: a pointer once armed", view.takesPointer, nil);
+  MVCheck(@"input: no key reaches a device from a window that is not key", !view.takesKeys, nil);
 }
