@@ -15,12 +15,31 @@ export const APPLE_CONTROLS = [
   'rotateRight',
 ];
 
+/** What an iPhone takes with no runner; the others are a simulator's, or an edge drag a person can do in the window. */
+export const PHONE_CONTROLS = ['home', 'appSwitch', 'lock', 'volumeUp', 'volumeDown', 'siri'];
+
 /** Two presses as a person's: the second within the time iOS counts as a double. */
 const DOUBLE_PRESS_MS = 150;
 /** Held this long, the side button is Siri. */
 const HOLD_MS = 900;
 const CONSUMER_PAGE = 12;
 const SIDE_BUTTON = 0x30;
+
+const KEYBOARD_PAGE = 7;
+const COMMAND = 0xe3;
+const V = 0x19;
+
+/** Command V as keys: what a person's keyboard sends. */
+export async function pasteKeys(send: (e: InputEvent) => Promise<void>) {
+  for (const [usage, state] of [
+    [COMMAND, 1],
+    [V, 1],
+    [V, 2],
+    [COMMAND, 2],
+  ] as const) {
+    await send({ kind: 'key', page: KEYBOARD_PAGE, usage, state });
+  }
+}
 
 /** A press that is more than one key on an Apple device; false leaves it to the device's own key. */
 export async function applePress(name: string, send: (e: InputEvent) => Promise<void>) {

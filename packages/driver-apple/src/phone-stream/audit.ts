@@ -8,11 +8,8 @@ import type { ServiceList } from './services.js';
 
 const SERVICE = 'com.apple.accessibility.axAuditDaemon.remoteserver.shim.remote';
 const ACTIVATE = 'AXAction-2010';
-const NEXT = 4;
 /** A screen longer than this is walked no further. */
 const MOST_ELEMENTS = 300;
-const MOVE_MS = 1_000;
-const READY_MS = 300;
 const SHOWN = 20;
 
 type Dict = { [k: string]: Archived };
@@ -42,11 +39,15 @@ export const actionOf = (name: string) =>
     ValueTypeValue_v1: 1,
   });
 
-export const moveOptions = () =>
-  plain({
-    allowNonAX: plain(false),
-    direction: plain(NEXT),
-    includeContainers: plain(true),
+const attribute = (name: string) =>
+  typed('AXAuditElementAttribute_v1', {
+    AttributeNameValue_v1: name,
+    DisplayAsTree_v1: false,
+    DisplayInlineValue_v1: false,
+    IsInternal_v1: false,
+    PerformsActionValue_v1: false,
+    SettableValue_v1: false,
+    ValueTypeValue_v1: 1,
   });
 
 const isDict = (v: Archived | undefined): v is Dict =>
@@ -58,18 +59,45 @@ const fieldsOf = (v: Archived | undefined): Dict => {
 };
 const valueOf = (v: Archived | undefined) => (isDict(v) ? v.Value : undefined);
 
-/** What a focus told by the service comes to. */
-export function elementOf(focus: Archived | undefined): AuditElement | undefined {
-  const fields = fieldsOf(focus);
-  const token = fields.ElementValue_v1;
-  const caption = valueOf(fields.CaptionTextValue_v1);
-  if (!token || typeof caption !== 'string') return undefined;
-  const identifier = valueOf(fieldsOf(token).AccessibilityIdentifier_v1);
-  return { caption, token, ...(typeof identifier === 'string' && { identifier }) };
+const idOf = (token: Archived | undefined) =>
+  JSON.stringify(valueOf(fieldsOf(token).PlatformElementValue_v1));
+
+const kidsOf = (node: Archived | undefined): Archived[] => {
+  const kids = valueOf(fieldsOf(node).ChildrenValue_v1);
+  return Array.isArray(kids) ? kids : [];
+};
+
+/**
+ * What the service says of an element is its way down from the app, with its own children: those are found by its token,
+ * as the way down holds its parent's other children too.
+ */
+export function childrenIn(tree: Archived | undefined, token: Archived): Archived[] {
+  const id = idOf(token);
+  if (idOf(fieldsOf(tree).AuditElementValue_v1) === id) return kidsOf(tree);
+  for (const kid of kidsOf(tree)) {
+    const inner = childrenIn(kid, token);
+    if (inner.length) return inner;
+  }
+  return [];
 }
 
-const idOf = (e: AuditElement) =>
-  JSON.stringify(valueOf(fieldsOf(e.token).PlatformElementValue_v1));
+/** A node with no children, as a list shows it: what stands for a view with nothing to say is left out. */
+export function leafOf(node: Archived, label: Archived | undefined): AuditElement | undefined {
+  const fields = fieldsOf(node);
+  const token = fields.AuditElementValue_v1;
+  if (!token || valueOf(fields.IsIgnoredValue_v1) === true) return undefined;
+  const words = valueOf(label) ?? valueOf(fields.HumanReadableDescriptionValue_v1);
+  if (typeof words !== 'string' || !words.trim() || words.startsWith('<')) return undefined;
+  const identifier = valueOf(fieldsOf(token).AccessibilityIdentifier_v1);
+  return { caption: words, token, ...(typeof identifier === 'string' && { identifier }) };
+}
+
+/** Traits as read on iOS 27.2: being typed in, and secure, seen on a password field against the others beside it. */
+const EDITING = 0x200000;
+const SECURE = 0x1000000;
+const hasBit = (traits: number, bit: number) => Math.floor(traits / bit) % 2 === 1;
+export const isSecureEditing = (traits: number) =>
+  hasBit(traits, EDITING) && hasBit(traits, SECURE);
 
 /** What a name means on a screen: an id first, then the words, whole or up to the first comma, as `Form` of `Form, Button`. */
 export function elementNamed(list: AuditElement[], name: string): AuditElement {
@@ -103,34 +131,62 @@ export class Audit {
     return new Audit(connection, dtx);
   }
 
-  /** The screen, each element once, in reading order. */
-  async elements(): Promise<AuditElement[]> {
+  /**
+   * What the screen holds, by going down the app's tree a node at a time. Moving the inspector along a screen would be
+   * quicker, and scrolls what it reads: reading must leave the screen as it was.
+   */
+  elements() {
+    return this.inspecting(() => this.walk());
+  }
+
+  /** Any field being typed in that is secure, by its traits: reads the whole screen, so only when it matters. */
+  secureFocused() {
+    return this.inspecting(async () => {
+      for (const element of await this.walk()) {
+        const traits = valueOf(await this.read(element.token, 'Traits'));
+        if (typeof traits === 'number' && isSecureEditing(traits)) return true;
+      }
+      return false;
+    });
+  }
+
+  /** The service answers of an element only with its inspector on. */
+  private async inspecting<T>(work: () => Promise<T>) {
     await this.dtx.call('deviceInspectorShowVisuals:', false);
     await this.dtx.call('deviceInspectorEnable:', true);
-    await new Promise((r) => setTimeout(r, READY_MS));
     try {
-      const seen: AuditElement[] = [];
-      while (seen.length < MOST_ELEMENTS) {
-        const next = await this.move();
-        if (!next || seen.some((e) => idOf(e) === idOf(next))) break;
-        seen.push(next);
-      }
-      return seen;
+      return await work();
     } finally {
       await this.dtx.call('deviceInspectorEnable:', false);
     }
   }
 
-  private move() {
-    return new Promise<AuditElement | undefined>((resolve) => {
-      const timer = setTimeout(() => resolve(undefined), MOVE_MS);
-      this.dtx.onPush = (m) => {
-        if (m.selector !== 'hostInspectorCurrentElementChanged:') return;
-        clearTimeout(timer);
-        resolve(elementOf(m.args[0]));
-      };
-      this.dtx.call('deviceInspectorMoveWithOptions:', moveOptions()).catch(() => undefined);
-    });
+  private async walk(): Promise<AuditElement[]> {
+    const start = await this.dtx.call('deviceFetchSpecialElement:', 0);
+    const found: AuditElement[] = [];
+    const seen = new Set<string>();
+    const visit = async (node: Archived) => {
+      const token = fieldsOf(node).AuditElementValue_v1;
+      if (!token || seen.has(idOf(token)) || found.length >= MOST_ELEMENTS) return;
+      seen.add(idOf(token));
+      const kids = childrenIn(await this.tree(token), token);
+      if (kids.length) {
+        for (const kid of kids) await visit(kid);
+        return;
+      }
+      const leaf = leafOf(node, await this.read(token, 'Label'));
+      if (leaf) found.push(leaf);
+    };
+    await visit(await this.tree(start));
+    return found;
+  }
+
+  private read(element: Archived, name: string) {
+    return this.dtx.call('deviceElement:valueForAttribute:', element, attribute(name));
+  }
+
+  private tree(element: Archived) {
+    return this.read(element, '_AXHierarchyElementsAttribute');
   }
 
   /** What a person's activate does, by the element and no place on the screen. */

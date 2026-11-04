@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { actionOf, elementNamed, elementOf, moveOptions, plain, typed } from '../audit.js';
+import {
+  actionOf,
+  childrenIn,
+  elementNamed,
+  isSecureEditing,
+  leafOf,
+  plain,
+  typed,
+} from '../audit.js';
 import { dtxFrame, DtxClient, DtxInt, DtxReader } from '../dtx.js';
-import { archive, unarchive } from '../keyed-archive.js';
+import { archive, unarchive, type Archived } from '../keyed-archive.js';
 
 describe('a keyed archive', () => {
   it('keeps what it carries', () => {
@@ -120,31 +128,48 @@ describe('what goes to the phone audit service', () => {
     });
   });
 
-  it('moves on to the next element, containers too', () => {
-    expect(moveOptions()).toEqual({
-      ObjectType: 'passthrough',
-      Value: {
-        allowNonAX: { ObjectType: 'passthrough', Value: false },
-        direction: { ObjectType: 'passthrough', Value: 4 },
-        includeContainers: { ObjectType: 'passthrough', Value: true },
-      },
+  const token = (n: number, id?: string) =>
+    typed('AXAuditElement_v1', {
+      PlatformElementValue_v1: Buffer.from([n]),
+      ...(id && { AccessibilityIdentifier_v1: id }),
     });
+  const node = (element: Archived, words: string, kids: Archived[] = []): Archived => ({
+    ObjectType: 'AXAuditNode_v1',
+    Value: plain({
+      AuditElementValue_v1: element,
+      HumanReadableDescriptionValue_v1: plain(words),
+      IsIgnoredValue_v1: plain(false),
+      ...(kids.length && { ChildrenValue_v1: plain(kids) }),
+    }),
   });
 
-  it('keeps an element whole, as a press must send it back', () => {
-    const token = typed('AXAuditElement_v1', {
-      PlatformElementValue_v1: Buffer.from([77, 7]),
-      AccessibilityIdentifier_v1: 'open_form',
-    });
-    const focus = typed('AXAuditInspectorFocus_v1', { CaptionTextValue_v1: 'Form, Button' });
-    const fields = (focus.Value as { Value: Record<string, unknown> }).Value;
-    fields.ElementValue_v1 = token;
-    expect(elementOf(focus)).toEqual({
-      caption: 'Form, Button',
+  it('finds an element children in its way down, past its parent others', () => {
+    const [app, list, row, other] = [token(1), token(2), token(3), token(4)];
+    const tree = node(app, 'app', [
+      node(other, '<Other>'),
+      node(list, '<List>', [node(row, 'Row')]),
+    ]);
+    expect(childrenIn(tree, list)).toEqual([node(row, 'Row')]);
+    expect(childrenIn(tree, other)).toEqual([]);
+    expect(childrenIn(undefined, list)).toEqual([]);
+  });
+
+  it('keeps an element with words and its id, and no bare view', () => {
+    const element = token(5, 'open_form');
+    expect(leafOf(node(element, 'Form Button'), plain('Form'))).toEqual({
+      caption: 'Form',
       identifier: 'open_form',
-      token,
+      token: element,
     });
-    expect(elementOf(typed('AXAuditInspectorFocus_v1', {}))).toBeUndefined();
+    expect(leafOf(node(element, 'Title'), undefined)?.caption).toBe('Title');
+    expect(leafOf(node(element, '<UIWindow>'), undefined)).toBeUndefined();
+    expect(leafOf(node(element, '  '), undefined)).toBeUndefined();
+  });
+
+  it('tells a secure field being typed in, by its traits as a phone gave them', () => {
+    expect(isSecureEditing(0x2201240000)).toBe(true);
+    expect(isSecureEditing(0x2201040000)).toBe(false);
+    expect(isSecureEditing(0x2200240000)).toBe(false);
   });
 
   it('finds a name by id first, then by its words, and never guesses', () => {

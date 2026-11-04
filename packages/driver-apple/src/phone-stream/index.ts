@@ -147,5 +147,15 @@ function start(
   };
 }
 
-const phoneStream: PhoneStreamModule = { check, screenshot, elements, press, live, start };
+const secureFocused = (udid: string) => withAudit(udid, (audit) => audit.secureFocused());
+
+const phoneStream: PhoneStreamModule = {
+  check,
+  screenshot,
+  elements,
+  press,
+  secureFocused,
+  live,
+  start,
+};
 export default phoneStream;

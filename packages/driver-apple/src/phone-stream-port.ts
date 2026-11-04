@@ -44,6 +44,8 @@ export interface PhoneStreamModule {
     app: string | undefined,
     onSample: (s: LiveSample) => void,
   ): Promise<() => void>;
+  /** Whether the field in focus is a secure one, as text must not reach it by a pasteboard. */
+  secureFocused(udid: string): Promise<boolean>;
   /** What can be known with no stream started. */
   check(udid: string): Promise<PhoneStreamCheck>;
   start(

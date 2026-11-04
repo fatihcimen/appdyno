@@ -10,6 +10,7 @@ import { sleep, stateDir, type ScreenRecorder } from '@appdyno/core';
 import { type IosDeviceOps, IosDevice } from './device.js';
 import { phoneRecorder } from './record.js';
 import { iosProducts, type RunnerTransport, IosRunnerLauncher } from './runner.js';
+import { PHONE_CONTROLS } from './mirror-press.js';
 import { PhoneInspector } from './phone-inspector.js';
 import { PhoneLive } from './phone-live.js';
 import { signedRunner, type PhoneSigning, findPhoneSigning, phoneXctestrun } from './signing.js';
@@ -116,7 +117,7 @@ export class IosPhoneDevice extends IosDevice {
   readonly ctl: Devicectl;
   override async hardware() {
     const model = await this.ctl.marketingName().catch(() => undefined);
-    return { ...(await super.hardware()), ...(model && { model }) };
+    return { ...(await super.hardware()), controls: PHONE_CONTROLS, ...(model && { model }) };
   }
   /** What Instruments and XCTest can read from a phone: what they cannot says why. */
   readonly measure: IosPhonePerf = new IosPhonePerf(this);

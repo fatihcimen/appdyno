@@ -15,7 +15,8 @@ import {
   type MirrorSource,
   type Need,
 } from '@appdyno/core';
-import { applePress } from './mirror-press.js';
+import { applePress, pasteKeys } from './mirror-press.js';
+import { usageOf } from './mirror-sim.js';
 import type { PhoneStreamHandle, PhoneStreamModule } from './phone-stream-port.js';
 
 const run = promisify(execFile);
@@ -65,7 +66,13 @@ async function makeFrames(file: string) {
 const RETRY_NEED_MS = 3_000;
 
 /** An iPhone's mirror: all it speaks is in the stream it loads, and only what a session asks is here. */
+/** How long a paste's text stays on the phone's pasteboard with no touch, and after the touch that allows it. */
+const RESTORE_MS = 60_000;
+const AFTER_TOUCH_MS = 1_500;
+
 export class PhoneMirror implements Mirror {
+  private say: (text: string) => void = () => undefined;
+  private afterTouch: (() => void) | undefined;
   readonly sendsWhenStill = true;
   /** A start lights the screen: it would turn back on a phone a person has just turned off. */
   readonly holdsThrough = 'asleep' as const;
@@ -136,7 +143,12 @@ export class PhoneMirror implements Mirror {
     });
   }
 
-  async open(options: MirrorOptions): Promise<MirrorSource> {
+  async open(
+    options: MirrorOptions,
+    _signal?: AbortSignal,
+    tell: (message: Record<string, unknown>) => void = () => undefined,
+  ): Promise<MirrorSource> {
+    this.say = (text) => tell({ op: 'note', text });
     const stream = await this.stream();
     if (!stream) throw new NeedError('no-phone-stream');
     const file = join(framesDir(), `${safeName(this.udid)}-${process.pid}-${this.attaches++}`);
@@ -157,8 +169,50 @@ export class PhoneMirror implements Mirror {
     this.handle?.keyframe();
   }
 
+  private pasteboard(action: 'copy' | 'paste') {
+    return run('xcrun', ['devicectl', 'device', 'pasteboard', action, '--device', this.udid]);
+  }
+
+  private async writePasteboard(text: string) {
+    const copying = this.pasteboard('copy');
+    copying.child.stdin?.end(text);
+    await copying;
+  }
+
+  /**
+   * What no key types goes by the phone's pasteboard, as a person would, and what it held comes back. The phone asks a
+   * person on its screen to allow the paste, so that waits for their next touch, or for a while. A secure field is left
+   * alone: its text must not sit on a pasteboard.
+   */
+  private async paste(text: string) {
+    const stream = await this.stream();
+    if (await stream?.secureFocused(this.udid).catch(() => false)) {
+      this.say('This field is secure and this text has no keys: type it on the phone.');
+      return;
+    }
+    const held = (await this.pasteboard('paste').catch(() => ({ stdout: '' }))).stdout;
+    await this.writePasteboard(text);
+    await pasteKeys((next) => this.input(next));
+    this.say(
+      `This text has no keys, so it went by the phone's pasteboard: allow the paste on its screen.${held ? '' : ' It held no text to put back.'}`,
+    );
+    const restore = () => {
+      clearTimeout(timer);
+      this.afterTouch = undefined;
+      if (held) void this.writePasteboard(held).catch(() => undefined);
+    };
+    const timer = setTimeout(restore, RESTORE_MS);
+    timer.unref();
+    this.afterTouch = () => {
+      clearTimeout(timer);
+      setTimeout(restore, AFTER_TOUCH_MS).unref();
+    };
+  }
+
   async input(e: InputEvent) {
+    if (e.kind === 'touch' && e.p === 2) this.afterTouch?.();
     if (e.kind === 'button' && (await applePress(e.name, (next) => this.input(next)))) return;
+    if (e.kind === 'text' && [...e.s].some((c) => !usageOf(c))) return this.paste(e.s);
     this.handle?.input(e);
   }
 
