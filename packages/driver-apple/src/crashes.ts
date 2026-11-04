@@ -12,6 +12,7 @@ import {
   type Measured,
 } from '@appdyno/core';
 import type { Devicectl } from './devicectl.js';
+import { withSymbols } from './symbols.js';
 
 /** A folder holds every app's reports: only so many are opened per query. */
 const MAX_OPENED = 200;
@@ -108,7 +109,8 @@ export async function simulatorCrashes(
     const other = /\/Devices\/([0-9A-F-]{36})\//.exec(r.procPath ?? '')?.[1];
     return !other || other === udid;
   });
-  return { reports, source: SIM_SOURCE };
+  const answer = { reports, source: SIM_SOURCE };
+  return q.symbols ? withSymbols(answer, q.symbols) : answer;
 }
 
 type PhoneFile = {
@@ -183,5 +185,6 @@ export async function phoneCrashes(ctl: Devicectl, q: CrashesQuery): Promise<Cra
       local,
     ]);
   }
-  return { reports: await reportsIn(dir, q), source: 'devicectl systemCrashLogs' };
+  const answer = { reports: await reportsIn(dir, q), source: 'devicectl systemCrashLogs' };
+  return q.symbols ? withSymbols(answer, q.symbols) : answer;
 }

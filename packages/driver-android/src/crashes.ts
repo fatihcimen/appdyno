@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { stateDir, type CrashesAnswer, type CrashesQuery, type CrashReport } from '@appdyno/core';
 import { type Adb, shq } from './adb.js';
+import { namedTombstone, shortFrame } from './tombstone.js';
 
 /** Reasons that are the app's end as nobody asked for it; the rest (a user's stop, a new install) are left out. */
 const DEATHS = /CRASH|ANR|LOW.?MEMORY|SIGNALED|EXCESSIVE|INITIALIZATION|FREEZER/i;
@@ -53,9 +54,11 @@ export function parseDropbox(text: string, app: string): Drop[] {
   });
 }
 
-/** The first lines of a dropbox entry's stack: what is under its headers. */
-const stackOf = (entry: string) =>
-  entry
+/** The first lines of a dropbox entry's stack: a tombstone's signal and frames, else what is under its headers. */
+const stackOf = (entry: string) => {
+  const tombstone = entry.match(/^(signal .*|\s+#\d+ pc .*)$/gm);
+  if (tombstone) return tombstone.slice(0, 6).map(shortFrame).join('\n');
+  return entry
     .split(/\n\s*\n/)
     .slice(1)
     .join('\n')
@@ -63,9 +66,19 @@ const stackOf = (entry: string) =>
     .slice(0, 6)
     .join('\n')
     .trim();
+};
+
+/** Seen on API 34: of an app's native crashes in a few minutes, the first 6 left a tombstone and the rest none. */
+const NO_TOMBSTONE =
+  'a native crash here has no tombstone: one comes a moment after it, and Android keeps few of them, 6 of an app in some minutes on API 34';
+const NOT_NATIVE = 'nothing to name: only a native crash leaves a tombstone';
+
+/** A report and the tombstone it came with: what `symbols` can name. */
+type Found = CrashReport & { tombstone?: string };
+const NATIVE = 'data_app_native_crash';
 
 /** Exits with the stack of the dropbox entry written within seconds of each; dropbox-only entries too. */
-export function crashReports(exitInfo: string, dropbox: string, q: CrashesQuery): CrashReport[] {
+export function crashReports(exitInfo: string, dropbox: string, q: CrashesQuery): Found[] {
   const drops = parseDropbox(dropbox, q.app);
   const near = (t: number) => drops.find((d) => Math.abs(d.time - t) < 5_000);
   const fromExits = parseExitInfo(exitInfo).map((e) => {
@@ -77,11 +90,18 @@ export function crashReports(exitInfo: string, dropbox: string, q: CrashesQuery)
       ...((stack ? stackOf(stack.text) : e.detail) && {
         detail: stack ? stackOf(stack.text) : e.detail!,
       }),
+      ...(stack?.tag === NATIVE && { tombstone: stack.text }),
     };
   });
   const orphans = drops
     .filter((d) => !fromExits.some((e) => Math.abs(e.time - d.time) < 5_000))
-    .map((d) => ({ time: d.time, at: d.at, reason: d.tag, detail: stackOf(d.text) }));
+    .map((d) => ({
+      time: d.time,
+      at: d.at,
+      reason: d.tag,
+      detail: stackOf(d.text),
+      ...(d.tag === NATIVE && { tombstone: d.text }),
+    }));
   return [...fromExits, ...orphans]
     .filter((r) => !q.since || r.time >= q.since)
     .sort((a, b) => b.time - a.time)
@@ -110,8 +130,25 @@ export async function androidCrashes(
     .map((d) => d.text)
     .join('\n\n');
   await writeFile(file, `${exitInfo}\n\n${about}\n`, { mode: 0o600 });
+  const otherBuilds = new Set<string>();
+  const named: CrashReport[] = [];
+  for (const [i, { tombstone, ...r }] of reports.entries()) {
+    if (!tombstone || !q.symbols) {
+      named.push({ ...r, file });
+      continue;
+    }
+    const symbolicated = file.replace(/\.txt$/, `-${i}.symbolicated.txt`);
+    const { detail, otherBuilds: other } = await namedTombstone(tombstone, q.symbols, symbolicated);
+    other.forEach((b) => otherBuilds.add(b));
+    named.push({ ...r, file, detail, symbolicated });
+  }
   return {
-    reports: reports.map((r) => ({ ...r, file })),
+    reports: named,
     source: 'dumpsys activity exit-info, dumpsys dropbox',
+    ...(otherBuilds.size > 0 && { note: [...otherBuilds].join('\n') }),
+    ...(q.symbols &&
+      reports.every((r) => !r.tombstone) && {
+        note: reports.some((r) => /NATIVE/.test(r.reason)) ? NO_TOMBSTONE : NOT_NATIVE,
+      }),
   };
 }

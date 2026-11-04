@@ -134,11 +134,16 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
           app: App,
           since: z.string().max(40).optional(),
           limit: z.number().int().min(1).max(20).default(5),
+          symbols: z
+            .string()
+            .max(1_000)
+            .optional()
+            .describe('names the stack: a .dSYM or folder of them; Android: a folder of .so'),
         })
         .strict(),
       output: CrashesOut,
       annotations: READ,
-      run: async ({ app, since, limit }) => {
+      run: async ({ app, since, limit, symbols }) => {
         const s = await ctx.session();
         if (!s.device.crashes)
           throw new ToolError('this device gives no crash reports', 'UNSUPPORTED');
@@ -148,6 +153,7 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
           app: pkg,
           limit,
           ...(from !== undefined && { since: from }),
+          ...(symbols && { symbols }),
         });
         const shown = reports.map((r) => ({
           ...r,
@@ -160,7 +166,7 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
             head,
             ...shown.map(
               (r) =>
-                `${r.at} ${r.reason}${r.file ? `\n  file: ${r.file}` : ''}${r.detail ? `\n  ${r.detail.split('\n').join('\n  ')}` : ''}`,
+                `${r.at} ${r.reason}${r.file ? `\n  file: ${r.file}` : ''}${r.symbolicated ? `\n  named: ${r.symbolicated}` : ''}${r.detail ? `\n  ${r.detail.split('\n').join('\n  ')}` : ''}`,
             ),
           ].join('\n'),
           { reports: shown, source, ...(note && { note }) },

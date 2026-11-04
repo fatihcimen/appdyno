@@ -10,6 +10,7 @@ android {
     namespace = "dev.appdyno.fixture"
     compileSdk = 35
     buildToolsVersion = "35.0.0"
+    ndkVersion = "28.2.13676358"
     defaultConfig {
         // -PoldTarget: built for an old Android, a harmless app that Play Protect warns about on a real phone
         val oldTarget = project.hasProperty("oldTarget")
@@ -18,7 +19,9 @@ android {
         targetSdk = if (oldTarget) 24 else 35
         versionCode = 1
         versionName = "0.1.0"
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
+    externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt") } }
     buildFeatures {
         compose = true
     }

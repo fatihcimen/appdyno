@@ -9,6 +9,8 @@
     <item name="submit" type="id" />
     <item name="result" type="id" />
     <item name="authenticate" type="id" />
+    <item name="crash" type="id" />
+    <item name="crash_native" type="id" />
     <item name="list" type="id" />
     <item name="row_name" type="id" />
     <item name="row_count" type="id" />

@@ -101,6 +101,7 @@ private val LINKED = mapOf(
     "code" to CodeActivity::class.java,
     "a11y" to A11yActivity::class.java,
     "biometric" to BiometricActivity::class.java,
+    "crash" to CrashActivity::class.java,
 )
 
 /** A number a test wrote into the app's files, as a known cost; absent, none. */
@@ -807,6 +808,23 @@ class LeakActivity : Activity() {
  * Reactions that come late with nothing in between: a tap adds a line after the button's delay. A settle
  * that ends before the delay misses the change.
  */
+object Native {
+    init { System.loadLibrary("fixture_native") }
+
+    external fun crash()
+}
+
+/** A crash in the app's own code, and one in its library: what `crashes` finds and names. */
+class CrashActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        column {
+            button("Crash", R.id.crash) { throw IllegalStateException("fixture crash") }
+            button("Crash natively", R.id.crash_native) { Native.crash() }
+        }
+    }
+}
+
 /** Asks for a fingerprint and says what came back: what `device_setting biometric` answers. */
 class BiometricActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {

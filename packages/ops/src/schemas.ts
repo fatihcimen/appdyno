@@ -313,6 +313,7 @@ export const CrashesOut = z.object({
       reason: z.string(),
       detail: z.string().optional(),
       file: z.string().optional(),
+      symbolicated: z.string().optional(),
     }),
   ),
   source: z.string(),

@@ -255,6 +255,8 @@ export type CrashesQuery = {
   /** Epoch ms; absent: any time. */
   since?: number;
   limit: number;
+  /** A build's symbols: a `.dSYM` or a folder of them; on Android a folder of libraries that keep theirs. */
+  symbols?: string;
 };
 
 export type CrashReport = {
@@ -265,6 +267,8 @@ export type CrashReport = {
   detail?: string;
   /** The whole report on this machine. */
   file?: string;
+  /** Its stack with the names `symbols` gave, on this machine. */
+  symbolicated?: string;
 };
 
 export type CrashesAnswer = { reports: CrashReport[]; source: string; note?: string };

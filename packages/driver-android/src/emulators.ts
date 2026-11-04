@@ -5,7 +5,7 @@ import { type VirtualDevices, type Startable, pause } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import type { Adb } from './adb.js';
 
-const sdkDir = () =>
+export const sdkDir = () =>
   process.env.ANDROID_HOME ??
   process.env.ANDROID_SDK_ROOT ??
   join(homedir(), 'Library/Android/sdk');

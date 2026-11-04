@@ -121,6 +121,8 @@ reaches the device, and long operations report progress.
 system's crash records for the app (Android exit info and dropbox, the simulator's DiagnosticReports,
 an iPhone's system crash logs) as a bounded summary and a file path. Secrets are redacted.
 
+With `symbols`, it names the stack of a release build. On iOS that is a `.dSYM`, or a folder holding them such as the build's products, and an image is named with `atos` only from the dSYM whose UUID, by `dwarfdump`, is the crashed image's: any other would name the wrong functions and look right, so a report with none says which UUID it wanted and which the folder has. On Android it is a folder of libraries that keep their symbols, such as the `lib` folder of a build (`merged_native_libs/.../out/lib`, the ABI found from the tombstone), read by `ndk-stack` from the newest NDK in the SDK, which leaves a library of another build unread, and the answer says which ids differ. A tombstone comes a moment after the crash, and a Java crash has none. Android keeps few: on API 34 the first 6 native crashes of an app in some minutes left one and the next left none, and the answer says so, which a loop of crashing runs will meet. The whole stack is left in the file `named` gives. Optimized Swift may give a function with no line.
+
 ## Evidence
 
 ### Video

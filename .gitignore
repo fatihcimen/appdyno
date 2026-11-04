@@ -4,6 +4,7 @@ dist/
 android/.gradle/
 android/build/
 android/*/build/
+android/*/.cxx/
 android/local.properties
 .bench/
 .compare/
