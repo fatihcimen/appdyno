@@ -135,6 +135,18 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
   );
 
   it(
+    'opens the App Switcher by Home pressed twice',
+    async () => {
+      const before = await picture();
+      control('appSwitch');
+      await screenBecomes((now) => changedShare(before, now) > 0.1);
+      control('home');
+      await screenBecomes((now) => changedShare(before, now) < 0.1);
+    },
+    3 * SCREEN_MS,
+  );
+
+  it(
     'holds a right click down as a long press, and the device sees one',
     async () => {
       const before = await picture();

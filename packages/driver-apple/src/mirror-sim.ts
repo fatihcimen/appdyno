@@ -11,6 +11,7 @@ import type {
   MirrorSource,
 } from '@appdyno/core';
 import type { Key } from '@appdyno/protocol';
+import { applePress } from './mirror-press.js';
 import { Simctl, xcodeEnv } from './simctl.js';
 import { startSimAx, startSimHid, type HelperProcess } from './simhelper.js';
 import { HID_KEYS } from './simtouch.js';
@@ -204,6 +205,7 @@ export class SimulatorMirror implements Mirror {
         await this.type(e.s);
         return;
       case 'button': {
+        if (await applePress(e.name, (next) => this.input(next))) return;
         const key = HID_KEYS[e.name as Key];
         if (key) await this.call({ op: 'key', ...key });
       }

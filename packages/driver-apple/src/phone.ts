@@ -116,7 +116,7 @@ export class IosPhoneDevice extends IosDevice {
   readonly ctl: Devicectl;
   override async hardware() {
     const model = await this.ctl.marketingName().catch(() => undefined);
-    return { platform: 'ios' as const, ...(model && { model }) };
+    return { ...(await super.hardware()), ...(model && { model }) };
   }
   /** What Instruments and XCTest can read from a phone: what they cannot says why. */
   readonly measure: IosPhonePerf = new IosPhonePerf(this);

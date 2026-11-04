@@ -40,20 +40,17 @@ function fixture(platform: 'ios' | 'android', device: Partial<Device> = {}, stre
     terminate: vi.fn(async () => undefined),
     ...device,
   } as unknown as Device;
-  const controls = windowControls(whole, { platform, model: 'Test Phone' }, () => session);
+  const hardware = { platform, controls: [], model: 'Test Phone' };
+  const controls = windowControls(whole, hardware, () => session);
   return { controls, sent, told, device: whole, session, recording };
 }
 
 describe("a window's look", () => {
-  it('names the frame and only the controls its kind has', () => {
-    const ios = windowLook({ platform: 'ios', model: 'iPhone 17 Pro' });
-    expect(ios.frame.model).toBe('iPhone 17 Pro');
-    expect(ios.controls).toContain('siri');
-    expect(ios.controls).not.toContain('back');
-    const android = windowLook({ platform: 'android' });
-    expect(android.controls).toContain('back');
-    expect(android.controls).not.toContain('siri');
-    expect(android).not.toHaveProperty('name');
+  it('draws the frame and the controls the device says it has', () => {
+    const look = windowLook({ platform: 'android', controls: ['home'], model: 'Test Phone' });
+    expect(look).toMatchObject({ controls: ['home'], name: 'Test Phone' });
+    expect(look.frame.model).toBe('Test Phone');
+    expect(windowLook(undefined).controls).toEqual([]);
   });
 });
 
@@ -63,24 +60,6 @@ describe("a window's controls", () => {
     expect(controls.press('home')).toBe(false);
     expect(controls.press('lock')).toBe(false);
     expect(sent).toEqual([]);
-  });
-
-  it('opens an app switcher by Home twice on iOS, and leaves it to Android', async () => {
-    const ios = fixture('ios');
-    expect(ios.controls.press('appSwitch')).toBe(true);
-    await vi.waitFor(() => expect(ios.sent).toHaveLength(2), WAIT);
-    expect(ios.sent).toEqual([
-      { kind: 'button', name: 'home' },
-      { kind: 'button', name: 'home' },
-    ]);
-    expect(fixture('android').controls.press('appSwitch')).toBe(false);
-  });
-
-  it('holds the side button for Siri, down then up', async () => {
-    const { controls, sent } = fixture('ios');
-    controls.press('siri');
-    await vi.waitFor(() => expect(sent).toHaveLength(2), WAIT);
-    expect(sent.map((e) => (e as { state: number }).state)).toEqual([1, 2]);
   });
 
   it('draws Control Center from the top edge, finger down to finger up', async () => {

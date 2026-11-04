@@ -57,7 +57,7 @@ function pixelsDevice(serial: string) {
     close: async () => undefined,
     watch: () => () => undefined,
   };
-  const hardware = async () => ({ platform: 'android' });
+  const hardware = async () => ({ platform: 'android', controls: [] });
   return { serial, mirror, hardware, close: vi.fn() } as unknown as Device;
 }
 

@@ -10,35 +10,6 @@ import type {
   ViewerMessage,
 } from '@appdyno/core';
 
-/** What each kind of device shows on its window, in the viewer's names. */
-const CONTROLS = {
-  ios: [
-    'home',
-    'appSwitch',
-    'lock',
-    'volumeUp',
-    'volumeDown',
-    'siri',
-    'controlCenter',
-    'notifications',
-    'spotlight',
-    'rotateLeft',
-    'rotateRight',
-  ],
-  android: [
-    'back',
-    'home',
-    'appSwitch',
-    'lock',
-    'volumeUp',
-    'volumeDown',
-    'quickSettings',
-    'notifications',
-    'rotateLeft',
-    'rotateRight',
-  ],
-};
-
 /** A finger's way down the screen, as fractions of it: from the top edge, or the middle of a home screen. */
 const SWIPES: Record<string, { x: number; from: number; to: number; times?: number }> = {
   // inside the corner's curve, near the battery: past it a screen has nothing to touch
@@ -50,12 +21,6 @@ const SWIPES: Record<string, { x: number; from: number; to: number; times?: numb
 const SWIPE_STEPS = 10;
 const SWIPE_STEP_MS = 16;
 const SWIPES_APART_MS = 400;
-/** Two presses as a person's: the second within the time iOS counts as a double. */
-const DOUBLE_PRESS_MS = 150;
-/** Held this long, the side button is the assistant. */
-const HOLD_MS = 900;
-const CONSUMER_PAGE = 12;
-const SIDE_BUTTON = 0x30;
 const RECORD_MAX_S = 3_600;
 
 const stamp = () =>
@@ -67,10 +32,9 @@ const stamp = () =>
 
 /** How a device looks on a window: its frame and the controls it has. */
 export function windowLook(hardware: DeviceHardware | undefined) {
-  const platform = hardware?.platform ?? 'android';
   return {
-    frame: { model: hardware?.model, platform, color: hardware?.color },
-    controls: CONTROLS[platform],
+    frame: { model: hardware?.model, platform: hardware?.platform, color: hardware?.color },
+    controls: hardware?.controls ?? [],
     ...(hardware?.model && { name: hardware.model }),
   };
 }
@@ -87,7 +51,6 @@ export function windowControls(
   session: () => WindowSession,
 ) {
   const name = () => safeName(hardware?.model ?? device.serial);
-  const ios = hardware?.platform === 'ios';
   let opened: Promise<unknown> | undefined;
   let rotation: 0 | 1 | 2 | 3 = 0;
   let stopRecording: (() => Promise<string>) | undefined;
@@ -125,25 +88,6 @@ export function windowControls(
   const presses: Record<string, () => Promise<void>> = {
     rotateLeft: () => rotate(1),
     rotateRight: () => rotate(3),
-    ...(ios && {
-      async appSwitch() {
-        const home: InputEvent = { kind: 'button', name: 'home' };
-        session().send(home);
-        await pause(DOUBLE_PRESS_MS);
-        session().send(home);
-      },
-      async siri() {
-        const hold = (state: 1 | 2): InputEvent => ({
-          kind: 'key',
-          page: CONSUMER_PAGE,
-          usage: SIDE_BUTTON,
-          state,
-        });
-        session().send(hold(1));
-        await pause(HOLD_MS);
-        session().send(hold(2));
-      },
-    }),
   };
 
   const screenshot = async (copyOnly: boolean) => {
@@ -194,9 +138,8 @@ export function windowControls(
     session().tell({ op: 'recording', on: true });
   };
 
-  // a new simulator has only the system's; a phone's system is hundreds of packages no one means
   const listApps = async () => {
-    session().tell({ op: 'apps', apps: await device.apps.listApps(ios) });
+    session().tell({ op: 'apps', apps: await device.apps.listApps(hardware?.systemApps === true) });
   };
 
   const appActions: Record<string, (id: string) => Promise<unknown>> = {

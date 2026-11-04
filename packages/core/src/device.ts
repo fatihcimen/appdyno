@@ -188,7 +188,15 @@ export interface ScreenInspector {
   press(name: string): Promise<InspectedElement>;
 }
 /** What a device is, for how a window draws it: nothing here starts anything on it. */
-export type DeviceHardware = { platform: 'ios' | 'android'; model?: string; color?: string };
+export type DeviceHardware = {
+  platform: Platform;
+  /** What a window offers on this device, in the viewer's names. */
+  controls: string[];
+  /** A window lists the system's apps too: its own list may otherwise be empty. */
+  systemApps?: boolean;
+  model?: string;
+  color?: string;
+};
 
 /** One device, whichever platform: what the operations are written against. */
 export interface Device {

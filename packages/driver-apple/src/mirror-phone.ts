@@ -15,6 +15,7 @@ import {
   type MirrorSource,
   type Need,
 } from '@appdyno/core';
+import { applePress } from './mirror-press.js';
 import type { PhoneStreamHandle, PhoneStreamModule } from './phone-stream-port.js';
 
 const run = promisify(execFile);
@@ -157,6 +158,7 @@ export class PhoneMirror implements Mirror {
   }
 
   async input(e: InputEvent) {
+    if (e.kind === 'button' && (await applePress(e.name, (next) => this.input(next)))) return;
     this.handle?.input(e);
   }
 

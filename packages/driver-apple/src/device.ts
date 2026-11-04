@@ -19,6 +19,7 @@ import {
   type ActOptions,
   assertLatLon,
 } from '@appdyno/core';
+import { APPLE_CONTROLS } from './mirror-press.js';
 import {
   type Tree,
   type Point,
@@ -269,9 +270,9 @@ export abstract class IosDevice extends RpcDevice implements Device {
     }
   }
 
-  /** What a subclass knows of itself: it is an iOS device, whichever. */
+  /** What every kind of iOS device has; a subclass adds what it knows of itself. */
   async hardware(): Promise<DeviceHardware> {
-    return { platform: 'ios' };
+    return { platform: 'ios', controls: APPLE_CONTROLS, systemApps: true };
   }
 
   async launch(pkg: string) {

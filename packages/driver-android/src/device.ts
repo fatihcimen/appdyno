@@ -56,6 +56,20 @@ const WAKE_STEADY_MS = 600;
  * overlap, failures are typed DeviceErrors. App lifecycle, links and location go through adb's own
  * protocol (no adb process per call).
  */
+/** What a window offers on Android, in the viewer's names. */
+const ANDROID_CONTROLS = [
+  'back',
+  'home',
+  'appSwitch',
+  'lock',
+  'volumeUp',
+  'volumeDown',
+  'quickSettings',
+  'notifications',
+  'rotateLeft',
+  'rotateRight',
+];
+
 export class AndroidDevice extends RpcDevice implements Device {
   readonly platform = 'android' as const;
   readonly platformScreen = androidScreen;
@@ -297,7 +311,11 @@ export class AndroidDevice extends RpcDevice implements Device {
 
   async hardware() {
     const model = await this.adb.exec(this.serial, 'getprop ro.product.model').catch(() => '');
-    return { platform: 'android' as const, ...(model.trim() && { model: model.trim() }) };
+    return {
+      platform: 'android' as const,
+      controls: ANDROID_CONTROLS,
+      ...(model.trim() && { model: model.trim() }),
+    };
   }
 
   /** Starts the app's launcher activity and waits for it (`am start -W`). */
