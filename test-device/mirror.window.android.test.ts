@@ -165,12 +165,14 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
       control('home');
       await focusIs('the launcher', (f) => !f.includes(APP));
       const launcher = now;
+      // a window's token may change, its name does not
+      const named = (f: string) => f.replace(/Window\{\w+ /, '');
       const shown = (await device.tree()).hash;
       control('appSwitch');
       // a maker may draw Recents in its launcher's own window: the screen says, not the focus
       await until('Recents', async () => (await device.tree()).hash !== shown);
       control('home');
-      await focusIs('the launcher again', (f) => f === launcher);
+      await focusIs('the launcher again', (f) => named(f) === named(launcher));
       await show('form');
       await focusIs('the form again', (f) => f.includes('FormActivity'));
       control('back');
@@ -220,15 +222,21 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
 
     it('the agent killed under its stream: the picture comes back, and a click still lands', async () => {
       await show('form');
-      const pid = (await sh("pgrep -f 'dev[.]appdyno[.]agent'")).trim().split('\n')[0];
-      expect(pid).toMatch(/^\d+$/);
+      const agents = async () => (await sh("pgrep -f 'dev[.]appdyno[.]agent'")).trim().split('\n');
+      const pids = await agents();
+      expect(pids[0]).toMatch(/^\d+$/);
+      expect(pids).toHaveLength(1);
       const seen: string[] = [];
       const watch = setInterval(() => seen.push(session.status.state), 100);
       try {
-        await sh(`kill -9 ${pid}`);
-        await until('the loss', () => seen.includes('reconnecting'), 40_000).catch((e: Error) => {
-          throw new Error(`${e.message}: it read ${[...new Set(seen)].join(', ')}`);
-        });
+        await sh(`kill -9 ${pids.join(' ')}`);
+        await until('the loss', () => seen.includes('reconnecting'), 40_000).catch(
+          async (e: Error) => {
+            throw new Error(
+              `${e.message}: it read ${[...new Set(seen)].join(', ')}; agents ${pids.join(' ')} became ${(await agents()).join(' ')}`,
+            );
+          },
+        );
         await until('a new picture', () => session.status.state === 'live', 90_000);
       } finally {
         clearInterval(watch);
