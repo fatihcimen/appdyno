@@ -67,6 +67,17 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
     }
   };
 
+  /** What a screen shows once it has stopped moving: a picture taken in a press's animation is no way back to compare. */
+  const steady = async () => {
+    let was: Buffer = await picture();
+    await screenBecomes((now) => {
+      const still = changedShare(was, now) < 0.01;
+      was = now;
+      return still;
+    });
+    return was;
+  };
+
   beforeAll(async () => {
     const binary = await viewerBinary();
     const hardware = await device.hardware();
@@ -109,7 +120,7 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
   it(
     'opens Control Center by a real drag from the edge, over the whole screen',
     async () => {
-      const before = await picture();
+      const before = await steady();
       inputs.length = 0;
       control('controlCenter');
       await until('finger up', () => inputs.some((e) => e.kind === 'touch' && e.p === 2));
