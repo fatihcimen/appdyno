@@ -309,8 +309,11 @@ describe.skipIf(!android)('driving on Android', () => {
     ok(await h.call('press_key', { key: 'volume_down' }));
     await expect.poll(volume, { timeout: 5_000 }).not.toBe(raised);
     ok(await h.call('press_key', { key: 'lock' }));
+    // a Pixel image dozes for seconds first, with its windows still there to read
     await expect
-      .poll(async () => /mWakefulness=(\w+)/.exec(await sh('dumpsys power'))?.[1])
+      .poll(async () => /mWakefulness=(\w+)/.exec(await sh('dumpsys power'))?.[1], {
+        timeout: 15_000,
+      })
       .toBe('Asleep');
     ok(await h.call('screen'));
     await expect
