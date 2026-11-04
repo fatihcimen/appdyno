@@ -1,6 +1,11 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { deviceStateFile, SETTINGS, type DeviceSettings, type SettingName } from '@appdyno/core';
+import {
+  deviceState,
+  heldElsewhere,
+  Owner,
+  SETTINGS,
+  type DeviceSettings,
+  type SettingName,
+} from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
@@ -15,59 +20,58 @@ const BIOMETRIC = ['match', 'nomatch', 'enroll'] as const;
 const ONE_SHOT = ['restore', 'push', 'biometric', 'fold', 'call', 'sms', 'keychain'] as const;
 
 /** The conditions this tool changed on a device and what to put back. Survives its process. */
-type Changes = Record<string, { was: string; app?: string }>;
+const Changes = z.record(
+  z.string(),
+  z.object({ was: z.string(), app: z.string().optional(), owner: Owner.optional() }),
+);
 
-const changesFile = (serial: string) => deviceStateFile('conditions', serial);
+export const conditions = deviceState('conditions', Changes);
 
-function readChanges(serial: string): Changes {
-  try {
-    return JSON.parse(readFileSync(changesFile(serial), 'utf8')) as Changes;
-  } catch {
-    return {};
-  }
-}
-
-function writeChanges(serial: string, c: Changes) {
-  const file = changesFile(serial);
-  mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
-  writeFileSync(file, JSON.stringify(c), { mode: 0o600 });
-}
+/** Whose entries a restore takes, by their owner. */
+export type Whose = (owner: Owner | undefined) => boolean;
 
 /** Writes a condition's old value down, once: true when this call did. */
 async function writeDown(s: Session, settings: DeviceSettings, name: SettingName, app?: string) {
   const serial = s.device.serial;
-  const changes = readChanges(serial);
-  if (changes[name]) return false;
+  if (conditions.read(serial)?.[name]) return false;
   await settings.willChange?.(name);
-  changes[name] = { was: await settings.get(name, app), ...(app && { app }) };
-  writeChanges(serial, changes);
-  return true;
+  const was = await settings.get(name, app);
+  let first = false;
+  // another process may have written it down during the read
+  conditions.update(serial, (now = {}) => {
+    if (now[name]) return now;
+    first = true;
+    return { ...now, [name]: { was, ...(app && { app }), ...(s.owner && { owner: s.owner }) } };
+  });
+  return first;
 }
 
-const forget = (s: Session, name: SettingName) => {
-  const changes = readChanges(s.device.serial);
-  delete changes[name];
-  writeChanges(s.device.serial, changes);
-};
+const forget = (s: Session, name: string) =>
+  conditions.update(s.device.serial, (now = {}) => {
+    const { [name]: _, ...rest } = now;
+    return Object.keys(rest).length > 0 ? rest : undefined;
+  });
 
 /** Sets a condition, the old value written down first so a crash cannot lose it. */
 export async function setCondition(s: Session, name: SettingName, value: string, app?: string) {
   const settings = s.device.settings;
   if (!settings) throw new ToolError('this device has no settings to change', 'UNSUPPORTED');
-  const first = await writeDown(s, settings, name, app);
-  try {
-    await settings.set(name, value, app);
-  } catch (e) {
-    // nothing changed, so nothing to put back
-    if (first) forget(s, name);
-    throw e;
-  }
+  await s.conditions.run(async () => {
+    const first = await writeDown(s, settings, name, app);
+    try {
+      await settings.set(name, value, app);
+    } catch (e) {
+      // nothing changed, so nothing to put back
+      if (first) forget(s, name);
+      throw e;
+    }
+  });
 }
 
 /** `during` changes a condition for its time and puts it back itself: only a process dying meanwhile leaves it. */
 export async function holdingCondition<T>(s: Session, name: SettingName, during: () => Promise<T>) {
   const settings = s.device.settings;
-  const first = settings ? await writeDown(s, settings, name) : false;
+  const first = settings ? await s.conditions.run(() => writeDown(s, settings, name)) : false;
   try {
     return await during();
   } finally {
@@ -75,34 +79,40 @@ export async function holdingCondition<T>(s: Session, name: SettingName, during:
   }
 }
 
-/** Puts back one condition, if this tool changed it. */
+/** Puts back one condition, if this tool changed it and no other live process did. */
 export async function restoreCondition(s: Session, name: SettingName) {
-  const changes = readChanges(s.device.serial);
-  const c = changes[name];
-  if (!c) return;
-  await s.device.settings!.set(name, c.was, c.app);
-  delete changes[name];
-  writeChanges(s.device.serial, changes);
+  await s.conditions.run(async () => {
+    const c = conditions.read(s.device.serial)?.[name];
+    if (!c || heldElsewhere(c.owner)) return;
+    await s.device.settings!.set(name, c.was, c.app);
+    forget(s, name);
+  });
 }
 
-/** Puts back what this tool changed; the names it could not, with why, stay written down. */
-export async function restoreConditions(s: Session) {
-  const serial = s.device.serial;
-  const changes = readChanges(serial);
-  const restored: string[] = [];
-  const failed: string[] = [];
-  // the newest first: two names can hold one thing (Android's animations and reduce_motion), and the older holds the user's value
-  for (const [name, c] of Object.entries(changes).reverse()) {
-    try {
-      await s.device.settings!.set(name as SettingName, c.was, c.app);
-      delete changes[name];
-      restored.push(`${name}: ${c.was}`);
-    } catch (e) {
-      failed.push(`${name} (was ${c.was}): ${(e as Error).message}`);
+/** Puts back the entries `whose` takes; the names it could not, with why, stay written down. */
+export function restoreConditions(s: Session, whose: Whose) {
+  return s.conditions.run(async () => {
+    const restored: string[] = [];
+    const failed: string[] = [];
+    const left: string[] = [];
+    const settings = s.device.settings;
+    const changes = (settings && conditions.read(s.device.serial)) ?? {};
+    // the newest first: two names can hold one thing (Android's animations and reduce_motion), and the older holds the user's value
+    for (const [name, c] of Object.entries(changes).reverse()) {
+      if (!whose(c.owner)) {
+        left.push(`${name} (pid ${c.owner?.pid})`);
+        continue;
+      }
+      try {
+        await settings!.set(name as SettingName, c.was, c.app);
+        forget(s, name);
+        restored.push(`${name}: ${c.was}`);
+      } catch (e) {
+        failed.push(`${name} (was ${c.was}): ${(e as Error).message}`);
+      }
     }
-  }
-  if (restored.length > 0) writeChanges(serial, changes);
-  return { restored, failed };
+    return { restored, failed, left };
+  });
 }
 
 export function settingOps(ctx: ServerContext, { clean }: Answers) {
@@ -128,11 +138,16 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
         const settings = s.device.settings;
         if (!settings) throw new ToolError('this device has no settings to change', 'UNSUPPORTED');
         if (name === 'restore') {
-          const { restored, failed } = await restoreConditions(s);
-          const t = [
-            restored.length > 0 ? `restored ${restored.join('; ')}` : 'nothing was changed',
-            ...failed.map((f) => `could not restore ${f}`),
-          ].join('\n');
+          const { restored, failed, left } = await restoreConditions(
+            s,
+            (owner) => !heldElsewhere(owner),
+          );
+          const t =
+            [
+              ...(restored.length > 0 ? [`restored ${restored.join('; ')}`] : []),
+              ...failed.map((f) => `could not restore ${f}`),
+              ...left.map((l) => `left alone, as its process still runs: ${l}`),
+            ].join('\n') || 'nothing was changed';
           return reply(t, { done: t, ...(failed.length > 0 && { notRestored: failed }) });
         }
         if (name === 'push') {

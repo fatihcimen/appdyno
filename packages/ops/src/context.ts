@@ -1,15 +1,18 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import {
+  readState,
   reportProgress,
   stateDir,
+  thisOwner,
+  writeState,
   type Device,
   type DeviceProvider,
   type ScreenElement,
 } from '@appdyno/core';
 import { DEFAULT_TRACE_LIMIT_GB } from '@appdyno/perf';
+import { z } from 'zod';
 import { claim, holder, release } from './claims.js';
-import { restoreConditions } from './settings.js';
+import { endSession, sweep, type Taken } from './leftovers.js';
 import { endCapture } from './network.js';
 import { checkApp, checkDevice, type Policy } from './policy.js';
 import { endRecording } from './record.js';
@@ -17,20 +20,12 @@ import { reportFor } from './report.js';
 import { Session } from './session.js';
 import { refused, ToolError } from './tool.js';
 
-type Saved = {
-  serial: string;
-  app?: string;
-  shown?: ScreenElement[];
-  lastActionAt?: number;
-};
-
-function recall(file: string): Saved | undefined {
-  try {
-    return JSON.parse(readFileSync(file, 'utf8')) as Saved;
-  } catch {
-    return undefined;
-  }
-}
+const Saved = z.object({
+  serial: z.string(),
+  app: z.string().optional(),
+  shown: z.array(z.custom<ScreenElement>()).optional(),
+  lastActionAt: z.number().optional(),
+});
 
 /** The server's devices: the sessions opened so far and which one tools act on by default. */
 export class ServerContext {
@@ -62,7 +57,7 @@ export class ServerContext {
     } = {},
   ) {
     this.policy = { ...policy, secrets: [...policy.secrets] };
-    this.saved = defaults.remember ? recall(defaults.remember) : undefined;
+    this.saved = defaults.remember ? readState(defaults.remember, Saved) : undefined;
   }
 
   /** These texts are not shown back until the returned function is called. */
@@ -74,7 +69,7 @@ export class ServerContext {
     };
   }
 
-  private readonly saved: Saved | undefined;
+  private readonly saved: z.infer<typeof Saved> | undefined;
 
   /** Where measurements and their raw outputs are stored (this machine only). */
   /** What traces and heap dumps may take on this Mac, in GB: `--trace-limit-gb`, `APPDYNO_TRACE_LIMIT_GB`. */
@@ -132,30 +127,49 @@ export class ServerContext {
     if (app) checkApp(this.policy, app);
     let s = this.sessions.get(serial);
     if (!s) {
-      const saved = this.saved?.serial === serial ? this.saved : undefined;
-      const holds = this.defaults.claims && !share && !this.defaults.share;
-      if (holds) claim(serial, this.defaults.owner ?? 'appdyno');
-      s = new Session(
-        // a replay, a test run and a survey ask for a session outside any op
-        await this.open(serial, launching).catch((e: unknown) => {
-          if (holds) release(serial);
-          return refused(e);
-        }),
-        app ?? this.defaults.app ?? saved?.app,
-      );
-      s.shown = saved?.shown;
-      s.lastActionAt = saved?.lastActionAt;
-      this.sessions.set(serial, s);
-      // a holder that died left its changes behind; a command line's stay until asked
-      if (holds && !this.defaults.remember && s.device.settings)
-        this.leftovers.set(serial, await restoreConditions(s));
-    } else if (app) s.appId = app;
+      // calls come in parallel: the first opens the device, the others wait for it
+      const start =
+        this.opening.get(serial) ??
+        this.start(serial, app, share, launching).finally(() => this.opening.delete(serial));
+      this.opening.set(serial, start);
+      s = await start;
+    }
+    if (app) s.appId = app;
     this.currentSerial = serial;
     return s;
   }
 
+  private readonly opening = new Map<string, Promise<Session>>();
+
+  private async start(
+    serial: string,
+    app: string | undefined,
+    share: boolean,
+    launching: string | undefined,
+  ) {
+    const saved = this.saved?.serial === serial ? this.saved : undefined;
+    const holds = this.defaults.claims && !share && !this.defaults.share;
+    const tool = this.defaults.owner ?? 'appdyno';
+    if (holds) claim(serial, tool);
+    const owner = this.defaults.remember ? undefined : thisOwner(tool);
+    const s = new Session(
+      // a replay, a test run and a survey ask for a session outside any op
+      await this.open(serial, launching).catch((e: unknown) => {
+        if (holds) release(serial);
+        return refused(e);
+      }),
+      app ?? this.defaults.app ?? saved?.app,
+      owner,
+    );
+    s.shown = saved?.shown;
+    s.lastActionAt = saved?.lastActionAt;
+    this.sessions.set(serial, s);
+    if (owner) this.leftovers.set(serial, await sweep(s));
+    return s;
+  }
+
   /** What the start of a session put back or could not, by device. */
-  readonly leftovers = new Map<string, { restored: string[]; failed: string[] }>();
+  readonly leftovers = new Map<string, Taken>();
 
   /** Who holds a device, when this server keeps to claims. */
   heldBy(serial: string) {
@@ -172,7 +186,7 @@ export class ServerContext {
       await reportFor(this)
         .close(s)
         .catch((e: Error) => failed.push(`report: ${e.message}`));
-      if (s.device.settings) failed.push(...(await restoreConditions(s)).failed);
+      failed.push(...(await endSession(s)).failed);
     }
     return failed;
   }
@@ -213,14 +227,12 @@ export class ServerContext {
   close() {
     const s = this.currentSerial ? this.sessions.get(this.currentSerial) : undefined;
     if (s && this.defaults.remember) {
-      const saved: Saved = {
+      writeState(this.defaults.remember, {
         serial: s.device.serial,
         ...(s.appId && { app: s.appId }),
         ...(s.shown && { shown: s.shown }),
         ...(s.lastActionAt && { lastActionAt: s.lastActionAt }),
-      };
-      mkdirSync(dirname(this.defaults.remember), { recursive: true, mode: 0o700 });
-      writeFileSync(this.defaults.remember, JSON.stringify(saved), { mode: 0o600 });
+      });
     }
     for (const x of this.sessions.values()) x.device.close();
     if (this.defaults.claims) for (const serial of this.sessions.keys()) release(serial);

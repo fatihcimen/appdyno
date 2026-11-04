@@ -1,8 +1,10 @@
 import {
   buildScreen,
+  DeviceQueue,
   pause,
   throwIfCancelled,
   type Device,
+  type Owner,
   type Screen,
   type ScreenElement,
 } from '@appdyno/core';
@@ -72,9 +74,14 @@ export class Session {
   /** The version and layout of the last screenshot sent. */
   shot: { at: number; hash: string } | undefined;
 
+  /** Changes to the device's conditions, one at a time: each reads, asks the device, then writes. */
+  readonly conditions = new DeviceQueue();
+
   constructor(
     readonly device: Device,
     public appId: string | undefined,
+    /** Who answers for what this session leaves on the device; a command line's stays until asked. */
+    readonly owner?: Owner,
   ) {}
 
   screenOf(tree: Tree): Screen {

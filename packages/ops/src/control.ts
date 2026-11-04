@@ -1,6 +1,12 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { reportProgress, stateDir, type Startable, type VirtualDevices } from '@appdyno/core';
+import { join } from 'node:path';
+import {
+  readState,
+  reportProgress,
+  stateDir,
+  updateState,
+  type Startable,
+  type VirtualDevices,
+} from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import { holder } from './claims.js';
@@ -13,18 +19,8 @@ import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const NO_APP = 'give app (or select one with use_device)';
 
+const Started = z.array(z.string());
 const startedFile = () => join(stateDir(), 'started.json');
-function startedHere(): string[] {
-  try {
-    return JSON.parse(readFileSync(startedFile(), 'utf8')) as string[];
-  } catch {
-    return [];
-  }
-}
-function writeStarted(ids: string[]) {
-  mkdirSync(dirname(startedFile()), { recursive: true, mode: 0o700 });
-  writeFileSync(startedFile(), JSON.stringify(ids), { mode: 0o600 });
-}
 
 export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) {
   const policy = ctx.policy;
@@ -170,7 +166,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
       output: VirtualOut,
       annotations: DESTRUCTIVE,
       run: async ({ action, name: device }) => {
-        const mine = startedHere();
+        const mine = readState(startedFile(), Started) ?? [];
         if (action === 'list') {
           const devices = (await virtuals()).map(({ d }) => ({
             ...d,
@@ -197,7 +193,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
           const wasStopped = d.state === 'stopped';
           const serial = await on.boot(d.id);
           // an emulator is listed by its serial once it runs
-          if (wasStopped) writeStarted([...mine, d.id, serial]);
+          if (wasStopped) updateState(startedFile(), Started, (ids = []) => [...ids, d.id, serial]);
           const t = `${d.name} is up as ${serial}`;
           return reply(t, { done: t, serial });
         }
@@ -220,7 +216,9 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
           await ctx.forget(d.serial ?? d.id);
           await on.shutdown(d.id);
         }
-        writeStarted(mine.filter((id) => !targets.some((x) => x.d.id === id || x.d.name === id)));
+        updateState(startedFile(), Started, (ids = []) =>
+          ids.filter((id) => !targets.some((x) => x.d.id === id || x.d.name === id)),
+        );
         const t = `shut down ${targets.map((x) => x.d.name).join(', ')}`;
         return reply(t, { done: t });
       },

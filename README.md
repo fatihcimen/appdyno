@@ -95,10 +95,12 @@ A radio is done when the device reads as asked, within 10 s: Wi-Fi by the state 
 
 `keychain` `reset` empties a simulator's keychain, and says how many items apps held, from the store's own rows, which also prove it empty after. The system's own rows stay and are not counted. It is one-shot: nothing brings them back.
 
-Changing a condition writes the old value down first. It goes back when the session ends, or with
-`device_setting` name `restore`. A session that died leaves the file, and the next one on that device
-puts it back and says so; what cannot be put back is reported. A command line is one process per
-command, so its changes stay until `restore`.
+Changing a condition writes the old value down first, with the process that changed it. It goes back
+when that session ends, or with `device_setting` name `restore`, which leaves alone what another live
+process changed and says so. A session that died leaves the file, and the next one on that device puts
+back only what a dead process left, and says so; what cannot be put back is reported, and a file that
+cannot be read is kept beside it as `.bad`. A command line is one process per command, so its changes
+stay until `restore`, whatever sessions come and go.
 
 ## Parallel agents
 

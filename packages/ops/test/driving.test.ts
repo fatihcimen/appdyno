@@ -903,22 +903,6 @@ describe('device conditions', () => {
     );
   });
 
-  it('a command line leaves changes until asked, and a later session puts back a dead one’s', async () => {
-    const settings = new Settings();
-    const d = Object.assign(new FakeDevice(), { settings });
-    const cli = await connect(d, {
-      defaults: { remember: join(mkdtempSync(join(tmpdir(), 'c-')), 's') },
-    });
-    await cli.call('device_setting', { name: 'dark_mode', value: 'on' });
-    expect(await cli.ctx.end()).toEqual([]);
-    expect(settings.values.dark_mode).toBe('on');
-    const next = await connect(d, { defaults: { claims: true } });
-    const r = await next.call('use_device', { device: d.serial });
-    expect(r.text).toContain('restored what an ended session left changed');
-    expect(settings.values.dark_mode).toBe('no');
-    next.ctx.close();
-  });
-
   it('passes on a refusal, posts a push, and says biometrics are not here', async () => {
     const settings = new Settings();
     const d = Object.assign(new FakeDevice(), { settings });
