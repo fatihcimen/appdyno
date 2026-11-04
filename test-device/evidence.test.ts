@@ -341,7 +341,8 @@ describe.skipIf(!android)('network on Android', () => {
     const r = await h.ok('network', { action: 'paths' });
     expect(r.text).toMatch(/^proxy: .*Now: none/m);
     expect(r.text).toMatch(/^bytes: .*no URLs, no bodies/m);
-    expect(r.text).toMatch(/^packets: .*no URLs, no bodies/m);
+    // a `user` build has no packet source, and says so
+    expect(r.text).toMatch(/^packets: (.*no URLs, no bodies|no: this build does not register)/m);
     expect(r.text).toMatch(/^probe: no:/m);
   });
 
