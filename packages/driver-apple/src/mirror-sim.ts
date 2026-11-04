@@ -9,7 +9,7 @@ const KEYBOARD = 7;
 const SHIFT = 0xe1;
 const COMMAND = 0xe3;
 const V = 0x19;
-const INPUT_MS = 5_000;
+const INPUT_MS = 8_000;
 
 const UNSHIFTED = "-=[]\\;'`,./";
 const SHIFTED = '_+{}|:"~<>?';
@@ -57,6 +57,8 @@ export class SimulatorMirror implements Mirror {
   }
 
   async open(): Promise<MirrorSource> {
+    // up before a person's first touch, which would otherwise wait over a second for it
+    void this.helper().catch(() => undefined);
     return {
       kind: 'surface',
       udid: this.udid,
@@ -71,7 +73,11 @@ export class SimulatorMirror implements Mirror {
   private async helper() {
     const running = await this.hid?.catch(() => undefined);
     if (running && !running.closed) return running;
-    this.hid = this.startHid(this.udid);
+    this.hid = this.startHid(this.udid).then(async (h) => {
+      // a touch sent first on a new connection was lost, where one after an answer was not
+      await h.call({ op: 'ping' }, INPUT_MS);
+      return h;
+    });
     return this.hid;
   }
 

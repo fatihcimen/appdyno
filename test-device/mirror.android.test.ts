@@ -10,7 +10,12 @@ import {
   type MirrorOptions,
   type MirrorStatus,
 } from '../packages/core/src/index.js';
-import { Adb, AndroidDevice, AndroidMirror } from '../packages/driver-android/src/index.js';
+import {
+  Adb,
+  AndroidDevice,
+  AndroidEmulators,
+  AndroidMirror,
+} from '../packages/driver-android/src/index.js';
 import { AndroidAgentLauncher } from '../packages/driver-android/src/agent.js';
 
 /**
@@ -263,4 +268,32 @@ describe.runIf(emulator)('an emulator picture by gRPC', () => {
     expect(Math.max(...arrived)).toBeGreaterThan(0);
     await session.stop('the test ended');
   }, 120_000);
+});
+
+/**
+ * Unplugged, as near as an emulator comes: it is killed under the stream and booted again by `simulator`'s own
+ * path, so that this also runs its gRPC flags. Names our own AVD; it costs a whole boot.
+ */
+const avd = process.env.APPDYNO_MIRROR_RESTART_AVD;
+
+describe.runIf(emulator && avd)('an emulator killed under its stream', () => {
+  it('waits with its need, and is live again once it is back', async () => {
+    const adb = new Adb();
+    const device = new AndroidDevice(serial!, adb);
+    const { session, seen } = start(device.mirror);
+    await session.start();
+    await until('picture', () => session.status.state === 'live', 120_000);
+    await adb.run(['-s', serial!, 'emu', 'kill'], 30_000);
+    await until(
+      'its need',
+      () => session.status.state === 'waiting' && session.status.need === 'not-connected',
+      60_000,
+    );
+    const back = seen.length;
+    await new AndroidEmulators(adb).boot(avd!);
+    await until('a new picture', () => seen.slice(back).some((s) => s.state === 'live'), 240_000);
+    expect(session.status.picture?.codec).toBe('pixels');
+    expect(session.status.note).toBeUndefined();
+    await session.stop('the test ended');
+  }, 600_000);
 });

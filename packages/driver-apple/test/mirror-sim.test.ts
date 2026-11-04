@@ -38,12 +38,13 @@ describe('a simulator mirror', () => {
     await expect(setup().mirror.open()).resolves.toMatchObject({ kind: 'surface', udid: UDID });
   });
 
-  it('starts nothing until a person touches, and sends a touch with no wait for proof', async () => {
+  it('readies the helper with the stream, and sends a touch with no wait for proof', async () => {
     const { mirror, calls, start } = setup();
     await mirror.open();
-    expect(start).not.toHaveBeenCalled();
     await mirror.input({ kind: 'touch', p: 0, x: 0.25, y: 0.5 });
+    expect(start).toHaveBeenCalledTimes(1);
     expect(calls).toEqual([
+      { op: 'ping' },
       {
         op: 'touch',
         quick: true,
@@ -64,6 +65,7 @@ describe('a simulator mirror', () => {
 
   it('a helper that refuses is a failed input, which the session counts', async () => {
     const { mirror, helper } = setup();
+    helper.call.mockResolvedValueOnce({ ok: true });
     helper.call.mockResolvedValueOnce({ ok: false, error: 'dtuhidd did not answer' } as never);
     await expect(mirror.input({ kind: 'touch', p: 0, x: 0, y: 0 })).rejects.toThrow(/dtuhidd/);
   });
@@ -71,7 +73,7 @@ describe('a simulator mirror', () => {
   it('types a US keyboard as keys, with shift where it needs it', async () => {
     const { mirror, calls } = setup();
     await mirror.input({ kind: 'text', s: 'aB' });
-    expect(calls).toEqual([
+    expect(calls.slice(1)).toEqual([
       { op: 'keyState', page: 7, usage: 4, state: 1 },
       { op: 'keyState', page: 7, usage: 4, state: 2 },
       { op: 'keyState', page: 7, usage: 0xe1, state: 1 },
@@ -85,8 +87,8 @@ describe('a simulator mirror', () => {
     const { mirror, calls, paste } = setup();
     await mirror.input({ kind: 'text', s: 'şğ' });
     expect(paste).toHaveBeenCalledWith(UDID, 'şğ');
-    expect(calls[0]).toEqual({ op: 'keyState', page: 7, usage: 0xe3, state: 1 });
-    expect(calls[1]).toEqual({ op: 'keyState', page: 7, usage: 0x19, state: 1 });
+    expect(calls[1]).toEqual({ op: 'keyState', page: 7, usage: 0xe3, state: 1 });
+    expect(calls[2]).toEqual({ op: 'keyState', page: 7, usage: 0x19, state: 1 });
   });
 
   it('passes a key as it came, up or down; a button by its name', async () => {
@@ -94,7 +96,7 @@ describe('a simulator mirror', () => {
     await mirror.input({ kind: 'key', page: 7, usage: 0x28, state: 1 });
     await mirror.input({ kind: 'button', name: 'home' });
     await mirror.input({ kind: 'button', name: 'no-such-button' });
-    expect(calls).toEqual([
+    expect(calls.slice(1)).toEqual([
       { op: 'keyState', page: 7, usage: 0x28, state: 1 },
       { op: 'key', page: 12, usage: 0x40 },
     ]);

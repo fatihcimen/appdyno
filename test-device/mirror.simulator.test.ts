@@ -5,6 +5,7 @@ import {
   startViewer,
   viewerBinary,
   ViewerProcess,
+  type InputEvent,
   type MirrorStatus,
   type ViewerLink,
 } from '../packages/core/src/index.js';
@@ -115,6 +116,12 @@ describe.runIf(udid)('mirror on a simulator', () => {
 describe.runIf(udid && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real window', () => {
   it('shows the simulator, and a click on it goes back as a touch in the device coordinates', async () => {
     const device = new IosSimulatorDevice(udid!);
+    const input = device.mirror.input.bind(device.mirror);
+    const touches: InputEvent[] = [];
+    device.mirror.input = async (e) => {
+      touches.push(e);
+      await input(e);
+    };
     const session = new MirrorSession({
       mirror: device.mirror,
       viewer: startViewer(false),
@@ -127,8 +134,14 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real 
       await new Promise((r) => setTimeout(r, 2_000));
       expect(session.status.touchedAt).toBeUndefined();
       session.poke(0.5, 0.25);
-      await until('touch', () => session.status.touchedAt !== undefined, 10_000);
+      await until('touch', () => touches.length >= 2, 10_000);
+      // a mouse on the window: the picture's quarter from the top, as a fraction of the device's screen
+      expect(touches[0]).toMatchObject({ kind: 'touch', p: 0 });
+      expect((touches[0] as { x: number }).x).toBeCloseTo(0.5, 2);
+      expect((touches[0] as { y: number }).y).toBeCloseTo(0.25, 2);
+      expect(touches[1]).toMatchObject({ kind: 'touch', p: 2 });
       expect(session.status.inputFailed).toBe(0);
+      expect(Number(session.status.stats?.shown ?? 0)).toBeGreaterThanOrEqual(0);
     } finally {
       await session.stop('the test ended');
       device.close();
