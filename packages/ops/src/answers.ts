@@ -48,6 +48,8 @@ export function busyReasons(r: ActResult | undefined, screen: Screen): string[] 
 
 export type ReadMode = 'diff' | 'full' | 'none';
 
+const needsPerson = (what: string) => `\nneeds a person: ${what}. hand_off asks yours, and waits`;
+
 /** How actions run and answer: the settle, the read it asks for, the screen and what changed on it. */
 export function answersFor(ctx: ServerContext) {
   const clean = (s: string) => redact(ctx.policy, s);
@@ -61,12 +63,24 @@ export function answersFor(ctx: ServerContext) {
       return '\nno words in the tree: these were read from the picture, and their places are near';
     if (s.pictureFailed)
       return `\nno words in the tree, and none from the picture: ${s.pictureFailed}`;
-    const person = personNeeded(s.device.platformScreen.systemAlert(screen.tree, screen.elements));
-    if (person) return `\nneeds a person: ${person}. hand_off asks yours, and waits`;
+    const person = s.device.platformScreen.personPrompt(screen.tree, screen.elements);
+    if (person) return needsPerson(person);
     if (s.device.platformScreen.alertButton(screen.elements, 'allow'))
       return '\na system permission prompt is open: answer it with alert';
     if (!s.appId || !screen.foreground || screen.foreground === s.appId) return '';
     return `\nWARNING: the app is not in the foreground (${screen.foreground}): if it crashed, bring it back with launch_app`;
+  };
+
+  /**
+   * The app check, and what the system shows that no read of the app has. That second look costs a read, so an action
+   * takes it only when nothing changed, which is all such a prompt leaves on the app.
+   */
+  const noticed = async (s: Session, screen: Screen, lookFurther = true) => {
+    const fg = foreground(s, screen);
+    if (fg || !lookFurther || !s.device.systemWords) return fg;
+    const words = await s.device.systemWords().catch(() => []);
+    const person = personNeeded({ texts: words, buttons: [] });
+    return person ? needsPerson(person) : '';
   };
 
   const info = (s: Session) => {
@@ -147,9 +161,9 @@ export function answersFor(ctx: ServerContext) {
     show(s, screen);
     const d = read === 'diff' && o.before ? diffScreens(o.before, screen.list) : undefined;
     const diff = d && diffText(d, screen.list.length, clean);
-    const fg = foreground(s, screen);
-    const appDied = await death(s, screen, o.pid, o.started);
     const changed = o.base && !o.found ? differs(diffScreens(o.base, screen.list)) : undefined;
+    const fg = await noticed(s, screen, changed === false || !!o.launched);
+    const appDied = await death(s, screen, o.pid, o.started);
     const busy = o.settled === false ? o.busy : [];
     const moving =
       o.settled === false ? ` (${MAYBE_MOVING}${busy.length ? `: ${busy.join('; ')}` : ''})` : '';
@@ -328,6 +342,7 @@ export function answersFor(ctx: ServerContext) {
     clean,
     header,
     foreground,
+    noticed,
     info,
     show,
     answer,

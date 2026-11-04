@@ -116,6 +116,51 @@ describe('system alerts', () => {
   });
 });
 
+describe('what wants a person', () => {
+  /** Nodes of a focused window of `pkg`, by their ids, as an emulator's prompts had them. */
+  const prompt = (pkg: string, ids: string[], texts: string[] = []) => {
+    const tree: Tree = {
+      ...treeOf([{ ...window(3, [0, 0, 1080, 2400], pkg) }]),
+      nodes: [
+        ...ids.map((id) => ({ p: -1, w: 0, c: 'android.view.View', id, b: [0, 0, 9, 9], f: 17 })),
+        ...texts.map((t) => ({
+          p: -1,
+          w: 0,
+          c: 'android.widget.TextView',
+          t,
+          b: [0, 0, 9, 9],
+          f: 17,
+        })),
+      ] as Tree['nodes'],
+    };
+    return androidScreen.personPrompt(tree, elementsOf(tree));
+  };
+
+  it('a fingerprint or a face, by the system prompt in any language', () => {
+    const ids = ['biometric_scrollview', 'biometric_icon'].map(
+      (n) => `com.android.systemui:id/${n}`,
+    );
+    expect(prompt('com.android.systemui', ids)).toBe('a fingerprint or a face');
+  });
+
+  it('a credential first, as its page has a biometric id too', () => {
+    const ids = ['biometric_scrollview', 'lockPassword'].map((n) => `com.android.systemui:id/${n}`);
+    expect(prompt('com.android.systemui', ids)).toBe('a passcode');
+    expect(prompt('com.android.settings', ['com.android.settings:id/password_entry'])).toBe(
+      'a passcode',
+    );
+  });
+
+  it('none on a page of the permission controller, whatever its words', () => {
+    const pkg = 'com.google.android.permissioncontroller';
+    expect(prompt(pkg, [], ['Set a screen lock password'])).toBeUndefined();
+  });
+
+  it('what a system alert asks, by its words', () => {
+    expect(prompt('android', [], ['Enter the password'])).toBe('a passcode');
+  });
+});
+
 describe('what the screen shows', () => {
   it('has a keyboard when an input method window is up', () => {
     expect(androidScreen.keyboardOpen(treeOf([window(1, [0, 0, 1080, 2400])]))).toBe(false);

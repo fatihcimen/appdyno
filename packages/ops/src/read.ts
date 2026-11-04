@@ -21,7 +21,7 @@ const SHOT_QUALITY = 60;
 
 export function readOps(
   ctx: ServerContext,
-  { clean, foreground, header, show }: Answers,
+  { clean, noticed, header, show }: Answers,
   { waitFor }: Steps,
 ) {
   return [
@@ -37,7 +37,7 @@ export function readOps(
         const s = await ctx.session();
         const screen = await s.read();
         s.shown = screen.list;
-        const fg = foreground(s, screen);
+        const fg = await noticed(s, screen);
         const web = await webLines(s, screen, clean);
         return reply(`${header(s, screen)}${web ? `\n${web}` : ''}${fg}`, {
           elements: screen.list.length,
@@ -143,12 +143,19 @@ export function readOps(
           quality: SHOT_QUALITY,
           maxPx: SHOT_PX,
         });
+        const look = await s.current().catch(() => undefined);
+        const fg = look ? await noticed(s, look) : '';
         const w = s.device.hello?.screen.w;
         s.shot = { at: s.version, hash: layout ?? '' };
         const scale = w ? Math.round((w / meta.w) * 1000) / 1000 : undefined;
         return reply(
-          `image ${meta.w}x${meta.h} px${scale ? `; tap unit = pixel × ${scale.toFixed(3)}` : ''}`,
-          { width: meta.w, height: meta.h, ...(scale && { scale }) },
+          `image ${meta.w}x${meta.h} px${scale ? `; tap unit = pixel × ${scale.toFixed(3)}` : ''}${fg}`,
+          {
+            width: meta.w,
+            height: meta.h,
+            ...(scale && { scale }),
+            warnings: fg ? [fg.trim()] : [],
+          },
           [{ type: 'image', data: data.toString('base64'), mimeType: 'image/jpeg' }],
         );
       },

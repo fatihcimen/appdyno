@@ -6,6 +6,8 @@ import type { Rect, UiElement } from './elements.js';
 export interface PlatformScreen {
   /** The system alert on the screen, whatever it asks. */
   systemAlert(tree: Tree, elements: UiElement[]): SystemAlert | undefined;
+  /** What this screen wants of a person, as `personNeeded` names it: a prompt that is no alert as well. */
+  personPrompt(tree: Tree, elements: UiElement[]): string | undefined;
   /** The button of a system permission prompt for `action`; undefined when no such prompt is up. */
   alertButton(
     elements: UiElement[],

@@ -271,6 +271,8 @@ export interface Device {
   swipe(from: Point, to: Point, durationMs?: number, opts?: ActOptions): Promise<ActResult>;
   /** A key by its name, or a letter or digit, with what is held during it. */
   key(key: string, opts?: ActOptions, modifiers?: Modifier[]): Promise<ActResult>;
+  /** The words of what the system shows over the app and no read of the app has: none where a read has them all. */
+  systemWords?(): Promise<string[]>;
   /** One of the system's own views, over what is on the screen. */
   openView(view: SystemView): Promise<void>;
   /** Settings at a page or at an app's own; `row`: no link goes there, and this row of the page it opened does. */

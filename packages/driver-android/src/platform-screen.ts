@@ -1,4 +1,10 @@
-import { alertButtonOf, alertOf, packageOf, type PlatformScreen } from '@appdyno/core';
+import {
+  alertButtonOf,
+  alertOf,
+  packageOf,
+  personNeeded,
+  type PlatformScreen,
+} from '@appdyno/core';
 
 const INPUT_METHOD_WINDOW = 2;
 const SYSTEM_WINDOW = 3;
@@ -9,6 +15,10 @@ const PERMISSION_PACKAGES = /^com\.(google\.)?android\.permissioncontroller$/;
 const ALLOW = /:id\/permission_allow(_foreground_only|_one_time)?_button$/;
 const DENY = /:id\/permission_deny(_and_dont_ask_again)?_button$/;
 const STATUS_BAND_DP = 56;
+/** The system's own prompt, by its ids, in any language. */
+const BIOMETRIC_PROMPT = /^com\.android\.systemui:id\/biometric_/;
+const CREDENTIAL_PROMPT =
+  /^com\.android\.(systemui:id\/(lockPassword|lockPattern|lockPIN)|settings:id\/(password_entry|lockPattern))/;
 
 export const androidScreen: PlatformScreen = {
   /**
@@ -30,6 +40,15 @@ export const androidScreen: PlatformScreen = {
       elements.filter((e) => e.pkg && pkgs.has(e.pkg)),
       (e) => !!e.clickable,
     );
+  },
+
+  /** A permission prompt is `alert`'s to answer, and the controller's own pages speak of passwords in passing. */
+  personPrompt(tree, elements) {
+    const ids = elements.map((e) => e.identifier ?? '');
+    if (ids.some((id) => CREDENTIAL_PROMPT.test(id))) return 'a passcode';
+    if (ids.some((id) => BIOMETRIC_PROMPT.test(id))) return 'a fingerprint or a face';
+    if (tree.windows.some((w) => PERMISSION_PACKAGES.test(w.pkg ?? ''))) return undefined;
+    return personNeeded(androidScreen.systemAlert(tree, elements));
   },
 
   /** A permission controller's allow or deny button, by id, in any language. */

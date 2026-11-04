@@ -3,6 +3,7 @@ import {
   alertOf,
   bare,
   fold,
+  personNeeded,
   type AlertWords,
   type PlatformScreen,
   type UiElement,
@@ -40,6 +41,8 @@ export const iosScreen: PlatformScreen = {
     const root = alertRoot(elements);
     return root < 0 ? undefined : alertOf(insideOf(elements, root), isButton);
   },
+
+  personPrompt: (tree, elements) => personNeeded(iosScreen.systemAlert(tree, elements)),
 
   /**
    * A button of an Alert of the home screen app, by `words`, else by its place: of two buttons deny is

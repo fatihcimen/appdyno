@@ -283,6 +283,22 @@ export abstract class IosDevice extends RpcDevice implements Device {
       );
   }
 
+  /**
+   * A Face ID sheet and a passcode's are the home screen app's, over an app whose read shows nothing of them, and none
+   * has an id: their words, as a read of that app has them. An app's name on its card is no such word.
+   */
+  async systemWords() {
+    const app = this.targetApp;
+    if (!app || app === HOME_SCREEN_APP) return [];
+    await this.target(HOME_SCREEN_APP);
+    try {
+      const { nodes } = await this.tree();
+      return nodes.flatMap((n) => (n.c === 'StaticText' ? (n.d ?? n.t ?? []) : []));
+    } finally {
+      await this.target(app);
+    }
+  }
+
   /** The app a view went over: home closes the view, and it is what is read again. */
   private underView: string | undefined;
 
