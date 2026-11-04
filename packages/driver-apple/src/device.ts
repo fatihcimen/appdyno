@@ -17,7 +17,6 @@ import {
   TIMEOUTS,
   type ActOptions,
   assertLatLon,
-  stateDir,
 } from '@appdyno/core';
 import {
   type Tree,
@@ -36,7 +35,6 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { IosRunnerLauncher } from './runner.js';
-import { recordHitches } from './trace.js';
 import { iosScreen } from './platform-screen.js';
 import { assertBundle } from './simctl.js';
 
@@ -160,16 +158,11 @@ export abstract class IosDevice extends RpcDevice implements Device {
       );
   }
 
-  protected async connect(): Promise<RpcClient> {
-    const { rpc, hello, started } = await this.launcher.connect(this.targetApp, () =>
-      this.prepareStart(),
-    );
+  protected async startAgent() {
+    const agent = await this.launcher.connect(this.targetApp, () => this.prepareStart());
     if (this.targetApp)
-      await rpc.call('app.target', { pkg: this.targetApp }, { timeoutMs: TIMEOUTS.action });
-    this.rpc = rpc;
-    this.helloInfo = hello;
-    this.lastStartWasCold = started;
-    return rpc;
+      await agent.rpc.call('app.target', { pkg: this.targetApp }, { timeoutMs: TIMEOUTS.action });
+    return agent;
   }
 
   /** A runner whose main thread stays stuck: stopped (its xcodebuild ends), the next call starts one. */
@@ -281,6 +274,14 @@ export abstract class IosDevice extends RpcDevice implements Device {
     await this.untilFront(pkg);
   }
 
+  /** One read: the app's window shows content. */
+  async appShown(bundle: string) {
+    // nothing may have named this app yet; a warm-up launch comes first, so this is not timed
+    if (this.targetApp !== bundle) await this.target(bundle).catch(() => undefined);
+    const t = await this.tree().catch(() => undefined);
+    return !!t && t.windows[0]?.pkg === bundle && t.nodes.filter((n) => n.w === 0).length > 3;
+  }
+
   /** A read during a launch would get the home screen, slowly. */
   protected async untilFront(pkg: string) {
     const end = Date.now() + 10_000;
@@ -302,21 +303,6 @@ export abstract class IosDevice extends RpcDevice implements Device {
   async setLocation(lat: number, lon: number) {
     assertLatLon(lat, lon);
     await this.queue.run(() => this.ops.setLocation(lat, lon));
-  }
-
-  /**
-   * Animation hitches of the app while `during` runs (Xcode's trace tool, Animation Hitches): frames
-   * shown, the app's hitches, their time; the trace is kept for Instruments.
-   */
-  async hitches(bundle: string, seconds = 5, during?: () => Promise<unknown>) {
-    assertBundle(bundle);
-    return recordHitches(
-      this.serial,
-      () => this.ops.pid(bundle),
-      Math.min(Math.max(Math.round(seconds), 1), 30),
-      join(stateDir(), 'traces'),
-      during,
-    );
   }
 
   /** Stops the runner (its xcodebuild ends). */

@@ -108,7 +108,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
       const p = await d.measure.cpuProfile(SETTINGS, 4_000, scroll);
       expect(p.value.samples).toBeGreaterThan(0);
       expect(p.value.top.length).toBeGreaterThan(0);
-      const hangs = await d.hangs(SETTINGS, 3, scroll);
+      const hangs = await d.measure.hangsOf(SETTINGS, 3, scroll);
       expect(hangs.hangs).toBeGreaterThanOrEqual(0);
       expect(hangs.tracePath).toMatch(/\.trace$/);
     }, 240_000);
@@ -128,7 +128,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
     await settings();
     const { w, h } = d.hello!.screen;
     // a recording without displayed surfaces must say so, never "no hitches"
-    const v = await d
+    const v = await d.measure
       .hitches(SETTINGS, 5, async () => {
         for (let i = 0; i < 4; i++)
           await d.swipe({ x: w / 2, y: h * 0.75 }, { x: w / 2, y: h * 0.25 }, 250, {
@@ -233,7 +233,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
 
     it('hangs: a 500 ms stall counts, a light tap does not', async () => {
       const s = await open('stall');
-      const h = await d.hangs(APP, 5, async () => {
+      const h = await d.measure.hangsOf(APP, 5, async () => {
         await pause(1_000);
         await d.tap(byId(s, 'stall_500'), { settle: false });
       });
@@ -246,7 +246,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
     it('hitches: a real scroll of the list', async () => {
       const s = await open('list');
       const { w, h } = d.hello!.screen;
-      const v = await d
+      const v = await d.measure
         .hitches(APP, 6, async () => {
           for (let i = 0; i < 4; i++)
             await d.swipe({ x: w / 2, y: h * 0.8 }, { x: w / 2, y: h * 0.2 }, 150, {

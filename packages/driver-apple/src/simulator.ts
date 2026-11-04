@@ -39,19 +39,7 @@ export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
     logs: (q) => simulatorLogs(simctl, udid, q),
     crashes: (q) => simulatorCrashes(udid, q),
     name: `simulator ${udid}`,
-    pid: async (b) => {
-      const out = await simctl.exec(['spawn', udid, 'launchctl', 'list']);
-      const pid = Number(
-        out
-          .split('\n')
-          .find((l) => l.includes(`UIKitApplication:${b}[`))
-          ?.trim()
-          .split(/\s+/)[0],
-      );
-      if (!Number.isInteger(pid) || pid <= 0)
-        throw new DeviceError('APP_NOT_RUNNING', `${b} is not running`);
-      return pid;
-    },
+    pid: (b) => simctl.pid(udid, b),
   };
 }
 
@@ -138,10 +126,10 @@ export class IosSimulatorDevice extends IosDevice {
   /** What starting the runner has taken: no settle running meanwhile counts it. */
   private startingMs = 0;
 
-  protected override async connect() {
+  protected override async startAgent() {
     const at = Date.now();
     try {
-      return await super.connect();
+      return await super.startAgent();
     } finally {
       this.startingMs += Date.now() - at;
     }
@@ -360,26 +348,12 @@ export class IosSimulatorDevice extends IosDevice {
     super.close();
   }
 
-  /** The trace tool's Animation Hitches recording fails on simulators (measured on Xcode 27.1). */
-  override hitches(): never {
-    throw new DeviceError(
-      'UNSUPPORTED',
-      'animation hitches are recorded on an iPhone only',
-      'use a phone',
-    );
-  }
-
   /** The app's performance, measured from the Mac; frames through the frame probe, if asked for. */
   get measure(): IosSimulatorPerf {
     return (this.perfTools ??= new IosSimulatorPerf(
       this.serial,
       this.simctl,
-      async (bundle) => {
-        // nothing may have named this app yet; a warm-up launch comes first, so this is not timed
-        if (this.targetApp !== bundle) await this.target(bundle).catch(() => undefined);
-        const t = await this.tree().catch(() => undefined);
-        return !!t && t.windows[0]?.pkg === bundle && t.nodes.filter((n) => n.w === 0).length > 3;
-      },
+      (bundle) => this.appShown(bundle),
       (bundle, test) => this.xctMetrics(bundle, test),
     ));
   }

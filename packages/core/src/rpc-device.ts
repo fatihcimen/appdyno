@@ -52,8 +52,8 @@ export abstract class RpcDevice extends DeviceActions {
 
   /** Read-only requests are retried once on a fresh connection when the agent went away. */
   protected abstract readonly retrySafe: ReadonlySet<Method>;
-  /** Starts or finds the agent; sets `rpc`, `helloInfo` and `lastStartWasCold`. */
-  protected abstract connect(): Promise<RpcClient>;
+  /** Starts or finds the agent, ready for the commands of this device. */
+  protected abstract startAgent(): Promise<{ rpc: RpcClient; hello: Hello; started: boolean }>;
   /** An agent whose work lane stays stuck: stopped, so the next call starts a new one. */
   protected abstract restartStuck(rpc: RpcClient): Promise<void>;
   abstract tree(opts?: { maxDepth?: number; maxNodes?: number }): Promise<Tree>;
@@ -102,6 +102,14 @@ export abstract class RpcDevice extends DeviceActions {
     const was = this.alongside;
     this.alongside = undefined;
     return was?.pkg === pkg ? was.began : false;
+  }
+
+  private async connect() {
+    const { rpc, hello, started } = await this.startAgent();
+    this.rpc = rpc;
+    this.helloInfo = hello;
+    this.lastStartWasCold = started;
+    return rpc;
   }
 
   private ensure(): Promise<RpcClient> {

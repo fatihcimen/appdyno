@@ -174,10 +174,10 @@ describe('what a device measures', () => {
     await says(sim.baselineProfile, 'a Baseline Profile');
     await says(sim.vitals, 'the device state');
     const iphone = phone();
-    await says(() => iphone.frames('a.b'), 'frames');
-    await says(() => iphone.attachProbe('a.b'), 'through a frame probe');
-    await says(() => iphone.heapProfile('a.b', 'heapprofd', 1), 'a heap profile');
-    await says(() => iphone.baselineProfile('a.b', { repeats: 1 }), 'a Baseline Profile');
+    await says(iphone.frames, 'frames');
+    await says(iphone.attachProbe, 'through a frame probe');
+    await says(iphone.heapProfile, 'a heap profile');
+    await says(iphone.baselineProfile, 'a Baseline Profile');
   });
 });
 

@@ -9,7 +9,7 @@ import {
 } from '@appdyno/protocol';
 import { readStateFile, writeStateFile } from '../src/state.js';
 import { assertLatLon, RpcDevice } from '../src/rpc-device.js';
-import { greet, type RpcClient } from '../src/rpc.js';
+import { greet } from '../src/rpc.js';
 import type { ActOptions } from '../src/device.js';
 import {
   fakeAgent,
@@ -35,11 +35,9 @@ class TestDevice extends RpcDevice {
     super();
   }
 
-  protected async connect(): Promise<RpcClient> {
+  protected async startAgent() {
     const { rpc } = fakeAgent(this.agents[this.connects++]!);
-    this.rpc = rpc;
-    this.helloInfo = HELLO as Hello;
-    return rpc;
+    return { rpc, hello: HELLO as Hello, started: true };
   }
 
   protected async restartStuck() {}

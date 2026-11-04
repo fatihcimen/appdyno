@@ -1,4 +1,4 @@
-import { crashExits, phoneCrashes } from './crashes.js';
+import { phoneCrashes } from './crashes.js';
 import { phoneLogs } from './logs.js';
 import { PhoneMirror } from './mirror-phone.js';
 import { PhoneApps, PhoneEvents, PhoneSettings } from './phone-manage.js';
@@ -6,32 +6,13 @@ import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DeviceError, type Tree } from '@appdyno/protocol';
-import {
-  cannot,
-  sleep,
-  stateDir,
-  type MeasureSource,
-  type ScreenRecorder,
-  type Symbols,
-} from '@appdyno/core';
+import { sleep, stateDir, type ScreenRecorder } from '@appdyno/core';
 import { type IosDeviceOps, IosDevice } from './device.js';
 import { phoneRecorder } from './record.js';
 import { iosProducts, type RunnerTransport, IosRunnerLauncher } from './runner.js';
 import { signedRunner, type PhoneSigning, findPhoneSigning, phoneXctestrun } from './signing.js';
 import { assertBundle } from './simctl.js';
-import {
-  hitchFrames,
-  parseActivityMonitor,
-  parseHangs,
-  parseThermal,
-  parseTimeProfile,
-} from './trace-parse.js';
-import { appLaunchPhases } from './phone-launch.js';
-import { phoneLeaks } from './phone-leaks.js';
-import { phoneEnergy, phoneNetwork } from './phone-power.js';
-import { parseHangCauses } from './hang-cause.js';
-import { nameFrames } from './frame-names.js';
-import { recentTrace, recordTrace, traceTable } from './trace.js';
+import { IosPhonePerf } from './phone-perf.js';
 import { connectPort, listDevices } from './usbmux.js';
 import { Devicectl } from './devicectl.js';
 
@@ -132,145 +113,7 @@ export class IosPhoneDevice extends IosDevice {
   private readonly transport: ReturnType<typeof phoneTransport>;
   readonly ctl: Devicectl;
   /** What Instruments and XCTest can read from a phone: what they cannot says why. */
-  readonly measure: MeasureSource = {
-    slowReads: ['memory', 'frames', 'resetFrames'],
-    framesByProbe: false,
-    symbolFiles: true,
-    anonMemory: cannot('anonymous memory by process state'),
-    surfaceFrames: cannot("a surface's frames"),
-    frames: cannot('frames'),
-    resetFrames: cannot('frames'),
-    baselineProfile: cannot('a Baseline Profile'),
-    attachProbe: cannot('through a frame probe'),
-    threads: cannot('per-thread CPU'),
-    battery: cannot('wake locks, wakeups and jobs'),
-    startInfo: cannot('start info'),
-    heapProfile: cannot('a heap profile'),
-    // no tool answers this by itself: every recording holds it, so it costs what the recording cost
-    vitals: async () => {
-      const trace = recentTrace(this.serial);
-      const thermalStatus = trace
-        ? parseThermal(await traceTable(trace, 'device-thermal-state-intervals'))
-        : undefined;
-      return {
-        value: thermalStatus === undefined ? {} : { thermalStatus },
-        raw: trace ?? 'no recording of this phone in the last minutes',
-        at: new Date().toISOString(),
-      };
-    },
-    frameTrace: async (bundle, seconds, during) => {
-      await this.inFront(bundle);
-      const v = await this.hitches(bundle, seconds, during);
-      return {
-        value: { kind: 'hitches', ...v },
-        raw: v.tracePath,
-        at: new Date().toISOString(),
-        source: 'xctrace Animation Hitches',
-      };
-    },
-    framesDuring: async (bundle, seconds, during) => {
-      await this.inFront(bundle);
-      const v = await this.hitches(bundle, seconds, during);
-      return { value: hitchFrames(v), raw: v.tracePath, at: new Date().toISOString() };
-    },
-    memory: async (bundle) => {
-      const { value, raw } = await this.activity(bundle, 2_000);
-      const kb = Math.round(value.footprintBytes / 1024);
-      return { value: { kb, kind: 'footprint' }, raw, at: new Date().toISOString() };
-    },
-    cpu: async (bundle, windowMs = 3_000) => {
-      const { value, raw } = await this.activity(bundle, windowMs);
-      if (value.cpuPercent === undefined)
-        throw new DeviceError(
-          'UNSUPPORTED',
-          `the trace has one reading of ${bundle}: no CPU share`,
-        );
-      return {
-        value: { percent: value.cpuPercent, windowMs: value.windowMs! },
-        raw,
-        at: new Date().toISOString(),
-      };
-    },
-    cpuProfile: async (bundle, ms, during, symbols) => {
-      const { trace, profile } = await this.profile(bundle, ms, during, symbols);
-      return {
-        value: { ...profile, durationMs: Math.round(ms / 1000) * 1000 },
-        raw: trace,
-        at: new Date().toISOString(),
-      };
-    },
-    launch: async (bundle, opts) => {
-      // first: a system app is refused at once, before the launches
-      const startup = opts.trace
-        ? await this.terminate(bundle).then(() => appLaunchPhases(this.serial, bundle, opts.env))
-        : undefined;
-      const samples: number[] = [];
-      for (let i = 0; i < opts.repeats + 1; i++) {
-        if (opts.mode === 'cold') await this.terminate(bundle);
-        else await this.ctl.launch('com.apple.Preferences').catch(() => undefined);
-        await sleep(500);
-        const t = performance.now();
-        if (opts.env) {
-          await this.ctl.launch(bundle, undefined, opts.env);
-          await this.target(bundle);
-        } else await this.launch(bundle);
-        const end = t + 20_000;
-        while (performance.now() < end) {
-          const tree = await this.tree().catch(() => undefined);
-          if (tree?.windows[0]?.pkg === bundle && tree.nodes.filter((n) => n.w === 0).length > 3)
-            break;
-        }
-        // the first warms up
-        if (i > 0) samples.push(Math.round(performance.now() - t));
-      }
-      const sorted = [...samples].sort((a, b) => a - b);
-      return {
-        value: {
-          mode: opts.mode,
-          samples: samples.map((totalMs) => ({ totalMs })),
-          ...(sorted.length && { medianMs: sorted[Math.floor((sorted.length - 1) / 2)]! }),
-          until: 'the first screen is read',
-          ...(startup && { startup: { startupType: opts.mode, ...startup } }),
-        },
-        raw: samples.join(' '),
-        at: new Date().toISOString(),
-      };
-    },
-    hangs: async (bundle, seconds, during, symbols) => {
-      const value = await this.hangs(bundle, seconds, during, symbols);
-      return {
-        value,
-        raw: value.tracePath,
-        at: new Date().toISOString(),
-        source: 'xctrace Time Profiler potential-hangs',
-      };
-    },
-    network: async (bundle, windowMs, during) => {
-      await this.inFront(bundle);
-      return phoneNetwork(this.serial, bundle, () => this.ctl.pid(bundle), windowMs, during);
-    },
-    energy: async (bundle, windowMs) => {
-      await this.inFront(bundle);
-      return phoneEnergy(this.serial, bundle, () => this.ctl.pid(bundle), windowMs);
-    },
-    exits: (bundle) => crashExits(this.crashes, bundle),
-    heap: async (bundle, dir) => {
-      await this.inFront(bundle);
-      return phoneLeaks(this.serial, bundle, () => this.ctl.pid(bundle), dir);
-    },
-    size: async () => {
-      throw new DeviceError(
-        'UNSUPPORTED',
-        "devicectl lists no size of an app, and a phone's app bundle cannot be read from the Mac",
-      );
-    },
-    // a Release build signed for development has the debugger's entitlement too, and its bundle cannot be read here
-    buildType: async (bundle) => {
-      const app = await this.ctl.app(bundle);
-      return app?.builtByDeveloper === false ? 'release' : 'unknown';
-    },
-    xctMetrics: (bundle, test) => this.xctMetrics(bundle, test),
-  };
+  readonly measure: IosPhonePerf = new IosPhonePerf(this);
 
   constructor(serial: string, signing?: PhoneSigning) {
     const transport = phoneTransport(serial, signing);
@@ -325,54 +168,6 @@ export class IosPhoneDevice extends IosDevice {
   async inFront(bundle: string) {
     await this.launch(assertBundle(bundle));
     await this.tree();
-  }
-
-  /** Activity Monitor over every process (no attach: a system app has no get-task-allow), one process read. */
-  private async activity(bundle: string, windowMs: number) {
-    const pid = await this.ctl.pid(assertBundle(bundle));
-    const trace = await recordTrace({
-      template: 'Activity Monitor',
-      device: this.serial,
-      seconds: Math.min(Math.max(Math.round(windowMs / 1000), 2), 30),
-      dir: join(stateDir(), 'traces'),
-    });
-    const value = parseActivityMonitor(
-      await traceTable(trace, 'activity-monitor-process-live'),
-      pid,
-    );
-    if (!value) throw new DeviceError('UNSUPPORTED', `no reading of ${bundle} in the trace`);
-    return { value, raw: trace };
-  }
-
-  /** The Time Profiler over every process (attaching fails at times on a phone), one process read. */
-  private async profile(
-    bundle: string,
-    ms: number,
-    during?: () => Promise<unknown>,
-    symbols?: Symbols,
-  ) {
-    const pid = await this.ctl.pid(assertBundle(bundle));
-    const trace = await recordTrace({
-      template: 'Time Profiler',
-      device: this.serial,
-      seconds: Math.min(Math.max(Math.round(ms / 1000), 1), 30),
-      dir: join(stateDir(), 'traces'),
-      ...(during && { during }),
-    });
-    const exported = await traceTable(trace, 'time-profile');
-    const samples = symbols?.dsym ? await nameFrames(exported, symbols.dsym) : exported;
-    return { trace, pid, samples, profile: parseTimeProfile(samples, pid) };
-  }
-
-  /** The main thread's hangs (over 250 ms) while `during` runs: part of the Time Profiler's recording. */
-  async hangs(bundle: string, seconds = 5, during?: () => Promise<unknown>, symbols?: Symbols) {
-    const { trace, pid, samples } = await this.profile(bundle, seconds * 1000, during, symbols);
-    const hangs = await traceTable(trace, 'potential-hangs');
-    return {
-      ...parseHangs(hangs, pid),
-      causes: parseHangCauses(hangs, samples, pid),
-      tracePath: trace,
-    };
   }
 
   /** Ends the phone's simulated position (setLocation's). */

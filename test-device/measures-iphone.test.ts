@@ -92,7 +92,7 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
     const dsym = process.env.APPDYNO_IPHONE_FIXTURE_DSYM;
     const hang = async (id: string) => {
       const s = await open('stall');
-      const h = await d.hangs(
+      const h = await d.measure.hangsOf(
         APP,
         5,
         async () => {

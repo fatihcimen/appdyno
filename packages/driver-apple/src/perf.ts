@@ -33,6 +33,7 @@ import { simulatorEnergy } from './sim-energy.js';
 import { memoryGraph } from './sim-heap.js';
 import { profileStart } from './sim-launch.js';
 import { type Simctl, assertBundle } from './simctl.js';
+import { IosPerf, lowerMedian, sampleLaunches, untilShown } from './ios-perf.js';
 import { helperBinary } from './simhelper.js';
 import { parseTimeProfile } from './trace-parse.js';
 import { nameFrames } from './frame-names.js';
@@ -56,29 +57,15 @@ const PROBE_FLUSH_MS = 350;
 /** What a list coasts on after its swipes. */
 const COAST_MS = 1_500;
 
-/** A launch that really took place: of two in the middle, the lower. */
-const lowerMedian = (xs: number[]) => {
-  const s = [...xs].sort((a, b) => a - b);
-  return s.length ? s[Math.floor((s.length - 1) / 2)]! : 0;
-};
-
 /**
  * Performance of an app on a simulator, measured from the Mac (a simulator app is a Mac process):
  * memory (physical footprint), CPU over a window, launch time (until the app's first screen reads),
  * a CPU profile (the Mac's sampler), network bytes, its bundle, and frames through the frame probe.
  */
-export class IosSimulatorPerf implements MeasureSource {
+export class IosSimulatorPerf extends IosPerf implements MeasureSource {
   readonly slowReads = [];
   readonly framesByProbe = true;
-  readonly symbolFiles = true;
-  anonMemory = cannot('anonymous memory by process state');
-  surfaceFrames = cannot("a surface's frames");
   vitals = cannot('the device state');
-  baselineProfile = cannot('a Baseline Profile');
-  threads = cannot('per-thread CPU');
-  battery = cannot('wake locks, wakeups and jobs');
-  startInfo = cannot('start info');
-  heapProfile = cannot('a heap profile');
   hangs = cannot('hangs');
 
   constructor(
@@ -91,20 +78,13 @@ export class IosSimulatorPerf implements MeasureSource {
       bundle: string,
       test: 'launch' | 'hitches',
     ) => Promise<Measured<XctMetrics>>,
-  ) {}
+  ) {
+    super();
+  }
 
   /** The app's process id (it must be running). */
-  async pid(bundle: string): Promise<number> {
-    assertBundle(bundle);
-    const out = await this.simctl.exec(['spawn', this.udid, 'launchctl', 'list']);
-    // a process just ended stays listed for a while, with no pid, beside the one that runs now
-    const pid = out
-      .split('\n')
-      .filter((l) => l.includes(`UIKitApplication:${bundle}[`))
-      .map((l) => Number(l.trim().split(/\s+/)[0]))
-      .find((n) => Number.isInteger(n) && n > 0);
-    if (!pid) throw new DeviceError('APP_NOT_RUNNING', `${bundle} is not running`);
-    return pid;
+  pid(bundle: string) {
+    return this.simctl.pid(this.udid, bundle);
   }
 
   async memory(bundle: string): Promise<Measured<IosMemory & MemoryReading>> {
@@ -323,32 +303,30 @@ export class IosSimulatorPerf implements MeasureSource {
     assertBundle(bundle);
     const mode = opts.mode ?? 'cold';
     const repeats = Math.min(Math.max(opts.repeats ?? 5, 1), 10);
-    const samples: number[] = [];
     const raw: string[] = [];
     const probe = mode === 'cold' && opts.probe === true;
     const startup = opts.trace ? await this.whySlow(bundle, opts.env) : undefined;
-    for (let i = 0; i < repeats + 1; i++) {
-      if (mode === 'cold') await this.simctl.terminate(this.udid, bundle);
-      else
-        await this.simctl
-          .exec(['launch', this.udid, 'com.apple.Preferences'])
-          .catch(() => undefined);
-      await sleep(500);
-      if (probe) {
-        const ms = Math.round(await this.launchProbed(bundle, opts.env));
-        raw.push(String(ms));
-        if (i > 0) samples.push(ms); // the first warms up
-        continue;
-      }
-      const t = performance.now();
-      raw.push(await this.simctl.launch(this.udid, bundle, opts.env));
-      const end = t + 20_000;
-      while (!(await this.appShown(bundle))) {
-        if (performance.now() > end)
+    const samples = await sampleLaunches(repeats, {
+      prepare: async () => {
+        if (mode === 'cold') await this.simctl.terminate(this.udid, bundle);
+        else
+          await this.simctl
+            .exec(['launch', this.udid, 'com.apple.Preferences'])
+            .catch(() => undefined);
+      },
+      launch: async () => {
+        if (probe) {
+          const ms = Math.round(await this.launchProbed(bundle, opts.env));
+          raw.push(String(ms));
+          return ms;
+        }
+        const t = performance.now();
+        raw.push(await this.simctl.launch(this.udid, bundle, opts.env));
+        if (!(await untilShown(() => this.appShown(bundle), t)))
           throw new DeviceError('TIMEOUT', `${bundle} showed no screen within 20 s`);
-      }
-      if (i > 0) samples.push(Math.round(performance.now() - t)); // the first warms up
-    }
+        return Math.round(performance.now() - t);
+      },
+    });
     return {
       value: {
         mode,

@@ -90,10 +90,6 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
     await pause(2_000);
   }, 60_000);
 
-  it('frames: says plainly that hitches need a phone', async () => {
-    expect(() => d.hitches()).toThrow(/on an iPhone only/);
-  });
-
   it('heap: a memory graph with the leaks summary', async () => {
     const s = await open('memory');
     await d.tap(byId(s, 'memory_alloc'), { settle: false });

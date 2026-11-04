@@ -77,6 +77,20 @@ export type Simulator = {
 export class Simctl {
   constructor(private readonly env: NodeJS.ProcessEnv = xcodeEnv()) {}
 
+  /** The process id of a running app. */
+  async pid(udid: string, bundle: string): Promise<number> {
+    assertBundle(bundle);
+    const out = await this.exec(['spawn', udid, 'launchctl', 'list']);
+    // a process just ended stays listed for a while, with no pid, beside the one that runs now
+    const pid = out
+      .split('\n')
+      .filter((l) => l.includes(`UIKitApplication:${bundle}[`))
+      .map((l) => Number(l.trim().split(/\s+/)[0]))
+      .find((n) => Number.isInteger(n) && n > 0);
+    if (!pid) throw new DeviceError('APP_NOT_RUNNING', `${bundle} is not running`);
+    return pid;
+  }
+
   async exec(args: string[], timeoutMs = 60_000, env?: NodeJS.ProcessEnv): Promise<string> {
     try {
       const { stdout } = await run('xcrun', ['simctl', ...args], {

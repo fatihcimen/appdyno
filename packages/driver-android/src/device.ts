@@ -119,16 +119,18 @@ export class AndroidDevice extends RpcDevice implements Device {
     await this.key('back', { settle: false, read: 'none' });
   };
 
-  protected async connect(): Promise<RpcClient> {
-    const { rpc, hello, started } = await this.launcher.connect();
-    this.rpc = rpc;
-    this.helloInfo = hello;
-    this.lastStartWasCold = started;
+  protected async startAgent() {
+    const agent = await this.launcher.connect();
     if (this.animations === 'off')
-      await rpc.call('animations.set', { off: true }, { timeoutMs: TIMEOUTS.action });
+      await agent.rpc
+        .call('animations.set', { off: true }, { timeoutMs: TIMEOUTS.action })
+        .catch((e: unknown) => {
+          agent.rpc.close();
+          throw e;
+        });
     // a new agent: a host that died without stopping its own may have left test providers
-    if (started) await this.clearStaleLocation().catch(() => undefined);
-    return rpc;
+    if (agent.started) await this.clearStaleLocation().catch(() => undefined);
+    return agent;
   }
 
   protected override connectionLost(e: unknown) {
