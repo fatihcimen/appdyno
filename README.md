@@ -316,7 +316,7 @@ appdyno test flows/login.flow --measure --device <id>
 appdyno perf compare --app A --scenario journey-login       # exit 1, naming the step that got slower
 ```
 
-A step's kind comes from its line, `journey.04_tap_id_load.ms`, with a `${NAME}` as it is written, so a value does not change it, and a step put in renumbers the ones after it. On Android a step has its frames (p95, worst) and memory; a simulator its memory, and frames under the probe; an iPhone its time only, as a read of its memory is a recording of seconds, and the answer says so. Start a flow with `stop` and `launch` to have every iteration start alike. An iteration that fails ends the run: what passed before it is kept, and the file's case fails. On the [dashboard](docs/perf.md#the-dashboard) a journey is one bar split by step, with a table of each step's numbers.
+A step's kind comes from its line, `journey.04_tap_id_load.ms`, with a `${NAME}` as it is written, so a value does not change it, and a step put in renumbers the ones after it. On Android a step has its frames (p95, worst) and memory, and on an iPhone its time only, as a read of its memory is a recording of seconds, and the answer says so. Both are proven on a phone against a known cost; a simulator or an emulator has not run one yet. Start a flow with `stop` and `launch` to have every iteration start alike. An iteration that fails ends the run: what passed before it is kept, and the file's case fails. On the [dashboard](docs/perf.md#the-dashboard) a journey is one bar split by step, with a table of each step's numbers.
 
 From code, `flowsFor(ctx).replay(file, { onStep })` calls `onStep` around each step's action, awaited:
 `before` once its target is on the screen, `after` with its time once the screen settled.
