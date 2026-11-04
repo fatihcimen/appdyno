@@ -30,6 +30,36 @@ appdyno doctor             # nelerin kurulu olduğunu, neyin eksik olduğunu sö
 
 Yayımlandıktan sonra kaynak koda gerek kalmayacak, sıradaki adımı doğrudan `npx -y appdyno install` yapacak.
 
+## appdyno'yu güncel tutmak
+
+Yeni bir sürüme geçmenin tek yolu `appdyno update`. Arka planda sürüm aranmaz: arama bir ağ çağrısıdır ve appdyno telemetri içermez.
+
+```sh
+appdyno update --check     # kurulu sürüm, son sürüm, ne olacağı; hiçbir şeyi değiştirmez
+appdyno update             # son sürümü doğrular, sonra ona geçer
+```
+
+Mac'inizde bir şey değişmeden önce doğrulama yapılır ve bunu atlayan bir seçenek yoktur. Tam sürüm geçici bir klasöre kurulur, betiklerinin hiçbiri çalıştırılmaz ve `npm audit signatures` onu orada denetler. npm'in, yalnızca bir bağımlılık için değil o sürümün kendisi için bir provenance attestation doğrulamış olması ve bu attestation'ın sürümün appdyno'nun kendi deposundan derlendiğini söylemesi gerekir. Aksi halde sürüm bir kod ve bir ipucuyla reddedilir, sizin sürümünüz yerinde kalır.
+
+Bunun için npm 11.12 ya da üstü gerekir, appdyno'yu pnpm kurmuş olsa bile: eski sürümler hangi paketi doğruladığını söylemez. Node 22 daha eski bir npm ile gelir, bu yüzden önce `npm install -g npm@latest` çalıştırın.
+
+Ardından appdyno'yu hangi araç kurduysa onunla yükseltir. Hangisi olduğunu, sürümü ve klasörüyle birlikte `appdyno doctor` gösterir.
+
+| neyle kuruldu                | `appdyno update`                                                  |
+| ---------------------------- | ----------------------------------------------------------------- |
+| `npm install -g`, her prefix | npm ile, o prefix içinde, az önce doğruladığı kopyadan yükseltir  |
+| `pnpm add -g`                | pnpm ile, tam o sürüme yükseltir                                  |
+| Homebrew, Volta, Nix         | reddeder: o araçla yükseltin                                      |
+| tek seferlik `npx`           | reddeder: aşağıya bakın                                           |
+| kaynak kod                   | reddeder: `git pull`, ardından `pnpm install && pnpm build`       |
+| başka bir şey                | reddeder: kuran araçla yükseltin ya da `npm install -g` ile kurun |
+
+Başarısız bir kurulum eski sürümü çalışır halde bırakır. `update` hiçbir zaman daha eski bir sürüme geçmez, kayıt defterindeki `latest` bir ön sürümü gösterse bile ön sürüme de geçmez.
+
+**`npx -y appdyno mcp` çalıştıran bir istemci.** npx her açılışta kayıt defterine sorar ve yukarıdaki denetimlerin hiçbiri olmadan son sürüme kendiliğinden geçer. appdyno global olarak kuruluysa npx onun yerine o kurulumu çalıştırır. Bu yüzden bir kez `npm install -g appdyno` çalıştırın: istemcilerinizin çalıştırdığı sürüm artık yalnızca siz `appdyno update` çalıştırdığınızda değişir.
+
+**Güncellemeden sonra.** Çalışan bir MCP sunucusu, istemcisi onu yeniden başlatana kadar eski kodla devam eder, bu yüzden istemciyi yeniden başlatın. Android agent ve iOS runner için bir şey gerekmez: ikisi de bir sonraki bağlantıda hash'lerine göre değişir. Yeni bir iOS runner içeren sürüm onu ilk kullanımda bir kez derler, bu birkaç dakika sürer.
+
 ## Bu Mac'teki istemciler
 
 `appdyno install`, bu Mac'teki istemcileri bulur ve seçtiklerinize appdyno'yu ekler. Yalnızca o tek girdiyi değiştirir, dosyanın yanına yedek bırakır, `--dry-run` ile hiçbir şey yazmaz.

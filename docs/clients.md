@@ -30,6 +30,36 @@ appdyno doctor             # says what is here and what is missing
 
 Once it is published, you will not need a checkout, and `npx -y appdyno install` does the next step directly.
 
+## Keep appdyno current
+
+`appdyno update` is the one way to move to a newer release. Nothing looks for one in the background, as a look is a network call and appdyno has no telemetry.
+
+```sh
+appdyno update --check     # what is installed, what is latest, what would happen; changes nothing
+appdyno update             # verifies the latest release, then upgrades to it
+```
+
+It verifies before anything on your Mac changes, and there is no flag to skip this. The exact version goes into a temporary folder with none of its scripts run, and `npm audit signatures` checks it there. npm must have verified a provenance attestation for that release itself, not only for a dependency, and the attestation must say the release was built from appdyno's own repository. Otherwise the release is refused, with a code and a hint, and your version stays.
+
+This takes npm 11.12 or newer, even if pnpm installed appdyno, because older versions do not say which package they verified. Node 22 comes with an older one, so run `npm install -g npm@latest` first.
+
+It then upgrades with whatever installed appdyno. `appdyno doctor` shows which, with the version and the folder.
+
+| installed with               | `appdyno update`                                                                |
+| ---------------------------- | ------------------------------------------------------------------------------- |
+| `npm install -g`, any prefix | upgrades with npm, in that prefix, from the copy it just verified               |
+| `pnpm add -g`                | upgrades with pnpm, to that exact version                                       |
+| Homebrew, Volta, Nix         | refuses: upgrade it with that manager                                           |
+| a one-off `npx`              | refuses: see below                                                              |
+| a source checkout            | refuses: `git pull`, then `pnpm install && pnpm build`                          |
+| anything else                | refuses: upgrade it with what installed it, or install it with `npm install -g` |
+
+A failed install leaves the old version working. `update` never moves to an older version, and never to a prerelease, even when the registry's `latest` points at one.
+
+**A client that runs `npx -y appdyno mcp`.** npx asks the registry at each start and moves to the latest release by itself, with none of the checks above. If appdyno is installed globally, npx runs that install instead. So run `npm install -g appdyno` once: what your clients run then changes only when you run `appdyno update`.
+
+**After an update.** A running MCP server keeps the old code until its client restarts it, so restart the client. The Android agent and the iOS runner need nothing: each is replaced by its hash at the next connection, and a release with a new iOS runner builds it once on first use, which takes a few minutes.
+
 ## Clients on this Mac
 
 `appdyno install` finds the clients on this Mac and adds appdyno to the ones you pick. It changes that one entry, keeps a backup beside the file, and writes nothing with `--dry-run`.

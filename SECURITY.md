@@ -8,7 +8,11 @@ Say what you did, what happened, and the version or commit.
 
 ## Nothing leaves the machine
 
-appdyno has no telemetry and sends nothing anywhere. By default the MCP server speaks over stdio to the
+appdyno has no telemetry and sends nothing anywhere. It asks the npm registry for a release only while you run
+`appdyno update`, and the MCP server never does. A client that runs `npx -y appdyno` has npx ask the registry at each
+start, before appdyno runs: that is npm's doing, and a global install, as `docs/clients.md` says, keeps it from
+changing the version.
+By default the MCP server speaks over stdio to the
 client that started it and opens no network listener. Only `--http` opens one: see below. Measurements are stored on the local disk, under the state
 directory or the `--measurements` directory. The Android agent listens on an abstract unix socket on the
 device, reached through adb, and accepts a connection only with its launch token. An iPhone is reached

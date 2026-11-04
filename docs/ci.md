@@ -40,3 +40,17 @@ scripts/ci.sh --device emulator-5580 --nightly     # + latency history and gate
 scripts/ci.sh --ios <simulator id>                 # + iOS simulator (a shared one: APPDYNO_WATCH_SIM in the session guard)
 scripts/ci.sh --iphone <UDID>                      # + iPhone (APPDYNO_IOS_PROFILE, _KEYCHAIN, _KEYCHAIN_PASSWORD)
 ```
+
+## Release
+
+A tag publishes, and nothing else does. `.github/workflows/release.yml` runs on `v1.2.3`: `ci.yml` as its gate, then a check that the tag is the version in `packages/appdyno/package.json`, the agent and the package built, and `npm publish --provenance --access public`.
+
+Before the first release:
+
+- The repository must be public. npm generates no provenance for a private one, even for a public package, and `appdyno update` refuses a release with none.
+- `repository` in `packages/appdyno/package.json` must match it, case included. npm checks this when it publishes, and `update` holds every release to that address, so a release built elsewhere is refused.
+- The first publish needs an `NPM_TOKEN` secret, as a package must exist before it can have a trusted publisher. After it, add `release.yml` as the trusted publisher on npmjs.com and remove the secret. The publish job's Node 24 has an npm that can do this.
+
+Before a tag, from a node whose folder has no pnpm, `node scripts/check-package.mjs` installs the tarball on an empty home. It stays out of the workflow, as it refuses to run where a JDK is on its path.
+
+`scripts/check-update.mjs` runs `update` and its verification for real, on public packages in a temporary folder, with no change to this machine: a release with provenance, one without, one whose dependency alone has it, a tampered registry, and a failed install under npm and under pnpm. It needs the network and npm 11.12 or newer.
