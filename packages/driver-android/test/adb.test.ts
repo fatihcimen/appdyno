@@ -2,6 +2,42 @@ import { describe, expect, it } from 'vitest';
 import { Adb, assertSerial, parseDevices, shq } from '../src/adb.js';
 import { AndroidDevice } from '../src/device.js';
 
+describe('an agent reached', () => {
+  const reached = (animations: 'on' | 'off', started: boolean) => {
+    const asked: string[] = [];
+    const ran: string[] = [];
+    const rpc = {
+      closed: false,
+      call: async (method: string) => {
+        asked.push(method);
+        return { result: {} };
+      },
+      close: () => undefined,
+    };
+    const hello = { model: 'Pixel' };
+    const adb = { exec: async (_: string, c: string) => (ran.push(c), '') } as unknown as Adb;
+    const device = new AndroidDevice('emulator-5640', adb, 0, false, animations);
+    Object.assign(device, { launcher: { connect: async () => ({ rpc, hello, started }) } });
+    return { asked, ran, device, hello };
+  };
+
+  it("takes the session's animations off, and clears what a dead host left on a new agent", async () => {
+    const { asked, ran, device, hello } = reached('off', true);
+    expect(await device.open()).toBe(hello);
+    expect(asked).toEqual(['animations.set']);
+    expect(ran.length).toBeGreaterThan(0);
+    expect(device.lastStartWasCold).toBe(true);
+  });
+
+  it('asks nothing of one found running with animations on', async () => {
+    const { asked, ran, device } = reached('on', false);
+    await device.open();
+    expect(asked).toEqual([]);
+    expect(ran).toEqual([]);
+    expect(device.lastStartWasCold).toBe(false);
+  });
+});
+
 describe('launching an app', () => {
   const STARTED = 'Starting: Intent { cmp=a.b/.Main }\n';
   /** A device whose `am start` answers `answer`; what it was told to run is kept. */
