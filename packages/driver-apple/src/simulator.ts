@@ -301,7 +301,12 @@ export class IosSimulatorDevice extends IosDevice {
       );
       p.stdin.end(text);
     });
-    if ((await this.pasteOnMac()) !== text) await super.setClipboard(text);
+    if ((await this.pasteOnMac()) === text) return;
+    // what holds the runner up does not last: it was restarted for it, and the next one has the text
+    await super.setClipboard(text).catch((e: unknown) => {
+      if (!(e instanceof DeviceError && e.code === 'TIMEOUT')) throw e;
+      return super.setClipboard(text);
+    });
   }
 
   /** From the Mac: the runner may read only what it wrote itself, or a system prompt holds it up. */
