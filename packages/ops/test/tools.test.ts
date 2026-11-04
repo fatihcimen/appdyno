@@ -552,6 +552,18 @@ describe('iOS simulators', () => {
     expect((await t.textOf('perf_heap')).text).toBe('emulator-5580 cannot measure a heap dump');
   });
 
+  it('words each measure a real device has no way of giving', async () => {
+    const t = await connect();
+    for (const [name, args, word] of [
+      ['perf_trace', { what: 'hangs' }, 'hangs'],
+      ['perf_trace', { what: 'xct_launch' }, "XCTest's metrics"],
+      ['perf_scroll', { probe: true }, 'through a frame probe'],
+      ['perf_heap', { profile: 'java_hprof' }, 'a heap profile'],
+      ['perf_launch', { baselineProfile: true }, 'a Baseline Profile'],
+    ] as const)
+      expect((await t.textOf(name, args)).text).toBe(`emulator-5580 cannot measure ${word}`);
+  });
+
   describe('each measure in its own terms', () => {
     const m = <T>(value: T) => ({ value, raw: 'raw', at: '2026-11-02T00:00:00.000Z' });
     const onDevice = (measure: object) => {

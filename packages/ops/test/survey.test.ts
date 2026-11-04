@@ -159,6 +159,14 @@ describe('the page and the measures', () => {
     const { data } = await op(part.ctx, 'perf_snapshot', { also: ['threads'] });
     expect(data.lacking).toEqual(['threads']);
     expect(await kept(part.measurements)).toEqual({});
+    // what a device has no way of reading is left out, and no row takes it
+    const absent = context();
+    const left = await op(absent.ctx, 'perf_snapshot', {
+      also: ['anonMemory', 'startInfo', 'battery'],
+    });
+    expect(left.data.lacking).toEqual(['anonMemory', 'startInfo', 'battery']);
+    await op(absent.ctx, 'perf_scroll', { probe: true }).catch(() => undefined);
+    expect(await kept(absent.measurements)).toEqual({});
   });
 
   it('keeps a start why by its phases, and a measure in the unit it has', async () => {
