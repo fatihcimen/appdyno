@@ -73,6 +73,8 @@ export type Simulator = {
   deviceType?: string;
 };
 
+const HOME_SCREEN = 'com.apple.springboard';
+
 /** The simulator tool, always for one named simulator (never "booted": other simulators may run). */
 export class Simctl {
   constructor(private readonly env: NodeJS.ProcessEnv = xcodeEnv()) {}
@@ -81,10 +83,15 @@ export class Simctl {
   async pid(udid: string, bundle: string): Promise<number> {
     assertBundle(bundle);
     const out = await this.exec(['spawn', udid, 'launchctl', 'list']);
+    // the home screen is a system service: it has a label of its own, with capitals its bundle id has not
+    const listed = (l: string) =>
+      bundle === HOME_SCREEN
+        ? l.endsWith('\tcom.apple.SpringBoard')
+        : l.includes(`UIKitApplication:${bundle}[`);
     // a process just ended stays listed for a while, with no pid, beside the one that runs now
     const pid = out
       .split('\n')
-      .filter((l) => l.includes(`UIKitApplication:${bundle}[`))
+      .filter(listed)
       .map((l) => Number(l.trim().split(/\s+/)[0]))
       .find((n) => Number.isInteger(n) && n > 0);
     if (!pid) throw new DeviceError('APP_NOT_RUNNING', `${bundle} is not running`);

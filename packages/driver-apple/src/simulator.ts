@@ -240,9 +240,11 @@ export class IosSimulatorDevice extends IosDevice {
   }
 
   override async foreground(): Promise<string | undefined> {
-    // the system's alert over an app makes the home screen the primary one: only the runner can tell
+    // the system's alert over an app makes the home screen the primary one: only the runner can tell, of the app it
+    // was given. With no target, as in a window, it has nothing to tell, and says the home screen whatever is up
     const front = await this.direct.front().catch(() => undefined);
-    return front && front === this.targetApp ? front : super.foreground();
+    if (!this.runnerUp) return front;
+    return front && (!this.targetApp || front === this.targetApp) ? front : super.foreground();
   }
 
   /** A running app comes forward as it is; to start it afresh, terminate it first. */
