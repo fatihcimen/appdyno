@@ -1,3 +1,4 @@
+import { KEYS, type Key } from '@appdyno/protocol';
 import { z } from 'zod';
 
 /** The screen in the answer after an action: its changes, all of it, or nothing. */
@@ -30,18 +31,18 @@ export const Target = {
 
 export const Direction = z.enum(['up', 'down', 'left', 'right']);
 
-export const Keys = z.enum([
-  'back',
-  'enter',
-  'home',
-  'delete',
-  'tab',
-  'app_switch',
-  'volume_up',
-  'volume_down',
-  'power',
-  'lock',
-]);
+/** A key as a tool takes it: the wire's `volumeUp` is `volume_up`. */
+type KeyName<K extends string> = K extends `${infer C}${infer Rest}`
+  ? `${C extends Lowercase<C> ? C : `_${Lowercase<C>}`}${KeyName<Rest>}`
+  : '';
+
+const keyName = (k: Key) => k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) as KeyName<Key>;
+
+export const WIRE_KEY = Object.fromEntries(KEYS.map((k) => [keyName(k), k])) as {
+  [K in Key as KeyName<K>]: K;
+};
+
+export const Keys = z.enum(KEYS.map(keyName) as [KeyName<Key>, ...KeyName<Key>[]]);
 
 export const WAIT_MS = 5_000;
 

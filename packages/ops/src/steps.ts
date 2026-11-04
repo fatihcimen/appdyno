@@ -15,23 +15,10 @@ import { type Answers, SETTLE, type ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
-import { Check, Step, Direction } from './step-schemas.js';
+import { Check, Step, Direction, WIRE_KEY } from './step-schemas.js';
 import { dragPath, swipeLine } from './gesture-paths.js';
 
 export const STALE = 'stale ref, read the screen again';
-
-const WIRE_KEY = {
-  back: 'back',
-  enter: 'enter',
-  home: 'home',
-  delete: 'delete',
-  tab: 'tab',
-  app_switch: 'appSwitch',
-  volume_up: 'volumeUp',
-  volume_down: 'volumeDown',
-  power: 'power',
-  lock: 'lock',
-} as const;
 
 /** These leave the app, as the home key does. */
 const LEAVES_APP = new Set(['home', 'app_switch', 'power', 'lock']);

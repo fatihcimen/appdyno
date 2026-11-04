@@ -11,9 +11,10 @@ import type {
   Startable,
   VirtualDevices,
 } from '@appdyno/core';
-import { DeviceError, type ActParams, type Tree } from '@appdyno/protocol';
+import { DeviceError, KEYS, type ActParams, type Tree } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext, type Policy } from '../src/index.js';
+import { Keys } from '../src/step-schemas.js';
 import { FakeDevice, SCREENS, WithKeyboard } from './fake-device.js';
 import { linkedClient } from './helpers.js';
 
@@ -504,6 +505,15 @@ describe('gestures, keys, clipboard', () => {
     await call('gesture', { kind: 'long_press', x: 1, y: 1, durationMs: 500 });
     expect(act(d).at(-1)).toEqual({ kind: 'longPress', x: 1, y: 1, durationMs: 500 });
     expect((await call('gesture', { kind: 'plan', pointers: [] })).error).toBe(true);
+  });
+
+  it('takes every key of the wire, under the name a tool gives it', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    for (const key of Keys.options) expect((await call('press_key', { key })).error).toBe(false);
+    const sent = act(d).map((a) => (a as Extract<ActParams, { kind: 'key' }>).key);
+    expect([...sent].sort()).toEqual([...KEYS].sort());
+    expect(Keys.options).toContain('app_switch');
   });
 
   it('presses hardware buttons, and a server without home refuses what leaves the app', async () => {
