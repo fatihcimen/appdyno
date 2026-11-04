@@ -58,6 +58,10 @@ class Settler(
         while (readCosts.size > 30) readCosts.removeFirst()
     }
 
+    /** The longest a read of this size takes on this device when it is not slowed, by the measure of `slowdown`; 0 until known. */
+    private fun usualRead(nodes: Int) =
+        if (readCosts.size < 3) 0L else (readCosts.min() * nodes.coerceAtLeast(20) * 2).toLong()
+
     fun <S> run(
         actionAt: Long,
         quietMs: Long,
@@ -118,8 +122,9 @@ class Settler(
             last = next
             val stillLayout = readStart - changedAt
             val quietEvents = now - maxOf(lastEventAt(), actionAt)
-            // a read slower than the window could be all of the "still" time: one more, on a loaded device
-            val settled = prev != null && !busy(next) && now - readStart <= quiet &&
+            // a read slower than the window could be all of the "still" time: one more, on a loaded device. Where reads
+            // take that long with no load, it says nothing, and a window shorter than a read would never be proven
+            val settled = prev != null && !busy(next) && now - readStart <= maxOf(quiet, usualRead(size(next))) &&
                 ((stillLayout >= quiet && quietEvents >= quiet) || stillLayout >= 2 * quiet)
             // a read is answered on the app's UI thread, after a click it was still busy with: what that click started
             // shows only now

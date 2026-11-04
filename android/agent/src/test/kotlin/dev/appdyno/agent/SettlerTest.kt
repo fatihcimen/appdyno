@@ -221,6 +221,34 @@ class SettlerTest {
     }
 
     @Test
+    fun aDeviceWhoseReadsOutlastTheWindowStillSettles() {
+        // a Samsung SM-A525F, idle: 165 ms to read 88 nodes against the 80 ms of a tap on plain text, and every such tap
+        // waited out its 3 s
+        val s = Settler({ now }, { now += it }, { lastEvent })
+        val tap = {
+            s.run(now, 80, 3_000, R("A"), { now += 165; R("A") }, { a, b -> a.hash == b.hash }, { it.busy }, { false }, { 88 })
+        }
+        val first = tap()
+        assertTrue(first.settled)
+        assertEquals(3, first.reads)
+        val next = tap()
+        assertTrue(next.settled)
+        assertEquals(1, next.reads)
+    }
+
+    @Test
+    fun readsThatTurnSlowAreStillNoProof() {
+        // the same 165 ms on a device that read in 10: it is loaded now, and the guard holds
+        val s = Settler({ now }, { now += it }, { lastEvent })
+        s.run(now, 80, 3_000, R("A"), { now += 10; R("A") }, { a, b -> a.hash == b.hash }, { it.busy }, { false }, { 88 })
+        var n = 0
+        val o = s.run(now, 80, 3_000, R("A"), { n++; now += if (n < 3) 165 else 10; R("A") },
+            { a, b -> a.hash == b.hash }, { it.busy }, { false }, { 88 })
+        assertTrue(o.settled)
+        assertEquals(3, o.reads)
+    }
+
+    @Test
     fun cancelStopsTheLoop() {
         var n = 0
         val o = go(50, 10_000, null, layoutAt = { t -> r("h$t") }, cancelled = { ++n >= 2 })
