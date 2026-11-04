@@ -1,0 +1,45 @@
+name: release
+
+# A tag publishes: `git tag v1.2.3 && git push origin v1.2.3`, for the version every package carries.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: gate
+    runs-on: macos-latest
+    permissions:
+      contents: read
+      # what `--provenance` signs with
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: The tag is the version
+        run: test "$GITHUB_REF_NAME" = "v$(node -p "require('./packages/appdyno/package.json').version")"
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          # its npm can publish by trusted publishing too, which the 22's cannot
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: pnpm install --frozen-lockfile
+      - name: Android agent
+        run: cd android && ./gradlew --console=plain :agent:assembleDebug
+      - run: pnpm build
+      - name: Publish with provenance
+        working-directory: packages/appdyno
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

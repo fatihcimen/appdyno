@@ -3,6 +3,8 @@ name: ci
 on:
   push:
   pull_request:
+  # the gate of a release
+  workflow_call:
 
 jobs:
   check:
@@ -22,8 +24,9 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      # `pnpm build` packages the agent, and stops when there is none
+      - name: Android agent
+        run: cd android && ./gradlew --console=plain :agent:testDebugUnitTest :agent:assembleDebug
       - run: pnpm build
       - name: Runner core unit tests
         run: swift test --package-path ios/RunnerCore
-      - name: Android agent unit tests
-        run: cd android && ./gradlew --console=plain :agent:testDebugUnitTest
