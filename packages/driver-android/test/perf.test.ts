@@ -116,6 +116,16 @@ describe('android perf parsers on recorded outputs', () => {
     expect(v.parkedKernelThreads).toBe(14);
   });
 
+  it('takes a load of three zeros for one the kernel hides, and keeps its pressure', () => {
+    // a Samsung SM-A525F, tasks running; a Xiaomi hides the pressure instead
+    const v = parseVitals(
+      '==load==\n0.00 0.00 0.00 4/4877 14151\n==parked==\n==pressure==\nsome avg10=4.85 avg60=4.80 avg300=4.35 total=13618980047\n==mem==\n==thermal==\nThermal Status: 0\n',
+    );
+    expect(v.load).toBeUndefined();
+    expect(v.cpuPressure).toBe(4.85);
+    expect(v.thermalStatus).toBe(0);
+  });
+
   it('counts none when nothing is parked, and does not read on into the next section', () => {
     const v = parseVitals('==load==\n1 1 1 1/9 9\n==parked==\n==mem==\nMemTotal: 2 kB\n');
     expect(v.parkedKernelThreads).toBe(0);

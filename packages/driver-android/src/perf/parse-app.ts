@@ -93,7 +93,8 @@ export function parseVitals(text: string): DeviceVitals {
     new RegExp(`==${name}==\\n([\\s\\S]*?)(?:\\n==|$)`).exec(text)?.[1] ?? '';
   const out: DeviceVitals = {};
   const load = section('load').trim().split(/\s+/).slice(0, 3).map(Number);
-  if (load.length === 3 && load.every(Number.isFinite)) out.load = load;
+  // three zeros from a running phone are a kernel that hides its load, not a calm device: a Samsung's, with tasks running
+  if (load.length === 3 && load.every(Number.isFinite) && load.some((l) => l > 0)) out.load = load;
   // a kernel thread's parent is kthreadd, process 2
   if (text.includes('==parked=='))
     out.parkedKernelThreads = [...section('parked').matchAll(/^D\S*\s+\d+\s+2\s/gm)].length;
