@@ -13,7 +13,7 @@ import {
   ServerContext,
   ToolError,
 } from '../src/index.js';
-import { FakeDevice, SCREENS } from './fake-device.js';
+import { FakeDevice, SCREENS, WithKeyboard } from './fake-device.js';
 import { callerOf } from './helpers.js';
 
 const SECRET = 's3cr3t-pass';
@@ -181,6 +181,22 @@ assert id=result check=text equals="Gönderildi"
       const call = callerOf(context());
       const { text } = await recorded(call, () => call('gesture', { kind: 'pinch', scale: 2 }));
       expect(text).toContain('unrecorded "gesture pinch"');
+    });
+
+    it('records an answered alert and a closed keyboard, and neither where nothing was there', async () => {
+      device = new WithKeyboard();
+      device.permissionUp = true;
+      const call = callerOf(context());
+      const { text } = await recorded(call, async () => {
+        await call('alert', { answer: 'allow' });
+        await call('alert', { answer: 'allow' });
+        await call('keyboard', { action: 'status' });
+        await call('keyboard', { action: 'dismiss' });
+        await call('keyboard', { action: 'dismiss' });
+      });
+      expect(text.match(/^alert /gm)).toHaveLength(1);
+      expect(text).toContain('alert "allow"');
+      expect(text.match(/^hide_keyboard$/gm)).toHaveLength(1);
     });
 
     it('holds across the processes of a command line, on the device it began on', async () => {

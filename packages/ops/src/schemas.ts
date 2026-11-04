@@ -36,6 +36,12 @@ export const ActionOut = z.object({
       buttons: z.array(z.object({ label: z.string(), x: z.number(), y: z.number() })),
     })
     .optional(),
+  /** `alert`: the label of the button it pressed. */
+  answered: z.string().optional(),
+  /** `keyboard dismiss`: it was open and closed. */
+  closed: z.boolean().optional(),
+  /** `scroll_to`: what it looked for is on the screen. */
+  found: z.boolean().optional(),
   moving: z.boolean().optional(),
   warnings: z.array(z.string()),
   code: z.string().optional(),

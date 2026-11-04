@@ -365,3 +365,25 @@ export class FakeDevice extends DeviceActions implements Device {
     } as unknown as MeasureSource;
   }
 }
+
+/** With the on-screen keyboard open, until it is dismissed (`closes`: the app lets it). */
+export class WithKeyboard extends FakeDevice {
+  up = true;
+  closes = true;
+  override current(): Tree {
+    const t = super.current();
+    if (this.up)
+      t.windows.push({
+        type: 2,
+        pkg: 'ime',
+        layer: 3,
+        b: [0, 1500, 1080, 2400],
+        active: false,
+        focused: false,
+      });
+    return t;
+  }
+  dismissKeyboard = async () => {
+    if (this.closes) this.up = false;
+  };
+}

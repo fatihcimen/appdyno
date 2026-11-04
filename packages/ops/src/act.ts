@@ -180,7 +180,8 @@ export function actOps(
             'UNSUPPORTED',
             'keyboard enter closes it on a field whose return key does so, and may submit the form',
           );
-        return afterChange(s, 'closed the keyboard', read);
+        const r = await afterChange(s, 'closed the keyboard', read);
+        return { ...r, data: { ...r.data, closed: true } };
       },
     }),
     defineOp({
@@ -303,12 +304,14 @@ export function actOps(
               : `no button ${JSON.stringify(answer)} on the alert: ${buttons}`,
             many ? 'AMBIGUOUS' : 'NOT_FOUND',
           );
-        return act(
+        const label = clean(hit.label);
+        const r = await act(
           s,
           read,
           (o) => s.device.tap(hit, o),
-          `answered the system alert: ${JSON.stringify(clean(hit.label))}`,
+          `answered the system alert: ${JSON.stringify(label)}`,
         );
+        return { ...r, data: { ...r.data, answered: label } };
       },
     }),
   ];

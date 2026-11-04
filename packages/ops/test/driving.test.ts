@@ -14,7 +14,7 @@ import type {
 import { DeviceError, type ActParams, type Tree } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext, type Policy } from '../src/index.js';
-import { FakeDevice, SCREENS } from './fake-device.js';
+import { FakeDevice, SCREENS, WithKeyboard } from './fake-device.js';
 import { linkedClient } from './helpers.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each test knows its tool's answer
@@ -356,6 +356,10 @@ describe('scroll_to', () => {
     const r = await call('scroll_to', { selector: { text: 'Row 20' } });
     expect(r.error).toBe(false);
     expect(r.text).toMatch(/found .*"Row 20"/);
+    expect(r.data.found).toBe(true);
+    // it compares with its own last swipe, so it says nothing of whether the call changed the screen
+    expect(r.data).not.toHaveProperty('changed');
+    expect(r.text).not.toContain('no change seen');
     expect(d.swipes).toBeGreaterThan(0);
     const g = act(d).at(-1) as Extract<ActParams, { kind: 'gesture' }>;
     expect(g.pointers[0]!.at(-1)!.t).toBeGreaterThan(g.pointers[0]!.at(-2)!.t);
@@ -526,34 +530,17 @@ describe('gestures, keys, clipboard', () => {
 });
 
 describe('keyboard', () => {
-  class WithKeyboard extends FakeDevice {
-    up = true;
-    closes = true;
-    override current(): Tree {
-      const t = super.current();
-      if (this.up)
-        t.windows.push({
-          type: 2,
-          pkg: 'ime',
-          layer: 3,
-          b: [0, 1500, 1080, 2400],
-          active: false,
-          focused: false,
-        });
-      return t;
-    }
-    dismissKeyboard = async () => {
-      if (this.closes) this.up = false;
-    };
-  }
-
   it('says whether it is open and closes it', async () => {
     const d = new WithKeyboard();
     const { call } = await connect(d);
     expect((await call('keyboard', { action: 'status' })).data.open).toBe(true);
-    expect((await call('keyboard', { action: 'dismiss' })).error).toBe(false);
+    const dismissed = await call('keyboard', { action: 'dismiss' });
+    expect(dismissed.error).toBe(false);
+    expect(dismissed.data.closed).toBe(true);
     expect((await call('keyboard', { action: 'status' })).data.open).toBe(false);
-    expect((await call('keyboard', { action: 'dismiss' })).text).toContain('no keyboard');
+    const none = await call('keyboard', { action: 'dismiss' });
+    expect(none.text).toContain('no keyboard');
+    expect(none.data).not.toHaveProperty('closed');
     await call('keyboard', { action: 'enter' });
     expect(act(d).at(-1)).toEqual({ kind: 'key', key: 'enter' });
   });
@@ -607,12 +594,14 @@ describe('system alerts', () => {
     const read = await call('alert');
     expect(read.text).toContain('Pixel keeps stopping');
     expect(read.text).toContain('"Close app"');
+    expect(read.data).not.toHaveProperty('answered');
     const wrong = await call('alert', { answer: 'Reboot' });
     expect(wrong.error).toBe(true);
     expect(wrong.text).toContain('"Close app"');
     expect(act(d)).toEqual([]);
     const r = await call('alert', { answer: 'close APP' });
     expect(r.error).toBe(false);
+    expect(r.data.answered).toBe('Close app');
     expect(act(d).at(-1)).toMatchObject({ kind: 'tap', x: 250, y: 1050 });
     expect((await call('alert')).text).toContain('no system alert');
   });

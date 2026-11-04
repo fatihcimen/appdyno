@@ -41,7 +41,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers): Op[] {
         if (!pkg) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
         reportProgress(`launching ${pkg}`);
         await s.device.launch(pkg);
-        return afterChange(s, `launched ${pkg}`, read);
+        return afterChange(s, `launched ${pkg}`, read, true);
       },
     }),
     defineOp({

@@ -291,7 +291,11 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
         hits = selectIn(screen.list, a.selector);
       }
       if (hits.length > 0)
-        return { r: last, done: `found ${line(pick(hits, a.selector))} after ${swipes} swipes` };
+        return {
+          r: last,
+          done: `found ${line(pick(hits, a.selector))} after ${swipes} swipes`,
+          found: true,
+        };
       if (swipes >= a.maxSwipes)
         throw new ToolError(
           `${what} not found after ${swipes} swipes; the list can still move${offer(screen.list, a.selector.text)}`,
@@ -345,7 +349,7 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
     st: Step,
     opts: ActOptions,
     patient: boolean,
-  ): Promise<{ r: ActResult | TextResult; done: string }> => {
+  ): Promise<{ r: ActResult | TextResult; done: string; found?: boolean }> => {
     const treeIfAsked = (screen: Screen): ActResult =>
       opts.read === 'tree' ? { tree: screen.tree } : {};
     switch (st.action) {
@@ -445,15 +449,18 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
 
   const one = async (s: Session, st: Step, read: ReadMode) => {
     let done = '';
+    let found = false;
     return act(
       s,
       read,
       async (o) => {
         const x = await step(s, st, o);
         done = x.done;
+        found = x.found === true;
         return x.r;
       },
       () => done,
+      () => found,
     );
   };
 

@@ -238,7 +238,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
             const pkg = appOf(s, app);
             reportProgress(`launching ${pkg}`);
             await apps.launchWith(pkg, { ...(args && { args }), ...(env && { env }) });
-            return afterChange(s, `launched ${pkg}`, read);
+            return afterChange(s, `launched ${pkg}`, read, true);
           }
           case 'grant':
           case 'revoke': {

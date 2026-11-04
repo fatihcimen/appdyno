@@ -253,13 +253,8 @@ export function flowRecorder(ctx: ServerContext) {
     open_link: (a) => stepOf('open_link', {}, { url: a.url as string }),
     set_location: (a) => stepOf('set_location', {}, { lat: a.lat as number, lon: a.lon as number }),
     alert: (a, data) =>
-      a.answer && String(data.done).startsWith('answered')
-        ? stepOf('alert', {}, { answer: a.answer as string })
-        : undefined,
-    keyboard: (a, data) =>
-      a.action === 'dismiss' && String(data.done).startsWith('closed')
-        ? stepOf('hide_keyboard', {})
-        : undefined,
+      data.answered !== undefined ? stepOf('alert', {}, { answer: a.answer as string }) : undefined,
+    keyboard: (_a, data) => (data.closed ? stepOf('hide_keyboard', {}) : undefined),
     gesture: (a) =>
       a.kind === 'pinch' || a.kind === 'plan' ? unrecorded(`gesture ${String(a.kind)}`) : undefined,
     set_orientation: (a) => unrecorded(`set_orientation ${String(a.orientation)}`),

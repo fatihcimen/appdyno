@@ -131,6 +131,10 @@ export function answersFor(ctx: ServerContext) {
       started: number;
       pid: string | undefined;
       settleMs?: number | undefined;
+      /** What a `scroll_to` looked for is there: it compares with its own last swipe, not with before the call. */
+      found?: boolean;
+      /** A launch of what is in front expects no change. */
+      launched?: boolean;
     },
   ) => {
     show(s, screen);
@@ -138,9 +142,7 @@ export function answersFor(ctx: ServerContext) {
     const diff = d && diffText(d, screen.list.length, clean);
     const fg = foreground(s, screen);
     const appDied = await death(s, screen, o.pid, o.started);
-    // a scroll compares with its own last swipe, and a launch of what is in front expects no change
-    const changed =
-      o.base && !done.startsWith('found ') ? differs(diffScreens(o.base, screen.list)) : undefined;
+    const changed = o.base && !o.found ? differs(diffScreens(o.base, screen.list)) : undefined;
     const busy = o.settled === false ? o.busy : [];
     const moving =
       o.settled === false ? ` (${MAYBE_MOVING}${busy.length ? `: ${busy.join('; ')}` : ''})` : '';
@@ -148,7 +150,7 @@ export function answersFor(ctx: ServerContext) {
       ...(appDied
         ? [`the app died: ${appDied.reason}${appDied.file ? ` (${appDied.file})` : ''}`]
         : []),
-      ...(changed === false && !done.startsWith('launched ') ? [noChange(o.ms)] : []),
+      ...(changed === false && !o.launched ? [noChange(o.ms)] : []),
     ];
     return reply(
       [`${done}${fg}${moving}`, ...notes, diff ?? header(s, screen)].join('\n'),
@@ -163,6 +165,7 @@ export function answersFor(ctx: ServerContext) {
         appDied,
         notes,
         settleMs: o.settleMs,
+        found: o.found,
       }),
     );
   };
@@ -177,8 +180,9 @@ export function answersFor(ctx: ServerContext) {
     started: number,
     pid: string | undefined,
     r?: ActResult,
+    found = false,
   ) => {
-    if (read === 'none' || !r?.tree) return reply(done, summary(done));
+    if (read === 'none' || !r?.tree) return reply(done, summary(done, undefined, { found }));
     return after(s, done, read, s.screenOf(r.tree), {
       pid,
       before,
@@ -189,6 +193,7 @@ export function answersFor(ctx: ServerContext) {
       busy: busyReasons(r, s.screenOf(r.tree)),
       started,
       settleMs: r.settle?.ms,
+      found,
     });
   };
 
@@ -207,6 +212,7 @@ export function answersFor(ctx: ServerContext) {
       notes?: string[];
       settleMs?: number | undefined;
       moving?: boolean | undefined;
+      found?: boolean | undefined;
     } = {},
   ): ActionOut => ({
     done: clean(done),
@@ -232,6 +238,7 @@ export function answersFor(ctx: ServerContext) {
     ...(o.changed !== undefined && { changed: o.changed }),
     ...(o.busy?.length && { busy: o.busy }),
     ...(o.appDied && { appDied: o.appDied }),
+    ...(o.found && { found: true }),
     warnings: [
       ...(o.fg ? [o.fg.trim()] : []),
       ...(o.settled === false ? [MAYBE_MOVING] : []),
@@ -245,6 +252,7 @@ export function answersFor(ctx: ServerContext) {
     read: ReadMode,
     run: (o: ActOptions) => Promise<ActResult | TextResult>,
     done: string | ((r: ActResult | TextResult) => string),
+    found: () => boolean = () => false,
   ) => {
     const started = Date.now();
     const before = s.shown;
@@ -269,6 +277,7 @@ export function answersFor(ctx: ServerContext) {
       started,
       await pid,
       r,
+      found(),
     );
   };
 
@@ -285,7 +294,7 @@ export function answersFor(ctx: ServerContext) {
     return { screen, settled: false };
   };
 
-  const afterChange = async (s: Session, done: string, read: ReadMode) => {
+  const afterChange = async (s: Session, done: string, read: ReadMode, launched = false) => {
     const started = Date.now();
     const before = s.shown;
     const base = s.fresh?.list ?? before;
@@ -303,6 +312,7 @@ export function answersFor(ctx: ServerContext) {
       busy: busyReasons(undefined, screen),
       started,
       pid: undefined,
+      launched,
     });
   };
 
