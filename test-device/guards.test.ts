@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   Adb,
   androidProvider,
@@ -101,7 +101,7 @@ for (const [name, serial] of [
 describe.skipIf(!phone)('an iPhone that locked itself', () => {
   const t = opsOn(appleProvider(), phone!, APP);
   let d: IosPhoneDevice;
-  const LOCKS_AFTER_MS = 70_000;
+  const LOCKS_AFTER_MS = 90_000;
 
   beforeAll(async () => {
     d = (await t.ctx.session()).device as IosPhoneDevice;
@@ -116,12 +116,26 @@ describe.skipIf(!phone)('an iPhone that locked itself', () => {
   }, 60_000);
 
   it('a swipe after it locked reaches the app, and opens nothing of the system', async () => {
+    const key = vi.spyOn(d, 'key');
     await pause(LOCKS_AFTER_MS);
     const r = await t.call('swipe', { direction: 'up' });
-    console.log(r.text.slice(0, 300));
+    console.log(r.text.slice(0, 300), '\nhome presses', key.mock.calls.length);
     expect(r.error, r.text).toBe(false);
+    // no press and it never locked, and this has proven nothing
+    expect(key).toHaveBeenCalledWith('home', expect.anything());
     expect((await d.tree()).windows[0]?.pkg).toBe(APP);
-  }, 180_000);
+  }, 240_000);
+
+  it('a read with no app chosen gets past it too', async () => {
+    await d.stopAgent();
+    const fresh = opsOn(appleProvider(), phone!, APP);
+    await pause(LOCKS_AFTER_MS);
+    const s = await fresh.ctx.session();
+    const read = await s.device.tree();
+    console.log('after the lock', read.windows[0]?.pkg);
+    expect(read.nodes.some((n) => n.id === 'lockscreen-date-view')).toBe(false);
+    fresh.ctx.close();
+  }, 240_000);
 
   it('reads its thermal state from what it recorded', async () => {
     const r = await t.call('perf_snapshot', { cpuWindowMs: 2_000 });

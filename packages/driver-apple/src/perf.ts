@@ -33,7 +33,8 @@ import { profileStart } from './sim-launch.js';
 import { type Simctl, assertBundle } from './simctl.js';
 import { helperBinary } from './simhelper.js';
 import { parseTimeProfile } from './trace-parse.js';
-import { recordTrace, symbolicate, traceTable } from './trace.js';
+import { nameFrames } from './frame-names.js';
+import { recordTrace, traceTable } from './trace.js';
 import {
   type IosMemory,
   parseFootprint,
@@ -379,9 +380,9 @@ export class IosSimulatorPerf implements MeasureSource {
       ...(once && { during: once }),
     }).then(
       async (trace) => {
-        if (symbols?.dsym) await symbolicate(trace, symbols.dsym);
         const xml = await traceTable(trace, 'time-profile');
-        return { trace, profile: parseTimeProfile(xml) };
+        const named = symbols?.dsym ? await nameFrames(xml, symbols.dsym) : xml;
+        return { trace, profile: parseTimeProfile(named) };
       },
       () => undefined,
     );

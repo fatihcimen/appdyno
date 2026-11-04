@@ -20,7 +20,7 @@ export const parseUuids = (out: string): Binary[] =>
   }));
 
 /** The binaries of a `.dSYM`, or of every one under a folder such as a build's products. */
-async function dsymBinaries(path: string) {
+export async function dsymBinaries(path: string) {
   if (!existsSync(path)) throw new DeviceError('NOT_FOUND', `no such dSYM or folder: ${path}`);
   const found = path.endsWith('.dSYM')
     ? [path]
@@ -54,7 +54,7 @@ export function atosName(line: string): string | undefined {
   return m[2] && !m[2].includes('<compiler-generated>') ? `${m[1]} (${m[2]})` : m[1];
 }
 
-async function named(binary: Binary, base: number, offsets: number[]) {
+export async function named(binary: Binary, base: number, offsets: number[]) {
   const hex = (n: number) => `0x${n.toString(16)}`;
   const { stdout } = await run('xcrun', [
     'atos',

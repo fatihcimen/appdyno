@@ -4,7 +4,7 @@ import { PhoneApps, PhoneSettings } from './phone-manage.js';
 import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { DeviceError } from '@appdyno/protocol';
+import { DeviceError, type Tree } from '@appdyno/protocol';
 import {
   sleep,
   stateDir,
@@ -28,7 +28,8 @@ import { appLaunchPhases } from './phone-launch.js';
 import { phoneLeaks } from './phone-leaks.js';
 import { phoneEnergy, phoneNetwork } from './phone-power.js';
 import { parseHangCauses } from './hang-cause.js';
-import { recentTrace, recordTrace, symbolicate, traceTable } from './trace.js';
+import { nameFrames } from './frame-names.js';
+import { recentTrace, recordTrace, traceTable } from './trace.js';
 import { connectPort, listDevices } from './usbmux.js';
 import { Devicectl } from './devicectl.js';
 
@@ -48,6 +49,8 @@ export async function phoneRunnerApp(build = true): Promise<string> {
 /** What the phone's lock screen shows, in any language. */
 const LOCK_SCREEN = 'lockscreen-date-view';
 const UNLOCK = 'unlock it by hand: no tool can answer a passcode';
+const LOCK_PRESSES = 3;
+const LOCK_GOES_MS = 1_500;
 
 const signedRunners = new Map<string, ReturnType<typeof signedRunner>>();
 
@@ -273,20 +276,24 @@ export class IosPhoneDevice extends IosDevice {
    * here can, and the read refuses by name before anything touches it.
    */
   override async tree(opts: { maxDepth?: number; maxNodes?: number } = {}) {
+    const onLock = (t: Tree) => t.nodes.some((n) => n.id === LOCK_SCREEN);
     const read = await super.tree(opts);
-    if (!read.nodes.some((n) => n.id === LOCK_SCREEN)) return read;
+    if (!onLock(read)) return read;
     if ((await this.ctl.lockState()).passcodeRequired)
       throw new DeviceError(
         'DEVICE_LOCKED',
         `${this.serial} is locked behind its passcode`,
         UNLOCK,
       );
-    await this.key('home', { settle: false });
-    if (this.targetApp) await this.launch(this.targetApp);
-    const after = await super.tree(opts);
-    if (after.nodes.some((n) => n.id === LOCK_SCREEN))
-      throw new DeviceError('DEVICE_LOCKED', `${this.serial} stays on its lock screen`, UNLOCK);
-    return after;
+    // on a dark screen the first press only wakes it, with the lock screen still up; a launch does that as well
+    for (let press = 0; press < LOCK_PRESSES; press++) {
+      await this.key('home', { settle: false });
+      if (this.targetApp) await this.launch(this.targetApp);
+      await sleep(LOCK_GOES_MS);
+      const after = await super.tree(opts);
+      if (!onLock(after)) return after;
+    }
+    throw new DeviceError('DEVICE_LOCKED', `${this.serial} stays on its lock screen`, UNLOCK);
   }
 
   /** The app in front on a screen that is on: a launch brings a running app forward as it is and lights a dark screen. */
@@ -327,8 +334,8 @@ export class IosPhoneDevice extends IosDevice {
       dir: join(stateDir(), 'traces'),
       ...(during && { during }),
     });
-    if (symbols?.dsym) await symbolicate(trace, symbols.dsym);
-    const samples = await traceTable(trace, 'time-profile');
+    const exported = await traceTable(trace, 'time-profile');
+    const samples = symbols?.dsym ? await nameFrames(exported, symbols.dsym) : exported;
     return { trace, pid, samples, profile: parseTimeProfile(samples, pid) };
   }
 
