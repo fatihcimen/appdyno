@@ -2,7 +2,9 @@ import {
   buildScreen,
   DeviceQueue,
   pause,
+  readPicture,
   throwIfCancelled,
+  withPictureText,
   type Device,
   type Owner,
   type Screen,
@@ -37,6 +39,8 @@ export class Session {
     for (;;) {
       throwIfCancelled('wait');
       let now: Screen | undefined;
+      // what changes on a picture changes nothing a device could wait on
+      if (this.wordless) onDevice = false;
       if (onDevice) {
         const left = Math.max(0, end - Date.now());
         // a failed or absent wait: poll for the rest of this call
@@ -49,7 +53,7 @@ export class Session {
           if (r.tree) {
             // no app window: a dark screen, which only the device's own read wakes
             now = r.tree.windows.some((w) => w.type === 1)
-              ? this.screenOf(r.tree)
+              ? await this.seen(r.tree)
               : await this.read().catch(() => undefined);
             if (now) this.remember(now);
           } else if (last) return { screen: last, met: false };
@@ -91,6 +95,31 @@ export class Session {
     });
   }
 
+  /** The last read had no word in its tree: a game, a canvas, anything drawn. */
+  wordless = false;
+  /** Why such a screen's picture gave no words, if it failed. */
+  pictureFailed: string | undefined;
+  /** Reads a picture's words: a test has its own. */
+  readWords = readPicture;
+
+  /** A tree as a screen, with the words of its picture where it has none of its own. */
+  async seen(tree: Tree): Promise<Screen> {
+    const screen = this.screenOf(tree);
+    this.wordless = !screen.list.some((e) => e.label);
+    this.pictureFailed = undefined;
+    if (!this.wordless) return screen;
+    try {
+      const shot =
+        (await this.device.mirror.screenshot?.('png')) ??
+        (await this.device.screenshot({ format: 'png' }));
+      const size = screen.window ?? this.device.hello!.screen;
+      return this.screenOf(withPictureText(tree, await this.readWords(shot.data), size));
+    } catch (e) {
+      this.pictureFailed = (e as Error).message;
+      return screen;
+    }
+  }
+
   /** A fresh read of the device, remembered as the newest. */
   async read(): Promise<Screen> {
     // a read that fails has seen nothing: what was read before it says nothing of a screen that now refuses
@@ -98,7 +127,7 @@ export class Session {
       this.latest = undefined;
       throw e;
     });
-    const screen = this.screenOf(tree);
+    const screen = await this.seen(tree);
     this.remember(screen);
     return screen;
   }

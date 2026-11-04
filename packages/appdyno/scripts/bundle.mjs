@@ -80,6 +80,7 @@ rmSync(agents, { recursive: true, force: true });
 cpSync(join(pkg, '../driver-android/agents/android'), join(agents, 'android'), { recursive: true });
 cpSync(join(pkg, '../driver-apple/agents/ios-src'), join(agents, 'ios-src'), { recursive: true });
 cpSync(join(pkg, '../../mirror/Viewer'), join(agents, 'mirror-src'), { recursive: true });
+cpSync(join(pkg, '../../mac'), join(agents, 'mac-src'), { recursive: true });
 
 for (const f of ['main.js', 'index.js'])
   console.log(`${f} ${(statSync(join(dist, f)).size / 1e6).toFixed(1)} MB`);

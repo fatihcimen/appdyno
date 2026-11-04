@@ -4,6 +4,7 @@ import {
   diffText,
   pause,
   personNeeded,
+  PICTURE_TEXT,
   renderFolded,
   reportProgress,
   UNCHANGED,
@@ -56,6 +57,10 @@ export function answersFor(ctx: ServerContext) {
 
   /** The app check: a permission prompt points to alert; another app in front is said. */
   const foreground = (s: Session, screen: Screen) => {
+    if (s.wordless && screen.elements.some((e) => e.type === PICTURE_TEXT))
+      return '\nno words in the tree: these were read from the picture, and their places are near';
+    if (s.pictureFailed)
+      return `\nno words in the tree, and none from the picture: ${s.pictureFailed}`;
     const person = personNeeded(s.device.platformScreen.systemAlert(screen.tree, screen.elements));
     if (person) return `\nneeds a person: ${person}. hand_off asks yours, and waits`;
     if (s.device.platformScreen.alertButton(screen.elements, 'allow'))
@@ -173,7 +178,7 @@ export function answersFor(ctx: ServerContext) {
   };
 
   /** The answer of an action: what was done, the app check and the screen after it. */
-  const answer = (
+  const answer = async (
     s: Session,
     done: string,
     read: ReadMode,
@@ -185,14 +190,15 @@ export function answersFor(ctx: ServerContext) {
     found = false,
   ) => {
     if (read === 'none' || !r?.tree) return reply(done, summary(done, undefined, { found }));
-    return after(s, done, read, s.screenOf(r.tree), {
+    const screen = await s.seen(r.tree);
+    return after(s, done, read, screen, {
       pid,
       before,
       base,
       settled: r.settle?.settled,
       moving: r.settle?.moving,
       ms: r.settle?.ms ?? Date.now() - started,
-      busy: busyReasons(r, s.screenOf(r.tree)),
+      busy: busyReasons(r, screen),
       started,
       settleMs: r.settle?.ms,
       found,

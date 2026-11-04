@@ -185,6 +185,11 @@ screen reader reads the node with its children as one unit, Android 9+); both ar
 `elapsedMs` is the agent's own time; `hash` is the layout digest (class, id and bounds of the visible
 nodes of the app's and the system dialogs' windows; text left out, a plain text node vertically only).
 
+A tree with no word for a tester is read from the picture on the host: a PNG of the screen goes to `mac/TextScan.m`, compiled on
+first use, which answers Vision's lines as fractions of the image, and they join the tree as nodes of class `PictureText`
+in the app's window. `hash` stays the agent's. A device's `wait` sees none of this, so `wait_for` then polls the picture. A
+screen with any word of its own is never read this way: words on a canvas beside a labelled button stay out.
+
 ### Settle
 
 With `settle {quietMs (200), maxMs (3000)}` the agent, after the action, calls the screen settled once it

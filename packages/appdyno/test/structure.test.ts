@@ -22,6 +22,7 @@ const NATIVE = [
   'ios/RunnerCore/Tests',
   'ios/SimHelper',
   'mirror/Viewer',
+  'mac',
 ];
 
 const sources = [
