@@ -5,30 +5,30 @@ import { describe, expect, it } from 'vitest';
 const root = join(import.meta.dirname, '../../..');
 const packages = join(root, 'packages');
 
-const sourcesIn = (dir: string): string[] =>
+const sourcesIn = (dir: string, name: RegExp): string[] =>
   readdirSync(dir).flatMap((f) => {
     const p = join(dir, f);
-    if (statSync(p).isDirectory()) return sourcesIn(p);
-    return p.endsWith('.ts') ? [p] : [];
+    if (statSync(p).isDirectory()) return sourcesIn(p, name);
+    return name.test(p) ? [p] : [];
   });
 
-/** Native code that is ours and grows: the viewer, and what the agent streams with. */
-const AGENT = join(root, 'android/agent/src/main/kotlin/dev/appdyno/agent');
-const nativeIn = (dir: string, name: RegExp) =>
-  readdirSync(dir)
-    .filter((f) => name.test(f))
-    .map((f) => join(dir, f));
-
-const native = [
-  ...nativeIn(join(root, 'mirror/Viewer'), /\.(m|h)$/),
-  ...nativeIn(AGENT, /^(Stream|DisplayMirror)/),
+/** All the native code: what gradle and SwiftPM generate lies outside these folders. */
+const NATIVE = [
+  'android/agent/src',
+  'android/fixture/src',
+  'ios/Fixture',
+  'ios/Runner',
+  'ios/RunnerCore/Sources',
+  'ios/RunnerCore/Tests',
+  'ios/SimHelper',
+  'mirror/Viewer',
 ];
 
 const sources = [
   ...readdirSync(packages)
     .filter((p) => statSync(join(packages, p)).isDirectory())
-    .flatMap((p) => sourcesIn(join(packages, p, 'src'))),
-  ...native,
+    .flatMap((p) => sourcesIn(join(packages, p, 'src'), /\.ts$/)),
+  ...NATIVE.flatMap((dir) => sourcesIn(join(root, dir), /\.(kt|swift|m|h)$/)),
 ].map((file) => ({ name: relative(root, file), text: readFileSync(file, 'utf8') }));
 
 const lineCount = (text: string) => text.trimEnd().split('\n').length;
@@ -96,6 +96,17 @@ describe('the size of a file', () => {
   });
 });
 
+describe('the Xcode project', () => {
+  it('builds every Swift source of the runner and the fixture', () => {
+    const project = readFileSync(join(root, 'ios/Appdyno.xcodeproj/project.pbxproj'), 'utf8');
+    const swift = ['ios/Fixture', 'ios/Runner', 'ios/RunnerCore/Sources']
+      .flatMap((dir) => sourcesIn(join(root, dir), /\.swift$/))
+      .map((file) => relative(join(root, 'ios'), file));
+    expect(swift.length).toBeGreaterThan(20);
+    expect(swift.filter((file) => !project.includes(`path = "${file}"`))).toEqual([]);
+  });
+});
+
 describe('repeated code', () => {
   it(`has no run of ${RUN_LINES} lines twice in the sources`, () => {
     expect(repeatedRuns(sources, RUN_LINES)).toEqual([]);
@@ -128,8 +139,16 @@ describe('repeated code', () => {
     expect(logicLines("import {\n  a,\n} from 'b';\nconst x = 1;")).toEqual(['const x = 1;']);
   });
 
-  it('takes in the viewer', () => {
-    expect(sources.some((f) => f.name.endsWith('mirror/Viewer/main.m'))).toBe(true);
+  it('takes in the native code', () => {
+    for (const file of [
+      'mirror/Viewer/main.m',
+      'android/agent/src/main/kotlin/dev/appdyno/agent/Handlers.kt',
+      'android/fixture/src/main/kotlin/dev/appdyno/fixture/MainActivity.kt',
+      'ios/Runner/Device.swift',
+      'ios/Fixture/FixtureApp.swift',
+      'ios/SimHelper/SimAX.m',
+    ])
+      expect(sources.some((f) => f.name === file)).toBe(true);
   });
 
   it('counts neither a long import nor a comment as code', () => {
