@@ -76,7 +76,7 @@ function parse(op: Op, argv: string[]) {
     try {
       return JSON.parse(word) as unknown;
     } catch {
-      throw new ToolError(`--${flag} needs JSON: ${word}`);
+      throw new ToolError(`--${flag} needs JSON: ${word}`, 'INVALID_ARGUMENT');
     }
   };
   const args: Record<string, unknown> = {};
@@ -88,7 +88,7 @@ function parse(op: Op, argv: string[]) {
       args.action = word;
       continue;
     }
-    if (!word.startsWith('--')) throw new ToolError(`unexpected word: ${word}`);
+    if (!word.startsWith('--')) throw new ToolError(`unexpected word: ${word}`, 'INVALID_ARGUMENT');
     const flag = word.slice(2);
     const key = camel(flag);
     const type = properties[key]?.type;
@@ -102,9 +102,10 @@ function parse(op: Op, argv: string[]) {
         `no --${flag} here; flags: ${Object.keys(properties)
           .map((k) => `--${dashed(k)}`)
           .join(' ')}`,
+        'INVALID_ARGUMENT',
       );
     const value = argv[++i];
-    if (value === undefined) throw new ToolError(`--${flag} needs a value`);
+    if (value === undefined) throw new ToolError(`--${flag} needs a value`, 'INVALID_ARGUMENT');
     if (flag === 'json') Object.assign(args, json(flag, value));
     else if (flag === 'out') out = value;
     else if (type === 'number' || type === 'integer') args[key] = Number(value);
@@ -117,6 +118,7 @@ function parse(op: Op, argv: string[]) {
       checked.error.issues
         .map((x) => `${x.path.length ? `--${x.path.join('.')}: ` : ''}${x.message}`)
         .join('; '),
+      'INVALID_ARGUMENT',
     );
   return { args: checked.data as Record<string, unknown>, out };
 }
@@ -142,7 +144,7 @@ export function flowWords(argv: string[]): string[] {
     else if (FLOW_VALUES.has(word)) out.push(word, argv[++i] ?? '');
     else if (word.startsWith('--')) out.push(word);
     else if (named.length > 0) out.push(named.shift()!, word);
-    else throw new ToolError(`unexpected word: ${word}`);
+    else throw new ToolError(`unexpected word: ${word}`, 'INVALID_ARGUMENT');
   }
   return params.length > 0 ? [...out, '--params', JSON.stringify(params)] : out;
 }

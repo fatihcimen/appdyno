@@ -152,7 +152,7 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
       return { point: { x: e.x, y: e.y }, name: `${e.ref} ${JSON.stringify(clean(e.label))}` };
     }
     if (a.x === undefined || a.y === undefined)
-      throw new ToolError('give a ref, a selector, or x and y');
+      throw new ToolError('give a ref, a selector, or x and y', 'INVALID_ARGUMENT');
     return { point: { x: a.x, y: a.y }, name: `${a.x},${a.y}` };
   };
 
@@ -160,7 +160,8 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
     const w =
       (await s.current()).window ??
       (s.device.hello && { w: s.device.hello.screen.w, h: s.device.hello.screen.h });
-    if (!w) throw new ToolError('the screen size is unknown: give x, y and distance');
+    if (!w)
+      throw new ToolError('the screen size is unknown: give x, y and distance', 'INVALID_ARGUMENT');
     return w;
   };
 
@@ -190,7 +191,8 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
       };
     const at = attributesOf(screen.elements, hits[0]!);
     if (a.check === 'text') {
-      if (a.equals === undefined) throw new ToolError('check text needs equals');
+      if (a.equals === undefined)
+        throw new ToolError('check text needs equals', 'INVALID_ARGUMENT');
       return at.text === a.equals || at.value === a.equals
         ? { pass: true, why: `${what} reads ${JSON.stringify(clean(a.equals))}` }
         : {
@@ -206,7 +208,8 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
 
   /** A check on a fresh read, given `timeoutMs` to come true; a refusal when it does not. */
   const checkNow = async (s: Session, a: Judged & { timeoutMs: number }) => {
-    if (!a.ref && !selectorOf(a)) throw new ToolError('give a ref, text, id or role');
+    if (!a.ref && !selectorOf(a))
+      throw new ToolError('give a ref, text, id or role', 'INVALID_ARGUMENT');
     const { screen } = await s.until((x) => judge(x, a).pass, a.timeoutMs);
     if (!screen) throw new ToolError('the screen could not be read', 'NOT_FOUND');
     const v = judge(screen, a);
@@ -220,11 +223,12 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
     a: SelectorOf & { ref?: string; gone: boolean; timeoutMs: number },
   ) => {
     const sel = selectorOf(a);
-    if (!a.ref && !sel) throw new ToolError('give text, id, role or ref');
+    if (!a.ref && !sel) throw new ToolError('give text, id, role or ref', 'INVALID_ARGUMENT');
     const found = (x: Screen) =>
       (a.ref ? x.list.filter((e) => e.ref === a.ref) : selectIn(x.list, sel!))[sel?.index ?? 0];
     const { screen, met } = await s.until((x) => !!found(x) !== a.gone, a.timeoutMs);
-    if (!screen) throw new ToolError('the screen could not be read: nothing to look in');
+    if (!screen)
+      throw new ToolError('the screen could not be read: nothing to look in', 'NOT_FOUND');
     return { screen, met, found: found(screen) };
   };
 
@@ -410,7 +414,10 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
       }
       case 'press_key': {
         if (LEAVES_APP.has(st.key) && !policy.allowHome)
-          throw new ToolError(`${st.key} is off on this server: the app may not be left`);
+          throw new ToolError(
+            `${st.key} is off on this server: the app may not be left`,
+            'POLICY_DENIED',
+          );
         const dark = DARKENS.has(st.key);
         return {
           r: await s.device.key(WIRE_KEY[st.key], dark ? { settle: false, read: 'none' } : opts),

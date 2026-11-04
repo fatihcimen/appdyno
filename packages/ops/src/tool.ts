@@ -6,7 +6,7 @@ import { z } from 'zod';
 export class ToolError extends Error {
   constructor(
     message: string,
-    readonly code: ErrorCode = 'INVALID_ARGUMENT',
+    readonly code: ErrorCode,
     readonly hint?: string,
   ) {
     super(message);

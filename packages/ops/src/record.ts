@@ -91,6 +91,7 @@ export function recordOps(ctx: ServerContext): Op[] {
         if (now)
           throw new ToolError(
             `a recording has run on ${s.device.serial} since ${now.since} (to ${now.file}): stop it first`,
+            'INVALID_ARGUMENT',
           );
         const since = new Date().toISOString();
         const to = resolve(
@@ -104,7 +105,7 @@ export function recordOps(ctx: ServerContext): Op[] {
         try {
           mkdirSync(dirname(to), { recursive: true });
         } catch (e) {
-          throw new ToolError(`cannot write ${to}: ${(e as Error).message}`);
+          throw new ToolError(`cannot write ${to}: ${(e as Error).message}`, 'INVALID_ARGUMENT');
         }
         const handle = await recorder.start(to, { maxSeconds });
         mkdirSync(dirname(stateOf(s.device.serial)), { recursive: true, mode: 0o700 });

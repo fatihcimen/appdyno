@@ -132,7 +132,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
   const policy = ctx.policy;
   const appOf = (s: Session, app?: string) => {
     const pkg = checkApp(policy, app ?? s.appId ?? '');
-    if (!pkg) throw new ToolError(NO_APP);
+    if (!pkg) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
     return pkg;
   };
   const appsOf = (s: Session) => {
@@ -221,7 +221,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
             return done(`${pkg}: ${state}`, { state });
           }
           case 'install': {
-            if (!path) throw new ToolError('install needs path');
+            if (!path) throw new ToolError('install needs path', 'INVALID_ARGUMENT');
             // the allowlist names apps, and a file's app is not known before it is installed
             if (policy.apps.length > 0)
               throw new ToolError(
@@ -243,7 +243,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
           case 'grant':
           case 'revoke': {
             const pkg = appOf(s, app);
-            if (!service) throw new ToolError(`${action} needs service`);
+            if (!service) throw new ToolError(`${action} needs service`, 'INVALID_ARGUMENT');
             await apps.permission(pkg, action === 'grant', service);
             return done(`${action === 'grant' ? 'granted' : 'revoked'} ${service} for ${pkg}`);
           }
@@ -288,7 +288,11 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
           return reply(t, { done: t, devices });
         }
         if (action === 'boot') {
-          if (!device) throw new ToolError('boot needs name: its id or name (action list)');
+          if (!device)
+            throw new ToolError(
+              'boot needs name: its id or name (action list)',
+              'INVALID_ARGUMENT',
+            );
           const { d, on } = await named(device);
           checkDevice(policy, d.id);
           reportProgress(`starting ${d.name}`);
@@ -351,7 +355,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
           return reply(t, { done: t, ...(failed.length > 0 && { notRestored: failed }) });
         }
         if (name === 'push') {
-          if (!value) throw new ToolError('push needs value: the text');
+          if (!value) throw new ToolError('push needs value: the text', 'INVALID_ARGUMENT');
           const pkg = app ?? s.appId;
           if (pkg) checkApp(policy, pkg);
           await settings.push(pkg, title ?? 'appdyno', value);
@@ -359,13 +363,13 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
         }
         if (name === 'biometric') {
           if (value !== 'match' && value !== 'nomatch')
-            throw new ToolError('biometric needs value: match or nomatch');
+            throw new ToolError('biometric needs value: match or nomatch', 'INVALID_ARGUMENT');
           await settings.biometric(value === 'match');
           return reply(`biometric: ${value}`, { done: `biometric: ${value}` });
         }
         if (name === 'fold') {
           if (value !== 'open' && value !== 'closed')
-            throw new ToolError('fold needs value: open or closed');
+            throw new ToolError('fold needs value: open or closed', 'INVALID_ARGUMENT');
           await settings.fold(value === 'closed');
           s.acted();
           return reply(`fold: ${value}`, { done: `fold: ${value}` });
@@ -373,7 +377,10 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
         if (name === 'call') {
           const m = /^(end )?(\+?\d{3,20})$/.exec(value ?? '');
           if (!m)
-            throw new ToolError('call needs value: a phone number; end and the number hangs up');
+            throw new ToolError(
+              'call needs value: a phone number; end and the number hangs up',
+              'INVALID_ARGUMENT',
+            );
           await settings.call(m[2]!, !!m[1]);
           s.acted();
           const t = m[1] ? `the call from ${m[2]} ended` : `a call from ${m[2]} is coming in`;
@@ -381,9 +388,12 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
         }
         if (name === 'sms') {
           const from = title ?? DEFAULT_SENDER;
-          if (!value) throw new ToolError('sms needs value: the text');
+          if (!value) throw new ToolError('sms needs value: the text', 'INVALID_ARGUMENT');
           if (!PHONE_NUMBER.test(from))
-            throw new ToolError('sms needs title: the phone number it comes from');
+            throw new ToolError(
+              'sms needs title: the phone number it comes from',
+              'INVALID_ARGUMENT',
+            );
           await settings.sms(from, value);
           s.acted();
           return reply(`an SMS came from ${from}`, { done: `an SMS came from ${from}` });
@@ -416,7 +426,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers):
           return reply(shown, { done: shown });
         }
         if (policy.secrets.some((x) => x && value.includes(x)))
-          throw new ToolError('a secret is never put on the clipboard');
+          throw new ToolError('a secret is never put on the clipboard', 'POLICY_DENIED');
         await s.device.setClipboard(value);
         const done = `on the clipboard (${Array.from(value).length} characters)`;
         return reply(done, { done });

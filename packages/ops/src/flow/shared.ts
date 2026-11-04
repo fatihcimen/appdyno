@@ -31,7 +31,8 @@ export const defined = <T extends object>(o: T) =>
   };
 
 export const readFlow = (file: string): Flow => {
-  if (!FLOW_FILE.test(file)) throw new ToolError(`a flow's file ends in .flow: ${file}`);
+  if (!FLOW_FILE.test(file))
+    throw new ToolError(`a flow's file ends in .flow: ${file}`, 'INVALID_ARGUMENT');
   let text: string;
   try {
     text = readFileSync(file, 'utf8');
@@ -43,7 +44,7 @@ export const readFlow = (file: string): Flow => {
   try {
     return parseFlow(text);
   } catch (e) {
-    if (e instanceof FlowError) throw new ToolError(`${file}: ${e.message}`);
+    if (e instanceof FlowError) throw new ToolError(`${file}: ${e.message}`, 'INVALID_ARGUMENT');
     throw e;
   }
 };

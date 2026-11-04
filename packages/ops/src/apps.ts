@@ -38,7 +38,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers): Op[] {
       run: async ({ app, read }) => {
         const s = await ctx.session();
         const pkg = checkApp(policy, app ?? s.appId ?? '');
-        if (!pkg) throw new ToolError(NO_APP);
+        if (!pkg) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
         reportProgress(`launching ${pkg}`);
         await s.device.launch(pkg);
         return afterChange(s, `launched ${pkg}`, read);
@@ -54,7 +54,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers): Op[] {
       run: async ({ app }) => {
         const s = await ctx.session();
         const pkg = checkApp(policy, app ?? s.appId ?? '');
-        if (!pkg) throw new ToolError(NO_APP);
+        if (!pkg) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
         await s.device.terminate(pkg);
         s.acted();
         s.appPid = undefined;

@@ -178,7 +178,8 @@ export function webOps(ctx: ServerContext): Op[] {
           });
         }
         if (action === 'click') {
-          if (!selector) throw new ToolError('click needs selector: a CSS selector');
+          if (!selector)
+            throw new ToolError('click needs selector: a CSS selector', 'INVALID_ARGUMENT');
           const hit = (await web.evaluate(on, CLICK(selector))) as {
             tag: string;
             text: string;
@@ -188,7 +189,7 @@ export function webOps(ctx: ServerContext): Op[] {
           const t = `clicked ${hit.tag} ${quoted(clean(hit.text))}`;
           return reply(t, { done: t, page: on.id });
         }
-        if (!js) throw new ToolError('eval needs js');
+        if (!js) throw new ToolError('eval needs js', 'INVALID_ARGUMENT');
         const value = await web.evaluate(on, js);
         s.acted();
         const t = clean(value === undefined ? 'undefined' : JSON.stringify(value)).slice(

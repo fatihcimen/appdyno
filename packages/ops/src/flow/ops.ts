@@ -23,7 +23,8 @@ export function paramsOf(words: string[] = []): Record<string, string> {
   return Object.fromEntries(
     words.map((w) => {
       const at = w.indexOf('=');
-      if (at < 1) throw new ToolError(`a parameter is NAME=value: ${w.split('=')[0]}`);
+      if (at < 1)
+        throw new ToolError(`a parameter is NAME=value: ${w.split('=')[0]}`, 'INVALID_ARGUMENT');
       return [w.slice(0, at), w.slice(at + 1)];
     }),
   );
@@ -50,8 +51,10 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner): Op[] {
       annotations: DESTRUCTIVE,
       run: async ({ action, file, from, params, overwrite }) => {
         const need = () => {
-          if (!file) throw new ToolError(`${action} needs file: a path ending in .flow`);
-          if (!FLOW_FILE.test(file)) throw new ToolError(`a flow's file ends in .flow: ${file}`);
+          if (!file)
+            throw new ToolError(`${action} needs file: a path ending in .flow`, 'INVALID_ARGUMENT');
+          if (!FLOW_FILE.test(file))
+            throw new ToolError(`a flow's file ends in .flow: ${file}`, 'INVALID_ARGUMENT');
           return file;
         };
         if (action === 'export') {
@@ -59,7 +62,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner): Op[] {
             const yaml = toMaestro(readFlow(need()));
             return reply(yaml, { done: 'exported' });
           } catch (e) {
-            if (e instanceof FlowError) throw new ToolError(e.message);
+            if (e instanceof FlowError) throw new ToolError(e.message, 'INVALID_ARGUMENT');
             throw e;
           }
         }
@@ -69,7 +72,10 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner): Op[] {
         switch (action) {
           case 'start': {
             if (held?.state.running)
-              throw new ToolError(`a recording is running on ${serial}: stop it first`);
+              throw new ToolError(
+                `a recording is running on ${serial}: stop it first`,
+                'INVALID_ARGUMENT',
+              );
             const pkg = s.appId;
             keepRecording(
               new Recording(
@@ -80,7 +86,8 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner): Op[] {
             return done(`recording on ${serial}${pkg ? ` (${pkg})` : ''}`);
           }
           case 'stop': {
-            if (!held) throw new ToolError('no recording to stop: flow start begins one');
+            if (!held)
+              throw new ToolError('no recording to stop: flow start begins one', 'NOT_FOUND');
             held.state.running = false;
             keepRecording(held);
             const notes = flagged(held.flow());
@@ -93,16 +100,24 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner): Op[] {
             );
           }
           case 'save': {
-            if (!held) throw new ToolError('no recording to save: flow start begins one');
-            if (held.state.steps.length === 0) throw new ToolError('nothing was recorded yet');
+            if (!held)
+              throw new ToolError('no recording to save: flow start begins one', 'NOT_FOUND');
+            if (held.state.steps.length === 0)
+              throw new ToolError('nothing was recorded yet', 'NOT_FOUND');
             const path = need();
             try {
               mkdirSync(dirname(path), { recursive: true });
               writeFileSync(path, held.text(), { flag: overwrite ? 'w' : 'wx' });
             } catch (e) {
               if ((e as NodeJS.ErrnoException).code === 'EEXIST')
-                throw new ToolError(`${path} exists: overwrite true replaces it`);
-              throw new ToolError(`cannot write ${path}: ${(e as Error).message}`);
+                throw new ToolError(
+                  `${path} exists: overwrite true replaces it`,
+                  'INVALID_ARGUMENT',
+                );
+              throw new ToolError(
+                `cannot write ${path}: ${(e as Error).message}`,
+                'INVALID_ARGUMENT',
+              );
             }
             const notes = flagged(held.flow());
             const t = `saved ${held.state.steps.length} steps to ${path}`;

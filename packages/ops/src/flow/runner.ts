@@ -97,6 +97,7 @@ function opCall(st: FlowStep): [string, Record<string, unknown>] {
     case 'unrecorded':
       throw new ToolError(
         `this action has no step and was not recorded: ${String(a.what)}. Replace or delete this line`,
+        'UNSUPPORTED',
       );
   }
 }
@@ -121,7 +122,8 @@ export function flowRunner(
 ) {
   const opInput = (name: string, args: Record<string, unknown>, where: string) => {
     const p = ops()[name]!.input.safeParse(args);
-    if (!p.success) throw new ToolError(`${where}: ${z.prettifyError(p.error)}`);
+    if (!p.success)
+      throw new ToolError(`${where}: ${z.prettifyError(p.error)}`, 'INVALID_ARGUMENT');
     return p.data as Record<string, unknown>;
   };
 
@@ -140,6 +142,7 @@ export function flowRunner(
       if (st.args.screen !== `${w.w}x${w.h}`)
         throw new ToolError(
           `this step is for a ${String(st.args.screen)} screen and this one is ${w.w}x${w.h}: name its target in the flow`,
+          'INVALID_ARGUMENT',
         );
     }
     if (!st.selector || READS_ONLY.has(st.action) || st.action === 'scroll_to') return;
@@ -221,16 +224,22 @@ export function flowRunner(
     o: ReplayOptions = {},
   ): Promise<RunResult> => {
     if (loadRecording(ctx, s.device.serial)?.state.running)
-      throw new ToolError('stop the recording first: a replay would be recorded in it');
+      throw new ToolError(
+        'stop the recording first: a replay would be recorded in it',
+        'INVALID_ARGUMENT',
+      );
     const from = o.from ?? 1;
     if (from < 1 || from > flow.steps.length)
-      throw new ToolError(`from ${from}: this flow has steps 1 to ${flow.steps.length}`);
+      throw new ToolError(
+        `from ${from}: this flow has steps 1 to ${flow.steps.length}`,
+        'INVALID_ARGUMENT',
+      );
     validate(flow, file);
     let values: Record<string, string>;
     try {
       values = valuesFor(flow, o.params ?? {}, process.env, from);
     } catch (e) {
-      throw new ToolError(`${file}: ${(e as Error).message}`);
+      throw new ToolError(`${file}: ${(e as Error).message}`, 'INVALID_ARGUMENT');
     }
     if (flow.app) {
       s.appId = checkApp(ctx.policy, fillApp(flow.app, values));

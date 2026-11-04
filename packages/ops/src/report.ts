@@ -360,6 +360,7 @@ export function reportFor(ctx: ServerContext) {
           if (open)
             throw new ToolError(
               `a report is open on ${serial} since ${new Date(open.since).toISOString()}: stop it first`,
+              'INVALID_ARGUMENT',
             );
           const to = named();
           mkdirSync(to, { recursive: true });

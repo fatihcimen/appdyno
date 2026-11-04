@@ -141,9 +141,9 @@ export async function harEntries(file: string, since?: number): Promise<NetworkE
         parts.push(b.subarray(from));
     }
   } catch (e) {
-    throw new ToolError(`not a HAR file: ${(e as Error).message}`);
+    throw new ToolError(`not a HAR file: ${(e as Error).message}`, 'INVALID_ARGUMENT');
   }
-  if (!found) throw new ToolError(`not a HAR file: it has no entries`);
+  if (!found) throw new ToolError(`not a HAR file: it has no entries`, 'INVALID_ARGUMENT');
   return out;
 }
 
@@ -280,10 +280,11 @@ export function networkOps(ctx: ServerContext): Op[] {
           return reply(clean(t), { done: clean(t), paths: ways });
         }
         if (action === 'start') {
-          if (!via) throw new ToolError(`start needs via: ${VIA.join(', ')}`);
+          if (!via) throw new ToolError(`start needs via: ${VIA.join(', ')}`, 'INVALID_ARGUMENT');
           if (now)
             throw new ToolError(
               `${now.via} has been capturing on ${serial} since ${new Date(now.since).toISOString()}: stop it first`,
+              'INVALID_ARGUMENT',
             );
           const target = app ?? s.appId;
           if (target) checkApp(ctx.policy, target);
@@ -293,11 +294,18 @@ export function networkOps(ctx: ServerContext): Op[] {
             const was = await s.device.settings.get('proxy');
             const want = proxy ?? was;
             if (want === 'none')
-              throw new ToolError(`give proxy: host:port (this device has none set)`);
-            if (!/^[\w.-]+:\d+$/.test(want)) throw new ToolError(`proxy: host:port, not ${want}`);
+              throw new ToolError(
+                `give proxy: host:port (this device has none set)`,
+                'INVALID_ARGUMENT',
+              );
+            if (!/^[\w.-]+:\d+$/.test(want))
+              throw new ToolError(`proxy: host:port, not ${want}`, 'INVALID_ARGUMENT');
             // a device left on a dead proxy has no network at all
             if (/^(127\.0\.0\.1|localhost):/.test(want) && !(await listening(want)))
-              throw new ToolError(`nothing listens on ${want}: start your proxy first`);
+              throw new ToolError(
+                `nothing listens on ${want}: start your proxy first`,
+                'NOT_FOUND',
+              );
             if (was !== want) await setCondition(s, 'proxy', want);
             keep(serial, { via, since: Date.now(), proxy: want });
             const t = `traffic goes through ${want}${was === want ? ' (it already did)' : `, ${was} before`}. ${SEES_PROXY}`;

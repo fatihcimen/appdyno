@@ -18,14 +18,15 @@ const Since = z.string().max(40).optional().describe('ISO time; default: since t
 
 function appOf(s: Session, ctx: ServerContext, app?: string) {
   const pkg = checkApp(ctx.policy, app ?? s.appId ?? '');
-  if (!pkg) throw new ToolError('give app (or select one with use_device)');
+  if (!pkg) throw new ToolError('give app (or select one with use_device)', 'INVALID_ARGUMENT');
   return pkg;
 }
 
 function sinceOf(given: string | undefined, s: Session) {
   if (!given) return s.lastActionAt;
   const t = Date.parse(given);
-  if (Number.isNaN(t)) throw new ToolError(`not a time: ${given} (give ISO 8601)`);
+  if (Number.isNaN(t))
+    throw new ToolError(`not a time: ${given} (give ISO 8601)`, 'INVALID_ARGUMENT');
   return t;
 }
 
@@ -100,7 +101,7 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers): Op[] {
       annotations: READ,
       run: async ({ app, since, level, maxLines }) => {
         const s = await ctx.session();
-        if (!s.device.logs) throw new ToolError('this device gives no app log');
+        if (!s.device.logs) throw new ToolError('this device gives no app log', 'UNSUPPORTED');
         const pkg = appOf(s, ctx, app);
         const from = sinceOf(since, s);
         const { lines, source, note } = await s.device.logs({
@@ -139,7 +140,8 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers): Op[] {
       annotations: READ,
       run: async ({ app, since, limit }) => {
         const s = await ctx.session();
-        if (!s.device.crashes) throw new ToolError('this device gives no crash reports');
+        if (!s.device.crashes)
+          throw new ToolError('this device gives no crash reports', 'UNSUPPORTED');
         const pkg = appOf(s, ctx, app);
         const from = since ? sinceOf(since, s) : undefined;
         const { reports, source, note } = await s.device.crashes({

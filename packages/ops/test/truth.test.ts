@@ -184,6 +184,18 @@ describe('failed answers', () => {
     const words = await call('tap', {});
     expect(words.structuredContent).toMatchObject({ code: 'INVALID_ARGUMENT' });
   });
+
+  it('say a policy as one, and what a device lacks as that, not as a wrong argument', async () => {
+    const device = Object.assign(new FakeDevice(), { logs: undefined, crashes: undefined });
+    const { call } = await connect(device, { allowHome: false, secrets: ['s3cr3t'] });
+    const code = async (name: string, args: Record<string, unknown> = {}) =>
+      (await call(name, args)).structuredContent?.code;
+    expect(await code('press_key', { key: 'home' })).toBe('POLICY_DENIED');
+    expect(await code('clipboard', { text: 'a s3cr3t b' })).toBe('POLICY_DENIED');
+    expect(await code('logs')).toBe('UNSUPPORTED');
+    expect(await code('crashes')).toBe('UNSUPPORTED');
+    expect(await code('flow', { action: 'stop' })).toBe('NOT_FOUND');
+  });
 });
 
 describe('cancellation and progress', () => {

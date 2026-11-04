@@ -22,7 +22,7 @@ const UNSAFE_SCHEME = /^(file|content|intent|javascript|data|android-app|jar):/i
 export function checkUrl(policy: Policy, url: string): string {
   const u = url.trim();
   if (!/^[a-z][a-z0-9+.-]*:/i.test(u))
-    throw new ToolError('give a link with its scheme (https://… or app://…)');
+    throw new ToolError('give a link with its scheme (https://… or app://…)', 'INVALID_ARGUMENT');
   if (UNSAFE_SCHEME.test(u))
     throw new ToolError(`this scheme is not opened: ${u.split(':')[0]}`, 'POLICY_DENIED');
   if (policy.urls && !policy.urls.test(u))

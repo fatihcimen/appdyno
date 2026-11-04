@@ -53,7 +53,8 @@ export function readOps(
       output: FindOut,
       annotations: READ,
       run: async ({ index, ...sel }) => {
-        if (!sel.text && !sel.id && !sel.role) throw new ToolError('give text, id or role');
+        if (!sel.text && !sel.id && !sel.role)
+          throw new ToolError('give text, id or role', 'INVALID_ARGUMENT');
         const s = await ctx.session();
         const screen = await s.read();
         const all = selectIn(screen.list, sel);
@@ -133,6 +134,7 @@ export function readOps(
         if (s.shot && s.shot.at === s.version && layout !== undefined && s.shot.hash === layout)
           throw new ToolError(
             'the screen has not changed since the last image: that image still holds',
+            'INVALID_ARGUMENT',
           );
         const { meta, data } = await s.device.screenshot({
           format: 'jpeg',

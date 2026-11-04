@@ -77,10 +77,10 @@ export function actOps(
           case 'long_press':
             return one(s, { action: 'long_press', ...a, ...during }, read);
           case 'drag':
-            if (!to) throw new ToolError('drag needs to');
+            if (!to) throw new ToolError('drag needs to', 'INVALID_ARGUMENT');
             return one(s, { action: 'drag', ...a, to, ...during }, read);
           case 'pinch': {
-            if (scale === undefined) throw new ToolError('pinch needs scale');
+            if (scale === undefined) throw new ToolError('pinch needs scale', 'INVALID_ARGUMENT');
             const size = await windowSize(s);
             const c = { x: a.x ?? size.w / 2, y: a.y ?? size.h / 2 };
             const paths = pinchPaths(c, scale, durationMs ?? PINCH_MS, size);
@@ -94,7 +94,10 @@ export function actOps(
           case 'plan': {
             const fingers = pointers ?? [];
             if (fingers.length < 1 || fingers.length > 5 || fingers.some((p) => p.length < 1))
-              throw new ToolError('plan needs pointers: 1 to 5 fingers, each with its points');
+              throw new ToolError(
+                'plan needs pointers: 1 to 5 fingers, each with its points',
+                'INVALID_ARGUMENT',
+              );
             return act(
               s,
               read,
@@ -198,7 +201,8 @@ export function actOps(
       run: async ({ steps: raw, read }) => {
         const steps = raw.map((x, i) => {
           const p = Step.safeParse(x);
-          if (!p.success) throw new ToolError(`step ${i + 1}: ${z.prettifyError(p.error)}`);
+          if (!p.success)
+            throw new ToolError(`step ${i + 1}: ${z.prettifyError(p.error)}`, 'INVALID_ARGUMENT');
           return p.data;
         });
         const s = await ctx.session();

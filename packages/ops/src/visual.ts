@@ -71,7 +71,8 @@ export function visualOps(ctx: ServerContext): Op[] {
         if (!existsSync(file))
           throw new ToolError(`no baseline ${file}: save one with action baseline`, 'NOT_FOUND');
         const baseline = decodePng(readFileSync(file));
-        if (!baseline) throw new ToolError(`${file} is a kind of PNG this tool cannot read`);
+        if (!baseline)
+          throw new ToolError(`${file} is a kind of PNG this tool cannot read`, 'UNSUPPORTED');
         const units = screen.window?.w ?? s.device.hello?.screen.w ?? image.width;
         const k = image.width / units;
         const rect = (r: { x: number; y: number; width: number; height: number }): PixelRect => ({
@@ -95,7 +96,7 @@ export function visualOps(ctx: ServerContext): Op[] {
             return hits.map((e) => rect(e.rect));
           }
           if (m.x === undefined || m.y === undefined || !m.w || !m.h)
-            throw new ToolError('a mask is x, y, w and h, or text, id or role');
+            throw new ToolError('a mask is x, y, w and h, or text, id or role', 'INVALID_ARGUMENT');
           return [rect({ x: m.x, y: m.y, width: m.w, height: m.h })];
         });
         const band = s.device.platformScreen.statusBand(

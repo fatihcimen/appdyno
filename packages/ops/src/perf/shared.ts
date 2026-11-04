@@ -209,7 +209,7 @@ export function perfTools(ctx: ServerContext) {
   };
   const appOf = (s: Session, app?: string) => {
     const pkg = checkApp(ctx.policy, app ?? s.appId ?? '');
-    if (!pkg) throw new ToolError('give app (or select one with use_device)');
+    if (!pkg) throw new ToolError('give app (or select one with use_device)', 'INVALID_ARGUMENT');
     return pkg;
   };
   const virtualNote = (s: Session) =>
