@@ -101,6 +101,8 @@ static NSDictionary *request(id element, NSUInteger maxNodes, Capture *c, NSErro
     options[@"maxDepth"] = @(c->levels);
     options[@"maxChildren"] = @(maxNodes);
     options[@"maxArrayCount"] = @(maxNodes);
+    // what a modal view covers is left out, as XCUI leaves it out: a sheet over a list is no list to touch
+    options[@"snapshotKeyHonorModalViews"] = @YES;
     NSError *failure = nil;
     NSDictionary *tree = [gFramework userTestingSnapshotForElement:element options:options error:&failure];
     if (tree) return tree;
@@ -273,7 +275,11 @@ static void handle(NSData *line) {
     uint64_t t0 = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
     NSDictionary *a;
     @try {
-      if (![q[@"op"] isEqual:@"leave"]) accessibilityOn();
+      if (![q[@"op"] isEqual:@"leave"]) {
+        accessibilityOn();
+        // just after a boot the accessibility server comes up a moment after the switches go on
+        if (gBlind) gBlind = observe();
+      }
       if ([q[@"op"] isEqual:@"read"]) a = readApp(q);
       else if ([q[@"op"] isEqual:@"arm"]) a = gBlind ? refuse(gBlind) : arm();
       else if ([q[@"op"] isEqual:@"animations"]) a = gBlind ? refuse(gBlind) : animationsOver([q[@"within"] doubleValue], [q[@"touches"] longValue]);
@@ -302,6 +308,7 @@ static void handle(NSData *line) {
 int main(void) {
   @autoreleasepool {
     NSString *problem = setup();
+    if (!problem) accessibilityOn();
     gBlind = problem ?: observe();
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), ^{
       char *line = NULL;

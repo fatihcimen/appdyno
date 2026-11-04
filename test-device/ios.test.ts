@@ -319,6 +319,31 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
       expect(d.direct.status().input).toBe('direct');
     }, 120_000);
 
+    it('leaves out what a sheet covers, as the runner does', async () => {
+      const settings = 'com.apple.Preferences';
+      await d.terminate(settings);
+      await d.launch(settings);
+      let row: Screen['list'][number] | undefined;
+      await expect
+        .poll(
+          async () => {
+            const s = await d.read(settings);
+            row = s.list.find((e) => /^(Apple Account|Sign in)/.test(e.label));
+            return s.list.some((e) => e.label === 'General' || e.label === 'General General');
+          },
+          { timeout: 10_000 },
+        )
+        .toBe(true);
+      await d.tap(row!, { settle: SETTLE, read: 'none' });
+      await new Promise((r) => setTimeout(r, 1_500));
+      const direct = await d.direct.read(settings);
+      if ('refused' in direct) throw new Error(direct.refused);
+      expect(named(direct.tree).map((n) => n.d)).not.toContain('General');
+      const runner = await IosDevice.prototype.tree.call(d, { maxNodes: 5000 });
+      expect(direct.tree.nodes.length).toBe(runner.nodes.length);
+      await d.terminate(settings);
+    }, 120_000);
+
     // the tree is final and the app's reports say all is still well before a pop has ended
     it('takes a tap right after going back, as UIKit takes none during the pop (10 of 10)', async () => {
       let s = await home();

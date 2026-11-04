@@ -113,7 +113,8 @@ indicator's slow drag up. The volume, lock and power keys go through direct inpu
 - **Web pages**, the socket `simctl getenv <udid> RWI_LISTEN_SOCKET` names: binary property lists, each after its 4-byte length. `_rpc_reportIdentifier:` brings the applications, `_rpc_forwardGetListing:` a page list, `_rpc_forwardSocketSetup:` a `Target.targetCreated`, and `Target.sendMessageToTarget` wraps what goes to the page.
 - **Reads**, `SimAX` inside the simulator through `simctl spawn`: one request of `XCTAccessibilityFramework`
   `userTestingSnapshotForElement:options:error:` per tree (a rejected depth is halved; children withheld at the
-  boundary are read again). The nodes are built as the runner builds them, so refs, hashes and diffs do not depend
+  boundary are read again), honouring modal views as XCUI does, so that what a sheet covers is not in the answer (215
+  nodes against the runner's 49 without). The nodes are built as the runner builds them, so refs, hashes and diffs do not depend
   on who read. Only XCUI tells which copy of a control a tap reaches: a layout with a control found at two or three
   different places goes to the runner once, and its verdict is kept by the layout's digest. Any other layout needs no
   runner. Once one is up for something else, a layout not seen yet is also compared with its read (about 100 ms, once per
