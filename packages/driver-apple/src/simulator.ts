@@ -1,4 +1,3 @@
-import { spawn } from 'node:child_process';
 import { sleep, type ScreenRecorder, TIMEOUTS, type ActOptions, pause } from '@appdyno/core';
 import { simulatorCrashes } from './crashes.js';
 import { simulatorLogs } from './logs.js';
@@ -19,7 +18,7 @@ import { DirectSim } from './simdirect.js';
 import { type Capture, settleAfter } from './simsettle.js';
 import { learnCopies, onKeyboard, withoutCopies } from './simtree.js';
 import { IosRunnerLauncher } from './runner.js';
-import { assertBundle, Simctl, xcodeEnv } from './simctl.js';
+import { assertBundle, Simctl } from './simctl.js';
 import { type IosDeviceOps, IosDevice } from './device.js';
 
 export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
@@ -285,27 +284,20 @@ export class IosSimulatorDevice extends IosDevice {
 
   /**
    * From the Mac: at times the runner's own pasteboard call held it up for its 15 s. Where the Mac's call writes
-   * nothing, as `simctl pbcopy` on a new iOS 26.5 simulator with Xcode 27.1, the runner's it is.
+   * nothing, as `simctl pbcopy` on a new iOS 26.5 simulator with Xcode 27.1, only the runner's is left, and a stall
+   * of that is refused as what it is: it was restarted for it, and a second wait saw the same at load 138.
    */
   override async setClipboard(text: string) {
-    await new Promise<void>((resolve, reject) => {
-      const p = spawn('xcrun', ['simctl', 'pbcopy', this.serial], {
-        env: xcodeEnv(),
-        stdio: ['pipe', 'ignore', 'ignore'],
-      });
-      p.on('error', reject);
-      p.on('close', (code) =>
-        code === 0
-          ? resolve()
-          : reject(new DeviceError('INTERNAL', `simctl pbcopy exited with ${code}`)),
-      );
-      p.stdin.end(text);
-    });
+    await this.simctl.pbcopy(this.serial, text);
     if ((await this.pasteOnMac()) === text) return;
-    // what holds the runner up does not last: it was restarted for it, and the next one has the text
     await super.setClipboard(text).catch((e: unknown) => {
       if (!(e instanceof DeviceError && e.code === 'TIMEOUT')) throw e;
-      return super.setClipboard(text);
+      throw new DeviceError(
+        'UNSUPPORTED',
+        `this simulator's clipboard did not take the text: simctl pbcopy wrote nothing and the runner's call stalled`,
+        'try again once the Mac is less busy, or give the text to type_text',
+        { cause: e, retryable: true },
+      );
     });
   }
 

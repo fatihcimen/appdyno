@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { RpcDevice } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from '../src/simulator.js';
 import { IosPhoneDevice } from '../src/phone.js';
 import { startPhase } from '../src/runner.js';
 import type { Tree } from '@appdyno/protocol';
-import { assertBundle, assertUdid } from '../src/simctl.js';
+import { assertBundle, assertUdid, type Simctl } from '../src/simctl.js';
 
 describe('simulator inputs', () => {
   it('takes only a simulator id, never "booted" or a name', () => {
@@ -16,6 +18,46 @@ describe('simulator inputs', () => {
     expect(assertBundle('dev.appdyno.fixture')).toBe('dev.appdyno.fixture');
     for (const bad of ['fixture', 'a.b c', 'a.b;ls', '-x.y'])
       expect(() => assertBundle(bad), bad).toThrow(/not a bundle id/);
+  });
+});
+
+describe("a simulator's clipboard", () => {
+  const device = (pasted: string) =>
+    new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951', {
+      pbcopy: async () => undefined,
+      exec: async () => pasted,
+    } as unknown as Simctl);
+  const runner = () => vi.spyOn(RpcDevice.prototype, 'setClipboard');
+  afterEach(() => void vi.restoreAllMocks());
+
+  it('leaves the runner alone where the Mac wrote the text', async () => {
+    const set = runner();
+    await device('pano').setClipboard('pano');
+    expect(set).not.toHaveBeenCalled();
+  });
+
+  it('goes to the runner where the Mac wrote nothing', async () => {
+    const set = runner().mockResolvedValue(undefined);
+    await device('').setClipboard('pano');
+    expect(set).toHaveBeenCalledOnce();
+  });
+
+  it('refuses once, saying what stalled, where the runner stalls too', async () => {
+    const set = runner().mockRejectedValue(new DeviceError('TIMEOUT', 'no answer in 15000 ms'));
+    await expect(device('').setClipboard('pano')).rejects.toMatchObject({
+      code: 'UNSUPPORTED',
+      message: expect.stringMatching(/did not take the text.*stalled/),
+      hint: expect.stringMatching(/type_text/),
+      retryable: true,
+    });
+    expect(set).toHaveBeenCalledOnce();
+  });
+
+  it('leaves any other failure of the runner as it was', async () => {
+    runner().mockRejectedValue(new DeviceError('AGENT_UNAVAILABLE', 'gone'));
+    await expect(device('').setClipboard('pano')).rejects.toMatchObject({
+      code: 'AGENT_UNAVAILABLE',
+    });
   });
 });
 

@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { sleep, run, callSignal, cancelled } from '@appdyno/core';
@@ -157,6 +157,23 @@ export class Simctl {
   install(udid: string, appPath: string) {
     return this.exec(['install', assertUdid(udid), appPath], 300_000);
   }
+  /** Puts `text` on the simulator's clipboard, from the Mac. */
+  pbcopy(udid: string, text: string) {
+    return new Promise<void>((resolve, reject) => {
+      const p = spawn('xcrun', ['simctl', 'pbcopy', assertUdid(udid)], {
+        env: this.env,
+        stdio: ['pipe', 'ignore', 'ignore'],
+      });
+      p.on('error', reject);
+      p.on('close', (code) =>
+        code === 0
+          ? resolve()
+          : reject(new DeviceError('INTERNAL', `simctl pbcopy exited with ${code}`)),
+      );
+      p.stdin.end(text);
+    });
+  }
+
   /**
    * Starts the app (`vars` go into its environment), or brings it forward as it is when it runs. `stopped`: it waits
    * before its first instruction, as for a debugger.
