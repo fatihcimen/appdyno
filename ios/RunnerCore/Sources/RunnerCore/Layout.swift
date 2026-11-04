@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 /// One captured element, the runner's own copy (wire names: c, id, t, d, h, b, f).
@@ -18,6 +19,19 @@ public struct Node: Equatable {
         self.label = label; self.hint = hint; self.left = left; self.top = top; self.right = right
         self.bottom = bottom; self.flags = flags
     }
+}
+
+public extension Node {
+    var box: [Int] { [left, top, right, bottom] }
+
+    /// One copy of a control: its type, id and place.
+    var copyKey: String { "\(type)#\(id ?? "")@\(box)" }
+}
+
+/// A frame as a tree gives it: [left, top, right, bottom], whole numbers; nothing finite to say is no box.
+public func box(_ r: CGRect) -> [Int] {
+    guard r.width.isFinite, r.height.isFinite else { return [0, 0, 0, 0] }
+    return [Int(r.minX.rounded()), Int(r.minY.rounded()), Int(r.maxX.rounded()), Int(r.maxY.rounded())]
 }
 
 /// Node flags, as the protocol numbers them.
@@ -110,6 +124,16 @@ public func actionable(_ nodes: [Node]?, x: Int, y: Int) -> Bool {
         }
     }
     return !hit
+}
+
+/// The controls found more than once in the app's window, by index: a control drawn twice (an overlay's spare
+/// copy) comes in 2 or 3; an id repeated more is a list's rows.
+public func repeatedControls(_ nodes: [Node]) -> [[Int]] {
+    var groups: [String: [Int]] = [:]
+    for (i, n) in nodes.enumerated() where n.window == 0 && n.flags & Flag.visible != 0 {
+        if let id = n.id { groups["\(n.type)#\(id)", default: []].append(i) }
+    }
+    return groups.values.filter { (2 ... 3).contains($0.count) }
 }
 
 /// A toolbar as large as the screen is the system's container, no bar (iOS 27 on a phone: XCUI calls it

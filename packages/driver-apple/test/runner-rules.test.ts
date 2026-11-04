@@ -73,7 +73,10 @@ describe('the rules the direct read shares with the runner', () => {
 });
 
 describe('the type tables', () => {
-  const swift = readFileSync(join(import.meta.dirname, '../../../ios/Runner/Device.swift'), 'utf8');
+  const swift = readFileSync(
+    join(import.meta.dirname, '../../../ios/Runner/ElementTypes.swift'),
+    'utf8',
+  );
   const inside = (open: string, close: string) => {
     const start = swift.indexOf(open);
     expect(start, open).toBeGreaterThanOrEqual(0);

@@ -1,0 +1,106 @@
+import UIKit
+import XCTest
+
+extension Device {
+    struct Capture {
+        var windows: [[String: Any]]
+        var nodes: [Node]
+        var truncated: Bool
+        var busy: Bool
+        var hash: String { layoutHash(nodes) }
+    }
+
+    func capture(maxDepth: Int = 128, maxNodes: Int = 5000, job: Job? = nil) throws -> Capture {
+        let (app, id) = front()
+        var windows: [[String: Any]] = []
+        var nodes: [Node] = []
+        var truncated = false
+        var busy = false
+        var screen = CGRect.zero
+        func add(_ root: XCUIElementSnapshot, window: Int) {
+            var queue: [(XCUIElementSnapshot, Int, Int)] = [(root, -1, 0)]
+            var head = 0
+            while head < queue.count {
+                let (s, parent, depth) = queue[head]
+                head += 1
+                if nodes.count >= maxNodes || job?.over == true { truncated = true; break }
+                let index = nodes.count
+                let n = Device.node(s, parent: parent, window: window, screen: screen)
+                if s.elementType == .activityIndicator, n.flags & Flag.visible != 0 { busy = true }
+                nodes.append(n)
+                if depth + 1 >= maxDepth { if !s.children.isEmpty { truncated = true }; continue }
+                for c in s.children { queue.append((c, index, depth + 1)) }
+            }
+        }
+        let snap: XCUIElementSnapshot
+        do { snap = try app.snapshot() } catch {
+            throw AgentError("APP_NOT_RUNNING", "the screen could not be read: \(error.localizedDescription)")
+        }
+        // the app's frame, not UIScreen's: a runner without a launch screen is told 320 x 480 on a bigger one
+        screen = snap.frame
+        windows.append(["type": 1, "pkg": id, "layer": 0, "b": box(snap.frame), "active": true, "focused": true])
+        add(snap, window: 0)
+        // `exists` answers at once; a snapshot of a missing element waits for it to appear
+        let alertQuery = springboard.alerts.firstMatch
+        alertFrame = nil
+        if app !== springboard, alertQuery.exists, let alert = try? alertQuery.snapshot() {
+            alertFrame = alert.frame
+            // a system alert (permission, notification prompt) over the app
+            windows.append(["type": 3, "pkg": Device.springboardId, "layer": 1, "b": box(alert.frame),
+                            "active": false, "focused": false])
+            add(alert, window: 1)
+        }
+        // a scroll view's bars are no control: shown only while it scrolls, they would name the screen's
+        // nameless controls differently than the app's own elements do
+        for i in scrollIndicators(nodes) { nodes[i].flags &= ~Flag.visible }
+        for i in containerBars(nodes, screenW: Int(screen.width), screenH: Int(screen.height)) { nodes[i].flags &= ~Flag.visible }
+        return Capture(windows: windows, nodes: nodes, truncated: truncated, busy: busy)
+    }
+
+    /**
+     * The same control (type and identifier) found more than once: the copies a tap would not reach (drawn
+     * under another view, never shown) are marked not visible, so a tool picks the one on screen. Live: the
+     * a real app's home walkthrough keeps a second bubble with its close button under the header; other drivers
+     * report one. XCUI's hittable check decides, only for such duplicates (a few queries).
+     */
+    func hideUnreachableCopies(_ c: inout Capture) {
+        let key = c.hash
+        if let known = unreachable.first(where: { $0.hash == key }) {
+            for i in c.nodes.indices where known.copies.contains(c.nodes[i].copyKey) {
+                c.nodes[i].flags &= ~Flag.visible
+            }
+            return
+        }
+        let app = front().0
+        var hidden: [String] = []
+        defer {
+            unreachable.removeAll { $0.hash == key }
+            unreachable.append((key, hidden))
+            if unreachable.count > 8 { unreachable.removeFirst() }
+        }
+        for idxs in repeatedControls(c.nodes).prefix(4) {
+            guard let id = c.nodes[idxs[0]].id else { continue }
+            let query = app.descendants(matching: .any).matching(identifier: id)
+            for k in 0 ..< min(query.count, 8) {
+                let e = query.element(boundBy: k)
+                guard e.exists, !e.isHittable else { continue }
+                let r = box(e.frame)
+                if let ni = idxs.first(where: { c.nodes[$0].box == r }) {
+                    c.nodes[ni].flags &= ~Flag.visible
+                    hidden.append(c.nodes[ni].copyKey)
+                }
+            }
+        }
+    }
+
+    func remember(_ c: Capture) {
+        let h = c.hash
+        recent.removeAll { $0.hash == h }
+        recent.append((h, c.nodes))
+        if recent.count > 8 { recent.removeFirst() }
+    }
+
+    func treeJSON(_ c: Capture, elapsedMs: Int) -> [String: Any] {
+        treeWire(windows: c.windows, nodes: c.nodes, truncated: c.truncated, elapsedMs: elapsedMs, hash: c.hash)
+    }
+}
