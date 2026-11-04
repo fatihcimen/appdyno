@@ -79,6 +79,33 @@ NSImage *_Nullable MVControlImage(NSString *name);
 NSMenu *MVControlMenu(NSString *title, NSArray<NSString *> *_Nullable names);
 NSMenu *MVMainMenu(NSArray<NSString *> *_Nullable names);
 
+typedef NS_ENUM(NSInteger, MVLiveState) { MVLiveNeutral, MVLiveGood, MVLiveWarning, MVLiveCritical };
+/// How a reading stands: what a card says in words and a symbol, as well as a colour.
+MVLiveState MVStateOf(NSString *field, double value);
+/// The system's rounded face, for numbers.
+NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight);
+
+/// A measure's last minute: a baseline, a line at `usual`, its readings, and a mark where a stutter fell.
+@interface MVSpark : NSView
+@property(nonatomic) double usual;
+@property(nonatomic, nullable) NSColor *color;
+- (void)add:(double)value;
+/// The second to come holds a stutter, or does not.
+- (void)mark;
+- (void)pass;
+@end
+
+static const double MVHudWidth = 188;
+
+/// The live numbers beside the device, as glass cards; a `perf` message each second fills them.
+@interface MVHud : NSView
+- (void)show:(NSDictionary *)message;
+/// Frames shown a second, as the window counts them: what the frame rate says where the device has no count.
+- (void)setPictureRate:(double)rate;
+/// What a measure's card says now.
+- (NSString *)shownFor:(NSString *)field;
+@end
+
 /// One line of a list.
 @interface MVRow : NSObject
 @property(nonatomic, copy) NSString *title;

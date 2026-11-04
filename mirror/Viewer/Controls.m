@@ -22,6 +22,7 @@ static const MVControlRow kControls[] = {
     {"zoomOut", "Zoom Out", "minus.magnifyingglass", '-', kCmd, "View"},
     {"frame", "Show Device Frame", "iphone", 'f', kCmd | kOpt, "View"},
     {"inspector", "Show Inspector", "sidebar.trailing", 'i', kCmd | kOpt, "View"},
+    {"hud", "Show Performance", "gauge.with.dots.needle.67percent", 'p', kCmd | kOpt, "View"},
     {"more", "More Controls", "ellipsis", 0, 0, "None"},
     {"reconnect", "Reconnect", "arrow.clockwise", 'r', kCmd | kShift, "View"},
     {"back", "Back", "chevron.backward", '[', kCmd, "Device"},

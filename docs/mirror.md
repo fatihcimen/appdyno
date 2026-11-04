@@ -112,6 +112,19 @@ The Inspector (⌥⌘I) opens beside the device, which keeps its size. **Stats**
 
 While an agent drives, a ring of the accent colour runs around the edge of the screen and the capsule names the call. What stands in the way is a card over the dimmed picture with its fix, and a click beside a card's button still goes to the device.
 
+## Live numbers
+
+**Show Performance** (⌥⌘P) opens a card for each measure beside the device: frame rate, jank, frozen frames, CPU, memory and network, each with its last minute as a line, and a state in words and a symbol as well as a colour. Nothing is read until it is open, and nothing after it closes. They are the app in front, named beneath them, and are marked as read with a stream running, as `perf_*` marks a mirrored device.
+
+A device gives each second what its own measures read, by the same readers `perf_*` uses. What it cannot give is a dash with the reason, and never a 0. Where a device counts no frames, the frame rate is what the window itself shows, and a still screen says Still.
+
+| device           | frame rate   | jank, frozen               | CPU, memory, network |
+| ---------------- | ------------ | -------------------------- | -------------------- |
+| simulator        | the window's | only under the frame probe | read                 |
+| Android emulator | the device's | read                       | read                 |
+
+A simulator needs no runner for any of this: it reads the app in front by its read helper, and the home screen is measured as any app is. A device that cannot say what is in front without its agent starts it when the cards open, and they say so until it is up.
+
 ## Pointer and trackpad
 
 | on the window             | on the device                                                                                          |
@@ -177,6 +190,8 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 - On a window a person has not clicked, keys go nowhere: typing into a window needs a hand run, as a test's window never holds the keyboard.
 - A simulator's fold: no control that folds one was found, so a new surface at a fold is untested.
 - The window does not yet show a secure Android window's content, as no shell can have it from Android 12: it is black, with the status bar still there. Not run on Android 12 and 13, or on 10, for which no image is here.
+- Live numbers have been run on a simulator and an Android emulator. An iPhone has its own source, not yet run through a window, and no Android phone has run them.
+- What reading a device each second costs it has not been measured.
 - A device's colour: the frame takes one, and nothing yet reads it from a device, so every frame is the table's own graphite or carbon.
 - The frame's Action button and Camera Control are drawn and do nothing: no input is known that presses them.
 - A stream's picture gives the backdrop no colours: only a surface is read so far, so a phone's window has a plain one.

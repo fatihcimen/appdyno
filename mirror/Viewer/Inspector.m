@@ -2,69 +2,8 @@
 // come from this process; the rest from the parent, by messages.
 #import "Window.h"
 
-enum { kActivityRows = 200, kHistory = 60, kPaneStats = 0, kPaneActivity = 1, kPaneApps = 2 };
+enum { kActivityRows = 200, kPaneStats = 0, kPaneActivity = 1, kPaneApps = 2 };
 static const double kUsualRate = 60, kSparkHeight = 56;
-
-/// The last minute's frames: a baseline, a line at the rate a screen usually has, and the rate. Nothing at all until
-/// something has moved, as a screen that stayed still has no line to show.
-@interface MVSpark : NSView
-- (void)add:(double)value;
-@end
-
-@implementation MVSpark {
-  double _values[kHistory];
-  int _count;
-}
-
-- (void)add:(double)value {
-  memmove(_values, _values + 1, sizeof(double) * (kHistory - 1));
-  _values[kHistory - 1] = value;
-  if (_count < kHistory) _count++;
-  BOOL moved = NO;
-  for (int i = 0; i < kHistory; i++) moved = moved || _values[i] > 0;
-  self.hidden = !moved;
-  self.needsDisplay = YES;
-}
-
-- (void)drawRect:(NSRect)dirty {
-  double top = kUsualRate;
-  for (int i = 0; i < kHistory; i++) top = MAX(top, _values[i]);
-  NSRect box = self.bounds;
-  double height = box.size.height - 2, step = box.size.width / (kHistory - 1);
-  double (^level)(double) = ^(double v) {
-    return 1 + v / top * height;
-  };
-  [NSColor.separatorColor setStroke];
-  NSBezierPath *base = [NSBezierPath bezierPath];
-  [base moveToPoint:NSMakePoint(0, 0.5)];
-  [base lineToPoint:NSMakePoint(box.size.width, 0.5)];
-  [base stroke];
-  NSBezierPath *usual = [NSBezierPath bezierPath];
-  [usual moveToPoint:NSMakePoint(0, level(kUsualRate))];
-  [usual lineToPoint:NSMakePoint(box.size.width, level(kUsualRate))];
-  CGFloat dashes[] = {3, 3};
-  [usual setLineDash:dashes count:2 phase:0];
-  [usual stroke];
-  [@"60" drawAtPoint:NSMakePoint(0, level(kUsualRate) - 13) withAttributes:@{NSFontAttributeName: [NSFont systemFontOfSize:9], NSForegroundColorAttributeName: NSColor.tertiaryLabelColor}];
-  NSBezierPath *line = [NSBezierPath bezierPath];
-  for (int i = kHistory - _count; i < kHistory; i++) {
-    NSPoint p = NSMakePoint(i * step, level(_values[i]));
-    if (line.isEmpty) [line moveToPoint:p];
-    else [line lineToPoint:p];
-  }
-  [NSColor.controlAccentColor setStroke];
-  line.lineWidth = 2;
-  line.lineJoinStyle = NSLineJoinStyleRound;
-  line.lineCapStyle = NSLineCapStyleRound;
-  [line stroke];
-}
-
-@end
-
-static NSFont *roundedFont(CGFloat size, NSFontWeight weight) {
-  NSFontDescriptor *rounded = [[NSFont systemFontOfSize:size weight:weight].fontDescriptor fontDescriptorWithDesign:NSFontDescriptorSystemDesignRounded];
-  return [NSFont fontWithDescriptor:rounded size:size] ?: [NSFont systemFontOfSize:size weight:weight];
-}
 
 static NSTextField *caption(NSString *text) {
   NSTextField *field = [NSTextField labelWithString:text];
@@ -152,7 +91,7 @@ static NSString *ms(id v) {
 /// One figure of the three a person came for.
 - (NSView *)tile:(NSString *)name value:(NSString *)key {
   NSTextField *number = value();
-  number.font = roundedFont(20, NSFontWeightSemibold);
+  number.font = MVRoundedFont(20, NSFontWeightSemibold);
   number.alignment = NSTextAlignmentLeft;
   _tiles[key] = number;
   NSStackView *stack = [NSStackView stackViewWithViews:@[number, caption(name)]];
@@ -189,10 +128,11 @@ static NSString *ms(id v) {
 
 - (NSView *)statsPane {
   _fps = [NSTextField labelWithString:@"\u2013"];
-  _fps.font = roundedFont(44, NSFontWeightBold);
+  _fps.font = MVRoundedFont(44, NSFontWeightBold);
   _fpsNote = caption(@"waiting for a picture");
   _spark = [MVSpark new];
   _spark.hidden = YES;
+  _spark.usual = kUsualRate;
   _spark.translatesAutoresizingMaskIntoConstraints = NO;
   [_spark.heightAnchor constraintEqualToConstant:kSparkHeight].active = YES;
   _tiles = [NSMutableDictionary dictionary];
@@ -283,6 +223,7 @@ static NSString *ms(id v) {
 
 - (void)showStats:(NSDictionary *)s {
   double shown = [s[@"shown"] doubleValue];
+  [_spark pass];
   [_spark add:shown];
   // a still screen is a good state, and sends nothing to count
   if (shown > 0) _lastRate = shown;

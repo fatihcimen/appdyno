@@ -40,6 +40,8 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   MVView *_view;
   MVInspector *_inspector;
   NSView *_panel, *_bar;
+  MVHud *_hud;
+  BOOL _hudding;
   NSView *_root;
   CALayer *_backdrop;
   double _backdropAt;
@@ -102,6 +104,9 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
       [pill.widthAnchor constraintLessThanOrEqualToConstant:230],
     ]];
     _inspector = [[MVInspector alloc] initWithFrame:NSZeroRect];
+    _hud = [[MVHud alloc] initWithFrame:NSZeroRect];
+    _hud.hidden = YES;
+    [root addSubview:_hud];
     _panel = MVGlass(_inspector, 22, nil);
     _panel.translatesAutoresizingMaskIntoConstraints = YES;
     _panel.hidden = YES;
@@ -136,7 +141,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   NSMutableArray *device = [NSMutableArray array];
   for (NSString *name in @[@"back", @"home", @"appSwitch", @"lock"])
     if ([_view.controls containsObject:name]) [device addObject:name];
-  _bar = MVGlassBar(@[device, @[@"screenshot", @"record"], @[@"more", @"inspector"]], self, @selector(control:));
+  _bar = MVGlassBar(@[device, @[@"screenshot", @"record"], @[@"hud", @"more", @"inspector"]], self, @selector(control:));
   [_root addSubview:_bar];
   [NSLayoutConstraint activateConstraints:@[
     [_bar.trailingAnchor constraintEqualToAnchor:_root.trailingAnchor constant:-12],
@@ -158,9 +163,11 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 /// Everything laid out once, from the window's size: the device takes the room there is.
 - (void)layoutPicture {
   NSRect all = _window.contentView.bounds;
-  double side = _inspecting ? kInspector + kInset : 0;
+  double side = [self sideWidth];
   _stage.frame = NSMakeRect(0, 0, all.size.width - side, all.size.height);
   _panel.frame = NSMakeRect(all.size.width - kInspector - kInset, kInset, kInspector, all.size.height - kTop - kInset);
+  double beside = all.size.width - (_inspecting ? kInspector + kInset : 0) - MVHudWidth - kInset;
+  _hud.frame = NSMakeRect(beside, kInset, MVHudWidth, all.size.height - kTop - kInset);
   if (_picture.width <= 0) return;
   [CATransaction begin];
   [CATransaction setDisableActions:YES];
@@ -217,12 +224,16 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   return [@"zoom." stringByAppendingString:_name ?: @""];
 }
 
+/// What the panes beside the device take of the window.
+- (double)sideWidth {
+  return (_inspecting ? kInspector + kInset : 0) + (_hudding ? MVHudWidth + kInset : 0);
+}
+
 /// The chrome that never scales, at a given zoom's device.
 - (CGSize)windowSizeAt:(double)zoom {
   CGSize body = [_frame bodyFor:CGSizeMake(_picture.width * zoom, _picture.height * zoom) turns:_turns];
   double margin = _frame.showsFrame ? kMargin : 0;
-  double side = _inspecting ? kInspector + kInset : 0;
-  return CGSizeMake(MAX(body.width + 2 * margin, kOpensWide) + side, MAX(body.height + kTop + kBottom, kSmallest.height));
+  return CGSizeMake(MAX(body.width + 2 * margin, kOpensWide) + [self sideWidth], MAX(body.height + kTop + kBottom, kSmallest.height));
 }
 
 - (double)fitZoom {
@@ -320,7 +331,20 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   [_inspector showPane:pane];
 }
 
+/// A source runs only while this is open: what it reads costs the device.
+- (void)toggleHud {
+  _hudding = !_hudding;
+  _hud.hidden = !_hudding;
+  MVEmit(@{@"op": @"perfWatch", @"on": @(_hudding)});
+  [self setZoom:_zoom > 0 ? _zoom : 1];
+}
+
+- (void)showPerf:(NSDictionary *)message {
+  if (_hudding) [_hud show:message];
+}
+
 - (void)showStats:(NSDictionary *)stats {
+  [_hud setPictureRate:[stats[@"shown"] doubleValue]];
   if (_inspecting) [_inspector showStats:stats];
 }
 
@@ -358,6 +382,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   if ([name isEqual:@"zoomActual"]) return [self setZoom:MIN(_picture.width, _picture.height) > 0 ? _frame.spec.points / MIN(_picture.width, _picture.height) : 1];
   if ([name isEqual:@"frame"]) return [self setFrameShown:!_frame.showsFrame];
   if ([name isEqual:@"inspector"]) return [self toggleInspector];
+  if ([name isEqual:@"hud"]) return [self toggleHud];
   if ([@[@"screenshot", @"copy", @"record", @"reconnect"] containsObject:name]) return MVEmit(@{@"op": @"control", @"name": name});
   if ([name isEqual:@"paste"]) return [_view paste:self];
   [_view pressButton:name];

@@ -65,6 +65,25 @@ static void checkControls(void) {
   MVCheck(@"menu: every control has its symbol", MVControlImage(@"home") && MVControlImage(@"rotateLeft") && MVControlImage(@"controlCenter"), nil);
 }
 
+static void checkLive(void) {
+  MVCheck(@"hud: a smooth screen is good, a slow one poor", MVStateOf(@"fps", 60) == MVLiveGood && MVStateOf(@"fps", 40) == MVLiveWarning && MVStateOf(@"fps", 12) == MVLiveCritical, nil);
+  MVCheck(@"hud: one frozen frame is poor", MVStateOf(@"frozenFrames", 1) == MVLiveCritical && MVStateOf(@"frozenFrames", 0) == MVLiveGood, nil);
+  MVCheck(@"hud: memory has no threshold to be judged by", MVStateOf(@"memoryMb", 4000) == MVLiveNeutral, nil);
+  MVHud *hud = [[MVHud alloc] initWithFrame:NSMakeRect(0, 0, 180, 600)];
+  [hud show:@{@"sample": @{@"at": @1, @"fps": @0, @"absent": @{@"cpuPercent": @"cannot measure CPU"}}, @"noise": @[@"mirrored"]}];
+  MVCheck(@"hud: a reading of 0 says 0", [[hud shownFor:@"fps"] hasPrefix:@"0"], [hud shownFor:@"fps"]);
+  [hud setPictureRate:0];
+  [hud show:@{@"sample": @{@"at": @2}}];
+  MVCheck(@"hud: a still picture is still, and no fault", [[hud shownFor:@"fps"] isEqual:@"Still"], [hud shownFor:@"fps"]);
+  [hud setPictureRate:58];
+  [hud show:@{@"sample": @{@"at": @3}}];
+  MVCheck(@"hud: with no count from the device, the picture's own rate", [[hud shownFor:@"fps"] isEqual:@"58 fps"], [hud shownFor:@"fps"]);
+  [hud show:@{@"sample": @{@"at": @4, @"fps": @30}}];
+  MVCheck(@"hud: a device's own count comes first", [[hud shownFor:@"fps"] isEqual:@"30 fps"], [hud shownFor:@"fps"]);
+  [hud show:@{@"sample": @{@"at": @5, @"absent": @{@"cpuPercent": @"cannot measure CPU"}}}];
+  MVCheck(@"hud: a measure a device cannot give is a dash, never 0", [[hud shownFor:@"cpuPercent"] isEqual:@"\u2013"], [hud shownFor:@"cpuPercent"]);
+}
+
 static void checkGlass(void) {
   NSView *content = [NSView new];
   NSView *pane = MVGlass(content, 20, nil);
@@ -115,6 +134,7 @@ void MVCheckFrame(void) {
   checkZoom();
   checkControls();
   checkGlass();
+  checkLive();
   checkMood();
   checkGestures();
 }

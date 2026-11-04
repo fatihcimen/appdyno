@@ -146,6 +146,7 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 - (void)setRecording:(BOOL)on;
 - (void)showPane:(NSInteger)pane;
 - (void)showStats:(NSDictionary *)stats;
+- (void)showPerf:(NSDictionary *)message;
 - (void)addActivity:(NSDictionary *)call;
 - (void)showApps:(NSDictionary *)message;
 /// What a control of the window does, by its name.

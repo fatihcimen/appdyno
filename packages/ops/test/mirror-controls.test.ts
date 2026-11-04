@@ -34,6 +34,7 @@ function fixture(platform: 'ios' | 'android', device: Partial<Device> = {}, stre
     serial: 'S',
     mirror: {},
     open: vi.fn(async () => undefined),
+    foreground: vi.fn(async () => 'dev.app'),
     setOrientation: vi.fn(async () => undefined),
     screenshot: vi.fn(async () => ({ meta: {}, data: Buffer.from('png') })),
     launch: vi.fn(async () => ''),
@@ -149,6 +150,57 @@ describe("a window's captures", () => {
     const { controls, session } = fixture('ios');
     controls.onWindow({ op: 'control', name: 'reconnect' });
     expect(session.askAgain).toHaveBeenCalledOnce();
+  });
+});
+
+describe("a window's live numbers", () => {
+  it('read nothing until they are shown, and stop when they are not', async () => {
+    const stop = vi.fn();
+    const start = vi.fn(async (onSample: (s: { at: number }) => void) => {
+      onSample({ at: 1 });
+      return stop;
+    });
+    const { controls, told } = fixture('ios', {
+      liveMetrics: { start },
+    } as unknown as Partial<Device>);
+    expect(start).not.toHaveBeenCalled();
+    controls.onWindow({ op: 'perfWatch', on: true });
+    await settle();
+    expect(told).toContainEqual({ op: 'perf', sample: { at: 1 }, noise: ['mirrored'] });
+    controls.onWindow({ op: 'perfWatch', on: false });
+    await settle();
+    expect(stop).toHaveBeenCalledOnce();
+  });
+
+  it('start an agent only for a device that cannot say what is in front without one', async () => {
+    const live = { liveMetrics: { start: async () => vi.fn() } };
+    const answers = fixture('ios', {
+      ...live,
+      foreground: async () => undefined,
+    } as unknown as Partial<Device>);
+    answers.controls.onWindow({ op: 'perfWatch', on: true });
+    await settle();
+    expect(answers.device.open).not.toHaveBeenCalled();
+    const refuses = fixture('android', {
+      ...live,
+      foreground: async () => {
+        throw new Error('no agent');
+      },
+    } as unknown as Partial<Device>);
+    refuses.controls.onWindow({ op: 'perfWatch', on: true });
+    await settle();
+    expect(refuses.device.open).toHaveBeenCalledOnce();
+  });
+
+  it('end with the window', async () => {
+    const stop = vi.fn();
+    const { controls } = fixture('ios', {
+      liveMetrics: { start: async () => stop },
+    } as unknown as Partial<Device>);
+    controls.onWindow({ op: 'perfWatch', on: true });
+    await settle();
+    await controls.end();
+    expect(stop).toHaveBeenCalledOnce();
   });
 });
 

@@ -21,7 +21,9 @@
 - A window's controls: Home, App Switcher, Lock, volume, Siri, Control Center, Notifications, Spotlight, rotation, screenshot, recording and zoom, in one table for its bar and menus, each kind of device showing only what it has. The Inspector has Stats, Activity and Apps, which lists, launches, quits and removes.
 - A person's gestures: a right click is a long press, a pinch two fingers, a drag from the bezel an edge gesture, and text goes through the system's own input, so that dead keys and held accents work. ⌘V pastes up to 4,096 characters.
 - `--behind` keeps a window off every screen, and it can write itself to a PNG as the window server draws it. `scripts/mirror-shots.mjs` does so for each state, in light and dark.
-- `LiveMetrics`: a port for a device's numbers each second, in one `perf` message. A measure a device cannot give stays out with its reason, and is never a 0. No window shows them yet.
+- `LiveMetrics`: a port for a device's numbers each second, in one `perf` message. A measure a device cannot give stays out with its reason, and is never a 0.
+- A window's live numbers (⌥⌘P): frame rate, jank, frozen frames, CPU, memory and network beside the device, each with its last minute, a state in words, and the reason where a device has none. Nothing is read until they are open.
+- A simulator says what is in front with no runner, and the home screen can be measured: it read as not running.
 
 - `app` `build_and_run`: builds an Xcode scheme or a Gradle variant for the device, with progress and what the build said was wrong, installs it and launches it. Off under an app allowlist, as a project's build runs its own scripts.
 - `app` `download_data` and `replace_data`: an app's data into a new or empty folder and back, by its container on a simulator, `devicectl` on an iPhone and `run-as` on Android. A replace takes away what the folder does not hold, and on Android goes only once the app has read the new data.

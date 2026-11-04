@@ -1,5 +1,5 @@
 import { MirrorRecording } from './recording.js';
-import { inputOf, InputQueue } from './input-queue.js';
+import { InputQueue } from './input-queue.js';
 import { NEEDS, NeedError, type Need } from './need.js';
 import type { DeviceState, InputEvent } from './port.js';
 import type { MirrorSessionOptions } from './session-options.js';
@@ -12,6 +12,7 @@ import {
   type MirrorStatus,
 } from './state.js';
 import type { ViewerLink, ViewerMessage } from './viewer.js';
+import { heardFromViewer, type ViewerWords } from './viewer-words.js';
 
 const WAITING_POLL_MS = 1_000;
 /** A viewer that goes on dying is not started a third time. */
@@ -275,57 +276,29 @@ export class MirrorSession {
       .then(() => this.reconnect(why));
   }
 
+  private readonly words: ViewerWords = {
+    first: (m) => this.onFirst(m),
+    stats: (stats, decoded) => {
+      this.stats = stats;
+      if (decoded > 0) this.renewed = false;
+      this.o.onChange?.(this.status);
+    },
+    lost: (why, fatal) => this.onLost(why, fatal),
+    needKey: (consecutive) => this.onNeedKey(consecutive),
+    recorded: (m) => this.recording.onMessage(m),
+    input: (e) => this.onInput(e),
+    zoom: (scale) => (this.zoom = scale),
+    control: (m) => this.o.onWindow?.(m),
+    done: (id) => this.o.onDone?.(id),
+    marked: (ms) => this.marks.splice(0).forEach((r) => r(ms)),
+    closed: () => (this.closedByPerson = true),
+    refused: (need) => (this.refusedNeed = need),
+    sleep: () => this.onMacSleep(),
+    wake: () => this.onMacWake(),
+  };
+
   private onViewer(m: ViewerMessage) {
-    switch (m.op) {
-      case 'first':
-        this.onFirst(m);
-        break;
-      case 'stats':
-        this.stats = m as MirrorStats;
-        if (Number(m.decoded) > 0) this.renewed = false;
-        this.o.onChange?.(this.status);
-        break;
-      case 'lost':
-        this.onLost(String(m.why), m.fatal === true);
-        break;
-      case 'needKey':
-        this.onNeedKey(Number(m.consecutive ?? 0));
-        break;
-      case 'recorded':
-        this.recording.onMessage(m);
-        break;
-      case 'touch':
-      case 'key':
-      case 'text':
-      case 'button':
-        this.onInput(inputOf(m));
-        break;
-      case 'zoom':
-        this.zoom = Number(m.scale);
-        break;
-      case 'control':
-      case 'app':
-        this.o.onWindow?.(m);
-        break;
-      case 'done':
-        this.o.onDone?.(String(m.id));
-        break;
-      case 'marked':
-        for (const r of this.marks.splice(0)) r(Number(m.ms));
-        break;
-      case 'closed':
-        this.closedByPerson = true;
-        break;
-      case 'refused':
-        this.refusedNeed = m.need as Need;
-        break;
-      case 'sleep':
-        this.onMacSleep();
-        break;
-      case 'wake':
-        this.onMacWake();
-        break;
-    }
+    heardFromViewer(m, this.words);
   }
 
   private onFirst(m: ViewerMessage) {

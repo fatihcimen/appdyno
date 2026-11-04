@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { pause, safeName } from '@appdyno/core';
+import { measuredLive, pause, perfMessage, safeName } from '@appdyno/core';
 import type {
   Device,
   DeviceHardware,
@@ -54,6 +54,7 @@ export function windowControls(
   let opened: Promise<unknown> | undefined;
   let rotation: 0 | 1 | 2 | 3 = 0;
   let stopRecording: (() => Promise<string>) | undefined;
+  let stopPerf: (() => void) | undefined;
 
   /** The window needs no agent of its own; what is asked of the device past the stream does. */
   const ready = () => (opened ??= device.open());
@@ -138,6 +139,21 @@ export function windowControls(
     session().tell({ op: 'recording', on: true });
   };
 
+  /** A device's own source where it has one, or its measures: nothing is read while nothing shows it. */
+  const watchPerf = async (on: boolean) => {
+    stopPerf?.();
+    stopPerf = undefined;
+    if (!on) return;
+    // only a device that has no way to say what is in front but its agent starts it: a late answer is no refusal
+    const refused = await device.foreground().then(
+      () => false,
+      () => true,
+    );
+    if (refused) void ready().catch(() => undefined);
+    const live = device.liveMetrics ?? measuredLive(device);
+    stopPerf = await live.start((sample) => session().tell(perfMessage(sample)));
+  };
+
   const listApps = async () => {
     session().tell({ op: 'apps', apps: await device.apps.listApps(hardware?.systemApps === true) });
   };
@@ -169,6 +185,10 @@ export function windowControls(
 
     /** A control of the window that is no input: a person's, however input is set. */
     onWindow(m: ViewerMessage) {
+      if (m.op === 'perfWatch') {
+        trying(() => watchPerf(m.on === true));
+        return;
+      }
       if (m.op === 'app') {
         const act = appActions[String(m.action)];
         trying(act ? () => act(String(m.id)).then(() => undefined) : listApps);
@@ -181,6 +201,7 @@ export function windowControls(
 
     /** A movie still being made ends with the window, and keeps what it has. */
     async end() {
+      await watchPerf(false);
       await stopRecording?.().catch(() => undefined);
       stopRecording = undefined;
     },
