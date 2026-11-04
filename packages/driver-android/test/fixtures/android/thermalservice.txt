@@ -1,0 +1,14 @@
+IsStatusOverride: false
+ThermalEventListeners:
+	callbacks: 1
+	killed: false
+	broadcasts count: -1
+ThermalStatusListeners:
+	callbacks: 7
+	killed: false
+	broadcasts count: -1
+Thermal Status: 0
+Cached temperatures:
+	Temperature{mValue=0.0, mType=2, mName=SUBBAT, mStatus=0}
+	Temperature{mValue=29.7, mType=0, mName=AP, mStatus=0}
+	Temperature{mValue=29.5, mType=5, mName=PA, mStatus=0}

@@ -1,6 +1,9 @@
+import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parseExitInfo } from '../src/crashes.js';
+import { THERMAL_READ } from '../src/perf/app.js';
 import { AndroidPerf } from '../src/perf/index.js';
 import { assertReadOnlySql, queryTrace } from '../src/perf/perfetto.js';
 import {
@@ -124,6 +127,13 @@ describe('android perf parsers on recorded outputs', () => {
     expect(v.load).toBeUndefined();
     expect(v.cpuPressure).toBe(4.85);
     expect(v.thermalStatus).toBe(0);
+  });
+
+  it("reads the thermal status from the tenth line of a phone's dump", () => {
+    const dump = fileURLToPath(new URL('./fixtures/android/thermalservice.txt', import.meta.url));
+    const read = THERMAL_READ.replace('dumpsys thermalservice', `cat ${dump}`);
+    const out = execSync(read, { encoding: 'utf8' });
+    expect(parseVitals(`==thermal==\n${out}`).thermalStatus).toBe(0);
   });
 
   it('counts none when nothing is parked, and does not read on into the next section', () => {
