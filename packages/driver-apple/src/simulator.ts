@@ -25,7 +25,9 @@ import { type IosDeviceOps, IosDevice } from './device.js';
 export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
   return {
     up: async () => (await simctl.state(udid)) === 'Booted',
-    launch: (b) => simctl.launch(udid, b),
+    launch: async (b) => {
+      await simctl.launch(udid, b);
+    },
     terminate: (b) => simctl.terminate(udid, b),
     openUrl: async (url) => {
       await simctl.openUrl(udid, url);
@@ -144,7 +146,7 @@ export class IosSimulatorDevice extends IosDevice {
   }
 
   protected override startAlongside(pkg: string) {
-    return this.ops.launch(assertBundle(pkg));
+    return this.ops.launch(assertBundle(pkg)).then(() => true);
   }
 
   /** A runner that starts later is told by `connect`. */
@@ -314,10 +316,10 @@ export class IosSimulatorDevice extends IosDevice {
     return super.openUrl(url, pkg);
   }
 
-  override async launch(pkg: string): Promise<string> {
+  override async launch(pkg: string) {
     await this.wake();
     if (this.targetApp === pkg && (await this.direct.front().catch(() => undefined)) === pkg)
-      return 'in front';
+      return;
     return super.launch(pkg);
   }
 

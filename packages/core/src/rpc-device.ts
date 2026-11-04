@@ -82,24 +82,24 @@ export abstract class RpcDevice extends DeviceActions {
   }
 
   /** The app a first call will launch, on its way while the device opens: each takes about as long. */
-  private alongside: { pkg: string; out: Promise<string | undefined> } | undefined;
+  private alongside: { pkg: string; began: Promise<boolean> } | undefined;
 
   launchAlongside(pkg: string) {
-    const out = this.startAlongside(pkg);
-    out.catch(() => undefined);
-    this.alongside = { pkg, out };
+    const began = this.startAlongside(pkg);
+    began.catch(() => undefined);
+    this.alongside = { pkg, began };
   }
 
-  /** Begins the app's launch, where nothing can go wrong for that; undefined: `launch` does it. */
-  protected startAlongside(_pkg: string): Promise<string | undefined> {
-    return Promise.resolve(undefined);
+  /** Begins the app's launch, where nothing can go wrong for that; false: `launch` does it. */
+  protected startAlongside(_pkg: string): Promise<boolean> {
+    return Promise.resolve(false);
   }
 
-  /** What the launch that began alongside said, if one did for this app; `launch` takes it up once. */
-  protected async launchedAlongside(pkg: string): Promise<string | undefined> {
-    const began = this.alongside;
+  /** Whether the launch that began alongside was this app's; `launch` takes it up once. */
+  protected async launchedAlongside(pkg: string): Promise<boolean> {
+    const was = this.alongside;
     this.alongside = undefined;
-    return began?.pkg === pkg ? began.out : undefined;
+    return was?.pkg === pkg ? was.began : false;
   }
 
   private ensure(): Promise<RpcClient> {

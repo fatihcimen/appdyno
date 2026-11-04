@@ -225,7 +225,7 @@ export interface Device {
   getClipboard(): Promise<string | undefined>;
   setOrientation(rotation: 0 | 1 | 2 | 3): Promise<void>;
   openUrl(url: string, pkg?: string): Promise<void>;
-  launch(pkg: string): Promise<string>;
+  launch(pkg: string): Promise<void>;
   /** Before `open`, when a first call is to launch this app: `launch` then takes up what began here. */
   launchAlongside(pkg: string): void;
   terminate(pkg: string): Promise<void>;

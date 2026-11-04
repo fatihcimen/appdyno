@@ -267,7 +267,6 @@ export class FakeDevice extends DeviceActions implements Device {
   async launch(pkg: string) {
     this.record('launch', pkg);
     this.screen = 'home';
-    return 'Status: ok';
   }
   async terminate(pkg: string) {
     this.record('terminate', pkg);

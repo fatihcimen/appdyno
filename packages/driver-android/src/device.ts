@@ -290,14 +290,16 @@ export class AndroidDevice extends RpcDevice implements Device {
 
   /** Over another tool's automation this session is refused, and must have left the device alone. */
   protected override startAlongside(pkg: string) {
-    return this.launcher
-      .holders()
-      .then((others) => (others.length > 0 ? undefined : this.apps.start(pkg)));
+    return this.launcher.holders().then(async (others) => {
+      if (others.length > 0) return false;
+      await this.apps.start(pkg);
+      return true;
+    });
   }
 
-  /** Starts the app's launcher activity and waits for it (`am start -W`); returns its output. */
-  async launch(pkg: string): Promise<string> {
-    return (await this.launchedAlongside(pkg)) ?? this.queue.run(() => this.apps.start(pkg));
+  /** Starts the app's launcher activity and waits for it (`am start -W`). */
+  async launch(pkg: string) {
+    if (!(await this.launchedAlongside(pkg))) await this.queue.run(() => this.apps.start(pkg));
   }
 
   async terminate(pkg: string) {

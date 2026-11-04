@@ -68,7 +68,7 @@ const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
 export type IosDeviceOps = {
   /** Up and usable (a simulator booted, a phone connected); asked only before a new runner starts. */
   up(): Promise<boolean>;
-  launch(bundle: string): Promise<string>;
+  launch(bundle: string): Promise<void>;
   terminate(bundle: string): Promise<void>;
   openUrl(url: string, bundle?: string): Promise<void>;
   setLocation(lat: number, lon: number): Promise<void>;
@@ -270,13 +270,11 @@ export abstract class IosDevice extends RpcDevice implements Device {
     }
   }
 
-  async launch(pkg: string): Promise<string> {
-    const out =
-      (await this.launchedAlongside(pkg)) ??
-      (await this.queue.run(() => this.ops.launch(assertBundle(pkg))));
+  async launch(pkg: string) {
+    if (!(await this.launchedAlongside(pkg)))
+      await this.queue.run(() => this.ops.launch(assertBundle(pkg)));
     await this.target(pkg);
     await this.untilFront(pkg);
-    return out;
   }
 
   /** A read during a launch would get the home screen, slowly. */

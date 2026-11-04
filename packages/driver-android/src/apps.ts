@@ -130,8 +130,8 @@ export class AndroidApps implements AppManager {
     await this.start(app, ['-S', ...extras]);
   }
 
-  /** Starts the app's launcher activity and waits for it (`am start -W`); returns its output. */
-  async start(app: string, args: string[] = []): Promise<string> {
+  /** Starts the app's launcher activity and waits for it (`am start -W`). */
+  async start(app: string, args: string[] = []) {
     const activity = (
       await this.sh(
         `cmd package resolve-activity --brief -c android.intent.category.LAUNCHER ${assertPkg(app)}`,
@@ -148,6 +148,5 @@ export class AndroidApps implements AppManager {
     const out = await this.sh(`am start -W -n ${shq(activity)} ${args.join(' ')}`);
     const error = amStartError(out);
     if (error) throw new DeviceError('APP_NOT_RUNNING', `${app} did not start: ${error}`);
-    return out;
   }
 }

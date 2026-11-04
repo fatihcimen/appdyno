@@ -99,7 +99,9 @@ export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
       (await listDevices()).some(
         (d) => d.connection === 'USB' && d.serial.replace(/-/g, '') === udid.replace(/-/g, ''),
       ),
-    launch: async (b) => JSON.stringify(await ctl.launch(b)),
+    launch: async (b) => {
+      await ctl.launch(b);
+    },
     terminate: (b) => ctl.terminate(b),
     openUrl: async (url, b) => {
       if (!b)

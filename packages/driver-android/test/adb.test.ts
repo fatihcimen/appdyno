@@ -23,7 +23,7 @@ describe('launching an app', () => {
 
   it('takes a start still drawing when the wait ended for a start: a read tells what is on the screen', async () => {
     const out = `${STARTED}Status: timeout\nLaunchState: UNKNOWN (0)\nWaitTime: 10001\nComplete\n`;
-    expect(await device(out).d.launch('a.b')).toBe(out);
+    await expect(device(out).d.launch('a.b')).resolves.toBeUndefined();
   });
 
   it('says what went wrong, not what it was starting', async () => {
