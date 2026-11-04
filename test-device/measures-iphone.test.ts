@@ -63,7 +63,7 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
     const r = await t.call('perf_scroll', { repeats: 1 });
     console.log(r.text);
     expect(r.error).toBe(false);
-    const round = (r.data.rounds as { frames: number }[])[0]!;
+    const round = r.data.rounds[0]!;
     expect(round.frames).toBeGreaterThan(30);
     expect(r.data.frozen).toBe(0);
   }, 240_000);
@@ -196,8 +196,6 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
     console.log('energy', idle.text, '\n', busy.text);
     expect(busy.data.energyModelled).toBe(false);
     expect(busy.text).toMatch(/power impact/);
-    expect(busy.data.energyImpact as number).toBeGreaterThan(
-      (idle.data.energyImpact as number) * 2,
-    );
+    expect(busy.data.energyImpact!).toBeGreaterThan(idle.data.energyImpact! * 2);
   }, 300_000);
 });

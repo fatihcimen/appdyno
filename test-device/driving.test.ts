@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext, type Op } from '@appdyno/ops';
 import { checkedOps } from '../packages/ops/test/helpers.js';
-import { opCaller, type Answer } from './helpers.js';
+import { opCaller, type Answer, type Call } from './helpers.js';
 import {
   Adb,
   AndroidDevice,
@@ -33,7 +33,7 @@ function harness(serial: string, provider: ConstructorParameters<typeof ServerCo
   return { ctx, call };
 }
 
-const ok = (r: Answer) => {
+const ok = <A extends Answer>(r: A) => {
   expect(r.text && !r.error ? '' : r.text).toBe('');
   return r;
 };
@@ -41,7 +41,7 @@ const ok = (r: Answer) => {
 /** What both platforms must do, given how each opens the fixture and names its parts. */
 function shared(
   get: () => {
-    call: (name: string, args?: Record<string, unknown>) => Promise<Answer>;
+    call: Call;
     ctx: ServerContext;
   },
   open: (screen: string) => Promise<void>,
@@ -56,7 +56,7 @@ function shared(
     noClipboard?: boolean;
   },
 ) {
-  const call = (n: string, a?: Record<string, unknown>) => get().call(n, a);
+  const call: Call = (n, a) => get().call(n, a);
 
   it('taps by a selector, folding case and accents, and refuses several or none', async () => {
     await open('list');
@@ -131,9 +131,9 @@ function shared(
     ok(await call('tap', { selector: names.field }));
     ok(await call('type_text', { text: 'Ayşe' }));
     const f = ok(await call('find', { ...names.field }));
-    const m = (f.data.matches as Record<string, unknown>[])[0]!;
+    const m = f.data.matches[0]!;
     expect(m).toMatchObject({ enabled: true, focused: true, value: 'Ayşe' });
-    expect((m.bounds as { w: number }).w).toBeGreaterThan(0);
+    expect(m.bounds.w).toBeGreaterThan(0);
     ok(await call('assert', { ...names.field, check: 'text', equals: 'Ayşe' }));
     expect((await call('assert', { ...names.field, check: 'text', equals: 'No' })).data.code).toBe(
       'CHECK_FAILED',
@@ -143,15 +143,10 @@ function shared(
   it('says whether the keyboard is open, and closes it or says it cannot', async () => {
     await open('form');
     ok(await call('tap', { selector: names.field }));
-    expect((ok(await call('keyboard', { action: 'status' })).data as { open: boolean }).open).toBe(
-      true,
-    );
+    expect(ok(await call('keyboard', { action: 'status' })).data.open).toBe(true);
     const r = await call('keyboard', { action: 'dismiss' });
     if (r.error) expect(r.text).toContain('stayed open');
-    else
-      expect(
-        (ok(await call('keyboard', { action: 'status' })).data as { open: boolean }).open,
-      ).toBe(false);
+    else expect(ok(await call('keyboard', { action: 'status' })).data.open).toBe(false);
   });
 
   it('double-taps, drags and runs a plan, as the app sees it', async () => {
@@ -160,7 +155,7 @@ function shared(
     ok(await call('gesture', { kind: 'double_tap', ...pad }));
     ok(await call('assert', { text: 'double taps: 1' }));
     const f = ok(await call('find', { text: 'Gesture pad' }));
-    const b = (f.data.matches as { x: number; y: number }[])[0]!;
+    const b = f.data.matches[0]!;
     ok(
       await call('gesture', {
         kind: 'drag',
@@ -266,7 +261,7 @@ describe.skipIf(!android)('driving on Android', () => {
   it('counts two fingers in a plan', async () => {
     await open('gestures');
     const f = ok(await h.call('find', { text: 'Gesture pad' }));
-    const b = (f.data.matches as { x: number; y: number }[])[0]!;
+    const b = f.data.matches[0]!;
     ok(
       await h.call('gesture', {
         kind: 'plan',
@@ -328,9 +323,7 @@ describe.skipIf(!android)('driving on Android', () => {
     await open('home');
     ok(await h.call('press_key', { key: 'app_switch' }));
     ok(await h.call('press_key', { key: 'home' }));
-    expect((ok(await h.call('device_info')).data as { foreground?: string }).foreground).not.toBe(
-      APP,
-    );
+    expect(ok(await h.call('device_info')).data.foreground).not.toBe(APP);
   });
 
   it('manages apps: clear, grant, launch with extras, uninstall and install', async () => {
@@ -488,7 +481,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
   it('pinches with two fingers in a plan, as the app sees it', async () => {
     await open('gestures');
     const f = ok(await h.call('find', { text: 'Gesture pad' }));
-    const b = (f.data.matches as { x: number; y: number }[])[0]!;
+    const b = f.data.matches[0]!;
     ok(
       await h.call('gesture', {
         kind: 'plan',
@@ -526,12 +519,9 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     ok(await h.call('press_key', { key: 'home' }));
     // the home screen may come later than the settle's window
     await expect
-      .poll(
-        async () => (ok(await h.call('device_info')).data as { foreground?: string }).foreground,
-        {
-          timeout: 8_000,
-        },
-      )
+      .poll(async () => ok(await h.call('device_info')).data.foreground, {
+        timeout: 8_000,
+      })
       .not.toBe(APP);
   });
 
@@ -669,8 +659,7 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
   });
 
   it('changes and restores dark mode, text size and reduce motion', async () => {
-    const read = async (name: string) =>
-      ok(await h.call('device_setting', { name })).data.value as string;
+    const read = async (name: string) => ok(await h.call('device_setting', { name })).data.value!;
     const before = {
       dark: await read('dark_mode'),
       size: await read('text_size'),
@@ -729,9 +718,7 @@ describe.skipIf(!emulator)('emulator lifecycle', () => {
     // other work may run the same AVD: the name is then ambiguous, a refusal, and the driver boots it as asked
     const up = await h.call('simulator', { action: 'boot', name: avd });
     if (up.error) expect(up.data.code).toBe('AMBIGUOUS');
-    const serial = up.error
-      ? await new AndroidEmulators(adb).boot(avd)
-      : (up.data.serial as string);
+    const serial = up.error ? await new AndroidEmulators(adb).boot(avd) : up.data.serial!;
     expect(await serials()).toContain(serial);
     if (!up.error) {
       expect(ok(await h.call('simulator', { action: 'list' })).text).toContain(

@@ -14,7 +14,13 @@ import {
   sleep as pause,
   Simctl,
 } from 'appdyno';
-import { DEFAULT_POLICY, ServerContext, type ToolResult } from '@appdyno/ops';
+import {
+  DEFAULT_POLICY,
+  ServerContext,
+  type OpData,
+  type OpName,
+  type ToolResult,
+} from '@appdyno/ops';
 import { checkedOps } from '../packages/ops/test/helpers.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -23,11 +29,15 @@ const APP = 'dev.appdyno.fixture';
 const serial = process.env.APPDYNO_ANDROID_SERIAL;
 const udid = process.env.APPDYNO_IOS_UDID;
 const textOf = (r: ToolResult) => r.blocks.map((b) => (b.type === 'text' ? b.text : '')).join('\n');
-type Call = (name: string, args?: Record<string, unknown>) => Promise<ToolResult>;
+type Call = <N extends OpName>(
+  name: N,
+  args?: Record<string, unknown>,
+) => Promise<ToolResult<OpData<N>>>;
 /** An operation as its tool calls it: through its input schema. */
 const caller = (ctx: ServerContext): Call => {
   const ops = checkedOps(ctx);
-  return async (name, args = {}) => ops[name]!.handler(ops[name]!.input.parse(args));
+  return async <N extends OpName>(name: N, args: Record<string, unknown> = {}) =>
+    (await ops[name]!.handler(ops[name]!.input.parse(args))) as ToolResult<OpData<N>>;
 };
 
 describe.skipIf(!serial)('android: another tool holds UI automation', () => {
@@ -143,12 +153,12 @@ describe.skipIf(!serial)('android: logs and crashes of the fixture', () => {
   });
 
   it('lists the crash with a summary and its file', async () => {
-    let r!: ToolResult;
+    let r!: ToolResult<OpData<'crashes'>>;
     let reports: { reason: string; detail?: string; file?: string }[] = [];
     // the stack comes from dropbox, written a moment after the exit
     for (let i = 0; i < 20 && !reports.some((x) => x.detail?.includes('shell-induced')); i++) {
       r = await call('crashes', { limit: 3 });
-      ({ reports } = r.data as { reports: typeof reports });
+      ({ reports } = r.data);
       await pause(500);
     }
     const crash = reports.find((x) => x.detail?.includes('shell-induced crash'));
@@ -232,7 +242,7 @@ describe.skipIf(!udid)('simulator: logs and crashes of the fixture', () => {
         since: new Date(Date.now() - 30_000).toISOString(),
         limit: 2,
       });
-      reports = (c.data as { reports: typeof reports }).reports;
+      reports = c.data.reports;
       if (reports.length === 0) await pause(1_000);
     }
     expect(reports[0]!.reason).toMatch(/SIGSEGV|EXC_/);
@@ -296,7 +306,7 @@ describe.skipIf(!iphone || !iphoneFixture)('iPhone: logs and crashes of the fixt
         since: new Date(Date.now() - 120_000).toISOString(),
         limit: 2,
       });
-      reports = (c.data as { reports: typeof reports }).reports;
+      reports = c.data.reports;
       if (reports.length === 0) await pause(3_000);
     }
     expect(reports[0]?.reason).toMatch(/SIGSEGV|EXC_/);

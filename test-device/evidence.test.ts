@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { checkedOps } from '../packages/ops/test/helpers.js';
-import { opCaller } from './helpers.js';
+import { opCaller, type Call } from './helpers.js';
 import { Adb, androidProvider, appleProvider, decodePng, Devicectl, PERFETTO } from 'appdyno';
 
 /**
@@ -82,7 +82,7 @@ function harness(serial: string, provider: ConstructorParameters<typeof ServerCo
     share: true,
   });
   const call = opCaller(checkedOps(ctx));
-  const ok = async (name: string, args: Record<string, unknown> = {}) => {
+  const ok: Call = async (name, args = {}) => {
     const r = await call(name, args);
     expect(r.error ? r.text : '').toBe('');
     return r;
@@ -379,9 +379,7 @@ describe.skipIf(!android)('network on Android', () => {
     await h.ok('network', { action: 'start', via: 'bytes' });
     await fetchIn(h.ok, `http://${macHost()}:${web.webPort}/big`);
     const r = await h.ok('network', { action: 'stop' });
-    const got = (r.data.entries as { direction: string; bytes: number }[]).find(
-      (e) => e.direction === 'Received',
-    )!;
+    const got = r.data.entries!.find((e) => e.direction === 'Received')!;
     expect(got.bytes).toBeGreaterThan(200_000);
     expect(r.text).toMatch(/bodies: not by this way/);
   }, 120_000);
@@ -394,7 +392,7 @@ describe.skipIf(!android)('network on Android', () => {
     await fetchIn(h.ok, `http://${macHost()}:${web.webPort}/big`);
     expect((await h.ok('network', { action: 'read' })).text).toMatch(/can be read when it ends/);
     const r = await h.ok('network', { action: 'stop' });
-    const port = (r.data.entries as { direction: string; host: string; bytes: number }[]).find(
+    const port = r.data.entries!.find(
       (e) => e.direction === 'Received' && e.host === `TCP port ${web.webPort}`,
     );
     expect(port?.bytes).toBeGreaterThan(200_000);
@@ -491,11 +489,9 @@ for (const { platform, serial, provider, pageId, other } of [
       expect(r.text).toMatch(/^"Fixture web" /);
       expect(r.text).toMatch(/button "Pay" \d+,\d+ #pay/);
       expect(r.text).toMatch(/input "Card" \d+,\d+ #card/);
-      const pay = (r.data.elements as { text: string; x: number; y: number }[]).find(
-        (e) => e.text === 'Pay',
-      )!;
+      const pay = r.data.elements!.find((e) => e.text === 'Pay')!;
       const found = await h.ok('find', { text: 'Pay' });
-      const inTree = (found.data.matches as { x: number; y: number }[])[0]!;
+      const inTree = found.data.matches[0]!;
       expect(Math.abs(pay.x - inTree.x)).toBeLessThan(40);
       expect(Math.abs(pay.y - inTree.y)).toBeLessThan(40);
     }, 60_000);
@@ -528,9 +524,7 @@ for (const { platform, serial, provider, pageId, other } of [
         js: "document.getElementById('paid').textContent = ''",
       });
       const r = await h.ok('webview', { action: 'elements' });
-      const pay = (r.data.elements as { text: string; x: number; y: number }[]).find(
-        (e) => e.text === 'Pay',
-      )!;
+      const pay = r.data.elements!.find((e) => e.text === 'Pay')!;
       await h.ok('tap', { x: pay.x, y: pay.y });
       expect((await h.ok('wait_for', { text: 'Paid' })).data.met).toBe(true);
     }, 60_000);
@@ -626,7 +620,7 @@ for (const { platform, serial, provider } of targets)
       });
       expect(loose.data.same).toBe(true);
       const window = await h.ok('device_info');
-      const size = window.data.screen as { w: number; h: number };
+      const size = window.data.screen;
       const masked = await h.ok('visual', {
         action: 'compare',
         name: 'masked',

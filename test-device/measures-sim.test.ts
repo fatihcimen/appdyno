@@ -62,12 +62,10 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     const heavy = await t.call('perf_scroll');
     console.log('light', light.text, '\nheavy', heavy.text);
     expect(heavy.text).not.toMatch(/relaunched/);
-    const of = (a: typeof light) => a.data.rounds as { jankyPercent: number; p95Ms: number }[];
+    const of = (a: typeof light) => a.data.rounds;
     expect(a95(of(heavy))).toBeGreaterThan(40);
     expect(a95(of(heavy))).toBeGreaterThan(a95(of(light)));
-    expect(heavy.data.jankMedianPercent as number).toBeGreaterThan(
-      light.data.jankMedianPercent as number,
-    );
+    expect(heavy.data.jankMedianPercent!).toBeGreaterThan(light.data.jankMedianPercent!);
   }, 240_000);
 
   it('probe: false turns it off, and its refusal is not kept as what the device cannot do', async () => {
@@ -89,7 +87,7 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
       pause(3_000).then(() => d.tap(byId(s, 'stall_500'), { settle: false })),
     ]);
     console.log(r.text);
-    within(r.data.worstMs as number, 500, 0.1);
+    within(r.data.worstMs, 500, 0.1);
     expect(r.data.stalls).toBe(1);
   }, 120_000);
 
@@ -158,11 +156,11 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     console.log('energy', idle.data.energyMj, busy.data.energyMj, busy.text);
     expect(busy.data.energyModelled).toBe(false);
     expect(busy.text).toMatch(/This Mac's energy/);
-    expect(busy.data.energyMj as number).toBeGreaterThan((idle.data.energyMj as number) * 3);
+    expect(busy.data.energyMj!).toBeGreaterThan(idle.data.energyMj! * 3);
     expect(execFileSync('xcrun', ['simctl', 'list', 'devices', udid!]).toString()).toMatch(
       /Booted/,
     );
   }, 120_000);
 });
 
-const a95 = (rounds: { p95Ms: number }[]) => Math.max(...rounds.map((r) => r.p95Ms));
+const a95 = (rounds: { p95Ms?: number | undefined }[]) => Math.max(...rounds.map((r) => r.p95Ms!));

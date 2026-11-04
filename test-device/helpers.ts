@@ -2,27 +2,47 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { DeviceProvider } from '@appdyno/core';
-import { DEFAULT_POLICY, ServerContext, ToolError, type Op } from '@appdyno/ops';
+import {
+  DEFAULT_POLICY,
+  ServerContext,
+  ToolError,
+  type Op,
+  type OpData,
+  type OpName,
+} from '@appdyno/ops';
 import { checkedOps } from '../packages/ops/test/helpers.js';
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 
-export type Answer = { error: boolean; text: string; data: Record<string, unknown> };
+/** What a client sees: the op's data, or with `error` its refusal's code. */
+export type Answer<D = unknown> = { error: boolean; text: string; data: D & { code?: string } };
+
+export type Call = <N extends OpName>(
+  name: N,
+  args?: Record<string, unknown>,
+) => Promise<Answer<OpData<N>>>;
 
 /** Calls an operation as a client sees it: through its input schema, a refusal as an answer. */
 export const opCaller =
-  (ops: Record<string, Op>) =>
-  async (name: string, args: Record<string, unknown> = {}): Promise<Answer> => {
+  (ops: Record<string, Op>): Call =>
+  async <N extends OpName>(
+    name: N,
+    args: Record<string, unknown> = {},
+  ): Promise<Answer<OpData<N>>> => {
     const op = ops[name] as Op;
     try {
       const r = await op.handler(op.input.parse(args) as Record<string, unknown>);
       return {
         error: false,
         text: r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'),
-        data: r.data,
+        data: r.data as OpData<N> & { code?: string },
       };
     } catch (e) {
       if (!(e instanceof ToolError)) throw e;
-      return { error: true, text: e.message, data: { code: e.code } };
+      return {
+        error: true,
+        text: e.message,
+        data: { code: e.code } as OpData<N> & { code?: string },
+      };
     }
   };
 

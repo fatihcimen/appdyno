@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { OpData, OpName } from '@appdyno/ops';
 import { Devicectl, IosSimulatorDevice } from 'appdyno';
 
 /**
@@ -63,7 +64,7 @@ for (const { platform, serial, form } of targets)
     const file = join(dir, `${platform}.flow`);
     const params = [`PASSWORD_INPUT=${PASSWORD}`, `SECRET_1=${LISTED_SECRET}`];
 
-    const raw = async (name: string, args: Record<string, unknown> = {}) => {
+    const raw = async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {
       const r = (await client.callTool({ name, arguments: args }, undefined, {
         timeout: LONG_MS,
       })) as {
@@ -74,10 +75,10 @@ for (const { platform, serial, form } of targets)
       return {
         error: r.isError === true,
         text: r.content.map((c) => c.text ?? '').join('\n'),
-        data: r.structuredContent ?? {},
+        data: (r.structuredContent ?? {}) as OpData<N> & { code?: string },
       };
     };
-    const call = async (name: string, args: Record<string, unknown> = {}) => {
+    const call = async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {
       const r = await raw(name, args);
       expect(r.error ? r.text : '').toBe('');
       return r;
@@ -120,7 +121,7 @@ for (const { platform, serial, form } of targets)
 
         await call('open_link', { url: 'appdyno-fixture://open/list' });
         await call('scroll_to', { selector: { text: 'Product 25' }, maxSwipes: 15 });
-        const adds = (await call('find', { id: 'add_button' })).data.matches as { ref: string }[];
+        const adds = (await call('find', { id: 'add_button' })).data.matches;
         // from the middle: the first rows of a scrolled iOS list lie under its navigation bar
         const middle = Math.floor(adds.length / 2);
         await call('tap', { ref: adds[middle]!.ref });
@@ -169,12 +170,7 @@ for (const { platform, serial, form } of targets)
         process.stderr.write(`--- ${platform} replay\n${r.text}\n---\n`);
         expect(secretsIn(r.text)).toEqual([]);
         expect(r.text).toMatch(/^passed: \d+ steps$/m);
-        const timings = r.data.timings as {
-          step: string;
-          ms: number;
-          settledMs?: number;
-          settled?: boolean;
-        }[];
+        const timings = r.data.timings!;
         const taps = timings.filter((t) => t.step.startsWith('tap'));
         expect(taps.length).toBeGreaterThan(3);
         for (const t of taps) {

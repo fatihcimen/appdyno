@@ -261,7 +261,7 @@ describe('the page and the measures', () => {
       'size.bytes',
     ]);
     // what it read is kept, and its value under its name
-    const raw = readFileSync(data.raw as string, 'utf8');
+    const raw = readFileSync(String(data.raw), 'utf8');
     for (const part of ['threads', 'network', 'energy', 'exits', 'size'])
       expect(raw).toContain(`raw ${part}`);
     const stored = JSON.parse(readFileSync(String(data.raw).replace(/\.txt$/, '.json'), 'utf8'));

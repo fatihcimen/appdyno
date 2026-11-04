@@ -60,7 +60,7 @@ describe.skipIf(!serial)('measures on Android, through the operations', () => {
     console.log(r.text);
     expect(r.error).toBe(false);
     expect(r.data.frozen).toBe(1);
-    expect(r.data.worstMs as number).toBeGreaterThan(800);
+    expect(r.data.worstMs).toBeGreaterThan(800);
   }, 180_000);
 
   it('why slow: an operation keeps the phases for the dashboard', async () => {
@@ -98,12 +98,10 @@ describe.skipIf(!serial)('measures on Android, through the operations', () => {
     expect(busy.data.energyModelled).toBe(true);
     if (serial!.startsWith('emulator-')) {
       expect(busy.text).toMatch(/A model, not a reading/);
-      expect(busy.data.energyMj as number).toBeGreaterThan(
-        (idle.data.energyMj as number) * 2 + 100,
-      );
+      expect(busy.data.energyMj!).toBeGreaterThan(idle.data.energyMj! * 2 + 100);
     } else {
       expect(busy.text).toMatch(/model-based/);
-      expect(busy.data.energyMah as number).toBeGreaterThan(idle.data.energyMah as number);
+      expect(busy.data.energyMah!).toBeGreaterThan(idle.data.energyMah!);
       expect(busy.text).toMatch(/energy \(a model\)/);
     }
     expect(await d.shell('dumpsys battery')).not.toMatch(/UPDATES STOPPED/);
