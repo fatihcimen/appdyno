@@ -83,6 +83,8 @@ static void checkLive(void) {
   MVCheck(@"hud: with no count from the device, the picture's own rate", [[hud shownFor:@"fps"] isEqual:@"58 fps"], [hud shownFor:@"fps"]);
   [hud show:@{@"sample": @{@"at": @4, @"fps": @30}}];
   MVCheck(@"hud: a device's own count comes first", [[hud shownFor:@"fps"] isEqual:@"30 fps"], [hud shownFor:@"fps"]);
+  [hud show:@{@"sample": @{@"at": @4, @"fps": @20, @"absent": @{@"fps": @"the display, not the app"}}}];
+  MVCheck(@"hud: what a source says of a reading stands beside it", [[hud whyFor:@"fps"] isEqual:@"the display, not the app"], [hud whyFor:@"fps"]);
   [hud show:@{@"sample": @{@"at": @5, @"absent": @{@"cpuPercent": @"cannot measure CPU"}}}];
   MVCheck(@"hud: a measure a device cannot give is a dash, never 0", [[hud shownFor:@"cpuPercent"] isEqual:@"\u2013"], [hud shownFor:@"cpuPercent"]);
 }

@@ -253,6 +253,12 @@ static MVMeasureCard *cardOf(const MVMeasureRow *row) {
   return @"";
 }
 
+- (NSString *)whyFor:(NSString *)field {
+  for (MVMeasureCard *card in _cards)
+    if ([card.field isEqual:field]) return card.why.hidden ? @"" : card.why.stringValue;
+  return @"";
+}
+
 - (void)show:(NSDictionary *)message {
   NSDictionary *sample = message[@"sample"];
   NSDictionary *absent = sample[@"absent"];
@@ -269,8 +275,10 @@ static MVMeasureCard *cardOf(const MVMeasureRow *row) {
       card.spark.hidden = YES;
       continue;
     }
-    card.why.hidden = YES;
-    card.pane.toolTip = nil;
+    // what a source says of a reading it does give stands beside it
+    card.why.stringValue = absent[card.field] ?: @"";
+    card.why.hidden = !absent[card.field];
+    card.pane.toolTip = absent[card.field];
     // a still screen sends nothing to count, and is no fault
     BOOL still = [card.field isEqual:@"fps"] && value.doubleValue <= 0;
     MVLiveState state = still ? MVLiveNeutral : [card.field isEqual:@"fps"] ? MVFramesState(sample) : MVStateOf(card.field, value.doubleValue);

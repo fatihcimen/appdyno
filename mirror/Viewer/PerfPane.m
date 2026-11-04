@@ -144,7 +144,7 @@ static MVTrend *trendOf(const MVTrendRow *row) {
     NSNumber *value = MVReadingOf(sample, trend.field, _pictureRate);
     NSString *why = sample[@"absent"][trend.field];
     trend.why.stringValue = why ?: @"";
-    trend.why.hidden = value != nil || !why;
+    trend.why.hidden = !why;
     BOOL still = [trend.field isEqual:@"fps"] && value && value.doubleValue <= 0;
     trend.now.stringValue = still ? @"Still" : value ? MVReadingWords(value.doubleValue, trend.unit) : @"–";
     if (!value) continue;

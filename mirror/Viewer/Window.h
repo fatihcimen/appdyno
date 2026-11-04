@@ -122,6 +122,7 @@ static const double MVHudWidth = 188;
 - (void)setPictureRate:(double)rate;
 /// What a measure's card says now.
 - (NSString *)shownFor:(NSString *)field;
+- (NSString *)whyFor:(NSString *)field;
 @end
 
 /// One line of a list.
