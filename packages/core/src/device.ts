@@ -67,6 +67,8 @@ export const SETTINGS = [
   'dark_mode',
   'text_size',
   'reduce_motion',
+  'increase_contrast',
+  'reduce_transparency',
   'animations',
   'locale',
   'network',

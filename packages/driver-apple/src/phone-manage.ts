@@ -139,6 +139,15 @@ export class PhoneApps implements AppManager {
   }
 }
 
+/** What `devicectl` has a word for. */
+const APPEARANCE: ReadonlySet<SettingName> = new Set<SettingName>([
+  'dark_mode',
+  'text_size',
+  'reduce_motion',
+  'increase_contrast',
+  'reduce_transparency',
+]);
+
 /** `devicectl` shows "Extra Large" where it is told extra-large. */
 export const phoneTextSize = (shown: string) => shown.trim().toLowerCase().replace(/\s+/g, '-');
 
@@ -151,23 +160,32 @@ export class PhoneSettings implements DeviceSettings {
   }
 
   async get(name: SettingName): Promise<string> {
-    if (name !== 'dark_mode' && name !== 'text_size' && name !== 'reduce_motion')
+    if (!APPEARANCE.has(name))
       throw new DeviceError('UNSUPPORTED', `an iPhone has no ${name} switch this tool can reach`);
     const j = await this.ctl.json(['device', 'info', 'appearance', '--device', this.ctl.udid]);
     const a = (j.result ?? {}) as {
       userInterfaceStyle?: string;
       textSize?: string;
       reduceMotion?: { enabled?: boolean };
+      increaseContrast?: { enabled?: boolean };
+      reduceTransparency?: { enabled?: boolean };
     };
     if (name === 'dark_mode') return a.userInterfaceStyle ?? '';
-    if (name === 'reduce_motion') return a.reduceMotion?.enabled ? 'on' : 'off';
-    return phoneTextSize(a.textSize ?? '');
+    if (name === 'text_size') return phoneTextSize(a.textSize ?? '');
+    const flags = {
+      reduce_motion: a.reduceMotion,
+      increase_contrast: a.increaseContrast,
+      reduce_transparency: a.reduceTransparency,
+    };
+    return flags[name as keyof typeof flags]?.enabled ? 'on' : 'off';
   }
 
   async set(name: SettingName, value: string) {
     if (name === 'dark_mode') await this.appearance('--mode', on(value, 'dark', 'light'));
     else if (name === 'text_size') await this.appearance('--text-size', value);
     else if (name === 'reduce_motion') await this.appearance('--reduce-motion', value);
+    else if (name === 'increase_contrast') await this.appearance('--increase-contrast', value);
+    else if (name === 'reduce_transparency') await this.appearance('--reduce-transparency', value);
     else
       throw new DeviceError('UNSUPPORTED', `an iPhone has no ${name} switch this tool can reach`);
   }

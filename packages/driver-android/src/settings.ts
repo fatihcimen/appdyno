@@ -8,6 +8,11 @@ const ANIMATION_SCALES = [
   'animator_duration_scale',
 ];
 
+/** Android's own: high contrast text, the nearest it has to increasing contrast. */
+const HIGH_CONTRAST = 'high_text_contrast_enabled';
+const NO_TRANSPARENCY =
+  'Android has no reduce_transparency switch: its blurs are a developer option';
+
 const localeApp = (app: string | undefined) => {
   if (!app)
     throw new DeviceError(
@@ -103,6 +108,12 @@ export class AndroidSettings implements DeviceSettings {
       case 'reduce_motion':
       case 'animations':
         return this.getAnimations();
+      case 'increase_contrast': {
+        const v = (await this.sh(`settings get secure ${HIGH_CONTRAST}`)).trim();
+        return v === '1' ? 'on' : 'off';
+      }
+      case 'reduce_transparency':
+        throw new DeviceError('UNSUPPORTED', NO_TRANSPARENCY);
       case 'locale': {
         const out = await this.sh(`cmd locale get-app-locales ${localeApp(app)}`);
         return /are \[([^\]]*)\]/.exec(out)?.[1] ?? '';
@@ -196,6 +207,13 @@ export class AndroidSettings implements DeviceSettings {
       case 'animations':
         await this.setAnimations(value);
         return;
+      case 'increase_contrast':
+        if (value !== 'on' && value !== 'off')
+          throw new DeviceError('INVALID_ARGUMENT', `${name}: on or off, not ${value}`);
+        await this.sh(`settings put secure ${HIGH_CONTRAST} ${value === 'on' ? 1 : 0}`);
+        return;
+      case 'reduce_transparency':
+        throw new DeviceError('UNSUPPORTED', NO_TRANSPARENCY);
       case 'locale': {
         const out = await this.sh(
           `cmd locale set-app-locales ${localeApp(app)} --locales ${shq(value)}`,

@@ -142,6 +142,8 @@ export class SimulatorApps implements AppManager {
   }
 }
 
+const TRANSPARENCY = ['com.apple.Accessibility', 'EnhancedBackgroundContrastEnabled'];
+
 const SIM_CANNOT = {
   fold: 'simctl has no fold pose (its ui and io options name none)',
   call: 'a simulator has no telephony: it cannot take a call',
@@ -177,6 +179,12 @@ export class SimulatorSettings implements DeviceSettings {
           'com.apple.Accessibility',
           'ReduceMotionEnabled',
         ).catch(() => '0');
+        return v.trim() === '1' ? 'on' : 'off';
+      }
+      case 'increase_contrast':
+        return (await this.ui('increase_contrast')) === 'enabled' ? 'on' : 'off';
+      case 'reduce_transparency': {
+        const v = await this.spawn('defaults', 'read', ...TRANSPARENCY).catch(() => '0');
         return v.trim() === '1' ? 'on' : 'off';
       }
       case 'locale':
@@ -220,6 +228,19 @@ export class SimulatorSettings implements DeviceSettings {
           value === 'on' ? 'YES' : 'NO',
         );
         await this.spawn('notifyutil', '-p', 'com.apple.accessibility.reduce.motion.status');
+        return;
+      case 'increase_contrast':
+        await this.ui('increase_contrast', on(value, 'enabled', 'disabled'));
+        return;
+      case 'reduce_transparency':
+        await this.spawn(
+          'defaults',
+          'write',
+          ...TRANSPARENCY,
+          '-bool',
+          value === 'on' ? 'YES' : 'NO',
+        );
+        await this.spawn('notifyutil', '-p', 'com.apple.accessibility.reduce.transparency.status');
         return;
       case 'locale':
         if (value) {

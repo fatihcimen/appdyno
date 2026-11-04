@@ -44,6 +44,30 @@ describe.skipIf(!ANDROID)('small tools on an emulator', () => {
   });
 });
 
+describe.skipIf(!ANDROID)('accessibility on an emulator', () => {
+  let call: Call;
+  const shell = (...words: string[]) =>
+    execFileSync('adb', ['-s', ANDROID!, 'shell', ...words], { encoding: 'utf8' }).trim();
+  beforeAll(() => {
+    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-small-')));
+    call = opsOn(androidProvider(new Adb()), ANDROID!, APP).call;
+  });
+
+  it('turns on high contrast text, and it goes back', async () => {
+    ok(await call('device_setting', { name: 'increase_contrast', value: 'on' }));
+    expect(shell('settings', 'get', 'secure', 'high_text_contrast_enabled')).toBe('1');
+    expect((await call('device_setting', { name: 'increase_contrast' })).data.value).toBe('on');
+    ok(await call('device_setting', { name: 'restore' }));
+    expect(shell('settings', 'get', 'secure', 'high_text_contrast_enabled')).not.toBe('1');
+  });
+
+  it('says Android has no reduce_transparency', async () => {
+    const r = await call('device_setting', { name: 'reduce_transparency', value: 'on' });
+    expect(r.data.code).toBe('UNSUPPORTED');
+    expect(r.text).toContain('no reduce_transparency switch');
+  });
+});
+
 describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
   let o: ReturnType<typeof opsOn>;
   let call: Call;
@@ -58,6 +82,17 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
     await call('set_orientation', { orientation: 'portrait' });
     await call('device_setting', { name: 'restore' });
     o.ctx.close();
+  });
+
+  it('turns on contrast and transparency, reads them back, and they go back', async () => {
+    for (const name of ['increase_contrast', 'reduce_transparency']) {
+      expect((await call('device_setting', { name })).data.value).toBe('off');
+      ok(await call('device_setting', { name, value: 'on' }));
+      expect((await call('device_setting', { name })).data.value).toBe('on');
+    }
+    ok(await call('device_setting', { name: 'restore' }));
+    for (const name of ['increase_contrast', 'reduce_transparency'])
+      expect((await call('device_setting', { name })).data.value).toBe('off');
   });
 
   it('turns to a landscape and back, and the app lays out for it', async () => {
