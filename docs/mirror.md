@@ -123,6 +123,13 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 
 ## Stated limits
 
+- An iPhone is experimental: it rests on undocumented services, and the two lines below are open.
+- An iPhone that turns stays sideways: the picture keeps its portrait shape while the app goes landscape, and a touch lands where the portrait has it, so not on what a turned app shows.
+- A person's click on a window fed by a pipe has been run with no phone behind it: all of it to the phone itself is still to run.
+- An iPhone's lock screen: a swipe sent to it does not open it, so with nothing on the window to press `home`, a phone turned dark stays at its lock screen until a person opens it by hand.
+- An iPhone at `--quality standard` sends a picture of 1296x2816, larger than its screen, which is not yet cropped.
+- An iPhone on the heaviest picture: a stream of 167 Mbit/s lost 0.25 % of its packets over 30 minutes, part of them at load 361, and each loss freezes the picture until a key.
+- On a window a person has not clicked, keys go nowhere: typing into a window needs a hand run, as a test's window never holds the keyboard.
 - A simulator's fold: no control that folds one was found, so a new surface at a fold is untested.
 - The window does not yet show a secure Android window's content, as no shell can have it from Android 12: it is black, with the status bar still there. Not run on Android 12 and 13, or on 10, for which no image is here.
 - Input by `key`: Android has only the keys the agent has (no arrows). On a simulator a keyboard's characters go as US keys; any other text by its pasteboard and command V.

@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto';
+import { monitorEventLoopDelay } from 'node:perf_hooks';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import {
@@ -33,6 +34,7 @@ const STOP_ACTION = 'com.apple.coredevice.action.mediastreamstop';
 const STREAM_TIMEOUT_S = 30n;
 const SUPPORTED_FEATURES = 140n;
 const RATE_CONTROL_MS = 50;
+const LAG_RESOLUTION_MS = 5;
 const ALIVE_MS = 1_000;
 const WATCH_MS = 2_000;
 /** A dark phone keeps its stream at a picture a second, and a lit one still sends about twenty. */
@@ -267,6 +269,8 @@ export class PhoneStream {
   }
 
   private runTimers(rtcp: RtcpWriter, receiver: RtpReceiver) {
+    const lag = monitorEventLoopDelay({ resolution: LAG_RESOLUTION_MS });
+    lag.enable();
     const every = (ms: number, run: () => void) => this.timers.push(setInterval(run, ms));
     every(RATE_CONTROL_MS, () =>
       this.toPhone(rtcp.rateControl(receiver.stats.pictures, performance.now(), receiver.received)),
@@ -275,8 +279,19 @@ export class PhoneStream {
       const alive = rtcp.alive(receiver.sender, receiver.highestSeq);
       this.toPhone(alive);
       if (this.audioPort) this.audio?.send(alive, this.audioPort);
-      const { packets, lost, late, held } = receiver.stats;
-      this.sink.counters({ packets, lostPackets: lost, latePackets: late, heldPictures: held });
+      const s = receiver.stats;
+      this.sink.counters({
+        packets: s.packets,
+        lostPackets: s.lost,
+        latePackets: s.late,
+        heldPictures: s.held,
+        freezes: s.freezes,
+        longestFreezeMs: Math.round(s.longestFreezeMs),
+        frozenMs: Math.round(s.frozenMs),
+        // the longest this thread was away from its reads this second
+        loopLagMs: Math.round(lag.max / 1e6),
+      });
+      lag.reset();
       const changed = this.dark.tick(receiver.stats.pictures);
       if (changed) this.sink.state(changed);
     });

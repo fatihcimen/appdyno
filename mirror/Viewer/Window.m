@@ -9,6 +9,16 @@
 // a new window takes at most this much of the screen
 static const double kFitScreen = 0.85;
 
+/// The words across the middle of the picture: a click there is the picture's, even with none showing.
+@interface MVWords : NSStackView
+@end
+
+@implementation MVWords
+- (NSView *)hitTest:(NSPoint)point {
+  return nil;
+}
+@end
+
 static NSTextField *label(CGFloat size, NSFontWeight weight) {
   NSTextField *field = [NSTextField wrappingLabelWithString:@""];
   field.font = [NSFont systemFontOfSize:size weight:weight];
@@ -65,7 +75,7 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
     _dim.hidden = YES;
     _title = label(15, NSFontWeightSemibold);
     _fix = label(12, NSFontWeightRegular);
-    NSStackView *words = [NSStackView stackViewWithViews:@[_title, _fix]];
+    MVWords *words = [MVWords stackViewWithViews:@[_title, _fix]];
     words.orientation = NSUserInterfaceLayoutOrientationVertical;
     words.translatesAutoresizingMaskIntoConstraints = NO;
     [_view addSubview:words];

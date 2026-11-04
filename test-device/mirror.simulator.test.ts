@@ -135,12 +135,13 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real 
       await until('picture', () => session.status.state === 'live');
       await new Promise((r) => setTimeout(r, 2_000));
       expect(session.status.touchedAt).toBeUndefined();
-      session.poke(0.5, 0.25);
+      // the middle of the window, where its words lie when it has any
+      session.poke(0.5, 0.5);
       await until('touch', () => touches.length >= 2, 10_000);
-      // a mouse on the window: the picture's quarter from the top, as a fraction of the device's screen
+      // a mouse on the window, as a fraction of the device's screen
       expect(touches[0]).toMatchObject({ kind: 'touch', p: 0 });
       expect((touches[0] as { x: number }).x).toBeCloseTo(0.5, 2);
-      expect((touches[0] as { y: number }).y).toBeCloseTo(0.25, 2);
+      expect((touches[0] as { y: number }).y).toBeCloseTo(0.5, 2);
       expect(touches[1]).toMatchObject({ kind: 'touch', p: 2 });
       // a key that reaches a window that is not key goes nowhere: what is typed elsewhere is no device's to have
       session.tell({ op: 'poke', key: 'a' });

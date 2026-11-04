@@ -150,12 +150,12 @@ appdyno mirror open --detach       # a window that outlives this command
 appdyno mirror close | status | stats
 ```
 
-| device    | the picture                                                    | still screen                         |
-| --------- | -------------------------------------------------------------- | ------------------------------------ |
-| simulator | its framebuffer itself, no encode                              | costs nothing                        |
-| phone     | the agent's H.264 or HEVC, straight to the viewer, not by Node | costs nothing                        |
-| emulator  | the emulator's own gRPC port, its screen in a shared file      | costs nothing                        |
-| iPhone    | iOS 27's display service, by USB, nothing on the phone         | about 20 frames a second keep coming |
+| device    | the picture                                                          | still screen                         |
+| --------- | -------------------------------------------------------------------- | ------------------------------------ |
+| simulator | its framebuffer itself, no encode                                    | costs nothing                        |
+| phone     | the agent's H.264 or HEVC, straight to the viewer, not by Node       | costs nothing                        |
+| emulator  | the emulator's own gRPC port, its screen in a shared file            | costs nothing                        |
+| iPhone    | experimental: iOS 27's display service, by USB, nothing on the phone | about 20 frames a second keep coming |
 
 An iPhone's stream rests on undocumented Apple services that may change: it is named, gated by what the phone lists, and the runner stays. Nothing of it opens a port on this Mac: its packets are inside a stream through `usbmuxd`.
 

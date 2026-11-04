@@ -12,6 +12,7 @@ import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { loadavg } from 'node:os';
 import { parseArgs } from 'node:util';
+import { byMinute, quietAndBusy } from './mirror-bench-minutes.mjs';
 import {
   Adb,
   AndroidDevice,
@@ -79,7 +80,9 @@ const session = new MirrorSession({
   options: { quality: 'auto' },
   title: `bench ${serial}`,
   onChange: (s) => {
-    if (s.stats && s.stats !== seconds.at(-1)) seconds.push(s.stats);
+    if (s.stats && s.stats !== seconds.at(-1)?.from) {
+      seconds.push({ ...s.stats, from: s.stats, load: load() });
+    }
   },
 });
 
@@ -245,6 +248,19 @@ const finish = async (why) => {
       'packets',
       `${last.lostPackets} lost, ${last.latePackets} late of ${last.packets}; ${last.heldPictures} pictures held, ${last.droppedPictures} dropped`,
     );
+    note(
+      'freezes',
+      `${last.freezes}, longest ${last.longestFreezeMs} ms, ${(last.frozenMs / 1000).toFixed(1)} s in all`,
+    );
+    const minutes = byMinute(seconds);
+    for (const line of quietAndBusy(minutes, LOAD_LIMIT)) note('held', line);
+    result.minutes = minutes;
+    for (const m of minutes.filter((x) => x.lost || x.held)) {
+      note(
+        `minute ${m.minute}`,
+        `${m.lost} lost, ${m.held} held, ${m.dropped} dropped, ${m.frozenMs} ms frozen, its thread away ${m.lagMs} ms at most, load up to ${m.load}`,
+      );
+    }
   }
   await session.stop(why);
   if (isIphone) {

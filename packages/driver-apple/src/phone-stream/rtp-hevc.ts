@@ -9,7 +9,7 @@ const IRAP_FIRST = 16;
 const IRAP_LAST = 21;
 const START_CODE = Buffer.from([0, 0, 0, 1]);
 /** No key picture this long after asking: asked again. */
-const ASK_AGAIN_MS = 1_000;
+const ASK_AGAIN_MS = 250;
 
 export type Picture = { annexB: Buffer; key: boolean; rtpTime: number };
 
@@ -21,6 +21,10 @@ export type RtpStats = {
   late: number;
   keys: number;
   held: number;
+  /** Times the picture stood still after it had begun, the longest of them, and all of them. */
+  freezes: number;
+  longestFreezeMs: number;
+  frozenMs: number;
 };
 
 /**
@@ -36,6 +40,9 @@ export class RtpReceiver {
     late: 0,
     keys: 0,
     held: 0,
+    freezes: 0,
+    longestFreezeMs: 0,
+    frozenMs: 0,
   };
   sender = 0;
   private lastSeq: number | undefined;
@@ -47,6 +54,8 @@ export class RtpReceiver {
   private broken = false;
   private waitingForKey = true;
   private askedAt = -Infinity;
+  private frozenAt: number | undefined;
+  private begun = false;
 
   constructor(
     private readonly onPicture: (p: Picture) => void,
@@ -65,9 +74,24 @@ export class RtpReceiver {
 
   /** The next picture a viewer can show is a key picture: after a drop, or for a decoder that asks. */
   needKey() {
+    this.freeze();
     this.waitingForKey = true;
     this.askedAt = -Infinity;
     this.ask();
+  }
+
+  private freeze() {
+    if (this.begun) this.frozenAt ??= this.now();
+  }
+
+  private thawed() {
+    this.begun = true;
+    if (this.frozenAt === undefined) return;
+    const ms = this.now() - this.frozenAt;
+    this.frozenAt = undefined;
+    this.stats.freezes++;
+    this.stats.frozenMs += ms;
+    this.stats.longestFreezeMs = Math.max(this.stats.longestFreezeMs, ms);
   }
 
   private ask() {
@@ -98,6 +122,9 @@ export class RtpReceiver {
         this.stats.lost += jump - 1;
         this.broken = true;
         this.fragment = undefined;
+        this.freeze();
+        // at the gap, not when its picture ends: each frame of waiting is one more held
+        this.ask();
       }
     }
     this.lastSeq = seq;
@@ -166,6 +193,7 @@ export class RtpReceiver {
     if (key) {
       this.stats.keys++;
       this.waitingForKey = false;
+      this.thawed();
     }
     this.onPicture({ annexB: Buffer.concat(nals), key, rtpTime: time });
   }

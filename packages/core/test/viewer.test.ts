@@ -79,6 +79,12 @@ describe('the keyboard', () => {
     expect(window).toContain('MVShowOf([attach[@"focus"] boolValue]');
   });
 
+  it('the words across a window take no click', () => {
+    expect(source('Window.m')).toMatch(
+      /@implementation MVWords\n- \(NSView \*\)hitTest[^}]*return nil;/,
+    );
+  });
+
   it('no launch brings the viewer forward', () => {
     expect(source('main.m')).toContain(
       'application.activationPolicy = NSApplicationActivationPolicyAccessory',

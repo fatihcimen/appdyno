@@ -116,6 +116,33 @@ describe('pictures out of RTP', () => {
     expect(pictures).toHaveLength(3);
   });
 
+  it('asks at the gap itself, and says how long the picture stood still', () => {
+    const { r, asked, tick } = setup();
+    r.push(rtp(1, 100, nal(IDR), true));
+    asked.mockClear();
+    tick(5_000);
+    r.push(rtp(3, 200, nal(TRAIL)));
+    expect(asked).toHaveBeenCalledTimes(1);
+    tick(100);
+    r.push(rtp(4, 200, nal(TRAIL), true));
+    tick(300);
+    r.push(rtp(5, 300, nal(IDR), true));
+    expect(r.stats).toMatchObject({ freezes: 1, longestFreezeMs: 400, frozenMs: 400 });
+    tick(1_000);
+    r.needKey();
+    tick(100);
+    r.push(rtp(6, 400, nal(IDR), true));
+    expect(r.stats).toMatchObject({ freezes: 2, longestFreezeMs: 400, frozenMs: 500 });
+  });
+
+  it('the wait for a first key is no freeze', () => {
+    const { r, tick } = setup();
+    r.push(rtp(1, 100, nal(TRAIL), true));
+    tick(900);
+    r.push(rtp(2, 200, nal(IDR), true));
+    expect(r.stats.freezes).toBe(0);
+  });
+
   it('a fragment cut by a gap is dropped whole', () => {
     const { r, pictures } = setup();
     r.push(rtp(1, 100, nal(IDR), true));
