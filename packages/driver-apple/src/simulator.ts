@@ -77,6 +77,9 @@ const WAKE_PRESSES = 6;
  */
 const TRANSITION_MS = 650;
 
+/** How long a touch that changed nothing has to be reported, before the runner does it again. */
+const LATE_TOUCH_MS = 4_000;
+
 const LAUNCH_FRONT_MS = 15_000;
 
 const HOME_FRONT_MS = 3_000;
@@ -213,23 +216,24 @@ export class IosSimulatorDevice extends IosDevice {
       const touchesBefore = this.direct.touchesEnded;
       const touchedAt = Date.now();
       if (!(await this.direct.send(action))) return this.actByRunner(action, opts);
-      const out = await settleAfter(
-        {
-          read: (final) => this.readNow(final),
-          remember: (t) => this.remember(t),
-          recent: this.recent,
-          width: this.hello?.screen.w ?? Infinity,
-          clock: () => Date.now() - this.startingMs,
-          handled: () => this.direct.touchHandled().catch(() => undefined),
-        },
-        action,
-        opts,
-      );
-      // nothing moved and the app has not seen the touch finish: it never got it
+      const on = {
+        read: (final: boolean) => this.readNow(final),
+        remember: (t: Tree) => this.remember(t),
+        recent: this.recent,
+        width: this.hello?.screen.w ?? Infinity,
+        clock: () => Date.now() - this.startingMs,
+        handled: () => this.direct.touchHandled().catch(() => undefined),
+      };
+      let out = await settleAfter(on, action, opts);
+      // nothing moved and the app has not seen the touch finish: it never got it, or a loaded Mac has it far behind
       const reports = armed && !onKeyboard([...this.recent.values()].pop() ?? [], at!.x, at!.y);
       if (reports && out.untouched && touchesBefore === this.direct.touchesEnded) {
-        this.direct.touchLost();
-        return this.actByRunner(action, opts);
+        await this.direct.touchHandled(LATE_TOUCH_MS).catch(() => undefined);
+        if (touchesBefore === this.direct.touchesEnded) {
+          this.direct.touchLost();
+          return this.actByRunner(action, opts);
+        }
+        out = await settleAfter(on, action, opts);
       }
       this.transitionEnds = out.moved ? touchedAt + TRANSITION_MS : 0;
       return { ...out.result, ...(waited !== undefined && { animationWaitMs: waited }) };

@@ -13,6 +13,9 @@ const HELLO_MS = 30_000;
 /** UIKit's sheet comes up in about 0.5 s; an animation that never ends costs this once per touch. */
 const ANIMATION_WAIT_MS = 1_000;
 
+/** Another process may draw what was touched, and report nothing. */
+const TOUCH_REPORT_MS = 300;
+
 type Starters = {
   ax: (udid: string) => Promise<HelperProcess>;
   hid: (udid: string) => Promise<HelperProcess>;
@@ -181,10 +184,15 @@ export class DirectSim {
   }
 
   /** Until the app has handled the last touch sent, as far as it reports that: a read before then misses its effect. */
-  async touchHandled() {
+  async touchHandled(withinMs = TOUCH_REPORT_MS) {
     if ((this.touchesEnded ?? 0) >= this.touchesDue) return;
     this.note(
-      await (await this.helperAx()).call({ op: 'touched', touches: this.touchesDue }, 3_000),
+      await (
+        await this.helperAx()
+      ).call(
+        { op: 'touched', touches: this.touchesDue, within: withinMs / 1_000 },
+        withinMs + 3_000,
+      ),
     );
   }
 

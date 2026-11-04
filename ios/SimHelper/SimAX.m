@@ -290,7 +290,7 @@ static void handle(NSData *line) {
         exit(0);
       } else if ([q[@"op"] isEqual:@"touched"]) {
         long touches = [q[@"touches"] longValue];
-        turnUntil(^{ return (BOOL)(gTouchesEnded >= touches); }, kTouchReportS);
+        turnUntil(^{ return (BOOL)(gTouchesEnded >= touches); }, [q[@"within"] doubleValue] ?: kTouchReportS);
         a = @{@"ok": @YES};
       } else if ([q[@"op"] isEqual:@"hello"]) a = hello();
       else if ([q[@"op"] isEqual:@"front"]) {
