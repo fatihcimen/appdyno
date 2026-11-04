@@ -19,6 +19,8 @@ const run = promisify(execFile);
 const FIXTURES = join(import.meta.dirname, '../../../mirror/Viewer/fixtures');
 /** The first use compiles it, on a Mac that may be busy. */
 const COMPILE_MS = 300_000;
+/** A hang, not a slow machine: how long a word from a viewer is waited for. */
+const WAIT_MS = 240_000;
 
 let binary: string;
 const dir = mkdtempSync(join(tmpdir(), 'appdyno-viewer-'));
@@ -51,7 +53,7 @@ function viewer() {
       const old = said.find((m) => m.op === op && test(m));
       if (old) return done(old);
       waiting.push({ op, test, done });
-      setTimeout(() => fail(new Error(`no ${op}: ${JSON.stringify(said).slice(-400)}`)), 30_000);
+      setTimeout(() => fail(new Error(`no ${op}: ${JSON.stringify(said).slice(-400)}`)), WAIT_MS);
     });
   return { v, said, until };
 }
@@ -119,87 +121,108 @@ describe('the viewer, compiled by its first-use path', () => {
     expect(named).toContain('stream: a frame over the limit ends it');
   }, 200_000);
 
-  it('says it is ready, and ends with its stdin', async () => {
-    const { v, until } = viewer();
-    await until('ready');
-    const end = exited(v);
-    v.kill();
-    await end;
-  }, 60_000);
+  it(
+    'says it is ready, and ends with its stdin',
+    async () => {
+      const { v, until } = viewer();
+      await until('ready');
+      const end = exited(v);
+      v.kill();
+      await end;
+    },
+    COMPILE_MS,
+  );
 
-  it('a parent that dies by SIGKILL takes its viewer with it', async () => {
-    // a parent of its own, killed as a crash would: the viewer sees its stdin end
-    const parent = spawn(
-      process.execPath,
-      [
-        '-e',
-        `const {spawn}=require('node:child_process');const c=spawn(${JSON.stringify(binary)},['--headless'],{stdio:['pipe','inherit','inherit']});process.stdout.write(String(c.pid)+'\\n');setInterval(()=>{},1000);`,
-      ],
-      { stdio: ['ignore', 'pipe', 'ignore'] },
-    );
-    // the viewer writes to this pipe too, and its first line may come before the parent's
-    const pid = await new Promise<number>((r) => {
-      let said = '';
-      parent.stdout.on('data', (b: Buffer) => {
-        said += b.toString();
-        const line = /^(\d+)\n/m.exec(said)?.[1];
-        if (line) r(Number(line));
+  it(
+    'a parent that dies by SIGKILL takes its viewer with it',
+    async () => {
+      // a parent of its own, killed as a crash would: the viewer sees its stdin end. It goes with this test's process by
+      // its own stdin, so a run that fails or is cut short before the kill leaves neither behind
+      const parent = spawn(
+        process.execPath,
+        [
+          '-e',
+          `const {spawn}=require('node:child_process');const c=spawn(${JSON.stringify(binary)},['--headless'],{stdio:['pipe','inherit','inherit']});process.stdout.write(String(c.pid)+'\\n');process.stdin.on('end',()=>process.exit()).resume();`,
+        ],
+        { stdio: ['pipe', 'pipe', 'ignore'] },
+      );
+      // the viewer writes to this pipe too, and its first line may come before the parent's
+      const pid = await new Promise<number>((r) => {
+        let said = '';
+        parent.stdout.on('data', (b: Buffer) => {
+          said += b.toString();
+          const line = /^(\d+)\n/m.exec(said)?.[1];
+          if (line) r(Number(line));
+        });
       });
-    });
-    expect(pid).toBeGreaterThan(0);
-    process.kill(parent.pid!, 'SIGKILL');
-    const end = Date.now() + 20_000;
-    let alive = true;
-    while (alive && Date.now() < end) {
-      try {
-        process.kill(pid, 0);
-        await new Promise((r) => setTimeout(r, 100));
-      } catch {
-        alive = false;
+      expect(pid).toBeGreaterThan(0);
+      process.kill(parent.pid!, 'SIGKILL');
+      const end = Date.now() + WAIT_MS;
+      let alive = true;
+      while (alive && Date.now() < end) {
+        try {
+          process.kill(pid, 0);
+          await new Promise((r) => setTimeout(r, 100));
+        } catch {
+          alive = false;
+        }
       }
-    }
-    expect(alive).toBe(false);
-  }, 60_000);
+      expect(alive).toBe(false);
+    },
+    COMPILE_MS,
+  );
 
-  it('a kind it does not know is said so, and it stays', async () => {
-    const { v, until } = viewer();
-    v.send({ op: 'attach', source: { kind: 'no-such' } });
-    await expect(until('lost')).resolves.toMatchObject({ fatal: true });
-    v.send({ op: 'status', state: 'live' });
-    v.send('not json' as never);
-    await until('stats');
-    const end = exited(v);
-    v.send({ op: 'quit' });
-    await end;
-  }, 60_000);
+  it(
+    'a kind it does not know is said so, and it stays',
+    async () => {
+      const { v, until } = viewer();
+      v.send({ op: 'attach', source: { kind: 'no-such' } });
+      await expect(until('lost')).resolves.toMatchObject({ fatal: true });
+      v.send({ op: 'status', state: 'live' });
+      v.send('not json' as never);
+      await until('stats');
+      const end = exited(v);
+      v.send({ op: 'quit' });
+      await end;
+    },
+    COMPILE_MS,
+  );
 
-  it('shows an emulator pixels on each tick, reports them, and lets go on detach', async () => {
-    const file = join(dir, 'screen.rgba');
-    writeFileSync(file, Buffer.alloc(64 * 32 * 4, 200));
-    chmodSync(file, 0o600);
-    const { v, until } = viewer();
-    v.send({ op: 'attach', source: { kind: 'pixels', file, w: 64, h: 32 } });
-    v.send({ op: 'tick', w: 64, h: 32 });
-    await expect(until('first')).resolves.toMatchObject({ w: 64, h: 32, codec: 'pixels' });
-    for (let i = 0; i < 5; i++) v.send({ op: 'tick', w: 64, h: 32 });
-    const stats = await until('stats', (m) => Number(m.arrived) > 0);
-    expect(stats).toMatchObject({ source: 'pixels', w: 64, h: 32 });
-    expect(Number(stats.rssMb)).toBeGreaterThan(0);
-    v.send({ op: 'detach' });
-    await until('stats', (m) => m.source === 'pixels' && Number(m.arrived) === 0);
-    v.send({ op: 'tick', w: 64, h: 32 });
-    v.kill();
-  }, 60_000);
+  it(
+    'shows an emulator pixels on each tick, reports them, and lets go on detach',
+    async () => {
+      const file = join(dir, 'screen.rgba');
+      writeFileSync(file, Buffer.alloc(64 * 32 * 4, 200));
+      chmodSync(file, 0o600);
+      const { v, until } = viewer();
+      v.send({ op: 'attach', source: { kind: 'pixels', file, w: 64, h: 32 } });
+      v.send({ op: 'tick', w: 64, h: 32 });
+      await expect(until('first')).resolves.toMatchObject({ w: 64, h: 32, codec: 'pixels' });
+      for (let i = 0; i < 5; i++) v.send({ op: 'tick', w: 64, h: 32 });
+      const stats = await until('stats', (m) => Number(m.arrived) > 0);
+      expect(stats).toMatchObject({ source: 'pixels', w: 64, h: 32 });
+      expect(Number(stats.rssMb)).toBeGreaterThan(0);
+      v.send({ op: 'detach' });
+      await until('stats', (m) => m.source === 'pixels' && Number(m.arrived) === 0);
+      v.send({ op: 'tick', w: 64, h: 32 });
+      v.kill();
+    },
+    COMPILE_MS,
+  );
 
-  it('names a simulator that is not there', async () => {
-    const { v, until } = viewer();
-    v.send({
-      op: 'attach',
-      source: { kind: 'surface', udid: '00000000-0000-0000-0000-000000000000' },
-    });
-    await expect(until('lost')).resolves.toMatchObject({ why: 'simulator-off' });
-    v.kill();
-  }, 60_000);
+  it(
+    'names a simulator that is not there',
+    async () => {
+      const { v, until } = viewer();
+      v.send({
+        op: 'attach',
+        source: { kind: 'surface', udid: '00000000-0000-0000-0000-000000000000' },
+      });
+      await expect(until('lost')).resolves.toMatchObject({ why: 'simulator-off' });
+      v.kill();
+    },
+    COMPILE_MS,
+  );
 });
 
 /** The adb server's two questions and a stand-in agent behind them, with real frames. */
@@ -351,34 +374,48 @@ describe('the viewer on an agent stream, through adb', () => {
     v.kill();
   }, 90_000);
 
-  it('a device adb refuses is said in adb words', async () => {
-    agent.refuse = "device 'emulator-9999' not found";
-    const { v, until } = viewer();
-    v.send({ op: 'attach', source: source() });
-    await expect(until('lost')).resolves.toMatchObject({ why: "device 'emulator-9999' not found" });
-    agent.refuse = undefined;
-    v.kill();
-  }, 60_000);
+  it(
+    'a device adb refuses is said in adb words',
+    async () => {
+      agent.refuse = "device 'emulator-9999' not found";
+      const { v, until } = viewer();
+      v.send({ op: 'attach', source: source() });
+      await expect(until('lost')).resolves.toMatchObject({
+        why: "device 'emulator-9999' not found",
+      });
+      agent.refuse = undefined;
+      v.kill();
+    },
+    COMPILE_MS,
+  );
 
-  it('a refusal of the stream is final, with the reason', async () => {
-    agent.onStart = (s) =>
-      agent.json(s, { id: 3, error: { message: 'no encoder took this display' } });
-    const { v, until } = viewer();
-    v.send({ op: 'attach', source: source() });
-    await expect(until('lost')).resolves.toMatchObject({
-      why: 'no encoder took this display',
-      fatal: true,
-    });
-    v.kill();
-  }, 60_000);
+  it(
+    'a refusal of the stream is final, with the reason',
+    async () => {
+      agent.onStart = (s) =>
+        agent.json(s, { id: 3, error: { message: 'no encoder took this display' } });
+      const { v, until } = viewer();
+      v.send({ op: 'attach', source: source() });
+      await expect(until('lost')).resolves.toMatchObject({
+        why: 'no encoder took this display',
+        fatal: true,
+      });
+      v.kill();
+    },
+    COMPILE_MS,
+  );
 
-  it('adb not running: said, and not final', async () => {
-    const { v, until } = viewer();
-    v.send({ op: 'attach', source: { ...source(), adbPort: 1 } });
-    await expect(until('lost')).resolves.toMatchObject({
-      why: 'adb server not reachable',
-      fatal: false,
-    });
-    v.kill();
-  }, 60_000);
+  it(
+    'adb not running: said, and not final',
+    async () => {
+      const { v, until } = viewer();
+      v.send({ op: 'attach', source: { ...source(), adbPort: 1 } });
+      await expect(until('lost')).resolves.toMatchObject({
+        why: 'adb server not reachable',
+        fatal: false,
+      });
+      v.kill();
+    },
+    COMPILE_MS,
+  );
 });

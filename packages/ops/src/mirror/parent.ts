@@ -24,6 +24,8 @@ export type MirrorRun = {
   headless: boolean;
   noInput: boolean;
   seconds?: number;
+  /** Ends the run when it settles, as its time being up would: a caller's own clock. */
+  ends?: Promise<unknown>;
   /** A person asked for the keyboard with `--focus`. */
   focus: boolean;
   /** An agent opened this window: input waits for a person's click. */
@@ -166,6 +168,7 @@ export async function runMirrors(ctx: ServerContext, o: MirrorRun): Promise<numb
   if (serials.length > o.max)
     o.log(`${serials.length - o.max} more devices left out: --max ${o.max}`);
 
+  void o.ends?.then(() => parent.stopAll('time is up'));
   const timer = o.seconds
     ? setTimeout(() => void parent.stopAll('time is up'), o.seconds * 1000)
     : undefined;

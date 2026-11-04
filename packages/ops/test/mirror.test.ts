@@ -87,7 +87,16 @@ const run = (ctx: ServerContext, o: Partial<MirrorRun> = {}) => {
   return { lines, done };
 };
 
-const until = async (test: () => boolean, ms = 60_000) => {
+/** A run's time, up when the test has seen what it came for, however slow the machine is. */
+const clock = () => {
+  let end = () => {};
+  const ends = new Promise<void>((resolve) => {
+    end = resolve;
+  });
+  return { ends, end: () => end() };
+};
+
+const until = async (test: () => boolean, ms = 240_000) => {
   const end = Date.now() + ms;
   while (!test()) {
     if (Date.now() > end) throw new Error(`not in ${ms} ms`);
@@ -105,16 +114,25 @@ const file = (serial: string, pid: number, status: object): MirrorFile => ({
 });
 
 describe('a mirror parent', () => {
+  it('stops by its seconds, at any point of its start', async () => {
+    const { lines, done } = run(context(['device-t']), { seconds: 0.05 });
+    await expect(done).resolves.toBe(0);
+    expect(lines.at(-1)).toContain('stopped: time is up');
+    expect(stateFiles()).toEqual([]);
+  }, 300_000);
+
   it('runs its time, keeps a file while it does, and leaves nothing behind', async () => {
-    const { lines, done } = run(context(['device-a']), { seconds: 3 });
+    const time = clock();
+    const { lines, done } = run(context(['device-a']), { ends: time.ends });
     await until(() => liveMirror('device-a')?.status.state === 'live');
     expect(holder('device-a')).toBeUndefined();
+    time.end();
     await expect(done).resolves.toBe(0);
     expect(stateFiles()).toEqual([]);
     expect(holder('device-a')).toBeUndefined();
     expect(lines.some((l) => l.startsWith('device-a: live 8x8'))).toBe(true);
     expect(lines.at(-1)).toContain('stopped: time is up');
-  }, 120_000);
+  }, 300_000);
 
   it('watches whoever holds the device: a holder is no refusal, and keeps its claim', async () => {
     const other = spawn(process.execPath, ['-e', 'setInterval(()=>{},1000)'], { stdio: 'ignore' });
@@ -132,15 +150,17 @@ describe('a mirror parent', () => {
         }),
       );
       const ctx = context(['device-b']);
-      const shared = run(ctx, { serials: ['device-b'], seconds: 2 });
+      const time = clock();
+      const shared = run(ctx, { serials: ['device-b'], ends: time.ends });
       await until(() => liveMirror('device-b')?.status.state === 'live');
       expect(holder('device-b')?.tool).toBe('another tool');
+      time.end();
       await expect(shared.done).resolves.toBe(0);
       expect(holder('device-b')?.tool).toBe('another tool');
     } finally {
       other.kill();
     }
-  }, 120_000);
+  }, 300_000);
 
   it('a device not allowed is refused by name', async () => {
     const barred = run(context(['device-d'], { policy: { devices: /^other/ } }), {
@@ -148,34 +168,38 @@ describe('a mirror parent', () => {
     });
     await expect(barred.done).resolves.toBe(1);
     expect(barred.lines.join()).toContain('not allowed');
-  }, 60_000);
+  }, 300_000);
 
   it('several devices each have their own; one refused leaves the others', async () => {
     const ctx = context(['device-e', 'device-f', 'device-g']);
-    const { lines, done } = run(ctx, { all: true, max: 2, seconds: 3 });
+    const time = clock();
+    const { lines, done } = run(ctx, { all: true, max: 2, ends: time.ends });
     await until(() => liveMirrors().length === 2);
     expect(lines.join()).toContain('1 more devices left out: --max 2');
+    time.end();
     await expect(done).resolves.toBe(0);
     expect(stateFiles()).toEqual([]);
-  }, 120_000);
+  }, 300_000);
 
   it('--watch opens a device that comes, once: a window closed stays closed until its device returns', async () => {
     const serials = ['device-w1'];
     const ctx = context(serials);
-    const { lines, done } = run(ctx, { all: true, watch: true, seconds: 8 });
+    const time = clock();
+    const { lines, done } = run(ctx, { all: true, watch: true, ends: time.ends });
     await until(() => liveMirror('device-w1')?.status.state === 'live');
     serials.push('device-w2');
     await until(() => liveMirror('device-w2')?.status.state === 'live');
+    time.end();
     await expect(done).resolves.toBe(0);
     expect(lines.filter((l) => l === 'device-w2: connecting')).toHaveLength(1);
     expect(stateFiles()).toEqual([]);
-  }, 120_000);
+  }, 300_000);
 
   it('--all with no device says so', async () => {
     const { lines, done } = run(context([]), { all: true });
     await expect(done).resolves.toBe(1);
     expect(lines).toEqual(['no device to mirror']);
-  }, 30_000);
+  }, 300_000);
 
   it('a second window on a device is refused, naming the first', async () => {
     const ctx = context(['device-h']);
@@ -184,7 +208,7 @@ describe('a mirror parent', () => {
     await expect(done).resolves.toBe(1);
     expect(lines.join()).toContain(`already has a window: pid ${process.pid}`);
     rmSync(join(dir, 'mirror/device-h.json'));
-  }, 30_000);
+  }, 300_000);
 });
 
 describe('what other processes read', () => {
@@ -303,7 +327,7 @@ describe('open and close from a tool', () => {
     const closed = await ops.mirror!.handler({ action: 'close', quality: 'auto' });
     expect(closed.data).toMatchObject({ mirrors: [] });
     expect(liveMirror('device-n')).toBeUndefined();
-  }, 60_000);
+  }, 300_000);
 
   it('a parent that ends at once is a refusal with its last word', async () => {
     const script = join(dir, 'ends.cjs');
@@ -312,7 +336,7 @@ describe('open and close from a tool', () => {
     await expect(ops.mirror!.handler({ action: 'open', quality: 'auto' })).rejects.toThrow(
       /No compiler/,
     );
-  }, 60_000);
+  }, 300_000);
 
   it('a host with no way to start a window says so', async () => {
     const ops = checkedOps(context(['device-p']));
