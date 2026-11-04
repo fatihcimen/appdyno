@@ -48,10 +48,15 @@ describe.skipIf(!android)('guards on Android', () => {
 
   it.runIf(swipeOnly)(
     'a lock screen with no credential is passed: no refusal, and the app is read',
-    async () => {
+    async (ctx) => {
       await d.shell('input keyevent KEYCODE_SLEEP');
-      await pause(3_000);
-      expect(await d.shell(KEYGUARD_READ)).toContain('true');
+      const locked = async () => (await d.shell(KEYGUARD_READ)).includes('=true');
+      // a phone may lock some time after its screen goes dark: a Xiaomi's had not 3 s on
+      for (let i = 0; i < 15 && !(await locked()); i++) await pause(1_000);
+      if (!(await locked())) {
+        await d.ensureAwake();
+        return ctx.skip();
+      }
       const read = await t.call('screen');
       console.log(read.error, read.data.code, read.text.slice(0, 150));
       expect(read.error, read.text).toBe(false);
