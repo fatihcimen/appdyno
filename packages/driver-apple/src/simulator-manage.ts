@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   type AppManager,
+  type BuildRequest,
   type AppEntry,
   run,
   type LaunchOptions,
@@ -14,6 +15,7 @@ import {
   type Startable,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import { buildScheme } from './build.js';
 import { macProxy } from './network.js';
 import { type Simctl, assertBundle } from './simctl.js';
 import { assertAppBundle, DATA_FOLDERS, on } from './manage.js';
@@ -37,6 +39,12 @@ export class SimulatorApps implements AppManager {
     assertAppBundle(path);
     await this.simctl.install(this.udid, path);
     return [];
+  }
+
+  async buildAndInstall(request: BuildRequest) {
+    const built = await buildScheme(request, `platform=iOS Simulator,id=${this.udid}`);
+    await this.install(built.path);
+    return built.bundle;
   }
 
   async uninstall(app: string) {

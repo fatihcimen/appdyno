@@ -1,10 +1,18 @@
 import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type AppManager, run, TIMEOUTS, type AppEntry, type LaunchOptions } from '@appdyno/core';
+import {
+  type AppManager,
+  type AppEntry,
+  type BuildRequest,
+  type LaunchOptions,
+  run,
+  TIMEOUTS,
+} from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { type Adb, amStartError, assertPkg, shq } from './adb.js';
 import { apkNames } from './apk-names.js';
+import { buildVariant } from './build.js';
 import {
   answerInstallPrompts,
   CONSENT_TAPPED,
@@ -87,6 +95,12 @@ export class AndroidApps implements AppManager {
       if (e instanceof DeviceError) throw new DeviceError(e.code, `${e.message}${also}`, e.hint);
       throw e;
     }
+  }
+
+  async buildAndInstall(request: BuildRequest) {
+    const built = await buildVariant(request);
+    await this.install(built.path);
+    return built.id;
   }
 
   async uninstall(app: string) {

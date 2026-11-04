@@ -78,7 +78,9 @@ wait on the device, so the tree crosses the wire only when the screen changed.
 `gesture` holds `double_tap`, `long_press`, `drag`, `pinch` and a free `plan`. `press_key` holds the
 hardware buttons. `app` holds `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke`,
 `launch` with arguments and environment, `download_data` into a new or empty folder, and `replace_data`
-from one, which stops the app and takes away what the folder does not hold. `device_setting` holds `dark_mode`, `text_size`,
+from one, which stops the app and takes away what the folder does not hold, and `build_and_run` from a
+project on this Mac: an Xcode project with `scheme` and `configuration`, or a Gradle folder with `scheme` as
+its module and `configuration` as its variant. `device_setting` holds `dark_mode`, `text_size`,
 `reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `push`, `biometric`, `fold`, `call`, `sms` and `keychain`.
 
 What a platform cannot do is refused with the reason (`UNSUPPORTED`):

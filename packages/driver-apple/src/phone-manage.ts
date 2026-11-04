@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type {
   AppManager,
+  BuildRequest,
   AppEntry,
   BiometricAnswer,
   LaunchOptions,
@@ -10,6 +11,7 @@ import type {
   SettingName,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import { buildScheme } from './build.js';
 import type { Devicectl } from './devicectl.js';
 import { assertBundle } from './simctl.js';
 import { assertAppBundle, DATA_FOLDERS, on } from './manage.js';
@@ -36,6 +38,12 @@ export class PhoneApps implements AppManager {
     assertAppBundle(path);
     await this.ctl.install(path);
     return [];
+  }
+
+  async buildAndInstall(request: BuildRequest) {
+    const built = await buildScheme(request, `id=${this.ctl.udid}`);
+    await this.install(built.path);
+    return built.bundle;
   }
 
   async uninstall(app: string) {

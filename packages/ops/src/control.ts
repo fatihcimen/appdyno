@@ -79,7 +79,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
       name: 'app',
       title: 'App management',
       description:
-        'list (all: with system apps), state, install (path: .apk or .app), uninstall, clear, grant, revoke (service: such as camera), launch (restarts it with args, env; Android args are key=value extras), download_data (path: a new or empty folder), replace_data (path: such a folder; stops the app). Default: the selected app.',
+        'list (all: with system apps), state, install (path: .apk or .app), uninstall, clear, grant, revoke (service), launch (restarts it with args, env; Android args: key=value extras), download_data, replace_data (path: a folder; stops the app), build_and_run (path: Xcode project or Gradle folder; scheme, or Gradle module; configuration, or variant). Default: the selected app.',
       input: z
         .object({
           action: z.enum([
@@ -93,10 +93,13 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
             'launch',
             'download_data',
             'replace_data',
+            'build_and_run',
           ]),
           app: z.string().max(200).optional(),
           path: z.string().max(1_000).optional(),
           service: z.string().max(80).optional(),
+          scheme: z.string().max(200).optional(),
+          configuration: z.string().max(100).optional(),
           args: z.array(z.string().max(500)).max(50).optional(),
           env: z.record(z.string(), z.string().max(1_000)).optional(),
           all: z.boolean().default(false),
@@ -105,7 +108,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
         .strict(),
       output: AppOut,
       annotations: DESTRUCTIVE,
-      run: async ({ action, app, path, service, args, env, all, read }) => {
+      run: async ({ action, app, path, service, scheme, configuration, args, env, all, read }) => {
         const s = await ctx.session();
         const { apps } = s.device;
         const done = (t: string, extra: Record<string, unknown> = {}) =>
@@ -144,6 +147,24 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
             if (said.length > 0) s.acted();
             // what it answered on the device is part of what happened: no read mode shortens this
             return done([`installed ${path}`, ...said].join('\n'));
+          }
+          case 'build_and_run': {
+            if (!path) throw new ToolError('build_and_run needs path', 'INVALID_ARGUMENT');
+            // a project's build runs its own scripts, and what it installs is not known before
+            if (policy.apps.length > 0)
+              throw new ToolError(
+                'build_and_run is off while this server has an app allowlist',
+                'POLICY_DENIED',
+              );
+            reportProgress(`building ${path}`);
+            const pkg = await apps.buildAndInstall({
+              project: path,
+              ...(scheme && { scheme }),
+              ...(configuration && { configuration }),
+            });
+            reportProgress(`launching ${pkg}`);
+            await apps.launchWith(pkg, { ...(args && { args }), ...(env && { env }) });
+            return afterChange(s, `built and launched ${pkg}`, read, true);
           }
           case 'launch': {
             const pkg = appOf(s, app);

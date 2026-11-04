@@ -707,6 +707,10 @@ describe('app management', () => {
       clearData: rec('clear'),
       downloadData: rec('download'),
       replaceData: rec('replace'),
+      buildAndInstall: async (...a: unknown[]) => {
+        log.push(['build', ...a]);
+        return 'dev.built';
+      },
       listApps: async () => [{ id: 'dev.app', name: 'App', version: '1' }],
       appState: async () => 'running',
       permission: rec('permission'),
@@ -752,6 +756,33 @@ describe('app management', () => {
       expect(r.text).toContain('passed a Play Protect warning for dev.app: "Unsafe app blocked"');
       expect(r.data.done).toContain('Unsafe app blocked');
     }
+  });
+
+  it('builds, installs and launches what a project makes, and only with no allowlist', async () => {
+    const apps = manager();
+    const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
+    expect((await call('app', { action: 'build_and_run' })).error).toBe(true);
+    const built = await call('app', {
+      action: 'build_and_run',
+      path: '/tmp/My.xcodeproj',
+      scheme: 'My',
+      configuration: 'Release',
+      read: 'none',
+    });
+    expect(built.text).toContain('built and launched dev.built');
+    expect(apps.log[0]).toEqual([
+      'build',
+      { project: '/tmp/My.xcodeproj', scheme: 'My', configuration: 'Release' },
+    ]);
+    expect(apps.log[1]?.slice(0, 2)).toEqual(['launch', 'dev.built']);
+
+    const narrow = manager();
+    const { call: narrowCall } = await connect(Object.assign(new FakeDevice(), { apps: narrow }), {
+      policy: { apps: ['dev.app'] },
+    });
+    const refused = await narrowCall('app', { action: 'build_and_run', path: '/tmp/a' });
+    expect(refused.error).toBe(true);
+    expect(narrow.log).toEqual([]);
   });
 
   it('copies an app data only with a safe folder', async () => {

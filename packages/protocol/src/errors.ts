@@ -20,6 +20,8 @@ export const ERROR_CODES = [
   'AMBIGUOUS',
   /** An `assert` that does not hold. Host only, never on the wire. */
   'CHECK_FAILED',
+  /** A project's own build failed, with what it said. Host only, never on the wire. */
+  'BUILD_FAILED',
   /** Another live process holds the device. Host only, never on the wire. */
   'DEVICE_CLAIMED',
   /** A phone locked behind what this tool cannot answer. Host only, never on the wire. */

@@ -39,9 +39,14 @@ export type AppState = 'not_installed' | 'stopped' | 'running' | 'foreground';
 export type LaunchOptions = { args?: string[]; env?: Record<string, string> };
 
 /** Apps on a device; what a device cannot do answers UNSUPPORTED with the reason. */
+/** A project on this Mac: `scheme` is Xcode's, or the Gradle module; `configuration` is Xcode's, or the variant. */
+export type BuildRequest = { project: string; scheme?: string; configuration?: string };
+
 export interface AppManager {
   /** Installs the file; what it answered on the device along the way, for the caller to keep in its answer. */
   install(path: string): Promise<string[]>;
+  /** Builds a project for this device and installs it; the app's id. */
+  buildAndInstall(request: BuildRequest): Promise<string>;
   uninstall(app: string): Promise<void>;
   clearData(app: string): Promise<void>;
   /** The app's data, into an empty folder on this Mac. */
