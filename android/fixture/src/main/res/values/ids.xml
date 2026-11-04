@@ -62,4 +62,6 @@
     <item name="memory_native" type="id" />
     <item name="memory_bitmap" type="id" />
     <item name="cpu_steady" type="id" />
+    <item name="cpu_stall" type="id" />
+    <item name="cpu_taps" type="id" />
 </resources>

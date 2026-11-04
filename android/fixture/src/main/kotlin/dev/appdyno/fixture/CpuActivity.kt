@@ -5,7 +5,8 @@ import android.os.Bundle
 
 /**
  * One core busy for 3 s on a background thread; and for a diff of two profiles, 8 s of a second's work over and over:
- * 200 ms in one function, and `files/known_ms` more in another.
+ * 200 ms in one function, and `files/known_ms` more in another. A tap on Stall holds the main thread for what a test
+ * put there: at work for `files/stall_ms` in that function, or asleep for `files/sleep_ms`.
  */
 class CpuActivity : Activity() {
     private fun steadyWork() {
@@ -44,6 +45,13 @@ class CpuActivity : Activity() {
                     while (android.os.SystemClock.uptimeMillis() < end) repeat(100_000) { x += x xor 7 }
                     if (x == 42L) println(x)
                 }.start()
+            }
+            val taps = label("Taps: 0", R.id.cpu_taps)
+            var count = 0
+            button("Stall", R.id.cpu_stall) {
+                costMs("stall_ms")?.let(::knownCost)
+                costMs("sleep_ms")?.let(Thread::sleep)
+                taps.text = "Taps: ${++count}"
             }
         }
     }
