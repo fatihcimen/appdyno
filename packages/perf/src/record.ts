@@ -56,6 +56,8 @@ export type PerfRecord = {
   noise: Noise[];
   /** An estimate from a model, not a reading of the thing itself; always shown as one. */
   modelled?: boolean;
+  /** Timed on this Mac and not on the device; always shown as such. */
+  throughHost?: boolean;
 };
 
 /** The rows of the performance table, in its order: what a device can be asked, and what the page calls it. */
@@ -253,6 +255,7 @@ export function recordsOf(ctx: RunContext, metrics: Metric[]): PerfRecord[] {
         deviceClass: deviceClass(ctx.device),
         noise: noiseOf(ctx, m.throughHost),
         ...(m.modelled && { modelled: true }),
+        ...(m.throughHost && { throughHost: true }),
       },
     ];
   });

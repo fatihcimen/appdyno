@@ -53,6 +53,10 @@ export type Comparison = {
   p?: number;
   n: { current: number; baseline: number };
   note?: string;
+  /** An estimate from a model: stays marked wherever the number goes. */
+  modelled?: boolean;
+  /** Timed on this Mac and not on the device: stays marked wherever the number goes. */
+  throughHost?: boolean;
 };
 
 /** Under this a rank test cannot reach ALPHA: 5 against 5 is at best p = 0.0079, 4 against 4 is 0.029. */
@@ -95,12 +99,23 @@ const r3 = (x: number) => Math.round(x * 1000) / 1000;
  */
 export function compareMetric(
   kind: string,
-  current: { samples: number[]; build: Build; compile?: string; noise: Noise[] },
+  current: {
+    samples: number[];
+    build: Build;
+    compile?: string;
+    noise: Noise[];
+    modelled?: boolean;
+    throughHost?: boolean;
+  },
   base: BaselineMetric | undefined,
   unit: Unit,
   better: 'lower' | 'higher',
 ): Comparison {
   const value = median(current.samples);
+  const marks = {
+    ...(current.modelled && { modelled: true }),
+    ...(current.throughHost && { throughHost: true }),
+  };
   if (!base?.runs.length)
     return {
       kind,
@@ -108,11 +123,12 @@ export function compareMetric(
       verdict: 'new',
       current: value,
       n: { current: current.samples.length, baseline: 0 },
+      ...marks,
     };
   const samples = base.runs.flatMap((r) => r.samples);
   const reference = median(samples);
   const n = { current: current.samples.length, baseline: samples.length };
-  const head = { kind, unit, current: value, baseline: reference, n };
+  const head = { kind, unit, current: value, baseline: reference, n, ...marks };
   const unlike = base.runs.find(
     (r) => r.build !== current.build || (r.compile ?? '') !== (current.compile ?? ''),
   );

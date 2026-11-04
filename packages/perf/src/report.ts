@@ -59,13 +59,20 @@ export const exitCode = (reports: KeyReport[]) => (reports.some((r) => failed(r)
 const shown = (x: number | undefined) =>
   x === undefined ? '?' : String(Math.round(x * 100) / 100);
 
-const line = (c: Comparison) => {
+/** What makes a number something other than the device's own reading, said beside it wherever it goes. */
+const marksOf = (c: Comparison) =>
+  `${c.modelled ? ' (modelled)' : ''}${c.throughHost ? ' (timed through the host)' : ''}`;
+
+/** One number against its baseline: what every surface says of it. */
+export const comparisonLine = (c: Comparison) => {
   const change =
     c.shift === undefined
       ? ''
       : ` ${c.shift >= 0 ? '+' : ''}${shown(c.shift)} ${c.unit}${c.percent !== undefined ? ` (${c.percent}%)` : ''}, floor ${shown(c.floor)}${c.p !== undefined ? `, p ${c.p}` : ''}`;
-  return `${c.verdict.padEnd(11)} ${c.kind}: ${shown(c.current)} ${c.unit} against ${shown(c.baseline)}${change} [n ${c.n.current}/${c.n.baseline}]${c.note ? `: ${c.note}` : ''}`;
+  return `${c.kind}: ${shown(c.current)} ${c.unit} against ${shown(c.baseline)}${change} [n ${c.n.current}/${c.n.baseline}]${marksOf(c)}${c.note ? `: ${c.note}` : ''}`;
 };
+
+const line = (c: Comparison) => `${c.verdict.padEnd(11)} ${comparisonLine(c)}`;
 
 export function toText(reports: KeyReport[]): string {
   if (reports.length === 0) return 'no measured runs to compare';

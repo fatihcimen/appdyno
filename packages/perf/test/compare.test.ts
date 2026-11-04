@@ -225,6 +225,58 @@ const context = (samples: number[], run: string, at: string, thermal = 0): PerfR
 describe('store and reports', () => {
   const dir = () => mkdtempSync(join(tmpdir(), 'appdyno-perf-'));
 
+  it('keeps a modelled number and one timed through the host marked, in the words too', () => {
+    const steady = metric([[100, 101, 102, 103, 104]]);
+    const c = compareMetric(
+      'energy.mj',
+      { ...current([100, 101, 102]), modelled: true, throughHost: true },
+      steady,
+      'ms',
+      'lower',
+    );
+    expect(c).toMatchObject({ modelled: true, throughHost: true });
+    expect(compareMetric('x', current([100]), steady, 'ms', 'lower')).not.toHaveProperty(
+      'modelled',
+    );
+    const fresh = compareMetric('y', { ...current([1]), modelled: true }, undefined, 'ms', 'lower');
+    expect(fresh).toMatchObject({ verdict: 'new', modelled: true });
+    const text = toText([
+      {
+        app: 'a',
+        scenario: 's',
+        deviceClass: 'c',
+        run: 'r',
+        at: 't',
+        noise: [],
+        comparisons: [c],
+        budgets: [],
+      },
+    ]);
+    expect(text).toContain('(modelled) (timed through the host)');
+  });
+
+  it('a record says when it was timed through the host', () => {
+    const records = recordsOf(
+      {
+        run: 'r',
+        app: 'a',
+        scenario: 's',
+        source: '',
+        raw: '',
+        device: phone,
+        build: 'release',
+        load: { host: [1, 1, 1], hostCpus: 10 },
+        tool: '',
+        at: '',
+      },
+      [
+        { kind: 'launch.until_ms', unit: 'ms', samples: [1], throughHost: true },
+        { kind: 'cpu.percent', unit: 'percent', samples: [1] },
+      ],
+    );
+    expect(records.map((r) => r.throughHost)).toEqual([true, undefined]);
+  });
+
   it('a record carries its context and its noise', () => {
     const [r] = context([100, 110, 120], 'r1', '2026-11-03T00:00:00.000Z', 3);
     expect(r).toMatchObject({
