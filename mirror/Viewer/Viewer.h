@@ -97,6 +97,8 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags);
 - (void)hideBanner;
 - (void)addActivity:(NSString *)line;
 - (void)toggleActivity;
+/// The banner's button.
+- (void)done:(id)sender;
 @end
 
 /// The window. The app keeps none when it runs headless.

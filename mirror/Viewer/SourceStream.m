@@ -223,36 +223,39 @@ static NSString *askAdb(int fd, NSString *request) {
   BOOL refused = NO;
   id<MVSink> sink = _sink;
   while (!why && !refused) {
-    uint8_t head[5];
-    if (!readAll(fd, head, 5)) {
-      why = @"the stream ended";
-      break;
-    }
-    uint32_t length = ntohl(*(uint32_t *)head);
-    if (length > kMaxFrame) {
-      why = @"a frame over the limit: the stream is broken";
-      break;
-    }
-    if (length > capacity) {
-      uint8_t *grown = realloc(buffer, length);
-      if (!grown) {
-        why = @"out of memory";
+    // this thread never returns to a run loop: what a frame leaves behind goes with the frame
+    @autoreleasepool {
+      uint8_t head[5];
+      if (!readAll(fd, head, 5)) {
+        why = @"the stream ended";
         break;
       }
-      buffer = grown;
-      capacity = length;
-    }
-    if (!readAll(fd, buffer, length)) {
-      why = @"the stream ended";
-      break;
-    }
-    if (head[4] == kFrameJson) {
-      refused = [self onJson:buffer length:length];
-    } else if (head[4] == kFrameVideo && length >= kVideoHeader) {
-      double capture = _haveOffset ? MVNowMs() - (big64(buffer) / 1000.0 - _offsetMs) : -1;
-      [sink.stats arrived:length - kVideoHeader captureMs:capture];
-      if (_hidden) [sink.stats dropped:1];
-      else [_decoder decode:buffer + kVideoHeader length:length - kVideoHeader];
+      uint32_t length = ntohl(*(uint32_t *)head);
+      if (length > kMaxFrame) {
+        why = @"a frame over the limit: the stream is broken";
+        break;
+      }
+      if (length > capacity) {
+        uint8_t *grown = realloc(buffer, length);
+        if (!grown) {
+          why = @"out of memory";
+          break;
+        }
+        buffer = grown;
+        capacity = length;
+      }
+      if (!readAll(fd, buffer, length)) {
+        why = @"the stream ended";
+        break;
+      }
+      if (head[4] == kFrameJson) {
+        refused = [self onJson:buffer length:length];
+      } else if (head[4] == kFrameVideo && length >= kVideoHeader) {
+        double capture = _haveOffset ? MVNowMs() - (big64(buffer) / 1000.0 - _offsetMs) : -1;
+        [sink.stats arrived:length - kVideoHeader captureMs:capture];
+        if (_hidden) [sink.stats dropped:1];
+        else [_decoder decode:buffer + kVideoHeader length:length - kVideoHeader];
+      }
     }
   }
   free(buffer);

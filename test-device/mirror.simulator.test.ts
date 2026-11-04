@@ -118,6 +118,7 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real 
     const device = new IosSimulatorDevice(udid!);
     const input = device.mirror.input.bind(device.mirror);
     const touches: InputEvent[] = [];
+    const answered: string[] = [];
     device.mirror.input = async (e) => {
       touches.push(e);
       await input(e);
@@ -127,6 +128,7 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real 
       viewer: startViewer(false),
       options: { quality: 'auto' },
       title: 'a test window',
+      onDone: (id) => answered.push(id),
     });
     await session.start();
     try {
@@ -143,6 +145,17 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real 
       // a key on the window: its text, as the window has it
       session.tell({ op: 'poke', key: 'a' });
       await until('a key', () => touches.some((e) => e.kind === 'text' && e.s === 'a'), 10_000);
+      // what sits over the picture: a mark, a line of activity in its panel, a banner answered, and no sound
+      session.tell({ op: 'agent', driving: true, tool: 'tap' });
+      session.tell({ op: 'activity', line: 'tap 3 ms ok' });
+      session.tell({ op: 'poke', panel: true });
+      session.tell({ op: 'banner', id: 'r1', text: 'Face ID', needsDone: true, sound: false });
+      session.tell({ op: 'poke', done: true });
+      await until('an answer', () => answered.includes('r1'), 10_000);
+      session.tell({ op: 'agent', driving: false });
+      session.tell({ op: 'poke', panel: true });
+      await new Promise((r) => setTimeout(r, 500));
+      expect(session.status.state).toBe('live');
       expect(session.status.inputFailed).toBe(0);
       expect(Number(session.status.stats?.shown ?? 0)).toBeGreaterThanOrEqual(0);
     } finally {

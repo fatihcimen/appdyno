@@ -16,7 +16,7 @@
 | iphone-build, iphone-functional        | with `--iphone <UDID>`: the runner for phones, the iPhone suites (signing variables)  |
 
 **Mirror.** `test-device/mirror.simulator.test.ts` and `mirror.android.test.ts`, with the same variables, are
-headless. `APPDYNO_MIRROR_WINDOW=1` adds the one real window, closed right after. A person is needed for these,
+headless. `APPDYNO_MIRROR_WINDOW=1` adds the one real window, closed right after. `APPDYNO_MIRROR_RESTART=1` shuts the named simulator down under its window and boots it, and `APPDYNO_MIRROR_RESTART_AVD=<avd>` kills the named emulator under its stream and boots that AVD by `simulator`'s path: each costs a whole boot of a device you own. A person is needed for these,
 and no suite does them: unplug a phone during a stream; unlock a phone with a passcode; sleep and wake the Mac;
 a `hand_off` with no window, which sounds and sends a notification; a `hand_off` on a window, with its sound.
 

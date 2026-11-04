@@ -107,7 +107,12 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   if ([op isEqual:@"agent"]) return [_window.overlay setDriving:[m[@"driving"] boolValue] tool:m[@"tool"] ?: @""];
   if ([op isEqual:@"banner"]) return m[@"id"] ? [_window.overlay showBanner:m] : [_window.overlay hideBanner];
   if ([op isEqual:@"activity"]) return [_window.overlay addActivity:m[@"line"] ?: @""];
-  if ([op isEqual:@"poke"]) return m[@"key"] ? [_window pokeKey:m[@"key"]] : [_window pokeX:[m[@"x"] doubleValue] y:[m[@"y"] doubleValue]];
+  if ([op isEqual:@"poke"]) {
+    if (m[@"key"]) return [_window pokeKey:m[@"key"]];
+    if ([m[@"done"] boolValue]) return [_window.overlay done:self];
+    if ([m[@"panel"] boolValue]) return [_window.overlay toggleActivity];
+    return [_window pokeX:[m[@"x"] doubleValue] y:[m[@"y"] doubleValue]];
+  }
   if ([op isEqual:@"mark"]) return [_stats mark];
   if ([op isEqual:@"quit"]) {
     [self detach];

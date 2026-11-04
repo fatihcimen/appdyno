@@ -106,9 +106,15 @@ async function prepareAndroid() {
   );
   await pause(1_500);
   const { screen } = await device.open();
-  const tree = await device.tree();
-  const node = tree.nodes.find((n) => n.id?.endsWith('frames_light'));
+  // a fresh start of the app on a loaded Mac is not drawn at once
+  let node;
+  for (let i = 0; i < 40 && !node; i++) {
+    node = (await device.tree()).nodes.find((n) => n.id?.endsWith('frames_light'));
+    if (!node) await pause(500);
+  }
   if (!node) throw new Error('the fixture frames screen is not on the device: install the fixture');
+  // the driver lets go: a person's window holds no UI automation, whose cost the app would pay
+  device.close();
   const [left, top, right, bottom] = node.b;
   return { x: (left + right) / 2 / screen.w, y: (top + bottom) / 2 / screen.h, animateMs: 2_000 };
 }
@@ -148,17 +154,11 @@ const drag = async () => {
   session.send({ kind: 'touch', p: 2, x, y: to });
 };
 
-/** Frames a guest drew in that time, by its own count: a limit the path cannot beat. */
-async function guestRate(act, ms) {
-  const framesOf = async () =>
-    Number(
-      /Total frames rendered: (\d+)/.exec(await adbShell(`dumpsys gfxinfo ${FIXTURE}`))?.[1] ?? 0,
-    );
-  const before = await framesOf();
-  await act();
-  await pause(ms);
-  return ((await framesOf()) - before) / (ms / 1000);
-}
+/** Frames a guest has drawn, by its own count: a limit the path cannot beat. */
+const guestFrames = async () =>
+  Number(
+    /Total frames rendered: (\d+)/.exec(await adbShell(`dumpsys gfxinfo ${FIXTURE}`))?.[1] ?? 0,
+  );
 
 const result = { serial, kind, date: new Date().toISOString(), runs: [] };
 const note = (name, value, target, ok) => {
@@ -213,7 +213,7 @@ if (values.soak) {
     'RSS, a minute in and at the end',
     `${top(early, 'rssMb')}, ${top(late, 'rssMb')} MB`,
     'flat, < 150',
-    top(late, 'rssMb') < 150 && top(late, 'rssMb') < top(early, 'rssMb') * 1.2,
+    top(late, 'rssMb') < 150 && top(late, 'rssMb') < top(early, 'rssMb') + 5,
   );
   note(
     'descriptors',
@@ -253,22 +253,28 @@ note(
   touch >= 0 && touch <= touchTarget,
 );
 
-// frames per second while it moves: only full seconds of motion, the first and last are part still
+// frames per second while it moves: on Android the animation is kept going, so that every second is motion
 await still();
-let guest;
 const moved = [];
+const guestBefore = kind === 'emulator' ? await guestFrames() : 0;
 const start = Date.now();
 while (Date.now() - start < SECONDS * 1000) {
   const from = seconds.length;
-  if (isUdid) await drag();
-  else if (kind === 'emulator')
-    guest = await guestRate(async () => tapAt(prepared.x, prepared.y), prepared.animateMs);
-  else tapAt(prepared.x, prepared.y);
-  await pause(isUdid ? 200 : kind === 'emulator' ? 500 : prepared.animateMs + 500);
+  if (isUdid) {
+    await drag();
+    await pause(200);
+  } else {
+    tapAt(prepared.x, prepared.y);
+    await pause(prepared.animateMs - 100);
+  }
   moved.push(...seconds.slice(from));
 }
+const guest =
+  kind === 'emulator'
+    ? ((await guestFrames()) - guestBefore) / ((Date.now() - start) / 1000)
+    : undefined;
 // a screen that coasts slows its own rate as it stops: only seconds of real motion say anything of this path
-const fullSeconds = moved.filter((n) => Number(n.arrived) >= 30);
+const fullSeconds = moved.slice(1).filter((n) => Number(n.arrived) >= 30);
 const fps = median(fullSeconds.map((n) => Number(n.arrived)));
 const best = Math.max(...fullSeconds.map((n) => Number(n.arrived)));
 const fpsTarget =
@@ -303,6 +309,7 @@ if (kind !== 'simulator') {
 }
 note('Mbit/s', median(fullSeconds.map((n) => Number(n.mbps))));
 note('mode', `${fullSeconds.at(-1)?.source} ${fullSeconds.at(-1)?.mode}`);
+note('inputs', `${session.status.inputFailed} failed, ${session.status.inputDropped} moves merged`);
 
 await session.stop('the bench ended');
 device.close?.();
