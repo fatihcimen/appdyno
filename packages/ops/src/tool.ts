@@ -119,7 +119,15 @@ export function defineOp<
   };
 }
 
-const SERVER_CHECKS = new Set(['maxLength', 'minLength', 'maxItems', 'minItems', 'pattern']);
+const SERVER_CHECKS = new Set([
+  'maxLength',
+  'minLength',
+  'maxItems',
+  'minItems',
+  'pattern',
+  'minimum',
+  'maximum',
+]);
 
 const withoutChecks = (v: unknown): unknown => {
   if (Array.isArray(v)) return v.map(withoutChecks);
@@ -133,8 +141,8 @@ const withoutChecks = (v: unknown): unknown => {
 };
 
 /**
- * An op's arguments as a client's catalog holds them: what has a default is optional. A length limit or a
- * pattern is the server's to refuse and no client's to know: left out, as a catalog is read on every session.
+ * An op's arguments as a client's catalog holds them: what has a default is optional. A limit or a pattern is
+ * the server's to refuse and no client's to know: left out, as a catalog is read on every session.
  */
 export function inputSchemaOf(op: Pick<Tool, 'input'>) {
   const { $schema: _, ...schema } = z.toJSONSchema(op.input, { io: 'input', target: 'draft-7' });

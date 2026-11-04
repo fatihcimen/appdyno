@@ -13,7 +13,9 @@ it('keeps the tool catalog within its budget', async () => {
   const { tools } = await client.listTools();
   expect(tools).toHaveLength(Object.keys(opsFor(ctx)).length);
   expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(26_615);
-  expect(JSON.stringify(tools)).not.toMatch(/\$schema|taskSupport|"additionalProperties":false/);
+  expect(JSON.stringify(tools)).not.toMatch(
+    /\$schema|taskSupport|"additionalProperties":false|"(minimum|maximum)":/,
+  );
   // what the server's instructions say once, and a test that sees it if the words on the tools change
   expect(JSON.stringify(tools)).not.toMatch(
     /"description":"(default: the selected app|kept under this name|iOS simulator: frame probe; relaunches the app)"/,
