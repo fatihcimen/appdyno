@@ -241,6 +241,20 @@ describe('flow on the command line', () => {
       '--overwrite',
     ]);
     expect(flowWords(['--action', 'start'])).toEqual(['--action', 'start']);
+    expect(
+      flowWords(['run', 'a.flow', '--env-file', 'ci.env', '--iterations', '5', '--scenario', 'x']),
+    ).toEqual([
+      '--action',
+      'run',
+      '--file',
+      'a.flow',
+      '--env-file',
+      'ci.env',
+      '--iterations',
+      '5',
+      '--scenario',
+      'x',
+    ]);
     expect(() => flowWords(['run', 'a.flow', 'extra'])).toThrow(/unexpected word: extra/);
   });
 });

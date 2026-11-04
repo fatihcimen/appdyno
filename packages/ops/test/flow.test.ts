@@ -503,6 +503,36 @@ assert id=result check=text equals="Gönderildi"
       expect(device.typed).toEqual(['env-person', 'param-person']);
     });
 
+    it('takes values from an env file, under the call and over the environment', async () => {
+      device.screen = 'form';
+      const file = flowFile(
+        `app dev.app\nparam WHO\nparam WHERE\ntype "\${WHO} \${WHERE}" id=name\n`,
+      );
+      const envFile = join(dir, 'ci.env');
+      writeFileSync(envFile, '# staging\nWHO="file person"\nexport WHERE=file=place\n');
+      vi.stubEnv('WHERE', 'env-place');
+      const run = (o: object) =>
+        callerOf(context())('flow', { action: 'run', file, envFile, ...o });
+      await run({});
+      await run({ params: ['WHO=param-person'] });
+      expect(device.typed).toEqual(['file person file=place', 'param-person file=place']);
+      const gone = await refusal(run({ envFile: join(dir, 'none.env') }));
+      expect(gone.code).toBe('NOT_FOUND');
+      expect(gone.message).toContain('no such file');
+    });
+
+    it('keeps a secret from an env file out of what a failure shows', async () => {
+      device.screen = 'login';
+      const file = flowFile(
+        'app dev.app\nsecret CODE\nassert id=none check=text equals="${CODE}" timeoutMs=300\n',
+      );
+      const envFile = join(dir, 'ci.env');
+      writeFileSync(envFile, `CODE=${SECRET}\n`);
+      const e = await refusal(callerOf(context())('flow', { action: 'run', file, envFile }));
+      expect(e.message).toContain('Merhaba •••');
+      expect(e.message).not.toContain(SECRET);
+    });
+
     it('hides a secret from the failure it may show up in', async () => {
       device.screen = 'login';
       const file = flowFile(`app dev.app

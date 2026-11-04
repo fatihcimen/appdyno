@@ -129,6 +129,9 @@ const FLOW_VALUES = new Set([
   '--file',
   '--from',
   '--params',
+  '--env-file',
+  '--iterations',
+  '--scenario',
   '--json',
   '--out',
 ]);

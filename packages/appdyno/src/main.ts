@@ -16,6 +16,7 @@ import { writeDashboard } from '@appdyno/perf';
 import {
   DEFAULT_POLICY,
   ServerContext,
+  envValues,
   flowFiles,
   flowsFor,
   JOURNEY_ITERATIONS,
@@ -230,6 +231,7 @@ async function main(): Promise<number> {
         options: {
           device: { type: 'string', multiple: true },
           param: { type: 'string', multiple: true },
+          'env-file': { type: 'string' },
           artifacts: { type: 'string' },
           junit: { type: 'string' },
           share: { type: 'boolean' },
@@ -249,7 +251,7 @@ async function main(): Promise<number> {
         retries < 0
       ) {
         err(
-          'usage: appdyno test <dir or files> [--device S]... [--param NAME=value]... [--artifacts dir] [--junit file] [--retries N] [--measure [--iterations N] [--measurements dir]]',
+          'usage: appdyno test <dir or files> [--device S]... [--param NAME=value]... [--env-file F] [--artifacts dir] [--junit file] [--retries N] [--measure [--iterations N] [--measurements dir]]',
         );
         return 2;
       }
@@ -264,7 +266,10 @@ async function main(): Promise<number> {
           devices: values.device ?? [],
           artifacts,
           junit: values.junit ?? join(artifacts, 'junit.xml'),
-          params: paramsOf(values.param),
+          params: {
+            ...(values['env-file'] && envValues(values['env-file'])),
+            ...paramsOf(values.param),
+          },
           retries,
           ...(values.measure && { iterations }),
           log: (line) => console.log(line),
@@ -354,7 +359,7 @@ commands:
   mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--animations on|off] [--measurements dir] [--no-install-consent] [--accept-install-warnings]
                    the MCP server over stdio
   devices          the connected Android devices
-  test <dir or files> [--device S]... [--param NAME=value]... [--artifacts dir] [--junit file] [--retries N] [--measure [--iterations N]]
+  test <dir or files> [--device S]... [--param NAME=value]... [--env-file F] [--artifacts dir] [--junit file] [--retries N] [--measure [--iterations N]]
                    replay flows, one after another, on each device; --retries runs a failed file again and calls it flaky; --measure keeps each as a scenario, by step
   doctor [--serial S]
                    what this machine and that device lack
@@ -370,7 +375,7 @@ commands:
   perf survey --app A [--device S] [--measurements dir]
                    every measure on that device in turn, then the page
 
-operations (--device S selects the device, also for the next commands; flow: appdyno flow run a.flow --from 3 --param NAME=value):
+operations (--device S selects the device, also for the next commands; flow: appdyno flow run a.flow --from 3 --param NAME=value --env-file F):
 ${listOf(ops)}`,
         );
         return asked ? 0 : 2;

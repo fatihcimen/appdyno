@@ -9,7 +9,7 @@ import { Scenario } from '../perf/shared.js';
 import { ToolError, reply, defineOp, DESTRUCTIVE } from '../tool.js';
 import { journeyText, measureJourney } from './journey.js';
 import type { FlowRunner } from './runner.js';
-import { FLOW_FILE, readFlow, loadRecording, keepRecording } from './shared.js';
+import { FLOW_FILE, envValues, readFlow, loadRecording, keepRecording } from './shared.js';
 
 const flagged = (flow: Flow) =>
   flow.steps.flatMap((st, i) => {
@@ -39,13 +39,14 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
       name: 'flow',
       title: 'Flow',
       description:
-        'Record your actions; replay them with no model. save (file, overwrite), run (file, from: a step, params: NAME=value; iterations: a journey timed by step, kept for perf_compare), export (file, to Maestro YAML).',
+        'Record your actions; replay them with no model. save (file, overwrite), run (file, from: a step, params: NAME=value, envFile; iterations: a journey timed by step, kept for perf_compare), export (file, to Maestro YAML).',
       input: z
         .object({
           action: z.enum(['start', 'stop', 'save', 'run', 'export']),
           file: z.string().max(1_000).optional(),
           from: z.number().refine(Number.isInteger, 'a step number').optional(),
           params: z.array(z.string().max(2_000)).optional(),
+          envFile: z.string().max(1_000).optional(),
           overwrite: z.boolean().optional(),
           iterations: z.number().int().min(1).max(50).optional(),
           scenario: Scenario,
@@ -53,7 +54,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
         .strict(),
       output: FlowOut,
       annotations: DESTRUCTIVE,
-      run: async ({ action, file, from, params, overwrite, iterations, scenario }) => {
+      run: async ({ action, file, from, params, envFile, overwrite, iterations, scenario }) => {
         const need = () => {
           if (!file)
             throw new ToolError(`${action} needs file: a path ending in .flow`, 'INVALID_ARGUMENT');
@@ -133,7 +134,10 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
           }
           case 'run': {
             const path = need();
-            const replay = { params: paramsOf(params), ...(from !== undefined && { from }) };
+            const replay = {
+              params: { ...(envFile && envValues(envFile)), ...paramsOf(params) },
+              ...(from !== undefined && { from }),
+            };
             const { result, journey } = iterations
               ? await measureJourney(ctx, runner, s, readFlow(path), path, {
                   ...replay,

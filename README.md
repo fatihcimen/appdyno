@@ -205,7 +205,7 @@ appdyno tap --json '{"selector":{"text":"Form"}}'
 appdyno flow stop             # prints the flow, and any step to look at
 appdyno flow save login.flow
 appdyno flow run login.flow --param PASSWORD_INPUT=... --from 3
-appdyno test flows/ --device emulator-5554 --device <udid> --artifacts out --junit out/junit.xml
+appdyno test flows/ --env-file ci.env --retries 1 --device emulator-5554 --device <udid> --artifacts out --junit out/junit.xml
 appdyno flow export login.flow > login.yaml
 ```
 
@@ -251,7 +251,7 @@ is written as `unrecorded "..."`, where a replay stops, so that it cannot pass w
 the field's id, or `SECRET_1` for the first of `APPDYNO_SECRETS`. From then on the same text anywhere else,
 such as a label that shows it back, becomes that name too. The file never holds a value. Neither does the
 recording kept between commands, which holds a salted digest. `param` and `secret` values come from
-`--param` (`params` in the tool) or the environment variable of that name; `$${` is a literal `${`. A secret
+`--param` (`params` in the tool), then `--env-file` (`envFile`; `NAME=value` lines, as a `.env` file has them, kept out of the repository by you), then the environment variable of that name; `$${` is a literal `${`. A secret
 is hidden from a replay's answers, report and saved tree. A screenshot shows what the screen shows, so a
 secret typed into a plain field can be seen in it.
 

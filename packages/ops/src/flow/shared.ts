@@ -1,5 +1,6 @@
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { parseEnv } from 'node:util';
 import { deviceStateFile } from '@appdyno/core';
 import { Recording, type RecordingState, type Flow, parseFlow, FlowError } from '@appdyno/flows';
 import type { ServerContext } from '../context.js';
@@ -30,17 +31,23 @@ export const defined = <T extends object>(o: T) =>
     [K in keyof T]: Exclude<T[K], undefined>;
   };
 
-export const readFlow = (file: string): Flow => {
-  if (!FLOW_FILE.test(file))
-    throw new ToolError(`a flow's file ends in .flow: ${file}`, 'INVALID_ARGUMENT');
-  let text: string;
+const textOf = (file: string) => {
   try {
-    text = readFileSync(file, 'utf8');
+    return readFileSync(file, 'utf8');
   } catch (e) {
     const why =
       (e as NodeJS.ErrnoException).code === 'ENOENT' ? 'no such file' : (e as Error).message;
     throw new ToolError(`cannot read ${file}: ${why}`, 'NOT_FOUND');
   }
+};
+
+/** A file of `NAME=value` lines, as a flow's values. What it holds is never said back. */
+export const envValues = (file: string) => parseEnv(textOf(file)) as Record<string, string>;
+
+export const readFlow = (file: string): Flow => {
+  if (!FLOW_FILE.test(file))
+    throw new ToolError(`a flow's file ends in .flow: ${file}`, 'INVALID_ARGUMENT');
+  const text = textOf(file);
   try {
     return parseFlow(text);
   } catch (e) {
