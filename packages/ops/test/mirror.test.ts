@@ -9,7 +9,7 @@ import {
   type Mirror,
   type MirrorSource,
 } from '@appdyno/core';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { startOf } from '@appdyno/core';
 import { holder } from '../src/claims.js';
 import { ServerContext } from '../src/context.js';
@@ -112,6 +112,9 @@ const file = (serial: string, pid: number, status: object): MirrorFile => ({
   serial,
   status: { state: 'live', since: 1, inputDropped: 0, inputFailed: 0, ...status } as never,
 });
+
+// a file a failed test left would be read by the next, which would then fail for no fault of its own
+afterEach(() => rmSync(join(dir, 'mirror'), { recursive: true, force: true }));
 
 describe('a mirror parent', () => {
   it('stops by its seconds, at any point of its start', async () => {
@@ -232,7 +235,8 @@ describe('what other processes read', () => {
     const text = answer.blocks.map((b) => (b.type === 'text' ? b.text : '')).join();
     expect(text).toContain('The device is not connected');
     expect(text).toContain('Connect it');
-    expect(text).toMatch(/a person touched it 3 s ago/);
+    // at least: the seconds go on while a slow machine gets here
+    expect(Number(/a person touched it (\d+) s ago/.exec(text)?.[1])).toBeGreaterThanOrEqual(3);
     expect(answer.data).toMatchObject({ mirrors: [{ serial: 'device-j', state: 'waiting' }] });
     rmSync(join(dir, 'mirror/device-j.json'));
   });
