@@ -1,9 +1,18 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { z } from 'zod';
+import { readState } from './state.js';
 
 /** Who holds something for now, in a file any process can read. */
-export type Owner = { pid: number; started: string; tool: string; since: string };
+export const Owner = z.object({
+  pid: z.number(),
+  /** A pid alone may be some later process's: the start time tells them apart. */
+  started: z.string(),
+  tool: z.string(),
+  since: z.string(),
+});
+export type Owner = z.infer<typeof Owner>;
 
 const startOf = (pid: number) => {
   try {
@@ -16,25 +25,32 @@ const startOf = (pid: number) => {
   }
 };
 
+let started: string | undefined;
+
+const startedHere = () => (started ??= startOf(process.pid));
+
 /** This process, as a file says it. */
 export const thisOwner = (tool: string): Owner => ({
   pid: process.pid,
-  started: startOf(process.pid),
+  started: startedHere(),
   tool,
   since: new Date().toISOString(),
 });
 
-/** A pid alone may be some later process's: the start time tells them apart. */
-const alive = (o: Owner) => startOf(o.pid) === o.started && o.started !== '';
+export const isAlive = (o: Owner) => o.started !== '' && startOf(o.pid) === o.started;
+
+/** No owner is a command line's: its process ends with the command, and what it set stays until asked. */
+export const isThisProcess = (o: Owner | undefined) =>
+  o?.pid === process.pid && o.started === startedHere();
+
+export const heldElsewhere = (o: Owner | undefined) => !!o && !isThisProcess(o) && isAlive(o);
+
+export const ownerGone = (o: Owner | undefined) => !!o && !isThisProcess(o) && !isAlive(o);
 
 /** The live owner a file names, if any: a dead one holds nothing. */
 export function ownerIn(file: string): Owner | undefined {
-  try {
-    const o = JSON.parse(readFileSync(file, 'utf8')) as Owner;
-    return alive(o) ? o : undefined;
-  } catch {
-    return undefined;
-  }
+  const o = readState(file, Owner);
+  return o && isAlive(o) ? o : undefined;
 }
 
 /**

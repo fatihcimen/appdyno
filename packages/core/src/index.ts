@@ -2,7 +2,7 @@ export { RpcClient, greet } from './rpc.js';
 export { assertLatLon, DeviceActions, RpcDevice } from './rpc-device.js';
 export { DeviceQueue } from './queue.js';
 export { afterTimeout } from './stuck.js';
-export { stateDir, safeName, deviceStateFile, readStateFile, writeStateFile } from './state.js';
+export * from './state.js';
 export { run } from './run.js';
 export * from './owner.js';
 export * from './stats.js';
