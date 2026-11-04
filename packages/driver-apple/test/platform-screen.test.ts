@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { UiElement } from '@appdyno/core';
+import { screenElements, windowRect, withStableRefs, type UiElement } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
 import { iosScreen } from '../src/platform-screen.js';
 
@@ -98,5 +98,50 @@ describe('what the screen shows', () => {
 
   it('leaves a status band as tall as it gets', () => {
     expect(iosScreen.statusBand(nodes('Button'))).toBe(64);
+  });
+});
+
+describe('what a tester sees of a tree', () => {
+  const ios = { platform: 'ios' as const };
+  const seen = (els: UiElement[]) =>
+    screenElements(withStableRefs([root, ...els], ios), ios).map((e) => e.label || e.id);
+  const bar = (height: number): UiElement => ({
+    type: 'StatusBar',
+    label: '12:00',
+    ref: '@s',
+    rect: { x: 0, y: 0, width: 402, height },
+  });
+
+  it('leaves out a root in the status bar band, and only there', () => {
+    expect(seen([bar(50)])).toEqual([]);
+    expect(seen([bar(51)])).toEqual(['12:00']);
+  });
+
+  it('lists an Other named only by its id', () => {
+    const other: UiElement = {
+      type: 'Other',
+      identifier: 'card',
+      ref: '@o',
+      parent: 0,
+      rect: { x: 10, y: 100, width: 200, height: 44 },
+    };
+    expect(seen([other])).toEqual(['card']);
+  });
+
+  it('takes the width of a bar for the screen when no root tells it', () => {
+    const offset: UiElement = { ...root, rect: { x: 50, y: 0, width: 300, height: 874 } };
+    const nav: UiElement = {
+      type: 'NavigationBar',
+      ref: '@n',
+      parent: 0,
+      rect: { x: 0, y: 40, width: 402, height: 44 },
+    };
+    expect(windowRect([offset, nav], 'ios')).toEqual({ x: 0, y: -1e9, width: 402, height: 2e9 });
+    expect(windowRect([offset], 'ios')).toBeUndefined();
+  });
+
+  it('has no navigation bar beside a window in landscape', () => {
+    const wide: UiElement = { ...root, rect: { x: 60, y: 0, width: 800, height: 400 } };
+    expect(windowRect([wide], 'ios')).toBeUndefined();
   });
 });
