@@ -1,3 +1,4 @@
+import { HOME_SCREEN_APP } from './platform-screen.js';
 import { phoneCrashes } from './crashes.js';
 import { phoneLogs } from './logs.js';
 import { PhoneMirror } from './mirror-phone.js';
@@ -115,6 +116,8 @@ export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
  * A real iPhone over USB: the runner signed for the development profile and installed when the phone
  * has another build under that id (another tool's runner, an older one); apps and links via devicectl.
  */
+const APPS_KEPT_MS = 60_000;
+
 export class IosPhoneDevice extends IosDevice {
   readonly virtual = false;
   readonly mirror: PhoneMirror;
@@ -178,6 +181,31 @@ export class IosPhoneDevice extends IosDevice {
       if (!onLock(after)) return after;
     }
     throw new DeviceError('DEVICE_LOCKED', `${this.serial} stays on its lock screen`, UNLOCK);
+  }
+
+  /** A list is a tool's slow answer and changes rarely, and a window asks every few seconds. */
+  private async personsApps() {
+    if (!this.appsRead || Date.now() - this.appsRead.at > APPS_KEPT_MS)
+      this.appsRead = {
+        at: Date.now(),
+        ids: (await this.apps.listApps(false)).map((a) => a.id),
+      };
+    return this.appsRead.ids;
+  }
+
+  private appsRead: { at: number; ids: string[] } | undefined;
+
+  /** A runner sees only the app it is told of and says the home screen of any other, so each of a person's is asked of. */
+  async frontApp() {
+    const told = this.targetApp;
+    const front = await this.foreground();
+    if (front !== HOME_SCREEN_APP) return front;
+    for (const id of await this.personsApps()) {
+      await this.target(id);
+      if ((await this.foreground()) === id) return id;
+    }
+    if (told) await this.target(told);
+    return front;
   }
 
   /** A phone takes a mirror's input only while a stream runs: by the runner. */

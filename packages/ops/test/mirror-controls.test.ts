@@ -339,6 +339,53 @@ describe("a window's measures", () => {
     expect(start.mock.calls.length).toBe(stop.mock.calls.length);
   });
 
+  it('ask a device that can tell of all its apps, and give its own source the app', async () => {
+    const start = vi.fn(async () => vi.fn());
+    const { controls, measures } = fixture('ios', {
+      ...yours,
+      foreground: async () => 'com.apple.springboard',
+      frontApp: async () => 'dev.app',
+      liveMetrics: { start },
+    } as unknown as Partial<Device>);
+    controls.onWindow({ op: 'perfWatch', on: true });
+    await vi.waitFor(() => expect(start).toHaveBeenCalledOnce(), WAIT);
+    expect((start.mock.calls[0] as unknown[])[1]).toBe('dev.app');
+    controls.onWindow({ op: 'control', name: 'measureScroll' });
+    await vi.waitFor(() => expect(measures.scroll).toHaveBeenCalledOnce(), WAIT);
+    expect((measures.scroll.mock.calls[0] as unknown[])[0]).toBe('dev.app');
+  });
+
+  it('follow a person to another app, and stop looking with the numbers', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    try {
+      const stop = vi.fn();
+      const start = vi.fn(async () => stop);
+      const frontApp = vi.fn(async () => 'dev.app');
+      const { controls } = fixture('ios', {
+        ...yours,
+        frontApp,
+        liveMetrics: { start },
+      } as unknown as Partial<Device>);
+      controls.onWindow({ op: 'perfWatch', on: true });
+      await vi.waitFor(() => expect(start).toHaveBeenCalledOnce(), WAIT);
+      vi.advanceTimersByTime(5_000);
+      await settle();
+      expect(start).toHaveBeenCalledOnce();
+      frontApp.mockResolvedValue('dev.other');
+      vi.advanceTimersByTime(5_000);
+      await vi.waitFor(() => expect(start).toHaveBeenCalledTimes(2), WAIT);
+      expect((start.mock.calls[1] as unknown[])[1]).toBe('dev.other');
+      expect(stop).toHaveBeenCalledOnce();
+      controls.onWindow({ op: 'perfWatch', on: false });
+      await vi.waitFor(() => expect(stop).toHaveBeenCalledTimes(2), WAIT);
+      frontApp.mockClear();
+      vi.advanceTimersByTime(20_000);
+      expect(frontApp).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('open the page of every kept run', async () => {
     const { controls, measures } = fixture('ios');
     controls.onWindow({ op: 'control', name: 'dashboard' });

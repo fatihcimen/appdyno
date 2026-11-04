@@ -286,6 +286,8 @@ export interface Device {
   ): Promise<{ meta: ResultOf<'screenshot'>; data: Buffer }>;
   audit(opts?: { types?: AuditType[]; maxIssues?: number }): Promise<AuditResult>;
   foreground(): Promise<string | undefined>;
+  /** What is in front among all of a person's apps, where `foreground` can tell only of the one it was given; it may take seconds. */
+  frontApp?(): Promise<string | undefined>;
   setClipboard(text: string): Promise<void>;
   getClipboard(): Promise<string | undefined>;
   setOrientation(rotation: 0 | 1 | 2 | 3): Promise<void>;

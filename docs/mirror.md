@@ -118,10 +118,14 @@ While an agent drives, a ring of the accent colour runs around the edge of the s
 
 A device gives each second what its own measures read, by the same readers `perf_*` uses, and its memory every five seconds, as that is the heaviest of them. What it cannot give is a dash with the reason, and never a 0. Where a device counts no frames, the frame rate is what the window itself shows, and a still screen says Still. A frame rate has no right value, as a screen draws what it has to: it is judged only by the share of its frames that came late, and where late frames are not counted it stands with no verdict.
 
-| device           | frame rate   | jank, frozen               | CPU, memory, network |
-| ---------------- | ------------ | -------------------------- | -------------------- |
-| simulator        | the window's | only under the frame probe | read                 |
-| Android emulator | the device's | read                       | read                 |
+| device           | frame rate    | jank, frozen               | CPU, memory, network |
+| ---------------- | ------------- | -------------------------- | -------------------- |
+| simulator        | the window's  | only under the frame probe | read                 |
+| Android emulator | the device's  | read                       | read                 |
+| Android phone    | the device's  | read                       | read                 |
+| iPhone           | the display's | no                         | CPU and memory       |
+
+An iPhone's frame rate is its display's, with a mirror alone keeping it near 20, and says so beside the number. Its runner can tell only of the app it was given, so a window asks it of each of a person's apps, and asks again every five seconds to follow them: one call while the same app stays in front.
 
 A simulator needs no runner for any of this: it reads the app in front by its read helper, and the home screen is measured as any app is. A device that cannot say what is in front without its agent starts it when the cards open, and they say so until it is up.
 
@@ -207,8 +211,8 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 - On a window a person has not clicked, keys go nowhere: typing into a window needs a hand run, as a test's window never holds the keyboard.
 - A simulator's fold: no control that folds one was found, so a new surface at a fold is untested.
 - The window does not yet show a secure Android window's content, as no shell can have it from Android 12: it is black, with the status bar still there. Not run on Android 12 and 13, or on 10, for which no image is here.
-- Live numbers have been run on a simulator and an Android emulator. An iPhone has its own source, not yet run through a window, and no Android phone has run them.
-- A window's measures have been run on a simulator and an Android emulator.
+- Live numbers have been run on a simulator, an Android emulator, a Xiaomi and an iPhone. A window following a person from one app to another on an iPhone has been tested without a phone.
+- A window's measures have been run on a simulator and an Android emulator. On an iPhone a launch has been run; a scroll runs its rounds and then the trace tool fails on its own trace, which the window says.
 - What the readings cost a device has been measured on one Android 14 emulator, at rest on a screen changing ten times a second: 6.0 % of its whole CPU with a window open and the numbers shut, 10.8 % with them shown, over eight spells of 30 s. No phone has been measured.
 - A device's colour: the frame takes one, and nothing yet reads it from a device, so every frame is the table's own graphite or carbon.
 - The frame's Action button and Camera Control are drawn and do nothing: no input is known that presses them.

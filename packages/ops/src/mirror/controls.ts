@@ -20,6 +20,8 @@ import type { MeasureWords, WindowMeasures } from './measures.js';
 
 const SWIPES: Record<string, SystemSwipe> = SYSTEM_SWIPES;
 const RECORD_MAX_S = 3_600;
+/** How often a device's own source is told what is in front: one call to its agent while that stays the same. */
+const APP_LOOK_MS = 5_000;
 
 const stamp = () =>
   new Date()
@@ -127,6 +129,8 @@ export function windowControls(
     session().tell({ op: 'recording', on: true });
   };
 
+  const inFront = () => device.frontApp?.() ?? device.foreground();
+
   /**
    * A device's own source where it has one, or its measures: nothing is read while nothing shows it, nor while a measure
    * runs, whose counts a reading would reset.
@@ -136,13 +140,30 @@ export function windowControls(
     stopPerf = undefined;
     if (!readingsWanted || measuring) return;
     // only a device that has no way to say what is in front but its agent starts it: a late answer is no refusal
-    const refused = await device.foreground().then(
-      () => false,
+    let front: string | undefined;
+    const refused = await inFront().then(
+      (app) => void (front = app),
       () => true,
     );
     if (refused) void ready().catch(() => undefined);
-    const live = device.liveMetrics ?? measuredLive(device);
-    stopPerf = await live.start((sample) => session().tell(perfMessage(sample)));
+    // its measures ask each turn what is in front; a device's own source reads the app it is given, and is told again
+    const own = device.liveMetrics;
+    const live = own ?? measuredLive(device);
+    const stop = await live.start(
+      (sample) => session().tell(perfMessage(sample)),
+      own ? front : undefined,
+    );
+    const looking = own ? setInterval(() => void lookAgain(front), APP_LOOK_MS) : undefined;
+    stopPerf = () => {
+      clearInterval(looking);
+      stop();
+    };
+  };
+
+  /** A person moves on, and the numbers go with them. */
+  const lookAgain = async (front: string | undefined) => {
+    const now = await inFront().catch(() => front);
+    if (now !== front && stopPerf) await turnReadings();
   };
 
   /** One at a time: a window quickly closed must not leave a source that started late running. */
@@ -157,7 +178,7 @@ export function windowControls(
       session().tell({ op: 'measuring', line: 'Starting the device agent' });
       await turnReadings();
       await ready();
-      const app = await device.foreground();
+      const app = await inFront();
       const mine = app && (await device.apps.listApps(false)).some((a) => a.id === app);
       if (!mine) {
         const front = app ?? 'Nothing that can be named';
