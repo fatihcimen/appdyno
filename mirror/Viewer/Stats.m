@@ -62,6 +62,7 @@ static int openDescriptors(void) {
     _cpuAt = cpuSeconds();
     _source = @"";
     _mode = @"";
+    _decoder = @"";
   }
   return self;
 }
@@ -146,6 +147,7 @@ static int openDescriptors(void) {
   NSMutableDictionary *full = [out mutableCopy];
   full[@"source"] = self.source;
   full[@"mode"] = self.mode;
+  full[@"decoder"] = self.decoder;
   full[@"rssMb"] = @(residentMb());
   full[@"fds"] = @(openDescriptors());
   return full;

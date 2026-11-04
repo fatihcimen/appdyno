@@ -147,7 +147,7 @@ static void onDecoded(void *owner, void *refcon, OSStatus status, VTDecodeInfoFl
   CFBooleanRef hardware = NULL;
   VTSessionCopyProperty(_session, kVTDecompressionPropertyKey_UsingHardwareAcceleratedVideoDecoder, NULL, &hardware);
   id<MVSink> sink = _sink;
-  sink.stats.mode = hardware == kCFBooleanTrue ? @"hardware" : @"software";
+  sink.stats.decoder = hardware == kCFBooleanTrue ? @"hardware" : @"software";
   if (hardware) CFRelease(hardware);
   CMVideoDimensions size = CMVideoFormatDescriptionGetDimensions(_format);
   id from = _source;

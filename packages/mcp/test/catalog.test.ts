@@ -12,7 +12,7 @@ it('keeps the tool catalog within its budget', async () => {
   await client.connect(b);
   const { tools } = await client.listTools();
   expect(tools).toHaveLength(Object.keys(opsFor(ctx)).length);
-  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(25_300);
+  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(25_710);
   expect(JSON.stringify(tools)).not.toMatch(/\$schema|taskSupport|"additionalProperties":false/);
   // what the server's instructions say once, and a test that sees it if the words on the tools change
   expect(JSON.stringify(tools)).not.toMatch(

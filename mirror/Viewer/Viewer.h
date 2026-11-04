@@ -18,6 +18,7 @@ void MVEmit(NSDictionary *message);
 @interface MVStats : NSObject
 @property(atomic, copy) NSString *source;
 @property(atomic, copy) NSString *mode;
+@property(atomic, copy) NSString *decoder;
 @property(atomic) CGSize size;
 - (void)arrived:(size_t)bytes captureMs:(double)ms;
 - (void)decodedMs:(double)ms;
@@ -88,8 +89,19 @@ uint16_t MVUsageOfKeyCode(uint16_t keyCode);
 /// Whether a key event's text is to be typed as text, rather than sent as a key.
 BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags);
 
+/// What sits over the picture and beside it, for a person's eyes.
+@interface MVOverlay : NSObject
+- (instancetype)initInView:(NSView *)view;
+- (void)setDriving:(BOOL)driving tool:(NSString *)tool;
+- (void)showBanner:(NSDictionary *)message;
+- (void)hideBanner;
+- (void)addActivity:(NSString *)line;
+- (void)toggleActivity;
+@end
+
 /// The window. The app keeps none when it runs headless.
 @interface MVWindow : NSObject <NSWindowDelegate>
+@property(readonly) MVOverlay *overlay;
 - (void)configure:(NSDictionary *)attach;
 - (void)setPicture:(CGSize)size;
 - (void)showSurface:(IOSurfaceRef)surface;
@@ -98,6 +110,7 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags);
 - (void)focus;
 /// A click at this fraction of the picture, by the window's own event queue: needs no permission to post.
 - (void)pokeX:(double)x y:(double)y;
+- (void)pokeKey:(NSString *)characters;
 @property(nonatomic, copy, nullable) void (^onHidden)(BOOL hidden);
 @end
 

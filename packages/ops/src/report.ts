@@ -33,7 +33,7 @@ const MAX_ANSWER = 20_000;
 const MAX_LOG_LINES = 1_000;
 const MAX_CRASHES = 20;
 /** Calls that say nothing about the app. */
-export const NOT_STEPS = new Set(['report', 'list_devices', 'simulator', 'mirror']);
+export const NOT_STEPS = new Set(['report', 'list_devices', 'simulator', 'mirror', 'hand_off']);
 
 type Step = {
   at: string;
@@ -101,7 +101,7 @@ const LOOKING = new Set(['wait_for', 'assert']);
  * Any other string that goes into a device may be a password, so it is shown by its length: an op written later
  * cannot leave what it was given here. An op that only reads is given what is on the screen.
  */
-function shownArgs(op: Op, args: unknown, clean: (s: string) => string): unknown {
+export function shownArgs(op: Op, args: unknown, clean: (s: string) => string): unknown {
   const walk = (v: unknown, shown: boolean): unknown => {
     if (typeof v === 'string') return shown ? clean(v) : `(${Array.from(v).length} characters)`;
     if (Array.isArray(v)) return v.map((x) => walk(x, shown));

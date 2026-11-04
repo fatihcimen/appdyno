@@ -316,6 +316,7 @@ static void checkHevc444(NSString *_Nullable fixtures) {
   NSString *file = [fixtures stringByAppendingPathComponent:@"hevc444.hevc"];
   NSData *stream = file ? [NSData dataWithContentsOfFile:file] : nil;
   if (!stream) return skip(@"4:4:4", @"no fixture given");
+  if (!VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)) return skip(@"4:4:4", @"no hardware HEVC decoder on this Mac");
   // the fixture's frames, one by one: each VCL unit with what comes before it
   MVTestSink *sink = [MVTestSink new];
   MVDecoder *decoder = [[MVDecoder alloc] initWithSink:sink from:sink];

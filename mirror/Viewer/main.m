@@ -63,6 +63,10 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   MVEmit(@{@"op": @"closed"});
 }
 
+- (void)toggleActivity:(id)sender {
+  [_window.overlay toggleActivity];
+}
+
 - (void)startClock {
   dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_global_queue(QOS_CLASS_UTILITY, 0));
   dispatch_source_set_timer(timer, dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), NSEC_PER_SEC, NSEC_PER_SEC / 10);
@@ -100,7 +104,10 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   if ([op isEqual:@"detach"]) return [self detach];
   if ([op isEqual:@"status"]) return [_window setStatus:m];
   if ([op isEqual:@"focus"]) return [_window focus];
-  if ([op isEqual:@"poke"]) return [_window pokeX:[m[@"x"] doubleValue] y:[m[@"y"] doubleValue]];
+  if ([op isEqual:@"agent"]) return [_window.overlay setDriving:[m[@"driving"] boolValue] tool:m[@"tool"] ?: @""];
+  if ([op isEqual:@"banner"]) return m[@"id"] ? [_window.overlay showBanner:m] : [_window.overlay hideBanner];
+  if ([op isEqual:@"activity"]) return [_window.overlay addActivity:m[@"line"] ?: @""];
+  if ([op isEqual:@"poke"]) return m[@"key"] ? [_window pokeKey:m[@"key"]] : [_window pokeX:[m[@"x"] doubleValue] y:[m[@"y"] doubleValue]];
   if ([op isEqual:@"mark"]) return [_stats mark];
   if ([op isEqual:@"quit"]) {
     [self detach];
@@ -250,6 +257,7 @@ int main(int argc, char **argv) {
     NSMenuItem *appItem = [bar addItemWithTitle:@"appdyno" action:NULL keyEquivalent:@""];
     NSMenu *appMenu = [NSMenu new];
     [appMenu addItemWithTitle:@"Close" action:@selector(performClose:) keyEquivalent:@"w"];
+    [appMenu addItemWithTitle:@"Activity" action:@selector(toggleActivity:) keyEquivalent:@"a"].target = app;
     [appMenu addItemWithTitle:@"Quit" action:@selector(terminate:) keyEquivalent:@"q"];
     appItem.submenu = appMenu;
     application.mainMenu = bar;

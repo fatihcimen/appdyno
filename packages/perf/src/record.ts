@@ -13,7 +13,8 @@ export type DeviceInfo = {
 };
 
 /** What makes a number less trustworthy; the first three also keep a change from failing a gate. */
-export type Noise = 'high-host-load' | 'high-device-load' | 'hot-device' | 'debuggable-build';
+export type Noise =
+  'high-host-load' | 'high-device-load' | 'hot-device' | 'debuggable-build' | 'mirrored';
 
 /** One number of one measurement, with everything needed to judge it later. */
 export type PerfRecord = {
@@ -44,6 +45,8 @@ export type PerfRecord = {
     devicePressure?: number;
     /** What of the device's load is kernel threads asleep, using no CPU. */
     deviceParked?: number;
+    /** A mirror's encoder ran on the device beside what was measured. */
+    mirrored?: boolean;
   };
   thermal?: number;
   batteryTempC?: number;
@@ -198,6 +201,7 @@ export function noiseOf(
     out.push('high-device-load');
   if ((r.thermal ?? 0) >= THERMAL_STATUS) out.push('hot-device');
   if (r.build === 'debug') out.push('debuggable-build');
+  if (r.load.mirrored) out.push('mirrored');
   return out;
 }
 

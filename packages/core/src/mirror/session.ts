@@ -21,6 +21,7 @@ const BACKOFF_FIRST_MS = 200;
 const BACKOFF_MAX_MS = 5_000;
 const NO_FIRST_FRAME_MS = 15_000;
 const DECODER_FAILURES = 3;
+const QUIT_MS = 5_000;
 
 export type MirrorSessionOptions = {
   mirror: Mirror;
@@ -33,6 +34,8 @@ export type MirrorSessionOptions = {
   activate?: boolean;
   clock?: MirrorClock;
   onChange?: (s: MirrorStatus) => void;
+  /** A person answered a banner. */
+  onDone?: (id: string) => void;
 };
 
 /**
@@ -111,13 +114,21 @@ export class MirrorSession {
     this.unwatch?.();
     this.set({ state: 'stopped', why, ...(need && { need }) });
     await this.o.mirror.close().catch(() => undefined);
-    this.viewer?.send({ op: 'quit' });
+    const v = this.viewer;
     this.viewer = undefined;
+    v?.send({ op: 'quit' });
+    // a viewer wedged in a framework hears no quit
+    if (v) this.clock.after(QUIT_MS, () => v.kill());
     this.finish(this.status);
   }
 
   focus() {
     this.viewer?.send({ op: 'focus' });
+  }
+
+  /** A word for the window itself: the mark of an agent, a banner, a line of activity. */
+  tell(message: Record<string, unknown>) {
+    this.viewer?.send(message);
   }
 
   /** The time from now to the next frame to arrive; for the bench, around an input. */
@@ -282,6 +293,9 @@ export class MirrorSession {
       case 'zoom':
         this.zoom = Number(m.scale);
         break;
+      case 'done':
+        this.o.onDone?.(String(m.id));
+        break;
       case 'marked':
         for (const r of this.marks.splice(0)) r(Number(m.ms));
         break;
@@ -318,6 +332,8 @@ export class MirrorSession {
     if (this.current.state === 'stopped') return;
     this.run++;
     this.cancelTimer?.();
+    // said at once: what comes next may be an agent's whole start
+    if (!fatal) this.set({ state: 'reconnecting', attempt: this.attempt + 1 });
     void this.o.mirror
       .close()
       .catch(() => undefined)

@@ -124,14 +124,18 @@ const tapAt = (x, y) => {
 };
 
 let dragUp = true;
-/** One finger along the list, and back along it on the next call: a list has an end. */
+/**
+ * A flick along the list, and back along it on the next call: a list has an end. The list then coasts at the
+ * display's own rate; a finger held on it would move it only as often as these moves come.
+ */
 const drag = async () => {
   const x = 0.5;
+  const steps = 24;
   const [from, to] = dragUp ? [0.8, 0.2] : [0.2, 0.8];
   dragUp = !dragUp;
   session.send({ kind: 'touch', p: 0, x, y: from });
-  for (let i = 1; i <= 24; i++) {
-    session.send({ kind: 'touch', p: 1, x, y: from + ((to - from) * i) / 24 });
+  for (let i = 1; i <= steps; i++) {
+    session.send({ kind: 'touch', p: 1, x, y: from + ((to - from) * i) / steps });
     await pause(16);
   }
   session.send({ kind: 'touch', p: 2, x, y: to });
@@ -256,7 +260,8 @@ while (Date.now() - start < SECONDS * 1000) {
   await pause(isUdid ? 200 : kind === 'emulator' ? 500 : prepared.animateMs + 500);
   moved.push(...seconds.slice(from));
 }
-const fullSeconds = moved.filter((n) => Number(n.arrived) > 5);
+// a screen that coasts slows its own rate as it stops: only seconds of real motion say anything of this path
+const fullSeconds = moved.filter((n) => Number(n.arrived) >= 30);
 const fps = median(fullSeconds.map((n) => Number(n.arrived)));
 const best = Math.max(...fullSeconds.map((n) => Number(n.arrived)));
 const fpsTarget =

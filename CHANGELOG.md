@@ -35,6 +35,12 @@
 - A journey measured and gated: `appdyno test <flow> --measure [--iterations N]`, or `flow` `run` with `iterations`, keeps a flow as a scenario with a time and what the device reads for each step. `perf compare` names the step that got slower, and the dashboard has a row `Journeys`, with one bar split by step.
 - A `perf_*` call during a recording no longer stops a replay: what it did to the screen is written as the plain steps that do the same, and what left the screen alone writes nothing.
 - A baseline takes what a run measured clean and names what it left out, rather than refusing the whole run for one number that went through a loaded Mac.
+- `appdyno mirror`: a live native window on a simulator, an emulator or an Android phone, driven by mouse, trackpad and keyboard, with an agent on the same device if it shares. One viewer per device, compiled by `clang` on first use, with no server, daemon or port of ours. What stands in the way is named with its fix, and it goes on by itself when it clears. See `docs/mirror.md`.
+- The `mirror` tool: open, close, status, stats. No frames over MCP.
+- `hand_off`: asks a person, and waits. A pill on a window while an agent drives, and an Activity panel of its calls.
+- `perf_*` on a mirrored device gets the noise mark `mirrored`, as a stream runs an encoder there.
+- The Android agent: a stream with an encoder ladder and bounded backpressure, on a connection of its own, and `touch`, with no settle.
+- `simulator` boots an emulator with `-grpc <free port> -grpc-use-token`, for a window's picture with nothing in the guest.
 
 ## 0.6.0
 

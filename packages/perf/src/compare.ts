@@ -81,7 +81,7 @@ const FLOOR: Record<Unit, { percent: number; absolute: number }> = {
   ratio: { percent: 25, absolute: 0.05 },
 };
 
-const BLOCKING: Noise[] = ['high-host-load', 'high-device-load', 'hot-device'];
+const BLOCKING: Noise[] = ['high-host-load', 'high-device-load', 'hot-device', 'mirrored'];
 const blocks = (noise: Noise[]) => noise.filter((n) => BLOCKING.includes(n));
 const percentChange = (d: number, base: number) =>
   base === 0 ? undefined : Math.round((d / Math.abs(base)) * 1000) / 10;

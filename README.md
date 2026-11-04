@@ -52,7 +52,7 @@ else the one `use_device` selected.
 | purpose  | tools                                                                                                                      |
 | -------- | -------------------------------------------------------------------------------------------------------------------------- |
 | devices  | `list_devices`, `use_device`, `device_info`, `set_orientation`, `set_location`, `clipboard`, `device_setting`, `simulator` |
-| window   | `mirror`                                                                                                                   |
+| window   | `mirror`, `hand_off`                                                                                                       |
 | read     | `screen`, `find`, `wait_for`, `assert`, `screenshot`                                                                       |
 | act      | `tap`, `gesture`, `swipe`, `scroll_to`, `type_text`, `press_key`, `keyboard`, `steps`, `alert`                             |
 | apps     | `open_link`, `launch_app`, `terminate_app`, `app`                                                                          |
@@ -156,7 +156,7 @@ appdyno mirror close | status | stats
 | phone     | the agent's H.264 or HEVC, straight to the viewer, not by Node | costs nothing |
 | emulator  | the emulator's own gRPC port, its screen in a shared file      | costs nothing |
 
-The viewer is compiled by `clang` on first use: Command Line Tools are enough, and `doctor` says if there is none. What stands in the way is named with its fix, and the window goes on by itself when it clears. See [docs/mirror.md](docs/mirror.md).
+`hand_off` asks your person for what an agent cannot do, and waits. While an agent drives, a pill on the window says so, and its Activity panel lists each call. The viewer is compiled by `clang` on first use: Command Line Tools are enough, and `doctor` says if there is none. What stands in the way is named with its fix, and the window goes on by itself when it clears. See [docs/mirror.md](docs/mirror.md).
 
 ## Evidence
 

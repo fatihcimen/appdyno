@@ -37,6 +37,18 @@ const until = async (what: string, test: () => boolean, ms = 60_000) => {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** How many displays of ours the device lists: one made directly, as on Android 11, only the compositor knows of. */
+const displaysOf = async (adb: Adb, serial: string) =>
+  (await adb.exec(serial, 'dumpsys display; dumpsys SurfaceFlinger')).match(/appdyno-mirror/g)
+    ?.length ?? 0;
+
+/** The compositor lets go a moment after the agent did. */
+const noneLeft = async (adb: Adb, serial: string) => {
+  const end = Date.now() + 10_000;
+  while ((await displaysOf(adb, serial)) > 0 && Date.now() < end) await sleep(250);
+  expect(await displaysOf(adb, serial)).toBe(0);
+};
+
 function start(mirror: Mirror) {
   const seen: MirrorStatus[] = [];
   let viewer: ViewerProcess | undefined;
@@ -54,8 +66,6 @@ describe.runIf(serial)('the agent stream', () => {
   const adb = new Adb();
   const launcher = new AndroidAgentLauncher(adb, serial!);
   const stream = new AndroidMirror(adb, serial!, launcher);
-  const displays = async () =>
-    (await adb.exec(serial!, 'dumpsys display')).match(/appdyno-mirror/g)?.length ?? 0;
 
   /** The mirror with something added to what a stream asks of the agent. */
   const asking = (start: Record<string, unknown>): Mirror =>
@@ -82,8 +92,7 @@ describe.runIf(serial)('the agent stream', () => {
     expect(session.status.stats?.source).toBe('adb');
     expect(String(session.status.stats?.mode)).toContain('top');
     await session.stop('the test ended');
-    await until('no display left', () => true);
-    await expect(displays()).resolves.toBe(0);
+    await noneLeft(adb, serial!);
   }, 120_000);
 
   it('a person tap reaches the device, in fractions of its screen', async () => {
@@ -115,7 +124,7 @@ describe.runIf(serial)('the agent stream', () => {
     const status = await Promise.race([session.stopped, sleep(90_000).then(() => undefined)]);
     expect(status).toMatchObject({ state: 'stopped' });
     expect((status as { why: string }).why).toContain('no encoder took this display');
-    await expect(displays()).resolves.toBe(0);
+    await noneLeft(adb, serial!);
   }, 120_000);
 
   it('HEVC at the user word', async () => {
@@ -155,13 +164,11 @@ describe.runIf(serial)('the agent stream', () => {
     const { session, viewerPid } = start(stream);
     await session.start();
     await until('picture', () => session.status.state === 'live');
-    await expect(displays()).resolves.toBeGreaterThan(0);
+    expect(await displaysOf(adb, serial!)).toBeGreaterThan(0);
     // what a dying parent leaves: its viewer sees its stdin end, and goes; with it the connection
     process.kill(viewerPid()!, 'SIGKILL');
     await session.stop('the test ended');
-    await until('no display left', () => true);
-    await sleep(1_500);
-    await expect(displays()).resolves.toBe(0);
+    await noneLeft(adb, serial!);
   }, 120_000);
 
   it('the agent stopped: reconnects by the existing path', async () => {
@@ -227,8 +234,6 @@ describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () =>
   const adb = new Adb();
   const launcher = new AndroidAgentLauncher(adb, serial!);
   const stateFile = deviceStateFile('mirror', serial!);
-  const displays = async () =>
-    (await adb.exec(serial!, 'dumpsys display')).match(/appdyno-mirror/g)?.length ?? 0;
   const pidsOf = (pattern: string) =>
     spawnSync('pgrep', ['-f', pattern]).stdout.toString().trim().split('\n').filter(Boolean);
 
@@ -251,7 +256,7 @@ describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () =>
       () => readFileSync(stateFile, 'utf8').includes('"state":"live"'),
       120_000,
     );
-    await expect(displays()).resolves.toBeGreaterThan(0);
+    expect(await displaysOf(adb, serial!)).toBeGreaterThan(0);
     const viewer = spawnSync('pgrep', ['-P', String(child.pid)])
       .stdout.toString()
       .trim();
@@ -267,7 +272,7 @@ describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () =>
     }
     expect(active).toBe(0);
     rpc.close();
-    await expect(displays()).resolves.toBe(0);
+    await noneLeft(adb, serial!);
     // its file is left, and is no mirror: the next start does not take it for one
     expect(existsSync(stateFile)).toBe(true);
     const next = parent();

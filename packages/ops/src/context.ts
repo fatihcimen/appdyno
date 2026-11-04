@@ -53,6 +53,8 @@ export class ServerContext {
       share?: boolean;
       /** How to run this tool again, for a window that outlives the call that opened it. */
       mirrorCommand?: string[];
+      /** Reaches a person when there is no window to show a request in. */
+      alertPerson?: (reason: string) => void;
     } = {},
   ) {
     this.policy = { ...policy, secrets: [...policy.secrets] };
@@ -199,6 +201,10 @@ export class ServerContext {
 
   get mirrorCommand() {
     return this.defaults.mirrorCommand;
+  }
+
+  get alertPerson() {
+    return this.defaults.alertPerson;
   }
 
   /** A device's driver object, cold: nothing on the device has started. */

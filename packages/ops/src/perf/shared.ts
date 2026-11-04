@@ -18,6 +18,7 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
+import { liveMirror } from '../mirror/state.js';
 import { checkApp } from '../policy.js';
 import type { Session } from '../session.js';
 import { swipeLine } from '../gesture-paths.js';
@@ -238,6 +239,7 @@ export async function keepRun(
           deviceParked: vitals.parkedKernelThreads,
         }),
         ...(vitals?.cpuPressure !== undefined && { devicePressure: vitals.cpuPressure }),
+        ...(liveMirror(s.device.serial) && { mirrored: true }),
       },
       ...(vitals?.thermalStatus !== undefined && { thermal: vitals.thermalStatus }),
       ...(vitals?.batteryTempC !== undefined && { batteryTempC: vitals.batteryTempC }),

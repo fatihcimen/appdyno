@@ -4,6 +4,7 @@ import { chmod, mkdir, readFile, rename } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { Check } from './device.js';
+import { NEEDS } from './mirror/need.js';
 import { run } from './run.js';
 
 /** How long a first compile may take on a loaded Mac: 25 s was measured at load 270. */
@@ -57,8 +58,8 @@ export async function compilerCheck(env?: NodeJS.ProcessEnv): Promise<Check> {
       name: 'compiler',
       ok: false,
       warn: true,
-      detail: 'no clang: no mirror window, and a phone records by screenrecord',
-      fix: 'xcode-select --install',
+      detail: NEEDS['no-compiler'].title,
+      fix: NEEDS['no-compiler'].fix,
     };
   }
 }

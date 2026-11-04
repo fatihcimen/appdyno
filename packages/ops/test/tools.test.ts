@@ -69,6 +69,7 @@ describe('tool list', () => {
         "find",
         "flow",
         "gesture",
+        "hand_off",
         "keyboard",
         "launch_app",
         "list_devices",
@@ -134,7 +135,7 @@ describe('tool list', () => {
       'visual',
       'wait_for',
     ]);
-    expect(tools.length).toBeLessThanOrEqual(45);
+    expect(tools.length).toBeLessThanOrEqual(46);
   });
 
   it('reports the server as appdyno with an icon', async () => {

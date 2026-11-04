@@ -26,7 +26,7 @@ export type MirrorSource =
       /** What a person should know of this picture. */
       note?: string;
     }
-  | { kind: 'pixels'; file: string; w: number; h: number; flip?: boolean };
+  | { kind: 'pixels'; file: string; w: number; h: number };
 
 /** One touch, key or text. A touch is in fractions of the screen, whatever its size or rotation. */
 export type InputEvent =

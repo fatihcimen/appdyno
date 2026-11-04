@@ -3,6 +3,8 @@ import { MirrorSession, startViewer, type MirrorOptions, type MirrorStatus } fro
 import { claim, release, startOf } from '../claims.js';
 import type { ServerContext } from '../context.js';
 import { ToolError } from '../tool.js';
+import { followDevice } from './follow.js';
+import { handoffDone } from './handoff.js';
 import { FOCUS_SIGNAL, liveMirror, removeMirrorFile, writeMirrorFile } from './state.js';
 
 export type MirrorRun = {
@@ -81,6 +83,7 @@ class Parent {
       title: serial,
       noInput: this.o.noInput,
       activate: this.o.activate,
+      onDone: (id) => handoffDone(serial, id),
       onChange: (status) => {
         // a stop is the end of its file; a status written after would look like a mirror
         if (status.state !== 'stopped') writeMirrorFile({ ...file, status });
@@ -90,9 +93,11 @@ class Parent {
       },
     });
     this.sessions.set(serial, session);
+    const unfollow = followDevice(serial, session);
     this.done.set(
       serial,
       session.stopped.then((status) => {
+        unfollow();
         removeMirrorFile(serial);
         if (!this.o.share) release(serial);
         device.close();

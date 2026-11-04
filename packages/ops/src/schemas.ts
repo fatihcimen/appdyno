@@ -215,6 +215,12 @@ export const MirrorOut = z.object({
   mirrors: z.array(z.record(z.string(), z.unknown())),
 });
 
+export const HandOffOut = z.object({
+  done: z.string(),
+  by: z.enum(['person', 'screen', 'timeout']),
+  waitedMs: z.number(),
+});
+
 export const FlowOut = z.object({
   done: z.string(),
   steps: z.number().int().optional(),

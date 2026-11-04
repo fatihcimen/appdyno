@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import { actOps } from './act.js';
+import { activityFor } from './activity.js';
 import { answersFor, type Answers } from './answers.js';
 import { appOps } from './apps.js';
 import type { ServerContext } from './context.js';
@@ -12,6 +13,7 @@ import { flowRecorder } from './flow/recorder.js';
 import { flowRunner, type FlowRunner, type ReplayOptions } from './flow/runner.js';
 import { readFlow } from './flow/shared.js';
 import { runTests, type TestOptions } from './flow/test-run.js';
+import { handoffOps } from './mirror/handoff.js';
 import { mirrorOps } from './mirror/op.js';
 import { networkOps } from './network.js';
 import { perfOps } from './perf/index.js';
@@ -40,6 +42,7 @@ const everyOp = (
   ...diagnoseOps(ctx, answers),
   ...recordOps(ctx),
   ...mirrorOps(ctx),
+  ...handoffOps(ctx),
   ...report.ops(),
   ...networkOps(ctx),
   ...webOps(ctx),
@@ -56,8 +59,9 @@ function build(ctx: ServerContext) {
   let raw: Record<string, Op> = {};
   const runner = flowRunner(ctx, () => raw, answers, steps);
   const report = reportFor(ctx);
+  const activity = activityFor(ctx);
   raw = Object.fromEntries(
-    everyOp(ctx, answers, steps, report, runner).map((op) => [op.name, report.wrap(op)]),
+    everyOp(ctx, answers, steps, report, runner).map((op) => [op.name, report.wrap(activity(op))]),
   );
   const ops = Object.fromEntries(Object.values(raw).map((op) => [op.name, recorder.wrap(op)]));
   return { ops, runner };

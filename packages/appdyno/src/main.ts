@@ -28,9 +28,11 @@ import {
   survey,
   type Policy,
 } from '@appdyno/ops';
+import { alertPerson } from './alert.js';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
 import { endWithClient } from './lifetime.js';
+import { mirrorArgs } from './mirror-args.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
@@ -107,6 +109,7 @@ function contextFrom(values: Settings, remember?: string) {
     claims: true,
     tool: remember ? 'appdyno cli' : 'appdyno mcp',
     ...((values.share || env.APPDYNO_SHARE === '1') && { share: true }),
+    alertPerson,
     mirrorCommand: [
       process.execPath,
       fileURLToPath(import.meta.url),
@@ -190,45 +193,12 @@ async function surveyCommand(args: string[]) {
   }
 }
 
-const MIRROR_USAGE = `usage: appdyno mirror [open] [--device S]... [--all [--watch]] [--max N] [--detach]
-                      [--quality auto|high|standard] [--codec h264|hevc]
-                      [--no-input] [--headless] [--seconds N] [--share] [--takeover]
-       appdyno mirror close|status|stats`;
-
 /** `appdyno mirror`: stays with its windows until they close; its other words are the tool's. */
 async function mirrorCommand(args: string[]) {
-  const { values, positionals } = parseArgs({
-    args,
-    allowPositionals: true,
-    options: {
-      device: { type: 'string', multiple: true },
-      all: { type: 'boolean' },
-      watch: { type: 'boolean' },
-      max: { type: 'string' },
-      detach: { type: 'boolean' },
-      quality: { type: 'string' },
-      codec: { type: 'string' },
-      'no-input': { type: 'boolean' },
-      headless: { type: 'boolean' },
-      seconds: { type: 'string' },
-      share: { type: 'boolean' },
-      takeover: { type: 'boolean' },
-      'allow-devices': { type: 'string' },
-      help: { type: 'boolean', short: 'h' },
-    },
-  });
-  const action = positionals[0] ?? 'open';
-  const quality = values.quality ?? 'auto';
-  const codec = values.codec;
-  if (
-    values.help ||
-    !['open', 'close', 'status', 'stats'].includes(action) ||
-    !['auto', 'high', 'standard'].includes(quality) ||
-    (codec !== undefined && codec !== 'h264' && codec !== 'hevc')
-  ) {
-    (values.help ? console.log : err)(MIRROR_USAGE);
-    return values.help ? 0 : 2;
-  }
+  const { values, action, quality, codec, help, usage } = mirrorArgs(args);
+  if (help) console.log(help);
+  if (usage) err(usage);
+  if (help || usage) return help ? 0 : 2;
   const device = values.device?.[0];
   const ctx = contextFrom({
     ...(device && { device }),
@@ -245,7 +215,7 @@ async function mirrorCommand(args: string[]) {
       all: values.all ?? false,
       watch: values.watch ?? false,
       max: Number(values.max ?? 8),
-      options: { quality: quality as 'auto', ...(codec && { codec: codec as 'h264' }) },
+      options: { quality, ...(codec && { codec }) },
       headless: values.headless ?? false,
       noInput: values['no-input'] ?? false,
       ...(values.seconds && { seconds: Number(values.seconds) }),

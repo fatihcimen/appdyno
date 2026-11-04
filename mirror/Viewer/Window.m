@@ -55,6 +55,7 @@ static NSTextField *label(CGFloat size, NSFontWeight weight) {
     words.orientation = NSUserInterfaceLayoutOrientationVertical;
     words.translatesAutoresizingMaskIntoConstraints = NO;
     [_view addSubview:words];
+    _overlay = [[MVOverlay alloc] initInView:_view];
     [NSLayoutConstraint activateConstraints:@[
       [words.centerYAnchor constraintEqualToAnchor:_view.centerYAnchor],
       [words.leadingAnchor constraintEqualToAnchor:_view.leadingAnchor constant:16],
@@ -79,6 +80,7 @@ static NSTextField *label(CGFloat size, NSFontWeight weight) {
   // a restarted viewer keeps the zoom it had; a phone's picture size comes with its first frame
   if ([attach[@"zoom"] doubleValue] > 0) _zoom = [attach[@"zoom"] doubleValue];
   [_window makeKeyAndOrderFront:nil];
+  [_window makeFirstResponder:_view];
   if (_activate) [NSApp activateIgnoringOtherApps:YES];
 }
 
@@ -148,6 +150,12 @@ static NSTextField *label(CGFloat size, NSFontWeight weight) {
     NSEvent *e = [NSEvent mouseEventWithType:type.unsignedIntegerValue location:at modifierFlags:0 timestamp:0 windowNumber:_window.windowNumber context:nil eventNumber:0 clickCount:1 pressure:1];
     [NSApp postEvent:e atStart:NO];
   }
+}
+
+- (void)pokeKey:(NSString *)characters {
+  NSEvent *e = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:_window.windowNumber context:nil characters:characters charactersIgnoringModifiers:characters isARepeat:NO keyCode:0];
+  // to the window itself: this app need not be the active one for an acceptance run
+  [_window sendEvent:e];
 }
 
 - (void)windowDidChangeOcclusionState:(NSNotification *)notification {

@@ -140,6 +140,9 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real 
       expect((touches[0] as { x: number }).x).toBeCloseTo(0.5, 2);
       expect((touches[0] as { y: number }).y).toBeCloseTo(0.25, 2);
       expect(touches[1]).toMatchObject({ kind: 'touch', p: 2 });
+      // a key on the window: its text, as the window has it
+      session.tell({ op: 'poke', key: 'a' });
+      await until('a key', () => touches.some((e) => e.kind === 'text' && e.s === 'a'), 10_000);
       expect(session.status.inputFailed).toBe(0);
       expect(Number(session.status.stats?.shown ?? 0)).toBeGreaterThanOrEqual(0);
     } finally {
@@ -150,3 +153,41 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real 
     console.log(`viewers left on this Mac: ${left || 'none'}`);
   }, 120_000);
 });
+
+/** It costs a shutdown and a whole boot of our own simulator. */
+describe.runIf(udid && process.env.APPDYNO_MIRROR_RESTART === '1')(
+  'a simulator shut down under its window',
+  () => {
+    it('waits with its need, and is live again once it is booted', async () => {
+      const device = new IosSimulatorDevice(udid!);
+      const seen: MirrorStatus[] = [];
+      const session = new MirrorSession({
+        mirror: device.mirror,
+        viewer: startViewer(true),
+        options: { quality: 'auto' },
+        title: 'a test',
+        onChange: (s) => seen.push(s),
+      });
+      await session.start();
+      try {
+        await until('picture', () => session.status.state === 'live');
+        execFileSync('xcrun', ['simctl', 'shutdown', udid!]);
+        await until(
+          'its need',
+          () => session.status.state === 'waiting' && session.status.need === 'simulator-off',
+          60_000,
+        );
+        const back = seen.length;
+        execFileSync('xcrun', ['simctl', 'bootstatus', udid!, '-b'], { timeout: 300_000 });
+        await until(
+          'a new picture',
+          () => seen.slice(back).some((s) => s.state === 'live'),
+          60_000,
+        );
+      } finally {
+        await session.stop('the test ended');
+        device.close();
+      }
+    }, 420_000);
+  },
+);
