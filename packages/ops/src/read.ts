@@ -126,22 +126,23 @@ export function readOps(
     defineOp({
       name: 'screenshot',
       title: 'Screenshot',
-      description: `An image of the screen (at most ${SHOT_PX} px) and the scale from its pixels to tap units; only for a visual judgement. A second one of an unchanged screen is refused.`,
-      input: z.object({}).strict(),
+      description: `An image of the screen (at most ${SHOT_PX} px) and the scale from its pixels to tap units; only for a visual judgement. A second one of an unchanged screen is refused. points: 1 pixel is 1 tap unit.`,
+      input: z.object({ points: z.boolean().optional() }).strict(),
       output: ScreenshotOut,
       annotations: READ,
-      run: async () => {
+      run: async ({ points }) => {
         const s = await ctx.session();
-        const layout = s.fresh ? screenStructure(s.fresh.list) : undefined;
+        const layout = s.fresh ? `${!!points} ${screenStructure(s.fresh.list)}` : undefined;
         if (s.shot && s.shot.at === s.version && layout !== undefined && s.shot.hash === layout)
           throw new ToolError(
             'the screen has not changed since the last image: that image still holds',
             'INVALID_ARGUMENT',
           );
+        const size = s.device.hello?.screen;
         const { meta, data } = await s.device.screenshot({
           format: 'jpeg',
           quality: SHOT_QUALITY,
-          maxPx: SHOT_PX,
+          maxPx: points && size ? Math.max(size.w, size.h) : SHOT_PX,
         });
         const look = await s.current().catch(() => undefined);
         const fg = look ? await noticed(s, look) : '';

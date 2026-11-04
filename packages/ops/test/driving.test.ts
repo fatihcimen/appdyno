@@ -789,6 +789,22 @@ describe('gestures, keys, clipboard', () => {
     expect((await call('set_location', { lat: 1 })).error).toBe(true);
   });
 
+  it('asks for an image of the screen in tap units', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    const asked: unknown[] = [];
+    const shot = d.screenshot.bind(d);
+    Object.assign(d, {
+      screenshot: async (o: unknown) => {
+        asked.push(o);
+        return shot();
+      },
+    });
+    await call('screenshot', { points: true });
+    await call('screenshot');
+    expect(asked).toMatchObject([{ maxPx: 2400 }, { maxPx: 800 }]);
+  });
+
   it('reads the clipboard and keeps a secret off it', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d, { policy: { secrets: ['hunter2'] } });

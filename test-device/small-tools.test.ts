@@ -107,6 +107,13 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
     ok(await call('set_location', { clear: true }));
   });
 
+  it('takes a picture whose pixels are points', async () => {
+    const r = ok(await call('screenshot', { points: true }));
+    const { w, h } = ok(await call('device_info')).data.screen;
+    expect([r.data.width, r.data.height]).toEqual([w, h]);
+    expect(r.data.scale).toBe(1);
+  });
+
   it('holds a drag before it moves: the pad sees the same travel, later', async () => {
     ok(await call('open_link', { url: 'appdyno-fixture://open/gestures' }));
     const at = Date.now();
