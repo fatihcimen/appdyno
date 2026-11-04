@@ -96,7 +96,7 @@ clipboard and every case below. `APPDYNO_SIM_DIRECT=off` turns both off, `read` 
 
 `text.set` goes in as keys on iOS (`mode: keys`): a paste the user did not make brings up the "Allow Paste" alert, which holds it up.
 `clipboard.get` answers only what the runner wrote itself, as reading another app's text asks the user; a simulator's is read with
-`simctl pbpaste` instead.
+`simctl pbpaste` instead. Where `simctl pbcopy` writes nothing (Xcode 27.1 on a new iOS 26.5 simulator) the runner sets and reads it.
 
 iOS has no key to close a keyboard or to open the app switcher. `dismissKeyboard` taps the keyboard's hide key where it
 shows one, else a place with no control; the host then reads whether it went and refuses if it did not. `appSwitch` is the home
@@ -106,8 +106,8 @@ indicator's slow drag up. The volume, lock and power keys go through direct inpu
 - **Input**, `SimHID` on the Mac: XPC to the simulator's `dtuhidd` (`com.apple.coredevice.feature.remote.hid.digitizer`).
   Tap, long press, swipe, one- and two-finger gestures, and the home, enter, delete and tab keys. A barrier
   after the last event proves a daemon received them; text stays with the runner for Unicode. A touch that
-  changed nothing, and that the app has not reported finished (`TouchEventsCompleted`), never got there (a
-  Device Hub in Resize Mode swallows touches and reports success): the runner does it again and takes
+  changed nothing, and that the app has not reported finished (`TouchEventsCompleted`) within 4 s of the settle, never
+  got there (a Device Hub in Resize Mode swallows touches and reports success): the runner does it again and takes
   over for the session. Portrait only, as that is what was verified; other orientations go to the runner.
 - **Traffic**, `NetProbe` injected into the app with `DYLD_INSERT_LIBRARIES`: an `NSURLProtocol` that writes a JSON line per finished request to the file `APPDYNO_NET_LOG` names. A simulator's app writes to the Mac's files as they are.
 - **Web pages**, the socket `simctl getenv <udid> RWI_LISTEN_SOCKET` names: binary property lists, each after its 4-byte length. `_rpc_reportIdentifier:` brings the applications, `_rpc_forwardGetListing:` a page list, `_rpc_forwardSocketSetup:` a `Target.targetCreated`, and `Target.sendMessageToTarget` wraps what goes to the page.
