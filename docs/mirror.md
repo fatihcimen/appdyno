@@ -183,6 +183,8 @@ token goes to a viewer by its stdin, never by its arguments.
 | 576x1280                | 69       | 26.4, 29.3                      | 94.8          |
 | 456x1024                | 81       | 23.6, 26.5                      | 93.8          |
 
+That phone's first stream settles on 576x1280, and the next starts there. A first run that is small can under-read, so a size may take two steps to settle, each a restart of the picture on a person's first touches.
+
 What an encoder publishes of itself could not decide this: scaled as Android scales them, its `measured-frame-rate` figures say the Samsung's 2400 lines are faster than a Xiaomi's 1600, where a touch is more than twice as quick.
 
 ## The numbers
@@ -211,7 +213,7 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 - Text an iPhone's keyboard has no key for goes by its pasteboard: the phone asks a person to allow the paste, and what it held comes back after, if that was text. In a secure field it does not go at all, and the window says so.
 - More's menu, the frame's hover, a window's remembered size and place, and a trackpad's pinch or a dead key on a real keyboard have not been run by hand; their maths are checked by the self test.
 - `auto` on a phone starts at its display's size and changes it, once, on the first motion that shows the encoder falling behind, so a person may see the picture restart on their first touches. `--quality high` and `standard` keep the display's size.
-- A phone's touch has a floor below which no size goes: about 94 ms on a Samsung SM-A525F, over the target of 80, at 1280 lines and at 1024 alike.
+- A phone's touch has a floor below which no size goes: 94 ms on a Samsung SM-A525F at 1024 lines, and 95 to 107 at 1280 across runs, over the target of 80. A Xiaomi's reads 92 at its own size, a miss too.
 - Input by `key`: Android has only the keys the agent has (no arrows). On a simulator a keyboard's characters go as US keys; any other text by its pasteboard and command V.
 
 ## Left out, for now
