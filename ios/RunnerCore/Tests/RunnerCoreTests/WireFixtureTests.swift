@@ -98,6 +98,16 @@ final class WireFixtureTests: XCTestCase {
         XCTAssertEqual(try WaitRequest(params("wait.since")).since, "abc")
     }
 
+    func testTheRequestsOfOneValueAsTheHostSendsThem() throws {
+        XCTAssertEqual(try OneValue.text(params("clipboard.set")), "a")
+        XCTAssertEqual(try OneValue.pkg(params("app.target")), "dev.appdyno.fixture")
+        XCTAssertEqual(try OneValue.rotation(params("orientation.set")), 1)
+        XCTAssertEqual(try OneValue.id(params("cancel")), 7)
+        let at = try OneValue.point(params("animations.wait"))
+        XCTAssertEqual(at.x, 10)
+        XCTAssertEqual(at.y, 20)
+    }
+
     func testAHelloIsWhatTheHostTakes() throws {
         same(helloWire(agentVersion: "0.0.0", osVersion: "26.5", model: "iPhone17,3", w: 402, h: 874, density: 3, rotation: 0,
                        pid: 1234, idleShimChecked: true), try result("hello.ios"))

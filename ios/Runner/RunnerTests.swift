@@ -93,7 +93,8 @@ final class RunnerTests: XCTestCase {
             if let waited { out["animationWaitMs"] = waited }
             return Reply(result: out)
         case "animations.wait":
-            let waited = d.animationsOver(try requiredNumber(p, "x"), try requiredNumber(p, "y"))
+            let at = try OneValue.point(p)
+            let waited = d.animationsOver(at.x, at.y)
             return Reply(result: waited.map { ["ms": $0] } ?? [:])
         case "text.set":
             return Reply(result: try d.setText(TextRequest(p), job: job))
@@ -104,10 +105,10 @@ final class RunnerTests: XCTestCase {
         case "app.foreground":
             return Reply(result: d.foreground())
         case "app.target":
-            d.setTarget(try requiredString(p, "pkg"))
+            d.setTarget(try OneValue.pkg(p))
             return Reply(result: [:])
         case "clipboard.set":
-            let text = try requiredString(p, "text")
+            let text = try OneValue.text(p)
             UIPasteboard.general.string = text
             Device.markPasteboard()
             guard UIPasteboard.general.string == text else {
@@ -120,7 +121,7 @@ final class RunnerTests: XCTestCase {
             }
             return Reply(result: UIPasteboard.general.string.map { ["text": $0] } ?? [:])
         case "orientation.set":
-            d.orientation(try requiredInt(p, "rotation"))
+            d.orientation(try OneValue.rotation(p))
             return Reply(result: [:])
         case "shutdown":
             pump.stop()

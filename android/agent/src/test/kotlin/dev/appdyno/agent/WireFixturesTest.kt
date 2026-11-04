@@ -109,6 +109,29 @@ class WireFixturesTest {
     }
 
     @Test
+    fun theRequestsOfOneValueAsTheHostSendsThem() {
+        assertEquals("a", OneValue.text(params("clipboard.set")))
+        assertTrue(OneValue.off(params("animations.set")))
+        assertEquals(1, OneValue.rotation(params("orientation.set")))
+        assertEquals(60, OneValue.maxNodes(params("a11y.read")))
+        assertEquals(7, OneValue.id(params("cancel")))
+    }
+
+    @Test
+    fun aTouchAsTheHostSendsIt() {
+        val two = TouchRequest.from(params("touch"))
+        assertEquals(1, two.phase)
+        assertEquals(0.5f, two.x)
+        assertEquals(0.25f, two.y)
+        assertEquals(0.75f, two.x2)
+        assertEquals(0.125f, two.y2)
+        val one = TouchRequest.from(params("touch.one"))
+        assertEquals(0, one.phase)
+        assertNull(one.x2)
+        assertNull(one.y2)
+    }
+
+    @Test
     fun aHelloIsWhatTheHostTakes() {
         val d = DisplayInfo(1080, 2400, 420, 0)
         same(result("hello.android"), Results.hello("0.0.0", "15", 35, "Google Pixel 8", d, 1234))

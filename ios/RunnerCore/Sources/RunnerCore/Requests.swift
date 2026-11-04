@@ -17,6 +17,19 @@ public func requiredInt(_ p: Wire, _ key: String) throws -> Int { (try required(
 
 public func requiredString(_ p: Wire, _ key: String) throws -> String { try required(p, key) }
 
+/// The requests that carry one value.
+public enum OneValue {
+    public static func text(_ p: Wire) throws -> String { try requiredString(p, "text") }
+
+    public static func pkg(_ p: Wire) throws -> String { try requiredString(p, "pkg") }
+
+    public static func rotation(_ p: Wire) throws -> Int { try requiredInt(p, "rotation") }
+
+    public static func id(_ p: Wire) throws -> Int { try requiredInt(p, "id") }
+
+    public static func point(_ p: Wire) throws -> (x: Double, y: Double) { (try requiredNumber(p, "x"), try requiredNumber(p, "y")) }
+}
+
 public struct TreeRequest {
     public let maxDepth: Int, maxNodes: Int
 

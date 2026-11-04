@@ -95,6 +95,32 @@ class WaitRequest(val since: String?, val timeoutMs: Long, val minMs: Long) {
     }
 }
 
+/** A person's finger: one phase of a touch, in fractions of the screen, with a second finger's place if there is one. */
+class TouchRequest(val phase: Int, val x: Float, val y: Float, val x2: Float?, val y2: Float?) {
+    companion object {
+        fun from(p: JSONObject) = TouchRequest(
+            p.getInt("p"),
+            p.x(),
+            p.y(),
+            if (p.has("x2")) p.getDouble("x2").toFloat() else null,
+            if (p.has("y2")) p.getDouble("y2").toFloat() else null,
+        )
+    }
+}
+
+/** The requests that carry one value. */
+object OneValue {
+    fun text(p: JSONObject): String = p.getString("text")
+
+    fun off(p: JSONObject) = p.getBoolean("off")
+
+    fun rotation(p: JSONObject) = p.getInt("rotation")
+
+    fun maxNodes(p: JSONObject) = p.getInt("maxNodes")
+
+    fun id(p: JSONObject) = p.getInt("id")
+}
+
 private fun JSONObject.x() = getDouble("x").toFloat()
 
 private fun JSONObject.y() = getDouble("y").toFloat()

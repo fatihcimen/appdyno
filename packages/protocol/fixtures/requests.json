@@ -123,6 +123,10 @@
     "method": "touch",
     "params": { "p": 1, "x": 0.5, "y": 0.25, "x2": 0.75, "y2": 0.125 }
   },
+  "touch.one": {
+    "method": "touch",
+    "params": { "p": 0, "x": 0.5, "y": 0.25 }
+  },
   "stream.sync": { "method": "stream.sync", "params": {} },
   "stream.status": { "method": "stream.status", "params": {} },
   "cancel": { "method": "cancel", "params": { "id": 7 } },

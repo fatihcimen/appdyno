@@ -42,13 +42,7 @@ class Handlers(private val automation: Automation, private val token: String) {
     )
 
     /** A person's finger on a mirror's window: one event, now, with no settle. On a connection's thread. */
-    fun touch(p: JSONObject) = input.liveTouch(
-        p.getInt("p"),
-        p.getDouble("x").toFloat(),
-        p.getDouble("y").toFloat(),
-        if (p.has("x2")) p.getDouble("x2").toFloat() else null,
-        if (p.has("y2")) p.getDouble("y2").toFloat() else null,
-    )
+    fun touch(r: TouchRequest) = input.liveTouch(r.phase, r.x, r.y, r.x2, r.y2)
 
     fun ping() = JSONObject().put("uptimeMs", SystemClock.uptimeMillis() - startedAt)
 
@@ -60,12 +54,12 @@ class Handlers(private val automation: Automation, private val token: String) {
         }
         "wait" -> WaitFor.handle(WaitRequest.from(p), job, { capture.capture(yielding = !settling.idle(job)) }, settling::treeJson)
         "act" -> act(Action.from(p.getJSONObject("action")), AfterRequest.from(p), job)
-        "a11y.read" -> a11y.read(p.getInt("maxNodes"), job)
+        "a11y.read" -> a11y.read(OneValue.maxNodes(p), job)
         "text.set" -> textSet(TextRequest.from(p), job)
         "screenshot" -> screenshots.take(ShotRequest.from(p))
         "app.foreground" -> Reply(JSONObject().apply { foreground()?.let { put("pkg", it) } })
         "clipboard.set" -> {
-            clipboard.set(p.getString("text"))
+            clipboard.set(OneValue.text(p))
             Reply(JSONObject())
         }
         "clipboard.get" -> Reply(JSONObject().apply { clipboard.get()?.let { put("text", it) } })
@@ -74,11 +68,11 @@ class Handlers(private val automation: Automation, private val token: String) {
             Reply(JSONObject())
         }
         "animations.set" -> {
-            if (p.getBoolean("off")) animations.off() else animations.restore()
+            if (OneValue.off(p)) animations.off() else animations.restore()
             Reply(JSONObject())
         }
         "orientation.set" -> {
-            automation.ua.setRotation(p.getInt("rotation"))
+            automation.ua.setRotation(OneValue.rotation(p))
             Reply(JSONObject())
         }
         else -> throw unknownMethod(method)

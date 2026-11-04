@@ -152,7 +152,7 @@ final class Server {
         case "ping":
             send(s, id: id, Reply(result: ["uptimeMs": Int(Date().timeIntervalSince(startedAt) * 1000)]))
         case "cancel":
-            if let target = (params["id"] as? NSNumber)?.intValue { running[target]?.cancelled = true }
+            running[try OneValue.id(params)]?.cancelled = true
             send(s, id: id, Reply(result: [:]))
         default:
             let job = try Job(id: id, method: method, params: params)

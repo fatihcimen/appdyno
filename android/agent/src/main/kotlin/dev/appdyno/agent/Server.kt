@@ -79,11 +79,11 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                     "hello" -> writer.json(resultJson(id, handlers.hello()))
                     "ping" -> writer.json(resultJson(id, handlers.ping()))
                     "cancel" -> {
-                        jobs[params.optInt("id")]?.cancelled = true
+                        jobs[OneValue.id(params)]?.cancelled = true
                         writer.json(resultJson(id, JSONObject()))
                     }
                     "animations.set" -> {
-                        val off = params.getBoolean("off")
+                        val off = OneValue.off(params)
                         synchronized(animationsOff) {
                             if (off) animationsOff += socket else animationsOff -= socket
                             params.put("off", animationsOff.isNotEmpty())
@@ -92,7 +92,7 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                     }
                     // on this thread, not the work lane: a person's finger and a stream wait for nothing
                     "touch" -> {
-                        handlers.touch(params)
+                        handlers.touch(TouchRequest.from(params))
                         writer.json(resultJson(id, JSONObject()))
                     }
                     "stream.start" -> {
