@@ -9,7 +9,9 @@ import {
   type InputEvent,
 } from '../packages/core/src/index.js';
 import { IosSimulatorDevice } from '../packages/driver-apple/src/index.js';
+import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { windowControls, windowLook } from '../packages/ops/src/mirror/controls.js';
+import { windowMeasures } from '../packages/ops/src/mirror/measures.js';
 
 /**
  * A window's controls on our own booted simulator (APPDYNO_IOS_UDID; never a default): a real window, kept off
@@ -82,7 +84,8 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
     const binary = await viewerBinary();
     const hardware = await device.hardware();
     expect(hardware.model).toBeTruthy();
-    const controls = windowControls(device, hardware, () => session);
+    const measures = windowMeasures(new ServerContext(DEFAULT_POLICY, []), device);
+    const controls = windowControls(device, hardware, () => session, measures);
     const input = device.mirror.input.bind(device.mirror);
     device.mirror.input = async (e) => {
       inputs.push(e);

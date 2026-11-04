@@ -2,8 +2,8 @@
 // come from this process; the rest from the parent, by messages.
 #import "Window.h"
 
-enum { kActivityRows = 200, kPaneStats = 0, kPaneActivity = 1, kPaneApps = 2 };
-static const double kUsualRate = 60, kSparkHeight = 56;
+enum { kActivityRows = 200, kPaneStats = 0, kPaneActivity = 1, kPaneApps = 2, kPanePerf = 3, kPanes = 4 };
+static const double kUsualRate = 60, kSparkHeight = 56, kPillPadding = 14;
 
 static NSTextField *caption(NSString *text) {
   NSTextField *field = [NSTextField labelWithString:text];
@@ -27,7 +27,8 @@ static NSString *ms(id v) {
 @implementation MVInspector {
   NSStackView *_tabs;
   NSArray<NSButton *> *_pills;
-  NSView *_panes[3];
+  NSView *_panes[kPanes];
+  NSInteger _chosen;
   NSTextField *_fps, *_fpsNote;
   NSMutableDictionary<NSString *, NSTextField *> *_tiles;
   double _lastRate;
@@ -42,11 +43,11 @@ static NSString *ms(id v) {
   BOOL _asked;
 }
 
-- (instancetype)initWithFrame:(NSRect)frame {
+- (instancetype)initWithFrame:(NSRect)frame target:(id)target {
   if ((self = [super initWithFrame:frame])) {
     _calls = [NSMutableArray array];
     NSMutableArray *pills = [NSMutableArray array];
-    for (NSString *title in @[@"Stats", @"Activity", @"Apps"]) {
+    for (NSString *title in @[@"Stats", @"Activity", @"Apps", @"Performance"]) {
       NSButton *pill = [NSButton buttonWithTitle:title target:self action:@selector(tabChosen:)];
       pill.bordered = NO;
       pill.wantsLayer = YES;
@@ -54,23 +55,26 @@ static NSString *ms(id v) {
       pill.font = [NSFont systemFontOfSize:12 weight:NSFontWeightSemibold];
       pill.tag = pills.count;
       [pill.heightAnchor constraintEqualToConstant:26].active = YES;
+      [pill.widthAnchor constraintGreaterThanOrEqualToConstant:pill.intrinsicContentSize.width + kPillPadding].active = YES;
       [pills addObject:pill];
     }
     _pills = pills;
     _tabs = [NSStackView stackViewWithViews:pills];
-    _tabs.distribution = NSStackViewDistributionFillEqually;
+    _tabs.distribution = NSStackViewDistributionFillProportionally;
     _tabs.spacing = 2;
     _tabs.translatesAutoresizingMaskIntoConstraints = NO;
     [self addSubview:_tabs];
     _panes[kPaneStats] = [self statsPane];
     _panes[kPaneActivity] = [self activityPane];
     _panes[kPaneApps] = [self appsPane];
+    _perf = [[MVPerfPane alloc] initWithFrame:NSZeroRect target:target];
+    _panes[kPanePerf] = _perf;
     NSMutableArray *rules = [NSMutableArray arrayWithArray:@[
       [_tabs.topAnchor constraintEqualToAnchor:self.topAnchor constant:12],
       [_tabs.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:12],
       [_tabs.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-12],
     ]];
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < kPanes; i++) {
       NSView *pane = _panes[i];
       pane.translatesAutoresizingMaskIntoConstraints = NO;
       pane.hidden = i != kPaneStats;
@@ -198,6 +202,10 @@ static NSString *ms(id v) {
   _launch.enabled = _quit.enabled = _remove.enabled = on;
 }
 
+- (BOOL)readings {
+  return _chosen == kPanePerf;
+}
+
 - (void)tabChosen:(NSButton *)sender {
   [self showPane:sender.tag];
 }
@@ -214,7 +222,9 @@ static NSString *ms(id v) {
     [title addAttribute:NSParagraphStyleAttributeName value:middle range:NSMakeRange(0, title.length)];
     pill.attributedTitle = title;
   }
-  for (int i = 0; i < 3; i++) _panes[i].hidden = i != pane;
+  for (int i = 0; i < kPanes; i++) _panes[i].hidden = i != pane;
+  _chosen = pane;
+  if (self.onPane) self.onPane();
   if (pane == kPaneApps && !_asked) {
     _asked = YES;
     MVEmit(@{@"op": @"app", @"action": @"list"});

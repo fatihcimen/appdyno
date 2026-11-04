@@ -94,12 +94,18 @@ MVLiveState MVStateOf(NSString *field, double value);
 /// How a frame rate stands. It has no right value, as a screen draws what it has to: what can be judged is whether what it
 /// drew came on time, and where that is not counted it stands neutral.
 MVLiveState MVFramesState(NSDictionary *sample);
+/// A measure's reading, or where a device counts no frames the window's own rate; nil for none.
+NSNumber *_Nullable MVReadingOf(NSDictionary *sample, NSString *field, NSNumber *_Nullable pictureRate);
+/// A reading in the words a person reads it in.
+NSString *MVReadingWords(double value, NSString *unit);
 /// The system's rounded face, for numbers.
 NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight);
 
-/// A measure's last minute: a baseline, a line at `usual`, its readings, and a mark where a stutter fell.
+/// A measure's last readings: a baseline, a line at `usual`, its readings, and a mark where a stutter fell.
 @interface MVSpark : NSView
 @property(nonatomic) double usual;
+/// How many readings it holds: a minute's, unless told.
+@property(nonatomic) int capacity;
 @property(nonatomic, nullable) NSColor *color;
 - (void)add:(double)value;
 /// The second to come holds a stutter, or does not.
@@ -122,6 +128,8 @@ static const double MVHudWidth = 188;
 @interface MVRow : NSObject
 @property(nonatomic, copy) NSString *title;
 @property(nonatomic, copy) NSString *detail;
+/// All there is to say of it, where a line has no room.
+@property(nonatomic, copy, nullable) NSString *help;
 @property(nonatomic, copy, nullable) NSString *symbol;
 @property(nonatomic, nullable) NSColor *tint;
 @property(nonatomic, copy, nullable) NSString *key;
@@ -149,8 +157,26 @@ static const double MVHudWidth = 188;
 - (void)layOut:(CGSize)screen turns:(int)turns cutout:(CGRect)cutout;
 @end
 
-/// The right-hand pane: Stats, Activity and Apps. Glass is around it: all it has inside is fills.
+/// A longer look at the readings, and the real measures of the app in front, which the parent runs.
+@interface MVPerfPane : NSView
+- (instancetype)initWithFrame:(NSRect)frame target:(id)target;
+- (void)setPictureRate:(double)rate;
+- (void)show:(NSDictionary *)message;
+- (void)showMeasuring:(NSString *)line;
+- (void)showMeasured:(NSDictionary *)result;
+/// What the last measure came to, and how a line of the readings stands.
+- (NSString *)lastResult;
+- (NSString *)shownFor:(NSString *)field;
+@end
+
+/// The right-hand pane: Stats, Activity, Apps and Performance. Glass is around it: all it has inside is fills.
 @interface MVInspector : NSView
+- (instancetype)initWithFrame:(NSRect)frame target:(id)target;
+@property(nonatomic, readonly) MVPerfPane *perf;
+/// Whether Performance is the pane chosen.
+@property(nonatomic, readonly) BOOL readings;
+/// A pane was chosen.
+@property(nonatomic, copy, nullable) void (^onPane)(void);
 - (void)showPane:(NSInteger)pane;
 - (void)showStats:(NSDictionary *)stats;
 - (void)addActivity:(NSDictionary *)call;

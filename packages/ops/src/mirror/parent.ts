@@ -11,6 +11,7 @@ import { ToolError } from '../tool.js';
 import { windowControls, windowLook } from './controls.js';
 import { followDevice } from './follow.js';
 import { handoffDone } from './handoff.js';
+import { windowMeasures } from './measures.js';
 import { FOCUS_SIGNAL, liveMirror, removeMirrorFile, writeMirrorFile } from './state.js';
 
 export type MirrorRun = {
@@ -85,7 +86,12 @@ class Parent {
     };
     let said = '';
     const hardware = await device.hardware().catch(() => undefined);
-    const controls = windowControls(device, hardware, () => session);
+    const controls = windowControls(
+      device,
+      hardware,
+      () => session,
+      windowMeasures(this.ctx, device),
+    );
     const session: MirrorSession = new MirrorSession({
       mirror: device.mirror,
       viewer: startViewer(this.o.headless),

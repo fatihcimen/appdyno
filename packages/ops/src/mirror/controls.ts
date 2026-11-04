@@ -16,6 +16,7 @@ import type {
   SystemSwipe,
   ViewerMessage,
 } from '@appdyno/core';
+import type { MeasureWords, WindowMeasures } from './measures.js';
 
 const SWIPES: Record<string, SystemSwipe> = SYSTEM_SWIPES;
 const RECORD_MAX_S = 3_600;
@@ -47,12 +48,16 @@ export function windowControls(
   device: Device,
   hardware: DeviceHardware | undefined,
   session: () => WindowSession,
+  measures: WindowMeasures,
 ) {
   const name = () => safeName(hardware?.name ?? hardware?.model ?? device.serial);
   let opened: Promise<unknown> | undefined;
   let rotation: 0 | 1 | 2 | 3 = 0;
   let stopRecording: (() => Promise<string>) | undefined;
   let stopPerf: (() => void) | undefined;
+  let readingsWanted = false;
+  let measuring = false;
+  let readingsTurn: Promise<void> = Promise.resolve();
 
   /** The window needs no agent of its own; what is asked of the device past the stream does. */
   const ready = () => (opened ??= device.open());
@@ -122,11 +127,14 @@ export function windowControls(
     session().tell({ op: 'recording', on: true });
   };
 
-  /** A device's own source where it has one, or its measures: nothing is read while nothing shows it. */
-  const watchPerf = async (on: boolean) => {
+  /**
+   * A device's own source where it has one, or its measures: nothing is read while nothing shows it, nor while a measure
+   * runs, whose counts a reading would reset.
+   */
+  const followReadings = async () => {
     stopPerf?.();
     stopPerf = undefined;
-    if (!on) return;
+    if (!readingsWanted || measuring) return;
     // only a device that has no way to say what is in front but its agent starts it: a late answer is no refusal
     const refused = await device.foreground().then(
       () => false,
@@ -135,6 +143,40 @@ export function windowControls(
     if (refused) void ready().catch(() => undefined);
     const live = device.liveMetrics ?? measuredLive(device);
     stopPerf = await live.start((sample) => session().tell(perfMessage(sample)));
+  };
+
+  /** One at a time: a window quickly closed must not leave a source that started late running. */
+  const turnReadings = () => (readingsTurn = readingsTurn.then(followReadings, followReadings));
+
+  /** A real measure of the app in front, by the tools an agent calls: what is the system's is not measured. */
+  const measure = async (work: WindowMeasures['launch']) => {
+    if (measuring) return note('A measure is running');
+    measuring = true;
+    const tell = (m: Record<string, unknown>) => session().tell({ op: 'measured', ...m });
+    try {
+      session().tell({ op: 'measuring', line: 'Starting the device agent' });
+      await turnReadings();
+      await ready();
+      const app = await device.foreground();
+      const mine = app && (await device.apps.listApps(false)).some((a) => a.id === app);
+      if (!mine) {
+        const front = app ?? 'Nothing that can be named';
+        tell({
+          title: 'Open an app first',
+          detail: `${front} is in front, and is not an app of yours`,
+        });
+        return;
+      }
+      const said: MeasureWords = await work(app, (line) =>
+        session().tell({ op: 'measuring', line }),
+      );
+      tell({ ok: true, ...said });
+    } catch (e) {
+      tell({ title: 'No measure', detail: (e as Error).message });
+    } finally {
+      measuring = false;
+      await turnReadings();
+    }
   };
 
   const listApps = async () => {
@@ -169,7 +211,8 @@ export function windowControls(
     /** A control of the window that is no input: a person's, however input is set. */
     onWindow(m: ViewerMessage) {
       if (m.op === 'perfWatch') {
-        trying(() => watchPerf(m.on === true));
+        readingsWanted = m.on === true;
+        trying(turnReadings);
         return;
       }
       if (m.op === 'app') {
@@ -179,12 +222,16 @@ export function windowControls(
       }
       if (m.name === 'reconnect') session().askAgain();
       else if (m.name === 'record') trying(record);
+      else if (m.name === 'measureLaunch') trying(() => measure(measures.launch));
+      else if (m.name === 'measureScroll') trying(() => measure(measures.scroll));
+      else if (m.name === 'dashboard') trying(measures.dashboard);
       else trying(() => screenshot(m.name === 'copy'));
     },
 
     /** A movie still being made ends with the window, and keeps what it has. */
     async end() {
-      await watchPerf(false);
+      readingsWanted = false;
+      await turnReadings();
       await stopRecording?.().catch(() => undefined);
       stopRecording = undefined;
     },

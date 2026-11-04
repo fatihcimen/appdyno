@@ -57,6 +57,7 @@ static void checkControls(void) {
   NSMutableArray *menus = [NSMutableArray arrayWithArray:@[MVControlMenu(@"File", nil), MVControlMenu(@"Edit", nil), MVControlMenu(@"View", nil), MVControlMenu(@"Device", android)]];
   for (NSMenu *menu in menus) {
     for (NSMenuItem *item in menu.itemArray) {
+      if (!item.keyEquivalent.length) continue;
       shortcuts++;
       [seen addObject:[NSString stringWithFormat:@"%@ %lu", item.keyEquivalent, (unsigned long)item.keyEquivalentModifierMask]];
     }
@@ -84,6 +85,18 @@ static void checkLive(void) {
   MVCheck(@"hud: a device's own count comes first", [[hud shownFor:@"fps"] isEqual:@"30 fps"], [hud shownFor:@"fps"]);
   [hud show:@{@"sample": @{@"at": @5, @"absent": @{@"cpuPercent": @"cannot measure CPU"}}}];
   MVCheck(@"hud: a measure a device cannot give is a dash, never 0", [[hud shownFor:@"cpuPercent"] isEqual:@"\u2013"], [hud shownFor:@"cpuPercent"]);
+}
+
+static void checkMeasures(void) {
+  MVPerfPane *pane = [[MVPerfPane alloc] initWithFrame:NSMakeRect(0, 0, 276, 600) target:NSNull.null];
+  MVCheck(@"performance: a measure's control is the table's", MVFindControl(pane, @"measureLaunch") != nil && MVFindControl(pane, @"dashboard") != nil, nil);
+  [pane show:@{@"sample": @{@"at": @1, @"memoryMb": @123, @"cpuPercent": @9.25, @"absent": @{@"fps": @"cannot count frames here"}}}];
+  MVCheck(@"performance: readings stand as the cards say them", [[pane shownFor:@"memoryMb"] isEqual:@"123 MB"] && [[pane shownFor:@"cpuPercent"] isEqual:@"9.2 %"], [pane shownFor:@"cpuPercent"]);
+  MVCheck(@"performance: a reading a device cannot give is a dash", [[pane shownFor:@"fps"] isEqual:@"\u2013"], [pane shownFor:@"fps"]);
+  [pane showMeasuring:@"round 1 of 3"];
+  MVCheck(@"performance: no second measure over the first", !MVFindControl(pane, @"measureScroll").enabled, nil);
+  [pane showMeasured:@{@"ok": @YES, @"title": @"Cold launch", @"value": @"412 ms", @"detail": @"dev.app"}];
+  MVCheck(@"performance: a measure's result stands, and the next can start", [pane.lastResult containsString:@"412 ms"] && MVFindControl(pane, @"measureScroll").enabled, pane.lastResult);
 }
 
 static void checkGlass(void) {
@@ -167,6 +180,7 @@ void MVCheckFrame(void) {
   checkControls();
   checkGlass();
   checkLive();
+  checkMeasures();
   checkMood();
   checkStreamMood();
   checkGestures();

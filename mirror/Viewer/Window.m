@@ -27,7 +27,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   MVInspector *_inspector;
   NSView *_panel, *_bar;
   MVHud *_hud;
-  BOOL _hudding;
+  BOOL _hudding, _reading;
   NSView *_root;
   MVBackdrop *_backdrop;
   MVStatusLine *_line;
@@ -82,7 +82,11 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
       [pill.topAnchor constraintEqualToAnchor:root.topAnchor constant:12],
       [pill.widthAnchor constraintLessThanOrEqualToConstant:230],
     ]];
-    _inspector = [[MVInspector alloc] initWithFrame:NSZeroRect];
+    _inspector = [[MVInspector alloc] initWithFrame:NSZeroRect target:self];
+    __weak MVWindow *weak = self;
+    _inspector.onPane = ^{
+      [weak watchReadings];
+    };
     _hud = [[MVHud alloc] initWithFrame:NSZeroRect];
     _hud.hidden = YES;
     [root addSubview:_hud];
@@ -288,6 +292,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   double zoom = _zoom;
   _inspecting = !_inspecting;
   _panel.hidden = !_inspecting;
+  [self watchReadings];
   [self setZoom:zoom > 0 ? zoom : 1];
 }
 
@@ -296,20 +301,34 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   [_inspector showPane:pane];
 }
 
-/// A source runs only while this is open: what it reads costs the device.
+/// A source runs only while something shows it: what it reads costs the device.
+- (void)watchReadings {
+  BOOL wanted = _hudding || (_inspecting && _inspector.readings);
+  if (wanted == _reading) return;
+  _reading = wanted;
+  MVEmit(@{@"op": @"perfWatch", @"on": @(wanted)});
+}
+
 - (void)toggleHud {
   _hudding = !_hudding;
   _hud.hidden = !_hudding;
-  MVEmit(@{@"op": @"perfWatch", @"on": @(_hudding)});
+  [self watchReadings];
   [self setZoom:_zoom > 0 ? _zoom : 1];
 }
 
 - (void)showPerf:(NSDictionary *)message {
   if (_hudding) [_hud show:message];
+  [_inspector.perf show:message];
+}
+
+- (void)showMeasure:(NSDictionary *)message {
+  if (![message[@"op"] isEqual:@"measured"]) return [_inspector.perf showMeasuring:message[@"line"] ?: @""];
+  [_inspector.perf showMeasured:message];
 }
 
 - (void)showStats:(NSDictionary *)stats {
   [_hud setPictureRate:[stats[@"shown"] doubleValue]];
+  [_inspector.perf setPictureRate:[stats[@"shown"] doubleValue]];
   if (_inspecting) [_inspector showStats:stats];
 }
 
@@ -348,7 +367,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   if ([name isEqual:@"frame"]) return [self setFrameShown:!_frame.showsFrame];
   if ([name isEqual:@"inspector"]) return [self toggleInspector];
   if ([name isEqual:@"hud"]) return [self toggleHud];
-  if ([@[@"screenshot", @"copy", @"record", @"reconnect"] containsObject:name]) return MVEmit(@{@"op": @"control", @"name": name});
+  if ([@[@"screenshot", @"copy", @"record", @"reconnect", @"measureLaunch", @"measureScroll", @"dashboard"] containsObject:name]) return MVEmit(@{@"op": @"control", @"name": name});
   if ([name isEqual:@"paste"]) return [_view paste:self];
   [_view pressButton:name];
 }

@@ -42,8 +42,17 @@ function fixture(platform: 'ios' | 'android', device: Partial<Device> = {}, stre
     ...device,
   } as unknown as Device;
   const hardware = { platform, controls: [], model: 'Test Phone' };
-  const controls = windowControls(whole, hardware, () => session);
-  return { controls, sent, told, device: whole, session, recording };
+  const measured = { title: 'Cold launch', value: '412 ms', detail: 'median of 5', why: 'dev.app' };
+  const measures = {
+    launch: vi.fn(async (_app: string, say: (line: string) => void) => {
+      say('launch 1 of 5');
+      return measured;
+    }),
+    scroll: vi.fn(async () => measured),
+    dashboard: vi.fn(async () => undefined),
+  };
+  const controls = windowControls(whole, hardware, () => session, measures);
+  return { controls, sent, told, device: whole, session, recording, measures };
 }
 
 describe("a window's look", () => {
@@ -244,5 +253,89 @@ describe("a window's Apps pane", () => {
     await settle();
     expect(apps.uninstall).toHaveBeenCalledWith('a.b');
     expect(told.some((m) => m.op === 'apps')).toBe(true);
+  });
+});
+
+describe("a window's measures", () => {
+  const yours = { apps: { listApps: async () => [{ id: 'dev.app', name: 'App' }] } };
+  const answer = (told: Record<string, unknown>[]) => told.find((m) => m.op === 'measured');
+
+  it('measure the app in front by the tool an agent calls, and say how it goes', async () => {
+    const { controls, told, measures } = fixture('ios', yours as unknown as Partial<Device>);
+    controls.onWindow({ op: 'control', name: 'measureLaunch' });
+    await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
+    expect(measures.launch.mock.calls[0]![0]).toBe('dev.app');
+    expect(told).toContainEqual({ op: 'measuring', line: 'launch 1 of 5' });
+    expect(answer(told)).toMatchObject({ ok: true, title: 'Cold launch', value: '412 ms' });
+  });
+
+  it("leave alone what is the system's: a measure restarts what it measures", async () => {
+    const { controls, told, measures } = fixture('ios', {
+      ...yours,
+      foreground: async () => 'com.apple.springboard',
+    } as unknown as Partial<Device>);
+    controls.onWindow({ op: 'control', name: 'measureScroll' });
+    await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
+    expect(measures.scroll).not.toHaveBeenCalled();
+    expect(answer(told)).toMatchObject({ title: 'Open an app first' });
+    expect(answer(told)!.ok).toBeUndefined();
+  });
+
+  it('say why there is no number, and let the next one run', async () => {
+    const { controls, told, measures } = fixture('ios', yours as unknown as Partial<Device>);
+    measures.scroll.mockRejectedValueOnce(new Error('S is held by pid 7 (appdyno mcp)'));
+    controls.onWindow({ op: 'control', name: 'measureScroll' });
+    await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
+    expect(answer(told)).toMatchObject({ title: 'No measure' });
+    expect(String(answer(told)!.detail)).toContain('held by pid 7');
+    told.length = 0;
+    controls.onWindow({ op: 'control', name: 'measureScroll' });
+    await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
+    expect(answer(told)).toMatchObject({ ok: true });
+  });
+
+  it('run one at a time', async () => {
+    const { controls, told, measures } = fixture('ios', yours as unknown as Partial<Device>);
+    controls.onWindow({ op: 'control', name: 'measureScroll' });
+    controls.onWindow({ op: 'control', name: 'measureScroll' });
+    await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
+    expect(measures.scroll).toHaveBeenCalledOnce();
+    expect(told).toContainEqual({ op: 'note', text: 'A measure is running' });
+  });
+
+  it('stop the readings while they run, whose counts a reading would reset', async () => {
+    const stop = vi.fn();
+    const start = vi.fn(async () => stop);
+    const { controls, told, measures } = fixture('ios', {
+      ...yours,
+      liveMetrics: { start },
+    } as unknown as Partial<Device>);
+    let stoppedBefore = 0;
+    measures.scroll.mockImplementationOnce(async () => {
+      stoppedBefore = stop.mock.calls.length;
+      return { title: 'Scroll', value: '1%', detail: '', why: '' };
+    });
+    controls.onWindow({ op: 'perfWatch', on: true });
+    await vi.waitFor(() => expect(start).toHaveBeenCalledOnce(), WAIT);
+    controls.onWindow({ op: 'control', name: 'measureScroll' });
+    await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
+    expect(stoppedBefore).toBe(1);
+    await vi.waitFor(() => expect(start).toHaveBeenCalledTimes(2), WAIT);
+  });
+
+  it('leave no reading running that started as its window closed', async () => {
+    const stop = vi.fn();
+    const start = vi.fn(async () => stop);
+    const { controls } = fixture('ios', { liveMetrics: { start } } as unknown as Partial<Device>);
+    controls.onWindow({ op: 'perfWatch', on: true });
+    controls.onWindow({ op: 'perfWatch', on: false });
+    await controls.end();
+    expect(start.mock.calls.length).toBe(stop.mock.calls.length);
+  });
+
+  it('open the page of every kept run', async () => {
+    const { controls, measures } = fixture('ios');
+    controls.onWindow({ op: 'control', name: 'dashboard' });
+    await vi.waitFor(() => expect(measures.dashboard).toHaveBeenCalledOnce(), WAIT);
   });
 });

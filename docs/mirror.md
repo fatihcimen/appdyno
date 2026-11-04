@@ -125,6 +125,8 @@ A device gives each second what its own measures read, by the same readers `perf
 
 A simulator needs no runner for any of this: it reads the app in front by its read helper, and the home screen is measured as any app is. A device that cannot say what is in front without its agent starts it when the cards open, and they say so until it is up.
 
+**Performance**, in the Inspector, keeps the same readings for as long as ten minutes of being shown, and takes a real measure of the app in front. **Launch** is `perf_launch` and **Scroll** is `perf_scroll`, as an agent calls them, with their defaults: the app restarts, and the run is kept with every other, marked as read with a stream running. **Dashboard** writes the page of every kept run and opens it. Readings stop while a measure runs, as they would reset what it counts. A measure holds the device as an agent's session does, and is refused by name while something else holds it. What is the system's, such as a home screen, is not measured.
+
 ## Pointer and trackpad
 
 | on the window             | on the device                                                                                          |
@@ -206,6 +208,7 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 - A simulator's fold: no control that folds one was found, so a new surface at a fold is untested.
 - The window does not yet show a secure Android window's content, as no shell can have it from Android 12: it is black, with the status bar still there. Not run on Android 12 and 13, or on 10, for which no image is here.
 - Live numbers have been run on a simulator and an Android emulator. An iPhone has its own source, not yet run through a window, and no Android phone has run them.
+- A window's measures have been run on a simulator and an Android emulator.
 - What reading a device each second costs it has not been measured.
 - A device's colour: the frame takes one, and nothing yet reads it from a device, so every frame is the table's own graphite or carbon.
 - The frame's Action button and Camera Control are drawn and do nothing: no input is known that presses them.

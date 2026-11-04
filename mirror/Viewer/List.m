@@ -90,6 +90,7 @@ static const double kHeaderHeight = 26;
 - (NSView *)tableView:(NSTableView *)table viewForTableColumn:(NSTableColumn *)column row:(NSInteger)at {
   MVRow *row = _rows[at];
   NSTableCellView *cell = [NSTableCellView new];
+  cell.toolTip = row.help;
   if (row.header) return [self headerCell:row.title in:cell];
   NSImageView *icon = [NSImageView new];
   icon.image = row.symbol ? [NSImage imageWithSystemSymbolName:row.symbol accessibilityDescription:nil] : nil;

@@ -9,7 +9,9 @@ import {
   ViewerProcess,
 } from '../packages/core/src/index.js';
 import { Adb, AndroidDevice, FOCUS_READ } from '../packages/driver-android/src/index.js';
+import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { windowControls, windowLook } from '../packages/ops/src/mirror/controls.js';
+import { windowMeasures } from '../packages/ops/src/mirror/measures.js';
 
 /**
  * A person's window on a phone we hold (APPDYNO_ANDROID_SERIAL and APPDYNO_MIRROR_WINDOW=1; never a default): the real
@@ -62,7 +64,8 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
 
     const open = async () => {
       const hardware = await device.hardware();
-      const controls = windowControls(device, hardware, () => session);
+      const measures = windowMeasures(new ServerContext(DEFAULT_POLICY, []), device);
+      const controls = windowControls(device, hardware, () => session, measures);
       session = new MirrorSession({
         mirror: device.mirror,
         viewer: async () => new ViewerProcess(binary, ['--behind']),

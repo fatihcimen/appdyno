@@ -23,6 +23,9 @@ static const MVControlRow kControls[] = {
     {"frame", "Show Device Frame", "iphone", 'f', kCmd | kOpt, "View"},
     {"inspector", "Show Inspector", "sidebar.trailing", 'i', kCmd | kOpt, "View"},
     {"hud", "Show Performance", "gauge.with.dots.needle.67percent", 'p', kCmd | kOpt, "View"},
+    {"measureLaunch", "Measure Launch", "timer", 0, 0, "View"},
+    {"measureScroll", "Measure Scroll", "scroll", 0, 0, "View"},
+    {"dashboard", "Open Dashboard", "chart.line.uptrend.xyaxis", 0, 0, "View"},
     {"more", "More Controls", "ellipsis", 0, 0, "None"},
     {"reconnect", "Reconnect", "arrow.clockwise", 'r', kCmd | kShift, "View"},
     {"back", "Back", "chevron.backward", '[', kCmd, "Device"},
@@ -57,7 +60,7 @@ NSImage *MVControlImage(NSString *name) {
 }
 
 static NSMenuItem *itemFor(const MVControlRow *row) {
-  NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:@(row->title) action:@selector(control:) keyEquivalent:[NSString stringWithCharacters:&row->key length:1]];
+  NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:@(row->title) action:@selector(control:) keyEquivalent:row->key ? [NSString stringWithCharacters:&row->key length:1] : @""];
   item.keyEquivalentModifierMask = row->mods;
   item.representedObject = @(row->name);
   return item;

@@ -2,7 +2,7 @@
 // and its state in words and a symbol as well as a colour. What a device cannot give is a dash with the reason, never 0.
 #import "Window.h"
 
-enum { kHistory = 60 };
+enum { kHistory = 60, kLongest = 600 };
 static const double kCardHeight = 92, kLineHeight = 26;
 // a frame this long is seen as a stutter, and marked where it fell
 static const double kStutterMs = 100;
@@ -52,32 +52,57 @@ static NSString *symbolOf(MVLiveState state) {
   return state == MVLiveGood ? @"checkmark.circle.fill" : state == MVLiveWarning ? @"exclamationmark.triangle.fill" : state == MVLiveCritical ? @"xmark.octagon.fill" : nil;
 }
 
+NSNumber *MVReadingOf(NSDictionary *sample, NSString *field, NSNumber *pictureRate) {
+  id value = sample[field];
+  if ([value isKindOfClass:NSNumber.class]) return value;
+  // what the device does not count, the window does: the picture's own rate
+  return [field isEqual:@"fps"] ? pictureRate : nil;
+}
+
+NSString *MVReadingWords(double v, NSString *unit) {
+  return v >= 100 || v == round(v) ? [NSString stringWithFormat:@"%.0f %@", v, unit] : [NSString stringWithFormat:@"%.1f %@", v, unit];
+}
+
 NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight) {
   NSFontDescriptor *rounded = [[NSFont systemFontOfSize:size weight:weight].fontDescriptor fontDescriptorWithDesign:NSFontDescriptorSystemDesignRounded];
   return [NSFont fontWithDescriptor:rounded size:size] ?: [NSFont systemFontOfSize:size weight:weight];
 }
 
 @implementation MVSpark {
-  double _values[kHistory];
-  char _marks[kHistory];
+  double _values[kLongest];
+  char _marks[kLongest];
   int _count;
 }
 
+- (instancetype)initWithFrame:(NSRect)frame {
+  if ((self = [super initWithFrame:frame])) _capacity = kHistory;
+  return self;
+}
+
+- (void)setCapacity:(int)capacity {
+  _capacity = MIN(capacity, kLongest);
+}
+
 - (void)add:(double)value {
-  memmove(_values, _values + 1, sizeof(double) * (kHistory - 1));
-  _values[kHistory - 1] = value;
-  if (_count < kHistory) _count++;
+  memmove(_values, _values + 1, sizeof(double) * (_capacity - 1));
+  _values[_capacity - 1] = value;
+  if (_count < _capacity) _count++;
   BOOL moved = NO;
-  for (int i = 0; i < kHistory; i++) moved = moved || _values[i] > 0;
+  for (int i = 0; i < _capacity; i++) moved = moved || _values[i] > 0;
   self.hidden = !moved;
   self.needsDisplay = YES;
 }
 
 - (void)drawRect:(NSRect)dirty {
   double top = MAX(self.usual, 1);
-  for (int i = 0; i < kHistory; i++) top = MAX(top, _values[i]);
+  for (int i = 0; i < _capacity; i++) top = MAX(top, _values[i]);
   NSRect box = self.bounds;
-  double height = box.size.height - 3, step = box.size.width / (kHistory - 1);
+  // a long line starts as wide as a short one: its room is not a reason to squeeze its first minute into a corner
+  int span = MAX(_count, MIN(_capacity, kHistory));
+  double height = box.size.height - 3, step = box.size.width / (span - 1);
+  double (^across)(int) = ^(int i) {
+    return (i - (_capacity - span)) * step;
+  };
   double (^level)(double) = ^(double v) {
     return 1.5 + v / top * height;
   };
@@ -95,8 +120,8 @@ NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight) {
     [usual stroke];
   }
   NSBezierPath *line = [NSBezierPath bezierPath];
-  for (int i = kHistory - _count; i < kHistory; i++) {
-    NSPoint p = NSMakePoint(i * step, level(_values[i]));
+  for (int i = _capacity - _count; i < _capacity; i++) {
+    NSPoint p = NSMakePoint(across(i), level(_values[i]));
     if (line.isEmpty) [line moveToPoint:p];
     else [line lineToPoint:p];
   }
@@ -107,18 +132,18 @@ NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight) {
   [line stroke];
   // a stutter stands where it happened, in the second it happened
   [NSColor.systemRedColor setFill];
-  for (int i = kHistory - _count; i < kHistory; i++)
-    if (_marks[i]) NSRectFill(NSMakeRect(i * step - 0.75, 0, 1.5, box.size.height));
+  for (int i = _capacity - _count; i < _capacity; i++)
+    if (_marks[i]) NSRectFill(NSMakeRect(across(i) - 0.75, 0, 1.5, box.size.height));
 }
 
 - (void)mark {
-  memmove(_marks, _marks + 1, kHistory - 1);
-  _marks[kHistory - 1] = 1;
+  memmove(_marks, _marks + 1, _capacity - 1);
+  _marks[_capacity - 1] = 1;
 }
 
 - (void)pass {
-  memmove(_marks, _marks + 1, kHistory - 1);
-  _marks[kHistory - 1] = 0;
+  memmove(_marks, _marks + 1, _capacity - 1);
+  _marks[_capacity - 1] = 0;
 }
 
 @end
@@ -233,11 +258,8 @@ static MVMeasureCard *cardOf(const MVMeasureRow *row) {
   NSDictionary *absent = sample[@"absent"];
   BOOL stutter = [sample[@"worstFrameMs"] doubleValue] >= kStutterMs;
   for (MVMeasureCard *card in _cards) {
-    NSNumber *value = sample[card.field];
-    // what the device does not count, the window does: the picture's own rate
-    BOOL picture = ![value isKindOfClass:NSNumber.class] && [card.field isEqual:@"fps"] && _pictureRate;
-    if (picture) value = _pictureRate;
-    if (![value isKindOfClass:NSNumber.class]) {
+    NSNumber *value = MVReadingOf(sample, card.field, _pictureRate);
+    if (!value) {
       card.number.stringValue = @"\u2013";
       card.state.stringValue = @"";
       card.why.stringValue = absent[card.field] ?: @"";
@@ -253,7 +275,7 @@ static MVMeasureCard *cardOf(const MVMeasureRow *row) {
     BOOL still = [card.field isEqual:@"fps"] && value.doubleValue <= 0;
     MVLiveState state = still ? MVLiveNeutral : [card.field isEqual:@"fps"] ? MVFramesState(sample) : MVStateOf(card.field, value.doubleValue);
     double v = value.doubleValue;
-    card.number.stringValue = still ? @"Still" : [NSString stringWithFormat:@"%@ %@", v >= 100 || v == round(v) ? [NSString stringWithFormat:@"%.0f", v] : [NSString stringWithFormat:@"%.1f", v], card.unit];
+    card.number.stringValue = still ? @"Still" : MVReadingWords(v, card.unit);
     card.state.stringValue = wordsOf(state);
     card.mark.image = symbolOf(state) ? [NSImage imageWithSystemSymbolName:symbolOf(state) accessibilityDescription:wordsOf(state)] : nil;
     card.mark.contentTintColor = colorOf(state);

@@ -1,9 +1,12 @@
 import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   LIVE_FIELDS,
   MirrorSession,
+  startOf,
   viewerBinary,
   ViewerProcess,
   type Device,
@@ -11,7 +14,10 @@ import {
 } from '../packages/core/src/index.js';
 import { Adb, AndroidDevice } from '../packages/driver-android/src/index.js';
 import { IosSimulatorDevice } from '../packages/driver-apple/src/index.js';
+import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { windowControls, windowLook } from '../packages/ops/src/mirror/controls.js';
+import { windowMeasures } from '../packages/ops/src/mirror/measures.js';
+import { removeMirrorFile, writeMirrorFile } from '../packages/ops/src/mirror/state.js';
 
 /**
  * A window's live numbers on a device we hold (APPDYNO_IOS_UDID or APPDYNO_ANDROID_SERIAL; never a default): a real
@@ -21,6 +27,10 @@ const udid = process.env.APPDYNO_IOS_UDID;
 const serial = process.env.APPDYNO_ANDROID_SERIAL;
 const READING_MS = 200_000;
 const OUT_OF_A_READING = 3_000;
+/** A runner's first start and five launches, on a shared Mac. */
+const MEASURE_MS = 400_000;
+const FIXTURE = 'dev.appdyno.fixture';
+const PERFORMANCE_PANE = 3;
 
 const until = async (what: string, test: () => boolean, ms: number) => {
   const end = Date.now() + ms;
@@ -40,19 +50,44 @@ const inFront = async () => {
     );
 };
 
+const fixtureInFront = async () => {
+  if (udid) execFileSync('xcrun', ['simctl', 'launch', udid, FIXTURE]);
+  else
+    await new Adb().exec(
+      serial!,
+      `am start -a android.intent.action.VIEW -d appdyno-fixture://open/list ${FIXTURE}`,
+    );
+};
+
 describe.runIf(udid ?? serial)("a window's live numbers", () => {
   const device: Device = udid
     ? new IosSimulatorDevice(udid)
     : new AndroidDevice(serial!, new Adb());
   const told: Record<string, unknown>[] = [];
   let session: MirrorSession;
+  const runs = mkdtempSync(join(tmpdir(), 'appdyno-window-runs-'));
   const control = (name: string) => session.tell({ op: 'poke', control: name });
   const perf = () => told.filter((m) => m.op === 'perf');
+  const answers = () => told.filter((m) => m.op === 'measured');
+  const picture = async (name: string) => {
+    const shots = process.env.APPDYNO_SHOTS;
+    if (!shots) return;
+    await new Promise((r) => setTimeout(r, 6_000));
+    session.tell({ op: 'snapshot', file: join(shots, `${name}-${udid ? 'ios' : 'android'}.png`) });
+    await new Promise((r) => setTimeout(r, 1_000));
+  };
 
   beforeAll(async () => {
     const binary = await viewerBinary();
     const hardware = await device.hardware();
-    const controls = windowControls(device, hardware, () => session);
+    const measures = windowMeasures(
+      new ServerContext(DEFAULT_POLICY, [], {
+        measurements: join(runs, 'measurements'),
+        perf: join(runs, 'perf'),
+      }),
+      device,
+    );
+    const controls = windowControls(device, hardware, () => session, measures);
     session = new MirrorSession({
       mirror: device.mirror,
       viewer: async () => new ViewerProcess(binary, ['--behind']),
@@ -69,12 +104,23 @@ describe.runIf(udid ?? serial)("a window's live numbers", () => {
     };
     await session.start();
     await until('picture', () => session.status.state === 'live', 120_000);
+    // as a window's parent writes it: what is measured beside a stream is marked by this
+    writeMirrorFile({
+      pid: process.pid,
+      started: startOf(process.pid),
+      session: 'a window under test',
+      serial: device.serial,
+      status: session.status,
+    });
     await inFront();
   }, 180_000);
 
   afterAll(async () => {
+    removeMirrorFile(device.serial);
     await session?.stop('done');
+    await device.stopAgent().catch(() => undefined);
     device.close();
+    rmSync(runs, { recursive: true, force: true });
   });
 
   it(
@@ -98,12 +144,7 @@ describe.runIf(udid ?? serial)("a window's live numbers", () => {
       // every measure is a reading or the reason it has none: nothing is left to look like a 0
       for (const field of LIVE_FIELDS)
         expect(sample[field] ?? sample.absent?.[field]).toBeDefined();
-      const shots = process.env.APPDYNO_SHOTS;
-      if (shots) {
-        await new Promise((r) => setTimeout(r, 6_000));
-        session.tell({ op: 'snapshot', file: join(shots, `hud-${udid ? 'ios' : 'android'}.png`) });
-        await new Promise((r) => setTimeout(r, 1_000));
-      }
+      await picture('hud');
       control('hud');
       await new Promise((r) => setTimeout(r, OUT_OF_A_READING));
       const after = perf().length;
@@ -111,5 +152,35 @@ describe.runIf(udid ?? serial)("a window's live numbers", () => {
       expect(perf()).toHaveLength(after);
     },
     2 * READING_MS + 60_000,
+  );
+
+  it(
+    'measures the app in front for real, by the tools an agent calls, and reads again after',
+    async () => {
+      await fixtureInFront();
+      session.tell({ op: 'poke', pane: PERFORMANCE_PANE });
+      // as a person does: a measure is of what the pane says is in front
+      const fixtureRead = () => (perf().at(-1)?.sample as LiveSample | undefined)?.app === FIXTURE;
+      await until('the fixture in the pane', fixtureRead, READING_MS);
+      for (const [name, value] of [
+        ['measureLaunch', /\d+ ms/],
+        ['measureScroll', /jank|too few frames/],
+      ] as const) {
+        const before = answers().length;
+        control(name);
+        await until(name, () => answers().length > before, MEASURE_MS);
+        const said = answers().at(-1)!;
+        console.log(`measured: ${JSON.stringify(said)}`);
+        expect(said.ok).toBe(true);
+        expect(String(said.value)).toMatch(value);
+        expect(String(said.detail)).toContain('with a stream running');
+        const read = perf().length;
+        await until('readings again', () => perf().length > read, READING_MS);
+        await fixtureInFront();
+        await until('the fixture in the pane', fixtureRead, READING_MS);
+      }
+      await picture('performance');
+    },
+    2 * MEASURE_MS + 120_000,
   );
 });
