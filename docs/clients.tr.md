@@ -2,7 +2,7 @@
 
 [English](clients.md)
 
-appdyno, Mac'inizde, kullandığı telefonun ya da simülatörün yanında çalışır. İstemci ise sizin konuştuğunuz uygulamadır. Bu sayfa ikisini nasıl bağlayacağınızı istemci istemci anlatır, ayrıca hiçbir şey kurulu değilken bir telefonu nasıl hazırlayacağınızı gösterir. Her istemcinin neler sunduğu 4 Kasım 2026'da kendi belgelerinden okundu. Bunlar sık değişir: bir menünün yeri değiştiyse istemcinin kendi sayfasına güvenin. Menü adları, istemcilerin İngilizce arayüzündeki gibi yazıldı.
+appdyno, Mac'inizde, kullandığı telefonun ya da simülatörün yanında çalışır. İstemci ise sizin konuştuğunuz uygulamadır. Bu sayfa ikisini nasıl bağlayacağınızı istemci istemci anlatır, ayrıca hiçbir şey kurulu değilken bir telefonu nasıl hazırlayacağınızı gösterir. Her istemcinin neler sunduğu 4 Kasım 2026'da kendi belgelerinden okundu. Bunlar sık değişir: bir menünün yeri değiştiyse istemcinin kendi sayfasına güvenin. İstemcilerin menü adları İngilizce arayüzdeki gibi yazıldı; telefon ayarlarının adları ise üreticiye ve sürüme göre değişebilir.
 
 İstemcilerin çoğu appdyno'yu Mac'inizde kendisi başlatır, bunun için ağ gerekmez. Tarayıcıda çalışan bir istemci ise Mac'inizde hiçbir şey başlatamaz. Zor olan durum budur.
 
@@ -227,12 +227,12 @@ Bir çağrı sürerken bağlantı koparsa, çağrı cihazda da durur.
 
 Tarayıcıdaki ChatGPT yalnızca uzak sunuculara ulaşır. Plugins altından bağlanır ve token gönderemez: formu OAuth, No authentication ya da ikisini birden sunar.
 
-| plan            | ne elde edersiniz                                                                                                                                                                                                 |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Business        | her şey. Sunucuyu yalnızca yönetici ya da sahip ekleyebilir                                                                                                                                                       |
-| Enterprise, Edu | her şey. Kimin ekleyebileceğine yönetici karar verir                                                                                                                                                              |
-| Pro             | yalnızca salt okunur işaretli araçlar: `screen`, `find`, `screenshot`, `wait_for`, `assert`, `logs`, `crashes`, `audit`, `device_info`, `list_devices` ve okuma yapan `perf_` araçları. `tap` yok, yazı yazma yok |
-| Plus, Free      | OpenAI'ın sayfaları bir şey söylemiyor. Yokmuş gibi düşünün ve masaüstü uygulamasını kullanın                                                                                                                     |
+| plan            | ne elde edersiniz                                                                                                                                                                                                                                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Business        | her şey. Sunucuyu yalnızca yönetici ya da sahip ekleyebilir                                                                                                                                                                                                                                                      |
+| Enterprise, Edu | her şey. Kimin ekleyebileceğine yönetici karar verir                                                                                                                                                                                                                                                             |
+| Pro             | yalnızca salt okunur işaretli araçlar: `screen`, `find`, `screenshot`, `wait_for`, `assert`, `logs`, `crashes`, `audit`, `device_info`, `list_devices`, `visual` ve okuma yapan `perf_` araçları. `tap` yok, yazı yazma yok, `use_device` de yok: sunucuyu `--device` ile ya da tek cihaza izin vererek başlatın |
+| Plus, Free      | OpenAI'ın sayfaları bir şey söylemiyor. Yokmuş gibi düşünün ve masaüstü uygulamasını kullanın                                                                                                                                                                                                                    |
 
 Masaüstü uygulamasında bunların hiçbiri yoktur: appdyno'yu Mac'inizde çalıştırır. Mümkünse [onu kullanın](#codex-ve-chatgpt-masaüstü-uygulaması).
 
@@ -281,7 +281,7 @@ Bir araç çağrısının yaklaşık 240 saniyesi, bir yanıtın yaklaşık 150.
 Android cihazlarla konuşan `adb` aracı gerekir.
 
 1. Kurun. Ya [Android Studio](https://developer.android.com/studio), appdyno'nun baktığı yere kurar, ya da `brew install --cask android-platform-tools`.
-2. Telefonda geliştirici seçeneklerini açın: Ayarlar, Telefon hakkında, **Yapım numarası**na yedi kez dokunun. Xiaomi'de bu **OS sürümü**dür.
+2. Telefonda geliştirici seçeneklerini açın: Ayarlar, Telefon hakkında, **Derleme numarası**na (bazı telefonlarda Yapım numarası) yedi kez dokunun. Xiaomi'de bu **OS sürümü**dür.
 3. Ayarlar, Geliştirici seçenekleri altında **USB hata ayıklama**yı açın. Xiaomi'de **USB ile yükle** ve **USB hata ayıklama (Güvenlik ayarları)** da açılmalı.
 4. Kabloyu takın. Telefonun kilidini açın, sorduğu soruya **İzin ver** deyin.
 5. Kontrol: `adb devices` telefonu `device` olarak listeler. `unauthorized`, sorunun yanıtlanmadığı anlamına gelir: telefona bakın. Liste boşsa kablo büyük olasılıkla yalnızca şarj kablosudur.

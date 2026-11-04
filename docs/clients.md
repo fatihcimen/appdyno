@@ -227,12 +227,12 @@ If a connection breaks in the middle of a call, the call stops on the device.
 
 ChatGPT in a browser reaches remote servers only. It connects to one under Plugins, and it can send no token: its form offers OAuth, No authentication, or both.
 
-| plan            | what you get                                                                                                                                                                                 |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Business        | everything. Only an admin or owner can add the server                                                                                                                                        |
-| Enterprise, Edu | everything. An admin decides who can add it                                                                                                                                                  |
-| Pro             | only tools marked read-only: `screen`, `find`, `screenshot`, `wait_for`, `assert`, `logs`, `crashes`, `audit`, `device_info`, `list_devices`, the reading `perf_` tools. No `tap`, no typing |
-| Plus, Free      | OpenAI's pages do not say. Plan on it not being there, and use the desktop app                                                                                                               |
+| plan            | what you get                                                                                                                                                                                                                                                                                |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Business        | everything. Only an admin or owner can add the server                                                                                                                                                                                                                                       |
+| Enterprise, Edu | everything. An admin decides who can add it                                                                                                                                                                                                                                                 |
+| Pro             | only tools marked read-only: `screen`, `find`, `screenshot`, `wait_for`, `assert`, `logs`, `crashes`, `audit`, `device_info`, `list_devices`, `visual`, the reading `perf_` tools. No `tap`, no typing, and no `use_device`, so start the server with `--device` or with one device allowed |
+| Plus, Free      | OpenAI's pages do not say. Plan on it not being there, and use the desktop app                                                                                                                                                                                                              |
 
 The desktop app has none of this: it runs appdyno on your Mac. [Use that](#codex-and-the-chatgpt-desktop-app) if you can.
 
