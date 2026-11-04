@@ -42,8 +42,9 @@ export function fileOf(client: Client, { home, env }: Pick<InstallOptions, 'home
   );
 }
 
-/** `want` is met when `have` holds all of it: flags and variables added by hand stay. */
+/** `want` is met when `have` holds all of it: flags, variables and times set by hand stay. */
 const fits = (have: unknown, want: unknown): boolean => {
+  if (typeof want === 'number') return typeof have === 'number';
   if (Array.isArray(want)) return Array.isArray(have) && want.every((x, i) => fits(have[i], x));
   if (typeof want !== 'object' || want === null) return have === want;
   if (typeof have !== 'object' || have === null) return false;

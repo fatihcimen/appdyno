@@ -140,7 +140,7 @@ describe.each(CLIENTS)('$name', (client) => {
     expect(entryIn(client, file)).toEqual(client.entry);
     const after = readFileSync(file, 'utf8');
     expect(after).not.toBe(sample);
-    expect(after.split('\n').length - sample.split('\n').length).toBeLessThanOrEqual(5);
+    expect(after.split('\n').length - sample.split('\n').length).toBeLessThanOrEqual(7);
     expect((await run(home, { remove: true })).code).toBe(0);
     expect(readFileSync(file, 'utf8')).toBe(sample);
   });
@@ -200,10 +200,10 @@ describe.each(CLIENTS)('$name', (client) => {
     }
   });
 
-  it('keeps flags and variables added by hand: the entry is right as it is', async () => {
+  it('keeps flags, variables and times set by hand: the entry is right as it is', async () => {
     const extra =
       client.format === 'toml'
-        ? `[${client.key}.${SERVER}]\ncommand = "npx"\nargs = ["-y", "appdyno", "mcp", "--device", "x"]\n`
+        ? `[${client.key}.${SERVER}]\ncommand = "npx"\nargs = ["-y", "appdyno", "mcp", "--device", "x"]\nstartup_timeout_sec = 5\ntool_timeout_sec = 7200\n`
         : undefined;
     const have = Array.isArray(client.entry.command)
       ? { ...client.entry, command: [...client.entry.command, '--device', 'x'] }

@@ -63,11 +63,19 @@ export const CLIENTS: Client[] = [
     entry: STDIO,
   },
   {
-    name: 'Codex',
+    name: 'Codex and ChatGPT desktop',
     files: ['.codex/config.toml'],
     moved: { env: 'CODEX_HOME', file: 'config.toml' },
     format: 'toml',
     key: 'mcp_servers',
+    // 10 s and 60 s by default: a first download and a first runner build take minutes
+    entry: { ...STDIO, startup_timeout_sec: 120, tool_timeout_sec: 1800 },
+  },
+  {
+    name: 'Antigravity',
+    files: ['.gemini/config/mcp_config.json'],
+    format: 'jsonc',
+    key: 'mcpServers',
     entry: STDIO,
   },
   {
