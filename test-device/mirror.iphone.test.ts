@@ -187,6 +187,16 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     await until('upright', () => status().picture?.w === w && status().picture?.h === h);
   }, 120_000);
 
+  it('a screenshot goes by the phone own service, in either format', async () => {
+    for (const format of ['png', 'jpeg'] as const) {
+      const { meta, data } = await device.screenshot({ format });
+      expect(meta.format).toBe(format);
+      expect(meta.h).toBeGreaterThan(meta.w);
+      expect(data.length).toBe(meta.bytes);
+      expect(data[0]).toBe(format === 'png' ? 0x89 : 0xff);
+    }
+  }, 60_000);
+
   it('a viewer killed comes back, with a new key for its picture', async () => {
     const pid = viewerProcess!.pid!;
     process.kill(pid, 'SIGKILL');

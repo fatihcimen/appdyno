@@ -6,7 +6,6 @@ import {
   type MirrorStatus,
   startOf,
 } from '@appdyno/core';
-import { claim, release } from '../claims.js';
 import type { ServerContext } from '../context.js';
 import { ToolError } from '../tool.js';
 import { followDevice } from './follow.js';
@@ -25,8 +24,6 @@ export type MirrorRun = {
   headless: boolean;
   noInput: boolean;
   seconds?: number;
-  /** Goes on past another's claim, and takes none: the window serves whoever holds the device. */
-  share: boolean;
   /** A person asked for the keyboard with `--focus`. */
   focus: boolean;
   /** An agent opened this window: input waits for a person's click. */
@@ -79,7 +76,6 @@ class Parent {
     const device = this.ctx.deviceFor(serial);
     if (!device.mirror)
       throw new ToolError(`no mirror on this kind of device: ${serial}`, 'UNSUPPORTED');
-    if (!this.o.share) claim(serial, 'appdyno mirror');
     const file = {
       pid: process.pid,
       started: startOf(process.pid),
@@ -116,7 +112,6 @@ class Parent {
       session.stopped.then((status) => {
         unfollow();
         removeMirrorFile(serial);
-        if (!this.o.share) release(serial);
         device.close();
         this.sessions.delete(serial);
         if (status.state === 'stopped' && !this.stopping && status.why !== WINDOW_CLOSED)

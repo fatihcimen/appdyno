@@ -297,11 +297,9 @@ describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () =>
   });
 
   const parent = () => {
-    const child = spawn(
-      process.execPath,
-      [MAIN, 'mirror', '--device', serial!, '--headless', '--share'],
-      { stdio: 'ignore' },
-    );
+    const child = spawn(process.execPath, [MAIN, 'mirror', '--device', serial!, '--headless'], {
+      stdio: 'ignore',
+    });
     parents.push(child);
     return child;
   };
@@ -336,7 +334,7 @@ describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () =>
     // a second window on the device: refused, naming the first
     const second = spawnSync(
       process.execPath,
-      [MAIN, 'mirror', '--device', serial!, '--headless', '--share'],
+      [MAIN, 'mirror', '--device', serial!, '--headless'],
       {
         encoding: 'utf8',
         timeout: 60_000,

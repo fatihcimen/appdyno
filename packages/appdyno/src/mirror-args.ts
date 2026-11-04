@@ -3,7 +3,7 @@ import { parseArgs } from 'node:util';
 
 const USAGE = `usage: appdyno mirror [open] [--device S]... [--all [--watch]] [--max N] [--detach]
                       [--quality auto|high|standard] [--codec h264|hevc]
-                      [--no-input] [--headless] [--seconds N] [--share] [--takeover] [--record file.mp4] [--focus]
+                      [--no-input] [--headless] [--seconds N] [--takeover] [--record file.mp4] [--focus]
        appdyno mirror close|status|stats`;
 
 /** The words of `appdyno mirror`; `usage` when they make no call, `help` when it was asked for. */
@@ -22,7 +22,6 @@ export function mirrorArgs(args: string[]) {
       'no-input': { type: 'boolean' },
       headless: { type: 'boolean' },
       seconds: { type: 'string' },
-      share: { type: 'boolean' },
       takeover: { type: 'boolean' },
       record: { type: 'string' },
       focus: { type: 'boolean' },
@@ -60,7 +59,6 @@ export function mirrorRun({ values, quality, codec }: ReturnType<typeof mirrorAr
     noInput: values['no-input'] ?? false,
     ...(values.seconds && { seconds: Number(values.seconds) }),
     ...(values.record && { record: resolve(values.record) }),
-    share: values.share ?? false,
     focus: values.focus ?? false,
     inputOnClick: values['input-on-click'] ?? false,
     log: (line: string) => console.log(line),

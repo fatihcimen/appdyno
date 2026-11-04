@@ -10,7 +10,7 @@ appdyno mirror                     # open this device's window and stay
 appdyno mirror --all [--watch]     # every device, and new ones as they come; at most --max, default 8
 appdyno mirror open --detach       # a window that outlives this command
 appdyno mirror close | status | stats
-  --quality auto|high|standard  --codec h264|hevc  --no-input  --headless  --seconds N  --share  --takeover
+  --quality auto|high|standard  --codec h264|hevc  --no-input  --headless  --seconds N  --takeover
   --record file.mp4  --focus
 ```
 
@@ -98,9 +98,8 @@ is typed reaches the device and nothing else: no log, the Activity panel or `rep
 
 ## Sharing a device
 
-A viewer goes through the same claims as any process: `appdyno mirror` holds the device, or is refused with who
-does, unless `--share`. `--takeover` and `--allow-devices` apply. A window opened by the `mirror` tool shares,
-as it serves the session that opened it.
+A window watches whoever holds the device: it takes no claim, and an agent holding one is no refusal. The pill on it
+says who drives. `--no-input` makes it a window to look at only, and `--allow-devices` applies.
 
 A person's input always goes through, on a connection of its own, and it does not queue behind what an agent
 does. `mirror status` tells an agent when a person last touched the window. While calls come, a pill on the window

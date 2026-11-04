@@ -197,7 +197,6 @@ const streamRecorder = (udid: string, main: string): ScreenRecorder =>
       '--device',
       udid,
       '--headless',
-      '--share',
       '--no-input',
       '--record',
       file,

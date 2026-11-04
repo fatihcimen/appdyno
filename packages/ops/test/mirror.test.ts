@@ -85,7 +85,6 @@ const run = (ctx: ServerContext, o: Partial<MirrorRun> = {}) => {
     options: { quality: 'auto' },
     headless: true,
     noInput: false,
-    share: false,
     focus: false,
     inputOnClick: false,
     log: (l) => lines.push(l),
@@ -115,7 +114,7 @@ describe('a mirror parent', () => {
   it('runs its time, keeps a file while it does, and leaves nothing behind', async () => {
     const { lines, done } = run(context(['device-a']), { seconds: 3 });
     await until(() => liveMirror('device-a')?.status.state === 'live');
-    expect(holder('device-a')?.tool).toBe('appdyno mirror');
+    expect(holder('device-a')).toBeUndefined();
     await expect(done).resolves.toBe(0);
     expect(stateFiles()).toEqual([]);
     expect(holder('device-a')).toBeUndefined();
@@ -123,7 +122,7 @@ describe('a mirror parent', () => {
     expect(lines.at(-1)).toContain('stopped: time is up');
   }, 120_000);
 
-  it('goes through the claims: another holder is said by name, and --share goes on', async () => {
+  it('watches whoever holds the device: a holder is no refusal, and keeps its claim', async () => {
     const other = spawn(process.execPath, ['-e', 'setInterval(()=>{},1000)'], { stdio: 'ignore' });
     try {
       const claims = join(dir, 'claims');
@@ -139,10 +138,7 @@ describe('a mirror parent', () => {
         }),
       );
       const ctx = context(['device-b']);
-      const refused = run(ctx, { serials: ['device-b'] });
-      await expect(refused.done).resolves.toBe(1);
-      expect(refused.lines.join()).toContain(`held by pid ${other.pid} (another tool)`);
-      const shared = run(ctx, { serials: ['device-b'], share: true, seconds: 2 });
+      const shared = run(ctx, { serials: ['device-b'], seconds: 2 });
       await until(() => liveMirror('device-b')?.status.state === 'live');
       expect(holder('device-b')?.tool).toBe('another tool');
       await expect(shared.done).resolves.toBe(0);
