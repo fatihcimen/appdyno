@@ -1,6 +1,12 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { stateDir, type CrashesAnswer, type CrashesQuery, type CrashReport } from '@appdyno/core';
+import {
+  stateDir,
+  type CrashesAnswer,
+  type CrashesQuery,
+  type CrashReport,
+  type ExitCount,
+} from '@appdyno/core';
 import { type Adb, shq } from './adb.js';
 import { namedTombstone, shortFrame } from './tombstone.js';
 
@@ -9,30 +15,64 @@ const DEATHS = /CRASH|ANR|LOW.?MEMORY|SIGNALED|EXCESSIVE|INITIALIZATION|FREEZER/
 
 const TAGS = ['data_app_crash', 'data_app_native_crash', 'data_app_anr'];
 
-type Exit = { at: string; time: number; reason: string; detail?: string };
+type Exit = {
+  at: string;
+  time: number;
+  reason: string;
+  detail?: string;
+  /** Who stopped it (`FORCE STOP`, `KILL BACKGROUND`): the reason alone says only a user asked. */
+  subreason?: string;
+  /** A signal's number, or the code it exited with. */
+  status?: string;
+  memory?: string;
+};
 
 /**
- * The exits in `dumpsys activity exit-info <pkg>`, newest first as printed, deaths only. Shortcut: its
- * times are the device's local time read in the host's zone; a phone in another zone needs its offset.
+ * Every exit in `dumpsys activity exit-info <pkg>`, newest first as printed. Shortcut: its times are the
+ * device's local time read in the host's zone; a phone in another zone needs its offset. Most exits read
+ * `pss=0.00`, so what memory it died with is given only where the system kept it.
  */
-export function parseExitInfo(text: string): Exit[] {
+export function allExits(text: string): Exit[] {
   return text
     .split(/ApplicationExitInfo #\d+:/)
     .slice(1)
     .flatMap((block) => {
       const at = /timestamp=(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d(?:\.\d+)?)/.exec(block)?.[1];
       const reason = /\breason=\d+ \((.*?)\) subreason=/.exec(block)?.[1];
-      if (!at || !reason || !DEATHS.test(reason)) return [];
+      if (!at || !reason) return [];
       const description = /description=(.*?)(?: state=| trace=|$)/m.exec(block)?.[1]?.trim();
+      const subreason = /\bsubreason=\d+ \((.*?)\)/.exec(block)?.[1];
+      const status = /\bstatus=(\d+)/.exec(block)?.[1];
+      const [pss, rss] = [/\bpss=(\S+)/, /\brss=(\S+)/].map((re) => re.exec(block)?.[1]);
       return [
         {
           at,
           time: new Date(at.replace(' ', 'T')).getTime(),
           reason,
           ...(description && description !== 'null' && { detail: description }),
+          ...(subreason && subreason !== 'UNKNOWN' && { subreason }),
+          ...(status && status !== '0' && { status }),
+          ...(pss && pss !== '0.00' && { memory: `pss ${pss}, rss ${rss}` }),
         },
       ];
     });
+}
+
+/** The exits that are an app's end as nobody asked for it. */
+export const parseExitInfo = (text: string) => allExits(text).filter((e) => DEATHS.test(e.reason));
+
+/** Exits by their reason in full, most frequent first: `SIGNALED status 9` is another end than an app's own. */
+export function exitCounts(exits: Exit[]): ExitCount[] {
+  const by = new Map<string, ExitCount>();
+  for (const e of exits) {
+    const reason = [e.reason, e.subreason, e.status && `status ${e.status}`]
+      .filter(Boolean)
+      .join(' ');
+    const held = by.get(reason);
+    if (held) held.count++;
+    else by.set(reason, { reason, count: 1, newest: e.at, ...(e.memory && { memory: e.memory }) });
+  }
+  return [...by.values()].sort((a, b) => b.count - a.count);
 }
 
 type Drop = { at: string; time: number; tag: string; text: string };
@@ -58,6 +98,9 @@ export function parseDropbox(text: string, app: string): Drop[] {
 const stackOf = (entry: string) => {
   const tombstone = entry.match(/^(signal .*|\s+#\d+ pc .*)$/gm);
   if (tombstone) return tombstone.slice(0, 6).map(shortFrame).join('\n');
+  // an ANR says on its first lines what it was: what follows is every thread's stack
+  const subject = /^Subject: .*$/m.exec(entry)?.[0];
+  if (subject) return subject;
   return entry
     .split(/\n\s*\n/)
     .slice(1)
@@ -121,8 +164,9 @@ export async function androidCrashes(
     TAGS.map((t) => `dumpsys dropbox --print ${t}`).join('; '),
   );
   const reports = crashReports(exitInfo, dropbox, q);
+  const exits = exitCounts(allExits(exitInfo).filter((e) => !q.since || e.time >= q.since));
   if (reports.length === 0)
-    return { reports, source: 'dumpsys activity exit-info, dumpsys dropbox' };
+    return { reports, source: 'dumpsys activity exit-info, dumpsys dropbox', exits };
   const dir = join(stateDir(), 'crashes');
   await mkdir(dir, { recursive: true, mode: 0o700 });
   const file = join(dir, `${q.app}-${Date.now()}.txt`);
@@ -145,6 +189,7 @@ export async function androidCrashes(
   return {
     reports: named,
     source: 'dumpsys activity exit-info, dumpsys dropbox',
+    exits,
     ...(otherBuilds.size > 0 && { note: [...otherBuilds].join('\n') }),
     ...(q.symbols &&
       reports.every((r) => !r.tombstone) && {

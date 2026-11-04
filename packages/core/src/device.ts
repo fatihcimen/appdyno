@@ -274,7 +274,16 @@ export type CrashReport = {
   symbolicated?: string;
 };
 
-export type CrashesAnswer = { reports: CrashReport[]; source: string; note?: string };
+/** One way an app's processes ended, as the system keeps them, with how many went that way. */
+export type ExitCount = { reason: string; count: number; newest: string; memory?: string };
+
+export type CrashesAnswer = {
+  reports: CrashReport[];
+  source: string;
+  note?: string;
+  /** Every exit the system keeps, by reason, what no one calls a crash too (Android). */
+  exits?: ExitCount[];
+};
 
 /** A doctor's finding. */
 export type Check = { name: string; ok: boolean; warn?: boolean; detail: string; fix?: string };

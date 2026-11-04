@@ -137,5 +137,6 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
     console.log(after.text);
     expect(after.data.userAnrs!).toBe(before.data.userAnrs! + 1);
     expect(after.text).toContain('this session would count as a user-perceived ANR');
+    expect((await t.call('crashes', {})).text).toContain('Input dispatching timed out');
   }, 240_000);
 });

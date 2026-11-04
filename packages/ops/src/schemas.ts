@@ -332,4 +332,14 @@ export const CrashesOut = z.object({
   ),
   source: z.string(),
   note: z.string().optional(),
+  exits: z
+    .array(
+      z.object({
+        reason: z.string(),
+        count: z.number().int(),
+        newest: z.string(),
+        memory: z.string().optional(),
+      }),
+    )
+    .optional(),
 });

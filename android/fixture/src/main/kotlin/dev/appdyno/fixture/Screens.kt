@@ -887,6 +887,7 @@ class CrashActivity : Activity() {
         column {
             button("Crash", R.id.crash) { throw IllegalStateException("fixture crash") }
             button("Crash natively", R.id.crash_native) { Native.crash() }
+            button("Exit", R.id.exit) { kotlin.system.exitProcess(3) }
         }
     }
 }

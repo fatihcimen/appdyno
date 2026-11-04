@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `crashes` on Android counts every exit the system keeps, by its reason in full with its status, and what memory it died with where that was kept.
 - `perf_snapshot` `also: surface`: an Android `SurfaceView` or game's frames from `dumpsys SurfaceFlinger --latency`, where `gfxinfo` has none, with its frame rate and Play's slow sessions, read in whole refreshes of the display.
 - `perf_launch` `baselineProfile`: an Android release build's Baseline Profile, present in the APK, applied by the device's status, and what it is worth, in cold starts with it and without taken in turns and called as the gate calls a change. A `.dm` that delivered a profile and compiled nothing is called that.
 - `crashes` `symbols` names a release build's stack: `atos` from the dSYM whose UUID is the crashed image's, by `dwarfdump`; `ndk-stack` from a folder of libraries with their symbols. A dSYM or library of another build is never read, and the answer says which it wanted. A tombstone's signal and frames are its `detail` now, not its headers.

@@ -149,7 +149,7 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
           throw new ToolError('this device gives no crash reports', 'UNSUPPORTED');
         const pkg = appOf(s, ctx, app);
         const from = since ? sinceOf(since, s) : undefined;
-        const { reports, source, note } = await s.device.crashes({
+        const { reports, source, note, exits } = await s.device.crashes({
           app: pkg,
           limit,
           ...(from !== undefined && { since: from }),
@@ -168,8 +168,18 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
               (r) =>
                 `${r.at} ${r.reason}${r.file ? `\n  file: ${r.file}` : ''}${r.symbolicated ? `\n  named: ${r.symbolicated}` : ''}${r.detail ? `\n  ${r.detail.split('\n').join('\n  ')}` : ''}`,
             ),
+            ...(exits?.length
+              ? [
+                  `every exit kept: ${exits
+                    .map(
+                      (e) =>
+                        `${e.reason} ${e.count}${e.memory ? ` (the last with ${e.memory})` : ''}`,
+                    )
+                    .join(', ')}`,
+                ]
+              : []),
           ].join('\n'),
-          { reports: shown, source, ...(note && { note }) },
+          { reports: shown, source, ...(note && { note }), ...(exits && { exits }) },
         );
       },
     }),
