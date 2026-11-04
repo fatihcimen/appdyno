@@ -46,9 +46,9 @@ export class ServerContext {
       perf?: string;
       /** A file to keep the selection and the diff baseline in between processes (the command line). */
       remember?: string;
-      /** Hold a device for the session, refusing one another live process holds (`owner`: this tool, as it is shown). */
+      /** Hold a device for the session, refusing one another live process holds (`tool`: this one, as it is shown). */
       claims?: boolean;
-      owner?: string;
+      tool?: string;
       /** Use a device another process holds. */
       share?: boolean;
     } = {},
@@ -146,7 +146,7 @@ export class ServerContext {
   ) {
     const saved = this.saved?.serial === serial ? this.saved : undefined;
     const holds = this.defaults.claims && !share && !this.defaults.share;
-    const tool = this.defaults.owner ?? 'appdyno';
+    const tool = this.defaults.tool ?? 'appdyno';
     if (holds) claim(serial, tool);
     const owner = this.defaults.remember ? undefined : thisOwner(tool);
     const s = new Session(

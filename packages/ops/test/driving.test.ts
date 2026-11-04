@@ -959,7 +959,7 @@ describe('device claims', () => {
     child.kill('SIGKILL');
     await new Promise((r) => child.once('exit', r));
     const d = new FakeDevice();
-    const first = await connect(d, { defaults: { claims: true, owner: 'one' } });
+    const first = await connect(d, { defaults: { claims: true, tool: 'one' } });
     expect((await first.call('use_device', { device: d.serial })).error).toBe(false);
     expect((await first.call('list_devices')).data.devices[0].heldBy).toMatchObject({
       pid: process.pid,

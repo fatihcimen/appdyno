@@ -103,7 +103,7 @@ function contextFrom(values: Settings, remember?: string) {
     ...(!values.measurements && { autoPrune: true }),
     ...(remember && { remember }),
     claims: true,
-    owner: remember ? 'appdyno cli' : 'appdyno mcp',
+    tool: remember ? 'appdyno cli' : 'appdyno mcp',
     ...((values.share || env.APPDYNO_SHARE === '1') && { share: true }),
   });
 }
