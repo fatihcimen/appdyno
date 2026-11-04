@@ -844,6 +844,7 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
         expect(r.xml).not.toContain('rerunFailure');
         const said = r.lines.join('\n');
         expect(said).toContain('FLAKY a.flow: passed on attempt 2 of 3');
+        expect(said).toContain('0 passed, 1 flaky, 0 failed');
         expect(said).toContain('flaky, passed only on a retry');
         expect(said).not.toContain('ok   a.flow');
         // what failed stays, and a passing retry leaves nothing over it
@@ -872,6 +873,7 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
       it('leaves a run with no retries as it was', async () => {
         const r = await run(flow, 0);
         expect(firstSteps()).toBe(1);
+        expect(r.lines.at(-1)).toBe('0 passed, 0 flaky, 1 failed');
         expect(r.lines.join('\n')).not.toContain('retry');
         expect(r.xml).not.toContain('rerunFailure');
       });

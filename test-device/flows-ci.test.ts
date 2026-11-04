@@ -103,6 +103,7 @@ for (const [platform, serial] of targets)
         expect(r.out).toContain('ok   a-form.flow');
         expect(r.out).toContain('ok   b-list.flow');
         expect(r.out).toContain('FLAKY c-counts.flow: passed on attempt 2 of 2');
+        expect(r.out).toContain('2 passed, 1 flaky, 0 failed');
         expect(r.out).toContain('flaky, passed only on a retry');
         expect(r.junit).toContain('tests="3" failures="0"');
         expect(r.junit).toContain('flakes="1"');
@@ -122,6 +123,7 @@ for (const [platform, serial] of targets)
         const r = await job('plain', flows, '--tag', 'ci', '--env-file', envFile);
         expect(r.code).toBe(1);
         expect(r.out).toContain('FAIL c-counts.flow: line 6, step 4:');
+        expect(r.out).toContain('2 passed, 0 flaky, 1 failed');
         expect(r.junit).toContain('tests="3" failures="1"');
         expect(r.junit).toContain('flakes="0"');
       },

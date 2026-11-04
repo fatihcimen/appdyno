@@ -177,6 +177,10 @@ export async function runTests(
   mkdirSync(dirname(o.junit), { recursive: true });
   writeFileSync(o.junit, junitXml(suites));
   const flaky = suites.flatMap((x) => x.cases.filter(isFlaky).map((c) => `${x.name}/${c.name}`));
+  const cases = suites.flatMap((x) => x.cases);
+  const failed = cases.filter((c) => c.failure).length;
+  // always, so that a run that exits 0 still shows what it took to
+  log(`${cases.length - failed - flaky.length} passed, ${flaky.length} flaky, ${failed} failed`);
   if (flaky.length > 0) log(`flaky, passed only on a retry: ${flaky.join(', ')}`);
-  return { passed: suites.every((x) => x.cases.every((c) => !c.failure)), flaky, suites };
+  return { passed: failed === 0, flaky, suites };
 }
