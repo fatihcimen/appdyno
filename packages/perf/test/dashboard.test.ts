@@ -110,8 +110,8 @@ describe('the page', () => {
   it('escapes what the store holds', async () => {
     const hostile = '<img src=x onerror=alert(1)>';
     const s = store();
-    await s.run(5, [{ ...launch(400), kind: `other.${hostile}` }], { app: hostile });
-    await s.run(1, [{ ...launch(410), kind: `other.${hostile}` }], { app: hostile });
+    await s.run(5, [{ ...launch(400), kind: `journey.${hostile}` }], { app: hostile });
+    await s.run(1, [{ ...launch(410), kind: `journey.${hostile}` }], { app: hostile });
     await saveRefusal(s.dir, {
       deviceClass: PHONE_CLASS,
       measure: 'energy',

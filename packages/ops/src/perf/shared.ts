@@ -34,7 +34,7 @@ export const Probe = z
   .describe('iOS simulator: frame probe, relaunches the app once; on for frames, off for launches');
 
 /** The row of the table a refusal of this measure answers. What is about a part of a row (threads, a profile) has none. */
-const ROW_OF: Partial<Record<Capability, MeasureId>> = {
+export const ROW_OF: Partial<Record<Capability, MeasureId>> = {
   cpu: 'cpu',
   memory: 'memory',
   heap: 'leaks',

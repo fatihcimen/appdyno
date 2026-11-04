@@ -71,29 +71,54 @@ export const MEASURES = [
 ] as const;
 export type MeasureId = (typeof MEASURES)[number];
 
-/** Which row a kind answers. A launch's phases are kinds of the form `launch.phase.<name>_ms`. */
+/** The row each kind answers: `Metric` takes no other, so a new number cannot miss the table. */
+export const KINDS = {
+  'launch.ttid_ms': 'launch',
+  'launch.first_frame_ms': 'launch',
+  'launch.until_ms': 'launch',
+  'launch.ttfd_ms': 'launch',
+  'frames.jank_percent': 'frames',
+  'frames.app_jank_percent': 'frames',
+  'frames.p95_ms': 'frames',
+  'frames.overrun_p95_ms': 'frames',
+  'frames.cpu_p95_ms': 'frames',
+  'hitches.count': 'frames',
+  'hitches.ratio': 'frames',
+  'hitches.worst_ms': 'frames',
+  'probe.missed_percent': 'frames',
+  'probe.p95_ms': 'frames',
+  'frames.frozen': 'frozen',
+  'stalls.worst_ms': 'stalls',
+  'hangs.count': 'stalls',
+  'hangs.worst_ms': 'stalls',
+  'probe.stall_worst_ms': 'stalls',
+  'memory.kb': 'memory',
+  'memory.end_kb': 'memory',
+  'heap.bytes': 'memory',
+  'heap.leaks': 'leaks',
+  'cpu.percent': 'cpu',
+  'threads.over90_ms': 'cpu',
+  'network.rx_bytes': 'network',
+  'network.tx_bytes': 'network',
+  'energy.mah': 'energy',
+  'energy.mj': 'energy',
+  'energy.impact': 'energy',
+  'exits.crashes': 'crashes',
+  'exits.anrs': 'crashes',
+  'size.bytes': 'size',
+} as const satisfies Record<string, MeasureId>;
+
+/**
+ * Those, and what is named at run time: a launch's phases, which answer `launch-why`; XCTest's own metrics and a
+ * caller's journey through `keepRun`, which answer no row and show as rows of their own.
+ */
+export type Kind =
+  keyof typeof KINDS | `launch.phase.${string}_ms` | `xct.${string}` | `journey.${string}`;
+
+/** Which row a kept kind answers, if any: a record may have been kept by another version. */
 export function measureOf(kind: string): MeasureId | undefined {
   if (kind.startsWith('launch.phase.')) return 'launch-why';
-  if (kind === 'heap.leaks') return 'leaks';
-  if (kind === 'frames.frozen') return 'frozen';
-  if (kind === 'probe.missed_percent' || kind === 'probe.p95_ms') return 'frames';
-  if (kind === 'probe.stall_worst_ms') return 'stalls';
-  const byPrefix: Record<string, MeasureId> = {
-    launch: 'launch',
-    frames: 'frames',
-    hitches: 'frames',
-    stalls: 'stalls',
-    hangs: 'stalls',
-    memory: 'memory',
-    heap: 'memory',
-    cpu: 'cpu',
-    threads: 'cpu',
-    network: 'network',
-    energy: 'energy',
-    exits: 'crashes',
-    size: 'size',
-  };
-  return byPrefix[kind.split('.')[0] ?? ''];
+  return Object.hasOwn(KINDS, kind) ? KINDS[kind as keyof typeof KINDS] : undefined;
 }
 
 /** A run of odd characters as one: stored runs and baselines already have these names. */
@@ -131,7 +156,7 @@ export function noiseOf(r: Pick<PerfRecord, 'load' | 'thermal' | 'build' | 'devi
 }
 
 export type Metric = {
-  kind: string;
+  kind: Kind;
   unit: Unit;
   samples: number[];
   better?: 'lower' | 'higher';

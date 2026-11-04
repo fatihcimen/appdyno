@@ -185,11 +185,15 @@ export function perfTraceOp(ctx: ServerContext): Op {
         ...(v.stats
           ? [
               {
-                kind: 'frames.overrun_p95_ms',
+                kind: 'frames.overrun_p95_ms' as const,
                 unit: 'ms' as const,
                 samples: [v.stats.overrunP95Ms],
               },
-              { kind: 'frames.cpu_p95_ms', unit: 'ms' as const, samples: [v.stats.cpuP95Ms] },
+              {
+                kind: 'frames.cpu_p95_ms' as const,
+                unit: 'ms' as const,
+                samples: [v.stats.cpuP95Ms],
+              },
             ]
           : []),
       ]);

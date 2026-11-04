@@ -219,7 +219,7 @@ const context = (samples: number[], run: string, at: string, thermal = 0): PerfR
       tool: '0.5.0',
       at,
     },
-    [{ kind: 'launch.ttid', unit: 'ms', samples }],
+    [{ kind: 'launch.ttid_ms', unit: 'ms', samples }],
   );
 
 describe('store and reports', () => {
@@ -247,7 +247,7 @@ describe('store and reports', () => {
           tool: '',
           at: '',
         },
-        [{ kind: 'k', unit: 'ms', samples: [1] }],
+        [{ kind: 'cpu.percent', unit: 'ms', samples: [1] }],
       )[0]!.noise,
     ).toEqual(['high-host-load', 'debuggable-build']);
     expect(
@@ -264,7 +264,7 @@ describe('store and reports', () => {
           tool: '',
           at: '',
         },
-        [{ kind: 'gone', unit: 'ms', samples: [Number.NaN] }],
+        [{ kind: 'cpu.percent', unit: 'ms', samples: [Number.NaN] }],
       ),
     ).toEqual([]);
   });
@@ -289,14 +289,14 @@ describe('store and reports', () => {
       addToBaseline(key!, addToBaseline(key!, addToBaseline(key!, undefined, a), a), a),
     );
     const baseline = await loadBaseline(project, key!);
-    expect(baseline!.metrics['launch.ttid']!.runs).toHaveLength(3);
-    expect(addToBaseline(key!, baseline, a).metrics['launch.ttid']!.runs).toHaveLength(4);
-    expect(addToBaseline(key!, baseline, a, true).metrics['launch.ttid']!.runs).toHaveLength(1);
+    expect(baseline!.metrics['launch.ttid_ms']!.runs).toHaveLength(3);
+    expect(addToBaseline(key!, baseline, a).metrics['launch.ttid_ms']!.runs).toHaveLength(4);
+    expect(addToBaseline(key!, baseline, a, true).metrics['launch.ttid_ms']!.runs).toHaveLength(1);
 
     const report = reportKey(key!, newest, baseline, []);
     expect(report.comparisons[0]!.verdict).toBe('regression');
     expect(exitCode([report])).toBe(1);
-    expect(toText([report])).toMatch(/regression\s+launch\.ttid: 910 ms against 510/);
+    expect(toText([report])).toMatch(/regression\s+launch\.ttid_ms: 910 ms against 510/);
     expect(JSON.parse(toJson([report])).failed).toBe(true);
     expect(toJUnit([report])).toContain('<failure message="regression');
 
@@ -304,16 +304,16 @@ describe('store and reports', () => {
     expect(exitCode([pass])).toBe(0);
     expect(toJUnit([pass])).not.toContain('<failure');
 
-    const over = reportKey(key!, newest, undefined, [{ kind: 'launch.ttid', max: 800 }]);
+    const over = reportKey(key!, newest, undefined, [{ kind: 'launch.ttid_ms', max: 800 }]);
     expect(over.comparisons[0]!.verdict).toBe('new');
     expect(exitCode([over])).toBe(1);
-    expect(toText([over])).toMatch(/over budget launch\.ttid: 910 \(max 800\)/);
+    expect(toText([over])).toMatch(/over budget launch\.ttid_ms: 910 \(max 800\)/);
     expect(
-      exitCode([reportKey(key!, newest, undefined, [{ kind: 'launch.ttid', max: 2000 }])]),
+      exitCode([reportKey(key!, newest, undefined, [{ kind: 'launch.ttid_ms', max: 2000 }])]),
     ).toBe(0);
     expect(
       exitCode([
-        reportKey(key!, newest, undefined, [{ kind: 'launch.ttid', max: 1, scenario: 'other' }]),
+        reportKey(key!, newest, undefined, [{ kind: 'launch.ttid_ms', max: 1, scenario: 'other' }]),
       ]),
     ).toBe(0);
   });

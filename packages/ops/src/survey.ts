@@ -1,3 +1,4 @@
+import type { Capability } from '@appdyno/core';
 import {
   deviceClass,
   formatValue,
@@ -10,7 +11,7 @@ import {
   type MeasureId,
 } from '@appdyno/perf';
 import type { ServerContext } from './context.js';
-import { deviceInfo, keepRefusal } from './perf/shared.js';
+import { deviceInfo, keepRefusal, ROW_OF } from './perf/shared.js';
 import { opsFor } from './registry.js';
 
 type Call = { op: string; args?: Record<string, unknown> };
@@ -100,7 +101,7 @@ export async function survey(ctx: ServerContext, app: string, log: (line: string
       line(row, `failed: ${[...new Set(failed)].join('; ')}`);
       continue;
     }
-    const lacks = (o: Outcome) => o.lacking?.some((what) => measureOf(`${what}.`) === row);
+    const lacks = (o: Outcome) => o.lacking?.some((what) => ROW_OF[what as Capability] === row);
     const kept = (await loadRefusals(dir)).find(
       (r) => r.deviceClass === cls && r.app === app && r.measure === row && since(r.at),
     );

@@ -1,3 +1,4 @@
+import type { Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { LaunchOut } from '../schemas.js';
@@ -68,9 +69,9 @@ export function perfLaunchOp(ctx: ServerContext): Op {
             unit: 'ms',
             samples: samples.flatMap((x) => (x.fullyDrawnMs === undefined ? [] : [x.fullyDrawnMs])),
           },
-          ...(startup?.breakdown ?? []).map((b) => ({
+          ...(startup?.breakdown ?? []).map((b): Metric => ({
             kind: `launch.phase.${b.reason.replace(/\W+/g, '_').toLowerCase()}_ms`,
-            unit: 'ms' as const,
+            unit: 'ms',
             samples: [b.ms],
           })),
         ],

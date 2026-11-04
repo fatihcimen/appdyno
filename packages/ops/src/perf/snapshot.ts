@@ -109,7 +109,7 @@ export function perfSnapshotOp(ctx: ServerContext): Op {
         ...(threads
           ? [
               {
-                kind: 'threads.over90_ms',
+                kind: 'threads.over90_ms' as const,
                 unit: 'ms' as const,
                 samples: [threads.value.worstOver90Ms],
               },
@@ -118,12 +118,12 @@ export function perfSnapshotOp(ctx: ServerContext): Op {
         ...(network
           ? [
               {
-                kind: 'network.rx_bytes',
+                kind: 'network.rx_bytes' as const,
                 unit: 'bytes' as const,
                 samples: [network.value.rxBytes],
               },
               {
-                kind: 'network.tx_bytes',
+                kind: 'network.tx_bytes' as const,
                 unit: 'bytes' as const,
                 samples: [network.value.txBytes],
               },
@@ -132,16 +132,20 @@ export function perfSnapshotOp(ctx: ServerContext): Op {
         ...(energy ? energyMetrics(energy.value) : []),
         ...(exits
           ? [
-              { kind: 'exits.crashes', unit: 'count' as const, samples: [exits.value.crashes] },
               {
-                kind: 'exits.anrs',
+                kind: 'exits.crashes' as const,
+                unit: 'count' as const,
+                samples: [exits.value.crashes],
+              },
+              {
+                kind: 'exits.anrs' as const,
                 unit: 'count' as const,
                 samples: exits.value.anrs === undefined ? [] : [exits.value.anrs],
               },
             ]
           : []),
         ...(size
-          ? [{ kind: 'size.bytes', unit: 'bytes' as const, samples: [size.value.bytes] }]
+          ? [{ kind: 'size.bytes' as const, unit: 'bytes' as const, samples: [size.value.bytes] }]
           : []),
       ]);
       const m = mem.value;

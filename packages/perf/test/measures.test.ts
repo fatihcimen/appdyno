@@ -2,7 +2,15 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadRefusals, measureOf, MEASURES, recordsOf, saveRefusal } from '../src/index.js';
+import {
+  KINDS,
+  loadRefusals,
+  measureOf,
+  MEASURES,
+  recordsOf,
+  saveRefusal,
+  type Metric,
+} from '../src/index.js';
 
 describe('the rows of the performance table', () => {
   it.each([
@@ -32,6 +40,19 @@ describe('the rows of the performance table', () => {
 
   it('a kind it does not know answers no row', () => {
     expect(measureOf('journey.checkout_ms')).toBeUndefined();
+    // the name of a family is no kind of it, nor of what Object has
+    expect(measureOf('frames.nothing')).toBeUndefined();
+    expect(measureOf('toString')).toBeUndefined();
+  });
+
+  it('every kind answers a row of the table', () => {
+    expect(Object.values(KINDS).filter((row) => !MEASURES.includes(row))).toEqual([]);
+  });
+
+  it('a number with no row does not compile', () => {
+    // @ts-expect-error: not in KINDS, and of no family named at run time
+    const m: Metric = { kind: 'frames.nothing', unit: 'ms', samples: [1] };
+    expect(measureOf(m.kind)).toBeUndefined();
   });
 });
 
