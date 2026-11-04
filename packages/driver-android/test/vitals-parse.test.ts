@@ -30,9 +30,48 @@ describe("what Play's definitions are read from", () => {
     ).toEqual({ frames: 68, over16: 38, over700: 3 });
   });
 
+  const device = (dropbox: string) => ({
+    shell: async (cmd: string) => (cmd.includes('dropbox') ? dropbox : EXIT_INFO),
+  });
+  const filed = (...subjects: string[]) =>
+    subjects
+      .map(
+        (s, i) =>
+          `========================================\n2026-11-04 13:0${i}:25 data_app_anr (compressed text, 26120 bytes)\nProcess: dev.appdyno.fixture\nSubject: ${s}\n`,
+      )
+      .join('');
+  const TOUCH = 'Input dispatching timed out (c6abf43 dev.appdyno.fixture is not responding)';
+
   it('counts only the ANRs of a touch as user-perceived', async () => {
-    const device = { shell: async () => EXIT_INFO };
-    const { value } = await exits(device as never, 'dev.appdyno.fixture');
+    const { value } = await exits(device('') as never, 'dev.appdyno.fixture');
     expect(value).toMatchObject({ crashes: 1, anrs: 2, userAnrs: 1, total: 3 });
+  });
+
+  it('counts an ANR the app recovered from, which ends in no exit', async () => {
+    const shell = async (cmd: string) =>
+      cmd.includes('dropbox') ? filed(TOUCH, TOUCH, TOUCH) : 'no exits here';
+    const { value } = await exits({ shell } as never, 'dev.appdyno.fixture');
+    expect(value).toMatchObject({ crashes: 0, anrs: 3, userAnrs: 3, total: 0 });
+  });
+
+  it('counts one that was killed once, though both have it', async () => {
+    const { value } = await exits(
+      device(filed(TOUCH, 'Broadcast of Intent')) as never,
+      'dev.appdyno.fixture',
+    );
+    expect(value).toMatchObject({ anrs: 2, userAnrs: 1 });
+  });
+
+  it('counts no other app’s, and stands where the dropbox cannot be read', async () => {
+    const other = filed(TOUCH).replace('Process: dev.appdyno.fixture', 'Process: com.other');
+    const { value } = await exits(device(other) as never, 'dev.appdyno.fixture');
+    expect(value).toMatchObject({ anrs: 2, userAnrs: 1 });
+    const failing = {
+      shell: async (cmd: string) => {
+        if (cmd.includes('dropbox')) throw new Error('no dropbox');
+        return EXIT_INFO;
+      },
+    };
+    expect((await exits(failing as never, 'dev.appdyno.fixture')).value.userAnrs).toBe(1);
   });
 });

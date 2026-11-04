@@ -8,6 +8,7 @@
 - `biometric` on an emulator: `match` and `nomatch` touch its sensor and are done only when the fingerprint service counted the touch, and `enroll` touches until one is held.
 - `device_setting` `keychain`: empties a simulator's keychain and counts what apps held, from the store's own rows.
 - Android: a system UI window with the focus is read: a biometric prompt was an empty screen.
+- User-perceived ANRs count one the app recovered from: it ends in no exit, and read 0 for three real ones. The dropbox has them.
 - One flow can run another: `run shared/login.flow` puts its steps in place. All are read before the first step acts, a file that runs itself is refused with the way round named, and a failure names the file and line it is on.
 - Kept traces are pruned, to a limit that is said and can be changed (10 GB, `--trace-limit-gb`), oldest first and never what a baseline or a recent run names. It goes by one state folder, removes nothing when what it reads is empty or unreadable, and logs what it removes; `appdyno perf prune [--dry-run]` lists the same.
 - A unit test can no longer reach this Mac's own state folder: it has one of its own, and a call on the real one fails the run.

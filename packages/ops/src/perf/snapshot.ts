@@ -222,7 +222,7 @@ const EXTRAS = {
     ],
     line: (v) =>
       [
-        `exits: ${v.crashes} crashes${v.anrs === undefined ? '' : `, ${v.anrs} ANRs`} of ${v.total}`,
+        `exits: ${v.crashes} crashes of ${v.total}${v.anrs === undefined ? '' : `; ${v.anrs} ANRs filed`}`,
         ...(v.userAnrs === undefined ? [] : [playLine('exits.user_anrs', v.userAnrs)]),
       ].join('\n'),
     data: (v) => ({

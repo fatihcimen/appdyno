@@ -235,7 +235,7 @@ describe('the page and the measures', () => {
       'threads: main 50% (10 ms above 90 %)',
       'network: 3 bytes in, 4 out (loopback)',
       'energy: 5 mAh; a formula',
-      'exits: 1 crashes, 2 ANRs of 3',
+      'exits: 1 crashes of 3; 2 ANRs filed',
       'size: 1.0 MB',
     ]);
     expect(data).toMatchObject({

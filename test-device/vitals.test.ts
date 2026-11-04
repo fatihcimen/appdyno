@@ -117,36 +117,25 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
     await d.shell(`am force-stop ${APP}`);
     await t.call('launch_app');
     const before = await t.call('perf_snapshot', { also: ['exits'], cpuWindowMs: 500 });
+    await pause(1_500);
     const freeze = (await d.read(APP)).list.find((e) => /freeze/i.test(e.label ?? ''))!;
     await d.tap(freeze, { settle: false });
-    await pause(1_000);
-    // the system's limit for a touch nobody takes is 5 s, from its second touch on
-    await d.shell('input tap 200 200');
-    await pause(500);
-    await d.shell('input tap 200 200');
-    let closed = false;
-    for (let i = 0; i < 40 && !closed; i++) {
+    await pause(800);
+    // more touches on the same button, and not awaited as each waits for the app: the system takes longer than one 12 s
+    // freeze to come to its dialog, and an app that has recovered by then gets none, so these keep it stuck
+    const stuck = [0, 300].map(async (ms) => {
+      await pause(ms);
+      await d.shell(`input tap ${freeze.x} ${freeze.y}`).catch(() => undefined);
+    });
+    // the system files it in the time it takes, and an app that recovers ends in no exit: the count is what says
+    let after = before;
+    for (let i = 0; i < 40 && after.data.userAnrs === before.data.userAnrs; i++) {
       await pause(1_000);
-      // the system's dialog is no window of the app's: its button is found in the whole tree
-      const tree = await d.tree().catch(() => undefined);
-      const close = tree?.nodes.find((n) => /aerr_close/.test(n.id ?? ''));
-      if (close) {
-        await d.shell(
-          `input tap ${(close.b[0] + close.b[2]) >> 1} ${(close.b[1] + close.b[3]) >> 1}`,
-        );
-        closed = true;
-      }
+      after = await t.call('perf_snapshot', { also: ['exits'], cpuWindowMs: 500 });
     }
-    console.log('ANR dialog answered:', closed);
-    await pause(2_000);
-    // HyperOS opens its own page on what happened: back to where the test was
-    await d.shell('input keyevent KEYCODE_BACK');
-    const raw = await d.shell(`dumpsys activity exit-info ${APP}`);
-    console.log(raw.split('ApplicationExitInfo #').slice(1, 2).join('').slice(0, 500));
-    await t.call('launch_app');
-    const after = await t.call('perf_snapshot', { also: ['exits'], cpuWindowMs: 500 });
+    await Promise.all(stuck);
     console.log(after.text);
     expect(after.data.userAnrs!).toBe(before.data.userAnrs! + 1);
     expect(after.text).toContain('this session would count as a user-perceived ANR');
-  }, 180_000);
+  }, 240_000);
 });

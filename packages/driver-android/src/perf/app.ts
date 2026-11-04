@@ -13,7 +13,7 @@ import {
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg, shq } from '../adb.js';
-import { parseExitInfo } from '../crashes.js';
+import { parseDropbox, parseExitInfo } from '../crashes.js';
 import { BATTERY_BACK, BATTERY_GUARD } from '../settings.js';
 import { traceProcessor } from '../tools.js';
 import {
@@ -148,26 +148,39 @@ export async function energy(
   }
 }
 
-/** How the app's processes ended, as far back as the system keeps (16 by default): crashes and ANRs apart. */
+/** An ANR as the system filed it: only its headers, as an entry holds a whole trace of every thread. */
+const ANR_HEADERS = `dumpsys dropbox --print data_app_anr | grep -E '^(=====|[0-9]{4}-[0-9]{2}-[0-9]{2} |Process: |Package: |Subject: )'`;
+
+const USER_PERCEIVED = /Input dispatching timed out/i;
+
+/**
+ * How the app's processes ended, as far back as the system keeps (16 by default), and its ANRs. An app that recovers
+ * ends in no exit, though the user waited all the same, and its ANR is only in the dropbox: three in a row on a Xiaomi
+ * left none in the exits. A kill is in both, so what counts is the larger of the two, not their sum.
+ */
 export async function exits(d: PerfDevice, pkg: string): Promise<Measured<ExitReading>> {
   assertPkg(pkg);
   const raw = await sh(d, `dumpsys activity exit-info ${pkg}`, 30_000);
-  const exits = parseExitInfo(raw);
+  const filed = await sh(d, ANR_HEADERS, 30_000).catch(() => '');
+  const ended = parseExitInfo(raw);
+  const anrExits = ended.filter((e) => /\bANR\b/i.test(e.reason));
+  const anrFiled = parseDropbox(filed, pkg);
   return {
     value: {
-      crashes: exits.filter((e) => /CRASH/i.test(e.reason)).length,
-      anrs: exits.filter((e) => /\bANR\b/i.test(e.reason)).length,
-      userAnrs: exits.filter(
-        (e) => /\bANR\b/i.test(e.reason) && /Input dispatching timed out/i.test(e.detail ?? ''),
-      ).length,
-      total: exits.length,
-      recent: exits.slice(0, 10).map((e) => ({
+      crashes: ended.filter((e) => /CRASH/i.test(e.reason)).length,
+      anrs: Math.max(anrExits.length, anrFiled.length),
+      userAnrs: Math.max(
+        anrExits.filter((e) => USER_PERCEIVED.test(e.detail ?? '')).length,
+        anrFiled.filter((e) => USER_PERCEIVED.test(e.text)).length,
+      ),
+      total: ended.length,
+      recent: ended.slice(0, 10).map((e) => ({
         at: e.at,
         reason: e.reason,
         ...(e.detail && { description: e.detail }),
       })),
     },
-    raw,
+    raw: `${raw}\n---\n${filed}`,
     at: at(),
   };
 }
