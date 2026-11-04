@@ -3,6 +3,8 @@
 ## Unreleased
 
 - One flow can run another: `run shared/login.flow` puts its steps in place. All are read before the first step acts, a file that runs itself is refused with the way round named, and a failure names the file and line it is on.
+- Kept traces are pruned, to a limit that is said and can be changed (10 GB, `--trace-limit-gb`), oldest first and never what a baseline or a recent run names. It goes by one state folder, removes nothing when what it reads is empty or unreadable, and logs what it removes; `appdyno perf prune [--dry-run]` lists the same.
+- A unit test can no longer reach this Mac's own state folder: it has one of its own, and a call on the real one fails the run.
 - No silent success: a failed action says whether its touch went out (`dispatched`); a touch reads a screen nobody has seen first; a locked phone refuses by name (`DEVICE_LOCKED`); two recordings at once refuse by name, not an empty trace; an iPhone's thermal state is read from what it recorded.
 - Android 15 and later: `perf_snapshot` `also: startInfo` says why the app last started, and where the start went, with no trace.
 - `perf_snapshot` on a process with no window, up for a broadcast or a job, reads 0 frames: it failed on the summary such a process does not print.

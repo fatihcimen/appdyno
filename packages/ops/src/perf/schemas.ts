@@ -163,6 +163,16 @@ export const HeapOut = z.object({
 });
 
 export const CompareOut = z.object({
+  prune: z
+    .object({
+      limitBytes: z.number(),
+      beforeBytes: z.number(),
+      afterBytes: z.number(),
+      removed: z.number(),
+      over: z.boolean(),
+      stopped: z.string().optional(),
+    })
+    .optional(),
   functions: z
     .array(
       z.object({

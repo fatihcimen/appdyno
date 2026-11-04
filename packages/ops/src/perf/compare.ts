@@ -1,7 +1,8 @@
-import type { CpuProfile } from '@appdyno/core';
+import { stateDir, type CpuProfile } from '@appdyno/core';
 import {
   functionDiff,
   loadMeasurement,
+  pinBaseline,
   writeDashboard,
   runKeys,
   latestRuns,
@@ -21,21 +22,23 @@ import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { CompareOut } from './schemas.js';
 import { defineOp, READ, reply, ToolError } from '../tool.js';
-import { Scenario, rewriteDashboard } from './shared.js';
+import { Scenario, pruneNow, rewriteDashboard } from './shared.js';
 
-const MeasurementId = z.string().max(40).optional().describe('a perf_profile id');
+const MeasurementId = z.string().max(40).optional();
 
 export function perfCompareOp(ctx: ServerContext) {
   return defineOp({
     name: 'perf_compare',
     title: 'Compare with the baseline',
     description:
-      'The newest runs against the baseline and budgets in .appdyno/perf/; a change counts only when statistically and practically significant. budget: budgets only; baseline: adds the newest run, `replace` starts over; dashboard: writes the page; functions: what moved between two perf_profile ids. No device needed.',
+      'The newest runs against the baseline and budgets in .appdyno/perf/; a change counts only when statistically and practically significant. budget: budgets only; baseline: adds the newest run, `replace` starts over; dashboard: writes the page; functions: what moved between two perf_profile ids; prune: traces down to the limit. No device needed.',
     input: z
       .object({
         action: z
-          .enum(['compare', 'budget', 'baseline', 'dashboard', 'functions'])
+          .enum(['compare', 'budget', 'baseline', 'dashboard', 'functions', 'prune'])
           .default('compare'),
+        limitGb: z.number().min(0).max(10_000).optional(),
+        dryRun: z.boolean().optional(),
         from: MeasurementId,
         to: MeasurementId,
         app: z.string().max(200).optional(),
@@ -48,9 +51,52 @@ export function perfCompareOp(ctx: ServerContext) {
       .strict(),
     output: CompareOut,
     annotations: READ,
-    run: async ({ action, from, to, app, scenario, deviceClass, last, replace, format }) => {
+    run: async ({
+      action,
+      limitGb,
+      dryRun,
+      from,
+      to,
+      app,
+      scenario,
+      deviceClass,
+      last,
+      replace,
+      format,
+    }) => {
       const dir = ctx.measurementsDir;
       const project = ctx.perfDir;
+      if (action === 'prune') {
+        const r = await pruneNow(ctx, limitGb ?? ctx.traceLimitGb, dryRun);
+        const gb = (bytes: number) => `${(bytes / 2 ** 30).toFixed(2)} GB`;
+        const verb = dryRun ? 'would remove' : 'removed';
+        return reply(
+          [
+            `traces and heap dumps: ${gb(r.beforeBytes)} of a limit of ${gb(r.limitBytes)}; ${verb} ${r.removed.length}, ${gb(r.beforeBytes - r.afterBytes)}; ${gb(r.afterBytes)} left`,
+            ...(r.stopped ? [`nothing was removed: ${r.stopped}`] : []),
+            ...(r.over && !r.stopped
+              ? [
+                  'still over the limit: what is left is named by a baseline or a recent run, or is under a day old',
+                ]
+              : []),
+            ...r.removed.map((x) => `${verb}: ${x.name} (${x.bytes} bytes)`),
+            ...(r.removed.length && !dryRun ? [`log: ${r.log}`] : []),
+          ].join('\n'),
+          {
+            failed: false,
+            exitCode: 0,
+            reports: [],
+            prune: {
+              limitBytes: r.limitBytes,
+              beforeBytes: r.beforeBytes,
+              afterBytes: r.afterBytes,
+              removed: r.removed.length,
+              over: r.over,
+              ...(r.stopped && { stopped: r.stopped }),
+            },
+          },
+        );
+      }
       if (action === 'functions') {
         const profile = async (id: string | undefined) => {
           const held = id ? await loadMeasurement<CpuProfile>(dir, id) : undefined;
@@ -108,6 +154,7 @@ export function perfCompareOp(ctx: ServerContext) {
             project,
             addToBaseline(k, await loadBaseline(project, k), clean, replace),
           );
+          await pinBaseline(stateDir(), clean);
           files.push(file);
           lines.push(
             `baseline: ${file}`,

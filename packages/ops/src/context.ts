@@ -7,6 +7,7 @@ import {
   type DeviceProvider,
   type ScreenElement,
 } from '@appdyno/core';
+import { DEFAULT_TRACE_LIMIT_GB } from '@appdyno/perf';
 import { claim, holder, release } from './claims.js';
 import { restoreConditions } from './control.js';
 import { endCapture } from './network.js';
@@ -47,6 +48,8 @@ export class ServerContext {
       device?: string;
       app?: string;
       measurements?: string;
+      traceLimitGb?: number;
+      autoPrune?: boolean;
       /** The project's baselines and budgets. */
       perf?: string;
       /** A file to keep the selection and the diff baseline in between processes (the command line). */
@@ -74,6 +77,16 @@ export class ServerContext {
   private readonly saved: Saved | undefined;
 
   /** Where measurements and their raw outputs are stored (this machine only). */
+  /** What traces and heap dumps may take on this Mac, in GB: `--trace-limit-gb`, `APPDYNO_TRACE_LIMIT_GB`. */
+  get traceLimitGb(): number {
+    return this.defaults.traceLimitGb ?? DEFAULT_TRACE_LIMIT_GB;
+  }
+
+  /** Only a user's own entry point sets this: a kept run looks at what traces take. */
+  get autoPrune(): boolean {
+    return this.defaults.autoPrune === true;
+  }
+
   get measurementsDir(): string {
     return this.defaults.measurements ?? join(stateDir(), 'measurements');
   }

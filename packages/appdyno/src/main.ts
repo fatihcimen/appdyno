@@ -54,6 +54,7 @@ type Settings = {
   takeover?: boolean;
   share?: boolean;
   measurements?: string;
+  'trace-limit-gb'?: string;
   animations?: string;
   'no-install-consent'?: boolean;
   'accept-install-warnings'?: boolean;
@@ -83,6 +84,10 @@ function contextFrom(values: Settings, remember?: string) {
   const animations = values.animations ?? env.APPDYNO_ANIMATIONS;
   if (animations !== undefined && animations !== 'on' && animations !== 'off')
     throw new Error(`--animations takes on or off, not ${animations}`);
+  const limit = values['trace-limit-gb'] ?? env.APPDYNO_TRACE_LIMIT_GB;
+  const traceLimitGb = limit === undefined ? undefined : Number(limit);
+  if (traceLimitGb !== undefined && !(traceLimitGb >= 0))
+    throw new Error(`--trace-limit-gb takes a number of GB, not ${limit}`);
   const installAnswers = {
     prompts: !(values['no-install-consent'] || env.APPDYNO_NO_INSTALL_CONSENT === '1'),
     warnings:
@@ -92,6 +97,9 @@ function contextFrom(values: Settings, remember?: string) {
     ...(device && { device }),
     ...(app && { app }),
     ...(values.measurements && { measurements: values.measurements }),
+    ...(traceLimitGb !== undefined && { traceLimitGb }),
+    // a run kept in a folder of its own says nothing of the traces here
+    ...(!values.measurements && { autoPrune: true }),
     ...(remember && { remember }),
     claims: true,
     owner: remember ? 'appdyno cli' : 'appdyno mcp',
@@ -117,6 +125,7 @@ async function serveMcp(args: string[]) {
       share: { type: 'boolean' },
       animations: { type: 'string' },
       measurements: { type: 'string' },
+      'trace-limit-gb': { type: 'string' },
       'no-install-consent': { type: 'boolean' },
       'accept-install-warnings': { type: 'boolean' },
     },
@@ -328,10 +337,10 @@ async function main(): Promise<number> {
       const gate = command === 'perf' ? rest.shift() : undefined;
       if (
         command === 'perf' &&
-        !['compare', 'baseline', 'budget', 'functions'].includes(gate ?? '')
+        !['compare', 'baseline', 'budget', 'functions', 'prune'].includes(gate ?? '')
       ) {
         err(
-          'usage: appdyno perf compare|baseline|budget [--app A] [--scenario S] [--device-class C] [--last N] [--replace] [--format text|json|junit]\n       appdyno perf functions --from pm-a --to pm-b\n       appdyno perf dashboard [--app A] [--out dir] [--open]\n       appdyno perf survey --app A [--device S]',
+          'usage: appdyno perf compare|baseline|budget [--app A] [--scenario S] [--device-class C] [--last N] [--replace] [--format text|json|junit]\n       appdyno perf functions --from pm-a --to pm-b\n       appdyno perf prune [--limit-gb N] [--dry-run]\n       appdyno perf dashboard [--app A] [--out dir] [--open]\n       appdyno perf survey --app A [--device S]',
         );
         return 2;
       }
@@ -359,7 +368,7 @@ async function main(): Promise<number> {
           `usage: appdyno <command> [flags]; appdyno <command> --help for its flags
 
 commands:
-  mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--animations on|off] [--measurements dir] [--no-install-consent] [--accept-install-warnings]
+  mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--animations on|off] [--measurements dir] [--trace-limit-gb N] [--no-install-consent] [--accept-install-warnings]
                    the MCP server over stdio
   devices          the connected Android devices
   test <dir or files> [--device S]... [--param NAME=value]... [--env-file F] [--tag T]... [--exclude-tag T]... [--artifacts dir] [--junit file] [--retries N] [--measure [--iterations N]]
@@ -373,6 +382,8 @@ commands:
                    the performance gate: non-zero on a regression or a broken budget
   perf functions --from pm-a --to pm-b [--measurements dir]
                    which functions moved between two kept profiles
+  perf prune [--limit-gb N] [--dry-run] [--measurements dir]
+                   kept traces and heap dumps down to the limit, 10 GB by default
   perf dashboard [--app A] [--out dir] [--open] [--measurements dir]
                    one page: what can be read on each device, what changed, what needs attention
   perf survey --app A [--device S] [--measurements dir]

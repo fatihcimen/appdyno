@@ -122,7 +122,15 @@ An injected change has to clear what that device's runs do by themselves, so a s
 reported as `ok`, with the floor beside it. On an emulator a sleep at the start of a very fast launch shows only partly: 400 ms added
 about 230 ms, because the system's own start work runs alongside it.
 
-Kept traces and runs stay on this machine until removed; nothing prunes them.
+## Kept traces
+
+Traces and heap dumps stay on this machine, up to a limit: 10 GB by default, `--trace-limit-gb` or `APPDYNO_TRACE_LIMIT_GB` to change it. `appdyno perf prune [--limit-gb N] [--dry-run]` or `perf_compare` `action: prune` brings them down to it and lists what it removed; a dry run lists the same and touches nothing. Each removal goes in `traces-pruned.log` in the state folder, with its time and size. The server and the command line also look when a run is kept, at most once an hour. Nothing else that makes a context does: not the library, and not a test.
+
+They go oldest first, and never what a baseline took its numbers from, what one of a scenario's 30 newest runs names, or what is under a day old, so it can stay over the limit, and says so. A baseline holds samples and no path, so the way there is the baseline's run time to the kept run, the run to its measurement, and the measurement's two files to the trace. Taking a baseline also pins what it took, in `traces-pinned.json`, as one project cannot see another's baselines.
+
+**What it does not know, it does not delete.** It goes by one state folder: it reads that folder's `measurements`, and removes only direct entries of that folder's `traces` and `measurements` that are traces or heap dumps. With no kept run to go by, or a run, a measurement, a baseline or the pins it cannot read, it removes nothing and says why. A context with `--measurements` elsewhere is refused: the traces are not its runs' to speak for. A link is not followed, and a linked `traces` folder stops it.
+
+An earlier version read a context's own runs and deleted from the state folder, so a context with no runs saw every trace as free, and unit tests ran it on this Mac's real folder. Only the limit stopped it. So a unit test now has a state folder of its own, and `packages/appdyno/test/no-real-state.setup.ts` watches every file call in every worker: one on `~/Library/Caches/appdyno` throws, and fails the run at its end even if the error is swallowed. Proven both ways: a clean run exits 0, and a swallowed read exits 1 naming the call.
 
 ## Why a slow frame was slow
 

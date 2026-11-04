@@ -1,5 +1,7 @@
+import { stat, writeFile } from 'node:fs/promises';
 import { loadavg, cpus } from 'node:os';
-import { type Capability, type MeasureSource, type Measured, pause } from '@appdyno/core';
+import { join } from 'node:path';
+import { type Capability, type MeasureSource, type Measured, pause, stateDir } from '@appdyno/core';
 import {
   type DeviceInfo,
   type MeasureId,
@@ -9,6 +11,7 @@ import {
   type Metric,
   recordsOf,
   newId,
+  pruneTraces,
   saveRun,
   store,
 } from '@appdyno/perf';
@@ -150,6 +153,50 @@ export const rewriteDashboard = async (ctx: ServerContext) => {
   }
 };
 
+/** How often a kept run looks at what traces take: it walks the folder, and a run comes every few seconds. */
+const PRUNE_EVERY_MS = 3_600_000;
+
+/**
+ * Down to the limit, by one state folder's runs and only in it. A context that keeps its runs elsewhere does not know
+ * what those traces are for, so it is refused and not guessed at.
+ */
+export function pruneNow(ctx: ServerContext, limitGb: number, dryRun = false) {
+  const state = stateDir();
+  if (ctx.measurementsDir !== join(state, 'measurements'))
+    throw new ToolError(
+      `traces are in ${state} and this context keeps its runs in ${ctx.measurementsDir}: a prune goes by one folder's runs`,
+      'UNSUPPORTED',
+      'leave out --measurements',
+    );
+  return pruneTraces({
+    state,
+    project: ctx.perfDir,
+    limitBytes: limitGb * 2 ** 30,
+    dryRun,
+  });
+}
+
+/**
+ * At most hourly across processes, by a file's time, and only where the entry point asked (`autoPrune`): the server and
+ * the command line of a user. Nothing else that makes a context ever prunes by itself. A number is kept whatever becomes
+ * of this.
+ */
+async function pruneWhenDue(ctx: ServerContext) {
+  if (!ctx.autoPrune) return;
+  const stamp = join(stateDir(), 'traces-pruned');
+  try {
+    const last = await stat(stamp).then(
+      (x) => x.mtimeMs,
+      () => 0,
+    );
+    if (Date.now() - last < PRUNE_EVERY_MS) return;
+    await writeFile(stamp, '');
+    await pruneNow(ctx, ctx.traceLimitGb);
+  } catch {
+    // `perf prune` says what is wrong
+  }
+}
+
 /**
  * A run's records, with the context each number is judged by; read after the measured window, so it does not
  * disturb it. Whatever measures next (a flow's journey, step by step) keeps its numbers here and perf_compare
@@ -196,6 +243,7 @@ export async function keepRun(
   );
   await saveRun(ctx.measurementsDir, records);
   await rewriteDashboard(ctx);
+  await pruneWhenDue(ctx);
   return [...new Set(records.flatMap((r) => r.noise))];
 }
 
