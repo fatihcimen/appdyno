@@ -1,7 +1,7 @@
 # appdyno
 
 appdyno drives and measures iOS and Android devices: simulators, emulators and phones. It is an MCP
-server (stdio), a command line and a TypeScript library, on macOS. It talks to the device through its
+server (stdio, and Streamable HTTP if asked), a command line and a TypeScript library, on macOS. It talks to the device through its
 own on-device agents, and it reads performance numbers (frames, memory, CPU, launch time) from the
 device itself.
 
@@ -28,6 +28,8 @@ For any other client, add this to its server list:
 ```
 
 Add `--device`, `--app` and the other [server options](#server-options) to `args`.
+
+[docs/clients.md](docs/clients.md) ([Türkçe](docs/clients.tr.md)) takes each client step by step, with what to check and what goes wrong, the clients that run in a browser and cannot start a program here, and a phone from nothing, signing included.
 
 You need Node 22+, and `adb` for Android or Xcode for iOS. No JDK, no pnpm. The package is one
 download with no runtime dependencies.
@@ -382,10 +384,16 @@ directory, so two terminals in two folders do not share a device.
 | `--share`                   | `APPDYNO_SHARE=1`                   | use a device another process holds                                                                                  |
 | `--animations V`            | `APPDYNO_ANIMATIONS`                | `off` sets an Android device's animation scales to 0 while it is driven                                             |
 | `--trace-limit-gb N`        | `APPDYNO_TRACE_LIMIT_GB`            | what kept traces and heap dumps may take, 10 by default; older ones go, never what a baseline or a recent run names |
+| `--http 127.0.0.1:PORT`     |                                     | Streamable HTTP on this Mac's loopback, not stdio: see below. Off unless given, and no variable turns it on         |
+|                             | `APPDYNO_HTTP_TOKEN`                | the token `--http` asks for, 32 characters or more: generated and printed if not set                                |
 |                             | `APPDYNO_SECRETS=a,b`               | values never shown back or put on the clipboard                                                                     |
 
 Without `--takeover`, a second tool holding UI automation on Android is never stopped. The error names
 the holder by its pid and command line and gives the exact command to stop it.
+
+`--http` is for a client that cannot start a program on this Mac. It listens on loopback and refuses any other address, and it reaches further only through a tunnel you run: there is no service of ours. **Whoever has the address and the token drives your devices**, and reads and writes files here where a tool takes a path. See [docs/clients.md](docs/clients.md#clients-in-a-browser) before you open one.
+
+A request needs the token, as `Authorization: Bearer <token>` on `/mcp`, or as `/mcp/<token>` for a client with no field for a header, and a token in an address shows in a tunnel's logs. A request with an `Origin` other than the server's own is refused with 403. There is a server per POST and no MCP session, as such a client may open one for each tool call and leave no word. A client is known by the name it gives: once it has called a tool it holds the context of a stdio session until 10 minutes after its last call, when its conditions go back, and another client is refused with a 409 that names it. A broken connection stops its call. A variable sets the token and no flag does, as a flag would show in `ps`.
 
 ## Reaching a phone
 
@@ -430,7 +438,7 @@ Measurement methods and raw outputs are described in `docs/perf.md`.
 
 ## Security
 
-Local only: no network listener, no telemetry, and you decide which devices, apps and links it may touch. What listens on this Mac is others': adb's server on its port, and an emulator's gRPC port, the emulator's own, behind its token, for the picture of a window.
+Local only: no network listener by default, no telemetry, and you decide which devices, apps and links it may touch. `--http` alone opens one, on loopback, behind a token. What else listens on this Mac is others': adb's server on its port, and an emulator's gRPC port, the emulator's own, behind its token, for the picture of a window.
 See [SECURITY.md](SECURITY.md).
 
 ## Contributing
