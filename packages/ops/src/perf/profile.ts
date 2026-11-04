@@ -27,7 +27,6 @@ export function perfProfileOp(ctx: ServerContext) {
       .strict(),
     output: ProfileOut,
     annotations: READ,
-    needs: 'cpuProfile',
     run: async ({ app, seconds, scroll, dsym }) => {
       const s = await ctx.session();
       s.appPid = undefined;

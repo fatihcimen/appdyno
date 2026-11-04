@@ -287,7 +287,6 @@ export function perfSnapshotOp(ctx: ServerContext) {
       .strict(),
     output: SnapshotOut,
     annotations: READ,
-    needs: 'cpu',
     run: async ({ app, cpuWindowMs, batteryWindowMs, also = [], scenario }) => {
       const s = await ctx.session();
       s.appPid = undefined;

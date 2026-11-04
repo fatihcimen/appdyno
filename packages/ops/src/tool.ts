@@ -1,4 +1,3 @@
-import type { Capability } from '@appdyno/core';
 import { DeviceError, type ErrorCode } from '@appdyno/protocol';
 import { z } from 'zod';
 
@@ -91,11 +90,7 @@ export interface Tool {
 }
 
 /** One operation: a tool on the MCP surface and a command on the CLI. */
-export type Op = Tool & {
-  name: string;
-  /** The measure it cannot do without. */
-  needs?: Capability;
-};
+export type Op = Tool & { name: string };
 
 /** An op, whose device failures reach the surfaces as refusals wherever in its `run` they came from. */
 export function defineOp<
@@ -109,7 +104,6 @@ export function defineOp<
   input: S;
   output: O;
   annotations: ToolAnnotations;
-  needs?: Capability;
   run: (args: z.infer<S>) => Promise<ToolResult<z.infer<O>>>;
 }): Omit<Op, 'name' | 'output'> & { name: N; output: O } {
   const { run, ...rest } = def;

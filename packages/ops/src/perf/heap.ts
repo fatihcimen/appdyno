@@ -28,7 +28,6 @@ export function perfHeapOp(ctx: ServerContext) {
       .strict(),
     output: HeapOut,
     annotations: READ,
-    needs: 'heap',
     run: async ({ app, profile, seconds }) => {
       const s = await ctx.session();
       s.appPid = undefined;

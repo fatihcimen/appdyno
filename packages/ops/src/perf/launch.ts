@@ -31,7 +31,6 @@ export function perfLaunchOp(ctx: ServerContext) {
       .strict(),
     output: LaunchOut,
     annotations: DESTRUCTIVE,
-    needs: 'launch',
     run: async ({ app, mode, repeats, compile, trace, baselineProfile, probe, scenario }) => {
       const s = await ctx.session();
       s.appPid = undefined;

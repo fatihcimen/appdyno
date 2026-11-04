@@ -60,7 +60,6 @@ export function perfScrollOp(ctx: ServerContext) {
       .strict(),
     output: ScrollOut,
     annotations: ACT,
-    needs: 'frames',
     run: async ({ app, direction, swipes, repeats, probe, scenario }) => {
       const s = await ctx.session();
       s.appPid = undefined;

@@ -50,7 +50,6 @@ export function perfTraceOp(ctx: ServerContext) {
       .strict(),
     output: TraceOut,
     annotations: ACT,
-    needs: 'frameTrace',
     run: async ({ app, seconds, scroll, what, dsym, probe, scenario }) => {
       const s = await ctx.session();
       s.appPid = undefined;
