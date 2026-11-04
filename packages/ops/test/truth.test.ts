@@ -1,6 +1,6 @@
 import { reportProgress, type Device, type DeviceProvider } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { busyReasons } from '../src/answers.js';
 import { ServerContext } from '../src/context.js';
@@ -195,6 +195,49 @@ describe('failed answers', () => {
     expect(await code('logs')).toBe('UNSUPPORTED');
     expect(await code('crashes')).toBe('UNSUPPORTED');
     expect(await code('flow', { action: 'stop' })).toBe('NOT_FOUND');
+  });
+});
+
+describe('a launch', () => {
+  const launching = (until?: string) => {
+    const device = new FakeDevice();
+    const launch = vi.fn(async () => ({
+      value: {
+        mode: 'cold' as const,
+        samples: [{ totalMs: 6_000 }],
+        medianMs: 6_000,
+        ...(until && { until }),
+      },
+      raw: '6000',
+      at: '2026-11-03T00:00:00.000Z',
+    }));
+    Object.defineProperty(device, 'measure', { value: { ...device.measure, launch } });
+    return { device, launch };
+  };
+
+  it("past the system's limit is excessive, in its text and its data alike", async () => {
+    const { call } = await connect(launching().device);
+    const r = await call('perf_launch');
+    expect(r.text).toContain('excessive: threshold 5000 ms');
+    expect(r.structuredContent).toMatchObject({ excessive: true });
+  });
+
+  it("counted to a tool's own mark is judged by no such limit, in its text or its data", async () => {
+    const { call } = await connect(launching('the first screen is read').device);
+    const r = await call('perf_launch');
+    expect(r.text).toContain('median: 6000 ms');
+    expect(r.text).not.toContain('excessive');
+    expect(r.structuredContent).toMatchObject({ excessive: false });
+  });
+
+  it('is asked for as many times as it is done', async () => {
+    const { device, launch } = launching();
+    const { call } = await connect(device);
+    await call('perf_launch', { repeats: 10 });
+    expect(launch.mock.calls.at(-1)).toMatchObject([expect.any(String), { repeats: 10 }]);
+    // Android and a simulator do at most 10, so more is refused rather than quietly not done
+    expect((await call('perf_launch', { repeats: 11 })).isError).toBe(true);
+    expect(launch).toHaveBeenCalledTimes(1);
   });
 });
 

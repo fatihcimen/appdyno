@@ -15,7 +15,7 @@ export function perfLaunchOp(ctx: ServerContext): Op {
       .object({
         app: App,
         mode: z.enum(['cold', 'warm', 'hot']).default('cold'),
-        repeats: z.number().int().min(1).max(30).default(5),
+        repeats: z.number().int().min(1).max(10).default(5),
         compile: z.enum(['speed', 'speed-profile', 'verify']).optional(),
         trace: z.boolean().optional(),
         probe: Probe,
@@ -120,7 +120,7 @@ export function perfLaunchOp(ctx: ServerContext): Op {
             ...(x.state && { state: x.state }),
           })),
           ...(med !== undefined && { medianMs: med }),
-          excessive: med !== undefined && med >= limit,
+          excessive: over,
           ...(fullyDrawnMedianMs !== undefined && { fullyDrawnMedianMs }),
           ...(m.value.compile && { compile: m.value.compile.asked }),
           ...(startup && {
