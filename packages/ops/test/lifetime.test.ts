@@ -25,12 +25,6 @@ class Settings implements DeviceSettings {
     }
     this.values[name] = value;
   };
-  push = async () => undefined;
-  biometric = async () => undefined;
-  resetKeychain = async () => 0;
-  fold = async () => undefined;
-  call = async () => undefined;
-  sms = async () => undefined;
 }
 
 const withSettings = () => {

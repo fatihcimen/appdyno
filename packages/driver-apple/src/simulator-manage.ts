@@ -7,6 +7,7 @@ import {
   run,
   type LaunchOptions,
   type BiometricAnswer,
+  type DeviceEvents,
   type DeviceSettings,
   type SettingName,
   type VirtualDevices,
@@ -215,6 +216,16 @@ export class SimulatorSettings implements DeviceSettings {
         await this.get(name);
     }
   }
+}
+
+/** A simulator's one-time events; what it has no way to take says so. */
+export class SimulatorEvents implements DeviceEvents {
+  constructor(
+    private readonly simctl: Simctl,
+    private readonly udid: string,
+  ) {}
+
+  private spawn = (...words: string[]) => this.simctl.exec(['spawn', this.udid, ...words]);
 
   async push(app: string | undefined, title: string, body: string) {
     if (!app)

@@ -134,7 +134,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
       annotations: DESTRUCTIVE,
       run: async ({ name, value, title, app }) => {
         const s = await ctx.session();
-        const settings = s.device.settings;
+        const { settings, events } = s.device;
         if (name === 'restore') {
           const { restored, failed, left } = await restoreConditions(
             s,
@@ -152,7 +152,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
           if (!value) throw new ToolError('push needs value: the text', 'INVALID_ARGUMENT');
           const pkg = app ?? s.appId;
           if (pkg) checkApp(policy, pkg);
-          await settings.push(pkg, title ?? 'appdyno', value);
+          await events.push(pkg, title ?? 'appdyno', value);
           return reply(`posted a notification`, { done: 'posted a notification' });
         }
         if (name === 'biometric') {
@@ -162,19 +162,19 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
               `biometric needs value: ${BIOMETRIC.join(', ')}`,
               'INVALID_ARGUMENT',
             );
-          await settings.biometric(answer);
+          await events.biometric(answer);
           return reply(`biometric: ${value}`, { done: `biometric: ${value}` });
         }
         if (name === 'keychain') {
           if (value !== 'reset')
             throw new ToolError('keychain needs value: reset', 'INVALID_ARGUMENT');
-          const t = `the keychain is empty: it held ${await settings.resetKeychain()} items`;
+          const t = `the keychain is empty: it held ${await events.resetKeychain()} items`;
           return reply(t, { done: t });
         }
         if (name === 'fold') {
           if (value !== 'open' && value !== 'closed')
             throw new ToolError('fold needs value: open or closed', 'INVALID_ARGUMENT');
-          await settings.fold(value === 'closed');
+          await events.fold(value === 'closed');
           s.acted();
           return reply(`fold: ${value}`, { done: `fold: ${value}` });
         }
@@ -185,7 +185,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
               'call needs value: a phone number; end and the number hangs up',
               'INVALID_ARGUMENT',
             );
-          await settings.call(m[2]!, !!m[1]);
+          await events.call(m[2]!, !!m[1]);
           s.acted();
           const t = m[1] ? `the call from ${m[2]} ended` : `a call from ${m[2]} is coming in`;
           return reply(t, { done: t });
@@ -198,7 +198,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
               'sms needs title: the phone number it comes from',
               'INVALID_ARGUMENT',
             );
-          await settings.sms(from, value);
+          await events.sms(from, value);
           s.acted();
           return reply(`an SMS came from ${from}`, { done: `an SMS came from ${from}` });
         }

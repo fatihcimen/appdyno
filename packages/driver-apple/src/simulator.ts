@@ -1,7 +1,7 @@
 import { sleep, type ScreenRecorder, TIMEOUTS, type ActOptions, pause } from '@appdyno/core';
 import { simulatorCrashes } from './crashes.js';
 import { simulatorLogs } from './logs.js';
-import { SimulatorApps, SimulatorSettings } from './simulator-manage.js';
+import { SimulatorApps, SimulatorEvents, SimulatorSettings } from './simulator-manage.js';
 import {
   DeviceError,
   type Hello,
@@ -104,6 +104,7 @@ export class IosSimulatorDevice extends IosDevice {
     this.direct = direct ?? new DirectSim(serial);
     this.apps = new SimulatorApps(simctl, serial);
     this.settings = new SimulatorSettings(simctl, serial);
+    this.events = new SimulatorEvents(simctl, serial);
     this.recorder = simulatorRecorder(serial);
     this.mirror = new SimulatorMirror(serial, simctl);
     this.network = new SimulatorNetwork(simctl, serial);
@@ -116,6 +117,7 @@ export class IosSimulatorDevice extends IosDevice {
   readonly web: SimulatorWeb;
   readonly apps: SimulatorApps;
   readonly settings: SimulatorSettings;
+  readonly events: SimulatorEvents;
 
   private get runnerUp() {
     return !!this.rpc && !this.rpc.closed;

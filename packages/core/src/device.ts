@@ -67,9 +67,6 @@ export const SETTINGS = [
 
 export type SettingName = (typeof SETTINGS)[number];
 
-/** `enroll`: a fingerprint or a face is known to the device; the others answer a request for one. */
-export type BiometricAnswer = 'match' | 'nomatch' | 'enroll';
-
 /**
  * The device's conditions. `get` answers what `set` takes, so a change can be put back; `app` is the app
  * a per-app setting (Android's locale) is about.
@@ -79,6 +76,13 @@ export interface DeviceSettings {
   willChange?(name: SettingName): Promise<void>;
   get(name: SettingName, app?: string): Promise<string>;
   set(name: SettingName, value: string, app?: string): Promise<void>;
+}
+
+/** `enroll`: a fingerprint or a face is known to the device; the others answer a request for one. */
+export type BiometricAnswer = 'match' | 'nomatch' | 'enroll';
+
+/** What happens to a device once: a condition holds and is put back, an event is over when it is said. */
+export interface DeviceEvents {
   push(app: string | undefined, title: string, body: string): Promise<void>;
   biometric(answer: BiometricAnswer): Promise<void>;
   /** Empties a simulator's keychain, and answers how many items it held. */
@@ -182,6 +186,7 @@ export interface Device {
   readonly platformScreen: PlatformScreen;
   readonly apps: AppManager;
   readonly settings: DeviceSettings;
+  readonly events: DeviceEvents;
   readonly recorder: ScreenRecorder;
   readonly network?: NetworkSource;
   readonly web?: WebInspector;

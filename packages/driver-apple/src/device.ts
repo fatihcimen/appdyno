@@ -8,6 +8,7 @@ import {
   RpcDevice,
   type AppManager,
   type Device,
+  type DeviceEvents,
   type DeviceSettings,
   type Mirror,
   type ScreenRecorder,
@@ -108,6 +109,7 @@ export abstract class IosDevice extends RpcDevice implements Device {
   abstract readonly virtual: boolean;
   abstract readonly apps: AppManager;
   abstract readonly settings: DeviceSettings;
+  abstract readonly events: DeviceEvents;
   abstract readonly recorder: ScreenRecorder;
   abstract readonly mirror: Mirror;
   protected readonly retrySafe = RETRY_SAFE;

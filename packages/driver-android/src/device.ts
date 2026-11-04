@@ -27,6 +27,7 @@ import { AndroidAgentLauncher } from './agent.js';
 import { clearStaleTestLocation, clearTestLocation, setTestLocation } from './location.js';
 import { AndroidApps } from './apps.js';
 import type { InstallAnswers } from './install-consent.js';
+import { AndroidEvents } from './events.js';
 import { AndroidSettings } from './settings.js';
 import { AndroidNetwork } from './network.js';
 import { AndroidPerf } from './perf/index.js';
@@ -88,6 +89,7 @@ export class AndroidDevice extends RpcDevice implements Device {
       installAnswers,
     );
     this.settings = new AndroidSettings(adb, serial, () => this.releaseAnimations());
+    this.events = new AndroidEvents(adb, serial);
     this.recorder = new AndroidRecorder(adb, serial);
     this.network = new AndroidNetwork(adb, serial);
     this.web = new AndroidWeb(adb, serial);
@@ -112,6 +114,7 @@ export class AndroidDevice extends RpcDevice implements Device {
 
   readonly apps: AndroidApps;
   readonly settings: AndroidSettings;
+  readonly events: AndroidEvents;
   dismissKeyboard = async () => {
     await this.key('back', { settle: false, read: 'none' });
   };

@@ -6,6 +6,7 @@ import {
   type CrashesQuery,
   type CrashReport,
   type Device,
+  type DeviceEvents,
   type DeviceSettings,
   type LaunchMode,
   type LogsQuery,
@@ -143,8 +144,8 @@ export class FakeDevice extends DeviceActions implements Device {
   apps = notGiven<AppManager>('apps');
   recorder = notGiven<ScreenRecorder>('recorder');
   mirror = notGiven<Mirror>('mirror');
-  settings = { get: async () => 'none', set: async () => undefined } as Partial<DeviceSettings> &
-    Pick<DeviceSettings, 'get' | 'set'> as DeviceSettings;
+  settings: DeviceSettings = { get: async () => 'none', set: async () => undefined };
+  events = notGiven<DeviceEvents>('events');
   /** An agent without `wait`: the caller polls. */
   waitChange: Device['waitChange'] = async () => undefined;
   dismissKeyboard: Device['dismissKeyboard'] = async () => undefined;

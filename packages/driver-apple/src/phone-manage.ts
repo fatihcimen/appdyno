@@ -3,6 +3,7 @@ import type {
   AppEntry,
   BiometricAnswer,
   LaunchOptions,
+  DeviceEvents,
   DeviceSettings,
   SettingName,
 } from '@appdyno/core';
@@ -119,7 +120,10 @@ export class PhoneSettings implements DeviceSettings {
     else
       throw new DeviceError('UNSUPPORTED', `an iPhone has no ${name} switch this tool can reach`);
   }
+}
 
+/** No one-time event reaches an iPhone from a Mac: each says why. */
+export class PhoneEvents implements DeviceEvents {
   async push(): Promise<void> {
     throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.push);
   }

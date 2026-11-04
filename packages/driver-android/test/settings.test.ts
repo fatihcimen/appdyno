@@ -1,6 +1,7 @@
 import { DeviceError } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
 import type { Adb } from '../src/adb.js';
+import { AndroidEvents } from '../src/events.js';
 import { AndroidSettings } from '../src/settings.js';
 
 /** A device by what its shell answers: the first pattern that matches a command. */
@@ -17,7 +18,11 @@ const device = (serial: string, answers: [RegExp, string | (() => string)][]) =>
       return 'OK';
     },
   };
-  return { settings: new AndroidSettings(adb as unknown as Adb, serial), asked };
+  return {
+    settings: new AndroidSettings(adb as unknown as Adb, serial),
+    events: new AndroidEvents(adb as unknown as Adb, serial),
+    asked,
+  };
 };
 
 const refusal = async (p: Promise<unknown>) => {
@@ -94,44 +99,44 @@ describe('a radio', () => {
 
 describe('a fingerprint', () => {
   it('is an emulator’s alone', async () => {
-    const { settings, asked } = device('Y9DE', []);
-    const e = await refusal(settings.biometric('match'));
+    const { events, asked } = device('Y9DE', []);
+    const e = await refusal(events.biometric('match'));
     expect(e.code).toBe('UNSUPPORTED');
     expect(e.message).toContain('only an emulator has a sensor');
     expect(asked).toEqual([]);
   });
 
   it('asks for one to be enrolled first', async () => {
-    const { settings, asked } = device('emulator-5554', [[/dumpsys fingerprint/, prints(0)]]);
-    const e = await refusal(settings.biometric('match'));
+    const { events, asked } = device('emulator-5554', [[/dumpsys fingerprint/, prints(0)]]);
+    const e = await refusal(events.biometric('match'));
     expect(e.message).toContain('no fingerprint is enrolled here');
     expect(asked.filter((c) => c.includes('finger touch'))).toEqual([]);
   });
 
   it('touches until enrolled, lifting between', async () => {
-    const { settings, asked } = device('emulator-5554', [
+    const { events, asked } = device('emulator-5554', [
       [
         /dumpsys fingerprint/,
         () => prints(asked.filter((c) => /touch/.test(c)).length >= 3 ? 1 : 0),
       ],
     ]);
-    await settings.biometric('enroll');
+    await events.biometric('enroll');
     expect(asked.filter((c) => c.includes('finger touch 1'))).toHaveLength(3);
     expect(asked.filter((c) => c.includes('finger remove'))).toHaveLength(3);
   });
 
   it('touches nothing when one is enrolled', async () => {
-    const { settings, asked } = device('emulator-5554', [[/dumpsys fingerprint/, prints(1)]]);
-    await settings.biometric('enroll');
+    const { events, asked } = device('emulator-5554', [[/dumpsys fingerprint/, prints(1)]]);
+    await events.biometric('enroll');
     expect(asked.filter((c) => c.includes('finger touch'))).toEqual([]);
   });
 
   it('is done only when the service counted it, with the finger it was asked for', async () => {
     let touched = false;
-    const { settings, asked } = device('emulator-5554', [
+    const { events, asked } = device('emulator-5554', [
       [/dumpsys fingerprint/, () => prints(1, touched ? 1 : 0, 0)],
     ]);
-    const run = settings.biometric('match');
+    const run = events.biometric('match');
     await new Promise((r) => setTimeout(r, 400));
     touched = true;
     await run;
@@ -142,27 +147,27 @@ describe('a fingerprint', () => {
         () => prints(1, 0, other.asked.some((c) => /touch 99/.test(c)) ? 1 : 0),
       ],
     ]);
-    await other.settings.biometric('nomatch');
+    await other.events.biometric('nomatch');
   });
 
   it('says when nothing took the touch', { timeout: 8_000 }, async () => {
-    const { settings } = device('emulator-5554', [[/dumpsys fingerprint/, prints(1, 4, 2)]]);
-    const e = await refusal(settings.biometric('match'));
+    const { events } = device('emulator-5554', [[/dumpsys fingerprint/, prints(1, 4, 2)]]);
+    const e = await refusal(events.biometric('match'));
     expect(e.message).toContain('not counted as a match (4 accepted, 2 rejected)');
     expect(e.message).toContain('an app must be asking');
   });
 
   it('says when the service gives no counts', async () => {
-    const { settings } = device('emulator-5554', [
+    const { events } = device('emulator-5554', [
       [/dumpsys fingerprint/, "Can't find service: fingerprint"],
     ]);
-    expect((await refusal(settings.biometric('match'))).message).toBe(
+    expect((await refusal(events.biometric('match'))).message).toBe(
       "this device gives no fingerprint counts: Can't find service: fingerprint",
     );
   });
 });
 
 it('says Android has no keychain', async () => {
-  const { settings } = device('emulator-5554', []);
-  expect((await refusal(settings.resetKeychain())).code).toBe('UNSUPPORTED');
+  const { events } = device('emulator-5554', []);
+  expect((await refusal(events.resetKeychain())).code).toBe('UNSUPPORTED');
 });

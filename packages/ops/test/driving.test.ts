@@ -848,7 +848,7 @@ describe('device conditions', () => {
 
   it('takes one-shot events, and refuses what is not one', async () => {
     const settings = new Settings();
-    const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
+    const { call } = await connect(Object.assign(new FakeDevice(), { settings, events: settings }));
     await call('device_setting', { name: 'fold', value: 'closed' });
     await call('device_setting', { name: 'call', value: '+905551112233' });
     await call('device_setting', { name: 'call', value: 'end +905551112233' });
@@ -905,7 +905,7 @@ describe('device conditions', () => {
 
   it('passes on a refusal, posts a push, and says biometrics are not here', async () => {
     const settings = new Settings();
-    const d = Object.assign(new FakeDevice(), { settings });
+    const d = Object.assign(new FakeDevice(), { settings, events: settings });
     const { call } = await connect(d);
     const net = await call('device_setting', { name: 'network', value: 'slow' });
     expect(net.data.code).toBe('UNSUPPORTED');

@@ -1,7 +1,7 @@
 import { crashExits, phoneCrashes } from './crashes.js';
 import { phoneLogs } from './logs.js';
 import { PhoneMirror } from './mirror-phone.js';
-import { PhoneApps, PhoneSettings } from './phone-manage.js';
+import { PhoneApps, PhoneEvents, PhoneSettings } from './phone-manage.js';
 import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -268,6 +268,7 @@ export class IosPhoneDevice extends IosDevice {
     this.mirror = new PhoneMirror(serial);
     this.apps = new PhoneApps(ctl);
     this.settings = new PhoneSettings(ctl);
+    this.events = new PhoneEvents();
     this.recorder = phoneRecorder(serial);
   }
 
@@ -279,6 +280,7 @@ export class IosPhoneDevice extends IosDevice {
   }
   readonly apps: PhoneApps;
   readonly settings: PhoneSettings;
+  readonly events: PhoneEvents;
 
   /**
    * A phone locks itself about a minute after the last touch, and a swipe or a tap on its lock screen goes to the system
