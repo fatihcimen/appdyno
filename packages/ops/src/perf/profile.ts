@@ -1,8 +1,14 @@
+import type { ProfileEntry } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { ProfileOut } from './schemas.js';
 import { defineOp, READ, reply } from '../tool.js';
-import { perfTools, App, virtual } from './shared.js';
+import { perfTools, App, Dsym, symbolsOf, virtual } from './shared.js';
+
+/** What an answer holds; the measurement keeps them all, for a diff of two runs. */
+const SHOWN = 15;
+const shortList = (entries: ProfileEntry[]) =>
+  entries.slice(0, SHOWN).map((e) => ({ percent: e.percent, symbol: e.symbol }));
 
 export function perfProfileOp(ctx: ServerContext) {
   const { measure, appOf, virtualNote, save, scroller } = perfTools(ctx);
@@ -10,24 +16,25 @@ export function perfProfileOp(ctx: ServerContext) {
     name: 'perf_profile',
     title: 'CPU profile',
     description:
-      "Where the app's CPU time goes: sampled for `seconds` (a debuggable or profileable app), the top functions. `scroll` scrolls meanwhile.",
+      "Where the app's CPU time goes: sampled for `seconds` (a debuggable or profileable app), the top functions. `scroll` scrolls meanwhile. perf_compare's `functions` compares two of these.",
     input: z
       .object({
         app: App,
         seconds: z.number().int().min(1).max(30).default(3),
         scroll: z.enum(['up', 'down']).optional(),
+        dsym: Dsym,
       })
       .strict(),
     output: ProfileOut,
     annotations: READ,
     needs: 'cpuProfile',
-    run: async ({ app, seconds, scroll }) => {
+    run: async ({ app, seconds, scroll, dsym }) => {
       const s = await ctx.session();
       s.appPid = undefined;
       const pkg = appOf(s, app);
       const profile = measure(s, 'cpuProfile');
       const during = scroll ? await scroller(s, scroll, 300) : undefined;
-      const m = await profile(pkg, seconds * 1000, during);
+      const m = await profile(pkg, seconds * 1000, during, symbolsOf(s, dsym));
       if (scroll) s.acted();
       const saved = await save('cpu-profile', [m], m.value);
       return reply(
@@ -48,10 +55,8 @@ export function perfProfileOp(ctx: ServerContext) {
           raw: saved.txt,
           virtualDevice: virtual(s),
           samples: m.value.samples,
-          top: m.value.top.map((e) => ({ percent: e.percent, symbol: e.symbol })),
-          ...(m.value.appTop && {
-            appTop: m.value.appTop.map((e) => ({ percent: e.percent, symbol: e.symbol })),
-          }),
+          top: shortList(m.value.top),
+          ...(m.value.appTop && { appTop: shortList(m.value.appTop) }),
         },
       );
     },

@@ -1,6 +1,7 @@
 import {
   frozenMoments,
   MIN_FRAMES,
+  PROFILE_FUNCTIONS,
   type FrameStats,
   type HitchSummary,
   round1,
@@ -70,7 +71,7 @@ const spansOf = (rows: Record<string, Cell>[]): Span[] =>
   }));
 
 /** The main thread's hangs of a process in the template's table: what it only suspects is no hang. */
-const hangRows = (xml: string, pid?: number) =>
+export const hangRows = (xml: string, pid?: number) =>
   parseTraceTable(xml)
     .filter((r) => pid === undefined || r.process?.fmt?.includes(`(${pid})`))
     .filter((r) => !/Interaction Delay/.test(r['hang-type']?.value ?? ''));
@@ -160,32 +161,38 @@ export function traceDigest(
   };
 }
 
-/**
- * The Time Profiler's samples: the busiest functions by the weight of the samples they were on top of,
- * and the app's own functions (of a binary inside an .app) by the weight of the samples they were
- * anywhere in. Only running threads are sampled, so there are no idle waits to leave out.
- */
-export function parseTimeProfile(
-  xml: string,
-  pid?: number,
-  limit = 10,
-): CpuProfile & { appTop: ProfileEntry[] } {
-  type Frame = { name: string; binary: string };
+export type SampleFrame = { name: string; binary: string };
+
+export type Sample = {
+  /** From the start of the recording. */
+  ns: number;
+  tid?: number | undefined;
+  pid?: number | undefined;
+  /** Nanoseconds of CPU. */
+  weight: number;
+  /** Innermost first. */
+  stack: SampleFrame[];
+};
+
+/** The Time Profiler's rows one at a time: a value seen once is a `ref` from then on, each kind with its own ids. */
+export function* samplesOf(xml: string): Generator<Sample> {
   const binaries = new Map<string, string>();
-  const frames = new Map<string, Frame>();
-  const stacks = new Map<string, Frame[]>();
+  const frames = new Map<string, SampleFrame>();
+  const stacks = new Map<string, SampleFrame[]>();
   const weights = new Map<string, number>();
   const processes = new Map<string, number>();
-  const top = new Map<string, number>();
-  const app = new Map<string, number>();
-  let total = 0;
+  const threads = new Map<string, number>();
+  const times = new Map<string, number>();
   for (const row of xml.split('<row>').slice(1)) {
+    const t = /<sample-time (?:id="(\d+)"[^>]*>(\d+)|ref="(\d+)")/.exec(row);
+    if (t?.[1]) times.set(t[1], Number(t[2]));
     const w = /<weight (?:id="(\d+)"[^>]*>(\d+)|ref="(\d+)")/.exec(row);
     if (w?.[1]) weights.set(w[1], Number(w[2]));
     const weight = w ? (w[3] ? (weights.get(w[3]) ?? 0) : Number(w[2])) : 0;
     const proc = /<process (?:id="(\d+)" fmt="[^"]*\((\d+)\)"|ref="(\d+)")/.exec(row);
     if (proc?.[1]) processes.set(proc[1], Number(proc[2]));
-    const ofProcess = proc ? (proc[3] ? processes.get(proc[3]) : Number(proc[2])) : undefined;
+    const thread = /<thread (?:id="(\d+)"[^>]*><tid [^>]*>(\d+)|ref="(\d+)")/.exec(row);
+    if (thread?.[1]) threads.set(thread[1], Number(thread[2]));
     const known = /<(?:tagged-)?backtrace ref="(\d+)"/.exec(row)?.[1];
     let stack = known ? stacks.get(known) : undefined;
     if (!stack) {
@@ -206,11 +213,42 @@ export function parseTimeProfile(
       const id = /<(?:tagged-)?backtrace id="(\d+)"/.exec(row)?.[1];
       if (id) stacks.set(id, stack);
     }
-    if (!stack.length || (pid !== undefined && ofProcess !== pid)) continue;
+    yield {
+      ns: t ? (t[3] ? (times.get(t[3]) ?? 0) : Number(t[2])) : 0,
+      tid: thread ? (thread[3] ? threads.get(thread[3]) : Number(thread[2])) : undefined,
+      pid: proc ? (proc[3] ? processes.get(proc[3]) : Number(proc[2])) : undefined,
+      weight,
+      stack,
+    };
+  }
+}
+
+/** A frame's name as the export escapes it, as it reads. */
+const unescaped = (name: string) =>
+  name.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+
+/** In the app's own binary, and so what a reader can change. */
+export const inApp = (f: SampleFrame) => f.binary.includes('.app/');
+
+/**
+ * The Time Profiler's samples: the busiest functions by the weight of the samples they were on top of,
+ * and the app's own functions (of a binary inside an .app) by the weight of the samples they were
+ * anywhere in. Only running threads are sampled, so there are no idle waits to leave out.
+ */
+export function parseTimeProfile(
+  xml: string,
+  pid?: number,
+  limit = PROFILE_FUNCTIONS,
+): CpuProfile & { appTop: ProfileEntry[] } {
+  const top = new Map<string, number>();
+  const app = new Map<string, number>();
+  let total = 0;
+  for (const { stack, weight, pid: of } of samplesOf(xml)) {
+    if (!stack.length || (pid !== undefined && of !== pid)) continue;
     total += weight;
-    const head = stack[0]!.name.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    const head = unescaped(stack[0]!.name);
     top.set(head, (top.get(head) ?? 0) + weight);
-    for (const name of new Set(stack.filter((f) => f.binary.includes('.app/')).map((f) => f.name)))
+    for (const name of new Set(stack.filter(inApp).map((f) => f.name)))
       app.set(name, (app.get(name) ?? 0) + weight);
   }
   const entries = (m: Map<string, number>) =>

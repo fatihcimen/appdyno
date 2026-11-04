@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { TraceOut } from './schemas.js';
 import { defineOp, ACT, reply } from '../tool.js';
-import { perfTools, App, Probe, Scenario, virtual } from './shared.js';
+import { perfTools, App, Dsym, Probe, Scenario, symbolsOf, virtual } from './shared.js';
 
 const CAUSE_WORDS: Record<FrameCause, string> = {
   lock: 'waiting for a monitor lock',
@@ -43,6 +43,7 @@ export function perfTraceOp(ctx: ServerContext) {
         seconds: z.number().min(1).max(30).default(5),
         scroll: z.enum(['up', 'down']).optional(),
         what: z.enum(['frames', 'hangs', 'xct_hitches', 'xct_launch']).default('frames'),
+        dsym: Dsym,
         probe: Probe,
         scenario: Scenario,
       })
@@ -50,7 +51,7 @@ export function perfTraceOp(ctx: ServerContext) {
     output: TraceOut,
     annotations: ACT,
     needs: 'frameTrace',
-    run: async ({ app, seconds, scroll, what, probe, scenario }) => {
+    run: async ({ app, seconds, scroll, what, dsym, probe, scenario }) => {
       const s = await ctx.session();
       s.appPid = undefined;
       const pkg = appOf(s, app);
@@ -106,7 +107,7 @@ export function perfTraceOp(ctx: ServerContext) {
       }
       if (what === 'hangs') {
         const during = scroll ? await scroller(s, scroll, 500) : undefined;
-        const m = await measure(s, 'hangs')(pkg, seconds, during);
+        const m = await measure(s, 'hangs')(pkg, seconds, during, symbolsOf(s, dsym));
         if (scroll) s.acted();
         const v = m.value;
         return answer(
@@ -119,9 +120,19 @@ export function perfTraceOp(ctx: ServerContext) {
           {
             lines: [
               `${v.hangs} hangs of the main thread (over 250 ms), ${v.totalMs} ms in all, worst ${v.worstMs} ms`,
+              ...(v.causes ?? []).map(
+                (c) =>
+                  `${c.ms} ms hang: ${c.kind === 'busy' ? 'busy' : 'blocked'}, on the CPU ${c.cpuPercent} % of it${c.function ? `, in ${c.function}${c.function.startsWith('0x') ? ' (an address: `dsym` names it)' : ''}` : ''}`,
+              ),
             ],
             after: () => [`trace (Instruments): ${v.tracePath}`],
-            data: { frames: 0, hangs: v.hangs, worstMs: v.worstMs, tracePath: v.tracePath },
+            data: {
+              frames: 0,
+              hangs: v.hangs,
+              worstMs: v.worstMs,
+              ...(v.causes && { hangCauses: v.causes }),
+              tracePath: v.tracePath,
+            },
           },
         );
       }

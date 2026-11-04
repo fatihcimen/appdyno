@@ -21,6 +21,18 @@ export async function store(dir: string, kind: string, value: unknown, raw: stri
   return { id, json, txt };
 }
 
+const MEASUREMENT = /^pm-[0-9a-f]{8}$/;
+
+/** A kept measurement by the id its answer gave; none for anything else, which goes no further than this folder. */
+export async function loadMeasurement<T>(
+  dir: string,
+  id: string,
+): Promise<{ id: string; kind: string; at: string; value: T } | undefined> {
+  if (!MEASUREMENT.test(id)) return undefined;
+  const file = join(dir, `${id}.json`);
+  return existsSync(file) ? JSON.parse(await readFile(file, 'utf8')) : undefined;
+}
+
 export type RunKey = { app: string; scenario: string; deviceClass: string };
 
 const runsDir = (dir: string, k: RunKey) => join(dir, 'runs', k.app, k.scenario, k.deviceClass);

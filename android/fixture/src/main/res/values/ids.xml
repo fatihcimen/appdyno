@@ -57,4 +57,5 @@
     <item name="battery_job" type="id" />
     <item name="memory_native" type="id" />
     <item name="memory_bitmap" type="id" />
+    <item name="cpu_steady" type="id" />
 </resources>

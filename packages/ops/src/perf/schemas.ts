@@ -129,6 +129,16 @@ export const TraceOut = z.object({
   stalls: z.number().optional(),
   limits: z.string().optional(),
   hangs: z.number().optional(),
+  hangCauses: z
+    .array(
+      z.object({
+        ms: z.number(),
+        kind: z.enum(['busy', 'blocked']),
+        cpuPercent: z.number(),
+        function: z.string().optional(),
+      }),
+    )
+    .optional(),
   metrics: z.record(z.string(), z.array(z.number())).optional(),
 });
 
@@ -149,6 +159,16 @@ export const HeapOut = z.object({
 });
 
 export const CompareOut = z.object({
+  functions: z
+    .array(
+      z.object({
+        symbol: z.string(),
+        beforeMs: z.number(),
+        afterMs: z.number(),
+        changeMs: z.number(),
+      }),
+    )
+    .optional(),
   failed: z.boolean(),
   exitCode: z.number(),
   reports: z.array(z.record(z.string(), z.unknown())),

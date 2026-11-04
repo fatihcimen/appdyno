@@ -183,6 +183,23 @@ const exported = async (tracePath: string, xpath: string) =>
 export const traceTable = (tracePath: string, schema: string) =>
   exported(tracePath, `/trace-toc/run[@number="1"]/data/table[@schema="${schema}"]`);
 
+/**
+ * Names for a trace of addresses, from a build's `.dSYM` or a folder of them, written into the trace itself so that
+ * `perf_query` reads them too. No dSYM is a refusal: a run of addresses would read as if nothing could be done.
+ */
+export async function symbolicate(tracePath: string, dsym: string) {
+  if (!existsSync(dsym))
+    throw new DeviceError(
+      'NOT_FOUND',
+      `no such dSYM: ${dsym}`,
+      "give the build's .dSYM or a folder of them",
+    );
+  await run('xcrun', ['xctrace', 'symbolicate', '--input', tracePath, '--dsym', dsym], {
+    env: xcodeEnv(),
+    timeout: 300_000,
+  });
+}
+
 /** What an instrument keeps under its track and not as a table (Leaks, Allocations), as XML. */
 export const traceDetail = (tracePath: string, track: string, detail: string) =>
   exported(

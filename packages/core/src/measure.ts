@@ -29,6 +29,9 @@ export function frozenMoments(spans: { start: number; ms: number }[]) {
   return count;
 }
 
+/** How many functions a profile keeps: a diff of two runs needs more of them than an answer shows. */
+export const PROFILE_FUNCTIONS = 200;
+
 export type ProfileEntry = { percent: number; samples: number; symbol: string };
 
 export type CpuProfile = {
@@ -312,7 +315,23 @@ export type HeapProfile = {
   totalBytes: number;
 };
 
-export type HangReading = { hangs: number; worstMs: number; totalMs: number; tracePath: string };
+/** Apple's triage of a hang: its thread at work, or waiting for something. */
+export type HangCause = {
+  ms: number;
+  kind: 'busy' | 'blocked';
+  /** Its CPU time as a share of the hang. */
+  cpuPercent: number;
+  /** The app's innermost function: what ran most, or what ran last before it stopped. An address has no symbols. */
+  function?: string;
+};
+
+export type HangReading = {
+  hangs: number;
+  worstMs: number;
+  totalMs: number;
+  tracePath: string;
+  causes?: HangCause[];
+};
 
 /** An XCTest metric's readings under `measure()`, from the result bundle. */
 export type XctMetrics = { metrics: Record<string, number[]>; resultBundle: string; note?: string };
@@ -340,6 +359,9 @@ export type FrameTrace =
   | ({ kind: 'hitches'; tracePath: string } & HitchSummary)
   | ({ kind: 'timeline' } & FrameTimeline)
   | ({ kind: 'probe'; tracePath: string } & ProbeSummary);
+
+/** Where a build's names are, for a trace of addresses: a `.dSYM`, or a folder of them. */
+export type Symbols = { dsym?: string };
 
 /** What a device can measure: each has what it has, and `ops` names what it lacks. */
 export interface MeasureSource {
@@ -396,6 +418,7 @@ export interface MeasureSource {
     app: string,
     seconds: number,
     during?: () => Promise<unknown>,
+    symbols?: Symbols,
   ): Promise<Measured<HangReading>>;
   /** XCTest's `measure()` in a test of its own: launch, hitches, memory, CPU. */
   xctMetrics?(app: string, test: 'launch' | 'hitches'): Promise<Measured<XctMetrics>>;
@@ -403,6 +426,7 @@ export interface MeasureSource {
     app: string,
     ms: number,
     during?: () => Promise<unknown>,
+    symbols?: Symbols,
   ): Promise<Measured<CpuProfile>>;
   heap?(app: string, dir: string): Promise<Measured<HeapReading>>;
   frameTrace?(

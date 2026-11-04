@@ -140,6 +140,12 @@ Each frame given a known 100 ms on the fixture, by `test-device/frame-cause.test
 
 A first version of the binder case spent 100 ms in a framework call, and the answer named work on the main thread: 89 ms was the client's own, 14 ms the binder call. So a framework call that is slow in the app's process is named as work, which is what it is.
 
+## Why a hang was a hang, and which function moved
+
+**iPhone, busy or blocked.** `perf_trace` `what: hangs` answers each hang as Apple triages it. A Time Profiler trace holds no `thread-state` table on a phone, but it samples only a thread that runs, so the hung thread's samples inside a hang are how much of it was on the CPU: at half or more it was busy, in what ran most, and below that blocked, in what it ran last. Nothing new is recorded. The function is the app's innermost, an address where the build has no symbols, and `dsym` on `perf_trace` or `perf_profile` names it, through `xctrace symbolicate` into the trace itself. Two kept traces of the fixture's 500 ms `usleep` on a phone read blocked, 2.3 and 2.5 % on the CPU.
+
+**A function-level diff.** `perf_compare` `action: functions` with two ids of `perf_profile`, or `appdyno perf functions --from pm-a --to pm-b`: what moved, in ms of CPU in each second so that windows of other lengths compare, the app's own functions where the profile has them. A function must move 20 ms a second and a quarter of itself, so two runs of the same work name nothing. A profile keeps 200 functions, and an answer shows 15. Android's names are what simpleperf finds on the device: Java functions of a debuggable build, once compiled, and the first run of a screen may read as the interpreter. By `test-device/function-diff.test.ts`, on the Xiaomi, host load 13: two runs of the same work named nothing, and 300 ms a second put into one function read `+296 knownCost`, first of the diff.
+
 ## A journey
 
 `appdyno test <flow> --measure` or `flow` `run` with `iterations`. A first run is left out, as a measured launch leaves out its warm-up, and the iterations (5 by default: the gate calls nothing under 5 samples a side) make one kept run of the scenario `journey-<file>`:

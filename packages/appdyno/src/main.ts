@@ -309,9 +309,12 @@ async function main(): Promise<number> {
       if (command === 'perf' && rest[0] === 'survey') return surveyCommand(rest.slice(1));
       // `perf compare|baseline|budget [flags]`: the gate's names for one operation
       const gate = command === 'perf' ? rest.shift() : undefined;
-      if (command === 'perf' && !['compare', 'baseline', 'budget'].includes(gate ?? '')) {
+      if (
+        command === 'perf' &&
+        !['compare', 'baseline', 'budget', 'functions'].includes(gate ?? '')
+      ) {
         err(
-          'usage: appdyno perf compare|baseline|budget [--app A] [--scenario S] [--device-class C] [--last N] [--replace] [--format text|json|junit]\n       appdyno perf dashboard [--app A] [--out dir] [--open]\n       appdyno perf survey --app A [--device S]',
+          'usage: appdyno perf compare|baseline|budget [--app A] [--scenario S] [--device-class C] [--last N] [--replace] [--format text|json|junit]\n       appdyno perf functions --from pm-a --to pm-b\n       appdyno perf dashboard [--app A] [--out dir] [--open]\n       appdyno perf survey --app A [--device S]',
         );
         return 2;
       }
@@ -351,6 +354,8 @@ commands:
   bench --serial S [--driver appdyno|<module>]... [--n 50] [--out file]
   perf compare|baseline|budget [--app A] [--scenario S] [--format text|json|junit] [--measurements dir]
                    the performance gate: non-zero on a regression or a broken budget
+  perf functions --from pm-a --to pm-b [--measurements dir]
+                   which functions moved between two kept profiles
   perf dashboard [--app A] [--out dir] [--open] [--measurements dir]
                    one page: what can be read on each device, what changed, what needs attention
   perf survey --app A [--device S] [--measurements dir]

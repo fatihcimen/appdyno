@@ -4,4 +4,5 @@ export * from './compare.js';
 export * from './store.js';
 export * from './report.js';
 export * from './vitals.js';
+export * from './functions.js';
 export * from './dashboard/index.js';

@@ -5,7 +5,13 @@ import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
-import { sleep, stateDir, type MeasureSource, type ScreenRecorder } from '@appdyno/core';
+import {
+  sleep,
+  stateDir,
+  type MeasureSource,
+  type ScreenRecorder,
+  type Symbols,
+} from '@appdyno/core';
 import { type IosDeviceOps, IosDevice } from './device.js';
 import { phoneRecorder } from './record.js';
 import { iosProducts, type RunnerTransport, IosRunnerLauncher } from './runner.js';
@@ -15,7 +21,8 @@ import { hitchFrames, parseActivityMonitor, parseTimeProfile, parseHangs } from 
 import { appLaunchPhases } from './phone-launch.js';
 import { phoneLeaks } from './phone-leaks.js';
 import { phoneEnergy, phoneNetwork } from './phone-power.js';
-import { recordTrace, traceTable } from './trace.js';
+import { parseHangCauses } from './hang-cause.js';
+import { recordTrace, symbolicate, traceTable } from './trace.js';
 import { connectPort, listDevices } from './usbmux.js';
 import { Devicectl } from './devicectl.js';
 
@@ -145,8 +152,8 @@ export class IosPhoneDevice extends IosDevice {
         at: new Date().toISOString(),
       };
     },
-    cpuProfile: async (bundle, ms, during) => {
-      const { trace, profile } = await this.profile(bundle, ms, during);
+    cpuProfile: async (bundle, ms, during, symbols) => {
+      const { trace, profile } = await this.profile(bundle, ms, during, symbols);
       return {
         value: { ...profile, durationMs: Math.round(ms / 1000) * 1000 },
         raw: trace,
@@ -190,8 +197,8 @@ export class IosPhoneDevice extends IosDevice {
         at: new Date().toISOString(),
       };
     },
-    hangs: async (bundle, seconds, during) => {
-      const value = await this.hangs(bundle, seconds, during);
+    hangs: async (bundle, seconds, during, symbols) => {
+      const value = await this.hangs(bundle, seconds, during, symbols);
       return {
         value,
         raw: value.tracePath,
@@ -272,7 +279,12 @@ export class IosPhoneDevice extends IosDevice {
   }
 
   /** The Time Profiler over every process (attaching fails at times on a phone), one process read. */
-  private async profile(bundle: string, ms: number, during?: () => Promise<unknown>) {
+  private async profile(
+    bundle: string,
+    ms: number,
+    during?: () => Promise<unknown>,
+    symbols?: Symbols,
+  ) {
     const pid = await this.ctl.pid(assertBundle(bundle));
     const trace = await recordTrace({
       template: 'Time Profiler',
@@ -281,13 +293,20 @@ export class IosPhoneDevice extends IosDevice {
       dir: join(stateDir(), 'traces'),
       ...(during && { during }),
     });
-    return { trace, pid, profile: parseTimeProfile(await traceTable(trace, 'time-profile'), pid) };
+    if (symbols?.dsym) await symbolicate(trace, symbols.dsym);
+    const samples = await traceTable(trace, 'time-profile');
+    return { trace, pid, samples, profile: parseTimeProfile(samples, pid) };
   }
 
   /** The main thread's hangs (over 250 ms) while `during` runs: part of the Time Profiler's recording. */
-  async hangs(bundle: string, seconds = 5, during?: () => Promise<unknown>) {
-    const { trace, pid } = await this.profile(bundle, seconds * 1000, during);
-    return { ...parseHangs(await traceTable(trace, 'potential-hangs'), pid), tracePath: trace };
+  async hangs(bundle: string, seconds = 5, during?: () => Promise<unknown>, symbols?: Symbols) {
+    const { trace, pid, samples } = await this.profile(bundle, seconds * 1000, during, symbols);
+    const hangs = await traceTable(trace, 'potential-hangs');
+    return {
+      ...parseHangs(hangs, pid),
+      causes: parseHangCauses(hangs, samples, pid),
+      tracePath: trace,
+    };
   }
 
   /** Ends the phone's simulated position (setLocation's). */

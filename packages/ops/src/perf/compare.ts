@@ -1,4 +1,7 @@
+import type { CpuProfile } from '@appdyno/core';
 import {
+  functionDiff,
+  loadMeasurement,
   writeDashboard,
   runKeys,
   latestRuns,
@@ -20,15 +23,21 @@ import { CompareOut } from './schemas.js';
 import { defineOp, READ, reply, ToolError } from '../tool.js';
 import { Scenario, rewriteDashboard } from './shared.js';
 
+const MeasurementId = z.string().max(40).optional().describe('a perf_profile id');
+
 export function perfCompareOp(ctx: ServerContext) {
   return defineOp({
     name: 'perf_compare',
     title: 'Compare with the baseline',
     description:
-      'The newest runs against the baseline and budgets in .appdyno/perf/; a change counts only when statistically and practically significant. budget: budgets only; baseline: adds the newest run, `replace` starts over; dashboard: writes the page. No device needed.',
+      'The newest runs against the baseline and budgets in .appdyno/perf/; a change counts only when statistically and practically significant. budget: budgets only; baseline: adds the newest run, `replace` starts over; dashboard: writes the page; functions: what moved between two perf_profile ids. No device needed.',
     input: z
       .object({
-        action: z.enum(['compare', 'budget', 'baseline', 'dashboard']).default('compare'),
+        action: z
+          .enum(['compare', 'budget', 'baseline', 'dashboard', 'functions'])
+          .default('compare'),
+        from: MeasurementId,
+        to: MeasurementId,
         app: z.string().max(200).optional(),
         scenario: Scenario,
         deviceClass: z.string().max(200).optional(),
@@ -39,9 +48,35 @@ export function perfCompareOp(ctx: ServerContext) {
       .strict(),
     output: CompareOut,
     annotations: READ,
-    run: async ({ action, app, scenario, deviceClass, last, replace, format }) => {
+    run: async ({ action, from, to, app, scenario, deviceClass, last, replace, format }) => {
       const dir = ctx.measurementsDir;
       const project = ctx.perfDir;
+      if (action === 'functions') {
+        const profile = async (id: string | undefined) => {
+          const held = id ? await loadMeasurement<CpuProfile>(dir, id) : undefined;
+          if (held?.kind !== 'cpu-profile')
+            throw new ToolError(
+              `give from and to: the ids perf_profile answered${id ? `; ${id} is no profile kept here` : ''}`,
+              'NOT_FOUND',
+            );
+          return held.value;
+        };
+        const functions = functionDiff(await profile(from), await profile(to));
+        return reply(
+          [
+            `functions, ms of CPU in each second, ${from} to ${to}:`,
+            ...(functions.length
+              ? functions
+                  .slice(0, 15)
+                  .map(
+                    (f) =>
+                      `${f.changeMs > 0 ? '+' : ''}${f.changeMs} ${f.symbol} (${f.beforeMs} to ${f.afterMs})`,
+                  )
+              : ['no function moved past the floor of 20 ms a second and a quarter of itself']),
+          ].join('\n'),
+          { failed: false, exitCode: 0, reports: [], functions: functions.slice(0, 50) },
+        );
+      }
       if (action === 'dashboard') {
         const file = await writeDashboard(dir, project, app ? { app } : {});
         return reply(`dashboard: ${file}`, { failed: false, exitCode: 0, reports: [], file });

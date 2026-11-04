@@ -88,6 +88,32 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
     );
   }, 240_000);
 
+  it('hangs: a sleep reads blocked and a loop busy, in its function given the build’s dSYM', async () => {
+    const dsym = process.env.APPDYNO_IPHONE_FIXTURE_DSYM;
+    const hang = async (id: string) => {
+      const s = await open('stall');
+      const h = await d.hangs(
+        APP,
+        5,
+        async () => {
+          await pause(1_000);
+          await d.tap(byId(s, id), { settle: false });
+        },
+        dsym ? { dsym } : undefined,
+      );
+      console.log(id, JSON.stringify(h.causes));
+      return h.causes[0]!;
+    };
+    const blocked = await hang('stall_500');
+    expect(blocked.kind).toBe('blocked');
+    within(blocked.ms, 500, 0.15);
+    const busy = await hang('stall_busy');
+    expect(busy.kind).toBe('busy');
+    expect(busy.cpuPercent).toBeGreaterThan(80);
+    within(busy.ms, 500, 0.15);
+    if (dsym) expect(busy.function).toContain('busyMainThread');
+  }, 240_000);
+
   it('why slow: a 500 ms slow start is named in `main`, within 15 %', async () => {
     const phases = async (env?: Record<string, string>) => {
       const { startup } = (

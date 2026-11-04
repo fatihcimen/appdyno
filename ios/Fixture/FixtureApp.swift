@@ -361,6 +361,14 @@ struct CpuScreen: View {
 }
 
 /// Blocks the main thread for a known time: a stall reading must show it. "Light" does next to nothing.
+/// A loop with a name of its own: what a hang that is busy must name.
+@inline(never) func busyMainThread() {
+    let end = Date().addingTimeInterval(0.5)
+    var x = 0
+    while Date() < end { x &+= 1 }
+    if x == 42 { print(x) }
+}
+
 struct StallScreen: View {
     @State private var taps = 0
 
@@ -371,6 +379,11 @@ struct StallScreen: View {
                 taps += 1
             }
             .accessibilityIdentifier("stall_500")
+            Button("Busy 500 ms") {
+                busyMainThread()
+                taps += 1
+            }
+            .accessibilityIdentifier("stall_busy")
             Button("Light") { taps += 1 }.accessibilityIdentifier("stall_light")
             Text("Taps: \(taps)").accessibilityIdentifier("stall_taps")
             Spacer()

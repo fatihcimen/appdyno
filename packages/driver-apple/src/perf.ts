@@ -14,6 +14,7 @@ import {
   type LaunchMode,
   type CpuProfile,
   type ProfileEntry,
+  type Symbols,
   callSignal,
   type HeapReading,
   type EnergyReading,
@@ -32,7 +33,7 @@ import { profileStart } from './sim-launch.js';
 import { type Simctl, assertBundle } from './simctl.js';
 import { helperBinary } from './simhelper.js';
 import { parseTimeProfile } from './trace-parse.js';
-import { recordTrace, traceTable } from './trace.js';
+import { recordTrace, symbolicate, traceTable } from './trace.js';
 import {
   type IosMemory,
   parseFootprint,
@@ -363,6 +364,7 @@ export class IosSimulatorPerf implements MeasureSource {
     bundle: string,
     durationMs = 3_000,
     during?: () => Promise<unknown>,
+    symbols?: Symbols,
   ): Promise<Measured<CpuProfile & { appTop: ProfileEntry[] }>> {
     const pid = await this.pid(bundle);
     const s = Math.min(Math.max(Math.round(durationMs / 1000), 1), 30);
@@ -377,6 +379,7 @@ export class IosSimulatorPerf implements MeasureSource {
       ...(once && { during: once }),
     }).then(
       async (trace) => {
+        if (symbols?.dsym) await symbolicate(trace, symbols.dsym);
         const xml = await traceTable(trace, 'time-profile');
         return { trace, profile: parseTimeProfile(xml) };
       },

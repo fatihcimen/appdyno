@@ -7,6 +7,7 @@ import type {
   EnergyReading,
   BuildType,
 } from '@appdyno/core';
+import { PROFILE_FUNCTIONS } from '@appdyno/core';
 import { num } from './parse-common.js';
 
 export type MemoryStats = {
@@ -114,7 +115,7 @@ export function parseVitals(text: string): DeviceVitals {
  * `simpleperf report --sort symbol -n` text: the functions taking the app's CPU time, most first. Rows look
  * like `12.34%  1234  java.lang.String.indexOf`.
  */
-export function parseSimpleperfReport(text: string, limit = 15): ProfileEntry[] {
+export function parseSimpleperfReport(text: string, limit = PROFILE_FUNCTIONS): ProfileEntry[] {
   const out: ProfileEntry[] = [];
   for (const line of text.split('\n')) {
     const m = /^\s*([\d.]+)%\s+(\d+)\s+(.+?)\s*$/.exec(line);

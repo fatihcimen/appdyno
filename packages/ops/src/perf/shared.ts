@@ -20,18 +20,30 @@ import type { Session } from '../session.js';
 import { swipeLine } from '../gesture-paths.js';
 import { ToolError } from '../tool.js';
 
-export const App = z.string().max(200).optional().describe('default: the selected app');
+export const App = z.string().max(200).optional();
 
 export const Scenario = z
   .string()
   .regex(/^[\w.-]{1,60}$/)
   .optional()
-  .describe('name to keep this run under');
+  .describe('kept under this name');
 
 export const Probe = z
   .boolean()
   .optional()
-  .describe('iOS simulator: frame probe, relaunches the app once; on for frames, off for launches');
+  .describe('iOS simulator: frame probe; relaunches the app');
+
+export const Dsym = z.string().max(1_000).optional().describe("iOS: the build's .dSYM");
+
+/** A dSYM's path as the driver takes it; on Android simpleperf reads what the device holds, and one would do nothing. */
+export const symbolsOf = (s: Session, dsym?: string) => {
+  if (dsym && s.device.platform !== 'ios')
+    throw new ToolError(
+      'dsym is for iOS: on Android the names come from the device',
+      'UNSUPPORTED',
+    );
+  return dsym ? { dsym } : undefined;
+};
 
 /** The row of the table a refusal of this measure answers. What is about a part of a row (threads, a profile) has none. */
 export const ROW_OF: Partial<Record<Capability, MeasureId>> = {
