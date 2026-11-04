@@ -238,6 +238,10 @@ export type HangCause = {
   function?: string;
 };
 
+/** A hang in words: what a trace answers and what the gate's answer says. */
+export const hangText = (c: HangCause) =>
+  `${c.ms} ms hang: ${c.kind}, on the CPU ${c.cpuPercent} % of it${c.function ? `, in ${c.function}${c.function.startsWith('0x') ? ' (an address: `dsym` names it)' : ''}` : ''}`;
+
 export type HangReading = {
   hangs: number;
   worstMs: number;

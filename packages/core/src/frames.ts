@@ -59,6 +59,20 @@ export type SlowFrameCauses = {
   top?: FrameCause;
 };
 
+const CAUSE_WORDS: Record<FrameCause, string> = {
+  lock: 'waiting for a monitor lock',
+  binder: 'in binder calls',
+  gc: 'waiting for the garbage collector',
+  busy: 'at work on the main thread',
+  starved: 'waiting for a CPU',
+  io: 'blocked in the kernel, as on disk',
+  sleeping: 'asleep, with nothing named holding it',
+};
+
+/** One cause of slow frames in words: what a trace answers and what the gate's answer says. */
+export const frameCauseText = (x: SlowFrameCauses['causes'][number]) =>
+  `${CAUSE_WORDS[x.cause]}, ${x.msPerFrame} ms a frame (${x.share} %)${x.detail ? `: ${x.detail}` : ''}`;
+
 export type FrameTimeline = {
   frames: number;
   /** Frames with any jank type (on an emulator nearly all: its display's prediction errors). */

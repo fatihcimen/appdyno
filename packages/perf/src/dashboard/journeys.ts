@@ -1,4 +1,4 @@
-import { JOURNEY_TOTAL, journeyStep } from '../record.js';
+import { JOURNEY_TOTAL, journeyStep, stepName } from '../record.js';
 import { figure, multiples } from './figure.js';
 import { deviceLabel, formatValue, when } from './format.js';
 import { chip } from './marks.js';
@@ -9,7 +9,6 @@ import {
   changeText,
   nameOf,
   regressedSteps,
-  stepName,
   stepTimes,
   type AppView,
   type Scenario,

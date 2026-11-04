@@ -5,5 +5,8 @@ export * from './store.js';
 export * from './report.js';
 export * from './vitals.js';
 export * from './functions.js';
+export * from './answer.js';
+export * from './answer-text.js';
+export * from './comment.js';
 export * from './prune.js';
 export * from './dashboard/index.js';

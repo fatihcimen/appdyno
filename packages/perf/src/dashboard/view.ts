@@ -4,6 +4,7 @@ import {
   journeyStep,
   measureOf,
   MEASURES,
+  stepName,
   type Noise,
   type PerfRecord,
 } from '../record.js';
@@ -39,9 +40,6 @@ export const cellKey = (row: string, cls: string) => `${row}\n${cls}`;
 export const isPhase = (kind: string) => kind.startsWith('launch.phase.');
 
 export const isJourney = (kind: string) => kind.startsWith('journey.');
-
-/** A step's name in words, from its kind. */
-export const stepName = (step: string) => step.replaceAll('_', ' ');
 
 /** What each step of this run took, in order. */
 export const stepTimes = (run: PerfRecord[]) =>

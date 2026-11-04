@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import type { GateAnswer, Reference } from './answer.js';
 import type { Baseline, BudgetRule } from './compare.js';
 import { keyName, type MeasureId, type PerfRecord } from './record.js';
 
@@ -118,6 +119,37 @@ export async function saveBaseline(projectDir: string, b: Baseline): Promise<str
   await mkdir(dirname(file), { recursive: true });
   await writeFile(file, `${JSON.stringify(b, null, 2)}\n`);
   return file;
+}
+
+const referenceFile = (projectDir: string, k: RunKey) =>
+  join(projectDir, 'references', k.app, k.scenario, `${k.deviceClass}.json`);
+
+/** Beside the baselines and committed with them: a baseline's other side, which that build alone could give. */
+export async function saveReference(projectDir: string, r: Reference): Promise<string> {
+  const file = referenceFile(projectDir, r);
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, `${JSON.stringify(r, null, 2)}\n`);
+  return file;
+}
+
+export async function loadReference(projectDir: string, k: RunKey): Promise<Reference | undefined> {
+  const file = referenceFile(projectDir, k);
+  return existsSync(file) ? (JSON.parse(await readFile(file, 'utf8')) as Reference) : undefined;
+}
+
+const answerFile = (dir: string, k: RunKey) =>
+  join(dir, 'answers', k.app, k.scenario, `${k.deviceClass}.json`);
+
+/** The newest answer of a key: one file, as only the newest run's is ever read. */
+export async function saveAnswer(dir: string, a: GateAnswer): Promise<void> {
+  const file = answerFile(dir, a);
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, JSON.stringify(a, null, 2));
+}
+
+export async function loadAnswer(dir: string, k: RunKey): Promise<GateAnswer | undefined> {
+  const file = answerFile(dir, k);
+  return existsSync(file) ? (JSON.parse(await readFile(file, 'utf8')) as GateAnswer) : undefined;
 }
 
 /** A project's limits: `budgets.json`, a list of rules; none is fine. */

@@ -74,7 +74,7 @@ const RUN_SDS = 4;
  * The least change worth reporting, whatever the baseline's runs say: a difference of medians over 10 % alone
  * alarmed on 25 of 72 pairs of unchanged runs on a loaded simulator (docs/perf.md).
  */
-const FLOOR: Record<Unit, { percent: number; absolute: number }> = {
+export const FLOOR: Record<Unit, { percent: number; absolute: number }> = {
   ms: { percent: 15, absolute: 10 },
   percent: { percent: 25, absolute: 3 },
   kb: { percent: 10, absolute: 2048 },

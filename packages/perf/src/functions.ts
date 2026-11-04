@@ -3,7 +3,7 @@ const FLOOR_MS_A_SECOND = 20;
 const FLOOR_SHARE = 0.25;
 
 /** What a diff reads of a profile; on either platform a sample is a millisecond of CPU. */
-type Profile = {
+export type Profile = {
   durationMs: number;
   top: { symbol: string; samples: number }[];
   appTop?: { symbol: string; samples: number }[] | undefined;
@@ -25,25 +25,36 @@ const rates = (p: Profile) =>
   );
 
 /**
- * What moved between two profiles, most first: what a gate's alarm comes down to. A function neither lists counts as
- * nothing, which is below the floor either way, and two runs of the same work name nothing.
+ * What moved between two readings past both floors, most first. A name one of them lacks counts as nothing there, and
+ * only what passes both floors is called: two runs of the same work name nothing.
  */
-export function functionDiff(before: Profile, after: Profile): FunctionChange[] {
-  const [a, b] = [rates(before), rates(after)];
-  return [...new Set([...a.keys(), ...b.keys()])]
-    .map((symbol) => {
-      const [was, is] = [a.get(symbol) ?? 0, b.get(symbol) ?? 0];
-      return { symbol, was, is, moved: is - was };
+export function moved(
+  before: Map<string, number>,
+  after: Map<string, number>,
+  floor: number,
+  share: number,
+) {
+  return [...new Set([...before.keys(), ...after.keys()])]
+    .map((name) => {
+      const [was, is] = [before.get(name) ?? 0, after.get(name) ?? 0];
+      return { name, was, is, change: is - was };
     })
     .filter(
-      ({ was, is, moved }) =>
-        Math.abs(moved) >= FLOOR_MS_A_SECOND && Math.abs(moved) >= FLOOR_SHARE * Math.max(was, is),
+      ({ was, is, change }) =>
+        Math.abs(change) >= floor && Math.abs(change) >= share * Math.max(was, is),
     )
-    .sort((x, y) => Math.abs(y.moved) - Math.abs(x.moved))
-    .map(({ symbol, was, is, moved }) => ({
-      symbol,
+    .sort((x, y) => Math.abs(y.change) - Math.abs(x.change))
+    .map(({ name, was, is, change }) => ({
+      name,
       beforeMs: r1(was),
       afterMs: r1(is),
-      changeMs: r1(moved),
+      changeMs: r1(change),
     }));
 }
+
+/** What moved between two profiles, most first: what a gate's alarm comes down to. */
+export const functionDiff = (before: Profile, after: Profile): FunctionChange[] =>
+  moved(rates(before), rates(after), FLOOR_MS_A_SECOND, FLOOR_SHARE).map(({ name, ...change }) => ({
+    symbol: name,
+    ...change,
+  }));

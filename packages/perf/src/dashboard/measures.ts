@@ -1,4 +1,5 @@
 import { esc } from '@appdyno/core';
+import { VIRTUAL_IS_RELATIVE } from '../answer-text.js';
 import { measureOf, type MeasureId, type PerfRecord } from '../record.js';
 import { vitalsCall } from '../vitals.js';
 import type { Refusal } from '../store.js';
@@ -112,9 +113,6 @@ const rowTitle = (row: string) => {
   const title = measureTitle(row);
   return title ? esc(title) : `other<div class="m">${esc(row)}</div>`;
 };
-
-const VIRTUAL_IS_RELATIVE =
-  'Numbers from an emulator or simulator are relative to this Mac; real frame rates, frozen frames, hitches and energy need a phone.';
 
 /** Said above the table: it is why the columns are not alike, and an app with no phone has no real numbers yet. */
 function realDeviceNote(v: AppView) {

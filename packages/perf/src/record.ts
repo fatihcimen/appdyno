@@ -170,6 +170,9 @@ export function journeyStep(kind: string): { step: string; what: string } | unde
   return m ? { step: m[1]!, what: m[2]! } : undefined;
 }
 
+/** A step's name in words, from its kind. */
+export const stepName = (step: string) => step.replaceAll('_', ' ');
+
 /** A run of odd characters as one: stored runs and baselines already have these names. */
 export const keyName = (s: string) => s.replace(/[^\w.-]+/g, '_');
 

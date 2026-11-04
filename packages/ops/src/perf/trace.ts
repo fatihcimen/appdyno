@@ -1,32 +1,20 @@
-import type { FrameCause, Measured, SlowFrameCauses } from '@appdyno/core';
-import type { Metric } from '@appdyno/perf';
+import { frameCauseText, hangText, type Measured, type SlowFrameCauses } from '@appdyno/core';
+import { UNEXPLAINED_FRAMES, type Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { TraceOut } from './schemas.js';
 import { defineOp, ACT, reply } from '../tool.js';
 import { perfTools, App, Dsym, Probe, Scenario, symbolsOf } from './shared.js';
 
-const CAUSE_WORDS: Record<FrameCause, string> = {
-  lock: 'waiting for a monitor lock',
-  binder: 'in binder calls',
-  gc: 'waiting for the garbage collector',
-  busy: 'at work on the main thread',
-  starved: 'waiting for a CPU',
-  io: 'blocked in the kernel, as on disk',
-  sleeping: 'asleep, with nothing named holding it',
-};
-
 /** Why the slow frames were slow, or that the trace cannot say: never a guess. */
 const causeLines = (c: SlowFrameCauses | undefined) => {
   if (!c?.slowFrames) return [];
-  const named = (x: SlowFrameCauses['causes'][number]) =>
-    `${CAUSE_WORDS[x.cause]}, ${x.msPerFrame} ms a frame (${x.share} %)${x.detail ? `: ${x.detail}` : ''}`;
   const [first, ...rest] = c.causes;
   return [
     c.top && first
-      ? `why the ${c.slowFrames} slow frames were slow: ${named(first)}`
-      : `the ${c.slowFrames} slow frames are unexplained: no cause holds the main thread long enough to name`,
-    ...rest.slice(0, 3).map((x) => `then ${named(x)}`),
+      ? `why the ${c.slowFrames} slow frames were slow: ${frameCauseText(first)}`
+      : `the ${c.slowFrames} slow frames ${UNEXPLAINED_FRAMES}`,
+    ...rest.slice(0, 3).map((x) => `then ${frameCauseText(x)}`),
   ];
 };
 
@@ -119,10 +107,7 @@ export function perfTraceOp(ctx: ServerContext) {
           {
             lines: [
               `${v.hangs} hangs of the main thread (over 250 ms), ${v.totalMs} ms in all, worst ${v.worstMs} ms`,
-              ...(v.causes ?? []).map(
-                (c) =>
-                  `${c.ms} ms hang: ${c.kind === 'busy' ? 'busy' : 'blocked'}, on the CPU ${c.cpuPercent} % of it${c.function ? `, in ${c.function}${c.function.startsWith('0x') ? ' (an address: `dsym` names it)' : ''}` : ''}`,
-              ),
+              ...(v.causes ?? []).map(hangText),
             ],
             after: () => [`trace (Instruments): ${v.tracePath}`],
             data: {
