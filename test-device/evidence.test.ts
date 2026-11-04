@@ -352,28 +352,35 @@ describe.skipIf(!android)('network on Android', () => {
     expect(await proxySetting()).toBe('null');
   });
 
-  it('sends an app through a proxy on this Mac, lists it from the export and puts it back', async () => {
-    const proxy = `127.0.0.1:${web.proxyPort}`;
-    await h.ok('network', { action: 'start', via: 'proxy', proxy });
-    expect(await proxySetting()).toBe(proxy);
-    expect((await h.call('network', { action: 'start', via: 'bytes' })).text).toMatch(
-      /stop it first/,
-    );
-    await fetchIn(h.ok, 'http://proxied.test/hello?token=abc123');
-    const har = join(dir, 'proxy.har');
-    writeFileSync(har, web.har());
-    // a proxy on the device takes every app's traffic, the system's own checks too
-    const read = await h.ok('network', { action: 'read', har, contains: 'proxied.test' });
-    expect(read.text).toMatch(/GET http:\/\/proxied\.test\/hello\?token=••• 200/);
-    expect(read.text).not.toContain('abc123');
-    expect(read.text).toMatch(/bodies: 1 of 1 in the export/);
-    const none = await h.call('network', { action: 'read' });
-    expect(none.error).toBe(true);
-    expect(none.text).toMatch(/export it as HAR/);
-    await h.ok('network', { action: 'stop' });
-    expect(await proxySetting()).toBe('null');
-    expect(await adb.run(['-s', android!, 'reverse', '--list'])).not.toContain(`${web.proxyPort}`);
-  }, 120_000);
+  // never on a phone: a person's proxy is no test's to change, and a run that dies would leave their traffic pointing here
+  it.runIf(android?.startsWith('emulator-'))(
+    'sends an app through a proxy on this Mac, lists it from the export and puts it back',
+    async () => {
+      const proxy = `127.0.0.1:${web.proxyPort}`;
+      await h.ok('network', { action: 'start', via: 'proxy', proxy });
+      expect(await proxySetting()).toBe(proxy);
+      expect((await h.call('network', { action: 'start', via: 'bytes' })).text).toMatch(
+        /stop it first/,
+      );
+      await fetchIn(h.ok, 'http://proxied.test/hello?token=abc123');
+      const har = join(dir, 'proxy.har');
+      writeFileSync(har, web.har());
+      // a proxy on the device takes every app's traffic, the system's own checks too
+      const read = await h.ok('network', { action: 'read', har, contains: 'proxied.test' });
+      expect(read.text).toMatch(/GET http:\/\/proxied\.test\/hello\?token=••• 200/);
+      expect(read.text).not.toContain('abc123');
+      expect(read.text).toMatch(/bodies: 1 of 1 in the export/);
+      const none = await h.call('network', { action: 'read' });
+      expect(none.error).toBe(true);
+      expect(none.text).toMatch(/export it as HAR/);
+      await h.ok('network', { action: 'stop' });
+      expect(await proxySetting()).toBe('null');
+      expect(await adb.run(['-s', android!, 'reverse', '--list'])).not.toContain(
+        `${web.proxyPort}`,
+      );
+    },
+    120_000,
+  );
 
   it('counts an app by its bytes, with no URL and no body', async () => {
     await h.ok('network', { action: 'start', via: 'bytes' });
