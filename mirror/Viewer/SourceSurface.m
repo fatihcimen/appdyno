@@ -28,6 +28,7 @@ enum { kBooted = 3 };
   id<MVSimulator> _device;
   NSUUID *_uuid;
   NSMutableArray *_screens;
+  NSMapTable *_surfaces;
   id _chosen;
   id _surface;
   dispatch_source_t _watch;
@@ -42,6 +43,7 @@ enum { kBooted = 3 };
     _uuid = NSUUID.UUID;
     _turns = [options[@"turns"] intValue] & 3;
     _screens = [NSMutableArray array];
+    _surfaces = [NSMapTable strongToStrongObjectsMapTable];
   }
   return self;
 }
@@ -98,7 +100,7 @@ enum { kBooted = 3 };
   [self lost:@"simulator-off"];
 }
 
-/// A device may report several screens and not all draw: the first to hand over a surface is the one.
+/// A device may report several screens and not all draw, and a Duo draws on one at a time: the one that draws is shown.
 - (void)registerScreens:(NSArray *)screens {
   if (_stopped) return;
   __weak MVSourceSurface *weak = self;
@@ -120,13 +122,8 @@ enum { kBooted = 3 };
 
 - (void)screen:(id)screen surface:(id)surface {
   if (_stopped || !surface) return;
-  if (!_chosen) {
-    _chosen = screen;
-    for (id<MVSimulator> other in _screens)
-      if (other != screen) [other unregisterScreenCallbacksWithUUID:_uuid];
-    [_screens removeAllObjects];
-    [_screens addObject:screen];
-  }
+  [_surfaces setObject:surface forKey:screen];
+  _chosen = _chosen ?: screen;
   if (screen != _chosen) return;
   // a fold: a new surface, with no reconnect
   _surface = surface;
@@ -152,7 +149,13 @@ enum { kBooted = 3 };
 }
 
 - (void)presented:(id)screen {
-  if (_stopped || screen != _chosen) return;
+  id surface = [_surfaces objectForKey:screen];
+  if (_stopped || !surface) return;
+  if (screen != _chosen) {
+    _chosen = screen;
+    _surface = surface;
+    [self sayShape];
+  }
   [self show];
 }
 

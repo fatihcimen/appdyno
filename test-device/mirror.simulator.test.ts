@@ -28,6 +28,9 @@ const until = async (what: string, test: () => boolean, ms = 30_000) => {
 const percentile = (values: number[], p: number) =>
   [...values].sort((a, b) => a - b)[Math.floor(values.length * p)]!;
 
+/** Past this, a picture is an iPad's or an open Duo's, not a phone's. */
+const WIDE_PIXELS = 1300;
+
 describe.runIf(udid)('mirror on a simulator', () => {
   const device = new IosSimulatorDevice(udid!);
   const seen: MirrorStatus[] = [];
@@ -70,18 +73,27 @@ describe.runIf(udid)('mirror on a simulator', () => {
   });
 
   it('a person drag reaches the simulator, and the screen answers', async () => {
-    execFileSync('xcrun', ['simctl', 'launch', udid!, 'com.apple.Preferences']);
+    // a list as wide as any screen: Settings on an iPad or an open Duo has a sidebar and a pane that does not move. By
+    // the app's own button, as a link from outside first asks whether to open it
+    await device.launch('dev.appdyno.fixture');
+    const home = await device.read('dev.appdyno.fixture');
+    const open = home.list.find((e) => e.id === 'open_list')!;
+    session.send({ kind: 'touch', p: 0, x: open.x / home.window!.w, y: open.y / home.window!.h });
+    await new Promise((r) => setTimeout(r, 80));
+    session.send({ kind: 'touch', p: 2, x: open.x / home.window!.w, y: open.y / home.window!.h });
     await new Promise((r) => setTimeout(r, 3_000));
     const times: number[] = [];
     for (let round = 0; round < 8; round++) {
       await new Promise((r) => setTimeout(r, 800));
       const marked = session.mark();
-      session.send({ kind: 'touch', p: 0, x: 0.5, y: 0.75 });
+      // up and back: a list shorter than eight flicks would stop answering at its end
+      const [from, step] = round % 2 ? [0.39, 0.03] : [0.75, -0.03];
+      session.send({ kind: 'touch', p: 0, x: 0.5, y: from });
       for (let i = 1; i <= 12; i++) {
-        session.send({ kind: 'touch', p: 1, x: 0.5, y: 0.75 - i * 0.03 });
+        session.send({ kind: 'touch', p: 1, x: 0.5, y: from + i * step });
         await new Promise((r) => setTimeout(r, 16));
       }
-      session.send({ kind: 'touch', p: 2, x: 0.5, y: 0.39 });
+      session.send({ kind: 'touch', p: 2, x: 0.5, y: from + 12 * step });
       times.push(
         await Promise.race([marked, new Promise<number>((r) => setTimeout(() => r(-1), 5_000))]),
       );
@@ -240,6 +252,16 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_ROTATE === '1')('a simulator t
       const { w, h } = session.status.picture!;
       expect(h).toBeGreaterThan(w);
 
+      // an open Duo stays as it is, whatever is asked: then nothing has turned, and the picture must say so
+      await device.launch(APP);
+      await device.setOrientation(1);
+      await new Promise((r) => setTimeout(r, 2_500));
+      const { window: tried } = await device.read(APP);
+      if (tried!.h > tried!.w) {
+        expect(told.at(-1) ?? 0).toBe(0);
+        expect(shaped(w, h)).toBe(true);
+        return;
+      }
       for (const rotation of [1, 3] as const) {
         await device.terminate(APP);
         await device.launch(APP);
@@ -277,11 +299,13 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_ROTATE === '1')('a simulator t
       );
       await until('the same shape', () => shaped(h, w));
 
-      // an app that does not turn is upright, though the device has turned
-      execFileSync('xcrun', ['simctl', 'launch', udid!, 'com.apple.Preferences']);
-      await until('an upright app', () => shaped(w, h));
-      await device.launch(APP);
-      await until('a turned app', () => shaped(h, w));
+      // an app that does not turn is upright, though the device has turned; on a wide screen Settings turns too
+      if (w < WIDE_PIXELS) {
+        execFileSync('xcrun', ['simctl', 'launch', udid!, 'com.apple.Preferences']);
+        await until('an upright app', () => shaped(w, h));
+        await device.launch(APP);
+        await until('a turned app', () => shaped(h, w));
+      }
 
       await device.setOrientation(0);
       await until('the picture upright again', () => shaped(w, h));
