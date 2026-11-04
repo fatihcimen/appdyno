@@ -25,7 +25,8 @@ const MARKS = `.defs{position:absolute;width:0;height:0}
 .tile .chip{margin-top:0;font-size:.85rem}
 .which{margin:.25rem 0;padding-left:1.1rem}.which li{margin:.15rem 0}.clear{margin:.25rem 0}.clear .chip{display:inline-flex;font-weight:600;font-size:inherit;margin-right:.25rem}
 .attention h3{font-size:.9rem;margin:.75rem 0 .1rem}.attention details{margin-top:.75rem}.attention summary{font-weight:600;font-size:.9rem}
-summary{cursor:pointer}`;
+summary{cursor:pointer}
+.why+.why{margin-top:.6rem}.why h4{margin:0 0 .35rem;padding:0;border:0;overflow-wrap:anywhere}.why dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:.15rem .75rem;margin:0}.why dt{font-weight:600}.why dd{margin:0;overflow-wrap:anywhere}`;
 
 const TABLES = `.tw{overflow-x:auto}
 .matrix{border-collapse:collapse;table-layout:fixed;width:100%;min-width:calc(10.5rem + var(--cols)*10.5rem);background:var(--surface);font-variant-numeric:tabular-nums}

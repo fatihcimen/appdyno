@@ -6,9 +6,10 @@ import { measuresTable } from './measures.js';
 import { dashboardPage, emptySection, pageHead } from './page.js';
 import { trendsSection } from './trends.js';
 import { appViewOf, namesOf, scenariosOf, type AppView } from './view.js';
+import { whySection } from './why.js';
 
 const appSection = (v: AppView) =>
-  `<section class="app" id="${esc(appAnchor(v.app))}"><h2>${esc(v.app)}</h2><h3>Measures by device</h3>${measuresTable(v)}${trendsSection(v)}</section>`;
+  `<section class="app" id="${esc(appAnchor(v.app))}"><h2>${esc(v.app)}</h2>${whySection(v.scenarios)}<h3>Measures by device</h3>${measuresTable(v)}${trendsSection(v)}</section>`;
 
 /** The whole page from what was loaded: the same data gives the same page. */
 export function renderDashboard(data: DashboardData): string {

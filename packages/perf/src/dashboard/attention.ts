@@ -1,4 +1,5 @@
 import { esc } from '@appdyno/core';
+import type { Comparison } from '../compare.js';
 import { age, appAnchor, deviceLabel, deviceName, type DeviceName } from './format.js';
 import { vitalsCall } from '../vitals.js';
 import { chip, icon, type Status } from './marks.js';
@@ -17,6 +18,12 @@ const item = (s: Scenario, names: Map<string, DeviceName>, now: number, what: st
 const which = (title: string, items: string[]) =>
   items.length ? `<h3>${esc(title)}</h3><ul class="which">${items.join('')}</ul>` : '';
 
+/** What the kept answer names for this number: nothing, where it names nothing. */
+const causeOf = (c: Comparison, s: Scenario) => {
+  const finding = s.answer.findings.find((f) => f.worse.some((x) => x.kind === c.kind));
+  return finding?.causes[0] ? `; likeliest cause: ${finding.causes[0].says}` : '';
+};
+
 /** What a reader should look at first, with its counts; what the page cannot vouch for is said here too. */
 export function attentionSection(
   scenarios: Scenario[],
@@ -29,7 +36,7 @@ export function attentionSection(
     scenarios.flatMap((s) => pick(s).map((x) => item(s, names, now, words(x, s))));
   const regressions = list(
     (s) => s.report.comparisons.filter((c) => c.verdict === 'regression'),
-    (c) => `${c.kind} ${againstText(c)}, ${changeText(c)}`,
+    (c, s) => `${c.kind} ${againstText(c)}, ${changeText(c)}${causeOf(c, s)}`,
   );
   const budgets = list(
     (s) => s.report.budgets.filter((b) => !b.ok),

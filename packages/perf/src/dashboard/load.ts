@@ -1,6 +1,8 @@
+import type { GateAnswer } from '../answer.js';
 import type { Baseline, BudgetRule } from '../compare.js';
 import type { PerfRecord } from '../record.js';
 import {
+  loadAnswer,
   loadBaseline,
   loadBudgets,
   loadRefusals,
@@ -22,6 +24,8 @@ export type KeyRuns = {
   /** How many runs the store holds of this key. */
   total: number;
   baseline?: Baseline;
+  /** What `perf why` kept last, of whichever run that was. */
+  answer?: GateAnswer;
 };
 
 export type DashboardData = {
@@ -45,6 +49,13 @@ const usable = (r: PerfRecord) =>
   Array.isArray(r.noise) &&
   Number.isFinite(Date.parse(r.at)) &&
   Object.hasOwn(UNIT_STEPS, r.unit);
+
+const usableAnswer = (a: GateAnswer | undefined) =>
+  Array.isArray(a?.notes) &&
+  Array.isArray(a?.findings) &&
+  a.findings.every((f) =>
+    [f?.worse, f?.causes, f?.evidence, f?.cannot].every((list) => Array.isArray(list)),
+  );
 
 /** What the page shows from the store, and no more; a file half written or edited by hand is no reason to fail. */
 export async function loadDashboard(
@@ -74,6 +85,11 @@ export async function loadDashboard(
       () => loadBaseline(projectDir, key),
       undefined,
     );
+    const answer = await attempt(
+      `answer of ${key.scenario}`,
+      () => loadAnswer(dir, key),
+      undefined,
+    );
     return {
       key,
       runs: runs
@@ -81,6 +97,7 @@ export async function loadDashboard(
         .filter((run) => run.length > 0),
       total: files.length,
       ...(baseline && { baseline }),
+      ...(usableAnswer(answer) && { answer: answer! }),
     };
   };
   const keys: KeyRuns[] = [];

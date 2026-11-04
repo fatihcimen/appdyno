@@ -1,3 +1,4 @@
+import { answerOf, type GateAnswer } from '../answer.js';
 import type { BudgetResult, BudgetRule, Comparison } from '../compare.js';
 import {
   JOURNEY_TOTAL,
@@ -13,8 +14,8 @@ import type { Refusal } from '../store.js';
 import { deviceName, formatValue, time, type DeviceName } from './format.js';
 import type { DashboardData, KeyRuns } from './load.js';
 
-/** A key with what its newest run says, as `perf compare` would. */
-export type Scenario = KeyRuns & { report: KeyReport };
+/** A key with what its newest run says, as `perf compare` would, and why, where `perf why` looked at that very run. */
+export type Scenario = KeyRuns & { report: KeyReport; answer: GateAnswer };
 
 export type Reading = { record: PerfRecord; run: PerfRecord[]; scenario: Scenario };
 
@@ -62,11 +63,16 @@ export const loud = (noise: Noise[]) => noise.filter((n) => n !== 'debuggable-bu
 export function scenariosOf(data: DashboardData, unread: string[]): Scenario[] {
   return data.keys.map((k) => {
     const newest = k.runs.slice(0, 1);
+    const against = (baseline: KeyRuns['baseline']) => {
+      const report = reportKey(k.key, newest, baseline, data.rules);
+      const kept = k.answer?.run === report.run && k.answer;
+      return { ...k, report, answer: kept || answerOf(report, newest[0] ?? [], baseline) };
+    };
     try {
-      return { ...k, report: reportKey(k.key, newest, k.baseline, data.rules) };
+      return against(k.baseline);
     } catch (e) {
       unread.push(`baseline of ${k.key.scenario}: ${(e as Error).message}`);
-      return { ...k, report: reportKey(k.key, newest, undefined, data.rules) };
+      return against(undefined);
     }
   });
 }

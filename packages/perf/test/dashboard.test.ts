@@ -4,14 +4,18 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   addToBaseline,
+  latestRuns,
   loadDashboard,
   recordsOf,
   renderDashboard,
+  runKeys,
+  saveAnswer,
   saveBaseline,
   saveRefusal,
   saveRun,
   writeDashboard,
   type DeviceInfo,
+  type GateAnswer,
   type Metric,
   type PerfRecord,
 } from '../src/index.js';
@@ -476,5 +480,98 @@ describe('what it reads', () => {
     const other = await writeDashboard(s.dir, s.project, { out });
     expect(other).toBe(join(out, 'index.html'));
     expect(existsSync(other)).toBe(true);
+  });
+});
+
+describe('why it got worse', () => {
+  const KEY = { app: 'dev.app', scenario: 'launch-cold', deviceClass: PHONE_CLASS };
+
+  /** A store whose newest run the gate calls a regression. */
+  async function worse() {
+    const s = store();
+    await baselineAndBudget(s.project);
+    await s.run(1, [launch(900)]);
+    const [key] = await runKeys(s.dir);
+    const [run] = await latestRuns(s.dir, key!);
+    return { ...s, runId: run![0]!.run };
+  }
+
+  const kept = (run: string, says: string): GateAnswer => ({
+    ...KEY,
+    schema: 1,
+    status: 'regression',
+    run,
+    at: ago(1),
+    findings: [
+      {
+        place: 'run',
+        worse: [
+          {
+            kind: 'launch.ttid_ms',
+            unit: 'ms',
+            verdict: 'regression',
+            current: 902,
+            baseline: 402,
+            shift: 500,
+            floor: 60,
+            p: 0.0002,
+            n: { current: 6, baseline: 18 },
+          },
+        ],
+        sure: 'p 0.0002',
+        causes: [{ kind: 'phase', name: 'bindApplication', says }],
+        evidence: ['start trace pm-1'],
+        cannot: [],
+      },
+    ],
+    notes: [],
+  });
+
+  it('says of a regression nobody looked into what would look', async () => {
+    const s = await worse();
+    const text = textOf(await s.page());
+    expect(text).toContain('Why it got worse');
+    expect(text).toContain('no cause was looked for');
+  });
+
+  it('puts the cause kept for that run beside the regression, and in the app', async () => {
+    const s = await worse();
+    await saveAnswer(s.dir, kept(s.runId, 'bindApplication, +500 ms'));
+    const text = textOf(await s.page());
+    expect(text).toContain('likeliest cause: bindApplication, +500 ms');
+    expect(text.indexOf('What needs attention')).toBeLessThan(text.indexOf('Why it got worse'));
+    expect(text.indexOf('Why it got worse')).toBeLessThan(text.indexOf('Measures by device'));
+    expect(text).toContain('Likeliest cause');
+    expect(text).toContain('start trace pm-1');
+  });
+
+  it('gives no answer of an older run for a newer one', async () => {
+    const s = await worse();
+    await saveAnswer(s.dir, kept('run-of-another-time', 'bindApplication, +500 ms'));
+    expect(textOf(await s.page())).not.toContain('bindApplication, +500 ms');
+  });
+
+  it('has no such section with no regression', async () => {
+    const s = store();
+    await s.run(5, [launch(400)]);
+    expect(textOf(await s.page())).not.toContain('Why it got worse');
+  });
+
+  it('escapes what an answer holds', async () => {
+    const s = await worse();
+    await saveAnswer(s.dir, kept(s.runId, '<img src=x onerror=alert(1)>'));
+    const html = await s.page();
+    expect(html).not.toContain('<img src=x');
+    expect(html).toContain('&#60;img src=x');
+  });
+
+  it('reads past an answer edited by hand, and says what it could not read', async () => {
+    const s = await worse();
+    const file = join(s.dir, 'answers', KEY.app, KEY.scenario, `${KEY.deviceClass}.json`);
+    await saveAnswer(s.dir, kept(s.runId, 'x'));
+    writeFileSync(file, '{ not json');
+    const text = textOf(await s.page());
+    expect(text).toContain('no cause was looked for');
+    expect(text).toContain('answer of launch-cold');
   });
 });
