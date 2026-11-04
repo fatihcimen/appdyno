@@ -408,8 +408,13 @@ const fullSeconds = moved.slice(1).filter((n) => Number(n.arrived) >= 30);
 const fps = median(fullSeconds.map((n) => Number(n.arrived)));
 const best = Math.max(...fullSeconds.map((n) => Number(n.arrived)));
 const hz = kind === 'phone' ? await displayHz() : undefined;
+// what a phone's picture must hold is 60 frames, or all its display has: `auto` trades what is past that for a touch
 const fpsNeeded =
-  kind === 'emulator' ? (guest ?? 0) * 0.9 : kind === 'phone' ? Math.floor((hz * 59) / 60) : 58;
+  kind === 'emulator'
+    ? (guest ?? 0) * 0.9
+    : kind === 'phone'
+      ? Math.min(59, Math.floor((hz * 59) / 60))
+      : 58;
 const fpsTarget =
   kind === 'emulator'
     ? guest
