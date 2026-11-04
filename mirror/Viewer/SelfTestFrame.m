@@ -120,6 +120,36 @@ static void checkMood(void) {
   CFRelease(surface);
 }
 
+/// One corner's colour of a mood, as its first byte in each channel.
+static void moodCorner(CGImageRef mood, uint8_t px[4]) {
+  CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+  CGContextRef c = CGBitmapContextCreate(px, 1, 1, 8, 4, space, (CGBitmapInfo)kCGImageAlphaNoneSkipLast);
+  CGContextDrawImage(c, CGRectMake(0, 0, 1, 1), mood);
+  CGContextRelease(c);
+  CGColorSpaceRelease(space);
+}
+
+static void checkStreamMood(void) {
+  CVPixelBufferRef image = NULL;
+  CVPixelBufferCreate(NULL, 64, 64, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange, NULL, &image);
+  CVPixelBufferLockBaseAddress(image, 0);
+  // red, as a stream carries it
+  memset(CVPixelBufferGetBaseAddressOfPlane(image, 0), 63, CVPixelBufferGetBytesPerRowOfPlane(image, 0) * 64);
+  uint8_t *chroma = CVPixelBufferGetBaseAddressOfPlane(image, 1);
+  for (size_t i = 0; i < CVPixelBufferGetBytesPerRowOfPlane(image, 1) * 32; i += 2) chroma[i] = 102, chroma[i + 1] = 240;
+  CVPixelBufferUnlockBaseAddress(image, 0);
+  CGImageRef mood = MVImageMood(image, NO);
+  uint8_t px[4] = {0};
+  if (mood) moodCorner(mood, px);
+  MVCheck(@"backdrop: a stream's own colours reach the window", mood && px[0] > px[1] + 40 && px[0] > px[2] + 40, [NSString stringWithFormat:@"%d %d %d", px[0], px[1], px[2]]);
+  if (mood) CGImageRelease(mood);
+  CVPixelBufferRelease(image);
+  CVPixelBufferRef ten = NULL;
+  CVPixelBufferCreate(NULL, 64, 64, kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange, NULL, &ten);
+  MVCheck(@"backdrop: a kind of image it cannot read leaves the window as it was", ten && !MVImageMood(ten, NO), nil);
+  CVPixelBufferRelease(ten);
+}
+
 static void checkGestures(void) {
   MVCheck(@"pinch: fingers spread with the magnification", near(MVPinchGap(100, 0.5, 400), 150), nil);
   MVCheck(@"pinch: never onto each other, nor off the screen", near(MVPinchGap(10, -0.9, 400), 8) && near(MVPinchGap(390, 0.5, 400), 400), nil);
@@ -138,5 +168,6 @@ void MVCheckFrame(void) {
   checkGlass();
   checkLive();
   checkMood();
+  checkStreamMood();
   checkGestures();
 }

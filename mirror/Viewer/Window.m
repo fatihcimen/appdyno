@@ -240,6 +240,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 }
 
 - (BOOL)showImage:(CVImageBufferRef)image {
+  [_backdrop followImage:image];
   return [_layers showImage:image];
 }
 
