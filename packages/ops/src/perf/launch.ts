@@ -4,6 +4,7 @@ import type { ServerContext } from '../context.js';
 import { LaunchOut } from './schemas.js';
 import { defineOp, DESTRUCTIVE, reply } from '../tool.js';
 import { perfTools, App, Probe, Scenario, deviceInfo, virtual } from './shared.js';
+import { baselineLines, baselineVerdict } from './baseline.js';
 import { dayLongest, playLine } from './vitals.js';
 
 export function perfLaunchOp(ctx: ServerContext) {
@@ -20,6 +21,10 @@ export function perfLaunchOp(ctx: ServerContext) {
         repeats: z.number().int().min(1).max(10).default(5),
         compile: z.enum(['speed', 'speed-profile', 'verify']).optional(),
         trace: z.boolean().optional(),
+        baselineProfile: z
+          .boolean()
+          .optional()
+          .describe('Android, a release build: in the APK, applied, cold starts with and without'),
         probe: Probe,
         scenario: Scenario,
       })
@@ -27,10 +32,53 @@ export function perfLaunchOp(ctx: ServerContext) {
     output: LaunchOut,
     annotations: DESTRUCTIVE,
     needs: 'launch',
-    run: async ({ app, mode, repeats, compile, trace, probe, scenario }) => {
+    run: async ({ app, mode, repeats, compile, trace, baselineProfile, probe, scenario }) => {
       const s = await ctx.session();
       s.appPid = undefined;
       const pkg = appOf(s, app);
+      if (baselineProfile) {
+        const m = await measure(s, 'baselineProfile', false)(pkg, { repeats });
+        s.acted();
+        const saved = await save('launch', [m], m.value);
+        const { present, state, applied, rules, without, with: withMs } = m.value;
+        const noise = await keep(
+          s,
+          pkg,
+          scenario ?? 'launch-baseline-profile',
+          'perf_launch',
+          saved.txt,
+          [
+            { kind: 'launch.without_profile_ms', unit: 'ms', samples: without },
+            { kind: 'launch.with_profile_ms', unit: 'ms', samples: withMs },
+          ],
+        );
+        return reply(
+          [
+            `measurement ${saved.id}${virtualNote(s)}`,
+            ...baselineLines(m.value),
+            ...noisy(noise),
+            `raw output: ${saved.txt}`,
+          ].join('\n'),
+          {
+            id: saved.id,
+            raw: saved.txt,
+            virtualDevice: virtual(s),
+            mode: 'cold' as const,
+            samples: withMs.map((totalMs) => ({ totalMs })),
+            excessive: false,
+            baselineProfile: {
+              present,
+              ...(state && { state }),
+              applied,
+              ...(rules && { rules }),
+              withoutMs: without,
+              withMs,
+              ...(without.length > 0 && { verdict: baselineVerdict(m.value).verdict }),
+            },
+            noise,
+          },
+        );
+      }
       // not by default: a kept launch stays one kind, whatever else measured this app
       await withProbe(s, pkg, probe ?? false);
       const m = await measure(

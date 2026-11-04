@@ -124,6 +124,21 @@ export type LaunchReading = {
   startup?: StartupAnalysis;
 };
 
+/** An Android app's Baseline Profile: in its APK, compiled on the device, and what it does for a cold start. */
+export type BaselineReading = {
+  /** `assets/dexopt/baseline.prof` in its APK. */
+  present: boolean;
+  /** What the device says of its code before any of this: `status=verify reason=install`. */
+  state?: string;
+  /** Compiled from a profile now: by the status, as a `.dm` of the wrong format has the reason and no code. */
+  applied: boolean;
+  /** Of the profile once installed, where the device can say. */
+  rules?: number;
+  /** Cold starts, taken in turns; none with no profile to try. */
+  without: number[];
+  with: number[];
+};
+
 export type BuildType = 'debug' | 'profileable' | 'release' | 'unknown';
 
 export type ThreadReading = {
@@ -286,6 +301,7 @@ export interface MeasureSource {
   ): Promise<Measured<LaunchReading>>;
   /** Debuggable, profileable or neither: what a number of this build can be compared with. */
   buildType?(app: string): Promise<BuildType>;
+  baselineProfile?(app: string, opts: { repeats: number }): Promise<Measured<BaselineReading>>;
   /** Relaunches the app with the frame probe unless it runs under it already (simulator): true if it did. */
   attachProbe?(app: string): Promise<boolean>;
   threads?(app: string, windowMs: number): Promise<Measured<ThreadReading>>;

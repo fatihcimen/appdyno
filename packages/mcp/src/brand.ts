@@ -19,4 +19,4 @@ export const INSTRUCTIONS =
   'Drives a mobile device: the one use_device selected, or the only one connected. Read the screen first; act on elements by ref or selector (tap, gesture, type_text, steps). ' +
   'Every action returns the settled screen after it (read: diff by default), no extra read needed, with changed: false when nothing moved and settled: false when it kept moving. ' +
   'No fixed sleeps: use wait_for. Take a screenshot only for a visual judgement. A failed answer has code and hint. When the app misbehaves: logs and crashes. ' +
-  'Apps: app; an app left out is the selected one, and scenario names what a measure is kept under. Conditions, push and biometrics: device_setting. Starting a simulator or emulator: simulator.';
+  'Apps: app; an app left out is the selected one, scenario names what a measure is kept under, and probe is the frame probe of an iOS simulator, which relaunches the app. Conditions, push and biometrics: device_setting. Starting a simulator or emulator: simulator.';

@@ -107,6 +107,17 @@ export const LaunchOut = z.object({
   tracePath: z.string().optional(),
   reasons: z.array(z.string()).optional(),
   findings: z.array(z.string()).optional(),
+  baselineProfile: z
+    .object({
+      present: z.boolean(),
+      state: z.string().optional(),
+      applied: z.boolean(),
+      rules: z.number().int().optional(),
+      withoutMs: z.array(z.number()),
+      withMs: z.array(z.number()),
+      verdict: z.enum(['worth-it', 'no-gain', 'slower']).optional(),
+    })
+    .optional(),
 });
 
 export const TraceOut = z.object({

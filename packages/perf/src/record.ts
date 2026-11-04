@@ -79,6 +79,8 @@ export const KINDS = {
   'launch.first_frame_ms': 'launch',
   'launch.until_ms': 'launch',
   'launch.ttfd_ms': 'launch',
+  'launch.without_profile_ms': 'launch',
+  'launch.with_profile_ms': 'launch',
   'launch.worst_cold_ms': 'launch',
   'launch.worst_warm_ms': 'launch',
   'launch.worst_hot_ms': 'launch',

@@ -3,6 +3,7 @@ import { type PerfDevice, isVirtual, pidOf } from './shared.js';
 import { frames, framesDuring, resetFrames, frameTimeline, frameTrace } from './frames.js';
 import { memory, anonMemory, heapDump, heap, heapProfile } from './memory.js';
 import { cpu, threads, cpuProfile } from './cpu.js';
+import { baselineProfile } from './baseline.js';
 import { launch } from './launch.js';
 import { buildType, network, energy, exits, size, vitals } from './app.js';
 import { battery } from './battery.js';
@@ -41,6 +42,7 @@ export class AndroidPerf implements MeasureSource {
   threads = this.on(threads);
   cpuProfile = this.on(cpuProfile);
   launch = this.on(launch);
+  baselineProfile = this.on(baselineProfile);
   buildType = this.on(buildType);
   network = this.on(network);
   energy = this.on(energy);

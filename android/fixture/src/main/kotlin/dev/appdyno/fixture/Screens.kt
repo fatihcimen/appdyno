@@ -119,6 +119,12 @@ class FixtureApp : Application() {
 class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // a store's build starts in Compose: code run for the first time, which a Baseline Profile is for
+        if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE == 0) {
+            startActivity(Intent(this, ComposeStartActivity::class.java))
+            finish()
+            return
+        }
         column {
             label("appdyno fixture", R.id.title)
             for (v in SCREENS.values) button(v.first) { startActivity(Intent(this@MainActivity, v.second)) }
@@ -351,6 +357,18 @@ class DialogActivity : Activity() {
             }
             result.id = R.id.result
             addView(result)
+        }
+    }
+}
+
+/** A first frame of many controls: a start of known weight, all of it code a Compose app runs when it starts. */
+class ComposeStartActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            Column(Modifier.fillMaxSize()) {
+                repeat(150) { i -> Button(onClick = {}) { Text("Row ${i + 1}") } }
+            }
         }
     }
 }

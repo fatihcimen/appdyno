@@ -29,6 +29,7 @@
         <activity android:name=".StallListActivity" />
         <activity android:name=".DialogActivity" />
         <activity android:name=".ComposeActivity" />
+        <activity android:name=".ComposeStartActivity" />
         <activity android:name=".TickerActivity" />
         <activity android:name=".DelayedActivity" />
         <activity android:name=".PermissionActivity" />

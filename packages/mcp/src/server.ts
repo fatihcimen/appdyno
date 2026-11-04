@@ -7,7 +7,11 @@ import { inCall, inputSchemaOf, ToolError, text, type Op } from '@appdyno/ops';
 const BEAT_MS = 5_000;
 
 /** What many tools would each say of an argument: the server's instructions say it once. */
-const IN_INSTRUCTIONS = new Set(['default: the selected app', 'kept under this name']);
+const IN_INSTRUCTIONS = new Set([
+  'default: the selected app',
+  'kept under this name',
+  'iOS simulator: frame probe; relaunches the app',
+]);
 
 /**
  * A JSON schema without what every tool would repeat: arguments are checked strictly when they arrive, and

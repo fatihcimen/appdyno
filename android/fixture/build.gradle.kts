@@ -5,7 +5,7 @@ plugins {
 }
 
 // A deterministic app with the screen kinds the agent must handle (lists, dialogs, Compose, text fields,
-// moving content, slow focus, a web view, a crash and a hang). Debug build only.
+// moving content, slow focus, a web view, a crash and a hang). Debug, but for what only a store's build shows.
 android {
     namespace = "dev.appdyno.fixture"
     compileSdk = 35
@@ -22,6 +22,12 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
     externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt") } }
+    buildTypes {
+        // not debuggable, as a Baseline Profile needs, and it holds the profile Compose's libraries ship
+        release {
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
     buildFeatures {
         compose = true
     }

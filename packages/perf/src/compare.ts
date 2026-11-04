@@ -167,6 +167,27 @@ export function compareMetric(
   return { ...stats, p: Math.round(p * 1e5) / 1e5, verdict: worse ? 'regression' : 'improvement' };
 }
 
+/**
+ * Two conditions measured in turns: a run's own drift falls on both, so what is left to call is the floor and
+ * the rank test, and no term for how runs move apart.
+ */
+export function pairedChange(before: number[], after: number[], unit: Unit) {
+  const reference = median(before);
+  const moved = shift(before, after);
+  const limits = FLOOR[unit];
+  const floor = Math.max((Math.abs(reference) * limits.percent) / 100, limits.absolute);
+  const enough = before.length >= MIN_SAMPLES && after.length >= MIN_SAMPLES;
+  const p = enough ? rankTest(before, after) : 1;
+  return {
+    before: reference,
+    after: median(after),
+    moved,
+    floor,
+    p,
+    called: Math.abs(moved) > floor && p < ALPHA,
+  };
+}
+
 /** A baseline's metrics with one more run added (or, `replace`, this run only). */
 export function addToBaseline(
   key: { app: string; scenario: string; deviceClass: string },

@@ -79,6 +79,7 @@ const ROUTES: Partial<Record<MeasureId, Capability[]>> = {
 
 /** What a device without the measure is told it lacks. */
 const MEASURE_NAME: Record<Capability, string> = {
+  baselineProfile: 'a Baseline Profile',
   cpu: 'CPU',
   memory: 'memory',
   anonMemory: 'anonymous memory by process state',

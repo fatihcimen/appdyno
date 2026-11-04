@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `perf_launch` `baselineProfile`: an Android release build's Baseline Profile, present in the APK, applied by the device's status, and what it is worth, in cold starts with it and without taken in turns and called as the gate calls a change. A `.dm` that delivered a profile and compiled nothing is called that.
 - `crashes` `symbols` names a release build's stack: `atos` from the dSYM whose UUID is the crashed image's, by `dwarfdump`; `ndk-stack` from a folder of libraries with their symbols. A dSYM or library of another build is never read, and the answer says which it wanted. A tombstone's signal and frames are its `detail` now, not its headers.
 - `device_setting`: Android's `airplane`, `wifi` and `mobile_data`, read back from the device, put back at the end, and refused with what the device said. A device reached over its network refuses to cut it.
 - `biometric` on an emulator: `match` and `nomatch` touch its sensor and are done only when the fingerprint service counted the touch, and `enroll` touches until one is held.
