@@ -223,6 +223,13 @@ const guestFrames = async () =>
     /Total frames rendered: (\d+)/.exec(await adbShell(`dumpsys gfxinfo ${FIXTURE}`))?.[1] ?? 0,
   );
 
+/** The rate a phone's display runs at now: a target of 60 frames says nothing of a 90 or 120 Hz panel. */
+const displayHz = async () => {
+  const rate = /renderFrameRate ([\d.]+)/.exec(await adbShell('dumpsys display'))?.[1];
+  if (!rate) throw new Error("the display's rate is not in dumpsys display on this device");
+  return Number(rate);
+};
+
 const result = { serial, kind, date: new Date().toISOString(), runs: [] };
 const note = (name, value, target, ok) => {
   const row = { name, value, target, ok, load: load() };
@@ -400,16 +407,17 @@ const guest =
 const fullSeconds = moved.slice(1).filter((n) => Number(n.arrived) >= 30);
 const fps = median(fullSeconds.map((n) => Number(n.arrived)));
 const best = Math.max(...fullSeconds.map((n) => Number(n.arrived)));
+const hz = kind === 'phone' ? await displayHz() : undefined;
+const fpsNeeded =
+  kind === 'emulator' ? (guest ?? 0) * 0.9 : kind === 'phone' ? Math.floor((hz * 59) / 60) : 58;
 const fpsTarget =
   kind === 'emulator'
     ? guest
-      ? `>= ${(guest * 0.9).toFixed(1)} (90 % of the guest's ${guest.toFixed(1)})`
+      ? `>= ${fpsNeeded.toFixed(1)} (90 % of the guest's ${guest.toFixed(1)})`
       : ''
-    : kind === 'simulator' || kind === 'iphone'
-      ? '>= 58'
-      : '>= 59 at a 60 Hz display';
-const fpsNeeded =
-  kind === 'emulator' ? (guest ?? 0) * 0.9 : kind === 'simulator' || kind === 'iphone' ? 58 : 59;
+    : kind === 'phone'
+      ? `>= ${fpsNeeded} at its ${Math.round(hz)} Hz display`
+      : '>= 58';
 note(
   'frames/s while moving, median',
   `${fps} (best ${best}; ${fullSeconds.length} s counted)`,
