@@ -130,6 +130,7 @@ describe('what may call it', () => {
     expect((await fetch(url, { headers: bearer })).status).toBe(405);
     expect((await fetch(url, { method: 'DELETE', headers: bearer })).status).toBe(405);
     expect((await post(url, bearer, 'not json')).status).toBe(400);
+    expect((await post(url, bearer, 'null')).status).toBe(400);
     expect((await post(url, bearer, `"${'x'.repeat(5 * 1024 * 1024)}"`)).status).toBe(400);
   });
 
@@ -217,8 +218,19 @@ describe('one client at a time', () => {
   it('refuses another client plainly, naming who holds it, and lets the first go on', async () => {
     const { url } = await serving();
     const first = await clientOf(url, 'first');
+    await first.callTool({ name: 'list_devices' });
     await expect(clientOf(url, 'second')).rejects.toThrow('first has held it since');
     expect((await first.listTools()).tools.length).toBeGreaterThan(10);
+  });
+
+  it('holds nothing for a client that only looked, as a health check does', async () => {
+    const { url, contexts } = await serving();
+    const check = await clientOf(url, 'check');
+    await check.listTools();
+    const real = await clientOf(url, 'real');
+    await real.callTool({ name: 'list_devices' });
+    await expect(clientOf(url, 'check')).rejects.toThrow('real has held it since');
+    expect(contexts).toHaveLength(1);
   });
 });
 

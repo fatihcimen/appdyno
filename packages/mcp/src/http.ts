@@ -70,12 +70,13 @@ async function bodyOf(req: IncomingMessage): Promise<unknown> {
  *
  * Stateless: a server and transport per POST, as a hosted client opens a session per tool call and drops it
  * with no word. What lasts is the seat: one context for one client, known by the name it gives, kept
- * across its connections until it has been idle for `idleMs`. Another client is refused while it lasts.
- * The token comes as a bearer header, or as the last part of the path for the hosted clients with no field
- * for a header. No host check: a tunnel sends its own name.
+ * across its connections until it has been idle for `idleMs`. Once it has called a tool another client is
+ * refused; one that only looked holds nothing, or a health check would keep the next client out. The token
+ * comes as a bearer header, or as the last part of the path for the hosted clients with no field for a
+ * header. No host check: a tunnel sends its own name.
  */
 export async function serveHttp({ host, port, token, open, log, idleMs = IDLE_MS }: HttpOptions) {
-  let held: (Seat & { client?: string; since: string }) | undefined;
+  let held: (Seat & { client?: string; acted?: boolean; since: string }) | undefined;
   let leaving: Promise<void> | undefined;
   let busy = 0;
   let idle: NodeJS.Timeout | undefined;
@@ -91,14 +92,18 @@ export async function serveHttp({ host, port, token, open, log, idleMs = IDLE_MS
 
   const call = async (req: IncomingMessage, res: ServerResponse, body: unknown) => {
     await leaving;
-    const message = body as { id?: unknown; method?: string; params?: { requestId?: unknown } };
+    const message = (body ?? {}) as {
+      id?: unknown;
+      method?: string;
+      params?: { requestId?: unknown };
+    };
     if (message.method === 'notifications/cancelled') {
       running.get(message.params?.requestId)?.();
       res.writeHead(202).end();
       return;
     }
     const client = isInitializeRequest(body) ? body.params.clientInfo.name : undefined;
-    if (client && held?.client && held.client !== client) {
+    if (client && held?.acted && held.client !== client) {
       log({ http: 'refused', status: 409, client, heldBy: held.client });
       refuse(
         res,
@@ -112,6 +117,7 @@ export async function serveHttp({ host, port, token, open, log, idleMs = IDLE_MS
     // beside it; only `initialize` says who is calling, until protocol versions carry a client in each call
     held ??= { ...open(), since: new Date().toISOString() };
     if (client) held.client = client;
+    held.acted ||= message.method === 'tools/call';
     const server = createServer(held.ops, log);
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     const stop = () => void server.close();
