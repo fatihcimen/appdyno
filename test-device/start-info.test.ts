@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, sleep as pause, type AndroidDevice } from 'appdyno';
+import { loadRefusals } from '@appdyno/perf';
 import { opsOn } from './helpers.js';
 
 /**
@@ -87,9 +88,15 @@ describe.skipIf(!serial)('start info', () => {
 
   it('before Android 15 it is refused by name, and the rest of the answer stands', async (ctx) => {
     if (sdk >= 35) return ctx.skip();
+    await d.shell(launcher);
+    await pause(1_500);
     const r = await t.call('perf_snapshot', { also: ['startInfo'], cpuWindowMs: 500 });
     console.log(r.text);
     expect(r.error, r.text).toBe(false);
     expect(r.text).toContain('not measurable here: startInfo');
+    const [refused] = (await loadRefusals(t.measurements)).filter(
+      (x) => x.measure === 'launch-why',
+    );
+    expect(refused?.reason).toContain('start info needs Android 15');
   }, 60_000);
 });
