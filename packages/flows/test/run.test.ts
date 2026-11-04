@@ -199,6 +199,9 @@ stop`),
     fails('unrecorded "gesture pinch"', /step 1 .*gesture pinch/);
     expect(() => yaml('alert allow\nlaunch\nunrecorded "x"')).toThrow(/step 1[^]*step 3/);
     expect(() => toMaestro(parseFlow('launch'))).toThrow(/needs an app/);
+    expect(toMaestro(parseFlow('app dev.x\ntag smoke login\nlaunch\n'))).toContain(
+      'appId: "dev.x"\ntags:\n  - smoke\n  - login\n---\n',
+    );
   });
 });
 

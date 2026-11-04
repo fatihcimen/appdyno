@@ -171,7 +171,11 @@ function write(value: Yaml, indent: string): string[] {
 export function toMaestro(flow: Flow): string {
   if (!flow.app) throw new FlowError('Maestro needs an app: add app to the flow', 0);
   const broken: string[] = [];
-  const lines = [`appId: ${JSON.stringify(flow.app)}`, '---'];
+  const lines = [
+    `appId: ${JSON.stringify(flow.app)}`,
+    ...(flow.tags.length > 0 ? ['tags:', ...flow.tags.map((t) => `  - ${t}`)] : []),
+    '---',
+  ];
   for (const [i, st] of flow.steps.entries()) {
     try {
       if (st.selector?.role && (st.selector.id || st.selector.text))

@@ -205,7 +205,7 @@ appdyno tap --json '{"selector":{"text":"Form"}}'
 appdyno flow stop             # prints the flow, and any step to look at
 appdyno flow save login.flow
 appdyno flow run login.flow --param PASSWORD_INPUT=... --from 3
-appdyno test flows/ --env-file ci.env --retries 1 --device emulator-5554 --device <udid> --artifacts out --junit out/junit.xml
+appdyno test flows/ --tag smoke --env-file ci.env --retries 1 --device emulator-5554 --device <udid> --artifacts out --junit out/junit.xml
 appdyno flow export login.flow > login.yaml
 ```
 
@@ -213,6 +213,7 @@ A flow is a text file, one step per line:
 
 ```text
 app dev.appdyno.fixture
+tag smoke login
 param NAME
 secret PASSWORD_INPUT
 
@@ -268,6 +269,8 @@ the step for `launch`, `open_link` and `scroll_to`.
 JUnit (a suite per device, a case per file; default `appdyno-artifacts/junit.xml`), saves `screen.jpg` and
 `tree.json` under `<artifacts>/<device>/<file>/` at a failure, goes on to the next file, and exits 1 if any
 failed or if there was nothing to run. Assertions are steps.
+
+**Tags.** `tag smoke login` before the steps; `--tag smoke` runs the files with any of the tags named, `--exclude-tag slow` leaves out those with any of these. A file that cannot be read stays, to fail, as nobody can tell what it was tagged, and selecting nothing exits 1, as a job that ran nothing has not passed.
 
 **A retry.** `--retries N` runs a file that failed on a step again, whole, from its first step, on a run of its own: within a run a failed step stays failed. A file that passes on a retry is flaky, not passed. The line reads `FLAKY login.flow: passed on attempt 2 of 3`, the run ends by naming it, the JUnit case holds each failed attempt as `<flakyFailure>` and its suite has `flakes="1"`, and each failed attempt's evidence stays, the later ones under `attempt-<n>/`. A flaky file exits 0, as a retry would otherwise be for nothing: to stop on one, read `flakes` or leave `--retries` out. A file that fails every attempt has the attempts as `<rerunFailure>`. What kept a file from running at all (a line that does not parse, a value missing) is not run again, and `--measure` refuses `--retries`, as the gate would compare what a failed go left with what a later one read.
 

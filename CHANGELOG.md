@@ -5,6 +5,7 @@
 - iPhone: `perf_trace` `what: hangs` says whether each hang was busy or blocked, in which function, from what a Time Profiler trace holds already; `dsym` names the functions of a build with no symbols, on `perf_trace` and `perf_profile`.
 - `perf_compare` `action: functions` and `appdyno perf functions`: which functions moved between two profiles.
 - Android: `perf_trace` says why the slow frames were slow: a monitor lock and who holds it, a binder call and to whom, the garbage collector, work, a starved or blocked thread, or that they are unexplained.
+- Tags: `tag smoke login` in a flow, `appdyno test --tag smoke --exclude-tag slow` to select. A file that cannot be read stays and fails, and selecting nothing is a failure.
 - `--env-file` on `appdyno test` and `flow run` (`envFile` in the tool): a flow's values from a `.env` file, under `--param` and over the environment. A secret from it is hidden as any other.
 - `appdyno flow run --iterations` and `--scenario` work: the command line took their values for stray words.
 - `appdyno test --retries N` runs a file that failed on a step again, whole. One that passes then is reported as flaky, in the log and in JUnit (`flakyFailure`, `flakes`), never as a plain pass, and exits 0; each failed attempt's evidence stays.

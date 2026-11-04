@@ -100,6 +100,7 @@ export class Recording {
   flow(): Flow {
     return {
       ...(this.state.app && { app: this.state.app }),
+      tags: [],
       params: [],
       secrets: [...new Set(this.state.steps.flatMap(namesOf))],
       steps: this.state.steps,

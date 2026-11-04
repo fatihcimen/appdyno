@@ -13,6 +13,7 @@ import {
   DEFAULT_POLICY,
   flowFiles,
   flowsFor,
+  flowsTagged,
   paramsOf,
   reply,
   ServerContext,
@@ -646,6 +647,27 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
       const tests = mkdtempSync(join(dir, 'tests-'));
       for (const f of ['b.flow', 'a.flow', 'c.txt']) writeFileSync(join(tests, f), 'launch\n');
       expect(flowFiles([tests])).toEqual([join(tests, 'a.flow'), join(tests, 'b.flow')]);
+    });
+
+    it('selects files by their tags, and a broken file stays to fail', () => {
+      const tests = mkdtempSync(join(dir, 'tests-'));
+      const file = (name: string, text: string) => {
+        writeFileSync(join(tests, name), text);
+        return join(tests, name);
+      };
+      const smoke = file('a.flow', 'tag smoke login\nlaunch\n');
+      const slow = file('b.flow', 'tag smoke slow\nlaunch\n');
+      const plain = file('c.flow', 'launch\n');
+      const broken = file('d.flow', 'fly\n');
+      const files = [smoke, slow, plain, broken];
+      expect(flowsTagged(files)).toEqual(files);
+      expect(flowsTagged(files, ['login'])).toEqual([smoke, broken]);
+      expect(flowsTagged(files, ['login', 'slow'])).toEqual([smoke, slow, broken]);
+      expect(flowsTagged(files, [], ['slow'])).toEqual([smoke, plain, broken]);
+      expect(flowsTagged(files, ['smoke'], ['slow'])).toEqual([smoke, broken]);
+      expect(() => flowsTagged([smoke, slow], ['none'], ['slow'])).toThrow(
+        'no flow of 2 is selected by --tag none --exclude-tag slow',
+      );
     });
 
     it('runs every file, writes JUnit, and keeps a failure’s screenshot and tree', async () => {

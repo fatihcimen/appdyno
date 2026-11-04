@@ -6,6 +6,7 @@
  *
  *   # a comment
  *   app dev.appdyno.fixture
+ *   tag smoke login
  *   param NAME
  *   secret PASSWORD_INPUT
  *   launch
@@ -34,7 +35,14 @@ export type FlowStep = {
   flags: Flag[];
 };
 
-export type Flow = { app?: string; params: string[]; secrets: string[]; steps: FlowStep[] };
+export type Flow = {
+  app?: string;
+  /** What `appdyno test --tag` selects it by. */
+  tags: string[];
+  params: string[];
+  secrets: string[];
+  steps: FlowStep[];
+};
 
 /** A file that cannot be read as a flow, at its line. */
 export class FlowError extends Error {
@@ -91,6 +99,7 @@ const NUMERIC_WORDS = new Set(['lat', 'lon']);
 const SELECTOR_KEYS = ['id', 'role', 'text'] as const;
 const FLAGS: readonly string[] = ['ambiguous', 'coordinates'] satisfies Flag[];
 const NAME = /^[A-Z_][A-Z0-9_]*$/;
+const WORD = /^[\w.:/@+-]+$/;
 /** A placeholder, or the escape of one. */
 const PLACEHOLDER = /\$\$\{|\$\{([^}]*)\}/g;
 
@@ -229,7 +238,7 @@ const stringsOf = (st: FlowStep) => [
 export const namesOf = (st: FlowStep) => stringsOf(st).flatMap((v) => namesIn(v, st.line));
 
 export function parseFlow(text: string): Flow {
-  const flow: Flow = { params: [], secrets: [], steps: [] };
+  const flow: Flow = { tags: [], params: [], secrets: [], steps: [] };
   const lines = text.split(/\r?\n/);
   let appLine = 0;
   for (const [i, raw] of lines.entries()) {
@@ -240,6 +249,14 @@ export function parseFlow(text: string): Flow {
     if (head.quoted || head.key !== undefined)
       throw new FlowError(`a line starts with a step: ${raw.trim()}`, line);
     const word = head.value;
+    if (word === 'tag') {
+      if (flow.steps.length > 0) throw new FlowError('tag comes before the steps', line);
+      const tags = toks.slice(1);
+      if (tags.length === 0 || tags.some((t) => t.key !== undefined || !WORD.test(t.value)))
+        throw new FlowError('tag takes words: tag smoke login', line);
+      flow.tags.push(...tags.map((t) => t.value));
+      continue;
+    }
     if (word === 'app' || word === 'param' || word === 'secret') {
       if (flow.steps.length > 0) throw new FlowError(`${word} comes before the steps`, line);
       const value = toks[1];
@@ -271,7 +288,6 @@ export function parseFlow(text: string): Flow {
   return flow;
 }
 
-const WORD = /^[\w.:/@+-]+$/;
 const show = (value: string) => (WORD.test(value) ? value : JSON.stringify(value));
 /** A text always in quotes where a word might read as something else. */
 const quote = (value: string) => JSON.stringify(value);
@@ -306,9 +322,10 @@ export function stepLine(st: FlowStep): string {
 export const flowText = (flow: Flow) =>
   [
     ...(flow.app ? [`app ${show(flow.app)}`] : []),
+    ...(flow.tags.length > 0 ? [`tag ${flow.tags.join(' ')}`] : []),
     ...flow.params.map((p) => `param ${p}`),
     ...flow.secrets.map((p) => `secret ${p}`),
-    ...(flow.app || flow.params.length || flow.secrets.length ? [''] : []),
+    ...(flow.app || flow.tags.length || flow.params.length || flow.secrets.length ? [''] : []),
     ...flow.steps.map(stepLine),
     '',
   ].join('\n');

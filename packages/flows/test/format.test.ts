@@ -65,6 +65,7 @@ describe('the flow format', () => {
   it('keeps Unicode, quotes and escapes through a round trip', () => {
     const text = 'Ayşe "İstanbul"\nikinci satır \\ son';
     const f: Flow = {
+      tags: [],
       params: [],
       secrets: [],
       steps: [{ action: 'type', line: 0, args: { text }, flags: [] }],
@@ -72,6 +73,23 @@ describe('the flow format', () => {
     const back = parseFlow(flowText(f));
     expect(back.steps[0]!.args.text).toBe(text);
     expect(flowText(f)).toContain('İstanbul');
+  });
+
+  it('reads tags on one line or several, and writes them back', () => {
+    const f = parseFlow('app dev.app\ntag smoke login\ntag nightly\n\nlaunch\n');
+    expect(f.tags).toEqual(['smoke', 'login', 'nightly']);
+    expect(flowText(f)).toContain('app dev.app\ntag smoke login nightly\n\nlaunch\n');
+    expect(parseFlow(flowText(f)).tags).toEqual(f.tags);
+    expect(parseFlow('tag only\nlaunch\n').steps).toHaveLength(1);
+    expect(flowText(parseFlow('tag only\nlaunch\n'))).toBe('tag only\n\nlaunch\n');
+    expect(parseFlow('launch\n').tags).toEqual([]);
+  });
+
+  it('refuses a tag after the steps, or one that is no word', () => {
+    expect(() => parseFlow('launch\ntag late\n')).toThrow('line 2: tag comes before the steps');
+    expect(() => parseFlow('tag\nlaunch\n')).toThrow('line 1: tag takes words');
+    expect(() => parseFlow('tag a=b\nlaunch\n')).toThrow('line 1: tag takes words');
+    expect(() => parseFlow('tag smoke,login\nlaunch\n')).toThrow('line 1: tag takes words');
   });
 
   it('refuses what it cannot run, saying the line', () => {

@@ -31,6 +31,29 @@ export function flowFiles(paths: string[]): string[] {
   return files;
 }
 
+/**
+ * The files holding any of `tags`, or all with none given, and none of `exclude`. A file that cannot be read stays,
+ * to fail as such: its tags are not known, and a broken file must not leave a run unseen.
+ */
+export function flowsTagged(files: string[], tags: string[] = [], exclude: string[] = []) {
+  const chosen = files.filter((file) => {
+    let have: string[];
+    try {
+      have = readFlow(file).tags;
+    } catch {
+      return true;
+    }
+    const wanted = tags.length === 0 || tags.some((t) => have.includes(t));
+    return wanted && !exclude.some((t) => have.includes(t));
+  });
+  if (chosen.length === 0)
+    throw new ToolError(
+      `no flow of ${files.length} is selected by ${[...tags.map((t) => `--tag ${t}`), ...exclude.map((t) => `--exclude-tag ${t}`)].join(' ')}`,
+      'NOT_FOUND',
+    );
+  return chosen;
+}
+
 export type TestOptions = {
   files: string[];
   /** In order; none: the context's default device. */
