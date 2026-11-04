@@ -79,9 +79,12 @@ static void writeBytes(int fd, const void *from, size_t length) {
 
 static void sendFrame(int fd, uint8_t type, const void *payload, size_t length) {
   uint32_t big = htonl((uint32_t)length);
-  writeBytes(fd, &big, 4);
-  writeBytes(fd, &type, 1);
-  writeBytes(fd, payload, length);
+  // two threads write here, the test's and the one answering pings, and a frame must not take the other's in its middle
+  @synchronized([MVTestSink class]) {
+    writeBytes(fd, &big, 4);
+    writeBytes(fd, &type, 1);
+    writeBytes(fd, payload, length);
+  }
 }
 
 static void sendJson(int fd, NSDictionary *message) {
@@ -95,31 +98,41 @@ static void sendVideo(int fd, NSData *frame) {
   sendFrame(fd, 2, payload.bytes, payload.length);
 }
 
-/// Answers a stream's clock pings for as long as the connection lasts, as the agent does.
+/// Answers a stream's clock pings for as long as the connection lasts, as the agent does. On a number of its own: the test
+/// closes `fd`, and the next socket takes that number, whose bytes this thread would then read.
 static void answerRequests(int fd, void (^_Nullable onStart)(void)) {
+  int own = dup(fd);
   [NSThread detachNewThreadWithBlock:^{
     for (;;) {
       uint8_t head[5];
       ssize_t got = 0;
       while (got < 5) {
-        ssize_t n = read(fd, head + got, 5 - got);
-        if (n <= 0) return;
+        ssize_t n = read(own, head + got, 5 - got);
+        if (n <= 0) goto done;
         got += n;
       }
       uint32_t length = ntohl(*(uint32_t *)head);
-      if (length > 1 << 20) return;
+      if (length > 1 << 20) goto done;
       NSMutableData *body = [NSMutableData dataWithLength:length];
       size_t have = 0;
       while (have < length) {
-        ssize_t n = read(fd, (uint8_t *)body.mutableBytes + have, length - have);
-        if (n <= 0) return;
+        ssize_t n = read(own, (uint8_t *)body.mutableBytes + have, length - have);
+        if (n <= 0) goto done;
         have += n;
       }
       NSDictionary *m = [NSJSONSerialization JSONObjectWithData:body options:0 error:NULL];
-      if ([m[@"method"] isEqual:@"stream.clock"]) sendJson(fd, @{@"id": m[@"id"], @"result": @{@"now": @(MVNowMs() * 1e6)}});
+      if ([m[@"method"] isEqual:@"stream.clock"]) sendJson(own, @{@"id": m[@"id"], @"result": @{@"now": @(MVNowMs() * 1e6)}});
       else if ([m[@"method"] isEqual:@"stream.start"] && onStart) onStart();
     }
+  done:
+    close(own);
   }];
+}
+
+/// The agent hangs up: that thread's number keeps the socket open until it is told.
+static void hangUp(int fd) {
+  shutdown(fd, SHUT_RDWR);
+  close(fd);
 }
 
 typedef struct {
@@ -285,7 +298,7 @@ static void checkCodec(BOOL hevc) {
   [c.source setHidden:NO];
   sendVideo(c.agent, frames[0].data);
   MVCheck([name stringByAppendingString:@": back with a keyframe"], [sink waitForImages:before + 1], nil);
-  close(c.agent);
+  hangUp(c.agent);
   MVCheck([name stringByAppendingString:@": the end of the connection is seen"], [sink waitForLost], sink.lost);
   [c.source stop];
 }
@@ -299,7 +312,7 @@ static void checkBroken(void) {
   writeBytes(c.agent, &type, 1);
   MVCheck(@"stream: a frame over the limit ends it", [sink waitForLost] && [sink.lost containsString:@"limit"], sink.lost);
   [c.source stop];
-  close(c.agent);
+  hangUp(c.agent);
 
   sink = [MVTestSink new];
   c = connectStream(sink, NO, nil);
@@ -313,7 +326,7 @@ static void checkBroken(void) {
   sendJson(c.agent, @{@"id": @0, @"error": @{@"message": @"no encoder took this display"}});
   MVCheck(@"stream: a refusal says why", [sink waitForLost] && [sink.lost containsString:@"encoder"], sink.lost);
   [c.source stop];
-  close(c.agent);
+  hangUp(c.agent);
 }
 
 /// Whether the layer a window uses takes a picture of this kind; it needs no window to say so.
