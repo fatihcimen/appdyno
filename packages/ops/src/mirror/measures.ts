@@ -8,7 +8,14 @@ import { perfScrollOp } from '../perf/scroll.js';
 import type { ToolResult } from '../tool.js';
 
 /** What a window's pane says of a measure. */
-export type MeasureWords = { title: string; value: string; detail: string; why: string };
+export type MeasureWords = {
+  title: string;
+  value: string;
+  detail: string;
+  why: string;
+  /** The tool itself found something in it: that a measure ran says nothing of how it came out. */
+  flagged: boolean;
+};
 
 /** The real measures of a window: the ones an agent calls, kept with the same runs. */
 export type WindowMeasures = {
@@ -19,11 +26,11 @@ export type WindowMeasures = {
 
 /** What may stand behind a number, as the dashboard marks it. */
 const NOISE: Record<string, string> = {
-  mirrored: 'with a stream running',
-  'high-host-load': 'on a loaded Mac',
-  'high-device-load': 'on a loaded device',
-  'hot-device': 'on a hot device',
-  'debuggable-build': 'a debug build',
+  mirrored: 'stream running',
+  'high-host-load': 'loaded Mac',
+  'high-device-load': 'loaded device',
+  'hot-device': 'hot device',
+  'debuggable-build': 'debug build',
 };
 
 /** Whether a number is one to judge by: a line for the pane, and all of it for a look closer. */
@@ -72,6 +79,7 @@ export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasur
       return {
         title: 'Cold launch',
         value: out.medianMs === undefined ? 'not measured' : `${out.medianMs} ms`,
+        flagged: out.excessive,
         ...judged(app, `median of ${out.samples.length}`, out),
       };
     },
@@ -82,7 +90,9 @@ export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasur
       const jank = out.jankMedianPercent;
       return {
         title: 'Scroll',
-        value: jank === undefined ? 'too few frames' : `${jank}% jank, ${out.frozen} frozen`,
+        value:
+          jank === undefined ? 'too few frames' : `${Math.round(jank)}% jank, ${out.frozen} frozen`,
+        flagged: out.findings.length > 0,
         ...judged(app, `${out.rounds.length} rounds`, out),
       };
     },

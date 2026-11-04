@@ -42,7 +42,13 @@ function fixture(platform: 'ios' | 'android', device: Partial<Device> = {}, stre
     ...device,
   } as unknown as Device;
   const hardware = { platform, controls: [], model: 'Test Phone' };
-  const measured = { title: 'Cold launch', value: '412 ms', detail: 'median of 5', why: 'dev.app' };
+  const measured = {
+    title: 'Cold launch',
+    value: '412 ms',
+    detail: 'median of 5',
+    why: 'dev.app',
+    flagged: false,
+  };
   const measures = {
     launch: vi.fn(async (_app: string, say: (line: string) => void) => {
       say('launch 1 of 5');
@@ -313,7 +319,7 @@ describe("a window's measures", () => {
     let stoppedBefore = 0;
     measures.scroll.mockImplementationOnce(async () => {
       stoppedBefore = stop.mock.calls.length;
-      return { title: 'Scroll', value: '1%', detail: '', why: '' };
+      return { title: 'Scroll', value: '1%', detail: '', why: '', flagged: false };
     });
     controls.onWindow({ op: 'perfWatch', on: true });
     await vi.waitFor(() => expect(start).toHaveBeenCalledOnce(), WAIT);

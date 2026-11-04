@@ -166,12 +166,13 @@ static MVTrend *trendOf(const MVTrendRow *row) {
   _doing.superview.hidden = YES;
   for (NSButton *measure in _measures) measure.enabled = YES;
   MVRow *row = [MVRow new];
-  BOOL ok = [result[@"ok"] boolValue];
+  // that it ran is no verdict: only what its tool found in it, or that it did not run, gets a mark of its own
+  BOOL plain = [result[@"ok"] boolValue] && ![result[@"flagged"] boolValue];
   row.title = [result[@"value"] length] ? [NSString stringWithFormat:@"%@  %@", result[@"title"], result[@"value"]] : result[@"title"] ?: @"";
   row.detail = result[@"detail"] ?: @"";
   row.help = result[@"why"];
-  row.symbol = ok ? @"checkmark.circle" : @"exclamationmark.triangle";
-  row.tint = ok ? NSColor.systemGreenColor : NSColor.systemOrangeColor;
+  row.symbol = plain ? @"chart.bar" : @"exclamationmark.triangle";
+  row.tint = plain ? NSColor.secondaryLabelColor : NSColor.systemOrangeColor;
   [_kept addObject:row];
   if (_kept.count > kResults) [_kept removeObjectAtIndex:0];
   _results.rows = _kept;
@@ -182,6 +183,10 @@ static MVTrend *trendOf(const MVTrendRow *row) {
   for (MVTrend *trend in _trends)
     if ([trend.field isEqual:field]) return trend.now.stringValue;
   return @"";
+}
+
+- (BOOL)lastMarked {
+  return [_kept.lastObject.symbol isEqual:@"exclamationmark.triangle"];
 }
 
 - (NSString *)lastResult {

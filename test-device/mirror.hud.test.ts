@@ -173,7 +173,7 @@ describe.runIf(udid ?? serial)("a window's live numbers", () => {
         console.log(`measured: ${JSON.stringify(said)}`);
         expect(said.ok).toBe(true);
         expect(String(said.value)).toMatch(value);
-        expect(String(said.detail)).toContain('with a stream running');
+        expect(String(said.detail)).toContain('stream running');
         const read = perf().length;
         await until('readings again', () => perf().length > read, READING_MS);
         await fixtureInFront();

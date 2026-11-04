@@ -166,6 +166,7 @@ static const double MVHudWidth = 188;
 - (void)showMeasured:(NSDictionary *)result;
 /// What the last measure came to, and how a line of the readings stands.
 - (NSString *)lastResult;
+- (BOOL)lastMarked;
 - (NSString *)shownFor:(NSString *)field;
 @end
 

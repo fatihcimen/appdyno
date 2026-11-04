@@ -47,6 +47,22 @@ describe('what a window measures', () => {
     expect(await latestRuns(measurements, key!, 1)).toHaveLength(1);
   });
 
+  it('passes on what the tool found: that a measure ran is no verdict', async () => {
+    const device = new FakeDevice();
+    const framesDuring = device.measure.framesDuring.bind(device.measure);
+    vi.spyOn(device, 'measure', 'get').mockReturnValue(
+      Object.assign(Object.create(device.measure), {
+        framesDuring: async (...a: Parameters<typeof framesDuring>) => {
+          const m = await framesDuring(...a);
+          return { ...m, value: { ...m.value, jankyPercent: 72.31, totalFrames: 500 } };
+        },
+      }),
+    );
+    const words = await measuresOn(device).scroll('dev.app', () => undefined);
+    expect(words.value).toContain('72% jank');
+    expect(words.flagged).toBe(true);
+  });
+
   it('holds the device only while it runs, and leaves the window its device', async () => {
     const device = new FakeDevice();
     const close = vi.spyOn(device, 'close');

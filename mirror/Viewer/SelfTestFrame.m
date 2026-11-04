@@ -97,6 +97,8 @@ static void checkMeasures(void) {
   MVCheck(@"performance: no second measure over the first", !MVFindControl(pane, @"measureScroll").enabled, nil);
   [pane showMeasured:@{@"ok": @YES, @"title": @"Cold launch", @"value": @"412 ms", @"detail": @"dev.app"}];
   MVCheck(@"performance: a measure's result stands, and the next can start", [pane.lastResult containsString:@"412 ms"] && MVFindControl(pane, @"measureScroll").enabled, pane.lastResult);
+  [pane showMeasured:@{@"ok": @YES, @"flagged": @YES, @"title": @"Scroll", @"value": @"72% jank", @"detail": @"3 rounds"}];
+  MVCheck(@"performance: that a measure ran is no verdict, and what its tool found is marked", pane.lastMarked, nil);
 }
 
 static void checkGlass(void) {
