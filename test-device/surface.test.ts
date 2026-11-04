@@ -37,6 +37,7 @@ describe.skipIf(!SERIAL)('frames of a surface', () => {
     expect(s.slow34Percent).toBeLessThan(25);
     expect(s.slow50Percent).toBeLessThan(25);
     expect(s.layer).toContain('SurfaceActivity');
+    expect(s.drawing).toBe(true);
     expect(text).toContain('would not count');
   });
 

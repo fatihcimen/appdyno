@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseLatency, surfaceFrames, surfaceStats } from '../src/perf/surface.js';
+import { parseLatency, surfaceFrames, surfaceLayers, surfaceStats } from '../src/perf/surface.js';
 import type { PerfDevice } from '../src/perf/shared.js';
 
 const PERIOD = 16_666_666;
@@ -16,8 +16,8 @@ const latency = (gaps: number[]) => {
   return `${PERIOD}\n${rows.join('\n')}\n`;
 };
 
-const stats = (gaps: number[], nowMs = 3_100_000) =>
-  surfaceStats('SurfaceView[x](BLAST)#1', parseLatency(latency(gaps)), nowMs);
+const stats = (gaps: number[]) =>
+  surfaceStats('SurfaceView[x](BLAST)#1', parseLatency(latency(gaps)), true);
 
 describe('frames of a surface', () => {
   it('reads what was presented, and leaves out what is empty or still on its way', () => {
@@ -53,16 +53,33 @@ describe('frames of a surface', () => {
     expect(s.worstMs).toBe(66.7);
   });
 
-  it('says how long ago a surface left alone drew', () => {
-    expect(stats([2, 2, 2]).lastFrameAgoMs).toBeGreaterThan(90_000);
+  it('finds a surface as API 34 lists it, and as Android 16 does', () => {
+    const api34 = `Background for SurfaceView[dev.app/x]#1
+SurfaceView[dev.app/x]#2
+SurfaceView[dev.app/x](BLAST)#3
+dev.app/x#4
+`;
+    expect(surfaceLayers(api34, 'dev.app')).toEqual([
+      'SurfaceView[dev.app/x]#2',
+      'SurfaceView[dev.app/x](BLAST)#3',
+    ]);
+    const android16 = `RequestedLayerState{Background for ad16944 SurfaceView[dev.app/x]#111505 parentId=111503 relativeParentId=-1}
+RequestedLayerState{ad16944 SurfaceView[dev.app/x](BLAST)#111504 parentId=111503 relativeParentId=-1}
+RequestedLayerState{ad16944 SurfaceView[dev.app/x]#111503 parentId=111502 relativeParentId=-1}
+`;
+    expect(surfaceLayers(android16, 'dev.app')).toEqual([
+      'ad16944 SurfaceView[dev.app/x](BLAST)#111504',
+      'ad16944 SurfaceView[dev.app/x]#111503',
+    ]);
   });
 
   it('takes the layer that holds frames, and reads none when the app shows no surface', async () => {
-    const device = (answers: Record<string, string>) =>
+    const device = (answers: Record<string, string>, frames?: () => string) =>
       ({
         serial: 'emulator-5554',
         readyToMeasure: async () => undefined,
         shell: async (c: string) => {
+          if (frames && c.includes('--latency') && c.includes('BLAST')) return frames();
           const hit = Object.keys(answers).find((k) => c.includes(k));
           return hit ? answers[hit]! : '';
         },
@@ -72,13 +89,22 @@ describe('frames of a surface', () => {
     const got = await surfaceFrames(
       device({
         '--list': list,
-        '(BLAST)#3': `3000.5 1\n${latency([2, 2, 2])}`,
-        '[dev.app/x]#2': `3000.5 1\n${PERIOD}\n0\t0\t0\n`,
+        '(BLAST)#3': latency([2, 2, 2]),
+        '[dev.app/x]#2': `${PERIOD}\n0\t0\t0\n`,
       }),
       'dev.app',
     );
     expect(got.value.layer).toBe('SurfaceView[dev.app/x](BLAST)#3');
     expect(got.value.frames).toBe(4);
+    expect(got.value.drawing).toBe(false);
+    let reads = 0;
+    const moving = await surfaceFrames(
+      device({ '--list': list, '(BLAST)#3': '' }, () =>
+        latency(reads++ ? [2, 2, 2, 2] : [2, 2, 2]),
+      ),
+      'dev.app',
+    );
+    expect(moving.value.drawing).toBe(true);
     const none = await surfaceFrames(device({ '--list': 'dev.app/x.Main#4\n' }), 'dev.app');
     expect(none.value.frames).toBe(0);
   });

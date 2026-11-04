@@ -133,6 +133,6 @@ export type SurfaceFrames = {
   /** Frames not presented less than 34 and 50 ms after the last: Play's two bars for a game's session. */
   slow34Percent: number;
   slow50Percent: number;
-  /** A surface left alone keeps its old frames: this says how old they are. */
-  lastFrameAgoMs: number;
+  /** A surface left alone keeps its old frames: false when no new one came as it was read. */
+  drawing: boolean;
 };

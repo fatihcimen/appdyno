@@ -196,7 +196,7 @@ const EXTRAS = {
       v.frames === 0
         ? 'no SurfaceView of the app holds frames: what it draws through the View toolkit is in frames above'
         : [
-            `surface: ${v.frames} frames, ${v.fps} a second, p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms, on a ${v.refreshMs} ms display, the last ${v.lastFrameAgoMs} ms ago`,
+            `surface: ${v.frames} frames, ${v.fps} a second, p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms, on a ${v.refreshMs} ms display${v.drawing ? '' : ', and it is not drawing now: these are its last'}`,
             playLine('surface.slow_50_percent', v.slow50Percent),
             playLine('surface.slow_34_percent', v.slow34Percent),
           ].join('\n'),

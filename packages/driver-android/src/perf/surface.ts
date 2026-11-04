@@ -1,4 +1,4 @@
-import { quantile, type Measured, type SurfaceFrames } from '@appdyno/core';
+import { quantile, sleep, type Measured, type SurfaceFrames } from '@appdyno/core';
 import { assertPkg, shq } from '../adb.js';
 import { at, sh, type PerfDevice } from './shared.js';
 
@@ -6,6 +6,8 @@ import { at, sh, type PerfDevice } from './shared.js';
 const SLOW_MS = [34, 50] as const;
 /** A frame still on its way is held at the largest number there is. */
 const PENDING = 2 ** 62;
+/** Long enough for a frame of a surface at 3 a second to come. */
+const STILL_DRAWING_MS = 400;
 
 /** `dumpsys SurfaceFlinger --latency`: the refresh period, then per frame desired, presented and ready, in ns. */
 export function parseLatency(text: string) {
@@ -26,7 +28,7 @@ const NO_SURFACE: SurfaceFrames = {
   worstMs: 0,
   slow34Percent: 0,
   slow50Percent: 0,
-  lastFrameAgoMs: 0,
+  drawing: false,
 };
 
 const round = (x: number) => Math.round(x * 10) / 10;
@@ -41,7 +43,7 @@ const round = (x: number) => Math.round(x * 10) / 10;
 export function surfaceStats(
   layer: string,
   { periodNs, presents }: ReturnType<typeof parseLatency>,
-  nowMs: number,
+  drawing: boolean,
 ): SurfaceFrames {
   const refreshMs = periodNs / 1e6;
   const gaps = presents.slice(1).map((t, i) => (t - presents[i]!) / 1e6);
@@ -60,32 +62,54 @@ export function surfaceStats(
     worstMs: whole.at(-1) ?? 0,
     slow34Percent,
     slow50Percent,
-    // the uptime is in hundredths of a second: a frame just shown can read as yet to come
-    lastFrameAgoMs: Math.max(0, Math.round(nowMs - (presents.at(-1) ?? 0) / 1e6)),
+    drawing,
   };
 }
 
 /**
+ * The layers that may hold the app's surface: a name alone a line on API 34, on Android 16 as
+ * `RequestedLayerState{ad16944 SurfaceView[...](BLAST)#111504 parentId=...`.
+ */
+export const surfaceLayers = (list: string, pkg: string) =>
+  list
+    .split('\n')
+    .map((l) =>
+      l
+        .trim()
+        .replace(/^RequestedLayerState\{/, '')
+        .replace(/ parentId=.*$/, ''),
+    )
+    .filter((l) => /^(\w+ )?SurfaceView/.test(l) && l.includes(pkg));
+
+/**
  * Frames of the app's `SurfaceView`, as SurfaceFlinger presented them: a game or an engine draws there, past
- * the View toolkit, and `gfxinfo` counts none of it. It keeps a surface's last 127 frames, whatever their age.
+ * the View toolkit, and `gfxinfo` counts none of it. It keeps a surface's last 127 frames, whatever their age,
+ * so a second read says whether they are still coming: a present's clock leaves out the time a phone slept
+ * and `/proc/uptime` does not, 12 hours apart on one that had.
  */
 export async function surfaceFrames(d: PerfDevice, pkg: string): Promise<Measured<SurfaceFrames>> {
   await d.readyToMeasure();
   assertPkg(pkg);
   const list = await sh(d, 'dumpsys SurfaceFlinger --list');
-  const layers = list
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.startsWith('SurfaceView') && l.includes(pkg));
+  const layers = surfaceLayers(list, pkg);
   const raws = [list];
-  let best = NO_SURFACE;
-  for (const layer of layers) {
-    const raw = await sh(d, `cat /proc/uptime; dumpsys SurfaceFlinger --latency ${shq(layer)}`);
+  const latency = async (layer: string) => {
+    const raw = await sh(d, `dumpsys SurfaceFlinger --latency ${shq(layer)}`);
     raws.push(raw);
-    const [uptime = '', ...rest] = raw.trim().split('\n');
-    const read = parseLatency(rest.join('\n'));
-    if (read.presents.length > best.frames)
-      best = surfaceStats(layer, read, Number(uptime.split(' ')[0]) * 1000);
+    return parseLatency(raw);
+  };
+  let held: { layer: string; read: ReturnType<typeof parseLatency> } | undefined;
+  for (const layer of layers) {
+    const read = await latency(layer);
+    if (read.presents.length > (held?.read.presents.length ?? 0)) held = { layer, read };
   }
-  return { value: best, raw: raws.join('\n---\n'), at: at() };
+  if (!held) return { value: NO_SURFACE, raw: raws.join('\n---\n'), at: at() };
+  await sleep(STILL_DRAWING_MS);
+  const again = await latency(held.layer);
+  const drawing = again.presents.at(-1) !== held.read.presents.at(-1);
+  return {
+    value: surfaceStats(held.layer, held.read, drawing),
+    raw: raws.join('\n---\n'),
+    at: at(),
+  };
 }

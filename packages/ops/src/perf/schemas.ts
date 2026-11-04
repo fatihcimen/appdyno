@@ -23,7 +23,7 @@ export const SnapshotOut = z.object({
       worstMs: z.number(),
       slow34Percent: z.number(),
       slow50Percent: z.number(),
-      lastFrameAgoMs: z.number(),
+      drawing: z.boolean(),
     })
     .optional(),
   startReason: z.string().optional(),
