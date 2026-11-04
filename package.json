@@ -13,7 +13,7 @@
     "test:device": "vitest run --config vitest.device.config.ts",
     "lint": "eslint packages scripts test-device '*.{js,ts}' && prettier --check packages scripts test-device docs ios .github '*.{md,json,js,ts,yaml,yml}'",
     "format": "prettier --write packages scripts test-device docs ios .github '*.{md,json,js,ts,yaml,yml}'",
-    "ci": "pnpm lint && pnpm typecheck && pnpm test"
+    "ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
