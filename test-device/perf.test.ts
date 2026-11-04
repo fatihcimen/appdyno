@@ -142,7 +142,9 @@ describe.skipIf(!serial)('android perf accuracy', () => {
 
   it('vitals: load, memory and thermal state of the device', async () => {
     const v = (await d.measure.vitals()).value;
-    expect(v.load).toHaveLength(3);
+    // a kernel may hide its load and give its pressure, as a Samsung's, or the reverse, as a Xiaomi's
+    expect(v.load ?? v.cpuPressure).toBeDefined();
+    if (!serial!.startsWith('emulator-')) expect(v.thermalStatus).toBeGreaterThanOrEqual(0);
     expect(v.memAvailableKb).toBeGreaterThan(0);
     expect(v.memTotalKb).toBeGreaterThan(v.memAvailableKb!);
   });
