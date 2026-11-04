@@ -10,6 +10,7 @@ import {
 import type { ServerContext } from '../context.js';
 import { NOT_STEPS } from '../report.js';
 import type { Session } from '../session.js';
+import { SCROLLER_SWIPES } from '../perf/shared.js';
 import { type Step, WAIT_MS } from '../step-schemas.js';
 import type { Op, ToolResult } from '../tool.js';
 import { defined, loadRecording, keepRecording } from './shared.js';
@@ -21,6 +22,12 @@ const DEFAULT_SWIPES = 10;
 
 /** A target as the flat form the ops take. */
 type Target = { ref?: string; x?: number; y?: number; selector?: FlowSelector };
+
+/** What an op that ran comes to in a flow: its arguments and answer, as steps. */
+type ToStep = (
+  a: Record<string, unknown>,
+  data: Record<string, unknown>,
+) => FlowStep | FlowStep[] | undefined;
 
 const unrecorded = (what: string): FlowStep => ({
   action: 'unrecorded',
@@ -252,17 +259,42 @@ export function flowRecorder(ctx: ServerContext) {
         : undefined;
   };
 
-  const add = (r: Recording, step: FlowStep | undefined) => {
-    if (!step) return;
-    r.add(step);
-    keepRecording(r);
+  const add = (r: Recording, step: FlowStep | FlowStep[] | undefined) => {
+    const steps = [step ?? []].flat();
+    for (const st of steps) r.add(st);
+    if (steps.length) keepRecording(r);
+  };
+
+  /**
+   * A measure is the agent measuring, not the journey: its numbers come from `appdyno test --measure`. What it does to
+   * the screen stays, as the plain steps that do the same, so that the next step finds what it found, and nothing stops
+   * a replay: a cold start is a stop and a launch, a scroll its swipes.
+   */
+  const swipes = (a: Record<string, unknown>, count: number) =>
+    Array.from({ length: count }, () =>
+      stepOf('swipe', {}, { direction: (a.direction ?? a.scroll) as string }),
+    );
+  const restarts = (a: Record<string, unknown>) => [
+    stepOf('stop', {}, { app: a.app as string | undefined }),
+    stepOf('launch', {}, { app: a.app as string | undefined }),
+  ];
+  const measureOps: Record<string, ToStep> = {
+    perf_launch: (a) =>
+      a.mode === 'cold' ? restarts(a) : stepOf('launch', {}, { app: a.app as string | undefined }),
+    perf_scroll: (a, data) => [
+      ...(data.relaunched ? restarts(a) : []),
+      ...swipes(a, (a.swipes as number) * (a.repeats as number)),
+    ],
+    perf_trace: (a, data) => [
+      ...(data.relaunched || String(a.what).startsWith('xct_') ? restarts(a) : []),
+      ...(a.scroll ? swipes(a, SCROLLER_SWIPES) : []),
+    ],
+    perf_profile: (a) => (a.scroll ? swipes(a, SCROLLER_SWIPES) : undefined),
   };
 
   /** An op with no step of its own, as a flow step; a refused action is none, and any other op stops a replay. */
-  const OPS: Record<
-    string,
-    (a: Record<string, unknown>, data: Record<string, unknown>) => FlowStep | undefined
-  > = {
+  const OPS: Record<string, ToStep> = {
+    ...measureOps,
     launch_app: (a) => stepOf('launch', {}, { app: a.app as string | undefined }),
     terminate_app: (a) => stepOf('stop', {}, { app: a.app as string | undefined }),
     open_link: (a) => stepOf('open_link', {}, { url: a.url as string }),
@@ -300,7 +332,8 @@ export function flowRecorder(ctx: ServerContext) {
     wrap: (op: Op): Op => {
       const checks = op.name === 'wait_for' || op.name === 'assert';
       const elsewhere = BY_STEP.has(op.name) || NOT_ACTIONS.has(op.name);
-      if (!checks && (elsewhere || op.annotations.readOnlyHint)) return op;
+      // what is called a read may still move the screen, as a profile scrolling meanwhile
+      if (!checks && (elsewhere || (op.annotations.readOnlyHint && !OPS[op.name]))) return op;
       const toStep = OPS[op.name] ?? unknownOp(op.name);
       return {
         ...op,

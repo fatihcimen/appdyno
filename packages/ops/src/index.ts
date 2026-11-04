@@ -2,6 +2,7 @@ export { opsFor, flowsFor, type OpData, type OpName } from './registry.js';
 export { paramsOf } from './flow/ops.js';
 export type { ReplayOptions } from './flow/runner.js';
 export { flowFiles, type TestOptions } from './flow/test-run.js';
+export { JOURNEY_ITERATIONS } from './flow/journey.js';
 export { keepRun } from './perf/shared.js';
 export { survey } from './survey.js';
 export { swipeLine, pinchPaths } from './gesture-paths.js';

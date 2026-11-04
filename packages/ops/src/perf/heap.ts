@@ -18,7 +18,7 @@ export function perfHeapOp(ctx: ServerContext) {
     name: 'perf_heap',
     title: 'Heap dump',
     description:
-      "The app's heap into a local file (Android: Java HPROF, for a memory analyser; iOS simulator: an Xcode memory graph; iPhone, an app signed for development: a Leaks trace; on iOS the leak count). For a suspected leak, after perf_scroll. Android `profile`: a Perfetto trace, top classes or sites, for a debuggable or profileable build.",
+      "The app's heap into a local file (Android: Java HPROF; iOS simulator: an Xcode memory graph; iPhone, an app signed for development: a Leaks trace; on iOS the leak count). Android `profile`: a Perfetto trace, top classes or sites, for a debuggable or profileable build.",
     input: z
       .object({
         app: App,

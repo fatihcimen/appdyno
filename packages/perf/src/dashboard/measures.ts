@@ -2,10 +2,12 @@ import { esc } from '@appdyno/core';
 import { measureOf, type MeasureId, type PerfRecord } from '../record.js';
 import type { Refusal } from '../store.js';
 import { age, formatValue, measureTitle, time, type DeviceName } from './format.js';
+import { stepChips } from './journeys.js';
 import { chip } from './marks.js';
 import {
   cellKey,
   changeText,
+  isJourney,
   isPhase,
   limitText,
   loud,
@@ -13,6 +15,7 @@ import {
   phaseName,
   phasesOf,
   rowsOf,
+  stepTimes,
   type AppView,
   type Reading,
 } from './view.js';
@@ -21,7 +24,9 @@ const verdictChips = ({ record, run, scenario }: Reading) => {
   if (run !== scenario.runs[0]) return [];
   const c = scenario.report.comparisons.find((x) => x.kind === record.kind);
   const broken = scenario.report.budgets.filter((b) => b.kind === record.kind && !b.ok);
+  const steps = isJourney(record.kind) ? stepChips(scenario) : [];
   return [
+    ...steps,
     ...(c?.verdict === 'regression' ? [chip('critical', `regression ${changeText(c)}`)] : []),
     ...(c?.verdict === 'improvement' ? [chip('good', `improved ${changeText(c)}`)] : []),
     ...(c?.verdict === 'noisy' ? [chip('warning', 'a change under noise: measure again')] : []),
@@ -36,6 +41,13 @@ const valueOf = ({ record, run }: Reading) =>
   );
 
 const detailOf = ({ record, run }: Reading) => {
+  if (isJourney(record.kind)) {
+    const steps = stepTimes(run);
+    const slowest = steps.reduce((a, x) => (x.record.value > a.record.value ? x : a), steps[0]!);
+    return steps.length
+      ? `${steps.length} steps, slowest ${slowest.name} ${formatValue(slowest.record.value, slowest.record.unit)}`
+      : record.kind;
+  }
   if (!isPhase(record.kind)) return record.kind;
   const phases = phasesOf(run);
   const longest = phases.reduce((a, p) => (p.value > a.value ? p : a), record);

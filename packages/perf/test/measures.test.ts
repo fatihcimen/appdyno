@@ -33,13 +33,15 @@ describe('the rows of the performance table', () => {
     ['energy.mah', 'energy'],
     ['exits.crashes', 'crashes'],
     ['size.bytes', 'size'],
+    ['journey.total_ms', 'journey'],
+    ['journey.03_tap_id_submit.ms', 'journey'],
   ])('%s answers %s', (kind, row) => {
     expect(measureOf(kind)).toBe(row);
     expect(MEASURES).toContain(row);
   });
 
   it('a kind it does not know answers no row', () => {
-    expect(measureOf('journey.checkout_ms')).toBeUndefined();
+    expect(measureOf('xct.Duration')).toBeUndefined();
     // the name of a family is no kind of it, nor of what Object has
     expect(measureOf('frames.nothing')).toBeUndefined();
     expect(measureOf('toString')).toBeUndefined();

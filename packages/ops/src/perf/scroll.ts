@@ -196,6 +196,7 @@ export function perfScrollOp(ctx: ServerContext) {
           id: saved.id,
           raw: saved.txt,
           virtualDevice: virtual(s),
+          ...(relaunched.length && { relaunched: true }),
           rounds,
           ...(jank !== undefined && { jankMedianPercent: jank }),
           frozen,

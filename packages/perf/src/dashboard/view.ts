@@ -1,5 +1,12 @@
 import type { BudgetResult, BudgetRule, Comparison } from '../compare.js';
-import { measureOf, MEASURES, type Noise, type PerfRecord } from '../record.js';
+import {
+  JOURNEY_TOTAL,
+  journeyStep,
+  measureOf,
+  MEASURES,
+  type Noise,
+  type PerfRecord,
+} from '../record.js';
 import { reportKey, type KeyReport } from '../report.js';
 import type { Refusal } from '../store.js';
 import { deviceName, formatValue, time, type DeviceName } from './format.js';
@@ -30,6 +37,26 @@ export const rowOf = (kind: string) => measureOf(kind) ?? kind;
 export const cellKey = (row: string, cls: string) => `${row}\n${cls}`;
 
 export const isPhase = (kind: string) => kind.startsWith('launch.phase.');
+
+export const isJourney = (kind: string) => kind.startsWith('journey.');
+
+/** A step's name in words, from its kind. */
+export const stepName = (step: string) => step.replaceAll('_', ' ');
+
+/** What each step of this run took, in order. */
+export const stepTimes = (run: PerfRecord[]) =>
+  run.flatMap((r) => {
+    const s = journeyStep(r.kind);
+    return s?.what === 'ms' ? [{ name: stepName(s.step), record: r }] : [];
+  });
+
+/** A step's kinds that the gate calls slower in the newest run of this scenario. */
+export const regressedSteps = (s: Scenario) =>
+  s.report.comparisons.filter((c) => c.verdict === 'regression' && isJourney(c.kind));
+
+/** A kind of the row that has a chart of its own: a journey's whole, and a step while it stands out. */
+export const hasTrend = (s: Scenario, kind: string) =>
+  !isJourney(kind) || kind === JOURNEY_TOTAL || regressedSteps(s).some((c) => c.kind === kind);
 
 /** A debuggable build is said beside its number, but it is no reason to measure again. */
 export const loud = (noise: Noise[]) => noise.filter((n) => n !== 'debuggable-build');

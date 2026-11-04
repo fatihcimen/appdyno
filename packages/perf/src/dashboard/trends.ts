@@ -6,9 +6,19 @@ import { deviceLabel, formatValue, inScale, measureTitle, scaleOf, when } from '
 import { lineChart, type LinePoint } from './line-chart.js';
 import { SHOWN_RUNS } from './load.js';
 import { chip } from './marks.js';
+import { journeyFigures } from './journeys.js';
 import { phaseFigures } from './phases.js';
 import { tableView } from './table-view.js';
-import { isPhase, loud, nameOf, rowOf, rowsOf, type AppView, type Scenario } from './view.js';
+import {
+  hasTrend,
+  isPhase,
+  loud,
+  nameOf,
+  rowOf,
+  rowsOf,
+  type AppView,
+  type Scenario,
+} from './view.js';
 
 type Point = LinePoint & { record: PerfRecord };
 
@@ -89,7 +99,7 @@ function trendRow(v: AppView, row: string) {
   const byKind = new Map<string, string[]>();
   for (const s of v.scenarios)
     for (const kind of new Set(s.runs.flat().map((r) => r.kind))) {
-      if (rowOf(kind) !== row || isPhase(kind)) continue;
+      if (rowOf(kind) !== row || isPhase(kind) || !hasTrend(s, kind)) continue;
       const points = pointsOf(s, kind);
       if (points.length < 2) continue;
       byKind.set(kind, [...(byKind.get(kind) ?? []), trendFigure(v, s, kind, points)]);
@@ -100,7 +110,10 @@ function trendRow(v: AppView, row: string) {
 /** What changed over time, a measure at a time; a row with one run so far has nothing to show here. */
 export function trendsSection(v: AppView): string {
   const groups = rowsOf(v.scenarios).flatMap((row) => {
-    const body = row === 'launch-why' ? phaseFigures(v) : trendRow(v, row);
+    const body =
+      row === 'launch-why'
+        ? phaseFigures(v)
+        : `${row === 'journey' ? journeyFigures(v) : ''}${trendRow(v, row)}`;
     return body ? [`<h4>${esc(measureTitle(row) ?? `Other: ${row}`)}</h4>${body}`] : [];
   });
   return `<h3>Trends</h3>${

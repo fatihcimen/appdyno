@@ -391,7 +391,7 @@ class TickerActivity : Activity() {
     }
 }
 
-/** Content that arrives 600 ms after the tap, with a fade (the settle must wait for it). */
+/** Content that arrives 600 ms after the tap (and `files/delayed_ms` more), with a fade (the settle must wait for it). */
 class DelayedActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -406,7 +406,7 @@ class DelayedActivity : Activity() {
                     loaded.alpha = 0f
                     loaded.visibility = View.VISIBLE
                     loaded.animate().alpha(1f).setDuration(400).start()
-                }, 600)
+                }, 600 + (costMs("delayed_ms") ?: 0))
             }
             addView(loaded)
         }

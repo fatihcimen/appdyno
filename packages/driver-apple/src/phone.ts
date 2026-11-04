@@ -111,6 +111,7 @@ export class IosPhoneDevice extends IosDevice {
   private readonly ctl: Devicectl;
   /** What Instruments and XCTest can read from a phone: what they cannot says why. */
   readonly measure: MeasureSource = {
+    slowReads: ['memory'],
     frameTrace: async (bundle, seconds, during) => {
       await this.inFront(bundle);
       const v = await this.hitches(bundle, seconds, during);

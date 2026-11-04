@@ -219,11 +219,33 @@ export const FlowOut = z.object({
         step: z.string(),
         ms: z.number(),
         settledMs: z.number().optional(),
+        actMs: z.number().optional(),
         settled: z.boolean().optional(),
         changed: z.boolean().optional(),
         warnings: z.array(z.string()).optional(),
       }),
     )
+    .optional(),
+  /** `run` with `iterations`: what each step read, the median of the iterations. */
+  journey: z
+    .object({
+      id: z.string(),
+      raw: z.string(),
+      scenario: z.string(),
+      iterations: z.number().int(),
+      totalMs: z.number(),
+      steps: z.array(
+        z.object({
+          step: z.string(),
+          ms: z.number(),
+          framesP95Ms: z.number().optional(),
+          framesWorstMs: z.number().optional(),
+          memoryKb: z.number().optional(),
+        }),
+      ),
+      note: z.string().optional(),
+      noise: z.array(z.string()),
+    })
     .optional(),
 });
 
@@ -336,6 +358,7 @@ export const SnapshotOut = z.object({
 
 export const ScrollOut = z.object({
   ...Measurement,
+  relaunched: z.boolean().optional(),
   rounds: z.array(
     z.object({
       frames: z.number(),
@@ -370,6 +393,7 @@ export const LaunchOut = z.object({
 
 export const TraceOut = z.object({
   ...Measurement,
+  relaunched: z.boolean().optional(),
   frames: z.number(),
   /** Android. */
   appDeadlineMissed: z.number().optional(),

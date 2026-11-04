@@ -36,6 +36,8 @@ const READS: Record<MeasureId, Call[]> = {
   energy: [SNAPSHOT],
   crashes: [SNAPSHOT],
   size: [SNAPSHOT],
+  // a flow of the caller's: nothing here can make one up, and no device refuses it
+  journey: [],
 };
 
 type Outcome = { refused?: string; failed?: string; lacking?: string[] };
@@ -83,6 +85,10 @@ export async function survey(ctx: ServerContext, app: string, log: (line: string
 
   let read = 0;
   for (const row of MEASURES) {
+    if (READS[row].length === 0) {
+      line(row, 'your flow: appdyno test <file> --measure');
+      continue;
+    }
     const said: Outcome[] = [];
     for (const call of READS[row]) {
       if (await readingOf(row)) break;

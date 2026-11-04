@@ -5,7 +5,9 @@ import type { ErrorCode } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { FlowOut } from '../schemas.js';
+import { Scenario } from '../perf/shared.js';
 import { ToolError, reply, defineOp, DESTRUCTIVE } from '../tool.js';
+import { journeyText, measureJourney } from './journey.js';
 import type { FlowRunner } from './runner.js';
 import { FLOW_FILE, readFlow, loadRecording, keepRecording } from './shared.js';
 
@@ -37,7 +39,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
       name: 'flow',
       title: 'Flow',
       description:
-        'Record your actions; replay them with no model. save (file, overwrite), run (file, from: a step, params: NAME=value; a miss stops with the nearest), export (file, to Maestro YAML).',
+        'Record your actions; replay them with no model. save (file, overwrite), run (file, from: a step, params: NAME=value; iterations: a journey timed by step, kept for perf_compare), export (file, to Maestro YAML).',
       input: z
         .object({
           action: z.enum(['start', 'stop', 'save', 'run', 'export']),
@@ -45,11 +47,13 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
           from: z.number().refine(Number.isInteger, 'a step number').optional(),
           params: z.array(z.string().max(2_000)).optional(),
           overwrite: z.boolean().optional(),
+          iterations: z.number().int().min(1).max(50).optional(),
+          scenario: Scenario,
         })
         .strict(),
       output: FlowOut,
       annotations: DESTRUCTIVE,
-      run: async ({ action, file, from, params, overwrite }) => {
+      run: async ({ action, file, from, params, overwrite, iterations, scenario }) => {
         const need = () => {
           if (!file)
             throw new ToolError(`${action} needs file: a path ending in .flow`, 'INVALID_ARGUMENT');
@@ -129,22 +133,33 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
           }
           case 'run': {
             const path = need();
-            const result = await runner.run(s, readFlow(path), path, {
-              params: paramsOf(params),
-              ...(from !== undefined && { from }),
-            });
+            const replay = { params: paramsOf(params), ...(from !== undefined && { from }) };
+            const { result, journey } = iterations
+              ? await measureJourney(ctx, runner, s, readFlow(path), path, {
+                  ...replay,
+                  iterations,
+                  ...(scenario && { scenario }),
+                })
+              : { result: await runner.run(s, readFlow(path), path, replay), journey: undefined };
             if (result.failure)
               throw new ToolError(
-                runner.failureText(path, result.failure),
+                [
+                  runner.failureText(path, result.failure),
+                  ...(journey ? [`what passed before it is kept: ${journeyText(journey)}`] : []),
+                ].join('\n'),
                 (result.failure.code ?? 'NOT_FOUND') as ErrorCode,
                 result.failure.hint,
               );
             const t = result.steps.map(runner.lineOf).join('\n');
-            return reply(`${t}\npassed: ${result.steps.length} steps`, {
-              done: 'passed',
-              steps: result.steps.length,
-              timings: result.steps,
-            });
+            return reply(
+              journey ? journeyText(journey) : `${t}\npassed: ${result.steps.length} steps`,
+              {
+                done: 'passed',
+                steps: result.steps.length,
+                timings: result.steps,
+                ...(journey && { journey }),
+              },
+            );
           }
         }
       },

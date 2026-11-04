@@ -68,6 +68,7 @@ export const MEASURES = [
   'energy',
   'crashes',
   'size',
+  'journey',
 ] as const;
 export type MeasureId = (typeof MEASURES)[number];
 
@@ -109,16 +110,33 @@ export const KINDS = {
 } as const satisfies Record<string, MeasureId>;
 
 /**
- * Those, and what is named at run time: a launch's phases, which answer `launch-why`; XCTest's own metrics and a
- * caller's journey through `keepRun`, which answer no row and show as rows of their own.
+ * Those, and what is named at run time: a launch's phases, which answer `launch-why`; a journey's whole and its steps,
+ * which answer `journey`; XCTest's own metrics, which answer no row and show as rows of their own.
  */
 export type Kind =
-  keyof typeof KINDS | `launch.phase.${string}_ms` | `xct.${string}` | `journey.${string}`;
+  keyof typeof KINDS | `launch.phase.${string}_ms` | `journey.${string}` | `xct.${string}`;
 
 /** Which row a kept kind answers, if any: a record may have been kept by another version. */
 export function measureOf(kind: string): MeasureId | undefined {
   if (kind.startsWith('launch.phase.')) return 'launch-why';
+  if (kind.startsWith('journey.')) return 'journey';
   return Object.hasOwn(KINDS, kind) ? KINDS[kind as keyof typeof KINDS] : undefined;
+}
+
+/** A journey's time from start to end: its kind keeps the row's first record, what its cell and trend read. */
+export const JOURNEY_TOTAL = 'journey.total_ms';
+
+/** A step's kind: `journey.<number>_<its line>.<what>`. What a line holds that is no word reads as `_`. */
+export const journeyKind = (n: number, line: string, what: string): `journey.${string}` =>
+  `journey.${String(n).padStart(2, '0')}_${line
+    .replace(/\W+/g, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 48)}.${what}`;
+
+/** The two parts of a step's kind; none for the journey's whole, or a kind from elsewhere. */
+export function journeyStep(kind: string): { step: string; what: string } | undefined {
+  const m = /^journey\.(\d+_.*)\.(\w+)$/.exec(kind);
+  return m ? { step: m[1]!, what: m[2]! } : undefined;
 }
 
 /** A run of odd characters as one: stored runs and baselines already have these names. */

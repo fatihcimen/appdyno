@@ -18,6 +18,7 @@ import {
   ServerContext,
   flowFiles,
   flowsFor,
+  JOURNEY_ITERATIONS,
   opsFor,
   paramsOf,
   survey,
@@ -232,16 +233,23 @@ async function main(): Promise<number> {
           artifacts: { type: 'string' },
           junit: { type: 'string' },
           share: { type: 'boolean' },
+          measure: { type: 'boolean' },
+          iterations: { type: 'string' },
+          measurements: { type: 'string' },
         },
       });
-      if (positionals.length === 0) {
+      const iterations = Number(values.iterations ?? JOURNEY_ITERATIONS);
+      if (positionals.length === 0 || !Number.isInteger(iterations) || iterations < 1) {
         err(
-          'usage: appdyno test <dir or files> [--device S]... [--param NAME=value]... [--artifacts dir] [--junit file]',
+          'usage: appdyno test <dir or files> [--device S]... [--param NAME=value]... [--artifacts dir] [--junit file] [--measure [--iterations N] [--measurements dir]]',
         );
         return 2;
       }
       const artifacts = values.artifacts ?? 'appdyno-artifacts';
-      const ctx = contextFrom({ ...(values.share && { share: true }) });
+      const ctx = contextFrom({
+        ...(values.share && { share: true }),
+        ...(values.measurements && { measurements: values.measurements }),
+      });
       try {
         const { passed } = await flowsFor(ctx).test({
           files: flowFiles(positionals),
@@ -249,6 +257,7 @@ async function main(): Promise<number> {
           artifacts,
           junit: values.junit ?? join(artifacts, 'junit.xml'),
           params: paramsOf(values.param),
+          ...(values.measure && { iterations }),
           log: (line) => console.log(line),
         });
         return passed ? 0 : 1;
@@ -333,8 +342,8 @@ commands:
   mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--animations on|off] [--measurements dir] [--no-install-consent] [--accept-install-warnings]
                    the MCP server over stdio
   devices          the connected Android devices
-  test <dir or files> [--device S]... [--param NAME=value]... [--artifacts dir] [--junit file]
-                   replay flows, one after another, on each device
+  test <dir or files> [--device S]... [--param NAME=value]... [--artifacts dir] [--junit file] [--measure [--iterations N]]
+                   replay flows, one after another, on each device; --measure keeps each as a scenario, by step
   doctor [--serial S]
                    what this machine and that device lack
   ios build        build the iOS runners now

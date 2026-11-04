@@ -83,6 +83,9 @@ const MEASURE_NAME: Record<Capability, string> = {
 
 export const kb = (n?: number) => (n === undefined ? '?' : `${(n / 1024).toFixed(1)} MB`);
 
+/** How far a measure that records during a scroll swipes. */
+export const SCROLLER_SWIPES = 4;
+
 /** A measure the platform may lack: its answer, or nothing when it says UNSUPPORTED. */
 export const unlessUnsupported = async <T>(p: Promise<T>): Promise<T | undefined> =>
   p.catch((e: unknown) => {
@@ -240,7 +243,7 @@ export function perfTools(ctx: ServerContext) {
     const size = (await s.current()).window ?? { w: h.screen.w, h: h.screen.h };
     return async () => {
       await pause(waitMs);
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < SCROLLER_SWIPES; i++) {
         const { from, to } = swipeLine(size, { direction, distance: size.h * 0.4 });
         await s.device.swipe(from, to, 300, { settle: false });
       }

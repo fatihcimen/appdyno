@@ -320,12 +320,12 @@ describe('the page', () => {
 
   it('shows a kind no measure answers under other', async () => {
     const s = store();
-    const journey: Metric = { kind: 'journey.checkout_ms', unit: 'ms', samples: [900] };
-    await s.run(2, [journey], { scenario: 'journey' });
-    await s.run(1, [journey], { scenario: 'journey' });
+    const xct: Metric = { kind: 'xct.Duration', unit: 'ms', samples: [900] };
+    await s.run(2, [xct], { scenario: 'xct' });
+    await s.run(1, [xct], { scenario: 'xct' });
     const text = textOf(await s.page());
-    expect(text).toContain('other journey.checkout_ms');
-    expect(text).toContain('Other: journey.checkout_ms');
+    expect(text).toContain('other xct.Duration');
+    expect(text).toContain('Other: xct.Duration');
   });
 
   it('calls a regression and a broken budget, and names them', async () => {

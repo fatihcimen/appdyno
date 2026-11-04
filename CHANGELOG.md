@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- A journey measured and gated: `appdyno test <flow> --measure [--iterations N]`, or `flow` `run` with `iterations`, keeps a flow as a scenario with a time and what the device reads for each step. `perf compare` names the step that got slower, and the dashboard has a row `Journeys`, with one bar split by step.
+- A `perf_*` call during a recording no longer stops a replay: what it did to the screen is written as the plain steps that do the same, and what left the screen alone writes nothing.
+- A baseline takes what a run measured clean and names what it left out, rather than refusing the whole run for one number that went through a loaded Mac.
+
 ## 0.6.0
 
 The first version run on all four kinds of device together: an emulator, a simulator, an Android phone and an iPhone.

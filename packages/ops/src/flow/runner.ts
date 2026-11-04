@@ -7,6 +7,7 @@ import {
   type Flow,
   type Executor,
   type StepOutcome,
+  type StepResult,
   type RunResult,
   valuesFor,
   fillApp,
@@ -108,6 +109,12 @@ const WHOLE_STEP = new Set(['launch', 'open_link', 'scroll_to']);
 
 const READS_ONLY = new Set(['wait_for', 'assert']);
 
+/** What a step took: the device's own count from action to settled where it has one, else the action on this Mac's clock. */
+export const stepTime = (action: FlowStep['action'], r: StepResult) =>
+  !WHOLE_STEP.has(action) && r.settledMs !== undefined
+    ? { ms: r.settledMs, throughHost: false }
+    : { ms: r.actMs ?? r.ms, throughHost: true };
+
 export type ReplayOptions = Pick<RunOptions, 'from' | 'onStep'> & {
   params?: Record<string, string>;
   /** Where a failure leaves its screenshot and tree. */
@@ -178,6 +185,7 @@ export function flowRunner(
         ? undefined
         : data.settleMs;
     return {
+      actMs: whole,
       ...(settledMs !== undefined && { settledMs }),
       ...(data.settled !== undefined && { settled: data.settled }),
       ...(data.changed !== undefined && { changed: data.changed }),

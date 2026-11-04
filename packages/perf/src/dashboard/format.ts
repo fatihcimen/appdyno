@@ -107,6 +107,7 @@ export const MEASURE_TITLE: Record<MeasureId, string> = {
   energy: 'Energy',
   crashes: 'Crashes, ANRs',
   size: 'App size',
+  journey: 'Journeys',
 };
 
 /** A row's title, when it is one of the measures. */

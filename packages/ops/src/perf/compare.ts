@@ -7,6 +7,7 @@ import {
   loadBaseline,
   loadBudgets,
   type KeyReport,
+  type PerfRecord,
   reportKey,
   exitCode,
   toJson,
@@ -24,7 +25,7 @@ export function perfCompareOp(ctx: ServerContext) {
     name: 'perf_compare',
     title: 'Compare with the baseline',
     description:
-      'The newest runs against the baseline and budgets in .appdyno/perf/; a change counts only when statistically and practically significant. budget: budgets only; baseline: adds the newest run to the baseline, `replace` starts it over; dashboard: writes the page, answers its path. No device needed.',
+      'The newest runs against the baseline and budgets in .appdyno/perf/; a change counts only when statistically and practically significant. budget: budgets only; baseline: adds the newest run, `replace` starts over; dashboard: writes the page. No device needed.',
     input: z
       .object({
         action: z.enum(['compare', 'budget', 'baseline', 'dashboard']).default('compare'),
@@ -58,21 +59,25 @@ export function perfCompareOp(ctx: ServerContext) {
         let left = 0;
         for (const k of keys) {
           const [newest = []] = await latestRuns(dir, k);
-          // a reference taken under load would hide every later change
-          const loud = [...new Set(newest.flatMap((r) => r.noise))].filter(
-            (n) => n !== 'debuggable-build',
-          );
-          if (loud.length) {
+          // a reference taken under load would hide every later change; a number of the device's own in the same run stands
+          const loudOf = (r: PerfRecord) => r.noise.filter((n) => n !== 'debuggable-build');
+          const clean = newest.filter((r) => loudOf(r).length === 0);
+          const noisy = newest.filter((r) => loudOf(r).length > 0);
+          const said = [...new Set(noisy.flatMap(loudOf))].join(', ');
+          if (clean.length === 0) {
             left++;
-            lines.push(`not added, ${loud.join(', ')}: measure ${k.scenario} again`);
+            lines.push(`not added, ${said}: measure ${k.scenario} again`);
             continue;
           }
           const file = await saveBaseline(
             project,
-            addToBaseline(k, await loadBaseline(project, k), newest, replace),
+            addToBaseline(k, await loadBaseline(project, k), clean, replace),
           );
           files.push(file);
-          lines.push(`baseline: ${file}`);
+          lines.push(
+            `baseline: ${file}`,
+            ...(noisy.length ? [`left out, ${said}: ${noisy.map((r) => r.kind).join(', ')}`] : []),
+          );
         }
         await rewriteDashboard(ctx);
         return reply(lines.join('\n'), {

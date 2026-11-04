@@ -1,0 +1,320 @@
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { ActOptions, MeasureSource } from '@appdyno/core';
+import { latestRuns, runKeys, type PerfRecord } from '@appdyno/perf';
+import { DeviceError, type ActParams } from '@appdyno/protocol';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_POLICY, flowsFor, ServerContext, ToolError } from '../src/index.js';
+import { FakeDevice } from './fake-device.js';
+import { callerOf } from './helpers.js';
+
+// the Mac's load is this test's to set: what the gate says under it is part of what is tested
+const host = vi.hoisted(() => ({ load: 1 }));
+vi.mock('node:os', async (original) => ({
+  ...(await original<typeof import('node:os')>()),
+  loadavg: () => [host.load, host.load, host.load],
+}));
+
+const fresh = () => mkdtempSync(join(tmpdir(), 'appdyno-journey-'));
+
+beforeEach(() => {
+  host.load = 1;
+  vi.stubEnv('APPDYNO_STATE_DIR', fresh());
+});
+afterEach(() => vi.unstubAllEnvs());
+
+/** A phone whose tap on "Form" takes `formMs` and any other touch 200 ms, a little apart from one to the next. */
+class TimedPhone extends FakeDevice {
+  formMs = 400;
+  private tick = 0;
+  override async act(action: ActParams, opts: ActOptions = {}) {
+    const onForm = action.kind === 'tap' && action.y >= 300 && action.y <= 400;
+    const r = await super.act(action, opts);
+    const ms = (onForm ? this.formMs : 200) + (this.tick++ % 3);
+    return { ...r, ...(r.settle && { settle: { ...r.settle, ms } }) };
+  }
+}
+
+function phone(overrides: Partial<MeasureSource> = {}) {
+  const device = new TimedPhone();
+  Object.defineProperty(device, 'measure', {
+    value: {
+      ...device.measure,
+      virtual: false,
+      buildType: async () => 'release',
+      vitals: async () => ({ value: {}, raw: '', at: new Date().toISOString() }),
+      ...overrides,
+    } satisfies MeasureSource,
+  });
+  const measurements = fresh();
+  const perf = fresh();
+  const ctx = new ServerContext(
+    DEFAULT_POLICY,
+    [
+      {
+        list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+        handles: () => true,
+        open: () => device,
+      },
+    ],
+    { device: device.serial, app: 'dev.app', measurements, perf },
+  );
+  return { device, ctx, measurements, perf, call: callerOf(ctx) };
+}
+
+const JOURNEY = 'launch\ntap text="Form"\nassert text="Bilgiler"\n';
+
+const flowFile = (text = JOURNEY, name = 'checkout.flow') => {
+  const file = join(fresh(), name);
+  writeFileSync(file, text);
+  return file;
+};
+
+const newestRun = async (measurements: string) => {
+  const [key] = await runKeys(measurements);
+  return (await latestRuns(measurements, key!))[0]!;
+};
+
+const named = (run: PerfRecord[], part: string) => run.find((r) => r.kind.includes(part));
+
+describe('a journey as a performance scenario', () => {
+  it('keeps a time and what the device reads for each step, the first iteration left out', async () => {
+    const { call, measurements, device } = phone();
+    const file = flowFile();
+    const r = await call('flow', { action: 'run', file, iterations: 5 });
+    expect(r.data.journey!.scenario).toBe('journey-checkout');
+    expect(r.data.journey!.iterations).toBe(5);
+    expect(r.text).toContain('tap text="Form": 40');
+    const run = await newestRun(measurements);
+    expect(run[0]!.kind).toBe('journey.total_ms');
+    expect(run[0]!.samples).toHaveLength(5);
+    expect(named(run, '02_tap_text_Form.ms')!.samples).toHaveLength(5);
+    expect(named(run, '02_tap_text_Form.ms')!.value).toBeCloseTo(401, 0);
+    // what a device times itself is its own; what is timed on the Mac says so through the load it takes
+    expect(named(run, '02_tap_text_Form.frames_p95_ms')!.samples).toEqual([18, 18, 18, 18, 18]);
+    expect(named(run, '02_tap_text_Form.memory_kb')!.unit).toBe('kb');
+    // the frames of a step are those of the step: reset before its action
+    const names = device.calls.map((c) => c.name);
+    expect(names.filter((n) => n === 'perf.reset')).toHaveLength(15);
+    expect(names.filter((n) => n === 'launch')).toHaveLength(6);
+  });
+
+  it('names the step that got slower through the gate, and leaves the others alone', async () => {
+    const { device, call, measurements } = phone();
+    const file = flowFile();
+    for (let i = 0; i < 3; i++) {
+      await call('flow', { action: 'run', file, iterations: 5 });
+      await call('perf_compare', { action: 'baseline', scenario: 'journey-checkout' });
+    }
+    await call('flow', { action: 'run', file, iterations: 5 });
+    const same = await call('perf_compare', { action: 'compare' });
+    expect(same.data.exitCode).toBe(0);
+
+    device.formMs = 1_100;
+    await call('flow', { action: 'run', file, iterations: 5 });
+    const worse = await call('perf_compare', { action: 'compare' });
+    expect(worse.data.exitCode).toBe(1);
+    expect(worse.text).toMatch(/regression\s+journey\.02_tap_text_Form\.ms: 110\d ms against 40/);
+    expect(worse.text).toMatch(/regression\s+journey\.total_ms/);
+    expect(worse.text).not.toMatch(/regression\s+journey\.03_/);
+
+    const dashboard = await call('perf_compare', { action: 'dashboard' });
+    const page = readFileSync(dashboard.data.file!, 'utf8');
+    const text = page.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    expect(text).toContain('Journeys');
+    expect(text).toContain('3 steps, slowest 02 tap text Form');
+    expect(text).toContain('02 tap text Form slower +');
+    expect(page).toContain('class="split"');
+    expect(page).toContain('Against the baseline');
+    expect(await newestRun(measurements)).toBeDefined();
+  });
+
+  it('on a loaded Mac a phone gates what it timed itself, and leaves out what went through the Mac', async () => {
+    host.load = 10_000;
+    const { device, call } = phone();
+    const file = flowFile();
+    for (let i = 0; i < 3; i++) {
+      await call('flow', { action: 'run', file, iterations: 5 });
+      const b = await call('perf_compare', { action: 'baseline', scenario: 'journey-checkout' });
+      expect(b.data.exitCode).toBe(0);
+      expect(b.text).toMatch(/left out, high-host-load: journey\.total_ms, journey\.01_launch\.ms/);
+    }
+    device.formMs = 1_100;
+    await call('flow', { action: 'run', file, iterations: 5 });
+    const worse = await call('perf_compare', { action: 'compare' });
+    expect(worse.text).toMatch(/regression\s+journey\.02_tap_text_Form\.ms/);
+    expect(worse.text).toMatch(/new\s+journey\.01_launch\.ms/);
+    expect(worse.data.exitCode).toBe(1);
+  });
+
+  it('a step after which the app does not run has no reading, and the run goes on', async () => {
+    const gone = async () => {
+      throw new DeviceError('APP_NOT_RUNNING', 'dev.app is not running');
+    };
+    let up = true;
+    const base = phone();
+    const { frames, memory } = base.device.measure;
+    const { call, measurements, device } = phone({
+      frames: async () => (up ? frames() : gone()),
+      memory: async () => (up ? memory() : gone()),
+    } as Partial<MeasureSource>);
+    const terminate = device.terminate.bind(device);
+    device.terminate = async (pkg: string) => {
+      up = false;
+      await terminate(pkg);
+    };
+    const launch = device.launch.bind(device);
+    device.launch = async (pkg: string) => {
+      up = true;
+      return launch(pkg);
+    };
+    const r = await call('flow', {
+      action: 'run',
+      file: flowFile('stop\nlaunch\n'),
+      iterations: 2,
+    });
+    expect(r.data.done).toBe('passed');
+    const run = await newestRun(measurements);
+    expect(named(run, '01_stop.ms')!.samples).toHaveLength(2);
+    expect(named(run, '01_stop.memory_kb')).toBeUndefined();
+    expect(named(run, '02_launch.memory_kb')!.samples).toHaveLength(2);
+  });
+
+  it('a read that takes a recording of seconds is not made between two steps, and the answer says so', async () => {
+    const { device, call, measurements } = phone({
+      slowReads: ['memory'],
+      frames: undefined,
+      resetFrames: undefined,
+    } as Partial<MeasureSource>);
+    const r = await call('flow', { action: 'run', file: flowFile(), iterations: 1 });
+    expect(r.data.journey!.note).toMatch(/time only for frames and memory/);
+    expect(device.calls.some((c) => c.name === 'perf.memory')).toBe(false);
+    const run = await newestRun(measurements);
+    expect(named(run, 'memory_kb')).toBeUndefined();
+    expect(named(run, '02_tap_text_Form.ms')).toBeDefined();
+  });
+
+  it('keeps what passed before an iteration failed, and the failure is the answer', async () => {
+    const { device, call, measurements } = phone();
+    let launches = 0;
+    const launch = device.launch.bind(device);
+    device.launch = async (pkg: string) => {
+      if (++launches === 4) device.fail = new DeviceError('TIMEOUT', 'the phone went away');
+      return launch(pkg);
+    };
+    const e = await call('flow', { action: 'run', file: flowFile(), iterations: 5 }).then(
+      () => undefined,
+      (x: unknown) => x as ToolError,
+    );
+    expect(e).toBeInstanceOf(ToolError);
+    expect(e!.message).toContain('the phone went away');
+    expect(e!.message).toContain('what passed before it is kept');
+    device.fail = undefined;
+    // the warm-up, then two that passed, then the one that failed
+    expect((await newestRun(measurements))[0]!.samples).toHaveLength(2);
+  });
+
+  it('a warm-up that fails keeps nothing', async () => {
+    const { device, call, measurements } = phone();
+    device.fail = new DeviceError('TIMEOUT', 'the phone went away');
+    await expect(
+      call('flow', { action: 'run', file: flowFile(), iterations: 5 }),
+    ).rejects.toBeInstanceOf(ToolError);
+    device.fail = undefined;
+    expect(await runKeys(measurements)).toEqual([]);
+  });
+
+  it('refuses a start half way and a flow with no owner, by name', async () => {
+    const { call } = phone();
+    await expect(
+      call('flow', { action: 'run', file: flowFile(), iterations: 2, from: 2 }),
+    ).rejects.toThrow(/runs whole/);
+    const { device } = phone();
+    const ctx = new ServerContext(DEFAULT_POLICY, [
+      {
+        list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+        handles: () => true,
+        open: () => device,
+      },
+    ]);
+    await expect(
+      callerOf(ctx)('flow', { action: 'run', file: flowFile(), iterations: 2 }),
+    ).rejects.toThrow(/names no app/);
+  });
+
+  it('a value given for a step does not change its key', async () => {
+    const { call, measurements } = phone();
+    const file = flowFile('param WHERE\nlaunch\ntap text="${WHERE}"\n');
+    await call('flow', { action: 'run', file, iterations: 1, params: ['WHERE=Form'] });
+    expect(named(await newestRun(measurements), '02_tap_text_WHERE.ms')).toBeDefined();
+  });
+
+  it('runs as a test, a case per file, with what it read in the case', async () => {
+    const { ctx, measurements } = phone();
+    const artifacts = fresh();
+    const junit = join(artifacts, 'junit.xml');
+    const logged: string[] = [];
+    const r = await flowsFor(ctx).test({
+      files: [flowFile(JOURNEY, 'a.flow')],
+      devices: [],
+      artifacts,
+      junit,
+      iterations: 2,
+      log: (l) => logged.push(l),
+    });
+    expect(r.passed).toBe(true);
+    expect(logged.join('\n')).toContain('journey-a: 2 iterations');
+    expect(readFileSync(junit, 'utf8')).toContain('journey-a: 2 iterations');
+    expect((await newestRun(measurements))[0]!.scenario).toBe('journey-a');
+  });
+});
+
+describe('a measure during a recording', () => {
+  const recorded = async (
+    call: ReturnType<typeof phone>['call'],
+    actions: () => Promise<unknown>,
+  ) => {
+    const file = join(fresh(), 'a.flow');
+    await call('flow', { action: 'start' });
+    await actions();
+    await call('flow', { action: 'stop' });
+    await call('flow', { action: 'save', file });
+    return readFileSync(file, 'utf8');
+  };
+  const stepsOf = (text: string) =>
+    text.split('\n').filter((l) => l && !l.startsWith('app ') && !l.startsWith('param '));
+
+  it('leaves what it did to the screen as plain steps, so a replay does not stop there', async () => {
+    const { call } = phone();
+    const text = await recorded(call, async () => {
+      await call('perf_launch', { repeats: 1 });
+      await call('perf_scroll', { swipes: 2, repeats: 2 });
+      await call('perf_trace', { scroll: 'down', seconds: 1 });
+      await call('perf_profile', { scroll: 'up', seconds: 1 });
+      await call('perf_launch', { mode: 'warm', repeats: 1 });
+    });
+    expect(stepsOf(text)).toEqual([
+      'stop',
+      'launch',
+      ...Array<string>(4).fill('swipe up'),
+      ...Array<string>(4).fill('swipe down'),
+      ...Array<string>(4).fill('swipe up'),
+      'launch',
+    ]);
+    const file = flowFile(text, 'b.flow');
+    const r = await call('flow', { action: 'run', file });
+    expect(r.data.done).toBe('passed');
+  });
+
+  it('writes nothing for what leaves the screen as it found it', async () => {
+    const { call } = phone();
+    const text = await recorded(call, async () => {
+      await call('perf_snapshot');
+      await call('perf_trace', { seconds: 1 });
+      await call('perf_profile', { seconds: 1 });
+      await call('launch_app');
+    });
+    expect(stepsOf(text)).toEqual(['launch']);
+  });
+});

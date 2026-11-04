@@ -243,8 +243,8 @@ screen at that moment: the id, else role and text, else text. Refs never reach t
 finds alone keeps its index and is flagged `!ambiguous`. Only a point on no element, a slider or a large
 area stays as coordinates, flagged `!coordinates` with the screen size they hold for; a screen of another
 size refuses that step. A role is kept when both platforms name it alike (`button`, `textField`...), and
-Android's own ids (`android:id/button1`) are not kept. An action with no step (a pinch, a device setting, a click in a web view, a measure that restarts the app)
-is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. `flow stop` and
+Android's own ids (`android:id/button1`) are not kept. An action with no step (a pinch, a device setting, a click in a web view)
+is written as `unrecorded "..."`, where a replay stops, so that it cannot pass without it. A measure is the agent measuring, not the journey: what it did to the screen stays, as the plain steps that do the same (`perf_launch` cold: `stop`, `launch`; `perf_scroll`: its swipes), and it stops no replay. `flow stop` and
 `flow save` list every step to look at.
 
 **Secrets.** Text typed into a password field, and text in `APPDYNO_SECRETS`, become a `secret` by name:
@@ -273,6 +273,17 @@ failed or if there was nothing to run. Assertions are steps.
 coordinates, a role with no id or text). A role beside a text is left out, as Maestro has none, and the YAML
 says so in a comment. Maestro's text matches a whole label where ours also takes a part of one. There is no
 import.
+
+**A journey measured and gated.** `appdyno test login.flow --measure [--iterations 5]`, or `flow` `run` with `iterations`, runs a flow as a performance scenario: a first run left out as a warm-up, then each iteration with a time and what the device reads in a moment for each step. All of it is one kept run of the scenario `journey-login`, and the gate is the usual one:
+
+```sh
+appdyno test flows/login.flow --measure --device <id>       # three times, then:
+appdyno perf baseline --app A --scenario journey-login
+appdyno test flows/login.flow --measure --device <id>
+appdyno perf compare --app A --scenario journey-login       # exit 1, naming the step that got slower
+```
+
+A step's kind comes from its line, `journey.04_tap_id_load.ms`, with a `${NAME}` as it is written, so a value does not change it, and a step put in renumbers the ones after it. On Android a step has its frames (p95, worst) and memory; a simulator its memory, and frames under the probe; an iPhone its time only, as a read of its memory is a recording of seconds, and the answer says so. Start a flow with `stop` and `launch` to have every iteration start alike. An iteration that fails ends the run: what passed before it is kept, and the file's case fails. On the [dashboard](docs/perf.md#the-dashboard) a journey is one bar split by step, with a table of each step's numbers.
 
 From code, `flowsFor(ctx).replay(file, { onStep })` calls `onStep` around each step's action, awaited:
 `before` once its target is on the screen, `after` with its time once the screen settled.

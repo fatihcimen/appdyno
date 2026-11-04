@@ -77,13 +77,12 @@ appdyno perf compare --app A [--format text|json|junit]  exit 1 on a regression 
 appdyno perf budget --app A                              budgets only
 ```
 
-The same comes through `perf_compare`. A journey keeps its numbers with `keepRun` from `packages/ops`: a scenario and
-metrics, and the comparison reads them like any other.
+The same comes through `perf_compare`.
 
 **How a change is called.** All of: at least 5 samples each side and 3 baseline runs, else `few-samples`, which is no alarm; a rank
 test on all baseline samples against the run, p under 0.01 (by permutation, because whole milliseconds tie; 4 against 4 cannot reach
 it); a shift past a floor by unit (15 % and 10 ms for times); and past 4 standard deviations of the baseline's run medians. A run under
-high load or on a hot device says `noisy` and exit 0, and is refused as a baseline. Unlike builds or compile states say `refused`.
+high load or on a hot device says `noisy` and exit 0, and is refused as a baseline; a number of its own under noise is left out of one and named, and the rest of the run goes in. Unlike builds or compile states say `refused`.
 
 **Why that method.** Samples of one run share its load and heat, so two runs of an unchanged app differ "significantly". Across 72
 ordered pairs of unchanged runs, a rank test alone and a 10 % difference of medians alone would have alarmed:
@@ -97,7 +96,7 @@ ordered pairs of unchanged runs, a rank test alone and a 10 % difference of medi
 
 Run medians of the unchanged app: emulator 371-667 ms, simulator 1,661-1,705 ms, iPhone 554-626 ms. On an emulator the same launch read
 350 ms and 700 ms minutes apart between load 11 and 16 on 15 cores, and one baseline run at load 41 read 1,661 ms; so a run with host load over
-0.8 per core is marked noisy and is refused as a baseline. So is a phone's number that is timed on the Mac (an iPhone's launch, to the first screen it reads), and not what a phone reports itself.
+0.8 per core is marked noisy and is left out of a baseline. So is a phone's number that is timed on the Mac (an iPhone's launch, to the first screen it reads), and not what a phone reports itself.
 
 Why 4 standard deviations of run medians rather than their range, from `scripts/perf-floor-sim.mjs` (a run moving 6 % by itself, 5 % noise per
 launch, 6 launches, 400 trials): false alarms 3.0 % with 3 baseline runs and 2.3 % with 5 for the range, 0.8 % and 0.5 % for 4 sd; +40 % caught
@@ -123,6 +122,23 @@ about 230 ms, because the system's own start work runs alongside it.
 
 Kept traces and runs stay on this machine until removed; nothing prunes them.
 
+## A journey
+
+`appdyno test <flow> --measure` or `flow` `run` with `iterations`. A first run is left out, as a measured launch leaves out its warm-up, and the iterations (5 by default: the gate calls nothing under 5 samples a side) make one kept run of the scenario `journey-<file>`:
+
+| kind                                                   | what                                                                                                                                                                                              |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `journey.total_ms`                                     | each iteration's steps added up                                                                                                                                                                   |
+| `journey.<n>_<line>.ms`                                | the device's own count from the action to a settled screen; `launch`, `open_link`, `scroll_to`, `wait_for`, `assert` and what has no such count are the action on this Mac's clock, `throughHost` |
+| `journey.<n>_<line>.frames_p95_ms`, `.frames_worst_ms` | the step's frames: reset before its action, read after it settled; none when it drew nothing                                                                                                      |
+| `journey.<n>_<line>.memory_kb`                         | what `perf_snapshot` reads, after it settled                                                                                                                                                      |
+
+The reads are between the steps, so they cost time but are in no step's number. A step after which the app does not run has no reading, and the run goes on.
+
+Against a known cost, by `test-device/journey.test.ts`, on the Xiaomi, Android 16, 2026-11-04, host load 27-33 on 15 cores: a baseline of 3 runs of 5 iterations, an unchanged run all `ok`, then 700 ms added to one step (`files/delayed_ms`): `regression journey.04_tap_id_load.ms: 1663 ms against 952, +709 ms, p 0.0002`, exit 1, and no other step called. What went through the Mac (`stop`, `launch`, `assert`, the whole) was left out of the baseline at that load and read `new`, and the step the phone timed itself was called all the same. 50 MB held in one step read as +50.1 MB in that step's memory; a step with 40 ms draws read frames p95 81 ms, worst 91 ms, against 10 and 11 for a light one.
+
+**A measure inside a flow.** A `perf_*` call during a recording used to be written as `unrecorded`, which stopped the replay. A measure is the agent measuring, not the journey, and a journey now has its numbers from `--measure`, so what it did to the screen stays as the plain steps that do the same and nothing stops: `perf_launch` cold is `stop`, `launch`, warm or hot is `launch`; `perf_scroll` is its swipes; `perf_trace` or `perf_profile` with `scroll` is 4 swipes; a relaunch for the probe, or XCTest's own test, is `stop`, `launch`. What leaves the screen as it found it writes nothing.
+
 ## The dashboard
 
 ```text
@@ -137,8 +153,8 @@ appdyno perf dashboard [--app A] [--out dir] [--open]  the page alone, from what
 There is no server, and the page is one file with no script, which loads nothing: its content policy allows only its own style. Everything from the store is escaped. It follows the system's light or dark, and prints as ink on paper with no tooltips or tables. An app has a section of its own, with an anchor. In order:
 
 1. **What needs attention**, across every app, for the newest run of each scenario: regressions and broken budgets as `perf compare` calls them, and runs under high load or heat. A debuggable build is said beside its number but is no alarm. It says how many scenarios have a baseline and how many budget rules there are, since "nothing needs attention" means little without them, and which files could not be read.
-2. **Measures by device.** Above the table: that an emulator's or a simulator's numbers are relative to this Mac and that real frame rates, frozen frames, hitches and energy need a phone, and, with no phone measured for the app, the command for one. A cell holds the newest reading of that measure on that kind of device, with its unit, kind, scenario and age; an estimate from a model is marked; so is a reading under noise; and on a simulator it says when the number is something else: main-thread pacing for frames, frozen frames and stalls, this Mac's energy. A refusal newer than any reading gives its reason instead. Otherwise "not measured yet". A kind no measure answers has a row of its own under "other". Emulators and simulators read as relative, and the page says so.
-3. **Trends**, for a kind with more than one run on a device: one small chart per kind, scenario and device, each with one y-scale, from zero, with the runs evenly spaced. The shaded band is the baseline's median plus and minus the floor of the gate above: a run outside it has moved past the floor, though the call needs the rank test as well. A budget is a dashed line, drawn when within twice the data's top and otherwise said in words. A hollow point was taken under noise, and a dashed line is an estimate. The newest launch phases (`launch.phase.*`) are one bar split into phases, up to six with the smallest folded into "other". Every chart has a table under it.
+2. **Measures by device.** The row `Journeys` holds the newest journey on that device, its whole time, its slowest step and the steps the gate calls slower. Above the table: that an emulator's or a simulator's numbers are relative to this Mac and that real frame rates, frozen frames, hitches and energy need a phone, and, with no phone measured for the app, the command for one. A cell holds the newest reading of that measure on that kind of device, with its unit, kind, scenario and age; an estimate from a model is marked; so is a reading under noise; and on a simulator it says when the number is something else: main-thread pacing for frames, frozen frames and stalls, this Mac's energy. A refusal newer than any reading gives its reason instead. Otherwise "not measured yet". A kind no measure answers has a row of its own under "other". Emulators and simulators read as relative, and the page says so.
+3. **Trends**, for a kind with more than one run on a device: one small chart per kind, scenario and device, each with one y-scale, from zero, with the runs evenly spaced. The shaded band is the baseline's median plus and minus the floor of the gate above: a run outside it has moved past the floor, though the call needs the rank test as well. A budget is a dashed line, drawn when within twice the data's top and otherwise said in words. A hollow point was taken under noise, and a dashed line is an estimate. The newest launch phases (`launch.phase.*`) are one bar split into phases, up to six with the smallest folded into "other", and each journey's newest run one bar split by step, with a table of each step's time, verdict, frames and memory; a journey's whole has a trend, and so has a step the gate calls slower. Every chart has a table under it.
 4. **An empty store** shows the one command that fills it.
 
 A trend reads a key's newest 30 runs and says how many there are. Times are UTC. What it costs each kept run, the median of 7 rewrites of 1,000 runs of 5 kinds each, at host load 44-47 on 15 cores (a measure takes seconds):

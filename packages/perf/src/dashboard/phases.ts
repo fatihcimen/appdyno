@@ -1,4 +1,3 @@
-import type { PerfRecord } from '../record.js';
 import { figure, multiples } from './figure.js';
 import { deviceLabel, formatValue, when } from './format.js';
 import { shareOf, splitBar, type Part } from './split-bar.js';
@@ -25,8 +24,10 @@ function slotOf(name: string, slots: Map<string, number>, taken: Set<number>) {
 }
 
 /** The largest parts in their recorded order, each its own color, with the rest and any phase called other folded. */
-function partsOf(phases: PerfRecord[], slots: Map<string, number>): Part[] {
-  const named = phases.map((p) => ({ name: phaseName(p.kind), value: p.value }));
+export function partsOf(
+  named: { name: string; value: number }[],
+  slots: Map<string, number>,
+): Part[] {
   const own = named.filter((p) => p.name !== OTHER);
   const room =
     own.length === named.length && named.length <= MOST_PARTS ? MOST_PARTS : MOST_PARTS - 1;
@@ -59,7 +60,10 @@ export function phaseFigures(v: AppView): string {
           `${total} in all, ${reading.scenario.key.scenario}, ${when(reading.record.at)}`,
           [],
           splitBar(
-            partsOf(phases, slots),
+            partsOf(
+              phases.map((p) => ({ name: phaseName(p.kind), value: p.value })),
+              slots,
+            ),
             unit,
             `Launch phases on ${deviceLabel(nameOf(v, cls))}, ${total} in all`,
           ),

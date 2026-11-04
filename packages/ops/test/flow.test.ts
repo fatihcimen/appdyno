@@ -236,7 +236,6 @@ assert id=result check=text equals="Gönderildi"
         'unrecorded "webview eval"',
         'unrecorded "network start"',
         'unrecorded "network stop"',
-        'unrecorded "perf_launch"',
       ]);
       expect(text).not.toContain('secretWork');
     });

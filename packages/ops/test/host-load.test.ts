@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { MeasureSource } from '@appdyno/core';
@@ -49,7 +49,7 @@ function phone(until?: string) {
     ],
     { device: device.serial, app: 'dev.app', measurements, perf },
   );
-  return { ctx, measurements, call: callerOf(ctx) };
+  return { ctx, measurements, perf, call: callerOf(ctx) };
 }
 
 describe('a loaded Mac', () => {
@@ -75,8 +75,8 @@ describe('a loaded Mac', () => {
     expect(text).not.toContain('noise');
   });
 
-  it('takes no baseline from a run with one number under it, whichever comes first', async () => {
-    const { ctx } = phone();
+  it('leaves out of a baseline the number under it, says which, and keeps what the device timed itself', async () => {
+    const { ctx, perf } = phone();
     const s = await ctx.session();
     const noise = await keepRun(ctx, s, 'dev.app', 'mixed', 'test', '', [
       { kind: 'memory.kb', unit: 'kb', samples: [1] },
@@ -89,7 +89,29 @@ describe('a loaded Mac', () => {
       last: 1,
     });
     expect(r.blocks[0]).toMatchObject({
-      text: expect.stringContaining('not added, high-host-load: measure mixed again'),
+      text: expect.stringContaining('left out, high-host-load: launch.until_ms'),
+    });
+    expect(r.data.exitCode).toBe(0);
+    const baseline = JSON.parse(readFileSync((r.data.baselines as string[])[0]!, 'utf8')) as {
+      metrics: Record<string, unknown>;
+    };
+    expect(Object.keys(baseline.metrics)).toEqual(['memory.kb']);
+    expect(perf).toBeTruthy();
+  });
+
+  it('takes no baseline from a run with every number under it', async () => {
+    const { ctx } = phone();
+    const s = await ctx.session();
+    await keepRun(ctx, s, 'dev.app', 'loud', 'test', '', [
+      { kind: 'launch.until_ms', unit: 'ms', samples: [3_000], throughHost: true },
+    ]);
+    const r = await checkedOps(ctx).perf_compare!.handler({
+      action: 'baseline',
+      format: 'text',
+      last: 1,
+    });
+    expect(r.blocks[0]).toMatchObject({
+      text: expect.stringContaining('not added, high-host-load: measure loud again'),
     });
     expect(r.data.exitCode).toBe(1);
   });

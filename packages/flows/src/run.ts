@@ -4,6 +4,8 @@ import { fillStep, stepLine, type Flow, type FlowStep } from './format.js';
 export type StepOutcome = {
   /** From the action to the settled screen, as the device timed it (or the whole step where nothing else can). */
   settledMs?: number;
+  /** The action alone, on this machine's clock: no lookup and no hook around it. */
+  actMs?: number;
   settled?: boolean;
   changed?: boolean;
   warnings?: string[];

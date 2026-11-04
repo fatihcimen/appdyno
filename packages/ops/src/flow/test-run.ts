@@ -5,6 +5,7 @@ import { type TestSuite, type TestCase, type RunResult, junitXml } from '@appdyn
 import type { ServerContext } from '../context.js';
 import type { Session } from '../session.js';
 import { ToolError } from '../tool.js';
+import { journeyText, measureJourney, type JourneyAnswer } from './journey.js';
 import type { FlowRunner } from './runner.js';
 import { readFlow } from './shared.js';
 
@@ -30,6 +31,8 @@ export type TestOptions = {
   artifacts: string;
   junit: string;
   params?: Record<string, string>;
+  /** Each file as a performance scenario, this many times: see `measureJourney`. */
+  iterations?: number;
   log?: (line: string) => void;
 };
 
@@ -63,20 +66,28 @@ export async function runTests(
       const t0 = Date.now();
       const label = basename(file);
       let result: RunResult | undefined;
+      let journey: JourneyAnswer | undefined;
       let error = openError;
       if (s) {
+        const replay = {
+          evidence: join(o.artifacts, safeName(name), safeName(label)),
+          ...(o.params && { params: o.params }),
+        };
         try {
-          result = await runner.run(s, readFlow(file), file, {
-            evidence: join(o.artifacts, safeName(name), safeName(label)),
-            ...(o.params && { params: o.params }),
-          });
+          if (o.iterations)
+            ({ result, journey } = await measureJourney(ctx, runner, s, readFlow(file), file, {
+              ...replay,
+              iterations: o.iterations,
+            }));
+          else result = await runner.run(s, readFlow(file), file, replay);
         } catch (e) {
           // a file that does not parse, a value missing: this file's failure, not the run's
           error = e as Error;
         }
       }
       const ms = Date.now() - t0;
-      const out = result?.steps.map(runner.lineOf).join('\n');
+      const out = journey ? journeyText(journey) : result?.steps.map(runner.lineOf).join('\n');
+      for (const line of journey ? journeyText(journey).split('\n') : []) log(`       ${line}`);
       if (result?.passed) {
         log(`  ok   ${label} (${result.steps.length} steps, ${ms} ms)`);
         cases.push({ name: label, ms, ...(out && { out }) });

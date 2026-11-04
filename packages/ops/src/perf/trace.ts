@@ -12,7 +12,7 @@ export function perfTraceOp(ctx: ServerContext) {
     name: 'perf_trace',
     title: 'Frame trace',
     description:
-      "Record frames (Android 12+: each frame's time and why it was late; iPhone: animation hitches, their ratio and causes; iOS simulator: main-thread pacing, through a probe). `scroll` scrolls meanwhile. `what`: hangs (iPhone), or XCTest's own hitch or launch metric. The trace is kept for perf_query.",
+      "Record frames (Android 12+: each frame's time and why it was late; iPhone: animation hitches and causes; iOS simulator: main-thread pacing, through a probe). `scroll` scrolls meanwhile. `what`: hangs (iPhone), or XCTest's own hitch or launch metric. Kept for perf_query.",
     input: z
       .object({
         app: App,
@@ -129,6 +129,7 @@ export function perfTraceOp(ctx: ServerContext) {
             ],
             after: () => [`probe output: ${v.tracePath}`],
             data: {
+              ...(relaunched.length && { relaunched: true }),
               frames: v.frames,
               p50Ms: v.p50Ms,
               p95Ms: v.p95Ms,
