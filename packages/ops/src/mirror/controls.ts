@@ -41,7 +41,8 @@ const CONTROLS = {
 
 /** A finger's way down the screen, as fractions of it: from the top edge, or the middle of a home screen. */
 const SWIPES: Record<string, { x: number; from: number; to: number; times?: number }> = {
-  controlCenter: { x: 0.92, from: 0, to: 0.55 },
+  // inside the corner's curve, near the battery: past it a screen has nothing to touch
+  controlCenter: { x: 0.84, from: 0.012, to: 0.55 },
   notifications: { x: 0.3, from: 0, to: 0.65 },
   spotlight: { x: 0.5, from: 0.35, to: 0.55 },
   quickSettings: { x: 0.5, from: 0, to: 0.6, times: 2 },
@@ -147,7 +148,7 @@ export function windowControls(
 
   const screenshot = async (copyOnly: boolean) => {
     // no agent is started for what the device can answer without one
-    const own = await device.mirror?.screenshot?.('png');
+    const own = await device.mirror.screenshot?.('png');
     if (!own) await ready();
     const { data } = own ?? (await device.screenshot({ format: 'png' }));
     const file = copyOnly
@@ -173,7 +174,7 @@ export function windowControls(
     mkdirSync(movies, { recursive: true });
     const file = join(movies, `${name()} ${stamp()}`);
     const { recorder } = device;
-    if (session().streamsItsOwn || !recorder) {
+    if (session().streamsItsOwn) {
       // its frames as the stream has them: nothing is encoded twice
       session().recording.start(`${file}.mp4`);
       stopRecording = async () => {
@@ -193,11 +194,9 @@ export function windowControls(
     session().tell({ op: 'recording', on: true });
   };
 
+  // a new simulator has only the system's; a phone's system is hundreds of packages no one means
   const listApps = async () => {
-    const apps = device.apps;
-    if (!apps) return session().tell({ op: 'apps', apps: [], note: 'No apps on this device' });
-    // a new simulator has only the system's; a phone's system is hundreds of packages no one means
-    session().tell({ op: 'apps', apps: await apps.listApps(ios) });
+    session().tell({ op: 'apps', apps: await device.apps.listApps(ios) });
   };
 
   const appActions: Record<string, (id: string) => Promise<unknown>> = {
@@ -210,7 +209,7 @@ export function windowControls(
       await device.terminate(id);
     },
     remove: async (id) => {
-      await device.apps?.uninstall(id);
+      await device.apps.uninstall(id);
       await listApps();
     },
   };

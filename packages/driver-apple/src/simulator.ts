@@ -343,7 +343,7 @@ export class IosSimulatorDevice extends IosDevice {
     return (await this.direct.front().catch(() => undefined)) ?? super.frontNow();
   }
 
-  async hardware() {
+  override async hardware() {
     const me = (await this.simctl.list()).find((d) => d.udid === this.serial);
     const type = me?.deviceType?.replace(/^.*SimDeviceType\./, '').replaceAll('-', ' ');
     return { platform: 'ios' as const, ...(type && { model: type }) };

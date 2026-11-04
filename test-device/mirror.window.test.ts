@@ -19,15 +19,24 @@ const udid = process.env.APPDYNO_IOS_UDID;
 /** A first turn may have to build the simulator's runner. */
 const ROTATE_MS = 420_000;
 const SCREEN_MS = 30_000;
+/** Where a new simulator's home screen has it. */
+const SETTINGS = { x: 0.845, y: 0.483 };
 
-/** The share of the screen that differs between two pictures, on a sample of its pixels. */
+/**
+ * The share of a screen that differs between two pictures, in the band of bare wallpaper below a new home screen's icons:
+ * a widget above it and the clock change by themselves, and what covers the screen covers this too.
+ */
 const changedShare = (before: Buffer, after: Buffer) => {
   const [a, b] = [decodePng(before)!, decodePng(after)!];
   let changed = 0;
   let seen = 0;
-  for (let i = 0; i + 2 < a.data.length; i += a.channels * 97, seen++)
-    if (Math.abs(a.data[i]! - b.data[i]!) + Math.abs(a.data[i + 1]! - b.data[i + 1]!) > 24)
-      changed++;
+  for (let y = Math.floor(a.height * 0.58); y < a.height * 0.8; y += 31) {
+    for (let x = 0; x < a.width; x += 29, seen++) {
+      const i = (y * a.width + x) * a.channels;
+      if (Math.abs(a.data[i]! - b.data[i]!) + Math.abs(a.data[i + 1]! - b.data[i + 1]!) > 24)
+        changed++;
+    }
+  }
   return changed / seen;
 };
 
@@ -130,7 +139,8 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
     async () => {
       const before = await picture();
       inputs.length = 0;
-      session.tell({ op: 'poke', x: 0.5, y: 0.5, right: true });
+      // on an icon, whose menu comes at once: bare wallpaper waits longer than a press does
+      session.tell({ op: 'poke', x: SETTINGS.x, y: SETTINGS.y, right: true });
       await until('finger down', () => inputs.some((e) => e.kind === 'touch' && e.p === 0));
       const down = Date.now();
       await until('finger up', () => inputs.some((e) => e.kind === 'touch' && e.p === 2));

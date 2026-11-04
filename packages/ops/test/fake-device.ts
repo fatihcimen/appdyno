@@ -237,6 +237,10 @@ export class FakeDevice extends DeviceActions implements Device {
     return t;
   }
 
+  async hardware() {
+    return { platform: 'android' as const };
+  }
+
   async open() {
     if (this.openError) throw this.openError;
     return this.hello;

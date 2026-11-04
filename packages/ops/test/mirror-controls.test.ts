@@ -32,6 +32,7 @@ function fixture(platform: 'ios' | 'android', device: Partial<Device> = {}, stre
   } as unknown as WindowSession;
   const whole = {
     serial: 'S',
+    mirror: {},
     open: vi.fn(async () => undefined),
     setOrientation: vi.fn(async () => undefined),
     screenshot: vi.fn(async () => ({ meta: {}, data: Buffer.from('png') })),
@@ -87,7 +88,8 @@ describe("a window's controls", () => {
     controls.press('controlCenter');
     const touches = sent as { p: number; x: number; y: number }[];
     await vi.waitFor(() => expect(touches.at(-1)?.p).toBe(2), WAIT);
-    expect(touches[0]).toMatchObject({ p: 0, y: 0 });
+    expect(touches[0]).toMatchObject({ p: 0 });
+    expect(touches[0]!.y).toBeLessThan(0.02);
     expect(touches.every((t) => t.x > 0.8)).toBe(true);
     expect(touches.at(-1)!.y).toBeGreaterThan(0.5);
   });
@@ -201,12 +203,5 @@ describe("a window's Apps pane", () => {
     await settle();
     expect(apps.uninstall).toHaveBeenCalledWith('a.b');
     expect(told.some((m) => m.op === 'apps')).toBe(true);
-  });
-
-  it('says so on a device with no way to list them', async () => {
-    const { controls, told } = fixture('android');
-    controls.onWindow({ op: 'app', action: 'list' });
-    await settle();
-    expect(told).toContainEqual({ op: 'apps', apps: [], note: 'No apps on this device' });
   });
 });

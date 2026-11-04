@@ -9,6 +9,7 @@ import {
   type AppManager,
   type Device,
   type DeviceEvents,
+  type DeviceHardware,
   type DeviceSettings,
   type MeasureSource,
   type Mirror,
@@ -266,6 +267,11 @@ export abstract class IosDevice extends RpcDevice implements Device {
       }
       await sleep(150);
     }
+  }
+
+  /** What a subclass knows of itself: it is an iOS device, whichever. */
+  async hardware(): Promise<DeviceHardware> {
+    return { platform: 'ios' };
   }
 
   async launch(pkg: string) {

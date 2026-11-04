@@ -5,7 +5,7 @@
 #import "Window.h"
 #import <Carbon/Carbon.h>
 
-static const double kDot = 30, kLongPressSeconds = 0.7, kPinchStart = 0.14, kPinchLeast = 8;
+static const double kDot = 30, kLongPressSeconds = 0.8, kPinchStart = 0.14, kPinchLeast = 8;
 
 BOOL MVNormalize(NSPoint point, NSSize bounds, CGSize picture, double *x, double *y) {
   if (picture.width <= 0 || picture.height <= 0 || bounds.width <= 0 || bounds.height <= 0) return NO;

@@ -57,7 +57,8 @@ function pixelsDevice(serial: string) {
     close: async () => undefined,
     watch: () => () => undefined,
   };
-  return { serial, mirror, close: vi.fn() } as unknown as Device;
+  const hardware = async () => ({ platform: 'android' });
+  return { serial, mirror, hardware, close: vi.fn() } as unknown as Device;
 }
 
 function context(serials: string[], over: { policy?: object; command?: string[] } = {}) {

@@ -84,7 +84,7 @@ class Parent {
       serial,
     };
     let said = '';
-    const hardware = await device.hardware?.().catch(() => undefined);
+    const hardware = await device.hardware().catch(() => undefined);
     const controls = windowControls(device, hardware, () => session);
     const session: MirrorSession = new MirrorSession({
       mirror: device.mirror,
