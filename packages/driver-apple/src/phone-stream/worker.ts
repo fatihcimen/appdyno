@@ -2,7 +2,8 @@ import { parentPort, workerData } from 'node:worker_threads';
 import type { InputEvent, MirrorQuality } from '@appdyno/core';
 import type { PhoneStreamEvent } from '../phone-stream-port.js';
 import { FrameWriter } from './frame-writer.js';
-import { PhoneStream, StreamRefusal, needOf } from './stream.js';
+import { PhoneStream } from './stream.js';
+import { needOf, StreamRefusal } from './stream-state.js';
 
 /**
  * A thread of its own for a stream's TLS, packets and pictures: whatever else the process's main thread does, its garbage

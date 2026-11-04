@@ -5,7 +5,7 @@ import type { TcpConnection } from '../ipstack.js';
 import { touchReport, PhoneHid } from '../phone-hid.js';
 import { RemoteXpc } from '../remotexpc.js';
 import { errorWords, invoke } from '../services.js';
-import { DarkWatch, needOf } from '../stream.js';
+import { DarkWatch, needOf } from '../stream-state.js';
 import { audioOffer, thisMac, videoOffer } from '../stream-offer.js';
 import { readTunnelAnswer, tunnelRequest } from '../tunnel.js';
 import {
