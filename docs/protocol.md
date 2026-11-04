@@ -96,7 +96,7 @@ clipboard and every case below. `APPDYNO_SIM_DIRECT=off` turns both off, `read` 
 
 `text.set` goes in as keys on iOS (`mode: keys`): a paste the user did not make brings up the "Allow Paste" alert, which holds it up.
 `clipboard.get` answers only what the runner wrote itself, as reading another app's text asks the user; a simulator's is read with
-`simctl pbpaste` instead. Where `simctl pbcopy` writes nothing (Xcode 27.1 on a new iOS 26.5 simulator) the runner sets and reads it.
+`simctl pbpaste` instead. Where `simctl pbcopy` writes nothing (Xcode 27.1 on a new iOS 26.5 simulator) the runner sets and reads it. That is a known limit: on a loaded Mac the runner's call can stall too (twice at load 138), and `clipboard` then refuses within about 20 s, with `UNSUPPORTED` and the reason, and the runner restarted.
 
 iOS has no key to close a keyboard or to open the app switcher. `dismissKeyboard` taps the keyboard's hide key where it
 shows one, else a place with no control; the host then reads whether it went and refuses if it did not. `appSwitch` is the home
@@ -350,4 +350,5 @@ The socket name and token are kept in a state file readable only by the user
 process reconnects in one round trip. A different build on the device is stopped (by its process id,
 only when its command line is the agent's) and replaced. The agent exits after 30 minutes without a
 connection. Exit code 3 with `AGENT_CONFLICT` on stderr: another UI automation client holds the device
-(a device has exactly one).
+(a device has exactly one). The agent says so after trying for 4 s, as the system keeps UI automation for a holder that was
+killed: held 1.3 s after its process had gone, free at 2.3 s, on an emulator, while after a plain `kill` it was free at once.

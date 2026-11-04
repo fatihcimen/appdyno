@@ -104,9 +104,11 @@ Found when the parallel branches ran together:
 - A first `launch_app` starts the app alongside the agent or helper. `am start`'s `Status: timeout` is no failure: at load 500 an app still drawing was refused as not started.
 - A ref is touched where the screen has it just then, not where the last answer did: an app can move things with no action.
 - An answer's image is 800 px at quality 60, and an answer says a row once when a control of its name stands at its place.
+- A new Android agent waits out one that was killed, which the system keeps as UI automation's holder for about 2 s: a start in that moment was refused with `AGENT_CONFLICT`.
 
 Still open:
 
+- `simctl pbcopy` writes nothing on Xcode 27.1, even on a new simulator, so a simulator's clipboard depends on the runner, whose call can stall on a loaded Mac: `clipboard` then refuses and says so.
 - The gate on a Xiaomi takes no baseline: its device load stays over the limit of 8.
 - `network` `packets` records nothing on a Xiaomi with Android 16; why was not looked into. The answer says so.
 - `record` on an iPhone 13 Pro Max with iOS 27.0.1: `devicectl` has no such capability. It has not been seen working on any phone.

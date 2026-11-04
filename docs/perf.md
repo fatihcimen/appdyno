@@ -344,14 +344,23 @@ for stillness in `packages/ops`.
 
 What each change did, the rest of the scenario held still:
 
-| change                                                             | before                | after                  | conditions                                                        |
-| ------------------------------------------------------------------ | --------------------- | ---------------------- | ----------------------------------------------------------------- |
-| direct input with the settle on the host                           | tap 1,206; back 1,340 | tap 905; back 760      | load 5-12; the touch itself 52-58 ms                              |
-| direct read                                                        | 74-75                 | 31-32 at rest          | load 7-11, 167 elements                                           |
-| the settle compares what can be named, in any order                | back 1,220            | back 500-750           | load 18-36; a floating search bar moves levels                    |
-| 150 ms once something has reacted, against 200 ms                  | tap 984-1,357         | tap 944-959            | load 8-21; nothing moved in 16 answers at either                  |
-| `launch` without a restart, running app                            | 2,592-5,735           | 273-292                | load 7-320                                                        |
-| first start: erased simulator, booted (19 s), runner not installed |                       | 2.7 s; installed 1.9 s | load 7; 37 s seen at load 319. Says where it has got to on stderr |
+| change                                                                                                | before                           | after                  | conditions                                                               |
+| ----------------------------------------------------------------------------------------------------- | -------------------------------- | ---------------------- | ------------------------------------------------------------------------ |
+| direct input with the settle on the host                                                              | tap 1,206; back 1,340            | tap 905; back 760      | load 5-12; the touch itself 52-58 ms                                     |
+| direct read                                                                                           | 74-75                            | 31-32 at rest          | load 7-11, 167 elements                                                  |
+| the settle compares what can be named, in any order                                                   | back 1,220                       | back 500-750           | load 18-36; a floating search bar moves levels                           |
+| 150 ms once something has reacted, against 200 ms                                                     | tap 984-1,357                    | tap 944-959            | load 8-21; nothing moved in 16 answers at either                         |
+| `launch` without a restart, running app                                                               | 2,592-5,735                      | 273-292                | load 7-320                                                               |
+| first start: erased simulator, booted (19 s), runner not installed                                    |                                  | 2.7 s; installed 1.9 s | load 7; 37 s seen at load 319. Says where it has got to on stderr        |
+| a first open with no runner, the app started alongside the helper                                     | first open 12,507 (6,303-13,424) | 2,391 (2,052-2,918)    | three runs each, in turn, load 5-11; a screen in every answer            |
+| the app's animation report asked of the helper, a touch held 650 ms after one that changed the screen | tap 987; back 600                | tap 976; back 484      | the same runs; nothing moved, no stale answer                            |
+| a row said once where a control of its name stands at its place                                       | read 1,120 characters            | 587                    | the same runs                                                            |
+| an answer's image at 800 px, quality 60                                                               | 86,782 characters of base64      | 44,808                 | the same runs; the smallest text of Settings and the fixture still reads |
+
+Where a first open of Settings goes, five runs at load 18-27: `simctl launch` and the helper's hello, side by side, 250-750 ms;
+the app's own start until it is the primary one, by far the most, done at 1,520-3,440 ms; a read 70-400; the 200 ms of stillness
+`launch_app` waits for; a read 40-115. What a first open no longer pays, the first thing only the runner does pays instead: a first
+image took 3,012-3,317 ms in the runs above, against 85 for the next ones.
 
 Tried and dropped:
 
@@ -365,3 +374,18 @@ Tried and dropped:
   `simctl launch`.
 - A depth limit in the runner's request was not tried: the direct read asks for 60 levels, and the runner now answers
   only what the helper refuses.
+
+## Android speed
+
+The Settings scenario on a Pixel 6 emulator, Android 14, ten rounds in each of three runs, before and after in turn, load 5-10.
+
+| measure                        | before | after  |
+| ------------------------------ | ------ | ------ |
+| first open, agent not up       | 1,739  | 1,441  |
+| read, characters               | 700    | 700    |
+| an image, characters of base64 | 39,546 | 21,972 |
+
+Nothing moved and no answer was stale in any run, and a first open's answer holds the screen. Starting the agent and
+`am start -W` take about 500 ms each at load 8-9, and the first read about 450 while the app is still coming up: the first open
+went down by starting the app alongside the agent. It does not do so over another tool's UI automation, where the session may be
+refused and must have left the device alone.
