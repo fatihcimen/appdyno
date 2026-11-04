@@ -52,7 +52,8 @@ export function allExits(text: string): Exit[] {
           ...(description && description !== 'null' && { detail: description }),
           ...(subreason && subreason !== 'UNKNOWN' && { subreason }),
           ...(status && status !== '0' && { status }),
-          ...(pss && pss !== '0.00' && { memory: `pss ${pss}, rss ${rss}` }),
+          // in the phone's language: `0,00` on one in Turkish
+          ...(pss && !/^0[.,]0+$/.test(pss) && { memory: `pss ${pss}, rss ${rss}` }),
         },
       ];
     });

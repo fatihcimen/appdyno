@@ -197,6 +197,15 @@ describe('how an app ended', () => {
     ]);
   });
 
+  it('takes no memory from a phone in another language that kept none', () => {
+    const turkish = block(
+      '14:00:40.000',
+      'reason=1 (EXIT_SELF) subreason=0 (UNKNOWN) status=3',
+      'pss=0,00 rss=0,00 description=null',
+    );
+    expect(allExits(turkish)[0]!.memory).toBeUndefined();
+  });
+
   it('still calls only an end nobody asked for a death', () => {
     expect(parseExitInfo(INFO).map((e) => e.reason)).toEqual(['APP CRASH(EXCEPTION)', 'SIGNALED']);
   });

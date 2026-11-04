@@ -73,7 +73,7 @@ export async function baselineProfile(
     if (!COMPILED.test(on.value.compile?.status ?? ''))
       throw new DeviceError(
         'UNSUPPORTED',
-        `the profile compiled nothing here (${on.value.compile?.status}): the app has no ProfileInstaller to take it (${/result=\d+/.exec(said)?.[0] ?? said.trim()}), so install the APK with its .dm`,
+        `the profile compiled nothing here (${on.value.compile?.status}): ProfileInstaller answered ${/result=\d+/.exec(said)?.[0] ?? said.trim()}, where 0 is none in the app and 3 an Android newer than it knows: install the APK with its .dm`,
       );
     without.push(...coldStarts(off));
     withProfile.push(...coldStarts(on));
