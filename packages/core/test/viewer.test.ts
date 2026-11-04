@@ -137,9 +137,15 @@ describe('the viewer, compiled by its first-use path', () => {
       ],
       { stdio: ['ignore', 'pipe', 'ignore'] },
     );
-    const pid = await new Promise<number>((r) =>
-      parent.stdout.once('data', (b: Buffer) => r(parseInt(b.toString()))),
-    );
+    // the viewer writes to this pipe too, and its first line may come before the parent's
+    const pid = await new Promise<number>((r) => {
+      let said = '';
+      parent.stdout.on('data', (b: Buffer) => {
+        said += b.toString();
+        const line = /^(\d+)\n/m.exec(said)?.[1];
+        if (line) r(Number(line));
+      });
+    });
     expect(pid).toBeGreaterThan(0);
     process.kill(parent.pid!, 'SIGKILL');
     const end = Date.now() + 20_000;
