@@ -36,7 +36,11 @@ export function perfTraceOp(ctx: ServerContext): Op {
         kind: string,
         m: Measured<unknown>,
         metrics: Metric[],
-        o: { lines: string[]; after: (raw: string) => string[]; data: Record<string, unknown> },
+        o: {
+          lines: string[];
+          after: (raw: string) => string[];
+          data: Omit<z.infer<typeof TraceOut>, 'id' | 'raw' | 'virtualDevice' | 'noise'>;
+        },
       ) => {
         const saved = await save(kind, [m], m.value);
         const noise = await keep(s, pkg, name, m.source ?? 'perf_trace', saved.txt, metrics);

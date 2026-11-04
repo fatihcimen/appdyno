@@ -3,7 +3,8 @@ import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
+import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
+import { checkedOps } from '../packages/ops/test/helpers.js';
 import { Adb, AndroidDevice, androidProvider, apkNames, stats, type InstallAnswers } from 'appdyno';
 import { opCaller } from './helpers.js';
 
@@ -43,7 +44,7 @@ function harness(installAnswers: InstallAnswers) {
     app: APP,
     claims: true,
   });
-  return { ctx, call: opCaller(opsFor(ctx)) };
+  return { ctx, call: opCaller(checkedOps(ctx)) };
 }
 const off = { prompts: false, warnings: false };
 const on = { prompts: true, warnings: false };

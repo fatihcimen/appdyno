@@ -6,7 +6,8 @@ import { homedir, networkInterfaces, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
+import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
+import { checkedOps } from '../packages/ops/test/helpers.js';
 import { opCaller } from './helpers.js';
 import { Adb, androidProvider, appleProvider, decodePng, Devicectl, PERFETTO } from 'appdyno';
 
@@ -80,7 +81,7 @@ function harness(serial: string, provider: ConstructorParameters<typeof ServerCo
     app: APP,
     share: true,
   });
-  const call = opCaller(opsFor(ctx));
+  const call = opCaller(checkedOps(ctx));
   const ok = async (name: string, args: Record<string, unknown> = {}) => {
     const r = await call(name, args);
     expect(r.error ? r.text : '').toBe('');

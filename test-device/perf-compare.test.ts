@@ -6,7 +6,8 @@ import { promisify } from 'node:util';
 import { afterAll, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, appleProvider, Simctl } from 'appdyno';
 import { latestRuns, rankTest, runKeys, type Comparison } from '@appdyno/perf';
-import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
+import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
+import { checkedOps } from '../packages/ops/test/helpers.js';
 
 /**
  * The gate's two acceptance tests on a device, through the operations: no false alarm across repeated runs
@@ -103,7 +104,7 @@ for (const t of targets)
       measurements: dir,
       perf: project,
     });
-    const ops = opsFor(ctx);
+    const ops = checkedOps(ctx);
     // what goes through this Mac waits out its load: a read on an iPhone does too, while what an Android phone's
     // `am start -W` reports is its own
     const ownNumbers = t.name === 'android' && !t.serial?.startsWith('emulator-');

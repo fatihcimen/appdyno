@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { harEntries } from '../src/network.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
-import { opsFor } from '../src/registry.js';
 import type { Op } from '../src/tool.js';
 import { FakeDevice } from './fake-device.js';
+import { checkedOps } from './helpers.js';
 
 const dir = mkdtempSync(join(tmpdir(), 'appdyno-har-'));
 let files = 0;
@@ -81,7 +81,7 @@ describe('a proxy export', () => {
       ],
       { app: 'dev.app' },
     );
-    const op = opsFor(ctx).network as Op;
+    const op = checkedOps(ctx).network as Op;
     const list = Array.from({ length: 10 }, (_, i) => ({
       ...entry('2026-01-01T00:00:00Z'),
       request: { method: 'GET', url: `https://a.test/${i}?token=abc` },

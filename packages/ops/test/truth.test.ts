@@ -7,7 +7,7 @@ import { ServerContext } from '../src/context.js';
 import { boundLines } from '../src/diagnose.js';
 import { DEFAULT_POLICY, redactLog, type Policy } from '../src/policy.js';
 import { ActionOut, CrashesOut, LogsOut } from '../src/schemas.js';
-import { defineOp, READ, ToolError } from '../src/tool.js';
+import { defineOp, READ, reply, ToolError } from '../src/tool.js';
 import { FakeDevice } from './fake-device.js';
 import { linkedClient } from './helpers.js';
 
@@ -195,6 +195,22 @@ describe('failed answers', () => {
     expect(await code('logs')).toBe('UNSUPPORTED');
     expect(await code('crashes')).toBe('UNSUPPORTED');
     expect(await code('flow', { action: 'stop' })).toBe('NOT_FOUND');
+  });
+});
+
+describe('an answer', () => {
+  it('that leaves out what its schema asks for does not compile', () => {
+    const op = defineOp({
+      name: 'x',
+      title: 'x',
+      description: 'x',
+      input: z.object({}),
+      output: z.object({ done: z.string() }),
+      annotations: READ,
+      // @ts-expect-error: `done` is what the schema asks for
+      run: async () => reply('x', { other: 1 }),
+    });
+    expect(op.name).toBe('x');
   });
 });
 

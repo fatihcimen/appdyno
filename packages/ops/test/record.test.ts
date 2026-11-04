@@ -6,9 +6,9 @@ import { DeviceError } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
-import { opsFor } from '../src/registry.js';
 import type { Op } from '../src/tool.js';
 import { FakeDevice } from './fake-device.js';
+import { checkedOps } from './helpers.js';
 
 function connect(recorder: ScreenRecorder | undefined) {
   const device = Object.assign(new FakeDevice(), recorder ? { recorder } : {});
@@ -18,7 +18,7 @@ function connect(recorder: ScreenRecorder | undefined) {
     open: () => device,
   };
   const ctx = new ServerContext(DEFAULT_POLICY, [provider], { app: 'dev.app' });
-  const op = opsFor(ctx).record as Op;
+  const op = checkedOps(ctx).record as Op;
   const call = (args: Record<string, unknown>) =>
     op.handler(op.input.parse(args) as Record<string, unknown>);
   return { ctx, call };

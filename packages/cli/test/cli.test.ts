@@ -9,6 +9,7 @@ import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { DeviceError } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { FakeDevice } from '../../ops/test/fake-device.js';
+import { checkedOps } from '../../ops/test/helpers.js';
 import { commandsFor, deviceFlag, flowWords, listOf, takeFlag } from '../src/index.js';
 
 describe('commands from the operations', () => {
@@ -31,7 +32,7 @@ describe('commands from the operations', () => {
       handles: () => true,
       open: () => device,
     };
-    ops = opsFor(new ServerContext(DEFAULT_POLICY, [provider], { app: 'dev.app' }));
+    ops = checkedOps(new ServerContext(DEFAULT_POLICY, [provider], { app: 'dev.app' }));
   });
 
   it('takes the first bare word of an op with actions as its action', async () => {

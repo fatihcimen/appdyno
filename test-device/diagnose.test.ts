@@ -14,7 +14,8 @@ import {
   sleep as pause,
   Simctl,
 } from 'appdyno';
-import { DEFAULT_POLICY, opsFor, ServerContext, type ToolResult } from '@appdyno/ops';
+import { DEFAULT_POLICY, ServerContext, type ToolResult } from '@appdyno/ops';
+import { checkedOps } from '../packages/ops/test/helpers.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 /** Conflicts with a real holder, logs and crashes of the fixture, cancellation: on the devices named. */
@@ -25,7 +26,7 @@ const textOf = (r: ToolResult) => r.blocks.map((b) => (b.type === 'text' ? b.tex
 type Call = (name: string, args?: Record<string, unknown>) => Promise<ToolResult>;
 /** An operation as its tool calls it: through its input schema. */
 const caller = (ctx: ServerContext): Call => {
-  const ops = opsFor(ctx);
+  const ops = checkedOps(ctx);
   return async (name, args = {}) => ops[name]!.handler(ops[name]!.input.parse(args));
 };
 

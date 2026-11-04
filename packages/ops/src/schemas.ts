@@ -295,12 +295,9 @@ export const CrashesOut = z.object({
   note: z.string().optional(),
 });
 
-const Measurement = {
-  id: z.string(),
-  raw: z.string(),
-  virtualDevice: z.boolean(),
-  noise: z.array(z.string()),
-};
+const Kept = { id: z.string(), raw: z.string(), virtualDevice: z.boolean() };
+
+const Measurement = { ...Kept, noise: z.array(z.string()) };
 
 export const SnapshotOut = z.object({
   ...Measurement,
@@ -396,7 +393,7 @@ export const TraceOut = z.object({
 });
 
 export const ProfileOut = z.object({
-  ...Measurement,
+  ...Kept,
   samples: z.number(),
   top: z.array(z.object({ percent: z.number(), symbol: z.string() })),
   /** iOS: the app's own functions by busy inclusive time. */
@@ -407,6 +404,7 @@ export const HeapOut = z.object({
   id: z.string(),
   file: z.string(),
   bytes: z.number(),
+  leaks: z.number().optional(),
   top: z.array(z.object({ name: z.string(), bytes: z.number(), count: z.number() })).optional(),
 });
 

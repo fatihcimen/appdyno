@@ -42,7 +42,7 @@ export type ToolAnnotations = {
 };
 
 /** What a tool answers: the text (and images) for the model, a summary matching its output schema. */
-export type ToolResult = { blocks: Block[]; data: Record<string, unknown> };
+export type ToolResult<D = Record<string, unknown>> = { blocks: Block[]; data: D };
 
 export interface Tool {
   title: string;
@@ -61,22 +61,22 @@ export type Op = Tool & {
 };
 
 /** An op, whose device failures reach the surfaces as refusals wherever in its `run` they came from. */
-export function defineOp<S extends z.ZodObject>(def: {
+export function defineOp<S extends z.ZodObject, O extends z.ZodObject>(def: {
   name: string;
   title: string;
   description: string;
   input: S;
-  output: z.ZodObject;
+  output: O;
   annotations: ToolAnnotations;
   needs?: Capability;
-  run: (args: z.infer<S>) => Promise<ToolResult>;
+  run: (args: z.infer<S>) => Promise<ToolResult<z.infer<O>>>;
 }): Op {
   const { run, ...rest } = def;
   return {
     ...rest,
     handler: async (args) => {
       try {
-        return await (run as Tool['handler'])(args);
+        return (await run(args as z.infer<S>)) as ToolResult;
       } catch (e) {
         return refused(e);
       }
@@ -108,11 +108,7 @@ export function inputSchemaOf(op: Pick<Tool, 'input'>) {
 
 export const text = (t: string): Block[] => [{ type: 'text', text: t }];
 
-export const reply = (
-  t: string,
-  data: Record<string, unknown>,
-  extra: Block[] = [],
-): ToolResult => ({
+export const reply = <D>(t: string, data: D, extra: Block[] = []): ToolResult<D> => ({
   blocks: [{ type: 'text', text: t }, ...extra],
   data,
 });

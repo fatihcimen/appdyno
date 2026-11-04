@@ -3,7 +3,8 @@ import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_POLICY, opsFor, ServerContext, type Op } from '@appdyno/ops';
+import { DEFAULT_POLICY, ServerContext, type Op } from '@appdyno/ops';
+import { checkedOps } from '../packages/ops/test/helpers.js';
 import { opCaller, type Answer } from './helpers.js';
 import {
   Adb,
@@ -28,7 +29,7 @@ function harness(serial: string, provider: ConstructorParameters<typeof ServerCo
     app: APP,
     claims: true,
   });
-  const call = opCaller(opsFor(ctx));
+  const call = opCaller(checkedOps(ctx));
   return { ctx, call };
 }
 
@@ -397,7 +398,7 @@ describe.skipIf(!android)('driving on Android', () => {
         app: APP,
         share: true,
       });
-      const ops = opsFor(ctx);
+      const ops = checkedOps(ctx);
       const set = async (args: Record<string, unknown>) => {
         const op = ops.device_setting as Op;
         return op.handler(op.input.parse(args) as Record<string, unknown>);

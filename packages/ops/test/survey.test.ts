@@ -4,8 +4,9 @@ import { join } from 'node:path';
 import { latestRuns, loadRefusals, MEASURES, runKeys } from '@appdyno/perf';
 import { DeviceError } from '@appdyno/protocol';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_POLICY, opsFor, ServerContext, survey } from '../src/index.js';
+import { DEFAULT_POLICY, ServerContext, survey } from '../src/index.js';
 import { FakeDevice } from './fake-device.js';
+import { checkedOps } from './helpers.js';
 
 const fresh = () => mkdtempSync(join(tmpdir(), 'appdyno-survey-'));
 
@@ -98,7 +99,7 @@ describe('perf survey', { timeout: 60_000 }, () => {
 
 describe('the page and the measures', () => {
   const op = (ctx: ServerContext, name: string, args: Record<string, unknown> = {}) => {
-    const o = opsFor(ctx)[name]!;
+    const o = checkedOps(ctx)[name]!;
     return o.handler(o.input.parse(args) as Record<string, unknown>);
   };
   const says = (why: string) => async () => {

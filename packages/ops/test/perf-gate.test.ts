@@ -4,8 +4,9 @@ import { tmpdir } from 'node:os';
 import { stateDir, type MeasureSource } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { leakSignal } from '../src/perf/scroll.js';
-import { DEFAULT_POLICY, opsFor, ServerContext } from '../src/index.js';
+import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
 import { FakeDevice } from './fake-device.js';
+import { checkedOps } from './helpers.js';
 
 const fresh = () => mkdtempSync(join(tmpdir(), 'appdyno-gate-'));
 
@@ -47,7 +48,7 @@ function context(
     ],
     { device: device.serial, app: 'dev.appdyno.fixture', measurements, perf },
   );
-  return opsFor(ctx);
+  return checkedOps(ctx);
 }
 
 const text = (r: { blocks: { type: string; text?: string }[] }) => r.blocks[0]!.text!;
@@ -154,7 +155,7 @@ describe('perf_query', () => {
       ],
       { measurements: dir },
     );
-    const ops = opsFor(ctx);
+    const ops = checkedOps(ctx);
     const refused = ops.perf_query!.handler({ trace: '/etc/passwd', sql: 'SELECT 1', limit: 5 });
     await expect(refused).rejects.toThrow(/not a kept trace/);
     const inside = join(stateDir(), 'traces', 'x.pftrace');

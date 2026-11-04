@@ -8,10 +8,9 @@ import type { DeviceProvider } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
-import { opsFor } from '../src/registry.js';
 import { ToolError, type Op } from '../src/tool.js';
 import { FakeDevice } from './fake-device.js';
-import { callerOf } from './helpers.js';
+import { callerOf, checkedOps } from './helpers.js';
 
 /** One text frame from the server. */
 const frame = (text: string) => {
@@ -104,7 +103,7 @@ async function fakeMetro(opts: { reloadRoute: boolean; targets?: number }) {
   };
 }
 
-const ops = () => opsFor(new ServerContext(DEFAULT_POLICY, []));
+const ops = () => checkedOps(new ServerContext(DEFAULT_POLICY, []));
 const call = async (args: Record<string, unknown>) => {
   const op = ops().react_native as Op;
   const r = await op.handler(op.input.parse(args) as Record<string, unknown>);

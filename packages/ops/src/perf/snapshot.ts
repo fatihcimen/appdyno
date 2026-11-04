@@ -38,11 +38,13 @@ type Asked = {
 const reads = <K extends Capability>(k: K, a: Asked) =>
   a.s.device.measure?.[k] && a.measure(a.s, k);
 
+type Answered = Partial<z.infer<typeof SnapshotOut>>;
+
 type Got = {
   measured: Measured<unknown>;
   metrics: Metric[];
   line: string;
-  data: Record<string, unknown>;
+  data: Answered;
 };
 
 /** One thing `also` can ask for: how it is read, then what is kept of it, said of it and answered. */
@@ -51,7 +53,7 @@ const extra =
     read: (a: Asked) => Promise<Measured<T>> | undefined;
     metrics: (v: T) => Metric[];
     line: (v: T) => string;
-    data: (v: T) => Record<string, unknown>;
+    data: (v: T) => Answered;
   }) =>
   async (a: Asked): Promise<Got | undefined> => {
     const read = x.read(a);
@@ -239,7 +241,7 @@ export function perfSnapshotOp(ctx: ServerContext): Op {
             },
           }),
           ...(v?.load && { deviceLoad: v.load }),
-          ...Object.fromEntries(got.flatMap((g) => Object.entries(g.data))),
+          ...got.reduce<Answered>((all, g) => ({ ...all, ...g.data }), {}),
           ...(lacking.length && { lacking }),
           noise,
         },
