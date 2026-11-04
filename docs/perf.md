@@ -475,4 +475,6 @@ An iPhone 13 Pro Max, iOS 27.2, mode 7, on a screen of noise, 167 Mbit/s at 60 f
 | 15, load 6 to 8           | 20.9 to 17.3 | 1,504 of 16,027,627  | 129 of 54,715          | 1, 1.1 s, in its first minute | the phone says |
 | 30, load 361 falling to 8 | 17.3 to 15.8 | 80,398 of 32,038,280 | 9,425 of about 108,000 | not yet counted               | the phone says |
 
+All the quiet run's loss is in the stream's first second. On that noise the first key comes as a burst of about 330 Mbit/s, twice the steady rate: 1,506 of the 3,457 packets in its heaviest 100 ms were lost, and the first whole picture was the next key, 1.56 s from the start, at load 27. A still screen shows its first picture in 459 ms, at load 18 to 20.
+
 A simulator's turns are read four times a second by the helper that reads its screen, which a mirror starts if it is not running: 0.3 % of a core and 98 MB resident on a still screen at load 94.

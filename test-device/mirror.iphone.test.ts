@@ -86,7 +86,8 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     expect(status().picture!.h).toBeGreaterThan(status().picture!.w);
     await until('frames', () => Number(status().stats?.arrived ?? 0) > 0);
     expect(status().stats?.mode).toBe('mode 7');
-    expect(String(status().stats?.decoder)).toBe('hardware 444f');
+    // told by the first image, which comes after the first frame's arrival
+    await until('the decoder', () => status().stats?.decoder === 'hardware 444f');
     if (!headless) await until('the window to show it', () => status().stats?.layer === 'ok');
   }, 60_000);
 
