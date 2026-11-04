@@ -116,7 +116,7 @@ While an agent drives, a ring of the accent colour runs around the edge of the s
 
 **Show Performance** (⌥⌘P) opens a card for each measure beside the device: frame rate, jank, frozen frames, CPU, memory and network, each with its last minute as a line, and a state in words and a symbol as well as a colour. Nothing is read until it is open, and nothing after it closes. They are the app in front, named beneath them, and are marked as read with a stream running, as `perf_*` marks a mirrored device.
 
-A device gives each second what its own measures read, by the same readers `perf_*` uses. What it cannot give is a dash with the reason, and never a 0. Where a device counts no frames, the frame rate is what the window itself shows, and a still screen says Still. A frame rate has no right value, as a screen draws what it has to: it is judged only by the share of its frames that came late, and where late frames are not counted it stands with no verdict.
+A device gives each second what its own measures read, by the same readers `perf_*` uses, and its memory every five seconds, as that is the heaviest of them. What it cannot give is a dash with the reason, and never a 0. Where a device counts no frames, the frame rate is what the window itself shows, and a still screen says Still. A frame rate has no right value, as a screen draws what it has to: it is judged only by the share of its frames that came late, and where late frames are not counted it stands with no verdict.
 
 | device           | frame rate   | jank, frozen               | CPU, memory, network |
 | ---------------- | ------------ | -------------------------- | -------------------- |
@@ -209,7 +209,7 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 - The window does not yet show a secure Android window's content, as no shell can have it from Android 12: it is black, with the status bar still there. Not run on Android 12 and 13, or on 10, for which no image is here.
 - Live numbers have been run on a simulator and an Android emulator. An iPhone has its own source, not yet run through a window, and no Android phone has run them.
 - A window's measures have been run on a simulator and an Android emulator.
-- What reading a device each second costs it has not been measured.
+- What the readings cost a device has been measured on one Android 14 emulator, at rest on a screen changing ten times a second: 6.0 % of its whole CPU with a window open and the numbers shut, 10.8 % with them shown, over eight spells of 30 s. No phone has been measured.
 - A device's colour: the frame takes one, and nothing yet reads it from a device, so every frame is the table's own graphite or carbon.
 - The frame's Action button and Camera Control are drawn and do nothing: no input is known that presses them.
 - A stream's picture gives the backdrop no colours: only a surface is read so far, so a phone's window has a plain one.

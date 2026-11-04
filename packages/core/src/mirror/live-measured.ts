@@ -6,13 +6,15 @@ import { LIVE_FIELDS, type LiveField, type LiveMetrics, type LiveSample } from '
 /** The least time between two samples: a reader that takes longer sets the pace itself. */
 const SECOND_MS = 1_000;
 const CPU_WINDOW_MS = 500;
+/** Memory moves slowly and its reader is the heaviest of them: read this often in seconds, and said as read until then. */
+const MEMORY_EVERY = 5;
 
 const NOT_EACH_SECOND = 'too slow to read each second here';
 const FRAME_FIELDS: LiveField[] = ['fps', 'jankyFrames', 'frozenFrames'];
 const COUNT_BEGINS = 'counting begins';
 
-/** Which app's frames have been counted since when: a count covers the time from the last reset, whatever a reading took. */
-type FrameCount = { app?: string; since?: number };
+/** What a source keeps from turn to turn: which app, since when its frames are counted, and its memory as last read. */
+type Kept = { app?: string; since?: number; turn: number; memoryMb?: number };
 
 /** Whatever is missing is missing for one reason, said once for each measure it takes away. */
 const allAbsent = (fields: readonly LiveField[], why: string) =>
@@ -22,7 +24,7 @@ const allAbsent = (fields: readonly LiveField[], why: string) =>
 async function sampleOf(
   device: Pick<Device, 'measure'>,
   app: string,
-  count: FrameCount,
+  kept: Kept,
 ): Promise<LiveSample> {
   const { measure } = device;
   const sample: LiveSample = { at: Date.now(), app };
@@ -44,6 +46,10 @@ async function sampleOf(
     }
     return undefined;
   };
+  const sameApp = kept.app === app;
+  const memoryDue = !sameApp || kept.memoryMb === undefined || kept.turn % MEMORY_EVERY === 0;
+  kept.turn += 1;
+  if (!memoryDue) sample.memoryMb = kept.memoryMb!;
   await Promise.all([
     read(
       ['cpuPercent'],
@@ -51,12 +57,13 @@ async function sampleOf(
       () => measure.cpu(app, CPU_WINDOW_MS),
       (v) => (sample.cpuPercent = v.percent),
     ),
-    read(
-      ['memoryMb'],
-      'memory',
-      () => measure.memory(app),
-      (v) => (sample.memoryMb = Math.round(v.kb / 1024)),
-    ),
+    memoryDue &&
+      read(
+        ['memoryMb'],
+        'memory',
+        () => measure.memory(app),
+        (v) => (sample.memoryMb = kept.memoryMb = Math.round(v.kb / 1024)),
+      ),
     read(
       ['networkInKbps', 'networkOutKbps'],
       'network',
@@ -73,9 +80,8 @@ async function sampleOf(
       () => measure.frames(app, { reset: true }),
       (v) => {
         const now = Date.now();
-        const since = count.app === app ? count.since : undefined;
-        count.app = app;
-        count.since = now;
+        const since = sameApp ? kept.since : undefined;
+        kept.since = now;
         // what was counted before the first reset belongs to no second
         if (since === undefined)
           return void Object.assign(absent, allAbsent(FRAME_FIELDS, COUNT_BEGINS));
@@ -87,6 +93,7 @@ async function sampleOf(
       },
     ),
   ]);
+  kept.app = app;
   return Object.keys(absent).length ? { ...sample, absent } : sample;
 }
 
@@ -98,13 +105,13 @@ export function measuredLive(device: Pick<Device, 'measure' | 'foreground'>): Li
   return {
     async start(onSample, app) {
       let on = true;
-      const count: FrameCount = {};
+      const kept: Kept = { turn: 0 };
       void (async () => {
         while (on) {
           const began = Date.now();
           const front = app ?? (await device.foreground().catch(() => undefined));
           const sample = front
-            ? await sampleOf(device, front, count)
+            ? await sampleOf(device, front, kept)
             : { at: began, absent: allAbsent(LIVE_FIELDS, 'waiting for the app in front') };
           if (on) onSample(sample);
           await pause(Math.max(0, SECOND_MS - (Date.now() - began)));

@@ -83,6 +83,20 @@ describe("a device's numbers each second", () => {
     expect(second!.absent?.fps).toBe('counting begins');
   });
 
+  it('read memory every few turns, its reader being the heaviest, and say it as read', async () => {
+    const d = device();
+    const seen = await samples(d, 3);
+    expect(d.measure.memory).toHaveBeenCalledOnce();
+    expect(seen.map((s) => s.memoryMb)).toEqual([200, 200, 200]);
+  });
+
+  it('read memory at once for an app newly in front', async () => {
+    const d = device();
+    vi.mocked(d.foreground).mockResolvedValueOnce('dev.app').mockResolvedValue('dev.other');
+    await samples(d, 2);
+    expect(d.measure.memory).toHaveBeenCalledTimes(2);
+  });
+
   it('keep a refusal as its reason, and never as a 0', async () => {
     const sample = await first(
       device({ cpu: () => Promise.reject(new Cannot('CPU on this device')) }),
