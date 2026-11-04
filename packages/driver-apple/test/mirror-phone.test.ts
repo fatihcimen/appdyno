@@ -1,5 +1,7 @@
+import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { NeedError, type DeviceState } from '@appdyno/core';
+import { NeedError, stateDir, type DeviceState } from '@appdyno/core';
 import { imageSize, loadPhoneStream, PhoneMirror } from '../src/mirror-phone.js';
 import type { PhoneStreamEvent, PhoneStreamModule } from '../src/phone-stream-port.js';
 
@@ -62,6 +64,31 @@ describe('the phone stream, gone from a build', () => {
     await expect(loadPhoneStream('data:text/javascript,throw new Error("broken")')).rejects.toThrow(
       'broken',
     );
+  });
+});
+
+describe('the pipe to a viewer', () => {
+  const dir = join(stateDir(), 'phone-frames');
+
+  it('is no file of the mirror folder, and goes with a process that died', async () => {
+    mkdirSync(dir, { recursive: true });
+    const dead = join(dir, `${UDID}-999999-0`);
+    const mine = join(dir, `${UDID}-${process.pid}-99`);
+    writeFileSync(dead, '');
+    writeFileSync(mine, '');
+    const start = fake().module.start;
+    const module = { ...fake().module, start };
+    const mirror = new PhoneMirror(UDID, async () => module);
+    const source = await mirror.open(OPTIONS);
+    expect(source).toMatchObject({ kind: 'pipe' });
+    const { file } = source as { file: string };
+    expect(file.startsWith(`${dir}/`)).toBe(true);
+    expect(statSync(file).isFIFO()).toBe(true);
+    expect(existsSync(dead)).toBe(false);
+    expect(existsSync(mine)).toBe(true);
+    await mirror.close();
+    expect(existsSync(file)).toBe(false);
+    rmSync(mine);
   });
 });
 

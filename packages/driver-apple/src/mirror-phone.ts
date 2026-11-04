@@ -1,10 +1,12 @@
 import { execFile } from 'node:child_process';
-import { mkdirSync, rmSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 import {
-  deviceStateFile,
   NeedError,
+  safeName,
+  startOf,
+  stateDir,
   type DeviceState,
   type InputEvent,
   type Mirror,
@@ -44,6 +46,20 @@ export function imageSize(b: Buffer): { w: number; h: number } | undefined {
   return undefined;
 }
 
+/** A folder of their own: a pipe nothing writes holds up whoever reads it, as a scan of a folder would. */
+const framesDir = () => join(stateDir(), 'phone-frames');
+
+/** A named pipe for a viewer, after taking away those of processes that are gone: a kill leaves one. */
+async function makeFrames(file: string) {
+  const dir = framesDir();
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  for (const name of readdirSync(dir)) {
+    const pid = /-(\d+)-\d+$/.exec(name)?.[1];
+    if (pid && startOf(Number(pid)) === '') rmSync(join(dir, name), { force: true });
+  }
+  await run('/usr/bin/mkfifo', ['-m', '600', file]);
+}
+
 /** A stream that ended for this need is not tried again for this long, however often it is checked. */
 const RETRY_NEED_MS = 3_000;
 
@@ -66,11 +82,7 @@ export class PhoneMirror implements Mirror {
   constructor(
     private readonly udid: string,
     private readonly load: () => Promise<PhoneStreamModule | undefined> = loadPhoneStream,
-    private readonly makePipe: (file: string) => Promise<void> = async (file) => {
-      mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
-      rmSync(file, { force: true });
-      await run('/usr/bin/mkfifo', ['-m', '600', file]);
-    },
+    private readonly makePipe: (file: string) => Promise<void> = makeFrames,
     private readonly now: () => number = Date.now,
   ) {}
 
@@ -126,7 +138,7 @@ export class PhoneMirror implements Mirror {
   async open(options: MirrorOptions): Promise<MirrorSource> {
     const stream = await this.stream();
     if (!stream) throw new NeedError('no-phone-stream');
-    const file = deviceStateFile('mirror', `${this.udid}-frames-${process.pid}-${this.attaches++}`);
+    const file = join(framesDir(), `${safeName(this.udid)}-${process.pid}-${this.attaches++}`);
     this.dropPipe();
     await this.makePipe(file);
     this.pipe = file;

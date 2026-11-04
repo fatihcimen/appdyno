@@ -262,7 +262,10 @@ describe.runIf(serial && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one rea
       console.log(`a click on the window to the next frame: ${ms} ms`);
       expect(ms).toBeGreaterThan(0);
       await sleep(1_500);
-      expect(session.status.stats?.layer).toBe('ok');
+      // an emulator's picture is drawn by its own path, with no decoder's layer
+      if (session.status.stats?.source !== 'pixels') {
+        expect(session.status.stats?.layer).toBe('ok');
+      }
       expect(Number(session.status.stats?.shown)).toBeGreaterThan(5);
     } finally {
       await session.stop('the test ended');
