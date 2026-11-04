@@ -1,5 +1,3 @@
-import type { ServerContext } from '@appdyno/ops';
-
 /** How long putting a session's conditions back may hold up the end of the server. */
 const END_MS = 20_000;
 
@@ -8,7 +6,7 @@ const END_MS = 20_000;
  * finds no listener left, so a server stuck on a device can still be stopped by hand.
  */
 export function endWithClient(
-  ctx: ServerContext,
+  ctx: { end(): Promise<string[]>; close(): void },
   log: (line: object) => void,
   exit: (code: number) => void = process.exit,
   stdin: NodeJS.ReadableStream = process.stdin,
