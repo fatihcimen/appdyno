@@ -8,6 +8,7 @@ export * from './owner.js';
 export * from './stats.js';
 export * from './call.js';
 export * from './device.js';
+export * from './frames.js';
 export * from './measure.js';
 export * from './energy-model.js';
 export * from './screen/index.js';
