@@ -13,6 +13,8 @@ vi.mock('node:os', async (real) => ({
 afterAll(() => rmSync(home, { recursive: true, force: true }));
 
 const settle = () => new Promise((r) => setTimeout(r, 400));
+/** A gesture takes real time, and more of it on a loaded Mac: a test waits for its end, not for a guess at it. */
+const WAIT = { timeout: 10_000 };
 
 function fixture(platform: 'ios' | 'android', device: Partial<Device> = {}, streams = false) {
   const sent: InputEvent[] = [];
@@ -65,7 +67,7 @@ describe("a window's controls", () => {
   it('opens an app switcher by Home twice on iOS, and leaves it to Android', async () => {
     const ios = fixture('ios');
     expect(ios.controls.press('appSwitch')).toBe(true);
-    await settle();
+    await vi.waitFor(() => expect(ios.sent).toHaveLength(2), WAIT);
     expect(ios.sent).toEqual([
       { kind: 'button', name: 'home' },
       { kind: 'button', name: 'home' },
@@ -76,17 +78,16 @@ describe("a window's controls", () => {
   it('holds the side button for Siri, down then up', async () => {
     const { controls, sent } = fixture('ios');
     controls.press('siri');
-    await new Promise((r) => setTimeout(r, 1_000));
+    await vi.waitFor(() => expect(sent).toHaveLength(2), WAIT);
     expect(sent.map((e) => (e as { state: number }).state)).toEqual([1, 2]);
   });
 
   it('draws Control Center from the top edge, finger down to finger up', async () => {
     const { controls, sent } = fixture('ios');
     controls.press('controlCenter');
-    await settle();
     const touches = sent as { p: number; x: number; y: number }[];
+    await vi.waitFor(() => expect(touches.at(-1)?.p).toBe(2), WAIT);
     expect(touches[0]).toMatchObject({ p: 0, y: 0 });
-    expect(touches.at(-1)?.p).toBe(2);
     expect(touches.every((t) => t.x > 0.8)).toBe(true);
     expect(touches.at(-1)!.y).toBeGreaterThan(0.5);
   });
