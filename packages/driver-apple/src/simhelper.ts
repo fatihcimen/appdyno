@@ -1,12 +1,9 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { chmod, mkdir, readFile, rename } from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertUdid, xcodeEnv } from './simctl.js';
-import { run } from '@appdyno/core';
+import { nativeBinary } from '@appdyno/core';
 
 const SDK_FLAGS = {
   // SimHID and SimEnergy run on the Mac, SimAX inside the simulator
@@ -64,23 +61,7 @@ export async function helperBinary(name: keyof typeof SDK_FLAGS): Promise<string
     join(here, `../agents/ios-src/SimHelper/${name}.m`),
   ].find((p) => existsSync(p));
   if (!source) throw new Error(`the source of ${name} is missing`);
-  const id = createHash('sha256')
-    .update(await readFile(source))
-    .update(SDK_FLAGS[name].join(' '))
-    .digest('hex')
-    .slice(0, 16);
-  const dir = join(homedir(), 'Library/Caches/appdyno/ios-helper', id);
-  const binary = join(dir, name);
-  if (existsSync(binary)) return binary;
-  await mkdir(dir, { recursive: true, mode: 0o700 });
-  const tmp = `${binary}.${randomBytes(4).toString('hex')}`;
-  await run('xcrun', [...SDK_FLAGS[name], '-o', tmp, source], {
-    env: xcodeEnv(),
-    timeout: 120_000,
-  });
-  await chmod(tmp, 0o700);
-  await rename(tmp, binary);
-  return binary;
+  return nativeBinary({ name, sources: [source], flags: SDK_FLAGS[name], env: xcodeEnv() });
 }
 
 export type HelperAnswer = { ok: boolean; refused?: string; error?: string; ms?: number } & Record<
