@@ -3,10 +3,10 @@ import type { Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { TraceOut } from '../schemas.js';
-import { type Op, defineOp, ACT, reply } from '../tool.js';
+import { defineOp, ACT, reply } from '../tool.js';
 import { perfTools, App, Probe, Scenario, virtual } from './shared.js';
 
-export function perfTraceOp(ctx: ServerContext): Op {
+export function perfTraceOp(ctx: ServerContext) {
   const { measure, appOf, virtualNote, save, keep, noisy, withProbe, scroller } = perfTools(ctx);
   return defineOp({
     name: 'perf_trace',

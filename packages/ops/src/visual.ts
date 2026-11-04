@@ -12,7 +12,7 @@ import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { VisualOut } from './schemas.js';
 import type { Session } from './session.js';
-import { defineOp, READ, reply, ToolError, type Op } from './tool.js';
+import { defineOp, READ, reply, ToolError } from './tool.js';
 
 const DEFAULT_DIR = 'appdyno-baselines';
 /** Percent of the pixels compared. */
@@ -39,7 +39,7 @@ async function shot(s: Session): Promise<{ png: Buffer; image: Image }> {
 }
 
 /** Screenshots against a saved image of the same screen, pixel by pixel. */
-export function visualOps(ctx: ServerContext): Op[] {
+export function visualOps(ctx: ServerContext) {
   return [
     defineOp({
       name: 'visual',

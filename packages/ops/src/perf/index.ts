@@ -1,5 +1,4 @@
 import type { ServerContext } from '../context.js';
-import type { Op } from '../tool.js';
 import { perfSnapshotOp } from './snapshot.js';
 import { perfScrollOp } from './scroll.js';
 import { perfLaunchOp } from './launch.js';
@@ -9,7 +8,7 @@ import { perfTraceOp } from './trace.js';
 import { perfCompareOp } from './compare.js';
 import { perfQueryOp } from './query.js';
 
-export function perfOps(ctx: ServerContext): Op[] {
+export function perfOps(ctx: ServerContext) {
   return [
     perfSnapshotOp(ctx),
     perfScrollOp(ctx),

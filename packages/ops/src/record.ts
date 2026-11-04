@@ -14,7 +14,7 @@ import type { ServerContext } from './context.js';
 import { reportVideoDir } from './report.js';
 import { RecordOut } from './schemas.js';
 import type { Session } from './session.js';
-import { defineOp, DESTRUCTIVE, reply, ToolError, type Op } from './tool.js';
+import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const DEFAULT_S = 1_800;
 const MAX_S = 3_600;
@@ -63,7 +63,7 @@ export async function endRecording(s: Session) {
   };
 }
 
-export function recordOps(ctx: ServerContext): Op[] {
+export function recordOps(ctx: ServerContext) {
   return [
     defineOp({
       name: 'record',

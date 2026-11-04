@@ -6,7 +6,7 @@ import type { ServerContext } from './context.js';
 import { checkApp, redactLog } from './policy.js';
 import { AuditOut, CrashesOut, LogsOut } from './schemas.js';
 import type { Session } from './session.js';
-import { defineOp, READ, reply, ToolError, type Op } from './tool.js';
+import { defineOp, READ, reply, ToolError } from './tool.js';
 
 const MAX_LINES = 1_000;
 const DEFAULT_LINES = 200;
@@ -43,7 +43,7 @@ export function boundLines(lines: string[], maxLines: number, maxChars = MAX_LOG
   return { kept, dropped: lines.length - kept.length };
 }
 
-export function diagnoseOps(ctx: ServerContext, { clean }: Answers): Op[] {
+export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
   return [
     defineOp({
       name: 'audit',

@@ -28,7 +28,7 @@ import { boundLines } from './diagnose.js';
 import { checkApp, redactLog } from './policy.js';
 import { NetworkOut } from './schemas.js';
 import type { Session } from './session.js';
-import { defineOp, DESTRUCTIVE, reply, ToolError, type Op } from './tool.js';
+import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const MAX_ENTRIES = 200;
 const DEFAULT_ENTRIES = 50;
@@ -202,7 +202,7 @@ export async function endCapture(s: Session): Promise<NetworkAnswer | undefined>
   return answer;
 }
 
-export function networkOps(ctx: ServerContext): Op[] {
+export function networkOps(ctx: ServerContext) {
   const clean = (t: string) => redactLog(ctx.policy, t);
 
   const paths = async (s: Session): Promise<NetworkPath[]> => {

@@ -1,3 +1,4 @@
+import type { z } from 'zod';
 import { actOps } from './act.js';
 import { answersFor } from './answers.js';
 import { appOps } from './apps.js';
@@ -49,6 +50,28 @@ function build(ctx: ServerContext) {
   const ops = Object.fromEntries(Object.values(raw).map((op) => [op.name, recorder.wrap(op)]));
   return { ops, runner };
 }
+
+type Built = ReturnType<
+  | typeof deviceOps
+  | typeof readOps
+  | typeof actOps
+  | typeof appOps
+  | typeof controlOps
+  | typeof diagnoseOps
+  | typeof recordOps
+  | ReturnType<typeof reportFor>['ops']
+  | typeof networkOps
+  | typeof webOps
+  | typeof reactNativeOps
+  | typeof visualOps
+  | typeof perfOps
+  | typeof flowOps
+>[number];
+
+export type OpName = Built['name'];
+
+/** What this op answers, as its output schema says. */
+export type OpData<N extends OpName> = z.infer<Extract<Built, { name: N }>['output']>;
 
 /** Every operation over this context, by name: what the MCP tools and CLI commands are made from. */
 export const opsFor = (ctx: ServerContext): Record<string, Op> => build(ctx).ops;

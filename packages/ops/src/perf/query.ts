@@ -3,9 +3,9 @@ import { stateDir, type TraceDigest } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { QueryOut } from '../schemas.js';
-import { type Op, defineOp, READ, ToolError, reply } from '../tool.js';
+import { defineOp, READ, ToolError, reply } from '../tool.js';
 
-export function perfQueryOp(ctx: ServerContext): Op {
+export function perfQueryOp(ctx: ServerContext) {
   return defineOp({
     name: 'perf_query',
     title: 'Query a kept trace',

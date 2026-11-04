@@ -18,7 +18,7 @@ import { checkApp, checkDevice } from './policy.js';
 import { AppOut, DoneOut, SettingOut, VirtualOut } from './schemas.js';
 import type { Session } from './session.js';
 import { Read } from './step-schemas.js';
-import { ACT, defineOp, DESTRUCTIVE, reply, ToolError, type Op } from './tool.js';
+import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const NO_APP = 'give app (or select one with use_device)';
 const PHONE_NUMBER = /^\+?\d{3,20}$/;
@@ -128,7 +128,7 @@ function writeStarted(ids: string[]) {
   writeFileSync(startedFile(), JSON.stringify(ids), { mode: 0o600 });
 }
 
-export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers): Op[] {
+export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) {
   const policy = ctx.policy;
   const appOf = (s: Session, app?: string) => {
     const pkg = checkApp(policy, app ?? s.appId ?? '');

@@ -61,8 +61,12 @@ export type Op = Tool & {
 };
 
 /** An op, whose device failures reach the surfaces as refusals wherever in its `run` they came from. */
-export function defineOp<S extends z.ZodObject, O extends z.ZodObject>(def: {
-  name: string;
+export function defineOp<
+  const N extends string,
+  S extends z.ZodObject,
+  O extends z.ZodObject,
+>(def: {
+  name: N;
   title: string;
   description: string;
   input: S;
@@ -70,7 +74,7 @@ export function defineOp<S extends z.ZodObject, O extends z.ZodObject>(def: {
   annotations: ToolAnnotations;
   needs?: Capability;
   run: (args: z.infer<S>) => Promise<ToolResult<z.infer<O>>>;
-}): Op {
+}): Omit<Op, 'name' | 'output'> & { name: N; output: O } {
   const { run, ...rest } = def;
   return {
     ...rest,

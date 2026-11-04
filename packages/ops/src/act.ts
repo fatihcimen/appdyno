@@ -16,7 +16,7 @@ import {
   TypeStep,
 } from './step-schemas.js';
 import type { Steps } from './steps.js';
-import { ACT, defineOp, READ, refused, reply, ToolError, type Op } from './tool.js';
+import { ACT, defineOp, READ, refused, reply, ToolError } from './tool.js';
 
 // measured on a loaded Mac: 20 took 10 s on an emulator, 19 s on a simulator; 30 took up to 56 s, near a client's usual 60 s
 const MAX_STEPS = 20;
@@ -36,7 +36,7 @@ export function actOps(
   ctx: ServerContext,
   { act, summary, header, show, clean, afterChange }: Answers,
   { one, step, windowSize, checkNow }: Steps,
-): Op[] {
+) {
   return [
     defineOp({
       name: 'tap',

@@ -4,9 +4,9 @@ import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { DeviceOut, DevicesOut, ActionOut, DoneOut } from './schemas.js';
 import { Read } from './step-schemas.js';
-import { ACT, defineOp, READ, reply, type Op } from './tool.js';
+import { ACT, defineOp, READ, reply } from './tool.js';
 
-export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers): Op[] {
+export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
   return [
     defineOp({
       name: 'list_devices',

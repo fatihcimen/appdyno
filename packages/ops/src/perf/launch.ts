@@ -2,10 +2,10 @@ import type { Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { LaunchOut } from '../schemas.js';
-import { type Op, defineOp, DESTRUCTIVE, reply } from '../tool.js';
+import { defineOp, DESTRUCTIVE, reply } from '../tool.js';
 import { perfTools, App, Probe, Scenario, virtual } from './shared.js';
 
-export function perfLaunchOp(ctx: ServerContext): Op {
+export function perfLaunchOp(ctx: ServerContext) {
   const { measure, appOf, virtualNote, save, keep, noisy, withProbe } = perfTools(ctx);
   return defineOp({
     name: 'perf_launch',

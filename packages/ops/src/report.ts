@@ -361,7 +361,7 @@ export function reportFor(ctx: ServerContext) {
     return r;
   };
 
-  const ops = (): Op[] => [
+  const ops = () => [
     defineOp({
       name: 'report',
       title: 'Session report',

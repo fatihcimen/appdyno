@@ -5,7 +5,7 @@ import type { ServerContext } from '../context.js';
 import { holdingCondition } from '../control.js';
 import { SnapshotOut } from '../schemas.js';
 import type { Session } from '../session.js';
-import { type Op, defineOp, READ, reply } from '../tool.js';
+import { defineOp, READ, reply } from '../tool.js';
 import { perfTools, App, Scenario, unlessUnsupported, kb, virtual } from './shared.js';
 
 /** A device's energy in the unit it has it in: a charge, a count of energy, or a score. */
@@ -128,7 +128,7 @@ type ExtraName = keyof typeof EXTRAS;
 /** All of them, in the order an answer gives them. */
 export const EXTRA_NAMES = Object.keys(EXTRAS) as [ExtraName, ...ExtraName[]];
 
-export function perfSnapshotOp(ctx: ServerContext): Op {
+export function perfSnapshotOp(ctx: ServerContext) {
   const { measure, appOf, virtualNote, save, keep, noisy } = perfTools(ctx);
   return defineOp({
     name: 'perf_snapshot',

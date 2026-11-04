@@ -12,7 +12,7 @@ import type { ServerContext } from './context.js';
 import { FindOut, ScreenOut, ScreenshotOut, WaitOut } from './schemas.js';
 import { Read, Selector, WaitStep } from './step-schemas.js';
 import type { Steps } from './steps.js';
-import { defineOp, READ, reply, ToolError, type Op } from './tool.js';
+import { defineOp, READ, reply, ToolError } from './tool.js';
 import { webLines } from './web.js';
 
 const SHOT_PX = 1024;
@@ -21,7 +21,7 @@ export function readOps(
   ctx: ServerContext,
   { clean, foreground, header, show }: Answers,
   { waitFor }: Steps,
-): Op[] {
+) {
   return [
     defineOp({
       name: 'screen',

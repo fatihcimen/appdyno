@@ -10,7 +10,7 @@ import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { ScrollOut } from '../schemas.js';
 import { swipeLine } from '../gesture-paths.js';
-import { type Op, defineOp, ACT, reply } from '../tool.js';
+import { defineOp, ACT, reply } from '../tool.js';
 import { perfTools, App, Probe, Scenario, kb, virtual } from './shared.js';
 
 /** Jank above this share of frames is worth a finding (Android vitals counts a session slow above 25 %). */
@@ -39,7 +39,7 @@ export function leakSignal(
   });
 }
 
-export function perfScrollOp(ctx: ServerContext): Op {
+export function perfScrollOp(ctx: ServerContext) {
   const { measure, appOf, virtualNote, save, keep, noisy, withProbe } = perfTools(ctx);
   return defineOp({
     name: 'perf_scroll',

@@ -72,7 +72,7 @@ describe('flows', () => {
       device.screen = 'settings';
       const { text } = await recorded(call, async () => {
         const { data } = await call('find', { text: 'Wi-Fi' });
-        await call('tap', { ref: (data.matches as { ref: string }[])[0]!.ref });
+        await call('tap', { ref: data.matches[0]!.ref });
       });
       expect(text).toContain('text="Wi-Fi"');
       expect(text).not.toMatch(/@\w/);
@@ -402,7 +402,7 @@ assert id=result check=text equals="Gönderildi"
       expect(device.screen).toBe('sent');
       expect(r.text).toContain('2. tap role=button text="Form": settled in 120 ms');
       expect(r.text).toContain('passed: 4 steps');
-      const timings = r.data.timings as { settledMs?: number; settled?: boolean; line: number }[];
+      const timings = r.data.timings!;
       expect(timings[1]).toMatchObject({ settledMs: 120, settled: true, line: 4 });
       expect(timings[0]!.settledMs).toBeGreaterThanOrEqual(0);
     });

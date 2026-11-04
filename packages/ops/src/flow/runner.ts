@@ -17,6 +17,7 @@ import { z } from 'zod';
 import type { Answers } from '../answers.js';
 import type { ServerContext } from '../context.js';
 import { checkApp } from '../policy.js';
+import type { ActionOut } from '../schemas.js';
 import type { Session } from '../session.js';
 import type { Steps } from '../steps.js';
 import { refused, ToolError, type Op } from '../tool.js';
@@ -154,7 +155,8 @@ export function flowRunner(
   const act = async (s: Session, st: FlowStep): Promise<StepOutcome> => {
     const [name, args] = opCall(st);
     const t0 = Date.now();
-    const { data } = await ops()[name]!.handler(opInput(name, args, st.action));
+    const answered = await ops()[name]!.handler(opInput(name, args, st.action));
+    const data = answered.data as Partial<ActionOut> & { met?: boolean };
     const whole = Date.now() - t0;
     if (data.met === false) {
       const screen = await s.read();
@@ -164,7 +166,7 @@ export function flowRunner(
         'TIMEOUT',
       );
     }
-    const died = data.appDied as { reason: string; file?: string } | undefined;
+    const died = data.appDied;
     if (died)
       throw new ToolError(
         `the app died: ${died.reason}${died.file ? ` (${died.file})` : ''}`,
@@ -174,13 +176,12 @@ export function flowRunner(
       ? whole
       : READS_ONLY.has(st.action)
         ? undefined
-        : (data.settleMs as number | undefined);
-    const warnings = data.warnings as string[] | undefined;
+        : data.settleMs;
     return {
       ...(settledMs !== undefined && { settledMs }),
-      ...(data.settled !== undefined && { settled: data.settled as boolean }),
-      ...(data.changed !== undefined && { changed: data.changed as boolean }),
-      ...(warnings?.length && { warnings }),
+      ...(data.settled !== undefined && { settled: data.settled }),
+      ...(data.changed !== undefined && { changed: data.changed }),
+      ...(data.warnings?.length && { warnings: data.warnings }),
     };
   };
 

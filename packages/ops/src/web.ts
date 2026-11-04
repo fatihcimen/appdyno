@@ -4,7 +4,7 @@ import type { ServerContext } from './context.js';
 import { checkApp, redactLog } from './policy.js';
 import { WebOut } from './schemas.js';
 import type { Session } from './session.js';
-import { defineOp, DESTRUCTIVE, reply, ToolError, type Op } from './tool.js';
+import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const MAX_ELEMENTS = 200;
 const MAX_ANSWER = 20_000;
@@ -100,7 +100,7 @@ export async function webLines(
   return more.length > 0 ? `not in the accessibility tree:\n${more.join('\n')}` : undefined;
 }
 
-export function webOps(ctx: ServerContext): Op[] {
+export function webOps(ctx: ServerContext) {
   const clean = (t: string) => redactLog(ctx.policy, t);
 
   const inspector = (s: Session) => {

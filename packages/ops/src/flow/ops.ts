@@ -5,7 +5,7 @@ import type { ErrorCode } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { FlowOut } from '../schemas.js';
-import { ToolError, type Op, reply, defineOp, DESTRUCTIVE } from '../tool.js';
+import { ToolError, reply, defineOp, DESTRUCTIVE } from '../tool.js';
 import type { FlowRunner } from './runner.js';
 import { FLOW_FILE, readFlow, loadRecording, keepRecording } from './shared.js';
 
@@ -30,7 +30,7 @@ export function paramsOf(words: string[] = []): Record<string, string> {
   );
 }
 
-export function flowOps(ctx: ServerContext, runner: FlowRunner): Op[] {
+export function flowOps(ctx: ServerContext, runner: FlowRunner) {
   const done = (t: string, data: Record<string, unknown> = {}) => reply(t, { done: t, ...data });
   return [
     defineOp({

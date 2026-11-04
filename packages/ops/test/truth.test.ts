@@ -9,7 +9,7 @@ import { DEFAULT_POLICY, redactLog, type Policy } from '../src/policy.js';
 import { ActionOut, CrashesOut, LogsOut } from '../src/schemas.js';
 import { defineOp, READ, reply, ToolError } from '../src/tool.js';
 import { FakeDevice } from './fake-device.js';
-import { linkedClient } from './helpers.js';
+import { callerOf, linkedClient } from './helpers.js';
 
 type Result = {
   isError?: boolean;
@@ -199,6 +199,17 @@ describe('failed answers', () => {
 });
 
 describe('an answer', () => {
+  it('is known by its op’s name to what calls it', async () => {
+    const { ctx } = await connect();
+    const call = callerOf(ctx);
+    const { data } = await call('find', { text: 'Form' });
+    expect(data.matches[0]!.label).toBe('Form');
+    // @ts-expect-error: no such key in the schema of find
+    expect(data.settled).toBeUndefined();
+    // @ts-expect-error: no such op
+    await expect(call('nothing')).rejects.toThrow();
+  });
+
   it('that leaves out what its schema asks for does not compile', () => {
     const op = defineOp({
       name: 'x',

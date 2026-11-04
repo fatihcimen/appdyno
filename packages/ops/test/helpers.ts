@@ -1,7 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '@appdyno/mcp';
-import { opsFor, ServerContext, type Op } from '../src/index.js';
+import { opsFor, ServerContext, type Op, type OpData, type OpName } from '../src/index.js';
 
 /** The operations, each held to its output schema: what it answers must be all that says, and no more. */
 export const checkedOps = (ctx: ServerContext): Record<string, Op> =>
@@ -22,12 +22,12 @@ export const checkedOps = (ctx: ServerContext): Record<string, Op> =>
 /** Calls operations as their tools do: through their input schema, with their text and data back. */
 export const callerOf = (ctx: ServerContext) => {
   const ops = checkedOps(ctx);
-  return async (name: string, args: Record<string, unknown> = {}) => {
+  return async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {
     const op = ops[name] as Op;
     const r = await op.handler(op.input.parse(args) as Record<string, unknown>);
     return {
       text: r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'),
-      data: r.data,
+      data: r.data as OpData<N>,
     };
   };
 };

@@ -16,10 +16,10 @@ import {
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { CompareOut } from '../schemas.js';
-import { type Op, defineOp, READ, reply, ToolError } from '../tool.js';
+import { defineOp, READ, reply, ToolError } from '../tool.js';
 import { Scenario, rewriteDashboard } from './shared.js';
 
-export function perfCompareOp(ctx: ServerContext): Op {
+export function perfCompareOp(ctx: ServerContext) {
   return defineOp({
     name: 'perf_compare',
     title: 'Compare with the baseline',

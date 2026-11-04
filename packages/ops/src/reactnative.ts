@@ -4,7 +4,7 @@ import type { ServerContext } from './context.js';
 import { boundLines } from './diagnose.js';
 import { redactLog } from './policy.js';
 import { ReactNativeOut } from './schemas.js';
-import { defineOp, DESTRUCTIVE, reply, ToolError, type Op } from './tool.js';
+import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const DEFAULT_METRO = 'localhost:8081';
 const DEFAULT_LOG_MS = 3_000;
@@ -24,7 +24,7 @@ const shown = (a: { value?: unknown; description?: string; type?: string }) =>
       : (a.description ?? a.type ?? '');
 
 /** Metro on this Mac, and the Hermes runtime it fronts over the DevTools protocol. Needs no device. */
-export function reactNativeOps(ctx: ServerContext): Op[] {
+export function reactNativeOps(ctx: ServerContext) {
   const targetsAt = (base: string) =>
     devToolsTargets(base).catch((e: Error) => {
       throw new ToolError(

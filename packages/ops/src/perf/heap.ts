@@ -3,7 +3,7 @@ import type { HeapReading } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { HeapOut } from '../schemas.js';
-import { type Op, defineOp, READ, reply } from '../tool.js';
+import { defineOp, READ, reply } from '../tool.js';
 import { keepRefusal, perfTools, App } from './shared.js';
 
 const HEAP: Record<HeapReading['kind'], { store: string; label: string }> = {
@@ -12,7 +12,7 @@ const HEAP: Record<HeapReading['kind'], { store: string; label: string }> = {
   trace: { store: 'heap-leaks', label: 'Leaks trace (Instruments)' },
 };
 
-export function perfHeapOp(ctx: ServerContext): Op {
+export function perfHeapOp(ctx: ServerContext) {
   const { measure, appOf, save, keep } = perfTools(ctx);
   return defineOp({
     name: 'perf_heap',
