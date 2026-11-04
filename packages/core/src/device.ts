@@ -44,6 +44,10 @@ export interface AppManager {
   install(path: string): Promise<string[]>;
   uninstall(app: string): Promise<void>;
   clearData(app: string): Promise<void>;
+  /** The app's data, into an empty folder on this Mac. */
+  downloadData(app: string, to: string): Promise<void>;
+  /** The folder's content becomes the app's data, with the app stopped. */
+  replaceData(app: string, from: string): Promise<void>;
   listApps(all: boolean): Promise<AppEntry[]>;
   /** Installed and running; `foreground` is told by the caller, which has the screen. */
   appState(app: string): Promise<Exclude<AppState, 'foreground'>>;

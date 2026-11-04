@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, rmSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, readdirSync, rmSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -16,9 +16,16 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import { macProxy } from './network.js';
 import { type Simctl, assertBundle } from './simctl.js';
-import { assertAppBundle, on } from './manage.js';
+import { assertAppBundle, DATA_FOLDERS, on } from './manage.js';
 
 const SIMULATOR_ID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;
+
+const copyFolders = (from: string, to: string) => {
+  for (const dir of DATA_FOLDERS) {
+    if (existsSync(join(from, dir)))
+      cpSync(join(from, dir), join(to, dir), { recursive: true, verbatimSymlinks: true });
+  }
+};
 
 export class SimulatorApps implements AppManager {
   constructor(
@@ -36,21 +43,35 @@ export class SimulatorApps implements AppManager {
     await this.simctl.exec(['uninstall', this.udid, assertBundle(app)], 120_000);
   }
 
-  /** No tool does this: the app's data container is emptied while it is stopped. */
-  async clearData(app: string) {
-    await this.simctl.terminate(this.udid, app);
+  private async container(app: string) {
     const data = (
       await this.simctl.exec(['get_app_container', this.udid, assertBundle(app), 'data'])
     ).trim();
     if (!data.includes(`/Devices/${this.udid}/`))
       throw new DeviceError('INTERNAL', `unexpected data container: ${data}`);
+    return data;
+  }
+
+  /** No tool does this: the app's data container is emptied while it is stopped. */
+  async clearData(app: string) {
+    await this.simctl.terminate(this.udid, app);
+    const data = await this.container(app);
     // its preferences are also held in memory, and would come back at the next launch
     await this.simctl.exec(['spawn', this.udid, 'defaults', 'delete', app]).catch(() => undefined);
-    for (const dir of ['Documents', 'Library', 'tmp']) {
+    for (const dir of DATA_FOLDERS) {
       const base = join(data, dir);
       if (!existsSync(base)) continue;
       for (const f of readdirSync(base)) rmSync(join(base, f), { recursive: true, force: true });
     }
+  }
+
+  async downloadData(app: string, to: string) {
+    copyFolders(await this.container(app), to);
+  }
+
+  async replaceData(app: string, from: string) {
+    await this.clearData(app);
+    copyFolders(from, await this.container(app));
   }
 
   async listApps(all: boolean): Promise<AppEntry[]> {

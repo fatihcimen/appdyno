@@ -1,5 +1,5 @@
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type {
@@ -705,6 +705,8 @@ describe('app management', () => {
       },
       uninstall: rec('uninstall'),
       clearData: rec('clear'),
+      downloadData: rec('download'),
+      replaceData: rec('replace'),
       listApps: async () => [{ id: 'dev.app', name: 'App', version: '1' }],
       appState: async () => 'running',
       permission: rec('permission'),
@@ -749,6 +751,35 @@ describe('app management', () => {
       });
       expect(r.text).toContain('passed a Play Protect warning for dev.app: "Unsafe app blocked"');
       expect(r.data.done).toContain('Unsafe app blocked');
+    }
+  });
+
+  it('copies an app data only with a safe folder', async () => {
+    const apps = manager();
+    const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
+    const base = mkdtempSync(join(tmpdir(), 'app-data-op-'));
+    try {
+      const to = join(base, 'new', 'copy');
+      const down = { action: 'download_data', app: 'dev.app', path: to };
+      expect((await call('app', { action: 'download_data', app: 'dev.app' })).error).toBe(true);
+      expect((await call('app', down)).text).toContain(to);
+      expect(apps.log).toEqual([['download', 'dev.app', to]]);
+      expect(statSync(to).mode & 0o777).toBe(0o700);
+      // a copy never lands among what a folder already holds
+      writeFileSync(join(to, 'mine.txt'), 'mine');
+      const refused = await call('app', down);
+      expect(refused.error).toBe(true);
+      expect(refused.text).toContain('new or empty');
+      expect(apps.log).toHaveLength(1);
+
+      const up = { action: 'replace_data', app: 'dev.app', path: to };
+      expect((await call('app', up)).text).toContain(to);
+      expect(apps.log.at(-1)).toEqual(['replace', 'dev.app', to]);
+      const missing = await call('app', { ...up, path: join(base, 'gone') });
+      expect(missing.error).toBe(true);
+      expect(apps.log).toHaveLength(2);
+    } finally {
+      rmSync(base, { recursive: true, force: true });
     }
   });
 

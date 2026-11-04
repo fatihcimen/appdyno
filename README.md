@@ -76,8 +76,9 @@ stops at the first failure, says which step and why, and shows the screen. `wait
 wait on the device, so the tree crosses the wire only when the screen changed.
 
 `gesture` holds `double_tap`, `long_press`, `drag`, `pinch` and a free `plan`. `press_key` holds the
-hardware buttons. `app` holds `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke` and
-`launch` with arguments and environment. `device_setting` holds `dark_mode`, `text_size`,
+hardware buttons. `app` holds `list`, `state`, `install`, `uninstall`, `clear`, `grant`, `revoke`,
+`launch` with arguments and environment, `download_data` into a new or empty folder, and `replace_data`
+from one, which stops the app and takes away what the folder does not hold. `device_setting` holds `dark_mode`, `text_size`,
 `reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `push`, `biometric`, `fold`, `call`, `sms` and `keychain`.
 
 What a platform cannot do is refused with the reason (`UNSUPPORTED`):
@@ -86,6 +87,7 @@ What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 | ---------------------------- | -------------------------- | ---------------------------- | ------------------------------ |
 | volume buttons               | yes                        | yes (no way to read back)    | the runner                     |
 | clear an app's data          | `pm clear`                 | empties its container        | no: uninstall and install      |
+| download, replace app data   | debuggable builds          | yes                          | development-signed apps        |
 | grant, revoke a permission   | `pm grant`, `pm revoke`    | `simctl privacy`             | no: answer with `alert`        |
 | launch environment           | no: args are intent extras | yes                          | yes                            |
 | dark mode, text, motion      | yes                        | yes                          | `devicectl`                    |

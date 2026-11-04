@@ -1,5 +1,7 @@
-import { existsSync } from 'node:fs';
-import { type AppManager, TIMEOUTS, type AppEntry, type LaunchOptions } from '@appdyno/core';
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { type AppManager, run, TIMEOUTS, type AppEntry, type LaunchOptions } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { type Adb, amStartError, assertPkg, shq } from './adb.js';
 import { apkNames } from './apk-names.js';
@@ -16,6 +18,8 @@ const success = (out: string, what: string) => {
   if (!/^Success/m.test(out))
     throw new DeviceError('INTERNAL', `${what}: ${out.trim().slice(0, 300)}`);
 };
+
+const DATA_MS = 600_000;
 
 const PERMISSIONS: Record<string, string> = {
   camera: 'CAMERA',
@@ -91,6 +95,74 @@ export class AndroidApps implements AppManager {
 
   async clearData(app: string) {
     success(await this.sh(`pm clear ${assertPkg(app)}`), `clear ${app}`);
+  }
+
+  /** Only a debuggable build lets a shell in, and `run-as` says why not on its output. */
+  private async dataOpen(app: string) {
+    const pkg = assertPkg(app);
+    const said = (await this.sh(`run-as ${pkg} true`)).trim();
+    if (said)
+      throw new DeviceError(
+        'UNSUPPORTED',
+        `${pkg}'s data opens only on a debuggable build: ${said.slice(0, 200)}`,
+      );
+    return pkg;
+  }
+
+  /** A folder of ours on this Mac for the archive that carries an app's data, gone after. */
+  private async withArchive(use: (file: string) => Promise<void>) {
+    const folder = mkdtempSync(join(tmpdir(), 'appdyno-data-'));
+    try {
+      await use(join(folder, 'data.tar'));
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
+    }
+  }
+
+  async downloadData(app: string, to: string) {
+    const pkg = await this.dataOpen(app);
+    const archive = await this.adb.execBuffer(
+      this.serial,
+      `run-as ${pkg} tar -cf - --exclude=./lib .`,
+      { timeoutMs: DATA_MS },
+    );
+    await this.withArchive(async (file) => {
+      writeFileSync(file, archive, { mode: 0o600 });
+      await run('tar', ['-xf', file, '-C', to]);
+    });
+  }
+
+  async replaceData(app: string, from: string) {
+    const pkg = await this.dataOpen(app);
+    const names = readdirSync(from);
+    const remote = names.length ? `/data/local/tmp/appdyno-data-${pkg}.tar` : undefined;
+    if (remote) {
+      await this.withArchive(async (file) => {
+        // by name, not `.`: that entry would put this folder's mode on the app's, and `run-as` then refuses it
+        await run('tar', ['-cf', file, '-C', from, '--', ...names], {
+          env: { ...process.env, COPYFILE_DISABLE: '1' },
+        });
+        await this.adb.run(['-s', this.serial, 'push', file, remote], DATA_MS);
+      });
+    }
+    try {
+      // the old data goes only once the app itself has read the new one
+      if (remote) {
+        const read = await this.sh(`run-as ${pkg} tar -tf ${remote} > /dev/null && echo read`);
+        if (!/^read$/m.test(read))
+          throw new DeviceError('INTERNAL', `${pkg} cannot read its data: ${read.slice(0, 200)}`);
+      }
+      await this.sh(`am force-stop ${pkg}`);
+      const empty = 'find . -mindepth 1 -maxdepth 1 ! -name lib -exec rm -rf {} +';
+      await this.sh(`run-as ${pkg} sh -c ${shq(empty)}`);
+      const wrote = remote
+        ? (await this.sh(`run-as ${pkg} tar -xf ${remote}`, DATA_MS)).trim()
+        : '';
+      if (wrote)
+        throw new DeviceError('INTERNAL', `replacing ${pkg}'s data: ${wrote.slice(0, 200)}`);
+    } finally {
+      if (remote) await this.sh(`rm -f ${remote}`);
+    }
   }
 
   async listApps(all: boolean): Promise<AppEntry[]> {

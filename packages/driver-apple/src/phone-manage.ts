@@ -1,3 +1,5 @@
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import type {
   AppManager,
   AppEntry,
@@ -10,7 +12,7 @@ import type {
 import { DeviceError } from '@appdyno/protocol';
 import type { Devicectl } from './devicectl.js';
 import { assertBundle } from './simctl.js';
-import { assertAppBundle, on } from './manage.js';
+import { assertAppBundle, DATA_FOLDERS, on } from './manage.js';
 
 const PHONE_CANNOT = {
   clear: "an iPhone's app data can only go with the app: uninstall and install it again",
@@ -24,6 +26,8 @@ const PHONE_CANNOT = {
   call: 'an iPhone takes calls only from the network',
   sms: 'an iPhone takes messages only from the network',
 } as const;
+
+const DATA_MS = 600_000;
 
 export class PhoneApps implements AppManager {
   constructor(private readonly ctl: Devicectl) {}
@@ -43,6 +47,45 @@ export class PhoneApps implements AppManager {
 
   async clearData(): Promise<void> {
     throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.clear);
+  }
+
+  private copy(way: 'from' | 'to', app: string, paths: string[]) {
+    return this.ctl.json(
+      [
+        'device',
+        'copy',
+        way,
+        '--device',
+        this.ctl.udid,
+        '--domain-type',
+        'appDataContainer',
+        '--domain-identifier',
+        assertBundle(app),
+        ...paths,
+      ],
+      DATA_MS,
+    );
+  }
+
+  async downloadData(app: string, to: string) {
+    for (const dir of DATA_FOLDERS) {
+      // the tool fails on an empty folder unless the place for it is there
+      mkdirSync(join(to, dir));
+      await this.copy('from', app, ['--source', dir, '--destination', join(to, dir)]);
+    }
+  }
+
+  /** One copy of the whole folder: the tool's removal takes the whole container, so a copy per folder keeps only the last. */
+  async replaceData(app: string, from: string) {
+    await this.ctl.terminate(app);
+    await this.copy('to', app, [
+      '--source',
+      from,
+      '--destination',
+      '.',
+      '--remove-existing-content',
+      'true',
+    ]);
   }
 
   async listApps(all: boolean): Promise<AppEntry[]> {

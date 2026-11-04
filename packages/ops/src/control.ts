@@ -1,4 +1,5 @@
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import {
   readState,
   reportProgress,
@@ -18,6 +19,24 @@ import { Read } from './step-schemas.js';
 import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const NO_APP = 'give app (or select one with use_device)';
+
+/** App data can hold secrets, and a copy must not land among a person's files: a new or empty folder, for this user alone. */
+function emptyFolder(path: string | undefined) {
+  if (!path) throw new ToolError('download_data needs path', 'INVALID_ARGUMENT');
+  const to = resolve(path);
+  if (existsSync(to) && (!statSync(to).isDirectory() || readdirSync(to).length > 0))
+    throw new ToolError(`${to} must be a new or empty folder`, 'INVALID_ARGUMENT');
+  mkdirSync(to, { recursive: true, mode: 0o700 });
+  return to;
+}
+
+function dataFolder(path: string | undefined) {
+  if (!path) throw new ToolError('replace_data needs path', 'INVALID_ARGUMENT');
+  const from = resolve(path);
+  if (!existsSync(from) || !statSync(from).isDirectory())
+    throw new ToolError(`${from} is not a folder`, 'INVALID_ARGUMENT');
+  return from;
+}
 
 const Started = z.array(z.string());
 const startedFile = () => join(stateDir(), 'started.json');
@@ -60,7 +79,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
       name: 'app',
       title: 'App management',
       description:
-        'list (all: with system apps), state, install (path: .apk or .app), uninstall, clear, grant, revoke (service: such as camera), launch (restarts it with args, env; Android args are key=value extras). Default: the selected app.',
+        'list (all: with system apps), state, install (path: .apk or .app), uninstall, clear, grant, revoke (service: such as camera), launch (restarts it with args, env; Android args are key=value extras), download_data (path: a new or empty folder), replace_data (path: such a folder; stops the app). Default: the selected app.',
       input: z
         .object({
           action: z.enum([
@@ -72,6 +91,8 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
             'grant',
             'revoke',
             'launch',
+            'download_data',
+            'replace_data',
           ]),
           app: z.string().max(200).optional(),
           path: z.string().max(1_000).optional(),
@@ -136,6 +157,22 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
             if (!service) throw new ToolError(`${action} needs service`, 'INVALID_ARGUMENT');
             await apps.permission(pkg, action === 'grant', service);
             return done(`${action === 'grant' ? 'granted' : 'revoked'} ${service} for ${pkg}`);
+          }
+          case 'download_data': {
+            const pkg = appOf(s, app);
+            const to = emptyFolder(path);
+            reportProgress(`copying the data of ${pkg}`);
+            await apps.downloadData(pkg, to);
+            return done(`the data of ${pkg} is in ${to}`);
+          }
+          case 'replace_data': {
+            const pkg = appOf(s, app);
+            const from = dataFolder(path);
+            reportProgress(`replacing the data of ${pkg}`);
+            await apps.replaceData(pkg, from);
+            s.acted();
+            s.appPid = undefined;
+            return done(`the data of ${pkg} is now what ${from} holds`);
           }
           case 'uninstall':
           case 'clear': {
