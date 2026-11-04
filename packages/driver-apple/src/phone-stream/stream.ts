@@ -45,6 +45,8 @@ const TURNS_CHECK_MS = 250;
 const ALIVE_MS = 1_000;
 const WATCH_MS = 2_000;
 
+type TurnsReader = Awaited<ReturnType<typeof orientationReader>>;
+
 export interface StreamSink {
   live(info: { w: number; h: number; mode: string; crop: boolean }): void;
   picture(p: Picture): void;
@@ -186,6 +188,7 @@ export class PhoneStream {
     this.videoPort ||= number(dict(connection.sender).port);
     // the lower mode codes a larger picture, with the screen at its top left
     const screen = mode === 5 ? await this.screenSize().catch(() => undefined) : undefined;
+    const turnsReader = await this.openTurns();
     this.sink.live({
       w: screen?.w ?? number(config.CustomWidth),
       h: screen?.h ?? number(config.CustomHeight),
@@ -193,6 +196,7 @@ export class PhoneStream {
       crop: screen !== undefined,
     });
     this.runTimers(rtcp, receiver);
+    if (turnsReader) this.watchTurns(turnsReader);
   }
 
   private async screenSize() {
@@ -234,15 +238,30 @@ export class PhoneStream {
       if (changed === 'ok') this.dropInput();
     });
     every(WATCH_MS, () => void this.watchServer());
-    void this.watchTurns();
     this.toPhone(rtcp.alive(receiver.sender, receiver.highestSeq));
   }
 
-  /** A turned phone sends the same shape, with the app on its side: nothing in the stream says so. */
-  private async watchTurns() {
+  /**
+   * A turned phone sends the same shape, with the app on its side: nothing in the stream says so. Read once before the
+   * stream is live: a phone already on its side would otherwise take its first touches as upright, and lose them.
+   */
+  private async openTurns() {
     const reader = await orientationReader(this.udid).catch(() => undefined);
-    if (!reader || this.stopped) {
-      reader?.close();
+    if (reader) await this.readTurns(reader).catch(() => undefined);
+    return reader;
+  }
+
+  private async readTurns(reader: TurnsReader) {
+    const turns = turnsOf(await reader.read());
+    if (turns === undefined || turns === this.turns) return;
+    this.turns = turns;
+    if (this.hid) this.hid.turns = turns;
+    this.sink.turns(turns);
+  }
+
+  private watchTurns(reader: TurnsReader) {
+    if (this.stopped) {
+      reader.close();
       return;
     }
     this.closeOrientation = reader.close;
@@ -251,23 +270,14 @@ export class PhoneStream {
       setInterval(() => {
         if (reading) return;
         reading = true;
-        reader
-          .read()
-          .then((orientation) => {
-            const turns = turnsOf(orientation);
-            if (turns === undefined || turns === this.turns) return;
-            this.turns = turns;
-            if (this.hid) this.hid.turns = turns;
-            this.sink.turns(turns);
-          })
-          // an upright window, and a touch that may miss, is all that is lost
+        // an upright window, and a touch that may miss, is all that is lost
+        this.readTurns(reader)
           .catch(() => undefined)
           .finally(() => (reading = false));
       }, TURNS_CHECK_MS),
     );
   }
 
-  /** The phone can end a stream by itself, for a call or the camera: a new start then says why. */
   private async watchServer() {
     if (!this.display || this.stopped) return;
     try {

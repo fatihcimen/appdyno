@@ -52,6 +52,19 @@ describe.runIf(udid)('mirror on an iPhone', () => {
 
   const status = () => session.status as MirrorStatus;
   const read = () => device.read(FIXTURE);
+  /** The length of the picture from low to high, whichever way the phone is. */
+  const flick = async () => {
+    session.send({ kind: 'touch', p: 0, x: 0.5, y: 0.8 });
+    for (let i = 1; i <= 18; i++) {
+      session.send({ kind: 'touch', p: 1, x: 0.5, y: 0.8 - i * 0.03 });
+      await new Promise((r) => setTimeout(r, 16));
+    }
+    session.send({ kind: 'touch', p: 2, x: 0.5, y: 0.26 });
+  };
+  const firstRowMoved = async () => {
+    const first = (await read()).list.find((e: { id?: string }) => e.id === 'row_name');
+    return first && first.label !== 'Product 1';
+  };
 
   const start = async () => {
     const binary = await built.viewerBinary();
@@ -98,16 +111,8 @@ describe.runIf(udid)('mirror on an iPhone', () => {
       before = (await read()).list.find((e: { id?: string }) => e.id === 'row_name');
       return !!before && before.label === 'Product 1';
     });
-    session.send({ kind: 'touch', p: 0, x: 0.5, y: 0.8 });
-    for (let i = 1; i <= 18; i++) {
-      session.send({ kind: 'touch', p: 1, x: 0.5, y: 0.8 - i * 0.03 });
-      await new Promise((r) => setTimeout(r, 16));
-    }
-    session.send({ kind: 'touch', p: 2, x: 0.5, y: 0.26 });
-    await until('a moved list', async () => {
-      const first = (await read()).list.find((e: { id?: string }) => e.id === 'row_name');
-      return first && first.label !== 'Product 1';
-    });
+    await flick();
+    await until('a moved list', firstRowMoved);
     expect(status().inputFailed).toBe(0);
   }, 90_000);
 
@@ -168,25 +173,54 @@ describe.runIf(udid)('mirror on an iPhone', () => {
       (await read()).list.some((e: { id?: string }) => e.id === 'add_button'),
     );
     const { w, h } = status().picture!;
-    await device.setOrientation(1);
-    await until('its side', () => status().picture?.w === h && status().picture?.h === w);
-    // a tap during the turn's animation goes nowhere
-    await new Promise((r) => setTimeout(r, 2_500));
-    const screen = await read();
-    expect(screen.window.w).toBeGreaterThan(screen.window.h);
-    const add = screen.list.find((e: { id?: string }) => e.id === 'add_button');
-    const [x, y] = [add.x / screen.window.w, add.y / screen.window.h];
-    if (headless) {
-      session.send({ kind: 'touch', p: 0, x, y });
-      await new Promise((r) => setTimeout(r, 80));
-      session.send({ kind: 'touch', p: 2, x, y });
-    } else session.poke(x, y);
-    await until('a count', async () =>
-      (await read()).list.some((e: { label: string }) => e.label === 'In basket: 1'),
-    );
-    await device.setOrientation(0);
+    try {
+      let count = 0;
+      for (const rotation of [1, 3] as const) {
+        await device.setOrientation(rotation);
+        await until('its side', () => status().picture?.w === h && status().picture?.h === w);
+        // a tap during the turn's animation goes nowhere
+        await new Promise((r) => setTimeout(r, 2_500));
+        const screen = await read();
+        expect(screen.window.w).toBeGreaterThan(screen.window.h);
+        const add = screen.list.find((e: { id?: string }) => e.id === 'add_button');
+        const [x, y] = [add.x / screen.window.w, add.y / screen.window.h];
+        if (headless) {
+          session.send({ kind: 'touch', p: 0, x, y });
+          await new Promise((r) => setTimeout(r, 80));
+          session.send({ kind: 'touch', p: 2, x, y });
+        } else session.poke(x, y);
+        count += 1;
+        await until('a count', async () =>
+          (await read()).list.some((e: { label: string }) => e.label === `In basket: ${count}`),
+        );
+      }
+      await flick();
+      await until('a moved list', firstRowMoved);
+    } finally {
+      // a phone left on its side fails every test after it, and a person finds it so
+      await device.setOrientation(0);
+    }
     await until('upright', () => status().picture?.w === w && status().picture?.h === h);
-  }, 120_000);
+  }, 180_000);
+
+  it('a stream begun on a phone already on its side takes its first touch', async () => {
+    await session.stop('a test turns the phone first');
+    await device.setOrientation(1);
+    try {
+      await start();
+      await until('picture', () => status().state === 'live');
+      show('list');
+      await new Promise((r) => setTimeout(r, 2_000));
+      await device.launch(FIXTURE);
+      await until('the list', async () =>
+        (await read()).list.some((e: { id?: string }) => e.id === 'row_name'),
+      );
+      await flick();
+      await until('a moved list', firstRowMoved);
+    } finally {
+      await device.setOrientation(0);
+    }
+  }, 180_000);
 
   it('a screenshot goes by the phone own service, in either format', async () => {
     for (const format of ['png', 'jpeg'] as const) {
