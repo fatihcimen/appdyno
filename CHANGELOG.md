@@ -86,6 +86,10 @@ Found when the parallel branches ran together:
   Android the host's checks of a tree, a screenshot and the characters each text does not show
   (`a11y.read`, which also brings the nodes' traversal hints): touch targets, text and icon contrast, names, duplicate names, clipped text.
 - Android tree flags: not important for accessibility, and read as one unit by a screen reader.
+- A simulator opens, reads and takes touches with no runner: it starts for a system alert, text entry, an image, an audit or a control found at different places.
+- A first `launch_app` starts the app alongside the agent or helper. `am start`'s `Status: timeout` is no failure: at load 500 an app still drawing was refused as not started.
+- A ref is touched where the screen has it just then, not where the last answer did: an app can move things with no action.
+- An answer's image is 800 px at quality 60, and an answer says a row once when a control of its name stands at its place.
 
 Still open:
 

@@ -320,7 +320,11 @@ export class IosSimulatorDevice extends IosDevice {
     let homeSince: number | undefined;
     while (this.direct.reads && Date.now() < end) {
       const front = await this.direct.front().catch(() => undefined);
-      if (front === pkg) return;
+      if (front === pkg) {
+        // the app opening over the home screen takes no touches either: the first one was lost on a fresh boot
+        this.transitionEnds = Date.now() + TRANSITION_MS;
+        return;
+      }
       homeSince = front === SPRINGBOARD ? (homeSince ?? Date.now()) : undefined;
       if (homeSince !== undefined && Date.now() - homeSince > HOME_FRONT_MS) break;
       await sleep(20);
