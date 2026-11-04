@@ -198,6 +198,75 @@ describe('the page and the measures', () => {
     expect(kinds).toContainEqual(['energy.mj', true]);
   });
 
+  it('answers what `also` asks in one order, whatever order it was asked in', async () => {
+    const at = '2026-11-03T00:00:00.000Z';
+    const reading = (value: unknown, raw: string) => async () => ({ value, raw, at });
+    const { ctx, measurements } = context({
+      threads: reading(
+        {
+          windowMs: 2000,
+          reads: 2,
+          threads: [{ tid: 1, name: 'main', percent: 50, over90Ms: 10 }],
+          worstOver90Ms: 10,
+        },
+        'raw threads',
+      ),
+      network: reading({ windowMs: 2000, rxBytes: 3, txBytes: 4, note: 'loopback' }, 'raw network'),
+      energy: reading({ mah: 5, note: 'a formula' }, 'raw energy'),
+      exits: reading({ crashes: 1, anrs: 2, total: 3, recent: [] }, 'raw exits'),
+      size: reading({ bytes: 1_048_576, parts: {} }, 'raw size'),
+    });
+    const { data, blocks } = await op(ctx, 'perf_snapshot', {
+      also: ['size', 'exits', 'energy', 'network', 'threads'],
+    });
+    // whether this Mac is loaded right now is no part of it
+    const text = (blocks[0] as { text: string }).text
+      .split('\n')
+      .filter((l) => !l.startsWith('noise:'));
+    expect(
+      text.slice(
+        text.findIndex((l) => l.startsWith('threads')),
+        -1,
+      ),
+    ).toEqual([
+      'threads: main 50% (10 ms above 90 %)',
+      'network: 3 bytes in, 4 out (loopback)',
+      'energy: 5 mAh; a formula',
+      'exits: 1 crashes, 2 ANRs of 3',
+      'size: 1.0 MB',
+    ]);
+    expect(data).toMatchObject({
+      threads: [{ tid: 1, name: 'main', percent: 50, over90Ms: 10 }],
+      rxBytes: 3,
+      txBytes: 4,
+      energyMah: 5,
+      energyModelled: false,
+      crashes: 1,
+      anrs: 2,
+      sizeBytes: 1_048_576,
+    });
+    expect(data).not.toHaveProperty('lacking');
+    const [key] = await runKeys(measurements, { app: 'dev.app' });
+    const [run] = await latestRuns(measurements, key!, 1);
+    expect(run!.map((r) => r.kind)).toEqual([
+      'cpu.percent',
+      'memory.kb',
+      'threads.over90_ms',
+      'network.rx_bytes',
+      'network.tx_bytes',
+      'energy.mah',
+      'exits.crashes',
+      'exits.anrs',
+      'size.bytes',
+    ]);
+    // what it read is kept, and its value under its name
+    const raw = readFileSync(data.raw as string, 'utf8');
+    for (const part of ['threads', 'network', 'energy', 'exits', 'size'])
+      expect(raw).toContain(`raw ${part}`);
+    const stored = JSON.parse(readFileSync(String(data.raw).replace(/\.txt$/, '.json'), 'utf8'));
+    expect(JSON.stringify(stored)).toMatch(/"threads":.*"network":.*"energy":.*"exits":.*"size":/);
+  });
+
   it('is rewritten after each kept run', async () => {
     const { ctx, measurements } = context();
     await op(ctx, 'perf_snapshot');

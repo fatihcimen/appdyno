@@ -12,14 +12,12 @@ import {
 } from '@appdyno/perf';
 import type { ServerContext } from './context.js';
 import { deviceInfo, keepRefusal, ROW_OF } from './perf/shared.js';
+import { EXTRA_NAMES } from './perf/snapshot.js';
 import { opsFor } from './registry.js';
 
 type Call = { op: string; args?: Record<string, unknown> };
 
-const SNAPSHOT: Call = {
-  op: 'perf_snapshot',
-  args: { also: ['threads', 'network', 'energy', 'exits', 'size'] },
-};
+const SNAPSHOT: Call = { op: 'perf_snapshot', args: { also: EXTRA_NAMES } };
 const SCROLL: Call = { op: 'perf_scroll' };
 const TRACE: Call = { op: 'perf_trace', args: { scroll: 'up' } };
 
