@@ -1,4 +1,10 @@
-import type { FrameStats, FrameTimeline, HitchSummary, ProbeSummary } from './frames.js';
+import type {
+  FrameStats,
+  FrameTimeline,
+  HitchSummary,
+  ProbeSummary,
+  SurfaceFrames,
+} from './frames.js';
 
 /** A measurement and the raw output it was read from (kept as its proof). */
 export type Measured<T> = {
@@ -285,6 +291,7 @@ export interface MeasureSource {
     during: () => Promise<unknown>,
   ): Promise<Measured<FrameStats>>;
   resetFrames?(app: string): Promise<void>;
+  surfaceFrames?(app: string): Promise<Measured<SurfaceFrames>>;
   vitals?(): Promise<Measured<DeviceVitals>>;
   launch?(
     app: string,

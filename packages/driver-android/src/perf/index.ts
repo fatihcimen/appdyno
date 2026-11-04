@@ -8,6 +8,7 @@ import { launch } from './launch.js';
 import { buildType, network, energy, exits, size, vitals } from './app.js';
 import { battery } from './battery.js';
 import { startInfo } from './start-info.js';
+import { surfaceFrames } from './surface.js';
 
 /**
  * The app's and the device's performance on Android, from the platform's own tools: frames (gfxinfo,
@@ -33,6 +34,7 @@ export class AndroidPerf implements MeasureSource {
   resetFrames = this.on(resetFrames);
   frameTimeline = this.on(frameTimeline);
   frameTrace = this.on(frameTrace);
+  surfaceFrames = this.on(surfaceFrames);
   memory = this.on(memory);
   anonMemory = this.on(anonMemory);
   heapDump = this.on(heapDump);

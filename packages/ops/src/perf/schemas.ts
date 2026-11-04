@@ -12,6 +12,20 @@ const PlayShares = {
 
 export const SnapshotOut = z.object({
   ...Measurement,
+  surface: z
+    .object({
+      layer: z.string(),
+      refreshMs: z.number(),
+      frames: z.number().int(),
+      fps: z.number(),
+      p50Ms: z.number(),
+      p95Ms: z.number(),
+      worstMs: z.number(),
+      slow34Percent: z.number(),
+      slow50Percent: z.number(),
+      lastFrameAgoMs: z.number(),
+    })
+    .optional(),
   startReason: z.string().optional(),
   startType: z.string().optional(),
   startPhases: z.record(z.string(), z.number()).optional(),

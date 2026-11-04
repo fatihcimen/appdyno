@@ -119,3 +119,20 @@ export type HitchSummary = {
   hitchRatio: number;
   causes: Record<string, number>;
 };
+
+/** A surface's frames as SurfaceFlinger presented them: what a game or an engine draws, which `gfxinfo` never sees. */
+export type SurfaceFrames = {
+  /** Empty, with no frames, when the app shows no surface. */
+  layer: string;
+  refreshMs: number;
+  frames: number;
+  fps: number;
+  p50Ms: number;
+  p95Ms: number;
+  worstMs: number;
+  /** Frames not presented less than 34 and 50 ms after the last: Play's two bars for a game's session. */
+  slow34Percent: number;
+  slow50Percent: number;
+  /** A surface left alone keeps its old frames: this says how old they are. */
+  lastFrameAgoMs: number;
+};

@@ -45,6 +45,7 @@
         <activity android:name=".LateActivity" />
         <activity android:name=".BiometricActivity" />
         <activity android:name=".CrashActivity" />
+        <activity android:name=".SurfaceActivity" />
         <activity android:name=".GesturesActivity" />
         <activity android:name=".A11yActivity" />
         <activity android:name=".CodeActivity" android:windowSoftInputMode="stateVisible" />

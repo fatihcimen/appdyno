@@ -12,6 +12,9 @@ export const FROZEN_SESSION_PERCENT = 0.1;
 /** Fewer frames than this say nothing of a share that small: one frame in 500 is already over it. */
 export const FROZEN_MIN_FRAMES = 1_000;
 
+/** A game's session counts as slow above this share of frames not presented less than 50 or 34 ms after the last. */
+const SLOW_GAME_PERCENT = 25;
+
 /** A start counts as slow from this long, by the day's longest of each state. */
 export const SLOW_LAUNCH_MS = { cold: 5_000, warm: 2_000, hot: 1_500 } as const;
 /** Play's two pages differ on a hot start, and its help page is out of date elsewhere too. */
@@ -36,10 +39,25 @@ const share =
   (value: number, { limit }: Rule) =>
     `${value} % of frames over ${over}, the limit ${limit} %`;
 
+const gameShare =
+  (bar: number) =>
+  (value: number, { limit }: Rule) =>
+    `${value} % of frames ${bar} ms or more after the last, the limit ${limit} %`;
+
 const launch = (state: string) => (value: number, rule: Rule) =>
   `the day's longest ${state} start ${Math.round(value)} ms, the limit ${rule.limit} ms`;
 
 const RULES: Record<string, Rule> = {
+  'surface.slow_50_percent': {
+    limit: SLOW_GAME_PERCENT,
+    name: 'a slow session at 20 FPS',
+    reads: gameShare(50),
+  },
+  'surface.slow_34_percent': {
+    limit: SLOW_GAME_PERCENT,
+    name: 'a slow session at 30 FPS',
+    reads: gameShare(34),
+  },
   'frames.slow_percent': {
     limit: SLOW_SESSION_PERCENT,
     name: 'slow frames',

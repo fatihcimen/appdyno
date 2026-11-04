@@ -182,6 +182,26 @@ const EXTRAS = {
       startReasons: v.starts.map((s) => s.reason),
     }),
   }),
+  surface: extra({
+    read: (a) => reads('surfaceFrames', a)?.(a.pkg),
+    metrics: (v) =>
+      v.frames === 0
+        ? []
+        : [
+            { kind: 'surface.p95_ms', unit: 'ms', samples: [v.p95Ms] },
+            { kind: 'surface.slow_34_percent', unit: 'percent', samples: [v.slow34Percent] },
+            { kind: 'surface.slow_50_percent', unit: 'percent', samples: [v.slow50Percent] },
+          ],
+    line: (v) =>
+      v.frames === 0
+        ? 'no SurfaceView of the app holds frames: what it draws through the View toolkit is in frames above'
+        : [
+            `surface: ${v.frames} frames, ${v.fps} a second, p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms, on a ${v.refreshMs} ms display, the last ${v.lastFrameAgoMs} ms ago`,
+            playLine('surface.slow_50_percent', v.slow50Percent),
+            playLine('surface.slow_34_percent', v.slow34Percent),
+          ].join('\n'),
+    data: (v) => ({ surface: v }),
+  }),
   battery: extra({
     read: (a) => reads('battery', a)?.(a.pkg, a.batteryMs),
     metrics: (v) => [
@@ -259,7 +279,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
           .array(z.enum(EXTRA_NAMES))
           .optional()
           .describe(
-            'threads; network; energy (says if a model); anonMemory: by process state, bitmaps; startInfo: why it last started; battery: wake locks, wakeups, jobs; exits; size',
+            'threads; network; energy (says if a model); anonMemory: by process state, bitmaps; surface: a SurfaceView or game; startInfo: why it last started; battery: wake locks, wakeups, jobs; exits; size',
           ),
         batteryWindowMs: z.number().int().min(1_000).max(600_000).default(30_000),
         scenario: Scenario,
