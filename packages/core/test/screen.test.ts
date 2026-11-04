@@ -6,6 +6,7 @@ import {
   elementLine,
   elementsOf,
   fold,
+  personNeeded,
   refHash,
   screenElements,
   withStableRefs,
@@ -296,5 +297,25 @@ describe('fold', () => {
     expect(fold('İstanbul')).toBe('istanbul');
     expect(fold('ıslak')).toBe('islak');
     expect(fold('Gönder')).toBe('gonder');
+  });
+});
+
+describe('what an alert wants of a person', () => {
+  const alert = (...texts: string[]) => ({ texts, buttons: [] });
+
+  it('names Face ID, a passcode and the rest, in either language it knows', () => {
+    expect(personNeeded(alert('Do you want to use Face ID?'))).toBe('Face ID');
+    expect(personNeeded(alert('Enter your passcode'))).toBe('a passcode');
+    expect(personNeeded(alert('Parolanızı girin'))).toBe('a passcode');
+    expect(personNeeded(alert('Sign in with your Apple Account'))).toBe('an Apple Account');
+    expect(personNeeded({ texts: [], buttons: [{ label: 'Allow Paste', x: 0, y: 0 }] })).toBe(
+      'Allow Paste',
+    );
+    expect(personNeeded(alert('Confirm your purchase'))).toBe('a purchase');
+  });
+
+  it('says nothing of an alert an agent can answer, or of none', () => {
+    expect(personNeeded(alert('Allow "Maps" to use your location?'))).toBeUndefined();
+    expect(personNeeded(undefined)).toBeUndefined();
   });
 });

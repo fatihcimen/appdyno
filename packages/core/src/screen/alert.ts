@@ -41,6 +41,27 @@ export function alertOf(
   return buttons.length > 0 || texts.length > 0 ? { texts, buttons } : undefined;
 }
 
+/** What an alert asks that only a person can give, by the words on it, as `fold` gives them. */
+const FOR_A_PERSON: [string, RegExp][] = [
+  ['Face ID', /face id/],
+  ['Touch ID', /touch id|parmak izi/],
+  ['a fingerprint', /fingerprint/],
+  ['a passcode', /passcode|password|sifre|parola/],
+  ['an Apple Account', /apple (account|id|hesab)/],
+  ['Allow Paste', /allow paste|would like to paste/],
+  ['a VPN', /\bvpn\b/],
+  ['a profile', /configuration profile|install profile/],
+  ['a purchase', /purchase|satin al/],
+];
+
+/** What this alert wants of a person, if it wants one. */
+export function personNeeded(alert: SystemAlert | undefined): string | undefined {
+  const words = fold(
+    [...(alert?.texts ?? []), ...(alert?.buttons ?? []).map((b) => b.label)].join(' '),
+  );
+  return FOR_A_PERSON.find(([, match]) => match.test(words))?.[0];
+}
+
 /** The button of an open alert an answer names: `allow`, `deny` (in the device's language) or its label. */
 export function alertAnswer(
   alert: SystemAlert,

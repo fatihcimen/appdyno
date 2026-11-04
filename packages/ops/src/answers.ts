@@ -3,6 +3,7 @@ import {
   diffScreens,
   diffText,
   pause,
+  personNeeded,
   renderFolded,
   reportProgress,
   UNCHANGED,
@@ -55,6 +56,8 @@ export function answersFor(ctx: ServerContext) {
 
   /** The app check: a permission prompt points to alert; another app in front is said. */
   const foreground = (s: Session, screen: Screen) => {
+    const person = personNeeded(s.device.platformScreen.systemAlert(screen.tree, screen.elements));
+    if (person) return `\nneeds a person: ${person}. hand_off asks yours, and waits`;
     if (s.device.platformScreen.alertButton(screen.elements, 'allow'))
       return '\na system permission prompt is open: answer it with alert';
     if (!s.appId || !screen.foreground || screen.foreground === s.appId) return '';

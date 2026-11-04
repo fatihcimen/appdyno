@@ -204,3 +204,32 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_RESTART === '1')(
     }, 420_000);
   },
 );
+
+/** It needs the runner, which sets the orientation, and so its build. */
+describe.runIf(udid && process.env.APPDYNO_MIRROR_ROTATE === '1')('a simulator that turns', () => {
+  it('follows by its surface, at the new size, with no new session', async () => {
+    const device = new IosSimulatorDevice(udid!);
+    await device.open();
+    const session = new MirrorSession({
+      mirror: device.mirror,
+      viewer: startViewer(true),
+      options: { quality: 'auto' },
+      title: 'a test',
+    });
+    await session.start();
+    try {
+      await until('picture', () => session.status.state === 'live');
+      const { w, h } = session.status.picture!;
+      await device.setOrientation(1);
+      await until('a turned picture', () => session.status.picture!.w !== w, 30_000);
+      expect(session.status.picture).toMatchObject({ w: h, h: w });
+      expect(session.status.state).toBe('live');
+      await device.setOrientation(0);
+      await until('upright again', () => session.status.picture!.w === w, 30_000);
+    } finally {
+      await session.stop('the test ended');
+      await device.stopAgent().catch(() => undefined);
+      device.close();
+    }
+  }, 600_000);
+});
