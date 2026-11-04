@@ -19,6 +19,8 @@ final class Device {
     /// The longest a touch waits for the app's animations (UIKit's sheet comes up in about 0.5 s; an
     /// animation that never ends costs this once per touch).
     static let animationWaitS = 1.0
+    /// How long typed text has to show in its field before it counts as not gone in.
+    static let echoWaitS = 1.5
 
     /// Letters and digits only: a formatting field shows "(599) 999-9900" for "5999999900".
     static func plain(_ s: String) -> String { String(s.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init)) }
@@ -423,6 +425,12 @@ final class Device {
             }
             if field.exists { field.typeText(text) }
             verified = check()
+            // the keys are sent, not yet handled, and a field that formats what is typed takes a moment more
+            let echoEnd = Date().addingTimeInterval(Device.echoWaitS)
+            while verified == false, Date() < echoEnd, !job.over {
+                Thread.sleep(forTimeInterval: 0.05)
+                verified = check()
+            }
         }
         // a field that is gone has taken the text and submitted it already
         if p["submit"] as? Bool == true, field.exists { field.typeText("\n") }
