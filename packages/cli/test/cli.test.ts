@@ -6,6 +6,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { DeviceProvider } from '@appdyno/core';
 import { createServer } from '@appdyno/mcp';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
+import { DeviceError } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { FakeDevice } from '../../ops/test/fake-device.js';
 import { commandsFor, deviceFlag, flowWords, listOf, takeFlag } from '../src/index.js';
@@ -191,6 +192,18 @@ describe('commands from the operations', () => {
   it('prints a refusal and exits 1', async () => {
     const r = await run('tap');
     expect(r).toEqual({ code: 1, out: [], err: ['give a ref, a selector, or x and y'] });
+  });
+
+  it('prints what to do with a refusal, once', async () => {
+    device.screen = 'login';
+    const several = await run('tap', '--json', '{"selector":{"text":"Add"}}');
+    expect(several.code).toBe(1);
+    expect(several.err[0]).toContain('2 elements match');
+    expect(several.err[1]).toBe('  give the selector an index, or use a ref');
+    device.fail = new DeviceError('TIMEOUT', 'the build hung', 'the last lines of its log');
+    const failed = await run('screen');
+    expect(failed.code).toBe(1);
+    expect(failed.err).toEqual(['the build hung (TIMEOUT): the last lines of its log']);
   });
 
   it('writes an image to --out, or to a temporary file it names', async () => {

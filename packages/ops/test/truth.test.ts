@@ -108,6 +108,20 @@ describe('failed answers', () => {
     });
   });
 
+  it.each(['TIMEOUT', 'DEVICE_GONE', 'AGENT_UNAVAILABLE'] as const)(
+    "of %s keep the driver's hint over the general one",
+    async (code) => {
+      const device = new FakeDevice();
+      device.openError = new DeviceError(code, 'xcodebuild ended', 'the last lines of its log');
+      const { call } = await connect(device);
+      const r = await call('screen');
+      expect(r.structuredContent).toEqual({ code, hint: 'the last lines of its log' });
+      expect(r.text).toContain('xcodebuild ended');
+      expect(r.text).toContain('the last lines of its log');
+      expect(r.text).not.toContain('try');
+    },
+  );
+
   it('are refusals from anywhere in an op, with nothing written for it there', async () => {
     const op = defineOp({
       name: 'x',

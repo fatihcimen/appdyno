@@ -188,6 +188,8 @@ export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
         } catch (e) {
           if (!(e instanceof ToolError)) throw e;
           io.err(e.message);
+          // a device's failure says it in its message already
+          if (e.hint && !e.message.includes(e.hint)) io.err(`  ${e.hint}`);
           return 1;
         }
       },

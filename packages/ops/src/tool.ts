@@ -13,26 +13,21 @@ export class ToolError extends Error {
   }
 }
 
+const NO_FOCUS = 'no editable field has the focus: tap the field first (or give type_text a ref)';
+const CONNECTION = 'the device is not connected or its agent stopped; try once more';
+/** What to do, where the driver has nothing better to say (a build's log tail, which process holds the port). */
+const HINTS: Partial<Record<ErrorCode, string>> = {
+  TIMEOUT: 'the device did not answer; read the screen and try again',
+  DEVICE_GONE: CONNECTION,
+  AGENT_UNAVAILABLE: CONNECTION,
+};
+
 /** A device failure as the agent's error: what failed and what to do. */
 export function refused(err: unknown): never {
-  if (err instanceof ToolError) throw err;
-  if (err instanceof DeviceError) {
-    const hint =
-      err.code === 'TIMEOUT'
-        ? 'the device did not answer; read the screen and try again'
-        : err.code === 'DEVICE_GONE' || err.code === 'AGENT_UNAVAILABLE'
-          ? 'the device is not connected or its agent stopped; try once more'
-          : err.code === 'NO_FOCUS'
-            ? 'no editable field has the focus: tap the field first (or give type_text a ref)'
-            : err.hint;
-    if (err.code === 'NO_FOCUS') throw new ToolError(hint!, err.code, hint);
-    throw new ToolError(
-      `${err.message} (${err.code})${hint ? `: ${hint}` : ''}`,
-      err.code,
-      ...(hint ? [hint] : []),
-    );
-  }
-  throw err;
+  if (!(err instanceof DeviceError)) throw err;
+  if (err.code === 'NO_FOCUS') throw new ToolError(NO_FOCUS, err.code, NO_FOCUS);
+  const hint = err.hint ?? HINTS[err.code];
+  throw new ToolError(`${err.message} (${err.code})${hint ? `: ${hint}` : ''}`, err.code, hint);
 }
 
 export type Block =
