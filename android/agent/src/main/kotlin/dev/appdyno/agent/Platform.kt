@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import java.lang.reflect.Method
 
 /**
@@ -52,6 +53,20 @@ object Platform {
 
     fun asInterface(stubClass: String, binder: IBinder): Any =
         Class.forName(stubClass).getDeclaredMethod("asInterface", IBinder::class.java).invoke(null, binder)!!
+
+    private val power by lazy { asInterface("android.os.IPowerManager\$Stub", service("power")) }
+
+    /**
+     * What a finger landing tells the system, said ahead of the finger: a screen dimmed for want of a person takes the touch
+     * that brightens it for its own, and on a Xiaomi the app never hears of it. No worse than before where it is refused.
+     */
+    fun userActivity() {
+        runCatching {
+            val now = SystemClock.uptimeMillis()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) callByTypes(power, "userActivity", DEFAULT_DISPLAY, now, EVENT_TOUCH, 0)
+            else callByTypes(power, "userActivity", now, EVENT_TOUCH, 0)
+        }
+    }
 
     /**
      * Calls the first public method named `name` whose parameters can all be filled from `values`
@@ -105,6 +120,9 @@ object Platform {
     }
 
     private const val DEFAULT_RATE = 60f
+    private const val DEFAULT_DISPLAY = 0
+    /** `PowerManager.USER_ACTIVITY_EVENT_TOUCH`. */
+    private const val EVENT_TOUCH = 2
 
     /** The default display's logical size, density and rotation (falls back to the resources' metrics). */
     fun display(): DisplayInfo {

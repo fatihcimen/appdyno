@@ -66,6 +66,26 @@ describe.skipIf(!android)('guards on Android', () => {
     60_000,
   );
 
+  it('a touch on a dimmed screen reaches the app, not only the brightness', async (ctx) => {
+    const dimsAfter = Number(await d.shell('settings get system screen_off_timeout'));
+    // a phone that is not soon to dim says nothing
+    if (dimsAfter > 120_000) return ctx.skip();
+    await d.shell(
+      `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/gestures ${APP}`,
+    );
+    const pad = (await d.tree()).nodes.find((n) => n.d === 'Gesture pad')!;
+    const [l, top, r, b] = pad.b;
+    await vi.waitFor(
+      async () =>
+        expect(await d.shell('dumpsys display | grep -m1 mPowerRequest=')).toContain('policy=DIM'),
+      { timeout: dimsAfter, interval: 1_000 },
+    );
+    await d.tap({ x: (l + r) / 2, y: (top + b) / 2 }, { settle: false });
+    await vi.waitFor(async () =>
+      expect((await d.tree()).nodes.some((n) => n.t?.includes('travel:'))).toBe(true),
+    );
+  }, 150_000);
+
   it.runIf(android?.startsWith('emulator-'))(
     'a phone locked behind a PIN refuses by name, reads and touches alike',
     async () => {

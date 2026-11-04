@@ -56,6 +56,7 @@ class Input(private val automation: Automation) {
     }
 
     private fun touchOnce(x: Float, y: Float) {
+        Platform.userActivity()
         val down = SystemClock.uptimeMillis()
         automation.inject(touch(down, down, MotionEvent.ACTION_DOWN, x, y))
         automation.inject(touch(down, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y))
@@ -69,6 +70,7 @@ class Input(private val automation: Automation) {
     }
 
     fun longPress(x: Float, y: Float, durationMs: Long, cancelled: () -> Boolean) {
+        Platform.userActivity()
         val down = SystemClock.uptimeMillis()
         automation.inject(touch(down, down, MotionEvent.ACTION_DOWN, x, y))
         sleepUntil(down + durationMs, cancelled)
@@ -95,6 +97,7 @@ class Input(private val automation: Automation) {
                 coords[i].y = s.y
             }
         }
+        Platform.userActivity()
         val down = SystemClock.uptimeMillis()
         at(0)
         automation.inject(multi(down, down, MotionEvent.ACTION_DOWN, 1, props, coords))
@@ -144,6 +147,7 @@ class Input(private val automation: Automation) {
         val second = 1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT
         when (p) {
             0 -> {
+                Platform.userActivity()
                 liveDownAt = now
                 send(MotionEvent.ACTION_DOWN, 1)
                 if (fingers == 2) send(MotionEvent.ACTION_POINTER_DOWN or second, 2)
