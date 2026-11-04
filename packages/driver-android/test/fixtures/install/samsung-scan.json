@@ -1,0 +1,217 @@
+{
+  "windows": [
+    {
+      "type": 1,
+      "pkg": "com.android.vending",
+      "layer": 0,
+      "b": [0, 454, 1080, 1907],
+      "active": true,
+      "focused": true
+    },
+    {
+      "type": 3,
+      "pkg": "com.android.systemui",
+      "layer": 1,
+      "b": [0, 0, 1080, 88],
+      "active": false,
+      "focused": false
+    },
+    {
+      "type": 3,
+      "pkg": "com.sec.android.app.launcher",
+      "layer": 2,
+      "b": [1038, 458, 1080, 800],
+      "active": false,
+      "focused": false
+    },
+    {
+      "type": 3,
+      "pkg": "com.android.systemui",
+      "layer": 3,
+      "b": [0, 2274, 1080, 2400],
+      "active": false,
+      "focused": false
+    }
+  ],
+  "nodes": [
+    {
+      "p": -1,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "b": [0, 454, 1080, 1907],
+      "f": 17
+    },
+    {
+      "p": 0,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "b": [0, 454, 1080, 1907],
+      "f": 4113
+    },
+    {
+      "p": 1,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/content",
+      "b": [0, 454, 1080, 1907],
+      "f": 4113
+    },
+    {
+      "p": 2,
+      "w": 0,
+      "c": "android.view.ViewGroup",
+      "b": [0, 454, 1080, 1907],
+      "f": 17
+    },
+    {
+      "p": 3,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [41, 454, 1039, 1907],
+      "f": 4113
+    },
+    {
+      "p": 4,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [41, 454, 1039, 1907],
+      "f": 17
+    },
+    {
+      "p": 5,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [41, 454, 1039, 1907],
+      "f": 17
+    },
+    {
+      "p": 6,
+      "w": 0,
+      "c": "android.widget.ScrollView",
+      "b": [83, 454, 997, 1907],
+      "f": 17
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [321, 517, 759, 588],
+      "f": 4113
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Send app for a security check?",
+      "b": [146, 630, 934, 804],
+      "f": 8209
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [146, 867, 934, 1057],
+      "f": 17
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "This app is unknown to Play Protect. To protect yourself and others, send it to Google for a security check.",
+      "b": [146, 1120, 934, 1297],
+      "f": 8209
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [146, 1381, 934, 1528],
+      "f": 8215
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [146, 1539, 934, 1686],
+      "f": 8215
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [146, 1697, 934, 1844],
+      "f": 8215
+    },
+    {
+      "p": 8,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Google Play Protect",
+      "b": [374, 517, 759, 588],
+      "f": 8209
+    },
+    {
+      "p": 10,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [178, 899, 304, 1025],
+      "f": 4113
+    },
+    {
+      "p": 10,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "appdyno fixture",
+      "b": [325, 928, 881, 996],
+      "f": 8209
+    },
+    {
+      "p": 12,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Always send unknown apps",
+      "b": [283, 1425, 797, 1484],
+      "f": 17
+    },
+    {
+      "p": 12,
+      "w": 0,
+      "c": "android.widget.Button",
+      "b": [146, 1381, 934, 1528],
+      "f": 17
+    },
+    {
+      "p": 13,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Send this time",
+      "b": [407, 1583, 674, 1642],
+      "f": 17
+    },
+    {
+      "p": 13,
+      "w": 0,
+      "c": "android.widget.Button",
+      "b": [146, 1539, 934, 1686],
+      "f": 17
+    },
+    {
+      "p": 14,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Don't send",
+      "b": [440, 1741, 641, 1800],
+      "f": 17
+    },
+    {
+      "p": 14,
+      "w": 0,
+      "c": "android.widget.Button",
+      "b": [146, 1697, 934, 1844],
+      "f": 17
+    }
+  ],
+  "truncated": false,
+  "elapsedMs": 356,
+  "hash": "5f7e8ca17bf63c87"
+}

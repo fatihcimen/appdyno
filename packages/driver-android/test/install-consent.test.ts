@@ -15,8 +15,9 @@ import {
 /**
  * fixtures/install/*.json are real: agent reads of the prompts on a Xiaomi 25078RA3EY (HyperOS 3, Android 16, tr-TR),
  * with only the prompt's own window's nodes kept. consent and scan came from installing the fixture; warning,
- * warning-details and scan-after-warning from the same fixture built for an old Android (targetSdk 24).
- * Where a test changes one, it says "hand-written".
+ * warning-details and scan-after-warning from the same fixture built for an old Android (targetSdk 24). samsung-*
+ * are the same prompts on a Samsung SM-A525F (One UI 6.1, Android 14, en-US). Where a test changes one, it says
+ * "hand-written".
  */
 const dir = join(import.meta.dirname, 'fixtures/install');
 const real = (name: string) => JSON.parse(readFileSync(join(dir, `${name}.json`), 'utf8')) as Tree;
@@ -85,12 +86,8 @@ describe("Play Protect's prompt to send the app to Google", () => {
     },
   );
 
-  it("is answered no in English, by the Play Store's own strings (hand-written)", () => {
-    const t = handWritten('scan', {
-      'Bilinmeyen uygulamaları her zaman gönder': 'Always send unknown apps',
-      'Bu seferlik gönder': 'Send this time',
-      Gönderme: "Don't send",
-    });
+  it('is answered no in English, read on a Samsung', () => {
+    const t = real('samsung-scan');
     expect(touch(installStep(t, app, false)).touch).toEqual(centre(t, "Don't send"));
   });
 
@@ -154,6 +151,20 @@ describe('a Play Protect warning', () => {
   it('that it cannot pass is left for a person even with the flag (hand-written)', () => {
     const t = handWritten('warning', { 'Diğer ayrıntılar': 'Başka bir şey' });
     expect(left(installStep(t, app, true)).hint).toContain('answer it on the phone');
+  });
+
+  it("reads the same in English on another maker's phone", () => {
+    const quoted = "This app was built for an older version of Android and doesn't include";
+    const closed = real('samsung-warning');
+    expect(left(installStep(closed, app, false)).left).toContain(quoted);
+    expect(touch(installStep(closed, app, true)).touch).toEqual(centre(closed, 'More details'));
+    // the line "Install anyway" in the text at [146,1315,934,1551], where the screenshot has it
+    const s = touch(installStep(real('samsung-warning-details'), app, true));
+    expect(s.touch.x).toBeGreaterThan(146);
+    expect(s.touch.y).toBeGreaterThan(1490);
+    expect(s.touch.y).toBeLessThan(1551);
+    expect(s.said).toContain(quoted);
+    expect(s.said).not.toContain('Install anyway');
   });
 });
 

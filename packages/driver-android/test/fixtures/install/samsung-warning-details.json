@@ -1,0 +1,209 @@
+{
+  "windows": [
+    {
+      "type": 1,
+      "pkg": "com.android.vending",
+      "layer": 0,
+      "b": [0, 517, 1080, 1845],
+      "active": true,
+      "focused": true
+    },
+    {
+      "type": 3,
+      "pkg": "com.android.systemui",
+      "layer": 1,
+      "b": [0, 0, 1080, 88],
+      "active": false,
+      "focused": false
+    },
+    {
+      "type": 3,
+      "pkg": "com.sec.android.app.launcher",
+      "layer": 2,
+      "b": [1038, 458, 1080, 800],
+      "active": false,
+      "focused": false
+    },
+    {
+      "type": 3,
+      "pkg": "com.android.systemui",
+      "layer": 3,
+      "b": [0, 2274, 1080, 2400],
+      "active": false,
+      "focused": false
+    }
+  ],
+  "nodes": [
+    {
+      "p": -1,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "b": [0, 517, 1080, 1845],
+      "f": 17
+    },
+    {
+      "p": 0,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "b": [0, 517, 1080, 1845],
+      "f": 4113
+    },
+    {
+      "p": 1,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/content",
+      "b": [0, 517, 1080, 1845],
+      "f": 4113
+    },
+    {
+      "p": 2,
+      "w": 0,
+      "c": "android.view.ViewGroup",
+      "b": [0, 517, 1080, 1845],
+      "f": 17
+    },
+    {
+      "p": 3,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [41, 517, 1039, 1845],
+      "f": 4113
+    },
+    {
+      "p": 4,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [41, 517, 1039, 1845],
+      "f": 17
+    },
+    {
+      "p": 5,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [41, 517, 1039, 1845],
+      "f": 17
+    },
+    {
+      "p": 6,
+      "w": 0,
+      "c": "android.widget.ScrollView",
+      "b": [83, 517, 997, 1845],
+      "f": 17
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [321, 580, 759, 651],
+      "f": 4113
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Unsafe app blocked",
+      "b": [250, 693, 830, 780],
+      "f": 8209
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [146, 843, 934, 1033],
+      "f": 17
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "This app was built for an older version of Android and doesn't include the latest privacy protections.",
+      "b": [146, 1096, 934, 1273],
+      "f": 8209
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [146, 1315, 934, 1551],
+      "f": 8209
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [146, 1635, 934, 1782],
+      "f": 8215
+    },
+    {
+      "p": 8,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Google Play Protect",
+      "b": [374, 580, 759, 651],
+      "f": 8209
+    },
+    {
+      "p": 10,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [178, 875, 304, 1001],
+      "f": 4113
+    },
+    {
+      "p": 10,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [257, 954, 304, 1001],
+      "f": 17
+    },
+    {
+      "p": 10,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "appdyno fixture",
+      "b": [325, 904, 881, 972],
+      "f": 8209
+    },
+    {
+      "p": 12,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [146, 1315, 934, 1551],
+      "f": 4113
+    },
+    {
+      "p": 13,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Got it",
+      "b": [488, 1679, 592, 1738],
+      "f": 17
+    },
+    {
+      "p": 13,
+      "w": 0,
+      "c": "android.widget.Button",
+      "b": [146, 1635, 934, 1782],
+      "f": 17
+    },
+    {
+      "p": 16,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [262, 959, 299, 996],
+      "f": 17
+    },
+    {
+      "p": 18,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Installing this app may put your device at risk. Learn more about Play Protect.\n\nInstall anyway",
+      "b": [146, 1315, 934, 1551],
+      "f": 17
+    }
+  ],
+  "truncated": false,
+  "elapsedMs": 787,
+  "hash": "e009913403f639a3"
+}

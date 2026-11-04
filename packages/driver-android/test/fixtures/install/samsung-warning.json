@@ -1,0 +1,216 @@
+{
+  "windows": [
+    {
+      "type": 1,
+      "pkg": "com.android.vending",
+      "layer": 0,
+      "b": [0, 605, 1080, 1756],
+      "active": true,
+      "focused": true
+    },
+    {
+      "type": 3,
+      "pkg": "com.android.systemui",
+      "layer": 1,
+      "b": [0, 0, 1080, 88],
+      "active": false,
+      "focused": false
+    },
+    {
+      "type": 3,
+      "pkg": "com.sec.android.app.launcher",
+      "layer": 2,
+      "b": [1038, 458, 1080, 800],
+      "active": false,
+      "focused": false
+    },
+    {
+      "type": 3,
+      "pkg": "com.android.systemui",
+      "layer": 3,
+      "b": [0, 2274, 1080, 2400],
+      "active": false,
+      "focused": false
+    }
+  ],
+  "nodes": [
+    {
+      "p": -1,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "b": [0, 605, 1080, 1756],
+      "f": 17
+    },
+    {
+      "p": 0,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "b": [0, 605, 1080, 1756],
+      "f": 4113
+    },
+    {
+      "p": 1,
+      "w": 0,
+      "c": "android.widget.FrameLayout",
+      "id": "android:id/content",
+      "b": [0, 605, 1080, 1756],
+      "f": 4113
+    },
+    {
+      "p": 2,
+      "w": 0,
+      "c": "android.view.ViewGroup",
+      "b": [0, 605, 1080, 1756],
+      "f": 17
+    },
+    {
+      "p": 3,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [41, 605, 1039, 1756],
+      "f": 4113
+    },
+    {
+      "p": 4,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [41, 605, 1039, 1756],
+      "f": 17
+    },
+    {
+      "p": 5,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [41, 605, 1039, 1756],
+      "f": 17
+    },
+    {
+      "p": 6,
+      "w": 0,
+      "c": "android.widget.ScrollView",
+      "b": [83, 605, 997, 1756],
+      "f": 17
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [321, 668, 759, 739],
+      "f": 4113
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Unsafe app blocked",
+      "b": [250, 781, 830, 868],
+      "f": 8209
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [146, 931, 934, 1121],
+      "f": 17
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "This app was built for an older version of Android and doesn't include the latest privacy protections.",
+      "b": [146, 1184, 934, 1361],
+      "f": 8209
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [146, 1403, 442, 1462],
+      "f": 8209
+    },
+    {
+      "p": 7,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [146, 1546, 934, 1693],
+      "f": 8215
+    },
+    {
+      "p": 8,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Google Play Protect",
+      "b": [374, 668, 759, 739],
+      "f": 8209
+    },
+    {
+      "p": 10,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [178, 963, 304, 1089],
+      "f": 4113
+    },
+    {
+      "p": 10,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [257, 1042, 304, 1089],
+      "f": 17
+    },
+    {
+      "p": 10,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "appdyno fixture",
+      "b": [325, 992, 881, 1060],
+      "f": 8209
+    },
+    {
+      "p": 12,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [146, 1370, 442, 1496],
+      "f": 4113
+    },
+    {
+      "p": 13,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "Got it",
+      "b": [488, 1590, 592, 1649],
+      "f": 17
+    },
+    {
+      "p": 13,
+      "w": 0,
+      "c": "android.widget.Button",
+      "b": [146, 1546, 934, 1693],
+      "f": 17
+    },
+    {
+      "p": 16,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [262, 1047, 299, 1084],
+      "f": 17
+    },
+    {
+      "p": 18,
+      "w": 0,
+      "c": "android.view.View",
+      "b": [146, 1370, 442, 1496],
+      "f": 8215
+    },
+    {
+      "p": 22,
+      "w": 0,
+      "c": "android.widget.TextView",
+      "t": "More details",
+      "b": [146, 1403, 368, 1462],
+      "f": 17
+    }
+  ],
+  "truncated": false,
+  "elapsedMs": 461,
+  "hash": "76b5cd9d6b96b704"
+}
