@@ -311,6 +311,41 @@ describe('the gate, asked why', () => {
     expect(t.looks).toEqual([]);
   });
 
+  it('stops the agent a look started, as it changes what the next run measures', async () => {
+    const t = phone({
+      cpuProfile: async () => {
+        t.device.agentUp = true;
+        return measured({ durationMs: 3_000, samples: 1, top: [] });
+      },
+    });
+    await regressed(t);
+    await why(t);
+    expect(t.device.agentUp).toBe(false);
+  });
+
+  it('leaves up an agent that was up before it looked', async () => {
+    const t = phone();
+    await regressed(t);
+    t.device.agentUp = true;
+    await why(t);
+    expect(t.device.agentUp).toBe(true);
+  });
+
+  it('answers in the gate’s formats, with its exit code', async () => {
+    const t = phone();
+    await regressed(t);
+    const asked = (format: string) =>
+      t.call('perf_compare', { action: 'why', scenario: SCENARIO, format });
+    const json = await asked('json');
+    expect(json.data.exitCode).toBe(1);
+    const held = JSON.parse(json.text) as { failed: boolean; answers: GateAnswer[] };
+    expect(held.failed).toBe(true);
+    expect(held.answers[0]!.findings[0]!.place).toBe(STEP);
+    const junit = await asked('junit');
+    expect(junit.data.exitCode).toBe(1);
+    expect(junit.text).toContain('<failure message=');
+  });
+
   it('says why a reference of another build was not used, and names nothing by it', async () => {
     const t = phone();
     await regressed(t, { reference: true });

@@ -51,6 +51,10 @@ export abstract class RpcDevice extends DeviceActions {
   /** Whether the last connect started a new agent (a cold start), for measurements. */
   lastStartWasCold = false;
 
+  get agentUp() {
+    return !!this.rpc && !this.rpc.closed;
+  }
+
   /** Read-only requests are retried once on a fresh connection when the agent went away. */
   protected abstract readonly retrySafe: ReadonlySet<Method>;
   /** Starts or finds the agent, ready for the commands of this device. */

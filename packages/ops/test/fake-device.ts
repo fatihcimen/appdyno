@@ -317,7 +317,10 @@ export class FakeDevice extends DeviceActions implements Device {
   async audit(): ReturnType<Device['audit']> {
     return { engine: 'rules', issues: [], truncated: false, elapsedMs: 1 };
   }
-  async stopAgent() {}
+  agentUp = false;
+  async stopAgent() {
+    this.agentUp = false;
+  }
   /** What `logs` finds, and what it was asked. */
   logLines: string[] = [];
   logNote: string | undefined;

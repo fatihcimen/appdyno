@@ -327,13 +327,23 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner) {
     return { s, app };
   };
 
+  /**
+   * A look leaves the device as it found it, and what it started it stops: a look can bring up a simulator's
+   * runner, and with one up the same read went another way, 11 ms to 39 ms, which the gate rightly called on the next
+   * run of an unchanged app. A runner that was up before is the caller's.
+   */
   const gather = async (s: Session, app: string, run: PerfRecord[], places: Place[]) => {
     const seen = Object.fromEntries(places.map((p) => [p.name, blank()]));
     const how = await asMeasured(ctx.measurementsDir, run);
     const steps = places.filter((p) => p.name !== WHOLE_RUN);
-    if (steps.length) await lookAtSteps(s, app, run, steps, seen, how.file);
     const whole = places.find((p) => p.name === WHOLE_RUN);
-    if (whole) await lookAtRun(s, app, run, whole.looks, seen[WHOLE_RUN]!, how);
+    const up = s.device.agentUp;
+    try {
+      if (steps.length) await lookAtSteps(s, app, run, steps, seen, how.file);
+      if (whole) await lookAtRun(s, app, run, whole.looks, seen[WHOLE_RUN]!, how);
+    } finally {
+      if (!up && s.device.agentUp) await s.device.stopAgent().catch(() => undefined);
+    }
     return seen;
   };
 

@@ -108,7 +108,7 @@ export class IosSimulatorDevice extends IosDevice {
   readonly events: SimulatorEvents;
 
   private get runnerUp() {
-    return !!this.rpc && !this.rpc.closed;
+    return this.agentUp;
   }
 
   /** Only a runner waits on the device: the helper is read. */
