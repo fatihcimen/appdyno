@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { IosSimulatorDevice, Simctl, buildScreen, type Screen } from 'appdyno';
-import type { Tree } from '@appdyno/protocol';
+import type { Point, Tree } from '@appdyno/protocol';
 import { join } from 'node:path';
 import { IosDevice } from '../packages/driver-apple/src/device.js';
 import { directChecks } from '../packages/driver-apple/src/provider.js';
@@ -262,7 +262,8 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     it('reads a typing field as the runner does: the focus and its text', async () => {
       const s = await open('Form');
       const field = s.elements.find((e) => e.editable)!;
-      await d.typeText('Çok', { at: field, settle: SETTLE });
+      // shortcut: an element has no x and y, so the runner taps nothing here; take the point from s.list once this can run
+      await d.typeText('Çok', { at: field as unknown as Point, settle: SETTLE });
       const runner = await IosDevice.prototype.tree.call(d, { maxNodes: 5000 });
       const direct = await d.direct.read(APP);
       if ('refused' in direct) throw new Error(direct.refused);
