@@ -1,6 +1,7 @@
 package dev.appdyno.agent
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -71,6 +72,15 @@ class StreamLadderTest {
         assertEquals(0, w % 8)
         assertEquals(0, h % 8)
         assertTrue(h <= 1024)
+    }
+
+    @Test
+    fun lowLatencyIsAskedOnlyOfAnEncoderThatOffersIt() {
+        // a Samsung SM-A525F's OMX.qcom encoders: "encoder does not support low-latency", "configureCodec returning error -22",
+        // on every step of the ladder down to software
+        assertFalse(asksLowLatency(34, offered = false))
+        assertTrue(asksLowLatency(34, offered = true))
+        assertFalse(asksLowLatency(29, offered = true)) // the key came in API 30
     }
 
     @Test
