@@ -93,6 +93,7 @@ class Stream(private val request: StreamRequest, private val out: StreamOutput) 
                 val slowMs = runEncoder(step, adapting && !step.software)
                 // none: a new size or rotation, and the same step at once
                 if (slowMs != null) {
+                    System.err.println("too slow at ${step.maxSize}: its frames took $slowMs ms")
                     val smaller = ladder.smaller(slowMs)
                     if (smaller == null) adapting = false
                     else {
