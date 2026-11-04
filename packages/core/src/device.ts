@@ -79,6 +79,33 @@ export const SETTINGS = [
 
 export type SettingName = (typeof SETTINGS)[number];
 
+/** The pages of the system's Settings a call opens by name, where the device has them. */
+export const SETTINGS_PAGES = [
+  'general',
+  'about',
+  'keyboard',
+  'language_region',
+  'device_management',
+  'accessibility',
+  'siri',
+  'apps',
+  'privacy',
+  'privacy_location',
+  'privacy_photos',
+  'privacy_camera',
+  'privacy_contacts',
+  'privacy_microphone',
+  'wifi',
+  'bluetooth',
+  'cellular',
+  'battery',
+  'display',
+  'sounds',
+  'notifications',
+] as const;
+
+export type SettingsPage = (typeof SETTINGS_PAGES)[number];
+
 /**
  * The device's conditions. `get` answers what `set` takes, so a change can be put back; `app` is the app
  * a per-app setting (Android's locale) is about.
@@ -246,6 +273,8 @@ export interface Device {
   key(key: string, opts?: ActOptions, modifiers?: Modifier[]): Promise<ActResult>;
   /** One of the system's own views, over what is on the screen. */
   openView(view: SystemView): Promise<void>;
+  /** Settings at a page or at an app's own; `row`: no link goes there, and this row of the page it opened does. */
+  openSettings(to: { page: SettingsPage } | { app: string }): Promise<{ row?: string }>;
   typeText(
     text: string,
     opts?: { at?: Point; replace?: boolean; submit?: boolean } & ActOptions,

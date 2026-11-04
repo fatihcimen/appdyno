@@ -300,7 +300,12 @@ export function flowRecorder(ctx: ServerContext) {
     ...measureOps,
     launch_app: (a) => stepOf('launch', {}, { app: a.app as string | undefined }),
     terminate_app: (a) => stepOf('stop', {}, { app: a.app as string | undefined }),
-    open_link: (a) => stepOf('open_link', {}, { url: a.url as string }),
+    open_link: (a) =>
+      stepOf(
+        'open_link',
+        {},
+        { url: a.url as string | undefined, settings: a.settings as string | undefined },
+      ),
     set_location: (a) => stepOf('set_location', {}, { lat: a.lat as number, lon: a.lon as number }),
     alert: (a, data) =>
       data.answered !== undefined ? stepOf('alert', {}, { answer: a.answer as string }) : undefined,

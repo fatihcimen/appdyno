@@ -1,28 +1,72 @@
-import { reportProgress } from '@appdyno/core';
+import { reportProgress, SETTINGS_PAGES, type SettingsPage } from '@appdyno/core';
 import { z } from 'zod';
-import type { Answers } from './answers.js';
+import type { Answers, ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
 import { checkApp, checkUrl } from './policy.js';
 import { ActionOut, DoneOut } from './schemas.js';
+import type { Session } from './session.js';
 import { Read } from './step-schemas.js';
+import type { Steps } from './steps.js';
 import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const NO_APP = 'give app (or select one with use_device)';
 
-export function appOps(ctx: ServerContext, { afterChange }: Answers) {
+/** How long the page an app's row is on has to come, and how far down a long list of apps it may be. */
+const APPS_PAGE_MS = 5_000;
+const APPS_SWIPES = 20;
+
+export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: Steps) {
   const policy = ctx.policy;
+
+  const openSettings = async (s: Session, settings: string, read: ReadMode) => {
+    if (!policy.allowHome)
+      throw new ToolError(
+        'Settings is off on this server: the app may not be left',
+        'POLICY_DENIED',
+      );
+    const page = SETTINGS_PAGES.find((p): p is SettingsPage => p === settings);
+    const app = page
+      ? undefined
+      : checkApp(policy, settings === 'app' ? (s.appId ?? '') : settings);
+    if (!page && !app) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
+    if (!page && settings !== 'app' && !settings.includes('.'))
+      throw new ToolError(
+        `settings: an app's id, app, or a page: ${SETTINGS_PAGES.join(', ')}`,
+        'INVALID_ARGUMENT',
+      );
+    const { row } = await s.device.openSettings(page ? { page } : { app: app! });
+    if (!row) return afterChange(s, `opened Settings: ${settings}`, read);
+    s.acted();
+    const selector = { text: row };
+    await s.until((x) => x.list.length > 0, APPS_PAGE_MS);
+    await one(
+      s,
+      { action: 'scroll_to', selector, direction: 'up', maxSwipes: APPS_SWIPES },
+      'none',
+    );
+    return one(s, { action: 'tap', selector }, read);
+  };
+
   return [
     defineOp({
       name: 'open_link',
       title: 'Open link',
       description:
-        'Open a link (https:// or an app scheme) and answer its screen; with an app selected it opens there.',
-      input: z.object({ url: z.string().min(3).max(2_000), read: Read }).strict(),
+        "Open a link (https:// or an app scheme) and answer its screen; with an app selected it opens there. settings instead: Settings at a page (about, privacy, privacy_photos, accessibility, apps, wifi…; a wrong word lists them), or at an app's own: its id, or app for the selected one.",
+      input: z
+        .object({
+          url: z.string().min(3).max(2_000).optional(),
+          settings: z.string().min(1).max(200).optional(),
+          read: Read,
+        })
+        .strict(),
       output: ActionOut,
       annotations: ACT,
-      run: async ({ url, read }) => {
+      run: async ({ url, settings, read }) => {
+        if (!url === !settings) throw new ToolError('give url, or settings', 'INVALID_ARGUMENT');
         const s = await ctx.session();
-        const href = checkUrl(policy, url);
+        if (settings) return openSettings(s, settings, read);
+        const href = checkUrl(policy, url!);
         await s.device.openUrl(href, s.appId);
         return afterChange(s, `opened ${href}`, read);
       },

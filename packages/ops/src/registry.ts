@@ -37,7 +37,7 @@ const everyOp = (
   ...deviceOps(ctx, answers),
   ...readOps(ctx, answers, steps),
   ...actOps(ctx, answers, steps),
-  ...appOps(ctx, answers),
+  ...appOps(ctx, answers, steps),
   ...controlOps(ctx, answers),
   ...settingOps(ctx, answers),
   ...diagnoseOps(ctx, answers),

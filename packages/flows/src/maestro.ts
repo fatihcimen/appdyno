@@ -138,6 +138,7 @@ function commands(st: FlowStep): Yaml[] {
       return [{ assertVisible: { ...sel, [check as string]: yes } }];
     }
     case 'open_link':
+      if (a.settings) unsupported('Maestro opens no page of Settings');
       return [{ openLink: plain(a.url as string) }];
     case 'set_location':
       return [{ setLocation: { latitude: String(a.lat), longitude: String(a.lon) } }];

@@ -89,7 +89,7 @@ function opCall(st: FlowStep): [string, Record<string, unknown>] {
         },
       ];
     case 'open_link':
-      return ['open_link', { url: a.url }];
+      return ['open_link', defined({ url: a.url, settings: a.settings })];
     case 'set_location':
       return ['set_location', { lat: a.lat, lon: a.lon }];
     case 'alert':

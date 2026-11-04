@@ -19,6 +19,7 @@ import {
   type ActOptions,
   assertLatLon,
   SYSTEM_SWIPES,
+  type SettingsPage,
   type SystemSwipe,
   type SystemView,
 } from '@appdyno/core';
@@ -41,7 +42,10 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { IosRunnerLauncher } from './runner.js';
 import { HOME_SCREEN_APP, iosScreen } from './platform-screen.js';
+import type { SettingsLinks } from './settings-pages.js';
 import { assertBundle } from './simctl.js';
+
+const SETTINGS_APP = 'com.apple.Preferences';
 
 /** Diagnostics: while this file exists, iOS tree reads are written to DUMP_DIR. */
 const DUMP_FLAG = join(homedir(), 'Library/Caches/appdyno/dump-trees');
@@ -86,6 +90,9 @@ export type IosDeviceOps = {
   name: string;
   /** The process id of a running app (for the trace tool). */
   pid(bundle: string): Promise<number>;
+  /** Settings' pages this device has a link to, and how a private link gets there. */
+  settingsLinks: SettingsLinks;
+  openSettings(link: string): Promise<void>;
   logs(q: LogsQuery): Promise<LogsAnswer>;
   crashes(q: CrashesQuery): Promise<CrashesAnswer>;
 };
@@ -237,6 +244,27 @@ export abstract class IosDevice extends RpcDevice implements Device {
       );
     }
     return super.key(key, opts, modifiers);
+  }
+
+  /** An app's page has no link any more: its row is on Apps. */
+  async openSettings(to: { page: SettingsPage } | { app: string }) {
+    const link = this.ops.settingsLinks['app' in to ? 'apps' : to.page];
+    if (!link)
+      throw new DeviceError(
+        'UNSUPPORTED',
+        `${this.ops.name} has no ${'page' in to ? to.page : 'apps'} page in Settings`,
+        'open general or apps, and tap your way from there',
+      );
+    const row = 'app' in to ? await this.appName(to.app) : undefined;
+    await this.target(SETTINGS_APP);
+    await this.queue.run(() => this.ops.openSettings(link));
+    return row ? { row } : {};
+  }
+
+  private async appName(app: string) {
+    const entry = (await this.apps.listApps(true)).find((a) => a.id === app);
+    if (!entry?.name) throw new DeviceError('NOT_FOUND', `${app} is not on ${this.ops.name}`);
+    return entry.name;
   }
 
   /**

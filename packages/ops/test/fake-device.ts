@@ -293,6 +293,12 @@ export class FakeDevice extends DeviceActions implements Device {
   async openView(view: SystemView) {
     this.record('openView', view);
   }
+  /** A row to tap, as a device with no link to an app's page answers. */
+  settingsRow: string | undefined;
+  async openSettings(to: Parameters<Device['openSettings']>[0]) {
+    this.record('openSettings', to);
+    return this.settingsRow ? { row: this.settingsRow } : {};
+  }
   async foreground() {
     return this.current().windows.at(-1)!.pkg;
   }

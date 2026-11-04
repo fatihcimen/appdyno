@@ -28,6 +28,8 @@ import { type Capture, settleAfter } from './simsettle.js';
 import { learnCopies, onKeyboard, withoutCopies } from './simtree.js';
 import { IosRunnerLauncher } from './runner.js';
 import { assertBundle, Simctl } from './simctl.js';
+import { SIMULATOR_LINKS } from './settings-pages.js';
+import { helperBinary } from './simhelper.js';
 import { type IosDeviceOps, IosDevice } from './device.js';
 import { HOME_SCREEN_APP } from './platform-screen.js';
 
@@ -45,6 +47,10 @@ export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
       await simctl.setLocation(udid, lat, lon);
     },
     linkPrompt: true,
+    settingsLinks: SIMULATOR_LINKS,
+    openSettings: async (link) => {
+      await simctl.exec(['spawn', udid, await helperBinary('SimOpen'), link]);
+    },
     logs: (q) => simulatorLogs(simctl, udid, q),
     crashes: (q) => simulatorCrashes(udid, q),
     name: `simulator ${udid}`,

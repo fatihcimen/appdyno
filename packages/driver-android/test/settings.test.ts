@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Adb } from '../src/adb.js';
 import { AndroidEvents } from '../src/events.js';
 import { AndroidSettings } from '../src/settings.js';
+import { openSettingsAt } from '../src/settings-pages.js';
 
 /** A device by what its shell answers: the first pattern that matches a command. */
 const device = (serial: string, answers: [RegExp, string | (() => string)][]) => {
@@ -170,4 +171,30 @@ describe('a fingerprint', () => {
 it('says Android has no keychain', async () => {
   const { events } = device('emulator-5554', []);
   expect((await refusal(events.resetKeychain())).code).toBe('UNSUPPORTED');
+});
+
+describe('the pages of Settings', () => {
+  const asked: string[] = [];
+  const start = async (intent: string) => {
+    asked.push(intent);
+    return undefined;
+  };
+
+  it('stops it first, as an intent to it would bring back the page it shows', async () => {
+    await openSettingsAt({ page: 'about' }, start);
+    await openSettingsAt({ app: 'com.example.app' }, start);
+    expect(asked).toEqual([
+      '-S -a android.settings.DEVICE_INFO_SETTINGS',
+      '-S -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:com.example.app',
+    ]);
+  });
+
+  it('refuses a page Android has not got as one, and what the device said', async () => {
+    await expect(openSettingsAt({ page: 'privacy_photos' }, start)).rejects.toThrow(
+      /no privacy_photos page in Settings/,
+    );
+    await expect(
+      openSettingsAt({ page: 'wifi' }, async () => 'Error: no activity'),
+    ).rejects.toThrow(/no wifi page in Settings: Error: no activity/);
+  });
 });

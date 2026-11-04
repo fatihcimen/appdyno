@@ -12,6 +12,7 @@ import { phoneRecorder } from './record.js';
 import { iosProducts, type RunnerTransport, IosRunnerLauncher } from './runner.js';
 import { PHONE_CONTROLS } from './mirror-press.js';
 import { PhoneInspector } from './phone-inspector.js';
+import { PHONE_LINKS } from './settings-pages.js';
 import { PhoneLive } from './phone-live.js';
 import { signedRunner, type PhoneSigning, findPhoneSigning, phoneXctestrun } from './signing.js';
 import { assertBundle } from './simctl.js';
@@ -99,6 +100,10 @@ export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
     },
     setLocation: (lat, lon) => ctl.setLocation(lat, lon),
     linkPrompt: false,
+    settingsLinks: PHONE_LINKS,
+    openSettings: async (link) => {
+      await ctl.launch('com.apple.Preferences', link);
+    },
     logs: phoneLogs,
     crashes: (q) => phoneCrashes(ctl, q),
     name: `iPhone ${udid}`,

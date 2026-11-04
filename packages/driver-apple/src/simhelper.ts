@@ -5,23 +5,24 @@ import { fileURLToPath } from 'node:url';
 import { assertUdid, xcodeEnv } from './simctl.js';
 import { nativeBinary } from '@appdyno/core';
 
+const IN_A_SIMULATOR = [
+  '--sdk',
+  'iphonesimulator',
+  'clang',
+  '-fobjc-arc',
+  '-arch',
+  'arm64',
+  '-mios-simulator-version-min=17.0',
+  '-framework',
+  'Foundation',
+];
+
 const SDK_FLAGS = {
-  // SimHID and SimEnergy run on the Mac, SimAX inside the simulator
+  // SimHID and SimEnergy run on the Mac, SimAX and SimOpen inside the simulator
   SimHID: ['clang', '-fobjc-arc', '-framework', 'Foundation'],
   SimEnergy: ['clang'],
-  SimAX: [
-    '--sdk',
-    'iphonesimulator',
-    'clang',
-    '-fobjc-arc',
-    '-arch',
-    'arm64',
-    '-mios-simulator-version-min=17.0',
-    '-framework',
-    'Foundation',
-    '-framework',
-    'CoreGraphics',
-  ],
+  SimAX: [...IN_A_SIMULATOR, '-framework', 'CoreGraphics'],
+  SimOpen: IN_A_SIMULATOR,
   // libraries, injected into a simulator app when it is launched
   SimProbe: [
     '--sdk',
@@ -61,7 +62,19 @@ export async function helperBinary(name: keyof typeof SDK_FLAGS): Promise<string
     join(here, `../agents/ios-src/SimHelper/${name}.m`),
   ].find((p) => existsSync(p));
   if (!source) throw new Error(`the source of ${name} is missing`);
-  return nativeBinary({ name, sources: [source], flags: SDK_FLAGS[name], env: xcodeEnv() });
+  // what SimOpen may do, in the section a simulator reads
+  const allowed = source.replace(/\.m$/, '.plist');
+  const linked = existsSync(allowed);
+  return nativeBinary({
+    name,
+    sources: [source],
+    ...(linked && { headers: [allowed] }),
+    flags: [
+      ...SDK_FLAGS[name],
+      ...(linked ? [`-Wl,-sectcreate,__TEXT,__entitlements,${allowed}`] : []),
+    ],
+    env: xcodeEnv(),
+  });
 }
 
 export type HelperAnswer = { ok: boolean; refused?: string; error?: string; ms?: number } & Record<

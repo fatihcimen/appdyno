@@ -88,7 +88,7 @@ const SPECS = {
     bool: ['expect'],
     number: ['timeoutMs'],
   },
-  open_link: { words: ['url'] },
+  open_link: { words: ['url?'], text: ['settings'] },
   set_location: { words: ['lat', 'lon'] },
   alert: { words: ['answer'] },
   hide_keyboard: {},

@@ -639,6 +639,25 @@ describe('gestures, keys, clipboard', () => {
       expect((await locked.call('press_key', { key })).error).toBe(true);
   });
 
+  it('opens Settings at a page or at an app, and takes one or the other', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    const opened = () => d.calls.filter((c) => c.name === 'openSettings').map((c) => c.args[0]);
+    expect((await call('open_link', { settings: 'about' })).text).toMatch(
+      /^opened Settings: about/,
+    );
+    await call('open_link', { settings: 'app' });
+    await call('open_link', { settings: 'com.example.other' });
+    expect(opened()).toEqual([{ page: 'about' }, { app: 'dev.app' }, { app: 'com.example.other' }]);
+    expect((await call('open_link', {})).error).toBe(true);
+    expect((await call('open_link', { url: 'https://a.b', settings: 'about' })).error).toBe(true);
+    const wrong = await call('open_link', { settings: 'wifii' });
+    expect(wrong.error).toBe(true);
+    expect(wrong.text).toContain('privacy_photos');
+    const locked = await connect(new FakeDevice(), { policy: { allowHome: false } });
+    expect((await locked.call('open_link', { settings: 'about' })).data.code).toBe('POLICY_DENIED');
+  });
+
   it('reads the clipboard and keeps a secret off it', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d, { policy: { secrets: ['hunter2'] } });
