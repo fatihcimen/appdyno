@@ -1,11 +1,16 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { deviceStateFile } from '@appdyno/core';
 import { ToolError, type Op } from '@appdyno/ops';
 import { z } from 'zod';
 
 export type Io = { out: (line: string) => void; err: (line: string) => void };
+
+/** Where a command line keeps its device and diff baseline: by folder, so two terminals are two sessions. */
+export const cliSessionFile = (cwd = process.cwd()) =>
+  deviceStateFile('cli', createHash('sha256').update(cwd).digest('hex'));
 
 const dashed = (key: string) => key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 

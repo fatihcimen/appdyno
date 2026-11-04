@@ -10,8 +10,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { Adb, androidProvider, installTools, type InstallAnswers } from '@appdyno/driver-android';
 import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
 import { createServer } from '@appdyno/mcp';
-import { commandsFor, deviceFlag, listOf, takeFlag } from '@appdyno/cli';
-import { stateDir } from '@appdyno/core';
+import { cliSessionFile, commandsFor, deviceFlag, listOf, takeFlag } from '@appdyno/cli';
 import { writeDashboard } from '@appdyno/perf';
 import {
   DEFAULT_POLICY,
@@ -172,7 +171,7 @@ async function surveyCommand(args: string[]) {
     err('usage: appdyno perf survey --app A [--device S] [--measurements dir] [--share]');
     return 2;
   }
-  const ctx = contextFrom(values, join(stateDir(), 'cli-session.json'));
+  const ctx = contextFrom(values, cliSessionFile());
   try {
     const { read } = await survey(ctx, values.app, (line) => console.log(line));
     return read > 0 ? 0 : 1;
@@ -348,7 +347,7 @@ async function main(): Promise<number> {
           ...(shareAt >= 0 && { share: true }),
           ...(measurements && { measurements }),
         },
-        join(stateDir(), 'cli-session.json'),
+        cliSessionFile(),
       );
       const ops = opsFor(ctx);
       const commands = commandsFor(ops);
@@ -380,7 +379,7 @@ commands:
   perf survey --app A [--device S] [--measurements dir]
                    every measure on that device in turn, then the page
 
-operations (--device S selects the device, also for the next commands; flow: appdyno flow run a.flow --from 3 --param NAME=value --env-file F):
+operations (--device S selects the device, also for the next commands in this folder; flow: appdyno flow run a.flow --from 3 --param NAME=value --env-file F):
 ${listOf(ops)}`,
         );
         return asked ? 0 : 2;

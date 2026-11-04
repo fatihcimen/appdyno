@@ -325,8 +325,9 @@ appdyno --help
 ```
 
 An op with `action` takes it as its first word: `appdyno record start`, `appdyno network stop`. Other commands: `doctor [--serial S]`, `ios build`, `test` (see Flows), `tools install` (fetches the pinned
-Perfetto trace processor), `bench`. Exit code 1 means the call was refused, 2 means wrong arguments. A diff baseline
-between CLI processes is kept in a small file in the state directory.
+Perfetto trace processor), `bench`. Exit code 1 means the call was refused, 2 means wrong arguments. The selected
+device and the diff baseline between CLI processes are kept in a small file in the state directory, one per working
+directory, so two terminals in two folders do not share a device.
 
 ## Server options
 

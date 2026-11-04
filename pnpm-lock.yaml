@@ -71,6 +71,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@appdyno/core':
+        specifier: workspace:*
+        version: link:../core
       '@appdyno/ops':
         specifier: workspace:*
         version: link:../ops

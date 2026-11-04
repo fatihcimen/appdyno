@@ -10,7 +10,14 @@ import { DeviceError } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { FakeDevice } from '../../ops/test/fake-device.js';
 import { checkedOps } from '../../ops/test/helpers.js';
-import { commandsFor, deviceFlag, flowWords, listOf, takeFlag } from '../src/index.js';
+import {
+  cliSessionFile,
+  commandsFor,
+  deviceFlag,
+  flowWords,
+  listOf,
+  takeFlag,
+} from '../src/index.js';
 
 describe('commands from the operations', () => {
   let device: FakeDevice;
@@ -188,6 +195,33 @@ describe('commands from the operations', () => {
     expect(again.code).toBe(0);
     expect(again.out).toContain('screen unchanged');
     expect(again.out).toContain('no change seen in');
+  });
+
+  it('gives two terminals in two folders a session each', async () => {
+    process.env.APPDYNO_STATE_DIR = mkdtempSync(join(tmpdir(), 'appdyno-cli-'));
+    const other = new FakeDevice('emulator-5612');
+    const provider: DeviceProvider = {
+      list: async () =>
+        [device, other].map((d) => ({ serial: d.serial, state: 'device', ready: true })),
+      handles: () => true,
+      open: (serial) => (serial === other.serial ? other : device),
+    };
+    const inFolder = async (cwd: string, name: string, ...argv: string[]) => {
+      const ctx = new ServerContext(DEFAULT_POLICY, [provider], { remember: cliSessionFile(cwd) });
+      const out: string[] = [];
+      await commandsFor(opsFor(ctx))[name]!.run(argv, {
+        out: (s) => out.push(s),
+        err: (s) => out.push(s),
+      });
+      ctx.close();
+      return out.join('\n');
+    };
+    expect(cliSessionFile('/work/one')).toBe(cliSessionFile('/work/one'));
+    expect(cliSessionFile('/work/one')).not.toBe(cliSessionFile('/work/two'));
+    await inFolder('/work/one', 'use-device', '--device', device.serial);
+    await inFolder('/work/two', 'use-device', '--device', other.serial);
+    expect(await inFolder('/work/one', 'device-info')).toContain(device.serial);
+    expect(await inFolder('/work/two', 'device-info')).toContain(other.serial);
   });
 
   it('prints a refusal and exits 1', async () => {
