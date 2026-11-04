@@ -22,7 +22,7 @@ import {
   update,
 } from '@appdyno/cli';
 import { run } from '@appdyno/core';
-import { writeDashboard } from '@appdyno/perf';
+import { writeComment, writeDashboard } from '@appdyno/perf';
 import {
   DEFAULT_POLICY,
   ServerContext,
@@ -126,6 +126,24 @@ async function dashboardCommand(args: string[]) {
   ctx.close();
   console.log(file);
   if (values.open) execFileSync('open', [file]);
+  return 0;
+}
+
+/** `perf comment`: no device, and nothing is posted: what the gate kept, as a file for the person's own CI. */
+async function commentCommand(args: string[]) {
+  const { values } = parseArgs({ args, options: COMMANDS['perf comment'].flags });
+  if (!values.out) {
+    err(usage('perf comment'));
+    return 2;
+  }
+  const ctx = contextFrom(values);
+  const file = await writeComment(ctx.measurementsDir, ctx.perfDir, resolve(values.out), {
+    ...(values.app && { app: values.app }),
+    ...(values.scenario && { scenario: values.scenario }),
+    ...(values['device-class'] && { deviceClass: values['device-class'] }),
+  });
+  ctx.close();
+  console.log(file);
   return 0;
 }
 
@@ -301,11 +319,14 @@ async function main(): Promise<number> {
     default: {
       if (command === 'perf' && rest[0] === 'dashboard') return dashboardCommand(rest.slice(1));
       if (command === 'perf' && rest[0] === 'survey') return surveyCommand(rest.slice(1));
+      if (command === 'perf' && rest[0] === 'comment') return commentCommand(rest.slice(1));
       // `perf compare|baseline|budget [flags]`: the gate's names for one operation
       const gate = command === 'perf' ? rest.shift() : undefined;
       if (
         command === 'perf' &&
-        !['compare', 'baseline', 'budget', 'functions', 'prune'].includes(gate ?? '')
+        !['compare', 'why', 'reference', 'baseline', 'budget', 'functions', 'prune'].includes(
+          gate ?? '',
+        )
       ) {
         err(usage('perf '));
         return 2;

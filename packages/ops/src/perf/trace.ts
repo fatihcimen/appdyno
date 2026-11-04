@@ -54,7 +54,8 @@ export function perfTraceOp(ctx: ServerContext) {
           data: Omit<z.infer<typeof TraceOut>, 'id' | 'raw' | 'virtualDevice' | 'noise'>;
         },
       ) => {
-        const saved = await save(kind, [m], m.value);
+        // the scroll stays with the reading: a look at this run on a regression does the same
+        const saved = await save(kind, [m], { ...(m.value as object), scroll });
         const noise = await keep(s, pkg, name, m.source ?? 'perf_trace', saved.txt, metrics);
         return reply(
           [

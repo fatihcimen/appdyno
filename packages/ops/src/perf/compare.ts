@@ -1,5 +1,6 @@
 import { stateDir, type CpuProfile } from '@appdyno/core';
 import {
+  answerText,
   functionDiff,
   loadMeasurement,
   pinBaseline,
@@ -20,22 +21,34 @@ import {
 } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
+import type { FlowRunner } from '../flow/runner.js';
 import { CompareOut } from './schemas.js';
-import { defineOp, READ, reply, ToolError } from '../tool.js';
+import { DESTRUCTIVE, defineOp, reply, ToolError } from '../tool.js';
 import { Scenario, pruneNow, rewriteDashboard } from './shared.js';
+import { gateLooks } from './why.js';
 
 const MeasurementId = z.string().max(40).optional();
 
-export function perfCompareOp(ctx: ServerContext) {
+export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
+  const looks = gateLooks(ctx, runner);
   return defineOp({
     name: 'perf_compare',
     title: 'Compare with the baseline',
     description:
-      'The newest runs against the baseline and budgets in .appdyno/perf/; a change counts only when statistically and practically significant. budget: budgets only; baseline: adds the newest run, `replace` starts over; dashboard: writes the page; functions: what moved between two perf_profile ids; prune: traces down to the limit. No device needed.',
+      "The newest runs against the baseline and budgets in .appdyno/perf/; a change must be statistically and practically significant. why: also finds a regression's cause on the device; reference: why's other side, on the baseline's build; budget; baseline: adds the newest run, `replace` resets; dashboard; functions: two perf_profile ids; prune: traces.",
     input: z
       .object({
         action: z
-          .enum(['compare', 'budget', 'baseline', 'dashboard', 'functions', 'prune'])
+          .enum([
+            'compare',
+            'why',
+            'reference',
+            'budget',
+            'baseline',
+            'dashboard',
+            'functions',
+            'prune',
+          ])
           .default('compare'),
         limitGb: z.number().min(0).max(10_000).optional(),
         dryRun: z.boolean().optional(),
@@ -50,7 +63,8 @@ export function perfCompareOp(ctx: ServerContext) {
       })
       .strict(),
     output: CompareOut,
-    annotations: READ,
+    // the worst of its actions: `why` and `reference` replay a flow and restart the app
+    annotations: DESTRUCTIVE,
     run: async ({
       action,
       limitGb,
@@ -134,6 +148,17 @@ export function perfCompareOp(ctx: ServerContext) {
       });
       if (keys.length === 0)
         throw new ToolError('no measured runs: run a perf_ operation first', 'NOT_FOUND');
+      if (action === 'reference') {
+        const taken = [];
+        for (const k of keys) taken.push(await looks.reference(k));
+        const ok = taken.every((t) => t.ok);
+        return reply(taken.map((t) => t.line).join('\n'), {
+          failed: !ok,
+          exitCode: ok ? 0 : 1,
+          reports: [],
+          references: taken.flatMap((t) => t.file ?? []),
+        });
+      }
       if (action === 'baseline') {
         const lines: string[] = [];
         const files: string[] = [];
@@ -182,6 +207,21 @@ export function perfCompareOp(ctx: ServerContext) {
         }),
       );
       const code = exitCode(reports);
+      if (action === 'why') {
+        const answers = [];
+        for (const [i, report] of reports.entries()) {
+          const [run = []] = await latestRuns(dir, keys[i]!);
+          answers.push(await looks.why(keys[i]!, report, run));
+        }
+        await rewriteDashboard(ctx);
+        const words =
+          format === 'json'
+            ? JSON.stringify({ failed: code !== 0, answers }, null, 2)
+            : format === 'junit'
+              ? toJUnit(reports)
+              : answers.map(answerText).join('\n\n');
+        return reply(words, { failed: code !== 0, exitCode: code, reports, answers });
+      }
       const out =
         format === 'json'
           ? toJson(reports)

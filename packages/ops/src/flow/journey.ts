@@ -1,4 +1,4 @@
-import { basename } from 'node:path';
+import { basename, resolve } from 'node:path';
 import { median, type Capability, type Measured } from '@appdyno/core';
 import type { Flow, RunResult, StepEvent } from '@appdyno/flows';
 import {
@@ -137,7 +137,8 @@ export async function measureJourney(
   const saved = await store(
     ctx.measurementsDir,
     'journey',
-    { scenario: name, iterations: passed, steps },
+    // its file, not its values: a value may be a secret, and a look on a regression reads the environment's
+    { scenario: name, iterations: passed, steps, file: resolve(file) },
     reader.raw.join('\n\n'),
   );
   const held = [...reader.held];

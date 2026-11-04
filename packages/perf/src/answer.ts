@@ -28,10 +28,12 @@ const LOOKS: Partial<Record<MeasureId, Look[]>> = {
   journey: ['profile', 'frames'],
 };
 
+/** What fits one number: a step's memory is a journey's number and no CPU profile explains it. */
+const lookOf = (kind: string) =>
+  journeyStep(kind)?.what === 'memory_kb' ? [] : (LOOKS[measureOf(kind) as MeasureId] ?? []);
+
 /** What is looked at for these numbers: none, for a kind no tool here can explain. */
-export const looksFor = (kinds: string[]) => [
-  ...new Set(kinds.flatMap((kind) => LOOKS[measureOf(kind) as MeasureId] ?? [])),
-];
+export const looksFor = (kinds: string[]) => [...new Set(kinds.flatMap(lookOf))];
 
 /** The place of a change that is no step of a journey. */
 export const WHOLE_RUN = 'run';
@@ -120,6 +122,8 @@ export type GateAnswer = RunKey & {
 
 /** Under this share of a change, what moved does not account for it: a frame's cause is held to the same. */
 const NAMED_SHARE = 0.4;
+/** A caller's rise and its callee's differ by what the sampler happened to catch. */
+const NEAR_THE_MOST = 0.9;
 
 export const UNEXPLAINED_FRAMES =
   'are unexplained: no cause holds the main thread long enough to name';
@@ -163,6 +167,15 @@ type Part = { causes?: Cause[]; evidence?: string[]; cannot?: string[] };
 const functionWords = (f: FunctionChange, per: string, share?: number) =>
   `${f.symbol}, +${f.changeMs} ms of CPU${per} (${f.beforeMs} to ${f.afterMs})${shareWords(share)}`;
 
+/**
+ * Of a list that counts callers in, as an iPhone's and a simulator's does: a caller rises as far as what it called, so
+ * `main` rises with everything. Of those that rose about as far, the deepest has the least time besides.
+ */
+const deepest = (rose: FunctionChange[]) =>
+  rose
+    .filter((f) => f.changeMs >= rose[0]!.changeMs * NEAR_THE_MOST)
+    .toSorted((a, b) => a.afterMs - b.afterMs)[0];
+
 /** The function that rose against the other build's profile of the same place. */
 function byFunction(place: string, lead: Comparison, seen: Seen, before?: Profile): Part {
   const { profile } = seen;
@@ -177,9 +190,10 @@ function byFunction(place: string, lead: Comparison, seen: Seen, before?: Profil
     };
   }
   const step = place !== WHOLE_RUN;
-  const [top] = (
+  const rose = (
     step ? functionDiff(inAll(before), inAll(profile)) : functionDiff(before, profile)
   ).filter((f) => f.changeMs > 0);
+  const top = profile.appTop?.length && rose.length ? deepest(rose) : rose[0];
   if (!top) return { cannot: ['no function rose past its floor'] };
   const share = step ? shareOf(top.changeMs, lead) : undefined;
   const per = step ? ' in the step' : ' a second';
@@ -271,6 +285,7 @@ function findingOf(
     byMainThread(seen),
   ];
   const causes = parts.flatMap((p) => p.causes ?? []);
+  const unexplained = worse.filter((c) => lookOf(c.kind).length === 0).map((c) => c.kind);
   const showed =
     seen.againMs === undefined || lead.baseline === undefined || !lead.shift
       ? undefined
@@ -294,7 +309,9 @@ function findingOf(
         : []),
       ...parts.flatMap((p) => p.cannot ?? []),
       ...seen.cannot,
-      ...(causes.length ? [] : [NOTHING_NAMED]),
+      ...(unexplained.length ? [`no measure here explains ${unexplained.join(', ')}`] : []),
+      // "not found" is a claim about what was read: with nothing read, the lines above are all there is to say
+      ...(causes.length || seen.read.length === 0 ? [] : [NOTHING_NAMED]),
     ],
   };
 }

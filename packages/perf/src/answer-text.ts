@@ -51,8 +51,11 @@ export const answerRows = (a: GateAnswer): Row[] => [
 export const answerText = (a: GateAnswer) =>
   [answerTitle(a), ...answerRows(a).map((r) => `  ${r.label.toLowerCase()}: ${r.text}`)].join('\n');
 
-/** What Markdown would act on: a symbol or a step comes from the app under test, and a comment is posted as it is. */
-const plain = (s: string) => s.replace(/[\\`*_{}[\]()#+\-.!|<>~]/g, '\\$&');
+/**
+ * All Markdown would act on, as a symbol or a step comes from the app under test and a comment is posted as it is: a
+ * pull request can name a function anything, and an `@name` in a comment notifies that person.
+ */
+const plain = (s: string) => s.replace(/\s+/g, ' ').replace(/[\\`*_{}[\]()#+\-.!|<>~@&]/g, '\\$&');
 
 export const answerMarkdown = (a: GateAnswer) =>
   [

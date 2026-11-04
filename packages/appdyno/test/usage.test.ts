@@ -36,6 +36,8 @@ describe('usage', () => {
         .map((l) => l.trim().split(' ').slice(0, 4)),
     ).toEqual([
       ['usage:', 'appdyno', 'perf', 'compare|baseline|budget'],
+      ['appdyno', 'perf', 'why|reference', '[--app'],
+      ['appdyno', 'perf', 'comment', '--out'],
       ['appdyno', 'perf', 'functions', '--from'],
       ['appdyno', 'perf', 'prune', '[--limit-gb'],
       ['appdyno', 'perf', 'dashboard', '[--app'],

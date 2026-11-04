@@ -291,6 +291,8 @@ export function flowRecorder(ctx: ServerContext) {
       ...(a.scroll ? swipes(a, SCROLLER_SWIPES) : []),
     ],
     perf_profile: (a) => (a.scroll ? swipes(a, SCROLLER_SWIPES) : undefined),
+    // a gate reads what is kept, and refuses to look at a device while a recording runs
+    perf_compare: () => undefined,
   };
 
   /** An op with no step of its own, as a flow step; a refused action is none, and any other op stops a replay. */

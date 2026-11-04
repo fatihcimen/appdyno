@@ -120,6 +120,28 @@ export const COMMANDS = {
     },
     what: 'the performance gate: non-zero on a regression or a broken budget',
   },
+  'perf why|reference': {
+    flags: {
+      app: value('A'),
+      scenario: value('S'),
+      'device-class': value('C'),
+      device: value('S'),
+      format: value('text|json|junit'),
+      measurements: value('dir'),
+      share: on,
+    },
+    what: "the gate, and on a regression its cause, found on the device; reference: what that diffs against, on the baseline's build",
+  },
+  'perf comment': {
+    flags: {
+      out: needed('file'),
+      app: value('A'),
+      scenario: value('S'),
+      'device-class': value('C'),
+      measurements: value('dir'),
+    },
+    what: "the gate's newest answers as Markdown in a file, for your own CI to post; no device",
+  },
   'perf functions': {
     flags: { from: needed('pm-a'), to: needed('pm-b'), measurements: value('dir') },
     what: 'which functions moved between two kept profiles',

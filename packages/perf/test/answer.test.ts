@@ -128,6 +128,8 @@ describe('where a change is looked for', () => {
     expect(looksFor(['frames.p95_ms', 'stalls.worst_ms'])).toEqual(['profile', 'frames']);
     expect(looksFor(['cpu.percent'])).toEqual(['profile']);
     expect(looksFor(['network.rx_bytes', 'memory.kb'])).toEqual([]);
+    expect(looksFor([`journey.${STEP}.memory_kb`])).toEqual([]);
+    expect(looksFor([`journey.${STEP}.ms`])).toEqual(['profile', 'frames']);
   });
 });
 
@@ -149,6 +151,24 @@ describe('a cause', () => {
     expect(only(a).evidence).toContain('CPU profile pm-b');
   });
 
+  it('of a profile that counts callers in, names what was called and not main', () => {
+    const counted = (entries: Record<string, number>) => {
+      const p = profile(entries);
+      return { ...p, appTop: p.top };
+    };
+    const f = only(
+      answer(
+        seen({
+          profile: counted({ main: 1_700, closure: 805, knownCost: 790, steady: 300 }),
+          read: ['CPU profile pm-b'],
+        }),
+        reference({ [STEP]: { profile: counted({ main: 900, closure: 5, steady: 300 }) } }),
+      ),
+    );
+    expect(f.causes[0]!.name).toBe('knownCost');
+    expect(f.causes[0]!.says).toContain('+790 ms of CPU in the step (0 to 790)');
+  });
+
   it('names no function that accounts for too little of the change, and says which it was', () => {
     const f = only(
       answer(
@@ -168,10 +188,25 @@ describe('a cause', () => {
     expect(f.cannot.join()).toContain('appdyno perf reference');
   });
 
+  it('says "no cause was found" only of what it read', () => {
+    expect(only(answer(seen({ cannot: ['no device'] }))).cannot).toEqual(['no device']);
+  });
+
+  it('says what no measure explains, and claims to have looked at nothing there', () => {
+    const net = answerOf(report([worse('network.rx_bytes', { unit: 'bytes' })]), run, baseline, {
+      [WHOLE_RUN]: seen(),
+    });
+    expect(only(net).cannot).toEqual(['no measure here explains network.rx_bytes']);
+    const memory = [worse(`journey.${STEP}.memory_kb`, { unit: 'kb' })];
+    expect(only(answer(seen(), undefined, memory)).cannot).toEqual([
+      `no measure here explains journey.${STEP}.memory_kb`,
+    ]);
+  });
+
   it('says nothing was found rather than guess, when nothing moved', () => {
     const f = only(
       answer(
-        seen({ profile: profile({ steady: 200 }) }),
+        seen({ profile: profile({ steady: 200 }), read: ['CPU profile pm-a'] }),
         reference({ [STEP]: { profile: profile({ steady: 205 }) } }),
       ),
     );
@@ -335,6 +370,14 @@ describe('the answer, written once', () => {
     const md = answerMarkdown(full);
     expect(md).not.toMatch(/(^|[^\\])</);
     expect(md).toContain('\\<script\\>a\\|b\\_c\\*');
+    const named = answer(
+      seen({ profile: profile({ '@everyone\n# Hello &amp;': 690 }) }),
+      reference({ [STEP]: { profile: profile({}) } }),
+    );
+    const out = answerMarkdown(named);
+    // no mention to notify, no heading of its own, no entity
+    expect(out).toContain('\\@everyone \\# Hello \\&amp;');
+    expect(out).not.toMatch(/(^|[^\\])@/);
   });
 
   it('heads a comment with what most needs saying, and cuts it under what can be posted', () => {

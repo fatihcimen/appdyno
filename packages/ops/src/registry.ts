@@ -50,7 +50,7 @@ const everyOp = (
   ...webOps(ctx),
   ...reactNativeOps(ctx),
   ...visualOps(ctx),
-  ...perfOps(ctx),
+  ...perfOps(ctx, runner),
   ...flowOps(ctx, runner),
 ];
 

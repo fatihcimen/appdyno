@@ -211,7 +211,10 @@ export const CompareOut = z.object({
   failed: z.boolean(),
   exitCode: z.number(),
   reports: z.array(z.record(z.string(), z.unknown())),
+  /** What the gate says of each run, and why: `why`. */
+  answers: z.array(z.record(z.string(), z.unknown())).optional(),
   baselines: z.array(z.string()).optional(),
+  references: z.array(z.string()).optional(),
   file: z.string().optional(),
 });
 
