@@ -297,6 +297,19 @@ describe('answering during an install', () => {
     expect((e as DeviceError).hint).toContain('already reads on');
   });
 
+  it('where the maker has no such setting names none: a Samsung has no such property', async () => {
+    const s = phone([{ focus: PROTECT_WINDOW, tree: real('samsung-warning') }], {
+      ignores: true,
+      adbInput: '\n',
+    });
+    let e: unknown;
+    await fast(() =>
+      answerInstallPrompts(s, names, true, () => true, []).catch((x: unknown) => void (e = x)),
+    );
+    expect((e as DeviceError).message).toContain('ignored 3 touches');
+    expect((e as DeviceError).hint).toBe('answer it on the phone');
+  });
+
   it('passes on the refusal of injected input', async () => {
     const s = phone([{ focus: CONSENT_WINDOW, tree: real('consent') }]);
     const refusal = new DeviceError(

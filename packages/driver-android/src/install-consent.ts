@@ -181,13 +181,16 @@ async function stillTree(s: InstallScreen): Promise<Tree | undefined> {
 }
 
 const ignored = async (s: InstallScreen, what: string) => {
-  const on = (await s.shell('getprop persist.security.adbinput')).trim() === ADB_INPUT_ON;
+  const setting = (await s.shell('getprop persist.security.adbinput')).trim();
   return new DeviceError(
     'PERMISSION_REQUIRED',
     `the phone ignored ${TOUCHES} touches on its install prompt (${what}): the system can block injected touches on that window`,
-    on
-      ? '"USB debugging (Security settings)" already reads on here: answer it on the phone'
-      : 'turn on "USB debugging (Security settings)" in Developer options, or answer it on the phone',
+    // no such property: this maker has no such setting to send anyone to
+    !setting
+      ? 'answer it on the phone'
+      : setting === ADB_INPUT_ON
+        ? '"USB debugging (Security settings)" already reads on here: answer it on the phone'
+        : 'turn on "USB debugging (Security settings)" in Developer options, or answer it on the phone',
   );
 };
 
