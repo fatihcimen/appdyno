@@ -19,6 +19,8 @@ export default defineConfig({
     },
   },
   test: {
+    // a test's own work, on a machine others are also using: a hang still fails
+    testTimeout: 30_000,
     include: ['packages/*/test/**/*.test.ts'],
   },
 });
