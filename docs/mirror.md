@@ -85,16 +85,56 @@ a phone does not open a lock screen.
 
 A phone that turns keeps sending a picture of the same shape with the app on its side. SpringBoard says how the app in front is drawn, four times a second, over a lockdown service of its own, so the window stands the picture up and a touch is turned back on its way down.
 
-## The window's controls
+## The window
 
-A right click on a window, or its shortcuts, press what is no touch: Home (⇧⌘H), Lock (⌘L), Volume Up (⌘↑), Volume Down (⌘↓). The menu bar shows them too once the window is in front with `--focus`.
+The device stands full bleed on a backdrop of its own picture's colours, with glass floating over it: a capsule that says how it is, its controls, and the Inspector. Glass is the system's own, found at run time, as a viewer is compiled by whatever SDK a Mac has; before macOS 26 a material stands in. It is only what floats: what sits on a pane is a fill, as glass cannot sample glass.
+
+The frame is drawn in code from a small table by model: its corners, its island or notch, its buttons. Nothing of it is artwork, and it is drawn once per size, so a still window costs nothing for having it. A simulator's picture holds its own island, so the frame adds one only where a picture has none. **Show Device Frame** (⌥⌘F) takes it away, and the setting stays. The backdrop is a few cells of the picture's colours stretched by the layer, read at most every 2 s, with no blur pass.
+
+The buttons on the frame work: a click presses them, and holding the side button is Siri. A window keeps its size and place per device. It can be any size: the device takes the room there is, and zoom sets the window to fit it.
+
+The window shows what is pressed most, and the rest is a click away in **More** and in the menu bar. Both come from one table, so that no control is in one and missing from the other. What a device has not got, it does not show: Android has Back and Quick Settings, and no Siri.
+
+| control                                                  | shortcut        | on a device                                                                                                                                        |
+| -------------------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Home, Lock, Volume Up, Volume Down                       | ⇧⌘H, ⌘L, ⌘↑, ⌘↓ | its own buttons                                                                                                                                    |
+| Back                                                     | ⌘[              | Android only                                                                                                                                       |
+| App Switcher                                             | ⇧⌘A             | iOS: Home twice. Android: its own key                                                                                                              |
+| Siri                                                     | ⇧⌘K             | iOS: the side button held                                                                                                                          |
+| Control Center, Quick Settings, Notifications, Spotlight | ⌃⌘C, ⌃⌘N, ⌃⌘F   | a finger's drag                                                                                                                                    |
+| Rotate Left, Rotate Right                                | ⌘←, ⌘→          | the device's own orientation: the first turn starts the agent, which a simulator may first have to build                                           |
+| Save Screenshot, Copy Screen                             | ⌘S, ⌘C          | the device's own lossless picture, to the Desktop and the pasteboard, or to the pasteboard. No agent needed where the device has a way without one |
+| Record Screen                                            | ⌥⌘R             | to Movies: a stream's own frames, or the device's recorder where its picture is no stream                                                          |
+| Zoom to Fit, Actual Size, Zoom In, Zoom Out              | ⌘9, ⌘0, ⌘=, ⌘-  | Actual Size is one device point to one Mac point                                                                                                   |
+| Reconnect                                                | ⇧⌘R             | a new stream                                                                                                                                       |
+
+The Inspector (⌥⌘I) opens beside the device, which keeps its size. **Stats** says what the viewer counts each second, and Still on a still screen, with the rate it last moved at. **Activity** lists each call an agent made. **Apps** lists, launches, quits and removes, the last after a sheet that says what goes with it. On iOS the list holds the system's apps, as a new simulator has no other; on Android, only what was installed.
+
+While an agent drives, a ring of the accent colour runs around the edge of the screen and the capsule names the call. What stands in the way is a card over the dimmed picture with its fix, and a click beside a card's button still goes to the device.
+
+## Pointer and trackpad
+
+| on the window             | on the device                                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| click, drag, double click | a tap, a swipe, a double tap                                                                           |
+| hold                      | a long press, for as long as it is held                                                                |
+| right click               | a long press of 0.8 s, as an agent's is; on the frame or beside it, the Device menu                    |
+| scroll wheel, two fingers | a one-finger drag: the device scrolls as it does for a finger, and the coasting is the device's own    |
+| pinch on a trackpad       | two fingers either side of the pointer                                                                 |
+| a drag from the bezel     | starts at the screen's edge, as a finger coming on from outside does: the edge gestures of each system |
+
+A dot shows where the pointer touches, and two for a pinch. With no frame, a drag from the outermost pixel of the picture does the same as one from the bezel.
 
 ## The keyboard
 
 A window never takes the keyboard by itself: not when it opens, reconnects or restarts, and not when an agent opens it.
 A person's click gives it, or `--focus` at the first opening. A key that reaches a window without the keyboard goes
 nowhere. A window an agent opened also holds all input until a person's click, and that click goes no further. What
-is typed reaches the device and nothing else: no log, the Activity panel or `report` holds it.
+is typed reaches the device and nothing else: no log, the Activity pane or `report` holds it.
+
+Typing goes through the system's own text input, so a dead key, an accent held down and an input method all work. ⌘V sends the Mac's text the same way, 4,096 characters at most, and the window says when it cut one short, as a long text goes one key at a time. A simulator types what a US keyboard has as keys and anything else by its pasteboard and command V, so an app may ask Allow Paste.
+
+A window takes its menu bar and Dock icon at a person's first click, not before: an agent's window changes nothing on a Mac until someone uses it.
 
 ## Sharing a device
 
@@ -102,8 +142,7 @@ A window watches whoever holds the device: it takes no claim, and an agent holdi
 says who drives. `--no-input` makes it a window to look at only, and `--allow-devices` applies.
 
 A person's input always goes through, on a connection of its own, and it does not queue behind what an agent
-does. `mirror status` tells an agent when a person last touched the window. While calls come, a pill on the window
-says an agent is driving. The window's Activity panel lists each call: time, tool, how long, its result, with
+does. `mirror status` tells an agent when a person last touched the window. While calls come, the window says an agent is driving. Its Activity pane lists each call: time, tool, how long, its result, with
 typed text by its length and secrets hidden, by the code `report` uses. It reads
 `activity/<serial>.jsonl` in the state directory: no socket, across processes.
 
@@ -126,17 +165,24 @@ token goes to a viewer by its stdin, never by its arguments.
 iOS, reads the screen before it touches, and says each target's verdict with the host's load beside it. All are
 arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See [perf.md](perf.md#mirror).
 
+## Looking at a window
+
+`packages/appdyno/scripts/mirror-shots.mjs <simulator> <folder>` writes each state of a window, light and dark, with nothing brought forward. `--behind` keeps a real window off every screen, where the window server still composites it, glass and picture included, and `{"op":"snapshot","file":...}` writes it out; no permission is asked, as a process may read its own window. Hover, animation, sheets and the menu bar cannot be seen this way: those take a hand run.
+
 ## Stated limits
 
 - An iPhone is experimental: it rests on undocumented services, which may change.
-- An iPhone's lock screen: a swipe sent to it does not open it. Home does, from the Device menu.
+- An iPhone's lock screen: a swipe sent to it does not open it. Home does, from the window's controls.
 - An iPhone on the heaviest picture, 167 Mbit/s, under load: 0.25 % of its packets lost over 30 minutes that began at load 361, each loss freezing the picture until a key. At load 8 over 15 minutes it lost 0.01 %, once, as the picture went heavy, for a freeze of 1.1 s.
 - On a window a person has not clicked, keys go nowhere: typing into a window needs a hand run, as a test's window never holds the keyboard.
 - A simulator's fold: no control that folds one was found, so a new surface at a fold is untested.
 - The window does not yet show a secure Android window's content, as no shell can have it from Android 12: it is black, with the status bar still there. Not run on Android 12 and 13, or on 10, for which no image is here.
+- A device's colour: the frame takes one, and nothing yet reads it from a device, so every frame is the table's own graphite or carbon.
+- The frame's Action button and Camera Control are drawn and do nothing: no input is known that presses them.
+- A stream's picture gives the backdrop no colours: only a surface is read so far, so a phone's window has a plain one.
+- More's menu, the frame's hover, a window's remembered size and place, and a trackpad's pinch or a dead key on a real keyboard have not been run by hand; their maths are checked by the self test.
 - Input by `key`: Android has only the keys the agent has (no arrows). On a simulator a keyboard's characters go as US keys; any other text by its pasteboard and command V.
 
 ## Left out, for now
 
-Wi-Fi, which needs an identity of our own paired with the phone. Recording through the stream. The toolbar,
-shortcuts and device menu. Audio. A device frame.
+Wi-Fi, which needs an identity of our own paired with the phone. Audio.
