@@ -4,27 +4,11 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createServer, listenOn, serveHttp } from '@appdyno/mcp';
 import { opsFor, type ServerContext } from '@appdyno/ops';
 import { endWithClient, putBack } from './lifetime.js';
+import { COMMANDS } from './usage.js';
 
-const flags = (args: string[]) =>
-  parseArgs({
-    args,
-    options: {
-      http: { type: 'string' },
-      device: { type: 'string' },
-      app: { type: 'string' },
-      'allow-devices': { type: 'string' },
-      'allow-apps': { type: 'string' },
-      'allow-urls': { type: 'string' },
-      'no-home': { type: 'boolean' },
-      takeover: { type: 'boolean' },
-      share: { type: 'boolean' },
-      animations: { type: 'string' },
-      measurements: { type: 'string' },
-      'trace-limit-gb': { type: 'string' },
-      'no-install-consent': { type: 'boolean' },
-      'accept-install-warnings': { type: 'boolean' },
-    },
-  }).values;
+const flags = (args: string[]) => parseArgs({ args, options: COMMANDS.mcp.flags }).values;
+
+export type ServerFlags = ReturnType<typeof flags>;
 
 /** It goes in a URL as well as a header, and it is all that stands between a tunnel and a phone. */
 const GOOD_TOKEN = /^[\w.~-]{32,}$/;
@@ -45,7 +29,7 @@ export function tokenFromEnv(token = process.env.APPDYNO_HTTP_TOKEN) {
  */
 export async function serveCommand(
   args: string[],
-  context: (values: ReturnType<typeof flags>) => ServerContext,
+  context: (values: ServerFlags) => ServerContext,
 ) {
   const values = flags(args);
   const log = (line: object) =>

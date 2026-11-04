@@ -30,7 +30,8 @@ import { alertPerson } from './alert.js';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
 import { mirrorCommand } from './mirror-args.js';
-import { serveCommand } from './serve.js';
+import { COMMANDS, commandList, usage } from './usage.js';
+import { serveCommand, type ServerFlags } from './serve.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
@@ -47,24 +48,8 @@ const providers = (
   appleProvider(),
 ];
 
-type Settings = {
-  device?: string;
-  app?: string;
-  'allow-devices'?: string;
-  'allow-apps'?: string;
-  'allow-urls'?: string;
-  'no-home'?: boolean;
-  takeover?: boolean;
-  share?: boolean;
-  measurements?: string;
-  'trace-limit-gb'?: string;
-  animations?: string;
-  'no-install-consent'?: boolean;
-  'accept-install-warnings'?: boolean;
-};
-
 /** The operations' context, from flags and the environment. */
-function contextFrom(values: Settings, remember?: string) {
+function contextFrom(values: ServerFlags, remember?: string) {
   const env = process.env;
   const list = (s: string | undefined) =>
     (s ?? '')
@@ -119,15 +104,7 @@ function contextFrom(values: Settings, remember?: string) {
 
 /** `perf dashboard`: no device; `--out` and `--open` are this command's alone, not the tool's. */
 async function dashboardCommand(args: string[]) {
-  const { values } = parseArgs({
-    args,
-    options: {
-      app: { type: 'string' },
-      out: { type: 'string' },
-      open: { type: 'boolean' },
-      measurements: { type: 'string' },
-    },
-  });
+  const { values } = parseArgs({ args, options: COMMANDS['perf dashboard'].flags });
   const ctx = contextFrom(values);
   const file = await writeDashboard(ctx.measurementsDir, ctx.perfDir, {
     ...(values.app && { app: values.app }),
@@ -141,17 +118,9 @@ async function dashboardCommand(args: string[]) {
 
 /** `perf survey`: every measure on one device, then the page; exit 1 only when nothing could be read. */
 async function surveyCommand(args: string[]) {
-  const { values } = parseArgs({
-    args,
-    options: {
-      app: { type: 'string' },
-      device: { type: 'string' },
-      measurements: { type: 'string' },
-      share: { type: 'boolean' },
-    },
-  });
+  const { values } = parseArgs({ args, options: COMMANDS['perf survey'].flags });
   if (!values.app) {
-    err('usage: appdyno perf survey --app A [--device S] [--measurements dir] [--share]');
+    err(usage('perf survey'));
     return 2;
   }
   const ctx = contextFrom(values, cliSessionFile());
@@ -185,7 +154,7 @@ async function main(): Promise<number> {
     }
     case 'tools': {
       if (rest[0] !== 'install') {
-        err('usage: appdyno tools install');
+        err(usage('tools install'));
         return 2;
       }
       console.log(await installTools(err));
@@ -193,7 +162,7 @@ async function main(): Promise<number> {
     }
     case 'ios': {
       if (rest[0] !== 'build') {
-        err('usage: appdyno ios build');
+        err(usage('ios build'));
         return 2;
       }
       // both runners now, so a device session never waits for a build
@@ -203,14 +172,7 @@ async function main(): Promise<number> {
       return 0;
     }
     case 'install': {
-      const { values } = parseArgs({
-        args: rest,
-        options: {
-          yes: { type: 'boolean', short: 'y' },
-          remove: { type: 'boolean' },
-          'dry-run': { type: 'boolean' },
-        },
-      });
+      const { values } = parseArgs({ args: rest, options: COMMANDS.install.flags });
       const { stdin: input, stdout: output } = process;
       const terminal = input.isTTY ? createInterface({ input, output }) : undefined;
       try {
@@ -229,7 +191,7 @@ async function main(): Promise<number> {
       }
     }
     case 'doctor': {
-      const { values } = parseArgs({ args: rest, options: { serial: { type: 'string' } } });
+      const { values } = parseArgs({ args: rest, options: COMMANDS.doctor.flags });
       const checks = await doctor({
         providers: providers(),
         ...(values.serial && { serial: values.serial }),
@@ -244,20 +206,7 @@ async function main(): Promise<number> {
       const { values, positionals } = parseArgs({
         args: rest,
         allowPositionals: true,
-        options: {
-          device: { type: 'string', multiple: true },
-          param: { type: 'string', multiple: true },
-          'env-file': { type: 'string' },
-          tag: { type: 'string', multiple: true },
-          'exclude-tag': { type: 'string', multiple: true },
-          artifacts: { type: 'string' },
-          junit: { type: 'string' },
-          share: { type: 'boolean' },
-          measure: { type: 'boolean' },
-          iterations: { type: 'string' },
-          retries: { type: 'string' },
-          measurements: { type: 'string' },
-        },
+        options: COMMANDS.test.flags,
       });
       const iterations = Number(values.iterations ?? JOURNEY_ITERATIONS);
       const retries = Number(values.retries ?? 0);
@@ -268,9 +217,7 @@ async function main(): Promise<number> {
         !Number.isInteger(retries) ||
         retries < 0
       ) {
-        err(
-          'usage: appdyno test <dir or files> [--device S]... [--param NAME=value]... [--env-file F] [--tag T]... [--exclude-tag T]... [--artifacts dir] [--junit file] [--retries N] [--measure [--iterations N] [--measurements dir]]',
-        );
+        err(usage('test'));
         return 2;
       }
       const artifacts = values.artifacts ?? 'appdyno-artifacts';
@@ -299,16 +246,7 @@ async function main(): Promise<number> {
       }
     }
     case 'bench': {
-      const { values } = parseArgs({
-        args: rest,
-        options: {
-          serial: { type: 'string' },
-          driver: { type: 'string', multiple: true },
-          n: { type: 'string' },
-          out: { type: 'string' },
-          'max-load': { type: 'string' },
-        },
-      });
+      const { values } = parseArgs({ args: rest, options: COMMANDS.bench.flags });
       const serial = values.serial;
       if (!serial) {
         err('--serial is required (never a default: other devices may be attached)');
@@ -345,9 +283,7 @@ async function main(): Promise<number> {
         command === 'perf' &&
         !['compare', 'baseline', 'budget', 'functions', 'prune'].includes(gate ?? '')
       ) {
-        err(
-          'usage: appdyno perf compare|baseline|budget [--app A] [--scenario S] [--device-class C] [--last N] [--replace] [--format text|json|junit]\n       appdyno perf functions --from pm-a --to pm-b\n       appdyno perf prune [--limit-gb N] [--dry-run]\n       appdyno perf dashboard [--app A] [--out dir] [--open]\n       appdyno perf survey --app A [--device S]',
-        );
+        err(usage('perf '));
         return 2;
       }
       if (gate) rest.push('--action', gate);
@@ -374,30 +310,7 @@ async function main(): Promise<number> {
           `usage: appdyno <command> [flags]; appdyno <command> --help for its flags
 
 commands:
-  mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--animations on|off] [--measurements dir] [--trace-limit-gb N] [--no-install-consent] [--accept-install-warnings] [--http 127.0.0.1:PORT]
-                   the MCP server over stdio; with --http, on this Mac's loopback behind a token
-  install [--yes] [--dry-run] [--remove]
-                   add this server to the MCP clients on this Mac, or take it out
-  devices          the connected Android devices
-  test <dir or files> [--device S]... [--param NAME=value]... [--env-file F] [--tag T]... [--exclude-tag T]... [--artifacts dir] [--junit file] [--retries N] [--measure [--iterations N]]
-                   replay flows, one after another, on each device; --retries runs a failed file again and calls it flaky; --measure keeps each as a scenario, by step
-  doctor [--serial S]
-                   what this machine and that device lack
-  ios build        build the iOS runners now
-  tools install    download the trace tools
-  bench --serial S [--driver appdyno|<module>]... [--n 50] [--out file]
-  mirror [--device S] [--all] [--headless] [--seconds N]; mirror close|status|stats
-                   a live window on a device, driven by mouse and keyboard
-  perf compare|baseline|budget [--app A] [--scenario S] [--format text|json|junit] [--measurements dir]
-                   the performance gate: non-zero on a regression or a broken budget
-  perf functions --from pm-a --to pm-b [--measurements dir]
-                   which functions moved between two kept profiles
-  perf prune [--limit-gb N] [--dry-run] [--measurements dir]
-                   kept traces and heap dumps down to the limit, 10 GB by default
-  perf dashboard [--app A] [--out dir] [--open] [--measurements dir]
-                   one page: what can be read on each device, what changed, what needs attention
-  perf survey --app A [--device S] [--measurements dir]
-                   every measure on that device in turn, then the page
+${commandList()}
 
 operations (--device S selects the device, also for the next commands in this folder; flow: appdyno flow run a.flow --from 3 --param NAME=value --env-file F):
 ${listOf(ops)}`,
