@@ -26,6 +26,14 @@ INCLUDE PERFETTO MODULE android.frames.per_frame_metrics;
 SELECT s.overrun, s.cpu_time FROM android_frame_stats s JOIN android_frames f USING (frame_id)
   WHERE f.process_name = '${pkg}';`;
 
+const NOTHING_DRAWN: FrameStats = {
+  totalFrames: 0,
+  jankyFrames: 0,
+  jankyPercent: 0,
+  frozenFrames: 0,
+  fewFrames: true,
+};
+
 /** Frames since the stats were last reset, then a reset (the next read starts a new window). */
 export async function frames(
   d: PerfDevice,
@@ -40,6 +48,8 @@ export async function frames(
   );
   if (/No process found/i.test(raw))
     throw new DeviceError('APP_NOT_RUNNING', `${pkg} is not running`);
+  // a process up for a broadcast or a job has no window, and prints no summary: it drew nothing
+  if (!/Total frames rendered/.test(raw)) return { value: NOTHING_DRAWN, raw, at: at() };
   return { value: parseFrameStats(raw), raw, at: at() };
 }
 

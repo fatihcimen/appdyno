@@ -12,6 +12,10 @@ const PlayShares = {
 
 export const SnapshotOut = z.object({
   ...Measurement,
+  startReason: z.string().optional(),
+  startType: z.string().optional(),
+  startPhases: z.record(z.string(), z.number()).optional(),
+  startReasons: z.array(z.string()).optional(),
   anonSwapKb: z.number().optional(),
   rssAnonKb: z.number().optional(),
   swapKb: z.number().optional(),

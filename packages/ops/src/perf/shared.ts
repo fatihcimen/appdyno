@@ -62,11 +62,13 @@ export const ROW_OF: Partial<Record<Capability, MeasureId>> = {
   energy: 'energy',
   battery: 'battery',
   exits: 'crashes',
+  startInfo: 'launch-why',
   size: 'size',
 };
 
 /** A row with more than one way to read it: a device lacking one of them is no device that cannot. */
 const ROUTES: Partial<Record<MeasureId, Capability[]>> = {
+  'launch-why': ['launch', 'startInfo'],
   memory: ['memory', 'anonMemory'],
   frames: ['frames', 'framesDuring', 'frameTrace'],
   stalls: ['frames', 'frameTrace', 'hangs'],
@@ -92,6 +94,7 @@ const MEASURE_NAME: Record<Capability, string> = {
   energy: 'energy',
   battery: 'wake locks, wakeups and jobs',
   exits: 'crash and ANR exits',
+  startInfo: 'start info',
   size: 'app size',
   heapProfile: 'a heap profile',
   hangs: 'hangs',

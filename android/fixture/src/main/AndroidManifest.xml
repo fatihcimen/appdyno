@@ -22,6 +22,7 @@
         <activity android:name=".ListActivity" />
         <activity android:name=".FrozenActivity" />
         <activity android:name=".BatteryActivity" />
+        <receiver android:name=".FixtureReceiver" android:exported="true" />
         <service android:name=".SlowService" android:process=":slow" android:exported="false" />
         <service android:name=".FixtureJob" android:permission="android.permission.BIND_JOB_SERVICE" />
         <activity android:name=".StallListActivity" />

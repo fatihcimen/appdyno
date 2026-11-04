@@ -17,7 +17,10 @@ import { opsFor } from './registry.js';
 
 type Call = { op: string; args?: Record<string, unknown> };
 
-const SNAPSHOT: Call = { op: 'perf_snapshot', args: { also: EXTRA_NAMES } };
+const SNAPSHOT: Call = {
+  op: 'perf_snapshot',
+  args: { also: EXTRA_NAMES, batteryWindowMs: 10_000 },
+};
 const SCROLL: Call = { op: 'perf_scroll' };
 const TRACE: Call = { op: 'perf_trace', args: { scroll: 'up' } };
 

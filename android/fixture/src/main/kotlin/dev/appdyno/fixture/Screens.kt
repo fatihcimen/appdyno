@@ -695,6 +695,11 @@ class BatteryActivity : Activity() {
     }
 }
 
+/** Does nothing: what a start for a broadcast must read. */
+class FixtureReceiver : android.content.BroadcastReceiver() {
+    override fun onReceive(context: Context?, intent: Intent?) = Unit
+}
+
 /** A job that ends at once: what a count of jobs must read. */
 class FixtureJob : android.app.job.JobService() {
     override fun onStartJob(params: android.app.job.JobParameters?) = false

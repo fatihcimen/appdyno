@@ -3,6 +3,8 @@
 ## Unreleased
 
 - One flow can run another: `run shared/login.flow` puts its steps in place. All are read before the first step acts, a file that runs itself is refused with the way round named, and a failure names the file and line it is on.
+- Android 15 and later: `perf_snapshot` `also: startInfo` says why the app last started, and where the start went, with no trace.
+- `perf_snapshot` on a process with no window, up for a broadcast or a job, reads 0 frames: it failed on the summary such a process does not print.
 - iPhone: `perf_trace` `what: hangs` says whether each hang was busy or blocked, in which function, from what a Time Profiler trace holds already; `dsym` names the functions of a build with no symbols, on `perf_trace` and `perf_profile`.
 - `perf_compare` `action: functions` and `appdyno perf functions`: which functions moved between two profiles.
 - Android: `perf_trace` says why the slow frames were slow: a monitor lock and who holds it, a binder call and to whom, the garbage collector, work, a starved or blocked thread, or that they are unexplained.

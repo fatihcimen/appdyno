@@ -6,6 +6,7 @@ import { cpu, threads, cpuProfile } from './cpu.js';
 import { launch } from './launch.js';
 import { buildType, network, energy, exits, size, vitals } from './app.js';
 import { battery } from './battery.js';
+import { startInfo } from './start-info.js';
 
 /**
  * The app's and the device's performance on Android, from the platform's own tools: frames (gfxinfo,
@@ -45,6 +46,7 @@ export class AndroidPerf implements MeasureSource {
   energy = this.on(energy);
   battery = this.on(battery);
   exits = this.on(exits);
+  startInfo = this.on(startInfo);
   size = this.on(size);
   vitals = this.on(vitals);
 }

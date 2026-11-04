@@ -303,6 +303,16 @@ export type BatterySignals = {
   note: string;
 };
 
+/** One start of an app's process as the system kept it. `phases`: the ms up to each mark from the one before it. */
+export type StartRecord = {
+  reason: string;
+  startType: string;
+  wasForceStopped: boolean;
+  phases: Record<string, number>;
+};
+
+export type StartInfo = { starts: StartRecord[]; newest: StartRecord };
+
 export type SizeReading = { bytes: number; parts: Record<string, number>; note?: string };
 
 export type HeapProfileKind = 'java_hprof' | 'heapprofd';
@@ -407,6 +417,7 @@ export interface MeasureSource {
   energy?(app: string, windowMs: number): Promise<Measured<EnergyReading>>;
   battery?(app: string, windowMs: number): Promise<Measured<BatterySignals>>;
   exits?(app: string): Promise<Measured<ExitReading>>;
+  startInfo?(app: string): Promise<Measured<StartInfo>>;
   size?(app: string): Promise<Measured<SizeReading>>;
   heapProfile?(
     app: string,

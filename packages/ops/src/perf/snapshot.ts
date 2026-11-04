@@ -151,6 +151,37 @@ const EXTRAS = {
       ...(v.bitmapKb !== undefined && { bitmapKb: v.bitmapKb }),
     }),
   }),
+  startInfo: extra({
+    read: (a) => reads('startInfo', a)?.(a.pkg),
+    metrics: (v) =>
+      Object.entries(v.newest.phases).map(([phase, ms]) => ({
+        kind: `launch.phase.${phase}_ms` as const,
+        unit: 'ms' as const,
+        samples: [ms],
+      })),
+    line: (v) => {
+      const { reason, startType, wasForceStopped, phases } = v.newest;
+      const counts = new Map<string, number>();
+      for (const s of v.starts) counts.set(s.reason, (counts.get(s.reason) ?? 0) + 1);
+      const reasons = [...counts].map(([r, n]) => `${r} ${n}`).join(', ');
+      return [
+        `last start: ${startType}, ${reason}${wasForceStopped ? ', after a force stop' : ''}${
+          Object.keys(phases).length
+            ? `; ${Object.entries(phases)
+                .map(([p, ms]) => `${p.replaceAll('_', ' ')} ${ms} ms`)
+                .join(', ')}`
+            : ''
+        }`,
+        `the ${v.starts.length} starts the system keeps: ${reasons}`,
+      ].join('\n');
+    },
+    data: (v) => ({
+      startReason: v.newest.reason,
+      startType: v.newest.startType,
+      startPhases: v.newest.phases,
+      startReasons: v.starts.map((s) => s.reason),
+    }),
+  }),
   battery: extra({
     read: (a) => reads('battery', a)?.(a.pkg, a.batteryMs),
     metrics: (v) => [
@@ -228,7 +259,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
           .array(z.enum(EXTRA_NAMES))
           .optional()
           .describe(
-            'threads; network: bytes; energy: says if a model; anonMemory: anon RSS and swap by process state, bitmaps; battery: wake locks, wakeups, jobs; exits: crashes, ANRs; size: on disk',
+            'threads; network; energy (says if a model); anonMemory: by process state, bitmaps; startInfo: why it last started; battery: wake locks, wakeups, jobs; exits; size',
           ),
         batteryWindowMs: z.number().int().min(1_000).max(600_000).default(30_000),
         scenario: Scenario,
