@@ -45,6 +45,7 @@ const BY_STEP = new Set(['tap', 'swipe', 'scroll_to', 'type_text', 'press_key', 
 /** What an op that can change things does when it only looks. */
 const LOOKS: Record<string, string[]> = {
   app: ['list', 'state'],
+  inspector: ['list'],
   network: ['paths', 'read'],
   webview: ['pages', 'elements'],
   react_native: ['targets', 'logs'],

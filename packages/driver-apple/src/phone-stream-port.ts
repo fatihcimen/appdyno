@@ -1,4 +1,4 @@
-import type { DeviceState, InputEvent, MirrorQuality, Need } from '@appdyno/core';
+import type { DeviceState, InputEvent, InspectedElement, MirrorQuality, Need } from '@appdyno/core';
 
 /**
  * What the phone's stream offers this package, and all it knows of it. What speaks to the phone lives in
@@ -27,6 +27,10 @@ export type PhoneStreamCheck = { ok: true } | { ok: false; need: Need; detail?: 
 export interface PhoneStreamModule {
   /** The screen by the phone's own service, with no stream and nothing on the phone. */
   screenshot(udid: string, format: 'png' | 'jpeg'): Promise<Buffer>;
+  /** The screen by the phone's accessibility service, with no runner. */
+  elements(udid: string): Promise<InspectedElement[]>;
+  /** Activates what the screen, read now, has by that id or those words. */
+  press(udid: string, name: string): Promise<InspectedElement>;
   /** What can be known with no stream started. */
   check(udid: string): Promise<PhoneStreamCheck>;
   start(

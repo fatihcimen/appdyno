@@ -4,7 +4,15 @@ import type { WebInspector, WebPage } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertUdid, type Simctl } from './simctl.js';
 
-type Plist = string | number | boolean | Buffer | null | Plist[] | { [k: string]: Plist };
+export type Plist = string | number | boolean | Buffer | null | Plist[] | { [k: string]: Plist };
+
+/** A plist's reference to another object, by the name its XML form gives it. */
+const UID = 'CF$UID';
+export const plistUid = (n: number): Plist => ({ [UID]: n });
+export const uidOf = (v: Plist | undefined): number | undefined =>
+  v && typeof v === 'object' && !Buffer.isBuffer(v) && !Array.isArray(v)
+    ? (v[UID] as number | undefined)
+    : undefined;
 
 /** A binary property list: what the inspector's socket speaks (no dependency, no process per message). */
 export function readBplist(b: Buffer): Plist {
@@ -31,7 +39,10 @@ export function readBplist(b: Buffer): Plist {
       case 0:
         return low === 8 ? false : low === 9 ? true : null;
       case 1:
-        return low <= 2 ? b.readUIntBE(p, 1 << low) : Number(b.readBigInt64BE(p));
+        // the long form is 16 bytes, the value in the last 8
+        return low <= 2
+          ? b.readUIntBE(p, 1 << low)
+          : Number(b.readBigInt64BE(low === 4 ? p + 8 : p));
       case 2:
         return low === 3 ? b.readDoubleBE(p) : b.readFloatBE(p);
       case 4: {
@@ -48,6 +59,8 @@ export function readBplist(b: Buffer): Plist {
           .swap16()
           .toString('utf16le');
       }
+      case 8:
+        return plistUid(b.readUIntBE(p, low + 1));
       case 10:
         return refs(size(), 0);
       case 13: {
@@ -93,6 +106,11 @@ export function writeBplist(root: Plist): Buffer {
     else if (Array.isArray(v)) {
       objects.push({ own: sized(10, v.length) });
       objects[i]!.refs = v.map(add);
+    } else if (uidOf(v) !== undefined) {
+      const n = Buffer.alloc(5);
+      n[0] = 0x83;
+      n.writeUInt32BE(uidOf(v)!, 1);
+      objects.push({ own: n });
     } else {
       const keys = Object.keys(v);
       objects.push({ own: sized(13, keys.length) });

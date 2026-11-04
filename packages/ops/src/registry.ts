@@ -1,3 +1,4 @@
+import { inspectorOps } from './inspector.js';
 import type { z } from 'zod';
 import { actOps } from './act.js';
 import { activityFor } from './activity.js';
@@ -42,6 +43,7 @@ const everyOp = (
   ...diagnoseOps(ctx, answers),
   ...recordOps(ctx),
   ...mirrorOps(ctx),
+  ...inspectorOps(ctx),
   ...handoffOps(ctx),
   ...report.ops(),
   ...networkOps(ctx),

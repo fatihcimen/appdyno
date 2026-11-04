@@ -177,6 +177,16 @@ const OS_NAMES: Record<Platform, string> = { android: 'Android', ios: 'iOS' };
 /** The OS as people name it: Android 14, iOS 18.2. */
 export const osName = (platform: Platform, version: string) => `${OS_NAMES[platform]} ${version}`;
 
+/** One thing on a screen as the system's accessibility service tells it: its words and id, and no place. */
+export type InspectedElement = { caption: string; identifier?: string };
+
+/** A screen read and pressed with no agent on the device, by the system's own accessibility service. */
+export interface ScreenInspector {
+  elements(): Promise<InspectedElement[]>;
+  /** Activates what has that id or those words on the screen as read now, and says which it was. */
+  press(name: string): Promise<InspectedElement>;
+}
+
 /** One device, whichever platform: what the operations are written against. */
 export interface Device {
   readonly platformScreen: PlatformScreen;
@@ -186,6 +196,7 @@ export interface Device {
   readonly recorder: ScreenRecorder;
   readonly network?: NetworkSource;
   readonly web?: WebInspector;
+  readonly inspector?: ScreenInspector;
   /** A live picture of the device: nothing of it starts until asked, and no agent needs to be up first. */
   readonly mirror: Mirror;
   /** One attempt to close an open keyboard; the caller reads whether it went. */

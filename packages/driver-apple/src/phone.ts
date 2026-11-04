@@ -10,6 +10,7 @@ import { sleep, stateDir, type ScreenRecorder } from '@appdyno/core';
 import { type IosDeviceOps, IosDevice } from './device.js';
 import { phoneRecorder } from './record.js';
 import { iosProducts, type RunnerTransport, IosRunnerLauncher } from './runner.js';
+import { PhoneInspector } from './phone-inspector.js';
 import { signedRunner, type PhoneSigning, findPhoneSigning, phoneXctestrun } from './signing.js';
 import { assertBundle } from './simctl.js';
 import { IosPhonePerf } from './phone-perf.js';
@@ -125,6 +126,7 @@ export class IosPhoneDevice extends IosDevice {
     this.apps = new PhoneApps(ctl);
     this.settings = new PhoneSettings(ctl);
     this.events = new PhoneEvents();
+    this.inspector = new PhoneInspector(ctl);
     this.recorder = phoneRecorder(serial);
   }
 
@@ -137,6 +139,7 @@ export class IosPhoneDevice extends IosDevice {
   readonly apps: PhoneApps;
   readonly settings: PhoneSettings;
   readonly events: PhoneEvents;
+  readonly inspector: PhoneInspector;
 
   /**
    * A phone locks itself about a minute after the last touch, and a swipe or a tap on its lock screen goes to the system

@@ -785,6 +785,31 @@ describe('app management', () => {
     expect(narrow.log).toEqual([]);
   });
 
+  it('lists a screen and presses by name, with no runner', async () => {
+    const pressed: string[] = [];
+    const inspector = {
+      elements: async () => [
+        { caption: 'Form, Button', identifier: 'open_form' },
+        { caption: 'Title' },
+      ],
+      press: async (name: string) => {
+        pressed.push(name);
+        return { caption: 'Form, Button' };
+      },
+    };
+    const { call } = await connect(Object.assign(new FakeDevice(), { inspector }));
+    const list = await call('inspector', { action: 'list' });
+    expect(list.text).toBe('Form, Button #open_form\nTitle');
+    expect((await call('inspector', { action: 'press' })).error).toBe(true);
+    expect(pressed).toEqual([]);
+    expect((await call('inspector', { action: 'press', name: 'Form' })).text).toBe(
+      'pressed Form, Button',
+    );
+    expect(pressed).toEqual(['Form']);
+    const none = await connect(new FakeDevice());
+    expect((await none.call('inspector', { action: 'list' })).error).toBe(true);
+  });
+
   it('copies an app data only with a safe folder', async () => {
     const apps = manager();
     const { call } = await connect(Object.assign(new FakeDevice(), { apps }));

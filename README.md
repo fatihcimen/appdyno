@@ -89,6 +89,7 @@ What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 | ---------------------------- | -------------------------- | ---------------------------- | ------------------------------ |
 | volume buttons               | yes                        | yes (no way to read back)    | the runner                     |
 | clear an app's data          | `pm clear`                 | empties its container        | no: uninstall and install      |
+| reads with no signing        | no need                    | no need                      | `inspector`: words and ids     |
 | download, replace app data   | debuggable builds          | yes                          | development-signed apps        |
 | grant, revoke a permission   | `pm grant`, `pm revoke`    | `simctl privacy`             | no: answer with `alert`        |
 | launch environment           | no: args are intent extras | yes                          | yes                            |

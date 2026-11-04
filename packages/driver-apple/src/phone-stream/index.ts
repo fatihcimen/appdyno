@@ -7,6 +7,7 @@ import type {
   PhoneStreamModule,
 } from '../phone-stream-port.js';
 import { listDevices } from '../usbmux.js';
+import { Audit, elementNamed, type AuditElement } from './audit.js';
 import { readServices, takeScreenshot } from './services.js';
 import { openTunnel, PhoneRefusal, readPairRecord } from './tunnel.js';
 import type { ToWorker } from './worker.js';
@@ -36,6 +37,36 @@ async function screenshot(udid: string, format: 'png' | 'jpeg'): Promise<Buffer>
     stack.close();
   }
 }
+
+async function withAudit<T>(udid: string, use: (audit: Audit) => Promise<T>): Promise<T> {
+  const { stack, rsdPort } = await openTunnel(udid);
+  try {
+    const audit = await Audit.open(stack, await readServices(stack, rsdPort));
+    try {
+      return await use(audit);
+    } finally {
+      await audit.close();
+    }
+  } finally {
+    stack.close();
+  }
+}
+
+const told = ({ caption, identifier }: AuditElement) => ({
+  caption,
+  ...(identifier && { identifier }),
+});
+
+const elements = (udid: string) =>
+  withAudit(udid, async (audit) => (await audit.elements()).map(told));
+
+const press = (udid: string, name: string) =>
+  withAudit(udid, async (audit) => {
+    // a token is good for its connection, and a screen is read before it is touched
+    const element = elementNamed(await audit.elements(), name);
+    await audit.press(element);
+    return told(element);
+  });
 
 function start(
   udid: string,
@@ -90,5 +121,5 @@ function start(
   };
 }
 
-const phoneStream: PhoneStreamModule = { check, screenshot, start };
+const phoneStream: PhoneStreamModule = { check, screenshot, elements, press, start };
 export default phoneStream;

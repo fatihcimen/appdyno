@@ -60,7 +60,8 @@ describe('what this folder must never do', () => {
         expect(text.includes(banned), `${file}: ${banned}`).toBe(false);
       }
     }
-    expect([...asked].sort()).toEqual(['QueryType', 'StartService', 'StartSession']);
+    // RSDCheckin says who calls a service on our own tunnel: it asks lockdown nothing
+    expect([...asked].sort()).toEqual(['QueryType', 'RSDCheckin', 'StartService', 'StartSession']);
     // and the one thing it asks SpringBoard
     const springboard = sources().flatMap((s) => [...s.text.matchAll(/command: '(\w+)'/g)]);
     expect(springboard.map((m) => m[1])).toEqual(['getInterfaceOrientation']);

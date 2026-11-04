@@ -145,7 +145,7 @@ export async function findPhoneSigning(
   if (!found)
     throw new DeviceError(
       'UNSUPPORTED',
-      `no signing for the iPhone runner: no wildcard development profile names ${udid} with an identity in the keychain`,
+      `no signing for the iPhone runner: no wildcard development profile names ${udid} with an identity in the keychain. The inspector tool reads and presses without one`,
       "install one from Xcode (Settings, Accounts; a team's wildcard profile), or set APPDYNO_IOS_PROFILE, or APPDYNO_IOS_TEAM to let Xcode provision the runner",
     );
   return { profile: found.path };
