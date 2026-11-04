@@ -6,7 +6,7 @@ import java.io.ByteArrayOutputStream
 class Screenshots(private val automation: Automation, private val settling: Settling) {
     fun take(r: ShotRequest): Reply {
         settling.awaitRest()
-        val shot = automation.ua.takeScreenshot() ?: throw AgentFailure("INTERNAL", "the screen could not be captured")
+        val shot = automation.ua.takeScreenshot() ?: throw AgentFailure("UNSUPPORTED", "the screen could not be captured: a window marked secure gives no picture here")
         // bitmaps live in native memory until a collection: each one is freed as soon as it is encoded
         val made = mutableListOf(shot)
         try {
