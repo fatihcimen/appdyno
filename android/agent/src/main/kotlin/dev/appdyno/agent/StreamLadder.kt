@@ -49,9 +49,6 @@ class StreamLadder(codec: String, displayMax: Int, askedMax: Int? = null) {
     }
 }
 
-/** Low latency only where the encoder offers it: one that does not refuses the whole format, at every size and codec. */
-fun asksLowLatency(sdk: Int, offered: Boolean) = sdk >= 30 && offered
-
 /** How big a picture is for a screen and a longest side: even, as encoders need, and multiples of 8 when scaled. */
 fun streamSize(w: Int, h: Int, maxSize: Int): Pair<Int, Int> {
     val longest = maxOf(w, h)

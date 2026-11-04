@@ -17,8 +17,7 @@ class StreamEncoder(private val step: EncoderStep, w: Int, h: Int, fps: Float, q
     private var buffer = ByteArray(1 shl 20)
 
     init {
-        val offered = codec.codecInfo.getCapabilitiesForType(step.mime)
-        val caps = offered.videoCapabilities
+        val caps = codec.codecInfo.getCapabilitiesForType(step.mime).videoCapabilities
         val format = MediaFormat.createVideoFormat(step.mime, w, h).apply {
             // a software codec has its own cap, and refuses more
             setInteger(MediaFormat.KEY_BIT_RATE, caps.bitrateRange.clamp(streamBitRate(w, h, quality)))
@@ -28,9 +27,7 @@ class StreamEncoder(private val step: EncoderStep, w: Int, h: Int, fps: Float, q
             setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 10)
             setInteger(MediaFormat.KEY_PRIORITY, 0)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) setInteger(MediaFormat.KEY_MAX_B_FRAMES, 0)
-            if (asksLowLatency(Build.VERSION.SDK_INT, offered.isFeatureSupported(MediaCodecInfo.CodecCapabilities.FEATURE_LowLatency))) {
-                setInteger(MediaFormat.KEY_LOW_LATENCY, 1)
-            }
+            // never KEY_LOW_LATENCY: it is a decoder's, and an OMX encoder refuses the whole format for it, at every size
             setInteger(MediaFormat.KEY_LATENCY, 1)
         }
         try {
