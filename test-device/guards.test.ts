@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   Adb,
@@ -19,6 +20,12 @@ const phone = process.env.APPDYNO_IPHONE_UDID;
 const simulator = process.env.APPDYNO_IOS_UDID;
 const APP = 'dev.appdyno.fixture';
 const PIN = '1234';
+/** With no credential to give, `verify` passes: a lock screen a swipe opens. */
+const swipeOnly =
+  !!android &&
+  execFileSync(new Adb().bin, ['-s', android, 'shell', 'locksettings verify'], {
+    encoding: 'utf8',
+  }).includes('verified successfully');
 
 describe.skipIf(!android)('guards on Android', () => {
   const t = opsOn(androidProvider(new Adb(), {}), android!, APP);
@@ -37,6 +44,21 @@ describe.skipIf(!android)('guards on Android', () => {
     expect(r.error).toBe(true);
     expect(r.text).toContain('no touch was sent');
   }, 60_000);
+
+  it.runIf(swipeOnly)(
+    'a lock screen with no credential is passed: no refusal, and the app is read',
+    async () => {
+      await d.shell('input keyevent KEYCODE_SLEEP');
+      await pause(3_000);
+      expect(await d.shell('dumpsys window | grep -m1 isKeyguardShowing=')).toContain('true');
+      const read = await t.call('screen');
+      console.log(read.error, read.data.code, read.text.slice(0, 150));
+      expect(read.error, read.text).toBe(false);
+      expect(await d.shell('dumpsys window | grep -m1 isKeyguardShowing=')).toContain('false');
+      expect(await d.foreground()).toBe(APP);
+    },
+    60_000,
+  );
 
   it.runIf(android?.startsWith('emulator-'))(
     'a phone locked behind a PIN refuses by name, reads and touches alike',
