@@ -17,6 +17,7 @@ import type {
 import type { MeasureSource, TraceDigest } from './measure.js';
 import type { LiveMetrics } from './mirror/live-metrics.js';
 import type { PlatformScreen } from './screen/port.js';
+import type { Need } from './mirror/need.js';
 import type { Mirror } from './mirror/port.js';
 
 /** Per-command limits (ms); the settle cap is added to an action's. */
@@ -321,6 +322,8 @@ export interface DeviceProvider {
   /** `state` is the driver's own word; `ready` says whether the device can be driven now. */
   list(): Promise<{ serial: string; state: string; ready: boolean; model?: string }[]>;
   handles(serial: string): boolean;
+  /** What a person must do before a listed device can be driven, by reads that change nothing. */
+  need?(device: { serial: string; state: string }): Promise<Need | undefined>;
   open(serial: string): Device;
   readonly virtual?: VirtualDevices;
   /** What this driver needs of this machine and, with `serial`, of that device. */

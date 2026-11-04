@@ -1,4 +1,4 @@
-import type { Check, DeviceProvider } from '@appdyno/core';
+import type { Check, DeviceProvider, Need } from '@appdyno/core';
 import type { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from './simulator.js';
 import { Simulators } from './simulator-manage.js';
@@ -7,9 +7,26 @@ import { iosProducts } from './runner.js';
 import { DirectSim } from './simdirect.js';
 import { findPhoneSigning, phoneSigningFromEnv, readProfile } from './signing.js';
 import { Simctl, xcodeEnv, type Simulator } from './simctl.js';
+import { Devicectl } from './devicectl.js';
 import { queryTraceFile } from './trace.js';
 import { listPhones } from './usbmux.js';
 import { run } from '@appdyno/core';
+
+/** The runner's deployment target. */
+const RUNNER_MIN_IOS = 17;
+
+/** What keeps a phone from being driven: what the Mac knows of it, and last its lock, which asks the phone. */
+export async function phoneNeed(
+  ctl: Pick<Devicectl, 'listed' | 'lockState'>,
+): Promise<Need | undefined> {
+  const phone = await ctl.listed();
+  if (!phone) return 'not-connected';
+  if (phone.connectionProperties?.pairingState !== 'paired') return 'not-trusted';
+  if (phone.deviceProperties?.developerModeStatus !== 'enabled') return 'developer-mode-off';
+  if (parseInt(phone.deviceProperties.osVersionNumber ?? '', 10) < RUNNER_MIN_IOS)
+    return 'os-too-old';
+  return (await ctl.lockState()).passcodeRequired ? 'locked' : undefined;
+}
 
 /** A simulator is named by its id. */
 const SIMULATOR_ID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;
@@ -138,6 +155,8 @@ export function appleProvider(
       })),
     ],
     handles: (serial) => SIMULATOR_ID.test(serial) || PHONE_ID.test(serial),
+    need: async ({ serial }) =>
+      SIMULATOR_ID.test(serial) ? undefined : phoneNeed(new Devicectl(serial)),
     virtual: new Simulators(new Simctl()),
     open: (serial) =>
       SIMULATOR_ID.test(serial) ? new IosSimulatorDevice(serial) : new IosPhoneDevice(serial),

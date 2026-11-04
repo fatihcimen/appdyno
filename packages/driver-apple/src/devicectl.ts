@@ -17,6 +17,13 @@ type PhoneApp = {
   builtByDeveloper?: boolean;
 };
 
+/** What the Mac knows of a paired phone, with no word to the phone. */
+export type ListedPhone = {
+  hardwareProperties?: { udid?: string };
+  connectionProperties?: { pairingState?: string };
+  deviceProperties?: { developerModeStatus?: string; osVersionNumber?: string };
+};
+
 /** Xcode's device tool for one phone; JSON results. */
 export class Devicectl {
   constructor(readonly udid: string) {
@@ -104,6 +111,13 @@ export class Devicectl {
     const r = await this.json(['device', 'info', 'details', '--device', this.udid]);
     const result = (r.result ?? r) as { hardwareProperties?: { marketingName?: string } };
     return result.hardwareProperties?.marketingName;
+  }
+
+  /** This phone as the Mac lists it. */
+  async listed(): Promise<ListedPhone | undefined> {
+    const j = await this.json(['list', 'devices']);
+    const all = (j.result as { devices?: ListedPhone[] } | undefined)?.devices ?? [];
+    return all.find((d) => d.hardwareProperties?.udid === this.udid);
   }
 
   /** Whether the phone wants its passcode now. */

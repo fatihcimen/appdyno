@@ -92,6 +92,8 @@ export const DevicesOut = z.object({
       allowed: z.boolean(),
       selected: z.boolean(),
       heldBy: z.object({ pid: z.number(), tool: z.string(), since: z.string() }).optional(),
+      /** What a person must do before it can be driven. */
+      blocked: z.object({ need: z.string(), title: z.string(), fix: z.string() }).optional(),
     }),
   ),
 });

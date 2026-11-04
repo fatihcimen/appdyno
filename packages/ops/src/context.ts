@@ -5,6 +5,7 @@ import {
   stateDir,
   thisOwner,
   writeState,
+  NEEDS,
   type Device,
   type DeviceProvider,
   type ScreenElement,
@@ -101,6 +102,13 @@ export class ServerContext {
   /** The devices of every provider. */
   async devices() {
     return (await Promise.all(this.providers.map((p) => p.list()))).flat();
+  }
+
+  /** What stands in the way of driving a listed device, and its fix; a read that fails says nothing. */
+  async blockOf(d: { serial: string; state: string }) {
+    const provider = this.providers.findLast((p) => p.handles(d.serial));
+    const need = await provider?.need?.(d).catch(() => undefined);
+    return need && { need, ...NEEDS[need] };
   }
 
   private async open(serial: string, launching: string | undefined): Promise<Device> {

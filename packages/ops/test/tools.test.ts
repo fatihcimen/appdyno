@@ -539,6 +539,35 @@ describe('iOS simulators', () => {
     );
   });
 
+  it('says what blocks a device, with the fix, and a read that fails stops nothing', async () => {
+    const device = new FakeDevice();
+    const listing = async (need: DeviceProvider['need']) => {
+      const provider: DeviceProvider = {
+        list: async () => [{ serial: device.serial, state: 'device', ready: true, model: 'Fake' }],
+        handles: () => true,
+        open: () => device,
+        ...(need && { need }),
+      };
+      const ctx = new ServerContext(DEFAULT_POLICY, [provider]);
+      const client = await linkedClient(ctx, () => undefined);
+      return (await client.callTool({ name: 'list_devices', arguments: {} })) as Result & {
+        structuredContent: { devices: { blocked?: unknown }[] };
+      };
+    };
+    const locked = await listing(async () => 'locked');
+    expect(locked.content[0]!.text).toBe(
+      `${device.serial} device Fake: The device is locked. Unlock it. The picture goes on; input stops where it asks for a passcode.`,
+    );
+    expect(locked.structuredContent.devices[0]!.blocked).toMatchObject({
+      need: 'locked',
+      title: 'The device is locked',
+    });
+    const failing = await listing(async () => {
+      throw new Error('no answer');
+    });
+    expect(failing.content[0]!.text).toBe(`${device.serial} device Fake`);
+  });
+
   it('says which measure a device lacks', async () => {
     const none = new FakeDevice();
     Object.defineProperty(none, 'measure', { value: LACKS });

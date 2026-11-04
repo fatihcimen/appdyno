@@ -5,6 +5,7 @@ import type {
   MirrorCheck,
   MirrorOptions,
   MirrorSource,
+  Need,
   RpcClient,
 } from '@appdyno/core';
 import { pause } from '@appdyno/core';
@@ -14,6 +15,10 @@ import type { AndroidAgentLauncher } from './agent.js';
 
 /** Android 10: below it the agent has no mirror to make. */
 const MIN_SDK = 29;
+
+/** What adb's word for a device says stands in its way. */
+export const needOfState = (state: string | undefined): Need | undefined =>
+  state === 'unauthorized' ? 'not-trusted' : state === 'device' ? undefined : 'not-connected';
 const INPUT_MS = 5_000;
 const STATUS_MS = 5_000;
 const ACTION_MS = 15_000;
@@ -72,9 +77,8 @@ export class AndroidMirror implements Mirror {
 
   async check(): Promise<MirrorCheck> {
     const device = (await this.adb.devices()).find((d) => d.serial === this.serial);
-    if (!device || device.state === 'offline') return { ok: false, need: 'not-connected' };
-    if (device.state === 'unauthorized') return { ok: false, need: 'not-trusted' };
-    if (device.state !== 'device') return { ok: false, need: 'not-connected' };
+    const need = needOfState(device?.state);
+    if (need) return { ok: false, need };
     this.sdk ??= Number(await this.adb.exec(this.serial, 'getprop ro.build.version.sdk'));
     if (this.sdk < MIN_SDK) return { ok: false, need: 'os-too-old', detail: `SDK ${this.sdk}` };
     return (await this.status()).on

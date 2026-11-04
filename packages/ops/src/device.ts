@@ -12,27 +12,31 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       name: 'list_devices',
       title: 'Devices',
       description:
-        'Connected devices (serial, state, model), which this server may drive, who holds each. To start one: simulator.',
+        'Connected devices (serial, state, model), which this server may drive, who holds each, what blocks each with its fix. To start one: simulator.',
       input: z.object({}).strict(),
       output: DevicesOut,
       annotations: READ,
       run: async () => {
-        const devices = (await ctx.devices()).map((d) => {
-          const h = ctx.heldBy(d.serial);
-          return {
-            ...d,
-            allowed: ctx.allowed(d.serial),
-            selected: d.serial === ctx.currentSerial,
-            ...(h && { heldBy: { pid: h.pid, tool: h.tool, since: h.since } }),
-          };
-        });
+        const devices = await Promise.all(
+          (await ctx.devices()).map(async (d) => {
+            const h = ctx.heldBy(d.serial);
+            const blocked = await ctx.blockOf(d);
+            return {
+              ...d,
+              allowed: ctx.allowed(d.serial),
+              selected: d.serial === ctx.currentSerial,
+              ...(h && { heldBy: { pid: h.pid, tool: h.tool, since: h.since } }),
+              ...(blocked && { blocked }),
+            };
+          }),
+        );
         if (devices.length === 0)
           return reply('no device connected (adb lists none, no simulator is booted)', { devices });
         return reply(
           devices
             .map(
               (d) =>
-                `${d.serial} ${d.state} ${d.model ?? ''}${d.allowed ? '' : ' (not allowed on this server)'}${d.selected ? ' ← selected' : ''}${d.heldBy ? ` (held by pid ${d.heldBy.pid}, ${d.heldBy.tool}, since ${d.heldBy.since})` : ''}`,
+                `${d.serial} ${d.state} ${d.model ?? ''}${d.allowed ? '' : ' (not allowed on this server)'}${d.selected ? ' ← selected' : ''}${d.heldBy ? ` (held by pid ${d.heldBy.pid}, ${d.heldBy.tool}, since ${d.heldBy.since})` : ''}${d.blocked ? `: ${d.blocked.title}. ${d.blocked.fix}` : ''}`,
             )
             .join('\n'),
           { devices },

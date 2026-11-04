@@ -28,7 +28,7 @@ export const NEEDS = {
     fix: 'xcrun devicectl device info ddiServices --auto-mount-ddis',
   },
   'os-too-old': {
-    title: 'This version of the OS cannot be mirrored',
+    title: 'This version of the OS is too old',
     fix: 'Update the device.',
   },
   'camera-or-mic': {

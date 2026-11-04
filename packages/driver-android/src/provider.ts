@@ -1,10 +1,11 @@
-import type { Check, DeviceProvider } from '@appdyno/core';
+import type { Check, DeviceProvider, Need } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { Adb } from './adb.js';
 import { agentApk } from './agent.js';
 import { AndroidDevice } from './device.js';
 import { AndroidEmulators } from './emulators.js';
 import type { InstallAnswers } from './install-consent.js';
+import { needOfState } from './mirror.js';
 import { queryTrace } from './perf/perfetto.js';
 import { traceProcessor } from './tools.js';
 import { run } from '@appdyno/core';
@@ -158,6 +159,27 @@ async function animationsCheck(adb: Adb, serial: string): Promise<Check> {
   };
 }
 
+/** The agent's `minSdk`. */
+const AGENT_MIN_SDK = 26;
+
+/**
+ * What keeps a listed device from being driven. `deviceLocked` is 1 only behind a PIN, a pattern or a password: a
+ * keyguard with none is no block, as `ensureAwake` passes it.
+ */
+export async function androidNeed(
+  adb: Adb,
+  d: { serial: string; state: string },
+): Promise<Need | undefined> {
+  const need = needOfState(d.state);
+  if (need) return need;
+  const out = await adb.exec(
+    d.serial,
+    "getprop ro.build.version.sdk; dumpsys trust | grep -m1 -o 'deviceLocked=[01]'",
+  );
+  if (Number(out.trim().split('\n')[0]) < AGENT_MIN_SDK) return 'os-too-old';
+  return out.includes('deviceLocked=1') ? 'locked' : undefined;
+}
+
 /** Android devices over adb, which takes any serial no later provider claims. */
 /** A Mac set up for iOS alone has no adb, which is no failure of the list. */
 const noAdbNoDevices = (e: unknown): never[] => {
@@ -178,6 +200,7 @@ export function androidProvider(
         ...(d.props.model && { model: d.props.model }),
       })),
     handles: () => true,
+    need: (d) => androidNeed(adb, d),
     virtual: new AndroidEmulators(adb),
     // a phone unplugged for a moment (or rebooting) is waited for, up to 30 s, on read-only calls
     open: (serial) =>
