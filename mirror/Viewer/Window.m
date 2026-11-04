@@ -212,6 +212,10 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns) {
   }
 }
 
+- (void)pokeButton:(NSString *)name {
+  [_view pressButton:name];
+}
+
 - (void)pokeKey:(NSString *)characters {
   NSEvent *e = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:_window.windowNumber context:nil characters:characters charactersIgnoringModifiers:characters isARepeat:NO keyCode:0];
   // to the window itself: this app need not be the active one for an acceptance run

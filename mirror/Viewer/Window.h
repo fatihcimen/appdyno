@@ -11,7 +11,11 @@ NS_ASSUME_NONNULL_BEGIN
 @property(readonly) BOOL takesPointer;
 /// Only in the key window, whatever reaches it: what is typed elsewhere is not a device's to have.
 @property(readonly) BOOL takesKeys;
+- (void)pressButton:(id)sender;
 @end
+
+/// What a person can press that is no touch, by the names a device's buttons take, as a menu with its shortcuts.
+NSMenu *MVDeviceMenu(void);
 
 typedef NS_ENUM(NSInteger, MVShow) { MVShowBehind, MVShowFront, MVShowFocused };
 

@@ -149,7 +149,9 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     await until('its picture back', () => status().state === 'live', 20_000);
     // it stands at the lock screen, and a second press opens a phone with no passcode
     await new Promise((r) => setTimeout(r, 1_000));
-    session.send({ kind: 'button', name: 'home' });
+    // by the window's own menu where there is one
+    if (headless) session.send({ kind: 'button', name: 'home' });
+    else session.tell({ op: 'poke', button: 'home' });
     await until('the app again', async () =>
       (await read()).list.some((e: { id?: string }) => e.id === 'row_name'),
     );

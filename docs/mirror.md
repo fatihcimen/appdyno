@@ -85,6 +85,10 @@ a phone does not open a lock screen.
 
 A phone that turns keeps sending a picture of the same shape with the app on its side. SpringBoard says how the app in front is drawn, four times a second, over a lockdown service of its own, so the window stands the picture up and a touch is turned back on its way down.
 
+## The window's controls
+
+A right click on a window, or its shortcuts, press what is no touch: Home (⇧⌘H), Lock (⌘L), Volume Up (⌘↑), Volume Down (⌘↓). The menu bar shows them too once the window is in front with `--focus`.
+
 ## The keyboard
 
 A window never takes the keyboard by itself: not when it opens, reconnects or restarts, and not when an agent opens it.
@@ -126,7 +130,7 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 ## Stated limits
 
 - An iPhone is experimental: it rests on undocumented services, which may change.
-- An iPhone's lock screen: a swipe sent to it does not open it, so with nothing on the window to press `home`, a phone turned dark stays at its lock screen until a person opens it by hand.
+- An iPhone's lock screen: a swipe sent to it does not open it. Home does, from the Device menu.
 - An iPhone at `--quality standard` sends a picture of 1296x2816, larger than its screen, which is not yet cropped.
 - An iPhone on the heaviest picture, 167 Mbit/s, under load: 0.25 % of its packets lost over 30 minutes that began at load 361, each loss freezing the picture until a key. At load 8 over 15 minutes it lost 0.01 %, once, as the picture went heavy, for a freeze of 1.1 s.
 - On a window a person has not clicked, keys go nowhere: typing into a window needs a hand run, as a test's window never holds the keyboard.

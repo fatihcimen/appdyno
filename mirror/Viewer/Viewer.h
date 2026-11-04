@@ -143,6 +143,7 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 /// A click at this fraction of the picture, by the window's own event queue: needs no permission to post.
 - (void)pokeX:(double)x y:(double)y;
 - (void)pokeKey:(NSString *)characters;
+- (void)pokeButton:(NSString *)name;
 @property(nonatomic, copy, nullable) void (^onHidden)(BOOL hidden);
 @end
 

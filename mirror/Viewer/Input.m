@@ -57,6 +57,39 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags) {
   return YES;
 }
 
+NSMenu *MVDeviceMenu(void) {
+  NSMenu *menu = [[NSMenu alloc] initWithTitle:@"Device"];
+  unichar up = NSUpArrowFunctionKey, down = NSDownArrowFunctionKey;
+  NSArray *rows = @[
+    @[@"Home", @"home", @"h", @(NSEventModifierFlagCommand | NSEventModifierFlagShift)],
+    @[@"Lock", @"lock", @"l", @(NSEventModifierFlagCommand)],
+    @[@"Volume Up", @"volumeUp", [NSString stringWithCharacters:&up length:1], @(NSEventModifierFlagCommand)],
+    @[@"Volume Down", @"volumeDown", [NSString stringWithCharacters:&down length:1], @(NSEventModifierFlagCommand)],
+  ];
+  for (NSArray *row in rows) {
+    NSMenuItem *item = [menu addItemWithTitle:row[0] action:@selector(pressButton:) keyEquivalent:row[2]];
+    item.keyEquivalentModifierMask = [row[3] unsignedIntegerValue];
+    item.representedObject = row[1];
+  }
+  return menu;
+}
+
+- (NSMenu *)menuForEvent:(NSEvent *)event {
+  NSMenu *menu = MVDeviceMenu();
+  for (NSMenuItem *item in menu.itemArray) item.target = self;
+  return menu;
+}
+
+/// A person's: a menu of a window is reached only by a click on it, or a shortcut in the key window.
+- (void)pressButton:(id)sender {
+  NSString *name = [sender respondsToSelector:@selector(representedObject)] ? [sender representedObject] : sender;
+  if (self.inputOn && !self.armed) {
+    self.armed = YES;
+    return;
+  }
+  if (self.takesPointer && [name isKindOfClass:NSString.class]) MVEmit(@{@"op": @"button", @"name": name});
+}
+
 - (BOOL)takesPointer {
   return self.inputOn && self.armed;
 }

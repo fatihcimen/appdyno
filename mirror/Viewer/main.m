@@ -6,6 +6,7 @@
 //   appdyno-viewer --selftest [fixtures dir]
 //   appdyno-viewer --encode <h264|hevc> <frames>
 #import "Viewer.h"
+#import "Window.h"
 #import <CoreGraphics/CoreGraphics.h>
 
 static NSLock *gOut;
@@ -131,6 +132,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   if ([op isEqual:@"activity"]) return [_window.overlay addActivity:m[@"line"] ?: @""];
   if ([op isEqual:@"poke"]) {
     if (m[@"key"]) return [_window pokeKey:m[@"key"]];
+    if (m[@"button"]) return [_window pokeButton:m[@"button"]];
     if ([m[@"done"] boolValue]) return [_window.overlay done:self];
     if ([m[@"panel"] boolValue]) return [_window.overlay toggleActivity];
     return [_window pokeX:[m[@"x"] doubleValue] y:[m[@"y"] doubleValue]];
@@ -316,6 +318,8 @@ int main(int argc, char **argv) {
     [appMenu addItemWithTitle:@"Activity" action:@selector(toggleActivity:) keyEquivalent:@"a"].target = app;
     [appMenu addItemWithTitle:@"Quit" action:@selector(terminate:) keyEquivalent:@"q"];
     appItem.submenu = appMenu;
+    NSMenuItem *deviceItem = [bar addItemWithTitle:@"Device" action:NULL keyEquivalent:@""];
+    deviceItem.submenu = MVDeviceMenu();
     application.mainMenu = bar;
     [application run];
   }
