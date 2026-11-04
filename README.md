@@ -310,6 +310,7 @@ between CLI processes is kept in a small file in the state directory.
 | `--no-install-consent`      | `APPDYNO_NO_INSTALL_CONSENT=1`      | `app install` touches no prompt on the phone: a person answers them all       |
 | `--accept-install-warnings` | `APPDYNO_ACCEPT_INSTALL_WARNINGS=1` | `app install` passes a Play Protect warning, and always says so and quotes it |
 | `--share`                   | `APPDYNO_SHARE=1`                   | use a device another process holds                                            |
+| `--animations V`            | `APPDYNO_ANIMATIONS`                | `off` sets an Android device's animation scales to 0 while it is driven       |
 |                             | `APPDYNO_SECRETS=a,b`               | values never shown back or put on the clipboard                               |
 
 Without `--takeover`, a second tool holding UI automation on Android is never stopped. The error names

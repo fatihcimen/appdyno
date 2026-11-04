@@ -330,7 +330,7 @@ async function main(): Promise<number> {
           `usage: appdyno <command> [flags]; appdyno <command> --help for its flags
 
 commands:
-  mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--measurements dir] [--no-install-consent] [--accept-install-warnings]
+  mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--animations on|off] [--measurements dir] [--no-install-consent] [--accept-install-warnings]
                    the MCP server over stdio
   devices          the connected Android devices
   test <dir or files> [--device S]... [--param NAME=value]... [--artifacts dir] [--junit file]
