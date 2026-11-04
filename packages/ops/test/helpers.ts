@@ -3,7 +3,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '@appdyno/mcp';
 import { opsFor, ServerContext, type Op, type OpData, type OpName } from '../src/index.js';
 
-/** The operations, each held to its output schema: what it answers must be all that says, and no more. */
+/** The operations, each held to its output schema: an answer must be what that says, no more and no less. */
 export const checkedOps = (ctx: ServerContext): Record<string, Op> =>
   Object.fromEntries(
     Object.entries(opsFor(ctx)).map(([name, op]) => [
