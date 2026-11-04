@@ -1,6 +1,6 @@
 import { cannot, sleep } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 
-/** What a launch has to show in: over this the two kinds of device part, by what they do with it. */
 const SHOWN_WITHIN_MS = 20_000;
 const BEFORE_A_LAUNCH_MS = 500;
 
@@ -29,12 +29,20 @@ export async function sampleLaunches(
   return samples;
 }
 
-/** Whether `shown` came true in time, counted from `from` on the clock of `performance.now`. */
-export async function untilShown(shown: () => Promise<boolean>, from: number) {
+/**
+ * Until `shown` comes true, counted from `from` on the clock of `performance.now`. A launch that showed no screen is
+ * no measurement: the time it took is only how long this waited.
+ */
+export async function untilShown(bundle: string, shown: () => Promise<boolean>, from: number) {
   const end = from + SHOWN_WITHIN_MS;
   for (;;) {
-    if (await shown()) return true;
-    if (performance.now() > end) return false;
+    if (await shown()) return;
+    if (performance.now() > end)
+      throw new DeviceError(
+        'TIMEOUT',
+        `${bundle} showed no screen within 20 s`,
+        'read the screen: a prompt, a lock or a crash can hold an app back',
+      );
   }
 }
 

@@ -4,6 +4,7 @@
 
 - `app` `build_and_run`: builds an Xcode scheme or a Gradle variant for the device, with progress and what the build said was wrong, installs it and launches it. Off under an app allowlist, as a project's build runs its own scripts.
 - `app` `download_data` and `replace_data`: an app's data into a new or empty folder and back, by its container on a simulator, `devicectl` on an iPhone and `run-as` on Android. A replace takes away what the folder does not hold, and on Android goes only once the app has read the new data.
+- `perf_launch` on an iPhone refuses a launch that shows no screen within 20 s, as a simulator does: it was kept as a launch of about 20 s. Both now say what to look at.
 - `crashes` on Android counts every exit the system keeps, by its reason in full with its status, and what memory it died with where that was kept.
 - `perf_snapshot` `also: surface`: an Android `SurfaceView` or game's frames from `dumpsys SurfaceFlinger --latency`, where `gfxinfo` has none, with its frame rate and Play's slow sessions, read in whole refreshes of the display.
 - `appdyno mcp --http 127.0.0.1:PORT`: the same server over Streamable HTTP, for a client that cannot start a program on this Mac. Off unless asked, on loopback alone, with a token required and generated if not set, and an `Origin` check. A client holds it from its first tool call until 10 minutes after its last, when its conditions go back; another is refused by name. A tunnel is yours to run. See `docs/clients.md`.

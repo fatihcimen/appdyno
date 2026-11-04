@@ -193,7 +193,7 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
           await phone.ctl.launch(bundle, undefined, opts.env);
           await phone.target(bundle);
         } else await phone.launch(bundle);
-        await untilShown(() => phone.appShown(bundle), t);
+        await untilShown(bundle, () => phone.appShown(bundle), t);
         return Math.round(performance.now() - t);
       },
     });

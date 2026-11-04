@@ -7,6 +7,13 @@ import { Simctl } from '../src/simctl.js';
 
 const APP = 'dev.appdyno.fixture';
 
+/** What either kind of device says of a launch that showed nothing. */
+const NO_SCREEN = {
+  code: 'TIMEOUT',
+  message: `${APP} showed no screen within 20 s`,
+  hint: expect.stringMatching(/read the screen/),
+};
+
 /** A clock that jumps: a screen's 20 s go by in no time. */
 const clockOf = (stepMs: number) => {
   let now = 0;
@@ -66,10 +73,7 @@ describe('a launch on a simulator', () => {
   it('refuses a screen that never comes', async () => {
     clockOf(25_000);
     const { perf } = simulator(async () => false);
-    await expect(perf.launch(APP, { mode: 'cold', repeats: 1 })).rejects.toMatchObject({
-      code: 'TIMEOUT',
-      message: `${APP} showed no screen within 20 s`,
-    });
+    await expect(perf.launch(APP, { mode: 'cold', repeats: 1 })).rejects.toMatchObject(NO_SCREEN);
   }, 10_000);
 
   it('looks once even when the launch itself took longer than the wait', async () => {
@@ -135,11 +139,10 @@ describe('a launch on a phone', () => {
     expect(did.slice(0, 3)).toEqual(['stop', `env ${APP}`, 'target']);
   }, 10_000);
 
-  it('keeps the wait as its time when the screen never comes: it does not refuse', async () => {
+  it('refuses a screen that never comes: a launch that showed none is no measurement', async () => {
     clockOf(5_000);
     const { perf } = phone(async () => screen('another.app'));
-    const { value } = await perf.launch(APP, { mode: 'cold', repeats: 1 });
-    expect(value.samples[0]!.totalMs).toBeGreaterThanOrEqual(20_000);
+    await expect(perf.launch(APP, { mode: 'cold', repeats: 1 })).rejects.toMatchObject(NO_SCREEN);
   }, 10_000);
 });
 

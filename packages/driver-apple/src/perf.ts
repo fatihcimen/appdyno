@@ -322,8 +322,7 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
         }
         const t = performance.now();
         raw.push(await this.simctl.launch(this.udid, bundle, opts.env));
-        if (!(await untilShown(() => this.appShown(bundle), t)))
-          throw new DeviceError('TIMEOUT', `${bundle} showed no screen within 20 s`);
+        await untilShown(bundle, () => this.appShown(bundle), t);
         return Math.round(performance.now() - t);
       },
     });
