@@ -17,12 +17,18 @@ import { phoneRecorder } from './record.js';
 import { iosProducts, type RunnerTransport, IosRunnerLauncher } from './runner.js';
 import { signedRunner, type PhoneSigning, findPhoneSigning, phoneXctestrun } from './signing.js';
 import { assertBundle } from './simctl.js';
-import { hitchFrames, parseActivityMonitor, parseTimeProfile, parseHangs } from './trace-parse.js';
+import {
+  hitchFrames,
+  parseActivityMonitor,
+  parseHangs,
+  parseThermal,
+  parseTimeProfile,
+} from './trace-parse.js';
 import { appLaunchPhases } from './phone-launch.js';
 import { phoneLeaks } from './phone-leaks.js';
 import { phoneEnergy, phoneNetwork } from './phone-power.js';
 import { parseHangCauses } from './hang-cause.js';
-import { recordTrace, symbolicate, traceTable } from './trace.js';
+import { recentTrace, recordTrace, symbolicate, traceTable } from './trace.js';
 import { connectPort, listDevices } from './usbmux.js';
 import { Devicectl } from './devicectl.js';
 
@@ -41,6 +47,7 @@ export async function phoneRunnerApp(build = true): Promise<string> {
 
 /** What the phone's lock screen shows, in any language. */
 const LOCK_SCREEN = 'lockscreen-date-view';
+const UNLOCK = 'unlock it by hand: no tool can answer a passcode';
 
 const signedRunners = new Map<string, ReturnType<typeof signedRunner>>();
 
@@ -115,10 +122,22 @@ export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
 export class IosPhoneDevice extends IosDevice {
   readonly virtual = false;
   private readonly transport: ReturnType<typeof phoneTransport>;
-  private readonly ctl: Devicectl;
+  readonly ctl: Devicectl;
   /** What Instruments and XCTest can read from a phone: what they cannot says why. */
   readonly measure: MeasureSource = {
     slowReads: ['memory'],
+    // no tool answers this by itself: every recording holds it, so it costs what the recording cost
+    vitals: async () => {
+      const trace = recentTrace(this.serial);
+      const thermalStatus = trace
+        ? parseThermal(await traceTable(trace, 'device-thermal-state-intervals'))
+        : undefined;
+      return {
+        value: thermalStatus === undefined ? {} : { thermalStatus },
+        raw: trace ?? 'no recording of this phone in the last minutes',
+        at: new Date().toISOString(),
+      };
+    },
     frameTrace: async (bundle, seconds, during) => {
       await this.inFront(bundle);
       const v = await this.hitches(bundle, seconds, during);
@@ -249,16 +268,31 @@ export class IosPhoneDevice extends IosDevice {
   readonly settings: PhoneSettings;
 
   /**
-   * The app in front on a screen that is on. A phone locks itself about a minute after the last touch, with the app
-   * still reading as in front for a moment. A launch brings a running app forward as it is and lights a dark screen,
-   * but leaves a lock screen up, where a swipe or a tap goes to the system: with no passcode, the home button gets past it.
+   * A phone locks itself about a minute after the last touch, and a swipe or a tap on its lock screen goes to the system
+   * (one opened Spotlight): with no passcode the home button gets past it, then the app comes back; with one, nothing
+   * here can, and the read refuses by name before anything touches it.
    */
+  override async tree(opts: { maxDepth?: number; maxNodes?: number } = {}) {
+    const read = await super.tree(opts);
+    if (!read.nodes.some((n) => n.id === LOCK_SCREEN)) return read;
+    if ((await this.ctl.lockState()).passcodeRequired)
+      throw new DeviceError(
+        'DEVICE_LOCKED',
+        `${this.serial} is locked behind its passcode`,
+        UNLOCK,
+      );
+    await this.key('home', { settle: false });
+    if (this.targetApp) await this.launch(this.targetApp);
+    const after = await super.tree(opts);
+    if (after.nodes.some((n) => n.id === LOCK_SCREEN))
+      throw new DeviceError('DEVICE_LOCKED', `${this.serial} stays on its lock screen`, UNLOCK);
+    return after;
+  }
+
+  /** The app in front on a screen that is on: a launch brings a running app forward as it is and lights a dark screen. */
   async inFront(bundle: string) {
     await this.launch(assertBundle(bundle));
-    const { nodes } = await this.tree();
-    if (!nodes.some((n) => n.id === LOCK_SCREEN)) return;
-    await this.key('home', { settle: false });
-    await this.launch(bundle);
+    await this.tree();
   }
 
   /** Activity Monitor over every process (no attach: a system app has no get-task-allow), one process read. */

@@ -1,39 +1,17 @@
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, rmdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { deviceStateFile } from '@appdyno/core';
+import { deviceStateFile, ownerIn, thisOwner, type Owner } from '@appdyno/core';
 import { ToolError } from './tool.js';
 
-export type Claim = { pid: number; started: string; tool: string; since: string };
+export type Claim = Owner;
 
 const LOCK_STALE_MS = 5_000;
 const LOCK_WAIT_MS = 2_000;
 
 const fileOf = (serial: string) => deviceStateFile('claims', serial);
 
-const startOf = (pid: number) => {
-  try {
-    return execFileSync('ps', ['-o', 'lstart=', '-p', String(pid)], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim();
-  } catch {
-    return '';
-  }
-};
-
-/** A pid alone may be some later process's: the start time tells them apart. */
-const alive = (c: Claim) => startOf(c.pid) === c.started && c.started !== '';
-
 /** The live process that holds the device, if any: a dead owner's claim is no claim. */
-export function holder(serial: string): Claim | undefined {
-  try {
-    const c = JSON.parse(readFileSync(fileOf(serial), 'utf8')) as Claim;
-    return alive(c) ? c : undefined;
-  } catch {
-    return undefined;
-  }
-}
+export const holder = (serial: string) => ownerIn(fileOf(serial));
 
 /** Two processes checking and writing at once: only one may be between the two. */
 function locked<T>(file: string, body: () => T): T {
@@ -75,13 +53,7 @@ export function claim(serial: string, tool: string) {
         'DEVICE_CLAIMED',
         'use another device, or share this one: use_device with share: true, --share on the command line',
       );
-    const mine: Claim = {
-      pid: process.pid,
-      started: startOf(process.pid),
-      tool,
-      since: new Date().toISOString(),
-    };
-    writeFileSync(file, JSON.stringify(mine), { mode: 0o600 });
+    writeFileSync(file, JSON.stringify(thisOwner(tool)), { mode: 0o600 });
   });
 }
 

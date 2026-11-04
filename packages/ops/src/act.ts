@@ -16,7 +16,7 @@ import {
   TypeStep,
 } from './step-schemas.js';
 import type { Steps } from './steps.js';
-import { ACT, defineOp, READ, refused, reply, ToolError } from './tool.js';
+import { ACT, defineOp, READ, refusedAction, reply, ToolError } from './tool.js';
 
 // measured on a loaded Mac: 20 took 10 s on an emulator, 19 s on a simulator; 30 took up to 56 s, near a client's usual 60 s
 const MAX_STEPS = 20;
@@ -81,6 +81,7 @@ export function actOps(
             return one(s, { action: 'drag', ...a, to, ...during }, read);
           case 'pinch': {
             if (scale === undefined) throw new ToolError('pinch needs scale', 'INVALID_ARGUMENT');
+            await s.beforeTouch();
             const size = await windowSize(s);
             const c = { x: a.x ?? size.w / 2, y: a.y ?? size.h / 2 };
             const paths = pinchPaths(c, scale, durationMs ?? PINCH_MS, size);
@@ -98,6 +99,7 @@ export function actOps(
                 'plan needs pointers: 1 to 5 fingers, each with its points',
                 'INVALID_ARGUMENT',
               );
+            await s.beforeTouch();
             return act(
               s,
               read,
@@ -211,7 +213,7 @@ export function actOps(
         for (const [i, st] of steps.entries()) {
           const last = i === steps.length - 1;
           // a refusal here, not at the op's end: the catch below says which step it was
-          const attempt = (o: ActOptions) => step(s, st, o, true).catch(refused);
+          const attempt = (o: ActOptions) => step(s, st, o, true).catch(refusedAction);
           try {
             throwIfCancelled('steps');
             reportProgress(`step ${i + 1} of ${steps.length}: ${st.action}`);
@@ -254,6 +256,7 @@ export function actOps(
               ].join('\n'),
               e.code,
               e.hint,
+              e.dispatched,
             );
           }
         }

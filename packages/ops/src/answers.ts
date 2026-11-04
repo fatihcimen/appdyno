@@ -15,7 +15,7 @@ import type { ServerContext } from './context.js';
 import { redact } from './policy.js';
 import type { ActionOut } from './schemas.js';
 import type { Session } from './session.js';
-import { reply } from './tool.js';
+import { refusedAction, reply } from './tool.js';
 
 /** After an action: quiet window and cap of the on-device settle (the window: docs/protocol.md, measured). */
 export const SETTLE = { quietMs: 200, maxMs: 3_000 } as const;
@@ -264,7 +264,7 @@ export function answersFor(ctx: ServerContext) {
     const pid =
       s.appPid ??
       (read !== 'none' && s.appId ? s.device.appPid?.(s.appId).catch(() => undefined) : undefined);
-    const r = await run(opts);
+    const r = await run(opts).catch(refusedAction);
     // the last read before the action, which a ref's lookup may have just made
     const base = s.fresh?.list ?? before;
     s.acted();

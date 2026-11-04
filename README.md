@@ -105,7 +105,7 @@ touches only what this tool started. `APPDYNO_EMULATOR_ARGS` replaces the emulat
 An action answers with the settled screen. `settled` means the screen was still for the window.
 `changed` means the screen differs from before the action, in layout or text; it does not say the action
 caused it. If nothing changed the answer says "no change seen in N ms; if a slow reaction is expected,
-use wait_for". A failed call is an `isError` answer with a `code` and a `hint`. Cancelling a request
+use wait_for". A failed call is an `isError` answer with a `code` and a `hint`, and a failed action says whether its touch went out (`dispatched`). An action reads a screen nobody has seen before it touches it, and a locked phone refuses by name (`DEVICE_LOCKED`). Cancelling a request
 reaches the device, and long operations report progress.
 
 `logs` reads logcat for the app on Android and the simulator log on a simulator. For an iPhone,

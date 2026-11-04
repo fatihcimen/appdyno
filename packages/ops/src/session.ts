@@ -9,6 +9,8 @@ import {
 import type { Tree } from '@appdyno/protocol';
 
 const WAIT_GAP_MS = 300;
+/** A phone locks itself about a minute after the last touch: an older read says nothing of the screen a touch will reach. */
+const LOOK_MS = 20_000;
 
 /** A read this recent is what the device shows: a client that reads and at once acts pays for one read. */
 const FRESH_MS = 150;
@@ -84,7 +86,12 @@ export class Session {
 
   /** A fresh read of the device, remembered as the newest. */
   async read(): Promise<Screen> {
-    const screen = this.screenOf(await this.device.tree());
+    // a read that fails has seen nothing: what was read before it says nothing of a screen that now refuses
+    const tree = await this.device.tree().catch((e: unknown) => {
+      this.latest = undefined;
+      throw e;
+    });
+    const screen = this.screenOf(tree);
     this.remember(screen);
     return screen;
   }
@@ -106,6 +113,14 @@ export class Session {
   async justNow(): Promise<Screen> {
     const l = this.latest;
     return l && l.at === this.version && Date.now() - l.taken < FRESH_MS ? l.screen : this.read();
+  }
+
+  /**
+   * A look at the screen before a touch, unless one was just taken: what a device refuses, it refuses here (a locked
+   * phone, no window), and nothing reaches a screen nobody has seen.
+   */
+  async beforeTouch() {
+    if (!this.fresh || Date.now() - this.latest!.taken > LOOK_MS) await this.read();
   }
 
   /** The newest read when it is still the device's screen (no action since), else undefined. */

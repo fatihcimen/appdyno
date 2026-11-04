@@ -4,6 +4,7 @@ export { DeviceQueue } from './queue.js';
 export { afterTimeout } from './stuck.js';
 export { stateDir, safeName, deviceStateFile, readStateFile, writeStateFile } from './state.js';
 export { run } from './run.js';
+export * from './owner.js';
 export * from './stats.js';
 export * from './call.js';
 export * from './device.js';

@@ -75,7 +75,11 @@ export function createServer(ops: Record<string, Op>, log: (line: object) => voi
             return {
               isError: true,
               content: text(e.message),
-              structuredContent: { code: e.code, ...(e.hint && { hint: e.hint }) },
+              structuredContent: {
+                code: e.code,
+                ...(e.hint && { hint: e.hint }),
+                ...(e.dispatched !== undefined && { dispatched: e.dispatched }),
+              },
             };
           }
           // never the arguments: they may hold typed text

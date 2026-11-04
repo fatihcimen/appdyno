@@ -327,6 +327,13 @@ export function parseLeakRows(xml: string) {
   return { leaks: sum('count'), leakedBytes: sum('size') };
 }
 
+/** iOS's thermal states on Android's scale, which a run's noise is judged by: from "serious" it throttles. */
+const THERMAL_STATUS: Record<string, number> = { Nominal: 0, Fair: 1, Serious: 2, Critical: 4 };
+
+/** The device's thermal state at the end of a recording: every template but a lone instrument's has the table. */
+export const parseThermal = (xml: string) =>
+  THERMAL_STATUS[parseTraceTable(xml).at(-1)?.['thermal-state']?.value ?? ''];
+
 /** The Time Profiler's report of the main thread's hangs (over 250 ms): how many and the worst. */
 export function parseHangs(
   xml: string,

@@ -1,5 +1,7 @@
 import {
   callSignal,
+  deviceStateFile,
+  exclusively,
   sleep,
   throwIfCancelled,
   run,
@@ -55,6 +57,34 @@ export type TraceRecording = {
  * started, and the stop is bounded. The trace stays at `dir` for Instruments.
  */
 export async function recordTrace(r: TraceRecording): Promise<string> {
+  const tracePath = await exclusively(
+    deviceStateFile('traces-recording', r.device),
+    r.template,
+    (o) =>
+      new DeviceError(
+        'DEVICE_CLAIMED',
+        `a recording is running on ${r.device} (${o.tool}, pid ${o.pid}, since ${o.since}): a second would come back empty`,
+        'wait for it to end',
+      ),
+    () => recordInTurn(r),
+  );
+  newest.set(r.device, { tracePath, at: Date.now() });
+  return tracePath;
+}
+
+/** The newest recording of each device, and when it ended. */
+const newest = new Map<string, { tracePath: string; at: number }>();
+
+/** How long what a recording says of a device's state stays true of it. */
+const RECENT_MS = 300_000;
+
+/** What this process last recorded of a device, while it says something of the device as it is now. */
+export function recentTrace(device: string) {
+  const held = newest.get(device);
+  return held && Date.now() - held.at < RECENT_MS ? held.tracePath : undefined;
+}
+
+async function recordInTurn(r: TraceRecording): Promise<string> {
   const givenUp = Date.now() + FIND_PROCESS_MS;
   for (;;) {
     const pid = await r.attach?.();
@@ -154,6 +184,13 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
     if (r.during && !atOnce) await r.during();
     const code = await exited;
     throwIfCancelled('the recording');
+    // another tool's recording: the trace it leaves is empty, whatever the exit code says
+    if (/could not lock kperf/i.test(log))
+      throw new DeviceError(
+        'DEVICE_CLAIMED',
+        `another recording holds ${r.device}'s performance counters: ${failure(log)}`,
+        'wait for it to end, or stop it in Instruments',
+      );
     // a stopped recording still has what it caught
     if (code !== 0 && (!existsSync(tracePath) || (code !== null && /Recording failed/.test(log))))
       throw new DeviceError('UNSUPPORTED', `the trace tool could not record: ${failure(log)}`);

@@ -22,6 +22,8 @@ export const ERROR_CODES = [
   'CHECK_FAILED',
   /** Another live process holds the device. Host only, never on the wire. */
   'DEVICE_CLAIMED',
+  /** A phone locked behind what this tool cannot answer. Host only, never on the wire. */
+  'DEVICE_LOCKED',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 

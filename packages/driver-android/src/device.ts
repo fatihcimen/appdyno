@@ -203,6 +203,14 @@ export class AndroidDevice extends RpcDevice implements Device {
     }
   }
 
+  private lockedError() {
+    return new DeviceError(
+      'DEVICE_LOCKED',
+      `${this.serial} is locked behind its PIN, pattern or password`,
+      'unlock it by hand: no tool can answer it',
+    );
+  }
+
   /** The window that has the focus; none between windows and on a dark screen. */
   private async currentFocus(): Promise<string> {
     const focus = /mCurrentFocus=(.*)/.exec(
@@ -220,13 +228,10 @@ export class AndroidDevice extends RpcDevice implements Device {
     // no app window at all: a dark or locked screen; once awake, read again
     if (t && t.windows.some((w) => w.type === 1)) return t;
     const s = await this.ensureAwake();
+    if (s.locked) throw this.lockedError();
     if (!s.woke && !s.unlocked) {
       if (t) return t;
-      throw new DeviceError(
-        'NOT_FOUND',
-        'no window to read',
-        s.locked ? 'the device is locked' : undefined,
-      );
+      throw new DeviceError('NOT_FOUND', 'no window to read');
     }
     return read();
   }
@@ -236,7 +241,7 @@ export class AndroidDevice extends RpcDevice implements Device {
     return once().catch(async (e: unknown) => {
       // the agent refuses a touch on a dark screen before it is made: it would reach nothing
       if (!(e instanceof DeviceError && /the screen is off/.test(e.message))) throw e;
-      await this.ensureAwake();
+      if ((await this.ensureAwake()).locked) throw this.lockedError();
       return once();
     });
   }

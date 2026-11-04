@@ -168,6 +168,18 @@ Against a known cost, by `test-device/journey.test.ts`, on the Xiaomi, Android 1
 
 **A measure inside a flow.** A `perf_*` call during a recording used to be written as `unrecorded`, which stopped the replay. A measure is the agent measuring, not the journey, and a journey now has its numbers from `--measure`, so what it did to the screen stays as the plain steps that do the same and nothing stops: `perf_launch` cold is `stop`, `launch`, warm or hot is `launch`; `perf_scroll` is its swipes; `perf_trace` or `perf_profile` with `scroll` is 4 swipes; a relaunch for the probe, or XCTest's own test, is `stop`, `launch`. What leaves the screen as it found it writes nothing.
 
+## No silent success
+
+**A failed action says whether it touched anything.** Its answer ends "no touch was sent", "the touch was sent", or, for a device that stopped answering, "the touch may have been sent: read the screen before trying again", and a client has `dispatched`: `true`, `false` or `unknown`. A target that is not there and a refusal by the device come before any touch; a scroll that ran out of list swiped first.
+
+**A touch looks first.** Every action reads the screen unless a read was taken since the last action and under 20 s ago, as a phone locks itself about a minute after the last touch: during research a blind swipe opened Spotlight from a lock screen. It costs a read only where there was none. A read that is refused leaves nothing to go on, so the next touch reads again. Within those 20 s a screen that locked while on is still touched; one that went dark is refused by the agent.
+
+**A locked phone refuses by name**, with `DEVICE_LOCKED`, reads and touches alike. Android: after a wake and a dismissal, a keyguard that stays. On an emulator with API 36 and a PIN set for the test, at host load 220-250, `screen`, `tap` and `swipe` refused and no touch went out, by `test-device/guards.test.ts`. An iPhone with no passcode gets past its lock screen with the home button and the app comes back; with a passcode the read refuses, by `devicectl device info lockState`. No phone here has a passcode, so that refusal is from the code alone.
+
+**Two recordings at once refuse by name.** Xcode's trace tool, given a second recording, fails to lock the performance counters and leaves an empty trace, so `recordTrace` holds a device across processes, and a second gets `DEVICE_CLAIMED` naming the first, a dead holder's file being taken over. A recording by another tool shows only as that failure, which refuses the same way. Android's Perfetto takes sessions side by side, so it has no such rule.
+
+**An iPhone's thermal state.** No tool answers this by itself, but every recording but a lone Power Profiler instrument holds `device-thermal-state-intervals`, so a measure reads the state its recording ended in, up to 5 minutes old, on Android's scale that a run's noise is judged by: nominal 0, fair 1, serious 2, critical 4. A measure with no recording in the last 5 minutes, such as a launch alone, has none.
+
 ## The dashboard
 
 ```text

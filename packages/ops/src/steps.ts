@@ -75,6 +75,9 @@ type Judged = SelectorOf & {
 export type StepSeam = <T>(s: Session, st: Step, run: () => Promise<T>) => Promise<T>;
 
 /** One step's device call and the action around it, shared by the tools that act on a target. */
+/** Only these touch nothing. */
+const LOOKS_ONLY = new Set<Step['action']>(['wait_for', 'assert']);
+
 export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: StepSeam) {
   const policy = ctx.policy;
   const line = (e: ScreenElement) =>
@@ -288,6 +291,7 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
           `${what} not found after ${swipes} swipes; the list can still move${offer(screen.list, a.selector.text)}`,
           'NOT_FOUND',
           'raise maxSwipes',
+          swipes > 0,
         );
       const box = scrollArea(screen, a, await windowSize(s));
       const inner = (e: ScreenElement) =>
@@ -322,6 +326,7 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
           `${what} not found: the list did not move after ${swipes + 1} swipes, so this is its end${offer(next.list, a.selector.text)}`,
           'NOT_FOUND',
           'try the other direction',
+          true,
         );
       screen = next;
     }
@@ -329,7 +334,10 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
 
   /** One step's device call. `patient`: in a sequence, a ref may need a moment to come. */
   const step = (s: Session, st: Step, opts: ActOptions, patient = false) =>
-    through(s, st, () => call(s, st, opts, patient));
+    through(s, st, async () => {
+      if (!LOOKS_ONLY.has(st.action)) await s.beforeTouch();
+      return call(s, st, opts, patient);
+    });
 
   const call = async (
     s: Session,
@@ -396,6 +404,8 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
           throw new ToolError(
             'no editable field has the focus: tap the field first (or give type_text a ref)',
             'NO_FOCUS',
+            undefined,
+            true,
           );
         // never the text itself (it may be a phone number or a code)
         return {

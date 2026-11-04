@@ -99,6 +99,13 @@ export class Devicectl {
     ]);
   }
 
+  /** Whether the phone wants its passcode now. */
+  async lockState() {
+    const r = await this.json(['device', 'info', 'lockState', '--device', this.udid]);
+    const result = (r.result ?? r) as { passcodeRequired?: boolean };
+    return { passcodeRequired: result.passcodeRequired === true };
+  }
+
   /** The phone's simulated position (Xcode's location simulation; it stays until cleared). */
   async setLocation(lat: number, lon: number) {
     await this.json([

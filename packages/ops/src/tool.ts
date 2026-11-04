@@ -3,13 +3,50 @@ import { DeviceError, type ErrorCode } from '@appdyno/protocol';
 import { z } from 'zod';
 
 /** A refusal the agent can act on (shown as the tool's error text, never a stack). */
+/** Whether a failed action's touch went out: `unknown` is a device that stopped answering, and the screen will say. */
+export type Dispatched = boolean | 'unknown';
+
 export class ToolError extends Error {
   constructor(
     message: string,
     readonly code: ErrorCode,
     readonly hint?: string,
+    public dispatched?: Dispatched,
   ) {
     super(message);
+  }
+}
+
+/** A device that stopped answering may have made the touch before it did. Any other refusal comes before it. */
+const MAY_HAVE_GONE: ReadonlySet<ErrorCode> = new Set([
+  'TIMEOUT',
+  'CANCELLED',
+  'DEVICE_GONE',
+  'AGENT_UNAVAILABLE',
+  'INTERNAL',
+]);
+
+const WORDS = {
+  yes: 'the touch was sent',
+  no: 'no touch was sent',
+  unknown: 'the touch may have been sent: read the screen before trying again',
+};
+
+/** A failure of an action as a refusal that says whether its touch went out. */
+export function refusedAction(err: unknown): never {
+  try {
+    refused(err);
+  } catch (e) {
+    if (e instanceof ToolError && e.dispatched === undefined)
+      e.dispatched = MAY_HAVE_GONE.has(e.code) ? 'unknown' : false;
+    // a call that was wrong is said to be: it touched nothing, as `dispatched` has it
+    if (
+      e instanceof ToolError &&
+      e.code !== 'INVALID_ARGUMENT' &&
+      !/touch (was|may)/.test(e.message)
+    )
+      e.message += ` (${WORDS[e.dispatched === 'unknown' ? 'unknown' : e.dispatched ? 'yes' : 'no']})`;
+    throw e;
   }
 }
 
