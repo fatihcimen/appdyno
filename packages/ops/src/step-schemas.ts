@@ -23,6 +23,12 @@ export const Selector = z
   })
   .strict();
 
+export const showSelector = (sel: z.infer<typeof Selector>) =>
+  Object.entries(sel)
+    .filter(([, v]) => v !== undefined)
+    .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+    .join(' ');
+
 export const Target = {
   ref: Ref.optional(),
   x: Coord.optional(),
