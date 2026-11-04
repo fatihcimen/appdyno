@@ -9,7 +9,7 @@ import {
 import type { ActResult } from '@appdyno/protocol';
 import type { z } from 'zod';
 import { SETTLE } from './answers.js';
-import { dragPath } from './gesture-paths.js';
+import { dragPath, slowingPath } from './gesture-paths.js';
 import type { Session } from './session.js';
 import { type Direction, showSelector } from './step-schemas.js';
 import { ToolError } from './tool.js';
@@ -30,6 +30,48 @@ const STILL_CAP_MS = 2_500;
 
 const STILL_GAP_MS = 50;
 
+/** A stroke covers at most this share of the list, so that what is on the screen after it was there before. */
+const STROKE_REACH = 0.6;
+
+/** A slow stroke, and its finger still this long before it lifts. */
+const STROKE_MS = 900;
+const STROKE_REST_MS = 200;
+
+/** What a finger travels before the list takes it, as a first guess: each stroke then measures it. */
+const SLOP = 12;
+
+/** Whole points or pixels, and a rect read as the list stops: this close is there. */
+const CLOSE_ENOUGH = 2;
+
+type Box = { x: number; y: number; width: number; height: number };
+
+/**
+ * How far what two reads share moved along an axis, by the most common distance that is not 0, as a bar keeps its
+ * place. Only a label said once tells an element: the rows' repeated words keep their order, not their place.
+ * Undefined: they share nothing to measure by.
+ */
+export function shift(was: ScreenElement[], now: ScreenElement[], box: Box, vertical: boolean) {
+  const inside = ({ rect: r }: ScreenElement) =>
+    r.x >= box.x &&
+    r.y >= box.y &&
+    r.x + r.width <= box.x + box.width &&
+    r.y + r.height <= box.y + box.height;
+  const once = (list: ScreenElement[]) => {
+    const seen = new Map<string, number>();
+    for (const e of list) seen.set(e.label, (seen.get(e.label) ?? 0) + 1);
+    return list.filter((e) => e.label && seen.get(e.label) === 1 && inside(e));
+  };
+  const before = new Map(once(was).map((e) => [e.label, e.rect]));
+  const moves = once(now).flatMap((e) => {
+    const o = before.get(e.label);
+    return o ? [vertical ? e.rect.y - o.y : e.rect.x - o.x] : [];
+  });
+  if (moves.length === 0) return undefined;
+  const counts = new Map<number, number>();
+  for (const m of moves) if (m !== 0) counts.set(m, (counts.get(m) ?? 0) + 1);
+  return [...counts].sort((x, y) => y[1] - x[1])[0]?.[0] ?? 0;
+}
+
 /** What scrolling takes from the steps around it. */
 type Around = {
   windowSize: (s: Session) => Promise<{ w: number; h: number }>;
@@ -38,7 +80,7 @@ type Around = {
   offer: (list: ScreenElement[], want?: string) => string;
 };
 
-/** Moving a list until something is on the screen. */
+/** Moving a list until something is on the screen, or by a distance. */
 export function scrollingFor({ windowSize, line, pick, offer }: Around) {
   /** The biggest scrolling container, the one under x,y if given; else the whole window. */
   const scrollArea = (
@@ -150,5 +192,83 @@ export function scrollingFor({ windowSize, line, pick, offer }: Around) {
     }
   };
 
-  return { holdsStill, scrollTo };
+  /** The screen once what is on it no longer moves: a slow stroke's list may still give a little. */
+  const stopped = async (s: Session, first: Screen, box: Box, vertical: boolean) => {
+    const end = Date.now() + STILL_CAP_MS;
+    let screen = first;
+    while (Date.now() < end) {
+      await pause(STILL_MS);
+      const next = await s.read();
+      const moved = shift(screen.list, next.list, box, vertical);
+      screen = next;
+      if (!moved) break;
+    }
+    return screen;
+  };
+
+  /**
+   * The content moved by `distance`, measured on what each read shares with the last: a stroke's finger stops before it
+   * lifts, what the list took of it says how much of the next is lost to the start of a drag, and a list that no
+   * longer moves has ended, which is no failure.
+   */
+  const scrollBy = async (
+    s: Session,
+    a: { direction: z.infer<typeof Direction>; distance: number; x?: number; y?: number },
+  ) => {
+    const vertical = a.direction === 'up' || a.direction === 'down';
+    const sign = a.direction === 'up' || a.direction === 'left' ? -1 : 1;
+    let screen = await s.read();
+    const box = scrollArea(screen, a, await windowSize(s));
+    const reach = (vertical ? box.height : box.width) * STROKE_REACH;
+    const c = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    const most = Math.ceil(a.distance / reach) + 4;
+    let moved = 0;
+    let lost = SLOP;
+    let strokes = 0;
+    let last: ActResult = { tree: screen.tree };
+    let ended = false;
+    while (Math.abs(a.distance - moved) > CLOSE_ENOUGH && strokes < most && !ended) {
+      const left = a.distance - moved;
+      const length = Math.min(Math.abs(left) + lost, reach);
+      const half = (Math.sign(left) * sign * length) / 2;
+      const at = (k: number) => ({
+        x: Math.round(c.x + (vertical ? 0 : k * half)),
+        y: Math.round(c.y + (vertical ? k * half : 0)),
+      });
+      reportProgress(`scrolling (stroke ${strokes + 1})`);
+      last = await s.device.act(
+        { kind: 'gesture', pointers: [slowingPath(at(-1), at(1), STROKE_MS, STROKE_REST_MS)] },
+        { settle: SETTLE, read: 'tree', before: screen.hash },
+      );
+      s.acted();
+      strokes++;
+      const next = await stopped(
+        s,
+        last.tree ? s.screenOf(last.tree) : await s.read(),
+        box,
+        vertical,
+      );
+      const went = shift(screen.list, next.list, box, vertical);
+      if (went === undefined)
+        throw new ToolError(
+          `nothing stayed on the screen to measure by after ${strokes} strokes, having moved ${Math.abs(moved)}`,
+          'UNSUPPORTED',
+          'a swipe without exact moves such a screen, with no promise of how far',
+          true,
+        );
+      const asked = went * sign;
+      ended = asked === 0;
+      if (!ended) lost = Math.max(0, length - Math.abs(asked));
+      moved += asked;
+      screen = next;
+      last = { ...last, ...(last.tree && { tree: screen.tree }) };
+    }
+    const end = ended ? ': the list ended' : '';
+    return {
+      r: last,
+      done: `scrolled ${a.direction} ${moved} of ${a.distance} in ${strokes} stroke${strokes === 1 ? '' : 's'}${end}`,
+    };
+  };
+
+  return { holdsStill, scrollTo, scrollBy };
 }

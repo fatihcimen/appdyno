@@ -114,7 +114,7 @@ export function actOps(
       name: 'swipe',
       title: 'Swipe',
       description:
-        'direction up: content moves up, a list scrolls on; optional start (a target) and distance.',
+        'direction up: content moves up, a list scrolls on; optional start (a target) and distance. exact: the content moves that distance and stops, in several strokes if long, and the answer says what was measured.',
       input: z.object({ ...SwipeStep.omit({ action: true }).shape, read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,

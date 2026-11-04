@@ -66,7 +66,7 @@ function opCall(st: FlowStep): [string, Record<string, unknown>] {
         {
           direction: a.direction,
           ...target,
-          ...defined({ distance: a.distance, durationMs: a.durationMs }),
+          ...defined({ distance: a.distance, durationMs: a.durationMs, exact: a.exact }),
         },
       ];
     case 'scroll_to':

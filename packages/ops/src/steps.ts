@@ -206,7 +206,7 @@ export function stepsFor(
     return { screen, met, found: found(screen) };
   };
 
-  const { holdsStill, scrollTo } = scrollingFor({ windowSize, line, pick, offer });
+  const { holdsStill, scrollTo, scrollBy } = scrollingFor({ windowSize, line, pick, offer });
 
   /** One step's device call. `patient`: in a sequence, a ref may need a moment to come. */
   const step = (s: Session, st: Step, opts: ActOptions, patient = false) =>
@@ -258,6 +258,11 @@ export function stepsFor(
       }
       case 'swipe': {
         const start = st.ref || st.selector ? (await target(s, st, patient)).point : undefined;
+        if (st.exact) {
+          if (st.distance === undefined)
+            throw new ToolError('exact needs distance', 'INVALID_ARGUMENT');
+          return scrollBy(s, { ...st, ...start, distance: st.distance });
+        }
         const { from, to } = swipeLine(await windowSize(s), { ...st, ...start });
         return {
           r: await s.device.swipe(from, to, st.durationMs ?? 300, opts),

@@ -381,35 +381,41 @@ describe('a folded answer', () => {
   });
 });
 
-describe('scroll_to', () => {
-  /** A list of 30 rows: a swipe up moves it by the finger's way, down to its end. */
-  class ListDevice extends FakeDevice {
-    offset = 0;
-    swipes = 0;
-    override current(): Tree {
-      const rows = Array.from({ length: 30 }, (_, i) => ({
-        t: `Row ${i}`,
-        b: [0, 200 * i - this.offset, 1080, 200 * i - this.offset + 180] as [
-          number,
-          number,
-          number,
-          number,
-        ],
-      })).filter((r) => r.b[3] > 0 && r.b[1] < 2400);
-      SCREENS.scroll = rows;
-      this.screen = 'scroll';
-      return super.current();
-    }
-    override async act(action: ActParams, opts = {}) {
-      if (action.kind === 'gesture') {
-        this.swipes++;
-        const p = action.pointers[0]!;
-        const by = p[0]!.y - p.at(-1)!.y;
-        this.offset = Math.min(Math.max(this.offset + by, 0), 200 * 30 - 2400);
-      }
-      return super.act(action, opts);
-    }
+/** A list of 30 rows: a swipe up moves it by the finger's way, down to its end. */
+class ScrollingList extends FakeDevice {
+  offset = 0;
+  swipes = 0;
+  /** What the list takes of a finger's way. */
+  taken(by: number) {
+    return by;
   }
+  override current(): Tree {
+    const rows = Array.from({ length: 30 }, (_, i) => ({
+      t: `Row ${i}`,
+      b: [0, 200 * i - this.offset, 1080, 200 * i - this.offset + 180] as [
+        number,
+        number,
+        number,
+        number,
+      ],
+    })).filter((r) => r.b[3] > 0 && r.b[1] < 2400);
+    SCREENS.scroll = rows;
+    this.screen = 'scroll';
+    return super.current();
+  }
+  override async act(action: ActParams, opts = {}) {
+    if (action.kind === 'gesture') {
+      this.swipes++;
+      const p = action.pointers[0]!;
+      const by = this.taken(p[0]!.y - p.at(-1)!.y);
+      this.offset = Math.min(Math.max(this.offset + by, 0), 200 * 30 - 2400);
+    }
+    return super.act(action, opts);
+  }
+}
+
+describe('scroll_to', () => {
+  const ListDevice = ScrollingList;
 
   it('finds a row further down by scrolling, with no flick', async () => {
     const d = new ListDevice();
@@ -470,6 +476,40 @@ describe('scroll_to', () => {
     expect(r.error).toBe(true);
     expect(r.text).toContain('can still move');
     expect(d.swipes).toBe(1);
+  });
+});
+
+describe('swipe exact', () => {
+  /** A list that takes a finger's way less 10, and gives no more than its 30 rows. */
+  class Dragged extends ScrollingList {
+    override taken(by: number) {
+      return Math.abs(by) <= 10 ? 0 : by - Math.sign(by) * 10;
+    }
+  }
+
+  it('moves the content by the distance, whatever a drag loses at its start', async () => {
+    const d = new Dragged();
+    const { call } = await connect(d);
+    const r = await call('swipe', { direction: 'up', distance: 3000, exact: true });
+    expect(r.error).toBe(false);
+    expect(Math.abs(d.offset - 3000)).toBeLessThanOrEqual(2);
+    expect(r.text).toMatch(/^scrolled up 3\d{3} of 3000 in \d strokes/);
+    const moves = act(d).filter((a) => a.kind === 'gesture');
+    expect(moves.length).toBeGreaterThan(1);
+  });
+
+  it('a list that ends is no failure: the answer says how far it went', async () => {
+    const d = new Dragged();
+    d.offset = 200 * 30 - 2400 - 300;
+    const { call } = await connect(d);
+    const r = await call('swipe', { direction: 'up', distance: 1000, exact: true });
+    expect(r.error).toBe(false);
+    expect(r.text).toMatch(/^scrolled up 300 of 1000 in \d strokes?: the list ended/);
+  });
+
+  it('wants a distance', async () => {
+    const { call } = await connect(new Dragged());
+    expect((await call('swipe', { direction: 'up', exact: true })).error).toBe(true);
   });
 });
 

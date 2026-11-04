@@ -102,6 +102,7 @@ export const SwipeStep = z
     ...Target,
     distance: z.number().min(10).max(5_000).optional(),
     durationMs: z.number().int().min(50).max(5_000).optional(),
+    exact: z.boolean().optional(),
   })
   .strict();
 

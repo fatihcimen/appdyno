@@ -48,3 +48,19 @@ export const dragPath = (from: Point, to: Point, durationMs: number, holdMs = 0)
   { ...to, t: holdMs + durationMs },
   { ...to, t: holdMs + durationMs + 80 },
 ];
+
+const SLOWING_SAMPLES = 12;
+
+/** A finger that slows down to a stop and rests before it lifts: a simulator's list took a resting finger's last speed. */
+export function slowingPath(from: Point, to: Point, durationMs: number, restMs: number) {
+  const at = (k: number) => {
+    const part = 1 - (1 - k) ** 3;
+    return {
+      x: Math.round(from.x + (to.x - from.x) * part),
+      y: Math.round(from.y + (to.y - from.y) * part),
+      t: Math.round(k * durationMs),
+    };
+  };
+  const path = Array.from({ length: SLOWING_SAMPLES + 1 }, (_, i) => at(i / SLOWING_SAMPLES));
+  return [...path, { ...to, t: durationMs + restMs }];
+}
