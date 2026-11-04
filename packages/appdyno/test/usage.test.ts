@@ -18,6 +18,11 @@ describe('usage', () => {
     );
   });
 
+  it('has no flag that skips verifying a release', () => {
+    expect(Object.keys(COMMANDS.update.flags).sort()).toEqual(['check', 'help']);
+    expect(line('update')).toBe('update [--check]');
+  });
+
   it('leaves out what is between its own processes', () => {
     expect(line('mirror')).toContain('[--all [--watch]]');
     expect(line('mirror')).not.toContain('input-on-click');

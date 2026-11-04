@@ -50,6 +50,10 @@ export const COMMANDS = {
     flags: { yes: { type: 'boolean', short: 'y' }, 'dry-run': on, remove: on },
     what: 'add this server to the MCP clients on this Mac, or take it out',
   },
+  update: {
+    flags: { check: on, help: { type: 'boolean', short: 'h', unsaid: true } },
+    what: 'move to the latest release, verified before anything changes; --check changes nothing',
+  },
   devices: { what: 'the connected devices' },
   test: {
     takes: '<dir or files>',

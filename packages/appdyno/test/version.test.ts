@@ -19,4 +19,11 @@ describe('release version', () => {
     expect(read('packages/mcp/src/brand.ts')).toContain(`version: '${v}'`);
     expect(read('CHANGELOG.md')).toContain(`## ${v}`);
   });
+
+  it('names the repository a release is published from, which update holds it to', () => {
+    const { repository } = JSON.parse(read('packages/appdyno/package.json')) as {
+      repository: { url: string };
+    };
+    expect(repository.url).toBe('git+https://github.com/fatihcimen/appdyno.git');
+  });
 });

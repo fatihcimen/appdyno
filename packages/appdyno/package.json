@@ -3,6 +3,11 @@
   "version": "0.6.0",
   "private": false,
   "description": "Drive and measure iOS and Android devices: an MCP stdio server, a command line and a TypeScript library.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fatihcimen/appdyno.git",
+    "directory": "packages/appdyno"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

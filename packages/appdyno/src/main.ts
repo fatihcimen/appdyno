@@ -19,7 +19,9 @@ import {
   installCheck,
   listOf,
   takeFlag,
+  update,
 } from '@appdyno/cli';
+import { run } from '@appdyno/core';
 import { writeDashboard } from '@appdyno/perf';
 import {
   DEFAULT_POLICY,
@@ -200,6 +202,14 @@ async function main(): Promise<number> {
       } finally {
         terminal?.close();
       }
+    }
+    case 'update': {
+      const { values } = parseArgs({ args: rest, options: COMMANDS.update.flags });
+      if (values.help) {
+        console.log(usage('update'));
+        return 0;
+      }
+      return update({ root, run, check: values.check, out: (s) => console.log(s) });
     }
     case 'doctor': {
       const { values } = parseArgs({ args: rest, options: COMMANDS.doctor.flags });

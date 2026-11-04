@@ -5,10 +5,17 @@ import type { Check } from '@appdyno/core';
 export type Manifest = {
   name: string;
   version: string;
+  repository?: string | { url?: string };
 };
 
 export const manifestOf = (root: string) =>
   JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as Manifest;
+
+/** A repository's address as a provenance statement has it. */
+export const repositoryOf = ({ repository }: Manifest) =>
+  (typeof repository === 'string' ? repository : repository?.url)
+    ?.replace(/^git\+/, '')
+    .replace(/\.git$/, '');
 
 /** A manager this command can drive. */
 export type Manager = { by: 'npm'; prefix: string } | { by: 'pnpm' };
