@@ -11,7 +11,10 @@ const DENY = /:id\/permission_deny(_and_dont_ask_again)?_button$/;
 const STATUS_BAND_DP = 56;
 
 export const androidScreen: PlatformScreen = {
-  /** Its system windows and its permission and chooser dialogs; a dialog of an app is the app's own. */
+  /**
+   * Its system windows that hold the focus, and its permission and chooser dialogs; a dialog of an app is the app's own.
+   * Without the focus a system window asks nothing: a maker's edge panel handle, always there, or a toast.
+   */
   systemAlert(tree, elements) {
     const pkgs = new Set(
       tree.windows
@@ -19,7 +22,7 @@ export const androidScreen: PlatformScreen = {
           (w) =>
             w.pkg &&
             w.pkg !== SYSTEM_UI &&
-            (w.type === SYSTEM_WINDOW || SYSTEM_DIALOGS.test(w.pkg)),
+            ((w.type === SYSTEM_WINDOW && w.focused) || SYSTEM_DIALOGS.test(w.pkg)),
         )
         .map((w) => w.pkg!),
     );

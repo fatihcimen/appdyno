@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { UiElement } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
@@ -86,6 +88,23 @@ describe('system alerts', () => {
       ]),
     ).toEqual({ texts: ['Konum?'], buttons: [{ label: 'İzin ver', x: 100, y: 1050 }] });
     expect(androidScreen.systemAlert(treeOf([window(1, [0, 0, 1080, 2400])]), [])).toBeUndefined();
+  });
+
+  it("leaves out a system window with no focus: a Samsung's edge panel handle, always there", () => {
+    const { windows } = JSON.parse(
+      readFileSync(join(import.meta.dirname, 'fixtures/install/samsung-warning.json'), 'utf8'),
+    ) as Tree;
+    const handle: UiElement = {
+      type: 'android.widget.FrameLayout',
+      ref: '@h',
+      pkg: 'com.sec.android.app.launcher',
+      label: 'Edge panels',
+      rect: { x: 1038, y: 458, width: 42, height: 342 },
+    };
+    expect(androidScreen.systemAlert(treeOf(windows), [handle])).toBeUndefined();
+    const focused = window(3, [100, 800, 980, 1400], 'com.example.maker.dialog');
+    const asks = { ...handle, pkg: focused.pkg, label: 'Allow it?' };
+    expect(androidScreen.systemAlert(treeOf([focused]), [asks])?.texts).toEqual(['Allow it?']);
   });
 });
 
