@@ -62,6 +62,8 @@ export const Tree = z.object({
   elapsedMs: z.number(),
   /** Layout digest (class, id, bounds; no text): equal digests are the same settled layout. */
   hash: z.string(),
+  /** The screen is off, though the app's windows may still be listed, as they are while a display dozes. */
+  dark: z.boolean().optional(),
   /** A window is still sliding to its place: places given are those it comes to rest at. */
   moving: z.boolean().optional(),
 });

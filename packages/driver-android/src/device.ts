@@ -252,7 +252,7 @@ export class AndroidDevice extends RpcDevice implements Device {
       throw e;
     });
     // no app window at all: a dark or locked screen; once awake, read again
-    if (t && t.windows.some((w) => w.type === 1)) return t;
+    if (t && !t.dark && t.windows.some((w) => w.type === 1)) return t;
     const s = await this.ensureAwake();
     if (s.locked) throw this.lockedError();
     if (!s.woke && !s.unlocked) {

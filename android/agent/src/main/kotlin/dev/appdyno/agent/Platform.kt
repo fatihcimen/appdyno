@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
+import android.view.Display
 import java.lang.reflect.Method
 
 /**
@@ -120,6 +121,7 @@ object Platform {
     }
 
     private const val DEFAULT_RATE = 60f
+    private val OFF_STATES = listOf(Display.STATE_OFF, Display.STATE_DOZE, Display.STATE_DOZE_SUSPEND)
     private const val DEFAULT_DISPLAY = 0
     /** `PowerManager.USER_ACTIVITY_EVENT_TOUCH`. */
     private const val EVENT_TOUCH = 2
@@ -136,7 +138,8 @@ object Platform {
                 c.getField("logicalHeight").getInt(info),
                 c.getField("logicalDensityDpi").getInt(info),
                 c.getField("rotation").getInt(info),
-                c.getField("state").getInt(info) != android.view.Display.STATE_OFF,
+                // an always-on display dozes, with the app's windows still listed: to a person it is off
+                c.getField("state").getInt(info) !in OFF_STATES,
             )
         } catch (_: Throwable) {
             val m = android.content.res.Resources.getSystem().displayMetrics

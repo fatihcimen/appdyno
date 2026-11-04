@@ -50,7 +50,7 @@ class Handlers(private val automation: Automation, private val token: String) {
         "tree.get" -> {
             val quiet = settling.idle(job)
             val r = TreeRequest.from(p)
-            Reply(settling.treeJson(settling.aScreen(job) { capture.capture(r.maxDepth, r.maxNodes, yielding = !quiet) }))
+            Reply(settling.treeJson(settling.aScreen(job) { capture.capture(r.maxDepth, r.maxNodes, yielding = !quiet) }).apply { if (!Platform.display().on) put("dark", true) })
         }
         "wait" -> WaitFor.handle(WaitRequest.from(p), job, { capture.capture(yielding = !settling.idle(job)) }, settling::treeJson)
         "act" -> act(Action.from(p.getJSONObject("action")), AfterRequest.from(p), job)

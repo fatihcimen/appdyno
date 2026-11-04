@@ -32,6 +32,19 @@ describe('a read of the window dump', () => {
     expect(read(dump, KEYGUARD_READ)).toContain('isKeyguardShowing=false');
   });
 
+  it('a read of a dozing display wakes it, though the app is still listed', async () => {
+    const commands: string[] = [];
+    const exec = async (_serial: string, command: string) => {
+      commands.push(command);
+      return command.includes('dumpsys power') ? 'mWakefulness=Dozing\n' : '';
+    };
+    const windows = [{ type: 1, pkg: 'dev.app', layer: 0, b: [0, 0, 1080, 2400] }];
+    const device = new AndroidDevice('s', { exec } as unknown as Adb);
+    const call = async () => ({ result: { windows, nodes: [], dark: true } });
+    await Object.assign(device, { call }).tree();
+    expect(commands).toContain('input keyevent KEYCODE_WAKEUP');
+  });
+
   it('a phone locked since its last ANR is seen as locked, and is dismissed', async () => {
     const commands: string[] = [];
     const exec = async (_serial: string, command: string) => {
