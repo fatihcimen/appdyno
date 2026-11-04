@@ -68,7 +68,8 @@ const RETRY_NEED_MS = 3_000;
 /** An iPhone's mirror: all it speaks is in the stream it loads, and only what a session asks is here. */
 /** How long a paste's text stays on the phone's pasteboard with no touch, and after the touch that allows it. */
 const RESTORE_MS = 60_000;
-const AFTER_TOUCH_MS = 1_500;
+const AFTER_TOUCH_MS = 3_000;
+const PROMPT_MS = 2_000;
 
 export class PhoneMirror implements Mirror {
   private say: (text: string) => void = () => undefined;
@@ -203,7 +204,10 @@ export class PhoneMirror implements Mirror {
     };
     const timer = setTimeout(restore, RESTORE_MS);
     timer.unref();
+    // a touch before the phone has asked is not the answer, and putting the text back then would paste the old one
+    const asked = this.now() + PROMPT_MS;
     this.afterTouch = () => {
+      if (this.now() < asked) return;
       clearTimeout(timer);
       setTimeout(restore, AFTER_TOUCH_MS).unref();
     };

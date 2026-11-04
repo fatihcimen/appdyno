@@ -42,7 +42,11 @@ async function screenshot(udid: string, format: 'png' | 'jpeg'): Promise<Buffer>
 async function withAudit<T>(udid: string, use: (audit: Audit) => Promise<T>): Promise<T> {
   const { stack, rsdPort } = await openTunnel(udid);
   try {
-    const audit = await Audit.open(stack, await readServices(stack, rsdPort));
+    const list = await readServices(stack, rsdPort);
+    // seen once in a run of quick reads: a list without it, and the next one has it
+    const audit = await Audit.open(stack, list).catch(async () =>
+      Audit.open(stack, await readServices(stack, rsdPort)),
+    );
     try {
       return await use(audit);
     } finally {
