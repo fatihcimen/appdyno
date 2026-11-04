@@ -101,7 +101,8 @@ describe.skipIf(!serial)('measures on Android, through the operations', () => {
       expect(busy.data.energyMj!).toBeGreaterThan(idle.data.energyMj! * 2 + 100);
     } else {
       expect(busy.text).toMatch(/model-based/);
-      expect(busy.data.energyMah!).toBeGreaterThan(idle.data.energyMah!);
+      // an idle app that grew nothing has no estimate to give, on a phone that counts so little
+      expect(busy.data.energyMah!).toBeGreaterThan(idle.data.energyMah ?? 0);
       expect(busy.text).toMatch(/energy \(a model\)/);
     }
     expect(await d.shell('dumpsys battery')).not.toMatch(/UPDATES STOPPED/);

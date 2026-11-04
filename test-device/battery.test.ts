@@ -100,7 +100,8 @@ describe.skipIf(!serial)('battery signals on Android', () => {
     const [r] = await Promise.all([
       reading(15_000),
       (async () => {
-        await pause(2_000);
+        // the window opens after what the snapshot reads first, which takes a slower phone seconds
+        await pause(5_000);
         for (let i = 0; i < 3; i++) {
           await d.tap(button(s, 'battery_job'), { settle: false });
           await pause(2_000);
