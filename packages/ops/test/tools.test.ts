@@ -6,7 +6,7 @@ import { DeviceError, type Tree } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY, type Policy } from '../src/policy.js';
-import { iosScreen } from '../../driver-apple/src/platform-screen.js';
+import { iosScreen } from '@appdyno/driver-apple';
 import { pinchPaths, swipeLine } from '../src/gesture-paths.js';
 import { FakeDevice } from './fake-device.js';
 import { linkedClient } from './helpers.js';

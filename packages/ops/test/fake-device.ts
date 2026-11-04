@@ -1,9 +1,11 @@
+import { androidScreen } from '@appdyno/driver-android';
 import {
   DeviceActions,
   type ActOptions,
   type CrashesQuery,
   type CrashReport,
   type Device,
+  type LaunchMode,
   type LogsQuery,
   type MeasureSource,
 } from '@appdyno/core';
@@ -15,8 +17,6 @@ import {
   type Tree,
   type WireNode,
 } from '@appdyno/protocol';
-
-import { androidScreen } from '../../driver-android/src/platform-screen.js';
 
 type Node = Partial<WireNode> & { b: [number, number, number, number]; go?: string };
 
@@ -278,7 +278,7 @@ export class FakeDevice extends DeviceActions implements Device {
   jank = 4;
   memKb = [100_000, 110_000, 112_000, 113_000, 114_000, 115_000, 116_000];
   private memRead = 0;
-  get measure(): MeasureSource {
+  get measure() {
     const m = <T>(value: T, raw: string) => ({ value, raw, at: '2026-10-25T00:00:00.000Z' });
     return {
       virtual: true,
@@ -317,11 +317,11 @@ export class FakeDevice extends DeviceActions implements Device {
       vitals: async () => {
         return m({ load: [1, 1, 1], cpuPressure: 2, thermalStatus: 0 }, '==load==');
       },
-      launch: async (_pkg: string, o: { mode?: 'cold' | 'warm' } = {}) => {
+      launch: async (_pkg: string, o: { mode: LaunchMode }) => {
         this.record('perf.launch', o.mode);
         return m(
           {
-            mode: o.mode ?? 'cold',
+            mode: o.mode,
             samples: [
               { totalMs: 610, state: 'COLD' },
               { totalMs: 590, state: 'COLD' },
@@ -362,7 +362,7 @@ export class FakeDevice extends DeviceActions implements Device {
           '"ts","dur","jank_type"',
         );
       },
-    } as unknown as MeasureSource;
+    } satisfies MeasureSource;
   }
 }
 

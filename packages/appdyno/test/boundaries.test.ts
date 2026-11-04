@@ -30,17 +30,27 @@ const RULES: Record<string, string[]> = {
   appdyno: [PROTOCOL, CORE, ANDROID, APPLE, PERF, OPS, MCP, CLI],
 };
 
+/** What a package's tests may import on top of its rule: a driver's rules for a fake device, the server to call it through. */
+const IN_TESTS: Record<string, string[]> = {
+  ops: [ANDROID, APPLE, MCP],
+  cli: [MCP],
+};
+
 const IMPORT = /\b(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g;
 
 /** The imports of a package's file that its rule forbids, as `file: import`. */
 function violations(pkg: string, file: string, source: string): string[] {
-  const allowed = RULES[pkg] ?? [];
   const home = join(packages, pkg);
+  const inTest = relative(home, file).startsWith('test');
+  const allowed = [...(RULES[pkg] ?? []), ...(inTest ? (IN_TESTS[pkg] ?? []) : [])];
   const bad = [...source.matchAll(IMPORT)]
     .map((m) => m[1]!)
     .filter((spec) => {
-      if (spec.startsWith('.'))
-        return relative(home, resolve(dirname(file), spec)).startsWith('..');
+      if (spec.startsWith('.')) {
+        const to = relative(home, resolve(dirname(file), spec));
+        // tests may share another package's fake, and reach nothing else of it but through its package
+        return to.startsWith('..') && !(inTest && /^\.\.\/[^/]+\/test\//.test(to));
+      }
       const workspace = spec === 'appdyno' || /^(@appdyno\/|appdyno\/)/.test(spec);
       return workspace && !allowed.includes(spec);
     });
@@ -62,14 +72,20 @@ describe('module boundaries', () => {
     expect(names.sort()).toEqual(Object.keys(RULES).sort());
   });
 
-  it('holds across every source file', () => {
+  it('holds across every source file, and every test', () => {
     const files = names.flatMap((pkg) =>
-      sources(join(packages, pkg, 'src')).map((file) => ({ pkg, file })),
+      ['src', 'test'].flatMap((dir) =>
+        existsSync(join(packages, pkg, dir))
+          ? sources(join(packages, pkg, dir)).map((file) => ({ pkg, file }))
+          : [],
+      ),
     );
     expect(files.length).toBeGreaterThan(40);
-    const broken = files.flatMap(({ pkg, file }) =>
-      violations(pkg, file, readFileSync(file, 'utf8')),
-    );
+    expect(files.filter(({ file }) => file.includes('/test/')).length).toBeGreaterThan(40);
+    const broken = files
+      // this file writes down what is forbidden, to see it caught
+      .filter(({ file }) => file !== import.meta.filename)
+      .flatMap(({ pkg, file }) => violations(pkg, file, readFileSync(file, 'utf8')));
     expect(broken).toEqual([]);
   });
 
@@ -89,6 +105,20 @@ describe('module boundaries', () => {
     expect(flagged('core', `import { x } from './screen/index.js';`)).toBe(false);
     expect(flagged('driver-apple', `import { x } from '${CORE}';`)).toBe(false);
     expect(flagged('appdyno', `import { x } from '${ANDROID}';`)).toBe(false);
+  });
+
+  it('holds a test to it too, but for what a test needs', () => {
+    const flagged = (pkg: string, line: string) =>
+      violations(pkg, join(packages, pkg, 'test/a/x.test.ts'), line).length > 0;
+    expect(flagged('ops', `import { x } from '${ANDROID}';`)).toBe(false);
+    expect(flagged('ops', `import { x } from '${MCP}';`)).toBe(false);
+    expect(flagged('cli', `import { x } from '../../../ops/test/fake-device.js';`)).toBe(false);
+    expect(flagged('ops', `import { x } from '../../src/index.js';`)).toBe(false);
+    expect(flagged('ops', `import { x } from '../../../driver-android/src/adb.js';`)).toBe(true);
+    expect(flagged('core', `import { x } from '${OPS}';`)).toBe(true);
+    expect(flagged('driver-apple', `import { x } from '${ANDROID}';`)).toBe(true);
+    // a package's sources are not its tests
+    expect(violations('ops', join(packages, 'ops/src/x.ts'), `from '${MCP}';`)).not.toEqual([]);
   });
 });
 

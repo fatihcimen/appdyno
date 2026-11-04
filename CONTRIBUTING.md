@@ -41,8 +41,8 @@ every gate locally and records the results.
 
 Each package under `packages/` may import only the packages its rule allows. For example `core` may import
 `protocol` and nothing else, and `driver-android` and `driver-apple` never import each other. The rules
-and the test that enforces them are in `packages/appdyno/test/boundaries.test.ts`. Change the rule there
-if the architecture needs it, not around it.
+and the test that enforces them are in `packages/appdyno/test/boundaries.test.ts`. A package's tests keep
+to its rule too, but for the few the test names. Change the rule there if the architecture needs it, not around it.
 
 `packages/appdyno/test/structure.test.ts` keeps a file in `packages/*/src` to one job and to 450 lines, but for
 the ones it names with a reason, and refuses a run of 8 lines that appears twice. What both drivers do belongs
