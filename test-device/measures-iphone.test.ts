@@ -130,6 +130,17 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
     expect(slow.toSorted((a, b) => b.ms - a.ms)[0]!.reason).toBe('main');
   }, 300_000);
 
+  it('a launch that shows no screen in 20 s refuses by name', async () => {
+    await expect(
+      d.measure.launch(APP, {
+        mode: 'cold',
+        repeats: 1,
+        env: { APPDYNO_FIXTURE_STARTUP_MS: '25000' },
+      }),
+    ).rejects.toMatchObject({ code: 'TIMEOUT' });
+    await d.terminate(APP).catch(() => undefined);
+  }, 120_000);
+
   it('why slow: a system app refuses, says why, and the refusal is kept', async () => {
     const r = await t.call('perf_launch', { app: SETTINGS, repeats: 1, trace: true });
     console.log(r.text);
