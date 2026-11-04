@@ -391,6 +391,36 @@ describe('the page', () => {
     expect(textOf(html)).toContain('2,800 ms in all');
   });
 
+  it("says what would count by Play's definitions beside its number and among what needs attention", async () => {
+    const s = store();
+    await s.run(1, [
+      { kind: 'frames.jank_percent', unit: 'percent', samples: [80] },
+      { kind: 'frames.slow_percent', unit: 'percent', samples: [98] },
+      { kind: 'frames.frozen_percent', unit: 'percent', samples: [0.05] },
+    ]);
+    const text = textOf(await s.page());
+    expect(text).toContain('this session would count as slow frames: 98 % of frames over 16 ms');
+    expect(text).toContain('this session would not count as frozen frames');
+    expect(text).toContain('definitions: a session, not a rate');
+    expect(text).toContain('would count on Play');
+    expect(text).not.toContain('Nothing needs attention');
+  });
+
+  it("says nothing of Play's definitions for an iPhone's numbers", async () => {
+    const s = store();
+    const iphone = {
+      serial: 'u',
+      platform: 'ios' as const,
+      model: 'iPhone',
+      os: '27',
+      virtual: false,
+    };
+    await s.run(1, [{ kind: 'frames.slow_percent', unit: 'percent', samples: [98] }], {
+      device: iphone,
+    });
+    expect(textOf(await s.page())).not.toContain('would count');
+  });
+
   it('gives a section per app with anchors, or the one asked for', async () => {
     const s = store();
     await s.run(1, [launch(400)], { app: 'dev.one' });

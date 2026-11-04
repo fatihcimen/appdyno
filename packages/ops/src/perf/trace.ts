@@ -2,7 +2,7 @@ import type { Measured } from '@appdyno/core';
 import type { Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { TraceOut } from '../schemas.js';
+import { TraceOut } from './schemas.js';
 import { defineOp, ACT, reply } from '../tool.js';
 import { perfTools, App, Probe, Scenario, virtual } from './shared.js';
 

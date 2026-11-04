@@ -18,15 +18,19 @@ export function parseGfxSummary(text: string): FrameSummary {
   const janky = /^\s*Janky frames:\s*(\d+)\s*\(([\d.]+)%\)/m.exec(text);
   if (total === undefined || !janky) throw new Error('no frame summary in gfxinfo output');
   const hist = /^HISTOGRAM:(.*)$/m.exec(text)?.[1] ?? '';
-  let frozen = 0;
-  for (const [, ms, n] of hist.matchAll(/(\d+)ms=(\d+)/g))
-    if (Number(ms) >= FROZEN_FRAME_MS) frozen += Number(n);
+  const histogram = { frames: 0, over16: 0, over700: 0 };
+  for (const [, ms, n] of hist.matchAll(/(\d+)ms=(\d+)/g)) {
+    histogram.frames += Number(n);
+    if (Number(ms) > 16) histogram.over16 += Number(n);
+    if (Number(ms) >= FROZEN_FRAME_MS) histogram.over700 += Number(n);
+  }
   const out: FrameSummary = {
     totalFrames: total,
     jankyFrames: Number(janky[1]),
     jankyPercent: Number(janky[2]),
-    frozenFrames: frozen,
+    frozenFrames: histogram.over700,
     fewFrames: total < MIN_FRAMES,
+    ...(hist && { histogram }),
   };
   const opt = {
     p50Ms: num(/^50th percentile:\s*(\d+)ms/m, text),

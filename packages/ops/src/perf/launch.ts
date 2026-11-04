@@ -1,9 +1,10 @@
-import type { Metric } from '@appdyno/perf';
+import { deviceClass, SLOW_LAUNCH_MS, type Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { LaunchOut } from '../schemas.js';
+import { LaunchOut } from './schemas.js';
 import { defineOp, DESTRUCTIVE, reply } from '../tool.js';
-import { perfTools, App, Probe, Scenario, virtual } from './shared.js';
+import { perfTools, App, Probe, Scenario, deviceInfo, virtual } from './shared.js';
+import { dayLongest, launchVitals } from './vitals.js';
 
 export function perfLaunchOp(ctx: ServerContext) {
   const { measure, appOf, virtualNote, save, keep, noisy, withProbe } = perfTools(ctx);
@@ -45,13 +46,17 @@ export function perfLaunchOp(ctx: ServerContext) {
       });
       s.acted();
       const saved = await save('launch', [m], m.value);
-      // Android vitals: excessive cold ≥ 5 s, warm ≥ 2 s, hot ≥ 1.5 s
-      const limit = { cold: 5_000, warm: 2_000, hot: 1_500 }[mode];
+      const limit = SLOW_LAUNCH_MS[mode];
       const { medianMs: med, until, samples, startup, fullyDrawnMedianMs } = m.value;
+      const name = scenario ?? `launch-${mode}`;
+      const times = samples.flatMap((x) => (x.totalMs === undefined ? [] : [x.totalMs]));
+      // Play keeps a state's longest start of the day, and only what the platform itself reports is its number
+      const worstKind = `launch.worst_${mode}_ms` as const;
+      const worst = !until && times.length ? Math.max(...times) : undefined;
       const noise = await keep(
         s,
         pkg,
-        scenario ?? `launch-${mode}`,
+        name,
         'perf_launch',
         saved.txt,
         [
@@ -62,7 +67,7 @@ export function perfLaunchOp(ctx: ServerContext) {
                 ? 'launch.first_frame_ms'
                 : 'launch.until_ms',
             unit: 'ms',
-            samples: samples.flatMap((x) => (x.totalMs === undefined ? [] : [x.totalMs])),
+            samples: times,
             // a tool's own mark is counted on this Mac; what a platform reports is its own
             ...(until && { throughHost: true }),
           },
@@ -71,6 +76,7 @@ export function perfLaunchOp(ctx: ServerContext) {
             unit: 'ms',
             samples: samples.flatMap((x) => (x.fullyDrawnMs === undefined ? [] : [x.fullyDrawnMs])),
           },
+          { kind: worstKind, unit: 'ms', samples: worst === undefined ? [] : [worst] },
           ...(startup?.breakdown ?? []).map((b): Metric => ({
             kind: `launch.phase.${b.reason.replace(/\W+/g, '_').toLowerCase()}_ms`,
             unit: 'ms',
@@ -79,13 +85,22 @@ export function perfLaunchOp(ctx: ServerContext) {
         ],
         m.value.compile?.asked,
       );
-      // a time counted to a tool's own mark (`until`) is not the system's launch time the limit is about
-      const over = !until && med !== undefined && med >= limit;
+      const onAndroid = s.device.platform === 'android';
+      const longest =
+        worst === undefined || !onAndroid
+          ? undefined
+          : await dayLongest(
+              ctx.measurementsDir,
+              { app: pkg, scenario: name, deviceClass: deviceClass(deviceInfo(s)) },
+              { kind: worstKind, value: worst, at: m.at },
+            );
+      const over = longest !== undefined && longest >= limit;
       return reply(
         [
           `measurement ${saved.id}${virtualNote(s)}`,
           `${mode} launch${until ? ` (until ${until})` : ''}: ${samples.map((x) => `${x.totalMs ?? '?'} ms${until ? '' : ` (${x.state ?? '?'})`}`).join(', ')}`,
-          `median: ${med === undefined ? 'not measured' : `${med} ms`}${over ? ` (excessive: threshold ${limit} ms)` : ''}`,
+          `median: ${med === undefined ? 'not measured' : `${med} ms`}${worst === undefined ? '' : `, longest ${worst} ms`}`,
+          ...(longest === undefined ? [] : [launchVitals(worstKind, longest)]),
           ...(fullyDrawnMedianMs !== undefined ? [`fully drawn: ${fullyDrawnMedianMs} ms`] : []),
           ...(m.value.compile
             ? [

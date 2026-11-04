@@ -2,16 +2,18 @@ import {
   FROZEN_FRAME_MS,
   MIN_FRAMES,
   sleep,
+  type FrameHistogram,
   type Measured,
   reportProgress,
   median,
 } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { ScrollOut } from '../schemas.js';
+import { ScrollOut } from './schemas.js';
 import { swipeLine } from '../gesture-paths.js';
 import { defineOp, ACT, reply } from '../tool.js';
 import { perfTools, App, Probe, Scenario, kb, virtual } from './shared.js';
+import { frameVitals } from './vitals.js';
 
 /** Jank above this share of frames is worth a finding (Android vitals counts a session slow above 25 %). */
 const JANK_PERCENT = 10;
@@ -84,6 +86,7 @@ export function perfScrollOp(ctx: ServerContext) {
       let limits: string | undefined;
       const stalls: number[] = [];
       const hitches: number[] = [];
+      const histograms: FrameHistogram[] = [];
       const swipeAll = async () => {
         for (let i = 0; i < swipes; i++) {
           const { from, to } = swipeLine(size, { direction, distance: size.h * 0.4 });
@@ -123,6 +126,7 @@ export function perfScrollOp(ctx: ServerContext) {
           ...(m1.value.viewRootImpl !== undefined && { viewRootImpl: m1.value.viewRootImpl }),
         });
         limits = f.value.limits;
+        if (f.value.histogram) histograms.push(f.value.histogram);
         if (f.value.stalls) stalls.push(f.value.stalls.worstMs);
         if (f.value.worstHitchMs !== undefined) hitches.push(f.value.worstHitchMs);
       }
@@ -154,6 +158,7 @@ export function perfScrollOp(ctx: ServerContext) {
           : []),
         ...leakSignal(rounds),
       ];
+      const play = frameVitals(histograms);
       const noise = await keep(
         s,
         pkg,
@@ -176,6 +181,7 @@ export function perfScrollOp(ctx: ServerContext) {
           { kind: 'hitches.worst_ms', unit: 'ms', samples: hitches },
           { kind: 'memory.end_kb', unit: 'kb', samples: rounds.map((x) => x.memEndKb) },
           { kind: 'stalls.worst_ms', unit: 'ms', samples: stalls },
+          ...play.metrics,
         ],
       );
       return reply(
@@ -189,6 +195,7 @@ export function perfScrollOp(ctx: ServerContext) {
           `median jank: ${jank === undefined ? 'not enough frames' : `${jank}%`}; frozen frames: ${frozen}`,
           ...(notes.length ? notes : ['no threshold exceeded']),
           ...(limits ? [limits] : []),
+          ...play.lines,
           ...noisy(noise),
           `raw output: ${saved.txt}`,
         ].join('\n'),
@@ -200,6 +207,7 @@ export function perfScrollOp(ctx: ServerContext) {
           rounds,
           ...(jank !== undefined && { jankMedianPercent: jank }),
           frozen,
+          ...play.shares,
           ...(growth !== undefined && { memGrowth: Math.round(growth * 1000) / 1000 }),
           findings: notes,
           noise,

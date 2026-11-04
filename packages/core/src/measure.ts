@@ -58,6 +58,15 @@ export type FrameSummary = {
   limits?: string;
   /** The main thread's stalls, where the source sees them. */
   stalls?: { count: number; worstMs: number; totalMs: number };
+  /** The session's frames by length, where the platform keeps a histogram: what Android vitals judges. */
+  histogram?: FrameHistogram;
+};
+
+export type FrameHistogram = {
+  frames: number;
+  /** A bucket holds a whole millisecond and those above it: 16 ms is left out, so this is the least it can be. */
+  over16: number;
+  over700: number;
 };
 
 export type FrameStats = FrameSummary & {
@@ -234,6 +243,8 @@ export type ExitReading = {
   crashes: number;
   /** Android's; iOS has no such count, and its hangs are a measure of their own. */
   anrs?: number;
+  /** Those of input dispatching timed out: the only kind Android vitals calls user-perceived. */
+  userAnrs?: number;
   total: number;
   recent: { at: string; reason: string; description?: string }[];
 };

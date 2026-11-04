@@ -3,10 +3,11 @@ import type { Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { holdingCondition } from '../control.js';
-import { SnapshotOut } from '../schemas.js';
+import { SnapshotOut } from './schemas.js';
 import type { Session } from '../session.js';
 import { defineOp, READ, reply } from '../tool.js';
 import { perfTools, App, Scenario, unlessUnsupported, kb, virtual } from './shared.js';
+import { anrVitals, frameVitals } from './vitals.js';
 
 /** A device's energy in the unit it has it in: a charge, a count of energy, or a score. */
 const ENERGY_KINDS = [
@@ -110,10 +111,22 @@ const EXTRAS = {
     metrics: (v) => [
       { kind: 'exits.crashes', unit: 'count', samples: [v.crashes] },
       { kind: 'exits.anrs', unit: 'count', samples: v.anrs === undefined ? [] : [v.anrs] },
+      {
+        kind: 'exits.user_anrs',
+        unit: 'count',
+        samples: v.userAnrs === undefined ? [] : [v.userAnrs],
+      },
     ],
     line: (v) =>
-      `exits: ${v.crashes} crashes${v.anrs === undefined ? '' : `, ${v.anrs} ANRs`} of ${v.total}`,
-    data: (v) => ({ crashes: v.crashes, anrs: v.anrs }),
+      [
+        `exits: ${v.crashes} crashes${v.anrs === undefined ? '' : `, ${v.anrs} ANRs`} of ${v.total}`,
+        ...(v.userAnrs === undefined ? [] : [anrVitals(v.userAnrs)]),
+      ].join('\n'),
+    data: (v) => ({
+      crashes: v.crashes,
+      anrs: v.anrs,
+      ...(v.userAnrs !== undefined && { userAnrs: v.userAnrs }),
+    }),
   }),
   size: extra({
     read: (a) => reads('size', a)?.(a.pkg),
@@ -182,13 +195,15 @@ export function perfSnapshotOp(ctx: ServerContext) {
           ...Object.fromEntries(got.map((g) => [g.name, g.measured.value])),
         },
       );
+      const f = frames?.value;
+      const play = frameVitals(f?.histogram ? [f.histogram] : []);
       const noise = await keep(s, pkg, scenario ?? 'idle', 'perf_snapshot', saved.txt, [
         { kind: 'cpu.percent', unit: 'percent', samples: [cpu.value.percent] },
         { kind: 'memory.kb', unit: 'kb', samples: [mem.value.kb] },
+        ...play.metrics,
         ...got.flatMap((g) => g.metrics),
       ]);
       const m = mem.value;
-      const f = frames?.value;
       const v = vitals?.value;
       return reply(
         [
@@ -212,6 +227,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
                   : 'no frame counter on a phone: perf_scroll and perf_trace record its hitches',
               ]),
           ...(f?.limits ? [f.limits] : []),
+          ...play.lines,
           ...(v
             ? [
                 `device: load ${v.load?.join(' ') ?? '?'}${v.parkedKernelThreads ? ` (${v.parkedKernelThreads} of it kernel threads asleep, no CPU)` : ''}, CPU pressure ${v.cpuPressure ?? '?'}, thermal ${v.thermalStatus ?? '?'}`,
@@ -238,6 +254,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
               jankyPercent: f.jankyPercent,
               frozen: f.frozenFrames,
               ...(f.p95Ms !== undefined && { p95Ms: f.p95Ms }),
+              ...play.shares,
             },
           }),
           ...(v?.load && { deviceLoad: v.load }),

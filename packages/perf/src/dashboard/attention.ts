@@ -1,5 +1,6 @@
 import { esc } from '@appdyno/core';
 import { age, appAnchor, deviceLabel, deviceName, type DeviceName } from './format.js';
+import { vitalsCall } from '../vitals.js';
 import { chip, icon, type Status } from './marks.js';
 import { againstText, budgetText, changeText, loud, type Scenario } from './view.js';
 
@@ -39,16 +40,20 @@ export function attentionSection(
     (s) =>
       `${loud(s.report.noise).join(', ')}${s.report.comparisons.some((c) => c.verdict === 'noisy') ? '; a change was seen: measure again' : ''}`,
   );
+  const counted = list(
+    (s) => (s.runs[0] ?? []).flatMap((r) => vitalsCall(r) ?? []).filter((c) => c.counts),
+    (c) => c.says,
+  );
   const compared = scenarios.filter((s) => s.baseline).length;
   const coverage = `Against a baseline: ${compared} of ${scenarios.length} scenarios. Budget rules: ${budgetRules}.`;
   const problems = unread.length
     ? `<p class="note">${icon('no')} Could not read:</p><ul class="which">${unread.map((u) => `<li>${esc(u)}</li>`).join('')}</ul>`
     : '';
-  const nothing = !regressions.length && !budgets.length && !noisy.length;
+  const nothing = !regressions.length && !budgets.length && !noisy.length && !counted.length;
   return `<section class="attention card"><h2>What needs attention</h2>${
     nothing
       ? `<p class="clear">${chip('good', 'Nothing needs attention')} no regression, no broken budget and no noisy run in the newest run of each scenario.</p>`
-      : `<div class="tiles">${tile('critical', regressions.length, regressions.length === 1 ? 'regression' : 'regressions')}${tile('critical', budgets.length, budgets.length === 1 ? 'broken budget' : 'broken budgets')}${tile('warning', noisy.length, noisy.length === 1 ? 'noisy run' : 'noisy runs')}</div>${which('Regressions', regressions)}${which('Broken budgets', budgets)}${
+      : `<div class="tiles">${tile('critical', regressions.length, regressions.length === 1 ? 'regression' : 'regressions')}${tile('critical', budgets.length, budgets.length === 1 ? 'broken budget' : 'broken budgets')}${tile('warning', counted.length, 'would count on Play')}${tile('warning', noisy.length, noisy.length === 1 ? 'noisy run' : 'noisy runs')}</div>${which('Regressions', regressions)}${which('Broken budgets', budgets)}${which("Would count by Play's definitions: a session, not a rate", counted)}${
           noisy.length
             ? `<details${noisy.length <= NOISY_SHOWN_OPEN ? ' open' : ''}><summary>Noisy runs (${noisy.length})</summary><ul class="which">${noisy.join('')}</ul></details>`
             : ''

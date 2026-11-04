@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { ProfileOut } from '../schemas.js';
+import { ProfileOut } from './schemas.js';
 import { defineOp, READ, reply } from '../tool.js';
 import { perfTools, App, virtual } from './shared.js';
 

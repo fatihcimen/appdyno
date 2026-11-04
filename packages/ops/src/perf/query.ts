@@ -2,7 +2,7 @@ import { resolve, join, relative, isAbsolute } from 'node:path';
 import { stateDir, type TraceDigest } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { QueryOut } from '../schemas.js';
+import { QueryOut } from './schemas.js';
 import { defineOp, READ, ToolError, reply } from '../tool.js';
 
 export function perfQueryOp(ctx: ServerContext) {

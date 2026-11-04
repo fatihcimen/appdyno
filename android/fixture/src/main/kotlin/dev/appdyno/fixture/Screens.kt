@@ -89,6 +89,8 @@ private val SCREENS = linkedMapOf(
 /** Screens opened by link only (appdyno-fixture://open/<key>): measurement fixtures. */
 private val LINKED = mapOf(
     "frames" to FramesActivity::class.java,
+    "frozen" to FrozenActivity::class.java,
+    "battery" to BatteryActivity::class.java,
     "list_stall" to StallListActivity::class.java,
     "memory" to MemoryActivity::class.java,
     "cpu" to CpuActivity::class.java,
@@ -561,6 +563,86 @@ class FramesActivity : Activity() {
             addView(view)
         }
     }
+}
+
+/**
+ * Shares of frames of a known size: `frames` frames one after another, each drawn in `draw` ms, and `stalls` of them
+ * evenly apart taking 800 ms. Says "done" at its end.
+ */
+class FrozenActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val asked = { name: String, otherwise: Int -> intent.data?.getQueryParameter(name)?.toIntOrNull() ?: otherwise }
+        val total = asked("frames", 2_000)
+        val stalls = asked("stalls", 0)
+        val drawMs = asked("draw", 0).toLong()
+        column {
+            val status = label("ready", R.id.frozen_status)
+            val paint = Paint().apply { color = 0xFF5D3EBC.toInt() }
+            val animated = object : View(context) {
+                var toDraw = 0
+                override fun onDraw(canvas: Canvas) {
+                    canvas.drawRect((toDraw % width).toFloat(), 0f, (toDraw % width + 100).toFloat(), 200f, paint)
+                    if (toDraw <= 0) return
+                    if (drawMs > 0) Thread.sleep(drawMs)
+                    if (stalls > 0 && toDraw % (total / stalls) == total / stalls / 2) Thread.sleep(800)
+                    toDraw--
+                    if (toDraw == 0) status.text = "done" else postInvalidateOnAnimation()
+                }
+            }.apply { layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 220) }
+            button("Start", R.id.frozen_start) {
+                animated.toDraw = total
+                animated.postInvalidateOnAnimation()
+            }
+            addView(animated)
+        }
+    }
+}
+
+/**
+ * A known cost to a battery: a partial wake lock of `lock_ms` under the tag `fixture:held`, `alarms` wakeup alarms a
+ * second apart, a job. Each by its button, each with no power model in between.
+ */
+class BatteryActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val asked = { name: String, otherwise: Int -> intent.data?.getQueryParameter(name)?.toIntOrNull() ?: otherwise }
+        column {
+            val status = label("ready", R.id.battery_status)
+            button("Hold lock", R.id.battery_lock) {
+                val power = getSystemService(android.os.PowerManager::class.java)
+                power.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "fixture:held").acquire(asked("lock_ms", 30_000).toLong())
+                status.text = "holding"
+            }
+            button("Alarms", R.id.battery_alarms) {
+                val alarms = getSystemService(android.app.AlarmManager::class.java)
+                val count = asked("alarms", 6)
+                var rung = 0
+                repeat(count) { i ->
+                    alarms.setExact(
+                        android.app.AlarmManager.RTC_WAKEUP,
+                        System.currentTimeMillis() + (i + 1) * 1_000L,
+                        "fixture.alarm",
+                        { if (++rung == count) status.text = "rang $rung" },
+                        Handler(Looper.getMainLooper()),
+                    )
+                }
+                status.text = "set $count"
+            }
+            button("Job", R.id.battery_job) {
+                val jobs = getSystemService(android.app.job.JobScheduler::class.java)
+                val at = android.content.ComponentName(this@BatteryActivity, FixtureJob::class.java)
+                jobs.schedule(android.app.job.JobInfo.Builder(1, at).setOverrideDeadline(0).build())
+                status.text = "scheduled"
+            }
+        }
+    }
+}
+
+/** A job that ends at once: what a count of jobs must read. */
+class FixtureJob : android.app.job.JobService() {
+    override fun onStartJob(params: android.app.job.JobParameters?) = false
+    override fun onStopJob(params: android.app.job.JobParameters?) = false
 }
 
 /** Java heap held on purpose: 50 MB in 1 MB arrays, every page written; released on demand. */

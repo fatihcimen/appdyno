@@ -78,8 +78,12 @@ export const KINDS = {
   'launch.first_frame_ms': 'launch',
   'launch.until_ms': 'launch',
   'launch.ttfd_ms': 'launch',
+  'launch.worst_cold_ms': 'launch',
+  'launch.worst_warm_ms': 'launch',
+  'launch.worst_hot_ms': 'launch',
   'frames.jank_percent': 'frames',
   'frames.app_jank_percent': 'frames',
+  'frames.slow_percent': 'frames',
   'frames.p95_ms': 'frames',
   'frames.overrun_p95_ms': 'frames',
   'frames.cpu_p95_ms': 'frames',
@@ -89,6 +93,7 @@ export const KINDS = {
   'probe.missed_percent': 'frames',
   'probe.p95_ms': 'frames',
   'frames.frozen': 'frozen',
+  'frames.frozen_percent': 'frozen',
   'stalls.worst_ms': 'stalls',
   'hangs.count': 'stalls',
   'hangs.worst_ms': 'stalls',
@@ -106,6 +111,7 @@ export const KINDS = {
   'energy.impact': 'energy',
   'exits.crashes': 'crashes',
   'exits.anrs': 'crashes',
+  'exits.user_anrs': 'crashes',
   'size.bytes': 'size',
 } as const satisfies Record<string, MeasureId>;
 

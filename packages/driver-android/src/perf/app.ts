@@ -157,6 +157,9 @@ export async function exits(d: PerfDevice, pkg: string): Promise<Measured<ExitRe
     value: {
       crashes: exits.filter((e) => /CRASH/i.test(e.reason)).length,
       anrs: exits.filter((e) => /\bANR\b/i.test(e.reason)).length,
+      userAnrs: exits.filter(
+        (e) => /\bANR\b/i.test(e.reason) && /Input dispatching timed out/i.test(e.detail ?? ''),
+      ).length,
       total: exits.length,
       recent: exits.slice(0, 10).map((e) => ({
         at: e.at,

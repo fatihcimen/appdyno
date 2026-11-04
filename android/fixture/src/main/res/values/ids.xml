@@ -49,4 +49,10 @@
     <item name="a11y_price" type="id" />
     <item name="a11y_name" type="id" />
     <item name="a11y_ok" type="id" />
+    <item name="frozen_status" type="id" />
+    <item name="frozen_start" type="id" />
+    <item name="battery_status" type="id" />
+    <item name="battery_lock" type="id" />
+    <item name="battery_alarms" type="id" />
+    <item name="battery_job" type="id" />
 </resources>

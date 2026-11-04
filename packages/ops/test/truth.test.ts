@@ -245,7 +245,8 @@ describe('a launch', () => {
   it("past the system's limit is excessive, in its text and its data alike", async () => {
     const { call } = await connect(launching().device);
     const r = await call('perf_launch');
-    expect(r.text).toContain('excessive: threshold 5000 ms');
+    expect(r.text).toContain('this session would count as a slow cold start');
+    expect(r.text).toContain("the day's longest cold start 6000 ms, the limit 5000 ms");
     expect(r.structuredContent).toMatchObject({ excessive: true });
   });
 

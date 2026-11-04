@@ -190,14 +190,40 @@ A start through it (`perf_launch` with `trace`) writes its phases: `load`, proce
 | launch         | `am start -W`                                                                                         | cold: the app is stopped first; warm: it goes home and comes back. One warm-up launch is left out, then the median TotalTime of the launches the system reports in that state. WaitTime includes `am`'s own cost and is not used.                                                                                                                                                                                                                           |
 | device state   | `/proc/loadavg`, `/proc/pressure/cpu`, `/proc/meminfo`, `dumpsys thermalservice`, `dumpsys battery`   | recorded with measurements: a loaded device explains slow frames that are not the app's                                                                                                                                                                                                                                                                                                                                                                     |
 
+## Against Play's definitions
+
+A local run says "this session would count" or "would not", in the answer and on the dashboard, with the number and the limit beside it, and never a rate: Play's thresholds are shares of users or sessions over 28 days ([vitals overview](https://developer.android.com/topic/performance/vitals), [Play Console help](https://support.google.com/googleplay/android-developer/answer/9844486), [technical quality requirements](https://support.google.com/googleplay/android-developer/answer/17492799)), and one phone in one run has neither.
+
+| number                                                    | counts when                                                                                                                      | definition                                                                 |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `frames.slow_percent`, from gfxinfo's histogram           | over 50 % of a session's frames take over 16 ms                                                                                  | [slow frames](https://developer.android.com/google/play/vitals/render)     |
+| `frames.frozen_percent`, from the same, from 1,000 frames | over 0.1 % take 700 ms or longer. Under 1,000 frames it says too few, as one frame in 500 is already over it, and keeps no share | [frozen frames](https://developer.android.com/google/play/vitals/render)   |
+| `launch.worst_cold_ms`, `worst_warm_ms`, `worst_hot_ms`   | the day's longest start of that state, from midnight Pacific as Play's session is: 5 s, 2 s, 1.5 s. The gate stays on the median | [slow start](https://developer.android.com/google/play/vitals/launch-time) |
+| `exits.user_anrs`, of `exits.anrs`                        | an ANR of `Input dispatching timed out`: the only kind Play calls user-perceived                                                 | [ANRs](https://developer.android.com/google/play/vitals/anr)               |
+
+A hot start's limit is 1.5 s by the developer page and 1 s by the help page; 1.5 s holds here, and the answer says the other. The help page is out of date on other points, such as wake locks, so it has the lesser claim. A bucket of the histogram holds a whole millisecond and those above it, so a frame of 16 to 17 ms is left out of "over 16 ms" and that share is the least it can be. At 90 or 120 Hz the same page speaks of a missed deadline too, and nothing settles which: 16 ms is Play's written number, and `frames.jank_percent` keeps the deadline's share beside it. An app with no View toolkit (Vulkan, a game engine) has no such frames, as Play says of it too.
+
+Against known costs, by `test-device/vitals.test.ts`, on the Xiaomi, Android 16, 2026-11-04, host load 33-66 (these are the phone's own counts):
+
+| known cost                                                            | read                                                        | says                                                                                |
+| --------------------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| 600 frames with a 40 ms draw                                          | 92.6 % over 16 ms, with the frames of the tap that began it | would count as slow frames                                                          |
+| 300 frames with a light draw                                          | 0 %                                                         | would not count                                                                     |
+| one 800 ms frame in 300                                               | 604 frames                                                  | too few frames to say of frozen frames                                              |
+| one 800 ms frame in 4,000                                             | 4 of 7,994, 0.05 %                                          | would not count as frozen                                                           |
+| six 800 ms frames in 1,500                                            | 24 of 3,004, 0.8 %                                          | would count as frozen                                                               |
+| a slow start, 5.2 s in `Application.onCreate`                         | 6,369 ms                                                    | would count as a slow cold start, and still does on the next fast start of that day |
+| a hot start                                                           | 110 ms                                                      | would not count, and says the two pages' limits                                     |
+| a touch on a main thread stuck for 12 s, the system's dialog answered | `reason=6 (ANR)`, `Input dispatching timed out`             | `userAnrs` +1, would count                                                          |
+
+This phone's summary counts each frame twice, 7,994 frames for 4,000 drawn, and a stall holds up the next frame too, so one stall reads as 4 frames of 700 ms or longer: the share of 0.05 % is of 0.025 % drawn. Doubled on both sides it holds, and whether Play's own count of a stall is 2 frames could not be checked from here.
+
 ## Thresholds the tools name
 
-| issue                   | threshold                                                                                     | source                       |
-| ----------------------- | --------------------------------------------------------------------------------------------- | ---------------------------- |
-| slow cold / warm launch | ≥ 5 s / ≥ 2 s                                                                                 | Android vitals (launch time) |
-| frozen frame            | ≥ 700 ms                                                                                      | Android vitals (rendering)   |
-| jank                    | median janky share of the scroll rounds (rounds under 60 frames left out) above 10 %          | this project's default       |
-| memory growth           | over 30 % from the second round's end to the last's (the first round loads images and caches) | this project's default       |
+| issue         | threshold                                                                                     | source                 |
+| ------------- | --------------------------------------------------------------------------------------------- | ---------------------- |
+| jank          | median janky share of the scroll rounds (rounds under 60 frames left out) above 10 %          | this project's default |
+| memory growth | over 30 % from the second round's end to the last's (the first round loads images and caches) | this project's default |
 
 An emulator's numbers depend on the host's load and GPU mode: they are relative and only compared with
 the same kind of device (the tools say "sanal cihaz: göreli").

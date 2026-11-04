@@ -2,7 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import type { HeapReading } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { HeapOut } from '../schemas.js';
+import { HeapOut } from './schemas.js';
 import { defineOp, READ, reply } from '../tool.js';
 import { keepRefusal, perfTools, App } from './shared.js';
 

@@ -1,5 +1,6 @@
 import { esc } from '@appdyno/core';
 import { measureOf, type MeasureId, type PerfRecord } from '../record.js';
+import { vitalsCall } from '../vitals.js';
 import type { Refusal } from '../store.js';
 import { age, formatValue, measureTitle, time, type DeviceName } from './format.js';
 import { stepChips } from './journeys.js';
@@ -14,6 +15,7 @@ import {
   nameOf,
   phaseName,
   phasesOf,
+  rowOf,
   rowsOf,
   stepTimes,
   type AppView,
@@ -67,12 +69,20 @@ const meaningOf = ({ device, kind }: PerfRecord) => {
   return row && device.platform === 'ios' && device.virtual ? ON_A_SIMULATOR[row] : undefined;
 };
 
+/** What Play's definitions say of what this run read for this row. */
+const vitalsChips = ({ record, run }: Reading) =>
+  run
+    .filter((x) => rowOf(x.kind) === rowOf(record.kind))
+    .flatMap((x) => vitalsCall(x) ?? [])
+    .map((c) => chip(c.counts ? 'warning' : 'good', c.says));
+
 const readingCell = (r: Reading, now: number) => {
   const { record, scenario } = r;
   const noise = loud(record.noise);
   const meaning = meaningOf(record);
   const notes = [
     ...verdictChips(r),
+    ...vitalsChips(r),
     ...(record.modelled ? [chip('model', 'estimate, from a model')] : []),
     ...(meaning ? [`<div class="m">${esc(meaning)}</div>`] : []),
     ...(noise.length ? [chip('warning', `noise: ${noise.join(', ')}`)] : []),

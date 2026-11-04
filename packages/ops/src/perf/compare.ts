@@ -16,7 +16,7 @@ import {
 } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { CompareOut } from '../schemas.js';
+import { CompareOut } from './schemas.js';
 import { defineOp, READ, reply, ToolError } from '../tool.js';
 import { Scenario, rewriteDashboard } from './shared.js';
 
