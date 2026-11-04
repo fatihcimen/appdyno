@@ -235,13 +235,21 @@ async function main(): Promise<number> {
           share: { type: 'boolean' },
           measure: { type: 'boolean' },
           iterations: { type: 'string' },
+          retries: { type: 'string' },
           measurements: { type: 'string' },
         },
       });
       const iterations = Number(values.iterations ?? JOURNEY_ITERATIONS);
-      if (positionals.length === 0 || !Number.isInteger(iterations) || iterations < 1) {
+      const retries = Number(values.retries ?? 0);
+      if (
+        positionals.length === 0 ||
+        !Number.isInteger(iterations) ||
+        iterations < 1 ||
+        !Number.isInteger(retries) ||
+        retries < 0
+      ) {
         err(
-          'usage: appdyno test <dir or files> [--device S]... [--param NAME=value]... [--artifacts dir] [--junit file] [--measure [--iterations N] [--measurements dir]]',
+          'usage: appdyno test <dir or files> [--device S]... [--param NAME=value]... [--artifacts dir] [--junit file] [--retries N] [--measure [--iterations N] [--measurements dir]]',
         );
         return 2;
       }
@@ -257,6 +265,7 @@ async function main(): Promise<number> {
           artifacts,
           junit: values.junit ?? join(artifacts, 'junit.xml'),
           params: paramsOf(values.param),
+          retries,
           ...(values.measure && { iterations }),
           log: (line) => console.log(line),
         });
@@ -345,8 +354,8 @@ commands:
   mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--animations on|off] [--measurements dir] [--no-install-consent] [--accept-install-warnings]
                    the MCP server over stdio
   devices          the connected Android devices
-  test <dir or files> [--device S]... [--param NAME=value]... [--artifacts dir] [--junit file] [--measure [--iterations N]]
-                   replay flows, one after another, on each device; --measure keeps each as a scenario, by step
+  test <dir or files> [--device S]... [--param NAME=value]... [--artifacts dir] [--junit file] [--retries N] [--measure [--iterations N]]
+                   replay flows, one after another, on each device; --retries runs a failed file again and calls it flaky; --measure keeps each as a scenario, by step
   doctor [--serial S]
                    what this machine and that device lack
   ios build        build the iOS runners now

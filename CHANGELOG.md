@@ -5,6 +5,7 @@
 - iPhone: `perf_trace` `what: hangs` says whether each hang was busy or blocked, in which function, from what a Time Profiler trace holds already; `dsym` names the functions of a build with no symbols, on `perf_trace` and `perf_profile`.
 - `perf_compare` `action: functions` and `appdyno perf functions`: which functions moved between two profiles.
 - Android: `perf_trace` says why the slow frames were slow: a monitor lock and who holds it, a binder call and to whom, the garbage collector, work, a starved or blocked thread, or that they are unexplained.
+- `appdyno test --retries N` runs a file that failed on a step again, whole. One that passes then is reported as flaky, in the log and in JUnit (`flakyFailure`, `flakes`), never as a plain pass, and exits 0; each failed attempt's evidence stays.
 - Android memory as Play judges it: `perf_snapshot` `also: anonMemory` reads anon RSS and swap by process state, and bitmaps, against Play's table for the device's RAM, and says a device is no P90.
 - Android battery signals with no power model: `perf_snapshot` `also: battery` reads wake locks by tag, the longest one, wakeups and jobs over a window, on a phone on a cable and on an emulator. Nothing is reset and the phone is never told it is unplugged.
 - Numbers against Play's definitions, in the answers and on the dashboard: slow frames over 16 ms (a session above 50 %), frozen frames (above 0.1 %, from 1,000 frames), a state's longest start of the day, user-perceived ANRs. A local run says "this session would count", never a rate.

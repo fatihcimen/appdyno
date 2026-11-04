@@ -269,6 +269,8 @@ JUnit (a suite per device, a case per file; default `appdyno-artifacts/junit.xml
 `tree.json` under `<artifacts>/<device>/<file>/` at a failure, goes on to the next file, and exits 1 if any
 failed or if there was nothing to run. Assertions are steps.
 
+**A retry.** `--retries N` runs a file that failed on a step again, whole, from its first step, on a run of its own: within a run a failed step stays failed. A file that passes on a retry is flaky, not passed. The line reads `FLAKY login.flow: passed on attempt 2 of 3`, the run ends by naming it, the JUnit case holds each failed attempt as `<flakyFailure>` and its suite has `flakes="1"`, and each failed attempt's evidence stays, the later ones under `attempt-<n>/`. A flaky file exits 0, as a retry would otherwise be for nothing: to stop on one, read `flakes` or leave `--retries` out. A file that fails every attempt has the attempts as `<rerunFailure>`. What kept a file from running at all (a line that does not parse, a value missing) is not run again, and `--measure` refuses `--retries`, as the gate would compare what a failed go left with what a later one read.
+
 **Export** writes Maestro YAML, or refuses and names every step it has no form for (an `alert`, `replace`,
 coordinates, a role with no id or text). A role beside a text is left out, as Maestro has none, and the YAML
 says so in a comment. Maestro's text matches a whole label where ours also takes a part of one. There is no

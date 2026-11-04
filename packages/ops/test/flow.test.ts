@@ -680,6 +680,93 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
       expect(readFileSync(join(artifacts, 'j.xml'), 'utf8')).not.toContain(SECRET);
     });
 
+    describe('a retry', () => {
+      const flow = 'app dev.app\nopen_link "app://x"\nassert text="Ana sayfa" timeoutMs=200\n';
+      /** The test run of one file, on a screen that fails it, with `onRetry` as a retry begins. */
+      const run = async (text: string, retries: number, onRetry = () => {}) => {
+        const tests = mkdtempSync(join(dir, 'tests-'));
+        writeFileSync(join(tests, 'a.flow'), text);
+        const artifacts = join(dir, 'artifacts');
+        const lines: string[] = [];
+        device.screen = 'form';
+        const r = await flowsFor(context()).test({
+          files: flowFiles([tests]),
+          devices: [],
+          artifacts,
+          junit: join(artifacts, 'j.xml'),
+          retries,
+          log: (l) => {
+            lines.push(l);
+            if (l.includes('retry')) onRetry();
+          },
+        });
+        return {
+          ...r,
+          lines,
+          kept: join(artifacts, device.serial, 'a.flow'),
+          xml: readFileSync(join(artifacts, 'j.xml'), 'utf8'),
+        };
+      };
+      const firstSteps = () => device.calls.filter((c) => c.name === 'openUrl').length;
+
+      it('calls a file that passed only on a retry flaky, never a plain pass', async () => {
+        const r = await run(flow, 2, () => (device.screen = 'home'));
+        expect(r.passed).toBe(true);
+        expect(r.flaky).toEqual([`${device.serial}/a.flow`]);
+        expect(r.xml).toContain('failures="0" errors="0" flakes="1"');
+        expect(r.xml).toMatch(
+          /<flakyFailure message="line 3, step 2: .+" type="flow"><stackTrace>/,
+        );
+        expect(r.xml).toContain('flaky: passed on attempt 2 of 3');
+        expect(r.xml.indexOf('</flakyFailure>')).toBeLessThan(r.xml.indexOf('<system-out>'));
+        expect(r.xml).not.toContain('rerunFailure');
+        const said = r.lines.join('\n');
+        expect(said).toContain('FLAKY a.flow: passed on attempt 2 of 3');
+        expect(said).toContain('flaky, passed only on a retry');
+        expect(said).not.toContain('ok   a.flow');
+        // what failed stays, and a passing retry leaves nothing over it
+        expect(existsSync(join(r.kept, 'screen.jpg'))).toBe(true);
+        expect(existsSync(join(r.kept, 'attempt-2'))).toBe(false);
+      });
+
+      it('starts the file over at its first step: a failed step never passes within a run', async () => {
+        const r = await run(flow, 1, () => (device.screen = 'home'));
+        expect(r.flaky).toHaveLength(1);
+        expect(firstSteps()).toBe(2);
+      });
+
+      it('fails a file that fails every attempt, with each one in the report', async () => {
+        const r = await run(flow, 2);
+        expect(r.passed).toBe(false);
+        expect(r.flaky).toEqual([]);
+        expect(firstSteps()).toBe(3);
+        expect(r.xml).toContain('failures="1" errors="0" flakes="0"');
+        expect(r.xml.match(/<rerunFailure /g)).toHaveLength(2);
+        expect(r.xml).not.toContain('flakyFailure');
+        for (const f of [r.kept, join(r.kept, 'attempt-2'), join(r.kept, 'attempt-3')])
+          expect(existsSync(join(f, 'screen.jpg'))).toBe(true);
+      });
+
+      it('leaves a run with no retries as it was', async () => {
+        const r = await run(flow, 0);
+        expect(firstSteps()).toBe(1);
+        expect(r.lines.join('\n')).not.toContain('retry');
+        expect(r.xml).not.toContain('rerunFailure');
+      });
+
+      it('does not run again what cannot end otherwise', async () => {
+        const r = await run('fly\n', 3);
+        expect(r.passed).toBe(false);
+        expect(r.lines.join('\n')).not.toContain('retry');
+      });
+
+      it('refuses to retry a measured flow', async () => {
+        const o = { files: [], devices: [], artifacts: dir, junit: join(dir, 'j.xml') };
+        const test = flowsFor(context()).test({ ...o, retries: 1, iterations: 5 });
+        expect((await refusal(test)).code).toBe('INVALID_ARGUMENT');
+      });
+    });
+
     it('runs on each device in turn, and a device that will not open fails its files alone', async () => {
       const tests = mkdtempSync(join(dir, 'tests-'));
       writeFileSync(join(tests, 'a.flow'), 'app dev.app\nlaunch\n');
