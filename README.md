@@ -138,7 +138,7 @@ crashes and the measurements taken. So does the end of a session. `write` writes
 of the screen as it is.
 
 The page loads nothing: it has no script, and its content policy allows only its own folder. Listed secrets and what looks
-like a credential are hidden in all text. Typed text is shown by its length. An image is painted over where an
+like a credential are hidden in all text. Typed text, and any argument not known to name something, is shown by its length. An image is painted over where an
 element holds a secret or is a password field, and left out if it cannot be painted over. Text drawn with no element behind it cannot be told, and a video is not painted over.
 
 ### Dashboard

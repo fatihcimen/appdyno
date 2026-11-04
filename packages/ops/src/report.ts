@@ -66,24 +66,56 @@ export const reportVideoDir = (serial: string) => {
 
 const journalOf = (dir: string) => join(dir, 'steps.jsonl');
 
-/** Typed text says what was typed into a password field as well: its length is enough here. */
-function shownArgs(op: string, args: unknown, clean: (s: string) => string): unknown {
-  const walk = (v: unknown, typed: boolean): unknown => {
-    if (typeof v === 'string') return clean(v);
-    if (Array.isArray(v)) return v.map((x) => walk(x, typed));
+/** What an argument under these names holds names something; a selector's text is what is on the screen. */
+const NAMES = new Set([
+  'action',
+  'answer',
+  'app',
+  'compile',
+  'contains',
+  'device',
+  'dir',
+  'direction',
+  'file',
+  'har',
+  'key',
+  'kind',
+  'metro',
+  'mode',
+  'name',
+  'orientation',
+  'page',
+  'path',
+  'proxy',
+  'read',
+  'ref',
+  'scenario',
+  'scroll',
+  'selector',
+  'service',
+  'target',
+  'url',
+  'via',
+  'what',
+]);
+
+/** In `steps`: these only look, so their text is what they look for. */
+const LOOKING = new Set(['wait_for', 'assert']);
+
+/**
+ * Any other string that goes into a device may be a password, so it is shown by its length: an op written later
+ * cannot leave what it was given here. An op that only reads is given what is on the screen.
+ */
+function shownArgs(op: Op, args: unknown, clean: (s: string) => string): unknown {
+  const walk = (v: unknown, shown: boolean): unknown => {
+    if (typeof v === 'string') return shown ? clean(v) : `(${Array.from(v).length} characters)`;
+    if (Array.isArray(v)) return v.map((x) => walk(x, shown));
     if (!v || typeof v !== 'object') return v;
     const o = v as Record<string, unknown>;
-    const isTyped = typed || o.action === 'type_text' || o.action === 'type';
-    return Object.fromEntries(
-      Object.entries(o).map(([k, x]) => [
-        k,
-        isTyped && k === 'text' && typeof x === 'string'
-          ? `(${Array.from(x).length} characters)`
-          : walk(x, false),
-      ]),
-    );
+    const all = shown || LOOKING.has(String(o.action));
+    return Object.fromEntries(Object.entries(o).map(([k, x]) => [k, walk(x, all || NAMES.has(k))]));
   };
-  return walk(args, op === 'type_text' || op === 'clipboard');
+  return walk(args, op.annotations.readOnlyHint === true);
 }
 
 const pre = (s: string) => `<pre>${esc(s)}</pre>`;
@@ -148,7 +180,7 @@ export function reportFor(ctx: ServerContext) {
     const step: Step = {
       at: new Date().toISOString(),
       op: op.name,
-      args: shownArgs(op.name, args, clean),
+      args: shownArgs(op, args, clean),
       ok: !err,
       answer: clean(answer).slice(0, MAX_ANSWER),
       ...(Array.isArray(out?.data.files) && { files: out.data.files as string[] }),
