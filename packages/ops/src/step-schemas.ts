@@ -1,3 +1,4 @@
+import { SYSTEM_VIEWS, type SystemView } from '@appdyno/core';
 import { KEYS, MODIFIERS, type Key, type Modifier } from '@appdyno/protocol';
 import { z } from 'zod';
 
@@ -49,6 +50,8 @@ const BUTTONS: ReadonlySet<string> = new Set<Key>([
   'lock',
 ]);
 
+export const viewNamed = (words: string) => SYSTEM_VIEWS.find((v): v is SystemView => v === words);
+
 /** `command+a` as the wire has it: what is held, then the key by its name, or a letter or digit. */
 export function keyPress(words: string): { key: string; modifiers: Modifier[] } | undefined {
   const parts = words.split('+');
@@ -63,7 +66,10 @@ export function keyPress(words: string): { key: string; modifiers: Modifier[] } 
 // a check, not an enum: 36 more words would cost the catalog more than the names in the description
 const KeyWords = z
   .string()
-  .refine((k) => !!keyPress(k), `a key as press_key lists it, or a letter or digit: command+a`);
+  .refine(
+    (k) => !!keyPress(k) || !!viewNamed(k),
+    `a key as press_key lists it, or a letter or digit: command+a`,
+  );
 
 export const WAIT_MS = 5_000;
 

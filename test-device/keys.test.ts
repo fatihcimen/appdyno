@@ -78,6 +78,36 @@ function keysOf(get: () => Call) {
   });
 }
 
+/** What each view shows, by words a fresh device has. */
+function viewsOf(get: () => Call, shows: Record<'control' | 'notifications' | 'search', RegExp>) {
+  const call: Call = (n, a) => get()(n, a);
+  const opens = async (key: string, shown: RegExp) => {
+    await call('terminate_app');
+    ok(await call('launch_app'));
+    const r = ok(await call('press_key', { key, read: 'full' }));
+    expect(r.text).toMatch(new RegExp(`^opened ${key}`));
+    expect(r.text).toMatch(shown);
+    expect(r.text).not.toContain('no change seen');
+    ok(await call('press_key', { key: 'home' }));
+  };
+
+  it('opens Control Center by name, and reads what it shows', () =>
+    opens('control_center', shows.control));
+
+  it('opens Notification Center by name', () => opens('notification_center', shows.notifications));
+
+  it('opens Spotlight by name', () => opens('spotlight', shows.search));
+
+  it('reads the app again once home has closed a view over it', async () => {
+    await call('terminate_app');
+    ok(await call('launch_app'));
+    ok(await call('press_key', { key: 'control_center' }));
+    await call('press_key', { key: 'home' });
+    ok(await call('launch_app'));
+    expect(ok(await call('assert', { text: 'Form', timeoutMs: 5_000 })).error).toBe(false);
+  });
+}
+
 describe.skipIf(!ANDROID)('keys on an emulator', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(() => {
@@ -86,6 +116,11 @@ describe.skipIf(!ANDROID)('keys on an emulator', () => {
   });
   afterAll(() => o.ctx.close());
   keysOf(() => o.call);
+  viewsOf(() => o.call, {
+    control: /Internet/,
+    notifications: /id=scrim_behind/,
+    search: /foreground: com\.google\.android\.googlequicksearchbox/,
+  });
 });
 
 describe.skipIf(!SIMULATOR)('keys on a simulator', () => {
@@ -97,4 +132,9 @@ describe.skipIf(!SIMULATOR)('keys on a simulator', () => {
   }, 300_000);
   afterAll(() => o.ctx.close());
   keysOf(() => o.call);
+  viewsOf(() => o.call, {
+    control: /"Add Controls"/,
+    notifications: /id=lockscreen-date-view/,
+    search: /id=inputView/,
+  });
 });

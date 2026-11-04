@@ -15,7 +15,7 @@ import { type Answers, SETTLE, type ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
-import { Check, Step, Direction, keyPress } from './step-schemas.js';
+import { Check, Step, Direction, keyPress, viewNamed } from './step-schemas.js';
 import { dragPath, swipeLine } from './gesture-paths.js';
 
 export const STALE = 'stale ref, read the screen again';
@@ -81,7 +81,11 @@ export type StepSeam = <T>(s: Session, st: Step, run: () => Promise<T>) => Promi
 /** Only these touch nothing. */
 const LOOKS_ONLY = new Set<Step['action']>(['wait_for', 'assert']);
 
-export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: StepSeam) {
+export function stepsFor(
+  ctx: ServerContext,
+  { act, clean, settleRead }: Answers,
+  through: StepSeam,
+) {
   const policy = ctx.policy;
   const line = (e: ScreenElement) =>
     `${e.ref} ${e.role} ${JSON.stringify(clean(e.label || e.id || ''))} ${e.x},${e.y}`;
@@ -417,6 +421,19 @@ export function stepsFor(ctx: ServerContext, { act, clean }: Answers, through: S
         };
       }
       case 'press_key': {
+        const view = viewNamed(st.key);
+        if (view) {
+          if (!policy.allowHome)
+            throw new ToolError(
+              `${st.key} is off on this server: the app may not be left`,
+              'POLICY_DENIED',
+            );
+          await s.device.openView(view);
+          const { screen } = await settleRead(s);
+          // what the answer compares with is what was on the screen before, not this read
+          s.acted();
+          return { r: treeIfAsked(screen), done: `opened ${view}` };
+        }
         const { key, modifiers } = keyPress(st.key)!;
         const leaves = LEAVES_APP.has(key) || (modifiers.length > 0 && SHORTCUT_LEAVES.has(key));
         if (leaves && !policy.allowHome)

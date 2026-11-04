@@ -626,6 +626,19 @@ describe('gestures, keys, clipboard', () => {
     expect((await locked.call('press_key', { key: 'command+a' })).error).toBe(false);
   });
 
+  it('opens the system views by name, and a server without home refuses them', async () => {
+    const d = new FakeDevice();
+    const { call } = await connect(d);
+    const r = await call('press_key', { key: 'control_center' });
+    expect(r.text).toMatch(/^opened control_center/);
+    expect(d.calls.filter((c) => c.name === 'openView').map((c) => c.args[0])).toEqual([
+      'control_center',
+    ]);
+    const locked = await connect(new FakeDevice(), { policy: { allowHome: false } });
+    for (const key of ['control_center', 'notification_center', 'spotlight'])
+      expect((await locked.call('press_key', { key })).error).toBe(true);
+  });
+
   it('reads the clipboard and keeps a secret off it', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d, { policy: { secrets: ['hunter2'] } });

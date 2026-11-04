@@ -18,6 +18,9 @@ import {
   TIMEOUTS,
   type ActOptions,
   assertLatLon,
+  SYSTEM_SWIPES,
+  type SystemSwipe,
+  type SystemView,
 } from '@appdyno/core';
 import { APPLE_CONTROLS } from './mirror-press.js';
 import {
@@ -37,7 +40,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { IosRunnerLauncher } from './runner.js';
-import { iosScreen } from './platform-screen.js';
+import { HOME_SCREEN_APP, iosScreen } from './platform-screen.js';
 import { assertBundle } from './simctl.js';
 
 /** Diagnostics: while this file exists, iOS tree reads are written to DUMP_DIR. */
@@ -207,7 +210,14 @@ export abstract class IosDevice extends RpcDevice implements Device {
     return this.actNow(action, opts, extra);
   }
 
-  override key(key: string, opts?: ActOptions, modifiers?: Modifier[]) {
+  override async key(key: string, opts?: ActOptions, modifiers?: Modifier[]) {
+    if (key === 'home' && this.underView) {
+      const app = this.underView;
+      this.underView = undefined;
+      const r = await super.key(key, { settle: {}, read: 'none' });
+      await this.target(app);
+      return opts?.read === 'tree' ? { ...r, tree: await this.tree() } : r;
+    }
     if (key === 'appSwitch') {
       // iOS has no such key: the home indicator's slow drag up, held until the switcher shows
       const { w, h } = this.helloInfo!.screen;
@@ -228,6 +238,28 @@ export abstract class IosDevice extends RpcDevice implements Device {
     }
     return super.key(key, opts, modifiers);
   }
+
+  /**
+   * A person's drag from the screen's top; Spotlight is the keyboard's, from the home screen, as an app may keep the
+   * shortcut. These are the home screen app's: an app under one is still in front, and a read of it would miss the view.
+   */
+  async openView(view: SystemView) {
+    this.underView ??= this.targetApp;
+    await this.target(HOME_SCREEN_APP);
+    if (view === 'spotlight') {
+      await super.key('home', { settle: {}, read: 'none' });
+      await super.key('space', { settle: false, read: 'none' }, ['command']);
+    } else
+      await this.drag(
+        view === 'control_center' ? SYSTEM_SWIPES.controlCenter : SYSTEM_SWIPES.notifications,
+      );
+  }
+
+  /** The app a view went over: home closes the view, and it is what is read again. */
+  private underView: string | undefined;
+
+  /** A drag that belongs to the system: the app under it is told nothing. */
+  protected abstract drag(way: SystemSwipe): Promise<void>;
 
   /** A code entry's hidden field never reports the focus, so its keys wait this out each time. */
   override typeText(text: string, opts: Parameters<RpcDevice['typeText']>[1] = {}) {

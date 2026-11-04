@@ -18,4 +18,5 @@ export { joinVideos, readVideo, type VideoInfo } from './video.js';
 export * from './png.js';
 export * from './html.js';
 export * from './native.js';
+export * from './system-swipes.js';
 export * from './mirror/index.js';

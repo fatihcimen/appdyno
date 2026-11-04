@@ -1,4 +1,12 @@
-import { sleep, type ScreenRecorder, TIMEOUTS, type ActOptions, pause } from '@appdyno/core';
+import {
+  sleep,
+  swipeThrough,
+  type ScreenRecorder,
+  type SystemSwipe,
+  TIMEOUTS,
+  type ActOptions,
+  pause,
+} from '@appdyno/core';
 import { simulatorCrashes } from './crashes.js';
 import { simulatorLogs } from './logs.js';
 import { SimulatorApps, SimulatorEvents, SimulatorSettings } from './simulator-manage.js';
@@ -21,6 +29,7 @@ import { learnCopies, onKeyboard, withoutCopies } from './simtree.js';
 import { IosRunnerLauncher } from './runner.js';
 import { assertBundle, Simctl } from './simctl.js';
 import { type IosDeviceOps, IosDevice } from './device.js';
+import { HOME_SCREEN_APP } from './platform-screen.js';
 
 export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
   return {
@@ -73,8 +82,6 @@ const LATE_TOUCH_MS = 4_000;
 const LAUNCH_FRONT_MS = 15_000;
 
 const HOME_FRONT_MS = 3_000;
-
-const SPRINGBOARD = 'com.apple.springboard';
 
 export class IosSimulatorDevice extends IosDevice {
   readonly virtual = true;
@@ -247,6 +254,11 @@ export class IosSimulatorDevice extends IosDevice {
     return front && (!this.targetApp || front === this.targetApp) ? front : super.foreground();
   }
 
+  /** A touch the app in front never reports is one `act` would take for lost and do again by the runner. */
+  protected drag(way: SystemSwipe) {
+    return swipeThrough(way, (e) => this.mirror.input(e));
+  }
+
   /** A running app comes forward as it is; to start it afresh, terminate it first. */
   /** Locked by this tool: a screen under the lock still reads, and an app will not come forward. */
   private locked = false;
@@ -334,7 +346,7 @@ export class IosSimulatorDevice extends IosDevice {
         this.transitionEnds = Date.now() + TRANSITION_MS;
         return;
       }
-      homeSince = front === SPRINGBOARD ? (homeSince ?? Date.now()) : undefined;
+      homeSince = front === HOME_SCREEN_APP ? (homeSince ?? Date.now()) : undefined;
       if (homeSince !== undefined && Date.now() - homeSince > HOME_FRONT_MS) break;
       await sleep(20);
     }
@@ -358,6 +370,7 @@ export class IosSimulatorDevice extends IosDevice {
 
   override close() {
     this.direct.close(this.runnerUp);
+    void this.mirror.close();
     super.close();
   }
 

@@ -11,6 +11,8 @@ import {
   assertLatLon,
   decodePng,
   RpcDevice,
+  swipeThrough,
+  SYSTEM_SWIPES,
   TIMEOUTS,
   type ActOptions,
   type CrashesQuery,
@@ -18,6 +20,7 @@ import {
   type LogsQuery,
   type Mirror,
   type RpcClient,
+  type SystemView,
 } from '@appdyno/core';
 import { Adb, amStartError, assertPkg, assertSerial, shq } from './adb.js';
 import { androidCrashes } from './crashes.js';
@@ -47,6 +50,8 @@ const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
   'app.foreground',
   'clipboard.get',
 ]);
+
+const GLOBAL_SEARCH = 'android.search.action.GLOBAL_SEARCH';
 
 /** How long a phone just woken gets for its focus to hold, and how long it must hold. */
 const WAKE_FOCUS_MS = 5_000;
@@ -303,6 +308,26 @@ export class AndroidDevice extends RpcDevice implements Device {
         () => '',
       );
     return androidHardware(read, this.virtual);
+  }
+
+  /** Quick Settings is Android's Control Center; its search is the app that answers the system's request for one. */
+  async openView(view: SystemView) {
+    if (view === 'spotlight') {
+      const error = amStartError(
+        await this.shell(`am start -W -a ${GLOBAL_SEARCH} 2>&1`, TIMEOUTS.app),
+      );
+      if (error)
+        throw new DeviceError(
+          'UNSUPPORTED',
+          `this device has no app for a global search: ${error}`,
+          "press home and tap the launcher's own search",
+        );
+      return;
+    }
+    await swipeThrough(
+      view === 'control_center' ? SYSTEM_SWIPES.quickSettings : SYSTEM_SWIPES.notifications,
+      (e) => this.mirror.input(e),
+    );
   }
 
   /** Starts the app's launcher activity and waits for it (`am start -W`). */

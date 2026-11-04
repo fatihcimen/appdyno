@@ -1,26 +1,23 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { measuredLive, pause, perfMessage, safeName } from '@appdyno/core';
+import {
+  measuredLive,
+  pause,
+  perfMessage,
+  safeName,
+  swipeThrough,
+  SYSTEM_SWIPES,
+} from '@appdyno/core';
 import type {
   Device,
   DeviceHardware,
-  InputEvent,
   MirrorSession,
+  SystemSwipe,
   ViewerMessage,
 } from '@appdyno/core';
 
-/** A finger's way down the screen, as fractions of it: from the top edge, or the middle of a home screen. */
-const SWIPES: Record<string, { x: number; from: number; to: number; times?: number }> = {
-  // inside the corner's curve, near the battery: past it a screen has nothing to touch
-  controlCenter: { x: 0.84, from: 0.012, to: 0.55 },
-  notifications: { x: 0.3, from: 0, to: 0.65 },
-  spotlight: { x: 0.5, from: 0.35, to: 0.55 },
-  quickSettings: { x: 0.5, from: 0, to: 0.6, times: 2 },
-};
-const SWIPE_STEPS = 10;
-const SWIPE_STEP_MS = 16;
-const SWIPES_APART_MS = 400;
+const SWIPES: Record<string, SystemSwipe> = SYSTEM_SWIPES;
 const RECORD_MAX_S = 3_600;
 
 const stamp = () =>
@@ -62,22 +59,7 @@ export function windowControls(
   const note = (text: string) => session().tell({ op: 'note', text });
   const trying = (work: () => Promise<void>) => void work().catch((e: Error) => note(e.message));
 
-  const touch = (p: 0 | 1 | 2, x: number, y: number) => {
-    const e: InputEvent = { kind: 'touch', p, x, y };
-    session().send(e);
-  };
-
-  const swipe = async ({ x, from, to, times = 1 }: (typeof SWIPES)[string]) => {
-    for (let n = 0; n < times; n++) {
-      touch(0, x, from);
-      for (let i = 1; i <= SWIPE_STEPS; i++) {
-        await pause(SWIPE_STEP_MS);
-        touch(1, x, from + ((to - from) * i) / SWIPE_STEPS);
-      }
-      touch(2, x, to);
-      if (n + 1 < times) await pause(SWIPES_APART_MS);
-    }
-  };
+  const swipe = (way: SystemSwipe) => swipeThrough(way, (e) => session().send(e));
 
   const rotate = async (by: 1 | 3) => {
     // a simulator's orientation has no way in but its runner, which a first turn may have to build

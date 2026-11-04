@@ -14,6 +14,7 @@ import {
   type MeasureSource,
   type Mirror,
   type ScreenRecorder,
+  type SystemView,
 } from '@appdyno/core';
 import {
   DeviceError,
@@ -288,6 +289,9 @@ export class FakeDevice extends DeviceActions implements Device {
       meta: { w: 460, h: 1024, format: 'jpeg', bytes: 3 },
       data: Buffer.from([1, 2, 3]),
     };
+  }
+  async openView(view: SystemView) {
+    this.record('openView', view);
   }
   async foreground() {
     return this.current().windows.at(-1)!.pkg;

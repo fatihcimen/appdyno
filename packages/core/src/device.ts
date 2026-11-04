@@ -18,6 +18,7 @@ import type { MeasureSource, TraceDigest } from './measure.js';
 import type { LiveMetrics } from './mirror/live-metrics.js';
 import type { PlatformScreen } from './screen/port.js';
 import type { Need } from './mirror/need.js';
+import type { SystemView } from './system-swipes.js';
 import type { Mirror } from './mirror/port.js';
 
 /** Per-command limits (ms); the settle cap is added to an action's. */
@@ -243,6 +244,8 @@ export interface Device {
   swipe(from: Point, to: Point, durationMs?: number, opts?: ActOptions): Promise<ActResult>;
   /** A key by its name, or a letter or digit, with what is held during it. */
   key(key: string, opts?: ActOptions, modifiers?: Modifier[]): Promise<ActResult>;
+  /** One of the system's own views, over what is on the screen. */
+  openView(view: SystemView): Promise<void>;
   typeText(
     text: string,
     opts?: { at?: Point; replace?: boolean; submit?: boolean } & ActOptions,

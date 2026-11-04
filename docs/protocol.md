@@ -109,7 +109,10 @@ clipboard and every case below. `APPDYNO_SIM_DIRECT=off` turns both off, `read` 
 
 iOS has no key to close a keyboard or to open the app switcher. `dismissKeyboard` taps the keyboard's hide key where it
 shows one, else a place with no control; the host then reads whether it went and refuses if it did not. `appSwitch` is the home
-indicator's slow drag up. The volume, lock and power keys go through direct input on a simulator and through
+indicator's slow drag up. Control Center and Notification Center are the drags a window's controls send, by the mirror's
+input on a simulator: `act` would wait for the app under them to report the touch, take it for lost when it does not, and
+do it again. Spotlight is Command-Space from the home screen. Each is the home screen app's, so that is what is read until
+`home` closes it. The volume, lock and power keys go through direct input on a simulator and through
 `XCUIDevice` on a phone, where lock and power use the private `pressLockButton`.
 
 - **Input**, `SimHID` on the Mac: XPC to the simulator's `dtuhidd` (`com.apple.coredevice.feature.remote.hid.digitizer`).

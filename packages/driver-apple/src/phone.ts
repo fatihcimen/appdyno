@@ -6,7 +6,7 @@ import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DeviceError, type Tree } from '@appdyno/protocol';
-import { sleep, stateDir, type ScreenRecorder } from '@appdyno/core';
+import { sleep, stateDir, swipePath, type ScreenRecorder, type SystemSwipe } from '@appdyno/core';
 import { type IosDeviceOps, IosDevice } from './device.js';
 import { phoneRecorder } from './record.js';
 import { iosProducts, type RunnerTransport, IosRunnerLauncher } from './runner.js';
@@ -173,6 +173,11 @@ export class IosPhoneDevice extends IosDevice {
       if (!onLock(after)) return after;
     }
     throw new DeviceError('DEVICE_LOCKED', `${this.serial} stays on its lock screen`, UNLOCK);
+  }
+
+  /** A phone takes a mirror's input only while a stream runs: by the runner. */
+  protected async drag(way: SystemSwipe) {
+    await this.act({ kind: 'gesture', pointers: [swipePath(way, this.helloInfo!.screen)] });
   }
 
   /** The app in front on a screen that is on: a launch brings a running app forward as it is and lights a dark screen. */

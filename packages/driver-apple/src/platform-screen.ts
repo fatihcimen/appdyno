@@ -9,7 +9,7 @@ import {
 } from '@appdyno/core';
 
 /** The home screen app, whose alerts are the system's (permission prompts), never the app's own. */
-const HOME_SCREEN_APP = 'com.apple.springboard';
+export const HOME_SCREEN_APP = 'com.apple.springboard';
 /** As tall as it gets, on a phone with a Dynamic Island: a pixel comparison leaves it out. */
 const STATUS_BAND_PT = 64;
 /** Status bar items are root elements in this band. */
