@@ -36,6 +36,7 @@
         <activity android:name=".SlowFocusActivity" />
         <activity android:name=".WebActivity" />
         <activity android:name=".NetworkActivity" />
+        <activity android:name=".SecureActivity" />
         <activity android:name=".ShowcaseActivity" />
         <activity android:name=".FramesActivity" />
         <activity android:name=".MemoryActivity" />

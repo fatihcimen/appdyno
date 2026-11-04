@@ -12,7 +12,8 @@ import { FOCUS_SIGNAL, liveMirror, liveMirrors, mirrorLog, type MirrorFile } fro
 
 /** A first use compiles the viewer: 25 s was measured at load 270. */
 const OPEN_MS = 180_000;
-const CLOSE_MS = 10_000;
+/** A window ends its stream and proves it: a loaded Mac took over 10 s. */
+const CLOSE_MS = 30_000;
 const POLL_MS = 100;
 
 const ago = (ms: number) => `${Math.round((Date.now() - ms) / 1000)} s ago`;

@@ -132,7 +132,8 @@ export class ViewerProcess implements ViewerLink {
   }
 
   onExit(listener: (tail: string) => void) {
-    this.exits.push(listener);
+    if (this.ended) listener(this.tail);
+    else this.exits.push(listener);
   }
 
   kill() {

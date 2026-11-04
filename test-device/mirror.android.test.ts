@@ -1,6 +1,7 @@
-import { spawn, spawnSync } from 'node:child_process';
+import { execFile, spawn, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   decodePng,
@@ -237,25 +238,33 @@ describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () =>
   const pidsOf = (pattern: string) =>
     spawnSync('pgrep', ['-f', pattern]).stdout.toString().trim().split('\n').filter(Boolean);
 
+  // a file replaced is gone for a moment
+  const stateText = () => {
+    try {
+      return readFileSync(stateFile, 'utf8');
+    } catch {
+      return '';
+    }
+  };
+  const parents: ReturnType<typeof spawn>[] = [];
+  afterAll(() => {
+    for (const p of parents) p.kill();
+  });
+
   const parent = () => {
     const child = spawn(
       process.execPath,
       [MAIN, 'mirror', '--device', serial!, '--headless', '--share'],
-      {
-        stdio: 'ignore',
-      },
+      { stdio: 'ignore' },
     );
+    parents.push(child);
     return child;
   };
 
   it('killed outright: its viewer goes, the agent lets go of the display, and the next start is clean', async () => {
     const child = parent();
     await until('its file', () => existsSync(stateFile), 60_000);
-    await until(
-      'a stream',
-      () => readFileSync(stateFile, 'utf8').includes('"state":"live"'),
-      120_000,
-    );
+    await until('a stream', () => stateText().includes('"state":"live"'), 120_000);
     expect(await displaysOf(adb, serial!)).toBeGreaterThan(0);
     const viewer = spawnSync('pgrep', ['-P', String(child.pid)])
       .stdout.toString()
@@ -276,16 +285,8 @@ describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () =>
     // its file is left, and is no mirror: the next start does not take it for one
     expect(existsSync(stateFile)).toBe(true);
     const next = parent();
-    await until(
-      'the next start',
-      () => readFileSync(stateFile, 'utf8').includes(`"pid":${next.pid}`),
-      60_000,
-    );
-    await until(
-      'its picture',
-      () => readFileSync(stateFile, 'utf8').includes('"state":"live"'),
-      120_000,
-    );
+    await until('the next start', () => stateText().includes(`"pid":${next.pid}`), 60_000);
+    await until('its picture', () => stateText().includes('"state":"live"'), 120_000);
     // a second window on the device: refused, naming the first
     const second = spawnSync(
       process.execPath,
@@ -303,10 +304,14 @@ describe.runIf(serial && existsSync(MAIN))('a parent on the command line', () =>
       timeout: 60_000,
     });
     expect(status.stdout).toContain(`${serial}: live`);
-    const closed = spawnSync(process.execPath, [MAIN, 'mirror', 'close', '--device', serial!], {
-      encoding: 'utf8',
-      timeout: 60_000,
-    });
+    // not a blocking call: the parent's end is seen only once this process has reaped it
+    const closed = await promisify(execFile)(process.execPath, [
+      MAIN,
+      'mirror',
+      'close',
+      '--device',
+      serial!,
+    ]);
     expect(closed.stdout + closed.stderr).toContain('closed the mirror');
     await until('its file gone', () => !existsSync(stateFile), 20_000);
   }, 300_000);

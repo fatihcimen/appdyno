@@ -117,8 +117,8 @@ export class MirrorSession {
     const v = this.viewer;
     this.viewer = undefined;
     v?.send({ op: 'quit' });
-    // a viewer wedged in a framework hears no quit
-    if (v) this.clock.after(QUIT_MS, () => v.kill());
+    // a viewer wedged in a framework hears no quit; one that heard it holds nothing up
+    if (v) v.onExit(this.clock.after(QUIT_MS, () => v.kill()));
     this.finish(this.status);
   }
 

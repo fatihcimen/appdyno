@@ -18,11 +18,11 @@ and `record`. `hand_off` asks a person for what an agent cannot do.
 
 ## What feeds it
 
-| device    | how                                                                                         | what to know                                                                                               |
-| --------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| simulator | CoreSimulator's own surface, no encode: the framebuffer itself, called back on each present | a still screen costs nothing. Private API, loaded at run time; what fails says so                          |
-| phone     | the agent's stream on a connection of its own: nothing passes through Node                  | H.264 by default, HEVC at your word. Android 10 and up. A secure window is black from Android 12 (not run) |
-| emulator  | the emulator's own gRPC port, its screen in a shared file, nothing in the guest             | the emulator's port, not ours. Where it has none, the guest encodes, which lags by seconds, and it says so |
+| device    | how                                                                                         | what to know                                                                                                             |
+| --------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| simulator | CoreSimulator's own surface, no encode: the framebuffer itself, called back on each present | a still screen costs nothing. Private API, loaded at run time; what fails says so                                        |
+| phone     | the agent's stream on a connection of its own: nothing passes through Node                  | H.264 by default, HEVC at your word. Android 10 and up. A secure window is black, as in `screencap` (seen on Android 16) |
+| emulator  | the emulator's own gRPC port, its screen in a shared file, nothing in the guest             | the emulator's port, not ours. Where it has none, the guest encodes, which lags by seconds, and it says so               |
 
 The emulator's frame is RGBA in a file of exactly its size, top row first (the proto's comment says bottom up, and
 a frame compared with `screencap` says not). Asked with no size or into a larger file, it answers every frame and writes

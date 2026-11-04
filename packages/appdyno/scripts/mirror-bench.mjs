@@ -82,10 +82,17 @@ const during = async (ms) => {
   return seconds.slice(from);
 };
 
-/** A screen that has stopped moving: a second with no frame in it. */
-const still = async (ms = 15_000) => {
+/** A screen that has stopped moving: two seconds with no frame, as a scroll bar fades a moment after a list stops. */
+const still = async (ms = 20_000) => {
   const from = seconds.length;
-  await waitFor('still screen', () => seconds.slice(from).some((n) => n.arrived === 0), ms);
+  await waitFor(
+    'still screen',
+    () => {
+      const since = seconds.slice(from);
+      return since.length >= 2 && since.slice(-2).every((n) => n.arrived === 0);
+    },
+    ms,
+  );
 };
 
 const adbShell = (cmd) => adb.exec(serial, cmd, { timeoutMs: 30_000 });

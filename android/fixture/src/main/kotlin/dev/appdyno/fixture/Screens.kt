@@ -102,6 +102,7 @@ private val LINKED = mapOf(
     "a11y" to A11yActivity::class.java,
     "biometric" to BiometricActivity::class.java,
     "crash" to CrashActivity::class.java,
+    "secure" to SecureActivity::class.java,
 )
 
 /** A number a test wrote into the app's files, as a known cost; absent, none. */
@@ -673,6 +674,17 @@ class SlowService : android.app.Service() {
     }
 
     override fun onBind(intent: Intent?) = binder
+}
+
+/** A window the system keeps out of screenshots and mirrors, for what a mirror shows of one. */
+class SecureActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        window.setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE, android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        column {
+            button("Secure", R.id.frames_light) { }
+        }
+    }
 }
 
 /**
