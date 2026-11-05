@@ -65,6 +65,7 @@ function fixture(platform: 'ios' | 'android', device: Partial<Device> = {}, stre
       ran: { totalMs: 412 } as JourneyAnswer,
     })),
     dashboard: vi.fn(async () => undefined),
+    history: vi.fn(async () => []),
   };
   const controls = windowControls(whole, hardware, () => session, measures);
   return { controls, sent, told, device: whole, session, recording, measures };

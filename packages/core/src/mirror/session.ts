@@ -92,7 +92,13 @@ export class MirrorSession {
   }
 
   private tellViewerState() {
-    this.viewer?.send({ op: 'status', state: this.current.state, ...wordsOf(this.current) });
+    const need = 'need' in this.current ? this.current.need : undefined;
+    this.viewer?.send({
+      op: 'status',
+      state: this.current.state,
+      ...wordsOf(this.current),
+      ...(need && { need }),
+    });
   }
 
   async start() {

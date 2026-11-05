@@ -131,7 +131,7 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags);
 - (void)showBanner:(NSDictionary *)message;
 - (void)hideBanner;
 /// A ring where a touch landed, at these fractions of the screen.
-- (void)showTouchAtX:(double)x y:(double)y;
+- (void)showTouchAtX:(double)x y:(double)y agent:(BOOL)agent;
 /// The banner's button.
 - (void)done:(id)sender;
 @end
@@ -176,6 +176,8 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 @property(readonly) NSView *screenView;
 @property(readonly) MVInspector *inspector;
 @property(readonly) BOOL inspecting;
+/// The stream's numbers are showing.
+@property(readonly) BOOL numbersShown;
 @property(readonly) MVToolbar *bar;
 @property(readonly) MVStatusLine *line;
 @property(readonly) NSDictionary *look;

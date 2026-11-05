@@ -162,6 +162,8 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   if (_hub && !name) return [self handleHub:op message:m];
   MVStage *stage = [self stageNamed:name];
   if (!stage && name && [op isEqual:@"attach"]) stage = [self newStageNamed:name];
+  // a device held up before its first picture has no stage to say so on
+  if (!stage && name && [op isEqual:@"status"]) return [_hub showStatus:m];
   [stage handle:op message:m];
 }
 

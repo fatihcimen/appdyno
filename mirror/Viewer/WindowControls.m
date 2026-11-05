@@ -56,6 +56,10 @@
   [self perform:name];
 }
 
+- (BOOL)numbersShown {
+  return _numbers.shown;
+}
+
 /// What is underneath the capsule's words: the stream, and what it costs this Mac.
 - (void)showNumbers:(NSView *)anchor {
   if (!_numbers) {

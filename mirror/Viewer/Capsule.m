@@ -4,7 +4,7 @@
 #import "Window.h"
 #import "Words.h"
 
-static const double kHigh = 28, kMark = 10, kBar = 2, kStepSeconds = 0.15, kWordsSeconds = 0.15, kNoteSeconds = 4, kWidest = 340, kInset = 12;
+static const double kHigh = 28, kMark = 10, kBar = 2, kStepSeconds = 0.15, kWordsSeconds = 0.15, kNoteSeconds = 4, kWidest = 220, kInset = 12;
 
 @implementation MVStatusLine {
   NSString *_note;
@@ -37,7 +37,7 @@ static const double kHigh = 28, kMark = 10, kBar = 2, kStepSeconds = 0.15, kWord
   if (!self.live) return self.state ?: @"Connecting";
   if (self.measuring) return self.measuring;
   if (self.recording) return @"Recording";
-  if (self.tool) return self.client.length ? [NSString stringWithFormat:@"%@ driving", self.client] : @"An AI client is driving";
+  if (self.tool) return self.client.length ? [NSString stringWithFormat:@"%@ driving", self.client] : @"AI client driving";
   return self.liveWords;
 }
 

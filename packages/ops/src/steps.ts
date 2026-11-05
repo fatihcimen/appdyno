@@ -11,6 +11,7 @@ import {
 import type { ActResult, Point, TextResult } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { Answers, ReadMode } from './answers.js';
+import { noteTouch } from './activity.js';
 import type { ServerContext } from './context.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
@@ -285,6 +286,8 @@ export function stepsFor(
     switch (st.action) {
       case 'tap': {
         const t = await target(s, st, patient);
+        const screen = s.device.hello?.screen;
+        if (screen) noteTouch(t.point.x / screen.w, t.point.y / screen.h);
         return { r: await s.device.tap(t.point, opts), done: `tapped ${t.name}` };
       }
       case 'long_press': {

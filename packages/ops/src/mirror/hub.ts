@@ -7,6 +7,7 @@ import {
   viewerBinary,
   ViewerProcess,
   type DeviceHardware,
+  type Need,
   type NewDevice,
   type Startable,
   type ViewerLink,
@@ -40,6 +41,10 @@ export type HubDevice = {
   platform?: Platform;
   model?: string;
   detail: string;
+  /** How a phone is joined to this Mac. */
+  link?: 'USB' | 'Wi-Fi';
+  /** What a person has to do before it can show. */
+  need?: Need;
 };
 
 type Hardware = (serial: string) => Promise<DeviceHardware | undefined>;
@@ -84,6 +89,8 @@ export async function hubDevices(ctx: ServerContext, hardware: Hardware): Promis
     // what this server may not drive is not even asked of, as asking refuses
     if (seen.has(d.serial) || !ctx.allowed(d.serial)) continue;
     const known = await hardware(d.serial);
+    const provider = ctx.providers.findLast((p) => p.handles(d.serial));
+    const need = d.ready ? undefined : await provider?.need?.(d).catch(() => undefined);
     phones.push({
       id: d.serial,
       serial: d.serial,
@@ -93,7 +100,9 @@ export async function hubDevices(ctx: ServerContext, hardware: Hardware): Promis
       mirrored: mirrored.has(d.serial),
       ...(known?.platform && { platform: known.platform }),
       ...(known?.model && { model: known.model }),
-      detail: d.state,
+      detail: '',
+      link: d.state === 'network' || d.serial.includes(':') ? 'Wi-Fi' : 'USB',
+      ...(need && { need }),
     });
   }
   return [...phones, ...virtual].filter((d) => ctx.allowed(d.serial ?? d.id));

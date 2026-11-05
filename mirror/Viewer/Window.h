@@ -1,4 +1,5 @@
 #import "Frame.h"
+#import "Style.h"
 #import "Viewer.h"
 
 NS_ASSUME_NONNULL_BEGIN
@@ -90,43 +91,6 @@ typedef NS_ENUM(NSInteger, MVTone) { MVToneLive, MVToneBusy, MVToneNeedsYou, MVT
 - (void)say:(NSString *)note;
 @end
 
-/// Words of the hub's panes.
-typedef NS_ENUM(NSInteger, MVStyle) { MVStyleTitle, MVStyleBody, MVStyleStrong, MVStyleCallout, MVStyleHeading, MVStyleSub };
-NSTextField *MVText(NSString *text, MVStyle style);
-NSTextField *MVWrappedText(NSString *text, MVStyle style);
-/// A colour as it is, by its look: the system's own fade to 2:1 in the bar of a window behind others, and this does not.
-NSColor *MVSolid(NSColor *color);
-/// What stands under a main word: it reads at 4.5:1 on any pane, in a window behind others too.
-NSColor *MVQuietColor(void);
-/// Green for live or passed, and orange for what needs a person: each holds 3:1 on every pane, dark and light.
-NSColor *MVGreen(void);
-NSColor *MVOrange(void);
-/// A symbol in its own ink: AppKit dims a template in a window behind others, and leaves this as it is.
-NSImage *_Nullable MVSymbol(NSString *name, NSColor *color, CGFloat size, NSFontWeight weight);
-/// A symbol drawn by itself: in a window behind others AppKit fades every image in the bar, whatever its ink, and not this.
-@interface MVInk : NSView
-- (instancetype)initWithSymbol:(NSString *)symbol color:(NSColor *)color size:(CGFloat)size;
-- (void)paint:(NSString *)symbol color:(NSColor *)color;
-@property(nonatomic, readonly) CGFloat size;
-@end
-
-/// Whether a person has left motion on.
-BOOL MVMoves(void);
-/// Opacity to `to`; at once for a person who asked for less motion.
-void MVFade(CALayer *layer, double from, double to, double seconds);
-
-/// A click on a window not in use is the click a person meant: without this its first click on any control only made the
-/// window the one in use, with nothing to show for it, and this window is usually not the one in use.
-@interface MVBarButton : NSButton
-@end
-
-/// What a device is at, in the toolbar. A click on it shows the stream's numbers.
-@interface MVCapsule : MVBarButton
-- (void)show:(MVStatusLine *)line;
-/// What it says now.
-@property(nonatomic, readonly) NSString *words;
-@end
-
 /// A pane of glass around `content`: the system's where it has one, its nearest material where it has not.
 NSView *MVGlass(NSView *content, double radius, NSColor *_Nullable tint);
 /// A pane comes or goes: a short fade, or at once for a person who asked for less motion.
@@ -167,6 +131,9 @@ CGImageRef _Nullable MVImageMood(CVImageBufferRef image, BOOL dark);
 
 /// A mouse's click at a point of a window, posted to this process as the window server would send it.
 void MVRealClick(NSWindow *window, NSPoint at);
+
+/// The symbol of what holds a device up, by the name `NEEDS` has for it.
+NSString *MVNeedSymbol(NSString *_Nullable need);
 
 /// A control's button, however deep in glass it sits.
 NSButton *_Nullable MVFindControl(NSView *view, NSString *name);
@@ -249,6 +216,7 @@ static const double MVHudWidth = 188;
 /// What a secondary click on a row offers, and the row it was on.
 @property(nonatomic, nullable) NSMenu *rowMenu;
 @property(nonatomic, readonly, nullable) NSString *clickedKey;
+/// Rows are matched by key or title, and what comes or goes opens or closes; else the list just shows what it is given.
 - (void)useSidebarStyle;
 @end
 
@@ -282,6 +250,13 @@ static const double MVHudWidth = 188;
 NSTextField *MVPaneNote(NSString *text);
 NSTextField *MVPaneHeading(NSString *text);
 
+/// What an agent did on this device, as runs of work.
+@interface MVActivityPane : NSView
+- (void)add:(NSDictionary *)call;
+/// The newest line, for a look at what it says.
+- (NSString *)firstLine;
+@end
+
 /// What a person's clicks have written, and what is under the pointer, as the parent says.
 @interface MVFlowPane : NSView
 - (instancetype)initWithFrame:(NSRect)frame target:(id)target;
@@ -314,7 +289,12 @@ static const double MVInspectorWidth = 320;
 @property(nonatomic, readonly) NSSplitViewItem *item;
 @property(nonatomic, readonly, nullable) NSView *pane;
 - (void)hold:(nullable NSView *)pane onMove:(nullable void (^)(void))onMove;
+/// A window under `least` wide goes without it, and has it back when it is wide enough again.
+- (void)fitWindow:(double)wide least:(double)least;
 @end
+
+/// A side of a window closes while the window is too narrow for it, and opens again only if that is what closed it.
+void MVGiveWay(NSSplitViewItem *item, BOOL narrow, BOOL *gaveWay);
 
 /// Where the chosen stand: one fills it, and two share it evenly. Its window's Inspector goes with it.
 @interface MVRoomView : NSView
@@ -335,6 +315,8 @@ enum { MVPanePerf, MVPaneFlow, MVPaneApps, MVPaneActivity, MVPanes };
 @property(nonatomic, readonly) MVFlowPane *flow;
 /// The stream's numbers, which stand in no pane of their own.
 @property(nonatomic, readonly) NSView *numbers;
+/// The pane chosen, by the index `showPane:` takes.
+@property(nonatomic, readonly) NSInteger chosen;
 /// Whether Performance is the pane chosen.
 @property(nonatomic, readonly) BOOL readings;
 /// Whether Flow is.
@@ -395,6 +377,13 @@ void MVPresent(MVOffscreenWindow *window, MVShow how);
 - (void)setName:(NSString *)name;
 @end
 
+/// A place of the sidebar that is no device: chosen, it takes the room. AI Clients and Help stand here.
+@interface MVPlace : NSObject
+@property(nonatomic, copy) NSString *title;
+@property(nonatomic, copy) NSString *symbol;
+@property(nonatomic) NSView *view;
+@end
+
 /// The window of `appdyno hub`: what its parent says is there, and what a person asks of it.
 @interface MVHub : NSObject <NSWindowDelegate, NSSearchFieldDelegate>
 - (instancetype)initWithShow:(MVShow)how poses:(BOOL)poses;
@@ -404,10 +393,24 @@ void MVPresent(MVOffscreenWindow *window, MVShow how);
 @property(nonatomic, readonly, nullable) NSString *chosen;
 - (void)show:(NSDictionary *)message;
 - (void)sayNote:(NSString *)note;
+/// How the device chosen is, where no picture of it stands yet.
+- (void)showStatus:(NSDictionary *)message;
 /// Presses a device's button as a person does.
 - (void)poke:(NSDictionary *)message;
 - (BOOL)snapshot:(NSString *)file;
 - (NSArray<NSDictionary *> *)parts;
+@end
+
+@interface MVHub (Rows)
+- (void)listDevices;
+- (nullable NSDictionary *)rowFor:(NSString *)serial;
+- (void)sayWhatMoved;
+/// One more place under the devices, last added last.
+- (void)addPlace:(MVPlace *)place;
+- (void)choosePlace:(MVPlace *)place;
+/// What the sidebar lists, for a look at it.
+- (NSArray<NSString *> *)rowTitles;
+- (BOOL)sidebarClosed;
 @end
 
 NS_ASSUME_NONNULL_END

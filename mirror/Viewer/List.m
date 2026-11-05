@@ -1,9 +1,16 @@
 // Rows of a title and a line beneath, with a symbol: the Inspector's lists and a sidebar.
 #import "Window.h"
 
-static const double kHeaderHeight = 30;
+static const double kHeaderHeight = 30, kChangeSeconds = 0.2;
+
+@class MVRow;
+static NSString *identityOf(MVRow *row);
 
 @implementation MVRow
+- (NSString *)identity {
+  return identityOf(self);
+}
+
 + (instancetype)headerNamed:(NSString *)title {
   MVRow *row = [MVRow new];
   row.title = title;
@@ -37,12 +44,42 @@ static const double kHeaderHeight = 30;
   return self;
 }
 
+static NSString *identityOf(MVRow *row) {
+  return row.key ?: row.title;
+}
+
+/// What comes opens and what goes closes, where nothing else moved: a device arriving is a state changing.
+- (BOOL)changeTo:(NSArray<MVRow *> *)rows {
+  NSArray *before = [_rows valueForKey:@"identity"], *after = [rows valueForKey:@"identity"];
+  NSIndexSet *gone = [before indexesOfObjectsPassingTest:^BOOL(id one, NSUInteger i, BOOL *stop) {
+    return ![after containsObject:one];
+  }];
+  NSIndexSet *come = [after indexesOfObjectsPassingTest:^BOOL(id one, NSUInteger i, BOOL *stop) {
+    return ![before containsObject:one];
+  }];
+  NSMutableArray *kept = [before mutableCopy], *still = [after mutableCopy];
+  [kept removeObjectsAtIndexes:gone];
+  [still removeObjectsAtIndexes:come];
+  if (![kept isEqual:still] || (!gone.count && !come.count)) return NO;
+  _rows = [rows copy];
+  [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context) {
+    context.duration = kChangeSeconds;
+    [self->_table beginUpdates];
+    [self->_table removeRowsAtIndexes:gone withAnimation:NSTableViewAnimationEffectFade];
+    [self->_table insertRowsAtIndexes:come withAnimation:NSTableViewAnimationEffectFade | NSTableViewAnimationSlideDown];
+    [self->_table endUpdates];
+  }];
+  return YES;
+}
+
 - (void)setRows:(NSArray<MVRow *> *)rows {
+  if (_table.style == NSTableViewStyleSourceList && MVMoves() && _rows.count && [self changeTo:rows]) return;
   _rows = [rows copy];
   [_table reloadData];
 }
 
 - (void)selectKey:(nullable NSString *)key {
+  if (!key) return [_table deselectAll:nil];
   [_rows enumerateObjectsUsingBlock:^(MVRow *row, NSUInteger at, BOOL *stop) {
     if (!row.header && [row.key isEqual:key]) [self->_table selectRowIndexes:[NSIndexSet indexSetWithIndex:at] byExtendingSelection:NO];
   }];

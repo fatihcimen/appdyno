@@ -1,31 +1,25 @@
 // The hub: every device this Mac can reach in a sidebar, and the one chosen, live, in its room. A stage stands there by
 // the same code as in a window of its own; what a person asks goes to the parent as a message.
+#import "HubParts.h"
 #import "Window.h"
 #import "Words.h"
 
 static const NSSize kOpens = {1240, 820};
-// under this a window gives up its Inspector, and then its sidebar
+// under the first a window gives up its Inspector, and under the second its sidebar
+static const double kInspectorFrom = 1100, kSidebarFrom = 860;
 static const double kContentLeast = 520;
 static const double kWordsWide = 320;
 static const double kSidebar = 260;
 // a window's three buttons stand above the sidebar's first line
 static const double kBelowLights = 46;
-static NSString *const kFold = @"fold";
-
-static NSColor *_Nullable stateColor(NSDictionary *device) {
-  if ([device[@"mirrored"] boolValue]) return NSColor.systemBlueColor;
-  return [device[@"state"] isEqual:@"running"] ? MVGreen() : nil;
-}
 
 static NSString *stateWords(NSDictionary *device) {
   if ([device[@"mirrored"] boolValue]) return @"Window open";
   return [device[@"state"] isEqual:@"running"] ? @"Running" : @"Shut down";
 }
 
-static NSString *symbolOf(NSDictionary *device) {
-  if ([device[@"model"] hasPrefix:@"iPad"]) return @"ipad";
-  return [device[@"platform"] isEqual:@"android"] ? @"candybarphone" : @"iphone";
-}
+@implementation MVPlace
+@end
 
 @implementation MVRoomView
 - (NSArray<NSView *> *)stages {
@@ -59,22 +53,7 @@ static NSString *symbolOf(NSDictionary *device) {
 }
 @end
 
-@implementation MVHub {
-  MVOffscreenWindow *_window;
-  MVList *_list;
-  NSSearchField *_search;
-  NSDictionary *_shown;
-  NSArray<NSDictionary *> *_devices;
-  NSDictionary *_choices;
-  BOOL _unfolded;
-  NSView *_room;
-  NSTextField *_name, *_about;
-  NSButton *_start, *_new;
-  NSStackView *_column;
-  NSString *_chosen;
-  MVNewDevice *_asking;
-  MVToolbar *_bare;
-}
+@implementation MVHub
 
 - (instancetype)initWithShow:(MVShow)how poses:(BOOL)poses {
   if ((self = [super init])) {
@@ -97,6 +76,7 @@ static NSString *symbolOf(NSDictionary *device) {
     ((MVRoomView *)_room).slot = slot;
     NSSplitViewController *split = [NSSplitViewController new];
     NSSplitViewItem *sidebar = [NSSplitViewItem sidebarWithViewController:side];
+    _sidebarItem = sidebar;
     sidebar.minimumThickness = kSidebar;
     sidebar.maximumThickness = kSidebar + 80;
     [split addSplitViewItem:sidebar];
@@ -187,10 +167,16 @@ static NSString *symbolOf(NSDictionary *device) {
   _start = [NSButton buttonWithTitle:MVWord(@"Start") target:self action:@selector(togglePower:)];
   _start.controlSize = NSControlSizeLarge;
   _start.keyEquivalent = @"\r";
-  _column = [NSStackView stackViewWithViews:@[_name, _about, _start]];
+  _again = [MVBarButton buttonWithTitle:MVWord(@"Try Again") target:self action:@selector(tryAgain:)];
+  _again.identifier = @"tryAgain";
+  _again.controlSize = NSControlSizeLarge;
+  _again.hidden = YES;
+  _mark = [[MVInk alloc] initWithSymbol:@"iphone" color:MVQuietColor() size:32];
+  _column = [NSStackView stackViewWithViews:@[_mark, _name, _about, _start, _again]];
   _column.orientation = NSUserInterfaceLayoutOrientationVertical;
   _column.spacing = 6;
-  [_column setCustomSpacing:18 afterView:_about];
+  [_column setCustomSpacing:12 afterView:_mark];
+  [_column setCustomSpacing:16 afterView:_about];
   _column.translatesAutoresizingMaskIntoConstraints = NO;
   [_room addSubview:_column];
   [NSLayoutConstraint activateConstraints:@[
@@ -226,65 +212,6 @@ static NSString *symbolOf(NSDictionary *device) {
   [self listDevices];
 }
 
-static BOOL matches(NSDictionary *device, NSString *words) {
-  if (!words.length) return YES;
-  NSString *all = [NSString stringWithFormat:@"%@ %@", device[@"name"] ?: @"", device[@"detail"] ?: @""];
-  return [all rangeOfString:words options:NSCaseInsensitiveSearch].location != NSNotFound;
-}
-
-/// A simulator's name, and the system it holds, which it carries in brackets.
-static NSArray<NSString *> *namedParts(NSString *name) {
-  NSRange open = [name rangeOfString:@" (" options:NSBackwardsSearch];
-  if (open.location == NSNotFound || ![name hasSuffix:@")"]) return @[name, @""];
-  NSString *inside = [name substringWithRange:NSMakeRange(NSMaxRange(open), name.length - NSMaxRange(open) - 1)];
-  BOOL system = [inside hasPrefix:@"iOS"] || [inside hasPrefix:@"Android"];
-  return system ? @[[name substringToIndex:open.location], inside] : @[name, @""];
-}
-
-static MVRow *rowOf(NSDictionary *device) {
-  MVRow *row = [MVRow new];
-  // one name everywhere: what it is, then its system and what this Mac calls it
-  NSArray<NSString *> *parts = namedParts(device[@"name"] ?: @"");
-  NSString *model = device[@"model"], *own = parts[0];
-  BOOL named = model.length && ![model isEqual:own];
-  row.title = named ? model : own;
-  NSMutableArray<NSString *> *about = [NSMutableArray array];
-  if ([parts[1] length]) [about addObject:parts[1]];
-  if (named) [about addObject:own];
-  if ([device[@"detail"] length] && ![device[@"detail"] isEqual:model]) [about addObject:device[@"detail"]];
-  row.detail = [about componentsJoinedByString:@" · "];
-  row.symbol = symbolOf(device);
-  row.tint = NSColor.secondaryLabelColor;
-  row.dot = stateColor(device);
-  row.key = device[@"id"];
-  return row;
-}
-
-/// Phones first, then what runs, and what is shut down folded away: a person's Mac may have a hundred of them.
-- (void)listDevices {
-  NSString *words = _search.stringValue;
-  NSMutableArray<MVRow *> *phones = [NSMutableArray array], *running = [NSMutableArray array], *off = [NSMutableArray array];
-  for (NSDictionary *device in _devices) {
-    if (!matches(device, words)) continue;
-    BOOL phone = [device[@"kind"] isEqual:@"phone"], up = [device[@"state"] isEqual:@"running"];
-    [phone ? phones : up ? running : off addObject:rowOf(device)];
-  }
-  NSMutableArray<MVRow *> *rows = [NSMutableArray array];
-  if (phones.count) [rows addObject:[MVRow headerNamed:@"Phones"]];
-  [rows addObjectsFromArray:phones];
-  if (running.count) [rows addObject:[MVRow headerNamed:@"Running"]];
-  [rows addObjectsFromArray:running];
-  if (off.count) {
-    BOOL open = _unfolded || words.length;
-    MVRow *fold = [MVRow headerNamed:[NSString stringWithFormat:@"%@ Shut Down (%lu)", open ? @"▾" : @"▸", (unsigned long)off.count]];
-    fold.key = kFold;
-    [rows addObject:fold];
-    if (open) [rows addObjectsFromArray:off];
-  }
-  _list.rows = rows;
-  [_list selectKey:_shown[@"id"]];
-}
-
 - (void)show:(NSDictionary *)message {
   _devices = [message[@"devices"] isKindOfClass:NSArray.class] ? message[@"devices"] : @[];
   if (message[@"choices"]) _choices = message[@"choices"];
@@ -295,12 +222,17 @@ static MVRow *rowOf(NSDictionary *device) {
     // a phone is a person's: it is touched only when they choose it
     if (!first && [device[@"state"] isEqual:@"running"] && ![device[@"kind"] isEqual:@"phone"]) first = device;
   }
-  [self showDevice:kept ?: first];
+  // a phone that left stays what is chosen: it says so where it stood, and comes back by itself
+  BOOL left = !kept && [_shown[@"kind"] isEqual:@"phone"];
+  if (!left) [self showDevice:kept ?: first];
+  _left = left ? _shown : nil;
   [self listDevices];
+  [self sayWhatMoved];
 }
 
 - (void)chose:(nullable MVRow *)row {
-  if ([row.key isEqual:kFold]) {
+  if ([row.key hasPrefix:MVPlaceKey]) return [self choosePlace:_places[[row.key substringFromIndex:MVPlaceKey.length].integerValue]];
+  if ([row.key isEqual:MVFoldKey]) {
     _unfolded = !_unfolded;
     return [self listDevices];
   }
@@ -320,14 +252,18 @@ static MVRow *rowOf(NSDictionary *device) {
 }
 
 - (void)showDevice:(nullable NSDictionary *)device {
+  [_placeShown removeFromSuperview];
+  _placeShown = nil;
   _shown = device;
   [_list selectKey:device[@"id"]];
   BOOL running = [device[@"state"] isEqual:@"running"], elsewhere = [device[@"mirrored"] boolValue];
   [self tellChosen:running && !elsewhere ? device[@"serial"] ?: device[@"id"] : nil];
-  _name.stringValue = device ? namedParts(device[@"name"] ?: @"")[0] : _devices.count ? @"Choose a device" : @"No device yet";
+  _again.hidden = YES;
+  [_mark paint:device ? MVDeviceSymbol(device) : @"iphone.gen3" color:MVQuietColor()];
+  _name.stringValue = device ? MVNamedParts(device[@"name"] ?: @"")[0] : _devices.count ? @"Choose a device" : @"No device yet";
   _about.stringValue = device ? (elsewhere ? @"In a window of its own" : stateWords(device)) : _devices.count ? @"A phone starts only when you choose it." : @"Connect a phone with its cable, or make a simulator with +.";
   _start.title = MVWord(elsewhere ? @"Close That Window" : @"Start");
-  if (device) [_bare setName:rowOf(device).title about:rowOf(device).detail];
+  if (device) [_bare setName:MVDeviceRow(device).title about:MVDeviceRow(device).detail];
   else [_bare setName:@"appdyno" about:nil];
   _start.hidden = !device || (running && !elsewhere) || [device[@"kind"] isEqual:@"phone"];
 }
@@ -342,16 +278,6 @@ static MVRow *rowOf(NSDictionary *device) {
 - (void)barClicked:(NSButton *)sender {
   NSSplitViewItem *item = ((MVRoomView *)_room).slot.item;
   if ([sender.identifier isEqual:@"inspector"]) (MVMoves() ? item.animator : item).collapsed = !item.collapsed;
-}
-
-/// What the sidebar says of a device, for the bar over it.
-- (nullable NSDictionary *)rowFor:(NSString *)serial {
-  for (NSDictionary *device in _devices) {
-    if (![(device[@"serial"] ?: device[@"id"]) isEqual:serial]) continue;
-    MVRow *row = rowOf(device);
-    return @{@"about": row.detail ?: @"", @"link": device[@"link"] ?: @""};
-  }
-  return nil;
 }
 
 - (nullable NSDictionary *)deviceKeyed:(nullable NSString *)key {
@@ -410,8 +336,28 @@ static MVRow *rowOf(NSDictionary *device) {
   _about.stringValue = note;
 }
 
+- (void)showStatus:(NSDictionary *)message {
+  BOOL stuck = [message[@"state"] isEqual:@"waiting"] || [message[@"state"] isEqual:@"stopped"];
+  if ([message[@"title"] length]) _name.stringValue = message[@"title"];
+  _about.stringValue = message[@"fix"] ?: @"";
+  [_mark paint:MVNeedSymbol(message[@"need"]) color:stuck ? MVOrange() : MVQuietColor()];
+  _held = message[@"stage"];
+  _again.hidden = !stuck;
+  _start.hidden = YES;
+}
+
+- (void)tryAgain:(id)sender {
+  if (_held) MVEmit(@{@"op": @"control", @"name": @"reconnect", @"stage": _held});
+}
+
 - (BOOL)snapshot:(NSString *)file {
   return MVWriteWindow(_window.attachedSheet ?: _window, file);
+}
+
+- (void)windowDidResize:(NSNotification *)notification {
+  double wide = _window.frame.size.width;
+  [((MVRoomView *)_room).slot fitWindow:wide least:kInspectorFrom];
+  MVGiveWay(_sidebarItem, wide < kSidebarFrom, &_sidebarGaveWay);
 }
 
 - (NSArray<NSDictionary *> *)parts {

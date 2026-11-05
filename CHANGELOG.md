@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- The hub is one calm window. The system's Inspector, edge to edge, in place of a floating pane; one capsule in the toolbar for everything a device is at; four symbol tabs; figures and charts in one row; and measures as one grouped list.
+- What a window says holds its strength behind other windows, as it usually is: from a title at 2:1 and symbols at 2:1 to every word at 4.5:1 and every symbol at 3:1, read from the real window, dark and light.
+- Every word of the hub in Turkish and English by the Mac's language, from one table. A viewer's own words and what the parent sends pass through it at the label.
+- Results has a history: what was measured on this device before, judged by the gate's method, in words.
+- An agent shows on the device: a purple ring, a dot where each tap landed, and Activity as runs of work in words, not a list of tool calls.
+- A device that cannot show says why, with a next step: asleep, locked, held up before its first picture, unplugged, and a cable that only charges. A phone unplugged stays chosen and comes back by itself.
+- Motion for what changes and nothing at rest, under 300 ms, with Reduce Motion a plain cut, and VoiceOver told of a device arriving or leaving and of a regression.
+- `pokeClick` clicks by real `CGEventPostToPid` events, through the window's own hit testing, and says truly what was under the point.
+
 - A window a person did not click passes nothing to a device. Started from a terminal someone was typing in, a viewer could be handed the keyboard: its keys, dictation, ⌘V with the Mac's clipboard and device shortcuts such as ⌘L all reached the device, as being the key window was all that was asked. Now a viewer cannot be activated until it has launched, one kept behind cannot be at all, and a device hears nothing until a person's mouse comes down in that window.
 - A first read of a simulator's home screen starts no runner in a session that boots it, new or not. Three things sent it to the runner: a widget, which is another process's; a widget and its app's icon, taken for copies of one control; and the seconds of a first boot with nothing in front. Spotlight, and another process's content in an app, still go there.
 - A new icon, drawn from one source: `pnpm icons` regenerates the runner's and fixtures' icons, the Dock tile, the pages' mark, the logo and the social preview from `scripts/icon-art.mjs`, and `scripts/build-app.mjs` builds the app's `.icns` and menu bar glyph from it. Below 128 px it is a separate drawing, as the large one reads as a letter there. The Android and iOS fixtures now have an icon, and a signed runner rebuilds once to take the new one.

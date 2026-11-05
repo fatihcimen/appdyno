@@ -121,8 +121,9 @@ static MVTrend *trendOf(const MVTrendRow *row) {
   NSTextField *_sentence, *_app, *_doing, *_none;
   NSView *_slack;
   NSArray<NSButton *> *_measures;
-  NSMutableArray<MVRow *> *_kept;
-  NSArray<MVRow *> *_past;
+  NSMutableArray<NSDictionary *> *_kept;
+  NSArray<NSDictionary *> *_past;
+  BOOL _measured;
   MVList *_results;
   NSNumber *_pictureRate;
   double _held, _heldSince;
@@ -232,7 +233,9 @@ static MVRow *rowOfResult(NSDictionary *result) {
 }
 
 - (void)listResults {
-  _results.rows = [_kept arrayByAddingObjectsFromArray:_past];
+  NSMutableArray<MVRow *> *rows = [NSMutableArray array];
+  for (NSDictionary *result in [_kept arrayByAddingObjectsFromArray:_past]) [rows addObject:rowOfResult(result)];
+  _results.rows = rows;
   _none.hidden = _results.rows.count > 0;
   _results.hidden = !_none.hidden;
   _slack.hidden = _none.hidden;
@@ -244,21 +247,24 @@ static MVRow *rowOfResult(NSDictionary *result) {
     measure.enabled = YES;
     measure.alphaValue = 1;
   }
-  [_kept insertObject:rowOfResult(result) atIndex:0];
+  [_kept insertObject:result atIndex:0];
+  _measured = YES;
   if (_kept.count > kResults) [_kept removeLastObject];
   [self listResults];
 }
 
 /// What was measured here before, newest first: what is kept on the Mac stands in for this session's own lines of the same.
 - (void)showHistory:(NSDictionary *)message {
-  NSMutableArray<MVRow *> *past = [NSMutableArray array];
-  for (NSDictionary *result in message[@"results"]) [past addObject:rowOfResult(result)];
-  _past = past;
-  _kept = [NSMutableArray arrayWithArray:[_kept filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(MVRow *row, NSDictionary *bindings) {
-            return ![row.detail length] || [row.symbol isEqual:@"exclamationmark.triangle"];
-          }]]];
+  _past = [message[@"results"] isKindOfClass:NSArray.class] ? message[@"results"] : @[];
+  [_kept filterUsingPredicate:[NSPredicate predicateWithFormat:@"ok != YES"]];
   if ([message[@"app"] length]) _app.stringValue = [NSString stringWithFormat:@"A measure restarts %@.", message[@"app"]];
   [self listResults];
+  // only a measure just made is news: a window opening on an old regression has nothing to announce
+  if (_measured && [_past.firstObject[@"verdict"] isEqual:@"regression"]) {
+    MVAnnounce(_past.firstObject[@"title"]);
+    MVPulse(_results);
+  }
+  _measured = NO;
 }
 
 - (NSString *)shownFor:(NSString *)field {

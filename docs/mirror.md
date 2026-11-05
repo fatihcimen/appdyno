@@ -88,7 +88,11 @@ A phone that turns keeps sending a picture of the same shape with the app on its
 
 ## The window
 
-The device stands full bleed on a backdrop of its own picture's colours, with glass floating over it: a capsule that says how it is, its controls, and the Inspector. Glass is the system's own, found at run time, as a viewer is compiled by whatever SDK a Mac has; before macOS 26 a material stands in. It is only what floats: what sits on a pane is a fill, as glass cannot sample glass.
+The device stands on a backdrop of its own picture's colours, under the system's toolbar. One capsule there says everything a device is at: `Live · 60 fps · USB`, `Reconnecting`, what holds it up, `Measuring launch 3 of 6` with a bar along its foot, or that an AI client is driving. A click on it shows the stream's numbers. A state is never a colour alone: each has a symbol and words.
+
+The window is usually behind the one a person types in, so what it says is built to hold its strength there. AppKit fades the system's colours and every image in the bar of a window that is not key: its own title to 2:1. So the name in the bar is a label of ours, colours are resolved to plain ones, and symbols are drawn by a view of ours. Read from the real window behind others, dark and light: every word at 4.5:1 or more, and every symbol at 3:1.
+
+Its words are in Turkish or English by the Mac's language, from one table, `mirror/Viewer/WordsTable.m`. English is the key, so what the parent sends for a command line needs no second name: a label looks up whatever it is given, and what the table has not got, such as a tool's own error, stands in English.
 
 The frame is drawn in code from a small table by model: its corners, its island or notch, its buttons. Nothing of it is artwork, and it is drawn once per size, so a still window costs nothing for having it. A simulator's picture holds its own island, so the frame adds one only where a picture has none. **Show Device Frame** (⌥⌘F) takes it away, and the setting stays. The backdrop is a few cells of the picture's colours stretched by the layer, read at most every 2 s, with no blur pass.
 
@@ -110,9 +114,13 @@ The window shows what is pressed most, and the rest is a click away in **More** 
 | Zoom to Fit, Actual Size, Zoom In, Zoom Out              | ⌘9, ⌘0, ⌘=, ⌘-  | Actual Size is one device point to one Mac point                                                                                                   |
 | Reconnect                                                | ⇧⌘R             | a new stream                                                                                                                                       |
 
-The Inspector (⌥⌘I) opens beside the device, which keeps its size. **Stats** says what the viewer counts each second, and Still on a still screen, with the rate it last moved at. **Activity** lists each call an agent made. **Apps** lists, launches, quits and removes, the last after a sheet that says what goes with it. On iOS the list holds the system's apps, as a new simulator has no other; on Android, only what was installed. **Flow** records what a person does, and says what is under the pointer.
+The Inspector (⌥⌘I) is the system's own, 320 points wide and edge to edge, and gives way by itself under 1,100 points wide, and the sidebar under 860, each back when the window is wide again. It stands open in the hub, and closed in a window of its own, which grows to take it. **Performance** says in one sentence how the screen is, then the frame rate, CPU and memory with a minute of each, the measures, and **Results**: what was measured on this device before, for the app in front, each judged against the runs before it by the method the gate uses, as `Regression +553 ms` or `Could not judge: 3 of 5 samples`. It reads files only, so a phone is not touched for it. **Flows** records what a person does, and says what is under the pointer. **Apps** lists, launches, quits and removes, the last after a sheet that says what goes with it. On iOS the list holds the system's apps, as a new simulator has no other; on Android, only what was installed. **Activity** tells what an agent did as runs of work, `Worked for 40 s · 23 calls`, opening to `Tapped Sign in`.
 
-While an agent drives, a ring of the accent colour runs around the edge of the screen and the capsule names the call. What stands in the way is a card over the dimmed picture with its fix, and a click beside a card's button still goes to the device.
+While an agent drives, a purple ring runs around the screen, the capsule says so, naming the client where it says who it is, and a dot fades where each tap landed. A request for a person turns the ring orange.
+
+What stands between a device and its picture is said in words with a next step. Asleep or locked, a card stands over the dimmed picture with what to do and **Try Again**, and a click beside its button still goes to the device. A device held up before its first picture has none to dim, so the room says it in the same words. A phone that is unplugged stays the one chosen under **Needs You**, as `Unplugged`, and comes back by itself; it is not swapped for another device. A cable that only charges looks like no phone at all, as nothing reaches this Mac to tell them apart, so what a person reads names that too.
+
+Motion is for what changes: a device coming or going in the sidebar, 200 ms; the first frame fading into a bezel that stands at once, 200 ms; the ring, 240 ms; a dot, 300 ms; a step of a measure's bar, 150 ms; one small spring for a regression. Nothing moves at rest, and with Reduce Motion set each is a plain cut. VoiceOver hears a device arriving or leaving and a regression found.
 
 ## Live numbers
 

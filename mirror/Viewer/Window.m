@@ -8,6 +8,7 @@ static const double kFitScreen = 0.85;
 // far from every screen a Mac can have
 static const double kOffscreenAt = -30000;
 static const double kMargin = 24, kTop = 68, kBottom = 24, kInset = 10;
+static const double kFirstFrameSeconds = 0.2;
 static const CGSize kSmallest = {380, 420};
 // wide enough that a toolbar shows all it has; a person can go narrower, and it folds into its own menu
 static const double kOpensWide = 780;
@@ -177,6 +178,8 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 
 - (void)setPicture:(CGSize)size {
   if (size.width <= 0 || size.height <= 0 || CGSizeEqualToSize(size, _picture)) return;
+  // the bezel stands at once, and the first frame comes up in it
+  if (_picture.width <= 0) MVFade(_view.layer, 0, 1, kFirstFrameSeconds);
   _picture = size;
   _view.picture = size;
   [self applySpec];
@@ -237,6 +240,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 }
 
 - (void)windowDidResize:(NSNotification *)notification {
+  [_slot fitWindow:_window.frame.size.width least:kSmallest.width + MVInspectorWidth];
   [self layoutPicture];
 }
 

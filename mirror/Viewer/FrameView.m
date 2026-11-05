@@ -3,6 +3,9 @@
 #import "Frame.h"
 #import "Window.h"
 
+// an agent coming and going: its ring is a state, and says so without a jump
+static const double kRingSeconds = 0.24;
+
 // a held side button is the assistant, as on the device
 static const double kHoldSeconds = 0.7;
 static const double kPressedAlpha = 0.55;
@@ -114,10 +117,10 @@ static void fillMetal(CGContextRef c, CGRect rect, uint32_t color, BOOL across) 
     _keys = [NSMutableArray array];
     _ring = [CAShapeLayer layer];
     _ring.fillColor = NSColor.clearColor.CGColor;
-    _ring.lineWidth = 2.5;
+    _ring.lineWidth = 2;
     _ring.hidden = YES;
-    _ring.shadowOpacity = 0.9;
-    _ring.shadowRadius = 7;
+    _ring.shadowOpacity = 0.6;
+    _ring.shadowRadius = 6;
     _ring.shadowOffset = CGSizeZero;
     _ring.zPosition = 10;
     [self.layer addSublayer:_ring];
@@ -208,10 +211,14 @@ static void fillMetal(CGContextRef c, CGRect rect, uint32_t color, BOOL across) 
 - (void)setEdge:(NSColor *)color {
   [CATransaction begin];
   [CATransaction setDisableActions:YES];
-  _ring.strokeColor = color.CGColor;
-  _ring.shadowColor = color.CGColor;
-  _ring.hidden = !color;
+  BOOL was = !_ring.hidden && _ring.opacity > 0;
+  if (color) {
+    _ring.strokeColor = color.CGColor;
+    _ring.shadowColor = color.CGColor;
+    _ring.hidden = NO;
+  }
   [CATransaction commit];
+  if (was != (color != nil)) MVFade(_ring, was ? 1 : 0, color ? 1 : 0, kRingSeconds);
 }
 
 - (void)drawRect:(NSRect)dirty {

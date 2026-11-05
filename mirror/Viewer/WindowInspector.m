@@ -2,10 +2,21 @@
 // of its own opens with it closed; the hub's stands open, with a word in it while no device does.
 #import "WindowParts.h"
 
+void MVGiveWay(NSSplitViewItem *item, BOOL narrow, BOOL *gaveWay) {
+  if (narrow && !item.collapsed) {
+    *gaveWay = YES;
+    item.collapsed = YES;
+  } else if (!narrow && *gaveWay) {
+    *gaveWay = NO;
+    item.collapsed = NO;
+  }
+}
+
 @implementation MVInspectorSlot {
   NSViewController *_holder;
   NSTextField *_empty;
   void (^_onMove)(void);
+  BOOL _gaveWay;
 }
 
 - (instancetype)init {
@@ -16,7 +27,6 @@
     _item.minimumThickness = MVInspectorWidth;
     _item.maximumThickness = MVInspectorWidth;
     _item.canCollapse = YES;
-    _item.canCollapseFromWindowResize = YES;
     [_item addObserver:self forKeyPath:@"collapsed" options:0 context:NULL];
     _empty = MVPaneNote(@"Choose a running device to see its numbers.");
     _empty.alignment = NSTextAlignmentCenter;
@@ -37,6 +47,10 @@
 
 - (void)observeValueForKeyPath:(NSString *)path ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
   if (_onMove) _onMove();
+}
+
+- (void)fitWindow:(double)wide least:(double)least {
+  MVGiveWay(_item, wide < least, &_gaveWay);
 }
 
 - (void)hold:(nullable NSView *)pane onMove:(nullable void (^)(void))onMove {
@@ -92,7 +106,7 @@
 
 - (void)openInspector:(BOOL)open {
   [self holdInspector];
-  BOOL animated = _hosted && !NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion;
+  BOOL animated = _hosted && MVMoves();
   (animated ? _slot.item.animator : _slot.item).collapsed = !open;
 }
 

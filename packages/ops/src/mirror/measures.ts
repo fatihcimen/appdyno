@@ -3,6 +3,7 @@ import { inCall, type Device } from '@appdyno/core';
 import { writeDashboard } from '@appdyno/perf';
 import { claim, release } from '../claims.js';
 import { ServerContext } from '../context.js';
+import { measureHistory, type PastMeasure } from './history.js';
 import { JOURNEY_ITERATIONS, type JourneyAnswer } from '../flow/journey.js';
 import { perfLaunchOp } from '../perf/launch.js';
 import { perfScrollOp } from '../perf/scroll.js';
@@ -30,6 +31,8 @@ export type WindowMeasures = {
     say: (line: string) => void,
   ): Promise<{ said: MeasureWords; ran: JourneyAnswer }>;
   dashboard(): Promise<void>;
+  /** What was measured here before, for an app. */
+  history(app: string): Promise<PastMeasure[]>;
 };
 
 /** What may stand behind a number, as the dashboard marks it. */
@@ -130,6 +133,7 @@ export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasur
         },
       };
     },
+    history: (app) => measureHistory(ctx.perfDir, app, serial),
     dashboard: async () => {
       const file = await writeDashboard(ctx.measurementsDir, ctx.perfDir);
       execFile('open', [file]);

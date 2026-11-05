@@ -122,7 +122,7 @@
   if ([op isEqual:@"note"]) return [_window sayNote:m[@"text"] ?: @""];
   if ([op isEqual:@"recording"]) return [_window setRecording:[m[@"on"] boolValue]];
   if ([op isEqual:@"pair"]) return [_window setPair:m];
-  if ([op isEqual:@"touchAt"]) return [_window.overlay showTouchAtX:[m[@"x"] doubleValue] y:[m[@"y"] doubleValue]];
+  if ([op isEqual:@"touchAt"]) return [_window.overlay showTouchAtX:[m[@"x"] doubleValue] y:[m[@"y"] doubleValue] agent:[m[@"agent"] boolValue]];
   if ([op isEqual:@"copied"]) return MVCopyImage(m[@"file"]);
   if ([op isEqual:@"copyText"]) return MVCopyText(m[@"text"] ?: @"", NSPasteboard.generalPasteboard);
   if ([op isEqual:@"poke"]) return [self poke:m];

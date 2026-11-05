@@ -4,7 +4,7 @@
 #import "Window.h"
 #import "Words.h"
 
-static const double kCardWidth = 264, kInset = 16, kRing = 44, kRingSeconds = 0.6;
+static const double kCardWidth = 264, kInset = 16, kDot = 24, kDotSeconds = 0.3;
 
 /// A click on it is the picture's, even with a card showing; only a button is its own.
 @interface MVCard : NSVisualEffectView
@@ -90,24 +90,20 @@ static NSString *symbolOf(NSString *state) {
   return self;
 }
 
-- (void)showTouchAtX:(double)x y:(double)y {
-  CALayer *ring = [CALayer layer];
+/// A dot where a touch landed on another's behalf, gone by itself: purple where an agent made it.
+- (void)showTouchAtX:(double)x y:(double)y agent:(BOOL)agent {
+  CALayer *dot = [CALayer layer];
   CGSize size = _view.bounds.size;
-  ring.frame = CGRectMake(x * size.width - kRing / 2, (1 - y) * size.height - kRing / 2, kRing, kRing);
-  ring.cornerRadius = kRing / 2;
-  ring.borderWidth = 2.5;
-  ring.borderColor = NSColor.controlAccentColor.CGColor;
-  ring.backgroundColor = [NSColor.controlAccentColor colorWithAlphaComponent:0.25].CGColor;
-  [_view.layer addSublayer:ring];
-  if (!NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion) {
-    CABasicAnimation *fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
-    fade.fromValue = @1;
-    fade.toValue = @0;
-    fade.duration = kRingSeconds;
-    [ring addAnimation:fade forKey:nil];
-  }
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kRingSeconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-    [ring removeFromSuperlayer];
+  NSColor *color = agent ? NSColor.systemPurpleColor : NSColor.controlAccentColor;
+  dot.frame = CGRectMake(x * size.width - kDot / 2, (1 - y) * size.height - kDot / 2, kDot, kDot);
+  dot.cornerRadius = kDot / 2;
+  dot.borderWidth = 2;
+  dot.borderColor = color.CGColor;
+  dot.backgroundColor = [color colorWithAlphaComponent:0.3].CGColor;
+  [_view.layer addSublayer:dot];
+  MVFade(dot, 1, 0, kDotSeconds);
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kDotSeconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    [dot removeFromSuperlayer];
   });
 }
 
@@ -127,9 +123,15 @@ static NSString *symbolOf(NSString *state) {
     [parts addObject:symbol(symbolOf(state), NSColor.whiteColor)];
   }
   [parts addObject:words(title ?: state, 14, NSFontWeightSemibold, NSColor.labelColor)];
-  if (fix.length) [parts addObject:words(fix, 12, NSFontWeightRegular, NSColor.secondaryLabelColor)];
+  if (fix.length) [parts addObject:words(fix, 12, NSFontWeightRegular, NSColor.labelColor)];
+  // what no one can wait out alone gets a step of its own
+  if ([state isEqual:@"waiting"] || [state isEqual:@"stopped"]) [parts addObject:[NSButton buttonWithTitle:MVWord(@"Try Again") target:self action:@selector(tryAgain:)]];
   _stateCard = card(parts);
   place(_stateCard, view, [_stateCard.centerYAnchor constraintEqualToAnchor:view.centerYAnchor]);
+}
+
+- (void)tryAgain:(id)sender {
+  MVEmitFrom(_view, @{@"op": @"control", @"name": @"reconnect"});
 }
 
 - (void)showBanner:(NSDictionary *)m {
@@ -140,7 +142,7 @@ static NSString *symbolOf(NSString *state) {
   NSMutableArray<NSView *> *parts = [NSMutableArray arrayWithArray:@[
     symbol(@"hand.raised", NSColor.systemYellowColor),
     words(m[@"title"] ?: @"Needs you", 14, NSFontWeightSemibold, NSColor.labelColor),
-    words(m[@"text"] ?: @"A person is needed", 12, NSFontWeightRegular, NSColor.secondaryLabelColor),
+    words(m[@"text"] ?: @"A person is needed", 12, NSFontWeightRegular, NSColor.labelColor),
   ]];
   if ([m[@"needsDone"] boolValue]) {
     NSButton *done = [NSButton buttonWithTitle:MVWord(@"I'm Done") target:self action:@selector(done:)];

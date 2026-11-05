@@ -202,6 +202,7 @@ export function windowControls(
       (sample) => session().tell(perfMessage(sample)),
       own ? front : undefined,
     );
+    void tellHistory(front).catch(() => undefined);
     const looking = own ? setInterval(() => void lookAgain(front), APP_LOOK_MS) : undefined;
     stopPerf = () => {
       clearInterval(looking);
@@ -219,6 +220,18 @@ export function windowControls(
   const turnReadings = () => (readingsTurn = readingsTurn.then(followReadings, followReadings));
 
   const tellMeasured = (m: Record<string, unknown>) => session().tell({ op: 'measured', ...m });
+
+  /** What was measured here before, with the app's own name: a person never reads its id. */
+  const tellHistory = async (app: string | undefined) => {
+    if (!app) return;
+    const known = await device.apps.listApps(false).catch(() => []);
+    const name = known.find((a) => a.id === app)?.name;
+    session().tell({
+      op: 'results',
+      results: await measures.history(app),
+      ...(name && { app: name }),
+    });
+  };
   const saying = (line: string) => session().tell({ op: 'measuring', line });
 
   /** A measure has the device to itself: nothing reads over what it counts, and no second one starts. */
@@ -255,6 +268,7 @@ export function windowControls(
         return;
       }
       tellMeasured({ ok: true, ...(await work(app, saying)) });
+      await tellHistory(app);
     });
 
   /** A flow as a measure, with what a window beside this one needs to compare it. */

@@ -16,7 +16,17 @@ import { shownArgs } from './report.js';
 import type { Op, ToolResult } from './tool.js';
 
 /** One call, for a person watching: no socket, across processes. */
-export type ActivityLine = { at: number; tool: string; ms: number; ok: boolean; args: unknown };
+export type ActivityLine = {
+  at: number;
+  tool: string;
+  ms: number;
+  ok: boolean;
+  args: unknown;
+  /** What it did, as the tool said it. */
+  done?: string;
+  /** Where it touched, as fractions of the screen. */
+  touched?: { x: number; y: number };
+};
 
 /** A session of hours stays small: past this the older half goes. */
 const MAX_BYTES = 256 * 1024;
@@ -35,6 +45,13 @@ export function appendActivity(serial: string, line: ActivityLine) {
   writeFileSync(file, text.slice(text.indexOf('\n', text.length / 2) + 1), { mode: 0o600 });
 }
 
+let touched: ActivityLine['touched'];
+
+/** The next line kept says it touched here: only a step knows the point a ref came to. */
+export const noteTouch = (x: number, y: number) => {
+  touched = { x, y };
+};
+
 /** Each op's calls go in the file of the device they acted on; typed text by its length, secrets hidden. */
 export function activityFor(ctx: ServerContext) {
   const clean = (s: string) => redactLog(ctx.policy, s);
@@ -45,7 +62,7 @@ export function activityFor(ctx: ServerContext) {
           ...op,
           handler: async (args): Promise<ToolResult> => {
             const at = Date.now();
-            const note = (ok: boolean) => {
+            const note = (ok: boolean, done?: unknown) => {
               const serial = ctx.currentSerial;
               if (serial)
                 appendActivity(serial, {
@@ -54,11 +71,14 @@ export function activityFor(ctx: ServerContext) {
                   ms: Date.now() - at,
                   ok,
                   args: shownArgs(op, args, clean),
+                  ...(typeof done === 'string' && { done }),
+                  ...(touched && { touched }),
                 });
+              touched = undefined;
             };
             try {
               const out = await op.handler(args);
-              note(true);
+              note(true, (out.data as { done?: unknown } | undefined)?.done);
               return out;
             } catch (e) {
               note(false);

@@ -181,6 +181,7 @@ static void checkWords(void) {
   MVCheck(@"words: what changes keeps its place, in Turkish order", [MVInTurkish(@"Steady at 60 fps for 30 s") isEqual:@"30 saniyedir 60 fps'de sabit"], MVInTurkish(@"Steady at 60 fps for 30 s"));
   MVCheck(@"words: what a word holds is said in its turn", [MVInTurkish(@"Measuring launch 3 of 6") isEqual:@"Açılış ölçülüyor: 3/6"], MVInTurkish(@"Measuring launch 3 of 6"));
   MVCheck(@"words: what is joined up is said a part at a time", [MVInTurkish(@"Live · 60 fps") isEqual:@"Canlı · 60 fps"] && [MVInTurkish(@"median of 5, stream running") isEqual:@"5 ölçümün ortancası, yayın açık"], MVInTurkish(@"median of 5, stream running"));
+  MVCheck(@"words: a number and its unit in a line of Results", [MVInTurkish(@"Scroll  4% jank") isEqual:@"Kaydırma  %4 takılma"], MVInTurkish(@"Scroll  4% jank"));
   MVCheck(@"words: a percent sign in a row stays one", [MVInTurkish(@"72% jank, 3 frozen") isEqual:@"%72 takılma, 3 donma"], MVInTurkish(@"72% jank, 3 frozen"));
 }
 

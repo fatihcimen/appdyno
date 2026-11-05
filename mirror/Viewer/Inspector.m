@@ -3,7 +3,6 @@
 #import "Window.h"
 #import "Words.h"
 
-enum { kActivityRows = 200 };
 static const double kUsualRate = 60, kSparkHeight = 56, kTab = 28, kInset = 16;
 
 /// The panes in the order their symbols stand, by the index `showPane:` takes.
@@ -37,14 +36,13 @@ static NSString *ms(id v) {
   NSArray<NSButton *> *_tabs;
   NSTextField *_paneName;
   NSView *_panes[MVPanes];
-  NSInteger _chosen;
   NSTextField *_fps, *_fpsNote;
   NSMutableDictionary<NSString *, NSTextField *> *_tiles;
   double _lastRate;
   MVSpark *_spark;
   NSDictionary<NSString *, NSTextField *> *_values;
-  MVList *_activity, *_apps;
-  NSMutableArray<MVRow *> *_calls;
+  MVActivityPane *_activity;
+  MVList *_apps;
   NSArray<NSDictionary *> *_appList;
   NSSearchField *_filter;
   NSTextField *_appsNote;
@@ -54,7 +52,6 @@ static NSString *ms(id v) {
 
 - (instancetype)initWithFrame:(NSRect)frame target:(id)target {
   if ((self = [super initWithFrame:frame])) {
-    _calls = [NSMutableArray array];
     NSMutableArray *tabs = [NSMutableArray array];
     for (NSInteger i = 0; i < MVPanes; i++) {
       NSButton *tab = [MVBarButton buttonWithImage:[NSImage new] target:self action:@selector(tabChosen:)];
@@ -181,7 +178,7 @@ static NSString *ms(id v) {
 }
 
 - (NSView *)activityPane {
-  _activity = [MVList new];
+  _activity = [MVActivityPane new];
   return _activity;
 }
 
@@ -266,16 +263,7 @@ static NSString *ms(id v) {
 }
 
 - (void)addActivity:(NSDictionary *)call {
-  MVRow *row = [MVRow new];
-  BOOL ok = [call[@"ok"] boolValue];
-  row.title = call[@"tool"] ?: @"";
-  row.detail = [NSString stringWithFormat:@"%@  ·  %@ ms%@", call[@"time"] ?: @"", call[@"ms"] ?: @0, [call[@"args"] length] ? [@"  ·  " stringByAppendingString:call[@"args"]] : @""];
-  row.symbol = ok ? @"checkmark.circle" : @"xmark.octagon";
-  row.tint = ok ? NSColor.systemGreenColor : NSColor.systemRedColor;
-  [_calls addObject:row];
-  if (_calls.count > kActivityRows) [_calls removeObjectAtIndex:0];
-  _activity.rows = _calls;
-  [_activity scrollToEnd];
+  [_activity add:call];
 }
 
 - (void)showApps:(NSDictionary *)message {

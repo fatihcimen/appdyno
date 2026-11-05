@@ -5,6 +5,7 @@
 
 // the Inspector's width, less what it leaves at its sides
 static const double kPaneWordsWide = 288;
+static const double kPulseSeconds = 0.3;
 
 @interface MVLabel : NSTextField
 @end
@@ -142,8 +143,33 @@ NSImage *_Nullable MVSymbol(NSString *name, NSColor *color, CGFloat size, NSFont
 }
 @end
 
+NSString *MVNeedSymbol(NSString *_Nullable need) {
+  NSDictionary *symbols = @{@"locked": @"lock", @"asleep": @"moon.zzz", @"not-connected": @"cable.connector.slash", @"not-trusted": @"hand.raised"};
+  return symbols[need ?: @""] ?: @"exclamationmark.triangle";
+}
+
+void MVAnnounce(NSString *words) {
+  NSAccessibilityPostNotificationWithUserInfo(NSApp, NSAccessibilityAnnouncementRequestedNotification, @{NSAccessibilityAnnouncementKey: MVWord(words), NSAccessibilityPriorityKey: @(NSAccessibilityPriorityHigh)});
+}
+
+void MVPulse(NSView *view) {
+  if (!MVMoves()) return;
+  view.wantsLayer = YES;
+  CASpringAnimation *pulse = [[CASpringAnimation alloc] initWithPerceptualDuration:kPulseSeconds bounce:0.3];
+  pulse.keyPath = @"transform.scale";
+  pulse.fromValue = @1.02;
+  pulse.toValue = @1;
+  [view.layer addAnimation:pulse forKey:@"pulse"];
+}
+
+static BOOL gHeldStill;
+
+void MVHoldStill(BOOL held) {
+  gHeldStill = held;
+}
+
 BOOL MVMoves(void) {
-  return !NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion;
+  return !gHeldStill && !NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion;
 }
 
 void MVFade(CALayer *layer, double from, double to, double seconds) {

@@ -36,7 +36,8 @@ void MVRealClick(NSWindow *window, NSPoint at) {
   if (!button.window) return MVEmitFrom(self.screenView, @{@"op": @"clicked", @"name": name, @"found": @NO});
   NSPoint at = [button convertPoint:NSMakePoint(NSMidX(button.bounds), NSMidY(button.bounds)) toView:nil];
   NSView *frame = self.nsWindow.contentView.superview;
-  NSView *under = [frame hitTest:[frame.superview convertPoint:at fromView:nil]];
+  // the window's top view: a point in the window is a point in what it stands on
+  NSView *under = [frame hitTest:at];
   MVRealClick(self.nsWindow, at);
   MVEmitFrom(self.screenView, @{@"op": @"clicked", @"name": name, @"found": @YES, @"under": NSStringFromClass(under.class) ?: @"", @"isIt": @(under == button || [under isDescendantOf:button])});
 }
