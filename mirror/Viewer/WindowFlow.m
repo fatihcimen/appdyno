@@ -15,7 +15,7 @@
   if (wanted == pane.looking) return;
   pane.looking = wanted;
   if (!wanted) [view showMark:nil];
-  MVEmit(@{@"op": @"inspect", @"on": @(wanted)});
+  MVEmitFrom(self.screenView, @{@"op": @"inspect", @"on": @(wanted)});
 }
 
 - (void)chooseClick:(NSString *)does {
@@ -28,7 +28,7 @@
   // a recording is for watching: its steps come up beside the device
   if (on && !pane.recording) [self showPane:MVPaneFlow];
   pane.recording = on;
-  NSButton *button = MVFindControl(self.bar, @"recordFlow");
+  NSButton *button = [self.bar buttonNamed:@"recordFlow"];
   button.image = [NSImage imageWithSystemSymbolName:on ? @"hand.tap.fill" : @"hand.tap" accessibilityDescription:on ? @"Stop Recording Flow" : MVControlTitle(@"recordFlow")];
   button.contentTintColor = on ? NSColor.systemRedColor : NSColor.labelColor;
   [pane show:message];

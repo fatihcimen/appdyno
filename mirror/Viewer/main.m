@@ -1,18 +1,29 @@
-// The viewer's process: reads the parent's messages, runs one source at a time, says what happens. It ends
-// with its stdin, so a parent that dies, however it dies, takes its viewer with it.
+// The viewer's process: reads the parent's messages, keeps a stage for each device it shows, says what happens. It
+// ends with its stdin, so a parent that dies, however it dies, takes its viewer with it.
 //   appdyno-viewer             a window
 //   appdyno-viewer --headless  the same, with no window and nothing that could raise one
 //   appdyno-viewer --behind    a real window kept off every screen, for a test on a Mac a person is using
 //   appdyno-viewer --behind --appearance light|dark   the same, drawn as in use, to be looked at by `snapshot`
-//   appdyno-viewer --hub [--focus]   the window of `appdyno hub`, which holds no device
+//   appdyno-viewer --hub [--focus]   the window of `appdyno hub`, whose stages stand in its room
 //   appdyno-viewer --selftest [fixtures dir]
 //   appdyno-viewer --encode <h264|hevc> <frames>
-#import "Motion.h"
 #import "Viewer.h"
 #import "Window.h"
 #import <CoreGraphics/CoreGraphics.h>
 
 static NSLock *gOut;
+
+void MVEmitFrom(NSView *_Nullable view, NSDictionary *message) {
+  for (NSView *above = view; above; above = above.superview) {
+    if (![above isKindOfClass:MVRootView.class]) continue;
+    NSString *stage = ((MVRootView *)above).stage;
+    if (!stage) break;
+    NSMutableDictionary *tagged = [message mutableCopy];
+    tagged[@"stage"] = stage;
+    return MVEmit(tagged);
+  }
+  MVEmit(message);
+}
 
 void MVEmit(NSDictionary *message) {
   NSData *line = [NSJSONSerialization dataWithJSONObject:message options:0 error:NULL];
@@ -28,7 +39,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   return @{@"surface": MVSourceSurface.class, @"adb": MVSourceStream.class, @"pipe": MVSourceStream.class, @"pixels": MVSourcePixels.class};
 }
 
-@interface MVApp : NSObject <MVSink, NSApplicationDelegate>
+@interface MVApp : NSObject <NSApplicationDelegate>
 - (void)setBehind:(BOOL)behind;
 - (void)setPoses:(BOOL)poses;
 - (void)openHub:(BOOL)focus;
@@ -37,30 +48,17 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 @end
 
 @implementation MVApp {
-  MVStats *_stats;
-  MVWindow *_window;
+  NSMutableDictionary<NSString *, MVStage *> *_stages;
   MVHub *_hub;
-  BOOL _headlessOnly;
   BOOL _behind, _poses;
-  id<MVSource> _source;
-  NSString *_lastSized;
-  NSString *_codec;
-  CGSize _sourceSize;
-  int _turns;
-  NSDictionary *_pendingStatus;
-  MVWatch *_watch;
 }
 
 - (instancetype)initWithWindow:(BOOL)window {
   if ((self = [super init])) {
-    _stats = [MVStats new];
-    _headlessOnly = !window;
+    // a process with one device has it under no name
+    _stages = [NSMutableDictionary dictionaryWithObject:[[MVStage alloc] initNamed:nil room:nil windowless:!window] forKey:@""];
   }
   return self;
-}
-
-- (MVStats *)stats {
-  return _stats;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
@@ -85,269 +83,101 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 - (void)startClock {
   dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_global_queue(QOS_CLASS_UTILITY, 0));
   dispatch_source_set_timer(timer, dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), NSEC_PER_SEC, NSEC_PER_SEC / 10);
-  MVStats *stats = _stats;
   __weak MVApp *weak = self;
   dispatch_source_set_event_handler(timer, ^{
-    NSDictionary *report = stats.report;
-    MVEmit(report);
-    dispatch_async(dispatch_get_main_queue(), ^{
-      [weak showReport:report];
-    });
+    [weak reportStages];
   });
   dispatch_resume(timer);
   // kept for the life of the process
   CFBridgingRetain(timer);
 }
 
-- (void)showReport:(NSDictionary *)report {
-  [_window showStats:report];
+- (void)reportStages {
+  NSArray<MVStage *> *stages;
+  @synchronized(self) {
+    stages = _stages.allValues;
+  }
+  for (MVStage *stage in stages) {
+    NSDictionary *report = stage.report;
+    MVEmit(report);
+    dispatch_async(dispatch_get_main_queue(), ^{
+      [stage showReport:report];
+    });
+  }
 }
 
 /// A `tick` comes up to 60 times a second and needs nothing of the main thread.
 - (void)receive:(NSDictionary *)message {
   NSString *op = message[@"op"];
-  if ([op isEqual:@"tick"]) {
-    id<MVSource> source;
-    @synchronized(self) {
-      source = _source;
-    }
-    // the first may come on the heels of its `attach`, which is on its way through the main queue
-    if (!source) dispatch_async(dispatch_get_main_queue(), ^{
-      if ([(id)self->_source respondsToSelector:@selector(tick:)]) [self->_source tick:message];
-    });
-    else if ([(id)source respondsToSelector:@selector(tick:)]) [source tick:message];
-    return;
-  }
+  if ([op isEqual:@"tick"]) return [[self stageNamed:message[@"stage"]] tick:message];
   dispatch_async(dispatch_get_main_queue(), ^{
     [self handle:op message:message];
   });
 }
 
-- (void)handle:(NSString *)op message:(NSDictionary *)m {
-  if ([op isEqual:@"attach"]) return [self attach:m];
-  if ([op isEqual:@"detach"]) return [self detach];
-  if ([op isEqual:@"status"]) return [_window setStatus:m];
-  if ([op isEqual:@"raise"]) return [_window raise];
-  if ([op isEqual:@"turns"]) {
-    if ([(id)_source respondsToSelector:@selector(setTurns:)]) [_source setTurns:[m[@"turns"] intValue] & 3];
-    return;
+- (nullable MVStage *)stageNamed:(nullable NSString *)name {
+  @synchronized(self) {
+    return _stages[name ?: @""];
   }
-  if ([op isEqual:@"record"]) {
-    if ([(id)_source respondsToSelector:@selector(startRecording:)]) [(MVSourceStream *)_source startRecording:m[@"file"]];
-    else MVEmit(@{@"op": @"recorded", @"why": @"this kind of picture is not recorded here", @"frames": @0});
-    return;
+}
+
+/// A device of the hub's stands in its room, and goes when it is told to; the process stays.
+- (MVStage *)newStageNamed:(NSString *)name {
+  MVStage *stage = [[MVStage alloc] initNamed:name room:_hub.room windowless:NO];
+  stage.behind = _behind;
+  stage.poses = _poses;
+  __weak MVApp *weak = self;
+  stage.onGone = ^{
+    [weak forget:name];
+  };
+  @synchronized(self) {
+    _stages[name] = stage;
   }
-  if ([op isEqual:@"recordStop"]) {
-    NSDictionary *told = [(id)_source respondsToSelector:@selector(finishRecording)] ? [(MVSourceStream *)_source finishRecording] : nil;
-    NSMutableDictionary *answer = [told ?: @{@"frames": @0, @"why": @"nothing was being recorded"} mutableCopy];
-    answer[@"op"] = @"recorded";
-    MVEmit(answer);
-    return;
+  return stage;
+}
+
+- (void)forget:(NSString *)name {
+  @synchronized(self) {
+    [_stages removeObjectForKey:name];
   }
-  if ([op isEqual:@"agent"]) return [_window setDriving:[m[@"driving"] boolValue] tool:m[@"tool"] ?: @""];
-  if ([op isEqual:@"banner"]) return m[@"id"] ? [_window.overlay showBanner:m] : [_window.overlay hideBanner];
-  if ([op isEqual:@"activity"]) return [_window addActivity:m];
-  if ([op isEqual:@"apps"]) return [_window showApps:m];
-  if ([op isEqual:@"flow"]) return [_window showFlow:m];
-  if ([op isEqual:@"element"]) return [_window showElement:m];
-  if ([op isEqual:@"copyText"]) return MVCopyText(m[@"text"] ?: @"", NSPasteboard.generalPasteboard);
-  if ([op isEqual:@"perf"]) return [_window showPerf:m];
-  if ([op isEqual:@"measuring"] || [op isEqual:@"measured"]) return [_window showMeasure:m];
+}
+
+- (void)handleHub:(NSString *)op message:(NSDictionary *)m {
   if ([op isEqual:@"hub"]) return [_hub show:m];
-  if ([op isEqual:@"note"]) return _hub ? [_hub sayNote:m[@"text"] ?: @""] : [_window sayNote:m[@"text"] ?: @""];
-  if ([op isEqual:@"recording"]) return [_window setRecording:[m[@"on"] boolValue]];
-  if ([op isEqual:@"pair"]) return [_window setPair:m];
-  if ([op isEqual:@"touchAt"]) return [_window.overlay showTouchAtX:[m[@"x"] doubleValue] y:[m[@"y"] doubleValue]];
-  if ([op isEqual:@"copied"]) return MVCopyImage(m[@"file"]);
-  if ([op isEqual:@"poke"]) {
-    if (_hub) return [_hub poke:m];
-    if (m[@"clickOn"]) return [_window pokeClick:m[@"clickOn"]];
-    if (m[@"key"]) return [_window pokeKey:m[@"key"]];
-    if (m[@"text"]) return [_window pokeText:m[@"text"]];
-    if (m[@"button"]) return [_window pokeButton:m[@"button"]];
-    if ([m[@"done"] boolValue]) return [_window.overlay done:self];
-    if (m[@"pane"]) return [_window showPane:[m[@"pane"] integerValue]];
-    if (m[@"journey"]) return MVEmit(@{@"op": @"control", @"name": @"journey", @"file": m[@"journey"]});
-    if (m[@"control"]) return [_window perform:m[@"control"]];
-    if (m[@"click"]) return [_window chooseClick:m[@"click"]];
-    double x = [m[@"x"] doubleValue], y = [m[@"y"] doubleValue];
-    if ([m[@"hover"] boolValue]) return [_window pokeHoverX:x y:y];
-    if (m[@"seconds"]) return [_window pokeX:x y:y toX:[(m[@"x2"] ?: m[@"x"]) doubleValue] toY:[(m[@"y2"] ?: m[@"y"]) doubleValue] seconds:[m[@"seconds"] doubleValue]];
-    return [_window pokeX:x y:y right:[m[@"right"] boolValue]];
-  }
+  if ([op isEqual:@"note"]) return [_hub sayNote:m[@"text"] ?: @""];
+  if ([op isEqual:@"poke"]) return [_hub poke:m];
   if ([op isEqual:@"snapshot"]) {
     NSString *file = m[@"file"] ?: @"";
-    BOOL ok = _hub ? [_hub snapshot:file] : [m[@"screen"] boolValue] ? [_window snapshotScreen:file] : [_window snapshot:file];
-    return MVEmit(@{@"op": @"snapped", @"file": file, @"ok": @(ok)});
+    return MVEmit(@{@"op": @"snapped", @"file": file, @"ok": @([_hub snapshot:file])});
   }
-  if ([op isEqual:@"mark"]) return [_stats mark:[m[@"bigger"] boolValue]];
-  if ([op isEqual:@"watch"]) return [self watch:m];
   if ([op isEqual:@"quit"]) {
-    [self detach];
     MVEmit(@{@"op": @"closed"});
     exit(0);
   }
 }
 
-/// One at a time: it reads the frames a window shows, on the way to it, and leaves them as they are.
-- (void)watch:(NSDictionary *)m {
-  if (_watch) return MVEmit(@{@"op": @"watched", @"id": m[@"id"] ?: @"", @"why": @"another watch is running on this stream"});
-  MVWatch *watch = [[MVWatch alloc] initWithId:m[@"id"] ?: @"" ms:[m[@"ms"] doubleValue] strip:[m[@"strip"] boolValue]];
-  _watch = watch;
-  // a still screen sends nothing, and its time runs out all the same
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(watch.ms * NSEC_PER_MSEC)), dispatch_get_main_queue(), ^{
-    if (!watch.started) [self endWatch:watch];
-  });
-}
-
-- (void)endWatch:(MVWatch *)watch {
-  if (_watch != watch) return;
-  _watch = nil;
-  MVEmit(watch.finish);
-}
-
-- (void)watchImage:(CVImageBufferRef)image {
-  MVWatch *watch = _watch;
-  BOOL started = watch.started;
-  [watch addImage:image turns:_turns];
-  if (!watch.started || started) return;
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(watch.ms * NSEC_PER_MSEC)), dispatch_get_main_queue(), ^{
-    [self endWatch:watch];
-  });
+- (void)handle:(NSString *)op message:(NSDictionary *)m {
+  NSString *name = m[@"stage"];
+  if (_hub && !name) return [self handleHub:op message:m];
+  MVStage *stage = [self stageNamed:name];
+  if (!stage && name && [op isEqual:@"attach"]) stage = [self newStageNamed:name];
+  [stage handle:op message:m];
 }
 
 - (void)setBehind:(BOOL)behind {
   _behind = behind;
+  [self stageNamed:nil].behind = behind;
 }
 
 - (void)setPoses:(BOOL)poses {
   _poses = poses;
+  [self stageNamed:nil].poses = poses;
 }
 
 - (void)openHub:(BOOL)focus {
   NSApp.mainMenu = MVHubMenu();
   _hub = [[MVHub alloc] initWithShow:MVShowOf(focus, _behind) poses:_poses];
-}
-
-- (void)detach {
-  id<MVSource> source;
-  @synchronized(self) {
-    source = _source;
-    _source = nil;
-  }
-  [source stop];
-  [_stats reset];
-  _lastSized = nil;
-  _codec = nil;
-  _turns = 0;
-}
-
-- (void)attach:(NSDictionary *)m {
-  [self detach];
-  NSDictionary *options = m[@"source"];
-  Class kind = [options isKindOfClass:NSDictionary.class] ? MVSourceClasses()[options[@"kind"]] : nil;
-  if (!kind) {
-    MVEmit(@{@"op": @"lost", @"why": @"unknown source", @"fatal": @YES});
-    return;
-  }
-  if (!_headlessOnly && !_window) {
-    _window = [MVWindow new];
-    _window.behind = _behind;
-    _window.poses = _poses;
-    __weak MVApp *weak = self;
-    // a window kept behind the rest is covered by design: it still shows what it gets
-    if (!_behind) {
-      _window.onHidden = ^(BOOL hidden) {
-        [weak setHidden:hidden];
-      };
-    }
-  }
-  [_window configure:m];
-  _stats.source = options[@"kind"];
-  _stats.mode = @"";
-  id<MVSource> source = [[kind alloc] initWithOptions:options sink:self];
-  @synchronized(self) {
-    _source = source;
-  }
-  [source start];
-}
-
-- (void)setHidden:(BOOL)hidden {
-  id<MVSource> source = _source;
-  if ([(id)source respondsToSelector:@selector(setHidden:)]) [source setHidden:hidden];
-}
-
-- (BOOL)isCurrent:(id)from {
-  @synchronized(self) {
-    return from == _source;
-  }
-}
-
-- (void)source:(id)from size:(CGSize)size codec:(NSString *)codec {
-  dispatch_async(dispatch_get_main_queue(), ^{
-    if (![self isCurrent:from]) return;
-    self->_sourceSize = size;
-    self->_codec = codec;
-    [self sayShape];
-  });
-}
-
-/// What is told of the picture is its shape stood up, whatever kind of source turned it.
-- (void)sayShape {
-  CGSize size = _turns % 2 ? CGSizeMake(_sourceSize.height, _sourceSize.width) : _sourceSize;
-  NSString *sized = [NSString stringWithFormat:@"%.0fx%.0f %@", size.width, size.height, _codec];
-  if (!_codec || [sized isEqual:_lastSized]) return;
-  _lastSized = sized;
-  _stats.size = size;
-  [_window setTurns:_turns];
-  [_window setPicture:size];
-  MVEmit(@{@"op": @"first", @"w": @(size.width), @"h": @(size.height), @"codec": _codec});
-}
-
-- (void)source:(id)from surface:(IOSurfaceRef)surface {
-  id held = (__bridge id)surface;
-  dispatch_async(dispatch_get_main_queue(), ^{
-    if (![self isCurrent:from]) return;
-    [self->_window showSurface:(__bridge IOSurfaceRef)held];
-    [self->_stats shown];
-    CVPixelBufferRef image = NULL;
-    if (self->_watch && CVPixelBufferCreateWithIOSurface(NULL, (__bridge IOSurfaceRef)held, NULL, &image) == kCVReturnSuccess) {
-      [self watchImage:image];
-      CVBufferRelease(image);
-    }
-  });
-}
-
-- (void)source:(id)from image:(CVImageBufferRef)image {
-  CVBufferRetain(image);
-  dispatch_async(dispatch_get_main_queue(), ^{
-    if ([self isCurrent:from]) {
-      if (self->_window) self->_stats.layer = [self->_window showImage:image] ? @"ok" : @"failed";
-      [self->_stats shown];
-      if (self->_watch) [self watchImage:image];
-    }
-    CVBufferRelease(image);
-  });
-}
-
-- (void)source:(id)from turns:(int)turns {
-  dispatch_async(dispatch_get_main_queue(), ^{
-    if (![self isCurrent:from]) return;
-    self->_turns = turns;
-    [self sayShape];
-  });
-}
-
-- (void)source:(id)from needsKey:(int)failures {
-  if ([self isCurrent:from]) MVEmit(@{@"op": @"needKey", @"consecutive": @(failures)});
-}
-
-- (void)source:(id)from lost:(NSString *)why fatal:(BOOL)fatal {
-  dispatch_async(dispatch_get_main_queue(), ^{
-    if (![self isCurrent:from]) return;
-    [self detach];
-    MVEmit(@{@"op": @"lost", @"why": why, @"fatal": @(fatal)});
-  });
+  [self forget:@""];
 }
 
 @end

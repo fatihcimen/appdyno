@@ -30,7 +30,7 @@ const OUT_OF_A_READING = 3_000;
 /** A runner's first start and five launches, on a shared Mac. */
 const MEASURE_MS = 400_000;
 const FIXTURE = 'dev.appdyno.fixture';
-const PERFORMANCE_PANE = 3;
+const PERFORMANCE_PANE = 0;
 
 const until = async (what: string, test: () => boolean, ms: number) => {
   const end = Date.now() + ms;

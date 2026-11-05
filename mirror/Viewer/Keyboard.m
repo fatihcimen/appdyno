@@ -11,7 +11,7 @@ static const NSUInteger kPasteLimit = 4096;
   if (!self.takesKeys) return;
   uint16_t usage = MVUsageOfKeyCode(event.keyCode);
   if (usage && !self.hasMarkedText) {
-    MVEmit(@{@"op": @"key", @"page": @7, @"usage": @(usage), @"state": @1});
+    MVEmitFrom(self, @{@"op": @"key", @"page": @7, @"usage": @(usage), @"state": @1});
     return;
   }
   // a dead key has no characters yet: it is the system's to compose
@@ -21,7 +21,7 @@ static const NSUInteger kPasteLimit = 4096;
 - (void)keyUp:(NSEvent *)event {
   if (!self.takesKeys) return;
   uint16_t usage = MVUsageOfKeyCode(event.keyCode);
-  if (usage) MVEmit(@{@"op": @"key", @"page": @7, @"usage": @(usage), @"state": @2});
+  if (usage) MVEmitFrom(self, @{@"op": @"key", @"page": @7, @"usage": @(usage), @"state": @2});
 }
 
 - (void)paste:(nullable id)sender {
@@ -32,13 +32,13 @@ static const NSUInteger kPasteLimit = 4096;
     [(MVWindow *)self.window.delegate sayNote:[NSString stringWithFormat:@"Pasted the first %lu of %lu characters", (unsigned long)kPasteLimit, (unsigned long)text.length]];
     text = [text substringToIndex:[text rangeOfComposedCharacterSequenceAtIndex:kPasteLimit].location];
   }
-  MVEmit(@{@"op": @"text", @"s": text});
+  MVEmitFrom(self, @{@"op": @"text", @"s": text});
 }
 
 - (void)insertText:(id)string replacementRange:(NSRange)range {
   NSString *text = [string isKindOfClass:NSAttributedString.class] ? [string string] : string;
   self.composing = nil;
-  if (text.length) MVEmit(@{@"op": @"text", @"s": text});
+  if (text.length) MVEmitFrom(self, @{@"op": @"text", @"s": text});
 }
 
 - (void)setMarkedText:(id)string selectedRange:(NSRange)selected replacementRange:(NSRange)range {

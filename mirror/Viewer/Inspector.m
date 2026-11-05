@@ -47,7 +47,7 @@ static NSString *ms(id v) {
   if ((self = [super initWithFrame:frame])) {
     _calls = [NSMutableArray array];
     NSMutableArray *pills = [NSMutableArray array];
-    for (NSString *title in @[@"Stats", @"Activity", @"Apps", @"Performance", @"Flow"]) {
+    for (NSString *title in @[@"Performance", @"Flow", @"Apps", @"Activity", @"Stats"]) {
       NSButton *pill = [NSButton buttonWithTitle:title target:self action:@selector(tabChosen:)];
       pill.bordered = NO;
       pill.wantsLayer = YES;
@@ -79,7 +79,7 @@ static NSString *ms(id v) {
     for (int i = 0; i < MVPanes; i++) {
       NSView *pane = _panes[i];
       pane.translatesAutoresizingMaskIntoConstraints = NO;
-      pane.hidden = i != MVPaneStats;
+      pane.hidden = i != MVPanePerf;
       [self addSubview:pane];
       [rules addObjectsFromArray:@[
         [pane.topAnchor constraintEqualToAnchor:_tabs.bottomAnchor constant:12],
@@ -89,7 +89,7 @@ static NSString *ms(id v) {
       ]];
     }
     [NSLayoutConstraint activateConstraints:rules];
-    [self showPane:MVPaneStats];
+    [self showPane:MVPanePerf];
   }
   return self;
 }
@@ -233,7 +233,7 @@ static NSString *ms(id v) {
   if (self.onPane) self.onPane();
   if (pane == MVPaneApps && !_asked) {
     _asked = YES;
-    MVEmit(@{@"op": @"app", @"action": @"list"});
+    MVEmitFrom(self, @{@"op": @"app", @"action": @"list"});
   }
 }
 
@@ -294,11 +294,11 @@ static NSString *ms(id v) {
 }
 
 - (void)launchApp:(id)sender {
-  MVEmit(@{@"op": @"app", @"action": @"launch", @"id": _apps.selected.key ?: @""});
+  MVEmitFrom(self, @{@"op": @"app", @"action": @"launch", @"id": _apps.selected.key ?: @""});
 }
 
 - (void)quitApp:(id)sender {
-  MVEmit(@{@"op": @"app", @"action": @"quit", @"id": _apps.selected.key ?: @""});
+  MVEmitFrom(self, @{@"op": @"app", @"action": @"quit", @"id": _apps.selected.key ?: @""});
 }
 
 /// As a sheet, never modal over the whole app: a person may be using something else, and this must not take it.
@@ -313,7 +313,7 @@ static NSString *ms(id v) {
   [alert addButtonWithTitle:@"Cancel"];
   NSString *key = row.key;
   [alert beginSheetModalForWindow:self.window completionHandler:^(NSModalResponse answer) {
-    if (answer == NSAlertFirstButtonReturn) MVEmit(@{@"op": @"app", @"action": @"remove", @"id": key ?: @""});
+    if (answer == NSAlertFirstButtonReturn) MVEmitFrom(self, @{@"op": @"app", @"action": @"remove", @"id": key ?: @""});
   }];
 }
 

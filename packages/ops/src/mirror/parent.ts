@@ -4,6 +4,7 @@ import {
   startViewer,
   type MirrorOptions,
   type MirrorStatus,
+  type ViewerStart,
   startOf,
 } from '@appdyno/core';
 import type { ServerContext } from '../context.js';
@@ -29,6 +30,8 @@ export type MirrorRun = {
   headless: boolean;
   /** A real window kept off every screen. */
   behind?: boolean;
+  /** Where a device's window stands, when it is not a viewer of its own. */
+  viewer?: (serial: string) => ViewerStart;
   /** Two devices side by side, a touch on either going to both. */
   pair?: boolean;
   noInput: boolean;
@@ -68,6 +71,8 @@ export class Parent {
   private readonly movies = new Map<string, Promise<(() => Promise<MovieEnd>) | undefined>>();
   private readonly sides: PairSide[] = [];
   private pair: WindowPair | undefined;
+  /** What opens next stands beside what opened last. */
+  pairing = false;
   stopping = false;
   failed = false;
 
@@ -105,10 +110,10 @@ export class Parent {
     const flow = windowFlow(this.ctx, device, hardware, () => session, controls.measuring);
     const session: MirrorSession = new MirrorSession({
       mirror: device.mirror,
-      viewer: startViewer(this.o.headless, undefined, this.o.behind),
+      viewer: this.o.viewer?.(serial) ?? startViewer(this.o.headless, undefined, this.o.behind),
       look: {
         ...windowLook(hardware),
-        ...(this.o.pair && { pair: this.sides.length === 0 ? 'left' : 'right' }),
+        ...((this.o.pair || this.pairing) && { pair: this.sides.length === 0 ? 'left' : 'right' }),
       },
       press: controls.press,
       takeInput: (e) => this.pair?.input(serial, e) ?? false,
@@ -153,6 +158,7 @@ export class Parent {
         await flow.end();
         this.pair?.end(serial);
         this.pair = undefined;
+        this.sides.length = 0;
         await controls.end();
         removeMirrorFile(serial);
         device.close();
@@ -163,7 +169,7 @@ export class Parent {
       }),
     );
     await session.start();
-    if (!this.o.pair) return;
+    if (!this.o.pair && !this.pairing) return;
     this.sides.push({
       serial,
       name: hardware?.name ?? hardware?.model ?? serial,
@@ -191,6 +197,12 @@ export class Parent {
     if (!end) return;
     if (!end.kept) this.failed = true;
     this.o.log(`${serial}: recorded ${end.what}${end.why ? `: ${end.why}` : ''}`);
+  }
+
+  /** One device's window, and all it holds, while the rest go on. */
+  async close(serial: string, why: string) {
+    await this.sessions.get(serial)?.stop(why);
+    await this.done.get(serial);
   }
 
   async stopAll(why: string) {

@@ -1,16 +1,15 @@
 // The window: the device on a backdrop drawn from its own picture, full bleed, with glass floating over it: its status,
 // its controls and the Inspector. The picture's view is exactly the device's screen, so its maths never hear of a frame.
-#import "Viewer.h"
-#import "Window.h"
+#import "WindowParts.h"
 
 // a new window takes at most this much of the screen
 static const double kFitScreen = 0.85;
 // far from every screen a Mac can have
 static const double kOffscreenAt = -30000;
-static const double kMargin = 30, kTop = 60, kBottom = 22, kInspector = 300, kInset = 10;
+static const double kMargin = 30, kTop = 72, kBottom = 30, kInspector = 300, kInset = 10;
 static const CGSize kSmallest = {380, 420};
 // wide enough that a toolbar shows all it has; a person can go narrower, and it folds into its own menu
-static const double kOpensWide = 640;
+static const double kOpensWide = 780;
 static NSString *const kFrameDefault = @"showsDeviceFrame";
 
 MVShow MVShowOf(BOOL focus, BOOL behind) {
@@ -18,42 +17,48 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   return focus ? MVShowFocused : MVShowFront;
 }
 
-@implementation MVWindow {
-  MVOffscreenWindow *_window;
-  NSView *_stage;
-  MVFrameView *_frame;
-  MVView *_view;
-  MVInspector *_inspector;
-  NSView *_panel, *_bar, *_pill, *_pillFill;
-  MVHud *_hud;
-  BOOL _hudding, _reading, _recording;
-  NSView *_root;
-  MVBackdrop *_backdrop;
-  MVStatusLine *_line;
-  MVPictureLayers *_layers;
-  CGSize _picture;
-  double _zoom;
-  int _turns;
-  NSString *_name, *_kind;
-  NSDictionary *_look;
-  BOOL _inspecting;
+@implementation MVRootView
+- (void)setFrameSize:(NSSize)size {
+  [super setFrameSize:size];
+  if (self.onResize) self.onResize();
+}
+@end
+
+@implementation MVWindow
+
+- (MVOffscreenWindow *)ownWindow {
+  NSRect frame = NSMakeRect(80, 80, 440, 760);
+  NSWindowStyleMask style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable | NSWindowStyleMaskFullSizeContentView;
+  MVOffscreenWindow *window = [[MVOffscreenWindow alloc] initWithContentRect:frame styleMask:style backing:NSBackingStoreBuffered defer:NO];
+  window.releasedWhenClosed = NO;
+  window.delegate = self;
+  window.titlebarAppearsTransparent = YES;
+  window.contentMinSize = kSmallest;
+  return window;
 }
 
 - (instancetype)init {
+  return [self initInRoom:nil];
+}
+
+- (instancetype)initInRoom:(nullable NSView *)room {
   if ((self = [super init])) {
-    NSRect frame = NSMakeRect(80, 80, 440, 760);
-    NSWindowStyleMask style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable | NSWindowStyleMaskFullSizeContentView;
-    _window = [[MVOffscreenWindow alloc] initWithContentRect:frame styleMask:style backing:NSBackingStoreBuffered defer:NO];
-    _window.releasedWhenClosed = NO;
-    _window.delegate = self;
-    _window.titlebarAppearsTransparent = YES;
-    _window.titleVisibility = NSWindowTitleHidden;
-    _window.contentMinSize = kSmallest;
-    NSView *root = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, frame.size.width, frame.size.height)];
+    _hosted = room != nil;
+    _window = room ? (MVOffscreenWindow *)room.window : [self ownWindow];
+    MVRootView *root = [[MVRootView alloc] initWithFrame:room ? room.bounds : NSMakeRect(0, 0, 440, 760)];
     root.wantsLayer = YES;
     _backdrop = [[MVBackdrop alloc] initInView:root window:_window];
     _root = root;
-    _window.contentView = root;
+    __weak MVWindow *held = self;
+    if (room) {
+      root.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+      root.onResize = ^{
+        [held layoutPicture];
+      };
+      [room addSubview:root];
+    } else {
+      _window.contentView = root;
+    }
     _stage = [[NSView alloc] initWithFrame:root.bounds];
     [root addSubview:_stage];
     _frame = [[MVFrameView alloc] initWithFrame:NSZeroRect];
@@ -64,27 +69,15 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
     _frame.showsFrame = ![NSUserDefaults.standardUserDefaults objectForKey:kFrameDefault] || [NSUserDefaults.standardUserDefaults boolForKey:kFrameDefault];
     [_stage addSubview:_frame];
     [_frame addSubview:_view];
+    _view.onTouched = ^{
+      [held useToolbar];
+    };
     _layers = [[MVPictureLayers alloc] initInView:_view];
     _overlay = [[MVOverlay alloc] initInView:_view];
-    _line = [[MVStatusLine alloc] initWithFrame:NSZeroRect];
-    _line.translatesAutoresizingMaskIntoConstraints = NO;
-    NSView *padded = [NSView new];
-    padded.wantsLayer = YES;
-    padded.layer.cornerRadius = 17;
-    _pillFill = padded;
-    [padded addSubview:_line];
-    NSView *pill = MVGlass(padded, 17, nil);
-    [root addSubview:pill];
-    _pill = pill;
-    [NSLayoutConstraint activateConstraints:@[
-      [_line.leadingAnchor constraintEqualToAnchor:padded.leadingAnchor constant:14],
-      [_line.trailingAnchor constraintEqualToAnchor:padded.trailingAnchor constant:-14],
-      [_line.centerYAnchor constraintEqualToAnchor:padded.centerYAnchor],
-      [padded.heightAnchor constraintEqualToConstant:34],
-      [pill.leadingAnchor constraintEqualToAnchor:root.leadingAnchor constant:84],
-      [pill.topAnchor constraintEqualToAnchor:root.topAnchor constant:12],
-      [pill.widthAnchor constraintLessThanOrEqualToConstant:260],
-    ]];
+    _line = [MVStatusLine new];
+    _line.onChange = ^(NSString *subtitle) {
+      [held sayStatus:subtitle];
+    };
     _inspector = [[MVInspector alloc] initWithFrame:NSZeroRect target:self];
     __weak MVWindow *weak = self;
     _inspector.onPane = ^{
@@ -105,17 +98,33 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   return self;
 }
 
+/// A device and how it is, as the system's title and subtitle: in a room the window is the hub's, and says the one chosen.
+- (void)sayStatus:(NSString *)subtitle {
+  if (_window.toolbar != _toolbar) return;
+  _window.title = _line.name ?: @"";
+  _window.subtitle = subtitle;
+}
+
+/// Off its room, which stays for the next device.
+- (void)leave {
+  [_root removeFromSuperview];
+  if (_window.toolbar != _toolbar) return;
+  _window.toolbar = nil;
+  _window.title = @"Devices";
+  _window.subtitle = @"";
+}
+
 - (void)configure:(NSDictionary *)attach {
   _name = attach[@"title"] ?: @"appdyno";
-  _window.title = _name;
+  _root.stage = attach[@"stage"];
   _look = [attach[@"look"] isKindOfClass:NSDictionary.class] ? attach[@"look"] : @{};
   _kind = attach[@"source"][@"kind"];
   _view.controls = _look[@"controls"] ?: @[@"home", @"lock", @"volumeUp", @"volumeDown"];
   if (!_bar) {
     [self addControls];
-    NSApp.mainMenu = MVMainMenu(_view.controls);
+    if (!_hosted) NSApp.mainMenu = MVMainMenu(_view.controls);
   }
-  _window.poses = self.poses;
+  if (!_hosted) _window.poses = self.poses;
   _view.inputOn = ![attach[@"input"] isEqual:@NO];
   // a click once given stands: a reconnect does not take it back
   if (![attach[@"input"] isEqual:@"click"]) _view.armed = YES;
@@ -123,43 +132,16 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   if ([attach[@"zoom"] doubleValue] > 0) _zoom = [attach[@"zoom"] doubleValue];
   _line.name = _look[@"name"] ?: _name;
   [_window makeFirstResponder:_view];
-  MVPresent(_window, MVShowOf([attach[@"focus"] boolValue], self.behind));
-}
-
-/// What is always there, and the rest a click away: a window is for its device, not its controls.
-- (void)addControls {
-  NSMutableArray *device = [NSMutableArray array];
-  for (NSString *name in @[@"back", @"home", @"appSwitch", @"lock"])
-    if ([_view.controls containsObject:name]) [device addObject:name];
-  NSArray *groups = @[device, @[@"screenshot", @"record", @"recordFlow"], @[@"hud", @"more", @"inspector"]];
-  _bar = MVGlassBar(_look[@"pair"] ? [@[@[@"both"]] arrayByAddingObjectsFromArray:groups] : groups, self, @selector(control:));
-  // it has nothing to say until there are two windows
-  MVFindControl(_bar, @"both").enabled = NO;
-  [_root addSubview:_bar];
-  [NSLayoutConstraint activateConstraints:@[
-    [_bar.trailingAnchor constraintEqualToAnchor:_root.trailingAnchor constant:-12],
-    [_bar.topAnchor constraintEqualToAnchor:_root.topAnchor constant:10],
-    // a long name gives way to the controls
-    [_pill.trailingAnchor constraintLessThanOrEqualToAnchor:_bar.leadingAnchor constant:-8],
-  ]];
-}
-
-- (void)showMore:(NSView *)anchor {
-  NSMenu *menu = [[NSMenu alloc] initWithTitle:@"More"];
-  NSArray<NSString *> *shown = @[@"back", @"home", @"appSwitch", @"lock"];
-  for (NSMenuItem *item in [_view deviceMenu].itemArray)
-    if (![shown containsObject:item.representedObject]) [menu addItem:[item copy]];
-  [menu addItem:NSMenuItem.separatorItem];
-  for (NSMenuItem *item in MVControlMenu(@"View", nil).itemArray)
-    if (![item.representedObject isEqual:@"inspector"]) [menu addItem:[item copy]];
-  [menu popUpMenuPositioningItem:nil atLocation:NSMakePoint(0, anchor.bounds.size.height + 6) inView:anchor];
+  if (!_hosted) MVPresent(_window, MVShowOf([attach[@"focus"] boolValue], self.behind));
 }
 
 /// Everything laid out once, from the window's size: the device takes the room there is.
 - (void)layoutPicture {
-  NSRect all = _window.contentView.bounds;
+  NSRect all = _root.bounds;
   double side = [self sideWidth];
-  _stage.frame = NSMakeRect(0, 0, all.size.width - side, all.size.height);
+  // what stands under a sidebar is the backdrop's
+  double under = _root.safeAreaInsets.left;
+  _stage.frame = NSMakeRect(under, 0, all.size.width - side - under, all.size.height);
   _panel.frame = NSMakeRect(all.size.width - kInspector - kInset, kInset, kInspector, all.size.height - kTop - kInset);
   double beside = all.size.width - (_inspecting ? kInspector + kInset : 0) - MVHudWidth - kInset;
   _hud.frame = NSMakeRect(beside, kInset, MVHudWidth, all.size.height - kTop - kInset);
@@ -192,7 +174,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   _picture = size;
   _view.picture = size;
   [self applySpec];
-  if (_zoom <= 0 && !self.behind) {
+  if (_zoom <= 0 && !self.behind && !_hosted) {
     _window.frameAutosaveName = _name;
     double saved = [NSUserDefaults.standardUserDefaults doubleForKey:[self zoomKey]];
     if (saved > 0) _zoom = saved;
@@ -224,8 +206,10 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   return MVFitScale(body, room);
 }
 
+/// A window of its own takes the device's size; in a room the device takes the room's.
 - (void)setZoom:(double)zoom {
   _zoom = zoom;
+  if (_hosted) return [self layoutPicture];
   [_window setContentSize:[self windowSizeAt:zoom]];
   [self placeBeside];
   [self layoutPicture];
@@ -233,7 +217,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 }
 
 - (void)sayZoom {
-  MVEmit(@{@"op": @"zoom", @"scale": @(_zoom)});
+  MVEmitFrom(_view, @{@"op": @"zoom", @"scale": @(_zoom)});
   if (!self.behind) [NSUserDefaults.standardUserDefaults setDouble:_zoom forKey:[self zoomKey]];
 }
 
@@ -247,7 +231,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 }
 
 - (void)windowDidEndLiveResize:(NSNotification *)notification {
-  if (_picture.width <= 0) return;
+  if (_picture.width <= 0 || _hosted) return;
   _zoom = _view.bounds.size.width / _picture.width;
   [self sayZoom];
 }
@@ -268,16 +252,12 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   _line.state = live ? @"Live" : message[@"title"] ?: state;
   [_layers setDimmed:!live];
   [_overlay showState:live ? nil : state title:message[@"title"] fix:message[@"fix"]];
-  _window.title = live ? _name : [NSString stringWithFormat:@"%@: %@", _name, message[@"title"] ?: state];
 }
 
-/// Its one colour says what is happening to the device, and the line says it in words. A fill, and not the glass's tint,
-/// which glass gives up in a window that is not in front: the window a touch was not made on has to say it too.
+/// One colour around the device says what is happening to it, and the window's subtitle says it in words.
 - (void)tintPill {
   NSColor *red = NSColor.systemRedColor, *accent = NSColor.controlAccentColor;
-  NSColor *tint = _recording || _line.failing ? red : _line.tool || _line.both ? accent : nil;
-  _pillFill.layer.backgroundColor = [tint colorWithAlphaComponent:0.35].CGColor;
-  [_frame setEdge:_line.failing ? red : _line.tool ? accent : nil];
+  [_frame setEdge:_recording || _line.failing ? red : _line.tool || _line.both ? accent : nil];
 }
 
 - (void)setDriving:(BOOL)driving tool:(NSString *)tool {
@@ -308,7 +288,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 }
 
 - (void)raise {
-  MVPresent(_window, MVShowOf(NO, self.behind));
+  if (!_hosted) MVPresent(_window, MVShowOf(NO, self.behind));
 }
 
 - (void)toggleInspector {
@@ -330,10 +310,12 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
   BOOL wanted = _hudding || (_inspecting && _inspector.readings);
   if (wanted == _reading) return;
   _reading = wanted;
-  MVEmit(@{@"op": @"perfWatch", @"on": @(wanted)});
+  MVEmitFrom(_view, @{@"op": @"perfWatch", @"on": @(wanted)});
 }
 
+/// In a room the numbers are the Inspector's, on Performance; a window of its own has them beside the device too.
 - (void)toggleHud {
+  if (_hosted) return _inspecting && _inspector.readings ? [self toggleInspector] : [self showPane:MVPanePerf];
   _hudding = !_hudding;
   MVShowPane(_hud, _hudding);
   [self watchReadings];
@@ -367,7 +349,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 
 /// The toolbar's record button says a movie is being made.
 - (void)setRecording:(BOOL)on {
-  NSButton *button = MVFindControl(_bar, @"record");
+  NSButton *button = [_bar buttonNamed:@"record"];
   button.image = [NSImage imageWithSystemSymbolName:on ? @"stop.circle.fill" : @"record.circle" accessibilityDescription:on ? @"Stop Recording" : @"Record Screen"];
   button.contentTintColor = on ? NSColor.systemRedColor : NSColor.labelColor;
   _recording = on;
@@ -379,35 +361,6 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
   _frame.showsFrame = shown;
   if (!self.behind) [NSUserDefaults.standardUserDefaults setBool:shown forKey:kFrameDefault];
   [self setZoom:_zoom > 0 ? _zoom : 1];
-}
-
-- (void)control:(id)sender {
-  // a menu's item by what it holds, a bar's button by its identifier: a button answers `representedObject` too, with nil
-  NSString *name = [sender isKindOfClass:NSMenuItem.class] ? [sender representedObject] : [sender identifier];
-  if ([name isEqual:@"more"]) return [self showMore:sender];
-  [self perform:name];
-}
-
-- (void)perform:(NSString *)name {
-  if ([name isEqual:@"zoomIn"] || [name isEqual:@"zoomOut"]) return [self setZoom:MVZoomStep(_zoom, [name isEqual:@"zoomIn"])];
-  if ([name isEqual:@"zoomFit"]) return [self setZoom:[self fitZoom]];
-  if ([name isEqual:@"zoomActual"]) return [self setZoom:MIN(_picture.width, _picture.height) > 0 ? _frame.spec.points / MIN(_picture.width, _picture.height) : 1];
-  if ([name isEqual:@"frame"]) return [self setFrameShown:!_frame.showsFrame];
-  if ([name isEqual:@"inspector"]) return [self toggleInspector];
-  if ([name isEqual:@"hud"]) return [self toggleHud];
-  if ([@[@"screenshot", @"copy", @"record", @"recordFlow", @"reconnect", @"measureLaunch", @"measureScroll", @"dashboard"] containsObject:name]) return MVEmit(@{@"op": @"control", @"name": name});
-  if ([name isEqual:@"paste"]) return [_view paste:self];
-  if ([name isEqual:@"both"]) return MVEmit(@{@"op": @"control", @"name": name});
-  if ([name isEqual:@"journey"]) return [self askJourney];
-  [_view pressButton:name];
-}
-
-- (BOOL)validateUserInterfaceItem:(id<NSValidatedUserInterfaceItem>)item {
-  if (item.action != @selector(control:)) return YES;
-  id object = [(id)item respondsToSelector:@selector(representedObject)] ? [(id)item representedObject] : nil;
-  if ([object isEqual:@"frame"]) [(NSMenuItem *)item setState:_frame.showsFrame ? NSControlStateValueOn : NSControlStateValueOff];
-  if ([object isEqual:@"inspector"]) [(NSMenuItem *)item setState:_inspecting ? NSControlStateValueOn : NSControlStateValueOff];
-  return YES;
 }
 
 - (NSWindow *)nsWindow {

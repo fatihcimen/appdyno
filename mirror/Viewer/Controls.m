@@ -117,6 +117,10 @@ NSMenu *MVMainMenu(NSArray<NSString *> *_Nullable names) {
 NSMenu *MVHubMenu(void) {
   NSMenu *bar = [NSMenu new];
   menuOf(bar, @"appdyno", appMenu());
+  NSMenu *file = [[NSMenu alloc] initWithTitle:@"File"];
+  // to the first that answers, which is the hub, as its window's delegate
+  [file addItemWithTitle:@"Open in New Window" action:NSSelectorFromString(@"openWindow:") keyEquivalent:@"N"];
+  menuOf(bar, @"File", file);
   menuOf(bar, @"Window", windowMenu());
   return bar;
 }

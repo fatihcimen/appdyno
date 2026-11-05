@@ -42,6 +42,24 @@ static const double kHeaderHeight = 26;
   [_table reloadData];
 }
 
+- (void)selectKey:(nullable NSString *)key {
+  [_rows enumerateObjectsUsingBlock:^(MVRow *row, NSUInteger at, BOOL *stop) {
+    if (!row.header && [row.key isEqual:key]) [self->_table selectRowIndexes:[NSIndexSet indexSetWithIndex:at] byExtendingSelection:NO];
+  }];
+}
+
+- (void)setRowMenu:(nullable NSMenu *)menu {
+  _table.menu = menu;
+}
+
+- (nullable NSMenu *)rowMenu {
+  return _table.menu;
+}
+
+- (nullable NSString *)clickedKey {
+  return _table.clickedRow >= 0 && (NSUInteger)_table.clickedRow < _rows.count ? _rows[_table.clickedRow].key : nil;
+}
+
 - (void)scrollToEnd {
   if (_rows.count) [_table scrollRowToVisible:_rows.count - 1];
 }
@@ -59,7 +77,7 @@ static const double kHeaderHeight = 26;
 }
 
 - (BOOL)tableView:(NSTableView *)table shouldSelectRow:(NSInteger)at {
-  return !_rows[at].header;
+  return !_rows[at].header || _rows[at].key;
 }
 
 - (CGFloat)tableView:(NSTableView *)table heightOfRow:(NSInteger)at {
@@ -109,6 +127,16 @@ static const double kHeaderHeight = 26;
   [lines setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
   NSStackView *stack = [NSStackView stackViewWithViews:@[icon, lines]];
   stack.spacing = 8;
+  if (row.dot) {
+    NSImageView *dot = [NSImageView imageViewWithImage:[[NSImage imageWithSystemSymbolName:@"circle.fill" accessibilityDescription:nil] imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithPointSize:7 weight:NSFontWeightRegular]]];
+    dot.contentTintColor = row.dot;
+    dot.translatesAutoresizingMaskIntoConstraints = NO;
+    [cell addSubview:dot];
+    [NSLayoutConstraint activateConstraints:@[
+      [dot.trailingAnchor constraintEqualToAnchor:cell.trailingAnchor constant:-8],
+      [dot.centerYAnchor constraintEqualToAnchor:cell.centerYAnchor],
+    ]];
+  }
   stack.translatesAutoresizingMaskIntoConstraints = NO;
   [cell addSubview:stack];
   [NSLayoutConstraint activateConstraints:@[

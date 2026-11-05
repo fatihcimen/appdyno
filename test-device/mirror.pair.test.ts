@@ -217,7 +217,12 @@ describe.runIf(serials.length === 2)('two windows as one hand', () => {
   it('starts from the hub, as one process with two windows', async () => {
     await parent.stopAll('the hub opens its own');
     const link = new ViewerProcess(await viewerBinary(), ['--hub', '--behind']);
-    const done = runHub(ctx, { focus: false, behind: true, log: () => undefined, viewer: link });
+    const done = runHub(ctx, {
+      focus: false,
+      behind: true,
+      log: () => undefined,
+      viewer: () => link,
+    });
     await new Promise((r) => setTimeout(r, 3_000));
     if (process.env.APPDYNO_SHOTS)
       link.send({ op: 'snapshot', file: join(process.env.APPDYNO_SHOTS, 'pair-hub.png') });
@@ -231,9 +236,8 @@ describe.runIf(serials.length === 2)('two windows as one hand', () => {
     expect(liveMirror(a)!.pid).toBe(liveMirror(b)!.pid);
     // the hub's list follows within its poll, and a press acts on what it lists
     await new Promise((r) => setTimeout(r, 3_000));
-    link.send({ op: 'poke', id: a, press: 'window' });
-    await until('the windows to close', () => serials.every((s) => !liveMirror(s)), 60_000);
-    link.kill();
+    link.send({ op: 'quit' });
     await done;
+    expect(serials.every((s) => !liveMirror(s))).toBe(true);
   }, 240_000);
 });

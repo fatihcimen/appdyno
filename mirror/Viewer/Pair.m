@@ -17,7 +17,7 @@ NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left) {
   self.line.both = both;
   self.line.failing = message[@"failing"];
   self.line.pairing = ended ? nil : both ? @"To both" : @"Here only";
-  NSButton *button = MVFindControl(self.bar, @"both");
+  NSButton *button = [self.bar buttonNamed:@"both"];
   button.enabled = !ended;
   button.contentTintColor = both ? NSColor.controlAccentColor : NSColor.labelColor;
   button.toolTip = ended ? @"The other window has closed" : [NSString stringWithFormat:both ? @"Touches go here and to %@" : @"Touches stay here, and do not reach %@", with];
@@ -39,7 +39,7 @@ NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left) {
   panel.allowedFileTypes = @[@"flow"];
 #pragma clang diagnostic pop
   [panel beginSheetModalForWindow:self.nsWindow completionHandler:^(NSModalResponse answer) {
-    if (answer == NSModalResponseOK) MVEmit(@{@"op": @"control", @"name": @"journey", @"file": panel.URL.path ?: @""});
+    if (answer == NSModalResponseOK) MVEmitFrom(self.screenView, @{@"op": @"control", @"name": @"journey", @"file": panel.URL.path ?: @""});
   }];
 }
 

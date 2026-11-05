@@ -163,7 +163,7 @@ static NSString *symbolOf(NSString *state) {
 }
 
 - (void)done:(id)sender {
-  if (_bannerId) MVEmit(@{@"op": @"done", @"id": _bannerId});
+  if (_bannerId) MVEmitFrom(_view, @{@"op": @"done", @"id": _bannerId});
   [self hideBanner];
 }
 
@@ -171,20 +171,6 @@ static NSString *symbolOf(NSString *state) {
 
 @implementation MVStatusLine {
   NSString *_note;
-}
-
-- (instancetype)initWithFrame:(NSRect)frame {
-  if ((self = [super initWithFrame:frame])) {
-    self.editable = NO;
-    self.bezeled = NO;
-    self.drawsBackground = NO;
-    self.selectable = NO;
-    self.font = [NSFont systemFontOfSize:11 weight:NSFontWeightMedium];
-    self.textColor = NSColor.labelColor;
-    self.alignment = NSTextAlignmentCenter;
-    self.lineBreakMode = NSLineBreakByTruncatingMiddle;
-  }
-  return self;
 }
 
 - (void)setName:(NSString *)name {
@@ -227,26 +213,16 @@ static NSString *symbolOf(NSString *state) {
   [self show];
 }
 
-- (void)show {
-  if (_note) {
-    self.stringValue = _note;
-    return;
-  }
-  NSString *state = _state ?: @"Connecting";
-  NSColor *dot = [state isEqual:@"Live"] ? NSColor.systemGreenColor : NSColor.systemOrangeColor;
-  NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithString:@"\u25CF  " attributes:@{NSFontAttributeName: [NSFont systemFontOfSize:8], NSForegroundColorAttributeName: dot, NSBaselineOffsetAttributeName: @1}];
-  // what the words say goes before how the stream is, as the pill's colour says it already
-  NSMutableArray<NSString *> *parts = [NSMutableArray arrayWithObject:_name ?: @""];
-  [parts addObject:_failing ?: state];
+- (NSString *)stringValue {
+  if (_note) return _note;
+  NSMutableArray<NSString *> *parts = [NSMutableArray arrayWithObject:_failing ?: _state ?: @"Connecting"];
   if (_tool) [parts addObject:_tool.length ? [@"Agent driving: " stringByAppendingString:_tool] : @"Agent driving"];
   if (_pairing && !_failing) [parts addObject:_pairing];
-  NSDictionary *plain = @{NSFontAttributeName: self.font, NSForegroundColorAttributeName: NSColor.labelColor};
-  [text appendAttributedString:[[NSAttributedString alloc] initWithString:[parts componentsJoinedByString:@"  \u00B7  "] attributes:plain]];
-  NSMutableParagraphStyle *middle = [NSMutableParagraphStyle new];
-  middle.alignment = NSTextAlignmentCenter;
-  middle.lineBreakMode = NSLineBreakByTruncatingMiddle;
-  [text addAttribute:NSParagraphStyleAttributeName value:middle range:NSMakeRange(0, text.length)];
-  self.attributedStringValue = text;
+  return [parts componentsJoinedByString:@"  \u00B7  "];
+}
+
+- (void)show {
+  if (self.onChange) self.onChange(self.stringValue);
 }
 
 @end

@@ -17,6 +17,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, copy, nullable) NSString *clickDoes;
 /// What the system's text input holds, before it is typed.
 @property(nonatomic, copy, nullable) NSString *composing;
+/// A person's mouse came down on it.
+@property(nonatomic, copy, nullable) void (^onTouched)(void);
 @property(readonly) BOOL takesPointer;
 /// Only in the key window, whatever reaches it: what is typed elsewhere is not a device's to have.
 @property(readonly) BOOL takesKeys;
@@ -48,7 +50,11 @@ NS_ASSUME_NONNULL_BEGIN
 NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left);
 
 /// The line beneath the device: its name, how it is, and whether an agent is on it.
-@interface MVStatusLine : NSTextField
+@interface MVStatusLine : NSObject
+/// It has something new to say.
+@property(nonatomic, copy, nullable) void (^onChange)(NSString *subtitle);
+/// What it says now.
+@property(nonatomic, readonly) NSString *stringValue;
 @property(nonatomic, copy, nullable) NSString *name;
 @property(nonatomic, copy, nullable) NSString *state;
 /// While an agent drives; empty when it does not say what with.
@@ -69,8 +75,6 @@ NSView *MVGlass(NSView *content, double radius, NSColor *_Nullable tint);
 void MVShowPane(NSView *pane, BOOL shown);
 /// Panes that merge as they near each other, and share one pass.
 NSView *MVGlassGroup(NSView *content);
-/// A row of glass groups of buttons, each named as a control.
-NSView *MVGlassBar(NSArray<NSArray<NSString *> *> *groups, id target, SEL action);
 
 /// A window kept off every screen: it never shows, and the window server still composites it.
 @interface MVOffscreenWindow : NSWindow
@@ -123,6 +127,8 @@ NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight);
 
 /// A measure's last readings: a baseline, a line at `usual`, its readings, and a mark where a stutter fell.
 @interface MVSpark : NSView
+/// From its first readings it takes the whole width.
+@property(nonatomic) BOOL fills;
 @property(nonatomic) double usual;
 /// How many readings it holds: a minute's, unless told.
 @property(nonatomic) int capacity;
@@ -147,6 +153,8 @@ static const double MVHudWidth = 188;
 
 /// One line of a list.
 @interface MVRow : NSObject
+/// A small mark of how a device is.
+@property(nonatomic, nullable) NSColor *dot;
 @property(nonatomic, copy) NSString *title;
 @property(nonatomic, copy) NSString *detail;
 /// All there is to say of it, where a line has no room.
@@ -164,6 +172,10 @@ static const double MVHudWidth = 188;
 @property(nonatomic, copy, nullable) void (^onSelect)(MVRow *_Nullable row);
 @property(nonatomic, readonly, nullable) MVRow *selected;
 - (void)scrollToEnd;
+- (void)selectKey:(nullable NSString *)key;
+/// What a secondary click on a row offers, and the row it was on.
+@property(nonatomic, nullable) NSMenu *rowMenu;
+@property(nonatomic, readonly, nullable) NSString *clickedKey;
 - (void)useSidebarStyle;
 @end
 
@@ -221,9 +233,9 @@ NSRect MVMarkFrame(NSDictionary *rect, CGSize size);
 void MVCopyText(NSString *text, NSPasteboard *board);
 
 /// The panes of the Inspector, by the index `showPane:` takes.
-enum { MVPaneStats, MVPaneActivity, MVPaneApps, MVPanePerf, MVPaneFlow, MVPanes };
+enum { MVPanePerf, MVPaneFlow, MVPaneApps, MVPaneActivity, MVPaneStats, MVPanes };
 
-/// The right-hand pane: Stats, Activity, Apps, Performance and Flow. Glass is around it: all it has inside is fills.
+/// The right-hand pane: Performance, Flow, Apps, Activity and Stats. Glass is around it: all it has inside is fills.
 @interface MVInspector : NSView
 - (instancetype)initWithFrame:(NSRect)frame target:(id)target;
 @property(nonatomic, readonly) MVPerfPane *perf;
@@ -242,13 +254,52 @@ enum { MVPaneStats, MVPaneActivity, MVPaneApps, MVPanePerf, MVPaneFlow, MVPanes 
 
 typedef NS_ENUM(NSInteger, MVShow) { MVShowBehind, MVShowFront, MVShowFocused };
 
+/// A device's controls as the system's own toolbar.
+@interface MVToolbar : NSObject <NSToolbarDelegate>
+- (instancetype)initWithGroups:(NSArray<NSArray<NSString *> *> *)groups target:(id)target action:(SEL)action;
+- (NSToolbar *)toolbar;
+/// What stands for a control, for a word on it, or a click.
+- (nullable NSButton *)buttonNamed:(NSString *)name;
+@end
+
+/// All of a device's views: the whole of a window of its own, or what stands in a room of the hub's.
+@interface MVRootView : NSView
+/// The device it is, where a process holds more than one.
+@property(nonatomic, copy, nullable) NSString *stage;
+@property(nonatomic, copy, nullable) void (^onResize)(void);
+@end
+
+/// One device's stream and what shows it. A process with one has one stage, with no name.
+@interface MVStage : NSObject <MVSink>
+- (instancetype)initNamed:(nullable NSString *)name room:(nullable NSView *)room windowless:(BOOL)windowless;
+@property(nonatomic) BOOL behind;
+@property(nonatomic) BOOL poses;
+/// It has gone, in a process that goes on.
+@property(nonatomic, copy, nullable) void (^onGone)(void);
+- (void)handle:(NSString *)op message:(NSDictionary *)m;
+/// A tick needs nothing of the main thread.
+- (void)tick:(NSDictionary *)message;
+/// This second's numbers, which the parent hears as being this stage's.
+- (NSDictionary *)report;
+- (void)showReport:(NSDictionary *)report;
+@end
+
 /// How a window shows itself. Only a person's `--focus` gives it the keyboard; a click does the rest.
 MVShow MVShowOf(BOOL focus, BOOL behind);
 void MVPresent(MVOffscreenWindow *window, MVShow how);
 
+/// The sheet that makes a new simulator or emulator, from what the parent says can be made.
+@interface MVNewDevice : NSObject
+- (void)askIn:(NSWindow *)window kind:(NSString *)kind choices:(NSDictionary *)choices;
+- (void)create:(nullable id)sender;
+- (void)setName:(NSString *)name;
+@end
+
 /// The window of `appdyno hub`: what its parent says is there, and what a person asks of it.
-@interface MVHub : NSObject <NSWindowDelegate, NSToolbarDelegate>
+@interface MVHub : NSObject <NSWindowDelegate, NSSearchFieldDelegate>
 - (instancetype)initWithShow:(MVShow)how poses:(BOOL)poses;
+/// Where the device chosen stands.
+@property(nonatomic, readonly) NSView *room;
 - (void)show:(NSDictionary *)message;
 - (void)sayNote:(NSString *)note;
 /// Presses a device's button as a person does.

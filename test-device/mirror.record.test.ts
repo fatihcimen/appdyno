@@ -242,7 +242,7 @@ const form = async (w: Awaited<ReturnType<typeof windowOn>>) => {
   await w.element((e) => e.id === 'result', 'the result');
   await pause(600);
   const result = await w.element((e) => e.id === 'result', 'the result');
-  w.poke({ pane: 4 });
+  w.poke({ pane: 1 });
   await pause(400);
   await hovering(w, result, () => w.told.some((m) => m.op === 'element' && m.id === 'result'));
   w.poke({ click: 'assert' });
@@ -395,7 +395,7 @@ describe.each(kinds)('a flow recorded in a window on $name', ({ name, serial, de
       try {
         await open(w, A11Y);
         const faint = await w.element((e) => e.id === 'a11y_faint', 'the faint text');
-        w.poke({ pane: 4 });
+        w.poke({ pane: 1 });
         await pause(400);
         const said = () =>
           w.told.filter((m) => m.op === 'element' && m.id === 'a11y_faint').at(-1) as

@@ -85,7 +85,7 @@ static int openDescriptors(void) {
     _quietBytes = _quietBytes > 0 ? _quietBytes * 0.9 + bytes * 0.1 : bytes;
   }
   os_unfair_lock_unlock(&_lock);
-  if (markedAt > 0) MVEmit(@{@"op": @"marked", @"ms": @(round((now - markedAt) * 10) / 10)});
+  if (markedAt > 0) MVEmit(self.stage ? @{@"op": @"marked", @"ms": @(round((now - markedAt) * 10) / 10), @"stage": self.stage} : @{@"op": @"marked", @"ms": @(round((now - markedAt) * 10) / 10)});
 }
 
 - (void)decodedMs:(double)ms {

@@ -104,7 +104,7 @@ static void checkMeasures(void) {
 }
 
 static void checkPair(void) {
-  MVStatusLine *line = [[MVStatusLine alloc] initWithFrame:NSZeroRect];
+  MVStatusLine *line = [MVStatusLine new];
   line.name = @"Phone";
   line.state = @"Live";
   MVCheck(@"pair: a window alone says nothing of one", ![line.stringValue containsString:@"To both"], line.stringValue);
@@ -143,6 +143,9 @@ static void checkClicks(void) {
     window.asked = [NSMutableArray array];
     window.behind = YES;
     [window configure:@{@"title": @"clicks", @"look": @{@"controls": controls}}];
+    // room for the whole toolbar, which folds into its own menu where it has none
+    [window.nsWindow setContentSize:NSMakeSize(1000, 700)];
+    [window.nsWindow displayIfNeeded];
     NSMutableArray<NSString *> *names = [NSMutableArray arrayWithArray:@[@"screenshot", @"record", @"recordFlow", @"hud", @"inspector"]];
     for (NSString *name in @[@"back", @"home", @"appSwitch", @"lock"])
       if ([controls containsObject:name]) [names addObject:name];
@@ -160,9 +163,6 @@ static void checkGlass(void) {
   BOOL system = NSClassFromString(@"NSGlassEffectView") != nil;
   // the glass or its stand-in, and what it holds is in it either way
   MVCheck(@"glass: a pane holds its content", system ? [pane valueForKey:@"contentView"] == content : content.superview == pane, nil);
-  NSView *bar = MVGlassBar(@[@[@"home"], @[@"record"]], pane, @selector(description));
-  MVCheck(@"glass: a bar's button is found however deep it sits", MVFindControl(bar, @"record") != nil && MVFindControl(bar, @"lock") == nil, nil);
-  MVCheck(@"glass: each button says what it does", [MVFindControl(bar, @"home").accessibilityLabel isEqual:@"Home"], nil);
 }
 
 static void checkMood(void) {

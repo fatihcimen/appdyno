@@ -98,7 +98,7 @@ static CALayer *dotLayer(CALayer *parent) {
     self.armed = YES;
     return;
   }
-  if (self.takesPointer && [name isKindOfClass:NSString.class]) MVEmit(@{@"op": @"button", @"name": name});
+  if (self.takesPointer && [name isKindOfClass:NSString.class]) MVEmitFrom(self, @{@"op": @"button", @"name": name});
 }
 
 - (BOOL)takesPointer {
@@ -126,7 +126,7 @@ static CALayer *dotLayer(CALayer *parent) {
     touch[@"x2"] = @(x2);
     touch[@"y2"] = @(y2);
   }
-  MVEmit(touch);
+  MVEmitFrom(self, touch);
   [self showDot:phase == 2 ? nil : [NSValue valueWithPoint:p] second:second && phase != 2 ? [NSValue valueWithPoint:other] : nil];
 }
 
@@ -164,7 +164,7 @@ static CALayer *dotLayer(CALayer *parent) {
   double x, y;
   if (!self.inspects || event.timestamp - _hoveredAt < kHoverSeconds || ![self fractionOf:event x:&x y:&y]) return;
   _hoveredAt = event.timestamp;
-  MVEmit(@{@"op": @"hover", @"x": @(x), @"y": @(y)});
+  MVEmitFrom(self, @{@"op": @"hover", @"x": @(x), @"y": @(y)});
 }
 
 - (void)mouseExited:(NSEvent *)event {
@@ -189,9 +189,10 @@ static CALayer *dotLayer(CALayer *parent) {
 }
 
 - (void)mouseDown:(NSEvent *)event {
+  if (self.onTouched) self.onTouched();
   if (self.clickDoes) {
     double x, y;
-    if ([self fractionOf:event x:&x y:&y]) MVEmit(@{@"op": @"pick", @"x": @(x), @"y": @(y), @"as": self.clickDoes});
+    if ([self fractionOf:event x:&x y:&y]) MVEmitFrom(self, @{@"op": @"pick", @"x": @(x), @"y": @(y), @"as": self.clickDoes});
     return;
   }
   if (self.inputOn && !self.armed) {

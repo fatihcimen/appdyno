@@ -98,7 +98,7 @@ NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight) {
   for (int i = 0; i < _capacity; i++) top = MAX(top, _values[i]);
   NSRect box = self.bounds;
   // a long line starts as wide as a short one: its room is not a reason to squeeze its first minute into a corner
-  int span = MAX(_count, MIN(_capacity, kHistory));
+  int span = self.fills ? MAX(_count, 2) : MAX(_count, MIN(_capacity, kHistory));
   double height = box.size.height - 3, step = box.size.width / (span - 1);
   double (^across)(int) = ^(int i) {
     return (i - (_capacity - span)) * step;

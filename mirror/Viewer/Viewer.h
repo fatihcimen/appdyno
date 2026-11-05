@@ -14,10 +14,14 @@ double MVNowMs(void);
 extern CFStringRef const MVCapturedAt;
 /// One JSON line on stdout, from any thread.
 void MVEmit(NSDictionary *message);
+/// The same, from what stands on a stage, so that a parent with several hears which device it is about.
+void MVEmitFrom(NSView *_Nullable view, NSDictionary *message);
 
 /// What a second of frames came to. Thread safe; sources and the sink feed it, the app reports it.
 @interface MVStats : NSObject
 @property(atomic, copy) NSString *source;
+/// Whose numbers these are, where a process holds more than one.
+@property(atomic, copy, nullable) NSString *stage;
 @property(atomic, copy) NSString *mode;
 @property(atomic, copy) NSString *decoder;
 /// What became of the last picture a window's layer was given: empty with no layer.
@@ -136,10 +140,14 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags);
 void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 
 @class MVInspector;
-@class MVStatusLine;
+@class MVStatusLine, MVToolbar;
 
 /// The window. The app keeps none when it runs headless.
 @interface MVWindow : NSObject <NSWindowDelegate>
+/// A device in `room`, part of a window that is the hub's; with none, in a window of its own.
+- (instancetype)initInRoom:(nullable NSView *)room;
+/// Off its room, which stays.
+- (void)leave;
 @property(readonly) MVOverlay *overlay;
 - (void)configure:(NSDictionary *)attach;
 - (void)setPicture:(CGSize)size;
@@ -158,8 +166,6 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 - (void)showMeasure:(NSDictionary *)message;
 - (void)addActivity:(NSDictionary *)call;
 - (void)showApps:(NSDictionary *)message;
-/// What a control of the window does, by its name.
-- (void)perform:(NSString *)name;
 /// Comes forward, with no keyboard: asked for by a second start, or an agent.
 - (void)raise;
 @property(nonatomic) BOOL behind;
@@ -169,7 +175,7 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 @property(readonly) NSView *screenView;
 @property(readonly) MVInspector *inspector;
 @property(readonly) BOOL inspecting;
-@property(readonly) NSView *bar;
+@property(readonly) MVToolbar *bar;
 @property(readonly) MVStatusLine *line;
 @property(readonly) NSDictionary *look;
 - (void)tintPill;
@@ -184,6 +190,14 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 - (void)showElement:(NSDictionary *)message;
 /// What a click on the device does instead of touching it, as a person chooses in the Flow pane.
 - (void)chooseClick:(NSString *)does;
+@end
+
+/// A window's bar and what its controls do.
+@interface MVWindow (Controls)
+- (void)addControls;
+- (void)useToolbar;
+/// What a control of the window does, by its name.
+- (void)perform:(NSString *)name;
 @end
 
 /// A window driven and looked at from outside.

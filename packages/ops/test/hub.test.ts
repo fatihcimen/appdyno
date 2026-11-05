@@ -59,7 +59,16 @@ function window() {
     onExit: (l) => (ended = l),
     kill: () => ended(''),
   };
-  return { link, told, say: (m: ViewerMessage) => listener(m), close: () => ended('') };
+  return {
+    link,
+    told,
+    say: (m: ViewerMessage) => listener(m),
+    die: () => ended('it crashed'),
+    close: () => {
+      listener({ op: 'closed' });
+      ended('');
+    },
+  };
 }
 
 const lastList = (told: Record<string, unknown>[]) =>
@@ -120,7 +129,11 @@ describe('the hub', () => {
   it('starts, stops and makes what a person asks, by the driver it belongs to', async () => {
     const virtual = new Simulated();
     const { link, told, say, close } = window();
-    const done = runHub(context(virtual), { focus: false, log: () => undefined, viewer: link });
+    const done = runHub(context(virtual), {
+      focus: false,
+      log: () => undefined,
+      viewer: () => link,
+    });
     await vi.waitFor(() => expect(lastList(told)).toBeDefined());
     say({ op: 'hub', action: 'start', id: 'A' });
     await vi.waitFor(() => expect(virtual.boot).toHaveBeenCalledWith('A'));
@@ -132,25 +145,47 @@ describe('the hub', () => {
     expect(await done).toBe(0);
   });
 
-  it('opens two devices side by side as one window process', async () => {
+  it('opens a window of its own as a process of its own', async () => {
     const said = join(state, 'args');
     const command = ['/bin/sh', '-c', `echo "$@" > ${said}.next && mv ${said}.next ${said}`, 'sh'];
     const { link, told, say, close } = window();
     const ctx = context(new Simulated(), [phone], command);
-    const done = runHub(ctx, { focus: false, log: () => undefined, viewer: link });
+    const done = runHub(ctx, { focus: false, log: () => undefined, viewer: () => link });
     await vi.waitFor(() => expect(lastList(told)).toBeDefined());
-    say({ op: 'hub', action: 'pair', serial: 'R58M', with: 'B' });
+    say({ op: 'hub', action: 'open', serial: 'R58M' });
     await vi.waitFor(() => expect(existsSync(said)).toBe(true));
-    expect(readFileSync(said, 'utf8').trim()).toBe('--device R58M --device B --pair');
+    expect(readFileSync(said, 'utf8').trim()).toBe('--device R58M');
     close();
     await done;
+  });
+
+  it('brings a window that died back, and stops after three in a minute', async () => {
+    const windows = [window(), window(), window(), window()];
+    const made = [...windows];
+    const ctx = context(new Simulated());
+    const done = runHub(ctx, {
+      focus: false,
+      log: () => undefined,
+      viewer: () => made.shift()!.link,
+    });
+    await vi.waitFor(() => expect(lastList(windows[0]!.told)).toBeDefined());
+    windows[0]!.die();
+    await vi.waitFor(() => expect(lastList(windows[1]!.told)).toBeDefined());
+    windows[1]!.die();
+    windows[2]!.die();
+    windows[3]!.die();
+    expect(await done).toBe(0);
   });
 
   it('says why a thing asked could not be done, and goes on', async () => {
     const virtual = new Simulated();
     virtual.boot.mockRejectedValueOnce(new Error('no runtime'));
     const { link, told, say, close } = window();
-    const done = runHub(context(virtual), { focus: false, log: () => undefined, viewer: link });
+    const done = runHub(context(virtual), {
+      focus: false,
+      log: () => undefined,
+      viewer: () => link,
+    });
     await vi.waitFor(() => expect(lastList(told)).toBeDefined());
     say({ op: 'hub', action: 'start', id: 'A' });
     await vi.waitFor(() => expect(told).toContainEqual({ op: 'note', text: 'no runtime' }));
@@ -163,7 +198,7 @@ describe('the hub', () => {
     const done = runHub(context(new Simulated()), {
       focus: false,
       log: () => undefined,
-      viewer: link,
+      viewer: () => link,
     });
     await vi.waitFor(() => expect(lastList(told)).toBeDefined());
     expect(told.find((m) => m.op === 'hub')?.choices).toMatchObject({

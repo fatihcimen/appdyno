@@ -53,7 +53,7 @@ describe.runIf(udid)('the hub', () => {
     const ctx = new ServerContext(policy, [appleProvider()], {
       mirrorCommand: [process.execPath, main, 'mirror'],
     });
-    done = runHub(ctx, { focus: false, behind: true, log: () => undefined, viewer: link });
+    done = runHub(ctx, { focus: false, behind: true, log: () => undefined, viewer: () => link });
     await new Promise((r) => setTimeout(r, 3_000));
   }, 60_000);
 
@@ -71,13 +71,21 @@ describe.runIf(udid)('the hub', () => {
       await until('a booted simulator', booted, BOOT_MS);
       await new Promise((r) => setTimeout(r, 4_000));
       press('window');
-      await until('a window', () => liveMirror(udid!)?.status.state === 'live', WINDOW_MS);
+      // the device stood in the hub's own window until then
+      await until(
+        'a window',
+        () => {
+          const own = liveMirror(udid!);
+          return own?.pid !== process.pid && own?.status.state === 'live';
+        },
+        WINDOW_MS,
+      );
       const window = liveMirror(udid!)!;
       expect(window.pid).not.toBe(process.pid);
       await new Promise((r) => setTimeout(r, 3_000));
       await picture('open');
       press('window');
-      await until('the window to close', () => !liveMirror(udid!), WINDOW_MS);
+      await until('the window to close', () => liveMirror(udid!)?.pid !== window.pid, WINDOW_MS);
       press('power');
       await until('a stopped simulator', () => !booted(), BOOT_MS);
     },

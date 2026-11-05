@@ -162,12 +162,12 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real 
       // what sits over the picture: a mark, a line of activity in its panel, a banner answered, and no sound
       session.tell({ op: 'agent', driving: true, tool: 'tap' });
       session.tell({ op: 'activity', line: 'tap 3 ms ok' });
-      session.tell({ op: 'poke', pane: 1 });
+      session.tell({ op: 'poke', pane: 3 });
       session.tell({ op: 'banner', id: 'r1', text: 'Face ID', needsDone: true, sound: false });
       session.tell({ op: 'poke', done: true });
       await until('an answer', () => answered.includes('r1'), 10_000);
       session.tell({ op: 'agent', driving: false });
-      session.tell({ op: 'poke', pane: 1 });
+      session.tell({ op: 'poke', pane: 3 });
       await new Promise((r) => setTimeout(r, 500));
       expect(session.status.state).toBe('live');
       expect(session.status.inputFailed).toBe(0);

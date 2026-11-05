@@ -15,13 +15,14 @@ static const double kClickSeconds = 0.08;
 
 /// A click on a control where it stands, as a mouse's: through the window's own hit testing, and no shortcut to what it does.
 - (void)pokeClick:(NSString *)name {
-  NSButton *button = MVFindControl(self.bar, name) ?: MVFindControl(self.nsWindow.contentView, name);
-  if (!button) return MVEmit(@{@"op": @"clicked", @"name": name, @"found": @NO});
+  NSButton *button = [self.bar buttonNamed:name] ?: MVFindControl(self.nsWindow.contentView, name);
+  if (!button.window) return MVEmitFrom(self.screenView, @{@"op": @"clicked", @"name": name, @"found": @NO});
   NSPoint at = [button convertPoint:NSMakePoint(NSMidX(button.bounds), NSMidY(button.bounds)) toView:nil];
-  NSView *under = [self.nsWindow.contentView hitTest:[self.nsWindow.contentView.superview convertPoint:at fromView:nil]];
+  NSView *frame = self.nsWindow.contentView.superview;
+  NSView *under = [frame hitTest:[frame.superview convertPoint:at fromView:nil]];
   for (NSNumber *type in @[@(NSEventTypeLeftMouseDown), @(NSEventTypeLeftMouseUp)])
     [NSApp postEvent:[NSEvent mouseEventWithType:type.unsignedIntegerValue location:at modifierFlags:0 timestamp:NSProcessInfo.processInfo.systemUptime windowNumber:self.nsWindow.windowNumber context:nil eventNumber:0 clickCount:1 pressure:1] atStart:NO];
-  MVEmit(@{@"op": @"clicked", @"name": name, @"found": @YES, @"under": NSStringFromClass(under.class) ?: @"", @"isIt": @(under == button || [under isDescendantOf:button])});
+  MVEmitFrom(self.screenView, @{@"op": @"clicked", @"name": name, @"found": @YES, @"under": NSStringFromClass(under.class) ?: @"", @"isIt": @(under == button || [under isDescendantOf:button])});
 }
 
 - (void)pokeX:(double)x y:(double)y right:(BOOL)right {

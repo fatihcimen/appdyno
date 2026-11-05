@@ -3,7 +3,7 @@
 #import "Window.h"
 
 enum { kMinutes = 10, kResults = 20 };
-static const double kTrendHeight = 40, kBetween = 12;
+static const double kTrendHeight = 52, kBetween = 12, kButtonHeight = 28;
 
 /// What a line of the longer history shows, in the order it stands.
 typedef struct {
@@ -41,12 +41,19 @@ NSTextField *MVPaneHeading(NSString *text) {
   return heading(text);
 }
 
-/// A control of the table, as a button of a pane.
+/// A control of the table, as a button of a pane: of one family with the Inspector's tabs.
 static NSButton *button(NSString *name, id target) {
   NSButton *button = [NSButton buttonWithTitle:[[MVControlTitle(name) componentsSeparatedByString:@" "] lastObject] image:MVControlImage(name) ?: [NSImage new] target:target action:@selector(control:)];
   button.identifier = name;
   button.accessibilityLabel = MVControlTitle(name);
   button.imagePosition = NSImageLeading;
+  button.imageHugsTitle = YES;
+  button.bordered = NO;
+  button.wantsLayer = YES;
+  button.layer.cornerRadius = kButtonHeight / 2;
+  button.layer.backgroundColor = NSColor.quaternaryLabelColor.CGColor;
+  button.font = [NSFont systemFontOfSize:12 weight:NSFontWeightMedium];
+  [button.heightAnchor constraintEqualToConstant:kButtonHeight].active = YES;
   return button;
 }
 
@@ -72,10 +79,11 @@ static MVTrend *trendOf(const MVTrendRow *row) {
   NSStackView *head = [NSStackView stackViewWithViews:@[name, gap, trend.now]];
   trend.line = [MVSpark new];
   trend.line.capacity = kMinutes * 60;
-  trend.line.hidden = YES;
+  trend.line.fills = YES;
   [trend.line.heightAnchor constraintEqualToConstant:kTrendHeight].active = YES;
-  trend.why = note(@"");
-  trend.why.hidden = YES;
+  // a line always, so that a reason coming and going moves nothing under it
+  trend.why = note(@" ");
+  trend.why.maximumNumberOfLines = 1;
   NSStackView *stack = [NSStackView stackViewWithViews:@[head, trend.line, trend.why]];
   stack.orientation = NSUserInterfaceLayoutOrientationVertical;
   stack.alignment = NSLayoutAttributeLeading;
@@ -151,14 +159,14 @@ static MVTrend *trendOf(const MVTrendRow *row) {
   for (MVTrend *trend in _trends) {
     NSNumber *value = MVReadingOf(sample, trend.field, _pictureRate);
     NSString *why = sample[@"absent"][trend.field];
-    trend.why.stringValue = why ?: @"";
-    trend.why.hidden = !why;
+    trend.why.stringValue = why ?: @" ";
     BOOL still = [trend.field isEqual:@"fps"] && value && value.doubleValue <= 0;
     trend.now.stringValue = still ? @"Still" : value ? MVReadingWords(value.doubleValue, trend.unit) : @"–";
     if (!value) continue;
     trend.line.color = NSColor.controlAccentColor;
     [trend.line pass];
     [trend.line add:value.doubleValue];
+    trend.line.hidden = NO;
   }
 }
 
