@@ -1,4 +1,5 @@
 import { NODE_FLAGS, type Tree } from '@appdyno/protocol';
+import { HOME_SCREEN_APP } from './platform-screen.js';
 
 type Node = Tree['nodes'][number];
 
@@ -218,7 +219,13 @@ function toNode(raw: RawAx, parent: number, screen: { w: number; h: number }): N
 
 export type Refusal = { refused: string };
 
-export type DirectRead = { tree: Tree; busy: boolean; copies: boolean };
+export type DirectRead = {
+  tree: Tree;
+  busy: boolean;
+  copies: boolean;
+  /** The home screen read past a widget: what the widget holds only the runner can read. */
+  partial?: boolean;
+};
 
 const copyKey = (n: Node) => `${n.c}#${n.id ?? ''}@${n.b.join(',')}`;
 
@@ -248,7 +255,7 @@ export function withoutCopies(t: Tree, hidden: Set<string>): Tree {
 /**
  * The helper's tree in the runner's shape: nodes breadth first, flags as XCUI gives them, so refs and
  * diffs do not depend on who read. Refused when it would not say the same as the runner: content of
- * another process on screen, or an alert. `copies`: a control found twice at different places, and only XCUI
+ * another process on screen (but for a widget on the home screen, which is `partial`), or an alert. `copies`: a control found twice at different places, and only XCUI
  * can tell which one a tap reaches (`learnCopies`).
  */
 export function toTree(
@@ -261,10 +268,17 @@ export function toTree(
   const queue: [RawAx, number][] = [[raw, -1]];
   let busy = false;
   let truncated = false;
+  let partial = false;
   for (let head = 0; head < queue.length; head++) {
     const [r, parent] = queue[head]!;
     const n = toNode(r, parent, screen);
-    if (r.r && (n.f & F.visible) !== 0) return { refused: 'remote-content' };
+    if (r.r && (n.f & F.visible) !== 0) {
+      // what fills the screen is what it shows, as Spotlight does; a widget beside the icons is no reason for a runner
+      const [, , w = 0, h = 0] = r.f ?? [];
+      if (bundle !== HOME_SCREEN_APP || w * h >= (screen.w * screen.h) / 2)
+        return { refused: 'remote-content' };
+      partial = true;
+    }
     // XCUI makes an Alert of it and leaves out what it covers; the settle has to see it as one
     if (r.e?.includes('AlertController')) return { refused: 'alert' };
     if (n.c === 'ActivityIndicator' && (n.f & F.visible) !== 0) busy = true;
@@ -282,10 +296,14 @@ export function toTree(
     }
   return {
     busy,
-    // at one place a touch has nothing to choose; an id repeated more is a list's rows
-    copies: [...places.values()].some(
-      (at) => (at.length === 2 || at.length === 3) && new Set(at).size > 1,
-    ),
+    ...(partial && { partial }),
+    // at one place a touch has nothing to choose; an id repeated more is a list's rows; and on the home screen a
+    // widget and its app's icon are two things to tap, each opening the app
+    copies:
+      bundle !== HOME_SCREEN_APP &&
+      [...places.values()].some(
+        (at) => (at.length === 2 || at.length === 3) && new Set(at).size > 1,
+      ),
     tree: {
       windows: [
         {

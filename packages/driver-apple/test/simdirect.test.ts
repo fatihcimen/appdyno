@@ -34,6 +34,32 @@ const tree = (raw: RawAx) => {
   return r;
 };
 
+describe('another process on the home screen', () => {
+  const HOME = 'com.apple.springboard';
+  const widget = { a: 83, f: [26, 90, 164, 164], t: '8589934592', r: true, e: 'AXRemoteElement' };
+  const whole = { ...widget, f: [0, 0, 402, 874] };
+
+  it('reads past a widget, and says the read is partial', () => {
+    const r = toTree(app(widget, cell('Safari', 700)), HOME, SCREEN, 5);
+    expect(r).toMatchObject({ partial: true });
+  });
+
+  it("takes a widget and its app's icon for two things to tap, not copies of one", () => {
+    const icon = (y: number): RawAx => ({ ...cell('Maps', y), i: 'Maps' });
+    const r = toTree(app(icon(100), icon(300)), HOME, SCREEN, 5);
+    expect(r).toMatchObject({ copies: false });
+    expect(toTree(app(icon(100), icon(300)), 'dev.app', SCREEN, 5)).toMatchObject({ copies: true });
+  });
+
+  it('leaves to the runner what fills the screen, as Spotlight does', () => {
+    expect(toTree(app(whole), HOME, SCREEN, 5)).toEqual({ refused: 'remote-content' });
+  });
+
+  it('leaves to the runner what another process shows in an app, as a web view does', () => {
+    expect(toTree(app(widget), 'dev.app', SCREEN, 5)).toEqual({ refused: 'remote-content' });
+  });
+});
+
 describe('the helper read in the runner shape', () => {
   it('builds the nodes breadth first, as the runner does', () => {
     const { tree: t } = tree(

@@ -43,7 +43,7 @@ appdyno install            # adds the server to the MCP clients on this Mac
 appdyno doctor             # what is installed, what is missing, which devices are connected
 ```
 
-A simulator opens, reads and takes touches with no runner. The first thing only the runner does (a system alert, text entry, an image, an audit, a screen with one control in two places) builds it once, which takes a few minutes and shows progress, and starts it.
+A simulator opens, reads and takes touches with no runner. The first thing only the runner does (a system alert, text entry, an image, an audit, a web view, a screen with one control in two places) builds it once, which takes a few minutes and shows progress, and starts it.
 The result is cached under `~/Library/Caches/appdyno` (the state directory, `APPDYNO_STATE_DIR`).
 
 ## Tools

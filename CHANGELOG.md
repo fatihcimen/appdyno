@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A first read of a simulator's home screen starts no runner in a session that boots it, new or not. Three things sent it to the runner: a widget, which is another process's; a widget and its app's icon, taken for copies of one control; and the seconds of a first boot with nothing in front. Spotlight, and another process's content in an app, still go there.
 - `refused` fails the gate too, saying what is not comparable, and `new` stays a pass. The job in `docs/perf-gate.yml` waits for the load before the pull request's own run, where it waited only at the start.
 - `noisy` fails the gate as `few-samples` does: `perf compare`, `perf why` and the job in `docs/perf-gate.yml` exit 1 on a change seen under load, and say to measure again. It went green.
 - `Appdyno.app` and a disk image, from `scripts/build-app.mjs` and from `release.yml`. It carries its own Node, the Android agent and a prebuilt viewer, and runs on a Mac with no Node and no developer tools, where the Mac's own dialog offering to install them is never raised. A double click opens the hub, its devices are in the menu bar, and it is in the Dock only while a window is open. With no Developer ID it signs ad hoc; `APPDYNO_SIGN_IDENTITY` and the notary's variables sign and notarize.

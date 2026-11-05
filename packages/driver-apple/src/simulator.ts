@@ -78,6 +78,9 @@ const firstPoint = (a: ActParams) =>
 
 /** An iOS simulator: the simulator tool for apps, links and location; perf from the Mac. */
 const WAKE_GAP_MS = 400;
+/** A first boot has nothing in front for a few seconds: this is shorter than a runner's start. */
+const FIRST_FRONT_MS = 10_000;
+const FRONT_AGAIN_MS = 250;
 
 const WAKE_PRESSES = 6;
 
@@ -187,10 +190,10 @@ export class IosSimulatorDevice extends IosDevice {
    * verdict is kept by the layout's digest. Any other layout needs no runner, and is checked once one is up.
    */
   private async readDirect(final: boolean): Promise<Capture | undefined> {
-    // with no app named, what is in front: a new simulator's home screen needs no runner to be read
-    const app = this.targetApp ?? (await this.direct.front().catch(() => undefined));
-    const r = await this.direct.read(app).catch(() => ({ refused: 'failed' }));
+    const r = await this.readFront();
     if ('refused' in r) return undefined;
+    // with a runner up it reads the widget too: this read is less, and no misread to hold against the helper
+    if (r.partial && this.runnerUp) return undefined;
     const known = this.verdicts.get(r.tree.hash);
     if (known) return { tree: withoutCopies(r.tree, known), busy: r.busy };
     if (!r.copies && !this.runnerUp) return { tree: r.tree, busy: r.busy };
@@ -203,6 +206,22 @@ export class IosSimulatorDevice extends IosDevice {
     this.verdicts.set(r.tree.hash, verdict);
     if (this.verdicts.size > 64) this.verdicts.delete(this.verdicts.keys().next().value!);
     return { tree: withoutCopies(r.tree, verdict), busy: r.busy };
+  }
+
+  /**
+   * The named app, else what is in front: a new simulator's home screen needs no runner to be read. While the helper
+   * cannot say what that is the home screen is asked for, which it refuses if an app is up after all.
+   */
+  private async readFront() {
+    const end = Date.now() + FIRST_FRONT_MS;
+    for (;;) {
+      const app =
+        this.targetApp ?? (await this.direct.front().catch(() => undefined)) ?? HOME_SCREEN_APP;
+      const r = await this.direct.read(app).catch(() => ({ refused: 'failed' }));
+      const waiting = 'refused' in r && r.refused === 'no-foreground';
+      if (!waiting || this.targetApp || this.runnerUp || Date.now() >= end) return r;
+      await pause(FRONT_AGAIN_MS);
+    }
   }
 
   /** A read for one in the queue: the helper's, else the runner's (a system alert, a web page). */
