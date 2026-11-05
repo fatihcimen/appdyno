@@ -231,7 +231,7 @@ export function reportFor(ctx: ServerContext) {
     const app = s.appId;
     const out: string[] = [
       `<header class="bar"><h1>${PAGE_MARK}appdyno <span>report</span></h1></header>`,
-      `<p class="who">${esc(app ?? 'no app selected')}</p>`,
+      `<p class="who">${esc(app ?? hello?.model ?? s.device.serial)}</p>`,
       `<p class="facts">${esc(
         [
           `${s.device.serial}${hello ? `: ${hello.model}, ${osName(s.device.platform, hello.osVersion)}` : ''}`,
