@@ -610,6 +610,15 @@ describe('a person on the window', () => {
 });
 
 describe('what the session reports', () => {
+  it('keeps no reading the viewer has none of, which it sends as -1', async () => {
+    const { session, viewer, live } = setup();
+    await live();
+    viewer().say('stats', { arrived: 0, captureP50: -1, decodeP95: -1, shown: 0 });
+    expect(session.status.stats).toMatchObject({ arrived: 0, shown: 0 });
+    expect(session.status.stats).not.toHaveProperty('captureP50');
+    expect(session.status.stats).not.toHaveProperty('decodeP95');
+  });
+
   it('keeps the viewer numbers for whoever asks, and tells each change', async () => {
     const { session, viewer, seen, live } = setup();
     await live();

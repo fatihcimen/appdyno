@@ -318,14 +318,17 @@ describe('what other processes read', () => {
       }),
     );
     writeMirrorFile(file('device-l', process.pid, {}));
-    const ops = checkedOps(context(['device-k', 'device-l']));
+    writeMirrorFile(file('device-p', process.pid, { stats: { arrived: 0, shown: 0 } }));
+    const ops = checkedOps(context(['device-k', 'device-l', 'device-p']));
     const answer = await ops.mirror!.handler({ action: 'stats', quality: 'auto' });
     const text = answer.blocks.map((b) => (b.type === 'text' ? b.text : '')).join('\n');
     expect(text).toContain('59 frames/s shown of 60 arrived');
     expect(text).toContain('p50 26, p95 31 ms');
     expect(text).toContain('device-l: no numbers yet');
+    expect(text).toContain('capture to arrival – (none counted); decode – (none counted)');
     rmSync(join(dir, 'mirror/device-k.json'));
     rmSync(join(dir, 'mirror/device-l.json'));
+    rmSync(join(dir, 'mirror/device-p.json'));
   });
 
   it('with nothing open it says so, and close refuses', async () => {

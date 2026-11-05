@@ -32,7 +32,10 @@ function line({ serial, pid, status: s }: MirrorFile): string {
 function statsLine(f: MirrorFile): string {
   const n = f.status.stats;
   if (!n) return `${f.serial}: no numbers yet`;
-  return `${f.serial}: ${n.shown} frames/s shown of ${n.arrived} arrived, ${n.dropped} dropped, ${n.mbps} Mbit/s; capture to arrival p50 ${n.captureP50}, p95 ${n.captureP95} ms; decode p95 ${n.decodeP95} ms; ${n.source} ${n.mode} ${n.w}x${n.h}; viewer ${n.cpu}% of a core, ${n.rssMb} MB`;
+  const none = '– (none counted)';
+  const capture = n.captureP50 === undefined ? none : `p50 ${n.captureP50}, p95 ${n.captureP95} ms`;
+  const decode = n.decodeP95 === undefined ? none : `p95 ${n.decodeP95} ms`;
+  return `${f.serial}: ${n.shown} frames/s shown of ${n.arrived} arrived, ${n.dropped} dropped, ${n.mbps} Mbit/s; capture to arrival ${capture}; decode ${decode}; ${n.source} ${n.mode} ${n.w}x${n.h}; viewer ${n.cpu}% of a core, ${n.rssMb} MB`;
 }
 
 const asData = (f: MirrorFile) => ({ serial: f.serial, pid: f.pid, ...f.status });

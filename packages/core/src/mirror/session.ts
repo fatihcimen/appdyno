@@ -279,7 +279,8 @@ export class MirrorSession {
   private readonly words: ViewerWords = {
     first: (m) => this.onFirst(m),
     stats: (stats, decoded) => {
-      this.stats = stats;
+      // a viewer's -1 is no reading, and goes no further than here
+      this.stats = Object.fromEntries(Object.entries(stats).filter(([, v]) => v !== -1));
       if (decoded > 0) this.renewed = false;
       this.o.onChange?.(this.status);
     },
