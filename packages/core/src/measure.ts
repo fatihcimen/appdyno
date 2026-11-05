@@ -1,6 +1,7 @@
 import { DeviceError } from '@appdyno/protocol';
 import type { SettingName } from './device.js';
 import type {
+  FrameMarks,
   FrameStats,
   FrameTimeline,
   HitchSummary,
@@ -368,6 +369,12 @@ export interface MeasureSource {
     seconds: number,
     during?: () => Promise<unknown>,
   ): Promise<Measured<FrameTrace>>;
+  /** Every frame from when `during` is called until it ends, or `seconds` pass, each on the device's clock. */
+  frameMarks(
+    app: string,
+    seconds: number,
+    during: () => Promise<unknown>,
+  ): Promise<Measured<FrameMarks>>;
 }
 
 /** The measures, as against what a source says of itself. */

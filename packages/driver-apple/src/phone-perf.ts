@@ -51,6 +51,7 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
   readonly framesByProbe = false;
   frames = cannot('frames');
   resetFrames = cannot('frames');
+  frameMarks = cannot('frames on a clock: a phone gives its hitches over a whole trace');
   attachProbe = cannot('through a frame probe');
 
   constructor(private readonly phone: PerfPhone) {

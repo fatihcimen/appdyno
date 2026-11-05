@@ -26,7 +26,14 @@ import { readFile, mkdir, rm, appendFile, writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
 import { bundleSize } from './bundle-size.js';
-import { probeHead, probeWindow, probeFrames, probeSummary, PROBE_LIMITS } from './probe.js';
+import {
+  probeHead,
+  probeWindow,
+  probeFrames,
+  probeMarks,
+  probeSummary,
+  PROBE_LIMITS,
+} from './probe.js';
 import { crashExits, simulatorCrashes } from './crashes.js';
 import { nettopBytes } from './sim-network.js';
 import { simulatorEnergy } from './sim-energy.js';
@@ -244,6 +251,22 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
     return {
       value: { kind: 'probe', tracePath, ...probeSummary(raw, from, to) },
       raw: tracePath,
+      at: at(),
+      source: 'CADisplayLink probe',
+    };
+  }
+
+  /** The probe's frames from when `during` is called until it ends or `seconds` pass; its process reads this Mac's clock. */
+  async frameMarks(bundle: string, seconds: number, during: () => Promise<unknown>) {
+    await this.requireProbe(bundle);
+    const from = Date.now();
+    await Promise.race([during(), sleep(seconds * 1000)]);
+    const to = Date.now();
+    await sleep(PROBE_FLUSH_MS);
+    const raw = probeWindow(await readFile(this.probeFile(bundle), 'utf8'), from, to);
+    return {
+      value: { frames: probeMarks(raw), limits: PROBE_LIMITS },
+      raw,
       at: at(),
       source: 'CADisplayLink probe',
     };

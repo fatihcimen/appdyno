@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { probeFrames, probeHead, probeSummary, probeWindow } from '../src/probe.js';
+import { probeFrames, probeHead, probeMarks, probeSummary, probeWindow } from '../src/probe.js';
 
 // recorded from the fixture's stall screen: a window with one tap of 500 ms, as frameTrace keeps it
 const recorded = readFileSync(join(import.meta.dirname, 'fixtures/ios-probe-stall.jsonl'), 'utf8');
@@ -10,6 +10,14 @@ const T = 1_000_000;
 const frame = (at: number, dt = 16.7) => `{"t":${T + at},"dt":${dt},"v":16.7}`;
 
 describe('the frame probe', () => {
+  it('places each frame on the clock: a stall began when the frame before it ended', () => {
+    const marks = probeMarks(recorded);
+    const stall = marks.find((m) => m.ms === 522.2)!;
+    expect(stall).toEqual({ at: expect.closeTo(1793666303259.6, 1), ms: 522.2, late: true });
+    // the frame after it came late too: 27.8 ms, over one and a half of the display's 16.7
+    expect(marks.filter((m) => m.late).map((m) => m.ms)).toEqual([522.2, 27.8]);
+  });
+
   it('sums up a recorded window: the 500 ms stall, the touch, the rate', () => {
     const times = [...recorded.matchAll(/"t":([\d.]+),"dt"/g)].map((m) => Number(m[1]));
     const from = times[0]! - 1;

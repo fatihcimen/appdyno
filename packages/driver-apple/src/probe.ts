@@ -1,10 +1,12 @@
-import type { FrameStats, ProbeSummary } from '@appdyno/core';
+import type { FrameMark, FrameStats, ProbeSummary } from '@appdyno/core';
 import { FROZEN_FRAME_MS, MIN_FRAMES, round1 } from '@appdyno/core';
 
 export const PROBE_LIMITS =
   "The probe sees the app's main-thread pacing, not the render server or GPU, and the speed is the Mac's: it finds stalls and regressions on this machine and does not predict a phone's frame rate.";
 
 const STALL_MS = 100;
+/** An interval over this many of the display's counts as a frame missed. */
+const LATE_VSYNCS = 1.5;
 
 type Line = {
   loaded?: string;
@@ -77,7 +79,7 @@ function stats(windowText: string, fromMs: number, toMs: number) {
   const vsync = frames.map((l) => l.v!).sort((a, b) => a - b)[frames.length >> 1] ?? 0;
   const sorted = intervals.toSorted((a, b) => a - b);
   const at = (p: number) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] ?? 0;
-  const missed = intervals.filter((x) => vsync > 0 && x > vsync * 1.5).length;
+  const missed = intervals.filter((x) => vsync > 0 && x > vsync * LATE_VSYNCS).length;
   const stalled = intervals.filter((x) => x > STALL_MS);
   const lastInput = all.findLast((l) => l.input !== undefined)?.input;
   const summary: ProbeSummary = {
@@ -99,6 +101,16 @@ function stats(windowText: string, fromMs: number, toMs: number) {
   };
   return { summary, p90Ms: round1(at(0.9)), p99Ms: round1(at(0.99)), sorted };
 }
+
+/** A window of the probe's lines as frames: each interval on the wall clock its process read, late over 1.5 vsync. */
+export const probeMarks = (windowText: string): FrameMark[] =>
+  lines(windowText)
+    .filter((l) => l.dt !== undefined)
+    .map((l) => ({
+      at: l.t! - l.dt!,
+      ms: l.dt!,
+      ...(l.dt! > l.v! * LATE_VSYNCS && { late: true }),
+    }));
 
 /** A window of the probe's lines (`probeWindow`), summed up. */
 export const probeSummary = (windowText: string, fromMs: number, toMs: number): ProbeSummary =>

@@ -134,6 +134,22 @@ export type HitchSummary = {
   causes: Record<string, number>;
 };
 
+/** One frame on the device's clock: from `at`, in ms since the epoch, for `ms`. `late`: the platform calls it the app's fault. */
+export type FrameMark = { at: number; ms: number; late?: boolean };
+
+/** A touch or a key as it reached the app, whoever made it: a span, as a swipe is many events. */
+export type InputMark = { at: number; ms: number };
+
+/** Every frame of a stretch of time, each where it was on the device's clock: what a timeline is drawn from. */
+export type FrameMarks = {
+  frames: FrameMark[];
+  /** None where the source cannot see them, which is no evidence that nothing was touched. */
+  input?: InputMark[];
+  /** What these frames can and cannot see, where a source has limits. */
+  limits?: string;
+  tracePath?: string;
+};
+
 /** A surface's frames as SurfaceFlinger presented them: what a game or an engine draws, which `gfxinfo` never sees. */
 export type SurfaceFrames = {
   /** Empty, with no frames, when the app shows no surface. */

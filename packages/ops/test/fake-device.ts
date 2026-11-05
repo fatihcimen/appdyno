@@ -140,6 +140,7 @@ export const LACKS: MeasureSource = {
   anonMemory: cannot('anonymous memory by process state'),
   surfaceFrames: cannot("a surface's frames"),
   frames: cannot('frames'),
+  frameMarks: cannot('frames'),
   framesDuring: cannot('frames'),
   resetFrames: cannot('frames'),
   vitals: cannot('the device state'),
