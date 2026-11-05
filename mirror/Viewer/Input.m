@@ -106,7 +106,7 @@ static CALayer *dotLayer(CALayer *parent) {
 }
 
 - (BOOL)takesKeys {
-  return self.takesPointer && self.window && NSApp.keyWindow == self.window;
+  return self.takesPointer && self.window.isKeyWindow && [self.window isKindOfClass:MVOffscreenWindow.class] && ((MVOffscreenWindow *)self.window).personHere;
 }
 
 - (void)sendPhase:(int)phase at:(NSPoint)point clampToEdge:(BOOL)clamp {

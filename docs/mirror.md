@@ -207,6 +207,8 @@ A person's click gives it, or `--focus` at the first opening. A key that reaches
 nowhere. A window an agent opened also holds all input until a person's click, and that click goes no further. What
 is typed reaches the device and nothing else: no log, the Activity pane or `report` holds it.
 
+Being the key window is not enough. The app in front hands activation to what it starts, so a terminal a person is typing in could give a new window their keys. A viewer therefore cannot be activated until it has launched, and one kept behind cannot be at all: the system calls it a background process. And a device hears no key, typed text, paste or device shortcut until a person's mouse has come down in that window, which holds until the window loses the keyboard. Coming back by ⌘Tab needs a click before keys reach the device; a menu chosen with the mouse needs none.
+
 Typing goes through the system's own text input, so a dead key, an accent held down and an input method all work. ⌘V sends the Mac's text the same way, 4,096 characters at most, and the window says when it cut one short, as a long text goes one key at a time. A simulator types what a US keyboard has as keys and anything else by its pasteboard and command V, so an app may ask Allow Paste.
 
 A window takes its menu bar and Dock icon at a person's first click, not before: an agent's window changes nothing on a Mac until someone uses it.

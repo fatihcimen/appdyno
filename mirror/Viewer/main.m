@@ -62,6 +62,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
+  if (!_behind && NSApp.activationPolicy == NSApplicationActivationPolicyProhibited) NSApp.activationPolicy = NSApplicationActivationPolicyAccessory;
   NSNotificationCenter *center = NSWorkspace.sharedWorkspace.notificationCenter;
   [center addObserverForName:NSWorkspaceWillSleepNotification object:nil queue:nil usingBlock:^(NSNotification *n) {
     MVEmit(@{@"op": @"sleep"});
@@ -226,8 +227,9 @@ int main(int argc, char **argv) {
     if (headless) dispatch_main();
     NSApplication *application = NSApplication.sharedApplication;
     application.delegate = app;
-    // not one a launch brings forward: the keyboard stays with what a person is using
-    application.activationPolicy = NSApplicationActivationPolicyAccessory;
+    // not one a launch brings forward: the app in front hands that to what it starts, so a terminal a person is typing in
+    // would give it their keys. It can take none until it has launched, and a window kept behind can take none ever.
+    application.activationPolicy = NSApplicationActivationPolicyProhibited;
     NSUInteger look = [args indexOfObject:@"--appearance"];
     if (look != NSNotFound && args.count > look + 1) {
       application.appearance = [NSAppearance appearanceNamed:[args[look + 1] isEqual:@"dark"] ? NSAppearanceNameDarkAqua : NSAppearanceNameAqua];

@@ -90,7 +90,7 @@ describe('the keyboard', () => {
 
   it('no launch brings the viewer forward', () => {
     expect(source('main.m')).toContain(
-      'application.activationPolicy = NSApplicationActivationPolicyAccessory',
+      'application.activationPolicy = NSApplicationActivationPolicyProhibited',
     );
     expect(source('main.m')).not.toContain(
       'application.activationPolicy = NSApplicationActivationPolicyRegular',
@@ -105,6 +105,25 @@ describe('the keyboard', () => {
 });
 
 describe('the viewer, compiled by its first-use path', () => {
+  it('kept behind, it is one the system can never put in front, whoever started it', async () => {
+    const viewer = spawn(binary, ['--hub', '--behind'], { stdio: ['pipe', 'ignore', 'ignore'] });
+    try {
+      let kind = '';
+      for (let i = 0; i < 100 && !kind.includes('type='); i++) {
+        await new Promise((r) => setTimeout(r, 100));
+        ({ stdout: kind } = await run('lsappinfo', [
+          'info',
+          '-only',
+          'ApplicationType',
+          String(viewer.pid),
+        ]));
+      }
+      expect(kind).toContain('type="BackgroundOnly"');
+    } finally {
+      viewer.kill();
+    }
+  }, 30_000);
+
   it('passes its self test: real frames, bad input, the sums a window rests on', async () => {
     // a failed check exits 1, and it is the lines that say which
     const { stdout } = await run(binary, ['--selftest', FIXTURES], { timeout: 180_000 }).catch(

@@ -20,7 +20,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// A person's mouse came down on it.
 @property(nonatomic, copy, nullable) void (^onTouched)(void);
 @property(readonly) BOOL takesPointer;
-/// Only in the key window, whatever reaches it: what is typed elsewhere is not a device's to have.
+/// Only in a key window a person has clicked, whatever reaches it: what is typed elsewhere is not a device's to have.
 @property(readonly) BOOL takesKeys;
 - (void)pressButton:(id)sender;
 - (NSMenu *)deviceMenu;
@@ -31,6 +31,8 @@ NS_ASSUME_NONNULL_BEGIN
 @interface MVView (Typing) <NSTextInputClient>
 /// Text from the Mac's pasteboard to the device.
 - (void)paste:(nullable id)sender;
+/// Text to the device, past the keyboard's own checks: for what is driven with no key at all.
+- (void)typeText:(NSString *)text;
 @end
 
 /// The device around the picture. With no frame it holds the picture and nothing else.
@@ -81,7 +83,14 @@ NSView *MVGlassGroup(NSView *content);
 @property(nonatomic) BOOL offscreen;
 /// Drawn as the key window, with no keyboard: only for a picture of it.
 @property(nonatomic) BOOL poses;
+/// A person's mouse came down in it since it last had the keyboard, or they asked for it with `--focus`. Being key is not
+/// enough for a device to hear anything: a window may be handed the keyboard by what started it, with a person typing elsewhere.
+@property(nonatomic) BOOL personHere;
 @end
+
+/// Whether what `current` is may act on a device from `window`: a shortcut lands in whatever is key, and only counts in a
+/// window a person has clicked.
+BOOL MVShortcutMayAct(NSEvent *_Nullable current, MVOffscreenWindow *window);
 
 /// A window as the window server composites it, to a PNG; NO if it cannot.
 BOOL MVWriteWindow(NSWindow *window, NSString *file);

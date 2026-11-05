@@ -16,7 +16,21 @@ typedef CGImageRef (*MVCapture)(CGRect, CGWindowListOption, CGWindowID, CGWindow
 - (BOOL)isMainWindow {
   return self.poses || super.isMainWindow;
 }
+
+- (void)sendEvent:(NSEvent *)event {
+  if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeRightMouseDown || event.type == NSEventTypeOtherMouseDown) self.personHere = YES;
+  [super sendEvent:event];
+}
+
+- (void)resignKeyWindow {
+  [super resignKeyWindow];
+  self.personHere = NO;
+}
 @end
+
+BOOL MVShortcutMayAct(NSEvent *_Nullable current, MVOffscreenWindow *window) {
+  return current.type != NSEventTypeKeyDown || window.personHere;
+}
 
 /// `part` is in the window's own points, from its bottom left; empty for all of it.
 BOOL MVWriteWindowPart(NSWindow *window, NSRect part, NSString *file) {

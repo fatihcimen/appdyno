@@ -184,4 +184,21 @@ void MVCheckKeyboard(void) {
   view.armed = YES;
   MVCheck(@"input: a pointer once armed", view.takesPointer, nil);
   MVCheck(@"input: no key reaches a device from a window that is not key", !view.takesKeys, nil);
+  MVOffscreenWindow *window = [[MVOffscreenWindow alloc] initWithContentRect:NSMakeRect(0, 0, 200, 200) styleMask:NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO];
+  window.releasedWhenClosed = NO;
+  window.poses = YES;
+  MVView *held = [[MVView alloc] initWithFrame:NSMakeRect(0, 0, 200, 200)];
+  held.inputOn = YES;
+  held.armed = YES;
+  window.contentView = held;
+  MVCheck(@"keyboard: armed in a key window, it hears nothing until a person clicks there", window.isKeyWindow && !held.takesKeys, nil);
+  [held insertText:@"caught" replacementRange:NSMakeRange(NSNotFound, 0)];
+  NSEvent *key = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:NSEventModifierFlagCommand timestamp:0 windowNumber:window.windowNumber context:nil characters:@"v" charactersIgnoringModifiers:@"v" isARepeat:NO keyCode:9];
+  MVCheck(@"keyboard: a shortcut does nothing to a device from a window no person clicked", !MVShortcutMayAct(key, window), nil);
+  [window sendEvent:[NSEvent mouseEventWithType:NSEventTypeLeftMouseDown location:NSMakePoint(50, 50) modifierFlags:0 timestamp:0 windowNumber:window.windowNumber context:nil eventNumber:0 clickCount:1 pressure:1]];
+  [window sendEvent:[NSEvent mouseEventWithType:NSEventTypeLeftMouseUp location:NSMakePoint(50, 50) modifierFlags:0 timestamp:0 windowNumber:window.windowNumber context:nil eventNumber:0 clickCount:1 pressure:0]];
+  MVCheck(@"keyboard: a person's click gives it the keys, and a shortcut counts", held.takesKeys && MVShortcutMayAct(key, window), nil);
+  [window resignKeyWindow];
+  MVCheck(@"keyboard: losing the keyboard takes them back: a click counts until then", !held.takesKeys && !MVShortcutMayAct(key, window), nil);
+  [window close];
 }

@@ -36,8 +36,12 @@ static const NSUInteger kPasteLimit = 4096;
 }
 
 - (void)insertText:(id)string replacementRange:(NSRange)range {
-  NSString *text = [string isKindOfClass:NSAttributedString.class] ? [string string] : string;
   self.composing = nil;
+  // dictation and an accent's popup come here with no key, so `keyDown:` has not asked
+  if (self.takesKeys) [self typeText:[string isKindOfClass:NSAttributedString.class] ? [string string] : string];
+}
+
+- (void)typeText:(NSString *)text {
   if (text.length) MVEmitFrom(self, @{@"op": @"text", @"s": text});
 }
 

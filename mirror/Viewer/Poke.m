@@ -69,7 +69,7 @@ static const double kClickSeconds = 0.08;
 
 - (void)pokeText:(NSString *)text {
   // what a keyboard's letters end in: a window kept behind is never the key window, so no real key gets this far
-  [(MVView *)self.screenView insertText:text replacementRange:NSMakeRange(NSNotFound, 0)];
+  [(MVView *)self.screenView typeText:text];
 }
 
 - (void)pokeKey:(NSString *)characters {

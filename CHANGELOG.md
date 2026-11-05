@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A window a person did not click passes nothing to a device. Started from a terminal someone was typing in, a viewer could be handed the keyboard: its keys, dictation, ⌘V with the Mac's clipboard and device shortcuts such as ⌘L all reached the device, as being the key window was all that was asked. Now a viewer cannot be activated until it has launched, one kept behind cannot be at all, and a device hears nothing until a person's mouse comes down in that window.
 - A first read of a simulator's home screen starts no runner in a session that boots it, new or not. Three things sent it to the runner: a widget, which is another process's; a widget and its app's icon, taken for copies of one control; and the seconds of a first boot with nothing in front. Spotlight, and another process's content in an app, still go there.
 - `refused` fails the gate too, saying what is not comparable, and `new` stays a pass. The job in `docs/perf-gate.yml` waits for the load before the pull request's own run, where it waited only at the start.
 - `noisy` fails the gate as `few-samples` does: `perf compare`, `perf why` and the job in `docs/perf-gate.yml` exit 1 on a change seen under load, and say to measure again. It went green.

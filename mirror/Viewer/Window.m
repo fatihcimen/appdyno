@@ -280,6 +280,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
       [window orderFrontRegardless];
       break;
     case MVShowFocused:
+      window.personHere = YES;
       NSApp.activationPolicy = NSApplicationActivationPolicyRegular;
       [window makeKeyAndOrderFront:nil];
       [NSApp activateIgnoringOtherApps:YES];
