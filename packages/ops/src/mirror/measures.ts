@@ -35,10 +35,12 @@ const NOISE: Record<string, string> = {
 
 /** Whether a number is one to judge by: a line for the pane, and all of it for a look closer. */
 const judged = (app: string, runs: string, data: { virtualDevice: boolean; noise: string[] }) => {
+  // a debug build is said where all of it is, and is no alarm on a line of its own, as on the dashboard
   const marks = data.noise.map((n) => NOISE[n] ?? n);
+  const loud = data.noise.filter((n) => n !== 'debuggable-build').map((n) => NOISE[n] ?? n);
   const relative = data.virtualDevice ? ['virtual device: compare only with its kind'] : [];
   return {
-    detail: [runs, ...marks].join(', '),
+    detail: [runs, ...loud].join(', '),
     why: [app, runs, ...relative, ...marks].join(', '),
   };
 };
