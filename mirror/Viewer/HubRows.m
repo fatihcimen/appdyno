@@ -6,6 +6,8 @@
 NSString *const MVFoldKey = @"fold";
 NSString *const MVPlaceKey = @"place:";
 
+static const double kPlaceSeconds = 0.18;
+
 static NSColor *_Nullable stateColor(NSDictionary *device) {
   if ([device[@"mirrored"] boolValue]) return NSColor.systemBlueColor;
   return [device[@"state"] isEqual:@"running"] ? MVGreen() : nil;
@@ -93,7 +95,7 @@ static MVRow *goneRow(NSDictionary *device) {
     [rows addObject:row];
   }];
   _list.rows = rows;
-  [_list selectKey:_shown[@"id"]];
+  [_list selectKey:_placeKey ?: _shown[@"id"]];
 }
 
 - (void)addPlace:(MVPlace *)place {
@@ -102,14 +104,40 @@ static MVRow *goneRow(NSDictionary *device) {
   [self listDevices];
 }
 
-/// A place stands where a device would, so what stood there ends as it would for another device.
+/// A place stands where a device would, so what stood there ends as it would for another device. It has no use for an
+/// Inspector, which comes back with the next device.
 - (void)choosePlace:(MVPlace *)place {
+  if (place.view == _placeShown) return;
+  NSSplitViewItem *inspector = ((MVRoomView *)_room).slot.item;
+  if (!_placeShown) _inspectorWasOpen = !inspector.collapsed;
   [self showDevice:nil];
-  [_placeShown removeFromSuperview];
+  inspector.collapsed = YES;
+  [_bare hideInspectorSwitch:YES];
   _placeShown = place.view;
-  _placeShown.frame = _room.bounds;
-  _placeShown.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+  _placeKey = [NSString stringWithFormat:@"%@%lu", MVPlaceKey, (unsigned long)[_places indexOfObject:place]];
+  ((MVRoomView *)_room).place = _placeShown;
   [_room addSubview:_placeShown];
+  [_list selectKey:_placeKey];
+  [_bare setName:place.title about:nil];
+  [_help fillDevice:_lastDevice app:MVFrontApp()];
+  // a backdrop fades as a device's would; a person who asked for less motion has a cut
+  _placeShown.wantsLayer = YES;
+  MVFade(_placeShown.layer, 0, 1, kPlaceSeconds);
+}
+
+- (void)leavePlaceFor:(nullable NSDictionary *)device {
+  if (!_placeShown) return;
+  [_placeShown removeFromSuperview];
+  _placeShown = nil;
+  _placeKey = nil;
+  ((MVRoomView *)_room).place = nil;
+  _room.needsLayout = YES;
+  [_bare hideInspectorSwitch:NO];
+  if (device && _inspectorWasOpen) ((MVRoomView *)_room).slot.item.collapsed = NO;
+}
+
+- (nullable NSView *)placeShown {
+  return _placeShown;
 }
 
 - (BOOL)sidebarClosed {

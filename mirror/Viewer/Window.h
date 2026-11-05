@@ -131,6 +131,8 @@ CGImageRef _Nullable MVImageMood(CVImageBufferRef image, BOOL dark);
 
 /// A mouse's click at a point of a window, posted to this process as the window server would send it.
 void MVRealClick(NSWindow *window, NSPoint at);
+/// The same on a control, wherever it is scrolled to, and what the click landed on, for the parent.
+NSDictionary *MVClickControl(NSWindow *window, NSButton *_Nullable button, NSString *name);
 
 /// The symbol of what holds a device up, by the name `NEEDS` has for it.
 NSString *MVNeedSymbol(NSString *_Nullable need);
@@ -309,6 +311,8 @@ void MVGiveWay(NSSplitViewItem *item, BOOL narrow, BOOL *gaveWay);
 @property(nonatomic) NSToolbar *bare;
 /// What the sidebar says of a device.
 @property(nonatomic, copy, nullable) NSDictionary *_Nullable (^rowOf)(NSString *serial);
+/// What takes the room in place of a device.
+@property(nonatomic, nullable) NSView *place;
 @end
 
 /// The panes of the Inspector, by the index `showPane:` takes.
@@ -346,6 +350,7 @@ typedef NS_ENUM(NSInteger, MVShow) { MVShowBehind, MVShowFront, MVShowFocused };
 - (nullable NSButton *)buttonNamed:(NSString *)name;
 /// What stands left of the capsule: the device's name, and a line under it. Its controls say the same to a screen reader.
 - (void)setName:(NSString *)name about:(nullable NSString *)about;
+- (void)hideInspectorSwitch:(BOOL)hidden;
 @property(nonatomic, readonly) MVCapsule *capsule;
 /// A control's symbol now, in its own ink.
 - (void)paint:(NSString *)name symbol:(NSString *)symbol color:(NSColor *)color;
@@ -384,12 +389,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how);
 - (void)setName:(NSString *)name;
 @end
 
-/// A place of the sidebar that is no device: chosen, it takes the room. AI Clients and Help stand here.
-@interface MVPlace : NSObject
-@property(nonatomic, copy) NSString *title;
-@property(nonatomic, copy) NSString *symbol;
-@property(nonatomic) NSView *view;
-@end
+@class MVPlace;
 
 /// The window of `appdyno hub`: what its parent says is there, and what a person asks of it.
 @interface MVHub : NSObject <NSWindowDelegate, NSSearchFieldDelegate>
@@ -415,9 +415,14 @@ void MVPresent(MVOffscreenWindow *window, MVShow how);
 /// One more place under the devices, last added last.
 - (void)addPlace:(MVPlace *)place;
 - (void)choosePlace:(MVPlace *)place;
+/// The place standing, if one is.
+- (nullable NSView *)placeShown;
+/// A device comes back into the room: the Inspector it had comes with it.
+- (void)leavePlaceFor:(nullable NSDictionary *)device;
 /// What the sidebar lists, for a look at it.
 - (NSArray<NSString *> *)rowTitles;
 - (BOOL)sidebarClosed;
 @end
+
 
 NS_ASSUME_NONNULL_END

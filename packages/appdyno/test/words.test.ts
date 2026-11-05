@@ -2,14 +2,17 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { NEEDS } from '@appdyno/core';
+import { TRIED } from '../src/hub-places.js';
 
 const viewer = join(import.meta.dirname, '../../../mirror/Viewer');
 const source = (file: string) => readFileSync(join(viewer, file), 'utf8');
 
 const unquote = (s: string) => s.replace(/\\(.)/g, '$1');
-const rows = [
-  ...source('WordsTable.m').matchAll(/^\s*\{"((?:[^"\\]|\\.)*)", "((?:[^"\\]|\\.)*)"\},$/gm),
-].map((m) => ({ en: unquote(m[1]!), tr: unquote(m[2]!) }));
+const rows = ['WordsTable.m', 'WordsClients.m', 'WordsHelp.m']
+  .flatMap((file) => [
+    ...source(file).matchAll(/^\s*\{"((?:[^"\\]|\\.)*)", "((?:[^"\\]|\\.)*)"\},$/gm),
+  ])
+  .map((m) => ({ en: unquote(m[1]!), tr: unquote(m[2]!) }));
 const english = new Set(rows.map((r) => r.en));
 /** A word the table would find, as a pattern too. */
 const known = (word: string) =>
@@ -48,9 +51,33 @@ describe('the table of words', () => {
     expect(words.filter((w) => !known(w))).toEqual([]);
   });
 
+  it('has what a test of a client can say, and what to do next', () => {
+    const said = Object.values(TRIED).flatMap((words) => [...words]);
+    expect(said.filter((w) => w && !known(w))).toEqual([]);
+  });
+
+  it('has what doctor can say to do', () => {
+    const fixes = [
+      'set ANDROID_HOME to the Android SDK (Android only)',
+      'accept the USB debugging prompt on the phone',
+      'reconnect the cable, or restart the emulator',
+    ];
+    expect(fixes.filter((w) => !known(w))).toEqual([]);
+  });
+
+  it('has every sentence of the client and help panes, in whatever shape they are kept', () => {
+    const missed = ['HubClients.m', 'HubHelp.m'].flatMap((file) =>
+      [...source(file).matchAll(/@"([A-Z][^"]* [^"]*)"/g)]
+        .map((m) => m[1]!)
+        .filter((word) => !known(word))
+        .map((word) => `${file}: ${word}`),
+    );
+    expect(missed).toEqual([]);
+  });
+
   it('is what every control and label on a window says: nothing is written past it', () => {
     const shown =
-      /(?:buttonWithTitle|addItemWithTitle|addButtonWithTitle|labelWithString|initWithTitle):@"([^"]+)"|(?:placeholderString|toolTip|accessibilityLabel|messageText|informativeText) = @"([^"]+)"|(?:MVText|MVWrappedText|MVPaneNote|MVPaneHeading|MVWord|caption|note|heading)\(@"([^"]+)"/g;
+      /(?:buttonWithTitle|addItemWithTitle|addButtonWithTitle|labelWithString|initWithTitle):@"([^"]+)"|(?:placeholderString|toolTip|accessibilityLabel|messageText|informativeText) = @"([^"]+)"|(?:MVText|MVWrappedText|MVPaneNote|MVPaneHeading|MVParagraph|MVFormat|MVPlaceButton|MVPlacePrimary|MVWord|caption|note|heading|line)\(@"([^"]+)"/g;
     const missed: string[] = [];
     for (const file of readdirSync(viewer).filter((f) => f.endsWith('.m'))) {
       if (file.startsWith('SelfTest') || file.startsWith('Words')) continue;

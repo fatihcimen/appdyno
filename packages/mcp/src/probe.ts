@@ -5,7 +5,7 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
 /** A first `npx` downloads the package before anything answers. */
 const PROBE_MS = 60_000;
-const TAIL = 400;
+const TAIL = 2_000;
 
 /**
  * Whether a server answers as a client would find it. `missing`: no such command. `slow`: no answer in time. `ended`:

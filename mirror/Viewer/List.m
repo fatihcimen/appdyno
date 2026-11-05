@@ -165,6 +165,7 @@ static NSString *identityOf(MVRow *row) {
   NSTextField *title = MVText(row.title, MVStyleBody);
   NSTextField *detail = MVText(row.detail, MVStyleSub);
   detail.lineBreakMode = NSLineBreakByTruncatingMiddle;
+  detail.hidden = !row.detail.length;
   NSStackView *lines = [NSStackView stackViewWithViews:@[title, detail]];
   lines.orientation = NSUserInterfaceLayoutOrientationVertical;
   lines.alignment = NSLayoutAttributeLeading;

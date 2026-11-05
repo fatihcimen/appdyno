@@ -7,13 +7,16 @@ typedef struct {
   const char *en, *tr;
 } MVWordRow;
 
-extern const MVWordRow MVWordTable[];
-extern const size_t MVWordCount;
+/// One table, in a file for each of the larger parts.
+extern const MVWordRow MVWordTable[], MVWordTableClients[], MVWordTableHelp[];
+extern const size_t MVWordCount, MVWordCountClients, MVWordCountHelp;
 
 /// Words in the Mac's language: English comes back as it went in, and so does anything the table does not have, such as a name.
 NSString *MVWord(NSString *english);
 /// The same whatever the Mac's language.
 NSString *MVInTurkish(NSString *english);
+/// One of Help's rows, by its English, with what changes put in: a name there may hold anything, a comma too.
+NSString *MVFormat(NSString *english, NSArray<NSString *> *values);
 /// A number with the Mac's decimal mark, and `%` on the side its language puts it.
 NSString *MVPercent(double value);
 /// The same for a number with one decimal.

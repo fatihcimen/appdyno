@@ -40,12 +40,13 @@ static NSString *stateWords(NSDictionary *device) {
 - (void)layout {
   [super layout];
   NSArray<NSView *> *stages = self.stages;
-  // what the room says of itself stands only while no device does
+  // what the room says of itself stands only while nothing else does
   for (NSView *view in self.subviews)
-    if (![stages containsObject:view]) view.hidden = stages.count > 0;
+    view.hidden = self.place ? view != self.place : ![stages containsObject:view] && stages.count > 0;
   // the room runs on under the sidebar and the Inspector, and the end stages take that too, for their backdrops
   NSEdgeInsets under = self.safeAreaInsets;
   double all = self.bounds.size.width, wide = (all - under.left - under.right) / MAX(stages.count, 1);
+  self.place.frame = NSMakeRect(under.left, 0, all - under.left - under.right, self.bounds.size.height);
   [stages enumerateObjectsUsingBlock:^(NSView *stage, NSUInteger i, BOOL *stop) {
     double left = i == 0 ? 0 : under.left + i * wide, right = i + 1 == stages.count ? all : under.left + (i + 1) * wide;
     stage.frame = NSMakeRect(left, 0, right - left, self.bounds.size.height);
@@ -95,9 +96,9 @@ static NSString *stateWords(NSDictionary *device) {
     room.rowOf = ^(NSString *serial) {
       return [weak rowFor:serial];
     };
-    _bare.capsule.hidden = YES;
     _window.toolbar = room.bare;
     _window.toolbarStyle = NSWindowToolbarStyleUnified;
+    [self addOwnPlaces];
     MVPresent(_window, how);
   }
   return self;
@@ -224,7 +225,8 @@ static NSString *stateWords(NSDictionary *device) {
   }
   // a phone that left stays what is chosen: it says so where it stood, and comes back by itself
   BOOL left = !kept && [_shown[@"kind"] isEqual:@"phone"];
-  if (!left) [self showDevice:kept ?: first];
+  // a place a person chose stays chosen while the list changes behind it
+  if (!left && !_placeShown) [self showDevice:kept ?: first];
   _left = left ? _shown : nil;
   [self listDevices];
   [self sayWhatMoved];
@@ -252,9 +254,9 @@ static NSString *stateWords(NSDictionary *device) {
 }
 
 - (void)showDevice:(nullable NSDictionary *)device {
-  [_placeShown removeFromSuperview];
-  _placeShown = nil;
+  [self leavePlaceFor:device];
   _shown = device;
+  if (device) _lastDevice = device;
   [_list selectKey:device[@"id"]];
   BOOL running = [device[@"state"] isEqual:@"running"], elsewhere = [device[@"mirrored"] boolValue];
   [self tellChosen:running && !elsewhere ? device[@"serial"] ?: device[@"id"] : nil];
@@ -321,6 +323,9 @@ static NSString *stateWords(NSDictionary *device) {
 }
 
 - (void)poke:(NSDictionary *)message {
+  if (message[@"clickOn"]) return [self pokeClick:message[@"clickOn"]];
+  if (message[@"clickRow"]) return [self pokeRow:message[@"clickRow"]];
+  if (message[@"board"]) return [self pokeBoard];
   if (message[@"ask"]) return [self ask:message[@"ask"]];
   if ([message[@"press"] isEqual:@"create"]) {
     [_asking setName:message[@"name"] ?: @""];
@@ -356,7 +361,8 @@ static NSString *stateWords(NSDictionary *device) {
 
 - (void)windowDidResize:(NSNotification *)notification {
   double wide = _window.frame.size.width;
-  [((MVRoomView *)_room).slot fitWindow:wide least:kInspectorFrom];
+  // a place keeps the Inspector shut, whatever the width says
+  if (!_placeShown) [((MVRoomView *)_room).slot fitWindow:wide least:kInspectorFrom];
   MVGiveWay(_sidebarItem, wide < kSidebarFrom, &_sidebarGaveWay);
 }
 

@@ -18,6 +18,8 @@ import { HubHttp, httpToken, renewHttpToken } from './hub-http.js';
 
 /** What an app opened from the Dock has: neither Homebrew nor a Node from a version manager. */
 const DOCK_PATH = '/usr/bin:/bin:/usr/sbin:/sbin';
+/** The end of what a server said, which is where the reason is: all of it is for the client's own log. */
+const TAIL_SHOWN = 300;
 
 /** Each in English, as the hub's table has it, with what to do next: `words.test.ts` holds them to that table. */
 export const TRIED = {
@@ -64,7 +66,8 @@ function triedWords(probe: Probe, o: { command?: string; connected: boolean }): 
     return { ok: false, said, next };
   }
   const [said, next] = TRIED[probe.why];
-  return { ok: false, said, next, ...(probe.tail && { tail: probe.tail }) };
+  const tail = probe.tail?.slice(-TAIL_SHOWN);
+  return { ok: false, said, next, ...(tail && { tail }) };
 }
 
 export type PlacesOptions = {
@@ -90,7 +93,12 @@ export function hubPlaces(o: PlacesOptions): HubPlaces {
   const undos = new Map<string, Undo>();
   const clientNamed = (m: Message) => CLIENTS.find((c) => c.name === m.client);
   const notes = [...CLIENTS, ...BROWSER_CLIENTS].flatMap((c) =>
-    Object.entries(c.notes ?? {}).map(([kind, said]) => ({ client: c.name, kind, ...said })),
+    Object.entries(c.notes ?? {}).map(([kind, said]) => ({
+      client: c.name,
+      ...(c.tr && { clientTr: c.tr }),
+      kind,
+      ...said,
+    })),
   );
 
   const status = () => ({

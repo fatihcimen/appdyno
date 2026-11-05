@@ -1,4 +1,5 @@
 // The hub's parts, for the files it is split across.
+#import "Place.h"
 #import "Window.h"
 
 NS_ASSUME_NONNULL_BEGIN
@@ -32,6 +33,11 @@ NSArray<NSString *> *MVNamedParts(NSString *name);
   NSDictionary *_left;
   NSMutableArray<MVPlace *> *_places;
   NSView *_placeShown;
+  NSString *_placeKey;
+  BOOL _inspectorWasOpen;
+  NSDictionary *_lastDevice;
+  MVClientsPane *_clients;
+  MVHelpPane *_help;
   NSSplitViewItem *_sidebarItem;
   BOOL _sidebarGaveWay;
   NSSet<NSString *> *_seen;

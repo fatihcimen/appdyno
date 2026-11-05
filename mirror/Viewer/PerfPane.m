@@ -1,6 +1,7 @@
 // The Performance pane, top down: one sentence, three figures, a minute of readings, the measures, and what they came to,
 // now and before. The measures are the ones an agent calls, run by the parent and kept with every other run: this draws what
 // it is told.
+#import "Place.h"
 #import "Window.h"
 
 enum { kSeconds = 60, kResults = 20 };
@@ -253,7 +254,10 @@ static MVRow *rowOfResult(NSDictionary *result) {
   _past = [message[@"results"] isKindOfClass:NSArray.class] ? message[@"results"] : @[];
   // a kept line stands in for this session's own, and none kept takes nothing away
   if (_past.count) [_kept filterUsingPredicate:[NSPredicate predicateWithFormat:@"ok != YES"]];
-  if ([message[@"app"] length]) _app.stringValue = [NSString stringWithFormat:@"A measure restarts %@.", message[@"app"]];
+  if ([message[@"app"] length]) {
+    _app.stringValue = [NSString stringWithFormat:@"A measure restarts %@.", message[@"app"]];
+    MVNoteFrontApp(message[@"app"]);
+  }
   [self listResults];
   // only a measure just made is news: a window opening on an old regression has nothing to announce
   if (_measured && [_past.firstObject[@"verdict"] isEqual:@"regression"]) {

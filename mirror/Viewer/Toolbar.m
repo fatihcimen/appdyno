@@ -38,7 +38,9 @@ static const double kSymbolSize = 14, kButtonWide = 28, kTitleWidest = 150;
 }
 
 - (NSArray<NSToolbarItemIdentifier> *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar {
-  NSMutableArray *names = [NSMutableArray arrayWithObjects:NSToolbarSidebarTrackingSeparatorItemIdentifier, @"title", NSToolbarFlexibleSpaceItemIdentifier, @"status", NSToolbarFlexibleSpaceItemIdentifier, nil];
+  NSMutableArray *names = [NSMutableArray arrayWithObjects:NSToolbarSidebarTrackingSeparatorItemIdentifier, @"title", NSToolbarFlexibleSpaceItemIdentifier, nil];
+  // with no device there is nothing to say, and an empty capsule is a pill of glass holding nothing
+  if (_groups.count) [names addObjectsFromArray:@[@"status", NSToolbarFlexibleSpaceItemIdentifier]];
   for (NSUInteger i = 0; i < _groups.count; i++) [names addObject:[NSString stringWithFormat:@"group%lu", (unsigned long)i]];
   [names addObjectsFromArray:@[NSToolbarInspectorTrackingSeparatorItemIdentifier, NSToolbarFlexibleSpaceItemIdentifier, @"inspector"]];
   return names;
@@ -102,6 +104,12 @@ static const double kSymbolSize = 14, kButtonWide = 28, kTitleWidest = 150;
   _name.stringValue = name;
   _about.stringValue = about ?: @"";
   _about.hidden = !about.length;
+}
+
+/// A place has no use for the Inspector's switch. Before macOS 15 an item cannot hide, and it opens a pane that says so.
+- (void)hideInspectorSwitch:(BOOL)hidden {
+  for (NSToolbarItem *item in _buttons[@"inspector"].window.toolbar.items)
+    if ([item.itemIdentifier isEqual:@"inspector"] && [item respondsToSelector:@selector(setHidden:)]) [item setValue:@(hidden) forKey:@"hidden"];
 }
 
 - (void)paint:(NSString *)name symbol:(NSString *)symbol color:(NSColor *)color {

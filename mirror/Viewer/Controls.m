@@ -128,5 +128,9 @@ NSMenu *MVHubMenu(void) {
   [file addItemWithTitle:MVWord(@"Open in New Window") action:NSSelectorFromString(@"openWindow:") keyEquivalent:@"N"];
   menuOf(bar, @"File", file);
   menuOf(bar, @"Window", windowMenu());
+  NSMenu *help = [[NSMenu alloc] initWithTitle:@"Help"];
+  [help addItemWithTitle:MVWord(@"appdyno Help") action:NSSelectorFromString(@"openHelp:") keyEquivalent:@"?"];
+  menuOf(bar, @"Help", help);
+  NSApp.helpMenu = help;
   return bar;
 }

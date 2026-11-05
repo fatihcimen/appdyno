@@ -1,8 +1,9 @@
 // The hub's shell, with no device: what a person's real clicks do in its Inspector and capsule, and the places of its sidebar.
+#import "Place.h"
 #import "SelfTest.h"
 #import "Window.h"
 
-static void pump(double seconds) {
+void MVPump(double seconds) {
   NSDate *end = [NSDate dateWithTimeIntervalSinceNow:seconds];
   while (end.timeIntervalSinceNow > 0)
     for (NSEvent *e; (e = [NSApp nextEventMatchingMask:NSEventMaskAny untilDate:[NSDate dateWithTimeIntervalSinceNow:0.02] inMode:NSDefaultRunLoopMode dequeue:YES]);) [NSApp sendEvent:e];
@@ -19,32 +20,32 @@ static void checkTabs(void) {
   NSDictionary *tabs = @{@"tabFlows": @(MVPaneFlow), @"tabApps": @(MVPaneApps), @"tabActivity": @(MVPaneActivity), @"tabPerformance": @(MVPanePerf)};
   for (NSString *tab in tabs) {
     [window pokeClick:tab];
-    pump(0.1);
+    MVPump(0.1);
     MVCheck([@"inspector: a real click chooses " stringByAppendingString:tab], window.inspector.chosen == [tabs[tab] integerValue], nil);
   }
   [window pokeClick:@"status"];
-  pump(0.2);
+  MVPump(0.2);
   MVCheck(@"capsule: a real click shows the stream's numbers", window.numbersShown, nil);
   [window pokeClick:@"status"];
-  pump(0.2);
+  MVPump(0.2);
   [window showPane:MVPaneActivity];
   for (int i = 0; i < 3; i++) [window addActivity:@{@"at": @(i * 1000), @"tool": @"tap", @"ok": @YES, @"ms": @3, @"time": @"12:00"}];
   [window.nsWindow displayIfNeeded];
-  pump(0.1);
+  MVPump(0.1);
   NSUInteger open = window.inspector.activity.lines;
   MVRealClick(window.nsWindow, window.inspector.activity.firstLinePoint);
-  pump(0.2);
+  MVPump(0.2);
   MVCheck(@"activity: a real click folds a run away", open == 4 && window.inspector.activity.lines == 1, [NSString stringWithFormat:@"%lu then %lu", (unsigned long)open, (unsigned long)window.inspector.activity.lines]);
   MVRealClick(window.nsWindow, window.inspector.activity.firstLinePoint);
-  pump(0.2);
+  MVPump(0.2);
   MVCheck(@"activity: and opens it again", window.inspector.activity.lines == 4, nil);
   [window setStatus:@{@"state": @"waiting", @"title": @"The screen is off", @"fix": @"Wake the device."}];
   [window pokeClick:@"tryAgain"];
-  pump(0.2);
+  MVPump(0.2);
   MVCheck(@"overlay: Try Again stands where a real click reaches it", MVFindControl(window.nsWindow.contentView, @"tryAgain") != nil, nil);
   [window setStatus:@{@"state": @"live"}];
   [window.nsWindow setContentSize:NSMakeSize(480, 700)];
-  pump(0.3);
+  MVPump(0.3);
   MVCheck(@"inspector: a narrow window takes it away by itself", !window.inspecting, [NSString stringWithFormat:@"%.0f wide", window.nsWindow.frame.size.width]);
 }
 
@@ -88,16 +89,17 @@ static void checkPlaces(void) {
   MVCheck(@"sidebar: a place has its row, under the devices", [hub.rowTitles containsObject:@"Help"], [hub.rowTitles componentsJoinedByString:@"|"]);
   [hub choosePlace:place];
   MVCheck(@"sidebar: a place takes the room", room.superview == hub.room, nil);
+  [hub leavePlaceFor:@{}];
   NSWindow *window = hub.room.window;
   NSSplitViewItem *inspector = ((MVRoomView *)hub.room).slot.item;
   [window setContentSize:NSMakeSize(1000, 700)];
-  pump(0.2);
+  MVPump(0.2);
   MVCheck(@"hub: under 1,100 wide the Inspector gives way, and the sidebar stays", inspector.collapsed && !hub.sidebarClosed, nil);
   [window setContentSize:NSMakeSize(800, 700)];
-  pump(0.2);
+  MVPump(0.2);
   MVCheck(@"hub: under 860 wide the sidebar gives way too", hub.sidebarClosed, nil);
   [window setContentSize:NSMakeSize(1240, 820)];
-  pump(0.2);
+  MVPump(0.2);
   MVCheck(@"hub: wide again, both come back", !inspector.collapsed && !hub.sidebarClosed, nil);
 }
 

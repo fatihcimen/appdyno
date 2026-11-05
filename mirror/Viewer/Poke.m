@@ -30,16 +30,22 @@ void MVRealClick(NSWindow *window, NSPoint at) {
   [NSApp postEvent:[NSEvent mouseEventWithType:type location:at modifierFlags:0 timestamp:0 windowNumber:self.nsWindow.windowNumber context:nil eventNumber:0 clickCount:1 pressure:1] atStart:NO];
 }
 
+NSDictionary *MVClickControl(NSWindow *window, NSButton *_Nullable button, NSString *name) {
+  if (!button.window) return @{@"op": @"clicked", @"name": name, @"found": @NO};
+  [window layoutIfNeeded];
+  [button scrollRectToVisible:button.bounds];
+  [window displayIfNeeded];
+  NSPoint at = [button convertPoint:NSMakePoint(NSMidX(button.bounds), NSMidY(button.bounds)) toView:nil];
+  // the window's top view: a point in the window is a point in what it stands on
+  NSView *under = [window.contentView.superview hitTest:at];
+  MVRealClick(window, at);
+  return @{@"op": @"clicked", @"name": name, @"found": @YES, @"under": NSStringFromClass(under.class) ?: @"", @"isIt": @(under == button || [under isDescendantOf:button])};
+}
+
 /// A click on a control where it stands, as a mouse's: through the window's own hit testing, and no shortcut to what it does.
 - (void)pokeClick:(NSString *)name {
   NSButton *button = [self.bar buttonNamed:name] ?: MVFindControl(self.nsWindow.contentView, name);
-  if (!button.window) return MVEmitFrom(self.screenView, @{@"op": @"clicked", @"name": name, @"found": @NO});
-  NSPoint at = [button convertPoint:NSMakePoint(NSMidX(button.bounds), NSMidY(button.bounds)) toView:nil];
-  NSView *frame = self.nsWindow.contentView.superview;
-  // the window's top view: a point in the window is a point in what it stands on
-  NSView *under = [frame hitTest:at];
-  MVRealClick(self.nsWindow, at);
-  MVEmitFrom(self.screenView, @{@"op": @"clicked", @"name": name, @"found": @YES, @"under": NSStringFromClass(under.class) ?: @"", @"isIt": @(under == button || [under isDescendantOf:button])});
+  MVEmitFrom(self.screenView, MVClickControl(self.nsWindow, button, name));
 }
 
 - (void)pokeX:(double)x y:(double)y right:(BOOL)right {

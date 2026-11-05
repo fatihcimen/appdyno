@@ -23,6 +23,8 @@ export type Named = {
   notes?: Partial<Record<PromptKind, Said>>;
   /** What to call it on a device, where its name is for more than one app. */
   short?: string;
+  /** Its name in Turkish, where that is more than a name. */
+  tr?: string;
 };
 
 export type Client = Named & {
@@ -112,6 +114,7 @@ export const CLIENTS: Client[] = [
   },
   {
     name: 'Codex and ChatGPT desktop',
+    tr: 'Codex ve ChatGPT masaüstü',
     says: /codex|chatgpt/i,
     short: 'Codex',
     check: {
@@ -197,6 +200,7 @@ export const CLIENTS: Client[] = [
 export const BROWSER_CLIENTS: Named[] = [
   {
     name: 'ChatGPT in a browser',
+    tr: 'Tarayıcıda ChatGPT',
     says: /openai|chatgpt/i,
     check: {
       en: 'Business, Enterprise or Edu. Plugins, +, Add custom MCP server, then `https://<your tunnel>/mcp/<token>` and No authentication.',
@@ -219,6 +223,7 @@ export const BROWSER_CLIENTS: Named[] = [
   },
   {
     name: 'Claude in a browser',
+    tr: 'Tarayıcıda Claude',
     says: /claude/i,
     check: {
       en: 'On the web, on a phone and in Cowork. Customize, Connectors, +, Add custom connector, then `https://<your tunnel>/mcp/<token>` and No sign-in.',

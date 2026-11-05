@@ -22,8 +22,26 @@ static NSDictionary<NSString *, NSString *> *exact(void) {
   static dispatch_once_t once;
   dispatch_once(&once, ^{
     NSMutableDictionary *all = [NSMutableDictionary dictionary];
-    for (size_t i = 0; i < MVWordCount; i++)
-      if (!strstr(MVWordTable[i].en, "%@")) all[@(MVWordTable[i].en)] = @(MVWordTable[i].tr);
+    void (^take)(const MVWordRow *, size_t) = ^(const MVWordRow *table, size_t count) {
+      for (size_t i = 0; i < count; i++)
+        if (!strstr(table[i].en, "%@")) all[@(table[i].en)] = @(table[i].tr);
+    };
+    take(MVWordTable, MVWordCount);
+    take(MVWordTableClients, MVWordCountClients);
+    take(MVWordTableHelp, MVWordCountHelp);
+    words = all;
+  });
+  return words;
+}
+
+/// Help's rows with a `%@` are filled by name and are no patterns: its "On %@" must take no line that merely begins so.
+static NSDictionary<NSString *, NSString *> *forms(void) {
+  static NSDictionary *words;
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    NSMutableDictionary *all = [NSMutableDictionary dictionary];
+    for (size_t i = 0; i < MVWordCountHelp; i++)
+      if (strstr(MVWordTableHelp[i].en, "%@")) all[@(MVWordTableHelp[i].en)] = @(MVWordTableHelp[i].tr);
     words = all;
   });
   return words;
@@ -34,13 +52,17 @@ static NSArray<NSArray *> *patterns(void) {
   static dispatch_once_t once;
   dispatch_once(&once, ^{
     NSMutableArray *all = [NSMutableArray array];
-    for (size_t i = 0; i < MVWordCount; i++) {
-      if (!strstr(MVWordTable[i].en, "%@")) continue;
-      NSString *escaped = [NSRegularExpression escapedPatternForString:@(MVWordTable[i].en)];
-      NSString *shape = [NSString stringWithFormat:@"^%@$", [escaped stringByReplacingOccurrencesOfString:@"%@" withString:@"([^,·]+?)"]];
-      NSRegularExpression *english = [NSRegularExpression regularExpressionWithPattern:shape options:0 error:NULL];
-      if (english) [all addObject:@[english, @(MVWordTable[i].tr)]];
-    }
+    void (^take)(const MVWordRow *, size_t) = ^(const MVWordRow *table, size_t count) {
+      for (size_t i = 0; i < count; i++) {
+        if (!strstr(table[i].en, "%@")) continue;
+        NSString *escaped = [NSRegularExpression escapedPatternForString:@(table[i].en)];
+        NSString *shape = [NSString stringWithFormat:@"^%@$", [escaped stringByReplacingOccurrencesOfString:@"%@" withString:@"([^,·]+?)"]];
+        NSRegularExpression *english = [NSRegularExpression regularExpressionWithPattern:shape options:0 error:NULL];
+        if (english) [all addObject:@[english, @(table[i].tr)]];
+      }
+    };
+    take(MVWordTable, MVWordCount);
+    take(MVWordTableClients, MVWordCountClients);
     rows = all;
   });
   return rows;
@@ -80,6 +102,16 @@ NSString *MVInTurkish(NSString *english) {
 
 NSString *MVWord(NSString *english) {
   return turkish() ? MVInTurkish(english) : english;
+}
+
+NSString *MVFormat(NSString *english, NSArray<NSString *> *values) {
+  NSMutableString *out = [(turkish() ? forms()[english] ?: english : english) mutableCopy];
+  [values enumerateObjectsUsingBlock:^(NSString *value, NSUInteger at, BOOL *stop) {
+    NSRange place = [out rangeOfString:[NSString stringWithFormat:@"%%%lu$@", (unsigned long)at + 1]];
+    if (place.location == NSNotFound) place = [out rangeOfString:@"%@"];
+    if (place.location != NSNotFound) [out replaceCharactersInRange:place withString:value];
+  }];
+  return out;
 }
 
 NSString *MVDecimal(double value) {

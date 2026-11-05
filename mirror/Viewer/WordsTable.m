@@ -86,6 +86,7 @@ const MVWordRow MVWordTable[] = {
     {"Shut Down", "Kapat"},
     {"%@ Shut Down (%@)", "%1$@ Kapalı (%2$@)"},
     {"Window open", "Pencere açık"},
+    {"appdyno Help", "appdyno Yardımı"},
     {"In a window of its own", "Kendi penceresinde"},
     {"Close That Window", "O Pencereyi Kapat"},
     {"Start", "Başlat"},

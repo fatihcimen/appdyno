@@ -7,6 +7,7 @@
 //   appdyno-viewer --hub [--focus]   the window of `appdyno hub`, whose stages stand in its room
 //   appdyno-viewer --selftest [fixtures dir]
 //   appdyno-viewer --encode <h264|hevc> <frames>
+#import "Place.h"
 #import "Viewer.h"
 #import "Window.h"
 #import <CoreGraphics/CoreGraphics.h>
@@ -145,6 +146,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 
 - (void)handleHub:(NSString *)op message:(NSDictionary *)m {
   if ([op isEqual:@"hub"]) return [_hub show:m];
+  if ([op isEqual:@"clients"]) return [_hub showClients:m];
   if ([op isEqual:@"note"]) return [_hub sayNote:m[@"text"] ?: @""];
   if ([op isEqual:@"poke"]) return [_hub poke:m];
   if ([op isEqual:@"snapshot"]) {
@@ -179,6 +181,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 
 - (void)openHub:(BOOL)focus {
   NSApp.mainMenu = MVHubMenu();
+  MVPlaceBehind(_behind);
   _hub = [[MVHub alloc] initWithShow:MVShowOf(focus, _behind) poses:_poses];
   [self forget:@""];
 }

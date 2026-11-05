@@ -21,6 +21,8 @@ export type ClientRow = {
   /** Its last real call. */
   last?: string;
   check?: Named['check'];
+  /** Its name in Turkish, where it has one. */
+  tr?: string;
 };
 
 type Where = Pick<InstallOptions, 'home' | 'env' | 'server'>;
@@ -28,14 +30,17 @@ type Where = Pick<InstallOptions, 'home' | 'env' | 'server'>;
 const heardFrom = (client: Named, link: ClientLink, calls: ClientCall[]) =>
   calls.filter((c) => c.link === link && client.says.test(c.name)).sort(newestFirst)[0];
 
+const spoken = ({ name, check, tr }: Named) => ({ name, check, ...(tr && { tr }) });
+
 const newestFirst = (a: ClientCall, b: ClientCall) => b.last.localeCompare(a.last);
 
 function hereRow(client: Client, file: string, o: Where, calls: ClientCall[]): ClientRow {
   const { did, why } = outcomeFor(client, file, o);
-  const base = { name: client.name, file, check: client.check };
+  const base = { ...spoken(client), file };
   if (did === 'refused') return { ...base, state: 'refused', ...(why && { why }) };
   if (did === 'added') return { ...base, state: 'open' };
-  const stale = did === 'replaced';
+  // only the app has a command of its own: with none, a command set by hand is no staler than the npm package's
+  const stale = did === 'replaced' && o.server !== undefined;
   const call = heardFrom(client, 'stdio', calls);
   return call
     ? { ...base, state: 'connected', last: call.last, ...(stale && { stale }) }
@@ -53,16 +58,13 @@ const stranger = (call: ClientCall): ClientRow => ({
 export function clientRows(o: Where, calls = clientCalls()): ClientRow[] {
   const rows = CLIENTS.map((client): ClientRow => {
     const file = fileOf(client, o);
-    return file
-      ? hereRow(client, file, o, calls)
-      : { name: client.name, state: 'absent', check: client.check };
+    return file ? hereRow(client, file, o, calls) : { ...spoken(client), state: 'absent' };
   });
   const browser = BROWSER_CLIENTS.map((client): ClientRow => {
     const call = heardFrom(client, 'http', calls);
     return {
-      name: client.name,
+      ...spoken(client),
       state: call ? 'connected' : 'browser',
-      check: client.check,
       ...(call && { last: call.last }),
     };
   });
