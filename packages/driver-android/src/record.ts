@@ -21,6 +21,8 @@ const BIT_RATE = 4_000_000;
 /** Text stays legible on a phone's screen at this rate, and a segment stays a few MB. */
 const LIGHT_BIT_RATE = 1_000_000;
 const START_MS = 15_000;
+/** A file made and still empty after this is a device with nothing to draw yet, not one that refused. */
+const FIRST_FRAME_MS = 2_000;
 const PULL_MS = 600_000;
 
 /** The state folder may be on another volume than the video. */
@@ -66,18 +68,24 @@ export class AndroidRecorder implements ScreenRecorder {
     );
     try {
       const end = Date.now() + START_MS;
+      let madeAt: number | undefined;
       for (;;) {
-        // the file appears after screenrecord has set its signal handler; a ring's next segment waits for what is in it,
-        // as a Samsung A52 runs one encoder: a second recording makes its file and dies at the first frame
+        // the file appears after screenrecord has set its signal handler, and fills at the first frame: a Samsung A52 runs
+        // one encoder, so a second recording, or one under a stream, makes its file and dies there
         const out = await this.sh(
-          `cd ${dir} 2>/dev/null && { [ ${light ? '-s' : '-e'} seg1.mp4 ] && echo up; [ -e done ] && cat log; }`,
+          `cd ${dir} 2>/dev/null && { [ -s seg1.mp4 ] && echo up; [ -e done ] && cat log; [ -e seg1.mp4 ] && echo made; }`,
         );
         if (out.startsWith('up')) return { dir, file };
-        if (out.trim() || Date.now() > end) {
+        const said = out.replace(/made\s*$/, '');
+        if (out.trim() && !said.trim()) {
+          madeAt ??= Date.now();
+          if (Date.now() - madeAt >= FIRST_FRAME_MS) return { dir, file };
+        }
+        if (said.trim() || Date.now() > end) {
           await this.sh(`rm -rf ${dir}`);
           throw new DeviceError(
             'UNSUPPORTED',
-            `screenrecord did not start: ${out.trim().slice(0, 300) || `no file after ${START_MS} ms`}`,
+            `screenrecord did not start: ${said.trim().slice(0, 300) || `no file after ${START_MS} ms`}`,
           );
         }
         await pause(150);
