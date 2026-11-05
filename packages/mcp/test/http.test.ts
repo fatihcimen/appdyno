@@ -223,6 +223,69 @@ describe('one client at a time', () => {
     expect((await first.listTools()).tools.length).toBeGreaterThan(10);
   });
 
+  it('refuses at the call a client that connected before the holder first called', async () => {
+    const { url, contexts } = await serving();
+    const a = await clientOf(url, 'client-a');
+    const b = await clientOf(url, 'client-b');
+    await a.callTool({ name: 'list_devices' });
+    await expect(b.callTool({ name: 'list_devices' })).rejects.toThrow(
+      'client-a has held it since',
+    );
+    await expect(b.callTool({ name: 'screen' })).rejects.toThrow('client-a has held it since');
+    await a.callTool({ name: 'list_devices' });
+    expect(contexts).toHaveLength(1);
+  });
+
+  it('knows who calls with nothing but what the call carries, past the end of a seat', async () => {
+    const { url, contexts } = await serving(50);
+    const a = await clientOf(url, 'client-a');
+    const b = await clientOf(url, 'client-b');
+    await a.callTool({ name: 'list_devices' });
+    await new Promise((r) => setTimeout(r, 200));
+    // a call in progress: the seat it took cannot lapse under the second client's
+    const running = a.callTool({
+      name: 'wait_for',
+      arguments: { text: 'never', timeoutMs: 1_000 },
+    });
+    await vi.waitFor(() => expect(contexts.length).toBeGreaterThan(1));
+    await expect(b.callTool({ name: 'list_devices' })).rejects.toThrow(
+      'client-a has held it since',
+    );
+    await running;
+  });
+
+  it('refuses a call that says nothing of who it is, as it may be anyone', async () => {
+    const { url } = await serving();
+    const a = await clientOf(url, 'client-a');
+    await a.callTool({ name: 'list_devices' });
+    const stranger = await post(
+      url,
+      bearer,
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 9,
+        method: 'tools/call',
+        params: { name: 'list_devices', arguments: {} },
+      }),
+    );
+    expect(stranger.status).toBe(409);
+    expect(await stranger.text()).toContain('client-a has held it since');
+  });
+
+  it('leaves the holder its calls and its time, whatever a refused client tries', async () => {
+    const { url, dark } = await serving(1_000);
+    const a = await clientOf(url, 'client-a');
+    const b = await clientOf(url, 'client-b');
+    await a.callTool({ name: 'device_setting', arguments: { name: 'dark_mode', value: 'yes' } });
+    const end = Date.now() + 3_000;
+    // retries faster than the idle time: a seat that lapsed anyway is one they did not keep
+    while (dark.value === 'yes' && Date.now() < end) {
+      await b.callTool({ name: 'list_devices' }).catch(() => undefined);
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    expect(dark.value).toBe('no');
+  });
+
   it('holds nothing for a client that only looked, as a health check does', async () => {
     const { url, contexts } = await serving();
     const check = await clientOf(url, 'check');

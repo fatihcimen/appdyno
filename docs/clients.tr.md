@@ -249,7 +249,7 @@ npx @modelcontextprotocol/inspector --cli "http://127.0.0.1:8765/mcp/$APPDYNO_HT
 
 Sonra `http://127.0.0.1:8765` adresine bir tünel açın; örneğin adlandırılmış bir Cloudflare Tunnel, `ngrok http 8765` ya da `tailscale funnel 8765`. Size verdiği HTTPS adresini kullanın. `cloudflared` hızlı tüneli akış halindeki yanıtları tutar, adlandırılmış tünel kullanın.
 
-**Aynı anda tek istemci.** Bir istemci araç çağırdığı andan itibaren sunucuyu tutar, son çağrısından 10 dakika sonrasına kadar. Başka bir istemci, sunucuyu tutanın adını söyleyen 409 ile reddedilir. Yalnızca araçları listelemiş bir istemci hiçbir şey tutmaz, yani sağlık kontrolü kimseyi engellemez. 10 dakika dolunca ya da sunucuyu durdurunca, cihazda değiştirdiği her şey eski haline döner; bu Mac'teki bir istemci kapandığında olduğu gibi. Bağlam istemci başına değil, tektir: aynı istemcinin ikinci penceresi onu paylaşır. İki istemciyle iki cihaz kullanmak için iki portta iki sunucu çalıştırın.
+**Aynı anda tek istemci.** Bir istemci araç çağırdığı andan itibaren sunucuyu tutar, son çağrısından 10 dakika sonrasına kadar. Başka bir istemci, önce bağlanmış olsa bile çağrısında, sunucuyu tutanın adını söyleyen 409 ile reddedilir. Yalnızca araçları listelemiş bir istemci hiçbir şey tutmaz, yani sağlık kontrolü kimseyi engellemez. 10 dakika dolunca ya da sunucuyu durdurunca, cihazda değiştirdiği her şey eski haline döner; bu Mac'teki bir istemci kapandığında olduğu gibi. Bağlam istemci başına değil, tektir: aynı istemcinin ikinci penceresi onu paylaşır. İki istemciyle iki cihaz kullanmak için iki portta iki sunucu çalıştırın.
 
 Bir çağrı sürerken bağlantı koparsa, çağrı cihazda da durur.
 

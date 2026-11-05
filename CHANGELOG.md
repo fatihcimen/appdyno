@@ -3,6 +3,7 @@
 ## Unreleased
 
 - A window keeps its pictures through a decoder's stall on a busy Mac: pictures already decoding were thrown away with the frame that did not fit, and a stream's first burst could leave a window black until the next key frame.
+- `mcp --http`: a second client is refused at its call, by who is calling: one that connected before the first tool call was served on the same context. Each client gets its name back as its session id, and a call with none is refused while another holds the server. A refused client no longer keeps the holder's time running.
 - `press_key` `app_switch` on a simulator opens the switcher, by the input a window's control sends: the drag it made showed none, and it said pressed.
 - A failed action says `dispatched: "unknown"` once its touch has left for the device: the read after a touch can fail too, and `false` told a client to press again. An app in front that does not answer says so, in the words of a screen that is off.
 - `restore` and the end of a session bring Android's Wi-Fi back: its old value was read while the radio came back from airplane mode, and written down as off.

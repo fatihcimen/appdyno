@@ -249,7 +249,7 @@ npx @modelcontextprotocol/inspector --cli "http://127.0.0.1:8765/mcp/$APPDYNO_HT
 
 Then run a tunnel to `http://127.0.0.1:8765`, such as a named Cloudflare Tunnel, `ngrok http 8765` or `tailscale funnel 8765`, and use the HTTPS address it gives you. A `cloudflared` quick tunnel holds streamed answers back, so use a named one.
 
-**One client at a time.** Once a client has called a tool, it holds the server until 10 minutes after its last call. Another client is refused with a 409 that names the holder, and a client that has only listed the tools holds nothing, so a health check does not get in the way. When the 10 minutes are up, or you stop the server, whatever it changed on the device goes back, as it does when a client on this Mac quits. There is one context, not one per client: a second window of the same client shares it. To drive two devices from two clients, run two servers on two ports.
+**One client at a time.** Once a client has called a tool, it holds the server until 10 minutes after its last call. Another client is refused with a 409 that names the holder, at its call even if it connected first, and a client that has only listed the tools holds nothing, so a health check does not get in the way. When the 10 minutes are up, or you stop the server, whatever it changed on the device goes back, as it does when a client on this Mac quits. There is one context, not one per client: a second window of the same client shares it. To drive two devices from two clients, run two servers on two ports.
 
 If a connection breaks in the middle of a call, the call stops on the device.
 
