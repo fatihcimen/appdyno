@@ -300,6 +300,8 @@ void MVPresent(MVOffscreenWindow *window, MVShow how);
 - (instancetype)initWithShow:(MVShow)how poses:(BOOL)poses;
 /// Where the device chosen stands.
 @property(nonatomic, readonly) NSView *room;
+/// What the parent was told to show.
+@property(nonatomic, readonly, nullable) NSString *chosen;
 - (void)show:(NSDictionary *)message;
 - (void)sayNote:(NSString *)note;
 /// Presses a device's button as a person does.

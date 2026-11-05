@@ -157,6 +157,16 @@ static void checkClicks(void) {
   }
 }
 
+static void checkHubChoice(void) {
+  MVHub *hub = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
+  NSDictionary *phone = @{@"id": @"p", @"serial": @"p", @"kind": @"phone", @"state": @"running", @"name": @"A phone"};
+  NSDictionary *simulator = @{@"id": @"s", @"serial": @"s", @"kind": @"simulator", @"state": @"running", @"name": @"A simulator"};
+  [hub show:@{@"devices": @[phone]}];
+  MVCheck(@"hub: a phone streams only when a person chooses it", hub.chosen == nil, hub.chosen);
+  [hub show:@{@"devices": @[phone, simulator]}];
+  MVCheck(@"hub: a simulator already running may show at once", [hub.chosen isEqual:@"s"], hub.chosen);
+}
+
 static void checkGlass(void) {
   NSView *content = [NSView new];
   NSView *pane = MVGlass(content, 20, nil);
@@ -245,6 +255,7 @@ void MVCheckFrame(void) {
   checkMeasures();
   checkPair();
   checkClicks();
+  checkHubChoice();
   checkMood();
   checkStreamMood();
   checkGestures();

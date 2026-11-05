@@ -71,6 +71,9 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
   it(
     'shows the first device live in its window, the Inspector a click away, and another chosen',
     async () => {
+      // a phone starts only when it is chosen
+      await quiet(3_000);
+      link.send({ op: 'poke', id: serials[0] });
       await until('a first device', () => serials.some(live), LIVE_MS);
       await quiet(2_000);
       await picture('first');

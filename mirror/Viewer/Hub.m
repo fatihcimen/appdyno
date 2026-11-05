@@ -116,6 +116,10 @@ static NSTextField *label(CGFloat size, NSFontWeight weight, NSColor *color) {
   return _room;
 }
 
+- (nullable NSString *)chosen {
+  return _chosen;
+}
+
 - (NSView *)sidebarView {
   NSView *view = [NSView new];
   _search = [NSSearchField new];
@@ -260,9 +264,10 @@ static MVRow *rowOf(NSDictionary *device) {
   for (NSDictionary *device in _devices) {
     // a window that came back after a crash goes on with what stood in it
     if ([device[@"id"] isEqual:_shown[@"id"]] || (!_shown && [(device[@"serial"] ?: device[@"id"]) isEqual:message[@"showing"]])) kept = device;
-    if (!first && [device[@"state"] isEqual:@"running"]) first = device;
+    // a phone is a person's: it is touched only when they choose it
+    if (!first && [device[@"state"] isEqual:@"running"] && ![device[@"kind"] isEqual:@"phone"]) first = device;
   }
-  [self showDevice:kept ?: first ?: _devices.firstObject];
+  [self showDevice:kept ?: first];
   [self listDevices];
 }
 
@@ -291,8 +296,8 @@ static MVRow *rowOf(NSDictionary *device) {
   [_list selectKey:device[@"id"]];
   BOOL running = [device[@"state"] isEqual:@"running"], elsewhere = [device[@"mirrored"] boolValue];
   [self tellChosen:running && !elsewhere ? device[@"serial"] ?: device[@"id"] : nil];
-  _name.stringValue = device ? namedParts(device[@"name"] ?: @"")[0] : @"No device yet";
-  _about.stringValue = !device ? @"Connect a phone with its cable, or make a simulator with +." : elsewhere ? @"In a window of its own" : stateWords(device);
+  _name.stringValue = device ? namedParts(device[@"name"] ?: @"")[0] : _devices.count ? @"Choose a device" : @"No device yet";
+  _about.stringValue = device ? (elsewhere ? @"In a window of its own" : stateWords(device)) : _devices.count ? @"A phone starts only when you choose it." : @"Connect a phone with its cable, or make a simulator with +.";
   _start.title = elsewhere ? @"Close That Window" : @"Start";
   _start.hidden = !device || (running && !elsewhere) || [device[@"kind"] isEqual:@"phone"];
 }
