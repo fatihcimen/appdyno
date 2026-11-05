@@ -498,6 +498,20 @@ describe('a mirror, whatever the device', () => {
     expect(session.status).toMatchObject({ state: 'waiting', need: 'asleep' });
   });
 
+  it('Try Again on a dark screen wakes it, and starts no new stream', async () => {
+    const { session, mirror, clock, live } = setup();
+    await live();
+    mirror.checkAnswer = { ok: false, need: 'asleep' };
+    mirror.push!('asleep');
+    await flush();
+    const opens = mirror.opens;
+    session.askAgain();
+    await flush();
+    await clock.advance(1_000);
+    expect(mirror.wakes).toBe(2);
+    expect(mirror.opens).toBe(opens);
+  });
+
   it('stops whatever it was doing; twice is once', async () => {
     const { session, mirror, viewer, live } = setup();
     await live();

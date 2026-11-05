@@ -1,7 +1,7 @@
 import { MirrorRecording } from './recording.js';
 import { InputQueue } from './input-queue.js';
 import { NEEDS, NeedError, type Need } from './need.js';
-import type { DeviceState, InputEvent, MotionWatch } from './port.js';
+import type { DeviceState, InputEvent } from './port.js';
 import type { MirrorSessionOptions } from './session-options.js';
 import {
   realClock,
@@ -12,6 +12,7 @@ import {
   type MirrorStatus,
 } from './state.js';
 import type { ViewerLink, ViewerMessage } from './viewer.js';
+import { ViewerAsks } from './viewer-asks.js';
 import { heardFromViewer, type ViewerWords } from './viewer-words.js';
 
 const WAITING_POLL_MS = 1_000;
@@ -57,9 +58,10 @@ export class MirrorSession {
   private source: string | undefined;
   private refusedNeed: Need | undefined;
   private asleep = false;
-  private readonly marks: ((ms: number) => void)[] = [];
-  private readonly watches = new Map<string, (m: MotionWatch) => void>();
-  private watchCount = 0;
+  private readonly asks = new ViewerAsks(
+    () => this.viewer,
+    () => this.o.mirror.sendsWhenStill === true,
+  );
   private finish!: (s: MirrorStatus) => void;
   /** Resolved when the session has stopped, with why. */
   readonly stopped = new Promise<MirrorStatus>((r) => (this.finish = r));
@@ -139,22 +141,23 @@ export class MirrorSession {
     return this.source === 'adb' || this.source === 'pipe';
   }
 
-  /** A person asked for a new stream. */
+  /** A person asked for a new stream: on a dark screen, what they want is the screen back. */
   askAgain() {
-    if (this.current.state !== 'stopped') this.renew('a person asked');
+    if (!this.wakeIfDark() && this.current.state !== 'stopped') this.renew('a person asked');
   }
 
-  /** What moved in the stream's frames for this long, read by the viewer that has them decoded. */
-  watch(ms: number, strip: boolean): Promise<MotionWatch> {
-    const id = String(++this.watchCount);
-    this.viewer?.send({ op: 'watch', id, ms, strip });
-    return new Promise((r) => this.watches.set(id, r));
+  private wakeIfDark() {
+    const dark = this.current.state === 'waiting' && this.current.need === 'asleep';
+    if (dark) void this.o.mirror.wake?.().catch(() => undefined);
+    return dark;
   }
 
-  /** The time from now to the next frame to arrive; for the bench, around an input. */
-  mark(): Promise<number> {
-    this.viewer?.send({ op: 'mark', bigger: this.o.mirror.sendsWhenStill === true });
-    return new Promise((r) => this.marks.push(r));
+  watch(ms: number, strip: boolean) {
+    return this.asks.watch(ms, strip);
+  }
+
+  mark() {
+    return this.asks.mark();
   }
 
   /** The same way a person's touch goes. */
@@ -306,11 +309,8 @@ export class MirrorSession {
     zoom: (scale) => (this.zoom = scale),
     control: (m) => this.o.onWindow?.(m),
     done: (id) => this.o.onDone?.(id),
-    marked: (ms) => this.marks.splice(0).forEach((r) => r(ms)),
-    watched: (m) => {
-      this.watches.get(String(m.id))?.(m as unknown as MotionWatch);
-      this.watches.delete(String(m.id));
-    },
+    marked: (ms) => this.asks.marked(ms),
+    watched: (m) => this.asks.watched(m),
     closed: () => (this.closedByPerson = true),
     refused: (need) => (this.refusedNeed = need),
     sleep: () => this.onMacSleep(),
@@ -332,8 +332,7 @@ export class MirrorSession {
   private onInput(e: InputEvent) {
     this.touchedAt = this.clock.now();
     // a click on a dark window is a person who wants the screen back
-    if (this.current.state === 'waiting' && this.current.need === 'asleep' && e.kind === 'touch')
-      void this.o.mirror.wake?.().catch(() => undefined);
+    if (e.kind === 'touch') this.wakeIfDark();
     if (this.o.noInput || this.current.state !== 'live') {
       this.input.dropped++;
       return;

@@ -81,7 +81,7 @@ so a start stops one that was left over; any other client's reads as `taken-over
 
 A phone turned dark by its side button keeps its stream at a picture a second, and the mirror says `waiting asleep`
 while it stays: a new stream would light the screen and undo what a person did. It comes back with the pictures. A
-press of `home` on a dark phone lights its lock screen, and a second opens a phone with no passcode. A click on the window is the one thing that presses it, on a dark phone only. Input is opened anew after a dark screen, as a finger sent on a connection from before it goes nowhere; a swipe sent to
+press of `home` on a dark phone lights its lock screen, and a second opens a phone with no passcode. A click on the window, or its Try Again, is the one thing that presses it, on a dark phone only. Input is opened anew after a dark screen, as a finger sent on a connection from before it goes nowhere; a swipe sent to
 a phone does not open a lock screen.
 
 A phone that turns keeps sending a picture of the same shape with the app on its side. SpringBoard says how the app in front is drawn, four times a second, over a lockdown service of its own, so the window stands the picture up and a touch is turned back on its way down.
@@ -118,7 +118,7 @@ The Inspector (⌥⌘I) is the system's own, 320 points wide and edge to edge, a
 
 While an agent drives, a purple ring runs around the screen, the capsule says so, naming the client where it says who it is, and a dot fades where each tap landed. A request for a person turns the ring orange.
 
-What stands between a device and its picture is said in words with a next step. Asleep or locked, a card stands over the dimmed picture with what to do and **Try Again**, and a click beside its button still goes to the device. A device held up before its first picture has none to dim, so the room says it in the same words. A phone that is unplugged stays the one chosen under **Needs You**, as `Unplugged`, and comes back by itself; it is not swapped for another device. A cable that only charges looks like no phone at all, as nothing reaches this Mac to tell them apart, so what a person reads names that too.
+What stands between a device and its picture is said in words with a next step. Asleep or locked, a card stands over the dimmed picture with what to do and **Try Again**, and a click beside its button still goes to the device. On a dark screen either lights it, as a person who asks wants it back. A device held up before its first picture has none to dim, so the room says it in the same words. A phone that is unplugged stays the one chosen under **Needs You**, as `Unplugged`, and comes back by itself; it is not swapped for another device. A cable that only charges looks like no phone at all, as nothing reaches this Mac to tell them apart, so what a person reads names that too.
 
 Motion is for what changes: a device coming or going in the sidebar, 200 ms; the first frame fading into a bezel that stands at once, 200 ms; the ring, 240 ms; a dot, 300 ms; a step of a measure's bar, 150 ms; one small spring for a regression. Nothing moves at rest, and with Reduce Motion set each is a plain cut. VoiceOver hears a device arriving or leaving and a regression found.
 
