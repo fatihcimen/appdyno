@@ -1,6 +1,7 @@
-/** The server's icon: a plain phone outline. */
-export const DEVICE_ICON_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect x="9" y="3" width="14" height="26" rx="3" fill="none" stroke="#444" stroke-width="2"/><line x1="14" y1="25" x2="18" y2="25" stroke="#444" stroke-width="2" stroke-linecap="round"/></svg>';
+import { SERVER_ICON_SVG } from '@appdyno/core';
+
+/** The server's icon, as a client shows it. */
+export const DEVICE_ICON_SVG = SERVER_ICON_SVG;
 
 export const SERVER_INFO = {
   name: 'appdyno',

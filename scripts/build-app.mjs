@@ -26,6 +26,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildIcns, buildMenuGlyph } from './build-icons.mjs';
 
 /** The runtime, as nodejs.org publishes its digest. The smallest long-term release with years of fixes ahead. */
 const NODE = {
@@ -97,31 +98,12 @@ async function helperBinaries() {
   }
 }
 
-/** The icon of the iOS runner, on a Mac's rounded square with its margin. */
+/** The app's icon and menu glyph, and the same icon for the helper's Dock tile. */
 function icon() {
-  const svg = readFileSync(join(repo, 'ios/Branding/appdyno-icon.svg'), 'utf8');
-  const square = '<rect width="1024" height="1024" fill="url(#bg)"/>';
-  if (!svg.includes(square)) throw new Error('the icon has changed: fit its background here');
-  const made = mkdtempSync(join(tmpdir(), 'appdyno-icon-'));
-  const source = join(made, 'icon.svg');
-  writeFileSync(
-    source,
-    svg
-      .replace('viewBox="0 0 1024 1024"', 'viewBox="-100 -100 1224 1224"')
-      .replace(square, '<rect width="1024" height="1024" rx="228" fill="url(#bg)"/>'),
-  );
-  const set = join(made, `${NAME}.iconset`);
-  mkdirSync(set);
-  for (const size of [16, 32, 128, 256, 512])
-    for (const scale of [1, 2]) {
-      const file = `icon_${size}x${size}${scale === 2 ? '@2x' : ''}.png`;
-      const pixels = String(size * scale);
-      sh('sips', '-s', 'format', 'png', '-z', pixels, pixels, source, '--out', join(set, file));
-    }
-  sh('iconutil', '-c', 'icns', set, '-o', join(resources, `${NAME}.icns`));
+  buildIcns(join(resources, `${NAME}.icns`));
+  buildMenuGlyph(resources);
   mkdirSync(join(helper, 'Contents/Resources'), { recursive: true });
   copyFileSync(join(resources, `${NAME}.icns`), join(helper, 'Contents/Resources', `${NAME}.icns`));
-  rmSync(made, { recursive: true, force: true });
 }
 
 /** No Dock icon of its own: a window's process takes one, and gives it up with the window. */

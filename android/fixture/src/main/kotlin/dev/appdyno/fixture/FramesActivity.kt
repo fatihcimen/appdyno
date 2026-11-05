@@ -17,7 +17,7 @@ class FramesActivity : Activity() {
     private class Animated(ctx: Activity) : View(ctx) {
         var costMs = 0L
         var until = 0L
-        private val paint = Paint().apply { color = 0xFF5D3EBC.toInt() }
+        private val paint = Paint().apply { color = 0xFFDE3222.toInt() }
         override fun onDraw(canvas: Canvas) {
             val now = android.os.SystemClock.uptimeMillis()
             if (costMs > 0) Thread.sleep(costMs)

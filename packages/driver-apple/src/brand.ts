@@ -7,7 +7,7 @@ import { run } from '@appdyno/core';
 /** What the runner shows on the home screen. */
 export const RUNNER_NAME = 'appdyno';
 /** Part of a signed runner's cache key: a new branding means a new build on the phone. */
-export const BRAND_VERSION = '1';
+export const BRAND_VERSION = '2';
 const ICONS = ['AppIcon60x60@2x.png', 'AppIcon60x60@3x.png'];
 
 /**

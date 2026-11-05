@@ -230,6 +230,10 @@ int main(int argc, char **argv) {
     // not one a launch brings forward: the app in front hands that to what it starts, so a terminal a person is typing in
     // would give it their keys. It can take none until it has launched, and a window kept behind can take none ever.
     application.activationPolicy = NSApplicationActivationPolicyProhibited;
+    // in the app its bundle names the Dock tile; run from a package it has no bundle to name one
+    NSUInteger tile = [args indexOfObject:@"--tile"];
+    if (tile != NSNotFound && args.count > tile + 1 && !NSBundle.mainBundle.infoDictionary[@"CFBundleIconFile"])
+      application.applicationIconImage = [[NSImage alloc] initWithContentsOfFile:args[tile + 1]];
     NSUInteger look = [args indexOfObject:@"--appearance"];
     if (look != NSNotFound && args.count > look + 1) {
       application.appearance = [NSAppearance appearanceNamed:[args[look + 1] isEqual:@"dark"] ? NSAppearanceNameDarkAqua : NSAppearanceNameAqua];

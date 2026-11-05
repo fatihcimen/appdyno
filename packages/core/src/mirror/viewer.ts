@@ -150,6 +150,10 @@ export const startViewer =
   async () =>
     new ViewerProcess(
       await viewerBinary(env),
-      headless ? ['--headless'] : behind ? ['--behind'] : [],
+      [
+        ...(headless ? ['--headless'] : behind ? ['--behind'] : []),
+        '--tile',
+        join(viewerSources(), 'tile.png'),
+      ],
       env,
     );

@@ -16,6 +16,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@appdyno/core": "workspace:*",
     "@appdyno/ops": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.32.1"
   }

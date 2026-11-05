@@ -67,7 +67,7 @@ class FrozenActivity : Activity() {
         val drawMs = asked("draw", 0).toLong()
         column {
             val status = label("ready", R.id.frozen_status)
-            val paint = Paint().apply { color = 0xFF5D3EBC.toInt() }
+            val paint = Paint().apply { color = 0xFFDE3222.toInt() }
             val animated = object : View(context) {
                 var toDraw = 0
                 override fun onDraw(canvas: Canvas) {

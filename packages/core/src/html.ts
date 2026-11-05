@@ -53,5 +53,4 @@ pre{font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(
 @media screen and (max-width:720px){.bar{padding:.7rem 1rem}.bar .m{margin-left:0}}
 @media print{.bar{position:static;margin:0 0 1rem;padding:0 0 .5rem;background:none;-webkit-backdrop-filter:none;backdrop-filter:none}.card{box-shadow:none}}`;
 
-/** A phone with a pulse on it: drawn here, and the only picture a page has of its own. */
-export const PAGE_MARK = `<svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="1.5" width="13" height="21" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 13h2.2l1.4-4 2 6.5 1.3-2.5H16" fill="none" stroke="var(--series)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+export { PAGE_MARK, SERVER_ICON_SVG } from './mark.js';

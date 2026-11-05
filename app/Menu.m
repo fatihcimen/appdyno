@@ -61,8 +61,9 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
 
 - (void)showItem {
   _item = [NSStatusBar.systemStatusBar statusItemWithLength:NSSquareStatusItemLength];
-  _item.button.image = [NSImage imageWithSystemSymbolName:@"iphone" accessibilityDescription:@"Appdyno"];
+  _item.button.image = [NSImage imageNamed:@"menuTemplate"];
   _item.button.image.template = YES;
+  _item.button.image.accessibilityDescription = @"Appdyno";
   _item.menu = [NSMenu new];
   _item.menu.delegate = self;
   [self fill:_item.menu];
