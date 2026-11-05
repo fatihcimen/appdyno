@@ -11,6 +11,8 @@ import {
   addToBaseline,
   loadBaseline,
   loadBudgets,
+  MIN_BASELINE_RUNS,
+  runsIn,
   type KeyReport,
   type PerfRecord,
   reportKey,
@@ -57,7 +59,7 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
         app: z.string().max(200).optional(),
         scenario: Scenario,
         deviceClass: z.string().max(200).optional(),
-        last: z.number().int().min(1).max(20).default(1).describe('newest runs to pool'),
+        last: z.number().int().min(1).max(20).default(1).describe('newest runs to use'),
         replace: z.boolean().optional(),
         format: z.enum(['text', 'json', 'junit']).default('text'),
       })
@@ -146,8 +148,17 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
         ...(scenario && { scenario }),
         ...(deviceClass && { deviceClass }),
       });
-      if (keys.length === 0)
-        throw new ToolError('no measured runs: run a perf_ operation first', 'NOT_FOUND');
+      if (keys.length === 0) {
+        const others = deviceClass
+          ? await runKeys(dir, { ...(app && { app }), ...(scenario && { scenario }) })
+          : [];
+        throw new ToolError(
+          others.length > 0
+            ? `no runs of device class ${deviceClass}: they are under ${[...new Set(others.map((k) => k.deviceClass))].join(', ')}`
+            : 'no measured runs: run a perf_ operation first',
+          'NOT_FOUND',
+        );
+      }
       if (action === 'reference') {
         const taken = [];
         for (const k of keys) taken.push(await looks.reference(k));
@@ -164,26 +175,48 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
         const files: string[] = [];
         let left = 0;
         for (const k of keys) {
-          const [newest = []] = await latestRuns(dir, k);
-          // a reference taken under load would hide every later change; a number of the device's own in the same run stands
-          const loudOf = (r: PerfRecord) => r.noise.filter((n) => n !== 'debuggable-build');
-          const clean = newest.filter((r) => loudOf(r).length === 0);
-          const noisy = newest.filter((r) => loudOf(r).length > 0);
-          const said = [...new Set(noisy.flatMap(loudOf))].join(', ');
-          if (clean.length === 0) {
+          const runs = await latestRuns(dir, k, last);
+          let base = await loadBaseline(project, k);
+          let anew = replace;
+          let usable = 0;
+          let repeated = 0;
+          // oldest first, as a baseline holds them
+          for (const run of runs.toReversed()) {
+            // a reference taken under load would hide every later change; a number of the device's own in the same run stands
+            const loudOf = (r: PerfRecord) => r.noise.filter((n) => n !== 'debuggable-build');
+            const clean = run.filter((r) => loudOf(r).length === 0);
+            const noisy = run.filter((r) => loudOf(r).length > 0);
+            const said = [...new Set(noisy.flatMap(loudOf))].join(', ');
+            if (clean.length === 0) {
+              lines.push(`not added, ${said}: measure ${k.scenario} again`);
+              continue;
+            }
+            const before = runsIn(base);
+            base = addToBaseline(k, base, clean, anew);
+            if (!anew && runsIn(base) === before) repeated++;
+            anew = false;
+            usable++;
+            await pinBaseline(stateDir(), clean);
+            if (noisy.length)
+              lines.push(`left out, ${said}: ${noisy.map((r) => r.kind).join(', ')}`);
+          }
+          if (!base || usable === 0) {
             left++;
-            lines.push(`not added, ${said}: measure ${k.scenario} again`);
             continue;
           }
-          const file = await saveBaseline(
-            project,
-            addToBaseline(k, await loadBaseline(project, k), clean, replace),
-          );
-          await pinBaseline(stateDir(), clean);
+          const file = await saveBaseline(project, base);
           files.push(file);
+          const held = runsIn(base);
           lines.push(
-            `baseline: ${file}`,
-            ...(noisy.length ? [`left out, ${said}: ${noisy.map((r) => r.kind).join(', ')}`] : []),
+            [
+              `baseline: ${file}: ${held} run${held === 1 ? '' : 's'}${held < MIN_BASELINE_RUNS ? `, of the ${MIN_BASELINE_RUNS} a comparison needs` : ''}`,
+              ...(repeated ? [`${repeated} already in it, not added again`] : []),
+              ...(runs.length < last
+                ? [
+                    `only ${runs.length} of the ${last} runs asked for ${runs.length === 1 ? 'is' : 'are'} kept`,
+                  ]
+                : []),
+            ].join('; '),
           );
         }
         await rewriteDashboard(ctx);

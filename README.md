@@ -354,7 +354,7 @@ import.
 
 ```sh
 appdyno test flows/login.flow --measure --device <id>       # three times, then:
-appdyno perf baseline --app A --scenario journey-login
+appdyno perf baseline --app A --scenario journey-login --last 3
 appdyno test flows/login.flow --measure --device <id>
 appdyno perf compare --app A --scenario journey-login       # exit 1, naming the step that got slower
 ```

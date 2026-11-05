@@ -410,8 +410,10 @@ describe('the gate, asked why', () => {
     });
     const scenario = 'launch-cold';
     const measure = () => t.call('perf_launch', { mode: 'cold', repeats: 6, scenario });
-    await measure();
-    for (let i = 0; i < 3; i++) await t.call('perf_compare', { action: 'baseline', scenario });
+    for (let i = 0; i < 3; i++) {
+      await measure();
+      await t.call('perf_compare', { action: 'baseline', scenario });
+    }
     await t.call('perf_compare', { action: 'reference', scenario });
     start.bind = 1_000;
     start.total = 1_100;
@@ -459,9 +461,10 @@ describe('the gate, asked why', () => {
     t.device.virtual = true;
     const file = flowFile();
     const measure = () => t.call('flow', { action: 'run', file, iterations: 5 });
-    await measure();
-    for (let i = 0; i < 3; i++)
+    for (let i = 0; i < 3; i++) {
+      await measure();
       await t.call('perf_compare', { action: 'baseline', scenario: SCENARIO });
+    }
     t.device.formMs = 1_100;
     host.load = 1_000;
     await measure();

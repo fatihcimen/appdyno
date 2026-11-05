@@ -336,13 +336,21 @@ describe('store and reports', () => {
     const newest = await latestRuns(d, key!);
     expect(newest[0]![0]!.run).toBe('r2');
     expect(await loadBaseline(project, key!)).toBeUndefined();
+    const held = (n: number) =>
+      context([500, 505, 510, 515, 520], `b${n}`, `2026-11-02T00:0${n}:00.000Z`);
     await saveBaseline(
       project,
-      addToBaseline(key!, addToBaseline(key!, addToBaseline(key!, undefined, a), a), a),
+      addToBaseline(
+        key!,
+        addToBaseline(key!, addToBaseline(key!, undefined, held(1)), held(2)),
+        held(3),
+      ),
     );
     const baseline = await loadBaseline(project, key!);
     expect(baseline!.metrics['launch.ttid_ms']!.runs).toHaveLength(3);
     expect(addToBaseline(key!, baseline, a).metrics['launch.ttid_ms']!.runs).toHaveLength(4);
+    // one run counts once: three calls on it would meet the count with no movement in it
+    expect(addToBaseline(key!, baseline, held(1)).metrics['launch.ttid_ms']!.runs).toHaveLength(3);
     expect(addToBaseline(key!, baseline, a, true).metrics['launch.ttid_ms']!.runs).toHaveLength(1);
 
     const report = reportKey(key!, newest, baseline, []);

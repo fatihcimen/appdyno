@@ -204,7 +204,10 @@ export function pairedChange(before: number[], after: number[], unit: Unit) {
   };
 }
 
-/** A baseline's metrics with one more run added (or, `replace`, this run only). */
+/**
+ * A baseline's metrics with one more run added (or, `replace`, this run only). A run already there is not added
+ * again: it would meet the count of runs with no movement between them, which that count is there to measure.
+ */
 export function addToBaseline(
   key: { app: string; scenario: string; deviceClass: string },
   previous: Baseline | undefined,
@@ -220,14 +223,16 @@ export function addToBaseline(
       ...(r.compile && { compile: r.compile }),
       noise: r.noise,
     };
-    metrics[r.kind] = {
-      unit: r.unit,
-      better: r.better,
-      runs: [...(metrics[r.kind]?.runs ?? []), run],
-    };
+    const held = metrics[r.kind]?.runs ?? [];
+    if (held.some((x) => x.at === r.at)) continue;
+    metrics[r.kind] = { unit: r.unit, better: r.better, runs: [...held, run] };
   }
   return { schema: 1, ...key, metrics };
 }
+
+/** How many runs a baseline holds: of the metric that has most. */
+export const runsIn = (b: Baseline | undefined) =>
+  Math.max(0, ...Object.values(b?.metrics ?? {}).map((m) => m.runs.length));
 
 /** Limits a project sets. A rule without app, scenario or device class holds for all. */
 export type BudgetRule = {

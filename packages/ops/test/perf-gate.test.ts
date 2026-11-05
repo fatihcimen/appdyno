@@ -1,7 +1,8 @@
-import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { stateDir, type MeasureSource } from '@appdyno/core';
+import type { Baseline } from '@appdyno/perf';
 import { describe, expect, it } from 'vitest';
 import { leakSignal } from '../src/perf/scroll.js';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
@@ -59,11 +60,9 @@ describe('the gate', () => {
     const project = fresh();
     const startup = { ms: 500 };
     const ops = context(startup, dir, project);
-    await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
-    const b = await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
-    expect(text(b)).toMatch(/baselines\/dev\.appdyno\.fixture\/launch-cold\//);
-    for (let i = 0; i < 2; i++)
-      await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
+    for (let i = 0; i < 3; i++) await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
+    const b = await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 3 });
+    expect(text(b)).toMatch(/baselines\/dev\.appdyno\.fixture\/launch-cold\/.*: 3 runs$/m);
 
     await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
     const same = await ops.perf_compare!.handler({ action: 'compare', format: 'text', last: 1 });
@@ -87,6 +86,35 @@ describe('the gate', () => {
     const budget = await ops.perf_compare!.handler({ action: 'budget', format: 'text', last: 1 });
     expect(text(budget)).toMatch(/over budget launch\.ttid_ms: 902.5 \(max 800\)/);
     expect(budget.data.exitCode).toBe(1);
+  });
+
+  it('counts a run once, however often it is asked for', async () => {
+    const ops = context({ ms: 500 }, fresh(), fresh());
+    const runs = (b: { data: { baselines?: string[] } }) =>
+      Object.values(
+        (JSON.parse(readFileSync(b.data.baselines![0]!, 'utf8')) as Baseline).metrics,
+      )[0]!.runs.length;
+    await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
+    const first = await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
+    expect(text(first)).toContain('1 run, of the 3 a comparison needs');
+    const again = await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 3 });
+    expect(runs(again)).toBe(1);
+    expect(text(again)).toContain('1 already in it, not added again');
+    expect(text(again)).toContain('only 1 of the 3 runs asked for is kept');
+  });
+
+  it('says which classes have runs when the one asked for has none', async () => {
+    const dir = fresh();
+    const ops = context({ ms: 500 }, dir, fresh());
+    await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
+    await expect(
+      ops.perf_compare!.handler({
+        action: 'compare',
+        deviceClass: 'nope',
+        format: 'text',
+        last: 1,
+      }),
+    ).rejects.toThrow(/no runs of device class nope: they are under \S+/);
   });
 
   it('adds no run measured with noise to a baseline', async () => {
