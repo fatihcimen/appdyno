@@ -56,7 +56,7 @@ function lastWord(serial: string): string {
 }
 
 export function mirrorOps(ctx: ServerContext) {
-  const open = async (quality: string) => {
+  const open = async (quality: string, wifi: boolean) => {
     const serial = await ctx.defaultSerial();
     checkDevice(ctx.policy, serial);
     const running = liveMirror(serial);
@@ -79,7 +79,15 @@ export function mirrorOps(ctx: ServerContext) {
     const out = openSync(log, 'w', 0o600);
     const child = spawn(
       command[0]!,
-      [...command.slice(1), '--device', serial, '--input-on-click', '--quality', quality],
+      [
+        ...command.slice(1),
+        '--device',
+        serial,
+        '--input-on-click',
+        '--quality',
+        quality,
+        ...(wifi ? ['--wifi'] : []),
+      ],
       { detached: true, stdio: ['ignore', out, out] },
     );
     closeSync(out);
@@ -132,17 +140,18 @@ export function mirrorOps(ctx: ServerContext) {
       name: 'mirror',
       title: 'Live window',
       description:
-        'A live screen mirror for your person, who can touch it as you drive: open, close, status (what stands in its way, and the fix), stats (true frame rates, fps). No frames here: screenshot and record are yours.',
+        'A live screen mirror for your person, who can touch it as you drive: open, close, status (what stands in its way, the fix), stats (true frame rates, fps). No frames: use screenshot, record.',
       input: z
         .object({
           action: z.enum(['open', 'close', 'status', 'stats']),
           quality: z.enum(['auto', 'high', 'standard']).default('auto'),
+          wifi: z.boolean().default(false),
         })
         .strict(),
       output: MirrorOut,
       annotations: ACT,
-      run: async ({ action, quality }) => {
-        if (action === 'open') return open(quality);
+      run: async ({ action, quality, wifi }) => {
+        if (action === 'open') return open(quality, wifi);
         if (action === 'close') return close();
         const mirrors = liveMirrors().filter((f) => ctx.allowed(f.serial));
         if (mirrors.length === 0) return reply('no mirror is open', { done: 'none', mirrors: [] });

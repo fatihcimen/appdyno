@@ -11,7 +11,7 @@ import type {
 } from '@appdyno/core';
 import { pause } from '@appdyno/core';
 import { DeviceError, type Key, KEY_USAGES, keyOfUsage, KEYS } from '@appdyno/protocol';
-import type { Adb } from './adb.js';
+import { overNetwork, type Adb } from './adb.js';
 import type { AndroidAgentLauncher } from './agent.js';
 
 /** Android 10: below it the agent has no mirror to make. */
@@ -27,6 +27,7 @@ const WATCH_MS = 1_000;
 const PROOF_MS = 3_000;
 const BEHIND =
   'This device cannot keep up. The picture stays at a size that can be read, and runs late.';
+const ON_WIFI = 'On Wi-Fi: frames and touches take the longer way. A cable gives more.';
 
 /** A failure that no wait will clear: another tool holds the device, or the agent is not built. */
 const fatal = (e: unknown) => {
@@ -79,7 +80,7 @@ export class AndroidMirror implements Mirror {
     this.sdk ??= Number(await this.adb.exec(this.serial, 'getprop ro.build.version.sdk'));
     if (this.sdk < MIN_SDK) return { ok: false, need: 'os-too-old', detail: `SDK ${this.sdk}` };
     return (await this.status()).on
-      ? { ok: true, routes: ['agent'] }
+      ? { ok: true, routes: ['agent', ...(overNetwork(this.serial) ? ['wifi'] : [])] }
       : { ok: false, need: 'asleep' };
   }
 
@@ -110,6 +111,7 @@ export class AndroidMirror implements Mirror {
       codec: opts.codec ?? 'h264',
       ...(this.adb.port !== 5037 && { adbPort: this.adb.port }),
       start: { quality: opts.quality, ...start },
+      ...(overNetwork(this.serial) && { note: ON_WIFI }),
     };
   }
 
@@ -206,7 +208,12 @@ export class AndroidMirror implements Mirror {
           if (result.behind && !this.toldBehind) this.say(BEHIND);
           this.toldBehind ||= result.behind === true;
         })
-        .catch(() => undefined);
+        .catch(() => {
+          // a cable that goes ends the socket; a network that goes ends nothing, and this is all that tells
+          if (!overNetwork(this.serial) || state === 'not-connected') return;
+          state = 'not-connected';
+          onChange(state);
+        });
     }, WATCH_MS);
     timer.unref();
     return () => clearInterval(timer);

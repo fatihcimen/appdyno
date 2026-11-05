@@ -56,6 +56,16 @@ describe('a mirror, whatever the device', () => {
     expect(viewer().of('status').at(-1)).toMatchObject({ state: 'live' });
   });
 
+  it('says on the window that it goes by the network, and what a person should know of it', async () => {
+    const { mirror, viewer, session, live } = setup();
+    mirror.checkAnswer = { ok: true, routes: ['tunnel', 'wifi'] };
+    mirror.source = { kind: 'pipe', file: '/f', codec: 'hevc', note: 'On Wi-Fi: slower' };
+    await live();
+    expect(viewer().of('attach')[0]).toMatchObject({ title: 'a device on Wi-Fi' });
+    expect(viewer().of('note')).toMatchObject([{ text: 'On Wi-Fi: slower' }]);
+    expect(session.status.note).toBe('On Wi-Fi: slower');
+  });
+
   it('gives a window how to draw its device', async () => {
     const look = { frame: { model: 'iPhone 17 Pro' }, controls: ['home'] };
     const { session, viewer } = setup({ look });
@@ -702,6 +712,7 @@ describe('the table of needs', () => {
       [
         'locked',
         'asleep',
+        'not-paired',
         'not-trusted',
         'developer-mode-off',
         'ui-automation-off',

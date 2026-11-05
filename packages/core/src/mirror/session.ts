@@ -198,7 +198,7 @@ export class MirrorSession {
     if (this.current.state !== 'reconnecting') this.set({ state: 'connecting' });
     let check;
     try {
-      check = await this.o.mirror.check();
+      check = await this.o.mirror.check(this.o.options);
     } catch (e) {
       if (!stale()) this.onCheckFailed(e);
       return;
@@ -219,12 +219,13 @@ export class MirrorSession {
       this.viewer?.send({
         op: 'attach',
         source,
-        title: this.o.title,
+        title: check.routes.includes('wifi') ? `${this.o.title} on Wi-Fi` : this.o.title,
         input: this.o.noInput ? false : this.o.inputOnClick ? 'click' : true,
         ...(this.o.look && { look: this.o.look }),
         focus: this.o.focus === true && !this.focused,
         ...(this.zoom && { zoom: this.zoom }),
       });
+      if (this.note) this.viewer?.send({ op: 'note', text: this.note });
       this.focused = true;
       this.armFirstFrame(run);
     } catch (e) {
@@ -258,7 +259,7 @@ export class MirrorSession {
       this.set({ state: 'waiting', need });
     const run = this.run;
     this.schedule(WAITING_POLL_MS, () => {
-      void this.o.mirror.check().then(
+      void this.o.mirror.check(this.o.options).then(
         (c) => {
           if (run !== this.run) return;
           if (c.ok) void this.connect();
@@ -361,7 +362,7 @@ export class MirrorSession {
   /** Lost, and the device may say why: gone, off, asleep. */
   private afterLoss(why: string) {
     const run = ++this.run;
-    void this.o.mirror.check().then(
+    void this.o.mirror.check(this.o.options).then(
       (c) => {
         if (run !== this.run) return;
         if (c.ok) this.reconnect(why);

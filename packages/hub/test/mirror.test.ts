@@ -67,6 +67,29 @@ function pixelsDevice(serial: string, recorder?: object) {
   return { serial, mirror, hardware, recorder, close: vi.fn() } as unknown as Device;
 }
 
+describe('--wifi', () => {
+  it('is refused in words on a device that does not take it', async () => {
+    const ctx = context(['a-device']);
+    const log = vi.fn();
+    const code = await runMirrors(ctx, {
+      serials: ['a-device'],
+      all: false,
+      watch: false,
+      max: 1,
+      options: { quality: 'auto', wifi: true },
+      headless: true,
+      behind: true,
+      noInput: false,
+      focus: false,
+      inputOnClick: false,
+      log,
+    });
+    expect(code).toBeDefined();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('--wifi is for an iPhone'));
+    ctx.close();
+  });
+});
+
 function context(
   serials: string[],
   over: { policy?: object; command?: string[]; recorder?: object } = {},

@@ -45,6 +45,8 @@ const MVWordRow MVWordTable[] = {
     {"Wake the device. The picture comes back by itself.", "Cihazı uyandırın. Görüntü kendiliğinden geri gelir."},
     {"The device does not trust this Mac", "Cihaz bu Mac'e güvenmiyor"},
     {"Unlock it and tap Trust, or accept the USB debugging prompt.", "Kilidini açıp Güven'e dokunun ya da USB hata ayıklama isteğini onaylayın."},
+    {"This Mac is not paired with the phone for Wi-Fi", "Bu Mac, Wi-Fi için telefonla eşleştirilmemiş"},
+    {"Plug it in and run appdyno pair, then accept on the phone.", "Telefonu kabloyla bağlayıp appdyno pair komutunu çalıştırın, sonra telefonda onaylayın."},
     {"Developer Mode is off", "Geliştirici Modu kapalı"},
     {"Settings, Privacy & Security, Developer Mode.", "Ayarlar, Gizlilik ve Güvenlik, Geliştirici Modu."},
     {"UI Automation is off", "UI Otomasyonu kapalı"},

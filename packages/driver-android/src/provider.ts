@@ -1,6 +1,6 @@
 import type { Check, DeviceProvider, Need } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { Adb } from './adb.js';
+import { Adb, overNetwork } from './adb.js';
 import { androidGuide } from './guide.js';
 import { agentApk } from './agent.js';
 import { AndroidDevice } from './device.js';
@@ -73,7 +73,11 @@ export async function androidChecks(adb: Adb, serial?: string): Promise<Check[]>
       ok: d.state === 'device',
       detail: `${d.state}${d.props.model ? `, ${d.props.model}` : ''}`,
       ...(d.state === 'unauthorized' && { fix: 'accept the USB debugging prompt on the phone' }),
-      ...(d.state === 'offline' && { fix: 'reconnect the cable, or restart the emulator' }),
+      ...(d.state === 'offline' && {
+        fix: overNetwork(d.serial)
+          ? 'join the phone to this network, with Wireless debugging on'
+          : 'reconnect the cable, or restart the emulator',
+      }),
     });
   if (!serial) return checks;
   const dev = (await adb.devices()).find((d) => d.serial === serial);

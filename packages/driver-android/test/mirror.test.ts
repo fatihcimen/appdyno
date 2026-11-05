@@ -78,6 +78,57 @@ describe('an Android mirror', () => {
     }
   });
 
+  it('a network that goes silent reads as a cable pulled, once, and its return as a return', async () => {
+    vi.useFakeTimers();
+    try {
+      const adb = { port: 5037 } as unknown as Adb;
+      const { rpc, launcher } = setup();
+      const mirror = new AndroidMirror(adb, '192.168.1.5:41111', launcher);
+      await mirror.status();
+      const seen: string[] = [];
+      const stop = mirror.watch((s) => seen.push(s));
+      rpc.call.mockRejectedValue(new Error('no answer'));
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(seen).toEqual(['not-connected']);
+      rpc.call.mockResolvedValue({ result: { on: true } });
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(seen).toEqual(['not-connected', 'ok']);
+      stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a cable with a slow answer stays as it is: its end is the socket', async () => {
+    vi.useFakeTimers();
+    try {
+      const { mirror, rpc } = setup();
+      await mirror.status();
+      const seen: string[] = [];
+      const stop = mirror.watch((s) => seen.push(s));
+      rpc.call.mockRejectedValue(new Error('no answer'));
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(seen).toEqual([]);
+      stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('says on an address that it goes by the network, and what that costs', async () => {
+    const adb = {
+      port: 5037,
+      devices: async () => [{ serial: '192.168.1.5:41111', state: 'device', props: {} }],
+      exec: async () => '34',
+    } as unknown as Adb;
+    const { launcher } = setup();
+    const mirror = new AndroidMirror(adb, '192.168.1.5:41111', launcher);
+    await expect(mirror.check()).resolves.toEqual({ ok: true, routes: ['agent', 'wifi'] });
+    await expect(mirror.open({ quality: 'auto' })).resolves.toMatchObject({
+      note: expect.stringContaining('On Wi-Fi'),
+    });
+  });
+
   it('says what stands in the way, in the words of the table', async () => {
     await expect(setup({ state: undefined }).mirror.check()).resolves.toMatchObject({
       need: 'not-connected',

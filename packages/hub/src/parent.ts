@@ -97,6 +97,12 @@ export class Parent {
       );
     }
     const device = this.ctx.deviceFor(serial);
+    if (this.o.options.wifi && !device.mirror?.wifi) {
+      throw new ToolError(
+        `--wifi is for an iPhone: ${serial} is on the network already if its address says so`,
+        'INVALID_ARGUMENT',
+      );
+    }
     const file = {
       pid: process.pid,
       started: startOf(process.pid),

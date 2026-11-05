@@ -1,7 +1,10 @@
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, type AddressInfo, type Server } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DeviceError } from '@appdyno/protocol';
-import { Adb, assertSerial, parseDevices, shq } from '../src/adb.js';
+import { Adb, assertSerial, overNetwork, parseDevices, shq } from '../src/adb.js';
 import { AndroidDevice } from '../src/device.js';
 
 describe('an agent reached', () => {
@@ -189,10 +192,49 @@ describe('adb helpers', () => {
     expect(shq('demo://x?a=1&b=2')).toBe(`'demo://x?a=1&b=2'`);
   });
 
+  it('reads a phone found by name on the network, a second one of that name too', () => {
+    expect(
+      parseDevices(
+        '192.168.1.5:41111 device model:A transport_id:7\nadb-R68-Ab (2)._adb-tls-connect._tcp device model:B\n',
+      ),
+    ).toMatchObject([
+      { serial: '192.168.1.5:41111', state: 'device', props: { model: 'A' } },
+      { serial: 'adb-R68-Ab (2)._adb-tls-connect._tcp', state: 'device', props: { model: 'B' } },
+    ]);
+    expect(overNetwork('192.168.1.5:41111')).toBe(true);
+    expect(overNetwork('[fe80::1]:5555')).toBe(true);
+    expect(overNetwork('adb-R68-Ab._adb-tls-connect._tcp')).toBe(true);
+    expect(overNetwork('emulator-5580')).toBe(false);
+    expect(overNetwork('EXAMPLE0SERIAL')).toBe(false);
+  });
+
+  it('pairs by what the phone shows, and says what adb said when it did not', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-adb-'));
+    const bin = join(dir, 'adb');
+    writeFileSync(bin, '#!/bin/sh\necho "$@" > "$0.args"\necho "Successfully paired to $2"\n');
+    chmodSync(bin, 0o755);
+    await new Adb({ bin }).pair('192.168.1.5:37000', '123456');
+    expect(readFileSync(`${bin}.args`, 'utf8').trim()).toBe('pair 192.168.1.5:37000 123456');
+    writeFileSync(bin, '#!/bin/sh\necho "Enter pairing code: nothing"\n');
+    await expect(new Adb({ bin }).pair('192.168.1.5:37000', '1')).rejects.toThrow('did not pair');
+    writeFileSync(bin, '#!/bin/sh\necho "Failed: Wrong password"\nexit 1\n');
+    await expect(new Adb({ bin }).pair('192.168.1.5:37000', '1')).rejects.toThrow('Wrong password');
+    await expect(new Adb({ bin }).pair('a;b', '1')).rejects.toThrow('not a device serial');
+    rmSync(dir, { recursive: true });
+  });
+
   it('refuses a serial that could inject into the adb request', () => {
     expect(() => assertSerial('emulator-5580')).not.toThrow();
     expect(() => assertSerial('a;b')).toThrow();
-    expect(() => assertSerial('x'.repeat(65))).toThrow();
+    expect(() => assertSerial('x'.repeat(97))).toThrow();
+    for (const wireless of [
+      '192.168.1.5:41111',
+      '[fe80::1%wlan0]:5555',
+      'adb-EXAMPLE0SERIAL-AbCdEf._adb-tls-connect._tcp',
+      'adb-EXAMPLE0SERIAL-AbCdEf (2)._adb-tls-connect._tcp',
+    ])
+      expect(assertSerial(wireless)).toBe(wireless);
+    expect(() => assertSerial('a$(b)')).toThrow();
   });
 });
 

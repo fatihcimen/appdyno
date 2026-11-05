@@ -26,13 +26,17 @@ export type AdbOptions = {
 /** How long a request may go unanswered: adb itself waits for ever on a device that stopped answering it. */
 const ANSWER_MS = 15_000;
 
-const SERIAL = /^[\w.:-]{1,64}$/;
+/** A cable's serial, or what wireless debugging gives: an address, an IPv6 one in brackets, or an mDNS name. */
+const SERIAL = /^[\w.:%[\]() -]{1,96}$/;
 
 export function assertSerial(serial: string): string {
   if (!SERIAL.test(serial))
     throw new DeviceError('INVALID_ARGUMENT', `not a device serial: ${serial}`);
   return serial;
 }
+
+/** A serial of a phone reached by the network: it is an address, or a name adb found on the network. */
+export const overNetwork = (serial: string) => /:\d+$|\._adb-tls-connect\._tcp/.test(serial);
 
 /** One argument for the device's `sh -c`: single-quoted, quotes inside escaped. */
 const PACKAGE_NAME = /^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/;
@@ -58,6 +62,8 @@ export const amStartError = (out: string) =>
     .slice(0, 200);
 
 export const shq = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
+
+const PAIR_MS = 30_000;
 
 class Reader {
   private chunks: Buffer[] = [];
@@ -212,6 +218,14 @@ export class Adb {
     return { close: () => socket.destroy() };
   }
 
+  /** Pairs with a phone by the code it shows under Wireless debugging. Connecting is adb's own, or a later `connect`. */
+  async pair(address: string, code: string) {
+    assertSerial(address);
+    const said = await this.run(['pair', address, code], PAIR_MS);
+    if (!/Successfully paired/.test(said))
+      throw new DeviceError('CHECK_FAILED', `adb did not pair: ${shortFirstLine(said)}`);
+  }
+
   /** Runs the adb binary (push, install); `stop` ends it early, as the call's own signal does. */
   run(args: string[], timeoutMs = 120_000, stop?: AbortSignal): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -320,7 +334,9 @@ export function parseDevices(text: string): AdbDevice[] {
     .map((l) => l.trim())
     .filter(Boolean)
     .map((line) => {
-      const [serial = '', state = '', ...rest] = line.split(/\s+/);
+      // a second phone of one name gets " (2)" in the middle of its serial
+      const [, serial = '', words = ''] = /^(\S+(?: \(\d+\)\S*)?)\s*(.*)$/.exec(line) ?? [];
+      const [state = '', ...rest] = words.split(/\s+/);
       const props: Record<string, string> = {};
       for (const kv of rest) {
         const i = kv.indexOf(':');

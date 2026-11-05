@@ -8,6 +8,8 @@ export type MirrorOptions = {
   quality: MirrorQuality;
   /** H.264 has the widest support; HEVC at the user's word. */
   codec?: 'h264' | 'hevc';
+  /** By the network and not a cable, where the device's `wifi` says it can be asked to. */
+  wifi?: boolean;
 };
 
 export type MirrorCheck =
@@ -63,7 +65,7 @@ export type DeviceState = 'ok' | Need;
 /** A device's end of a mirror: only what differs between kinds of device. */
 export interface Mirror {
   /** What this device can do, and why not: asked before anything is opened. */
-  check(): Promise<MirrorCheck>;
+  check(opts?: MirrorOptions): Promise<MirrorCheck>;
   /** Readies the device's end; `tell` reaches the viewer, for a feeder that has something to say to it. */
   open(
     opts: MirrorOptions,
@@ -84,6 +86,8 @@ export interface Mirror {
   screenshot?(format: 'png' | 'jpeg'): Promise<{ data: Buffer } | undefined>;
   /** Turns a dark screen on, where this kind of device can be asked to: at a start, and at a person's click. */
   wake?(): Promise<void>;
+  /** It takes `MirrorOptions.wifi`: the network is a choice here, where an Android phone's address already is one. */
+  readonly wifi?: boolean;
   /** A still screen keeps sending frames, so that only a larger one tells that something changed. */
   readonly sendsWhenStill?: boolean;
   /** In this state the stream stays and only what is said changes, as a new start would undo what a person did. */

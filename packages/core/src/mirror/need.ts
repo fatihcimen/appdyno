@@ -15,6 +15,10 @@ export const NEEDS = {
     title: 'The device does not trust this Mac',
     fix: 'Unlock it and tap Trust, or accept the USB debugging prompt.',
   },
+  'not-paired': {
+    title: 'This Mac is not paired with the phone for Wi-Fi',
+    fix: 'Plug it in and run appdyno pair, then accept on the phone.',
+  },
   'developer-mode-off': {
     title: 'Developer Mode is off',
     fix: 'Settings, Privacy & Security, Developer Mode.',
