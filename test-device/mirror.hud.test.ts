@@ -55,7 +55,7 @@ const fixtureInFront = async () => {
   else
     await new Adb().exec(
       serial!,
-      `am start -a android.intent.action.VIEW -d appdyno-fixture://open/list ${FIXTURE}`,
+      `am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/list ${FIXTURE}`,
     );
 };
 
