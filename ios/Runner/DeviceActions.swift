@@ -99,6 +99,13 @@ extension Device {
             #else
             XCUIDevice.shared.press(k == "volumeUp" ? .volumeUp : .volumeDown)
             #endif
+        case "mute":
+            guard XCUIDevice.shared.hasHardwareButton(.action) else {
+                throw AgentError("UNSUPPORTED", "this iPhone has a mute switch, not an Action button: only a hand moves it")
+            }
+            XCUIDevice.shared.press(.action)
+        case "siri":
+            throw AgentError("UNSUPPORTED", "Siri is the side button held, which XCTest cannot press on a phone", hint: "appdyno mirror presses it")
         case "lock", "power":
             let press = NSSelectorFromString("pressLockButton")
             guard XCUIDevice.shared.responds(to: press) else {

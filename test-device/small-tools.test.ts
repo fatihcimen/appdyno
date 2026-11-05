@@ -34,6 +34,24 @@ describe.skipIf(!ANDROID)('small tools on an emulator', () => {
     o.ctx.close();
   });
 
+  it('mutes the media stream and turns it back, and calls the assistant', async () => {
+    const muted = () => /- STREAM_MUSIC:\s+Muted: (\w+)/.exec(shell('dumpsys', 'audio'))?.[1];
+    expect(muted()).toBe('false');
+    ok(await call('press_key', { key: 'mute' }));
+    expect(muted()).toBe('true');
+    ok(await call('press_key', { key: 'mute' }));
+    expect(muted()).toBe('false');
+    // the volume panel leaves no window to read while it is up
+    await new Promise((r) => setTimeout(r, 5_000));
+    expect(ok(await call('press_key', { key: 'siri' })).text).toContain('not read');
+    ok(await call('press_key', { key: 'home', read: 'none' }));
+    // the assistant's sheet takes a moment to go, and leaves no window to read until it has
+    await vi.waitFor(async () => ok(await call('launch_app')), {
+      timeout: 15_000,
+      interval: 1_000,
+    });
+  });
+
   it('fixes a position and ends it, with no test provider left', async () => {
     ok(await call('set_location', { lat: 41.01, lon: 28.97 }));
     expect(shell('dumpsys', 'location')).toContain('[mock]');
@@ -105,6 +123,28 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
   it('fixes a position and ends it, as the simulator takes both', async () => {
     ok(await call('set_location', { lat: 41.01, lon: 28.97 }));
     ok(await call('set_location', { clear: true }));
+  });
+
+  it('mutes by the Action button, where the simulated phone has one', async () => {
+    const ring = () =>
+      execFileSync(
+        'xcrun',
+        ['simctl', 'spawn', SIMULATOR!, 'notifyutil', '-g', 'com.apple.springboard.ringerstate'],
+        {
+          encoding: 'utf8',
+        },
+      ).trim();
+    const was = ring();
+    ok(await call('press_key', { key: 'mute' }));
+    await vi.waitFor(() => expect(ring()).not.toBe(was), { timeout: 5_000 });
+    ok(await call('press_key', { key: 'mute' }));
+    await vi.waitFor(() => expect(ring()).toBe(was), { timeout: 5_000 });
+  });
+
+  it('holds the side button for Siri, as a window does', async () => {
+    ok(await call('press_key', { key: 'siri', read: 'none' }));
+    ok(await call('press_key', { key: 'home', read: 'none' }));
+    ok(await call('launch_app'));
   });
 
   it('takes a picture whose pixels are points', async () => {

@@ -239,6 +239,8 @@ class Input(private val automation: Automation) {
             "arrowDown" to KeyEvent.KEYCODE_DPAD_DOWN,
             "arrowLeft" to KeyEvent.KEYCODE_DPAD_LEFT,
             "arrowRight" to KeyEvent.KEYCODE_DPAD_RIGHT,
+            "mute" to KeyEvent.KEYCODE_VOLUME_MUTE,
+            "siri" to KeyEvent.KEYCODE_ASSIST,
         )
 
         private val CTRL = Held(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.META_CTRL_ON or KeyEvent.META_CTRL_LEFT_ON)

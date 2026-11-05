@@ -52,6 +52,8 @@ const BUTTONS: ReadonlySet<string> = new Set<Key>([
   'appSwitch',
   'volumeUp',
   'volumeDown',
+  'mute',
+  'siri',
   'power',
   'lock',
 ]);

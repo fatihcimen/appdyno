@@ -115,6 +115,8 @@ export const KEYS = [
   'arrowDown',
   'arrowLeft',
   'arrowRight',
+  'mute',
+  'siri',
 ] as const;
 export type Key = (typeof KEYS)[number];
 

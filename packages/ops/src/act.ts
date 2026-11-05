@@ -191,7 +191,7 @@ export function actOps(
       name: 'press_key',
       title: 'Press key',
       description:
-        'A key or button: back, home, enter, delete, tab, escape, space, arrow_up, arrow_down, arrow_left, arrow_right, app_switch, volume_up, volume_down, power, lock; or a letter or digit, held keys first: command+a (Android: Ctrl). count: presses. control_center, notification_center, spotlight open those; home closes them. What leaves the app is off when the server turned home off.',
+        'A key or button: back, home, enter, delete, tab, escape, space, arrow_up, arrow_down, arrow_left, arrow_right, app_switch, volume_up, volume_down, mute, siri, power, lock; or a letter or digit, held keys first: command+a (Android: Ctrl). count: presses. control_center, notification_center, spotlight open those; home closes them. What leaves the app is off when the server turned home off.',
       input: z.object({ ...KeyStep.omit({ action: true }).shape, read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,

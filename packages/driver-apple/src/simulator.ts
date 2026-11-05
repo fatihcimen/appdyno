@@ -273,6 +273,10 @@ export class IosSimulatorDevice extends IosDevice {
   private locked = false;
 
   override async key(key: string, opts?: ActOptions, modifiers?: Modifier[]) {
+    if (key === 'siri') {
+      await this.mirror.input({ kind: 'button', name: 'siri' });
+      return opts?.read === 'tree' ? { tree: await this.tree() } : {};
+    }
     const r = await super.key(key, opts, modifiers);
     if (key === 'lock' || key === 'power') this.locked = true;
     return r;

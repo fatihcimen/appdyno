@@ -20,13 +20,16 @@ import { dragPath, swipeLine } from './gesture-paths.js';
 export const STALE = 'stale ref, read the screen again';
 
 /** These leave the app, as the home key does. */
-const LEAVES_APP = new Set(['home', 'appSwitch', 'power', 'lock']);
+const LEAVES_APP = new Set(['home', 'appSwitch', 'power', 'lock', 'siri']);
 
 /** A keyboard's way to the same: to the home screen, the switcher and search. */
 const SHORTCUT_LEAVES = new Set(['h', 'tab', 'space']);
 
-/** The screen goes dark: nothing to wait for or read. */
-const DARKENS = new Set(['power', 'lock']);
+/** The screen goes dark, or to a system sheet with no window to read: nothing to wait for. */
+const NOTHING_TO_READ = new Set(['power', 'lock', 'siri', 'mute']);
+
+/** What is pressed with no look first: the way out of such a sheet, and what opens one over itself. */
+const NEEDS_NO_LOOK = new Set(['home', 'mute']);
 
 /** How long a selector with no match waits for its element, as a screen may still be coming. */
 const NO_MATCH_WAIT_MS = 1_500;
@@ -211,7 +214,8 @@ export function stepsFor(
   /** One step's device call. `patient`: in a sequence, a ref may need a moment to come. */
   const step = (s: Session, st: Step, opts: ActOptions, patient = false) =>
     through(s, st, async () => {
-      if (!LOOKS_ONLY.has(st.action)) await s.beforeTouch();
+      if (!LOOKS_ONLY.has(st.action) && !(st.action === 'press_key' && NEEDS_NO_LOOK.has(st.key)))
+        await s.beforeTouch();
       return call(s, st, opts, patient);
     });
 
@@ -317,13 +321,13 @@ export function stepsFor(
             `${st.key} is off on this server: the app may not be left`,
             'POLICY_DENIED',
           );
-        const dark = DARKENS.has(key);
+        const dark = NOTHING_TO_READ.has(key);
         const quiet = { settle: false, read: 'none' } as const;
         const count = st.count ?? 1;
         for (let i = 1; i < count; i++) await s.device.key(key, quiet, modifiers);
         return {
           r: await s.device.key(key, dark ? quiet : opts, modifiers),
-          done: `pressed ${st.key}${count > 1 ? ` ${count} times` : ''}${dark ? ' (the screen was not read: it may be dark)' : ''}`,
+          done: `pressed ${st.key}${count > 1 ? ` ${count} times` : ''}${dark ? ' (the screen was not read)' : ''}`,
         };
       }
       case 'wait_for': {
