@@ -105,10 +105,11 @@ The window shows what is pressed most, and the rest is a click away in **More** 
 | Rotate Left, Rotate Right                                | ⌘←, ⌘→          | the device's own orientation: the first turn starts the agent, which a simulator may first have to build                                           |
 | Save Screenshot, Copy Screen                             | ⌘S, ⌘C          | the device's own lossless picture, to the Desktop and the pasteboard, or to the pasteboard. No agent needed where the device has a way without one |
 | Record Screen                                            | ⌥⌘R             | to Movies: a stream's own frames, or the device's recorder where its picture is no stream                                                          |
+| Record Flow                                              | ⌥⌘T             | what a person does, as a flow: see [Recording a flow](#recording-a-flow)                                                                           |
 | Zoom to Fit, Actual Size, Zoom In, Zoom Out              | ⌘9, ⌘0, ⌘=, ⌘-  | Actual Size is one device point to one Mac point                                                                                                   |
 | Reconnect                                                | ⇧⌘R             | a new stream                                                                                                                                       |
 
-The Inspector (⌥⌘I) opens beside the device, which keeps its size. **Stats** says what the viewer counts each second, and Still on a still screen, with the rate it last moved at. **Activity** lists each call an agent made. **Apps** lists, launches, quits and removes, the last after a sheet that says what goes with it. On iOS the list holds the system's apps, as a new simulator has no other; on Android, only what was installed.
+The Inspector (⌥⌘I) opens beside the device, which keeps its size. **Stats** says what the viewer counts each second, and Still on a still screen, with the rate it last moved at. **Activity** lists each call an agent made. **Apps** lists, launches, quits and removes, the last after a sheet that says what goes with it. On iOS the list holds the system's apps, as a new simulator has no other; on Android, only what was installed. **Flow** records what a person does, and says what is under the pointer.
 
 While an agent drives, a ring of the accent colour runs around the edge of the screen and the capsule names the call. What stands in the way is a card over the dimmed picture with its fix, and a click beside a card's button still goes to the device.
 
@@ -130,6 +131,44 @@ An iPhone's frame rate is its display's, with a mirror alone keeping it near 20,
 A simulator needs no runner for any of this: it reads the app in front by its read helper, and the home screen is measured as any app is. A device that cannot say what is in front without its agent starts it when the cards open, and they say so until it is up.
 
 **Performance**, in the Inspector, keeps the same readings for as long as ten minutes of being shown, and takes a real measure of the app in front. **Launch** is `perf_launch` and **Scroll** is `perf_scroll`, as an agent calls them, with their defaults: the app restarts, and the run is kept with every other, marked as read with a stream running. **Dashboard** writes the page of every kept run and opens it. Readings stop while a measure runs, as they would reset what it counts. A measure holds the device as an agent's session does, and is refused by name while something else holds it. What is the system's, such as a home screen, is not measured.
+
+## Recording a flow
+
+**Record Flow** (⌥⌘T) writes what a person does on the window as a flow, the file `flow run` replays. The **Flow** pane opens beside the device and lists each step as it is written. A second press stops it and saves it to the Desktop as `<device> <date>.flow`, and closing the window does the same, as it does for a movie.
+
+It writes what a person meant, by the element and not the place. Each click is named by the selector a tool would use on the screen that click landed on, by the rule of `flow start`, so that a flow made on one device runs on another of the same app wherever the selector holds.
+
+| on the window                       | in the file                                                                                                                                                                                                                       |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| a click                             | `tap id=submit`                                                                                                                                                                                                                   |
+| a double click                      | `double_tap id=submit`                                                                                                                                                                                                            |
+| a hold, a right click               | `long_press id=submit`, with `durationMs` if it is not the usual 0.8 s                                                                                                                                                            |
+| a drag, a wheel, two fingers        | `swipe up`, with a target only where one from the middle of the screen would move something else. A wheel's notches are one swipe. Swipes that reached what is clicked next become `scroll_to`, which holds on any size of screen |
+| typing, a paste                     | `type "Ada"`, with `replace` if the field was empty, as what was meant is that it says this, and `submit` if Return ended it. Delete takes back a letter                                                                          |
+| typing into a password field        | `type "${PASSWORD_INPUT}"` and `secret PASSWORD_INPUT`: the text reaches neither the file nor the recording on disk                                                                                                               |
+| typing where no read shows a field  | `type "${TYPED}"`, and the window says so: such a field may be a password's                                                                                                                                                       |
+| clicks on the device's own keyboard | no taps: a `type` of what the field came to, read from the field, or for a password its name                                                                                                                                      |
+| Home, Back, a button, a key         | `press_key home`, and a key held down is `count`                                                                                                                                                                                  |
+| Launch and Quit in the Apps pane    | `launch`, `stop`                                                                                                                                                                                                                  |
+
+A flow starts with `launch` when a person's own app is in front, which brings it forward and restarts nothing, so that another device has a way there. A recording starts where the app is: on a screen deep in it, a replay must start there too.
+
+A recording drops nothing without saying so. What has no step (a pinch, a rotation, Quick Settings, a drag along no axis or after a long press, Page Up and its kind, an app removed) is said in the window at that moment and written as `unrecorded`, which stops a replay there rather than go on without it. A place nothing names, or a finger coming on from the edge, is written as coordinates, marked `!coordinates` with the size of screen it holds for, and the window says so. Both stand in the pane's list with why. A measure restarts the app, so it is refused by name while a recording runs.
+
+**Which screen a click means.** It is the one before it, and when a click is known its effect has begun. So while a recording runs or the pane is open, the screen is read all the time, beside touches: a touch has left for the device before anything here hears of it, no read starts with a finger down or for 100 ms after, and a read takes at most half of the time. A click takes the newest read since the last input, else the one under way. A hover asks the device nothing. Nothing is read with neither in use, nor while the stream is down or a measure runs. Such a read is a look: it wakes no dark screen and opens no lock, as `tree` does for a tool.
+
+A click to the first picture it changed, 15 clicks each way, each from a still screen, through a window kept behind. On a simulator the click is on a list's first Add, and on Android on the fixture's frames button, as the bench's is, which draws each frame for 2 s. A window with no recording holds no UI automation on Android, and these start without it. On an iPhone a flick along the list stands in for the click, as a small change is lost in what its stream keeps sending.
+
+| device               | no recording, p50, ms | recording, p50, ms | Mac's load |
+| -------------------- | --------------------- | ------------------ | ---------- |
+| simulator, iOS 27.2  | 102.3                 | 109.8              | 4          |
+| emulator, Android 14 | 33.2                  | 35.1               | 3          |
+| Xiaomi, Android 16   | 68.2                  | 67.1               | 3          |
+| iPhone 13 Pro Max    | 110.7                 | 109.0              | 10         |
+
+**Under the pointer.** With the Flow pane open, the pointer over the device shows the element under it, marked on the picture: its role, words, ref and id, what a click there would write, and what `audit` says of its contrast, read once per screen. An audit waits for the pointer to rest, may start a simulator's runner, and the pane says it is reading until it is done. No audit runs during a recording, as a read waiting behind one would come after the click it was to name, and the pane says so. What a click on the device does is chosen there: it **Touches** the device, **Copies** the element's selector, or **Asserts**, which adds a check to the recording and touches nothing: `assert id=result check=text equals="Sent: Ada"`, or `assert text="Bilgiler"` where its words are what names it.
+
+The recording is the one `flow` keeps, a file per device. So `flow start` from an agent or the command line takes a person's clicks too, and a window's recording takes an agent's calls, each in the order they came. A flow's `stop` and `save` work on either.
 
 ## The hub
 
@@ -227,6 +266,16 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 - `auto` on a phone starts at its display's size and changes it, once, on the first motion that shows the encoder falling behind, so a person may see the picture restart on their first touches. `--quality high` and `standard` keep the display's size.
 - A phone's touch has a floor below which no size goes: 94 ms on a Samsung SM-A525F at 1024 lines, and 95 to 107 at 1280 across runs, over the target of 80. A Xiaomi's reads 92 at its own size, a miss too.
 - Input by `key`: Android has only the keys the agent has (no arrows). On a simulator a keyboard's characters go as US keys; any other text by its pasteboard and command V.
+
+- On an iPhone a recording and the pane read by its runner, which the first use starts: `inspector` gives words and ids with no places, so with no runner a click has no element to be named by, and the window says why.
+- A flow made on an iPhone or a Xiaomi has been replayed there, on a simulator and on an emulator. One made on a simulator or an emulator has been replayed on the other, and on no phone.
+- Clicks on a device's own keyboard have been recorded on a stand-in device only. A real pointer's hover, a wheel and a trackpad have not been run by hand: a test's window is given posted clicks, drags and hovers.
+- A swipe keeps its direction and not its length: a replay's goes 40 % of the screen. What it reached is kept, as `scroll_to`, where a click or an assertion came next.
+- A step is written when input leaves for the device, so what a device then refuses, such as a paste into an iPhone's secure field, is in the file as though it landed. The window says the refusal.
+- Clicks on the device's own keyboard are told from the field afterwards, so its Return key is not seen: the Mac's keyboard records it, and the window says so.
+- A flow goes to the Desktop under the device's name: rename it there. Steps cannot be taken back in the pane: a flow is a text file, so edit it.
+- `flow start` from another process reaches a window within a quarter of a second, and clicks in that time are not recorded. Two processes writing to one recording in the same instant can lose a step.
+- A hover and an assertion go by what was last read, so a screen that changed in the last read's time shows what it was, and a pointer resting on what came since says nothing until it moves.
 
 ## Left out, for now
 
