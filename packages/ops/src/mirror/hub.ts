@@ -68,7 +68,8 @@ export async function hubDevices(ctx: ServerContext, hardware: Hardware): Promis
   const seen = new Set(virtual.map((d) => d.serial ?? d.id));
   const phones: HubDevice[] = [];
   for (const d of await ctx.devices()) {
-    if (seen.has(d.serial)) continue;
+    // what this server may not drive is not even asked of, as asking refuses
+    if (seen.has(d.serial) || !ctx.allowed(d.serial)) continue;
     const known = await hardware(d.serial);
     phones.push({
       id: d.serial,

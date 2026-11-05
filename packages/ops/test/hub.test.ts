@@ -105,6 +105,18 @@ describe('the hub', () => {
     expect(devices.map((d) => d.id)).toEqual(['R58M']);
   });
 
+  it('asks nothing of what this server may not drive, as that refuses', async () => {
+    const provider: DeviceProvider = {
+      list: async () => [phone],
+      handles: () => true,
+      open: () => ({ hardware: async () => undefined }) as unknown as Device,
+      virtual: new Simulated(),
+    };
+    const ctx = new ServerContext({ ...DEFAULT_POLICY, devices: /^B$/ }, [provider]);
+    const devices = await hubDevices(ctx, async (s) => ctx.deviceFor(s).hardware());
+    expect(devices.map((d) => d.id)).toEqual(['B']);
+  });
+
   it('starts, stops and makes what a person asks, by the driver it belongs to', async () => {
     const virtual = new Simulated();
     const { link, told, say, close } = window();
