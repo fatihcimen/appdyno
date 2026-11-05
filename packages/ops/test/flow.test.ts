@@ -148,7 +148,7 @@ swipe up
         await call('device_info');
         await refusal(call('tap', { selector: { text: 'Nothing like it' } }));
         await refusal(call('assert', { text: 'Nothing like it' }));
-        await call('wait_for', { text: 'Nothing like it', timeoutMs: 300 });
+        await refusal(call('wait_for', { text: 'Nothing like it', timeoutMs: 300 }));
         await call('assert', { text: 'Ana sayfa' });
       });
       expect(text).toBe('app dev.app\n\nassert text="Ana sayfa"\n');
@@ -215,7 +215,7 @@ assert id=result check=text equals="Gönderildi"
       const call = callerOf(context());
       const { text } = await recorded(call, async () => {
         await call('alert', { answer: 'allow' });
-        await call('alert', { answer: 'allow' });
+        await refusal(call('alert', { answer: 'allow' }));
         await call('keyboard', { action: 'status' });
         await call('keyboard', { action: 'dismiss' });
         await call('keyboard', { action: 'dismiss' });
@@ -456,6 +456,19 @@ assert id=result check=text equals="Gönderildi"
       const acts = device.calls.filter((c) => c.name === 'act');
       expect(acts.length).toBeGreaterThan(2);
       for (const a of acts) expect((a.args[1] as { settle?: unknown }).settle).toBeTruthy();
+    });
+
+    it('goes on past a prompt that does not come: it comes once, and a second run has none', async () => {
+      const file = flowFile('app dev.app\nalert allow\ntap text="Form"\n');
+      await callerOf(context())('flow', { action: 'run', file });
+      expect(device.screen).toBe('form');
+    });
+
+    it('stops at a wait that ran out, with the nearest candidates', async () => {
+      const file = flowFile('app dev.app\nwait_for text="Forn" timeoutMs=300\n');
+      const e = await refusal(callerOf(context())('flow', { action: 'run', file }));
+      expect(e.code).toBe('TIMEOUT');
+      expect(e.message).toContain('not shown after 300 ms; nearest: ');
     });
 
     it('stops at a miss with the nearest candidates, the screen, the step and the line', async () => {

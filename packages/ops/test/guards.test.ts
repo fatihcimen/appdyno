@@ -41,6 +41,77 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe('what did not happen is no success', () => {
+  const client = (device: FakeDevice) => linkedClient(contextOf(device));
+  const asked = async (device: FakeDevice, name: string, args: Record<string, unknown>) =>
+    (await (await client(device)).callTool({ name, arguments: args })) as {
+      isError?: boolean;
+      structuredContent: Record<string, unknown>;
+      content: { text: string }[];
+    };
+
+  it('a wait that ran out refuses, with the screen it saw', async () => {
+    const r = await asked(new FakeDevice(), 'wait_for', { text: 'Never', timeoutMs: 300 });
+    expect(r.isError).toBe(true);
+    expect(r.structuredContent.code).toBe('TIMEOUT');
+    expect(r.content[0]!.text).toContain('not shown after 300 ms');
+    expect(r.content[0]!.text).toContain('Ana sayfa');
+  });
+
+  it('so does one with nothing asked of the screen', async () => {
+    const e = await refusal(
+      callerOf(contextOf(new FakeDevice()))('wait_for', {
+        text: 'Never',
+        timeoutMs: 300,
+        read: 'none',
+      }),
+    );
+    expect(e.code).toBe('TIMEOUT');
+    expect(e.message).toBe('not shown after 300 ms');
+  });
+
+  it('a wait for what goes refuses while it stays', async () => {
+    const e = await refusal(
+      callerOf(contextOf(new FakeDevice()))('wait_for', {
+        text: 'Ana sayfa',
+        gone: true,
+        timeoutMs: 300,
+      }),
+    );
+    expect(e.code).toBe('TIMEOUT');
+    expect(e.message).toContain('still there after 300 ms');
+  });
+
+  it('an answer to no alert refuses, and touched nothing', async () => {
+    const device = new FakeDevice();
+    const r = await asked(device, 'alert', { answer: 'allow' });
+    expect(r.isError).toBe(true);
+    expect(r.structuredContent).toMatchObject({ code: 'NOT_FOUND', dispatched: false });
+    expect(r.content[0]!.text).toContain('no system alert is open');
+    expect(namesOf(device)).not.toContain('act');
+  });
+
+  it('asking whether an alert is open is no refusal', async () => {
+    const r = await asked(new FakeDevice(), 'alert', {});
+    expect(r.isError).toBeFalsy();
+    expect(r.content[0]!.text).toContain('no system alert is open');
+  });
+
+  it('a sequence stops at an answer to no alert', async () => {
+    const device = new FakeDevice();
+    const e = await refusal(
+      callerOf(contextOf(device))('steps', {
+        steps: [
+          { action: 'alert', answer: 'allow' },
+          { action: 'press_key', key: 'back' },
+        ],
+      }),
+    );
+    expect(e.code).toBe('NOT_FOUND');
+    expect(namesOf(device)).not.toContain('act');
+  });
+});
+
 describe('a failed action says whether its touch went out', () => {
   it('no: nothing named the target', async () => {
     const call = callerOf(contextOf(new FakeDevice()));

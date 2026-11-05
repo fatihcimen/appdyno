@@ -167,17 +167,21 @@ export function flowRunner(
   const act = async (s: Session, st: FlowStep): Promise<StepOutcome> => {
     const [name, args] = opCall(st);
     const t0 = Date.now();
-    const answered = await ops()[name]!.handler(opInput(name, args, st.action));
-    const data = answered.data as Partial<ActionOut> & { met?: boolean };
-    const whole = Date.now() - t0;
-    if (data.met === false) {
+    const op = ops()[name]!;
+    const answered = await op.handler(opInput(name, args, st.action)).catch(async (e: unknown) => {
+      if (!(e instanceof ToolError)) throw e;
+      // a prompt comes once: a run after the one that answered it finds none, and that is no failure of the run
+      if (st.action === 'alert' && e.code === 'NOT_FOUND') return undefined;
+      if (st.action !== 'wait_for' || e.code !== 'TIMEOUT') throw e;
       const screen = await s.read();
       const near = nearest(screen.list, st.selector?.text ?? st.selector?.id).map(steps.line);
       throw new ToolError(
         `${st.args.gone ? 'still there' : 'not shown'} after ${String(st.args.timeoutMs ?? REPLAY_WAIT_MS)} ms${near.length > 0 ? `; nearest: ${near.join('; ')}` : ''}`,
         'TIMEOUT',
       );
-    }
+    });
+    const data = (answered?.data ?? {}) as Partial<ActionOut>;
+    const whole = Date.now() - t0;
     const died = data.appDied;
     if (died)
       throw new ToolError(

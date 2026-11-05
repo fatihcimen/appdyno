@@ -351,6 +351,8 @@ export function actOps(
         const a = facts.systemAlert(screen.tree, screen.elements);
         if (!a) {
           const t = "no system alert is open (the app's own dialogs are not touched)";
+          // an answer asked for and not given; a question has its answer here
+          if (answer) throw new ToolError(t, 'NOT_FOUND', undefined, false);
           return reply(t, summary(t));
         }
         const buttons = a.buttons.map((b) => JSON.stringify(clean(b.label))).join(', ');

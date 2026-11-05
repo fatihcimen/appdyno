@@ -113,7 +113,8 @@ function shared(
     const r = await call('wait_for', { text: names.delayed.shows, timeoutMs: 8_000 });
     expect(r.data.met).toBe(true);
     const absent = await call('wait_for', { text: 'Never', timeoutMs: 600 });
-    expect(absent.data.met).toBe(false);
+    expect(absent.error).toBe(true);
+    expect(absent.data.code).toBe('TIMEOUT');
   });
 
   it('scrolls to a row, and stops at the list’s end', async () => {

@@ -297,7 +297,6 @@ export function flowRecorder(ctx: ServerContext) {
           if (s && op.name === 'wait_for') record = await waitStep(s, args as never);
           if (s && op.name === 'assert') record = await assertStep(s, args as never);
           const out = await op.handler(args);
-          if (out.data.met === false) return out;
           addSteps(r, record ? record() : toStep(args, out.data));
           return out;
         },

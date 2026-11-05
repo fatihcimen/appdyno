@@ -143,12 +143,14 @@ export function readOps(
           gone,
           ...(found && !gone && { found: { ref: found.ref, label: clean(found.label) } }),
         };
-        if (read === 'none') return reply(head, { ...out, screen: 'none' });
         const diff =
           read === 'diff' && before
             ? diffText(diffScreens(before, last.list), last.list.length, clean)
             : undefined;
-        return reply(`${head}\n${diff ?? header(s, last)}`, {
+        const said = read === 'none' ? head : `${head}\n${diff ?? header(s, last)}`;
+        if (!met) throw new ToolError(said, 'TIMEOUT');
+        if (read === 'none') return reply(said, { ...out, screen: 'none' });
+        return reply(said, {
           ...out,
           screen: diff === undefined ? 'full' : diff.startsWith(UNCHANGED) ? 'unchanged' : 'diff',
         });
