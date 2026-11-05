@@ -3,6 +3,7 @@ import { mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import {
+  imageSize,
   NeedError,
   safeName,
   startOf,
@@ -32,20 +33,6 @@ export async function loadPhoneStream(entry = ENTRY): Promise<PhoneStreamModule 
     if ((e as NodeJS.ErrnoException).code === 'ERR_MODULE_NOT_FOUND') return undefined;
     throw e;
   }
-}
-
-/** Width and height from an image's own header: PNG's first chunk, or JPEG's frame marker. */
-export function imageSize(b: Buffer): { w: number; h: number } | undefined {
-  if (b[0] === 0x89) return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
-  for (let o = 2; o + 9 < b.length;) {
-    const marker = b[o + 1]!;
-    // a frame header, leaving out the three that are no frames
-    if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
-      return { w: b.readUInt16BE(o + 7), h: b.readUInt16BE(o + 5) };
-    }
-    o += 2 + b.readUInt16BE(o + 2);
-  }
-  return undefined;
 }
 
 /** A folder of their own: a pipe nothing writes holds up whoever reads it, as a scan of a folder would. */

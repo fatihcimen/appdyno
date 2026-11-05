@@ -2,7 +2,8 @@ import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { NeedError, stateDir, type DeviceState } from '@appdyno/core';
-import { imageSize, loadPhoneStream, PhoneMirror } from '../src/mirror-phone.js';
+import { imageSize } from '@appdyno/core';
+import { loadPhoneStream, PhoneMirror } from '../src/mirror-phone.js';
 import type { PhoneStreamEvent, PhoneStreamModule } from '../src/phone-stream-port.js';
 
 const UDID = '00001234-0123456789ABCDEF';

@@ -1,7 +1,11 @@
+import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import {
   attributesOf,
   diffScreens,
   diffText,
+  imageSize,
+  safeName,
   screenStructure,
   selectIn,
   UNCHANGED,
@@ -10,6 +14,7 @@ import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
 import { FindOut, ScreenOut, ScreenshotOut, WaitOut } from './schemas.js';
+import type { Session } from './session.js';
 import { Read, Selector, WaitStep } from './step-schemas.js';
 import type { Steps } from './steps.js';
 import { defineOp, READ, reply, ToolError } from './tool.js';
@@ -18,6 +23,31 @@ import { webLines } from './web.js';
 /** The fixtures' and Settings' smallest text still reads at this size and quality, and an answer costs half as much. */
 const SHOT_PX = 800;
 const SHOT_QUALITY = 60;
+
+/** The whole picture in a file: a folder gets a new name, and what is there stays unless asked. */
+async function saveShot(s: Session, file: string, overwrite: boolean) {
+  const given = resolve(file);
+  const folder = existsSync(given) && statSync(given).isDirectory();
+  const to = folder
+    ? join(given, `${safeName(s.device.serial)}-${new Date().toISOString().replace(/\W/g, '')}.png`)
+    : given;
+  if (!/\.(png|jpe?g)$/i.test(to))
+    throw new ToolError(`${to}: a .png, .jpg or .jpeg, or a folder`, 'INVALID_ARGUMENT');
+  if (existsSync(to) && !overwrite)
+    throw new ToolError(`${to} is there already`, 'INVALID_ARGUMENT', 'overwrite replaces it');
+  const format = /\.png$/i.test(to) ? 'png' : 'jpeg';
+  const own = await s.device.mirror.screenshot?.(format);
+  const { data } = own ?? (await s.device.screenshot({ format, quality: 100 }));
+  mkdirSync(dirname(to), { recursive: true });
+  writeFileSync(to, data, { flag: overwrite ? 'w' : 'wx' });
+  const size = imageSize(data);
+  return reply(`saved ${to}${size ? ` (${size.w}x${size.h} px)` : ''}`, {
+    width: size?.w ?? 0,
+    height: size?.h ?? 0,
+    warnings: [],
+    file: to,
+  });
+}
 
 export function readOps(
   ctx: ServerContext,
@@ -126,12 +156,19 @@ export function readOps(
     defineOp({
       name: 'screenshot',
       title: 'Screenshot',
-      description: `An image of the screen (at most ${SHOT_PX} px) and the scale from its pixels to tap units; only for a visual judgement. A second one of an unchanged screen is refused. points: 1 pixel is 1 tap unit.`,
-      input: z.object({ points: z.boolean().optional() }).strict(),
+      description: `An image of the screen (at most ${SHOT_PX} px) and the scale from its pixels to tap units; only for a visual judgement. A second one of an unchanged screen is refused. points: 1 pixel is 1 tap unit. file: full size into a .png or .jpg, or a folder; overwrite replaces.`,
+      input: z
+        .object({
+          points: z.boolean().optional(),
+          file: z.string().max(1_000).optional(),
+          overwrite: z.boolean().optional(),
+        })
+        .strict(),
       output: ScreenshotOut,
       annotations: READ,
-      run: async ({ points }) => {
+      run: async ({ points, file, overwrite }) => {
         const s = await ctx.session();
+        if (file) return saveShot(s, file, overwrite === true);
         const layout = s.fresh ? `${!!points} ${screenStructure(s.fresh.list)}` : undefined;
         if (s.shot && s.shot.at === s.version && layout !== undefined && s.shot.hash === layout)
           throw new ToolError(

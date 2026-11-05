@@ -1,5 +1,5 @@
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type {
@@ -816,6 +816,23 @@ describe('gestures, keys, clipboard', () => {
     expect(r.text).toMatch(/^launched dev\.app in pt-BR/);
     expect(launched).toEqual([['dev.app', { language: 'pt-BR' }]]);
     expect((await call('launch_app', { language: 'tr; rm -rf' })).error).toBe(true);
+  });
+
+  it('saves a picture, into a folder too, and leaves what is there', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
+    const d = new FakeDevice();
+    Object.defineProperty(d, 'mirror', { value: {} });
+    const { call } = await connect(d);
+    const file = join(dir, 'a.png');
+    expect((await call('screenshot', { file })).text).toContain(`saved ${file}`);
+    expect(readFileSync(file)).toEqual(Buffer.from([1, 2, 3]));
+    const again = await call('screenshot', { file });
+    expect(again.error).toBe(true);
+    expect(again.text).toContain('is there already');
+    expect((await call('screenshot', { file, overwrite: true })).error).toBe(false);
+    const named = await call('screenshot', { file: dir });
+    expect(named.data.file).toMatch(/emulator-5580-.*\.png$/);
+    expect((await call('screenshot', { file: join(dir, 'a.gif') })).error).toBe(true);
   });
 
   it('reads the clipboard and keeps a secret off it', async () => {

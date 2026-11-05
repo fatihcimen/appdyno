@@ -59,6 +59,12 @@ describe.skipIf(!ANDROID)('small tools on an emulator', () => {
     expect(shell('dumpsys', 'location')).not.toContain('[mock]');
   });
 
+  it('saves a picture at the size of the screen', async () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'appdyno-shot-')), 'screen.png');
+    const r = ok(await call('screenshot', { file }));
+    expect(r.data.width).toBe(ok(await call('device_info')).data.screen.w);
+  });
+
   it('turns to each of the four rotations, as the device says', async () => {
     for (const [i, orientation] of ['landscape_left', 'upside_down', 'landscape_right'].entries()) {
       ok(await call('set_orientation', { orientation, read: 'none' }));
@@ -174,6 +180,14 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
     ok(await call('launch_app'));
     expect(await language(call)).not.toContain('tr');
     ok(await call('launch_app'));
+  });
+
+  it("saves a picture at the screen's own size, and refuses to replace one", async () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'appdyno-shot-')), 'screen.png');
+    const r = ok(await call('screenshot', { file }));
+    const { w, density } = ok(await call('device_info')).data.screen;
+    expect(r.data.width).toBe(Math.round(w * density));
+    expect((await call('screenshot', { file })).text).toContain('is there already');
   });
 
   it('takes a picture whose pixels are points', async () => {

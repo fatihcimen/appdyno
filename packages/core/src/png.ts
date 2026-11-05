@@ -184,3 +184,17 @@ export function diffImages(a: Image, b: Image, masks: PixelRect[] = []): ImageDi
     image: { width: b.width, height: b.height, channels: 3, data: out },
   };
 }
+
+/** Width and height from an image's own header: PNG's first chunk, or JPEG's frame marker. */
+export function imageSize(b: Buffer): { w: number; h: number } | undefined {
+  if (b[0] === 0x89) return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
+  for (let o = 2; o + 9 < b.length;) {
+    const marker = b[o + 1]!;
+    // a frame header, leaving out the three that are no frames
+    if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
+      return { w: b.readUInt16BE(o + 7), h: b.readUInt16BE(o + 5) };
+    }
+    o += 2 + b.readUInt16BE(o + 2);
+  }
+  return undefined;
+}

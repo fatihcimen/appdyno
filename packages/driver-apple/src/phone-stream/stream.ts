@@ -14,7 +14,7 @@ import {
   takeScreenshot,
   type ServiceList,
 } from './services.js';
-import { imageSize } from '../mirror-phone.js';
+import { imageSize } from '@appdyno/core';
 import { turnsOf } from '../mirror-sim.js';
 import { audioOffer, thisMac, videoOffer, type StreamMode } from './stream-offer.js';
 import {

@@ -115,6 +115,7 @@ export const ScreenshotOut = z.object({
   height: z.number().int(),
   scale: z.number().optional(),
   warnings: z.array(z.string()),
+  file: z.string().optional(),
 });
 
 export const DoneOut = z.object({ done: z.string() });
