@@ -16,7 +16,6 @@ import { checkedOps } from '../packages/ops/test/helpers.js';
  */
 const APP = 'dev.appdyno.fixture';
 const REPEATS = Number(process.env.APPDYNO_GATE_REPEATS ?? 6);
-const BASELINE_RUNS = 3;
 const UNCHANGED_RUNS = Number(process.env.APPDYNO_GATE_RUNS ?? 6);
 const run = promisify(execFile);
 /** Printed and kept: a passing test's output is not shown. */
@@ -129,10 +128,10 @@ for (const t of targets)
         await new Simctl().launch(t.serial!, APP).catch(() => undefined);
       await t.clear(t.serial!);
       // a run measured under load is refused; another is measured in its place
-      for (let added = 0, tries = 0; added < BASELINE_RUNS && tries < 12; tries++) {
+      for (let tries = 0; tries < 12; tries++) {
         await launch();
         const b = await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
-        if (b.data.exitCode === 0) added++;
+        if (b.data.exitCode === 0) break;
       }
       const verdicts: Comparison[] = [];
       for (let i = 0; i < UNCHANGED_RUNS; i++) {

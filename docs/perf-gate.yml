@@ -8,7 +8,8 @@
 # appdyno has no service and no token: it writes a file, and this job posts that file with the repository's own token.
 # A pull request from a fork gets a token that cannot comment: the comment is then only in the job's artifacts.
 #
-# A run under load says `noisy` and fails nothing: the comment says so, and it is no pass. Measure again.
+# A run under load says `noisy` and fails nothing: the comment says so, and it is no pass. Measure again. A change the
+# gate could not judge, `few-samples`, fails the job, as a judgement that never happened must not go green.
 #
 # An Android emulator needs a hypervisor, which GitHub's arm64 macOS runners do not give, and `macos-latest` is one of
 # those. For Android use an Intel macOS label or a Mac of your own, boot an AVD with `-gpu host` where this boots a
@@ -58,18 +59,18 @@ jobs:
           done
 
       # A run under load is refused as a baseline, by a non-zero exit: over 2.4 on a runner of 3 cores, as a build leaves.
-      # So it measures until three are in, and stops the job if it cannot get them.
+      # `perf baseline` exits non-zero until the baseline can call a change: three runs. So it measures until then, and
+      # stops the job if it cannot get them.
       - name: The base, three runs, and the other side of a later diff
         run: |
           $BUILD
           xcrun simctl install "$UDID" "$BUILT"
-          added=0
+          ready=no
           for try in 1 2 3 4 5 6 7 8; do
             $APPDYNO test "$FLOW" --device "$UDID" --measure
-            if $APPDYNO perf baseline --app "$APP"; then added=$((added + 1)); fi
-            if [ "$added" -eq 3 ]; then break; fi
+            if $APPDYNO perf baseline --app "$APP"; then ready=yes; break; fi
           done
-          [ "$added" -eq 3 ]
+          [ "$ready" = yes ]
           $APPDYNO perf reference --app "$APP" --device "$UDID"
 
       # This cleans the workspace: the baseline is in $RUNNER_TEMP and the runs in the home folder, and both stay.
@@ -107,6 +108,6 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
         run: gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file perf-comment.md
 
-      - name: Fail on a regression or a broken budget
+      - name: Fail on a regression, a broken budget or a change it could not judge
         if: steps.gate.outcome == 'failure'
         run: exit 1

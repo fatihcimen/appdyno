@@ -56,6 +56,14 @@ describe('the workflow file', () => {
     expect(code).toContain('gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file');
   });
 
+  it('takes the baseline as ready by its own exit, which is non-zero until it can call a change', () => {
+    const steps = code.split('- name: ');
+    const base = steps.find((s) => s.startsWith('The base'))!;
+    expect(base).toContain('if $APPDYNO perf baseline --app "$APP"; then ready=yes; break; fi');
+    expect(base).toContain('[ "$ready" = yes ]');
+    expect(base).not.toContain('added');
+  });
+
   it('writes the comment and fails the job whatever the gate said', () => {
     const steps = code.split('- name: ');
     const named = (start: string) => steps.find((s) => s.startsWith(start))!;

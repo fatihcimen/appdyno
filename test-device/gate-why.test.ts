@@ -114,11 +114,11 @@ for (const t of targets)
       throw new Error(`no run of ${scenario} the gate could read: re-run on a quieter Mac`);
     };
     const baselined = async (measure: () => Promise<unknown>, scenario: string) => {
-      for (let added = 0, tries = 0; added < 3 && tries < 12; tries++) {
+      for (let tries = 0; tries < 12; tries++) {
         await quiet();
         await measure();
         const b = await ops.call('perf_compare', { action: 'baseline', scenario });
-        if (b.data.exitCode === 0) added++;
+        if (b.data.exitCode === 0) break;
       }
       await quiet();
       const r = await ops.call('perf_compare', { action: 'reference', scenario });

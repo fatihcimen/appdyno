@@ -48,12 +48,15 @@ export function reportKey(
   };
 }
 
+/** What stops a gate: too little to call a change is a judgement that never happened, which is no pass. */
+const stops = (c: Comparison) => c.verdict === 'regression' || c.verdict === 'few-samples';
+
 const failed = (r: KeyReport) => [
-  ...r.comparisons.filter((c) => c.verdict === 'regression'),
+  ...r.comparisons.filter(stops),
   ...r.budgets.filter((b) => !b.ok),
 ];
 
-/** Non-zero when any regression or broken budget is in the reports; a noisy change warns only. */
+/** Non-zero on a regression, a broken budget or a change too little to call; a noisy change warns only. */
 export const exitCode = (reports: KeyReport[]) => (reports.some((r) => failed(r).length) ? 1 : 0);
 
 const shown = (x: number | undefined) =>
@@ -76,16 +79,18 @@ const line = (c: Comparison) => `${c.verdict.padEnd(11)} ${comparisonLine(c)}`;
 
 export function toText(reports: KeyReport[]): string {
   if (reports.length === 0) return 'no measured runs to compare';
-  return reports
-    .flatMap((r) => [
-      `${r.app} ${r.scenario} on ${r.deviceClass} (run ${r.run}, ${r.at})${r.noise.length ? `; noise: ${r.noise.join(', ')}` : ''}`,
-      ...r.comparisons.map((c) => `  ${line(c)}`),
-      ...r.budgets.map(
-        (b) =>
-          `  ${b.ok ? 'ok         ' : 'over budget'} ${b.kind}: ${shown(b.value)} (${b.limit})`,
-      ),
-    ])
-    .join('\n');
+  const unjudged = reports.flatMap((r) => r.comparisons).filter((c) => c.verdict === 'few-samples');
+  const verdict = unjudged.length
+    ? [`the gate could not judge ${unjudged.length} of these: this is no pass, measure more`]
+    : [];
+  const lines = reports.flatMap((r) => [
+    `${r.app} ${r.scenario} on ${r.deviceClass} (run ${r.run}, ${r.at})${r.noise.length ? `; noise: ${r.noise.join(', ')}` : ''}`,
+    ...r.comparisons.map((c) => `  ${line(c)}`),
+    ...r.budgets.map(
+      (b) => `  ${b.ok ? 'ok         ' : 'over budget'} ${b.kind}: ${shown(b.value)} (${b.limit})`,
+    ),
+  ]);
+  return [...lines, ...verdict].join('\n');
 }
 
 export const toJson = (reports: KeyReport[]) =>
@@ -96,12 +101,11 @@ export function toJUnit(reports: KeyReport[]): string {
     const name = xmlText(`${r.app} ${r.scenario} ${r.deviceClass}`);
     const cases = [
       ...r.comparisons.map((c) => {
-        const body =
-          c.verdict === 'regression'
-            ? `<failure message="${xmlText(line(c))}"/>`
-            : c.verdict === 'ok' || c.verdict === 'improvement'
-              ? ''
-              : `<skipped message="${xmlText(line(c))}"/>`;
+        const body = stops(c)
+          ? `<failure message="${xmlText(line(c))}"/>`
+          : c.verdict === 'ok' || c.verdict === 'improvement'
+            ? ''
+            : `<skipped message="${xmlText(line(c))}"/>`;
         return `<testcase classname="${name}" name="${xmlText(c.kind)}">${body}</testcase>`;
       }),
       ...r.budgets.map(

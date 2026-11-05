@@ -65,7 +65,7 @@ It measures the pull request's base and head in one job, as a baseline from anot
 
 1. builds the base, measures the flow until three runs are in the baseline, and takes the [reference](perf.md#why-it-got-worse);
 2. builds the head and measures the flow;
-3. `appdyno perf why`, which fails the job at its end on a regression or a broken budget;
+3. `appdyno perf why`, which fails the job at its end on a regression, a broken budget or a change it could not judge (`few-samples`);
 4. `appdyno perf comment --out perf-comment.md`, whatever the gate said;
 5. uploads that file, and posts it with `gh pr comment` and the repository's own token.
 

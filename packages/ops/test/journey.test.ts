@@ -137,7 +137,7 @@ describe('a journey as a performance scenario', () => {
     for (let i = 0; i < 3; i++) {
       await call('flow', { action: 'run', file, iterations: 5 });
       const b = await call('perf_compare', { action: 'baseline', scenario: 'journey-checkout' });
-      expect(b.data.exitCode).toBe(0);
+      expect(b.data.exitCode).toBe(i < 2 ? 1 : 0);
       expect(b.text).toMatch(/left out, high-host-load: journey\.total_ms, journey\.01_launch\.ms/);
     }
     device.formMs = 1_100;

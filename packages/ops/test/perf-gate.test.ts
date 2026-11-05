@@ -95,12 +95,59 @@ describe('the gate', () => {
         (JSON.parse(readFileSync(b.data.baselines![0]!, 'utf8')) as Baseline).metrics,
       )[0]!.runs.length;
     await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
-    const first = await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
-    expect(text(first)).toContain('1 run, of the 3 a comparison needs');
+    await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
     const again = await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 3 });
     expect(runs(again)).toBe(1);
     expect(text(again)).toContain('1 already in it, not added again');
     expect(text(again)).toContain('only 1 of the 3 runs asked for is kept');
+  });
+
+  it('is not done until it can call a regression, and says what is missing', async () => {
+    const ops = context({ ms: 500 }, fresh(), fresh());
+    const add = async () => {
+      await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
+      return ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
+    };
+    const first = await add();
+    expect(text(first)).toContain('1 of the 3 runs a comparison needs, 2 missing');
+    expect(first.data.exitCode).toBe(1);
+    expect(first.data.failed).toBe(true);
+    const second = await add();
+    expect(text(second)).toContain('2 of the 3 runs a comparison needs, 1 missing');
+    expect(second.data.exitCode).toBe(1);
+    const third = await add();
+    expect(text(third)).toMatch(/: 3 runs$/m);
+    expect(third.data.exitCode).toBe(0);
+  });
+
+  it('says what it holds when a noisy run adds nothing to a baseline still short', async () => {
+    const vitals: Record<string, unknown> = {};
+    const ops = context({ ms: 500 }, fresh(), fresh(), vitals);
+    await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
+    await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
+    vitals.thermalStatus = 3;
+    await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
+    const r = await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
+    expect(text(r)).toContain('1 of the 3 runs a comparison needs, 2 missing');
+    expect(r.data.exitCode).toBe(1);
+  });
+
+  it('takes a change it could not judge for no pass, in every format', async () => {
+    const startup = { ms: 500 };
+    const ops = context(startup, fresh(), fresh());
+    await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
+    await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
+    startup.ms = 900;
+    await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
+    const asked = (format: 'text' | 'json' | 'junit') =>
+      ops.perf_compare!.handler({ action: 'compare', format, last: 1 });
+    const said = await asked('text');
+    expect(text(said)).toMatch(/few-samples\s+launch\.ttid_ms/);
+    expect(text(said)).toMatch(/^the gate could not judge \d+ of these: this is no pass/m);
+    expect(said.data.exitCode).toBe(1);
+    expect(said.data.failed).toBe(true);
+    expect(JSON.parse(text(await asked('json'))).failed).toBe(true);
+    expect(text(await asked('junit'))).toContain('<failure message="few-samples');
   });
 
   it('says which classes have runs when the one asked for has none', async () => {

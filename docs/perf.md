@@ -122,15 +122,15 @@ and `min` optional.
 
 ```text
 appdyno perf-launch --app A --mode cold --repeats 6      a measured run, kept
-appdyno perf baseline --app A [--last 3]                 adds the newest run, or runs, to the baseline, each once; at least 3 are needed
-appdyno perf compare --app A [--format text|json|junit]  exit 1 on a regression or a broken budget
+appdyno perf baseline --app A [--last 3]                 adds the newest run, or runs, to the baseline, each once; exit 1 until it holds 3
+appdyno perf compare --app A [--format text|json|junit]  exit 1 on a regression, a broken budget or `few-samples`
 appdyno perf budget --app A                              budgets only
 appdyno perf why --app A                                 the same as compare, and on a regression its cause
 ```
 
 The same comes through `perf_compare`. [Why it got worse](#why-it-got-worse) says what `perf why` runs.
 
-**How a change is called.** All of: at least 5 samples each side and 3 baseline runs, else `few-samples`, which is no alarm; a rank
+**How a change is called.** All of: at least 5 samples each side and 3 baseline runs, else `few-samples`: a change the gate could not judge, which is no pass and exits 1; a rank
 test on all baseline samples against the run, p under 0.01 (by permutation, because whole milliseconds tie; 4 against 4 cannot reach
 it); a shift past a floor by unit (15 % and 10 ms for times); and past 4 standard deviations of the baseline's run medians. A run under
 high load or on a hot device says `noisy` and exit 0, and is refused as a baseline; a number of its own under noise is left out of one and named, and the rest of the run goes in. Unlike builds or compile states say `refused`.

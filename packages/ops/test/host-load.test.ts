@@ -91,7 +91,8 @@ describe('a loaded Mac', () => {
     expect(r.blocks[0]).toMatchObject({
       text: expect.stringContaining('left out, high-host-load: launch.until_ms'),
     });
-    expect(r.data.exitCode).toBe(0);
+    // kept, and one run of the three a comparison needs
+    expect(r.data.exitCode).toBe(1);
     const baseline = JSON.parse(readFileSync((r.data.baselines as string[])[0]!, 'utf8')) as {
       metrics: Record<string, unknown>;
     };

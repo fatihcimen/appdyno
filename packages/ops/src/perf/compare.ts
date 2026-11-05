@@ -200,16 +200,23 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
             if (noisy.length)
               lines.push(`left out, ${said}: ${noisy.map((r) => r.kind).join(', ')}`);
           }
+          const held = runsIn(base);
+          const short = MIN_BASELINE_RUNS - held;
+          // one that cannot call a regression must not look done
+          if (usable === 0 || short > 0) left++;
+          const count =
+            short > 0
+              ? `${held} of the ${MIN_BASELINE_RUNS} runs a comparison needs, ${short} missing: it cannot call a regression yet`
+              : `${held} runs`;
           if (!base || usable === 0) {
-            left++;
+            lines.push(`baseline unchanged: ${count}`);
             continue;
           }
           const file = await saveBaseline(project, base);
           files.push(file);
-          const held = runsIn(base);
           lines.push(
             [
-              `baseline: ${file}: ${held} run${held === 1 ? '' : 's'}${held < MIN_BASELINE_RUNS ? `, of the ${MIN_BASELINE_RUNS} a comparison needs` : ''}`,
+              `baseline: ${file}: ${count}`,
               ...(repeated ? [`${repeated} already in it, not added again`] : []),
               ...(runs.length < last
                 ? [
