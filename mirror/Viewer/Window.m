@@ -8,7 +8,6 @@ static const double kFitScreen = 0.85;
 // far from every screen a Mac can have
 static const double kOffscreenAt = -30000;
 static const double kMargin = 30, kTop = 60, kBottom = 22, kInspector = 300, kInset = 10;
-static const double kClickSeconds = 0.08;
 static const CGSize kSmallest = {380, 420};
 // wide enough that a toolbar shows all it has; a person can go narrower, and it folds into its own menu
 static const double kOpensWide = 640;
@@ -384,56 +383,12 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
   return YES;
 }
 
-- (void)postMouse:(NSEventType)type x:(double)x y:(double)y {
-  NSPoint inView = NSMakePoint(x * _view.bounds.size.width, (1 - y) * _view.bounds.size.height);
-  NSPoint at = [_view convertPoint:inView toView:nil];
-  [NSApp postEvent:[NSEvent mouseEventWithType:type location:at modifierFlags:0 timestamp:0 windowNumber:_window.windowNumber context:nil eventNumber:0 clickCount:1 pressure:1] atStart:NO];
+- (NSWindow *)nsWindow {
+  return _window;
 }
 
-- (void)pokeX:(double)x y:(double)y right:(BOOL)right {
-  [self postMouse:right ? NSEventTypeRightMouseDown : NSEventTypeLeftMouseDown x:x y:y];
-  // as long as a mouse's: a touch that lifts in the instant it lands is no tap to a device
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kClickSeconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-    [self postMouse:right ? NSEventTypeRightMouseUp : NSEventTypeLeftMouseUp x:x y:y];
-  });
-}
-
-/// A button held, or drawn from one place to another, by the events a mouse sends: a step a display's tick apart.
-- (void)pokeX:(double)x y:(double)y toX:(double)x2 toY:(double)y2 seconds:(double)seconds {
-  [self postMouse:NSEventTypeLeftMouseDown x:x y:y];
-  int steps = x == x2 && y == y2 ? 0 : MAX(1, (int)(seconds / 0.016));
-  for (int i = 1; i <= steps; i++) {
-    double at = (double)i / steps;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(at * seconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-      [self postMouse:NSEventTypeLeftMouseDragged x:x + (x2 - x) * at y:y + (y2 - y) * at];
-    });
-  }
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)((seconds + 0.02) * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-    [self postMouse:NSEventTypeLeftMouseUp x:x2 y:y2];
-  });
-}
-
-- (BOOL)snapshot:(NSString *)file {
-  return MVWriteWindow(_window, file);
-}
-
-- (BOOL)snapshotScreen:(NSString *)file {
-  return MVWriteWindowPart(_window, [_view convertRect:_view.bounds toView:nil], file);
-}
-
-- (void)pokeButton:(NSString *)name {
-  [_view pressButton:name];
-}
-
-- (void)pokeText:(NSString *)text {
-  // what a keyboard's letters end in: a window kept behind is never the key window, so no real key gets this far
-  [_view insertText:text replacementRange:NSMakeRange(NSNotFound, 0)];
-}
-
-- (void)pokeKey:(NSString *)characters {
-  NSEvent *e = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:_window.windowNumber context:nil characters:characters charactersIgnoringModifiers:characters isARepeat:NO keyCode:0];
-  // to the window itself: this app need not be the active one for an acceptance run
-  [_window sendEvent:e];
+- (NSView *)screenView {
+  return _view;
 }
 
 - (void)windowDidChangeOcclusionState:(NSNotification *)notification {

@@ -157,6 +157,13 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 @property(nonatomic) BOOL behind;
 /// Drawn as the window in use, for a picture of it.
 @property(nonatomic) BOOL poses;
+@property(readonly) NSWindow *nsWindow;
+@property(readonly) NSView *screenView;
+@property(nonatomic, copy, nullable) void (^onHidden)(BOOL hidden);
+@end
+
+/// A window driven and looked at from outside.
+@interface MVWindow (Poke)
 /// A click at this fraction of the picture, by the window's own event queue: needs no permission to post.
 - (void)pokeX:(double)x y:(double)y right:(BOOL)right;
 - (void)pokeText:(NSString *)text;
@@ -167,7 +174,6 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 - (BOOL)snapshot:(NSString *)file;
 /// The device's screen alone, as this window shows it.
 - (BOOL)snapshotScreen:(NSString *)file;
-@property(nonatomic, copy, nullable) void (^onHidden)(BOOL hidden);
 @end
 
 /// Runs the checks; the process's exit code.
