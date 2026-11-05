@@ -9,6 +9,8 @@ android/local.properties
 .bench/
 .compare/
 packages/*/agents/
+packages/appdyno/README.md
+packages/appdyno/THIRD_PARTY_NOTICES
 *.tgz
 .ci/
 ios/*/.build/

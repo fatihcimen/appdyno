@@ -23,7 +23,9 @@
   },
   "files": [
     "dist",
-    "agents"
+    "agents",
+    "README.md",
+    "THIRD_PARTY_NOTICES"
   ],
   "engines": {
     "node": ">=22"

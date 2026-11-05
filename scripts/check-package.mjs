@@ -161,6 +161,8 @@ try {
       'dist/mcp-bin.js',
       'dist/index.js',
       'dist/index.d.ts',
+      'README.md',
+      'THIRD_PARTY_NOTICES',
       'agents/android/agent.apk',
       'agents/ios-src/Appdyno.xcodeproj/project.pbxproj',
     ])
