@@ -152,10 +152,10 @@ With `symbols`, it names the stack of a release build. On iOS that is a `.dSYM`,
 
 <p>
   <img src="docs/images/window-numbers.png" width="49%" alt="A window on a real Xiaomi phone, with its frame rate, jank, frozen frames, CPU, memory and network beside it, each read from the device">
-  <img src="docs/images/window-performance.png" width="49%" alt="A window on a simulator with the Performance pane open: readings over time, and a cold launch and a scroll measured for real">
+  <img src="docs/images/window-performance.png" width="49%" alt="A window on an Android emulator with the Performance pane open: readings over time, and a cold launch and a scroll measured for real">
 </p>
 <p>
-  <img src="docs/images/window-ipad.png" width="49%" alt="A window on a simulated iPad on its side, in a frame drawn in code">
+  <img src="docs/images/window-ipad.png" width="49%" alt="A window on a simulated iPad on its side, showing Settings, in a frame drawn in code">
   <img src="docs/images/dashboard.png" width="49%" alt="The dashboard of a kept app: what needs attention, measures by device, and trends">
 </p>
 
