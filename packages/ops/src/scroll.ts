@@ -9,7 +9,7 @@ import {
 import type { ActResult } from '@appdyno/protocol';
 import type { z } from 'zod';
 import { SETTLE } from './answers.js';
-import { dragPath, slowingPath } from './gesture-paths.js';
+import { slowingPath } from './gesture-paths.js';
 import type { Session } from './session.js';
 import { type Direction, showSelector } from './step-schemas.js';
 import { ToolError } from './tool.js';
@@ -36,6 +36,10 @@ const STROKE_REACH = 0.6;
 /** A slow stroke, and its finger still this long before it lifts. */
 const STROKE_MS = 900;
 const STROKE_REST_MS = 200;
+/** A stroke that looks for something need not be so slow: only stop. */
+const SEEK_STROKE_MS = 500;
+/** A list that does not take this many in a row has ended: one stroke alone may land as a screen still arrives. */
+const STILL_STROKES = 2;
 
 /** What a finger travels before the list takes it, as a first guess: each stroke then measures it. */
 const SLOP = 12;
@@ -131,6 +135,7 @@ export function scrollingFor({ windowSize, line, pick, offer }: Around) {
   ) => {
     let screen = await s.read();
     let last: ActResult = { tree: screen.tree };
+    let still = 0;
     const what = showSelector(a.selector);
     for (let swipes = 0; ; swipes++) {
       let hits = selectIn(screen.list, a.selector);
@@ -166,7 +171,15 @@ export function scrollingFor({ windowSize, line, pick, offer }: Around) {
       last = await s.device.act(
         {
           kind: 'gesture',
-          pointers: [dragPath({ x: cx - dx, y: cy - dy }, { x: cx + dx, y: cy + dy }, 400)],
+          // a finger that stops: a list left coasting ran past the row, and on to its end
+          pointers: [
+            slowingPath(
+              { x: cx - dx, y: cy - dy },
+              { x: cx + dx, y: cy + dy },
+              SEEK_STROKE_MS,
+              STROKE_REST_MS,
+            ),
+          ],
         },
         { settle: SETTLE, read: 'tree', before: screen.hash },
       );
@@ -181,7 +194,8 @@ export function scrollingFor({ windowSize, line, pick, offer }: Around) {
           const o = now[i]!;
           return e.label !== o.label || Math.abs(e.y - o.y) >= 8 || Math.abs(e.x - o.x) >= 8;
         });
-      if (!moved)
+      still = moved ? 0 : still + 1;
+      if (still >= STILL_STROKES)
         throw new ToolError(
           `${what} not found: the list did not move after ${swipes + 1} swipes, so this is its end${offer(next.list, a.selector.text)}`,
           'NOT_FOUND',

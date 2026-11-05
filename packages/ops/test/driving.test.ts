@@ -541,6 +541,20 @@ describe('scroll_to', () => {
     expect(d.swipes).toBeLessThan(40);
   });
 
+  it('takes one stroke that moved nothing for a screen still arriving, not for the list’s end', async () => {
+    class Arriving extends ListDevice {
+      lost = 1;
+      override taken(by: number) {
+        return this.lost-- > 0 ? 0 : by;
+      }
+    }
+    const d = new Arriving();
+    const { call } = await connect(d);
+    const r = await call('scroll_to', { selector: { text: 'Row 20' } });
+    expect(r.error).toBe(false);
+    expect(r.data.found).toBe(true);
+  });
+
   it('stops at the bound, and says it could go on', async () => {
     const d = new ListDevice();
     const { call } = await connect(d);
