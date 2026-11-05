@@ -8,8 +8,8 @@ import { NeedError } from './mirror/need.js';
 import { nativeBinary } from './native.js';
 import { run } from './run.js';
 
-/** Vision takes under a second on a calm Mac: a first run on a busy one was cut off at 30 s. */
-const SCAN_MS = 60_000;
+/** Under a second, at load 15 or 68 and with the Neural Engine's compiler busy: a read must not wait on more. */
+const SCAN_MS = 10_000;
 
 /** A run of words on a picture, in fractions of it from its top left corner. */
 export type PictureText = {

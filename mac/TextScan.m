@@ -11,10 +11,11 @@ int main(int argc, char **argv) {
       return 2;
     }
     VNRecognizeTextRequest *request = [VNRecognizeTextRequest new];
-    request.recognitionLevel = VNRequestTextRecognitionLevelAccurate;
+    // the accurate level waits on the system's Neural Engine compiler, by program and by picture, for a minute or four
+    // and on the CPU as well; a kill throws that work away. This level reads Latin letters only.
+    request.recognitionLevel = VNRequestTextRecognitionLevelFast;
     // a screen's words are labels, not prose: a correction would rewrite a name
     request.usesLanguageCorrection = NO;
-    request.automaticallyDetectsLanguage = YES;
     NSURL *image = [NSURL fileURLWithPath:@(argv[1])];
     VNImageRequestHandler *handler = [[VNImageRequestHandler alloc] initWithURL:image options:@{}];
     NSError *error = nil;
