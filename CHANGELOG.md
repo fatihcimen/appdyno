@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A measure on an iPhone no longer ends in a crash of Xcode's trace tool: the tool dies now and then as it loads a trace, and the read is made again.
 - A person's touch reaches the app on a dimmed screen: on a Xiaomi the touch that brightened it was lost, with a tap reported.
 - `--quality auto` on a phone takes the largest size that keeps up with a person, by what its encoder takes on motion, and starts the next stream there. `high` and `standard` keep the display's size.
 - Reads of the window dump take the phone's own display: under a mirror they read its virtual display, with no focus and no lock.

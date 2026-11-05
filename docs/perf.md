@@ -82,6 +82,8 @@ Xcode 27.1, iOS 27.0.1 on a cable, iOS 26.5 on the simulator, 2026-11-03. Host l
 
 **The trace tool and a running process.** On a phone `--attach` answers "Cannot find process for provided pid" at times, for a process that runs: the same pid not found for 100 s, then found, whichever way it is named. What needs an attach looks again every 5 s for 3 minutes.
 
+**The trace tool and its own traces.** Xcode 27.1's `xctrace export` dies now and then as it loads a trace: `NSInvalidArgumentException` from a sort on its own `TrackElaboratorQueue`, naming whatever then sits at a freed address (`XRAnalysisCoreQueryTicket`, `OS_dispatch_group`). No query avoids it: it died on a read of a trace's list of tables too. On one Activity Monitor trace 3 of 242 reads of `activity-monitor-process-live` died, the first with nothing else running, and the next read of the file worked each time. A read that dies by a signal is made again, up to 3 reads: through that, 200 of 200 came back over 2 such deaths.
+
 The model, where nothing else reads: `energy = 1 W x CPU time + 200 nJ x bytes`, in `packages/core/src/energy-model.ts`, with `modelled: true` on its metric and "a model" in the answer. Round figures within the examples of Android's power profile documentation, to tell runs apart on one device.
 
 ## A Baseline Profile

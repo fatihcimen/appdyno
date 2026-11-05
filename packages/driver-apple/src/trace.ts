@@ -203,10 +203,28 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
   }
 }
 
+/** Reads of a trace before what the tool says of it is the answer. */
+const READS = 3;
+
+/**
+ * `xctrace export`, read again if the tool dies by itself: Xcode 27.1's aborts now and then as it loads a trace, in
+ * a sort on a queue of its own that meets a freed object, and the next read of that file works.
+ */
+async function exporting(args: string[], limits: { maxBuffer: number; timeout: number }) {
+  for (let read = 1; ; read++) {
+    try {
+      return await run('xcrun', ['xctrace', 'export', ...args], { env: xcodeEnv(), ...limits });
+    } catch (e) {
+      // `killed` is a read that ran out of time: another would too
+      const { signal, killed } = e as { signal?: string; killed?: boolean };
+      if (!signal || killed || read === READS) throw e;
+    }
+  }
+}
+
 const exported = async (tracePath: string, xpath: string) =>
   (
-    await run('xcrun', ['xctrace', 'export', '--input', tracePath, '--xpath', xpath], {
-      env: xcodeEnv(),
+    await exporting(['--input', tracePath, '--xpath', xpath], {
       maxBuffer: 256 * 1024 * 1024,
       timeout: 300_000,
     }).catch((e: { stderr?: string; message: string }) => {
@@ -325,8 +343,7 @@ export async function queryTraceFile(
       );
     return digest;
   }
-  const { stdout } = await run('xcrun', ['xctrace', 'export', '--input', tracePath, '--toc'], {
-    env: xcodeEnv(),
+  const { stdout } = await exporting(['--input', tracePath, '--toc'], {
     maxBuffer: 64 * 1024 * 1024,
     timeout: 120_000,
   }).catch(refused);
