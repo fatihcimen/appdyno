@@ -68,10 +68,21 @@ NSView *MVGlassGroup(NSView *content) {
   return container;
 }
 
+/// A click on a window not in use is the click a person meant: a window opens in front with no keyboard, and without
+/// this its first click on any control only made the window the one in use, with nothing to show for it.
+@interface MVBarButton : NSButton
+@end
+
+@implementation MVBarButton
+- (BOOL)acceptsFirstMouse:(NSEvent *)event {
+  return YES;
+}
+@end
+
 /// One button of a glass bar: a symbol and nothing else, its words for a person's pointer and for VoiceOver.
 static NSButton *barButton(NSString *name, id target, SEL action) {
   NSImageSymbolConfiguration *quiet = [NSImageSymbolConfiguration configurationWithPointSize:15 weight:NSFontWeightRegular];
-  NSButton *button = [NSButton buttonWithImage:[MVControlImage(name) imageWithSymbolConfiguration:quiet] target:target action:action];
+  NSButton *button = [MVBarButton buttonWithImage:[MVControlImage(name) imageWithSymbolConfiguration:quiet] target:target action:action];
   button.bordered = NO;
   button.identifier = name;
   button.toolTip = MVControlTitle(name);

@@ -124,6 +124,36 @@ static void checkPair(void) {
   MVCheck(@"pair: a wide window stays on the screen", MVBesideOrigin(room, NSMakeSize(900, 600), YES).x == 0, nil);
 }
 
+/// A window that keeps what its controls ask for, and does none of it.
+@interface MVAskedWindow : MVWindow
+@property(nonatomic) NSMutableArray<NSString *> *asked;
+@end
+
+@implementation MVAskedWindow
+- (void)perform:(NSString *)name {
+  [self.asked addObject:name ?: @"nothing"];
+}
+@end
+
+/// A click by the window's own events on each button of its bar, on each kind of device: not one is a call to what it does.
+static void checkClicks(void) {
+  NSArray *kinds = @[@[@"home", @"lock", @"volumeUp"], @[@"back", @"home", @"appSwitch", @"lock"]];
+  for (NSArray<NSString *> *controls in kinds) {
+    MVAskedWindow *window = [MVAskedWindow new];
+    window.asked = [NSMutableArray array];
+    window.behind = YES;
+    [window configure:@{@"title": @"clicks", @"look": @{@"controls": controls}}];
+    NSMutableArray<NSString *> *names = [NSMutableArray arrayWithArray:@[@"screenshot", @"record", @"recordFlow", @"hud", @"inspector"]];
+    for (NSString *name in @[@"back", @"home", @"appSwitch", @"lock"])
+      if ([controls containsObject:name]) [names addObject:name];
+    for (NSString *name in names) {
+      [window pokeClick:name];
+      for (NSEvent *e; (e = [NSApp nextEventMatchingMask:NSEventMaskAny untilDate:[NSDate dateWithTimeIntervalSinceNow:0.05] inMode:NSDefaultRunLoopMode dequeue:YES]);) [NSApp sendEvent:e];
+    }
+    MVCheck(@"clicks: every button of a bar does what its name says", [window.asked isEqual:names], [window.asked componentsJoinedByString:@" "]);
+  }
+}
+
 static void checkGlass(void) {
   NSView *content = [NSView new];
   NSView *pane = MVGlass(content, 20, nil);
@@ -214,6 +244,7 @@ void MVCheckFrame(void) {
   checkLive();
   checkMeasures();
   checkPair();
+  checkClicks();
   checkMood();
   checkStreamMood();
   checkGestures();

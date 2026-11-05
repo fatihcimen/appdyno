@@ -382,7 +382,8 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 }
 
 - (void)control:(id)sender {
-  NSString *name = [sender respondsToSelector:@selector(representedObject)] ? [sender representedObject] : [sender identifier];
+  // a menu's item by what it holds, a bar's button by its identifier: a button answers `representedObject` too, with nil
+  NSString *name = [sender isKindOfClass:NSMenuItem.class] ? [sender representedObject] : [sender identifier];
   if ([name isEqual:@"more"]) return [self showMore:sender];
   [self perform:name];
 }

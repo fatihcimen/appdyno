@@ -187,6 +187,7 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 @interface MVWindow (Poke)
 /// A click at this fraction of the picture, by the window's own event queue: needs no permission to post.
 - (void)pokeX:(double)x y:(double)y right:(BOOL)right;
+- (void)pokeClick:(NSString *)name;
 - (void)pokeText:(NSString *)text;
 - (void)pokeX:(double)x y:(double)y toX:(double)x2 toY:(double)y2 seconds:(double)seconds;
 - (void)pokeKey:(NSString *)characters;

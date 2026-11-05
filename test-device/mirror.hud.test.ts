@@ -128,7 +128,7 @@ describe.runIf(udid ?? serial)("a window's live numbers", () => {
     async () => {
       await new Promise((r) => setTimeout(r, OUT_OF_A_READING));
       expect(perf()).toEqual([]);
-      control('hud');
+      session.tell({ op: 'poke', click: 'hud' });
       const read = (m: Record<string, unknown>) =>
         m.op === 'perf' && (m.sample as LiveSample).memoryMb !== undefined;
       await until('a real reading', () => told.some(read), READING_MS).catch((e: Error) => {
