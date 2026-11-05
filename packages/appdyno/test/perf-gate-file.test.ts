@@ -56,6 +56,12 @@ describe('the workflow file', () => {
     expect(code).toContain('gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file');
   });
 
+  it('waits for a quiet runner before the run the gate reads, after the build that loads it', () => {
+    const pr = code.split('- name: ').find((s) => s.startsWith('The pull request'))!;
+    expect(pr.indexOf('settle')).toBeGreaterThan(pr.indexOf('simctl install'));
+    expect(pr.indexOf('settle')).toBeLessThan(pr.indexOf('$APPDYNO test'));
+  });
+
   it('says a run the gate could not judge fails the job', () => {
     expect(file).not.toContain('fails nothing');
     expect(file).toContain('`noisy`');

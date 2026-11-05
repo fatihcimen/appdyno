@@ -48,9 +48,10 @@ export function reportKey(
   };
 }
 
-/** What stops a gate: a change seen with too little to call it, or under noise, is a judgement that never happened. */
-const stops = (c: Comparison) =>
-  c.verdict === 'regression' || c.verdict === 'few-samples' || c.verdict === 'noisy';
+/** What lets a gate through; anything else stops it, as a judgement that never happened is no pass. */
+const PASSES: Comparison['verdict'][] = ['ok', 'improvement', 'new'];
+
+const stops = (c: Comparison) => !PASSES.includes(c.verdict);
 
 const failed = (r: KeyReport) => [
   ...r.comparisons.filter(stops),
@@ -80,10 +81,12 @@ const line = (c: Comparison) => `${c.verdict.padEnd(11)} ${comparisonLine(c)}`;
 
 export function toText(reports: KeyReport[]): string {
   if (reports.length === 0) return 'no measured runs to compare';
+  const all = reports.flatMap((r) => r.comparisons);
   const cannot = (verdict: Comparison['verdict'], why: string) => {
-    const n = reports.flatMap((r) => r.comparisons).filter((c) => c.verdict === verdict).length;
+    const n = all.filter((c) => c.verdict === verdict).length;
     return n ? [`the gate could not judge ${n} of these: ${why}`] : [];
   };
+  const unlike = [...new Set(all.filter((c) => c.verdict === 'refused').map((c) => c.note))];
   const lines = reports.flatMap((r) => [
     `${r.app} ${r.scenario} on ${r.deviceClass} (run ${r.run}, ${r.at})${r.noise.length ? `; noise: ${r.noise.join(', ')}` : ''}`,
     ...r.comparisons.map((c) => `  ${line(c)}`),
@@ -95,6 +98,7 @@ export function toText(reports: KeyReport[]): string {
     ...lines,
     ...cannot('few-samples', 'this is no pass, measure more'),
     ...cannot('noisy', 'measured under load or noise, this is no pass, measure again'),
+    ...cannot('refused', `the two sides are not comparable, ${unlike.join('; ')}: this is no pass`),
   ].join('\n');
 }
 

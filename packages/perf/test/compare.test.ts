@@ -222,6 +222,34 @@ const context = (samples: number[], run: string, at: string, thermal = 0): PerfR
     [{ kind: 'launch.ttid_ms', unit: 'ms', samples }],
   );
 
+describe('what stops the gate', () => {
+  const report = (verdict: string, note?: string) =>
+    ({
+      app: 'a',
+      scenario: 's',
+      deviceClass: 'd',
+      run: 'r',
+      at: 't',
+      noise: [],
+      budgets: [],
+      comparisons: [{ kind: 'k', unit: 'ms', verdict, n: { current: 5, baseline: 5 }, note }],
+    }) as never;
+
+  it('takes two sides that are not alike for no pass, and says how they differ', () => {
+    const unlike = report('refused', 'baseline is debug; this run is release');
+    expect(exitCode([unlike])).toBe(1);
+    expect(toText([unlike])).toMatch(
+      /^the gate could not judge 1 of these: the two sides are not comparable, baseline is debug; this run is release: this is no pass$/m,
+    );
+    expect(toJUnit([unlike])).toContain('<failure message="refused');
+  });
+
+  it('lets through what it has nothing to compare with, and what got better', () => {
+    expect(exitCode([report('new'), report('ok'), report('improvement')])).toBe(0);
+    expect(toText([report('new')])).not.toContain('could not judge');
+  });
+});
+
 describe('store and reports', () => {
   const dir = () => mkdtempSync(join(tmpdir(), 'appdyno-perf-'));
 
