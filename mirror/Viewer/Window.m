@@ -86,6 +86,10 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
     __weak MVWindow *weak = self;
     _inspector.onPane = ^{
       [weak watchReadings];
+      [weak watchElements];
+    };
+    _inspector.flow.onClick = ^{
+      [weak watchElements];
     };
     _hud = [[MVHud alloc] initWithFrame:NSZeroRect];
     _hud.hidden = YES;
@@ -124,7 +128,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   NSMutableArray *device = [NSMutableArray array];
   for (NSString *name in @[@"back", @"home", @"appSwitch", @"lock"])
     if ([_view.controls containsObject:name]) [device addObject:name];
-  _bar = MVGlassBar(@[device, @[@"screenshot", @"record"], @[@"hud", @"more", @"inspector"]], self, @selector(control:));
+  _bar = MVGlassBar(@[device, @[@"screenshot", @"record", @"recordFlow"], @[@"hud", @"more", @"inspector"]], self, @selector(control:));
   [_root addSubview:_bar];
   [NSLayoutConstraint activateConstraints:@[
     [_bar.trailingAnchor constraintEqualToAnchor:_root.trailingAnchor constant:-12],
@@ -302,6 +306,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
   _inspecting = !_inspecting;
   MVShowPane(_panel, _inspecting);
   [self watchReadings];
+  [self watchElements];
   [self setZoom:zoom > 0 ? zoom : 1];
 }
 
@@ -378,7 +383,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
   if ([name isEqual:@"frame"]) return [self setFrameShown:!_frame.showsFrame];
   if ([name isEqual:@"inspector"]) return [self toggleInspector];
   if ([name isEqual:@"hud"]) return [self toggleHud];
-  if ([@[@"screenshot", @"copy", @"record", @"reconnect", @"measureLaunch", @"measureScroll", @"dashboard"] containsObject:name]) return MVEmit(@{@"op": @"control", @"name": name});
+  if ([@[@"screenshot", @"copy", @"record", @"recordFlow", @"reconnect", @"measureLaunch", @"measureScroll", @"dashboard"] containsObject:name]) return MVEmit(@{@"op": @"control", @"name": name});
   if ([name isEqual:@"paste"]) return [_view paste:self];
   [_view pressButton:name];
 }

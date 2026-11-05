@@ -146,6 +146,9 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   if ([op isEqual:@"banner"]) return m[@"id"] ? [_window.overlay showBanner:m] : [_window.overlay hideBanner];
   if ([op isEqual:@"activity"]) return [_window addActivity:m];
   if ([op isEqual:@"apps"]) return [_window showApps:m];
+  if ([op isEqual:@"flow"]) return [_window showFlow:m];
+  if ([op isEqual:@"element"]) return [_window showElement:m];
+  if ([op isEqual:@"copyText"]) return MVCopyText(m[@"text"] ?: @"", NSPasteboard.generalPasteboard);
   if ([op isEqual:@"perf"]) return [_window showPerf:m];
   if ([op isEqual:@"measuring"] || [op isEqual:@"measured"]) return [_window showMeasure:m];
   if ([op isEqual:@"hub"]) return [_hub show:m];
@@ -160,7 +163,9 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
     if ([m[@"done"] boolValue]) return [_window.overlay done:self];
     if (m[@"pane"]) return [_window showPane:[m[@"pane"] integerValue]];
     if (m[@"control"]) return [_window perform:m[@"control"]];
+    if (m[@"click"]) return [_window chooseClick:m[@"click"]];
     double x = [m[@"x"] doubleValue], y = [m[@"y"] doubleValue];
+    if ([m[@"hover"] boolValue]) return [_window pokeHoverX:x y:y];
     if (m[@"seconds"]) return [_window pokeX:x y:y toX:[(m[@"x2"] ?: m[@"x"]) doubleValue] toY:[(m[@"y2"] ?: m[@"y"]) doubleValue] seconds:[m[@"seconds"] doubleValue]];
     return [_window pokeX:x y:y right:[m[@"right"] boolValue]];
   }

@@ -11,6 +11,10 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic) BOOL armed;
 /// The controls this kind of device has.
 @property(nonatomic, copy) NSArray<NSString *> *controls;
+/// The pointer's place is asked about, as the Flow pane shows.
+@property(nonatomic) BOOL inspects;
+/// What a click does instead of touching the device: `copy` or `assert`; nil: it touches.
+@property(nonatomic, copy, nullable) NSString *clickDoes;
 /// What the system's text input holds, before it is typed.
 @property(nonatomic, copy, nullable) NSString *composing;
 @property(readonly) BOOL takesPointer;
@@ -18,6 +22,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property(readonly) BOOL takesKeys;
 - (void)pressButton:(id)sender;
 - (NSMenu *)deviceMenu;
+/// A rectangle over the element named, as fractions of the picture; nil takes it away.
+- (void)showMark:(nullable NSDictionary *)rect;
 @end
 
 @interface MVView (Typing) <NSTextInputClient>
@@ -177,12 +183,47 @@ static const double MVHudWidth = 188;
 - (NSString *)shownFor:(NSString *)field;
 @end
 
-/// The right-hand pane: Stats, Activity, Apps and Performance. Glass is around it: all it has inside is fills.
+/// Words of a pane, and a heading over them.
+NSTextField *MVPaneNote(NSString *text);
+NSTextField *MVPaneHeading(NSString *text);
+
+/// What a person's clicks have written, and what is under the pointer, as the parent says.
+@interface MVFlowPane : NSView
+- (instancetype)initWithFrame:(NSRect)frame target:(id)target;
+/// What a click on the device does instead of touching it; nil: it touches.
+@property(nonatomic, readonly, nullable) NSString *clickDoes;
+/// A person chose what a click does.
+@property(nonatomic, copy, nullable) void (^onClick)(void);
+/// The window says what the pointer is over.
+@property(nonatomic) BOOL looking;
+/// A recording runs.
+@property(nonatomic) BOOL recording;
+- (void)chooseClick:(NSString *)does;
+- (void)show:(NSDictionary *)message;
+- (void)showElement:(NSDictionary *)message;
+/// What it says now.
+- (NSString *)recordTitle;
+- (NSString *)elementShown;
+- (NSArray<MVRow *> *)rows;
+@end
+
+/// Where an element's rectangle stands in a view of this size: the rectangle is from the picture's top left.
+NSRect MVMarkFrame(NSDictionary *rect, CGSize size);
+/// Text on a pasteboard: a person's is the general one.
+void MVCopyText(NSString *text, NSPasteboard *board);
+
+/// The panes of the Inspector, by the index `showPane:` takes.
+enum { MVPaneStats, MVPaneActivity, MVPaneApps, MVPanePerf, MVPaneFlow, MVPanes };
+
+/// The right-hand pane: Stats, Activity, Apps, Performance and Flow. Glass is around it: all it has inside is fills.
 @interface MVInspector : NSView
 - (instancetype)initWithFrame:(NSRect)frame target:(id)target;
 @property(nonatomic, readonly) MVPerfPane *perf;
+@property(nonatomic, readonly) MVFlowPane *flow;
 /// Whether Performance is the pane chosen.
 @property(nonatomic, readonly) BOOL readings;
+/// Whether Flow is.
+@property(nonatomic, readonly) BOOL flowing;
 /// A pane was chosen.
 @property(nonatomic, copy, nullable) void (^onPane)(void);
 - (void)showPane:(NSInteger)pane;

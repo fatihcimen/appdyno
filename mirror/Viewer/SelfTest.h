@@ -33,5 +33,6 @@ void MVCheckPipe(void);
 void MVCheckRecorder(void);
 void MVCheckKeyboard(void);
 void MVCheckFrame(void);
+void MVCheckFlow(void);
 
 NS_ASSUME_NONNULL_END

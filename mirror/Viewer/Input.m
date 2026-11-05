@@ -6,6 +6,8 @@
 #import <Carbon/Carbon.h>
 
 static const double kDot = 30, kLongPressSeconds = 0.8, kPinchStart = 0.14, kPinchLeast = 8;
+// what the parent is asked about the pointer: more would say nothing a person could see
+static const double kHoverSeconds = 0.05;
 
 BOOL MVNormalize(NSPoint point, NSSize bounds, CGSize picture, double *x, double *y) {
   if (picture.width <= 0 || picture.height <= 0 || bounds.width <= 0 || bounds.height <= 0) return NO;
@@ -71,7 +73,10 @@ static CALayer *dotLayer(CALayer *parent) {
   BOOL _scrolling;
   NSPoint _pinchAt;
   double _pinchGap;
-  CALayer *_dot, *_dot2;
+  CALayer *_dot, *_dot2, *_mark;
+  BOOL _wheeling;
+  NSTimeInterval _hoveredAt;
+  NSTrackingArea *_tracking;
 }
 
 - (BOOL)acceptsFirstResponder {
@@ -115,6 +120,7 @@ static CALayer *dotLayer(CALayer *parent) {
   NSPoint p = clamp ? clampTo(point, size) : point;
   if (!MVNormalize(p, size, self.picture, &x, &y)) return;
   NSMutableDictionary *touch = [NSMutableDictionary dictionaryWithDictionary:@{@"op": @"touch", @"p": @(phase), @"x": @(x), @"y": @(y)}];
+  if (_wheeling) touch[@"wheel"] = @YES;
   NSPoint other = second ? clampTo(second.pointValue, size) : NSZeroPoint;
   if (second && MVNormalize(other, size, self.picture, &x2, &y2)) {
     touch[@"x2"] = @(x2);
@@ -141,7 +147,53 @@ static CALayer *dotLayer(CALayer *parent) {
   [CATransaction commit];
 }
 
+/// Where the pointer is, as a fraction of the picture; NO off it.
+- (BOOL)fractionOf:(NSEvent *)event x:(double *)x y:(double *)y {
+  return MVNormalize([self convertPoint:event.locationInWindow fromView:nil], self.bounds.size, self.picture, x, y);
+}
+
+- (void)updateTrackingAreas {
+  [super updateTrackingAreas];
+  if (_tracking) return;
+  // always: a person looks at a device from any app
+  _tracking = [[NSTrackingArea alloc] initWithRect:NSZeroRect options:NSTrackingMouseMoved | NSTrackingMouseEnteredAndExited | NSTrackingActiveAlways | NSTrackingInVisibleRect owner:self userInfo:nil];
+  [self addTrackingArea:_tracking];
+}
+
+- (void)mouseMoved:(NSEvent *)event {
+  double x, y;
+  if (!self.inspects || event.timestamp - _hoveredAt < kHoverSeconds || ![self fractionOf:event x:&x y:&y]) return;
+  _hoveredAt = event.timestamp;
+  MVEmit(@{@"op": @"hover", @"x": @(x), @"y": @(y)});
+}
+
+- (void)mouseExited:(NSEvent *)event {
+  [self showMark:nil];
+}
+
+- (void)showMark:(nullable NSDictionary *)rect {
+  if (rect && !_mark) {
+    _mark = [CALayer layer];
+    _mark.borderColor = NSColor.controlAccentColor.CGColor;
+    _mark.borderWidth = 2;
+    _mark.cornerRadius = 6;
+    _mark.backgroundColor = [NSColor.controlAccentColor colorWithAlphaComponent:0.14].CGColor;
+    _mark.zPosition = 19;
+    [self.layer addSublayer:_mark];
+  }
+  [CATransaction begin];
+  [CATransaction setDisableActions:YES];
+  _mark.hidden = !rect;
+  if (rect) _mark.frame = MVMarkFrame(rect, self.bounds.size);
+  [CATransaction commit];
+}
+
 - (void)mouseDown:(NSEvent *)event {
+  if (self.clickDoes) {
+    double x, y;
+    if ([self fractionOf:event x:&x y:&y]) MVEmit(@{@"op": @"pick", @"x": @(x), @"y": @(y), @"as": self.clickDoes});
+    return;
+  }
   if (self.inputOn && !self.armed) {
     self.armed = YES;
     return;
@@ -196,19 +248,22 @@ static CALayer *dotLayer(CALayer *parent) {
   BOOL wheel = event.phase == NSEventPhaseNone;
   double dx = event.scrollingDeltaX * (event.hasPreciseScrollingDeltas ? 1 : 12);
   double dy = event.scrollingDeltaY * (event.hasPreciseScrollingDeltas ? 1 : 12);
+  _wheeling = YES;
   if (wheel || event.phase == NSEventPhaseBegan) {
     _scrollAt = at;
     _scrolling = YES;
     [self sendPhase:0 at:at clampToEdge:NO];
   }
-  if (!_scrolling) return;
-  _scrollAt.x += dx;
-  _scrollAt.y -= dy;
-  [self sendPhase:1 at:_scrollAt clampToEdge:YES];
-  if (wheel || event.phase == NSEventPhaseEnded || event.phase == NSEventPhaseCancelled) {
-    [self sendPhase:2 at:_scrollAt clampToEdge:YES];
-    _scrolling = NO;
+  if (_scrolling) {
+    _scrollAt.x += dx;
+    _scrollAt.y -= dy;
+    [self sendPhase:1 at:_scrollAt clampToEdge:YES];
+    if (wheel || event.phase == NSEventPhaseEnded || event.phase == NSEventPhaseCancelled) {
+      [self sendPhase:2 at:_scrollAt clampToEdge:YES];
+      _scrolling = NO;
+    }
   }
+  _wheeling = NO;
 }
 
 @end

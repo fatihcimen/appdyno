@@ -130,6 +130,8 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags);
 /// Lays a layer out in its parent's size, stood up from its contents by these quarter turns, counterclockwise.
 void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 
+@class MVInspector;
+
 /// The window. The app keeps none when it runs headless.
 @interface MVWindow : NSObject <NSWindowDelegate>
 @property(readonly) MVOverlay *overlay;
@@ -159,7 +161,20 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 @property(nonatomic) BOOL poses;
 @property(readonly) NSWindow *nsWindow;
 @property(readonly) NSView *screenView;
+@property(readonly) MVInspector *inspector;
+@property(readonly) BOOL inspecting;
+@property(readonly) NSView *bar;
 @property(nonatomic, copy, nullable) void (^onHidden)(BOOL hidden);
+@end
+
+/// A window's part in a recording and in what is under the pointer.
+@interface MVWindow (Flow)
+/// The pane or the Inspector changed: what the pointer and a click do follow.
+- (void)watchElements;
+- (void)showFlow:(NSDictionary *)message;
+- (void)showElement:(NSDictionary *)message;
+/// What a click on the device does instead of touching it, as a person chooses in the Flow pane.
+- (void)chooseClick:(NSString *)does;
 @end
 
 /// A window driven and looked at from outside.
@@ -170,6 +185,8 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 - (void)pokeX:(double)x y:(double)y toX:(double)x2 toY:(double)y2 seconds:(double)seconds;
 - (void)pokeKey:(NSString *)characters;
 - (void)pokeButton:(NSString *)name;
+/// The pointer over this fraction of the picture.
+- (void)pokeHoverX:(double)x y:(double)y;
 /// The window as it looks now, to a PNG.
 - (BOOL)snapshot:(NSString *)file;
 /// The device's screen alone, as this window shows it.

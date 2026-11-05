@@ -38,6 +38,33 @@ const STATES = {
     call('launch_app', 1204, false, '{"app":"com.example.gone"}'),
   ],
   apps: [live, { op: 'poke', pane: 2 }, { pause: 1_000 }],
+  flow: [
+    live,
+    {
+      op: 'flow',
+      on: true,
+      lines: [
+        'launch',
+        'tap id=name_input',
+        'type "Ada" replace',
+        'tap id=password_input',
+        'type "${PASSWORD_INPUT}" replace',
+        'tap x=201 y=700 screen=402x874 !coordinates',
+        'tap id=submit',
+      ],
+      look: ['step 6: coordinates'],
+    },
+    {
+      op: 'element',
+      role: 'button',
+      label: 'Send',
+      ref: '@45l2',
+      id: 'submit',
+      tap: 'tap id=submit',
+      rect: { x: 0.04, y: 0.398, w: 0.097, h: 0.024 },
+      contrast: ['text contrast 2.31:1 (#8E8E93 on #FFFFFF), under 4.5:1'],
+    },
+  ],
   asleep: [
     {
       op: 'status',

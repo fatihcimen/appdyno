@@ -40,6 +40,13 @@ static const double kClickSeconds = 0.08;
   return MVWriteWindow(self.nsWindow, file);
 }
 
+/// The pointer over the picture: a window kept behind has no pointer to track.
+- (void)pokeHoverX:(double)x y:(double)y {
+  NSView *view = self.screenView;
+  NSPoint at = [view convertPoint:NSMakePoint(x * view.bounds.size.width, (1 - y) * view.bounds.size.height) toView:nil];
+  [view mouseMoved:[NSEvent mouseEventWithType:NSEventTypeMouseMoved location:at modifierFlags:0 timestamp:NSProcessInfo.processInfo.systemUptime windowNumber:self.nsWindow.windowNumber context:nil eventNumber:0 clickCount:0 pressure:0]];
+}
+
 - (BOOL)snapshotScreen:(NSString *)file {
   return MVWriteWindowPart(self.nsWindow, [self.screenView convertRect:self.screenView.bounds toView:nil], file);
 }

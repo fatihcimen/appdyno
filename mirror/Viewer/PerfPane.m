@@ -33,6 +33,14 @@ static NSTextField *heading(NSString *text) {
   return field;
 }
 
+NSTextField *MVPaneNote(NSString *text) {
+  return note(text);
+}
+
+NSTextField *MVPaneHeading(NSString *text) {
+  return heading(text);
+}
+
 /// A control of the table, as a button of a pane.
 static NSButton *button(NSString *name, id target) {
   NSButton *button = [NSButton buttonWithTitle:[[MVControlTitle(name) componentsSeparatedByString:@" "] lastObject] image:MVControlImage(name) ?: [NSImage new] target:target action:@selector(control:)];
