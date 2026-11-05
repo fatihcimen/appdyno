@@ -270,6 +270,15 @@ describe('the HTTP server', () => {
     expect(readFileSync(args, 'utf8')).toContain('--end-with-parent');
   });
 
+  it('starts once however often it is asked, and says it is on its way', async () => {
+    const http = new HubHttp([process.execPath, fake, 'http']);
+    const asked = [http.start(), http.start()];
+    expect(http.state).toEqual({ starting: true });
+    await Promise.all(asked);
+    expect(http.state).toEqual({ address: 'http://127.0.0.1:8765/mcp' });
+    await http.stop();
+  });
+
   it('takes the next port when one is taken', async () => {
     vi.stubEnv('FAKE_TAKEN', '8765');
     const http = new HubHttp([process.execPath, fake, 'http']);

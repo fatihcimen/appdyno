@@ -105,7 +105,6 @@ NSButton *MVPlaceButton(NSString *title, NSString *name, id target, SEL action) 
 
 NSButton *MVPlacePrimary(NSString *title, NSString *name, id target, SEL action) {
   NSButton *button = buttonNamed(title, name, target, action);
-  button.hasDestructiveAction = NO;
   button.bezelColor = NSColor.controlAccentColor;
   return button;
 }

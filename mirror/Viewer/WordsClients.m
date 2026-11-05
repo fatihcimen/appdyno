@@ -28,7 +28,7 @@ const MVWordRow MVWordTableClients[] = {
     {"Added. Restart it to see the change.", "Eklendi. Değişikliği görmesi için yeniden başlatın."},
     {"Updated. Restart it to see the change.", "Güncellendi. Değişikliği görmesi için yeniden başlatın."},
     {"Removed. Restart it to see the change.", "Kaldırıldı. Değişikliği görmesi için yeniden başlatın."},
-    {"Put back as it was.", "Eski haline getirildi."},
+    {"Put back as it was.", "Eski haline döndürüldü."},
     {"Backup: %@", "Yedek: %@"},
     {"To check:", "Denetlemek için:"},
     // what a test finds, as the parent says it
@@ -54,6 +54,7 @@ const MVWordRow MVWordTableClients[] = {
     {"Listening on %@", "Dinliyor: %@"},
     {"The server could not start: %@", "Sunucu başlatılamadı: %@"},
     {"Start Server", "Sunucuyu Başlat"},
+    {"Starting…", "Başlıyor…"},
     {"Stop Server", "Sunucuyu Durdur"},
     {"Copy Address", "Adresi Kopyala"},
     {"Token", "Token"},

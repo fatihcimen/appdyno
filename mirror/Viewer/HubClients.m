@@ -242,8 +242,12 @@ static NSString *shownName(NSDictionary *row) {
   NSTextField *promise = line([preview[@"backup"] boolValue] ? @"Only this entry changes, and a backup stays beside the file." : @"Only this entry changes.", MVStyleSub);
   NSStackView *buttons = [NSStackView stackViewWithViews:@[]];
   [buttons addView:[NSView new] inGravity:NSStackViewGravityLeading];
-  [buttons addView:[self button:@"Cancel" do:@"cancel" for:name] inGravity:NSStackViewGravityTrailing];
+  NSButton *cancel = [self button:@"Cancel" do:@"cancel" for:name];
+  cancel.keyEquivalent = @"\e";
+  [buttons addView:cancel inGravity:NSStackViewGravityTrailing];
   NSButton *apply = MVPlacePrimary(remove ? @"Remove" : update ? @"Update" : @"Add", [@"apply:" stringByAppendingString:name], self, @selector(rowClicked:));
+  apply.keyEquivalent = @"\r";
+  apply.hasDestructiveAction = remove;
   [buttons addView:apply inGravity:NSStackViewGravityTrailing];
   return MVPlaceColumn(@[where, lines, promise, buttons], 6);
 }
@@ -316,7 +320,9 @@ static NSString *shownName(NSDictionary *row) {
   [_serverMark paint:on ? @"circle.fill" : @"circle" color:on ? MVGreen() : MVQuietColor()];
   if (on) _failure = nil;
   _listening.stringValue = on ? [NSString stringWithFormat:@"Listening on %@", _address] : _failure ?: @"Off";
-  _power.title = MVWord(on ? @"Stop Server" : @"Start Server");
+  BOOL starting = [server[@"starting"] boolValue];
+  _power.title = MVWord(on ? @"Stop Server" : starting ? @"Starting…" : @"Start Server");
+  _power.enabled = !starting;
   _copyAddress.hidden = !on;
 }
 

@@ -40,11 +40,18 @@ export function renewHttpToken() {
 export class HubHttp {
   private child?: ChildProcess;
   private url?: string;
+  private starting?: Promise<void>;
 
   constructor(private readonly command: string[]) {}
 
   get address() {
     return this.url;
+  }
+
+  /** What a window says of it, and never the token. */
+  get state() {
+    if (this.url) return { address: this.url };
+    return this.starting ? { starting: true } : {};
   }
 
   private tryPort(port: number) {
@@ -87,8 +94,7 @@ export class HubHttp {
     this.url = undefined;
   }
 
-  async start() {
-    if (this.child) return;
+  private async firstFree() {
     for (let port = FIRST_PORT; port < FIRST_PORT + PORTS; port++) {
       const got = await this.tryPort(port);
       if (got === 'taken') continue;
@@ -96,6 +102,13 @@ export class HubHttp {
       return;
     }
     throw new Error(`no port free from ${FIRST_PORT} to ${FIRST_PORT + PORTS - 1}`);
+  }
+
+  /** A second click while it starts is the same start: two servers would be two ways in. */
+  start() {
+    if (this.child) return Promise.resolve();
+    this.starting ??= this.firstFree().finally(() => (this.starting = undefined));
+    return this.starting;
   }
 
   async stop() {

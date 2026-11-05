@@ -108,7 +108,7 @@ export function hubPlaces(o: PlacesOptions): HubPlaces {
       ...(r.last && { lastSaid: ago(r.last, Date.now()) }),
     })),
     browser: BROWSER_CLIENTS.map((c) => c.name),
-    server: http.address ? { address: http.address } : {},
+    server: http.state,
     notes,
   });
 
