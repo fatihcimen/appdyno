@@ -3,6 +3,19 @@
 ## Unreleased
 
 - A window keeps its pictures through a decoder's stall on a busy Mac: pictures already decoding were thrown away with the frame that did not fit, and a stream's first burst could leave a window black until the next key frame.
+- A failed action says `dispatched: "unknown"` once its touch has left for the device: the read after a touch can fail too, and `false` told a client to press again. An app in front that does not answer says so, in the words of a screen that is off.
+- `restore` and the end of a session bring Android's Wi-Fi back: its old value was read while the radio came back from airplane mode, and written down as off.
+- `press_key` `power` and `lock` press with no look at the screen first: on a dark Android screen the look woke it, and the key put it back to sleep.
+- A `wait_for` that ran out answers `TIMEOUT` and an `alert` answer with no alert `NOT_FOUND`, both refusals, and exit 1 on the command line. In a flow an `alert` step with no alert still passes, as a prompt comes once.
+- `audit` `types` is kept to on Android. On iOS a type the platform audit has not is refused by name: none of its types it knew meant every one.
+- `doctor --serial` asks the driver that would open the device, so that a booted simulator is no longer "not connected", and a missing runner's fix is `appdyno ios build`.
+- `--help` answers on every command, `--version` prints the version, a flag with a default is not called required, and a command's line is its first sentence, not its first colon.
+- The package holds the README, and `THIRD_PARTY_NOTICES` holds the notice of each package bundled in it.
+- A point past the edge of the screen is refused, with no touch sent: `tap`, `swipe`, `type_text` and `gesture`. It was called tapped.
+- `screenshot --out a.png` writes the format its name says, as `file` does, and answers `saved`.
+- `perf_snapshot` gives no percentile on no frames: gfxinfo's was the top bucket of an empty histogram.
+- Arguments a tool does not take answer `isError` with `code: INVALID_ARGUMENT`, a hint and `dispatched: false`. `type_text` says it takes up to 500 characters.
+- `perf_launch` `compile` is refused on iOS, where it was ignored.
 - `appdyno mirror`: **Record Flow** writes what a person does on a window as a flow, by selector: clicks, double clicks, long presses, swipes, typing, keys, Home and Back, and Launch and Quit from the Apps pane. A password is written as a secret's name, never as its text, typed on the Mac or on the device's own keyboard. What has no step is said at that moment and written as `unrecorded`, and a place nothing names is marked as coordinates. Swipes that reached what is clicked next become `scroll_to`. The recording is the one `flow` keeps, so an agent's `flow start` takes a person's clicks too.
 - The Inspector's **Flow** pane: the steps as they are written, and what is under the pointer, with its role, words, ref, id, contrast and what a click there would write. A click can copy its selector, or add an assertion, in place of touching the device.
 - `scroll_to` no longer runs past a row: on a simulator a list went on coasting from each stroke, and could reach its end with the row behind it. Each stroke now slows to a stop and takes 0.7 s, from 0.5 s. One stroke that moves nothing no longer reads as the list's end: it may land as a screen still arrives, and two in a row are asked for.
