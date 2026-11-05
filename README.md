@@ -150,6 +150,15 @@ With `symbols`, it names the stack of a release build. On iOS that is a `.dSYM`,
 
 ## A live window
 
+<p>
+  <img src="docs/images/window-numbers.png" width="49%" alt="A window on a real Xiaomi phone, with its frame rate, jank, frozen frames, CPU, memory and network beside it, each read from the device">
+  <img src="docs/images/window-performance.png" width="49%" alt="A window on a simulator with the Performance pane open: readings over time, and a cold launch and a scroll measured for real">
+</p>
+<p>
+  <img src="docs/images/window-ipad.png" width="49%" alt="A window on a simulated iPad on its side, in a frame drawn in code">
+  <img src="docs/images/dashboard.png" width="49%" alt="The dashboard of a kept app: what needs attention, measures by device, and trends">
+</p>
+
 `appdyno mirror` opens a native window on a device, driven by mouse, trackpad and keyboard, while an agent may drive the same device. One viewer process per device, with no server, no daemon and no port of ours. Android and simulators; an iPhone is not yet here.
 
 ```sh
@@ -157,6 +166,7 @@ appdyno mirror                     # this device's window, and stay
 appdyno mirror --all [--watch]     # every device, and new ones as they come
 appdyno mirror open --detach       # a window that outlives this command
 appdyno mirror close | status | stats
+appdyno hub                        # every device of this Mac in one window
 ```
 
 | device    | the picture                                                          | still screen                         |
