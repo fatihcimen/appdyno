@@ -55,6 +55,54 @@ const common = { id: expect.any(String), raw: expect.any(String), virtualDevice:
 const head = expect.stringMatching(/^measurement pm-\w+$/);
 
 describe('perf_trace', () => {
+  describe('a hold of the main thread', () => {
+    const timeline = (over: Record<string, number>) => ({
+      frameTrace: async () => ({
+        value: {
+          kind: 'timeline',
+          frames: 50,
+          janky: 0,
+          jankyPercent: 0,
+          appDeadlineMissed: 0,
+          appJankPercent: 0,
+          bufferStuffing: 0,
+          surfaceFlinger: 0,
+          p50Ms: 9,
+          p95Ms: 16,
+          worstMs: 38,
+          frozen: 0,
+          ...over,
+        },
+        raw: 'csv',
+        at,
+        source: 'a timeline tool',
+      }),
+    });
+    const stall = (r: Awaited<ReturnType<typeof traced>>) =>
+      r.kept.find((k) => k.kind === 'stalls.worst_ms')!.value;
+
+    it('that no frame shows is the number kept, and it says where that came from', async () => {
+      // what a 1500 ms hold read on an emulator: a longest frame of 38 ms was the wrong answer
+      const r = await traced({}, timeline({ heldMs: 1_483 }));
+      expect(stall(r)).toBe(1_483);
+      expect(r.data.heldMs).toBe(1_483);
+      expect(r.data.worstMs).toBe(38);
+      expect(r.lines.join('\n')).toContain(`Choreographer's "Skipped frames" line`);
+    });
+
+    it('that a long frame shows is no second finding', async () => {
+      const r = await traced({}, timeline({ worstMs: 1_100, heldMs: 1_000 }));
+      expect(stall(r)).toBe(1_100);
+      expect(r.lines.join('\n')).not.toContain('Skipped frames');
+    });
+
+    it('that nothing told of leaves the longest frame the number', async () => {
+      const r = await traced({}, timeline({}));
+      expect(stall(r)).toBe(38);
+      expect(r.data.heldMs).toBeUndefined();
+    });
+  });
+
   it('a frame timeline', async () => {
     const r = await traced(
       {},

@@ -96,6 +96,8 @@ export type FrameTimeline = {
   causes?: SlowFrameCauses;
   /** The kept trace. */
   tracePath?: string;
+  /** The longest hold of the main thread its log told of, which may be in no frame here. */
+  heldMs?: number;
 };
 
 /** The simulator's frame probe over a window (main-thread pacing, on the Mac's speed). */
@@ -147,8 +149,45 @@ export type FrameMarks = {
   input?: InputMark[];
   /** What these frames can and cannot see, where a source has limits. */
   limits?: string;
+  /** How they came to the clock, where that is no clock of the device's own, and how far that was found to hold. */
+  placed?: { by: string; withinMs: number };
   tracePath?: string;
 };
+
+/** Android's Choreographer, in the app's own log, as a main thread comes back late to a frame that was due. */
+const SKIPPED_FRAMES = /Skipped (\d+) frames!/;
+/** How long a refresh can be for what follows to mean anything: 240 Hz, and 30 Hz at its slowest. */
+const REFRESH_MS = { least: 4, most: 34, otherwise: 1_000 / 60 };
+
+/** A refresh on this device, by when its frames came: the middle gap between them. */
+export function refreshMsOf(times: number[]) {
+  const gaps = times
+    .slice(1)
+    .map((t, i) => t - times[i]!)
+    .filter((g) => g > 0)
+    .sort((a, b) => a - b);
+  const usual = gaps[gaps.length >> 1] ?? 0;
+  return usual >= REFRESH_MS.least && usual <= REFRESH_MS.most ? usual : REFRESH_MS.otherwise;
+}
+
+/**
+ * Each stop of a main thread a log tells of, ending at its line. A hold while the render thread goes on animating draws
+ * no long frame in Perfetto's timeline, and on an emulator none in `gfxinfo` either: this line is all there is of it.
+ * It comes only past 30 frames skipped.
+ */
+export function stopsInLog(
+  lines: string[],
+  at: (i: number) => number | undefined,
+  refreshMs: number,
+) {
+  return lines.flatMap((line, i) => {
+    const skipped = SKIPPED_FRAMES.exec(line)?.[1];
+    const end = at(i);
+    if (!skipped || end === undefined) return [];
+    const ms = Number(skipped) * refreshMs;
+    return [{ at: end - ms, ms }];
+  });
+}
 
 /** A surface's frames as SurfaceFlinger presented them: what a game or an engine draws, which `gfxinfo` never sees. */
 export type SurfaceFrames = {

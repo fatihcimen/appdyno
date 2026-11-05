@@ -146,6 +146,13 @@ describe('one clock', () => {
     expect(t.clock.sources.find((s) => s.row === 'Video')).toMatchObject({ by, withinMs: 1_000 });
   });
 
+  it("says what a source found of its own frames, and lends none of another's exactness", () => {
+    const placed = { by: 'the date their trace began', withinMs: 215 };
+    const frames = { frames: [{ at: FROM + 1, ms: 500, late: true }], placed };
+    const t = assemble(gathered({ frames }));
+    expect(t.clock.sources.find((s) => s.row === 'Frames')).toMatchObject(placed);
+  });
+
   it('keeps out what fell before or after the stretch', () => {
     const t = assemble(
       gathered({

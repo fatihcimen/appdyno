@@ -203,8 +203,8 @@ export function perfTraceOp(ctx: ServerContext) {
           { kind: 'frames.app_jank_percent', unit: 'percent', samples: [v.appJankPercent] },
           { kind: 'frames.p95_ms', unit: 'ms', samples: [v.p95Ms] },
           { kind: 'frames.frozen', unit: 'count', samples: [v.frozen] },
-          // the longest frame of the app's process: what a stall of its main thread becomes
-          { kind: 'stalls.worst_ms', unit: 'ms', samples: [v.worstMs] },
+          // the longest frame of the app's process, or a hold of its main thread no frame shows
+          { kind: 'stalls.worst_ms', unit: 'ms', samples: [Math.max(v.worstMs, v.heldMs ?? 0)] },
           ...(v.stats
             ? ([
                 { kind: 'frames.overrun_p95_ms', unit: 'ms', samples: [v.stats.overrunP95Ms] },
@@ -221,6 +221,11 @@ export function perfTraceOp(ctx: ServerContext) {
                 ]
               : []),
             `frame time p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms; frozen frames: ${v.frozen}`,
+            ...(v.heldMs !== undefined && v.heldMs > v.worstMs
+              ? [
+                  `its main thread stopped for ${v.heldMs} ms and no frame shows it: from Choreographer's "Skipped frames" line in the app's log`,
+                ]
+              : []),
             ...(v.stats
               ? [
                   `overrun p95 ${v.stats.overrunP95Ms} ms, worst ${v.stats.overrunWorstMs} ms; CPU p95 ${v.stats.cpuP95Ms} ms`,
@@ -245,6 +250,7 @@ export function perfTraceOp(ctx: ServerContext) {
             p50Ms: v.p50Ms,
             p95Ms: v.p95Ms,
             worstMs: v.worstMs,
+            ...(v.heldMs !== undefined && { heldMs: v.heldMs }),
             ...(v.tracePath && { tracePath: v.tracePath }),
           },
         },

@@ -1,5 +1,6 @@
 import {
-  median,
+  refreshMsOf,
+  stopsInLog,
   type ClockReading,
   type FrameMarks,
   type LiveSample,
@@ -17,13 +18,12 @@ import type {
   VideoFacts,
 } from '@appdyno/perf';
 
-/** A frame is in the video by the next refresh: 1 to 18 ms in the runs on an emulator, a draw stall against its freeze. */
-export const STAMPED_VIDEO_MS = 20;
+/** A frame is in the video by about the next refresh: 1 to 18 ms on an emulator, 8 to 14 on a Xiaomi, 10 to 20 on a Samsung. */
+export const STAMPED_VIDEO_MS = 25;
 /** A log line's time is printed to the ms; a trace's is its own clock's, a step past it. */
 const PRINTED_MS = 1;
 /** A reading is taken somewhere in the second it stands for. */
 const SAMPLE_MS = 1_000;
-const DISPLAY_MS = 1_000 / 60;
 
 const ON_DEVICE = 'the device';
 const ON_MAC = 'this Mac';
@@ -66,30 +66,14 @@ export function requestName(e: NetworkEntry, clean: (s: string) => string, full 
   }
 }
 
-/** Android's own word for a main thread that came back late: all there is of a stop that left no long frame. */
-const SKIPPED = /Skipped (\d+) frames!/;
-
-/** A refresh on this device, by how its frames came. */
-function refreshMs(frames: FrameMarks['frames']) {
-  const gaps = frames.slice(1).map((f, i) => f.at - frames[i]!.at);
-  const usual = median(gaps.filter((g) => g > 0));
-  return usual >= 4 && usual <= 34 ? usual : DISPLAY_MS;
-}
-
-/**
- * Each stop of the main thread its log tells of, from `n` refreshes before the line to the line. What a long frame
- * already shows is left out: one stop is one row.
- */
+/** Each stop of the main thread its log tells of. What a long frame already shows is left out: one stop is one row. */
 export function stallsIn(logs: LogsAnswer, frames: FrameMarks['frames']): StallSpan[] {
-  const each = refreshMs(frames);
-  return logs.lines.flatMap((line, i) => {
-    const n = SKIPPED.exec(line)?.[1];
-    const mark = logs.marks?.[i];
-    if (!n || !mark) return [];
-    const ms = Number(n) * each;
-    const span = { at: mark.at - ms, ms, how: 'Skipped frames in its log' };
-    const shown = frames.some((f) => f.ms >= ms / 2 && f.at < mark.at && f.at + f.ms > span.at);
-    return shown ? [] : [span];
+  const refresh = refreshMsOf(frames.map((f) => f.at));
+  return stopsInLog(logs.lines, (i) => logs.marks?.[i]?.at, refresh).flatMap((stop) => {
+    const shown = frames.some(
+      (f) => f.ms >= stop.ms / 2 && f.at < stop.at + stop.ms && f.at + f.ms > stop.at,
+    );
+    return shown ? [] : [{ ...stop, how: 'Skipped frames in its log' }];
   });
 }
 
@@ -125,7 +109,14 @@ function clockSources(g: Gathered, frames: FrameMarks | undefined): ClockSource[
         ]
       : []),
     ...(frames?.frames.length
-      ? [{ row: 'Frames', readOn: ON_DEVICE, by: 'their trace', withinMs: PRINTED_MS }]
+      ? [
+          {
+            row: 'Frames',
+            readOn: ON_DEVICE,
+            by: frames.placed?.by ?? 'their trace',
+            withinMs: frames.placed?.withinMs ?? PRINTED_MS,
+          },
+        ]
       : []),
     ...(frames?.input?.length
       ? [{ row: 'Touches', readOn: ON_DEVICE, by: 'their trace', withinMs: PRINTED_MS }]

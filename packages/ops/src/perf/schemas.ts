@@ -147,6 +147,8 @@ export const TraceOut = z.object({
   p50Ms: z.number().optional(),
   p95Ms: z.number().optional(),
   worstMs: z.number(),
+  /** Android: the longest hold of the main thread by Choreographer's own line in the app's log, which may be in no frame. */
+  heldMs: z.number().optional(),
   frozen: z.number().optional(),
   /** iOS: the app's animation hitches, their time and ratio (ms per second), and the trace. */
   hitches: z.number().optional(),

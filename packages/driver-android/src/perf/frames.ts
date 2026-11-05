@@ -1,6 +1,8 @@
 import {
   frozenMoments,
+  refreshMsOf,
   sleep,
+  stopsInLog,
   type Measured,
   type FrameStats,
   type FrameTimeline,
@@ -8,16 +10,18 @@ import {
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg } from '../adb.js';
+import { logcatCommand, markOfLine } from '../logs.js';
 import { traceProcessor } from '../tools.js';
 import { frameCauseSql, parseFrameCauses } from './frame-cause.js';
 import {
   parseFrameStats,
   parseFramestats,
   parseAndroidFrameStats,
+  parseCsv,
   parseFrameTimelineCsv,
   type FrameRow,
 } from './parse.js';
-import { type PerfDevice, sh, at } from './shared.js';
+import { type PerfDevice, pidOf, sh, at } from './shared.js';
 import { recordTrace, NAME_NEW_PROCESSES, PROCESS_STATS, queryFile } from './perfetto.js';
 
 const frameStatsSql = (pkg: string) => `
@@ -153,6 +157,19 @@ export async function frameTimeline(
   };
 }
 
+/** The longest hold of the main thread the app's log told of since `sinceMs`, by the device's clock; none if it told of none. */
+async function heldInLog(d: PerfDevice, pkg: string, sinceMs: number, refreshMs: number) {
+  const pid = await pidOf(d, pkg).catch(() => undefined);
+  if (pid === undefined) return undefined;
+  const out = await sh(
+    d,
+    logcatCommand(String(pid), { since: sinceMs, level: 'info', maxLines: 0, timed: true }),
+  ).catch(() => '');
+  const lines = out.split(/\r?\n/);
+  const stops = stopsInLog(lines, (i) => markOfLine(lines[i]!)?.at, refreshMs);
+  return stops.length ? Math.round(Math.max(...stops.map((s) => s.ms))) : undefined;
+}
+
 /** The frame timeline over `seconds`. */
 export async function frameTrace(
   d: PerfDevice,
@@ -161,9 +178,14 @@ export async function frameTrace(
   during?: () => Promise<unknown>,
 ): Promise<Measured<FrameTrace>> {
   await d.readyToMeasure();
+  // the device's own time: a log is read by its clock, and a phone's need not be this Mac's
+  const sinceMs = Math.floor(Number(await sh(d, 'date +%s%N')) / 1e6);
   const m = await frameTimeline(d, pkg, seconds * 1000, during);
+  const { columns, rows } = parseCsv(m.raw);
+  const refresh = refreshMsOf(rows.map((r) => Number(r[columns.indexOf('ts')]) / 1e6));
+  const heldMs = await heldInLog(d, pkg, sinceMs, refresh);
   return {
-    value: { kind: 'timeline', ...m.value },
+    value: { kind: 'timeline', ...m.value, ...(heldMs !== undefined && { heldMs }) },
     raw: m.raw,
     at: m.at,
     source: 'perfetto frame timeline',

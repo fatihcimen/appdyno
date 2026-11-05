@@ -90,7 +90,7 @@ export function parseInputMarks(csv: string): InputMark[] {
 }
 
 const LIMITS =
-  "Perfetto's frame timeline. A main thread held up while the render thread goes on animating draws no long frame: the log's Skipped frames lines show those.";
+  "Perfetto's frame timeline. A main thread held up while the render thread goes on animating draws no long frame: the log's Skipped frames lines show those, where a device writes them. A Samsung with One UI wrote none, and such a hold shows nowhere on it.";
 
 /** Frames and input as Perfetto has them, on the wall clock its own clock snapshots give. */
 export async function frameMarks(
