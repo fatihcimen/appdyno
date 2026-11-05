@@ -102,7 +102,8 @@ describe.runIf(serial)('the agent stream', () => {
     expect(session.status.picture?.codec).toBe('h264');
     await sleep(4_000);
     expect(session.status.stats?.source).toBe('adb');
-    expect(String(session.status.stats?.mode)).toContain('top');
+    // an agent keeps the size its last stream settled on
+    expect(String(session.status.stats?.mode)).toMatch(/top|smaller/);
     await session.stop('the test ended');
     await noneLeft(adb, serial!);
   }, 120_000);
@@ -225,10 +226,12 @@ describe.runIf(serial)('the agent stream', () => {
     await session.start();
     await until('picture', () => session.status.state === 'live');
     const longest = (p?: { w: number; h: number }) => Math.max(p?.w ?? 0, p?.h ?? 0);
-    expect(longest(session.status.picture)).toBe(1024);
     try {
+      // an agent built before `startSize` ignores it: the suite takes the build it finds, and says nothing of its age
+      expect(longest(session.status.picture), 'is the agent built from these sources?').toBe(1024);
       // a window's animation, as a scroll on an emulator makes too few frames to read
-      const end = Date.now() + 90_000;
+      // on an emulator just booted a window's animation may come too slowly to be a run for a while
+      const end = Date.now() + 180_000;
       for (
         let home = true;
         Date.now() < end && longest(session.status.picture) <= 1024;
@@ -247,7 +250,7 @@ describe.runIf(serial)('the agent stream', () => {
       await session.stop('the test ended');
       await adb.exec(serial!, 'input keyevent KEYCODE_HOME');
     }
-  }, 180_000);
+  }, 240_000);
 
   it('rotation: the picture restarts at the new size, with no new session', async () => {
     const device = new AndroidDevice(serial!, adb);
