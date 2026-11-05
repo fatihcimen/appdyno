@@ -17,12 +17,17 @@ const forWindow = ({ at, tool, ms, ok, args }: ActivityLine) => ({
 });
 
 /** Tells a window what other processes do on its device: calls, and a request for a person. No socket. */
-export function followDevice(serial: string, session: Pick<MirrorSession, 'tell'>) {
+export function followDevice(
+  serial: string,
+  session: Pick<MirrorSession, 'tell'>,
+  each?: () => void,
+) {
   const lines = activityFollower(serial);
   let lastCall = 0;
   let driving = false;
   let banner: string | undefined;
   const timer = setInterval(() => {
+    each?.();
     const now = Date.now();
     for (const line of lines()) {
       lastCall = now;

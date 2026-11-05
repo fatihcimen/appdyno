@@ -9,6 +9,7 @@ import {
 import type { ServerContext } from '../context.js';
 import { ToolError } from '../tool.js';
 import { windowControls, windowLook } from './controls.js';
+import { windowFlow } from './flow.js';
 import { followDevice } from './follow.js';
 import { handoffDone } from './handoff.js';
 import { windowMeasures } from './measures.js';
@@ -94,12 +95,16 @@ class Parent {
       () => session,
       windowMeasures(this.ctx, device),
     );
+    const flow = windowFlow(this.ctx, device, hardware, () => session, controls.measuring);
     const session: MirrorSession = new MirrorSession({
       mirror: device.mirror,
       viewer: startViewer(this.o.headless, undefined, this.o.behind),
       look: windowLook(hardware),
       press: controls.press,
-      onWindow: controls.onWindow,
+      onWindow: (m) => {
+        if (!flow.onWindow(m)) controls.onWindow(m);
+      },
+      onInput: flow.input,
       options: this.o.options,
       title: serial,
       noInput: this.o.noInput,
@@ -120,11 +125,12 @@ class Parent {
       },
     });
     this.sessions.set(serial, session);
-    const unfollow = followDevice(serial, session);
+    const unfollow = followDevice(serial, session, flow.follow);
     this.done.set(
       serial,
       session.stopped.then(async (status) => {
         unfollow();
+        await flow.end();
         await controls.end();
         removeMirrorFile(serial);
         device.close();

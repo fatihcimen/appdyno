@@ -23,7 +23,7 @@ const RECORD_MAX_S = 3_600;
 /** How often a device's own source is told what is in front: one call to its agent while that stays the same. */
 const APP_LOOK_MS = 5_000;
 
-const stamp = () =>
+export const stamp = () =>
   new Date()
     .toISOString()
     .replace(/\.\d+Z$/, '')
@@ -42,8 +42,19 @@ export function windowLook(hardware: DeviceHardware | undefined) {
 
 export type WindowSession = Pick<
   MirrorSession,
-  'send' | 'tell' | 'recording' | 'streamsItsOwn' | 'askAgain'
+  'send' | 'tell' | 'recording' | 'streamsItsOwn' | 'askAgain' | 'status'
 >;
+
+/** What is in front, and whether it is a person's own app. */
+export async function frontApp(device: Device) {
+  const app = await (device.frontApp?.() ?? device.foreground());
+  const mine = !!app && (await device.apps.listApps(false)).some((a) => a.id === app);
+  return { app, mine };
+}
+
+/** A device's name, for a file. */
+export const fileName = (device: Device, hardware: DeviceHardware | undefined) =>
+  safeName(hardware?.name ?? hardware?.model ?? device.serial);
 
 /** What a window's controls do that is not one key to one device: gestures, captures and the Apps pane. */
 export function windowControls(
@@ -52,7 +63,7 @@ export function windowControls(
   session: () => WindowSession,
   measures: WindowMeasures,
 ) {
-  const name = () => safeName(hardware?.name ?? hardware?.model ?? device.serial);
+  const name = () => fileName(device, hardware);
   let opened: Promise<unknown> | undefined;
   let rotation: 0 | 1 | 2 | 3 = 0;
   let stopRecording: (() => Promise<string>) | undefined;
@@ -178,8 +189,7 @@ export function windowControls(
       session().tell({ op: 'measuring', line: 'Starting the device agent' });
       await turnReadings();
       await ready();
-      const app = await inFront();
-      const mine = app && (await device.apps.listApps(false)).some((a) => a.id === app);
+      const { app, mine } = await frontApp(device);
       if (!mine) {
         const front = app ?? 'Nothing that can be named';
         tell({
@@ -188,7 +198,7 @@ export function windowControls(
         });
         return;
       }
-      const said: MeasureWords = await work(app, (line) =>
+      const said: MeasureWords = await work(app!, (line) =>
         session().tell({ op: 'measuring', line }),
       );
       tell({ ok: true, ...said });
@@ -220,6 +230,9 @@ export function windowControls(
   };
 
   return {
+    /** A measure runs: what reads the screen stays out of its numbers. */
+    measuring: () => measuring,
+
     /** A press of what is more than a key; `false` leaves it to the device's own. */
     press(button: string) {
       const swiped = SWIPES[button];

@@ -45,22 +45,23 @@ const judged = (app: string, runs: string, data: { virtualDevice: boolean; noise
   };
 };
 
-/**
- * Over a device already open in a window: a second driver object would be a second agent on it. A person's measure
- * holds the device as an agent's session does, for as long as it runs.
- */
-export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasures {
-  const { serial } = device;
-  const own = new ServerContext(
+/** Operations over a device already open in a window: a second driver object would be a second agent on it. */
+export const windowContext = (ctx: ServerContext, device: Device) =>
+  new ServerContext(
     ctx.policy,
-    [{ list: async () => [], handles: (s) => s === serial, open: () => device }],
+    [{ list: async () => [], handles: (s) => s === device.serial, open: () => device }],
     {
-      device: serial,
+      device: device.serial,
       measurements: ctx.measurementsDir,
       perf: ctx.perfDir,
       tool: 'appdyno window',
     },
   );
+
+/** A person's measure holds the device as an agent's session does, for as long as it runs. */
+export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasures {
+  const { serial } = device;
+  const own = windowContext(ctx, device);
   const launch = perfLaunchOp(own);
   const scroll = perfScrollOp(own);
 
