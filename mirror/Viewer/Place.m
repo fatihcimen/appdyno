@@ -141,6 +141,37 @@ NSView *MVCard(NSView *content, CGFloat tall) {
   return card;
 }
 
+@interface MVNoteView : NSView
+@end
+
+@implementation MVNoteView
+- (BOOL)wantsUpdateLayer {
+  return YES;
+}
+
+- (void)updateLayer {
+  self.layer.backgroundColor = MVSolid(NSColor.windowBackgroundColor).CGColor;
+  self.layer.borderColor = MVSolid(NSColor.separatorColor).CGColor;
+}
+@end
+
+NSView *MVNote(NSView *content) {
+  NSView *note = [MVNoteView new];
+  note.wantsLayer = YES;
+  note.layer.cornerRadius = kCardRound;
+  note.layer.cornerCurve = kCACornerCurveContinuous;
+  note.layer.borderWidth = 1;
+  content.translatesAutoresizingMaskIntoConstraints = NO;
+  [note addSubview:content];
+  [NSLayoutConstraint activateConstraints:@[
+    [content.topAnchor constraintEqualToAnchor:note.topAnchor constant:kCardInset],
+    [content.bottomAnchor constraintEqualToAnchor:note.bottomAnchor constant:-kCardInset],
+    [content.leadingAnchor constraintEqualToAnchor:note.leadingAnchor constant:kCardInset],
+    [content.trailingAnchor constraintEqualToAnchor:note.trailingAnchor constant:-kCardInset],
+  ]];
+  return note;
+}
+
 NSView *MVIndented(NSView *view, CGFloat left) {
   NSView *holder = [NSView new];
   view.translatesAutoresizingMaskIntoConstraints = NO;
@@ -152,6 +183,32 @@ NSView *MVIndented(NSView *view, CGFloat left) {
     [view.trailingAnchor constraintEqualToAnchor:holder.trailingAnchor],
   ]];
   return holder;
+}
+
+NSView *MVPlaceRow(NSView *words, NSArray<NSView *> *ends) {
+  NSView *row = [NSView new];
+  NSStackView *end = [NSStackView stackViewWithViews:ends];
+  end.spacing = 8;
+  [end setHuggingPriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
+  for (NSView *part in @[words, end]) {
+    part.translatesAutoresizingMaskIntoConstraints = NO;
+    [row addSubview:part];
+  }
+  [NSLayoutConstraint activateConstraints:@[
+    [words.leadingAnchor constraintEqualToAnchor:row.leadingAnchor],
+    [words.trailingAnchor constraintEqualToAnchor:end.leadingAnchor constant:-kCardInset],
+    [end.trailingAnchor constraintEqualToAnchor:row.trailingAnchor],
+    [words.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
+    [end.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
+    [words.topAnchor constraintGreaterThanOrEqualToAnchor:row.topAnchor],
+    [words.bottomAnchor constraintLessThanOrEqualToAnchor:row.bottomAnchor],
+    [end.topAnchor constraintGreaterThanOrEqualToAnchor:row.topAnchor],
+    [end.bottomAnchor constraintLessThanOrEqualToAnchor:row.bottomAnchor],
+  ]];
+  NSLayoutConstraint *tight = [row.heightAnchor constraintEqualToConstant:0];
+  tight.priority = NSLayoutPriorityDefaultLow;
+  tight.active = YES;
+  return row;
 }
 
 NSView *MVSeparator(void) {
@@ -186,6 +243,18 @@ static BOOL gBehind;
 
 void MVPlaceBehind(BOOL behind) {
   gBehind = behind;
+}
+
+static NSString *gOpened;
+
+void MVOpenOutside(NSString *where) {
+  gOpened = where;
+  if (gBehind) return;
+  [NSWorkspace.sharedWorkspace openURL:[where hasPrefix:@"/"] ? [NSURL fileURLWithPath:where] : [NSURL URLWithString:where]];
+}
+
+NSString *_Nullable MVLastOpened(void) {
+  return gOpened;
 }
 
 NSPasteboard *MVPlaceBoard(void) {

@@ -159,7 +159,7 @@ void MVCheckPlaces(void) {
   MVPlaceBehind(YES);
   gAsked = [NSMutableArray array];
   MVTapAsks(^(NSDictionary *message) {
-    if (![message[@"do"] isEqual:@"list"]) [gAsked addObject:message];
+    if (![@[@"list", @"connect", @"apps"] containsObject:message[@"do"]]) [gAsked addObject:message];
   });
   MVHub *hub = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
   [hub show:@{@"devices": @[]}];

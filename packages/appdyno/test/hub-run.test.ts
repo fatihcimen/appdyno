@@ -1,10 +1,11 @@
+import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 import { HUB_RUNS, HubRuns } from '../src/hub-run.js';
 import { COMMANDS } from '../src/usage.js';
 
 type Said = { run: Record<string, unknown> };
 
-const script = (body: string) => new HubRuns([process.execPath, '-e', body], process.env);
+const script = (body: string) => new HubRuns([process.execPath, '-e', body], process.env, tmpdir());
 
 /** Runs a named command of a stand-in, and answers with what it said. */
 const ran = (runs: HubRuns, name: string, asked = {}) =>
@@ -59,9 +60,9 @@ describe('a run under way', () => {
   it('tells what it says as it comes, what the command was, and how it ended', async () => {
     const said = await ran(
       script('console.log("a"); console.error("b"); process.exit(3)'),
-      'doctor',
+      'tools',
     );
-    expect(said[0]!.run.command).toBe('appdyno doctor');
+    expect(said[0]!.run.command).toBe('appdyno tools install');
     const text = said.map((s) => s.run.text ?? '').join('');
     expect(text).toContain('a');
     expect(text).toContain('b');
@@ -75,12 +76,12 @@ describe('a run under way', () => {
 
   it('takes no second click, and a second run comes only after the first', async () => {
     const runs = script('setTimeout(() => process.exit(0), 300)');
-    const first = ran(runs, 'doctor');
+    const first = ran(runs, 'tools');
     let second = 0;
-    runs.start('doctor', {}, () => second++);
+    runs.start('tools', {}, () => second++);
     expect(second).toBe(0);
     await first;
-    expect((await ran(runs, 'doctor')).at(-1)!.run.code).toBe(0);
+    expect((await ran(runs, 'tools')).at(-1)!.run.code).toBe(0);
   });
 
   it('stops by Ctrl-C, so a flight recorder saves what it holds', async () => {
@@ -103,7 +104,7 @@ describe('a run under way', () => {
   it('ends with the hub', async () => {
     const runs = script('setInterval(() => {}, 1000)');
     let code: unknown;
-    runs.start('doctor', {}, (s) => {
+    runs.start('tools', {}, (s) => {
       const { run } = s as Said;
       if ('code' in run) code = run.code;
     });

@@ -112,6 +112,8 @@ Flags go at the end of `args`. For example `"--device", "emulator-5554"`, or `"-
 
 ### From the hub
 
+**Connect a Phone** in the hub's sidebar takes a phone through USB debugging or Trust, one step at a time, by what the phone itself says. It asks only what the phone in your hand needs, and offers AI Clients when it is done. **Tools** adds this server to every client at once: Add to All AI Clients shows the lines first.
+
 **AI Clients** in the hub's sidebar lists every client here, each as it truly stands:
 
 | it says                   | what that means                                                               |

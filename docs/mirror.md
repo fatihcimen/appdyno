@@ -189,6 +189,61 @@ The recording is the one `flow` keeps, a file per device. So `flow start` from a
 
 **Open in New Window**, in the More menu, in a row's menu, or by shift-command-N, gives a device a window of its own, which is what `appdyno mirror` opens, by the same code: the hub shows that it is there, and can close it. A viewer that dies takes what stands in it, and the hub brings it back with the device it had: 0.6 s when its process was killed on an Android emulator and a simulator. After three in a minute it stops.
 
+## Connect a Phone
+
+Where the hub has nothing to show, Connect a Phone stands in its place, and its sidebar row keeps it reachable later. It is no wizard and no gate: every other part of the hub stays open.
+
+It finds the phone in your hand by itself. The Mac's USB registry names who made what is plugged in, whatever the phone allows, and asks the phone nothing: an Android with USB debugging off is there before adb has heard of it. So adb is asked for only with an Android in hand, after showing Google's terms, and Xcode only with an iPhone. Nothing on USB is said plainly: a cable that only charges shows nothing.
+
+Each driver owns its steps (`guide` on its provider), and `doctor` and `NEEDS` hold the facts. The current step is one short sentence and a diagram drawn in the viewer, and it moves on as the phone's state changes:
+
+| Phone   | Steps                                              | How it ticks                                                                                                                     |
+| ------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Android | Get adb                                            | `doctor` finds adb                                                                                                               |
+|         | Developer options, USB debugging                   | adb hears of the phone. From a Mac these two are one state, so a person moves between them with Next                             |
+|         | Allow USB debugging                                | adb's state goes from `unauthorized` to `device`                                                                                 |
+| Xiaomi  | USB debugging (Security settings), Install via USB | `persist.security.adbinput` and `adbinstall` read `1`. Neither holds the phone up: a person moves on with Next where they do not |
+| iPhone  | Get Xcode, Trust, Developer Mode                   | `devicectl`'s pairing and Developer Mode state                                                                                   |
+
+Build number's place is named for Samsung, Xiaomi and Pixel, and any other maker is told where it may be. Developer Mode says before it that the phone restarts. A lock or a dark screen is said only when the phone can be read. On a phone that has not allowed this Mac nothing can be, so that step says to wake it. What a runner needs comes from `doctor`, with Build Runner beside it.
+
+A phone that got ready while this place watched it opens by itself, with one sentence on what to try and AI Clients a click away. A phone that was ready all along waits to be chosen, as any other does: a phone is touched only when a person works on it or chooses it.
+
+## Tools
+
+Tools runs what appdyno does at a terminal, each row the very command, spawned by the hub from one table (`HUB_RUNS` in `packages/appdyno/src/hub-run.ts`), with no second implementation. Nothing a window sends becomes a command by itself. Each row shows the command, what it says as it runs, and how it ended in words. Stop is Ctrl-C, so a flight recorder saves what it holds.
+
+| In the hub                                            | Command                                               |
+| ----------------------------------------------------- | ----------------------------------------------------- |
+| Save as Baseline, Compare with Baseline, Find Out Why | `perf baseline`, `perf compare`, `perf why`           |
+| Measure Everything                                    | `perf survey`                                         |
+| Run Flows                                             | `test`, with its artifacts in the folder chosen       |
+| Timeline, Flight Recorder                             | `timeline`, `flight`                                  |
+| Dashboard                                             | `perf dashboard`, and it opens                        |
+| Get Trace Tools, Get adb                              | `tools install`, `tools install adb --accept-license` |
+| Add to All AI Clients                                 | `install --dry-run` first, then `install --yes`       |
+| Add to PATH, Take off PATH                            | `path`, `path --remove`, from the app only            |
+| Check for Updates, Update                             | `update --check`, `update`                            |
+| Build Runner, in Connect a Phone                      | `ios build`                                           |
+
+Elsewhere in the hub: Doctor is in Help, the sidebar has `devices`, a new simulator or emulator with start and shut down, and AI Clients has `mcp --http` and each client's `install`.
+
+Left out on purpose, as they are for CI or scripts, or belong to a session:
+
+| Left out                                                                                                                        | Why                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `bench`                                                                                                                         | Times a driver against others on a quiet machine: for this project's own numbers                                                 |
+| `perf comment`                                                                                                                  | Writes Markdown for a CI to post                                                                                                 |
+| `perf budget`                                                                                                                   | Budgets are a file kept with the code, read by `perf compare`                                                                    |
+| `perf reference`                                                                                                                | Needs the baseline's build put back on the device: a step of a script                                                            |
+| `perf functions`                                                                                                                | Takes two kept profile ids, which a person has no list of here                                                                   |
+| `perf prune`                                                                                                                    | Kept traces are pruned by themselves                                                                                             |
+| `report`                                                                                                                        | Written from a session's own steps, so it belongs to an agent. Timeline, Flight Recorder and Dashboard each write their own page |
+| `mcp` over stdio                                                                                                                | What a client starts for itself                                                                                                  |
+| `version`                                                                                                                       | `update --check` says it                                                                                                         |
+| Flags such as `--junit`, `--format`, `--retries`, `--tag`, `--env-file`, `--param`, `--share`, `--measurements` and `--allow-*` | For a pipeline, and each has one sensible default here                                                                           |
+| Single operations such as `tap` or `screen`                                                                                     | The device's window does these by hand, and a client by its tools                                                                |
+
 ## Two devices
 
 **Show Beside This One**, on a row of the hub's sidebar, splits its window between two devices: an iPhone and an Android phone, or one build on each of two devices. `appdyno mirror --device A --device B --pair` opens the same as two windows side by side from one process. Closing one leaves the other on its own. A window already open on either closes first.

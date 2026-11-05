@@ -108,6 +108,7 @@ static MVRow *goneRow(NSDictionary *device) {
 /// Inspector, which comes back with the next device.
 - (void)choosePlace:(MVPlace *)place {
   if (place.view == _placeShown) return;
+  _placeByItself = NO;
   NSSplitViewItem *inspector = ((MVRoomView *)_room).slot.item;
   if (!_placeShown) _inspectorWasOpen = !inspector.collapsed;
   [self showDevice:nil];
@@ -120,6 +121,7 @@ static MVRow *goneRow(NSDictionary *device) {
   [_list selectKey:_placeKey];
   [_bare setName:place.title about:nil];
   [_help fillDevice:_lastDevice app:MVFrontApp()];
+  [_tools fillDevice:_lastDevice];
   // a backdrop fades as a device's would; a person who asked for less motion has a cut
   _placeShown.wantsLayer = YES;
   MVFade(_placeShown.layer, 0, 1, kPlaceSeconds);

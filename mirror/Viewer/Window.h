@@ -313,6 +313,8 @@ void MVGiveWay(NSSplitViewItem *item, BOOL narrow, BOOL *gaveWay);
 @property(nonatomic, copy, nullable) NSDictionary *_Nullable (^rowOf)(NSString *serial);
 /// What takes the room in place of a device.
 @property(nonatomic, nullable) NSView *place;
+/// What lies over a device for a moment.
+@property(nonatomic, nullable) NSView *note;
 @end
 
 /// The panes of the Inspector, by the index `showPane:` takes.

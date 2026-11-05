@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import {
   clientCalls,
   forgetClientCall,
+  NEEDS,
   usbPhones,
   type Check,
   type DeviceProvider,
@@ -106,7 +107,7 @@ type Undo = { back?: Record<string, unknown> };
 export function hubPlaces(o: PlacesOptions): HubPlaces {
   const where = { home: o.home, env: o.env, ...(o.server && { server: o.server }) };
   const http = new HubHttp(o.mcpCommand);
-  const runs = new HubRuns(o.self ?? o.mcpCommand.slice(0, -1), o.env);
+  const runs = new HubRuns(o.self ?? o.mcpCommand.slice(0, -1), o.env, o.home);
   /** What `doctor` found, kept: it is slow, and a tool comes or goes only by what a person ran. */
   let checks: Promise<Check[]> | undefined;
   const found = (fresh: boolean) => {
@@ -114,6 +115,8 @@ export function hubPlaces(o: PlacesOptions): HubPlaces {
     return checks;
   };
   let looking = false;
+  /** Only an app has a command to put on the PATH. */
+  const fromApp = o.env.APPDYNO_HELPERS !== undefined;
   const undos = new Map<string, Undo>();
   const clientNamed = (m: Message) => CLIENTS.find((c) => c.name === m.client);
   const notes = [...CLIENTS, ...BROWSER_CLIENTS].flatMap((c) =>
@@ -177,9 +180,11 @@ export function hubPlaces(o: PlacesOptions): HubPlaces {
     const phones = await listedPhones(o.providers ?? [], (serial) => ownSwitches(adb, serial));
     const has = (tool: string) => !known.some((c) => c.name === tool && !c.ok);
     const rows = clientRows(where);
+    const guide = guideFor(o.providers ?? [], { usb: await usbPhones(), phones, has });
     return {
-      ...guideFor(o.providers ?? [], { usb: await usbPhones(), phones, has }),
-      fromApp: o.env.APPDYNO_HELPERS !== undefined,
+      ...guide,
+      ...(guide.need && { needWords: NEEDS[guide.need] }),
+      fromApp,
       terms: PLATFORM_TOOLS.terms,
       runner: runnerChecks(known),
       client: rows.some((r) => r.state === 'connected' || r.state === 'added'),
@@ -208,7 +213,7 @@ export function hubPlaces(o: PlacesOptions): HubPlaces {
     },
     apps: async (_, say) => {
       const kept = o.measurements ? await runKeys(o.measurements).catch(() => []) : [];
-      say({ apps: [...new Set(kept.map((k) => k.app))] });
+      say({ apps: [...new Set(kept.map((k) => k.app))], fromApp });
     },
     preview: (m, say) => {
       const plan = planned(m, { remove: m.remove === true });

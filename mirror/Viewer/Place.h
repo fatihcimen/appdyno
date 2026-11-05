@@ -5,6 +5,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class MVToolsPane;
+
 /// A place of the sidebar that is no device: chosen, it takes the room.
 @interface MVPlace : NSObject
 @property(nonatomic, copy) NSString *title;
@@ -15,6 +17,12 @@ NS_ASSUME_NONNULL_BEGIN
 /// AI Clients and Help, each a place of the hub.
 @interface MVHub (Places)
 - (void)addOwnPlaces;
+/// Where nothing stands, Connect a Phone does, by itself.
+- (void)offerConnect;
+/// A phone listed by now that got ready, and what to try on it.
+- (void)openWaiting;
+- (void)leaveNote;
+@property(nonatomic, readonly) MVToolsPane *toolsPane;
 /// What the parent says of clients.
 - (void)showClients:(NSDictionary *)message;
 - (void)openHelp:(nullable id)sender;
@@ -22,6 +30,10 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)pokeRow:(NSString *)title;
 - (void)pokeBoard;
 @end
+
+/// Opens a page or a file outside this window, as a person's click asks; a window kept behind only notes it.
+void MVOpenOutside(NSString *where);
+NSString *_Nullable MVLastOpened(void);
 
 /// A page of one column, as wide as it reads well, that scrolls in what room it has.
 NSScrollView *MVPlacePage(NSView *column);
@@ -39,6 +51,10 @@ NSButton *MVPlacePrimary(NSString *title, NSString *name, id target, SEL action)
 NSView *MVCard(NSView *content, CGFloat tall);
 /// What belongs to the row above it.
 NSView *MVIndented(NSView *view, CGFloat left);
+/// What lies over a device for a moment, on a solid ground of its own.
+NSView *MVNote(NSView *content);
+/// Words that take the room they have, with what is pressed at the row's end.
+NSView *MVPlaceRow(NSView *words, NSArray<NSView *> *ends);
 /// A line between the rows of a card.
 NSView *MVSeparator(void);
 /// A word to the parent, for AI Clients and Help alike.
@@ -74,6 +90,31 @@ NSString *MVSaid(NSDictionary *said);
 - (void)fillDevice:(nullable NSDictionary *)device app:(nullable NSString *)app;
 - (void)showNotes:(NSArray<NSDictionary *> *)notes;
 - (void)showDoctor:(NSArray<NSDictionary *> *)checks;
+@end
+
+/// A step's picture: a plain phone and what to do on it, drawn here.
+@interface MVStepPicture : NSView
+@property(nonatomic, copy, nullable) NSString *step;
+@end
+
+/// Connect a Phone: the phone's current step, moved on by what the parent reads of it.
+@interface MVConnectPane : NSView
+- (void)show:(NSDictionary *)guide;
+- (void)heard:(NSDictionary *)run;
+@property(nonatomic) BOOL hasDevice;
+/// A phone seen unready here got ready.
+@property(nonatomic, copy, nullable) void (^onReady)(NSString *serial);
+@property(nonatomic, copy, nullable) void (^onNew)(NSString *kind);
+@property(nonatomic, copy, nullable) void (^onPlace)(NSString *title);
+@end
+
+/// Tools: what appdyno does at a terminal, from the window.
+@interface MVToolsPane : NSView
+- (void)heard:(NSDictionary *)run;
+- (void)showApps:(NSDictionary *)message;
+- (void)fillDevice:(nullable NSDictionary *)device;
+/// For a test: what a person would pick.
+- (void)chooseApp:(NSString *)app folder:(NSString *)folder;
 @end
 
 NS_ASSUME_NONNULL_END

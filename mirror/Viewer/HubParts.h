@@ -38,12 +38,19 @@ NSArray<NSString *> *MVNamedParts(NSString *name);
   NSDictionary *_lastDevice;
   MVClientsPane *_clients;
   MVHelpPane *_help;
+  MVConnectPane *_connect;
+  MVToolsPane *_tools;
+  MVPlace *_connectPlace;
+  BOOL _placeByItself;
+  NSString *_opening;
+  NSView *_note;
   NSSplitViewItem *_sidebarItem;
   BOOL _sidebarGaveWay;
   NSSet<NSString *> *_seen;
   NSDictionary<NSString *, NSString *> *_seenNames;
 }
 - (void)showDevice:(nullable NSDictionary *)device;
+- (void)ask:(NSString *)kind;
 @end
 
 NS_ASSUME_NONNULL_END

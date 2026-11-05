@@ -37,6 +37,7 @@ void MVCheckFrame(void);
 void MVCheckFlow(void);
 void MVCheckShell(void);
 void MVCheckPlaces(void);
+void MVCheckConnect(void);
 /// Lets what was sent reach a window kept behind.
 void MVPump(double seconds);
 

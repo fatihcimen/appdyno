@@ -112,6 +112,8 @@ Seçenekler `args` dizisinin sonuna eklenir. Örneğin `"--device", "emulator-55
 
 ### Hub'dan
 
+Hub'ın kenar çubuğundaki **Telefon Bağla**, telefonu USB hata ayıklama ya da Güven adımlarından tek tek, telefonun söylediğine göre geçirir. Yalnızca elinizdeki telefonun gerektirdiğini sorar, bitince Yapay Zekâ İstemcileri'ni önerir. **Araçlar** bu sunucuyu tek seferde tüm istemcilere ekler: Tüm Yapay Zekâ İstemcilerine Ekle önce satırları gösterir.
+
 Hub'ın kenar çubuğundaki **Yapay Zekâ İstemcileri**, buradaki her istemciyi gerçek durumuyla listeler:
 
 | ne der                      | anlamı                                                                                    |

@@ -39,7 +39,6 @@ export const HUB_RUNS: Record<string, (a: Asked) => string[] | undefined> = {
     needs(plain(a.app) && plain(a.device), ['timeline', ...app(a), ...device(a), ...seconds(a)]),
   flight: (a) => needs(plain(a.app) && plain(a.device), ['flight', ...app(a), ...device(a)]),
   dashboard: (a) => ['perf', 'dashboard', ...app(a)],
-  doctor: () => ['doctor'],
   tools: () => ['tools', 'install'],
   adb: () => ['tools', 'install', 'adb', '--accept-license'],
   runner: () => RUNNER.split(' '),
@@ -66,6 +65,8 @@ export class HubRuns {
   constructor(
     private readonly self: string[],
     private readonly env: NodeJS.ProcessEnv,
+    /** Where a command runs: an app opened from the Dock stands in `/`, where nothing can be written. */
+    private readonly home: string,
   ) {}
 
   start(name: string, asked: Asked, say: Say) {
@@ -75,6 +76,7 @@ export class HubRuns {
     if (this.runs.has(name)) return undefined;
     const child = spawn(this.self[0]!, [...this.self.slice(1), ...words], {
       env: this.env,
+      cwd: this.home,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     const run: Run = { child, stopped: false };

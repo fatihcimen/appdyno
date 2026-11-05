@@ -12,6 +12,7 @@ static const double kWordsWide = 320;
 static const double kSidebar = 260;
 // a window's three buttons stand above the sidebar's first line
 static const double kBelowLights = 46;
+static const double kNoteDown = 12;
 
 static NSString *stateWords(NSDictionary *device) {
   if ([device[@"mirrored"] boolValue]) return @"Window open";
@@ -42,11 +43,13 @@ static NSString *stateWords(NSDictionary *device) {
   NSArray<NSView *> *stages = self.stages;
   // what the room says of itself stands only while nothing else does
   for (NSView *view in self.subviews)
-    view.hidden = self.place ? view != self.place : ![stages containsObject:view] && stages.count > 0;
+    view.hidden = self.place ? view != self.place : view != self.note && ![stages containsObject:view] && stages.count > 0;
   // the room runs on under the sidebar and the Inspector, and the end stages take that too, for their backdrops
   NSEdgeInsets under = self.safeAreaInsets;
   double all = self.bounds.size.width, wide = (all - under.left - under.right) / MAX(stages.count, 1);
   self.place.frame = NSMakeRect(under.left, 0, all - under.left - under.right, self.bounds.size.height);
+  NSSize note = self.note.fittingSize;
+  self.note.frame = NSMakeRect(under.left + (all - under.left - under.right - note.width) / 2, self.bounds.size.height - under.top - note.height - kNoteDown, note.width, note.height);
   [stages enumerateObjectsUsingBlock:^(NSView *stage, NSUInteger i, BOOL *stop) {
     double left = i == 0 ? 0 : under.left + i * wide, right = i + 1 == stages.count ? all : under.left + (i + 1) * wide;
     stage.frame = NSMakeRect(left, 0, right - left, self.bounds.size.height);
@@ -225,19 +228,26 @@ static NSString *stateWords(NSDictionary *device) {
   }
   // a phone that left stays what is chosen: it says so where it stood, and comes back by itself
   BOOL left = !kept && [_shown[@"kind"] isEqual:@"phone"];
-  // a place a person chose stays chosen while the list changes behind it
-  if (!left && !_placeShown) [self showDevice:kept ?: first];
+  // a place a person chose stays chosen while the list changes behind it; one that came by itself gives way
+  if (!left && (!_placeShown || (_placeByItself && (kept ?: first)))) [self showDevice:kept ?: first];
   _left = left ? _shown : nil;
+  _connect.hasDevice = _devices.count > 0;
   [self listDevices];
   [self sayWhatMoved];
+  [self openWaiting];
+  [self offerConnect];
 }
 
 - (void)chose:(nullable MVRow *)row {
+  _opening = nil;
+  _placeByItself = NO;
+  [self leaveNote];
   if ([row.key hasPrefix:MVPlaceKey]) return [self choosePlace:_places[[row.key substringFromIndex:MVPlaceKey.length].integerValue]];
   if ([row.key isEqual:MVFoldKey]) {
     _unfolded = !_unfolded;
     return [self listDevices];
   }
+  if ([self deviceKeyed:row.key][@"need"] && [[self deviceKeyed:row.key][@"kind"] isEqual:@"phone"]) return [self choosePlace:_connectPlace];
   [self choose:row.key];
 }
 
@@ -262,8 +272,8 @@ static NSString *stateWords(NSDictionary *device) {
   [self tellChosen:running && !elsewhere ? device[@"serial"] ?: device[@"id"] : nil];
   _again.hidden = YES;
   [_mark paint:device ? MVDeviceSymbol(device) : @"iphone.gen3" color:MVQuietColor()];
-  _name.stringValue = device ? MVNamedParts(device[@"name"] ?: @"")[0] : _devices.count ? @"Choose a device" : @"No device yet";
-  _about.stringValue = device ? (elsewhere ? @"In a window of its own" : stateWords(device)) : _devices.count ? @"A phone starts only when you choose it." : @"Connect a phone with its cable, or make a simulator with +.";
+  _name.stringValue = device ? MVNamedParts(device[@"name"] ?: @"")[0] : @"";
+  _about.stringValue = device ? (elsewhere ? @"In a window of its own" : stateWords(device)) : @"";
   _start.title = MVWord(elsewhere ? @"Close That Window" : @"Start");
   if (device) [_bare setName:MVDeviceRow(device).title about:MVDeviceRow(device).detail];
   else [_bare setName:@"appdyno" about:nil];

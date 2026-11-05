@@ -8,7 +8,7 @@ const viewer = join(import.meta.dirname, '../../../mirror/Viewer');
 const source = (file: string) => readFileSync(join(viewer, file), 'utf8');
 
 const unquote = (s: string) => s.replace(/\\(.)/g, '$1');
-const rows = ['WordsTable.m', 'WordsClients.m', 'WordsHelp.m']
+const rows = ['WordsTable.m', 'WordsClients.m', 'WordsHelp.m', 'WordsConnect.m']
   .flatMap((file) => [
     ...source(file).matchAll(/^\s*\{"((?:[^"\\]|\\.)*)", "((?:[^"\\]|\\.)*)"\},$/gm),
   ])
@@ -66,7 +66,7 @@ describe('the table of words', () => {
   });
 
   it('has every sentence of the client and help panes, in whatever shape they are kept', () => {
-    const missed = ['HubClients.m', 'HubHelp.m'].flatMap((file) =>
+    const missed = ['HubClients.m', 'HubHelp.m', 'HubConnect.m', 'HubTools.m'].flatMap((file) =>
       [...source(file).matchAll(/@"([A-Z][^"]* [^"]*)"/g)]
         .map((m) => m[1]!)
         .filter((word) => !known(word))
