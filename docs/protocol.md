@@ -186,7 +186,7 @@ screen reader reads the node with its children as one unit, Android 9+); both ar
 nodes of the app's and the system dialogs' windows; text left out, a plain text node vertically only).
 
 A tree with no word for a tester is read from the picture on the host: a PNG of the screen goes to `mac/TextScan.m`, compiled on
-first use, which answers Vision's lines as fractions of the image: the accurate level's within 3 s, else the fast level's, with the accurate scan left to finish in its own process for the next look at that picture, and they join the tree as nodes of class `PictureText`
+first use, which answers Vision's lines as fractions of the image: the accurate level's within 3 s, else the fast level's, with the accurate scan left to finish in its own process for the next look at that picture, its words in a `0600` file that goes once read and after 5 minutes anyway, and they join the tree as nodes of class `PictureText`
 in the app's window. `hash` stays the agent's. A device's `wait` sees none of this, so `wait_for` then polls the picture. A
 screen with any word of its own is never read this way: words on a canvas beside a labelled button stay out.
 

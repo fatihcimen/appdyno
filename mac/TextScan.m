@@ -5,8 +5,8 @@
 // TextScan <image>: the fast level, answered on stdout, in a fraction of a second. It reads Latin letters only.
 // TextScan <image> <folder> <key> <seconds>: the accurate level, in a process of its own, which any language takes. It
 // waits on the system's Neural Engine compiler, by program and by picture, for a minute or four, and a kill throws that
-// work away: so nothing here waits for it. Its words go to <folder>/accurate.json under <key>, and it takes
-// <folder>/running away when it ends. The image goes as soon as it is read.
+// work away: so nothing here waits for it. Its words go to <folder>/accurate.json under <key>, and what starts it clears
+// up after it. The image goes as soon as it is read.
 #import <Foundation/Foundation.h>
 #import <Vision/Vision.h>
 #import <unistd.h>
@@ -48,13 +48,11 @@ int main(int argc, char **argv) {
     if (argc == 5) {
       unlink(argv[1]);
       alarm((unsigned)atoi(argv[4]));
-      NSString *folder = @(argv[2]);
       NSArray *found = wordsOf(image, VNRequestTextRecognitionLevelAccurate, &error);
       if (found)
         [[NSJSONSerialization dataWithJSONObject:@{@"key": @(argv[3]), @"words": found} options:0 error:NULL]
-            writeToFile:[folder stringByAppendingPathComponent:@"accurate.json"]
+            writeToFile:[@(argv[2]) stringByAppendingPathComponent:@"accurate.json"]
              atomically:YES];
-      unlink([folder stringByAppendingPathComponent:@"running"].fileSystemRepresentation);
       return found ? 0 : 1;
     }
     NSArray *found = wordsOf(image, VNRequestTextRecognitionLevelFast, &error);

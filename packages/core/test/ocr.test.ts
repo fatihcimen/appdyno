@@ -1,5 +1,13 @@
 import { createHash } from 'node:crypto';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Tree } from '@appdyno/protocol';
@@ -68,36 +76,71 @@ describe('which level answers', () => {
 rm -f "$1"
 /bin/bash -c 'read -t ${seconds} < /dev/zero'
 printf '${ACCURATE}' "$3" > "$2/accurate.json"
-rm -f "$2/running"
 `,
     );
     chmodSync(file, 0o700);
     return file;
   };
   const texts = (r: Awaited<ReturnType<typeof readPicture>>) => [r.level, r.words[0]!.text];
+  const inFolder = (name: string) => join(process.env.APPDYNO_STATE_DIR!, 'picture-words', name);
+  const ended = () =>
+    vi.waitFor(() => expect(existsSync(inFolder('running'))).toBe(false), { timeout: 8_000 });
+  /** Accurate words left unread, which this keeps a while. */
+  const left = async (keptS: number) => {
+    expect(texts(await readPicture(Buffer.from('a'), scanner(4), keptS))).toEqual(['fast', 'fast']);
+    await ended();
+    expect(existsSync(inFolder('accurate.json'))).toBe(true);
+  };
 
   beforeEach(() => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-ocr-')));
   });
 
   it('answers from the accurate level when it comes in time', async () => {
-    expect(texts(await readPicture(Buffer.from('a'), scanner(0)))).toEqual(['accurate', 'doğru']);
+    expect(texts(await readPicture(Buffer.from('a'), scanner(0), 1))).toEqual([
+      'accurate',
+      'doğru',
+    ]);
   });
 
   it('answers from the fast level otherwise, and keeps the accurate words for the next look', async () => {
-    const slow = scanner(4);
-    expect(texts(await readPicture(Buffer.from('a'), slow))).toEqual(['fast', 'fast']);
-    const running = join(process.env.APPDYNO_STATE_DIR!, 'picture-words/running');
-    expect(existsSync(running)).toBe(true);
-    await vi.waitFor(() => expect(existsSync(running)).toBe(false), { timeout: 8_000 });
-    expect(texts(await readPicture(Buffer.from('a'), slow))).toEqual(['accurate', 'doğru']);
+    await left(30);
+    expect(texts(await readPicture(Buffer.from('a'), scanner(4), 30))).toEqual([
+      'accurate',
+      'doğru',
+    ]);
+  }, 15_000);
+
+  it("keeps a person's words from everyone else, and only until they are read", async () => {
+    await left(30);
+    expect(statSync(inFolder('accurate.json')).mode & 0o777).toBe(0o600);
+    expect(statSync(inFolder('.')).mode & 0o777).toBe(0o700);
+    await readPicture(Buffer.from('a'), scanner(4), 30);
+    expect(existsSync(inFolder('accurate.json'))).toBe(false);
+    expect(existsSync(inFolder('picture'))).toBe(false);
+  }, 15_000);
+
+  it('takes them away unread after a while, with nothing else running', async () => {
+    await left(1);
+    await vi.waitFor(() => expect(existsSync(inFolder('accurate.json'))).toBe(false), {
+      timeout: 4_000,
+    });
+  }, 15_000);
+
+  it('does not trust words that outlived what cleared them, and takes them away', async () => {
+    await left(30);
+    const long = new Date(Date.now() - 60_000);
+    utimesSync(inFolder('accurate.json'), long, long);
+    const r = await readPicture(Buffer.from('a'), scanner(0), 30);
+    expect(r.words[0]!.text).toBe('doğru');
+    expect(existsSync(inFolder('accurate.json'))).toBe(false);
   }, 15_000);
 
   it('starts no second accurate scan while one is at work, and does not wait for it', async () => {
     const slow = scanner(6);
-    await readPicture(Buffer.from('a'), slow);
+    await readPicture(Buffer.from('a'), slow, 1);
     const at = Date.now();
-    expect(texts(await readPicture(Buffer.from('b'), slow))).toEqual(['fast', 'fast']);
+    expect(texts(await readPicture(Buffer.from('b'), slow, 1))).toEqual(['fast', 'fast']);
     expect(Date.now() - at).toBeLessThan(1_000);
     const running = join(process.env.APPDYNO_STATE_DIR!, 'picture-words/running');
     expect(readFileSync(running, 'utf8')).toBe(createHash('sha256').update('a').digest('hex'));

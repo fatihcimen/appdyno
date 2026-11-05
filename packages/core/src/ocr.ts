@@ -19,6 +19,11 @@ const ACCURATE_WAIT_MS = 3_000;
 const ACCURATE_POLL_MS = 100;
 /** How long an accurate scan may live: 235 s was seen, and a kill throws its work away. */
 const ACCURATE_LIVES_S = 600;
+/** How long an accurate scan's words may stay on disk unread: they are a person's screen. */
+const KEPT_S = 300;
+/** Run in the folder: however the scan ends, by itself, by its limit or by a crash, its marks go, and then its words. */
+const afterScan = (keptS: number) =>
+  `umask 077; "$@"; rm -f running picture; sleep ${keptS}; rm -f accurate.json`;
 
 /** A run of words on a picture, in fractions of it from its top left corner. */
 export type PictureText = {
@@ -74,15 +79,29 @@ export async function fastWords(image: Buffer, binary?: string): Promise<Picture
   }
 }
 
-/** What the last accurate scan left for this picture. */
-async function keptWords(folder: string, key: string) {
-  const kept = await readFile(join(folder, 'accurate.json'), 'utf8').catch(() => '{}');
-  const found = JSON.parse(kept) as { key?: string; words?: PictureText[] };
-  return found.key === key ? found.words : undefined;
+/** What the last accurate scan left for this picture, which goes once read. Older than it may be, it goes unread. */
+async function keptWords(folder: string, key: string, keptS: number) {
+  const file = join(folder, 'accurate.json');
+  const since = await stat(file).catch(() => undefined);
+  if (!since) return undefined;
+  if (Date.now() - since.mtimeMs > keptS * 1_000) {
+    await rm(file, { force: true });
+    return undefined;
+  }
+  const found = JSON.parse(await readFile(file, 'utf8')) as { key: string; words: PictureText[] };
+  if (found.key !== key) return undefined;
+  await rm(file, { force: true });
+  return found.words;
 }
 
 /** One accurate scan at a time, on this Mac: false while one is at work. One that died took nothing with it. */
-async function startAccurate(binary: string, folder: string, key: string, image: Buffer) {
+async function startAccurate(
+  binary: string,
+  folder: string,
+  key: string,
+  image: Buffer,
+  keptS: number,
+) {
   const running = join(folder, 'running');
   const since = await stat(running).catch(() => undefined);
   if (since && Date.now() - since.mtimeMs < ACCURATE_LIVES_S * 1_000) return false;
@@ -94,10 +113,11 @@ async function startAccurate(binary: string, folder: string, key: string, image:
     ))
   )
     return false;
-  const picture = join(folder, 'picture');
-  await writeFile(picture, image, { mode: 0o600 });
-  // in a process of its own: this one may end first, and it takes the picture and the mark away itself
-  const scan = spawn(binary, [picture, folder, key, String(ACCURATE_LIVES_S)], {
+  await writeFile(join(folder, 'picture'), image, { mode: 0o600 });
+  // in a process of its own, as this one may end first
+  const args = [binary, 'picture', '.', key, String(ACCURATE_LIVES_S)];
+  const scan = spawn('/bin/sh', ['-c', afterScan(keptS), 'scan', ...args], {
+    cwd: folder,
     detached: true,
     stdio: 'ignore',
   });
@@ -110,17 +130,21 @@ async function startAccurate(binary: string, folder: string, key: string, image:
  * The words of an image, by the Mac's own Vision: the accurate level's when they come in time, or are there from an
  * earlier look at this same picture, else the fast level's, with the accurate scan left to finish for the next look.
  */
-export async function readPicture(image: Buffer, binary?: string): Promise<PictureWords> {
+export async function readPicture(
+  image: Buffer,
+  binary?: string,
+  keptS = KEPT_S,
+): Promise<PictureWords> {
   const scan = binary ?? (await scanner());
   const folder = join(stateDir(), 'picture-words');
   await mkdir(folder, { recursive: true, mode: 0o700 });
   const key = createHash('sha256').update(image).digest('hex');
-  const kept = await keptWords(folder, key);
+  const kept = await keptWords(folder, key, keptS);
   if (kept) return { words: kept, level: 'accurate' };
-  if (await startAccurate(scan, folder, key, image)) {
+  if (await startAccurate(scan, folder, key, image, keptS)) {
     const end = Date.now() + ACCURATE_WAIT_MS;
     while (Date.now() < end && existsSync(join(folder, 'running'))) await pause(ACCURATE_POLL_MS);
-    const words = await keptWords(folder, key);
+    const words = await keptWords(folder, key, keptS);
     if (words) return { words, level: 'accurate' };
   }
   return { words: await fastWords(image, scan), level: 'fast' };
