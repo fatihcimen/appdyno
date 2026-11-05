@@ -347,6 +347,55 @@ describe('the helpers prove themselves', () => {
     expect(await off.hello()).toBeUndefined();
   });
 
+  it('turns a touch as a window turns one, by what the app in front says of itself', async () => {
+    const touch = async (screen: number[], orientation: number) => {
+      const sent: { events: { x: number; y: number }[] }[] = [];
+      const answer = helper((q) =>
+        q.op === 'orientation'
+          ? { ok: true, orientation }
+          : { ok: true, osVersion: '26.5', model: 'x', scale: 3, screen },
+      );
+      const hid = helper((q) => {
+        sent.push(q as never);
+        return { ok: true };
+      });
+      const d = new DirectSim('u', { ax: async () => answer, hid: async () => hid });
+      await d.hello();
+      // as in a process of its own after the turn: nothing told it, and it reads what is
+      if (screen[0]! < screen[1]!) d.setRotation(orientation === 1 ? 0 : 1);
+      expect(await d.send({ kind: 'tap', x: 753, y: 210 })).toBe(true);
+      return sent[0]!.events[0]!;
+    };
+    const [across, down] = [753 / 874, 210 / 402];
+    const right = await touch([402, 874], 3);
+    expect(right.x).toBeCloseTo(1 - down, 5);
+    expect(right.y).toBeCloseTo(across, 5);
+    const left = await touch([402, 874], 4);
+    expect(left.x).toBeCloseTo(down, 5);
+    expect(left.y).toBeCloseTo(1 - across, 5);
+    const already = await touch([874, 402], 3);
+    expect(already.x).toBeCloseTo(1 - down, 5);
+    expect(already.y).toBeCloseTo(across, 5);
+    const portrait = await touch([402, 874], 1);
+    expect(portrait.x).toBeCloseTo(753 / 402, 5);
+    expect(portrait.y).toBeCloseTo(210 / 874, 5);
+  });
+
+  it('leaves a turned touch to the runner if the app in front will not say how it stands', async () => {
+    const answer = helper((q) =>
+      q.op === 'orientation'
+        ? { ok: false, refused: 'no-answer' }
+        : { ok: true, osVersion: '26.5', model: 'x', scale: 3, screen: [402, 874] },
+    );
+    const d = new DirectSim('u', {
+      ax: async () => answer,
+      hid: async () => helper(() => ({ ok: true })),
+    });
+    await d.hello();
+    d.setRotation(1);
+    expect(await d.send({ kind: 'tap', x: 10, y: 10 })).toBe(false);
+  });
+
   it('asks the app when its animations are over, and tells what that took', async () => {
     const asked: unknown[] = [];
     const answer = helper((q) => {

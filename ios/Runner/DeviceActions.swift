@@ -24,7 +24,9 @@ extension Device {
         switch a {
         case let .tap(x, y):
             let waited = animationsOver(x, y)
-            if !EventShim.tap(CGPoint(x: x, y: y), orientation: Device.interfaceOrientation()) { point(x, y).tap() }
+            // the synthesizer's tap missed on a turned screen, where XCUI's own coordinate knows the way
+            let upright = Device.interfaceOrientation() == 1
+            if !upright || !EventShim.tap(CGPoint(x: x, y: y), orientation: 1) { point(x, y).tap() }
             return waited
         case let .doubleTap(x, y):
             let waited = animationsOver(x, y)

@@ -48,6 +48,16 @@ export function onSurface(x: number, y: number, turns: number): { x: number; y: 
   }
 }
 
+/** A touch of a picture stood up by these turns, as it goes to the surface beneath it. */
+export function turnedTouch<T extends { x: number; y: number; x2?: number; y2?: number }>(
+  e: T,
+  turns: number,
+): T {
+  const second =
+    e.x2 !== undefined && e.y2 !== undefined ? onSurface(e.x2, e.y2, turns) : undefined;
+  return { ...e, ...onSurface(e.x, e.y, turns), ...(second && { x2: second.x, y2: second.y }) };
+}
+
 /**
  * A simulator's mirror. The viewer reads its screen by itself, with nothing to ready here, so only input
  * goes through this process, by the helper that also sends a driven simulator's touches. A guest that turns
@@ -165,13 +175,10 @@ export class SimulatorMirror implements Mirror {
   async input(e: InputEvent) {
     switch (e.kind) {
       case 'touch': {
-        const { x, y } = onSurface(e.x, e.y, this.turns);
-        const second =
-          e.x2 !== undefined && e.y2 !== undefined ? onSurface(e.x2, e.y2, this.turns) : undefined;
         await this.call({
           op: 'touch',
           quick: true,
-          events: [{ ...e, x, y, ...(second && { x2: second.x, y2: second.y }), at: 0 }],
+          events: [{ ...turnedTouch(e, this.turns), at: 0 }],
         });
         return;
       }

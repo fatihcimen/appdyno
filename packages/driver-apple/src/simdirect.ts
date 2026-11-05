@@ -1,4 +1,5 @@
 import { PROTOCOL, type Hello, type Tree, type ActParams } from '@appdyno/protocol';
+import { turnedTouch, turnsOf } from './mirror-sim.js';
 import { type HelperProcess, startSimAx, startSimHid, type HelperAnswer } from './simhelper.js';
 import { type DirectRead, type Refusal, toTree, type RawAx, sameTree } from './simtree.js';
 import { hidKey, HID_MODIFIERS, touchEvents } from './simtouch.js';
@@ -15,6 +16,9 @@ const ANIMATION_WAIT_MS = 1_000;
 
 /** Another process may draw what was touched, and report nothing. */
 const TOUCH_REPORT_MS = 300;
+
+/** A size as the screen stands upright, as a touch's surface does whatever the app does. */
+const upright = ([a, b]: [number, number]) => ({ w: Math.min(a, b), h: Math.max(a, b) });
 
 type Starters = {
   ax: (udid: string) => Promise<HelperProcess>;
@@ -66,14 +70,15 @@ export class DirectSim {
 
   /**
    * What a host needs to know of this simulator, from the read helper: no test runner has to start for it.
-   * Undefined when the helper cannot say, or in landscape, where it is not verified.
+   * Undefined when the helper cannot say, or in landscape, where its read is not verified.
    */
   async hello(): Promise<Hello | undefined> {
     if (this.readOff) return undefined;
     const a = this.note(await (await this.helperAx()).call({ op: 'hello' }, HELLO_MS));
     const size = a.screen as [number, number] | undefined;
-    if (!a.ok || !size?.[0] || !size[1] || size[0] > size[1]) return undefined;
-    this.screen = { w: size[0], h: size[1] };
+    if (!a.ok || !size?.[0] || !size[1]) return undefined;
+    this.screen = upright(size);
+    if (size[0] > size[1]) return undefined;
     return {
       agentVersion: HELPER_VERSION,
       protocol: PROTOCOL,
@@ -84,7 +89,7 @@ export class DirectSim {
     };
   }
 
-  /** Portrait only is verified for both helpers. */
+  /** Portrait only is verified for the read helper; a touch turns with the app in front. */
   setRotation(rotation: number) {
     this.rotated = rotation !== 0;
   }
@@ -114,7 +119,7 @@ export class DirectSim {
     const a = this.note(await (await this.helperAx()).call({ op: 'read', bundle }, 10_000));
     if (!a.ok) return { refused: a.refused ?? 'refused' };
     const size = a.screen as [number, number];
-    this.screen = { w: size[0], h: size[1] };
+    this.screen = upright(size);
     if (size[0] > size[1]) return { refused: 'landscape' };
     return toTree(a.tree as RawAx, bundle, this.screen, a.ms ?? 0);
   }
@@ -195,9 +200,15 @@ export class DirectSim {
     );
   }
 
+  /** The turns that stand the app in front up; undefined where it will not say and it was turned. */
+  private async turns() {
+    const a = await (await this.helperAx()).call({ op: 'orientation' }, 3_000);
+    return (a.ok ? turnsOf(a.orientation as number) : undefined) ?? (this.rotated ? undefined : 0);
+  }
+
   /** Sends the action straight to the simulator; false when the runner must do it. */
   async send(action: ActParams): Promise<boolean> {
-    if (this.inputOff || this.rotated || !this.screen) return false;
+    if (this.inputOff || !this.screen) return false;
     this.hid ??= this.start.hid(this.udid);
     const hid = await this.hid.catch((e: Error) => {
       this.inputOff = `the input helper did not start: ${e.message.slice(0, 120)}`;
@@ -206,7 +217,12 @@ export class DirectSim {
     if (!hid) return false;
     const key = action.kind === 'key' ? hidKey(action.key) : undefined;
     const held = action.kind === 'key' ? action.modifiers?.map((m) => HID_MODIFIERS[m]) : undefined;
-    const events = touchEvents(action, this.screen);
+    const turns = key ? 0 : await this.turns();
+    if (turns === undefined) return false;
+    const { w, h } = this.screen;
+    const events = touchEvents(action, turns % 2 ? { w: h, h: w } : this.screen)?.map((e) =>
+      turnedTouch(e, turns),
+    );
     if (!key && !events) return false;
     if (hid.closed) {
       this.inputOff = 'the input helper ended';
