@@ -4,8 +4,9 @@
 #import "Viewer.h"
 #import <os/lock.h>
 
-// memory is bounded by these, and no frame is kept to catch up
-enum { kMaxInFlight = 3, kMaxParameterSet = 4096 };
+// memory is bounded by these, and no frame is kept to catch up; a frame dropped costs all of them to the next key, about as
+// long as this, so a decoder's moment of stall is waited out
+enum { kMaxInFlight = 3, kMaxParameterSet = 4096, kRoomWaitMs = 100 };
 
 void MVForEachNal(const uint8_t *data, size_t length, void (^found)(const uint8_t *nal, size_t length)) {
   size_t start = 0;
@@ -65,6 +66,8 @@ static const double kRecorderAskMs = 1000;
   BOOL _formatStale;
   os_unfair_lock _lock;
   BOOL _awaitingKey;
+  // what a failed picture spoils: those decoded after it. A frame dropped spoils none of those already in hand
+  BOOL _damaged;
   int _inFlight, _failures;
   BOOL _closed;
   BOOL _pixelsTold;
@@ -164,11 +167,22 @@ static const double kRecorderAskMs = 1000;
 - (void)fail {
   os_unfair_lock_lock(&_lock);
   _awaitingKey = YES;
+  _damaged = YES;
   int failures = ++_failures;
   os_unfair_lock_unlock(&_lock);
   id<MVSink> sink = _sink;
   [sink.stats dropped:1];
   [self askForKey:failures];
+}
+
+/// Back when the decoder has room for one more, or after a moment without it.
+- (void)waitForRoom {
+  for (double until = MVNowMs() + kRoomWaitMs; MVNowMs() < until; usleep(1000)) {
+    os_unfair_lock_lock(&_lock);
+    BOOL room = _inFlight < kMaxInFlight;
+    os_unfair_lock_unlock(&_lock);
+    if (room) return;
+  }
 }
 
 - (BOOL)decode:(const uint8_t *)data length:(size_t)length {
@@ -190,9 +204,12 @@ static const double kRecorderAskMs = 1000;
   id<MVSink> sink = _sink;
   os_unfair_lock_lock(&_lock);
   BOOL skip = _awaitingKey && !key;
+  os_unfair_lock_unlock(&_lock);
+  if (!skip && !key) [self waitForRoom];
+  os_unfair_lock_lock(&_lock);
   BOOL behind = !skip && !key && _inFlight >= kMaxInFlight;
   if (behind) _awaitingKey = YES;
-  if (key) _awaitingKey = NO;
+  if (key) _awaitingKey = _damaged = NO;
   os_unfair_lock_unlock(&_lock);
   MVRecorder *recorder = self.recorder;
   if ((skip || behind) && !recorder) {
@@ -252,7 +269,7 @@ static const double kRecorderAskMs = 1000;
   BOOL closed = _closed;
   BOOL good = status == noErr && image;
   if (good) _failures = 0;
-  BOOL show = good && !_awaitingKey && !closed;
+  BOOL show = good && !_damaged && !closed;
   os_unfair_lock_unlock(&_lock);
   if (closed) return;
   if (!good) {

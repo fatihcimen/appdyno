@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A window keeps its pictures through a decoder's stall on a busy Mac: pictures already decoding were thrown away with the frame that did not fit, and a stream's first burst could leave a window black until the next key frame.
 - `appdyno mirror`: **Record Flow** writes what a person does on a window as a flow, by selector: clicks, double clicks, long presses, swipes, typing, keys, Home and Back, and Launch and Quit from the Apps pane. A password is written as a secret's name, never as its text, typed on the Mac or on the device's own keyboard. What has no step is said at that moment and written as `unrecorded`, and a place nothing names is marked as coordinates. Swipes that reached what is clicked next become `scroll_to`. The recording is the one `flow` keeps, so an agent's `flow start` takes a person's clicks too.
 - The Inspector's **Flow** pane: the steps as they are written, and what is under the pointer, with its role, words, ref, id, contrast and what a click there would write. A click can copy its selector, or add an assertion, in place of touching the device.
 - `scroll_to` no longer runs past a row: on a simulator a list went on coasting from each stroke, and could reach its end with the row behind it. Each stroke now slows to a stop and takes 0.7 s, from 0.5 s. One stroke that moves nothing no longer reads as the list's end: it may land as a screen still arrives, and two in a row are asked for.

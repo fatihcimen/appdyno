@@ -348,22 +348,50 @@ static void checkLayerTakes444(CVImageBufferRef _Nullable image) {
   if (sample) CFRelease(sample);
 }
 
+/// The fixture's frames, one by one: each VCL unit with what comes before it.
+static void feed444(NSData *stream, MVDecoder *decoder, void (^beforePicture)(void)) {
+  MVForEachNal(stream.bytes, stream.length, ^(const uint8_t *nal, size_t length) {
+    uint8_t start[3] = {0, 0, 1};
+    NSMutableData *unit = [NSMutableData dataWithBytes:start length:3];
+    [unit appendBytes:nal length:length];
+    if (((nal[0] >> 1) & 0x3f) < 32) beforePicture();
+    [decoder decode:unit.bytes length:unit.length];
+  });
+}
+
+/// A burst, as a stream's first frames or a busy Mac's catching up are: past what a decoder can hold a frame goes, and is
+/// said to have, but what it already held was whole, and is shown. Those were thrown away, so a window stayed black.
+static void checkBurst(NSData *stream) {
+  MVTestSink *sink = [MVTestSink new];
+  MVDecoder *decoder = [[MVDecoder alloc] initWithSink:sink from:sink];
+  decoder.hevc = YES;
+  __block int pictures = 0;
+  feed444(stream, decoder, ^{
+    pictures++;
+  });
+  int dropped = 0;
+  for (int i = 0; i < 300 && sink.images + dropped < pictures; i++) {
+    dropped += [sink.stats.report[@"dropped"] intValue];
+    usleep(10000);
+  }
+  [decoder close];
+  MVCheck(@"decoder: a burst loses no picture it held, and says what it dropped", sink.images > 0 && sink.images + dropped == pictures, [NSString stringWithFormat:@"%d shown, %d dropped, of %d", sink.images, dropped, pictures]);
+}
+
 static void checkHevc444(NSString *_Nullable fixtures) {
   NSString *file = [fixtures stringByAppendingPathComponent:@"hevc444.hevc"];
   NSData *stream = file ? [NSData dataWithContentsOfFile:file] : nil;
   if (!stream) return MVSkip(@"4:4:4", @"no fixture given");
   if (!VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)) return MVSkip(@"4:4:4", @"no hardware HEVC decoder on this Mac");
-  // the fixture's frames, one by one: each VCL unit with what comes before it
+  checkBurst(stream);
   MVTestSink *sink = [MVTestSink new];
   MVDecoder *decoder = [[MVDecoder alloc] initWithSink:sink from:sink];
   decoder.hevc = YES;
   __block int pictures = 0;
-  MVForEachNal(stream.bytes, stream.length, ^(const uint8_t *nal, size_t length) {
-    uint8_t start[3] = {0, 0, 1};
-    NSMutableData *unit = [NSMutableData dataWithBytes:start length:3];
-    [unit appendBytes:nal length:length];
-    if (((nal[0] >> 1) & 0x3f) < 32) pictures++;
-    [decoder decode:unit.bytes length:unit.length];
+  feed444(stream, decoder, ^{
+    // what this check is after is each frame, and how fast a burst can go is the check below: a stream's frames come spaced
+    [sink waitForImages:pictures - 2];
+    pictures++;
   });
   BOOL decoded = [sink waitForImages:pictures];
   MVCheck(@"4:4:4: every frame decoded", pictures > 0 && decoded, [NSString stringWithFormat:@"%d of %d", sink.images, pictures]);
