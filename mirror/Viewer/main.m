@@ -3,7 +3,7 @@
 //   appdyno-viewer             a window
 //   appdyno-viewer --headless  the same, with no window and nothing that could raise one
 //   appdyno-viewer --behind    a real window kept off every screen, for a test on a Mac a person is using
-//   appdyno-viewer --behind --appearance light|dark   the same, drawn as in use, to be looked at by `snapshot`
+//   appdyno-viewer --behind --appearance light|dark [--not-key]   the same, drawn as in use or as behind others, to be looked at by `snapshot`
 //   appdyno-viewer --hub [--focus]   the window of `appdyno hub`, whose stages stand in its room
 //   appdyno-viewer --selftest [fixtures dir]
 //   appdyno-viewer --encode <h264|hevc> <frames>
@@ -149,7 +149,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   if ([op isEqual:@"poke"]) return [_hub poke:m];
   if ([op isEqual:@"snapshot"]) {
     NSString *file = m[@"file"] ?: @"";
-    return MVEmit(@{@"op": @"snapped", @"file": file, @"ok": @([_hub snapshot:file])});
+    return MVEmit(@{@"op": @"snapped", @"file": file, @"ok": @([_hub snapshot:file]), @"parts": [_hub parts]});
   }
   if ([op isEqual:@"quit"]) {
     MVEmit(@{@"op": @"closed"});
@@ -237,7 +237,7 @@ int main(int argc, char **argv) {
     NSUInteger look = [args indexOfObject:@"--appearance"];
     if (look != NSNotFound && args.count > look + 1) {
       application.appearance = [NSAppearance appearanceNamed:[args[look + 1] isEqual:@"dark"] ? NSAppearanceNameDarkAqua : NSAppearanceNameAqua];
-      app.poses = YES;
+      app.poses = ![args containsObject:@"--not-key"];
     }
     if ([args containsObject:@"--hub"]) [app openHub:[args containsObject:@"--focus"]];
     [application run];

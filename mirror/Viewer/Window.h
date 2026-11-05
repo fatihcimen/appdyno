@@ -95,6 +95,8 @@ BOOL MVShortcutMayAct(NSEvent *_Nullable current, MVOffscreenWindow *window);
 /// A window as the window server composites it, to a PNG; NO if it cannot.
 BOOL MVWriteWindow(NSWindow *window, NSString *file);
 BOOL MVWriteWindowPart(NSWindow *window, NSRect part, NSString *file);
+/// Every word and symbol a window shows, with where it stands from its top left: how its contrast is read off a picture.
+NSArray<NSDictionary *> *MVWindowParts(NSWindow *window);
 
 /// A few cells of a picture's own colours, for a layer to stretch into a soft mesh with no blur pass. Caller owns it.
 CGImageRef _Nullable MVPictureMood(IOSurfaceRef surface, BOOL dark);
@@ -106,6 +108,9 @@ CGImageRef _Nullable MVImageMood(CVImageBufferRef image, BOOL dark);
 - (void)followSurface:(IOSurfaceRef)surface;
 - (void)followImage:(CVImageBufferRef)image;
 @end
+
+/// A mouse's click at a point of a window, posted to this process as the window server would send it.
+void MVRealClick(NSWindow *window, NSPoint at);
 
 /// A control's button, however deep in glass it sits.
 NSButton *_Nullable MVFindControl(NSView *view, NSString *name);
@@ -241,6 +246,20 @@ NSRect MVMarkFrame(NSDictionary *rect, CGSize size);
 /// Text on a pasteboard: a person's is the general one.
 void MVCopyText(NSString *text, NSPasteboard *board);
 
+static const double MVInspectorWidth = 320;
+
+/// The system's Inspector of one window. It holds the panes of one device at a time, and tells that device when they show or hide.
+@interface MVInspectorSlot : NSObject
+@property(nonatomic, readonly) NSSplitViewItem *item;
+@property(nonatomic, readonly, nullable) NSView *pane;
+- (void)hold:(nullable NSView *)pane onMove:(nullable void (^)(void))onMove;
+@end
+
+/// Where the chosen stand: one fills it, and two share it evenly. Its window's Inspector goes with it.
+@interface MVRoomView : NSView
+@property(nonatomic) MVInspectorSlot *slot;
+@end
+
 /// The panes of the Inspector, by the index `showPane:` takes.
 enum { MVPanePerf, MVPaneFlow, MVPaneApps, MVPaneActivity, MVPaneStats, MVPanes };
 
@@ -316,6 +335,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how);
 /// Presses a device's button as a person does.
 - (void)poke:(NSDictionary *)message;
 - (BOOL)snapshot:(NSString *)file;
+- (NSArray<NSDictionary *> *)parts;
 @end
 
 NS_ASSUME_NONNULL_END

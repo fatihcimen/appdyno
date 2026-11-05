@@ -1,9 +1,26 @@
 // A window's own events, sent to itself: how it is driven with no person and nothing brought forward, and how it is looked at.
 #import "Viewer.h"
 #import "Window.h"
+#import <dlfcn.h>
 
 // as long as a mouse's: a touch that lifts in the instant it lands is no tap to a device
 static const double kClickSeconds = 0.08;
+
+void MVRealClick(NSWindow *window, NSPoint at) {
+  // shortcut: the event record's window and the setter of its place in it are private, and a window kept off every screen
+  // is under no pointer for the server to name. Tests only: if either goes, a click reaches nothing and the check fails.
+  static const CGEventField kWindowOfEvent = 51;
+  void (*setPlace)(CGEventRef, CGPoint) = dlsym(RTLD_DEFAULT, "CGEventSetWindowLocation");
+  NSPoint onScreen = [window convertPointToScreen:at];
+  CGPoint global = CGPointMake(onScreen.x, NSScreen.screens.firstObject.frame.size.height - onScreen.y);
+  for (NSNumber *type in @[@(kCGEventLeftMouseDown), @(kCGEventLeftMouseUp)]) {
+    CGEventRef click = CGEventCreateMouseEvent(NULL, type.intValue, global, kCGMouseButtonLeft);
+    CGEventSetIntegerValueField(click, kWindowOfEvent, window.windowNumber);
+    if (setPlace) setPlace(click, CGPointMake(at.x, window.frame.size.height - at.y));
+    CGEventPostToPid(getpid(), click);
+    CFRelease(click);
+  }
+}
 
 @implementation MVWindow (Poke)
 
@@ -20,8 +37,7 @@ static const double kClickSeconds = 0.08;
   NSPoint at = [button convertPoint:NSMakePoint(NSMidX(button.bounds), NSMidY(button.bounds)) toView:nil];
   NSView *frame = self.nsWindow.contentView.superview;
   NSView *under = [frame hitTest:[frame.superview convertPoint:at fromView:nil]];
-  for (NSNumber *type in @[@(NSEventTypeLeftMouseDown), @(NSEventTypeLeftMouseUp)])
-    [NSApp postEvent:[NSEvent mouseEventWithType:type.unsignedIntegerValue location:at modifierFlags:0 timestamp:NSProcessInfo.processInfo.systemUptime windowNumber:self.nsWindow.windowNumber context:nil eventNumber:0 clickCount:1 pressure:1] atStart:NO];
+  MVRealClick(self.nsWindow, at);
   MVEmitFrom(self.screenView, @{@"op": @"clicked", @"name": name, @"found": @YES, @"under": NSStringFromClass(under.class) ?: @"", @"isIt": @(under == button || [under isDescendantOf:button])});
 }
 

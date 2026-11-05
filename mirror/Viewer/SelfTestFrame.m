@@ -146,9 +146,10 @@ static void checkClicks(void) {
     // room for the whole toolbar, which folds into its own menu where it has none
     [window.nsWindow setContentSize:NSMakeSize(1000, 700)];
     [window.nsWindow displayIfNeeded];
-    NSMutableArray<NSString *> *names = [NSMutableArray arrayWithArray:@[@"screenshot", @"record", @"recordFlow", @"hud", @"inspector"]];
+    NSMutableArray<NSString *> *names = [NSMutableArray arrayWithArray:@[@"screenshot", @"record", @"recordFlow", @"hud"]];
     for (NSString *name in @[@"back", @"home", @"appSwitch", @"lock"])
       if ([controls containsObject:name]) [names addObject:name];
+    [names addObject:@"inspector"];
     for (NSString *name in names) {
       [window pokeClick:name];
       for (NSEvent *e; (e = [NSApp nextEventMatchingMask:NSEventMaskAny untilDate:[NSDate dateWithTimeIntervalSinceNow:0.05] inMode:NSDefaultRunLoopMode dequeue:YES]);) [NSApp sendEvent:e];

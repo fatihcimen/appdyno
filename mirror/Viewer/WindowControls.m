@@ -8,7 +8,7 @@
   NSMutableArray *device = [NSMutableArray array];
   for (NSString *name in @[@"back", @"home", @"appSwitch", @"lock"])
     if ([_view.controls containsObject:name]) [device addObject:name];
-  NSArray *groups = @[device, @[@"screenshot", @"record", @"recordFlow"], _hosted ? @[@"more", @"inspector"] : @[@"hud", @"more", @"inspector"]];
+  NSArray *groups = @[device, @[@"screenshot", @"record", @"recordFlow"], _hosted ? @[@"more"] : @[@"hud", @"more"]];
   if (_look[@"pair"]) groups = [@[@[@"both"]] arrayByAddingObjectsFromArray:groups];
   _bar = [[MVToolbar alloc] initWithGroups:groups target:self action:@selector(control:)];
   [self useToolbar];
@@ -19,6 +19,7 @@
 /// The bar is the system's, one to a window: of two devices in a room, the one last touched has it.
 - (void)useToolbar {
   if (!_toolbar) _toolbar = _bar.toolbar;
+  [self holdInspector];
   if (_window.toolbar == _toolbar) return;
   _window.toolbar = _toolbar;
   _window.toolbarStyle = NSWindowToolbarStyleUnified;
@@ -68,7 +69,7 @@
   if (item.action != @selector(control:)) return YES;
   id object = [(id)item respondsToSelector:@selector(representedObject)] ? [(id)item representedObject] : nil;
   if ([object isEqual:@"frame"]) [(NSMenuItem *)item setState:_frame.showsFrame ? NSControlStateValueOn : NSControlStateValueOff];
-  if ([object isEqual:@"inspector"]) [(NSMenuItem *)item setState:_inspecting ? NSControlStateValueOn : NSControlStateValueOff];
+  if ([object isEqual:@"inspector"]) [(NSMenuItem *)item setState:self.inspecting ? NSControlStateValueOn : NSControlStateValueOff];
   return YES;
 }
 

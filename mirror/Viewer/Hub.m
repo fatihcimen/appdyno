@@ -2,7 +2,9 @@
 // the same code as in a window of its own; what a person asks goes to the parent as a message.
 #import "Window.h"
 
-static const NSSize kOpens = {1240, 860};
+static const NSSize kOpens = {1240, 820};
+// under this a window gives up its Inspector, and then its sidebar
+static const double kContentLeast = 520;
 static const double kSidebar = 260;
 // a window's three buttons stand above the sidebar's first line
 static const double kBelowLights = 46;
@@ -32,10 +34,6 @@ static NSTextField *label(CGFloat size, NSFontWeight weight, NSColor *color) {
   return field;
 }
 
-/// Where the chosen stand: one fills it, and two share it evenly.
-@interface MVRoomView : NSView
-@end
-
 @implementation MVRoomView
 - (NSArray<NSView *> *)stages {
   NSIndexSet *at = [self.subviews indexesOfObjectsPassingTest:^BOOL(NSView *view, NSUInteger i, BOOL *stop) {
@@ -55,11 +53,15 @@ static NSTextField *label(CGFloat size, NSFontWeight weight, NSColor *color) {
 - (void)layout {
   [super layout];
   NSArray<NSView *> *stages = self.stages;
-  // the room runs on under the sidebar, and the first takes that too, for its backdrop
-  double under = self.safeAreaInsets.left, wide = (self.bounds.size.width - under) / MAX(stages.count, 1);
+  // what the room says of itself stands only while no device does
+  for (NSView *view in self.subviews)
+    if (![stages containsObject:view]) view.hidden = stages.count > 0;
+  // the room runs on under the sidebar and the Inspector, and the end stages take that too, for their backdrops
+  NSEdgeInsets under = self.safeAreaInsets;
+  double all = self.bounds.size.width, wide = (all - under.left - under.right) / MAX(stages.count, 1);
   [stages enumerateObjectsUsingBlock:^(NSView *stage, NSUInteger i, BOOL *stop) {
-    double left = i == 0 ? 0 : under + i * wide;
-    stage.frame = NSMakeRect(left, 0, under + (i + 1) * wide - left, self.bounds.size.height);
+    double left = i == 0 ? 0 : under.left + i * wide, right = i + 1 == stages.count ? all : under.left + (i + 1) * wide;
+    stage.frame = NSMakeRect(left, 0, right - left, self.bounds.size.height);
   }];
 }
 @end
@@ -89,13 +91,15 @@ static NSTextField *label(CGFloat size, NSFontWeight weight, NSColor *color) {
     _window.delegate = self;
     _window.poses = poses;
     _window.titlebarAppearsTransparent = YES;
-    _window.contentMinSize = NSMakeSize(760, 520);
+    _window.contentMinSize = NSMakeSize(kContentLeast, 520);
     _window.offscreen = how == MVShowBehind;
     if (how != MVShowBehind) _window.frameAutosaveName = @"hub";
     NSViewController *side = [NSViewController new];
     side.view = [self sidebarView];
     NSViewController *main = [NSViewController new];
     main.view = [self roomView];
+    MVInspectorSlot *slot = [MVInspectorSlot new];
+    ((MVRoomView *)_room).slot = slot;
     NSSplitViewController *split = [NSSplitViewController new];
     NSSplitViewItem *sidebar = [NSSplitViewItem sidebarWithViewController:side];
     sidebar.minimumThickness = kSidebar;
@@ -104,7 +108,9 @@ static NSTextField *label(CGFloat size, NSFontWeight weight, NSColor *color) {
     NSSplitViewItem *content = [NSSplitViewItem splitViewItemWithViewController:main];
     // the device's room runs on under the sidebar, whose glass needs something to bend
     if ([content respondsToSelector:NSSelectorFromString(@"setAutomaticallyAdjustsSafeAreaInsets:")]) [content setValue:@YES forKey:@"automaticallyAdjustsSafeAreaInsets"];
+    content.minimumThickness = kContentLeast;
     [split addSplitViewItem:content];
+    [split addSplitViewItem:slot.item];
     _window.contentViewController = split;
     [_window setContentSize:kOpens];
     MVPresent(_window, how);
@@ -173,8 +179,8 @@ static NSTextField *label(CGFloat size, NSFontWeight weight, NSColor *color) {
   _column.translatesAutoresizingMaskIntoConstraints = NO;
   [_room addSubview:_column];
   [NSLayoutConstraint activateConstraints:@[
-    [_column.centerXAnchor constraintEqualToAnchor:_room.centerXAnchor],
-    [_column.centerYAnchor constraintEqualToAnchor:_room.centerYAnchor],
+    [_column.centerXAnchor constraintEqualToAnchor:_room.safeAreaLayoutGuide.centerXAnchor],
+    [_column.centerYAnchor constraintEqualToAnchor:_room.safeAreaLayoutGuide.centerYAnchor],
   ]];
   return _room;
 }
@@ -366,6 +372,10 @@ static MVRow *rowOf(NSDictionary *device) {
 
 - (BOOL)snapshot:(NSString *)file {
   return MVWriteWindow(_window.attachedSheet ?: _window, file);
+}
+
+- (NSArray<NSDictionary *> *)parts {
+  return MVWindowParts(_window.attachedSheet ?: _window);
 }
 
 - (void)windowWillClose:(NSNotification *)notification {

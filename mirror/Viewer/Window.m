@@ -6,7 +6,7 @@
 static const double kFitScreen = 0.85;
 // far from every screen a Mac can have
 static const double kOffscreenAt = -30000;
-static const double kMargin = 30, kTop = 72, kBottom = 30, kInspector = 300, kInset = 10;
+static const double kMargin = 24, kTop = 68, kBottom = 24, kInset = 10;
 static const CGSize kSmallest = {380, 420};
 // wide enough that a toolbar shows all it has; a person can go narrower, and it folds into its own menu
 static const double kOpensWide = 780;
@@ -20,6 +20,12 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 @implementation MVRootView
 - (void)setFrameSize:(NSSize)size {
   [super setFrameSize:size];
+  if (self.onResize) self.onResize();
+}
+
+/// A sidebar or an Inspector that opens or closes moves the insets, and no frame.
+- (void)layout {
+  [super layout];
   if (self.onResize) self.onResize();
 }
 @end
@@ -50,14 +56,15 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
     _backdrop = [[MVBackdrop alloc] initInView:root window:_window];
     _root = root;
     __weak MVWindow *held = self;
+    root.onResize = ^{
+      [held layoutPicture];
+    };
     if (room) {
       root.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-      root.onResize = ^{
-        [held layoutPicture];
-      };
       [room addSubview:root];
+      _slot = ((MVRoomView *)room).slot;
     } else {
-      _window.contentView = root;
+      [self splitAround:root];
     }
     _stage = [[NSView alloc] initWithFrame:root.bounds];
     [root addSubview:_stage];
@@ -90,10 +97,6 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
     _hud = [[MVHud alloc] initWithFrame:NSZeroRect];
     _hud.hidden = YES;
     [root addSubview:_hud];
-    _panel = MVGlass(_inspector, 22, nil);
-    _panel.translatesAutoresizingMaskIntoConstraints = YES;
-    _panel.hidden = YES;
-    [root addSubview:_panel];
   }
   return self;
 }
@@ -108,6 +111,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 /// Off its room, which stays for the next device.
 - (void)leave {
   [_root removeFromSuperview];
+  [self letGoOfInspector];
   if (_window.toolbar != _toolbar) return;
   _window.toolbar = nil;
   _window.title = @"Devices";
@@ -138,13 +142,10 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 /// Everything laid out once, from the window's size: the device takes the room there is.
 - (void)layoutPicture {
   NSRect all = _root.bounds;
-  double side = [self sideWidth];
-  // what stands under a sidebar is the backdrop's
-  double under = _root.safeAreaInsets.left;
-  _stage.frame = NSMakeRect(under, 0, all.size.width - side - under, all.size.height);
-  _panel.frame = NSMakeRect(all.size.width - kInspector - kInset, kInset, kInspector, all.size.height - kTop - kInset);
-  double beside = all.size.width - (_inspecting ? kInspector + kInset : 0) - MVHudWidth - kInset;
-  _hud.frame = NSMakeRect(beside, kInset, MVHudWidth, all.size.height - kTop - kInset);
+  // what stands under a sidebar and an Inspector is the backdrop's
+  NSEdgeInsets under = _root.safeAreaInsets;
+  _stage.frame = NSMakeRect(under.left, 0, all.size.width - [self sideWidth] - under.left - under.right, all.size.height);
+  _hud.frame = NSMakeRect(all.size.width - MVHudWidth - kInset, kInset, MVHudWidth, all.size.height - kTop - kInset);
   if (_picture.width <= 0) return;
   [CATransaction begin];
   [CATransaction setDisableActions:YES];
@@ -187,16 +188,20 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   return [@"zoom." stringByAppendingString:_name ?: @""];
 }
 
-/// What the panes beside the device take of the window.
+/// What the numbers beside the device take of the room it has.
 - (double)sideWidth {
-  return (_inspecting ? kInspector + kInset : 0) + (_hudding ? MVHudWidth + kInset : 0);
+  return _hudding ? MVHudWidth + kInset : 0;
+}
+
+- (BOOL)inspecting {
+  return _slot.pane == _inspector && !_slot.item.collapsed;
 }
 
 /// The chrome that never scales, at a given zoom's device.
 - (CGSize)windowSizeAt:(double)zoom {
   CGSize body = [_frame bodyFor:CGSizeMake(_picture.width * zoom, _picture.height * zoom) turns:_turns];
   double margin = _frame.showsFrame ? kMargin : 0;
-  return CGSizeMake(MAX(body.width + 2 * margin, kOpensWide) + [self sideWidth], MAX(body.height + kTop + kBottom, kSmallest.height));
+  return CGSizeMake(MAX(body.width + 2 * margin, kOpensWide) + [self sideWidth] + (self.inspecting ? MVInspectorWidth : 0), MAX(body.height + kTop + kBottom, kSmallest.height));
 }
 
 - (double)fitZoom {
@@ -294,21 +299,18 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 
 - (void)toggleInspector {
   double zoom = _zoom;
-  _inspecting = !_inspecting;
-  MVShowPane(_panel, _inspecting);
-  [self watchReadings];
-  [self watchElements];
+  [self openInspector:!self.inspecting];
   [self setZoom:zoom > 0 ? zoom : 1];
 }
 
 - (void)showPane:(NSInteger)pane {
-  if (!_inspecting) [self toggleInspector];
+  if (!self.inspecting) [self openInspector:YES];
   [_inspector showPane:pane];
 }
 
 /// A source runs only while something shows it: what it reads costs the device.
 - (void)watchReadings {
-  BOOL wanted = _hudding || (_inspecting && _inspector.readings);
+  BOOL wanted = _hudding || (self.inspecting && _inspector.readings);
   if (wanted == _reading) return;
   _reading = wanted;
   MVEmitFrom(_view, @{@"op": @"perfWatch", @"on": @(wanted)});
@@ -316,7 +318,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 
 /// In a room the numbers are the Inspector's, on Performance; a window of its own has them beside the device too.
 - (void)toggleHud {
-  if (_hosted) return _inspecting && _inspector.readings ? [self toggleInspector] : [self showPane:MVPanePerf];
+  if (_hosted) return self.inspecting && _inspector.readings ? [self toggleInspector] : [self showPane:MVPanePerf];
   _hudding = !_hudding;
   MVShowPane(_hud, _hudding);
   [self watchReadings];
@@ -329,7 +331,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 }
 
 - (void)showMeasure:(NSDictionary *)message {
-  if (!_inspecting) [self showPane:MVPanePerf];
+  if (!self.inspecting) [self showPane:MVPanePerf];
   if (![message[@"op"] isEqual:@"measured"]) return [_inspector.perf showMeasuring:message[@"line"] ?: @""];
   [_inspector.perf showMeasured:message];
 }
@@ -337,7 +339,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 - (void)showStats:(NSDictionary *)stats {
   [_hud setPictureRate:[stats[@"shown"] doubleValue]];
   [_inspector.perf setPictureRate:[stats[@"shown"] doubleValue]];
-  if (_inspecting) [_inspector showStats:stats];
+  if (self.inspecting) [_inspector showStats:stats];
 }
 
 - (void)addActivity:(NSDictionary *)call {
@@ -376,7 +378,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
   return _line;
 }
 
-- (NSView *)bar {
+- (MVToolbar *)bar {
   return _bar;
 }
 

@@ -11,7 +11,7 @@ NS_ASSUME_NONNULL_BEGIN
   MVFrameView *_frame;
   MVView *_view;
   MVInspector *_inspector;
-  NSView *_panel;
+  MVInspectorSlot *_slot;
   MVToolbar *_bar;
   NSToolbar *_toolbar;
   MVHud *_hud;
@@ -25,14 +25,21 @@ NS_ASSUME_NONNULL_BEGIN
   int _turns;
   NSString *_name, *_kind;
   NSDictionary *_look;
-  BOOL _inspecting;
 }
 - (double)fitZoom;
 - (void)setZoom:(double)zoom;
 - (void)setFrameShown:(BOOL)shown;
 - (void)toggleInspector;
+- (void)watchReadings;
 - (void)toggleHud;
 - (void)sayStatus:(NSString *)subtitle;
+@end
+
+@interface MVWindow (Inspector)
+- (void)splitAround:(NSView *)root;
+- (void)holdInspector;
+- (void)letGoOfInspector;
+- (void)openInspector:(BOOL)open;
 @end
 
 NS_ASSUME_NONNULL_END

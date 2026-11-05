@@ -74,6 +74,24 @@ NSButton *_Nullable MVFindControl(NSView *view, NSString *name) {
   return nil;
 }
 
+static void addParts(NSView *view, NSView *top, double height, NSMutableArray *parts) {
+  if (view.isHiddenOrHasHiddenAncestor || view.alphaValue < 0.05) return;
+  NSString *text = [view isKindOfClass:NSTextField.class] ? ((NSTextField *)view).stringValue : nil;
+  NSImage *symbol = [view isKindOfClass:NSImageView.class] ? ((NSImageView *)view).image : [view isKindOfClass:NSButton.class] ? ((NSButton *)view).image : nil;
+  if (text.length || symbol) {
+    NSRect at = [view convertRect:view.bounds toView:top];
+    [parts addObject:@{@"text": text ?: @"", @"kind": text.length ? @"text" : @"symbol", @"x": @(NSMinX(at)), @"y": @(height - NSMaxY(at)), @"w": @(at.size.width), @"h": @(at.size.height)}];
+  }
+  for (NSView *child in view.subviews) addParts(child, top, height, parts);
+}
+
+NSArray<NSDictionary *> *MVWindowParts(NSWindow *window) {
+  NSView *top = window.contentView.superview;
+  NSMutableArray *parts = [NSMutableArray array];
+  addParts(top, top, top.bounds.size.height, parts);
+  return parts;
+}
+
 BOOL MVWriteWindow(NSWindow *window, NSString *file) {
   return MVWriteWindowPart(window, NSZeroRect, file);
 }

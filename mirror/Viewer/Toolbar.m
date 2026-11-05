@@ -40,6 +40,7 @@
 - (NSArray<NSToolbarItemIdentifier> *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar {
   NSMutableArray *names = [NSMutableArray arrayWithObjects:NSToolbarSidebarTrackingSeparatorItemIdentifier, NSToolbarFlexibleSpaceItemIdentifier, nil];
   for (NSUInteger i = 0; i < _groups.count; i++) [names addObject:[NSString stringWithFormat:@"group%lu", (unsigned long)i]];
+  [names addObjectsFromArray:@[NSToolbarInspectorTrackingSeparatorItemIdentifier, NSToolbarFlexibleSpaceItemIdentifier, @"inspector"]];
   return names;
 }
 
@@ -66,6 +67,7 @@
 }
 
 - (nullable NSToolbarItem *)toolbar:(NSToolbar *)toolbar itemForItemIdentifier:(NSToolbarItemIdentifier)name willBeInsertedIntoToolbar:(BOOL)flag {
+  if ([name isEqual:@"inspector"]) return [self itemNamed:name];
   if (![name hasPrefix:@"group"]) return nil;
   NSArray<NSString *> *names = _groups[[name substringFromIndex:5].integerValue];
   NSMutableArray *items = [NSMutableArray array];
