@@ -165,7 +165,7 @@ export interface VirtualDevices {
   shutdown(id: string): Promise<void>;
   /** What can be made; none where the tools that make one are missing. */
   catalog?(): Promise<VirtualCatalog | undefined>;
-  /** Makes one and answers its id. */
+  /** Makes one and answers its id; with no `system` on the newest that runs the model, where a driver can tell. */
   create?(device: NewDevice): Promise<string>;
 }
 

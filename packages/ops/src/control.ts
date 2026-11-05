@@ -210,10 +210,10 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
       name: 'simulator',
       title: 'Simulators and emulators',
       description:
-        'Only on request. list (what can be started), boot (name: its id or name), shutdown (name; none: only those this tool started).',
+        'Only on request. list (what can be started), boot (name: its id or name), create (name: an iOS model; starts it), shutdown (name; none: only those this tool started).',
       input: z
         .object({
-          action: z.enum(['list', 'boot', 'shutdown']),
+          action: z.enum(['list', 'boot', 'create', 'shutdown']),
           name: z.string().max(100).optional(),
         })
         .strict(),
@@ -234,6 +234,24 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
               )
               .join('\n') || 'none can be started';
           return reply(t, { done: t, devices });
+        }
+        if (action === 'create') {
+          if (!device) throw new ToolError('create needs name: an iOS model', 'INVALID_ARGUMENT');
+          const maker = ctx.providers.find((p) => p.virtual?.kind === 'simulator')?.virtual;
+          if (!maker?.create)
+            throw new ToolError(
+              'this Mac has no driver that creates a simulator',
+              'UNSUPPORTED',
+              'an Android emulator is made with avdmanager or in Android Studio',
+            );
+          reportProgress(`creating a ${device}`);
+          const id = await maker.create({ name: device, model: device, system: '' });
+          checkDevice(policy, id);
+          reportProgress(`starting ${device}`);
+          const serial = await maker.boot(id);
+          updateState(startedFile(), Started, (ids = []) => [...ids, id]);
+          const t = `a new ${device} is up as ${serial}: xcrun simctl delete ${id} removes it`;
+          return reply(t, { done: t, serial });
         }
         if (action === 'boot') {
           if (!device)

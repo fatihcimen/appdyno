@@ -376,7 +376,8 @@ export class Simulators implements VirtualDevices {
   }
 
   async create({ name, model, system }: NewDevice) {
-    return (await this.simctl.exec(['create', name || typeName(model), model, system])).trim();
+    const runtime = system || (await this.simctl.runtimeFor(model));
+    return (await this.simctl.exec(['create', name || typeName(model), model, runtime])).trim();
   }
 
   async startable(): Promise<Startable[]> {

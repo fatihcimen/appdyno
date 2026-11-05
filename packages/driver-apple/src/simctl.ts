@@ -75,6 +75,26 @@ export type Simulator = {
 
 const HOME_SCREEN = 'com.apple.springboard';
 
+type Runtime = {
+  identifier: string;
+  version: string;
+  platform?: string;
+  isAvailable?: boolean;
+  supportedDeviceTypes?: { name: string }[];
+};
+
+/** Of the runtimes that take this model, the newest iOS: not each runs every model of its time. */
+export const newestRuntimeOf = (runtimes: Runtime[], model: string) =>
+  runtimes
+    .filter(
+      (r) =>
+        r.isAvailable !== false &&
+        r.platform !== 'watchOS' &&
+        r.supportedDeviceTypes?.some((t) => t.name === model),
+    )
+    .toSorted((a, b) => a.version.localeCompare(b.version, undefined, { numeric: true }))
+    .at(-1);
+
 /** The simulator tool, always for one named simulator (never "booted": other simulators may run). */
 export class Simctl {
   constructor(private readonly env: NodeJS.ProcessEnv = xcodeEnv()) {}
@@ -144,6 +164,23 @@ export class Simctl {
           ...(d.deviceTypeIdentifier && { deviceType: d.deviceTypeIdentifier }),
         })),
     );
+  }
+
+  /** The newest runtime that takes this model; a refusal names the models there are. */
+  async runtimeFor(model: string) {
+    const { runtimes } = JSON.parse(await this.exec(['list', '-j', 'runtimes'])) as {
+      runtimes: Runtime[];
+    };
+    const runtime = newestRuntimeOf(runtimes, model);
+    if (!runtime) {
+      const names = new Set(runtimes.flatMap((r) => r.supportedDeviceTypes?.map((t) => t.name)));
+      throw new DeviceError(
+        'NOT_FOUND',
+        `no runtime on this Mac runs a ${model}`,
+        `models here: ${[...names].filter(Boolean).slice(0, 30).join(', ')}`,
+      );
+    }
+    return runtime.identifier;
   }
 
   async state(udid: string): Promise<string | undefined> {
