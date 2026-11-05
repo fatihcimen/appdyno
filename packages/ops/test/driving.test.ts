@@ -12,7 +12,7 @@ import type {
   VirtualDevices,
 } from '@appdyno/core';
 import { DeviceError, KEYS, type ActParams, type Tree } from '@appdyno/protocol';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext, type Policy } from '../src/index.js';
 import { keyName, keyPress } from '../src/step-schemas.js';
 import { FakeDevice, SCREENS, WithKeyboard } from './fake-device.js';
@@ -820,6 +820,7 @@ describe('gestures, keys, clipboard', () => {
 
   it('saves a picture, into a folder too, and leaves what is there', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
+    onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
     const d = new FakeDevice();
     Object.defineProperty(d, 'mirror', { value: {} });
     const { call } = await connect(d);

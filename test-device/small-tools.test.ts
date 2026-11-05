@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { Adb, androidProvider, appleProvider, Simctl } from 'appdyno';
 import { type Answer, type Call, IPHONE, onIphone, opsOn } from './helpers.js';
 
@@ -220,7 +220,9 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
   });
 
   it("saves a picture at the screen's own size, and refuses to replace one", async () => {
-    const file = join(mkdtempSync(join(tmpdir(), 'appdyno-shot-')), 'screen.png');
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
+    onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
+    const file = join(dir, 'screen.png');
     const r = ok(await call('screenshot', { file }));
     const { w, density } = ok(await call('device_info')).data.screen;
     expect(r.data.width).toBe(Math.round(w * density));
