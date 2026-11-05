@@ -4,7 +4,7 @@ import { COMMANDS, usage } from './usage.js';
 
 const USAGE = usage('mirror');
 
-/** The words of `appdyno mirror`; `usage` when they make no call, `help` when it was asked for. */
+/** The words of `appdyno mirror`; `usage` when they make no call. */
 export function mirrorArgs(args: string[]) {
   const { values, positionals } = parseArgs({
     args,
@@ -24,8 +24,7 @@ export function mirrorArgs(args: string[]) {
     action,
     quality: quality as 'auto' | 'high' | 'standard',
     codec: codec as 'h264' | 'hevc' | undefined,
-    help: values.help ? USAGE : undefined,
-    usage: wrong && !values.help ? USAGE : undefined,
+    usage: wrong ? USAGE : undefined,
   };
 }
 
@@ -61,10 +60,11 @@ export async function mirrorCommand<Context extends { close(): void }>(
   },
 ) {
   const words = mirrorArgs(args);
-  const { values, action, quality, help, usage } = words;
-  if (help) console.log(help);
-  if (usage) console.error(usage);
-  if (help || usage) return help ? 0 : 2;
+  const { values, action, quality, usage } = words;
+  if (usage) {
+    console.error(usage);
+    return 2;
+  }
   const ctx = use.context({
     ...(values.device?.[0] && { device: values.device[0] }),
     ...(values['allow-devices'] && { 'allow-devices': values['allow-devices'] }),
@@ -91,10 +91,6 @@ export async function hubCommand<Context extends { close(): void }>(
   },
 ) {
   const { values } = parseArgs({ args, options: COMMANDS.hub.flags });
-  if (values.help) {
-    console.log(usage('hub'));
-    return 0;
-  }
   const ctx = use.context({
     ...(values['allow-devices'] && { 'allow-devices': values['allow-devices'] }),
   });

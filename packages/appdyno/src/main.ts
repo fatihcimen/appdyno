@@ -42,7 +42,8 @@ import { alertPerson } from './alert.js';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
 import { hubCommand, mirrorCommand } from './mirror-args.js';
-import { COMMANDS, commandList, usage } from './usage.js';
+import { COMMANDS, commandList, helpFor, usage } from './usage.js';
+import { SERVER_INFO } from '@appdyno/mcp';
 import { serveCommand, type ServerFlags } from './serve.js';
 import { flightCommand, timelineCommand } from './timeline.js';
 
@@ -173,6 +174,15 @@ async function surveyCommand(args: string[]) {
 }
 
 async function main(): Promise<number> {
+  if (['version', '--version', '-v'].includes(command ?? '')) {
+    console.log(SERVER_INFO.version);
+    return 0;
+  }
+  const help = helpFor(command, rest);
+  if (help) {
+    console.log(help);
+    return 0;
+  }
   switch (command) {
     case 'mirror':
       return mirrorCommand(rest, {
@@ -237,10 +247,6 @@ async function main(): Promise<number> {
     }
     case 'update': {
       const { values } = parseArgs({ args: rest, options: COMMANDS.update.flags });
-      if (values.help) {
-        console.log(usage('update'));
-        return 0;
-      }
       return update({ root, run, check: values.check, out: (s) => console.log(s) });
     }
     case 'doctor': {

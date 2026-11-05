@@ -30,7 +30,8 @@ type FlagSchema = {
 };
 
 const schemaOf = (op: Op) =>
-  z.toJSONSchema(op.input) as {
+  // as a caller writes it: what has a default is not required
+  z.toJSONSchema(op.input, { io: 'input' }) as {
     properties?: Record<string, FlagSchema>;
     required?: string[];
   };
@@ -55,7 +56,9 @@ export function helpOf(op: Op): string {
     ...flags,
     `  --json '{...}'  the arguments as JSON`,
     '  --out <file>  where an image goes',
-    '  --device <serial>  the device, for this command and the next ones',
+    ...(properties.device
+      ? []
+      : ['  --device <serial>  the device, for this command and the next ones']),
   ].join('\n');
 }
 
@@ -214,12 +217,19 @@ export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
   return Object.fromEntries(commands.map((c) => [c.name, c]));
 }
 
+const LINE_WIDTH = 100;
+
+/** A description's first sentence, whole, or cut at a word and marked as cut. */
+const firstSentence = (description: string) => {
+  const s = /^.*?\.(?=\s|$)/s.exec(description)?.[0] ?? description;
+  return s.length <= LINE_WIDTH ? s : `${s.slice(0, s.lastIndexOf(' ', LINE_WIDTH))} …`;
+};
+
 /** Every command, one line each: its first sentence. */
 export const listOf = (ops: Record<string, Op>) =>
   Object.values(ops)
     .map((op) => {
       const name = op.name.replaceAll('_', '-');
-      const first = /^.*?[.:](?:\s|$)/.exec(op.description)?.[0]?.trim() ?? op.description;
-      return `  ${name.padEnd(16)} ${first}`;
+      return `  ${name.padEnd(16)} ${firstSentence(op.description)}`;
     })
     .join('\n');

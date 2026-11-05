@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mirrorArgs, mirrorRun } from '../src/mirror-args.js';
-import { commandList, COMMANDS, line, usage } from '../src/usage.js';
+import { commandList, COMMANDS, helpFor, line, usage } from '../src/usage.js';
 
 describe('usage', () => {
   it('says a command as its table has it', () => {
@@ -20,7 +20,7 @@ describe('usage', () => {
   });
 
   it('has no flag that skips verifying a release', () => {
-    expect(Object.keys(COMMANDS.update.flags).sort()).toEqual(['check', 'help']);
+    expect(Object.keys(COMMANDS.update.flags).sort()).toEqual(['check']);
     expect(line('update')).toBe('update [--check]');
   });
 
@@ -33,6 +33,25 @@ describe('usage', () => {
     expect(
       mirrorArgs(['--device', 'A', '--device', 'B', '--pair', '--detach']).usage,
     ).toBeDefined();
+  });
+
+  it('answers --help on every command of the tables, and leaves an operation its own', () => {
+    for (const command of ['mcp', 'install', 'doctor', 'bench', 'test', 'devices', 'hub', 'mirror'])
+      expect(helpFor(command, ['--help']), command).toContain(`usage: appdyno ${command}`);
+    expect(helpFor('ios', ['-h'])).toContain('appdyno ios build');
+    expect(helpFor('tools', ['--help'])).toContain('appdyno tools install');
+    expect(helpFor('perf', ['--help'])).toContain('appdyno perf survey');
+    expect(helpFor('perf', ['survey', '--help'])).toContain('every measure on that device');
+    expect(helpFor('test', ['a.flow', '--help'])).toContain('usage: appdyno test');
+    expect(helpFor('perf', ['compare', '--help'])).toBeUndefined();
+    expect(helpFor('tap', ['--help'])).toBeUndefined();
+    expect(helpFor('doctor', ['--serial', 'S'])).toBeUndefined();
+    expect(helpFor(undefined, [])).toBeUndefined();
+  });
+
+  it('says --allow-devices on what takes it', () => {
+    expect(line('mirror')).toContain('[--allow-devices RE]');
+    expect(line('hub')).toContain('[--allow-devices RE]');
   });
 
   it('leaves out what is between its own processes', () => {

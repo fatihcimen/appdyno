@@ -123,6 +123,28 @@ describe('commands from the operations', () => {
     }
   });
 
+  it('calls only what has no default required', async () => {
+    const help = (await run('wait-for', '--help')).out.join('\n');
+    expect(help).not.toContain('required; default');
+    expect(help).toMatch(/--read <diff\|full\|none> {2}default "diff"/);
+    expect((await run('use-device', '--help')).out.join('\n')).toMatch(
+      /--device <\w+> {2}required/,
+    );
+  });
+
+  it('lists the device flag once, as an op that takes a device has its own', async () => {
+    const help = (await run('use-device', '--help')).out.join('\n');
+    expect(help.match(/^ {2}--device /gm)).toHaveLength(1);
+    expect((await run('tap', '--help')).out.join('\n')).toContain('--device <serial>');
+  });
+
+  it('says each command in a whole sentence, or marks where it cut one', () => {
+    const lines = listOf(ops).split('\n');
+    expect(lines.filter((l) => /:$/.test(l))).toEqual([]);
+    expect(lines.every((l) => l.length <= 124)).toBe(true);
+    for (const l of lines) expect(l).toMatch(/(\.|…)$/);
+  });
+
   it('lists flags from the schema on --help, and does not call the device', async () => {
     const before = device.calls.length;
     const r = await run('wait-for', '--help');

@@ -53,10 +53,11 @@ export const COMMANDS = {
     what: 'add this server to the MCP clients on this Mac, or take it out',
   },
   update: {
-    flags: { check: on, help: { type: 'boolean', short: 'h', unsaid: true } },
+    flags: { check: on },
     what: 'move to the latest release, verified before anything changes; --check changes nothing',
   },
   devices: { what: 'the connected devices' },
+  version: { what: 'which version this is' },
   test: {
     takes: '<dir or files>',
     flags: {
@@ -106,8 +107,7 @@ export const COMMANDS = {
       record: value('file.mp4'),
       focus: on,
       'input-on-click': unsaidOn,
-      'allow-devices': unsaidValue,
-      help: { type: 'boolean', short: 'h', unsaid: true },
+      'allow-devices': value('RE'),
     },
     what: 'a live window on a device, driven by mouse and keyboard',
   },
@@ -117,8 +117,7 @@ export const COMMANDS = {
       focus: on,
       behind: unsaidOn,
       appearance: unsaidValue,
-      'allow-devices': unsaidValue,
-      help: { type: 'boolean', short: 'h', unsaid: true },
+      'allow-devices': value('RE'),
     },
     what: 'every device of this Mac in one window: start, stop, make one, open its window',
   },
@@ -225,6 +224,24 @@ export const usage = (prefix: string) =>
     .filter((n) => n.startsWith(prefix))
     .map((n, i) => `${i ? '      ' : 'usage:'} appdyno ${line(n)}`)
     .join('\n');
+
+/** What `--help` answers for a command of these tables; undefined for an operation, which words its own. */
+export function helpFor(command: string | undefined, words: string[]) {
+  if (!command || !(words.includes('--help') || words.includes('-h'))) return undefined;
+  const starting = (prefix: string) =>
+    (Object.keys(COMMANDS) as Name[]).filter((n) => n === prefix || n.startsWith(`${prefix} `));
+  const sub = words[0]?.startsWith('-') ? undefined : words[0];
+  const exact = sub ? starting(`${command} ${sub}`) : [];
+  // `perf compare` goes on to its operation
+  const names = exact.length > 0 || (sub && command === 'perf') ? exact : starting(command);
+  if (names.length === 0) return undefined;
+  return names
+    .map((n, i) => {
+      const { what }: Command = COMMANDS[n];
+      return `${i ? '      ' : 'usage:'} appdyno ${line(n)}${what ? `\n       ${what}` : ''}`;
+    })
+    .join('\n');
+}
 
 const NAME_WIDTH = 17;
 
