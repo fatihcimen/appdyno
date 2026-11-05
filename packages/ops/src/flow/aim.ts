@@ -1,4 +1,4 @@
-import type { Screen, ScreenElement } from '@appdyno/core';
+import type { Screen, ScreenElement, UiElement } from '@appdyno/core';
 import {
   bestSelector,
   elementAt,
@@ -6,6 +6,7 @@ import {
   type FlowSelector,
   type FlowStep,
 } from '@appdyno/flows';
+import type { Point } from '@appdyno/protocol';
 import { defined } from './shared.js';
 
 export type Size = { w: number; h: number };
@@ -28,16 +29,20 @@ export const named = (screen: Pick<Screen, 'list' | 'elements'>, e: ScreenElemen
   };
 };
 
+/** A place only coordinates can give: it holds for this size of screen, and the file says so. */
+export const pointAim = (p: Point, size: Size | undefined): Aim => ({
+  args: { x: p.x, y: p.y, ...(size && { screen: `${size.w}x${size.h}` }) },
+  flags: ['coordinates'],
+});
+
 /** A point of a screen: the element a touch there reaches when anything names it, else flagged coordinates. */
-export function aimAt(screen: Screen, p: { x: number; y: number }, size: Size | undefined): Aim {
+export function aimAt(screen: Screen, p: Point, size: Size | undefined): Aim {
   const e = size && elementAt(screen.list, p, size);
-  if (e) return { screen, element: e, ...named(screen, e) };
-  return {
-    screen,
-    args: { x: p.x, y: p.y, ...(size && { screen: `${size.w}x${size.h}` }) },
-    flags: ['coordinates'],
-  };
+  return e ? { screen, element: e, ...named(screen, e) } : { screen, ...pointAim(p, size) };
 }
+
+/** A field as a recorded secret is called. */
+export const fieldName = (el: UiElement) => el.identifier?.replace(/^[\w.]*:id\//, '');
 
 export const stepOf = (
   action: FlowStep['action'],

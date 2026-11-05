@@ -99,6 +99,12 @@ export class Recording {
     });
   }
 
+  /** The last steps turn out to have been this one, as a second tap makes two taps a double tap. */
+  rewrite(count: number, step: FlowStep) {
+    this.state.steps.length -= count;
+    this.add(step);
+  }
+
   /** The flow so far, each name it uses declared. */
   flow(): Flow {
     return {

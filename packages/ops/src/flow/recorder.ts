@@ -6,7 +6,7 @@ import type { Session } from '../session.js';
 import { SCROLLER_SWIPES } from '../perf/shared.js';
 import { type Step, WAIT_MS } from '../step-schemas.js';
 import type { Op, ToolResult } from '../tool.js';
-import { type Aim, aimAt, named, stepOf, unrecorded } from './aim.js';
+import { type Aim, aimAt, fieldName, named, stepOf, unrecorded } from './aim.js';
 import { activeRecording, addSteps, defined } from './shared.js';
 
 /** While recording: how long a selector's element may take to come, as `steps` allows. */
@@ -124,7 +124,7 @@ export function flowRecorder(ctx: ServerContext) {
         const el = a.screen?.elements.find((x) =>
           hasTarget ? x.ref === a.element?.ref : x.focused,
         );
-        if (el?.password) r.learnSecret(st.text, el.identifier?.replace(/^[\w.]*:id\//, ''));
+        if (el?.password) r.learnSecret(st.text, fieldName(el));
         return () =>
           stepOf('type', hasTarget ? a : {}, {
             text: st.text,
