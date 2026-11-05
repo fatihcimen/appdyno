@@ -524,6 +524,24 @@ describe('a mirror, whatever the device', () => {
     await expect(session.stopped).resolves.toMatchObject({ why: 'asked to' });
   });
 
+  it('a window goes at once: what a phone takes to say goodbye keeps no card in a room', async () => {
+    const { session, mirror, viewer, live } = setup();
+    await live();
+    let goodbye!: () => void;
+    mirror.close = () => new Promise<void>((r) => (goodbye = r));
+    const before = viewer().sent.length;
+    const stopping = session.stop('another device was chosen');
+    await flush();
+    expect(
+      viewer()
+        .sent.slice(before)
+        .map((m) => m.op),
+    ).toEqual(['quit']);
+    goodbye();
+    await stopping;
+    await expect(session.stopped).resolves.toMatchObject({ state: 'stopped' });
+  });
+
   it('a stop during an open attaches nothing', async () => {
     let release!: () => void;
     const { session, mirror, viewer } = setup();

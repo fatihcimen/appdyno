@@ -110,20 +110,20 @@ export class MirrorSession {
     if (this.current.state !== 'stopped') void this.connect();
   }
 
-  /** Ends it all: the stream, then the viewer. Safe twice. */
+  /** Ends it all: the viewer, then the stream, as a phone's goodbye takes seconds and no window waits on it. Safe twice. */
   async stop(why: string, need?: Need) {
     if (this.current.state === 'stopped') return;
     this.run++;
     this.cancelTimer?.();
     this.abort.abort();
     this.unwatch?.();
-    this.set({ state: 'stopped', why, ...(need && { need }) });
-    await this.o.mirror.close().catch(() => undefined);
     const v = this.viewer;
     this.viewer = undefined;
+    this.set({ state: 'stopped', why, ...(need && { need }) });
     v?.send({ op: 'quit' });
     // a viewer wedged in a framework hears no quit; one that heard it holds nothing up
     if (v) v.onExit(this.clock.after(QUIT_MS, () => v.kill()));
+    await this.o.mirror.close().catch(() => undefined);
     this.finish(this.status);
   }
 
