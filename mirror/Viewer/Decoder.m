@@ -56,6 +56,7 @@ static void onDecoded(void *owner, void *refcon, OSStatus status, VTDecodeInfoFl
 }
 
 static const double kRecorderAskMs = 1000;
+CFStringRef const MVCapturedAt = CFSTR("MVCapturedAt");
 
 @implementation MVDecoder {
   __weak id<MVSink> _sink;
@@ -295,7 +296,10 @@ static const double kRecorderAskMs = 1000;
     };
     CVBufferSetAttachment(image, kCVImageBufferCleanApertureKey, (__bridge CFDictionaryRef)aperture, kCVAttachmentMode_ShouldPropagate);
   }
-  if (show && from) [sink source:from image:image];
+  if (show && from) {
+    CVBufferSetAttachment(image, MVCapturedAt, (__bridge CFNumberRef)@(self.capturedMs), kCVAttachmentMode_ShouldNotPropagate);
+    [sink source:from image:image];
+  }
 }
 
 @end

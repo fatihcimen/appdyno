@@ -191,6 +191,28 @@ first use, which answers Vision's lines as fractions of the image: the accurate 
 in the app's window. `hash` stays the agent's. A device's `wait` sees none of this, so `wait_for` then polls the picture. A
 screen with any word of its own is never read this way: words on a canvas beside a labelled button stay out.
 
+### What moves
+
+The tree first, then `screenshot` `watchMs`, then a video: a tree says what is there, and one picture cannot show a marquee that runs wrongly.
+
+`watchMs` asks the viewer of the device's one stream with `{op: "watch", id, ms, strip}`, and it answers `{op: "watched", id, summary, strip?}`. Another process's window takes the request by a file in the state folder, and a device with no window gets a viewer of its own for that watch, with no window. The frames are those it has decoded for a window, made gray and 360 samples wide once, and read in `mirror/Viewer/Motion.m`: tiles of 24 samples are looked for along each axis a tenth of a second later, tiles that moved the same way and touch are a region, and the middle of their shifts at each step is how it moved. Times are the device's capture times where a stream carries them, as frames bunch up on the way. A step is judged against what its own length should give, so a late frame is no jump.
+
+| Says                 | Means                                                                     |
+| -------------------- | ------------------------------------------------------------------------- |
+| `moves left at 80/s` | the steady speed, in the units of a `tap`, over the whole watch           |
+| `smoothly`           | nothing broke it, to a tenth of a second                                  |
+| `jumped 40 at 1.2 s` | one step went that much further than its time should give                 |
+| `ran backwards`      | it went against its usual way                                             |
+| `stopped`            | nothing moved in it between steps that did                                |
+| `cut at x 240`       | it ends there, inside the screen, though it travelled far enough to go on |
+| `changes`            | it changes in no direction a frame can follow, as a spinner or a fade     |
+
+Its limits are said where they matter: it reads motion and not intent; much of the screen changing at once, as a video or a game, is called noise; under 15 frames a second speeds and jumps are guesses; a fling faster than about 650 points a second is lost; and a region is no finer than a tile, about 27 points on a phone. A device with no stream refuses, naming what is missing.
+
+Cost, on an iOS 27.2 simulator and an API 34 emulator with no window open: a 3 s watch answered in 4.1 s on the simulator, and in 7.0 s on the emulator, where a stream has to start and settle, at load 10 to 40. The viewer took a median of 14 % of a core through the simulator's watches, at 120 frames a second, and 30 % at most. An answer is about 100 characters, against an image.
+
+`strip` adds one gray PNG of up to 8 frames evenly through the watch, side by side, their times in the answer. Its file goes as soon as it is read.
+
 ### Settle
 
 With `settle {quietMs (200), maxMs (3000)}` the agent, after the action, calls the screen settled once it

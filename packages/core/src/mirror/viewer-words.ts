@@ -17,6 +17,7 @@ export type ViewerWords = {
   control(m: ViewerMessage): void;
   done(id: string): void;
   marked(ms: number): void;
+  watched(m: ViewerMessage): void;
   closed(): void;
   refused(need: Need): void;
   sleep(): void;
@@ -36,6 +37,8 @@ export function heardFromViewer(m: ViewerMessage, on: ViewerWords) {
       return on.needKey(Number(m.consecutive ?? 0));
     case 'recorded':
       return on.recorded(m);
+    case 'watched':
+      return on.watched(m);
     case 'touch':
     case 'key':
     case 'text':

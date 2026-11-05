@@ -11,6 +11,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 double MVNowMs(void);
+extern CFStringRef const MVCapturedAt;
 /// One JSON line on stdout, from any thread.
 void MVEmit(NSDictionary *message);
 
@@ -81,6 +82,8 @@ void MVForEachNal(const uint8_t *data, size_t length, void (^found)(const uint8_
 /// Compressed frames in, decoded images to the sink. A loss or a failure freezes the picture until a keyframe.
 @interface MVDecoder : NSObject
 @property(atomic, nullable) MVRecorder *recorder;
+/// When the device captured the frame going in next, in its own clock; a decoded picture carries it as MVCapturedAt.
+@property(atomic) double capturedMs;
 - (instancetype)initWithSink:(id<MVSink>)sink from:(id)source;
 @property(atomic) BOOL hevc;
 /// What to show of each picture, from its top left, where the coded one is larger; zero: all of it.

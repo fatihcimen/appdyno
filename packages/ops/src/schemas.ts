@@ -116,6 +116,7 @@ export const ScreenshotOut = z.object({
   scale: z.number().optional(),
   warnings: z.array(z.string()),
   file: z.string().optional(),
+  motion: z.object({ frames: z.number(), noisy: z.boolean(), regions: z.number() }).optional(),
 });
 
 export const DoneOut = z.object({ done: z.string() });

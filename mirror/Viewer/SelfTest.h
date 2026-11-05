@@ -11,6 +11,7 @@ NS_ASSUME_NONNULL_BEGIN
 NSArray<MVTestFrame *> *_Nullable MVEncodeFrames(BOOL hevc, int count, int keyEvery);
 
 void MVCheck(NSString *name, BOOL ok, NSString *_Nullable detail);
+void MVTestMotion(void);
 void MVSkip(NSString *name, NSString *why);
 
 /// A sink that counts, and lets a check wait until a count is reached.

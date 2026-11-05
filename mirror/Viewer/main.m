@@ -7,6 +7,7 @@
 //   appdyno-viewer --hub [--focus]   the window of `appdyno hub`, which holds no device
 //   appdyno-viewer --selftest [fixtures dir]
 //   appdyno-viewer --encode <h264|hevc> <frames>
+#import "Motion.h"
 #import "Viewer.h"
 #import "Window.h"
 #import <CoreGraphics/CoreGraphics.h>
@@ -47,6 +48,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   CGSize _sourceSize;
   int _turns;
   NSDictionary *_pendingStatus;
+  MVWatch *_watch;
 }
 
 - (instancetype)initWithWindow:(BOOL)window {
@@ -179,11 +181,39 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
     return MVEmit(@{@"op": @"snapped", @"file": file, @"ok": @(ok)});
   }
   if ([op isEqual:@"mark"]) return [_stats mark:[m[@"bigger"] boolValue]];
+  if ([op isEqual:@"watch"]) return [self watch:m];
   if ([op isEqual:@"quit"]) {
     [self detach];
     MVEmit(@{@"op": @"closed"});
     exit(0);
   }
+}
+
+/// One at a time: it reads the frames a window shows, on the way to it, and leaves them as they are.
+- (void)watch:(NSDictionary *)m {
+  if (_watch) return MVEmit(@{@"op": @"watched", @"id": m[@"id"] ?: @"", @"why": @"another watch is running on this stream"});
+  MVWatch *watch = [[MVWatch alloc] initWithId:m[@"id"] ?: @"" ms:[m[@"ms"] doubleValue] strip:[m[@"strip"] boolValue]];
+  _watch = watch;
+  // a still screen sends nothing, and its time runs out all the same
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(watch.ms * NSEC_PER_MSEC)), dispatch_get_main_queue(), ^{
+    if (!watch.started) [self endWatch:watch];
+  });
+}
+
+- (void)endWatch:(MVWatch *)watch {
+  if (_watch != watch) return;
+  _watch = nil;
+  MVEmit(watch.finish);
+}
+
+- (void)watchImage:(CVImageBufferRef)image {
+  MVWatch *watch = _watch;
+  BOOL started = watch.started;
+  [watch addImage:image turns:_turns];
+  if (!watch.started || started) return;
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(watch.ms * NSEC_PER_MSEC)), dispatch_get_main_queue(), ^{
+    [self endWatch:watch];
+  });
 }
 
 - (void)setBehind:(BOOL)behind {
@@ -280,6 +310,11 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
     if (![self isCurrent:from]) return;
     [self->_window showSurface:(__bridge IOSurfaceRef)held];
     [self->_stats shown];
+    CVPixelBufferRef image = NULL;
+    if (self->_watch && CVPixelBufferCreateWithIOSurface(NULL, (__bridge IOSurfaceRef)held, NULL, &image) == kCVReturnSuccess) {
+      [self watchImage:image];
+      CVBufferRelease(image);
+    }
   });
 }
 
@@ -289,6 +324,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
     if ([self isCurrent:from]) {
       if (self->_window) self->_stats.layer = [self->_window showImage:image] ? @"ok" : @"failed";
       [self->_stats shown];
+      if (self->_watch) [self watchImage:image];
     }
     CVBufferRelease(image);
   });

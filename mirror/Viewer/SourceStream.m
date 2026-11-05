@@ -309,7 +309,10 @@ static NSString *askAdb(int fd, NSString *request) {
         double capture = _haveOffset ? MVNowMs() - (big64(buffer) / 1000.0 - _offsetMs) : -1;
         [sink.stats arrived:length - kVideoHeader captureMs:capture];
         if (_hidden && !_decoder.recorder) [sink.stats dropped:1];
-        else [_decoder decode:buffer + kVideoHeader length:length - kVideoHeader];
+        else {
+          _decoder.capturedMs = big64(buffer) / 1000.0;
+          [_decoder decode:buffer + kVideoHeader length:length - kVideoHeader];
+        }
       }
     }
   }

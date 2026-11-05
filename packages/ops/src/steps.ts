@@ -1,3 +1,4 @@
+import { motionText, movedIn, watchScreen } from './watch.js';
 import {
   type Selector as SelectorOf,
   type ScreenElement,
@@ -63,6 +64,8 @@ export type StepSeam = <T>(s: Session, st: Step, run: () => Promise<T>) => Promi
 /** One step's device call and the action around it, shared by the tools that act on a target. */
 /** Only these touch nothing. */
 const LOOKS_ONLY = new Set<Step['action']>(['wait_for', 'assert']);
+/** How long an `assert` watches with no time of its own. */
+const WATCH_CHECK_MS = 2_000;
 
 export function stepsFor(
   ctx: ServerContext,
@@ -204,14 +207,38 @@ export function stepsFor(
             why: `${what} reads ${JSON.stringify(clean(at.value ?? at.text))}, not ${JSON.stringify(clean(a.equals))}`,
           };
     }
+    const state = a.check as 'enabled' | 'checked' | 'focused';
     return {
-      pass: at[a.check] === a.expect,
-      why: `${what} is ${at[a.check] ? '' : 'not '}${a.check}`,
+      pass: at[state] === a.expect,
+      why: `${what} is ${at[state] ? '' : 'not '}${state}`,
     };
+  };
+
+  /** Over `timeoutMs`, in the element named or anywhere; `expect: false` says it must keep still. */
+  const movesNow = async (s: Session, a: Judged & { timeoutMs: number }) => {
+    const m = await watchScreen(ctx, s, a.timeoutMs || WATCH_CHECK_MS, false);
+    const screen = await s.current();
+    const sel = selectorOf(a);
+    const element = a.ref
+      ? screen.list.find((e) => e.ref === a.ref)
+      : sel && selectIn(screen.list, sel)[sel.index ?? 0];
+    if ((a.ref || sel) && !element)
+      throw new ToolError('check failed: nothing to watch by those words', 'CHECK_FAILED');
+    const box = element && {
+      x: element.rect.x,
+      y: element.rect.y,
+      w: element.rect.width,
+      h: element.rect.height,
+    };
+    const moved = movedIn(m, s.device.hello!.screen, box);
+    const said = motionText(m, s.device.hello!.screen);
+    if (moved !== a.expect) throw new ToolError(`check failed: ${said}`, 'CHECK_FAILED');
+    return { screen, done: `check passed: ${said}` };
   };
 
   /** A check on a fresh read, given `timeoutMs` to come true; a refusal when it does not. */
   const checkNow = async (s: Session, a: Judged & { timeoutMs: number }) => {
+    if (a.check === 'moves') return movesNow(s, a);
     if (!a.ref && !selectorOf(a))
       throw new ToolError('give a ref, text, id or role', 'INVALID_ARGUMENT');
     const { screen } = await s.until((x) => judge(x, a).pass, a.timeoutMs);

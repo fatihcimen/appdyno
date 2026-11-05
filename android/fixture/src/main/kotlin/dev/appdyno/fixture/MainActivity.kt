@@ -41,6 +41,10 @@ private val LINKED = mapOf(
     "secure" to SecureActivity::class.java,
     "surface" to SurfaceActivity::class.java,
     "canvas" to CanvasActivity::class.java,
+    "marquee" to MarqueeActivity::class.java,
+    "marquee_jumps" to MarqueeActivity::class.java,
+    "marquee_back" to MarqueeActivity::class.java,
+    "marquee_cut" to MarqueeActivity::class.java,
     "locale" to LocaleActivity::class.java,
 )
 

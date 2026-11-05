@@ -415,6 +415,7 @@ static void checkStats(void) {
 }
 
 int MVSelfTest(NSString *fixtures) {
+    MVTestMotion();
   checkNals();
   checkInputMaths();
   checkTurns();

@@ -15,6 +15,7 @@ import { handoffDone } from './handoff.js';
 import { windowMeasures } from './measures.js';
 import { pairWindows, type PairSide, type WindowPair } from './pair.js';
 import { FOCUS_SIGNAL, liveMirror, removeMirrorFile, writeMirrorFile } from './state.js';
+import { answerWatches } from '../watch.js';
 
 export type MirrorRun = {
   /** Named devices; none: the default device. */
@@ -140,7 +141,11 @@ export class Parent {
       },
     });
     this.sessions.set(serial, session);
-    const unfollow = followDevice(serial, session, flow.follow);
+    const watches = answerWatches(serial, session);
+    const unfollow = followDevice(serial, session, () => {
+      flow.follow();
+      watches();
+    });
     this.done.set(
       serial,
       session.stopped.then(async (status) => {

@@ -85,7 +85,7 @@ export const MAX_WAIT_MS = 15_000;
 
 const SCROLL_MAX = 10;
 
-export const Check = z.enum(['exists', 'absent', 'text', 'enabled', 'checked', 'focused']);
+export const Check = z.enum(['exists', 'absent', 'text', 'enabled', 'checked', 'focused', 'moves']);
 
 const TapStep = z.object({ action: z.literal('tap'), ...Target }).strict();
 

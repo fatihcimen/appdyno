@@ -1,3 +1,4 @@
+import { motionText, takeStrip, watchScreen } from './watch.js';
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import {
@@ -159,19 +160,43 @@ export function readOps(
     defineOp({
       name: 'screenshot',
       title: 'Screenshot',
-      description: `An image of the screen (at most ${SHOT_PX} px unless width) and the scale from its pixels to tap units; only for a visual judgement. A second of an unchanged screen is refused. points: 1 pixel is 1 tap unit. file: full size into a .png or .jpg, or a folder; overwrite replaces.`,
+      description: `An image of the screen (at most ${SHOT_PX} px unless width) and the scale from its pixels to tap units; only for a visual judgement: the tree first, then watchMs (no image: what moved, way, speed, jumps; not intent), then a video. strip: 8 timed frames. A second of an unchanged screen is refused. points: 1 pixel is 1 tap unit. file: full size into a .png or .jpg, or a folder; overwrite replaces.`,
       input: z
         .object({
           points: z.boolean().optional(),
           width: z.number().int().min(64).max(8_192).optional(),
+          watchMs: z.number().int().min(200).max(10_000).optional(),
+          strip: z.boolean().optional(),
           file: z.string().max(1_000).optional(),
           overwrite: z.boolean().optional(),
         })
         .strict(),
       output: ScreenshotOut,
       annotations: READ,
-      run: async ({ points, width, file, overwrite }) => {
+      run: async ({ points, width, watchMs, strip, file, overwrite }) => {
         const s = await ctx.session();
+        if (watchMs) {
+          const m = await watchScreen(ctx, s, watchMs, strip === true);
+          const shown = takeStrip(m);
+          const text = motionText(m, s.device.hello!.screen);
+          const at = shown
+            ? `\nframes at ${shown.at.map((t) => (t / 1_000).toFixed(1)).join(', ')} s`
+            : '';
+          return reply(
+            text + at,
+            {
+              width: 0,
+              height: 0,
+              warnings: [],
+              motion: {
+                frames: m.summary?.frames ?? 0,
+                noisy: m.summary?.noisy ?? false,
+                regions: m.summary?.regions.length ?? 0,
+              },
+            },
+            shown ? [{ type: 'image', data: shown.data, mimeType: 'image/png' }] : [],
+          );
+        }
         if (file) return saveShot(s, file, overwrite === true);
         const layout = s.fresh
           ? `${!!points} ${width} ${screenStructure(s.fresh.list)}`

@@ -1,7 +1,7 @@
 import { MirrorRecording } from './recording.js';
 import { InputQueue } from './input-queue.js';
 import { NEEDS, NeedError, type Need } from './need.js';
-import type { DeviceState, InputEvent } from './port.js';
+import type { DeviceState, InputEvent, MotionWatch } from './port.js';
 import type { MirrorSessionOptions } from './session-options.js';
 import {
   realClock,
@@ -58,6 +58,8 @@ export class MirrorSession {
   private refusedNeed: Need | undefined;
   private asleep = false;
   private readonly marks: ((ms: number) => void)[] = [];
+  private readonly watches = new Map<string, (m: MotionWatch) => void>();
+  private watchCount = 0;
   private finish!: (s: MirrorStatus) => void;
   /** Resolved when the session has stopped, with why. */
   readonly stopped = new Promise<MirrorStatus>((r) => (this.finish = r));
@@ -134,6 +136,13 @@ export class MirrorSession {
   /** A person asked for a new stream. */
   askAgain() {
     if (this.current.state !== 'stopped') this.renew('a person asked');
+  }
+
+  /** What moved in the stream's frames for this long, read by the viewer that has them decoded. */
+  watch(ms: number, strip: boolean): Promise<MotionWatch> {
+    const id = String(++this.watchCount);
+    this.viewer?.send({ op: 'watch', id, ms, strip });
+    return new Promise((r) => this.watches.set(id, r));
   }
 
   /** The time from now to the next frame to arrive; for the bench, around an input. */
@@ -292,6 +301,10 @@ export class MirrorSession {
     control: (m) => this.o.onWindow?.(m),
     done: (id) => this.o.onDone?.(id),
     marked: (ms) => this.marks.splice(0).forEach((r) => r(ms)),
+    watched: (m) => {
+      this.watches.get(String(m.id))?.(m as unknown as MotionWatch);
+      this.watches.delete(String(m.id));
+    },
     closed: () => (this.closedByPerson = true),
     refused: (need) => (this.refusedNeed = need),
     sleep: () => this.onMacSleep(),

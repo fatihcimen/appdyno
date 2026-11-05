@@ -83,3 +83,22 @@ export interface Mirror {
   /** No first picture in this time means this, rather than a failed stream. */
   readonly noFirstFrame?: { ms: number; need: Need };
 }
+
+/** What moved, as the viewer read it; places and speeds as fractions of the frame. */
+export type MotionRegion = {
+  kind: 'moves' | 'changes';
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  axis?: 'x' | 'y';
+  sign?: number;
+  speed?: number;
+  events?: { kind: 'jump' | 'back' | 'stop'; at: number; by: number }[];
+};
+
+export type MotionWatch = {
+  why?: string;
+  summary?: { frames: number; ms: number; noisy: boolean; regions: MotionRegion[] };
+  strip?: { file: string; at: number[] };
+};
