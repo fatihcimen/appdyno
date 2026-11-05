@@ -1,5 +1,11 @@
 import { existsSync } from 'node:fs';
-import { clientCalls, forgetClientCall, type Check } from '@appdyno/core';
+import {
+  clientCalls,
+  forgetClientCall,
+  usbPhones,
+  type Check,
+  type DeviceProvider,
+} from '@appdyno/core';
 import {
   apply,
   BROWSER_CLIENTS,
@@ -12,9 +18,13 @@ import {
   outcomeFor,
   type Stdio,
 } from '@appdyno/cli';
+import { Adb, ownSwitches, PLATFORM_TOOLS } from '@appdyno/driver-android';
 import { probeCommand, probeHttp, type Probe } from '@appdyno/mcp';
+import { runKeys } from '@appdyno/perf';
 import { ago, type HubPlaces } from '@appdyno/ops';
+import { guideFor, listedPhones, runnerChecks } from './hub-connect.js';
 import { HubHttp, httpToken, renewHttpToken } from './hub-http.js';
+import { HubRuns } from './hub-run.js';
 
 /** What an app opened from the Dock has: neither Homebrew nor a Node from a version manager. */
 const DOCK_PATH = '/usr/bin:/bin:/usr/sbin:/sbin';
@@ -79,6 +89,12 @@ export type PlacesOptions = {
   /** `appdyno mcp`, as this copy is run. */
   mcpCommand: string[];
   doctor(): Promise<Check[]>;
+  /** This copy of appdyno, for what a person runs from the window. */
+  self?: string[];
+  /** Who to ask of phones; none, for what has no phones to speak of. */
+  providers?: DeviceProvider[];
+  /** Where kept runs are, for the apps they were made of. */
+  measurements?: string;
 };
 
 type Message = Record<string, unknown>;
@@ -90,6 +106,14 @@ type Undo = { back?: Record<string, unknown> };
 export function hubPlaces(o: PlacesOptions): HubPlaces {
   const where = { home: o.home, env: o.env, ...(o.server && { server: o.server }) };
   const http = new HubHttp(o.mcpCommand);
+  const runs = new HubRuns(o.self ?? o.mcpCommand.slice(0, -1), o.env);
+  /** What `doctor` found, kept: it is slow, and a tool comes or goes only by what a person ran. */
+  let checks: Promise<Check[]> | undefined;
+  const found = (fresh: boolean) => {
+    if (fresh || !checks) checks = o.doctor().catch(() => []);
+    return checks;
+  };
+  let looking = false;
   const undos = new Map<string, Undo>();
   const clientNamed = (m: Message) => CLIENTS.find((c) => c.name === m.client);
   const notes = [...CLIENTS, ...BROWSER_CLIENTS].flatMap((c) =>
@@ -146,8 +170,46 @@ export function hubPlaces(o: PlacesOptions): HubPlaces {
     });
   };
 
+  /** The phone in a person's hand, and how far along they are, as the Connect place shows it. */
+  const look = async (fresh: boolean) => {
+    const known = await found(fresh);
+    const adb = new Adb();
+    const phones = await listedPhones(o.providers ?? [], (serial) => ownSwitches(adb, serial));
+    const has = (tool: string) => !known.some((c) => c.name === tool && !c.ok);
+    const rows = clientRows(where);
+    return {
+      ...guideFor(o.providers ?? [], { usb: await usbPhones(), phones, has }),
+      fromApp: o.env.APPDYNO_HELPERS !== undefined,
+      terms: PLATFORM_TOOLS.terms,
+      runner: runnerChecks(known),
+      client: rows.some((r) => r.state === 'connected' || r.state === 'added'),
+      prompt: clientCalls().length > 0,
+    };
+  };
+
   const acts: Record<string, (m: Message, say: Say) => Promise<unknown> | void> = {
     list: (_, say) => say(status()),
+    connect: async (m, say) => {
+      if (looking) return;
+      looking = true;
+      await look(m.fresh === true)
+        .then((connect) => say({ connect }))
+        .finally(() => {
+          looking = false;
+        });
+    },
+    run: (m, say) => {
+      if (m.stop === true) return runs.stop(String(m.name));
+      return runs.start(String(m.name), m as never, (said) => {
+        // a tool that just came changes what a person is asked
+        if (typeof (said.run as Message)?.code === 'number') checks = undefined;
+        say(said);
+      });
+    },
+    apps: async (_, say) => {
+      const kept = o.measurements ? await runKeys(o.measurements).catch(() => []) : [];
+      say({ apps: [...new Set(kept.map((k) => k.app))] });
+    },
     preview: (m, say) => {
       const plan = planned(m, { remove: m.remove === true });
       if (!plan) return;
@@ -207,6 +269,6 @@ export function hubPlaces(o: PlacesOptions): HubPlaces {
 
   return {
     act: (m, say) => acts[String(m.do)]?.(m, say),
-    end: () => http.stop(),
+    end: () => Promise.all([http.stop(), runs.end()]).then(() => undefined),
   };
 }

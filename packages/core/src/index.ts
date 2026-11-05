@@ -4,6 +4,7 @@ export { DeviceQueue } from './queue.js';
 export { afterTimeout } from './stuck.js';
 export * from './state.js';
 export { run } from './run.js';
+export * from './usb.js';
 export * from './build.js';
 export * from './owner.js';
 export * from './stats.js';

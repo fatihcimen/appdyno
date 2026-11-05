@@ -1,4 +1,4 @@
-export { androidChecks, androidProvider } from './provider.js';
+export { androidChecks, androidProvider, ownSwitches } from './provider.js';
 export { holdersIn, conflictHint, PROCESS_LIST, type Holder } from './holders.js';
 export { androidLogs, logcatCommand } from './logs.js';
 export { androidCrashes, crashReports, parseDropbox, parseExitInfo } from './crashes.js';

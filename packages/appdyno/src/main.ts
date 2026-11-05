@@ -120,7 +120,7 @@ function contextFrom(values: ServerFlags, remember?: string) {
 }
 
 /** What the hub's AI Clients and Help ask of this Mac: the same checks and entries as `doctor` and `install`. */
-const placesOfHub = () => {
+const placesOfHub = (measurements: string) => {
   const server = serverOf(root, manifestOf(root).name);
   return hubPlaces({
     home: homedir(),
@@ -128,6 +128,9 @@ const placesOfHub = () => {
     ...(server && { server }),
     mcpCommand: [process.execPath, fileURLToPath(import.meta.url), 'mcp'],
     doctor: async () => [installCheck(root), ...(await doctor({ providers: providers() }))],
+    self: [process.execPath, fileURLToPath(import.meta.url)],
+    providers: providers(),
+    measurements,
   });
 };
 
@@ -201,7 +204,7 @@ async function main(): Promise<number> {
     case 'hub':
       return hubCommand(rest, {
         context: contextFrom,
-        hub: (ctx, run) => runHub(ctx, { ...run, places: placesOfHub() }),
+        hub: (ctx, run) => runHub(ctx, { ...run, places: placesOfHub(ctx.measurementsDir) }),
       });
     case 'timeline':
       return timelineCommand(rest, contextFrom);

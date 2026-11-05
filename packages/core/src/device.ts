@@ -1,3 +1,4 @@
+import type { PhoneLook, PhoneSteps } from './usb.js';
 import type {
   SettleInput,
   Read,
@@ -439,6 +440,8 @@ export interface DeviceProvider {
   readonly virtual?: VirtualDevices;
   /** What this driver needs of this machine and, with `serial`, of that device. */
   doctor?(serial?: string): Promise<Check[]>;
+  /** What a person does for a phone of this kind in their hand: undefined for a phone of another kind. */
+  guide?(look: PhoneLook): PhoneSteps | undefined;
   /** A bounded table from a kept trace of this driver's kind: no device needed. */
   queryTrace?(
     tracePath: string,

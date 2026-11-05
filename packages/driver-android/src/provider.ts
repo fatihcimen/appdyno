@@ -1,6 +1,7 @@
 import type { Check, DeviceProvider, Need } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { Adb } from './adb.js';
+import { androidGuide } from './guide.js';
 import { agentApk } from './agent.js';
 import { AndroidDevice } from './device.js';
 import { AndroidEmulators } from './emulators.js';
@@ -180,6 +181,19 @@ export async function androidNeed(
   return out.includes('deviceLocked=1') ? 'locked' : undefined;
 }
 
+/**
+ * A Xiaomi's two switches of its own, as the phone reads them: `1` is on, and nothing means this maker has none. Reading
+ * asks the phone nothing a person would see.
+ */
+export async function ownSwitches(adb: Adb, serial: string) {
+  const out = await adb.exec(
+    serial,
+    'getprop persist.security.adbinput; echo /; getprop persist.security.adbinstall',
+  );
+  const [input = '', install = ''] = out.split('/').map((s) => s.trim());
+  return { input, install };
+}
+
 /** Android devices over adb, which takes any serial no later provider claims. */
 /** A Mac set up for iOS alone has no adb, which is no failure of the list. */
 const noAdbNoDevices = (e: unknown): never[] => {
@@ -201,6 +215,7 @@ export function androidProvider(
       })),
     handles: () => true,
     need: (d) => androidNeed(adb, d),
+    guide: androidGuide,
     virtual: new AndroidEmulators(adb),
     // a phone unplugged for a moment (or rebooting) is waited for, up to 30 s, on read-only calls
     open: (serial) =>

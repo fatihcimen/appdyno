@@ -9,6 +9,7 @@ import { findPhoneSigning, phoneSigningFromEnv, readProfile } from './signing.js
 import { Simctl, xcodeEnv, type Simulator } from './simctl.js';
 import { Devicectl } from './devicectl.js';
 import { queryTraceFile } from './trace.js';
+import { iphoneGuide } from './guide.js';
 import { listPhones } from './usbmux.js';
 import { run } from '@appdyno/core';
 
@@ -152,6 +153,7 @@ export function appleProvider(
     handles: (serial) => SIMULATOR_ID.test(serial) || PHONE_ID.test(serial),
     need: async ({ serial }) =>
       SIMULATOR_ID.test(serial) ? undefined : phoneNeed(new Devicectl(serial)),
+    guide: iphoneGuide,
     virtual: new Simulators(new Simctl()),
     open: (serial) =>
       SIMULATOR_ID.test(serial) ? new IosSimulatorDevice(serial) : new IosPhoneDevice(serial),
