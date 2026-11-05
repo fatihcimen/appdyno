@@ -34,8 +34,11 @@ export type LiveSample = Partial<Record<LiveField, number>> & {
  * with. Nothing runs until `start`: sampling costs the device, so it is off until a person opens what shows it.
  */
 export interface LiveMetrics {
-  /** Calls `onSample` about once a second until the answer is called, which is safe twice. */
-  start(onSample: (sample: LiveSample) => void, app?: string): Promise<() => void>;
+  /**
+   * Calls `onSample` about once a second until the answer is called, which is safe twice. What that returns ends with
+   * the reading under way, which goes on asking the device: only then may it close.
+   */
+  start(onSample: (sample: LiveSample) => void, app?: string): Promise<() => unknown>;
 }
 
 /** Why a window's numbers are not a clean run's: a stream runs an encoder on the device. */

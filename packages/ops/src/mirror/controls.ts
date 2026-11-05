@@ -73,7 +73,7 @@ export function windowControls(
   let opened: Promise<unknown> | undefined;
   let rotation: 0 | 1 | 2 | 3 = 0;
   let stopRecording: (() => Promise<MovieEnd>) | undefined;
-  let stopPerf: (() => void) | undefined;
+  let stopPerf: (() => unknown) | undefined;
   let readingsWanted = false;
   let measuring = false;
   let readingsTurn: Promise<void> = Promise.resolve();
@@ -185,7 +185,7 @@ export function windowControls(
    * runs, whose counts a reading would reset.
    */
   const followReadings = async () => {
-    stopPerf?.();
+    await stopPerf?.();
     stopPerf = undefined;
     if (!readingsWanted || measuring) return;
     // only a device that has no way to say what is in front but its agent starts it: a late answer is no refusal
@@ -206,7 +206,7 @@ export function windowControls(
     const looking = own ? setInterval(() => void lookAgain(front), APP_LOOK_MS) : undefined;
     stopPerf = () => {
       clearInterval(looking);
-      stop();
+      return stop();
     };
   };
 

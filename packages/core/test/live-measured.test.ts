@@ -172,4 +172,21 @@ describe("a device's numbers each second", () => {
     await new Promise((r) => setTimeout(r, 50));
     expect(seen.length).toBeLessThanOrEqual(1);
   });
+
+  it('stop only once the reading under way has ended, as it goes on asking the device', async () => {
+    let answer = () => undefined as void;
+    let ended = false;
+    const d = device();
+    d.measure.cpu = vi.fn(
+      () => new Promise((r) => (answer = () => r({ value: { percent: 1 } }))),
+    ) as never;
+    const stop = await measuredLive(d, ['cpuPercent'], 1).start(() => undefined);
+    await vi.waitFor(() => expect(d.measure.cpu).toHaveBeenCalled());
+    const stopped = Promise.resolve(stop()).then(() => (ended = true));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(ended).toBe(false);
+    answer();
+    await stopped;
+    expect(ended).toBe(true);
+  });
 });

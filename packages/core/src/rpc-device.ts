@@ -39,6 +39,8 @@ export function failedAfterSending(e: unknown): never {
   throw e;
 }
 
+const closedHere = () => new DeviceError('AGENT_UNAVAILABLE', 'the connection was closed');
+
 /** The touches and keys every device words as one `act`. */
 export abstract class DeviceActions {
   abstract act(action: ActParams, opts?: ActOptions): Promise<ActResult>;
@@ -129,8 +131,16 @@ export abstract class RpcDevice extends DeviceActions {
     return was?.pkg === pkg ? was.began : false;
   }
 
+  /** Counts `close`: what began before one must not connect, as nothing would then close that connection. */
+  private closes = 0;
+
   private async connect() {
+    const closes = this.closes;
     const { rpc, hello, started } = await this.startAgent();
+    if (closes !== this.closes) {
+      rpc.close();
+      throw closedHere();
+    }
     this.rpc = rpc;
     this.helloInfo = hello;
     this.lastStartWasCold = started;
@@ -144,18 +154,26 @@ export abstract class RpcDevice extends DeviceActions {
   }
 
   protected call<M extends Method>(method: M, params: ParamsOf<M>, timeoutMs: number) {
-    return this.queue.run(() => this.callNow(method, params, timeoutMs));
+    const closes = this.closes;
+    return this.queue.run(() => this.callNow(method, params, timeoutMs, closes));
   }
 
   /** The agent's method, for one already in the queue. */
-  protected async callNow<M extends Method>(method: M, params: ParamsOf<M>, timeoutMs: number) {
+  protected async callNow<M extends Method>(
+    method: M,
+    params: ParamsOf<M>,
+    timeoutMs: number,
+    closes = this.closes,
+  ) {
     let rpc: RpcClient | undefined;
     try {
+      if (closes !== this.closes) throw closedHere();
       rpc = await this.ensure();
       return await rpc.call(method, params, { timeoutMs });
     } catch (e) {
       if (!this.connectionLost(e)) throw await afterTimeout(e, rpc, () => this.restartStuck(rpc!));
-      if (!this.retrySafe.has(method)) throw e;
+      // closed here is not lost: a connection that dropped is worth a new one, and this one was let go
+      if (closes !== this.closes || !this.retrySafe.has(method)) throw e;
       this.rpc = undefined;
       await this.beforeRetry(e);
       return (await this.ensure()).call(method, params, { timeoutMs });
@@ -248,6 +266,7 @@ export abstract class RpcDevice extends DeviceActions {
 
   /** Closes the connection; what runs on the device stays for the next host. */
   close() {
+    this.closes++;
     this.rpc?.close();
     this.rpc = undefined;
   }

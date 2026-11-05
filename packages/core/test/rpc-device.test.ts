@@ -89,6 +89,60 @@ describe('a device through its agent', () => {
     expect(d.connects).toBe(2);
   });
 
+  describe('closed on purpose, which no retry may undo: nothing would close what it opened', () => {
+    const held: FakeHandler = () => new Promise(() => undefined);
+
+    it('does not connect again for a read under way', async () => {
+      const d = new TestDevice([{ 'tree.get': held }, { 'tree.get': tree }]);
+      await d.open();
+      const read = d.tree();
+      await new Promise((r) => setImmediate(r));
+      d.close();
+      await expect(read).rejects.toMatchObject({ code: 'AGENT_UNAVAILABLE' });
+      expect(d.connects).toBe(1);
+    });
+
+    it('does not connect again for a read waiting its turn', async () => {
+      const d = new TestDevice([{ 'tree.get': held }, { 'tree.get': tree }]);
+      await d.open();
+      const first = d.tree();
+      const second = d.tree();
+      await new Promise((r) => setImmediate(r));
+      d.close();
+      await expect(first).rejects.toMatchObject({ code: 'AGENT_UNAVAILABLE' });
+      await expect(second).rejects.toMatchObject({ code: 'AGENT_UNAVAILABLE' });
+      expect(d.connects).toBe(1);
+    });
+
+    it('closes a connection that came up after it', async () => {
+      let up = () => undefined as void;
+      const opened: { closed: boolean }[] = [];
+      class Slow extends TestDevice {
+        protected override async startAgent() {
+          await new Promise<void>((r) => (up = r));
+          const agent = await super.startAgent();
+          opened.push(agent.rpc);
+          return agent;
+        }
+      }
+      const d = new Slow([{ 'tree.get': tree }]);
+      const read = d.tree();
+      await new Promise((r) => setImmediate(r));
+      d.close();
+      up();
+      await expect(read).rejects.toMatchObject({ code: 'AGENT_UNAVAILABLE' });
+      expect(opened[0]!.closed).toBe(true);
+    });
+
+    it('still connects for what is asked after it', async () => {
+      const d = new TestDevice([{ 'tree.get': tree }, { 'tree.get': tree }]);
+      await d.open();
+      d.close();
+      expect((await d.tree()).nodes.length).toBeGreaterThan(0);
+      expect(d.connects).toBe(2);
+    });
+  });
+
   it('does not ask again for an action: it may have happened', async () => {
     const d = new TestDevice([{ act: gone }, { act: () => ({ result: {} }) }]);
     await expect(d.tap({ x: 1, y: 2 })).rejects.toMatchObject({ code: 'AGENT_UNAVAILABLE' });

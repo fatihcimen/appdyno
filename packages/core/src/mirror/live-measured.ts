@@ -117,7 +117,7 @@ export function measuredLive(
     async start(onSample, app) {
       let on = true;
       const kept: Kept = { turn: 0 };
-      void (async () => {
+      const running = (async () => {
         while (on) {
           const began = Date.now();
           const front = app ?? (await device.foreground().catch(() => undefined));
@@ -130,6 +130,7 @@ export function measuredLive(
       })();
       return () => {
         on = false;
+        return running;
       };
     },
   };

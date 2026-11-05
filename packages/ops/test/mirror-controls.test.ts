@@ -254,6 +254,22 @@ describe("a window's live numbers", () => {
     await controls.end();
     expect(stop).toHaveBeenCalledOnce();
   });
+
+  it('end only once a reading under way has, as the device closes next', async () => {
+    let finish = () => undefined as void;
+    let ended = false;
+    const { controls } = fixture('ios', {
+      liveMetrics: { start: async () => () => new Promise<void>((r) => (finish = r)) },
+    } as unknown as Partial<Device>);
+    controls.onWindow({ op: 'perfWatch', on: true });
+    await settle();
+    const ending = controls.end().then(() => (ended = true));
+    await settle();
+    expect(ended).toBe(false);
+    finish();
+    await ending;
+    expect(ended).toBe(true);
+  });
 });
 
 describe("a window's Apps pane", () => {
