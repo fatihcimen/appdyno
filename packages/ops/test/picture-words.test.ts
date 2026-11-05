@@ -16,7 +16,11 @@ const word = (text: string): PictureText => ({
 });
 
 /** A device whose screen has no word in its tree, and a picture that says `words`. */
-async function connect(screen: string, words: () => Promise<PictureText[]>) {
+async function connect(
+  screen: string,
+  words: () => Promise<PictureText[]>,
+  level: 'accurate' | 'fast' = 'accurate',
+) {
   const device = new FakeDevice();
   device.screen = screen;
   Object.defineProperty(device, 'mirror', {
@@ -29,7 +33,7 @@ async function connect(screen: string, words: () => Promise<PictureText[]>) {
   };
   const ctx = new ServerContext(DEFAULT_POLICY, [provider], { app: 'dev.app' });
   const s = await ctx.session();
-  s.readWords = words;
+  s.readWords = async () => ({ words: await words(), level });
   const client = await linkedClient(ctx, () => undefined);
   const call = async (name: string, args: Record<string, unknown> = {}) => {
     const r = (await client.callTool({ name, arguments: args })) as Result;
@@ -46,6 +50,11 @@ describe('a screen with no words in its tree', () => {
     const r = await call('screen');
     expect(r.text).toContain('"Start Game" 324,300');
     expect(r.text).toContain('read from the picture');
+  });
+
+  it('says when the fast level read them, and that its letters may be wrong', async () => {
+    const { call } = await connect('blind', async () => [word('Start Game')], 'fast');
+    expect((await call('screen')).text).toContain('letters outside English');
   });
 
   it('takes a tap at their place, by a selector', async () => {

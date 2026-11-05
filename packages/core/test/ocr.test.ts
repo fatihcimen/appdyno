@@ -1,8 +1,10 @@
-import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Tree } from '@appdyno/protocol';
-import { describe, expect, it } from 'vitest';
-import { PICTURE_TEXT, readPicture, withPictureText } from '../src/ocr.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fastWords, PICTURE_TEXT, readPicture, withPictureText } from '../src/ocr.js';
 
 /** The first use compiles it, on a Mac that may be busy. */
 const COMPILE_MS = 300_000;
@@ -21,9 +23,7 @@ describe('the words of a picture', () => {
   it(
     'reads them with their places, by the Mac alone',
     async () => {
-      const found = await readPicture(
-        readFileSync(join(import.meta.dirname, 'fixtures/words.png')),
-      );
+      const found = await fastWords(readFileSync(join(import.meta.dirname, 'fixtures/words.png')));
       expect(found.map((t) => t.text)).toEqual(['Start Game', 'High Score 42']);
       const [first, second] = found;
       // the picture's top left is the origin: the first line is above the second
@@ -35,7 +35,7 @@ describe('the words of a picture', () => {
   );
 
   it('says what went wrong with a file that is no picture', async () => {
-    await expect(readPicture(Buffer.from('nothing'))).rejects.toThrow();
+    await expect(fastWords(Buffer.from('nothing'))).rejects.toThrow();
   });
 
   it('puts them in the tree as text of the app, in tap units, leaving the digest', () => {
@@ -53,4 +53,53 @@ describe('the words of a picture', () => {
       b: [100, 500, 600, 600],
     });
   });
+});
+
+describe('which level answers', () => {
+  const WORDS = '[{"text":"fast","x":0,"y":0,"w":1,"h":1,"confidence":1}]';
+  const ACCURATE = '{"key":"%s","words":[{"text":"doğru","x":0,"y":0,"w":1,"h":1,"confidence":1}]}';
+  /** A scanner like the real one, with no Vision in it: its accurate level takes this long. */
+  const scanner = (seconds: number) => {
+    const file = join(mkdtempSync(join(tmpdir(), 'appdyno-fake-scan-')), 'scan');
+    writeFileSync(
+      file,
+      `#!/bin/bash
+[[ $# == 1 ]] && { echo '${WORDS}'; exit; }
+rm -f "$1"
+/bin/bash -c 'read -t ${seconds} < /dev/zero'
+printf '${ACCURATE}' "$3" > "$2/accurate.json"
+rm -f "$2/running"
+`,
+    );
+    chmodSync(file, 0o700);
+    return file;
+  };
+  const texts = (r: Awaited<ReturnType<typeof readPicture>>) => [r.level, r.words[0]!.text];
+
+  beforeEach(() => {
+    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-ocr-')));
+  });
+
+  it('answers from the accurate level when it comes in time', async () => {
+    expect(texts(await readPicture(Buffer.from('a'), scanner(0)))).toEqual(['accurate', 'doğru']);
+  });
+
+  it('answers from the fast level otherwise, and keeps the accurate words for the next look', async () => {
+    const slow = scanner(4);
+    expect(texts(await readPicture(Buffer.from('a'), slow))).toEqual(['fast', 'fast']);
+    const running = join(process.env.APPDYNO_STATE_DIR!, 'picture-words/running');
+    expect(existsSync(running)).toBe(true);
+    await vi.waitFor(() => expect(existsSync(running)).toBe(false), { timeout: 8_000 });
+    expect(texts(await readPicture(Buffer.from('a'), slow))).toEqual(['accurate', 'doğru']);
+  }, 15_000);
+
+  it('starts no second accurate scan while one is at work, and does not wait for it', async () => {
+    const slow = scanner(6);
+    await readPicture(Buffer.from('a'), slow);
+    const at = Date.now();
+    expect(texts(await readPicture(Buffer.from('b'), slow))).toEqual(['fast', 'fast']);
+    expect(Date.now() - at).toBeLessThan(1_000);
+    const running = join(process.env.APPDYNO_STATE_DIR!, 'picture-words/running');
+    expect(readFileSync(running, 'utf8')).toBe(createHash('sha256').update('a').digest('hex'));
+  }, 15_000);
 });

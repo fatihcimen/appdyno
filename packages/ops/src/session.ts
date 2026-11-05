@@ -7,6 +7,7 @@ import {
   withPictureText,
   type Device,
   type Owner,
+  type PictureWords,
   type Screen,
   type ScreenElement,
 } from '@appdyno/core';
@@ -99,6 +100,8 @@ export class Session {
   wordless = false;
   /** Why such a screen's picture gave no words, if it failed. */
   pictureFailed: string | undefined;
+  /** The level that read such a screen's picture. */
+  pictureLevel: PictureWords['level'] | undefined;
   /** Reads a picture's words: a test has its own. */
   readWords = readPicture;
 
@@ -113,7 +116,9 @@ export class Session {
         (await this.device.mirror.screenshot?.('png')) ??
         (await this.device.screenshot({ format: 'png' }));
       const size = screen.window ?? this.device.hello!.screen;
-      return this.screenOf(withPictureText(tree, await this.readWords(shot.data), size));
+      const { words, level } = await this.readWords(shot.data);
+      this.pictureLevel = level;
+      return this.screenOf(withPictureText(tree, words, size));
     } catch (e) {
       this.pictureFailed = (e as Error).message;
       return screen;

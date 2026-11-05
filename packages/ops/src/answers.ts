@@ -22,6 +22,8 @@ import { refusedAction, reply } from './tool.js';
 /** After an action: quiet window and cap of the on-device settle (the window: docs/protocol.md, measured). */
 export const SETTLE = { quietMs: 200, maxMs: 3_000 } as const;
 const MAYBE_MOVING = 'the screen may still be changing';
+const FAST_READ =
+  '; read at the fast level: letters outside English, French, Italian, German, Spanish and Portuguese may be wrong';
 /** A report can be stamped a moment before the host's clock says the action began. */
 const CLOCK_SLACK_MS = 2_000;
 /** A crash report is written within moments of the death. */
@@ -60,7 +62,7 @@ export function answersFor(ctx: ServerContext) {
   /** The app check: a permission prompt points to alert; another app in front is said. */
   const foreground = (s: Session, screen: Screen) => {
     if (s.wordless && screen.elements.some((e) => e.type === PICTURE_TEXT))
-      return '\nno words in the tree: these were read from the picture, and their places are near';
+      return `\nno words in the tree: these were read from the picture, and their places are near${s.pictureLevel === 'fast' ? FAST_READ : ''}`;
     if (s.pictureFailed)
       return `\nno words in the tree, and none from the picture: ${s.pictureFailed}`;
     const person = s.device.platformScreen.personPrompt(screen.tree, screen.elements);
