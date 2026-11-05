@@ -36,6 +36,12 @@ fun rpcCode(code: String): Int {
 class AgentFailure(val code: String, message: String, val hint: String? = null, cause: Throwable? = null) :
     Exception(message, cause)
 
+/** A lit screen with no window to read has an app that does not answer, as a busy main thread does. */
+fun noWindow(screenOn: Boolean) = AgentFailure(
+    "NOT_FOUND",
+    if (screenOn) "no window to read: the app in front is not answering" else "no window to read: the screen is off or locked",
+)
+
 fun unknownMethod(method: String) = AgentFailure("UNSUPPORTED", "unknown method $method")
 
 /** What a thrown failure tells the host. */

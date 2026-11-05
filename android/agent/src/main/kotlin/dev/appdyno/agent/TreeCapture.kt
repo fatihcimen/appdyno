@@ -186,7 +186,7 @@ class TreeCapture(private val automation: Automation) {
         }
         if (roots.isEmpty()) {
             val root = ua.rootInActiveWindow
-                ?: throw AgentFailure("NOT_FOUND", "no window to read (screen off or locked?)")
+                ?: throw noWindow(Platform.display().on)
             val b = Rect().also { root.getBoundsInScreen(it) }
             windows += CWindow(-1, AccessibilityWindowInfo.TYPE_APPLICATION, root.packageName?.toString(), 0, b, true, true)
             roots += root to 0

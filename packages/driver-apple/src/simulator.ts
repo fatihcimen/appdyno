@@ -1,4 +1,5 @@
 import {
+  failedAfterSending,
   sleep,
   swipeThrough,
   type ScreenRecorder,
@@ -245,7 +246,8 @@ export class IosSimulatorDevice extends IosDevice {
         clock: () => Date.now() - this.startingMs,
         handled: () => this.direct.touchHandled().catch(() => undefined),
       };
-      let out = await settleAfter(on, action, opts);
+      const settled = () => settleAfter(on, action, opts).catch(failedAfterSending);
+      let out = await settled();
       // nothing moved and the app has not seen the touch finish: it never got it, or a loaded Mac has it far behind
       const reports = armed && !onKeyboard([...this.recent.values()].pop() ?? [], at!.x, at!.y);
       if (reports && out.untouched && touchesBefore === this.direct.touchesEnded) {
@@ -254,7 +256,7 @@ export class IosSimulatorDevice extends IosDevice {
           this.direct.touchLost();
           return this.actByRunner(action, opts);
         }
-        out = await settleAfter(on, action, opts);
+        out = await settled();
       }
       this.transitionEnds = out.moved ? touchedAt + TRANSITION_MS : 0;
       return { ...out.result, ...(waited !== undefined && { animationWaitMs: waited }) };

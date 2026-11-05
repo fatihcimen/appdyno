@@ -3,6 +3,7 @@ import {
   Settle,
   type ActParams,
   type ActResult,
+  type ErrorCode,
   type Hello,
   type Method,
   type Modifier,
@@ -18,6 +19,25 @@ import { DeviceQueue } from './queue.js';
 import type { RpcClient } from './rpc.js';
 import { buildScreen, type PlatformScreen, type Screen } from './screen/index.js';
 import { afterTimeout } from './stuck.js';
+
+/** What an agent refuses before it touches anything: any other failure of an action may have come after the touch. */
+const REFUSED_FIRST: ReadonlySet<ErrorCode> = new Set([
+  'AGENT_CONFLICT',
+  'AGENT_VERSION_MISMATCH',
+  'INVALID_ARGUMENT',
+  'NO_FOCUS',
+  'PERMISSION_REQUIRED',
+  'POLICY_DENIED',
+  'SCREEN_OFF',
+  'STALE',
+  'UNSUPPORTED',
+]);
+
+/** The failure of an action that left for the device. */
+export function failedAfterSending(e: unknown): never {
+  if (e instanceof DeviceError && !REFUSED_FIRST.has(e.code)) e.sent = true;
+  throw e;
+}
 
 /** The touches and keys every device words as one `act`. */
 export abstract class DeviceActions {
@@ -165,7 +185,7 @@ export abstract class RpcDevice extends DeviceActions {
         ...(opts.before && { before: opts.before }),
       },
       TIMEOUTS.action + (settle?.maxMs ?? 0) + extraMs,
-    );
+    ).catch(failedAfterSending);
     return result;
   }
 
@@ -192,7 +212,7 @@ export abstract class RpcDevice extends DeviceActions {
         read: opts.read ?? 'none',
       },
       TIMEOUTS.text + (settle?.maxMs ?? 0),
-    );
+    ).catch(failedAfterSending);
     return result;
   }
 

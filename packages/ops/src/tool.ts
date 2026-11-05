@@ -37,7 +37,8 @@ export function refusedAction(err: unknown): never {
     refused(err);
   } catch (e) {
     if (e instanceof ToolError && e.dispatched === undefined)
-      e.dispatched = MAY_HAVE_GONE.has(e.code) ? 'unknown' : false;
+      e.dispatched =
+        MAY_HAVE_GONE.has(e.code) || (err instanceof DeviceError && err.sent) ? 'unknown' : false;
     // a call that was wrong is said to be: it touched nothing, as `dispatched` has it
     if (
       e instanceof ToolError &&

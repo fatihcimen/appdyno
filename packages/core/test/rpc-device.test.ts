@@ -95,6 +95,27 @@ describe('a device through its agent', () => {
     expect(d.connects).toBe(1);
   });
 
+  it.each([
+    ['NOT_FOUND', true],
+    ['INTERNAL', true],
+    ['STALE', false],
+    ['SCREEN_OFF', false],
+    ['INVALID_ARGUMENT', false],
+    ['NO_FOCUS', false],
+  ] as const)(
+    'says whether an action that failed with %s may have gone out',
+    async (code, sent) => {
+      const refused: FakeHandler = () => ({ error: code });
+      const touch = new TestDevice([{ act: refused }]);
+      const e = await touch.tap({ x: 1, y: 1 }, {}).catch((x: unknown) => x);
+      expect(e).toBeInstanceOf(DeviceError);
+      expect((e as DeviceError).sent).toBe(sent);
+      const text = new TestDevice([{ 'text.set': refused }]);
+      const t = await text.typeText('hi').catch((x: unknown) => x);
+      expect((t as DeviceError).sent).toBe(sent);
+    },
+  );
+
   it('words a touch as an act, and answers what the agent answers', async () => {
     const asked: Record<string, unknown>[] = [];
     const d = new TestDevice([

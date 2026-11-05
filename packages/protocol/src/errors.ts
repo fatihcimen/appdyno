@@ -43,6 +43,8 @@ export const codeOfRpc = (n: number): ErrorCode =>
 
 export class DeviceError extends Error {
   readonly retryable: boolean;
+  /** The action it failed on had left for the device, which may have done it: the read after a touch can fail too. */
+  sent = false;
   constructor(
     readonly code: ErrorCode,
     message: string,

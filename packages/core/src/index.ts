@@ -1,5 +1,5 @@
 export { RpcClient, greet } from './rpc.js';
-export { assertLatLon, DeviceActions, RpcDevice } from './rpc-device.js';
+export { assertLatLon, DeviceActions, failedAfterSending, RpcDevice } from './rpc-device.js';
 export { DeviceQueue } from './queue.js';
 export { afterTimeout } from './stuck.js';
 export * from './state.js';

@@ -72,6 +72,30 @@ describe('a failed action says whether its touch went out', () => {
     },
   );
 
+  it('unknown: what failed after the action went out, whatever its code: the read after a touch can fail', async () => {
+    const device = new FakeDevice();
+    device.act = async () => {
+      const e = new DeviceError('NOT_FOUND', 'no window to read');
+      e.sent = true;
+      throw e;
+    };
+    const e = await refusal(callerOf(contextOf(device))('press_key', { key: 'home' }));
+    expect(e.code).toBe('NOT_FOUND');
+    expect(e.dispatched).toBe('unknown');
+    expect(e.message).toContain('the touch may have been sent');
+    expect(e.message).not.toContain('no touch was sent');
+  });
+
+  it('no: a look at the screen that failed before the touch', async () => {
+    const device = new FakeDevice();
+    device.tree = async () => {
+      throw new DeviceError('NOT_FOUND', 'no window to read');
+    };
+    const e = await refusal(callerOf(contextOf(device))('tap', { x: 10, y: 10 }));
+    expect(e.dispatched).toBe(false);
+    expect(namesOf(device)).not.toContain('act');
+  });
+
   it('yes: a scroll that found nothing swiped', async () => {
     const e = await refusal(
       callerOf(contextOf(new FakeDevice()))('scroll_to', { selector: { text: 'Nowhere' } }),

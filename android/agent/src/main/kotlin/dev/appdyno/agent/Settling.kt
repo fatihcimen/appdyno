@@ -83,7 +83,7 @@ class Settling(private val automation: Automation, private val capture: TreeCapt
             }
             if (c != null && !c.noApp) return c
             if (job.cancelled || !Platform.display().on || SystemClock.uptimeMillis() >= end) {
-                throw AgentFailure("NOT_FOUND", "no window to read (screen off or locked?)")
+                throw noWindow(Platform.display().on)
             }
             automation.awaitEvent(Settler.POLL_MS)
         }
