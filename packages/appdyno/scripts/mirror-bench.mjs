@@ -3,7 +3,7 @@
 // All arrive-on-Mac figures. Every number has the host's load beside it, and a miss above load 60 says
 // "run it later": it is no proof either way. It reads the screen before it touches.
 //
-// Usage: node scripts/mirror-bench.mjs <device> [--seconds 12] [--taps 10] [--out file] [--window]
+// Usage: node scripts/mirror-bench.mjs <device> [--seconds 12] [--taps 10] [--out file] [--window] [--max-size lines]
 //        node scripts/mirror-bench.mjs <device> --soak <minutes>
 // A soak holds a stream and touches the screen now and then: its memory and descriptors must stay flat, and
 // frames must still move at its end.
@@ -13,16 +13,9 @@ import { writeFileSync } from 'node:fs';
 import { loadavg } from 'node:os';
 import { parseArgs } from 'node:util';
 import { byMinute, quietAndBusy } from './mirror-bench-minutes.mjs';
-import {
-  Adb,
-  AndroidDevice,
-  IosPhoneDevice,
-  IosSimulatorDevice,
-  MirrorSession,
-  startViewer,
-  ViewerProcess,
-  viewerBinary,
-} from '../dist/index.js';
+import { MirrorSession, startViewer, ViewerProcess, viewerBinary } from '../../core/dist/index.js';
+import { Adb, AndroidDevice } from '../../driver-android/dist/index.js';
+import { IosPhoneDevice, IosSimulatorDevice } from '../../driver-apple/dist/index.js';
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -32,6 +25,7 @@ const { values, positionals } = parseArgs({
     out: { type: 'string' },
     window: { type: 'boolean', default: false },
     soak: { type: 'string' },
+    'max-size': { type: 'string' },
   },
 });
 const serial = positionals[0];
@@ -69,6 +63,9 @@ const device = isIphone
   : isUdid
     ? new IosSimulatorDevice(serial)
     : new AndroidDevice(serial, adb);
+// an Android phone at a size asked for, which `auto` then leaves alone, as touch follows a picture's pixels
+if (values['max-size'])
+  device.mirror.open = (o) => device.mirror.sourceWith(o, { maxSize: Number(values['max-size']) });
 
 const seconds = [];
 const session = new MirrorSession({
