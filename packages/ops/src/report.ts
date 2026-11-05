@@ -18,10 +18,11 @@ import {
   paintRects,
   renderScreen,
   reportProgress,
-  selfContainedPage,
+  PAGE_MARK,
   stateDir,
   type Screen,
 } from '@appdyno/core';
+import { reportPage as page } from './report-page.js';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { redactLog } from './policy.js';
@@ -115,20 +116,6 @@ export function shownArgs(op: Op, args: unknown, clean: (s: string) => string): 
 }
 
 const pre = (s: string) => `<pre>${esc(s)}</pre>`;
-
-const STYLE = `body{font:14px -apple-system,system-ui,sans-serif;margin:2rem auto;max-width:60rem;padding:0 1rem;color:#222}
-h1{font-size:1.4rem}h2{font-size:1.1rem;margin-top:2rem;border-bottom:1px solid #ccc}h3{font-size:.95rem;margin:1.2rem 0 .3rem}
-pre{background:#f5f5f5;padding:.5rem;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:12px}
-img,video{max-height:30rem;max-width:100%;border:1px solid #ccc;display:block;margin:.3rem 0}
-.bad{color:#b00020}.note{color:#666}`;
-
-const page = (title: string, body: string) =>
-  selfContainedPage({
-    title,
-    body,
-    style: STYLE,
-    sources: "img-src 'self' file:; media-src 'self' file:; ",
-  });
 
 export function reportFor(ctx: ServerContext) {
   const clean = (s: string) => redactLog(ctx.policy, s);
@@ -243,11 +230,11 @@ export function reportFor(ctx: ServerContext) {
     const hello = s.device.hello;
     const app = s.appId;
     const out: string[] = [
-      '<h1>appdyno report</h1>',
-      `<p>${esc(
+      `<header class="bar"><h1>${PAGE_MARK}appdyno <span>report</span></h1></header>`,
+      `<p class="who">${esc(app ?? 'no app selected')}</p>`,
+      `<p class="facts">${esc(
         [
           `${s.device.serial}${hello ? `: ${hello.model}, ${osName(s.device.platform, hello.osVersion)}` : ''}`,
-          app ? `app ${app}` : 'no app selected',
           since ? `from ${new Date(since).toISOString()}` : undefined,
           `to ${new Date().toISOString()}`,
         ]
@@ -263,14 +250,19 @@ export function reportFor(ctx: ServerContext) {
         `<p class="note">${since ? 'no step ran' : 'none kept: report start keeps them'}</p>`,
       );
     steps.forEach((st, i) => {
-      out.push(
-        `<h3 id="s${i + 1}">${i + 1}. ${esc(st.op)} <span class="${st.ok ? 'note' : 'bad'}">${st.ok ? st.at : `failed, ${st.at}`}</span></h3>`,
+      const words = [
+        `<h3 id="s${i + 1}"><span class="n">${i + 1}</span>${esc(st.op)} <span class="${st.ok ? 'note' : 'bad'}">${st.ok ? st.at : `failed, ${st.at}`}</span></h3>`,
         pre(JSON.stringify(st.args)),
         pre(st.answer),
-        ...(st.shot ? [`<img alt="the screen after step ${i + 1}" src="${esc(st.shot)}">`] : []),
         ...(st.screen
           ? [`<details><summary>the screen after it</summary>${pre(st.screen)}</details>`]
           : []),
+      ].join('');
+      const shot = st.shot
+        ? `<img alt="the screen after step ${i + 1}" src="${esc(st.shot)}">`
+        : '';
+      out.push(
+        `<article class="step card${st.ok ? '' : ' failed'}"><div>${words}</div>${shot}</article>`,
       );
     });
 

@@ -207,6 +207,14 @@ describe('the page', () => {
     expect(text).not.toContain('batterystats is all zero');
   });
 
+  it('folds what no device has said into a line, and keeps a row with a number', async () => {
+    const s = store();
+    await s.run(1, [launch(400)]);
+    const html = await s.page();
+    expect(textOf(html)).toMatch(/not measured yet on any device: [^.]*Memory/);
+    expect(html.match(/<tr><th scope="row">/g)).toHaveLength(1);
+  });
+
   it('says what has not been measured on a device, and that a virtual one is relative', async () => {
     const s = store();
     await s.run(1, [launch(400)]);

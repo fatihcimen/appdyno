@@ -95,12 +95,15 @@ const readingCell = (r: Reading, now: number) => {
 const refusedCell = (r: Refusal, now: number) =>
   `${chip('no', 'cannot be read')}<div class="m">${esc(r.reason)}, ${esc(age(r.at, now))}</div>`;
 
+const refusalOf = (v: AppView, row: string, cls: string) =>
+  v.refusals.find(
+    (r) => r.measure === row && r.deviceClass === cls && (!r.app || !v.app || r.app === v.app),
+  );
+
 /** A refusal is the answer only until a reading is newer. */
 function cell(v: AppView, row: string, cls: string) {
   const reading = v.cells.get(cellKey(row, cls));
-  const refusal = v.refusals.find(
-    (r) => r.measure === row && r.deviceClass === cls && (!r.app || !v.app || r.app === v.app),
-  );
+  const refusal = refusalOf(v, row, cls);
   if (refusal && (!reading || time(refusal.at) > time(reading.record.at)))
     return refusedCell(refusal, v.now);
   return reading ? readingCell(reading, v.now) : '<span class="none">not measured yet</span>';
@@ -123,13 +126,25 @@ function realDeviceNote(v: AppView) {
   return `<p class="note">${esc(VIRTUAL_IS_RELATIVE)}</p>${v.app ? noPhone : ''}`;
 }
 
-/** The page's core: what each device can read of this app, and how it last read. */
+/** Whether any device has said anything of this row, by a number or a refusal. */
+const heardOf = (v: AppView, row: string) =>
+  v.classes.some((cls) => v.cells.has(cellKey(row, cls)) || refusalOf(v, row, cls));
+
+/** The page's core: what each device can read of this app, and how it last read. Rows with nothing yet fold into a line. */
 export function measuresTable(v: AppView): string {
-  const rows = rowsOf(v.scenarios).map((row) => {
-    const cells = v.classes.map(
-      (cls) => `<td data-device="${esc(nameOf(v, cls).name)}">${cell(v, row, cls)}</td>`,
-    );
-    return `<tr><th scope="row">${rowTitle(row)}</th>${cells.join('')}</tr>`;
-  });
-  return `${realDeviceNote(v)}<div class="tw"><table class="matrix" style="--cols:${v.classes.length}"><thead><tr><th scope="col">Measure</th>${v.classes.map((c) => header(nameOf(v, c))).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+  const all = rowsOf(v.scenarios);
+  const silent = all.filter((row) => !heardOf(v, row));
+  const unread = silent.length
+    ? `<p class="note unread">These are not measured yet on any device: ${esc(silent.map((r) => measureTitle(r) ?? r).join(', '))}.</p>`
+    : '';
+  const rows = all
+    .filter((row) => heardOf(v, row))
+    .map((row) => {
+      const cells = v.classes.map(
+        (cls) => `<td data-device="${esc(nameOf(v, cls).name)}">${cell(v, row, cls)}</td>`,
+      );
+      return `<tr><th scope="row">${rowTitle(row)}</th>${cells.join('')}</tr>`;
+    });
+  if (rows.length === 0) return `${realDeviceNote(v)}${unread}`;
+  return `${realDeviceNote(v)}<div class="tw"><table class="matrix" style="--cols:${v.classes.length}"><thead><tr><th scope="col">Measure</th>${v.classes.map((c) => header(nameOf(v, c))).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>${unread}`;
 }

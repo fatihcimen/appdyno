@@ -43,6 +43,7 @@
 - `--behind` keeps a window off every screen, and it can write itself to a PNG as the window server draws it. `scripts/mirror-shots.mjs` does so for each state, in light and dark.
 - `LiveMetrics`: a port for a device's numbers each second, in one `perf` message. A measure a device cannot give stays out with its reason, and is never a 0.
 - A window's live numbers (⌥⌘P): frame rate, jank, frozen frames, CPU, memory and network beside the device, each with its last minute, a state in words, and the reason where a device has none. Nothing is read until they are open.
+- The dashboard and the report share one look; rows no device has said anything of fold into a line, trends stand side by side, and a report's steps are cards.
 - `appdyno hub`: every device of this Mac in one window, to start, stop, make, and open a window on.
 - A window's Performance pane: readings over ten minutes, a real launch or scroll measure of the app in front by the tools an agent calls, its result, and the dashboard a click away.
 - A simulator says what is in front with no runner, and the home screen can be measured: it read as not running.

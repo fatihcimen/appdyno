@@ -114,11 +114,16 @@ export function trendsSection(v: AppView): string {
       row === 'launch-why'
         ? phaseFigures(v)
         : `${row === 'journey' ? journeyFigures(v) : ''}${trendRow(v, row)}`;
-    return body ? [`<h4>${esc(measureTitle(row) ?? `Other: ${row}`)}</h4>${body}`] : [];
+    if (!body) return [];
+    // as wide as what it holds, so that measures with one chart each stand side by side
+    const charts = body.split('<figure').length - 1;
+    return [
+      `<section class="trend" style="--charts:${charts}"><h4>${esc(measureTitle(row) ?? `Other: ${row}`)}</h4>${body}</section>`,
+    ];
   });
   return `<h3>Trends</h3>${
     groups.length
-      ? groups.join('')
+      ? `<div class="trends">${groups.join('')}</div>`
       : '<p class="note">One run of each so far: a trend starts with the second.</p>'
   }`;
 }

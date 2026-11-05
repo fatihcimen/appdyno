@@ -1,4 +1,4 @@
-import { esc, selfContainedPage } from '@appdyno/core';
+import { esc, PAGE_MARK, selfContainedPage } from '@appdyno/core';
 import { appAnchor, when } from './format.js';
 import { ICONS } from './marks.js';
 import { STYLE } from './style.js';
@@ -15,11 +15,11 @@ export const dashboardPage = (title: string, body: string) =>
   });
 
 export const pageHead = (now: string, apps: string[]) =>
-  `<header class="head"><h1>appdyno dashboard</h1><span class="m">written ${esc(when(now))}; reloads itself every minute</span>${
+  `<header class="bar"><h1>${PAGE_MARK}appdyno <span>dashboard</span></h1>${
     apps.length > 1
       ? `<nav>${apps.map((a) => `<a href="#${esc(appAnchor(a))}">${esc(a)}</a>`).join('')}</nav>`
       : ''
-  }</header>`;
+  }<span class="m">written ${esc(when(now))}; reloads itself every minute</span></header>`;
 
 /** The one command that fills an empty page. */
 export const emptySection = (app?: string) =>

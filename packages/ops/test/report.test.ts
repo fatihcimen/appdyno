@@ -58,8 +58,8 @@ describe('report', () => {
     expect(r.data).toMatchObject({ steps: 2, file: join(dir, 'index.html') });
     const html = readFileSync(join(dir, 'index.html'), 'utf8');
     expect(html).toContain('Content-Security-Policy');
-    expect(html).toMatch(/1\. tap/);
-    expect(html).toMatch(/2\. screen/);
+    expect(html).toMatch(/>1<\/span>tap/);
+    expect(html).toMatch(/>2<\/span>screen/);
     expect(html).toContain('Bilgiler');
     expect(readdirSync(join(dir, 'shots'))).toEqual(['0001.jpg']);
     expect(html).toContain('src="shots/0001.jpg"');
@@ -198,6 +198,6 @@ describe('report', () => {
     await expect(call('report', { action: 'start', dir })).rejects.toBeInstanceOf(ToolError);
     await call('tap', { selector: { text: 'Form' } });
     expect(await ctx.end()).toEqual([]);
-    expect(readFileSync(join(dir, 'index.html'), 'utf8')).toMatch(/1\. tap/);
+    expect(readFileSync(join(dir, 'index.html'), 'utf8')).toMatch(/>1<\/span>tap/);
   });
 });
