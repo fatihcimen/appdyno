@@ -219,7 +219,7 @@ const MVWordRow MVWordTable[] = {
     {"No measure", "Ölçüm yapılamadı"},
     {"Regression %@", "Gerileme %@"},
     {"Improvement %@", "İyileşme %@"},
-    {"Could not judge: %@ of %@ samples", "Karar verilemedi: %2$@ örnekten %1$@ örnek"},
+    {"Could not judge: %@ of %@ samples", "Karar verilemedi: %1$@/%2$@ örnek"},
     {"Could not judge: measured under load", "Karar verilemedi: yoğunluk altında ölçüldü"},
     {"Could not judge: not the same kind of build", "Karar verilemedi: derleme türleri aynı değil"},
     {"No change", "Değişiklik yok"},

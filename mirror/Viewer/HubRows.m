@@ -125,7 +125,7 @@ static MVRow *goneRow(NSDictionary *device) {
   for (NSDictionary *device in _devices) {
     if (![(device[@"serial"] ?: device[@"id"]) isEqual:serial]) continue;
     MVRow *row = MVDeviceRow(device);
-    return @{@"about": row.detail ?: @"", @"link": device[@"link"] ?: @""};
+    return @{@"title": row.title ?: @"", @"about": row.detail ?: @"", @"link": device[@"link"] ?: @""};
   }
   return nil;
 }

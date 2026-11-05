@@ -140,7 +140,10 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   if (![attach[@"input"] isEqual:@"click"]) _view.armed = YES;
   // a restarted viewer keeps the zoom it had; a phone's picture size comes with its first frame
   if ([attach[@"zoom"] doubleValue] > 0) _zoom = [attach[@"zoom"] doubleValue];
-  _line.name = _look[@"name"] ?: _name;
+  // one name everywhere: a room says what its sidebar says
+  NSDictionary *row = _room.rowOf ? _room.rowOf(_root.stage ?: @"") : nil;
+  _line.name = row[@"title"] ?: _look[@"name"] ?: _name;
+  [self showState];
   [_window makeFirstResponder:_view];
   if (!_hosted) MVPresent(_window, MVShowOf([attach[@"focus"] boolValue], self.behind));
 }
