@@ -1,5 +1,5 @@
 import { tmpdir } from 'node:os';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { HUB_RUNS, HubRuns } from '../src/hub-run.js';
 import { COMMANDS } from '../src/usage.js';
 
@@ -69,6 +69,58 @@ describe('a run under way', () => {
     expect(said.at(-1)!.run.code).toBe(3);
   });
 
+  it('takes the gate at its word, as its exit code cannot say what it found', async () => {
+    const gate = async (out: string, code: number) => {
+      const said = await ran(
+        script(`console.log(${JSON.stringify(out)}); process.exit(${code})`),
+        'compare',
+        { app: 'a' },
+      );
+      return said.at(-1)!.run.verdict;
+    };
+    const line = 'a launch-cold on c (run 1, now)\n  ';
+    expect(await gate(`${line}regression  launch: 900 ms against 300 ms`, 1)).toBe('regression');
+    expect(await gate(`${line}over budget launch: 900 (500)`, 1)).toBe('regression');
+    const cannot = `${line}noisy       launch: 9 ms\nthe gate could not judge 1 of these: no pass`;
+    expect(await gate(cannot, 1)).toBe('unjudged');
+    const few = `${line}few-samples launch: 9 ms\nthe gate could not judge 1 of these: no pass`;
+    expect(await gate(few, 0)).toBe('unjudged');
+    expect(await gate(`${line}ok          launch: 300 ms against 300 ms`, 0)).toBe('clear');
+  });
+
+  it('shows a person the words in a runner progress, not its JSON', async () => {
+    const progress = JSON.stringify({
+      runner: 'U',
+      startingMs: 0,
+      line: 'starting the iOS runner',
+    });
+    const said = await ran(script(`console.log(${JSON.stringify(progress)})`), 'tools');
+    const text = said.map((s) => s.run.text ?? '').join('');
+    expect(text).toContain('starting the iOS runner');
+    expect(text).not.toContain('startingMs');
+  });
+
+  it('counts what a sentence needs, so that a person need not read the log', async () => {
+    const flows = await ran(
+      script('console.log("3 passed, 1 flaky, 2 failed"); process.exit(1)'),
+      'flows',
+      {
+        folder: '/f',
+        device: 'S',
+      },
+    );
+    expect(flows.at(-1)!.run.count).toEqual({ passed: 4, failed: 2, all: 6 });
+    const timeline = await ran(
+      script('console.log("(0.2 MB; 1800 frames, 30 log lines)")'),
+      'timeline',
+      {
+        app: 'a',
+        device: 'S',
+      },
+    );
+    expect(timeline.at(-1)!.run.count).toEqual({ frames: 1800 });
+  });
+
   it('names the page a command wrote', async () => {
     const said = await ran(script('console.log("wrote /tmp/x/index.html")'), 'dashboard');
     expect(said.at(-1)!.run.file).toBe('/tmp/x/index.html');
@@ -99,6 +151,35 @@ describe('a run under way', () => {
     await end;
     expect(said.map((s) => s.run.text ?? '').join('')).toContain('saved');
     expect(said.at(-1)!.run).toMatchObject({ code: 0, stopped: true });
+  });
+
+  it('stops all a command started, as Ctrl-C at a terminal does', async () => {
+    const body = `const { spawn } = require('node:child_process');
+      const under = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' });
+      console.log('under ' + under.pid);
+      setInterval(() => {}, 1000);`;
+    const runs = script(body);
+    let under = 0;
+    await new Promise<void>((done) =>
+      runs.start('tools', {}, (s) => {
+        const { run } = s as Said;
+        const heard = /under (\d+)/.exec(String(run.text));
+        if (heard) {
+          under = Number(heard[1]);
+          runs.stop('tools');
+        }
+        if (typeof run.code === 'number') done();
+      }),
+    );
+    const alive = () => {
+      try {
+        process.kill(under, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    await vi.waitFor(() => expect(alive()).toBe(false));
   });
 
   it('ends with the hub', async () => {

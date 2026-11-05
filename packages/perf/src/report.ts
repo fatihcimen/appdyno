@@ -111,6 +111,17 @@ export function toText(reports: KeyReport[]): string {
   ].join('\n');
 }
 
+/**
+ * What `toText` found, for a window that shows that text and must not call it by the exit code alone: a change the gate
+ * could not judge exits as a regression does, and one with too few samples exits 0, and neither is a pass.
+ */
+export const gateSaid = (text: string): 'regression' | 'unjudged' | 'clear' =>
+  /^\s+(regression|over budget) /m.test(text)
+    ? 'regression'
+    : /^the gate could not judge /m.test(text)
+      ? 'unjudged'
+      : 'clear';
+
 export const toJson = (reports: KeyReport[]) =>
   JSON.stringify({ failed: exitCode(reports) !== 0, reports }, null, 2);
 

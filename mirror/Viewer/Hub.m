@@ -12,7 +12,7 @@ static const double kWordsWide = 320;
 static const double kSidebar = 260;
 // a window's three buttons stand above the sidebar's first line
 static const double kBelowLights = 46;
-static const double kNoteDown = 12;
+static const double kNoteGap = 10;
 
 static NSString *stateWords(NSDictionary *device) {
   if ([device[@"mirrored"] boolValue]) return @"Window open";
@@ -32,6 +32,8 @@ static NSString *stateWords(NSDictionary *device) {
 
 - (void)didAddSubview:(NSView *)subview {
   self.needsLayout = YES;
+  // a device's stage comes a moment after the sentence that speaks of it
+  if (self.note && subview != self.note) [self addSubview:self.note positioned:NSWindowAbove relativeTo:nil];
 }
 
 - (void)willRemoveSubview:(NSView *)subview {
@@ -48,11 +50,13 @@ static NSString *stateWords(NSDictionary *device) {
   NSEdgeInsets under = self.safeAreaInsets;
   double all = self.bounds.size.width, wide = (all - under.left - under.right) / MAX(stages.count, 1);
   self.place.frame = NSMakeRect(under.left, 0, all - under.left - under.right, self.bounds.size.height);
+  // a band of its own: what is said never lies on the device
   NSSize note = self.note.fittingSize;
-  self.note.frame = NSMakeRect(under.left + (all - under.left - under.right - note.width) / 2, self.bounds.size.height - under.top - note.height - kNoteDown, note.width, note.height);
+  double band = self.note ? under.top + note.height + 2 * kNoteGap : 0;
+  self.note.frame = NSMakeRect(under.left + (all - under.left - under.right - note.width) / 2, self.bounds.size.height - under.top - note.height - kNoteGap, note.width, note.height);
   [stages enumerateObjectsUsingBlock:^(NSView *stage, NSUInteger i, BOOL *stop) {
     double left = i == 0 ? 0 : under.left + i * wide, right = i + 1 == stages.count ? all : under.left + (i + 1) * wide;
-    stage.frame = NSMakeRect(left, 0, right - left, self.bounds.size.height);
+    stage.frame = NSMakeRect(left, 0, right - left, self.bounds.size.height - band);
   }];
 }
 @end
@@ -337,6 +341,7 @@ static NSString *stateWords(NSDictionary *device) {
   if (message[@"clickRow"]) return [self pokeRow:message[@"clickRow"]];
   if (message[@"board"]) return [self pokeBoard];
   if (message[@"ask"]) return [self ask:message[@"ask"]];
+  if (message[@"fill"]) return [_tools chooseApp:message[@"fill"] folder:message[@"folder"] ?: @""];
   if ([message[@"press"] isEqual:@"create"]) {
     [_asking setName:message[@"name"] ?: @""];
     return [_asking create:self];

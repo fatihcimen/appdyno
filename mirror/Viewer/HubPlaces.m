@@ -3,6 +3,8 @@
 #import "Place.h"
 #import "Words.h"
 
+static const double kNoteSeconds = 12;
+
 @implementation MVHub (Places)
 
 - (void)addOwnPlaces {
@@ -12,6 +14,9 @@
   _tools = [MVToolsPane new];
   __weak MVHub *weak = self;
   _connect.onReady = ^(NSString *serial) {
+    [weak openGuided:serial];
+  };
+  _connect.onOpen = ^(NSString *serial) {
     [weak openWhenListed:serial];
   };
   _connect.onNew = ^(NSString *kind) {
@@ -50,6 +55,11 @@
     if ([place.title isEqual:MVWord(title)]) [self choosePlace:place];
 }
 
+/// By itself only while a person stands at the guide, with no device on the stage: elsewhere a phone gets its row, and nothing moves.
+- (void)openGuided:(NSString *)serial {
+  if (_placeShown == _connect) [self openWhenListed:serial];
+}
+
 - (void)openWhenListed:(NSString *)serial {
   _opening = serial;
   [self openWaiting];
@@ -71,9 +81,18 @@
   NSButton *close = MVPlaceButton(@"Close", @"noteClose", self, @selector(leaveNote));
   NSStackView *line = [NSStackView stackViewWithViews:@[MVText(@"Ask your AI app what is on its screen.", MVStyleBody), clients, close]];
   line.spacing = 8;
-  _note = MVNote(line);
-  ((MVRoomView *)_room).note = _note;
-  [_room addSubview:_note];
+  NSView *note = MVNote(line);
+  _note = note;
+  ((MVRoomView *)_room).note = note;
+  [_room addSubview:note];
+  __weak MVHub *weak = self;
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kNoteSeconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    [weak leaveNoteOf:note];
+  });
+}
+
+- (void)leaveNoteOf:(NSView *)note {
+  if (note == _note) [self leaveNote];
 }
 
 - (void)noteClients:(id)sender {
@@ -84,6 +103,7 @@
   [_note removeFromSuperview];
   _note = nil;
   ((MVRoomView *)_room).note = nil;
+  _room.needsLayout = YES;
 }
 
 - (MVToolsPane *)toolsPane {

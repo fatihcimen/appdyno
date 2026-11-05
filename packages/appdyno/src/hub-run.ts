@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { join } from 'node:path';
+import { gateSaid } from '@appdyno/perf';
 import type { COMMANDS } from './usage.js';
 
 /** What a person chose in the window, for a command to take. */
@@ -55,7 +56,24 @@ const STOP_MS = 5_000;
 /** The last page, or report, a command wrote and named. */
 const MADE = /(\/[^\s'"]+\.html)\b/g;
 
-type Run = { child: ChildProcess; file?: string; stopped: boolean };
+/** What the gate says by its words, as its exit code cannot. */
+const GATE = new Set(['compare', 'why']);
+
+/** A runner's progress comes as JSON for a machine, with a line in it for a person: only that line is shown. */
+const forPerson = (text: string) => text.replace(/^\{"runner":.*"line":"([^"]*)"\}$/gm, '$1');
+
+/** What a sentence needs of what a command printed, so that no one has to read it. */
+function countOf(name: string, said: string) {
+  const tally = name === 'flows' ? /(\d+) passed, (\d+) flaky, (\d+) failed/.exec(said) : null;
+  if (tally) {
+    const [passed, flaky, failed] = tally.slice(1).map(Number) as [number, number, number];
+    return { passed: passed + flaky, failed, all: passed + flaky + failed };
+  }
+  const frames = name === 'timeline' ? /\b(\d+) frames\b/.exec(said) : null;
+  return frames ? { frames: Number(frames[1]) } : undefined;
+}
+
+type Run = { child: ChildProcess; file?: string; stopped: boolean; said: string };
 type Say = (said: Record<string, unknown>) => void;
 
 /** The commands under way: one of a name at a time, each ending with the hub. */
@@ -77,15 +95,18 @@ export class HubRuns {
     const child = spawn(this.self[0]!, [...this.self.slice(1), ...words], {
       env: this.env,
       cwd: this.home,
+      // a group of its own: Ctrl-C at a terminal reaches all a command started, and so must Stop
+      detached: true,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    const run: Run = { child, stopped: false };
+    const run: Run = { child, stopped: false, said: '' };
     this.runs.set(name, run);
     say({ run: { name, started: true, command: `appdyno ${words.join(' ')}` } });
     const heard = (chunk: Buffer) => {
       const text = chunk.toString();
+      run.said += text;
       run.file = [...text.matchAll(MADE)].at(-1)?.[1] ?? run.file;
-      say({ run: { name, text } });
+      say({ run: { name, text: forPerson(text) } });
     };
     child.stdout!.on('data', heard);
     child.stderr!.on('data', heard);
@@ -98,6 +119,8 @@ export class HubRuns {
           code: code ?? 1,
           ...(run.stopped && { stopped: true }),
           ...(run.file && { file: run.file }),
+          ...(GATE.has(name) && { verdict: gateSaid(run.said) }),
+          ...(countOf(name, run.said) && { count: countOf(name, run.said) }),
         },
       });
     });
@@ -109,8 +132,15 @@ export class HubRuns {
     const run = this.runs.get(name);
     if (!run) return;
     run.stopped = true;
-    run.child.kill('SIGINT');
-    setTimeout(() => run.child.exitCode === null && run.child.kill('SIGTERM'), STOP_MS).unref();
+    const group = (signal: NodeJS.Signals) => {
+      try {
+        process.kill(-run.child.pid!, signal);
+      } catch {
+        // nothing of it is left
+      }
+    };
+    group('SIGINT');
+    setTimeout(() => group('SIGTERM'), STOP_MS).unref();
   }
 
   async end() {

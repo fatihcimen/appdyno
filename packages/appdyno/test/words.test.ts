@@ -37,6 +37,11 @@ describe('the table of words', () => {
     expect(rows.filter((r) => places(r.en) !== places(r.tr))).toEqual([]);
   });
 
+  it('numbers what changes where a row has two: each value keeps its own place', () => {
+    const places = (s: string) => (s.match(/%(\d\$)?@/g) ?? []).length;
+    expect(rows.filter((r) => places(r.tr) > 1 && !r.tr.includes('%1$@'))).toEqual([]);
+  });
+
   it('writes Turkish with all its letters', () => {
     // words that lose their letters when typed on an English keyboard: none may stand plain
     const plain =

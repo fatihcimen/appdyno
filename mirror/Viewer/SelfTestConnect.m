@@ -90,6 +90,8 @@ static void checkIphone(MVHub *hub) {
   look(hub, trust);
   MVCheck(@"connect: an iPhone is asked for Trust and its passcode", says(hub, @"Unlock the phone, tap Trust, then enter your passcode."), wordsOf(hub));
   MVCheck(@"connect: and told what a runner needs", says(hub, @"To drive an iPhone by its screen, appdyno puts a small runner on it. That takes Xcode and a signing team.") && [wordsOf(hub) containsString:@"Xcode 27"], wordsOf(hub));
+  MVAccentButton *runner = (MVAccentButton *)MVFindControl(hub.room.window.contentView, @"run:runner");
+  MVCheck(@"connect: Build Runner has the colour where nothing else asks for it", !runner.quiet, nil);
   NSDictionary *build = clicked(hub, @"run:runner");
   MVCheck(@"connect: and can build one from here", [build[@"do"] isEqual:@"run"] && [build[@"name"] isEqual:@"runner"], nil);
   look(hub, @{@"hand": @"ios", @"maker": @"apple", @"ready": @NO, @"steps": @[step(@"trust", YES, YES), step(@"developer-mode", NO, YES)]});
@@ -112,7 +114,10 @@ static void checkAdb(MVHub *hub) {
   [gAsked removeAllObjects];
   [hub showClients:@{@"run": @{@"name": @"adb", @"code": @1}}];
   MVPump(0.1);
-  MVCheck(@"adb: a failure says what it said", [wordsOf(hub) containsString:@"no network"], wordsOf(hub));
+  MVCheck(@"adb: a failure is a sentence, and its log stays out of sight", says(hub, @"Getting adb failed.") && ![wordsOf(hub) containsString:@"no network"], wordsOf(hub));
+  [hub pokeClick:@"adbDetails"];
+  MVPump(0.1);
+  MVCheck(@"adb: until a person asks", [wordsOf(hub) containsString:@"no network"], wordsOf(hub));
   MVCheck(@"adb: and looks again", [gAsked.lastObject[@"fresh"] boolValue], nil);
 }
 
@@ -126,10 +131,119 @@ static void checkDone(MVHub *hub) {
   MVPump(0.3);
   MVCheck(@"done: a phone that got ready here opens by itself", [hub.chosen isEqual:@"R5C"] && hub.placeShown == nil, hub.chosen);
   MVCheck(@"done: with one sentence on what to try", says(hub, @"Ask your AI app what is on its screen."), wordsOf(hub));
+  NSView *stage = [MVRootView new];
+  [hub.room addSubview:stage];
+  [hub.room layoutSubtreeIfNeeded];
+  NSView *note = ((MVRoomView *)hub.room).note;
+  MVCheck(@"done: a stage that comes after it stays under the sentence", hub.room.subviews.lastObject == note, nil);
+  MVCheck(@"done: and makes room for it: a picture is never covered", NSMinY(note.frame) >= NSMaxY(stage.frame) && note.frame.size.height > 0, NSStringFromRect(stage.frame));
+  [stage removeFromSuperview];
+  [hub pokeClick:@"noteClose"];
+  MVPump(0.2);
+  MVCheck(@"done: Close takes the sentence away, and leaves the device", !says(hub, @"Ask your AI app what is on its screen.") && [hub.chosen isEqual:@"R5C"], wordsOf(hub));
+  [hub pokeRow:@"Connect a Phone"];
+  MVPump(0.3);
+  look(hub, android(@"samsung", YES, YES));
+  MVCheck(@"done: a phone ready all along waits to be chosen", hub.chosen == nil && hub.placeShown != nil, hub.chosen);
+  [hub pokeClick:@"openPhone"];
+  MVPump(0.3);
+  MVCheck(@"done: and Open opens it", [hub.chosen isEqual:@"R5C"] && hub.placeShown == nil, hub.chosen);
   [hub pokeClick:@"noteClients"];
   MVPump(0.3);
   MVCheck(@"done: AI Clients is one step away", [hub.placeShown isKindOfClass:MVClientsPane.class], nil);
+  [hub pokeRow:@"Connect a Phone"];
+  MVPump(0.3);
+  [hub pokeClick:@"toClients"];
+  MVPump(0.3);
+  MVCheck(@"done: from the guide too", [hub.placeShown isKindOfClass:MVClientsPane.class], nil);
   [hub show:@{@"devices": @[]}];
+}
+
+/// Only at the guide, with nothing on the stage; and the first of two.
+static void checkLimits(MVHub *hub) {
+  NSDictionary *one = @{@"id": @"R5C", @"serial": @"R5C", @"kind": @"phone", @"state": @"running", @"name": @"Test Phone"};
+  NSDictionary *two = @{@"id": @"R6D", @"serial": @"R6D", @"kind": @"phone", @"state": @"running", @"name": @"Other Phone"};
+  [hub show:@{@"devices": @[one, two]}];
+  [hub pokeRow:@"Connect a Phone"];
+  MVPump(0.3);
+  look(hub, android(@"samsung", YES, NO));
+  [hub pokeRow:@"Tools"];
+  MVPump(0.3);
+  look(hub, android(@"samsung", YES, YES));
+  MVPump(0.2);
+  MVCheck(@"limits: a phone that gets ready while a person is elsewhere moves nothing", hub.chosen == nil && [hub.placeShown isKindOfClass:MVToolsPane.class], hub.chosen);
+  [hub pokeRow:@"Connect a Phone"];
+  MVPump(0.3);
+  NSMutableDictionary *second = [android(@"samsung", YES, NO) mutableCopy];
+  second[@"serial"] = @"R6D";
+  look(hub, android(@"samsung", YES, NO));
+  look(hub, second);
+  look(hub, android(@"samsung", YES, YES));
+  MVPump(0.3);
+  MVCheck(@"limits: of two, the first opens", [hub.chosen isEqual:@"R5C"], hub.chosen);
+  NSMutableDictionary *ready = [android(@"samsung", YES, YES) mutableCopy];
+  ready[@"serial"] = @"R6D";
+  look(hub, ready);
+  MVPump(0.3);
+  MVCheck(@"limits: the second only gets its row", [hub.chosen isEqual:@"R5C"], hub.chosen);
+  [hub show:@{@"devices": @[]}];
+}
+
+/// A picture moves for a few beats, and not at all for a person who asked for less motion.
+static void checkPictureMoves(MVHub *hub) {
+  MVStepPicture *picture = [[MVStepPicture alloc] initWithFrame:NSMakeRect(0, 0, 216, 196)];
+  [hub.room addSubview:picture];
+  MVHoldStill(YES);
+  picture.step = @"developer-mode";
+  [picture display];
+  MVPump(0.2);
+  MVCheck(@"motion: with Reduce Motion a step stands still", picture.layer.sublayers.lastObject.sublayers.count == 0, nil);
+  MVHoldStill(NO);
+  picture.step = @"usb-debugging";
+  [picture display];
+  MVPump(0.2);
+  MVCheck(@"motion: else its switch slides", picture.layer.sublayers.lastObject.sublayers.count > 0, nil);
+  [picture removeFromSuperview];
+}
+
+/// It goes by itself too.
+static void checkNoteLeaves(MVHub *hub) {
+  NSDictionary *one = @{@"id": @"R5C", @"serial": @"R5C", @"kind": @"phone", @"state": @"running", @"name": @"Test Phone"};
+  [hub show:@{@"devices": @[one]}];
+  [hub pokeRow:@"Connect a Phone"];
+  MVPump(0.3);
+  look(hub, android(@"samsung", YES, NO));
+  look(hub, android(@"samsung", YES, YES));
+  MVPump(0.3);
+  MVCheck(@"done: the sentence stands a while", says(hub, @"Ask your AI app what is on its screen."), wordsOf(hub));
+  MVPump(12.2);
+  MVCheck(@"done: and goes by itself", !says(hub, @"Ask your AI app what is on its screen.") && ((MVRoomView *)hub.room).note == nil, wordsOf(hub));
+  [hub show:@{@"devices": @[]}];
+}
+
+static void checkWays(MVHub *hub) {
+  NSDictionary *choices = @{@"simulator": @{@"models": @[@{@"name": @"iPhone 17", @"id": @"m"}], @"systems": @[@{@"name": @"iOS 27", @"id": @"s"}]}};
+  [hub show:@{@"devices": @[], @"choices": choices}];
+  [hub pokeRow:@"Connect a Phone"];
+  MVPump(0.2);
+  look(hub, @{@"steps": @[], @"ready": @NO});
+  [hub pokeClick:@"startClients"];
+  MVPump(0.3);
+  MVCheck(@"started: Open goes to AI Clients", [hub.placeShown isKindOfClass:MVClientsPane.class], nil);
+  [hub pokeRow:@"Connect a Phone"];
+  MVPump(0.3);
+  [hub pokeClick:@"startHelp"];
+  MVPump(0.3);
+  MVCheck(@"started: and to Help", [hub.placeShown isKindOfClass:MVHelpPane.class], nil);
+  [hub pokeRow:@"Connect a Phone"];
+  MVPump(0.3);
+  look(hub, @{@"steps": @[], @"ready": @NO, @"client": @YES, @"prompt": @YES});
+  NSWindow *window = hub.room.window;
+  [hub pokeClick:@"newSimulator"];
+  MVPump(0.3);
+  MVCheck(@"started: New Simulator asks what to make", window.attachedSheet != nil, nil);
+  if (window.attachedSheet) [window endSheet:window.attachedSheet];
+  MVPump(0.2);
 }
 
 static void checkNeedsYou(MVHub *hub) {
@@ -147,13 +261,13 @@ static void checkTools(MVHub *hub, MVToolsPane *tools) {
   [hub pokeRow:@"Tools"];
   MVPump(0.2);
   MVCheck(@"tools: a real click on its row takes the room", hub.placeShown == tools, nil);
-  [hub pokeClick:@"run:baseline"];
-  MVPump(0.1);
-  MVCheck(@"tools: a row says what it needs, and asks nothing", says(hub, @"Choose an app first."), wordsOf(hub));
+  [tools chooseApp:@"" folder:@""];
   [tools fillDevice:nil];
-  [hub pokeClick:@"run:flows"];
-  MVPump(0.1);
-  MVCheck(@"tools: so does one that needs a device", says(hub, @"Choose a device first."), wordsOf(hub));
+  MVCheck(@"tools: what a row lacks is said once, at the top", says(hub, @"Dimmed rows need:") && !MVFindControl(hub.room.window.contentView, @"run:baseline").enabled, wordsOf(hub));
+  MVCheck(@"tools: a dimmed row asks nothing", clicked(hub, @"run:baseline") == nil, nil);
+  [hub pokeClick:@"index:4"];
+  MVPump(0.2);
+  MVCheck(@"tools: its index stays, and takes the page to a section", MVFindControl(hub.room.window.contentView, @"index:0") != nil, nil);
   [tools chooseApp:@"com.example.app" folder:@"/flows"];
   [tools fillDevice:@{@"id": @"S", @"serial": @"S", @"name": @"A Simulator", @"kind": @"simulator"}];
   for (NSString *name in @[@"baseline", @"compare", @"why", @"survey", @"flows", @"timeline", @"flight", @"dashboard", @"tools", @"clients-preview", @"update-check", @"update"]) {
@@ -165,18 +279,39 @@ static void checkTools(MVHub *hub, MVToolsPane *tools) {
   [hub showClients:@{@"run": @{@"name": @"compare", @"started": @YES, @"command": @"appdyno perf compare --app com.example.app"}}];
   [hub showClients:@{@"run": @{@"name": @"compare", @"text": @"launch 553 ms slower\n"}}];
   MVPump(0.1);
-  MVCheck(@"tools: a run says its command and what comes back", [wordsOf(hub) containsString:@"launch 553 ms slower"] && [wordsOf(hub) containsString:@"perf compare"], wordsOf(hub));
+  MVCheck(@"tools: a log stays behind Show Details", ![wordsOf(hub) containsString:@"launch 553 ms slower"], wordsOf(hub));
+  [hub pokeClick:@"details:compare"];
+  MVPump(0.1);
+  MVCheck(@"tools: which shows the command and what came back", [wordsOf(hub) containsString:@"launch 553 ms slower"] && [wordsOf(hub) containsString:@"perf compare"], wordsOf(hub));
+  for (int line = 0; line < 30; line++) [hub showClients:@{@"run": @{@"name": @"compare", @"text": [NSString stringWithFormat:@"line %d\n", line]}}];
+  MVPump(0.1);
+  MVCheck(@"tools: a long run keeps its command in sight, and its newest lines", [wordsOf(hub) containsString:@"appdyno perf compare"] && [wordsOf(hub) containsString:@"line 29"] && ![wordsOf(hub) containsString:@"line 3\n"], nil);
   NSDictionary *stop = clicked(hub, @"run:compare");
   MVCheck(@"tools: a run under way has Stop", [stop[@"stop"] boolValue] && [stop[@"name"] isEqual:@"compare"], stop.description);
-  [hub showClients:@{@"run": @{@"name": @"compare", @"code": @1}}];
+  [hub showClients:@{@"run": @{@"name": @"compare", @"code": @1, @"verdict": @"regression"}}];
   MVPump(0.1);
   MVCheck(@"tools: the gate's refusal is said in words", says(hub, @"Regression found"), wordsOf(hub));
+  [hub showClients:@{@"run": @{@"name": @"compare", @"code": @0, @"verdict": @"unjudged"}}];
+  MVPump(0.1);
+  MVCheck(@"tools: what it could not judge is no pass, whatever the exit code", says(hub, @"Could not judge") && !says(hub, @"No regression"), wordsOf(hub));
+  [hub showClients:@{@"run": @{@"name": @"compare", @"code": @1, @"verdict": @"unjudged"}}];
+  MVPump(0.1);
+  MVCheck(@"tools: and no regression either", says(hub, @"Could not judge") && !says(hub, @"Regression found"), wordsOf(hub));
+  [hub showClients:@{@"run": @{@"name": @"compare", @"code": @0, @"verdict": @"clear"}}];
+  MVPump(0.1);
+  MVCheck(@"tools: only a clear answer is a pass", says(hub, @"No regression"), wordsOf(hub));
+  [hub showClients:@{@"run": @{@"name": @"baseline", @"started": @YES, @"command": @"appdyno perf baseline"}}];
+  [hub showClients:@{@"run": @{@"name": @"baseline", @"code": @1}}];
+  MVPump(0.1);
+  MVCheck(@"tools: a baseline short of runs says so, and is no failure", says(hub, @"Saved, but it needs more runs to compare with.") && !says(hub, @"It failed: see what it said."), wordsOf(hub));
   [hub showClients:@{@"run": @{@"name": @"dashboard", @"started": @YES, @"command": @"appdyno perf dashboard"}}];
   [hub showClients:@{@"run": @{@"name": @"dashboard", @"code": @0, @"file": @"/x/index.html"}}];
   MVPump(0.1);
   MVCheck(@"tools: a dashboard opens as it is done, and no page opens from a test", [MVLastOpened() isEqual:@"/x/index.html"], MVLastOpened());
   [hub showClients:@{@"run": @{@"name": @"timeline", @"started": @YES, @"command": @"appdyno timeline"}}];
-  [hub showClients:@{@"run": @{@"name": @"timeline", @"code": @0, @"file": @"/x/timeline.html"}}];
+  [hub showClients:@{@"run": @{@"name": @"timeline", @"code": @0, @"file": @"/x/timeline.html", @"count": @{@"frames": @1800}}}];
+  MVPump(0.1);
+  MVCheck(@"tools: a result is a person's sentence, with its device", says(hub, @"Timeline saved, with 1800 frames.") && [wordsOf(hub) containsString:@"A Simulator"] && ![wordsOf(hub) containsString:@"0 steps"], wordsOf(hub));
   MVPump(0.1);
   [hub pokeClick:@"open:timeline"];
   MVPump(0.1);
@@ -185,13 +320,25 @@ static void checkTools(MVHub *hub, MVToolsPane *tools) {
   [hub showClients:@{@"run": @{@"name": @"clients-preview", @"text": @"+ a line\n"}}];
   [hub showClients:@{@"run": @{@"name": @"clients-preview", @"code": @0}}];
   MVPump(0.1);
-  MVCheck(@"tools: Add to All shows its lines first, and asks again", [clicked(hub, @"run:clients")[@"name"] isEqual:@"clients"], nil);
+  MVCheck(@"tools: one button: it shows the lines, and then adds them", [wordsOf(hub) containsString:@"+ a line"] && [clicked(hub, @"run:clients-preview")[@"name"] isEqual:@"clients"], wordsOf(hub));
+  MVCheck(@"tools: PATH stands out of a run that is not the app's", MVFindControl(hub.room.window.contentView, @"run:path-on") == nil, nil);
   [hub showClients:@{@"apps": @[@"com.kept.app"], @"fromApp": @YES}];
   MVPump(0.1);
   MVCheck(@"tools: PATH is offered only from the app", [clicked(hub, @"run:path-on")[@"name"] isEqual:@"path-on"], nil);
+  MVCheck(@"tools: and comes off the same way", [clicked(hub, @"run:path-off")[@"name"] isEqual:@"path-off"], nil);
+  [hub pokeClick:@"chooseFolder"];
+  MVPump(0.1);
+  MVCheck(@"tools: Choose asks for a folder, and takes no keyboard from a test", [MVLastOpened() isEqual:@"folder panel"], MVLastOpened());
+}
+
+static void checkWords(void) {
+  MVCheck(@"words: a step's count keeps each number in its place", [MVInTurkish(@"Step 1 of 4") isEqual:@"Adım 1 / 4"], MVInTurkish(@"Step 1 of 4"));
+  MVCheck(@"words: and so does a duration", [MVInTurkish(@"2 min 5 s") isEqual:@"2 dk 5 sn"], MVInTurkish(@"2 min 5 s"));
+  MVCheck(@"words: and a count of flows, the other way round", [MVInTurkish(@"2 of 3 flows passed.") isEqual:@"3 akıştan 2 tanesi geçti."], MVInTurkish(@"2 of 3 flows passed."));
 }
 
 void MVCheckConnect(void) {
+  checkWords();
   MVPlaceBehind(YES);
   gAsked = [NSMutableArray array];
   MVTapAsks(^(NSDictionary *message) {
@@ -208,6 +355,10 @@ void MVCheckConnect(void) {
   checkIphone(hub);
   checkAdb(hub);
   checkDone(hub);
+  checkLimits(hub);
+  checkNoteLeaves(hub);
+  checkPictureMoves(hub);
+  checkWays(hub);
   checkNeedsYou(hub);
   [hub pokeRow:@"Connect a Phone"];
   MVPump(0.2);

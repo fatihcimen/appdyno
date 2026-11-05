@@ -4,7 +4,7 @@
 
 - Connect a Phone in the hub, where the empty state stood: it finds the phone in your hand from the Mac's USB registry, asks only what that phone needs, and shows its one current step with a diagram, moving on as the phone's state changes. Android: adb with Google's terms first, Developer options by maker, USB debugging, Allow, and a Xiaomi's two switches. iPhone: Trust, Developer Mode, said to restart first, and what a runner needs. A cable that only charges is said plainly.
 - A phone that got ready there opens by itself, with one sentence on what to try and AI Clients a click away.
-- Tools in the hub: the gate, flows, the timeline, the flight recorder, the dashboard, trace tools, updates and the PATH, each the very command, spawned from one table, with what it says and how it ended in words. `docs/mirror.md` lists what stays out, and why.
+- Tools in the hub: the gate, flows, the timeline, the flight recorder, the dashboard, trace tools, updates and the PATH, each the very command, spawned from one table, with what it says and how it ended in words. The gate's row goes by what the gate printed, so what it could not judge is never green. `docs/mirror.md` lists what stays out, and why.
 
 - AI Clients in the hub: every client `appdyno install` knows, each as it truly stands. Connected is earned only by a real call: the server keeps a client's name, version, way in and last call, and nothing it sent. A client not in the list still gets a row of its own once it has called.
 - Adding or removing a client from the hub shows the exact lines first, by `install`'s own code, and Undo takes that one entry back, flags and all, as a client may have written its file since.

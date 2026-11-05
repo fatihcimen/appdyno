@@ -44,6 +44,7 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
   const heard: ViewerMessage[] = [];
   const sent: Record<string, unknown>[] = [];
   const path = process.env.PATH;
+  const sdk = process.env.ANDROID_HOME;
   let home: string;
   let bus: string;
   let link: ViewerProcess;
@@ -113,6 +114,10 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
   beforeAll(async () => {
     home = mkdtempSync(join(tmpdir(), 'appdyno-hub-connect-'));
     process.env.APPDYNO_STATE_DIR = join(home, 'state');
+    // a stand-in adb: nothing here, or any command it spawns, can start or stop the Mac's adb server
+    mkdirSync(join(home, 'platform-tools'));
+    writeFileSync(join(home, 'platform-tools/adb'), '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+    process.env.ANDROID_HOME = home;
     bus = join(home, 'bus');
     writeFileSync(bus, '');
     // what `ioreg` says is what this file says: nothing is asked of this Mac's real bus
@@ -169,6 +174,8 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
     link?.send({ op: 'quit' });
     await done;
     process.env.PATH = path;
+    if (sdk === undefined) delete process.env.ANDROID_HOME;
+    else process.env.ANDROID_HOME = sdk;
     rmSync(home, { recursive: true, force: true });
   });
 
@@ -226,7 +233,8 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
     expect((await ended('clients-preview')).code).toBe(0);
     expect(existsSync(file)).toBe(false);
     await picture('tools-preview');
-    await click('run:clients');
+    // one button: what showed the lines now adds them
+    await click('run:clients-preview');
     expect((await ended('clients')).code).toBe(0);
     expect(readFileSync(file, 'utf8')).toContain('appdyno');
     await click('run:dashboard');
@@ -234,5 +242,7 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
     expect(page.code).toBe(0);
     expect(page.file).toMatch(/\.html$/);
     await picture('tools-dashboard');
+    await click('run:update-check');
+    expect(typeof (await ended('update-check')).code).toBe('number');
   });
 });

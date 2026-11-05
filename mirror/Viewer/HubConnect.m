@@ -7,8 +7,7 @@
 
 // while this place shows; nothing looks at a phone while it does not
 static const double kLookSeconds = 3, kShowSeconds = 0.2;
-static const double kPictureWide = 216, kPictureTall = 196;
-static const double kTickSize = 13;
+static const double kPictureWide = 216, kPictureTall = 196, kWashShare = 0.46, kWashInset = 12, kSlideFrom = 14;
 
 /// What a phone of this maker calls a place, for the two steps that differ.
 static NSString *placeOn(NSString *step, NSString *maker) {
@@ -37,9 +36,12 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
 @implementation MVConnectPane {
   MVStepPicture *_picture;
   NSTextField *_count, *_title, *_say, *_where, *_more;
-  NSButton *_terms, *_get, *_back, *_next, *_toClients;
-  NSStackView *_body, *_ticks, *_started;
-  NSView *_ticksCard, *_runnerCard;
+  NSButton *_terms, *_back, *_toClients, *_detailsOfGet, *_startClients, *_startHelp;
+  MVAccentButton *_get, *_next, *_open, *_build;
+  NSStackView *_body, *_termsLine;
+  MVStepper *_ticks, *_started;
+  NSView *_ticksCard, *_runnerCard, *_gotCard;
+  NSTextField *_gotText;
   NSTextField *_runnerLines;
   NSMutableSet<NSString *> *_passed, *_unready;
   NSDictionary *_guide;
@@ -53,6 +55,8 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
   if ((self = [super initWithFrame:frame])) {
     _passed = [NSMutableSet set];
     _unready = [NSMutableSet set];
+    _startClients = MVPlaceButton(@"Open", @"startClients", self, @selector(toClients:));
+    _startHelp = MVPlaceButton(@"Open", @"startHelp", self, @selector(toHelp:));
     NSStackView *column = MVPlaceColumn(@[[self stepCard], [self ticks], [self runnerCard], [self otherWays], [self startedCard]], 16);
     NSScrollView *page = MVPlacePage(column);
     page.frame = self.bounds;
@@ -65,8 +69,7 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
 
 - (NSView *)stepCard {
   _picture = [MVStepPicture new];
-  [_picture.widthAnchor constraintEqualToConstant:kPictureWide].active = YES;
-  [_picture.heightAnchor constraintEqualToConstant:kPictureTall].active = YES;
+  NSView *wash = MVWash();
   _count = MVText(@"", MVStyleSub);
   _title = MVParagraph(@"", MVStyleTitle);
   _say = MVParagraph(@"", MVStyleBody);
@@ -74,39 +77,53 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
   _more = MVParagraph(@"", MVStyleSub);
   _terms = MVPlaceButton(@"Read Google's Terms", @"terms", self, @selector(readTerms:));
   _get = MVPlacePrimary(@"Accept and Get adb", @"getAdb", self, @selector(getAdb:));
+  _detailsOfGet = MVPlaceButton(@"Show Details", @"adbDetails", self, @selector(toggleGot:));
   _back = MVPlaceButton(@"Back", @"stepBack", self, @selector(stepBack:));
   _next = MVPlacePrimary(@"Next", @"stepNext", self, @selector(stepNext:));
-  _toClients = MVPlacePrimary(@"AI Clients", @"toClients", self, @selector(toClients:));
-  NSStackView *buttons = [NSStackView stackViewWithViews:@[_back, _next, _terms, _get, _toClients]];
+  _open = MVPlacePrimary(@"Open", @"openPhone", self, @selector(openPhone:));
+  _toClients = MVPlaceButton(@"AI Clients", @"toClients", self, @selector(toClients:));
+  NSStackView *buttons = [NSStackView stackViewWithViews:@[_next, _back, _get, _detailsOfGet, _open, _toClients]];
   buttons.spacing = 8;
-  _body = MVPlaceColumn(@[_count, _title, _say, _where, _more, buttons], 6);
+  _termsLine = [NSStackView stackViewWithViews:@[_terms]];
+  _gotText = MVCodeText(@"");
+  _gotCard = MVCard(_gotText, 8);
+  _gotCard.hidden = YES;
+  _body = MVPlaceColumn(@[_count, _title, _say, _where, _more, buttons, _termsLine, _gotCard], 6);
   [_body setCustomSpacing:12 afterView:_more];
   NSView *all = [NSView new];
-  for (NSView *part in @[_picture, _body]) {
+  for (NSView *part in @[wash, _picture, _body]) {
     part.translatesAutoresizingMaskIntoConstraints = NO;
     [all addSubview:part];
   }
   [NSLayoutConstraint activateConstraints:@[
-    [_picture.leadingAnchor constraintEqualToAnchor:all.leadingAnchor],
-    [_picture.centerYAnchor constraintEqualToAnchor:all.centerYAnchor],
-    [_picture.topAnchor constraintGreaterThanOrEqualToAnchor:all.topAnchor],
-    [_body.leadingAnchor constraintEqualToAnchor:_picture.trailingAnchor constant:16],
-    [_body.trailingAnchor constraintEqualToAnchor:all.trailingAnchor],
+    [wash.leadingAnchor constraintEqualToAnchor:all.leadingAnchor],
+    [wash.topAnchor constraintEqualToAnchor:all.topAnchor],
+    [wash.bottomAnchor constraintEqualToAnchor:all.bottomAnchor],
+    [wash.widthAnchor constraintEqualToAnchor:all.widthAnchor multiplier:kWashShare],
+    [wash.heightAnchor constraintGreaterThanOrEqualToConstant:kPictureTall + 2 * kWashInset],
+    [_picture.widthAnchor constraintEqualToConstant:kPictureWide],
+    [_picture.heightAnchor constraintEqualToConstant:kPictureTall],
+    [_picture.centerXAnchor constraintEqualToAnchor:wash.centerXAnchor],
+    [_picture.centerYAnchor constraintEqualToAnchor:wash.centerYAnchor],
+    [_body.leadingAnchor constraintEqualToAnchor:wash.trailingAnchor constant:16],
+    [_body.trailingAnchor constraintEqualToAnchor:all.trailingAnchor constant:-4],
     [_body.centerYAnchor constraintEqualToAnchor:all.centerYAnchor],
     [_body.topAnchor constraintGreaterThanOrEqualToAnchor:all.topAnchor],
+    [_body.bottomAnchor constraintLessThanOrEqualToAnchor:all.bottomAnchor],
   ]];
-  return MVCard(all, 16);
+  return MVCard(all, 12);
 }
 
 - (NSView *)ticks {
-  _ticks = MVPlaceColumn(@[], 6);
-  _ticksCard = MVCard(_ticks, 12);
+  _ticks = MVNewStepper();
+  _ticksCard = MVCard(_ticks, 8);
   return _ticksCard;
 }
 
 - (NSView *)runnerCard {
   _runnerLines = MVParagraph(@"", MVStyleSub);
-  NSView *head = MVPlaceRow(MVText(@"An iPhone Runner", MVStyleStrong), @[MVPlaceButton(@"Build Runner", @"run:runner", self, @selector(buildRunner:))]);
+  _build = MVPlacePrimary(@"Build Runner", @"run:runner", self, @selector(buildRunner:));
+  NSView *head = MVPlaceRow(MVText(@"An iPhone Runner", MVStyleStrong), @[_build]);
   _runnerCard = MVCard(MVPlaceColumn(@[head, MVParagraph(@"To drive an iPhone by its screen, appdyno puts a small runner on it. That takes Xcode and a signing team.", MVStyleCallout), _runnerLines], 6), 12);
   return _runnerCard;
 }
@@ -117,22 +134,8 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
 }
 
 - (NSView *)startedCard {
-  _started = MVPlaceColumn(@[], 6);
-  return MVPlaceColumn(@[MVText(@"Get Started", MVStyleHeading), MVCard(_started, 12)], 6);
-}
-
-/// A line of a list that ticks itself: a symbol, its word, and a way there where there is one.
-- (NSView *)tick:(NSString *)word done:(BOOL)done now:(BOOL)now button:(nullable NSButton *)button {
-  MVInk *mark = [[MVInk alloc] initWithSymbol:done ? @"checkmark.circle.fill" : now ? @"circle.inset.filled" : @"circle" color:done ? MVGreen() : now ? NSColor.controlAccentColor : MVQuietColor() size:kTickSize];
-  [mark.widthAnchor constraintEqualToConstant:18].active = YES;
-  NSStackView *line = [NSStackView stackViewWithViews:@[mark, MVText(word, now ? MVStyleStrong : MVStyleBody)]];
-  line.spacing = 6;
-  return MVPlaceRow(line, button ? @[button] : @[]);
-}
-
-- (void)fill:(NSStackView *)list with:(NSArray<NSView *> *)views {
-  for (NSView *view in list.arrangedSubviews) [view removeFromSuperview];
-  for (NSView *view in views) [list addArrangedSubview:view];
+  _started = MVNewStepper();
+  return MVPlaceColumn(@[MVText(@"Get Started", MVStyleHeading), MVCard(_started, 8)], 6);
 }
 
 - (void)viewDidMoveToWindow {
@@ -165,7 +168,8 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
   [self drawStep];
   // what stood here unready and got ready is the phone a person just worked on: a phone that was ready all along waits to be chosen
   if (serial && ready && [_unready containsObject:serial]) {
-    [_unready removeObject:serial];
+    // the first opens: a second phone waits for its row
+    [_unready removeAllObjects];
     if (self.onReady) self.onReady(serial);
   }
 }
@@ -186,14 +190,17 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
   NSArray<NSString *> *words = current[1];
   BOOL moved = _shownStep && ![_shownStep isEqual:step];
   _shownStep = step;
-  _picture.step = [step isEqual:@"locked"] || [step isEqual:@"asleep"] ? step : [step isEqual:@"ready"] ? step : wordsOf(step, nil)[0].length ? step : @"plug";
+  _picture.step = _guide[@"needWords"] && ![@[@"locked", @"asleep"] containsObject:step] ? @"plug" : step;
   _picture.accessibilityLabel = MVWord(words[1]);
   _title.stringValue = MVWord(words[0]);
   _say.stringValue = MVWord(words[1]);
   _where.stringValue = MVWord(words[2]);
   _where.hidden = !words[2].length;
   BOOL failed = _got.length && !_getting;
-  _more.stringValue = failed ? [NSString stringWithFormat:@"%@ %@", MVWord(@"It failed: see what it said."), _got] : MVWord(words[3]);
+  _more.stringValue = failed ? MVWord(@"Getting adb failed.") : _guide ? MVWord(words[3]) : @"";
+  _gotText.stringValue = _got ?: @"";
+  _detailsOfGet.hidden = !failed;
+  if (!failed) _gotCard.hidden = YES;
   _more.hidden = !_more.stringValue.length;
   NSArray *steps = _guide[@"steps"];
   NSDictionary *left = [self stepLeft];
@@ -202,41 +209,47 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
   _count.hidden = !counted;
   if (counted) _count.stringValue = MVWord([NSString stringWithFormat:@"Step %lu of %lu", (unsigned long)at + 1, (unsigned long)steps.count]);
   BOOL getting = [step isEqual:@"get-adb"];
-  _terms.hidden = _get.hidden = !getting;
+  _termsLine.hidden = _get.hidden = !getting;
   _get.enabled = !_getting;
   _get.title = MVWord(_getting ? @"Getting adb…" : @"Accept and Get adb");
   BOOL unseen = left && ![left[@"sees"] boolValue] && !_guide[@"needWords"];
   _next.hidden = !unseen;
   _back.hidden = !unseen || !_passed.count;
-  _toClients.hidden = ![step isEqual:@"ready"];
+  _open.hidden = _toClients.hidden = ![step isEqual:@"ready"];
+  // one colour on a screen: the runner takes it only where nothing else asks for it
+  _build.quiet = !_next.hidden || !_get.hidden || !_open.hidden;
   [self drawLists];
   if (!moved) return;
-  _body.wantsLayer = YES;
-  MVFade(_body.layer, 0, 1, kShowSeconds);
+  MVSlideIn(_body, kSlideFrom);
+  MVSlideIn(_picture, kSlideFrom);
   MVAnnounce(words[0]);
 }
 
 - (void)drawLists {
   NSArray *steps = _guide[@"steps"];
-  NSMutableArray<NSView *> *rows = [NSMutableArray array];
+  NSMutableArray<NSDictionary *> *items = [NSMutableArray array];
   NSDictionary *left = [self stepLeft];
   for (NSDictionary *step in steps) {
-    BOOL done = [step[@"done"] boolValue] || (left && [steps indexOfObject:step] < [steps indexOfObject:left]);
-    [rows addObject:[self tick:wordsOf(step[@"id"], _guide[@"maker"])[0] done:done now:step == left button:nil]];
+    BOOL done = [step[@"done"] boolValue] || (left && [steps indexOfObject:step] < [steps indexOfObject:left]) || (!left && [_passed containsObject:step[@"id"]]);
+    [items addObject:@{@"title": wordsOf(step[@"id"], _guide[@"maker"])[0], @"state": done ? @"done" : step == left ? @"now" : @"later"}];
   }
-  [self fill:_ticks with:rows];
+  [_ticks showItems:items];
   _ticksCard.hidden = steps.count == 0;
-  BOOL iphone = _guide[@"maker"] && [_guide[@"maker"] isEqual:@"apple"];
-  _runnerCard.hidden = !iphone;
+  _runnerCard.hidden = ![_guide[@"maker"] isEqual:@"apple"];
   NSMutableArray<NSString *> *lines = [NSMutableArray array];
   for (NSDictionary *check in _guide[@"runner"]) [lines addObject:[NSString stringWithFormat:@"%@: %@", check[@"name"], check[@"detail"]]];
   _runnerLines.stringValue = [lines componentsJoinedByString:@"\n"];
   _runnerLines.hidden = lines.count == 0;
-  [self fill:_started with:@[
-    [self tick:@"Add a device" done:self.hasDevice now:NO button:nil],
-    [self tick:@"Connect an AI client" done:[_guide[@"client"] boolValue] now:NO button:MVPlaceButton(@"Open", @"startClients", self, @selector(toClients:))],
-    [self tick:@"Try a prompt" done:[_guide[@"prompt"] boolValue] now:NO button:MVPlaceButton(@"Open", @"startHelp", self, @selector(toHelp:))],
-  ]];
+  NSArray<NSNumber *> *ticked = @[@(self.hasDevice), @([_guide[@"client"] boolValue]), @([_guide[@"prompt"] boolValue])];
+  NSUInteger now = [ticked indexOfObject:@NO];
+  NSArray<NSString *> *titles = @[@"Add a device", @"Connect an AI client", @"Try a prompt"];
+  NSMutableArray<NSDictionary *> *started = [NSMutableArray array];
+  [titles enumerateObjectsUsingBlock:^(NSString *title, NSUInteger at, BOOL *stop) {
+    NSMutableDictionary *item = [@{@"title": title, @"state": ticked[at].boolValue ? @"done" : at == now ? @"now" : @"later"} mutableCopy];
+    if (at) item[@"end"] = at == 1 ? self->_startClients : self->_startHelp;
+    [started addObject:item];
+  }];
+  [_started showItems:started];
 }
 
 - (void)setHasDevice:(BOOL)hasDevice {
@@ -259,6 +272,11 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
     MVAskClients(@"connect", @{@"fresh": @YES});
   }
   [self drawStep];
+}
+
+- (void)toggleGot:(id)sender {
+  _gotCard.hidden = !_gotCard.hidden;
+  _detailsOfGet.title = MVWord(_gotCard.hidden ? @"Show Details" : @"Hide Details");
 }
 
 - (void)readTerms:(id)sender {
@@ -285,6 +303,11 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
     if ([_passed containsObject:step[@"id"]]) last = step[@"id"];
   if (last) [_passed removeObject:last];
   [self drawStep];
+}
+
+/// A phone that was ready all along waits for this.
+- (void)openPhone:(id)sender {
+  if (self.onOpen && _guide[@"serial"]) self.onOpen(_guide[@"serial"]);
 }
 
 - (void)newSimulator:(id)sender {

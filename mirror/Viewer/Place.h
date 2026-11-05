@@ -7,6 +7,27 @@ NS_ASSUME_NONNULL_BEGIN
 
 @class MVToolsPane;
 
+/// The one button of a screen a person came for, in a colour of its own in any window; `quiet` makes it like the rest.
+@interface MVAccentButton : MVBarButton
+@property(nonatomic) BOOL quiet;
+@end
+
+/// A list that ticks itself, on one line from what is done to what is later. An item has `title`, `state` (`done`, `now` or
+/// `later`), and may have a control at its `end`.
+@interface MVStepper : NSStackView
+- (void)showItems:(NSArray<NSDictionary *> *)items;
+@end
+MVStepper *MVNewStepper(void);
+
+/// A colour darkened only as far as white words on it need, for this window's look.
+NSColor *MVFillFor(NSColor *color);
+/// A tinted square with a symbol, as a part of a page wears it.
+NSView *MVTile(NSString *symbol, NSColor *color, CGFloat side);
+/// A soft ground of the accent, behind a picture.
+NSView *MVWash(void);
+/// A new view arrives: a fade, and a short slide for a person who has not asked for less motion.
+void MVSlideIn(NSView *view, double from);
+
 /// A place of the sidebar that is no device: chosen, it takes the room.
 @interface MVPlace : NSObject
 @property(nonatomic, copy) NSString *title;
@@ -46,7 +67,7 @@ NSStackView *MVPlaceColumn(NSArray<NSView *> *views, CGFloat spacing);
 /// A control of a place, by the name a real click finds it by; it answers the first click, as this window is seldom the key one.
 NSButton *MVPlaceButton(NSString *title, NSString *name, id target, SEL action);
 /// The one button of a row or card a person came for.
-NSButton *MVPlacePrimary(NSString *title, NSString *name, id target, SEL action);
+MVAccentButton *MVPlacePrimary(NSString *title, NSString *name, id target, SEL action);
 /// A quiet ground for what belongs together, `tall` above and below what it holds: no glass, as that is for controls.
 NSView *MVCard(NSView *content, CGFloat tall);
 /// What belongs to the row above it.
@@ -69,6 +90,7 @@ NSTextField *MVCodeText(NSString *text);
 /// Where a copy goes: nowhere a person would meet it, for a window kept behind for a test.
 NSPasteboard *MVPlaceBoard(void);
 void MVPlaceBehind(BOOL behind);
+BOOL MVPlaceIsBehind(void);
 /// Says on a button that its copy was made, for a moment and to a screen reader too.
 void MVSayCopied(NSButton *button);
 /// The hub's two languages, as the parent sends a client's own words.
@@ -104,8 +126,26 @@ NSString *MVSaid(NSDictionary *said);
 @property(nonatomic) BOOL hasDevice;
 /// A phone seen unready here got ready.
 @property(nonatomic, copy, nullable) void (^onReady)(NSString *serial);
+/// A person pressed Open.
+@property(nonatomic, copy, nullable) void (^onOpen)(NSString *serial);
 @property(nonatomic, copy, nullable) void (^onNew)(NSString *kind);
 @property(nonatomic, copy, nullable) void (^onPlace)(NSString *title);
+@end
+
+/// One row of Tools, with what came of it last.
+@interface MVToolRow : NSObject
+- (instancetype)initWithAbout:(NSArray<NSString *> *)about owner:(id)owner run:(SEL)run open:(SEL)open;
+@property(nonatomic, readonly) NSView *view;
+@property(nonatomic, readonly) MVAccentButton *button;
+@property(nonatomic, readonly, copy) NSString *needs, *verb;
+@property(nonatomic, copy, nullable) NSString *running, *file;
+/// Its button now does what its preview showed.
+@property(nonatomic) BOOL armed;
+- (void)dim:(BOOL)dim;
+- (void)began:(NSDictionary *)run device:(nullable NSString *)device;
+- (void)heardText:(NSString *)text;
+- (void)ended:(NSDictionary *)run;
+- (void)armAs:(NSString *)title;
 @end
 
 /// Tools: what appdyno does at a terminal, from the window.

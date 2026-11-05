@@ -89,8 +89,8 @@ NSTextField *MVNoteText(NSString *text) {
   return field;
 }
 
-static NSButton *buttonNamed(NSString *title, NSString *name, id target, SEL action) {
-  NSButton *button = [MVBarButton buttonWithTitle:MVWord(title) target:target action:action];
+static id buttonNamed(Class kind, NSString *title, NSString *name, id target, SEL action) {
+  NSButton *button = [kind buttonWithTitle:MVWord(title) target:target action:action];
   button.identifier = name;
   button.controlSize = NSControlSizeRegular;
   button.bezelStyle = NSBezelStylePush;
@@ -100,13 +100,11 @@ static NSButton *buttonNamed(NSString *title, NSString *name, id target, SEL act
 }
 
 NSButton *MVPlaceButton(NSString *title, NSString *name, id target, SEL action) {
-  return buttonNamed(title, name, target, action);
+  return buttonNamed(MVBarButton.class, title, name, target, action);
 }
 
-NSButton *MVPlacePrimary(NSString *title, NSString *name, id target, SEL action) {
-  NSButton *button = buttonNamed(title, name, target, action);
-  button.bezelColor = NSColor.controlAccentColor;
-  return button;
+MVAccentButton *MVPlacePrimary(NSString *title, NSString *name, id target, SEL action) {
+  return buttonNamed(MVAccentButton.class, title, name, target, action);
 }
 
 @interface MVCardView : NSView
@@ -243,6 +241,10 @@ static BOOL gBehind;
 
 void MVPlaceBehind(BOOL behind) {
   gBehind = behind;
+}
+
+BOOL MVPlaceIsBehind(void) {
+  return gBehind;
 }
 
 static NSString *gOpened;

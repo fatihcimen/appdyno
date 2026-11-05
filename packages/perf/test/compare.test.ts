@@ -6,6 +6,7 @@ import {
   addToBaseline,
   compareMetric,
   exitCode,
+  gateSaid,
   latestRuns,
   loadBaseline,
   median,
@@ -247,6 +248,16 @@ describe('what stops the gate', () => {
   it('lets through what it has nothing to compare with, and what got better', () => {
     expect(exitCode([report('new'), report('ok'), report('improvement')])).toBe(0);
     expect(toText([report('new')])).not.toContain('could not judge');
+  });
+
+  it('reads back in its own words what its text says, which an exit code cannot', () => {
+    const said = (verdict: string) => gateSaid(toText([report(verdict)]));
+    expect(said('regression')).toBe('regression');
+    for (const verdict of ['few-samples', 'noisy', 'refused'])
+      expect(said(verdict)).toBe('unjudged');
+    for (const verdict of ['ok', 'new', 'improvement']) expect(said(verdict)).toBe('clear');
+    const over = { ...(report('ok') as object), budgets: [{ ok: false, kind: 'k', limit: 1 }] };
+    expect(gateSaid(toText([over as never]))).toBe('regression');
   });
 });
 
