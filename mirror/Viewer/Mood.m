@@ -56,7 +56,7 @@ static CGImageRef moodOf(const MVPixels *p, BOOL dark) {
       for (int i = 0; i < 3; i++) {
         // richer than the picture, and always behind it: dark stays dark and light stays light, whatever is on screen
         double rich = unit(luma + (c[i] - luma) * 1.7);
-        out[i] = (uint8_t)(255 * (dark ? 0.05 + rich * 0.5 : 0.56 + rich * 0.42));
+        out[i] = (uint8_t)(255 * (dark ? 0.05 + rich * 0.28 : 0.62 + rich * 0.36));
       }
       out[3] = 255;
     }

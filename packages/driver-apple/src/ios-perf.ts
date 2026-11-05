@@ -1,4 +1,4 @@
-import { Cannot, cannot, sleep, type CompileMode } from '@appdyno/core';
+import { Cannot, cannot, reportProgress, sleep, type CompileMode } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 
 const SHOWN_WITHIN_MS = 20_000;
@@ -21,6 +21,7 @@ export async function sampleLaunches(
 ) {
   const samples: number[] = [];
   for (let i = 0; i < repeats + 1; i++) {
+    reportProgress(`launch ${i + 1} of ${repeats + 1}`);
     await each.prepare();
     await sleep(BEFORE_A_LAUNCH_MS);
     const ms = await each.launch();

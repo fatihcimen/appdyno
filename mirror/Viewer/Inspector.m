@@ -3,18 +3,26 @@
 #import "Window.h"
 
 enum { kActivityRows = 200 };
-static const double kUsualRate = 60, kSparkHeight = 56, kPillPadding = 10;
+static const double kUsualRate = 60, kSparkHeight = 56, kTab = 28, kInset = 16;
+
+/// The panes in the order their symbols stand, by the index `showPane:` takes.
+static const struct {
+  const char *identifier, *title, *symbol;
+} kTabs[MVPanes] = {
+    {"tabPerformance", "Performance", "gauge.with.dots.needle.67percent"},
+    {"tabFlows", "Flows", "point.topleft.down.to.point.bottomright.curvepath"},
+    {"tabApps", "Apps", "square.grid.2x2"},
+    {"tabActivity", "Activity", "clock.arrow.circlepath"},
+};
 
 static NSTextField *caption(NSString *text) {
-  NSTextField *field = [NSTextField labelWithString:text];
-  field.font = [NSFont systemFontOfSize:11];
-  field.textColor = NSColor.secondaryLabelColor;
-  return field;
+  return MVText(text, MVStyleSub);
 }
 
 static NSTextField *value(void) {
-  NSTextField *field = [NSTextField labelWithString:@"–"];
+  NSTextField *field = MVText(@"–", MVStyleSub);
   field.font = [NSFont monospacedDigitSystemFontOfSize:11 weight:NSFontWeightMedium];
+  field.textColor = NSColor.labelColor;
   field.alignment = NSTextAlignmentRight;
   field.lineBreakMode = NSLineBreakByTruncatingMiddle;
   return field;
@@ -25,8 +33,8 @@ static NSString *ms(id v) {
 }
 
 @implementation MVInspector {
-  NSStackView *_tabs;
-  NSArray<NSButton *> *_pills;
+  NSArray<NSButton *> *_tabs;
+  NSTextField *_paneName;
   NSView *_panes[MVPanes];
   NSInteger _chosen;
   NSTextField *_fps, *_fpsNote;
@@ -46,25 +54,29 @@ static NSString *ms(id v) {
 - (instancetype)initWithFrame:(NSRect)frame target:(id)target {
   if ((self = [super initWithFrame:frame])) {
     _calls = [NSMutableArray array];
-    NSMutableArray *pills = [NSMutableArray array];
-    for (NSString *title in @[@"Performance", @"Flow", @"Apps", @"Activity", @"Stats"]) {
-      NSButton *pill = [NSButton buttonWithTitle:title target:self action:@selector(tabChosen:)];
-      pill.bordered = NO;
-      pill.wantsLayer = YES;
-      pill.layer.cornerRadius = 13;
-      pill.font = [NSFont systemFontOfSize:12 weight:NSFontWeightSemibold];
-      pill.tag = pills.count;
-      [pill.heightAnchor constraintEqualToConstant:26].active = YES;
-      [pill.widthAnchor constraintGreaterThanOrEqualToConstant:pill.intrinsicContentSize.width + kPillPadding].active = YES;
-      [pills addObject:pill];
+    NSMutableArray *tabs = [NSMutableArray array];
+    for (NSInteger i = 0; i < MVPanes; i++) {
+      NSButton *tab = [MVBarButton buttonWithImage:[NSImage new] target:self action:@selector(tabChosen:)];
+      tab.bordered = NO;
+      tab.wantsLayer = YES;
+      tab.layer.cornerRadius = kTab / 4;
+      tab.tag = i;
+      tab.identifier = @(kTabs[i].identifier);
+      tab.toolTip = @(kTabs[i].title);
+      tab.accessibilityLabel = @(kTabs[i].title);
+      [tab.widthAnchor constraintEqualToConstant:kTab].active = YES;
+      [tab.heightAnchor constraintEqualToConstant:kTab].active = YES;
+      [tabs addObject:tab];
     }
-    _pills = pills;
-    _tabs = [NSStackView stackViewWithViews:pills];
-    _tabs.distribution = NSStackViewDistributionFillProportionally;
-    _tabs.spacing = 2;
-    _tabs.translatesAutoresizingMaskIntoConstraints = NO;
-    [self addSubview:_tabs];
-    _panes[MVPaneStats] = [self statsPane];
+    _tabs = tabs;
+    _paneName = MVText(@"", MVStyleTitle);
+    NSView *gap = [NSView new];
+    [gap setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
+    NSStackView *head = [NSStackView stackViewWithViews:[@[_paneName, gap] arrayByAddingObjectsFromArray:tabs]];
+    head.spacing = 2;
+    head.translatesAutoresizingMaskIntoConstraints = NO;
+    [self addSubview:head];
+    _numbers = [self statsPane];
     _panes[MVPaneActivity] = [self activityPane];
     _panes[MVPaneApps] = [self appsPane];
     _perf = [[MVPerfPane alloc] initWithFrame:NSZeroRect target:target];
@@ -72,9 +84,9 @@ static NSString *ms(id v) {
     _flow = [[MVFlowPane alloc] initWithFrame:NSZeroRect target:target];
     _panes[MVPaneFlow] = _flow;
     NSMutableArray *rules = [NSMutableArray arrayWithArray:@[
-      [_tabs.topAnchor constraintEqualToAnchor:self.topAnchor constant:12],
-      [_tabs.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:12],
-      [_tabs.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-12],
+      [head.topAnchor constraintEqualToAnchor:self.topAnchor constant:12],
+      [head.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:kInset],
+      [head.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-kInset],
     ]];
     for (int i = 0; i < MVPanes; i++) {
       NSView *pane = _panes[i];
@@ -82,10 +94,10 @@ static NSString *ms(id v) {
       pane.hidden = i != MVPanePerf;
       [self addSubview:pane];
       [rules addObjectsFromArray:@[
-        [pane.topAnchor constraintEqualToAnchor:_tabs.bottomAnchor constant:12],
-        [pane.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:12],
-        [pane.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-12],
-        [pane.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-12],
+        [pane.topAnchor constraintEqualToAnchor:head.bottomAnchor constant:12],
+        [pane.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:kInset],
+        [pane.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-kInset],
+        [pane.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-kInset],
       ]];
     }
     [NSLayoutConstraint activateConstraints:rules];
@@ -97,7 +109,7 @@ static NSString *ms(id v) {
 /// One figure of the three a person came for.
 - (NSView *)tile:(NSString *)name value:(NSString *)key {
   NSTextField *number = value();
-  number.font = MVRoundedFont(20, NSFontWeightSemibold);
+  number.font = MVRoundedFont(22, NSFontWeightSemibold);
   number.alignment = NSTextAlignmentLeft;
   _tiles[key] = number;
   NSStackView *stack = [NSStackView stackViewWithViews:@[number, caption(name)]];
@@ -110,8 +122,7 @@ static NSString *ms(id v) {
 /// Rows of a name and a value under a heading, each value kept by its key. A kind of number that comes later, such
 /// as the device's own CPU and memory, is one more of these.
 - (NSView *)group:(NSString *)title rows:(NSArray<NSArray<NSString *> *> *)rows into:(NSMutableDictionary *)values {
-  NSTextField *heading = caption(title);
-  heading.font = [NSFont systemFontOfSize:11 weight:NSFontWeightSemibold];
+  NSTextField *heading = MVPaneHeading(title);
   NSMutableArray *cells = [NSMutableArray array];
   for (NSArray<NSString *> *row in rows) {
     values[row[0]] = value();
@@ -217,17 +228,13 @@ static NSString *ms(id v) {
 }
 
 - (void)showPane:(NSInteger)pane {
-  for (NSButton *pill in _pills) {
-    BOOL chosen = pill.tag == pane;
-    pill.layer.backgroundColor = chosen ? NSColor.controlAccentColor.CGColor : NSColor.clearColor.CGColor;
-    // a title's own colour: a borderless button's tint leaves its words dim in a window that is not key
-    NSDictionary *words = @{NSFontAttributeName: pill.font, NSForegroundColorAttributeName: chosen ? NSColor.whiteColor : NSColor.labelColor};
-    NSMutableParagraphStyle *middle = [NSMutableParagraphStyle new];
-    middle.alignment = NSTextAlignmentCenter;
-    NSMutableAttributedString *title = [[NSMutableAttributedString alloc] initWithString:pill.title attributes:words];
-    [title addAttribute:NSParagraphStyleAttributeName value:middle range:NSMakeRange(0, title.length)];
-    pill.attributedTitle = title;
+  for (NSButton *tab in _tabs) {
+    BOOL chosen = tab.tag == pane;
+    tab.layer.backgroundColor = chosen ? NSColor.controlAccentColor.CGColor : NSColor.clearColor.CGColor;
+    tab.image = MVSymbol(@(kTabs[tab.tag].symbol), chosen ? NSColor.whiteColor : NSColor.labelColor, 14, NSFontWeightRegular);
+    tab.accessibilityValue = chosen ? @"selected" : nil;
   }
+  _paneName.stringValue = @(kTabs[pane].title);
   for (int i = 0; i < MVPanes; i++) _panes[i].hidden = i != pane;
   _chosen = pane;
   if (self.onPane) self.onPane();

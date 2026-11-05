@@ -15,7 +15,8 @@ NS_ASSUME_NONNULL_BEGIN
   MVToolbar *_bar;
   NSToolbar *_toolbar;
   MVHud *_hud;
-  BOOL _hudding, _reading, _recording;
+  BOOL _hudding, _reading, _recording, _waitingForPerson;
+  __weak MVRoomView *_room;
   MVRootView *_root;
   MVBackdrop *_backdrop;
   MVStatusLine *_line;
@@ -25,6 +26,7 @@ NS_ASSUME_NONNULL_BEGIN
   int _turns;
   NSString *_name, *_kind;
   NSDictionary *_look;
+  NSPopover *_numbers;
 }
 - (double)fitZoom;
 - (void)setZoom:(double)zoom;
@@ -32,7 +34,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)toggleInspector;
 - (void)watchReadings;
 - (void)toggleHud;
-- (void)sayStatus:(NSString *)subtitle;
+- (void)showState;
 @end
 
 @interface MVWindow (Inspector)

@@ -89,7 +89,7 @@ NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight) {
   if (_count < _capacity) _count++;
   BOOL moved = NO;
   for (int i = 0; i < _capacity; i++) moved = moved || _values[i] > 0;
-  self.hidden = !moved;
+  self.hidden = !moved && !self.stays;
   self.needsDisplay = YES;
 }
 

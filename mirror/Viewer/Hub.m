@@ -5,6 +5,7 @@
 static const NSSize kOpens = {1240, 820};
 // under this a window gives up its Inspector, and then its sidebar
 static const double kContentLeast = 520;
+static const double kWordsWide = 320;
 static const double kSidebar = 260;
 // a window's three buttons stand above the sidebar's first line
 static const double kBelowLights = 46;
@@ -12,7 +13,7 @@ static NSString *const kFold = @"fold";
 
 static NSColor *_Nullable stateColor(NSDictionary *device) {
   if ([device[@"mirrored"] boolValue]) return NSColor.systemBlueColor;
-  return [device[@"state"] isEqual:@"running"] ? NSColor.systemGreenColor : nil;
+  return [device[@"state"] isEqual:@"running"] ? MVGreen() : nil;
 }
 
 static NSString *stateWords(NSDictionary *device) {
@@ -23,15 +24,6 @@ static NSString *stateWords(NSDictionary *device) {
 static NSString *symbolOf(NSDictionary *device) {
   if ([device[@"model"] hasPrefix:@"iPad"]) return @"ipad";
   return [device[@"platform"] isEqual:@"android"] ? @"candybarphone" : @"iphone";
-}
-
-static NSTextField *label(CGFloat size, NSFontWeight weight, NSColor *color) {
-  NSTextField *field = [NSTextField labelWithString:@""];
-  field.font = [NSFont systemFontOfSize:size weight:weight];
-  field.textColor = color;
-  field.alignment = NSTextAlignmentCenter;
-  field.lineBreakMode = NSLineBreakByTruncatingTail;
-  return field;
 }
 
 @implementation MVRoomView
@@ -80,6 +72,7 @@ static NSTextField *label(CGFloat size, NSFontWeight weight, NSColor *color) {
   NSStackView *_column;
   NSString *_chosen;
   MVNewDevice *_asking;
+  MVToolbar *_bare;
 }
 
 - (instancetype)initWithShow:(MVShow)how poses:(BOOL)poses {
@@ -91,6 +84,7 @@ static NSTextField *label(CGFloat size, NSFontWeight weight, NSColor *color) {
     _window.delegate = self;
     _window.poses = poses;
     _window.titlebarAppearsTransparent = YES;
+    _window.titleVisibility = NSWindowTitleHidden;
     _window.contentMinSize = NSMakeSize(kContentLeast, 520);
     _window.offscreen = how == MVShowBehind;
     if (how != MVShowBehind) _window.frameAutosaveName = @"hub";
@@ -113,6 +107,16 @@ static NSTextField *label(CGFloat size, NSFontWeight weight, NSColor *color) {
     [split addSplitViewItem:slot.item];
     _window.contentViewController = split;
     [_window setContentSize:kOpens];
+    _bare = [[MVToolbar alloc] initWithGroups:@[] target:self action:@selector(barClicked:)];
+    MVRoomView *room = (MVRoomView *)_room;
+    room.bare = _bare.toolbar;
+    __weak MVHub *weak = self;
+    room.rowOf = ^(NSString *serial) {
+      return [weak rowFor:serial];
+    };
+    _bare.capsule.hidden = YES;
+    _window.toolbar = room.bare;
+    _window.toolbarStyle = NSWindowToolbarStyleUnified;
     MVPresent(_window, how);
   }
   return self;
@@ -131,9 +135,17 @@ static NSTextField *label(CGFloat size, NSFontWeight weight, NSColor *color) {
   _search = [NSSearchField new];
   _search.placeholderString = @"Search";
   _search.delegate = self;
-  _new = [NSButton buttonWithImage:[NSImage imageWithSystemSymbolName:@"plus" accessibilityDescription:@"New simulator or emulator"] target:self action:@selector(askNew:)];
+  _new = [MVBarButton buttonWithImage:[NSImage new] target:self action:@selector(askNew:)];
   _new.bordered = NO;
+  _new.identifier = @"new";
   _new.toolTip = @"New simulator or emulator";
+  _new.accessibilityLabel = @"New simulator or emulator";
+  MVInk *plus = [[MVInk alloc] initWithSymbol:@"plus" color:NSColor.labelColor size:14];
+  plus.frame = NSMakeRect(0, 0, 24, 24);
+  plus.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+  [_new addSubview:plus];
+  [_new.widthAnchor constraintEqualToConstant:24].active = YES;
+  [_new.heightAnchor constraintEqualToConstant:24].active = YES;
   _list = [[MVList alloc] initWithFrame:NSZeroRect];
   [_list useSidebarStyle];
   __weak MVHub *weak = self;
@@ -167,8 +179,10 @@ static NSTextField *label(CGFloat size, NSFontWeight weight, NSColor *color) {
 - (NSView *)roomView {
   _room = [MVRoomView new];
   _room.wantsLayer = YES;
-  _name = label(22, NSFontWeightSemibold, NSColor.labelColor);
-  _about = label(13, NSFontWeightRegular, NSColor.secondaryLabelColor);
+  _name = MVText(@"", MVStyleTitle);
+  _about = MVWrappedText(@"", MVStyleBody);
+  _about.alignment = NSTextAlignmentCenter;
+  _about.preferredMaxLayoutWidth = kWordsWide;
   _start = [NSButton buttonWithTitle:@"Start" target:self action:@selector(togglePower:)];
   _start.controlSize = NSControlSizeLarge;
   _start.keyEquivalent = @"\r";
@@ -228,9 +242,16 @@ static NSArray<NSString *> *namedParts(NSString *name) {
 
 static MVRow *rowOf(NSDictionary *device) {
   MVRow *row = [MVRow new];
+  // one name everywhere: what it is, then its system and what this Mac calls it
   NSArray<NSString *> *parts = namedParts(device[@"name"] ?: @"");
-  row.title = parts[0];
-  row.detail = [parts[1] length] && [device[@"detail"] length] ? [NSString stringWithFormat:@"%@  ·  %@", device[@"detail"], parts[1]] : [device[@"detail"] length] ? device[@"detail"] : parts[1];
+  NSString *model = device[@"model"], *own = parts[0];
+  BOOL named = model.length && ![model isEqual:own];
+  row.title = named ? model : own;
+  NSMutableArray<NSString *> *about = [NSMutableArray array];
+  if ([parts[1] length]) [about addObject:parts[1]];
+  if (named) [about addObject:own];
+  if ([device[@"detail"] length] && ![device[@"detail"] isEqual:model]) [about addObject:device[@"detail"]];
+  row.detail = [about componentsJoinedByString:@" · "];
   row.symbol = symbolOf(device);
   row.tint = NSColor.secondaryLabelColor;
   row.dot = stateColor(device);
@@ -305,6 +326,8 @@ static MVRow *rowOf(NSDictionary *device) {
   _name.stringValue = device ? namedParts(device[@"name"] ?: @"")[0] : _devices.count ? @"Choose a device" : @"No device yet";
   _about.stringValue = device ? (elsewhere ? @"In a window of its own" : stateWords(device)) : _devices.count ? @"A phone starts only when you choose it." : @"Connect a phone with its cable, or make a simulator with +.";
   _start.title = elsewhere ? @"Close That Window" : @"Start";
+  if (device) [_bare setName:rowOf(device).title about:rowOf(device).detail];
+  else [_bare setName:@"appdyno" about:nil];
   _start.hidden = !device || (running && !elsewhere) || [device[@"kind"] isEqual:@"phone"];
 }
 
@@ -312,6 +335,22 @@ static MVRow *rowOf(NSDictionary *device) {
   if (!_shown) return;
   if ([_shown[@"mirrored"] boolValue]) return MVEmit(@{@"op": @"hub", @"action": @"close", @"serial": _shown[@"serial"] ?: _shown[@"id"]});
   MVEmit(@{@"op": @"hub", @"action": [_shown[@"state"] isEqual:@"running"] ? @"stop" : @"start", @"id": _shown[@"id"]});
+}
+
+/// With no device standing the bar has one control left to answer for.
+- (void)barClicked:(NSButton *)sender {
+  NSSplitViewItem *item = ((MVRoomView *)_room).slot.item;
+  if ([sender.identifier isEqual:@"inspector"]) (MVMoves() ? item.animator : item).collapsed = !item.collapsed;
+}
+
+/// What the sidebar says of a device, for the bar over it.
+- (nullable NSDictionary *)rowFor:(NSString *)serial {
+  for (NSDictionary *device in _devices) {
+    if (![(device[@"serial"] ?: device[@"id"]) isEqual:serial]) continue;
+    MVRow *row = rowOf(device);
+    return @{@"about": row.detail ?: @"", @"link": device[@"link"] ?: @""};
+  }
+  return nil;
 }
 
 - (nullable NSDictionary *)deviceKeyed:(nullable NSString *)key {

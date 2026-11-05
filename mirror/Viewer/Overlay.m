@@ -3,7 +3,7 @@
 #import "Viewer.h"
 #import "Window.h"
 
-static const double kCardWidth = 264, kInset = 16, kNoteSeconds = 4, kRing = 44, kRingSeconds = 0.6;
+static const double kCardWidth = 264, kInset = 16, kRing = 44, kRingSeconds = 0.6;
 
 /// A click on it is the picture's, even with a card showing; only a button is its own.
 @interface MVCard : NSVisualEffectView
@@ -165,64 +165,6 @@ static NSString *symbolOf(NSString *state) {
 - (void)done:(id)sender {
   if (_bannerId) MVEmitFrom(_view, @{@"op": @"done", @"id": _bannerId});
   [self hideBanner];
-}
-
-@end
-
-@implementation MVStatusLine {
-  NSString *_note;
-}
-
-- (void)setName:(NSString *)name {
-  _name = [name copy];
-  [self show];
-}
-
-- (void)setState:(NSString *)state {
-  _state = [state copy];
-  [self show];
-}
-
-- (void)setTool:(NSString *)tool {
-  _tool = [tool copy];
-  [self show];
-}
-
-- (void)setPairing:(NSString *)pairing {
-  _pairing = [pairing copy];
-  [self show];
-}
-
-- (void)setFailing:(NSString *)failing {
-  _failing = [failing copy];
-  [self show];
-}
-
-- (void)say:(NSString *)note {
-  _note = note;
-  [self show];
-  __weak MVStatusLine *weak = self;
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kNoteSeconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-    [weak clear:note];
-  });
-}
-
-- (void)clear:(NSString *)note {
-  if (_note != note) return;
-  _note = nil;
-  [self show];
-}
-
-- (NSString *)stringValue {
-  if (_note) return _note;
-  NSMutableArray<NSString *> *parts = [NSMutableArray arrayWithObject:_failing ?: _state ?: @"Connecting"];
-  if (_tool) [parts addObject:_tool.length ? [@"Agent driving: " stringByAppendingString:_tool] : @"Agent driving"];
-  if (_pairing && !_failing) [parts addObject:_pairing];
-  return [parts componentsJoinedByString:@"  \u00B7  "];
-}
-
-- (void)show {
-  if (self.onChange) self.onChange(self.stringValue);
 }
 
 @end

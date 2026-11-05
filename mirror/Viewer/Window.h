@@ -51,16 +51,35 @@ NS_ASSUME_NONNULL_BEGIN
 /// Where a window of two stands in this room: on its side of the middle, tops level, and never off its left.
 NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left);
 
-/// The line beneath the device: its name, how it is, and whether an agent is on it.
+typedef NS_ENUM(NSInteger, MVTone) { MVToneLive, MVToneBusy, MVToneNeedsYou, MVToneAgent, MVToneBad };
+
+/// All that is happening to a device, and the one thing to say of it now.
 @interface MVStatusLine : NSObject
-/// It has something new to say.
-@property(nonatomic, copy, nullable) void (^onChange)(NSString *subtitle);
+/// A note it said has run out.
+@property(nonatomic, copy, nullable) void (^onChange)(void);
 /// What it says now.
 @property(nonatomic, readonly) NSString *stringValue;
+@property(nonatomic, readonly) MVTone tone;
 @property(nonatomic, copy, nullable) NSString *name;
+/// What the hub's row says under the name: a window of its own has none.
+@property(nonatomic, copy, nullable) NSString *about;
 @property(nonatomic, copy, nullable) NSString *state;
+/// The picture is live, and `state` is only how to say so.
+@property(nonatomic) BOOL live;
+/// A person has something to do before it can be.
+@property(nonatomic) BOOL stuck;
+/// Frames shown a second, where they move.
+@property(nonatomic) double rate;
+/// How a phone is joined to this Mac.
+@property(nonatomic, copy, nullable) NSString *link;
 /// While an agent drives; empty when it does not say what with.
 @property(nonatomic, copy, nullable) NSString *tool;
+/// The AI client that drives, where it says.
+@property(nonatomic, copy, nullable) NSString *client;
+/// What a measure is at, and how far, as a part of 1.
+@property(nonatomic, copy, nullable) NSString *measuring;
+@property(nonatomic) double progress;
+@property(nonatomic) BOOL recording;
 /// Where a touch goes, beside another window.
 @property(nonatomic, copy, nullable) NSString *pairing;
 /// A touch goes to both.
@@ -69,6 +88,43 @@ NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left);
 @property(nonatomic, copy, nullable) NSString *failing;
 /// Words in its place for a few seconds.
 - (void)say:(NSString *)note;
+@end
+
+/// Words of the hub's panes.
+typedef NS_ENUM(NSInteger, MVStyle) { MVStyleTitle, MVStyleBody, MVStyleStrong, MVStyleCallout, MVStyleHeading, MVStyleSub };
+NSTextField *MVText(NSString *text, MVStyle style);
+NSTextField *MVWrappedText(NSString *text, MVStyle style);
+/// A colour as it is, by its look: the system's own fade to 2:1 in the bar of a window behind others, and this does not.
+NSColor *MVSolid(NSColor *color);
+/// What stands under a main word: it reads at 4.5:1 on any pane, in a window behind others too.
+NSColor *MVQuietColor(void);
+/// Green for live or passed, and orange for what needs a person: each holds 3:1 on every pane, dark and light.
+NSColor *MVGreen(void);
+NSColor *MVOrange(void);
+/// A symbol in its own ink: AppKit dims a template in a window behind others, and leaves this as it is.
+NSImage *_Nullable MVSymbol(NSString *name, NSColor *color, CGFloat size, NSFontWeight weight);
+/// A symbol drawn by itself: in a window behind others AppKit fades every image in the bar, whatever its ink, and not this.
+@interface MVInk : NSView
+- (instancetype)initWithSymbol:(NSString *)symbol color:(NSColor *)color size:(CGFloat)size;
+- (void)paint:(NSString *)symbol color:(NSColor *)color;
+@property(nonatomic, readonly) CGFloat size;
+@end
+
+/// Whether a person has left motion on.
+BOOL MVMoves(void);
+/// Opacity to `to`; at once for a person who asked for less motion.
+void MVFade(CALayer *layer, double from, double to, double seconds);
+
+/// A click on a window not in use is the click a person meant: without this its first click on any control only made the
+/// window the one in use, with nothing to show for it, and this window is usually not the one in use.
+@interface MVBarButton : NSButton
+@end
+
+/// What a device is at, in the toolbar. A click on it shows the stream's numbers.
+@interface MVCapsule : MVBarButton
+- (void)show:(MVStatusLine *)line;
+/// What it says now.
+@property(nonatomic, readonly) NSString *words;
 @end
 
 /// A pane of glass around `content`: the system's where it has one, its nearest material where it has not.
@@ -121,6 +177,7 @@ void MVCopyImage(NSString *file);
 /// A control's words and symbol, by its name.
 NSString *MVControlTitle(NSString *name);
 NSImage *_Nullable MVControlImage(NSString *name);
+NSString *MVControlSymbol(NSString *name);
 /// One menu of the table; with `names`, only what they list.
 NSMenu *MVControlMenu(NSString *title, NSArray<NSString *> *_Nullable names);
 NSMenu *MVMainMenu(NSArray<NSString *> *_Nullable names);
@@ -143,6 +200,8 @@ NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight);
 @interface MVSpark : NSView
 /// From its first readings it takes the whole width.
 @property(nonatomic) BOOL fills;
+/// It stands even while nothing has moved: a row that came and went would move all under it.
+@property(nonatomic) BOOL stays;
 @property(nonatomic) double usual;
 /// How many readings it holds: a minute's, unless told.
 @property(nonatomic) int capacity;
@@ -211,6 +270,8 @@ static const double MVHudWidth = 188;
 - (void)show:(NSDictionary *)message;
 - (void)showMeasuring:(NSString *)line;
 - (void)showMeasured:(NSDictionary *)result;
+/// What was measured on this device before, newest first, and the name of the app a measure restarts.
+- (void)showHistory:(NSDictionary *)message;
 /// What the last measure came to, and how a line of the readings stands.
 - (NSString *)lastResult;
 - (BOOL)lastMarked;
@@ -258,16 +319,22 @@ static const double MVInspectorWidth = 320;
 /// Where the chosen stand: one fills it, and two share it evenly. Its window's Inspector goes with it.
 @interface MVRoomView : NSView
 @property(nonatomic) MVInspectorSlot *slot;
+/// The toolbar while no device stands here.
+@property(nonatomic) NSToolbar *bare;
+/// What the sidebar says of a device.
+@property(nonatomic, copy, nullable) NSDictionary *_Nullable (^rowOf)(NSString *serial);
 @end
 
 /// The panes of the Inspector, by the index `showPane:` takes.
-enum { MVPanePerf, MVPaneFlow, MVPaneApps, MVPaneActivity, MVPaneStats, MVPanes };
+enum { MVPanePerf, MVPaneFlow, MVPaneApps, MVPaneActivity, MVPanes };
 
-/// The right-hand pane: Performance, Flow, Apps, Activity and Stats. Glass is around it: all it has inside is fills.
+/// What goes in the Inspector: Performance, Flows, Apps and Activity, by four symbols and the name of the one chosen.
 @interface MVInspector : NSView
 - (instancetype)initWithFrame:(NSRect)frame target:(id)target;
 @property(nonatomic, readonly) MVPerfPane *perf;
 @property(nonatomic, readonly) MVFlowPane *flow;
+/// The stream's numbers, which stand in no pane of their own.
+@property(nonatomic, readonly) NSView *numbers;
 /// Whether Performance is the pane chosen.
 @property(nonatomic, readonly) BOOL readings;
 /// Whether Flow is.
@@ -288,6 +355,11 @@ typedef NS_ENUM(NSInteger, MVShow) { MVShowBehind, MVShowFront, MVShowFocused };
 - (NSToolbar *)toolbar;
 /// What stands for a control, for a word on it, or a click.
 - (nullable NSButton *)buttonNamed:(NSString *)name;
+/// What stands left of the capsule: the device's name, and a line under it. Its controls say the same to a screen reader.
+- (void)setName:(NSString *)name about:(nullable NSString *)about;
+@property(nonatomic, readonly) MVCapsule *capsule;
+/// A control's symbol now, in its own ink.
+- (void)paint:(NSString *)name symbol:(NSString *)symbol color:(NSColor *)color;
 @end
 
 /// All of a device's views: the whole of a window of its own, or what stands in a room of the hub's.

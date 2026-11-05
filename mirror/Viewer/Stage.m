@@ -110,14 +110,15 @@
   }
   if ([op isEqual:@"record"]) return [self record:m];
   if ([op isEqual:@"recordStop"]) return [self recordStop];
-  if ([op isEqual:@"agent"]) return [_window setDriving:[m[@"driving"] boolValue] tool:m[@"tool"] ?: @""];
-  if ([op isEqual:@"banner"]) return m[@"id"] ? [_window.overlay showBanner:m] : [_window.overlay hideBanner];
+  if ([op isEqual:@"agent"]) return [_window setDriving:[m[@"driving"] boolValue] tool:m[@"tool"] ?: @"" client:m[@"client"]];
+  if ([op isEqual:@"banner"]) return [_window askPerson:m];
   if ([op isEqual:@"activity"]) return [_window addActivity:m];
   if ([op isEqual:@"apps"]) return [_window showApps:m];
   if ([op isEqual:@"perf"]) return [_window showPerf:m];
   if ([op isEqual:@"flow"]) return [_window showFlow:m];
   if ([op isEqual:@"element"]) return [_window showElement:m];
   if ([op isEqual:@"measuring"] || [op isEqual:@"measured"]) return [_window showMeasure:m];
+  if ([op isEqual:@"results"]) return [_window.inspector.perf showHistory:m];
   if ([op isEqual:@"note"]) return [_window sayNote:m[@"text"] ?: @""];
   if ([op isEqual:@"recording"]) return [_window setRecording:[m[@"on"] boolValue]];
   if ([op isEqual:@"pair"]) return [_window setPair:m];

@@ -57,6 +57,11 @@ NSString *MVControlTitle(NSString *name) {
   return row ? @(row->title) : name;
 }
 
+NSString *MVControlSymbol(NSString *name) {
+  const MVControlRow *row = rowNamed(name);
+  return row ? @(row->symbol) : @"questionmark";
+}
+
 NSImage *MVControlImage(NSString *name) {
   const MVControlRow *row = rowNamed(name);
   return row ? [NSImage imageWithSystemSymbolName:@(row->symbol) accessibilityDescription:@(row->title)] : nil;

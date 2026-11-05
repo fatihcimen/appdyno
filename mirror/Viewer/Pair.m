@@ -19,9 +19,9 @@ NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left) {
   self.line.pairing = ended ? nil : both ? @"To both" : @"Here only";
   NSButton *button = [self.bar buttonNamed:@"both"];
   button.enabled = !ended;
-  button.contentTintColor = both ? NSColor.controlAccentColor : NSColor.labelColor;
+  [self.bar paint:@"both" symbol:@"link" color:both ? NSColor.controlAccentColor : NSColor.labelColor];
   button.toolTip = ended ? @"The other window has closed" : [NSString stringWithFormat:both ? @"Touches go here and to %@" : @"Touches stay here, and do not reach %@", with];
-  [self tintPill];
+  [self showState];
 }
 
 - (void)placeBeside {

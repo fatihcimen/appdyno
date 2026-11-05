@@ -4,7 +4,7 @@
 
 static const double kBetween = 10;
 // the Inspector's width, less what its pane and this stack leave at the sides
-static const double kWordsWide = 268;
+static const double kWordsWide = 280;
 
 /// What a click does, by the segment chosen; nil: it touches the device.
 static NSString *clickNamed(NSInteger segment) {

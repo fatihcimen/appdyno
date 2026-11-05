@@ -23,7 +23,11 @@
   if (_window.toolbar == _toolbar) return;
   _window.toolbar = _toolbar;
   _window.toolbarStyle = NSWindowToolbarStyleUnified;
-  [self sayStatus:_line.stringValue];
+  _window.titleVisibility = NSWindowTitleHidden;
+  NSDictionary *row = _room.rowOf ? _room.rowOf(_root.stage ?: @"") : nil;
+  _line.about = row[@"about"] ?: _look[@"frame"][@"model"];
+  _line.link = row[@"link"];
+  [self showState];
 }
 
 - (void)showMore:(NSView *)anchor {
@@ -47,7 +51,22 @@
   if (!MVShortcutMayAct(NSApp.currentEvent, _window)) return;
   NSString *name = [sender isKindOfClass:NSMenuItem.class] ? [sender representedObject] : [sender identifier];
   if ([name isEqual:@"more"]) return [self showMore:sender];
+  if ([name isEqual:@"status"]) return [self showNumbers:sender];
   [self perform:name];
+}
+
+/// What is underneath the capsule's words: the stream, and what it costs this Mac.
+- (void)showNumbers:(NSView *)anchor {
+  if (!_numbers) {
+    NSViewController *holder = [NSViewController new];
+    holder.view = _inspector.numbers;
+    holder.preferredContentSize = NSMakeSize(MVInspectorWidth - 40, 240);
+    _numbers = [NSPopover new];
+    _numbers.behavior = NSPopoverBehaviorTransient;
+    _numbers.contentViewController = holder;
+  }
+  if (_numbers.shown) return [_numbers close];
+  [_numbers showRelativeToRect:anchor.bounds ofView:anchor preferredEdge:NSRectEdgeMaxY];
 }
 
 - (void)perform:(NSString *)name {

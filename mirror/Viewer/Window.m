@@ -62,7 +62,8 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
     if (room) {
       root.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
       [room addSubview:root];
-      _slot = ((MVRoomView *)room).slot;
+      _room = (MVRoomView *)room;
+      _slot = _room.slot;
     } else {
       [self splitAround:root];
     }
@@ -82,8 +83,8 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
     _layers = [[MVPictureLayers alloc] initInView:_view];
     _overlay = [[MVOverlay alloc] initInView:_view];
     _line = [MVStatusLine new];
-    _line.onChange = ^(NSString *subtitle) {
-      [held sayStatus:subtitle];
+    _line.onChange = ^{
+      [held showState];
     };
     _inspector = [[MVInspector alloc] initWithFrame:NSZeroRect target:self];
     __weak MVWindow *weak = self;
@@ -101,11 +102,15 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   return self;
 }
 
-/// A device and how it is, as the system's title and subtitle: in a room the window is the hub's, and says the one chosen.
-- (void)sayStatus:(NSString *)subtitle {
+/// How a device is, said once: a colour around it and the capsule over it. The window's title stays for the Window menu and
+/// Mission Control, and the bar says it, as the system's own title fades to 2:1 in a window behind others.
+- (void)showState {
+  NSColor *edge = _recording || _line.failing ? NSColor.systemRedColor : _waitingForPerson ? MVOrange() : _line.tool ? NSColor.systemPurpleColor : _line.both ? NSColor.controlAccentColor : nil;
+  [_frame setEdge:edge];
   if (_window.toolbar != _toolbar) return;
   _window.title = _line.name ?: @"";
-  _window.subtitle = subtitle;
+  [_bar setName:_line.name ?: @"" about:_line.about];
+  [_bar.capsule show:_line];
 }
 
 /// Off its room, which stays for the next device.
@@ -113,9 +118,8 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   [_root removeFromSuperview];
   [self letGoOfInspector];
   if (_window.toolbar != _toolbar) return;
-  _window.toolbar = nil;
+  _window.toolbar = _room.bare;
   _window.title = @"Devices";
-  _window.subtitle = @"";
 }
 
 - (void)configure:(NSDictionary *)attach {
@@ -255,19 +259,17 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   NSString *state = message[@"state"];
   BOOL live = [state isEqual:@"live"];
   _line.state = live ? @"Live" : message[@"title"] ?: state;
+  _line.live = live;
+  _line.stuck = [state isEqual:@"waiting"] || [state isEqual:@"stopped"];
+  [self showState];
   [_layers setDimmed:!live];
   [_overlay showState:live ? nil : state title:message[@"title"] fix:message[@"fix"]];
 }
 
-/// One colour around the device says what is happening to it, and the window's subtitle says it in words.
-- (void)tintPill {
-  NSColor *red = NSColor.systemRedColor, *accent = NSColor.controlAccentColor;
-  [_frame setEdge:_recording || _line.failing ? red : _line.tool || _line.both ? accent : nil];
-}
-
-- (void)setDriving:(BOOL)driving tool:(NSString *)tool {
+- (void)setDriving:(BOOL)driving tool:(NSString *)tool client:(nullable NSString *)client {
   _line.tool = driving ? tool : nil;
-  [self tintPill];
+  _line.client = driving ? client : nil;
+  [self showState];
 }
 
 - (void)sayNote:(NSString *)note {
@@ -332,14 +334,39 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 
 - (void)showMeasure:(NSDictionary *)message {
   if (!self.inspecting) [self showPane:MVPanePerf];
-  if (![message[@"op"] isEqual:@"measured"]) return [_inspector.perf showMeasuring:message[@"line"] ?: @""];
+  if (![message[@"op"] isEqual:@"measured"]) {
+    [_inspector.perf showMeasuring:message[@"line"] ?: @""];
+    [self sayMeasuring:message[@"line"] ?: @""];
+    return;
+  }
   [_inspector.perf showMeasured:message];
+  [self sayMeasuring:nil];
 }
 
 - (void)showStats:(NSDictionary *)stats {
   [_hud setPictureRate:[stats[@"shown"] doubleValue]];
   [_inspector.perf setPictureRate:[stats[@"shown"] doubleValue]];
-  if (self.inspecting) [_inspector showStats:stats];
+  [_inspector showStats:stats];
+  if (_line.rate == [stats[@"shown"] doubleValue]) return;
+  _line.rate = [stats[@"shown"] doubleValue];
+  [self showState];
+}
+
+/// The capsule's words for what a measure says it is at, and how far that is where it counts: `scroll round 3 of 5`.
+- (void)sayMeasuring:(nullable NSString *)line {
+  NSRegularExpression *count = [NSRegularExpression regularExpressionWithPattern:@"(\\d+) of (\\d+)" options:0 error:NULL];
+  NSTextCheckingResult *found = line ? [count firstMatchInString:line options:0 range:NSMakeRange(0, line.length)] : nil;
+  _line.measuring = line.length ? line : nil;
+  _line.progress = found ? [line substringWithRange:[found rangeAtIndex:1]].doubleValue / [line substringWithRange:[found rangeAtIndex:2]].doubleValue : 0;
+  [self showState];
+}
+
+/// A request for a person: words over the picture, and orange around it until it is answered.
+- (void)askPerson:(NSDictionary *)message {
+  _waitingForPerson = message[@"id"] != nil;
+  if (_waitingForPerson) [_overlay showBanner:message];
+  else [_overlay hideBanner];
+  [self showState];
 }
 
 - (void)addActivity:(NSDictionary *)call {
@@ -352,11 +379,11 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 
 /// The toolbar's record button says a movie is being made.
 - (void)setRecording:(BOOL)on {
-  NSButton *button = [_bar buttonNamed:@"record"];
-  button.image = [NSImage imageWithSystemSymbolName:on ? @"stop.circle.fill" : @"record.circle" accessibilityDescription:on ? @"Stop Recording" : @"Record Screen"];
-  button.contentTintColor = on ? NSColor.systemRedColor : NSColor.labelColor;
+  [_bar paint:@"record" symbol:on ? @"stop.circle.fill" : @"record.circle" color:on ? NSColor.systemRedColor : NSColor.labelColor];
+  [_bar buttonNamed:@"record"].accessibilityLabel = on ? @"Stop Recording" : @"Record Screen";
   _recording = on;
-  [self tintPill];
+  _line.recording = on;
+  [self showState];
 }
 
 - (void)setFrameShown:(BOOL)shown {

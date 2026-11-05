@@ -7,6 +7,7 @@ import {
   type Measured,
   type StartupAnalysis,
   run,
+  reportProgress,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg } from '../adb.js';
@@ -138,6 +139,7 @@ export async function launch(
       await sh(d, `am start -W -n ${component} > /dev/null`, 60_000);
     }
     for (let i = 0; i <= repeats; i++) {
+      reportProgress(`launch ${i + 1} of ${repeats + 1}`);
       await prepare();
       const s = await launchOnce();
       if (i === 0) {

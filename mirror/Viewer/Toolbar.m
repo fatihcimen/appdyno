@@ -2,22 +2,15 @@
 // button of the table, in a group by what it is for, and the window's title and subtitle say which device and how it is.
 #import "Window.h"
 
-/// A click on a window not in use is the click a person meant: a window opens in front with no keyboard, and without
-/// this its first click on any control only made the window the one in use, with nothing to show for it.
-@interface MVBarButton : NSButton
-@end
-
-@implementation MVBarButton
-- (BOOL)acceptsFirstMouse:(NSEvent *)event {
-  return YES;
-}
-@end
+static const double kSymbolSize = 14;
 
 @implementation MVToolbar {
   NSArray<NSArray<NSString *> *> *_groups;
   id _target;
   SEL _action;
   NSMutableDictionary<NSString *, NSButton *> *_buttons;
+  NSMutableDictionary<NSString *, MVInk *> *_inks;
+  NSTextField *_name, *_about;
 }
 
 - (instancetype)initWithGroups:(NSArray<NSArray<NSString *> *> *)groups target:(id)target action:(SEL)action {
@@ -26,6 +19,11 @@
     _target = target;
     _action = action;
     _buttons = [NSMutableDictionary dictionary];
+    _inks = [NSMutableDictionary dictionary];
+    _capsule = [MVCapsule new];
+    _capsule.target = target;
+    _capsule.action = action;
+    _buttons[@"status"] = _capsule;
   }
   return self;
 }
@@ -34,11 +32,12 @@
   NSToolbar *bar = [[NSToolbar alloc] initWithIdentifier:@"device"];
   bar.delegate = self;
   bar.displayMode = NSToolbarDisplayModeIconOnly;
+  bar.centeredItemIdentifiers = [NSSet setWithObject:@"status"];
   return bar;
 }
 
 - (NSArray<NSToolbarItemIdentifier> *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar {
-  NSMutableArray *names = [NSMutableArray arrayWithObjects:NSToolbarSidebarTrackingSeparatorItemIdentifier, NSToolbarFlexibleSpaceItemIdentifier, nil];
+  NSMutableArray *names = [NSMutableArray arrayWithObjects:NSToolbarSidebarTrackingSeparatorItemIdentifier, @"title", NSToolbarFlexibleSpaceItemIdentifier, @"status", NSToolbarFlexibleSpaceItemIdentifier, nil];
   for (NSUInteger i = 0; i < _groups.count; i++) [names addObject:[NSString stringWithFormat:@"group%lu", (unsigned long)i]];
   [names addObjectsFromArray:@[NSToolbarInspectorTrackingSeparatorItemIdentifier, NSToolbarFlexibleSpaceItemIdentifier, @"inspector"]];
   return names;
@@ -49,9 +48,18 @@
 }
 
 - (NSToolbarItem *)itemNamed:(NSString *)name {
-  NSImageSymbolConfiguration *quiet = [NSImageSymbolConfiguration configurationWithPointSize:14 weight:NSFontWeightRegular];
-  NSButton *button = [MVBarButton buttonWithImage:[MVControlImage(name) imageWithSymbolConfiguration:quiet] target:_target action:_action];
+  NSButton *button = [MVBarButton buttonWithImage:[NSImage new] target:_target action:_action];
   button.bezelStyle = NSBezelStyleToolbar;
+  MVInk *ink = [[MVInk alloc] initWithSymbol:MVControlSymbol(name) color:NSColor.labelColor size:kSymbolSize];
+  ink.translatesAutoresizingMaskIntoConstraints = NO;
+  [button addSubview:ink];
+  [NSLayoutConstraint activateConstraints:@[
+    [ink.leadingAnchor constraintEqualToAnchor:button.leadingAnchor],
+    [ink.trailingAnchor constraintEqualToAnchor:button.trailingAnchor],
+    [ink.topAnchor constraintEqualToAnchor:button.topAnchor],
+    [ink.bottomAnchor constraintEqualToAnchor:button.bottomAnchor],
+  ]];
+  _inks[name] = ink;
   button.identifier = name;
   button.toolTip = MVControlTitle(name);
   button.accessibilityLabel = MVControlTitle(name);
@@ -66,7 +74,41 @@
   return item;
 }
 
+- (NSToolbarItem *)titleItem {
+  _name = MVText(@"", MVStyleStrong);
+  _about = MVText(@"", MVStyleSub);
+  NSStackView *lines = [NSStackView stackViewWithViews:@[_name, _about]];
+  lines.orientation = NSUserInterfaceLayoutOrientationVertical;
+  lines.alignment = NSLayoutAttributeLeading;
+  lines.spacing = 0;
+  NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:@"title"];
+  item.view = lines;
+  item.bordered = NO;
+  item.visibilityPriority = NSToolbarItemVisibilityPriorityHigh;
+  return item;
+}
+
+- (NSToolbarItem *)statusItem {
+  NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:@"status"];
+  item.view = _capsule;
+  item.bordered = YES;
+  item.visibilityPriority = NSToolbarItemVisibilityPriorityHigh;
+  return item;
+}
+
+- (void)setName:(NSString *)name about:(nullable NSString *)about {
+  _name.stringValue = name;
+  _about.stringValue = about ?: @"";
+  _about.hidden = !about.length;
+}
+
+- (void)paint:(NSString *)name symbol:(NSString *)symbol color:(NSColor *)color {
+  [_inks[name] paint:symbol color:color];
+}
+
 - (nullable NSToolbarItem *)toolbar:(NSToolbar *)toolbar itemForItemIdentifier:(NSToolbarItemIdentifier)name willBeInsertedIntoToolbar:(BOOL)flag {
+  if ([name isEqual:@"title"]) return [self titleItem];
+  if ([name isEqual:@"status"]) return [self statusItem];
   if ([name isEqual:@"inspector"]) return [self itemNamed:name];
   if (![name hasPrefix:@"group"]) return nil;
   NSArray<NSString *> *names = _groups[[name substringFromIndex:5].integerValue];

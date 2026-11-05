@@ -86,6 +86,7 @@ static const double kHeaderHeight = 26;
 
 - (void)useSidebarStyle {
   _table.style = NSTableViewStyleSourceList;
+  _table.rowHeight = 44;
 }
 
 - (void)tableViewSelectionDidChange:(NSNotification *)notification {
@@ -93,9 +94,7 @@ static const double kHeaderHeight = 26;
 }
 
 - (NSView *)headerCell:(NSString *)text in:(NSTableCellView *)cell {
-  NSTextField *title = [NSTextField labelWithString:text];
-  title.font = [NSFont systemFontOfSize:11 weight:NSFontWeightSemibold];
-  title.textColor = NSColor.secondaryLabelColor;
+  NSTextField *title = MVText(text, MVStyleHeading);
   title.translatesAutoresizingMaskIntoConstraints = NO;
   [cell addSubview:title];
   [NSLayoutConstraint activateConstraints:@[
@@ -110,15 +109,9 @@ static const double kHeaderHeight = 26;
   NSTableCellView *cell = [NSTableCellView new];
   cell.toolTip = row.help;
   if (row.header) return [self headerCell:row.title in:cell];
-  NSImageView *icon = [NSImageView new];
-  icon.image = row.symbol ? [NSImage imageWithSystemSymbolName:row.symbol accessibilityDescription:nil] : nil;
-  icon.contentTintColor = row.tint ?: NSColor.secondaryLabelColor;
-  NSTextField *title = [NSTextField labelWithString:row.title];
-  title.font = [NSFont systemFontOfSize:12 weight:NSFontWeightMedium];
-  title.lineBreakMode = NSLineBreakByTruncatingTail;
-  NSTextField *detail = [NSTextField labelWithString:row.detail];
-  detail.font = [NSFont systemFontOfSize:10.5];
-  detail.textColor = NSColor.secondaryLabelColor;
+  NSView *icon = row.symbol ? [[MVInk alloc] initWithSymbol:row.symbol color:row.tint ?: NSColor.labelColor size:15] : [NSView new];
+  NSTextField *title = MVText(row.title, MVStyleBody);
+  NSTextField *detail = MVText(row.detail, MVStyleSub);
   detail.lineBreakMode = NSLineBreakByTruncatingMiddle;
   NSStackView *lines = [NSStackView stackViewWithViews:@[title, detail]];
   lines.orientation = NSUserInterfaceLayoutOrientationVertical;
@@ -128,12 +121,12 @@ static const double kHeaderHeight = 26;
   NSStackView *stack = [NSStackView stackViewWithViews:@[icon, lines]];
   stack.spacing = 8;
   if (row.dot) {
-    NSImageView *dot = [NSImageView imageViewWithImage:[[NSImage imageWithSystemSymbolName:@"circle.fill" accessibilityDescription:nil] imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithPointSize:7 weight:NSFontWeightRegular]]];
-    dot.contentTintColor = row.dot;
+    MVInk *dot = [[MVInk alloc] initWithSymbol:@"circle.fill" color:row.dot size:8];
     dot.translatesAutoresizingMaskIntoConstraints = NO;
     [cell addSubview:dot];
     [NSLayoutConstraint activateConstraints:@[
       [dot.trailingAnchor constraintEqualToAnchor:cell.trailingAnchor constant:-8],
+      [dot.widthAnchor constraintEqualToConstant:10],
       [dot.centerYAnchor constraintEqualToAnchor:cell.centerYAnchor],
     ]];
   }

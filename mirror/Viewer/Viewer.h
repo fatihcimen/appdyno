@@ -156,7 +156,8 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 /// Whether the layer took it.
 - (BOOL)showImage:(CVImageBufferRef)image;
 - (void)setStatus:(NSDictionary *)message;
-- (void)setDriving:(BOOL)driving tool:(NSString *)tool;
+- (void)setDriving:(BOOL)driving tool:(NSString *)tool client:(nullable NSString *)client;
+- (void)askPerson:(NSDictionary *)message;
 /// Words beneath the device for a few seconds: what became of something a person asked for.
 - (void)sayNote:(NSString *)note;
 - (void)setRecording:(BOOL)on;
@@ -178,7 +179,7 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 @property(readonly) MVToolbar *bar;
 @property(readonly) MVStatusLine *line;
 @property(readonly) NSDictionary *look;
-- (void)tintPill;
+- (void)showState;
 @property(nonatomic, copy, nullable) void (^onHidden)(BOOL hidden);
 @end
 
