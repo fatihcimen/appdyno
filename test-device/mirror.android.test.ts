@@ -39,6 +39,16 @@ const until = async (what: string, test: () => boolean, ms = 60_000) => {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** A phone's launcher holds its screen upright whatever is asked: a turn only shows over an app. */
+const overAnApp = async (adb: Adb, serial: string, turn: () => Promise<void>) => {
+  await adb.exec(serial, 'am start -W -a android.settings.SETTINGS');
+  try {
+    await turn();
+  } finally {
+    await adb.exec(serial, 'input keyevent KEYCODE_BACK');
+  }
+};
+
 /** How many displays of ours the device lists: one made directly, as on Android 11, only the compositor knows of. */
 const displaysOf = async (adb: Adb, serial: string) =>
   (await adb.exec(serial, 'dumpsys display; dumpsys SurfaceFlinger')).match(/appdyno-mirror/g)
@@ -215,17 +225,22 @@ describe.runIf(serial)('the agent stream', () => {
     const { session } = start(stream);
     await session.start();
     await until('picture', () => session.status.state === 'live');
-    const portrait = session.status.picture!;
+    // by shape: `--quality auto` may settle on another size while it turns, 1080x2400 to 360x800 on an emulator
+    const tall = () => session.status.picture!.h > session.status.picture!.w;
     try {
-      await device.setOrientation(1);
-      await until('landscape', () => session.status.picture!.w > session.status.picture!.h, 30_000);
-      expect(session.status.state).toBe('live');
+      await overAnApp(adb, serial!, async () => {
+        await device.setOrientation(1);
+        await until('landscape', () => !tall(), 30_000);
+        expect(session.status.state).toBe('live');
+        await device.setOrientation(0);
+        await until('portrait', tall, 30_000);
+      });
     } finally {
       await device.setOrientation(0);
       device.close();
+      // a stream left running reads as a failure of the test after this one
+      await session.stop('the test ended');
     }
-    await until('portrait', () => session.status.picture!.h === portrait.h, 30_000);
-    await session.stop('the test ended');
   }, 120_000);
 });
 
@@ -435,15 +450,18 @@ describe.runIf(emulator)('an emulator picture by gRPC', () => {
     const { w, h } = session.status.picture!;
     await device.open();
     try {
-      await device.setOrientation(1);
-      await until('a turned picture', () => session.status.picture!.w === h, 30_000);
-      expect(session.status.picture!.h).toBe(w);
-      expect(session.status.state).toBe('live');
+      await overAnApp(adb, serial!, async () => {
+        await device.setOrientation(1);
+        await until('a turned picture', () => session.status.picture!.w === h, 30_000);
+        expect(session.status.picture!.h).toBe(w);
+        expect(session.status.state).toBe('live');
+        await device.setOrientation(0);
+        await until('upright again', () => session.status.picture!.w === w, 30_000);
+      });
     } finally {
       await device.setOrientation(0);
+      await session.stop('the test ended');
     }
-    await until('upright again', () => session.status.picture!.w === w, 30_000);
-    await session.stop('the test ended');
   }, 120_000);
 
   it('a viewer killed: the picture comes back from the same emulator, with no agent restarted', async () => {
