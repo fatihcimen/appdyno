@@ -22,6 +22,8 @@ class StreamLadder(
     private val steps: List<EncoderStep>
     private var at = 0
     private val tooSlowUntil = HashMap<Int, Long>()
+    private var holdOffMs = HOLD_OFF_MS
+    private var grew = false
 
     init {
         val top = minOf(askedMax ?: displayMax, displayMax)
@@ -64,7 +66,8 @@ class StreamLadder(
     /**
      * A picture too slow for a person: the largest size of this codec that `ms` says will keep up, as what an encoder
      * takes goes with its pixels; where none will, the smallest that can still be read. Null where none is left. The
-     * size it leaves is not tried again for a while, so that a load that stays costs a person one change.
+     * size it leaves is not tried again for a while, twice as long each time a growth has to come back: a restart is
+     * felt, and a device that only looks as if it had room would otherwise show one every few minutes for ever.
      */
     fun smaller(ms: Long, nowMs: Long): EncoderStep? {
         val now = current
@@ -73,7 +76,9 @@ class StreamLadder(
             val share = steps[i].maxSize.toDouble() / now.maxSize
             ms * share * share <= FITS_MS
         } ?: below.lastOrNull() ?: return null
-        tooSlowUntil[now.maxSize] = nowMs + HOLD_OFF_MS
+        if (grew) holdOffMs = minOf(holdOffMs * 2, MOST_HOLD_OFF_MS)
+        grew = false
+        tooSlowUntil[now.maxSize] = nowMs + holdOffMs
         at = next
         return steps[next]
     }
@@ -98,6 +103,7 @@ class StreamLadder(
 
     fun larger(): EncoderStep? {
         at = nextUp() ?: return null
+        grew = true
         return current
     }
 
@@ -107,6 +113,7 @@ class StreamLadder(
         /** Past `EncoderPace.TOO_SLOW_MS`, as a burst's first frames read more than it settles at: 150 ms for 67. */
         private const val FITS_MS = 50L
         const val HOLD_OFF_MS = 300_000L
+        const val MOST_HOLD_OFF_MS = 3_600_000L
         const val RESTART_PAUSE_MS = 500L
         const val RAN_WELL_MS = 10_000L
         val SIZES = listOf(2560, 1920, 1600, 1280, 1024, 800)

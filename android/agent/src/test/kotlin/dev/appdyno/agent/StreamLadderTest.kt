@@ -190,6 +190,32 @@ class StreamLadderTest {
     }
 
     @Test
+    fun aGrowthThatComesBackWaitsTwiceAsLongUpToAnHourAndANewStreamForgets() {
+        val minute = 60_000L
+        val ladder = StreamLadder("h264", 1600)
+        var at = 0L
+        // a load's first shrink is no growth that failed: the hold stays as it starts
+        ladder.smaller(70, at)
+        val held = mutableListOf(5 * minute)
+        for (expected in listOf(10, 20, 40, 60, 60)) {
+            assertNull(ladder.roomMs(at + held.last() - 1))
+            at += held.last()
+            assertEquals(25L, ladder.roomMs(at))
+            assertEquals(1600, ladder.larger()!!.maxSize)
+            ladder.smaller(70, at)
+            held += expected * minute
+        }
+        assertNull(ladder.roomMs(at + 60 * minute - 1))
+        assertEquals(25L, ladder.roomMs(at + 60 * minute))
+        val next = StreamLadder("h264", 1600, held = 1280)
+        assertEquals(25L, next.roomMs(at))
+        next.larger()
+        next.smaller(70, at)
+        assertEquals(25L, next.roomMs(at + 10 * minute))
+        assertNull(next.roomMs(at + 10 * minute - 1))
+    }
+
+    @Test
     fun onlyRunsInARowOpenTheWayUp() {
         var room: Long? = 25
         val pace = EncoderPace { room }
