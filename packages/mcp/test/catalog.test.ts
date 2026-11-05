@@ -1,8 +1,19 @@
+import { readFileSync } from 'node:fs';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { expect, it } from 'vitest';
 import { createServer } from '../src/server.js';
+
+it('has every tool in the table of the README, and what it says of steps as the tool says it', () => {
+  const readme = readFileSync(new URL('../../../README.md', import.meta.url), 'utf8');
+  const ops = opsFor(new ServerContext(DEFAULT_POLICY, []));
+  const start = readme.indexOf('| purpose');
+  const table = readme.slice(start, readme.indexOf('\n\n', start));
+  expect(Object.keys(ops).filter((name) => !table.includes(`\`${name}\``))).toEqual([]);
+  const limit = /at most (\d+),/.exec(ops.steps!.description)?.[1];
+  expect(readme).toContain(`\`steps\` runs up to ${limit} steps`);
+});
 
 it('keeps the tool catalog within its budget', async () => {
   const ctx = new ServerContext(DEFAULT_POLICY, []);

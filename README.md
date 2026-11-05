@@ -56,7 +56,7 @@ else the one `use_device` selected.
 | devices  | `list_devices`, `use_device`, `device_info`, `set_orientation`, `set_location`, `clipboard`, `device_setting`, `simulator` |
 | window   | `mirror`, `hand_off`                                                                                                       |
 | read     | `screen`, `find`, `wait_for`, `assert`, `screenshot`                                                                       |
-| act      | `tap`, `gesture`, `swipe`, `scroll_to`, `type_text`, `press_key`, `keyboard`, `steps`, `alert`                             |
+| act      | `tap`, `gesture`, `swipe`, `scroll_to`, `type_text`, `press_key`, `keyboard`, `steps`, `alert`, `inspector`                |
 | apps     | `open_link`, `launch_app`, `terminate_app`, `app`                                                                          |
 | check    | `audit` (accessibility), `logs`, `crashes`, `visual`                                                                       |
 | evidence | `record`, `report`, `network`                                                                                              |
@@ -71,7 +71,7 @@ just before the action. Text matches as `find` does, without case or accents ("Ä
 and an exact match beats a partial one. Several matches refuse and list them with their refs; no match
 waits a moment, then refuses with the nearest labels.
 
-`steps` runs up to 20 steps across screens. A ref or selector need exist only when its step runs. It
+`steps` runs up to 30 steps across screens. A ref or selector need exist only when its step runs. It
 stops at the first failure, says which step and why, and shows the screen. `wait_for` and selectors
 wait on the device, so the tree crosses the wire only when the screen changed.
 
