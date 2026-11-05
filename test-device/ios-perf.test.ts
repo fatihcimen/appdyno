@@ -6,7 +6,7 @@ import {
   buildScreen,
   sleep as pause,
   recordTrace,
-} from 'appdyno';
+} from './workspace.js';
 import { DeviceError } from '@appdyno/protocol';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';

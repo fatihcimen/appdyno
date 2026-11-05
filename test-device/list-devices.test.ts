@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { afterAll, describe, expect, it } from 'vitest';
-import { Adb, androidProvider, appleProvider } from 'appdyno';
+import { Adb, androidProvider, appleProvider } from './workspace.js';
 import { IPHONE, opsOn } from './helpers.js';
 
 /** A PIN comes and goes on the emulator APPDYNO_ANDROID_SERIAL names: never on a phone. */

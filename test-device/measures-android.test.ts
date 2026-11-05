@@ -1,5 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { Adb, androidProvider, sleep as pause, type AndroidDevice, type Screen } from 'appdyno';
+import {
+  Adb,
+  androidProvider,
+  sleep as pause,
+  type AndroidDevice,
+  type Screen,
+} from './workspace.js';
 import { latestRuns, runKeys } from '@appdyno/perf';
 import { opsOn } from './helpers.js';
 

@@ -14,7 +14,7 @@ import {
   appleProvider,
   Devicectl,
   Simctl,
-} from 'appdyno';
+} from './workspace.js';
 
 /**
  * Driving on real devices, through the operations an agent calls: one suite per platform, each on the

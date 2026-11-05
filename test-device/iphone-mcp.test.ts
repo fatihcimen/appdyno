@@ -3,7 +3,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { refIn, toolCaller } from './helpers.js';
-import { IosPhoneDevice } from 'appdyno';
+import { IosPhoneDevice } from './workspace.js';
 
 /** The built MCP server over stdio on a real iPhone (APPDYNO_IPHONE_UDID), on Settings: read, open General, screenshot. */
 const udid = process.env.APPDYNO_IPHONE_UDID;

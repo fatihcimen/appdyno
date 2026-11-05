@@ -4,7 +4,7 @@ import { loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, describe, expect, it } from 'vitest';
-import { Adb, androidProvider, appleProvider, sleep as pause, videoStamps } from 'appdyno';
+import { Adb, androidProvider, appleProvider, sleep as pause, videoStamps } from './workspace.js';
 import { opsOn } from './helpers.js';
 import type { Timeline } from '@appdyno/perf';
 

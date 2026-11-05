@@ -34,14 +34,6 @@
     "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/bundle.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "peerDependencies": {
-    "zod": "^4.6.7"
-  },
-  "peerDependenciesMeta": {
-    "zod": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "@appdyno/cli": "workspace:*",
     "@appdyno/core": "workspace:*",

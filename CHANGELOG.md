@@ -3,6 +3,7 @@
 ## Unreleased
 
 - A window keeps its pictures through a decoder's stall on a busy Mac: pictures already decoding were thrown away with the frame that did not fit, and a stream's first burst could leave a window black until the next key frame.
+- The library is one function, `connect`, shown in the README by an example a test runs: every tool by name, typed from its schema, and `replay`. The 347 names it exported, the README's `flowsFor(ctx)` that was not among them, and the need for zod's types are gone.
 - `bench` says it is for an Android device, in its help and to an iOS one, where it spoke of adb.
 - `perf baseline` counts a run once, takes `--last`, and says how many runs it holds of the 3 a comparison needs. The README's lines left one run in it, so that a regression could only be `few-samples`.
 - `perf compare --device-class` with no runs of that class says which classes have them.

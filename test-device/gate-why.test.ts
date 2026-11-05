@@ -4,7 +4,7 @@ import { cpus, loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, describe, expect, it } from 'vitest';
-import { Adb, androidProvider, appleProvider } from 'appdyno';
+import { Adb, androidProvider, appleProvider } from './workspace.js';
 import { gateAnswers, writeComment, type GateAnswer } from '@appdyno/perf';
 import { opsOn } from './helpers.js';
 

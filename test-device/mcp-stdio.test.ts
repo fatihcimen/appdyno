@@ -3,7 +3,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { refIn, toolCaller } from './helpers.js';
-import { IosSimulatorDevice } from 'appdyno';
+import { IosSimulatorDevice } from './workspace.js';
 
 /**
  * The built MCP server over stdio, as an MCP client starts it, against the fixture: on the Android

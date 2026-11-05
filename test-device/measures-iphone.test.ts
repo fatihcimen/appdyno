@@ -11,7 +11,7 @@ import {
   sleep as pause,
   type IosPhoneDevice,
   type Screen,
-} from 'appdyno';
+} from './workspace.js';
 import { DeviceError } from '@appdyno/protocol';
 import { loadRefusals } from '@appdyno/perf';
 import { opsOn } from './helpers.js';

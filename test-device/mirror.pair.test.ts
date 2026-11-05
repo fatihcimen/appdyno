@@ -2,12 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import {
-  androidProvider,
-  appleProvider,
-  type MirrorSession,
-  type WireNode,
-} from '../packages/appdyno/src/index.js';
+import { androidProvider, appleProvider, type MirrorSession, type WireNode } from './workspace.js';
 import { viewerBinary, ViewerProcess, type Device } from '../packages/core/src/index.js';
 import { NODE_FLAGS } from '../packages/protocol/src/index.js';
 import { DEFAULT_POLICY, ServerContext, runHub } from '../packages/ops/src/index.js';

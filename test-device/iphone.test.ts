@@ -1,5 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { Devicectl, IosPhoneDevice, buildScreen, sleep as pause, type Screen } from 'appdyno';
+import {
+  Devicectl,
+  IosPhoneDevice,
+  buildScreen,
+  sleep as pause,
+  type Screen,
+} from './workspace.js';
 import { DeviceError } from '@appdyno/protocol';
 
 /**

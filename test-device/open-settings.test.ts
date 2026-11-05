@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { Adb, androidProvider, appleProvider, Simctl } from 'appdyno';
+import { Adb, androidProvider, appleProvider, Simctl } from './workspace.js';
 import { type Answer, type Call, IPHONE, onIphone, opsOn } from './helpers.js';
 
 /** Settings at a page and at an app's own, read back from what it shows, on the devices the variables name. */

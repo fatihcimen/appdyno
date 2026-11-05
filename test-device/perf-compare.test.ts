@@ -4,7 +4,7 @@ import { cpus, loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, describe, expect, it } from 'vitest';
-import { Adb, androidProvider, appleProvider, Simctl } from 'appdyno';
+import { Adb, androidProvider, appleProvider, Simctl } from './workspace.js';
 import { latestRuns, rankTest, runKeys, type Comparison } from '@appdyno/perf';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { checkedOps } from '../packages/ops/test/helpers.js';

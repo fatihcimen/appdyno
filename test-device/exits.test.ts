@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { Adb, androidProvider, sleep } from 'appdyno';
+import { Adb, androidProvider, sleep } from './workspace.js';
 import { opsOn, type Call } from './helpers.js';
 
 /**

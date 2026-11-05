@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { appleProvider, Simctl } from 'appdyno';
+import { appleProvider, Simctl } from './workspace.js';
 import { type Answer, opsOn } from './helpers.js';
 
 /**

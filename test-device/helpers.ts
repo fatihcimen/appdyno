@@ -1,7 +1,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { appleProvider, Devicectl } from 'appdyno';
+import { appleProvider, Devicectl } from './workspace.js';
 import type { DeviceProvider } from '@appdyno/core';
 import {
   DEFAULT_POLICY,

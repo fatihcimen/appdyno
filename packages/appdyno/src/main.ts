@@ -9,7 +9,7 @@ import { join, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { Adb, androidProvider, installTools, type InstallAnswers } from '@appdyno/driver-android';
+import { installTools } from '@appdyno/driver-android';
 import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
 import {
   cliSessionFile,
@@ -42,6 +42,7 @@ import { alertPerson } from './alert.js';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
 import { hubCommand, mirrorCommand } from './mirror-args.js';
+import { deviceProviders as providers } from './providers.js';
 import { COMMANDS, commandList, helpFor, usage } from './usage.js';
 import { SERVER_INFO } from '@appdyno/mcp';
 import { serveCommand, type ServerFlags } from './serve.js';
@@ -51,19 +52,6 @@ const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
 /** This package's own folder: `dist` and `src` both sit in it. */
 const root = realpathSync(fileURLToPath(new URL('..', import.meta.url)));
-const providers = (
-  takeover = false,
-  animations?: 'on' | 'off',
-  installAnswers?: InstallAnswers,
-) => [
-  androidProvider(new Adb(), {
-    takeover,
-    ...(animations && { animations }),
-    ...(installAnswers && { installAnswers }),
-  }),
-  appleProvider(),
-];
-
 /** The operations' context, from flags and the environment. */
 function contextFrom(values: ServerFlags, remember?: string) {
   const env = process.env;

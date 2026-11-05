@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest';
-import { Adb, androidProvider, appleProvider, Simctl } from 'appdyno';
+import { Adb, androidProvider, appleProvider, Simctl } from './workspace.js';
 import { type Answer, type Call, IPHONE, onIphone, opsOn } from './helpers.js';
 
 /**

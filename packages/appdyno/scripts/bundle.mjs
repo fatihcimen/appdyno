@@ -1,19 +1,25 @@
 // The one package: the workspace and every dependency inlined in dist (installing it needs no registry),
 // the workspace's types beside them, and the agents the driver packages made.
+import { execFileSync } from 'node:child_process';
 import {
   chmodSync,
   cpSync,
   existsSync,
+  mkdirSync,
+  mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { build } from 'esbuild';
 import { bundledPackages, noticesFor } from './notices.mjs';
+import { toolsInterface } from './tool-types.mjs';
 
 const pkg = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(pkg, 'dist');
@@ -60,25 +66,44 @@ if (existsSync(stream)) {
 await build({ ...options, entryPoints: ['src/mcp-bin.ts'] });
 for (const bin of ['main.js', 'mcp-bin.js']) chmodSync(join(dist, bin), 0o755);
 
-// what dist/index.d.ts reaches; the other workspace packages are inlined and show no types
-const TYPED = ['protocol', 'core', 'perf', 'driver-android', 'driver-apple'];
-const types = join(dist, 'types');
-for (const name of TYPED)
-  cpSync(join(pkg, '..', name, 'dist'), join(types, name), {
-    recursive: true,
-    filter: (p) => statSync(p).isDirectory() || p.endsWith('.d.ts'),
-  });
-for (const f of readdirSync(dist, { recursive: true }))
-  if (f.endsWith('.d.ts')) {
-    const file = join(dist, f);
-    const text = readFileSync(file, 'utf8');
-    const local = text.replace(/(['"])@appdyno\/([\w-]+)\1/g, (_, quote, name) => {
-      if (!TYPED.includes(name)) throw new Error(`${f} reaches the types of @appdyno/${name}`);
-      const path = relative(dirname(file), join(types, name, 'index.js'));
-      return `${quote}${path.startsWith('.') ? path : `./${path}`}${quote}`;
-    });
-    if (local !== text) writeFileSync(file, local);
-  }
+// the public face and nothing behind it: the workspace is inlined, and shows no types
+const PUBLIC = ['index.d.ts', 'library.d.ts'];
+for (const f of readdirSync(dist))
+  if (f.endsWith('.d.ts') && !PUBLIC.includes(f)) rmSync(join(dist, f));
+const face = join(dist, 'library.d.ts');
+const interfaceInSource = /export interface Tools \{[\s\S]*?\n\}/;
+const declared = readFileSync(face, 'utf8');
+if (!interfaceInSource.test(declared)) throw new Error('library.d.ts has no Tools to fill in');
+const ops = Object.values(opsFor(new ServerContext(DEFAULT_POLICY, [])));
+writeFileSync(face, declared.replace(interfaceInSource, toolsInterface(ops)));
+
+// a stranger's project: this package's types alone, with no zod in reach and every declaration checked
+const stranger = mkdtempSync(join(tmpdir(), 'appdyno-types-'));
+try {
+  const installed = join(stranger, 'node_modules/appdyno');
+  mkdirSync(join(installed, 'dist'), { recursive: true });
+  for (const f of PUBLIC) cpSync(join(dist, f), join(installed, 'dist', f));
+  writeFileSync(join(installed, 'package.json'), readFileSync(join(pkg, 'package.json')));
+  cpSync(join(pkg, 'examples/drive.ts'), join(stranger, 'drive.ts'));
+  writeFileSync(
+    join(stranger, 'tsconfig.json'),
+    JSON.stringify({
+      compilerOptions: {
+        strict: true,
+        noEmit: true,
+        skipLibCheck: false,
+        target: 'es2023',
+        lib: ['es2023'],
+        module: 'nodenext',
+        types: [],
+      },
+      files: ['drive.ts'],
+    }),
+  );
+  execFileSync(join(pkg, '../../node_modules/.bin/tsc'), ['-p', stranger], { stdio: 'inherit' });
+} finally {
+  rmSync(stranger, { recursive: true, force: true });
+}
 
 const agents = join(pkg, 'agents');
 rmSync(agents, { recursive: true, force: true });

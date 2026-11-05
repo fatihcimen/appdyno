@@ -3,7 +3,7 @@ import { cpSync, mkdirSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { appleProvider } from 'appdyno';
+import { appleProvider } from './workspace.js';
 import { type Answer, IPHONE, IPHONE_FIXTURE, onIphone, opsOn } from './helpers.js';
 
 /** The fixture as an `.ipa`, on the simulator APPDYNO_IOS_UDID names and an iPhone, and each refusing the other's. */

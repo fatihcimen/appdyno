@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AndroidDevice, renderScreen } from 'appdyno';
+import { AndroidDevice, renderScreen } from './workspace.js';
 
 const serial = process.env.APPDYNO_ANDROID_SERIAL;
 

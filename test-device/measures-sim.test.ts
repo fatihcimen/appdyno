@@ -8,7 +8,7 @@ import {
   Simctl,
   sleep as pause,
   type Screen,
-} from 'appdyno';
+} from './workspace.js';
 import { latestRuns, loadRefusals, runKeys } from '@appdyno/perf';
 import { opsOn } from './helpers.js';
 

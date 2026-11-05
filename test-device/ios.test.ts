@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { IosSimulatorDevice, Simctl, buildScreen, type Screen } from 'appdyno';
+import { IosSimulatorDevice, Simctl, buildScreen, type Screen } from './workspace.js';
 import type { Tree } from '@appdyno/protocol';
 import { join } from 'node:path';
 import { IosDevice } from '../packages/driver-apple/src/device.js';

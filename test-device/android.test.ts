@@ -12,7 +12,7 @@ import {
   TEST_LOCATION,
   mockedProviders,
   type Screen,
-} from 'appdyno';
+} from './workspace.js';
 
 /**
  * The Android agent against the fixture app on a real emulator or device (APPDYNO_ANDROID_SERIAL; never a

@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { Adb, androidProvider, appleProvider, sleep } from 'appdyno';
+import { Adb, androidProvider, appleProvider, sleep } from './workspace.js';
 import { opsOn, type Call } from './helpers.js';
 
 /**

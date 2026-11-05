@@ -13,7 +13,7 @@ import {
   FOCUS_READ,
   stats,
   type InstallAnswers,
-} from 'appdyno';
+} from './workspace.js';
 import { opCaller } from './helpers.js';
 
 /**

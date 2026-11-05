@@ -9,7 +9,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { checkedOps } from '../packages/ops/test/helpers.js';
 import { opCaller, type Call } from './helpers.js';
-import { Adb, androidProvider, appleProvider, decodePng, Devicectl, PERFETTO } from 'appdyno';
+import {
+  Adb,
+  androidProvider,
+  appleProvider,
+  decodePng,
+  Devicectl,
+  PERFETTO,
+} from './workspace.js';
 
 /**
  * Evidence on real devices, through the operations an agent calls and, where a recording must outlive its

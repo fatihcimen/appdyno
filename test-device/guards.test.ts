@@ -8,7 +8,7 @@ import {
   sleep as pause,
   type AndroidDevice,
   type IosPhoneDevice,
-} from 'appdyno';
+} from './workspace.js';
 import { opsOn } from './helpers.js';
 
 /**

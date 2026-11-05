@@ -7,7 +7,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { OpData, OpName } from '@appdyno/ops';
-import { Devicectl, IosSimulatorDevice } from 'appdyno';
+import { Devicectl, IosSimulatorDevice } from './workspace.js';
 
 /**
  * Flows on real devices: what an agent does through the MCP tools of the built server, replayed with no

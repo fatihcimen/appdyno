@@ -361,7 +361,7 @@ appdyno perf compare --app A --scenario journey-login       # exit 1, naming the
 
 A step's kind comes from its line, `journey.04_tap_id_load.ms`, with a `${NAME}` as it is written, so a value does not change it, and a step put in renumbers the ones after it. On Android a step has its frames (p95, worst) and memory, and on an iPhone its time only, as a read of its memory is a recording of seconds, and the answer says so. Both are proven on a phone against a known cost; a simulator or an emulator has not run one yet. Start a flow with `stop` and `launch` to have every iteration start alike. An iteration that fails ends the run: what passed before it is kept, and the file's case fails. On the [dashboard](docs/perf.md#the-dashboard) a journey is one bar split by step, with a table of each step's numbers.
 
-From code, `flowsFor(ctx).replay(file, { onStep })` calls `onStep` around each step's action, awaited:
+From code, `replay(file, { onStep })` of [the library](#library) calls `onStep` around each step's action, awaited:
 `before` once its target is on the screen, `after` with its time once the screen settled.
 
 ## Command line
@@ -380,6 +380,37 @@ An op with `action` takes it as its first word: `appdyno record start`, `appdyno
 Perfetto trace processor), `bench`. Exit code 1 means the call was refused, 2 means wrong arguments. The selected
 device and the diff baseline between CLI processes are kept in a small file in the state directory, one per working
 directory, so two terminals in two folders do not share a device.
+
+## Library
+
+`appdyno` exports one function, `connect`. What it gives calls every tool by its name, its arguments and its answer typed from the tool's own schema, and replays flows. A refused call throws, with `code`, `hint` and `dispatched`. The types stand alone: a project needs nothing else installed, zod included.
+
+```ts
+import { connect, type Refusal } from 'appdyno';
+
+/** Taps through an app by the words on its screen, replays a flow, and says what each step took. */
+export async function drive(flow: string, log: (line: string) => void) {
+  const device = connect({ app: 'dev.appdyno.fixture' });
+  try {
+    await device.tool('launch_app', {});
+    const form = await device.tool('tap', { selector: { text: 'Form' } });
+    log(form.text);
+    const run = await device.replay(flow, {
+      onStep: (e) => {
+        if (e.phase === 'after') log(`${e.result.step}: ${e.result.ms} ms`);
+      },
+    });
+    await device.tool('tap', { selector: { text: 'Not on this screen' } }).catch((e: Refusal) => {
+      log(`${e.code}: ${e.hint}`);
+    });
+    return run.passed;
+  } finally {
+    await device.close();
+  }
+}
+```
+
+`close` puts back what the tools changed on the device, as the end of a session does.
 
 ## Server options
 

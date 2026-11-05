@@ -13,7 +13,7 @@ import {
   inCall,
   sleep as pause,
   Simctl,
-} from 'appdyno';
+} from './workspace.js';
 import {
   DEFAULT_POLICY,
   ServerContext,

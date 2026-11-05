@@ -10,7 +10,7 @@ import {
   sleep as pause,
   traceProcessor,
   type Screen,
-} from 'appdyno';
+} from './workspace.js';
 
 /**
  * Measurement accuracy against fixture screens of known cost (APPDYNO_ANDROID_SERIAL; run on a quiet
