@@ -147,6 +147,25 @@ describe('the hub', () => {
     expect(await done).toBe(0);
   });
 
+  it('passes what a place asks to what serves it, says its answer, and ends it with itself', async () => {
+    const { link, told, say, close } = window();
+    const end = vi.fn(async () => undefined);
+    const places = { act: vi.fn((m, tell) => tell({ heard: m.do })), end };
+    const done = runHub(context(new Simulated()), {
+      focus: false,
+      log: () => undefined,
+      viewer: () => link,
+      places,
+    });
+    await vi.waitFor(() => expect(lastList(told)).toBeDefined());
+    say({ op: 'hub', action: 'clients', do: 'list' });
+    await vi.waitFor(() => expect(told).toContainEqual({ op: 'clients', heard: 'list' }));
+    expect(end).not.toHaveBeenCalled();
+    close();
+    await done;
+    expect(end).toHaveBeenCalledOnce();
+  });
+
   it('opens a window of its own as a process of its own', async () => {
     const said = join(state, 'args');
     const command = ['/bin/sh', '-c', `echo "$@" > ${said}.next && mv ${said}.next ${said}`, 'sh'];

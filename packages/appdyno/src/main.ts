@@ -4,7 +4,7 @@
 import { execFileSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
-import { loadavg } from 'node:os';
+import { homedir, loadavg } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -16,6 +16,8 @@ import {
   deviceFlag,
   installCheck,
   listOf,
+  manifestOf,
+  serverOf,
   takeFlag,
 } from '@appdyno/cli';
 import { writeComment, writeDashboard } from '@appdyno/perf';
@@ -37,6 +39,7 @@ import {
 import { alertPerson } from './alert.js';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
+import { hubPlaces } from './hub-places.js';
 import { hubCommand, mirrorCommand } from './mirror-args.js';
 import { deviceProviders as providers } from './providers.js';
 import { COMMANDS, commandList, helpFor, usage } from './usage.js';
@@ -116,6 +119,18 @@ function contextFrom(values: ServerFlags, remember?: string) {
   });
 }
 
+/** What the hub's AI Clients and Help ask of this Mac: the same checks and entries as `doctor` and `install`. */
+const placesOfHub = () => {
+  const server = serverOf(root, manifestOf(root).name);
+  return hubPlaces({
+    home: homedir(),
+    env: process.env,
+    ...(server && { server }),
+    mcpCommand: [process.execPath, fileURLToPath(import.meta.url), 'mcp'],
+    doctor: async () => [installCheck(root), ...(await doctor({ providers: providers() }))],
+  });
+};
+
 /** `perf dashboard`: no device; `--out` and `--open` are this command's alone, not the tool's. */
 async function dashboardCommand(args: string[]) {
   const { values } = parseArgs({ args, options: COMMANDS['perf dashboard'].flags });
@@ -184,7 +199,10 @@ async function main(): Promise<number> {
         windows: runMirrors,
       });
     case 'hub':
-      return hubCommand(rest, { context: contextFrom, hub: runHub });
+      return hubCommand(rest, {
+        context: contextFrom,
+        hub: (ctx, run) => runHub(ctx, { ...run, places: placesOfHub() }),
+      });
     case 'timeline':
       return timelineCommand(rest, contextFrom);
     case 'flight':

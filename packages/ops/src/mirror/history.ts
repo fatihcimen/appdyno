@@ -45,7 +45,8 @@ const MAINS = [
 
 const counted = (n: number, what: string) => `${n} ${what}${n === 1 ? '' : 's'} ago`;
 
-const ago = (at: string, now: number) => {
+/** How long ago, as a person says it. */
+export const ago = (at: string, now: number) => {
   const gone = now - Date.parse(at);
   if (gone < MINUTE) return counted(Math.max(1, Math.round(gone / SECOND)), 'second');
   if (gone < HOUR) return counted(Math.round(gone / MINUTE), 'minute');

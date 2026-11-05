@@ -55,7 +55,10 @@ export async function serveCommand(
     log,
   });
   const nothingLeft = { end: () => http.stop().then(() => []), close: () => undefined };
-  endWithClient(nothingLeft, log, undefined, null);
+  // the hub's own holds stdin open, so that a hub that dies with no word takes this way in with it
+  const parent = values['end-with-parent'] ? process.stdin : null;
+  parent?.resume();
+  endWithClient(nothingLeft, log, undefined, parent);
   const shown = given ? '$APPDYNO_HTTP_TOKEN' : token;
   process.stderr.write(
     `appdyno mcp: ${http.url}\n  send the header  Authorization: Bearer ${shown}\n  or, for a client with no field for it, use  ${http.url}/${shown}\nwhoever has this token and can reach this address drives your devices\n`,
