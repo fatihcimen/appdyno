@@ -14,7 +14,7 @@ import {
   type MeasureId,
   type PerfRecord,
 } from './record.js';
-import type { KeyReport } from './report.js';
+import { judged, type KeyReport } from './report.js';
 import type { RunKey } from './store.js';
 
 /** What a device is asked about a change: a start's phases, why frames were late or the main thread stood, a CPU profile. */
@@ -137,18 +137,12 @@ const NOTHING_NAMED =
 export const buildWords = (build: Build) =>
   build === 'unknown' ? 'a build of no known type' : `a ${build} build`;
 
-/**
- * A phone's gate goes by the phone: where it called its own numbers, one timed through a loaded Mac is a note, and no
- * reason to call the run unread. A virtual device's numbers all share the Mac's load.
- */
-const statusOf = (r: KeyReport, phone: boolean): GateStatus => {
-  const says = (v: Comparison['verdict']) => r.comparisons.some((c) => c.verdict === v);
-  const own = (c: Comparison) => !phone || !c.throughHost;
-  const called = r.comparisons.some((c) => own(c) && c.verdict === 'ok');
+const statusOf = (r: KeyReport): GateStatus => {
+  const heard = judged(r);
+  const says = (v: Comparison['verdict']) => heard.some((c) => c.verdict === v);
   if (says('regression')) return 'regression';
   if (r.budgets.some((b) => !b.ok)) return 'over-budget';
-  if (says('noisy') && (!called || r.comparisons.some((c) => own(c) && c.verdict === 'noisy')))
-    return 'noisy';
+  if (says('noisy')) return 'noisy';
   if (says('refused')) return 'refused';
   if (says('few-samples')) return 'few-samples';
   return r.comparisons.every((c) => c.verdict === 'new') ? 'no-baseline' : 'clear';
@@ -390,7 +384,7 @@ export function answerOf(
     app,
     scenario,
     deviceClass,
-    status: statusOf(report, device?.virtual === false),
+    status: statusOf(report),
     run: report.run,
     at: report.at,
     ...(device && { device: { model: device.model, os: device.os, virtual: device.virtual } }),

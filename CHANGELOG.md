@@ -52,7 +52,7 @@
 - **Journey…** in a window's Performance pane measures a flow, kept with every other run.
 - A window's colour holds when it is not in front: it was the glass's tint, which glass gives up. Its words stay on one line.
 - A recording no longer fills a Mac: each `xctrace record` left an `instruments*.ktrace` of up to 0.7 GB in the user's temp folder, 86 GB in two days of work, and now what it made goes when it ends, however it ended. What another process has open stays, and with another recording or Instruments running only what this run held goes.
-- `perf why` and `perf reference` take `--dsym`, as a function on a phone is an address without it. A phone's gate goes by the phone: where it called its own numbers, one timed through a loaded Mac is a note, and no reason to call the run unread.
+- `perf why` and `perf reference` take `--dsym`, as a function on a phone is an address without it. A phone's gate goes by the phone: where it called its own numbers, one timed through a loaded Mac is a note, and neither fails the job nor calls the run unread.
 - A device is busy by the share of its CPU at work over 2 s as a run ends, where that can be read, and no longer by its load: a Xiaomi at rest read a load of 23.35 at 6 % of its CPU, and a run was refused for it.
 - A phone that leaves during a recording is said to have gone, `DEVICE_GONE`, and not to be unable to record. A trace the tool cannot read says that nothing is wrong with the device.
 - A measure on an iPhone no longer ends in a crash of Xcode's trace tool: the tool dies now and then as it loads a trace, and the read is made again.

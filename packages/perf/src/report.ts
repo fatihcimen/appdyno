@@ -53,10 +53,19 @@ const PASSES: Comparison['verdict'][] = ['ok', 'improvement', 'new'];
 
 const stops = (c: Comparison) => !PASSES.includes(c.verdict);
 
-const failed = (r: KeyReport) => [
-  ...r.comparisons.filter(stops),
-  ...r.budgets.filter((b) => !b.ok),
-];
+/**
+ * What the gate goes by. A phone's gate goes by the phone: where it called its own numbers, one timed through a loaded Mac
+ * is a note and stops nothing. A virtual device's numbers all share the Mac's load, and a phone with none of its own
+ * called nothing.
+ */
+export const judged = (r: KeyReport) => {
+  const called = r.comparisons.some((c) => !c.throughHost && c.verdict === 'ok');
+  return r.deviceClass.includes('-physical-') && called
+    ? r.comparisons.filter((c) => !(c.throughHost && c.verdict === 'noisy'))
+    : r.comparisons;
+};
+
+const failed = (r: KeyReport) => [...judged(r).filter(stops), ...r.budgets.filter((b) => !b.ok)];
 
 /** Non-zero on a regression, a broken budget or a change the gate could not judge. */
 export const exitCode = (reports: KeyReport[]) => (reports.some((r) => failed(r).length) ? 1 : 0);
@@ -83,7 +92,7 @@ export function toText(reports: KeyReport[]): string {
   if (reports.length === 0) return 'no measured runs to compare';
   const all = reports.flatMap((r) => r.comparisons);
   const cannot = (verdict: Comparison['verdict'], why: string) => {
-    const n = all.filter((c) => c.verdict === verdict).length;
+    const n = reports.flatMap(judged).filter((c) => c.verdict === verdict).length;
     return n ? [`the gate could not judge ${n} of these: ${why}`] : [];
   };
   const unlike = [...new Set(all.filter((c) => c.verdict === 'refused').map((c) => c.note))];
@@ -108,13 +117,15 @@ export const toJson = (reports: KeyReport[]) =>
 export function toJUnit(reports: KeyReport[]): string {
   const suites = reports.map((r) => {
     const name = xmlText(`${r.app} ${r.scenario} ${r.deviceClass}`);
+    const heard = judged(r);
     const cases = [
       ...r.comparisons.map((c) => {
-        const body = stops(c)
-          ? `<failure message="${xmlText(line(c))}"/>`
-          : c.verdict === 'ok' || c.verdict === 'improvement'
-            ? ''
-            : `<skipped message="${xmlText(line(c))}"/>`;
+        const body =
+          stops(c) && heard.includes(c)
+            ? `<failure message="${xmlText(line(c))}"/>`
+            : c.verdict === 'ok' || c.verdict === 'improvement'
+              ? ''
+              : `<skipped message="${xmlText(line(c))}"/>`;
         return `<testcase classname="${name}" name="${xmlText(c.kind)}">${body}</testcase>`;
       }),
       ...r.budgets.map(

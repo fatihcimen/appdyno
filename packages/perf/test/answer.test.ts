@@ -8,6 +8,7 @@ import {
   answerRows,
   answerText,
   commentOf,
+  exitCode,
   gateAnswers,
   loadReference,
   looksFor,
@@ -17,6 +18,8 @@ import {
   saveAnswer,
   saveReference,
   saveRun,
+  toJUnit,
+  toText,
   WHOLE_RUN,
   writeComment,
   type Baseline,
@@ -361,21 +364,30 @@ describe('how sure', () => {
   });
 
   it('goes by a phone’s own numbers when only what the Mac timed is under noise', () => {
-    const phone = [{ device: { model: 'iPhone', os: '27', virtual: false } } as PerfRecord];
+    const onPhone = (c: Comparison[]) => ({
+      ...report(c),
+      deviceClass: 'ios-physical-iPhone14,3-27',
+    });
     const mac = worse('journey.total_ms', {
       verdict: 'noisy',
       note: 'measure again',
       throughHost: true,
     });
     const own = worse('journey.04_tap.ms', { verdict: 'ok' });
-    const clear = answerOf(report([own, mac]), phone, baseline);
+    const clear = answerOf(onPhone([own, mac]), run, baseline);
     expect(clear.status).toBe('clear');
     expect(clear.notes.join()).toContain('a change under noise, not called');
+    expect(exitCode([onPhone([own, mac])])).toBe(0);
+    expect(toText([onPhone([own, mac])])).not.toContain('could not judge');
+    expect(toJUnit([onPhone([own, mac])])).not.toContain('<failure');
     // a virtual device's numbers all share that load, and with none of its own a phone called nothing
     expect(answerOf(report([own, mac]), run, baseline).status).toBe('noisy');
-    expect(answerOf(report([mac]), phone, baseline).status).toBe('noisy');
+    expect(exitCode([report([own, mac])])).toBe(1);
+    expect(answerOf(onPhone([mac]), run, baseline).status).toBe('noisy');
+    expect(exitCode([onPhone([mac])])).toBe(1);
     const loud = worse('journey.04_tap.ms', { verdict: 'noisy', note: 'measure again' });
-    expect(answerOf(report([own, mac, loud]), phone, baseline).status).toBe('noisy');
+    expect(answerOf(onPhone([own, mac, loud]), run, baseline).status).toBe('noisy');
+    expect(exitCode([onPhone([own, mac, loud])])).toBe(1);
   });
 
   it('keeps too few samples, unlike builds and a budget apart from a regression', () => {
