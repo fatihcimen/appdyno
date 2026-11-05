@@ -148,6 +148,27 @@ describe('a journey as a performance scenario', () => {
     expect(worse.data.exitCode).toBe(1);
   });
 
+  it("takes a step's p95 and worst frame from the same frames, so that one cannot pass the other", async () => {
+    const { frames } = phone().device.measure;
+    const { call, measurements } = phone({
+      frames: async () => {
+        const read = await frames();
+        return {
+          ...read,
+          value: {
+            ...read.value,
+            p95Ms: 61,
+            frames: { count: 50, slow: 1, slowPercent: 2, p50Ms: 9, p95Ms: 30, worstMs: 38.4 },
+          },
+        };
+      },
+    } as Partial<MeasureSource>);
+    await call('flow', { action: 'run', file: flowFile(), iterations: 2 });
+    const run = await newestRun(measurements);
+    expect(named(run, '02_tap_text_Form.frames_p95_ms')!.samples).toEqual([30, 30]);
+    expect(named(run, '02_tap_text_Form.frames_worst_ms')!.samples).toEqual([38.4, 38.4]);
+  });
+
   it('a step after which the app does not run has no reading, and the run goes on', async () => {
     const gone = async () => {
       throw new DeviceError('APP_NOT_RUNNING', 'dev.app is not running');

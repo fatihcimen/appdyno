@@ -62,7 +62,9 @@ function journeyReader(s: Session) {
     raw.push(`# ${line}: ${ms} ms`);
     const frames = await read('frames', () => source.frames(app));
     if (frames?.totalFrames) {
-      if (frames.p95Ms !== undefined) add(kind('frames_p95_ms'), 'ms', frames.p95Ms);
+      // from one set of frames: the summary's p95 is of a wider span, in its buckets, and can pass the rows' worst
+      const p95 = frames.frames?.p95Ms ?? frames.p95Ms;
+      if (p95 !== undefined) add(kind('frames_p95_ms'), 'ms', p95);
       if (frames.frames) add(kind('frames_worst_ms'), 'ms', frames.frames.worstMs);
     }
     const memory = await read('memory', () => source.memory(app));

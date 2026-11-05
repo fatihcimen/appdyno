@@ -3,6 +3,7 @@
 ## Unreleased
 
 - A window keeps its pictures through a decoder's stall on a busy Mac: pictures already decoding were thrown away with the frame that did not fit, and a stream's first burst could leave a window black until the next key frame.
+- A journey's `frames_p95_ms` is of the step's own frames, as its `frames_worst_ms` is: it could pass the worst, from gfxinfo's buckets. A baseline kept before this moves.
 - `mirror --record` makes its movie as a window's Record does, by the device's own recorder where the picture is no stream, so that an emulator and a simulator get one. A movie that does not start, or ends with nothing, fails the run with exit 1.
 - `mcp --http`: a second client is refused at its call, by who is calling: one that connected before the first tool call was served on the same context. Each client gets its name back as its session id, and a call with none is refused while another holds the server. A refused client no longer keeps the holder's time running.
 - `press_key` `app_switch` on a simulator opens the switcher, by the input a window's control sends: the drag it made showed none, and it said pressed.
