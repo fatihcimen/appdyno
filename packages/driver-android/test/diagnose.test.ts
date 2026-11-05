@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { crashReports, parseDropbox, parseExitInfo } from '../src/crashes.js';
 import { conflictHint, holdersIn, PROCESS_LIST } from '../src/holders.js';
-import { logcatCommand } from '../src/logs.js';
+import { logcatCommand, markOfLine } from '../src/logs.js';
 
 const line = (pid: number, command: string, user = 'shell') =>
   `${String(pid).padStart(6)} ${user} ${command}`;
@@ -114,6 +114,29 @@ describe('logs', () => {
       "logcat -d --pid=42 -v threadtime -t 1730000000.123 '*:W'",
     );
     expect(logcatCommand('42', { level: 'info', maxLines: 5 })).toContain('-t 5 ');
+  });
+
+  it('asks for the time on each line when it is to be placed', () => {
+    expect(logcatCommand('42', { level: 'info', maxLines: 5, timed: true })).toContain(
+      '-v threadtime -v epoch ',
+    );
+  });
+
+  it('reads a line as this logcat prints it: indented, with its time and rank', () => {
+    expect(
+      markOfLine('         1793841365.998  6178  6178 I Choreographer: Skipped 47 frames!'),
+    ).toEqual({ at: 1793841365998 });
+    expect(markOfLine('1793841366.022  6178  6260 W OpenGLRenderer: Davey!')).toEqual({
+      at: 1793841366022,
+      level: 'warn',
+    });
+    expect(markOfLine('1793841366.022  6178  6260 E App: failed')?.level).toBe('error');
+    expect(markOfLine('1793841366.022  6178  6260 F libc: Fatal signal')?.level).toBe('error');
+  });
+
+  it('gives no place to what is not a line', () => {
+    expect(markOfLine('--------- beginning of main')).toBeUndefined();
+    expect(markOfLine('11-05 04:16:06.022  6178  6260 I OpenGLRenderer: Davey!')).toBeUndefined();
   });
 });
 

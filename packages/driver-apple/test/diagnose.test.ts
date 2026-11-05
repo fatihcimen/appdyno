@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { endReports, parseIps, reportsIn, simulatorCrashes } from '../src/crashes.js';
-import { logShowArgs } from '../src/logs.js';
+import { logShowArgs, placeLines } from '../src/logs.js';
 
 const UDID = '8BC57F11-901C-4DF6-A2B9-2A3B7DE1B79D';
 const OTHER = '11111111-2222-3333-4444-555555555555';
@@ -113,5 +113,35 @@ describe('simulator log', () => {
     const args = logShowArgs(UDID, app, { app: 'a.b', level: 'error', maxLines: 10 });
     expect(args).toContain('--last');
     expect(args.at(-1)).toContain('messageType == fault');
+  });
+
+  describe('lines on the clock', () => {
+    const AT = new Date(2026, 10, 5, 4, 46, 59, 959).getTime();
+
+    it("reads this Mac's local time, and the rank of a line", () => {
+      const [first, second] = placeLines([
+        '2026-11-05 04:46:59.959 Df SpringBoard[23436:143f1ae] [com.apple] a message',
+        '2026-11-05 04:46:59.960 E  SpringBoard[23436:143f1ae] [com.apple] it failed',
+      ]);
+      expect(first!.mark).toEqual({ at: AT });
+      expect(second!.mark).toEqual({ at: AT + 1, level: 'error' });
+    });
+
+    it('keeps the later lines of one message where the message is', () => {
+      const placed = placeLines([
+        '2026-11-05 04:46:59.959 F  App[1:2] it went wrong',
+        ' now: 4986292486976 seconds: 1793843219.967673',
+        '    timeEntry = <STStatusBarDataStringEntry: 0x113c12060>;',
+      ]);
+      expect(placed.map((p) => p.mark)).toEqual([
+        { at: AT, level: 'error' },
+        { at: AT, level: 'error' },
+        { at: AT, level: 'error' },
+      ]);
+    });
+
+    it('leaves out a line with nothing before it to go on from', () => {
+      expect(placeLines(['    a line cut from its message'])).toEqual([]);
+    });
   });
 });

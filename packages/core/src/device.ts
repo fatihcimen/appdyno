@@ -349,10 +349,23 @@ export type LogsQuery = {
   since?: number;
   level: LogLevel;
   maxLines: number;
+  /** Each line's time too, in `LogsAnswer.marks`; `since` is then by the device's clock. */
+  timed?: boolean;
+  /** The process, for one that may have ended: a crash's own lines are read after it is gone. */
+  pid?: string;
 };
 
+/** A line's place on the device's clock, in ms since the epoch, and how the platform ranked it. */
+export type LogMark = { at: number; level?: 'warn' | 'error' };
+
 /** The app's log lines as the platform prints them, and what the platform could not give. */
-export type LogsAnswer = { lines: string[]; source: string; note?: string };
+export type LogsAnswer = {
+  lines: string[];
+  source: string;
+  note?: string;
+  /** Asked with `timed`, one for each of `lines`. */
+  marks?: LogMark[];
+};
 
 export type CrashesQuery = {
   app: string;
