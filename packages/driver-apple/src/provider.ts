@@ -12,6 +12,9 @@ import { queryTraceFile } from './trace.js';
 import { listPhones } from './usbmux.js';
 import { run } from '@appdyno/core';
 
+const RUNNER_NOT_BUILT =
+  'built once on first use (a few minutes), or build it now: appdyno ios build';
+
 /** The runner's deployment target. */
 const RUNNER_MIN_IOS = 17;
 
@@ -55,21 +58,13 @@ export async function iosChecks(now = Date.now()): Promise<Check[]> {
   out.push(
     sim
       ? { name: 'ios runner (simulator)', ok: true, detail: sim }
-      : warn(
-          'ios runner (simulator)',
-          'not built yet',
-          'built once on first use (a few minutes), or build it now from ios/ (README)',
-        ),
+      : warn('ios runner (simulator)', 'not built yet', RUNNER_NOT_BUILT),
   );
   const phone = await phoneRunnerApp(false).catch(() => undefined);
   out.push(
     phone
       ? { name: 'ios runner (iPhone)', ok: true, detail: phone }
-      : warn(
-          'ios runner (iPhone)',
-          'not built yet',
-          'built once on first use (a few minutes), or build it now from ios/ (README)',
-        ),
+      : warn('ios runner (iPhone)', 'not built yet', RUNNER_NOT_BUILT),
   );
   const phones = await listPhones().catch(() => [] as string[]);
   const explicit = phoneSigningFromEnv();

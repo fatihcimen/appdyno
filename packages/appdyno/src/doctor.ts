@@ -15,6 +15,11 @@ export async function doctor(opts: {
     },
   ];
   checks.push(await compilerCheck());
-  for (const p of opts.providers) if (p.doctor) checks.push(...(await p.doctor(opts.serial)));
+  // the driver that would open it, as any other has no such device to speak of
+  const { serial } = opts;
+  const owner =
+    serial === undefined ? undefined : opts.providers.findLast((p) => p.handles(serial));
+  for (const p of opts.providers)
+    if (p.doctor) checks.push(...(await p.doctor(p === owner ? serial : undefined)));
   return checks;
 }
