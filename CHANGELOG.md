@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- AI Clients in the hub: every client `appdyno install` knows, each as it truly stands. Connected is earned only by a real call: the server keeps a client's name, version, way in and last call, and nothing it sent. A client not in the list still gets a row of its own once it has called.
+- Adding or removing a client from the hub shows the exact lines first, by `install`'s own code, and Undo takes that one entry back, flags and all, as a client may have written its file since.
+- Test runs what a client's entry runs, as far as its list of tools, and says what to do next: no such command, a short `PATH` from the Dock, a package the registry has not got, no answer in 60 s. It calls no tool, so it touches no device and earns no Connected.
+- The hub starts and stops `appdyno mcp --http` for a client in a browser: its address, its token hidden until asked and copied so that a clipboard manager leaves it, a new one when one got out, and in plain words what a token gives and what a tunnel means. The server ends with the hub, however the hub ends.
+- The capsule names the client driving a device, as a person knows it.
+- Help in the hub, in the Mac's language: what appdyno is, prompts by goal filled with the device and app, what each does to the device, what each panel and number means, and `doctor`.
+
 - The hub is one calm window: a neutral stage where the device is the only colour, as what stood behind the sidebar and Inspector took their words and symbols under contrast. The system's Inspector, edge to edge, in place of a floating pane; one capsule in the toolbar for everything a device is at; four symbol tabs; figures and charts in one row; and measures as one grouped list.
 - What a window says holds its strength behind other windows, as it usually is: from a title and symbols at 2:1 to every word at 4.5:1 and every symbol at 3:1, read from the real window, dark and light, but for what stands disabled while a measure runs.
 - Every word of the hub in Turkish and English by the Mac's language, from one table. A viewer's own words and what the parent sends pass through it at the label.

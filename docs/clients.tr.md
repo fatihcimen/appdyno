@@ -110,6 +110,29 @@ Bulunamayan bir istemci klasörünü henüz oluşturmamıştır: bir kez açın 
 
 Seçenekler `args` dizisinin sonuna eklenir. Örneğin `"--device", "emulator-5554"` ya da `"--allow-apps", "com.example.app"`. Bkz. [Server options](../README.md#server-options).
 
+### Hub'dan
+
+Hub'ın kenar çubuğundaki **Yapay Zekâ İstemcileri**, buradaki her istemciyi gerçek durumuyla listeler:
+
+| ne der                      | anlamı                                                                                    |
+| --------------------------- | ----------------------------------------------------------------------------------------- |
+| Bağlı, ne zaman olduğuyla   | burada gerçekten bir araç çağırdı. Bu sözü yalnızca bu kazandırır                         |
+| Eklendi, yeniden başlatın   | girdisi yerinde, henüz çağrı gelmedi                                                      |
+| Eklenmedi                   | bu Mac'te var, appdyno'ya ait bir şey yok                                                 |
+| Ayar dosyası düzenlenemiyor | `install` okuyamadığı dosyaya dokunmaz, nedenini söyler                                   |
+| Bu Mac'te Yok               | burada dosyası ya da klasörü yok: bir kez açın                                            |
+| Tarayıcıda çalışır          | bu Mac'te eklenecek bir şey yok: bkz. [Tarayıcıdaki istemciler](#tarayıcıdaki-istemciler) |
+
+**Ekle** ve **Kaldır**, `appdyno install` kodunu kullanır. Önce satırların tam hali görünür, ikinci tıklamaya kadar hiçbir şey yazılmaz. Yalnızca o girdi değişir, dosyanın yanında yedek kalır. **Geri Al** yalnızca o girdiyi, bayraklarıyla birlikte eski haline döndürür; yedeği geri yüklemez, çünkü istemci o arada dosyasını yazmış olabilir.
+
+**Test Et**, istemcinin girdisinin çalıştırdığını çalıştırır, araç listesini ister, ne bulduğunu ve sırada ne yapılacağını söyler. Araç çağırmaz, bu yüzden cihaza dokunmaz ve Bağlı sözünü kazandırmaz. Dock'tan açılan istemci, Dock'un verdiği kısa `PATH` ile denenir.
+
+Bunu nasıl bilir: sunucu her istemci için verdiği adı ve sürümü, stdio mu HTTP mi kullandığını ve son çağrısının zamanını `~/Library/Caches/appdyno/clients` altında tutar; gönderdiği hiçbir şeyi tutmaz. Listede olmayan bir istemci de çağırdığında kendi satırını alır. Adlar, çağrı yapılabilen yerlerde istemcinin kendi çağrısından okundu: bkz. [Neyle denendi](#neyle-denendi). Bir istemciyi kaldırmak çağrılarını da unutturur.
+
+İstemcinin verdiği ad, bir cihazı yönetirken durum kapsülünde de görünür.
+
+Kenar çubuğundaki **Yardım** ya da command-?, en son önde olan cihaz ve uygulamayla doldurulmuş, hedefe göre istemler sunar; her biri cihaza ne yaptığını söyler.
+
 ### Claude Code
 
 1. `appdyno install` çalıştırın ya da elle ekleyin: `claude mcp add --scope user --transport stdio appdyno -- npx -y appdyno mcp`
@@ -254,7 +277,9 @@ Tünel açmadan önce:
 
 ### HTTP sunucusu
 
-`appdyno mcp --http` aynı araçları MCP'nin Streamable HTTP taşıması üzerinden sunar. Siz istemedikçe kapalıdır ve yalnızca bu Mac'te dinler:
+Hub bunların hepsini Yapay Zekâ İstemcileri'nde, Tarayıcıda bölümünde yapar. Sunucuyu Başlat aynı komutu kendi sürecinde, 8765 bağlantı noktasından ya da sonraki boş olandan çalıştırır ve adresi söyler. Token siz istemedikçe gizli kalır, sunucuya ortam değişkeniyle gider ve durum klasöründe 0600 izniyle saklanır, böylece kayıtlı bir bağlayıcı çalışmaya devam eder. Yeni Token, dışarı sızan token'ın yerine yenisini koyar. Sunucu, hub nasıl kapanırsa kapansın onunla birlikte kapanır.
+
+Elle, `appdyno mcp --http` aynı araçları MCP'nin Streamable HTTP taşıması üzerinden sunar. Siz istemedikçe kapalıdır ve yalnızca bu Mac'te dinler:
 
 ```sh
 export APPDYNO_HTTP_TOKEN=$(openssl rand -hex 32)
@@ -474,5 +499,7 @@ macOS'ta, geçici bir ev klasörüyle, paketinden derlenip kurulan sürümle, b�
 | Gemini CLI 0.66.0, opencode 1.19.5           | kendi `mcp list` komutlarıyla bağlandı                    |
 | Codex CLI 0.166.0, Cline CLI 3.0.74          | dosyasını okuyup appdyno'yu listeledi; bağlantı kurulmadı |
 | MCP Inspector komut satırı, token adreste    | araçları listeledi, birini çağırdı                        |
+
+Yapay Zekâ İstemcileri'nin bir istemcinin çağırdığını bilmesini sağlayan `clientInfo` adı, Claude Code 2.1.318 için istemcinin kendi çağrısından okundu: `claude-code`. Diğer istemciler için `packages/cli/src/clients.ts` içindeki kalıp, gönderdiği bilinen addan gelir ve burada görülmedi. Biri yanlışsa o istemci verdiği adla kendi satırında görünür, başkasının yerine asla Bağlı denmez.
 
 Hesap, lisans ya da pencere gerektirdiği için denenmeyenler: ChatGPT uygulaması ve web sürümü, Claude Desktop ve web'deki Claude, Secure MCP Tunnel, herkese açık herhangi bir tünel, Codex'ten bağlantı, Cursor, VS Code, Devin Desktop, Antigravity ve Zed. Buradaki adımlar kendi belgelerinden alındı. Ücretsiz Apple kimliğiyle imzalama da denenmedi.

@@ -110,6 +110,29 @@ A client that is not found has not created its folder yet: open it once, or add 
 
 Flags go at the end of `args`. For example `"--device", "emulator-5554"`, or `"--allow-apps", "com.example.app"`. See [Server options](../README.md#server-options).
 
+### From the hub
+
+**AI Clients** in the hub's sidebar lists every client here, each as it truly stands:
+
+| it says                   | what that means                                                               |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| Connected, with when      | it has really called a tool here. Only that earns the word                    |
+| Added, restart it         | its entry is there and no call has come yet                                   |
+| Not added                 | it is on this Mac, with nothing of appdyno's                                  |
+| Its file cannot be edited | `install` will not touch a file it cannot read, and says why                  |
+| Not on This Mac           | it has no file or folder here: open it once                                   |
+| Runs in a browser         | nothing to add on this Mac: see [Clients in a browser](#clients-in-a-browser) |
+
+**Add** and **Remove** go by the code of `appdyno install`. The exact lines show first, and nothing is written until the second click. Only that entry changes, and a backup stays beside the file. **Undo** takes that one entry back, flags and all, and does not restore the backup, as a client may have written its file since.
+
+**Test** runs what the client's entry runs, as far as asking for its list of tools, and says what it found and what to do next. It calls no tool, so it touches no device and earns no Connected. A client opened from the Dock is tried with the short `PATH` the Dock gives it.
+
+How it knows: the server keeps, for each client, the name and version it gave, whether it came over stdio or HTTP, and the time of its last call, in `~/Library/Caches/appdyno/clients`, and nothing it sent. A client that is not in this list still gets a row of its own once it has called. The names were read from each client's own call where one could be made: see [What this was tried on](#what-this-was-tried-on). Taking a client out forgets its calls.
+
+The name a client gave is also what the status capsule says while it drives a device.
+
+**Help** in the sidebar, or command-?, has prompts by goal, filled with the device and app you last had in front, each saying what it does to the device.
+
 ### Claude Code
 
 1. Run `appdyno install`, or by hand: `claude mcp add --scope user --transport stdio appdyno -- npx -y appdyno mcp`
@@ -254,7 +277,9 @@ Before you open a tunnel:
 
 ### The HTTP server
 
-`appdyno mcp --http` serves the same tools over MCP's Streamable HTTP. It is off unless you ask for it, and only listens on this Mac:
+The hub does all of this from AI Clients, under In a Browser. Start Server runs the same command in a process of its own, from port 8765 or the next free one, and says the address. The token stays hidden until you ask, it goes to the server by its environment, and it is kept in the state folder with mode 0600, so a saved connector goes on working. New Token replaces it, for a token that got out. The server ends with the hub, however the hub ends.
+
+By hand, `appdyno mcp --http` serves the same tools over MCP's Streamable HTTP. It is off unless you ask for it, and only listens on this Mac:
 
 ```sh
 export APPDYNO_HTTP_TOKEN=$(openssl rand -hex 32)
@@ -474,5 +499,7 @@ On macOS with a temporary home folder, from the package built and installed from
 | Gemini CLI 0.66.0, opencode 1.19.5                     | connected, by their own `mcp list`                       |
 | Codex CLI 0.166.0, Cline CLI 3.0.74                    | each read its file and listed appdyno; neither connected |
 | MCP Inspector's command line, the token in the address | listed the tools, called one                             |
+
+What each client calls itself in `clientInfo`, which is how AI Clients knows it has called, was read from the client's own call for Claude Code 2.1.318: `claude-code`. For every other client the pattern in `packages/cli/src/clients.ts` comes from what it is known to send, and has not been seen here. If one is wrong, that client shows as a row of its own under the name it gave, and is never called Connected in another's place.
 
 Not tried, as each needs an account, a licence or a window: the ChatGPT app and web, Claude Desktop and Claude on the web, Secure MCP Tunnel, any public tunnel, a connection from Codex, Cursor, VS Code, Devin Desktop, Antigravity and Zed. Their steps here are from their own documentation. A free Apple ID's signing has not been tried either.
