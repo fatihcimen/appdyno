@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { appendFileSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect } from 'vitest';
@@ -26,7 +26,9 @@ export async function shownByWindow(session: { tell(m: Record<string, unknown>):
 /** On a still screen a window shows what the device says it shows, and where: suites read a phone back, and never this. */
 export function expectSamePicture(shown: Buffer, device: Buffer) {
   const { difference, shift } = pictureApart(shown, device);
-  console.log(`picture: ${difference.toFixed(1)} levels apart`);
+  // a passing test prints nothing, and how near a stream comes to the limit is the point: APPDYNO_PICTURE_LOG keeps it
+  const log = process.env.APPDYNO_PICTURE_LOG;
+  if (log) appendFileSync(log, `${difference.toFixed(1)} levels apart of ${SAME_PICTURE}\n`);
   expect(shift).toEqual({ x: 0, y: 0 });
   expect(difference).toBeLessThan(SAME_PICTURE);
 }
