@@ -30,6 +30,7 @@ import type { Session } from './session.js';
 import {
   DEFAULT_FLIGHT_SECONDS,
   MAX_FLIGHT_SECONDS,
+  MIN_FLIGHT_SECONDS,
   startFlight,
   type RunningFlight,
 } from './timeline/flight.js';
@@ -346,7 +347,8 @@ export function reportFor(ctx: ServerContext) {
   const startFlightOn = async (s: Session, dir: string | undefined) => {
     if (s.flight)
       throw new ToolError(`a flight recorder runs on ${s.device.serial}`, 'INVALID_ARGUMENT');
-    const seconds = Math.min(ctx.flightSeconds ?? DEFAULT_FLIGHT_SECONDS, MAX_FLIGHT_SECONDS);
+    const asked = ctx.flightSeconds ?? DEFAULT_FLIGHT_SECONDS;
+    const seconds = Math.max(MIN_FLIGHT_SECONDS, Math.min(asked, MAX_FLIGHT_SECONDS));
     const app = stayingApp(s, 'flight');
     s.flight = await startFlight(ctx, s, app, seconds, dir && resolve(dir));
     const t = `flight recorder on: the last ${seconds} s of ${app}, kept on a crash or a stall; report stop ends it`;

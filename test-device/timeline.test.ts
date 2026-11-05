@@ -18,20 +18,38 @@ const APP = 'dev.appdyno.fixture';
 const run = promisify(execFile);
 const adb = (command: string) => run('adb', ['-s', serial!, 'shell', command]);
 const flows = mkdtempSync(join(tmpdir(), 'appdyno-timeline-flows-'));
+/** Longer than a look of the flight recorder, which queues behind the device's other work: 22 s apart under load. */
+const WATCHED_MS = 30_000;
+/** One UI writes no Choreographer line: a hold no frame shows stays unseen there, and a test holds it to that. */
+const writesSkippedFrames = async () =>
+  !/samsung/i.test((await adb('getprop ro.product.manufacturer')).stdout);
 
 const pageData = (file: string) =>
   JSON.parse(
     /id="timeline">([\s\S]*?)<\/script>/.exec(readFileSync(file, 'utf8'))![1]!,
   ) as Timeline;
 
+/** The screen on, and the fixture in front: what a video holds on a phone is what is in front when it starts. */
+const fixtureInFront = async () => {
+  await adb('input keyevent KEYCODE_WAKEUP');
+  await adb(`am start -W -n ${APP}/.MainActivity`);
+};
+
+/** No agent stays behind on a device that is someone's. */
+const leave = async (t: ReturnType<typeof opsOn>) => {
+  await (await t.ctx.session()).device.stopAgent();
+  t.ctx.close();
+};
+
 describe.skipIf(!serial)('a timeline of a journey', () => {
   const t = opsOn(androidProvider(new Adb(), {}), serial!, APP);
-  afterAll(() => t.ctx.close());
+  afterAll(() => leave(t));
 
   const journey = async (name: string, steps: string[]) => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-timeline-'));
     const file = join(flows, `${name}.flow`);
     writeFileSync(file, `${[`app ${APP}`, ...steps].join('\n')}\n`);
+    await fixtureInFront();
     const started = await t.call('report', { action: 'timeline', dir });
     expect(started.error, started.text).toBe(false);
     console.log(started.text);
@@ -95,6 +113,7 @@ describe.skipIf(!serial)('a timeline of a journey', () => {
       console.log('longest frame', longest, 'stalls', JSON.stringify(page.stalls.marks));
       // what every frame source says of it
       expect(longest).toBeLessThan(200);
+      if (!(await writesSkippedFrames())) return expect(page.stalls.marks).toEqual([]);
       expect(page.stalls.marks).toHaveLength(1);
       expect(page.stalls.marks[0]!.ms).toBeGreaterThan(1_200);
       expect(page.stalls.marks[0]!.ms).toBeLessThan(1_800);
@@ -107,12 +126,41 @@ describe.skipIf(!serial)('a timeline of a journey', () => {
 const udid = process.env.APPDYNO_IOS_UDID;
 
 /** The same journey on a simulator, where everything but the video is on one clock already. */
+/** The hold no frame shows, in the measure that used to read its longest frame for it. */
+describe.skipIf(!serial)('perf_trace of a held main thread', () => {
+  const t = opsOn(androidProvider(new Adb(), {}), serial!, APP);
+  afterAll(() => leave(t));
+
+  it('reads the hold, and says where that came from', async () => {
+    await adb(
+      `run-as ${APP} sh -c 'mkdir -p files; rm -f files/stall_ms; echo 1500 > files/sleep_ms'`,
+    );
+    try {
+      await fixtureInFront();
+      await adb(
+        `am start -W -a android.intent.action.VIEW -d 'appdyno-fixture://open/cpu?n=${Date.now()}' ${APP}`,
+      );
+      await pause(1_500);
+      await t.call('screen');
+      const [trace] = await Promise.all([
+        t.call('perf_trace', { seconds: 6 }),
+        pause(3_000).then(() => t.call('tap', { selector: { id: 'cpu_stall' } })),
+      ]);
+      expect(trace.error, trace.text).toBe(false);
+      console.log(`longest frame ${trace.data.worstMs}, held ${trace.data.heldMs}`);
+      if (!(await writesSkippedFrames())) return expect(trace.data.heldMs).toBeUndefined();
+      expect(trace.data.heldMs).toBeGreaterThan(1_200);
+      expect(trace.data.heldMs).toBeLessThan(1_800);
+      expect(trace.text).toContain('Skipped frames');
+    } finally {
+      await adb(`run-as ${APP} rm -f files/sleep_ms`);
+    }
+  }, 120_000);
+});
+
 describe.skipIf(!udid)('a timeline on a simulator', () => {
   const t = opsOn(appleProvider(), udid!, APP);
-  afterAll(async () => {
-    await (await t.ctx.session()).device.stopAgent();
-    t.ctx.close();
-  });
+  afterAll(() => leave(t));
 
   it('holds the stall, and says what a simulator cannot give', async () => {
     const s = await t.ctx.session();
@@ -147,10 +195,11 @@ describe.skipIf(!udid)('a timeline on a simulator', () => {
  */
 describe.skipIf(!serial)('the flight recorder', () => {
   const t = opsOn(androidProvider(new Adb(), {}), serial!, APP);
-  afterAll(() => t.ctx.close());
+  afterAll(() => leave(t));
 
   /** The query makes each link a new intent: one equal to the task's root only brings the task to front. */
   const open = async (screen: string) => {
+    await fixtureInFront();
     const url = `appdyno-fixture://open/${screen}?n=${Date.now()}`;
     await adb(`am start -W -a android.intent.action.VIEW -d '${url}' ${APP}`);
     await pause(1_500);
@@ -210,14 +259,16 @@ describe.skipIf(!serial)('the flight recorder', () => {
     const page = await flying(async () => {
       await pause(5_000);
       for (let i = 0; i < 4; i++) await t.call('swipe', { direction: 'up' });
-      await pause(10_000);
+      await pause(WATCHED_MS);
     });
     console.log(page.reason);
-    expect(page.reason).toContain('stall');
+    // a device that counts a frozen frame and gives no length for it says that
+    expect(page.reason).toMatch(/a stall of \d+ ms|a frozen frame/);
     expect(Math.max(...page.frames.marks.map((f) => f.ms))).toBeGreaterThan(900);
   }, 180_000);
 
   it('keeps a stall no frame shows, by the log that says so', async () => {
+    if (!(await writesSkippedFrames())) return;
     await adb(
       `run-as ${APP} sh -c 'mkdir -p files; rm -f files/stall_ms; echo 1500 > files/sleep_ms'`,
     );
@@ -226,10 +277,11 @@ describe.skipIf(!serial)('the flight recorder', () => {
       const page = await flying(async () => {
         await pause(5_000);
         await tapById('cpu_stall');
-        await pause(10_000);
+        await pause(WATCHED_MS);
       });
       console.log(page.reason, JSON.stringify(page.stalls.marks));
-      expect(page.reason).toContain('main thread');
+      // an emulator's frame reads are blind to it and only the log tells; a Xiaomi's gfxinfo saw a frame of it too
+      expect(page.reason).toMatch(/a stall of its main thread|a stall of \d+ ms/);
       expect(page.stalls.marks).toHaveLength(1);
     } finally {
       await adb(`run-as ${APP} rm -f files/sleep_ms`);
@@ -240,10 +292,7 @@ describe.skipIf(!serial)('the flight recorder', () => {
 /** The same on a simulator, which restarts nothing, and whose crash reports are this Mac's (APPDYNO_IOS_UDID). */
 describe.skipIf(!udid)('the flight recorder on a simulator', () => {
   const t = opsOn(appleProvider(), udid!, APP);
-  afterAll(async () => {
-    await (await t.ctx.session()).device.stopAgent();
-    t.ctx.close();
-  });
+  afterAll(() => leave(t));
 
   it('keeps a real crash', async () => {
     const s = await t.ctx.session();

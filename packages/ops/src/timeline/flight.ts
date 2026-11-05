@@ -21,8 +21,15 @@ import { recordFrames, writePage, type FrameRecording } from './sources.js';
 
 export const DEFAULT_FLIGHT_SECONDS = 30;
 export const MAX_FLIGHT_SECONDS = 120;
-/** What is read each second: what says a stall and what is worth keeping. A stream's numbers are read as they come. */
+/** A look queues behind what the device is doing: 22 s apart on a loaded emulator, and what it keeps has to outlast that. */
+export const MIN_FLIGHT_SECONDS = 20;
+/** What is read: what says a stall and what is worth keeping. A stream's numbers are read as they come. */
 const WATCHED: readonly LiveField[] = ['fps', 'memoryMb'];
+/**
+ * How often it looks. Each look cost a Xiaomi about 5 points of its CPU at once a second, and nothing is lost by looking
+ * less: the ring holds the moment, a frozen frame stays counted until it is read, and a log and a crash report stay.
+ */
+const LOOK_MS = 5_000;
 /** A trace that outlives this process ends by itself by then, and one is started before that, so none has a hole. */
 const FRAMES_SECONDS = 600;
 const FRAMES_RENEWED_MS = 480_000;
@@ -58,6 +65,8 @@ type Armed = {
   first: ClockReading;
   /** When it began to watch, on the device's clock. */
   since: number;
+  /** When it last looked, on this Mac. */
+  lookedAt: number;
   pid: string | undefined;
   samples: LiveSample[];
 };
@@ -104,6 +113,8 @@ export async function startFlight(
   const saved: string[] = [];
   let armed: Armed | undefined;
   let busy = false;
+  /** What holds the sources now: a stop that came in the middle of a save would find nothing armed, and leave it all on. */
+  let working: Promise<unknown> = Promise.resolve();
   let over = false;
   let lastSave = 0;
   let logsReadTo = 0;
@@ -139,6 +150,7 @@ export async function startFlight(
       noVideo,
       first,
       since: Date.now() + first.offsetMs,
+      lookedAt: 0,
       endLive: () => undefined,
       timers: [],
       pid: await device.appPid?.(app),
@@ -152,7 +164,7 @@ export async function startFlight(
       );
     logsReadTo = Date.now() + first.offsetMs;
     armed = a;
-    a.endLive = await (device.liveMetrics ?? measuredLive(device, WATCHED)).start(
+    a.endLive = await (device.liveMetrics ?? measuredLive(device, WATCHED, LOOK_MS)).start(
       (sample) => void watch(a, sample),
       app,
     );
@@ -204,8 +216,10 @@ export async function startFlight(
   const alone = async <T>(work: () => Promise<T>) => {
     if (busy || over) return undefined;
     busy = true;
+    const running = work();
+    working = running.catch(() => undefined);
     try {
-      return await work();
+      return await running;
     } finally {
       busy = false;
     }
@@ -253,6 +267,9 @@ export async function startFlight(
   const watch = async (a: Armed, sample: LiveSample) => {
     a.samples.push(sample);
     while (a.samples.length > seconds + 2) a.samples.shift();
+    // a stream's numbers come each second whatever is asked: what they cost to look at is ours to spare
+    if (Date.now() - a.lookedAt < LOOK_MS && !stallOf(sample)) return;
+    a.lookedAt = Date.now();
     await alone(async () => {
       if (a !== armed) return;
       if (!(await stillThere(a))) {
@@ -276,6 +293,7 @@ export async function startFlight(
     save: () => alone(() => keep('a person asked')).then((page) => page ?? undefined),
     stop: async () => {
       over = true;
+      await working;
       await disarm(undefined);
       rmSync(folder, { recursive: true, force: true });
     },

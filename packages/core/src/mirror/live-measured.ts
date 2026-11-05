@@ -51,7 +51,9 @@ async function sampleOf(
     return undefined;
   };
   const sameApp = kept.app === app;
-  const memoryDue = !sameApp || kept.memoryMb === undefined || kept.turn % MEMORY_EVERY === 0;
+  // what is read only now and then has no turns to spare
+  const memoryDue =
+    !sameApp || kept.memoryMb === undefined || !!only || kept.turn % MEMORY_EVERY === 0;
   kept.turn += 1;
   if (!memoryDue) sample.memoryMb = kept.memoryMb!;
   await Promise.all([
@@ -104,11 +106,12 @@ async function sampleOf(
 /**
  * A device's numbers by its own measures, for every kind that has them: one source, and no second parser. A kind with a
  * better way of its own, such as a phone's live service, gives a `liveMetrics` of its own instead. `only`: what has to
- * be read, for one that runs all day and pays for each.
+ * be read, and how seldom, for one that runs all day and pays for each.
  */
 export function measuredLive(
   device: Pick<Device, 'measure' | 'foreground'>,
   only?: readonly LiveField[],
+  everyMs = SECOND_MS,
 ): LiveMetrics {
   return {
     async start(onSample, app) {
@@ -122,7 +125,7 @@ export function measuredLive(
             ? await sampleOf(device, front, kept, only)
             : { at: began, absent: allAbsent(LIVE_FIELDS, 'waiting for the app in front') };
           if (on) onSample(sample);
-          await pause(Math.max(0, SECOND_MS - (Date.now() - began)));
+          await pause(Math.max(0, everyMs - (Date.now() - began)));
         }
       })();
       return () => {

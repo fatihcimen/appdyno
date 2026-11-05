@@ -299,7 +299,10 @@ describe('the flight recorder', () => {
     await vi.advanceTimersByTimeAsync(10_000);
     expect(saved()).toEqual([]);
     d.running = true;
-    await call('report', { action: 'stop' });
+    // it may be in its look for the app: a stop waits that second out
+    const off = call('report', { action: 'stop' });
+    await vi.advanceTimersByTimeAsync(2_000);
+    await off;
   });
 
   it('keeps what it holds when a person asks', async () => {
@@ -324,6 +327,25 @@ describe('the flight recorder', () => {
     expect(existsSync(join(state, 'flight'))).toBe(true);
     expect(readdirSync(join(state, 'flight'))).toEqual([]);
     expect(d.liveEnded).toBe(1);
+  });
+
+  it('turned off in the middle of a save, keeps that page and leaves nothing running', async () => {
+    const d = new FlightDevice();
+    const { call } = connect(d, 20);
+    await call('report', { action: 'flight' });
+    d.tell({ at: Date.now(), worstFrameMs: 950 });
+    // it is in the pause after a stall, before it writes the page
+    await vi.advanceTimersByTimeAsync(500);
+    const stopping = call('report', { action: 'stop' });
+    await vi.advanceTimersByTimeAsync(5_000);
+    const off = await stopping;
+    expect(off.data.saved).toHaveLength(1);
+    expect(d.rec.log.running).toBe(0);
+    expect(filming.read(d.serial)).toBeUndefined();
+    const runs = d.frameRuns;
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(d.frameRuns).toBe(runs);
+    expect(d.rec.log.running).toBe(0);
   });
 
   it('ends with its session', async () => {
@@ -368,6 +390,13 @@ describe('the flight recorder', () => {
     const d = new FlightDevice();
     const { call } = connect(d, 100_000);
     expect((await call('report', { action: 'flight' })).text).toContain('the last 120 s');
+    await call('report', { action: 'stop' });
+  });
+
+  it('holds enough to outlast a look on a busy device, whatever a flag asks for', async () => {
+    const d = new FlightDevice();
+    const { call } = connect(d, 3);
+    expect((await call('report', { action: 'flight' })).text).toContain('the last 20 s');
     await call('report', { action: 'stop' });
   });
 });
