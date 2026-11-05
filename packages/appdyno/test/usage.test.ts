@@ -58,6 +58,10 @@ describe('usage', () => {
     expect(line('hub')).toContain('[--allow-devices RE]');
   });
 
+  it("says adb takes a person's word", () => {
+    expect(line('tools install')).toBe('tools install [adb] [--accept-license]');
+  });
+
   it('leaves out what is between its own processes', () => {
     expect(line('mirror')).toContain('[--all [--watch]]');
     expect(line('mirror')).not.toContain('input-on-click');
@@ -78,7 +82,7 @@ describe('usage', () => {
       ['appdyno', 'perf', 'dashboard', '[--app'],
       ['appdyno', 'perf', 'survey', '--app'],
     ]);
-    expect(usage('tools install')).toBe('usage: appdyno tools install');
+    expect(usage('ios build')).toBe('usage: appdyno ios build');
   });
 
   it('lists a short command beside what it does, a long one above it', () => {

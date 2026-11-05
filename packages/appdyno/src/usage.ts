@@ -78,7 +78,11 @@ export const COMMANDS = {
   },
   doctor: { flags: { serial: value('S') }, what: 'what this machine and that device lack' },
   'ios build': { what: 'build the iOS runners now' },
-  'tools install': { what: 'download the trace tools' },
+  'tools install': {
+    takes: '[adb]',
+    flags: { 'accept-license': on },
+    what: "download the trace tools; adb: Google's platform-tools, under Google's terms",
+  },
   bench: {
     flags: {
       serial: needed('S'),

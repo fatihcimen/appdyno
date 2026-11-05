@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { connect, type Socket } from 'node:net';
 import { callSignal, cancelled } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import { downloadedAdb } from './tools.js';
 
 /**
  * A client of the local adb server's own protocol (TCP 127.0.0.1:5037): device lists, raw streams to a
@@ -108,13 +109,18 @@ export class Adb {
   private readonly host: string;
   /** The adb server's port, for what connects to it by itself. */
   readonly port: number;
-  readonly bin: string;
+  private readonly given: string | undefined;
   private started: Promise<void> | undefined;
 
   constructor(opts: AdbOptions = {}) {
     this.host = opts.host ?? '127.0.0.1';
     this.port = opts.port ?? 5037;
-    this.bin = opts.bin ?? process.env.ADB ?? defaultAdb();
+    this.given = opts.bin;
+  }
+
+  /** Looked up each time: a hub that stays open can be given one by a person's download. */
+  get bin() {
+    return this.given ?? process.env.ADB ?? defaultAdb();
   }
 
   /** Every device adb knows (`adb devices -l`), any state. */
@@ -318,5 +324,6 @@ function defaultAdb(): string {
   if (sdk) return `${sdk}/platform-tools/adb`;
   // where Android Studio puts the SDK on a Mac
   const studio = join(homedir(), 'Library/Android/sdk/platform-tools/adb');
-  return existsSync(studio) ? studio : 'adb';
+  if (existsSync(studio)) return studio;
+  return existsSync(downloadedAdb()) ? downloadedAdb() : 'adb';
 }

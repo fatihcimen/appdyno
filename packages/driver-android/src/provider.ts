@@ -36,7 +36,7 @@ export async function androidChecks(adb: Adb, serial?: string): Promise<Check[]>
       name: 'adb',
       ok: false,
       detail: `not found at ${adb.bin}`,
-      fix: 'install the Android SDK platform-tools and set ANDROID_HOME',
+      fix: 'appdyno tools install adb, or install the Android SDK platform-tools and set ANDROID_HOME',
     });
     return checks;
   }
