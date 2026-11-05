@@ -29,7 +29,7 @@ import { windowMeasures } from '../packages/ops/src/mirror/measures.js';
 const UDID = process.env.APPDYNO_IOS_UDID;
 const SERIAL = process.env.APPDYNO_ANDROID_SERIAL;
 const IPHONE = process.env.APPDYNO_IPHONE_UDID;
-const BUILT = join(import.meta.dirname, '../packages/appdyno/dist/index.js');
+const BUILT = join(import.meta.dirname, '../packages/driver-apple/dist/index.js');
 const APP = 'dev.appdyno.fixture';
 const FORM = 'appdyno-fixture://open/form';
 const LIST = 'appdyno-fixture://open/list';

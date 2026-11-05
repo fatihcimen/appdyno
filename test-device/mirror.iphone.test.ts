@@ -16,7 +16,8 @@ import { windowMeasures } from '../packages/ops/src/mirror/measures.js';
  */
 const udid = process.env.APPDYNO_IPHONE_UDID;
 const FIXTURE = 'dev.appdyno.fixture';
-const dist = join(import.meta.dirname, '../packages/appdyno/dist');
+const packages = join(import.meta.dirname, '../packages');
+const dist = join(packages, 'appdyno/dist');
 const headless = process.env.APPDYNO_MIRROR_WINDOW !== '1';
 
 const until = async (what: string, test: () => boolean | Promise<boolean>, ms = 30_000) => {
@@ -86,7 +87,11 @@ describe.runIf(udid)('mirror on an iPhone', () => {
   };
 
   beforeAll(async () => {
-    built = await import(join(dist, 'index.js'));
+    // the package's own index holds only `connect`
+    built = {
+      ...(await import(join(packages, 'core/dist/index.js'))),
+      ...(await import(join(packages, 'driver-apple/dist/index.js'))),
+    };
     device = new built.IosPhoneDevice(udid!);
     await device.open();
     await device.launch(FIXTURE);
