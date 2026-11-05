@@ -230,7 +230,7 @@ export abstract class IosDevice extends RpcDevice implements Device {
       return opts?.read === 'tree' ? { ...r, tree: await this.tree() } : r;
     }
     if (key === 'appSwitch') {
-      // iOS has no such key: the home indicator's slow drag up, held until the switcher shows
+      // iOS has no such key: the home indicator's slow drag up, held until the switcher shows, on a phone
       const { w, h } = this.helloInfo!.screen;
       const [x, y] = [Math.round(w / 2), Math.round(h * 0.55)];
       return this.act(

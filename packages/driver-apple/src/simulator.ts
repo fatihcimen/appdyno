@@ -281,8 +281,9 @@ export class IosSimulatorDevice extends IosDevice {
   private locked = false;
 
   override async key(key: string, opts?: ActOptions, modifiers?: Modifier[]) {
-    if (key === 'siri') {
-      await this.mirror.input({ kind: 'button', name: 'siri' });
+    // what a window's control sends: the runner's drag up from the home indicator shows no switcher here
+    if (key === 'siri' || key === 'appSwitch') {
+      await this.mirror.input({ kind: 'button', name: key });
       return opts?.read === 'tree' ? { tree: await this.tree() } : {};
     }
     const r = await super.key(key, opts, modifiers);

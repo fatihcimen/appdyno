@@ -181,6 +181,19 @@ describe('what a device measures', () => {
   });
 });
 
+describe('the app switcher on a simulator', () => {
+  afterEach(() => void vi.restoreAllMocks());
+
+  it("opens by the input a window sends, as the runner's drag shows none", async () => {
+    const device = new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951');
+    const input = vi.spyOn(device.mirror, 'input').mockResolvedValue(undefined);
+    const act = vi.spyOn(device, 'act');
+    await device.key('appSwitch');
+    expect(input).toHaveBeenCalledExactlyOnceWith({ kind: 'button', name: 'appSwitch' });
+    expect(act).not.toHaveBeenCalled();
+  });
+});
+
 describe('the kind of device', () => {
   it('calls a simulator virtual, and a phone not', () => {
     expect(new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951').virtual).toBe(true);
