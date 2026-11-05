@@ -14,6 +14,7 @@ static NSDictionary *fixture(void) {
       @{@"name": @"Four", @"state": @"refused", @"file": @"/x/four", @"why": @"not JSON"},
       @{@"name": @"Five", @"state": @"absent"},
       @{@"name": @"Six", @"state": @"browser"},
+      @{@"name": @"Seven", @"state": @"added", @"file": @"/x/seven", @"stale": @YES},
     ],
     @"browser": @[@"Six"],
     @"server": @{},
@@ -38,13 +39,14 @@ static NSDictionary *clicked(MVHub *hub, NSString *name) {
 }
 
 static void checkStates(MVHub *hub) {
-  for (NSString *name in @[@"test:One", @"remove:One", @"test:Two", @"remove:Two", @"add:Three", @"test:Six"]) MVCheck([@"clients: a row offers " stringByAppendingString:name], has(hub, name), nil);
+  for (NSString *name in @[@"test:One", @"remove:One", @"test:Two", @"remove:Two", @"add:Three", @"test:Six", @"add:Seven"]) MVCheck([@"clients: a row offers " stringByAppendingString:name], has(hub, name), nil);
   for (NSString *name in @[@"add:One", @"add:Two", @"test:Three", @"remove:Three", @"add:Four", @"remove:Four", @"test:Four", @"add:Five", @"test:Five", @"add:Six", @"remove:Six"]) MVCheck([@"clients: a row does not offer " stringByAppendingString:name], !has(hub, name), nil);
   NSString *words = wordsOf(hub);
   for (NSString *said in @[@"Connected · last call 2 minutes ago", @"Added, restart it", @"Not added", @"Its settings file cannot be edited", @"not JSON", @"Runs in a browser: nothing to add here", @"Five"]) MVCheck([@"clients: says " stringByAppendingString:said], [words containsString:MVWord(said)], words);
 }
 
 static void checkChange(MVHub *hub) {
+  MVCheck(@"clients: Update goes by the lines too", [clicked(hub, @"add:Seven")[@"do"] isEqual:@"preview"], nil);
   MVCheck(@"clients: Add asks for the change first", [clicked(hub, @"add:Three")[@"do"] isEqual:@"preview"], nil);
   NSDictionary *preview = @{@"client": @"Three", @"remove": @NO, @"file": @"/x/three", @"did": @"added", @"backup": @YES, @"lines": @[@"+ the line"]};
   [hub showClients:@{@"preview": preview}];

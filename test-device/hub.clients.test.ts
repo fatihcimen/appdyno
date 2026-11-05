@@ -194,6 +194,23 @@ describe.runIf(process.env.APPDYNO_HUB_PLACES)('AI Clients and Help', () => {
     expect(readFileSync(file, 'utf8')).not.toContain('appdyno');
   });
 
+  it('takes an entry out on a click, and Undo puts it back as it was', async () => {
+    const file = fileIn(home, working);
+    const before = readFileSync(file, 'utf8');
+    sent.length = 0;
+    await click(`remove:${working.name}`);
+    expect(await answer('preview')).toMatchObject({ remove: true, did: 'removed' });
+    await quiet(200);
+    await click(`apply:${working.name}`);
+    expect(await answer('done')).toMatchObject({ did: 'removed' });
+    expect(readFileSync(file, 'utf8')).not.toContain(main);
+    sent.length = 0;
+    await click(`undo:${working.name}`);
+    await answer('done');
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(JSON.parse(before));
+    await quiet(200);
+  });
+
   it('tests what an entry runs, and says what to do when it fails', async () => {
     sent.length = 0;
     await click(`test:${working.name}`);

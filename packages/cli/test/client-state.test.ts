@@ -78,6 +78,15 @@ describe.each(CLIENTS)('$name on this Mac', (client) => {
     expect(rowOf(dir, client, [callOf(client)]).state).toBe('open');
   });
 
+  it('is stale only against the app, whose command is its own', () => {
+    const dir = home();
+    added(dir, client);
+    expect(rowOf(dir, client).stale).toBeUndefined();
+    const server = { command: '/Applications/X.app/Contents/Resources/bin/x', args: ['mcp'] };
+    const row = clientRows({ ...where(dir), server }, []).find((r) => r.name === client.name)!;
+    expect(row.stale).toBe(true);
+  });
+
   it('says so when it will not take an edit, and why', () => {
     const dir = home();
     present(dir, client);
