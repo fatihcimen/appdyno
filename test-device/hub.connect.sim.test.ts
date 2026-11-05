@@ -178,7 +178,7 @@ describe.runIf(sim)('Connect and Tools on a simulator', () => {
   }, 120_000);
 
   it.skipIf(short)(
-    'saves a baseline, compares with it, and asks why, each the very command',
+    'saves a baseline and compares with it, each the very command',
     async () => {
       const folder = join(home, 'flows');
       mkdirSync(folder);

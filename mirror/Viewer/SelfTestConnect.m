@@ -222,7 +222,8 @@ static void checkNoteLeaves(MVHub *hub) {
 }
 
 static void checkWays(MVHub *hub) {
-  NSDictionary *choices = @{@"simulator": @{@"models": @[@{@"name": @"iPhone 17", @"id": @"m"}], @"systems": @[@{@"name": @"iOS 27", @"id": @"s"}]}};
+  NSDictionary *kinds = @{@"models": @[@{@"name": @"iPhone 17", @"id": @"m"}], @"systems": @[@{@"name": @"iOS 27", @"id": @"s"}]};
+  NSDictionary *choices = @{@"simulator": kinds, @"emulator": kinds};
   [hub show:@{@"devices": @[], @"choices": choices}];
   [hub pokeRow:@"Connect a Phone"];
   MVPump(0.2);
@@ -243,7 +244,12 @@ static void checkWays(MVHub *hub) {
   MVPump(0.3);
   MVCheck(@"started: New Simulator asks what to make", window.attachedSheet != nil, nil);
   if (window.attachedSheet) [window endSheet:window.attachedSheet];
-  MVPump(0.2);
+  MVPump(0.3);
+  [hub pokeClick:@"newEmulator"];
+  MVPump(0.3);
+  MVCheck(@"started: and so does New Emulator", window.attachedSheet != nil, nil);
+  if (window.attachedSheet) [window endSheet:window.attachedSheet];
+  MVPump(0.3);
 }
 
 static void checkNeedsYou(MVHub *hub) {
