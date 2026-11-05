@@ -125,7 +125,7 @@ describe.skipIf(!ANDROID)('Settings on Android', () => {
     ['battery', /Battery|Power saving|Pil/],
     ['general', /Search settings|Settings|Ayarlar/],
     ['software_update', /update|güncelle/i],
-    ['storage', /Storage|Depolama/],
+    ['storage', /storage|depolama/i],
     ['date_time', /Date|Tarih/],
     ['vpn', /VPN/],
     ['home_screen', /Home|Default|Ana ekran|Varsayılan/],
