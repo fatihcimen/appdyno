@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import {
+  Cannot,
   cannot,
   stateDir,
   type DeviceVitals,
@@ -27,9 +28,15 @@ import {
   parseThermal,
   parseTimeProfile,
 } from './trace-parse.js';
-import { recentTrace, recordHitches, recordTrace, traceTable } from './trace.js';
+import { recentTrace, recordHitches, recordStallSpans, recordTrace, traceTable } from './trace.js';
 
 const now = () => new Date().toISOString();
+
+/**
+ * A trace's rows are counted from a date to the ms, of no clock it names. On an iPhone 13 Pro Max three stalls of 500 ms
+ * read 513 to 516 ms and each began inside its tap, a call of 331 to 427 ms: that is as far as it was found to hold.
+ */
+const PHONE_FRAMES_PLACED = { by: 'the date their trace began', withinMs: 215 };
 
 /** What a phone's measures ask of the device. */
 export type PerfPhone = Pick<
@@ -51,7 +58,6 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
   readonly framesByProbe = false;
   frames = cannot('frames');
   resetFrames = cannot('frames');
-  frameMarks = cannot('frames on a clock: a phone gives its hitches over a whole trace');
   attachProbe = cannot('through a frame probe');
 
   constructor(private readonly phone: PerfPhone) {
@@ -96,6 +102,39 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
     return {
       value: { kind: 'hitches', ...v },
       raw: v.tracePath,
+      at: now(),
+      source: 'xctrace Animation Hitches',
+    };
+  }
+
+  /** What went wrong while `during` ran, on the clock its trace was begun by: a phone says no more of its other frames. */
+  async frameMarks(
+    bundle: string,
+    seconds: number,
+    during: () => Promise<unknown>,
+    keepSeconds?: number,
+  ) {
+    // a trace has no ring: it would grow, heavy on the phone, for as long as a flight recorder runs
+    if (keepSeconds !== undefined) throw new Cannot('frames in a ring on a phone');
+    await this.phone.inFront(bundle);
+    assertBundle(bundle);
+    const { tracePath, started, spans } = await recordStallSpans(
+      this.phone.serial,
+      () => this.phone.ctl.pid(bundle),
+      seconds,
+      join(stateDir(), 'traces'),
+      during,
+    );
+    if (started === undefined)
+      throw new DeviceError('UNSUPPORTED', 'the trace says nothing of when it began');
+    return {
+      value: {
+        frames: spans.map((s) => ({ at: started + s.start, ms: s.ms, late: true })),
+        limits: 'A phone gives its hitches and hangs, not every frame.',
+        placed: PHONE_FRAMES_PLACED,
+        tracePath,
+      },
+      raw: tracePath,
       at: now(),
       source: 'xctrace Animation Hitches',
     };

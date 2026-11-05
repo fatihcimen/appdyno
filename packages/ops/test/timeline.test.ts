@@ -39,8 +39,10 @@ class TimedDevice extends FakeDevice {
     },
   };
   frameMarks: MeasureSource['frameMarks'] = async (_app, _seconds, during) => {
+    const began = Date.now();
     await during();
-    const at = Date.now() + this.clockAheadMs;
+    // the middle of what it recorded, which ends after the stretch the page is about
+    const at = (began + Date.now()) / 2 + this.clockAheadMs;
     return {
       value: { frames: [{ at, ms: 900, late: true }], input: [{ at, ms: 40 }] },
       raw: '',

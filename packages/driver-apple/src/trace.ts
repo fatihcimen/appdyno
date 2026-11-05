@@ -18,7 +18,7 @@ import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
 import { xcodeEnv } from './simctl.js';
-import { parseXctMetrics, traceDigest, hitchSummary } from './trace-parse.js';
+import { parseXctMetrics, stallSpans, traceDigest, hitchSummary } from './trace-parse.js';
 
 /**
  * How long a recording may take to stop after its time limit before it is ended (a phone took 14 s; a signal at 60 s
@@ -50,6 +50,8 @@ export type TraceRecording = {
   seconds: number;
   dir: string;
   during?: () => Promise<unknown>;
+  /** Ends when `during` does, rather than when `seconds` are up. */
+  endWithDuring?: boolean;
 };
 
 /**
@@ -182,6 +184,7 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
   try {
     const atOnce = await Promise.race([started.then(() => false), exited.then(() => true)]);
     if (r.during && !atOnce) await r.during();
+    if (r.endWithDuring) rec.kill('SIGINT');
     const code = await exited;
     throwIfCancelled('the recording');
     // another tool's recording: the trace it leaves is empty, whatever the exit code says
@@ -354,6 +357,45 @@ export async function queryTraceFile(
     columns: ['table'],
     rows: schemas.slice(0, q.limit).map((s) => [s]),
     dropped: Math.max(0, schemas.length - q.limit),
+  };
+}
+
+/** When a trace began, by its table of contents: what its rows are counted from. */
+export async function traceStart(tracePath: string) {
+  const { stdout } = await exporting(['--input', tracePath, '--toc'], {
+    maxBuffer: 64 * 1024 * 1024,
+    timeout: 120_000,
+  });
+  const date = /<start-date>([^<]+)<\/start-date>/.exec(stdout)?.[1];
+  return date ? Date.parse(date) : undefined;
+}
+
+/** The app's hitches and hangs while `during` runs, from when the trace began, for as long as `during` takes. */
+export async function recordStallSpans(
+  device: string,
+  pid: () => Promise<number>,
+  seconds: number,
+  dir: string,
+  during: () => Promise<unknown>,
+) {
+  const known = await pid();
+  const tracePath = await recordTrace({
+    template: 'Animation Hitches',
+    device,
+    attach: async () => known,
+    seconds,
+    dir,
+    during,
+    endWithDuring: true,
+  });
+  return {
+    tracePath,
+    started: await traceStart(tracePath),
+    spans: stallSpans(
+      await traceTable(tracePath, 'hitches'),
+      await traceTable(tracePath, 'potential-hangs'),
+      known,
+    ),
   };
 }
 

@@ -65,11 +65,12 @@ export async function startTimeline(
     reportProgress('ending the timeline');
     const to = Date.now() + first.offsetMs;
     endLive();
-    const marks = await frames.finish();
+    // the video first: an iPhone's trace takes a minute to end, and the video would go on filming it
     const movie = await endRecording(s).catch((e: Error) => {
       noVideo = e.message;
       return undefined;
     });
+    const marks = await frames.finish();
     const last = await measureClock(() => device.wallClock()).catch(() => first);
     const video =
       movie && !noVideo

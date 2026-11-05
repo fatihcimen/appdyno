@@ -144,6 +144,12 @@ const QUIET_MS = 3_000;
  */
 const SIMULATOR_LEAD = { ms: 150, withinMs: 150 };
 
+/**
+ * A phone's stream keeps no time either, and comes with no steady lead. Against a tap that crashed an app, four runs on an
+ * iPhone 13 Pro Max at host load 5 to 33 put its first frame from 398 ms before `start` answered to 840 ms after.
+ */
+const STREAM_LEAD = { ms: -220, withinMs: 620 };
+
 /** It writes a QuickTime movie, whatever the file is called. */
 export const simulatorRecorder = (udid: string): ScreenRecorder =>
   new ToolRecorder(
@@ -223,7 +229,7 @@ const streamRecorder = (udid: string, main: string): ScreenRecorder =>
     undefined,
     undefined,
     process.execPath,
-    undefined,
+    STREAM_LEAD,
     true,
   );
 

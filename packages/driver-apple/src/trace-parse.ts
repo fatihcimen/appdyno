@@ -76,6 +76,12 @@ export const hangRows = (xml: string, pid?: number) =>
     .filter((r) => pid === undefined || r.process?.fmt?.includes(`(${pid})`))
     .filter((r) => !/Interaction Delay/.test(r['hang-type']?.value ?? ''));
 
+/** The app's hitches and its main thread's hangs, each counted from the trace's start. */
+export const stallSpans = (hitchesXml: string, hangsXml: string, pid?: number): Span[] => [
+  ...spansOf(parseTraceTable(hitchesXml).filter((r) => r['is-system']?.value !== '1')),
+  ...spansOf(hangRows(hangsXml, pid)),
+];
+
 /**
  * The app's hitches over a recording. A main thread blocked during a scroll may show in no hitch, as no frame was on
  * its way (a 1 s stall read 50 ms in the hitch table and 1.02 s in the hang table of one recording), so what froze the
