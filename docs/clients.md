@@ -19,6 +19,34 @@ Then get your device ready: [Android](#an-android-phone-or-emulator), [iPhone or
 
 ## Install appdyno
 
+The Mac app is for most people, and needs no terminal. The npm package is for CI and for developers. Both run the same code.
+
+### The Mac app
+
+You need a Mac with Apple silicon and macOS 13.5 or newer. You do not need Node, Xcode or a terminal: the app carries its own Node, the Android agent and its window.
+
+There is no release yet. Until there is one, a checkout builds the same app: `pnpm build && node scripts/build-app.mjs` leaves it in `.app-build`.
+
+1. Download `Appdyno-<version>-arm64.dmg` from the [releases](https://github.com/fatihcimen/appdyno/releases) and open it.
+2. Drag Appdyno to Applications.
+3. Open Appdyno. The hub opens, and an icon stays in the menu bar with your devices. The Dock shows Appdyno only while a window is open.
+
+**The first open.** A build without a Developer ID is signed ad hoc, and macOS will not open it with a double click. On macOS 15 and later it says it could not verify the app: click Done, then open System Settings, Privacy & Security, scroll down, click Open Anyway and enter your password. On macOS 13 and 14, Control-click the app, choose Open, and confirm. Either is asked once. A build notarized by Apple only asks whether to open an app from the internet.
+
+**Android** needs adb, which the app does not carry: Google's terms keep it out, and it holds LGPL code. In the menu bar, Get adb for Android downloads Google's own platform-tools, 16 MB, and checks them against a pinned hash, once you accept Google's terms. If Android Studio or `ANDROID_HOME` already gives you adb, the app uses that, and the item does not appear.
+
+**In the menu bar**, Put appdyno on the PATH makes `appdyno` work in every terminal, with a link at `/usr/local/bin/appdyno`, and macOS may ask for your password. Add to MCP Clients shows what it would change and does what `appdyno install` does. If you move the app, your clients and the link follow it the next time you open it.
+
+**With Homebrew.** A release carries a cask, `appdyno.rb`. Copy it into a tap of your own:
+
+```sh
+brew tap-new you/tools
+cp appdyno.rb "$(brew --repository you/tools)/Casks/"
+brew install --cask you/tools/appdyno
+```
+
+### The npm package
+
 You need a Mac and Node 22 or newer. Check with `node --version`; if it says "command not found", install the LTS from [nodejs.org](https://nodejs.org/).
 
 appdyno is not on the npm registry yet. Until it is, build it from a checkout, which also needs pnpm and a JDK 21:
@@ -49,12 +77,15 @@ It then upgrades with whatever installed appdyno. `appdyno doctor` shows which, 
 | ---------------------------- | ------------------------------------------------------------------------------- |
 | `npm install -g`, any prefix | upgrades with npm, in that prefix, from the copy it just verified               |
 | `pnpm add -g`                | upgrades with pnpm, to that exact version                                       |
+| the Mac app                  | replaces the app: see below                                                     |
 | Homebrew, Volta, Nix         | refuses: upgrade it with that manager                                           |
 | a one-off `npx`              | refuses: see below                                                              |
 | a source checkout            | refuses: `git pull`, then `pnpm install && pnpm build`                          |
 | anything else                | refuses: upgrade it with what installed it, or install it with `npm install -g` |
 
 A failed install leaves the old version working. `update` never moves to an older version, and never to a prerelease, even when the registry's `latest` points at one.
+
+**The Mac app** updates itself by the same promise, with Check for Updates in the menu bar, or `appdyno update`. Nothing looks for an update unless you ask. A release publishes a small file, its appcast, signed with a key whose public half is in your app. The app believes nothing else: it downloads the disk image that file names, checks its hash and size, unpacks it beside the app, and checks its code signature, that it is the same program from the same signer, and that it is the version signed. Only then does it swap the two. If any of this fails, your app stays as it was, and a build made with no update key refuses to update at all. Open the app again afterwards.
 
 **A client that runs `npx -y appdyno mcp`.** npx asks the registry at each start and moves to the latest release by itself, with none of the checks above. If appdyno is installed globally, npx runs that install instead. So run `npm install -g appdyno` once: what your clients run then changes only when you run `appdyno update`.
 

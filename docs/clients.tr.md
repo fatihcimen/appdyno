@@ -19,6 +19,34 @@ Sonra cihazınızı hazırlayın: [Android](#android-telefon-veya-emülatör), [
 
 ## appdyno'yu kurmak
 
+Çoğu kişi için Mac uygulaması yeterlidir, terminal gerektirmez. npm paketi CI ve geliştiriciler içindir. İkisi de aynı kodu çalıştırır.
+
+### Mac uygulaması
+
+Apple silicon işlemcili, macOS 13.5 ya da üstü bir Mac gerekir. Node, Xcode ya da terminal gerekmez: uygulama kendi Node'unu, Android agent'ı ve penceresini içinde taşır.
+
+Henüz yayımlanmış bir sürüm yok. O zamana kadar kaynak kod aynı uygulamayı derler: `pnpm build && node scripts/build-app.mjs` onu `.app-build` klasörüne bırakır.
+
+1. `Appdyno-<sürüm>-arm64.dmg` dosyasını [sürümler](https://github.com/fatihcimen/appdyno/releases) sayfasından indirip açın.
+2. Appdyno'yu Applications klasörüne sürükleyin.
+3. Appdyno'yu açın. Hub açılır, menü çubuğunda cihazlarınızla birlikte bir simge kalır. Dock'ta Appdyno yalnızca bir pencere açıkken görünür.
+
+**İlk açılış.** Developer ID'si olmayan bir derleme ad hoc imzalıdır ve macOS onu çift tıklamayla açmaz. macOS 15 ve üstünde uygulamayı doğrulayamadığını söyler: Done'a tıklayın, ardından System Settings, Privacy & Security bölümünde aşağı inip Open Anyway'e tıklayın ve parolanızı girin. macOS 13 ve 14'te uygulamaya Control ile tıklayıp Open'ı seçin ve onaylayın. İkisi de yalnızca bir kez sorulur. Apple'ın noter onayından geçmiş bir derlemede macOS yalnızca internetten gelen bir uygulamayı açmak isteyip istemediğinizi sorar.
+
+**Android** için adb gerekir ve uygulama onu içinde taşımaz: Google'ın koşulları buna izin vermez ve içinde LGPL kod vardır. Menü çubuğundaki Get adb for Android, Google'ın koşullarını kabul ettiğinizde Google'ın kendi platform-tools paketini (16 MB) indirir ve sabit bir hash ile doğrular. Android Studio ya da `ANDROID_HOME` size zaten adb sağlıyorsa uygulama onu kullanır ve bu öğe görünmez.
+
+**Menü çubuğunda**, Put appdyno on the PATH `/usr/local/bin/appdyno` konumuna bir bağlantı koyarak `appdyno` komutunun her terminalde çalışmasını sağlar, macOS parolanızı sorabilir. Add to MCP Clients neyi değiştireceğini gösterir ve `appdyno install` ile aynı işi yapar. Uygulamayı taşırsanız istemcileriniz ve bağlantı bir sonraki açılışta onu izler.
+
+**Homebrew ile.** Her sürüm bir cask dosyası taşır: `appdyno.rb`. Onu kendi tap'inize kopyalayın:
+
+```sh
+brew tap-new siz/araclar
+cp appdyno.rb "$(brew --repository siz/araclar)/Casks/"
+brew install --cask siz/araclar/appdyno
+```
+
+### npm paketi
+
 Bir Mac ve Node 22 ya da üstü gerekir. `node --version` ile bakın; "command not found" derse [nodejs.org](https://nodejs.org/) adresinden LTS sürümünü kurun.
 
 appdyno henüz npm'de yok. Yayımlanana kadar kaynak koddan derlenir, bunun için pnpm ve JDK 21 de gerekir:
@@ -49,12 +77,15 @@ Ardından appdyno'yu hangi araç kurduysa onunla yükseltir. Hangisi olduğunu, 
 | ---------------------------- | ----------------------------------------------------------------- |
 | `npm install -g`, her prefix | npm ile, o prefix içinde, az önce doğruladığı kopyadan yükseltir  |
 | `pnpm add -g`                | pnpm ile, tam o sürüme yükseltir                                  |
+| Mac uygulaması               | uygulamayı değiştirir: aşağıya bakın                              |
 | Homebrew, Volta, Nix         | reddeder: o araçla yükseltin                                      |
 | tek seferlik `npx`           | reddeder: aşağıya bakın                                           |
 | kaynak kod                   | reddeder: `git pull`, ardından `pnpm install && pnpm build`       |
 | başka bir şey                | reddeder: kuran araçla yükseltin ya da `npm install -g` ile kurun |
 
 Başarısız bir kurulum eski sürümü çalışır halde bırakır. `update` hiçbir zaman daha eski bir sürüme geçmez, kayıt defterindeki `latest` bir ön sürümü gösterse bile ön sürüme de geçmez.
+
+**Mac uygulaması** kendini aynı sözle günceller: menü çubuğundaki Check for Updates ya da `appdyno update` ile. Siz istemedikçe güncelleme aranmaz. Her sürüm, appcast denen küçük bir dosya yayımlar. Bu dosya, açık yarısı uygulamanızda bulunan bir anahtarla imzalıdır ve uygulama başka hiçbir şeye inanmaz: dosyanın gösterdiği disk imajını indirir, hash'ini ve boyutunu denetler, uygulamanın yanına açar, kod imzasını, aynı imzacıdan gelen aynı program olduğunu ve imzalanan sürüm olduğunu denetler. İkisini ancak bundan sonra değiştirir. Bunlardan biri başarısız olursa uygulamanız olduğu gibi kalır, güncelleme anahtarı olmadan yapılmış bir derleme ise güncellemeyi hiç kabul etmez. Ardından uygulamayı yeniden açın.
 
 **`npx -y appdyno mcp` çalıştıran bir istemci.** npx her açılışta kayıt defterine sorar ve yukarıdaki denetimlerin hiçbiri olmadan son sürüme kendiliğinden geçer. appdyno global olarak kuruluysa npx onun yerine o kurulumu çalıştırır. Bu yüzden bir kez `npm install -g appdyno` çalıştırın: istemcilerinizin çalıştırdığı sürüm artık yalnızca siz `appdyno update` çalıştırdığınızda değişir.
 

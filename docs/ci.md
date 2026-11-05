@@ -43,7 +43,7 @@ scripts/ci.sh --iphone <UDID>                      # + iPhone (APPDYNO_IOS_PROFI
 
 ## Release
 
-A tag publishes, and nothing else does. `.github/workflows/release.yml` runs on `v1.2.3`: `ci.yml` as its gate, then a check that the tag is the version in `packages/appdyno/package.json`, the agent and the package built, and `npm publish --provenance --access public`.
+A tag publishes, and nothing else does. `.github/workflows/release.yml` runs on `v1.2.3`: `ci.yml` as its gate, then a check that the tag is the version in `packages/appdyno/package.json`, the agent and the package built, the Mac app, `npm publish --provenance --access public`, and a GitHub release with the disk image, the cask and the appcast.
 
 Before the first release:
 
@@ -72,3 +72,18 @@ It measures the pull request's base and head in one job, as a baseline from anot
 appdyno has no service and no token, and posts nothing: it writes a file, and your job posts it. A pull request from a fork gets a token that cannot comment, so there the comment is only in the job's artifacts. A new comment is written each time, as `gh pr comment --edit-last` edits the token's last comment, which may be another workflow's.
 
 **What to expect of a runner.** A run under load says `noisy`, fails nothing and is refused as a baseline. GitHub's arm64 runners have 3 cores, so that is a load over 2.4, as a build leaves behind, which is why the job measures until three are in. A new simulator works by itself at first too: about 3 minutes and 7 cores on an M5 Pro, with iOS 27.2, so the job waits for the load first. `macos-latest` is an arm64 runner, and [those have no nested virtualization](https://docs.github.com/en/actions/reference/runners/github-hosted-runners), so an Android emulator needs an Intel label or a Mac of your own. The job's simulator is new, and a new simulator asks once whether a link may open the app, which stops a flow at its first `open_link`: answer that once before the first measured run, or reach the screen by its buttons.
+
+### The Mac app
+
+`scripts/build-app.mjs` makes `Appdyno.app`, its disk image and a cask in `.app-build`, and prints what each part weighs. With no secrets it signs ad hoc. These turn on the rest, as secrets of the repository of the same name:
+
+| secret                                                                      | what it does                                                                        |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `APPDYNO_CERTIFICATE`, `APPDYNO_CERTIFICATE_PASSWORD`                       | a Developer ID Application certificate, a base64 `.p12`, for the release's keychain |
+| `APPDYNO_SIGN_IDENTITY`                                                     | that identity's name: signs for release, and then needs the three below             |
+| `APPDYNO_NOTARY_APPLE_ID`, `APPDYNO_NOTARY_PASSWORD`, `APPDYNO_NOTARY_TEAM` | notarizes and staples the disk image                                                |
+| `APPDYNO_UPDATE_KEY`                                                        | an Ed25519 private key, PEM: signs the appcast, and its public half goes in the app |
+
+`openssl genpkey -algorithm ed25519` makes an update key. Keep it: an app can only ever verify releases signed by the key it was built with, so losing it means people reinstall by hand. An identity is only ever taken from these variables, never found on the machine.
+
+`scripts/check-app.mjs` meets the app as a stranger does: a clean home and a PATH with no Node and no developer tools, where each would-be tool is a decoy that tells if it was reached. It downloads adb, opens the hub, updates from a real disk image, refuses a tampered one, and moves the app. `--android <serial>` adds a window on that device, with frames recorded. It needs the network, and windows stay behind.

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- `Appdyno.app` and a disk image, from `scripts/build-app.mjs` and from `release.yml`. It carries its own Node, the Android agent and a prebuilt viewer, and runs on a Mac with no Node and no developer tools, where the Mac's own dialog offering to install them is never raised. A double click opens the hub, its devices are in the menu bar, and it is in the Dock only while a window is open. With no Developer ID it signs ad hoc; `APPDYNO_SIGN_IDENTITY` and the notary's variables sign and notarize.
+- `adb` is not in the app: Google's terms forbid passing it on, and it holds LGPL code. `appdyno tools install adb --accept-license` downloads Google's platform-tools, checked against a pinned hash.
+- `appdyno path` puts the app's command on every shell's PATH, and `appdyno install` gives MCP clients the app's own path. A moved app is fixed on the next open: its entries and its link follow, and all else in them stays.
+- `appdyno update` and `doctor` know the app. It updates itself on a signed appcast, verified with a key it was built with, and changes nothing until the download, its signature, its signer and its version all hold. Nothing checks in the background.
+- A Homebrew cask, `appdyno.rb`, made for each release.
 - A window keeps its pictures through a decoder's stall on a busy Mac: pictures already decoding were thrown away with the frame that did not fit, and a stream's first burst could leave a window black until the next key frame.
 - The library is one function, `connect`, shown in the README by an example a test runs: every tool by name, typed from its schema, and `replay`. The 347 names it exported, the README's `flowsFor(ctx)` that was not among them, and the need for zod's types are gone.
 - `bench` says it is for an Android device, in its help and to an iOS one, where it spoke of adb.
