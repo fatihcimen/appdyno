@@ -13,6 +13,7 @@ import {
   type SettingName,
   type VirtualDevices,
   type Startable,
+  type NewDevice,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { buildScheme } from './build.js';
@@ -309,15 +310,55 @@ export class SimulatorEvents implements DeviceEvents {
 }
 
 /** This Mac's simulators. */
+/** Kinds of simulator this Mac may have that nothing here drives. */
+const NOT_DRIVEN = /Apple-(Watch|TV|Vision)/;
+
+/** A runtime's id as people name it: iOS 27.2. */
+const runtimeName = (runtime: string) =>
+  runtime
+    .replace(/^.*SimRuntime\./, '')
+    .replace('-', ' ')
+    .replaceAll('-', '.');
+
+/** A device type's id as people name it: the same words, with spaces. */
+export const typeName = (deviceType: string) =>
+  deviceType.replace(/^.*SimDeviceType\./, '').replaceAll('-', ' ');
+
 export class Simulators implements VirtualDevices {
+  readonly kind = 'simulator';
+  readonly platform = 'ios';
+
   constructor(private readonly simctl: Simctl) {}
 
+  async catalog() {
+    const { devicetypes, runtimes } = JSON.parse(
+      await this.simctl.exec(['list', 'devicetypes', 'runtimes', '-j']),
+    ) as {
+      devicetypes: { name: string; identifier: string; productFamily?: string }[];
+      runtimes: { name: string; identifier: string; isAvailable?: boolean; platform?: string }[];
+    };
+    return {
+      models: devicetypes
+        .filter((t) => t.productFamily === 'iPhone' || t.productFamily === 'iPad')
+        .map((t) => ({ id: t.identifier, name: t.name })),
+      systems: runtimes
+        .filter((r) => r.platform === 'iOS' && r.isAvailable !== false)
+        .map((r) => ({ id: r.identifier, name: r.name })),
+    };
+  }
+
+  async create({ name, model, system }: NewDevice) {
+    return (await this.simctl.exec(['create', name || typeName(model), model, system])).trim();
+  }
+
   async startable(): Promise<Startable[]> {
-    return (await this.simctl.list()).map((d) => ({
+    const driven = (await this.simctl.list()).filter((d) => !NOT_DRIVEN.test(d.deviceType ?? ''));
+    return driven.map((d) => ({
       id: d.udid,
-      name: `${d.name} (${d.runtime.replace(/^.*SimRuntime\./, '')})`,
+      name: `${d.name} (${runtimeName(d.runtime)})`,
       state: d.state === 'Booted' ? 'running' : 'stopped',
       ...(d.state === 'Booted' && { serial: d.udid }),
+      ...(d.deviceType && { model: typeName(d.deviceType) }),
     }));
   }
 

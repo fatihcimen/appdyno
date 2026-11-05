@@ -9,7 +9,7 @@ import {
 } from '@appdyno/core';
 import { simulatorCrashes } from './crashes.js';
 import { simulatorLogs } from './logs.js';
-import { SimulatorApps, SimulatorEvents, SimulatorSettings } from './simulator-manage.js';
+import { SimulatorApps, SimulatorEvents, SimulatorSettings, typeName } from './simulator-manage.js';
 import {
   DeviceError,
   type Hello,
@@ -365,8 +365,10 @@ export class IosSimulatorDevice extends IosDevice {
 
   override async hardware() {
     const me = (await this.simctl.list()).find((d) => d.udid === this.serial);
-    const type = me?.deviceType?.replace(/^.*SimDeviceType\./, '').replaceAll('-', ' ');
-    return { ...(await super.hardware()), ...(type && { model: type }) };
+    return {
+      ...(await super.hardware()),
+      ...(me?.deviceType && { model: typeName(me.deviceType) }),
+    };
   }
 
   override async setOrientation(rotation: 0 | 1 | 2 | 3) {

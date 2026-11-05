@@ -1058,6 +1058,8 @@ describe('simulators and emulators', () => {
       { id: 'A', name: 'one', state: 'stopped' },
       { id: 'B', name: 'two', state: 'running', serial: 'B' },
     ];
+    readonly kind = 'simulator';
+    readonly platform = 'ios';
     startable = async () => this.all;
     boot = async (id: string) => {
       this.log.push(`boot ${id}`);

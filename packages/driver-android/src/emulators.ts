@@ -1,8 +1,9 @@
 import { spawn } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { type VirtualDevices, type Startable, pause } from '@appdyno/core';
+import { type NewDevice, type VirtualDevices, type Startable, pause, run } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import type { Adb } from './adb.js';
 
@@ -12,6 +13,13 @@ export const sdkDir = () =>
   join(homedir(), 'Library/Android/sdk');
 
 const BOOT_MS = 300_000;
+
+const AVD_NAME = /^[\w.-]+$/;
+const avdmanager = () => join(sdkDir(), 'cmdline-tools/latest/bin/avdmanager');
+/** Of the many profiles `avdmanager` has, what a person making a phone or a tablet would pick. */
+const PROFILE = /^(pixel_|medium_|small_phone)/;
+const profileName = (id: string) =>
+  id.replace(/_/g, ' ').replace(/\b([a-z])/g, (c) => c.toUpperCase());
 
 /** Where the search for a free console port starts: a Mac shared with other work may keep some. */
 const firstPort = () => Number(process.env.APPDYNO_EMULATOR_FIRST_PORT ?? 5554);
@@ -36,9 +44,64 @@ const freePort = () =>
 export const grpcArgs = (extra: string[], port: number) =>
   extra.includes('-grpc') ? [] : ['-grpc', String(port), '-grpc-use-token'];
 
+/** The hardware profile an AVD was made from, as people name it. */
+function avdModel(avd: string) {
+  try {
+    const config = readFileSync(join(homedir(), '.android/avd', `${avd}.avd/config.ini`), 'utf8');
+    const profile = /^hw\.device\.name\s*=\s*(.+)$/m.exec(config)?.[1]?.trim();
+    return profile && profileName(profile);
+  } catch {
+    return undefined;
+  }
+}
+
 /** The AVDs of this machine, started by the SDK's own `emulator`. */
 export class AndroidEmulators implements VirtualDevices {
+  readonly kind = 'emulator';
+  readonly platform = 'android';
+
   constructor(private readonly adb: Adb) {}
+
+  async catalog() {
+    const root = join(sdkDir(), 'system-images');
+    if (!existsSync(avdmanager()) || !existsSync(root)) return undefined;
+    const under = (...path: string[]) =>
+      readdirSync(join(root, ...path)).filter((f) => f[0] !== '.');
+    const systems = under().flatMap((api) =>
+      under(api).flatMap((tag) =>
+        under(api, tag).map((abi) => ({
+          id: `system-images;${api};${tag};${abi}`,
+          name: `${api.replace('android-', 'API ')}, ${tag.replaceAll('_', ' ')}`,
+        })),
+      ),
+    );
+    const { stdout } = await run(avdmanager(), ['list', 'device', '-c'], { timeout: 60_000 });
+    const models = stdout
+      .split(/\r?\n/)
+      .filter((id) => PROFILE.test(id))
+      .map((id) => ({ id, name: profileName(id) }));
+    return { models, systems };
+  }
+
+  /** `avdmanager` asks whether a custom hardware profile is wanted, and is told no. */
+  async create({ name, model, system }: NewDevice) {
+    const avd = name || `appdyno_${model}`;
+    if (!AVD_NAME.test(avd))
+      throw new DeviceError('INVALID_ARGUMENT', `an emulator's name has no spaces: ${avd}`);
+    await new Promise<void>((resolve, reject) => {
+      const p = spawn(avdmanager(), ['create', 'avd', '-n', avd, '-k', system, '-d', model], {
+        stdio: ['pipe', 'ignore', 'pipe'],
+      });
+      let said = '';
+      p.stderr.on('data', (b) => (said += b));
+      p.on('error', reject);
+      p.on('close', (code) =>
+        code === 0 ? resolve() : reject(new DeviceError('UNSUPPORTED', said.trim().slice(-200))),
+      );
+      p.stdin.end('no\n');
+    });
+    return avd;
+  }
 
   private run(args: string[]) {
     return new Promise<string>((resolve, reject) => {
@@ -74,15 +137,19 @@ export class AndroidEmulators implements VirtualDevices {
       .split(/\r?\n/)
       .filter((l) => /^[\w.-]+$/.test(l));
     const running = await this.running();
+    const withModel = (avd: string) => {
+      const model = avdModel(avd);
+      return { name: avd, ...(model && { model }) };
+    };
     const up = [...running].map(([serial, avd]) => ({
       id: serial,
-      name: avd,
+      ...withModel(avd),
       state: 'running' as const,
       serial,
     }));
     const idle = names
       .filter((n) => ![...running.values()].includes(n))
-      .map((n) => ({ id: n, name: n, state: 'stopped' as const }));
+      .map((n) => ({ id: n, ...withModel(n), state: 'stopped' as const }));
     return [...up, ...idle];
   }
 
