@@ -314,6 +314,7 @@ export class IpStack {
   private nextPort = FIRST_LOCAL_PORT;
   private rest: Buffer | undefined;
   private ended = false;
+  private heard = Date.now();
   private readonly ends: ((why: string) => void)[] = [];
 
   constructor(
@@ -339,6 +340,15 @@ export class IpStack {
 
   onEnded(listener: (why: string) => void) {
     this.ends.push(listener);
+  }
+
+  /** A network that went leaves no end to read, only silence: this ends the stack past `ms` of it. */
+  endOnSilence(ms: number, every = ms / 4) {
+    const timer = setInterval(() => {
+      if (Date.now() - this.heard > ms) this.onEnd(`nothing came for ${ms / 1000} s`);
+    }, every);
+    timer.unref();
+    this.onEnded(() => clearInterval(timer));
   }
 
   /** A connection to a port on the phone, open once this resolves. */
@@ -386,6 +396,7 @@ export class IpStack {
   }
 
   feed(chunk: Buffer) {
+    this.heard = Date.now();
     const b = this.rest ? Buffer.concat([this.rest, chunk]) : chunk;
     let o = 0;
     while (b.length - o >= IPV6_HEADER) {

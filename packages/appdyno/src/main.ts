@@ -41,6 +41,7 @@ import { benchmark, appdynoDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
 import { hubServices } from './hub-services.js';
 import { hubCommand, mirrorCommand } from './mirror-args.js';
+import { pairCommand } from './pair.js';
 import { deviceProviders as providers } from './providers.js';
 import { COMMANDS, commandList, helpFor, usage } from './usage.js';
 import { SERVER_INFO } from '@appdyno/mcp';
@@ -206,6 +207,8 @@ async function main(): Promise<number> {
         context: contextFrom,
         hub: (ctx, run) => runHub(ctx, { ...run, services: servicesOfHub(ctx.measurementsDir) }),
       });
+    case 'pair':
+      return pairCommand(rest);
     case 'timeline':
       return timelineCommand(rest, contextFrom);
     case 'flight':

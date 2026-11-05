@@ -1,9 +1,9 @@
 import { DeviceError } from '@appdyno/protocol';
-import { lockdownFrame, nextLockdownMessage } from '../usbmux.js';
 import { greeted, within, type DtxClient } from './dtx.js';
 import type { IpStack, TcpConnection } from './ipstack.js';
 import { isDict, type Archived } from './keyed-archive.js';
 import type { ServiceList } from './services.js';
+import { checkIn } from './shim.js';
 
 const SERVICE = 'com.apple.accessibility.axAuditDaemon.remoteserver.shim.remote';
 const ACTIVATE = 'AXAction-2010';
@@ -216,21 +216,4 @@ export class Audit {
     await this.dtx.call('devicePerformFinalCleanup').catch(() => undefined);
     this.connection.close();
   }
-}
-
-/** A service reached over the tunnel is told who calls, in lockdown's framing, and answers twice; what follows is its own. */
-async function checkIn(connection: TcpConnection) {
-  let held: Buffer = Buffer.alloc(0);
-  let answers = 0;
-  const twice = new Promise<Buffer>((resolve) => {
-    connection.onData((d) => {
-      held = Buffer.concat([held, d]);
-      for (let next; answers < 2 && (next = nextLockdownMessage(held)); answers++) held = next.rest;
-      if (answers >= 2) resolve(held);
-    });
-  });
-  connection.write(
-    lockdownFrame({ Label: 'appdyno', ProtocolVersion: '2', Request: 'RSDCheckin' }),
-  );
-  return twice;
 }

@@ -30,6 +30,7 @@ function fake(
       return png;
     }),
     elements: async () => [],
+    pair: async () => undefined,
     press: async () => ({ caption: '' }),
     secureFocused: async () => false,
     focusedField: async () => 'a field',
@@ -413,6 +414,29 @@ describe('a phone mirror', () => {
       ok: false,
       need: 'not-trusted',
     });
+  });
+
+  it('goes by the network only when asked, and says so', async () => {
+    const { mirror, module } = fake();
+    const check = vi.spyOn(module, 'check');
+    await expect(mirror.check()).resolves.toEqual({ ok: true, routes: ['tunnel'] });
+    expect(check).toHaveBeenLastCalledWith(UDID, { wifi: false });
+    await expect(mirror.check({ ...OPTIONS, wifi: true })).resolves.toEqual({
+      ok: true,
+      routes: ['tunnel', 'wifi'],
+    });
+    expect(check).toHaveBeenLastCalledWith(UDID, { wifi: true });
+    const source = await mirror.open({ ...OPTIONS, wifi: true });
+    expect(module.start).toHaveBeenCalledWith(
+      UDID,
+      { ...OPTIONS, wifi: true },
+      expect.any(Function),
+    );
+    expect(source).toMatchObject({ note: expect.stringContaining('On Wi-Fi') });
+    await mirror.close();
+    const byCable = await mirror.open(OPTIONS);
+    expect(byCable).not.toHaveProperty('note');
+    await mirror.close();
   });
 
   it('starts one stream, and gives each viewer a pipe of its own', async () => {

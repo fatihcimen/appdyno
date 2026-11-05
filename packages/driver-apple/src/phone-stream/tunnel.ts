@@ -17,7 +17,7 @@ import { IpStack, type PacketStream } from './ipstack.js';
  * read and never written, and pairing is never asked for: a refusal stops here, naming what a person must do.
  */
 
-export type RefusalNeed = 'not-trusted' | 'locked' | 'not-connected';
+export type RefusalNeed = 'not-trusted' | 'not-paired' | 'locked' | 'not-connected';
 
 /** What the phone refused, with no retry: a retry cannot change it, and it may raise a prompt. */
 export class PhoneRefusal extends Error {
@@ -32,7 +32,7 @@ export class PhoneRefusal extends Error {
 const LOCKDOWN_PORT = 62_078;
 const PROXY_SERVICE = 'com.apple.internal.devicecompute.CoreDeviceProxy';
 const SPRINGBOARD_SERVICE = 'com.apple.springboardservices';
-const ORIENTATION_REQUEST = { command: 'getInterfaceOrientation' };
+export const ORIENTATION_REQUEST = { command: 'getInterfaceOrientation' };
 const LABEL = 'appdyno';
 const ANSWER_MS = 8_000;
 const TUNNEL_MAGIC = 'CDTunnel';
@@ -213,7 +213,7 @@ export async function orientationReader(udid: string) {
     const lockdown = new Lockdown(stream);
     return {
       read: async () => Number((await lockdown.ask(ORIENTATION_REQUEST)).interfaceOrientation),
-      close: () => stream.destroy(),
+      close: () => void stream.destroy(),
     };
   });
 }
@@ -261,12 +261,16 @@ export async function openTunnel(udid: string): Promise<Tunnel> {
   const record = await readPairRecord(udid);
   const service = await startService(udid, record, PROXY_SERVICE);
   const { socket } = await connectPort(udid, service.port);
-  return closingOnFailure(socket, async () => {
-    const stream = service.secure ? await withTls(socket, record) : socket;
-    stream.write(tunnelRequest());
-    const { info, rest } = await tunnelAnswer(stream);
-    const stack = new IpStack(stream as PacketStream, info);
-    if (rest.length) stack.feed(rest);
-    return { stack, rsdPort: info.rsdPort };
-  });
+  return closingOnFailure(socket, async () =>
+    tunnelOver(service.secure ? await withTls(socket, record) : socket),
+  );
+}
+
+/** The tunnel's handshake and the stack over it, on whatever reached the phone: a cable and a network take the same. */
+export async function tunnelOver(stream: Socket): Promise<Tunnel> {
+  stream.write(tunnelRequest());
+  const { info, rest } = await tunnelAnswer(stream);
+  const stack = new IpStack(stream as PacketStream, info);
+  if (rest.length) stack.feed(rest);
+  return { stack, rsdPort: info.rsdPort };
 }

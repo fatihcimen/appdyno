@@ -107,6 +107,7 @@ export const COMMANDS = {
       detach: on,
       quality: value('auto|high|standard'),
       codec: value('h264|hevc'),
+      wifi: on,
       'no-input': on,
       headless: on,
       behind: unsaidOn,
@@ -121,6 +122,11 @@ export const COMMANDS = {
     what: 'a live window on a device, driven by mouse and keyboard',
   },
   'mirror close|status|stats': {},
+  pair: {
+    takes: '[address code]',
+    flags: { device: value('S'), help: { type: 'boolean', short: 'h', unsaid: true } },
+    what: 'this Mac with a phone for Wi-Fi, once: an iPhone on its cable by --device, an Android phone by what it shows',
+  },
   hub: {
     flags: {
       focus: on,

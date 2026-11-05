@@ -26,7 +26,7 @@ const sources = () =>
     .map((f) => ({ file: f, text: readFileSync(join(here, f), 'utf8') }));
 
 describe('what this folder must never do', () => {
-  it('connects to nothing but through usbmuxd and its own tunnel', () => {
+  it("connects to nothing but through usbmuxd, its own tunnel and a phone's pairing port", () => {
     // Apple's tunnel is reached by a socket or its address: its discovery port takes one client, and a second throws it off
     for (const { file, text } of sources()) {
       for (const banned of [
@@ -37,12 +37,23 @@ describe('what this folder must never do', () => {
         'tunnelIPAddress',
         'devicectl',
         'coredevice-',
+        // what that port is advertised as
+        '_remoted',
       ]) {
         expect(text.includes(banned), `${file}: ${banned}`).toBe(false);
       }
       expect(/from 'node:net'/.test(text) && !/import \{ (type )?Socket \}/.test(text), file).toBe(
         false,
       );
+      // the one place that opens a socket of this Mac, to what a phone advertises for pairing and the port it then names
+      expect(text.includes('new Socket()') && file !== 'wifi.ts', file).toBe(false);
+    }
+  });
+
+  it('keeps the pairing of the network apart from the pair record', () => {
+    for (const { file, text } of sources()) {
+      if (!['pairing.ts', 'pairing-wire.ts', 'wifi.ts'].includes(file)) continue;
+      expect(/readPairRecord|PairRecord|HostPrivateKey|startService/.test(text), file).toBe(false);
     }
   });
 
@@ -74,7 +85,9 @@ describe('what this folder must never do', () => {
 
   it('asks for no prompt: nothing here touches the camera or the Mac capture path', () => {
     for (const { file, text } of sources()) {
-      expect(/CoreMediaIO|AVCapture|remote_pairing|_remotepairing/.test(text), file).toBe(false);
+      expect(/CoreMediaIO|AVCapture/.test(text), file).toBe(false);
+      // the phone's one question, which a person asks for by a command of their own
+      expect(/_remotepairing/.test(text) && file !== 'wifi.ts', file).toBe(false);
     }
   });
 });

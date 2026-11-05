@@ -6,21 +6,29 @@ import type {
   PhoneStreamHandle,
   PhoneStreamModule,
 } from '../phone-stream-port.js';
-import { listDevices } from '../usbmux.js';
+import { listDevices, sameUdid } from '../usbmux.js';
 import { Audit, elementNamed, type AuditElement } from './audit.js';
 import { LiveReader, NO_HUB, unreadable } from './live.js';
 import { readServices, takeScreenshot } from './services.js';
 import { openTunnel, PhoneRefusal, readPairRecord } from './tunnel.js';
 import type { ToWorker } from './stream-thread.js';
+import { isPaired, openWifiTunnel, pairOverWifi, wifiCheck } from './wifi.js';
 
 /** This folder's one way in. All it holds speaks a phone's private services; see `phone-stream-port.ts`. */
 
 const STOP_MS = 12_000;
 
-async function check(udid: string): Promise<PhoneStreamCheck> {
-  const same = (a: string, b: string) => a.replace(/-/g, '') === b.replace(/-/g, '');
-  const usb = (await listDevices()).some((d) => d.connection === 'USB' && same(d.serial, udid));
-  if (!usb) return { ok: false, need: 'not-connected' };
+const onCable = async (udid: string) =>
+  (await listDevices()).some((d) => d.connection === 'USB' && sameUdid(d.serial, udid));
+
+/** A cable where there is one; a phone paired for it is reached by the network where there is none. */
+async function tunnelTo(udid: string) {
+  return isPaired(udid) && !(await onCable(udid)) ? openWifiTunnel(udid) : openTunnel(udid);
+}
+
+async function check(udid: string, options?: { wifi?: boolean }): Promise<PhoneStreamCheck> {
+  if (options?.wifi) return wifiCheck(udid);
+  if (!(await onCable(udid))) return { ok: false, need: 'not-connected' };
   try {
     await readPairRecord(udid);
     return { ok: true };
@@ -31,7 +39,7 @@ async function check(udid: string): Promise<PhoneStreamCheck> {
 }
 
 async function screenshot(udid: string, format: 'png' | 'jpeg'): Promise<Buffer> {
-  const { stack, rsdPort } = await openTunnel(udid);
+  const { stack, rsdPort } = await tunnelTo(udid);
   try {
     return await takeScreenshot(stack, await readServices(stack, rsdPort), format);
   } finally {
@@ -40,7 +48,7 @@ async function screenshot(udid: string, format: 'png' | 'jpeg'): Promise<Buffer>
 }
 
 async function withAudit<T>(udid: string, use: (audit: Audit) => Promise<T>): Promise<T> {
-  const { stack, rsdPort } = await openTunnel(udid);
+  const { stack, rsdPort } = await tunnelTo(udid);
   try {
     const list = await readServices(stack, rsdPort);
     // seen once in a run of quick reads: a list without it, and the next one has it
@@ -78,7 +86,7 @@ async function live(
   app: string | undefined,
   onSample: (s: LiveSample) => void,
 ): Promise<() => void> {
-  const { stack, rsdPort } = await openTunnel(udid);
+  const { stack, rsdPort } = await tunnelTo(udid);
   const reader = await LiveReader.open(
     stack,
     await readServices(stack, rsdPort),
@@ -100,11 +108,11 @@ async function live(
 
 function start(
   udid: string,
-  options: { quality: MirrorQuality },
+  options: { quality: MirrorQuality; wifi?: boolean },
   onEvent: (e: PhoneStreamEvent) => void,
 ): PhoneStreamHandle {
   const worker = new Worker(new URL('./worker.js', import.meta.url), {
-    workerData: { udid, quality: options.quality },
+    workerData: { udid, quality: options.quality, wifi: options.wifi === true },
     // the pipe's descriptor is the socket's to close: a thread that also closed it as it ended took the same number
     // from whatever had it by then, a new viewer's output as seen
     trackUnmanagedFds: false,
@@ -163,5 +171,6 @@ const phoneStream: PhoneStreamModule = {
   focusedField,
   live,
   start,
+  pair: pairOverWifi,
 };
 export default phoneStream;

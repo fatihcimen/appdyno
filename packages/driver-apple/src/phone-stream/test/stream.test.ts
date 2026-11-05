@@ -107,7 +107,7 @@ describe('a stream starting', () => {
   it('takes a mode, says what it took, and keeps its session as its own', async () => {
     const p = phone();
     const s = sink();
-    const stream = await PhoneStream.open(udid, 'auto', s.out, p.wire);
+    const stream = await PhoneStream.open(udid, { quality: 'auto', wifi: false }, s.out, p.wire);
     expect(s.live).toEqual([{ w: 1284, h: 2778, mode: 'mode 7', crop: false }]);
     expect(p.asked.filter((a) => a === 'startmediastream')).toHaveLength(2);
     expect(ownSessions(udid)).toHaveLength(1);
@@ -117,7 +117,12 @@ describe('a stream starting', () => {
   it('asks standard for the lower mode alone, with the screen at the top left of its picture', async () => {
     const p = phone();
     const s = sink();
-    const stream = await PhoneStream.open(udid, 'standard', s.out, p.wire);
+    const stream = await PhoneStream.open(
+      udid,
+      { quality: 'standard', wifi: false },
+      s.out,
+      p.wire,
+    );
     expect(s.live).toEqual([{ w: 1179, h: 2556, mode: 'mode 5', crop: true }]);
     await stream.stop();
   });
@@ -126,7 +131,9 @@ describe('a stream starting', () => {
     const p = phone({
       getmediastreamserverstatus: () => ({ sessions: [session('someone-else')] }),
     });
-    await expect(PhoneStream.open(udid, 'auto', sink().out, p.wire)).rejects.toMatchObject({
+    await expect(
+      PhoneStream.open(udid, { quality: 'auto', wifi: false }, sink().out, p.wire),
+    ).rejects.toMatchObject({
       need: 'taken-over',
     });
     expect(p.asked).not.toContain('stopmediastream');
@@ -142,7 +149,7 @@ describe('a stream starting', () => {
       },
     });
     const s = sink();
-    const stream = await PhoneStream.open(udid, 'auto', s.out, p.wire);
+    const stream = await PhoneStream.open(udid, { quality: 'auto', wifi: false }, s.out, p.wire);
     expect(s.live[0]!.mode).toBe('mode 5');
     expect(ownSessions(udid)).toHaveLength(2);
     await stream.stop();
@@ -153,7 +160,12 @@ describe('a stream starting', () => {
     const p = phone({
       getmediastreamserverstatus: () => ({ sessions: [session('aaaabbbb')] }),
     });
-    const stream = await PhoneStream.open(udid, 'auto', sink().out, p.wire);
+    const stream = await PhoneStream.open(
+      udid,
+      { quality: 'auto', wifi: false },
+      sink().out,
+      p.wire,
+    );
     const [stop, start] = [p.asked.indexOf('stopmediastream'), p.asked.indexOf('startmediastream')];
     expect(stop).toBeGreaterThan(-1);
     expect(stop).toBeLessThan(start);
@@ -163,7 +175,9 @@ describe('a stream starting', () => {
   it('says a phone with no display service as the disk image it lacks', async () => {
     const p = phone();
     p.wire.readServices = async () => ({ ports: {}, properties: {}, close: () => undefined });
-    await expect(PhoneStream.open(udid, 'auto', sink().out, p.wire)).rejects.toMatchObject({
+    await expect(
+      PhoneStream.open(udid, { quality: 'auto', wifi: false }, sink().out, p.wire),
+    ).rejects.toMatchObject({
       need: 'disk-image-missing',
     });
   });
@@ -182,7 +196,7 @@ describe('a stream starting', () => {
       },
     });
     const s = sink();
-    const stream = await PhoneStream.open(udid, 'auto', s.out, p.wire);
+    const stream = await PhoneStream.open(udid, { quality: 'auto', wifi: false }, s.out, p.wire);
     expect(s.live[0]?.mode).toBe('mode 5');
     await stream.stop();
   });
@@ -195,9 +209,9 @@ describe('a stream starting', () => {
         throw new Error('The device microphone or camera is in use');
       },
     });
-    await expect(PhoneStream.open(udid, 'auto', sink().out, p.wire)).rejects.toBeInstanceOf(
-      StreamRefusal,
-    );
+    await expect(
+      PhoneStream.open(udid, { quality: 'auto', wifi: false }, sink().out, p.wire),
+    ).rejects.toBeInstanceOf(StreamRefusal);
     expect(starts).toBe(1);
   });
 
@@ -208,7 +222,9 @@ describe('a stream starting', () => {
       },
     });
     const s = sink();
-    await expect(PhoneStream.open(udid, 'auto', s.out, p.wire)).rejects.toThrow('refused');
+    await expect(
+      PhoneStream.open(udid, { quality: 'auto', wifi: false }, s.out, p.wire),
+    ).rejects.toThrow('refused');
     expect(p.closed).toEqual(expect.arrayContaining(['stack', 'services', 'xpc']));
     p.end('the tunnel ended');
     expect(s.lost).toEqual([]);
@@ -220,7 +236,12 @@ describe('a stream starting', () => {
 describe('a stream that runs', () => {
   it('keeps telling the phone it is there, which is what keeps the stream up', async () => {
     const p = phone();
-    const stream = await PhoneStream.open(udid, 'auto', sink().out, p.wire);
+    const stream = await PhoneStream.open(
+      udid,
+      { quality: 'auto', wifi: false },
+      sink().out,
+      p.wire,
+    );
     const before = p.sent.audio;
     vi.advanceTimersByTime(ALIVE_MS * 3);
     expect(p.sent.audio - before).toBe(3);
@@ -230,7 +251,7 @@ describe('a stream that runs', () => {
   it('says the end of its tunnel once, and lets go of all it opened', async () => {
     const p = phone();
     const s = sink();
-    await PhoneStream.open(udid, 'auto', s.out, p.wire);
+    await PhoneStream.open(udid, { quality: 'auto', wifi: false }, s.out, p.wire);
     p.end('the tunnel ended');
     p.end('the tunnel ended');
     expect(s.lost).toEqual(['the tunnel ended']);
@@ -250,7 +271,12 @@ describe('a stream stopping', () => {
         return answer;
       },
     });
-    const stream = await PhoneStream.open(udid, 'auto', sink().out, p.wire);
+    const stream = await PhoneStream.open(
+      udid,
+      { quality: 'auto', wifi: false },
+      sink().out,
+      p.wire,
+    );
     started.done = true;
     return { p, stream, proved: await stream.stop() };
   };
@@ -290,7 +316,7 @@ describe('a stream stopping', () => {
     const { stream } = await stopped(() => ({ running: false }));
     await expect(stream.stop()).resolves.toBe(false);
     const p = phone();
-    const lost = await PhoneStream.open(udid, 'auto', sink().out, p.wire);
+    const lost = await PhoneStream.open(udid, { quality: 'auto', wifi: false }, sink().out, p.wire);
     p.end('the tunnel ended');
     await expect(lost.stop()).resolves.toBe(false);
   });

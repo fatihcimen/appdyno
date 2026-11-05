@@ -35,7 +35,7 @@ export function mirrorRun({ values, quality, codec }: ReturnType<typeof mirrorAr
     all: values.all ?? false,
     watch: values.watch ?? false,
     max: Number(values.max ?? 8),
-    options: { quality, ...(codec && { codec }) },
+    options: { quality, ...(codec && { codec }), ...(values.wifi && { wifi: true }) },
     headless: values.headless ?? false,
     behind: values.behind ?? false,
     pair: values.pair ?? false,
@@ -72,7 +72,7 @@ export async function mirrorCommand<Context extends { close(): void }>(
   });
   try {
     return await (action !== 'open' || values.detach
-      ? use.tool(ctx, [action, '--quality', quality])
+      ? use.tool(ctx, [action, '--quality', quality, ...(values.wifi ? ['--wifi'] : [])])
       : use.windows(ctx, mirrorRun(words)));
   } finally {
     ctx.close();

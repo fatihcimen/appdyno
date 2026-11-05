@@ -3,7 +3,7 @@
 // All arrive-on-Mac figures. Every number has the host's load beside it, and a miss above load 60 says
 // "run it later": it is no proof either way. It reads the screen before it touches.
 //
-// Usage: node scripts/mirror-bench.mjs <device> [--seconds 12] [--taps 10] [--out file] [--window] [--max-size lines]
+// Usage: node scripts/mirror-bench.mjs <device> [--seconds 12] [--taps 10] [--out file] [--window] [--wifi] [--max-size lines]
 //        node scripts/mirror-bench.mjs <device> --soak <minutes>
 // A soak holds a stream and touches the screen now and then: its memory and descriptors must stay flat, and
 // frames must still move at its end.
@@ -24,6 +24,7 @@ const { values, positionals } = parseArgs({
     taps: { type: 'string', default: '10' },
     out: { type: 'string' },
     window: { type: 'boolean', default: false },
+    wifi: { type: 'boolean', default: false },
     soak: { type: 'string' },
     'max-size': { type: 'string' },
   },
@@ -76,7 +77,7 @@ const session = new MirrorSession({
   viewer: values.window
     ? async () => new ViewerProcess(await viewerBinary(), ['--behind'])
     : startViewer(true),
-  options: { quality: 'auto' },
+  options: { quality: 'auto', ...(values.wifi && { wifi: true }) },
   title: `bench ${serial}`,
   onChange: (s) => {
     if (s.stats && s.stats !== seconds.at(-1)?.from) {

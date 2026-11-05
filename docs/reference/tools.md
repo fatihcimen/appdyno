@@ -131,5 +131,5 @@ With `symbols`, it names the stack of a release build. On iOS that is a `.dSYM`,
   installed profile for a wildcard app id, with its identity in the unlocked login keychain, is found by itself. To choose another,
   set `APPDYNO_IOS_PROFILE=<profile.mobileprovision>`, `APPDYNO_IOS_KEYCHAIN=<keychain-db>` and
   `APPDYNO_IOS_KEYCHAIN_PASSWORD=<password>`. Run `appdyno doctor` to see what it found. The phone is
-  reached over USB, never the network. A phone's clipboard goes by Xcode's `devicectl`, with no runner and nothing asked on the phone,
+  reached over USB. Only a window goes by the network. A phone's clipboard goes by Xcode's `devicectl`, with no runner and nothing asked on the phone,
   and a simulator's is read from the Mac. Text goes in as keys on iOS: a paste brings up iOS's "Allow Paste" alert.

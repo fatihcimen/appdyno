@@ -171,7 +171,7 @@ export async function listDevices(path = USBMUXD): Promise<MuxDevice[]> {
   });
 }
 
-const sameUdid = (a: string, b: string) =>
+export const sameUdid = (a: string, b: string) =>
   a.replace(/-/g, '').toUpperCase() === b.replace(/-/g, '').toUpperCase();
 
 /** A raw stream to `port` on the phone with this UDID, over USB (never the network). */

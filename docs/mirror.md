@@ -65,9 +65,17 @@ that folder and the rest builds and passes its tests, an iPhone keeps its runner
 
 It makes its own tunnel: `usbmuxd`, lockdown with this Mac's pair record, `CoreDeviceProxy`, then IPv6, TCP and UDP in a
 thread of this process. It never connects to the discovery port of Apple's own tunnel, which takes one client and
-would throw `remoted` off it; a test holds that too. The pair record is read and never written; pairing is never asked
-for, and any refusal stops with what a person must do. No socket opens on this Mac for any of it, so the README's
-line on listeners stands.
+would throw `remoted` off it; a test holds that too. The pair record is read and never written; by cable pairing is
+never asked for, and any refusal stops with what a person must do. No socket opens on this Mac for any of it, so the
+README's line on listeners stands.
+
+With `--wifi` the same tunnel runs over TCP and TLS on the network. What gets there is `wifi.ts`, the one file here
+that opens a socket, and only to a phone: `dns-sd` finds what it advertises, and the phone proves itself with the key
+it gave at pairing, before a key for the tunnel is made. It listens for nothing. That pairing is `appdyno pair`'s, a
+person's word on the phone, an identity of its own in `wifi-pairing/` of the state directory, `0600`. It is made once,
+on the cable: on the network a phone says `allowsPairSetup: false` and names no udid, and inside the cable's tunnel it
+offers a service that takes a pairing, so that too comes nowhere near the discovery port. The pair record opens that
+tunnel, as it does every other, and plays no part in a window by the network, which a test holds too.
 
 The stream asks for the remote desktop profile first, 20 to 60 Mbit/s as configured, in 4:4:4, and takes the lower one,
 in 4:2:0, if a phone refuses it or `--quality standard` asks. Pictures go to the viewer by a named pipe, `0600`, off the
@@ -471,6 +479,24 @@ What it says:
 - `flow start` from another process reaches a window within a quarter of a second, and clicks in that time are not recorded. Two processes writing to one recording in the same instant can lose a step.
 - A hover and an assertion go by what was last read, so a screen that changed in the last read's time shows what it was, and a pointer resting on what came since says nothing until it moves.
 
+## Wi-Fi
+
+A cable stays the default. The network is a person's choice, made once for each phone.
+
+| device  | pairing                                                                                      | a window                                                     |
+| ------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Android | Wireless debugging, Pair device with pairing code: `appdyno pair <address> <code>`, as shown | a device like any other: `appdyno mirror --device <ip:port>` |
+| iPhone  | on its cable, unlocked: `appdyno pair --device <udid>`, and a person accepts on it           | `appdyno mirror --device <udid> --wifi`                      |
+
+The window's title says it is on Wi-Fi, and a note says what that costs. An iPhone takes the lower mode unless
+`--quality high` asks for the other.
+
+A network that goes leaves no end to read, so silence is what tells: past it the last picture dims and the window
+says `waiting not-connected`, as for a pulled cable, and it comes back by itself. Measured on an emulator reached by
+address through a relay that goes silent: said within 7 s of 20 s of silence, live within 1 s of the return.
+
+An iPhone over the network is not yet run on a phone, so nothing here is a number of one.
+
 ## Left out, for now
 
-Wi-Fi, which needs an identity of our own paired with the phone. Audio.
+Audio.

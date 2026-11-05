@@ -28,7 +28,9 @@ import {
   sessionsOf,
   StreamRefusal,
 } from './stream-state.js';
-import { openTunnel, orientationReader, PhoneRefusal } from './tunnel.js';
+import { askShim, springboardOver } from './shim.js';
+import { openTunnel, ORIENTATION_REQUEST, orientationReader, PhoneRefusal } from './tunnel.js';
+import { openWifiTunnel } from './wifi.js';
 import { XpcInt64, XpcUuid } from './xpc-codec.js';
 
 const FEATURE = 'com.apple.coredevice.feature.';
@@ -45,12 +47,15 @@ const TURNS_CHECK_MS = 250;
 const INPUT_IDLE_MS = 15_000;
 const ALIVE_MS = 1_000;
 const WATCH_MS = 2_000;
+/** On a network: the phone's answers to `WATCH_MS` stop coming, with or without a picture. */
+const SILENCE_MS = 6_000;
 
 type TurnsReader = Awaited<ReturnType<typeof orientationReader>>;
 
 /** All a stream reaches the phone and this Mac by: what a test stands in for, as nothing here needs a phone to be read. */
 const WIRE = {
   openTunnel,
+  openWifiTunnel,
   readServices,
   invoke,
   takeScreenshot,
@@ -93,17 +98,18 @@ export class PhoneStream {
 
   private constructor(
     private readonly udid: string,
+    private readonly wifi: boolean,
     private readonly sink: StreamSink,
     private readonly parts: StreamWire,
   ) {}
 
   static async open(
     udid: string,
-    quality: MirrorQuality,
+    { quality, wifi }: { quality: MirrorQuality; wifi: boolean },
     sink: StreamSink,
     parts: StreamWire = WIRE,
   ): Promise<PhoneStream> {
-    const stream = new PhoneStream(udid, sink, parts);
+    const stream = new PhoneStream(udid, wifi, sink, parts);
     try {
       await stream.start(quality);
       return stream;
@@ -117,10 +123,12 @@ export class PhoneStream {
   }
 
   private async start(quality: MirrorQuality) {
-    const { stack, rsdPort } = await this.parts.openTunnel(this.udid);
+    const { openTunnel, openWifiTunnel, readServices } = this.parts;
+    const { stack, rsdPort } = await (this.wifi ? openWifiTunnel : openTunnel)(this.udid);
     this.stack = stack;
     stack.onEnded((why) => this.onLost(why));
-    this.services = await this.parts.readServices(stack, rsdPort);
+    if (this.wifi) stack.endOnSilence(SILENCE_MS);
+    this.services = await readServices(stack, rsdPort);
     const port = this.services.ports[DISPLAY];
     if (!port) {
       throw new StreamRefusal('disk-image-missing', 'the phone lists no display service');
@@ -139,7 +147,9 @@ export class PhoneStream {
     if (before.length)
       await this.parts.invoke(display, `${FEATURE}stopmediastream`, { stopAll: true }, STOP_ACTION);
     rememberOwn(this.udid, []);
-    const ladder: StreamMode[] = quality === 'standard' ? [5] : [7, 5];
+    // the higher mode wants more than a network is sure to carry: a person can still ask for it
+    const ladder: StreamMode[] =
+      quality === 'standard' || (this.wifi && quality === 'auto') ? [5] : [7, 5];
     let lastError: unknown;
     for (const mode of ladder) {
       try {
@@ -269,9 +279,21 @@ export class PhoneStream {
    * stream is live: a phone already on its side would otherwise take its first touches as upright, and lose them.
    */
   private async openTurns() {
-    const reader = await this.parts.orientationReader(this.udid).catch(() => undefined);
+    const opening: Promise<TurnsReader> = this.wifi
+      ? this.turnsByTunnel()
+      : this.parts.orientationReader(this.udid);
+    const reader = await opening.catch(() => undefined);
     if (reader) await this.readTurns(reader).catch(() => undefined);
     return reader;
+  }
+
+  private async turnsByTunnel(): Promise<TurnsReader> {
+    const connection = await springboardOver(this.stack!, this.services!);
+    return {
+      read: async () =>
+        Number((await askShim(connection, ORIENTATION_REQUEST)).interfaceOrientation),
+      close: () => void connection.close(),
+    };
   }
 
   private async readTurns(reader: TurnsReader) {

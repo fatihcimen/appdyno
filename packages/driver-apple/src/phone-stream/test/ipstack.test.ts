@@ -197,6 +197,25 @@ describe('TCP in this process', () => {
   });
 });
 
+describe('a network that goes', () => {
+  beforeEach(() => void vi.useFakeTimers());
+  afterEach(() => void vi.useRealTimers());
+
+  it('ends the stack past that much silence, and what comes in the meantime holds it off', async () => {
+    const { stack } = peer();
+    const ended = vi.fn();
+    stack.onEnded(ended);
+    stack.endOnSilence(6_000);
+    await vi.advanceTimersByTimeAsync(5_000);
+    stack.feed(Buffer.alloc(0));
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(ended).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(ended).toHaveBeenCalledWith('nothing came for 6 s');
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
 describe('UDP and the tunnel', () => {
   it('sends with a checksum that adds up', () => {
     const { stack, sent } = peer();

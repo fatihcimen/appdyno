@@ -17,7 +17,7 @@ By default the MCP server speaks over stdio to the
 client that started it and opens no network listener. Only `--http` opens one: see below. Measurements are stored on the local disk, under the state
 directory or the `--measurements` directory. The Android agent listens on an abstract unix socket on the
 device, reached through adb, and accepts a connection only with its launch token. An iPhone is reached
-over USB. A window's picture comes from the same agent, with the same token, given to the viewer by its
+over USB, and a window on it by the network only with `--wifi`. A window's picture comes from the same agent, with the same token, given to the viewer by its
 stdin; on an emulator booted by `simulator` from that emulator's own gRPC port, behind its token, into a
 file only this user can read.
 
@@ -38,6 +38,15 @@ Limits you set:
   the holder and does nothing.
 
 A window shows what the screen shows, to whoever sits at this Mac. `--no-input` makes it watch only.
+
+## Wi-Fi
+
+`appdyno pair` makes an identity this Mac shares with one phone, once, with a person accepting on it. On an iPhone its
+private key is in the state directory, under `wifi-pairing/`, readable by this user alone: **whoever has that file and
+is on the phone's network can reach the phone's developer services**, as a window does. It is not the pair record,
+which is read and never written. An iPhone's pairing is made on its cable, as on the network a phone allows none. At
+each start the phone proves itself with the key it gave at pairing, so something else on the network that answers as it
+is turned away. All of it is encrypted on the network. Android's is adb's own, kept by adb.
 
 ## `--http`
 

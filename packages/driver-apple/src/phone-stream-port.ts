@@ -49,10 +49,12 @@ export interface PhoneStreamModule {
   /** The name of the field being typed in. */
   focusedField(udid: string): Promise<string | undefined>;
   /** What can be known with no stream started. */
-  check(udid: string): Promise<PhoneStreamCheck>;
+  check(udid: string, options?: { wifi?: boolean }): Promise<PhoneStreamCheck>;
   start(
     udid: string,
-    options: { quality: MirrorQuality },
+    options: { quality: MirrorQuality; wifi?: boolean },
     onEvent: (e: PhoneStreamEvent) => void,
   ): PhoneStreamHandle;
+  /** Makes this Mac's own pairing for Wi-Fi, which a person accepts on the phone. */
+  pair(udid: string, say: (words: string) => void): Promise<void>;
 }

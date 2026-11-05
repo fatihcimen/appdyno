@@ -39,6 +39,17 @@ export async function loadPhoneStream(entry = ENTRY): Promise<PhoneStreamModule 
   }
 }
 
+/** Makes this Mac's own pairing for Wi-Fi, which a person accepts on the phone. */
+export async function pairPhone(
+  udid: string,
+  say: (words: string) => void,
+  load: () => Promise<PhoneStreamModule | undefined> = loadPhoneStream,
+) {
+  const stream = await load();
+  if (!stream) throw new NeedError('no-phone-stream');
+  await stream.pair(udid, say);
+}
+
 /** A folder of their own: a pipe nothing writes holds up whoever reads it, as a scan of a folder would. */
 const framesDir = () => join(stateDir(), 'phone-frames');
 
@@ -81,6 +92,10 @@ export type PhoneRunner = {
   keys(text: string, into?: Spot): Promise<void>;
 };
 
+/** What a person should know of a picture that comes this way. */
+const ON_WIFI =
+  'On Wi-Fi: the picture is the lower mode, and frames and touches take the longer way. A cable gives more.';
+
 /** An iPhone's mirror: all it speaks is in the stream it loads, and only what a session asks is here. */
 export class PhoneMirror implements Mirror {
   private say: (text: string) => void = () => undefined;
@@ -101,6 +116,7 @@ export class PhoneMirror implements Mirror {
   /** No runner to be had: keys, which the phone's layout decides, with a word to say so. */
   private keysOnly = false;
   readonly sendsWhenStill = true;
+  readonly wifi = true;
   /** A start lights the screen: it would turn back on a phone a person has just turned off. */
   readonly holdsThrough = 'asleep' as const;
   readonly keyOf = keyOfUsage;
@@ -138,15 +154,16 @@ export class PhoneMirror implements Mirror {
     return size && { meta: { ...size, format, bytes: data.length }, data };
   }
 
-  async check(): Promise<MirrorCheck> {
+  async check(options?: MirrorOptions): Promise<MirrorCheck> {
     const stream = await this.stream();
     if (!stream) return { ok: false, need: 'no-phone-stream' };
     if (this.dark) return { ok: false, need: 'asleep' };
     if (this.blocked && this.now() < this.blocked.until) {
       return { ok: false, need: this.blocked.need, detail: this.blocked.detail };
     }
-    const c = await stream.check(this.udid);
-    return c.ok ? { ok: true, routes: ['tunnel'] } : c;
+    const wifi = options?.wifi === true;
+    const c = await stream.check(this.udid, { wifi });
+    return c.ok ? { ok: true, routes: ['tunnel', ...(wifi ? ['wifi'] : [])] } : c;
   }
 
   private tell(s: DeviceState) {
@@ -154,7 +171,8 @@ export class PhoneMirror implements Mirror {
   }
 
   private begin(stream: PhoneStreamModule, options: MirrorOptions) {
-    const handle = stream.start(this.udid, { quality: options.quality }, (e) => {
+    const { quality, wifi } = options;
+    const handle = stream.start(this.udid, { quality, ...(wifi && { wifi }) }, (e) => {
       // a stream being stopped still speaks, and it is no longer the one this mirror is about
       if (handle !== this.handle) return;
       if (e.kind === 'live') this.live = { w: e.w, h: e.h, mode: e.mode };
@@ -190,7 +208,13 @@ export class PhoneMirror implements Mirror {
     this.pipe = file;
     this.handle ??= this.begin(stream, options);
     this.handle.attach(file);
-    return { kind: 'pipe', encoded: true, file, codec: 'hevc' };
+    return {
+      kind: 'pipe',
+      encoded: true,
+      file,
+      codec: 'hevc',
+      ...(options.wifi && { note: ON_WIFI }),
+    };
   }
 
   /** Only on a dark screen: the same press on a lit one goes to the home screen. */
