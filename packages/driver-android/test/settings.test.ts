@@ -1,5 +1,5 @@
 import { DeviceError } from '@appdyno/protocol';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Adb } from '../src/adb.js';
 import { AndroidEvents } from '../src/events.js';
 import { AndroidSettings } from '../src/settings.js';
@@ -46,6 +46,57 @@ describe('a radio', () => {
     expect(await read('enabled')).toBe('on');
     expect(await read('disabled')).toBe('off');
     expect(await read('disabling')).toBe('disabling');
+  });
+
+  /** What the shell answers in turn: `wifi_on`, `airplane_mode_on` and the state. */
+  const reading = (...turns: [string, string, string][]) => {
+    let reads = 0;
+    const { settings } = device('emulator-5554', [
+      [
+        /dumpsys wifi/,
+        () => {
+          const [chosen, airplane, state] = turns[Math.min(reads++, turns.length - 1)]!;
+          return `${chosen}\n${airplane}\nWi-Fi is ${state}\n`;
+        },
+      ],
+    ]);
+    return { settings, reads: () => reads };
+  };
+
+  it('reads Wi-Fi once it has come to where its setting says, as airplane mode ending brings it back after', async () => {
+    const { settings, reads } = reading(
+      ['1', '0', 'disabled'],
+      ['1', '0', 'disabled'],
+      ['1', '0', 'enabled'],
+    );
+    expect(await settings.get('wifi')).toBe('on');
+    expect(reads()).toBe(3);
+  });
+
+  it('takes the setting airplane mode left, 3, as on its way back once airplane mode has ended', async () => {
+    const { settings } = reading(['3', '0', 'disabled'], ['1', '0', 'enabled']);
+    expect(await settings.get('wifi')).toBe('on');
+  });
+
+  it('waits for nothing in airplane mode, or when Wi-Fi was turned off', async () => {
+    for (const turn of [
+      ['3', '1', 'disabled'],
+      ['0', '0', 'disabled'],
+    ] as [string, string, string][]) {
+      const { settings, reads } = reading(turn);
+      expect(await settings.get('wifi')).toBe('off');
+      expect(reads()).toBe(1);
+    }
+  });
+
+  it('says what it reads when Wi-Fi never comes to its setting', async () => {
+    const start = Date.now();
+    const now = vi
+      .spyOn(Date, 'now')
+      .mockImplementation(() => start + now.mock.calls.length * 4_000);
+    const { settings } = reading(['1', '0', 'disabled']);
+    expect(await settings.get('wifi')).toBe('off');
+    now.mockRestore();
   });
 
   it('reads a switch as on or off, and says when there is none', async () => {

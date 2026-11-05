@@ -29,6 +29,9 @@ const localeApp = (app: string | undefined) => {
 export const BATTERY_GUARD = 'dumpsys batterystats enable no-auto-reset';
 export const BATTERY_BACK = 'dumpsys battery reset; dumpsys batterystats disable no-auto-reset';
 
+/** Where Wi-Fi is going by `wifi_on`: 2 and 3 are its values while airplane mode holds it, 3 until that ends. */
+const WIFI_GOING: Record<string, string> = { '0': 'off', '1': 'on', '2': 'on', '3': 'off' };
+
 /** What asks for each radio, `enable` or `disable` after it. */
 const RADIOS = {
   airplane: 'cmd connectivity airplane-mode',
@@ -135,14 +138,28 @@ export class AndroidSettings implements DeviceSettings {
       case 'mobile_data':
         // what the user chose, not the connection: that goes in airplane mode, and a restore would keep it off
         return this.switchOf('mobile_data', name);
-      case 'wifi': {
-        // the state, as `wifi_on` changes first, and has values of its own for airplane mode
-        const out = await this.sh("dumpsys wifi 2>/dev/null | grep -m1 '^Wi-Fi is'");
-        const state = /^Wi-Fi is (\w+)/.exec(out)?.[1];
-        if (!state)
-          throw new DeviceError('UNSUPPORTED', `this device reads no Wi-Fi state: ${out}`);
-        return { enabled: 'on', disabled: 'off' }[state] ?? state;
-      }
+      case 'wifi':
+        return this.wifi();
+    }
+  }
+
+  /**
+   * The state, once it has come to where `wifi_on` says it is going: that moves first, and a radio that airplane
+   * mode's end is bringing back still reads off for a moment, which would be written down as the user's value.
+   */
+  private async wifi() {
+    const end = Date.now() + RADIO_MS;
+    for (;;) {
+      const out = await this.sh(
+        "settings get global wifi_on; settings get global airplane_mode_on; dumpsys wifi 2>/dev/null | grep -m1 '^Wi-Fi is'",
+      );
+      const [chosen = '', airplane] = out.split('\n').map((l) => l.trim());
+      const state = /^Wi-Fi is (\w+)/m.exec(out)?.[1];
+      if (!state) throw new DeviceError('UNSUPPORTED', `this device reads no Wi-Fi state: ${out}`);
+      const now = { enabled: 'on', disabled: 'off' }[state] ?? state;
+      const going = airplane === '0' && chosen === '3' ? 'on' : WIFI_GOING[chosen];
+      if (!going || now === going || Date.now() >= end) return now;
+      await sleep(READ_AGAIN_MS);
     }
   }
 
