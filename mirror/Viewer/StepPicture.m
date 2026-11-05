@@ -4,7 +4,7 @@
 
 static const double kPhoneWide = 92, kPhoneTall = 176, kPhoneRound = 16, kLine = 2;
 static const double kRowTall = 20, kRowGap = 6, kInset = 10;
-static const double kBeatSeconds = 1.6, kBeats = 3, kMacWide = 112;
+static const double kBeatSeconds = 1.6, kBeats = 3, kMacWide = 112, kSwitchOff = 0.35;
 
 static NSColor *ink(void) {
   return MVSolid(NSColor.labelColor);
@@ -285,7 +285,9 @@ static void drawTick(NSPoint at) {
   CGPathRelease(shape);
   ground.fillColor = accent().CGColor;
   CAKeyframeAnimation *fill = [CAKeyframeAnimation animationWithKeyPath:@"fillColor"];
-  fill.values = @[(id)soft().CGColor, (id)soft().CGColor, (id)accent().CGColor, (id)accent().CGColor];
+  // dim while off: a white knob must stand clear of it in either look
+  NSColor *dimmed = [soft() colorWithAlphaComponent:kSwitchOff];
+  fill.values = @[(id)dimmed.CGColor, (id)dimmed.CGColor, (id)accent().CGColor, (id)accent().CGColor];
   CALayer *knob = [CALayer layer];
   knob.backgroundColor = NSColor.whiteColor.CGColor;
   knob.cornerRadius = 5;
