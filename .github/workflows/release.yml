@@ -17,9 +17,12 @@ jobs:
     needs: gate
     runs-on: macos-latest
     permissions:
-      contents: read
+      # the GitHub release
+      contents: write
       # what `--provenance` signs with
       id-token: write
+    env:
+      APPDYNO_CERTIFICATE: ${{ secrets.APPDYNO_CERTIFICATE }}
     steps:
       - uses: actions/checkout@v4
       - name: The tag is the version
@@ -38,8 +41,36 @@ jobs:
       - name: Android agent
         run: cd android && ./gradlew --console=plain :agent:assembleDebug
       - run: pnpm build
+      - name: The signing certificate
+        if: env.APPDYNO_CERTIFICATE != ''
+        env:
+          APPDYNO_CERTIFICATE_PASSWORD: ${{ secrets.APPDYNO_CERTIFICATE_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          security create-keychain -p "" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "" "$keychain"
+          echo "$APPDYNO_CERTIFICATE" | base64 -d > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" -P "$APPDYNO_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" "$keychain"
+          security list-keychains -d user -s "$keychain" login.keychain-db
+      - name: The Mac app
+        run: node scripts/build-app.mjs
+        env:
+          APPDYNO_SIGN_IDENTITY: ${{ secrets.APPDYNO_SIGN_IDENTITY }}
+          APPDYNO_NOTARY_APPLE_ID: ${{ secrets.APPDYNO_NOTARY_APPLE_ID }}
+          APPDYNO_NOTARY_PASSWORD: ${{ secrets.APPDYNO_NOTARY_PASSWORD }}
+          APPDYNO_NOTARY_TEAM: ${{ secrets.APPDYNO_NOTARY_TEAM }}
+          APPDYNO_UPDATE_KEY: ${{ secrets.APPDYNO_UPDATE_KEY }}
       - name: Publish with provenance
         working-directory: packages/appdyno
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: The release
+        # with no update key there is no appcast
+        run: |
+          shopt -s nullglob
+          gh release create "$GITHUB_REF_NAME" --generate-notes .app-build/*.dmg .app-build/appdyno.rb .app-build/appcast.json*
+        env:
+          GH_TOKEN: ${{ github.token }}
