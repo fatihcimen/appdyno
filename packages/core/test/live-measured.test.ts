@@ -65,6 +65,12 @@ describe('what one that runs all day reads', () => {
     expect(d.measure.frames).toHaveBeenCalled();
     expect(s.absent?.cpuPercent).toContain('not read');
   });
+
+  it('takes the screen as it is: a number is no reason to light a phone a person turned off', async () => {
+    const d = device();
+    await firstOf(d, ['fps']);
+    expect(d.measure.frames).toHaveBeenCalledWith('dev.app', { reset: true, asItIs: true });
+  });
 });
 
 describe("a device's numbers each second", () => {

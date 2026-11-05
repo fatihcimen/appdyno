@@ -1,7 +1,7 @@
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { parseExitInfo } from '../src/crashes.js';
 import { THERMAL_READ } from '../src/perf/app.js';
 import { AndroidPerf } from '../src/perf/index.js';
@@ -535,5 +535,22 @@ describe('the measures of a device', () => {
     await expect(on('R58M', 'No process found').frames('dev.app')).rejects.toMatchObject({
       code: 'APP_NOT_RUNNING',
     });
+  });
+
+  it('readies the device for frames that are measured, and not for what only looks', async () => {
+    const ready = vi.fn(async () => undefined);
+    const device = {
+      serial: 'R58M',
+      shell: async () => '',
+      shellAlongside: async () => '',
+      shellBuffer: async () => Buffer.from(''),
+      pull: async () => undefined,
+      readyToMeasure: ready,
+      ensureAwake: async () => ({ woke: false, unlocked: false, locked: false }),
+    };
+    await new AndroidPerf(device).frames('dev.app', { asItIs: true });
+    expect(ready).not.toHaveBeenCalled();
+    await new AndroidPerf(device).frames('dev.app');
+    expect(ready).toHaveBeenCalledOnce();
   });
 });

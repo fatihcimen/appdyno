@@ -308,7 +308,8 @@ export interface MeasureSource {
   cpu(app: string, windowMs?: number): Promise<Measured<CpuReading>>;
   memory(app: string): Promise<Measured<MemoryReading>>;
   anonMemory(app: string): Promise<Measured<AnonMemory>>;
-  frames(app: string, opts?: { reset?: boolean }): Promise<Measured<FrameStats>>;
+  /** `asItIs` only looks: a dark screen stays dark, where a measure would light it to see what a person sees. */
+  frames(app: string, opts?: { reset?: boolean; asItIs?: boolean }): Promise<Measured<FrameStats>>;
   /** Frames of what `during` does: recorded around it, or a counter read before and after it. */
   framesDuring(
     app: string,

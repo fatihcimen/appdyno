@@ -83,7 +83,7 @@ async function sampleOf(
     read(
       FRAME_FIELDS,
       'frames',
-      () => measure.frames(app, { reset: true }),
+      () => measure.frames(app, { reset: true, asItIs: true }),
       (v) => {
         const now = Date.now();
         const since = sameApp ? kept.since : undefined;

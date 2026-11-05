@@ -42,9 +42,9 @@ const NOTHING_DRAWN: FrameStats = {
 export async function frames(
   d: PerfDevice,
   pkg: string,
-  opts: { reset?: boolean } = {},
+  opts: { reset?: boolean; asItIs?: boolean } = {},
 ): Promise<Measured<FrameStats>> {
-  await d.readyToMeasure();
+  if (!opts.asItIs) await d.readyToMeasure();
   assertPkg(pkg);
   const raw = await sh(
     d,
