@@ -80,12 +80,23 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
       await quiet(2_000);
       await picture('first');
       const shown = serials.find(live)!;
+      // it stands open, reading: a real click closes it, and what it read stops with it
+      await until(
+        'readings',
+        () => told.some((m) => m.op === 'perfWatch' && m.on === true),
+        10_000,
+      );
       told.length = 0;
       link.send({ op: 'poke', stage: shown, clickOn: 'inspector' });
-      await until('a click on the Inspector', () => told.some((m) => m.op === 'perfWatch'), 10_000);
+      await until('the Inspector closing', () => told.some((m) => m.op === 'perfWatch'), 10_000);
+      expect(told.find((m) => m.op === 'clicked')).toMatchObject({ found: true, isIt: 1 });
+      expect(told.find((m) => m.op === 'perfWatch')).toMatchObject({ on: false });
+      await picture('closed');
+      told.length = 0;
+      link.send({ op: 'poke', stage: shown, clickOn: 'inspector' });
+      await until('the Inspector opening', () => told.some((m) => m.op === 'perfWatch'), 10_000);
       await quiet(6_000);
       await picture('inspector');
-      link.send({ op: 'poke', stage: shown, clickOn: 'inspector' });
       const other = serials.find((s) => s !== shown);
       if (!other) return;
       for (const [to, from] of [

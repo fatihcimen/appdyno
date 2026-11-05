@@ -200,6 +200,30 @@ describe('the hub', () => {
     await done;
   });
 
+  it('comes back for a device chosen while its window was on its way, when that is over', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'Date'], shouldAdvanceTime: true });
+    const { link, told, say, close } = window();
+    const ctx = context(new Simulated(), [phone], ['/usr/bin/true']);
+    const open = vi.spyOn(ctx, 'deviceFor');
+    const done = runHub(ctx, { focus: false, log: () => undefined, viewer: () => link });
+    await vi.waitFor(() => expect(lastList(told)).toBeDefined());
+    say({ op: 'hub', action: 'open', serial: 'R58M' });
+    await vi.advanceTimersByTimeAsync(50);
+    open.mockClear();
+    // being asked is the point here: this phone has no stream to open
+    open.mockImplementation(() => {
+      throw new Error('no stream here');
+    });
+    say({ op: 'hub', action: 'select', serial: 'R58M' });
+    await vi.advanceTimersByTimeAsync(50);
+    expect(open).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(21_000);
+    expect(open).toHaveBeenCalledWith('R58M');
+    vi.useRealTimers();
+    close();
+    await done;
+  });
+
   it('brings a window that died back, and stops after three in a minute', async () => {
     const windows = [window(), window(), window(), window()];
     const made = [...windows];

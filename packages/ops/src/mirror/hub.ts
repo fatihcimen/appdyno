@@ -228,6 +228,7 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
   let showing: string[] = [];
   /** A window of its own takes a moment to start: until then a choice of its device would take it first, and both hold it. */
   const ownWindows = new Map<string, number>();
+  let wanted: string | undefined;
   let choosing: Promise<unknown> = Promise.resolve();
   /** What stands in the room: choosing ends the streams of what no longer does. */
   const choose = (serials: string[], paired = false) => {
@@ -251,7 +252,13 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
   const acts: Record<string, (m: ViewerMessage) => Promise<unknown> | void> = {
     select: (m) => {
       const serial = m.serial === undefined ? undefined : String(m.serial);
-      if (serial && Date.now() < (ownWindows.get(serial) ?? 0)) return undefined;
+      wanted = serial;
+      const held = serial ? (ownWindows.get(serial) ?? 0) - Date.now() : 0;
+      // the window says a thing once: a choice held off is not lost, as nothing will ask again
+      if (held > 0) {
+        setTimeout(() => wanted === serial && void acts.select!(m), held).unref();
+        return undefined;
+      }
       return choose(serial ? [serial] : []);
     },
     open: async (m) => {
@@ -265,7 +272,10 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
       await Promise.all(serials.map(closeWindow));
       return choose(serials, true);
     },
-    close: (m) => closeWindow(String(m.serial)),
+    close: async (m) => {
+      await closeWindow(String(m.serial));
+      ownWindows.delete(String(m.serial));
+    },
     start: async (m) => (await ownerOf(ctx, String(m.id))).boot(String(m.id)),
     stop: async (m) => (await ownerOf(ctx, String(m.id))).shutdown(String(m.id)),
     new: (m) =>
