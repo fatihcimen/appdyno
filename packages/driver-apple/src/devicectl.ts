@@ -34,7 +34,7 @@ export class Devicectl {
     try {
       const { stdout } = await run(
         'xcrun',
-        ['devicectl', ...args, '--json-output', '-', '--quiet'],
+        ['devicectl', '--json-output', '-', '--quiet', ...args],
         {
           timeout: timeoutMs,
           maxBuffer: 64 * 1024 * 1024,

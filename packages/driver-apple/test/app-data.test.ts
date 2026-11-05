@@ -78,3 +78,24 @@ describe('an iOS app data', () => {
     );
   });
 });
+
+describe('a launch on a phone', () => {
+  it("keeps the app's arguments from the tool's own, as a dash would be taken for one", async () => {
+    let args: string[] = [];
+    const json = async (given: string[]) => ((args = given), {});
+    await new PhoneApps({ udid: UDID, json } as unknown as Devicectl).launchWith(APP, {
+      language: 'de',
+      args: ['-mode', 'test'],
+    });
+    expect(args.slice(args.indexOf(APP))).toEqual([
+      APP,
+      '--',
+      '-AppleLanguages',
+      '(de)',
+      '-AppleLocale',
+      'de',
+      '-mode',
+      'test',
+    ]);
+  });
+});

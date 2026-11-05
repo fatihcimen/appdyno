@@ -133,6 +133,8 @@ export class PhoneApps implements AppManager {
       '--terminate-existing',
       ...(opts.env ? ['--environment-variables', JSON.stringify(opts.env)] : []),
       assertBundle(app),
+      // what starts with a dash is the app's, not this tool's
+      '--',
       ...languageArgs(opts.language),
       ...(opts.args ?? []),
     ]);
