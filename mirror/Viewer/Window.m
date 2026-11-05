@@ -25,7 +25,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   MVFrameView *_frame;
   MVView *_view;
   MVInspector *_inspector;
-  NSView *_panel, *_bar;
+  NSView *_panel, *_bar, *_pill;
   MVHud *_hud;
   BOOL _hudding, _reading;
   NSView *_root;
@@ -73,6 +73,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
     [padded addSubview:_line];
     NSView *pill = MVGlass(padded, 17, nil);
     [root addSubview:pill];
+    _pill = pill;
     [NSLayoutConstraint activateConstraints:@[
       [_line.leadingAnchor constraintEqualToAnchor:padded.leadingAnchor constant:14],
       [_line.trailingAnchor constraintEqualToAnchor:padded.trailingAnchor constant:-14],
@@ -129,6 +130,8 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   [NSLayoutConstraint activateConstraints:@[
     [_bar.trailingAnchor constraintEqualToAnchor:_root.trailingAnchor constant:-12],
     [_bar.topAnchor constraintEqualToAnchor:_root.topAnchor constant:10],
+    // a long name gives way to the controls
+    [_pill.trailingAnchor constraintLessThanOrEqualToAnchor:_bar.leadingAnchor constant:-8],
   ]];
 }
 
@@ -163,7 +166,8 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   double bottom = kBottom + (room.height - drawn.height) / 2;
   NSRect place = NSMakeRect(round((_stage.frame.size.width - drawn.width) / 2), round(bottom), drawn.width, drawn.height);
   [_frame layOutScreen:screen in:place turns:_turns];
-  BOOL drawsItsOwn = [_kind isEqual:@"surface"] || [_kind isEqual:@"pixels"];
+  // a simulator's picture has its island in it and no notch, and an emulator's has what its device has
+  BOOL drawsItsOwn = [_kind isEqual:@"pixels"] || ([_kind isEqual:@"surface"] && _frame.spec.cutout == MVCutoutIsland);
   CGSize portrait = screen.width > screen.height ? CGSizeMake(screen.height, screen.width) : screen;
   [_layers layOut:screen turns:_turns cutout:_frame.showsFrame && !drawsItsOwn ? MVCutoutRect(_frame.spec, portrait) : CGRectZero];
   [CATransaction commit];
