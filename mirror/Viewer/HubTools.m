@@ -133,7 +133,17 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   [grid columnAtIndex:0].xPlacement = NSGridCellPlacementTrailing;
   _why = MVParagraph(@"", MVStyleSub);
   [self fillDevice:_shownDevice];
-  return MVCard(MVPlaceColumn(@[grid, _why], 8), 12);
+  // its own width: stretched to a column, what it does with the rest differs from one launch to the next
+  NSView *held = [NSView new];
+  grid.translatesAutoresizingMaskIntoConstraints = NO;
+  [held addSubview:grid];
+  [NSLayoutConstraint activateConstraints:@[
+    [grid.topAnchor constraintEqualToAnchor:held.topAnchor],
+    [grid.bottomAnchor constraintEqualToAnchor:held.bottomAnchor],
+    [grid.leadingAnchor constraintEqualToAnchor:held.leadingAnchor],
+    [grid.trailingAnchor constraintLessThanOrEqualToAnchor:held.trailingAnchor],
+  ]];
+  return MVCard(MVPlaceColumn(@[held, _why], 8), 12);
 }
 
 - (NSView *)rowFor:(NSArray<NSString *> *)about {

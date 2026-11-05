@@ -58,13 +58,15 @@ static NSRect drawRows(NSRect inside, int count, int at) {
 }
 
 /// A switch that is on, at the end of a row.
-static NSRect drawSwitch(NSRect row) {
-  NSRect track = NSMakeRect(NSMaxX(row) - 24, NSMidY(row) - 6, 20, 12);
+static NSRect switchIn(NSRect row) {
+  return NSMakeRect(NSMaxX(row) - 24, NSMidY(row) - 6, 20, 12);
+}
+
+static void drawSwitch(NSRect track) {
   [accent() setFill];
   [rounded(track, 6) fill];
   [NSColor.whiteColor setFill];
   [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(NSMaxX(track) - 11, NSMinY(track) + 1, 10, 10)] fill];
-  return track;
 }
 
 /// Rings around a point, for a tap.
@@ -232,7 +234,9 @@ static void drawTick(NSPoint at) {
   } else {
     // every other step is a switch to turn on: which row says only that it is not the first
     int at = [step isEqual:@"usb-debugging"] ? 2 : [step isEqual:@"xiaomi-security"] ? 3 : [step isEqual:@"xiaomi-install"] ? 1 : 0;
-    _track = drawSwitch(drawRows(drawPhone(middle, all), 5, at));
+    _track = switchIn(drawRows(drawPhone(middle, all), 5, at));
+    // it stands in the layer that slides it, or here where nothing may move: both, and the one shows through the other
+    if (!MVMoves()) drawSwitch(_track);
     if ([step isEqual:@"developer-mode"]) {
       _restartAt = NSMakePoint(middle + kPhoneWide + 26, NSMidY(all));
       // it stands in the layer that turns it, or here where nothing may move
