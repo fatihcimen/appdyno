@@ -322,7 +322,10 @@ export class AndroidDevice extends RpcDevice implements Device {
   private readonly startActivity = async (intent: string) =>
     amStartError(await this.shell(`am start -W ${intent} 2>&1`, TIMEOUTS.app));
 
+  /** Stopped by name, as `am start -S` refuses an intent several activities answer, on a Samsung. */
   async openSettings(to: { page: SettingsPage } | { app: string }) {
+    // an intent to Settings while it shows another page only brings that page back
+    await this.terminate('com.android.settings');
     await openSettingsAt(to, this.startActivity);
     return {};
   }

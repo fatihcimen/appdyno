@@ -25,13 +25,12 @@ const SETTINGS_ACTIONS: Partial<Record<SettingsPage, string>> = {
 /** What an `am start` of these words says went wrong, if anything. */
 type Start = (intent: string) => Promise<string | undefined>;
 
-/** Settings stopped first: an intent to it while it shows another page only brings that page back. */
 export async function openSettingsAt(to: { page: SettingsPage } | { app: string }, start: Start) {
   const action = 'page' in to ? SETTINGS_ACTIONS[to.page] : undefined;
   const intent =
     'app' in to
-      ? `-S -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:${assertPkg(to.app)}`
-      : action && `-S -a ${action}`;
+      ? `-a android.settings.APPLICATION_DETAILS_SETTINGS -d package:${assertPkg(to.app)}`
+      : action && `-a ${action}`;
   const error = intent ? await start(intent) : 'there is none';
   if (error)
     throw new DeviceError(

@@ -184,8 +184,8 @@ describe('the pages of Settings', () => {
     await openSettingsAt({ page: 'about' }, start);
     await openSettingsAt({ app: 'com.example.app' }, start);
     expect(asked).toEqual([
-      '-S -a android.settings.DEVICE_INFO_SETTINGS',
-      '-S -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:com.example.app',
+      '-a android.settings.DEVICE_INFO_SETTINGS',
+      '-a android.settings.APPLICATION_DETAILS_SETTINGS -d package:com.example.app',
     ]);
   });
 
