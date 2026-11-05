@@ -9,4 +9,8 @@ export const assertAppBundle = (path: string) => {
     throw new DeviceError('INVALID_ARGUMENT', `not a local .app bundle: ${path}`);
 };
 
+/** A language for one launch, in the arguments the system reads for it. */
+export const languageArgs = (language: string | undefined) =>
+  language ? ['-AppleLanguages', `(${language})`, '-AppleLocale', language.replace('-', '_')] : [];
+
 export const on = (v: string, yes: string, no: string) => ({ on: yes, off: no })[v] ?? v;

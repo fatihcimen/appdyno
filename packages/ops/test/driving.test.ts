@@ -805,6 +805,19 @@ describe('gestures, keys, clipboard', () => {
     expect(asked).toMatchObject([{ maxPx: 2400 }, { maxPx: 800 }]);
   });
 
+  it('launches in a language, restarting the app, and refuses what is none', async () => {
+    const d = new FakeDevice();
+    const launched: unknown[] = [];
+    Object.assign(d, {
+      apps: { launchWith: async (app: string, o: unknown) => void launched.push([app, o]) },
+    });
+    const { call } = await connect(d);
+    const r = await call('launch_app', { language: 'pt-BR' });
+    expect(r.text).toMatch(/^launched dev\.app in pt-BR/);
+    expect(launched).toEqual([['dev.app', { language: 'pt-BR' }]]);
+    expect((await call('launch_app', { language: 'tr; rm -rf' })).error).toBe(true);
+  });
+
   it('reads the clipboard and keeps a secret off it', async () => {
     const d = new FakeDevice();
     const { call } = await connect(d, { policy: { secrets: ['hunter2'] } });

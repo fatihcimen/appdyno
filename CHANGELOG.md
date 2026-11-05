@@ -10,6 +10,7 @@
 - `appdyno perf reference`, `perf_compare` `action: reference`: the other side of a function or phase diff, taken on the baseline's build and kept beside the baseline, as only one build is installed once a regression is there.
 - `appdyno perf comment --out file`: the gate's newest answers as Markdown in a file, with no device. Nothing is posted: `docs/perf-gate.yml` is a job to copy, which posts the file with the repository's own token.
 - The gate's comparisons keep a modelled number and one timed through the host marked, in every format.
+- `launch_app` `language`: restarts the app in that language, for that launch on iOS, and on Android as the app's own language, put back with the other conditions.
 - `press_key` takes `mute` and `siri`: on Android the media mute and the assistant, on an iPhone simulator the Action button and the side button held. On an iPhone `mute` needs an Action button, doing what it is set to, and `siri` refuses and names `appdyno mirror`.
 - `screenshot` `points`: an image where 1 pixel is 1 tap unit, with no scale to apply.
 - `set_location` `clear: true` ends a fixed position, on every kind of device.

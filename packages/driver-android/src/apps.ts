@@ -39,6 +39,8 @@ const PERMISSIONS: Record<string, string> = {
 };
 
 export class AndroidApps implements AppManager {
+  readonly languageStays = true;
+
   constructor(
     private readonly adb: Adb,
     private readonly serial: string,

@@ -161,7 +161,7 @@ export function actOps(
       name: 'swipe',
       title: 'Swipe',
       description:
-        'direction up: content moves up, a list scrolls on; optional start (a target) and distance. exact: the content moves that distance and stops, in several strokes if long, and the answer says what was measured.',
+        'direction up: content moves up, a list scrolls on; optional start (a target) and distance. exact: the content moves that far and stops, by strokes; the answer says how far.',
       input: z.object({ ...SwipeStep.omit({ action: true }).shape, read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
@@ -191,7 +191,7 @@ export function actOps(
       name: 'press_key',
       title: 'Press key',
       description:
-        'A key or button: back, home, enter, delete, tab, escape, space, arrow_up, arrow_down, arrow_left, arrow_right, app_switch, volume_up, volume_down, mute, siri, power, lock; or a letter or digit, held keys first: command+a (Android: Ctrl). count: presses. control_center, notification_center, spotlight open those; home closes them. What leaves the app is off when the server turned home off.',
+        'A key or button: back, home, enter, delete, tab, escape, space, arrow_up, arrow_down, arrow_left, arrow_right, app_switch, volume_up, volume_down, mute, siri, power, lock; or a letter or digit, held keys first: command+a (Android: Ctrl). count: presses. control_center, notification_center, spotlight open those; home closes them.',
       input: z.object({ ...KeyStep.omit({ action: true }).shape, read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
@@ -234,7 +234,7 @@ export function actOps(
     defineOp({
       name: 'steps',
       title: 'Steps',
-      description: `A sequence in one call, also across screens: at most ${MAX_STEPS}, each { action, ...the arguments of the tool of that name }; any tool but steps and flow, and double_tap, long_press, drag as gesture's. A selector or ref is looked for at its step. Stops at the first failure, saying which and why. Each step's answer comes back, images too; a touch reads the screen only with read on its step, or last.`,
+      description: `A sequence in one call, also across screens: at most ${MAX_STEPS}, each { action, ...the arguments of the tool of that name }; any tool but steps and flow, and double_tap, long_press, drag as gesture's. Stops at the first failure, saying which and why. Each step's answer comes back, images too; a touch reads the screen only with read on its step, or last.`,
       input: z
         .object({
           steps: z

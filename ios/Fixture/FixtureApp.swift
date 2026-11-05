@@ -52,6 +52,7 @@ struct FixtureApp: App {
         case "a11y": A11yScreen()
         case "web": WebScreen()
         case "canvas": CanvasScreen()
+        case "locale": LocaleScreen()
         default: Text("Bilinmeyen ekran: \(key)")
         }
     }

@@ -19,7 +19,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { buildScheme } from './build.js';
 import { macProxy } from './network.js';
 import { type Simctl, assertBundle } from './simctl.js';
-import { assertAppBundle, DATA_FOLDERS, on } from './manage.js';
+import { assertAppBundle, DATA_FOLDERS, languageArgs, on } from './manage.js';
 
 const SIMULATOR_ID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;
 
@@ -135,7 +135,14 @@ export class SimulatorApps implements AppManager {
 
   async launchWith(app: string, opts: LaunchOptions) {
     await this.simctl.exec(
-      ['launch', '--terminate-running-process', this.udid, assertBundle(app), ...(opts.args ?? [])],
+      [
+        'launch',
+        '--terminate-running-process',
+        this.udid,
+        assertBundle(app),
+        ...languageArgs(opts.language),
+        ...(opts.args ?? []),
+      ],
       60_000,
       Object.fromEntries(Object.entries(opts.env ?? {}).map(([k, v]) => [`SIMCTL_CHILD_${k}`, v])),
     );

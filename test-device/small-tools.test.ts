@@ -69,6 +69,26 @@ describe.skipIf(!ANDROID)('small tools on an emulator', () => {
   });
 });
 
+/** The language the fixture says it was launched in. */
+const language = async (call: Call) => {
+  ok(await call('open_link', { url: 'appdyno-fixture://open/locale' }));
+  const seen = ok(await call('find', { id: 'result' })).data.matches[0]!;
+  return seen.label;
+};
+
+describe.skipIf(!ANDROID)('a language on an emulator', () => {
+  it('stays with the app until it is put back', async () => {
+    const { call, ctx } = opsOn(androidProvider(new Adb()), ANDROID!, APP);
+    ok(await call('launch_app', { language: 'tr-TR' }));
+    expect(await language(call)).toContain('tr-TR');
+    ok(await call('device_setting', { name: 'restore' }));
+    await call('terminate_app');
+    ok(await call('launch_app'));
+    expect(await language(call)).not.toContain('tr');
+    ctx.close();
+  });
+});
+
 describe.skipIf(!ANDROID)('accessibility on an emulator', () => {
   let call: Call;
   const shell = (...words: string[]) =>
@@ -144,6 +164,15 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
   it('holds the side button for Siri, as a window does', async () => {
     ok(await call('press_key', { key: 'siri', read: 'none' }));
     ok(await call('press_key', { key: 'home', read: 'none' }));
+    ok(await call('launch_app'));
+  });
+
+  it('launches in a language for that launch alone', async () => {
+    ok(await call('launch_app', { language: 'tr' }));
+    expect(await language(call)).toContain('tr');
+    await call('terminate_app');
+    ok(await call('launch_app'));
+    expect(await language(call)).not.toContain('tr');
     ok(await call('launch_app'));
   });
 

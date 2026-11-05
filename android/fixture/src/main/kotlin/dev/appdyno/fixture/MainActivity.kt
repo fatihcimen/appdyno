@@ -41,6 +41,7 @@ private val LINKED = mapOf(
     "secure" to SecureActivity::class.java,
     "surface" to SurfaceActivity::class.java,
     "canvas" to CanvasActivity::class.java,
+    "locale" to LocaleActivity::class.java,
 )
 
 /** The home screen; `appdyno-fixture://open/<screen>` opens a screen directly. */

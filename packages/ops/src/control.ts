@@ -79,7 +79,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
       name: 'app',
       title: 'App management',
       description:
-        'list (all: with system apps), state, install (path: .apk or .app), uninstall, clear, grant, revoke (service), launch (restarts it with args, env; Android args: key=value extras), download_data, replace_data (path: a folder; stops the app), build_and_run (path: Xcode project or Gradle folder; scheme, or Gradle module; configuration, or variant). Default: the selected app.',
+        'list (all: with system apps), state, install (path: .apk or .app), uninstall, clear, grant, revoke (service), launch (restarts it with args, env; Android args: key=value extras), download_data, replace_data (path: a folder; stops the app), build_and_run (path: Xcode project or Gradle folder; scheme, or Gradle module; configuration, or variant).',
       input: z
         .object({
           action: z.enum([

@@ -5,11 +5,17 @@ import type { ServerContext } from './context.js';
 import { checkApp, checkUrl } from './policy.js';
 import { ActionOut, DoneOut } from './schemas.js';
 import type { Session } from './session.js';
+import { setCondition } from './settings.js';
 import { Read } from './step-schemas.js';
 import type { Steps } from './steps.js';
 import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const NO_APP = 'give app (or select one with use_device)';
+
+/** A language as the systems take it: `tr`, `pt-BR`, `zh-Hans`. */
+const Language = z
+  .string()
+  .refine((v) => /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(v), 'a language such as tr or pt-BR');
 
 /** How long the page an app's row is on has to come, and how far down a long list of apps it may be. */
 const APPS_PAGE_MS = 5_000;
@@ -52,7 +58,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
       name: 'open_link',
       title: 'Open link',
       description:
-        "Open a link (https:// or an app scheme) and answer its screen; with an app selected it opens there. settings instead: Settings at a page (about, privacy, privacy_photos, accessibility, apps, wifi…; a wrong word lists them), or at an app's own: its id, or app for the selected one.",
+        "Open a link (https:// or an app scheme) and answer its screen; with an app selected it opens there. settings instead: a page of Settings (about, privacy, wifi…; a wrong word lists them), or an app's own: its id, or app.",
       input: z
         .object({
           url: z.string().min(3).max(2_000).optional(),
@@ -75,23 +81,35 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
       name: 'launch_app',
       title: 'Launch app',
       description:
-        'Launch the app (to the front if it runs) and answer its screen; default: the selected app.',
-      input: z.object({ app: z.string().max(200).optional(), read: Read }).strict(),
+        'Launch the app (to the front if it runs) and answer its screen. language: tr, pt-BR: restarts it so, for that launch (Android: until restore).',
+      input: z
+        .object({
+          app: z.string().max(200).optional(),
+          language: Language.optional(),
+          read: Read,
+        })
+        .strict(),
       output: ActionOut,
       annotations: DESTRUCTIVE,
-      run: async ({ app, read }) => {
+      run: async ({ app, language, read }) => {
         const s = await ctx.sessionToLaunch(app);
         const pkg = checkApp(policy, app ?? s.appId ?? '');
         if (!pkg) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
         reportProgress(`launching ${pkg}`);
-        await s.device.launch(pkg);
-        return afterChange(s, `launched ${pkg}`, read, true);
+        if (!language) {
+          await s.device.launch(pkg);
+          return afterChange(s, `launched ${pkg}`, read, true);
+        }
+        const { apps } = s.device;
+        if (apps.languageStays) await setCondition(s, 'locale', language, pkg);
+        await apps.launchWith(pkg, { language });
+        return afterChange(s, `launched ${pkg} in ${language}`, read, true);
       },
     }),
     defineOp({
       name: 'terminate_app',
       title: 'Terminate app',
-      description: 'Stop the app (force-stop); default: the selected app.',
+      description: 'Stop the app (force-stop).',
       input: z.object({ app: z.string().max(200).optional() }).strict(),
       output: DoneOut,
       annotations: DESTRUCTIVE,
