@@ -69,6 +69,15 @@ describe('android perf parsers on recorded outputs', () => {
     ]);
   });
 
+  it('gives no percentile on no frames, where gfxinfo prints its top bucket', () => {
+    const text =
+      'Total frames rendered: 0\nJanky frames: 0 (0.00%)\n50th percentile: 4950ms\n95th percentile: 4950ms\n';
+    const s = parseFrameStats(text);
+    expect(s).toMatchObject({ totalFrames: 0, fewFrames: true });
+    expect(s).not.toHaveProperty('p50Ms');
+    expect(s).not.toHaveProperty('p95Ms');
+  });
+
   it('counts frozen frames from the histogram buckets from 700 ms on', () => {
     const text =
       'Total frames rendered: 100\nJanky frames: 5 (5.00%)\nHISTOGRAM: 5ms=90 700ms=2 1150ms=1\n';

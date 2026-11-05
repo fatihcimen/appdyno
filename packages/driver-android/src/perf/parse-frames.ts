@@ -33,10 +33,13 @@ export function parseGfxSummary(text: string): FrameSummary {
     ...(hist && { histogram }),
   };
   const opt = {
-    p50Ms: num(/^50th percentile:\s*(\d+)ms/m, text),
-    p90Ms: num(/^90th percentile:\s*(\d+)ms/m, text),
-    p95Ms: num(/^95th percentile:\s*(\d+)ms/m, text),
-    p99Ms: num(/^99th percentile:\s*(\d+)ms/m, text),
+    // on no frames these are the top bucket of an empty histogram, with nothing behind them
+    ...(total > 0 && {
+      p50Ms: num(/^50th percentile:\s*(\d+)ms/m, text),
+      p90Ms: num(/^90th percentile:\s*(\d+)ms/m, text),
+      p95Ms: num(/^95th percentile:\s*(\d+)ms/m, text),
+      p99Ms: num(/^99th percentile:\s*(\d+)ms/m, text),
+    }),
     slowUiThread: num(/^Number Slow UI thread:\s*(\d+)/m, text),
     deadlineMissed: num(/^Number Frame deadline missed:\s*(\d+)/m, text),
   };
