@@ -125,6 +125,65 @@ export async function readVideo(file: string): Promise<VideoInfo> {
   }
 }
 
+/** Android's `screenrecord` keeps each frame's time for its own trace viewer, in a metadata track. */
+const STAMPS_MAGIC = '#VV1NSC0PET1ME2#';
+/** The magic, a u32 version, a u64 of wall clock minus elapsed time, a u32 count; then a u64 for each frame. */
+const STAMPS_HEAD = 32;
+const MAX_STAMPS_BYTES = 1 << 20;
+
+/** A metadata track's frames as ms since the epoch by the device's clock; none in what is not that track, or is cut. */
+export function parseStamps(track: Buffer): number[] | undefined {
+  if (track.length < STAMPS_HEAD) return undefined;
+  if (track.toString('latin1', 0, STAMPS_MAGIC.length) !== STAMPS_MAGIC) return undefined;
+  const wall = track.readBigUInt64LE(20);
+  const count = track.readUInt32LE(28);
+  if (track.length < STAMPS_HEAD + count * 8) return undefined;
+  // an epoch in ns is past what a double holds: the sum is taken whole, and cut to a µs before it becomes one
+  return Array.from(
+    { length: count },
+    (_, i) => Number((wall + track.readBigUInt64LE(STAMPS_HEAD + i * 8)) / 1_000n) / 1_000,
+  );
+}
+
+/** Where a track's first sample is, and how long; none in a track with no sample table. */
+function firstSample(m: Buffer, trak: Box) {
+  const stbl = need(m, trak, 'mdia', 'minf', 'stbl');
+  const stsz = child(m, stbl, 'stsz');
+  const stco = child(m, stbl, 'stco');
+  const co64 = child(m, stbl, 'co64');
+  if (!stsz || (!stco && !co64)) return undefined;
+  const size = m.readUInt32BE(stsz.body + 4) || m.readUInt32BE(stsz.body + 12);
+  const at = stco ? m.readUInt32BE(stco.body + 8) : Number(m.readBigUInt64BE(co64!.body + 8));
+  return { at, size };
+}
+
+/**
+ * Each frame's moment by the device's clock, where the file keeps it: what puts a video on a timeline with nothing
+ * estimated. None where it does not, and never a refusal: a video with no clock of its own still plays.
+ */
+export async function videoStamps(file: string): Promise<number[] | undefined> {
+  let f: FileHandle | undefined;
+  try {
+    f = await open(file, 'r');
+    const { moov, root } = await moovOf(f);
+    for (const trak of boxesIn(moov, root).filter((x) => x.type === 'trak')) {
+      const hdlr = need(moov, trak, 'mdia', 'hdlr');
+      if (moov.toString('latin1', hdlr.body + 8, hdlr.body + 12) !== 'meta') continue;
+      const sample = firstSample(moov, trak);
+      if (!sample || sample.size > MAX_STAMPS_BYTES) continue;
+      const bytes = Buffer.alloc(sample.size);
+      await f.read(bytes, 0, sample.size, sample.at);
+      const stamps = parseStamps(bytes);
+      if (stamps) return stamps;
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  } finally {
+    await f?.close();
+  }
+}
+
 export const box = (type: string, ...parts: Buffer[]) => {
   const body = Buffer.concat(parts);
   const head = Buffer.alloc(8);
