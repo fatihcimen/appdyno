@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Adb, androidProvider, appleProvider, Simctl } from 'appdyno';
-import { type Answer, type Call, opsOn } from './helpers.js';
+import { type Answer, type Call, IPHONE, onIphone, opsOn } from './helpers.js';
 
 /**
  * A prompt only a person can answer, said by the call that met it with nothing asked: on the simulator APPDYNO_IOS_UDID
@@ -48,6 +48,20 @@ describe.skipIf(!SIMULATOR)('a prompt on a simulator', () => {
     ok(await o.call('wait_for', { id: 'result', text: 'Authenticated', timeoutMs: 8_000 }));
     expect(ok(await o.call('screen')).text).not.toContain('needs a person');
   });
+});
+
+describe.skipIf(!IPHONE)('a prompt on an iPhone', () => {
+  // a phone with no face enrolled raises no prompt, and enrolling one is its owner's
+  it('Face ID: the tap that raised it says so', async (t) => {
+    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-person-')));
+    const o = await onIphone(APP);
+    const r = await asks(o.call);
+    if (/not enrolled/.test(r.text)) return t.skip();
+    expect(r.text).toContain('needs a person');
+    await o.call('terminate_app');
+    await o.ctx.end();
+    o.ctx.close();
+  }, 300_000);
 });
 
 describe.skipIf(!EMULATOR)('a prompt on an emulator', () => {

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Adb, androidProvider, appleProvider, Simctl } from 'appdyno';
-import { type Answer, type Call, opsOn } from './helpers.js';
+import { type Answer, type Call, IPHONE, onIphone, opsOn } from './helpers.js';
 
 /**
  * `swipe exact` against what the fixture's list shows, on the emulator APPDYNO_ANDROID_SERIAL names and the simulator
@@ -69,7 +69,7 @@ function scrollOf(get: () => Call) {
   });
 }
 
-describe.skipIf(!ANDROID)('exact scrolling on an emulator', () => {
+describe.skipIf(!ANDROID)('exact scrolling on Android', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(() => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-scroll-')));
@@ -87,5 +87,19 @@ describe.skipIf(!SIMULATOR)('exact scrolling on a simulator', () => {
     o = opsOn(appleProvider(), SIMULATOR!, APP);
   }, 300_000);
   afterAll(() => o.ctx.close());
+  scrollOf(() => o.call);
+});
+
+describe.skipIf(!IPHONE)('exact scrolling on an iPhone', () => {
+  let o: Awaited<ReturnType<typeof onIphone>>;
+  beforeAll(async () => {
+    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-scroll-')));
+    o = await onIphone(APP);
+  }, 300_000);
+  afterAll(async () => {
+    await o.call('terminate_app');
+    await o.ctx.end();
+    o.ctx.close();
+  }, 60_000);
   scrollOf(() => o.call);
 });

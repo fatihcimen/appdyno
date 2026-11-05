@@ -53,7 +53,6 @@ function shared(
     /** A step that goes back a screen. */
     back: Record<string, unknown>;
     /** A phone's runner cannot reach the clipboard: iOS would ask the user. */
-    noClipboard?: boolean;
   },
 ) {
   const call: Call = (n, a) => get().call(n, a);
@@ -186,19 +185,20 @@ function shared(
     ok(r);
   });
 
-  it.skipIf(names.noClipboard)(
-    'reads the clipboard it set, then types without asking the user about it',
-    async () => {
-      await open('form');
-      const set = await call('clipboard', { text: 'pano içeriği' });
-      // a simulator whose pasteboard stalls on a loaded Mac: a refusal that says so, not a hang
-      if (set.error && /did not take the text/.test(set.text)) return;
-      ok(set);
-      expect(ok(await call('clipboard')).text).toBe('pano içeriği');
-      ok(await call('type_text', { text: 'x', selector: names.field }));
-      ok(await call('assert', { ...names.field, check: 'text', equals: 'x' }));
-    },
-  );
+  it('reads the clipboard it set, then types without asking the user about it', async () => {
+    await open('form');
+    // on a phone it is a person's
+    const held = await call('clipboard');
+    const set = await call('clipboard', { text: 'pano içeriği' });
+    // a simulator whose pasteboard stalls on a loaded Mac: a refusal that says so, not a hang
+    if (set.error && /did not take the text/.test(set.text)) return;
+    ok(set);
+    expect(ok(await call('clipboard')).text).toBe('pano içeriği');
+    ok(await call('type_text', { text: 'x', selector: names.field }));
+    ok(await call('assert', { ...names.field, check: 'text', equals: 'x' }));
+    if (!held.error && held.text !== 'the clipboard is empty')
+      ok(await call('clipboard', { text: held.text }));
+  });
 
   it('leaves the app’s own dialog alone', async () => {
     await open('dialog');
@@ -618,7 +618,6 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
     row: (n) => `Product ${n}`,
     delayed: { shows: 'Loaded' },
     back: { action: 'tap', selector: { text: 'Back' } },
-    noClipboard: true,
   });
 
   it('lists apps and their state, launches with an environment, uninstalls and installs', async () => {

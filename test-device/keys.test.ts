@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Adb, androidProvider, appleProvider, Simctl } from 'appdyno';
-import { type Answer, type Call, opsOn } from './helpers.js';
+import { type Answer, type Call, IPHONE, onIphone, opsOn } from './helpers.js';
 
 /**
  * What a keyboard does in a real field, read back from it, on the emulator APPDYNO_ANDROID_SERIAL names and the
@@ -84,11 +84,14 @@ function viewsOf(get: () => Call, shows: Record<'control' | 'notifications' | 's
   const opens = async (key: string, shown: RegExp) => {
     await call('terminate_app');
     ok(await call('launch_app'));
-    const r = ok(await call('press_key', { key, read: 'full' }));
-    expect(r.text).toMatch(new RegExp(`^opened ${key}`));
-    expect(r.text).toMatch(shown);
-    expect(r.text).not.toContain('no change seen');
-    ok(await call('press_key', { key: 'home' }));
+    try {
+      const r = ok(await call('press_key', { key, read: 'full' }));
+      expect(r.text).toMatch(new RegExp(`^opened ${key}`));
+      expect(r.text).toMatch(shown);
+      expect(r.text).not.toContain('no change seen');
+    } finally {
+      await call('press_key', { key: 'home' });
+    }
   };
 
   it('opens Control Center by name, and reads what it shows', () =>
@@ -108,7 +111,7 @@ function viewsOf(get: () => Call, shows: Record<'control' | 'notifications' | 's
   });
 }
 
-describe.skipIf(!ANDROID)('keys on an emulator', () => {
+describe.skipIf(!ANDROID)('keys on Android', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(() => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-keys-')));
@@ -117,8 +120,8 @@ describe.skipIf(!ANDROID)('keys on an emulator', () => {
   afterAll(() => o.ctx.close());
   keysOf(() => o.call);
   viewsOf(() => o.call, {
-    control: /Internet/,
-    notifications: /id=scrim_behind/,
+    control: /elements/,
+    notifications: /elements/,
     search: /foreground: com\.google\.android\.googlequicksearchbox/,
   });
 });
@@ -136,5 +139,24 @@ describe.skipIf(!SIMULATOR)('keys on a simulator', () => {
     control: /"Add Controls"/,
     notifications: /id=lockscreen-date-view/,
     search: /id=inputView/,
+  });
+});
+
+describe.skipIf(!IPHONE)('keys on an iPhone', () => {
+  let o: Awaited<ReturnType<typeof onIphone>>;
+  beforeAll(async () => {
+    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-keys-')));
+    o = await onIphone(APP);
+  }, 300_000);
+  afterAll(async () => {
+    await o.call('terminate_app');
+    await o.ctx.end();
+    o.ctx.close();
+  }, 60_000);
+  keysOf(() => o.call);
+  viewsOf(() => o.call, {
+    control: /elements/,
+    notifications: /elements/,
+    search: /elements/,
   });
 });

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Adb, androidProvider, appleProvider, Simctl } from 'appdyno';
-import { type Answer, type Call, opsOn } from './helpers.js';
+import { type Answer, type Call, IPHONE, onIphone, opsOn } from './helpers.js';
 
 /** Settings at a page and at an app's own, read back from what it shows, on the devices the variables name. */
 const APP = 'dev.appdyno.fixture';
@@ -61,7 +61,34 @@ describe.skipIf(!SIMULATOR)('Settings on a simulator', () => {
   });
 });
 
-describe.skipIf(!ANDROID)('Settings on an emulator', () => {
+describe.skipIf(!IPHONE)('Settings on an iPhone', () => {
+  let o: Awaited<ReturnType<typeof onIphone>>;
+  beforeAll(async () => {
+    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-settings-')));
+    o = await onIphone(APP);
+  }, 300_000);
+  afterAll(async () => {
+    await o.call('terminate_app');
+    await o.ctx.end();
+    o.ctx.close();
+  }, 60_000);
+
+  // pages with nothing of a person's; Wi-Fi stays out of it, as a phone's proxy is there
+  it.each([
+    ['about', /"(About|Hakkında)"/],
+    ['privacy', /"(Privacy & Security|Gizlilik ve Güvenlik)"/],
+    ['accessibility', /"(Accessibility|Erişilebilirlik)"/],
+    ['language_region', /"(Language & Region|Dil ve Bölge)"/],
+    ['display', /"(Display & Brightness|Ekran ve Parlaklık)"/],
+  ])('opens %s', (page, shown) => pageShows(o.call, page, shown));
+
+  it("opens an app's own page, by its row on Apps", async () => {
+    const r = ok(await o.call('open_link', { settings: 'app', read: 'full' }));
+    expect(r.text).toMatch(/text "appdyno fixture"/);
+  });
+});
+
+describe.skipIf(!ANDROID)('Settings on Android', () => {
   let call: Call;
   beforeAll(() => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-settings-')));
@@ -69,20 +96,20 @@ describe.skipIf(!ANDROID)('Settings on an emulator', () => {
   });
 
   it.each([
-    ['about', /Device name/],
+    ['about', /Device name|Model|Cihaz|Telefon|sürüm/],
     ['wifi', /Internet|Wi.?Fi/],
     ['bluetooth', /Bluetooth|Pair new device/],
-    ['display', /Display|Brightness/],
-    ['sounds', /Sound|Media volume/],
-    ['accessibility', /Accessibility/],
-    ['apps', /All apps|App info|Apps/],
-    ['privacy', /privacy/i],
-    ['privacy_location', /Location/],
-    ['language_region', /Language/],
-    ['keyboard', /keyboard|Keyboard/],
-    ['notifications', /Notification|notification/],
-    ['battery', /Battery/],
-    ['general', /Search settings|Settings/],
+    ['display', /Display|Brightness|Ekran|Parlaklık/],
+    ['sounds', /Sound|Media volume|Ses/],
+    ['accessibility', /Accessibility|Erişilebilirlik/],
+    ['apps', /All apps|App info|Apps|Uygulama/],
+    ['privacy', /privacy|gizlilik/i],
+    ['privacy_location', /Location|Konum/],
+    ['language_region', /Language|dil|Dansk/i],
+    ['keyboard', /keyboard|klavye/i],
+    ['notifications', /notification|bildirim/i],
+    ['battery', /Battery|Power saving|Pil/],
+    ['general', /Search settings|Settings|Ayarlar/],
   ])('opens %s', (page, shown) => pageShows(call, page, shown));
 
   it("opens an app's own page", () => pageShows(call, 'app', /appdyno fixture|App info/));

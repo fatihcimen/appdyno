@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Adb, androidProvider, appleProvider, Simctl } from 'appdyno';
-import { type Answer, type Call, opsOn } from './helpers.js';
+import { type Answer, type Call, IPHONE, onIphone, opsOn } from './helpers.js';
 
 /**
  * A screen whose words are only a picture, on the emulator APPDYNO_ANDROID_SERIAL names and the simulator
@@ -47,7 +47,7 @@ function wordsOf(get: () => Call) {
   });
 }
 
-describe.skipIf(!ANDROID)('a picture on an emulator', () => {
+describe.skipIf(!ANDROID)('a picture on Android', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(() => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-words-')));
@@ -65,5 +65,19 @@ describe.skipIf(!SIMULATOR)('a picture on a simulator', () => {
     o = opsOn(appleProvider(), SIMULATOR!, APP);
   }, 300_000);
   afterAll(() => o.ctx.close());
+  wordsOf(() => o.call);
+});
+
+describe.skipIf(!IPHONE)('a picture on an iPhone', () => {
+  let o: Awaited<ReturnType<typeof onIphone>>;
+  beforeAll(async () => {
+    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-words-')));
+    o = await onIphone(APP);
+  }, 300_000);
+  afterAll(async () => {
+    await o.call('terminate_app');
+    await o.ctx.end();
+    o.ctx.close();
+  }, 60_000);
   wordsOf(() => o.call);
 });

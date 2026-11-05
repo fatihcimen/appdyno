@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Adb, androidProvider, appleProvider, Simctl } from 'appdyno';
-import { type Answer, type Call, opsOn } from './helpers.js';
+import { type Answer, type Call, IPHONE, onIphone, opsOn } from './helpers.js';
 
 /**
  * A sequence of any tools in one call, against the fixture, on the emulator APPDYNO_ANDROID_SERIAL names and the
@@ -64,7 +64,7 @@ function stepsOf(get: () => Call) {
   });
 }
 
-describe.skipIf(!ANDROID)('steps on an emulator', () => {
+describe.skipIf(!ANDROID)('steps on Android', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(() => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-steps-')));
@@ -82,5 +82,19 @@ describe.skipIf(!SIMULATOR)('steps on a simulator', () => {
     o = opsOn(appleProvider(), SIMULATOR!, APP);
   }, 300_000);
   afterAll(() => o.ctx.close());
+  stepsOf(() => o.call);
+});
+
+describe.skipIf(!IPHONE)('steps on an iPhone', () => {
+  let o: Awaited<ReturnType<typeof onIphone>>;
+  beforeAll(async () => {
+    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-steps-')));
+    o = await onIphone(APP);
+  }, 300_000);
+  afterAll(async () => {
+    await o.call('terminate_app');
+    await o.ctx.end();
+    o.ctx.close();
+  }, 60_000);
   stepsOf(() => o.call);
 });

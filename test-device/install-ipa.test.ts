@@ -4,9 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { appleProvider } from 'appdyno';
-import { type Answer, opsOn } from './helpers.js';
+import { type Answer, IPHONE, IPHONE_FIXTURE, onIphone, opsOn } from './helpers.js';
 
-/** The fixture as an `.ipa`, on the simulator APPDYNO_IOS_UDID names, and the same built for a phone. */
+/** The fixture as an `.ipa`, on the simulator APPDYNO_IOS_UDID names and an iPhone, and each refusing the other's. */
 const APP = 'dev.appdyno.fixture';
 const SIMULATOR = process.env.APPDYNO_IOS_UDID;
 const PRODUCTS = join(import.meta.dirname, '../ios/.derived/Build/Products/Debug-iphonesimulator');
@@ -16,11 +16,11 @@ const ok = <A extends Answer>(r: A) => {
   return r;
 };
 
-const ipa = (platform?: string) => {
+const ipa = (platform?: string, from = join(PRODUCTS, 'Fixture.app')) => {
   const dir = mkdtempSync(join(tmpdir(), 'appdyno-ipa-make-'));
   mkdirSync(join(dir, 'Payload'));
   const app = join(dir, 'Payload/Fixture.app');
-  cpSync(join(PRODUCTS, 'Fixture.app'), app, { recursive: true });
+  cpSync(from, app, { recursive: true });
   if (platform)
     execFileSync('plutil', [
       '-replace',
@@ -48,4 +48,19 @@ describe.skipIf(!SIMULATOR)('an .ipa on a simulator', () => {
     expect(r.data.code).toBe('UNSUPPORTED');
     expect(r.text).toContain('is built for iPhoneOS');
   }, 60_000);
+});
+
+describe.skipIf(!IPHONE)('an .ipa on an iPhone', () => {
+  it('installs what is signed for it, and refuses a simulator build', async () => {
+    const { call, ctx } = await onIphone(APP);
+    ok(await call('app', { action: 'install', path: ipa(undefined, IPHONE_FIXTURE) }));
+    expect(ok(await call('app', { action: 'state' })).data.state).not.toBe('not_installed');
+    const r = await call('app', {
+      action: 'install',
+      path: ipa('iPhoneSimulator', IPHONE_FIXTURE),
+    });
+    expect(r.data.code).toBe('UNSUPPORTED');
+    expect(r.text).toContain('is built for iPhoneSimulator');
+    ctx.close();
+  }, 180_000);
 });

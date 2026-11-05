@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { afterAll, describe, expect, it } from 'vitest';
-import { Adb, androidProvider } from 'appdyno';
-import { opsOn } from './helpers.js';
+import { Adb, androidProvider, appleProvider } from 'appdyno';
+import { IPHONE, opsOn } from './helpers.js';
 
 /** A PIN comes and goes on the emulator APPDYNO_ANDROID_SERIAL names: never on a phone. */
 const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
@@ -46,5 +46,15 @@ describe.skipIf(!EMULATOR)('what blocks an emulator', () => {
     adb('locksettings', 'clear', '--old', PIN);
     expect(await until(() => !lockedNow())).toBe(true);
     expect((await listed())?.blocked).toBeUndefined();
+  });
+});
+
+describe.skipIf(!IPHONE)('what blocks an iPhone', () => {
+  it('nothing, when it is unlocked and trusts this Mac', async () => {
+    const { call } = opsOn(appleProvider(), IPHONE!, 'dev.appdyno.fixture');
+    const { devices } = (await call('list_devices')).data;
+    const phone = devices.find((d) => d.serial === IPHONE);
+    expect(phone).toBeDefined();
+    expect(phone?.blocked).toBeUndefined();
   });
 });

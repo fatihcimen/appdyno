@@ -1,6 +1,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { appleProvider, Devicectl } from 'appdyno';
 import type { DeviceProvider } from '@appdyno/core';
 import {
   DEFAULT_POLICY,
@@ -52,6 +53,16 @@ export function opsOn(provider: DeviceProvider, device: string, app: string) {
   const perf = mkdtempSync(join(tmpdir(), 'appdyno-perf-'));
   const ctx = new ServerContext(DEFAULT_POLICY, [provider], { device, app, measurements, perf });
   return { ctx, measurements, call: opCaller(checkedOps(ctx)) };
+}
+
+/** A fixture signed for the iPhone APPDYNO_IPHONE_UDID names. */
+export const IPHONE_FIXTURE = process.env.APPDYNO_IPHONE_FIXTURE_APP;
+export const IPHONE = IPHONE_FIXTURE && process.env.APPDYNO_IPHONE_UDID;
+
+/** The operations on that iPhone, with the fixture on it. */
+export async function onIphone(app: string) {
+  await new Devicectl(IPHONE!).install(IPHONE_FIXTURE!);
+  return opsOn(appleProvider(), IPHONE!, app);
 }
 
 /** Calls a tool over the client `get` gives, which connects after this is made. */
