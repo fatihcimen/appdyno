@@ -80,6 +80,31 @@ describe('a mirror, whatever the device', () => {
     expect(mirror.inputs).toEqual([{ kind: 'button', name: 'home' }]);
   });
 
+  it('tells of what a person did once it has left for the device, and of nothing that did not', async () => {
+    const heard: unknown[] = [];
+    const inputsThen: number[] = [];
+    const { viewer, mirror, live, session } = setup({
+      onInput: (e) => {
+        heard.push(e);
+        inputsThen.push(mirror.inputs.length);
+      },
+      press: (name) => name === 'rotateLeft',
+    });
+    await session.start();
+    await flush();
+    viewer().say('touch', { p: 0, x: 0.1, y: 0.2 });
+    expect(heard).toEqual([]);
+    await live();
+    viewer().say('touch', { p: 0, x: 0.1, y: 0.2, wheel: true });
+    viewer().say('button', { name: 'rotateLeft' });
+    await flush();
+    expect(heard).toEqual([
+      { kind: 'touch', p: 0, x: 0.1, y: 0.2, wheel: true },
+      { kind: 'button', name: 'rotateLeft' },
+    ]);
+    expect(inputsThen[0]).toBe(1);
+  });
+
   it('holds a press while the stream is down, as it does a touch', async () => {
     const taken: string[] = [];
     const { viewer, session } = setup({

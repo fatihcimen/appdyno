@@ -38,7 +38,16 @@ export type MirrorSource =
 
 /** One touch, key or text. A touch is in fractions of the screen, whatever its size or rotation. */
 export type InputEvent =
-  | { kind: 'touch'; p: 0 | 1 | 2; x: number; y: number; x2?: number; y2?: number }
+  | {
+      kind: 'touch';
+      p: 0 | 1 | 2;
+      x: number;
+      y: number;
+      x2?: number;
+      y2?: number;
+      /** Made by a scroll wheel or two fingers on a trackpad, not a finger. */
+      wheel?: boolean;
+    }
   | { kind: 'key'; page: number; usage: number; state: 1 | 2 }
   | { kind: 'text'; s: string }
   | { kind: 'button'; name: string };

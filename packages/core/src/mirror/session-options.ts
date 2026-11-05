@@ -1,4 +1,4 @@
-import type { Mirror, MirrorOptions } from './port.js';
+import type { InputEvent, Mirror, MirrorOptions } from './port.js';
 import type { MirrorClock, MirrorStatus } from './state.js';
 import type { ViewerMessage, ViewerStart } from './viewer.js';
 
@@ -23,4 +23,6 @@ export type MirrorSessionOptions = {
   press?: (name: string) => boolean;
   /** A control of the window that is no input: a capture, the Apps pane. */
   onWindow?: (m: ViewerMessage) => void;
+  /** A person's input, once it has left for the device: what watches it is beside a touch, and never in front of one. */
+  onInput?: (e: InputEvent) => void;
 };

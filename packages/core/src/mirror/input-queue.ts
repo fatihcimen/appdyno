@@ -16,6 +16,7 @@ export function inputOf(m: ViewerMessage): InputEvent {
         x: Number(m.x),
         y: Number(m.y),
         ...(m.x2 !== undefined && { x2: Number(m.x2), y2: Number(m.y2) }),
+        ...(m.wheel === true && { wheel: true }),
       };
     case 'key':
       return {

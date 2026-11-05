@@ -314,8 +314,12 @@ export class MirrorSession {
     // a click on a dark window is a person who wants the screen back
     if (this.current.state === 'waiting' && this.current.need === 'asleep' && e.kind === 'touch')
       void this.o.mirror.wake?.().catch(() => undefined);
-    if (this.o.noInput || this.current.state !== 'live') this.input.dropped++;
-    else if (e.kind !== 'button' || !this.o.press?.(e.name)) this.input.add(e);
+    if (this.o.noInput || this.current.state !== 'live') {
+      this.input.dropped++;
+      return;
+    }
+    if (e.kind !== 'button' || !this.o.press?.(e.name)) this.input.add(e);
+    this.o.onInput?.(e);
   }
 
   private onLost(why: string, fatal: boolean) {

@@ -46,6 +46,9 @@ export function heardFromViewer(m: ViewerMessage, on: ViewerWords) {
     case 'control':
     case 'app':
     case 'perfWatch':
+    case 'inspect':
+    case 'hover':
+    case 'pick':
       return on.control(m);
     case 'done':
       return on.done(String(m.id));
