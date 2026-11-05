@@ -9,7 +9,7 @@ export type Run = (
   file: string,
   args: string[],
   options: { cwd: string; timeout: number; maxBuffer: number },
-) => Promise<{ stdout: string }>;
+) => Promise<{ stdout: string; stderr?: string }>;
 
 const READ_MS = 60_000;
 const INSTALL_MS = 600_000;

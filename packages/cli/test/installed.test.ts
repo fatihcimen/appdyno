@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { installCheck, installedBy, said } from '../src/installed.js';
+import { appCommand, installCheck, installedBy, said, serverOf } from '../src/installed.js';
 
 const GLOBAL = 'lib/node_modules/tool';
 
@@ -46,6 +46,33 @@ describe('where a copy is installed', () => {
     const place = installedBy(path, 'tool');
     expect(said(place)).toContain(by);
     expect(place).toMatchObject({ instead: expect.stringMatching(instead) });
+  });
+
+  it('knows the app wherever a person keeps it', () => {
+    for (const bundle of ['/Applications/Appdyno.app', '/Users/a/Tools/Appdyno.app'])
+      expect(installedBy(`${bundle}/Contents/Resources/app`, 'tool')).toEqual({
+        by: 'the app',
+        bundle,
+      });
+  });
+
+  it.each([
+    '/Volumes/Appdyno/Appdyno.app/Contents/Resources/app',
+    '/private/var/folders/x/AppTranslocation/ab-cd/d/Appdyno.app/Contents/Resources/app',
+  ])('tells an app passing through %s to move first', (path) => {
+    expect(installedBy(path, 'tool')).toMatchObject({
+      instead: expect.stringMatching(/drag Appdyno to Applications/),
+    });
+    expect(serverOf(path, 'tool')).toBeUndefined();
+  });
+
+  it("gives clients the app's own command, and no entry for any other copy", () => {
+    const bundle = '/Applications/Appdyno.app';
+    expect(serverOf(`${bundle}/Contents/Resources/app`, 'tool')).toEqual({
+      command: appCommand(bundle),
+      args: ['mcp'],
+    });
+    expect(serverOf('/opt/homebrew/lib/node_modules/tool', 'tool')).toBeUndefined();
   });
 
   it('knows a source checkout by its sources, whatever the path', () => {

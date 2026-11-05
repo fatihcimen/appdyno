@@ -1,4 +1,6 @@
+import { tmpdir } from 'node:os';
 import { ToolError } from '@appdyno/ops';
+import { installApp, readAppcast, type Get } from './appcast.js';
 import {
   installedBy,
   manifestOf,
@@ -7,6 +9,7 @@ import {
   type Installed,
   type Manager,
   type Manifest,
+  type TheApp,
 } from './installed.js';
 import {
   call,
@@ -26,6 +29,7 @@ export type UpdateOptions = {
   /** The real path of this package: given, as what is running knows where it is and this file does not. */
   root: string;
   run: Run;
+  get: Get;
   out: (line: string) => void;
   /** Where a release is verified; the system's temporary folder by default. */
   tmp?: string;
@@ -38,39 +42,30 @@ const AFTER = [
 
 const SEE_DOCTOR = 'see what is there with appdyno doctor';
 
-const notHere = (name: string, place: Exclude<Installed, Manager>) =>
+const notHere = (name: string, place: Exclude<Installed, Manager | TheApp>) =>
   refuse(`${name} here is ${place.by}`, 'UNSUPPORTED', place.instead);
 
-/** Words when nothing is to be done, a refusal, or the manager that goes on. */
-function verdict(
-  me: Manifest,
-  place: Installed,
-  latest: Awaited<ReturnType<typeof latestRelease>>,
-  npm: string,
-) {
-  if (!isRelease(latest.version))
+/** What is latest, why it cannot be had here, and how it would be. */
+type Release = {
+  version: string;
+  refused?: ToolError | undefined;
+  plan: string;
+  install(): Promise<void>;
+  after: string[];
+};
+
+/** Words when nothing is to be done, a refusal, or nothing when this release is one to go to. */
+function verdict(me: Manifest, version: string) {
+  if (!isRelease(version))
     return refuse(
-      `the registry's latest is a prerelease, ${latest.version}`,
+      `the latest is a prerelease, ${version}`,
       'UNSUPPORTED',
       `only a release is installed: ${me.version} stays`,
     );
-  const order = compareVersions(me.version, latest.version);
+  const order = compareVersions(me.version, version);
   if (order === 0) return `${me.version} is the latest release`;
   if (order > 0) return `${me.version} is newer than the latest release: this never goes back`;
-  if ('instead' in place) return notHere(me.name, place);
-  if (!latest.attested)
-    return refuse(
-      `${me.name}@${latest.version} has no provenance attestation`,
-      'CHECK_FAILED',
-      `it is not installed: ${me.version} stays`,
-    );
-  if (compareVersions(npm, MIN_NPM) < 0)
-    return refuse(
-      `npm ${npm} cannot say which package it verified`,
-      'CHECK_FAILED',
-      `npm ${MIN_NPM} or newer can: npm install -g npm@latest`,
-    );
-  return place;
+  return undefined;
 }
 
 /** The version the manager has now, to tell an upgrade from one that only said so. */
@@ -109,6 +104,48 @@ async function upgrade(o: UpdateOptions, me: Manifest, version: string, place: M
     throw refuse(`${place.by} said it upgraded, and ${name} is ${now}`, 'CHECK_FAILED', SEE_DOCTOR);
 }
 
+async function fromRegistry(
+  o: UpdateOptions,
+  me: Manifest,
+  place: Exclude<Installed, TheApp>,
+): Promise<Release> {
+  const npm = await npmVersion(o.run);
+  const { version, attested } = await latestRelease(me.name, o.run);
+  const here = 'instead' in place ? notHere(me.name, place) : undefined;
+  const oldNpm = refuse(
+    `npm ${npm} cannot say which package it verified`,
+    'CHECK_FAILED',
+    `npm ${MIN_NPM} or newer can: npm install -g npm@latest`,
+  );
+  const unproved = refuse(
+    `${me.name}@${version} has no provenance attestation`,
+    'CHECK_FAILED',
+    `it is not installed: ${me.version} stays`,
+  );
+  return {
+    version,
+    refused:
+      here ??
+      (attested ? undefined : unproved) ??
+      (compareVersions(npm, MIN_NPM) < 0 ? oldNpm : undefined),
+    plan: `verify ${me.name}@${version}, then upgrade it with ${place.by}`,
+    install: async () => {
+      if (!('instead' in place)) await upgrade(o, me, version, place);
+    },
+    after: AFTER,
+  };
+}
+
+async function fromAppcast(o: UpdateOptions, me: Manifest, place: TheApp): Promise<Release> {
+  const cast = await readAppcast(o.root, me, o.get);
+  return {
+    version: cast.version,
+    plan: `download ${cast.url}, verify it, then replace this app`,
+    install: () => installApp(cast, place, { ...o, tmp: o.tmp ?? tmpdir() }),
+    after: ['what is running keeps the old code: quit Appdyno and open it again', ...AFTER],
+  };
+}
+
 /** `appdyno update`: verified before anything changes, by what keeps this copy. Exit code 0; a refusal throws. */
 export async function update(o: UpdateOptions & { check?: boolean | undefined }): Promise<number> {
   const me = manifestOf(o.root);
@@ -116,22 +153,20 @@ export async function update(o: UpdateOptions & { check?: boolean | undefined })
   // a refusal that needs no network does not wait for one
   if (!o.check && 'instead' in place) throw notHere(me.name, place);
   o.out(`installed: ${me.version}, ${said(place)}, at ${o.root}`);
-  const npm = await npmVersion(o.run);
-  const latest = await latestRelease(me.name, o.run);
+  const latest =
+    'bundle' in place ? await fromAppcast(o, me, place) : await fromRegistry(o, me, place);
   o.out(`latest: ${latest.version}`);
-  const next = verdict(me, place, latest, npm);
+  const next = verdict(me, latest.version) ?? latest.refused;
   if (typeof next === 'string') o.out(`nothing to do: ${next}`);
-  else if (next instanceof ToolError) {
+  else if (next) {
     if (!o.check) throw next;
     o.out(`would refuse: ${next.message}`);
     o.out(`  ${next.hint}`);
-  } else if (o.check) {
-    const spec = `${me.name}@${latest.version}`;
-    o.out(`would verify ${spec}, then upgrade it with ${next.by}; nothing was changed`);
-  } else {
-    await upgrade(o, me, latest.version, next);
+  } else if (o.check) o.out(`would ${latest.plan}; nothing was changed`);
+  else {
+    await latest.install();
     o.out(`updated: ${me.version} to ${latest.version}`);
-    AFTER.forEach((line) => o.out(line));
+    latest.after.forEach((line) => o.out(line));
   }
   return 0;
 }

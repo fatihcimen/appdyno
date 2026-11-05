@@ -19,8 +19,15 @@ export const repositoryOf = ({ repository }: Manifest) =>
 
 /** A manager this command can drive. */
 export type Manager = { by: 'npm'; prefix: string } | { by: 'pnpm' };
+/** Appdyno.app, which keeps its own package and replaces itself. */
+export type TheApp = { by: 'the app'; bundle: string };
 /** What keeps a copy, or what to do instead where this command cannot change it. */
-export type Installed = Manager | { by: string; instead: string };
+export type Installed = Manager | TheApp | { by: string; instead: string };
+
+/** Where the app keeps the package. */
+const IN_THE_APP = /^(.+\.app)\/Contents\/Resources\/app$/;
+/** Opened where it was downloaded, or from its disk image: both places are gone by the next open. */
+const PASSING_THROUGH = /\/AppTranslocation\/|^\/Volumes\/Appdyno/;
 
 /** Where pnpm 10 and pnpm 11 really keep a global package. */
 const PNPM_GLOBAL = /\/global\/\d+\/\.pnpm\/|\/store\/v\d+\/links\//;
@@ -36,6 +43,14 @@ export function installedBy(root: string, name: string): Installed {
       by: 'a source checkout',
       instead: 'update the checkout: git pull, then pnpm install && pnpm build',
     };
+  const app = IN_THE_APP.exec(root);
+  if (app)
+    return PASSING_THROUGH.test(root)
+      ? {
+          by: 'an app not yet in Applications',
+          instead: 'drag Appdyno to Applications, and open it from there',
+        }
+      : { by: 'the app', bundle: app[1]! };
   if (ONE_OFF.test(root))
     return {
       by: 'a one-off npx run',
@@ -53,6 +68,15 @@ export function installedBy(root: string, name: string): Installed {
     by: 'kept by no manager known here',
     instead: `upgrade it with what installed it, or npm install -g ${name} for one this command can update`,
   };
+}
+
+/** What a client or a terminal runs, where the app is what is installed. */
+export const appCommand = (bundle: string) => join(bundle, 'Contents/Resources/bin/appdyno');
+
+/** A client's entry for this copy; none where the npm package's is the right one. */
+export function serverOf(root: string, name: string) {
+  const place = installedBy(root, name);
+  return 'bundle' in place ? { command: appCommand(place.bundle), args: ['mcp'] } : undefined;
 }
 
 export const said = (place: Installed) =>

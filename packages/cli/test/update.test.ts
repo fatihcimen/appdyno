@@ -16,6 +16,8 @@ const SPEC = `tool@${LATEST}`;
 const GLOBAL = 'lib/node_modules/tool';
 
 const temp = () => mkdtempSync(join(tmpdir(), 'appdyno-update-test-'));
+/** The registry's path never reads an appcast. */
+const refusedGet = () => Promise.reject(new Error('no network here'));
 
 function copyAt(path: string, manifest: object = MANIFEST) {
   const root = join(temp(), path);
@@ -122,7 +124,14 @@ async function updating(root: string, answers: Answers = {}, check = false) {
   const npm = fake(root, answers);
   const out: string[] = [];
   const tmp = temp();
-  const going = update({ root, run: npm.run, tmp, check, out: (s) => out.push(s) });
+  const going = update({
+    root,
+    run: npm.run,
+    get: refusedGet,
+    tmp,
+    check,
+    out: (s) => out.push(s),
+  });
   return { npm, out, tmp, going };
 }
 

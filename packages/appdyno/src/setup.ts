@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
-import { install, update } from '@appdyno/cli';
+import { download, install, update } from '@appdyno/cli';
 import { run, type DeviceProvider } from '@appdyno/core';
 import { installAdb, installTools, PLATFORM_TOOLS } from '@appdyno/driver-android';
 import { COMMANDS, usage } from './usage.js';
@@ -32,7 +32,7 @@ export async function installCommand(args: string[], err: (line: string) => void
 /** `update`. */
 export async function updateCommand(args: string[], root: string): Promise<number> {
   const { values } = parseArgs({ args, options: COMMANDS.update.flags });
-  return update({ root, run, check: values.check, out });
+  return update({ root, run, get: download, check: values.check, out });
 }
 
 /** `tools install [adb]`: adb only with a person's word on Google's terms. */

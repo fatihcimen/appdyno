@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 export { CLIENTS } from './clients.js';
 export { install } from './install.js';
+export { download } from './appcast.js';
 export { installCheck } from './installed.js';
 export { verifyRelease, type Run } from './release.js';
 export { update } from './update.js';
