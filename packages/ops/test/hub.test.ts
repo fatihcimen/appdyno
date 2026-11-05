@@ -11,7 +11,9 @@ import type {
   VirtualDevices,
 } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { startOf } from '@appdyno/core';
 import { hubDevices, runHub, type HubDevice } from '../src/mirror/hub.js';
+import { removeMirrorFile, writeMirrorFile } from '../src/mirror/state.js';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
 
 class Simulated implements VirtualDevices {
@@ -171,6 +173,29 @@ describe('the hub', () => {
     say({ op: 'hub', action: 'select', serial: 'R58M' });
     await new Promise((r) => setTimeout(r, 50));
     expect(open).not.toHaveBeenCalled();
+    close();
+    await done;
+  });
+
+  it('takes a device back as soon as its own window has come and gone', async () => {
+    const { link, told, say, close } = window();
+    const ctx = context(new Simulated(), [phone], ['/usr/bin/true']);
+    const done = runHub(ctx, { focus: false, log: () => undefined, viewer: () => link });
+    await vi.waitFor(() => expect(lastList(told)).toBeDefined());
+    say({ op: 'hub', action: 'open', serial: 'R58M' });
+    writeMirrorFile({
+      pid: process.ppid,
+      started: startOf(process.ppid),
+      session: 's',
+      serial: 'R58M',
+      status: { state: 'live', since: 1, inputDropped: 0, inputFailed: 0 },
+    });
+    await vi.waitFor(() => expect(lastList(told)?.[0]?.mirrored).toBe(true), { timeout: 5_000 });
+    removeMirrorFile('R58M');
+    // a stream of the fake is no matter here: only that it is asked for
+    const open = vi.spyOn(ctx, 'deviceFor').mockRejectedValue(new Error('no stream here'));
+    say({ op: 'hub', action: 'select', serial: 'R58M' });
+    await vi.waitFor(() => expect(open).toHaveBeenCalled());
     close();
     await done;
   });

@@ -191,6 +191,8 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
   let said = '';
   const refresh = async () => {
     const devices = await hubDevices(ctx, hardware);
+    // a window that is up is on its way no more: closed soon after, its device must not be kept from the room
+    for (const d of devices) if (d.mirrored) ownWindows.delete(d.id);
     const text = JSON.stringify(devices);
     if (text === said) return;
     said = text;
