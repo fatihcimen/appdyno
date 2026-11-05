@@ -219,6 +219,36 @@ describe.runIf(serial)('the agent stream', () => {
     await session.stop('the test ended');
   }, 120_000);
 
+  it('a size is no ratchet: with room it grows, and what proves too slow it leaves', async () => {
+    // a run read 968 ms at 1024 lines on an emulator under a busy Mac: no calm comes by itself, so the test asks for one
+    const { session, seen } = start(asking({ startSize: 1024, roomMs: 1_500 }));
+    await session.start();
+    await until('picture', () => session.status.state === 'live');
+    const longest = (p?: { w: number; h: number }) => Math.max(p?.w ?? 0, p?.h ?? 0);
+    expect(longest(session.status.picture)).toBe(1024);
+    try {
+      // a window's animation, as a scroll on an emulator makes too few frames to read
+      const end = Date.now() + 90_000;
+      for (
+        let home = true;
+        Date.now() < end && longest(session.status.picture) <= 1024;
+        home = !home
+      ) {
+        await adb.exec(
+          serial!,
+          home ? 'input keyevent KEYCODE_HOME' : 'am start -a android.settings.SETTINGS',
+        );
+        await sleep(1_200);
+      }
+      expect(longest(session.status.picture)).toBeGreaterThan(1024);
+      expect(session.status.state).toBe('live');
+      expect(Math.min(...seen.map((s) => longest(s.picture) || 9999))).toBeGreaterThanOrEqual(1024);
+    } finally {
+      await session.stop('the test ended');
+      await adb.exec(serial!, 'input keyevent KEYCODE_HOME');
+    }
+  }, 180_000);
+
   it('rotation: the picture restarts at the new size, with no new session', async () => {
     const device = new AndroidDevice(serial!, adb);
     await device.open();
@@ -232,6 +262,8 @@ describe.runIf(serial)('the agent stream', () => {
         await device.setOrientation(1);
         await until('landscape', () => !tall(), 30_000);
         expect(session.status.state).toBe('live');
+        // whatever the size settled on, a person can still read it
+        expect(session.status.picture!.w).toBeGreaterThanOrEqual(1024);
         await device.setOrientation(0);
         await until('portrait', tall, 30_000);
       });

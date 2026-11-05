@@ -24,6 +24,8 @@ const STATUS_MS = 5_000;
 const ACTION_MS = 15_000;
 const WATCH_MS = 1_000;
 const PROOF_MS = 3_000;
+const BEHIND =
+  'This device cannot keep up. The picture stays at a size that can be read, and runs late.';
 
 /** The USB usages a keyboard has and the agent has a key for. */
 const KEY_OF_USAGE: Record<number, Key> = {
@@ -48,6 +50,8 @@ export class AndroidMirror implements Mirror {
   private rpc: RpcClient | undefined;
   private sdk: number | undefined;
   private lostTouch: unknown;
+  private say: (text: string) => void = () => undefined;
+  private toldBehind = false;
 
   constructor(
     private readonly adb: Adb,
@@ -86,7 +90,13 @@ export class AndroidMirror implements Mirror {
       : { ok: false, need: 'asleep' };
   }
 
-  async open(opts: MirrorOptions, _signal?: AbortSignal, _tell?: unknown): Promise<MirrorSource> {
+  async open(
+    opts: MirrorOptions,
+    _signal?: AbortSignal,
+    tell: (message: Record<string, unknown>) => void = () => undefined,
+  ): Promise<MirrorSource> {
+    this.say = (text) => tell({ op: 'note', text });
+    this.toldBehind = false;
     return this.sourceWith(opts, {});
   }
 
@@ -193,6 +203,9 @@ export class AndroidMirror implements Mirror {
           const now: DeviceState = result.on ? 'ok' : 'asleep';
           if (now !== state) onChange(now);
           state = now;
+          // once a picture: a device near the line would otherwise say it at every scroll
+          if (result.behind && !this.toldBehind) this.say(BEHIND);
+          this.toldBehind ||= result.behind === true;
         })
         .catch(() => undefined);
     }, WATCH_MS);

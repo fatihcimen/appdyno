@@ -225,6 +225,18 @@ token goes to a viewer by its stdin, never by its arguments.
 
 `--quality auto`, the default, takes the largest size that keeps up with a person: a picture that holds its rate can still run late, and a touch waits for exactly that. The agent reads what the encoder took on each run of motion, five frames or more, past the key frame, as a clock's tick or a ripple says nothing of it. Over 40 ms on two runs in a row, it goes straight to the size its pixels say will fit, and the next stream starts there. No model is named anywhere, and a phone whose encoder keeps up stays at its display's size. `--quality high` and `standard` keep the display's size, and a size asked for is that size.
 
+It stops at the smallest size a person can read, and says the device cannot keep up: 1.12 pixels of picture for each dp of the screen, which is 1024 lines on a screen of 914 dp. Frame rate plays no part. This is what a real window showed of three Settings screens, as read by the Mac's Vision, in words of those it reads on the device's own picture:
+
+| picture  | text at 14 sp | at 11 sp, Material's smallest | at 9 sp    |
+| -------- | ------------- | ----------------------------- | ---------- |
+| 576x1280 | 79 of 79      | 95 of 95                      | 104 of 104 |
+| 456x1024 | 78 of 79      | 95 of 95                      | 102 of 104 |
+| 360x800  | 79 of 79      | 93 of 95                      | 74 of 104  |
+
+An eye agrees: at 360x800 a line of 9 sp text cannot be made out, and at 456x1024 it can. Body text alone says nothing here, which is why the floor is taken from the smallest. An encoder that refuses a size is another matter, and may still go below it: a picture of any size is better than none.
+
+A size is no ratchet. Three runs in a row fast enough for the next size up, by the same rule of pixels, after 30 s at this one, and it goes up a size; a size that proved too slow is left for 5 minutes. A still screen reads nothing, so a picture grows as a person moves it. Under a load in the guest, on an emulator, a picture stayed at 456x1024 and said so; `test-device/mirror.android.test.ts` holds that a stream grows on a real restart, with the reading asked for, as under a busy Mac a run read 968 ms at that size and no calm came by itself.
+
 | Samsung SM-A525F, 90 Hz | frames/s | capture to arrival p50, p95, ms | touch p50, ms |
 | ----------------------- | -------- | ------------------------------- | ------------- |
 | 1080x2400               | 89       | 69.3, 73.4                      | 217           |

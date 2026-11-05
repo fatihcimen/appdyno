@@ -1,6 +1,7 @@
 package dev.appdyno.agent
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -123,7 +124,7 @@ class StreamLadderTest {
         // the Samsung's 2400 lines: its runs read 124 to 171 ms, and 1600 lines still read 72
         for (ms in listOf(124L, 152L, 171L)) {
             val ladder = StreamLadder("h264", 2400)
-            assertEquals(1280, ladder.smaller(ms)!!.maxSize)
+            assertEquals(1280, ladder.smaller(ms, 0)!!.maxSize)
             assertEquals(1280, ladder.current.maxSize)
             assertEquals(MIME_H264, ladder.current.mime)
         }
@@ -132,8 +133,88 @@ class StreamLadderTest {
     @Test
     fun aSlowPictureAtTheSmallestSizeStays() {
         val ladder = StreamLadder("h264", 800)
-        assertNull(ladder.smaller(500))
+        assertNull(ladder.smaller(500, 0))
         assertEquals(800, ladder.current.maxSize)
+    }
+
+    @Test
+    fun noLoadTakesAPictureBelowWhatAPersonCanRead() {
+        // a run of 150 ms at 2400 lines fits 1280; one of 900 ms fits only 800, and what was read last time stays
+        val floor = readableSize(2400, 420)
+        val ladder = StreamLadder("h264", 2400, readable = floor)
+        assertEquals(1024, ladder.smaller(900, 0)!!.maxSize)
+        assertTrue(ladder.atTheFloor)
+        assertNull(ladder.smaller(900, 1))
+        assertEquals(1024, ladder.current.maxSize)
+        // an encoder that refuses is another thing: a picture of any size is better than none
+        assertEquals(800, StreamLadder("h264", 1024).apply { repeat(4) { failed(0) } }.current.maxSize)
+    }
+
+    @Test
+    fun theFloorGoesByTheScreenNotAPixelCount() {
+        assertEquals(1024, readableSize(2400, 420)) // a phone of 914 dp, where it was measured
+        // a tablet shows more at each size, so the same text needs more lines
+        val tablet = readableSize(2560, 320)
+        assertEquals(1433, tablet)
+        assertEquals(1600, StreamLadder("h264", 2560, readable = tablet).smaller(900, 0)!!.maxSize)
+    }
+
+    @Test
+    fun aScreenAlreadySmallerThanTheFloorIsLeftAlone() {
+        val ladder = StreamLadder("h264", 800, readable = readableSize(800, 160))
+        assertTrue(ladder.atTheFloor)
+        assertNull(ladder.smaller(900, 0))
+    }
+
+    @Test
+    fun theNextStreamStartsWhereTheLastSettledAndCanStillGrow() {
+        val ladder = StreamLadder("h264", 2400, held = 1280)
+        assertEquals(1280, ladder.current.maxSize)
+        assertEquals(1600, ladder.larger()!!.maxSize)
+        assertEquals(1920, ladder.larger()!!.maxSize)
+        val top = ladder.larger()!!
+        assertEquals(2400, top.maxSize)
+        assertEquals("top", top.note)
+        assertNull(ladder.larger())
+        assertNull(ladder.roomMs(0))
+    }
+
+    @Test
+    fun aSizeThatProvedTooSlowIsHeldOffAndThenTriedAgain() {
+        val ladder = StreamLadder("h264", 1600)
+        ladder.smaller(70, 1_000)
+        assertEquals(1280, ladder.current.maxSize)
+        assertNull(ladder.roomMs(1_000 + StreamLadder.HOLD_OFF_MS - 1))
+        // 40 ms at 1600 lines, by pixels, is 25 at 1280
+        assertEquals(25L, ladder.roomMs(1_000 + StreamLadder.HOLD_OFF_MS))
+    }
+
+    @Test
+    fun onlyRunsInARowOpenTheWayUp() {
+        var room: Long? = 25
+        val pace = EncoderPace { room }
+        var at = 0L
+        fun run(ms: Long) {
+            at += 2_000
+            repeat(EncoderPace.FRAMES) { assertNull(pace.tooSlow(ms, at + it)) }
+        }
+        run(20)
+        run(20)
+        run(30)
+        assertFalse(pace.room)
+        run(20)
+        run(20)
+        assertFalse(pace.room)
+        run(20)
+        assertTrue(pace.room)
+        // a size held off: nothing counts until it comes back, however long this encoder runs
+        room = null
+        repeat(4) { run(20) }
+        assertFalse(pace.room)
+        room = 25
+        repeat(3) { run(20) }
+        assertTrue(pace.room)
+        assertFalse(EncoderPace().room)
     }
 
     @Test

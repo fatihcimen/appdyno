@@ -389,6 +389,8 @@ export const METHODS = {
       rotation: z.number().int(),
       modes: z.array(z.string()),
       dropped: z.number(),
+      /** Too slow at the smallest size a person can read: it stays there. */
+      behind: z.boolean().optional(),
     }),
   },
   cancel: { params: z.object({ id: z.number().int() }), result: z.object({}) },

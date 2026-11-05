@@ -48,6 +48,36 @@ function setup(
 }
 
 describe('an Android mirror', () => {
+  it('says once for each picture that a device cannot keep up', async () => {
+    vi.useFakeTimers();
+    try {
+      const { mirror, rpc } = setup();
+      const said: unknown[] = [];
+      await mirror.open({ quality: 'auto' }, undefined, (m) => said.push(m));
+      const stop = mirror.watch(() => undefined);
+      const answer = (behind: boolean) =>
+        rpc.call.mockResolvedValue({ result: { on: true, behind } });
+      answer(true);
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(said).toHaveLength(1);
+      expect(said[0]).toMatchObject({
+        op: 'note',
+        text: expect.stringContaining('cannot keep up'),
+      });
+      answer(false);
+      await vi.advanceTimersByTimeAsync(1_000);
+      answer(true);
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(said).toHaveLength(1);
+      await mirror.open({ quality: 'auto' }, undefined, (m) => said.push(m));
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(said).toHaveLength(2);
+      stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('says what stands in the way, in the words of the table', async () => {
     await expect(setup({ state: undefined }).mirror.check()).resolves.toMatchObject({
       need: 'not-connected',
