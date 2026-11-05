@@ -453,6 +453,8 @@ describe('a folded answer', () => {
   });
 });
 
+type Bounds = [number, number, number, number];
+
 /** A list of 30 rows: a swipe up moves it by the finger's way, down to its end. */
 class ScrollingList extends FakeDevice {
   offset = 0;
@@ -486,8 +488,60 @@ class ScrollingList extends FakeDevice {
   }
 }
 
+/** A page with a row across it that only a finger on it moves, and a banner above that changes by itself. */
+class SidewaysRow extends FakeDevice {
+  offset = 0;
+  ticks = 0;
+  strokes = 0;
+  override current(): Tree {
+    SCREENS.row = [
+      { t: `Banner ${this.ticks++}`, b: [0, 100, 1080, 300] },
+      ...Array.from({ length: 10 }, (_, i) => ({
+        t: `Fruit ${i + 1}`,
+        b: [300 * i - this.offset, 800, 300 * i - this.offset + 280, 1000] as Bounds,
+      })).filter((r) => r.b[2] > 0 && r.b[0] < 1080),
+    ];
+    this.screen = 'row';
+    return super.current();
+  }
+  override async act(action: ActParams, opts = {}) {
+    if (action.kind === 'gesture') {
+      this.strokes++;
+      const p = action.pointers[0]!;
+      if (p[0]!.y >= 800 && p[0]!.y <= 1000)
+        this.offset = Math.max(this.offset + p[0]!.x - p.at(-1)!.x, 0);
+    }
+    return super.act(action, opts);
+  }
+}
+
 describe('scroll_to', () => {
   const ListDevice = ScrollingList;
+
+  it('moves a row across the page with a finger on the row', async () => {
+    const d = new SidewaysRow();
+    const { call } = await connect(d);
+    const r = await call('scroll_to', {
+      selector: { text: 'Fruit 9' },
+      direction: 'left',
+      x: 540,
+      y: 900,
+    });
+    expect(r.text).toMatch(/found .*"Fruit 9"/);
+  });
+
+  it('says of a row it did not move that it did not, whatever else changes on the screen', async () => {
+    const d = new SidewaysRow();
+    const { call } = await connect(d);
+    const r = await call('scroll_to', {
+      selector: { text: 'Fruit 9' },
+      direction: 'left',
+      maxSwipes: 8,
+    });
+    expect(r.error).toBe(true);
+    expect(r.text).toContain('the list did not move');
+    expect(d.strokes).toBeLessThan(8);
+  });
 
   it('finds a row further down by scrolling, with no flick', async () => {
     const d = new ListDevice();

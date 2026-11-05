@@ -86,11 +86,15 @@ type Around = {
 
 /** Moving a list until something is on the screen, or by a distance. */
 export function scrollingFor({ windowSize, line, pick, offer }: Around) {
-  /** The biggest scrolling container, the one under x,y if given; else the whole window. */
+  /**
+   * The biggest scrolling container, the one under x,y if given; else the whole window. Sideways, a row across the
+   * page where one says it scrolls, as the page is the bigger and does not move that way.
+   */
   const scrollArea = (
     screen: Screen,
     a: { x?: number; y?: number },
     w: { w: number; h: number },
+    vertical: boolean,
   ) => {
     const under = (r: { x: number; y: number; width: number; height: number }) =>
       a.x === undefined ||
@@ -100,8 +104,15 @@ export function scrollingFor({ windowSize, line, pick, offer }: Around) {
       .filter((e) => e.scrollable && e.rect && e.visible !== false && under(e.rect))
       .map((e) => e.rect!)
       .sort((p, q) => q.width * q.height - p.width * p.height);
-    return boxes[0] ?? { x: 0, y: 0, width: w.w, height: w.h };
+    const row = vertical ? undefined : boxes.findLast((r) => r.width > r.height);
+    return row ?? boxes[0] ?? { x: 0, y: 0, width: w.w, height: w.h };
   };
+
+  /** Where a finger crosses a box: on the line through the point asked for, as that is what it is to move. */
+  const strokeCentre = (box: Box, a: { x?: number; y?: number }, vertical: boolean) => ({
+    x: Math.round(vertical && a.x !== undefined ? a.x : box.x + box.width / 2),
+    y: Math.round(!vertical && a.y !== undefined ? a.y : box.y + box.height / 2),
+  });
 
   /** Reads until the selector's element has kept its place for a while, the last read with it; it may be gone or still moving at the cap. */
   const holdsStill = async (s: Session, sel: SelectorOf): Promise<Screen> => {
@@ -158,13 +169,17 @@ export function scrollingFor({ windowSize, line, pick, offer }: Around) {
           'raise maxSwipes',
           swipes > 0,
         );
-      const box = scrollArea(screen, a, await windowSize(s));
-      const inner = (e: ScreenElement) =>
-        e.x >= box.x && e.x <= box.x + box.width && e.y >= box.y && e.y <= box.y + box.height;
-      const sign = a.direction === 'up' || a.direction === 'left' ? -1 : 1;
-      const cx = Math.round(box.x + box.width / 2);
-      const cy = Math.round(box.y + box.height / 2);
       const vertical = a.direction === 'up' || a.direction === 'down';
+      const box = scrollArea(screen, a, await windowSize(s), vertical);
+      const { x: cx, y: cy } = strokeCentre(box, a, vertical);
+      // sideways, only what the finger's line crosses says the list moved: a banner elsewhere changes by itself
+      const inner = (e: ScreenElement) =>
+        e.x >= box.x &&
+        e.x <= box.x + box.width &&
+        e.y >= box.y &&
+        e.y <= box.y + box.height &&
+        (vertical || (e.rect.y <= cy && cy <= e.rect.y + e.rect.height));
+      const sign = a.direction === 'up' || a.direction === 'left' ? -1 : 1;
       const dx = vertical ? 0 : Math.round(sign * box.width * SCROLL_REACH);
       const dy = vertical ? Math.round(sign * box.height * SCROLL_REACH) : 0;
       reportProgress(`scrolling (${swipes + 1} of ${a.maxSwipes})`);
@@ -199,7 +214,7 @@ export function scrollingFor({ windowSize, line, pick, offer }: Around) {
         throw new ToolError(
           `${what} not found: the list did not move after ${swipes + 1} swipes, so this is its end${offer(next.list, a.selector.text)}`,
           'NOT_FOUND',
-          'try the other direction',
+          'try the other direction, or give x and y on the list',
           true,
         );
       screen = next;
@@ -232,9 +247,9 @@ export function scrollingFor({ windowSize, line, pick, offer }: Around) {
     const vertical = a.direction === 'up' || a.direction === 'down';
     const sign = a.direction === 'up' || a.direction === 'left' ? -1 : 1;
     let screen = await s.read();
-    const box = scrollArea(screen, a, await windowSize(s));
+    const box = scrollArea(screen, a, await windowSize(s), vertical);
     const reach = (vertical ? box.height : box.width) * STROKE_REACH;
-    const c = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    const c = strokeCentre(box, a, vertical);
     const most = Math.ceil(a.distance / reach) + 4;
     let moved = 0;
     let lost = SLOP;
