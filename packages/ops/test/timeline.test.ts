@@ -19,6 +19,8 @@ const pageOf = (file: string) =>
     /id="timeline">([\s\S]*?)<\/script>/.exec(readFileSync(file, 'utf8'))![1]!,
   ) as Timeline;
 
+const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 /** A device with a recorder that writes a real file, and the frames of a stretch that ends when asked. */
 class TimedDevice extends FakeDevice {
   ended = 0;
@@ -38,11 +40,11 @@ class TimedDevice extends FakeDevice {
       return () => undefined;
     },
   };
+  /** When its one frame was drawn, by this Mac's clock: a test puts it inside the stretch. */
+  drawnAt = 0;
   frameMarks: MeasureSource['frameMarks'] = async (_app, _seconds, during) => {
-    const began = Date.now();
     await during();
-    // the middle of what it recorded, which ends after the stretch the page is about
-    const at = (began + Date.now()) / 2 + this.clockAheadMs;
+    const at = this.drawnAt + this.clockAheadMs;
     return {
       value: { frames: [{ at, ms: 900, late: true }], input: [{ at, ms: 40 }] },
       raw: '',
@@ -81,6 +83,10 @@ describe('report timeline', () => {
     const { call } = connect(device);
     await call('report', { action: 'timeline', dir });
     await call('tap', { x: 1, y: 1 });
+    // well inside: a measured offset is a little off, and the page goes by it
+    await pause(20);
+    device.drawnAt = Date.now();
+    await pause(20);
     const r = await call('report', { action: 'stop' });
     expect(r.data).toMatchObject({ timeline: join(dir, 'timeline.html') });
     expect(existsSync(join(dir, 'index.html'))).toBe(true);

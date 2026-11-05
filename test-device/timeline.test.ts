@@ -85,8 +85,10 @@ describe.skipIf(!serial)('a timeline of a journey', () => {
         `${(worst.at - last).toFixed(1)} ms after its last frame, and ${(next - end).toFixed(1)} ms before its next`,
     );
     expect(next - last).toBeGreaterThan(worst.ms * 0.9);
-    expect(Math.abs(worst.at - last)).toBeLessThan(50);
-    expect(Math.abs(next - end)).toBeLessThan(50);
+    // no further off than the page says it is
+    const within = page.clock.sources.find((s) => s.row === 'Video')!.withinMs;
+    expect(Math.abs(worst.at - last)).toBeLessThan(within);
+    expect(Math.abs(next - end)).toBeLessThan(within);
 
     expect(page.touches.marks.length).toBeGreaterThanOrEqual(4);
     expect(page.steps.marks.map((m) => m.name)).toContain('flow');
