@@ -1,0 +1,22 @@
+#import <Foundation/Foundation.h>
+
+NS_ASSUME_NONNULL_BEGIN
+
+/// One row of the table of words.
+typedef struct {
+  const char *en, *tr;
+} MVWordRow;
+
+extern const MVWordRow MVWordTable[];
+extern const size_t MVWordCount;
+
+/// Words in the Mac's language: English comes back as it went in, and so does anything the table does not have, such as a name.
+NSString *MVWord(NSString *english);
+/// The same whatever the Mac's language.
+NSString *MVInTurkish(NSString *english);
+/// A number with the Mac's decimal mark, and `%` on the side its language puts it.
+NSString *MVPercent(double value);
+/// The same for a number with one decimal.
+NSString *MVDecimal(double value);
+
+NS_ASSUME_NONNULL_END

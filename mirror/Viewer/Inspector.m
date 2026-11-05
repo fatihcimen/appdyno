@@ -1,6 +1,7 @@
 // The pane beside the device: the stream's numbers, what an agent has called, and the device's apps. The numbers
 // come from this process; the rest from the parent, by messages.
 #import "Window.h"
+#import "Words.h"
 
 enum { kActivityRows = 200 };
 static const double kUsualRate = 60, kSparkHeight = 56, kTab = 28, kInset = 16;
@@ -62,8 +63,8 @@ static NSString *ms(id v) {
       tab.layer.cornerRadius = kTab / 4;
       tab.tag = i;
       tab.identifier = @(kTabs[i].identifier);
-      tab.toolTip = @(kTabs[i].title);
-      tab.accessibilityLabel = @(kTabs[i].title);
+      tab.toolTip = MVWord(@(kTabs[i].title));
+      tab.accessibilityLabel = tab.toolTip;
       [tab.widthAnchor constraintEqualToConstant:kTab].active = YES;
       [tab.heightAnchor constraintEqualToConstant:kTab].active = YES;
       [tabs addObject:tab];
@@ -186,10 +187,10 @@ static NSString *ms(id v) {
 
 - (NSView *)appsPane {
   _filter = [NSSearchField new];
-  _filter.placeholderString = @"Filter";
+  _filter.placeholderString = MVWord(@"Filter");
   _filter.target = self;
   _filter.action = @selector(filterChanged:);
-  _filter.accessibilityLabel = @"Filter apps";
+  _filter.accessibilityLabel = MVWord(@"Filter apps");
   _apps = [MVList new];
   __weak MVInspector *weak = self;
   _apps.onSelect = ^(MVRow *row) {
@@ -198,9 +199,9 @@ static NSString *ms(id v) {
   _appsNote = caption(@"");
   _appsNote.lineBreakMode = NSLineBreakByWordWrapping;
   _appsNote.maximumNumberOfLines = 3;
-  _launch = [NSButton buttonWithTitle:@"Launch" target:self action:@selector(launchApp:)];
-  _quit = [NSButton buttonWithTitle:@"Quit" target:self action:@selector(quitApp:)];
-  _remove = [NSButton buttonWithTitle:@"Remove…" target:self action:@selector(removeApp:)];
+  _launch = [NSButton buttonWithTitle:MVWord(@"Launch") target:self action:@selector(launchApp:)];
+  _quit = [NSButton buttonWithTitle:MVWord(@"Quit") target:self action:@selector(quitApp:)];
+  _remove = [NSButton buttonWithTitle:MVWord(@"Remove…") target:self action:@selector(removeApp:)];
   NSStackView *buttons = [NSStackView stackViewWithViews:@[_launch, _quit, _remove]];
   buttons.distribution = NSStackViewDistributionFillEqually;
   [self enableAppButtons:NO];
@@ -230,9 +231,9 @@ static NSString *ms(id v) {
 - (void)showPane:(NSInteger)pane {
   for (NSButton *tab in _tabs) {
     BOOL chosen = tab.tag == pane;
-    tab.layer.backgroundColor = chosen ? NSColor.controlAccentColor.CGColor : NSColor.clearColor.CGColor;
-    tab.image = MVSymbol(@(kTabs[tab.tag].symbol), chosen ? NSColor.whiteColor : NSColor.labelColor, 14, NSFontWeightRegular);
-    tab.accessibilityValue = chosen ? @"selected" : nil;
+    tab.layer.backgroundColor = chosen ? NSColor.quaternaryLabelColor.CGColor : NSColor.clearColor.CGColor;
+    tab.image = MVSymbol(@(kTabs[tab.tag].symbol), chosen ? NSColor.labelColor : MVQuietColor(), 14, chosen ? NSFontWeightSemibold : NSFontWeightRegular);
+    tab.accessibilityValue = chosen ? MVWord(@"selected") : nil;
   }
   _paneName.stringValue = @(kTabs[pane].title);
   for (int i = 0; i < MVPanes; i++) _panes[i].hidden = i != pane;
@@ -284,11 +285,11 @@ static NSString *ms(id v) {
 }
 
 - (void)filterChanged:(id)sender {
-  NSString *needle = _filter.stringValue.lowercaseString;
+  NSString *needle = _filter.stringValue;
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
   for (NSDictionary *app in _appList) {
     NSString *name = app[@"name"] ?: app[@"id"];
-    if (needle.length && ![name.lowercaseString containsString:needle] && ![[app[@"id"] lowercaseString] containsString:needle]) continue;
+    if (needle.length && ![name localizedStandardContainsString:needle] && ![app[@"id"] localizedStandardContainsString:needle]) continue;
     MVRow *row = [MVRow new];
     row.title = name;
     row.detail = app[@"version"] ? [NSString stringWithFormat:@"%@  ·  %@", app[@"id"], app[@"version"]] : app[@"id"];
@@ -313,11 +314,11 @@ static NSString *ms(id v) {
   MVRow *row = _apps.selected;
   if (!row || !self.window) return;
   NSAlert *alert = [NSAlert new];
-  alert.messageText = [NSString stringWithFormat:@"Remove %@?", row.title];
-  alert.informativeText = @"The app and everything it keeps on this device go with it. This cannot be undone.";
+  alert.messageText = MVWord([NSString stringWithFormat:@"Remove %@?", row.title]);
+  alert.informativeText = MVWord(@"The app and everything it keeps on this device go with it. This cannot be undone.");
   alert.alertStyle = NSAlertStyleWarning;
-  [alert addButtonWithTitle:@"Remove"].hasDestructiveAction = YES;
-  [alert addButtonWithTitle:@"Cancel"];
+  [alert addButtonWithTitle:MVWord(@"Remove")].hasDestructiveAction = YES;
+  [alert addButtonWithTitle:MVWord(@"Cancel")];
   NSString *key = row.key;
   [alert beginSheetModalForWindow:self.window completionHandler:^(NSModalResponse answer) {
     if (answer == NSAlertFirstButtonReturn) MVEmitFrom(self, @{@"op": @"app", @"action": @"remove", @"id": key ?: @""});

@@ -4,7 +4,7 @@
 #import "Window.h"
 
 enum { kSeconds = 60, kResults = 20 };
-static const double kChartHeight = 44, kRowHeight = 32, kBetween = 12, kFigure = 22, kMaySwayShare = 0.1, kMaySwayFps = 3;
+static const double kChartHeight = 36, kFigureWide = 104, kWhyWide = 170, kRowHeight = 32, kRowInset = 10, kBetween = 16, kFigure = 20, kMaySwayShare = 0.1, kMaySwayFps = 3;
 
 /// What a line of readings shows, in the order it stands.
 typedef struct {
@@ -28,36 +28,65 @@ NSTextField *MVPaneHeading(NSString *text) {
 
 /// A row of a pane, the whole width of it: one of the measures, or the dashboard.
 static NSButton *rowButton(NSString *name, id target) {
-  NSButton *button = [MVBarButton buttonWithTitle:@"" image:MVSymbol(MVControlSymbol(name), NSColor.labelColor, 13, NSFontWeightRegular) ?: [NSImage new] target:target action:@selector(control:)];
+  NSButton *button = [MVBarButton buttonWithTitle:@"" target:target action:@selector(control:)];
   button.identifier = name;
   button.accessibilityLabel = MVControlTitle(name);
-  button.imagePosition = NSImageLeading;
-  button.imageHugsTitle = YES;
-  button.alignment = NSTextAlignmentLeft;
   button.bordered = NO;
-  button.wantsLayer = YES;
-  button.layer.cornerRadius = 8;
-  button.layer.backgroundColor = NSColor.quaternaryLabelColor.CGColor;
-  button.attributedTitle = [[NSAttributedString alloc] initWithString:[@" " stringByAppendingString:MVControlTitle(name)] attributes:@{NSFontAttributeName: [NSFont systemFontOfSize:13], NSForegroundColorAttributeName: MVSolid(NSColor.labelColor)}];
-  [button.heightAnchor constraintEqualToConstant:kRowHeight].active = YES;
+  MVInk *ink = [[MVInk alloc] initWithSymbol:MVControlSymbol(name) color:MVQuietColor() size:13];
+  NSTextField *words = MVText(MVControlTitle(name), MVStyleBody);
+  NSStackView *row = [NSStackView stackViewWithViews:@[ink, words]];
+  row.spacing = 8;
+  row.translatesAutoresizingMaskIntoConstraints = NO;
+  [button addSubview:row];
+  [NSLayoutConstraint activateConstraints:@[
+    [ink.widthAnchor constraintEqualToConstant:18],
+    [button.heightAnchor constraintEqualToConstant:kRowHeight],
+    [row.leadingAnchor constraintEqualToAnchor:button.leadingAnchor constant:kRowInset],
+    [row.centerYAnchor constraintEqualToAnchor:button.centerYAnchor],
+  ]];
   return button;
+}
+
+/// Rows that belong together, on one quiet ground with a hairline between them: a fill, as glass cannot sample glass.
+static NSView *grouped(NSArray<NSView *> *rows) {
+  NSMutableArray<NSView *> *lines = [NSMutableArray array];
+  for (NSView *row in rows) {
+    if (lines.count) {
+      NSBox *rule = [NSBox new];
+      rule.boxType = NSBoxSeparator;
+      [lines addObject:rule];
+    }
+    [lines addObject:row];
+  }
+  NSStackView *stack = [NSStackView stackViewWithViews:lines];
+  stack.orientation = NSUserInterfaceLayoutOrientationVertical;
+  stack.spacing = 0;
+  for (NSView *line in lines) [line.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
+  NSBox *ground = [NSBox new];
+  ground.boxType = NSBoxCustom;
+  ground.borderWidth = 0;
+  ground.cornerRadius = 10;
+  ground.fillColor = NSColor.quaternaryLabelColor;
+  stack.translatesAutoresizingMaskIntoConstraints = NO;
+  [ground addSubview:stack];
+  [NSLayoutConstraint activateConstraints:@[
+    [stack.topAnchor constraintEqualToAnchor:ground.topAnchor],
+    [stack.bottomAnchor constraintEqualToAnchor:ground.bottomAnchor],
+    [stack.leadingAnchor constraintEqualToAnchor:ground.leadingAnchor],
+    [stack.trailingAnchor constraintEqualToAnchor:ground.trailingAnchor],
+  ]];
+  return ground;
 }
 
 @interface MVTrend : NSObject
 @property(nonatomic) NSTextField *now, *why;
 @property(nonatomic) MVSpark *line;
 @property(nonatomic, copy) NSString *field, *unit;
-@property(nonatomic) NSView *view, *tile;
+@property(nonatomic) NSView *view;
 @end
 
 @implementation MVTrend
 @end
-
-static NSView *wideGap(void) {
-  NSView *gap = [NSView new];
-  [gap setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];
-  return gap;
-}
 
 static MVTrend *trendOf(const MVTrendRow *row) {
   MVTrend *trend = [MVTrend new];
@@ -65,25 +94,25 @@ static MVTrend *trendOf(const MVTrendRow *row) {
   trend.unit = @(row->unit);
   trend.now = MVText(@"–", MVStyleBody);
   trend.now.font = MVRoundedFont(kFigure, NSFontWeightSemibold);
-  NSStackView *tile = [NSStackView stackViewWithViews:@[trend.now, MVText(@(row->title), MVStyleSub)]];
-  tile.orientation = NSUserInterfaceLayoutOrientationVertical;
-  tile.alignment = NSLayoutAttributeLeading;
-  tile.spacing = 0;
-  trend.tile = tile;
-  // on the line of its name, so that a reason coming and going moves nothing under it
-  trend.why = MVText(@"", MVStyleSub);
-  [trend.why setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
-  NSStackView *head = [NSStackView stackViewWithViews:@[MVText(@(row->title), MVStyleSub), wideGap(), trend.why]];
+  NSStackView *figure = [NSStackView stackViewWithViews:@[MVText(@(row->title), MVStyleSub), trend.now]];
+  figure.orientation = NSUserInterfaceLayoutOrientationVertical;
+  figure.alignment = NSLayoutAttributeLeading;
+  figure.spacing = 0;
+  [figure.widthAnchor constraintEqualToConstant:kFigureWide].active = YES;
   trend.line = [MVSpark new];
   trend.line.capacity = kSeconds;
   trend.line.stays = YES;
+  trend.line.color = MVQuietColor();
+  // in the chart's place: a reason coming and going moves nothing, and where there is one the chart has nothing to say
+  trend.why = MVWrappedText(@"", MVStyleSub);
+  trend.why.maximumNumberOfLines = 2;
+  trend.why.preferredMaxLayoutWidth = kWhyWide;
+  [trend.why setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
+  NSStackView *row2 = [NSStackView stackViewWithViews:@[figure, trend.line, trend.why]];
+  row2.spacing = 12;
+  [row2.heightAnchor constraintEqualToConstant:kChartHeight + 8].active = YES;
   [trend.line.heightAnchor constraintEqualToConstant:kChartHeight].active = YES;
-  NSStackView *stack = [NSStackView stackViewWithViews:@[head, trend.line]];
-  stack.orientation = NSUserInterfaceLayoutOrientationVertical;
-  stack.alignment = NSLayoutAttributeLeading;
-  stack.spacing = 2;
-  for (NSView *line in stack.arrangedSubviews) [line.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
-  trend.view = stack;
+  trend.view = row2;
   return trend;
 }
 
@@ -104,15 +133,12 @@ static MVTrend *trendOf(const MVTrendRow *row) {
     _kept = [NSMutableArray array];
     _past = @[];
     _trends = [NSMutableArray array];
-    NSMutableArray<NSView *> *lines = [NSMutableArray array], *tiles = [NSMutableArray array];
+    NSMutableArray<NSView *> *lines = [NSMutableArray array];
     for (size_t i = 0; i < kTrendCount; i++) {
       [_trends addObject:trendOf(&kTrends[i])];
       [lines addObject:_trends.lastObject.view];
-      [tiles addObject:_trends.lastObject.tile];
     }
     _sentence = MVText(@"Waiting for the first readings", MVStyleCallout);
-    NSStackView *figures = [NSStackView stackViewWithViews:tiles];
-    figures.distribution = NSStackViewDistributionFillEqually;
     _app = MVPaneNote(@"Open an app, then measure it. It restarts.");
     _measures = @[rowButton(@"measureLaunch", target), rowButton(@"measureScroll", target), rowButton(@"journey", target)];
     _doing = MVPaneNote(@"");
@@ -121,20 +147,19 @@ static MVTrend *trendOf(const MVTrendRow *row) {
     _results = [MVList new];
     _slack = [NSView new];
     [_slack setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
-    NSMutableArray<NSView *> *all = [NSMutableArray arrayWithObjects:_sentence, figures, nil];
+    NSView *measures = grouped(_measures);
+    NSMutableArray<NSView *> *all = [NSMutableArray arrayWithObject:_sentence];
     [all addObjectsFromArray:lines];
-    [all addObjectsFromArray:@[MVPaneHeading(@"Measure"), _app]];
-    [all addObjectsFromArray:_measures];
-    [all addObjectsFromArray:@[_doing, MVPaneHeading(@"Results"), _none, _results, _slack, rowButton(@"dashboard", target)]];
+    [all addObjectsFromArray:@[MVPaneHeading(@"Measure"), measures, _app, _doing, MVPaneHeading(@"Results"), _none, _results, _slack, grouped(@[rowButton(@"dashboard", target)])]];
     NSStackView *stack = [NSStackView stackViewWithViews:all];
     stack.orientation = NSUserInterfaceLayoutOrientationVertical;
     stack.alignment = NSLayoutAttributeLeading;
-    stack.spacing = 4;
+    stack.spacing = 8;
     for (NSView *line in stack.arrangedSubviews) [line.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
-    [stack setCustomSpacing:kBetween afterView:figures];
-    [stack setCustomSpacing:kBetween afterView:lines.lastObject];
-    [stack setCustomSpacing:kBetween afterView:_doing];
-    [stack setCustomSpacing:kBetween afterView:_measures.lastObject];
+    [stack setCustomSpacing:kBetween afterView:_sentence];
+    [stack setCustomSpacing:kBetween + 8 afterView:lines.lastObject];
+    [stack setCustomSpacing:kBetween + 8 afterView:_app];
+    [stack setCustomSpacing:kBetween + 8 afterView:_doing];
     [_results setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [self addSubview:stack];
@@ -163,7 +188,7 @@ static MVTrend *trendOf(const MVTrendRow *row) {
     _heldSince = now;
   }
   int seconds = (int)((now - _heldSince) / 1000);
-  if (value <= 0) return seconds > 0 ? [NSString stringWithFormat:@"Still for %d s", seconds] : @"Still";
+  if (value <= 0) return seconds > 0 ? [NSString stringWithFormat:@"Nothing has moved for %d s", seconds] : @"Nothing moving";
   return seconds > 0 ? [NSString stringWithFormat:@"Steady at %.0f fps for %d s", value, seconds] : [NSString stringWithFormat:@"Moving at %.0f fps", value];
 }
 
@@ -174,7 +199,8 @@ static MVTrend *trendOf(const MVTrendRow *row) {
     // a person's words: what a tool names by its id is here only the app in front
     NSString *why = [sample[@"app"] length] ? [sample[@"absent"][trend.field] stringByReplacingOccurrencesOfString:sample[@"app"] withString:@"This app"] : sample[@"absent"][trend.field];
     trend.why.stringValue = why ?: @"";
-    trend.why.toolTip = why;
+    trend.why.hidden = !why.length;
+    trend.line.hidden = why.length > 0;
     BOOL still = [trend.field isEqual:@"fps"] && value && value.doubleValue <= 0;
     trend.now.stringValue = still ? @"Still" : value ? MVReadingWords(value.doubleValue, trend.unit) : @"–";
     if ([trend.field isEqual:@"fps"]) _sentence.stringValue = [self sentenceFor:value];
@@ -187,7 +213,10 @@ static MVTrend *trendOf(const MVTrendRow *row) {
 - (void)showMeasuring:(NSString *)line {
   _doing.stringValue = line;
   _doing.hidden = NO;
-  for (NSButton *measure in _measures) measure.enabled = NO;
+  for (NSButton *measure in _measures) {
+    measure.enabled = NO;
+    measure.alphaValue = 0.45;
+  }
 }
 
 static MVRow *rowOfResult(NSDictionary *result) {
@@ -211,7 +240,10 @@ static MVRow *rowOfResult(NSDictionary *result) {
 
 - (void)showMeasured:(NSDictionary *)result {
   _doing.hidden = YES;
-  for (NSButton *measure in _measures) measure.enabled = YES;
+  for (NSButton *measure in _measures) {
+    measure.enabled = YES;
+    measure.alphaValue = 1;
+  }
   [_kept insertObject:rowOfResult(result) atIndex:0];
   if (_kept.count > kResults) [_kept removeLastObject];
   [self listResults];

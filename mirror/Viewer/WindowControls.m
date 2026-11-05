@@ -1,5 +1,6 @@
 // A window's bar and what its controls do.
 #import "WindowParts.h"
+#import "Words.h"
 
 @implementation MVWindow (Controls)
 
@@ -31,13 +32,13 @@
 }
 
 - (void)showMore:(NSView *)anchor {
-  NSMenu *menu = [[NSMenu alloc] initWithTitle:@"More"];
+  NSMenu *menu = [[NSMenu alloc] initWithTitle:MVWord(@"More Controls")];
   NSArray<NSString *> *shown = @[@"back", @"home", @"appSwitch", @"lock"];
   for (NSMenuItem *item in [_view deviceMenu].itemArray)
     if (![shown containsObject:item.representedObject]) [menu addItem:[item copy]];
   [menu addItem:NSMenuItem.separatorItem];
   if (_hosted) {
-    NSMenuItem *alone = [menu addItemWithTitle:@"Open in New Window" action:@selector(control:) keyEquivalent:@""];
+    NSMenuItem *alone = [menu addItemWithTitle:MVWord(@"Open in New Window") action:@selector(control:) keyEquivalent:@""];
     alone.target = self;
     alone.representedObject = @"newWindow";
   }

@@ -2,6 +2,7 @@
 // touches the device, and a click anywhere but on its button goes to the picture.
 #import "Viewer.h"
 #import "Window.h"
+#import "Words.h"
 
 static const double kCardWidth = 264, kInset = 16, kRing = 44, kRingSeconds = 0.6;
 
@@ -24,7 +25,7 @@ static NSImageView *symbol(NSString *name, NSColor *tint) {
 }
 
 static NSTextField *words(NSString *text, CGFloat size, NSFontWeight weight, NSColor *color) {
-  NSTextField *field = [NSTextField wrappingLabelWithString:text];
+  NSTextField *field = [NSTextField wrappingLabelWithString:MVWord(text)];
   field.font = [NSFont systemFontOfSize:size weight:weight];
   field.textColor = color;
   field.alignment = NSTextAlignmentCenter;
@@ -142,7 +143,7 @@ static NSString *symbolOf(NSString *state) {
     words(m[@"text"] ?: @"A person is needed", 12, NSFontWeightRegular, NSColor.secondaryLabelColor),
   ]];
   if ([m[@"needsDone"] boolValue]) {
-    NSButton *done = [NSButton buttonWithTitle:@"I'm Done" target:self action:@selector(done:)];
+    NSButton *done = [NSButton buttonWithTitle:MVWord(@"I'm Done") target:self action:@selector(done:)];
     done.bezelColor = NSColor.controlAccentColor;
     done.keyEquivalent = @"\r";
     done.controlSize = NSControlSizeLarge;

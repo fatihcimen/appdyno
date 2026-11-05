@@ -1,6 +1,7 @@
 // Two windows side by side: what this one says of the other, where it stands, and the flow both are to run.
 #import "Viewer.h"
 #import "Window.h"
+#import "Words.h"
 
 static const double kBetween = 12, kFromTop = 24;
 
@@ -20,7 +21,7 @@ NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left) {
   NSButton *button = [self.bar buttonNamed:@"both"];
   button.enabled = !ended;
   [self.bar paint:@"both" symbol:@"link" color:both ? NSColor.controlAccentColor : NSColor.labelColor];
-  button.toolTip = ended ? @"The other window has closed" : [NSString stringWithFormat:both ? @"Touches go here and to %@" : @"Touches stay here, and do not reach %@", with];
+  button.toolTip = MVWord(ended ? @"The other window has closed" : [NSString stringWithFormat:both ? @"Touches go here and to %@" : @"Touches stay here, and do not reach %@", with]);
   [self showState];
 }
 
@@ -33,7 +34,7 @@ NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left) {
 
 - (void)askJourney {
   NSOpenPanel *panel = [NSOpenPanel openPanel];
-  panel.message = self.look[@"pair"] ? @"A flow to run on both devices, one after the other" : @"A flow to run and measure";
+  panel.message = MVWord(self.look[@"pair"] ? @"A flow to run on both devices, one after the other" : @"A flow to run and measure");
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
   panel.allowedFileTypes = @[@"flow"];

@@ -1,7 +1,7 @@
 // Rows of a title and a line beneath, with a symbol: the Inspector's lists and a sidebar.
 #import "Window.h"
 
-static const double kHeaderHeight = 26;
+static const double kHeaderHeight = 30;
 
 @implementation MVRow
 + (instancetype)headerNamed:(NSString *)title {
@@ -73,7 +73,7 @@ static const double kHeaderHeight = 26;
 }
 
 - (BOOL)tableView:(NSTableView *)table isGroupRow:(NSInteger)at {
-  return _rows[at].header;
+  return NO;
 }
 
 - (BOOL)tableView:(NSTableView *)table shouldSelectRow:(NSInteger)at {
@@ -98,8 +98,8 @@ static const double kHeaderHeight = 26;
   title.translatesAutoresizingMaskIntoConstraints = NO;
   [cell addSubview:title];
   [NSLayoutConstraint activateConstraints:@[
-    [title.leadingAnchor constraintEqualToAnchor:cell.leadingAnchor constant:4],
-    [title.centerYAnchor constraintEqualToAnchor:cell.centerYAnchor],
+    [title.leadingAnchor constraintEqualToAnchor:cell.leadingAnchor constant:6],
+    [title.bottomAnchor constraintEqualToAnchor:cell.bottomAnchor constant:-4],
   ]];
   return cell;
 }
@@ -134,7 +134,7 @@ static const double kHeaderHeight = 26;
   [cell addSubview:stack];
   [NSLayoutConstraint activateConstraints:@[
     [icon.widthAnchor constraintEqualToConstant:18],
-    [stack.leadingAnchor constraintEqualToAnchor:cell.leadingAnchor constant:4],
+    [stack.leadingAnchor constraintEqualToAnchor:cell.leadingAnchor constant:6],
     [stack.trailingAnchor constraintLessThanOrEqualToAnchor:cell.trailingAnchor constant:-4],
     [stack.centerYAnchor constraintEqualToAnchor:cell.centerYAnchor],
   ]];

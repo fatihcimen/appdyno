@@ -1,6 +1,7 @@
 // The window: the device on a backdrop drawn from its own picture, full bleed, with glass floating over it: its status,
 // its controls and the Inspector. The picture's view is exactly the device's screen, so its maths never hear of a frame.
 #import "WindowParts.h"
+#import "Words.h"
 
 // a new window takes at most this much of the screen
 static const double kFitScreen = 0.85;
@@ -119,7 +120,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   [self letGoOfInspector];
   if (_window.toolbar != _toolbar) return;
   _window.toolbar = _room.bare;
-  _window.title = @"Devices";
+  _window.title = MVWord(@"Devices");
 }
 
 - (void)configure:(NSDictionary *)attach {
@@ -356,7 +357,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 - (void)sayMeasuring:(nullable NSString *)line {
   NSRegularExpression *count = [NSRegularExpression regularExpressionWithPattern:@"(\\d+) of (\\d+)" options:0 error:NULL];
   NSTextCheckingResult *found = line ? [count firstMatchInString:line options:0 range:NSMakeRange(0, line.length)] : nil;
-  _line.measuring = line.length ? line : nil;
+  _line.measuring = found ? [@"Measuring " stringByAppendingString:line] : line.length ? line : nil;
   _line.progress = found ? [line substringWithRange:[found rangeAtIndex:1]].doubleValue / [line substringWithRange:[found rangeAtIndex:2]].doubleValue : 0;
   [self showState];
 }
@@ -380,7 +381,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 /// The toolbar's record button says a movie is being made.
 - (void)setRecording:(BOOL)on {
   [_bar paint:@"record" symbol:on ? @"stop.circle.fill" : @"record.circle" color:on ? NSColor.systemRedColor : NSColor.labelColor];
-  [_bar buttonNamed:@"record"].accessibilityLabel = on ? @"Stop Recording" : @"Record Screen";
+  [_bar buttonNamed:@"record"].accessibilityLabel = MVWord(on ? @"Stop Recording" : @"Record Screen");
   _recording = on;
   _line.recording = on;
   [self showState];

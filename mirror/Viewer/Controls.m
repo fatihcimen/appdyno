@@ -1,6 +1,7 @@
 // Every control of a window, once: its name, its words, its symbol and its shortcut. The menus and the glass bar
 // are both made from this table, so that a control cannot be in one and missing from the other.
 #import "Window.h"
+#import "Words.h"
 
 static const NSEventModifierFlags kCmd = NSEventModifierFlagCommand, kShift = NSEventModifierFlagShift, kOpt = NSEventModifierFlagOption, kCtl = NSEventModifierFlagControl;
 
@@ -54,7 +55,7 @@ static const MVControlRow *rowNamed(NSString *name) {
 
 NSString *MVControlTitle(NSString *name) {
   const MVControlRow *row = rowNamed(name);
-  return row ? @(row->title) : name;
+  return row ? MVWord(@(row->title)) : name;
 }
 
 NSString *MVControlSymbol(NSString *name) {
@@ -64,11 +65,11 @@ NSString *MVControlSymbol(NSString *name) {
 
 NSImage *MVControlImage(NSString *name) {
   const MVControlRow *row = rowNamed(name);
-  return row ? [NSImage imageWithSystemSymbolName:@(row->symbol) accessibilityDescription:@(row->title)] : nil;
+  return row ? [NSImage imageWithSystemSymbolName:@(row->symbol) accessibilityDescription:MVWord(@(row->title))] : nil;
 }
 
 static NSMenuItem *itemFor(const MVControlRow *row) {
-  NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:@(row->title) action:@selector(control:) keyEquivalent:row->key ? [NSString stringWithCharacters:&row->key length:1] : @""];
+  NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:MVWord(@(row->title)) action:@selector(control:) keyEquivalent:row->key ? [NSString stringWithCharacters:&row->key length:1] : @""];
   item.keyEquivalentModifierMask = row->mods;
   item.representedObject = @(row->name);
   return item;
@@ -85,25 +86,25 @@ NSMenu *MVControlMenu(NSString *title, NSArray<NSString *> *_Nullable names) {
 }
 
 static NSMenuItem *menuOf(NSMenu *bar, NSString *title, NSMenu *menu) {
-  NSMenuItem *item = [bar addItemWithTitle:title action:NULL keyEquivalent:@""];
-  menu.title = title;
+  NSMenuItem *item = [bar addItemWithTitle:MVWord(title) action:NULL keyEquivalent:@""];
+  menu.title = MVWord(title);
   item.submenu = menu;
   return item;
 }
 
 static NSMenu *appMenu(void) {
   NSMenu *menu = [NSMenu new];
-  [menu addItemWithTitle:@"Hide appdyno" action:@selector(hide:) keyEquivalent:@"h"];
+  [menu addItemWithTitle:MVWord(@"Hide appdyno") action:@selector(hide:) keyEquivalent:@"h"];
   [menu addItem:NSMenuItem.separatorItem];
-  [menu addItemWithTitle:@"Quit appdyno" action:@selector(terminate:) keyEquivalent:@"q"];
+  [menu addItemWithTitle:MVWord(@"Quit appdyno") action:@selector(terminate:) keyEquivalent:@"q"];
   return menu;
 }
 
 static NSMenu *windowMenu(void) {
   NSMenu *menu = [NSMenu new];
-  [menu addItemWithTitle:@"Minimize" action:@selector(performMiniaturize:) keyEquivalent:@"m"];
-  [menu addItemWithTitle:@"Zoom" action:@selector(performZoom:) keyEquivalent:@""];
-  [menu addItemWithTitle:@"Close" action:@selector(performClose:) keyEquivalent:@"w"];
+  [menu addItemWithTitle:MVWord(@"Minimize") action:@selector(performMiniaturize:) keyEquivalent:@"m"];
+  [menu addItemWithTitle:MVWord(@"Zoom") action:@selector(performZoom:) keyEquivalent:@""];
+  [menu addItemWithTitle:MVWord(@"Close") action:@selector(performClose:) keyEquivalent:@"w"];
   NSApp.windowsMenu = menu;
   return menu;
 }
@@ -124,7 +125,7 @@ NSMenu *MVHubMenu(void) {
   menuOf(bar, @"appdyno", appMenu());
   NSMenu *file = [[NSMenu alloc] initWithTitle:@"File"];
   // to the first that answers, which is the hub, as its window's delegate
-  [file addItemWithTitle:@"Open in New Window" action:NSSelectorFromString(@"openWindow:") keyEquivalent:@"N"];
+  [file addItemWithTitle:MVWord(@"Open in New Window") action:NSSelectorFromString(@"openWindow:") keyEquivalent:@"N"];
   menuOf(bar, @"File", file);
   menuOf(bar, @"Window", windowMenu());
   return bar;

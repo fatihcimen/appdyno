@@ -1,6 +1,7 @@
 // The hub: every device this Mac can reach in a sidebar, and the one chosen, live, in its room. A stage stands there by
 // the same code as in a window of its own; what a person asks goes to the parent as a message.
 #import "Window.h"
+#import "Words.h"
 
 static const NSSize kOpens = {1240, 820};
 // under this a window gives up its Inspector, and then its sidebar
@@ -133,13 +134,13 @@ static NSString *symbolOf(NSDictionary *device) {
 - (NSView *)sidebarView {
   NSView *view = [NSView new];
   _search = [NSSearchField new];
-  _search.placeholderString = @"Search";
+  _search.placeholderString = MVWord(@"Search");
   _search.delegate = self;
   _new = [MVBarButton buttonWithImage:[NSImage new] target:self action:@selector(askNew:)];
   _new.bordered = NO;
   _new.identifier = @"new";
-  _new.toolTip = @"New simulator or emulator";
-  _new.accessibilityLabel = @"New simulator or emulator";
+  _new.toolTip = MVWord(@"New simulator or emulator");
+  _new.accessibilityLabel = _new.toolTip;
   MVInk *plus = [[MVInk alloc] initWithSymbol:@"plus" color:NSColor.labelColor size:14];
   plus.frame = NSMakeRect(0, 0, 24, 24);
   plus.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
@@ -153,9 +154,9 @@ static NSString *symbolOf(NSDictionary *device) {
     [weak chose:row];
   };
   NSMenu *rowMenu = [[NSMenu alloc] initWithTitle:@"Device"];
-  [rowMenu addItemWithTitle:@"Show Beside This One" action:@selector(besideClicked:) keyEquivalent:@""].target = self;
-  [rowMenu addItemWithTitle:@"Open in New Window" action:@selector(openClicked:) keyEquivalent:@""].target = self;
-  [rowMenu addItemWithTitle:@"Shut Down" action:@selector(shutDownClicked:) keyEquivalent:@""].target = self;
+  [rowMenu addItemWithTitle:MVWord(@"Show Beside This One") action:@selector(besideClicked:) keyEquivalent:@""].target = self;
+  [rowMenu addItemWithTitle:MVWord(@"Open in New Window") action:@selector(openClicked:) keyEquivalent:@""].target = self;
+  [rowMenu addItemWithTitle:MVWord(@"Shut Down") action:@selector(shutDownClicked:) keyEquivalent:@""].target = self;
   _list.rowMenu = rowMenu;
   NSStackView *top = [NSStackView stackViewWithViews:@[_search, _new]];
   top.spacing = 6;
@@ -183,7 +184,7 @@ static NSString *symbolOf(NSDictionary *device) {
   _about = MVWrappedText(@"", MVStyleBody);
   _about.alignment = NSTextAlignmentCenter;
   _about.preferredMaxLayoutWidth = kWordsWide;
-  _start = [NSButton buttonWithTitle:@"Start" target:self action:@selector(togglePower:)];
+  _start = [NSButton buttonWithTitle:MVWord(@"Start") target:self action:@selector(togglePower:)];
   _start.controlSize = NSControlSizeLarge;
   _start.keyEquivalent = @"\r";
   _column = [NSStackView stackViewWithViews:@[_name, _about, _start]];
@@ -201,8 +202,8 @@ static NSString *symbolOf(NSDictionary *device) {
 
 - (void)askNew:(NSButton *)sender {
   NSMenu *menu = [[NSMenu alloc] initWithTitle:@"New"];
-  [menu addItemWithTitle:@"New Simulator…" action:@selector(newSimulator:) keyEquivalent:@""].target = self;
-  [menu addItemWithTitle:@"New Emulator…" action:@selector(newEmulator:) keyEquivalent:@""].target = self;
+  [menu addItemWithTitle:MVWord(@"New Simulator…") action:@selector(newSimulator:) keyEquivalent:@""].target = self;
+  [menu addItemWithTitle:MVWord(@"New Emulator…") action:@selector(newEmulator:) keyEquivalent:@""].target = self;
   [menu popUpMenuPositioningItem:nil atLocation:NSMakePoint(0, sender.bounds.size.height + 6) inView:sender];
 }
 
@@ -325,7 +326,7 @@ static MVRow *rowOf(NSDictionary *device) {
   [self tellChosen:running && !elsewhere ? device[@"serial"] ?: device[@"id"] : nil];
   _name.stringValue = device ? namedParts(device[@"name"] ?: @"")[0] : _devices.count ? @"Choose a device" : @"No device yet";
   _about.stringValue = device ? (elsewhere ? @"In a window of its own" : stateWords(device)) : _devices.count ? @"A phone starts only when you choose it." : @"Connect a phone with its cable, or make a simulator with +.";
-  _start.title = elsewhere ? @"Close That Window" : @"Start";
+  _start.title = MVWord(elsewhere ? @"Close That Window" : @"Start");
   if (device) [_bare setName:rowOf(device).title about:rowOf(device).detail];
   else [_bare setName:@"appdyno" about:nil];
   _start.hidden = !device || (running && !elsewhere) || [device[@"kind"] isEqual:@"phone"];

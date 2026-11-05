@@ -1,6 +1,10 @@
 // Words and controls of the hub's panes, at Apple's macOS sizes. Nothing here is vibrant: the window is usually behind the
 // one a person types in, and what is read in it stays as strong there as in front.
 #import "Window.h"
+#import "Words.h"
+
+// the Inspector's width, less what it leaves at its sides
+static const double kPaneWordsWide = 288;
 
 @interface MVLabel : NSTextField
 @end
@@ -8,6 +12,11 @@
 @implementation MVLabel
 - (BOOL)allowsVibrancy {
   return NO;
+}
+
+/// Words are put in the Mac's language here, where every word on a pane passes, whoever said it.
+- (void)setStringValue:(NSString *)value {
+  [super setStringValue:MVWord(value)];
 }
 @end
 
@@ -68,17 +77,18 @@ static void dress(NSTextField *field, MVStyle style) {
 }
 
 NSTextField *MVText(NSString *text, MVStyle style) {
-  NSTextField *field = [MVLabel labelWithString:text];
+  NSTextField *field = [MVLabel labelWithString:MVWord(text)];
   field.lineBreakMode = NSLineBreakByTruncatingTail;
   dress(field, style);
   return field;
 }
 
 NSTextField *MVWrappedText(NSString *text, MVStyle style) {
-  NSTextField *field = [MVLabel wrappingLabelWithString:text];
+  NSTextField *field = [MVLabel wrappingLabelWithString:MVWord(text)];
   field.selectable = NO;
   field.maximumNumberOfLines = 3;
-  field.lineBreakMode = NSLineBreakByTruncatingTail;
+  field.lineBreakMode = NSLineBreakByWordWrapping;
+  field.preferredMaxLayoutWidth = kPaneWordsWide;
   dress(field, style);
   return field;
 }

@@ -2,6 +2,7 @@
 // a bar along its foot while a measure runs. The line decides what is said, and the capsule shows it.
 #import "Viewer.h"
 #import "Window.h"
+#import "Words.h"
 
 static const double kHigh = 28, kMark = 10, kBar = 2, kStepSeconds = 0.15, kWordsSeconds = 0.15, kNoteSeconds = 4, kWidest = 340, kInset = 12;
 

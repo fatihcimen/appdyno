@@ -69,7 +69,7 @@ export const NEEDS = {
   },
   'not-connected': {
     title: 'The device is not connected',
-    fix: 'Connect it. The picture comes back by itself.',
+    fix: 'Connect it with a data cable: one that only charges shows nothing here. The picture comes back by itself.',
   },
   'simulator-off': {
     title: 'The simulator is off',

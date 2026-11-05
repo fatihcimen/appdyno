@@ -1,5 +1,6 @@
 // The sheet that makes a new simulator or emulator, from what the parent says can be made.
 #import "Window.h"
+#import "Words.h"
 
 @implementation MVNewDevice {
   NSPanel *_sheet;
@@ -22,7 +23,7 @@ static NSPopUpButton *popUp(NSArray<NSDictionary *> *rows) {
   _models = choices[@"models"] ?: @[];
   _systems = choices[@"systems"] ?: @[];
   _name = [NSTextField textFieldWithString:@""];
-  _name.placeholderString = [kind isEqual:@"simulator"] ? @"The model's name" : @"appdyno_emulator";
+  _name.placeholderString = [kind isEqual:@"simulator"] ? MVWord(@"The model's name") : @"appdyno_emulator";
   _model = popUp(_models);
   _os = popUp(_systems);
   // the newest comes last, and is the one a newest model runs on
@@ -30,15 +31,15 @@ static NSPopUpButton *popUp(NSArray<NSDictionary *> *rows) {
   NSTextField *(^caption)(NSString *) = ^(NSString *text) {
     return [NSTextField labelWithString:text];
   };
-  NSGridView *grid = [NSGridView gridViewWithViews:@[@[caption(@"Name"), _name], @[caption(@"Model"), _model], @[caption([kind isEqual:@"simulator"] ? @"iOS" : @"Android"), _os]]];
+  NSGridView *grid = [NSGridView gridViewWithViews:@[@[caption(MVWord(@"Name")), _name], @[caption(MVWord(@"Model")), _model], @[caption([kind isEqual:@"simulator"] ? @"iOS" : @"Android"), _os]]];
   grid.rowSpacing = 10;
   [grid columnAtIndex:0].xPlacement = NSGridCellPlacementTrailing;
-  NSButton *cancel = [NSButton buttonWithTitle:@"Cancel" target:self action:@selector(cancel:)];
+  NSButton *cancel = [NSButton buttonWithTitle:MVWord(@"Cancel") target:self action:@selector(cancel:)];
   cancel.keyEquivalent = @"\e";
-  NSButton *create = [NSButton buttonWithTitle:@"Create" target:self action:@selector(create:)];
+  NSButton *create = [NSButton buttonWithTitle:MVWord(@"Create") target:self action:@selector(create:)];
   create.keyEquivalent = @"\r";
   NSStackView *buttons = [NSStackView stackViewWithViews:@[cancel, create]];
-  NSTextField *title = [NSTextField labelWithString:[kind isEqual:@"simulator"] ? @"New Simulator" : @"New Emulator"];
+  NSTextField *title = MVText([kind isEqual:@"simulator"] ? @"New Simulator" : @"New Emulator", MVStyleTitle);
   title.font = [NSFont systemFontOfSize:15 weight:NSFontWeightSemibold];
   NSStackView *stack = [NSStackView stackViewWithViews:@[title, grid, buttons]];
   stack.orientation = NSUserInterfaceLayoutOrientationVertical;

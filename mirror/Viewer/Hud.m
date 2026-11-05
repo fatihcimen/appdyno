@@ -1,6 +1,7 @@
 // The live numbers beside the device: one glass card a measure, in one container, each with a line of its last minute
 // and its state in words and a symbol as well as a colour. What a device cannot give is a dash with the reason, never 0.
 #import "Window.h"
+#import "Words.h"
 
 enum { kHistory = 60, kLongest = 600 };
 static const double kCardHeight = 92, kLineHeight = 26;
@@ -60,6 +61,7 @@ NSNumber *MVReadingOf(NSDictionary *sample, NSString *field, NSNumber *pictureRa
 }
 
 NSString *MVReadingWords(double v, NSString *unit) {
+  if ([unit isEqual:@"%"]) return MVPercent(v);
   return v >= 100 || v == round(v) ? [NSString stringWithFormat:@"%.0f %@", v, unit] : [NSString stringWithFormat:@"%.1f %@", v, unit];
 }
 
@@ -89,7 +91,7 @@ NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight) {
   if (_count < _capacity) _count++;
   BOOL moved = NO;
   for (int i = 0; i < _capacity; i++) moved = moved || _values[i] > 0;
-  self.hidden = !moved && !self.stays;
+  if (!self.stays) self.hidden = !moved;
   self.needsDisplay = YES;
 }
 
@@ -108,6 +110,7 @@ NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight) {
   };
   [NSColor.separatorColor setStroke];
   NSBezierPath *base = [NSBezierPath bezierPath];
+  base.lineWidth = 0.5;
   [base moveToPoint:NSMakePoint(0, 0.5)];
   [base lineToPoint:NSMakePoint(box.size.width, 0.5)];
   [base stroke];
@@ -126,7 +129,7 @@ NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight) {
     else [line lineToPoint:p];
   }
   [(self.color ?: NSColor.controlAccentColor) setStroke];
-  line.lineWidth = 2;
+  line.lineWidth = 1.5;
   line.lineJoinStyle = NSLineJoinStyleRound;
   line.lineCapStyle = NSLineCapStyleRound;
   [line stroke];
@@ -161,10 +164,8 @@ NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight) {
 @end
 
 static NSTextField *small(NSString *text) {
-  NSTextField *field = [NSTextField labelWithString:text];
-  field.font = [NSFont systemFontOfSize:10.5 weight:NSFontWeightMedium];
-  field.textColor = NSColor.secondaryLabelColor;
-  field.lineBreakMode = NSLineBreakByTruncatingTail;
+  NSTextField *field = MVText(text, MVStyleSub);
+  field.font = [NSFont systemFontOfSize:11 weight:NSFontWeightMedium];
   return field;
 }
 

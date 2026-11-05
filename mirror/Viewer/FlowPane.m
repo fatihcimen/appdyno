@@ -1,6 +1,7 @@
 // The Flow pane: what a person's clicks have written so far, and what is under the pointer. The parent reads the device
 // and keeps the recording: this draws what it is told, and says what a click is to do.
 #import "Window.h"
+#import "Words.h"
 
 static const double kBetween = 10;
 // the Inspector's width, less what its pane and this stack leave at the sides
@@ -21,13 +22,12 @@ static NSString *clickNamed(NSInteger segment) {
 
 - (instancetype)initWithFrame:(NSRect)frame target:(id)target {
   if ((self = [super initWithFrame:frame])) {
-    _record = [NSButton buttonWithTitle:@"Record" image:MVControlImage(@"recordFlow") ?: [NSImage new] target:target action:@selector(control:)];
+    _record = [NSButton buttonWithTitle:MVWord(@"Record") image:MVControlImage(@"recordFlow") ?: [NSImage new] target:target action:@selector(control:)];
     _record.identifier = @"recordFlow";
     _record.accessibilityLabel = MVControlTitle(@"recordFlow");
     _record.imagePosition = NSImageLeading;
     _state = MVPaneNote(@"Each click is written by the element it touched.");
-    _what = [NSTextField labelWithString:@"Nothing yet"];
-    _what.font = [NSFont systemFontOfSize:13 weight:NSFontWeightSemibold];
+    _what = MVText(@"Nothing yet", MVStyleStrong);
     _what.lineBreakMode = NSLineBreakByTruncatingTail;
     _ids = MVPaneNote(@"Move the pointer over the device.");
     _writes = MVPaneNote(@"");
@@ -37,9 +37,9 @@ static NSString *clickNamed(NSInteger segment) {
     _contrast = MVPaneNote(@"");
     _contrast.lineBreakMode = NSLineBreakByWordWrapping;
     _contrast.preferredMaxLayoutWidth = kWordsWide;
-    _click = [NSSegmentedControl segmentedControlWithLabels:@[@"Touches", @"Copies", @"Asserts"] trackingMode:NSSegmentSwitchTrackingSelectOne target:self action:@selector(clickChosen:)];
+    _click = [NSSegmentedControl segmentedControlWithLabels:@[MVWord(@"Touches"), MVWord(@"Copies"), MVWord(@"Asserts")] trackingMode:NSSegmentSwitchTrackingSelectOne target:self action:@selector(clickChosen:)];
     _click.selectedSegment = 0;
-    _click.accessibilityLabel = @"What a click on the device does";
+    _click.accessibilityLabel = MVWord(@"What a click on the device does");
     _steps = [MVList new];
     _look = @[];
     NSStackView *stack = [NSStackView stackViewWithViews:@[_record, _state, MVPaneHeading(@"Under the pointer"), _what, _ids, _writes, _contrast, MVPaneHeading(@"A click on the device"), _click, MVPaneHeading(@"Steps"), _steps]];
@@ -103,7 +103,7 @@ static NSString *clickNamed(NSInteger segment) {
 
 - (void)show:(NSDictionary *)m {
   BOOL on = [m[@"on"] boolValue], starting = [m[@"starting"] boolValue];
-  _record.title = on ? @"Stop" : starting ? @"Starting" : @"Record";
+  _record.title = MVWord(on ? @"Stop" : starting ? @"Starting" : @"Record");
   _record.enabled = !starting;
   _record.contentTintColor = on ? NSColor.systemRedColor : nil;
   NSArray<NSString *> *lines = [m[@"lines"] isKindOfClass:NSArray.class] ? m[@"lines"] : @[];
