@@ -210,7 +210,12 @@ export class AndroidSettings implements DeviceSettings {
       case 'increase_contrast':
         if (value !== 'on' && value !== 'off')
           throw new DeviceError('INVALID_ARGUMENT', `${name}: on or off, not ${value}`);
-        await this.sh(`settings put secure ${HIGH_CONTRAST} ${value === 'on' ? 1 : 0}`);
+        // off is the key gone, as a device that never had it left it
+        await this.sh(
+          value === 'on'
+            ? `settings put secure ${HIGH_CONTRAST} 1`
+            : `settings delete secure ${HIGH_CONTRAST}`,
+        );
         return;
       case 'reduce_transparency':
         throw new DeviceError('UNSUPPORTED', NO_TRANSPARENCY);

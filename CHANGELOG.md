@@ -22,7 +22,7 @@
 - `screenshot` `points`: an image where 1 pixel is 1 tap unit, with no scale to apply.
 - `set_location` `clear: true` ends a fixed position, on every kind of device.
 - `gesture` `drag` takes `holdMs`: a press before it moves, which lifts a list row or an icon.
-- `device_setting` takes `increase_contrast` and `reduce_transparency`, read back and put back at the end. On Android the first is high contrast text, and the second refuses: it has no such switch.
+- `device_setting` takes `increase_contrast` and `reduce_transparency`, read back and put back at the end. On Android the first is high contrast text, and the second refuses: it has no such switch. Off on Android takes the key away, as a device that never had it left it.
 - `set_orientation` takes `landscape_left`, `landscape_right` and `upside_down`, where `landscape` was. An iPhone with Face ID does not turn upside down: the answer says no change was seen.
 - `steps` takes any tool but `steps` and `flow`, 30 steps, and answers with what each step answered, images in order. A touch reads the screen with `read` on its step, or last; an image asked for at a step is given, changed or not.
 - A Face ID, fingerprint or passcode prompt is said in the answer of the call that met it, on Android by the system prompt's own ids in any language, on iOS from the home screen app's words, which `screen`, `screenshot`, a launch and any action that changed nothing look at. Android's permission controller pages no longer read as wanting a person for mentioning a password.
