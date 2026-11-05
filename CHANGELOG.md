@@ -28,7 +28,7 @@
 - `screenshot` `file`: the whole picture, `.png` or `.jpg`, or into a folder under a new name. What is there stays unless `overwrite`.
 - `launch_app` `language`: restarts the app in that language, for that launch on iOS, and on Android as the app's own language, put back with the other conditions.
 - `press_key` takes `mute` and `siri`: on Android the media mute and the assistant, on an iPhone simulator the Action button and the side button held. On an iPhone `mute` needs an Action button, doing what it is set to, and `siri` refuses and names `appdyno mirror`.
-- `screenshot` `points`: an image where 1 pixel is 1 tap unit, with no scale to apply.
+- `screenshot` `points`: an image where 1 pixel is 1 tap unit, with no scale to apply. `width`: an image that wide in the answer, up to the screen's own.
 - `set_location` `clear: true` ends a fixed position, on every kind of device.
 - `gesture` `drag` takes `holdMs`: a press before it moves, which lifts a list row or an icon.
 - `device_setting` takes `increase_contrast` and `reduce_transparency`, read back and put back at the end. On Android the first is high contrast text, and the second refuses: it has no such switch. Off on Android takes the key away, as a device that never had it left it.

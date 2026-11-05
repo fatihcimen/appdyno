@@ -816,7 +816,14 @@ describe('gestures, keys, clipboard', () => {
     });
     await call('screenshot', { points: true });
     await call('screenshot');
-    expect(asked).toMatchObject([{ maxPx: 2400 }, { maxPx: 800 }]);
+    await call('screenshot', { width: 540 });
+    await call('screenshot', { width: 8_000 });
+    expect(asked).toMatchObject([
+      { maxPx: 2400 },
+      { maxPx: 800 },
+      { maxPx: 1200 },
+      { maxPx: 8_192 },
+    ]);
   });
 
   it('launches in a language, restarting the app, and refuses what is none', async () => {

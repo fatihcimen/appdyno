@@ -73,6 +73,8 @@ describe.skipIf(!ANDROID)('small tools on Android', () => {
     expect(shell('dumpsys', 'location')).not.toContain('[mock]');
   });
 
+  it('takes a picture of a width, and no wider than the screen', () => atWidth(call));
+
   it('saves a picture at the size of the screen', async () => {
     // a phone's screen is a person's: no picture of it stays
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
@@ -96,6 +98,21 @@ const language = async (call: Call) => {
   ok(await call('open_link', { url: 'appdyno-fixture://open/locale' }));
   const seen = ok(await call('find', { id: 'result' })).data.matches[0]!;
   return seen.label;
+};
+
+const inPoints = async (call: Call) => {
+  const r = ok(await call('screenshot', { points: true }));
+  const { w, h } = ok(await call('device_info')).data.screen;
+  expect([r.data.width, r.data.height]).toEqual([w, h]);
+  expect(r.data.scale).toBe(1);
+};
+
+const atWidth = async (call: Call) => {
+  expect(Math.abs(ok(await call('screenshot', { width: 200 })).data.width - 200)).toBeLessThan(2);
+  const { w, density } = ok(await call('device_info')).data.screen;
+  // Android's units are pixels already, and its density is in dpi
+  const full = density < 10 ? Math.round(w * density) : w;
+  expect(ok(await call('screenshot', { width: 8_000 })).data.width).toBe(full);
 };
 
 /** A landscape and back, seen in where the app puts a row. */
@@ -229,12 +246,9 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
     expect((await call('screenshot', { file })).text).toContain('is there already');
   });
 
-  it('takes a picture whose pixels are points', async () => {
-    const r = ok(await call('screenshot', { points: true }));
-    const { w, h } = ok(await call('device_info')).data.screen;
-    expect([r.data.width, r.data.height]).toEqual([w, h]);
-    expect(r.data.scale).toBe(1);
-  });
+  it('takes a picture whose pixels are points', () => inPoints(call));
+
+  it('takes a picture of a width, and no wider than the screen', () => atWidth(call));
 
   it('holds a drag before it moves: the pad sees the same travel, later', async () => {
     ok(await call('open_link', { url: 'appdyno-fixture://open/gestures' }));
@@ -310,12 +324,9 @@ describe.skipIf(!IPHONE)('small tools on an iPhone', () => {
     expect(r.data.width).toBe(Math.round(w * density));
   });
 
-  it('takes a picture whose pixels are points', async () => {
-    const r = ok(await call('screenshot', { points: true }));
-    const { w, h } = ok(await call('device_info')).data.screen;
-    expect([r.data.width, r.data.height]).toEqual([w, h]);
-    expect(r.data.scale).toBe(1);
-  });
+  it('takes a picture whose pixels are points', () => inPoints(call));
+
+  it('takes a picture of a width, and no wider than the screen', () => atWidth(call));
 
   it('holds a drag before it moves: the pad sees the same travel, later', async () => {
     ok(await call('open_link', { url: 'appdyno-fixture://open/gestures' }));

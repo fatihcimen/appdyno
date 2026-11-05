@@ -234,7 +234,7 @@ export function actOps(
     defineOp({
       name: 'steps',
       title: 'Steps',
-      description: `A sequence in one call, also across screens: at most ${MAX_STEPS}, each { action, ...the arguments of the tool of that name }; any tool but steps and flow, and double_tap, long_press, drag as gesture's. Stops at the first failure, saying which and why. Each step's answer comes back, images too; a touch reads the screen only with read on its step, or last.`,
+      description: `A sequence in one call: at most ${MAX_STEPS}, each { action, ...the arguments of the tool of that name }; any tool but steps and flow, and double_tap, long_press, drag as gesture's. Stops at the first failure, saying which and why. Each step's answer comes back, images too; a touch reads the screen only with read on its step, or last.`,
       input: z
         .object({
           steps: z

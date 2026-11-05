@@ -23,6 +23,7 @@ import { webLines } from './web.js';
 /** The fixtures' and Settings' smallest text still reads at this size and quality, and an answer costs half as much. */
 const SHOT_PX = 800;
 const SHOT_QUALITY = 60;
+const MAX_SHOT_PX = 8_192;
 
 /** The whole picture in a file: a folder gets a new name, and what is there stays unless asked. */
 async function saveShot(s: Session, file: string, overwrite: boolean) {
@@ -156,30 +157,40 @@ export function readOps(
     defineOp({
       name: 'screenshot',
       title: 'Screenshot',
-      description: `An image of the screen (at most ${SHOT_PX} px) and the scale from its pixels to tap units; only for a visual judgement. A second one of an unchanged screen is refused. points: 1 pixel is 1 tap unit. file: full size into a .png or .jpg, or a folder; overwrite replaces.`,
+      description: `An image of the screen (at most ${SHOT_PX} px unless width) and the scale from its pixels to tap units; only for a visual judgement. A second of an unchanged screen is refused. points: 1 pixel is 1 tap unit. file: full size into a .png or .jpg, or a folder; overwrite replaces.`,
       input: z
         .object({
           points: z.boolean().optional(),
+          width: z.number().int().min(64).max(8_192).optional(),
           file: z.string().max(1_000).optional(),
           overwrite: z.boolean().optional(),
         })
         .strict(),
       output: ScreenshotOut,
       annotations: READ,
-      run: async ({ points, file, overwrite }) => {
+      run: async ({ points, width, file, overwrite }) => {
         const s = await ctx.session();
         if (file) return saveShot(s, file, overwrite === true);
-        const layout = s.fresh ? `${!!points} ${screenStructure(s.fresh.list)}` : undefined;
+        const layout = s.fresh
+          ? `${!!points} ${width} ${screenStructure(s.fresh.list)}`
+          : undefined;
         if (s.shot && s.shot.at === s.version && layout !== undefined && s.shot.hash === layout)
           throw new ToolError(
             'the screen has not changed since the last image: that image still holds',
             'INVALID_ARGUMENT',
           );
         const size = s.device.hello?.screen;
+        const wide = width ?? (points ? size?.w : undefined);
         const { meta, data } = await s.device.screenshot({
           format: 'jpeg',
           quality: SHOT_QUALITY,
-          maxPx: points && size ? Math.max(size.w, size.h) : SHOT_PX,
+          // a device's limit is on the long side
+          maxPx: wide
+            ? Math.min(
+                MAX_SHOT_PX,
+                size ? Math.round((wide * Math.max(size.w, size.h)) / size.w) : wide,
+              )
+            : SHOT_PX,
         });
         const look = await s.current().catch(() => undefined);
         const fg = look ? await noticed(s, look) : '';
