@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Device, InputEvent } from '@appdyno/core';
 import { afterAll, describe, expect, it, vi } from 'vitest';
+import type { JourneyAnswer } from '../src/flow/journey.js';
 import { windowControls, windowLook, type WindowSession } from '../src/mirror/controls.js';
 
 const home = mkdtempSync(join(tmpdir(), 'appdyno-controls-'));
@@ -55,6 +56,10 @@ function fixture(platform: 'ios' | 'android', device: Partial<Device> = {}, stre
       return measured;
     }),
     scroll: vi.fn(async () => measured),
+    journey: vi.fn(async (_file: string, _app: string | undefined) => ({
+      said: measured,
+      ran: { totalMs: 412 } as JourneyAnswer,
+    })),
     dashboard: vi.fn(async () => undefined),
   };
   const controls = windowControls(whole, hardware, () => session, measures);
@@ -298,6 +303,38 @@ describe("a window's measures", () => {
     controls.onWindow({ op: 'control', name: 'measureScroll' });
     await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
     expect(answer(told)).toMatchObject({ ok: true });
+  });
+
+  it('run a journey as any other, and hand back what it ran', async () => {
+    const { controls, told, measures } = fixture('ios', yours as unknown as Partial<Device>);
+    expect(await controls.journey('x.flow')).toEqual({ totalMs: 412 });
+    expect(measures.journey.mock.calls[0]!.slice(0, 2)).toEqual(['x.flow', 'dev.app']);
+    expect(answer(told)).toMatchObject({ ok: true, value: '412 ms' });
+  });
+
+  it("give a journey no app of the system's, which a flow would stop", async () => {
+    const { controls, measures } = fixture('ios', {
+      apps: { listApps: async () => [] },
+    } as unknown as Partial<Device>);
+    await controls.journey('x.flow');
+    expect(measures.journey.mock.calls[0]![1]).toBeUndefined();
+  });
+
+  it('say why a journey did not run, and hand back nothing', async () => {
+    const { controls, told, measures } = fixture('ios', yours as unknown as Partial<Device>);
+    measures.journey.mockRejectedValueOnce(new Error('no text "Send" on the screen'));
+    expect(await controls.journey('x.flow')).toBeUndefined();
+    expect(answer(told)).toMatchObject({
+      title: 'No measure',
+      detail: 'no text "Send" on the screen',
+    });
+  });
+
+  it('take a journey from the window with the file a person chose', async () => {
+    const { controls, told, measures } = fixture('ios', yours as unknown as Partial<Device>);
+    controls.onWindow({ op: 'control', name: 'journey', file: 'chosen.flow' });
+    await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
+    expect(measures.journey.mock.calls[0]![0]).toBe('chosen.flow');
   });
 
   it('run one at a time', async () => {

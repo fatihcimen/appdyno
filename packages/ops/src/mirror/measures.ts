@@ -3,8 +3,10 @@ import { inCall, type Device } from '@appdyno/core';
 import { writeDashboard } from '@appdyno/perf';
 import { claim, release } from '../claims.js';
 import { ServerContext } from '../context.js';
+import { JOURNEY_ITERATIONS, type JourneyAnswer } from '../flow/journey.js';
 import { perfLaunchOp } from '../perf/launch.js';
 import { perfScrollOp } from '../perf/scroll.js';
+import { opsFor } from '../registry.js';
 import type { ToolResult } from '../tool.js';
 
 /** What a window's pane says of a measure. */
@@ -21,6 +23,12 @@ export type MeasureWords = {
 export type WindowMeasures = {
   launch(app: string, say: (line: string) => void): Promise<MeasureWords>;
   scroll(app: string, say: (line: string) => void): Promise<MeasureWords>;
+  /** A flow's journey, kept as any is: what a window says of it, and all of it for one to compare. */
+  journey(
+    file: string,
+    app: string | undefined,
+    say: (line: string) => void,
+  ): Promise<{ said: MeasureWords; ran: JourneyAnswer }>;
   dashboard(): Promise<void>;
 };
 
@@ -97,6 +105,29 @@ export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasur
           jank === undefined ? 'too few frames' : `${Math.round(jank)}% jank, ${out.frozen} frozen`,
         flagged: out.findings.length > 0,
         ...judged(app, `${out.rounds.length} rounds`, out),
+      };
+    },
+    journey: async (file, app, say) => {
+      const flow = opsFor(own).flow!;
+      const input = flow.input.parse({ action: 'run', file, iterations: JOURNEY_ITERATIONS });
+      const data = await held(say, async () => {
+        // a flow that names no app takes the one in front, so that two builds can run one file
+        (await own.session()).appId = app;
+        return flow.handler(input) as Promise<ToolResult<unknown>>;
+      });
+      const { journey: ran } = flow.output.parse(data) as { journey?: JourneyAnswer };
+      if (!ran) throw new Error('that flow kept no journey');
+      return {
+        ran,
+        said: {
+          title: 'Journey',
+          value: `${Math.round(ran.totalMs)} ms`,
+          flagged: false,
+          ...judged(ran.scenario, `median of ${ran.iterations}`, {
+            virtualDevice: device.virtual,
+            noise: ran.noise,
+          }),
+        },
       };
     },
     dashboard: async () => {

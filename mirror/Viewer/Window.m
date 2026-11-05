@@ -342,6 +342,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 }
 
 - (void)showMeasure:(NSDictionary *)message {
+  if (!_inspecting) [self showPane:MVPanePerf];
   if (![message[@"op"] isEqual:@"measured"]) return [_inspector.perf showMeasuring:message[@"line"] ?: @""];
   [_inspector.perf showMeasured:message];
 }
@@ -391,6 +392,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
   if ([name isEqual:@"hud"]) return [self toggleHud];
   if ([@[@"screenshot", @"copy", @"record", @"recordFlow", @"reconnect", @"measureLaunch", @"measureScroll", @"dashboard"] containsObject:name]) return MVEmit(@{@"op": @"control", @"name": name});
   if ([name isEqual:@"paste"]) return [_view paste:self];
+  if ([name isEqual:@"journey"]) return [self askJourney];
   [_view pressButton:name];
 }
 
@@ -400,6 +402,18 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
   if ([object isEqual:@"frame"]) [(NSMenuItem *)item setState:_frame.showsFrame ? NSControlStateValueOn : NSControlStateValueOff];
   if ([object isEqual:@"inspector"]) [(NSMenuItem *)item setState:_inspecting ? NSControlStateValueOn : NSControlStateValueOff];
   return YES;
+}
+
+- (void)askJourney {
+  NSOpenPanel *panel = [NSOpenPanel openPanel];
+  panel.message = @"A flow to run and measure";
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+  panel.allowedFileTypes = @[@"flow"];
+#pragma clang diagnostic pop
+  [panel beginSheetModalForWindow:_window completionHandler:^(NSModalResponse answer) {
+    if (answer == NSModalResponseOK) MVEmit(@{@"op": @"control", @"name": @"journey", @"file": panel.URL.path ?: @""});
+  }];
 }
 
 - (NSWindow *)nsWindow {

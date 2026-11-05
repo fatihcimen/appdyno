@@ -105,7 +105,7 @@ static MVTrend *trendOf(const MVTrendRow *row) {
       [lines addObject:_trends.lastObject.view];
     }
     _app = note(@"Open an app, then measure it. It restarts.");
-    _measures = @[button(@"measureLaunch", target), button(@"measureScroll", target)];
+    _measures = @[button(@"measureLaunch", target), button(@"measureScroll", target), button(@"journey", target)];
     NSStackView *measures = [NSStackView stackViewWithViews:_measures];
     measures.distribution = NSStackViewDistributionFillEqually;
     _spinner = [NSProgressIndicator new];

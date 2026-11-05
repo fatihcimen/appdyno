@@ -16,7 +16,7 @@ import type {
   SystemSwipe,
   ViewerMessage,
 } from '@appdyno/core';
-import type { MeasureWords, WindowMeasures } from './measures.js';
+import type { WindowMeasures } from './measures.js';
 
 const SWIPES: Record<string, SystemSwipe> = SYSTEM_SWIPES;
 const RECORD_MAX_S = 3_600;
@@ -180,35 +180,57 @@ export function windowControls(
   /** One at a time: a window quickly closed must not leave a source that started late running. */
   const turnReadings = () => (readingsTurn = readingsTurn.then(followReadings, followReadings));
 
-  /** A real measure of the app in front, by the tools an agent calls: what is the system's is not measured. */
-  const measure = async (work: WindowMeasures['launch']) => {
-    if (measuring) return note('A measure is running');
+  const tellMeasured = (m: Record<string, unknown>) => session().tell({ op: 'measured', ...m });
+  const saying = (line: string) => session().tell({ op: 'measuring', line });
+
+  /** A measure has the device to itself: nothing reads over what it counts, and no second one starts. */
+  const alone = async <T>(work: () => Promise<T>) => {
+    if (measuring) {
+      note('A measure is running');
+      return undefined;
+    }
     measuring = true;
-    const tell = (m: Record<string, unknown>) => session().tell({ op: 'measured', ...m });
     try {
-      session().tell({ op: 'measuring', line: 'Starting the device agent' });
+      saying('Starting the device agent');
       await turnReadings();
       await ready();
-      const { app, mine } = await frontApp(device);
-      if (!mine) {
-        const front = app ?? 'Nothing that can be named';
-        tell({
-          title: 'Open an app first',
-          detail: `${front} is in front, and is not an app of yours`,
-        });
-        return;
-      }
-      const said: MeasureWords = await work(app!, (line) =>
-        session().tell({ op: 'measuring', line }),
-      );
-      tell({ ok: true, ...said });
+      return await work();
     } catch (e) {
-      tell({ title: 'No measure', detail: (e as Error).message });
+      tellMeasured({ title: 'No measure', detail: (e as Error).message });
+      return undefined;
     } finally {
       measuring = false;
       await turnReadings();
     }
   };
+
+  /** A real measure of the app in front, by the tools an agent calls: what is the system's is not measured. */
+  const measure = (work: WindowMeasures['launch']) =>
+    alone(async () => {
+      const { app, mine } = await frontApp(device);
+      if (!app || !mine) {
+        const front = app ?? 'Nothing that can be named';
+        tellMeasured({
+          title: 'Open an app first',
+          detail: `${front} is in front, and is not an app of yours`,
+        });
+        return;
+      }
+      tellMeasured({ ok: true, ...(await work(app, saying)) });
+    });
+
+  /** A flow as a measure, with what a window beside this one needs to compare it. */
+  const journey = (file: string) =>
+    alone(async () => {
+      const front = await frontApp(device).catch(() => undefined);
+      const { said, ran } = await measures.journey(
+        file,
+        front?.mine ? front.app : undefined,
+        saying,
+      );
+      tellMeasured({ ok: true, ...said });
+      return ran;
+    });
 
   const listApps = async () => {
     session().tell({ op: 'apps', apps: await device.apps.listApps(hardware?.systemApps === true) });
@@ -242,6 +264,8 @@ export function windowControls(
       return true;
     },
 
+    journey,
+
     /** A control of the window that is no input: a person's, however input is set. */
     onWindow(m: ViewerMessage) {
       if (m.op === 'perfWatch') {
@@ -258,8 +282,10 @@ export function windowControls(
       else if (m.name === 'record') trying(record);
       else if (m.name === 'measureLaunch') trying(() => measure(measures.launch));
       else if (m.name === 'measureScroll') trying(() => measure(measures.scroll));
+      else if (m.name === 'journey') trying(() => journey(String(m.file)).then(() => undefined));
       else if (m.name === 'dashboard') trying(measures.dashboard);
-      else trying(() => screenshot(m.name === 'copy'));
+      else if (m.name === 'screenshot' || m.name === 'copy')
+        trying(() => screenshot(m.name === 'copy'));
     },
 
     /** A movie still being made ends with the window, and keeps what it has. */

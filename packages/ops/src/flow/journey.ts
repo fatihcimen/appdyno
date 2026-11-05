@@ -162,6 +162,7 @@ export async function measureJourney(
       scenario: name,
       iterations: passed,
       totalMs: medianOf(reader.held, JOURNEY_TOTAL)!,
+      samples: reader.held.get(JOURNEY_TOTAL)!.samples,
       steps,
       ...(unread.length && {
         note: `a step's time only for ${unread.join(' and ')}: this device has no quick read of it between two steps`,

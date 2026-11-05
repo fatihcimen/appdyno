@@ -162,6 +162,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
     if (m[@"button"]) return [_window pokeButton:m[@"button"]];
     if ([m[@"done"] boolValue]) return [_window.overlay done:self];
     if (m[@"pane"]) return [_window showPane:[m[@"pane"] integerValue]];
+    if (m[@"journey"]) return MVEmit(@{@"op": @"control", @"name": @"journey", @"file": m[@"journey"]});
     if (m[@"control"]) return [_window perform:m[@"control"]];
     if (m[@"click"]) return [_window chooseClick:m[@"click"]];
     double x = [m[@"x"] doubleValue], y = [m[@"y"] doubleValue];

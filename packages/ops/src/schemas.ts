@@ -256,6 +256,8 @@ export const FlowOut = z.object({
       scenario: z.string(),
       iterations: z.number().int(),
       totalMs: z.number(),
+      /** The whole of each iteration, for a test against another run. */
+      samples: z.array(z.number()),
       steps: z.array(
         z.object({
           step: z.string(),
