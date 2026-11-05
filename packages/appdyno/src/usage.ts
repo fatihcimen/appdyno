@@ -87,6 +87,7 @@ export const COMMANDS = {
       out: value('file'),
       'max-load': value('N'),
     },
+    what: 'time a driver on an Android device, against the others named',
   },
   mirror: {
     takes: '[open]',

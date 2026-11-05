@@ -49,6 +49,10 @@ describe('usage', () => {
     expect(helpFor(undefined, [])).toBeUndefined();
   });
 
+  it('says bench is for an Android device', () => {
+    expect(helpFor('bench', ['--help'])).toContain('Android');
+  });
+
   it('says --allow-devices on what takes it', () => {
     expect(line('mirror')).toContain('[--allow-devices RE]');
     expect(line('hub')).toContain('[--allow-devices RE]');

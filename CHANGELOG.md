@@ -3,6 +3,7 @@
 ## Unreleased
 
 - A window keeps its pictures through a decoder's stall on a busy Mac: pictures already decoding were thrown away with the frame that did not fit, and a stream's first burst could leave a window black until the next key frame.
+- `bench` says it is for an Android device, in its help and to an iOS one, where it spoke of adb.
 - `perf baseline` counts a run once, takes `--last`, and says how many runs it holds of the 3 a comparison needs. The README's lines left one run in it, so that a regression could only be `few-samples`.
 - `perf compare --device-class` with no runs of that class says which classes have them.
 - `scroll_to` and `swipe` `exact` move a row across a page: the finger went through the page's middle, whatever x,y said, and a banner changing by itself was called the list moving.

@@ -314,6 +314,10 @@ async function main(): Promise<number> {
         err('--serial is required (never a default: other devices may be attached)');
         return 2;
       }
+      if (appleProvider().handles(serial)) {
+        err(`bench drives an Android device: ${serial} is an iOS one`);
+        return 2;
+      }
       const maxLoad = Number(values['max-load'] ?? 4);
       if (loadavg()[0]! > maxLoad) {
         err(
