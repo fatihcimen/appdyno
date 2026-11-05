@@ -16,17 +16,19 @@ const ok = <A extends Answer>(r: A) => {
 describe.skipIf(!SIMULATOR)('a simulator of a model', () => {
   const simctl = new Simctl();
   let made: string | undefined;
+  const { call, ctx } = opsOn(appleProvider(), SIMULATOR!, 'dev.appdyno.fixture');
   afterAll(async () => {
     if (!made) return;
+    await ctx.forget(made);
     await simctl.shutdown(made);
     await simctl.exec(['delete', made]);
   }, 240_000);
 
   it('is created on a runtime that runs it, and started', async () => {
-    const { call } = opsOn(appleProvider(), SIMULATOR!, 'dev.appdyno.fixture');
     const r = ok(await call('simulator', { action: 'create', name: 'iPhone SE (3rd generation)' }));
     made = r.data.serial;
     expect(await simctl.state(made!)).toBe('Booted');
+    expect(ok(await call('device_info')).data.serial).toBe(made);
     expect(r.text).toContain(`xcrun simctl delete ${made}`);
     const none = await call('simulator', { action: 'create', name: 'Nokia 3310' });
     expect(none.data.code).toBe('NOT_FOUND');

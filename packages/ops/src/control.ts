@@ -210,7 +210,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
       name: 'simulator',
       title: 'Simulators and emulators',
       description:
-        'Only on request. list (what can be started), boot (name: its id or name), create (name: an iOS model; starts it), shutdown (name; none: only those this tool started).',
+        'Only on request. list (what can be started), boot (name: its id or name), create (name: an iOS model; starts and selects it), shutdown (name; none: those this tool started).',
       input: z
         .object({
           action: z.enum(['list', 'boot', 'create', 'shutdown']),
@@ -250,7 +250,8 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
           reportProgress(`starting ${device}`);
           const serial = await maker.boot(id);
           updateState(startedFile(), Started, (ids = []) => [...ids, id]);
-          const t = `a new ${device} is up as ${serial}: xcrun simctl delete ${id} removes it`;
+          await ctx.use(serial);
+          const t = `a new ${device} is up and selected as ${serial}: xcrun simctl delete ${id} removes it`;
           return reply(t, { done: t, serial });
         }
         if (action === 'boot') {
@@ -298,7 +299,7 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
     defineOp({
       name: 'clipboard',
       title: 'Clipboard',
-      description: 'Read the clipboard; with text, put it there (for paste tests).',
+      description: 'Read the clipboard; with text, put it there.',
       input: z.object({ text: z.string().min(1).max(2_000).optional() }).strict(),
       output: DoneOut,
       annotations: ACT,

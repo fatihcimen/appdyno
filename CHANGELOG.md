@@ -24,7 +24,7 @@
 - `screenshot` keeps to its size on an iPhone: the phone's own service has one size, and it gave the whole screen whatever was asked.
 - Notification Center on an iPhone reads as what it is: it has the lock screen's date, and a read took it for the lock screen and pressed home.
 - `app` `install` takes an `.ipa`, and says when a build is for another kind of device than this one, before trying it.
-- `simulator` `create`: a new iOS simulator of a model, on the newest runtime that runs it, started and counted among those this tool started. An Android emulator refuses, naming what makes one.
+- `simulator` `create`: a new iOS simulator of a model, on the newest runtime that runs it, started, selected for the calls that follow, and counted among those this tool started. An Android emulator refuses, naming what makes one.
 - `screenshot` `file`: the whole picture, `.png` or `.jpg`, or into a folder under a new name. What is there stays unless `overwrite`.
 - `launch_app` `language`: restarts the app in that language, for that launch on iOS, and on Android as the app's own language, put back with the other conditions.
 - `press_key` takes `mute` and `siri`: on Android the media mute and the assistant, on an iPhone simulator the Action button and the side button held. On an iPhone `mute` needs an Action button, doing what it is set to, and `siri` refuses and names `appdyno mirror`.

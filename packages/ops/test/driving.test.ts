@@ -1150,7 +1150,19 @@ describe('simulators and emulators', () => {
       this.log.push(`shutdown ${id}`);
       this.all.find((d) => d.id === id)!.state = 'stopped';
     };
+    create = async () => {
+      this.all.push({ id: 'C', name: 'new', state: 'stopped' });
+      return 'C';
+    };
   }
+
+  it('selects the one it creates, so that the next call goes to it', async () => {
+    const fleet = new Fleet();
+    const { call, ctx } = await connect(new FakeDevice(), { virtual: fleet });
+    const r = await call('simulator', { action: 'create', name: 'iPhone 17' });
+    expect(r.text).toContain('selected as C');
+    expect(ctx.selected).toBe('C');
+  });
 
   it('boots only on request, and shuts down only what it started unless named', async () => {
     const fleet = new Fleet();
