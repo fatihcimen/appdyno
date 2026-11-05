@@ -4,7 +4,7 @@ import { loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, describe, expect, it } from 'vitest';
-import { Adb, androidProvider, videoStamps } from 'appdyno';
+import { Adb, androidProvider, appleProvider, sleep as pause, videoStamps } from 'appdyno';
 import { opsOn } from './helpers.js';
 import type { Timeline } from '@appdyno/perf';
 
@@ -102,4 +102,39 @@ describe.skipIf(!serial)('a timeline of a journey', () => {
       await adb(`run-as ${APP} rm -f files/sleep_ms`);
     }
   }, 180_000);
+});
+
+const udid = process.env.APPDYNO_IOS_UDID;
+
+/** The same journey on a simulator, where everything but the video is on one clock already. */
+describe.skipIf(!udid)('a timeline on a simulator', () => {
+  const t = opsOn(appleProvider(), udid!, APP);
+  afterAll(async () => {
+    await (await t.ctx.session()).device.stopAgent();
+    t.ctx.close();
+  });
+
+  it('holds the stall, and says what a simulator cannot give', async () => {
+    const s = await t.ctx.session();
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-timeline-'));
+    const started = await t.call('report', { action: 'timeline', dir });
+    expect(started.error, started.text).toBe(false);
+    await s.device.openUrl('appdyno-fixture://open/list_stall', APP);
+    await pause(1_000);
+    for (let i = 0; i < 4; i++) await t.call('swipe', { direction: 'up' });
+    await pause(1_000);
+    const done = await t.call('report', { action: 'stop' });
+    expect(done.error, done.text).toBe(false);
+    console.log(done.text, 'host load', loadavg()[0]);
+    const page = pageData(done.data.timeline!);
+    const worst = page.frames.marks.reduce((a, b) => (b.ms > a.ms ? b : a));
+    console.log('worst frame', worst, 'clock', JSON.stringify(page.clock));
+    expect(worst.ms).toBeGreaterThan(900);
+    // a simulator runs on this Mac's clock, and that is read as well, not assumed
+    expect(Math.abs(page.clock.offsetMs)).toBeLessThanOrEqual(page.clock.boundMs);
+    expect(page.clock.sources.find((c) => c.row === 'Video')!.withinMs).toBe(150);
+    expect(page.touches.absent).toContain('Steps are what this tool sent');
+    expect(page.steps.marks.map((m) => m.name)).toContain('swipe');
+    expect(page.memory.marks.length).toBeGreaterThan(0);
+  }, 240_000);
 });

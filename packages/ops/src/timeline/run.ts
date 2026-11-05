@@ -24,8 +24,8 @@ import { assemble, NO_REQUESTS, STAMPED_VIDEO_MS, type Gathered } from './gather
 
 /** One segment of a recording keeps its frames' own times: past it they are lost in the join. */
 const MAX_SECONDS = 180;
-/** A bound by reason, until a run measures one: what a tool's own word for a recording's start is worth. */
-const UNSTAMPED_VIDEO_MS = 500;
+/** What is said of a recorder no one has measured: a reason, not a reading, and the page says it is one. */
+const UNMEASURED_VIDEO_MS = 1_000;
 const MAX_LOG_LINES = 2_000;
 
 export type TimelineDone = { file: string; bytes: number; videoInside: boolean; text: string };
@@ -47,19 +47,20 @@ async function requestsOf(s: Session): Promise<Gathered['requests']> {
     : { entries: [], why: `the capture by ${c.via} counts traffic, and names no request` };
 }
 
-/** The video as the page takes it: on the device's clock by its own stamps, or by the recorder's word. */
-async function placed(file: string, startedAt: number, offsetMs: number) {
+/** The video as the page takes it: on the device's clock by its own stamps, or by what was measured of its recorder. */
+async function placed(file: string, startedAt: number, s: Session, offsetMs: number) {
   const info = await readVideo(file);
   const stamps = await videoStamps(file);
+  const lead = s.device.recorder.lead;
   return {
     facts: {
       bytes: info.bytes,
       codec: info.codec,
       width: info.width,
       height: info.height,
-      firstAt: stamps?.[0] ?? startedAt + offsetMs,
+      firstAt: stamps?.[0] ?? startedAt - (lead?.ms ?? 0) + offsetMs,
     },
-    withinMs: stamps ? STAMPED_VIDEO_MS : UNSTAMPED_VIDEO_MS,
+    withinMs: stamps ? STAMPED_VIDEO_MS : (lead?.withinMs ?? UNMEASURED_VIDEO_MS),
   };
 }
 
@@ -137,7 +138,7 @@ export async function startTimeline(
       .catch((e: Error) => ({ lines: [], source: '', note: e.message }));
     const video =
       movie && !noVideo
-        ? await placed(file, startedAt, first.offsetMs).catch(() => undefined)
+        ? await placed(file, startedAt, s, first.offsetMs).catch(() => undefined)
         : undefined;
     const t = assemble({
       title: `${app} on ${device.hello?.model ?? serial}${device.hello ? `, ${osName(device.platform, device.hello.osVersion)}` : ''}`,

@@ -41,6 +41,7 @@ class ToolRecorder implements ScreenRecorder {
     private readonly stillNote?: string,
     private readonly refusedHint?: string,
     private readonly tool: string = 'xcrun',
+    readonly lead?: ScreenRecorder['lead'],
   ) {}
 
   /** Asks the recorder to end after `seconds`, if it is still that recorder; ends with `stop` too. */
@@ -136,6 +137,12 @@ class ToolRecorder implements ScreenRecorder {
 
 const QUIET_MS = 3_000;
 
+/**
+ * A simulator's video keeps no time of its own. Against an app killed at a known moment on a screen that changes every
+ * 100 ms, six runs at host load 4 to 7 put its first frame between 86 and 279 ms before `start` answered.
+ */
+const SIMULATOR_LEAD = { ms: 150, withinMs: 150 };
+
 /** It writes a QuickTime movie, whatever the file is called. */
 export const simulatorRecorder = (udid: string): ScreenRecorder =>
   new ToolRecorder(
@@ -145,6 +152,9 @@ export const simulatorRecorder = (udid: string): ScreenRecorder =>
     'recordVideo',
     false,
     'a simulator writes a frame only when the screen changes, so a still screen gives a very short video',
+    undefined,
+    undefined,
+    SIMULATOR_LEAD,
   );
 
 // shortcut: what `devicectl` prints once it records has not been seen, as the one phone tried (iPhone 13 Pro Max,

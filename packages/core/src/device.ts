@@ -180,6 +180,11 @@ export type RecordingFiles = { files: string[]; note?: string };
 /** Screen video. A recording outlives the process that started it. */
 export interface ScreenRecorder {
   readonly extension: 'mp4' | 'mov';
+  /**
+   * Where the first frame of a video with no times of its own lies, as measured for this recorder: `ms` before `start`
+   * answers, to within `withinMs`. None where it keeps its own, or where no one has measured it.
+   */
+  readonly lead?: { ms: number; withinMs: number };
   start(file: string, opts: { maxSeconds: number }): Promise<RecordingHandle>;
   stop(handle: RecordingHandle): Promise<RecordingFiles>;
 }

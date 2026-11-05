@@ -121,7 +121,7 @@ function clockSources(g: Gathered, frames: FrameMarks | undefined): ClockSource[
             by:
               g.video.withinMs === STAMPED_VIDEO_MS
                 ? "each frame's own time in the file"
-                : 'when the recording said it had begun',
+                : 'when its recording began, as measured of this kind of device',
             withinMs: g.video.withinMs,
           },
         ]
