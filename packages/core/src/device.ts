@@ -35,6 +35,8 @@ export const TIMEOUTS = {
 
 export type ActOptions = { settle?: SettleInput | false; read?: Read; before?: string };
 
+export type TreeOptions = { maxDepth?: number; maxNodes?: number; asItIs?: boolean };
+
 export type AppEntry = { id: string; name?: string; version?: string };
 
 export type AppState = 'not_installed' | 'stopped' | 'running' | 'foreground';
@@ -289,7 +291,8 @@ export interface Device {
   lastStartWasCold: boolean;
   open(): Promise<Hello>;
   close(): void;
-  tree(opts?: { maxDepth?: number; maxNodes?: number }): Promise<Tree>;
+  /** `asItIs`: a look that leaves a dark or locked screen so, for what reads with no one asking it to. */
+  tree(opts?: TreeOptions): Promise<Tree>;
   act(action: ActParams, opts?: ActOptions): Promise<ActResult>;
   tap(p: Point, opts?: ActOptions): Promise<ActResult>;
   longPress(p: Point, durationMs?: number, opts?: ActOptions): Promise<ActResult>;

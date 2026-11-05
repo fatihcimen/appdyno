@@ -13,7 +13,7 @@ import {
   type TextResult,
   type Tree,
 } from '@appdyno/protocol';
-import { TIMEOUTS, type ActOptions } from './device.js';
+import { TIMEOUTS, type ActOptions, type TreeOptions } from './device.js';
 import { DeviceQueue } from './queue.js';
 import type { RpcClient } from './rpc.js';
 import { buildScreen, type PlatformScreen, type Screen } from './screen/index.js';
@@ -61,7 +61,7 @@ export abstract class RpcDevice extends DeviceActions {
   protected abstract startAgent(): Promise<{ rpc: RpcClient; hello: Hello; started: boolean }>;
   /** An agent whose work lane stays stuck: stopped, so the next call starts a new one. */
   protected abstract restartStuck(rpc: RpcClient): Promise<void>;
-  abstract tree(opts?: { maxDepth?: number; maxNodes?: number }): Promise<Tree>;
+  abstract tree(opts?: TreeOptions): Promise<Tree>;
 
   /** Whether the device can be asked to `wait`; where not, the caller polls. */
   protected get waits() {

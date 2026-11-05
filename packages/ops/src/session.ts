@@ -132,6 +132,13 @@ export class Session {
     return screen;
   }
 
+  /** A read for what watches: a dark or locked screen stays as it is. */
+  async look(): Promise<Screen> {
+    const screen = await this.seen(await this.device.tree({ asItIs: true }));
+    this.remember(screen);
+    return screen;
+  }
+
   remember(screen: Screen) {
     this.latest = { screen, at: this.version, taken: Date.now() };
   }

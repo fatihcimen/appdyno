@@ -7,7 +7,14 @@ import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DeviceError, type Tree } from '@appdyno/protocol';
-import { sleep, stateDir, swipePath, type ScreenRecorder, type SystemSwipe } from '@appdyno/core';
+import {
+  sleep,
+  stateDir,
+  swipePath,
+  type ScreenRecorder,
+  type SystemSwipe,
+  type TreeOptions,
+} from '@appdyno/core';
 import { type IosDeviceOps, IosDevice } from './device.js';
 import { phoneRecorder } from './record.js';
 import { iosProducts, type RunnerTransport, IosRunnerLauncher } from './runner.js';
@@ -173,11 +180,11 @@ export class IosPhoneDevice extends IosDevice {
    * (one opened Spotlight): with no passcode the home button gets past it, then the app comes back; with one, nothing
    * here can, and the read refuses by name before anything touches it.
    */
-  override async tree(opts: { maxDepth?: number; maxNodes?: number } = {}) {
+  override async tree({ asItIs, ...opts }: TreeOptions = {}) {
     const onLock = (t: Tree) => t.nodes.some((n) => n.id === LOCK_SCREEN);
     const read = await super.tree(opts);
     // Notification Center, opened here, has the lock screen's date
-    if (!onLock(read) || this.underView) return read;
+    if (asItIs || !onLock(read) || this.underView) return read;
     if ((await this.ctl.lockState()).passcodeRequired)
       throw new DeviceError(
         'DEVICE_LOCKED',

@@ -5,6 +5,7 @@ import {
   type SystemSwipe,
   TIMEOUTS,
   type ActOptions,
+  type TreeOptions,
   pause,
 } from '@appdyno/core';
 import { simulatorCrashes } from './crashes.js';
@@ -204,9 +205,9 @@ export class IosSimulatorDevice extends IosDevice {
     return { tree, busy: nodesBusy(tree), byRunner: true };
   }
 
-  override async tree(opts: { maxDepth?: number; maxNodes?: number } = {}): Promise<Tree> {
-    await this.wake();
-    if (opts.maxDepth !== undefined || opts.maxNodes !== undefined) return super.tree(opts);
+  override async tree({ asItIs, ...limits }: TreeOptions = {}): Promise<Tree> {
+    if (!asItIs) await this.wake();
+    if (limits.maxDepth !== undefined || limits.maxNodes !== undefined) return super.tree(limits);
     const { tree } = await this.queue.run(() => this.readNow());
     await this.keepDump(tree);
     return this.remember(tree);

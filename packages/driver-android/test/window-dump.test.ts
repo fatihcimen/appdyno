@@ -45,6 +45,24 @@ describe('a read of the window dump', () => {
     expect(commands).toContain('input keyevent KEYCODE_WAKEUP');
   });
 
+  it('a look at a dozing display leaves it as it is', async () => {
+    const commands: string[] = [];
+    const exec = async (_serial: string, command: string) => {
+      commands.push(command);
+      return command.includes('dumpsys power') ? 'mWakefulness=Dozing\n' : '';
+    };
+    const windows = [{ type: 1, pkg: 'dev.app', layer: 0, b: [0, 0, 1080, 2400] }];
+    const device = new AndroidDevice('s', { exec } as unknown as Adb);
+    const params: unknown[] = [];
+    const call = async (_method: string, p: unknown) => {
+      params.push(p);
+      return { result: { windows, nodes: [], dark: true } };
+    };
+    await Object.assign(device, { call }).tree({ asItIs: true });
+    expect(commands).toEqual([]);
+    expect(params).toEqual([{}]);
+  });
+
   it('a phone locked since its last ANR is seen as locked, and is dismissed', async () => {
     const commands: string[] = [];
     const exec = async (_serial: string, command: string) => {
