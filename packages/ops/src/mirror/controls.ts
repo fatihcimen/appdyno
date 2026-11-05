@@ -26,8 +26,9 @@ const TURN_LOOK_MS = 100;
 /** How often a device's own source is told what is in front: one call to its agent while that stays the same. */
 const APP_LOOK_MS = 5_000;
 
+/** By the clock a person reads: a file's name is theirs, and it sorts as the ISO date does. */
 export const stamp = () =>
-  new Date()
+  new Date(Date.now() - new Date().getTimezoneOffset() * 60_000)
     .toISOString()
     .replace(/\.\d+Z$/, '')
     .replace('T', ' ')

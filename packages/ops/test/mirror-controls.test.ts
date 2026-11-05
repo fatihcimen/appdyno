@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { Device, InputEvent } from '@appdyno/core';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import type { JourneyAnswer } from '../src/flow/journey.js';
-import { windowControls, windowLook, type WindowSession } from '../src/mirror/controls.js';
+import { stamp, windowControls, windowLook, type WindowSession } from '../src/mirror/controls.js';
 
 const home = mkdtempSync(join(tmpdir(), 'appdyno-controls-'));
 vi.mock('node:os', async (real) => ({
@@ -148,6 +148,12 @@ describe("a window's controls", () => {
 });
 
 describe("a window's captures", () => {
+  it('names a file by the clock a person reads, in whatever zone that is', () => {
+    vi.useFakeTimers({ now: new Date(2026, 10, 5, 23, 49, 59), toFake: ['Date'] });
+    expect(stamp()).toBe('2026-11-05 23.49.59');
+    vi.useRealTimers();
+  });
+
   it('saves a screenshot to the Desktop and hands it to the pasteboard', async () => {
     const { mkdirSync } = await import('node:fs');
     mkdirSync(join(home, 'Desktop'), { recursive: true });
