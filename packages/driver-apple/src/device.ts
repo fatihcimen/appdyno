@@ -46,6 +46,9 @@ import type { SettingsLinks } from './settings-pages.js';
 import { assertBundle } from './simctl.js';
 
 const SETTINGS_APP = 'com.apple.Preferences';
+const ANOTHER_SECTION = 'prefs:root=SCREEN_TIME';
+/** Long enough for Settings to take the first of two links. */
+const SECTION_MS = 700;
 
 /** Diagnostics: while this file exists, iOS tree reads are written to DUMP_DIR. */
 const DUMP_FLAG = join(homedir(), 'Library/Caches/appdyno/dump-trees');
@@ -258,7 +261,12 @@ export abstract class IosDevice extends RpcDevice implements Device {
       );
     const row = 'app' in to ? await this.appName(to.app) : undefined;
     await this.target(SETTINGS_APP);
-    await this.queue.run(() => this.ops.openSettings(link));
+    await this.queue.run(async () => {
+      // a link while it shows another page of that section only brings that page back; a restart cost a read 15 s
+      await this.ops.openSettings(ANOTHER_SECTION);
+      await sleep(SECTION_MS);
+      await this.ops.openSettings(link);
+    });
     return row ? { row } : {};
   }
 
