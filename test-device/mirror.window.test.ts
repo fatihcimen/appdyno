@@ -12,6 +12,7 @@ import { IosSimulatorDevice } from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { windowControls, windowLook } from '../packages/ops/src/mirror/controls.js';
 import { windowMeasures } from '../packages/ops/src/mirror/measures.js';
+import { expectSamePicture, shownByWindow } from './window-picture.js';
 
 /**
  * A window's controls on our own booted simulator (APPDYNO_IOS_UDID; never a default): a real window, kept off
@@ -121,6 +122,11 @@ describe.runIf(udid)("a window's controls on a simulator", () => {
     control('home');
     await until('home', () => inputs.some((e) => e.kind === 'button' && e.name === 'home'));
   });
+
+  it('shows what the simulator shows, where it shows it', async () => {
+    const device = await steady();
+    expectSamePicture(await shownByWindow(session), device);
+  }, 60_000);
 
   it(
     'opens Control Center by a real drag from the edge, over the whole screen',

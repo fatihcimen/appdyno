@@ -417,6 +417,10 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
   return MVWriteWindow(_window, file);
 }
 
+- (BOOL)snapshotScreen:(NSString *)file {
+  return MVWriteWindowPart(_window, [_view convertRect:_view.bounds toView:nil], file);
+}
+
 - (void)pokeButton:(NSString *)name {
   [_view pressButton:name];
 }

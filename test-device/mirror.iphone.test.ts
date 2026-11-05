@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { MirrorStatus, ViewerLink } from '../packages/core/src/index.js';
+import { expectSamePicture, shownByWindow } from './window-picture.js';
 import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { windowControls } from '../packages/ops/src/mirror/controls.js';
 import { windowMeasures } from '../packages/ops/src/mirror/measures.js';
@@ -108,6 +109,20 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     await until('the decoder', () => status().stats?.decoder === 'hardware 444f');
     if (!headless) await until('the window to show it', () => status().stats?.layer === 'ok');
   }, 60_000);
+
+  it.runIf(!headless)(
+    'shows what the phone shows, where it shows it',
+    async () => {
+      show('list');
+      await until('the list', async () =>
+        (await read()).list.some((e: { id?: string }) => e.id === 'row_name'),
+      );
+      await new Promise((r) => setTimeout(r, 2_000));
+      const own = (await device.screenshot({ format: 'png' })).data as Buffer;
+      expectSamePicture(await shownByWindow(session), own);
+    },
+    90_000,
+  );
 
   it('a flick moves the list, read before and after', async () => {
     show('list');

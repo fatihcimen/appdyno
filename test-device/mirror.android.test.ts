@@ -1,4 +1,4 @@
-import { execFile, spawn, spawnSync } from 'node:child_process';
+import { execFile, execFileSync, spawn, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -20,6 +20,7 @@ import {
   AndroidMirror,
 } from '../packages/driver-android/src/index.js';
 import { AndroidAgentLauncher } from '../packages/driver-android/src/agent.js';
+import { expectSamePicture, shownByWindow } from './window-picture.js';
 
 /**
  * A mirror on an Android device we hold (APPDYNO_ANDROID_SERIAL; never a default), headless. On an emulator
@@ -229,6 +230,33 @@ describe.runIf(serial)('the agent stream', () => {
 });
 
 describe.runIf(serial && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real window', () => {
+  it('shows what the device shows, where it shows it', async () => {
+    const adb = new Adb();
+    const device = new AndroidDevice(serial!, adb);
+    await adb.exec(
+      serial!,
+      'am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/list dev.appdyno.fixture',
+    );
+    const session = new MirrorSession({
+      mirror: device.mirror,
+      viewer: async () => new ViewerProcess(await viewerBinary(), ['--behind']),
+      options: { quality: 'auto' },
+      title: 'a test window',
+    });
+    await session.start();
+    try {
+      await until('picture', () => session.status.state === 'live');
+      await sleep(3_000);
+      const own = execFileSync('adb', ['-s', serial!, 'exec-out', 'screencap', '-p'], {
+        maxBuffer: 1 << 26,
+      });
+      expectSamePicture(await shownByWindow(session), own);
+    } finally {
+      await session.stop('the test ended');
+      device.close();
+    }
+  }, 120_000);
+
   it('shows the agent stream by its layer, and a click on the picture moves the fixture', async () => {
     const adb = new Adb();
     const device = new AndroidDevice(serial!, adb);

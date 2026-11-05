@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -12,6 +13,7 @@ import { Adb, AndroidDevice, FOCUS_READ } from '../packages/driver-android/src/i
 import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { windowControls, windowLook } from '../packages/ops/src/mirror/controls.js';
 import { windowMeasures } from '../packages/ops/src/mirror/measures.js';
+import { expectSamePicture, shownByWindow } from './window-picture.js';
 
 /**
  * A person's window on a phone we hold (APPDYNO_ANDROID_SERIAL and APPDYNO_MIRROR_WINDOW=1; never a default): the real
@@ -112,6 +114,10 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
       });
       const png = decodePng(readFileSync(file))!;
       expect(png.width).toBeGreaterThan(100);
+      const own = execFileSync('adb', ['-s', serial!, 'exec-out', 'screencap', '-p'], {
+        maxBuffer: 1 << 26,
+      });
+      expectSamePicture(await shownByWindow(session), own);
     }, 60_000);
 
     it('a click is a tap on what is under it', async () => {

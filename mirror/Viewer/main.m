@@ -164,7 +164,11 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
     if (m[@"seconds"]) return [_window pokeX:x y:y toX:[(m[@"x2"] ?: m[@"x"]) doubleValue] toY:[(m[@"y2"] ?: m[@"y"]) doubleValue] seconds:[m[@"seconds"] doubleValue]];
     return [_window pokeX:x y:y right:[m[@"right"] boolValue]];
   }
-  if ([op isEqual:@"snapshot"]) return MVEmit(@{@"op": @"snapped", @"file": m[@"file"] ?: @"", @"ok": @(_hub ? [_hub snapshot:m[@"file"]] : [_window snapshot:m[@"file"]])});
+  if ([op isEqual:@"snapshot"]) {
+    NSString *file = m[@"file"] ?: @"";
+    BOOL ok = _hub ? [_hub snapshot:file] : [m[@"screen"] boolValue] ? [_window snapshotScreen:file] : [_window snapshot:file];
+    return MVEmit(@{@"op": @"snapped", @"file": file, @"ok": @(ok)});
+  }
   if ([op isEqual:@"mark"]) return [_stats mark:[m[@"bigger"] boolValue]];
   if ([op isEqual:@"quit"]) {
     [self detach];

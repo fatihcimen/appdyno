@@ -63,6 +63,7 @@ NSView *MVGlassBar(NSArray<NSArray<NSString *> *> *groups, id target, SEL action
 
 /// A window as the window server composites it, to a PNG; NO if it cannot.
 BOOL MVWriteWindow(NSWindow *window, NSString *file);
+BOOL MVWriteWindowPart(NSWindow *window, NSRect part, NSString *file);
 
 /// A few cells of a picture's own colours, for a layer to stretch into a soft mesh with no blur pass. Caller owns it.
 CGImageRef _Nullable MVPictureMood(IOSurfaceRef surface, BOOL dark);

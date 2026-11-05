@@ -165,6 +165,8 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 - (void)pokeButton:(NSString *)name;
 /// The window as it looks now, to a PNG.
 - (BOOL)snapshot:(NSString *)file;
+/// The device's screen alone, as this window shows it.
+- (BOOL)snapshotScreen:(NSString *)file;
 @property(nonatomic, copy, nullable) void (^onHidden)(BOOL hidden);
 @end
 
