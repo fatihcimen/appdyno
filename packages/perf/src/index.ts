@@ -10,3 +10,4 @@ export * from './answer-text.js';
 export * from './comment.js';
 export * from './prune.js';
 export * from './dashboard/index.js';
+export * from './timeline/index.js';

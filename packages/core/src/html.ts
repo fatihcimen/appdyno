@@ -14,7 +14,7 @@ export const xmlText = (s: string) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
-/** A page that loads nothing it did not bring: no script, and a policy allowing only `sources` and its own style. */
+/** A page that loads nothing it did not bring: a policy allowing only `sources` and its own style, so no script unless they name it. */
 export const selfContainedPage = (p: {
   title: string;
   style: string;
