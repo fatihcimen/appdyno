@@ -12,6 +12,7 @@
 - `appdyno perf comment --out file`: the gate's newest answers as Markdown in a file, with no device. Nothing is posted: `docs/perf-gate.yml` is a job to copy, which posts the file with the repository's own token.
 - The gate's comparisons keep a modelled number and one timed through the host marked, in every format.
 - `clipboard` works on an iPhone, by Xcode's `devicectl`, with no runner and nothing asked on the phone.
+- `screenshot` keeps to its size on an iPhone: the phone's own service has one size, and it gave the whole screen whatever was asked.
 - `app` `install` takes an `.ipa`, and says when a build is for another kind of device than this one, before trying it.
 - `simulator` `create`: a new iOS simulator of a model, on the newest runtime that runs it, started and counted among those this tool started. An Android emulator refuses, naming what makes one.
 - `screenshot` `file`: the whole picture, `.png` or `.jpg`, or into a folder under a new name. What is there stays unless `overwrite`.

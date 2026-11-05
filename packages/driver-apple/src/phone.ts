@@ -157,9 +157,10 @@ export class IosPhoneDevice extends IosDevice {
     return (await this.ctl.readPasteboard()) || undefined;
   }
 
-  /** By the phone's own service where it has it, which needs no runner; else as any device. */
+  /** By the phone's own service where it has it, which needs no runner but has one size; else as any device. */
   override async screenshot(opts: Parameters<IosDevice['screenshot']>[0] = {}) {
-    return (await this.mirror.screenshot(opts.format ?? 'jpeg')) ?? super.screenshot(opts);
+    const own = opts.maxPx ? undefined : await this.mirror.screenshot(opts.format ?? 'jpeg');
+    return own ?? super.screenshot(opts);
   }
   readonly apps: PhoneApps;
   readonly settings: PhoneSettings;
