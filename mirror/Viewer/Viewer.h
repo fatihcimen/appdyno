@@ -123,6 +123,8 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags);
 - (void)showState:(nullable NSString *)state title:(nullable NSString *)title fix:(nullable NSString *)fix;
 - (void)showBanner:(NSDictionary *)message;
 - (void)hideBanner;
+/// A ring where a touch landed, at these fractions of the screen.
+- (void)showTouchAtX:(double)x y:(double)y;
 /// The banner's button.
 - (void)done:(id)sender;
 @end
@@ -131,6 +133,7 @@ BOOL MVIsTypedText(NSString *characters, NSEventModifierFlags flags);
 void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 
 @class MVInspector;
+@class MVStatusLine;
 
 /// The window. The app keeps none when it runs headless.
 @interface MVWindow : NSObject <NSWindowDelegate>
@@ -164,6 +167,9 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 @property(readonly) MVInspector *inspector;
 @property(readonly) BOOL inspecting;
 @property(readonly) NSView *bar;
+@property(readonly) MVStatusLine *line;
+@property(readonly) NSDictionary *look;
+- (void)tintPill;
 @property(nonatomic, copy, nullable) void (^onHidden)(BOOL hidden);
 @end
 
@@ -191,6 +197,16 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 - (BOOL)snapshot:(NSString *)file;
 /// The device's screen alone, as this window shows it.
 - (BOOL)snapshotScreen:(NSString *)file;
+@end
+
+/// Two windows side by side.
+@interface MVWindow (Pair)
+/// How this window stands with the one beside it.
+- (void)setPair:(NSDictionary *)message;
+/// On its side of the middle of the screen, its top with the other's.
+- (void)placeBeside;
+/// A flow to measure, from a person.
+- (void)askJourney;
 @end
 
 /// Runs the checks; the process's exit code.

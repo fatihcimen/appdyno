@@ -105,16 +105,21 @@ async function ownerOf(ctx: ServerContext, id: string) {
   throw new ToolError(`no such device: ${id}`, 'NOT_FOUND');
 }
 
-/** A window of its own for a device: a process of its own, which outlives the hub. */
-function openWindow(ctx: ServerContext, serial: string, behind: boolean) {
+/** A window of its own for a device, or two side by side: a process of its own, which outlives the hub. */
+function openWindow(ctx: ServerContext, serials: string[], behind: boolean) {
   const command = ctx.mirrorCommand;
   if (!command) throw new ToolError('this host cannot start a window', 'UNSUPPORTED');
-  const log = mirrorLog(serial);
+  const log = mirrorLog(serials[0]!);
   mkdirSync(dirname(log), { recursive: true, mode: 0o700 });
   const out = openSync(log, 'w', 0o600);
   const child = spawn(
     command[0]!,
-    [...command.slice(1), '--device', serial, ...(behind ? ['--behind'] : [])],
+    [
+      ...command.slice(1),
+      ...serials.flatMap((serial) => ['--device', serial]),
+      ...(serials.length > 1 ? ['--pair'] : []),
+      ...(behind ? ['--behind'] : []),
+    ],
     { detached: true, stdio: ['ignore', out, out] },
   );
   closeSync(out);
@@ -164,7 +169,13 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     link.send({ op: 'hub', devices, choices: await choices });
   };
   const acts: Record<string, (m: ViewerMessage) => Promise<unknown> | void> = {
-    open: (m) => openWindow(ctx, String(m.serial), o.behind === true),
+    open: (m) => openWindow(ctx, [String(m.serial)], o.behind === true),
+    // windows already open are each a process of their own: the pair is one
+    pair: async (m) => {
+      const serials = [String(m.serial), String(m.with)];
+      await Promise.all(serials.map(closeWindow));
+      openWindow(ctx, serials, o.behind === true);
+    },
     close: (m) => closeWindow(String(m.serial)),
     start: async (m) => (await ownerOf(ctx, String(m.id))).boot(String(m.id)),
     stop: async (m) => (await ownerOf(ctx, String(m.id))).shutdown(String(m.id)),

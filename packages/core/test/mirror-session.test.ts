@@ -105,6 +105,23 @@ describe('a mirror, whatever the device', () => {
     expect(inputsThen[0]).toBe(1);
   });
 
+  it('lets a pair of windows take what a person does, and leaves the rest to the window', async () => {
+    const seen: string[] = [];
+    const { viewer, mirror, live } = setup({
+      takeInput: (e) => e.kind === 'touch',
+      press: (name) => {
+        seen.push(name);
+        return false;
+      },
+    });
+    await live();
+    viewer().say('touch', { p: 0, x: 0.5, y: 0.5 });
+    viewer().say('button', { name: 'home' });
+    await flush();
+    expect(seen).toEqual(['home']);
+    expect(mirror.inputs).toEqual([{ kind: 'button', name: 'home' }]);
+  });
+
   it('holds a press while the stream is down, as it does a touch', async () => {
     const taken: string[] = [];
     const { viewer, session } = setup({

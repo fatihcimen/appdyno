@@ -73,7 +73,11 @@ export function windowControls(
   let readingsTurn: Promise<void> = Promise.resolve();
 
   /** The window needs no agent of its own; what is asked of the device past the stream does. */
-  const ready = () => (opened ??= device.open());
+  const ready = () =>
+    (opened ??= device.open().catch((e: Error) => {
+      opened = undefined;
+      throw e;
+    }));
   const note = (text: string) => session().tell({ op: 'note', text });
   const trying = (work: () => Promise<void>) => void work().catch((e: Error) => note(e.message));
 
@@ -265,6 +269,12 @@ export function windowControls(
     },
 
     journey,
+
+    /** What is on the screen, by the device agent, which starts for it. */
+    read: async () => {
+      await ready();
+      return device.tree();
+    },
 
     /** A control of the window that is no input: a person's, however input is set. */
     onWindow(m: ViewerMessage) {

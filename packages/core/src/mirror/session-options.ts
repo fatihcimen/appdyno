@@ -21,6 +21,8 @@ export type MirrorSessionOptions = {
   look?: Record<string, unknown>;
   /** A press of what is more than one key to the device; `false` leaves it to the device. */
   press?: (name: string) => boolean;
+  /** A person's input, before it is the device's: `true` when a pair of windows sends it on itself. */
+  takeInput?: (e: InputEvent) => boolean;
   /** A control of the window that is no input: a capture, the Apps pane. */
   onWindow?: (m: ViewerMessage) => void;
   /** A person's input, once it has left for the device: what watches it is beside a touch, and never in front of one. */

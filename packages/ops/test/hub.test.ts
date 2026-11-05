@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type {
@@ -30,7 +30,7 @@ class Simulated implements VirtualDevices {
 
 const phone = { serial: 'R58M', state: 'device', ready: true, model: 'SM-S918B' };
 
-function context(virtual: VirtualDevices, connected = [phone]) {
+function context(virtual: VirtualDevices, connected = [phone], mirrorCommand?: string[]) {
   const provider: DeviceProvider = {
     list: async () => connected,
     handles: () => true,
@@ -45,7 +45,7 @@ function context(virtual: VirtualDevices, connected = [phone]) {
       }) as unknown as Device,
     virtual,
   };
-  return new ServerContext(DEFAULT_POLICY, [provider]);
+  return new ServerContext(DEFAULT_POLICY, [provider], { ...(mirrorCommand && { mirrorCommand }) });
 }
 
 /** A hub's window, as a test holds it. */
@@ -130,6 +130,20 @@ describe('the hub', () => {
     await vi.waitFor(() => expect(virtual.create).toHaveBeenCalledOnce());
     close();
     expect(await done).toBe(0);
+  });
+
+  it('opens two devices side by side as one window process', async () => {
+    const said = join(state, 'args');
+    const command = ['/bin/sh', '-c', `echo "$@" > ${said}.next && mv ${said}.next ${said}`, 'sh'];
+    const { link, told, say, close } = window();
+    const ctx = context(new Simulated(), [phone], command);
+    const done = runHub(ctx, { focus: false, log: () => undefined, viewer: link });
+    await vi.waitFor(() => expect(lastList(told)).toBeDefined());
+    say({ op: 'hub', action: 'pair', serial: 'R58M', with: 'B' });
+    await vi.waitFor(() => expect(existsSync(said)).toBe(true));
+    expect(readFileSync(said, 'utf8').trim()).toBe('--device R58M --device B --pair');
+    close();
+    await done;
   });
 
   it('says why a thing asked could not be done, and goes on', async () => {

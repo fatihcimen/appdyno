@@ -28,6 +28,7 @@ static const MVControlRow kControls[] = {
     {"measureScroll", "Measure Scroll", "scroll", 0, 0, "View"},
     {"dashboard", "Open Dashboard", "chart.line.uptrend.xyaxis", 0, 0, "View"},
     {"journey", "Measure Journey…", "point.topleft.down.to.point.bottomright.curvepath", 0, 0, "View"},
+    {"both", "Touches Go to Both", "link", 0, 0, "None"},
     {"more", "More Controls", "ellipsis", 0, 0, "None"},
     {"reconnect", "Reconnect", "arrow.clockwise", 'r', kCmd | kShift, "View"},
     {"back", "Back", "chevron.backward", '[', kCmd, "Device"},

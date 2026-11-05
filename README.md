@@ -166,6 +166,7 @@ appdyno mirror                     # this device's window, and stay
 appdyno mirror --all [--watch]     # every device, and new ones as they come
 appdyno mirror open --detach       # a window that outlives this command
 appdyno mirror close | status | stats
+appdyno mirror --device A --device B --pair   # two devices side by side, a touch going to both
 appdyno hub                        # every device of this Mac in one window
 ```
 

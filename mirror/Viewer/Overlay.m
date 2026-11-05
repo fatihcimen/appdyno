@@ -3,7 +3,7 @@
 #import "Viewer.h"
 #import "Window.h"
 
-static const double kCardWidth = 264, kInset = 16, kNoteSeconds = 4;
+static const double kCardWidth = 264, kInset = 16, kNoteSeconds = 4, kRing = 44, kRingSeconds = 0.6;
 
 /// A click on it is the picture's, even with a card showing; only a button is its own.
 @interface MVCard : NSVisualEffectView
@@ -87,6 +87,27 @@ static NSString *symbolOf(NSString *state) {
 - (instancetype)initInView:(NSView *)view {
   if ((self = [super init])) _view = view;
   return self;
+}
+
+- (void)showTouchAtX:(double)x y:(double)y {
+  CALayer *ring = [CALayer layer];
+  CGSize size = _view.bounds.size;
+  ring.frame = CGRectMake(x * size.width - kRing / 2, (1 - y) * size.height - kRing / 2, kRing, kRing);
+  ring.cornerRadius = kRing / 2;
+  ring.borderWidth = 2.5;
+  ring.borderColor = NSColor.controlAccentColor.CGColor;
+  ring.backgroundColor = [NSColor.controlAccentColor colorWithAlphaComponent:0.25].CGColor;
+  [_view.layer addSublayer:ring];
+  if (!NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion) {
+    CABasicAnimation *fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
+    fade.fromValue = @1;
+    fade.toValue = @0;
+    fade.duration = kRingSeconds;
+    [ring addAnimation:fade forKey:nil];
+  }
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kRingSeconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    [ring removeFromSuperlayer];
+  });
 }
 
 - (void)showState:(nullable NSString *)state title:(nullable NSString *)title fix:(nullable NSString *)fix {
@@ -181,6 +202,16 @@ static NSString *symbolOf(NSString *state) {
   [self show];
 }
 
+- (void)setPairing:(NSString *)pairing {
+  _pairing = [pairing copy];
+  [self show];
+}
+
+- (void)setFailing:(NSString *)failing {
+  _failing = [failing copy];
+  [self show];
+}
+
 - (void)say:(NSString *)note {
   _note = note;
   [self show];
@@ -204,8 +235,11 @@ static NSString *symbolOf(NSString *state) {
   NSString *state = _state ?: @"Connecting";
   NSColor *dot = [state isEqual:@"Live"] ? NSColor.systemGreenColor : NSColor.systemOrangeColor;
   NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithString:@"\u25CF  " attributes:@{NSFontAttributeName: [NSFont systemFontOfSize:8], NSForegroundColorAttributeName: dot, NSBaselineOffsetAttributeName: @1}];
-  NSMutableArray<NSString *> *parts = [NSMutableArray arrayWithObjects:_name ?: @"", state, nil];
+  // what the words say goes before how the stream is, as the pill's colour says it already
+  NSMutableArray<NSString *> *parts = [NSMutableArray arrayWithObject:_name ?: @""];
+  [parts addObject:_failing ?: state];
   if (_tool) [parts addObject:_tool.length ? [@"Agent driving: " stringByAppendingString:_tool] : @"Agent driving"];
+  if (_pairing && !_failing) [parts addObject:_pairing];
   NSDictionary *plain = @{NSFontAttributeName: self.font, NSForegroundColorAttributeName: NSColor.labelColor};
   [text appendAttributedString:[[NSAttributedString alloc] initWithString:[parts componentsJoinedByString:@"  \u00B7  "] attributes:plain]];
   NSMutableParagraphStyle *middle = [NSMutableParagraphStyle new];

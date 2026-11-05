@@ -318,7 +318,8 @@ export class MirrorSession {
       this.input.dropped++;
       return;
     }
-    if (e.kind !== 'button' || !this.o.press?.(e.name)) this.input.add(e);
+    if (!this.o.takeInput?.(e) && (e.kind !== 'button' || !this.o.press?.(e.name)))
+      this.input.add(e);
     this.o.onInput?.(e);
   }
 

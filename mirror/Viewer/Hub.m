@@ -117,7 +117,7 @@ static NSPopUpButton *popUp(NSArray<NSDictionary *> *rows) {
   MVFrameView *_frame;
   MVView *_screen;
   NSTextField *_name, *_about, *_empty;
-  NSButton *_open, *_power;
+  NSButton *_open, *_power, *_beside;
   NSStackView *_column;
   MVNewDevice *_asking;
 }
@@ -213,7 +213,9 @@ static NSPopUpButton *popUp(NSArray<NSDictionary *> *rows) {
   _open.keyEquivalent = @"\r";
   _power = [NSButton buttonWithTitle:@"Start" target:self action:@selector(togglePower:)];
   _power.controlSize = NSControlSizeLarge;
-  NSStackView *buttons = [NSStackView stackViewWithViews:@[_open, _power]];
+  _beside = [NSButton buttonWithTitle:@"Open Beside…" target:self action:@selector(openBeside:)];
+  _beside.controlSize = NSControlSizeLarge;
+  NSStackView *buttons = [NSStackView stackViewWithViews:@[_open, _beside, _power]];
   _column = [NSStackView stackViewWithViews:@[_name, _about, buttons]];
   _column.orientation = NSUserInterfaceLayoutOrientationVertical;
   _column.spacing = 6;
@@ -284,6 +286,7 @@ static NSPopUpButton *popUp(NSArray<NSDictionary *> *rows) {
   _about.stringValue = [@[stateWords(device), device[@"detail"] ?: @""] componentsJoinedByString:@"  ·  "];
   _open.title = mirrored ? @"Close Window" : @"Open Window";
   _open.enabled = running;
+  _beside.hidden = !running || [self others].count == 0;
   _power.title = running ? @"Stop" : @"Start";
   // a phone is a person's to turn off
   _power.hidden = [device[@"kind"] isEqual:@"phone"];
@@ -296,6 +299,33 @@ static NSPopUpButton *popUp(NSArray<NSDictionary *> *rows) {
 - (void)openWindow:(id)sender {
   if (!_shown) return;
   MVEmit(@{@"op": @"hub", @"action": [_shown[@"mirrored"] boolValue] ? @"close" : @"open", @"id": _shown[@"id"], @"serial": _shown[@"serial"] ?: _shown[@"id"]});
+}
+
+/// What is up to stand beside the device shown.
+- (NSArray<NSDictionary *> *)others {
+  NSMutableArray *others = [NSMutableArray array];
+  for (NSDictionary *device in _devices)
+    if ([device[@"state"] isEqual:@"running"] && ![device[@"id"] isEqual:_shown[@"id"]]) [others addObject:device];
+  return others;
+}
+
+- (void)openBeside:(NSButton *)sender {
+  NSMenu *menu = [[NSMenu alloc] initWithTitle:@"Beside"];
+  for (NSDictionary *device in [self others]) {
+    NSMenuItem *item = [menu addItemWithTitle:device[@"name"] ?: @"" action:@selector(beside:) keyEquivalent:@""];
+    item.target = self;
+    item.representedObject = device;
+  }
+  [menu popUpMenuPositioningItem:nil atLocation:NSMakePoint(0, sender.bounds.size.height + 6) inView:sender];
+}
+
+- (void)beside:(NSMenuItem *)item {
+  [self pairWith:item.representedObject];
+}
+
+- (void)pairWith:(nullable NSDictionary *)device {
+  if (!_shown || !device) return;
+  MVEmit(@{@"op": @"hub", @"action": @"pair", @"serial": _shown[@"serial"] ?: _shown[@"id"], @"with": device[@"serial"] ?: device[@"id"]});
 }
 
 - (void)togglePower:(id)sender {
@@ -312,6 +342,7 @@ static NSPopUpButton *popUp(NSArray<NSDictionary *> *rows) {
   [self choose:message[@"id"]];
   if ([message[@"press"] isEqual:@"window"]) [self openWindow:self];
   if ([message[@"press"] isEqual:@"power"]) [self togglePower:self];
+  if ([message[@"press"] isEqual:@"beside"]) [self pairWith:[self others].firstObject];
 }
 
 - (void)sayNote:(NSString *)note {

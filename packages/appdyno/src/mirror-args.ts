@@ -17,7 +17,8 @@ export function mirrorArgs(args: string[]) {
   const wrong =
     !['open', 'close', 'status', 'stats'].includes(action) ||
     !['auto', 'high', 'standard'].includes(quality) ||
-    (codec !== undefined && codec !== 'h264' && codec !== 'hevc');
+    (codec !== undefined && codec !== 'h264' && codec !== 'hevc') ||
+    (values.pair === true && (values.device?.length !== 2 || values.detach === true));
   return {
     values,
     action,
@@ -38,6 +39,7 @@ export function mirrorRun({ values, quality, codec }: ReturnType<typeof mirrorAr
     options: { quality, ...(codec && { codec }) },
     headless: values.headless ?? false,
     behind: values.behind ?? false,
+    pair: values.pair ?? false,
     noInput: values['no-input'] ?? false,
     ...(values.seconds && { seconds: Number(values.seconds) }),
     ...(values.record && { record: resolve(values.record) }),

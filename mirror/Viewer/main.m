@@ -154,6 +154,8 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   if ([op isEqual:@"hub"]) return [_hub show:m];
   if ([op isEqual:@"note"]) return _hub ? [_hub sayNote:m[@"text"] ?: @""] : [_window sayNote:m[@"text"] ?: @""];
   if ([op isEqual:@"recording"]) return [_window setRecording:[m[@"on"] boolValue]];
+  if ([op isEqual:@"pair"]) return [_window setPair:m];
+  if ([op isEqual:@"touchAt"]) return [_window.overlay showTouchAtX:[m[@"x"] doubleValue] y:[m[@"y"] doubleValue]];
   if ([op isEqual:@"copied"]) return MVCopyImage(m[@"file"]);
   if ([op isEqual:@"poke"]) {
     if (_hub) return [_hub poke:m];

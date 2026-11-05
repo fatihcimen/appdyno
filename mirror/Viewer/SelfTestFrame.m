@@ -103,6 +103,27 @@ static void checkMeasures(void) {
   MVCheck(@"performance: that a measure ran is no verdict, and what its tool found is marked", pane.lastMarked, nil);
 }
 
+static void checkPair(void) {
+  MVStatusLine *line = [[MVStatusLine alloc] initWithFrame:NSZeroRect];
+  line.name = @"Phone";
+  line.state = @"Live";
+  MVCheck(@"pair: a window alone says nothing of one", ![line.stringValue containsString:@"To both"], line.stringValue);
+  line.both = YES;
+  line.pairing = @"To both";
+  MVCheck(@"pair: a window says where a touch goes", [line.stringValue containsString:@"To both"], line.stringValue);
+  line.failing = @"No Add here";
+  MVCheck(@"pair: what failed stands in its place", [line.stringValue containsString:@"No Add here"] && ![line.stringValue containsString:@"To both"], line.stringValue);
+  line.failing = nil;
+  MVCheck(@"pair: a touch that lands clears it", [line.stringValue containsString:@"To both"], line.stringValue);
+  MVPerfPane *pane = [[MVPerfPane alloc] initWithFrame:NSMakeRect(0, 0, 276, 600) target:NSNull.null];
+  MVCheck(@"pair: a journey is measured from the pane the others are", MVFindControl(pane, @"journey") != nil, nil);
+  NSRect room = NSMakeRect(0, 0, 1512, 900);
+  NSPoint left = MVBesideOrigin(room, NSMakeSize(640, 800), YES), right = MVBesideOrigin(room, NSMakeSize(700, 600), NO);
+  MVCheck(@"pair: two windows stand either side of the middle", left.x + 640 < 756 && right.x > 756, nil);
+  MVCheck(@"pair: their tops are level", left.y + 800 == right.y + 600, nil);
+  MVCheck(@"pair: a wide window stays on the screen", MVBesideOrigin(room, NSMakeSize(900, 600), YES).x == 0, nil);
+}
+
 static void checkGlass(void) {
   NSView *content = [NSView new];
   NSView *pane = MVGlass(content, 20, nil);
@@ -192,6 +213,7 @@ void MVCheckFrame(void) {
   checkGlass();
   checkLive();
   checkMeasures();
+  checkPair();
   checkMood();
   checkStreamMood();
   checkGestures();

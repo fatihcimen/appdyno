@@ -100,6 +100,7 @@ export const COMMANDS = {
       'no-input': on,
       headless: on,
       behind: unsaidOn,
+      pair: on,
       seconds: value('N'),
       takeover: on,
       record: value('file.mp4'),

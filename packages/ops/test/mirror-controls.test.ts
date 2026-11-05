@@ -337,6 +337,30 @@ describe("a window's measures", () => {
     expect(measures.journey.mock.calls[0]![0]).toBe('chosen.flow');
   });
 
+  it('try the device agent again after it failed to start', async () => {
+    const open = vi.fn(async () => undefined);
+    open.mockRejectedValueOnce(new Error('not yet'));
+    const { controls } = fixture('ios', {
+      open,
+      tree: async () => ({ nodes: [] }),
+    } as unknown as Partial<Device>);
+    await expect(controls.read()).rejects.toThrow('not yet');
+    await expect(controls.read()).resolves.toEqual({ nodes: [] });
+  });
+
+  it('read the screen only once the device agent is up', async () => {
+    const order: string[] = [];
+    const { controls } = fixture('ios', {
+      open: async () => void order.push('open'),
+      tree: async () => {
+        order.push('tree');
+        return { nodes: [] };
+      },
+    } as unknown as Partial<Device>);
+    await controls.read();
+    expect(order).toEqual(['open', 'tree']);
+  });
+
   it('run one at a time', async () => {
     const { controls, told, measures } = fixture('ios', yours as unknown as Partial<Device>);
     controls.onWindow({ op: 'control', name: 'measureScroll' });

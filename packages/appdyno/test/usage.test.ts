@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { mirrorArgs, mirrorRun } from '../src/mirror-args.js';
 import { commandList, COMMANDS, line, usage } from '../src/usage.js';
 
 describe('usage', () => {
@@ -21,6 +22,17 @@ describe('usage', () => {
   it('has no flag that skips verifying a release', () => {
     expect(Object.keys(COMMANDS.update.flags).sort()).toEqual(['check', 'help']);
     expect(line('update')).toBe('update [--check]');
+  });
+
+  it('pairs two devices, and no other number of them', () => {
+    const two = mirrorArgs(['--device', 'A', '--device', 'B', '--pair']);
+    expect(two.usage).toBeUndefined();
+    expect(mirrorRun(two)).toMatchObject({ serials: ['A', 'B'], pair: true });
+    expect(mirrorArgs(['--device', 'A', '--pair']).usage).toBeDefined();
+    expect(mirrorArgs(['--all', '--pair']).usage).toBeDefined();
+    expect(
+      mirrorArgs(['--device', 'A', '--device', 'B', '--pair', '--detach']).usage,
+    ).toBeDefined();
   });
 
   it('leaves out what is between its own processes', () => {

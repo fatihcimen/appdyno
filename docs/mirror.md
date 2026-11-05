@@ -9,6 +9,7 @@ carries input, names what is wrong, and reconnects. There is no server, no daemo
 appdyno mirror                     # open this device's window and stay
 appdyno mirror --all [--watch]     # every device, and new ones as they come; at most --max, default 8
 appdyno mirror open --detach       # a window that outlives this command
+appdyno mirror --device A --device B --pair   # two devices side by side, a touch going to both
 appdyno mirror close | status | stats
   --quality auto|high|standard  --codec h264|hevc  --no-input  --headless  --seconds N  --takeover
   --record file.mp4  --focus
@@ -174,6 +175,16 @@ The recording is the one `flow` keeps, a file per device. So `flow start` from a
 
 `appdyno hub` opens one window with every device this Mac can reach: phones, simulators and emulators, each with its state. It starts and stops what is virtual, makes a new simulator or emulator from what this Mac has installed, and opens or closes a device's window. It holds no device and no stream: each window is an `appdyno mirror` of its own, so closing the hub closes no window, and a crash costs one window. A phone is a person's to turn off, so the hub offers it no stop.
 
+## Two devices
+
+**Open Beside…** in the hub, or `appdyno mirror --device A --device B --pair`, opens two windows side by side from one process: an iPhone and an Android phone, or one build on each of two devices. Each window keeps its own glass, as one window around two devices would have no room for either's panes. Closing one leaves the other on its own; closing them from the hub closes both. A window already open on either closes first, as a pair is one process.
+
+A touch on either window goes to both. It waits for both screens to be read, which took 30 to 60 ms a read on a simulator and an Android emulator, so that what it means is read as it was before it landed, and then goes to both at once. On the other device it goes to the same thing, by id or by words, and to the same one among those called alike, as two devices rarely have a thing in the same place. A finger on nothing with a name goes to the same place, and a drag keeps its length from where it landed. Keys, text and the window's device controls go to both.
+
+Each window says where a touch goes, and what became of it. The pill says **To both** on the accent's colour, or **Here only** once the link control is off, and a ring shows where a touch landed on each screen. Where it failed the pill and the device's edge go red and the words say why, until a touch lands: `No Send here` where that device has no such thing, and nothing else is touched, `iPhone 17 Pro is not live`, `That did not land`. A drag that begins on such a thing goes on from the same place, as it means no one thing. This colour is a fill and not the glass's own tint, which glass gives up in a window that is not in front, and the window beside the one in use has to say it too.
+
+**Journey…** in Performance measures a flow as `flow` `run` with `iterations` does, a first run left out and five kept, in the same store: `perf_compare` gates it, and the dashboard has it beside every other device. A flow that names no app takes your app in front, so builds under two ids can run one file. On two windows it runs on one device and then the other, as two at once would load each other, and touches stay on their own window meanwhile. Each window then says how it stands: `97 % slower, 1641 ms there`, and the step that moved most, by the rank test and the floor the gate uses for two conditions measured in turns, or `No clear difference`. Every step's numbers are in the row's tooltip. A window where the journey failed says so in red, and the other has nothing to compare.
+
 ## Pointer and trackpad
 
 | on the window             | on the device                                                                                          |
@@ -272,11 +283,11 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 - What the readings cost a device has been measured on one Android 14 emulator, at rest on a screen changing ten times a second: 6.0 % of its whole CPU with a window open and the numbers shut, 10.8 % with them shown, over eight spells of 30 s. No phone has been measured.
 - A device's colour: the frame takes one, and nothing yet reads it from a device, so every frame is the table's own graphite or carbon.
 - The frame's Action button and Camera Control are drawn and do nothing: no input is known that presses them.
-- A stream's picture gives the backdrop no colours: only a surface is read so far, so a phone's window has a plain one.
 - Text an iPhone's keyboard has no key for goes by its pasteboard: the phone asks a person to allow the paste, and what it held comes back after, if that was text. In a secure field it does not go at all, and the window says so.
 - More's menu, the frame's hover, a window's remembered size and place, and a trackpad's pinch or a dead key on a real keyboard have not been run by hand; their maths are checked by the self test.
 - `auto` on a phone starts at its display's size and changes it, once, on the first motion that shows the encoder falling behind, so a person may see the picture restart on their first touches. `--quality high` and `standard` keep the display's size.
 - A phone's touch has a floor below which no size goes: 94 ms on a Samsung SM-A525F at 1024 lines, and 95 to 107 at 1280 across runs, over the target of 80. A Xiaomi's reads 92 at its own size, a miss too.
+- Two devices have been run on a simulator and an Android emulator, with the fixture on each. Two windows standing side by side on a screen are checked by the self test's maths and not by eye, as a test's windows are kept off every screen, and a rotated device has not been run in a pair. Two builds under two ids have not been run.
 - Input by `key`: Android has only the keys the agent has (no arrows). On a simulator a keyboard's characters go as US keys; any other text by its pasteboard and command V.
 
 - On an iPhone a recording and the pane read by its runner, which the first use starts: `inspector` gives words and ids with no places, so with no runner a click has no element to be named by, and the window says why.

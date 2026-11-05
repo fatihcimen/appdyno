@@ -44,12 +44,21 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)press:(nullable NSString *)name;
 @end
 
+/// Where a window of two stands in this room: on its side of the middle, tops level, and never off its left.
+NSPoint MVBesideOrigin(NSRect room, NSSize size, BOOL left);
+
 /// The line beneath the device: its name, how it is, and whether an agent is on it.
 @interface MVStatusLine : NSTextField
 @property(nonatomic, copy, nullable) NSString *name;
 @property(nonatomic, copy, nullable) NSString *state;
 /// While an agent drives; empty when it does not say what with.
 @property(nonatomic, copy, nullable) NSString *tool;
+/// Where a touch goes, beside another window.
+@property(nonatomic, copy, nullable) NSString *pairing;
+/// A touch goes to both.
+@property(nonatomic) BOOL both;
+/// What went wrong on this device, until a touch lands.
+@property(nonatomic, copy, nullable) NSString *failing;
 /// Words in its place for a few seconds.
 - (void)say:(NSString *)note;
 @end

@@ -13,6 +13,7 @@ import { windowFlow } from './flow.js';
 import { followDevice } from './follow.js';
 import { handoffDone } from './handoff.js';
 import { windowMeasures } from './measures.js';
+import { pairWindows, type PairSide, type WindowPair } from './pair.js';
 import { FOCUS_SIGNAL, liveMirror, removeMirrorFile, writeMirrorFile } from './state.js';
 
 export type MirrorRun = {
@@ -27,6 +28,8 @@ export type MirrorRun = {
   headless: boolean;
   /** A real window kept off every screen. */
   behind?: boolean;
+  /** Two devices side by side, a touch on either going to both. */
+  pair?: boolean;
   noInput: boolean;
   seconds?: number;
   /** Ends the run when it settles, as its time being up would: a caller's own clock. */
@@ -58,10 +61,12 @@ const describe = (serial: string, s: MirrorStatus) => {
 };
 
 /** The mirrors of one invocation, each with its own viewer; one failing leaves the others alone. */
-class Parent {
+export class Parent {
   readonly sessions = new Map<string, MirrorSession>();
   readonly done = new Map<string, Promise<MirrorStatus>>();
   private readonly recording = new Map<string, string>();
+  private readonly sides: PairSide[] = [];
+  private pair: WindowPair | undefined;
   stopping = false;
   failed = false;
 
@@ -88,6 +93,7 @@ class Parent {
       serial,
     };
     let said = '';
+    let live = false;
     const hardware = await device.hardware().catch(() => undefined);
     const controls = windowControls(
       device,
@@ -99,10 +105,14 @@ class Parent {
     const session: MirrorSession = new MirrorSession({
       mirror: device.mirror,
       viewer: startViewer(this.o.headless, undefined, this.o.behind),
-      look: windowLook(hardware),
+      look: {
+        ...windowLook(hardware),
+        ...(this.o.pair && { pair: this.sides.length === 0 ? 'left' : 'right' }),
+      },
       press: controls.press,
+      takeInput: (e) => this.pair?.input(serial, e) ?? false,
       onWindow: (m) => {
-        if (!flow.onWindow(m)) controls.onWindow(m);
+        if (!this.pair?.control(m) && !flow.onWindow(m)) controls.onWindow(m);
       },
       onInput: flow.input,
       options: this.o.options,
@@ -119,6 +129,9 @@ class Parent {
         }
         // a stop is the end of its file; a status written after would look like a mirror
         if (status.state !== 'stopped') writeMirrorFile({ ...file, status });
+        // what a window was told is gone with a viewer that came up again
+        if (status.state === 'live' && !live) this.pair?.again(serial);
+        live = status.state === 'live';
         const line = describe(serial, status);
         if (line !== said) this.o.log(line);
         said = line;
@@ -131,6 +144,8 @@ class Parent {
       session.stopped.then(async (status) => {
         unfollow();
         await flow.end();
+        this.pair?.end(serial);
+        this.pair = undefined;
         await controls.end();
         removeMirrorFile(serial);
         device.close();
@@ -141,6 +156,20 @@ class Parent {
       }),
     );
     await session.start();
+    if (!this.o.pair) return;
+    this.sides.push({
+      serial,
+      name: hardware?.name ?? hardware?.model ?? serial,
+      read: controls.read,
+      session,
+      press: controls.press,
+      journey: controls.journey,
+    });
+    const [one, other] = this.sides;
+    if (one && other) {
+      this.pair = pairWindows([one, other]);
+      this.pair.begin();
+    }
   }
 
   async stopAll(why: string) {

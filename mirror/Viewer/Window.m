@@ -131,7 +131,10 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   NSMutableArray *device = [NSMutableArray array];
   for (NSString *name in @[@"back", @"home", @"appSwitch", @"lock"])
     if ([_view.controls containsObject:name]) [device addObject:name];
-  _bar = MVGlassBar(@[device, @[@"screenshot", @"record", @"recordFlow"], @[@"hud", @"more", @"inspector"]], self, @selector(control:));
+  NSArray *groups = @[device, @[@"screenshot", @"record", @"recordFlow"], @[@"hud", @"more", @"inspector"]];
+  _bar = MVGlassBar(_look[@"pair"] ? [@[@[@"both"]] arrayByAddingObjectsFromArray:groups] : groups, self, @selector(control:));
+  // it has nothing to say until there are two windows
+  MVFindControl(_bar, @"both").enabled = NO;
   [_root addSubview:_bar];
   [NSLayoutConstraint activateConstraints:@[
     [_bar.trailingAnchor constraintEqualToAnchor:_root.trailingAnchor constant:-12],
@@ -224,6 +227,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 - (void)setZoom:(double)zoom {
   _zoom = zoom;
   [_window setContentSize:[self windowSizeAt:zoom]];
+  [self placeBeside];
   [self layoutPicture];
   [self sayZoom];
 }
@@ -268,12 +272,12 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 }
 
 /// Its one colour says what is happening to the device, and the line says it in words. A fill, and not the glass's tint,
-/// which glass gives up in a window that is not in front.
+/// which glass gives up in a window that is not in front: the window a touch was not made on has to say it too.
 - (void)tintPill {
-  NSColor *accent = NSColor.controlAccentColor;
-  NSColor *tint = _recording ? NSColor.systemRedColor : _line.tool ? accent : nil;
+  NSColor *red = NSColor.systemRedColor, *accent = NSColor.controlAccentColor;
+  NSColor *tint = _recording || _line.failing ? red : _line.tool || _line.both ? accent : nil;
   _pillFill.layer.backgroundColor = [tint colorWithAlphaComponent:0.35].CGColor;
-  [_frame setEdge:_line.tool ? accent : nil];
+  [_frame setEdge:_line.failing ? red : _line.tool ? accent : nil];
 }
 
 - (void)setDriving:(BOOL)driving tool:(NSString *)tool {
@@ -392,6 +396,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
   if ([name isEqual:@"hud"]) return [self toggleHud];
   if ([@[@"screenshot", @"copy", @"record", @"recordFlow", @"reconnect", @"measureLaunch", @"measureScroll", @"dashboard"] containsObject:name]) return MVEmit(@{@"op": @"control", @"name": name});
   if ([name isEqual:@"paste"]) return [_view paste:self];
+  if ([name isEqual:@"both"]) return MVEmit(@{@"op": @"control", @"name": name});
   if ([name isEqual:@"journey"]) return [self askJourney];
   [_view pressButton:name];
 }
@@ -404,24 +409,24 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
   return YES;
 }
 
-- (void)askJourney {
-  NSOpenPanel *panel = [NSOpenPanel openPanel];
-  panel.message = @"A flow to run and measure";
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  panel.allowedFileTypes = @[@"flow"];
-#pragma clang diagnostic pop
-  [panel beginSheetModalForWindow:_window completionHandler:^(NSModalResponse answer) {
-    if (answer == NSModalResponseOK) MVEmit(@{@"op": @"control", @"name": @"journey", @"file": panel.URL.path ?: @""});
-  }];
-}
-
 - (NSWindow *)nsWindow {
   return _window;
 }
 
 - (NSView *)screenView {
   return _view;
+}
+
+- (MVStatusLine *)line {
+  return _line;
+}
+
+- (NSView *)bar {
+  return _bar;
+}
+
+- (NSDictionary *)look {
+  return _look;
 }
 
 - (void)windowDidChangeOcclusionState:(NSNotification *)notification {
