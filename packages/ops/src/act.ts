@@ -8,6 +8,7 @@ import {
   AssertStep,
   Coord,
   KeyStep,
+  MAX_TYPED,
   Read,
   ScrollStep,
   Step,
@@ -182,8 +183,7 @@ export function actOps(
     defineOp({
       name: 'type_text',
       title: 'Type text',
-      description:
-        "Type any Unicode text into the focused field. A target is tapped first and its focus waited for; replace: replaces the field's text; submit: enter afterwards.",
+      description: `Type up to ${MAX_TYPED} characters of Unicode into the focused field. A target is tapped first and its focus waited for; replace: the field's text; submit: then enter.`,
       input: z.object({ ...TypeStep.omit({ action: true }).shape, read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,

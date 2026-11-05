@@ -3,7 +3,7 @@ import { writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deviceStateFile } from '@appdyno/core';
-import { ToolError, type Op } from '@appdyno/ops';
+import { argumentsFor, ToolError, type Op } from '@appdyno/ops';
 import { z } from 'zod';
 
 export { CLIENTS } from './clients.js';
@@ -129,15 +129,7 @@ function parse(op: Op, argv: string[]) {
   // an op that saves by name itself takes the format from it; bytes written here would be its reply's
   if (out && properties.file && properties.overwrite)
     Object.assign(args, { file: out, overwrite: true });
-  const checked = op.input.safeParse(args);
-  if (!checked.success)
-    throw new ToolError(
-      checked.error.issues
-        .map((x) => `${x.path.length ? `--${x.path.join('.')}: ` : ''}${x.message}`)
-        .join('; '),
-      'INVALID_ARGUMENT',
-    );
-  return { args: checked.data as Record<string, unknown>, out };
+  return { args: argumentsFor(op, args, '--'), out };
 }
 
 const FLOW_VALUES = new Set([

@@ -27,6 +27,8 @@ it('keeps the tool catalog within its budget', async () => {
   expect(flag('crashes', 'app')).toBe('default: the selected app');
   expect(flag('perf_snapshot', 'scenario')).toBe('kept under this name');
   expect(flag('perf_launch', 'probe')).toBe('iOS simulator: frame probe; relaunches the app');
+  // a limit stays out of the catalog, but the words of a tool do not deny one
+  expect(tools.find((t) => t.name === 'type_text')!.description).toContain('up to 500 characters');
   expect(tools.every((t) => t.inputSchema.type === 'object')).toBe(true);
   expect(
     tools.filter((t) => 'device' in (t.inputSchema.properties ?? {})).map((t) => t.name),

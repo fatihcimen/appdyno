@@ -80,6 +80,23 @@ describe('what did not happen is no success', () => {
       content: { text: string }[];
     };
 
+  it.each([
+    ['type_text', { text: 'a'.repeat(1000) }, /^text: .*500/],
+    ['perf_snapshot', { cpuWindowMs: 100 }, /^cpuWindowMs: .*500/],
+    ['tap', { nonsense: true }, /nonsense/],
+  ])(
+    '%s with arguments it does not take is a refusal, not a failed call',
+    async (name, args, said) => {
+      const device = new FakeDevice();
+      const r = await asked(device, name, args);
+      expect(r.isError).toBe(true);
+      expect(r.structuredContent).toMatchObject({ code: 'INVALID_ARGUMENT', dispatched: false });
+      expect(r.structuredContent.hint).toEqual(expect.any(String));
+      expect(r.content[0]!.text).toMatch(said);
+      expect(namesOf(device).filter((n) => n !== 'connect')).toEqual([]);
+    },
+  );
+
   it('a wait that ran out refuses, with the screen it saw', async () => {
     const r = await asked(new FakeDevice(), 'wait_for', { text: 'Never', timeoutMs: 300 });
     expect(r.isError).toBe(true);

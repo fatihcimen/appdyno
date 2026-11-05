@@ -108,10 +108,13 @@ export const SwipeStep = z
   })
   .strict();
 
+/** What one call types, in characters. */
+export const MAX_TYPED = 500;
+
 export const TypeStep = z
   .object({
     action: z.literal('type_text'),
-    text: z.string().max(500),
+    text: z.string().max(MAX_TYPED),
     ...Target,
     replace: z.boolean().optional(),
     submit: z.boolean().optional(),

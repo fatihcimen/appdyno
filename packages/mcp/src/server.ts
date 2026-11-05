@@ -1,7 +1,15 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { INSTRUCTIONS, SERVER_INFO } from './brand.js';
-import { inCall, inputSchemaOf, ToolError, text, type Op } from '@appdyno/ops';
+import {
+  ANY_ARGUMENTS,
+  argumentsFor,
+  inCall,
+  inputSchemaOf,
+  ToolError,
+  text,
+  type Op,
+} from '@appdyno/ops';
 
 /** How often a call with a progress token says it is still working. */
 const BEAT_MS = 5_000;
@@ -46,7 +54,7 @@ export function createServer(ops: Record<string, Op>, log: (line: object) => voi
       {
         title: t.title,
         description: t.description,
-        inputSchema: t.input,
+        inputSchema: ANY_ARGUMENTS,
         annotations: t.annotations,
       },
       async (args, extra) => {
@@ -72,7 +80,7 @@ export function createServer(ops: Record<string, Op>, log: (line: object) => voi
           );
         try {
           const r = await inCall({ signal: extra.signal, ...(progress && { progress }) }, () =>
-            t.handler(args as Record<string, unknown>),
+            t.handler(argumentsFor(t, args)),
           );
           log({ tool: name, ms: Date.now() - started, outcome: 'ok' });
           return { content: r.blocks, structuredContent: r.data };

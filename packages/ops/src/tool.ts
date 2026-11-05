@@ -150,6 +150,23 @@ export function inputSchemaOf(op: Pick<Tool, 'input'>) {
   return withoutChecks(schema) as { type: 'object'; [k: string]: unknown };
 }
 
+/** What a transport holds a call to: nothing, as `argumentsFor` does it, with a code and a hint. */
+export const ANY_ARGUMENTS = z.looseObject({});
+
+/** A call's arguments as its op takes them, or a refusal naming each one wrong; `flag`: how the caller writes a name. */
+export function argumentsFor(op: Pick<Tool, 'input'>, args: unknown, flag = '') {
+  const checked = op.input.safeParse(args);
+  if (checked.success) return checked.data as Record<string, unknown>;
+  throw new ToolError(
+    checked.error.issues
+      .map((x) => `${x.path.length ? `${flag}${x.path.join('.')}: ` : ''}${x.message}`)
+      .join('; '),
+    'INVALID_ARGUMENT',
+    'change that and call again: nothing was done',
+    false,
+  );
+}
+
 export const text = (t: string): Block[] => [{ type: 'text', text: t }];
 
 export const reply = <D>(t: string, data: D, extra: Block[] = []): ToolResult<D> => ({
