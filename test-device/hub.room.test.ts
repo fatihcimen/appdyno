@@ -54,7 +54,7 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
     done = runHub(ctx, {
       focus: false,
       behind: true,
-      log: () => undefined,
+      log: measured,
       viewer: () => {
         link = new ViewerProcess(binary, ['--hub', '--behind', '--appearance', look]);
         link.onMessage((m) => told.push(m));

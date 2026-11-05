@@ -223,12 +223,16 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     choosing = choosing
       .then(async () => {
         const stays = paired ? [] : serials;
-        for (const serial of showing)
-          if (!stays.includes(serial)) await parent.close(serial, 'another device was chosen');
+        const leaving = showing
+          .filter((serial) => !stays.includes(serial))
+          .map((serial) => parent.close(serial, 'another device was chosen'));
+        // a pair opens what was just closed; else a phone's slow goodbye holds nothing up
+        if (paired) await Promise.all(leaving);
         const fresh = paired ? serials : serials.filter((s) => !showing.includes(s));
         showing = serials;
         parent.pairing = paired;
         for (const serial of fresh) await parent.open(serial);
+        await Promise.all(leaving);
       })
       .catch((e: Error) => link.send({ op: 'note', text: e.message }));
     return choosing;
