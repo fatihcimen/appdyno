@@ -38,7 +38,7 @@ const judged = (app: string, runs: string, data: { virtualDevice: boolean; noise
   const marks = data.noise.map((n) => NOISE[n] ?? n);
   const relative = data.virtualDevice ? ['virtual device: compare only with its kind'] : [];
   return {
-    detail: [runs, ...marks].join('  ·  '),
+    detail: [runs, ...marks].join(', '),
     why: [app, runs, ...relative, ...marks].join(', '),
   };
 };
