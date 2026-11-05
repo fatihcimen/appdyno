@@ -98,6 +98,26 @@ describe('commands from the operations', () => {
     expect(wait.out).toEqual(['gone']);
   });
 
+  it('writes a screenshot in the format the name of --out says, and replaces what is there', async () => {
+    Object.defineProperty(device, 'mirror', { value: {} });
+    const asked: unknown[] = [];
+    const shot = device.screenshot.bind(device);
+    Object.assign(device, {
+      screenshot: (o: { format: string }) => {
+        asked.push(o.format);
+        return shot();
+      },
+    });
+    const file = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 'a.png');
+    expect((await run('screenshot', '--out', file)).code).toBe(0);
+    expect((await run('screenshot', '--out', file)).code).toBe(0);
+    expect(existsSync(file)).toBe(true);
+    expect(asked).toEqual(['png', 'png']);
+    const notes = await run('screenshot', '--out', file.replace('a.png', 'a.txt'));
+    expect(notes.code).toBe(1);
+    expect(notes.err[0]).toContain('a .png, .jpg or .jpeg');
+  });
+
   it('takes the arguments as JSON', async () => {
     const r = await run('steps', '--json', '{"steps":[{"action":"tap","x":100,"y":350}]}');
     expect(r.code).toBe(0);
@@ -265,8 +285,9 @@ describe('commands from the operations', () => {
 
   it('writes an image to --out, or to a temporary file it names', async () => {
     const out = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 'shot.jpg');
+    Object.defineProperty(device, 'mirror', { value: {} });
     const named = await run('screenshot', '--out', out);
-    expect(named.out).toEqual([expect.stringContaining('image '), out]);
+    expect(named.out).toEqual([expect.stringContaining(`saved ${out}`)]);
     expect(readFileSync(out).length).toBeGreaterThan(0);
     await run('tap', '--x', '100', '--y', '350');
     const temp = await run('screenshot');
