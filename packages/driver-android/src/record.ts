@@ -67,9 +67,10 @@ export class AndroidRecorder implements ScreenRecorder {
     try {
       const end = Date.now() + START_MS;
       for (;;) {
-        // the file appears after screenrecord has set its signal handler
+        // the file appears after screenrecord has set its signal handler; a ring's next segment waits for what is in it,
+        // as a Samsung A52 runs one encoder: a second recording makes its file and dies at the first frame
         const out = await this.sh(
-          `cd ${dir} 2>/dev/null && { [ -e seg1.mp4 ] && echo up; [ -e done ] && cat log; }`,
+          `cd ${dir} 2>/dev/null && { [ ${light ? '-s' : '-e'} seg1.mp4 ] && echo up; [ -e done ] && cat log; }`,
         );
         if (out.startsWith('up')) return { dir, file };
         if (out.trim() || Date.now() > end) {

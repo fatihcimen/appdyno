@@ -22,6 +22,7 @@ export class VideoRing {
   private current: Running | undefined;
   private count = 0;
   private closed = false;
+  private oneEncoder = false;
   private turn: Promise<unknown> = Promise.resolve();
   /** The running segment's handle, for whoever has to end it if this process cannot. */
   onHandle: (handle: RecordingHandle, file: string) => void = () => undefined;
@@ -40,19 +41,35 @@ export class VideoRing {
     return next;
   }
 
-  /** Starts a new segment, and only then ends the one before it. */
+  private start(file: string) {
+    return this.recorder.start(file, { maxSeconds: this.segmentSeconds * 3, light: true });
+  }
+
+  /** A device with one encoder refuses the overlap: from then on the old segment ends first, and a moment goes unfilmed. */
+  private async next(file: string, before: Running | undefined) {
+    if (!before) return this.start(file);
+    if (!this.oneEncoder) {
+      try {
+        return await this.start(file);
+      } catch {
+        this.oneEncoder = true;
+      }
+    }
+    this.current = undefined;
+    await this.finish(before);
+    return this.start(file);
+  }
+
+  /** Starts a new segment, and only then ends the one before it, where the device can run both. */
   rotate() {
     return this.inTurn(async () => {
       if (this.closed) return;
       const file = join(this.dir, `segment-${++this.count}.${this.recorder.extension}`);
-      const handle = await this.recorder.start(file, {
-        maxSeconds: this.segmentSeconds * 3,
-        light: true,
-      });
       const before = this.current;
+      const handle = await this.next(file, before);
       this.current = { file, startedAt: Date.now(), handle };
       this.onHandle(handle, file);
-      if (before) await this.finish(before);
+      if (before && !this.oneEncoder) await this.finish(before);
       while (this.done.length > FINISHED) await rm(this.done.shift()!.file, { force: true });
     });
   }
@@ -78,7 +95,8 @@ export class VideoRing {
   seal(out: string): Promise<RingVideo | undefined> {
     return this.inTurn(async () => {
       const running = this.endRunning();
-      if (running) await this.finish(running);
+      // a segment that holds nothing yet costs nothing of those before it
+      if (running) await this.finish(running).catch(() => undefined);
       const read = await Promise.all(
         this.done.map((s) =>
           this.placed(s).then(

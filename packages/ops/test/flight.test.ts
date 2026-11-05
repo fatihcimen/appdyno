@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { DeviceProvider, LiveMetrics, LiveSample, ScreenRecorder } from '@appdyno/core';
@@ -114,6 +114,38 @@ describe('a ring of video', () => {
     await Promise.all([turning, sealing, late]);
     expect(log.started).toBe(1);
     expect(log.running).toBe(0);
+  });
+
+  it('ends the old segment first where a device runs one encoder, and asks no more', async () => {
+    const { r, log } = recorder();
+    const start = r.start;
+    r.start = async (file, o) => {
+      if (log.running > 0) throw new Error('screenrecord did not start: Encoder failed (err=-38)');
+      return start(file, o);
+    };
+    const d = dir();
+    const ring = new VideoRing(r, d, 15, 0);
+    for (let i = 0; i < 4; i++) await ring.rotate();
+    expect(log.started).toBe(4);
+    expect(log.stopped).toBe(3);
+    expect(log.most).toBe(1);
+    expect(await ring.seal(join(d, 'whole.mp4'))).toBeDefined();
+    expect(log.running).toBe(0);
+  });
+
+  it('keeps what it holds when the last segment has nothing in it', async () => {
+    const { r } = recorder();
+    const stop = r.stop;
+    let stops = 0;
+    r.stop = async (h) => {
+      if (++stops === 2) throw new Error('the recording failed: seg1.mp4 is empty');
+      return stop(h);
+    };
+    const d = dir();
+    const ring = new VideoRing(r, d, 15, 0);
+    await ring.rotate();
+    await ring.rotate();
+    expect((await ring.seal(join(d, 'whole.mp4')))?.facts.bytes).toBeGreaterThan(0);
   });
 
   it('leaves nothing behind when it is dropped', async () => {
@@ -308,6 +340,20 @@ describe('the flight recorder', () => {
     const off = call('report', { action: 'stop' });
     await vi.advanceTimersByTimeAsync(2_000);
     await off;
+  });
+
+  it('goes on after a save that failed: only that one is lost', async () => {
+    const d = new FlightDevice();
+    const { call } = connect(d, 20);
+    await call('report', { action: 'flight' });
+    const traces = join(state, 'traces');
+    rmSync(traces, { recursive: true });
+    writeFileSync(traces, 'where its pages would go');
+    await vi.advanceTimersByTimeAsync(10_500);
+    const runs = d.frameRuns;
+    d.tell({ at: Date.now(), worstFrameMs: 950 });
+    await until(() => d.frameRuns === runs + 1);
+    await call('report', { action: 'stop' });
   });
 
   it('keeps what it holds when a person asks', async () => {

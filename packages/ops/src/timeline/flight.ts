@@ -232,9 +232,11 @@ export async function startFlight(
   };
 
   const keep = async (why: string) => {
-    const page = await disarm(why);
-    if (!over) await arm();
-    return page;
+    try {
+      return await disarm(why);
+    } finally {
+      if (!over) await arm();
+    }
   };
 
   /** What its log says of a stop no frame shows, since the last time it looked. */
