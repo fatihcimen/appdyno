@@ -139,6 +139,13 @@ describe('one clock', () => {
     expect(t.clock.sources.find((s) => s.row === 'Frames')!.withinMs).toBe(1);
   });
 
+  it('says how a video was placed in the words it came with: a guess calls itself one', () => {
+    const by = 'when its recording began, which no one has measured here: a guess';
+    const facts = { bytes: 1, codec: 'avc1', width: 1, height: 1, firstAt: FROM };
+    const t = assemble(gathered({ video: { facts, withinMs: 1_000, by } }));
+    expect(t.clock.sources.find((s) => s.row === 'Video')).toMatchObject({ by, withinMs: 1_000 });
+  });
+
   it('keeps out what fell before or after the stretch', () => {
     const t = assemble(
       gathered({

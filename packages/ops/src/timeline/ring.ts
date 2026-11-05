@@ -7,7 +7,7 @@ import { placeVideo } from './sources.js';
 type Segment = { file: string; startedAt: number };
 type Running = Segment & { handle: RecordingHandle };
 
-export type RingVideo = { file: string; facts: VideoFacts; withinMs: number };
+export type RingVideo = { file: string; facts: VideoFacts; withinMs: number; by: string };
 
 /** Kept finished, beside the one being made: two of a half of what is asked for hold all of it, whenever it ends. */
 const FINISHED = 2;
@@ -114,6 +114,7 @@ export class VideoRing {
           ...(map.length > 1 && { parts: map }),
         },
         withinMs: Math.max(...parts.map((p) => p.withinMs)),
+        by: newest.by,
       };
     });
   }

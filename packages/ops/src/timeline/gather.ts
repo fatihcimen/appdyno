@@ -38,7 +38,8 @@ export type Gathered = {
   to: number;
   clocks: { first: ClockReading; last: ClockReading };
   frames: FrameMarks | { why: string };
-  video?: { facts: VideoFacts; withinMs: number };
+  /** `by`: how it was put on the clock, in words: an estimate says it is one. */
+  video?: { facts: VideoFacts; withinMs: number; by: string };
   noVideo?: string;
   samples: LiveSample[];
   logs: LogsAnswer;
@@ -118,10 +119,7 @@ function clockSources(g: Gathered, frames: FrameMarks | undefined): ClockSource[
           {
             row: 'Video',
             readOn: ON_DEVICE,
-            by:
-              g.video.withinMs === STAMPED_VIDEO_MS
-                ? "each frame's own time in the file"
-                : 'when its recording began, as measured of this kind of device',
+            by: g.video.by,
             withinMs: g.video.withinMs,
           },
         ]

@@ -116,6 +116,8 @@ describe.skipIf(!udid)('a timeline on a simulator', () => {
 
   it('holds the stall, and says what a simulator cannot give', async () => {
     const s = await t.ctx.session();
+    // this screen stalls once: a process that has shown it has nothing left to show
+    await s.device.terminate(APP);
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-timeline-'));
     const started = await t.call('report', { action: 'timeline', dir });
     expect(started.error, started.text).toBe(false);
@@ -233,4 +235,42 @@ describe.skipIf(!serial)('the flight recorder', () => {
       await adb(`run-as ${APP} rm -f files/sleep_ms`);
     }
   }, 180_000);
+});
+
+/** The same on a simulator, which restarts nothing, and whose crash reports are this Mac's (APPDYNO_IOS_UDID). */
+describe.skipIf(!udid)('the flight recorder on a simulator', () => {
+  const t = opsOn(appleProvider(), udid!, APP);
+  afterAll(async () => {
+    await (await t.ctx.session()).device.stopAgent();
+    t.ctx.close();
+  });
+
+  it('keeps a real crash', async () => {
+    const s = await t.ctx.session();
+    await s.device.terminate(APP);
+    await s.device.launch(APP);
+    await pause(1_500);
+    const on = await t.call('report', { action: 'flight' });
+    expect(on.error, on.text).toBe(false);
+    await s.device.openUrl('appdyno-fixture://open/crash', APP);
+    await pause(8_000);
+    await t.call('screen');
+    await t.call('tap', { selector: { id: 'crash' } });
+    await pause(12_000);
+    const off = await t.call('report', { action: 'stop' });
+    console.log(off.text, 'host load', loadavg()[0]);
+    expect(off.data.saved).toHaveLength(1);
+    const page = pageData(off.data.saved![0]!);
+    console.log(
+      JSON.stringify({
+        reason: page.reason,
+        seconds: (page.to - page.from) / 1_000,
+        video: page.video?.bytes,
+        frames: page.frames.marks.length,
+      }),
+    );
+    expect(page.reason).toContain('a crash');
+    expect(page.frames.marks.length).toBeGreaterThan(0);
+    expect(page.video?.bytes).toBeGreaterThan(1_000);
+  }, 240_000);
 });

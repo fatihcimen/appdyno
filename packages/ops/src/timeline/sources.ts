@@ -69,6 +69,11 @@ export async function placeVideo(
       firstAt: stamps?.[0] ?? startedAt - (lead?.ms ?? 0) + offsetMs,
     },
     withinMs: stamps ? STAMPED_VIDEO_MS : (lead?.withinMs ?? UNMEASURED_VIDEO_MS),
+    by: stamps
+      ? "each frame's own time in the file"
+      : lead
+        ? 'when its recording began, as measured of this recorder'
+        : 'when its recording began, which no one has measured here: a guess',
   };
 }
 
