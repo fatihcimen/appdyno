@@ -100,6 +100,11 @@ export class IosSimulatorDevice extends IosDevice {
   private readonly recent = new Map<string, Node[]>();
   private readonly verdicts = new Map<string, Set<string>>();
 
+  /** Its processes run on this Mac's kernel and read this clock, and a time needs no runner brought up for it. */
+  override async wallClock() {
+    return Date.now();
+  }
+
   constructor(
     serial: string,
     private readonly simctl: Simctl = new Simctl(),

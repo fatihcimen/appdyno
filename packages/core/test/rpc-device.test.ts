@@ -55,6 +55,25 @@ const gone: FakeHandler = () => ({ error: 'AGENT_UNAVAILABLE' });
 const tree: FakeHandler = () => ({ result: wireTree([{ t: 'Merhaba' }]) });
 
 describe('a device through its agent', () => {
+  it('reads its clock past whatever the device is busy with', async () => {
+    let let_go = () => undefined as void;
+    const d = new TestDevice([
+      {
+        'tree.get': () =>
+          new Promise((resolve) => {
+            let_go = () => resolve({ result: wireTree([{ t: 'Merhaba' }]) });
+          }),
+        ping: () => ({ result: { uptimeMs: 1, atMs: 1234.5 } }),
+      },
+    ]);
+    await d.open();
+    const busy = d.tree();
+    // held up by the queue this would never answer, and the test would time out
+    await expect(d.wallClock()).resolves.toBe(1234.5);
+    let_go();
+    await busy;
+  });
+
   it('connects once, and reads a screen with stable refs', async () => {
     const d = new TestDevice([{ 'tree.get': tree }]);
     expect((await d.open()).model).toBe('Fake');

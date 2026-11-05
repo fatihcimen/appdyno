@@ -268,7 +268,11 @@ export const METHODS = {
     params: z.object({ token: z.string(), protocol: z.number().int() }),
     result: Hello,
   },
-  ping: { params: z.object({}), result: z.object({ uptimeMs: z.number() }) },
+  ping: {
+    params: z.object({}),
+    /** `atMs`: the device's wall clock as it answers, in ms since the epoch: answered at once, so a host can time it. */
+    result: z.object({ uptimeMs: z.number(), atMs: z.number() }),
+  },
   'tree.get': {
     params: z.object({
       maxDepth: z.number().int().min(1).max(500).default(128),

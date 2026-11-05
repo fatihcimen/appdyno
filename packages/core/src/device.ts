@@ -332,6 +332,8 @@ export interface Device {
   stopAgent(): Promise<void>;
   logs(q: LogsQuery): Promise<LogsAnswer>;
   crashes(q: CrashesQuery): Promise<CrashesAnswer>;
+  /** Its wall clock now, in ms since the epoch, read once: `measureClock` makes an offset of it, for any kind of device. */
+  wallClock(): Promise<number>;
   /** Whether the app has a live process. */
   appRunning(app: string): Promise<boolean>;
   /** Its process id, where reading it is cheap enough to do on every action. */

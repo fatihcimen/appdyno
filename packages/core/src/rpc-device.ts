@@ -208,6 +208,12 @@ export abstract class RpcDevice extends DeviceActions {
     return (await this.call('app.foreground', {}, TIMEOUTS.read)).result.pkg;
   }
 
+  /** Past the queue: an agent answers a ping at once, whatever it is doing, and the time it took is what counts. */
+  async wallClock(): Promise<number> {
+    const { result } = await (await this.ensure()).call('ping', {}, { timeoutMs: TIMEOUTS.read });
+    return result.atMs;
+  }
+
   async setClipboard(text: string) {
     await this.call('clipboard.set', { text }, TIMEOUTS.action);
   }

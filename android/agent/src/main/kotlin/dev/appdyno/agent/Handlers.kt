@@ -44,7 +44,12 @@ class Handlers(private val automation: Automation, private val token: String) {
     /** A person's finger on a mirror's window: one event, now, with no settle. On a connection's thread. */
     fun touch(r: TouchRequest) = input.liveTouch(r.phase, r.x, r.y, r.x2, r.y2)
 
-    fun ping() = JSONObject().put("uptimeMs", SystemClock.uptimeMillis() - startedAt)
+    fun ping(): JSONObject {
+        val now = java.time.Instant.now()
+        return JSONObject()
+            .put("uptimeMs", SystemClock.uptimeMillis() - startedAt)
+            .put("atMs", now.epochSecond * 1000.0 + now.nano / 1e6)
+    }
 
     fun handle(method: String, p: JSONObject, job: Job): Reply = when (method) {
         "tree.get" -> {

@@ -353,6 +353,11 @@ export class FakeDevice extends DeviceActions implements Device {
       source: 'fake reports',
     };
   }
+  /** How far ahead of this Mac the fake's clock runs. */
+  clockAheadMs = 0;
+  async wallClock() {
+    return Date.now() + this.clockAheadMs;
+  }
   running = true;
   async appRunning() {
     return this.running;

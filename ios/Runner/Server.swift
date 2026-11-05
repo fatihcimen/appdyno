@@ -150,7 +150,9 @@ final class Server {
         pump.touch()
         switch method {
         case "ping":
-            send(s, id: id, Reply(result: ["uptimeMs": Int(Date().timeIntervalSince(startedAt) * 1000)]))
+            let now = Date()
+            send(s, id: id, Reply(result: ["uptimeMs": Int(now.timeIntervalSince(startedAt) * 1000),
+                                           "atMs": now.timeIntervalSince1970 * 1000]))
         case "cancel":
             running[try OneValue.id(params)]?.cancelled = true
             send(s, id: id, Reply(result: [:]))

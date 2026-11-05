@@ -25,7 +25,7 @@
       "idleShimChecked": true
     }
   },
-  "ping": { "method": "ping", "result": { "uptimeMs": 12 } },
+  "ping": { "method": "ping", "result": { "uptimeMs": 12, "atMs": 1793840974103.953 } },
   "tree.android": {
     "method": "tree.get",
     "result": {
