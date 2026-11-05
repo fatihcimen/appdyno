@@ -14,7 +14,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { buildScheme } from './build.js';
 import type { Devicectl } from './devicectl.js';
 import { assertBundle } from './simctl.js';
-import { assertAppBundle, DATA_FOLDERS, languageArgs, on } from './manage.js';
+import { DATA_FOLDERS, installingApp, languageArgs, on } from './manage.js';
 
 const PHONE_CANNOT = {
   clear: "an iPhone's app data can only go with the app: uninstall and install it again",
@@ -35,8 +35,7 @@ export class PhoneApps implements AppManager {
   constructor(private readonly ctl: Devicectl) {}
 
   async install(path: string) {
-    assertAppBundle(path);
-    await this.ctl.install(path);
+    await installingApp(path, 'iPhoneOS', (app) => this.ctl.install(app));
     return [];
   }
 

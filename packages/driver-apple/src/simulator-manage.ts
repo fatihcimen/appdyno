@@ -19,7 +19,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { buildScheme } from './build.js';
 import { macProxy } from './network.js';
 import { type Simctl, assertBundle } from './simctl.js';
-import { assertAppBundle, DATA_FOLDERS, languageArgs, on } from './manage.js';
+import { DATA_FOLDERS, installingApp, languageArgs, on } from './manage.js';
 
 const SIMULATOR_ID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;
 
@@ -37,8 +37,7 @@ export class SimulatorApps implements AppManager {
   ) {}
 
   async install(path: string) {
-    assertAppBundle(path);
-    await this.simctl.install(this.udid, path);
+    await installingApp(path, 'iPhoneSimulator', (app) => this.simctl.install(this.udid, app));
     return [];
   }
 

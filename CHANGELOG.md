@@ -10,6 +10,7 @@
 - `appdyno perf reference`, `perf_compare` `action: reference`: the other side of a function or phase diff, taken on the baseline's build and kept beside the baseline, as only one build is installed once a regression is there.
 - `appdyno perf comment --out file`: the gate's newest answers as Markdown in a file, with no device. Nothing is posted: `docs/perf-gate.yml` is a job to copy, which posts the file with the repository's own token.
 - The gate's comparisons keep a modelled number and one timed through the host marked, in every format.
+- `app` `install` takes an `.ipa`, and says when a build is for another kind of device than this one, before trying it.
 - `simulator` `create`: a new iOS simulator of a model, on the newest runtime that runs it, started and counted among those this tool started. An Android emulator refuses, naming what makes one.
 - `screenshot` `file`: the whole picture, `.png` or `.jpg`, or into a folder under a new name. What is there stays unless `overwrite`.
 - `launch_app` `language`: restarts the app in that language, for that launch on iOS, and on Android as the app's own language, put back with the other conditions.
