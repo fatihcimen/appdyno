@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
 import {
+  clientNamed,
   cliSessionFile,
   commandsFor,
   deviceFlag,
@@ -105,6 +106,7 @@ function contextFrom(values: ServerFlags, remember?: string) {
     tool: remember ? 'appdyno cli' : 'appdyno mcp',
     ...((values.share || env.APPDYNO_SHARE === '1') && { share: true }),
     alertPerson,
+    clientNamed,
     mirrorCommand: [
       process.execPath,
       fileURLToPath(import.meta.url),

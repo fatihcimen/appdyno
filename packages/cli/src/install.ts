@@ -27,12 +27,14 @@ export type InstallOptions = {
   err: (line: string) => void;
 };
 
-type Outcome = {
+export type Outcome = {
   client: Client;
   file: string;
   did: 'added' | 'replaced' | 'removed' | 'right' | 'absent' | 'refused';
   before: string;
   after: string;
+  /** This server's entry as it stands, whatever it holds, for putting back. */
+  had?: unknown;
   why?: string;
 };
 
@@ -66,16 +68,21 @@ function repointed(have: unknown, command: string) {
   return { ...entry, command: Array.isArray(now) ? [command, ...now.slice(1)] : command };
 }
 
-type Asked = Pick<InstallOptions, 'remove' | 'server' | 'moved'>;
+type Asked = Pick<InstallOptions, 'remove' | 'server' | 'moved'> & {
+  /** Puts back an entry as it was, flags and all: what an undo has, and an edit by hand may hold more than `entry` makes. */
+  back?: Record<string, unknown>;
+};
 
-function outcomeFor(client: Client, file: string, o: Asked): Outcome {
+/** What this would do to a client's file, with nothing done: the same answer a change works from. */
+export function outcomeFor(client: Client, file: string, o: Asked): Outcome {
   const { key } = client;
   const base = { client, file, before: '', after: '' };
   try {
     const before = existsSync(file) ? readFileSync(file, 'utf8') : '';
-    const same = { ...base, before, after: before };
     const edit = EDIT[client.format];
     const have = edit.read(before, key, SERVER);
+    const same = { ...base, before, after: before, ...(have !== undefined && { had: have }) };
+    if (o.back) return { ...same, did: 'replaced', after: edit.write(before, key, SERVER, o.back) };
     if (o.remove) {
       if (have === undefined) return { ...same, did: 'absent' };
       return { ...same, did: 'removed', after: edit.remove(before, key, SERVER) };
@@ -95,10 +102,11 @@ function outcomeFor(client: Client, file: string, o: Asked): Outcome {
   }
 }
 
-const changes = ({ did }: Outcome) => did === 'added' || did === 'replaced' || did === 'removed';
+export const changes = ({ did }: Outcome) =>
+  did === 'added' || did === 'replaced' || did === 'removed';
 
 /** Backed up first, then replaced whole: through a link to the real file, in its own mode. */
-function apply({ file, before, after }: Outcome) {
+export function apply({ file, before, after }: Outcome) {
   if (!existsSync(file)) {
     writeWhole(file, after);
     return undefined;
@@ -115,7 +123,7 @@ function apply({ file, before, after }: Outcome) {
 }
 
 /** The lines that differ: no two edits here touch far apart, so one run covers them. */
-function changedLines(before: string, after: string) {
+export function changedLines(before: string, after: string) {
   const a = before.split('\n');
   const b = after.split('\n');
   let head = 0;

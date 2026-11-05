@@ -6,8 +6,9 @@ import { deviceStateFile } from '@appdyno/core';
 import { argumentsFor, ToolError, type Op } from '@appdyno/ops';
 import { z } from 'zod';
 
-export { CLIENTS } from './clients.js';
-export { install } from './install.js';
+export { BROWSER_CLIENTS, CLIENTS, clientNamed, type Named, type Stdio } from './clients.js';
+export { clientRows, entryCommand, type ClientRow } from './client-state.js';
+export { apply, changedLines, changes, fileOf, install, outcomeFor } from './install.js';
 export { download } from './appcast.js';
 export { appCommand, installCheck, installedBy, manifestOf, serverOf } from './installed.js';
 export { followMove, putOnPath, takeOffPath } from './on-path.js';
