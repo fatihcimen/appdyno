@@ -101,6 +101,7 @@ export async function hubDevices(ctx: ServerContext, hardware: Hardware): Promis
       ...(known?.platform && { platform: known.platform }),
       ...(known?.model && { model: known.model }),
       detail: '',
+      // shortcut: an address names Wi-Fi on Android, and an iPhone here always reads USB; ask its own transport when one says
       link: d.state === 'network' || d.serial.includes(':') ? 'Wi-Fi' : 'USB',
       ...(need && { need }),
     });

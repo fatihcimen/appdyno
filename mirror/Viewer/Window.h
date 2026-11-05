@@ -210,9 +210,13 @@ static const double MVHudWidth = 188;
 @interface MVList : NSScrollView <NSTableViewDataSource, NSTableViewDelegate>
 @property(nonatomic, copy) NSArray<MVRow *> *rows;
 @property(nonatomic, copy, nullable) void (^onSelect)(MVRow *_Nullable row);
+/// A row is something to press, and none is ever selected: a second click on it means as much as the first.
+@property(nonatomic, copy, nullable) void (^onClick)(MVRow *row);
 @property(nonatomic, readonly, nullable) MVRow *selected;
 - (void)scrollToEnd;
 - (void)selectKey:(nullable NSString *)key;
+/// Where a row stands in its window.
+- (NSPoint)pointOfRow:(NSUInteger)at;
 /// What a secondary click on a row offers, and the row it was on.
 @property(nonatomic, nullable) NSMenu *rowMenu;
 @property(nonatomic, readonly, nullable) NSString *clickedKey;
@@ -253,8 +257,10 @@ NSTextField *MVPaneHeading(NSString *text);
 /// What an agent did on this device, as runs of work.
 @interface MVActivityPane : NSView
 - (void)add:(NSDictionary *)call;
-/// The newest line, for a look at what it says.
+/// The newest line, for a look at what it says, how many lines stand, and where the first is in its window.
 - (NSString *)firstLine;
+- (NSUInteger)lines;
+- (NSPoint)firstLinePoint;
 @end
 
 /// What a person's clicks have written, and what is under the pointer, as the parent says.
@@ -315,6 +321,7 @@ enum { MVPanePerf, MVPaneFlow, MVPaneApps, MVPaneActivity, MVPanes };
 @property(nonatomic, readonly) MVFlowPane *flow;
 /// The stream's numbers, which stand in no pane of their own.
 @property(nonatomic, readonly) NSView *numbers;
+@property(nonatomic, readonly) MVActivityPane *activity;
 /// The pane chosen, by the index `showPane:` takes.
 @property(nonatomic, readonly) NSInteger chosen;
 /// Whether Performance is the pane chosen.

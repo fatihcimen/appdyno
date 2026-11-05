@@ -125,7 +125,11 @@ static NSString *symbolOf(NSString *state) {
   [parts addObject:words(title ?: state, 14, NSFontWeightSemibold, NSColor.labelColor)];
   if (fix.length) [parts addObject:words(fix, 12, NSFontWeightRegular, NSColor.labelColor)];
   // what no one can wait out alone gets a step of its own
-  if ([state isEqual:@"waiting"] || [state isEqual:@"stopped"]) [parts addObject:[NSButton buttonWithTitle:MVWord(@"Try Again") target:self action:@selector(tryAgain:)]];
+  if ([state isEqual:@"waiting"] || [state isEqual:@"stopped"]) {
+    NSButton *again = [MVBarButton buttonWithTitle:MVWord(@"Try Again") target:self action:@selector(tryAgain:)];
+    again.identifier = @"tryAgain";
+    [parts addObject:again];
+  }
   _stateCard = card(parts);
   place(_stateCard, view, [_stateCard.centerYAnchor constraintEqualToAnchor:view.centerYAnchor]);
 }

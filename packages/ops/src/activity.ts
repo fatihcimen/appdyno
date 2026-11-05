@@ -45,6 +45,7 @@ export function appendActivity(serial: string, line: ActivityLine) {
   writeFileSync(file, text.slice(text.indexOf('\n', text.length / 2) + 1), { mode: 0o600 });
 }
 
+// shortcut: one to a process, so two devices tapped at once could cross; hold it per session if a server ever drives two
 let touched: ActivityLine['touched'];
 
 /** The next line kept says it touched here: only a step knows the point a ref came to. */

@@ -43,12 +43,14 @@ const MAINS = [
   },
 ];
 
+const counted = (n: number, what: string) => `${n} ${what}${n === 1 ? '' : 's'} ago`;
+
 const ago = (at: string, now: number) => {
   const gone = now - Date.parse(at);
-  if (gone < MINUTE) return `${Math.max(1, Math.round(gone / SECOND))} seconds ago`;
-  if (gone < HOUR) return `${Math.round(gone / MINUTE)} minutes ago`;
-  if (gone < DAY) return `${Math.round(gone / HOUR)} hours ago`;
-  return `${Math.round(gone / DAY)} days ago`;
+  if (gone < MINUTE) return counted(Math.max(1, Math.round(gone / SECOND)), 'second');
+  if (gone < HOUR) return counted(Math.round(gone / MINUTE), 'minute');
+  if (gone < DAY) return counted(Math.round(gone / HOUR), 'hour');
+  return counted(Math.round(gone / DAY), 'day');
 };
 
 const signed = (c: Comparison) => {

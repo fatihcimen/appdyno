@@ -66,7 +66,7 @@ describe('what a window says of past measures', () => {
     const lines = await measureHistory(d, 'dev.app', phone.serial, NOW);
     expect(lines[0]).toMatchObject({ verdict: 'regression', flagged: true });
     expect(lines[0]?.title).toMatch(/^Regression \+55\d ms$/);
-    expect(lines[0]?.detail).toBe('Cold launch 951 ms · 1 hours ago');
+    expect(lines[0]?.detail).toBe('Cold launch 951 ms · 1 hour ago');
     expect(lines[1]?.title).toBe('Cold launch');
   });
 

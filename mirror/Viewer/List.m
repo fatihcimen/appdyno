@@ -72,6 +72,16 @@ static NSString *identityOf(MVRow *row) {
   return YES;
 }
 
+- (void)setOnClick:(nullable void (^)(MVRow *))onClick {
+  _onClick = [onClick copy];
+  _table.target = self;
+  _table.action = @selector(rowClicked:);
+}
+
+- (void)rowClicked:(id)sender {
+  if (_table.clickedRow >= 0 && (NSUInteger)_table.clickedRow < _rows.count) self.onClick(_rows[_table.clickedRow]);
+}
+
 - (void)setRows:(NSArray<MVRow *> *)rows {
   if (_table.style == NSTableViewStyleSourceList && MVMoves() && _rows.count && [self changeTo:rows]) return;
   _rows = [rows copy];
@@ -97,6 +107,11 @@ static NSString *identityOf(MVRow *row) {
   return _table.clickedRow >= 0 && (NSUInteger)_table.clickedRow < _rows.count ? _rows[_table.clickedRow].key : nil;
 }
 
+- (NSPoint)pointOfRow:(NSUInteger)at {
+  NSRect row = [_table rectOfRow:at];
+  return [_table convertPoint:NSMakePoint(NSMidX(row), NSMidY(row)) toView:nil];
+}
+
 - (void)scrollToEnd {
   if (_rows.count) [_table scrollRowToVisible:_rows.count - 1];
 }
@@ -114,7 +129,7 @@ static NSString *identityOf(MVRow *row) {
 }
 
 - (BOOL)tableView:(NSTableView *)table shouldSelectRow:(NSInteger)at {
-  return !_rows[at].header || _rows[at].key;
+  return !self.onClick && (!_rows[at].header || _rows[at].key);
 }
 
 - (CGFloat)tableView:(NSTableView *)table heightOfRow:(NSInteger)at {

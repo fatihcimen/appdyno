@@ -2,7 +2,8 @@
 // button of the table, in a group by what it is for, and the window's title and subtitle say which device and how it is.
 #import "Window.h"
 
-static const double kSymbolSize = 14;
+// narrow enough that what the capsule says while a measure runs folds no control away at the window's opening size
+static const double kSymbolSize = 14, kButtonWide = 28, kTitleWidest = 150;
 
 @implementation MVToolbar {
   NSArray<NSArray<NSString *> *> *_groups;
@@ -63,7 +64,7 @@ static const double kSymbolSize = 14;
   button.identifier = name;
   button.toolTip = MVControlTitle(name);
   button.accessibilityLabel = MVControlTitle(name);
-  [button.widthAnchor constraintEqualToConstant:34].active = YES;
+  [button.widthAnchor constraintEqualToConstant:kButtonWide].active = YES;
   [button.heightAnchor constraintEqualToConstant:30].active = YES;
   _buttons[name] = button;
   NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:name];
@@ -81,6 +82,7 @@ static const double kSymbolSize = 14;
   lines.orientation = NSUserInterfaceLayoutOrientationVertical;
   lines.alignment = NSLayoutAttributeLeading;
   lines.spacing = 0;
+  [lines.widthAnchor constraintLessThanOrEqualToConstant:kTitleWidest].active = YES;
   NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:@"title"];
   item.view = lines;
   item.bordered = NO;

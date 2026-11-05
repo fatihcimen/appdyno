@@ -45,7 +45,7 @@ static MVRow *rowOfCall(NSDictionary *call) {
     _none = MVWrappedText(@"Nothing yet. What an AI client does on this device is told here.", MVStyleBody);
     _list = [MVList new];
     __weak MVActivityPane *weak = self;
-    _list.onSelect = ^(MVRow *row) {
+    _list.onClick = ^(MVRow *row) {
       [weak chose:row];
     };
     NSStackView *stack = [NSStackView stackViewWithViews:@[_none, _list]];
@@ -85,7 +85,6 @@ static MVRow *rowOfCall(NSDictionary *call) {
     for (NSDictionary *call in run.calls.reverseObjectEnumerator) [rows addObject:rowOfCall(call)];
   }];
   _list.rows = rows;
-  [_list selectKey:nil];
   _none.hidden = rows.count > 0;
   _list.hidden = !_none.hidden;
 }
@@ -107,6 +106,14 @@ static MVRow *rowOfCall(NSDictionary *call) {
   for (MVRun *run in _runs) kept += run.calls.count;
   if (kept > kCallsKept && _runs.count > 1) [_runs removeObjectAtIndex:0];
   [self listRuns];
+}
+
+- (NSUInteger)lines {
+  return _list.rows.count;
+}
+
+- (NSPoint)firstLinePoint {
+  return [_list pointOfRow:0];
 }
 
 - (NSString *)firstLine {
