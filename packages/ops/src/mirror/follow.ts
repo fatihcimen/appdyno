@@ -43,7 +43,12 @@ export function followDevice(
     for (const line of lines()) {
       lastCall = now;
       driving = true;
-      session.tell({ op: 'agent', driving: true, tool: line.tool });
+      session.tell({
+        op: 'agent',
+        driving: true,
+        tool: line.tool,
+        ...(line.client && { client: line.client }),
+      });
       session.tell(forWindow(line));
       if (line.touched) session.tell({ op: 'touchAt', ...line.touched, agent: true });
     }

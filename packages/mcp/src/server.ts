@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { noteClientCall } from '@appdyno/core';
 import { INSTRUCTIONS, SERVER_INFO } from './brand.js';
 import {
   ANY_ARGUMENTS,
@@ -44,10 +45,16 @@ function slim(schema: unknown): unknown {
 /**
  * The MCP server, one tool per op; an unexpected failure is logged to stderr by its message only. No
  * output schemas in the catalog: 16,000 characters that a client's validator would also hold against a
- * failed answer's code and hint. Structured content goes out all the same.
+ * failed answer's code and hint. Structured content goes out all the same. `held` is the client over HTTP, where a
+ * server lasts one POST and the `initialize` that named it came in another.
  */
-export function createServer(ops: Record<string, Op>, log: (line: object) => void): McpServer {
+export function createServer(
+  ops: Record<string, Op>,
+  log: (line: object) => void,
+  held?: string,
+): McpServer {
   const server = new McpServer(SERVER_INFO, { instructions: INSTRUCTIONS });
+  const caller = () => (held ? { name: held } : server.server.getClientVersion());
   for (const { name, ...t } of Object.values(ops)) {
     server.registerTool(
       name,
@@ -59,6 +66,9 @@ export function createServer(ops: Record<string, Op>, log: (line: object) => voi
       },
       async (args, extra) => {
         const started = Date.now();
+        const client = caller();
+        // what earns a client its word in the hub: a call that got here, whatever came of it
+        if (client) noteClientCall(client, held ? 'http' : 'stdio');
         const token = extra._meta?.progressToken;
         let sent = 0;
         const progress =
@@ -79,8 +89,13 @@ export function createServer(ops: Record<string, Op>, log: (line: object) => voi
             BEAT_MS,
           );
         try {
-          const r = await inCall({ signal: extra.signal, ...(progress && { progress }) }, () =>
-            t.handler(argumentsFor(t, args)),
+          const r = await inCall(
+            {
+              signal: extra.signal,
+              ...(progress && { progress }),
+              ...(client && { client: client.name }),
+            },
+            () => t.handler(argumentsFor(t, args)),
           );
           log({ tool: name, ms: Date.now() - started, outcome: 'ok' });
           return { content: r.blocks, structuredContent: r.data };

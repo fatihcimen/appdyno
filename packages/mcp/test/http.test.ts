@@ -1,6 +1,7 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { clientCalls } from '@appdyno/core';
 import type { DeviceProvider, DeviceSettings, SettingName } from '@appdyno/core';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -151,6 +152,18 @@ describe('a client', () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name)).toContain('list_devices');
     expect(text(await client.callTool({ name: 'list_devices' }))).toContain('emulator-5580');
+  });
+
+  it('earns its word in the hub by a call, not by a look, and leaves no token behind', async () => {
+    const { url } = await serving();
+    const client = await clientOf(url, 'A Hosted Client');
+    await client.listTools();
+    expect(clientCalls()).toEqual([]);
+    await client.callTool({ name: 'list_devices' });
+    expect(clientCalls()).toMatchObject([{ name: 'A Hosted Client', link: 'http' }]);
+    const dir = join(process.env.APPDYNO_STATE_DIR!, 'clients');
+    for (const file of readdirSync(dir))
+      expect(readFileSync(join(dir, file), 'utf8')).not.toContain(TOKEN);
   });
 
   it('reaches it with the token in the path, for a client with no field for a header', async () => {

@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname } from 'node:path';
-import { deviceStateFile } from '@appdyno/core';
+import { callClient, deviceStateFile } from '@appdyno/core';
 import type { ServerContext } from './context.js';
 import { redactLog } from './policy.js';
 import { shownArgs } from './report.js';
@@ -26,6 +26,8 @@ export type ActivityLine = {
   done?: string;
   /** Where it touched, as fractions of the screen. */
   touched?: { x: number; y: number };
+  /** Who called, as a person knows it. */
+  client?: string;
 };
 
 /** A session of hours stays small: past this the older half goes. */
@@ -63,6 +65,7 @@ export function activityFor(ctx: ServerContext) {
           ...op,
           handler: async (args): Promise<ToolResult> => {
             const at = Date.now();
+            const client = callClient();
             const note = (ok: boolean, done?: unknown) => {
               const serial = ctx.currentSerial;
               if (serial)
@@ -74,6 +77,7 @@ export function activityFor(ctx: ServerContext) {
                   args: shownArgs(op, args, clean),
                   ...(typeof done === 'string' && { done }),
                   ...(touched && { touched }),
+                  ...(client && { client: ctx.clientNamed(client) }),
                 });
               touched = undefined;
             };

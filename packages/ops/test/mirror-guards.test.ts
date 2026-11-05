@@ -5,7 +5,7 @@ import type { Device, DeviceProvider } from '@appdyno/core';
 import { noiseOf } from '@appdyno/perf';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { activityFollower, activityFor, appendActivity } from '../src/activity.js';
-import { startOf } from '@appdyno/core';
+import { inCall, startOf } from '@appdyno/core';
 import { ServerContext } from '../src/context.js';
 import { followDevice } from '../src/mirror/follow.js';
 import { handoffDone, handoffOps, handoffRequest } from '../src/mirror/handoff.js';
@@ -125,6 +125,23 @@ describe('the activity of a device', () => {
 });
 
 describe('what a window is told', () => {
+  it('names the client that drives, as a person knows it', async () => {
+    vi.useFakeTimers();
+    try {
+      rmSync(activityFile(), { force: true });
+      const told: Record<string, unknown>[] = [];
+      const off = followDevice('guarded', { tell: (m) => told.push(m) });
+      const ctx = new ServerContext(DEFAULT_POLICY, [], { clientNamed: (s) => `${s} by name` });
+      ctx.currentSerial = 'guarded';
+      await inCall({ client: 'said' }, () => activityFor(ctx)(op('tap')).handler({}));
+      await vi.advanceTimersByTimeAsync(300);
+      expect(told[0]).toEqual({ op: 'agent', driving: true, tool: 'tap', client: 'said by name' });
+      off();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('marks that an agent is driving while calls come, and for 2 s after', async () => {
     vi.useFakeTimers();
     try {

@@ -8,6 +8,7 @@ export * from './build.js';
 export * from './owner.js';
 export * from './stats.js';
 export * from './call.js';
+export * from './client-calls.js';
 export * from './clock.js';
 export * from './device.js';
 export * from './frames.js';

@@ -131,7 +131,7 @@ export async function serveHttp({ host, port, token, open, log, idleMs = IDLE_MS
     held ??= { ...open(), since: new Date().toISOString() };
     if (client) held.client = client;
     held.acted ||= message.method === 'tools/call';
-    const server = createServer(held.ops, log);
+    const server = createServer(held.ops, log, held.client);
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     if (isInitializeRequest(body) && client !== undefined)
       res.setHeader(SESSION, Buffer.from(client).toString('base64url'));

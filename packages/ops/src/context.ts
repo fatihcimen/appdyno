@@ -60,6 +60,8 @@ export class ServerContext {
       mirrorCommand?: string[];
       /** Reaches a person when there is no window to show a request in. */
       alertPerson?: (reason: string) => void;
+      /** What a person calls the client that named itself this. */
+      clientNamed?: (said: string) => string;
     } = {},
   ) {
     this.policy = { ...policy, secrets: [...policy.secrets] };
@@ -221,6 +223,10 @@ export class ServerContext {
 
   get mirrorCommand() {
     return this.defaults.mirrorCommand;
+  }
+
+  clientNamed(said: string) {
+    return this.defaults.clientNamed?.(said) ?? said;
   }
 
   get alertPerson() {

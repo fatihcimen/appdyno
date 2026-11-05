@@ -2,7 +2,12 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { DeviceError } from '@appdyno/protocol';
 
 /** What a client's request brings to every device call under it, however deep. */
-export type CallScope = { signal?: AbortSignal; progress?: (message: string) => void };
+export type CallScope = {
+  signal?: AbortSignal;
+  progress?: (message: string) => void;
+  /** Who is calling, as it named itself. */
+  client?: string;
+};
 
 const scope = new AsyncLocalStorage<CallScope>();
 
@@ -13,6 +18,9 @@ export const callSignal = () => scope.getStore()?.signal;
 
 /** Tells the client what a long operation is doing, when it asked to be told. */
 export const reportProgress = (message: string) => scope.getStore()?.progress?.(message);
+
+/** The client whose request this is, if it gave a name. */
+export const callClient = () => scope.getStore()?.client;
 
 export const cancelled = (what: string) =>
   new DeviceError('CANCELLED', `${what}: cancelled by the client`, 'the client cancelled the call');
