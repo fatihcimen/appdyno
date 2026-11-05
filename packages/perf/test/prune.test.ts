@@ -108,6 +108,19 @@ describe('kept traces pruned', () => {
     ]);
   });
 
+  it('counts a saved flight as it counts a trace, and takes it by the same rules', async () => {
+    const s = store();
+    await s.anyRun();
+    const old = s.trace('dev.app-flight-1.timeline.html', 4, 3);
+    const young = s.trace('dev.app-flight-2.timeline.html', 4, 0);
+    const other = s.trace('timeline.html', 4, 3);
+    const r = await s.prune(3);
+    expect(r.removed.map((x) => x.name)).toEqual(['dev.app-flight-1.timeline.html']);
+    expect(r.beforeBytes).toBe(8 * MB);
+    // under a day old stays; what a person kept under the plain name is not among them
+    expect([existsSync(old), existsSync(young), existsSync(other)]).toEqual([false, true, true]);
+  });
+
   it('never takes a trace a recent run names, by either of its files', async () => {
     const s = store();
     const named = s.trace('named.pftrace', 4, 9);

@@ -10,6 +10,7 @@ const CPU_WINDOW_MS = 500;
 const MEMORY_EVERY = 5;
 
 const NOT_EACH_SECOND = 'too slow to read each second here';
+const NOT_ASKED = 'not read: each read costs the device';
 const FRAME_FIELDS: LiveField[] = ['fps', 'jankyFrames', 'frozenFrames'];
 const COUNT_BEGINS = 'counting begins';
 
@@ -25,6 +26,7 @@ async function sampleOf(
   device: Pick<Device, 'measure'>,
   app: string,
   kept: Kept,
+  only?: readonly LiveField[],
 ): Promise<LiveSample> {
   const { measure } = device;
   const sample: LiveSample = { at: Date.now(), app };
@@ -37,6 +39,8 @@ async function sampleOf(
     get: () => Promise<Measured<T>>,
     use: (v: T) => void,
   ) => {
+    if (only && !fields.some((f) => only.includes(f)))
+      return Object.assign(absent, allAbsent(fields, NOT_ASKED));
     if (measure.slowReads.includes(reader))
       return Object.assign(absent, allAbsent(fields, NOT_EACH_SECOND));
     try {
@@ -99,9 +103,13 @@ async function sampleOf(
 
 /**
  * A device's numbers by its own measures, for every kind that has them: one source, and no second parser. A kind with a
- * better way of its own, such as a phone's live service, gives a `liveMetrics` of its own instead.
+ * better way of its own, such as a phone's live service, gives a `liveMetrics` of its own instead. `only`: what has to
+ * be read, for one that runs all day and pays for each.
  */
-export function measuredLive(device: Pick<Device, 'measure' | 'foreground'>): LiveMetrics {
+export function measuredLive(
+  device: Pick<Device, 'measure' | 'foreground'>,
+  only?: readonly LiveField[],
+): LiveMetrics {
   return {
     async start(onSample, app) {
       let on = true;
@@ -111,7 +119,7 @@ export function measuredLive(device: Pick<Device, 'measure' | 'foreground'>): Li
           const began = Date.now();
           const front = app ?? (await device.foreground().catch(() => undefined));
           const sample = front
-            ? await sampleOf(device, front, kept)
+            ? await sampleOf(device, front, kept, only)
             : { at: began, absent: allAbsent(LIVE_FIELDS, 'waiting for the app in front') };
           if (on) onSample(sample);
           await pause(Math.max(0, SECOND_MS - (Date.now() - began)));

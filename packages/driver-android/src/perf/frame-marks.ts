@@ -2,8 +2,16 @@ import { type FrameMarks, type InputMark, type Measured } from '@appdyno/core';
 import { assertPkg } from '../adb.js';
 import { traceProcessor } from '../tools.js';
 import { cellNum, nsToMs, parseCsv } from './parse-common.js';
-import { NAME_NEW_PROCESSES, PROCESS_STATS, queryFile, recordTrace } from './perfetto.js';
+import {
+  NAME_NEW_PROCESSES,
+  PROCESS_STATS,
+  queryFile,
+  recordTrace,
+  REMOTE_TRACES,
+} from './perfetto.js';
 import { at, type PerfDevice } from './shared.js';
+
+const TRACE_NAME = 'timeline';
 
 /** What says a frame was the app's fault, as the frame reading counts it. */
 const APP_LATE = /App Deadline Missed|App Resynced Jitter/;
@@ -11,12 +19,22 @@ const APP_LATE = /App Deadline Missed|App Resynced Jitter/;
 /** Events this close are one touch: a swipe is an event every few ms. */
 const SAME_TOUCH_MS = 150;
 
+/** This config wrote 120 KB a second on an emulator drawing all the time; four times that, for a screen of 120 Hz. */
+const KB_A_SECOND = 512;
+const WHOLE_RING_KB = 65_536;
+const LEAST_RING_KB = 8_192;
+
+const ringKb = (keepSeconds?: number) =>
+  keepSeconds === undefined
+    ? WHOLE_RING_KB
+    : Math.max(LEAST_RING_KB, Math.min(keepSeconds * KB_A_SECOND, WHOLE_RING_KB));
+
 /**
  * Lean, so that it can run for minutes: no scheduler or binder events, which fill a ring in under a minute, and which
  * only say why a frame was late. `view` holds the frames' doFrame and every input event the app is handed.
  */
-const config = (pkg: string, ms: number) => [
-  'buffers { size_kb: 65536 fill_policy: RING_BUFFER }',
+const config = (pkg: string, ms: number, keepSeconds?: number) => [
+  `buffers { size_kb: ${ringKb(keepSeconds)} fill_policy: RING_BUFFER }`,
   'data_sources { config { name: "android.surfaceflinger.frametimeline" } }',
   `data_sources { config { name: "linux.ftrace" ftrace_config { ${NAME_NEW_PROCESSES} atrace_categories: "view" atrace_apps: "${pkg}" } } }`,
   PROCESS_STATS,
@@ -80,14 +98,20 @@ export async function frameMarks(
   pkg: string,
   seconds: number,
   during: () => Promise<unknown>,
+  keepSeconds?: number,
 ): Promise<Measured<FrameMarks>> {
   await d.readyToMeasure();
   assertPkg(pkg);
   await traceProcessor();
-  const tracePath = await recordTrace(d, pkg, 'timeline', config(pkg, seconds * 1000), {
-    during,
-    stop: true,
-  });
+  // a process that died with one running leaves its file, and only this name says whose it was
+  await d.shell(`rm -f ${REMOTE_TRACES}/appdyno-${TRACE_NAME}-*`).catch(() => undefined);
+  const tracePath = await recordTrace(
+    d,
+    pkg,
+    TRACE_NAME,
+    config(pkg, seconds * 1000, keepSeconds),
+    { during, stop: true },
+  );
   const raw = await queryFile(tracePath, framesSql(pkg));
   return {
     value: {

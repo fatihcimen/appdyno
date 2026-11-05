@@ -128,7 +128,8 @@ export function renderTimeline(t: Timeline, video: { bytes?: Buffer; beside?: st
 ${t.reason ? `<p>${chip('warning', t.reason)}</p>` : ''}${holds(t)}${tiles(t)}
 <div class="top">${screen(t, video.beside)}<div class="side">
 <section class="card"><h2>Timeline</h2><div id="plots">${lanes(t)}<div id="cursor"></div></div>
-<input id="scrub" type="range" min="0" max="${span}" step="10" data-first="${worst?.at ?? t.from}" aria-label="Moment in this stretch"></section>
+<input id="scrub" type="range" min="0" max="${span}" step="10" data-first="${worst?.at ?? t.from}" aria-label="Moment in this stretch">
+${t.frames.note ? `<p class="note">${esc(t.frames.note)}</p>` : ''}</section>
 ${NOW}
 <section class="card"><h2>Slowest moments</h2><p class="note">Click one: the video goes there.</p>${slowList(t)}${clockSection(t)}</section>
 </div></div>

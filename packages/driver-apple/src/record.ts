@@ -42,6 +42,7 @@ class ToolRecorder implements ScreenRecorder {
     private readonly refusedHint?: string,
     private readonly tool: string = 'xcrun',
     readonly lead?: ScreenRecorder['lead'],
+    readonly oneAtATime?: boolean,
   ) {}
 
   /** Asks the recorder to end after `seconds`, if it is still that recorder; ends with `stop` too. */
@@ -182,6 +183,9 @@ const devicectlRecorder = (udid: string): ScreenRecorder =>
     true,
     undefined,
     'this phone does not offer it to devicectl: record on the phone (Control Center, Screen Recording), or with QuickTime Player on this Mac',
+    'xcrun',
+    undefined,
+    true,
   );
 
 /** This command's own file, beside what is built or in the published package. */
@@ -219,6 +223,8 @@ const streamRecorder = (udid: string, main: string): ScreenRecorder =>
     undefined,
     undefined,
     process.execPath,
+    undefined,
+    true,
   );
 
 /** By its stream where this build has one; else as `devicectl` can, which not every phone offers. */

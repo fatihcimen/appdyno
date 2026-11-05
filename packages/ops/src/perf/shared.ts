@@ -206,7 +206,8 @@ export async function keepRun(
           deviceParked: vitals.parkedKernelThreads,
         }),
         ...(vitals?.cpuPressure !== undefined && { devicePressure: vitals.cpuPressure }),
-        ...(liveMirror(s.device.serial) && { mirrored: true }),
+        // a timeline's or a flight recorder's video runs the same encoder on the device
+        ...((liveMirror(s.device.serial) || s.timeline || s.flight) && { mirrored: true }),
       },
       ...(vitals?.thermalStatus !== undefined && { thermal: vitals.thermalStatus }),
       ...(vitals?.batteryTempC !== undefined && { batteryTempC: vitals.batteryTempC }),

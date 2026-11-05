@@ -11,10 +11,10 @@ const say = async (ops: Ops, name: string, args: Record<string, unknown>) => {
   return blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n');
 };
 
-/** Until `ms` pass or a person stops it, whichever is first. */
-const forThisLong = (ms: number) =>
+/** Until `ms` pass, if any are given, or a person stops it, whichever is first. */
+const forThisLong = (ms?: number) =>
   new Promise<void>((done) => {
-    const timer = setTimeout(done, ms);
+    const timer = ms === undefined ? undefined : setTimeout(done, ms);
     process.once('SIGINT', () => {
       clearTimeout(timer);
       done();
@@ -40,21 +40,61 @@ export async function recordTimeline(ops: Ops, { during, dir, log }: TimelineRun
   if (failed !== undefined) throw failed;
 }
 
+type Settings = {
+  device?: string;
+  app?: string;
+  'flight-seconds'?: string;
+  'full-urls'?: boolean;
+};
+
+/**
+ * `appdyno flight`: stays until a person stops it, and says what it kept.
+ * @internal the bin's own, and the published types have none of what it takes
+ */
+export async function flightCommand(args: string[], context: (values: Settings) => ServerContext) {
+  const { values } = parseArgs({ args, options: COMMANDS.flight.flags });
+  const { app, device, seconds, dir, 'full-urls': fullUrls } = values;
+  if (!app) {
+    console.error(usage('flight'));
+    return 2;
+  }
+  const ctx = context({
+    app,
+    ...(device && { device }),
+    ...(seconds && { 'flight-seconds': seconds }),
+    ...(fullUrls && { 'full-urls': true }),
+  });
+  const ops = opsFor(ctx);
+  try {
+    console.log(await say(ops, 'report', { action: 'flight', ...(dir && { dir: resolve(dir) }) }));
+    await forThisLong();
+    console.log(await say(ops, 'report', { action: 'stop' }));
+    return 0;
+  } finally {
+    await ctx.end().catch(() => []);
+    ctx.close();
+  }
+}
+
 /**
  * `appdyno timeline`: its sources run in this process, so this stays for the whole of it, as a window does.
  * @internal the bin's own, and the published types have none of what it takes
  */
 export async function timelineCommand(
   args: string[],
-  context: (values: { device?: string; app?: string }) => ServerContext,
+  context: (values: Settings) => ServerContext,
 ) {
   const { values } = parseArgs({ args, options: COMMANDS.timeline.flags });
-  const { app, device, flow, seconds, dir } = values;
+  const { app, device, flow, seconds, dir, 'full-urls': fullUrls } = values;
   if (!app || (!flow && !seconds)) {
     console.error(usage('timeline'));
     return 2;
   }
-  const ctx = context({ app, ...(device && { device }) });
+  const ctx = context({
+    app,
+    ...(device && { device }),
+    ...(fullUrls && { 'full-urls': true }),
+  });
   try {
     await recordTimeline(opsFor(ctx), {
       during: flow

@@ -12,6 +12,7 @@ import {
   type ScreenElement,
 } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
+import type { RunningFlight } from './timeline/flight.js';
 import type { RunningTimeline } from './timeline/run.js';
 
 const WAIT_GAP_MS = 300;
@@ -74,6 +75,8 @@ export class Session {
 
   /** What is recording for a timeline: its sources run in this process, and end with it. */
   timeline: RunningTimeline | undefined;
+  /** The flight recorder of this device, for as long as a person keeps it on. */
+  flight: RunningFlight | undefined;
   /** The screen the agent was shown last: diffs are against it. */
   shown: ScreenElement[] | undefined;
   /** Device actions so far. */

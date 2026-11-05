@@ -180,7 +180,7 @@ export function assemble(g: Gathered): Timeline {
   const none = marks ? undefined : (g.frames as { why: string }).why;
   return {
     title: g.title,
-    ...(g.reason && { reason: g.reason }),
+    ...(g.reason && { reason: g.clean(g.reason) }),
     written: g.written,
     from: g.from,
     to: g.to,

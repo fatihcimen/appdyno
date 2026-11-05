@@ -42,6 +42,8 @@ export type VideoFacts = {
   height: number;
   /** The first frame, on the clock: a moment's place in the video is its distance from this. */
   firstAt: number;
+  /** A video joined from segments: where each begins on the clock, and in the video, in seconds. */
+  parts?: { at: number; s: number }[];
 };
 
 export type Timeline = {

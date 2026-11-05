@@ -125,6 +125,7 @@ describe('simulator log', () => {
       ]);
       expect(first!.mark).toEqual({ at: AT });
       expect(second!.mark).toEqual({ at: AT + 1, level: 'error' });
+      expect(second!.line).toBe('E  SpringBoard[23436:143f1ae] [com.apple] it failed');
     });
 
     it('keeps the later lines of one message where the message is', () => {

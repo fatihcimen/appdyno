@@ -28,6 +28,7 @@ export class AndroidPerf implements MeasureSource {
   readonly slowReads = [];
   readonly framesByProbe = false;
   readonly symbolFiles = false;
+  readonly logTellsStalls = true;
   readonly energyHolds = 'battery';
   attachProbe = cannot('through a frame probe');
   hangs = cannot('hangs');

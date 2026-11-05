@@ -41,6 +41,7 @@ export function logShowArgs(udid: string, appPath: string, q: LogsQuery): string
 
 /** `2026-11-05 04:46:59.959 Df …`, in this Mac's time zone, which is a simulator's. */
 const STAMPED = /^(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d)\.(\d{3}) (\w+)\s/;
+const STAMP_CHARS = '2026-11-05 04:46:59.959 '.length;
 
 /**
  * Lines with their place on the clock. A message of several lines has its time on the first alone, so the rest go on
@@ -62,7 +63,8 @@ export function placeLines(lines: string[]) {
       ];
       const level = /^[EF]/.test(m[8]!) ? ('error' as const) : undefined;
       const at = new Date(y, mo - 1, d, h, mi, s, ms).getTime();
-      placed.push({ line, mark: { at, ...(level && { level }) } });
+      // its time is in its mark: what is left is what happened
+      placed.push({ line: line.slice(STAMP_CHARS), mark: { at, ...(level && { level }) } });
     } else if (placed.length) placed.push({ line, mark: placed.at(-1)!.mark });
   }
   return placed;

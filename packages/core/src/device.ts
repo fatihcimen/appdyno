@@ -185,7 +185,10 @@ export interface ScreenRecorder {
    * answers, to within `withinMs`. None where it keeps its own, or where no one has measured it.
    */
   readonly lead?: { ms: number; withinMs: number };
-  start(file: string, opts: { maxSeconds: number }): Promise<RecordingHandle>;
+  /** A second recording cannot begin before the first has ended, so a ring of them has a hole in it. */
+  readonly oneAtATime?: boolean;
+  /** `light`: what will run for hours, kept only in case: fewer bits, for what it costs the device and the disk. */
+  start(file: string, opts: { maxSeconds: number; light?: boolean }): Promise<RecordingHandle>;
   stop(handle: RecordingHandle): Promise<RecordingFiles>;
 }
 

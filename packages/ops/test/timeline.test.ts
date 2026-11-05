@@ -7,6 +7,7 @@ import type { Timeline } from '@appdyno/perf';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeVideo } from '../../core/test/fake-video.js';
 import { ServerContext } from '../src/context.js';
+import { captures } from '../src/network.js';
 import { filming } from '../src/record.js';
 import { openReports } from '../src/report-state.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
@@ -150,9 +151,12 @@ describe('report timeline', () => {
     const { call, ctx } = connect(device);
     await call('report', { action: 'timeline', dir });
     expect(await ctx.end()).toEqual([]);
-    expect(existsSync(join(dir, 'timeline.html'))).toBe(true);
     expect(device.ended).toBe(1);
     expect(openReports.read(device.serial)).toBeUndefined();
+    // the recording's own end must not come first and take the video from it
+    const html = readFileSync(join(dir, 'timeline.html'), 'utf8');
+    expect(html).toContain('id="video-bytes"');
+    expect(pageOf(join(dir, 'timeline.html')).video).toBeDefined();
   });
 
   it('stops once, however many ask', async () => {
@@ -164,6 +168,44 @@ describe('report timeline', () => {
     expect(device.ended).toBe(1);
     await call('report', { action: 'stop' });
     expect(device.ended).toBe(1);
+  });
+
+  describe('a request in the file', () => {
+    const withCapture = async (defaults = {}) => {
+      const device = new TimedDevice();
+      const { call } = connect(device, defaults);
+      await call('report', { action: 'timeline', dir });
+      captures.write(device.serial, { via: 'probe', since: Date.now(), handle: {} });
+      (device as { network?: unknown }).network = {
+        read: async () => ({
+          entries: [
+            {
+              at: new Date().toISOString(),
+              method: 'GET',
+              url: 'https://api.example.com/items?page=2&token=abc123',
+              ms: 12,
+            },
+          ],
+        }),
+      };
+      const r = await call('report', { action: 'stop' });
+      captures.remove(device.serial);
+      return pageOf(r.data.timeline as string).network;
+    };
+
+    it('keeps its name and times, and no query, as nobody asked', async () => {
+      const network = await withCapture();
+      expect(network.marks[0]).toMatchObject({ name: 'GET api.example.com/items', ms: 12 });
+      expect(JSON.stringify(network)).not.toMatch(/page=2|abc123/);
+      expect(network.note).toBe('method, host and path, no query');
+    });
+
+    it('keeps the query only where a person turned that on, and hides a credential even then', async () => {
+      const network = await withCapture({ fullUrls: true });
+      expect(network.marks[0]!.name).toContain('page=2');
+      expect(JSON.stringify(network)).not.toContain('abc123');
+      expect(network.note).toBe('whole URLs, as asked');
+    });
   });
 
   it('refuses a command line, which ends before there is anything to read', async () => {

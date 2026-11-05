@@ -40,6 +40,8 @@ export const COMMANDS = {
       animations: value('on|off'),
       measurements: value('dir'),
       'trace-limit-gb': value('N'),
+      'flight-seconds': value('N'),
+      'full-urls': on,
       'no-install-consent': on,
       'accept-install-warnings': on,
       http: value('127.0.0.1:PORT'),
@@ -168,8 +170,19 @@ export const COMMANDS = {
       flow: value('file'),
       seconds: value('N'),
       dir: value('dir'),
+      'full-urls': on,
     },
     what: 'video, touches, frames, requests, log and memory on one clock, in one file: for a flow, or for N seconds of your hands',
+  },
+  flight: {
+    flags: {
+      app: needed('A'),
+      device: value('S'),
+      seconds: value('N'),
+      dir: value('dir'),
+      'full-urls': on,
+    },
+    what: 'keeps the last N seconds of an app as a timeline, saved on a crash or a stall, until Ctrl-C',
   },
   'perf dashboard': {
     flags: { app: value('A'), out: value('dir'), open: on, measurements: value('dir') },

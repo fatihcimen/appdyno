@@ -18,6 +18,8 @@ export const NAME_NEW_PROCESSES =
 export const PROCESS_STATS =
   'data_sources { config { name: "linux.process_stats" target_buffer: 0 process_stats_config { scan_all_processes_on_start: true } } }';
 
+export const REMOTE_TRACES = '/data/misc/perfetto-traces';
+
 /** The trace processor's answer to `sql`, as its CSV text. */
 export async function queryFile(file: string, sql: string): Promise<string> {
   const tp = await traceProcessor();
@@ -100,7 +102,7 @@ export async function recordTrace(
   config: string[],
   opts: { during?: () => Promise<unknown>; stop?: boolean } = {},
 ): Promise<string> {
-  const remote = `/data/misc/perfetto-traces/appdyno-${randomBytes(4).toString('hex')}.pftrace`;
+  const remote = `${REMOTE_TRACES}/appdyno-${name}-${randomBytes(4).toString('hex')}.pftrace`;
   // --background-wait: a launch right after it is inside the recording
   const started = await d.shell(
     `echo '${config.join('\n')}' | perfetto --txt -c - -o ${remote} --background-wait 2>&1`,

@@ -18,6 +18,8 @@ import { REMOTE_DIR } from './agent.js';
 const SEGMENT_S = 180;
 /** A tenth of its default: a long recording must fit the device, and a screen of UI needs no more. */
 const BIT_RATE = 4_000_000;
+/** Text stays legible on a phone's screen at this rate, and a segment stays a few MB. */
+const LIGHT_BIT_RATE = 1_000_000;
 const START_MS = 15_000;
 const PULL_MS = 600_000;
 
@@ -45,13 +47,17 @@ export class AndroidRecorder implements ScreenRecorder {
 
   private sh = (c: string, timeoutMs = 30_000) => this.adb.exec(this.serial, c, { timeoutMs });
 
-  async start(file: string, { maxSeconds }: { maxSeconds: number }): Promise<RecordingHandle> {
+  async start(
+    file: string,
+    { maxSeconds, light }: { maxSeconds: number; light?: boolean },
+  ): Promise<RecordingHandle> {
     const dir = `${REMOTE_DIR}/video-${randomBytes(4).toString('hex')}`;
     const segment = segmentSeconds();
+    const bitRate = light ? LIGHT_BIT_RATE : BIT_RATE;
     const loop =
       `cd ${dir}; i=0; left=${maxSeconds}; while [ ! -e stop ] && [ $left -gt 0 ]; do i=$((i+1)); ` +
       `t=${segment}; [ $left -lt $t ] && t=$left; left=$((left-t)); ` +
-      `screenrecord --time-limit $t --bit-rate ${BIT_RATE} seg$i.mp4 >>log 2>&1 & echo $! > pid; wait $!; ` +
+      `screenrecord --time-limit $t --bit-rate ${bitRate} seg$i.mp4 >>log 2>&1 & echo $! > pid; wait $!; ` +
       `c=$?; [ $c -eq 0 ] || { echo "screenrecord exited with $c" >> log; break; }; done; touch done`;
     const session = await this.adb.startDetached(
       this.serial,

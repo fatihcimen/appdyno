@@ -1,5 +1,6 @@
-import { isThisProcess, ownerGone } from '@appdyno/core';
+import { heldElsewhere, isThisProcess, ownerGone } from '@appdyno/core';
 import type { ServerContext } from './context.js';
+import { dropFlightFolder } from './timeline/flight.js';
 import { flowRecordings } from './flow/shared.js';
 import { captures, endCapture } from './network.js';
 import { endRecording, filming } from './record.js';
@@ -16,7 +17,24 @@ async function takeBack(ctx: ServerContext, s: Session, whose: Whose): Promise<T
   const serial = s.device.serial;
   const restored: string[] = [];
   const failed: string[] = [];
+  // what holds a recording of its own goes first: ended by the next line, its page would have no video
   const running = [
+    {
+      name: 'timeline',
+      held: s.timeline && { owner: s.owner },
+      end: () => s.timeline!.finish(),
+      done: 'timeline written',
+    },
+    {
+      name: 'flight recorder',
+      held: s.flight && { owner: s.owner },
+      end: async () => {
+        await s.flight!.stop();
+        s.flight = undefined;
+        return true;
+      },
+      done: 'flight recorder off',
+    },
     {
       name: 'recording',
       held: filming.read(serial),
@@ -64,6 +82,8 @@ export async function sweep(ctx: ServerContext, s: Session): Promise<Taken> {
     return at ? [`${name}: unreadable, kept as ${at}`] : [];
   });
   const { restored, failed } = await takeBack(ctx, s, ownerGone);
+  // its segments were this Mac's to keep only while a recorder held them
+  if (!heldElsewhere(filming.read(serial)?.owner)) dropFlightFolder(serial);
   const flow = flowRecordings.read(serial);
   // stopped, not removed: what it holds can still be saved
   if (flow?.running && ownerGone(flow.owner)) {

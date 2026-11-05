@@ -138,3 +138,99 @@ describe.skipIf(!udid)('a timeline on a simulator', () => {
     expect(page.memory.marks.length).toBeGreaterThan(0);
   }, 240_000);
 });
+
+/**
+ * The flight recorder against a real crash and a real stall of the fixture: it holds the last moments, and both keep them
+ * unasked (APPDYNO_ANDROID_SERIAL). Nothing here tells it what happened: it finds out by what it watches.
+ */
+describe.skipIf(!serial)('the flight recorder', () => {
+  const t = opsOn(androidProvider(new Adb(), {}), serial!, APP);
+  afterAll(() => t.ctx.close());
+
+  /** The query makes each link a new intent: one equal to the task's root only brings the task to front. */
+  const open = async (screen: string) => {
+    const url = `appdyno-fixture://open/${screen}?n=${Date.now()}`;
+    await adb(`am start -W -a android.intent.action.VIEW -d '${url}' ${APP}`);
+    await pause(1_500);
+  };
+  /** What it kept while `act` ran, with the recorder off again whatever became of `act`. */
+  const flying = async (act: () => Promise<void>) => {
+    const on = await t.call('report', { action: 'flight' });
+    expect(on.error, on.text).toBe(false);
+    const failed = await act().then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    const off = await t.call('report', { action: 'stop' });
+    if (failed) throw failed;
+    console.log(off.text, 'host load', loadavg()[0]);
+    expect(off.data.saved).toHaveLength(1);
+    return pageData(off.data.saved![0]!);
+  };
+  /** What it answers, as a tap that ends the app may have no good answer: the test looks at what came of it. */
+  const tapById = async (id: string) => {
+    await t.call('screen');
+    return t.call('tap', { selector: { id } });
+  };
+
+  it('keeps a real crash, with the screen and the log up to it', async () => {
+    await open('crash');
+    const page = await flying(async () => {
+      await pause(20_000);
+      const before = (await adb(`pidof ${APP}`)).stdout.trim();
+      await tapById('crash');
+      await pause(15_000);
+      // the fixture's process really ended: anything less proves nothing of the recorder
+      const after = await adb(`pidof ${APP}`).then(
+        (r) => r.stdout.trim(),
+        () => '',
+      );
+      expect(before).not.toBe('');
+      expect(after).not.toBe(before);
+    });
+    console.log(
+      JSON.stringify({
+        reason: page.reason,
+        video: page.video,
+        seconds: (page.to - page.from) / 1_000,
+        frames: page.frames.marks.length,
+        logs: page.logs.marks.length,
+      }),
+    );
+    expect(page.reason).toContain('a crash');
+    expect(page.video?.bytes).toBeGreaterThan(1_000);
+    expect(page.frames.marks.length).toBeGreaterThan(0);
+    expect(page.logs.marks.some((l) => /fixture crash|FATAL EXCEPTION/.test(l.text))).toBe(true);
+  }, 180_000);
+
+  it('keeps a real stall, by the frame that stood still', async () => {
+    await open('list_stall');
+    const page = await flying(async () => {
+      await pause(5_000);
+      for (let i = 0; i < 4; i++) await t.call('swipe', { direction: 'up' });
+      await pause(10_000);
+    });
+    console.log(page.reason);
+    expect(page.reason).toContain('stall');
+    expect(Math.max(...page.frames.marks.map((f) => f.ms))).toBeGreaterThan(900);
+  }, 180_000);
+
+  it('keeps a stall no frame shows, by the log that says so', async () => {
+    await adb(
+      `run-as ${APP} sh -c 'mkdir -p files; rm -f files/stall_ms; echo 1500 > files/sleep_ms'`,
+    );
+    try {
+      await open('cpu');
+      const page = await flying(async () => {
+        await pause(5_000);
+        await tapById('cpu_stall');
+        await pause(10_000);
+      });
+      console.log(page.reason, JSON.stringify(page.stalls.marks));
+      expect(page.reason).toContain('main thread');
+      expect(page.stalls.marks).toHaveLength(1);
+    } finally {
+      await adb(`run-as ${APP} rm -f files/sleep_ms`);
+    }
+  }, 180_000);
+});

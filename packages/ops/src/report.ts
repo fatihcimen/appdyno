@@ -6,7 +6,7 @@ import {
   readFileSync,
   writeFileSync,
 } from 'node:fs';
-import { basename, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import {
   safeName,
   decodePng,
@@ -27,6 +27,12 @@ import { checkApp, redactLog } from './policy.js';
 import { journalOf, openReports, stepsIn, type Step } from './report-state.js';
 import { ReportOut } from './schemas.js';
 import type { Session } from './session.js';
+import {
+  DEFAULT_FLIGHT_SECONDS,
+  MAX_FLIGHT_SECONDS,
+  startFlight,
+  type RunningFlight,
+} from './timeline/flight.js';
 import { startTimeline } from './timeline/run.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError, type Op, type ToolResult } from './tool.js';
 
@@ -325,11 +331,11 @@ export function reportFor(ctx: ServerContext) {
     return r;
   };
 
-  /** Sources run in this process, so one that ends with the command has no timeline to give. */
-  const timelineApp = (s: Session) => {
+  /** Sources run in this process, so one that ends with the command has nothing to give. */
+  const stayingApp = (s: Session, command: 'timeline' | 'flight') => {
     if (!s.owner)
       throw new ToolError(
-        'a timeline runs in a process that stays, and a command ends here: `appdyno timeline`',
+        `this runs in a process that stays, and a command ends here: \`appdyno ${command}\``,
         'UNSUPPORTED',
       );
     const app = checkApp(ctx.policy, s.appId ?? '');
@@ -337,15 +343,32 @@ export function reportFor(ctx: ServerContext) {
     return app;
   };
 
+  const startFlightOn = async (s: Session, dir: string | undefined) => {
+    if (s.flight)
+      throw new ToolError(`a flight recorder runs on ${s.device.serial}`, 'INVALID_ARGUMENT');
+    const seconds = Math.min(ctx.flightSeconds ?? DEFAULT_FLIGHT_SECONDS, MAX_FLIGHT_SECONDS);
+    const app = stayingApp(s, 'flight');
+    s.flight = await startFlight(ctx, s, app, seconds, dir && resolve(dir));
+    const t = `flight recorder on: the last ${seconds} s of ${app}, kept on a crash or a stall; report stop ends it`;
+    return reply(t, { done: t, dir: dir ?? '' });
+  };
+
+  const stopFlight = async (s: Session, flight: RunningFlight) => {
+    await flight.stop();
+    s.flight = undefined;
+    const t = [`flight recorder off, ${flight.saved.length} kept`, ...flight.saved].join('\n');
+    return reply(t, { done: t, dir: '', saved: flight.saved });
+  };
+
   const ops = () => [
     defineOp({
       name: 'report',
       title: 'Session report',
       description:
-        "index.html: steps, video, logs, crashes, measurements; secrets hidden. start (dir), until stop or the session's end; write: now. timeline: one page on one clock.",
+        "index.html: steps, video, logs, crashes, measurements; secrets hidden. start (dir), until stop or the session's end; write: now. timeline: one page on one clock. flight: last seconds, kept on a crash or stall.",
       input: z
         .object({
-          action: z.enum(['start', 'timeline', 'write', 'stop']),
+          action: z.enum(['start', 'timeline', 'flight', 'write', 'stop']),
           dir: z.string().max(1_000).optional(),
         })
         .strict(),
@@ -364,13 +387,20 @@ export function reportFor(ctx: ServerContext) {
                 `${safeName(serial)}-${new Date().toISOString().replace(/\W/g, '')}`,
               ),
           );
+        if (action === 'flight') return startFlightOn(s, dir);
+        if (action === 'stop' && s.flight) return stopFlight(s, s.flight);
+        if (action === 'write' && s.flight) {
+          const page = await s.flight.save();
+          const t = page ? `kept: ${page}` : 'a save is under way';
+          return reply(t, { done: t, dir: dirname(page ?? ''), ...(page && { file: page }) });
+        }
         if (action === 'start' || action === 'timeline') {
           if (open)
             throw new ToolError(
               `a report is open on ${serial} since ${new Date(open.since).toISOString()}: stop it first`,
               'INVALID_ARGUMENT',
             );
-          const app = action === 'timeline' ? timelineApp(s) : undefined;
+          const app = action === 'timeline' ? stayingApp(s, 'timeline') : undefined;
           const to = named();
           mkdirSync(to, { recursive: true });
           openReports.write(serial, { dir: to, since: Date.now(), owner: s.owner });

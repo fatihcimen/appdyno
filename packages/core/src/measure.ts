@@ -299,6 +299,8 @@ export interface MeasureSource {
   readonly framesByProbe: boolean;
   /** Names in a build's frames come from files on this Mac (`Symbols`), not from the device. */
   readonly symbolFiles: boolean;
+  /** Its log says when a main thread came back late, and reads in a moment: a stop no frame shows can be watched for. */
+  readonly logTellsStalls?: boolean;
   /** The condition reading energy changes for its time, where it changes one. */
   readonly energyHolds?: SettingName;
   cpu(app: string, windowMs?: number): Promise<Measured<CpuReading>>;
@@ -369,16 +371,20 @@ export interface MeasureSource {
     seconds: number,
     during?: () => Promise<unknown>,
   ): Promise<Measured<FrameTrace>>;
-  /** Every frame from when `during` is called until it ends, or `seconds` pass, each on the device's clock. */
+  /**
+   * Every frame from when `during` is called until it ends, or `seconds` pass, each on the device's clock. `keepSeconds`:
+   * only about the last so many are wanted, so the source need hold no more.
+   */
   frameMarks(
     app: string,
     seconds: number,
     during: () => Promise<unknown>,
+    keepSeconds?: number,
   ): Promise<Measured<FrameMarks>>;
 }
 
 /** The measures, as against what a source says of itself. */
 export type Capability = Exclude<
   keyof MeasureSource,
-  'slowReads' | 'framesByProbe' | 'symbolFiles' | 'energyHolds'
+  'slowReads' | 'framesByProbe' | 'symbolFiles' | 'energyHolds' | 'logTellsStalls'
 >;

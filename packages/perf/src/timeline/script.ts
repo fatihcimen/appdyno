@@ -8,6 +8,11 @@ export const MOMENT = `
 const LOG_WINDOW_MS = 500;
 const MAX_LINES = 8;
 const inSpan = (m, t) => m.at <= t && t <= m.at + (m.ms ?? 0);
+function videoSeconds(video, t) {
+  const parts = video.parts ?? [{ at: video.firstAt, s: 0 }];
+  const part = parts.findLast((p) => p.at <= t) ?? parts[0];
+  return Math.max(0, part.s + (t - part.at) / 1000);
+}
 function moment(T, t) {
   const covering = (row) => row.marks.filter((m) => inSpan(m, t));
   const last = (row) => row.marks.findLast((m) => m.at <= t);
@@ -59,7 +64,7 @@ function show(t) {
   $('cursor').style.left = ((at - T.from) / (T.to - T.from)) * 100 + '%';
   $('scrub').value = at - T.from;
   $('now').textContent = '+' + seconds(at - T.from);
-  if (video && T.video) video.currentTime = Math.max(0, (at - T.video.firstAt) / 1000);
+  if (video && T.video) video.currentTime = videoSeconds(T.video, at);
   say('now-screen', [
     ...(now.frame ? [line('frame: ' + now.frame.ms + ' ms' + (now.frame.late ? ', late' : ''), now.frame.late ? 'late' : '')] : []),
     ...(now.stall ? [line('main thread stopped for ' + Math.round(now.stall.ms) + ' ms', 'late')] : []),

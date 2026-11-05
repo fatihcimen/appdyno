@@ -44,7 +44,7 @@ import { doctor } from './doctor.js';
 import { hubCommand, mirrorCommand } from './mirror-args.js';
 import { COMMANDS, commandList, usage } from './usage.js';
 import { serveCommand, type ServerFlags } from './serve.js';
-import { timelineCommand } from './timeline.js';
+import { flightCommand, timelineCommand } from './timeline.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
@@ -91,6 +91,10 @@ function contextFrom(values: ServerFlags, remember?: string) {
   const traceLimitGb = limit === undefined ? undefined : Number(limit);
   if (traceLimitGb !== undefined && !(traceLimitGb >= 0))
     throw new Error(`--trace-limit-gb takes a number of GB, not ${limit}`);
+  const flight = values['flight-seconds'] ?? env.APPDYNO_FLIGHT_SECONDS;
+  const flightSeconds = flight === undefined ? undefined : Number(flight);
+  if (flightSeconds !== undefined && !(flightSeconds > 0))
+    throw new Error(`--flight-seconds takes a number of seconds, not ${flight}`);
   const installAnswers = {
     prompts: !(values['no-install-consent'] || env.APPDYNO_NO_INSTALL_CONSENT === '1'),
     warnings:
@@ -101,6 +105,8 @@ function contextFrom(values: ServerFlags, remember?: string) {
     ...(app && { app }),
     ...(values.measurements && { measurements: values.measurements }),
     ...(traceLimitGb !== undefined && { traceLimitGb }),
+    ...(flightSeconds !== undefined && { flightSeconds }),
+    ...((values['full-urls'] || env.APPDYNO_FULL_URLS === '1') && { fullUrls: true }),
     // a run kept in a folder of its own says nothing of the traces here
     ...(!values.measurements && { autoPrune: true }),
     ...(remember && { remember }),
@@ -179,6 +185,8 @@ async function main(): Promise<number> {
       return hubCommand(rest, { context: contextFrom, hub: runHub });
     case 'timeline':
       return timelineCommand(rest, contextFrom);
+    case 'flight':
+      return flightCommand(rest, contextFrom);
     case 'mcp': {
       await serveCommand(rest, contextFrom);
       return 0;

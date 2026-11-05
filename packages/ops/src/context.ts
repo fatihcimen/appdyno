@@ -42,6 +42,10 @@ export class ServerContext {
       app?: string;
       measurements?: string;
       traceLimitGb?: number;
+      /** What a flight recorder keeps, from a person's own flag: an agent is not the one to ask for more of a screen. */
+      flightSeconds?: number;
+      /** Whole URLs in a timeline, query and all, from a person's own flag: it is a file that gets sent to people. */
+      fullUrls?: boolean;
       autoPrune?: boolean;
       /** The project's baselines and budgets. */
       perf?: string;
@@ -77,6 +81,14 @@ export class ServerContext {
   /** What traces and heap dumps may take on this Mac, in GB: `--trace-limit-gb`, `APPDYNO_TRACE_LIMIT_GB`. */
   get traceLimitGb(): number {
     return this.defaults.traceLimitGb ?? DEFAULT_TRACE_LIMIT_GB;
+  }
+
+  get flightSeconds(): number | undefined {
+    return this.defaults.flightSeconds;
+  }
+
+  get fullUrls(): boolean {
+    return this.defaults.fullUrls === true;
   }
 
   /** Only a user's own entry point sets this: a kept run looks at what traces take. */

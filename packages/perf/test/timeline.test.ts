@@ -94,6 +94,12 @@ describe('the page', () => {
     expect(html).toContain('no capture ran');
   });
 
+  it('says what its frames cannot see where a person reads it, not only on a hover', () => {
+    const limits = 'A main thread held up draws no long frame';
+    const html = renderTimeline(timeline({ frames: { marks: [], note: limits } }));
+    expect(html).toContain(`<p class="note">${limits}</p>`);
+  });
+
   it('tells nothing in the row from a row it cannot read', () => {
     expect(renderTimeline(timeline({ stalls: { marks: [] } }))).toContain(
       'nothing in this stretch',
@@ -231,6 +237,31 @@ describe('a moment', () => {
 
   it('is part of what the page runs', () => {
     expect(SCRIPT).toContain(MOMENT);
+  });
+
+  describe('its place in the video', () => {
+    const videoSeconds = new Function(`${MOMENT}; return videoSeconds;`)() as (
+      v: { firstAt: number; parts?: { at: number; s: number }[] },
+      t: number,
+    ) => number;
+
+    it('is its distance from the first frame', () => {
+      expect(videoSeconds({ firstAt: 1_000 }, 3_500)).toBe(2.5);
+    });
+
+    it('never comes before the video', () => {
+      expect(videoSeconds({ firstAt: 1_000 }, 400)).toBe(0);
+    });
+
+    it('goes by the segment it fell in, for a video joined from several', () => {
+      // 15 s of the first, with the clock moving on 16 s: the time between them is in neither
+      const parts = [
+        { at: 1_000, s: 0 },
+        { at: 17_000, s: 15 },
+      ];
+      expect(videoSeconds({ firstAt: 1_000, parts }, 2_000)).toBe(1);
+      expect(videoSeconds({ firstAt: 1_000, parts }, 18_000)).toBe(16);
+    });
   });
 });
 

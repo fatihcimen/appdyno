@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Cannot, measuredLive, type Device, type LiveSample } from '../src/index.js';
+import {
+  Cannot,
+  measuredLive,
+  type Device,
+  type LiveField,
+  type LiveSample,
+} from '../src/index.js';
 
 const reading = <T>(value: T) => Promise.resolve({ value, raw: '', at: '' });
 
@@ -37,6 +43,29 @@ async function samples(d: Pick<Device, 'measure' | 'foreground'>, count: number,
 
 const first = async (d: Pick<Device, 'measure' | 'foreground'>, app?: string) =>
   (await samples(d, 1, app))[0]!;
+
+describe('what one that runs all day reads', () => {
+  const firstOf = (d: Pick<Device, 'measure' | 'foreground'>, fields: readonly LiveField[]) =>
+    new Promise<LiveSample>((done) => {
+      let stop = () => {};
+      void measuredLive(d, fields)
+        .start((sample) => {
+          stop();
+          done(sample);
+        })
+        .then((s) => (stop = s));
+    });
+
+  it('is what it asks for, and nothing that costs the device more', async () => {
+    const d = device();
+    const s = await firstOf(d, ['memoryMb', 'fps']);
+    expect(s.memoryMb).toBe(200);
+    expect(d.measure.cpu).not.toHaveBeenCalled();
+    expect(d.measure.network).not.toHaveBeenCalled();
+    expect(d.measure.frames).toHaveBeenCalled();
+    expect(s.absent?.cpuPercent).toContain('not read');
+  });
+});
 
 describe("a device's numbers each second", () => {
   it('come from the measures it already has', async () => {

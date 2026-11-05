@@ -42,7 +42,8 @@ export async function androidLogs(adb: Adb, serial: string, q: LogsQuery): Promi
   if (!q.timed) return { lines, source: `logcat --pid=${pid}` };
   const placed = lines.flatMap((line) => {
     const mark = markOfLine(line);
-    return mark ? [{ line: line.trimStart(), mark }] : [];
+    // its time is in its mark, and stands on the page's clock: here it would be a long number to read past
+    return mark ? [{ line: line.replace(/^\s*\d+\.\d{3}\s+/, ''), mark }] : [];
   });
   return {
     lines: placed.map((p) => p.line),
