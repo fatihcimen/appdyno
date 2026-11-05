@@ -1,25 +1,46 @@
 import { homedir } from 'node:os';
 import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
-import { download, install, update } from '@appdyno/cli';
+import {
+  appCommand,
+  download,
+  followMove,
+  install,
+  installedBy,
+  manifestOf,
+  putOnPath,
+  serverOf,
+  takeOffPath,
+  update,
+} from '@appdyno/cli';
 import { run, type DeviceProvider } from '@appdyno/core';
 import { installAdb, installTools, PLATFORM_TOOLS } from '@appdyno/driver-android';
 import { COMMANDS, usage } from './usage.js';
 
 const out = (line: string) => console.log(line);
 
-/** `install`. */
-export async function installCommand(args: string[], err: (line: string) => void): Promise<number> {
+/** `install`: the npm package's entry, or the app's own; `--moved` only follows an app that moved. */
+export async function installCommand(
+  args: string[],
+  root: string,
+  err: (line: string) => void,
+): Promise<number> {
   const { values } = parseArgs({ args, options: COMMANDS.install.flags });
+  const server = serverOf(root, manifestOf(root).name);
+  // a copy that is not the app has no entry to follow, and must not write the npm package's over one
+  if (values.moved && !server) return 0;
+  if (values.moved && server) followMove(homedir(), server.command);
   const { stdin: input, stdout: output } = process;
   const terminal = input.isTTY ? createInterface({ input, output }) : undefined;
   try {
     return await install({
       home: homedir(),
       env: process.env,
-      yes: values.yes,
+      yes: values.yes || values.moved,
       remove: values.remove,
       dryRun: values['dry-run'],
+      moved: values.moved,
+      server,
       ask: terminal && ((question) => terminal.question(question)),
       out,
       err,
@@ -64,4 +85,16 @@ export async function devicesCommand(providers: DeviceProvider[]) {
   for (const provider of providers)
     for (const d of await provider.list()) out(`${d.serial}\t${d.state}\t${d.model ?? ''}`);
   return 0;
+}
+
+/** `path`: only the app has a command to put there. */
+export async function pathCommand(args: string[], root: string, err: (line: string) => void) {
+  const { values } = parseArgs({ args, options: COMMANDS.path.flags });
+  const place = installedBy(root, manifestOf(root).name);
+  if (!('bundle' in place)) {
+    err(`this appdyno is ${place.by}, and its own manager keeps its command`);
+    return 1;
+  }
+  const o = { home: homedir(), command: appCommand(place.bundle), run, out };
+  return values.remove ? takeOffPath(o) : putOnPath(o);
 }

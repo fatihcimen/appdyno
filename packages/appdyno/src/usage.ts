@@ -49,12 +49,16 @@ export const COMMANDS = {
     what: "the MCP server over stdio; with --http, on this Mac's loopback behind a token",
   },
   install: {
-    flags: { yes: { type: 'boolean', short: 'y' }, 'dry-run': on, remove: on },
+    flags: { yes: { type: 'boolean', short: 'y' }, 'dry-run': on, remove: on, moved: unsaidOn },
     what: 'add this server to the MCP clients on this Mac, or take it out',
   },
   update: {
     flags: { check: on },
     what: 'move to the latest release, verified before anything changes; --check changes nothing',
+  },
+  path: {
+    flags: { remove: on },
+    what: 'from the app: put this appdyno on the PATH of every shell, or take it off',
   },
   devices: { what: 'the connected devices' },
   version: { what: 'which version this is' },

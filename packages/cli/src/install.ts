@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { writeWhole } from '@appdyno/core';
-import { CLIENTS, SERVER, STDIO, type Client } from './clients.js';
+import { CLIENTS, SERVER, STDIO, type Client, type Stdio } from './clients.js';
 import { jsonEdit } from './jsonc.js';
 import { tomlEdit } from './toml.js';
 
@@ -17,6 +17,10 @@ export type InstallOptions = {
   yes?: boolean | undefined;
   remove?: boolean | undefined;
   dryRun?: boolean | undefined;
+  /** What a client runs, where it is not the npm package. */
+  server?: Stdio | undefined;
+  /** Only repoints the entries of an app that has moved: nothing is added, and nothing else in them changes. */
+  moved?: boolean | undefined;
   /** Asks the person at the terminal; none when there is none. */
   ask?: ((question: string) => Promise<string>) | undefined;
   out: (line: string) => void;
@@ -51,7 +55,20 @@ const fits = (have: unknown, want: unknown): boolean => {
   return Object.entries(want).every(([k, v]) => fits((have as Record<string, unknown>)[k], v));
 };
 
-function outcomeFor(client: Client, file: string, removing: boolean | undefined): Outcome {
+const IN_AN_APP = /\.app\/Contents\/Resources\/bin\/appdyno$/;
+
+/** An entry that runs the app from where it was, pointed at where it is. */
+function repointed(have: unknown, command: string) {
+  const entry = (have ?? {}) as Record<string, unknown>;
+  const now = entry.command;
+  const first: unknown = Array.isArray(now) ? now[0] : now;
+  if (typeof first !== 'string' || !IN_AN_APP.test(first) || first === command) return undefined;
+  return { ...entry, command: Array.isArray(now) ? [command, ...now.slice(1)] : command };
+}
+
+type Asked = Pick<InstallOptions, 'remove' | 'server' | 'moved'>;
+
+function outcomeFor(client: Client, file: string, o: Asked): Outcome {
   const { key } = client;
   const base = { client, file, before: '', after: '' };
   try {
@@ -59,12 +76,19 @@ function outcomeFor(client: Client, file: string, removing: boolean | undefined)
     const same = { ...base, before, after: before };
     const edit = EDIT[client.format];
     const have = edit.read(before, key, SERVER);
-    if (removing) {
+    if (o.remove) {
       if (have === undefined) return { ...same, did: 'absent' };
       return { ...same, did: 'removed', after: edit.remove(before, key, SERVER) };
     }
-    if (fits(have, client.entry)) return { ...same, did: 'right' };
-    const after = edit.write(before, key, SERVER, client.entry);
+    const server = o.server ?? STDIO;
+    if (o.moved) {
+      const entry = repointed(have, server.command);
+      if (!entry) return { ...same, did: 'right' };
+      return { ...same, did: 'replaced', after: edit.write(before, key, SERVER, entry) };
+    }
+    const entry = client.entry(server);
+    if (fits(have, entry)) return { ...same, did: 'right' };
+    const after = edit.write(before, key, SERVER, entry);
     return { ...same, did: have === undefined ? 'added' : 'replaced', after };
   } catch (e) {
     return { ...base, did: 'refused', why: (e as Error).message };
@@ -121,8 +145,6 @@ const said = ({ client, file, did, why }: Outcome) =>
     refused: `${client.name}: refused, ${file} is left as it is: ${why}`,
   })[did];
 
-const ANY_CLIENT = JSON.stringify({ mcpServers: { [SERVER]: STDIO } }, null, 2);
-
 /** The ones asked for, or undefined when the answer names none of them. */
 function picked(answer: string, outcomes: Outcome[]) {
   const words = answer
@@ -139,11 +161,12 @@ function picked(answer: string, outcomes: Outcome[]) {
 export async function install(o: InstallOptions): Promise<number> {
   const found = CLIENTS.flatMap((client) => {
     const file = fileOf(client, o);
-    return file ? [outcomeFor(client, file, o.remove)] : [];
+    return file ? [outcomeFor(client, file, o)] : [];
   });
   if (found.length === 0) {
+    const entry = { mcpServers: { [SERVER]: o.server ?? STDIO } };
     o.out(
-      `no MCP client found on this Mac; for yours, add this to its server list:\n${ANY_CLIENT}`,
+      `no MCP client found on this Mac; for yours, add this to its server list:\n${JSON.stringify(entry, null, 2)}`,
     );
     return 1;
   }
@@ -180,7 +203,7 @@ export async function install(o: InstallOptions): Promise<number> {
   let wrote = false;
   for (const { client, file } of chosen) {
     // a client may have written its file while the question was open
-    const now = outcomeFor(client, file, o.remove);
+    const now = outcomeFor(client, file, o);
     if (!changes(now)) {
       tell(now);
       continue;

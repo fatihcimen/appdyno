@@ -58,8 +58,11 @@ describe('usage', () => {
     expect(line('hub')).toContain('[--allow-devices RE]');
   });
 
-  it("says adb takes a person's word", () => {
+  it('says what sets the app up, and leaves its moved-app word unsaid', () => {
+    expect(line('path')).toBe('path [--remove]');
     expect(line('tools install')).toBe('tools install [adb] [--accept-license]');
+    expect(line('install')).not.toContain('moved');
+    expect(COMMANDS.install.flags).toHaveProperty('moved');
   });
 
   it('leaves out what is between its own processes', () => {

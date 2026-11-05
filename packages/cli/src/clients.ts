@@ -1,11 +1,10 @@
 /** The name this server goes by in a client's list. */
 export const SERVER = 'appdyno';
 
-const COMMAND = 'npx';
-const ARGS = ['-y', 'appdyno', 'mcp'];
+export type Stdio = { command: string; args: string[] };
 
-/** What most clients take. */
-export const STDIO = { command: COMMAND, args: ARGS };
+/** What most clients take, from the npm package. The app gives its own command. */
+export const STDIO: Stdio = { command: 'npx', args: ['-y', 'appdyno', 'mcp'] };
 
 export type Client = {
   name: string;
@@ -17,7 +16,7 @@ export type Client = {
   format: 'json' | 'jsonc' | 'toml';
   /** What the file lists its servers under. */
   key: string;
-  entry: Record<string, unknown>;
+  entry: (server: Stdio) => Record<string, unknown>;
   /** The client writes this file itself: added to when it exists, and never begun for it. */
   ownFile?: true;
 };
@@ -30,7 +29,7 @@ export const CLIENTS: Client[] = [
     moved: { env: 'CLAUDE_CONFIG_DIR', file: '.claude.json' },
     format: 'json',
     key: 'mcpServers',
-    entry: STDIO,
+    entry: (server) => server,
     ownFile: true,
   },
   {
@@ -38,21 +37,21 @@ export const CLIENTS: Client[] = [
     files: ['Library/Application Support/Claude/claude_desktop_config.json'],
     format: 'json',
     key: 'mcpServers',
-    entry: STDIO,
+    entry: (server) => server,
   },
   {
     name: 'Cursor',
     files: ['.cursor/mcp.json'],
     format: 'jsonc',
     key: 'mcpServers',
-    entry: STDIO,
+    entry: (server) => server,
   },
   {
     name: 'VS Code',
     files: ['Library/Application Support/Code/User/mcp.json'],
     format: 'jsonc',
     key: 'servers',
-    entry: { type: 'stdio', ...STDIO },
+    entry: (server) => ({ type: 'stdio', ...server }),
   },
   {
     name: 'Windsurf',
@@ -60,7 +59,7 @@ export const CLIENTS: Client[] = [
     moved: { env: 'XDG_CONFIG_HOME', file: 'devin/mcp_config.json' },
     format: 'jsonc',
     key: 'mcpServers',
-    entry: STDIO,
+    entry: (server) => server,
   },
   {
     name: 'Codex and ChatGPT desktop',
@@ -69,14 +68,14 @@ export const CLIENTS: Client[] = [
     format: 'toml',
     key: 'mcp_servers',
     // 10 s and 60 s by default: a first download and a first runner build take minutes
-    entry: { ...STDIO, startup_timeout_sec: 120, tool_timeout_sec: 1800 },
+    entry: (server) => ({ ...server, startup_timeout_sec: 120, tool_timeout_sec: 1800 }),
   },
   {
     name: 'Antigravity',
     files: ['.gemini/config/mcp_config.json'],
     format: 'jsonc',
     key: 'mcpServers',
-    entry: STDIO,
+    entry: (server) => server,
   },
   {
     name: 'Gemini CLI',
@@ -84,21 +83,25 @@ export const CLIENTS: Client[] = [
     moved: { env: 'GEMINI_CLI_HOME', file: '.gemini/settings.json' },
     format: 'jsonc',
     key: 'mcpServers',
-    entry: STDIO,
+    entry: (server) => server,
   },
   {
     name: 'Zed',
     files: ['.config/zed/settings.json'],
     format: 'jsonc',
     key: 'context_servers',
-    entry: { ...STDIO, env: {} },
+    entry: (server) => ({ ...server, env: {} }),
   },
   {
     name: 'opencode',
     files: ['.config/opencode/opencode.json', '.config/opencode/opencode.jsonc'],
     format: 'jsonc',
     key: 'mcp',
-    entry: { type: 'local', command: [COMMAND, ...ARGS], enabled: true },
+    entry: ({ command, args }) => ({
+      type: 'local',
+      command: [command, ...args],
+      enabled: true,
+    }),
   },
   {
     name: 'Cline CLI',
@@ -106,6 +109,6 @@ export const CLIENTS: Client[] = [
     moved: { env: 'CLINE_MCP_SETTINGS_PATH', file: '' },
     format: 'jsonc',
     key: 'mcpServers',
-    entry: STDIO,
+    entry: (server) => server,
   },
 ];

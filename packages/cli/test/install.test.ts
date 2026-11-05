@@ -137,7 +137,7 @@ describe.each(CLIENTS)('$name', (client) => {
   it('gains the one entry, and removing it gives the file back byte for byte', async () => {
     const { home, file } = homeWith(client, sample);
     expect((await run(home)).code).toBe(0);
-    expect(entryIn(client, file)).toEqual(client.entry);
+    expect(entryIn(client, file)).toEqual(client.entry(STDIO));
     const after = readFileSync(file, 'utf8');
     expect(after).not.toBe(sample);
     expect(after.split('\n').length - sample.split('\n').length).toBeLessThanOrEqual(7);
@@ -205,9 +205,10 @@ describe.each(CLIENTS)('$name', (client) => {
       client.format === 'toml'
         ? `[${client.key}.${SERVER}]\ncommand = "npx"\nargs = ["-y", "appdyno", "mcp", "--device", "x"]\nstartup_timeout_sec = 5\ntool_timeout_sec = 7200\n`
         : undefined;
-    const have = Array.isArray(client.entry.command)
-      ? { ...client.entry, command: [...client.entry.command, '--device', 'x'] }
-      : { ...client.entry, args: [...STDIO.args, '--device', 'x'], env: { A: '1' } };
+    const entry = client.entry(STDIO);
+    const have = Array.isArray(entry.command)
+      ? { ...entry, command: [...entry.command, '--device', 'x'] }
+      : { ...entry, args: [...STDIO.args, '--device', 'x'], env: { A: '1' } };
     const text = extra ?? JSON.stringify({ [client.key]: { [SERVER]: have } }, null, 2);
     const { home, file } = homeWith(client, text);
     expect((await run(home)).out.join('\n')).toContain('already right');
@@ -227,7 +228,7 @@ describe.each(CLIENTS)('$name', (client) => {
   it.runIf(!client.ownFile)('begins a file when the client has only its folder', async () => {
     const { home, file } = homeWith(client);
     expect((await run(home)).code).toBe(0);
-    expect(entryIn(client, file)).toEqual(client.entry);
+    expect(entryIn(client, file)).toEqual(client.entry(STDIO));
     expect(beside(file)).toEqual([]);
   });
 
@@ -247,7 +248,7 @@ describe.each(CLIENTS)('$name', (client) => {
     const env = { [client.moved!.env]: client.moved!.file ? elsewhere : moved };
     expect(fileOf(client, { home, env })).toBe(moved);
     await run(home, { env });
-    expect(entryIn(client, moved)).toEqual(client.entry);
+    expect(entryIn(client, moved)).toEqual(client.entry(STDIO));
     expect(readFileSync(file, 'utf8')).toBe(sample);
   });
 });
@@ -512,5 +513,77 @@ describe('install', () => {
     await run(home);
     expect(readdirSync(real)).toEqual([]);
     vi.unstubAllEnvs();
+  });
+});
+
+describe('install, from the app', () => {
+  const bin = (bundle: string) => `${bundle}/Contents/Resources/bin/appdyno`;
+  const here = { command: bin('/Applications/Appdyno.app'), args: ['mcp'] };
+  const moved = { command: bin('/Users/a/Tools/Appdyno.app'), args: ['mcp'] };
+
+  it.each(CLIENTS.map((c) => [c.name, c] as const))(
+    '%s gets the same entry, with the app in it',
+    async (_, client) => {
+      const { home, file } = homeWith(client, client.format === 'toml' ? '' : '{}\n');
+      expect((await run(home, { server: here })).code).toBe(0);
+      expect(entryIn(client, file)).toEqual(client.entry(here));
+      expect(JSON.stringify(entryIn(client, file))).toContain(here.command);
+      expect(JSON.stringify(entryIn(client, file))).not.toContain('npx');
+    },
+  );
+
+  it.each(CLIENTS.map((c) => [c.name, c] as const))(
+    '%s follows an app that moved, and keeps what a person added',
+    async (_, client) => {
+      const { home, file } = homeWith(client, client.format === 'toml' ? '' : '{}\n');
+      await run(home, { server: here });
+      const edit = client.format === 'toml' ? tomlEdit : jsonEdit(client.format === 'json');
+      const entry = entryIn(client, file) as Record<string, unknown>;
+      const flagged = { ...entry, startup_note: 'mine' };
+      writeFileSync(file, edit.write(readFileSync(file, 'utf8'), client.key, SERVER, flagged));
+      expect((await run(home, { server: moved, moved: true })).code).toBe(0);
+      const after = entryIn(client, file) as Record<string, unknown>;
+      expect(JSON.stringify(after)).toContain(moved.command);
+      expect(JSON.stringify(after)).not.toContain(here.command);
+      expect(after.startup_note).toBe('mine');
+    },
+  );
+
+  it('leaves a backup of what it repointed', async () => {
+    const client = CLIENTS.find((c) => c.format === 'jsonc')!;
+    const { home, file } = homeWith(client, '{}\n');
+    await run(home, { server: here });
+    const before = readFileSync(file, 'utf8');
+    await run(home, { server: moved, moved: true });
+    const backups = readdirSync(dirname(file)).filter((f) => f.includes('-backup-'));
+    expect(backups.map((f) => readFileSync(join(dirname(file), f), 'utf8'))).toContain(before);
+  });
+
+  it('adds nothing and writes nothing when no entry is stale', async () => {
+    const client = CLIENTS.find((c) => c.format === 'jsonc')!;
+    const empty = homeWith(client, '{}\n');
+    await run(empty.home, { server: moved, moved: true });
+    expect(readFileSync(empty.file, 'utf8')).toBe('{}\n');
+    const right = homeWith(client, '{}\n');
+    await run(right.home, { server: moved });
+    const written = readFileSync(right.file, 'utf8');
+    await run(right.home, { server: moved, moved: true });
+    expect(readFileSync(right.file, 'utf8')).toBe(written);
+  });
+
+  it('never repoints an entry that is not the app', async () => {
+    const client = CLIENTS.find((c) => c.format === 'jsonc')!;
+    const { home, file } = homeWith(client, '{}\n');
+    await run(home, {});
+    const written = readFileSync(file, 'utf8');
+    await run(home, { server: moved, moved: true });
+    expect(readFileSync(file, 'utf8')).toBe(written);
+  });
+
+  it('says the entry to add by hand with the app in it', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'appdyno-install-'));
+    const { code, out } = await run(home, { server: here });
+    expect(code).toBe(1);
+    expect(out.join('\n')).toContain(here.command);
   });
 });

@@ -41,7 +41,13 @@ import { deviceProviders as providers } from './providers.js';
 import { COMMANDS, commandList, helpFor, usage } from './usage.js';
 import { SERVER_INFO } from '@appdyno/mcp';
 import { serveCommand, type ServerFlags } from './serve.js';
-import { devicesCommand, installCommand, toolsCommand, updateCommand } from './setup.js';
+import {
+  devicesCommand,
+  installCommand,
+  pathCommand,
+  toolsCommand,
+  updateCommand,
+} from './setup.js';
 import { flightCommand, timelineCommand } from './timeline.js';
 
 const [command, ...rest] = process.argv.slice(2);
@@ -187,6 +193,8 @@ async function main(): Promise<number> {
     }
     case 'devices':
       return devicesCommand(providers());
+    case 'path':
+      return pathCommand(rest, root, err);
     case 'tools':
       return toolsCommand(rest, err);
     case 'ios': {
@@ -201,7 +209,7 @@ async function main(): Promise<number> {
       return 0;
     }
     case 'install':
-      return installCommand(rest, err);
+      return installCommand(rest, root, err);
     case 'update':
       return updateCommand(rest, root);
     case 'doctor': {
