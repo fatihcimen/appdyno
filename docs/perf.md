@@ -301,38 +301,47 @@ Through the server: `report` `timeline`, then the journey, then `report` `stop`;
 
 ### One clock
 
-Everything stands on the device's own clock. What was read there needs nothing done to it, and what was read on the Mac is moved by an offset that is measured at both ends of the run and never assumed: an emulator's clock read 25 to 31 ms ahead of this Mac, a simulator's 0 ± 1 ms. The offset comes from the agent's `ping`, answered past the queue: the shortest round trip of eight, half of it the bound, and a millisecond for `Date.now()`'s own tick. It has to be the shortest: of 24 reads of `adb shell date` under load, one was 254 ms out.
+Everything stands on the device's own clock. What was read there needs nothing done to it, and what was read on the Mac is moved by an offset that is measured at both ends of the run and never assumed: an emulator's clock read 25 to 31 ms ahead of this Mac, an iPhone's 2 ± 1 ms, a simulator's 0 ± 1 ms. The offset comes from the agent's `ping`, answered past the queue: the shortest round trip of eight, half of it the bound, and a millisecond for `Date.now()`'s own tick. It has to be the shortest: of 24 reads of `adb shell date` under load, one was 254 ms out.
 
 The page says how far off each row can be, and two rows can be apart by at most the sum of their figures:
 
-| Row               | Read on | Placed by                                                          | Within                      |
-| ----------------- | ------- | ------------------------------------------------------------------ | --------------------------- |
-| Video, Android    | device  | each frame's own time, in the metadata track `screenrecord` writes | ±20 ms                      |
-| Video, simulator  | Mac     | when its recording began, as measured of this recorder             | ±150 ms                     |
-| Frames, touches   | device  | the trace's own clock snapshots (`to_realtime`)                    | ±1 ms                       |
-| Frames, simulator | Mac     | the probe, which reads the wall clock                              | ±1 ms                       |
-| Log               | device  | the time on each line                                              | ±1 ms                       |
-| Steps, requests   | Mac     | the offset                                                         | its bound, 1.5 ms by `ping` |
-| Memory, traffic   | Mac     | the offset, and a reading is taken somewhere in its second         | ±1 s                        |
+| Row               | Read on | Placed by                                                          | Within       |
+| ----------------- | ------- | ------------------------------------------------------------------ | ------------ |
+| Video, Android    | device  | each frame's own time, in the metadata track `screenrecord` writes | ±40 ms       |
+| Video, simulator  | Mac     | when its recording began, as measured of this recorder             | ±150 ms      |
+| Video, iPhone     | Mac     | when its stream began, as measured: it has no steady lead          | ±620 ms      |
+| Frames, touches   | device  | the trace's own clock snapshots (`to_realtime`)                    | ±1 ms        |
+| Frames, simulator | Mac     | the probe, which reads the wall clock                              | ±1 ms        |
+| Frames, iPhone    | device  | the date their trace began                                         | ±215 ms      |
+| Log               | device  | the time on each line                                              | ±1 ms        |
+| Steps, requests   | Mac     | the offset                                                         | about 1.5 ms |
+| Memory, traffic   | Mac     | the offset, and a reading is taken somewhere in its second         | ±1 s         |
 
 **What was run.** On an Android 14 emulator at host load 31 to 37 and again at 4, `test-device/timeline.test.ts`: a journey of a list with a 1 s stall read a frame of 1005.7 to 1010.5 ms, and the video stood still 1016.4 to 1017.6 ms, from within 1.6 ms of that frame's start to 7.4 to 13.4 ms after its end. Three draw stalls of 800 ms read 807 to 815 ms, within 1.8 ms and 9 to 18 ms. The video's stamps matched what a player reads, frame by frame, to 0.1 ms over three recordings. A simulator's video has no time of its own: against an app killed at a known moment on a screen that changes every 100 ms, six runs at load 4 to 7 put its first frame 86 to 279 ms before `start` answered, so it stands 150 ms before that, within 150. A recorder no one has measured says so in the page.
 
+On phones, with the same test: a Xiaomi on Android 16 read a 1 s stall as a frame of 1011.9 ms, its video still for 1018.1 ms, within 8.2 and 14.4 ms; a Samsung A52 on Android 14 read 1034.6 and 1023.9 ms, within 20.3 and 9.6 ms. An emulator at host load 40 to 50 read a frame of 1064.3 ms, within 18.2 and 36.1 ms, which is why the bound is 40. An iPhone 13 Pro Max's frames are placed less well: three stalls of 500 ms read 513 to 516 ms, each beginning inside its tap, a call of 331 to 427 ms. Its stream's video has no steady start at all: against a tap that crashed the app, four runs at host load 5 to 33 put its first frame from 398 ms before `start` answered to 840 ms after, so it stands 220 ms after, within 620. Its HEVC plays and seeks from inside the page in Chrome.
+
 ### A stall no frame shows
 
-Android's frames are blind to one common stall. A main thread held up in a click, with a ripple drawing on the render thread, drew no long frame in Perfetto's timeline, nor in `gfxinfo`: a 1500 ms hold read a longest frame of 27 to 38 ms, 115 frames at their usual pace, and `Number Slow UI thread: 0`. The frame timeline has no row of it either, by actual or by expected time. All that says so is Choreographer's own line, `Skipped 90 frames!`, at the moment the thread came back: 90 × 16.7 ms is the 1500 ms put in. So the page takes those lines as the Stalls row, 1483 ms in that run, from the refresh its frames show. One a long frame already shows is left out: one stop is one row. The line comes only past 30 frames skipped, so a shorter hold of this kind shows nowhere. `perf_trace`'s `stalls.worst_ms` goes by the longest frame, and has this blind spot.
+Android's frames are blind to one common stall. A main thread held up in a click, with a ripple drawing on the render thread, drew no long frame in Perfetto's timeline: a 1500 ms hold read a longest frame of 27 to 38 ms on an emulator, 59 on a Xiaomi and 64 on a Samsung. The frame timeline has no row of it either, by actual or by expected time. `gfxinfo` read 21 ms on the emulator, and on the Xiaomi 1525 ms in one run of two, so it cannot be gone by. What says so is Choreographer's own line in the app's log, `Skipped 90 frames!`, at the moment the thread came back: 90 × 16.7 ms is the 1500 ms put in.
+
+So the page takes those lines as its Stalls row, 1483 ms on the emulator and 1499 on the Xiaomi, by the refresh its frames show, and leaves out one a long frame already shows: one stop is one row. `perf_trace` does the same: `stalls.worst_ms` is the longest frame or the longest such hold, whichever is more, and its answer has `heldMs` and says the number came from that line. The flight recorder watches for it too.
+
+**Where this does not reach.** A Samsung with One UI writes no such line: none in the log of a run with that same hold, whose `Taps: 1` shows it ran. There such a hold shows nowhere, and the page says so. The line comes only past 30 frames skipped, so a shorter hold shows nowhere on any device. `perf_scroll` goes by what it reads while it scrolls, which is driven by the main thread, and does not read this line.
 
 ### What each device gives
 
-| Row      | Android emulator                          | iOS simulator                            | iPhone                                           |
-| -------- | ----------------------------------------- | ---------------------------------------- | ------------------------------------------------ |
-| Video    | yes, each frame stamped                   | yes, placed within 150 ms                | one recording at a time: no ring                 |
-| Frames   | yes: every frame, with Perfetto's verdict | yes: the probe, which relaunches the app | no: a phone gives its hitches over a whole trace |
-| Touches  | yes: what reached the app, from anyone    | no: Steps are what this tool sent        | no: the same                                     |
-| Requests | through a proxy capture                   | through the probe or a proxy capture     | through a proxy capture                          |
-| Log      | yes                                       | yes                                      | no: `devicectl` cannot read a running app's log  |
-| Memory   | yes, every 5 s                            | yes                                      | by its own instruments                           |
+| Row      | Android                                        | iOS simulator                            | iPhone                                           |
+| -------- | ---------------------------------------------- | ---------------------------------------- | ------------------------------------------------ |
+| Video    | yes, each frame stamped                        | yes, placed within 150 ms                | yes, HEVC, placed within 620 ms                  |
+| Frames   | yes: every frame, with Perfetto's verdict      | yes: the probe, which relaunches the app | its hitches and hangs only, placed within 215 ms |
+| Stalls   | by the log's Skipped frames, but not on One UI | a long frame shows them                  | a hang shows them                                |
+| Touches  | yes: what reached the app, from anyone         | no: Steps are what this tool sent        | no: the same                                     |
+| Requests | through a proxy capture                        | through the probe or a proxy capture     | through a proxy capture                          |
+| Log      | yes                                            | yes                                      | no: `devicectl` cannot read a running app's log  |
+| Memory   | yes, every 5 s                                 | yes                                      | by its own instruments                           |
 
-A row a device cannot give stands empty, with the reason its device gave. No real phone has run any of this yet: the iPhone's column is what its driver says, and an Android phone is expected to answer as the emulator does.
+A row a device cannot give stands empty, with the reason its device gave. Android was run on an emulator (Android 14), a Xiaomi (Android 16) and a Samsung A52 (Android 14); the iPhone is a 13 Pro Max.
 
 ### What the file holds
 
@@ -343,7 +352,7 @@ The page says this at its top: it gets sent to people.
 - Requests by method, host and path. No query, which is where a token rides, and no body: this tool keeps none. A path can hold an id. `--full-urls`, or `APPDYNO_FULL_URLS=1`, keeps the query, with a credential in it still hidden. It is a flag of the person who starts the tool, and no argument an agent can pass.
 - Steps by name: no text that was typed.
 
-The page's one script is allowed by its hash, so a second script on it does not run, whatever a log line holds: tried in Chrome. The video goes inside as base64, read by that script into a blob. Chrome played an MP4 and a simulator's QuickTime file so, and went to the moment asked. Safari has not been tried.
+The page's one script is allowed by its hash, so a second script on it does not run, whatever a log line holds: tried in Chrome. The video goes inside as base64, read by that script into a blob. Chrome played an MP4, a simulator's QuickTime file and an iPhone's HEVC so, and went to the moment asked. Safari has not been tried.
 
 ### The flight recorder
 
@@ -351,15 +360,15 @@ The page's one script is allowed by its hash, so a second script on it does not 
 appdyno flight --app dev.app --seconds 30    # until Ctrl-C; through the server, report flight, report stop
 ```
 
-It keeps the last N seconds of an app as a timeline, 30 by default and at most 120 (`--flight-seconds`, `APPDYNO_FLIGHT_SECONDS`), and saves them when the app crashes or stalls. It is off until a person turns it on, and it ends with its session.
+It keeps the last N seconds of an app as a timeline, 30 by default, from 20 to 120 (`--flight-seconds`, `APPDYNO_FLIGHT_SECONDS`), and saves them when the app crashes or stalls. It is off until a person turns it on, and it ends with its session.
 
-**What sets it off.** The signals the measures read: a frame of 700 ms or more or a frozen frame in the second's reading, a stop of a main thread in its log, and on a process gone with a crash report. It goes by the process, not by whether the app runs: Android restarts a crashed app within the second, and a look at `pidof` then finds one running. A process gone with no report is one a person closed, and nothing is kept. A stall is saved 2 s after, with the screen coming back, and one that repeats is one to look at: none is saved within N seconds of the last, and at most 20 in a run.
+**What sets it off.** The signals the measures read: a frame of 700 ms or more or a frozen frame, a stop of a main thread in its log, and a process gone with a crash report. It looks every 5 s, as a look costs the device and nothing is lost by waiting: the ring holds the moment, a frozen frame stays counted until it is read, and a log and a crash report stay. A look queues behind what the device is doing: they came 14 and 22 s apart on an emulator at host load 33 to 41, which is why it keeps no less than 20 s. It goes by the process, not by whether the app runs: Android restarts a crashed app within the second, and a look at `pidof` then finds one running. A process gone with no report is one a person closed, and nothing is kept. A stall is saved 2 s after, with the screen coming back, and one that repeats is one to look at: none is saved within N seconds of the last, and at most 20 in a run.
 
 **What it holds, and where.** The frames in Perfetto's ring on the device, sized for N seconds. The video on this Mac in three overlapping segments of N/2 seconds at 1 Mbit/s, so nothing falls between two. Both are gone when it stops. A saved page goes in `traces/`, as `<app>-flight-<time>.timeline.html`, and goes by the rules of [kept traces](#kept-traces): nothing under a day old goes, and past the limit the oldest go first. `report` `write` saves now. A session that starts after a process died clears what that process left on this Mac; what it left on the device ends by itself: in a run with its owner killed every `screenrecord` was gone within 45 s and Perfetto within its 10 minutes, and the next timeline removes the file Perfetto leaves.
 
-**What it costs.** On an Android 14 emulator at host load 2 to 7, on a screen changing ten times a second, over eight spells of 30 s on and off in turn, it took the device's whole CPU from 3.3 to 10.6 %, left 72 MB less of its memory free, and on this Mac took 0.3 % of a core for this tool and 0.2 % more for adb. Each part alone, in two rounds: the video 4.2 points, steady; Perfetto's ring 0.4 to 3 and the reads 1.5 to 4.3, the wider figure of each from a round in which the Mac got busy. That emulator encodes in software, so this is no figure for a phone: no phone has been measured. What it holds on this Mac is at most three segments of N/2 seconds at 1 Mbit/s, so 5.6 MB for 30 s; on that ticking screen it held 0.3 MB.
+**What it costs.** It looks at the device every 5 s, and it does cost something: it is for a run a person means to look at, and a `perf_*` run during it is marked `mirrored`. On a Xiaomi on Android 16 at host load 13 to 29, on a screen changing ten times a second, over eight spells of 30 s on and off in turn, it took the phone's whole CPU from 10.4 to 19.9 %, left 158 MB less of its memory free, and on this Mac took 0.3 % of a core for this tool and 0.1 % more for adb. Looking each second, the same run read 11.2 to 28.5 %, which is why it looks this seldom. Each part alone, read at that 1 s look: the video about 5 points, `pidof` and the log about 3, `gfxinfo` 1.6, Perfetto's ring and `meminfo` about none. Those come to about 6 of the 9.5 points at 5 s, and what is left was not traced to a part. An Android 14 emulator encodes in software, so it says little of a phone, and its figure goes with its host: looking each second at host load 2 to 7 it read 3.3 to 10.6 %, and looking every 5 s at load 19 to 48, 14.2 to 49 %, with no page saved. An iPhone keeps no ring and no video here and has no reading of its whole CPU, so its cost was not measured. What it holds on this Mac is at most three segments of N/2 seconds at 1 Mbit/s, so 5.6 MB for 30 s; on that ticking screen it held 0.2 MB.
 
-**What was run.** On an Android 14 emulator at host load 3 to 9, `test-device/timeline.test.ts` with no word to the recorder of what happened: a tap on the fixture's crash button kept `a crash: APP CRASH(EXCEPTION)`, with the frames, the video and `FATAL EXCEPTION: main` in its 27 log lines; a 1 s stall in a list kept `a stall of 1010 ms`; a 1.5 s hold of a main thread kept `a stall of its main thread`. On an iOS 27.2 simulator a crash kept `a crash: EXC_BREAKPOINT SIGTRAP`. No phone has run it.
+**What was run.** On an Android 14 emulator at host load 3 to 9, `test-device/timeline.test.ts` with no word to the recorder of what happened: a tap on the fixture's crash button kept `a crash: APP CRASH(EXCEPTION)`, with the frames, the video and `FATAL EXCEPTION: main` in its 27 log lines; a 1 s stall in a list kept `a stall of 1010 ms`; a 1.5 s hold of a main thread kept `a stall of its main thread`. On an iOS 27.2 simulator a crash kept `a crash: EXC_BREAKPOINT SIGTRAP`. A Xiaomi on Android 16 kept a real crash, a real stall and such a hold. A Samsung A52 kept a real crash; a test that ended 10 s after a 1 s stall kept nothing, as no look had come by then, and a longer wait has not been run there. An iPhone 13 Pro Max kept a real crash, and there it holds no video and no frames: its stream is one at a time, and a trace has no ring, so the page says why those rows are empty.
 
 ## No silent success
 

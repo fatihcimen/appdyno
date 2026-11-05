@@ -18,8 +18,8 @@ import type {
   VideoFacts,
 } from '@appdyno/perf';
 
-/** A frame is in the video by about the next refresh: 1 to 18 ms on an emulator, 8 to 14 on a Xiaomi, 10 to 20 on a Samsung. */
-export const STAMPED_VIDEO_MS = 25;
+/** A frame is in the video by about the next refresh: 1 to 18 ms on an emulator, 36 at host load 50, 8 to 14 on a Xiaomi, 10 to 20 on a Samsung. */
+export const STAMPED_VIDEO_MS = 40;
 /** A log line's time is printed to the ms; a trace's is its own clock's, a step past it. */
 const PRINTED_MS = 1;
 /** A reading is taken somewhere in the second it stands for. */
