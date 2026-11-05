@@ -49,6 +49,7 @@ type Stage = { message: (m: ViewerMessage) => void; exit: (tail: string) => void
 
 const POLL_MS = 2_000;
 const CLOSE_MS = 30_000;
+const OWN_WINDOW_MS = 20_000;
 /** A window that keeps dying is not brought back for ever. */
 const MAX_DEATHS = 3;
 const DEATHS_MS = 60_000;
@@ -214,6 +215,8 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     log: o.log,
   });
   let showing: string[] = [];
+  /** A window of its own takes a moment to start: until then a choice of its device would take it first, and both hold it. */
+  const ownWindows = new Map<string, number>();
   let choosing: Promise<unknown> = Promise.resolve();
   /** What stands in the room: choosing ends the streams of what no longer does. */
   const choose = (serials: string[], paired = false) => {
@@ -231,8 +234,13 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     return choosing;
   };
   const acts: Record<string, (m: ViewerMessage) => Promise<unknown> | void> = {
-    select: (m) => choose(m.serial === undefined ? [] : [String(m.serial)]),
+    select: (m) => {
+      const serial = m.serial === undefined ? undefined : String(m.serial);
+      if (serial && Date.now() < (ownWindows.get(serial) ?? 0)) return undefined;
+      return choose(serial ? [serial] : []);
+    },
     open: async (m) => {
+      ownWindows.set(String(m.serial), Date.now() + OWN_WINDOW_MS);
       await choose([]);
       openWindow(ctx, String(m.serial), o.behind === true);
     },

@@ -133,6 +133,7 @@ static NSTextField *label(CGFloat size, NSFontWeight weight, NSColor *color) {
   NSMenu *rowMenu = [[NSMenu alloc] initWithTitle:@"Device"];
   [rowMenu addItemWithTitle:@"Show Beside This One" action:@selector(besideClicked:) keyEquivalent:@""].target = self;
   [rowMenu addItemWithTitle:@"Open in New Window" action:@selector(openClicked:) keyEquivalent:@""].target = self;
+  [rowMenu addItemWithTitle:@"Shut Down" action:@selector(shutDownClicked:) keyEquivalent:@""].target = self;
   _list.rowMenu = rowMenu;
   NSStackView *top = [NSStackView stackViewWithViews:@[_search, _new]];
   top.spacing = 6;
@@ -311,6 +312,12 @@ static MVRow *rowOf(NSDictionary *device) {
 /// The row a person's secondary click is on, beside the device shown.
 - (void)besideClicked:(id)sender {
   [self pairWith:[self deviceKeyed:_list.clickedKey]];
+}
+
+/// A phone is a person's to turn off.
+- (void)shutDownClicked:(id)sender {
+  NSDictionary *device = [self deviceKeyed:_list.clickedKey];
+  if (![device[@"kind"] isEqual:@"phone"] && [device[@"state"] isEqual:@"running"]) MVEmit(@{@"op": @"hub", @"action": @"stop", @"id": device[@"id"]});
 }
 
 - (void)openClicked:(id)sender {

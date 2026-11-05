@@ -1,10 +1,16 @@
 import { appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { viewerBinary, ViewerProcess, type ViewerMessage } from '../packages/core/src/index.js';
+import {
+  isAlive,
+  viewerBinary,
+  ViewerProcess,
+  type ViewerMessage,
+} from '../packages/core/src/index.js';
 import { androidProvider } from '../packages/driver-android/src/index.js';
 import { appleProvider } from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, ServerContext, runHub } from '../packages/ops/src/index.js';
+import { liveMirror } from '../packages/ops/src/mirror/state.js';
 
 /**
  * The hub as one window, on devices we hold (APPDYNO_HUB_DEVICES=A,B; never a default, and only those are listed): its
@@ -12,6 +18,7 @@ import { DEFAULT_POLICY, ServerContext, runHub } from '../packages/ops/src/index
  */
 const serials = process.env.APPDYNO_HUB_DEVICES?.split(',') ?? [];
 const LIVE_MS = 180_000;
+const main = join(import.meta.dirname, '../packages/appdyno/dist/main.js');
 
 const until = async (what: string, test: () => boolean, ms: number) => {
   const end = Date.now() + ms;
@@ -41,7 +48,9 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
     const look = process.env.APPDYNO_HUB_LOOK ?? 'dark';
     const binary = await viewerBinary();
     const policy = { ...DEFAULT_POLICY, devices: new RegExp(`^(${serials.join('|')})$`) };
-    const ctx = new ServerContext(policy, [androidProvider(), appleProvider()]);
+    const ctx = new ServerContext(policy, [androidProvider(), appleProvider()], {
+      mirrorCommand: [process.execPath, main, 'mirror'],
+    });
     done = runHub(ctx, {
       focus: false,
       behind: true,
@@ -90,6 +99,30 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
       await picture('other');
     },
     4 * LIVE_MS,
+  );
+
+  it(
+    'gives a device a window of its own on request, and closes it again',
+    async () => {
+      const serial = serials[0]!;
+      link.send({ op: 'poke', id: serial, press: 'window' });
+      await until(
+        'a window of its own',
+        () => {
+          const own = liveMirror(serial);
+          return own?.pid !== process.pid && own?.status.state === 'live';
+        },
+        LIVE_MS,
+      );
+      const window = liveMirror(serial)!;
+      await picture('own-window');
+      // the hub's list follows within its poll, and a press acts on what it lists
+      await quiet(5_000);
+      link.send({ op: 'poke', id: serial, press: 'window' });
+      await until('it to close', () => !isAlive(window), 60_000);
+      await quiet(3_000);
+    },
+    LIVE_MS + 90_000,
   );
 
   it(

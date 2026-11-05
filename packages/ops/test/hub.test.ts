@@ -159,6 +159,22 @@ describe('the hub', () => {
     await done;
   });
 
+  it('leaves a device alone while its own window is on its way', async () => {
+    const { link, told, say, close } = window();
+    const ctx = context(new Simulated(), [phone], ['/usr/bin/true']);
+    const open = vi.spyOn(ctx, 'deviceFor');
+    const done = runHub(ctx, { focus: false, log: () => undefined, viewer: () => link });
+    await vi.waitFor(() => expect(lastList(told)).toBeDefined());
+    say({ op: 'hub', action: 'open', serial: 'R58M' });
+    await new Promise((r) => setTimeout(r, 50));
+    open.mockClear();
+    say({ op: 'hub', action: 'select', serial: 'R58M' });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(open).not.toHaveBeenCalled();
+    close();
+    await done;
+  });
+
   it('brings a window that died back, and stops after three in a minute', async () => {
     const windows = [window(), window(), window(), window()];
     const made = [...windows];

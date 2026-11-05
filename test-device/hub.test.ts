@@ -1,7 +1,12 @@
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { viewerBinary, ViewerProcess, type ViewerMessage } from '../packages/core/src/index.js';
+import {
+  isAlive,
+  viewerBinary,
+  ViewerProcess,
+  type ViewerMessage,
+} from '../packages/core/src/index.js';
 import { appleProvider } from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, ServerContext, runHub } from '../packages/ops/src/index.js';
 import { liveMirror } from '../packages/ops/src/mirror/state.js';
@@ -32,9 +37,16 @@ const booted = () =>
 
 describe.runIf(udid)('the hub', () => {
   const told: ViewerMessage[] = [];
+  const sent: Record<string, unknown>[] = [];
   let link: ViewerProcess;
   let done: Promise<number>;
   const press = (name: string) => link.send({ op: 'poke', id: udid, press: name });
+  const listed = () => {
+    const list = sent.findLast((m) => m.op === 'hub')?.devices;
+    return (list as { id: string; state: string; mirrored: boolean }[] | undefined)?.find(
+      (d) => d.id === udid,
+    );
+  };
   const picture = async (name: string) => {
     const shots = process.env.APPDYNO_SHOTS;
     if (!shots) return;
@@ -47,6 +59,11 @@ describe.runIf(udid)('the hub', () => {
     const look = process.env.APPDYNO_HUB_LOOK ?? 'dark';
     link = new ViewerProcess(await viewerBinary(), ['--hub', '--behind', '--appearance', look]);
     link.onMessage((m) => told.push(m));
+    const send = link.send.bind(link);
+    link.send = (m) => {
+      sent.push(m);
+      send(m);
+    };
     // only ours, unless a picture is to show the Mac's whole list: nothing else here is pressed
     const whole = process.env.APPDYNO_HUB_ALL === '1';
     const policy = whole ? DEFAULT_POLICY : { ...DEFAULT_POLICY, devices: new RegExp(`^${udid}$`) };
@@ -69,7 +86,7 @@ describe.runIf(udid)('the hub', () => {
       await picture('stopped');
       press('power');
       await until('a booted simulator', booted, BOOT_MS);
-      await new Promise((r) => setTimeout(r, 4_000));
+      await until('the list to say so', () => listed()?.state === 'running', WINDOW_MS);
       press('window');
       // the device stood in the hub's own window until then
       await until(
@@ -82,10 +99,11 @@ describe.runIf(udid)('the hub', () => {
       );
       const window = liveMirror(udid!)!;
       expect(window.pid).not.toBe(process.pid);
-      await new Promise((r) => setTimeout(r, 3_000));
+      await until('the list to say so', () => listed()?.mirrored === true, WINDOW_MS);
       await picture('open');
       press('window');
-      await until('the window to close', () => liveMirror(udid!)?.pid !== window.pid, WINDOW_MS);
+      await until('the window to close', () => !isAlive(window), WINDOW_MS);
+      await until('the list to say so', () => listed()?.mirrored === false, WINDOW_MS);
       press('power');
       await until('a stopped simulator', () => !booted(), BOOT_MS);
     },
