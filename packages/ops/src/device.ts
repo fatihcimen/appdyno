@@ -50,7 +50,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       name: 'use_device',
       title: 'Use device',
       description:
-        'Drive this device, starting its agent if needed; app: package or bundle id under test. One another process holds refuses, naming it; share: true uses it anyway.',
+        'Drive this device, starting its agent if needed; app: the id under test. One another process holds refuses, naming it; share: true uses it anyway.',
       input: z
         .object({
           device: z.string().max(64),

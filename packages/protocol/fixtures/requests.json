@@ -105,6 +105,7 @@
   },
   "app.foreground": { "method": "app.foreground", "params": {} },
   "app.target": { "method": "app.target", "params": { "pkg": "dev.appdyno.fixture" } },
+  "app.labels": { "method": "app.labels", "params": {} },
   "clipboard.set": { "method": "clipboard.set", "params": { "text": "a" } },
   "clipboard.get": { "method": "clipboard.get", "params": {} },
   "animations.wait": { "method": "animations.wait", "params": { "x": 10, "y": 20 } },

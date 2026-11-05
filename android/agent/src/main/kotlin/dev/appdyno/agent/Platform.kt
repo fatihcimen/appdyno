@@ -2,11 +2,15 @@ package dev.appdyno.agent
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.os.Looper
 import android.os.SystemClock
 import android.view.Display
 import java.lang.reflect.Method
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * Access to framework internals an app_process server needs (it has no app context of its own). Every
@@ -44,6 +48,19 @@ object Platform {
         val thread = at.getDeclaredConstructor().apply { isAccessible = true }.newInstance()
         at.getDeclaredField("sCurrentActivityThread").apply { isAccessible = true }.set(null, thread)
         at.getDeclaredMethod("getSystemContext").invoke(thread) as Context
+    }
+
+    /** What a launcher calls each app it shows. */
+    fun launcherLabels(): JSONArray {
+        // the framework's thread object, made on first use, wants a looper here
+        if (Looper.myLooper() == null) Looper.prepare()
+        val pm = systemContext.packageManager
+        val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val apps = JSONArray()
+        for (app in pm.queryIntentActivities(launcher, 0)) {
+            apps.put(JSONObject().put("id", app.activityInfo.packageName).put("name", app.loadLabel(pm).toString()))
+        }
+        return apps
     }
 
     fun service(name: String): IBinder {

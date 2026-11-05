@@ -46,6 +46,8 @@ export class AndroidApps implements AppManager {
     private readonly serial: string,
     private readonly screen: InstallScreen,
     private readonly answers: InstallAnswers = { prompts: true, warnings: false },
+    /** What the agent knows of names; with no agent up, nothing. */
+    private readonly labels: () => Promise<{ id: string; name: string }[]> = async () => [],
   ) {}
 
   private sh = (c: string, ms: number = TIMEOUTS.app) =>
@@ -183,9 +185,15 @@ export class AndroidApps implements AppManager {
 
   async listApps(all: boolean): Promise<AppEntry[]> {
     const out = await this.sh(`pm list packages${all ? '' : ' -3'}`);
+    const names = new Map((await this.labels().catch(() => [])).map((a) => [a.id, a.name]));
     return out
       .split('\n')
-      .flatMap((l) => (l.startsWith('package:') ? [{ id: l.slice(8).trim() }] : []))
+      .flatMap((l) => {
+        if (!l.startsWith('package:')) return [];
+        const id = l.slice(8).trim();
+        const name = names.get(id);
+        return [{ id, ...(name && { name }) }];
+      })
       .sort((a, b) => a.id.localeCompare(b.id));
   }
 

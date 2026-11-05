@@ -826,6 +826,28 @@ describe('gestures, keys, clipboard', () => {
     ]);
   });
 
+  it('launches an app by its name, in any case, and refuses a name it cannot settle', async () => {
+    const d = new FakeDevice();
+    const names = [
+      { id: 'dev.one', name: 'Ödeme' },
+      { id: 'dev.two', name: 'Twin' },
+      { id: 'dev.three', name: 'Twin' },
+    ];
+    Object.assign(d, { apps: { listApps: async () => names } });
+    const { call } = await connect(d);
+    expect((await call('launch_app', { app: 'ödeme' })).text).toContain('launched dev.one');
+    const none = await call('launch_app', { app: 'Nothing' });
+    expect(none.text).toContain('no app named Nothing');
+    expect((await call('launch_app', { app: 'Twin' })).text).toContain('dev.two, dev.three');
+  });
+
+  it('keeps a name to what the server allows', async () => {
+    const d = new FakeDevice();
+    Object.assign(d, { apps: { listApps: async () => [{ id: 'dev.other', name: 'Other' }] } });
+    const { call } = await connect(d, { policy: { apps: ['dev.app'] } });
+    expect((await call('launch_app', { app: 'Other' })).text).toContain('not an allowed app');
+  });
+
   it('launches in a language, restarting the app, and refuses what is none', async () => {
     const d = new FakeDevice();
     const launched: unknown[] = [];

@@ -1,4 +1,4 @@
-import { reportProgress, SETTINGS_PAGES, type SettingsPage } from '@appdyno/core';
+import { fold, reportProgress, SETTINGS_PAGES, type SettingsPage } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers, ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
@@ -11,6 +11,8 @@ import type { Steps } from './steps.js';
 import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const NO_APP = 'give app (or select one with use_device)';
+/** An app's id; anything else is what a person calls it. */
+const APP_ID = /^[\w-]+(\.[\w-]+)+$/;
 
 /** A language as the systems take it: `tr`, `pt-BR`, `zh-Hans`. */
 const Language = z
@@ -23,6 +25,20 @@ const APPS_SWIPES = 20;
 
 export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: Steps) {
   const policy = ctx.policy;
+
+  const appNamed = async (s: Session, name: string) => {
+    const same = (await s.device.apps.listApps(true)).filter(
+      (a) => a.name && fold(a.name) === fold(name),
+    );
+    if (same.length === 1) return same[0]!.id;
+    if (same.length === 0)
+      throw new ToolError(`no app named ${name} here`, 'NOT_FOUND', 'app action list names them');
+    throw new ToolError(
+      `several apps are named ${name}: ${same.map((a) => a.id).join(', ')}`,
+      'INVALID_ARGUMENT',
+      'give its id',
+    );
+  };
 
   const openSettings = async (s: Session, settings: string, read: ReadMode) => {
     if (!policy.allowHome)
@@ -81,7 +97,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
       name: 'launch_app',
       title: 'Launch app',
       description:
-        'Launch the app (to the front if it runs) and answer its screen. language: tr, pt-BR: restarts it so, for that launch (Android: until restore).',
+        'Launch the app, by id or name (to the front if it runs); answers its screen. language: tr, pt-BR: restarts it so, for that launch (Android: until restore).',
       input: z
         .object({
           app: z.string().max(200).optional(),
@@ -92,8 +108,9 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
       output: ActionOut,
       annotations: DESTRUCTIVE,
       run: async ({ app, language, read }) => {
-        const s = await ctx.sessionToLaunch(app);
-        const pkg = checkApp(policy, app ?? s.appId ?? '');
+        const named = app !== undefined && !APP_ID.test(app);
+        const s = await (named ? ctx.session() : ctx.sessionToLaunch(app));
+        const pkg = checkApp(policy, named ? await appNamed(s, app) : (app ?? s.appId ?? ''));
         if (!pkg) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
         reportProgress(`launching ${pkg}`);
         if (!language) {

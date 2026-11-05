@@ -63,6 +63,7 @@ class Handlers(private val automation: Automation, private val token: String) {
         "text.set" -> textSet(TextRequest.from(p), job)
         "screenshot" -> screenshots.take(ShotRequest.from(p))
         "app.foreground" -> Reply(JSONObject().apply { foreground()?.let { put("pkg", it) } })
+        "app.labels" -> Reply(JSONObject().put("apps", Platform.launcherLabels()))
         "clipboard.set" -> {
             clipboard.set(OneValue.text(p))
             Reply(JSONObject())

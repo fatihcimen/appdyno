@@ -75,6 +75,8 @@ describe.skipIf(!ANDROID)('small tools on Android', () => {
 
   it('takes a picture of a width, and no wider than the screen', () => atWidth(call));
 
+  it('launches an app by its name', () => byName(call));
+
   it('saves a picture at the size of the screen', async () => {
     // a phone's screen is a person's: no picture of it stays
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
@@ -128,6 +130,16 @@ const turns = async (call: Call) => {
     ok(await call('set_orientation', { orientation: 'portrait', read: 'none' }));
   }
   await vi.waitFor(async () => expect(await y()).toBe(upright), { timeout: 8_000 });
+};
+
+/** By what a launcher shows: the fixture's name is the same on every device. */
+const byName = async (call: Call) => {
+  await call('terminate_app');
+  expect(ok(await call('launch_app', { app: 'appdyno fixture' })).text).toContain(
+    `launched ${APP}`,
+  );
+  expect(ok(await call('device_info')).data.foreground).toBe(APP);
+  expect((await call('launch_app', { app: 'no such app' })).data.code).toBe('NOT_FOUND');
 };
 
 describe.skipIf(!ANDROID)('a language on Android', () => {
@@ -250,6 +262,8 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
 
   it('takes a picture of a width, and no wider than the screen', () => atWidth(call));
 
+  it('launches an app by its name', () => byName(call));
+
   it('holds a drag before it moves: the pad sees the same travel, later', async () => {
     ok(await call('open_link', { url: 'appdyno-fixture://open/gestures' }));
     const at = Date.now();
@@ -327,6 +341,8 @@ describe.skipIf(!IPHONE)('small tools on an iPhone', () => {
   it('takes a picture whose pixels are points', () => inPoints(call));
 
   it('takes a picture of a width, and no wider than the screen', () => atWidth(call));
+
+  it('launches an app by its name', () => byName(call));
 
   it('holds a drag before it moves: the pad sees the same travel, later', async () => {
     ok(await call('open_link', { url: 'appdyno-fixture://open/gestures' }));

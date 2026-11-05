@@ -95,6 +95,7 @@ export class AndroidDevice extends RpcDevice implements Device {
         shell: (c) => this.shell(c),
       },
       installAnswers,
+      async () => (await this.call('app.labels', {}, TIMEOUTS.action)).result.apps,
     );
     this.settings = new AndroidSettings(adb, serial, () => this.releaseAnimations());
     this.events = new AndroidEvents(adb, serial);

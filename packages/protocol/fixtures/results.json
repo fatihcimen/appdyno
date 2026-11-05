@@ -127,6 +127,10 @@
   },
   "app.foreground": { "method": "app.foreground", "result": { "pkg": "dev.appdyno.fixture" } },
   "app.target": { "method": "app.target", "result": {} },
+  "app.labels": {
+    "method": "app.labels",
+    "result": { "apps": [{ "id": "dev.appdyno.fixture", "name": "appdyno fixture" }] }
+  },
   "clipboard.set": { "method": "clipboard.set", "result": {} },
   "clipboard.get": { "method": "clipboard.get", "result": { "text": "a" } },
   "animations.wait": { "method": "animations.wait", "result": { "ms": 40 } },

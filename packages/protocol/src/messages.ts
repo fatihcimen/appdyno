@@ -319,6 +319,11 @@ export const METHODS = {
   'app.foreground': { params: z.object({}), result: Foreground },
   /** iOS: the app the runner reads and acts on while it is in front. */
   'app.target': { params: z.object({ pkg: z.string().min(1).max(255) }), result: z.object({}) },
+  /** Android: what a launcher calls each app. */
+  'app.labels': {
+    params: z.object({}),
+    result: z.object({ apps: z.array(z.object({ id: z.string(), name: z.string() })) }),
+  },
   'clipboard.set': { params: z.object({ text: z.string().max(10_000) }), result: z.object({}) },
   /** iOS: until the app under a point has no animation running (UIKit takes no touches during one). */
   'animations.wait': {

@@ -26,6 +26,7 @@
 - `app` `install` takes an `.ipa`, and says when a build is for another kind of device than this one, before trying it.
 - `simulator` `create`: a new iOS simulator of a model, on the newest runtime that runs it, started, selected for the calls that follow, and counted among those this tool started. An Android emulator refuses, naming what makes one.
 - `screenshot` `file`: the whole picture, `.png` or `.jpg`, or into a folder under a new name. What is there stays unless `overwrite`.
+- `launch_app` takes an app by its name as well as its id, in any case and with or without accents. A name that no app has, or that several have, refuses, and the second says their ids. `app` `list` gives names on Android too.
 - `launch_app` `language`: restarts the app in that language, for that launch on iOS, and on Android as the app's own language, put back with the other conditions.
 - `press_key` takes `mute` and `siri`: on Android the media mute and the assistant, on an iPhone simulator the Action button and the side button held. On an iPhone `mute` needs an Action button, doing what it is set to, and `siri` refuses and names `appdyno mirror`.
 - `screenshot` `points`: an image where 1 pixel is 1 tap unit, with no scale to apply. `width`: an image that wide in the answer, up to the screen's own.
