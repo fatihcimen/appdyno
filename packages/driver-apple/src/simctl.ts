@@ -118,6 +118,19 @@ export class Simctl {
     return pid;
   }
 
+  /** What people call each kind of device: an id says less, and these do not change as a Mac runs. */
+  typeNames() {
+    this.names ??= this.exec(['list', 'devicetypes', '-j']).then((out) => {
+      const { devicetypes } = JSON.parse(out) as {
+        devicetypes: { name: string; identifier: string }[];
+      };
+      return new Map(devicetypes.map((t) => [t.identifier, t.name]));
+    });
+    return this.names;
+  }
+
+  private names: Promise<Map<string, string>> | undefined;
+
   async exec(args: string[], timeoutMs = 60_000, env?: NodeJS.ProcessEnv): Promise<string> {
     try {
       const { stdout } = await run('xcrun', ['simctl', ...args], {

@@ -374,7 +374,11 @@ export class IosSimulatorDevice extends IosDevice {
     const me = (await this.simctl.list()).find((d) => d.udid === this.serial);
     return {
       ...(await super.hardware()),
-      ...(me?.deviceType && { model: typeName(me.deviceType) }),
+      ...(me?.deviceType && {
+        model:
+          (await this.simctl.typeNames().catch(() => undefined))?.get(me.deviceType) ??
+          typeName(me.deviceType),
+      }),
     };
   }
 

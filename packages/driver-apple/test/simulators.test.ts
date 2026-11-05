@@ -16,6 +16,13 @@ const simulators = () =>
         deviceType: `${TYPE}iPhone-17-Pro`,
       },
       {
+        udid: 'C',
+        name: 'Tablet',
+        state: 'Shutdown',
+        runtime: RUNTIME,
+        deviceType: `${TYPE}iPad-Pro-11-inch-M5-12GB`,
+      },
+      {
         udid: 'B',
         name: 'A watch',
         state: 'Shutdown',
@@ -23,12 +30,14 @@ const simulators = () =>
         deviceType: `${TYPE}Apple-Watch-Series-12-46mm`,
       },
     ],
+    typeNames: async () => new Map([[`${TYPE}iPad-Pro-11-inch-M5-12GB`, 'iPad Pro 11-inch (M5)']]),
   } as unknown as Simctl);
 
 describe("a Mac's simulators", () => {
   it('are named as people name them, with the hardware each stands for', async () => {
     expect(await simulators().startable()).toEqual([
       { id: 'A', name: 'Mine (iOS 27.2)', state: 'running', serial: 'A', model: 'iPhone 17 Pro' },
+      { id: 'C', name: 'Tablet (iOS 27.2)', state: 'stopped', model: 'iPad Pro 11-inch (M5)' },
     ]);
   });
 });

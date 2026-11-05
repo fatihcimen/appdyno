@@ -381,12 +381,13 @@ export class Simulators implements VirtualDevices {
 
   async startable(): Promise<Startable[]> {
     const driven = (await this.simctl.list()).filter((d) => !NOT_DRIVEN.test(d.deviceType ?? ''));
+    const names = await this.simctl.typeNames().catch(() => new Map<string, string>());
     return driven.map((d) => ({
       id: d.udid,
       name: `${d.name} (${runtimeName(d.runtime)})`,
       state: d.state === 'Booted' ? 'running' : 'stopped',
       ...(d.state === 'Booted' && { serial: d.udid }),
-      ...(d.deviceType && { model: typeName(d.deviceType) }),
+      ...(d.deviceType && { model: names.get(d.deviceType) ?? typeName(d.deviceType) }),
     }));
   }
 
