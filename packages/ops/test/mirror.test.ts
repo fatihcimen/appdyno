@@ -42,7 +42,7 @@ const stateFiles = () => {
 };
 
 /** A device whose mirror shows a little file of pixels, through a real viewer with no window. */
-function pixelsDevice(serial: string) {
+function pixelsDevice(serial: string, recorder?: object) {
   const file = join(dir, `${serial}.rgba`);
   writeFileSync(file, Buffer.alloc(8 * 8 * 4, 100));
   chmodSync(file, 0o600);
@@ -58,14 +58,17 @@ function pixelsDevice(serial: string) {
     watch: () => () => undefined,
   };
   const hardware = async () => ({ platform: 'android', controls: [] });
-  return { serial, mirror, hardware, close: vi.fn() } as unknown as Device;
+  return { serial, mirror, hardware, recorder, close: vi.fn() } as unknown as Device;
 }
 
-function context(serials: string[], over: { policy?: object; command?: string[] } = {}) {
+function context(
+  serials: string[],
+  over: { policy?: object; command?: string[]; recorder?: object } = {},
+) {
   const provider: DeviceProvider = {
     list: async () => serials.map((serial) => ({ serial, state: 'device', ready: true })),
     handles: () => true,
-    open: pixelsDevice,
+    open: (serial) => pixelsDevice(serial, over.recorder),
   };
   return new ServerContext({ ...DEFAULT_POLICY, ...over.policy }, [provider], {
     ...(over.command && { mirrorCommand: over.command }),
@@ -116,6 +119,58 @@ const file = (serial: string, pid: number, status: object): MirrorFile => ({
 
 // a file a failed test left would be read by the next, which would then fail for no fault of its own
 afterEach(() => rmSync(join(dir, 'mirror'), { recursive: true, force: true }));
+
+describe('a movie asked for by --record, where the picture is no stream', () => {
+  const recorder = (over: object = {}) => ({
+    extension: 'mp4',
+    start: vi.fn(async (file: string, _o: object) => ({ file })),
+    stop: vi.fn(async (h: { file: string }) => ({ files: [h.file] })),
+    ...over,
+  });
+  const movie = (made: ReturnType<typeof recorder>, serial: string) => {
+    const time = clock();
+    const started = run(context([serial], { recorder: made }), {
+      ends: time.ends,
+      record: '/movies/out.mp4',
+    });
+    return { ...started, ...time };
+  };
+
+  it("is made by the device's own recorder, and says what it came to", async () => {
+    const made = recorder();
+    const { lines, done, end } = movie(made, 'device-m');
+    await until(() => made.start.mock.calls.length > 0);
+    expect(made.start.mock.calls[0]![0]).toBe('/movies/out.mp4');
+    end();
+    await expect(done).resolves.toBe(0);
+    expect(made.stop).toHaveBeenCalledOnce();
+    expect(lines).toContain('device-m: recorded 1 file');
+  }, 300_000);
+
+  it('fails the run where the recorder will not start, and says why', async () => {
+    const start = vi.fn(async () => {
+      throw new Error('screenrecord did not start');
+    });
+    const { lines, done, end } = movie(recorder({ start }), 'device-n');
+    await until(() => start.mock.calls.length > 0);
+    end();
+    await expect(done).resolves.toBe(1);
+    expect(lines).toContain('device-n: no movie: screenrecord did not start');
+  }, 300_000);
+
+  it('fails the run where it ended with nothing kept', async () => {
+    const made = recorder({
+      stop: vi.fn(async () => {
+        throw new Error('the recording failed: screenrecord wrote no file');
+      }),
+    });
+    const { lines, done, end } = movie(made, 'device-o');
+    await until(() => made.start.mock.calls.length > 0);
+    end();
+    await expect(done).resolves.toBe(1);
+    expect(lines).toContain('device-o: no movie: the recording failed: screenrecord wrote no file');
+  }, 300_000);
+});
 
 describe('a mirror parent', () => {
   it('stops by its seconds, at any point of its start', async () => {

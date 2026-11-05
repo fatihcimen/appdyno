@@ -8,7 +8,7 @@ import {
 } from '@appdyno/core';
 import type { ServerContext } from '../context.js';
 import { ToolError } from '../tool.js';
-import { windowControls, windowLook } from './controls.js';
+import { windowControls, windowLook, type MovieEnd } from './controls.js';
 import { windowFlow } from './flow.js';
 import { followDevice } from './follow.js';
 import { handoffDone } from './handoff.js';
@@ -64,7 +64,7 @@ const describe = (serial: string, s: MirrorStatus) => {
 export class Parent {
   readonly sessions = new Map<string, MirrorSession>();
   readonly done = new Map<string, Promise<MirrorStatus>>();
-  private readonly recording = new Map<string, string>();
+  private readonly movies = new Map<string, Promise<(() => Promise<MovieEnd>) | undefined>>();
   private readonly sides: PairSide[] = [];
   private pair: WindowPair | undefined;
   stopping = false;
@@ -122,10 +122,12 @@ export class Parent {
       inputOnClick: this.o.inputOnClick,
       onDone: (id) => handoffDone(serial, id),
       onChange: (status) => {
-        if (this.o.record && status.state === 'live' && !this.recording.has(serial)) {
-          this.recording.set(serial, this.o.record);
-          session.recording.start(this.o.record);
+        if (this.o.record && status.state === 'live' && !this.movies.has(serial)) {
           this.o.log(`${serial}: recording to ${this.o.record}`);
+          this.movies.set(
+            serial,
+            controls.movieTo(this.o.record).catch((e: Error) => this.noMovie(serial, e)),
+          );
         }
         // a stop is the end of its file; a status written after would look like a mirror
         if (status.state !== 'stopped') writeMirrorFile({ ...file, status });
@@ -172,16 +174,25 @@ export class Parent {
     }
   }
 
+  private noMovie(serial: string, e: Error) {
+    this.failed = true;
+    this.o.log(`${serial}: no movie: ${e.message}`);
+    return undefined;
+  }
+
+  private async endMovie(serial: string) {
+    const stop = await this.movies.get(serial);
+    const end = await stop?.().catch((e: Error) => this.noMovie(serial, e));
+    if (!end) return;
+    if (!end.kept) this.failed = true;
+    this.o.log(`${serial}: recorded ${end.what}${end.why ? `: ${end.why}` : ''}`);
+  }
+
   async stopAll(why: string) {
     this.stopping = true;
     await Promise.all(
       [...this.sessions.entries()].map(async ([serial, s]) => {
-        if (this.recording.has(serial)) {
-          const r = await s.recording.stop();
-          this.o.log(
-            `${serial}: recorded ${r.frames} frames${r.seconds ? ` in ${r.seconds.toFixed(1)} s` : ''}${r.why ? `: ${r.why}` : ''}`,
-          );
-        }
+        await this.endMovie(serial);
         await s.stop(why);
       }),
     );

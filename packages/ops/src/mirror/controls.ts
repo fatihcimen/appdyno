@@ -43,6 +43,9 @@ export function windowLook(hardware: DeviceHardware | undefined) {
   };
 }
 
+/** How a movie ended: what it came to in words, and why it ended early or holds little. */
+export type MovieEnd = { kept: boolean; what: string; why?: string };
+
 export type WindowSession = Pick<
   MirrorSession,
   'send' | 'tell' | 'recording' | 'streamsItsOwn' | 'askAgain' | 'status'
@@ -69,7 +72,7 @@ export function windowControls(
   const name = () => fileName(device, hardware);
   let opened: Promise<unknown> | undefined;
   let rotation: 0 | 1 | 2 | 3 = 0;
-  let stopRecording: (() => Promise<string>) | undefined;
+  let stopRecording: (() => Promise<MovieEnd>) | undefined;
   let stopPerf: (() => void) | undefined;
   let readingsWanted = false;
   let measuring = false;
@@ -128,35 +131,50 @@ export function windowControls(
     rmSync(file, { force: true });
   };
 
+  /** A movie into `file`, by what this source has, and how to end it: once, however many ask. */
+  const movieTo = async (file: string) => {
+    const { recorder } = device;
+    let finish: () => Promise<MovieEnd>;
+    if (session().streamsItsOwn) {
+      // its frames as the stream has them: nothing is encoded twice
+      session().recording.start(file);
+      finish = async () => {
+        const r = await session().recording.stop();
+        const took = r.seconds ? ` in ${r.seconds.toFixed(1)} s` : '';
+        return {
+          kept: r.frames > 0,
+          what: `${r.frames} frames${took}`,
+          ...(r.why && { why: r.why }),
+        };
+      };
+    } else {
+      const handle = await recorder.start(file, { maxSeconds: RECORD_MAX_S });
+      finish = async () => {
+        const { files, note: why } = await recorder.stop(handle);
+        const what = `${files.length} file${files.length > 1 ? 's' : ''}`;
+        return { kept: files.length > 0, what, ...(why && { why }) };
+      };
+    }
+    let ending: Promise<MovieEnd> | undefined;
+    const stop = () => {
+      stopRecording = undefined;
+      return (ending ??= finish());
+    };
+    stopRecording = stop;
+    return stop;
+  };
+
   const record = async () => {
     if (stopRecording) {
-      const stop = stopRecording;
-      stopRecording = undefined;
       session().tell({ op: 'recording', on: false });
-      note(await stop());
+      const { what, why } = await stopRecording();
+      note(why ?? `Saved to Movies: ${what}`);
       return;
     }
     const movies = join(homedir(), 'Movies');
     mkdirSync(movies, { recursive: true });
-    const file = join(movies, `${name()} ${stamp()}`);
-    const { recorder } = device;
-    if (session().streamsItsOwn) {
-      // its frames as the stream has them: nothing is encoded twice
-      session().recording.start(`${file}.mp4`);
-      stopRecording = async () => {
-        const r = await session().recording.stop();
-        return r.why ?? `Saved to Movies: ${r.frames} frames`;
-      };
-    } else {
-      await ready();
-      const handle = await recorder.start(`${file}.${recorder.extension}`, {
-        maxSeconds: RECORD_MAX_S,
-      });
-      stopRecording = async () => {
-        const { files, note: said } = await recorder.stop(handle);
-        return said ?? `Saved to Movies: ${files.length} file${files.length > 1 ? 's' : ''}`;
-      };
-    }
+    const type = session().streamsItsOwn ? 'mp4' : device.recorder.extension;
+    await movieTo(join(movies, `${name()} ${stamp()}.${type}`));
     session().tell({ op: 'recording', on: true });
   };
 
@@ -274,6 +292,8 @@ export function windowControls(
   return {
     /** A measure runs: what reads the screen stays out of its numbers. */
     measuring: () => measuring,
+
+    movieTo,
 
     /** A press of what is more than a key; `false` leaves it to the device's own. */
     press(button: string) {
