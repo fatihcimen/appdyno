@@ -3,6 +3,7 @@ import {
   type ActParams,
   type ActResult,
   type AuditResult,
+  type AuditType,
   type Method,
   type Tree,
 } from '@appdyno/protocol';
@@ -274,7 +275,7 @@ export class AndroidDevice extends RpcDevice implements Device {
    * The screen's accessibility issues (docs/protocol.md "Accessibility audit"): the host's checks of a
    * tree read, a PNG screenshot and the characters each text does not show.
    */
-  async audit(opts: { maxIssues?: number } = {}): Promise<AuditResult> {
+  async audit(opts: { types?: AuditType[]; maxIssues?: number } = {}): Promise<AuditResult> {
     const startedAt = Date.now();
     const hello = await this.open();
     const { tree, clips, traversal } = (await this.call('a11y.read', {}, TIMEOUTS.read)).result;
@@ -282,6 +283,7 @@ export class AndroidDevice extends RpcDevice implements Device {
     const r = auditAndroid(tree, decodePng(shot.data), {
       scale: hello.screen.density / 160,
       clips,
+      ...(opts.types && { types: opts.types }),
       ...(opts.maxIssues && { maxIssues: opts.maxIssues }),
       startedAt,
     });

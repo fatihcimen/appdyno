@@ -86,7 +86,13 @@ type Rect = NonNullable<UiElement['rect']>;
 export function auditAndroid(
   tree: Tree,
   img: Image | null,
-  o: { scale: number; clips?: TextClip[]; maxIssues?: number; startedAt?: number },
+  o: {
+    scale: number;
+    clips?: TextClip[];
+    types?: AuditType[];
+    maxIssues?: number;
+    startedAt?: number;
+  },
 ): AuditResult {
   const els = elementsOf(tree);
   const byRef = new Map(els.map((e, i) => [e.ref, i] as const));
@@ -251,11 +257,12 @@ export function auditAndroid(
         `${list.length} controls are read as "${name}"`,
       );
 
+  const asked = o.types ? issues.filter((i) => o.types!.includes(i.type)) : issues;
   const max = o.maxIssues ?? 50;
   return {
     engine: 'rules',
-    issues: issues.slice(0, max),
-    truncated: issues.length > max,
+    issues: asked.slice(0, max),
+    truncated: asked.length > max,
     elapsedMs: o.startedAt === undefined ? 0 : Date.now() - o.startedAt,
   };
 }

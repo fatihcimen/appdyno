@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { crc32, deflateSync } from 'node:zlib';
-import { NODE_FLAGS, type Tree, type WireNode } from '@appdyno/protocol';
+import { NODE_FLAGS, type AuditType, type Tree, type WireNode } from '@appdyno/protocol';
 import { decodePng, type Image } from '@appdyno/core';
+import type { Adb } from '../src/adb.js';
 import { auditAndroid, contrastRatio } from '../src/audit.js';
+import { AndroidDevice } from '../src/device.js';
 
 /** A 1080×2400 screen at 2.625 px/dp (420 dpi), white, every pixel `fill` until painted. */
 const W = 1080;
@@ -235,6 +237,34 @@ describe('android accessibility checks', () => {
     );
     const r = auditAndroid(t, null, { scale: SCALE, maxIssues: 3 });
     expect([r.engine, r.issues.length, r.truncated]).toEqual(['rules', 3, true]);
+  });
+
+  describe('asked for some types', () => {
+    const t = tree(
+      { c: 'android.widget.Button', id: 'small', d: 'Küçük', b: [100, 100, 163, 163], f: C },
+      { c: 'android.widget.Button', id: 'one', t: 'Aynı', b: [100, 300, 1000, 440], f: C },
+      { c: 'android.widget.Button', id: 'two', t: 'Aynı', b: [100, 500, 1000, 640], f: C },
+    );
+    const types = (r: { issues: { type: string }[] }) => r.issues.map((i) => i.type);
+
+    it('keeps to them, and counts only them against the limit', () => {
+      const of = (asked: AuditType[], maxIssues?: number) =>
+        auditAndroid(t, null, { scale: SCALE, types: asked, ...(maxIssues && { maxIssues }) });
+      expect(types(of(['hitRegion']))).toEqual(['hitRegion']);
+      expect(types(of(['duplicateLabel']))).toEqual(['duplicateLabel']);
+      expect(types(of(['contrast']))).toEqual([]);
+      expect(of(['duplicateLabel'], 1).truncated).toBe(false);
+    });
+
+    it("takes them from the device's audit", async () => {
+      const d = new AndroidDevice('emulator-5640', {} as Adb);
+      Object.assign(d, {
+        open: async () => ({ screen: { density: 420 } }),
+        call: async () => ({ result: { tree: t, clips: [], traversal: [] } }),
+        screenshot: async () => ({ data: encodePng(canvas()) }),
+      });
+      expect(types(await d.audit({ types: ['duplicateLabel'] }))).toEqual(['duplicateLabel']);
+    });
   });
 
   it('decodes every PNG row filter it may meet and refuses what it cannot', () => {

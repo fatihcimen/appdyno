@@ -16,6 +16,10 @@ extension Device {
     func audit(_ r: AuditRequest, job: Job) throws -> [String: Any] {
         let (app, id) = front()
         guard id != Device.springboardId else { throw AgentError("APP_NOT_RUNNING", "the target app is not in front") }
+        // the platform audits everything when given no type, so a type it does not have is said, not passed on as none
+        if let lacking = r.types?.first(where: { name in !Device.auditTypes.contains { $0.name == name } }) {
+            throw AgentError("UNSUPPORTED", "the platform accessibility audit has no \(lacking)")
+        }
         var types: XCUIAccessibilityAuditType = []
         for t in Device.auditTypes where r.types?.contains(t.name) ?? true { types.insert(t.type) }
         let t0 = Date()
