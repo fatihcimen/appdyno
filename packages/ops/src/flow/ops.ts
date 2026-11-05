@@ -1,6 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { type Flow, toMaestro, FlowError, Recording } from '@appdyno/flows';
+import { toMaestro, FlowError } from '@appdyno/flows';
 import type { ErrorCode } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
@@ -9,16 +7,16 @@ import { Scenario } from '../perf/shared.js';
 import { ToolError, reply, defineOp, DESTRUCTIVE } from '../tool.js';
 import { journeyText, measureJourney } from './journey.js';
 import type { FlowRunner } from './runner.js';
-import { FLOW_FILE, envValues, readFlow, loadRecording, keepRecording } from './shared.js';
-
-const flagged = (flow: Flow) =>
-  flow.steps.flatMap((st, i) => {
-    const why = [
-      ...st.flags,
-      ...(st.action === 'unrecorded' ? [`not recorded: ${String(st.args.what)}`] : []),
-    ];
-    return why.length > 0 ? [`step ${i + 1}: ${why.join(', ')}`] : [];
-  });
+import {
+  FLOW_FILE,
+  envValues,
+  flagged,
+  keepRecording,
+  loadRecording,
+  readFlow,
+  saveRecording,
+  startRecording,
+} from './shared.js';
 
 /** `NAME=value` words as a record. */
 export function paramsOf(words: string[] = []): Record<string, string> {
@@ -82,19 +80,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
                 'INVALID_ARGUMENT',
               );
             const pkg = s.appId;
-            keepRecording(
-              new Recording(
-                {
-                  serial,
-                  running: true,
-                  steps: [],
-                  known: [],
-                  ...(pkg && { app: pkg }),
-                  owner: s.owner,
-                },
-                ctx.policy.secrets,
-              ),
-            );
+            startRecording(ctx, serial, pkg, s.owner);
             return done(`recording on ${serial}${pkg ? ` (${pkg})` : ''}`);
           }
           case 'stop': {
@@ -117,21 +103,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
             if (held.state.steps.length === 0)
               throw new ToolError('nothing was recorded yet', 'NOT_FOUND');
             const path = need();
-            try {
-              mkdirSync(dirname(path), { recursive: true });
-              writeFileSync(path, held.text(), { flag: overwrite ? 'w' : 'wx' });
-            } catch (e) {
-              if ((e as NodeJS.ErrnoException).code === 'EEXIST')
-                throw new ToolError(
-                  `${path} exists: overwrite true replaces it`,
-                  'INVALID_ARGUMENT',
-                );
-              throw new ToolError(
-                `cannot write ${path}: ${(e as Error).message}`,
-                'INVALID_ARGUMENT',
-              );
-            }
-            const notes = flagged(held.flow());
+            const notes = saveRecording(held, path, overwrite);
             const t = `saved ${held.state.steps.length} steps to ${path}`;
             return reply([t, ...notes.map((n) => `look at ${n}`)].join('\n'), {
               done: t,

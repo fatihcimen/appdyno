@@ -1,19 +1,13 @@
 import { type Screen, type ScreenElement, selectIn } from '@appdyno/core';
-import {
-  type FlowSelector,
-  type FlowStep,
-  type Flag,
-  bestSelector,
-  elementAt,
-  Recording,
-} from '@appdyno/flows';
+import { type FlowSelector, type FlowStep, type Flag, Recording } from '@appdyno/flows';
 import type { ServerContext } from '../context.js';
 import { NOT_STEPS } from '../report.js';
 import type { Session } from '../session.js';
 import { SCROLLER_SWIPES } from '../perf/shared.js';
 import { type Step, WAIT_MS } from '../step-schemas.js';
 import type { Op, ToolResult } from '../tool.js';
-import { defined, loadRecording, keepRecording } from './shared.js';
+import { type Aim, aimAt, named, stepOf, unrecorded } from './aim.js';
+import { activeRecording, addSteps, defined } from './shared.js';
 
 /** While recording: how long a selector's element may take to come, as `steps` allows. */
 const AIM_WAIT_MS = 1_500;
@@ -28,13 +22,6 @@ type ToStep = (
   a: Record<string, unknown>,
   data: Record<string, unknown>,
 ) => FlowStep | FlowStep[] | undefined;
-
-const unrecorded = (what: string): FlowStep => ({
-  action: 'unrecorded',
-  line: 0,
-  args: { what },
-  flags: [],
-});
 
 /** No action of a flow, as they pick the device, film it or run the recording; nor is what a report leaves out. */
 const NOT_ACTIONS = new Set([...NOT_STEPS, 'use_device', 'record', 'flow']);
@@ -68,39 +55,9 @@ const flatSelector = (a: FlatSelector): FlowSelector | undefined =>
  * other op passes `wrap`. Nothing is written unless the action succeeded.
  */
 export function flowRecorder(ctx: ServerContext) {
-  const active = (serial: string | undefined) => {
-    const r = serial === undefined ? undefined : loadRecording(ctx, serial);
-    return r?.state.running ? r : undefined;
-  };
-
   const size = async (s: Session) =>
     (await s.current()).window ??
     (s.device.hello && { w: s.device.hello.screen.w, h: s.device.hello.screen.h });
-
-  /** A target named for later, and the screen it was named on. */
-  type Aim = {
-    screen?: Screen | undefined;
-    element?: ScreenElement | undefined;
-    selector?: FlowSelector;
-    args?: Record<string, string | number>;
-    flags?: Flag[];
-  };
-
-  const named = (screen: Screen, e: ScreenElement) => {
-    const c = bestSelector(screen, e);
-    return {
-      selector: c.selector,
-      flags: (c.ambiguous !== undefined ? ['ambiguous'] : []) as Flag[],
-    };
-  };
-
-  const coordinates = async (s: Session, p: { x: number; y: number }) => {
-    const w = await size(s);
-    return {
-      args: { x: p.x, y: p.y, ...(w && { screen: `${w.w}x${w.h}` }) },
-      flags: ['coordinates'] as Flag[],
-    };
-  };
 
   /** A target on the screen the action is about to act on: a selector when anything names it, else flagged coordinates. */
   const aim = async (s: Session, t: Target): Promise<Aim> => {
@@ -116,26 +73,11 @@ export function flowRecorder(ctx: ServerContext) {
       screen = (await s.until((x) => selectIn(x.list, sel).length > 0, AIM_WAIT_MS)).screen;
       e = screen && selectIn(screen.list, sel)[sel.index ?? 0];
     } else if (t.x !== undefined && t.y !== undefined) {
-      screen = await s.current();
-      const w = await size(s);
-      e = w && elementAt(screen.list, { x: t.x, y: t.y }, w);
-      if (!e) return { screen, ...(await coordinates(s, { x: t.x, y: t.y })) };
+      return aimAt(await s.current(), { x: t.x, y: t.y }, await size(s));
     } else return { screen: await s.current() };
     if (!screen || !e) return { screen };
     return { screen, element: e, ...named(screen, e) };
   };
-
-  const stepOf = (
-    action: FlowStep['action'],
-    a: Aim,
-    args: Record<string, string | number | boolean | undefined> = {},
-  ): FlowStep => ({
-    action,
-    line: 0,
-    ...(a.selector && { selector: a.selector }),
-    args: defined({ ...args, ...a.args }),
-    flags: a.flags ?? [],
-  });
 
   /** A step's record, known before it runs as the screen is about to change. */
   const prepared = async (
@@ -260,12 +202,6 @@ export function flowRecorder(ctx: ServerContext) {
         : undefined;
   };
 
-  const add = (r: Recording, step: FlowStep | FlowStep[] | undefined) => {
-    const steps = [step ?? []].flat();
-    for (const st of steps) r.add(st);
-    if (steps.length) keepRecording(r);
-  };
-
   /**
    * A measure is the agent measuring, not the journey: its numbers come from `appdyno test --measure`. What it does to
    * the screen stays, as the plain steps that do the same, so that the next step finds what it found, and nothing stops
@@ -328,11 +264,11 @@ export function flowRecorder(ctx: ServerContext) {
   return {
     /** Around one step of `tap`, `steps` and the like. */
     through: async <T>(s: Session, st: Step, run: () => Promise<T>): Promise<T> => {
-      const r = active(s.device.serial);
+      const r = activeRecording(ctx, s.device.serial);
       if (!r) return run();
       const record = await prepared(r, s, st);
       const out = await run();
-      add(r, record());
+      addSteps(r, record());
       return out;
     },
 
@@ -355,14 +291,14 @@ export function flowRecorder(ctx: ServerContext) {
                     ? ctx.sessionToLaunch((args as { app?: string }).app)
                     : ctx.session()
                 ).catch(() => undefined);
-          const r = active(s?.device.serial ?? ctx.selected);
+          const r = activeRecording(ctx, s?.device.serial ?? ctx.selected);
           if (!r) return op.handler(args);
           let record: (() => FlowStep | undefined) | undefined;
           if (s && op.name === 'wait_for') record = await waitStep(s, args as never);
           if (s && op.name === 'assert') record = await assertStep(s, args as never);
           const out = await op.handler(args);
           if (out.data.met === false) return out;
-          add(r, record ? record() : toStep(args, out.data));
+          addSteps(r, record ? record() : toStep(args, out.data));
           return out;
         },
       };

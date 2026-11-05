@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { parseEnv } from 'node:util';
 import { deviceState, Owner } from '@appdyno/core';
 import {
@@ -36,6 +37,54 @@ export function loadRecording(ctx: ServerContext, serial: string): Recording | u
 }
 
 export const keepRecording = (r: Recording) => flowRecordings.write(r.state.serial, r.state);
+
+/** The recording that takes what happens on `serial` now. */
+export const activeRecording = (ctx: ServerContext, serial: string | undefined) => {
+  const r = serial === undefined ? undefined : loadRecording(ctx, serial);
+  return r?.state.running ? r : undefined;
+};
+
+export const startRecording = (
+  ctx: ServerContext,
+  serial: string,
+  app: string | undefined,
+  owner: Owner | undefined,
+) =>
+  keepRecording(
+    new Recording(
+      { serial, running: true, steps: [], known: [], ...(app && { app }), owner },
+      ctx.policy.secrets,
+    ),
+  );
+
+export const addSteps = (r: Recording, step: FlowStep | FlowStep[] | undefined) => {
+  const steps = [step ?? []].flat();
+  for (const st of steps) r.add(st);
+  if (steps.length) keepRecording(r);
+};
+
+/** What a person should look at in a flow, by step. */
+export const flagged = (flow: Flow) =>
+  flow.steps.flatMap((st, i) => {
+    const why = [
+      ...st.flags,
+      ...(st.action === 'unrecorded' ? [`not recorded: ${String(st.args.what)}`] : []),
+    ];
+    return why.length > 0 ? [`step ${i + 1}: ${why.join(', ')}`] : [];
+  });
+
+/** A recording as its file: what is there stays unless `overwrite`. */
+export function saveRecording(r: Recording, path: string, overwrite: boolean | undefined) {
+  try {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, r.text(), { flag: overwrite ? 'w' : 'wx' });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'EEXIST')
+      throw new ToolError(`${path} exists: overwrite true replaces it`, 'INVALID_ARGUMENT');
+    throw new ToolError(`cannot write ${path}: ${(e as Error).message}`, 'INVALID_ARGUMENT');
+  }
+  return flagged(r.flow());
+}
 
 export const defined = <T extends object>(o: T) =>
   Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as {
