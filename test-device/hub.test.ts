@@ -44,7 +44,8 @@ describe.runIf(udid)('the hub', () => {
 
   beforeAll(async () => {
     expect(booted()).toBe(false);
-    link = new ViewerProcess(await viewerBinary(), ['--hub', '--behind', '--appearance', 'dark']);
+    const look = process.env.APPDYNO_HUB_LOOK ?? 'dark';
+    link = new ViewerProcess(await viewerBinary(), ['--hub', '--behind', '--appearance', look]);
     link.onMessage((m) => told.push(m));
     // only ours, unless a picture is to show the Mac's whole list: nothing else here is pressed
     const whole = process.env.APPDYNO_HUB_ALL === '1';

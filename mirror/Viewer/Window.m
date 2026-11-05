@@ -26,7 +26,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   MVInspector *_inspector;
   NSView *_panel, *_bar, *_pill;
   MVHud *_hud;
-  BOOL _hudding, _reading;
+  BOOL _hudding, _reading, _recording;
   NSView *_root;
   MVBackdrop *_backdrop;
   MVStatusLine *_line;
@@ -260,9 +260,15 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   _window.title = live ? _name : [NSString stringWithFormat:@"%@: %@", _name, message[@"title"] ?: state];
 }
 
+/// Its one colour says what is happening to the device, and the line says it in words.
+- (void)tintPill {
+  MVTintGlass(_pill, _recording ? [NSColor.systemRedColor colorWithAlphaComponent:0.35] : _line.tool ? [NSColor.controlAccentColor colorWithAlphaComponent:0.35] : nil);
+}
+
 - (void)setDriving:(BOOL)driving tool:(NSString *)tool {
   _line.tool = driving ? tool : nil;
   [_frame setDriving:driving];
+  [self tintPill];
 }
 
 - (void)sayNote:(NSString *)note {
@@ -294,7 +300,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 - (void)toggleInspector {
   double zoom = _zoom;
   _inspecting = !_inspecting;
-  _panel.hidden = !_inspecting;
+  MVShowPane(_panel, _inspecting);
   [self watchReadings];
   [self setZoom:zoom > 0 ? zoom : 1];
 }
@@ -314,7 +320,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 
 - (void)toggleHud {
   _hudding = !_hudding;
-  _hud.hidden = !_hudding;
+  MVShowPane(_hud, _hudding);
   [self watchReadings];
   [self setZoom:_zoom > 0 ? _zoom : 1];
 }
@@ -348,6 +354,8 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
   NSButton *button = MVFindControl(_bar, @"record");
   button.image = [NSImage imageWithSystemSymbolName:on ? @"stop.circle.fill" : @"record.circle" accessibilityDescription:on ? @"Stop Recording" : @"Record Screen"];
   button.contentTintColor = on ? NSColor.systemRedColor : NSColor.labelColor;
+  _recording = on;
+  [self tintPill];
 }
 
 - (void)setFrameShown:(BOOL)shown {

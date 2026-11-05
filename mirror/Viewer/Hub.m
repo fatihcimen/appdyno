@@ -278,7 +278,7 @@ static NSPopUpButton *popUp(NSArray<NSDictionary *> *rows) {
   CGSize screen = CGSizeMake(shape.width * scale, shape.height * scale);
   CGSize body = [_frame bodyFor:screen turns:0];
   NSSize room = _detail.bounds.size;
-  [_frame layOutScreen:screen in:NSMakeRect(round((room.width - body.width) / 2), room.height - body.height - 56, body.width, body.height) turns:0];
+  [_frame layOutScreen:screen in:NSMakeRect(round((room.width - body.width) / 2), room.height - body.height - 72, body.width, body.height) turns:0];
   BOOL mirrored = [device[@"mirrored"] boolValue], running = [device[@"state"] isEqual:@"running"];
   _name.stringValue = device[@"name"] ?: @"";
   _about.stringValue = [@[stateWords(device), device[@"detail"] ?: @""] componentsJoinedByString:@"  ·  "];
@@ -319,7 +319,7 @@ static NSPopUpButton *popUp(NSArray<NSDictionary *> *rows) {
 }
 
 - (BOOL)snapshot:(NSString *)file {
-  return MVWriteWindow(_window, file);
+  return MVWriteWindow(_window.attachedSheet ?: _window, file);
 }
 
 - (void)windowWillClose:(NSNotification *)notification {

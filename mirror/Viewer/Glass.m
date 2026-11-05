@@ -4,6 +4,7 @@
 #import "Window.h"
 
 static const double kNearest = 12;
+static const double kComesAndGoes = 0.18;
 
 NSView *MVGlass(NSView *content, double radius, NSColor *_Nullable tint) {
   Class glass = NSClassFromString(@"NSGlassEffectView");
@@ -33,6 +34,33 @@ NSView *MVGlass(NSView *content, double radius, NSColor *_Nullable tint) {
   if ([pane respondsToSelector:NSSelectorFromString(@"setEffectIsInteractive:")]) [pane setValue:@YES forKey:@"effectIsInteractive"];
   pane.translatesAutoresizingMaskIntoConstraints = NO;
   return pane;
+}
+
+void MVShowPane(NSView *pane, BOOL shown) {
+  if (NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion) {
+    pane.hidden = !shown;
+    pane.alphaValue = 1;
+    return;
+  }
+  if (shown && pane.hidden) pane.alphaValue = 0;
+  if (shown) pane.hidden = NO;
+  [NSAnimationContext
+      runAnimationGroup:^(NSAnimationContext *context) {
+        context.duration = kComesAndGoes;
+        context.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
+        pane.animator.alphaValue = shown ? 1 : 0;
+      }
+      completionHandler:^{
+        // shown again meanwhile: the later word stands
+        if (shown || pane.alphaValue > 0) return;
+        pane.hidden = YES;
+        pane.alphaValue = 1;
+      }];
+}
+
+void MVTintGlass(NSView *pane, NSColor *_Nullable tint) {
+  // the stand-in has no tint: a pane says the same in words, as a colour is never alone
+  if ([pane respondsToSelector:NSSelectorFromString(@"setTintColor:")]) [pane setValue:tint forKey:@"tintColor"];
 }
 
 NSView *MVGlassGroup(NSView *content) {

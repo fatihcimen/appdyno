@@ -49,6 +49,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// A pane of glass around `content`: the system's where it has one, its nearest material where it has not.
 NSView *MVGlass(NSView *content, double radius, NSColor *_Nullable tint);
+/// A pane comes or goes: a short fade, or at once for a person who asked for less motion.
+void MVShowPane(NSView *pane, BOOL shown);
+/// A pane takes a colour that means something; nil gives it back.
+void MVTintGlass(NSView *pane, NSColor *_Nullable tint);
 /// Panes that merge as they near each other, and share one pass.
 NSView *MVGlassGroup(NSView *content);
 /// A row of glass groups of buttons, each named as a control.
