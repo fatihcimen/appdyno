@@ -7,7 +7,7 @@ import {
   attributesOf,
   type ActOptions,
 } from '@appdyno/core';
-import type { ActResult, TextResult } from '@appdyno/protocol';
+import type { ActResult, Point, TextResult } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { Answers, ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
@@ -145,6 +145,30 @@ export function stepsFor(
     return w;
   };
 
+  /**
+   * A point past the screen's edge reaches nothing, and the answer would still say it was made. Measured by
+   * the larger of what the tree shows and what the device said when opened: a phone turned since, or two apps
+   * side by side, make either one too small alone, and a point on the screen is never refused.
+   */
+  const onTheScreen = async (s: Session, points: Partial<Point>[]) => {
+    const named = points.filter((p) => p.x !== undefined || p.y !== undefined);
+    if (named.length === 0) return;
+    const known = [(await s.current()).window, s.device.hello?.screen].filter(
+      (z) => z !== undefined,
+    );
+    if (known.length === 0) return;
+    const w = Math.max(...known.map((z) => z.w));
+    const h = Math.max(...known.map((z) => z.h));
+    const off = named.find((p) => (p.x ?? 0) >= w || (p.y ?? 0) >= h);
+    if (off)
+      throw new ToolError(
+        `${off.x ?? ''},${off.y ?? ''} is off the screen, which is ${w}x${h}`,
+        'INVALID_ARGUMENT',
+        undefined,
+        false,
+      );
+  };
+
   /** Whether a check holds on this screen, and why or why not in words. */
   const judge = (screen: Screen, a: Judged): { pass: boolean; why: string } => {
     const sel = selectorOf(a) ?? {};
@@ -230,6 +254,7 @@ export function stepsFor(
   ): Promise<{ r: ActResult | TextResult; done: string; found?: boolean }> => {
     const treeIfAsked = (screen: Screen): ActResult =>
       opts.read === 'tree' ? { tree: screen.tree } : {};
+    await onTheScreen(s, [st as Partial<Point>, ...('to' in st ? [st.to] : [])]);
     switch (st.action) {
       case 'tap': {
         const t = await target(s, st, patient);
@@ -369,7 +394,7 @@ export function stepsFor(
     );
   };
 
-  return { target, windowSize, step, one, checkNow, waitFor, holdsStill, line };
+  return { target, windowSize, onTheScreen, step, one, checkNow, waitFor, holdsStill, line };
 }
 
 export type Steps = ReturnType<typeof stepsFor>;

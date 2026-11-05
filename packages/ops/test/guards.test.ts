@@ -41,6 +41,36 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe('a point past the edge of the screen', () => {
+  const touches = (d: FakeDevice) =>
+    namesOf(d).filter((n) => ['tap', 'act', 'swipe', 'longPress', 'typeText'].includes(n));
+
+  it.each([
+    ['tap', { x: 9999, y: 9999 }],
+    ['tap', { x: 1080, y: 10 }],
+    ['tap', { x: 10, y: 2400 }],
+    ['swipe', { direction: 'up', x: 9999, y: 100 }],
+    ['type_text', { text: 'a', x: 9999, y: 100 }],
+    ['gesture', { kind: 'drag', x: 10, y: 10, to: { x: 9999, y: 10 } }],
+    ['gesture', { kind: 'pinch', scale: 2, x: 9999, y: 10 }],
+    ['gesture', { kind: 'plan', pointers: [[{ x: 9999, y: 10, t: 0 }]] }],
+  ])('%s %j is refused and no touch goes out', async (op, args) => {
+    const device = new FakeDevice();
+    const e = await refusal(callerOf(contextOf(device))(op as 'tap', args as { x: number }));
+    expect(e.code).toBe('INVALID_ARGUMENT');
+    expect(e.message).toContain('off the screen, which is 1080x2400');
+    expect(e.dispatched).toBe(false);
+    expect(touches(device)).toEqual([]);
+  });
+
+  it('a phone turned since it was opened is not held to the old edge', async () => {
+    const device = new FakeDevice();
+    device.hello = { ...device.hello, screen: { ...device.hello.screen, w: 2400, h: 1080 } };
+    await callerOf(contextOf(device))('tap', { x: 2000, y: 100 });
+    expect(touches(device)).toHaveLength(1);
+  });
+});
+
 describe('what did not happen is no success', () => {
   const client = (device: FakeDevice) => linkedClient(contextOf(device));
   const asked = async (device: FakeDevice, name: string, args: Record<string, unknown>) =>

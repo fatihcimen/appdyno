@@ -58,7 +58,7 @@ const readsScreen = (st: Step | undefined) =>
 export function actOps(
   ctx: ServerContext,
   { act, summary, header, show, clean, afterChange }: Answers,
-  { one, step, windowSize, checkNow }: Steps,
+  { one, step, windowSize, onTheScreen, checkNow }: Steps,
   tools: () => Record<string, Op>,
 ) {
   const planned = (x: { action: string } & Record<string, unknown>, i: number): Planned => {
@@ -129,6 +129,7 @@ export function actOps(
           case 'pinch': {
             if (scale === undefined) throw new ToolError('pinch needs scale', 'INVALID_ARGUMENT');
             await s.beforeTouch();
+            await onTheScreen(s, [a]);
             const size = await windowSize(s);
             const c = { x: a.x ?? size.w / 2, y: a.y ?? size.h / 2 };
             const paths = pinchPaths(c, scale, durationMs ?? PINCH_MS, size);
@@ -147,6 +148,7 @@ export function actOps(
                 'INVALID_ARGUMENT',
               );
             await s.beforeTouch();
+            await onTheScreen(s, fingers.flat());
             return act(
               s,
               read,
