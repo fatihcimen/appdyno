@@ -46,6 +46,17 @@ describe('what is in front of a simulator with no runner', () => {
     expect(await withFront('dev.app').foreground()).toBe('dev.app');
   });
 
+  it('is read with no app named, so that a first look at a simulator starts no runner', async () => {
+    const tree = { windows: [], nodes: [], hash: 'h', truncated: false };
+    const read = vi.fn(async () => ({ busy: false, copies: false, tree }));
+    const direct = { front: async () => 'com.apple.springboard', read, close: vi.fn() };
+    const device = Object.assign(new IosSimulatorDevice(UDID, new Listed(''), direct as never), {
+      keepDump: async () => undefined,
+    });
+    await expect(device.tree()).resolves.toMatchObject({ hash: 'h' });
+    expect(read).toHaveBeenCalledWith('com.apple.springboard');
+  });
+
   it('is nothing yet when the helper has no answer, and no refusal', async () => {
     await expect(withFront(undefined).foreground()).resolves.toBeUndefined();
   });

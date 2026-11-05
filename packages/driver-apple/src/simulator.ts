@@ -187,7 +187,9 @@ export class IosSimulatorDevice extends IosDevice {
    * verdict is kept by the layout's digest. Any other layout needs no runner, and is checked once one is up.
    */
   private async readDirect(final: boolean): Promise<Capture | undefined> {
-    const r = await this.direct.read(this.targetApp).catch(() => ({ refused: 'failed' }));
+    // with no app named, what is in front: a new simulator's home screen needs no runner to be read
+    const app = this.targetApp ?? (await this.direct.front().catch(() => undefined));
+    const r = await this.direct.read(app).catch(() => ({ refused: 'failed' }));
     if ('refused' in r) return undefined;
     const known = this.verdicts.get(r.tree.hash);
     if (known) return { tree: withoutCopies(r.tree, known), busy: r.busy };

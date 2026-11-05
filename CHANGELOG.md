@@ -3,6 +3,7 @@
 ## Unreleased
 
 - A window keeps its pictures through a decoder's stall on a busy Mac: pictures already decoding were thrown away with the frame that did not fit, and a stream's first burst could leave a window black until the next key frame.
+- A first read of a simulator with no app named starts no runner: it asked for the runner where nothing was named, and a new simulator's home screen took a build to read.
 - A touch on a turned simulator lands where the read says: it takes the path a window's touch takes, turned by what the app in front says of itself, and it left that path for one that missed and said tapped. A process started after the turn knows it too. The runner's tap on a turned screen is XCUI's own.
 - `mirror stats` says a dash where nothing was counted, not -1, and a status has no such number.
 - A journey's `frames_p95_ms` is of the step's own frames, as its `frames_worst_ms` is: it could pass the worst, from gfxinfo's buckets. A baseline kept before this moves.
