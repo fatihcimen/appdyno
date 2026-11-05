@@ -8,8 +8,8 @@
 # appdyno has no service and no token: it writes a file, and this job posts that file with the repository's own token.
 # A pull request from a fork gets a token that cannot comment: the comment is then only in the job's artifacts.
 #
-# A run under load says `noisy` and fails nothing: the comment says so, and it is no pass. Measure again. A change the
-# gate could not judge, `few-samples`, fails the job, as a judgement that never happened must not go green.
+# A change the gate could not judge fails the job, as a judgement that never happened must not go green: `noisy`, seen
+# under load, says to measure again, and `few-samples`, with too little to call it, to measure more.
 #
 # An Android emulator needs a hypervisor, which GitHub's arm64 macOS runners do not give, and `macos-latest` is one of
 # those. For Android use an Intel macOS label or a Mac of your own, boot an AVD with `-gpu host` where this boots a

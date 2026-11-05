@@ -141,7 +141,8 @@ for (const t of targets)
         note(
           `${t.name} unchanged ${i + 1}: ${c.verdict} ${c.current} ms against ${c.baseline}, shift ${c.shift}, floor ${c.floor}, load ${loadavg()[0]!.toFixed(1)}`,
         );
-        expect(code).toBe(0);
+        // a run the gate could not judge is no pass, and no false alarm
+        expect(code).toBe(c.verdict === 'noisy' ? 1 : 0);
       }
 
       const [key] = await runKeys(dir, { app: APP });

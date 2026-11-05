@@ -150,6 +150,29 @@ describe('the gate', () => {
     expect(text(await asked('junit'))).toContain('<failure message="few-samples');
   });
 
+  it('takes a change it saw under noise for no pass, and says to measure again', async () => {
+    const startup = { ms: 500 };
+    const vitals: Record<string, unknown> = {};
+    const ops = context(startup, fresh(), fresh(), vitals);
+    for (let i = 0; i < 3; i++) await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
+    await ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 3 });
+    startup.ms = 900;
+    vitals.thermalStatus = 3;
+    await ops.perf_launch!.handler({ mode: 'cold', repeats: 5 });
+    const asked = (format: 'text' | 'json' | 'junit') =>
+      ops.perf_compare!.handler({ action: 'compare', format, last: 1 });
+    const said = await asked('text');
+    expect(text(said)).toMatch(/noisy\s+launch\.ttid_ms/);
+    expect(text(said)).toMatch(
+      /^the gate could not judge \d+ of these: measured under load or noise/m,
+    );
+    expect(text(said)).toContain('measure again');
+    expect(said.data.exitCode).toBe(1);
+    expect(said.data.failed).toBe(true);
+    expect(JSON.parse(text(await asked('json'))).failed).toBe(true);
+    expect(text(await asked('junit'))).toContain('<failure message="noisy');
+  });
+
   it('says which classes have runs when the one asked for has none', async () => {
     const dir = fresh();
     const ops = context({ ms: 500 }, dir, fresh());

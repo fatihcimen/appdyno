@@ -56,6 +56,12 @@ describe('the workflow file', () => {
     expect(code).toContain('gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file');
   });
 
+  it('says a run the gate could not judge fails the job', () => {
+    expect(file).not.toContain('fails nothing');
+    expect(file).toContain('`noisy`');
+    expect(file).toContain('`few-samples`');
+  });
+
   it('takes the baseline as ready by its own exit, which is non-zero until it can call a change', () => {
     const steps = code.split('- name: ');
     const base = steps.find((s) => s.startsWith('The base'))!;

@@ -48,15 +48,16 @@ export function reportKey(
   };
 }
 
-/** What stops a gate: too little to call a change is a judgement that never happened, which is no pass. */
-const stops = (c: Comparison) => c.verdict === 'regression' || c.verdict === 'few-samples';
+/** What stops a gate: a change seen with too little to call it, or under noise, is a judgement that never happened. */
+const stops = (c: Comparison) =>
+  c.verdict === 'regression' || c.verdict === 'few-samples' || c.verdict === 'noisy';
 
 const failed = (r: KeyReport) => [
   ...r.comparisons.filter(stops),
   ...r.budgets.filter((b) => !b.ok),
 ];
 
-/** Non-zero on a regression, a broken budget or a change too little to call; a noisy change warns only. */
+/** Non-zero on a regression, a broken budget or a change the gate could not judge. */
 export const exitCode = (reports: KeyReport[]) => (reports.some((r) => failed(r).length) ? 1 : 0);
 
 const shown = (x: number | undefined) =>
@@ -79,10 +80,10 @@ const line = (c: Comparison) => `${c.verdict.padEnd(11)} ${comparisonLine(c)}`;
 
 export function toText(reports: KeyReport[]): string {
   if (reports.length === 0) return 'no measured runs to compare';
-  const unjudged = reports.flatMap((r) => r.comparisons).filter((c) => c.verdict === 'few-samples');
-  const verdict = unjudged.length
-    ? [`the gate could not judge ${unjudged.length} of these: this is no pass, measure more`]
-    : [];
+  const cannot = (verdict: Comparison['verdict'], why: string) => {
+    const n = reports.flatMap((r) => r.comparisons).filter((c) => c.verdict === verdict).length;
+    return n ? [`the gate could not judge ${n} of these: ${why}`] : [];
+  };
   const lines = reports.flatMap((r) => [
     `${r.app} ${r.scenario} on ${r.deviceClass} (run ${r.run}, ${r.at})${r.noise.length ? `; noise: ${r.noise.join(', ')}` : ''}`,
     ...r.comparisons.map((c) => `  ${line(c)}`),
@@ -90,7 +91,11 @@ export function toText(reports: KeyReport[]): string {
       (b) => `  ${b.ok ? 'ok         ' : 'over budget'} ${b.kind}: ${shown(b.value)} (${b.limit})`,
     ),
   ]);
-  return [...lines, ...verdict].join('\n');
+  return [
+    ...lines,
+    ...cannot('few-samples', 'this is no pass, measure more'),
+    ...cannot('noisy', 'measured under load or noise, this is no pass, measure again'),
+  ].join('\n');
 }
 
 export const toJson = (reports: KeyReport[]) =>
