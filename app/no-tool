@@ -1,0 +1,4 @@
+#!/bin/sh
+# Stands in for xcrun and xcodebuild on a Mac with no developer tools: the real ones raise the installer's dialog.
+echo "$(/usr/bin/basename "$0"): this Mac has no developer tools" >&2
+exit 72

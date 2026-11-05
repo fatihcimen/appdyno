@@ -60,7 +60,7 @@ export const COMMANDS = {
     flags: { remove: on },
     what: 'from the app: put this appdyno on the PATH of every shell, or take it off',
   },
-  devices: { what: 'the connected devices' },
+  devices: { flags: { json: unsaidOn }, what: 'the connected devices' },
   version: { what: 'which version this is' },
   test: {
     takes: '<dir or files>',

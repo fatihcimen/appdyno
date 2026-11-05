@@ -54,7 +54,8 @@ function scanSource(): string {
   return source;
 }
 
-const scanner = () =>
+/** The scanner, ready to run. */
+export const textScanner = () =>
   nativeBinary({
     name: 'TextScan',
     sources: [scanSource()],
@@ -67,7 +68,7 @@ const scanner = () =>
 
 /** The fast level: no gate or person waits on a system service. The picture is a file for this user alone, and is gone after. */
 export async function fastWords(image: Buffer, binary?: string): Promise<PictureText[]> {
-  const scan = binary ?? (await scanner());
+  const scan = binary ?? (await textScanner());
   const dir = await mkdtemp(join(tmpdir(), 'appdyno-scan-'));
   try {
     const file = join(dir, 'screen');
@@ -135,7 +136,7 @@ export async function readPicture(
   binary?: string,
   keptS = KEPT_S,
 ): Promise<PictureWords> {
-  const scan = binary ?? (await scanner());
+  const scan = binary ?? (await textScanner());
   const folder = join(stateDir(), 'picture-words');
   await mkdir(folder, { recursive: true, mode: 0o700 });
   const key = createHash('sha256').update(image).digest('hex');

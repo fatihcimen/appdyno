@@ -1,0 +1,13 @@
+#!/bin/sh
+# The app's command line: its own Node and helpers, whatever this Mac has or lacks. Clients and terminals run this.
+contents=$(/usr/bin/dirname "$(/usr/bin/dirname "$(/usr/bin/dirname "$(/usr/bin/readlink -f "$0")")")")
+APPDYNO_HELPERS="$contents/Helpers/Appdyno Window.app/Contents/MacOS"
+export APPDYNO_HELPERS
+# with no developer tools, a Mac answers xcrun with the installer's dialog: whatever asks for them finds these instead,
+# and a process that outlives a moved app, whose PATH then leads nowhere, is told of a folder that is no developer's
+if ! xcode-select -p >/dev/null 2>&1; then
+  PATH="$contents/Resources/no-tools:$PATH"
+  DEVELOPER_DIR="$contents/Resources/no-tools"
+  export PATH DEVELOPER_DIR
+fi
+exec "$contents/MacOS/node" "$contents/Resources/app/dist/main.js" "$@"

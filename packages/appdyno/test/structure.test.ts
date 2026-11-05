@@ -23,6 +23,7 @@ const NATIVE = [
   'ios/SimHelper',
   'mirror/Viewer',
   'mac',
+  'app',
 ];
 
 const sources = [

@@ -14,7 +14,7 @@ import {
   update,
 } from '@appdyno/cli';
 import { run, type DeviceProvider } from '@appdyno/core';
-import { installAdb, installTools, PLATFORM_TOOLS } from '@appdyno/driver-android';
+import { Adb, installAdb, installTools, PLATFORM_TOOLS } from '@appdyno/driver-android';
 import { COMMANDS, usage } from './usage.js';
 
 const out = (line: string) => console.log(line);
@@ -80,10 +80,17 @@ export async function toolsCommand(args: string[], err: (line: string) => void):
   return 0;
 }
 
-/** `devices`: a line each. */
-export async function devicesCommand(providers: DeviceProvider[]) {
-  for (const provider of providers)
-    for (const d of await provider.list()) out(`${d.serial}\t${d.state}\t${d.model ?? ''}`);
+/** `devices`: a line each, or for the menu bar what it lists and whether adb is here at all. */
+export async function devicesCommand(args: string[], providers: DeviceProvider[]) {
+  const { values } = parseArgs({ args, options: COMMANDS.devices.flags });
+  const found = (await Promise.all(providers.map((p) => p.list().catch(() => [])))).flat();
+  if (values.json) {
+    const adb = await run(new Adb().bin, ['version']).then(
+      () => true,
+      () => false,
+    );
+    out(JSON.stringify({ devices: found, adb }));
+  } else for (const d of found) out(`${d.serial}\t${d.state}\t${d.model ?? ''}`);
   return 0;
 }
 

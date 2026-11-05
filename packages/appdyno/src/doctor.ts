@@ -14,7 +14,8 @@ export async function doctor(opts: {
       ...(major < 22 && { fix: 'install Node 22 or newer (mise use node@22)' }),
     },
   ];
-  checks.push(await compilerCheck());
+  // the app's helpers are built already
+  if (!process.env.APPDYNO_HELPERS) checks.push(await compilerCheck());
   // the driver that would open it, as any other has no such device to speak of
   const { serial } = opts;
   const owner =

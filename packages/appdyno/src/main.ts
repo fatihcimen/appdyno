@@ -192,7 +192,7 @@ async function main(): Promise<number> {
       return 0;
     }
     case 'devices':
-      return devicesCommand(providers());
+      return devicesCommand(rest, providers());
     case 'path':
       return pathCommand(rest, root, err);
     case 'tools':
