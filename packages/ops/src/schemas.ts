@@ -202,6 +202,8 @@ export const ReportOut = z.object({
   dir: z.string(),
   file: z.string().optional(),
   steps: z.number().int().optional(),
+  timeline: z.string().optional(),
+  timelineBytes: z.number().int().optional(),
 });
 
 export const RecordOut = z.object({

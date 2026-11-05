@@ -10,11 +10,9 @@ import { basename, join, relative, resolve } from 'node:path';
 import {
   safeName,
   decodePng,
-  deviceState,
   encodePng,
   esc,
   osName,
-  Owner,
   paintRects,
   renderScreen,
   reportProgress,
@@ -25,9 +23,11 @@ import {
 import { reportPage as page } from './report-page.js';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
-import { redactLog } from './policy.js';
+import { checkApp, redactLog } from './policy.js';
+import { journalOf, openReports, stepsIn, type Step } from './report-state.js';
 import { ReportOut } from './schemas.js';
 import type { Session } from './session.js';
+import { startTimeline } from './timeline/run.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError, type Op, type ToolResult } from './tool.js';
 
 const SHOT_PX = 720;
@@ -36,32 +36,6 @@ const MAX_LOG_LINES = 1_000;
 const MAX_CRASHES = 20;
 /** Calls that say nothing about the app. */
 export const NOT_STEPS = new Set(['report', 'list_devices', 'simulator', 'mirror', 'hand_off']);
-
-type Step = {
-  at: string;
-  op: string;
-  args: unknown;
-  ok: boolean;
-  answer: string;
-  screen?: string;
-  shot?: string;
-  /** Videos this call made. */
-  files?: string[];
-};
-
-/** The device's open report. */
-export const openReports = deviceState(
-  'reports',
-  z.object({ dir: z.string(), since: z.number(), owner: Owner.optional() }),
-);
-
-/** The open report's folder for videos, so that a report is one folder. */
-export const reportVideoDir = (serial: string) => {
-  const o = openReports.read(serial);
-  return o && join(o.dir, 'video');
-};
-
-const journalOf = (dir: string) => join(dir, 'steps.jsonl');
 
 /** What an argument under these names holds names something; a selector's text is what is on the screen. */
 const NAMES = new Set([
@@ -151,7 +125,13 @@ export function reportFor(ctx: ServerContext) {
   };
 
   /** One call in the journal, with the screen after it when it may have changed something. */
-  const note = async (op: Op, args: unknown, out: ToolResult | undefined, err: unknown) => {
+  const note = async (
+    op: Op,
+    args: unknown,
+    began: number,
+    out: ToolResult | undefined,
+    err: unknown,
+  ) => {
     const serial = ctx.currentSerial;
     const open = serial && openReports.read(serial);
     if (!serial || !open || NOT_STEPS.has(op.name)) return;
@@ -161,6 +141,7 @@ export function reportFor(ctx: ServerContext) {
     const journal = journalOf(open.dir);
     const n = existsSync(journal) ? readFileSync(journal, 'utf8').split('\n').length : 1;
     const step: Step = {
+      began,
       at: new Date().toISOString(),
       op: op.name,
       args: shownArgs(op, args, clean),
@@ -168,8 +149,9 @@ export function reportFor(ctx: ServerContext) {
       answer: clean(answer).slice(0, MAX_ANSWER),
       ...(Array.isArray(out?.data.files) && { files: out.data.files as string[] }),
     };
-    if (!op.annotations.readOnlyHint) {
-      const s = await ctx.session();
+    const s = await ctx.session();
+    // a timeline's video has every screen, and a read and a picture after each step would be in its frames
+    if (!op.annotations.readOnlyHint && !s.timeline) {
       const screen = await s.read().catch(() => undefined);
       if (screen) {
         step.screen = renderScreen(screen.list, clean);
@@ -186,6 +168,7 @@ export function reportFor(ctx: ServerContext) {
   const wrap = (op: Op): Op => ({
     ...op,
     handler: async (args) => {
+      const began = Date.now();
       let out: ToolResult | undefined;
       let err: unknown;
       try {
@@ -193,7 +176,7 @@ export function reportFor(ctx: ServerContext) {
       } catch (e) {
         err = e;
       }
-      await note(op, args, out, err).catch(() => undefined);
+      await note(op, args, began, out, err).catch(() => undefined);
       if (err !== undefined) throw err;
       return out!;
     },
@@ -220,13 +203,7 @@ export function reportFor(ctx: ServerContext) {
   const write = async (s: Session, dir: string, since: number | undefined) => {
     reportProgress(`writing the report in ${dir}`);
     mkdirSync(dir, { recursive: true });
-    const journal = journalOf(dir);
-    const steps = existsSync(journal)
-      ? readFileSync(journal, 'utf8')
-          .split('\n')
-          .filter(Boolean)
-          .map((l) => JSON.parse(l) as Step)
-      : [];
+    const steps = stepsIn(dir);
     const hello = s.device.hello;
     const app = s.appId;
     const out: string[] = [
@@ -342,9 +319,22 @@ export function reportFor(ctx: ServerContext) {
   const close = async (s: Session) => {
     const open = openReports.read(s.device.serial);
     if (!open) return undefined;
+    await s.timeline?.finish();
     const r = await write(s, open.dir, open.since);
     openReports.remove(s.device.serial);
     return r;
+  };
+
+  /** Sources run in this process, so one that ends with the command has no timeline to give. */
+  const timelineApp = (s: Session) => {
+    if (!s.owner)
+      throw new ToolError(
+        'a timeline runs in a process that stays, and a command ends here: `appdyno timeline`',
+        'UNSUPPORTED',
+      );
+    const app = checkApp(ctx.policy, s.appId ?? '');
+    if (!app) throw new ToolError('select an app with use_device first', 'INVALID_ARGUMENT');
+    return app;
   };
 
   const ops = () => [
@@ -352,10 +342,10 @@ export function reportFor(ctx: ServerContext) {
       name: 'report',
       title: 'Session report',
       description:
-        "A folder with index.html: steps, the screen and an image after each, video, logs, crashes, measurements; secrets hidden, loads nothing. start (dir) keeps steps until stop or the session's end; write: now.",
+        "index.html: steps, video, logs, crashes, measurements; secrets hidden. start (dir), until stop or the session's end; write: now. timeline: one page on one clock.",
       input: z
         .object({
-          action: z.enum(['start', 'write', 'stop']),
+          action: z.enum(['start', 'timeline', 'write', 'stop']),
           dir: z.string().max(1_000).optional(),
         })
         .strict(),
@@ -374,24 +364,40 @@ export function reportFor(ctx: ServerContext) {
                 `${safeName(serial)}-${new Date().toISOString().replace(/\W/g, '')}`,
               ),
           );
-        if (action === 'start') {
+        if (action === 'start' || action === 'timeline') {
           if (open)
             throw new ToolError(
               `a report is open on ${serial} since ${new Date(open.since).toISOString()}: stop it first`,
               'INVALID_ARGUMENT',
             );
+          const app = action === 'timeline' ? timelineApp(s) : undefined;
           const to = named();
           mkdirSync(to, { recursive: true });
           openReports.write(serial, { dir: to, since: Date.now(), owner: s.owner });
-          const t = `keeping steps for a report in ${to}`;
+          const t = app
+            ? await startTimeline(ctx, s, app, to).catch((e: unknown) => {
+                openReports.remove(serial);
+                throw e;
+              })
+            : `keeping steps for a report in ${to}`;
           return reply(t, { done: t, dir: to });
         }
         if (action === 'stop' && !open)
           throw new ToolError(`no report is open on ${serial}`, 'NOT_FOUND');
+        const timeline = action === 'stop' ? await s.timeline?.finish() : undefined;
         const r = await write(s, open?.dir ?? named(), open?.since);
         if (action === 'stop') openReports.remove(serial);
-        const t = `report: ${r.file} (${r.steps} steps, ${r.measurements} measurements)`;
-        return reply(t, { done: t, dir: dirOf(r.file), file: r.file, steps: r.steps });
+        const t = [
+          `report: ${r.file} (${r.steps} steps, ${r.measurements} measurements)`,
+          ...(timeline ? [timeline.text] : []),
+        ].join('\n');
+        return reply(t, {
+          done: t,
+          dir: dirOf(r.file),
+          file: r.file,
+          steps: r.steps,
+          ...(timeline && { timeline: timeline.file, timelineBytes: timeline.bytes }),
+        });
       },
     }),
   ];

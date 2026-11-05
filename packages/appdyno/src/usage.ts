@@ -161,6 +161,16 @@ export const COMMANDS = {
     flags: { 'limit-gb': value('N'), 'dry-run': on, measurements: value('dir') },
     what: 'kept traces and heap dumps down to the limit, 10 GB by default',
   },
+  timeline: {
+    flags: {
+      app: needed('A'),
+      device: value('S'),
+      flow: value('file'),
+      seconds: value('N'),
+      dir: value('dir'),
+    },
+    what: 'video, touches, frames, requests, log and memory on one clock, in one file: for a flow, or for N seconds of your hands',
+  },
   'perf dashboard': {
     flags: { app: value('A'), out: value('dir'), open: on, measurements: value('dir') },
     what: 'one page: what can be read on each device, what changed, what needs attention',

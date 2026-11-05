@@ -172,6 +172,13 @@ const line = (e: NetworkEntry) =>
     ? `${e.method ?? 'GET'} ${e.url}${e.status ? ` ${e.status}` : ''}${e.ms !== undefined ? ` ${e.ms} ms` : ''}${e.bytes !== undefined ? ` ${e.bytes} B` : ''}${e.body ? ' (body in the export)' : ''}${e.error ? ` failed: ${e.error}` : ''}`
     : `${e.direction ?? ''} ${e.host ?? ''}: ${e.packets !== undefined ? `${e.packets} packets, ` : ''}${e.bytes ?? 0} B`.trim();
 
+/** What a running capture has seen so far; none from a proxy whose list this tool cannot read. */
+export async function readCapture(s: Session, c: Capture): Promise<NetworkAnswer | undefined> {
+  if (c.via !== 'proxy') return s.device.network!.read(c.handle!);
+  const entries = await proxymanEntries(c.proxy!, c.since);
+  return entries && { entries };
+}
+
 /** Ends a device's capture, its proxy put back; what the way saw to the end. */
 export async function endCapture(s: Session): Promise<NetworkAnswer | undefined> {
   const serial = s.device.serial;
@@ -321,17 +328,14 @@ export function networkOps(ctx: ServerContext) {
             `no capture runs on ${serial}: start one, or give har (a proxy's export)`,
             'NOT_FOUND',
           );
-        if (now.via === 'proxy') {
-          reportProgress('exporting from the proxy');
-          const entries = await proxymanEntries(now.proxy!, now.since);
-          if (entries) return answer(now, { entries }, contains, limit, 'Proxyman');
-          throw new ToolError(
-            `the traffic went through ${now.proxy}, whose list this tool cannot read: export it as HAR and give har (Charles: File, Export Session; mitmproxy: --set hardump=file)`,
-            'UNSUPPORTED',
-          );
-        }
-        const read = await s.device.network!.read(now.handle!);
-        return answer(now, read, contains, limit, now.via);
+        if (now.via === 'proxy') reportProgress('exporting from the proxy');
+        const read = await readCapture(s, now);
+        if (read)
+          return answer(now, read, contains, limit, now.via === 'proxy' ? 'Proxyman' : now.via);
+        throw new ToolError(
+          `the traffic went through ${now.proxy}, whose list this tool cannot read: export it as HAR and give har (Charles: File, Export Session; mitmproxy: --set hardump=file)`,
+          'UNSUPPORTED',
+        );
       },
     }),
   ];

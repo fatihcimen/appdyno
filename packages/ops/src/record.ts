@@ -4,7 +4,7 @@ import { safeName, deviceState, Owner, readVideo, reportProgress, stateDir } fro
 import type { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
-import { reportVideoDir } from './report.js';
+import { reportVideoDir } from './report-state.js';
 import { Handle, RecordOut } from './schemas.js';
 import type { Session } from './session.js';
 import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';

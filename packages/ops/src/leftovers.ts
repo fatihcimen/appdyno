@@ -3,7 +3,8 @@ import type { ServerContext } from './context.js';
 import { flowRecordings } from './flow/shared.js';
 import { captures, endCapture } from './network.js';
 import { endRecording, filming } from './record.js';
-import { openReports, reportFor } from './report.js';
+import { reportFor } from './report.js';
+import { openReports } from './report-state.js';
 import type { Session } from './session.js';
 import { conditions, restoreConditions, type Whose } from './settings.js';
 

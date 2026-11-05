@@ -12,6 +12,7 @@ import {
   type ScreenElement,
 } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
+import type { RunningTimeline } from './timeline/run.js';
 
 const WAIT_GAP_MS = 300;
 /** A phone locks itself about a minute after the last touch: an older read says nothing of the screen a touch will reach. */
@@ -71,6 +72,8 @@ export class Session {
     }
   }
 
+  /** What is recording for a timeline: its sources run in this process, and end with it. */
+  timeline: RunningTimeline | undefined;
   /** The screen the agent was shown last: diffs are against it. */
   shown: ScreenElement[] | undefined;
   /** Device actions so far. */

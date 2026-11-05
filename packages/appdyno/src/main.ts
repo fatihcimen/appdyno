@@ -44,6 +44,7 @@ import { doctor } from './doctor.js';
 import { hubCommand, mirrorCommand } from './mirror-args.js';
 import { COMMANDS, commandList, usage } from './usage.js';
 import { serveCommand, type ServerFlags } from './serve.js';
+import { timelineCommand } from './timeline.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
@@ -176,6 +177,8 @@ async function main(): Promise<number> {
       });
     case 'hub':
       return hubCommand(rest, { context: contextFrom, hub: runHub });
+    case 'timeline':
+      return timelineCommand(rest, contextFrom);
     case 'mcp': {
       await serveCommand(rest, contextFrom);
       return 0;
