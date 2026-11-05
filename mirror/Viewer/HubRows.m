@@ -44,7 +44,6 @@ MVRow *MVDeviceRow(NSDictionary *device) {
   if ([device[@"detail"] length] && ![device[@"detail"] isEqual:model]) [about addObject:device[@"detail"]];
   row.detail = [about componentsJoinedByString:@" · "];
   row.symbol = MVDeviceSymbol(device);
-  row.tint = NSColor.secondaryLabelColor;
   row.dot = stateColor(device);
   row.key = device[@"id"];
   return row;

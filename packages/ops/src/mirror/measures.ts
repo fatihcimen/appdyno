@@ -133,7 +133,7 @@ export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasur
         },
       };
     },
-    history: (app) => measureHistory(ctx.perfDir, app, serial),
+    history: (app) => measureHistory(ctx.measurementsDir, app, serial),
     dashboard: async () => {
       const file = await writeDashboard(ctx.measurementsDir, ctx.perfDir);
       execFile('open', [file]);

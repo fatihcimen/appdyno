@@ -33,6 +33,13 @@ describe('what a window measures', () => {
       device,
     );
 
+  it('finds what it just measured among what was measured before', async () => {
+    const device = new FakeDevice();
+    const measures = measuresOn(device);
+    await measures.launch('dev.app', () => undefined);
+    expect((await measures.history('dev.app')).map((line) => line.title)).toEqual(['Cold launch']);
+  });
+
   it("runs the tool an agent calls, on the window's own device, and keeps its run", async () => {
     const device = new FakeDevice();
     const open = vi.spyOn(device, 'open');

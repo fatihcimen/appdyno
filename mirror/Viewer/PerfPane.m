@@ -4,7 +4,7 @@
 #import "Window.h"
 
 enum { kSeconds = 60, kResults = 20 };
-static const double kChartHeight = 36, kFigureWide = 104, kWhyWide = 170, kRowHeight = 32, kRowInset = 10, kBetween = 16, kFigure = 20, kMaySwayShare = 0.1, kMaySwayFps = 3;
+static const double kChartHeight = 36, kFigureWide = 104, kWhyWide = 170, kRowHeight = 32, kRowInset = 10, kBetween = 16, kFigure = 20, kMaySwayShare = 0.1, kMaySwayFps = 3, kWaiting = 0.6;
 
 /// What a line of readings shows, in the order it stands.
 typedef struct {
@@ -118,7 +118,7 @@ static MVTrend *trendOf(const MVTrendRow *row) {
 
 @implementation MVPerfPane {
   NSMutableArray<MVTrend *> *_trends;
-  NSTextField *_sentence, *_app, *_doing, *_none;
+  NSTextField *_sentence, *_app, *_none;
   NSView *_slack;
   NSArray<NSButton *> *_measures;
   NSMutableArray<NSDictionary *> *_kept;
@@ -142,8 +142,6 @@ static MVTrend *trendOf(const MVTrendRow *row) {
     _sentence = MVText(@"Waiting for the first readings", MVStyleCallout);
     _app = MVPaneNote(@"Open an app, then measure it. It restarts.");
     _measures = @[rowButton(@"measureLaunch", target), rowButton(@"measureScroll", target), rowButton(@"journey", target)];
-    _doing = MVPaneNote(@"");
-    _doing.hidden = YES;
     _none = MVPaneNote(@"No results yet. A measure gives you a number to compare against.");
     _results = [MVList new];
     _slack = [NSView new];
@@ -151,7 +149,7 @@ static MVTrend *trendOf(const MVTrendRow *row) {
     NSView *measures = grouped(_measures);
     NSMutableArray<NSView *> *all = [NSMutableArray arrayWithObject:_sentence];
     [all addObjectsFromArray:lines];
-    [all addObjectsFromArray:@[MVPaneHeading(@"Measure"), measures, _app, _doing, MVPaneHeading(@"Results"), _none, _results, _slack, grouped(@[rowButton(@"dashboard", target)])]];
+    [all addObjectsFromArray:@[MVPaneHeading(@"Measure"), measures, _app, MVPaneHeading(@"Results"), _none, _results, _slack, grouped(@[rowButton(@"dashboard", target)])]];
     NSStackView *stack = [NSStackView stackViewWithViews:all];
     stack.orientation = NSUserInterfaceLayoutOrientationVertical;
     stack.alignment = NSLayoutAttributeLeading;
@@ -160,7 +158,6 @@ static MVTrend *trendOf(const MVTrendRow *row) {
     [stack setCustomSpacing:kBetween afterView:_sentence];
     [stack setCustomSpacing:kBetween + 8 afterView:lines.lastObject];
     [stack setCustomSpacing:kBetween + 8 afterView:_app];
-    [stack setCustomSpacing:kBetween + 8 afterView:_doing];
     [_results setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [self addSubview:stack];
@@ -211,12 +208,11 @@ static MVTrend *trendOf(const MVTrendRow *row) {
   }
 }
 
+/// What it is at is the capsule's to say: here the measures only wait for it.
 - (void)showMeasuring:(NSString *)line {
-  _doing.stringValue = line;
-  _doing.hidden = NO;
   for (NSButton *measure in _measures) {
     measure.enabled = NO;
-    measure.alphaValue = 0.45;
+    measure.alphaValue = kWaiting;
   }
 }
 
@@ -242,7 +238,6 @@ static MVRow *rowOfResult(NSDictionary *result) {
 }
 
 - (void)showMeasured:(NSDictionary *)result {
-  _doing.hidden = YES;
   for (NSButton *measure in _measures) {
     measure.enabled = YES;
     measure.alphaValue = 1;
@@ -256,7 +251,8 @@ static MVRow *rowOfResult(NSDictionary *result) {
 /// What was measured here before, newest first: what is kept on the Mac stands in for this session's own lines of the same.
 - (void)showHistory:(NSDictionary *)message {
   _past = [message[@"results"] isKindOfClass:NSArray.class] ? message[@"results"] : @[];
-  [_kept filterUsingPredicate:[NSPredicate predicateWithFormat:@"ok != YES"]];
+  // a kept line stands in for this session's own, and none kept takes nothing away
+  if (_past.count) [_kept filterUsingPredicate:[NSPredicate predicateWithFormat:@"ok != YES"]];
   if ([message[@"app"] length]) _app.stringValue = [NSString stringWithFormat:@"A measure restarts %@.", message[@"app"]];
   [self listResults];
   // only a measure just made is news: a window opening on an old regression has nothing to announce

@@ -41,8 +41,8 @@ static void checkLine(void) {
   MVCheck(@"capsule: live says its rate and how it is joined", [line.stringValue isEqual:@"Live · 60 fps · USB"], line.stringValue);
   line.tool = @"tap";
   MVCheck(@"capsule: an agent with no name is still said, in purple", [line.stringValue isEqual:@"AI client driving"] && line.tone == MVToneAgent, line.stringValue);
-  line.client = @"Claude Code";
-  MVCheck(@"capsule: an agent that says its name is named", [line.stringValue isEqual:@"Claude Code driving"], line.stringValue);
+  line.client = @"Some Client";
+  MVCheck(@"capsule: an agent that says its name is named", [line.stringValue isEqual:@"Some Client driving"], line.stringValue);
   line.measuring = @"Measuring launch 3 of 6";
   MVCheck(@"capsule: a measure comes before who drives", [line.stringValue containsString:@"3 of 6"] && line.tone == MVToneBusy, line.stringValue);
   line.measuring = nil;
