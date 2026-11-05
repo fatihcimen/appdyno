@@ -30,13 +30,17 @@ class StreamLadder(
         val sizes = listOf(top) + SIZES.filter { it < top }
         val first = if (codec == "hevc") MIME_HEVC else MIME_H264
         val other = if (codec == "hevc") MIME_H264 else MIME_HEVC
+        // where a stream starts gets its restarts wherever that is: an encoder may refuse for a moment at a held size too
+        val start = held?.let { h -> sizes.firstOrNull { it <= h } } ?: top
+        val named = { s: Int -> if (s == top) "top" else "smaller: $s" }
         steps = buildList {
-            repeat(RESTARTS + 1) { add(EncoderStep(first, top, false, if (it == 0) "top" else "restarted $it")) }
-            for (s in sizes.drop(1)) add(EncoderStep(first, s, false, "smaller: $s"))
+            for (s in sizes.filter { it > start }) add(EncoderStep(first, s, false, named(s)))
+            repeat(RESTARTS + 1) { add(EncoderStep(first, start, false, if (it == 0) named(start) else "restarted $it")) }
+            for (s in sizes.filter { it < start }) add(EncoderStep(first, s, false, named(s)))
             for (s in sizes) add(EncoderStep(other, s, false, "other codec: $s"))
             for (s in sizes) add(EncoderStep(first, s, true, "software: $s, up to its own bit rate"))
         }
-        if (held != null) at = steps.indexOfFirst { it.maxSize <= held }.coerceAtLeast(0)
+        at = sizes.count { it > start }
     }
 
     val current: EncoderStep get() = steps[at]

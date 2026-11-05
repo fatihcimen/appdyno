@@ -180,6 +180,13 @@ class StreamLadderTest {
     }
 
     @Test
+    fun anEncoderThatRefusesAtAHeldSizeIsRestartedThereFirst() {
+        val ladder = StreamLadder("h264", 2400, held = 1024)
+        assertEquals("smaller: 1024", ladder.current.note)
+        assertEquals(listOf("restarted 1", "restarted 2", "restarted 3", "smaller: 800"), List(4) { ladder.failed(0)!!.note })
+    }
+
+    @Test
     fun aSizeThatProvedTooSlowIsHeldOffAndThenTriedAgain() {
         val ladder = StreamLadder("h264", 1600)
         ladder.smaller(70, 1_000)
