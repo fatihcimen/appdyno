@@ -4,24 +4,19 @@
 import { execFileSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
-import { homedir, loadavg } from 'node:os';
+import { loadavg } from 'node:os';
 import { join, resolve } from 'node:path';
-import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { installTools } from '@appdyno/driver-android';
 import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
 import {
   cliSessionFile,
   commandsFor,
   deviceFlag,
-  install,
   installCheck,
   listOf,
   takeFlag,
-  update,
 } from '@appdyno/cli';
-import { run } from '@appdyno/core';
 import { writeComment, writeDashboard } from '@appdyno/perf';
 import {
   DEFAULT_POLICY,
@@ -46,6 +41,7 @@ import { deviceProviders as providers } from './providers.js';
 import { COMMANDS, commandList, helpFor, usage } from './usage.js';
 import { SERVER_INFO } from '@appdyno/mcp';
 import { serveCommand, type ServerFlags } from './serve.js';
+import { devicesCommand, installCommand, toolsCommand, updateCommand } from './setup.js';
 import { flightCommand, timelineCommand } from './timeline.js';
 
 const [command, ...rest] = process.argv.slice(2);
@@ -189,20 +185,10 @@ async function main(): Promise<number> {
       await serveCommand(rest, contextFrom);
       return 0;
     }
-    case 'devices': {
-      for (const provider of providers())
-        for (const d of await provider.list())
-          console.log(`${d.serial}\t${d.state}\t${d.model ?? ''}`);
-      return 0;
-    }
-    case 'tools': {
-      if (rest[0] !== 'install') {
-        err(usage('tools install'));
-        return 2;
-      }
-      console.log(await installTools(err));
-      return 0;
-    }
+    case 'devices':
+      return devicesCommand(providers());
+    case 'tools':
+      return toolsCommand(rest, err);
     case 'ios': {
       if (rest[0] !== 'build') {
         err(usage('ios build'));
@@ -214,29 +200,10 @@ async function main(): Promise<number> {
       console.log(`older builds removed: ${await pruneIosBuilds()}`);
       return 0;
     }
-    case 'install': {
-      const { values } = parseArgs({ args: rest, options: COMMANDS.install.flags });
-      const { stdin: input, stdout: output } = process;
-      const terminal = input.isTTY ? createInterface({ input, output }) : undefined;
-      try {
-        return await install({
-          home: homedir(),
-          env: process.env,
-          yes: values.yes,
-          remove: values.remove,
-          dryRun: values['dry-run'],
-          ask: terminal && ((question) => terminal.question(question)),
-          out: (line) => console.log(line),
-          err,
-        });
-      } finally {
-        terminal?.close();
-      }
-    }
-    case 'update': {
-      const { values } = parseArgs({ args: rest, options: COMMANDS.update.flags });
-      return update({ root, run, check: values.check, out: (s) => console.log(s) });
-    }
+    case 'install':
+      return installCommand(rest, err);
+    case 'update':
+      return updateCommand(rest, root);
     case 'doctor': {
       const { values } = parseArgs({ args: rest, options: COMMANDS.doctor.flags });
       const checks = [
