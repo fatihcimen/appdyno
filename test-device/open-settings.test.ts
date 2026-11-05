@@ -41,6 +41,20 @@ describe.skipIf(!SIMULATOR)('Settings on a simulator', () => {
     ['accessibility', /text "Accessibility"/],
     ['language_region', /"Language & Region"/],
     ['apps', /text "Apps"/],
+    ['privacy_reminders', /text "Reminders"/],
+    ['privacy_bluetooth', /text "Bluetooth"/],
+    ['privacy_health', /text "Health"/],
+    ['privacy_motion', /text "Motion & Fitness"/],
+    ['privacy_speech', /text "Speech Recognition"/],
+    ['privacy_media', /"Media & Apple Music"/],
+    ['privacy_tracking', /text "Tracking"/],
+    ['privacy_analytics', /"Analytics & Improvements"/],
+    ['privacy_advertising', /"Apple Advertising"/],
+    ['screen_time', /"Screen Time"/],
+    ['camera', /text "Camera"/],
+    ['game_center', /"Game Center"/],
+    ['home_screen', /"Home Screen & App Library"/],
+    ['developer', /text "Developer"/],
   ])('opens %s', (page, shown) => pageShows(call, page, shown));
 
   it("opens an app's own page, by its row on Apps", async () => {
@@ -110,6 +124,11 @@ describe.skipIf(!ANDROID)('Settings on Android', () => {
     ['notifications', /notification|bildirim/i],
     ['battery', /Battery|Power saving|Pil/],
     ['general', /Search settings|Settings|Ayarlar/],
+    ['software_update', /update|güncelle/i],
+    ['storage', /Storage|Depolama/],
+    ['date_time', /Date|Tarih/],
+    ['vpn', /VPN/],
+    ['home_screen', /Home|Default|Ana ekran|Varsayılan/],
   ])('opens %s', (page, shown) => pageShows(call, page, shown));
 
   it("opens an app's own page", () => pageShows(call, 'app', /appdyno fixture|App info/));

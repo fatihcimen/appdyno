@@ -16,6 +16,20 @@ const EVERYWHERE = {
   privacy_camera: 'prefs:root=Privacy&path=CAMERA',
   privacy_contacts: 'prefs:root=Privacy&path=CONTACTS',
   privacy_microphone: 'prefs:root=Privacy&path=MICROPHONE',
+  privacy_reminders: 'prefs:root=Privacy&path=REMINDERS',
+  privacy_bluetooth: 'prefs:root=Privacy&path=BT_PERIPHERAL',
+  privacy_health: 'prefs:root=Privacy&path=HEALTH',
+  privacy_motion: 'prefs:root=Privacy&path=MOTION',
+  privacy_speech: 'prefs:root=Privacy&path=SPEECH_RECOGNITION',
+  privacy_media: 'prefs:root=Privacy&path=MEDIALIBRARY',
+  privacy_tracking: 'prefs:root=Privacy&path=USER_TRACKING',
+  privacy_analytics: 'prefs:root=Privacy&path=PROBLEM_REPORTING',
+  privacy_advertising: 'prefs:root=Privacy&path=ADVERTISING',
+  screen_time: 'prefs:root=SCREEN_TIME',
+  camera: 'prefs:root=CAMERA',
+  game_center: 'prefs:root=GAMECENTER',
+  home_screen: 'prefs:root=HOME_SCREEN',
+  developer: 'prefs:root=DEVELOPER_SETTINGS',
 } as const;
 
 export type SettingsLinks = Partial<Record<SettingsPage, string>>;

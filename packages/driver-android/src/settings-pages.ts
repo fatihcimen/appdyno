@@ -20,6 +20,11 @@ const SETTINGS_ACTIONS: Partial<Record<SettingsPage, string>> = {
   display: 'android.settings.DISPLAY_SETTINGS',
   sounds: 'android.settings.SOUND_SETTINGS',
   notifications: 'android.settings.NOTIFICATION_SETTINGS',
+  home_screen: 'android.settings.HOME_SETTINGS',
+  software_update: 'android.settings.SYSTEM_UPDATE_SETTINGS',
+  storage: 'android.settings.INTERNAL_STORAGE_SETTINGS',
+  date_time: 'android.settings.DATE_SETTINGS',
+  vpn: 'android.settings.VPN_SETTINGS',
 };
 
 /** What an `am start` of these words says went wrong, if anything. */
