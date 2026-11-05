@@ -13,6 +13,7 @@
 - The gate's comparisons keep a modelled number and one timed through the host marked, in every format.
 - `clipboard` works on an iPhone, by Xcode's `devicectl`, with no runner and nothing asked on the phone.
 - `screenshot` keeps to its size on an iPhone: the phone's own service has one size, and it gave the whole screen whatever was asked.
+- Notification Center on an iPhone reads as what it is: it has the lock screen's date, and a read took it for the lock screen and pressed home.
 - `app` `install` takes an `.ipa`, and says when a build is for another kind of device than this one, before trying it.
 - `simulator` `create`: a new iOS simulator of a model, on the newest runtime that runs it, started and counted among those this tool started. An Android emulator refuses, naming what makes one.
 - `screenshot` `file`: the whole picture, `.png` or `.jpg`, or into a folder under a new name. What is there stays unless `overwrite`.
@@ -28,7 +29,7 @@
 - A screen with no word in its tree (a game, a canvas, anything drawn) is read from its picture, by the Mac's own Vision and nothing on the device: its words get refs, and `find`, `tap`, `wait_for` and `assert` take them. The answer says they came from the picture, and that their places are near. A screen with any word of its own is read as ever, and takes no picture.
 - `swipe` `exact`: the content moves `distance` and stops, in several strokes if long, each slowing to a stop before it lifts and measured on what the reads share. The answer says what was measured, and where the list ended, which is no failure. A screen that shares nothing between strokes refuses by name.
 - `open_link` `settings`: Settings at a page, or at an app's own, by `am start` on Android, and a link through a small helper with the entitlement it needs on a simulator. A page a device has not got refuses by name. Off when the server turned home off.
-- `press_key` opens `control_center`, `notification_center` and `spotlight` by name, and reads what they show: on a simulator by the drag a window's control sends, on Android as Quick Settings, the shade and the system's search. `home` closes them and the app is read again. Off when the server turned home off.
+- `press_key` opens `control_center`, `notification_center` and `spotlight` by name, and reads what they show: on a simulator by the drag a window's control sends, on an iPhone by the runner's drag and the keyboard's shortcut, on Android as Quick Settings, the shade and the system's search. `home` closes them and the app is read again. Off when the server turned home off.
 - `press_key` takes `escape`, `space`, the arrows, and a letter or digit, with what is held during it (`command+a`, `shift+arrow_left`), and `count`, with one settle after the last press. On Android `command` is Ctrl. A server with home off refuses the shortcuts that leave the app as well.
 - `list_devices` says what blocks each device, with the fix, in the words `mirror` uses: a lock behind a credential, a phone that does not trust this Mac, Developer Mode off, an OS too old for the agent. It only reads.
 - A mirror on a phone runs on its hardware encoder where it was refused for a key that is a decoder's: on a Samsung's `OMX.qcom` encoders every step of the ladder failed down to software, and its 90 Hz panel now gets 89 frames/s.

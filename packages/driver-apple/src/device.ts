@@ -301,7 +301,7 @@ export abstract class IosDevice extends RpcDevice implements Device {
   }
 
   /** The app a view went over: home closes the view, and it is what is read again. */
-  private underView: string | undefined;
+  protected underView: string | undefined;
 
   /** A drag that belongs to the system: the app under it is told nothing. */
   protected abstract drag(way: SystemSwipe): Promise<void>;

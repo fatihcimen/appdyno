@@ -176,7 +176,8 @@ export class IosPhoneDevice extends IosDevice {
   override async tree(opts: { maxDepth?: number; maxNodes?: number } = {}) {
     const onLock = (t: Tree) => t.nodes.some((n) => n.id === LOCK_SCREEN);
     const read = await super.tree(opts);
-    if (!onLock(read)) return read;
+    // Notification Center, opened here, has the lock screen's date
+    if (!onLock(read) || this.underView) return read;
     if ((await this.ctl.lockState()).passcodeRequired)
       throw new DeviceError(
         'DEVICE_LOCKED',
