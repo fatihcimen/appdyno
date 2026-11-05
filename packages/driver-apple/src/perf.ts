@@ -12,6 +12,7 @@ import {
   type NetworkReading,
   type SizeReading,
   type BuildType,
+  type CompileMode,
   type LaunchMode,
   type CpuProfile,
   type ProfileEntry,
@@ -320,9 +321,11 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
       repeats?: number;
       trace?: boolean;
       probe?: boolean;
+      compile?: CompileMode;
       env?: Record<string, string>;
     } = {},
   ): Promise<Measured<IosLaunch>> {
+    this.noCompileState(opts);
     assertBundle(bundle);
     const mode = opts.mode ?? 'cold';
     const repeats = Math.min(Math.max(opts.repeats ?? 5, 1), 10);

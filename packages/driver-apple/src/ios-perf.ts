@@ -1,4 +1,4 @@
-import { cannot, sleep } from '@appdyno/core';
+import { Cannot, cannot, sleep, type CompileMode } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 
 const SHOWN_WITHIN_MS = 20_000;
@@ -48,6 +48,11 @@ export async function untilShown(bundle: string, shown: () => Promise<boolean>, 
 
 /** What neither kind of iOS device has, and what both do alike. */
 export abstract class IosPerf {
+  /** A compile state is Android's: taken without a word, a launch would read as measured in it. */
+  protected noCompileState(opts: { compile?: CompileMode }) {
+    if (opts.compile) throw new Cannot('a launch in a compile state');
+  }
+
   readonly symbolFiles = true;
   anonMemory = cannot('anonymous memory by process state');
   surfaceFrames = cannot("a surface's frames");

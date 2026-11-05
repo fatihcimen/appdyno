@@ -1,8 +1,9 @@
-import { cannot } from '@appdyno/core';
+import { Cannot, cannot } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IosSimulatorPerf } from '../src/perf.js';
 import { IosPhoneDevice } from '../src/phone.js';
+import { IosPhonePerf } from '../src/phone-perf.js';
 import { Simctl } from '../src/simctl.js';
 
 const APP = 'dev.appdyno.fixture';
@@ -178,6 +179,20 @@ describe('a runner reached', () => {
     await device.open();
     expect(asked).toEqual([]);
     expect(device.lastStartWasCold).toBe(false);
+  });
+});
+
+describe('a compile state', () => {
+  it.each([
+    [
+      'simulator',
+      new IosSimulatorPerf('U', new Simctl(), async () => true, cannot("XCTest's metrics")),
+    ],
+    ['phone', new IosPhonePerf({} as never)],
+  ])('is refused on a %s, as a launch there would read as measured in it', async (_, perf) => {
+    const launch = perf.launch(APP, { mode: 'cold', repeats: 1, compile: 'speed' });
+    await expect(launch).rejects.toBeInstanceOf(Cannot);
+    await expect(launch).rejects.toThrow('cannot measure a launch in a compile state');
   });
 });
 

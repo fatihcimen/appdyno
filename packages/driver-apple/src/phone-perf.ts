@@ -217,6 +217,7 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
     bundle: string,
     opts: Parameters<MeasureSource['launch']>[1],
   ): Promise<Measured<LaunchReading>> {
+    this.noCompileState(opts);
     const { phone } = this;
     // first: a system app is refused at once, before the launches
     const startup = opts.trace
