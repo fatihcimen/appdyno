@@ -311,6 +311,26 @@ describe('the gate, asked why', () => {
     expect(t.looks).toEqual([]);
   });
 
+  it('reads a phone’s names from the dSYM it is given, and says so where a device takes none', async () => {
+    const asked: unknown[] = [];
+    const named = phone({
+      symbolFiles: true,
+      cpuProfile: async (_app, _ms, _during, symbols) => {
+        asked.push(symbols);
+        return measured({ durationMs: 3_000, samples: 1, top: [] });
+      },
+    });
+    await regressed(named);
+    const dsym = '/builds/App.app.dSYM';
+    await named.call('perf_compare', { action: 'why', scenario: SCENARIO, dsym });
+    expect(asked).toEqual([{ dsym }]);
+
+    const none = phone();
+    await regressed(none);
+    const r = await none.call('perf_compare', { action: 'why', scenario: SCENARIO, dsym });
+    expect(answers(r.data)[0]!.findings[0]!.cannot.join()).toContain('dsym is for iOS');
+  });
+
   it('stops the agent a look started, as it changes what the next run measures', async () => {
     const t = phone({
       cpuProfile: async () => {

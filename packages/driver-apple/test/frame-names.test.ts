@@ -2,7 +2,7 @@ import { copyFileSync, mkdirSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { functionOf, nameFrames, renamed } from '../src/frame-names.js';
+import { functionOf, nameFrames, nameFramesOf, renamed } from '../src/frame-names.js';
 import { parseTimeProfile } from '../src/trace-parse.js';
 
 const APP = '/private/var/containers/Bundle/Application/X/Fixture.app/Fixture';
@@ -42,6 +42,13 @@ describe('a build’s names for its frames', () => {
     expect(functionOf('busyMainThread() (FixtureApp.swift:201)')).toBe('busyMainThread()');
     expect(functionOf('closure #1 in Foo.bar(_:) (Foo.swift:9)')).toBe('closure #1 in Foo.bar(_:)');
     expect(functionOf('-[Foo bar:]')).toBe('-[Foo bar:]');
+  });
+
+  it('asks no dSYM of a process that ran none of its own code', async () => {
+    await expect(nameFramesOf(TABLE, 77, '/nowhere/Fixture.dSYM')).resolves.toBe(TABLE);
+    await expect(nameFramesOf(TABLE, 9, '/nowhere/Fixture.dSYM')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
   });
 
   it('refuses a path with no dSYM in it, by name', async () => {

@@ -14,7 +14,7 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import { crashExits } from './crashes.js';
 import { parseHangCauses } from './hang-cause.js';
-import { nameFrames } from './frame-names.js';
+import { nameFramesOf } from './frame-names.js';
 import { IosPerf, lowerMedian, sampleLaunches, untilShown } from './ios-perf.js';
 import { appLaunchPhases } from './phone-launch.js';
 import { phoneLeaks } from './phone-leaks.js';
@@ -200,7 +200,7 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
       ...(during && { during }),
     });
     const exported = await traceTable(trace, 'time-profile');
-    const samples = symbols?.dsym ? await nameFrames(exported, symbols.dsym) : exported;
+    const samples = symbols?.dsym ? await nameFramesOf(exported, pid, symbols.dsym) : exported;
     return { trace, pid, samples, profile: parseTimeProfile(samples, pid) };
   }
 

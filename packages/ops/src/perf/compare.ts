@@ -32,12 +32,11 @@ import { gateLooks } from './why.js';
 const MeasurementId = z.string().max(40).optional();
 
 export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
-  const looks = gateLooks(ctx, runner);
   return defineOp({
     name: 'perf_compare',
     title: 'Compare with the baseline',
     description:
-      "The newest runs against the baseline and budgets in .appdyno/perf/; a change must be statistically and practically significant. why: also finds a regression's cause on the device; reference: why's other side, on the baseline's build; budget; baseline: adds the newest run, `replace` resets; dashboard; functions: two perf_profile ids; prune: traces.",
+      "The newest runs against baseline and budgets in .appdyno/perf/; a change must be statistically and practically significant. why: finds a regression's cause on device; reference: its other side, on baseline's build; budget; baseline: adds the newest, `replace` resets; dashboard; functions: two perf_profile ids; prune: traces.",
     input: z
       .object({
         action: z
@@ -62,6 +61,7 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
         last: z.number().int().min(1).max(20).default(1).describe('newest runs to use'),
         replace: z.boolean().optional(),
         format: z.enum(['text', 'json', 'junit']).default('text'),
+        dsym: z.string().max(1_000).optional(),
       })
       .strict(),
     output: CompareOut,
@@ -79,7 +79,9 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
       last,
       replace,
       format,
+      dsym,
     }) => {
+      const looks = gateLooks(ctx, runner, dsym);
       const dir = ctx.measurementsDir;
       const project = ctx.perfDir;
       if (action === 'prune') {

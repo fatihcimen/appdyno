@@ -148,6 +148,7 @@ export const COMMANDS = {
       scenario: value('S'),
       'device-class': value('C'),
       device: value('S'),
+      dsym: value('path'),
       format: value('text|json|junit'),
       measurements: value('dir'),
       share: on,

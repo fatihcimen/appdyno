@@ -148,9 +148,15 @@ export type Kind =
   | `memory.anon_swap.${string}`
   | `memory.bitmap.${string}`;
 
+export const isPhase = (kind: string) => kind.startsWith('launch.phase.');
+
+/** A start's phase as it is kept. */
+export const phaseKind = (phase: string): Kind =>
+  `launch.phase.${phase.replace(/\W+/g, '_').toLowerCase()}_ms`;
+
 /** Which row a kept kind answers, if any: a record may have been kept by another version. */
 export function measureOf(kind: string): MeasureId | undefined {
-  if (kind.startsWith('launch.phase.')) return 'launch-why';
+  if (isPhase(kind)) return 'launch-why';
   if (kind.startsWith('journey.')) return 'journey';
   if (kind.startsWith('memory.anon_swap.') || kind.startsWith('memory.bitmap.')) return 'memory';
   return Object.hasOwn(KINDS, kind) ? KINDS[kind as keyof typeof KINDS] : undefined;

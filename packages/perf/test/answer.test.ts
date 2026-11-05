@@ -348,6 +348,36 @@ describe('how sure', () => {
     expect(a.notes.join()).toContain('a change under noise, not called');
   });
 
+  it('holds a phase that moved against that phase of the look, not a whole start', () => {
+    const phase = [worse('launch.phase.main_ms', { current: 816, baseline: 11, shift: 805 })];
+    const looked = (againMs: number, ms: number) =>
+      only(
+        answerOf(report(phase), run, baseline, {
+          [WHOLE_RUN]: seen({ againMs, phases: [{ phase: 'main', ms }] }),
+        }),
+      );
+    expect(looked(1_451, 816).evidence.join()).toContain('it showed again: 816 ms');
+    expect(looked(1_451, 12).cannot.join()).toContain('it did not show again: 12 ms');
+  });
+
+  it('goes by a phone’s own numbers when only what the Mac timed is under noise', () => {
+    const phone = [{ device: { model: 'iPhone', os: '27', virtual: false } } as PerfRecord];
+    const mac = worse('journey.total_ms', {
+      verdict: 'noisy',
+      note: 'measure again',
+      throughHost: true,
+    });
+    const own = worse('journey.04_tap.ms', { verdict: 'ok' });
+    const clear = answerOf(report([own, mac]), phone, baseline);
+    expect(clear.status).toBe('clear');
+    expect(clear.notes.join()).toContain('a change under noise, not called');
+    // a virtual device's numbers all share that load, and with none of its own a phone called nothing
+    expect(answerOf(report([own, mac]), run, baseline).status).toBe('noisy');
+    expect(answerOf(report([mac]), phone, baseline).status).toBe('noisy');
+    const loud = worse('journey.04_tap.ms', { verdict: 'noisy', note: 'measure again' });
+    expect(answerOf(report([own, mac, loud]), phone, baseline).status).toBe('noisy');
+  });
+
   it('keeps too few samples, unlike builds and a budget apart from a regression', () => {
     const says = (c: Comparison[], b: KeyReport['budgets'] = []) =>
       answerOf(report(c, b), run, baseline).status;

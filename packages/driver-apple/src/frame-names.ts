@@ -1,6 +1,7 @@
 import { xmlText } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { dsymBinaries, named } from './symbols.js';
+import { parseTimeProfile } from './trace-parse.js';
 
 /** What `atos` takes on one command line. */
 const ADDRESSES_A_CALL = 400;
@@ -59,3 +60,7 @@ export async function nameFrames(xml: string, dsym: string): Promise<string> {
   }
   return out;
 }
+
+/** Of one process: one that only slept ran none of its own code, which leaves nothing to name and is no wrong dSYM. */
+export const nameFramesOf = async (xml: string, pid: number, dsym: string) =>
+  parseTimeProfile(xml, pid).appTop.length ? nameFrames(xml, dsym) : xml;

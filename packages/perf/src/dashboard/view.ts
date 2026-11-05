@@ -2,6 +2,7 @@ import { answerOf, type GateAnswer } from '../answer.js';
 import type { BudgetResult, BudgetRule, Comparison } from '../compare.js';
 import {
   JOURNEY_TOTAL,
+  isPhase,
   journeyStep,
   measureOf,
   MEASURES,
@@ -38,7 +39,7 @@ export const rowOf = (kind: string) => measureOf(kind) ?? kind;
 
 export const cellKey = (row: string, cls: string) => `${row}\n${cls}`;
 
-export const isPhase = (kind: string) => kind.startsWith('launch.phase.');
+export { isPhase };
 
 export const isJourney = (kind: string) => kind.startsWith('journey.');
 

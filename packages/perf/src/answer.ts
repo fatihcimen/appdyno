@@ -4,9 +4,11 @@ import { ALPHA, FLOOR, type Baseline, type Comparison } from './compare.js';
 import { when } from './dashboard/format.js';
 import { functionDiff, moved, type FunctionChange, type Profile } from './functions.js';
 import {
+  isPhase,
   JOURNEY_TOTAL,
   journeyStep,
   measureOf,
+  phaseKind,
   type Build,
   type DeviceInfo,
   type MeasureId,
@@ -131,11 +133,22 @@ export const UNEXPLAINED_FRAMES =
 const NOTHING_NAMED =
   'no cause was found. A profile sees what is on the CPU and a frame trace what the main thread did in its frames, so a wait outside both (a sleep in a touch, a timer, the network) shows in neither';
 
-const statusOf = (r: KeyReport): GateStatus => {
+/** A phone cannot say what a build signed for development was built as. */
+export const buildWords = (build: Build) =>
+  build === 'unknown' ? 'a build of no known type' : `a ${build} build`;
+
+/**
+ * A phone's gate goes by the phone: where it called its own numbers, one timed through a loaded Mac is a note, and no
+ * reason to call the run unread. A virtual device's numbers all share the Mac's load.
+ */
+const statusOf = (r: KeyReport, phone: boolean): GateStatus => {
   const says = (v: Comparison['verdict']) => r.comparisons.some((c) => c.verdict === v);
+  const own = (c: Comparison) => !phone || !c.throughHost;
+  const called = r.comparisons.some((c) => own(c) && c.verdict === 'ok');
   if (says('regression')) return 'regression';
   if (r.budgets.some((b) => !b.ok)) return 'over-budget';
-  if (says('noisy')) return 'noisy';
+  if (says('noisy') && (!called || r.comparisons.some((c) => own(c) && c.verdict === 'noisy')))
+    return 'noisy';
   if (says('refused')) return 'refused';
   if (says('few-samples')) return 'few-samples';
   return r.comparisons.every((c) => c.verdict === 'new') ? 'no-baseline' : 'clear';
@@ -261,7 +274,14 @@ function byMainThread(seen: Seen): Part {
           },
         ],
       }
-    : { ...hang, cannot: [`the ${frames.slowFrames} slow frames ${UNEXPLAINED_FRAMES}`] };
+    : {
+        ...hang,
+        cannot: [
+          frames.slowFrames === 1
+            ? `the slow frame ${UNEXPLAINED_FRAMES.replace('are', 'is')}`
+            : `the ${frames.slowFrames} slow frames ${UNEXPLAINED_FRAMES}`,
+        ],
+      };
 }
 
 function findingOf(
@@ -288,11 +308,15 @@ function findingOf(
   ];
   const causes = parts.flatMap((p) => p.causes ?? []);
   const unexplained = worse.filter((c) => lookOf(c.kind).length === 0).map((c) => c.kind);
+  // a look times a whole start, and what moved may be one of its phases
+  const againMs = isPhase(lead.kind)
+    ? seen.phases?.find((p) => phaseKind(p.phase) === lead.kind)?.ms
+    : seen.againMs;
   const showed =
-    seen.againMs === undefined || lead.baseline === undefined || !lead.shift
+    againMs === undefined || lead.baseline === undefined || !lead.shift
       ? undefined
-      : seen.againMs - lead.baseline >= lead.shift / 2;
-  const again = `${seen.againMs} ms while it was looked at, against ${lead.baseline} ms`;
+      : againMs - lead.baseline >= lead.shift / 2;
+  const again = `${againMs} ms while it was looked at, against ${lead.baseline} ms`;
   return {
     ...said,
     causes,
@@ -301,7 +325,7 @@ function findingOf(
       ...(showed ? [`it showed again: ${again}`] : []),
       ...seen.read,
       ...(reference
-        ? [`the other side: the reference of ${when(reference.at)}, a ${reference.build} build`]
+        ? [`the other side: the reference of ${when(reference.at)}, ${buildWords(reference.build)}`]
         : []),
       ...(seen.hostLoad === undefined ? [] : [`host load ${seen.hostLoad} while it was looked at`]),
     ],
@@ -330,7 +354,7 @@ function notesOf(r: KeyReport) {
   return [
     ...r.comparisons.flatMap((c) => NOTE_OF[c.verdict]?.(c) ?? []),
     ...r.budgets.filter((b) => !b.ok).map((b) => `over budget: ${b.kind} ${b.value} (${b.limit})`),
-    ...(fresh ? [`${fresh} numbers have no baseline yet`] : []),
+    ...(fresh ? [`${fresh} ${fresh === 1 ? 'number has' : 'numbers have'} no baseline yet`] : []),
   ];
 }
 
@@ -366,7 +390,7 @@ export function answerOf(
     app,
     scenario,
     deviceClass,
-    status: statusOf(report),
+    status: statusOf(report, device?.virtual === false),
     run: report.run,
     at: report.at,
     ...(device && { device: { model: device.model, os: device.os, virtual: device.virtual } }),

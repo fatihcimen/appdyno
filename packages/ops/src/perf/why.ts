@@ -3,6 +3,7 @@ import { pause, type CompileMode, type CpuProfile, type LaunchMode } from '@appd
 import { stepLine, type Flow, type StepEvent } from '@appdyno/flows';
 import {
   answerOf,
+  buildWords,
   deviceClass,
   journeyKind,
   journeyStep,
@@ -29,7 +30,7 @@ import { stepTime, type FlowRunner } from '../flow/runner.js';
 import { loadRecording, readFlow } from '../flow/shared.js';
 import { checkApp } from '../policy.js';
 import type { Session } from '../session.js';
-import { deviceInfo, perfTools, unlessUnsupported } from './shared.js';
+import { deviceInfo, perfTools, symbolsOf, unlessUnsupported } from './shared.js';
 
 /** How long a look at what has no time of its own records. */
 const LOOK_SECONDS = 8;
@@ -85,7 +86,7 @@ const blank = (cannot: string[] = []): Seen => ({
  * What the gate runs on a regression: the measures there are, on the same device and build, keeping nothing as a run,
  * as a look must not become the newest run the gate compares. What cannot be read is said, and the rest still is.
  */
-export function gateLooks(ctx: ServerContext, runner: FlowRunner) {
+export function gateLooks(ctx: ServerContext, runner: FlowRunner, dsym?: string) {
   const { measure, save, scroller } = perfTools(ctx);
 
   /** What a device or a replay refuses goes into the answer: a look never fails the gate's own word. */
@@ -103,7 +104,7 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner) {
 
   const profile = async (s: Session, app: string, seen: Seen, seconds: number, during?: During) => {
     const m = await attempt(into(seen), 'a CPU profile', () =>
-      measure(s, 'cpuProfile')(app, seconds * 1000, during),
+      measure(s, 'cpuProfile')(app, seconds * 1000, during, symbolsOf(s, dsym)),
     );
     if (!m) return;
     const { id } = await save('cpu-profile', [m], m.value);
@@ -120,7 +121,7 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner) {
     during?: During,
   ) => {
     const hangs = await attempt(into(seen), 'hangs', () =>
-      unlessUnsupported(measure(s, 'hangs', false)(app, seconds, during)),
+      unlessUnsupported(measure(s, 'hangs', false)(app, seconds, during, symbolsOf(s, dsym))),
     );
     if (hangs) {
       const { id } = await save('hangs', [hangs], hangs.value);
@@ -320,10 +321,10 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner) {
     } catch (e) {
       return (e as Error).message;
     }
-    const build = await s.device.measure.buildType(app).catch(() => 'unknown');
+    const build = await s.device.measure.buildType(app).catch(() => 'unknown' as const);
     const measured = run[0]?.build;
     if (measured && build !== measured)
-      return `${s.device.serial} holds a ${build} build of ${app}, and the run was of a ${measured} build`;
+      return `${s.device.serial} holds ${buildWords(build)} of ${app}, and the run was of ${buildWords(measured)}`;
     return { s, app };
   };
 
@@ -366,7 +367,7 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner) {
     if (reference && !fits)
       for (const x of Object.values(seen))
         x.cannot.push(
-          `the reference is of a ${reference.build} build${reference.compile ? `, compile ${reference.compile}` : ''}, and does not compare with this run: it was not used`,
+          `the reference is of ${buildWords(reference.build)}${reference.compile ? `, compile ${reference.compile}` : ''}, and does not compare with this run: it was not used`,
         );
     const answer = answerOf(report, run, baseline, seen, fits ? reference : undefined);
     await saveAnswer(ctx.measurementsDir, answer);

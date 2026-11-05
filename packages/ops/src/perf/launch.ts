@@ -1,4 +1,4 @@
-import { deviceClass, ratedByPlay, SLOW_LAUNCH_MS, type Metric } from '@appdyno/perf';
+import { deviceClass, phaseKind, ratedByPlay, SLOW_LAUNCH_MS, type Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { LaunchOut } from './schemas.js';
@@ -125,7 +125,7 @@ export function perfLaunchOp(ctx: ServerContext) {
           },
           { kind: worstKind, unit: 'ms', samples: worst === undefined ? [] : [worst] },
           ...(startup?.breakdown ?? []).map((b): Metric => ({
-            kind: `launch.phase.${b.reason.replace(/\W+/g, '_').toLowerCase()}_ms`,
+            kind: phaseKind(b.reason),
             unit: 'ms',
             samples: [b.ms],
           })),
