@@ -120,6 +120,25 @@ export class Devicectl {
     return all.find((d) => d.hardwareProperties?.udid === this.udid);
   }
 
+  /** The text on the phone's pasteboard, '' with none. */
+  async readPasteboard() {
+    const { stdout } = await this.pasteboard('paste');
+    // with no text there, the tool says so on the same stream
+    return stdout.startsWith('No text content') ? '' : stdout;
+  }
+
+  async writePasteboard(text: string) {
+    const copying = this.pasteboard('copy');
+    copying.child.stdin?.end(text);
+    await copying;
+  }
+
+  private pasteboard(action: 'copy' | 'paste') {
+    return run('xcrun', ['devicectl', 'device', 'pasteboard', action, '--device', this.udid], {
+      env: xcodeEnv(),
+    });
+  }
+
   /** Whether the phone wants its passcode now. */
   async lockState() {
     const r = await this.json(['device', 'info', 'lockState', '--device', this.udid]);

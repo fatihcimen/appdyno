@@ -105,7 +105,7 @@ clipboard and every case below. `APPDYNO_SIM_DIRECT=off` turns both off, `read` 
 
 `text.set` goes in as keys on iOS (`mode: keys`): a paste the user did not make brings up the "Allow Paste" alert, which holds it up.
 `clipboard.get` answers only what the runner wrote itself, as reading another app's text asks the user; a simulator's is read with
-`simctl pbpaste` instead. Where `simctl pbcopy` writes nothing (Xcode 27.1 on a new iOS 26.5 simulator) the runner sets and reads it. That is a known limit: on a loaded Mac the runner's call can stall too (twice at load 138), and `clipboard` then refuses within about 20 s, with `UNSUPPORTED` and the reason, and the runner restarted.
+`simctl pbpaste` instead, and an iPhone's goes both ways by `devicectl device pasteboard`, as the runner has the pasteboard only while it is in front. Where `simctl pbcopy` writes nothing (Xcode 27.1 on a new iOS 26.5 simulator) the runner sets and reads it. That is a known limit: on a loaded Mac the runner's call can stall too (twice at load 138), and `clipboard` then refuses within about 20 s, with `UNSUPPORTED` and the reason, and the runner restarted.
 
 iOS has no key to close a keyboard or to open the app switcher. `dismissKeyboard` taps the keyboard's hide key where it
 shows one, else a place with no control; the host then reads whether it went and refuses if it did not. `appSwitch` is the home

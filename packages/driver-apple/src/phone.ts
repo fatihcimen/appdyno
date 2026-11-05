@@ -148,6 +148,15 @@ export class IosPhoneDevice extends IosDevice {
 
   readonly recorder: ScreenRecorder;
 
+  /** By the phone's own service: the runner has the pasteboard only while it is in front. */
+  override async setClipboard(text: string) {
+    await this.ctl.writePasteboard(text);
+  }
+
+  override async getClipboard() {
+    return (await this.ctl.readPasteboard()) || undefined;
+  }
+
   /** By the phone's own service where it has it, which needs no runner; else as any device. */
   override async screenshot(opts: Parameters<IosDevice['screenshot']>[0] = {}) {
     return (await this.mirror.screenshot(opts.format ?? 'jpeg')) ?? super.screenshot(opts);

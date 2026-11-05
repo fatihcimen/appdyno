@@ -16,6 +16,7 @@ import {
   type MirrorSource,
   type Need,
 } from '@appdyno/core';
+import { Devicectl } from './devicectl.js';
 import { applePress, pasteKeys } from './mirror-press.js';
 import { usageOf } from './simtouch.js';
 import type { PhoneStreamHandle, PhoneStreamModule } from './phone-stream-port.js';
@@ -158,16 +159,6 @@ export class PhoneMirror implements Mirror {
     this.handle?.keyframe();
   }
 
-  private pasteboard(action: 'copy' | 'paste') {
-    return run('xcrun', ['devicectl', 'device', 'pasteboard', action, '--device', this.udid]);
-  }
-
-  private async writePasteboard(text: string) {
-    const copying = this.pasteboard('copy');
-    copying.child.stdin?.end(text);
-    await copying;
-  }
-
   /**
    * What no key types goes by the phone's pasteboard, as a person would, and what it held comes back. The phone asks a
    * person on its screen to allow the paste, so that waits for their next touch, or for a while. A secure field is left
@@ -184,10 +175,9 @@ export class PhoneMirror implements Mirror {
       );
       return;
     }
-    const { stdout } = await this.pasteboard('paste').catch(() => ({ stdout: '' }));
-    // with no text there, the tool says so on the same stream
-    const held = stdout.startsWith('No text content') ? '' : stdout;
-    await this.writePasteboard(text);
+    const ctl = new Devicectl(this.udid);
+    const held = await ctl.readPasteboard().catch(() => '');
+    await ctl.writePasteboard(text);
     await pasteKeys(async (next) => this.handle?.input(next));
     this.say(
       `This text has no keys, so it went by the phone's pasteboard: allow the paste on its screen.${held ? '' : ' It held no text to put back.'}`,
@@ -195,7 +185,7 @@ export class PhoneMirror implements Mirror {
     const restore = () => {
       clearTimeout(timer);
       this.afterTouch = undefined;
-      if (held) void this.writePasteboard(held).catch(() => undefined);
+      if (held) void ctl.writePasteboard(held).catch(() => undefined);
     };
     const timer = setTimeout(restore, RESTORE_MS);
     timer.unref();
