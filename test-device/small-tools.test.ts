@@ -74,8 +74,10 @@ describe.skipIf(!ANDROID)('small tools on Android', () => {
   });
 
   it('saves a picture at the size of the screen', async () => {
-    const file = join(mkdtempSync(join(tmpdir(), 'appdyno-shot-')), 'screen.png');
-    const r = ok(await call('screenshot', { file }));
+    // a phone's screen is a person's: no picture of it stays
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-shot-'));
+    const r = ok(await call('screenshot', { file: join(dir, 'screen.png') }));
+    rmSync(dir, { recursive: true });
     expect(r.data.width).toBe(ok(await call('device_info')).data.screen.w);
   });
 
