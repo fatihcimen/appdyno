@@ -1,5 +1,6 @@
 // A window to a file as the window server composites it, materials and picture included, with no focus and
 // whatever covers it: how a window is looked at on a Mac a person is using.
+#import "Place.h"
 #import "Viewer.h"
 #import "Window.h"
 #import <dlfcn.h>
@@ -56,8 +57,9 @@ BOOL MVWriteWindowPart(NSWindow *window, NSRect part, NSString *file) {
 void MVCopyImage(NSString *file) {
   NSImage *image = [[NSImage alloc] initWithContentsOfFile:file];
   if (!image) return;
-  [NSPasteboard.generalPasteboard clearContents];
-  [NSPasteboard.generalPasteboard writeObjects:@[image]];
+  NSPasteboard *board = MVPlaceBoard();
+  [board clearContents];
+  [board writeObjects:@[image]];
 }
 
 NSButton *_Nullable MVFindControl(NSView *view, NSString *name) {

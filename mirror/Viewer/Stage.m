@@ -1,6 +1,7 @@
 // One device's stream and what shows it, in a window of its own or a room of the hub's. A source feeds a stage, and a
 // parent's messages about the device come here.
 #import "Motion.h"
+#import "Place.h"
 #import "Viewer.h"
 #import "Window.h"
 
@@ -124,7 +125,7 @@
   if ([op isEqual:@"pair"]) return [_window setPair:m];
   if ([op isEqual:@"touchAt"]) return [_window.overlay showTouchAtX:[m[@"x"] doubleValue] y:[m[@"y"] doubleValue] agent:[m[@"agent"] boolValue]];
   if ([op isEqual:@"copied"]) return MVCopyImage(m[@"file"]);
-  if ([op isEqual:@"copyText"]) return MVCopyText(m[@"text"] ?: @"", NSPasteboard.generalPasteboard);
+  if ([op isEqual:@"copyText"]) return MVCopyText(m[@"text"] ?: @"", MVPlaceBoard());
   if ([op isEqual:@"poke"]) return [self poke:m];
   if ([op isEqual:@"snapshot"]) {
     NSString *file = m[@"file"] ?: @"";

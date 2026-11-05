@@ -172,6 +172,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 - (void)setBehind:(BOOL)behind {
   _behind = behind;
   [self stageNamed:nil].behind = behind;
+  MVPlaceBehind(behind);
 }
 
 - (void)setPoses:(BOOL)poses {
@@ -181,8 +182,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 
 - (void)openHub:(BOOL)focus {
   NSApp.mainMenu = MVHubMenu();
-  MVPlaceBehind(_behind);
-  _hub = [[MVHub alloc] initWithShow:MVShowOf(focus, _behind) poses:_poses];
+  _hub =[[MVHub alloc] initWithShow:MVShowOf(focus, _behind) poses:_poses];
   [self forget:@""];
 }
 

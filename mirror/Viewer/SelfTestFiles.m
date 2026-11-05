@@ -1,4 +1,5 @@
 // The self test of the sources that read a file: an emulator's frame, and a stream on a named pipe.
+#import "Place.h"
 #import "SelfTest.h"
 #import "Words.h"
 #import "Window.h"
@@ -185,8 +186,23 @@ static void checkWords(void) {
   MVCheck(@"words: a percent sign in a row stays one", [MVInTurkish(@"72% jank, 3 frozen") isEqual:@"%72 takılma, 3 donma"], MVInTurkish(@"72% jank, 3 frozen"));
 }
 
+/// This Mac's pasteboard is a person's: what a window kept behind copies stays on a board of its own.
+static void checkBoard(void) {
+  NSString *file = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID.UUID.UUIDString stringByAppendingString:@".png"]];
+  NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL pixelsWide:1 pixelsHigh:1 bitsPerSample:8 samplesPerPixel:4 hasAlpha:YES isPlanar:NO colorSpaceName:NSDeviceRGBColorSpace bytesPerRow:0 bitsPerPixel:0];
+  [[rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}] writeToFile:file atomically:NO];
+  NSInteger before = NSPasteboard.generalPasteboard.changeCount;
+  MVPlaceBehind(YES);
+  [MVPlaceBoard() clearContents];
+  MVCopyImage(file);
+  [NSFileManager.defaultManager removeItemAtPath:file error:NULL];
+  MVCheck(@"copy: a picture from a window kept behind leaves a person's pasteboard alone", NSPasteboard.generalPasteboard.changeCount == before, nil);
+  MVCheck(@"copy: and it stands on the window's own board", [MVPlaceBoard() canReadObjectForClasses:@[NSImage.class] options:nil], nil);
+}
+
 void MVCheckKeyboard(void) {
   checkWords();
+  checkBoard();
   MVCheck(@"keyboard: a window comes up without it", MVShowOf(NO, NO) == MVShowFront, nil);
   MVCheck(@"keyboard: only --focus takes it", MVShowOf(YES, NO) == MVShowFocused, nil);
   MVCheck(@"keyboard: a window kept behind comes forward for nothing", MVShowOf(YES, YES) == MVShowBehind && MVShowOf(NO, YES) == MVShowBehind, nil);
