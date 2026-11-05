@@ -66,6 +66,11 @@ export const iosScreen: PlatformScreen = {
 
   keyboardOpen: (tree) => tree.nodes.some((n) => /keyboard$/i.test(n.c)),
 
+  keyboardArea(tree) {
+    const b = tree.nodes.find((n) => /keyboard$/i.test(n.c))?.b;
+    return b && { x: b[0], y: b[1], width: b[2] - b[0], height: b[3] - b[1] };
+  },
+
   statusBand: () => STATUS_BAND_PT,
 
   notTheApp: (el) =>

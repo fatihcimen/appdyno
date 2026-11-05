@@ -167,6 +167,16 @@ describe('what the screen shows', () => {
     expect(androidScreen.keyboardOpen(treeOf([window(2, [0, 1600, 1080, 2400])]))).toBe(true);
   });
 
+  it('finds the keyboard by its window, as what is in it spans the screen', () => {
+    expect(androidScreen.keyboardArea(treeOf([window(1, [0, 0, 1080, 2400])]))).toBeUndefined();
+    expect(androidScreen.keyboardArea(treeOf([window(2, [0, 1600, 1080, 2400])]))).toEqual({
+      x: 0,
+      y: 1600,
+      width: 1080,
+      height: 800,
+    });
+  });
+
   it('takes the first app window that leaves room for the status bar, else a tall one by density', () => {
     expect(androidScreen.statusBand(treeOf([window(1, [0, 96, 1080, 2400])]), 420)).toBe(96);
     expect(androidScreen.statusBand(treeOf([window(1, [0, 0, 1080, 2400])]), 320)).toBe(112);

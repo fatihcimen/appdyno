@@ -15,6 +15,8 @@ export interface PlatformScreen {
     words?: AlertWords,
   ): AlertButton | undefined;
   keyboardOpen(tree: Tree): boolean;
+  /** Where the on-screen keyboard is, in tap units; undefined when it is not open or does not say. */
+  keyboardArea(tree: Tree): Rect | undefined;
   /**
    * What the status bar takes at the top of the screen, in tap units, for what compares pixels: its clock moves.
    * `density` is the agent's `screen.density` as this platform means it: dots per inch, or a scale.

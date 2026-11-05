@@ -67,6 +67,12 @@ export const androidScreen: PlatformScreen = {
 
   keyboardOpen: (tree) => tree.windows.some((w) => w.type === INPUT_METHOD_WINDOW),
 
+  /** The window's bounds, which are the keyboard's: the nodes in it span the whole screen. */
+  keyboardArea(tree) {
+    const b = tree.windows.find((w) => w.type === INPUT_METHOD_WINDOW)?.b;
+    return b && { x: b[0], y: b[1], width: b[2] - b[0], height: b[3] - b[1] };
+  },
+
   /** The first app window's top when it leaves room for the bar, else a tall bar's height. */
   statusBand(tree, density = 160) {
     const app = tree.windows.find((w) => w.type === 1 && w.b[1] > 0);

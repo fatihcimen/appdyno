@@ -6,6 +6,7 @@ export const plainScreen: PlatformScreen = {
   personPrompt: () => undefined,
   alertButton: () => undefined,
   keyboardOpen: () => false,
+  keyboardArea: () => undefined,
   statusBand: () => 0,
   notTheApp: () => false,
   isSystemUi: () => false,

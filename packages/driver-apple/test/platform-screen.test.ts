@@ -96,6 +96,12 @@ describe('what the screen shows', () => {
     expect(iosScreen.keyboardOpen(nodes('Button'))).toBe(false);
   });
 
+  it('finds the keyboard by its element', () => {
+    const open = { nodes: [{ c: 'Keyboard', b: [0, 590, 402, 816] }] } as unknown as Tree;
+    expect(iosScreen.keyboardArea(open)).toEqual({ x: 0, y: 590, width: 402, height: 226 });
+    expect(iosScreen.keyboardArea(nodes('Button'))).toBeUndefined();
+  });
+
   it('leaves a status band as tall as it gets', () => {
     expect(iosScreen.statusBand(nodes('Button'))).toBe(64);
   });
