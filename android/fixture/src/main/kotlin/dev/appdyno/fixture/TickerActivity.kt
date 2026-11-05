@@ -8,7 +8,7 @@ import android.os.Looper
 /** A countdown that never stops: the screen is settled though a text keeps changing. */
 class TickerActivity : Activity() {
     private val handler = Handler(Looper.getMainLooper())
-    private var left = 100_000
+    private var remaining = 100_000
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -17,7 +17,8 @@ class TickerActivity : Activity() {
             button("Stop", R.id.stop) { }
             this@TickerActivity.handler.post(object : Runnable {
                 override fun run() {
-                    ticker.text = "Kalan: ${left--}"
+                    // named apart from `left`: in here that is the column's own edge, and it would walk off the screen
+                    ticker.text = "Kalan: ${remaining--}"
                     this@TickerActivity.handler.postDelayed(this, 100)
                 }
             })
