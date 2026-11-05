@@ -33,6 +33,7 @@ import {
   JOURNEY_ITERATIONS,
   opsFor,
   paramsOf,
+  runHub,
   runMirrors,
   survey,
   type Policy,
@@ -40,7 +41,7 @@ import {
 import { alertPerson } from './alert.js';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
-import { mirrorCommand } from './mirror-args.js';
+import { hubCommand, mirrorCommand } from './mirror-args.js';
 import { COMMANDS, commandList, usage } from './usage.js';
 import { serveCommand, type ServerFlags } from './serve.js';
 
@@ -173,6 +174,8 @@ async function main(): Promise<number> {
           commandsFor(opsFor(ctx)).mirror!.run(words, { out: (s) => console.log(s), err }),
         windows: runMirrors,
       });
+    case 'hub':
+      return hubCommand(rest, { context: contextFrom, hub: runHub });
     case 'mcp': {
       await serveCommand(rest, contextFrom);
       return 0;

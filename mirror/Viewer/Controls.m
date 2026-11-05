@@ -83,24 +83,37 @@ static NSMenuItem *menuOf(NSMenu *bar, NSString *title, NSMenu *menu) {
   return item;
 }
 
+static NSMenu *appMenu(void) {
+  NSMenu *menu = [NSMenu new];
+  [menu addItemWithTitle:@"Hide appdyno" action:@selector(hide:) keyEquivalent:@"h"];
+  [menu addItem:NSMenuItem.separatorItem];
+  [menu addItemWithTitle:@"Quit appdyno" action:@selector(terminate:) keyEquivalent:@"q"];
+  return menu;
+}
+
+static NSMenu *windowMenu(void) {
+  NSMenu *menu = [NSMenu new];
+  [menu addItemWithTitle:@"Minimize" action:@selector(performMiniaturize:) keyEquivalent:@"m"];
+  [menu addItemWithTitle:@"Zoom" action:@selector(performZoom:) keyEquivalent:@""];
+  [menu addItemWithTitle:@"Close" action:@selector(performClose:) keyEquivalent:@"w"];
+  NSApp.windowsMenu = menu;
+  return menu;
+}
+
 NSMenu *MVMainMenu(NSArray<NSString *> *_Nullable names) {
   NSMenu *bar = [NSMenu new];
-  NSMenu *appMenu = [NSMenu new];
-  [appMenu addItemWithTitle:@"Hide appdyno" action:@selector(hide:) keyEquivalent:@"h"];
-  [appMenu addItem:NSMenuItem.separatorItem];
-  [appMenu addItemWithTitle:@"Quit appdyno" action:@selector(terminate:) keyEquivalent:@"q"];
-  menuOf(bar, @"appdyno", appMenu);
-  NSMenu *file = MVControlMenu(@"File", nil);
-  [file addItem:NSMenuItem.separatorItem];
-  [file addItemWithTitle:@"Close" action:@selector(performClose:) keyEquivalent:@"w"];
-  menuOf(bar, @"File", file);
+  menuOf(bar, @"appdyno", appMenu());
+  menuOf(bar, @"File", MVControlMenu(@"File", nil));
   menuOf(bar, @"Edit", MVControlMenu(@"Edit", nil));
   menuOf(bar, @"View", MVControlMenu(@"View", nil));
   menuOf(bar, @"Device", MVControlMenu(@"Device", names));
-  NSMenu *window = [NSMenu new];
-  [window addItemWithTitle:@"Minimize" action:@selector(performMiniaturize:) keyEquivalent:@"m"];
-  [window addItemWithTitle:@"Zoom" action:@selector(performZoom:) keyEquivalent:@""];
-  menuOf(bar, @"Window", window);
-  NSApp.windowsMenu = window;
+  menuOf(bar, @"Window", windowMenu());
+  return bar;
+}
+
+NSMenu *MVHubMenu(void) {
+  NSMenu *bar = [NSMenu new];
+  menuOf(bar, @"appdyno", appMenu());
+  menuOf(bar, @"Window", windowMenu());
   return bar;
 }

@@ -131,6 +131,10 @@ A simulator needs no runner for any of this: it reads the app in front by its re
 
 **Performance**, in the Inspector, keeps the same readings for as long as ten minutes of being shown, and takes a real measure of the app in front. **Launch** is `perf_launch` and **Scroll** is `perf_scroll`, as an agent calls them, with their defaults: the app restarts, and the run is kept with every other, marked as read with a stream running. **Dashboard** writes the page of every kept run and opens it. Readings stop while a measure runs, as they would reset what it counts. A measure holds the device as an agent's session does, and is refused by name while something else holds it. What is the system's, such as a home screen, is not measured.
 
+## The hub
+
+`appdyno hub` opens one window with every device this Mac can reach: phones, simulators and emulators, each with its state. It starts and stops what is virtual, makes a new simulator or emulator from what this Mac has installed, and opens or closes a device's window. It holds no device and no stream: each window is an `appdyno mirror` of its own, so closing the hub closes no window, and a crash costs one window. A phone is a person's to turn off, so the hub offers it no stop.
+
 ## Pointer and trackpad
 
 | on the window             | on the device                                                                                          |

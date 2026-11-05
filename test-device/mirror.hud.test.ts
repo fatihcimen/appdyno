@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -86,6 +86,7 @@ describe.runIf(udid ?? serial)("a window's live numbers", () => {
         perf: join(runs, 'perf'),
       }),
       device,
+      true,
     );
     const controls = windowControls(device, hardware, () => session, measures);
     session = new MirrorSession({
@@ -180,6 +181,12 @@ describe.runIf(udid ?? serial)("a window's live numbers", () => {
         await until('the fixture in the pane', fixtureRead, READING_MS);
       }
       await picture('performance');
+      // its page is a tab in this Mac's browser, kept behind: asked for, as it stays there
+      if (process.env.APPDYNO_OPEN_PAGE === '1') {
+        control('dashboard');
+        const page = join(runs, 'measurements/dashboard/index.html');
+        await until('the page', () => existsSync(page), READING_MS);
+      }
     },
     2 * MEASURE_MS + 120_000,
   );

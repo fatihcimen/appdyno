@@ -4,6 +4,7 @@
 //   appdyno-viewer --headless  the same, with no window and nothing that could raise one
 //   appdyno-viewer --behind    a real window kept off every screen, for a test on a Mac a person is using
 //   appdyno-viewer --behind --appearance light|dark   the same, drawn as in use, to be looked at by `snapshot`
+//   appdyno-viewer --hub [--focus]   the window of `appdyno hub`, which holds no device
 //   appdyno-viewer --selftest [fixtures dir]
 //   appdyno-viewer --encode <h264|hevc> <frames>
 #import "Viewer.h"
@@ -29,6 +30,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 @interface MVApp : NSObject <MVSink, NSApplicationDelegate>
 - (void)setBehind:(BOOL)behind;
 - (void)setPoses:(BOOL)poses;
+- (void)openHub:(BOOL)focus;
 - (instancetype)initWithWindow:(BOOL)window;
 - (void)receive:(NSDictionary *)message;
 @end
@@ -36,6 +38,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 @implementation MVApp {
   MVStats *_stats;
   MVWindow *_window;
+  MVHub *_hub;
   BOOL _headlessOnly;
   BOOL _behind, _poses;
   id<MVSource> _source;
@@ -145,10 +148,12 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   if ([op isEqual:@"apps"]) return [_window showApps:m];
   if ([op isEqual:@"perf"]) return [_window showPerf:m];
   if ([op isEqual:@"measuring"] || [op isEqual:@"measured"]) return [_window showMeasure:m];
-  if ([op isEqual:@"note"]) return [_window sayNote:m[@"text"] ?: @""];
+  if ([op isEqual:@"hub"]) return [_hub show:m];
+  if ([op isEqual:@"note"]) return _hub ? [_hub sayNote:m[@"text"] ?: @""] : [_window sayNote:m[@"text"] ?: @""];
   if ([op isEqual:@"recording"]) return [_window setRecording:[m[@"on"] boolValue]];
   if ([op isEqual:@"copied"]) return MVCopyImage(m[@"file"]);
   if ([op isEqual:@"poke"]) {
+    if (_hub) return [_hub poke:m];
     if (m[@"key"]) return [_window pokeKey:m[@"key"]];
     if (m[@"text"]) return [_window pokeText:m[@"text"]];
     if (m[@"button"]) return [_window pokeButton:m[@"button"]];
@@ -159,7 +164,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
     if (m[@"seconds"]) return [_window pokeX:x y:y toX:[(m[@"x2"] ?: m[@"x"]) doubleValue] toY:[(m[@"y2"] ?: m[@"y"]) doubleValue] seconds:[m[@"seconds"] doubleValue]];
     return [_window pokeX:x y:y right:[m[@"right"] boolValue]];
   }
-  if ([op isEqual:@"snapshot"]) return MVEmit(@{@"op": @"snapped", @"file": m[@"file"] ?: @"", @"ok": @([_window snapshot:m[@"file"]])});
+  if ([op isEqual:@"snapshot"]) return MVEmit(@{@"op": @"snapped", @"file": m[@"file"] ?: @"", @"ok": @(_hub ? [_hub snapshot:m[@"file"]] : [_window snapshot:m[@"file"]])});
   if ([op isEqual:@"mark"]) return [_stats mark:[m[@"bigger"] boolValue]];
   if ([op isEqual:@"quit"]) {
     [self detach];
@@ -174,6 +179,11 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
 
 - (void)setPoses:(BOOL)poses {
   _poses = poses;
+}
+
+- (void)openHub:(BOOL)focus {
+  NSApp.mainMenu = MVHubMenu();
+  _hub = [[MVHub alloc] initWithShow:MVShowOf(focus, _behind) poses:_poses];
 }
 
 - (void)detach {
@@ -344,6 +354,7 @@ int main(int argc, char **argv) {
       application.appearance = [NSAppearance appearanceNamed:[args[look + 1] isEqual:@"dark"] ? NSAppearanceNameDarkAqua : NSAppearanceNameAqua];
       app.poses = YES;
     }
+    if ([args containsObject:@"--hub"]) [app openHub:[args containsObject:@"--focus"]];
     [application run];
   }
   return 0;

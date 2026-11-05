@@ -116,7 +116,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   if ([attach[@"zoom"] doubleValue] > 0) _zoom = [attach[@"zoom"] doubleValue];
   _line.name = _look[@"name"] ?: _name;
   [_window makeFirstResponder:_view];
-  [self show:MVShowOf([attach[@"focus"] boolValue], self.behind)];
+  MVPresent(_window, MVShowOf([attach[@"focus"] boolValue], self.behind));
 }
 
 /// What is always there, and the rest a click away: a window is for its device, not its controls.
@@ -266,26 +266,26 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   [_line say:note];
 }
 
-- (void)show:(MVShow)how {
+void MVPresent(MVOffscreenWindow *window, MVShow how) {
   switch (how) {
     case MVShowBehind:
-      _window.offscreen = YES;
-      [_window setFrameOrigin:NSMakePoint(kOffscreenAt, kOffscreenAt)];
-      [_window orderBack:nil];
+      window.offscreen = YES;
+      [window setFrameOrigin:NSMakePoint(kOffscreenAt, kOffscreenAt)];
+      [window orderBack:nil];
       break;
     case MVShowFront:
-      [_window orderFrontRegardless];
+      [window orderFrontRegardless];
       break;
     case MVShowFocused:
       NSApp.activationPolicy = NSApplicationActivationPolicyRegular;
-      [_window makeKeyAndOrderFront:nil];
+      [window makeKeyAndOrderFront:nil];
       [NSApp activateIgnoringOtherApps:YES];
       break;
   }
 }
 
 - (void)raise {
-  [self show:MVShowOf(NO, self.behind)];
+  MVPresent(_window, MVShowOf(NO, self.behind));
 }
 
 - (void)toggleInspector {

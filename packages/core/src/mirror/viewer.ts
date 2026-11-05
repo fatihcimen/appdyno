@@ -146,6 +146,10 @@ export type ViewerStart = () => Promise<ViewerLink>;
 
 /** Starts viewers for a session. */
 export const startViewer =
-  (headless: boolean, env?: NodeJS.ProcessEnv): ViewerStart =>
+  (headless: boolean, env?: NodeJS.ProcessEnv, behind = false): ViewerStart =>
   async () =>
-    new ViewerProcess(await viewerBinary(env), headless ? ['--headless'] : [], env);
+    new ViewerProcess(
+      await viewerBinary(env),
+      headless ? ['--headless'] : behind ? ['--behind'] : [],
+      env,
+    );

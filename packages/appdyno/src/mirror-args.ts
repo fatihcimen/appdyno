@@ -37,6 +37,7 @@ export function mirrorRun({ values, quality, codec }: ReturnType<typeof mirrorAr
     max: Number(values.max ?? 8),
     options: { quality, ...(codec && { codec }) },
     headless: values.headless ?? false,
+    behind: values.behind ?? false,
     noInput: values['no-input'] ?? false,
     ...(values.seconds && { seconds: Number(values.seconds) }),
     ...(values.record && { record: resolve(values.record) }),
@@ -71,6 +72,37 @@ export async function mirrorCommand<Context extends { close(): void }>(
     return await (action !== 'open' || values.detach
       ? use.tool(ctx, [action, '--quality', quality])
       : use.windows(ctx, mirrorRun(words)));
+  } finally {
+    ctx.close();
+  }
+}
+
+/** `appdyno hub`: stays with its window, and the windows it opens stay with their own processes. */
+export async function hubCommand<Context extends { close(): void }>(
+  args: string[],
+  use: {
+    context(settings: Settings): Context;
+    hub(
+      ctx: Context,
+      run: { focus: boolean; behind: boolean; appearance?: string; log: (l: string) => void },
+    ): Promise<number>;
+  },
+) {
+  const { values } = parseArgs({ args, options: COMMANDS.hub.flags });
+  if (values.help) {
+    console.log(usage('hub'));
+    return 0;
+  }
+  const ctx = use.context({
+    ...(values['allow-devices'] && { 'allow-devices': values['allow-devices'] }),
+  });
+  try {
+    return await use.hub(ctx, {
+      focus: values.focus ?? false,
+      behind: values.behind ?? false,
+      ...(values.appearance && { appearance: values.appearance }),
+      log: (line) => console.log(line),
+    });
   } finally {
     ctx.close();
   }

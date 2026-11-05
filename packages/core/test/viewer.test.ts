@@ -79,6 +79,7 @@ describe('the keyboard', () => {
       expect(window.indexOf(taking)).toBeLessThan(window.indexOf('- (void)raise'));
     }
     expect(window).toContain('MVShowOf([attach[@"focus"] boolValue]');
+    expect(source('Hub.m')).toContain('MVPresent(_window, how)');
   });
 
   it('a card over the picture takes no click, but on its own button', () => {

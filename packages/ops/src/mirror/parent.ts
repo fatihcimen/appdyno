@@ -24,6 +24,8 @@ export type MirrorRun = {
   max: number;
   options: MirrorOptions;
   headless: boolean;
+  /** A real window kept off every screen. */
+  behind?: boolean;
   noInput: boolean;
   seconds?: number;
   /** Ends the run when it settles, as its time being up would: a caller's own clock. */
@@ -90,11 +92,11 @@ class Parent {
       device,
       hardware,
       () => session,
-      windowMeasures(this.ctx, device),
+      windowMeasures(this.ctx, device, this.o.behind),
     );
     const session: MirrorSession = new MirrorSession({
       mirror: device.mirror,
-      viewer: startViewer(this.o.headless),
+      viewer: startViewer(this.o.headless, undefined, this.o.behind),
       look: windowLook(hardware),
       press: controls.press,
       onWindow: controls.onWindow,

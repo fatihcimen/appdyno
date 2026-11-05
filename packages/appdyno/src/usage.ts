@@ -97,6 +97,7 @@ export const COMMANDS = {
       codec: value('h264|hevc'),
       'no-input': on,
       headless: on,
+      behind: unsaidOn,
       seconds: value('N'),
       takeover: on,
       record: value('file.mp4'),
@@ -108,6 +109,16 @@ export const COMMANDS = {
     what: 'a live window on a device, driven by mouse and keyboard',
   },
   'mirror close|status|stats': {},
+  hub: {
+    flags: {
+      focus: on,
+      behind: unsaidOn,
+      appearance: unsaidValue,
+      'allow-devices': unsaidValue,
+      help: { type: 'boolean', short: 'h', unsaid: true },
+    },
+    what: 'every device of this Mac in one window: start, stop, make one, open its window',
+  },
   'perf compare|baseline|budget': {
     flags: {
       app: value('A'),

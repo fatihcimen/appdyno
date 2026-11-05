@@ -87,6 +87,7 @@ NSImage *_Nullable MVControlImage(NSString *name);
 /// One menu of the table; with `names`, only what they list.
 NSMenu *MVControlMenu(NSString *title, NSArray<NSString *> *_Nullable names);
 NSMenu *MVMainMenu(NSArray<NSString *> *_Nullable names);
+NSMenu *MVHubMenu(void);
 
 typedef NS_ENUM(NSInteger, MVLiveState) { MVLiveNeutral, MVLiveGood, MVLiveWarning, MVLiveCritical };
 /// How a reading stands: what a card says in words and a symbol, as well as a colour.
@@ -189,5 +190,16 @@ typedef NS_ENUM(NSInteger, MVShow) { MVShowBehind, MVShowFront, MVShowFocused };
 
 /// How a window shows itself. Only a person's `--focus` gives it the keyboard; a click does the rest.
 MVShow MVShowOf(BOOL focus, BOOL behind);
+void MVPresent(MVOffscreenWindow *window, MVShow how);
+
+/// The window of `appdyno hub`: what its parent says is there, and what a person asks of it.
+@interface MVHub : NSObject <NSWindowDelegate, NSToolbarDelegate>
+- (instancetype)initWithShow:(MVShow)how poses:(BOOL)poses;
+- (void)show:(NSDictionary *)message;
+- (void)sayNote:(NSString *)note;
+/// Presses a device's button as a person does.
+- (void)poke:(NSDictionary *)message;
+- (BOOL)snapshot:(NSString *)file;
+@end
 
 NS_ASSUME_NONNULL_END
