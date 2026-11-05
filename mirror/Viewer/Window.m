@@ -252,11 +252,9 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 
 - (void)showSurface:(IOSurfaceRef)surface {
   [_layers showSurface:surface];
-  [_backdrop followSurface:surface];
 }
 
 - (BOOL)showImage:(CVImageBufferRef)image {
-  [_backdrop followImage:image];
   return [_layers showImage:image];
 }
 

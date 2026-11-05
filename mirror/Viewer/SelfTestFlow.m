@@ -15,7 +15,7 @@ void MVCheckFlow(void) {
   [pane show:@{@"on": @YES, @"starting": @NO, @"lines": @[@"launch", @"tap id=submit", @"tap x=1 y=2 !coordinates"], @"look": @[@"step 3: coordinates"]}];
   MVCheck(@"flow: the button stops what is recording", [pane.recordTitle isEqual:@"Stop"], pane.recordTitle);
   MVCheck(@"flow: each step has its row", pane.rows.count == 3 && [pane.rows[1].title isEqual:@"tap id=submit"], nil);
-  MVCheck(@"flow: a step to look at says why, in words as well as a colour", [pane.rows[2].detail isEqual:@"coordinates"] && [pane.rows[2].symbol isEqual:@"exclamationmark.triangle"], pane.rows[2].detail);
+  MVCheck(@"flow: a step to look at says why, in words as well as a colour", [pane.rows[2].detail isEqual:@"coordinates"] && [pane.rows[2].symbol isEqual:@"exclamationmark.triangle.fill"], pane.rows[2].detail);
   [pane show:@{@"on": @NO, @"starting": @YES, @"lines": @[]}];
   MVCheck(@"flow: a start can't be pressed twice", ![pane.recordTitle isEqual:@"Record"], pane.recordTitle);
 

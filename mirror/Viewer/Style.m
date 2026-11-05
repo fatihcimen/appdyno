@@ -144,8 +144,8 @@ NSImage *_Nullable MVSymbol(NSString *name, NSColor *color, CGFloat size, NSFont
 @end
 
 NSString *MVNeedSymbol(NSString *_Nullable need) {
-  NSDictionary *symbols = @{@"locked": @"lock", @"asleep": @"moon.zzz", @"not-connected": @"cable.connector.slash", @"not-trusted": @"hand.raised"};
-  return symbols[need ?: @""] ?: @"exclamationmark.triangle";
+  NSDictionary *symbols = @{@"locked": @"lock.fill", @"asleep": @"moon.zzz.fill", @"not-connected": @"cable.connector.slash", @"not-trusted": @"hand.raised.fill"};
+  return symbols[need ?: @""] ?: @"exclamationmark.triangle.fill";
 }
 
 void MVAnnounce(NSString *words) {

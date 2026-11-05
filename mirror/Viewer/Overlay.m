@@ -75,7 +75,7 @@ static void place(NSView *box, NSView *view, NSLayoutConstraint *vertical) {
 /// What a state of the stream looks like.
 static NSString *symbolOf(NSString *state) {
   if ([state isEqual:@"waiting"]) return @"pause.circle";
-  if ([state isEqual:@"stopped"]) return @"exclamationmark.triangle";
+  if ([state isEqual:@"stopped"]) return @"exclamationmark.triangle.fill";
   return @"arrow.triangle.2.circlepath";
 }
 

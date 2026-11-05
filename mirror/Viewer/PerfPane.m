@@ -223,7 +223,7 @@ static MVRow *rowOfResult(NSDictionary *result) {
   row.title = [result[@"value"] length] ? [NSString stringWithFormat:@"%@  %@", result[@"title"], result[@"value"]] : result[@"title"] ?: @"";
   row.detail = result[@"detail"] ?: @"";
   row.help = result[@"why"];
-  row.symbol = regression ? @"arrow.up.circle.fill" : plain ? @"chart.bar" : @"exclamationmark.triangle";
+  row.symbol = regression ? @"arrow.up.circle.fill" : plain ? @"chart.bar" : @"exclamationmark.triangle.fill";
   row.tint = regression ? NSColor.systemRedColor : plain ? nil : MVOrange();
   return row;
 }

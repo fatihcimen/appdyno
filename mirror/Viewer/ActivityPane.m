@@ -28,7 +28,7 @@ static MVRow *rowOfCall(NSDictionary *call) {
   row.detail = [NSString stringWithFormat:@"%@ · %@ ms", call[@"time"] ?: @"", call[@"ms"] ?: @0];
   row.help = call[@"args"];
   // only what failed gets a mark: a run of ticks says nothing
-  row.symbol = ok ? nil : @"xmark.octagon";
+  row.symbol = ok ? nil : @"xmark.octagon.fill";
   row.tint = NSColor.systemRedColor;
   return row;
 }

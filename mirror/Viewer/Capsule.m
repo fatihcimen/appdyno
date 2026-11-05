@@ -4,7 +4,7 @@
 #import "Window.h"
 #import "Words.h"
 
-static const double kHigh = 28, kMark = 10, kBar = 2, kStepSeconds = 0.15, kWordsSeconds = 0.15, kNoteSeconds = 4, kWidest = 220, kInset = 12;
+static const double kHigh = 28, kMark = 12, kDotMark = 8, kBar = 2, kStepSeconds = 0.15, kWordsSeconds = 0.15, kNoteSeconds = 4, kWidest = 220, kInset = 12;
 
 @implementation MVStatusLine {
   NSString *_note;
@@ -142,7 +142,10 @@ static NSColor *colorOf(MVTone tone) {
 - (void)show:(MVStatusLine *)line {
   NSString *words = line.stringValue;
   MVTone tone = line.tone;
-  if (!_shown || tone != _tone) [_mark paint:symbolOf(tone) color:colorOf(tone)];
+  if (!_shown || tone != _tone) {
+    _mark.size = tone == MVToneLive ? kDotMark : kMark;
+    [_mark paint:symbolOf(tone) color:colorOf(tone)];
+  }
   if ([words isEqual:_words.stringValue]) return [self setProgress:line.progress];
   if (MVMoves() && _shown) {
     CATransition *fade = [CATransition animation];

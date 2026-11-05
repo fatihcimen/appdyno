@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- The hub is one calm window. The system's Inspector, edge to edge, in place of a floating pane; one capsule in the toolbar for everything a device is at; four symbol tabs; figures and charts in one row; and measures as one grouped list.
-- What a window says holds its strength behind other windows, as it usually is: from a title at 2:1 and symbols at 2:1 to every word at 4.5:1 and every symbol at 3:1, read from the real window, dark and light.
+- The hub is one calm window: a neutral stage where the device is the only colour, as what stood behind the sidebar and Inspector took their words and symbols under contrast. The system's Inspector, edge to edge, in place of a floating pane; one capsule in the toolbar for everything a device is at; four symbol tabs; figures and charts in one row; and measures as one grouped list.
+- What a window says holds its strength behind other windows, as it usually is: from a title and symbols at 2:1 to every word at 4.5:1 and every symbol at 3:1, read from the real window, dark and light, but for what stands disabled while a measure runs.
 - Every word of the hub in Turkish and English by the Mac's language, from one table. A viewer's own words and what the parent sends pass through it at the label.
 - Results has a history: what was measured on this device before, judged by the gate's method, in words.
 - An agent shows on the device: a purple ring, a dot where each tap landed, and Activity as runs of work in words, not a list of tool calls.

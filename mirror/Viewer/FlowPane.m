@@ -119,8 +119,8 @@ static NSString *clickNamed(NSInteger segment) {
     row.title = line;
     row.detail = why ?: [NSString stringWithFormat:@"Step %lu", (unsigned long)i + 1];
     row.help = line;
-    row.symbol = why ? @"exclamationmark.triangle" : @"checkmark.circle";
-    row.tint = why ? NSColor.systemOrangeColor : NSColor.systemGreenColor;
+    row.symbol = why ? @"exclamationmark.triangle.fill" : @"checkmark.circle.fill";
+    row.tint = why ? MVOrange() : MVGreen();
     [rows addObject:row];
   }];
   _steps.rows = rows;

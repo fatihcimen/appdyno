@@ -22,7 +22,7 @@ NSImage *_Nullable MVSymbol(NSString *name, NSColor *color, CGFloat size, NSFont
 @interface MVInk : NSView
 - (instancetype)initWithSymbol:(NSString *)symbol color:(NSColor *)color size:(CGFloat)size;
 - (void)paint:(NSString *)symbol color:(NSColor *)color;
-@property(nonatomic, readonly) CGFloat size;
+@property(nonatomic) CGFloat size;
 @end
 
 /// Words for a screen reader, in the Mac's language.

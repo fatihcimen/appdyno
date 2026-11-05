@@ -121,7 +121,7 @@ static NSString *stateWords(NSDictionary *device) {
   _new.identifier = @"new";
   _new.toolTip = MVWord(@"New simulator or emulator");
   _new.accessibilityLabel = _new.toolTip;
-  MVInk *plus = [[MVInk alloc] initWithSymbol:@"plus" color:NSColor.labelColor size:14];
+  MVInk *plus = [[MVInk alloc] initWithSymbol:@"plus" color:NSColor.labelColor size:16];
   plus.frame = NSMakeRect(0, 0, 24, 24);
   plus.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
   [_new addSubview:plus];
