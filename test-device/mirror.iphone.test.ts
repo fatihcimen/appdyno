@@ -2,7 +2,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { MirrorStatus, ViewerLink } from '../packages/core/src/index.js';
 import { expectSamePicture, shownByWindow } from './window-picture.js';
 import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
@@ -304,33 +304,22 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     const home = mkdtempSync(join(tmpdir(), 'appdyno-button-'));
     const desktop = join(home, 'Desktop');
     mkdirSync(desktop);
-    const clipboard = () =>
-      execFileSync('osascript', ['-e', 'clipboard info'], { encoding: 'utf8' });
-    // only what can be put back is touched: anything but text stays where it is, and the copy is then only asked for
-    const plain = !/picture|PNGf|TIFF|furl/.test(clipboard());
-    const held = plain ? execFileSync('pbpaste', { encoding: 'utf8' }) : '';
-    const copies: unknown[] = [];
-    const told = plain
-      ? session
-      : {
-          ...session,
-          tell: (m: { op: string }) => (m.op === 'copied' ? copies.push(m) : session.tell(m)),
-        };
+    const tell = vi.spyOn(session, 'tell');
     const realHome = process.env.HOME;
     process.env.HOME = home;
     try {
       const measures = windowMeasures(new ServerContext(DEFAULT_POLICY, []), device);
-      const controls = windowControls(device, await device.hardware(), () => told, measures);
+      const controls = windowControls(device, await device.hardware(), () => session, measures);
       controls.onWindow({ op: 'control', name: 'screenshot' });
       await until('its file', () => readdirSync(desktop).some((f) => f.endsWith('.png')));
       const file = readdirSync(desktop).find((f) => f.endsWith('.png'))!;
       await until('a whole picture', () => statSync(join(desktop, file)).size > 1_000);
       expect(readFileSync(join(desktop, file))[0]).toBe(0x89);
-      if (plain) await until('the copy', () => /PNGf|TIFF|picture/.test(clipboard()));
-      else expect(copies).toHaveLength(1);
+      // a viewer with no person at it copies to a board of its own, as a test in the viewer's holds
+      expect(tell).toHaveBeenCalledWith(expect.objectContaining({ op: 'copied' }));
     } finally {
+      tell.mockRestore();
       process.env.HOME = realHome;
-      if (plain) execFileSync('pbcopy', { input: held });
       rmSync(home, { recursive: true, force: true });
     }
   }, 60_000);

@@ -124,6 +124,40 @@ describe('the viewer, compiled by its first-use path', () => {
     }
   }, 30_000);
 
+  it.each(['--headless', '--behind'])(
+    "%s copies to a board of its own, and leaves a person's pasteboard alone",
+    async (flag) => {
+      const counts = async () => {
+        const read = `ObjC.import('AppKit');
+          [$.NSPasteboard.generalPasteboard.changeCount,
+           $.NSPasteboard.pasteboardWithName('dev.appdyno.behind').changeCount].join(' ')`;
+        const { stdout } = await run('osascript', ['-l', 'JavaScript', '-e', read]);
+        const [general, own] = stdout.trim().split(' ').map(Number);
+        return { general: general!, own: own! };
+      };
+      const file = join(dir, `copied${flag}.png`);
+      // a picture of one pixel
+      const pixel =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+      writeFileSync(file, Buffer.from(pixel, 'base64'));
+      const before = await counts();
+      const v = new ViewerProcess(binary, [flag]);
+      try {
+        v.send({ op: 'copied', file });
+        v.send({ op: 'copyText', text: 'nothing of a person' });
+        // that the viewer did copy is what makes the other count mean anything
+        const end = Date.now() + WAIT_MS;
+        let after = await counts();
+        while (after.own < before.own + 2 && Date.now() < end) after = await counts();
+        expect(after.own).toBeGreaterThanOrEqual(before.own + 2);
+        expect(after.general).toBe(before.general);
+      } finally {
+        v.kill();
+      }
+    },
+    WAIT_MS + 10_000,
+  );
+
   it('passes its self test: real frames, bad input, the sums a window rests on', async () => {
     // a failed check exits 1, and it is the lines that say which
     const { stdout } = await run(binary, ['--selftest', FIXTURES], { timeout: 180_000 }).catch(
@@ -139,6 +173,7 @@ describe('the viewer, compiled by its first-use path', () => {
     expect(named).toContain('nal: random bytes stay in bounds');
     expect(named).toContain('pixels: a size past the file is refused, unread');
     expect(named).toContain('stream: a frame over the limit ends it');
+    expect(named).toContain("pasteboard: all of this left a person's alone");
   }, 200_000);
 
   it(

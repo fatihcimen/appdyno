@@ -1,5 +1,6 @@
 // The viewer tested as it runs, with no device and no window: real frames through the real reader and
 // decoder, bad input, and the arithmetic a window depends on. One JSON line per check, then the verdict.
+#import "Place.h"
 #import "SelfTest.h"
 #import <Carbon/Carbon.h>
 #import <arpa/inet.h>
@@ -415,6 +416,9 @@ static void checkStats(void) {
 }
 
 int MVSelfTest(NSString *fixtures) {
+  // before any check, so that one failing cannot reach this Mac's pasteboard, which is a person's
+  MVPlaceBehind(YES);
+  NSInteger board = NSPasteboard.generalPasteboard.changeCount;
     MVTestMotion();
   checkNals();
   checkInputMaths();
@@ -433,6 +437,7 @@ int MVSelfTest(NSString *fixtures) {
   checkCodec(NO);
   checkCodec(YES);
   checkHevc444(fixtures);
+  MVCheck(@"pasteboard: all of this left a person's alone", NSPasteboard.generalPasteboard.changeCount == board, nil);
   MVEmit(@{@"selftest": @"done", @"ok": @(gFailed == 0), @"failed": @(gFailed)});
   return gFailed ? 1 : 0;
 }

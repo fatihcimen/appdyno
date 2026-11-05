@@ -80,8 +80,7 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
       const tell = session.tell.bind(session);
       session.tell = (m) => {
         told.push(m);
-        // the Mac's pasteboard is a person's
-        if (m.op !== 'copied') tell(m);
+        tell(m);
       };
       await session.start();
       await until('a picture', () => session.status.state === 'live', 60_000);

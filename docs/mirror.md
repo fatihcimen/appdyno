@@ -338,6 +338,8 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 
 ## Looking at a window
 
+A viewer kept behind, or with no window at all, copies to a board of its own, `dev.appdyno.behind`, as this Mac's pasteboard is a person's. `packages/core/test/viewer.test.ts` reads the Mac's own count around a copy, and the viewer's self test around all it does.
+
 `packages/appdyno/scripts/mirror-shots.mjs <simulator> <folder>` writes each state of a window, light and dark, with nothing brought forward. `--behind` keeps a real window off every screen, where the window server still composites it, glass and picture included, and `{"op":"snapshot","file":...}` writes it out; no permission is asked, as a process may read its own window. Hover, animation, sheets and the menu bar cannot be seen this way: those take a hand run.
 
 ## Stated limits

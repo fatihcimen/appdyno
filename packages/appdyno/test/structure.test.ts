@@ -95,6 +95,57 @@ describe('the size of a file', () => {
   });
 });
 
+describe("a person's pasteboard", () => {
+  /** What runs a test, by a tool of the Mac's: a simulator's own `simctl pbcopy` is its own. */
+  const reachesTheMac = (text: string) =>
+    /\b(execFile|execFileSync|spawn|spawnSync|exec|execSync)\(\s*['"`]pb(copy|paste)\b|clipboard info|set the clipboard/.test(
+      text,
+    );
+  /** What the viewer writes goes by `MVPlaceBoard`, in that one file: the rest may only read. */
+  const writesIt = (line: string) =>
+    line.includes('generalPasteboard') && !/stringForType|changeCount/.test(line);
+
+  it('sees what it must', () => {
+    expect(reachesTheMac("execFileSync('pbcopy', { input })")).toBe(true);
+    expect(reachesTheMac("spawn('xcrun', ['simctl', 'pbcopy', udid])")).toBe(false);
+    expect(writesIt('[NSPasteboard.generalPasteboard clearContents];')).toBe(true);
+    expect(writesIt('[NSPasteboard.generalPasteboard stringForType:x];')).toBe(false);
+  });
+
+  it('is reached by no test or script', () => {
+    const tests = [
+      join(root, 'test-device'),
+      join(root, 'scripts'),
+      ...readdirSync(packages).flatMap((p) => [
+        join(packages, p, 'test'),
+        join(packages, p, 'scripts'),
+      ]),
+    ].flatMap((dir) => {
+      try {
+        return sourcesIn(dir, /\.(ts|mjs|sh)$/);
+      } catch {
+        return [];
+      }
+    });
+    expect(tests.length).toBeGreaterThan(100);
+    const own = join(packages, 'appdyno/test/structure.test.ts');
+    expect(
+      tests
+        .filter((f) => f !== own && reachesTheMac(readFileSync(f, 'utf8')))
+        .map((f) => relative(root, f)),
+    ).toEqual([]);
+  });
+
+  it('is written by no viewer source but the one that keeps a window behind off it', () => {
+    const viewer = sources.filter((f) => f.name.startsWith('mirror/Viewer/'));
+    expect(viewer.length).toBeGreaterThan(40);
+    const writers = viewer
+      .filter((f) => f.name !== 'mirror/Viewer/Place.m' && f.text.split('\n').some(writesIt))
+      .map((f) => f.name);
+    expect(writers).toEqual([]);
+  });
+});
+
 describe('the Xcode project', () => {
   it('builds every Swift source of the runner and the fixture', () => {
     const project = readFileSync(join(root, 'ios/Appdyno.xcodeproj/project.pbxproj'), 'utf8');

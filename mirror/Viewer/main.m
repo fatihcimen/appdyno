@@ -215,6 +215,8 @@ int main(int argc, char **argv) {
     BOOL headless = [args containsObject:@"--headless"];
     MVApp *app = [[MVApp alloc] initWithWindow:!headless];
     app.behind = [args containsObject:@"--behind"];
+    // no window, so no person asked for a copy: this Mac's pasteboard is theirs
+    if (headless) MVPlaceBehind(YES);
     if (!headless) {
       // a window needs a window server: a session with none is refused by its need, with no crash
       CFDictionaryRef session = CGSessionCopyCurrentDictionary();
