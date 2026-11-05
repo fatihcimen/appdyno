@@ -27,6 +27,7 @@
         <service android:name=".SlowService" android:process=":slow" android:exported="false" />
         <service android:name=".FixtureJob" android:permission="android.permission.BIND_JOB_SERVICE" />
         <activity android:name=".StallListActivity" />
+        <activity android:name=".HeavyListActivity" />
         <activity android:name=".DialogActivity" />
         <activity android:name=".ComposeActivity" />
         <activity android:name=".ComposeStartActivity" />

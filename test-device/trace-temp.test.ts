@@ -3,8 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { recordTrace, traceTable, xcodeEnv } from '@appdyno/driver-apple';
-import { run, sleep, stateDir } from '@appdyno/core';
+import { recordTrace, run, sleep, stateDir, traceTable, xcodeEnv } from './workspace.js';
 
 /**
  * What `xctrace` leaves, on a real recording and a real kill. APPDYNO_TRACE_DEVICE names a device of yours, and no other

@@ -28,6 +28,7 @@ private val LINKED = mapOf(
     "frozen" to FrozenActivity::class.java,
     "battery" to BatteryActivity::class.java,
     "list_stall" to StallListActivity::class.java,
+    "list_heavy" to HeavyListActivity::class.java,
     "memory" to MemoryActivity::class.java,
     "cpu" to CpuActivity::class.java,
     "leak" to LeakActivity::class.java,

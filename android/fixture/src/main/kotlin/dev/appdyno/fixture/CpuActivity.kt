@@ -23,8 +23,17 @@ class CpuActivity : Activity() {
         if (x == 42L) println(x)
     }
 
+    /** What a test put on this screen, and only while it shows: a core at work off the main thread for `files/cpu_ms` of each second. */
+    private fun knownCpuCost(ms: Long) {
+        while (!isDestroyed) {
+            knownCost(ms)
+            Thread.sleep(1_000 - ms)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        costMs("cpu_ms")?.let { Thread { knownCpuCost(it) }.start() }
         column {
             button("Steady", R.id.cpu_steady) {
                 val known = costMs("known_ms")

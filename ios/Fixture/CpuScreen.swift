@@ -1,5 +1,16 @@
 import SwiftUI
 
+/// What a test put on the app: a core at work off the main thread for the cost `cpu` of each second, in this function.
+@inline(never) func knownCpuCost(_ ms: Double) {
+    var x: UInt64 = 1
+    while true {
+        let end = Date().addingTimeInterval(ms / 1000)
+        while Date() < end { for _ in 0 ..< 100_000 { x = x &+ (x ^ 7) } }
+        if x == 42 { print(x) }
+        usleep(UInt32(1000 - ms) * 1000)
+    }
+}
+
 /// Keeps one core busy for 3 s off the main thread: a CPU reading and a profile must show it.
 struct CpuScreen: View {
     @State private var busy = false

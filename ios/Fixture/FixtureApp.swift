@@ -1,5 +1,14 @@
 import SwiftUI
 
+/// A known cost by name, from `APPDYNO_FIXTURE_<NAME>_MS`, or kept by `appdyno-fixture://cost/<name>/<ms>` (0 clears it):
+/// a phone's flow launches the app with no environment, so a cost has to outlive a stop.
+func fixtureCost(_ name: String) -> Double? {
+    let env = ProcessInfo.processInfo.environment["APPDYNO_FIXTURE_\(name.uppercased())_MS"]
+    if let ms = env.flatMap(Double.init) { return ms }
+    let kept = UserDefaults.standard.double(forKey: "cost_\(name)")
+    return kept > 0 ? kept : nil
+}
+
 /// The iOS fixture: the same screens as the Android one, where the platform has them.
 /// `appdyno-fixture://open/<screen>` opens a screen directly.
 @main
@@ -9,7 +18,8 @@ struct FixtureApp: App {
 
     /// A slow start of a known length: a launch reading must rise by it.
     init() {
-        if let ms = ProcessInfo.processInfo.environment["APPDYNO_FIXTURE_STARTUP_MS"].flatMap(UInt32.init) { usleep(ms * 1000) }
+        if let ms = fixtureCost("startup") { usleep(UInt32(ms) * 1000) }
+        if let ms = fixtureCost("cpu") { DispatchQueue.global(qos: .userInitiated).async { knownCpuCost(ms) } }
     }
 
     var body: some Scene {
@@ -21,6 +31,10 @@ struct FixtureApp: App {
             .onOpenURL { url in
                 lastLink = url.absoluteString
                 if url.host == "open", let key = url.pathComponents.last { path = [key] }
+                if url.host == "cost", url.pathComponents.count == 3, let ms = Double(url.lastPathComponent) {
+                    UserDefaults.standard.set(ms, forKey: "cost_\(url.pathComponents[1])")
+                    UserDefaults.standard.synchronize()
+                }
             }
         }
     }

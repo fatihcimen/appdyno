@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// What a test put on the light button: the main thread at work for `APPDYNO_FIXTURE_STALL_MS` in this function, or
-/// asleep for `APPDYNO_FIXTURE_SLEEP_MS`.
+/// What a test put on the light button: the main thread at work for the cost `stall` in this function, or asleep for
+/// the cost `sleep`.
 @inline(never) func knownCost() {
-    let env = ProcessInfo.processInfo.environment
-    if let ms = env["APPDYNO_FIXTURE_SLEEP_MS"].flatMap(UInt32.init) { usleep(ms * 1000) }
-    guard let ms = env["APPDYNO_FIXTURE_STALL_MS"].flatMap(Double.init) else { return }
+    if let ms = fixtureCost("sleep") { usleep(UInt32(ms) * 1000) }
+    guard let ms = fixtureCost("stall") else { return }
     let end = Date().addingTimeInterval(ms / 1000)
     var x = 0
     while Date() < end { x &+= 1 }
