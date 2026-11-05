@@ -302,6 +302,16 @@ const show = (value: string) => (WORD.test(value) ? value : JSON.stringify(value
 /** A text always in quotes where a word might read as something else. */
 const quote = (value: string) => JSON.stringify(value);
 
+/** A selector as a flow's file has it. */
+const selectorWords = (s: FlowSelector | undefined) => [
+  ...(s?.id !== undefined ? [`id=${show(s.id)}`] : []),
+  ...(s?.role !== undefined ? [`role=${show(s.role)}`] : []),
+  ...(s?.text !== undefined ? [`text=${quote(s.text)}`] : []),
+  ...(s?.index !== undefined ? [`index=${s.index}`] : []),
+];
+
+export const selectorLine = (s: FlowSelector) => selectorWords(s).join(' ');
+
 /** One step as its line. */
 export function stepLine(st: FlowStep): string {
   const spec: Spec = SPECS[st.action];
@@ -312,19 +322,13 @@ export function stepLine(st: FlowStep): string {
     return typeof v === 'string' ? [name === 'key' || name === 'direction' ? v : quote(v)] : [v];
   });
   const named = new Set((spec.words ?? []).map((w) => w.replace('?', '')));
-  const s = st.selector;
-  const selector = [
-    ...(s?.id !== undefined ? [`id=${show(s.id)}`] : []),
-    ...(s?.role !== undefined ? [`role=${show(s.role)}`] : []),
-    ...(s?.text !== undefined ? [`text=${quote(s.text)}`] : []),
-    ...(s?.index !== undefined ? [`index=${s.index}`] : []),
-  ];
   const rest = Object.entries(st.args)
     .filter(([k]) => !named.has(k))
     .map(([k, v]) => {
       if (typeof v === 'boolean') return v ? k : `${k}=false`;
       return typeof v === 'number' ? `${k}=${v}` : `${k}=${show(v)}`;
     });
+  const selector = selectorWords(st.selector);
   return [st.action, ...words, ...selector, ...rest, ...st.flags.map((f) => `!${f}`)].join(' ');
 }
 

@@ -38,6 +38,20 @@ export function bestSelector(screen: Pick<Screen, 'list' | 'elements'>, e: Scree
   };
 }
 
+const area = (e: ScreenElement) => e.rect.width * e.rect.height;
+
+/** The smallest element holding a point. */
+export const elementUnder = (list: ScreenElement[], p: { x: number; y: number }) =>
+  list
+    .filter(
+      (e) =>
+        p.x >= e.rect.x &&
+        p.x <= e.rect.x + e.rect.width &&
+        p.y >= e.rect.y &&
+        p.y <= e.rect.y + e.rect.height,
+    )
+    .sort((a, b) => area(a) - area(b))[0];
+
 /**
  * The element a point is on, when a tap at its centre would do the same: the smallest one holding it,
  * not a slider (where on it is the point) and not a large area (a pad, a canvas, a map).
@@ -47,16 +61,7 @@ export function elementAt(
   p: { x: number; y: number },
   size: { w: number; h: number },
 ): ScreenElement | undefined {
-  const area = (e: ScreenElement) => e.rect.width * e.rect.height;
-  const under = list
-    .filter(
-      (e) =>
-        p.x >= e.rect.x &&
-        p.x <= e.rect.x + e.rect.width &&
-        p.y >= e.rect.y &&
-        p.y <= e.rect.y + e.rect.height,
-    )
-    .sort((a, b) => area(a) - area(b))[0];
+  const under = elementUnder(list, p);
   if (!under || under.role === 'slider' || area(under) > POINT_AREA * size.w * size.h)
     return undefined;
   return under;
