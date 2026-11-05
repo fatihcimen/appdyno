@@ -532,6 +532,8 @@ refused and must have left the device alone.
 
 ## Mirror
 
+A window's own cost, kept off every screen on an iPhone 17 Pro simulator at rest, on a quiet Mac (load 3 to 10), over five runs of 22 s and one of 60 s: its first picture in 338 ms (269 to 437), 0.01 % of a core while nothing moves, and 106 MB once it has settled, with 121 MB at its first second.
+
 `packages/appdyno/scripts/mirror-bench.mjs <device>`, headless: the fixture's frames screen on Android, a flick along Settings on a simulator. All arrive-on-Mac figures, not glass: a window adds about a display tick. It waits for two still seconds before each touch, so that the next frame is the touch's own. Measured 2026-11-04 on an M5 Pro with 15 cores, on the same Mac as other work, with the host's load beside each. Each is one run; a number is relative to this Mac at this load.
 
 | device, picture                                         | frames/s while moving (target)               | capture to arrival p50, p95, ms (target) | touch to first changed frame p50, ms (target) | decode or copy p95, ms (target) | still screen: viewer CPU, RSS | host load |
