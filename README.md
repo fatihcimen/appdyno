@@ -159,7 +159,7 @@ With `symbols`, it names the stack of a release build. On iOS that is a `.dSYM`,
   <img src="docs/images/dashboard.png" width="49%" alt="The dashboard of a kept app: what needs attention, measures by device, and trends">
 </p>
 
-`appdyno mirror` opens a native window on a device, driven by mouse, trackpad and keyboard, while an agent may drive the same device. One viewer process per device, with no server, no daemon and no port of ours. Android and simulators; an iPhone is not yet here.
+`appdyno mirror` opens a native window on a device, driven by mouse, trackpad and keyboard, while an agent may drive the same device. One viewer process per device, with no server, no daemon and no port of ours. Android and simulators, and an iPhone as experimental.
 
 ```sh
 appdyno mirror                     # this device's window, and stay
@@ -421,8 +421,8 @@ A request needs the token, as `Authorization: Bearer <token>` on `/mcp`, or as `
   installed profile for a wildcard app id, with its identity in the unlocked login keychain, is found by itself. To choose another,
   set `APPDYNO_IOS_PROFILE=<profile.mobileprovision>`, `APPDYNO_IOS_KEYCHAIN=<keychain-db>` and
   `APPDYNO_IOS_KEYCHAIN_PASSWORD=<password>`. Run `appdyno doctor` to see what it found. The phone is
-  reached over USB, never the network. On a phone the runner cannot reach the clipboard or read what another app put there:
-  iOS would ask the user. A simulator's clipboard is read from the Mac. Text goes in as keys on iOS: a paste brings up iOS's "Allow Paste" alert.
+  reached over USB, never the network. A phone's clipboard goes by Xcode's `devicectl`, with no runner and nothing asked on the phone,
+  and a simulator's is read from the Mac. Text goes in as keys on iOS: a paste brings up iOS's "Allow Paste" alert.
 
 ## Speed
 
