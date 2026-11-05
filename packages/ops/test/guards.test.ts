@@ -96,6 +96,15 @@ describe('a failed action says whether its touch went out', () => {
     expect(namesOf(device)).not.toContain('act');
   });
 
+  it.each(['power', 'lock'] as const)(
+    'presses %s with no look first: a look would wake a dark screen, and the key would put it back',
+    async (key) => {
+      const device = new FakeDevice();
+      await callerOf(contextOf(device))('press_key', { key });
+      expect(namesOf(device)).toEqual(['act']);
+    },
+  );
+
   it('yes: a scroll that found nothing swiped', async () => {
     const e = await refusal(
       callerOf(contextOf(new FakeDevice()))('scroll_to', { selector: { text: 'Nowhere' } }),

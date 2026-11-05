@@ -28,8 +28,11 @@ const SHORTCUT_LEAVES = new Set(['h', 'tab', 'space']);
 /** The screen goes dark, or to a system sheet with no window to read: nothing to wait for. */
 const NOTHING_TO_READ = new Set(['power', 'lock', 'siri', 'mute']);
 
-/** What is pressed with no look first: the way out of such a sheet, and what opens one over itself. */
-const NEEDS_NO_LOOK = new Set(['home', 'mute']);
+/**
+ * What is pressed with no look first: the way out of such a sheet, what opens one over itself, and what acts on the
+ * screen's power, as a look at a dark screen wakes it and the key would then put it back.
+ */
+const NEEDS_NO_LOOK = new Set(['home', 'mute', 'power', 'lock']);
 
 /** How long a selector with no match waits for its element, as a screen may still be coming. */
 const NO_MATCH_WAIT_MS = 1_500;
