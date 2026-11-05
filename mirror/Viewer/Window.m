@@ -73,6 +73,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
     [root addSubview:_stage];
     _frame = [[MVFrameView alloc] initWithFrame:NSZeroRect];
     _view = [[MVView alloc] initWithFrame:NSZeroRect];
+    _view.menuTarget = self;
     _view.wantsLayer = YES;
     _view.layer.backgroundColor = NSColor.blackColor.CGColor;
     _frame.screen = _view;

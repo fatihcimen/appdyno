@@ -31,20 +31,27 @@
   [self showState];
 }
 
-- (void)showMore:(NSView *)anchor {
+- (NSMenu *)moreMenu {
   NSMenu *menu = [[NSMenu alloc] initWithTitle:MVWord(@"More Controls")];
-  NSArray<NSString *> *shown = @[@"back", @"home", @"appSwitch", @"lock"];
-  for (NSMenuItem *item in [_view deviceMenu].itemArray)
+  // what the bar has; a room has no menu bar of a device's, so all the rest must stand here
+  NSArray<NSString *> *shown = @[@"back", @"home", @"appSwitch", @"lock", @"screenshot", @"record", @"recordFlow"];
+  for (NSMenuItem *item in [[_view deviceMenu].itemArray arrayByAddingObjectsFromArray:MVControlMenu(@"File", nil).itemArray])
     if (![shown containsObject:item.representedObject]) [menu addItem:[item copy]];
   [menu addItem:NSMenuItem.separatorItem];
   if (_hosted) {
     NSMenuItem *alone = [menu addItemWithTitle:MVWord(@"Open in New Window") action:@selector(control:) keyEquivalent:@""];
-    alone.target = self;
     alone.representedObject = @"newWindow";
   }
   for (NSMenuItem *item in MVControlMenu(@"View", nil).itemArray)
     if (![item.representedObject isEqual:@"inspector"]) [menu addItem:[item copy]];
-  [menu popUpMenuPositioningItem:nil atLocation:NSMakePoint(0, anchor.bounds.size.height + 6) inView:anchor];
+  // by target: a window in a room is no delegate of it, so nothing up the responders would answer
+  for (NSMenuItem *item in menu.itemArray)
+    if (item.action == @selector(control:)) item.target = self;
+  return menu;
+}
+
+- (void)showMore:(NSView *)anchor {
+  [[self moreMenu] popUpMenuPositioningItem:nil atLocation:NSMakePoint(0, anchor.bounds.size.height + 6) inView:anchor];
 }
 
 - (void)control:(id)sender {

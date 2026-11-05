@@ -66,6 +66,7 @@
 
 - (void)poke:(NSDictionary *)m {
   if (m[@"clickOn"]) return [_window pokeClick:m[@"clickOn"]];
+  if (m[@"menu"]) return [_window pokeMenu:m[@"menu"]];
   if (m[@"key"]) return [_window pokeKey:m[@"key"]];
   if (m[@"text"]) return [_window pokeText:m[@"text"]];
   if (m[@"button"]) return [_window pokeButton:m[@"button"]];

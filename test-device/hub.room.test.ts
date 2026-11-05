@@ -141,6 +141,61 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
     LIVE_MS + 90_000,
   );
 
+  /** The real item of More, fired by its menu: no menu opens, as one would on a person's screen and hold their mouse. */
+  const fired = async (stage: string, menu: string) => {
+    told.length = 0;
+    link.send({ op: 'poke', stage, menu });
+    await until(`${menu} fired`, () => told.some((m) => m.op === 'fired'), 10_000);
+    expect(told.find((m) => m.op === 'fired')).toMatchObject({ found: true, enabled: true });
+  };
+
+  it(
+    'turns the device by the item of More, and back',
+    async () => {
+      const shown = serials.findLast((s) => live(s) || serials.length === 1)!;
+      await until('the device in the room', () => live(shown), LIVE_MS);
+      const size = () => told.findLast((m) => m.op === 'stats' && m.stage === shown && m.w);
+      await until('a picture', () => !!size(), 20_000);
+      await fired(shown, 'rotateLeft');
+      await until(
+        'the press',
+        () => told.some((m) => m.op === 'button' || m.op === 'control'),
+        5_000,
+      );
+      // the app in front may not turn, and the window then says so: what counts is that the device was asked
+      await quiet(4_000);
+      measured(`rotate left on ${shown}: picture ${JSON.stringify(size())}`);
+      await picture('turned');
+      await fired(shown, 'rotateRight');
+      await quiet(4_000);
+    },
+    LIVE_MS + 30_000,
+  );
+
+  it(
+    'gives a device a window of its own by the item of More',
+    async () => {
+      const shown = serials.findLast((s) => live(s) || serials.length === 1)!;
+      await until('the device in the room', () => live(shown), LIVE_MS);
+      await quiet(2_000);
+      await fired(shown, 'newWindow');
+      await until(
+        'a window of its own',
+        () => {
+          const own = liveMirror(shown);
+          return own?.pid !== process.pid && own?.status.state === 'live';
+        },
+        LIVE_MS,
+      );
+      const window = liveMirror(shown)!;
+      await quiet(5_000);
+      link.send({ op: 'poke', id: shown, press: 'window' });
+      await until('it to close', () => !isAlive(window), 60_000);
+      await quiet(3_000);
+    },
+    LIVE_MS + 90_000,
+  );
+
   it(
     'brings the device back when the viewer under it is killed',
     async () => {

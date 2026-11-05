@@ -12,6 +12,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic) BOOL armed;
 /// The controls this kind of device has.
 @property(nonatomic, copy) NSArray<NSString *> *controls;
+/// What a device menu's items go to.
+@property(nonatomic, weak, nullable) id menuTarget;
 /// The pointer's place is asked about, as the Flow pane shows.
 @property(nonatomic) BOOL inspects;
 /// What a click does instead of touching the device: `copy` or `assert`; nil: it touches.

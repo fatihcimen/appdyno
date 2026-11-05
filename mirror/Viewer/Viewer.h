@@ -201,6 +201,8 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 - (void)useToolbar;
 /// What a control of the window does, by its name.
 - (void)perform:(NSString *)name;
+/// What More holds.
+- (NSMenu *)moreMenu;
 @end
 
 /// A window driven and looked at from outside.
@@ -208,6 +210,8 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 /// A click at this fraction of the picture, by the window's own event queue: needs no permission to post.
 - (void)pokeX:(double)x y:(double)y right:(BOOL)right;
 - (void)pokeClick:(NSString *)name;
+/// An item of More, fired by the menu itself.
+- (void)pokeMenu:(NSString *)name;
 - (void)pokeText:(NSString *)text;
 - (void)pokeX:(double)x y:(double)y toX:(double)x2 toY:(double)y2 seconds:(double)seconds;
 - (void)pokeKey:(NSString *)characters;

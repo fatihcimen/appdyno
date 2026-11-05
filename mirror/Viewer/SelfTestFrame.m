@@ -158,6 +158,25 @@ static void checkClicks(void) {
   }
 }
 
+/// More's items, fired by the menu itself, on a window of its own and on one in a room: no menu opens here, as one would on
+/// a person's screen. What the room's window answers to is the hub, and no item may rest on that.
+static void checkMenus(void) {
+  MVHub *hub = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
+  NSArray *controls = @[@"back", @"home", @"appSwitch", @"lock", @"rotateLeft", @"rotateRight", @"copy"];
+  NSArray *names = @[@"rotateLeft", @"rotateRight", @"copy", @"zoomIn"];
+  for (MVAskedWindow *window in @[[MVAskedWindow new], [[MVAskedWindow alloc] initInRoom:hub.room]]) {
+    window.asked = [NSMutableArray array];
+    window.behind = YES;
+    [window configure:@{@"title": @"menus", @"look": @{@"controls": controls}}];
+    for (NSString *name in names) [window pokeMenu:name];
+    MVCheck(@"menus: an item of More reaches its window, alone and in a room", [window.asked isEqual:names], [window.asked componentsJoinedByString:@" "]);
+    [window.asked removeAllObjects];
+    NSMenu *frame = [(MVView *)window.screenView deviceMenu];
+    [frame performActionForItemAtIndex:[frame indexOfItemWithRepresentedObject:@"rotateLeft"]];
+    MVCheck(@"menus: and so does an item of the frame's own menu", [window.asked isEqual:@[@"rotateLeft"]], [window.asked componentsJoinedByString:@" "]);
+  }
+}
+
 static void checkHubChoice(void) {
   MVHub *hub = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
   NSDictionary *phone = @{@"id": @"p", @"serial": @"p", @"kind": @"phone", @"state": @"running", @"name": @"A phone"};
@@ -256,6 +275,7 @@ void MVCheckFrame(void) {
   checkMeasures();
   checkPair();
   checkClicks();
+  checkMenus();
   checkHubChoice();
   checkMood();
   checkStreamMood();

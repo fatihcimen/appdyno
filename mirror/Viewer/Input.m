@@ -88,7 +88,9 @@ static CALayer *dotLayer(CALayer *parent) {
 }
 
 - (NSMenu *)deviceMenu {
-  return MVControlMenu(@"Device", self.controls);
+  NSMenu *menu = MVControlMenu(@"Device", self.controls);
+  for (NSMenuItem *item in menu.itemArray) item.target = self.menuTarget;
+  return menu;
 }
 
 /// A person's: a menu of a window is reached only by a click on it, or a shortcut in the key window.

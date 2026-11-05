@@ -48,6 +48,16 @@ NSDictionary *MVClickControl(NSWindow *window, NSButton *_Nullable button, NSStr
   MVEmitFrom(self.screenView, MVClickControl(self.nsWindow, button, name));
 }
 
+/// The menu's own wiring and no click: a menu kept off every screen would open on a person's, and its loop would hold their mouse.
+- (void)pokeMenu:(NSString *)name {
+  NSMenu *menu = [self moreMenu];
+  NSInteger at = [menu indexOfItemWithRepresentedObject:name];
+  [menu update];
+  BOOL enabled = at >= 0 && [menu itemAtIndex:at].enabled;
+  if (enabled) [menu performActionForItemAtIndex:at];
+  MVEmitFrom(self.screenView, @{@"op": @"fired", @"name": name, @"found": @(at >= 0), @"enabled": @(enabled)});
+}
+
 - (void)pokeX:(double)x y:(double)y right:(BOOL)right {
   [self postMouse:right ? NSEventTypeRightMouseDown : NSEventTypeLeftMouseDown x:x y:y];
   // as long as a mouse's: a touch that lifts in the instant it lands is no tap to a device
