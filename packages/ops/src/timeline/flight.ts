@@ -8,6 +8,7 @@ import {
   safeName,
   stateDir,
   type ClockReading,
+  type FrameMarks,
   type LiveField,
   type LiveSample,
 } from '@appdyno/core';
@@ -40,6 +41,11 @@ const POLL_MS = 500;
 /** Each is a few MB, and a stall that repeats is one to look at. */
 const MAX_SAVES = 20;
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** A stretch no one kept leaves nothing of its trace on this Mac. */
+const dropTrace = async (marks: FrameMarks | { why: string }) => {
+  if ('tracePath' in marks && marks.tracePath) await rm(marks.tracePath, { force: true });
+};
 
 const flightFolder = (serial: string) => join(stateDir(), 'flight', safeName(serial));
 
@@ -123,8 +129,7 @@ export async function startFlight(
   const renewFrames = async (a: Armed) => {
     const old = a.frames;
     a.frames = await recordFrames(device, app, FRAMES_SECONDS, seconds);
-    const marks = await old.finish();
-    if ('tracePath' in marks && marks.tracePath) await rm(marks.tracePath, { force: true });
+    await dropTrace(await old.finish());
   };
 
   const arm = async (): Promise<Armed> => {
@@ -181,6 +186,7 @@ export async function startFlight(
     const end = Date.now() + a.first.offsetMs;
     const marks = await a.frames.finish();
     if (!why) {
+      await dropTrace(marks);
       await a.ring?.drop();
       filming.remove(serial);
       return undefined;

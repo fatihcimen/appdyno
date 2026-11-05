@@ -141,6 +141,8 @@ class FlightDevice extends FakeDevice {
     },
   };
   frameRuns = 0;
+  /** What its trace leaves on this Mac. */
+  tracePath: string | undefined;
   override get measure() {
     return {
       ...super.measure,
@@ -148,7 +150,10 @@ class FlightDevice extends FakeDevice {
         this.frameRuns++;
         await during();
         return {
-          value: { frames: [{ at: Date.now(), ms: 900, late: true }] },
+          value: {
+            frames: [{ at: Date.now(), ms: 900, late: true }],
+            ...(this.tracePath && { tracePath: this.tracePath }),
+          },
           raw: '',
           at: new Date().toISOString(),
         };
@@ -318,10 +323,13 @@ describe('the flight recorder', () => {
 
   it('leaves nothing on this Mac, and no recording running, when it is turned off', async () => {
     const d = new FlightDevice();
+    d.tracePath = join(state, 'ring.pftrace');
+    writeFileSync(d.tracePath, 'a trace');
     const { call } = connect(d, 20);
     await call('report', { action: 'flight' });
     await vi.advanceTimersByTimeAsync(25_000);
     await call('report', { action: 'stop' });
+    expect(existsSync(d.tracePath)).toBe(false);
     expect(d.rec.log.running).toBe(0);
     expect(filming.read(d.serial)).toBeUndefined();
     expect(existsSync(join(state, 'flight'))).toBe(true);
