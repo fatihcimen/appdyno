@@ -203,6 +203,19 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
       await until('an upright picture', () => session.status.picture!.h === upright.h, 30_000);
     }, 90_000);
 
+    it('says so when the app in front does not turn', async () => {
+      await sh('input keyevent KEYCODE_HOME');
+      await until('the launcher', async () => !(await focus()).includes(APP));
+      const upright = session.status.picture!;
+      control('rotateLeft');
+      await until(
+        'a word from the window',
+        () => told.some((m) => m.text === 'The app in front does not turn'),
+        15_000,
+      );
+      expect(session.status.picture).toEqual(upright);
+    }, 30_000);
+
     it('saves a screenshot of the phone, whole', async () => {
       const home = mkdtempSync(join(tmpdir(), 'appdyno-home-'));
       mkdirSync(join(home, 'Desktop'));

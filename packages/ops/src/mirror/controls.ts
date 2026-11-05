@@ -20,6 +20,9 @@ import type { WindowMeasures } from './measures.js';
 
 const SWIPES: Record<string, SystemSwipe> = SYSTEM_SWIPES;
 const RECORD_MAX_S = 3_600;
+/** A turn shows in the picture's shape by then, or the app in front refused it. */
+const TURN_MS = 2_000;
+const TURN_LOOK_MS = 100;
 /** How often a device's own source is told what is in front: one call to its agent while that stays the same. */
 const APP_LOOK_MS = 5_000;
 
@@ -83,12 +86,25 @@ export function windowControls(
 
   const swipe = (way: SystemSwipe) => swipeThrough(way, (e) => session().send(e));
 
+  const sideways = () => {
+    const { picture } = session().status;
+    return picture && picture.w > picture.h;
+  };
+
   const rotate = async (by: 1 | 3) => {
     // a simulator's orientation has no way in but its runner, which a first turn may have to build
     note(opened ? 'Rotating' : 'Rotating: the first turn starts the device agent');
     await ready();
+    const [was, shape] = [rotation, sideways()];
     rotation = ((rotation + by) % 4) as 0 | 1 | 2 | 3;
     await device.setOrientation(rotation);
+    const end = Date.now() + TURN_MS;
+    while (sideways() === shape && Date.now() < end) await pause(TURN_LOOK_MS);
+    if (sideways() !== shape) return;
+    // an app that holds the screen as it is, such as a launcher: a turn left asked for would wait for the next app
+    rotation = was;
+    await device.setOrientation(was);
+    note('The app in front does not turn');
   };
 
   const presses: Record<string, () => Promise<void>> = {

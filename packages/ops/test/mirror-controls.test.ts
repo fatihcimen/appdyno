@@ -24,9 +24,11 @@ function fixture(platform: 'ios' | 'android', device: Partial<Device> = {}, stre
     start: vi.fn(),
     stop: vi.fn(async () => ({ frames: 12 })),
   };
+  const picture = { w: 1080, h: 2400 };
   const session = {
     send: (e: InputEvent) => sent.push(e),
     tell: (m: Record<string, unknown>) => told.push(m),
+    status: { state: 'live', picture },
     recording,
     streamsItsOwn: streams,
     askAgain: vi.fn(),
@@ -36,7 +38,9 @@ function fixture(platform: 'ios' | 'android', device: Partial<Device> = {}, stre
     mirror: {},
     open: vi.fn(async () => undefined),
     foreground: vi.fn(async () => 'dev.app'),
-    setOrientation: vi.fn(async () => undefined),
+    setOrientation: vi.fn(async () => {
+      [picture.w, picture.h] = [picture.h, picture.w];
+    }),
     screenshot: vi.fn(async () => ({ meta: {}, data: Buffer.from('png') })),
     launch: vi.fn(async () => ''),
     terminate: vi.fn(async () => undefined),
@@ -111,6 +115,23 @@ describe("a window's controls", () => {
     controls.press('rotateLeft');
     await settle();
     expect(vi.mocked(device.setOrientation).mock.calls).toEqual([[3], [0]]);
+  });
+
+  it('says so when the app in front does not turn, and asks for no turn it would keep', async () => {
+    const { controls, told, device } = fixture('android', {
+      setOrientation: vi.fn(async () => undefined),
+    });
+    controls.press('rotateRight');
+    await vi.waitFor(
+      () => expect(told).toContainEqual({ op: 'note', text: 'The app in front does not turn' }),
+      WAIT,
+    );
+    expect(vi.mocked(device.setOrientation).mock.calls).toEqual([[3], [0]]);
+    controls.press('rotateLeft');
+    await vi.waitFor(
+      () => expect(vi.mocked(device.setOrientation).mock.calls[2]).toEqual([1]),
+      WAIT,
+    );
   });
 
   it('says what went wrong beneath the device, and goes on', async () => {
