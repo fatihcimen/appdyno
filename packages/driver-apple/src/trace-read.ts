@@ -1,0 +1,49 @@
+import { run } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
+import { xcodeEnv } from './simctl.js';
+
+/** Reads of a trace before what the tool says of it is the answer. */
+const READS = 3;
+
+/**
+ * `xctrace export`, read again if the tool dies by itself: Xcode 27.1's aborts now and then as it loads a trace, in
+ * a sort on a queue of its own that meets a freed object, and the next read of that file works.
+ */
+export async function exporting(args: string[], limits: { maxBuffer: number; timeout: number }) {
+  for (let read = 1; ; read++) {
+    try {
+      return await run('xcrun', ['xctrace', 'export', ...args], { env: xcodeEnv(), ...limits });
+    } catch (e) {
+      // `killed` is a read that ran out of time: another would too
+      const { signal, killed } = e as { signal?: string; killed?: boolean };
+      if (!signal || killed || read === READS) throw e;
+    }
+  }
+}
+
+const exported = async (tracePath: string, xpath: string) =>
+  (
+    await exporting(['--input', tracePath, '--xpath', xpath], {
+      maxBuffer: 256 * 1024 * 1024,
+      timeout: 300_000,
+    }).catch((e: { stderr?: string; message: string }) => {
+      // says nothing of what the device can do: a recording cut short on a loaded Mac reads so
+      const said = (e.stderr ?? e.message).trim().split('\n').slice(0, 2).join(' ');
+      throw new DeviceError(
+        'TIMEOUT',
+        `the trace tool cannot read its own trace: ${said}`,
+        'nothing is wrong with the device: measure again when this Mac is quieter',
+      );
+    })
+  ).stdout;
+
+/** One table of a trace, as XML. */
+export const traceTable = (tracePath: string, schema: string) =>
+  exported(tracePath, `/trace-toc/run[@number="1"]/data/table[@schema="${schema}"]`);
+
+/** What an instrument keeps under its track and not as a table (Leaks, Allocations), as XML. */
+export const traceDetail = (tracePath: string, track: string, detail: string) =>
+  exported(
+    tracePath,
+    `/trace-toc/run[@number="1"]/tracks/track[@name="${track}"]/details/detail[@name="${detail}"]`,
+  );
