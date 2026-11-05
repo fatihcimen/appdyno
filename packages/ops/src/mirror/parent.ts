@@ -92,7 +92,7 @@ class Parent {
       device,
       hardware,
       () => session,
-      windowMeasures(this.ctx, device, this.o.behind),
+      windowMeasures(this.ctx, device),
     );
     const session: MirrorSession = new MirrorSession({
       mirror: device.mirror,

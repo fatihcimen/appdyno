@@ -212,6 +212,7 @@ arrive-on-Mac figures, not glass. A miss above load 60 says "run it later". See 
 - An iPhone is experimental: it rests on undocumented services, which may change.
 - An iPhone's lock screen: a swipe sent to it does not open it. Home does, from the window's controls.
 - An iPhone on the heaviest picture, 167 Mbit/s, under load: 0.25 % of its packets lost over 30 minutes that began at load 361, each loss freezing the picture until a key. At load 8 over 15 minutes it lost 0.01 %, once, as the picture went heavy, for a freeze of 1.1 s.
+- **Dashboard** in the Performance pane writes its page and opens it with `open`: that the page then shows in a browser needs a hand run, as a test must not bring anything forward.
 - On a window a person has not clicked, keys go nowhere: typing into a window needs a hand run, as a test's window never holds the keyboard.
 - A simulator's fold: no control that folds one was found, so a new surface at a fold is untested.
 - The window does not yet show a secure Android window's content, as no shell can have it from Android 12: it is black, with the status bar still there. Not run on Android 12 and 13, or on 10, for which no image is here.

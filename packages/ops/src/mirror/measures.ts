@@ -47,7 +47,7 @@ const judged = (app: string, runs: string, data: { virtualDevice: boolean; noise
  * Over a device already open in a window: a second driver object would be a second agent on it. A person's measure
  * holds the device as an agent's session does, for as long as it runs.
  */
-export function windowMeasures(ctx: ServerContext, device: Device, behind = false): WindowMeasures {
+export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasures {
   const { serial } = device;
   const own = new ServerContext(
     ctx.policy,
@@ -98,7 +98,7 @@ export function windowMeasures(ctx: ServerContext, device: Device, behind = fals
     },
     dashboard: async () => {
       const file = await writeDashboard(ctx.measurementsDir, ctx.perfDir);
-      execFile('open', behind ? ['-g', file] : [file]);
+      execFile('open', [file]);
     },
   };
 }
