@@ -159,7 +159,7 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   if ([op isEqual:@"copied"]) return MVCopyImage(m[@"file"]);
   if ([op isEqual:@"poke"]) {
     if (_hub) return [_hub poke:m];
-    if (m[@"click"]) return [_window pokeClick:m[@"click"]];
+    if (m[@"clickOn"]) return [_window pokeClick:m[@"clickOn"]];
     if (m[@"key"]) return [_window pokeKey:m[@"key"]];
     if (m[@"text"]) return [_window pokeText:m[@"text"]];
     if (m[@"button"]) return [_window pokeButton:m[@"button"]];
