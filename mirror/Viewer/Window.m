@@ -24,7 +24,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   MVFrameView *_frame;
   MVView *_view;
   MVInspector *_inspector;
-  NSView *_panel, *_bar, *_pill;
+  NSView *_panel, *_bar, *_pill, *_pillFill;
   MVHud *_hud;
   BOOL _hudding, _reading, _recording;
   NSView *_root;
@@ -69,6 +69,9 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
     _line = [[MVStatusLine alloc] initWithFrame:NSZeroRect];
     _line.translatesAutoresizingMaskIntoConstraints = NO;
     NSView *padded = [NSView new];
+    padded.wantsLayer = YES;
+    padded.layer.cornerRadius = 17;
+    _pillFill = padded;
     [padded addSubview:_line];
     NSView *pill = MVGlass(padded, 17, nil);
     [root addSubview:pill];
@@ -80,7 +83,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
       [padded.heightAnchor constraintEqualToConstant:34],
       [pill.leadingAnchor constraintEqualToAnchor:root.leadingAnchor constant:84],
       [pill.topAnchor constraintEqualToAnchor:root.topAnchor constant:12],
-      [pill.widthAnchor constraintLessThanOrEqualToConstant:230],
+      [pill.widthAnchor constraintLessThanOrEqualToConstant:260],
     ]];
     _inspector = [[MVInspector alloc] initWithFrame:NSZeroRect target:self];
     __weak MVWindow *weak = self;
@@ -264,14 +267,17 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   _window.title = live ? _name : [NSString stringWithFormat:@"%@: %@", _name, message[@"title"] ?: state];
 }
 
-/// Its one colour says what is happening to the device, and the line says it in words.
+/// Its one colour says what is happening to the device, and the line says it in words. A fill, and not the glass's tint,
+/// which glass gives up in a window that is not in front.
 - (void)tintPill {
-  MVTintGlass(_pill, _recording ? [NSColor.systemRedColor colorWithAlphaComponent:0.35] : _line.tool ? [NSColor.controlAccentColor colorWithAlphaComponent:0.35] : nil);
+  NSColor *accent = NSColor.controlAccentColor;
+  NSColor *tint = _recording ? NSColor.systemRedColor : _line.tool ? accent : nil;
+  _pillFill.layer.backgroundColor = [tint colorWithAlphaComponent:0.35].CGColor;
+  [_frame setEdge:_line.tool ? accent : nil];
 }
 
 - (void)setDriving:(BOOL)driving tool:(NSString *)tool {
   _line.tool = driving ? tool : nil;
-  [_frame setDriving:driving];
   [self tintPill];
 }
 

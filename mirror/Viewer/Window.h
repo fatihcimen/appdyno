@@ -39,7 +39,8 @@ NS_ASSUME_NONNULL_BEGIN
 /// What the whole of it takes at this screen size.
 - (CGSize)bodyFor:(CGSize)screen turns:(int)turns;
 - (void)layOutScreen:(CGSize)screen in:(NSRect)place turns:(int)turns;
-- (void)setDriving:(BOOL)driving;
+/// A colour around the device; none takes it away.
+- (void)setEdge:(nullable NSColor *)color;
 - (void)press:(nullable NSString *)name;
 @end
 
@@ -57,8 +58,6 @@ NS_ASSUME_NONNULL_BEGIN
 NSView *MVGlass(NSView *content, double radius, NSColor *_Nullable tint);
 /// A pane comes or goes: a short fade, or at once for a person who asked for less motion.
 void MVShowPane(NSView *pane, BOOL shown);
-/// A pane takes a colour that means something; nil gives it back.
-void MVTintGlass(NSView *pane, NSColor *_Nullable tint);
 /// Panes that merge as they near each other, and share one pass.
 NSView *MVGlassGroup(NSView *content);
 /// A row of glass groups of buttons, each named as a control.

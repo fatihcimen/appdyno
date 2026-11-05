@@ -205,13 +205,12 @@ static void fillMetal(CGContextRef c, CGRect rect, uint32_t color, BOOL across) 
   [self addSubview:view positioned:NSWindowBelow relativeTo:self.screen];
 }
 
-- (void)setDriving:(BOOL)driving {
+- (void)setEdge:(NSColor *)color {
   [CATransaction begin];
   [CATransaction setDisableActions:YES];
-  CGColorRef accent = NSColor.controlAccentColor.CGColor;
-  _ring.strokeColor = accent;
-  _ring.shadowColor = accent;
-  _ring.hidden = !driving;
+  _ring.strokeColor = color.CGColor;
+  _ring.shadowColor = color.CGColor;
+  _ring.hidden = !color;
   [CATransaction commit];
 }
 

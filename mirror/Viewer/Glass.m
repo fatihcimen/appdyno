@@ -58,11 +58,6 @@ void MVShowPane(NSView *pane, BOOL shown) {
       }];
 }
 
-void MVTintGlass(NSView *pane, NSColor *_Nullable tint) {
-  // the stand-in has no tint: a pane says the same in words, as a colour is never alone
-  if ([pane respondsToSelector:NSSelectorFromString(@"setTintColor:")]) [pane setValue:tint forKey:@"tintColor"];
-}
-
 NSView *MVGlassGroup(NSView *content) {
   Class group = NSClassFromString(@"NSGlassEffectContainerView");
   if (!group) return content;

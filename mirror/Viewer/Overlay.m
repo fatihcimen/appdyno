@@ -204,14 +204,13 @@ static NSString *symbolOf(NSString *state) {
   NSString *state = _state ?: @"Connecting";
   NSColor *dot = [state isEqual:@"Live"] ? NSColor.systemGreenColor : NSColor.systemOrangeColor;
   NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithString:@"\u25CF  " attributes:@{NSFontAttributeName: [NSFont systemFontOfSize:8], NSForegroundColorAttributeName: dot, NSBaselineOffsetAttributeName: @1}];
+  NSMutableArray<NSString *> *parts = [NSMutableArray arrayWithObjects:_name ?: @"", state, nil];
+  if (_tool) [parts addObject:_tool.length ? [@"Agent driving: " stringByAppendingString:_tool] : @"Agent driving"];
   NSDictionary *plain = @{NSFontAttributeName: self.font, NSForegroundColorAttributeName: NSColor.labelColor};
-  [text appendAttributedString:[[NSAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@  \u00B7  %@", _name ?: @"", state] attributes:plain]];
-  if (_tool) {
-    NSString *agent = _tool.length ? [NSString stringWithFormat:@"  \u00B7  Agent driving: %@", _tool] : @"  \u00B7  Agent driving";
-    [text appendAttributedString:[[NSAttributedString alloc] initWithString:agent attributes:@{NSFontAttributeName: self.font, NSForegroundColorAttributeName: NSColor.controlAccentColor}]];
-  }
+  [text appendAttributedString:[[NSAttributedString alloc] initWithString:[parts componentsJoinedByString:@"  \u00B7  "] attributes:plain]];
   NSMutableParagraphStyle *middle = [NSMutableParagraphStyle new];
   middle.alignment = NSTextAlignmentCenter;
+  middle.lineBreakMode = NSLineBreakByTruncatingMiddle;
   [text addAttribute:NSParagraphStyleAttributeName value:middle range:NSMakeRange(0, text.length)];
   self.attributedStringValue = text;
 }

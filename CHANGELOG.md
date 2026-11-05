@@ -11,6 +11,7 @@
 - `perf_trace` on Android: `stalls.worst_ms` sees a main thread held while the render thread draws, which left no long frame: a 1500 ms hold read 38 ms. The number comes from Choreographer's `Skipped frames` line in the app's log, and the answer has `heldMs` and says so. A Samsung with One UI writes no such line, so there a hold still shows nowhere.
 - An agent's `ping` says the device's time, and is answered past the queue.
 - A timed log query: `logs` of a platform can say each line's place on the device's clock, and a process's lines can be read after it has gone.
+- A window's colour holds when it is not in front: it was the glass's tint, which glass gives up. Its words stay on one line.
 - A measure on an iPhone no longer ends in a crash of Xcode's trace tool: the tool dies now and then as it loads a trace, and the read is made again.
 - A person's touch reaches the app on a dimmed screen: on a Xiaomi the touch that brightened it was lost, with a tap reported.
 - `--quality auto` on a phone takes the largest size that keeps up with a person, by what its encoder takes on motion, and starts the next stream there. `high` and `standard` keep the display's size.
