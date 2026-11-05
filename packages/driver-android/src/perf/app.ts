@@ -214,14 +214,18 @@ export async function size(d: PerfDevice, pkg: string): Promise<Measured<SizeRea
 /** Not near its head: the status is on the tenth line on phones of two makers. */
 export const THERMAL_READ = 'dumpsys thermalservice 2>/dev/null | grep -m1 "Thermal Status"';
 
-/** The device's own state: load, CPU pressure, memory, thermal status, battery temperature. */
+/** A second alone swung from 22 % to 99 % on a Xiaomi at work. */
+const BUSY_WINDOW_S = 2;
+
+/** The device's own state: load, CPU pressure, memory, thermal status, battery temperature, how busy its CPU is. */
 export async function vitals(d: PerfDevice): Promise<Measured<DeviceVitals>> {
   const raw = await sh(
     d,
     'echo ==load==; cat /proc/loadavg; echo ==parked==; ps -A -o STAT,PID,PPID,WCHAN:24,NAME 2>/dev/null | grep "^D"; ' +
       'echo ==pressure==; cat /proc/pressure/cpu 2>/dev/null; ' +
       `echo ==mem==; head -3 /proc/meminfo; echo ==thermal==; ${THERMAL_READ}; ` +
-      'echo ==battery==; dumpsys battery 2>/dev/null',
+      'echo ==battery==; dumpsys battery 2>/dev/null; ' +
+      `echo ==stat==; head -1 /proc/stat; sleep ${BUSY_WINDOW_S}; head -1 /proc/stat`,
   );
   return { value: parseVitals(raw), raw, at: at() };
 }

@@ -59,6 +59,8 @@ export type DeviceVitals = {
   parkedKernelThreads?: number;
   /** `/proc/pressure/cpu` some avg10. */
   cpuPressure?: number;
+  /** The share of all cores at work over two seconds of `/proc/stat`. */
+  cpuBusyPercent?: number;
   memAvailableKb?: number;
   memTotalKb?: number;
   /** `dumpsys thermalservice` Thermal Status (0 none … 6 shutdown). */

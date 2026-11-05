@@ -87,6 +87,17 @@ export function parseProcStatTicks(text: string): number {
   return ticks;
 }
 
+/** The share of all cores at work between two `cpu` lines of /proc/stat: idle and waiting on storage are no work. */
+export function busyPercent(before: string, after: string): number | undefined {
+  const fields = (l: string) => l.trim().split(/\s+/).slice(1).map(Number);
+  const moved = fields(after).map((n, i) => n - (fields(before)[i] ?? NaN));
+  const total = moved.reduce((a, b) => a + b, 0);
+  const idle = moved[3]! + moved[4]!;
+  return total > 0 && Number.isFinite(idle)
+    ? Math.round((100 * (total - idle)) / total)
+    : undefined;
+}
+
 /** One shell read of the device's own state (sections separated by marker lines). */
 export function parseVitals(text: string): DeviceVitals {
   const section = (name: string) =>
@@ -100,6 +111,11 @@ export function parseVitals(text: string): DeviceVitals {
     out.parkedKernelThreads = [...section('parked').matchAll(/^D\S*\s+\d+\s+2\s/gm)].length;
   const pressure = num(/some avg10=([\d.]+)/, section('pressure'));
   if (pressure !== undefined) out.cpuPressure = pressure;
+  const [before, after] = section('stat')
+    .split('\n')
+    .filter((l) => l.startsWith('cpu '));
+  const busy = before && after ? busyPercent(before, after) : undefined;
+  if (busy !== undefined) out.cpuBusyPercent = busy;
   const mem = section('mem');
   const avail = num(/^MemAvailable:\s*(\d+)/m, mem);
   const total = num(/^MemTotal:\s*(\d+)/m, mem);

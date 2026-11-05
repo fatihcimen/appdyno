@@ -80,4 +80,21 @@ describe('the device load a run is judged by', () => {
     expect(noise(14.31)).toEqual(['high-device-load']);
     expect(noise(3)).toEqual([]);
   });
+
+  it('goes by the CPU’s share where it has one: a Xiaomi at rest read 23.35 at 6 %', () => {
+    const atShare = (deviceBusy: number) =>
+      noiseOf({
+        device,
+        build: 'release',
+        load: {
+          host: [1],
+          hostCpus: 15,
+          device: [23.35, 22.74, 18.93],
+          deviceParked: 14,
+          deviceBusy,
+        },
+      });
+    expect(atShare(6)).toEqual([]);
+    expect(atShare(99)).toEqual(['high-device-load']);
+  });
 });

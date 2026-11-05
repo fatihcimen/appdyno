@@ -128,6 +128,23 @@ describe('android perf parsers on recorded outputs', () => {
     expect(v.parkedKernelThreads).toBe(14);
   });
 
+  it('reads how busy the CPU was between two lines of /proc/stat, from a Xiaomi at rest and at work', () => {
+    const atRest = parseVitals(
+      '==load==\n23.35 22.74 18.93 1/7340 4033\n==stat==\n' +
+        'cpu  6908478 1597606 6477298 379887089 48021 1870020 410860 0 0 0\n' +
+        'cpu  6908501 1597606 6477357 379888636 48022 1870033 410863 0 0 0\n',
+    );
+    expect(atRest.cpuBusyPercent).toBe(6);
+    const atWork = parseVitals(
+      '==stat==\n' +
+        'cpu  6891923 1594216 6467317 379857143 48000 1868663 410550 0 0 0\n' +
+        'cpu  6892987 1594392 6467750 379857162 48000 1868709 410559 0 0 0\n',
+    );
+    expect(atWork.cpuBusyPercent).toBe(99);
+    expect(parseVitals('==stat==\n').cpuBusyPercent).toBeUndefined();
+    expect(parseVitals('==stat==\ncpu  1 2 3\n').cpuBusyPercent).toBeUndefined();
+  });
+
   it('takes a load of three zeros for one the kernel hides, and keeps its pressure', () => {
     // a Samsung SM-A525F, tasks running; a Xiaomi hides the pressure instead
     const v = parseVitals(

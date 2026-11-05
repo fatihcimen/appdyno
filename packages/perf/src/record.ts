@@ -46,6 +46,8 @@ export type PerfRecord = {
     devicePressure?: number;
     /** What of the device's load is kernel threads asleep, using no CPU. */
     deviceParked?: number;
+    /** The share of all its cores at work as the run ended. */
+    deviceBusy?: number;
     /** A mirror's encoder ran on the device beside what was measured. */
     mirrored?: boolean;
   };
@@ -188,7 +190,9 @@ export const deviceClass = (d: DeviceInfo) =>
  * 16 on 15 cores, and an iPhone's launch swung between 550 ms and 3 s (docs/perf.md).
  */
 const HOST_LOAD_PER_CORE = 0.8;
-/** Above this a device is busy with more than the app. */
+/** Above this share of all its cores a device is busy with more than the app. */
+const DEVICE_BUSY = 80;
+/** The same, by load, for a device whose CPU share cannot be read. */
 const DEVICE_LOAD = 8;
 const CPU_PRESSURE = 40;
 /** Android's thermal status "moderate" and up throttles. */
@@ -204,11 +208,12 @@ export function noiseOf(
     (r.load.host[0] ?? 0) > r.load.hostCpus * HOST_LOAD_PER_CORE
   )
     out.push('high-host-load');
-  // shortcut: the parked count is of this moment and the load a minute's average, so a burst of kernel I/O
-  // reads low; judge by the CPU's busy share if a busy phone ever passes
+  // a phone's kernel threads count as load and do no work: a Xiaomi at rest read 23.35 with 6 % of its CPU at work, and
+  // the parked count of one moment does not undo a minute's average
   const working = (r.load.device?.[0] ?? 0) - (r.load.deviceParked ?? 0);
-  if (working > DEVICE_LOAD || (r.load.devicePressure ?? 0) > CPU_PRESSURE)
-    out.push('high-device-load');
+  const busy =
+    r.load.deviceBusy === undefined ? working > DEVICE_LOAD : r.load.deviceBusy > DEVICE_BUSY;
+  if (busy || (r.load.devicePressure ?? 0) > CPU_PRESSURE) out.push('high-device-load');
   if ((r.thermal ?? 0) >= THERMAL_STATUS) out.push('hot-device');
   if (r.build === 'debug') out.push('debuggable-build');
   if (r.load.mirrored) out.push('mirrored');
