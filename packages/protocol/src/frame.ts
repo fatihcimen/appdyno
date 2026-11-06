@@ -7,6 +7,9 @@
 
 export const FRAME_JSON = 0;
 export const FRAME_BINARY = 1;
+/** A stream's frame, `[u64 BE capture us][u64 BE sent ns][u32 BE flags][bytes]`: it goes to the viewer, never through here. */
+export const FRAME_VIDEO = 2;
+export const VIDEO_HEADER_BYTES = 20;
 /** A screenshot of a 4K screen as PNG stays well below this; anything larger is a broken stream. */
 export const MAX_FRAME_BYTES = 64 * 1024 * 1024;
 const HEADER = 5;
