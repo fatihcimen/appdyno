@@ -413,7 +413,7 @@ describe('perf tools', () => {
     expect(swipe.to.y).toBeLessThan(swipe.from.y);
   });
 
-  it('scroll: each round starts where the first did, as a short list has nothing left for the next', async () => {
+  it('scroll: goes on into new rows for as long as the list moves', async () => {
     const dev = new FakeDevice();
     const t = await connect({}, dev);
     await t.textOf('perf_scroll', { swipes: 2, repeats: 3 });
@@ -423,21 +423,7 @@ describe('perf tools', () => {
       return s.to.y < s.from.y ? 'up' : 'down';
     };
     const seen = dev.calls.filter((c) => c.name === 'act' || c.name === 'perf.frames').map(way);
-    expect(seen).toEqual([
-      'up',
-      'up',
-      'read',
-      'down',
-      'down',
-      'up',
-      'up',
-      'read',
-      'down',
-      'down',
-      'up',
-      'up',
-      'read',
-    ]);
+    expect(seen).toEqual(['up', 'up', 'read', 'up', 'up', 'read', 'up', 'up', 'read']);
   });
 
   it('launch: the median against the vitals threshold; only allowed apps', async () => {

@@ -364,6 +364,79 @@ describe('a measure during a recording', () => {
   const stepsOf = (text: string) =>
     text.split('\n').filter((l) => l && !l.startsWith('app ') && !l.startsWith('param '));
 
+  describe('a scroll of a list that ends', () => {
+    const noFrames = () =>
+      new DeviceError(
+        'CHECK_FAILED',
+        'the trace tool recorded no frames: nothing moved on the screen',
+      );
+    const frames = {
+      totalFrames: 185,
+      jankyFrames: 0,
+      jankyPercent: 0,
+      frozenFrames: 0,
+      fewFrames: false,
+    };
+    /** A phone whose trace refuses these rounds, by the count of rounds asked for so far. */
+    const refusing = (rounds: number[]) => {
+      let asked = 0;
+      return phone({
+        framesDuring: async (_app, _seconds, during) => {
+          await during();
+          if (rounds.includes(++asked)) throw noFrames();
+          return { value: frames, raw: 'frames', at: new Date().toISOString() };
+        },
+      });
+    };
+    const swipesOf = (text: string) => stepsOf(text).filter((s) => s.startsWith('swipe'));
+    const rewound = (r: { data: { rounds: { rewound?: boolean }[] } }) =>
+      r.data.rounds.map((x) => x.rewound === true);
+
+    it('goes on past no frames: a list at its end draws them still, and they are of nothing', async () => {
+      const { call, device } = phone();
+      device.listEnd = 2;
+      const r = await call('perf_scroll', { swipes: 2, repeats: 3 });
+      expect(rewound(r)).toEqual([false, true, true]);
+      expect(r.text).toContain('round 2 ran after the list was brought back');
+      expect(r.text).toContain('round 3 ran after the list was brought back');
+    });
+
+    it('brings a list back only once it has ended, and a recording does the same', async () => {
+      const { call, device } = phone();
+      device.listEnd = 4;
+      let r!: Awaited<ReturnType<typeof call<'perf_scroll'>>>;
+      const text = await recorded(call, async () => {
+        r = await call('perf_scroll', { swipes: 2, repeats: 4 });
+      });
+      expect(rewound(r)).toEqual([false, false, true, true]);
+      expect(swipesOf(text)).toEqual([
+        ...Array<string>(4).fill('swipe up'),
+        ...Array<string>(2).fill('swipe down'),
+        ...Array<string>(2).fill('swipe up'),
+        ...Array<string>(2).fill('swipe down'),
+        ...Array<string>(2).fill('swipe up'),
+      ]);
+    });
+
+    it('takes a phone that refuses a round with no frames as a list that did not move', async () => {
+      const { call } = refusing([2]);
+      const r = await call('perf_scroll', { swipes: 2, repeats: 3 });
+      expect(rewound(r)).toEqual([false, true, true]);
+    });
+
+    it('keeps its good rounds when the list does not move even then', async () => {
+      const { call } = refusing([2, 3]);
+      const r = await call('perf_scroll', { swipes: 2, repeats: 3 });
+      expect(r.data.rounds).toHaveLength(1);
+      expect(r.text).toContain('1 of 3 rounds');
+    });
+
+    it('still refuses a first round that moves nothing: that screen does not scroll', async () => {
+      const { call } = refusing([1]);
+      await expect(call('perf_scroll', { swipes: 2, repeats: 3 })).rejects.toThrow('nothing moved');
+    });
+  });
+
   it('leaves what it did to the screen as plain steps, so a replay does not stop there', async () => {
     const { call } = phone();
     const text = await recorded(call, async () => {
@@ -376,10 +449,7 @@ describe('a measure during a recording', () => {
     expect(stepsOf(text)).toEqual([
       'stop',
       'launch',
-      // the scroll's two rounds, the list brought back between them
-      ...Array<string>(2).fill('swipe up'),
-      ...Array<string>(2).fill('swipe down'),
-      ...Array<string>(2).fill('swipe up'),
+      ...Array<string>(4).fill('swipe up'),
       ...Array<string>(4).fill('swipe down'),
       ...Array<string>(4).fill('swipe up'),
       'launch',

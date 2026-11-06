@@ -104,6 +104,7 @@ export const ScrollOut = z.object({
   relaunched: z.boolean().optional(),
   rounds: z.array(
     z.object({
+      rewound: z.boolean().optional(),
       frames: z.number(),
       jankyPercent: z.number(),
       frozen: z.number(),

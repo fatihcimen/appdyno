@@ -7,8 +7,10 @@ import {
   reportProgress,
   median,
 } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
+import { moved } from '../scroll.js';
 import { ScrollOut } from './schemas.js';
 import { defineOp, ACT, reply } from '../tool.js';
 import { perfTools, App, Probe, Scenario, kb } from './shared.js';
@@ -46,7 +48,7 @@ export function perfScrollOp(ctx: ServerContext) {
     name: 'perf_scroll',
     title: 'Scroll performance',
     description:
-      'Frames, frozen frames and memory while scrolling a list: each round swipes `swipes` times, reads both once the list stops, and swipes back, so that every round moves the same rows.',
+      'Frames, frozen frames and memory while scrolling a list: each round swipes `swipes` times into new rows, and reads both once the list stops. A list at its end is brought back for a round, which the answer says.',
     input: z
       .object({
         app: App,
@@ -69,6 +71,7 @@ export function perfScrollOp(ctx: ServerContext) {
       const readMemory = measure(s, 'memory');
       const all: Measured<unknown>[] = [];
       const rounds: {
+        rewound?: boolean;
         jankyPercent: number;
         frozen: number;
         frames: number;
@@ -91,16 +94,40 @@ export function perfScrollOp(ctx: ServerContext) {
           Math.ceil(swipes * SECONDS_A_SWIPE) + COAST_SECONDS,
           swipeAll,
         );
+      /**
+       * A round that moved the list, read from the screen: past its end a phone draws frames of nothing, which read as
+       * smooth, or refuses a round that has none.
+       */
+      const roundThatMoved = async () => {
+        const was = await s.read();
+        const f = await framesOfRound().catch((e: unknown) => {
+          if (e instanceof DeviceError && e.code === 'CHECK_FAILED') return undefined;
+          throw e;
+        });
+        return f && moved(was.list, (await s.read()).list) ? f : undefined;
+      };
+      let ended = false;
       for (let r = 0; r < repeats; r++) {
         reportProgress(`scroll round ${r + 1} of ${repeats}`);
         const m0 = await readMemory(pkg);
-        const f = await framesOfRound();
+        // new rows are the cost a person feels, so a list goes on for as long as it moves, and one that has ended comes
+        // back for each round after; a first round that cannot is a screen that does not scroll, said as it is
+        let f = r === 0 ? await framesOfRound() : ended ? undefined : await roundThatMoved();
+        if (!f && r > 0) {
+          ended = true;
+          await swipeBack();
+          // at rest first, or the round would count the list's coasting
+          await pause(COAST_SECONDS * 1_000);
+          f = await roundThatMoved();
+        }
+        if (!f) break;
         const m1 = await readMemory(pkg);
         all.push(m0, f, m1);
         rounds.push({
           jankyPercent: f.value.jankyPercent,
           frozen: f.value.frozenFrames,
           frames: f.value.histogram?.rowFrames ?? f.value.totalFrames,
+          ...(ended && { rewound: true }),
           ...(f.value.p95Ms !== undefined && { p95Ms: f.value.p95Ms }),
           memStartKb: m0.value.kb,
           memEndKb: m1.value.kb,
@@ -114,11 +141,6 @@ export function perfScrollOp(ctx: ServerContext) {
         if (f.value.totalFrames > 0 && f.value.stalls) stalls.push(f.value.stalls.worstMs);
         if (f.value.totalFrames > 0 && f.value.worstHitchMs !== undefined)
           hitches.push(f.value.worstHitchMs);
-        if (r === repeats - 1) break;
-        // a short list ends within a round, and a round that moves nothing has no frames, which a phone refuses; the
-        // list then comes to rest, or the next round would count its coasting
-        await swipeBack();
-        await pause(COAST_SECONDS * 1_000);
       }
       s.acted();
       const counted = rounds.filter((x) => x.frames >= MIN_FRAMES);
@@ -147,6 +169,14 @@ export function perfScrollOp(ctx: ServerContext) {
           ? [`memory grows: ${Math.round(growth * 100)}% (from round 2 to the last)`]
           : []),
         ...leakSignal(rounds),
+        ...rounds.flatMap((x, i) =>
+          x.rewound
+            ? [`round ${i + 1} ran after the list was brought back, over rows already seen`]
+            : [],
+        ),
+        ...(rounds.length < repeats
+          ? [`the list stopped moving: ${rounds.length} of ${repeats} rounds`]
+          : []),
       ];
       const play = frameVitals(histograms);
       const noise = await keep(s, {

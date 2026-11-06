@@ -217,8 +217,8 @@ const MEASURES: Record<string, ToStep> = {
   perf_scroll: (a, data) => {
     const count = a.swipes as number;
     const back = { direction: a.direction === 'up' ? 'down' : 'up' };
-    const rounds = Array.from({ length: a.repeats as number }, (_, round) => [
-      ...(round ? swipes(back, count) : []),
+    const rounds = (data.rounds as { rewound?: boolean }[]).map((round) => [
+      ...(round.rewound ? swipes(back, count) : []),
       ...swipes(a, count),
     ]);
     return [...(data.relaunched ? restarts(a) : []), ...rounds.flat()];

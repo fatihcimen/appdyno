@@ -41,6 +41,14 @@ const SEEK_STROKE_MS = 500;
 /** A list that does not take this many in a row has ended: one stroke alone may land as a screen still arrives. */
 const STILL_STROKES = 2;
 
+/** Whether the same things stand in the same places: reads a list that gives a little as one that did not move. */
+export const moved = (was: ScreenElement[], now: ScreenElement[]) =>
+  was.length !== now.length ||
+  was.some((e, i) => {
+    const o = now[i]!;
+    return e.label !== o.label || Math.abs(e.y - o.y) >= 8 || Math.abs(e.x - o.x) >= 8;
+  });
+
 /** What a finger travels before the list takes it, as a first guess: each stroke then measures it. */
 const SLOP = 12;
 
@@ -201,15 +209,7 @@ export function scrollingFor({ windowSize, line, pick, offer }: Around) {
       s.acted();
       const next = last.tree ? s.screenOf(last.tree) : await s.read();
       s.remember(next);
-      const was = screen.list.filter(inner);
-      const now = next.list.filter(inner);
-      const moved =
-        was.length !== now.length ||
-        was.some((e, i) => {
-          const o = now[i]!;
-          return e.label !== o.label || Math.abs(e.y - o.y) >= 8 || Math.abs(e.x - o.x) >= 8;
-        });
-      still = moved ? 0 : still + 1;
+      still = moved(screen.list.filter(inner), next.list.filter(inner)) ? 0 : still + 1;
       if (still >= STILL_STROKES)
         throw new ToolError(
           `${what} not found: the list did not move after ${swipes + 1} swipes, so this is its end${offer(next.list, a.selector.text)}`,

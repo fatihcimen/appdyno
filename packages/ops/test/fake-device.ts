@@ -213,8 +213,23 @@ export class FakeDevice extends DeviceActions implements Device {
     if (this.fail) throw this.fail;
   }
 
+  /** The swipes a list on the screen takes to reach its end: until then each moves what is shown. */
+  listEnd = Number.POSITIVE_INFINITY;
+  private swiped = 0;
+
   current(): Tree {
     const t = tree(SCREENS[this.screen]!);
+    if (this.swiped > 0) {
+      t.nodes.push({
+        p: -1,
+        w: 0,
+        c: 'android.widget.TextView',
+        t: `Row ${this.swiped}`,
+        b: [0, 900, 1080, 1000],
+        f: 17,
+      });
+      t.hash = `${t.hash}+${this.swiped}`;
+    }
     if (this.permissionUp) {
       t.windows.push({
         type: 1,
@@ -255,6 +270,10 @@ export class FakeDevice extends DeviceActions implements Device {
   }
   async act(action: ActParams, opts: ActOptions = {}) {
     this.record('act', action, opts);
+    if (action.kind === 'swipe') {
+      const on = this.swiped + (action.to.y < action.from.y ? 1 : -1);
+      this.swiped = Math.max(0, Math.min(on, this.listEnd));
+    }
     if (action.kind === 'tap') {
       if (this.permissionUp && action.y >= 1000 && action.y <= 1100) this.permissionUp = false;
       else {
