@@ -14,6 +14,9 @@ export const uidOf = (v: Plist | undefined): number | undefined =>
     ? (v[UID] as number | undefined)
     : undefined;
 
+/** Past any message here: an object may be named twice, so that a few bytes can unfold for as long as there is memory. */
+export const MOST_VALUES = 1 << 20;
+
 /** A binary property list: what the inspector's socket speaks (no dependency, no process per message). */
 export function readBplist(b: Buffer): Plist {
   if (b.toString('latin1', 0, 8) !== 'bplist00') throw new Error('not a binary plist');
@@ -22,7 +25,9 @@ export function readBplist(b: Buffer): Plist {
   const count = Number(trailer.readBigUInt64BE(8));
   const top = Number(trailer.readBigUInt64BE(16));
   const table = Number(trailer.readBigUInt64BE(24));
+  let left = MOST_VALUES;
   const read = (i: number): Plist => {
+    if (--left < 0) throw new Error(`a plist of more than ${MOST_VALUES} values`);
     let p = b.readUIntBE(table + i * offsetSize, offsetSize);
     const marker = b[p++]!;
     const low = marker & 15;

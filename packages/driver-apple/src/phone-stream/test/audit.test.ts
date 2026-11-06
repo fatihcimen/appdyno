@@ -11,6 +11,7 @@ import {
 } from '../audit.js';
 import { dtxFrame, DtxClient, DtxInt, DtxReader } from '../dtx.js';
 import { archive, unarchive, type Archived } from '../keyed-archive.js';
+import { plistUid, writeBplist, type Plist } from '../../webinspector.js';
 
 describe('a keyed archive', () => {
   it('keeps what it carries', () => {
@@ -29,6 +30,20 @@ describe('a keyed archive', () => {
 
   it('refuses what is not one', () => {
     expect(() => unarchive(Buffer.from('bplist00'))).toThrow();
+  });
+
+  const archived = (objects: Plist[]) =>
+    writeBplist({ $top: { root: plistUid(1) }, $objects: objects });
+
+  it('refuses one that holds itself', () => {
+    expect(() => unarchive(archived(['$null', { 'NS.objects': [plistUid(1)] }]))).toThrow();
+  });
+
+  it('does not unfold a small one for ever: each of 40 lists holds the next one twice', () => {
+    const lists = Array.from({ length: 40 }, (_, i) => ({
+      'NS.objects': [plistUid(i + 2), plistUid(i + 2)],
+    }));
+    expect(() => unarchive(archived(['$null', ...lists, 'the end']))).toThrow(/more than/);
   });
 });
 

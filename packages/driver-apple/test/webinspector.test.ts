@@ -7,6 +7,40 @@ import { describe, expect, it } from 'vitest';
 import { readBplist, SimulatorWeb, writeBplist } from '../src/webinspector.js';
 import type { Simctl } from '../src/simctl.js';
 
+/** A plist of arrays by hand: `refs[i]` are what object `i` holds, each given as one byte. */
+function bplistOf(refs: number[][]) {
+  const objects = refs.map((r) => Buffer.from([0xa0 | r.length, ...r]));
+  const offsets = Buffer.alloc(objects.length * 2);
+  let at = 8;
+  objects.forEach((o, i) => {
+    offsets.writeUInt16BE(at, i * 2);
+    at += o.length;
+  });
+  const trailer = Buffer.alloc(32);
+  trailer[6] = 2;
+  trailer[7] = 1;
+  trailer.writeBigUInt64BE(BigInt(objects.length), 8);
+  trailer.writeBigUInt64BE(BigInt(at), 24);
+  return Buffer.concat([Buffer.from('bplist00', 'latin1'), ...objects, offsets, trailer]);
+}
+
+describe('a plist that cannot be read to its end', () => {
+  it('reads one that has no way out of itself as an error', () => {
+    expect(() => readBplist(bplistOf([[0]]))).toThrow();
+    expect(() => readBplist(bplistOf([[1], [0]]))).toThrow();
+  });
+
+  it('does not unfold one small file for ever: each of 40 lists holds the next one twice', () => {
+    const levels = Array.from({ length: 40 }, (_, i) => [i + 1, i + 1]);
+    expect(() => readBplist(bplistOf([...levels, []]))).toThrow(/more than/);
+  });
+
+  it('reads an object named many times, as a list of the same string', () => {
+    const many = Array.from({ length: 14 }, () => 1);
+    expect(readBplist(bplistOf([many, []]))).toEqual(many.map(() => []));
+  });
+});
+
 describe('the Safari inspector of a simulator', () => {
   it('ends on what it cannot read, as a socket that said nothing', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-inspector-'));

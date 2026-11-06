@@ -1,4 +1,11 @@
-import { plistUid, readBplist, uidOf, writeBplist, type Plist } from '../webinspector.js';
+import {
+  MOST_VALUES,
+  plistUid,
+  readBplist,
+  uidOf,
+  writeBplist,
+  type Plist,
+} from '../webinspector.js';
 
 /** What a keyed archive can carry here: strings, numbers, data, lists and dictionaries. */
 export type Archived =
@@ -55,7 +62,9 @@ export function unarchive(bytes: Buffer): Archived {
   if (!isDict(whole) || !isDict(whole.$top) || !Array.isArray(whole.$objects))
     throw new Error('not a keyed archive');
   const objects = whole.$objects;
+  let left = MOST_VALUES;
   const value = (ref: Plist): Archived => {
+    if (--left < 0) throw new Error(`an archive of more than ${MOST_VALUES} values`);
     const uid = uidOf(ref);
     const v = uid === undefined ? ref : objects[uid];
     if (v === undefined || v === '$null') return null;
