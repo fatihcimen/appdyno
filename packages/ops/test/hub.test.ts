@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startOf } from '@appdyno/core';
 import { hubDevices, runHub, stageLink, type HubDevice } from '../src/mirror/hub.js';
 import { Parent } from '../src/mirror/parent.js';
-import { removeMirrorFile, writeMirrorFile } from '../src/mirror-state.js';
+import { FOCUS_SIGNAL, removeMirrorFile, writeMirrorFile } from '../src/mirror-state.js';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
 
 class Simulated implements VirtualDevices {
@@ -165,6 +165,22 @@ describe('the hub', () => {
     close();
     await done;
     expect(end).toHaveBeenCalledOnce();
+  });
+
+  it('outlives another process asking for a window that stands in it', async () => {
+    const { link, told, close } = window();
+    const before = process.listenerCount(FOCUS_SIGNAL);
+    const done = runHub(context(new Simulated()), {
+      focus: false,
+      log: () => undefined,
+      viewer: () => link,
+    });
+    await vi.waitFor(() => expect(lastList(told)).toBeDefined());
+    // a process with no handler of this signal is ended by it, and a client's `mirror open` sends it to a hub's pid
+    expect(process.listenerCount(FOCUS_SIGNAL)).toBe(before + 1);
+    close();
+    await done;
+    expect(process.listenerCount(FOCUS_SIGNAL)).toBe(before);
   });
 
   it('closes its streams beside what its places hold, not behind it', async () => {

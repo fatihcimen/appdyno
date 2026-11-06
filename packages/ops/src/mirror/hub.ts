@@ -17,7 +17,7 @@ import type { Platform } from '@appdyno/protocol';
 import type { ServerContext } from '../context.js';
 import { ToolError } from '../tool.js';
 import { Parent } from './parent.js';
-import { liveMirror, liveMirrors, mirrorLog } from '../mirror-state.js';
+import { FOCUS_SIGNAL, liveMirror, liveMirrors, mirrorLog } from '../mirror-state.js';
 
 export type HubRun = {
   /** A person asked for the keyboard. */
@@ -347,6 +347,8 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
   };
   process.on('SIGINT', onStop);
   process.on('SIGTERM', onStop);
+  // what stands here has its file in this pid's name, and with no handler this signal ends the process
+  process.on(FOCUS_SIGNAL, parent.raise);
   const timer = setInterval(() => void refresh().catch(() => undefined), POLL_MS);
   await refresh().catch((e: Error) => o.log(e.message));
   await new Promise<void>((done) => {
@@ -357,5 +359,6 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
   await Promise.all(parent.done.values());
   process.off('SIGINT', onStop);
   process.off('SIGTERM', onStop);
+  process.off(FOCUS_SIGNAL, parent.raise);
   return 0;
 }

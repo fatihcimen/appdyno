@@ -205,6 +205,11 @@ export class Parent {
     await this.done.get(serial);
   }
 
+  /** Another process asked for a window that stands here. */
+  raise = () => {
+    for (const s of this.sessions.values()) s.raise();
+  };
+
   async stopAll(why: string) {
     this.stopping = true;
     await Promise.all(
@@ -222,12 +227,9 @@ const WINDOW_CLOSED = 'the window was closed';
 export async function runMirrors(ctx: ServerContext, o: MirrorRun): Promise<number> {
   const parent = new Parent(ctx, o);
   const onStop = () => void parent.stopAll('asked to stop');
-  const onFocus = () => {
-    for (const s of parent.sessions.values()) s.raise();
-  };
   process.on('SIGINT', onStop);
   process.on('SIGTERM', onStop);
-  process.on(FOCUS_SIGNAL, onFocus);
+  process.on(FOCUS_SIGNAL, parent.raise);
   const refusals = new Map<string, string>();
   const open = (serial: string) =>
     parent.open(serial).catch((e: Error) => {
@@ -280,7 +282,7 @@ export async function runMirrors(ctx: ServerContext, o: MirrorRun): Promise<numb
     clearInterval(watcher);
     process.off('SIGINT', onStop);
     process.off('SIGTERM', onStop);
-    process.off(FOCUS_SIGNAL, onFocus);
+    process.off(FOCUS_SIGNAL, parent.raise);
   }
   const nothingRan = serials.length === 0 ? !watching : refusals.size >= serials.length;
   return parent.failed || nothingRan ? 1 : 0;
