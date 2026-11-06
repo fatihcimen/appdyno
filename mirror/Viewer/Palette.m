@@ -1,5 +1,6 @@
 // Every colour of the hub, by look, in one place. What stands behind the glass is a ground painted from these: the system's
-// glass has no colour of its own, so a window is as rich as what it stands on, whatever a device shows.
+// glass has no colour of its own, so a window is as rich as what it stands on, whatever a device shows. The dashboard's page
+// wears the same colours, and `packages/core/test/palette.test.ts` holds the two together.
 #import "Style.h"
 #import "Window.h"
 

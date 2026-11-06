@@ -29,17 +29,26 @@ export const selfContainedPage = (p: {
 ${p.head ?? ''}<title>${esc(p.title)}</title><style>${p.style}</style></head>
 <body>${p.body}</body></html>\n`;
 
-/** Colors by role, for every page; dark is on screen only, so that a page prints as ink on paper. */
-const COLORS = `:root{color-scheme:light dark;--surface:#fcfcfb;--plane:#f9f9f7;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--grid:#e1e0d9;--axis:#c3c2b7;--edge:rgba(11,11,11,.1);--series:#2a78d6;
---good:#0ca30c;--warning:#fab219;--critical:#d03b3b;--fold:#898781;--tip:#0b0b0b;--tip-ink:#f0efec;--tip-ink2:#c3c2b7;
---s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--s8:#e34948;--on4:#0b0b0b}
-@media screen and (prefers-color-scheme:dark){:root{--surface:#1a1a19;--plane:#0d0d0d;--ink:#f0efec;--ink2:#c3c2b7;--grid:#2c2c2a;--axis:#383835;--edge:rgba(255,255,255,.1);--series:#3987e5;--tip:#f0efec;--tip-ink:#0b0b0b;--tip-ink2:#52514e;
---s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;--on4:#fff}}`;
+/**
+ * Colors by role, for every page: the hub's palette, as `packages/core/test/palette.test.ts` holds it. Dark is on screen only,
+ * so that a page prints as ink on paper. `--s*` are the palette's tiles, which hold white words, and none is a state's colour.
+ */
+const COLORS = `:root{color-scheme:light dark;--surface:#fbfbff;--plane:#eef0ff;--ink:#12163a;--ink2:#434a78;--muted:#5f6692;--grid:#dcdff5;--axis:#bcc2e8;--edge:rgba(26,32,80,.1);--series:#2447e0;
+--good:#0b7a3e;--warning:#8a4c00;--critical:#c4201a;--fold:#5f6692;--tip:#12163a;--tip-ink:#f4f6ff;--tip-ink2:#d0d6f2;
+--s1:#3358f0;--s2:#7b3deb;--s3:#c92aa0;--s4:#0e86c9;--s5:#4a55d8;--s6:#9a35d0;--s7:#2a6fc9;--s8:#8a5ae0;--on4:#fff;
+--b1:#a6b8ff;--b2:#d3afff;--b3:#ffb3d1;--b4:#a8deff}
+@media screen and (prefers-color-scheme:dark){:root{--surface:#141a45;--plane:#0a0e2e;--ink:#f4f6ff;--ink2:#d0d6f2;--muted:#aab2dc;--grid:#262d5e;--axis:#3a4278;--edge:rgba(255,255,255,.13);--series:#7ea2ff;
+--good:#3ee08f;--warning:#ffbe3d;--critical:#ff6b5e;--fold:#aab2dc;--tip:#f4f6ff;--tip-ink:#12163a;--tip-ink2:#434a78;
+--b1:#1f3fd6;--b2:#5b1fc4;--b3:#b81c68;--b4:#0b6dbd}}`;
+
+/** The hub's ground as a page wears it: fixed, so that it stands behind what scrolls. */
+const GROUND = `body{background:radial-gradient(58vw 58vw at 100% 0,var(--b1),transparent 72%),radial-gradient(60vw 60vw at 0 100%,var(--b2),transparent 72%),radial-gradient(40vw 40vw at 96% 100%,var(--b3),transparent 70%),radial-gradient(34vw 34vw at 0 0,var(--b4),transparent 70%),var(--plane);background-attachment:fixed}`;
 
 /** What a product's own pages share: colors, type, the bar across the top, a card. */
 export const PAGE_BASE = `${COLORS}
+${GROUND}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
-body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Inter,system-ui,sans-serif;margin:0;background:var(--plane);color:var(--ink);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Inter,system-ui,sans-serif;margin:0;color:var(--ink);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 a{color:inherit;text-decoration-color:var(--axis);text-underline-offset:.18em}a:hover{text-decoration-color:currentColor}
 h1,h2,h3,h4{line-height:1.2;letter-spacing:-.012em;margin:0;font-weight:650}
 pre{font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface);border:1px solid var(--edge);border-radius:10px;padding:.75rem .9rem;overflow-x:auto;margin:.6rem 0}
@@ -51,6 +60,6 @@ pre{font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(
 .card{background:var(--surface);border:1px solid var(--edge);border-radius:14px;padding:1.15rem 1.3rem;box-shadow:0 1px 2px rgba(0,0,0,.04),0 12px 28px -22px rgba(0,0,0,.28)}
 .m{color:var(--ink2);font-size:.8rem;font-weight:400;font-variant-numeric:tabular-nums}
 @media screen and (max-width:720px){.bar{padding:.7rem 1rem}.bar .m{margin-left:0}}
-@media print{.bar{position:static;margin:0 0 1rem;padding:0 0 .5rem;background:none;-webkit-backdrop-filter:none;backdrop-filter:none}.card{box-shadow:none}}`;
+@media print{body{background:#fff}.bar{position:static;margin:0 0 1rem;padding:0 0 .5rem;background:none;-webkit-backdrop-filter:none;backdrop-filter:none}.card{box-shadow:none}}`;
 
 export { PAGE_MARK, SERVER_ICON_SVG } from './mark.js';
