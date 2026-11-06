@@ -1,16 +1,16 @@
 {
   "fill": {
     "linear-gradient": [
-      "extended-srgb:1.00000,0.41600,0.30200,1.00000",
-      "extended-srgb:0.65900,0.08600,0.05500,1.00000"
+      "extended-srgb:0.24706,0.41961,1.00000,1.00000",
+      "extended-srgb:0.47843,0.23922,0.94118,1.00000"
     ],
     "orientation": {
       "start": {
-        "x": 0.5,
+        "x": 0.2,
         "y": 0
       },
       "stop": {
-        "x": 0.5,
+        "x": 0.8,
         "y": 1
       }
     }
@@ -49,6 +49,21 @@
         "enabled": false,
         "value": 0.5
       }
+    },
+    {
+      "layers": [
+        {
+          "image-name": "glow.svg",
+          "name": "glow",
+          "glass": false,
+          "hidden-specializations": [
+            {
+              "appearance": "dark",
+              "value": true
+            }
+          ]
+        }
+      ]
     }
   ],
   "supported-platforms": {

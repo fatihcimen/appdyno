@@ -2,14 +2,22 @@
  * The icon as vector and nothing else: a device cut by the curve a dyno pull draws.
  * Every picture the project shows comes from here, through scripts/build-icons.mjs.
  *
- * Two drawings of one idea. From 128 px up, a device on a red body. At 64 px and below that closes into
- * a ring of red and reads as a letter, so the body itself becomes the device, cut by the same curve.
+ * Two drawings of one idea. From 128 px up, a device on a body of the hub's gradient. At 64 px and below that
+ * closes into a ring and reads as a letter, so the body itself becomes the device, cut by the same curve. That
+ * second drawing is for a Mac below the glass one: on macOS 26 and later the system draws app/appdyno.icon at
+ * every size, and a device with a two-toned inside holds at 16 px there.
  */
 
-const RED = '#DE3222';
-const INK = '#17181E';
-/** The mark's upper part: light enough to hold on a dark background, where ink would vanish. */
-const SLATE = '#3A3C46';
+/** From the hub's palette, mirror/Viewer/Palette.m, as `brand.test.ts` holds them. */
+const BLUE = '#3F6BFF';
+const VIOLET = '#7A3DF0';
+const PINK = '#FF7FD0';
+const NIGHT = '#0A0E2E';
+const SURFACE = '#1A2460';
+const INK = '#12163A';
+const PALE = '#F4F6FF';
+const QUIET = '#D0D6F2';
+const MIST = '#D9DFFF';
 const WHITE = '#FFFFFF';
 
 const SVG = 'xmlns="http://www.w3.org/2000/svg"';
@@ -44,19 +52,25 @@ const gradient = (id, stops, attributes = 'x1="0" y1="0" x2="0" y2="1"') =>
     .join('')}</linearGradient>`;
 
 const FULL = '<rect width="1024" height="1024" fill="url(#';
+const DIAGONAL = 'x1=".2" y1="0" x2=".8" y2="1"';
+const GLOW = `<radialGradient id="glow" cx="1" cy="1" r=".95"><stop offset="0" stop-color="${PINK}"/><stop offset="1" stop-color="${PINK}" stop-opacity="0"/></radialGradient>`;
 
-/** The large drawing: a device on a red body. */
+/** The large drawing: a device on the body, with the ground's pink coming up in a corner. */
 const SLAB = rounded(262, 128, 500, 768, 112);
 const PULL = 'M250 770C390 770 450 660 520 500C580 366 650 300 790 292';
 const UNDER_PULL = `${PULL}L790 930L250 930Z`;
 
 function large() {
   const defs =
-    gradient('body', [
-      [0, '#FF6A4D'],
-      [0.55, RED],
-      [1, '#A8160E'],
-    ]) +
+    gradient(
+      'body',
+      [
+        [0, BLUE],
+        [1, VIOLET],
+      ],
+      DIAGONAL,
+    ) +
+    GLOW +
     gradient('sky', [
       [0, WHITE, 0.2],
       [0.55, WHITE, 0],
@@ -67,17 +81,17 @@ function large() {
       [1, WHITE, 0],
     ]) +
     gradient('slab', [
-      [0, '#2A2C33'],
-      [1, '#0B0C10'],
+      [0, SURFACE],
+      [0.4, NIGHT],
     ]) +
     gradient('fill', [
       [0, WHITE],
-      [1, '#DDE7F3'],
+      [1, MIST],
     ]) +
     '<filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="22"/></filter>' +
     `<clipPath id="in"><path d="${SLAB}"/></clipPath>`;
   return (
-    `<defs>${defs}</defs>${FULL}body)"/>${FULL}sky)"/>` +
+    `<defs>${defs}</defs>${FULL}body)"/>${FULL}glow)"/>${FULL}sky)"/>` +
     `<path d="${SLAB}" transform="translate(0 18)" fill="#000" opacity=".46" filter="url(#soft)"/>` +
     `<path d="${SLAB}" fill="url(#slab)"/>` +
     `<path d="${SLAB}" fill="none" stroke="url(#light)" stroke-width="8" clip-path="url(#in)" opacity=".28"/>` +
@@ -91,10 +105,17 @@ const RIBBON = { 64: 54, 32: 72, 16: 96 };
 
 const small = (px) =>
   `<defs>${gradient('up', [
-    [0, '#4A4C57'],
-    [1, '#1E1F26'],
-  ])}</defs>${FULL}up)"/>` +
-  `<path d="${CUT}L1044 1044L-20 1044Z" fill="${RED}"/>` +
+    [0, SURFACE],
+    [1, NIGHT],
+  ])}${gradient(
+    'low',
+    [
+      [0, BLUE],
+      [1, VIOLET],
+    ],
+    DIAGONAL,
+  )}</defs>${FULL}up)"/>` +
+  `<path d="${CUT}L1044 1044L-20 1044Z" fill="url(#low)"/>` +
   `<path d="${CUT}" fill="none" stroke="${WHITE}" stroke-width="${RIBBON[px]}"/>`;
 
 /** The body on a Mac's canvas, as this Mac's own icons have it: 824 at an inset of 100. */
@@ -148,10 +169,10 @@ export const menuGlyph = (px) =>
     'viewBox="-48 -48 1120 1120"',
   );
 
-/** Follows the page's ink, so it holds in light and in dark, and on paper. */
-export const PAGE_MARK = mark('currentColor', RED, 'class="mark" aria-hidden="true" ');
+/** Follows the page's ink and accent, so it holds in light and in dark, and on paper. */
+export const PAGE_MARK = mark('currentColor', 'var(--series)', 'class="mark" aria-hidden="true" ');
 /** Stands alone, so it brings its own colours. */
-export const SERVER_ICON = mark(SLATE, RED, `${SVG} `);
+export const SERVER_ICON = mark(BLUE, VIOLET, `${SVG} `);
 
 /** Letters from a ring and a stem, so that a logo depends on no font. */
 function wordmark(x, baseline, height, stroke) {
@@ -188,23 +209,23 @@ function wordmark(x, baseline, height, stroke) {
 
 /** For the README: a dark page gets light letters, and the mark holds on both. */
 export function logo() {
-  const word = wordmark(176, 134, 76, '#0B0B0B');
+  const word = wordmark(176, 134, 76, INK);
   const width = Math.ceil(176 + word.width + 8);
   return (
     `<svg ${SVG} width="${width}" height="192" viewBox="0 0 ${width} 192" role="img" aria-label="appdyno">` +
-    '<style>@media (prefers-color-scheme:dark){.word{stroke:#F0EFEC}.up{fill:#5A5C67}}</style>' +
-    `<g transform="translate(16 36) scale(.1171875)"><path class="up" d="${MARK_UPPER}" fill="${SLATE}"/><path d="${MARK_LOWER}" fill="${RED}"/></g>` +
+    `<style>@media (prefers-color-scheme:dark){.word{stroke:${PALE}}}</style>` +
+    `<g transform="translate(16 36) scale(.1171875)"><path d="${MARK_UPPER}" fill="${BLUE}"/><path d="${MARK_LOWER}" fill="${VIOLET}"/></g>` +
     `${word.svg}</svg>\n`
   );
 }
 
 /** A repository's preview, 1280 by 640. */
 export function social() {
-  const word = wordmark(470, 318, 84, '#F0EFEC');
+  const word = wordmark(470, 318, 84, PALE);
   return (
-    `<svg ${SVG} width="1280" height="640" viewBox="0 0 1280 640"><rect width="1280" height="640" fill="#0D0D10"/>` +
+    `<svg ${SVG} width="1280" height="640" viewBox="0 0 1280 640"><rect width="1280" height="640" fill="${NIGHT}"/>` +
     `<g transform="translate(70 140) scale(.3515625)">${macIcon(1024).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>` +
-    `${word.svg}<text x="470" y="436" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="42" fill="#C3C2B7">Real numbers from a real device.</text></svg>\n`
+    `${word.svg}<text x="470" y="436" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="42" fill="${QUIET}">Real numbers from a real device.</text></svg>\n`
   );
 }
 
@@ -218,8 +239,8 @@ const androidArt = `<?xml version="1.0" encoding="utf-8"?>
     android:height="108dp"
     android:viewportWidth="1024"
     android:viewportHeight="1024">
-    <path android:fillColor="${SLATE}" android:pathData="M0 0H1024V1024H0Z" />
-    <path android:fillColor="${RED}" android:pathData="${CUT}L1044 1044L-20 1044Z" />
+    <path android:fillColor="${SURFACE}" android:pathData="M0 0H1024V1024H0Z" />
+    <path android:fillColor="${BLUE}" android:pathData="${CUT}L1044 1044L-20 1044Z" />
     <path android:strokeColor="${WHITE}" android:strokeWidth="${RIBBON[16]}" android:pathData="${CUT}" />
 </vector>
 `;
@@ -227,18 +248,21 @@ const androidArt = `<?xml version="1.0" encoding="utf-8"?>
 /** Every generated text in the repository, by path, so that a test can hold them to this file. */
 export const GENERATED = {
   'docs/images/logo.svg': logo(),
-  'app/appdyno.icon/Assets/slab.svg': layer(`<path d="${SLAB}" fill="${INK}"/>`),
+  'app/appdyno.icon/Assets/slab.svg': layer(`<path d="${SLAB}" fill="${NIGHT}"/>`),
   'app/appdyno.icon/Assets/curve.svg': layer(
     `<defs><clipPath id="in"><path d="${SLAB}"/></clipPath></defs><path d="${UNDER_PULL}" fill="${WHITE}" clip-path="url(#in)"/>`,
+  ),
+  'app/appdyno.icon/Assets/glow.svg': layer(
+    `<defs>${GLOW}</defs><rect width="1024" height="1024" fill="url(#glow)"/>`,
   ),
   'app/appdyno.icon/icon.json': `${JSON.stringify(
     {
       fill: {
         'linear-gradient': [
-          'extended-srgb:1.00000,0.41600,0.30200,1.00000',
-          'extended-srgb:0.65900,0.08600,0.05500,1.00000',
+          'extended-srgb:0.24706,0.41961,1.00000,1.00000',
+          'extended-srgb:0.47843,0.23922,0.94118,1.00000',
         ],
-        orientation: { start: { x: 0.5, y: 0 }, stop: { x: 0.5, y: 1 } },
+        orientation: { start: { x: 0.2, y: 0 }, stop: { x: 0.8, y: 1 } },
       },
       groups: [
         {
@@ -250,6 +274,17 @@ export const GENERATED = {
           layers: [{ 'image-name': 'slab.svg', name: 'slab', glass: true }],
           shadow: { kind: 'neutral', opacity: 0.5 },
           translucency: { enabled: false, value: 0.5 },
+        },
+        {
+          // a stain on the black body of the dark icon, which the system draws for itself
+          layers: [
+            {
+              'image-name': 'glow.svg',
+              name: 'glow',
+              glass: false,
+              'hidden-specializations': [{ appearance: 'dark', value: true }],
+            },
+          ],
         },
       ],
       'supported-platforms': { squares: ['macOS'] },

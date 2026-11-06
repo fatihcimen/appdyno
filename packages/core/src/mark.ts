@@ -2,8 +2,8 @@
 
 /** The mark every page shows: drawn inline, as a page loads nothing. */
 export const PAGE_MARK =
-  '<svg class="mark" aria-hidden="true" viewBox="0 0 1024 1024"><path d="M0 634C260 634 380 544 480 384C570 244 680 196 1024 190V240A240 240 0 0 0 784 0H240A240 240 0 0 0 0 240Z" fill="currentColor"/><path d="M0 766C260 766 380 676 480 516C570 376 680 328 1024 322V784A240 240 0 0 1 784 1024H240A240 240 0 0 1 0 784Z" fill="#DE3222"/></svg>';
+  '<svg class="mark" aria-hidden="true" viewBox="0 0 1024 1024"><path d="M0 634C260 634 380 544 480 384C570 244 680 196 1024 190V240A240 240 0 0 0 784 0H240A240 240 0 0 0 0 240Z" fill="currentColor"/><path d="M0 766C260 766 380 676 480 516C570 376 680 328 1024 322V784A240 240 0 0 1 784 1024H240A240 240 0 0 1 0 784Z" fill="var(--series)"/></svg>';
 
 /** The mark on its own, as a client shows it for the server. */
 export const SERVER_ICON_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><path d="M0 634C260 634 380 544 480 384C570 244 680 196 1024 190V240A240 240 0 0 0 784 0H240A240 240 0 0 0 0 240Z" fill="#3A3C46"/><path d="M0 766C260 766 380 676 480 516C570 376 680 328 1024 322V784A240 240 0 0 1 784 1024H240A240 240 0 0 1 0 784Z" fill="#DE3222"/></svg>';
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><path d="M0 634C260 634 380 544 480 384C570 244 680 196 1024 190V240A240 240 0 0 0 784 0H240A240 240 0 0 0 0 240Z" fill="#3F6BFF"/><path d="M0 766C260 766 380 676 480 516C570 376 680 328 1024 322V784A240 240 0 0 1 784 1024H240A240 240 0 0 1 0 784Z" fill="#7A3DF0"/></svg>';

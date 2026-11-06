@@ -24,7 +24,15 @@ describe('the icon', () => {
       expect(existsSync(join(root, path))).toBe(true);
   });
 
-  it('has no closed ring of red at 64 px and below: that reads as a letter', () => {
+  it('wears the colours of the hub', () => {
+    const palette = readFileSync(join(root, 'mirror/Viewer/Palette.m'), 'utf8');
+    const source = readFileSync(join(root, 'scripts/icon-art.mjs'), 'utf8');
+    for (const [, name, value] of source.matchAll(/^const (\w+) = '#([0-9A-F]{6})';$/gm)) {
+      if (name !== 'WHITE') expect(palette).toContain(`0x${value}`);
+    }
+  });
+
+  it('has no closed ring at 64 px and below: that reads as a letter', () => {
     for (const px of [16, 32, 64]) expect(art.macIcon(px)).not.toContain('id="slab"');
     for (const px of [128, 256, 512, 1024]) expect(art.macIcon(px)).toContain('id="slab"');
   });

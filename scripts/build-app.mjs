@@ -26,7 +26,7 @@ import {
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildIcns, buildMenuGlyph } from './build-icons.mjs';
+import { buildGlassIcon, buildIcns, buildMenuGlyph } from './build-icons.mjs';
 
 /** The runtime, as nodejs.org publishes its digest. The smallest long-term release with years of fixes ahead. */
 const NODE = {
@@ -105,6 +105,7 @@ async function helperBinaries() {
 
 /** The app's icon and menu glyph, and the same icon for the helper's Dock tile. */
 function icon() {
+  buildGlassIcon(resources, MIN_MACOS);
   buildIcns(join(resources, `${NAME}.icns`));
   buildMenuGlyph(resources);
   mkdirSync(join(helper, 'Contents/Resources'), { recursive: true });
@@ -118,6 +119,7 @@ function infoPlist(to, identifier, executable) {
     CFBundleDisplayName: NAME,
     CFBundleExecutable: executable,
     CFBundleIconFile: NAME,
+    CFBundleIconName: NAME,
     CFBundleIdentifier: identifier,
     CFBundleInfoDictionaryVersion: '6.0',
     CFBundleName: NAME,

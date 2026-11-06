@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Regenerates every icon, logo and mark from scripts/icon-art.mjs, and compiles the Icon Composer file
- * to prove it. The app's .icns and menu glyph are built with the app; see scripts/build-app.mjs.
+ * to prove it. The app's icons and menu glyph are built with the app; see scripts/build-app.mjs.
  *
  *   node scripts/build-icons.mjs
  */
@@ -58,28 +58,32 @@ export function buildMenuGlyph(dir) {
   render(menuGlyph(36), join(dir, 'menuTemplate@2x.png'));
 }
 
-/** Compiled by the tool Xcode uses, so a hand-written file is known to be a real one. */
-function proveIconComposer() {
+/**
+ * The glass icon for macOS 26 and later, compiled by the tool Xcode uses into an Assets.car. actool writes an
+ * .icns beside it, scaled from the large drawing: `buildIcns` after it puts the drawn one in its place.
+ */
+export function buildGlassIcon(dir, minimum) {
   const made = mkdtempSync(join(tmpdir(), 'appdyno-glass-'));
   const said = sh(
+    'xcrun',
     'actool',
     join(repo, 'app/appdyno.icon'),
     '--compile',
-    made,
+    dir,
     '--app-icon',
     'appdyno',
     '--platform',
     'macosx',
     '--minimum-deployment-target',
-    '14.0',
+    minimum,
     '--output-partial-info-plist',
     join(made, 'partial.plist'),
     '--errors',
     '--warnings',
   );
-  const good = existsSync(join(made, 'Assets.car')) && !/error:|warning:/i.test(said);
   rmSync(made, { recursive: true, force: true });
-  if (!good) throw new Error(`actool refused the icon: ${said}`);
+  if (!existsSync(join(dir, 'Assets.car')) || /error:|warning:/i.test(said))
+    throw new Error(`actool refused the icon: ${said}`);
 }
 
 function main() {
@@ -91,7 +95,9 @@ function main() {
   render(iosIcon(180), join(repo, 'ios/Branding/AppIcon60x60@3x.png'));
   render(macIcon(256), join(repo, 'mirror/Viewer/tile.png'));
   render(social(), join(repo, 'docs/images/social.png'));
-  proveIconComposer();
+  const proof = mkdtempSync(join(tmpdir(), 'appdyno-proof-'));
+  buildGlassIcon(proof, '14.0');
+  rmSync(proof, { recursive: true, force: true });
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();
