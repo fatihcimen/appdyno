@@ -1,4 +1,13 @@
-import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
+import {
+  accessSync,
+  constants,
+  existsSync,
+  lstatSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { writeWhole } from '@appdyno/core';
@@ -72,8 +81,13 @@ function repointed(have: unknown, command: string) {
 /** Refuses a byte that is not UTF-8, which would come back changed in the file and in its backup, and keeps a BOM. */
 const UTF8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
-/** A client's file, or nothing where it has none yet. */
-const textOf = (file: string) => (existsSync(file) ? UTF8.decode(readFileSync(file)) : '');
+/** A client's file, or nothing where it has none yet. A link with nothing at its end is a person's: a file would replace it. */
+function textOf(file: string) {
+  if (existsSync(file)) return UTF8.decode(readFileSync(file));
+  if (lstatSync(file, { throwIfNoEntry: false }))
+    throw new Error('it is a link that leads nowhere');
+  return '';
+}
 
 type Asked = Pick<InstallOptions, 'remove' | 'server' | 'moved'> & {
   /** Puts back an entry as it was, flags and all: what an undo has, and an edit by hand may hold more than `entry` makes. */
@@ -92,6 +106,8 @@ export function outcomeFor(client: Client, file: string, o: Asked): Outcome {
     const others = (text: string) => edit.others(text, key, SERVER);
     /** An edit works on text: what it made is read back, and is the entry asked for and nothing else, or is not written. */
     const proved = (after: string, entry: unknown) => {
+      // a rename asks the folder: a file closed to writing would be replaced all the same
+      if (existsSync(file)) accessSync(file, constants.W_OK);
       if (
         !isDeepStrictEqual(edit.read(after, key, SERVER), entry) ||
         !isDeepStrictEqual(others(after), others(before))

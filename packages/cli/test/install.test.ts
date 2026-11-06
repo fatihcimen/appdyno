@@ -595,6 +595,25 @@ describe('install', () => {
     expect(readFileSync(join(dirname(file), beside(file)[0]!)).equals(bytes)).toBe(true);
   });
 
+  it('leaves a link that leads nowhere, whose place a new file would take', async () => {
+    const { home, file } = homeWith(cursor!);
+    symlinkSync(join(home, 'an unmounted disk', 'mcp.json'), file);
+    const { code, err } = await run(home);
+    expect(code).toBe(1);
+    expect(err.join('\n')).toContain('leads nowhere');
+    expect(lstatSync(file).isSymbolicLink()).toBe(true);
+  });
+
+  it('leaves a file its owner closed to writing, though a rename would go through', async () => {
+    const { home, file } = homeWith(cursor!, '{}\n');
+    chmodSync(file, 0o400);
+    const { code, err } = await run(home);
+    expect(code).toBe(1);
+    expect(err.join('\n')).toContain('refused');
+    expect(readFileSync(file, 'utf8')).toBe('{}\n');
+    expect(beside(file)).toEqual([]);
+  });
+
   it('says what to add by hand when it finds no client', async () => {
     const home = mkdtempSync(join(tmpdir(), 'appdyno-home-'));
     homes.push(home);
