@@ -2,7 +2,7 @@
 // Appdyno.app as a stranger meets it: a home with nothing in it and a PATH with no Node and no developer tools. On a
 // real such Mac `/usr/bin/xcrun` and its kin are stubs that raise the installer's dialog, so here each is a decoy that
 // says it was reached, and `xcode-select` says what it says there. Windows stay behind, and this opens no web page.
-//   pnpm build && node scripts/build-app.mjs && node scripts/check-app.mjs [--android <serial>] [--keep]
+//   pnpm build && node scripts/build-app.mjs && node scripts/check-app.mjs [--android <serial>] [--iphone <udid>] [--keep]
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { createHash, generateKeyPairSync, sign } from 'node:crypto';
 import {
@@ -29,8 +29,9 @@ import { parseArgs } from 'node:util';
 import { CLIENTS, putOnPath, update } from '@appdyno/cli';
 
 const { values: flags } = parseArgs({
-  options: { android: { type: 'string' }, keep: { type: 'boolean' } },
+  options: { android: { type: 'string' }, iphone: { type: 'string' }, keep: { type: 'boolean' } },
 });
+const phone = flags.android ?? flags.iphone;
 
 /** What a Mac with no developer tools does not have, or has only as a stub that asks to install them. */
 const ABSENT = [
@@ -94,7 +95,7 @@ const env = {
   // preferences follow this, not HOME
   CFFIXED_USER_HOME: home,
   // a stranger's Mac holds their own devices; this one may hold other people's
-  APPDYNO_ALLOW_DEVICES: `^(${flags.android ?? 'none'})$`,
+  APPDYNO_ALLOW_DEVICES: `^(${phone ?? 'none'})$`,
 };
 const app = join(temp, 'Applications/Appdyno.app');
 mkdirSync(dirname(app));
@@ -413,8 +414,8 @@ try {
     const { got, ms } = await until('hub window', () => newWindow(before));
     return `${got} after ${ms} ms`;
   });
-  if (flags.android)
-    await step(`pictures of ${flags.android} in a window of the app, behind`, async () => {
+  if (phone)
+    await step(`pictures of ${phone} in a window of the app, behind`, async () => {
       const before = windowPids();
       const video = join(temp, 'window.mp4');
       const log = join(temp, 'window.log');
@@ -422,7 +423,7 @@ try {
       const words = [
         'mirror',
         '--device',
-        String(flags.android),
+        String(phone),
         '--behind',
         '--seconds',
         '20',
