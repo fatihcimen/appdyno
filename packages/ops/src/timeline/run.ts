@@ -64,11 +64,15 @@ export async function startTimeline(
   const endLive = await (device.liveMetrics ?? measuredLive(device))
     .start((sample) => samples.push(sample), app)
     .catch(abandon);
+  // past this its video and frames have ended: a timeline left open must not go on reading a device, and keeping that
+  const held = setTimeout(endLive, MAX_SECONDS * 1_000);
+  held.unref();
   const from = startedAt + first.offsetMs;
 
   const finishing = async (reason?: string): Promise<TimelineDone> => {
     reportProgress('ending the timeline');
     const to = Date.now() + first.offsetMs;
+    clearTimeout(held);
     endLive();
     // the video first: an iPhone's trace takes a minute to end, and the video would go on filming it
     const movie = await endRecording(s).catch((e: Error) => {

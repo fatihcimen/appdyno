@@ -125,6 +125,24 @@ describe('report timeline', () => {
     expect(traces).toBe(0);
   });
 
+  it('stops reading a device at the end of what it can hold, if no one says stop', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    try {
+      const device = new TimedDevice();
+      let ended = 0;
+      device.liveMetrics.start = async () => () => void ended++;
+      const { call } = connect(device);
+      await call('report', { action: 'timeline', dir });
+      await vi.advanceTimersByTimeAsync(179_000);
+      expect(ended).toBe(0);
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(ended).toBe(1);
+      await call('report', { action: 'stop' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('carries the video inside the page, and says how large it came to', async () => {
     const { call } = connect();
     await call('report', { action: 'timeline', dir });
