@@ -172,7 +172,7 @@ export type VitalsCall = { kind: string; counts: boolean; says: string };
 export function vitalsCall(
   r: Pick<PerfRecord, 'kind' | 'value'> & { device: Pick<PerfRecord['device'], 'platform'> },
 ): VitalsCall | undefined {
-  const rule = RULES[r.kind] ?? memoryRule(r.kind);
+  const rule = Object.hasOwn(RULES, r.kind) ? RULES[r.kind] : memoryRule(r.kind);
   if (!rule || !ratedByPlay(r.device.platform)) return undefined;
   const counts = rule.from ? r.value >= rule.limit : r.value > rule.limit;
   return {

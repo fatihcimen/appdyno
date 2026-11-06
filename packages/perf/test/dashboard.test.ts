@@ -18,6 +18,7 @@ import {
   type GateAnswer,
   type Metric,
   type PerfRecord,
+  type Refusal,
 } from '../src/index.js';
 
 const PHONE: DeviceInfo = {
@@ -467,6 +468,47 @@ describe('what it reads', () => {
       JSON.stringify([...held, { ...held[0], kind: 'x.bad', value: 'much' }, null]),
     );
     expect(textOf(await s.page())).not.toContain('x.bad');
+  });
+
+  it.each([
+    ['no device', ({ device: _device, ...rest }: PerfRecord) => rest],
+    ['the name of what every object has', (r: PerfRecord) => ({ ...r, kind: '__proto__' })],
+    ['the name of what every object has', (r: PerfRecord) => ({ ...r, kind: 'constructor' })],
+  ])('holds with a record of %s', async (_, spoil) => {
+    const s = store();
+    await s.run(2, [launch(400)]);
+    const file = await s.run(1, [launch(410)]);
+    const held = JSON.parse(readFileSync(file!, 'utf8')) as PerfRecord[];
+    writeFileSync(file!, JSON.stringify(held.map(spoil)));
+    expect(textOf(await s.page())).toContain('403 ms');
+  });
+
+  it('holds with a refusal that names no device', async () => {
+    const s = store();
+    await s.run(1, [launch(400)]);
+    await saveRefusal(s.dir, {
+      deviceClass: PHONE_CLASS,
+      measure: 'energy',
+      reason: 'no',
+      at: ago(0),
+    });
+    const file = join(s.dir, 'refusals', PHONE_CLASS, 'energy.json');
+    const { deviceClass: _class, ...rest } = JSON.parse(readFileSync(file, 'utf8')) as Refusal;
+    writeFileSync(file, JSON.stringify(rest));
+    expect(textOf(await s.page())).toContain('403 ms');
+  });
+
+  it('holds with a baseline run that has no time', async () => {
+    const s = store();
+    await baselineAndBudget(s.project);
+    const file = join(s.project, 'baselines/dev.app/launch-cold', `${PHONE_CLASS}.json`);
+    const baseline = JSON.parse(readFileSync(file, 'utf8')) as {
+      metrics: Record<string, { runs: { at?: string }[] }>;
+    };
+    delete baseline.metrics['launch.ttid_ms']!.runs[0]!.at;
+    writeFileSync(file, JSON.stringify(baseline));
+    await s.run(1, [launch(900)]);
+    expect(textOf(await s.page())).toContain('Why it got worse');
   });
 
   it('reads only the newest runs it shows, and says how many there are', async () => {

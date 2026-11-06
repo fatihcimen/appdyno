@@ -42,6 +42,7 @@ export type DashboardData = {
 
 const usable = (r: PerfRecord) =>
   typeof r?.kind === 'string' &&
+  typeof r.device?.platform === 'string' &&
   Number.isFinite(r.value) &&
   Array.isArray(r.samples) &&
   r.samples.length > 0 &&
@@ -116,7 +117,10 @@ export async function loadDashboard(
     keys,
     rules,
     refusals: refusals.filter(
-      (r) => typeof r?.reason === 'string' && Number.isFinite(Date.parse(r.at)),
+      (r) =>
+        typeof r?.reason === 'string' &&
+        typeof r.deviceClass === 'string' &&
+        Number.isFinite(Date.parse(r.at)),
     ),
     unread,
   };

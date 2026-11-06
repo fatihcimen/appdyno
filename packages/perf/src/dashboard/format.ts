@@ -65,7 +65,10 @@ export function age(at: string, now: number) {
 
 /** A time as the page prints it: always UTC, so that a rewrite on another machine reads the same. */
 export const when = (at: string) => {
-  const iso = new Date(at).toISOString();
+  const date = new Date(at);
+  // a baseline is a person's file too: what is no time stays what it is, with the rest of the page around it
+  if (Number.isNaN(date.getTime())) return String(at);
+  const iso = date.toISOString();
   return `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
 };
 
