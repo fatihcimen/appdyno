@@ -13,6 +13,7 @@ import {
   readStateFile,
   reportProgress,
   safeName,
+  sharedAgent,
   stateDir,
   writeStateFile,
   type RpcClient,
@@ -30,6 +31,8 @@ const START_MS = 60_000;
 /** A start that has no process after this long has failed (the process shows within a second). */
 const NO_PROCESS_MS = 5_000;
 const POLL_MS = 100;
+/** One line of `/proc/net/unix`: its state, its inode and its path. */
+const CONNECTED_SOCKET = / 03 \d+ @appdyno_/;
 
 /** The agent APK the package ships (or a development build), and its sha256. */
 export async function agentApk(): Promise<{ path: string; sha256: string }> {
@@ -62,7 +65,7 @@ type State = z.infer<typeof State>;
 /**
  * Starts, finds again and stops the Android agent of one device. The agent outlives the host process
  * (a new host reconnects in one round trip): its socket name and launch token are kept in a state file
- * readable only by this user. A different agent build on the device is replaced.
+ * readable only by this user. A different agent build on the device is replaced once no live host uses it.
  */
 export class AndroidAgentLauncher {
   constructor(
@@ -81,11 +84,11 @@ export class AndroidAgentLauncher {
   /** A connected client to a running agent of this build: the one already there, else a new one. */
   async connect(): Promise<{ rpc: RpcClient; hello: Hello; started: boolean }> {
     const apk = await agentApk();
+    const found = async () =>
+      sharedAgent(this.serial, await this.readState(), apk.sha256, (s) => this.tryConnect(s));
+    const running = await found();
+    if (running) return running;
     const state = await this.readState();
-    if (state && state.sha256 === apk.sha256) {
-      const c = await this.tryConnect(state).catch(() => undefined);
-      if (c) return { ...c, started: false };
-    }
     if (state?.pid) await this.kill(state.pid);
     const start = async () => ({ ...(await this.start(apk)), started: true });
     const unlessConflict = (e: unknown): DeviceError => {
@@ -98,8 +101,17 @@ export class AndroidAgentLauncher {
     } catch (e) {
       conflict = unlessConflict(e);
     }
-    // our own agent from a lost state (another state folder, a cleared cache) holds the device: it
-    // cannot be reached without its token, so it is replaced, once
+    // another host of this Mac started first
+    const theirs = await found();
+    if (theirs) return theirs;
+    if (await this.hostConnected())
+      throw new DeviceError(
+        'AGENT_CONFLICT',
+        'another process of this tool drives this device, from a state folder of its own',
+        'a test run has one: wait for it to end, or end it, then retry',
+      );
+    // our own agent from a lost state (a cleared cache) holds the device: it cannot be reached
+    // without its token, so it is replaced, once
     if (await this.killOrphans()) {
       try {
         return await start();
@@ -221,6 +233,17 @@ export class AndroidAgentLauncher {
   private async tryConnect(state: State): Promise<{ rpc: RpcClient; hello: Hello }> {
     const { socket, rest } = await this.adb.open(this.serial, `localabstract:${state.socket}`);
     return greet(socket, rest, 'agent', state.token, 3_000);
+  }
+
+  /**
+   * A host is connected to an agent of ours, as the device's table of sockets shows: each connection is a line of its
+   * own in the connected state, beside the one that listens. Where a device keeps that table from a shell, none shows.
+   */
+  private async hostConnected(): Promise<boolean> {
+    const sockets = await this.adb
+      .exec(this.serial, 'grep appdyno_ /proc/net/unix')
+      .catch(() => '');
+    return CONNECTED_SOCKET.test(sockets);
   }
 
   /** Stops every agent process of ours on the device; true when there was one. */

@@ -422,7 +422,17 @@ CLASSPATH=<apk> app_process / dev.appdyno.agent.Main --socket appdyno_<random> -
 The socket name and token are kept in a state file readable only by the user
 (`~/Library/Caches/appdyno/android-<serial>.json`, or `APPDYNO_STATE_DIR`), so the next host
 process reconnects in one round trip. A different build on the device is stopped (by its process id,
-only when its command line is the agent's) and replaced. The agent exits after 30 minutes without a
+only when its command line is the agent's) and replaced, unless another live process of this Mac uses it. The hosts
+of a device share one agent, as a device has one UI automation connection to give, and two builds replacing each other's
+agent would take the device from each other for as long as both run, which is what an update leaves: a hub open
+beside a client that has already moved on. So the agent stays, and the newer host uses it and is told, until its last host
+has gone; `agent-hosts/<serial>.json` in the state folder lists them, and a process's end is what takes it off. A host
+that cannot speak that agent's protocol is refused with the pid of the one that uses it. An iOS runner keeps to the same
+rule. The agent exits after 30 minutes without a
 connection. Exit code 3 with `AGENT_CONFLICT` on stderr: another UI automation client holds the device
 (a device has exactly one). The agent says so after trying for 4 s, as the system keeps UI automation for a holder that was
 killed: held 1.3 s after its process had gone, free at 2.3 s, on an emulator, while after a plain `kill` it was free at once.
+
+An agent of ours that this state folder knows nothing of is replaced once, as a cleared cache leaves one behind, unless
+`/proc/net/unix` shows a host connected to it: that is a host with a state folder of its own, and the start is refused
+with `AGENT_CONFLICT`. Where a phone keeps that table from a shell, the agent is replaced.

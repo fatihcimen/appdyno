@@ -294,6 +294,10 @@ A window takes its menu bar and Dock icon at a person's first click, not before:
 A window watches whoever holds the device: it takes no claim, and an agent holding one is no refusal. The pill on it
 says who drives. `--no-input` makes it a window to look at only, and `--allow-devices` applies.
 
+The hub and any client on this Mac meet on one agent, whichever came first, and a client that asks for the window of a
+device standing in the hub is told it is open. That holds across builds too: a hub left open through an update keeps the
+agent it started, and what starts later uses that one until the hub has closed.
+
 A person's input always goes through, on a connection of its own, and it does not queue behind what an agent
 does. `mirror status` tells an agent when a person last touched the window. While calls come, the window says an agent is driving. Its Activity pane lists each call: time, tool, how long, its result, with
 typed text by its length and secrets hidden, by the code `report` uses. It reads

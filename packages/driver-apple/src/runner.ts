@@ -15,6 +15,7 @@ import {
   readStateFile,
   reportProgress,
   run,
+  sharedAgent,
   stateDir,
   writeStateFile,
   type RpcClient,
@@ -218,7 +219,7 @@ async function freePort(): Promise<number> {
 /**
  * Starts, finds again and stops the runner of one simulator. The runner (a UI test kept running by
  * xcodebuild) outlives the host process; its port and launch token are kept in a state file readable
- * only by this user. A different runner build is replaced.
+ * only by this user. A different runner build is replaced once no live host uses it.
  */
 /** How the runner of one kind of device is built, given a port and reached. */
 export type RunnerTransport = {
@@ -261,10 +262,8 @@ export class IosRunnerLauncher {
   ): Promise<{ rpc: RpcClient; hello: Hello; started: boolean }> {
     const build = await this.transport.build();
     const state = await this.readState();
-    if (state && state.sha256 === build.sha256) {
-      const c = await this.tryConnect(state).catch(() => undefined);
-      if (c) return { ...c, started: false };
-    }
+    const running = await sharedAgent(this.udid, state, build.sha256, (s) => this.tryConnect(s));
+    if (running) return running;
     await beforeStart?.();
     if (state?.pid) await this.kill(state.pid);
     return { ...(await this.start(build, target)), started: true };

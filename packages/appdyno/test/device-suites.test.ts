@@ -25,6 +25,7 @@ const OWN_GATE = [
   'hub.connect.test.ts',
   'hub.driving.test.ts',
   'hub.room.test.ts',
+  'hub.shared.test.ts',
   'mirror.pair.test.ts',
   'trace-temp.test.ts',
 ];

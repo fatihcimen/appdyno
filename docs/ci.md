@@ -19,15 +19,15 @@ measuring step was postponed, as what never ran is no pass.
 
 **Which suites run where.** No device suite runs by itself: each gates on a variable, and every one a run must take has to be named.
 
-| where                                 | what runs                                                                                                                                                |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.github/workflows/ci.yml`, each push | lint, types, unit tests, the agent's unit tests and build, the runner's core. **No device suite**, so a device suite's own rot is seen only below        |
-| `scripts/ci.sh`, no option            | the same, on this Mac                                                                                                                                    |
-| `--device <serial>`                   | `android`, `smoke`, `mcp-stdio`, then `perf`                                                                                                             |
-| `--ios <simulator id>`                | `ios`, `mcp-stdio`, then `ios-perf`                                                                                                                      |
-| `--iphone <UDID>`                     | `iphone`, `iphone-mcp`. Needs `APPDYNO_IPHONE_FIXTURE_APP` and refuses to start without it: with no fixture its measures would skip and the step read ok |
-| `--all-on <serial>`                   | every file that reads that device's variable, one step each, so that nobody has to remember them: 42 on Android, 32 on a simulator, 17 on an iPhone      |
-| only when named, each by its own gate | `hub.clients`, `hub.connect`, `hub.connect.sim`, `hub.driving`, `hub.room`, `mirror.pair`, `trace-temp`: their variables are at the head of each file    |
+| where                                 | what runs                                                                                                                                                           |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.github/workflows/ci.yml`, each push | lint, types, unit tests, the agent's unit tests and build, the runner's core. **No device suite**, so a device suite's own rot is seen only below                   |
+| `scripts/ci.sh`, no option            | the same, on this Mac                                                                                                                                               |
+| `--device <serial>`                   | `android`, `smoke`, `mcp-stdio`, then `perf`                                                                                                                        |
+| `--ios <simulator id>`                | `ios`, `mcp-stdio`, then `ios-perf`                                                                                                                                 |
+| `--iphone <UDID>`                     | `iphone`, `iphone-mcp`. Needs `APPDYNO_IPHONE_FIXTURE_APP` and refuses to start without it: with no fixture its measures would skip and the step read ok            |
+| `--all-on <serial>`                   | every file that reads that device's variable, one step each, so that nobody has to remember them: 42 on Android, 32 on a simulator, 17 on an iPhone                 |
+| only when named, each by its own gate | `hub.clients`, `hub.connect`, `hub.connect.sim`, `hub.driving`, `hub.room`, `hub.shared`, `mirror.pair`, `trace-temp`: their variables are at the head of each file |
 
 `--all-on` takes the kind of device from the id it is given, and asks nothing else of it. It runs what can reach a device you own, so give it no other: its suites install, crash and reset the fixture, and some change settings and put them back.
 

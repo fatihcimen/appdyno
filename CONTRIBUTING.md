@@ -40,6 +40,12 @@ Set only the variable of the device you have. `APPDYNO_IPHONE_UDID` runs the iPh
 signing variables from the README. See `vitest.device.config.ts` and `docs/ci.md`. `scripts/ci.sh` runs
 every gate locally and records the results.
 
+Close the hub on a device a suite uses. A suite keeps its state in a folder of its own, by `APPDYNO_STATE_DIR`, so it
+cannot share the agent of a hub, which keeps to the default one, as neither can read the other's token and a device has
+room for one agent. A hub finds a suite's agent in use and stops with `AGENT_CONFLICT`, and so does a suite that finds a
+hub's. A hub takes a running emulator or simulator by itself, so a suite between two connections can still lose its
+agent to one left open, and a phone may keep from a shell the table that shows who is connected.
+
 ## Modules
 
 Each package under `packages/` may import only the packages its rule allows. For example `core` may import

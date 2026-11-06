@@ -9,6 +9,7 @@ export { run } from './run.js';
 export * from './usb.js';
 export * from './build.js';
 export * from './owner.js';
+export { sharedAgent } from './agent-hosts.js';
 export * from './stats.js';
 export * from './call.js';
 export * from './client-calls.js';
