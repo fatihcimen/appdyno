@@ -70,8 +70,10 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
     async () => {
       // a phone starts only when it is chosen
       await quiet(3_000);
-      // a running simulator may show at once
-      expect(serials.filter((s) => !/^[0-9A-F]{8}-[0-9A-F]{4}-/.test(s)).some(live)).toBe(false);
+      // a running simulator or emulator may show at once
+      expect(
+        serials.filter((s) => !/^[0-9A-F]{8}-[0-9A-F]{4}-|^emulator-/.test(s)).some(live),
+      ).toBe(false);
       link.send({ op: 'poke', id: serials[0] });
       await until('a first device', () => serials.some(live), LIVE_MS);
       await quiet(2_000);
