@@ -160,6 +160,10 @@ describe('a ring of video', () => {
   });
 });
 
+const refused = async (): Promise<never> => {
+  throw new Error('it will not start');
+};
+
 /** A device whose app, stalls and crashes a test decides. */
 class FlightDevice extends FakeDevice {
   rec = recorder();
@@ -173,6 +177,10 @@ class FlightDevice extends FakeDevice {
     },
   };
   frameRuns = 0;
+  /** Traces under way now. */
+  frameTraces = 0;
+  /** While set, a trace being started does not come up. */
+  frameGate: Promise<void> | undefined;
   /** What its trace leaves on this Mac. */
   tracePath: string | undefined;
   override get measure() {
@@ -180,7 +188,10 @@ class FlightDevice extends FakeDevice {
       ...super.measure,
       frameMarks: async (_a: string, _s: number, during: () => Promise<unknown>) => {
         this.frameRuns++;
+        await this.frameGate;
+        this.frameTraces++;
         await during();
+        this.frameTraces--;
         return {
           value: {
             frames: [{ at: Date.now(), ms: 900, late: true }],
@@ -400,6 +411,40 @@ describe('the flight recorder', () => {
     await vi.advanceTimersByTimeAsync(30_000);
     expect(d.frameRuns).toBe(runs);
     expect(d.rec.log.running).toBe(0);
+  });
+
+  it.each([
+    ['its numbers', (d: FlightDevice) => (d.liveMetrics.start = () => refused())],
+    ['the process of the app', (d: FlightDevice) => (d.appPid = refused)],
+  ])('leaves nothing running when %s will not start', async (_, spoil) => {
+    const d = new FlightDevice();
+    spoil(d);
+    const { call } = connect(d, 20);
+    await expect(call('report', { action: 'flight' })).rejects.toThrow('it will not start');
+    expect(d.rec.log.running).toBe(0);
+    expect(d.frameTraces).toBe(0);
+    expect(filming.read(d.serial)).toBeUndefined();
+    const { started } = d.rec.log;
+    await vi.advanceTimersByTimeAsync(600_000);
+    expect(d.rec.log.started).toBe(started);
+    expect(d.frameTraces).toBe(0);
+  });
+
+  it('ends the trace that was coming up when it was turned off', async () => {
+    const d = new FlightDevice();
+    const { call } = connect(d, 20);
+    await call('report', { action: 'flight' });
+    let up = () => undefined as void;
+    d.frameGate = new Promise((r) => (up = r));
+    await vi.advanceTimersByTimeAsync(480_000);
+    expect(d.frameRuns).toBe(2);
+    const off = call('report', { action: 'stop' });
+    await vi.advanceTimersByTimeAsync(1_000);
+    d.frameGate = undefined;
+    up();
+    await vi.advanceTimersByTimeAsync(5_000);
+    await off;
+    expect(d.frameTraces).toBe(0);
   });
 
   it('ends with its session', async () => {

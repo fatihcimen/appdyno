@@ -69,6 +69,8 @@ type Armed = {
   noVideo: string | undefined;
   endLive: () => void;
   timers: NodeJS.Timeout[];
+  /** The next trace coming up, which only then replaces `frames`. */
+  renewing: Promise<unknown>;
   first: ClockReading;
   /** When it began to watch, on the device's clock. */
   since: number;
@@ -126,11 +128,15 @@ export async function startFlight(
   let lastSave = 0;
   let logsReadTo = 0;
 
-  /** The ring's trace is about to end: the next one is up before it does. */
-  const renewFrames = async (a: Armed) => {
+  /** The ring's trace is about to end: the next one is up before it does, and what disarms waits for that. */
+  const renewFrames = (a: Armed) => {
     const old = a.frames;
-    a.frames = await recordFrames(device, app, FRAMES_SECONDS, seconds);
-    await dropTrace(await old.finish());
+    const renewing = recordFrames(device, app, FRAMES_SECONDS, seconds).then(async (next) => {
+      a.frames = next;
+      await dropTrace(await old.finish());
+    });
+    a.renewing = renewing.catch(() => undefined);
+    return renewing;
   };
 
   const arm = async (): Promise<Armed> => {
@@ -159,22 +165,32 @@ export async function startFlight(
       lookedAt: 0,
       endLive: () => undefined,
       timers: [],
-      pid: await device.appPid?.(app),
+      renewing: Promise.resolve(),
+      pid: undefined,
       samples: [],
     };
-    a.timers.push(setInterval(() => void renewFrames(a).catch(() => undefined), FRAMES_RENEWED_MS));
-    const turning = ring;
-    if (turning)
-      a.timers.push(
-        setInterval(() => void turning.rotate().catch(() => undefined), segmentSeconds * 1_000),
-      );
-    logsReadTo = Date.now() + first.offsetMs;
     armed = a;
-    a.endLive = await (device.liveMetrics ?? measuredLive(device, WATCHED, LOOK_MS)).start(
-      (sample) => void watch(a, sample),
-      app,
-    );
-    return a;
+    try {
+      a.pid = await device.appPid?.(app);
+      a.timers.push(
+        setInterval(() => void renewFrames(a).catch(() => undefined), FRAMES_RENEWED_MS),
+      );
+      const turning = ring;
+      if (turning)
+        a.timers.push(
+          setInterval(() => void turning.rotate().catch(() => undefined), segmentSeconds * 1_000),
+        );
+      logsReadTo = Date.now() + first.offsetMs;
+      a.endLive = await (device.liveMetrics ?? measuredLive(device, WATCHED, LOOK_MS)).start(
+        (sample) => void watch(a, sample),
+        app,
+      );
+      return a;
+    } catch (e) {
+      // a flight that did not start has no stop: what is up by now would turn for ever
+      await disarm(undefined);
+      throw e;
+    }
   };
 
   /** Ends what is armed, and writes a page of it if there is a reason to. */
@@ -185,6 +201,7 @@ export async function startFlight(
     a.timers.forEach(clearInterval);
     a.endLive();
     const end = Date.now() + a.first.offsetMs;
+    await a.renewing;
     const marks = await a.frames.finish();
     if (!why) {
       await dropTrace(marks);
