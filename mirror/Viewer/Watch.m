@@ -77,9 +77,10 @@ enum {
 
 - (void)addImage:(CVImageBufferRef)image turns:(int)turns {
   if (![self fill:image turns:turns]) return;
-  // a stream's frames by the device's clock: on the way here they bunch up, which is no fault of the screen
-  NSNumber *captured = CFBridgingRelease(CVBufferCopyAttachment(image, MVCapturedAt, NULL));
-  double at = captured ? captured.doubleValue : MVNowMs();
+  // a stream's frames by the device's clock: on the way here they bunch up, which is no fault of the screen.
+  // Where it has none, as an iPhone's says 0 for every frame, by this Mac's.
+  double captured = [CFBridgingRelease(CVBufferCopyAttachment(image, MVCapturedAt, NULL)) doubleValue];
+  double at = captured > 0 ? captured : MVNowMs();
   if (!_started) _firstAt = at;
   _started = YES;
   double ms = at - _firstAt;

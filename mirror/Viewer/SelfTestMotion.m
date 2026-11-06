@@ -41,7 +41,24 @@ static BOOL hasEvent(NSDictionary *region, NSString *kind) {
   return NO;
 }
 
+/// An iPhone's stream has no clock of the device's, and says 0 for every frame: those frames still have a time.
+static void checkNoClock(void) {
+  MVWatch *watch = [[MVWatch alloc] initWithId:@"clock" ms:100 strip:NO];
+  CVPixelBufferRef image = NULL;
+  CVPixelBufferCreate(NULL, W, H, kCVPixelFormatType_32BGRA, NULL, &image);
+  CVBufferSetAttachment(image, MVCapturedAt, (__bridge CFNumberRef)@0.0, kCVAttachmentMode_ShouldNotPropagate);
+  // past a step of what is read, or time stands still for a reason of its own
+  for (int i = 0; i < 4; i++) {
+    [watch addImage:image turns:0];
+    usleep(110000);
+  }
+  CVPixelBufferRelease(image);
+  double ms = [watch.finish[@"summary"][@"ms"] doubleValue];
+  MVCheck(@"watch: frames with no time of the device's go by this Mac's clock", ms >= 200, [NSString stringWithFormat:@"%.0f ms", ms]);
+}
+
 void MVTestMotion(void) {
+  checkNoClock();
   NSDictionary *smooth = only(watched(^int(double s) { return (int)(s * 120); }, W));
   double speed = [smooth[@"speed"] doubleValue] * W;
   MVCheck(@"motion: a smooth band is one region, moving left at its speed", smooth && [smooth[@"sign"] intValue] < 0 && [smooth[@"axis"] isEqual:@"x"] && fabs(speed - 120) < 12, [NSString stringWithFormat:@"%@", smooth]);
