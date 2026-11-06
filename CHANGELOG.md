@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `perf_snapshot` on an iPhone says when another app, or a locked phone's home screen, stood in front, and keeps no CPU number from it: an app the phone had stopped read 0 %, and the gate called a real cost no regression. It asks only if a runner is already up.
 - `perf_scroll` brings the list back between rounds, so that every round moves the same rows: on a real iPhone a list that ended within a round had nothing left for the next, and the call failed with its good rounds lost.
 - An agent that stops under a session says so, on the call's progress and on stderr, where a read used to start another and go on as though nothing had happened. A device suite that loses one fails, unless the test ended it on purpose.
 - An iPhone's runner lives through a keyboard closing and a home screen settling: a read of what had gone by then ended it, a new start hid that, and an action caught in it failed. A read of the home screen no longer asks a widget's process about its copies, which took 7 s and then stopped answering.

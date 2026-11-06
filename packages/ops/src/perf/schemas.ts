@@ -53,6 +53,7 @@ export const SnapshotOut = z.object({
   alarms: z.number().optional(),
   jobs: z.number().optional(),
   cpuPercent: z.number(),
+  cpuBehind: z.string().optional(),
   memoryKb: z.number(),
   /** What memoryKb counts: Android's PSS, or Apple's physical footprint. */
   memoryKind: z.enum(['pss', 'footprint']),

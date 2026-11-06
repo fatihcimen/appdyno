@@ -68,7 +68,12 @@ export type DeviceVitals = {
   batteryTempC?: number;
 };
 
-export type CpuReading = { percent: number; windowMs: number };
+export type CpuReading = {
+  percent: number;
+  windowMs: number;
+  /** What stood in front of the app: a phone stops an app behind, so this is no reading of it. */
+  behind?: string;
+};
 
 export type MemoryReading = {
   kb: number;

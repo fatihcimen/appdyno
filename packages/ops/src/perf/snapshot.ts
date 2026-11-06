@@ -320,6 +320,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
       const readCpu = measure(s, 'cpu');
       const readMemory = measure(s, 'memory');
       const cpu = await readCpu(pkg, cpuWindowMs);
+      const behind = cpu.value.behind;
       const mem = await readMemory(pkg);
       const source = s.device.measure;
       const frames = await unlessUnsupported(source.frames(pkg));
@@ -362,7 +363,15 @@ export function perfSnapshotOp(ctx: ServerContext) {
         raw: saved.txt,
         startedNs: got.find((g) => g.startedNs !== undefined)?.startedNs,
         metrics: [
-          { kind: 'cpu.percent', unit: 'percent', samples: [cpu.value.percent] },
+          ...(behind
+            ? []
+            : [
+                {
+                  kind: 'cpu.percent' as const,
+                  unit: 'percent' as const,
+                  samples: [cpu.value.percent],
+                },
+              ]),
           { kind: 'memory.kb', unit: 'kb', samples: [mem.value.kb] },
           ...play.metrics,
           ...got.flatMap((g) => g.metrics),
@@ -373,7 +382,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
       return reply(
         [
           `measurement ${saved.id}${virtualNote(s)}`,
-          `CPU: ${cpu.value.percent}% (of one core, ${cpu.value.windowMs} ms)`,
+          `CPU: ${cpu.value.percent}% (of one core, ${cpu.value.windowMs} ms)${behind ? `, with ${behind} in front: a phone stops an app behind, so this says nothing of it and is not kept` : ''}`,
           m.kind === 'pss'
             ? `memory: PSS ${kb(m.kb)}, Java ${kb(m.javaHeapKb)}, native ${kb(m.nativeHeapKb)}, graphics ${kb(m.graphicsKb)}`
             : `memory: physical footprint ${kb(m.kb)}${m.peakKb !== undefined ? ` (peak ${kb(m.peakKb)})` : ''}`,
@@ -415,6 +424,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
           raw: saved.txt,
           virtualDevice: s.device.virtual,
           cpuPercent: cpu.value.percent,
+          ...(behind && { cpuBehind: behind }),
           memoryKb: m.kb,
           memoryKind: m.kind,
           ...(m.peakKb !== undefined && { peakKb: m.peakKb }),

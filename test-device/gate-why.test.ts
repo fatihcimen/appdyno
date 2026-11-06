@@ -297,7 +297,13 @@ for (const t of targets)
       // a snapshot is one sample, and the gate takes five; five outlast a phone's screen, and a dark app is another app
       const measure = async () => {
         const { device } = await ops.ctx.session();
-        await (device as { ensureAwake?: () => Promise<unknown> }).ensureAwake?.();
+        const d = device as {
+          ensureAwake?: () => Promise<unknown>;
+          inFront?: (app: string) => Promise<unknown>;
+        };
+        await d.ensureAwake?.();
+        // what `ensureAwake` is to an Android: a locked iPhone stops the app, which then reads 0
+        await d.inFront?.(APP);
         const m = await ops.call('perf_snapshot', { scenario });
         expect(m.error, m.text).toBe(false);
         note(`${t.name} ${scenario}: ${/CPU: .*/.exec(m.text)?.[0]}`);

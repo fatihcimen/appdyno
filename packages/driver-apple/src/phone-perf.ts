@@ -43,6 +43,8 @@ export type PerfPhone = Pick<
   IosPhoneDevice,
   | 'serial'
   | 'ctl'
+  | 'agentUp'
+  | 'foreground'
   | 'crashes'
   | 'launch'
   | 'terminate'
@@ -177,11 +179,22 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
     const { value, raw } = await this.activity(bundle, windowMs);
     if (value.cpuPercent === undefined)
       throw new DeviceError('UNSUPPORTED', `the trace has one reading of ${bundle}: no CPU share`);
+    const behind = await this.inFrontOf(bundle);
     return {
-      value: { percent: value.cpuPercent, windowMs: value.windowMs! },
+      value: { percent: value.cpuPercent, windowMs: value.windowMs!, ...(behind && { behind }) },
       raw,
       at: now(),
     };
+  }
+
+  /** What stands in front of an app, if a runner is up to say: no measure of a moment waits for one to start. */
+  private async inFrontOf(bundle: string) {
+    if (!this.phone.agentUp) return undefined;
+    const front = await this.phone
+      .target(bundle)
+      .then(() => this.phone.foreground())
+      .catch(() => undefined);
+    return front === bundle ? undefined : front;
   }
 
   /** The Time Profiler over every process (attaching fails at times on a phone), one process read. */

@@ -210,6 +210,24 @@ describe('the page and the measures', () => {
     expect(kinds).toContainEqual(['energy.mj', true]);
   });
 
+  it('says of a CPU read with another app in front that it is none, and keeps the memory', async () => {
+    const at = '2026-11-03T00:00:00.000Z';
+    const behind = 'com.apple.springboard';
+    const { ctx, measurements } = context({
+      cpu: async () => ({ value: { percent: 0, windowMs: 1_200, behind }, raw: 'raw cpu', at }),
+    });
+    const { data, blocks } = await op(ctx, 'perf_snapshot', {});
+    expect(data).toMatchObject({ cpuBehind: behind });
+    expect((blocks[0] as { text: string }).text).toMatch(
+      /CPU: .*com\.apple\.springboard.*not kept/,
+    );
+    const [key] = await runKeys(measurements, { app: 'dev.app' });
+    const [run] = await latestRuns(measurements, key!, 1);
+    const kinds = run!.map((r) => r.kind);
+    expect(kinds).toContain('memory.kb');
+    expect(kinds).not.toContain('cpu.percent');
+  });
+
   it('answers what `also` asks in one order, whatever order it was asked in', async () => {
     const at = '2026-11-03T00:00:00.000Z';
     const reading = (value: unknown, raw: string) => async () => ({ value, raw, at });
