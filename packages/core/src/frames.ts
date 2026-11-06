@@ -93,7 +93,7 @@ export type FrameTimeline = {
   p95Ms: number;
   worstMs: number;
   /** `android_frame_stats`, where the trace has doFrame and DrawFrame slices. */
-  stats?: { frames: number; overrunP95Ms: number; overrunWorstMs: number; cpuP95Ms: number };
+  stats?: { frames: number; overrunP95Ms: number; overrunWorstMs: number; cpuP95Ms?: number };
   /** Why the frames that missed did, where the trace can say. */
   causes?: SlowFrameCauses;
   /** The kept trace. */

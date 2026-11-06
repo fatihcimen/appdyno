@@ -214,9 +214,13 @@ export function perfTraceOp(ctx: ServerContext) {
           ...(v.stats
             ? ([
                 { kind: 'frames.overrun_p95_ms', unit: 'ms', samples: [v.stats.overrunP95Ms] },
-                { kind: 'frames.cpu_p95_ms', unit: 'ms', samples: [v.stats.cpuP95Ms] },
               ] satisfies Metric[])
             : []),
+          ...(v.stats?.cpuP95Ms === undefined
+            ? []
+            : ([
+                { kind: 'frames.cpu_p95_ms', unit: 'ms', samples: [v.stats.cpuP95Ms] },
+              ] satisfies Metric[])),
         ],
         {
           lines: [
@@ -234,7 +238,7 @@ export function perfTraceOp(ctx: ServerContext) {
               : []),
             ...(v.stats
               ? [
-                  `overrun p95 ${v.stats.overrunP95Ms} ms, worst ${v.stats.overrunWorstMs} ms; CPU p95 ${v.stats.cpuP95Ms} ms`,
+                  `overrun p95 ${v.stats.overrunP95Ms} ms, worst ${v.stats.overrunWorstMs} ms${v.stats.cpuP95Ms === undefined ? '' : `; CPU p95 ${v.stats.cpuP95Ms} ms`}`,
                 ]
               : []),
             ...causeLines(v.causes),

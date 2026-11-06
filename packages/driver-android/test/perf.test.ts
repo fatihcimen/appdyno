@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
+import { quantile } from '@appdyno/core';
 import { parseExitInfo } from '../src/crashes.js';
 import { THERMAL_READ } from '../src/perf/app.js';
 import { AndroidPerf } from '../src/perf/index.js';
@@ -179,9 +180,27 @@ describe('android perf parsers on recorded outputs', () => {
       bufferStuffing: 1,
       surfaceFlinger: 1,
       p50Ms: 16,
-      p95Ms: 45,
+      p95Ms: 42,
       worstMs: 45,
     });
+  });
+
+  it('keeps its columns where a cell is empty, and a frame with no duration is no frame', () => {
+    const csv =
+      '"ts","surface","dur","jank_type"\n1,,2000000,"Buffer Stuffing, App Deadline Missed"\n2,,[NULL],"None"\n3,,,"None"\n';
+    expect(parseFrameTimelineCsv(csv)).toMatchObject({
+      frames: 1,
+      appDeadlineMissed: 1,
+      bufferStuffing: 1,
+      worstMs: 2,
+    });
+  });
+
+  it('reads a percentile as every measurement does', () => {
+    const frames = [10, 20, 30, 40].map((ms, i) => `${i},${ms * 1e6},"None"`).join('\n');
+    const read = parseFrameTimelineCsv(`"ts","dur","jank_type"\n${frames}\n`);
+    expect(read.p50Ms).toBe(quantile([10, 20, 30, 40], 0.5));
+    expect(read.p95Ms).toBe(38.5);
   });
 
   it('counts app resynced jitter as the app jank', () => {
@@ -207,6 +226,11 @@ describe('android perf parsers on recorded outputs', () => {
     expect(s.frames).toBe(32);
     expect(s.overrunWorstMs).toBeGreaterThanOrEqual(s.overrunP95Ms);
     expect(s.overrunWorstMs).toBeCloseTo(316.5, 0);
+    expect(parseAndroidFrameStats('overrun,cpu_time\n1000000,[NULL]\n')).toEqual({
+      frames: 1,
+      overrunP95Ms: 1,
+      overrunWorstMs: 1,
+    });
     expect(s.cpuP95Ms).toBeGreaterThan(40);
     expect(parseAndroidFrameStats('"overrun","cpu_time"\n')).toBeUndefined();
   });

@@ -1,6 +1,8 @@
 import {
   FROZEN_FRAME_MS,
   MIN_FRAMES,
+  quantile,
+  round1,
   type FrameSummary,
   type FrameStats,
   type FrameTimeline,
@@ -83,11 +85,6 @@ export function parseFramestats(text: string): FrameRow[] {
   return out;
 }
 
-const nearestRank = (xs: number[], p: number) => {
-  const s = [...xs].sort((a, b) => a - b);
-  return s[Math.min(s.length - 1, Math.max(0, Math.ceil(p * s.length) - 1))] ?? 0;
-};
-
 /** The summary plus what the per-frame rows say: a frame over two vsync intervals is slow. */
 export function parseFrameStats(text: string): FrameStats {
   const out: FrameStats = parseGfxSummary(text);
@@ -101,8 +98,8 @@ export function parseFrameStats(text: string): FrameStats {
       count: rows.length,
       slow,
       slowPercent: Math.round((slow / rows.length) * 1000) / 10,
-      p50Ms: nearestRank(ms, 0.5),
-      p95Ms: nearestRank(ms, 0.95),
+      p50Ms: round1(quantile(ms, 0.5)),
+      p95Ms: round1(quantile(ms, 0.95)),
       worstMs: Math.max(...ms),
       ...(worstWindow(rows) && { worstWindow: worstWindow(rows)! }),
     };
@@ -135,20 +132,15 @@ export function worstWindow(
  * "SurfaceFlinger CPU Deadline Missed", … (several may be listed, comma separated).
  */
 export function parseFrameTimelineCsv(csv: string): FrameTimeline {
-  const lines = csv.trim().split('\n');
-  const head = (lines.shift() ?? '').split(',').map((h) => h.replace(/"/g, '').trim());
-  const iDur = head.indexOf('dur');
-  const iJank = head.indexOf('jank_type');
+  const { columns, rows: cells } = parseCsv(csv);
+  const iDur = columns.indexOf('dur');
+  const iJank = columns.indexOf('jank_type');
   if (iDur < 0 || iJank < 0)
     throw new Error('no dur/jank_type columns in the frame timeline output');
-  const rows = lines
-    .filter(Boolean)
-    .map((l) => {
-      // jank_type is quoted and may hold commas
-      const cells = [...l.matchAll(/"([^"]*)"|([^,]+)/g)].map((m) => m[1] ?? m[2] ?? '');
-      return { durMs: Number(cells[iDur]) / 1e6, jank: cells[iJank] ?? '' };
-    })
-    .filter((r) => Number.isFinite(r.durMs));
+  const rows = cells.flatMap((r) => {
+    const dur = cellNum(r[iDur]);
+    return dur === undefined ? [] : [{ durMs: dur / 1e6, jank: r[iJank] ?? '' }];
+  });
   const has = (j: string, kind: RegExp) => kind.test(j);
   const janky = rows.filter((r) => r.jank && r.jank !== 'None').length;
   const ms = rows.map((r) => r.durMs);
@@ -164,8 +156,8 @@ export function parseFrameTimelineCsv(csv: string): FrameTimeline {
     bufferStuffing: rows.filter((r) => has(r.jank, /Buffer Stuffing/)).length,
     surfaceFlinger: rows.filter((r) => has(r.jank, /SurfaceFlinger|Display HAL|Prediction Error/))
       .length,
-    p50Ms: Math.round(nearestRank(ms, 0.5) * 10) / 10,
-    p95Ms: Math.round(nearestRank(ms, 0.95) * 10) / 10,
+    p50Ms: ms.length ? round1(quantile(ms, 0.5)) : 0,
+    p95Ms: ms.length ? round1(quantile(ms, 0.95)) : 0,
     worstMs: Math.round((ms.length ? Math.max(...ms) : 0) * 10) / 10,
   };
 }
@@ -177,10 +169,11 @@ export function parseAndroidFrameStats(csv: string): FrameTimeline['stats'] {
     rows.flatMap((r) => cellNum(r[columns.indexOf(name)]) ?? []).map(nsToMs);
   const overrun = col('overrun');
   if (overrun.length === 0) return undefined;
+  const cpu = col('cpu_time');
   return {
     frames: rows.length,
-    overrunP95Ms: nearestRank(overrun, 0.95),
+    overrunP95Ms: round1(quantile(overrun, 0.95)),
     overrunWorstMs: Math.max(...overrun),
-    cpuP95Ms: nearestRank(col('cpu_time'), 0.95),
+    ...(cpu.length > 0 && { cpuP95Ms: round1(quantile(cpu, 0.95)) }),
   };
 }

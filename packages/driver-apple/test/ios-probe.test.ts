@@ -33,6 +33,11 @@ describe('the frame probe', () => {
     expect(s.limits).toMatch(/not the render server or GPU/);
   });
 
+  it('reads a percentile as every measurement does', () => {
+    const lines = [frame(10, 10), frame(30, 20), frame(60, 30), frame(100, 40)].join('\n');
+    expect(probeSummary(lines, T, T + 200)).toMatchObject({ p50Ms: 25, p95Ms: 38.5 });
+  });
+
   it('reads the same window as frames, with the limits and the stalls', () => {
     const lines = [frame(10), frame(27), frame(77, 50), frame(1000, 923)].join('\n');
     const f = probeFrames(probeWindow(lines, T, T + 2000), T, T + 2000);

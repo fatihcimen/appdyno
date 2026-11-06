@@ -22,6 +22,8 @@ static int ascending(const void *a, const void *b) {
   return x < y ? -1 : x > y;
 }
 
+// the sample at floor(count * p), one that was seen: a rank at most from the interpolated quantile of the measurements
+// in TypeScript, which a viewer cannot reach
 static NSNumber *percentile(Samples *s, double p) {
   if (!s->count) return @(-1);
   qsort(s->values, s->count, sizeof(double), ascending);

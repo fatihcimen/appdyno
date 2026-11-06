@@ -1,5 +1,5 @@
 import type { FrameMark, FrameStats, ProbeSummary } from '@appdyno/core';
-import { FROZEN_FRAME_MS, MIN_FRAMES, round1 } from '@appdyno/core';
+import { FROZEN_FRAME_MS, MIN_FRAMES, quantile, round1 } from '@appdyno/core';
 
 export const PROBE_LIMITS =
   "The probe sees the app's main-thread pacing, not the render server or GPU, and the speed is the Mac's: it finds stalls and regressions on this machine and does not predict a phone's frame rate.";
@@ -78,7 +78,7 @@ function stats(windowText: string, fromMs: number, toMs: number) {
   if (open && open.open! > lastFrame) intervals.push(toMs - (open.open! - open.ms!));
   const vsync = frames.map((l) => l.v!).sort((a, b) => a - b)[frames.length >> 1] ?? 0;
   const sorted = intervals.toSorted((a, b) => a - b);
-  const at = (p: number) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] ?? 0;
+  const at = (p: number) => (sorted.length ? quantile(sorted, p) : 0);
   const missed = intervals.filter((x) => vsync > 0 && x > vsync * LATE_VSYNCS).length;
   const stalled = intervals.filter((x) => x > STALL_MS);
   const lastInput = all.findLast((l) => l.input !== undefined)?.input;
