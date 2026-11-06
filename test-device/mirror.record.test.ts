@@ -55,6 +55,8 @@ const LOAD_LIMIT = 60;
 
 const home = mkdtempSync(join(tmpdir(), 'appdyno-record-'));
 mkdirSync(join(home, 'Desktop'));
+// a flow's file goes under another HOME for a moment, and the state folder must not go with it
+process.env.APPDYNO_STATE_DIR ??= join(home, 'state');
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!;
 
