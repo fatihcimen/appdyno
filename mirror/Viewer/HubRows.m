@@ -48,6 +48,7 @@ MVRow *MVDeviceRow(NSDictionary *device) {
   row.symbol = MVDeviceSymbol(device);
   row.tile = MVHueTile(0);
   row.dot = stateColor(device);
+  row.dotShape = [device[@"mirrored"] boolValue] ? @"macwindow" : @"play.circle.fill";
   row.key = device[@"id"];
   return row;
 }

@@ -4,14 +4,41 @@
 
 static const double kHeaderHeight = 30, kChangeSeconds = 0.2, kTileSide = 26, kChosenAlpha = 0.2, kChosenRound = 10, kChosenInset = 4;
 
+/// Its title is its own: as a cell's `textField` the table would take over its colour.
+@interface MVRowCell : NSTableCellView
+@property(nonatomic) NSTextField *title;
+@end
+
+@implementation MVRowCell
+@end
+
 @interface MVRowView : NSTableRowView
 @end
 
 @implementation MVRowView
 - (void)drawSelectionInRect:(NSRect)dirty {
   NSRect pill = NSInsetRect(self.bounds, kChosenInset, 1);
+  NSBezierPath *shape = [NSBezierPath bezierPathWithRoundedRect:pill xRadius:kChosenRound yRadius:kChosenRound];
   [[MVAccent() colorWithAlphaComponent:kChosenAlpha] setFill];
-  [[NSBezierPath bezierPathWithRoundedRect:pill xRadius:kChosenRound yRadius:kChosenRound] fill];
+  [shape fill];
+  if (!MVWithoutColor()) return;
+  [MVInkColor() setStroke];
+  [shape stroke];
+}
+
+- (void)weigh {
+  for (NSView *view in self.subviews)
+    if ([view isKindOfClass:MVRowCell.class]) ((MVRowCell *)view).title.font = [NSFont systemFontOfSize:NSFont.systemFontSize weight:self.selected ? NSFontWeightSemibold : NSFontWeightRegular];
+}
+
+- (void)setSelected:(BOOL)selected {
+  super.selected = selected;
+  [self weigh];
+}
+
+- (void)didAddSubview:(NSView *)subview {
+  [super didAddSubview:subview];
+  [self weigh];
 }
 @end
 
@@ -174,11 +201,12 @@ static NSString *identityOf(MVRow *row) {
 
 - (NSView *)tableView:(NSTableView *)table viewForTableColumn:(NSTableColumn *)column row:(NSInteger)at {
   MVRow *row = _rows[at];
-  NSTableCellView *cell = [NSTableCellView new];
+  MVRowCell *cell = [MVRowCell new];
   cell.toolTip = row.help;
   if (row.header) return [self headerCell:row.title in:cell];
   NSView *icon = row.tile ? MVTile(row.symbol, row.tile, kTileSide) : row.symbol ? [[MVInk alloc] initWithSymbol:row.symbol color:row.tint ?: MVInkColor() size:15] : [NSView new];
   NSTextField *title = MVText(row.title, MVStyleBody);
+  cell.title = title;
   NSTextField *detail = MVText(row.detail, MVStyleSub);
   detail.lineBreakMode = NSLineBreakByTruncatingMiddle;
   detail.hidden = !row.detail.length;
@@ -190,12 +218,13 @@ static NSString *identityOf(MVRow *row) {
   NSStackView *stack = [NSStackView stackViewWithViews:@[icon, lines]];
   stack.spacing = row.tile ? 10 : 8;
   if (row.dot) {
-    MVInk *dot = [[MVInk alloc] initWithSymbol:@"circle.fill" color:row.dot size:8];
+    // a dot says what it says by its colour: a person who asked for more than colour gets a mark to read
+    MVInk *dot = [[MVInk alloc] initWithSymbol:MVWithoutColor() ? row.dotShape ?: @"circle.fill" : @"circle.fill" color:row.dot size:MVWithoutColor() ? 12 : 8];
     dot.translatesAutoresizingMaskIntoConstraints = NO;
     [cell addSubview:dot];
     [NSLayoutConstraint activateConstraints:@[
       [dot.trailingAnchor constraintEqualToAnchor:cell.trailingAnchor constant:-8],
-      [dot.widthAnchor constraintEqualToConstant:10],
+      [dot.widthAnchor constraintEqualToConstant:14],
       [dot.centerYAnchor constraintEqualToAnchor:cell.centerYAnchor],
     ]];
   }
