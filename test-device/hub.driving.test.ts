@@ -10,6 +10,7 @@ import { clientNamed, CLIENTS } from '../packages/cli/src/index.js';
 import { viewerBinary, ViewerProcess, type ViewerMessage } from '../packages/core/src/index.js';
 import { appleProvider } from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, ServerContext, runHub } from '../packages/ops/src/index.js';
+import { untilWithin } from './until.js';
 
 /**
  * A real MCP client through a real server, on a simulator we hold (APPDYNO_HUB_SIMULATOR; never a default), in the hub's real
@@ -37,13 +38,7 @@ describe.runIf(serial)('a client driving a device in the hub', () => {
   let model: string;
 
   const quiet = (ms: number) => new Promise((r) => setTimeout(r, ms));
-  const until = async (what: string, test: () => boolean, ms = 60_000) => {
-    const end = Date.now() + ms;
-    while (!test()) {
-      if (Date.now() > end) throw new Error(`no ${what} in ${ms} ms`);
-      await quiet(50);
-    }
-  };
+  const until = untilWithin(60_000);
   const clickRow = async (title: string) => {
     heard.length = 0;
     link.send({ op: 'poke', clickRow: title });

@@ -18,6 +18,7 @@ import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { windowControls, windowLook } from '../packages/ops/src/mirror/controls.js';
 import { windowMeasures } from '../packages/ops/src/mirror/measures.js';
 import { removeMirrorFile, writeMirrorFile } from '../packages/ops/src/mirror/state.js';
+import { untilWithin } from './until.js';
 
 /**
  * A window's live numbers on a device we hold (APPDYNO_IOS_UDID or APPDYNO_ANDROID_SERIAL; never a default): a real
@@ -32,13 +33,7 @@ const MEASURE_MS = 400_000;
 const FIXTURE = 'dev.appdyno.fixture';
 const PERFORMANCE_PANE = 0;
 
-const until = async (what: string, test: () => boolean, ms: number) => {
-  const end = Date.now() + ms;
-  while (!test()) {
-    if (Date.now() > end) throw new Error(`no ${what} in ${ms} ms`);
-    await new Promise((r) => setTimeout(r, 100));
-  }
-};
+const until = untilWithin(30_000);
 
 /** A real app in front: on Android one that animates, so that its frames have something to count. */
 const inFront = async () => {

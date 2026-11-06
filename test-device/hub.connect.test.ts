@@ -22,6 +22,7 @@ import {
 import { androidProvider } from '../packages/driver-android/src/index.js';
 import { appleProvider } from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, runHub, ServerContext } from '../packages/ops/src/index.js';
+import { untilWithin } from './until.js';
 
 /**
  * Connect a Phone and Tools in the real window, with the real parent and the drivers' real guides. No phone is near it:
@@ -54,13 +55,7 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
   let tools = [{ name: 'adb', ok: true, detail: '' }];
 
   const quiet = (ms: number) => new Promise((r) => setTimeout(r, ms));
-  const until = async (what: string, test: () => boolean, ms = 30_000) => {
-    const end = Date.now() + ms;
-    while (!test()) {
-      if (Date.now() > end) throw new Error(`no ${what} in ${ms} ms`);
-      await quiet(50);
-    }
-  };
+  const until = untilWithin(30_000);
   /** The same text a person reads. */
   const words = async () => {
     heard.length = 0;

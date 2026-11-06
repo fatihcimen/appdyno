@@ -11,6 +11,7 @@ import { Adb, androidProvider } from '../packages/driver-android/src/index.js';
 import { appleProvider } from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, ServerContext, runHub } from '../packages/ops/src/index.js';
 import { liveMirror } from '../packages/ops/src/mirror/state.js';
+import { untilWithin } from './until.js';
 
 /**
  * The hub as one window, on devices we hold (APPDYNO_HUB_DEVICES=A,B; never a default, and only those are listed): its
@@ -21,13 +22,7 @@ const serials = process.env.APPDYNO_HUB_DEVICES?.split(',') ?? [];
 const LIVE_MS = 180_000;
 const main = join(import.meta.dirname, '../packages/appdyno/dist/main.js');
 
-const until = async (what: string, test: () => boolean, ms: number) => {
-  const end = Date.now() + ms;
-  while (!test()) {
-    if (Date.now() > end) throw new Error(`no ${what} in ${ms} ms`);
-    await new Promise((r) => setTimeout(r, 200));
-  }
-};
+const until = untilWithin(30_000);
 
 describe.runIf(serials.length > 0)('the hub as one window', () => {
   const told: ViewerMessage[] = [];

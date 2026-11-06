@@ -10,6 +10,7 @@ import {
 import { appleProvider } from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, ServerContext, runHub } from '../packages/ops/src/index.js';
 import { liveMirror } from '../packages/ops/src/mirror/state.js';
+import { untilWithin } from './until.js';
 
 /**
  * `appdyno hub` on a simulator we hold and have shut down (APPDYNO_IOS_UDID; never a default): its real window, kept off
@@ -22,13 +23,7 @@ const BOOT_MS = 180_000;
 const WINDOW_MS = 120_000;
 const MADE = 'appdyno-hub-made';
 
-const until = async (what: string, test: () => boolean, ms: number) => {
-  const end = Date.now() + ms;
-  while (!test()) {
-    if (Date.now() > end) throw new Error(`no ${what} in ${ms} ms`);
-    await new Promise((r) => setTimeout(r, 200));
-  }
-};
+const until = untilWithin(30_000);
 
 const booted = () =>
   execFileSync('xcrun', ['simctl', 'list', 'devices', 'booted'], { encoding: 'utf8' }).includes(

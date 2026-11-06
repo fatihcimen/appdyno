@@ -8,6 +8,7 @@ import { expectSamePicture, shownByWindow } from './window-picture.js';
 import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { windowControls } from '../packages/ops/src/mirror/controls.js';
 import { windowMeasures } from '../packages/ops/src/mirror/measures.js';
+import { untilWithin } from './until.js';
 
 /**
  * A mirror on our own iPhone (APPDYNO_IPHONE_UDID; never a default), through what is built: the stream's thread runs only
@@ -20,13 +21,7 @@ const packages = join(import.meta.dirname, '../packages');
 const dist = join(packages, 'appdyno/dist');
 const headless = process.env.APPDYNO_MIRROR_WINDOW !== '1';
 
-const until = async (what: string, test: () => boolean | Promise<boolean>, ms = 30_000) => {
-  const end = Date.now() + ms;
-  while (!(await test())) {
-    if (Date.now() > end) throw new Error(`no ${what} in ${ms} ms`);
-    await new Promise((r) => setTimeout(r, 100));
-  }
-};
+const until = untilWithin(30_000);
 
 const show = (screen: string) =>
   execFileSync(

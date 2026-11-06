@@ -11,6 +11,7 @@ import {
   type ViewerMessage,
 } from '../packages/core/src/index.js';
 import { DEFAULT_POLICY, ServerContext, runHub } from '../packages/ops/src/index.js';
+import { untilWithin } from './until.js';
 
 /**
  * AI Clients and Help in the hub's real window, kept off every screen, every control pressed by a real click. Its home is a
@@ -47,13 +48,7 @@ describe.runIf(process.env.APPDYNO_HUB_PLACES)('AI Clients and Help', () => {
   let done: Promise<number>;
 
   const quiet = (ms: number) => new Promise((r) => setTimeout(r, ms));
-  const until = async (what: string, test: () => boolean, ms = 30_000) => {
-    const end = Date.now() + ms;
-    while (!test()) {
-      if (Date.now() > end) throw new Error(`no ${what} in ${ms} ms`);
-      await quiet(50);
-    }
-  };
+  const until = untilWithin(30_000);
   /** Clicks a control as a mouse does: the window's own events, through its hit testing. */
   const click = async (name: string) => {
     heard.length = 0;

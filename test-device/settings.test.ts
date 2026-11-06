@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, appleProvider } from './workspace.js';
 import { opsOn, type Call } from './helpers.js';
+import { untilWithin } from './until.js';
 
 /**
  * Conditions against what they cost, on the fixture. Airplane mode and mobile data are read back and proven
@@ -26,11 +27,7 @@ const reaches = () => {
     return false;
   }
 };
-const until = async (holds: () => boolean, ms = 15_000) => {
-  const end = Date.now() + ms;
-  while (!holds() && Date.now() < end) await new Promise((r) => setTimeout(r, 300));
-  return holds();
-};
+const until = untilWithin(15_000);
 
 const value = async (call: Call, name: string) =>
   (await call('device_setting', { name })).data.value;
@@ -58,11 +55,11 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
     expect(reaches()).toBe(true);
     await set(call, 'mobile_data', 'off');
     expect(await value(call, 'mobile_data')).toBe('off');
-    expect(await until(() => !reaches())).toBe(true);
+    await until('the network gone', () => !reaches());
     const r = await call('device_setting', { name: 'restore' });
     expect(r.text).toContain('mobile_data: on');
     expect(await value(call, 'mobile_data')).toBe('on');
-    expect(await until(reaches)).toBe(true);
+    await until('the network back', reaches);
   });
 
   it('turns airplane mode on, read back, cuts everything, and restore brings it all back', async () => {
@@ -70,11 +67,11 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
     await set(call, 'airplane', 'on');
     expect(await value(call, 'airplane')).toBe('on');
     expect(await value(call, 'wifi')).toBe('off');
-    expect(await until(() => !reaches())).toBe(true);
+    await until('the network gone', () => !reaches());
     await call('device_setting', { name: 'restore' });
     expect(await value(call, 'airplane')).toBe('off');
-    expect(await until(reaches)).toBe(true);
-    expect(await until(() => adb('settings', 'get', 'global', 'wifi_on') === '1')).toBe(true);
+    await until('the network back', reaches);
+    await until('Wi-Fi on', () => adb('settings', 'get', 'global', 'wifi_on') === '1');
   });
 
   it('turns Wi-Fi off and on, by the state of the radio', async () => {

@@ -14,6 +14,7 @@ import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { windowControls, windowLook } from '../packages/ops/src/mirror/controls.js';
 import { windowMeasures } from '../packages/ops/src/mirror/measures.js';
 import { expectSamePicture, shownByWindow } from './window-picture.js';
+import { untilWithin } from './until.js';
 
 /**
  * A person's window on a phone we hold (APPDYNO_ANDROID_SERIAL and APPDYNO_MIRROR_WINDOW=1; never a default): the real
@@ -24,13 +25,7 @@ const serial = process.env.APPDYNO_ANDROID_SERIAL;
 const APP = 'dev.appdyno.fixture';
 const MS = 20_000;
 
-const until = async (what: string, test: () => boolean | Promise<boolean>, ms = MS) => {
-  const end = Date.now() + ms;
-  while (!(await test())) {
-    if (Date.now() > end) throw new Error(`no ${what} in ${ms} ms`);
-    await new Promise((r) => setTimeout(r, 200));
-  }
-};
+const until = untilWithin(MS);
 
 const onPhone = !!serial && !serial.startsWith('emulator-');
 

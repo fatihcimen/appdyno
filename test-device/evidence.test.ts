@@ -17,6 +17,7 @@ import {
   Devicectl,
   PERFETTO,
 } from './workspace.js';
+import { untilWithin } from './until.js';
 
 /**
  * Evidence on real devices, through the operations an agent calls and, where a recording must outlive its
@@ -693,11 +694,7 @@ describe.skipIf(!android || !android.startsWith('emulator-'))('emulator events o
   const adb = new Adb();
   const callState = async () =>
     /mCallState=(\d)/.exec(await adb.exec(android!, 'dumpsys telephony.registry'))?.[1];
-  const until = async (met: () => Promise<boolean>) => {
-    const end = Date.now() + 15_000;
-    while (!(await met()) && Date.now() < end) await new Promise((r) => setTimeout(r, 250));
-    expect(await met()).toBe(true);
-  };
+  const until = untilWithin(15_000);
   beforeAll(async () => {
     h = harness(android!, androidProvider(adb));
     await h.ok('launch_app');
@@ -719,16 +716,16 @@ describe.skipIf(!android || !android.startsWith('emulator-'))('emulator events o
 
   it('brings a call in and ends it', async () => {
     await h.ok('device_setting', { name: 'call', value: '5551212' });
-    await until(async () => (await callState()) === '1');
+    await until('a call ringing', async () => (await callState()) === '1');
     await h.ok('device_setting', { name: 'call', value: 'end 5551212' });
-    await until(async () => (await callState()) === '0');
+    await until('the call gone', async () => (await callState()) === '0');
     await h.ok('launch_app');
   }, 60_000);
 
   it('brings an SMS in', async () => {
     const text = `Merhaba ${Date.now()}`;
     await h.ok('device_setting', { name: 'sms', title: '5553434', value: text });
-    await until(async () =>
+    await until('the SMS in the inbox', async () =>
       (
         await adb.exec(android!, 'content query --uri content://sms/inbox --projection body')
       ).includes(text),

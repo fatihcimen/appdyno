@@ -18,6 +18,7 @@ import { DEFAULT_POLICY, flowsFor, opsFor, ServerContext } from '../packages/ops
 import { windowControls, windowLook } from '../packages/ops/src/mirror/controls.js';
 import { windowFlow } from '../packages/ops/src/mirror/flow.js';
 import { windowMeasures } from '../packages/ops/src/mirror/measures.js';
+import { untilWithin } from './until.js';
 
 /**
  * A flow made by real clicks: a real window, kept off every screen, given the events a mouse sends, on our own
@@ -57,13 +58,7 @@ mkdirSync(join(home, 'Desktop'));
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!;
 
-const until = async (what: string, test: () => boolean, ms = 60_000) => {
-  const end = Date.now() + ms;
-  while (!test()) {
-    if (Date.now() > end) throw new Error(`no ${what} in ${ms} ms`);
-    await pause(50);
-  }
-};
+const until = untilWithin(60_000);
 
 /** A link opens a screen from the app's first one: a screen left open may swallow it. */
 const restart = async (device: Device) => {

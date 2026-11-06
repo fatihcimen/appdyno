@@ -21,6 +21,7 @@ import {
 } from '../packages/driver-android/src/index.js';
 import { AndroidAgentLauncher } from '../packages/driver-android/src/agent.js';
 import { expectSamePicture, shownByWindow } from './window-picture.js';
+import { untilWithin } from './until.js';
 
 /**
  * A mirror on an Android device we hold (APPDYNO_ANDROID_SERIAL; never a default), headless. On an emulator
@@ -29,13 +30,7 @@ import { expectSamePicture, shownByWindow } from './window-picture.js';
 const serial = process.env.APPDYNO_ANDROID_SERIAL;
 const emulator = serial?.startsWith('emulator-') ?? false;
 
-const until = async (what: string, test: () => boolean, ms = 60_000) => {
-  const end = Date.now() + ms;
-  while (!test()) {
-    if (Date.now() > end) throw new Error(`no ${what} in ${ms} ms`);
-    await new Promise((r) => setTimeout(r, 50));
-  }
-};
+const until = untilWithin(60_000);
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

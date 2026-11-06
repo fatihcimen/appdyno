@@ -8,6 +8,7 @@ import { NODE_FLAGS } from '../packages/protocol/src/index.js';
 import { DEFAULT_POLICY, ServerContext, runHub } from '../packages/ops/src/index.js';
 import { Parent } from '../packages/ops/src/mirror/parent.js';
 import { liveMirror } from '../packages/ops/src/mirror/state.js';
+import { untilWithin } from './until.js';
 
 /**
  * Two windows as one hand, on two devices we hold with the fixture on them (APPDYNO_PAIR=A,B; never a default): real
@@ -22,13 +23,7 @@ const LIST = 'appdyno-fixture://open/list';
 const MS = 20_000;
 const LONG_MS = 300_000;
 
-const until = async (what: string, test: () => boolean | Promise<boolean>, ms = MS) => {
-  const end = Date.now() + ms;
-  while (!(await test())) {
-    if (Date.now() > end) throw new Error(`no ${what} in ${ms} ms`);
-    await new Promise((r) => setTimeout(r, 200));
-  }
-};
+const until = untilWithin(MS);
 
 const has = (n: WireNode, name: string) => n.id?.split('/').pop() === name;
 

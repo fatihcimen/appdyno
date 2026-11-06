@@ -10,6 +10,7 @@ import {
   type ViewerLink,
 } from '../packages/core/src/index.js';
 import { IosSimulatorDevice } from '../packages/driver-apple/src/index.js';
+import { untilWithin } from './until.js';
 
 /**
  * A mirror on our own booted simulator (APPDYNO_IOS_UDID; never a default). Headless, unless
@@ -17,13 +18,7 @@ import { IosSimulatorDevice } from '../packages/driver-apple/src/index.js';
  */
 const udid = process.env.APPDYNO_IOS_UDID;
 
-const until = async (what: string, test: () => boolean, ms = 30_000) => {
-  const end = Date.now() + ms;
-  while (!test()) {
-    if (Date.now() > end) throw new Error(`no ${what} in ${ms} ms`);
-    await new Promise((r) => setTimeout(r, 50));
-  }
-};
+const until = untilWithin(30_000);
 
 const percentile = (values: number[], p: number) =>
   [...values].sort((a, b) => a - b)[Math.floor(values.length * p)]!;

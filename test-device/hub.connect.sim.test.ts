@@ -14,6 +14,7 @@ import {
 } from '../packages/core/src/index.js';
 import { androidProvider } from '../packages/driver-android/src/index.js';
 import { DEFAULT_POLICY, runHub, ServerContext } from '../packages/ops/src/index.js';
+import { untilWithin } from './until.js';
 
 /**
  * What a phone that gets ready leads to, and every command of Tools for real, on a simulator of the runner's own: its
@@ -39,13 +40,7 @@ describe.runIf(sim)('Connect and Tools on a simulator', () => {
   let phones: ListedPhone[] = [];
 
   const quiet = (ms: number) => new Promise((r) => setTimeout(r, ms));
-  const until = async (what: string, test: () => boolean, ms = 60_000) => {
-    const end = Date.now() + ms;
-    while (!test()) {
-      if (Date.now() > end) throw new Error(`no ${what} in ${ms} ms`);
-      await quiet(50);
-    }
-  };
+  const until = untilWithin(60_000);
   const click = async (name: string) => {
     heard.length = 0;
     link.send({ op: 'poke', clickOn: name });
