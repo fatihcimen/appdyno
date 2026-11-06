@@ -93,13 +93,14 @@ describe.skipIf(!serial)('android perf accuracy', () => {
   });
 
   it('launch: cold starts are COLD and match the system log; warm starts are faster', async () => {
-    await d.shell('logcat -c');
+    // a phone's log is a person's: read it from here on, and leave what was there
+    const from = (await d.shell('date +%s')).trim();
     const cold = (await d.measure.launch(APP, { mode: 'cold', repeats: 3 })).value;
     // under memory pressure the system may kill or keep a process: most launches are in the asked state
     expect(cold.samples.filter((x) => x.state === 'COLD').length).toBeGreaterThanOrEqual(2);
     expect(cold.medianMs).toBeGreaterThan(0);
     const log = await d.shell(
-      'logcat -d -s ActivityTaskManager:I | grep "Displayed dev.appdyno.fixture"',
+      `logcat -d -T ${from}.000 -s ActivityTaskManager:I | grep "Displayed dev.appdyno.fixture"`,
     );
     const displayed = [...log.matchAll(/\+(?:(\d+)s)?(\d+)ms/g)].map(
       (m) => Number(m[1] ?? 0) * 1000 + Number(m[2]),
