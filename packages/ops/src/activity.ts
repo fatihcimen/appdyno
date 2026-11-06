@@ -12,7 +12,7 @@ import { dirname } from 'node:path';
 import { callClient, deviceStateFile } from '@appdyno/core';
 import type { ServerContext } from './context.js';
 import { redactLog } from './policy.js';
-import { shownArgs } from './report.js';
+import { shownArgs } from './report-journal.js';
 import type { Op, ToolResult } from './tool.js';
 
 /** One call, for a person watching: no socket, across processes. */

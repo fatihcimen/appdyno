@@ -1,7 +1,7 @@
 import { type Screen, type ScreenElement, selectIn } from '@appdyno/core';
 import { type FlowSelector, type FlowStep, type Flag, Recording } from '@appdyno/flows';
 import type { ServerContext } from '../context.js';
-import { NOT_STEPS } from '../report.js';
+import { NOT_STEPS } from '../report-journal.js';
 import type { Session } from '../session.js';
 import { SCROLLER_SWIPES } from '../perf/shared.js';
 import { SCROLL_MAX, type Step, WAIT_MS } from '../step-schemas.js';
