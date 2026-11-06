@@ -60,6 +60,18 @@ describe('going without a cable', () => {
     );
     expect(seen).toEqual([expect.objectContaining({ serial: 'R68', onWifi: true })]);
   });
+
+  it('asks nothing of an iPhone away on Wi-Fi, which would stand before the phone in a hand', async () => {
+    const list = async () => [
+      { serial: '00001234-0123456789ABCDEF', state: 'network', ready: false },
+      { serial: 'R68', state: 'device', ready: true },
+    ];
+    const seen = await listedPhones(
+      [{ list, handles: () => true, open: () => undefined }] as never,
+      async () => undefined,
+    );
+    expect(seen.map((p) => p.serial)).toEqual(['R68']);
+  });
 });
 
 describe('the phone in a person hand', () => {

@@ -32,9 +32,9 @@ export function guideFor(
   return { steps: [], ready: false };
 }
 
-/** Phones only: a simulator or an emulator needs none of this. */
+/** Phones in a person's hand: a simulator or an emulator needs none of this, and one away on Wi-Fi is the list's. */
 const isPhone = (d: { serial: string; state: string }) =>
-  d.state !== 'booted' && !d.serial.startsWith('emulator-');
+  !['booted', 'network'].includes(d.state) && !d.serial.startsWith('emulator-');
 
 /** Each phone a driver hears of, with what stands in its way. */
 export async function listedPhones(
