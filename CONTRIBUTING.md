@@ -58,6 +58,13 @@ we wrote, to one job and to 450 lines, but for the ones it names with a reason, 
 appears twice. What both drivers do belongs in `core`; what the iOS runner decides without a device belongs in
 `ios/RunnerCore`, and the Android agent's in a class of its own with no framework in it, where a unit test reaches it.
 
+`packages/appdyno/test/function-size.test.ts` does the same for a TypeScript function, at 200 lines, a closure inside it
+counted by itself too: a file's limit never sees one closure that holds a class's worth of state. The ones over it are
+named, each with what is long about it.
+
+`packages/ops` is what a client calls, `packages/hub` the hub's and a window's controller on top of it. What the hub takes
+from `ops` is what `ops` lets out in its `index.ts`, and the rule above keeps `ops` from importing the hub.
+
 ## A new platform
 
 A platform is one driver package: a `DeviceProvider`, a `Device`, a `PlatformScreen` and a `MeasureSource`, each of
@@ -70,7 +77,7 @@ takes `PLATFORMS` in `packages/protocol/src/messages.ts`, the tables keyed by it
 
 Some names here carry a meaning of their own:
 
-- A **place** is what stands in the hub where a device would: AI Clients and Help. `HubPlaces` is what they ask of this Mac.
+- A **place** is what stands in the hub's window where a device would: AI Clients and Help. `HubServices` is what they ask of this Mac.
 - **Words** are text for a person, in `WordsTable.m` and `wordsOf`, and a **need** is what stands between a person and a device, with its fix.
 - **said** and **heard** are what a process wrote and what the other side took from it, on the viewer's wire or a command's output.
 - To **keep** a run is to save its records for the gate, and a **source** is what a window shows from, or what measured a number.
