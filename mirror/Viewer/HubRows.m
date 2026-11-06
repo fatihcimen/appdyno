@@ -9,7 +9,7 @@ NSString *const MVPlaceKey = @"place:";
 static const double kPlaceSeconds = 0.18;
 
 static NSColor *_Nullable stateColor(NSDictionary *device) {
-  if ([device[@"mirrored"] boolValue]) return NSColor.systemBlueColor;
+  if ([device[@"mirrored"] boolValue]) return MVAccent();
   return [device[@"state"] isEqual:@"running"] ? MVGreen() : nil;
 }
 
@@ -46,6 +46,7 @@ MVRow *MVDeviceRow(NSDictionary *device) {
   if ([device[@"detail"] length] && ![device[@"detail"] isEqual:model]) [about addObject:device[@"detail"]];
   row.detail = [about componentsJoinedByString:@" · "];
   row.symbol = MVDeviceSymbol(device);
+  row.tile = MVHueTile(0);
   row.dot = stateColor(device);
   row.key = device[@"id"];
   return row;
@@ -57,6 +58,7 @@ static MVRow *goneRow(NSDictionary *device) {
   row.detail = @"Unplugged";
   row.dot = nil;
   row.symbol = @"cable.connector.slash";
+  row.tile = nil;
   row.tint = MVOrange();
   return row;
 }
@@ -91,6 +93,7 @@ static MVRow *goneRow(NSDictionary *device) {
     row.title = place.title;
     row.detail = @"";
     row.symbol = place.symbol;
+    row.tile = MVHueTile((NSInteger)at + 1);
     row.key = [NSString stringWithFormat:@"%@%lu", MVPlaceKey, (unsigned long)at];
     [rows addObject:row];
   }];
@@ -119,7 +122,9 @@ static MVRow *goneRow(NSDictionary *device) {
   ((MVRoomView *)_room).place = _placeShown;
   [_room addSubview:_placeShown];
   [_list selectKey:_placeKey];
-  [_bare setName:place.title about:nil];
+  // a place says its own name, large, at the head of its page
+  [_bare setName:@"" about:nil];
+  [((MVRoomView *)_room).backdrop showPlace:(NSInteger)[_places indexOfObject:place] + 1];
   [_help fillDevice:_lastDevice app:MVFrontApp()];
   [_tools fillDevice:_lastDevice];
   // a backdrop fades as a device's would; a person who asked for less motion has a cut
@@ -134,6 +139,7 @@ static MVRow *goneRow(NSDictionary *device) {
   _placeKey = nil;
   ((MVRoomView *)_room).place = nil;
   _room.needsLayout = YES;
+  [((MVRoomView *)_room).backdrop showPlace:0];
   [_bare hideInspectorSwitch:NO];
   if (device && _inspectorWasOpen) ((MVRoomView *)_room).slot.item.collapsed = NO;
 }

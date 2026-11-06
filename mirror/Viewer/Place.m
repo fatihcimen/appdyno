@@ -4,8 +4,8 @@
 #import "Window.h"
 #import "Words.h"
 
-static const double kPageWide = 620, kMargin = 24, kCardRound = 10, kCardInset = 12, kCardGround = 0.06;
-static const double kCopiedSeconds = 1.5;
+static const double kPageWide = 660, kMargin = 28, kCardRound = 16, kCardInset = 14;
+static const double kCopiedSeconds = 1.5, kRuleAlpha = 0.1;
 static NSString *gFrontApp;
 
 void MVNoteFrontApp(NSString *name) {
@@ -89,22 +89,23 @@ NSTextField *MVNoteText(NSString *text) {
   return field;
 }
 
-static id buttonNamed(Class kind, NSString *title, NSString *name, id target, SEL action) {
-  NSButton *button = [kind buttonWithTitle:MVWord(title) target:target action:action];
+static MVAccentButton *buttonNamed(NSString *title, NSString *name, id target, SEL action) {
+  MVAccentButton *button = [MVAccentButton buttonWithTitle:MVWord(title) target:target action:action];
   button.identifier = name;
-  button.controlSize = NSControlSizeRegular;
-  button.bezelStyle = NSBezelStylePush;
+  button.bordered = NO;
   [button setContentHuggingPriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
   [button setContentCompressionResistancePriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
   return button;
 }
 
 NSButton *MVPlaceButton(NSString *title, NSString *name, id target, SEL action) {
-  return buttonNamed(MVBarButton.class, title, name, target, action);
+  MVAccentButton *button = buttonNamed(title, name, target, action);
+  button.quiet = YES;
+  return button;
 }
 
 MVAccentButton *MVPlacePrimary(NSString *title, NSString *name, id target, SEL action) {
-  return buttonNamed(MVAccentButton.class, title, name, target, action);
+  return buttonNamed(title, name, target, action);
 }
 
 @interface MVCardView : NSView
@@ -116,25 +117,28 @@ MVAccentButton *MVPlacePrimary(NSString *title, NSString *name, id target, SEL a
 }
 
 - (void)updateLayer {
-  self.layer.backgroundColor = [NSColor colorWithName:nil dynamicProvider:^NSColor *(NSAppearance *look) {
-    BOOL dark = [[look bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]] isEqual:NSAppearanceNameDarkAqua];
-    return [NSColor colorWithWhite:dark ? 1 : 0 alpha:kCardGround];
-  }].CGColor;
+  self.layer.backgroundColor = MVCardFill().CGColor;
+  self.layer.borderColor = MVCardEdge().CGColor;
 }
 @end
 
 NSView *MVCard(NSView *content, CGFloat tall) {
+  return MVCardInset(content, tall, kCardInset);
+}
+
+NSView *MVCardInset(NSView *content, CGFloat tall, CGFloat wide) {
   NSView *card = [MVCardView new];
   card.wantsLayer = YES;
   card.layer.cornerRadius = kCardRound;
   card.layer.cornerCurve = kCACornerCurveContinuous;
+  card.layer.borderWidth = 1;
   content.translatesAutoresizingMaskIntoConstraints = NO;
   [card addSubview:content];
   [NSLayoutConstraint activateConstraints:@[
     [content.topAnchor constraintEqualToAnchor:card.topAnchor constant:tall],
     [content.bottomAnchor constraintEqualToAnchor:card.bottomAnchor constant:-tall],
-    [content.leadingAnchor constraintEqualToAnchor:card.leadingAnchor constant:kCardInset],
-    [content.trailingAnchor constraintEqualToAnchor:card.trailingAnchor constant:-kCardInset],
+    [content.leadingAnchor constraintEqualToAnchor:card.leadingAnchor constant:wide],
+    [content.trailingAnchor constraintEqualToAnchor:card.trailingAnchor constant:-wide],
   ]];
   return card;
 }
@@ -148,8 +152,8 @@ NSView *MVCard(NSView *content, CGFloat tall) {
 }
 
 - (void)updateLayer {
-  self.layer.backgroundColor = MVSolid(NSColor.windowBackgroundColor).CGColor;
-  self.layer.borderColor = MVSolid(NSColor.separatorColor).CGColor;
+  self.layer.backgroundColor = MVSurface().CGColor;
+  self.layer.borderColor = MVCardEdge().CGColor;
 }
 @end
 
@@ -209,9 +213,23 @@ NSView *MVPlaceRow(NSView *words, NSArray<NSView *> *ends) {
   return row;
 }
 
+@interface MVRuleView : NSView
+@end
+
+@implementation MVRuleView
+- (BOOL)wantsUpdateLayer {
+  return YES;
+}
+
+- (void)updateLayer {
+  self.layer.backgroundColor = MVRule(kRuleAlpha).CGColor;
+}
+@end
+
 NSView *MVSeparator(void) {
-  NSBox *line = [NSBox new];
-  line.boxType = NSBoxSeparator;
+  NSView *line = [MVRuleView new];
+  line.wantsLayer = YES;
+  [line.heightAnchor constraintEqualToConstant:1].active = YES;
   return line;
 }
 
@@ -231,7 +249,7 @@ void MVAskClients(NSString *what, NSDictionary *more) {
 NSTextField *MVCodeText(NSString *text) {
   NSTextField *field = [NSTextField wrappingLabelWithString:text];
   field.font = [NSFont monospacedSystemFontOfSize:11 weight:NSFontWeightRegular];
-  field.textColor = MVSolid(NSColor.labelColor);
+  field.textColor = MVInkColor();
   field.selectable = YES;
   [field setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
   return field;

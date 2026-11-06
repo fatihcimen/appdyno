@@ -269,8 +269,8 @@ static void checkTools(MVHub *hub, MVToolsPane *tools) {
   MVCheck(@"tools: a real click on its row takes the room", hub.placeShown == tools, nil);
   [tools chooseApp:@"" folder:@""];
   [tools fillDevice:nil];
-  MVCheck(@"tools: what a row lacks is said once, at the top", says(hub, @"Dimmed rows need:") && !MVFindControl(hub.room.window.contentView, @"run:baseline").enabled, wordsOf(hub));
-  MVCheck(@"tools: a dimmed row asks nothing", clicked(hub, @"run:baseline") == nil, nil);
+  MVCheck(@"tools: a row says what it lacks where its button stood", says(hub, @"Needs an app") && !MVFindControl(hub.room.window.contentView, @"run:baseline").enabled, wordsOf(hub));
+  MVCheck(@"tools: a row that lacks something asks nothing", clicked(hub, @"run:baseline") == nil, nil);
   [hub pokeClick:@"index:4"];
   MVPump(0.2);
   MVCheck(@"tools: its index stays, and takes the page to a section", MVFindControl(hub.room.window.contentView, @"index:0") != nil, nil);

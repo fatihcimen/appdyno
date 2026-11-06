@@ -6,9 +6,9 @@
 
 // while this place shows, for a client that connects with nobody touching the window; nothing runs while it does not
 static const double kListSeconds = 2;
-static const double kRowHigh = 44, kShowSeconds = 0.2;
+static const double kRowHigh = 52, kTileSide = 32, kShowSeconds = 0.2;
 // a symbol and the gap after it: what a row says of itself stands under its name
-static const double kUnderName = 26;
+static const double kUnderName = 44;
 
 /// A state is a symbol and a word as well as a colour.
 static NSString *symbolOf(NSString *state) {
@@ -43,7 +43,7 @@ static NSString *shownName(NSDictionary *row) {
 @implementation MVClientsPane {
   NSStackView *_here, *_browser;
   NSTextField *_awayNames;
-  NSView *_awayGroup;
+  NSView *_awayGroup, *_hereGroup, *_browserGroup;
   NSTextField *_listening, *_tokenText;
   MVInk *_serverMark;
   NSButton *_power, *_showToken, *_copyToken, *_copyAddress;
@@ -68,9 +68,11 @@ static NSString *shownName(NSDictionary *row) {
     _awayNames = MVParagraph(@"", MVStyleBody);
     _browser = MVPlaceColumn(@[], 0);
     _awayGroup = MVPlaceColumn(@[MVText(@"Not on This Mac", MVStyleHeading), MVCard(MVPlaceColumn(@[_awayNames, MVParagraph(@"Open one once, and it comes up above.", MVStyleSub)], 2), 10)], 6);
-    NSStackView *column = MVPlaceColumn(@[MVParagraph(@"Connect an AI app, and it can see and drive your devices.", MVStyleBody), [self group:@"On This Mac" rows:_here], _awayGroup, [self group:@"In a Browser" rows:_browser], [self serverCard]], 8);
+    _hereGroup = [self group:@"On This Mac" rows:_here];
+    _browserGroup = [self group:@"In a Browser" rows:_browser];
+    NSStackView *column = MVPlaceColumn(@[MVPlaceHead(@"sparkles", MVHueTile(3), @"AI Clients", @"Connect an AI app, and it can see and drive your devices."), _hereGroup, _awayGroup, _browserGroup, [self serverCard]], 8);
     [column setCustomSpacing:16 afterView:column.arrangedSubviews[0]];
-    for (NSView *group in @[column.arrangedSubviews[1], _awayGroup, column.arrangedSubviews[3]]) [column setCustomSpacing:16 afterView:group];
+    for (NSView *group in @[_hereGroup, _awayGroup, _browserGroup]) [column setCustomSpacing:16 afterView:group];
     NSScrollView *page = MVPlacePage(column);
     page.frame = self.bounds;
     page.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
@@ -167,6 +169,8 @@ static NSString *shownName(NSDictionary *row) {
   [self fill:_browser with:browser];
   _awayNames.stringValue = [away componentsJoinedByString:@", "];
   _awayGroup.hidden = away.count == 0;
+  _hereGroup.hidden = here.count == 0;
+  _browserGroup.hidden = browser.count == 0;
   _fresh = nil;
 }
 
@@ -194,22 +198,27 @@ static NSString *shownName(NSDictionary *row) {
   if (browser || !row[@"file"]) return buttons;
   if ([row[@"stale"] boolValue]) [buttons addObject:[self button:@"Update" do:@"add" for:name]];
   if (has) [buttons addObject:[self button:@"Remove" do:@"remove" for:name]];
-  if ([state isEqual:@"open"]) [buttons addObject:[self button:@"Add" do:@"add" for:name]];
+  if ([state isEqual:@"open"]) {
+    [buttons addObject:MVPlacePrimary(@"Add", [@"add:" stringByAppendingString:name], self, @selector(rowClicked:))];
+  }
   return buttons;
 }
 
 - (NSView *)rowFor:(NSDictionary *)row {
   NSString *name = row[@"name"];
   BOOL browser = [_browserNames containsObject:name];
-  MVInk *mark = [[MVInk alloc] initWithSymbol:symbolOf(row[@"state"]) color:colorOf(row[@"state"]) size:15];
+  // a hue of the palette's, by its name: no client's own colour stands here
+  NSView *mark = MVLetterTile([shownName(row) substringToIndex:1].uppercaseString, MVHueTile((NSInteger)(shownName(row).hash % 6)), kTileSide);
+  MVInk *state = [[MVInk alloc] initWithSymbol:symbolOf(row[@"state"]) color:colorOf(row[@"state"]) size:11];
   _stateLines[name] = MVText(stateWords(row), MVStyleSub);
-  NSStackView *words = [NSStackView stackViewWithViews:@[MVText(shownName(row), MVStyleBody), _stateLines[name]]];
+  NSStackView *stateLine = [NSStackView stackViewWithViews:@[state, _stateLines[name]]];
+  stateLine.spacing = 4;
+  NSStackView *words = [NSStackView stackViewWithViews:@[MVText(shownName(row), MVStyleStrong), stateLine]];
   words.orientation = NSUserInterfaceLayoutOrientationVertical;
   words.alignment = NSLayoutAttributeLeading;
   words.spacing = 1;
   NSStackView *top = [NSStackView stackViewWithViews:@[mark, words]];
-  top.spacing = 8;
-  [mark.widthAnchor constraintEqualToConstant:18].active = YES;
+  top.spacing = 12;
   [words setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
   [top setHuggingPriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
   [top addView:[NSView new] inGravity:NSStackViewGravityTrailing];
@@ -257,7 +266,7 @@ static NSString *shownName(NSDictionary *row) {
   NSMutableArray<NSView *> *parts = [NSMutableArray array];
   NSString *said = told[@"said"] ?: told[@"line"];
   BOOL ok = [told[@"ok"] boolValue];
-  MVInk *mark = [[MVInk alloc] initWithSymbol:ok ? @"checkmark" : @"xmark.octagon.fill" color:ok ? MVGreen() : NSColor.systemRedColor size:12];
+  MVInk *mark = [[MVInk alloc] initWithSymbol:ok ? @"checkmark" : @"xmark.octagon.fill" color:ok ? MVGreen() : MVRed() size:12];
   NSTextField *words = line(said, MVStyleCallout);
   NSStackView *first = [NSStackView stackViewWithViews:@[mark, words]];
   first.spacing = 6;

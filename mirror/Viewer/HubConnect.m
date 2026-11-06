@@ -57,7 +57,8 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
     _unready = [NSMutableSet set];
     _startClients = MVPlaceButton(@"Open", @"startClients", self, @selector(toClients:));
     _startHelp = MVPlaceButton(@"Open", @"startHelp", self, @selector(toHelp:));
-    NSStackView *column = MVPlaceColumn(@[[self stepCard], [self ticks], [self runnerCard], [self otherWays], [self startedCard]], 16);
+    NSView *head = MVPlaceHead(@"cable.connector", MVHueTile(1), @"Connect a Phone", @"Plug it in, and this window takes you through the rest.");
+    NSStackView *column = MVPlaceColumn(@[head, [self stepCard], [self ticks], [self runnerCard], [self otherWays], [self startedCard]], 16);
     NSScrollView *page = MVPlacePage(column);
     page.frame = self.bounds;
     page.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;

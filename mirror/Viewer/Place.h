@@ -7,9 +7,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 @class MVToolsPane;
 
-/// The one button of a screen a person came for, in a colour of its own in any window; `quiet` makes it like the rest.
+/// A capsule, in a colour of its own in any window. The one a person came for has the accent's gradient; `quiet` makes it like
+/// the rest, and `hue` gives a quiet one its part's colour.
 @interface MVAccentButton : MVBarButton
 @property(nonatomic) BOOL quiet;
+@property(nonatomic, nullable) NSColor *hue;
 @end
 
 /// A list that ticks itself, on one line from what is done to what is later. An item has `title`, `state` (`done`, `now` or
@@ -23,8 +25,15 @@ MVStepper *MVNewStepper(void);
 NSColor *MVFillFor(NSColor *color);
 /// A tinted square with a symbol, as a part of a page wears it.
 NSView *MVTile(NSString *symbol, NSColor *color, CGFloat side);
-/// A soft ground of the accent, behind a picture.
+/// The same with a letter, for what has a name and no symbol.
+NSView *MVLetterTile(NSString *letter, NSColor *color, CGFloat side);
+/// A word of how something stands, in a capsule, with its symbol.
+NSView *MVChip(NSString *symbol, NSString *words, NSColor *color);
+void MVChipSay(NSView *chip, NSString *words);
+/// The accent's own gradient, behind a picture.
 NSView *MVWash(void);
+/// What a place is, at the head of its page.
+NSView *MVPlaceHead(NSString *symbol, NSColor *color, NSString *title, NSString *sentence);
 /// A new view arrives: a fade, and a short slide for a person who has not asked for less motion.
 void MVSlideIn(NSView *view, double from);
 
@@ -70,6 +79,8 @@ NSButton *MVPlaceButton(NSString *title, NSString *name, id target, SEL action);
 MVAccentButton *MVPlacePrimary(NSString *title, NSString *name, id target, SEL action);
 /// A quiet ground for what belongs together, `tall` above and below what it holds: no glass, as that is for controls.
 NSView *MVCard(NSView *content, CGFloat tall);
+/// The same, with `wide` at its sides.
+NSView *MVCardInset(NSView *content, CGFloat tall, CGFloat wide);
 /// What belongs to the row above it.
 NSView *MVIndented(NSView *view, CGFloat left);
 /// What lies over a device for a moment, on a solid ground of its own.
@@ -134,14 +145,15 @@ NSString *MVSaid(NSDictionary *said);
 
 /// One row of Tools, with what came of it last.
 @interface MVToolRow : NSObject
-- (instancetype)initWithAbout:(NSArray<NSString *> *)about owner:(id)owner run:(SEL)run open:(SEL)open;
+- (instancetype)initWithAbout:(NSArray<NSString *> *)about hue:(NSInteger)hue owner:(id)owner run:(SEL)run open:(SEL)open;
 @property(nonatomic, readonly) NSView *view;
 @property(nonatomic, readonly) MVAccentButton *button;
 @property(nonatomic, readonly, copy) NSString *needs, *verb;
 @property(nonatomic, copy, nullable) NSString *running, *file;
 /// Its button now does what its preview showed.
 @property(nonatomic) BOOL armed;
-- (void)dim:(BOOL)dim;
+/// What it lacks, in a word: it cannot run, and says so where its button stands.
+- (void)needs:(nullable NSString *)lack;
 - (void)began:(NSDictionary *)run device:(nullable NSString *)device;
 - (void)heardText:(NSString *)text;
 - (void)ended:(NSDictionary *)run;

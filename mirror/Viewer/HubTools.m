@@ -19,19 +19,19 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
     [mac insertObject:@[@"path-off", @"Take off PATH", @"Take this appdyno off the PATH again.", @"", @"Remove"] atIndex:3];
   }
   return @[
-    @{@"title": @"Performance Gate", @"symbol": @"gauge.with.dots.needle.33percent", @"color": NSColor.systemOrangeColor, @"rows": @[
+    @{@"title": @"Performance Gate", @"symbol": @"gauge.with.dots.needle.33percent", @"hue": @0, @"rows": @[
       @[@"baseline", @"Save as Baseline", @"Keep the newest runs as what later ones are compared with.", @"a", @"Save"],
       @[@"compare", @"Compare with Baseline", @"Say whether the newest runs got worse.", @"a", @"Compare"],
       @[@"why", @"Find Out Why", @"Find a regression's cause on the device.", @"a", @"Find Out"],
       @[@"survey", @"Measure Everything", @"Run every measure on the device in turn, then write the page.", @"ad", @"Start"],
     ]},
-    @{@"title": @"Flows", @"symbol": @"arrow.triangle.branch", @"color": NSColor.systemIndigoColor, @"rows": @[@[@"flows", @"Run Flows", @"Replay every flow in the folder on the device.", @"df", @"Run"]]},
-    @{@"title": @"Record", @"symbol": @"record.circle", @"color": NSColor.systemRedColor, @"rows": @[
+    @{@"title": @"Flows", @"symbol": @"arrow.triangle.branch", @"hue": @1, @"rows": @[@[@"flows", @"Run Flows", @"Replay every flow in the folder on the device.", @"df", @"Run"]]},
+    @{@"title": @"Record", @"symbol": @"record.circle", @"hue": @2, @"rows": @[
       @[@"timeline", @"Timeline", @"Keep video, touches, frames and requests on one clock for 30 s.", @"ad", @"Record"],
       @[@"flight", @"Flight Recorder", @"Keep the last seconds of the app, saved on a crash or a stall, until you stop it.", @"ad", @"Start"],
     ]},
-    @{@"title": @"Reports", @"symbol": @"chart.bar.doc.horizontal", @"color": NSColor.systemTealColor, @"rows": @[@[@"dashboard", @"Dashboard", @"Write one page of what was measured, and open it.", @"", @"Open"]]},
-    @{@"title": @"This Mac", @"symbol": @"desktopcomputer", @"color": NSColor.systemGrayColor, @"rows": mac},
+    @{@"title": @"Reports", @"symbol": @"chart.bar.doc.horizontal", @"hue": @3, @"rows": @[@[@"dashboard", @"Dashboard", @"Write one page of what was measured, and open it.", @"", @"Open"]]},
+    @{@"title": @"This Mac", @"symbol": @"desktopcomputer", @"hue": @4, @"rows": mac},
   ];
 }
 
@@ -42,7 +42,7 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   NSMutableDictionary<NSString *, MVToolRow *> *_rows;
   NSMutableArray<NSView *> *_sectionViews;
   NSComboBox *_app;
-  NSTextField *_folder, *_device, *_why;
+  NSTextField *_folder, *_device;
   NSStackView *_column, *_index;
   NSDictionary *_shownDevice;
   BOOL _fromApp;
@@ -50,7 +50,7 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
 
 - (instancetype)initWithFrame:(NSRect)frame {
   if ((self = [super initWithFrame:frame])) {
-    _column = MVPlaceColumn(@[], 16);
+    _column = MVPlaceColumn(@[], 18);
     _index = [NSStackView stackViewWithViews:@[]];
     _index.spacing = 6;
     NSScrollView *page = MVPlacePage(_column);
@@ -77,16 +77,15 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   for (NSView *view in _index.arrangedSubviews) [view removeFromSuperview];
   _rows = [NSMutableDictionary dictionary];
   _sectionViews = [NSMutableArray array];
+  [_column addArrangedSubview:MVPlaceHead(@"wrench.and.screwdriver", MVHueTile(2), @"Tools", @"What a terminal would do, from here: measure, compare, record and report.")];
   [_column addArrangedSubview:[self subjectCard]];
   [sections(_fromApp) enumerateObjectsUsingBlock:^(NSDictionary *section, NSUInteger at, BOOL *stop) {
     NSStackView *rows = MVPlaceColumn(@[], 0);
     for (NSArray<NSString *> *row in section[@"rows"]) {
       if (rows.arrangedSubviews.count) [rows addArrangedSubview:MVSeparator()];
-      [rows addArrangedSubview:[self rowFor:row]];
+      [rows addArrangedSubview:[self rowFor:row hue:[section[@"hue"] integerValue]]];
     }
-    NSStackView *head = [NSStackView stackViewWithViews:@[MVTile(section[@"symbol"], section[@"color"], kTile), MVText(section[@"title"], MVStyleStrong)]];
-    head.spacing = 8;
-    NSView *whole = MVPlaceColumn(@[head, MVCard(rows, 0)], 6);
+    NSView *whole = MVPlaceColumn(@[MVText(section[@"title"], MVStyleStrong), MVCard(rows, 2)], 6);
     [_sectionViews addObject:whole];
     [_column addArrangedSubview:whole];
     [_index addArrangedSubview:[self indexButton:section at:at]];
@@ -99,8 +98,8 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   button.identifier = [NSString stringWithFormat:@"index:%lu", (unsigned long)at];
   button.bordered = NO;
   button.font = [NSFont systemFontOfSize:12 weight:NSFontWeightMedium];
-  button.contentTintColor = MVSolid(NSColor.labelColor);
-  NSStackView *chip = [NSStackView stackViewWithViews:@[MVTile(section[@"symbol"], section[@"color"], kIndexTile), button]];
+  button.contentTintColor = MVInkColor();
+  NSStackView *chip = [NSStackView stackViewWithViews:@[MVTile(section[@"symbol"], MVHueTile([section[@"hue"] integerValue]), kIndexTile), button]];
   chip.spacing = 4;
   return chip;
 }
@@ -110,7 +109,7 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   [section scrollRectToVisible:section.bounds];
 }
 
-/// What the rows run on: one app, one device and one folder, chosen once for all of them, and why any row stands dimmed.
+/// What the rows run on: one app, one device and one folder, chosen once for all of them.
 - (NSView *)subjectCard {
   NSString *kept = _app.stringValue;
   _app = [NSComboBox new];
@@ -131,7 +130,6 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   grid.rowSpacing = 8;
   grid.columnSpacing = 12;
   [grid columnAtIndex:0].xPlacement = NSGridCellPlacementTrailing;
-  _why = MVParagraph(@"", MVStyleSub);
   [self fillDevice:_shownDevice];
   // its own width: stretched to a column, what it does with the rest differs from one launch to the next
   NSView *held = [NSView new];
@@ -143,11 +141,11 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
     [grid.leadingAnchor constraintEqualToAnchor:held.leadingAnchor],
     [grid.trailingAnchor constraintLessThanOrEqualToAnchor:held.trailingAnchor],
   ]];
-  return MVCard(MVPlaceColumn(@[held, _why], 8), 12);
+  return MVCard(held, 12);
 }
 
-- (NSView *)rowFor:(NSArray<NSString *> *)about {
-  MVToolRow *row = [[MVToolRow alloc] initWithAbout:about owner:self run:@selector(rowClicked:) open:@selector(openClicked:)];
+- (NSView *)rowFor:(NSArray<NSString *> *)about hue:(NSInteger)hue {
+  MVToolRow *row = [[MVToolRow alloc] initWithAbout:about hue:hue owner:self run:@selector(rowClicked:) open:@selector(openClicked:)];
   _rows[about[0]] = row;
   if ([about[0] isEqual:@"clients-preview"]) _rows[@"clients"] = row;
   return row.view;
@@ -173,19 +171,17 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   [self build];
 }
 
-- (BOOL)cannotRun:(MVToolRow *)row {
-  return ([row.needs containsString:@"a"] && !_app.stringValue.length) || ([row.needs containsString:@"d"] && !_shownDevice) || ([row.needs containsString:@"f"] && !_folder.stringValue.length);
+/// What a row lacks first, in a word.
+- (nullable NSString *)lackOf:(MVToolRow *)row {
+  if ([row.needs containsString:@"a"] && !_app.stringValue.length) return @"Needs an app";
+  if ([row.needs containsString:@"d"] && !_shownDevice) return @"Needs a device";
+  if ([row.needs containsString:@"f"] && !_folder.stringValue.length) return @"Needs a folder";
+  return nil;
 }
 
-/// What a row lacks is said once, up here, and the rows that lack it stand dimmed.
+/// A row says for itself what it lacks.
 - (void)refreshRows {
-  for (MVToolRow *row in _rows.allValues) [row dim:!row.running && [self cannotRun:row]];
-  NSMutableArray<NSString *> *missing = [NSMutableArray array];
-  if (!_app.stringValue.length) [missing addObject:MVWord(@"an app")];
-  if (!_shownDevice) [missing addObject:MVWord(@"a device")];
-  if (!_folder.stringValue.length) [missing addObject:MVWord(@"a folder")];
-  _why.stringValue = [NSString stringWithFormat:@"%@ %@", MVWord(@"Dimmed rows need:"), [missing componentsJoinedByString:@", "]];
-  _why.hidden = missing.count == 0;
+  for (MVToolRow *row in _rows.allValues) [row needs:row.running ? nil : [self lackOf:row]];
 }
 
 - (void)controlTextDidChange:(NSNotification *)notification {
@@ -203,7 +199,7 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   NSString *name = [sender.identifier substringFromIndex:@"run:".length];
   MVToolRow *row = _rows[name];
   if (row.running) return MVAskClients(@"run", @{@"name": row.running, @"stop": @YES});
-  if ([self cannotRun:row]) return;
+  if ([self lackOf:row]) return;
   NSMutableDictionary *asked = [@{@"name": row.armed ? @"clients" : name} mutableCopy];
   if (_app.stringValue.length) asked[@"app"] = _app.stringValue;
   if (_shownDevice) asked[@"device"] = _shownDevice[@"serial"] ?: _shownDevice[@"id"];

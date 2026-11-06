@@ -7,15 +7,15 @@ static const double kRowTall = 20, kRowGap = 6, kInset = 10;
 static const double kBeatSeconds = 1.6, kBeats = 3, kMacWide = 112, kSwitchOff = 0.35;
 
 static NSColor *ink(void) {
-  return MVSolid(NSColor.labelColor);
+  return NSColor.whiteColor;
 }
 
 static NSColor *soft(void) {
-  return MVQuietColor();
+  return [NSColor colorWithWhite:1 alpha:0.72];
 }
 
 static NSColor *accent(void) {
-  return MVSolid(NSColor.controlAccentColor);
+  return MVHeroMark();
 }
 
 static void stroke(NSBezierPath *path, NSColor *color, double wide) {
@@ -172,7 +172,7 @@ static void drawTick(NSPoint at) {
   [tick moveToPoint:NSMakePoint(at.x - 15, at.y)];
   [tick lineToPoint:NSMakePoint(at.x - 4, at.y - 12)];
   [tick lineToPoint:NSMakePoint(at.x + 17, at.y + 14)];
-  stroke(tick, MVGreen(), 4);
+  stroke(tick, accent(), 4);
 }
 
 @implementation MVStepPicture {

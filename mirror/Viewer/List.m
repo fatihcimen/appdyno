@@ -1,7 +1,19 @@
 // Rows of a title and a line beneath, with a symbol: the Inspector's lists and a sidebar.
+#import "Place.h"
 #import "Window.h"
 
-static const double kHeaderHeight = 30, kChangeSeconds = 0.2;
+static const double kHeaderHeight = 30, kChangeSeconds = 0.2, kTileSide = 26, kChosenAlpha = 0.2, kChosenRound = 10, kChosenInset = 4;
+
+@interface MVRowView : NSTableRowView
+@end
+
+@implementation MVRowView
+- (void)drawSelectionInRect:(NSRect)dirty {
+  NSRect pill = NSInsetRect(self.bounds, kChosenInset, 1);
+  [[MVAccent() colorWithAlphaComponent:kChosenAlpha] setFill];
+  [[NSBezierPath bezierPathWithRoundedRect:pill xRadius:kChosenRound yRadius:kChosenRound] fill];
+}
+@end
 
 @class MVRow;
 static NSString *identityOf(MVRow *row);
@@ -141,6 +153,10 @@ static NSString *identityOf(MVRow *row) {
   _table.rowHeight = 44;
 }
 
+- (NSTableRowView *)tableView:(NSTableView *)table rowViewForRow:(NSInteger)at {
+  return table.style == NSTableViewStyleSourceList ? [MVRowView new] : nil;
+}
+
 - (void)tableViewSelectionDidChange:(NSNotification *)notification {
   if (self.onSelect) self.onSelect(self.selected);
 }
@@ -161,7 +177,7 @@ static NSString *identityOf(MVRow *row) {
   NSTableCellView *cell = [NSTableCellView new];
   cell.toolTip = row.help;
   if (row.header) return [self headerCell:row.title in:cell];
-  NSView *icon = row.symbol ? [[MVInk alloc] initWithSymbol:row.symbol color:row.tint ?: NSColor.labelColor size:15] : [NSView new];
+  NSView *icon = row.tile ? MVTile(row.symbol, row.tile, kTileSide) : row.symbol ? [[MVInk alloc] initWithSymbol:row.symbol color:row.tint ?: MVInkColor() size:15] : [NSView new];
   NSTextField *title = MVText(row.title, MVStyleBody);
   NSTextField *detail = MVText(row.detail, MVStyleSub);
   detail.lineBreakMode = NSLineBreakByTruncatingMiddle;
@@ -172,7 +188,7 @@ static NSString *identityOf(MVRow *row) {
   lines.spacing = 1;
   [lines setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
   NSStackView *stack = [NSStackView stackViewWithViews:@[icon, lines]];
-  stack.spacing = 8;
+  stack.spacing = row.tile ? 10 : 8;
   if (row.dot) {
     MVInk *dot = [[MVInk alloc] initWithSymbol:@"circle.fill" color:row.dot size:8];
     dot.translatesAutoresizingMaskIntoConstraints = NO;
@@ -186,8 +202,8 @@ static NSString *identityOf(MVRow *row) {
   stack.translatesAutoresizingMaskIntoConstraints = NO;
   [cell addSubview:stack];
   [NSLayoutConstraint activateConstraints:@[
-    [icon.widthAnchor constraintEqualToConstant:18],
-    [stack.leadingAnchor constraintEqualToAnchor:cell.leadingAnchor constant:6],
+    [icon.widthAnchor constraintEqualToConstant:row.tile ? kTileSide : 18],
+    [stack.leadingAnchor constraintEqualToAnchor:cell.leadingAnchor constant:row.tile ? 8 : 6],
     [stack.trailingAnchor constraintLessThanOrEqualToAnchor:cell.trailingAnchor constant:-4],
     [stack.centerYAnchor constraintEqualToAnchor:cell.centerYAnchor],
   ]];

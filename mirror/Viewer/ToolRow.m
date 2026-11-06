@@ -4,7 +4,13 @@
 #import "Words.h"
 
 static const NSUInteger kLinesShown = 10;
-static const double kRowLeast = 40, kRowInset = 6, kShowSeconds = 0.2;
+static const double kRowLeast = 40, kRowInset = 7, kShowSeconds = 0.2, kTileSide = 30;
+
+/// A row's own mark.
+static NSString *symbolOf(NSString *name) {
+  NSDictionary *symbols = @{@"baseline": @"flag", @"compare": @"arrow.left.arrow.right", @"why": @"magnifyingglass", @"survey": @"square.stack.3d.up", @"flows": @"play", @"timeline": @"film", @"flight": @"clock.arrow.circlepath", @"dashboard": @"chart.bar.doc.horizontal", @"tools": @"arrow.down.circle", @"clients-preview": @"sparkles", @"update-check": @"arrow.clockwise", @"update": @"arrow.up.circle", @"path-on": @"terminal", @"path-off": @"terminal"};
+  return symbols[name] ?: @"gearshape";
+}
 
 /// What a command came to, in a sentence. The gate's own word comes first: an exit code cannot tell a regression from what it
 /// could not judge.
@@ -38,6 +44,7 @@ static NSString *durationOf(double seconds) {
   NSTextField *_title, *_hint, *_result, *_meta, *_log;
   MVInk *_mark;
   NSStackView *_resultLine;
+  NSView *_lackChip;
   NSButton *_open, *_details;
   NSView *_logCard;
   NSMutableString *_said;
@@ -45,13 +52,14 @@ static NSString *durationOf(double seconds) {
   NSDate *_began;
 }
 
-- (instancetype)initWithAbout:(NSArray<NSString *> *)about owner:(id)owner run:(SEL)run open:(SEL)open {
+- (instancetype)initWithAbout:(NSArray<NSString *> *)about hue:(NSInteger)hue owner:(id)owner run:(SEL)run open:(SEL)open {
   if ((self = [super init])) {
     NSString *name = about[0];
     _needs = about[3];
     _verb = about[4];
     _button = MVPlacePrimary(_verb, [@"run:" stringByAppendingString:name], owner, run);
     _button.quiet = YES;
+    _button.hue = MVHue(hue);
     _open = MVPlaceButton(@"Open", [@"open:" stringByAppendingString:name], owner, open);
     _details = MVPlaceButton(@"Show Details", [@"details:" stringByAppendingString:name], self, @selector(toggleDetails:));
     _open.hidden = _details.hidden = YES;
@@ -65,7 +73,14 @@ static NSString *durationOf(double seconds) {
     _resultLine.hidden = YES;
     _meta = MVText(@"", MVStyleSub);
     _meta.hidden = YES;
-    NSView *top = MVPlaceRow(MVPlaceColumn(@[_title, _hint, _resultLine, _meta], 1), @[_details, _open, _button]);
+    _lackChip = MVChip(@"circle.dashed", @"", MVQuietColor());
+    _lackChip.hidden = YES;
+    NSStackView *lines = MVPlaceColumn(@[_title, _hint, _resultLine, _meta], 1);
+    [lines setContentHuggingPriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
+    NSStackView *words = [NSStackView stackViewWithViews:@[MVTile(symbolOf(name), MVHueTile(hue), kTileSide), lines]];
+    words.spacing = 12;
+    words.distribution = NSStackViewDistributionFill;
+    NSView *top = MVPlaceRow(words, @[_details, _open, _lackChip, _button]);
     [top.heightAnchor constraintGreaterThanOrEqualToConstant:kRowLeast].active = YES;
     _log = MVCodeText(@"");
     _logCard = MVCard(_log, 8);
@@ -77,9 +92,11 @@ static NSString *durationOf(double seconds) {
   return self;
 }
 
-- (void)dim:(BOOL)dim {
-  self.button.enabled = !dim;
-  _title.textColor = dim ? MVQuietColor() : MVSolid(NSColor.labelColor);
+- (void)needs:(nullable NSString *)lack {
+  _button.enabled = !lack;
+  _button.hidden = lack != nil;
+  _lackChip.hidden = !lack;
+  if (lack) MVChipSay(_lackChip, lack);
 }
 
 - (void)tell:(NSString *)word symbol:(NSString *)symbol color:(NSColor *)color {
@@ -121,7 +138,7 @@ static NSString *durationOf(double seconds) {
   NSString *sentence = sentenceOf(run);
   BOOL good = [run[@"code"] intValue] == 0, stopped = [run[@"stopped"] boolValue], more = unfinished(sentence);
   BOOL plain = [sentence isEqual:@"Stopped"];
-  [self tell:sentence symbol:plain ? @"stop.circle" : more ? @"exclamationmark.triangle.fill" : good || stopped ? @"checkmark.circle.fill" : @"xmark.octagon.fill" color:plain ? MVQuietColor() : more ? MVOrange() : good || stopped ? MVGreen() : NSColor.systemRedColor];
+  [self tell:sentence symbol:plain ? @"stop.circle" : more ? @"exclamationmark.triangle.fill" : good || stopped ? @"checkmark.circle.fill" : @"xmark.octagon.fill" color:plain ? MVQuietColor() : more ? MVOrange() : good || stopped ? MVGreen() : MVRed()];
   MVAnnounce(sentence);
   self.running = nil;
   _button.title = MVWord(_verb);
