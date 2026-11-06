@@ -31,7 +31,9 @@ Henüz yayımlanmış bir sürüm yok. O zamana kadar kaynak kod aynı uygulamay
 2. Appdyno'yu Applications klasörüne sürükleyin.
 3. Appdyno'yu açın. Hub açılır, menü çubuğunda cihazlarınızla birlikte bir simge kalır. Dock'ta Appdyno yalnızca bir pencere açıkken görünür.
 
-**İlk açılış.** Developer ID'si olmayan bir derleme ad hoc imzalıdır ve macOS onu çift tıklamayla açmaz. macOS 15 ve üstünde uygulamayı doğrulayamadığını söyler: Done'a tıklayın, ardından System Settings, Privacy & Security bölümünde aşağı inip Open Anyway'e tıklayın ve parolanızı girin. macOS 13 ve 14'te uygulamaya Control ile tıklayıp Open'ı seçin ve onaylayın. İkisi de yalnızca bir kez sorulur. Apple'ın noter onayından geçmiş bir derlemede macOS yalnızca internetten gelen bir uygulamayı açmak isteyip istemediğinizi sorar.
+**İlk açılış.** Bir sürüm Developer ID ile imzalıdır ve Apple'ın noter onayından geçmiştir, bu yüzden çift tıklamayla açılır. macOS internetten gelen bir uygulamayı açmak isteyip istemediğinizi bir kez sorar: Open'a tıklayın.
+
+**Noter onayından geçmemiş bir derleme**, örneğin bir kaynak kopyasından yapılıp başka bir Mac'e taşınmış olan, çift tıklamayla açılmaz. macOS 15 ve üstünde macOS uygulamayı doğrulayamadığını söyler: Done'a tıklayın, ardından System Settings, Privacy & Security bölümünde aşağı inip Open Anyway'e tıklayın ve parolanızı girin. macOS 13 ve 14'te uygulamaya Control ile tıklayıp Open'ı seçin ve onaylayın. İkisi de yalnızca bir kez sorulur.
 
 **Android** için adb gerekir ve uygulama onu içinde taşımaz: Google'ın koşulları buna izin vermez ve içinde LGPL kod vardır. Menü çubuğundaki Get adb for Android, Google'ın koşullarını kabul ettiğinizde Google'ın kendi platform-tools paketini (16 MB) indirir ve sabit bir hash ile doğrular. Android Studio ya da `ANDROID_HOME` size zaten adb sağlıyorsa uygulama onu kullanır ve bu öğe görünmez.
 

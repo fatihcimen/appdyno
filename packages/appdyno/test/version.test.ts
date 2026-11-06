@@ -58,6 +58,22 @@ describe('release version', () => {
     expect(repository.url).toBe('git+https://github.com/fatihcimen/appdyno.git');
   });
 
+  it('signs the app with one identity, and calls nothing short of notarized a release', () => {
+    // each of these stops before anything is built
+    const refusal = (env: Record<string, string>, ...flags: string[]) =>
+      spawnSync(process.execPath, [join(root, 'scripts/build-app.mjs'), ...flags], {
+        encoding: 'utf8',
+        env: { PATH: process.env.PATH!, ...env },
+      }).stderr;
+    const ours = { APPDYNO_SIGN_IDENTITY: 'Developer ID Application: Fatih Cimen (BKXMF846AT)' };
+    expect(refusal({ APPDYNO_SIGN_IDENTITY: 'Apple Distribution: Another' })).toContain(
+      `only ${ours.APPDYNO_SIGN_IDENTITY} signs this app`,
+    );
+    expect(refusal({ APPDYNO_NOTARY_PROFILE: 'p' })).toContain('notarizing needs');
+    expect(refusal({}, '--release')).toContain('a release is signed and notarized');
+    expect(refusal(ours, '--release')).toContain('a release is signed and notarized');
+  });
+
   it('leaves this Mac only with its Android agent, which a build goes on without', () => {
     const { prepack } = JSON.parse(read('packages/appdyno/package.json')).scripts as {
       prepack: string;

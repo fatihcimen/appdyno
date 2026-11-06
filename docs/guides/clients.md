@@ -31,7 +31,9 @@ There is no release yet. Until there is one, a checkout builds the same app: `pn
 2. Drag Appdyno to Applications.
 3. Open Appdyno. The hub opens, and an icon stays in the menu bar with your devices. The Dock shows Appdyno only while a window is open.
 
-**The first open.** A build without a Developer ID is signed ad hoc, and macOS will not open it with a double click. On macOS 15 and later it says it could not verify the app: click Done, then open System Settings, Privacy & Security, scroll down, click Open Anyway and enter your password. On macOS 13 and 14, Control-click the app, choose Open, and confirm. Either is asked once. A build notarized by Apple only asks whether to open an app from the internet.
+**The first open.** A release is signed with a Developer ID and notarized by Apple, so a double click opens it. macOS asks once whether to open an app from the internet: click Open.
+
+**A build that is not notarized**, such as one made from a checkout and copied to another Mac, will not open with a double click. On macOS 15 and later macOS says it could not verify the app: click Done, then open System Settings, Privacy & Security, scroll down, click Open Anyway and enter your password. On macOS 13 and 14, Control-click the app, choose Open, and confirm. Either is asked once.
 
 **Android** needs adb, which the app does not carry: Google's terms keep it out, and it holds LGPL code. In the menu bar, Get adb for Android downloads Google's own platform-tools, 16 MB, and checks them against a pinned hash, once you accept Google's terms. If Android Studio or `ANDROID_HOME` already gives you adb, the app uses that, and the item does not appear.
 

@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 // Appdyno.app and its disk image, from what `pnpm build` made. Everything lands in `.app-build`:
-//   pnpm build && node scripts/build-app.mjs
+//   pnpm build && node scripts/build-app.mjs [--release]
 //
-// With no identity it signs ad hoc, and a person is warned on first open. These turn on the rest; each is a secret
+// With no identity it signs ad hoc, and a person has to open it by hand once. These turn on the rest; each is a secret
 // the person releasing holds, and none is ever looked up on this machine:
-//   APPDYNO_SIGN_IDENTITY     a Developer ID Application identity: signs for release, and then needs
-//   APPDYNO_NOTARY_APPLE_ID, APPDYNO_NOTARY_PASSWORD, APPDYNO_NOTARY_TEAM     which notarize it
+//   APPDYNO_SIGN_IDENTITY     the Developer ID Application identity below, and no other
+//   APPDYNO_NOTARY_APPLE_ID, APPDYNO_NOTARY_PASSWORD, APPDYNO_NOTARY_TEAM     notarize and staple: a double click opens it
+//   APPDYNO_NOTARY_PROFILE    the same from `notarytool store-credentials`, which keeps the password off the process list
 //   APPDYNO_UPDATE_KEY        an Ed25519 private key, PEM: writes the signed appcast, and puts its public half in the app
+//
+// --release refuses a build that is not signed and notarized: a release opens with a double click, or it is no release.
 import { execFileSync } from 'node:child_process';
 import { createHash, createPrivateKey, createPublicKey, sign } from 'node:crypto';
 import {
@@ -37,6 +40,28 @@ const MIN_MACOS = '13.5';
 const NAME = 'Appdyno';
 const WINDOW = 'Appdyno Window';
 
+const IDENTITY = 'Developer ID Application: Fatih Cimen (BKXMF846AT)';
+
+const { APPDYNO_SIGN_IDENTITY: identity, APPDYNO_UPDATE_KEY: updateKey } = process.env;
+const { APPDYNO_NOTARY_PROFILE: profile } = process.env;
+const [appleId, password, team] = ['APPLE_ID', 'PASSWORD', 'TEAM'].map(
+  (k) => process.env[`APPDYNO_NOTARY_${k}`],
+);
+/** How notarytool logs in; none, and nothing is notarized. */
+const credentials = profile
+  ? ['--keychain-profile', profile]
+  : appleId && password && team
+    ? ['--apple-id', appleId, '--password', password, '--team-id', team]
+    : [];
+const notary = credentials.length > 0;
+
+if (identity && identity !== IDENTITY) throw new Error(`only ${IDENTITY} signs this app`);
+if (notary && !identity) throw new Error('notarizing needs APPDYNO_SIGN_IDENTITY');
+if (process.argv.includes('--release') && !(identity && notary))
+  throw new Error(
+    'a release is signed and notarized: set APPDYNO_SIGN_IDENTITY, and APPDYNO_NOTARY_PROFILE or APPDYNO_NOTARY_APPLE_ID, _PASSWORD and _TEAM',
+  );
+
 const repo = join(dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = join(repo, 'packages/appdyno');
 const out = join(repo, '.app-build');
@@ -56,11 +81,6 @@ const manifest = JSON.parse(readFileSync(join(pkg, 'package.json'), 'utf8'));
 const { version } = manifest;
 const repository = manifest.repository.url.replace(/^git\+/, '').replace(/\.git$/, '');
 const image = `${NAME}-${version}-arm64.dmg`;
-
-const { APPDYNO_SIGN_IDENTITY: identity, APPDYNO_UPDATE_KEY: updateKey } = process.env;
-const notary = ['APPLE_ID', 'PASSWORD', 'TEAM'].map((k) => process.env[`APPDYNO_NOTARY_${k}`]);
-if (identity && !notary.every(Boolean))
-  throw new Error('a release identity needs APPDYNO_NOTARY_APPLE_ID, _PASSWORD and _TEAM');
 
 const sh = (file, ...args) =>
   execFileSync(file, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
@@ -211,6 +231,22 @@ function signAll() {
   sh('codesign', '--verify', '--deep', '--strict', app);
 }
 
+/** Apple's scan and its ticket, stapled on, so that a Mac with no network opens it too. */
+function notarize(path, upload = path) {
+  sh('xcrun', 'notarytool', 'submit', upload, ...credentials, '--wait');
+  sh('xcrun', 'stapler', 'staple', path);
+  sh('xcrun', 'stapler', 'validate', path);
+}
+
+/** The app's own ticket, as a person drags it out of the disk image and leaves that behind. */
+function notarizeApp() {
+  const zip = join(out, `${NAME}.zip`);
+  sh('ditto', '-c', '-k', '--keepParent', app, zip);
+  notarize(app, zip);
+  rmSync(zip);
+  sh('spctl', '--assess', '--type', 'execute', app);
+}
+
 function diskImage() {
   const stage = mkdtempSync(join(tmpdir(), 'appdyno-dmg-'));
   sh('ditto', app, join(stage, `${NAME}.app`));
@@ -232,13 +268,8 @@ function diskImage() {
     dmg,
   );
   rmSync(stage, { recursive: true, force: true });
-  if (identity) {
-    sh('codesign', '--sign', identity, '--timestamp', dmg);
-    const [appleId, password, team] = notary;
-    const who = ['--apple-id', appleId, '--password', password, '--team-id', team];
-    sh('xcrun', 'notarytool', 'submit', dmg, ...who, '--wait');
-    sh('xcrun', 'stapler', 'staple', dmg);
-  }
+  if (identity) sh('codesign', '--sign', identity, '--timestamp', dmg);
+  if (notary) notarize(dmg);
   return dmg;
 }
 
@@ -269,6 +300,7 @@ await helperBinaries();
 icon();
 thePackage();
 signAll();
+if (notary) notarizeApp();
 const dmg = diskImage();
 if (updateKey) appcast(dmg, updateKey);
 cask(dmg);
@@ -281,6 +313,5 @@ const parts = [
 ];
 for (const [what, path] of parts) console.log(`${what.padEnd(20)}${mb(sizeOf(path))}`);
 console.log(`${'the app'.padEnd(20)}${mb(sizeOf(app))}`);
-console.log(
-  `${image.padEnd(32)}${mb(statSync(dmg).size)}, signed ${identity ? 'for release' : 'ad hoc'}`,
-);
+const signed = notary ? 'signed and notarized' : identity ? 'signed, NOT notarized' : 'ad hoc';
+console.log(`${image.padEnd(32)}${mb(statSync(dmg).size)}, ${signed}`);

@@ -55,7 +55,8 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k "" "$keychain"
           security list-keychains -d user -s "$keychain" login.keychain-db
       - name: The Mac app
-        run: node scripts/build-app.mjs
+        # refuses a build that is not signed and notarized
+        run: node scripts/build-app.mjs --release
         env:
           APPDYNO_SIGN_IDENTITY: ${{ secrets.APPDYNO_SIGN_IDENTITY }}
           APPDYNO_NOTARY_APPLE_ID: ${{ secrets.APPDYNO_NOTARY_APPLE_ID }}

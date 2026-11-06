@@ -78,12 +78,16 @@ Before a tag, from a node whose folder has no pnpm, `node scripts/check-package.
 
 `scripts/build-app.mjs` makes `Appdyno.app`, its disk image and a cask in `.app-build`, and prints what each part weighs. With no secrets it signs ad hoc. These turn on the rest, as secrets of the repository of the same name:
 
-| secret                                                                      | what it does                                                                        |
-| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `APPDYNO_CERTIFICATE`, `APPDYNO_CERTIFICATE_PASSWORD`                       | a Developer ID Application certificate, a base64 `.p12`, for the release's keychain |
-| `APPDYNO_SIGN_IDENTITY`                                                     | that identity's name: signs for release, and then needs the three below             |
-| `APPDYNO_NOTARY_APPLE_ID`, `APPDYNO_NOTARY_PASSWORD`, `APPDYNO_NOTARY_TEAM` | notarizes and staples the disk image                                                |
-| `APPDYNO_UPDATE_KEY`                                                        | an Ed25519 private key, PEM: signs the appcast, and its public half goes in the app |
+| secret                                                                      | what it does                                                                              |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `APPDYNO_CERTIFICATE`, `APPDYNO_CERTIFICATE_PASSWORD`                       | a Developer ID Application certificate, a base64 `.p12`, for the release's keychain       |
+| `APPDYNO_SIGN_IDENTITY`                                                     | that identity's name, the only one `build-app.mjs` takes: signs with the hardened runtime |
+| `APPDYNO_NOTARY_APPLE_ID`, `APPDYNO_NOTARY_PASSWORD`, `APPDYNO_NOTARY_TEAM` | notarize and staple the app and its disk image, so that a double click opens them         |
+| `APPDYNO_UPDATE_KEY`                                                        | an Ed25519 private key, PEM: signs the appcast, and its public half goes in the app       |
+
+`release.yml` runs it with `--release`, which refuses a build that is not signed and notarized: a disk image on a release opens with a double click. To notarize from a Mac, `xcrun notarytool store-credentials` keeps the password in the keychain and off the process list, and `APPDYNO_NOTARY_PROFILE` names what it stored.
+
+**The hardened runtime.** Every binary is signed with it, and one holds an entitlement: Node has `com.apple.security.cs.allow-jit`, because V8 writes the code it runs. Nothing else needs one. A build signed with the Developer ID and not notarized was run on macOS 27, on a simulator: Node's JIT, WebAssembly and a worker; the viewer loading CoreSimulator by path, which library validation allows because Apple signed it; `TextScan`; the server driving Settings over MCP with its helpers; and `adb` as a child. Loading a library signed by anyone else would need `disable-library-validation`.
 
 `openssl genpkey -algorithm ed25519` makes an update key. Keep it: an app can only ever verify releases signed by the key it was built with, so losing it means people reinstall by hand. An identity is only ever taken from these variables, never found on the machine.
 
