@@ -13,6 +13,7 @@ import type {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startOf } from '@appdyno/core';
 import { hubDevices, runHub, type HubDevice } from '../src/mirror/hub.js';
+import { Parent } from '../src/mirror/parent.js';
 import { removeMirrorFile, writeMirrorFile } from '../src/mirror/state.js';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
 
@@ -164,6 +165,26 @@ describe('the hub', () => {
     close();
     await done;
     expect(end).toHaveBeenCalledOnce();
+  });
+
+  it('closes its streams beside what its places hold, not behind it', async () => {
+    const { link, told, close } = window();
+    const stopAll = vi.spyOn(Parent.prototype, 'stopAll');
+    let held: () => void = () => undefined;
+    const end = () => new Promise<void>((done) => (held = done));
+    const places = { act: vi.fn(), end };
+    const done = runHub(context(new Simulated()), {
+      focus: false,
+      log: () => undefined,
+      viewer: () => link,
+      places,
+    });
+    await vi.waitFor(() => expect(lastList(told)).toBeDefined());
+    close();
+    await vi.waitFor(() => expect(stopAll).toHaveBeenCalledOnce());
+    held();
+    await done;
+    stopAll.mockRestore();
   });
 
   it('opens a window of its own as a process of its own', async () => {

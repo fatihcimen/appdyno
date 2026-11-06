@@ -336,8 +336,7 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     ended = done;
   });
   clearInterval(timer);
-  await o.places?.end();
-  await parent.stopAll('the hub closed');
+  await Promise.all([o.places?.end(), parent.stopAll('the hub closed')]);
   await Promise.all(parent.done.values());
   process.off('SIGINT', onStop);
   process.off('SIGTERM', onStop);

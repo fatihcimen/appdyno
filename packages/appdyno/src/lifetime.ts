@@ -1,5 +1,9 @@
 /** How long putting a session's conditions back may hold up the end of the server. */
 const END_MS = 20_000;
+/** How long a command has to end its own way, as a flight recorder saves on its way out. */
+export const STOP_MS = 5_000;
+/** Says that a command's stdin is the hub's, held for as long as the hub lives. */
+export const HELD_BY_HUB = 'APPDYNO_HELD_BY_HUB';
 
 type Ending = { end(): Promise<string[]>; close(): void };
 
@@ -31,4 +35,23 @@ export function endWithClient(
   stdin?.once('close', end);
   process.once('SIGTERM', end);
   process.once('SIGINT', end);
+}
+
+/**
+ * A command the hub runs: a hub that dies with no word would leave it driving a device with no window. Its stdin closing
+ * is a Ctrl-C to all it started, then an end none can refuse, with no one left to ask. The word stops here, as what it
+ * starts has a stdin of its own, and a command that is done is done, whatever its stdin.
+ */
+export function endWithHub(
+  stdin: Pick<typeof process.stdin, 'once' | 'resume' | 'unref'> = process.stdin,
+  signal: (name: NodeJS.Signals) => void = (name) => process.kill(0, name),
+) {
+  if (!process.env[HELD_BY_HUB]) return;
+  delete process.env[HELD_BY_HUB];
+  stdin.once('close', () => {
+    signal('SIGINT');
+    setTimeout(() => signal('SIGKILL'), STOP_MS).unref();
+  });
+  stdin.resume();
+  stdin.unref();
 }

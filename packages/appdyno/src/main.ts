@@ -36,6 +36,7 @@ import {
   survey,
   type Policy,
 } from '@appdyno/ops';
+import { endWithHub } from './lifetime.js';
 import { alertPerson } from './alert.js';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
@@ -381,6 +382,7 @@ ${listOf(ops)}`,
   }
 }
 
+endWithHub();
 process.exitCode = await main().catch((e: unknown) => {
   // a failure the user can act on: its message and hint, not a stack trace
   const d = e as { message?: string; hint?: string };

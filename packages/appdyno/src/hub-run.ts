@@ -1,6 +1,8 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { join } from 'node:path';
+import { endChild } from '@appdyno/core';
 import { gateSaid } from '@appdyno/perf';
+import { HELD_BY_HUB, STOP_MS } from './lifetime.js';
 import type { COMMANDS } from './usage.js';
 
 /** What a person chose in the window, for a command to take. */
@@ -51,8 +53,6 @@ export const HUB_RUNS: Record<string, (a: Asked) => string[] | undefined> = {
   update: () => ['update'],
 };
 
-/** How long a command has to end its own way after Stop, as a flight recorder saves on its way out. */
-const STOP_MS = 5_000;
 /** The last page, or report, a command wrote and named. */
 const MADE = /(\/[^\s'"]+\.html)\b/g;
 
@@ -73,10 +73,16 @@ function countOf(name: string, said: string) {
   return frames ? { frames: Number(frames[1]) } : undefined;
 }
 
-type Run = { child: ChildProcess; file?: string; stopped: boolean; said: string };
+type Run = {
+  child: ChildProcess;
+  file?: string;
+  stopped: boolean;
+  said: string;
+  ending?: Promise<void>;
+};
 type Say = (said: Record<string, unknown>) => void;
 
-/** The commands under way: one of a name at a time, each ending with the hub. */
+/** The commands under way: one of a name at a time, each ending with the hub, however the hub ends. */
 export class HubRuns {
   private readonly runs = new Map<string, Run>();
 
@@ -93,11 +99,12 @@ export class HubRuns {
       return say({ run: { name, code: 2, line: `${name}: something it needs is missing` } });
     if (this.runs.has(name)) return undefined;
     const child = spawn(this.self[0]!, [...this.self.slice(1), ...words], {
-      env: this.env,
+      env: { ...this.env, [HELD_BY_HUB]: '1' },
       cwd: this.home,
       // a group of its own: Ctrl-C at a terminal reaches all a command started, and so must Stop
       detached: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      // its stdin is held for as long as this process lives, for it to see this process die
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
     const run: Run = { child, stopped: false, said: '' };
     this.runs.set(name, run);
@@ -128,26 +135,22 @@ export class HubRuns {
   }
 
   /** A person's Stop: Ctrl-C, as at a terminal, and only then an end it cannot refuse. */
+  private ending(run: Run) {
+    run.stopped = true;
+    run.ending ??= endChild(run.child, {
+      group: true,
+      signals: ['SIGINT', 'SIGTERM'],
+      graceMs: STOP_MS,
+    });
+    return run.ending;
+  }
+
   stop(name: string) {
     const run = this.runs.get(name);
-    if (!run) return;
-    run.stopped = true;
-    const group = (signal: NodeJS.Signals) => {
-      try {
-        process.kill(-run.child.pid!, signal);
-      } catch {
-        // nothing of it is left
-      }
-    };
-    group('SIGINT');
-    setTimeout(() => group('SIGTERM'), STOP_MS).unref();
+    if (run) void this.ending(run);
   }
 
   async end() {
-    const left = [...this.runs.values()].map(
-      ({ child }) => new Promise((done) => child.once('close', done)),
-    );
-    for (const name of this.runs.keys()) this.stop(name);
-    await Promise.all(left);
+    await Promise.all([...this.runs.values()].map((run) => this.ending(run)));
   }
 }

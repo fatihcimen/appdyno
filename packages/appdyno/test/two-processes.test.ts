@@ -2,32 +2,17 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { mkdtempSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { build } from 'esbuild';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { SETTINGS } from '@appdyno/core';
+import { childFile } from './child-file.js';
 
-const pkg = join(import.meta.dirname, '..');
 const ROUNDS = 12;
 
 let child: string;
 
-/** From the sources, as nothing here is built: a real process has no test runner to resolve them. */
 beforeAll(async () => {
-  child = join(mkdtempSync(join(tmpdir(), 'appdyno-child-')), 'child.mjs');
-  await build({
-    absWorkingDir: pkg,
-    entryPoints: ['test/two-processes.child.ts'],
-    tsconfig: 'tsconfig.json',
-    bundle: true,
-    platform: 'node',
-    format: 'esm',
-    target: 'node22',
-    outfile: child,
-    logLevel: 'silent',
-    banner: {
-      js: "import { createRequire as __createRequire } from 'node:module';\nconst require = __createRequire(import.meta.url);",
-    },
-  });
+  const dir = mkdtempSync(join(tmpdir(), 'appdyno-child-'));
+  child = await childFile('test/two-processes.child.ts', join(dir, 'child.mjs'));
 });
 
 const running: ChildProcessWithoutNullStreams[] = [];

@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { stateDir, writeWhole } from '@appdyno/core';
+import { endChild, stateDir, writeWhole } from '@appdyno/core';
 
 /** The port the guide uses, and how far on to look when that is taken: a tunnel goes wherever the hub says it stands. */
 const FIRST_PORT = 8765;
@@ -115,16 +115,6 @@ export class HubHttp {
     const child = this.child;
     if (!child) return;
     this.forget();
-    await new Promise<void>((resolve) => {
-      const timer = setTimeout(() => {
-        child.kill('SIGKILL');
-        resolve();
-      }, STOP_MS);
-      child.once('exit', () => {
-        clearTimeout(timer);
-        resolve();
-      });
-      child.kill('SIGTERM');
-    });
+    await endChild(child, { graceMs: STOP_MS });
   }
 }
