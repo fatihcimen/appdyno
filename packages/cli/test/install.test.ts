@@ -307,6 +307,26 @@ describe('a JSON file', () => {
       '{\n  "s": {\n    // one\n    "appdyno": {}, // two\n    "a": 1 // three\n  }\n}\n',
       '{\n  "s": {\n    // one // two\n    "a": 1 // three\n  }\n}\n',
     ],
+    [
+      'alone, under a comment',
+      '{\n  "s": {\n    // one\n    "appdyno": {}\n  }\n}\n',
+      '{\n  "s": {\n    // one\n  }\n}\n',
+    ],
+    [
+      'alone, under a comment on its opening line',
+      '{\n  "s": { // one\n    "appdyno": {}\n  }\n}\n',
+      '{\n  "s": { // one\n  }\n}\n',
+    ],
+    [
+      'alone, with the close on its line',
+      '{ "s": { // one\n  "appdyno": {} } }\n',
+      '{ "s": { // one\n   } }\n',
+    ],
+    [
+      'last, with the close on its line',
+      '{ "s": {\n  "a": 1, // one\n  "appdyno": {} } }\n',
+      '{ "s": {\n  "a": 1 // one\n   } }\n',
+    ],
   ])('leaves valid text when the entry is %s', (_, text, expected) => {
     const after = edit.remove(text, 's', SERVER);
     expect(after).toBe(expected);

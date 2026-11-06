@@ -133,20 +133,25 @@ function insert(
   return splice(text, eol, eol, `\n${indent}${member(indent)},`);
 }
 
-function cut(text: string, open: number, { members }: Members, i: number) {
+function cut(text: string, open: number, { members, close }: Members, i: number) {
   const m = members[i]!;
   const next = members[i + 1];
   const previous = members[i - 1];
   const past = m.comma === undefined ? m.end : m.comma + 1;
+  const gap = spaceBefore(text, m.start);
+  // the close on the member's line stays down there: on the line above, a comment would take it in
+  const from =
+    text.slice(gap, m.start).includes('\n') && !text.slice(past, close).includes('\n')
+      ? m.start
+      : gap;
   if (members.length === 1) {
-    const close = spaceAfter(text, past);
-    const from =
-      text.slice(open + 1, m.start).trim() === '' ? open + 1 : spaceBefore(text, m.start);
-    return splice(text, from, text[close] === '}' ? close : past, '');
+    if (text.slice(open + 1, m.start).trim() !== '') return splice(text, from, past, '');
+    const end = spaceAfter(text, past);
+    return splice(text, open + 1, text[end] === '}' ? end : past, '');
   }
   if (next && !text.slice(past, next.start).includes('\n'))
     return splice(text, m.start, spaceAfter(text, past), '');
-  const left = splice(text, spaceBefore(text, m.start), past, '');
+  const left = splice(text, from, past, '');
   // a last member with no comma of its own leaves the one before it trailing
   return !next && m.comma === undefined && previous?.comma !== undefined
     ? splice(left, previous.comma, previous.comma + 1, '')
