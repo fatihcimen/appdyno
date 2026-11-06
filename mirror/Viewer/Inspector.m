@@ -22,7 +22,7 @@ static NSTextField *caption(NSString *text) {
 static NSTextField *value(void) {
   NSTextField *field = MVText(@"–", MVStyleSub);
   field.font = [NSFont monospacedDigitSystemFontOfSize:11 weight:NSFontWeightMedium];
-  field.textColor = NSColor.labelColor;
+  field.textColor = MVInkColor();
   field.alignment = NSTextAlignmentRight;
   field.lineBreakMode = NSLineBreakByTruncatingMiddle;
   return field;
@@ -57,7 +57,7 @@ static NSString *ms(id v) {
       NSButton *tab = [MVBarButton buttonWithImage:[NSImage new] target:self action:@selector(tabChosen:)];
       tab.bordered = NO;
       tab.wantsLayer = YES;
-      tab.layer.cornerRadius = kTab / 4;
+      tab.layer.cornerRadius = kTab / 2;
       tab.tag = i;
       tab.identifier = @(kTabs[i].identifier);
       tab.toolTip = MVWord(@(kTabs[i].title));
@@ -228,8 +228,8 @@ static NSString *ms(id v) {
 - (void)showPane:(NSInteger)pane {
   for (NSButton *tab in _tabs) {
     BOOL chosen = tab.tag == pane;
-    tab.layer.backgroundColor = chosen ? NSColor.quaternaryLabelColor.CGColor : NSColor.clearColor.CGColor;
-    tab.image = MVSymbol(@(kTabs[tab.tag].symbol), chosen ? NSColor.labelColor : MVQuietColor(), 14, chosen ? NSFontWeightSemibold : NSFontWeightRegular);
+    tab.layer.backgroundColor = chosen ? [MVAccent() colorWithAlphaComponent:0.22].CGColor : NSColor.clearColor.CGColor;
+    tab.image = MVSymbol(@(kTabs[tab.tag].symbol), chosen ? MVAccent() : MVQuietColor(), 14, chosen ? NSFontWeightSemibold : NSFontWeightRegular);
     tab.accessibilityValue = chosen ? MVWord(@"selected") : nil;
   }
   _paneName.stringValue = @(kTabs[pane].title);

@@ -4,7 +4,7 @@
 #import "Words.h"
 
 enum { kHistory = 60, kLongest = 600 };
-static const double kCardHeight = 92, kLineHeight = 26;
+static const double kCardHeight = 92, kLineHeight = 26, kGlowAlpha = 0.38;
 // a frame this long is seen as a stutter, and marked where it fell
 static const double kStutterMs = 100;
 // the share of frames that may come late: past the first `perf_scroll` has a finding, past the second Android vitals calls
@@ -46,7 +46,7 @@ static NSString *wordsOf(MVLiveState state) {
 }
 
 static NSColor *colorOf(MVLiveState state) {
-  return state == MVLiveGood ? NSColor.systemGreenColor : state == MVLiveWarning ? NSColor.systemOrangeColor : state == MVLiveCritical ? NSColor.systemRedColor : NSColor.controlAccentColor;
+  return state == MVLiveGood ? MVGreen() : state == MVLiveWarning ? MVOrange() : state == MVLiveCritical ? MVRed() : MVAccent();
 }
 
 static NSString *symbolOf(MVLiveState state) {
@@ -108,7 +108,7 @@ NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight) {
   double (^level)(double) = ^(double v) {
     return 1.5 + v / top * height;
   };
-  [NSColor.separatorColor setStroke];
+  [MVRule(0.14) setStroke];
   NSBezierPath *base = [NSBezierPath bezierPath];
   base.lineWidth = 0.5;
   [base moveToPoint:NSMakePoint(0, 0.5)];
@@ -128,13 +128,26 @@ NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight) {
     if (line.isEmpty) [line moveToPoint:p];
     else [line lineToPoint:p];
   }
-  [(self.color ?: NSColor.controlAccentColor) setStroke];
-  line.lineWidth = 1.5;
+  NSColor *ink = self.color ?: MVAccent();
+  if (self.glows && _count > 1) {
+    NSBezierPath *under = [line copy];
+    [under lineToPoint:NSMakePoint(across(_capacity - 1), 0)];
+    [under lineToPoint:NSMakePoint(across(_capacity - _count), 0)];
+    [under closePath];
+    [[[NSGradient alloc] initWithStartingColor:[ink colorWithAlphaComponent:kGlowAlpha] endingColor:[ink colorWithAlphaComponent:0]] drawInBezierPath:under angle:-90];
+  }
+  [ink setStroke];
+  line.lineWidth = self.glows ? 2 : 1.5;
   line.lineJoinStyle = NSLineJoinStyleRound;
   line.lineCapStyle = NSLineCapStyleRound;
   [line stroke];
+  if (self.glows && _count) {
+    NSPoint end = NSMakePoint(across(_capacity - 1), level(_values[_capacity - 1]));
+    [ink setFill];
+    [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(end.x - 5.5, end.y - 2.75, 5.5, 5.5)] fill];
+  }
   // a stutter stands where it happened, in the second it happened
-  [NSColor.systemRedColor setFill];
+  [MVRed() setFill];
   for (int i = _capacity - _count; i < _capacity; i++)
     if (_marks[i]) NSRectFill(NSMakeRect(across(i) - 0.75, 0, 1.5, box.size.height));
 }
@@ -174,7 +187,7 @@ static MVMeasureCard *cardOf(const MVMeasureRow *row) {
   card.field = @(row->field);
   card.unit = @(row->unit);
   NSImageView *icon = [NSImageView imageViewWithImage:[NSImage imageWithSystemSymbolName:@(row->symbol) accessibilityDescription:nil]];
-  icon.contentTintColor = NSColor.secondaryLabelColor;
+  icon.contentTintColor = MVQuietColor();
   card.state = small(@"");
   card.mark = [NSImageView new];
   NSView *gap = [NSView new];
