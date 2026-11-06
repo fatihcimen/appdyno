@@ -80,7 +80,11 @@ export function entryCommand(
   const { command, args, env } = (entry ?? {}) as Record<string, unknown>;
   const [first, ...rest] = Array.isArray(command) ? (command as string[]) : [command];
   if (typeof first !== 'string') return undefined;
-  const given = env && typeof env === 'object' ? (env as Record<string, string>) : undefined;
+  // an object of the file's own: what TOML holds on one line is kept as its text, and has no variables to give
+  const given =
+    env && Object.getPrototypeOf(env) === Object.prototype
+      ? (env as Record<string, string>)
+      : undefined;
   return {
     command: first,
     args: Array.isArray(args) ? (args as string[]) : (rest as string[]),

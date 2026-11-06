@@ -124,18 +124,10 @@ function scan(text: string) {
 
 /**
  * A value JSON has no way to say, as the file has it: an inline table, a literal string, a date. It goes back word for
- * word, as a string in its place stops a client reading its settings, and it shows nothing to what goes through an entry.
+ * word, as a string in its place stops a client reading its settings.
  */
 class Verbatim {
-  readonly #text: string;
-
-  constructor(text: string) {
-    this.#text = text;
-  }
-
-  get text() {
-    return this.#text;
-  }
+  constructor(readonly text: string) {}
 }
 
 const decoded = (value: string): unknown => {

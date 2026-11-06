@@ -12,6 +12,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { entryCommand } from '../src/client-state.js';
 import { CLIENTS, SERVER, STDIO, type Client } from '../src/clients.js';
@@ -445,6 +446,13 @@ describe('a TOML file', () => {
     expect(moved).toBe(text.replace('"old"', '"new"'));
     // an undo, with the table gone by then
     expect(tomlEdit.write('', 'mcp_servers', SERVER, had)).toBe(text);
+  });
+
+  it('tells apart two values JSON cannot say, as reading an edit back must', () => {
+    const read = (value: string) =>
+      tomlEdit.read(`[mcp_servers.${SERVER}]\nenv = ${value}\n`, 'mcp_servers', SERVER);
+    expect(isDeepStrictEqual(read('{ A = "1" }'), read('{ A = "1" }'))).toBe(true);
+    expect(isDeepStrictEqual(read('{ A = "1" }'), read('{ A = "2" }'))).toBe(false);
   });
 
   it('gives no variable of a value it cannot read', () => {
