@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Adb, androidProvider, appleProvider, pause, Simctl } from './workspace.js';
 import { type Answer, type Call, opsOn } from './helpers.js';
 import { Parent } from '../packages/ops/src/mirror/parent.js';
-import { liveMirror } from '../packages/ops/src/mirror/state.js';
+import { liveMirror } from '../packages/ops/src/mirror-state.js';
 import type { ServerContext } from '../packages/ops/src/context.js';
 
 /** The fixture's marquee, smooth and with each fault, read from the stream, on the devices the variables name. */

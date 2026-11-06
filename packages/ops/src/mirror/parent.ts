@@ -15,7 +15,7 @@ import { followDevice } from './follow.js';
 import { handoffDone } from './handoff.js';
 import { windowMeasures } from './measures.js';
 import { pairWindows, type PairSide, type WindowPair } from './pair.js';
-import { FOCUS_SIGNAL, liveMirror, removeMirrorFile, writeMirrorFile } from './state.js';
+import { FOCUS_SIGNAL, liveMirror, removeMirrorFile, writeMirrorFile } from '../mirror-state.js';
 import { answerWatches } from '../watch.js';
 
 export type MirrorRun = {

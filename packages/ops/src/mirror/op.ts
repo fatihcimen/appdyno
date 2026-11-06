@@ -7,7 +7,13 @@ import type { ServerContext } from '../context.js';
 import { checkDevice } from '../policy.js';
 import { MirrorOut } from '../schemas.js';
 import { ACT, defineOp, reply, ToolError } from '../tool.js';
-import { FOCUS_SIGNAL, liveMirror, liveMirrors, mirrorLog, type MirrorFile } from './state.js';
+import {
+  FOCUS_SIGNAL,
+  liveMirror,
+  liveMirrors,
+  mirrorLog,
+  type MirrorFile,
+} from '../mirror-state.js';
 
 /** A first use compiles the viewer: 25 s was measured at load 270. */
 const OPEN_MS = 180_000;

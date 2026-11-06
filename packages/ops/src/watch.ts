@@ -12,7 +12,7 @@ import {
 } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
-import { liveMirror } from './mirror/state.js';
+import { liveMirror } from './mirror-state.js';
 import type { Session } from './session.js';
 import { ToolError } from './tool.js';
 

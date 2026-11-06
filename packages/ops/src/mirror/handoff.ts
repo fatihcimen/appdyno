@@ -5,7 +5,7 @@ import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { HandOffOut } from '../schemas.js';
 import { ACT, defineOp, reply } from '../tool.js';
-import { liveMirror } from './state.js';
+import { liveMirror } from '../mirror-state.js';
 
 const POLL_MS = 250;
 const PROGRESS_MS = 5_000;

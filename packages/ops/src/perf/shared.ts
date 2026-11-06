@@ -26,7 +26,7 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
-import { liveMirror } from '../mirror/state.js';
+import { liveMirror } from '../mirror-state.js';
 import { checkApp } from '../policy.js';
 import type { Session } from '../session.js';
 import { swipeLine } from '../gesture-paths.js';

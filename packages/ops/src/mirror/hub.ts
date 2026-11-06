@@ -17,7 +17,7 @@ import type { Platform } from '@appdyno/protocol';
 import type { ServerContext } from '../context.js';
 import { ToolError } from '../tool.js';
 import { Parent } from './parent.js';
-import { liveMirror, liveMirrors, mirrorLog } from './state.js';
+import { liveMirror, liveMirrors, mirrorLog } from '../mirror-state.js';
 
 export type HubRun = {
   /** A person asked for the keyboard. */

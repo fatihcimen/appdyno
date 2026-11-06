@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startOf } from '@appdyno/core';
 import { hubDevices, runHub, type HubDevice } from '../src/mirror/hub.js';
 import { Parent } from '../src/mirror/parent.js';
-import { removeMirrorFile, writeMirrorFile } from '../src/mirror/state.js';
+import { removeMirrorFile, writeMirrorFile } from '../src/mirror-state.js';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
 
 class Simulated implements VirtualDevices {

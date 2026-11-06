@@ -15,7 +15,7 @@ import { holder } from '../src/claims.js';
 import { ServerContext } from '../src/context.js';
 import { checkedOps } from './helpers.js';
 import { runMirrors, type MirrorRun } from '../src/mirror/parent.js';
-import { liveMirror, liveMirrors, writeMirrorFile, type MirrorFile } from '../src/mirror/state.js';
+import { liveMirror, liveMirrors, writeMirrorFile, type MirrorFile } from '../src/mirror-state.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
 
 const dir = mkdtempSync(join(tmpdir(), 'appdyno-mirror-'));

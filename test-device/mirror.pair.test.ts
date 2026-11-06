@@ -7,7 +7,7 @@ import { viewerBinary, ViewerProcess, type Device } from '../packages/core/src/i
 import { NODE_FLAGS } from '../packages/protocol/src/index.js';
 import { DEFAULT_POLICY, ServerContext, runHub } from '../packages/ops/src/index.js';
 import { Parent } from '../packages/ops/src/mirror/parent.js';
-import { liveMirror } from '../packages/ops/src/mirror/state.js';
+import { liveMirror } from '../packages/ops/src/mirror-state.js';
 import { untilWithin } from './until.js';
 
 /**

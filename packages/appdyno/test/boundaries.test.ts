@@ -123,6 +123,66 @@ describe('module boundaries', () => {
   });
 });
 
+/**
+ * `ops` holds two things: operations, knotted together, and the hub's controller in `mirror/`, which reaches into them
+ * and never the other way. What the rest of `ops` takes from that folder is this, by the file that takes it: what the
+ * package lets out, and the two operations in it that a client calls. A second way in is a package split made harder.
+ */
+const MIRROR_WAY_IN: Record<string, string[]> = {
+  'index.ts': ['hub.js', 'history.js', 'parent.js'],
+  'registry.ts': ['handoff.js', 'op.js'],
+};
+
+/** What `file`, of `ops` and outside `mirror/`, takes from that folder and its rule does not name. */
+function intoMirror(file: string, source: string): string[] {
+  const allowed = MIRROR_WAY_IN[file] ?? [];
+  return [...source.matchAll(IMPORT)]
+    .map((m) => m[1]!)
+    .filter((spec) => spec.startsWith('.'))
+    .map((spec) => relative('/', resolve('/', dirname(file), spec)))
+    .filter((to) => to.startsWith('mirror/') && !allowed.includes(to.slice('mirror/'.length)))
+    .map((to) => `${file}: ${to}`);
+}
+
+describe('the hub in ops', () => {
+  const src = join(packages, 'ops/src');
+
+  it('is reached from the rest of the package by the ways its rule names, and no other', () => {
+    const outside = sources(src)
+      .map((file) => relative(src, file))
+      .filter((file) => !file.startsWith('mirror/'));
+    expect(outside.length).toBeGreaterThan(40);
+    expect(
+      outside.flatMap((file) => intoMirror(file, readFileSync(join(src, file), 'utf8'))),
+    ).toEqual([]);
+  });
+
+  it('names only ways in that are there', () => {
+    const named = Object.entries(MIRROR_WAY_IN).flatMap(([file, ways]) =>
+      ways.map((way) => [file, way] as const),
+    );
+    expect(
+      named.filter(
+        ([file, way]) => !readFileSync(join(src, file), 'utf8').includes(`./mirror/${way}`),
+      ),
+    ).toEqual([]);
+  });
+
+  it('catches a measure reaching in, and a way in from a file of no rule', () => {
+    expect(intoMirror('perf/shared.ts', `import { x } from '../mirror/session.js';`)).toEqual([
+      'perf/shared.ts: mirror/session.js',
+    ]);
+    expect(intoMirror('watch.ts', `import { x } from './mirror/hub.js';`)).toEqual([
+      'watch.ts: mirror/hub.js',
+    ]);
+    expect(intoMirror('index.ts', `export { runHub } from './mirror/hub.js';`)).toEqual([]);
+    expect(intoMirror('index.ts', `export { x } from './mirror/pair.js';`)).toEqual([
+      'index.ts: mirror/pair.js',
+    ]);
+    expect(intoMirror('watch.ts', `import { x } from './mirror-state.js';`)).toEqual([]);
+  });
+});
+
 // joined here so that this file passes itself
 describe('the phone stream', () => {
   const driver = join(packages, 'driver-apple/src');

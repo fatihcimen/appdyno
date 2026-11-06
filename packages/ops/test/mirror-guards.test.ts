@@ -9,7 +9,7 @@ import { inCall, startOf } from '@appdyno/core';
 import { ServerContext } from '../src/context.js';
 import { followDevice } from '../src/mirror/follow.js';
 import { handoffDone, handoffOps, handoffRequest } from '../src/mirror/handoff.js';
-import { removeMirrorFile, writeMirrorFile } from '../src/mirror/state.js';
+import { removeMirrorFile, writeMirrorFile } from '../src/mirror-state.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
 import { reply, type Op } from '../src/tool.js';
 import { z } from 'zod';
