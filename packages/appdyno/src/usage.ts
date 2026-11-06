@@ -91,12 +91,11 @@ export const COMMANDS = {
   bench: {
     flags: {
       serial: needed('S'),
-      driver: values('appdyno|<module>'),
       n: value('50'),
       out: value('file'),
       'max-load': value('N'),
     },
-    what: 'time a driver on an Android device, against the others named',
+    what: 'time reads, taps and typing on an Android device',
   },
   mirror: {
     takes: '[open]',

@@ -1,5 +1,4 @@
 import { freemem, loadavg, totalmem } from 'node:os';
-import { pathToFileURL } from 'node:url';
 import { buildScreen, run, sleep, stats, type Stats } from '@appdyno/core';
 import { Adb, AndroidDevice } from '@appdyno/driver-android';
 
@@ -230,14 +229,6 @@ export async function benchmark(
     await driver.teardown().catch(() => undefined);
   }
   return { driver: driver.name, serial, before, after: await environment(adb, serial), ops };
-}
-
-/** A driver from a module file: its default export is `(serial) => BenchDriver`. */
-export async function loadDriver(path: string, serial: string): Promise<BenchDriver> {
-  const mod = (await import(pathToFileURL(path).href)) as {
-    default: (serial: string) => BenchDriver;
-  };
-  return mod.default(serial);
 }
 
 export function table(results: BenchResult[]): string {

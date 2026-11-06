@@ -6,8 +6,6 @@ android/build/
 android/*/build/
 android/*/.cxx/
 android/local.properties
-.bench/
-.compare/
 packages/*/agents/
 packages/appdyno/README.md
 packages/appdyno/THIRD_PARTY_NOTICES

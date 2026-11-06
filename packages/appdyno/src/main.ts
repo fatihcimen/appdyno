@@ -37,7 +37,7 @@ import {
 import { runHub, runMirrors } from '@appdyno/hub';
 import { endWithHub } from './lifetime.js';
 import { alertPerson } from './alert.js';
-import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
+import { benchmark, appdynoDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
 import { hubServices } from './hub-services.js';
 import { hubCommand, mirrorCommand } from './mirror-args.js';
@@ -311,13 +311,9 @@ async function main(): Promise<number> {
         );
         return 3;
       }
-      const results: BenchResult[] = [];
-      const drivers = values.driver?.length ? values.driver : ['appdyno'];
-      for (const name of drivers) {
-        const driver = name === 'appdyno' ? appdynoDriver(serial) : await loadDriver(name, serial);
-        err(`driver ${driver.name}`);
-        results.push(await benchmark(driver, serial, { n: Number(values.n ?? 50), log: err }));
-      }
+      const results: BenchResult[] = [
+        await benchmark(appdynoDriver(serial), serial, { n: Number(values.n ?? 50), log: err }),
+      ];
       if (values.out) await writeFile(values.out, JSON.stringify(results, null, 2));
       console.log(table(results));
       for (const r of results)

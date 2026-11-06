@@ -11,9 +11,7 @@ describe('usage', () => {
     expect(line('test')).toBe(
       'test <dir or files> [--device S]... [--param NAME=value]... [--env-file F] [--tag T]... [--exclude-tag T]... [--artifacts dir] [--junit file] [--share] [--retries N] [--measure [--iterations N] [--measurements dir]]',
     );
-    expect(line('bench')).toBe(
-      'bench --serial S [--driver appdyno|<module>]... [--n 50] [--out file] [--max-load N]',
-    );
+    expect(line('bench')).toBe('bench --serial S [--n 50] [--out file] [--max-load N]');
     expect(line('perf survey')).toBe(
       'perf survey --app A [--device S] [--measurements dir] [--share]',
     );

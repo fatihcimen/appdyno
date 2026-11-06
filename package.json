@@ -21,19 +21,12 @@
     "@appdyno/core": "workspace:*",
     "@appdyno/perf": "workspace:*",
     "@eslint/js": "^10.0.1",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@types/node": "^22.20.5",
     "eslint": "^10.13.0",
     "prettier": "^3.9.10",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.72.0",
-    "vitest": "^5.0.5",
-    "@modelcontextprotocol/sdk": "^1.32.1"
-  },
-  "version": "1.0.0",
-  "description": "A local device automation server for mobile QA: one MCP stdio server (`appdyno-mcp`) and a TypeScript host library (`appdyno`) that drive the iOS simulator, real iPhones, the Android emulator and real Android phones through our own on-device agents, and measure app and device performance on each of them.",
-  "directories": {
-    "doc": "docs"
-  },
-  "keywords": [],
-  "license": "UNLICENSED"
+    "vitest": "^5.0.5"
+  }
 }
