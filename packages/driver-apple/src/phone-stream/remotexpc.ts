@@ -58,7 +58,7 @@ export class RemoteXpc {
     reject: (e: Error) => void;
     timer: NodeJS.Timeout;
   }[] = [];
-  private unacked = 0;
+  private readonly unacked = new Map<number, number>();
   private ended: Error | undefined;
 
   private constructor(private readonly connection: TcpConnection) {
@@ -106,14 +106,16 @@ export class RemoteXpc {
     }
   }
 
+  /** HTTP/2 counts a connection and each of its streams apart: what one stream took is given back to that one. */
+  private took(stream: number, n: number) {
+    const unacked = (this.unacked.get(stream) ?? 0) + n;
+    this.unacked.set(stream, unacked < WINDOW_STEP ? unacked : 0);
+    if (unacked >= WINDOW_STEP) this.connection.write(windowUpdate(stream, unacked));
+  }
+
   private onChannel(stream: number, payload: Buffer) {
-    this.unacked += payload.length;
-    if (this.unacked >= WINDOW_STEP) {
-      this.connection.write(
-        Buffer.concat([windowUpdate(0, this.unacked), windowUpdate(stream, this.unacked)]),
-      );
-      this.unacked = 0;
-    }
+    this.took(0, payload.length);
+    this.took(stream, payload.length);
     const held = this.channels.get(stream);
     if (!held) return;
     let b: Buffer = held.length ? Buffer.concat([held, payload]) : payload;

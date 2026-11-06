@@ -186,6 +186,26 @@ describe('a service connection', () => {
     expect(updates[0]!.payload.readUInt32BE()).toBeGreaterThanOrEqual(256 * 1024);
   });
 
+  it('gives each channel back what it took, whichever of them last spoke', () => {
+    const { connection, feed, written } = fakeConnection();
+    RemoteXpc.start(connection);
+    written.length = 0;
+    const part = encodeWrapper(0x101, { a: Buffer.alloc(16_000) });
+    // the window a phone is given opens at 1 MB: this much of it again, and its answers would stop coming
+    const rounds = 12;
+    for (let i = 0; i < rounds; i++) {
+      for (let k = 0; k < 16; k++) feed(http2(0, 0, 3, part));
+      feed(http2(0, 0, 1, part));
+    }
+    const given = (stream: number) =>
+      framesOf(written)
+        .filter((p) => p.type === 8 && p.stream === stream)
+        .reduce((a, p) => a + p.payload.readUInt32BE(), 0);
+    expect(given(3)).toBeGreaterThan(rounds * 16 * part.length - 256 * 1024);
+    expect(given(1)).toBeLessThanOrEqual(rounds * part.length);
+    expect(given(0)).toBeGreaterThan(rounds * 17 * part.length - 256 * 1024);
+  });
+
   it('a connection that ends rejects who waits, and who asks later; so does silence', async () => {
     const { connection, end } = fakeConnection();
     const x = RemoteXpc.start(connection);
