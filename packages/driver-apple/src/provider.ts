@@ -3,7 +3,7 @@ import type { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from './simulator.js';
 import { Simulators } from './simulator-manage.js';
 import { IosPhoneDevice, phoneRunnerApp } from './phone.js';
-import { iosProducts } from './runner.js';
+import { iosProducts } from './runner-build.js';
 import { DirectSim } from './simdirect.js';
 import { findPhoneSigning, phoneSigningFromEnv, readProfile } from './signing.js';
 import { Simctl, xcodeEnv, type Simulator } from './simctl.js';

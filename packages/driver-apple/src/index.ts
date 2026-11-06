@@ -1,11 +1,13 @@
 export { appleProvider, iosChecks } from './provider.js';
 export { IosDevice, promptButton, type IosDeviceOps } from './device.js';
 export { ALERT_WORDS, iosScreen } from './platform-screen.js';
-export { IosSimulatorDevice, simulatorOps } from './simulator.js';
+export { IosSimulatorDevice } from './simulator.js';
+export { simulatorOps } from './simulator-ops.js';
 export { Devicectl, assertPhoneUdid } from './devicectl.js';
 export { IosPhoneDevice, phoneRunnerApp } from './phone.js';
 export { phoneSigningFromEnv, readProfile, signedRunner, type PhoneSigning } from './signing.js';
-export { IosRunnerLauncher, iosProducts, pruneIosBuilds, runnerBuild } from './runner.js';
+export { IosRunnerLauncher } from './runner.js';
+export { iosProducts, pruneIosBuilds, runnerBuild } from './runner-build.js';
 export { logShowArgs, simulatorLogs, PHONE_LOGS_NOTE } from './logs.js';
 export { parseIps, phoneCrashes, reportsIn, simulatorCrashes } from './crashes.js';
 export { Simctl, xcodeEnv, type Simulator } from './simctl.js';

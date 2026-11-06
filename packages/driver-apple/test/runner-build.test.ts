@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { inCall } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { buildPhase, xcodebuildTelling } from '../src/runner.js';
+import { buildPhase, xcodebuildTelling } from '../src/runner-build.js';
 
 describe('the runner build', () => {
   const path = process.env.PATH;

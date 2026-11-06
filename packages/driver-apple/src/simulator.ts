@@ -9,8 +9,6 @@ import {
   type TreeOptions,
   pause,
 } from '@appdyno/core';
-import { simulatorCrashes } from './crashes.js';
-import { simulatorLogs } from './logs.js';
 import { SimulatorApps, SimulatorEvents, SimulatorSettings, typeName } from './simulator-manage.js';
 import {
   DeviceError,
@@ -30,38 +28,9 @@ import { type Capture, settleAfter } from './simsettle.js';
 import { learnCopies, onKeyboard, withoutCopies } from './simtree.js';
 import { IosRunnerLauncher } from './runner.js';
 import { assertBundle, Simctl } from './simctl.js';
-import { SIMULATOR_LINKS } from './settings-pages.js';
-import { helperBinary } from './simhelper.js';
-import { type IosDeviceOps, IosDevice } from './device.js';
+import { IosDevice } from './device.js';
+import { simulatorOps } from './simulator-ops.js';
 import { HOME_SCREEN_APP } from './platform-screen.js';
-
-export function simulatorOps(udid: string, simctl: Simctl): IosDeviceOps {
-  return {
-    up: async () => (await simctl.state(udid)) === 'Booted',
-    launch: async (b) => {
-      await simctl.launch(udid, b);
-    },
-    terminate: (b) => simctl.terminate(udid, b),
-    openUrl: async (url) => {
-      await simctl.openUrl(udid, url);
-    },
-    setLocation: async (lat, lon) => {
-      await simctl.setLocation(udid, lat, lon);
-    },
-    clearLocation: async () => {
-      await simctl.exec(['location', udid, 'clear']);
-    },
-    linkPrompt: true,
-    settingsLinks: SIMULATOR_LINKS,
-    openSettings: async (link) => {
-      await simctl.exec(['spawn', udid, await helperBinary('SimOpen'), link]);
-    },
-    logs: (q) => simulatorLogs(simctl, udid, q),
-    crashes: (q) => simulatorCrashes(udid, q),
-    name: `simulator ${udid}`,
-    pid: (b) => simctl.pid(udid, b),
-  };
-}
 
 type Node = Tree['nodes'][number];
 

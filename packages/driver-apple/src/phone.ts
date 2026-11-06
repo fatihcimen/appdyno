@@ -17,7 +17,8 @@ import {
 } from '@appdyno/core';
 import { type IosDeviceOps, IosDevice } from './device.js';
 import { phoneRecorder } from './record.js';
-import { iosProducts, type RunnerTransport, IosRunnerLauncher } from './runner.js';
+import { type RunnerTransport, IosRunnerLauncher } from './runner.js';
+import { iosProducts } from './runner-build.js';
 import { PHONE_CONTROLS } from './mirror-press.js';
 import { PhoneInspector } from './phone-inspector.js';
 import { PHONE_LINKS } from './settings-pages.js';
