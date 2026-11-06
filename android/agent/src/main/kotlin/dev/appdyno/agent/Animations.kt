@@ -2,7 +2,7 @@ package dev.appdyno.agent
 
 /**
  * The device's animation scales, off on request and back as they were when the last host leaves. If this
- * process dies first (killed, crashed), a separate shell process watching it puts them back (scrcpy's way).
+ * process dies first (killed, crashed), a separate shell process watching it puts them back.
  */
 class Animations {
     private var saved: List<String>? = null

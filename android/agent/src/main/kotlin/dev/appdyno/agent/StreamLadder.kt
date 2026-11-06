@@ -9,7 +9,7 @@ const val MIME_HEVC = "video/hevc"
 /**
  * What to try when an encoder fails, each step said in the stats: the same again a few times (an encoder
  * may refuse for a moment), then smaller, then the other codec, then software. (Pure, unit tested.) The
- * sizes follow what encoders on real phones refuse, as scrcpy's source shows; only the top step has run on
+ * sizes follow what encoders on real phones refuse (see THIRD_PARTY_NOTICES); only the top step has run on
  * a phone that needed none of the others.
  */
 class StreamLadder(

@@ -1,6 +1,7 @@
-appdyno's Android agent (Stream*.kt, DisplayMirror.kt) makes its display and encoder as the platform behaves,
-which was read in the source of scrcpy (https://github.com/Genymobile/scrcpy, Apache License 2.0): which hidden
-calls exist on which release, the sizes an encoder refuses. No code of it is here.
+appdyno's Android agent (Stream*.kt, DisplayMirror.kt, Animations.kt) makes its display and encoder as the platform
+behaves, which was read in the source of scrcpy (https://github.com/Genymobile/scrcpy, Apache License 2.0): which
+hidden calls exist on which release, the sizes an encoder refuses, and a separate shell process that puts a setting
+back when the agent dies. No code of it is here.
 
 appdyno's iPhone stream (packages/driver-apple/src/phone-stream) speaks to services a phone offers its Mac, as public
 notes describe them: the names of those services, the shape of their requests, the fields of a stream's offer, and what

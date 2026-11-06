@@ -11,7 +11,7 @@ import java.lang.reflect.Method
 /**
  * The screen drawn into a surface, by hidden platform calls, found by name at run time: a display that
  * mirrors the main one where the release has that (proven on 14 and 16), else one made directly (proven on
- * 11). What differs between releases is behaviour read in scrcpy's source (see THIRD_PARTY_NOTICES).
+ * 11). What differs between releases was read in another project's source: see THIRD_PARTY_NOTICES.
  */
 @SuppressLint("PrivateApi")
 class DisplayMirror private constructor(val how: String, private val release: () -> Unit) {
