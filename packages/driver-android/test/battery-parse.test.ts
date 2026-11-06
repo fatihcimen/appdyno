@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { noteLocks, type SeenLock } from '../src/perf/battery.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { battery, noteLocks, type SeenLock } from '../src/perf/battery.js';
 import {
   parseAlarmStats,
   parseDuration,
@@ -63,6 +63,72 @@ describe('a wake lock read again and again', () => {
     expect(noteLocks(held, [lock(0)], 14_000)).toBe(true);
     expect(noteLocks(held, [lock(4_000, 'fixture:other')], 14_000)).toBe(true);
     expect(held).toHaveLength(3);
+  });
+});
+
+describe('a window of battery signals', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  /** A device that shows these locks at each read, the last again; two reads of its alarms, before and after. */
+  const device = (locks: string[][], alarms = ['', ALARMS]) => {
+    let read = 0;
+    let alarmsRead = 0;
+    const shell = async (cmd: string) => {
+      if (cmd.includes('pm list packages')) return `package:dev.appdyno.fixture uid:${UID}\n`;
+      if (cmd.includes('dumpsys power')) {
+        const held = locks[Math.min(read++, locks.length - 1)]!;
+        return `Wake Locks: size=${held.length}\n${held.join('\n')}\n`;
+      }
+      if (cmd.includes('dumpsys alarm')) return alarms[Math.min(alarmsRead++, 1)]!;
+      return JOBS;
+    };
+    return { shell } as never;
+  };
+  const held = (ago: string, tag = 'fixture:held', owner = `uid=${UID} pid=1`) =>
+    `  PARTIAL_WAKE_LOCK  '${tag}' ACQ=-${ago} (${owner})`;
+  const over = async (d: never, windowMs = 3_000) => {
+    const reading = battery(d, 'dev.appdyno.fixture', windowMs);
+    await vi.advanceTimersByTimeAsync(windowMs + 2_000);
+    return (await reading).value;
+  };
+
+  it('counts a lock read at each pass once, however its time wavers, and no more than the window', async () => {
+    const v = await over(
+      device([[held('1s499ms')], [held('2s501ms')], [held('3s499ms')], [held('4s501ms')]]),
+    );
+    expect(v.wakeLocks).toHaveLength(1);
+    expect(v.wakeLocks[0]).toMatchObject({ tag: 'fixture:held', count: 1 });
+    expect(v.wakeLockMs).toBeLessThanOrEqual(v.windowMs);
+    expect(v.wakeLockPercent).toBeLessThanOrEqual(100);
+    expect(v.longestLockMs).toBeGreaterThan(v.wakeLockMs);
+  });
+
+  it('adds up two locks of a tag, one after the other', async () => {
+    const v = await over(device([[held('0ms')], [held('1s')], [], [held('0ms')]]), 4_000);
+    expect(v.wakeLocks).toHaveLength(1);
+    expect(v.wakeLocks[0]?.count).toBe(2);
+  });
+
+  it('lists what the system holds for the app, and leaves it out of what Play counts', async () => {
+    const v = await over(device([[held('1s', 'AudioMix', 'uid=1041 pid=5 ws=WorkSource{10469}')]]));
+    expect(v.wakeLocks[0]).toMatchObject({ tag: 'AudioMix', exempt: 'audio' });
+    expect(v.wakeLockMs).toBe(0);
+    expect(v.wakeLockPercent).toBe(0);
+    expect(v.longestLockMs).toBe(0);
+  });
+
+  it('counts the alarms of the window alone, and goes by the time it really read', async () => {
+    const v = await over(device([[]]));
+    expect(v.windowMs).toBe(3_000);
+    expect(v.wakeups).toBe(6);
+    expect(v.wakeupsPerHour).toBe(7_200);
+    expect(v.alarms).toBe(9);
+    expect(v.alarmTags).toEqual([
+      { tag: '*walarm*:fixture.alarm', alarms: 6, wakeups: 6 },
+      { tag: '*alarm*:fixture.quiet', alarms: 3, wakeups: 0 },
+    ]);
+    expect(v.wakeLocks).toEqual([]);
   });
 });
 
