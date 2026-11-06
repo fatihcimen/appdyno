@@ -614,6 +614,13 @@ describe('install', () => {
     expect(beside(file)).toEqual([]);
   });
 
+  it('keeps the mode of a file open to others, whatever this process gives a new one', async () => {
+    const { home, file } = homeWith(cursor!, '{}\n');
+    chmodSync(file, 0o666);
+    await run(home);
+    expect(statSync(file).mode & 0o777).toBe(0o666);
+  });
+
   it('says what to add by hand when it finds no client', async () => {
     const home = mkdtempSync(join(tmpdir(), 'appdyno-home-'));
     homes.push(home);

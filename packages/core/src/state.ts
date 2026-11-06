@@ -1,4 +1,5 @@
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -46,6 +47,8 @@ export function writeWhole(file: string, text: string, mode = 0o600) {
   const temp = `${file}.${process.pid}.tmp`;
   try {
     writeFileSync(temp, text, { mode });
+    // as asked: a mode given to a new file is narrowed by the process's umask
+    chmodSync(temp, mode);
     renameSync(temp, file);
   } catch (e) {
     rmSync(temp, { recursive: true, force: true });
