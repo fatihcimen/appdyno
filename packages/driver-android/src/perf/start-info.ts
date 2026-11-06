@@ -34,7 +34,8 @@ function phasesOf(block: string): Record<string, number> {
   for (const mark of MARKS) {
     const ns = stamps.get(mark);
     if (ns === undefined) continue;
-    if (last)
+    // a service's launch is stamped on another clock than the rest of its start, and no time runs backwards
+    if (last && ns >= last.ns)
       out[mark === 4 && last.mark !== 2 ? 'first_frame' : UP_TO[mark]] =
         Math.round((ns - last.ns) / 1e5) / 10;
     last = { mark, ns };
@@ -64,14 +65,23 @@ export function parseStartInfo(text: string): StartRecord[] {
     });
 }
 
+/** The device's two clocks at one moment: any running process's dump opens with them, and the system's UI always runs. */
+const CLOCKS = 'dumpsys gfxinfo com.android.systemui 2>/dev/null | head -3';
+
 /**
  * Whether a start began at `since` or later. How long ago is asked of the device's own clock and taken from this Mac's
- * now, so the two need not agree. A stamp on any clock but the boot's reads as older, and keeps nothing.
+ * now, so the two need not agree. A start is stamped on the clock that stops while a phone sleeps and a service's launch
+ * on the boot's, so a stamp goes by the clock it is on: the one it is least behind.
+ * shortcut: a start before a sleep reads as newer than it is, so a phone that slept since the last run can keep that start
+ * twice; keep the stamp with its run to close this.
  */
 const beganSince = async (d: PerfDevice, start: StartRecord, since: number) => {
-  const up = await sh(d, 'cat /proc/uptime').catch(() => '');
-  const ago = Number(up.trim().split(/\s+/)[0]) * 1_000 - (start.startedNs ?? NaN) / 1e6;
-  return Date.now() - ago >= since;
+  const clocks = /Uptime: (\d+) Realtime: (\d+)/.exec(await sh(d, CLOCKS).catch(() => ''));
+  const agos = (clocks ?? [])
+    .slice(1)
+    .map((ms) => Number(ms) - (start.startedNs ?? NaN) / 1e6)
+    .filter((ago) => ago >= 0);
+  return agos.length > 0 && Date.now() - Math.min(...agos) >= since;
 };
 
 /**

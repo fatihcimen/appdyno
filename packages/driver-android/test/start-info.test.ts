@@ -55,6 +55,13 @@ describe('start info', () => {
     expect(start!.phases).toEqual({ first_frame: 100 });
   });
 
+  it('counts no phase across two clocks, as a Xiaomi stamps a service start', () => {
+    const [start] = parseStartInfo(
+      'ApplicationStartInfo #0:\n reason=SERVICE startType=COLD\n timestamps: 0=665171850087996 1=559172317414559 4=559172463732328 \n',
+    );
+    expect(start!.phases).toEqual({ first_frame: 146.3 });
+  });
+
   it('refuses before Android 15, by name', async () => {
     await expect(startInfo(device(34, '') as never, 'dev.app')).rejects.toMatchObject({
       code: 'UNSUPPORTED',
@@ -75,17 +82,19 @@ describe('start info', () => {
   });
 
   describe('whether the newest began since the run before', () => {
-    /** The device up for as long as the dump's newest start, and `ago` s more. */
-    const upFor = (ago: number | string) => ({
+    /** The dump's newest start `ago` s back on the first clock, with the boot's that far from it. */
+    const upFor = (ago: number | string, boot = 0, up = 0) => ({
       shell: async (cmd: string) =>
         cmd.includes('getprop')
           ? '36\n'
-          : cmd.includes('/proc/uptime')
-            ? `${typeof ago === 'number' ? 433894.334 + ago : ago} 99.0\n`
+          : cmd.includes('gfxinfo')
+            ? typeof ago === 'number'
+              ? `Uptime: ${(433894.334 + ago + up) * 1_000} Realtime: ${(433894.334 + ago + boot) * 1_000}\n`
+              : ago
             : DUMP,
     });
-    const isNew = async (ago: number | string, since: number | undefined) =>
-      (await startInfo(upFor(ago) as never, 'dev.app', since)).value.newestIsNew;
+    const isNew = async (ago: number | string, since: number | undefined, boot = 0, up = 0) =>
+      (await startInfo(upFor(ago, boot, up) as never, 'dev.app', since)).value.newestIsNew;
     const before = (s: number) => Date.now() - s * 1_000;
 
     it('goes by how long ago the device says, on any clock this Mac has', async () => {
@@ -101,9 +110,19 @@ describe('start info', () => {
       expect(await isNew('garbled', before(60))).toBe(false);
     });
 
-    it('says no of a stamp from a clock that left out the time it slept', async () => {
-      // the stamp's clock stood still while the uptime went on: an older start than it is, never a newer
-      expect(await isNew(12 * 3_600, before(60))).toBe(false);
+    it('reads a start on the clock that stopped while the phone slept', async () => {
+      // a Xiaomi with 29 hours asleep read every start as 29 hours old, and so kept none
+      expect(await isNew(5, before(60), 12 * 3_600)).toBe(true);
+      expect(await isNew(600, before(60), 12 * 3_600)).toBe(false);
+    });
+
+    it("reads a stamp on the boot's clock, which a service's launch is", async () => {
+      expect(await isNew(5, before(60), 0, -12 * 3_600)).toBe(true);
+      expect(await isNew(600, before(60), 0, -12 * 3_600)).toBe(false);
+    });
+
+    it('says no of a stamp ahead of both clocks', async () => {
+      expect(await isNew(-5, before(60))).toBe(false);
     });
   });
 });
