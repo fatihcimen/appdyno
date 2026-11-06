@@ -45,14 +45,19 @@ static NalKind nalKind(const uint8_t *nal, size_t length, BOOL hevc) {
   return type >= 1 && type <= 4 ? NalSlice : NalOther;
 }
 
+/// What goes through the decoder with a picture: with others in flight, what is set as a frame goes in holds a later frame's by the time this one comes out.
+typedef struct {
+  double startedAt, capturedMs;
+} MVInFlight;
+
 @interface MVDecoder ()
-- (void)finished:(OSStatus)status image:(CVImageBufferRef _Nullable)image startedAt:(double)startedAt;
+- (void)finished:(OSStatus)status image:(CVImageBufferRef _Nullable)image frame:(MVInFlight)frame;
 @end
 
 static void onDecoded(void *owner, void *refcon, OSStatus status, VTDecodeInfoFlags flags, CVImageBufferRef image, CMTime pts, CMTime duration) {
-  double *startedAt = refcon;
-  [(__bridge MVDecoder *)owner finished:status image:image startedAt:*startedAt];
-  free(startedAt);
+  MVInFlight *frame = refcon;
+  [(__bridge MVDecoder *)owner finished:status image:image frame:*frame];
+  free(frame);
 }
 
 static const double kRecorderAskMs = 1000;
@@ -245,17 +250,17 @@ CFStringRef const MVCapturedAt = CFSTR("MVCapturedAt");
     return NO;
   }
   if (status == noErr) {
-    double *startedAt = malloc(sizeof(double));
-    *startedAt = MVNowMs();
+    MVInFlight *frame = malloc(sizeof(MVInFlight));
+    *frame = (MVInFlight){.startedAt = MVNowMs(), .capturedMs = self.capturedMs};
     os_unfair_lock_lock(&_lock);
     _inFlight++;
     os_unfair_lock_unlock(&_lock);
-    status = VTDecompressionSessionDecodeFrame(_session, sample, kVTDecodeFrame_EnableAsynchronousDecompression, startedAt, NULL);
+    status = VTDecompressionSessionDecodeFrame(_session, sample, kVTDecodeFrame_EnableAsynchronousDecompression, frame, NULL);
     if (status != noErr) {
       os_unfair_lock_lock(&_lock);
       _inFlight--;
       os_unfair_lock_unlock(&_lock);
-      free(startedAt);
+      free(frame);
     }
   }
   if (sample) CFRelease(sample);
@@ -264,7 +269,7 @@ CFStringRef const MVCapturedAt = CFSTR("MVCapturedAt");
   return status == noErr;
 }
 
-- (void)finished:(OSStatus)status image:(CVImageBufferRef)image startedAt:(double)startedAt {
+- (void)finished:(OSStatus)status image:(CVImageBufferRef)image frame:(MVInFlight)frame {
   os_unfair_lock_lock(&_lock);
   _inFlight--;
   BOOL closed = _closed;
@@ -278,7 +283,7 @@ CFStringRef const MVCapturedAt = CFSTR("MVCapturedAt");
     return;
   }
   id<MVSink> sink = _sink;
-  [sink.stats decodedMs:MVNowMs() - startedAt];
+  [sink.stats decodedMs:MVNowMs() - frame.startedAt];
   id from = _source;
   if (image && !_pixelsTold) {
     _pixelsTold = YES;
@@ -297,7 +302,7 @@ CFStringRef const MVCapturedAt = CFSTR("MVCapturedAt");
     CVBufferSetAttachment(image, kCVImageBufferCleanApertureKey, (__bridge CFDictionaryRef)aperture, kCVAttachmentMode_ShouldPropagate);
   }
   if (show && from) {
-    CVBufferSetAttachment(image, MVCapturedAt, (__bridge CFNumberRef)@(self.capturedMs), kCVAttachmentMode_ShouldNotPropagate);
+    CVBufferSetAttachment(image, MVCapturedAt, (__bridge CFNumberRef)@(frame.capturedMs), kCVAttachmentMode_ShouldNotPropagate);
     [sink source:from image:image];
   }
 }

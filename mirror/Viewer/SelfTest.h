@@ -24,6 +24,8 @@ void MVSkip(NSString *name, NSString *why);
 @property(atomic, nullable) id lastImage;
 @property(atomic, nullable) id lastSurface;
 @property(atomic) int keyRequests, lastFailures;
+/// The capture time each picture came out with.
+@property(atomic, readonly) NSCountedSet<NSNumber *> *captured;
 - (BOOL)waitForKeyRequests:(int)count;
 - (BOOL)waitForImages:(int)count;
 - (BOOL)waitForLost;
@@ -38,6 +40,7 @@ void MVCheckFlow(void);
 void MVCheckShell(void);
 void MVCheckPlaces(void);
 void MVCheckConnect(void);
+void MVCheckHevc444(NSString *_Nullable fixtures);
 /// Lets what was sent reach a window kept behind.
 void MVPump(double seconds);
 
