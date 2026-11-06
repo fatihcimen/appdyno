@@ -667,6 +667,26 @@ describe('what the session reports', () => {
     viewer().say('marked', { ms: 72.5 });
     await expect(marked).resolves.toBe(72.5);
   });
+
+  it('answers what it asked a viewer that died, as nothing else will', async () => {
+    const { session, viewer, live } = setup();
+    await live();
+    const watching = session.watch(1_000, false);
+    const marked = session.mark();
+    viewer().die('a crash');
+    await expect(watching).resolves.toEqual({ why: 'its window went' });
+    await expect(marked).resolves.toBeNaN();
+  });
+
+  it('answers what it asked when it stops, and leaves no wait with no viewer', async () => {
+    const { session, live } = setup();
+    await live();
+    const watching = session.watch(1_000, false);
+    await session.stop('done');
+    await expect(watching).resolves.toEqual({ why: 'its window went' });
+    await expect(session.watch(1_000, false)).resolves.toEqual({ why: 'its window went' });
+    await expect(session.mark()).resolves.toBeNaN();
+  });
 });
 
 describe('the table of needs', () => {

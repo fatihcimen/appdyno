@@ -1,7 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { deviceStateFile, pause, reportProgress } from '@appdyno/core';
+import { rmSync } from 'node:fs';
+import { deviceStateFile, pause, readState, reportProgress, writeState } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { HandOffOut } from '../schemas.js';
@@ -13,29 +12,17 @@ const PROGRESS_MS = 5_000;
 const DEFAULT_S = 300;
 const MAX_S = 3_600;
 
-type Request = { id: string; reason: string };
+const Request = z.object({ id: z.string(), reason: z.string() });
+const Done = z.object({ id: z.string() });
 
 const requestFile = (serial: string) => deviceStateFile('handoff', serial);
 const doneFile = (serial: string) => `${requestFile(serial)}.done`;
 
-const write = (file: string, value: unknown) => {
-  mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
-  writeFileSync(file, JSON.stringify(value), { mode: 0o600 });
-};
-
-const read = <T>(file: string): T | undefined => {
-  try {
-    return JSON.parse(readFileSync(file, 'utf8')) as T;
-  } catch {
-    return undefined;
-  }
-};
-
 /** What a mirror's parent shows: the request on this device, if one is open. */
-export const handoffRequest = (serial: string) => read<Request>(requestFile(serial));
+export const handoffRequest = (serial: string) => readState(requestFile(serial), Request);
 
 /** A person said they are done, by the window. */
-export const handoffDone = (serial: string, id: string) => write(doneFile(serial), { id });
+export const handoffDone = (serial: string, id: string) => writeState(doneFile(serial), { id });
 
 export function handoffOps(ctx: ServerContext) {
   return [
@@ -56,7 +43,7 @@ export function handoffOps(ctx: ServerContext) {
         const serial = await ctx.defaultSerial();
         const id = randomBytes(4).toString('hex');
         rmSync(doneFile(serial), { force: true });
-        write(requestFile(serial), { id, reason } satisfies Request);
+        writeState(requestFile(serial), { id, reason });
         const window = liveMirror(serial) !== undefined;
         // with a window, its parent shows the banner and sounds it; with none, a sound and a notification
         if (!window) ctx.alertPerson?.(reason);
@@ -66,7 +53,7 @@ export function handoffOps(ctx: ServerContext) {
         let saidAt = started;
         try {
           while (Date.now() < end) {
-            if (read<{ id: string }>(doneFile(serial))?.id === id) {
+            if (readState(doneFile(serial), Done)?.id === id) {
               const t = `a person said done after ${Math.round((Date.now() - started) / 1000)} s`;
               return reply(t, { done: t, by: 'person', waitedMs: Date.now() - started });
             }

@@ -119,6 +119,7 @@ export class MirrorSession {
     this.unwatch?.();
     const v = this.viewer;
     this.viewer = undefined;
+    this.asks.gone();
     this.set({ state: 'stopped', why, ...(need && { need }) });
     v?.send({ op: 'quit' });
     // a viewer wedged in a framework hears no quit; one that heard it holds nothing up
@@ -386,6 +387,7 @@ export class MirrorSession {
   private async onViewerExit(tail: string) {
     const v = this.viewer;
     this.viewer = undefined;
+    this.asks.gone();
     v?.kill();
     if (this.current.state === 'stopped') return;
     if (this.closedByPerson) {

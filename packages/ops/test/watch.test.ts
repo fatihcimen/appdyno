@@ -1,7 +1,7 @@
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { MotionRegion, MotionWatch } from '@appdyno/core';
+import { deviceStateFile, writeState, type MotionRegion, type MotionWatch } from '@appdyno/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { answerWatches, motionText, movedIn, regionLine } from '../src/watch.js';
 
@@ -89,6 +89,28 @@ describe('a window that shares its stream', () => {
 
   it('asks nothing of a session with no request', () => {
     const watching = vi.fn();
+    answerWatches('phone', { watch: watching })();
+    expect(watching).not.toHaveBeenCalled();
+  });
+
+  it('takes a request once, and answers it by file under its id', async () => {
+    const watching = vi.fn(async () => ({ why: 'no picture' }));
+    const answerFile = deviceStateFile('watch', 'phone.answer');
+    writeState(deviceStateFile('watch', 'phone'), { id: 'a', ms: 10, strip: false });
+    const look = answerWatches('phone', { watch: watching });
+    look();
+    look();
+    expect(watching).toHaveBeenCalledExactlyOnceWith(10, false);
+    await vi.waitFor(() => expect(existsSync(answerFile)).toBe(true));
+    expect(JSON.parse(readFileSync(answerFile, 'utf8'))).toEqual({ why: 'no picture', id: 'a' });
+  });
+
+  it('reads a broken request as none', () => {
+    const watching = vi.fn();
+    const file = deviceStateFile('watch', 'phone');
+    writeState(file, { id: 'a' });
+    answerWatches('phone', { watch: watching })();
+    writeFileSync(file, '{"id":');
     answerWatches('phone', { watch: watching })();
     expect(watching).not.toHaveBeenCalled();
   });

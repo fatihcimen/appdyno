@@ -1,15 +1,16 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, rmSync } from 'node:fs';
 import {
+  deviceStateFile,
   MirrorSession,
   NEEDS,
   pause,
-  safeName,
+  readState,
   startViewer,
-  stateDir,
+  writeState,
   type MotionRegion,
   type MotionWatch,
 } from '@appdyno/core';
+import { z } from 'zod';
 import type { ServerContext } from './context.js';
 import { liveMirror } from './mirror/state.js';
 import type { Session } from './session.js';
@@ -31,37 +32,22 @@ const EDGE = 0.07;
 const cannot = (why: string, fix?: string) =>
   new ToolError(`cannot watch this device: ${why}`, 'UNSUPPORTED', fix);
 
-const folder = () => join(stateDir(), 'watch');
-const asked = (serial: string) => join(folder(), `${safeName(serial)}.json`);
-const answered = (serial: string) => join(folder(), `${safeName(serial)}.answer.json`);
+/** One slot to a device: a second watch takes the first's place, and the first hears that its window did not answer. */
+const asked = (serial: string) => deviceStateFile('watch', serial);
+const answered = (serial: string) => deviceStateFile('watch', `${serial}.answer`);
 
-const readJson = <T>(file: string): T | undefined => {
-  try {
-    return JSON.parse(readFileSync(file, 'utf8')) as T;
-  } catch {
-    return undefined;
-  }
-};
-
-const write = (file: string, value: unknown) => {
-  mkdirSync(folder(), { recursive: true, mode: 0o700 });
-  const part = `${file}.${process.pid}`;
-  writeFileSync(part, JSON.stringify(value), { mode: 0o600 });
-  rmSync(file, { force: true });
-  writeFileSync(file, readFileSync(part), { mode: 0o600 });
-  rmSync(part, { force: true });
-};
-
-type Request = { id: string; ms: number; strip: boolean };
+const Request = z.object({ id: z.string(), ms: z.number(), strip: z.boolean() });
+/** What a viewer said of a watch, under the id it answers. */
+const Answer = z.looseObject({ id: z.string() });
 
 /** In the process that holds a window: another's request goes to its one stream, and the answer back by a file. */
 export function answerWatches(serial: string, session: Pick<MirrorSession, 'watch'>) {
   let seen: string | undefined;
   return () => {
-    const r = readJson<Request>(asked(serial));
+    const r = readState(asked(serial), Request);
     if (!r || r.id === seen) return;
     seen = r.id;
-    void session.watch(r.ms, r.strip).then((m) => write(answered(serial), { ...m, id: r.id }));
+    void session.watch(r.ms, r.strip).then((m) => writeState(answered(serial), { ...m, id: r.id }));
   };
 }
 
@@ -69,13 +55,13 @@ export function answerWatches(serial: string, session: Pick<MirrorSession, 'watc
 async function byWindow(serial: string, ms: number, strip: boolean) {
   const id = `${process.pid}-${Date.now()}`;
   rmSync(answered(serial), { force: true });
-  write(asked(serial), { id, ms, strip });
+  writeState(asked(serial), { id, ms, strip });
   const end = Date.now() + ms + ANSWER_SLACK_MS;
   while (Date.now() < end) {
-    const a = readJson<MotionWatch & { id: string }>(answered(serial));
+    const a = readState(answered(serial), Answer);
     if (a?.id === id) {
       rmSync(answered(serial), { force: true });
-      return a;
+      return a as MotionWatch;
     }
     await pause(POLL_MS);
   }

@@ -1,6 +1,8 @@
 import type { MotionWatch } from './port.js';
 import type { ViewerLink, ViewerMessage } from './viewer.js';
 
+const NO_VIEWER = 'its window went';
+
 /** What a viewer is asked to time, and answers for later. */
 export class ViewerAsks {
   private readonly marks: ((ms: number) => void)[] = [];
@@ -15,14 +17,18 @@ export class ViewerAsks {
 
   /** What moved in the stream's frames for this long, read by the viewer that has them decoded. */
   watch(ms: number, strip: boolean): Promise<MotionWatch> {
+    const viewer = this.viewer();
+    if (!viewer) return Promise.resolve({ why: NO_VIEWER });
     const id = String(++this.count);
-    this.viewer()?.send({ op: 'watch', id, ms, strip });
+    viewer.send({ op: 'watch', id, ms, strip });
     return new Promise((r) => this.watches.set(id, r));
   }
 
   /** The time from now to the next frame to arrive; for the bench, around an input. */
   mark(): Promise<number> {
-    this.viewer()?.send({ op: 'mark', bigger: this.sendsWhenStill() });
+    const viewer = this.viewer();
+    if (!viewer) return Promise.resolve(Number.NaN);
+    viewer.send({ op: 'mark', bigger: this.sendsWhenStill() });
     return new Promise((r) => this.marks.push(r));
   }
 
@@ -33,5 +39,12 @@ export class ViewerAsks {
   watched(m: ViewerMessage) {
     this.watches.get(String(m.id))?.(m as unknown as MotionWatch);
     this.watches.delete(String(m.id));
+  }
+
+  /** The viewer went, and with it what it was asked: no one is left to answer these. */
+  gone() {
+    this.marks.splice(0).forEach((r) => r(Number.NaN));
+    this.watches.forEach((r) => r({ why: NO_VIEWER }));
+    this.watches.clear();
   }
 }
