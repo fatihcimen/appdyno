@@ -42,7 +42,7 @@ What an agent does most is look, act, and look again. Most of the design serves 
 
 **The answer holds the screen.** An action returns the settled screen, as a diff of what changed, so a client needs no second call to see what happened. `settled` says the screen went still. `changed` says it differs from before.
 
-**The device decides when it is still.** The agent or runner watches the screen and answers once it has been quiet for 200 ms, within 3 s. Doing that on the device needs no round trips, and the wire stays quiet while nothing moves. [The protocol](reference/protocol.md#settle) has the rules and what the window catches.
+**The side nearest the screen decides when it is still.** The agent or runner watches the screen and answers once it has been quiet for 200 ms, within 3 s. Doing that on the device needs no round trips, and the wire stays quiet while nothing moves. A simulator with no runner does the same on the Mac, in `simsettle.ts`, with timings of its own: a read costs about 30 ms there, so it can look more often. [The protocol](reference/protocol.md#settle) has the rules and what the window catches.
 
 **A selector is resolved late.** A target is found on a fresh read, just before the touch. A screen that moved in between cannot send it to the wrong place. Several matches are refused, with their refs. A guess would look like success.
 
