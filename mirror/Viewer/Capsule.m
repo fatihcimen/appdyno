@@ -4,7 +4,7 @@
 #import "Window.h"
 #import "Words.h"
 
-static const double kHigh = 28, kMark = 12, kDotMark = 8, kBar = 2, kStepSeconds = 0.15, kWordsSeconds = 0.15, kNoteSeconds = 4, kWidest = 220, kInset = 12;
+static const double kHigh = 28, kMark = 12, kDotMark = 8, kBar = 2, kStepSeconds = 0.15, kWordsSeconds = 0.15, kNoteSeconds = 4, kWidest = 220, kInset = 12, kTurnGrows = 1.4;
 
 @implementation MVStatusLine {
   NSString *_note;
@@ -142,12 +142,16 @@ static NSColor *colorOf(MVTone tone) {
 - (void)show:(MVStatusLine *)line {
   NSString *words = line.stringValue;
   MVTone tone = line.tone;
+  BOOL turned = _shown && tone != _tone;
   if (!_shown || tone != _tone) {
     _mark.size = tone == MVToneLive ? kDotMark : kMark;
     [_mark paint:symbolOf(tone) color:colorOf(tone)];
+    _tone = tone;
   }
+  if (turned) MVPulse(_mark, kTurnGrows);
   if ([words isEqual:_words.stringValue]) return [self setProgress:line.progress];
-  if (MVMoves() && _shown) {
+  // a state that changed crosses over, and a reading that changed is a number, once a second, and only changes
+  if (MVMoves() && turned) {
     CATransition *fade = [CATransition animation];
     fade.type = kCATransitionFade;
     fade.duration = kWordsSeconds;
@@ -155,7 +159,6 @@ static NSColor *colorOf(MVTone tone) {
   }
   _words.stringValue = words;
   [self invalidateIntrinsicContentSize];
-  _tone = tone;
   _shown = YES;
   self.toolTip = words;
   self.accessibilityLabel = words;

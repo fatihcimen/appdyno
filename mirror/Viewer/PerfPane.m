@@ -5,6 +5,7 @@
 #import "Window.h"
 
 enum { kSeconds = 60, kResults = 20 };
+static const double kNewsGrows = 1.02;
 static const double kChartHeight = 34, kWhyWide = 244, kRowHeight = 36, kRowInset = 10, kTile = 24, kBetween = 14, kFigure = 20, kMaySwayShare = 0.1, kMaySwayFps = 3, kWaiting = 0.6;
 
 /// What a line of readings shows, in the order it stands.
@@ -247,7 +248,7 @@ static MVRow *rowOfResult(NSDictionary *result) {
   // only a measure just made is news: a window opening on an old regression has nothing to announce
   if (_measured && [_past.firstObject[@"verdict"] isEqual:@"regression"]) {
     MVAnnounce(_past.firstObject[@"title"]);
-    MVPulse(_results);
+    MVPulse(_results, kNewsGrows);
   }
   _measured = NO;
 }

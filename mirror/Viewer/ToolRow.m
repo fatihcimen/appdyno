@@ -4,7 +4,7 @@
 #import "Words.h"
 
 static const NSUInteger kLinesShown = 10;
-static const double kRowLeast = 40, kRowInset = 7, kShowSeconds = 0.2, kTileSide = 30;
+static const double kRowLeast = 40, kRowInset = 7, kShowSeconds = 0.2, kTileSide = 30, kEndGrows = 1.35;
 
 /// A row's own mark.
 static NSString *symbolOf(NSString *name) {
@@ -43,6 +43,7 @@ static NSString *durationOf(double seconds) {
 @implementation MVToolRow {
   NSTextField *_title, *_hint, *_result, *_meta, *_log;
   MVInk *_mark;
+  NSProgressIndicator *_turning;
   NSStackView *_resultLine;
   NSView *_lackChip;
   NSButton *_open, *_details;
@@ -68,7 +69,11 @@ static NSString *durationOf(double seconds) {
     _mark = [[MVInk alloc] initWithSymbol:@"circle" color:MVQuietColor() size:12];
     [_mark.widthAnchor constraintEqualToConstant:16].active = YES;
     _result = MVParagraph(@"", MVStyleCallout);
-    _resultLine = [NSStackView stackViewWithViews:@[_mark, _result]];
+    _turning = [NSProgressIndicator new];
+    _turning.style = NSProgressIndicatorStyleSpinning;
+    _turning.controlSize = NSControlSizeSmall;
+    _turning.hidden = YES;
+    _resultLine = [NSStackView stackViewWithViews:@[_turning, _mark, _result]];
     _resultLine.spacing = 4;
     _resultLine.hidden = YES;
     _meta = MVText(@"", MVStyleSub);
@@ -110,6 +115,15 @@ static NSString *durationOf(double seconds) {
   MVFade(_resultLine.layer, 0, 1, kShowSeconds);
 }
 
+/// Something turns only while something runs, and a person who asked for less motion has the still mark and the words.
+- (void)turn:(BOOL)on {
+  BOOL turns = on && MVMoves();
+  _turning.hidden = !turns;
+  _mark.hidden = turns;
+  if (turns) [_turning startAnimation:nil];
+  else [_turning stopAnimation:nil];
+}
+
 - (void)began:(NSDictionary *)run device:(nullable NSString *)device {
   self.running = run[@"name"];
   self.armed = NO;
@@ -123,6 +137,7 @@ static NSString *durationOf(double seconds) {
   _details.hidden = NO;
   _button.title = MVWord(@"Stop");
   [self tell:@"Running…" symbol:@"circle.dotted" color:MVQuietColor()];
+  [self turn:YES];
 }
 
 - (void)heardText:(NSString *)text {
@@ -139,6 +154,9 @@ static NSString *durationOf(double seconds) {
   BOOL good = [run[@"code"] intValue] == 0, stopped = [run[@"stopped"] boolValue], more = unfinished(sentence);
   BOOL plain = [sentence isEqual:@"Stopped"];
   [self tell:sentence symbol:plain ? @"stop.circle" : more ? @"exclamationmark.triangle.fill" : good || stopped ? @"checkmark.circle.fill" : @"xmark.octagon.fill" color:plain ? MVQuietColor() : more ? MVOrange() : good || stopped ? MVGreen() : MVRed()];
+  [self turn:NO];
+  [_resultLine layoutSubtreeIfNeeded];
+  MVPulse(_mark, kEndGrows);
   MVAnnounce(sentence);
   self.running = nil;
   _button.title = MVWord(_verb);

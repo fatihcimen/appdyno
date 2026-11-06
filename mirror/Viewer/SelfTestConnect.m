@@ -10,6 +10,14 @@ static NSString *wordsOf(MVHub *hub) {
   return [[hub.parts valueForKey:@"text"] componentsJoinedByString:@"|"];
 }
 
+/// Whatever goes on turning under a view.
+static BOOL turning(NSView *view) {
+  if ([view isKindOfClass:NSProgressIndicator.class] && !view.hiddenOrHasHiddenAncestor) return YES;
+  for (NSView *sub in view.subviews)
+    if (turning(sub)) return YES;
+  return NO;
+}
+
 static BOOL says(MVHub *hub, NSString *english) {
   return [wordsOf(hub) containsString:MVWord(english)];
 }
@@ -285,6 +293,7 @@ static void checkTools(MVHub *hub, MVToolsPane *tools) {
   [hub showClients:@{@"run": @{@"name": @"compare", @"started": @YES, @"command": @"appdyno perf compare --app com.example.app"}}];
   [hub showClients:@{@"run": @{@"name": @"compare", @"text": @"launch 553 ms slower\n"}}];
   MVPump(0.1);
+  MVCheck(@"tools: something turns while a run is under way", turning(hub.room.window.contentView), nil);
   MVCheck(@"tools: a log stays behind Show Details", ![wordsOf(hub) containsString:@"launch 553 ms slower"], wordsOf(hub));
   [hub pokeClick:@"details:compare"];
   MVPump(0.1);
@@ -306,6 +315,7 @@ static void checkTools(MVHub *hub, MVToolsPane *tools) {
   [hub showClients:@{@"run": @{@"name": @"compare", @"code": @0, @"verdict": @"clear"}}];
   MVPump(0.1);
   MVCheck(@"tools: only a clear answer is a pass", says(hub, @"No regression"), wordsOf(hub));
+  MVCheck(@"tools: and nothing turns once it has ended: a window at rest stays at rest", !turning(hub.room.window.contentView), nil);
   [hub showClients:@{@"run": @{@"name": @"baseline", @"started": @YES, @"command": @"appdyno perf baseline"}}];
   [hub showClients:@{@"run": @{@"name": @"baseline", @"code": @1}}];
   MVPump(0.1);

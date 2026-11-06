@@ -151,12 +151,14 @@ CABasicAnimation *MVSpring(NSString *keyPath, double seconds, double bounce) {
   return eased;
 }
 
-void MVPulse(NSView *view) {
+void MVPulse(NSView *view, double scale) {
   if (!MVMoves()) return;
   view.wantsLayer = YES;
-  CABasicAnimation *pulse = MVSpring(@"transform.scale", kPulseSeconds, kPulseBounce);
-  pulse.fromValue = @1.02;
-  pulse.toValue = @1;
+  // AppKit keeps a view's layer anchored at its corner, so the centre is carried by hand
+  CGFloat x = NSMidX(view.bounds), y = NSMidY(view.bounds);
+  CABasicAnimation *pulse = MVSpring(@"transform", kPulseSeconds, kPulseBounce);
+  pulse.fromValue = [NSValue valueWithCATransform3D:CATransform3DTranslate(CATransform3DScale(CATransform3DMakeTranslation(x, y, 0), scale, scale, 1), -x, -y, 0)];
+  pulse.toValue = [NSValue valueWithCATransform3D:CATransform3DIdentity];
   [view.layer addAnimation:pulse forKey:@"pulse"];
 }
 

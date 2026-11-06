@@ -74,7 +74,8 @@ NSImage *_Nullable MVSymbol(NSString *name, NSColor *color, CGFloat size, NSFont
 /// Words for a screen reader, in the Mac's language.
 void MVAnnounce(NSString *words);
 /// One small spring for something found: nothing for a person who asked for less motion.
-void MVPulse(NSView *view);
+/// Once, from this scale to its own, about its centre.
+void MVPulse(NSView *view, double scale);
 /// A spring that comes to rest, and where the system has none, below macOS 14, the same move eased.
 CABasicAnimation *MVSpring(NSString *keyPath, double seconds, double bounce);
 /// Whether a person has left motion on.

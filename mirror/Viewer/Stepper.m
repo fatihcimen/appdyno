@@ -3,12 +3,14 @@
 #import "Place.h"
 
 static const double kRowHigh = 36, kMarkWide = 24, kRadius = 10, kLine = 2;
-static const double kPulseSeconds = 1.4, kPulses = 3, kPulseGrows = 1.7;
+static const double kPulseSeconds = 1.4, kPulses = 3, kPulseGrows = 1.7, kPassedSeconds = 0.3;
 
 @interface MVStepMark : NSView
 @property(nonatomic, copy) NSString *state;
 @property(nonatomic) NSUInteger number;
 @property(nonatomic) BOOL joinsUp, joinsDown;
+/// It has only now been done.
+@property(nonatomic) BOOL passed;
 @end
 
 @implementation MVStepMark {
@@ -67,8 +69,8 @@ static const double kPulseSeconds = 1.4, kPulses = 3, kPulseGrows = 1.7;
   }
 }
 
-/// Only when it becomes the step, and only for a few beats: nothing moves at rest.
-- (void)pulse {
+/// Only when a step changes, and only for a few beats: nothing moves at rest.
+- (void)ring:(NSColor *)color seconds:(double)seconds beats:(double)beats {
   if (!MVMoves() || _pulse) return;
   self.wantsLayer = YES;
   _pulse = [CAShapeLayer layer];
@@ -78,7 +80,7 @@ static const double kPulseSeconds = 1.4, kPulses = 3, kPulseGrows = 1.7;
   _pulse.bounds = CGRectMake(0, 0, 2 * kRadius, 2 * kRadius);
   _pulse.position = CGPointMake(NSMidX(self.bounds), NSMidY(self.bounds));
   _pulse.fillColor = NSColor.clearColor.CGColor;
-  _pulse.strokeColor = MVAccent().CGColor;
+  _pulse.strokeColor = color.CGColor;
   _pulse.lineWidth = kLine;
   _pulse.opacity = 0;
   [self.layer addSublayer:_pulse];
@@ -90,15 +92,16 @@ static const double kPulseSeconds = 1.4, kPulses = 3, kPulseGrows = 1.7;
   fade.toValue = @0;
   CAAnimationGroup *beat = [CAAnimationGroup animation];
   beat.animations = @[grow, fade];
-  beat.duration = kPulseSeconds;
-  beat.repeatCount = kPulses;
+  beat.duration = seconds;
+  beat.repeatCount = beats;
   beat.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
   [_pulse addAnimation:beat forKey:@"pulse"];
 }
 
 - (void)layout {
   [super layout];
-  if ([self.state isEqual:@"now"]) [self pulse];
+  if ([self.state isEqual:@"now"]) [self ring:MVAccent() seconds:kPulseSeconds beats:kPulses];
+  else if (self.passed) [self ring:MVGreen() seconds:kPassedSeconds beats:1];
 }
 
 @end
@@ -106,6 +109,7 @@ static const double kPulseSeconds = 1.4, kPulses = 3, kPulseGrows = 1.7;
 @implementation MVStepper {
   NSString *_drawn;
   NSString *_now;
+  NSDictionary<NSString *, NSString *> *_was;
 }
 
 - (void)showItems:(NSArray<NSDictionary *> *)items {
@@ -115,11 +119,15 @@ static const double kPulseSeconds = 1.4, kPulses = 3, kPulseGrows = 1.7;
   // a look at a phone that changed nothing changes nothing, a pulse least of all
   if ([drawn isEqual:_drawn]) return;
   _drawn = drawn;
+  NSDictionary<NSString *, NSString *> *was = _was;
+  _was = [NSDictionary dictionaryWithObjects:[items valueForKey:@"state"] forKeys:[items valueForKey:@"title"]];
   for (NSView *view in self.arrangedSubviews) [view removeFromSuperview];
   [items enumerateObjectsUsingBlock:^(NSDictionary *item, NSUInteger at, BOOL *stop) {
     MVStepMark *mark = [MVStepMark new];
     mark.state = item[@"state"];
     mark.number = at + 1;
+    // what a window opens on is old news: only a step seen undone can be seen to pass
+    mark.passed = [item[@"state"] isEqual:@"done"] && was[item[@"title"]] && ![was[item[@"title"]] isEqual:@"done"];
     mark.joinsUp = at > 0;
     mark.joinsDown = at + 1 < items.count;
     [mark.widthAnchor constraintEqualToConstant:kMarkWide].active = YES;

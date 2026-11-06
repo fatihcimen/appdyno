@@ -111,6 +111,37 @@ static void checkPlaces(void) {
   MVCheck(@"hub: wide again, both come back", !inspector.collapsed && !hub.sidebarClosed, nil);
 }
 
+static NSInteger passedUnder(NSView *view) {
+  NSInteger count = [view isKindOfClass:NSClassFromString(@"MVStepMark")] && [[view valueForKey:@"passed"] boolValue] ? 1 : 0;
+  for (NSView *sub in view.subviews) count += passedUnder(sub);
+  return count;
+}
+
+static void checkStateMoves(void) {
+  NSWindow *window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 300, 60) styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO];
+  MVCapsule *capsule = [[MVCapsule alloc] initWithFrame:NSMakeRect(0, 0, 200, 28)];
+  [window.contentView addSubview:capsule];
+  MVStatusLine *line = [MVStatusLine new];
+  line.live = YES;
+  line.state = @"Live";
+  line.rate = 60;
+  [capsule show:line];
+  // a window never ordered in has no layers until it is drawn, and an animation given to none is never there
+  [window display];
+  NSTextField *words = [capsule valueForKey:@"_words"];
+  line.rate = 61;
+  [capsule show:line];
+  MVCheck(@"motion: a reading changes at once: a number is no state", words.layer && [capsule.words containsString:@"61"] && ![words.layer animationForKey:kCATransition], capsule.words);
+  line.failing = @"Lost it";
+  [capsule show:line];
+  MVCheck(@"motion: a state crosses over", [words.layer animationForKey:kCATransition] != nil, nil);
+  MVStepper *stepper = MVNewStepper();
+  [stepper showItems:@[@{@"title": @"One", @"state": @"done"}, @{@"title": @"Two", @"state": @"now"}]];
+  MVCheck(@"motion: what a window opens on is old news, and no step passes", passedUnder(stepper) == 0, nil);
+  [stepper showItems:@[@{@"title": @"One", @"state": @"done"}, @{@"title": @"Two", @"state": @"done"}]];
+  MVCheck(@"motion: a step seen undone is seen to pass, and that one only", passedUnder(stepper) == 1, nil);
+}
+
 static void checkMotion(void) {
   CALayer *layer = [CALayer layer];
   MVHoldStill(YES);
@@ -123,6 +154,7 @@ static void checkMotion(void) {
 
 void MVCheckShell(void) {
   checkMotion();
+  checkStateMoves();
   checkLine();
   checkActivity();
   checkTabs();
