@@ -3,6 +3,7 @@
 ## Unreleased
 
 - The viewer a Mac compiles on first use, and the one in the app, hold no test code: about 14 % less to build, and no test switch in what a person runs.
+- On an Android phone an arrow leaves a text field, as it does from a keyboard with arrows: a key that named a keyboard alone was held by the field, and only an emulator's window went another way.
 - A watch on a window that goes while it runs says so at once, in place of waiting out its time, and a request from another process is whole or not there.
 - What runs from the hub's Tools ends with the hub, however the hub ends: a hub that crashed left it driving a device with no window. A command that refuses to stop now ends within seconds, and can no longer hold the hub's own end.
 - On an Android window the arrow keys reach the device, as the agent has them, and a recording writes the key that was sent: Esc is Back there, so a replay does what was done, and not `KEYCODE_ESCAPE`.

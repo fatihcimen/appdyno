@@ -119,6 +119,15 @@ describe.skipIf(!ANDROID)('keys on Android', () => {
   });
   afterAll(() => o.ctx.close());
   keysOf(() => o.call);
+  it('leaves a field by an arrow, and the next key lands in the next field', async () => {
+    await o.call('terminate_app');
+    ok(await o.call('launch_app'));
+    ok(await o.call('open_link', { url: 'appdyno-fixture://open/form' }));
+    ok(await o.call('type_text', { selector: { id: FIELD }, text: 'a' }));
+    ok(await o.call('press_key', { key: 'arrow_down' }));
+    ok(await o.call('press_key', { key: '5' }));
+    ok(await o.call('assert', { id: 'phone_input', check: 'text', equals: '5', timeoutMs: 3_000 }));
+  });
   viewsOf(() => o.call, {
     control: /elements/,
     notifications: /elements/,

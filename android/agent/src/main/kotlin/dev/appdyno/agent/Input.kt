@@ -192,8 +192,9 @@ class Input(private val automation: Automation) {
         return true
     }
 
+    /** A keyboard with arrows, as a real one says: a text field keeps the focus from an arrow that names a keyboard alone. */
     private fun keyEvent(time: Long, action: Int, code: Int, meta: Int) =
-        KeyEvent(time, time, action, code, 0, meta, KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD)
+        KeyEvent(time, time, action, code, 0, meta, KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD or InputDevice.SOURCE_DPAD)
 
     private fun touch(down: Long, time: Long, action: Int, x: Float, y: Float): MotionEvent =
         MotionEvent.obtain(down, time, action, x, y, 0).apply { source = InputDevice.SOURCE_TOUCHSCREEN }
