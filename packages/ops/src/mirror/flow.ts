@@ -82,6 +82,7 @@ export function windowFlow(
 
   const steps = windowSteps({
     seen: follow.seen,
+    keyOf: (usage) => device.mirror.keyOf(usage),
     fresh: async () => (await readerSession()).look().catch(() => follow.latest()),
     sizeOf,
     keyboardOf: (screen) => device.platformScreen.keyboardArea(screen.tree),

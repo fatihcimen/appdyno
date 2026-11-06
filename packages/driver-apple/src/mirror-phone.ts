@@ -16,6 +16,7 @@ import {
   type MirrorSource,
   type Need,
 } from '@appdyno/core';
+import { keyOfUsage } from '@appdyno/protocol';
 import { Devicectl } from './devicectl.js';
 import { applePress, pasteKeys } from './mirror-press.js';
 import { usageOf } from './simtouch.js';
@@ -66,6 +67,7 @@ export class PhoneMirror implements Mirror {
   readonly sendsWhenStill = true;
   /** A start lights the screen: it would turn back on a phone a person has just turned off. */
   readonly holdsThrough = 'asleep' as const;
+  readonly keyOf = keyOfUsage;
   private dark = false;
   private module: PhoneStreamModule | undefined;
   private handle: PhoneStreamHandle | undefined;

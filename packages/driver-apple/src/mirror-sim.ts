@@ -10,11 +10,11 @@ import type {
   MirrorOptions,
   MirrorSource,
 } from '@appdyno/core';
-import type { Key } from '@appdyno/protocol';
+import { type Key, KEY_USAGES, keyOfUsage } from '@appdyno/protocol';
 import { applePress } from './mirror-press.js';
 import { Simctl, xcodeEnv } from './simctl.js';
 import { startSimAx, startSimHid, type HelperProcess } from './simhelper.js';
-import { HID_KEYS, usageOf } from './simtouch.js';
+import { usageOf } from './simtouch.js';
 
 const KEYBOARD = 7;
 const SHIFT = 0xe1;
@@ -66,6 +66,7 @@ export function turnedTouch<T extends { x: number; y: number; x2?: number; y2?: 
 export class SimulatorMirror implements Mirror {
   /** A still screen draws nothing, but the surface comes at once: silence means someone else has it. */
   readonly noFirstFrame = { ms: 3_000, need: 'presented-elsewhere' as const };
+  readonly keyOf = keyOfUsage;
   private hid: Promise<HelperProcess> | undefined;
   private reader: Promise<HelperProcess> | undefined;
   private turns = 0;
@@ -190,7 +191,7 @@ export class SimulatorMirror implements Mirror {
         return;
       case 'button': {
         if (await applePress(e.name, (next) => this.input(next))) return;
-        const key = HID_KEYS[e.name as Key];
+        const key = KEY_USAGES[e.name as Key];
         if (key) await this.call({ op: 'key', ...key });
       }
     }

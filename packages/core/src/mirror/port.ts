@@ -1,3 +1,4 @@
+import type { Key } from '@appdyno/protocol';
 import type { Need } from './need.js';
 
 export type MirrorQuality = 'auto' | 'high' | 'standard';
@@ -68,6 +69,8 @@ export interface Mirror {
   keyframe(): Promise<void>;
   /** With no settle. */
   input(e: InputEvent): Promise<void>;
+  /** The key a keyboard's usage presses on this device: a recording writes this, so that a replay does what a person did. */
+  keyOf(usage: number): Key | undefined;
   /** Ends the stream and proves it ended. Safe twice. */
   close(): Promise<void>;
   /** Pushes what the device's state became: locked, unplugged, taken over. */

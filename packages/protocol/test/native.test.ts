@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ERROR_CODES } from '../src/errors.js';
+import { keyOfUsage, KEYS } from '../src/keys.js';
 import { NODE_FLAGS, PROTOCOL } from '../src/messages.js';
 
 const read = (path: string) => readFileSync(join(import.meta.dirname, '../../..', path), 'utf8');
@@ -51,6 +52,43 @@ describe('what is written three times', () => {
     expect(named.length).toBeGreaterThan(0);
     for (const [, name, value] of named)
       expect(NODE_FLAGS[name as keyof typeof NODE_FLAGS]).toBe(Number(value));
+  });
+
+  it('the Android agent has every key', () => {
+    expect(quoted(inside(read(`${AGENT}/Input.kt`), /val KEYS = mapOf\(/, '\n        )'))).toEqual([
+      ...KEYS,
+    ]);
+  });
+
+  it('the iOS runner has every key but those a phone has no way to press', () => {
+    const device = read('ios/Runner/DeviceActions.swift');
+    const keyboard = quoted(inside(device, /keyboard: \[String: XCUIKeyboardKey\] = \[/, ']'));
+    const cases = [...inside(device, /switch k \{/, 'default:').matchAll(/case (.+):/g)].flatMap(
+      (m) => quoted(m[1]!),
+    );
+    expect([...new Set([...keyboard, ...cases])].sort()).toEqual(
+      KEYS.filter((k) => k !== 'back' && k !== 'appSwitch').sort(),
+    );
+  });
+
+  it('the Mac keyboard sends the usage of every key it has', () => {
+    const table = inside(
+      read('mirror/Viewer/Input.m'),
+      /MVUsageOfKeyCode\(uint16_t keyCode\) \{/,
+      'default:',
+    );
+    const usages = [...table.matchAll(/return (0x[0-9a-f]+);/g)].map((m) => Number(m[1]));
+    const named = [
+      'enter',
+      'escape',
+      'delete',
+      'tab',
+      'arrowUp',
+      'arrowDown',
+      'arrowLeft',
+      'arrowRight',
+    ];
+    expect(named.filter((k) => !usages.some((u) => keyOfUsage(u) === k))).toEqual([]);
   });
 
   it('all speak one version', () => {

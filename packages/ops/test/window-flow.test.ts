@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MirrorSession, type DeviceProvider, type InputEvent } from '@appdyno/core';
 import { parseFlow } from '@appdyno/flows';
-import type { AuditResult } from '@appdyno/protocol';
+import { type Adb, AndroidMirror, EmulatorMirror } from '@appdyno/driver-android';
+import { type AuditResult, keyOfUsage } from '@appdyno/protocol';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeMirror, FakeViewer, flush } from '../../core/test/mirror-fakes.js';
 import { flowRecordings } from '../src/flow/shared.js';
@@ -23,6 +24,7 @@ let serial = 0;
 
 function setup(device: FakeDevice = new FakeDevice(`emulator-${6000 + serial++}`)) {
   device.apps = { listApps: async () => [{ id: 'dev.app' }] } as unknown as FakeDevice['apps'];
+  device.mirror = { keyOf: keyOfUsage } as unknown as FakeDevice['mirror'];
   const told: Record<string, unknown>[] = [];
   const status = { state: 'live' };
   const window = { tell: (m: Record<string, unknown>) => told.push(m), status };
@@ -347,6 +349,25 @@ describe('a flow recorded in a window', () => {
     ]);
     await t.toggle();
     expect(t.saved().text).toContain('press_key arrow_right count=2');
+  });
+
+  it('writes the key an Android window was sent: Esc is Back, as a replay must be', async () => {
+    const t = setup();
+    t.device.mirror = new EmulatorMirror(
+      'emulator-1',
+      new AndroidMirror({} as Adb, 'x', {} as never),
+    );
+    await t.toggle();
+    t.key(0x29);
+    await t.settle();
+    t.key(0x52);
+    t.key(0x4a);
+    await t.settle();
+    expect(t.lines().slice(1)).toEqual([
+      'press_key back',
+      'press_key arrow_up',
+      'unrecorded "a key with no step"',
+    ]);
   });
 
   it.each([

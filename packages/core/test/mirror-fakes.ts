@@ -1,3 +1,4 @@
+import { keyOfUsage } from '@appdyno/protocol';
 import type {
   DeviceState,
   InputEvent,
@@ -101,6 +102,7 @@ export class FakeMirror implements Mirror {
   noFirstFrame: Mirror['noFirstFrame'];
   source: MirrorSource = { kind: 'pixels', file: '/x', w: 1, h: 1 };
   tell: ((m: Record<string, unknown>) => void) | undefined;
+  keyOf = keyOfUsage;
 
   async check() {
     this.checks++;

@@ -1,4 +1,4 @@
-import { DeviceError } from '@appdyno/protocol';
+import { DeviceError, KEY_USAGES } from '@appdyno/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import type { Adb } from '../src/adb.js';
 import type { AndroidAgentLauncher } from '../src/agent.js';
@@ -143,12 +143,24 @@ describe('an Android mirror', () => {
     await expect(mirror.input({ kind: 'touch', p: 2, x: 0, y: 0 })).resolves.toBeUndefined();
   });
 
-  it('keys it has go down once; those it has not are passed over', async () => {
+  it('a key goes down once, and each the agent has goes through', async () => {
     const { mirror, calls } = setup();
     await mirror.input({ kind: 'key', page: 7, usage: 0x28, state: 1 });
     await mirror.input({ kind: 'key', page: 7, usage: 0x28, state: 2 });
-    await mirror.input({ kind: 'key', page: 7, usage: 0x52, state: 1 });
-    expect(calls).toEqual([['act', { action: { kind: 'key', key: 'enter' }, read: 'none' }]]);
+    await mirror.input({ kind: 'key', page: 7, usage: KEY_USAGES.arrowUp.usage, state: 1 });
+    await mirror.input({ kind: 'key', page: 7, usage: KEY_USAGES.arrowLeft.usage, state: 1 });
+    expect(calls.map(([, params]) => (params as { action: { key: string } }).action.key)).toEqual([
+      'enter',
+      'arrowUp',
+      'arrowLeft',
+    ]);
+  });
+
+  it('Esc is Back, and a key the agent does not have is passed over', async () => {
+    const { mirror, calls } = setup();
+    await mirror.input({ kind: 'key', page: 7, usage: KEY_USAGES.escape.usage, state: 1 });
+    await mirror.input({ kind: 'key', page: 7, usage: 0x4a, state: 1 });
+    expect(calls).toEqual([['act', { action: { kind: 'key', key: 'back' }, read: 'none' }]]);
   });
 
   it('text and buttons go by the agent paths that exist', async () => {

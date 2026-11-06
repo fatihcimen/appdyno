@@ -361,7 +361,7 @@ A viewer kept behind, or with no window at all, copies to a board of its own, `d
 - `auto` on a phone starts at its display's size and changes it, once, on the first motion that shows the encoder falling behind, so a person may see the picture restart on their first touches. `--quality high` and `standard` keep the display's size.
 - A phone's touch has a floor below which no size goes: 94 ms on a Samsung SM-A525F at 1024 lines, and 95 to 107 at 1280 across runs, over the target of 80. A Xiaomi's reads 92 at its own size, a miss too.
 - Two devices have been run on a simulator and an Android emulator, with the fixture on each. Two windows standing side by side on a screen are checked by the self test's maths and not by eye, as a test's windows are kept off every screen, and a rotated device has not been run in a pair. Two builds under two ids have not been run.
-- Input by `key`: Android has only the keys the agent has (no arrows). On a simulator a keyboard's characters go as US keys; any other text by its pasteboard and command V.
+- Input by `key`: Android presses the agent's keys, and Esc is Back there, which is what a recording writes, so that a replay does what was done. On a simulator a keyboard's characters go as US keys; any other text by its pasteboard and command V.
 
 - On an iPhone a recording and the pane read by its runner, which the first use starts: `inspector` gives words and ids with no places, so with no runner a click has no element to be named by, and the window says why.
 - A flow made on an iPhone or a Xiaomi has been replayed there, on a simulator and on an emulator. One made on a simulator or an emulator has been replayed on the other, and on no phone.

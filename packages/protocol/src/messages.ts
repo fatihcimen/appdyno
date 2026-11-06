@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { KeyName, MODIFIERS } from './keys.js';
 
 /** The wire's version: a host and an agent of another one do not talk. */
 export const PROTOCOL = { major: 2 } as const;
@@ -97,35 +98,6 @@ export type Point = z.infer<typeof Point>;
 
 /** One finger's path: points with their time offset from the gesture start (ms). */
 const Pointer = z.array(z.object({ x: z.number(), y: z.number(), t: z.number().min(0) })).min(1);
-
-export const KEYS = [
-  'back',
-  'home',
-  'enter',
-  'delete',
-  'tab',
-  'appSwitch',
-  'volumeUp',
-  'volumeDown',
-  'power',
-  'lock',
-  'escape',
-  'space',
-  'arrowUp',
-  'arrowDown',
-  'arrowLeft',
-  'arrowRight',
-  'mute',
-  'siri',
-] as const;
-export type Key = (typeof KEYS)[number];
-
-/** What is held during a keyboard key. Android has no command key: there it is Ctrl, which its text fields take. */
-export const MODIFIERS = ['command', 'control', 'option', 'shift'] as const;
-export type Modifier = (typeof MODIFIERS)[number];
-
-/** A key by its name, or the letter or digit it types. */
-export const KeyName = z.union([z.enum(KEYS), z.string().regex(/^[a-z0-9]$/)]);
 
 export const ActParams = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('tap'), ...Point.shape }),

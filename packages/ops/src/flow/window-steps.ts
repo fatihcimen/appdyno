@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { selectIn, type InputEvent, type Rect, type Screen, type UiElement } from '@appdyno/core';
 import type { FlowStep, Recording } from '@appdyno/flows';
-import { KEYS, type Key, type Point } from '@appdyno/protocol';
+import { KEY_USAGES, KEYS, type Key, type Point } from '@appdyno/protocol';
 import { keyName } from '../step-schemas.js';
 import { type Aim, aimAt, fieldName, pointAim, type Size, stepOf, unrecorded } from './aim.js';
 import { type Direction, type Fraction, gestureOf, type Stroke, StrokeReader } from './gestures.js';
@@ -21,20 +21,9 @@ const LONG_PRESS_MS = { least: 100, most: 5_000, step: 100 };
 /** A secret with no name of its own: typed, with nothing on the screen to say into what. */
 const UNKNOWN_FIELD = 'TYPED';
 
-/** A key that types nothing, as the viewer says it: USB usage on page 7. */
-const KEY_NAMES: Record<number, string> = {
-  0x28: 'enter',
-  0x29: 'escape',
-  0x2a: 'delete',
-  0x2b: 'tab',
-  0x4f: 'arrow_right',
-  0x50: 'arrow_left',
-  0x51: 'arrow_down',
-  0x52: 'arrow_up',
-};
-const DELETE = 0x2a;
-const ENTER = 0x28;
-const TAB = 0x2b;
+const DELETE = KEY_USAGES.delete.usage;
+const ENTER = KEY_USAGES.enter.usage;
+const TAB = KEY_USAGES.tab.usage;
 
 /** What a window's control is pressed as, where it is no key of the device. */
 const VIEWS: Record<string, string> = {
@@ -70,6 +59,8 @@ const heldFor = (ms: number) => {
 export type WindowStepsPort = {
   /** What a person sees now: called in the same tick as their input, it is the screen they aimed at. */
   seen(): Promise<Screen | undefined>;
+  /** The key the device was sent for a keyboard's usage. */
+  keyOf(usage: number): Key | undefined;
   /** A read made for this, where no later input will say what the screen came to. */
   fresh(): Promise<Screen | undefined>;
   /** The screen's size in tap units. */
@@ -273,9 +264,10 @@ export function windowSteps(o: WindowStepsPort) {
   };
 
   const onKey = (r: Recording, usage: number) => {
-    const key = KEY_NAMES[usage];
+    const sent = o.keyOf(usage);
     if (usage === TAB) field = undefined;
-    if (!key) return told(r, 'a key with no step');
+    if (!sent) return told(r, 'a key with no step');
+    const key = keyName(sent);
     const last = lastKey;
     if (last?.key === key && last.index === r.state.steps.length - 1) {
       last.count++;

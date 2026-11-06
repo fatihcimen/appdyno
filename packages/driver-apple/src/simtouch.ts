@@ -1,4 +1,4 @@
-import type { ActParams, Modifier } from '@appdyno/protocol';
+import { type ActParams, type Key, KEY_USAGES, type Modifier } from '@appdyno/protocol';
 
 export type TouchEvent = {
   p: 0 | 1 | 2;
@@ -89,24 +89,6 @@ export function touchEvents(
   }
 }
 
-/** USB HID usages of the keys that have one; page 12 is the consumer page of hardware buttons. */
-export const HID_KEYS: Record<string, { page: number; usage: number } | undefined> = {
-  home: { page: 12, usage: 0x40 },
-  enter: { page: 7, usage: 0x28 },
-  delete: { page: 7, usage: 0x2a },
-  tab: { page: 7, usage: 0x2b },
-  escape: { page: 7, usage: 0x29 },
-  space: { page: 7, usage: 0x2c },
-  arrowRight: { page: 7, usage: 0x4f },
-  arrowLeft: { page: 7, usage: 0x50 },
-  arrowDown: { page: 7, usage: 0x51 },
-  arrowUp: { page: 7, usage: 0x52 },
-  volumeUp: { page: 12, usage: 0xe9 },
-  volumeDown: { page: 12, usage: 0xea },
-  lock: { page: 12, usage: 0x30 },
-  power: { page: 12, usage: 0x30 },
-};
-
 /** The keyboard's usages of what is held during a key. */
 export const HID_MODIFIERS: Record<Modifier, number> = {
   control: 0xe0,
@@ -141,5 +123,5 @@ export function usageOf(c: string): { usage: number; shift: boolean } | undefine
 /** A key by its name, or the letter or digit a keyboard has it under. */
 export function hidKey(key: string) {
   const typed = key.length === 1 ? usageOf(key) : undefined;
-  return typed ? { page: 7, usage: typed.usage } : HID_KEYS[key];
+  return typed ? { page: 7, usage: typed.usage } : KEY_USAGES[key as Key];
 }

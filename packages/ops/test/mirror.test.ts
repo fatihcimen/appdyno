@@ -54,6 +54,7 @@ function pixelsDevice(serial: string, recorder?: object) {
     },
     keyframe: async () => undefined,
     input: async () => undefined,
+    keyOf: () => undefined,
     close: async () => undefined,
     watch: () => () => undefined,
   };

@@ -9,7 +9,7 @@ import type {
   RpcClient,
 } from '@appdyno/core';
 import { pause } from '@appdyno/core';
-import { DeviceError, type Key, KEYS } from '@appdyno/protocol';
+import { DeviceError, type Key, KEY_USAGES, keyOfUsage, KEYS } from '@appdyno/protocol';
 import type { Adb } from './adb.js';
 import type { AndroidAgentLauncher } from './agent.js';
 
@@ -26,14 +26,6 @@ const WATCH_MS = 1_000;
 const PROOF_MS = 3_000;
 const BEHIND =
   'This device cannot keep up. The picture stays at a size that can be read, and runs late.';
-
-/** The USB usages a keyboard has and the agent has a key for. */
-const KEY_OF_USAGE: Record<number, Key> = {
-  0x28: 'enter',
-  0x29: 'back',
-  0x2a: 'delete',
-  0x2b: 'tab',
-};
 
 /** A failure that no wait will clear: another tool holds the device, or the agent is not built. */
 export const fatal = (e: unknown) => {
@@ -133,6 +125,11 @@ export class AndroidMirror implements Mirror {
     ).call('act', { action: { kind: 'key', key }, read: 'none' }, { timeoutMs: ACTION_MS });
   }
 
+  /** Esc leaves a screen on a keyboard, which is Back here: the one key that is not what its usage names. */
+  keyOf(usage: number) {
+    return usage === KEY_USAGES.escape.usage ? 'back' : keyOfUsage(usage);
+  }
+
   async input(e: InputEvent) {
     if (this.lostTouch) {
       const failure = this.lostTouch;
@@ -158,7 +155,7 @@ export class AndroidMirror implements Mirror {
         return;
       }
       case 'key': {
-        const key = KEY_OF_USAGE[e.usage];
+        const key = this.keyOf(e.usage);
         if (key && e.state === 1) await this.press(key);
         return;
       }
