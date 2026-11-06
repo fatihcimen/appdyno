@@ -27,6 +27,41 @@ const apple = (o: Partial<Listed> = {}): Listed => ({
 const now = (g: Guide) => g.steps.find((s) => !s.done)?.id;
 const ids = (g: Guide) => g.steps.map((s) => s.id);
 
+describe('going without a cable', () => {
+  it('is offered for a phone on a cable, each by its own way, and not for one on the network', () => {
+    const offered = (phone: Listed, usb: UsbPhone) =>
+      guideFor({ usb: [usb], phones: [phone], has: all }).wifi;
+    expect(offered(android({ link: 'USB' }), samsung)).toEqual({ way: 'code', paired: false });
+    expect(offered(android({ link: 'USB', onWifi: true }), samsung)).toEqual({
+      way: 'code',
+      paired: true,
+    });
+    expect(offered(android({ link: 'Wi-Fi' }), samsung)).toBeUndefined();
+    expect(offered(android({ link: 'USB', state: 'unauthorized' }), samsung)).toBeUndefined();
+    expect(offered(apple({ link: 'USB' }), iphone)).toEqual({ way: 'cable', paired: false });
+    expect(offered(apple({ link: 'Wi-Fi', state: 'network' }), iphone)).toBeUndefined();
+    expect(offered(apple({ link: 'USB', need: 'not-trusted' }), iphone)).toBeUndefined();
+  });
+
+  it('sees one phone in its two ways in', async () => {
+    const list = async () => [
+      { serial: 'R68', state: 'device', ready: true, link: 'USB' as const },
+      {
+        serial: 'adb-R68-Ab._adb-tls-connect._tcp',
+        state: 'device',
+        ready: true,
+        link: 'Wi-Fi' as const,
+        sameAs: 'R68',
+      },
+    ];
+    const seen = await listedPhones(
+      [{ list, handles: () => true, open: () => undefined }] as never,
+      async () => undefined,
+    );
+    expect(seen).toEqual([expect.objectContaining({ serial: 'R68', onWifi: true })]);
+  });
+});
+
 describe('the phone in a person hand', () => {
   it('has nothing to say of a bus with no phone, which is the cable or the phone itself', () => {
     expect(guideFor({ usb: [], phones: [], has: all })).toEqual({ steps: [], ready: false });

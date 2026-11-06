@@ -1,19 +1,27 @@
 import { parseArgs } from 'node:util';
 import { Adb, overNetwork } from '@appdyno/driver-android';
-import { pairPhone } from '@appdyno/driver-apple';
+import { forgetPhone, pairPhone } from '@appdyno/driver-apple';
 import { pause } from '@appdyno/core';
 import { COMMANDS, usage } from './usage.js';
 
 /** How long adb takes to connect by itself to a phone it has just paired with, as it finds it on the network. */
 const CONNECT_MS = 10_000;
 const LOOK_MS = 500;
+const FORGOTTEN =
+  'This Mac has forgotten the pairing. The phone keeps its half until it clears its trusted computers.';
 
 /** `appdyno pair`: once per phone, with a person at it, and nothing is paired by anything else. */
 export async function pairCommand(
   args: string[],
-  use: { adb: Pick<Adb, 'pair' | 'devices'>; phone: typeof pairPhone; say(line: string): void } = {
+  use: {
+    adb: Pick<Adb, 'pair' | 'devices'>;
+    phone: typeof pairPhone;
+    forget: typeof forgetPhone;
+    say(line: string): void;
+  } = {
     adb: new Adb(),
     phone: pairPhone,
+    forget: forgetPhone,
     say: (line) => console.log(line),
   },
 ) {
@@ -25,6 +33,11 @@ export async function pairCommand(
   const [address, code] = positionals;
   if (values.help) {
     use.say(usage('pair'));
+    return 0;
+  }
+  if (values.device && values.forget) {
+    use.forget(values.device);
+    use.say(FORGOTTEN);
     return 0;
   }
   if (values.device && !address) {

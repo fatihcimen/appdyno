@@ -124,7 +124,7 @@ export const COMMANDS = {
   'mirror close|status|stats': {},
   pair: {
     takes: '[address code]',
-    flags: { device: value('S'), help: { type: 'boolean', short: 'h', unsaid: true } },
+    flags: { device: value('S'), forget: on, help: { type: 'boolean', short: 'h', unsaid: true } },
     what: 'this Mac with a phone for Wi-Fi, once: an iPhone on its cable by --device, an Android phone by what it shows',
   },
   hub: {

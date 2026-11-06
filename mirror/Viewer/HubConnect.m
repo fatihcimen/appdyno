@@ -43,6 +43,7 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
   NSView *_ticksCard, *_runnerCard, *_gotCard;
   NSTextField *_gotText;
   NSTextField *_runnerLines;
+  MVWifiCard *_wifi;
   NSMutableSet<NSString *> *_passed, *_unready;
   NSDictionary *_guide;
   NSString *_shownStep;
@@ -58,7 +59,8 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
     _startClients = MVPlaceButton(@"Open", @"startClients", self, @selector(toClients:));
     _startHelp = MVPlaceButton(@"Open", @"startHelp", self, @selector(toHelp:));
     NSView *head = MVPlaceHead(@"cable.connector", MVHueTile(1), @"Connect a Phone", @"Plug it in, and this window takes you through the rest.");
-    NSStackView *column = MVPlaceColumn(@[head, [self stepCard], [self ticks], [self runnerCard], [self otherWays], [self startedCard]], 16);
+    _wifi = [MVWifiCard new];
+    NSStackView *column = MVPlaceColumn(@[head, [self stepCard], [self ticks], [self runnerCard], _wifi.view, [self otherWays], [self startedCard]], 16);
     NSScrollView *page = MVPlacePage(column);
     page.frame = self.bounds;
     page.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
@@ -166,6 +168,7 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
   NSString *serial = guide[@"serial"];
   BOOL ready = [self phoneReady];
   if (serial && !ready) [_unready addObject:serial];
+  [_wifi show:guide];
   [self drawStep];
   // what stood here unready and got ready is the phone a person just worked on: a phone that was ready all along waits to be chosen
   if (serial && ready && [_unready containsObject:serial]) {
@@ -261,6 +264,7 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
 
 /// What was run from here came to an end: the next look says what it changed.
 - (void)heard:(NSDictionary *)run {
+  [_wifi heard:run];
   if (![run[@"name"] isEqual:@"adb"]) return;
   if (run[@"started"]) {
     _getting = YES;

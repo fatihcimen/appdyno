@@ -6,7 +6,14 @@ import { HELD_BY_HUB, STOP_MS } from './lifetime.js';
 import type { COMMANDS } from './usage.js';
 
 /** What a person chose in the window, for a command to take. */
-type Asked = { app?: string; device?: string; folder?: string; seconds?: string };
+type Asked = {
+  app?: string;
+  device?: string;
+  folder?: string;
+  seconds?: string;
+  address?: string;
+  code?: string;
+};
 
 /** A command of the table by its name, which cannot be renamed under this. */
 const RUNNER = 'ios build' satisfies keyof typeof COMMANDS;
@@ -19,6 +26,9 @@ const device = (a: Asked) => (plain(a.device) ? ['--device', a.device] : []);
 const seconds = (a: Asked) => (/^\d+$/.test(a.seconds ?? '') ? ['--seconds', a.seconds!] : []);
 /** What a command cannot run without: nothing, where one is missing. */
 const needs = (ok: boolean, words: string[]) => (ok ? words : undefined);
+/** What Wireless debugging shows, and nothing that would read as anything else. */
+const shown = (a: Asked) =>
+  plain(a.address) && /^[\w.:[\]%-]{1,64}$/.test(a.address) && /^\d{6}$/.test(a.code ?? '');
 
 /**
  * All a person can run from the hub, each the command they could type: there is no second way to do any of it. Only
@@ -45,6 +55,9 @@ export const HUB_RUNS: Record<string, (a: Asked) => string[] | undefined> = {
   tools: () => ['tools', 'install'],
   adb: () => ['tools', 'install', 'adb', '--accept-license'],
   runner: () => RUNNER.split(' '),
+  pair: (a) =>
+    shown(a) ? ['pair', a.address!, a.code!] : needs(plain(a.device), ['pair', ...device(a)]),
+  forget: (a) => needs(plain(a.device), ['pair', '--forget', ...device(a)]),
   'path-on': () => ['path'],
   'path-off': () => ['path', '--remove'],
   'clients-preview': () => ['install', '--dry-run'],

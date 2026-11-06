@@ -106,6 +106,38 @@ static void checkIphone(MVHub *hub) {
   MVCheck(@"connect: Developer Mode says first that the phone restarts", says(hub, @"Your phone restarts when you turn this on.") && says(hub, @"Settings, Privacy & Security, Developer Mode."), wordsOf(hub));
 }
 
+static NSTextField *wifiField(MVHub *hub, NSString *name) {
+  NSMutableArray<NSView *> *left = [NSMutableArray arrayWithObject:hub.room.window.contentView];
+  for (NSUInteger at = 0; at < left.count; at++) {
+    if ([left[at].identifier isEqual:name]) return (NSTextField *)left[at];
+    [left addObjectsFromArray:left[at].subviews];
+  }
+  return nil;
+}
+
+static void checkWifi(MVHub *hub) {
+  NSDictionary *phone = @{@"hand": @"ios", @"maker": @"apple", @"ready": @YES, @"serial": @"U", @"steps": @[], @"wifi": @{@"way": @"cable", @"paired": @NO}};
+  look(hub, phone);
+  MVCheck(@"wi-fi: an iPhone on its cable is told to pair there, once", says(hub, @"Pair this iPhone once, while it is on this cable and unlocked. After that it shows here by Wi-Fi, on this Mac's network."), wordsOf(hub));
+  NSDictionary *asked = clicked(hub, @"pairWifi");
+  MVCheck(@"wi-fi: and Pair runs the command for that phone", [asked[@"do"] isEqual:@"run"] && [asked[@"name"] isEqual:@"pair"] && [asked[@"device"] isEqual:@"U"], nil);
+  [hub showClients:@{@"run": @{@"name": @"pair", @"text": @"Tap Trust on the phone.\n"}}];
+  MVPump(0.1);
+  MVCheck(@"wi-fi: what the phone wants of a person is said, in their language", says(hub, @"Tap Trust on the phone."), wordsOf(hub));
+  look(hub, @{@"hand": @"ios", @"maker": @"apple", @"ready": @YES, @"serial": @"U", @"steps": @[], @"wifi": @{@"way": @"cable", @"paired": @YES}});
+  NSDictionary *forget = clicked(hub, @"forgetWifi");
+  MVCheck(@"wi-fi: a paired iPhone can be forgotten here", says(hub, @"Paired for Wi-Fi. Unplug it, and it stays in the list while it is on this Mac's network.") && [forget[@"name"] isEqual:@"forget"], wordsOf(hub));
+  look(hub, @{@"hand": @"android", @"maker": @"samsung", @"ready": @YES, @"serial": @"W1", @"steps": @[], @"wifi": @{@"way": @"code", @"paired": @NO}});
+  MVCheck(@"wi-fi: an Android phone is told where its code is", says(hub, @"On the phone: Settings, Developer options, Wireless debugging, Pair device with pairing code. Type here what it shows."), wordsOf(hub));
+  MVCheck(@"wi-fi: and nothing goes without one", clicked(hub, @"pairWifi") == nil && says(hub, @"Type the address and the six digits the phone shows."), wordsOf(hub));
+  wifiField(hub, @"wifiAddress").stringValue = @"10.0.0.2:37000";
+  wifiField(hub, @"wifiCode").stringValue = @"123456";
+  NSDictionary *byCode = clicked(hub, @"pairWifi");
+  MVCheck(@"wi-fi: what it shows goes to the command as typed", [byCode[@"address"] isEqual:@"10.0.0.2:37000"] && [byCode[@"code"] isEqual:@"123456"], nil);
+  look(hub, @{@"steps": @[], @"ready": @NO});
+  MVCheck(@"wi-fi: with no phone the card goes", !says(hub, @"Without a Cable"), wordsOf(hub));
+}
+
 static void checkAdb(MVHub *hub) {
   NSDictionary *guide = @{@"hand": @"android", @"maker": @"samsung", @"ready": @NO, @"terms": @"https://terms.example", @"steps": @[step(@"get-adb", NO, YES), step(@"developer-options", NO, NO)]};
   look(hub, guide);
@@ -378,6 +410,7 @@ void MVCheckConnect(void) {
   checkXiaomiSwitches(hub);
   checkNeeds(hub);
   checkIphone(hub);
+  checkWifi(hub);
   checkAdb(hub);
   checkDone(hub);
   checkLimits(hub);

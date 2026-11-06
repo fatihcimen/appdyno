@@ -34,6 +34,20 @@ describe('what a person can run from the hub', () => {
     }
   });
 
+  it('pairs a phone by its name or by what it shows, and takes nothing else', () => {
+    expect(HUB_RUNS.pair!({ device: 'U' })).toEqual(['pair', '--device', 'U']);
+    expect(HUB_RUNS.pair!({ address: '10.0.0.2:37000', code: '123456' })).toEqual([
+      'pair',
+      '10.0.0.2:37000',
+      '123456',
+    ]);
+    expect(HUB_RUNS.pair!({ address: '--help', code: '123456' })).toBeUndefined();
+    expect(HUB_RUNS.pair!({ address: '10.0.0.2:37000', code: '12345; rm' })).toBeUndefined();
+    expect(HUB_RUNS.pair!({})).toBeUndefined();
+    expect(HUB_RUNS.forget!({ device: 'U' })).toEqual(['pair', '--forget', '--device', 'U']);
+    expect(HUB_RUNS.forget!({})).toBeUndefined();
+  });
+
   it('takes nothing that would read as a flag, from a window or anywhere else', () => {
     expect(HUB_RUNS.baseline!({ app: '--replace' })).toBeUndefined();
     expect(HUB_RUNS.flows!({ folder: '-x', device: 'S' })).toBeUndefined();

@@ -8,7 +8,14 @@ const fake = (seen: { serial: string }[][]) => {
     devices: vi.fn(async () => (seen.length > 1 ? seen.shift()! : seen[0]!)),
   };
   const phone = vi.fn(async () => undefined);
-  return { said, adb, phone, use: { adb, phone, say: (l: string) => void said.push(l) } };
+  const forget = vi.fn();
+  return {
+    said,
+    adb,
+    phone,
+    forget,
+    use: { adb, phone, forget, say: (l: string) => void said.push(l) },
+  };
 };
 
 describe('appdyno pair', () => {
@@ -22,6 +29,14 @@ describe('appdyno pair', () => {
     expect(await pairCommand(['192.168.1.5:37000', '123456'], android.use as never)).toBe(0);
     expect(android.adb.pair).toHaveBeenCalledWith('192.168.1.5:37000', '123456');
     expect(android.said).toEqual(['Paired: 192.168.1.5:41111']);
+  });
+
+  it('forgets a phone on this Mac, and says what the phone keeps', async () => {
+    const f = fake([[]]);
+    expect(await pairCommand(['--forget', '--device', 'UDID'], f.use as never)).toBe(0);
+    expect(f.forget).toHaveBeenCalledWith('UDID');
+    expect(f.phone).not.toHaveBeenCalled();
+    expect(f.said[0]).toContain('The phone keeps its half');
   });
 
   it('words that make no call get the usage, and pair nothing', async () => {

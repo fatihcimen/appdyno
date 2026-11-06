@@ -24,5 +24,9 @@ export function androidGuide({ phone, usb, has }: PhoneLook): PhoneSteps | undef
         : []),
     ],
     ...needBeside(phone?.need, ['not-trusted']),
+    ...(phone?.state === 'device' &&
+      phone.link === 'USB' && {
+        wifi: { way: 'code', paired: phone.onWifi === true },
+      }),
   };
 }

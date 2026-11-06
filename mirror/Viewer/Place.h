@@ -136,6 +136,13 @@ NSString *MVSaid(NSDictionary *said);
 @property(nonatomic, copy, nullable) NSString *step;
 @end
 
+/// Connect a Phone's card for going without a cable: once for each phone, by what `appdyno pair` does.
+@interface MVWifiCard : NSObject
+@property(nonatomic, readonly) NSView *view;
+- (void)show:(NSDictionary *)guide;
+- (void)heard:(NSDictionary *)run;
+@end
+
 /// Connect a Phone: the phone's current step, moved on by what the parent reads of it.
 @interface MVConnectPane : NSView
 - (void)show:(NSDictionary *)guide;
