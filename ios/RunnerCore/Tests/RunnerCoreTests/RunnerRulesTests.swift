@@ -19,6 +19,37 @@ final class RunnerRulesTests: XCTestCase {
         XCTAssertEqual(t["alertWatchMs"], SettleTimes.alertWatchMs)
     }
 
+    func testTheSettle() throws {
+        let traces = try cases("settleTraces")
+        XCTAssertFalse(traces.isEmpty)
+        for t in traces {
+            let why = t["why"] as? String ?? ""
+            let screens = try XCTUnwrap(t["screens"] as? [String], why)
+            let busy = try XCTUnwrap(t["busy"] as? [String], why)
+            let readMs = try XCTUnwrap(t["readMs"] as? Int, why)
+            var now = 0
+            var read = 0
+            let settler = Settler(clock: { now }, sleep: { now += $0 })
+            settler.pollMs = try XCTUnwrap(t["pollMs"] as? Int, why)
+            let outcome: SettleOutcome<String> = settler.run(
+                actionAt: 0,
+                quietMs: try XCTUnwrap(t["quietMs"] as? Int, why),
+                maxMs: try XCTUnwrap(t["maxMs"] as? Int, why),
+                before: t["before"] as? String,
+                read: {
+                    now += readMs
+                    defer { read += 1 }
+                    return screens[min(read, screens.count - 1)]
+                },
+                same: ==,
+                busy: { busy.contains($0) },
+                cancelled: { false })
+            XCTAssertEqual(outcome.settled, t["settled"] as? Bool, why)
+            XCTAssertEqual(outcome.reads, t["reads"] as? Int, why)
+            XCTAssertEqual(outcome.elapsedMs, t["elapsedMs"] as? Int, why)
+        }
+    }
+
     func testTheDigest() throws {
         let d = try XCTUnwrap(rules()["digest"] as? Wire)
         XCTAssertEqual(layoutHash(try nodes(d)), d["hash"] as? String)

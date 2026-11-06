@@ -1,6 +1,7 @@
 import Foundation
 
-/// The settle's fixed times, which the host's settle of a simulator shares (`runner-rules.json`).
+/// The settle's fixed times. The host's settle of a simulator shares them and how it decides, both held by
+/// `runner-rules.json`, but for its windows once a reaction has begun, as its reads cost far less.
 public enum SettleTimes {
     /// The quiet window after a tap on something that cannot react.
     public static let inertQuietMs = 80

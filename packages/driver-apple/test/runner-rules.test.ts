@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Tree } from '@appdyno/protocol';
-import { ALERT_APPEAR_MS, ALERT_WATCH_MS, INERT_QUIET_MS } from '../src/simsettle.js';
+import { ALERT_APPEAR_MS, ALERT_WATCH_MS, INERT_QUIET_MS, settle } from '../src/simsettle.js';
 import {
   CHECKABLE,
   CLICKABLE,
@@ -34,6 +34,19 @@ const rules = JSON.parse(
   scrollBars: (Why & { nodes: Node[]; bars: number[] })[];
   containerBars: { nodes: Node[]; screen: { w: number; h: number }; bars: number[] };
   hasAlert: (Why & { nodes: Node[]; has: boolean })[];
+  settleTraces: (Why & {
+    quietMs: number;
+    maxMs: number;
+    pollMs: number;
+    readMs: number;
+    before: string | null;
+    /** What each read sees; the last goes on being seen. */
+    screens: string[];
+    busy: string[];
+    settled: boolean;
+    reads: number;
+    elapsedMs: number;
+  })[];
 };
 
 describe('the rules the direct read shares with the runner', () => {
@@ -44,6 +57,36 @@ describe('the rules the direct read shares with the runner', () => {
       alertAppearMs: ALERT_APPEAR_MS,
       alertWatchMs: ALERT_WATCH_MS,
     }).toEqual(rules.times);
+  });
+
+  it('settles as the runner does, where its windows are the same', async () => {
+    expect(rules.settleTraces.length).toBeGreaterThan(0);
+    for (const t of rules.settleTraces) {
+      let now = 0;
+      let read = 0;
+      const answer = await settle({
+        actionAt: 0,
+        quietMs: t.quietMs,
+        // the one place the host goes its own way: what comes after a reaction, as its reads cost less
+        firstMs: t.quietMs,
+        reactedMs: t.quietMs,
+        maxMs: t.maxMs,
+        pollMs: t.pollMs,
+        before: t.before ?? undefined,
+        read: async () => {
+          now += t.readMs;
+          return t.screens[Math.min(read++, t.screens.length - 1)]!;
+        },
+        same: (a, b) => a === b,
+        busy: (s) => t.busy.includes(s),
+        clock: () => now,
+        sleep: async (ms) => void (now += ms),
+      });
+      expect(
+        { settled: answer.settled, reads: answer.reads, elapsedMs: answer.elapsedMs },
+        t.why,
+      ).toEqual({ settled: t.settled, reads: t.reads, elapsedMs: t.elapsedMs });
+    }
   });
 
   it('computes the digest the runner computes', () => {

@@ -691,5 +691,72 @@
         }
       ]
     }
+  ],
+  "settleTraces": [
+    {
+      "quietMs": 100,
+      "maxMs": 1000,
+      "pollMs": 50,
+      "readMs": 10,
+      "why": "the first read is held to what the caller saw",
+      "before": "a",
+      "screens": ["a"],
+      "busy": [],
+      "settled": true,
+      "reads": 3,
+      "elapsedMs": 130
+    },
+    {
+      "quietMs": 0,
+      "maxMs": 1000,
+      "pollMs": 50,
+      "readMs": 10,
+      "why": "a first read with nothing to hold it to proves nothing",
+      "before": null,
+      "screens": ["a"],
+      "busy": [],
+      "settled": true,
+      "reads": 2,
+      "elapsedMs": 70
+    },
+    {
+      "quietMs": 100,
+      "maxMs": 1000,
+      "pollMs": 50,
+      "readMs": 10,
+      "why": "a change starts the count again, from when that read began",
+      "before": "a",
+      "screens": ["a", "b"],
+      "busy": [],
+      "settled": true,
+      "reads": 4,
+      "elapsedMs": 190
+    },
+    {
+      "quietMs": 100,
+      "maxMs": 1000,
+      "pollMs": 50,
+      "readMs": 10,
+      "why": "busy holds it, however still the screen",
+      "before": "a",
+      "screens": ["spin", "spin", "spin", "a"],
+      "busy": ["spin"],
+      "settled": true,
+      "reads": 6,
+      "elapsedMs": 310
+    },
+    {
+      "quietMs": 100,
+      "maxMs": 200,
+      "pollMs": 50,
+      "readMs": 10,
+      "why": "the deadline ends it, unsettled, and the last sleep stops at it",
+      "before": "a",
+      "screens": ["spin"],
+      "busy": ["spin"],
+      "settled": false,
+      "reads": 5,
+      "elapsedMs": 210
+    }
   ]
 }
