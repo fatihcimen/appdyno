@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- A client's search finds a tool by the words people use, such as emulator, performance, deep link and dark mode, none of which was in any description.
+- `appdyno mcp` is the one way to start the server: `appdyno-mcp` is gone.
+- `bench` times this tool alone: `--driver` is gone.
+- `pnpm build` goes on with no Android agent, so a clean clone passes `pnpm run ci` with no JDK. `npm pack` and the Mac app's build refuse without one.
+- The docs are an index, guides and a reference, with an architecture page and diagrams. The README keeps what a newcomer needs.
 - A tap on an iPhone that changed nothing watches for a system alert on a screen with a hidden copy of a control too, where it did not run at all, and its answer says no alert came.
 - `perf_snapshot` on an iPhone says when another app, or a locked phone's home screen, stood in front, and keeps no CPU number from it: an app the phone had stopped read 0 %, and the gate called a real cost no regression. It asks only if a runner is already up.
 - `perf_scroll` goes on into new rows for as long as a list moves, read from the screen, and brings it back only once the list has ended, which the answer says. A round past a list's end read as smooth on Android, from frames of nothing, and on a real iPhone it failed the call with its good rounds lost.

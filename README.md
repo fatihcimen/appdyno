@@ -81,7 +81,7 @@ appdyno perf survey --app A    # every measure on this device, then a page of th
 | launch time   | yes     | yes           | yes    |
 | frames, jank  | yes     | main thread   | yes    |
 | memory        | yes     | yes           | yes    |
-| leaks         | no      | yes           | yes    |
+| leaks         | signal  | yes           | yes    |
 | CPU, profiles | yes     | yes           | yes    |
 | network bytes | yes     | yes           | yes    |
 
