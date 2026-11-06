@@ -25,7 +25,7 @@ export class FrameError extends Error {
   }
 }
 
-function header(length: number, type: number): Buffer {
+export function frameHeader(length: number, type: number): Buffer {
   if (length > MAX_FRAME_BYTES) throw new FrameError(`frame of ${length} bytes is over the limit`);
   const h = Buffer.allocUnsafe(HEADER);
   h.writeUInt32BE(length, 0);
@@ -35,13 +35,13 @@ function header(length: number, type: number): Buffer {
 
 export function encodeJson(message: unknown): Buffer {
   const payload = Buffer.from(JSON.stringify(message), 'utf8');
-  return Buffer.concat([header(payload.length, FRAME_JSON), payload]);
+  return Buffer.concat([frameHeader(payload.length, FRAME_JSON), payload]);
 }
 
 export function encodeBinary(id: number, data: Buffer): Buffer {
   const idBuf = Buffer.allocUnsafe(4);
   idBuf.writeUInt32BE(id >>> 0, 0);
-  return Buffer.concat([header(data.length + 4, FRAME_BINARY), idBuf, data]);
+  return Buffer.concat([frameHeader(data.length + 4, FRAME_BINARY), idBuf, data]);
 }
 
 /** Collects stream chunks and returns the frames they complete; throws FrameError on a broken stream. */

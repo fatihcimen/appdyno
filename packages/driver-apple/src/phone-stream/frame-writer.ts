@@ -1,24 +1,20 @@
 import { constants, openSync, unlinkSync } from 'node:fs';
 import { Socket } from 'node:net';
-import type { StreamInfo } from '@appdyno/protocol';
+import {
+  encodeJson,
+  FRAME_VIDEO,
+  frameHeader,
+  VIDEO_HEADER_BYTES,
+  type StreamInfo,
+} from '@appdyno/protocol';
 
 /**
  * Frames to the viewer, on a pipe it holds, in the framing of an agent's stream. Three pictures at most wait: past them
  * a picture is dropped, which needs a key picture to go on from, so a slow viewer costs frames and never memory.
  */
-const JSON_FRAME = 0;
-const VIDEO_FRAME = 2;
-const VIDEO_HEADER = 20;
 const MAX_WAITING = 3;
 const OPEN_EVERY_MS = 20;
 const OPEN_FOR_MS = 15_000;
-
-const frameHead = (type: number, length: number) => {
-  const h = Buffer.alloc(5);
-  h.writeUInt32BE(length);
-  h[4] = type;
-  return h;
-};
 
 export class FrameWriter {
   private socket: Socket | undefined;
@@ -75,8 +71,7 @@ export class FrameWriter {
   }
 
   private writeJson(message: Record<string, unknown>) {
-    const body = Buffer.from(JSON.stringify(message));
-    this.socket?.write(Buffer.concat([frameHead(JSON_FRAME, body.length), body]));
+    this.socket?.write(encodeJson(message));
   }
 
   /** What a viewer is told of the picture, now and on each new attach. */
@@ -109,11 +104,9 @@ export class FrameWriter {
     }
     this.waiting++;
     // an all-zero header: this clock is not the viewer's, and it says so by never pinging
-    const head = Buffer.alloc(5 + VIDEO_HEADER);
-    head.writeUInt32BE(VIDEO_HEADER + annexB.length);
-    head[4] = VIDEO_FRAME;
     s.cork();
-    s.write(head);
+    s.write(frameHeader(VIDEO_HEADER_BYTES + annexB.length, FRAME_VIDEO));
+    s.write(Buffer.alloc(VIDEO_HEADER_BYTES));
     s.write(annexB, () => {
       this.waiting--;
     });
