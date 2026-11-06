@@ -39,6 +39,7 @@ export function failed(e: unknown, doing: string): ToolError {
   const {
     code,
     killed,
+    message = '',
     stdout = '',
     stderr = '',
   } = e as NodeJS.ErrnoException & {
@@ -46,7 +47,8 @@ export function failed(e: unknown, doing: string): ToolError {
     stdout?: string;
     stderr?: string;
   };
-  const said = `${stdout}\n${stderr}`;
+  // last, as a run's own message only repeats the command: a failure of this Mac's has nothing else to say
+  const said = `${stdout}\n${stderr}\n${message}`;
   if (killed) return refuse(`${doing} took too long`, 'TIMEOUT', 'try again');
   if (code === 'ENOENT')
     return refuse(`${doing}: the program is not on PATH`, 'UNSUPPORTED', 'put it on PATH');

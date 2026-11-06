@@ -223,6 +223,26 @@ describe('appdyno update, in the app', () => {
     expect(mac.calls).toContain('hdiutil detach');
   });
 
+  it('says what stood in the way of a folder it may not write, not nothing', async () => {
+    const locked = Object.assign(new Error("EACCES: permission denied, rename '/Applications'"), {
+      code: 'EACCES',
+    });
+    const mac = tools();
+    const run: Run = async (file, args, o) => {
+      if (file.endsWith('ditto')) throw locked;
+      return mac.run(file, args, o);
+    };
+    const going = update({
+      root: app.root,
+      run,
+      get: getting(released()),
+      tmp,
+      out: () => undefined,
+    });
+    await expect(going).rejects.toMatchObject({ code: 'PERMISSION_REQUIRED' });
+    oldStays();
+  });
+
   it('says so offline, and when no release exists', async () => {
     const lost = Object.assign(new TypeError('fetch failed'), { cause: { code: 'ENOTFOUND' } });
     await expect(updating(getting({ [AT]: lost })).going).rejects.toMatchObject({
