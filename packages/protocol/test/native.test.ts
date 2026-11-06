@@ -136,6 +136,13 @@ describe('what is written three times', () => {
     expect(valueOf(stream, 'kMaxFrame')).toBe(MAX_FRAME_BYTES);
   });
 
+  it('an export to Maestro goes by the keys there are', () => {
+    const table = inside(read('packages/flows/src/maestro.ts'), /MAESTRO_KEYS: .* = \{/, '}');
+    const named = [...table.matchAll(/^\s*(\w+):/gm)].map((m) => m[1]!);
+    expect(named.length).toBeGreaterThan(0);
+    expect(named.filter((k) => !(KEYS as readonly string[]).includes(k))).toEqual([]);
+  });
+
   it('both agents wait alike after a touch that changed nothing', () => {
     const kotlin = /INERT_QUIET_MS = (\d+)L/.exec(read(`${AGENT}/Settling.kt`));
     const swift = /inertQuietMs = (\d+)/.exec(read(`${CORE}/Settler.swift`));

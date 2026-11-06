@@ -169,6 +169,12 @@ stop`),
 `);
   });
 
+  it('takes a volume key by the name a recording writes', () => {
+    const out = yaml('press_key volumeUp\npress_key volumeDown');
+    expect(out).toContain('- pressKey: "Volume Up"');
+    expect(out).toContain('- pressKey: "Volume Down"');
+  });
+
   it('takes a check given time to hold as a wait', () => {
     expect(yaml('assert id=a timeoutMs=800')).toContain(
       '- extendedWaitUntil:\n    visible:\n      id: "a"\n    timeout: 800\n',

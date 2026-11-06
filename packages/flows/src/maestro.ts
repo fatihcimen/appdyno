@@ -7,8 +7,8 @@ const MAESTRO_KEYS: Record<string, string> = {
   home: 'Home',
   delete: 'Backspace',
   tab: 'Tab',
-  volume_up: 'Volume Up',
-  volume_down: 'Volume Down',
+  volumeUp: 'Volume Up',
+  volumeDown: 'Volume Down',
   power: 'Power',
   lock: 'Lock',
 };
