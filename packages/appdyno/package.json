@@ -39,6 +39,7 @@
     "@appdyno/core": "workspace:*",
     "@appdyno/driver-android": "workspace:*",
     "@appdyno/driver-apple": "workspace:*",
+    "@appdyno/hub": "workspace:*",
     "@appdyno/mcp": "workspace:*",
     "@appdyno/ops": "workspace:*",
     "@appdyno/perf": "workspace:*",

@@ -6,9 +6,44 @@ export { flowFiles, flowsTagged, type TestOptions } from './flow/test-run.js';
 export { JOURNEY_ITERATIONS } from './flow/journey.js';
 export { keepRun } from './perf/shared.js';
 export { survey } from './survey.js';
-export { runMirrors, type MirrorRun } from './mirror/parent.js';
-export { runHub, type HubPlaces, type HubRun } from './mirror/hub.js';
-export { ago } from './mirror/history.js';
+// what the hub, a package of its own, takes from the operations
+export { activityFollower, appendActivity, type ActivityLine } from './activity.js';
+export { claim, holder, release } from './claims.js';
+export {
+  aimAt,
+  fieldName,
+  named,
+  pointAim,
+  stepOf,
+  unrecorded,
+  type Aim,
+  type Size,
+} from './flow/aim.js';
+export type { JourneyAnswer } from './flow/journey.js';
+export {
+  activeRecording,
+  addSteps,
+  flagged,
+  flowRecordings,
+  keepRecording,
+  loadRecording,
+  saveRecording,
+  startRecording,
+} from './flow/shared.js';
+export { handoffDone, handoffRequest } from './mirror/handoff.js';
+export {
+  FOCUS_SIGNAL,
+  liveMirror,
+  liveMirrors,
+  mirrorLog,
+  removeMirrorFile,
+  writeMirrorFile,
+  type MirrorFile,
+} from './mirror-state.js';
+export { perfLaunchOp } from './perf/launch.js';
+export { perfScrollOp } from './perf/scroll.js';
+export { keyName } from './step-schemas.js';
+export { answerWatches } from './watch.js';
 export { swipeLine, pinchPaths } from './gesture-paths.js';
 export { SETTLE } from './answers.js';
 export { ServerContext } from './context.js';

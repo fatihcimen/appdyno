@@ -1,6 +1,6 @@
 import type { InputEvent } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
-import { gestureOf, StrokeReader, type Stroke } from '../src/flow/gestures.js';
+import { gestureOf, StrokeReader, type Stroke } from '../src/gestures.js';
 
 const SIZE = { w: 400, h: 800 };
 type Touch = Extract<InputEvent, { kind: 'touch' }>;

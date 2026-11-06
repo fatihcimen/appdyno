@@ -1,12 +1,11 @@
 import type { InputEvent, Screen } from '@appdyno/core';
 import type { FlowStep, Recording } from '@appdyno/flows';
 import { KEY_USAGES, KEYS, type Key } from '@appdyno/protocol';
-import { keyName } from '../step-schemas.js';
-import { type Aim, stepOf } from './aim.js';
 import { StrokeReader } from './gestures.js';
 import { TouchSteps } from './window-touches.js';
 import { TypingSteps } from './window-typing.js';
 import { StepWriter, type WindowStepsPort } from './window-writer.js';
+import { type Aim, keyName, stepOf } from '@appdyno/ops';
 
 export type { WindowStepsPort } from './window-writer.js';
 

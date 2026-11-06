@@ -15,7 +15,8 @@ import {
   IosPhoneDevice,
   IosSimulatorDevice,
 } from '../packages/driver-apple/src/index.js';
-import { DEFAULT_POLICY, ServerContext, runHub } from '../packages/ops/src/index.js';
+import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
+import { runHub } from '../packages/hub/src/index.js';
 import { liveMirror } from '../packages/ops/src/mirror-state.js';
 import { untilWithin } from './until.js';
 

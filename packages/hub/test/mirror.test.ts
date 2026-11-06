@@ -11,12 +11,17 @@ import {
 } from '@appdyno/core';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { startOf } from '@appdyno/core';
-import { holder } from '../src/claims.js';
-import { ServerContext } from '../src/context.js';
-import { checkedOps } from './helpers.js';
-import { runMirrors, type MirrorRun } from '../src/mirror/parent.js';
-import { liveMirror, liveMirrors, writeMirrorFile, type MirrorFile } from '../src/mirror-state.js';
-import { DEFAULT_POLICY } from '../src/policy.js';
+import { checkedOps } from '../../ops/test/helpers.js';
+import { runMirrors, type MirrorRun } from '../src/parent.js';
+import {
+  DEFAULT_POLICY,
+  holder,
+  liveMirror,
+  liveMirrors,
+  type MirrorFile,
+  ServerContext,
+  writeMirrorFile,
+} from '@appdyno/ops';
 
 const dir = mkdtempSync(join(tmpdir(), 'appdyno-mirror-'));
 const before = process.env.APPDYNO_STATE_DIR;

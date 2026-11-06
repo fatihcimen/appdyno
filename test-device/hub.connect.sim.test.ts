@@ -13,7 +13,8 @@ import {
   type ViewerMessage,
 } from '../packages/core/src/index.js';
 import { androidProvider } from '../packages/driver-android/src/index.js';
-import { DEFAULT_POLICY, runHub, ServerContext } from '../packages/ops/src/index.js';
+import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
+import { runHub } from '../packages/hub/src/index.js';
 import { untilWithin } from './until.js';
 
 /**

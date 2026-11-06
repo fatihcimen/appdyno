@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Device, DeviceProvider } from '@appdyno/core';
@@ -7,7 +7,6 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { activityFollower, activityFor, appendActivity } from '../src/activity.js';
 import { inCall, startOf } from '@appdyno/core';
 import { ServerContext } from '../src/context.js';
-import { followDevice } from '../src/mirror/follow.js';
 import { handoffDone, handoffOps, handoffRequest } from '../src/mirror/handoff.js';
 import { removeMirrorFile, writeMirrorFile } from '../src/mirror-state.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
@@ -91,6 +90,14 @@ describe('the activity of a device', () => {
     expect(JSON.stringify(lines)).not.toContain('hunter2');
   });
 
+  it('names the client that drives, as a person knows it', async () => {
+    rmSync(activityFile(), { force: true });
+    const ctx = new ServerContext(DEFAULT_POLICY, [], { clientNamed: (s) => `${s} by name` });
+    ctx.currentSerial = 'guarded';
+    await inCall({ client: 'said' }, () => activityFor(ctx)(op('tap')).handler({}));
+    expect(readActivity()[0]).toMatchObject({ tool: 'tap', client: 'said by name' });
+  });
+
   it('leaves out what is no agent acting on the device', async () => {
     const ctx = context();
     ctx.currentSerial = 'guarded';
@@ -121,69 +128,6 @@ describe('the activity of a device', () => {
       appendActivity('guarded', { at: i, tool: 't', ms: 1, ok: true, args });
     expect(readFileSync(activityFile(), 'utf8').length).toBeLessThan(260 * 1024);
     expect(readActivity().at(-1)).toMatchObject({ tool: 't' });
-  });
-});
-
-describe('what a window is told', () => {
-  it('names the client that drives, as a person knows it', async () => {
-    vi.useFakeTimers();
-    try {
-      rmSync(activityFile(), { force: true });
-      const told: Record<string, unknown>[] = [];
-      const off = followDevice('guarded', { tell: (m) => told.push(m) });
-      const ctx = new ServerContext(DEFAULT_POLICY, [], { clientNamed: (s) => `${s} by name` });
-      ctx.currentSerial = 'guarded';
-      await inCall({ client: 'said' }, () => activityFor(ctx)(op('tap')).handler({}));
-      await vi.advanceTimersByTimeAsync(300);
-      expect(told[0]).toEqual({ op: 'agent', driving: true, tool: 'tap', client: 'said by name' });
-      off();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('marks that an agent is driving while calls come, and for 2 s after', async () => {
-    vi.useFakeTimers();
-    try {
-      rmSync(activityFile(), { force: true });
-      const told: Record<string, unknown>[] = [];
-      const off = followDevice('guarded', { tell: (m) => told.push(m) });
-      await vi.advanceTimersByTimeAsync(500);
-      expect(told).toEqual([]);
-      appendActivity('guarded', { at: Date.now(), tool: 'tap', ms: 3, ok: true, args: {} });
-      await vi.advanceTimersByTimeAsync(300);
-      expect(told[0]).toEqual({ op: 'agent', driving: true, tool: 'tap' });
-      expect(told[1]).toMatchObject({ op: 'activity', tool: 'tap', ms: 3, ok: true, args: '{}' });
-      await vi.advanceTimersByTimeAsync(1_500);
-      expect(told.filter((m) => m.driving === false)).toEqual([]);
-      await vi.advanceTimersByTimeAsync(600);
-      expect(told.at(-1)).toEqual({ op: 'agent', driving: false });
-      off();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('puts up a request for a person once, and takes it down when it ends', async () => {
-    vi.useFakeTimers();
-    try {
-      const file = join(dir, 'handoff/guarded.json');
-      rmSync(file, { force: true });
-      const told: Record<string, unknown>[] = [];
-      const off = followDevice('guarded', { tell: (m) => told.push(m) });
-      mkdirSync(join(dir, 'handoff'), { recursive: true });
-      writeFileSync(file, JSON.stringify({ id: 'r1', reason: 'Face ID' }));
-      await vi.advanceTimersByTimeAsync(600);
-      expect(told.filter((m) => m.op === 'banner')).toEqual([
-        { op: 'banner', id: 'r1', text: 'Face ID', needsDone: true, sound: true },
-      ]);
-      rmSync(file);
-      await vi.advanceTimersByTimeAsync(300);
-      expect(told.at(-1)).toEqual({ op: 'banner' });
-      off();
-    } finally {
-      vi.useRealTimers();
-    }
   });
 });
 

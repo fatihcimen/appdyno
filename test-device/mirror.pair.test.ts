@@ -5,8 +5,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { androidProvider, appleProvider, type MirrorSession, type WireNode } from './workspace.js';
 import { viewerBinary, ViewerProcess, type Device } from '../packages/core/src/index.js';
 import { NODE_FLAGS } from '../packages/protocol/src/index.js';
-import { DEFAULT_POLICY, ServerContext, runHub } from '../packages/ops/src/index.js';
-import { Parent } from '../packages/ops/src/mirror/parent.js';
+import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
+import { runHub } from '../packages/hub/src/index.js';
+import { Parent } from '../packages/hub/src/parent.js';
 import { liveMirror } from '../packages/ops/src/mirror-state.js';
 import { untilWithin } from './until.js';
 

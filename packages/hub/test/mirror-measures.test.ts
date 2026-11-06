@@ -5,10 +5,9 @@ import { join } from 'node:path';
 import { startOf } from '@appdyno/core';
 import { latestRuns, runKeys } from '@appdyno/perf';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { holder } from '../src/claims.js';
-import { windowMeasures } from '../src/mirror/measures.js';
-import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
+import { windowMeasures } from '../src/measures.js';
+import { FakeDevice } from '../../ops/test/fake-device.js';
+import { DEFAULT_POLICY, holder, ServerContext } from '@appdyno/ops';
 
 const opened = vi.hoisted(() => vi.fn());
 vi.mock('node:child_process', async (real) => ({

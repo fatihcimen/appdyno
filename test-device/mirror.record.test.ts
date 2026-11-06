@@ -15,9 +15,9 @@ import {
 import { AndroidDevice, FOCUS_READ } from '../packages/driver-android/src/index.js';
 import { IosSimulatorDevice } from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, flowsFor, opsFor, ServerContext } from '../packages/ops/src/index.js';
-import { windowControls, windowLook } from '../packages/ops/src/mirror/controls.js';
-import { windowFlow } from '../packages/ops/src/mirror/flow.js';
-import { windowMeasures } from '../packages/ops/src/mirror/measures.js';
+import { windowControls, windowLook } from '../packages/hub/src/controls.js';
+import { windowFlow } from '../packages/hub/src/flow.js';
+import { windowMeasures } from '../packages/hub/src/measures.js';
 import { untilWithin } from './until.js';
 
 /**

@@ -7,10 +7,9 @@ import { type Adb, AndroidMirror, EmulatorMirror } from '@appdyno/driver-android
 import { type AuditResult, keyOfUsage } from '@appdyno/protocol';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeMirror, FakeViewer, flush } from '../../core/test/mirror-fakes.js';
-import { flowRecordings } from '../src/flow/shared.js';
-import { DEFAULT_POLICY, flowsFor, ServerContext } from '../src/index.js';
-import { shownSize, windowFlow } from '../src/mirror/flow.js';
-import { FakeDevice, WithKeyboard } from './fake-device.js';
+import { shownSize, windowFlow } from '../src/flow.js';
+import { FakeDevice, WithKeyboard } from '../../ops/test/fake-device.js';
+import { DEFAULT_POLICY, flowRecordings, flowsFor, ServerContext } from '@appdyno/ops';
 
 const home = mkdtempSync(join(tmpdir(), 'appdyno-window-flow-'));
 vi.mock('node:os', async (real) => ({

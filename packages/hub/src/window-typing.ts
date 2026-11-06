@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import type { Screen, UiElement } from '@appdyno/core';
 import type { Recording } from '@appdyno/flows';
 import { KEY_USAGES } from '@appdyno/protocol';
-import { fieldName, stepOf } from './aim.js';
 import type { StepWriter, WindowStepsPort } from './window-writer.js';
+import { fieldName, stepOf } from '@appdyno/ops';
 
 /** As `type_text` takes it. */
 const MOST_TEXT = 500;

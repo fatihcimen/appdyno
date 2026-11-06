@@ -7,16 +7,21 @@ import {
   type ViewerStart,
   startOf,
 } from '@appdyno/core';
-import type { ServerContext } from '../context.js';
-import { ToolError } from '../tool.js';
 import { windowControls, windowLook, type MovieEnd } from './controls.js';
 import { windowFlow } from './flow.js';
 import { followDevice } from './follow.js';
-import { handoffDone } from './handoff.js';
 import { windowMeasures } from './measures.js';
 import { pairWindows, type PairSide, type WindowPair } from './pair.js';
-import { FOCUS_SIGNAL, liveMirror, removeMirrorFile, writeMirrorFile } from '../mirror-state.js';
-import { answerWatches } from '../watch.js';
+import {
+  answerWatches,
+  FOCUS_SIGNAL,
+  handoffDone,
+  liveMirror,
+  removeMirrorFile,
+  type ServerContext,
+  ToolError,
+  writeMirrorFile,
+} from '@appdyno/ops';
 
 export type MirrorRun = {
   /** Named devices; none: the default device. */

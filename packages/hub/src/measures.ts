@@ -1,14 +1,18 @@
 import { execFile } from 'node:child_process';
 import { inCall, type Device } from '@appdyno/core';
 import { loud, writeDashboard, type Noise } from '@appdyno/perf';
-import { claim, release } from '../claims.js';
-import { ServerContext } from '../context.js';
 import { measureHistory, type PastMeasure } from './history.js';
-import { JOURNEY_ITERATIONS, type JourneyAnswer } from '../flow/journey.js';
-import { perfLaunchOp } from '../perf/launch.js';
-import { perfScrollOp } from '../perf/scroll.js';
-import { opsFor } from '../registry.js';
-import type { ToolResult } from '../tool.js';
+import {
+  claim,
+  JOURNEY_ITERATIONS,
+  type JourneyAnswer,
+  opsFor,
+  perfLaunchOp,
+  perfScrollOp,
+  release,
+  ServerContext,
+  type ToolResult,
+} from '@appdyno/ops';
 
 /** What a window's pane says of a measure. */
 export type MeasureWords = {

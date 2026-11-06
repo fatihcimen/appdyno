@@ -21,6 +21,7 @@ export default defineConfig({
       '@appdyno/flows': src('flows'),
       '@appdyno/perf': src('perf'),
       '@appdyno/ops': src('ops'),
+      '@appdyno/hub': src('hub'),
       '@appdyno/mcp': src('mcp'),
       '@appdyno/cli': src('cli'),
       appdyno: src('appdyno'),

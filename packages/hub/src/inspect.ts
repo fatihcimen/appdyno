@@ -8,7 +8,7 @@ import {
 } from '@appdyno/core';
 import { elementUnder, type FlowStep, selectorLine, stepLine } from '@appdyno/flows';
 import type { AuditIssue } from '@appdyno/protocol';
-import { type Aim, aimAt, named, type Size, stepOf } from '../flow/aim.js';
+import { type Aim, aimAt, named, type Size, stepOf } from '@appdyno/ops';
 
 /** What the inspector needs of its window. */
 export type InspectPort = {

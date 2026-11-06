@@ -56,6 +56,9 @@ importers:
       '@appdyno/driver-apple':
         specifier: workspace:*
         version: link:../driver-apple
+      '@appdyno/hub':
+        specifier: workspace:*
+        version: link:../hub
       '@appdyno/mcp':
         specifier: workspace:*
         version: link:../mcp
@@ -128,6 +131,24 @@ importers:
       '@appdyno/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/hub:
+    dependencies:
+      '@appdyno/core':
+        specifier: workspace:*
+        version: link:../core
+      '@appdyno/flows':
+        specifier: workspace:*
+        version: link:../flows
+      '@appdyno/ops':
+        specifier: workspace:*
+        version: link:../ops
+      '@appdyno/perf':
+        specifier: workspace:*
+        version: link:../perf
+      '@appdyno/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/mcp:
     dependencies:

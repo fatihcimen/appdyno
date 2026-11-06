@@ -1,6 +1,5 @@
 import type { MirrorSession } from '@appdyno/core';
-import { activityFollower, type ActivityLine } from '../activity.js';
-import { handoffRequest } from './handoff.js';
+import { activityFollower, type ActivityLine, handoffRequest } from '@appdyno/ops';
 
 const POLL_MS = 250;
 /** The pill goes this long after the last call. */

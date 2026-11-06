@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { recordsOf, saveRun } from '@appdyno/perf';
-import { spokenDone } from '../src/mirror/follow.js';
-import { measureHistory } from '../src/mirror/history.js';
+import { spokenDone } from '../src/follow.js';
+import { measureHistory } from '../src/history.js';
 
 const phone = {
   serial: 'R58M' as string,

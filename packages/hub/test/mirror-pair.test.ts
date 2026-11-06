@@ -1,8 +1,8 @@
 import type { InputEvent } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
 import { describe, expect, it, vi } from 'vitest';
-import type { JourneyAnswer } from '../src/flow/journey.js';
-import { pairWindows, type PairSide } from '../src/mirror/pair.js';
+import { pairWindows, type PairSide } from '../src/pair.js';
+import { type JourneyAnswer } from '@appdyno/ops';
 
 const WINDOW = (w: number, h: number) => ({
   type: 1,

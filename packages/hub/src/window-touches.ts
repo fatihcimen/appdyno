@@ -1,10 +1,10 @@
 import { selectIn, type Rect, type Screen } from '@appdyno/core';
 import type { Recording } from '@appdyno/flows';
 import type { Point } from '@appdyno/protocol';
-import { type Aim, aimAt, pointAim, type Size, stepOf } from './aim.js';
 import { type Direction, type Fraction, gestureOf, type Stroke } from './gestures.js';
 import type { TypingSteps } from './window-typing.js';
 import type { StepWriter, WindowStepsPort } from './window-writer.js';
+import { type Aim, aimAt, pointAim, type Size, stepOf } from '@appdyno/ops';
 
 /** Two taps this close, in time and place, are one double tap. */
 const DOUBLE_MS = 350;

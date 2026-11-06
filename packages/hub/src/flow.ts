@@ -2,8 +2,11 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { Device, DeviceHardware, InputEvent, Screen, ViewerMessage } from '@appdyno/core';
 import { type FlowStep, type Recording, stepLine } from '@appdyno/flows';
-import type { ServerContext } from '../context.js';
-import { type Size, stepOf, unrecorded } from '../flow/aim.js';
+import { windowSteps } from './window-steps.js';
+import { fileName, frontApp, stamp, type WindowSession } from './controls.js';
+import { windowInspector } from './inspect.js';
+import { windowContext } from './measures.js';
+import { followScreen } from './screen-follow.js';
 import {
   activeRecording,
   addSteps,
@@ -11,14 +14,13 @@ import {
   keepRecording,
   loadRecording,
   saveRecording,
+  type ServerContext,
+  type Session,
+  type Size,
   startRecording,
-} from '../flow/shared.js';
-import { windowSteps } from '../flow/window-steps.js';
-import type { Session } from '../session.js';
-import { fileName, frontApp, stamp, type WindowSession } from './controls.js';
-import { windowInspector } from './inspect.js';
-import { windowContext } from './measures.js';
-import { followScreen } from './screen-follow.js';
+  stepOf,
+  unrecorded,
+} from '@appdyno/ops';
 
 type FlowSession = Pick<WindowSession, 'tell' | 'status'>;
 

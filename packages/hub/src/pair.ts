@@ -1,7 +1,7 @@
 import { pause, type InputEvent, type MirrorSession, type ViewerMessage } from '@appdyno/core';
 import { MIN_SAMPLES, pairedChange } from '@appdyno/perf';
 import { NODE_FLAGS, type Tree, type WireNode } from '@appdyno/protocol';
-import type { JourneyAnswer } from '../flow/journey.js';
+import { type JourneyAnswer } from '@appdyno/ops';
 
 /** One of two windows side by side. */
 export type PairSide = {

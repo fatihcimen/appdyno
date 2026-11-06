@@ -12,11 +12,16 @@ import type {
 } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startOf } from '@appdyno/core';
-import { runHub, stageLink } from '../src/mirror/hub.js';
-import { hubDevices, type HubDevice } from '../src/mirror/hub-list.js';
-import { Parent } from '../src/mirror/parent.js';
-import { FOCUS_SIGNAL, removeMirrorFile, writeMirrorFile } from '../src/mirror-state.js';
-import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
+import { runHub, stageLink } from '../src/hub.js';
+import { hubDevices, type HubDevice } from '../src/hub-list.js';
+import { Parent } from '../src/parent.js';
+import {
+  DEFAULT_POLICY,
+  FOCUS_SIGNAL,
+  removeMirrorFile,
+  ServerContext,
+  writeMirrorFile,
+} from '@appdyno/ops';
 
 class Simulated implements VirtualDevices {
   readonly kind = 'simulator';

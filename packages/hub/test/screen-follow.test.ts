@@ -1,6 +1,6 @@
 import type { InputEvent, Screen } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { followScreen } from '../src/mirror/screen-follow.js';
+import { followScreen } from '../src/screen-follow.js';
 
 const screen = (hash: string) => ({ hash }) as Screen;
 const down: InputEvent = { kind: 'touch', p: 0, x: 0.5, y: 0.5 };

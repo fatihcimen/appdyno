@@ -2,10 +2,8 @@ import { spawn } from 'node:child_process';
 import { closeSync, mkdirSync, openSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { isAlive, pause, type ViewerMessage } from '@appdyno/core';
-import type { ServerContext } from '../context.js';
-import { liveMirror, mirrorLog } from '../mirror-state.js';
-import { ToolError } from '../tool.js';
 import type { Parent } from './parent.js';
+import { liveMirror, mirrorLog, type ServerContext, ToolError } from '@appdyno/ops';
 
 const CLOSE_MS = 30_000;
 const OWN_WINDOW_MS = 20_000;

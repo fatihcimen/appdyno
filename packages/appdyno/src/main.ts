@@ -31,11 +31,10 @@ import {
   JOURNEY_ITERATIONS,
   opsFor,
   paramsOf,
-  runHub,
-  runMirrors,
   survey,
   type Policy,
 } from '@appdyno/ops';
+import { runHub, runMirrors } from '@appdyno/hub';
 import { endWithHub } from './lifetime.js';
 import { alertPerson } from './alert.js';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';

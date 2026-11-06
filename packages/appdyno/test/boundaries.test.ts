@@ -14,6 +14,7 @@ const APPLE = '@appdyno/driver-apple';
 const FLOWS = '@appdyno/flows';
 const PERF = '@appdyno/perf';
 const OPS = '@appdyno/ops';
+const HUB = '@appdyno/hub';
 const MCP = '@appdyno/mcp';
 const CLI = '@appdyno/cli';
 
@@ -26,14 +27,16 @@ const RULES: Record<string, string[]> = {
   flows: [CORE, PROTOCOL],
   perf: [CORE, PROTOCOL],
   ops: [CORE, PROTOCOL, FLOWS, PERF],
+  hub: [OPS, CORE, PROTOCOL, FLOWS, PERF],
   mcp: [OPS, CORE, PROTOCOL],
   cli: [OPS, CORE, PROTOCOL],
-  appdyno: [PROTOCOL, CORE, ANDROID, APPLE, PERF, OPS, MCP, CLI],
+  appdyno: [PROTOCOL, CORE, ANDROID, APPLE, PERF, OPS, HUB, MCP, CLI],
 };
 
 /** What a package's tests may import on top of its rule: a driver's rules for a fake device, the server to call it through. */
 const IN_TESTS: Record<string, string[]> = {
   ops: [ANDROID, APPLE, MCP],
+  hub: [ANDROID, APPLE, MCP],
   cli: [MCP],
 };
 
@@ -100,6 +103,9 @@ describe('module boundaries', () => {
     expect(flagged('protocol', `import '${CORE}';`)).toBe(true);
     expect(flagged('perf', `import { x } from '${OPS}';`)).toBe(true);
     expect(flagged('perf', `import { x } from '${ANDROID}';`)).toBe(true);
+    expect(flagged('ops', `import { x } from '${HUB}';`)).toBe(true);
+    expect(flagged('hub', `import { x } from '${ANDROID}';`)).toBe(true);
+    expect(flagged('hub', `import { x } from '${OPS}';`)).toBe(false);
     expect(flagged('ops', `import { x } from '${PERF}';`)).toBe(false);
     expect(flagged('mcp', `import { x } from 'appdyno';`)).toBe(true);
     expect(flagged('cli', `import { x } from '../../driver-android/src/adb.js';`)).toBe(true);
@@ -120,66 +126,6 @@ describe('module boundaries', () => {
     expect(flagged('driver-apple', `import { x } from '${ANDROID}';`)).toBe(true);
     // a package's sources are not its tests
     expect(violations('ops', join(packages, 'ops/src/x.ts'), `from '${MCP}';`)).not.toEqual([]);
-  });
-});
-
-/**
- * `ops` holds two things: operations, knotted together, and the hub's controller in `mirror/`, which reaches into them
- * and never the other way. What the rest of `ops` takes from that folder is this, by the file that takes it: what the
- * package lets out, and the two operations in it that a client calls. A second way in is a package split made harder.
- */
-const MIRROR_WAY_IN: Record<string, string[]> = {
-  'index.ts': ['hub.js', 'history.js', 'parent.js'],
-  'registry.ts': ['handoff.js', 'op.js'],
-};
-
-/** What `file`, of `ops` and outside `mirror/`, takes from that folder and its rule does not name. */
-function intoMirror(file: string, source: string): string[] {
-  const allowed = MIRROR_WAY_IN[file] ?? [];
-  return [...source.matchAll(IMPORT)]
-    .map((m) => m[1]!)
-    .filter((spec) => spec.startsWith('.'))
-    .map((spec) => relative('/', resolve('/', dirname(file), spec)))
-    .filter((to) => to.startsWith('mirror/') && !allowed.includes(to.slice('mirror/'.length)))
-    .map((to) => `${file}: ${to}`);
-}
-
-describe('the hub in ops', () => {
-  const src = join(packages, 'ops/src');
-
-  it('is reached from the rest of the package by the ways its rule names, and no other', () => {
-    const outside = sources(src)
-      .map((file) => relative(src, file))
-      .filter((file) => !file.startsWith('mirror/'));
-    expect(outside.length).toBeGreaterThan(40);
-    expect(
-      outside.flatMap((file) => intoMirror(file, readFileSync(join(src, file), 'utf8'))),
-    ).toEqual([]);
-  });
-
-  it('names only ways in that are there', () => {
-    const named = Object.entries(MIRROR_WAY_IN).flatMap(([file, ways]) =>
-      ways.map((way) => [file, way] as const),
-    );
-    expect(
-      named.filter(
-        ([file, way]) => !readFileSync(join(src, file), 'utf8').includes(`./mirror/${way}`),
-      ),
-    ).toEqual([]);
-  });
-
-  it('catches a measure reaching in, and a way in from a file of no rule', () => {
-    expect(intoMirror('perf/shared.ts', `import { x } from '../mirror/session.js';`)).toEqual([
-      'perf/shared.ts: mirror/session.js',
-    ]);
-    expect(intoMirror('watch.ts', `import { x } from './mirror/hub.js';`)).toEqual([
-      'watch.ts: mirror/hub.js',
-    ]);
-    expect(intoMirror('index.ts', `export { runHub } from './mirror/hub.js';`)).toEqual([]);
-    expect(intoMirror('index.ts', `export { x } from './mirror/pair.js';`)).toEqual([
-      'index.ts: mirror/pair.js',
-    ]);
-    expect(intoMirror('watch.ts', `import { x } from './mirror-state.js';`)).toEqual([]);
   });
 });
 

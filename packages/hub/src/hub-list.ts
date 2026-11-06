@@ -1,7 +1,6 @@
 import type { DeviceHardware, Need, Startable, ViewerOrder } from '@appdyno/core';
 import type { Platform } from '@appdyno/protocol';
-import type { ServerContext } from '../context.js';
-import { liveMirrors } from '../mirror-state.js';
+import { liveMirrors, type ServerContext } from '@appdyno/ops';
 
 /** One row of the sidebar. */
 export type HubDevice = {

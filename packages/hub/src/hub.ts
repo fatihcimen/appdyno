@@ -5,12 +5,10 @@ import {
   type ViewerLink,
   type ViewerMessage,
 } from '@appdyno/core';
-import type { ServerContext } from '../context.js';
-import { ToolError } from '../tool.js';
 import { HubList } from './hub-list.js';
 import { HubRoom } from './hub-room.js';
 import { Parent } from './parent.js';
-import { FOCUS_SIGNAL } from '../mirror-state.js';
+import { FOCUS_SIGNAL, type ServerContext, ToolError } from '@appdyno/ops';
 
 export type HubRun = {
   /** A person asked for the keyboard. */

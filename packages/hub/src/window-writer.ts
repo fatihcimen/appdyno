@@ -1,8 +1,7 @@
 import type { Rect, Screen } from '@appdyno/core';
 import type { FlowStep, Recording } from '@appdyno/flows';
 import type { Key } from '@appdyno/protocol';
-import { type Aim, type Size, unrecorded } from './aim.js';
-import { addSteps, keepRecording } from './shared.js';
+import { addSteps, type Aim, keepRecording, type Size, unrecorded } from '@appdyno/ops';
 
 /** What the writer needs of its window. */
 export type WindowStepsPort = {

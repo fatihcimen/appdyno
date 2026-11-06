@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Device, InputEvent } from '@appdyno/core';
 import { afterAll, describe, expect, it, vi } from 'vitest';
-import type { JourneyAnswer } from '../src/flow/journey.js';
-import { stamp, windowControls, windowLook, type WindowSession } from '../src/mirror/controls.js';
+import { stamp, windowControls, windowLook, type WindowSession } from '../src/controls.js';
+import { type JourneyAnswer } from '@appdyno/ops';
 
 const home = mkdtempSync(join(tmpdir(), 'appdyno-controls-'));
 vi.mock('node:os', async (real) => ({

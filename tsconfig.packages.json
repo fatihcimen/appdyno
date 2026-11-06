@@ -10,6 +10,7 @@
       "@appdyno/flows": ["./packages/flows/src/index.ts"],
       "@appdyno/perf": ["./packages/perf/src/index.ts"],
       "@appdyno/ops": ["./packages/ops/src/index.ts"],
+      "@appdyno/hub": ["./packages/hub/src/index.ts"],
       "@appdyno/mcp": ["./packages/mcp/src/index.ts"],
       "@appdyno/cli": ["./packages/cli/src/index.ts"],
       "appdyno": ["./packages/appdyno/src/index.ts"]

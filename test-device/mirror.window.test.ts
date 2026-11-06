@@ -10,8 +10,8 @@ import {
 } from '../packages/core/src/index.js';
 import { IosSimulatorDevice } from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
-import { windowControls, windowLook } from '../packages/ops/src/mirror/controls.js';
-import { windowMeasures } from '../packages/ops/src/mirror/measures.js';
+import { windowControls, windowLook } from '../packages/hub/src/controls.js';
+import { windowMeasures } from '../packages/hub/src/measures.js';
 import { expectSamePicture, shownByWindow } from './window-picture.js';
 import { untilWithin } from './until.js';
 
