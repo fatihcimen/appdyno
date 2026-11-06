@@ -11,8 +11,6 @@ struct HiddenField: UIViewRepresentable {
         override var canBecomeFirstResponder: Bool { true }
         var keyboardType: UIKeyboardType = .numberPad
         var hasText: Bool { !value.isEmpty }
-        /// Like an entry that moves to its next box after each digit: a key that comes before that move is lost.
-        private var moving = false
         func insertText(_ text: String) {
             guard text != "\n" else { return }
             value = String((value + text).prefix(6))

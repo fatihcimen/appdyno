@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Reactions that come late with nothing in between: a tap adds a line after the button's delay.
 /** Says what a finger did on the pad: double taps, how far the last path went, whether two pinched. */
 struct GesturesScreen: View {
     @State private var doubles = 0

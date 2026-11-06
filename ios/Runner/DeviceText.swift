@@ -15,7 +15,6 @@ extension Device {
         return f
     }
 
-    /// The field's text; a field showing its placeholder is empty.
     /// The field's text from a snapshot (nil when it is gone); a field showing its placeholder is empty.
     private func currentText(_ f: XCUIElement) -> String? {
         guard let s = try? f.snapshot() else { return nil }

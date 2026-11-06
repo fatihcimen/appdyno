@@ -59,9 +59,9 @@ extension Device {
 
     /**
      * The same control (type and identifier) found more than once: the copies a tap would not reach (drawn
-     * under another view, never shown) are marked not visible, so a tool picks the one on screen. Live: the
-     * a real app's home walkthrough keeps a second bubble with its close button under the header; other drivers
-     * report one. XCUI's hittable check decides, only for such duplicates (a few queries).
+     * under another view, never shown) are marked not visible, so a tool picks the one on screen. Live: a real
+     * app's home walkthrough keeps a second bubble with its close button under the header; other drivers report
+     * one. XCUI's hittable check decides, only for such duplicates (a few queries).
      */
     func hideUnreachableCopies(_ c: inout Capture) {
         let key = c.hash
