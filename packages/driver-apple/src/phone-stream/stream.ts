@@ -354,7 +354,7 @@ export class PhoneStream {
 
   /** Ends it, and whether the phone says so; what it did not answer is a false, and its timeout will end it. */
   async stop(): Promise<boolean> {
-    if (this.stopped) return true;
+    if (this.stopped) return false;
     this.stopped = true;
     for (const t of this.timers) clearInterval(t);
     let proved = false;

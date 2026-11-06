@@ -11,7 +11,7 @@ import { Audit, elementNamed, type AuditElement } from './audit.js';
 import { LiveReader, NO_HUB, unreadable } from './live.js';
 import { readServices, takeScreenshot } from './services.js';
 import { openTunnel, PhoneRefusal, readPairRecord } from './tunnel.js';
-import type { ToWorker } from './worker.js';
+import type { ToWorker } from './stream-thread.js';
 
 /** This folder's one way in. All it holds speaks a phone's private services; see `phone-stream-port.ts`. */
 
