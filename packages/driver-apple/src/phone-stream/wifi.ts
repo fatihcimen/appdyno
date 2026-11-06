@@ -58,9 +58,21 @@ export function phonesIn(lines: string[]): FoundPhone[] {
   });
 }
 
-export const findPhones = async () => phonesIn(await browse(['-Z', SERVICE, 'local.'], enough));
+/** What is advertised, once the name wanted is among it or the time is up. */
+const findPhones = async (wanted: string) =>
+  phonesIn(
+    await browse(['-Z', SERVICE, 'local.'], (l) => phonesIn(l).some((p) => p.phone === wanted)),
+  );
 
-const enough = (lines: string[]) => phonesIn(lines).length > 0;
+/**
+ * The phone by its name where that finds it, and else all that are there, as what decides is the key a phone proves it
+ * holds. shortcut: a phone that advertises another name costs a full look at each start; keep the name it is found by if
+ * a real phone turns out to.
+ */
+export function phonesToTry(found: FoundPhone[], name: string) {
+  const named = found.filter((p) => p.phone === name);
+  return named.length ? named : found;
+}
 
 /**
  * The phone's address on a network, from `dns-sd -G`. A phone on a cable also answers by link-local addresses of that
@@ -121,16 +133,16 @@ const identityOf = (udid: string) => {
   return JSON.parse(readFileSync(identityFile(udid), 'utf8')) as Identity;
 };
 
-async function phoneOf(identity: Identity) {
-  const found = (await findPhones()).find((p) => p.phone === identity.phone);
-  if (!found) throw new PhoneRefusal('not-connected', 'the phone is not on this network');
-  return found;
+async function phonesFor(identity: Identity) {
+  const phones = phonesToTry(await findPhones(identity.phone), identity.phone);
+  if (!phones.length) throw new PhoneRefusal('not-connected', 'the phone is not on this network');
+  return phones;
 }
 
 /** Can a stream start: whether the phone is paired, there, and takes a connection. Asks it nothing. */
 export async function wifiCheck(udid: string): Promise<PhoneStreamCheck> {
   try {
-    (await reach(await phoneOf(identityOf(udid)))).socket.destroy();
+    (await reach((await phonesFor(identityOf(udid)))[0]!)).socket.destroy();
     return { ok: true };
   } catch (e) {
     if (e instanceof PhoneRefusal) return { ok: false, need: e.need, detail: e.message };
@@ -155,8 +167,8 @@ export const pskTls = (socket: Socket, key: Buffer) =>
   });
 
 /** A connection on which the phone has taken this Mac for who it says it is. */
-async function provenChannel(identity: Identity) {
-  const { address, socket } = await reach(await phoneOf(identity));
+async function provedBy(phone: FoundPhone, identity: Identity) {
+  const { address, socket } = await reach(phone);
   const channel = new PairingChannel(new FramedLine(socket));
   try {
     await channel.handshake();
@@ -168,6 +180,18 @@ async function provenChannel(identity: Identity) {
     channel.close();
     throw e;
   }
+}
+
+async function provenChannel(identity: Identity) {
+  let refused: unknown;
+  for (const phone of await phonesFor(identity)) {
+    try {
+      return await provedBy(phone, identity);
+    } catch (e) {
+      refused = e;
+    }
+  }
+  throw refused;
 }
 
 /** The same tunnel as by cable, with its packets over TCP and TLS on the network. */

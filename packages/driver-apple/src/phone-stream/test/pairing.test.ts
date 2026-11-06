@@ -6,7 +6,7 @@ import { PairingChannel, type Identity } from '../pairing.js';
 import { N, opack, readTlv, srpClient, TAG, tlv } from '../pairing-wire.js';
 import type { RemoteXpc } from '../remotexpc.js';
 import { PhoneRefusal } from '../tunnel.js';
-import { networkAddress, phonesIn, pskTls } from '../wifi.js';
+import { networkAddress, phonesIn, phonesToTry, pskTls } from '../wifi.js';
 import { XpcInt64 } from '../xpc-codec.js';
 import { FakePhone } from './fake-phone.js';
 
@@ -236,6 +236,14 @@ describe('finding a phone', () => {
     '5E1F._remotepairing._tcp SRV     0 0 49152 Test-iPhone.local. ; Replace with unicast FQDN of target host',
     '5E1F._remotepairing._tcp TXT     "identifier=5E1F0A2B" "authTag=Ab12Cd34" "ver=26" "minVer=8" "flags=0"',
   ];
+
+  it('goes by its name where that finds it, and else tries what is there', () => {
+    const at = (phone: string) => ({ phone, host: `${phone}.local.`, port: 1 });
+    const found = [at('A'), at('B')];
+    expect(phonesToTry(found, 'B')).toEqual([at('B')]);
+    expect(phonesToTry(found, 'C')).toEqual(found);
+    expect(phonesToTry([], 'C')).toEqual([]);
+  });
 
   it('reads its name, host and port from what is advertised', () => {
     expect(phonesIn(browsed)).toEqual([
