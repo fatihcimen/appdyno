@@ -13,7 +13,8 @@ vi.mock('node:os', async (real) => ({
 }));
 afterAll(() => rmSync(home, { recursive: true, force: true }));
 
-const settle = () => new Promise((r) => setTimeout(r, 400));
+/** Only for what must not happen, which no wait can see: all else waits for what it is after. */
+const nothingFor = () => new Promise((r) => setTimeout(r, 400));
 /** A gesture takes real time, and more of it on a loaded Mac: a test waits for its end, not for a guess at it. */
 const WAIT = { timeout: 10_000 };
 
@@ -111,11 +112,11 @@ describe("a window's controls", () => {
 
   it('turns once per press, each way, around the four', async () => {
     const { controls, device } = fixture('android');
+    const turns = vi.mocked(device.setOrientation).mock.calls;
     controls.press('rotateRight');
-    await settle();
+    await vi.waitFor(() => expect(turns).toEqual([[3]]), WAIT);
     controls.press('rotateLeft');
-    await settle();
-    expect(vi.mocked(device.setOrientation).mock.calls).toEqual([[3], [0]]);
+    await vi.waitFor(() => expect(turns).toEqual([[3], [0]]), WAIT);
   });
 
   it('says so when the app in front does not turn, and asks for no turn it would keep', async () => {
@@ -142,8 +143,10 @@ describe("a window's controls", () => {
       },
     });
     controls.press('rotateLeft');
-    await settle();
-    expect(told).toContainEqual({ op: 'note', text: 'no agent here' });
+    await vi.waitFor(
+      () => expect(told).toContainEqual({ op: 'note', text: 'no agent here' }),
+      WAIT,
+    );
   });
 });
 
@@ -159,11 +162,13 @@ describe("a window's captures", () => {
     mkdirSync(join(home, 'Desktop'), { recursive: true });
     const { controls, told } = fixture('ios');
     controls.onWindow({ op: 'control', name: 'screenshot' });
-    await settle();
+    await vi.waitFor(
+      () => expect(told).toContainEqual({ op: 'note', text: 'Saved to the Desktop and copied' }),
+      WAIT,
+    );
     const copied = told.find((m) => m.op === 'copied') as { file: string };
     expect(copied.file).toContain(join(home, 'Desktop'));
     expect(existsSync(copied.file)).toBe(true);
-    expect(told).toContainEqual({ op: 'note', text: 'Saved to the Desktop and copied' });
   });
 
   it('takes a picture with no agent where the device has its own way', async () => {
@@ -172,22 +177,21 @@ describe("a window's captures", () => {
       mirror: { screenshot },
     } as unknown as Partial<Device>);
     controls.onWindow({ op: 'control', name: 'copy' });
-    await settle();
+    await vi.waitFor(() => expect(told.some((m) => m.op === 'copied')).toBe(true), WAIT);
     expect(screenshot).toHaveBeenCalledWith('png');
     expect(device.open).not.toHaveBeenCalled();
-    expect(told.some((m) => m.op === 'copied')).toBe(true);
   });
 
   it("records a stream's own frames, and says so at both ends", async () => {
     const { controls, told, recording } = fixture('android', {}, true);
     controls.onWindow({ op: 'control', name: 'record' });
-    await settle();
+    await vi.waitFor(() => expect(told).toContainEqual({ op: 'recording', on: true }), WAIT);
     expect(recording.start).toHaveBeenCalledOnce();
-    expect(told).toContainEqual({ op: 'recording', on: true });
     controls.onWindow({ op: 'control', name: 'record' });
-    await settle();
-    expect(told).toContainEqual({ op: 'recording', on: false });
-    expect(told).toContainEqual({ op: 'note', text: 'Saved to Movies: 12 frames' });
+    await vi.waitFor(() => {
+      expect(told).toContainEqual({ op: 'recording', on: false });
+      expect(told).toContainEqual({ op: 'note', text: 'Saved to Movies: 12 frames' });
+    }, WAIT);
   });
 
   it("records by the device's own recorder where the picture is no stream", async () => {
@@ -197,8 +201,7 @@ describe("a window's captures", () => {
       recorder: { extension: 'mp4', start, stop },
     });
     controls.onWindow({ op: 'control', name: 'record' });
-    await settle();
-    expect(start).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(start).toHaveBeenCalledOnce(), WAIT);
     expect(recording.start).not.toHaveBeenCalled();
     await controls.end();
     expect(stop).toHaveBeenCalledOnce();
@@ -223,21 +226,23 @@ describe("a window's live numbers", () => {
     } as unknown as Partial<Device>);
     expect(start).not.toHaveBeenCalled();
     controls.onWindow({ op: 'perfWatch', on: true });
-    await settle();
-    expect(told).toContainEqual({ op: 'perf', sample: { at: 1 }, noise: ['mirrored'] });
+    await vi.waitFor(
+      () => expect(told).toContainEqual({ op: 'perf', sample: { at: 1 }, noise: ['mirrored'] }),
+      WAIT,
+    );
     controls.onWindow({ op: 'perfWatch', on: false });
-    await settle();
-    expect(stop).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(stop).toHaveBeenCalledOnce(), WAIT);
   });
 
   it('start an agent only for a device that cannot say what is in front without one', async () => {
-    const live = { liveMetrics: { start: async () => vi.fn() } };
+    const start = vi.fn(async () => vi.fn());
+    const live = { liveMetrics: { start } };
     const answers = fixture('ios', {
       ...live,
       foreground: async () => undefined,
     } as unknown as Partial<Device>);
     answers.controls.onWindow({ op: 'perfWatch', on: true });
-    await settle();
+    await vi.waitFor(() => expect(start).toHaveBeenCalled(), WAIT);
     expect(answers.device.open).not.toHaveBeenCalled();
     const refuses = fixture('android', {
       ...live,
@@ -246,17 +251,17 @@ describe("a window's live numbers", () => {
       },
     } as unknown as Partial<Device>);
     refuses.controls.onWindow({ op: 'perfWatch', on: true });
-    await settle();
-    expect(refuses.device.open).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(refuses.device.open).toHaveBeenCalledOnce(), WAIT);
   });
 
   it('end with the window', async () => {
     const stop = vi.fn();
+    const start = vi.fn(async () => stop);
     const { controls } = fixture('ios', {
-      liveMetrics: { start: async () => stop },
+      liveMetrics: { start },
     } as unknown as Partial<Device>);
     controls.onWindow({ op: 'perfWatch', on: true });
-    await settle();
+    await vi.waitFor(() => expect(start).toHaveBeenCalled(), WAIT);
     await controls.end();
     expect(stop).toHaveBeenCalledOnce();
   });
@@ -264,13 +269,12 @@ describe("a window's live numbers", () => {
   it('end only once a reading under way has, as the device closes next', async () => {
     let finish = () => undefined as void;
     let ended = false;
-    const { controls } = fixture('ios', {
-      liveMetrics: { start: async () => () => new Promise<void>((r) => (finish = r)) },
-    } as unknown as Partial<Device>);
+    const start = vi.fn(async () => () => new Promise<void>((r) => (finish = r)));
+    const { controls } = fixture('ios', { liveMetrics: { start } } as unknown as Partial<Device>);
     controls.onWindow({ op: 'perfWatch', on: true });
-    await settle();
+    await vi.waitFor(() => expect(start).toHaveBeenCalled(), WAIT);
     const ending = controls.end().then(() => (ended = true));
-    await settle();
+    await nothingFor();
     expect(ended).toBe(false);
     finish();
     await ending;
@@ -287,17 +291,20 @@ describe("a window's Apps pane", () => {
   it('lists them', async () => {
     const { controls, told } = fixture('ios', { apps } as unknown as Partial<Device>);
     controls.onWindow({ op: 'app', action: 'list' });
-    await settle();
-    expect(told).toContainEqual({ op: 'apps', apps: [{ id: 'a.b', name: 'App' }] });
+    await vi.waitFor(
+      () => expect(told).toContainEqual({ op: 'apps', apps: [{ id: 'a.b', name: 'App' }] }),
+      WAIT,
+    );
   });
 
   it('launches and quits, on a device made ready for it', async () => {
     const { controls, device } = fixture('ios', { apps } as unknown as Partial<Device>);
     controls.onWindow({ op: 'app', action: 'launch', id: 'a.b' });
     controls.onWindow({ op: 'app', action: 'quit', id: 'a.b' });
-    await settle();
-    expect(device.launch).toHaveBeenCalledWith('a.b');
-    expect(device.terminate).toHaveBeenCalledWith('a.b');
+    await vi.waitFor(() => {
+      expect(device.launch).toHaveBeenCalledWith('a.b');
+      expect(device.terminate).toHaveBeenCalledWith('a.b');
+    }, WAIT);
     expect(device.open).toHaveBeenCalledOnce();
   });
 
@@ -305,9 +312,8 @@ describe("a window's Apps pane", () => {
     apps.uninstall.mockClear();
     const { controls, told } = fixture('ios', { apps } as unknown as Partial<Device>);
     controls.onWindow({ op: 'app', action: 'remove', id: 'a.b' });
-    await settle();
+    await vi.waitFor(() => expect(told.some((m) => m.op === 'apps')).toBe(true), WAIT);
     expect(apps.uninstall).toHaveBeenCalledWith('a.b');
-    expect(told.some((m) => m.op === 'apps')).toBe(true);
   });
 });
 
@@ -474,7 +480,7 @@ describe("a window's measures", () => {
       controls.onWindow({ op: 'perfWatch', on: true });
       await vi.waitFor(() => expect(start).toHaveBeenCalledOnce(), WAIT);
       vi.advanceTimersByTime(5_000);
-      await settle();
+      await nothingFor();
       expect(start).toHaveBeenCalledOnce();
       frontApp.mockResolvedValue('dev.other');
       vi.advanceTimersByTime(5_000);

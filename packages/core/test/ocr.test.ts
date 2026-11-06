@@ -139,9 +139,8 @@ printf '${ACCURATE}' "$3" > "$2/accurate.json"
   it('starts no second accurate scan while one is at work, and does not wait for it', async () => {
     const slow = scanner(6);
     await readPicture(Buffer.from('a'), slow, 1);
-    const at = Date.now();
     expect(texts(await readPicture(Buffer.from('b'), slow, 1))).toEqual(['fast', 'fast']);
-    expect(Date.now() - at).toBeLessThan(1_000);
+    // answered while the first is still at work: that is the order that shows it did not wait, however busy this Mac is
     const running = join(process.env.APPDYNO_STATE_DIR!, 'picture-words/running');
     expect(readFileSync(running, 'utf8')).toBe(createHash('sha256').update('a').digest('hex'));
   }, 15_000);

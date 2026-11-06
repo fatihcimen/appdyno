@@ -55,7 +55,8 @@ const ANDROID = tree(1080, 2400, [
   node('add', [900, 200, 1040, 260]),
 ]);
 const touch = (p: 0 | 1 | 2, x: number, y: number): InputEvent => ({ kind: 'touch', p, x, y });
-const settled = () => new Promise((r) => setTimeout(r, 400));
+/** What a window does takes real time, and more of it on a loaded Mac: a test waits for what it is after. */
+const landed = (check: () => void) => vi.waitFor(check, { timeout: 10_000 });
 
 const run = (totalMs: number, samples: number[], steps: [string, number][]): JourneyAnswer =>
   ({
@@ -75,13 +76,14 @@ describe('two windows as one hand', () => {
     const pair = pairWindows([a.it, b.it]);
     expect(pair.input('a', touch(0, 0.25, 0.125))).toBe(true);
     pair.input('a', touch(2, 0.25, 0.125));
-    await settled();
-    expect(b.sent[0]).toMatchObject({ p: 0 });
+    await landed(() => {
+      expect(b.sent[0]).toMatchObject({ p: 0 });
+      expect(b.told).toContainEqual(expect.objectContaining({ op: 'touchAt' }));
+      expect(a.told).toContainEqual(expect.objectContaining({ op: 'touchAt', x: 0.25 }));
+    });
     const down = b.sent[0] as { x: number; y: number };
     expect(down.x).toBeCloseTo(300 / 1080);
     expect(down.y).toBeCloseTo(1050 / 2400);
-    expect(b.told).toContainEqual(expect.objectContaining({ op: 'touchAt' }));
-    expect(a.told).toContainEqual(expect.objectContaining({ op: 'touchAt', x: 0.25 }));
   });
 
   it('holds the touch of the window it fell on until the screens are read, and keeps it a tap', async () => {
@@ -95,8 +97,7 @@ describe('two windows as one hand', () => {
     expect(a.sent).toEqual([]);
     const at = Date.now();
     answer(IPHONE);
-    await settled();
-    expect(a.sent.map((e) => (e as { p: number }).p)).toEqual([0, 2]);
+    await landed(() => expect(a.sent.map((e) => (e as { p: number }).p)).toEqual([0, 2]));
     expect(Date.now() - at).toBeGreaterThanOrEqual(80);
   });
 
@@ -105,10 +106,13 @@ describe('two windows as one hand', () => {
     const pair = pairWindows([a.it, b.it]);
     pair.input('a', touch(0, 0.85, 0.4));
     pair.input('a', touch(2, 0.85, 0.4));
-    await settled();
+    await landed(() => {
+      expect(a.sent).toHaveLength(2);
+      expect(b.told).toContainEqual(
+        expect.objectContaining({ op: 'pair', failing: 'No Add here' }),
+      );
+    });
     expect(b.sent).toEqual([]);
-    expect(a.sent).toHaveLength(2);
-    expect(b.told).toContainEqual(expect.objectContaining({ op: 'pair', failing: 'No Add here' }));
   });
 
   it('lets a drag go on from the same place where the other has no such thing', async () => {
@@ -117,12 +121,13 @@ describe('two windows as one hand', () => {
     pair.input('a', touch(0, 0.85, 0.4));
     pair.input('a', touch(1, 0.85, 0.5));
     pair.input('a', touch(2, 0.85, 0.6));
-    await settled();
-    expect(b.sent).toMatchObject([
-      { p: 0, x: 0.85, y: 0.4 },
-      { p: 1, x: 0.85, y: 0.5 },
-      { p: 2, x: 0.85, y: 0.6 },
-    ]);
+    await landed(() =>
+      expect(b.sent).toMatchObject([
+        { p: 0, x: 0.85, y: 0.4 },
+        { p: 1, x: 0.85, y: 0.5 },
+        { p: 2, x: 0.85, y: 0.6 },
+      ]),
+    );
     expect(b.told).not.toContainEqual(expect.objectContaining({ failing: expect.anything() }));
   });
 
@@ -132,7 +137,7 @@ describe('two windows as one hand', () => {
     pair.input('a', touch(0, 0.25, 0.125));
     pair.input('a', touch(1, 0.25, 0.225));
     pair.input('a', touch(2, 0.25, 0.325));
-    await settled();
+    await landed(() => expect(b.sent).toHaveLength(3));
     const [down, moved] = b.sent as { y: number }[];
     expect(moved!.y - down!.y).toBeCloseTo(0.1);
   });
@@ -144,8 +149,7 @@ describe('two windows as one hand', () => {
     const pair = pairWindows([a.it, b.it]);
     pair.input('a', touch(0, 0.2, 0.2));
     pair.input('a', touch(2, 0.2, 0.2));
-    await settled();
-    expect(b.sent[0]).toMatchObject({ x: 0.75, y: 0.75 });
+    await landed(() => expect(b.sent[0]).toMatchObject({ x: 0.75, y: 0.75 }));
   });
 
   it('takes the same one among those called alike', async () => {
@@ -157,8 +161,7 @@ describe('two windows as one hand', () => {
     const pair = pairWindows([a.it, b.it]);
     pair.input('a', touch(0, 0.05, 0.35));
     pair.input('a', touch(2, 0.05, 0.35));
-    await settled();
-    expect(b.sent[0]).toMatchObject({ x: 0.55, y: 0.35 });
+    await landed(() => expect(b.sent[0]).toMatchObject({ x: 0.55, y: 0.35 }));
   });
 
   it('sends a finger on nothing named to the same place', async () => {
@@ -166,8 +169,7 @@ describe('two windows as one hand', () => {
     const pair = pairWindows([a.it, b.it]);
     pair.input('a', touch(0, 0.5, 0.9));
     pair.input('a', touch(2, 0.5, 0.9));
-    await settled();
-    expect(b.sent[0]).toMatchObject({ x: 0.5, y: 0.9 });
+    await landed(() => expect(b.sent[0]).toMatchObject({ x: 0.5, y: 0.9 }));
   });
 
   it('does not take a layout with an id for something a person meant', async () => {
@@ -176,8 +178,7 @@ describe('two windows as one hand', () => {
     const pair = pairWindows([a.it, b.it]);
     pair.input('a', touch(0, 0.5, 0.5));
     pair.input('a', touch(2, 0.5, 0.5));
-    await settled();
-    expect(b.sent[0]).toMatchObject({ x: 0.5, y: 0.5 });
+    await landed(() => expect(b.sent[0]).toMatchObject({ x: 0.5, y: 0.5 }));
   });
 
   it('knows a field with nothing in it by its id', async () => {
@@ -189,8 +190,7 @@ describe('two windows as one hand', () => {
     const pair = pairWindows([a.it, b.it]);
     pair.input('a', touch(0, 0.5, 0.2));
     pair.input('a', touch(2, 0.5, 0.2));
-    await settled();
-    expect(b.sent[0]).toMatchObject({ x: 0.5, y: 0.375 });
+    await landed(() => expect(b.sent[0]).toMatchObject({ x: 0.5, y: 0.375 }));
   });
 
   it('sends a touch on where a screen cannot be read, and says so', async () => {
@@ -201,9 +201,10 @@ describe('two windows as one hand', () => {
     const pair = pairWindows([a.it, b.it]);
     pair.input('a', touch(0, 0.25, 0.125));
     pair.input('a', touch(2, 0.25, 0.125));
-    await settled();
-    expect(b.sent[0]).toMatchObject({ x: 0.25, y: 0.125 });
-    expect(b.told).toContainEqual(expect.objectContaining({ op: 'note' }));
+    await landed(() => {
+      expect(b.sent[0]).toMatchObject({ x: 0.25, y: 0.125 });
+      expect(b.told).toContainEqual(expect.objectContaining({ op: 'note' }));
+    });
   });
 
   it('says so when the other window is not live, and the touch stands on this one', async () => {
@@ -212,10 +213,11 @@ describe('two windows as one hand', () => {
     const pair = pairWindows([a.it, b.it]);
     pair.input('a', touch(0, 0.25, 0.125));
     pair.input('a', touch(2, 0.25, 0.125));
-    await settled();
+    await landed(() => {
+      expect(a.sent).toHaveLength(2);
+      expect(b.told).toContainEqual(expect.objectContaining({ failing: 'the b is not live' }));
+    });
     expect(b.sent).toEqual([]);
-    expect(a.sent).toHaveLength(2);
-    expect(b.told).toContainEqual(expect.objectContaining({ failing: 'the b is not live' }));
   });
 
   it('says a touch that did not land, on the window it did not land on, and clears it on one that did', async () => {
@@ -224,14 +226,16 @@ describe('two windows as one hand', () => {
     b.session.status.inputFailed = 1;
     pair.input('a', touch(0, 0.25, 0.125));
     pair.input('a', touch(2, 0.25, 0.125));
-    await settled();
-    expect(b.told).toContainEqual(expect.objectContaining({ failing: 'That did not land' }));
+    await landed(() =>
+      expect(b.told).toContainEqual(expect.objectContaining({ failing: 'That did not land' })),
+    );
     expect(a.told).not.toContainEqual(expect.objectContaining({ failing: expect.anything() }));
     pair.input('a', touch(0, 0.25, 0.125));
     pair.input('a', touch(2, 0.25, 0.125));
-    await settled();
-    expect(b.told.at(-1)).toMatchObject({ op: 'pair', both: true });
-    expect(b.told.at(-1)).not.toHaveProperty('failing');
+    await landed(() => {
+      expect(b.told.at(-1)).toMatchObject({ op: 'pair', both: true });
+      expect(b.told.at(-1)).not.toHaveProperty('failing');
+    });
   });
 
   it('leaves a touch to its window when told to, and goes to both again', () => {
@@ -255,13 +259,14 @@ describe('two windows as one hand', () => {
     a.press.mockReturnValue(true);
     pair.input('a', { kind: 'button', name: 'home' });
     pair.input('a', { kind: 'text', s: 'hi' });
-    await settled();
-    expect(a.sent).toEqual([{ kind: 'text', s: 'hi' }]);
-    expect(b.press).toHaveBeenCalledWith('home');
-    expect(b.sent).toEqual([
-      { kind: 'button', name: 'home' },
-      { kind: 'text', s: 'hi' },
-    ]);
+    await landed(() => {
+      expect(a.sent).toEqual([{ kind: 'text', s: 'hi' }]);
+      expect(b.press).toHaveBeenCalledWith('home');
+      expect(b.sent).toEqual([
+        { kind: 'button', name: 'home' },
+        { kind: 'text', s: 'hi' },
+      ]);
+    });
   });
 
   it('says a press that did not land, on the window it did not land on', async () => {
@@ -269,8 +274,9 @@ describe('two windows as one hand', () => {
     const pair = pairWindows([a.it, b.it]);
     b.session.status.inputFailed = 1;
     pair.input('a', { kind: 'button', name: 'back' });
-    await settled();
-    expect(b.told).toContainEqual(expect.objectContaining({ failing: 'That did not land' }));
+    await landed(() =>
+      expect(b.told).toContainEqual(expect.objectContaining({ failing: 'That did not land' })),
+    );
   });
 
   it('runs a journey on each in turn, and tells each how it stands to the other', async () => {
@@ -281,24 +287,28 @@ describe('two windows as one hand', () => {
     const a = side('a', IPHONE, run(1000, [990, 995, 1000, 1005, 1010], steps(600)));
     const b = side('b', ANDROID, run(1500, [1490, 1495, 1500, 1505, 1510], steps(1100)));
     pairWindows([a.it, b.it]).control({ op: 'control', name: 'journey', file: 'x.flow' });
-    await settled();
-    expect(b.told).toContainEqual(
-      expect.objectContaining({
-        op: 'measured',
-        title: 'Against the a',
-        detail: '50 % slower, 1000 ms there',
-      }),
-    );
-    expect(a.told).toContainEqual(
-      expect.objectContaining({
-        title: 'Against the b',
-        detail: '33 % faster, 1500 ms there',
-      }),
-    );
-    expect(b.told).toContainEqual(
-      expect.objectContaining({ title: 'Most in tap Send', detail: '1100 ms here, 600 ms there' }),
-    );
-    expect(a.told).toContainEqual({ op: 'measuring', line: 'Waiting for the b' });
+    await landed(() => {
+      expect(b.told).toContainEqual(
+        expect.objectContaining({
+          op: 'measured',
+          title: 'Against the a',
+          detail: '50 % slower, 1000 ms there',
+        }),
+      );
+      expect(a.told).toContainEqual(
+        expect.objectContaining({
+          title: 'Against the b',
+          detail: '33 % faster, 1500 ms there',
+        }),
+      );
+      expect(b.told).toContainEqual(
+        expect.objectContaining({
+          title: 'Most in tap Send',
+          detail: '1100 ms here, 600 ms there',
+        }),
+      );
+      expect(a.told).toContainEqual({ op: 'measuring', line: 'Waiting for the b' });
+    });
   });
 
   it('calls no difference the test does not', async () => {
@@ -306,9 +316,10 @@ describe('two windows as one hand', () => {
     const a = side('a', IPHONE, run(1000, [990, 995, 1000, 1005, 1010], steps));
     const b = side('b', ANDROID, run(1010, [1000, 1005, 1010, 1015, 1020], steps));
     pairWindows([a.it, b.it]).control({ op: 'control', name: 'journey', file: 'x.flow' });
-    await settled();
-    expect(a.told).toContainEqual(
-      expect.objectContaining({ detail: 'No clear difference, 1010 ms there' }),
+    await landed(() =>
+      expect(a.told).toContainEqual(
+        expect.objectContaining({ detail: 'No clear difference, 1010 ms there' }),
+      ),
     );
   });
 
@@ -317,13 +328,14 @@ describe('two windows as one hand', () => {
     const a = side('a', IPHONE, run(1000, [990, 995, 1000, 1005, 1010], steps));
     const b = side('b', ANDROID, run(5000, [4990, 5010], steps));
     pairWindows([a.it, b.it]).control({ op: 'control', name: 'journey', file: 'x.flow' });
-    await settled();
-    expect(a.told).toContainEqual(
-      expect.objectContaining({
-        title: 'Against the b',
-        detail: 'Could not judge: 2 of 5 samples',
-        flagged: true,
-      }),
+    await landed(() =>
+      expect(a.told).toContainEqual(
+        expect.objectContaining({
+          title: 'Against the b',
+          detail: 'Could not judge: 2 of 5 samples',
+          flagged: true,
+        }),
+      ),
     );
   });
 
@@ -332,9 +344,10 @@ describe('two windows as one hand', () => {
     const a = side('a', IPHONE, none());
     const b = side('b', ANDROID, none());
     pairWindows([a.it, b.it]).control({ op: 'control', name: 'journey', file: 'x.flow' });
-    await settled();
-    expect(b.told).toContainEqual(
-      expect.objectContaining({ detail: 'Could not judge: 0 of 5 samples' }),
+    await landed(() =>
+      expect(b.told).toContainEqual(
+        expect.objectContaining({ detail: 'Could not judge: 0 of 5 samples' }),
+      ),
     );
   });
 
@@ -342,22 +355,26 @@ describe('two windows as one hand', () => {
     const a = side('a', IPHONE, run(1000, [1000], [['launch', 1000]]));
     const b = side('b', ANDROID);
     pairWindows([a.it, b.it]).control({ op: 'control', name: 'journey', file: 'x.flow' });
-    await settled();
-    expect(b.told).toContainEqual(expect.objectContaining({ failing: 'The journey failed here' }));
-    expect(a.told).toContainEqual(
-      expect.objectContaining({
-        title: 'Nothing to compare',
-        detail: 'The journey failed on the b',
-      }),
-    );
+    await landed(() => {
+      expect(b.told).toContainEqual(
+        expect.objectContaining({ failing: 'The journey failed here' }),
+      );
+      expect(a.told).toContainEqual(
+        expect.objectContaining({
+          title: 'Nothing to compare',
+          detail: 'The journey failed on the b',
+        }),
+      );
+    });
   });
 
   it('leaves no window waiting when the journey failed on it first', async () => {
     const a = side('a', IPHONE);
     const b = side('b', ANDROID, run(1000, [1000], [['launch', 1000]]));
     pairWindows([a.it, b.it]).control({ op: 'control', name: 'journey', file: 'x.flow' });
-    await settled();
-    expect(a.told.at(-1)).toMatchObject({ op: 'measured', title: 'Nothing to compare' });
+    await landed(() =>
+      expect(a.told.at(-1)).toMatchObject({ op: 'measured', title: 'Nothing to compare' }),
+    );
   });
 
   it('carries no touch while a journey runs', () => {
