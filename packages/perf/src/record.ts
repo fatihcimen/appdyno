@@ -165,6 +165,12 @@ export function measureOf(kind: string): MeasureId | undefined {
 /** A journey's time from start to end: its kind keeps the row's first record, what its cell and trend read. */
 export const JOURNEY_TOTAL = 'journey.total_ms';
 
+/**
+ * How many steps of an iteration never settled: such a step has no time, and a gate goes by the kinds a run holds, so
+ * this is what it sees of one that stopped settling in every iteration.
+ */
+export const JOURNEY_UNSETTLED = 'journey.unsettled';
+
 /** A step's kind: `journey.<number>_<its line>.<what>`. What a line holds that is no word reads as `_`. */
 export const journeyKind = (n: number, line: string, what: string): `journey.${string}` =>
   `journey.${String(n).padStart(2, '0')}_${line

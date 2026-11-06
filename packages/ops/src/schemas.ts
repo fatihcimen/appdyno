@@ -256,13 +256,17 @@ export const FlowOut = z.object({
       raw: z.string(),
       scenario: z.string(),
       iterations: z.number().int(),
-      totalMs: z.number(),
-      /** The whole of each iteration, for a test against another run. */
+      /** None where no iteration settled at every step. */
+      totalMs: z.number().optional(),
+      /** The whole of each iteration that has one, for a test against another run. */
       samples: z.array(z.number()),
       steps: z.array(
         z.object({
           step: z.string(),
-          ms: z.number(),
+          /** None where it never settled: what ended it was the tool's deadline. */
+          ms: z.number().optional(),
+          /** In how many iterations it never settled. */
+          unsettled: z.number().int().optional(),
           framesP95Ms: z.number().optional(),
           framesWorstMs: z.number().optional(),
           memoryKb: z.number().optional(),

@@ -312,6 +312,32 @@ describe('two windows as one hand', () => {
     );
   });
 
+  it('calls no difference of a side with too few whole runs, and could not judge is what it says', async () => {
+    const steps: [string, number][] = [['launch', 1000]];
+    const a = side('a', IPHONE, run(1000, [990, 995, 1000, 1005, 1010], steps));
+    const b = side('b', ANDROID, run(5000, [4990, 5010], steps));
+    pairWindows([a.it, b.it]).control({ op: 'control', name: 'journey', file: 'x.flow' });
+    await settled();
+    expect(a.told).toContainEqual(
+      expect.objectContaining({
+        title: 'Against the b',
+        detail: 'Could not judge: 2 of 5 samples',
+        flagged: true,
+      }),
+    );
+  });
+
+  it('says a journey with no whole on either side as one it could not judge', async () => {
+    const none = () => ({ ...run(0, [], []), totalMs: undefined, steps: [{ step: 'launch' }] });
+    const a = side('a', IPHONE, none());
+    const b = side('b', ANDROID, none());
+    pairWindows([a.it, b.it]).control({ op: 'control', name: 'journey', file: 'x.flow' });
+    await settled();
+    expect(b.told).toContainEqual(
+      expect.objectContaining({ detail: 'Could not judge: 0 of 5 samples' }),
+    );
+  });
+
   it('marks the window a journey failed on, and leaves the other nothing to compare', async () => {
     const a = side('a', IPHONE, run(1000, [1000], [['launch', 1000]]));
     const b = side('b', ANDROID);

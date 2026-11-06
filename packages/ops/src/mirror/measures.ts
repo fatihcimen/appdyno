@@ -124,8 +124,8 @@ export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasur
         ran,
         said: {
           title: 'Journey',
-          value: `${Math.round(ran.totalMs)} ms`,
-          flagged: false,
+          value: ran.totalMs === undefined ? 'not measured' : `${Math.round(ran.totalMs)} ms`,
+          flagged: ran.totalMs === undefined,
           ...judged(ran.scenario, `median of ${ran.iterations}`, {
             virtualDevice: device.virtual,
             noise: ran.noise,

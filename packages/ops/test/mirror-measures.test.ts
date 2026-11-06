@@ -70,6 +70,16 @@ describe('what a window measures', () => {
     expect(words.flagged).toBe(true);
   });
 
+  it('says a journey with no whole as not measured, for a person to look at', async () => {
+    const device = new FakeDevice();
+    device.settles = false;
+    const file = join(state, 'moving.flow');
+    writeFileSync(file, 'launch\ntap text="Form"\n');
+    const { ran, said } = await measuresOn(device).journey(file, 'dev.app', () => undefined);
+    expect(ran.totalMs).toBeUndefined();
+    expect(said).toMatchObject({ value: 'not measured', flagged: true });
+  });
+
   it('holds the device only while it runs, and leaves the window its device', async () => {
     const device = new FakeDevice();
     const close = vi.spyOn(device, 'close');

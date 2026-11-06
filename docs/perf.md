@@ -306,6 +306,7 @@ On Android 15 and later, `perf_snapshot` with `also: startInfo` reads `dumpsys a
 | `journey.<n>_<line>.ms`                                | the device's own count from the action to a settled screen; `launch`, `open_link`, `scroll_to`, `wait_for`, `assert` and what has no such count are the action on this Mac's clock, `throughHost` |
 | `journey.<n>_<line>.frames_p95_ms`, `.frames_worst_ms` | the step's frames: reset before its action, read after it settled; none when it drew nothing                                                                                                      |
 | `journey.<n>_<line>.memory_kb`                         | what `perf_snapshot` reads, after it settled                                                                                                                                                      |
+| `journey.unsettled`                                    | how many of an iteration's steps never settled: such a step keeps no time and its iteration no whole, as the tool's deadline ended it; its frames and memory are read at that deadline            |
 
 The reads are between the steps, so they cost time but are in no step's number. A step after which the app does not run has no reading, and the run goes on.
 

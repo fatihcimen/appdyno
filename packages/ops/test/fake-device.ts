@@ -199,6 +199,8 @@ export class FakeDevice extends DeviceActions implements Device {
   calls: { name: string; args: unknown[] }[] = [];
   typed: string[] = [];
   fail: DeviceError | undefined;
+  /** Off: an action answers as an agent does at its deadline, with the screen still moving. */
+  settles = true;
   /** Thrown by open: a device that cannot start its agent. */
   openError: DeviceError | undefined;
 
@@ -270,7 +272,7 @@ export class FakeDevice extends DeviceActions implements Device {
     }
     const t = this.current();
     return {
-      ...(opts.settle && { settle: { settled: true, ms: 120, reads: 1 } }),
+      ...(opts.settle && { settle: { settled: this.settles, ms: 120, reads: 1 } }),
       ...(opts.read === 'tree' && { tree: t }),
       ...(opts.read === 'hash' && { hash: t.hash }),
     };

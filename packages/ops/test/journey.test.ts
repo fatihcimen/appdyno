@@ -24,15 +24,21 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 
-/** A phone whose tap on "Form" takes `formMs` and any other touch 200 ms, a little apart from one to the next. */
+/**
+ * A phone whose tap on "Form" takes `formMs` and any other touch 200 ms, a little apart from one to the next. Its tap on
+ * "Form" stops settling for as many times as `formNeverSettles` says, and answers at the tool's 3 s.
+ */
 class TimedPhone extends FakeDevice {
   formMs = 400;
+  formNeverSettles = 0;
   private tick = 0;
   override async act(action: ActParams, opts: ActOptions = {}) {
     const onForm = action.kind === 'tap' && action.y >= 300 && action.y <= 400;
+    const moving = onForm && this.formNeverSettles > 0;
+    if (moving) this.formNeverSettles--;
     const r = await super.act(action, opts);
-    const ms = (onForm ? this.formMs : 200) + (this.tick++ % 3);
-    return { ...r, ...(r.settle && { settle: { ...r.settle, ms } }) };
+    const ms = moving ? 3_000 : (onForm ? this.formMs : 200) + (this.tick++ % 3);
+    return { ...r, ...(r.settle && { settle: { ...r.settle, ms, settled: !moving } }) };
   }
 }
 
@@ -128,6 +134,46 @@ describe('a journey as a performance scenario', () => {
     expect(page).toContain('class="split"');
     expect(page).toContain('Against the baseline');
     expect(await newestRun(measurements)).toBeDefined();
+  });
+
+  it('keeps no time for a step that never settled, and no whole for its iteration', async () => {
+    const { device, call, measurements } = phone();
+    const r0 = call('flow', { action: 'run', file: flowFile(), iterations: 5 });
+    // the warm-up settles, and the first two iterations do not
+    const left = device.act.bind(device);
+    let forms = 0;
+    device.act = async (action, opts) => {
+      if (action.kind === 'tap' && ++forms === 2) device.formNeverSettles = 2;
+      return left(action, opts);
+    };
+    const r = await r0;
+    const run = await newestRun(measurements);
+    const form = named(run, '02_tap_text_Form.ms')!;
+    expect(form.samples).toHaveLength(3);
+    expect(Math.max(...form.samples)).toBeLessThan(500);
+    expect(named(run, 'journey.total_ms')!.samples).toHaveLength(3);
+    expect(named(run, 'journey.unsettled')!.samples).toEqual([1, 1, 0, 0, 0]);
+    expect(r.data.journey!.steps[1]).toMatchObject({ unsettled: 2 });
+    expect(r.data.journey!.steps[1]!.ms).toBeLessThan(500);
+    expect(r.data.journey!.note).toContain('step 2 never settled in 2 of 5');
+    expect(r.text).toContain('(never settled in 2 of 5)');
+    expect(r.text).toContain('as what ended them was the deadline');
+  });
+
+  it('says a step that never settled at all as no time, with no number to mistake for one', async () => {
+    const { device, call, measurements } = phone();
+    device.formNeverSettles = Infinity;
+    const r = await call('flow', { action: 'run', file: flowFile(), iterations: 5 });
+    const run = await newestRun(measurements);
+    expect(named(run, '02_tap_text_Form.ms')).toBeUndefined();
+    expect(named(run, 'journey.total_ms')).toBeUndefined();
+    expect(run[0]!.kind).toBe('journey.unsettled');
+    const j = r.data.journey!;
+    expect(j.totalMs).toBeUndefined();
+    expect(j.samples).toEqual([]);
+    expect(j.steps[1]!.ms).toBeUndefined();
+    expect(r.text).toContain('no whole: none settled at every step');
+    expect(r.text).toMatch(/2\. tap text="Form": no time \(never settled in 5 of 5\)/);
   });
 
   it('on a loaded Mac a phone gates what it timed itself, and leaves out what went through the Mac', async () => {

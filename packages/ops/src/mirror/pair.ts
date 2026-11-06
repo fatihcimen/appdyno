@@ -1,5 +1,5 @@
 import { pause, type InputEvent, type MirrorSession, type ViewerMessage } from '@appdyno/core';
-import { pairedChange } from '@appdyno/perf';
+import { MIN_SAMPLES, pairedChange } from '@appdyno/perf';
 import { NODE_FLAGS, type Tree, type WireNode } from '@appdyno/protocol';
 import type { JourneyAnswer } from '../flow/journey.js';
 
@@ -93,10 +93,25 @@ const shifted = (e: Touch, way: Point): Touch => ({
 
 /** This window's journey against the other's, by the test the gate makes of two conditions measured in turns. */
 function against(name: string, mine: JourneyAnswer, theirs: JourneyAnswer) {
+  const fewest = Math.min(mine.samples.length, theirs.samples.length);
+  // an iteration with a step that never settled has no whole, and too few of them are no difference found
+  if (fewest < MIN_SAMPLES)
+    return [
+      {
+        ok: true,
+        why: `${mine.samples.length} whole runs here, ${theirs.samples.length} there`,
+        flagged: true,
+        title: `Against ${name}`,
+        detail: `Could not judge: ${fewest} of ${MIN_SAMPLES} samples`,
+      },
+    ];
   const { moved, before, called } = pairedChange(theirs.samples, mine.samples, 'ms');
   const percent = Math.round((Math.abs(moved) / before) * 100);
   const shown = (ms: number) => `${Math.round(ms)} ms`;
-  const steps = mine.steps.map((s, i) => ({ ...s, there: theirs.steps[i]?.ms ?? s.ms }));
+  const steps = mine.steps.flatMap((s, i) => {
+    const there = theirs.steps[i]?.ms ?? s.ms;
+    return s.ms === undefined || there === undefined ? [] : [{ ...s, ms: s.ms, there }];
+  });
   const apart = (s: (typeof steps)[number]) => Math.abs(s.ms - s.there);
   const most = steps.reduce((a, b) => (apart(b) > apart(a) ? b : a), steps[0]!);
   const why = [
@@ -108,7 +123,7 @@ function against(name: string, mine: JourneyAnswer, theirs: JourneyAnswer) {
     ? `${percent} % ${moved > 0 ? 'slower' : 'faster'}`
     : 'No clear difference';
   return [
-    { ...row, title: `Against ${name}`, detail: `${verdict}, ${shown(theirs.totalMs)} there` },
+    { ...row, title: `Against ${name}`, detail: `${verdict}, ${shown(before)} there` },
     ...(called
       ? [
           {
