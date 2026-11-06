@@ -201,6 +201,8 @@ export class FakeDevice extends DeviceActions implements Device {
   fail: DeviceError | undefined;
   /** Off: an action answers as an agent does at its deadline, with the screen still moving. */
   settles = true;
+  /** What a settle says it watched for a system alert, as an iPhone's runner does. */
+  idleMs: number | undefined;
   /** Thrown by open: a device that cannot start its agent. */
   openError: DeviceError | undefined;
 
@@ -291,7 +293,14 @@ export class FakeDevice extends DeviceActions implements Device {
     }
     const t = this.current();
     return {
-      ...(opts.settle && { settle: { settled: this.settles, ms: 120, reads: 1 } }),
+      ...(opts.settle && {
+        settle: {
+          settled: this.settles,
+          ms: 120,
+          reads: 1,
+          ...(this.idleMs && { idleMs: this.idleMs }),
+        },
+      }),
       ...(opts.read === 'tree' && { tree: t }),
       ...(opts.read === 'hash' && { hash: t.hash }),
     };

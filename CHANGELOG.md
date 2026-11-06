@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A tap on an iPhone that changed nothing watches for a system alert on a screen with a hidden copy of a control too, where it did not run at all, and its answer says no alert came.
 - `perf_snapshot` on an iPhone says when another app, or a locked phone's home screen, stood in front, and keeps no CPU number from it: an app the phone had stopped read 0 %, and the gate called a real cost no regression. It asks only if a runner is already up.
 - `perf_scroll` goes on into new rows for as long as a list moves, read from the screen, and brings it back only once the list has ended, which the answer says. A round past a list's end read as smooth on Android, from frames of nothing, and on a real iPhone it failed the call with its good rounds lost.
 - An agent that stops under a session says so, on the call's progress and on stderr, where a read used to start another and go on as though nothing had happened. A device suite that loses one fails, unless the test ended it on purpose.

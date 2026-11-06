@@ -26,8 +26,8 @@ const MAYBE_MOVING = 'the screen may still be changing';
 const FAST_READ =
   '; read at the fast level: letters outside English, French, Italian, German, Spanish and Portuguese may be wrong';
 
-const noChange = (ms: number) =>
-  `no change seen in ${ms} ms; if a slow reaction is expected, use wait_for`;
+const noChange = (ms: number, watchedMs?: number) =>
+  `no change seen in ${ms} ms${watchedMs ? `, and no system alert in ${(watchedMs / 1000).toFixed(1)} s` : ''}; if a slow reaction is expected, use wait_for`;
 const differs = (d: ScreenDiff) => d.added.length + d.removed.length + d.changed.length > 0;
 
 /** What is known to keep a screen busy: the agent's own reasons, the wait its settle took, a spinner on the screen. */
@@ -163,6 +163,8 @@ type Aftermath = {
   settled: boolean | undefined;
   moving?: boolean | undefined;
   ms: number;
+  /** What the device watched for a system alert, past `ms`. */
+  idleMs?: number | undefined;
   busy: string[];
   started: number;
   pid: string | undefined;
@@ -198,7 +200,7 @@ async function afterAction(
     ...(appDied
       ? [`the app died: ${appDied.reason}${appDied.file ? ` (${appDied.file})` : ''}`]
       : []),
-    ...(changed === false && !o.launched ? [noChange(o.ms)] : []),
+    ...(changed === false && !o.launched ? [noChange(o.ms, o.idleMs)] : []),
   ];
   return reply(
     [`${done}${fg}${moving}`, ...notes, diff ?? headerOf(screen, clean)].join('\n'),
@@ -254,6 +256,7 @@ async function act(
     settled: r.settle?.settled,
     moving: r.settle?.moving,
     ms: r.settle?.ms ?? Date.now() - started,
+    idleMs: r.settle?.idleMs,
     busy: busyReasons(r, screen),
     started,
     settleMs: r.settle?.ms,

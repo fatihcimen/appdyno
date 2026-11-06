@@ -3,6 +3,7 @@ import { IosSimulatorDevice, Simctl, buildScreen, type Screen } from './workspac
 import { PROTOCOL, type Tree } from '@appdyno/protocol';
 import { join } from 'node:path';
 import { IosDevice } from '../packages/driver-apple/src/device.js';
+import { IosRunnerLauncher } from '../packages/driver-apple/src/index.js';
 import { directChecks } from '../packages/driver-apple/src/provider.js';
 import { DirectSim } from '../packages/driver-apple/src/simdirect.js';
 import { learnCopies, sameTree, withoutCopies } from '../packages/driver-apple/src/simtree.js';
@@ -120,6 +121,41 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     const shown = nodes.filter((n) => n.f & 1);
     expect(shown).toHaveLength(1);
     expect(shown[0]!.b[0]).toBeGreaterThan(Math.min(...nodes.map((n) => n.b[0])));
+  });
+
+  // asked of the runner itself: a simulator's own touches go past it, and a phone's are all it has
+  it('watches for a system alert after a button that changes nothing, with a copy on the screen or not', async () => {
+    await home();
+    await d.tree();
+    const { rpc } = await new IosRunnerLauncher(udid!).connect(APP);
+    type Read = { nodes: { id?: string; b: number[]; f: number }[]; hash?: string };
+    const read = async () => (await rpc.call('tree.get', {}, { timeoutMs: 20_000 })).result as Read;
+    try {
+      for (const [screen, id] of [
+        ['a11y', 'a11y_ok'],
+        ['form', 'dup_close'],
+      ] as const) {
+        await d.openUrl(`appdyno-fixture://open/${screen}`, APP);
+        await new Promise((r) => setTimeout(r, 2_000));
+        const before = await read();
+        const [x0, y0, x1, y1] = before.nodes.find((n) => n.id === id && n.f & 1)!.b;
+        const { result } = await rpc.call(
+          'act',
+          {
+            action: { kind: 'tap', x: (x0! + x1!) / 2, y: (y0! + y1!) / 2 },
+            settle: SETTLE,
+            read: 'hash',
+            ...(before.hash && { before: before.hash }),
+          } as never,
+          { timeoutMs: 20_000 },
+        );
+        const { settle } = result as { settle?: { idleMs?: number } };
+        console.log(`${id}: ${JSON.stringify(settle)}`);
+        expect(settle?.idleMs, id).toBeGreaterThan(0);
+      }
+    } finally {
+      rpc.close();
+    }
   });
 
   it("leaves a scroll view's bars out of the screen, and the app's name too", async () => {

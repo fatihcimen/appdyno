@@ -36,14 +36,19 @@ extension Device {
             var idleMs = 0
             // an actionable tap that changed nothing in the app may have asked the system for something (a
             // permission): its alert comes from the home screen app a moment later, while the app is idle
-            if tapAt != nil, !inert, let before, let now = last, sameLayout(before, now.nodes), !hasAlert(now.nodes) {
-                let end = Date().addingTimeInterval(Double(SettleTimes.alertWatchMs) / 1000)
-                while Date() < end, !job.over, !springboard.alerts.firstMatch.exists {
-                    RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+            if tapAt != nil, !inert, let before, var now = last {
+                // `before` was sent with its copies hidden, and this read has them still, so that a screen with a copy
+                // would never compare as the same
+                hideUnreachableCopies(&now)
+                if sameLayout(before, now.nodes), !hasAlert(now.nodes) {
+                    let end = Date().addingTimeInterval(Double(SettleTimes.alertWatchMs) / 1000)
+                    while Date() < end, !job.over, !springboard.alerts.firstMatch.exists {
+                        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+                    }
+                    // read again either way: an in-app change that came during the watch belongs in the answer
+                    last = (try? capture(job: job)) ?? last
+                    idleMs = Int(Date().timeIntervalSince(idleAt) * 1000)
                 }
-                // read again either way: an in-app change that came during the watch belongs in the answer
-                last = (try? capture(job: job)) ?? last
-                idleMs = Int(Date().timeIntervalSince(idleAt) * 1000)
             }
             out["settle"] = settleWire(settled: r.settled, ms: r.elapsedMs, reads: r.reads, quietMs: quiet, idleMs: idleMs)
         }

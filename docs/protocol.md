@@ -256,7 +256,8 @@ late were missed 10 of 10 times). The first read is compared with `before` when 
 agent sent recently (else the first read counts as a change), so an action that changed nothing ends
 `quietMs` after it returned. On iOS an actionable tap that changed nothing then watches up to 0.8 s for a
 system alert, and the screen is read again after that watch: that wait is the agent's own, said apart as `idleMs`
-and in no `ms`, so that a step reads the same on both platforms. The settle stops at
+and in no `ms`, so that a step reads the same on both platforms, and a tap's answer says no alert came. A screen with a copy
+of a control is compared with its hidden copies left out, as `before` was sent. The settle stops at
 `maxMs` after the action; the result says `settled`, the time, the number of reads and the window used.
 
 A tap whose point hits nothing that can react on the screen named by `before` (plain text, an image,

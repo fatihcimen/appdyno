@@ -47,6 +47,15 @@ describe('changed', () => {
     }
   });
 
+  it('says a device watched for a system alert and none came, where one did', async () => {
+    const device = new FakeDevice();
+    device.idleMs = 912;
+    const { call } = await connect(device);
+    await call('screen');
+    const r = await call('tap', { x: 5, y: 2390 });
+    expect(r.text).toMatch(/no change seen in \d+ ms, and no system alert in 0\.9 s; if a slow/);
+  });
+
   it('is false with its plain sentence when nothing changed', async () => {
     const { call } = await connect();
     await call('screen');
