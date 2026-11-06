@@ -176,12 +176,12 @@ describe.runIf(serials.length === 2)('two windows as one hand', () => {
   }, 60_000);
 
   it('stays on one window when told to, and goes to both again', async () => {
-    await clickOn(a, 'name_input');
-    await until('the field in focus', () => focused(a, 'name_input'));
     poke(a, { control: 'both' });
     await until('the window to say so', () => heard(a, { op: 'pair', both: false }));
     await picture('alone');
     const other = (await device(b).tree()).hash;
+    await clickOn(a, 'name_input');
+    await until('the field in focus', () => focused(a, 'name_input'));
     await clickOn(a, 'submit');
     await new Promise((r) => setTimeout(r, 1_000));
     expect((await device(b).tree()).hash).toBe(other);
