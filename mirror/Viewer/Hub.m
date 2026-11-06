@@ -116,6 +116,8 @@ static NSString *stateWords(NSDictionary *device) {
     _window.toolbar = room.bare;
     _window.toolbarStyle = NSWindowToolbarStyleUnified;
     [self addOwnPlaces];
+    // AppKit's choice is the first field, a caret blinking in Search on a window that has nothing for it yet
+    _window.initialFirstResponder = _list.documentView;
     MVPresent(_window, how);
   }
   return self;
