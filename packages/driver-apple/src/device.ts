@@ -67,6 +67,10 @@ export function promptButton(t: Tree, words: RegExp = /^open$/): Point | undefin
   return b && { x: (b.b[0] + b.b[2]) / 2, y: (b.b[1] + b.b[3]) / 2 };
 }
 
+/** The words of a read that are no control's. */
+export const staticTexts = ({ nodes }: Tree) =>
+  nodes.flatMap((n) => (n.c === 'StaticText' ? (n.d ?? n.t ?? []) : []));
+
 /** How long a field has to report the focus before the keys go to whatever has the keyboard. */
 const KEYS_AFTER_MS = 2_000;
 
@@ -301,8 +305,7 @@ export abstract class IosDevice extends RpcDevice implements Device {
     if (!app || app === HOME_SCREEN_APP) return [];
     await this.target(HOME_SCREEN_APP);
     try {
-      const { nodes } = await this.tree();
-      return nodes.flatMap((n) => (n.c === 'StaticText' ? (n.d ?? n.t ?? []) : []));
+      return staticTexts(await this.tree());
     } finally {
       await this.target(app);
     }

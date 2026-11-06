@@ -28,7 +28,7 @@ import { type Capture, settleAfter } from './simsettle.js';
 import { learnCopies, onKeyboard, withoutCopies } from './simtree.js';
 import { IosRunnerLauncher } from './runner.js';
 import { assertBundle, Simctl } from './simctl.js';
-import { IosDevice } from './device.js';
+import { IosDevice, staticTexts } from './device.js';
 import { simulatorOps } from './simulator-ops.js';
 import { HOME_SCREEN_APP } from './platform-screen.js';
 
@@ -251,6 +251,20 @@ export class IosSimulatorDevice extends IosDevice {
       this.transitionEnds = out.moved ? touchedAt + TRANSITION_MS : 0;
       return { ...out.result, ...(waited !== undefined && { animationWaitMs: waited }) };
     });
+  }
+
+  /**
+   * With the app in front the helper says so at once, and nothing stands over it: a look is no reason to start a runner,
+   * which hid seconds, or a first build, in a read. With anything over it the app is not in front, and the read before
+   * this look has brought a runner up.
+   */
+  override async systemWords() {
+    if (!this.targetApp || this.targetApp === HOME_SCREEN_APP) return [];
+    const r = await this.queue
+      .run(() => this.direct.read(HOME_SCREEN_APP))
+      .catch(() => ({ refused: 'failed' }));
+    if (!('refused' in r)) return staticTexts(r.tree);
+    return this.runnerUp && r.refused !== 'not-foreground' ? super.systemWords() : [];
   }
 
   override async foreground(): Promise<string | undefined> {

@@ -140,7 +140,8 @@ do it again. Spotlight is Command-Space from the home screen. Each is the home s
 - **Hello**, from the same helper: model, OS version, screen and scale, in the same shape. `agentVersion` is `helper`,
   until a runner starts and says its own. The runner
   starts on the first thing only it does: an alert, a system prompt, text entry, an image, an audit, or a read of a control
-  found at different places.
+  found at different places. A look for a sheet over the app is none of these: with the app in front the helper says
+  so at once, and a read of an app that is not in front is what brings the runner.
 - **The runner answers a read** when the app named is not the primary app (a system alert over it, the home
   screen, the app's launch), when the app shows an alert, when another process's content reaches the screen
   (`AXRemoteElement`: a web page, an extension), when the window does not fill the screen, or when the helper fails.

@@ -103,3 +103,47 @@ describe('what is in front of a simulator with no runner', () => {
     await expect(withFront(undefined).foreground()).resolves.toBeUndefined();
   });
 });
+
+describe('a look for what stands over the app on a simulator', () => {
+  const word = (d: string) => ({ c: 'StaticText', d });
+  const tree = { windows: [], nodes: [word('Face ID'), { c: 'Button', d: 'Cancel' }], hash: 'h' };
+
+  const device = async (answer: unknown) => {
+    const read = vi.fn(async () => answer);
+    const direct = { front: async () => undefined, read, close: vi.fn() };
+    const d = new IosSimulatorDevice(UDID, new Listed(''), direct as never);
+    const callNow = vi.fn(async () => {
+      throw new Error('a runner was asked for');
+    });
+    Object.assign(d, { callNow, keepDump: async () => undefined });
+    await d.target('dev.app');
+    return { d, read, callNow };
+  };
+
+  it('needs no runner with the app in front, which the helper says at once', async () => {
+    const { d, read, callNow } = await device({ refused: 'not-foreground', front: 'dev.app' });
+    expect(await d.systemWords()).toEqual([]);
+    expect(read).toHaveBeenCalledWith('com.apple.springboard');
+    expect(callNow).not.toHaveBeenCalled();
+  });
+
+  it("reads a sheet from the home screen, which it puts in front, with a control's copies left to no runner", async () => {
+    const { d, callNow } = await device({ busy: false, copies: true, tree });
+    expect(await d.systemWords()).toEqual(['Face ID']);
+    expect(callNow).not.toHaveBeenCalled();
+  });
+
+  it('asks a runner that is up where the helper has no say, as in landscape', async () => {
+    const { d, callNow } = await device({ refused: 'landscape' });
+    Object.defineProperty(d, 'runnerUp', { value: true });
+    Object.assign(d, { rpc: { closed: false, call: async () => ({ result: {} }) } });
+    callNow.mockResolvedValue({ result: tree } as never);
+    expect(await d.systemWords()).toEqual(['Face ID']);
+  });
+
+  it('starts none for it where the helper has no say', async () => {
+    const { d, callNow } = await device({ refused: 'landscape' });
+    expect(await d.systemWords()).toEqual([]);
+    expect(callNow).not.toHaveBeenCalled();
+  });
+});

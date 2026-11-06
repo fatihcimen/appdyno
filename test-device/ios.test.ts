@@ -55,6 +55,12 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect(d.hello!.agentVersion).toBe('helper');
   });
 
+  it('looks for a sheet over the app in front with no runner, and brings none up', async () => {
+    await home();
+    expect(await d.systemWords()).toEqual([]);
+    expect(d.agentUp).toBe(false);
+  });
+
   it('says hello as iOS in points, from the helper and then from the runner', async () => {
     expect(d.hello).toMatchObject({ platform: 'ios', protocol: PROTOCOL });
     const size = d.hello!.screen;
@@ -67,6 +73,22 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
     expect((await d.waitChange(undefined, 0))?.sig).toBeTruthy();
     // the idle shim's replacements were each called at start with a BOOL in every slot (a crash otherwise)
     expect(d.hello!.idleShimChecked).toBe(true);
+  });
+
+  it('says a Face ID sheet as a read does, which brings the runner an app not in front needs', async () => {
+    await d.events.biometric('enroll');
+    await home();
+    await d.openUrl('appdyno-fixture://open/biometric', APP);
+    await d.stopAgent();
+    await d.tap(byId(await d.read(APP), 'authenticate')!, { settle: false, read: 'none' });
+    let said = false;
+    for (let end = Date.now() + 10_000; !said && Date.now() < end;) {
+      // as `screen` does: the read, then the look
+      await d.read(APP);
+      said = (await d.systemWords()).some((w) => /face id/i.test(w));
+    }
+    expect(said).toBe(true);
+    await d.events.biometric('nomatch');
   });
 
   it('reads the fixture home with the app in front', async () => {
