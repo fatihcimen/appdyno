@@ -7,7 +7,7 @@ export type Stdio = { command: string; args: string[] };
 export const STDIO: Stdio = { command: 'npx', args: ['-y', 'appdyno', 'mcp'] };
 
 /** Words in both of the hub's languages. */
-export type Said = { en: string; tr: string };
+export type Translated = { en: string; tr: string };
 
 /** What a prompt asks of a client that treats it its own way: a measure's minutes, acting on a device, or a picture. */
 export type PromptKind = 'long' | 'acts' | 'picture';
@@ -18,9 +18,9 @@ export type Named = {
   /** What it calls itself in MCP's `clientInfo`, which only its own call shows: `docs/clients.md` says which were seen. */
   says: RegExp;
   /** Where a person sees that it worked. */
-  check: Said;
+  check: Translated;
   /** Where a prompt goes differently in it. */
-  notes?: Partial<Record<PromptKind, Said>>;
+  notes?: Partial<Record<PromptKind, Translated>>;
   /** What to call it on a device, where its name is for more than one app. */
   short?: string;
   /** Its name in Turkish, where that is more than a name. */

@@ -25,7 +25,7 @@ export type ViewerHandlers = {
 };
 
 /** A viewer's message as what it means; one a session does not know goes nowhere. */
-export function heardFromViewer(m: ViewerMessage, on: ViewerHandlers) {
+export function handleViewerMessage(m: ViewerMessage, on: ViewerHandlers) {
   switch (m.op) {
     case 'first':
       return on.first(m);

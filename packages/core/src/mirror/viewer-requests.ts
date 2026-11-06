@@ -4,7 +4,7 @@ import type { ViewerLink, ViewerMessage } from './viewer.js';
 const NO_VIEWER = 'its window went';
 
 /** What a viewer is asked to time, and answers for later. */
-export class ViewerAsks {
+export class ViewerRequests {
   private readonly marks: ((ms: number) => void)[] = [];
   private readonly watches = new Map<string, (m: MotionWatch) => void>();
   private count = 0;

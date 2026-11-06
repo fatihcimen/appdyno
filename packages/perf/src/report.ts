@@ -124,7 +124,7 @@ export function toText(reports: KeyReport[]): string {
  * What `toText` found, for a window that shows that text and must not call it by the exit code alone: a change the gate
  * could not judge exits 1 as a regression does, and is not one.
  */
-export const gateSaid = (text: string): 'regression' | 'unjudged' | 'clear' =>
+export const gateVerdict = (text: string): 'regression' | 'unjudged' | 'clear' =>
   /^\s+(regression|over budget) /m.test(text)
     ? 'regression'
     : /^the gate could not judge /m.test(text)

@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { join } from 'node:path';
 import { endChild } from '@appdyno/core';
-import { gateSaid } from '@appdyno/perf';
+import { gateVerdict } from '@appdyno/perf';
 import { HELD_BY_HUB, STOP_MS } from './lifetime.js';
 import type { COMMANDS } from './usage.js';
 
@@ -126,7 +126,7 @@ export class HubRuns {
           code: code ?? 1,
           ...(run.stopped && { stopped: true }),
           ...(run.file && { file: run.file }),
-          ...(GATE.has(name) && { verdict: gateSaid(run.said) }),
+          ...(GATE.has(name) && { verdict: gateVerdict(run.said) }),
           ...(countOf(name, run.said) && { count: countOf(name, run.said) }),
         },
       });

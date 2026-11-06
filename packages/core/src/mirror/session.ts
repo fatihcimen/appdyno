@@ -12,8 +12,8 @@ import {
   type MirrorStatus,
 } from './state.js';
 import type { ViewerLink, ViewerMessage, ViewerOrder } from './viewer.js';
-import { ViewerAsks } from './viewer-asks.js';
-import { heardFromViewer, type ViewerHandlers } from './viewer-handlers.js';
+import { ViewerRequests } from './viewer-requests.js';
+import { handleViewerMessage, type ViewerHandlers } from './viewer-handlers.js';
 
 const WAITING_POLL_MS = 1_000;
 /** A viewer that goes on dying is not started a third time. */
@@ -58,7 +58,7 @@ export class MirrorSession {
   private encoded = false;
   private refusedNeed: Need | undefined;
   private asleep = false;
-  private readonly asks = new ViewerAsks(
+  private readonly requests = new ViewerRequests(
     () => this.viewer,
     () => this.o.mirror.sendsWhenStill === true,
   );
@@ -119,7 +119,7 @@ export class MirrorSession {
     this.unwatch?.();
     const v = this.viewer;
     this.viewer = undefined;
-    this.asks.gone();
+    this.requests.gone();
     this.set({ state: 'stopped', why, ...(need && { need }) });
     v?.send({ op: 'quit' });
     // a viewer wedged in a framework hears no quit; one that heard it holds nothing up
@@ -154,11 +154,11 @@ export class MirrorSession {
   }
 
   watch(ms: number, strip: boolean) {
-    return this.asks.watch(ms, strip);
+    return this.requests.watch(ms, strip);
   }
 
   mark() {
-    return this.asks.mark();
+    return this.requests.mark();
   }
 
   /** The same way a person's touch goes. */
@@ -310,8 +310,8 @@ export class MirrorSession {
     zoom: (scale) => (this.zoom = scale),
     control: (m) => this.o.onWindow?.(m),
     done: (id) => this.o.onDone?.(id),
-    marked: (ms) => this.asks.marked(ms),
-    watched: (m) => this.asks.watched(m),
+    marked: (ms) => this.requests.marked(ms),
+    watched: (m) => this.requests.watched(m),
     closed: () => (this.closedByPerson = true),
     refused: (need) => (this.refusedNeed = need),
     sleep: () => this.onMacSleep(),
@@ -319,7 +319,7 @@ export class MirrorSession {
   };
 
   private onViewer(m: ViewerMessage) {
-    heardFromViewer(m, this.handlers);
+    handleViewerMessage(m, this.handlers);
   }
 
   private onFirst(m: ViewerMessage) {
@@ -387,7 +387,7 @@ export class MirrorSession {
   private async onViewerExit(tail: string) {
     const v = this.viewer;
     this.viewer = undefined;
-    this.asks.gone();
+    this.requests.gone();
     v?.kill();
     if (this.current.state === 'stopped') return;
     if (this.closedByPerson) {
