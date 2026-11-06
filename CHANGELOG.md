@@ -8,6 +8,12 @@
 - `pnpm build` goes on with no Android agent, so a clean clone passes `pnpm run ci` with no JDK. `npm pack` and the Mac app's build refuse without one.
 - The docs are an index, guides and a reference, with an architecture page and diagrams. The README keeps what a newcomer needs.
 - A tap on an iPhone that changed nothing watches for a system alert on a screen with a hidden copy of a control too, where it did not run at all, and its answer says no alert came.
+- The hub wears one palette, light and dark: a ground of deep blue, violet and rose painted behind the system's glass, tiles and capsules that keep their colour, a card for each reading, and Tools rows that say how they stand. The device's picture is never tinted: its colours reach the ground around it, as hue only. Reduce Transparency gives a plain ground and solid cards, Increase Contrast stronger lines and words, and Differentiate Without Color a shape for each state.
+- The dashboard and reports wear the same palette, on the same ground, and a test holds the two together.
+- The app's icon is glass on macOS 26 and later, drawn by the system at every size, with no grey plate at 16 and 32 pt. A Mac below that has the drawn icon.
+- A run in Tools turns while it runs and lands when it ends, a step passes with a ring, a result arrives in its list, and the capsule crosses over for a state, where it did so for every new number, once a second. A spring that took 500 ms to come to rest now keeps within 300 ms.
+- On macOS 13 the viewer no longer calls what only macOS 14 has, in a toolbar, a spring and a path, any of which ends a process, and two symbols that drew nothing there have older ones in their place. A test holds every source to the floor.
+- A client of no name no longer ends the hub, and a name that begins with an emoji keeps it whole on its tile.
 - `perf_snapshot` on an iPhone says when another app, or a locked phone's home screen, stood in front, and keeps no CPU number from it: an app the phone had stopped read 0 %, and the gate called a real cost no regression. It asks only if a runner is already up.
 - `perf_scroll` goes on into new rows for as long as a list moves, read from the screen, and brings it back only once the list has ended, which the answer says. A round past a list's end read as smooth on Android, from frames of nothing, and on a real iPhone it failed the call with its good rounds lost.
 - An agent that stops under a session says so, on the call's progress and on stderr, where a read used to start another and go on as though nothing had happened. A device suite that loses one fails, unless the test ended it on purpose.
@@ -60,7 +66,7 @@
 - The capsule names the client driving a device, as a person knows it.
 - Help in the hub, in the Mac's language: what appdyno is, prompts by goal filled with the device and app, what each does to the device, what each panel and number means, and `doctor`.
 
-- The hub is one calm window: a neutral stage where the device is the only colour, as what stood behind the sidebar and Inspector took their words and symbols under contrast. The system's Inspector, edge to edge, in place of a floating pane; one capsule in the toolbar for everything a device is at; four symbol tabs; figures and charts in one row; and measures as one grouped list.
+- The hub is one window: the system's Inspector, edge to edge, in place of a floating pane; one capsule in the toolbar for everything a device is at; four symbol tabs; and measures as one grouped list.
 - What a window says holds its strength behind other windows, as it usually is: from a title and symbols at 2:1 to every word at 4.5:1 and every symbol at 3:1, read from the real window, dark and light, but for what stands disabled while a measure runs.
 - Every word of the hub in Turkish and English by the Mac's language, from one table. A viewer's own words and what the parent sends pass through it at the label.
 - Results has a history: what was measured on this device before, judged by the gate's method, in words.
