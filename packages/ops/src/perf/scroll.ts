@@ -13,7 +13,7 @@ import { defineOp, ACT, reply } from '../tool.js';
 import { perfTools, App, Probe, Scenario, kb } from './shared.js';
 import { frameVitals } from './vitals.js';
 
-/** Jank above this share of frames is worth a finding (Android vitals counts a session slow above 25 %). */
+/** Jank above this share of frames is worth a finding: this tool's own line, and none of Play's (`vitals.ts`). */
 const JANK_PERCENT = 10;
 
 /** What a recording around the swipes gives each, and the list's coasting after them. */
@@ -154,7 +154,7 @@ export function perfScrollOp(ctx: ServerContext) {
           {
             kind: 'frames.p95_ms',
             unit: 'ms',
-            samples: rounds.flatMap((x) => (x.p95Ms === undefined ? [] : [x.p95Ms])),
+            samples: counted.flatMap((x) => (x.p95Ms === undefined ? [] : [x.p95Ms])),
           },
           // the whole run's: one frozen frame in one round is not a median of none
           { kind: 'frames.frozen', unit: 'count', samples: [frozen] },

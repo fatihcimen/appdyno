@@ -108,6 +108,8 @@ export function compareMetric(
     noise: Noise[];
     modelled?: boolean;
     throughHost?: boolean;
+    /** What a pool of runs was built as: more than one, and its median is of no build. */
+    builds?: string[];
   },
   base: BaselineMetric | undefined,
   unit: Unit,
@@ -118,6 +120,16 @@ export function compareMetric(
     ...(current.modelled && { modelled: true }),
     ...(current.throughHost && { throughHost: true }),
   };
+  if (current.builds && current.builds.length > 1)
+    return {
+      kind,
+      unit,
+      verdict: 'refused',
+      current: value,
+      n: { current: current.samples.length, baseline: 0 },
+      note: `these runs are of more than one build, ${current.builds.join(' and ')}`,
+      ...marks,
+    };
   if (!base?.runs.length)
     return {
       kind,

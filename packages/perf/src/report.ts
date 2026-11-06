@@ -35,6 +35,10 @@ export function reportKey(
     samples: rs.flatMap((r) => r.samples),
     value: median(rs.flatMap((r) => r.samples)),
     noise: [...new Set(rs.flatMap((r) => r.noise))],
+    builds: [...new Set(rs.map((r) => `${r.build}${r.compile ? `, compile ${r.compile}` : ''}`))],
+    // what any run of a pool is, the pool is: the newest alone would wash a mark off
+    ...(rs.some((r) => r.modelled) && { modelled: true }),
+    ...(rs.some((r) => r.throughHost) && { throughHost: true }),
   }));
   return {
     ...key,
@@ -113,7 +117,7 @@ export function toText(reports: KeyReport[]): string {
 
 /**
  * What `toText` found, for a window that shows that text and must not call it by the exit code alone: a change the gate
- * could not judge exits as a regression does, and one with too few samples exits 0, and neither is a pass.
+ * could not judge exits 1 as a regression does, and is not one.
  */
 export const gateSaid = (text: string): 'regression' | 'unjudged' | 'clear' =>
   /^\s+(regression|over budget) /m.test(text)

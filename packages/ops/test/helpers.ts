@@ -1,7 +1,19 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '@appdyno/mcp';
-import { opsFor, ServerContext, type Op, type OpData, type OpName } from '../src/index.js';
+import { latestRuns, runKeys } from '@appdyno/perf';
+import {
+  DEFAULT_POLICY,
+  opsFor,
+  ServerContext,
+  type Op,
+  type OpData,
+  type OpName,
+} from '../src/index.js';
+import { FakeDevice } from './fake-device.js';
 
 /** The operations, each held to its output schema: an answer must be what that says, no more and no less. */
 export const checkedOps = (ctx: ServerContext): Record<string, Op> =>
@@ -31,6 +43,43 @@ export const callerOf = (ctx: ServerContext) => {
     };
   };
 };
+
+/** One tool on a phone that answers `measures`: its answer, and what was kept of it, none if nothing was. */
+export async function keptBy(
+  tool: OpName,
+  args: Record<string, unknown>,
+  measures: Record<string, unknown>,
+): Promise<{
+  lines: string[];
+  data: Record<string, unknown>;
+  kept: { kind: string; value: number; source: string }[];
+}> {
+  const device = new FakeDevice();
+  device.virtual = false;
+  Object.defineProperty(device, 'measure', {
+    value: { ...device.measure, ...measures },
+  });
+  const measurements = mkdtempSync(join(tmpdir(), 'appdyno-kept-'));
+  const ctx = new ServerContext(
+    DEFAULT_POLICY,
+    [
+      {
+        list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+        handles: () => true,
+        open: () => device,
+      },
+    ],
+    { device: device.serial, app: 'dev.app', measurements, perf: measurements },
+  );
+  const { text, data } = await callerOf(ctx)(tool, args);
+  const [key] = await runKeys(measurements, { app: 'dev.app' });
+  const run = key ? (await latestRuns(measurements, key, 1))[0]! : [];
+  return {
+    lines: text.split('\n'),
+    data: data as Record<string, unknown>,
+    kept: run.map(({ kind, value, source }) => ({ kind, value, source })),
+  };
+}
 
 /** A client of this context's server, in this process. */
 export async function linkedClient(

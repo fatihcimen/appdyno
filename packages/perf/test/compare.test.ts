@@ -446,6 +446,37 @@ describe('store and reports', () => {
     expect(pooled.at).toBe(stamp(6));
   });
 
+  it('refuses a pool of two builds, baseline or none, and says which', async () => {
+    const d = dir();
+    await saveRun(d, context([100, 101, 102], 'r1', '2026-11-03T00:00:00.000Z'));
+    await saveRun(d, context([100, 101, 102], 'r2', '2026-11-03T00:01:00.000Z'));
+    const [key] = await runKeys(d);
+    const [newest, older] = await latestRuns(d, key!, 2);
+    const debug = older!.map((r) => ({ ...r, build: 'debug' as const }));
+    const baseline = addToBaseline(key!, undefined, newest!);
+    for (const base of [baseline, undefined]) {
+      const c = reportKey(key!, [newest!, debug], base, []).comparisons[0]!;
+      expect(c.verdict).toBe('refused');
+      expect(c.note).toContain('more than one build, release and debug');
+    }
+    expect(exitCode([reportKey(key!, [newest!, debug], undefined, [])])).toBe(1);
+    expect(reportKey(key!, [newest!], baseline, []).comparisons[0]!.verdict).not.toBe('refused');
+  });
+
+  it('says of a pool what any run of it is, as the newest alone would wash a mark off', async () => {
+    const d = dir();
+    await saveRun(d, context([100], 'r1', '2026-11-03T00:00:00.000Z'));
+    await saveRun(d, context([100], 'r2', '2026-11-03T00:01:00.000Z'));
+    const [key] = await runKeys(d);
+    const [newest, older] = await latestRuns(d, key!, 2);
+    const marked = older!.map((r) => ({ ...r, modelled: true, throughHost: true }));
+    expect(reportKey(key!, [newest!, marked], undefined, []).comparisons[0]).toMatchObject({
+      modelled: true,
+      throughHost: true,
+    });
+    expect(reportKey(key!, [newest!], undefined, []).comparisons[0]).not.toHaveProperty('modelled');
+  });
+
   it('holds a budget to the pool, and carries the noise of any run of it', async () => {
     const d = dir();
     await saveRun(d, context([100], 'r1', '2026-11-03T00:00:00.000Z'));

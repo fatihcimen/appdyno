@@ -1,11 +1,5 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { latestRuns, runKeys } from '@appdyno/perf';
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
-import { FakeDevice } from './fake-device.js';
-import { callerOf } from './helpers.js';
+import { keptBy } from './helpers.js';
 
 // whether this Mac is loaded right now is no part of these answers
 vi.mock('node:os', async (original) => ({
@@ -15,41 +9,8 @@ vi.mock('node:os', async (original) => ({
 
 const at = '2026-11-03T00:00:00.000Z';
 
-/** One trace on a phone that answers `measures`, its answer and what was kept of it. */
-async function traced(
-  args: Record<string, unknown>,
-  measures: Record<string, unknown>,
-): Promise<{
-  lines: string[];
-  data: Record<string, unknown>;
-  kept: { kind: string; value: number; source: string }[];
-}> {
-  const device = new FakeDevice();
-  device.virtual = false;
-  Object.defineProperty(device, 'measure', {
-    value: { ...device.measure, ...measures },
-  });
-  const measurements = mkdtempSync(join(tmpdir(), 'appdyno-trace-'));
-  const ctx = new ServerContext(
-    DEFAULT_POLICY,
-    [
-      {
-        list: async () => [{ serial: device.serial, state: 'device', ready: true }],
-        handles: () => true,
-        open: () => device,
-      },
-    ],
-    { device: device.serial, app: 'dev.app', measurements, perf: measurements },
-  );
-  const { text, data } = await callerOf(ctx)('perf_trace', args);
-  const [key] = await runKeys(measurements, { app: 'dev.app' });
-  const [run] = await latestRuns(measurements, key!, 1);
-  return {
-    lines: text.split('\n'),
-    data,
-    kept: run!.map(({ kind, value, source }) => ({ kind, value, source })),
-  };
-}
+const traced = (args: Record<string, unknown>, measures: Record<string, unknown>) =>
+  keptBy('perf_trace', args, measures);
 
 const common = { id: expect.any(String), raw: expect.any(String), virtualDevice: false, noise: [] };
 const head = expect.stringMatching(/^measurement pm-\w+$/);
