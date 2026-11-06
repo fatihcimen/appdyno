@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { IosSimulatorDevice, Simctl, buildScreen, type Screen } from './workspace.js';
-import type { Tree } from '@appdyno/protocol';
+import { PROTOCOL, type Tree } from '@appdyno/protocol';
 import { join } from 'node:path';
 import { IosDevice } from '../packages/driver-apple/src/device.js';
 import { directChecks } from '../packages/driver-apple/src/provider.js';
@@ -55,7 +55,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
   });
 
   it('says hello as iOS in points, from the helper and then from the runner', async () => {
-    expect(d.hello).toMatchObject({ platform: 'ios', protocol: { major: 2 } });
+    expect(d.hello).toMatchObject({ platform: 'ios', protocol: PROTOCOL });
     const size = d.hello!.screen;
     expect(size.density).toBeGreaterThanOrEqual(2);
     // only a runner waits on the device: the helper is read

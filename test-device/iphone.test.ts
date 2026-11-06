@@ -6,7 +6,7 @@ import {
   sleep as pause,
   type Screen,
 } from './workspace.js';
-import { DeviceError } from '@appdyno/protocol';
+import { DeviceError, PROTOCOL } from '@appdyno/protocol';
 
 /**
  * The runner on a real iPhone (APPDYNO_IPHONE_UDID; signing from APPDYNO_IOS_*), on the Settings
@@ -40,7 +40,7 @@ describe.skipIf(!udid)('ios runner on an iPhone', () => {
   });
 
   it('says hello as iOS from the phone', () => {
-    expect(d.hello).toMatchObject({ platform: 'ios', protocol: { major: 1 } });
+    expect(d.hello).toMatchObject({ platform: 'ios', protocol: PROTOCOL });
     expect(d.hello!.screen.density).toBe(3);
   });
 

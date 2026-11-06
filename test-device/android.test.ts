@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
+import { PROTOCOL } from '@appdyno/protocol';
 import {
   Adb,
   androidScreen,
@@ -97,7 +98,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
   afterAll(() => d?.close());
 
   it('says hello with the device and the protocol', () => {
-    expect(d.hello).toMatchObject({ platform: 'android', protocol: { major: 2 } });
+    expect(d.hello).toMatchObject({ platform: 'android', protocol: PROTOCOL });
     expect(d.hello!.screen.w).toBeGreaterThan(0);
   });
 
