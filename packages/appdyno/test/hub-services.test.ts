@@ -34,6 +34,7 @@ type Said = {
   server: { address?: string };
   notes: unknown[];
   done: { backup: string };
+  tested: { ok: boolean; said: string; line: string };
   token: string;
   doctor: unknown;
   preview: { lines: string[] };
@@ -121,6 +122,28 @@ describe('a change', () => {
       [client.key]: {},
       since: 1,
     });
+  });
+
+  it('says an Undo did not happen when the file refused it, and offers it again', async () => {
+    writeFileSync(file, JSON.stringify({ theme: 'dark' }, null, 2));
+    const p = place();
+    await act(p, 'change');
+    const written = readFileSync(file, 'utf8');
+    writeFileSync(file, '{ a person was editing this');
+    const refused = await act(p, 'undo');
+    expect(refused.done).toBeUndefined();
+    expect(refused.tested).toMatchObject({ client: client.name, ok: false });
+    // what keeps its Undo button on the window
+    expect(refused.tested.line).toBe(refused.tested.said);
+    expect(readFileSync(file, 'utf8')).toBe('{ a person was editing this');
+    expect(refused.rows.find((r: { name: string }) => r.name === client.name)).toMatchObject({
+      state: 'refused',
+      undo: true,
+    });
+    writeFileSync(file, written);
+    const again = await act(p, 'undo');
+    expect(again.done).toMatchObject({ client: client.name, did: 'undone' });
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ theme: 'dark', [client.key]: {} });
   });
 
   it('takes out only its entry, and Undo puts back what was set by hand', async () => {

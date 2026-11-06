@@ -29,6 +29,7 @@ const MVWordRow MVWordTableClients[] = {
     {"Updated. Restart it to see the change.", "Güncellendi. Değişikliği görmesi için yeniden başlatın."},
     {"Removed. Restart it to see the change.", "Kaldırıldı. Değişikliği görmesi için yeniden başlatın."},
     {"Put back as it was.", "Eski haline döndürüldü."},
+    {"Not put back: its settings file cannot be edited.", "Eski haline döndürülemedi: ayar dosyası düzenlenemiyor."},
     {"Backup: %@", "Yedek: %@"},
     {"To check:", "Denetlemek için:"},
     // what a test finds, as the parent says it

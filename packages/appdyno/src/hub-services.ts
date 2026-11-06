@@ -34,6 +34,7 @@ const TAIL_SHOWN = 300;
 
 /** Each in English, as the hub's table has it, with what to do next: `words.test.ts` holds them to that table. */
 export const TRIED = {
+  notPutBack: ['Not put back: its settings file cannot be edited.', ''],
   listed: ['It started, and lists %@ tools.', 'Restart it, then ask it to list the devices.'],
   connected: ['It started, and lists %@ tools.', ''],
   missing: [
@@ -247,7 +248,15 @@ export function hubServices(o: ServicesOptions): HubServices {
       const undo = undos.get(String(m.client));
       if (!undo) return;
       const plan = planned(m, undo.back ? { back: undo.back } : { remove: true });
-      if (plan && changes(plan)) apply(plan);
+      // nothing changed, and it can be asked again once the file reads; `line` is what keeps a window's Undo on the row
+      if (!plan || plan.did === 'refused') {
+        const [said, next] = TRIED.notPutBack;
+        return say({
+          ...status(),
+          tested: { client: m.client, ok: false, said, next, line: said },
+        });
+      }
+      if (changes(plan)) apply(plan);
       undos.delete(String(m.client));
       say({ ...status(), done: { client: m.client, did: 'undone' } });
     },
