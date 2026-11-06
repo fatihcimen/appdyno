@@ -72,14 +72,16 @@ const RUN_SDS = 4;
 
 /**
  * The least change worth reporting, whatever the baseline's runs say: a difference of medians over 10 % alone
- * alarmed on 25 of 72 pairs of unchanged runs on a loaded simulator (docs/perf.md).
+ * alarmed on 25 of 72 pairs of unchanged runs on a loaded simulator (docs/perf.md). A count's is under 1, as a move of
+ * one is the smallest there is: at 1 a rise from none was `ok` on 400 of 400 simulated runs, and a crash on every run
+ * passed (scripts/perf-floor-sim.mjs).
  */
 export const FLOOR: Record<Unit, { percent: number; absolute: number }> = {
   ms: { percent: 15, absolute: 10 },
   percent: { percent: 25, absolute: 3 },
   kb: { percent: 10, absolute: 2048 },
   bytes: { percent: 10, absolute: 1 << 20 },
-  count: { percent: 25, absolute: 1 },
+  count: { percent: 25, absolute: 0.5 },
   mah: { percent: 25, absolute: 0.1 },
   mj: { percent: 25, absolute: 1 },
   ratio: { percent: 25, absolute: 0.05 },

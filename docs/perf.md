@@ -154,6 +154,8 @@ launch, 6 launches, 400 trials): false alarms 3.0 % with 3 baseline runs and 2.3
 100 % and 99 % against 89 % and 91 %. At 10 % movement no floor is safe with 3 runs (4 sd still 5.8 %), so use more runs on a loaded host, or
 a quieter one. These are simulated rates, and what the device runs below show is no false alarm in 6 runs each, not a rate.
 
+Why a count's floor is 0.5, from the same script, by the gate itself on counts that follow a Poisson law, 3 baseline runs, 400 trials. At a floor of 1 a rise from none read `ok` every time, so a crash on every run passed. Under 1 it never reads `ok`: with one sample a run it is `few-samples`, exit 1, and with 5 it is `regression`. What that costs an unchanged count of one sample a run is more stops, and all of them `few-samples`: 0 % to 6 % at a rate of 0.1 a run, 4 % to 12 % at 0.5, 4 % to 7 % at 1, 5 % to 10 % at 2, and no change from 3 up. Floors of 0.25, 0.5 and 0.75 read the same within the trials: on whole counts a move is at least a half.
+
 **The acceptance tests** (`test-device/perf-compare.test.ts`; the numbers are kept in `.ci/perf-gate.txt`), 6 launches per run, a baseline
 of 3 runs, 6 unchanged runs, then the fixture's start made slower by a known amount:
 

@@ -176,6 +176,20 @@ describe('a journey as a performance scenario', () => {
     expect(r.text).toMatch(/2\. tap text="Form": no time \(never settled in 5 of 5\)/);
   });
 
+  it('calls a step that stopped settling a regression, though it left no time to compare', async () => {
+    const { device, call } = phone();
+    const file = flowFile();
+    for (let i = 0; i < 3; i++) {
+      await call('flow', { action: 'run', file, iterations: 5 });
+      await call('perf_compare', { action: 'baseline', scenario: 'journey-checkout' });
+    }
+    device.formNeverSettles = Infinity;
+    await call('flow', { action: 'run', file, iterations: 5 });
+    const worse = await call('perf_compare', { action: 'compare' });
+    expect(worse.data.exitCode).toBe(1);
+    expect(worse.text).toMatch(/regression\s+journey\.unsettled: 1 count against 0/);
+  });
+
   it('on a loaded Mac a phone gates what it timed itself, and leaves out what went through the Mac', async () => {
     host.load = 10_000;
     const { device, call } = phone();

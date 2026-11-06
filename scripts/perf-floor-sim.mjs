@@ -1,6 +1,6 @@
-// False alarms and catches of the gate's run-to-run floor, on simulated launches: the numbers docs/perf.md quotes.
-// Needs a build: pnpm --filter @appdyno/perf build; then node scripts/perf-floor-sim.mjs
-import { median, rankTest, shift } from '@appdyno/perf';
+// False alarms and catches of the gate's floors, on simulated launches and counts: the numbers docs/perf.md quotes.
+// Needs a build: pnpm --filter '@appdyno/perf...' build; then node scripts/perf-floor-sim.mjs
+import { compareMetric, FLOOR, median, rankTest, shift } from '@appdyno/perf';
 
 let seed = 7;
 const r = () => {
@@ -53,4 +53,44 @@ for (const [runSd, k] of [
     );
   }
   console.log(`runSd ${runSd} k ${k} | ${row.join(' | ')}`);
+}
+
+// What a count comes to at each absolute floor, by the gate itself: how often an unchanged count stops a gate, and how
+// often a real rise passes it. Counts are small and whole, with a rise of 1 from none the case that matters most.
+const poisson = (rate) => {
+  if (rate === 0) return 0;
+  const limit = Math.exp(-rate);
+  let k = 0;
+  for (let p = r(); p > limit; p *= r()) k++;
+  return k;
+};
+const counts = (rate, n, plus) => Array.from({ length: n }, () => poisson(rate) + plus);
+const verdictOf = (rate, plus, n, runs) => {
+  const build = /** @type {const} */ ('release');
+  const run = (i) => ({ at: String(i), samples: counts(rate, n, 0), build, noise: [] });
+  const base = {
+    unit: /** @type {const} */ ('count'),
+    better: /** @type {const} */ ('lower'),
+    runs: Array.from({ length: runs }, (_, i) => run(i)),
+  };
+  const now = { samples: counts(rate, n, plus), build, noise: [] };
+  return compareMetric('count', now, base, 'count', 'lower').verdict;
+};
+for (const n of [1, 5]) {
+  for (const [title, plus] of [
+    ['unchanged', 0],
+    ['+1', 1],
+  ]) {
+    for (const rate of [0, 0.1, 0.5, 1, 2, 3, 5, 10]) {
+      const row = [];
+      for (const absolute of [1, 0.75, 0.5, 0.25]) {
+        FLOOR.count.absolute = absolute;
+        const seen = { ok: 0, 'few-samples': 0, regression: 0, improvement: 0 };
+        for (let i = 0; i < trials; i++) seen[verdictOf(rate, plus, n, 3)]++;
+        const of = (v) => `${v[0]} ${((seen[v] / trials) * 100).toFixed(0)}%`;
+        row.push(`${absolute}: ${Object.keys(seen).map(of).join(' ')}`);
+      }
+      console.log(`${n} a run, rate ${rate}, ${title} | ${row.join(' | ')}`);
+    }
+  }
 }
