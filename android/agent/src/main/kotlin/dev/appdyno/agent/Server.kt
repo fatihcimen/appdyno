@@ -100,7 +100,7 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                         writer.json(resultJson(id, JSONObject()))
                         releaseIfNoDrivers()
                     }
-                    "stream.clock" -> writer.json(resultJson(id, JSONObject().put("now", System.nanoTime())))
+                    "stream.clock" -> writer.json(resultJson(id, Results.streamClock(System.nanoTime())))
                     "stream.sync" -> {
                         streams.requestKey()
                         writer.json(resultJson(id, JSONObject()))

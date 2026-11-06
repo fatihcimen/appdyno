@@ -161,13 +161,7 @@ class Stream(private val request: StreamRequest, private val out: StreamOutput) 
             encoder.start()
             queue.restart()
             mode = "${encoder.name} ${step.note}, ${mirror.how}"
-            out.info(
-                JSONObject()
-                    .put("w", w)
-                    .put("h", h)
-                    .put("codec", if (step.mime == MIME_HEVC) "hevc" else "h264")
-                    .put("mode", mode),
-            )
+            out.info(Results.streamInfo(w, h, step.mime == MIME_HEVC, mode))
             val began = SystemClock.uptimeMillis()
             var checkedAt = began
             val pace = EncoderPace { sizes?.roomMs(SystemClock.uptimeMillis())?.let { request.roomMs ?: it } }

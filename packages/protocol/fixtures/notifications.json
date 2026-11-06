@@ -1,0 +1,27 @@
+{
+  "stream.info.android": {
+    "method": "stream.info",
+    "params": {
+      "w": 1080,
+      "h": 2400,
+      "codec": "h264",
+      "mode": "c2.mtk.avc.encoder 1920, a display of its own"
+    }
+  },
+  "stream.info.phone": {
+    "method": "stream.info",
+    "params": { "w": 1284, "h": 2778, "codec": "hevc", "mode": "mode 5", "crop": true }
+  },
+  "stream.end": {
+    "method": "stream.end",
+    "params": { "why": "no encoder took this display" }
+  },
+  "stream.counters": {
+    "method": "stream.counters",
+    "params": { "packets": 2400, "lostPackets": 3, "droppedPictures": 1 }
+  },
+  "stream.turns": {
+    "method": "stream.turns",
+    "params": { "turns": 1 }
+  }
+}

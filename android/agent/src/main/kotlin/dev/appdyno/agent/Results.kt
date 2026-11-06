@@ -15,6 +15,14 @@ object Results {
         .put("screen", JSONObject().put("w", d.width).put("h", d.height).put("density", d.densityDpi).put("rotation", d.rotation))
         .put("pid", pid)
 
+    fun streamInfo(w: Int, h: Int, hevc: Boolean, mode: String): JSONObject = JSONObject()
+        .put("w", w)
+        .put("h", h)
+        .put("codec", if (hevc) "hevc" else "h264")
+        .put("mode", mode)
+
+    fun streamClock(now: Long): JSONObject = JSONObject().put("now", now)
+
     fun tree(c: Capture): JSONObject {
         val windows = JSONArray()
         for (w in c.windows) {

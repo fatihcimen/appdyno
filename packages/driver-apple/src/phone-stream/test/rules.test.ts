@@ -13,6 +13,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:net';
+import { NOTIFICATIONS, type Notification } from '@appdyno/protocol';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { writeBplist } from '../../webinspector.js';
 import { FrameWriter } from '../frame-writer.js';
@@ -165,7 +166,8 @@ describe('frames to a viewer', () => {
     const file = pipe();
     const key = vi.fn();
     const w = new FrameWriter(key, () => undefined);
-    w.setInfo({ w: 10, h: 20 });
+    const info = { w: 10, h: 20, codec: 'hevc', mode: 'mode 5' } as const;
+    w.setInfo(info);
     w.attach(file);
     await new Promise((r) => setTimeout(r, 60));
     expect(key).not.toHaveBeenCalled();
@@ -183,12 +185,37 @@ describe('frames to a viewer', () => {
     expect(got[4]).toBe(0);
     expect(JSON.parse(got.toString('utf8', 5, 5 + n))).toEqual({
       method: 'stream.info',
-      params: { w: 10, h: 20 },
+      params: info,
     });
     const video = got.subarray(5 + n);
     expect(video.readUInt32BE(0)).toBe(20 + 5);
     expect(video[4]).toBe(2);
     expect(video.toString('latin1', 25)).toBe('frame');
+    w.close();
+    closeSync(fd);
+  });
+
+  it('says only what the protocol holds a viewer to', async () => {
+    const file = pipe();
+    const key = vi.fn();
+    const w = new FrameWriter(key, () => undefined);
+    const fd = openSync(file, constants.O_RDWR | constants.O_NONBLOCK);
+    w.attach(file);
+    await until(() => key.mock.calls.length > 0);
+    w.setInfo({ w: 1284, h: 2778, codec: 'hevc', mode: 'mode 5', crop: true });
+    w.setTurns(1);
+    w.setCounters({ packets: 2400, lostPackets: 3 });
+    let got = Buffer.alloc(0);
+    await until(() => {
+      got = Buffer.concat([got, drain(fd)]);
+      return got.includes(Buffer.from('stream.counters'));
+    });
+    const said: { method: Notification; params: unknown }[] = [];
+    for (let at = 0; at < got.length; at += 5 + got.readUInt32BE(at))
+      said.push(JSON.parse(got.toString('utf8', at + 5, at + 5 + got.readUInt32BE(at))));
+    expect(said.map((m) => m.method)).toEqual(['stream.info', 'stream.turns', 'stream.counters']);
+    for (const m of said) expect(() => NOTIFICATIONS[m.method].parse(m.params)).not.toThrow();
+    expect(said[2]!.params).toEqual({ packets: 2400, lostPackets: 3, droppedPictures: 0 });
     w.close();
     closeSync(fd);
   });

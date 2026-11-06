@@ -15,6 +15,7 @@ class WireFixturesTest {
     private val requests = fixture("requests")
     private val results = fixture("results")
     private val errors = fixture("errors")
+    private val notifications = fixture("notifications")
 
     private fun params(name: String) = requests.getJSONObject(name).getJSONObject("params")
 
@@ -133,6 +134,33 @@ class WireFixturesTest {
         assertEquals(0, one.phase)
         assertNull(one.x2)
         assertNull(one.y2)
+    }
+
+    @Test
+    fun aStreamAsTheViewerAsksForIt() {
+        val plain = StreamRequest.from(params("stream.start"))
+        assertEquals("h264", plain.codec)
+        assertEquals("auto", plain.quality)
+        assertNull(plain.maxSize)
+        assertNull(plain.startSize)
+        assertNull(plain.roomMs)
+        val whole = StreamRequest.from(params("stream.start.whole"))
+        assertEquals("hevc", whole.codec)
+        assertEquals("standard", whole.quality)
+        assertEquals(1280, whole.maxSize)
+        assertEquals(2, whole.failFirst)
+        assertEquals(1024, whole.startSize)
+        assertEquals(12L, whole.roomMs)
+    }
+
+    @Test
+    fun aStreamsClockAndNewsAreWhatAViewerTakes() {
+        same(result("stream.clock"), Results.streamClock(123456789012L))
+        val info = notifications.getJSONObject("stream.info.android").getJSONObject("params")
+        same(info, Results.streamInfo(1080, 2400, false, info.getString("mode")))
+        val sent = java.io.ByteArrayOutputStream()
+        ConnectionOutput(FrameWriter(sent)).end("no encoder took this display")
+        same(notifications.getJSONObject("stream.end"), JSONObject(String(sent.toByteArray(), 5, sent.size() - 5)))
     }
 
     @Test

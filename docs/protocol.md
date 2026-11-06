@@ -64,7 +64,7 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 | `audit` (iOS)                                            | `types?`, `maxIssues` (50)                                                                               | `issues`, `truncated`, `elapsedMs`                                               |
 | `a11y.read` (Android)                                    | `maxNodes` (60)                                                                                          | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`) |
 | `touch` (Android)                                        | `p` (0 down, 1 moved, 2 up), `x`, `y`, `x2?`, `y2?`: fractions of the screen, no settle                  |
-| `stream.start` (Android)                                 | `codec` (`h264`), `quality`, `maxSize?`, `failFirst?`                                                    |
+| `stream.start` (Android)                                 | `codec` (`h264`), `quality`, `maxSize?`, `failFirst?`, `startSize?`, `roomMs?`                           |
 | `stream.clock`, `stream.sync`, `stream.status` (Android) | –                                                                                                        |
 | `wait`                                                   | `since?`, `timeoutMs`, `minMs` (300)                                                                     | `sig`, `changed`, `reads`, `elapsedMs`, `tree?`                                  |
 | `cancel`                                                 | `id`                                                                                                     | –                                                                                |
@@ -321,11 +321,18 @@ codec are released with it. It comes with the same token as any connection, and 
 agent's idle exit. `touch`, `stream.clock`, `stream.sync` and `stream.status` are answered on the connection's own
 thread, not the one lane of device work: a person's finger waits for no settle.
 
-- `stream.info {w, h, codec, mode}` is the agent's own message, with no id, before the first frame of each encoder: its
-  size, and in `mode` the encoder and the step of the ladder.
+- `stream.info {w, h, codec, mode, crop?}` is the agent's own message, with no id, before the first frame of each encoder:
+  its size, and in `mode` the encoder and the step of the ladder. `crop` is a phone's: the picture is larger than the
+  screen, which stands at its top left.
 - `stream.end {why}` says it will not go on: every step of the ladder failed.
+- `stream.counters {...}` and `stream.turns {turns}` are a phone's: what its stream has counted so far, by name, and the
+  quarter turns that stand the picture up, as nothing in that stream says so. They reach the viewer on the same pipe.
 - Flags: 1 a keyframe, 2 parameter sets. The capture time is the display's own, on `System.nanoTime`'s clock, which
   `stream.clock` answers in `now` for the host to find the offset by its shortest round trip.
+
+The viewer speaks all of this to the agent itself, with no host between them, so these names and fields stand in
+`METHODS` and `NOTIFICATIONS` in `packages/protocol/src/messages.ts` with fixtures of their own, and
+`packages/protocol/test/native.test.ts` reads the viewer and both agents for them.
 
 **The ladder**, when an encoder fails: the same step again three times, 500 ms apart; each size down from
 `{2560, 1920, 1600, 1280, 1024, 800}`; the other codec, at each size; a software encoder of the first codec, at each

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import type { z } from 'zod';
 import { ERROR_CODES } from '../src/errors.js';
 import {
   FRAME_BINARY,
@@ -10,7 +11,13 @@ import {
   VIDEO_HEADER_BYTES,
 } from '../src/frame.js';
 import { keyOfUsage, KEYS } from '../src/keys.js';
-import { NODE_FLAGS, PROTOCOL } from '../src/messages.js';
+import {
+  METHODS,
+  NODE_FLAGS,
+  NOTIFICATIONS,
+  PROTOCOL,
+  type Notification,
+} from '../src/messages.js';
 
 const read = (path: string) => readFileSync(join(import.meta.dirname, '../../..', path), 'utf8');
 
@@ -133,5 +140,57 @@ describe('what is written three times', () => {
     expect(read(`${AGENT}/Errors.kt`)).toContain(`PROTOCOL_MAJOR = ${PROTOCOL.major}\n`);
     expect(read(`${CORE}/Errors.swift`)).toContain(`protocolMajor = ${PROTOCOL.major}\n`);
     expect(read('mirror/Viewer/SourceStream.m')).toContain(`@"protocol": @${PROTOCOL.major}}`);
+  });
+});
+
+describe('the stream, which a viewer speaks to the agent with no host between them', () => {
+  const VIEWER = 'mirror/Viewer/SourceStream.m';
+  const names = (path: string) => [
+    ...new Set([...read(path).matchAll(/["'](stream\.\w+)["']/g)].map((m) => m[1]!)),
+  ];
+  const read$ = (text: string, of: RegExp) => [...text.matchAll(of)].map((m) => m[1]!);
+  const fields = (name: Notification) =>
+    Object.keys((NOTIFICATIONS[name] as unknown as z.ZodObject).shape);
+
+  // a phone's stream holds its own writer to these, in its own folder, which can go whole
+  it.each([VIEWER, `${AGENT}/Stream.kt`, `${AGENT}/Server.kt`])(
+    '%s says no name the protocol has not got',
+    (path) => {
+      const known = [...Object.keys(METHODS), ...Object.keys(NOTIFICATIONS)];
+      expect(names(path).length).toBeGreaterThan(0);
+      expect(names(path).filter((name) => !known.includes(name))).toEqual([]);
+    },
+  );
+
+  it('the viewer asks by the names of the table, and hears every notification', () => {
+    const asked = read$(read(VIEWER), /sendMethod:@"([\w.]+)"/g);
+    expect(asked.filter((m) => !(m in METHODS))).toEqual([]);
+    expect(asked).toEqual(expect.arrayContaining(['stream.start', 'stream.clock']));
+    const heard = read$(read(VIEWER), /isEqual:@"(stream\.\w+)"/g);
+    expect(heard.sort()).toEqual(Object.keys(NOTIFICATIONS).sort());
+  });
+
+  it('the viewer reads no field a notification has not got', () => {
+    const viewer = read(VIEWER);
+    expect(
+      read$(viewer, /info\[@"(\w+)"\]/g).filter((f) => !fields('stream.info').includes(f)),
+    ).toEqual([]);
+    expect(viewer).toContain(`[@"params"][@"${fields('stream.turns')[0]}"]`);
+    expect(viewer).toContain(`[@"params"][@"${fields('stream.end')[0]}"]`);
+  });
+
+  it('the viewer reads its clock by the field the table has', () => {
+    const clock = METHODS['stream.clock'].result as unknown as z.ZodObject;
+    expect(read(VIEWER)).toContain(`[@"result"][@"${Object.keys(clock.shape)[0]}"]`);
+  });
+
+  it('the Android agent reads the whole of a start, and nothing else', () => {
+    const from = inside(
+      read(`${AGENT}/Stream.kt`),
+      /fun from\(p: JSONObject\) = StreamRequest\(/,
+      '\n        )',
+    );
+    const start = METHODS['stream.start'].params as unknown as z.ZodObject;
+    expect(read$(from, /p\.opt\w+\("(\w+)"/g).sort()).toEqual(Object.keys(start.shape).sort());
   });
 });

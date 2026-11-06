@@ -135,6 +135,23 @@
     "method": "touch",
     "params": { "p": 0, "x": 0.5, "y": 0.25 }
   },
+  "stream.start": {
+    "method": "stream.start",
+    "input": {},
+    "params": { "codec": "h264", "quality": "auto" }
+  },
+  "stream.start.whole": {
+    "method": "stream.start",
+    "params": {
+      "codec": "hevc",
+      "quality": "standard",
+      "maxSize": 1280,
+      "failFirst": 2,
+      "startSize": 1024,
+      "roomMs": 12
+    }
+  },
+  "stream.clock": { "method": "stream.clock", "params": {} },
   "stream.sync": { "method": "stream.sync", "params": {} },
   "stream.status": { "method": "stream.status", "params": {} },
   "cancel": { "method": "cancel", "params": { "id": 7 } },

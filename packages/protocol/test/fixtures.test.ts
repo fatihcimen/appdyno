@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { z } from 'zod';
 import { ERROR_CODES, codeOfRpc, rpcCode, type ErrorCode } from '../src/errors.js';
-import { METHODS, type Method } from '../src/messages.js';
+import { METHODS, NOTIFICATIONS, type Method, type Notification } from '../src/messages.js';
 
 /** The wire as canonical JSON: the agent's unit tests and the runner's read the same files. */
 const fixture = <T>(name: string) =>
@@ -12,6 +12,8 @@ const fixture = <T>(name: string) =>
 const requests =
   fixture<Record<string, { method: Method; input?: unknown; params: object }>>('requests.json');
 const results = fixture<Record<string, { method: Method; result: object }>>('results.json');
+const notifications =
+  fixture<Record<string, { method: Notification; params: object }>>('notifications.json');
 const errors =
   fixture<Record<string, { code: number; message: string; data: { code: ErrorCode } }>>(
     'errors.json',
@@ -33,7 +35,16 @@ describe('the canonical requests', () => {
   it('show every default the schemas give', () => {
     const shown = Object.values(requests).filter((r) => r.input !== undefined);
     expect(new Set(shown.map((r) => r.method))).toEqual(
-      new Set(['tree.get', 'act', 'text.set', 'screenshot', 'audit', 'wait', 'a11y.read']),
+      new Set([
+        'tree.get',
+        'act',
+        'text.set',
+        'screenshot',
+        'audit',
+        'wait',
+        'a11y.read',
+        'stream.start',
+      ]),
     );
   });
 });
@@ -46,6 +57,17 @@ describe('the canonical results', () => {
   it('name every method', () => {
     const named = new Set(Object.values(results).map((r) => r.method));
     expect(Object.keys(METHODS).filter((m) => !named.has(m as Method))).toEqual([]);
+  });
+});
+
+describe('the canonical notifications', () => {
+  it.each(Object.entries(notifications))('%s is what a viewer takes', (_, n) => {
+    expect(NOTIFICATIONS[n.method].parse(n.params)).toEqual(n.params);
+  });
+
+  it('name every notification', () => {
+    const named = new Set(Object.values(notifications).map((n) => n.method));
+    expect(Object.keys(NOTIFICATIONS).filter((m) => !named.has(m as Notification))).toEqual([]);
   });
 });
 

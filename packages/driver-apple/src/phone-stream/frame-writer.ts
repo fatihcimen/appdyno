@@ -1,5 +1,6 @@
 import { constants, openSync, unlinkSync } from 'node:fs';
 import { Socket } from 'node:net';
+import type { StreamInfo } from '@appdyno/protocol';
 
 /**
  * Frames to the viewer, on a pipe it holds, in the framing of an agent's stream. Three pictures at most wait: past them
@@ -79,7 +80,7 @@ export class FrameWriter {
   }
 
   /** What a viewer is told of the picture, now and on each new attach. */
-  setInfo(params: Record<string, unknown>) {
+  setInfo(params: StreamInfo) {
     this.info = { method: 'stream.info', params };
     this.writeJson(this.info);
   }

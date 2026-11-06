@@ -357,6 +357,23 @@ export const METHODS = {
     }),
     result: z.object({}),
   },
+  /** Android: frames on this connection until it ends, asked for by the viewer, which talks to the agent itself. */
+  'stream.start': {
+    params: z.object({
+      codec: z.enum(['h264', 'hevc']).default('h264'),
+      quality: z.enum(['auto', 'high', 'standard']).default('auto'),
+      maxSize: z.number().int().positive().optional(),
+      /** So many encoders fail first, for a test of the ladder. */
+      failFirst: z.number().int().nonnegative().optional(),
+      /** Where `auto` starts, for a test that cannot wait for a load to take it there. */
+      startSize: z.number().int().positive().optional(),
+      /** What a run must beat to show room, for a test on a device a busy Mac leaves none on. */
+      roomMs: z.number().int().positive().optional(),
+    }),
+    result: z.object({}),
+  },
+  /** Android: the clock frames are stamped by, in ns, for the host to find the offset by its shortest round trip. */
+  'stream.clock': { params: z.object({}), result: z.object({ now: z.number() }) },
   /** Android: a fresh keyframe from each stream of this agent. */
   'stream.sync': { params: z.object({}), result: z.object({}) },
   /** Android: how many streams run, and whether the screen is on. */
@@ -378,6 +395,29 @@ export const METHODS = {
   cancel: { params: z.object({ id: z.number().int() }), result: z.object({}) },
   shutdown: { params: z.object({}), result: z.object({}) },
 } as const;
+/**
+ * What goes to a viewer with no id and wants no answer: from the agent, or on a phone from the stream's own writer to a
+ * pipe. All of it reads the same in the viewer, so a field here is a field in all three.
+ */
+export const NOTIFICATIONS = {
+  /** The picture, before its first frame and on each new encoder. A phone's `crop`: the picture is larger than the screen. */
+  'stream.info': z.object({
+    w: z.number().int(),
+    h: z.number().int(),
+    codec: z.enum(['h264', 'hevc']),
+    mode: z.string(),
+    crop: z.boolean().optional(),
+  }),
+  /** It will not go on, and why. */
+  'stream.end': z.object({ why: z.string() }),
+  /** A phone: since the stream began, by name, for the viewer's stats. */
+  'stream.counters': z.record(z.string(), z.number()),
+  /** A phone: quarter turns to stand the picture up, as nothing in its stream says so. */
+  'stream.turns': z.object({ turns: z.number().int() }),
+} as const;
+export type Notification = keyof typeof NOTIFICATIONS;
+export type StreamInfo = z.infer<(typeof NOTIFICATIONS)['stream.info']>;
+
 export type Method = keyof typeof METHODS;
 export type ParamsOf<M extends Method> = z.input<(typeof METHODS)[M]['params']>;
 export type ResultOf<M extends Method> = z.infer<(typeof METHODS)[M]['result']>;
