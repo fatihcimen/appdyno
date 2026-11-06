@@ -136,6 +136,20 @@ describe('what is written three times', () => {
     expect(valueOf(stream, 'kMaxFrame')).toBe(MAX_FRAME_BYTES);
   });
 
+  it('both agents wait alike after a touch that changed nothing', () => {
+    const kotlin = /INERT_QUIET_MS = (\d+)L/.exec(read(`${AGENT}/Settling.kt`));
+    const swift = /inertQuietMs = (\d+)/.exec(read(`${CORE}/Settler.swift`));
+    expect(kotlin?.[1]).toBeDefined();
+    expect(kotlin?.[1]).toBe(swift?.[1]);
+  });
+
+  it('the host calls a region cut at an edge by the tile the viewer looks in', () => {
+    const tile = /MVTile = (\d+)/.exec(read('mirror/Viewer/Motion.m'));
+    const width = /MVWatchWidth = (\d+)/.exec(read('mirror/Viewer/Watch.m'));
+    const edge = /const EDGE = ([\d.]+)/.exec(read('packages/ops/src/watch.ts'));
+    expect(Number(edge![1])).toBeCloseTo(Number(tile![1]) / Number(width![1]), 2);
+  });
+
   it('all speak one version', () => {
     expect(read(`${AGENT}/Errors.kt`)).toContain(`PROTOCOL_MAJOR = ${PROTOCOL.major}\n`);
     expect(read(`${CORE}/Errors.swift`)).toContain(`protocolMajor = ${PROTOCOL.major}\n`);

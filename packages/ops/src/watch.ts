@@ -26,7 +26,7 @@ const REGIONS_SAID = 6;
 /** Under this many frames a second, a speed and a jump are guesses. */
 const FEW_FRAMES = 15;
 const EVENTS_SAID = 3;
-/** Tiles are this share of a frame's width: a region's edges are no nearer than that to the screen's. */
+/** A tile's share of a frame's width, `MVTile` of `MVWatchWidth`: a region's edges are no nearer than that to the screen's. */
 const EDGE = 0.07;
 
 const cannot = (why: string, fix?: string) =>

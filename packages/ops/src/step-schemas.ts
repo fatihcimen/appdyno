@@ -83,7 +83,7 @@ export const WAIT_MS = 5_000;
 
 export const MAX_WAIT_MS = 15_000;
 
-const SCROLL_MAX = 10;
+export const SCROLL_MAX = 10;
 
 export const Check = z.enum(['exists', 'absent', 'text', 'enabled', 'checked', 'focused', 'moves']);
 

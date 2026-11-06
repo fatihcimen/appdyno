@@ -4,15 +4,11 @@ import type { ServerContext } from '../context.js';
 import { NOT_STEPS } from '../report.js';
 import type { Session } from '../session.js';
 import { SCROLLER_SWIPES } from '../perf/shared.js';
-import { type Step, WAIT_MS } from '../step-schemas.js';
+import { SCROLL_MAX, type Step, WAIT_MS } from '../step-schemas.js';
+import { NO_MATCH_WAIT_MS } from '../steps.js';
 import type { Op, ToolResult } from '../tool.js';
 import { type Aim, aimAt, fieldName, named, stepOf, unrecorded } from './aim.js';
 import { activeRecording, addSteps, defined } from './shared.js';
-
-/** While recording: how long a selector's element may take to come, as `steps` allows. */
-const AIM_WAIT_MS = 1_500;
-
-const DEFAULT_SWIPES = 10;
 
 /** A target as the flat form the ops take. */
 type Target = { ref?: string; x?: number; y?: number; selector?: FlowSelector };
@@ -66,11 +62,11 @@ export function flowRecorder(ctx: ServerContext) {
     if (t.ref) {
       const has = (x: Screen) => x.list.find((y) => y.ref === t.ref);
       screen = await s.current();
-      if (!has(screen)) screen = (await s.until((x) => !!has(x), AIM_WAIT_MS)).screen;
+      if (!has(screen)) screen = (await s.until((x) => !!has(x), NO_MATCH_WAIT_MS)).screen;
       e = screen && has(screen);
     } else if (t.selector) {
       const sel = t.selector;
-      screen = (await s.until((x) => selectIn(x.list, sel).length > 0, AIM_WAIT_MS)).screen;
+      screen = (await s.until((x) => selectIn(x.list, sel).length > 0, NO_MATCH_WAIT_MS)).screen;
       e = screen && selectIn(screen.list, sel)[sel.index ?? 0];
     } else if (t.x !== undefined && t.y !== undefined) {
       return aimAt(await s.current(), { x: t.x, y: t.y }, await size(s));
@@ -150,7 +146,7 @@ export function flowRecorder(ctx: ServerContext) {
             },
             {
               direction: st.direction === 'up' ? undefined : st.direction,
-              maxSwipes: st.maxSwipes === DEFAULT_SWIPES ? undefined : st.maxSwipes,
+              maxSwipes: st.maxSwipes === SCROLL_MAX ? undefined : st.maxSwipes,
             },
           );
     }

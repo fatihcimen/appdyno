@@ -37,7 +37,7 @@ const NOTHING_TO_READ = new Set(['power', 'lock', 'siri', 'mute']);
 const NEEDS_NO_LOOK = new Set(['home', 'mute', 'power', 'lock']);
 
 /** How long a selector with no match waits for its element, as a screen may still be coming. */
-const NO_MATCH_WAIT_MS = 1_500;
+export const NO_MATCH_WAIT_MS = 1_500;
 
 const DRAG_HOLD_MS = 150;
 
@@ -62,12 +62,12 @@ type Judged = SelectorOf & {
 /** What every step passes through on its way to the device (the recorder). */
 export type StepSeam = <T>(s: Session, st: Step, run: () => Promise<T>) => Promise<T>;
 
-/** One step's device call and the action around it, shared by the tools that act on a target. */
 /** Only these touch nothing. */
 const LOOKS_ONLY = new Set<Step['action']>(['wait_for', 'assert']);
 /** How long an `assert` watches with no time of its own. */
 const WATCH_CHECK_MS = 2_000;
 
+/** One step's device call and the action around it, shared by the tools that act on a target. */
 export function stepsFor(
   ctx: ServerContext,
   { act, clean, settleRead }: Answers,
