@@ -76,8 +76,8 @@ export async function cpuProfile(
       `LC_ALL=C simpleperf record --app ${pkg} -e cpu-clock -f 1000 --duration ${s} -o ${file} 2>&1`,
       (s + 30) * 1000,
     );
-    if (during) await during();
-    const recorded = await rec;
+    // both at once: a recording that fails while `during` throws must not fail with no one listening
+    const [recorded] = await Promise.all([rec, during?.()]);
     if (/ E |error|fail|not supported/i.test(recorded) && !/Samples recorded/i.test(recorded))
       throw new DeviceError(
         'UNSUPPORTED',

@@ -111,9 +111,14 @@ export async function recordTrace(
   const pid = Number(/^(\d+)\s*$/m.exec(started)?.[1]);
   if (!pid)
     throw new DeviceError('UNSUPPORTED', `perfetto did not start: ${started.trim().slice(0, 200)}`);
+  const stop = () => d.shell(`kill -TERM ${pid}`);
   try {
-    if (opts.during) await opts.during();
-    if (opts.stop) await d.shell(`kill -TERM ${pid}`);
+    await opts.during?.().catch(async (e: unknown) => {
+      // no one will read it, and it would hold the device's tracing for the rest of its time
+      await stop().catch(() => undefined);
+      throw e;
+    });
+    if (opts.stop) await stop();
     // the longest asked for, with the time a heap dump may take to end
     const end = Date.now() + 200_000;
     while (Date.now() < end && (await d.shell(`[ -d /proc/${pid} ] && echo up`)).includes('up'))

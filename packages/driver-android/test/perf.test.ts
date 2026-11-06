@@ -6,7 +6,7 @@ import { quantile } from '@appdyno/core';
 import { parseExitInfo } from '../src/crashes.js';
 import { THERMAL_READ } from '../src/perf/app.js';
 import { AndroidPerf } from '../src/perf/index.js';
-import { assertReadOnlySql, queryTrace } from '../src/perf/perfetto.js';
+import { assertReadOnlySql, queryTrace, recordTrace } from '../src/perf/perfetto.js';
 import {
   parseAmStart,
   parseAndroidFrameStats,
@@ -559,6 +559,57 @@ describe('the measures of a device', () => {
     await expect(on('R58M', 'No process found').frames('dev.app')).rejects.toMatchObject({
       code: 'APP_NOT_RUNNING',
     });
+  });
+
+  it('hears a recording that fails after what it was around threw', async () => {
+    const heard: unknown[] = [];
+    const note = (e: unknown) => void heard.push(e);
+    process.on('unhandledRejection', note);
+    let fail = (_: Error) => {};
+    const recording = new Promise<string>((_, reject) => (fail = reject));
+    const device = {
+      serial: 'R58M',
+      shell: async () => '4242\n',
+      shellAlongside: () => recording,
+      shellBuffer: async () => Buffer.from(''),
+      pull: async () => undefined,
+      readyToMeasure: async () => undefined,
+      ensureAwake: async () => ({ woke: false, unlocked: false, locked: false }),
+    };
+    const during = async () => {
+      throw new Error('the swipe failed');
+    };
+    await expect(new AndroidPerf(device).cpuProfile('dev.app', 1_000, during)).rejects.toThrow(
+      'the swipe failed',
+    );
+    fail(new Error('the device went away'));
+    await new Promise((r) => setImmediate(r));
+    process.off('unhandledRejection', note);
+    expect(heard).toEqual([]);
+  });
+
+  it('stops a trace no one will read, when what it was around threw', async () => {
+    const sent: string[] = [];
+    const device = {
+      serial: 'R58M',
+      shell: async (cmd: string) => {
+        sent.push(cmd);
+        return cmd.includes('perfetto') ? '4242\n' : '';
+      },
+      shellAlongside: async () => '',
+      shellBuffer: async () => Buffer.from(''),
+      pull: async () => undefined,
+      readyToMeasure: async () => undefined,
+      ensureAwake: async () => ({ woke: false, unlocked: false, locked: false }),
+    };
+    const during = async () => {
+      throw new Error('the swipe failed');
+    };
+    await expect(recordTrace(device, 'dev.app', 'frames', [], { during })).rejects.toThrow(
+      'the swipe failed',
+    );
+    expect(sent).toContain('kill -TERM 4242');
+    expect(sent.at(-1)).toMatch(/^rm -f /);
   });
 
   it('readies the device for frames that are measured, and not for what only looks', async () => {
