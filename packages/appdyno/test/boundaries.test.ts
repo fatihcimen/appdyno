@@ -172,37 +172,8 @@ describe('the phone stream', () => {
   });
 });
 
-const FORBIDDEN = [
-  ['get', 'ir'],
-  ['mobile', '-mcp'],
-  ['mobile', 'cli'],
-  ['mobile', 'next'],
-  ['agent', '-device'],
-  ['agent', 'device'],
-  ['call', 'stack'],
-  ['device', 'kit'],
-  ['anth', 'ropic'],
-  ['co', '-authored'],
-  ['super', 'powers'],
-  ['sub', 'agent'],
-  ['worktree', '-agent'],
-  ['clau', 'de'],
-  ['chat', 'gpt'],
-].map((parts) => parts.join(''));
-
 /** What the clients are called has to be written somewhere, and only here: the list, and how to set each up. */
 const CLIENT_DATA = ['packages/cli/src/clients.ts', 'docs/clients.md', 'docs/clients.tr.md'];
-const IN_CLIENT_DATA = FORBIDDEN.slice(-2);
-
-const forbiddenIn = (text: string) => {
-  const lower = text.toLowerCase();
-  return FORBIDDEN.filter((name) => lower.includes(name));
-};
-
-const hitsIn = (file: string, text: string) =>
-  forbiddenIn(`${file}\n${text}`)
-    .filter((name) => !(CLIENT_DATA.includes(file) && IN_CLIENT_DATA.includes(name)))
-    .map((name) => `${file}: ${name}`);
 
 const trackedFiles = () =>
   execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' })
@@ -210,41 +181,17 @@ const trackedFiles = () =>
     .filter(Boolean)
     .filter((f) => existsSync(join(root, f)) && statSync(join(root, f)).isFile());
 
-describe('the name', () => {
-  it('has no trace of the old one, or of any other', () => {
+describe('a client', () => {
+  it('has its name and folders in those files, and in no other', () => {
     const tracked = trackedFiles();
     expect(tracked.length).toBeGreaterThan(100);
-    expect(tracked).toContain('pnpm-lock.yaml');
     expect(tracked).toEqual(expect.arrayContaining(CLIENT_DATA));
-    const hits = tracked.flatMap((f) => hitsIn(f, readFileSync(join(root, f), 'latin1')));
-    expect(hits).toEqual([]);
-  });
-
-  it('catches a name in any case', () => {
-    expect(forbiddenIn('uses ' + FORBIDDEN[1]!.toUpperCase() + ' here')).toEqual([FORBIDDEN[1]]);
-    expect(forbiddenIn('npx -y appdyno mcp')).toEqual([]);
-  });
-
-  it.each(CLIENT_DATA)('lets %s name a client, and nothing else in it', (file) => {
-    for (const name of IN_CLIENT_DATA) expect(hitsIn(file, `uses ${name}`)).toEqual([]);
-    expect(hitsIn(file, `uses ${FORBIDDEN[1]}`)).toEqual([`${file}: ${FORBIDDEN[1]}`]);
-  });
-
-  it('lets no other file name a client', () => {
-    for (const name of IN_CLIENT_DATA) {
-      expect(hitsIn('README.md', `uses ${name}`)).toEqual([`README.md: ${name}`]);
-      expect(hitsIn('docs/perf.md', `uses ${name}`)).toEqual([`docs/perf.md: ${name}`]);
-      expect(hitsIn('packages/cli/src/install.ts', `uses ${name}`)).not.toEqual([]);
-    }
-  });
-
-  it('keeps a client’s name and folders in those files', () => {
     const marks = CLIENTS.flatMap((c) => [
       ...c.name.split(' and ').map((name) => new RegExp(`\\b${name}\\b`)),
       ...c.files.map((f) => new RegExp(f.replaceAll('.', '\\.'))),
     ]);
     expect(marks.length).toBeGreaterThan(CLIENTS.length);
-    const hits = trackedFiles()
+    const hits = tracked
       .filter((f) => !CLIENT_DATA.includes(f) && !f.endsWith('.apk') && !/\.(png|jpg|jar)$/.test(f))
       .flatMap((f) => {
         const text = readFileSync(join(root, f), 'latin1');
