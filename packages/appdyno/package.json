@@ -32,6 +32,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/bundle.mjs",
+    "prepack": "test -f agents/android/agent.apk || { echo 'no Android agent: run ./gradlew :agent:assembleDebug in android/, then pnpm build' >&2; exit 1; }",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

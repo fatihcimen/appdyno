@@ -24,7 +24,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
-      # `pnpm build` packages the agent, and stops when there is none
+      # before `pnpm build`, which packages it
       - name: Android agent
         run: cd android && ./gradlew --console=plain :agent:testDebugUnitTest :agent:assembleDebug
       - run: pnpm build

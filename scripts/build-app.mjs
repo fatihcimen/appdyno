@@ -47,6 +47,11 @@ const resources = join(contents, 'Resources');
 const helper = join(contents, 'Helpers', `${WINDOW}.app`);
 const helpers = join(helper, 'Contents/MacOS');
 
+if (!existsSync(join(pkg, 'agents/android/agent.apk')))
+  throw new Error(
+    'no Android agent: run ./gradlew :agent:assembleDebug in android/, then pnpm build',
+  );
+
 const manifest = JSON.parse(readFileSync(join(pkg, 'package.json'), 'utf8'));
 const { version } = manifest;
 const repository = manifest.repository.url.replace(/^git\+/, '').replace(/\.git$/, '');

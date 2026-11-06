@@ -112,7 +112,8 @@ rmSync(agents, { recursive: true, force: true });
 const { agent, ios, mac, viewer } = NATIVE_PARTS;
 const packed = (from, part, filter = () => true) =>
   cpSync(from, join(agents, part.packaged), { recursive: true, filter });
-packed(join(pkg, '../driver-android/agents', agent.packaged), agent);
+const android = join(pkg, '../driver-android/agents', agent.packaged);
+if (existsSync(android)) packed(android, agent);
 packed(join(pkg, '../driver-apple/agents', ios.packaged), ios);
 packed(join(pkg, '../..', viewer.repo), viewer, (f) => !VIEWER_TEST_FILES.test(basename(f)));
 packed(join(pkg, '../..', mac.repo), mac);

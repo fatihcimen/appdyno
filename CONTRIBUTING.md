@@ -2,19 +2,28 @@
 
 ## Setup
 
-You need macOS, Xcode (for the iOS parts) and the Android SDK with `adb` (for the Android parts).
+You need macOS, Node 22 and pnpm 10.
 
 ```sh
 mise install        # Node 22, pnpm 10, JDK 21 (see .mise.toml)
 pnpm install
+pnpm run ci         # lint, types, tests, build
 ```
 
-JDK 21 is for the Android agent only. Users of the published package do not need it.
+That runs on a clean clone, with no device, no Xcode project and no JDK.
+
+To work on a device you need more: Xcode for iOS, and the Android SDK with `adb` for Android. Build the Android agent
+once, and again when you change it. Users of the published package do not need a JDK.
+
+```sh
+(cd android && ./gradlew :agent:assembleDebug)
+pnpm build          # packages the agent; a package without it refuses to leave this Mac
+```
 
 ## Checks
 
 ```sh
-pnpm run ci      # lint, types, tests, build; no device
+pnpm run ci
 (cd android && ./gradlew --console=plain :agent:testDebugUnitTest)
 (cd ios/RunnerCore && swift test)             # the iOS runner's core
 ```

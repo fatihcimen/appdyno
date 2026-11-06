@@ -1,4 +1,13 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -25,5 +34,17 @@ describe('release version', () => {
       repository: { url: string };
     };
     expect(repository.url).toBe('git+https://github.com/fatihcimen/appdyno.git');
+  });
+
+  it('leaves this Mac only with its Android agent, which a build goes on without', () => {
+    const { prepack } = JSON.parse(read('packages/appdyno/package.json')).scripts as {
+      prepack: string;
+    };
+    const folder = mkdtempSync(join(tmpdir(), 'appdyno-prepack-'));
+    const packs = () => spawnSync('sh', ['-c', prepack], { cwd: folder, stdio: 'ignore' }).status;
+    expect(packs()).toBe(1);
+    mkdirSync(join(folder, 'agents/android'), { recursive: true });
+    writeFileSync(join(folder, 'agents/android/agent.apk'), '');
+    expect(packs()).toBe(0);
   });
 });

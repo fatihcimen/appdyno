@@ -8,7 +8,7 @@ measuring step was postponed, as what never ran is no pass.
 | -------------------------------------- | ------------------------------------------------------------------------------------- |
 | install, format, lint, typecheck, unit | `pnpm install --frozen-lockfile`, prettier, eslint, tsc, vitest (`--maxWorkers=2`)    |
 | agent                                  | Gradle: the agent's unit tests, the agent and the fixture app                         |
-| build                                  | `pnpm build` (packages the agent)                                                     |
+| build                                  | `pnpm build` (packages the agent when it was built)                                   |
 | fixture-install, device-functional     | with `--device <serial>`: the fixture app, then the contract, smoke and stdio suites  |
 | device-perf                            | the measurement accuracy suite (a measuring step)                                     |
 | latency, regression-gate               | with `--nightly`: the latency suite (`appdyno bench`, n = 30) and the gate            |
