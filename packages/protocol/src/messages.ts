@@ -23,7 +23,6 @@ export const NODE_FLAGS = {
   /** Android 9+: a screen reader reads it as one unit with its children. */
   screenReaderFocusable: 8192,
 } as const;
-export type NodeFlag = keyof typeof NODE_FLAGS;
 
 const Rect = z.tuple([z.number(), z.number(), z.number(), z.number()]);
 

@@ -76,8 +76,6 @@ export async function takeScreenshot(
   }
 }
 
-export type ServiceError = { text: string };
-
 /** The readable words of what a service refused with, wherever in its answer they are. */
 export function errorWords(error: Decoded | undefined): string {
   if (typeof error === 'string') return error;

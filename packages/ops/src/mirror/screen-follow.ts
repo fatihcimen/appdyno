@@ -85,5 +85,3 @@ export function followScreen(o: FollowPort) {
     },
   };
 }
-
-export type ScreenFollow = ReturnType<typeof followScreen>;

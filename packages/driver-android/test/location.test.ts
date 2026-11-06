@@ -4,7 +4,6 @@ import {
   clearStaleTestLocation,
   clearTestLocation,
   locationScript,
-  mockedProviders,
   parseLocationRun,
   parseTestLocation,
   processAlive,
@@ -12,18 +11,6 @@ import {
 } from '../src/location.js';
 
 describe('test location bookkeeping', () => {
-  it('reads the mock providers from dumpsys location', () => {
-    const dump = [
-      '  Location Providers:',
-      '    network provider:',
-      '    fused provider [mock]:',
-      '      last mock location=Location[fused 41.008200,28.978400 mock]',
-      '    gps provider [mock]:',
-    ].join('\n');
-    expect([...mockedProviders(dump)].sort()).toEqual(['fused', 'gps']);
-    expect(mockedProviders('    gps provider:\n').size).toBe(0);
-  });
-
   it('knows its own file and nothing else as ours', () => {
     expect(parseTestLocation('4242 gps fused\n')).toEqual({
       pid: 4242,

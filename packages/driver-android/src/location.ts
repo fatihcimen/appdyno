@@ -78,11 +78,6 @@ export function removableProviders(listed: string[], dumpsys: string): string[] 
 /** The test location providers this library added: `<host pid> <provider>…`. */
 export const TEST_LOCATION = `${REMOTE_DIR}/test-location`;
 
-/** Providers `dumpsys location` shows with a mock (`  gps provider [mock]:`). */
-export function mockedProviders(dumpsys: string): Set<string> {
-  return new Set([...dumpsys.matchAll(/^\s*(\w+) provider \[mock\]/gm)].map((m) => m[1]!));
-}
-
 /** The host process and the providers of a TEST_LOCATION file; nothing when it is missing or not ours. */
 export function parseTestLocation(text: string): { pid?: number; providers: string[] } {
   const [pid, ...rest] = text.trim().split(/\s+/);

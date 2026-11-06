@@ -10,7 +10,6 @@ import {
   FOCUS_READ,
   NODE_FLAGS,
   TEST_LOCATION,
-  mockedProviders,
   type Screen,
 } from './workspace.js';
 
@@ -575,7 +574,10 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(compose.f & NODE_FLAGS.screenReaderFocusable).toBe(NODE_FLAGS.screenReaderFocusable);
   });
 
-  const mocks = async () => [...mockedProviders(await d.shell('dumpsys location'))].sort();
+  const mocks = async () =>
+    [...(await d.shell('dumpsys location')).matchAll(/^\s*(\w+) provider \[mock\]/gm)]
+      .map((m) => m[1]!)
+      .sort();
 
   it('sets a test location and removes only the providers it added', async () => {
     // a mock provider the device already had (another tool's): used, never removed
