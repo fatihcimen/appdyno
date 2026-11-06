@@ -342,6 +342,80 @@ A viewer kept behind, or with no window at all, copies to a board of its own, `d
 
 `packages/appdyno/scripts/mirror-shots.mjs <simulator> <folder>` writes each state of a window, light and dark, with nothing brought forward. `--behind` keeps a real window off every screen, where the window server still composites it, glass and picture included, and `{"op":"snapshot","file":...}` writes it out; no permission is asked, as a process may read its own window. Hover, animation, sheets and the menu bar cannot be seen this way: those take a hand run.
 
+## The wire
+
+A viewer and its parent speak one JSON object a line, on the viewer's stdin and stdout, each with an `op`. Either side passes over a name it does not know, so `VIEWER_OPS` in `packages/core/src/mirror/viewer.ts` lists them all, the compiler holds the parent to that list, and a test holds it to the viewer's sources and to these tables. Names only: what a message carries is read where it is handled.
+
+What it takes:
+
+| Name         | What it asks                                       |
+| ------------ | -------------------------------------------------- |
+| `activity`   | A line for the Activity pane.                      |
+| `agent`      | Who drives the device now, and by what tool.       |
+| `apps`       | What the Apps pane lists.                          |
+| `attach`     | Show this source.                                  |
+| `banner`     | Ask a person for something, or stop asking.        |
+| `clients`    | What the AI Clients pane shows.                    |
+| `copied`     | Put this image on the pasteboard.                  |
+| `copyText`   | Put this text on the pasteboard.                   |
+| `detach`     | Let the source go; the window stays.               |
+| `element`    | What is under the pointer.                         |
+| `flow`       | The steps of the recording.                        |
+| `hub`        | The hub's list and what the chosen device shows.   |
+| `mark`       | Time from now to the next changed frame.           |
+| `measured`   | The result of a measure.                           |
+| `measuring`  | A line on a measure under way.                     |
+| `note`       | A line for a person.                               |
+| `pair`       | The other device of a pair.                        |
+| `perf`       | Live numbers.                                      |
+| `poke`       | What a test does to the window, as a person would. |
+| `quit`       | Close and exit.                                    |
+| `raise`      | Come to the front, at a person's word.             |
+| `record`     | Record the picture to this file.                   |
+| `recording`  | Show that a recording runs.                        |
+| `recordStop` | End the recording.                                 |
+| `results`    | What was measured on this device before.           |
+| `snapshot`   | Write the window to this file.                     |
+| `status`     | The state to show.                                 |
+| `tick`       | A new frame in the shared file.                    |
+| `touchAt`    | Show where a touch landed.                         |
+| `turns`      | Quarter turns that stand the picture up.           |
+| `watch`      | Read the motion of the next frames.                |
+
+What it says:
+
+| Name        | What it means                                      |
+| ----------- | -------------------------------------------------- |
+| `app`       | An action from the Apps pane.                      |
+| `board`     | The answer to a test's read of its own pasteboard. |
+| `button`    | A device button was pressed.                       |
+| `clicked`   | The answer to a test's click.                      |
+| `closed`    | The window closed.                                 |
+| `control`   | A control that is no input.                        |
+| `done`      | A person answered a banner.                        |
+| `fired`     | The answer to a test's menu item.                  |
+| `first`     | The first picture of a source.                     |
+| `hover`     | The pointer rests here.                            |
+| `hub`       | A hub action, as `action` names it.                |
+| `inspect`   | The element inspector went on or off.              |
+| `key`       | A key went down or up.                             |
+| `lost`      | The stream was lost, and if it can come back.      |
+| `marked`    | The answer to `mark`.                              |
+| `needKey`   | The decoder wants a keyframe.                      |
+| `perfWatch` | The numbers are wanted, or no longer.              |
+| `pick`      | A click on an element, in the inspector.           |
+| `ready`     | The process is up.                                 |
+| `recorded`  | The answer to `recordStop`.                        |
+| `refused`   | It cannot open, and what it needs.                 |
+| `sleep`     | The Mac goes to sleep.                             |
+| `snapped`   | The answer to `snapshot`.                          |
+| `stats`     | The stream's numbers, once a second.               |
+| `text`      | Typed text.                                        |
+| `touch`     | A finger went down, moved or lifted.               |
+| `wake`      | The Mac woke.                                      |
+| `watched`   | The answer to `watch`.                             |
+| `zoom`      | The window's scale changed.                        |
+
 ## Stated limits
 
 - An iPhone is experimental: it rests on undocumented services, which may change.

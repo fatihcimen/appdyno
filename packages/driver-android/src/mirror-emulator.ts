@@ -17,6 +17,7 @@ import {
   type Mirror,
   type MirrorOptions,
   type MirrorSource,
+  type ViewerOrder,
 } from '@appdyno/core';
 import { GrpcMessages, grpcFrame, imageInfo, imageRequest } from './grpc-image.js';
 import type { AndroidMirror } from './mirror.js';
@@ -94,7 +95,7 @@ export class EmulatorMirror implements Mirror {
   async open(
     opts: MirrorOptions,
     _signal: AbortSignal,
-    tell: (message: Record<string, unknown>) => void,
+    tell: (message: ViewerOrder) => void,
   ): Promise<MirrorSource> {
     const grpc = this.endpoint();
     if (!grpc) return this.guest(opts, 'this emulator has no gRPC port');
@@ -139,7 +140,7 @@ export class EmulatorMirror implements Mirror {
 
   private async openPixels(
     grpc: GrpcEndpoint,
-    tell: (message: Record<string, unknown>) => void,
+    tell: (message: ViewerOrder) => void,
   ): Promise<MirrorSource> {
     const screen = await this.phone.status();
     // the emulator's frame keeps the shape it was built with: a guest that rotates draws sideways in it

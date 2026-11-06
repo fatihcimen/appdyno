@@ -15,6 +15,7 @@ import {
   type MirrorOptions,
   type MirrorSource,
   type Need,
+  type ViewerOrder,
 } from '@appdyno/core';
 import { keyOfUsage } from '@appdyno/protocol';
 import { Devicectl } from './devicectl.js';
@@ -138,7 +139,7 @@ export class PhoneMirror implements Mirror {
   async open(
     options: MirrorOptions,
     _signal?: AbortSignal,
-    tell: (message: Record<string, unknown>) => void = () => undefined,
+    tell: (message: ViewerOrder) => void = () => undefined,
   ): Promise<MirrorSource> {
     this.say = (text) => tell({ op: 'note', text });
     const stream = await this.stream();

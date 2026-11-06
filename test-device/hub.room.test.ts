@@ -236,9 +236,6 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
       told.length = 0;
       link.send({ op: 'poke', id: serials[0], press: 'beside' });
       await until('both', () => serials.every(live), LIVE_MS);
-      await until('the pair said', () => told.some((m) => m.op === 'pair'), 10_000).catch(
-        () => undefined,
-      );
       await quiet(3_000);
       await picture('split');
       link.send({ op: 'poke', id: serials[1] });

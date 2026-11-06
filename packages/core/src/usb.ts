@@ -26,16 +26,18 @@ const ANDROID_MAKERS: Record<number, Maker> = {
 const APPLE = 0x05ac;
 
 /** What a person does for a phone, in the order they do it. The hub's table has the words of each. */
-export type StepId =
-  | 'get-adb'
-  | 'developer-options'
-  | 'usb-debugging'
-  | 'allow'
-  | 'xiaomi-security'
-  | 'xiaomi-install'
-  | 'get-xcode'
-  | 'trust'
-  | 'developer-mode';
+export const STEP_IDS = [
+  'get-adb',
+  'developer-options',
+  'usb-debugging',
+  'allow',
+  'xiaomi-security',
+  'xiaomi-install',
+  'get-xcode',
+  'trust',
+  'developer-mode',
+] as const;
+export type StepId = (typeof STEP_IDS)[number];
 
 /** `sees`: this Mac can tell when it is done, and ticks it. Where it cannot, a person moves on by a word, and nothing waits. */
 export type Step = { id: StepId; done: boolean; sees: boolean };

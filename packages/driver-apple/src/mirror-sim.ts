@@ -9,6 +9,7 @@ import type {
   MirrorCheck,
   MirrorOptions,
   MirrorSource,
+  ViewerOrder,
 } from '@appdyno/core';
 import { type Key, KEY_USAGES, keyOfUsage } from '@appdyno/protocol';
 import { applePress } from './mirror-press.js';
@@ -87,7 +88,7 @@ export class SimulatorMirror implements Mirror {
   }
 
   /** One read at a time, and none for a while after one failed: the window then stays as it was last told. */
-  private followTurns(tell: (message: Record<string, unknown>) => void) {
+  private followTurns(tell: (message: ViewerOrder) => void) {
     clearInterval(this.turnsTimer);
     let notBefore = 0;
     this.turnsTimer = setInterval(() => {
@@ -101,7 +102,7 @@ export class SimulatorMirror implements Mirror {
     this.turnsTimer.unref();
   }
 
-  private async readTurns(tell: (message: Record<string, unknown>) => void) {
+  private async readTurns(tell: (message: ViewerOrder) => void) {
     const running = await this.reader?.catch(() => undefined);
     // closed meanwhile: a helper started now would have no one to end it
     if (!this.turnsTimer) return true;
@@ -118,7 +119,7 @@ export class SimulatorMirror implements Mirror {
   async open(
     _opts?: MirrorOptions,
     _signal?: AbortSignal,
-    tell: (message: Record<string, unknown>) => void = () => undefined,
+    tell: (message: ViewerOrder) => void = () => undefined,
   ): Promise<MirrorSource> {
     // up before a person's first touch, which would otherwise wait over a second for it
     void this.helper().catch(() => undefined);

@@ -17,7 +17,7 @@ export const spokenDone = (done: string | undefined) => {
 };
 
 const forWindow = ({ at, tool, ms, ok, args, done }: ActivityLine) => ({
-  op: 'activity',
+  op: 'activity' as const,
   at,
   time: new Date(at).toLocaleTimeString(),
   tool,

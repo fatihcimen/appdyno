@@ -11,7 +11,7 @@ import {
   type MirrorStats,
   type MirrorStatus,
 } from './state.js';
-import type { ViewerLink, ViewerMessage } from './viewer.js';
+import type { ViewerLink, ViewerMessage, ViewerOrder } from './viewer.js';
 import { ViewerAsks } from './viewer-asks.js';
 import { heardFromViewer, type ViewerWords } from './viewer-words.js';
 
@@ -132,7 +132,7 @@ export class MirrorSession {
   }
 
   /** A word for the window itself: the mark of an agent, a banner, a line of activity. */
-  tell(message: Record<string, unknown>) {
+  tell(message: ViewerOrder) {
     this.viewer?.send(message);
   }
 

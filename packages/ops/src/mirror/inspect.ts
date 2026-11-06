@@ -4,6 +4,7 @@ import {
   type Screen,
   type ScreenElement,
   type ViewerMessage,
+  type ViewerOrder,
 } from '@appdyno/core';
 import { elementUnder, type FlowStep, selectorLine, stepLine } from '@appdyno/flows';
 import type { AuditIssue } from '@appdyno/protocol';
@@ -14,7 +15,7 @@ export type InspectPort = {
   device: Pick<Device, 'audit'>;
   latest(): Screen | undefined;
   sizeOf(screen: Screen): Size | undefined;
-  tell(message: Record<string, unknown>): void;
+  tell(message: ViewerOrder): void;
   say(note: string): void;
   /** Takes an assertion into the running recording; false: none runs. */
   assert(step: FlowStep, aim: Aim): boolean;

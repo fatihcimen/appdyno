@@ -60,11 +60,85 @@ export async function viewerBinary(env?: NodeJS.ProcessEnv): Promise<string> {
   });
 }
 
-export type ViewerMessage = { op: string } & Record<string, unknown>;
+/**
+ * The viewer's wire, by name: what it takes and what it says. Both sides pass over a name they do not know, so one
+ * changed on one side only would fail in silence: a test holds this list to the viewer's sources.
+ */
+export const VIEWER_OPS = {
+  takes: [
+    'activity',
+    'agent',
+    'apps',
+    'attach',
+    'banner',
+    'clients',
+    'copied',
+    'copyText',
+    'detach',
+    'element',
+    'flow',
+    'hub',
+    'mark',
+    'measured',
+    'measuring',
+    'note',
+    'pair',
+    'perf',
+    'poke',
+    'quit',
+    'raise',
+    'record',
+    'recording',
+    'recordStop',
+    'results',
+    'snapshot',
+    'status',
+    'tick',
+    'touchAt',
+    'turns',
+    'watch',
+  ],
+  says: [
+    'app',
+    'board',
+    'button',
+    'clicked',
+    'closed',
+    'control',
+    'done',
+    'fired',
+    'first',
+    'hover',
+    'hub',
+    'inspect',
+    'key',
+    'lost',
+    'marked',
+    'needKey',
+    'perfWatch',
+    'pick',
+    'ready',
+    'recorded',
+    'refused',
+    'sleep',
+    'snapped',
+    'stats',
+    'text',
+    'touch',
+    'wake',
+    'watched',
+    'zoom',
+  ],
+} as const;
+
+/** What a viewer says. */
+export type ViewerMessage = { op: (typeof VIEWER_OPS.says)[number] } & Record<string, unknown>;
+/** What a viewer is told. */
+export type ViewerOrder = { op: (typeof VIEWER_OPS.takes)[number] } & Record<string, unknown>;
 
 /** The viewer as a session sees it, a process or a test's stand-in. */
 export interface ViewerLink {
-  send(message: Record<string, unknown>): void;
+  send(message: ViewerOrder): void;
   onMessage(listener: (m: ViewerMessage) => void): void;
   /** Once, however it ended; what it last said on stderr. */
   onExit(listener: (tail: string) => void): void;
@@ -123,7 +197,7 @@ export class ViewerProcess implements ViewerLink {
     for (const l of this.exits) l([this.tail, extra].filter(Boolean).join('\n').trim());
   }
 
-  send(message: Record<string, unknown>) {
+  send(message: ViewerOrder) {
     if (!this.ended) this.child.stdin.write(`${JSON.stringify(message)}\n`);
   }
 

@@ -7,10 +7,12 @@ export * from './session-options.js';
 export type { MirrorClock, MirrorState, MirrorStats, MirrorStatus } from './state.js';
 export {
   startViewer,
+  VIEWER_OPS,
   viewerBinary,
   ViewerProcess,
   type ViewerLink,
   type ViewerMessage,
+  type ViewerOrder,
   type ViewerStart,
 } from './viewer.js';
 export type { RecordingResult } from './recording.js';

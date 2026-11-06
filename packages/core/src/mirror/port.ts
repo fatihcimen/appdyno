@@ -1,5 +1,6 @@
 import type { Key } from '@appdyno/protocol';
 import type { Need } from './need.js';
+import type { ViewerOrder } from './viewer.js';
 
 export type MirrorQuality = 'auto' | 'high' | 'standard';
 
@@ -63,7 +64,7 @@ export interface Mirror {
   open(
     opts: MirrorOptions,
     signal: AbortSignal,
-    tell: (message: Record<string, unknown>) => void,
+    tell: (message: ViewerOrder) => void,
   ): Promise<MirrorSource>;
   /** Asks the far end for a fresh keyframe, after loss or a decoder error. */
   keyframe(): Promise<void>;

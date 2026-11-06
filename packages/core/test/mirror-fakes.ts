@@ -8,6 +8,7 @@ import type {
   MirrorSource,
   ViewerLink,
   ViewerMessage,
+  ViewerOrder,
 } from '../src/index.js';
 
 /** A clock run by hand. */
@@ -51,12 +52,12 @@ export const flush = async () => {
 
 /** A viewer that says what it is told to say, and keeps what it was sent. */
 export class FakeViewer implements ViewerLink {
-  sent: Record<string, unknown>[] = [];
+  sent: ViewerOrder[] = [];
   private listeners: ((m: ViewerMessage) => void)[] = [];
   private exits: ((tail: string) => void)[] = [];
   killed = false;
 
-  send(message: Record<string, unknown>) {
+  send(message: ViewerOrder) {
     this.sent.push(message);
   }
 
@@ -72,7 +73,7 @@ export class FakeViewer implements ViewerLink {
     this.killed = true;
   }
 
-  say(op: string, rest: Record<string, unknown> = {}) {
+  say(op: ViewerMessage['op'], rest: Record<string, unknown> = {}) {
     for (const l of this.listeners) l({ op, ...rest });
   }
 
@@ -101,7 +102,7 @@ export class FakeMirror implements Mirror {
   holdsThrough: DeviceState | undefined;
   noFirstFrame: Mirror['noFirstFrame'];
   source: MirrorSource = { kind: 'pixels', file: '/x', w: 1, h: 1 };
-  tell: ((m: Record<string, unknown>) => void) | undefined;
+  tell: ((m: ViewerOrder) => void) | undefined;
   keyOf = keyOfUsage;
 
   async check() {
@@ -109,11 +110,7 @@ export class FakeMirror implements Mirror {
     return this.checkAnswer;
   }
 
-  async open(
-    _o: unknown,
-    _s: AbortSignal,
-    tell: (m: Record<string, unknown>) => void,
-  ): Promise<MirrorSource> {
+  async open(_o: unknown, _s: AbortSignal, tell: (m: ViewerOrder) => void): Promise<MirrorSource> {
     this.opens++;
     this.tell = tell;
     if (this.openFails) throw this.openFails;

@@ -7,6 +7,7 @@ import type {
   MirrorSource,
   Need,
   RpcClient,
+  ViewerOrder,
 } from '@appdyno/core';
 import { pause } from '@appdyno/core';
 import { DeviceError, type Key, KEY_USAGES, keyOfUsage, KEYS } from '@appdyno/protocol';
@@ -85,7 +86,7 @@ export class AndroidMirror implements Mirror {
   async open(
     opts: MirrorOptions,
     _signal?: AbortSignal,
-    tell: (message: Record<string, unknown>) => void = () => undefined,
+    tell: (message: ViewerOrder) => void = () => undefined,
   ): Promise<MirrorSource> {
     this.say = (text) => tell({ op: 'note', text });
     this.toldBehind = false;
