@@ -19,6 +19,7 @@ NS_ASSUME_NONNULL_BEGIN
   __weak MVRoomView *_room;
   MVRootView *_root;
   MVBackdrop *_backdrop;
+  NSInteger _side;
   MVStatusLine *_line;
   MVPictureLayers *_layers;
   CGSize _picture;

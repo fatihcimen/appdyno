@@ -8,7 +8,8 @@ enum { kMoodColumns = 5, kMoodRows = 9, kMoodSamples = 6 };
 static const double kBackdropSeconds = 2;
 static const double kPlaceSeconds = 0.24;
 // how far a picture's colour reaches and how strongly, how much colour in a picture counts as all of it, and its light in each look
-static const double kMoodReach = 0.3, kMoodStrength = 0.9, kMoodFull = 60, kMoodDark = 0.66, kMoodLight = 0.68, kMoodSeconds = 0.3;
+static const double kMoodReach = 0.3, kMoodStrength = 0.9, kMoodFull = 60, kMoodDark = 0.66, kMoodLight = 0.68, kMoodSeconds = 0.3, kMoodSame = 0.02, kMoodLeft = 0.32;
+static const float kMoodY = 0.56;
 
 typedef struct {
   const uint8_t *base;
@@ -119,9 +120,9 @@ CGImageRef MVImageMood(CVImageBufferRef image, BOOL dark) {
 @implementation MVBackdrop {
   CALayer *_layer, *_grain;
   __weak NSWindow *_window;
-  double _at;
-  id _picture;
-  BOOL _waiting;
+  double _at[2];
+  id _picture[2];
+  BOOL _waiting[2];
   NSInteger _place;
   /// What the picture adds, each side of it, as colour and strength.
   MVGroundBloom _mood[2];
@@ -199,73 +200,78 @@ static void drawAgain(NSView *view) {
   [self paint];
 }
 
+/// A hue at the ground's own light: dark stays dark and light stays light, whatever is on the screen.
+static MVGroundBloom bloomOf(const uint8_t *bytes, size_t row, size_t wide, size_t tall, size_t from, size_t to, BOOL dark, double x) {
+  double sum[3] = {0, 0, 0}, weight = 0;
+  for (size_t y = 0; y < tall; y++)
+    for (size_t at = from; at < to; at++) {
+      const uint8_t *px = bytes + y * row + at * 4;
+      double chroma = MAX(px[0], MAX(px[1], px[2])) - MIN(px[0], MIN(px[1], px[2]));
+      for (int i = 0; i < 3; i++) sum[i] += px[i] * chroma;
+      weight += chroma;
+    }
+  MVGroundBloom bloom = {(float)x, kMoodY, kMoodReach, 0, 0};
+  if (weight < 1) return bloom;
+  double top = MAX(sum[0], MAX(sum[1], sum[2])), low = MIN(sum[0], MIN(sum[1], sum[2])), level = dark ? kMoodDark : kMoodLight;
+  uint32_t color = 0;
+  for (int i = 0; i < 3; i++) {
+    double share = sum[i] / top;
+    color = color << 8 | (uint8_t)(255 * (dark ? level * share : 1 - (1 - share) * (1 - level)));
+  }
+  bloom.color = color;
+  bloom.strength = (float)(MIN(1, weight / ((double)(to - from) * tall * kMoodFull)) * (top - low) / top * kMoodStrength);
+  return bloom;
+}
+
 /// What a picture adds is its hue and no more: its light stays the ground's, so that nothing a device shows can reach what is read over it.
-- (void)show:(nullable CGImageRef)mood {
+- (void)show:(nullable CGImageRef)mood side:(NSInteger)side {
   if (!mood) return;
   MVGroundBloom was[2] = {_mood[0], _mood[1]};
   NSData *cells = CFBridgingRelease(CGDataProviderCopyData(CGImageGetDataProvider(mood)));
-  const uint8_t *bytes = cells.bytes;
   size_t row = CGImageGetBytesPerRow(mood), wide = CGImageGetWidth(mood), tall = CGImageGetHeight(mood);
   BOOL dark = self.isDark;
-  for (int side = 0; side < 2; side++) {
-    double sum[3] = {0, 0, 0}, weight = 0;
-    for (size_t y = 0; y < tall; y++)
-      for (size_t x = side ? wide / 2 : 0; x < (side ? wide : wide / 2 + 1); x++) {
-        const uint8_t *px = bytes + y * row + x * 4;
-        double high = MAX(px[0], MAX(px[1], px[2])), low = MIN(px[0], MIN(px[1], px[2])), chroma = high - low;
-        for (int i = 0; i < 3; i++) sum[i] += px[i] * chroma;
-        weight += chroma;
-      }
-    double reach = wide * tall * kMoodFull;
-    _mood[side] = (MVGroundBloom){side ? 0.68 : 0.32, 0.56, kMoodReach, 0, 0};
-    if (weight < 1) continue;
-    double r = sum[0] / weight, g = sum[1] / weight, b = sum[2] / weight, top = MAX(r, MAX(g, b)), floor = MIN(r, MIN(g, b));
-    double level = dark ? kMoodDark : kMoodLight, sat = top > floor ? (top - floor) / top : 0;
-    // a hue at the ground's own light: dark stays dark and light stays light, whatever is on the screen
-    uint8_t channel[3];
-    double value[3] = {r, g, b};
-    for (int i = 0; i < 3; i++) {
-      double share = top > 0 ? value[i] / top : 0;
-      channel[i] = (uint8_t)(255 * (dark ? level * share : 1 - (1 - share) * (1 - level)));
-    }
-    _mood[side].color = (uint32_t)channel[0] << 16 | (uint32_t)channel[1] << 8 | channel[2];
-    _mood[side].strength = MIN(1, weight / reach) * sat * kMoodStrength;
+  if (side < 0) {
+    _mood[0] = bloomOf(cells.bytes, row, wide, tall, 0, wide / 2 + 1, dark, kMoodLeft);
+    _mood[1] = bloomOf(cells.bytes, row, wide, tall, wide / 2, wide, dark, 1 - kMoodLeft);
+  } else {
+    _mood[side] = bloomOf(cells.bytes, row, wide, tall, 0, wide, dark, side ? 1 - kMoodLeft : kMoodLeft);
   }
   CGImageRelease(mood);
   // a screen that stays as it was changes nothing, and is not painted
-  if (fabs(was[0].strength - _mood[0].strength) + fabs(was[1].strength - _mood[1].strength) < 0.02 && was[0].color == _mood[0].color && was[1].color == _mood[1].color) return;
+  if (fabs(was[0].strength - _mood[0].strength) + fabs(was[1].strength - _mood[1].strength) < kMoodSame && was[0].color == _mood[0].color && was[1].color == _mood[1].color) return;
   [self fadeOver:kMoodSeconds];
   [self paint];
 }
 
-- (void)sample {
-  id picture = _picture;
-  _picture = nil;
-  _at = MVNowMs();
+- (void)sample:(NSInteger)at side:(NSInteger)side {
+  id picture = _picture[at];
+  _picture[at] = nil;
+  _at[at] = MVNowMs();
   if (!picture) return;
   CFTypeRef held = (__bridge CFTypeRef)picture;
-  [self show:CFGetTypeID(held) == IOSurfaceGetTypeID() ? MVPictureMood((IOSurfaceRef)held, self.isDark) : MVImageMood((CVImageBufferRef)held, self.isDark)];
+  [self show:CFGetTypeID(held) == IOSurfaceGetTypeID() ? MVPictureMood((IOSurfaceRef)held, self.isDark) : MVImageMood((CVImageBufferRef)held, self.isDark) side:side];
 }
 
 /// At most once in its time, and the last picture always: a screen that stops sends nothing more, and it is the one that stays.
-- (void)follow:(id)picture {
-  _picture = picture;
-  double wait = kBackdropSeconds * 1000 - (MVNowMs() - _at);
-  if (wait <= 0) return [self sample];
-  if (_waiting) return;
-  _waiting = YES;
+- (void)follow:(id)picture side:(NSInteger)side {
+  NSInteger at = MAX(side, 0);
+  _picture[at] = picture;
+  double wait = kBackdropSeconds * 1000 - (MVNowMs() - _at[at]);
+  if (wait <= 0) return [self sample:at side:side];
+  if (_waiting[at]) return;
+  _waiting[at] = YES;
   dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(wait * NSEC_PER_MSEC)), dispatch_get_main_queue(), ^{
-    self->_waiting = NO;
-    [self sample];
+    self->_waiting[at] = NO;
+    [self sample:at side:side];
   });
 }
 
-- (void)followSurface:(IOSurfaceRef)surface {
-  [self follow:(__bridge id)surface];
+- (void)followSurface:(IOSurfaceRef)surface side:(NSInteger)side {
+  [self follow:(__bridge id)surface side:side];
 }
 
-- (void)followImage:(CVImageBufferRef)image {
-  [self follow:(__bridge id)image];
+- (void)followImage:(CVImageBufferRef)image side:(NSInteger)side {
+  [self follow:(__bridge id)image side:side];
 }
 
 @end

@@ -40,6 +40,11 @@ static NSString *stateWords(NSDictionary *device) {
   self.needsLayout = YES;
 }
 
+- (NSInteger)sideOf:(NSView *)stage {
+  NSArray<NSView *> *stages = self.stages;
+  return stages.count > 1 ? (NSInteger)MIN([stages indexOfObject:stage], 1) : -1;
+}
+
 - (void)viewDidChangeEffectiveAppearance {
   [super viewDidChangeEffectiveAppearance];
   [self.backdrop repaint];
@@ -178,12 +183,9 @@ static NSString *stateWords(NSDictionary *device) {
   _about = MVWrappedText(@"", MVStyleBody);
   _about.alignment = NSTextAlignmentCenter;
   _about.preferredMaxLayoutWidth = kWordsWide;
-  _start = [NSButton buttonWithTitle:MVWord(@"Start") target:self action:@selector(togglePower:)];
-  _start.controlSize = NSControlSizeLarge;
+  _start = MVPlacePrimary(@"Start", @"start", self, @selector(togglePower:));
   _start.keyEquivalent = @"\r";
-  _again = [MVBarButton buttonWithTitle:MVWord(@"Try Again") target:self action:@selector(tryAgain:)];
-  _again.identifier = @"tryAgain";
-  _again.controlSize = NSControlSizeLarge;
+  _again = MVPlacePrimary(@"Try Again", @"tryAgain", self, @selector(tryAgain:));
   _again.hidden = YES;
   _mark = [[MVInk alloc] initWithSymbol:@"iphone" color:MVQuietColor() size:32];
   _column = [NSStackView stackViewWithViews:@[_mark, _name, _about, _start, _again]];

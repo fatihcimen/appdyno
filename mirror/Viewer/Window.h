@@ -128,8 +128,9 @@ CGImageRef _Nullable MVImageMood(CVImageBufferRef image, BOOL dark);
 /// something to show whatever the device does.
 @interface MVBackdrop : NSObject
 - (instancetype)initInView:(NSView *)view window:(NSWindow *)window;
-- (void)followSurface:(IOSurfaceRef)surface;
-- (void)followImage:(CVImageBufferRef)image;
+/// A picture's colours, on `side` of the window: 0 or 1 of two devices, or -1 for one alone.
+- (void)followSurface:(IOSurfaceRef)surface side:(NSInteger)side;
+- (void)followImage:(CVImageBufferRef)image side:(NSInteger)side;
 /// A place's colours; 0 for a device.
 - (void)showPlace:(NSInteger)place;
 /// The look changed.
@@ -204,8 +205,9 @@ static const double MVHudWidth = 188;
 
 /// One line of a list.
 @interface MVRow : NSObject
-/// A small mark of how a device is.
+/// A small mark of how a device is, and the shape that says it where colour is not to be relied on.
 @property(nonatomic, nullable) NSColor *dot;
+@property(nonatomic, copy, nullable) NSString *dotShape;
 @property(nonatomic, copy) NSString *title;
 @property(nonatomic, copy) NSString *detail;
 /// All there is to say of it, where a line has no room.
@@ -317,6 +319,8 @@ void MVGiveWay(NSSplitViewItem *item, BOOL narrow, BOOL *gaveWay);
 
 /// Where the chosen stand: one fills it, and two share it evenly. Its window's Inspector goes with it.
 @interface MVRoomView : NSView
+/// Where a stage stands of two; -1 for one alone.
+- (NSInteger)sideOf:(NSView *)stage;
 /// What stands behind every stage and place.
 @property(nonatomic) MVBackdrop *backdrop;
 @property(nonatomic) MVInspectorSlot *slot;

@@ -151,6 +151,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 
 /// Everything laid out once, from the window's size: the device takes the room there is.
 - (void)layoutPicture {
+  _side = _room ? [_room sideOf:_root] : -1;
   NSRect all = _root.bounds;
   // what stands under a sidebar and an Inspector is the backdrop's
   NSEdgeInsets under = _root.safeAreaInsets;
@@ -256,11 +257,11 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 
 - (void)showSurface:(IOSurfaceRef)surface {
   [_layers showSurface:surface];
-  [_backdrop followSurface:surface];
+  [_backdrop followSurface:surface side:_side];
 }
 
 - (BOOL)showImage:(CVImageBufferRef)image {
-  [_backdrop followImage:image];
+  [_backdrop followImage:image side:_side];
   return [_layers showImage:image];
 }
 
