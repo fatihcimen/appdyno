@@ -15,6 +15,7 @@
 - On macOS 13 the viewer no longer calls what only macOS 14 has, in a toolbar, a spring and a path, any of which ends a process, and two symbols that drew nothing there have older ones in their place. A test holds every source to the floor.
 - A client of no name no longer ends the hub, and a name that begins with an emoji keeps it whole on its tile.
 - The keyboard starts on the hub's list, where a caret blinked in Search on a window with no device.
+- A failed read of the app in front no longer blanks the figures for a second: the app last named is read on.
 - `perf_snapshot` on an iPhone says when another app, or a locked phone's home screen, stood in front, and keeps no CPU number from it: an app the phone had stopped read 0 %, and the gate called a real cost no regression. It asks only if a runner is already up.
 - `perf_scroll` goes on into new rows for as long as a list moves, read from the screen, and brings it back only once the list has ended, which the answer says. A round past a list's end read as smooth on Android, from frames of nothing, and on a real iPhone it failed the call with its good rounds lost.
 - An agent that stops under a session says so, on the call's progress and on stderr, where a read used to start another and go on as though nothing had happened. A device suite that loses one fails, unless the test ended it on purpose.

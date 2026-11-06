@@ -164,6 +164,25 @@ describe("a device's numbers each second", () => {
     expect(d.measure.cpu).not.toHaveBeenCalled();
   });
 
+  it('go on through a read of what is in front that failed, rather than go blank', async () => {
+    const d = device();
+    vi.mocked(d.foreground)
+      .mockResolvedValueOnce('dev.app')
+      .mockRejectedValueOnce(new Error('timed out'))
+      .mockResolvedValue('dev.app');
+    const [, second] = await samples(d, 2);
+    expect(second).toMatchObject({ app: 'dev.app', cpuPercent: 12.5, memoryMb: 200 });
+    expect(second!.absent?.cpuPercent).toBeUndefined();
+  });
+
+  it('wait when that read fails with no app known yet: there is nothing to go on with', async () => {
+    const d = device();
+    vi.mocked(d.foreground).mockRejectedValue(new Error('timed out'));
+    const sample = await first(d);
+    expect(sample.absent?.fps).toBe('waiting for the app in front');
+    expect(d.measure.cpu).not.toHaveBeenCalled();
+  });
+
   it('are about the app asked for, when one is', async () => {
     const d = device();
     expect((await first(d, 'other.app')).app).toBe('other.app');

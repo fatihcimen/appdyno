@@ -120,7 +120,8 @@ export function measuredLive(
       const running = (async () => {
         while (on) {
           const began = Date.now();
-          const front = app ?? (await device.foreground().catch(() => undefined));
+          // a read that failed says nothing of what is in front: the app last named is read on, and its figures stay
+          const front = app ?? (await device.foreground().catch(() => kept.app));
           const sample = front
             ? await sampleOf(device, front, kept, only)
             : { at: began, absent: allAbsent(LIVE_FIELDS, 'waiting for the app in front') };
