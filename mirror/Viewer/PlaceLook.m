@@ -3,8 +3,8 @@
 // window usually is.
 #import "Place.h"
 
-static const double kWordsHold = 4.5, kSymbolHolds = 3, kDarkenBy = 0.95, kPressedBy = 0.14, kDisabledAlpha = 0.5;
-static const double kButtonHigh = 28, kButtonWide = 14, kSoftAlpha = 0.14, kWordsLift = 0.5, kPlainAlpha = 0.09, kRimAlpha = 0.28;
+static const double kWordsHold = 4.5, kSymbolHolds = 3, kDarkenBy = 0.95, kPressedBy = 0.14, kDisabledAlpha = 0.66;
+static const double kButtonHigh = 28, kButtonWide = 14, kSoftAlpha = 0.14, kWordsLift = 0.5, kPlainAlpha = 0.09, kRimAlpha = 0.28, kOutlineAlpha = 0.6;
 static const double kTileRound = 0.28, kTileLift = 0.14, kWashRound = 12;
 static const double kChipHigh = 22, kChipWide = 9, kChipAlpha = 0.14;
 static const double kHeadTile = 44, kHeadGap = 14;
@@ -56,6 +56,11 @@ static void fillGradient(NSBezierPath *shape, NSColor *from, NSColor *to, double
   self.needsDisplay = YES;
 }
 
+- (void)setHasDestructiveAction:(BOOL)destructive {
+  super.hasDestructiveAction = destructive;
+  self.needsDisplay = YES;
+}
+
 - (void)setTitle:(NSString *)title {
   super.title = title;
   [self invalidateIntrinsicContentSize];
@@ -88,8 +93,8 @@ static void fillGradient(NSBezierPath *shape, NSColor *from, NSColor *to, double
   [NSGraphicsContext saveGraphicsState];
   if (!self.enabled) CGContextSetAlpha(NSGraphicsContext.currentContext.CGContext, kDisabledAlpha);
   [self fill:shape];
-  if (!_quiet) {
-    [[NSColor colorWithWhite:1 alpha:kRimAlpha] setStroke];
+  if (!_quiet || MVWithoutColor()) {
+    [(_quiet ? MVRule(kOutlineAlpha) : [NSColor colorWithWhite:1 alpha:kRimAlpha]) setStroke];
     shape.lineWidth = 1;
     [shape stroke];
   }

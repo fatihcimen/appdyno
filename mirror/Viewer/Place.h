@@ -89,6 +89,10 @@ NSView *MVNote(NSView *content);
 NSView *MVPlaceRow(NSView *words, NSArray<NSView *> *ends);
 /// A line between the rows of a card.
 NSView *MVSeparator(void);
+/// A field on a card, on a plate of the palette's: the system's bezel is a black slab on a dark card.
+NSView *MVFieldPlate(NSTextField *field, NSView *_Nullable end);
+/// Nothing here yet: a symbol and what would come, on a card.
+NSView *MVEmptyCard(NSString *symbol, NSString *words);
 /// A word to the parent, for AI Clients and Help alike.
 void MVAskClients(NSString *what, NSDictionary *more);
 /// A self test hears those words itself, as it has no parent.

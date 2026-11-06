@@ -4,7 +4,7 @@
 #import "Window.h"
 #import "Words.h"
 
-static const double kFieldWide = 300, kTile = 22, kIndexTile = 18, kIndexHigh = 44;
+static const double kFieldWide = 300, kIndexTile = 18, kIndexHigh = 36, kIndexGap = 10;
 
 /// A row: the command's name, its title, what it does, what it cannot run without, and the word on its button.
 static NSArray<NSDictionary *> *sections(BOOL fromApp) {
@@ -35,15 +35,16 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   ];
 }
 
-@interface MVToolsPane () <NSComboBoxDelegate, NSTextFieldDelegate>
+@interface MVToolsPane () <NSTextFieldDelegate>
 @end
 
 @implementation MVToolsPane {
   NSMutableDictionary<NSString *, MVToolRow *> *_rows;
   NSMutableArray<NSView *> *_sectionViews;
-  NSComboBox *_app;
-  NSTextField *_folder, *_device;
+  NSTextField *_app, *_folder, *_device;
+  NSArray<NSString *> *_apps;
   NSStackView *_column, *_index;
+  NSScrollView *_page;
   NSDictionary *_shownDevice;
   BOOL _fromApp;
 }
@@ -52,24 +53,33 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   if ((self = [super initWithFrame:frame])) {
     _column = MVPlaceColumn(@[], 18);
     _index = [NSStackView stackViewWithViews:@[]];
-    _index.spacing = 6;
-    NSScrollView *page = MVPlacePage(_column);
-    for (NSView *part in @[_index, page]) {
+    _index.spacing = 12;
+    _index.edgeInsets = NSEdgeInsetsMake(0, 14, 0, 14);
+    _page = MVPlacePage(_column);
+    _page.automaticallyAdjustsContentInsets = NO;
+    NSView *bar = MVGlass(_index, kIndexHigh / 2, nil);
+    for (NSView *part in @[_page, bar]) {
       part.translatesAutoresizingMaskIntoConstraints = NO;
       [self addSubview:part];
     }
     [NSLayoutConstraint activateConstraints:@[
-      [_index.topAnchor constraintEqualToAnchor:self.safeAreaLayoutGuide.topAnchor],
-      [_index.centerXAnchor constraintEqualToAnchor:self.centerXAnchor],
-      [_index.heightAnchor constraintEqualToConstant:kIndexHigh],
-      [page.topAnchor constraintEqualToAnchor:_index.bottomAnchor],
-      [page.leadingAnchor constraintEqualToAnchor:self.leadingAnchor],
-      [page.trailingAnchor constraintEqualToAnchor:self.trailingAnchor],
-      [page.bottomAnchor constraintEqualToAnchor:self.bottomAnchor],
+      [bar.topAnchor constraintEqualToAnchor:self.safeAreaLayoutGuide.topAnchor constant:kIndexGap],
+      [bar.centerXAnchor constraintEqualToAnchor:self.centerXAnchor],
+      [bar.heightAnchor constraintEqualToConstant:kIndexHigh],
+      [_page.topAnchor constraintEqualToAnchor:self.topAnchor],
+      [_page.leadingAnchor constraintEqualToAnchor:self.leadingAnchor],
+      [_page.trailingAnchor constraintEqualToAnchor:self.trailingAnchor],
+      [_page.bottomAnchor constraintEqualToAnchor:self.bottomAnchor],
     ]];
     [self build];
   }
   return self;
+}
+
+/// The page runs on under the index, and starts below it.
+- (void)layout {
+  [super layout];
+  _page.contentInsets = NSEdgeInsetsMake(self.safeAreaInsets.top + kIndexHigh + kIndexGap, 0, 0, 0);
 }
 
 - (void)build {
@@ -112,21 +122,26 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
 /// What the rows run on: one app, one device and one folder, chosen once for all of them.
 - (NSView *)subjectCard {
   NSString *kept = _app.stringValue;
-  _app = [NSComboBox new];
+  _app = [NSTextField textFieldWithString:kept ?: MVFrontApp() ?: @""];
   _app.identifier = @"app";
-  _app.stringValue = kept ?: MVFrontApp() ?: @"";
   _app.placeholderString = MVWord(@"Choose an app, or type its id");
   _app.delegate = self;
-  [_app.widthAnchor constraintEqualToConstant:kFieldWide].active = YES;
+  NSButton *list = [MVBarButton buttonWithImage:MVSymbol(@"chevron.down", MVQuietColor(), 11, NSFontWeightSemibold) target:self action:@selector(listApps:)];
+  list.bordered = NO;
+  list.identifier = @"appList";
+  list.accessibilityLabel = MVWord(@"Choose an app, or type its id");
+  NSView *appPlate = MVFieldPlate(_app, list);
+  [appPlate.widthAnchor constraintEqualToConstant:kFieldWide].active = YES;
   NSString *where = _folder.stringValue;
   _folder = [NSTextField textFieldWithString:where ?: @""];
   _folder.identifier = @"folder";
   _folder.placeholderString = MVWord(@"A folder of .flow files");
   _folder.delegate = self;
-  [_folder.widthAnchor constraintEqualToConstant:kFieldWide - 76].active = YES;
+  NSView *folderPlate = MVFieldPlate(_folder, nil);
+  [folderPlate.widthAnchor constraintEqualToConstant:kFieldWide - 86].active = YES;
   _device = MVText(@"No device chosen", MVStyleBody);
-  NSStackView *folder = [NSStackView stackViewWithViews:@[_folder, MVPlaceButton(@"Choose…", @"chooseFolder", self, @selector(chooseFolder:))]];
-  NSGridView *grid = [NSGridView gridViewWithViews:@[@[MVText(@"App", MVStyleStrong), _app], @[MVText(@"Device", MVStyleStrong), _device], @[MVText(@"Folder", MVStyleStrong), folder]]];
+  NSStackView *folder = [NSStackView stackViewWithViews:@[folderPlate, MVPlaceButton(@"Choose…", @"chooseFolder", self, @selector(chooseFolder:))]];
+  NSGridView *grid = [NSGridView gridViewWithViews:@[@[MVText(@"App", MVStyleStrong), appPlate], @[MVText(@"Device", MVStyleStrong), _device], @[MVText(@"Folder", MVStyleStrong), folder]]];
   grid.rowSpacing = 8;
   grid.columnSpacing = 12;
   [grid columnAtIndex:0].xPlacement = NSGridCellPlacementTrailing;
@@ -162,9 +177,8 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
 }
 
 - (void)showApps:(NSDictionary *)message {
-  [_app removeAllItems];
-  [_app addItemsWithObjectValues:message[@"apps"]];
-  if (!_app.stringValue.length && [message[@"apps"] count]) _app.stringValue = [message[@"apps"] firstObject];
+  _apps = message[@"apps"];
+  if (!_app.stringValue.length && _apps.count) _app.stringValue = _apps.firstObject;
   [self refreshRows];
   if ([message[@"fromApp"] boolValue] == _fromApp) return;
   _fromApp = !_fromApp;
@@ -188,11 +202,17 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   [self refreshRows];
 }
 
-- (void)comboBoxSelectionDidChange:(NSNotification *)notification {
-  // the box takes its new word after this says so
-  dispatch_async(dispatch_get_main_queue(), ^{
-    [self refreshRows];
-  });
+/// The apps the device has, for a click: a menu takes the screen, which a window kept behind never does.
+- (void)listApps:(NSButton *)sender {
+  if (MVPlaceIsBehind() || !_apps.count) return;
+  NSMenu *menu = [[NSMenu alloc] initWithTitle:@""];
+  for (NSString *app in _apps) [menu addItemWithTitle:app action:@selector(appPicked:) keyEquivalent:@""].target = self;
+  [menu popUpMenuPositioningItem:nil atLocation:NSMakePoint(0, NSHeight(sender.bounds) + 6) inView:sender];
+}
+
+- (void)appPicked:(NSMenuItem *)item {
+  _app.stringValue = item.title;
+  [self refreshRows];
 }
 
 - (void)rowClicked:(NSButton *)sender {

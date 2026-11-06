@@ -5,7 +5,7 @@
 #import "Words.h"
 
 static const double kPageWide = 660, kMargin = 28, kCardRound = 16, kCardInset = 14;
-static const double kCopiedSeconds = 1.5, kRuleAlpha = 0.1;
+static const double kCopiedSeconds = 1.5, kRuleAlpha = 0.1, kPlateAlpha = 0.07, kPlateEdge = 0.16, kPlateRound = 9, kPlateHigh = 30, kPlateInset = 10;
 static NSString *gFrontApp;
 
 void MVNoteFrontApp(NSString *name) {
@@ -211,6 +211,61 @@ NSView *MVPlaceRow(NSView *words, NSArray<NSView *> *ends) {
   tight.priority = NSLayoutPriorityDefaultLow;
   tight.active = YES;
   return row;
+}
+
+@interface MVPlateView : NSView
+@end
+
+@implementation MVPlateView
+- (BOOL)wantsUpdateLayer {
+  return YES;
+}
+
+- (void)updateLayer {
+  self.layer.backgroundColor = MVRule(kPlateAlpha).CGColor;
+  self.layer.borderColor = MVRule(kPlateEdge).CGColor;
+}
+@end
+
+NSView *MVFieldPlate(NSTextField *field, NSView *_Nullable end) {
+  field.bezeled = NO;
+  field.bordered = NO;
+  field.drawsBackground = NO;
+  field.focusRingType = NSFocusRingTypeNone;
+  field.textColor = MVInkColor();
+  if (field.placeholderString) field.placeholderAttributedString = [[NSAttributedString alloc] initWithString:field.placeholderString attributes:@{NSForegroundColorAttributeName: MVQuietColor(), NSFontAttributeName: field.font}];
+  NSView *plate = [MVPlateView new];
+  plate.wantsLayer = YES;
+  plate.layer.cornerRadius = kPlateRound;
+  plate.layer.cornerCurve = kCACornerCurveContinuous;
+  plate.layer.borderWidth = 1;
+  field.translatesAutoresizingMaskIntoConstraints = NO;
+  [plate addSubview:field];
+  [NSLayoutConstraint activateConstraints:@[
+    [plate.heightAnchor constraintEqualToConstant:kPlateHigh],
+    [field.centerYAnchor constraintEqualToAnchor:plate.centerYAnchor],
+    [field.leadingAnchor constraintEqualToAnchor:plate.leadingAnchor constant:kPlateInset],
+  ]];
+  if (!end) {
+    [field.trailingAnchor constraintEqualToAnchor:plate.trailingAnchor constant:-kPlateInset].active = YES;
+    return plate;
+  }
+  end.translatesAutoresizingMaskIntoConstraints = NO;
+  [plate addSubview:end];
+  [NSLayoutConstraint activateConstraints:@[
+    [end.centerYAnchor constraintEqualToAnchor:plate.centerYAnchor],
+    [end.trailingAnchor constraintEqualToAnchor:plate.trailingAnchor constant:-kPlateInset],
+    [field.trailingAnchor constraintEqualToAnchor:end.leadingAnchor constant:-kPlateInset / 2],
+  ]];
+  return plate;
+}
+
+NSView *MVEmptyCard(NSString *symbol, NSString *words) {
+  MVInk *mark = [[MVInk alloc] initWithSymbol:symbol color:MVQuietColor() size:16];
+  [mark.widthAnchor constraintEqualToConstant:22].active = YES;
+  NSStackView *line = [NSStackView stackViewWithViews:@[mark, MVPaneNote(words)]];
+  line.spacing = 10;
+  return MVCard(line, 10);
 }
 
 @interface MVRuleView : NSView
