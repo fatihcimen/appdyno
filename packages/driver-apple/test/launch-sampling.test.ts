@@ -1,4 +1,6 @@
-import { Cannot, cannot } from '@appdyno/core';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { Cannot, cannot, stateDir } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IosSimulatorPerf } from '../src/perf.js';
@@ -193,6 +195,28 @@ describe('a compile state', () => {
     const launch = perf.launch(APP, { mode: 'cold', repeats: 1, compile: 'speed' });
     await expect(launch).rejects.toBeInstanceOf(Cannot);
     await expect(launch).rejects.toThrow('cannot measure a launch in a compile state');
+  });
+});
+
+describe('frames on a simulator', () => {
+  const UDID = 'FRAMES-DEFAULT';
+  const file = () => join(stateDir(), 'probes', `${UDID}-${APP}.jsonl`);
+  const perf = () => {
+    const list = `4242\t0\tUIKitApplication:${APP}[cd34][rb-legacy]`;
+    const simctl = Object.assign(new Simctl(), { exec: async () => list });
+    return new IosSimulatorPerf(UDID, simctl, async () => true, cannot("XCTest's metrics"));
+  };
+  const resets = () => (readFileSync(file(), 'utf8').match(/"reset"/g) ?? []).length;
+
+  it('start a window of their own at each read, as they do on Android', async () => {
+    mkdirSync(join(stateDir(), 'probes'), { recursive: true });
+    writeFileSync(file(), `${JSON.stringify({ pid: 4242, loaded: APP, t: Date.now() })}\n`);
+    await perf().frames(APP);
+    expect(resets()).toBe(1);
+    await perf().frames(APP, { reset: false });
+    expect(resets()).toBe(1);
+    await perf().frames(APP, { reset: true });
+    expect(resets()).toBe(2);
   });
 });
 

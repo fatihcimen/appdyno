@@ -212,7 +212,7 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
     await appendFile(this.probeFile(bundle), `${JSON.stringify({ reset: Date.now() })}\n`);
   }
 
-  /** The frames since the last reset, or since the app started under the probe. */
+  /** The frames since the last reset, or since the app started under the probe, then a reset unless told otherwise. */
   async frames(bundle: string, opts: { reset?: boolean } = {}): Promise<Measured<FrameStats>> {
     await this.requireProbe(bundle);
     const to = Date.now();
@@ -221,7 +221,7 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
     const head = probeHead(text);
     const from = head.resetAt ?? head.loadedAt!;
     const raw = probeWindow(text, from, to);
-    if (opts.reset) await this.resetFrames(bundle);
+    if (opts.reset !== false) await this.resetFrames(bundle);
     return { value: probeFrames(raw, from, to), raw, at: at() };
   }
 
