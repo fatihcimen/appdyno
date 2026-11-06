@@ -248,7 +248,16 @@ Left out on purpose, as they are for CI or scripts, or belong to a session:
 
 **Show Beside This One**, on a row of the hub's sidebar, splits its window between two devices: an iPhone and an Android phone, or one build on each of two devices. `appdyno mirror --device A --device B --pair` opens the same as two windows side by side from one process. Closing one leaves the other on its own. A window already open on either closes first.
 
-A touch on either window goes to both. It waits for both screens to be read, which took 30 to 60 ms a read on a simulator and an Android emulator, so that what it means is read as it was before it landed, and then goes to both at once. On the other device it goes to the same thing, by id or by words, and to the same one among those called alike, as two devices rarely have a thing in the same place. A finger on nothing with a name goes to the same place, and a drag keeps its length from where it landed. Keys, text and the window's device controls go to both.
+A touch on either window goes to both. It waits for both screens to be read, so that what it means is read as it was before it landed, and then goes to both at once. That wait is what **To both** costs: a read took 30 to 60 ms on a simulator and an Android emulator, and on two phones the wait comes to 150 to 250 ms, as the table says. On the other device it goes to the same thing, by id or by words, and to the same one among those called alike, as two devices rarely have a thing in the same place. A finger on nothing with a name goes to the same place, and a drag keeps its length from where it landed. Keys, text and the window's device controls go to both.
+
+A real click's release to the first changed picture in the window, on a Samsung SM-A525F and a Xiaomi 25078RA3EY side by side at 720x1600, load 5, 15 clicks each way, every one landing. This is a person's own measure and not the bench's, which stops as a frame arrives:
+
+| Clicked on | Here only, both streams up, p50, ms | To both, on the clicked device, p50, ms | To both, on the other, p50, ms |
+| ---------- | ----------------------------------- | --------------------------------------- | ------------------------------ |
+| Xiaomi     | 97                                  | 243                                     | 265                            |
+| Samsung    | 113                                 | 368, from 180 to 623                    | 363                            |
+
+Here only is what each phone reads alone, so a second stream costs nothing measurable, and what To both adds is that wait. The reads were not timed apart from it.
 
 Each device says where a touch goes, and what became of it. The subtitle says **To both** with an edge of the accent's colour around the device, or **Here only** once the link control is off, and a ring shows where a touch landed on each screen. Where it failed the device's edge goes red and the subtitle says why, until a touch lands: `No Send here` where that device has no such thing, and nothing else is touched, `iPhone 17 Pro is not live`, `That did not land`. A drag that begins on such a thing goes on from the same place, as it means no one thing.
 
@@ -434,7 +443,7 @@ What it says:
 - More's menu, the frame's hover, a window's remembered size and place, and a trackpad's pinch or a dead key on a real keyboard have not been run by hand; their maths are checked by the self test.
 - `auto` on a phone starts at its display's size and changes it, once, on the first motion that shows the encoder falling behind, so a person may see the picture restart on their first touches. `--quality high` and `standard` keep the display's size.
 - A phone's touch has a floor below which no size goes: 94 ms on a Samsung SM-A525F at 1024 lines, and 95 to 107 at 1280 across runs, over the target of 80. A Xiaomi's reads 92 at its own size, a miss too.
-- Two devices have been run on a simulator and an Android emulator, with the fixture on each. Two windows standing side by side on a screen are checked by the self test's maths and not by eye, as a test's windows are kept off every screen, and a rotated device has not been run in a pair. Two builds under two ids have not been run.
+- Two devices have been run on a simulator and an Android emulator, and on a Samsung and a Xiaomi, with the fixture on each. Two windows standing side by side on a screen are checked by the self test's maths and not by eye, as a test's windows are kept off every screen, and a rotated device has not been run in a pair. Two builds under two ids have not been run.
 - Input by `key`: Android presses the agent's keys, and Esc is Back there, which is what a recording writes, so that a replay does what was done. On a simulator a keyboard's characters go as US keys; any other text by its pasteboard and command V.
 
 - On an iPhone a recording and the pane read by its runner, which the first use starts: `inspector` gives words and ids with no places, so with no runner a click has no element to be named by, and the window says why.
