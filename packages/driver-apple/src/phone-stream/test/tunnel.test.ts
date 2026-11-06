@@ -1,6 +1,8 @@
+import { EventEmitter } from 'node:events';
+import type { Socket } from 'node:net';
 import { PassThrough } from 'node:stream';
 import { describe, expect, it, vi } from 'vitest';
-import { closingOnFailure, tunnelAnswer } from '../tunnel.js';
+import { closingOnFailure, Lockdown, tunnelAnswer } from '../tunnel.js';
 
 const answer = (more = '') => {
   const body = Buffer.from(
@@ -17,6 +19,19 @@ const answer = (more = '') => {
 };
 
 const listeners = (s: PassThrough) => s.listenerCount('data') + s.listenerCount('close');
+
+describe('lockdown', () => {
+  it('fails the question on an answer it cannot read, and does not throw on the socket', async () => {
+    const socket = Object.assign(new EventEmitter(), { write: vi.fn(), resume: vi.fn() });
+    const lockdown = new Lockdown(socket as unknown as Socket);
+    const asked = lockdown.ask({ Request: 'QueryType' });
+    const body = Buffer.from('bplist00 and then nothing that is one');
+    const head = Buffer.alloc(4);
+    head.writeUInt32BE(body.length);
+    expect(() => socket.emit('data', Buffer.concat([head, body]))).not.toThrow();
+    await expect(asked).rejects.toThrow();
+  });
+});
 
 describe('a handshake on a tunnel', () => {
   it('gives up on a phone that never answers, and leaves nothing on the stream', async () => {

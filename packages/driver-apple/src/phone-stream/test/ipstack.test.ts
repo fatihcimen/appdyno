@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IpStack, ipv6Bytes, type PacketStream } from '../ipstack.js';
+import { RemoteXpc } from '../remotexpc.js';
+import { encodeWrapper, WRAPPER_HEADER } from '../xpc-codec.js';
 
 const LOCAL = 'fd81:fee2:fd54::2';
 const REMOTE = 'fd81:fee2:fd54::1';
@@ -245,6 +247,65 @@ describe('UDP and the tunnel', () => {
     (handlers.close as () => void)();
     expect(why).toEqual(['the tunnel ended', 'stack: the tunnel ended']);
     await expect(stack.connect(1)).rejects.toThrow();
+  });
+
+  it('ends the one connection on what its reader cannot read, and tells the phone', async () => {
+    const { c, port, stack, segment, tcp, theirs, sent } = await connected();
+    const why: string[] = [];
+    c.onClose((w) => why.push(w));
+    c.onData(() => {
+      throw new RangeError('an XPC value runs past its message');
+    });
+    const data = Buffer.from('x');
+    // it would reach the tunnel's own stream, where nothing catches it, and end the process
+    expect(() => stack.feed(segment(port, 1234, { seq: theirs, flags: ACK, data }))).not.toThrow();
+    expect(why).toEqual([expect.stringMatching(/cannot be read: an XPC value runs past/)]);
+    expect(tcp().some((s) => s.flags & FIN)).toBe(true);
+    sent.length = 0;
+    expect(() =>
+      stack.feed(segment(port, 1234, { seq: theirs + 1, flags: ACK, data })),
+    ).not.toThrow();
+  });
+
+  it('fails who waits on a service whose message cannot be read', async () => {
+    const { c, port, stack, segment, theirs } = await connected();
+    const x = RemoteXpc.start(c);
+    const message = encodeWrapper(0x101, { a: 1n });
+    message.writeUInt32LE(0x6000, WRAPPER_HEADER + 8);
+    const data = Buffer.alloc(9 + message.length);
+    data.writeUIntBE(message.length, 0, 3);
+    data.writeUInt32BE(1, 5);
+    message.copy(data, 9);
+    const waiting = x.next();
+    stack.feed(segment(port, 1234, { seq: theirs, flags: ACK, data }));
+    await expect(waiting).rejects.toThrow(/cannot be read: an XPC value of type 0x6000/);
+  });
+
+  it('gives a reader that failed nothing more that came early', async () => {
+    const { c, port, stack, segment, theirs } = await connected();
+    let reads = 0;
+    c.onData(() => {
+      reads++;
+      throw new Error('not a DTX frame');
+    });
+    const data = Buffer.from('x');
+    stack.feed(segment(port, 1234, { seq: theirs + 1, flags: ACK, data }));
+    stack.feed(segment(port, 1234, { seq: theirs, flags: ACK, data }));
+    expect(reads).toBe(1);
+  });
+
+  it.each([
+    ['TCP', 6, 3],
+    ['TCP', 6, 6],
+    ['UDP', 17, 3],
+    ['UDP', 17, 6],
+  ])('passes over a %s packet of %i too short for its header: %i bytes', async (_, next, size) => {
+    const { c, port, stack, packet } = await connected();
+    const u = stack.createUdp();
+    const short = Buffer.alloc(size);
+    if (size > 3) short.writeUInt16BE(next === 6 ? port : u.localPort, 2);
+    expect(() => stack.feed(packet(next, short))).not.toThrow();
+    c.close();
   });
 
   it('reads addresses with and without their shorthand', () => {

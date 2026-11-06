@@ -1,9 +1,30 @@
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readBplist, writeBplist } from '../src/webinspector.js';
+import { readBplist, SimulatorWeb, writeBplist } from '../src/webinspector.js';
+import type { Simctl } from '../src/simctl.js';
+
+describe('the Safari inspector of a simulator', () => {
+  it('ends on what it cannot read, as a socket that said nothing', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-inspector-'));
+    const path = join(dir, 's');
+    const server = createServer((socket) => {
+      const body = Buffer.from('bplist00 and then nothing that is one');
+      const head = Buffer.alloc(4);
+      head.writeUInt32BE(body.length);
+      socket.on('error', () => undefined);
+      socket.write(Buffer.concat([head, body]));
+    });
+    await new Promise<void>((r) => server.listen(path, r));
+    const simctl = { exec: async () => path } as unknown as Simctl;
+    const udid = '00000000-0000-0000-0000-000000000000';
+    await expect(new SimulatorWeb(simctl, udid).pages(undefined)).rejects.toThrow(/said nothing/);
+    server.close();
+  });
+});
 
 describe('binary plists', () => {
   const value = {

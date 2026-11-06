@@ -196,18 +196,31 @@ export class TcpConnection {
     this.arm();
   }
 
+  /**
+   * What its reader cannot read ends this connection, and only this. Each read here is a protocol's own, and a throw
+   * would go on to the tunnel's stream, where nothing is left to catch it and the whole process ends.
+   */
+  private hand(data: Buffer) {
+    try {
+      this.data?.(data);
+    } catch (e) {
+      this.close(`what the phone sent cannot be read: ${(e as Error).message}`);
+    }
+  }
+
   private deliver(seq: number, data: Buffer) {
     if (seq !== this.rcv) {
       if (!before(seq, this.rcv) && this.early.size < MAX_EARLY) this.early.set(seq, data);
       return;
     }
     this.rcv = (this.rcv + data.length) | 0;
-    this.data?.(data);
+    this.hand(data);
     for (let next = this.early.get(this.rcv); next; next = this.early.get(this.rcv)) {
+      if (this.closed) return;
       const at = this.rcv;
       this.early.delete(at);
       this.rcv = (this.rcv + next.length) | 0;
-      this.data?.(next);
+      this.hand(next);
     }
   }
 
@@ -247,10 +260,10 @@ export class TcpConnection {
   }
 
   /** A goodbye to the phone, which is not waited for long. */
-  close() {
+  close(why = 'closed') {
     if (this.closed) return;
     if (this.established) this.segment(FIN | ACK, this.seq, Buffer.alloc(0), false);
-    this.end('closed', CLOSE_LINGER_MS);
+    this.end(why, CLOSE_LINGER_MS);
   }
 
   end(why: string, lingerMs = 0) {
@@ -381,9 +394,9 @@ export class IpStack {
       const next = b[o + 6];
       const p = b.subarray(o + IPV6_HEADER, o + IPV6_HEADER + n);
       o += IPV6_HEADER + n;
-      if (next === NEXT_UDP) {
+      if (next === NEXT_UDP && p.length >= UDP_HEADER) {
         this.udp.get(p.readUInt16BE(2))?.message?.(p.subarray(UDP_HEADER), p.readUInt16BE(0));
-      } else if (next === NEXT_TCP) {
+      } else if (next === NEXT_TCP && p.length >= TCP_HEADER) {
         this.tcp.get(p.readUInt16BE(2))?.onPacket(p);
       }
     }

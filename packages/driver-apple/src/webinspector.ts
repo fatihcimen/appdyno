@@ -183,11 +183,16 @@ class Conversation {
 
   private onData(d: Buffer) {
     this.rest = Buffer.concat([this.rest, d]);
-    while (this.rest.length >= 4) {
-      const n = this.rest.readUInt32BE(0);
-      if (this.rest.length < 4 + n) break;
-      this.seen.push(readBplist(this.rest.subarray(4, 4 + n)) as Rpc);
-      this.rest = this.rest.subarray(4 + n);
+    try {
+      while (this.rest.length >= 4) {
+        const n = this.rest.readUInt32BE(0);
+        if (this.rest.length < 4 + n) break;
+        this.seen.push(readBplist(this.rest.subarray(4, 4 + n)) as Rpc);
+        this.rest = this.rest.subarray(4 + n);
+      }
+    } catch {
+      // nothing is left to catch it past a socket's listener: the wait ends as on a socket that said no more
+      this.socket.destroy();
     }
     this.wake?.();
   }

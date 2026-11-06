@@ -90,7 +90,7 @@ const withTls = (socket: Socket, record: PairRecord) =>
   });
 
 /** Lockdown: one answer per question. */
-class Lockdown {
+export class Lockdown {
   private buffer: Buffer = Buffer.alloc(0);
   private waiting: ((m: Record<string, unknown>) => void) | undefined;
   private failed: ((e: Error) => void) | undefined;
@@ -106,10 +106,14 @@ class Lockdown {
   }
 
   private pump() {
-    const next = this.waiting && nextLockdownMessage(this.buffer);
-    if (!next) return;
-    this.buffer = next.rest;
-    this.waiting!(next.message as Record<string, unknown>);
+    try {
+      const next = this.waiting && nextLockdownMessage(this.buffer);
+      if (!next) return;
+      this.buffer = next.rest;
+      this.waiting!(next.message as Record<string, unknown>);
+    } catch (e) {
+      this.failed?.(e as Error);
+    }
   }
 
   ask(message: Record<string, string>): Promise<Record<string, unknown>> {
