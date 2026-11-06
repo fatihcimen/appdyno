@@ -256,13 +256,16 @@ export class AndroidDevice extends RpcDevice implements Device {
 
   async tree({ asItIs, ...limits }: TreeOptions = {}): Promise<Tree> {
     const read = async () => (await this.call('tree.get', limits, TIMEOUTS.read)).result;
+    // what the agent found goes with the refusal: an app that does not answer is told from a dark screen by it
+    let refusal = new DeviceError('NOT_FOUND', 'no window to read');
     const t = await read().catch((e: unknown) => {
-      if (e instanceof DeviceError && e.code === 'NOT_FOUND') return undefined;
-      throw e;
+      if (!(e instanceof DeviceError && e.code === 'NOT_FOUND')) throw e;
+      refusal = e;
+      return undefined;
     });
     if (asItIs) {
       if (t) return t;
-      throw new DeviceError('NOT_FOUND', 'no window to read');
+      throw refusal;
     }
     // no app window at all: a dark or locked screen; once awake, read again
     if (t && !t.dark && t.windows.some((w) => w.type === 1)) return t;
@@ -270,7 +273,7 @@ export class AndroidDevice extends RpcDevice implements Device {
     if (s.locked) throw this.lockedError();
     if (!s.woke && !s.unlocked) {
       if (t) return t;
-      throw new DeviceError('NOT_FOUND', 'no window to read');
+      throw refusal;
     }
     return read();
   }

@@ -11,6 +11,7 @@
 - A failed update leaves none of its copy beside the app, says why when the failure is this Mac's own, and refuses an app whose signer it cannot read.
 - A flight recorder or a timeline that cannot start leaves nothing running, one turned off waits for the trace coming up, a crash is looked for by the device's clock, and a timeline left open stops reading its device at the 180 s it can hold.
 - A store edited by hand no longer takes the whole dashboard down: what cannot be shown is left out.
+- On Android a read that finds no window says what the agent found, that the app in front is not answering, or that the screen is off: both read as `no window to read`.
 - An Undo in the hub that a client's file refused says it did not happen, and stays to be asked again: it said Put back as it was, with nothing changed, and went.
 - A client that reaches an iPhone as something else starts its runner shares that runner: each started its own, and the one that lost heard nothing for 3 minutes.
 - A hub with a device in it ends within a second of being closed, dark screen or not: a timer for a window that had already gone held the finished process for 5 s.

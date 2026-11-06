@@ -1,5 +1,6 @@
 import { createServer, type AddressInfo, type Server } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
+import { DeviceError } from '@appdyno/protocol';
 import { Adb, assertSerial, parseDevices, shq } from '../src/adb.js';
 import { AndroidDevice } from '../src/device.js';
 
@@ -28,6 +29,24 @@ describe('an agent reached', () => {
     expect(asked).toEqual(['animations.set']);
     expect(ran.length).toBeGreaterThan(0);
     expect(device.lastStartWasCold).toBe(true);
+  });
+
+  it('says what the agent said of a read with no window, as an app that hangs reads so', async () => {
+    const said = 'no window to read: the app in front is not answering';
+    const rpc = {
+      closed: false,
+      call: async () => {
+        throw new DeviceError('NOT_FOUND', said);
+      },
+      close: () => undefined,
+    };
+    const adb = { exec: async () => 'mWakefulness=Awake' } as unknown as Adb;
+    const device = new AndroidDevice('emulator-5640', adb);
+    Object.assign(device, {
+      launcher: { connect: async () => ({ rpc, hello: {}, started: false }) },
+    });
+    await expect(device.tree()).rejects.toMatchObject({ code: 'NOT_FOUND', message: said });
+    await expect(device.tree({ asItIs: true })).rejects.toMatchObject({ message: said });
   });
 
   it('asks nothing of one found running with animations on', async () => {
