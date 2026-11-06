@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { createServer, type AddressInfo, type Server } from 'node:net';
+import { afterEach, describe, expect, it } from 'vitest';
 import { Adb, assertSerial, parseDevices, shq } from '../src/adb.js';
 import { AndroidDevice } from '../src/device.js';
 
@@ -100,6 +101,51 @@ describe('launching an app', () => {
     expect(starts(ran)).toHaveLength(0);
     await d.launch('a.b');
     expect(starts(ran)).toHaveLength(1);
+  });
+});
+
+describe('a device that stopped answering', () => {
+  let server: Server;
+  afterEach(() => void server.close());
+
+  /** An adb server: it takes the choice of a device, and then says nothing of what that device was asked. */
+  const silentAfterTransport = async () => {
+    server = createServer((socket) => {
+      socket.on('error', () => undefined);
+      socket.on('data', (asked) => {
+        if (asked.includes('host:transport')) socket.write('OKAY');
+      });
+    });
+    await new Promise<void>((up) => server.listen(0, '127.0.0.1', up));
+    return new Adb({ port: (server.address() as AddressInfo).port, answerMs: 50 });
+  };
+
+  it('fails a command, so that what waits on it goes on', async () => {
+    const adb = await silentAfterTransport();
+    await expect(adb.exec('X1', 'getprop')).rejects.toMatchObject({ code: 'TIMEOUT' });
+  });
+
+  it('fails a stream that does not open', async () => {
+    const adb = await silentAfterTransport();
+    await expect(adb.open('X1', 'localabstract:a')).rejects.toMatchObject({ code: 'TIMEOUT' });
+  });
+
+  it('fails a list adb never gives', async () => {
+    const adb = await silentAfterTransport();
+    await expect(adb.devices()).rejects.toMatchObject({ code: 'TIMEOUT' });
+  });
+
+  it('leaves an open stream as quiet as its user likes', async () => {
+    server = createServer((socket) => {
+      socket.on('error', () => undefined);
+      socket.on('data', () => socket.write('OKAY'));
+    });
+    await new Promise<void>((up) => server.listen(0, '127.0.0.1', up));
+    const adb = new Adb({ port: (server.address() as AddressInfo).port, answerMs: 50 });
+    const { socket } = await adb.open('X1', 'localabstract:a');
+    await new Promise((r) => setTimeout(r, 150));
+    expect(socket.destroyed).toBe(false);
+    socket.destroy();
   });
 });
 

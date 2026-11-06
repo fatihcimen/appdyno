@@ -5,6 +5,11 @@
 - A hub with a device in it ends within a second of being closed, dark screen or not: a timer for a window that had already gone held the finished process for 5 s.
 - A start's phases are kept once: a run keeps the stamp of the newest start it read, on that phone, and a start is new when it is not that one, which asks no clock of the phone's to agree with another.
 - A phone that has slept keeps a start's phases: its starts are stamped on the clock that stops in sleep, so each read as older than the last run and none was kept. A service's start no longer shows a phase of minus 29 hours, as its launch is stamped on the other clock.
+- A client asking for the window of a device that stands in the hub no longer closes the hub: it died of the signal that brings a window forward.
+- A hub and a client of two builds share a device, as an update leaves them: each used to replace the other's agent, and calls failed on Android. An agent of another build now stays until its last host on this Mac has gone, and the host that starts later is told.
+- A device that stops answering adb no longer leaves a window on Connecting until the hub is restarted, and a request to it fails in 15 s: nothing ended that wait.
+- A hub does not take an Android device from a run with a state folder of its own: it stops and says so, where it replaced that run's agent.
+
 - The viewer a Mac compiles on first use, and the one in the app, hold no test code: about 14 % less to build, and no test switch in what a person runs.
 - On an Android phone an arrow leaves a text field, as it does from a keyboard with arrows: a key that named a keyboard alone was held by the field, and only an emulator's window went another way.
 - A watch on a window that goes while it runs says so at once, in place of waiting out its time, and a request from another process is whole or not there.

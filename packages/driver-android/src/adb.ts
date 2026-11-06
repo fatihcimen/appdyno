@@ -20,7 +20,11 @@ export type AdbOptions = {
   port?: number;
   /** The adb binary (start-server, push, install). */
   bin?: string;
+  answerMs?: number;
 };
+
+/** How long a request may go unanswered: adb itself waits for ever on a device that stopped answering it. */
+const ANSWER_MS = 15_000;
 
 const SERIAL = /^[\w.:-]{1,64}$/;
 
@@ -110,12 +114,14 @@ export class Adb {
   /** The adb server's port, for what connects to it by itself. */
   readonly port: number;
   private readonly given: string | undefined;
+  private readonly answerMs: number;
   private started: Promise<void> | undefined;
 
   constructor(opts: AdbOptions = {}) {
     this.host = opts.host ?? '127.0.0.1';
     this.port = opts.port ?? 5037;
     this.given = opts.bin;
+    this.answerMs = opts.answerMs ?? ANSWER_MS;
   }
 
   /** Looked up each time: a hub that stays open can be given one by a person's download. */
@@ -142,6 +148,8 @@ export class Adb {
   async open(serial: string, service: string): Promise<{ socket: Socket; rest: Buffer }> {
     const { socket, reader } = await this.request(`host:transport:${assertSerial(serial)}`, serial);
     await this.ask(socket, reader, service, serial);
+    // from here on the stream is its user's, and may be quiet for as long as it likes
+    socket.setTimeout(0);
     return { socket, rest: reader.detach() };
   }
 
@@ -267,6 +275,9 @@ export class Adb {
     return new Promise((resolve, reject) => {
       // a person's next touch must not wait for an answer to the one before it
       const s = connect({ host: this.host, port: this.port, noDelay: true });
+      s.setTimeout(this.answerMs, () =>
+        s.destroy(new DeviceError('TIMEOUT', `adb did not answer in ${this.answerMs} ms`)),
+      );
       s.once('connect', () => resolve(s));
       s.once('error', reject);
     });
