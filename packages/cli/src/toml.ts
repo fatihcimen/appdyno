@@ -122,13 +122,32 @@ function scan(text: string) {
   }
 }
 
+/**
+ * A value JSON has no way to say, as the file has it: an inline table, a literal string, a date. It goes back word for
+ * word, as a string in its place stops a client reading its settings, and it shows nothing to what goes through an entry.
+ */
+class Verbatim {
+  readonly #text: string;
+
+  constructor(text: string) {
+    this.#text = text;
+  }
+
+  get text() {
+    return this.#text;
+  }
+}
+
 const decoded = (value: string): unknown => {
   try {
     return JSON.parse(value);
   } catch {
-    return value;
+    return new Verbatim(value);
   }
 };
+
+const encoded = (value: unknown) =>
+  value instanceof Verbatim ? value.text : JSON.stringify(value).replaceAll('","', '", "');
 
 /** The table is written as a value of a key, or under one: TOML lets no table be added to a value on one line. */
 const inlined = (keys: Key[], full: string) =>
@@ -168,9 +187,7 @@ export const tomlEdit = {
 
   write(text: string, key: string, name: string, entry: Record<string, unknown>) {
     const { full, table } = located(text, key, name);
-    const lines = Object.entries(entry).map(
-      ([k, v]) => `${k} = ${JSON.stringify(v).replaceAll('","', '", "')}`,
-    );
+    const lines = Object.entries(entry).map(([k, v]) => `${k} = ${encoded(v)}`);
     const section = `[${full}]\n${lines.join('\n')}\n`;
     if (table) return text.slice(0, table.start) + section + text.slice(table.end);
     const gap = text === '' || text.endsWith('\n\n') ? '' : text.endsWith('\n') ? '\n' : '\n\n';

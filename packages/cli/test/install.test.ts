@@ -13,6 +13,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { entryCommand } from '../src/client-state.js';
 import { CLIENTS, SERVER, STDIO, type Client } from '../src/clients.js';
 import { fileOf, install, type InstallOptions } from '../src/install.js';
 import { jsonEdit } from '../src/jsonc.js';
@@ -427,6 +428,21 @@ describe('a TOML file', () => {
     expect(() => tomlEdit.read(text, 'mcp_servers', SERVER)).toThrow('edit it by hand');
   });
 
+  it('puts back word for word what JSON has no way to say', () => {
+    const text = `[mcp_servers.${SERVER}]\ncommand = "old"\nargs = ['mcp']\nenv = { A = "1" }\ntool_timeout_sec = 1_800\nat = 1979-05-27\nnote = """two\nlines"""\n"a key" = 1\n`;
+    const had = tomlEdit.read(text, 'mcp_servers', SERVER) as Record<string, unknown>;
+    const moved = tomlEdit.write(text, 'mcp_servers', SERVER, { ...had, command: 'new' });
+    expect(moved).toBe(text.replace('"old"', '"new"'));
+    // an undo, with the table gone by then
+    expect(tomlEdit.write('', 'mcp_servers', SERVER, had)).toBe(text);
+  });
+
+  it('gives no variable of a value it cannot read', () => {
+    const text = `[mcp_servers.${SERVER}]\ncommand = "npx"\nenv = { A = "1" }\n`;
+    const entry = entryCommand(tomlEdit.read(text, 'mcp_servers', SERVER));
+    expect({ ...entry?.env }).toEqual({});
+  });
+
   it('takes a server whose name is only quoted to hold a dot for another', () => {
     const other = `[mcp_servers."${SERVER}.staging"]\ncommand = "elsewhere"\n`;
     expect(tomlEdit.read(other, 'mcp_servers', SERVER)).toBeUndefined();
@@ -610,6 +626,14 @@ describe('install, from the app', () => {
       expect(after.startup_note).toBe('mine');
     },
   );
+
+  it('keeps the variables of a TOML entry a table, when the app moved', async () => {
+    const client = CLIENTS.find((c) => c.format === 'toml')!;
+    const table = `[${client.key}.${SERVER}]\ncommand = "${here.command}"\nargs = ["mcp"]\nenv = { A = "1" }\n`;
+    const { home, file } = homeWith(client, table);
+    expect((await run(home, { server: moved, moved: true })).code).toBe(0);
+    expect(readFileSync(file, 'utf8')).toBe(table.replace(here.command, moved.command));
+  });
 
   it('leaves a backup of what it repointed', async () => {
     const client = CLIENTS.find((c) => c.format === 'jsonc')!;
