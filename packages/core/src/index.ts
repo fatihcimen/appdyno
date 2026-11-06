@@ -14,6 +14,7 @@ export * from './call.js';
 export * from './client-calls.js';
 export * from './clock.js';
 export * from './device.js';
+export * from './virtual.js';
 export * from './frames.js';
 export * from './measure.js';
 export * from './energy-model.js';

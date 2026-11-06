@@ -171,7 +171,7 @@ describe('a phone mirror', () => {
   it('starts one stream, and gives each viewer a pipe of its own', async () => {
     const { mirror, module, handle, pipes } = fake();
     const first = await mirror.open(OPTIONS);
-    expect(first).toEqual({ kind: 'pipe', file: pipes[0], codec: 'hevc' });
+    expect(first).toEqual({ kind: 'pipe', encoded: true, file: pipes[0], codec: 'hevc' });
     const second = await mirror.open(OPTIONS);
     expect(pipes[1]).not.toBe(pipes[0]);
     expect(second).toMatchObject({ file: pipes[1] });

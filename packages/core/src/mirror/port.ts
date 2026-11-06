@@ -14,7 +14,7 @@ export type MirrorCheck =
   { ok: true; routes: string[] } | { ok: false; need: Need; detail?: string };
 
 /** What the viewer attaches to. A kind of device adds its kind here, and a source in the viewer. */
-export type MirrorSource =
+export type MirrorSource = (
   | {
       kind: 'surface';
       udid: string;
@@ -31,12 +31,16 @@ export type MirrorSource =
       adbPort?: number;
       /** For the agent's `stream.start`, beside the codec. */
       start?: Record<string, unknown>;
-      /** What a person should know of this picture. */
-      note?: string;
     }
   | { kind: 'pixels'; file: string; w: number; h: number }
   /** Frames as an agent's stream has them, on a named pipe; what writes them holds the device. */
-  | { kind: 'pipe'; file: string; codec: 'hevc' };
+  | { kind: 'pipe'; file: string; codec: 'hevc' }
+) & {
+  /** What a person should know of this picture. */
+  note?: string;
+  /** Its frames are the stream's own, so a movie needs no second encoder. */
+  encoded?: boolean;
+};
 
 /** One touch, key or text. A touch is in fractions of the screen, whatever its size or rotation. */
 export type InputEvent =

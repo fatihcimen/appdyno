@@ -251,7 +251,8 @@ export function controlOps(ctx: ServerContext, { afterChange, clean }: Answers) 
           const serial = await maker.boot(id);
           updateState(startedFile(), Started, (ids = []) => [...ids, id]);
           await ctx.use(serial);
-          const t = `a new ${device} is up and selected as ${serial}: xcrun simctl delete ${id} removes it`;
+          const removal = maker.removedBy ? `: ${maker.removedBy(id)} removes it` : '';
+          const t = `a new ${device} is up and selected as ${serial}${removal}`;
           return reply(t, { done: t, serial });
         }
         if (action === 'boot') {

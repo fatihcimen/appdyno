@@ -104,6 +104,7 @@ describe('an Android mirror', () => {
     const { mirror } = setup();
     await expect(mirror.open({ quality: 'high', codec: 'hevc' })).resolves.toEqual({
       kind: 'adb',
+      encoded: true,
       serial: SERIAL,
       socket: 'appdyno_x',
       token: 'the-token',

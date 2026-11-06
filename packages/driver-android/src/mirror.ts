@@ -103,6 +103,7 @@ export class AndroidMirror implements Mirror {
     if (!address) throw new DeviceError('AGENT_UNAVAILABLE', 'the agent left no address');
     return {
       kind: 'adb',
+      encoded: true,
       serial: this.serial,
       socket: address.socket,
       token: address.token,

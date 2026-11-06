@@ -150,7 +150,14 @@ describe('a mirror, whatever the device', () => {
 
   it('knows a stream records its own frames, and a surface does not', async () => {
     const { session, viewer, mirror } = setup();
-    mirror.source = { kind: 'adb', serial: 's', socket: 'x', token: 't', codec: 'h264' };
+    mirror.source = {
+      kind: 'adb',
+      encoded: true,
+      serial: 's',
+      socket: 'x',
+      token: 't',
+      codec: 'h264',
+    };
     await session.start();
     await flush();
     viewer().say('first', { w: 1080, h: 2400, codec: 'h264' });

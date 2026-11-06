@@ -55,7 +55,7 @@ export class MirrorSession {
   /** A movie of the stream's own frames, where its source has them. */
   readonly recording = new MirrorRecording(() => this.viewer);
   private closedByPerson = false;
-  private source: string | undefined;
+  private encoded = false;
   private refusedNeed: Need | undefined;
   private asleep = false;
   private readonly asks = new ViewerAsks(
@@ -139,7 +139,7 @@ export class MirrorSession {
 
   /** Its frames are the stream's own, so a movie needs no second encoder. */
   get streamsItsOwn() {
-    return this.source === 'adb' || this.source === 'pipe';
+    return this.encoded;
   }
 
   /** A person asked for a new stream: on a dark screen, what they want is the screen back. */
@@ -214,8 +214,8 @@ export class MirrorSession {
         this.viewer?.send(m),
       );
       if (stale()) return;
-      this.note = source.kind === 'adb' ? source.note : undefined;
-      this.source = source.kind;
+      this.note = source.note;
+      this.encoded = source.encoded === true;
       this.viewer?.send({
         op: 'attach',
         source,

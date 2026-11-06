@@ -61,6 +61,31 @@ describe('a new platform', () => {
   });
 });
 
+describe("a platform's tools", () => {
+  /** What is no driver's, and may still name one: a kind of source, or what a person is told to run. */
+  const NAMES_A_TOOL = [
+    'packages/core/src/mirror/need.ts',
+    'packages/core/src/mirror/port.ts',
+    'packages/core/src/usb.ts',
+  ];
+  const TOOL = /\b(adb|simctl|devicectl)\b/;
+
+  it('are named by a driver, and by the few listed', () => {
+    const shared = inPackages((p) =>
+      ['core', 'flows', 'mcp', 'ops', 'perf', 'protocol'].includes(p),
+    );
+    expect(shared.length).toBeGreaterThan(100);
+    const naming = shared.filter((f) => TOOL.test(f.text)).map((f) => f.name);
+    expect(naming.sort()).toEqual(NAMES_A_TOOL);
+  });
+
+  it('are seen however they are written', () => {
+    expect(TOOL.test("source === 'adb'")).toBe(true);
+    expect(TOOL.test('xcrun simctl delete x')).toBe(true);
+    expect(TOOL.test('a shadow in the padding')).toBe(false);
+  });
+});
+
 describe('a driver', () => {
   it('words no tool by its name: that is for the operations to say', () => {
     const ops = Object.keys(opsFor(new ServerContext(DEFAULT_POLICY, [])));

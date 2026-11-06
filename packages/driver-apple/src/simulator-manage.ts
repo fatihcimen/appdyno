@@ -374,6 +374,10 @@ export class Simulators implements VirtualDevices {
     };
   }
 
+  removedBy(id: string) {
+    return `xcrun simctl delete ${id}`;
+  }
+
   async create({ name, model, system }: NewDevice) {
     const runtime = system || (await this.simctl.runtimeFor(model));
     return (await this.simctl.exec(['create', name || typeName(model), model, runtime])).trim();

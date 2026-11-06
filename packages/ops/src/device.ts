@@ -34,7 +34,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
           }),
         );
         if (devices.length === 0)
-          return reply('no device connected (adb lists none, no simulator is booted)', { devices });
+          return reply('no device connected, and no simulator booted', { devices });
         return reply(
           devices
             .map(

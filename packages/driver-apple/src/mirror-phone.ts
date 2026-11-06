@@ -153,7 +153,7 @@ export class PhoneMirror implements Mirror {
     this.pipe = file;
     this.handle ??= this.begin(stream, options);
     this.handle.attach(file);
-    return { kind: 'pipe', file, codec: 'hevc' };
+    return { kind: 'pipe', encoded: true, file, codec: 'hevc' };
   }
 
   /** Only on a dark screen: the same press on a lit one goes to the home screen. */
