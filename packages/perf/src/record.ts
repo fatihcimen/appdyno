@@ -44,6 +44,8 @@ export type PerfRecord = {
   build: Build;
   /** Android's compile state, or what else makes launches comparable. */
   compile?: string;
+  /** The newest start this run read of the device, as the device stamped it: no start is kept twice. */
+  startedNs?: number;
   load: {
     host: number[];
     hostCpus: number;

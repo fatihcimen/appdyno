@@ -14,6 +14,7 @@ import { SnapshotOut } from './schemas.js';
 import type { Session } from '../session.js';
 import { defineOp, READ, reply } from '../tool.js';
 import { perfTools, App, Scenario, unlessUnsupported, kb, lastRunAt } from './shared.js';
+import { lastStartSeen, startLine } from './starts.js';
 import { frameVitals, playLine } from './vitals.js';
 
 /** A device's energy in the unit it has it in: a charge, a count of energy, or a score. */
@@ -57,6 +58,7 @@ type Got = {
   metrics: Metric[];
   line: string;
   data: Answered;
+  startedNs?: number | undefined;
 };
 
 /** One thing `also` can ask for: how it is read, then what is kept of it, said of it and answered. */
@@ -66,6 +68,7 @@ const extra =
     metrics: (v: T) => Metric[];
     line: (v: T) => string;
     data: (v: T) => Answered;
+    startedNs?: (v: T) => number | undefined;
   }) =>
   async (a: Asked): Promise<Got | undefined> => {
     const m = await unlessUnsupported(x.read(a));
@@ -75,6 +78,7 @@ const extra =
         metrics: x.metrics(m.value),
         line: x.line(m.value),
         data: x.data(m.value),
+        startedNs: x.startedNs?.(m.value),
       }
     );
   };
@@ -168,9 +172,10 @@ const EXTRAS = {
     }),
   }),
   startInfo: extra({
-    // the system keeps a start for as long as it likes: what is kept is one that came since the run before this
+    // the system keeps a start for as long as it likes: what is kept is one no run has seen
     read: async (a) =>
-      a.measure(a.s, 'startInfo')(a.pkg, await lastRunAt(a.ctx, a.s, a.pkg, a.scenario)),
+      a.measure(a.s, 'startInfo')(a.pkg, await lastStartSeen(a.ctx, a.s, a.pkg, a.scenario)),
+    startedNs: (v) => v.newest.startedNs,
     metrics: (v) =>
       v.newestIsNew
         ? Object.entries(v.newest.phases).map(([phase, ms]) => ({
@@ -179,22 +184,7 @@ const EXTRAS = {
             samples: [ms],
           }))
         : [],
-    line: (v) => {
-      const { reason, startType, wasForceStopped, phases } = v.newest;
-      const counts = new Map<string, number>();
-      for (const s of v.starts) counts.set(s.reason, (counts.get(s.reason) ?? 0) + 1);
-      const reasons = [...counts].map(([r, n]) => `${r} ${n}`).join(', ');
-      return [
-        `last start: ${startType}, ${reason}${wasForceStopped ? ', after a force stop' : ''}${
-          Object.keys(phases).length
-            ? `; ${Object.entries(phases)
-                .map(([p, ms]) => `${p.replaceAll('_', ' ')} ${ms} ms`)
-                .join(', ')}`
-            : ''
-        }${v.newestIsNew ? '' : '; not known to be since the last run, so it keeps no phase'}`,
-        `the ${v.starts.length} starts the system keeps: ${reasons}`,
-      ].join('\n');
-    },
+    line: startLine,
     data: (v) => ({
       startReason: v.newest.reason,
       startType: v.newest.startType,
@@ -370,6 +360,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
         scenario: keptAs,
         source: 'perf_snapshot',
         raw: saved.txt,
+        startedNs: got.find((g) => g.startedNs !== undefined)?.startedNs,
         metrics: [
           { kind: 'cpu.percent', unit: 'percent', samples: [cpu.value.percent] },
           { kind: 'memory.kb', unit: 'kb', samples: [mem.value.kb] },

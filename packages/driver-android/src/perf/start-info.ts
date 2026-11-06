@@ -65,33 +65,16 @@ export function parseStartInfo(text: string): StartRecord[] {
     });
 }
 
-/** The device's two clocks at one moment: any running process's dump opens with them, and the system's UI always runs. */
-const CLOCKS = 'dumpsys gfxinfo com.android.systemui 2>/dev/null | head -3';
-
-/**
- * Whether a start began at `since` or later. How long ago is asked of the device's own clock and taken from this Mac's
- * now, so the two need not agree. A start is stamped on the clock that stops while a phone sleeps and a service's launch
- * on the boot's, so a stamp goes by the clock it is on: the one it is least behind.
- * shortcut: a start before a sleep reads as newer than it is, so a phone that slept since the last run can keep that start
- * twice; keep the stamp with its run to close this.
- */
-const beganSince = async (d: PerfDevice, start: StartRecord, since: number) => {
-  const clocks = /Uptime: (\d+) Realtime: (\d+)/.exec(await sh(d, CLOCKS).catch(() => ''));
-  const agos = (clocks ?? [])
-    .slice(1)
-    .map((ms) => Number(ms) - (start.startedNs ?? NaN) / 1e6)
-    .filter((ago) => ago >= 0);
-  return agos.length > 0 && Date.now() - Math.min(...agos) >= since;
-};
-
 /**
  * Why the app started and where the start's time went, as the system kept it, with no trace: on Android 15 and later,
- * for the starts it remembers. A process started for a job or a broadcast shows here, which no launch measure sees.
+ * for the starts it remembers. A process started for a job or a broadcast shows here, which no launch measure sees. The
+ * newest is new unless it is `seen`, the last run's: a stamp is its own name, and asks no clock of the phone's to agree
+ * with another, which those a start is stamped on do not once it has slept.
  */
 export async function startInfo(
   d: PerfDevice,
   pkg: string,
-  since?: number,
+  seen?: number,
 ): Promise<Measured<StartInfo>> {
   assertPkg(pkg);
   const sdk = Number((await sh(d, 'getprop ro.build.version.sdk')).trim());
@@ -108,6 +91,7 @@ export async function startInfo(
       `this device keeps no start info of ${pkg}: its build may not have the feature on`,
     );
   const newest = starts[0]!;
-  const newestIsNew = since !== undefined && (await beganSince(d, newest, since));
+  const newestIsNew =
+    seen !== undefined && newest.startedNs !== undefined && newest.startedNs !== seen;
   return { value: { starts, newest, newestIsNew }, raw, at: at() };
 }

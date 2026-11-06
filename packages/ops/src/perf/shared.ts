@@ -192,6 +192,7 @@ export type KeptRun = {
   raw: string;
   metrics: Metric[];
   compile?: string | undefined;
+  startedNs?: number | undefined;
 };
 
 /**
@@ -202,7 +203,7 @@ export type KeptRun = {
 export async function keepRun(
   ctx: ServerContext,
   s: Session,
-  { app, scenario, source, raw, metrics, compile }: KeptRun,
+  { app, scenario, source, raw, metrics, compile, startedNs }: KeptRun,
 ) {
   const m = s.device.measure;
   const vitals = (await m.vitals().catch(() => undefined))?.value;
@@ -217,6 +218,7 @@ export async function keepRun(
       device: deviceInfo(s),
       build: (await m.buildType(app).catch(() => undefined)) ?? 'unknown',
       ...(compile && { compile }),
+      ...(startedNs !== undefined && { startedNs }),
       load: {
         host: loadavg(),
         hostCpus: cpus().length,

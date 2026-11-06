@@ -229,7 +229,7 @@ export type StartRecord = {
 export type StartInfo = {
   starts: StartRecord[];
   newest: StartRecord;
-  /** The newest began since the time asked of: the system keeps a start as long as it likes. */
+  /** The newest is not the start the last run read: the system keeps a start as long as it likes. */
   newestIsNew: boolean;
 };
 
@@ -364,7 +364,8 @@ export interface MeasureSource {
   battery(app: string, windowMs: number): Promise<Measured<BatterySignals>>;
   /** `since`: epoch ms by this Mac's clock; with none, only what the system holds. */
   exits(app: string, since?: number): Promise<Measured<ExitReading>>;
-  startInfo(app: string, since?: number): Promise<Measured<StartInfo>>;
+  /** `seen`: the stamp of the newest start the last run read. */
+  startInfo(app: string, seen?: number): Promise<Measured<StartInfo>>;
   size(app: string): Promise<Measured<SizeReading>>;
   heapProfile(
     app: string,
