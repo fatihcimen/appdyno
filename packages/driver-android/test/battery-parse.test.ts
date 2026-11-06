@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { noteLocks, type SeenLock } from '../src/perf/battery.js';
 import {
   parseAlarmStats,
   parseDuration,
@@ -32,6 +33,38 @@ const JOBS = `  Job history:
            -1m2s3ms   START: #u0a469/1 dev.appdyno.fixture/.FixtureJob
              -500ms   START: #u0a123/9 com.other/.Job
 `;
+
+describe('a wake lock read again and again', () => {
+  const lock = (acquiredMsAgo: number, tag = 'fixture:held') => ({ tag, acquiredMsAgo });
+
+  it('is one lock, whatever the reads’ lateness puts its time at', () => {
+    const held: SeenLock[] = [];
+    // acquired at 1,499 and 1,501: a reckoning of itself by 3 s buckets falls either side of an edge
+    expect(noteLocks(held, [lock(8_501)], 10_000)).toBe(true);
+    expect(noteLocks(held, [lock(9_499)], 11_000)).toBe(false);
+    expect(held).toEqual([
+      expect.objectContaining({ tag: 'fixture:held', acquired: 1_499, lastSeen: 11_000 }),
+    ]);
+  });
+
+  it('is two where one read lists two of a tag, however close', () => {
+    const held: SeenLock[] = [];
+    noteLocks(held, [lock(100), lock(200)], 10_000);
+    noteLocks(held, [lock(1_100), lock(1_200)], 11_000);
+    expect(held.map((h) => [h.acquired, h.lastSeen])).toEqual([
+      [9_900, 11_000],
+      [9_800, 11_000],
+    ]);
+  });
+
+  it('is another when it came later than a lock’s lateness can explain, or by another tag', () => {
+    const held: SeenLock[] = [];
+    noteLocks(held, [lock(0)], 10_000);
+    expect(noteLocks(held, [lock(0)], 14_000)).toBe(true);
+    expect(noteLocks(held, [lock(4_000, 'fixture:other')], 14_000)).toBe(true);
+    expect(held).toHaveLength(3);
+  });
+});
 
 describe('a battery read from the platform’s own counts', () => {
   it('reads the platform’s way of writing a time', () => {
