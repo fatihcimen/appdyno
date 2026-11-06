@@ -21,6 +21,7 @@ import {
   toJUnit,
   toJson,
   toText,
+  type Baseline,
   type BaselineMetric,
   type DeviceInfo,
   type PerfRecord,
@@ -424,5 +425,35 @@ describe('store and reports', () => {
     const [key] = await runKeys(d);
     const r = reportKey(key!, await latestRuns(d, key!, 2), undefined, []);
     expect(r.comparisons[0]!.n.current).toBe(5);
+  });
+
+  it('calls a change only pooling can show, and goes by the newest run for its name', async () => {
+    const d = dir();
+    const stamp = (i: number) => `2026-11-0${i}T00:00:00.000Z`;
+    for (const i of [4, 5, 6]) await saveRun(d, context([900, 901], `r${i}`, stamp(i)));
+    const [key] = await runKeys(d);
+    const baseline = [1, 2, 3].reduce<Baseline | undefined>(
+      (base, i) => addToBaseline(key!, base, context([100, 101], `b${i}`, stamp(i))),
+      undefined,
+    );
+    const runs = await latestRuns(d, key!, 3);
+    const one = reportKey(key!, runs.slice(0, 1), baseline, []).comparisons[0]!;
+    expect(one.verdict).toBe('few-samples');
+    const pooled = reportKey(key!, runs, baseline, []);
+    expect(pooled.comparisons[0]).toMatchObject({ verdict: 'regression', current: 900.5 });
+    expect(pooled.comparisons[0]!.n.current).toBe(6);
+    expect(pooled.run).toBe('r6');
+    expect(pooled.at).toBe(stamp(6));
+  });
+
+  it('holds a budget to the pool, and carries the noise of any run of it', async () => {
+    const d = dir();
+    await saveRun(d, context([100], 'r1', '2026-11-03T00:00:00.000Z'));
+    await saveRun(d, context([300], 'r2', '2026-11-03T00:01:00.000Z', 3));
+    const [key] = await runKeys(d);
+    const rule = { kind: 'launch.ttid_ms', max: 150 };
+    const r = reportKey(key!, await latestRuns(d, key!, 2), undefined, [rule]);
+    expect(r.budgets[0]).toMatchObject({ value: 200, ok: false });
+    expect(r.noise).toContain('hot-device');
   });
 });
