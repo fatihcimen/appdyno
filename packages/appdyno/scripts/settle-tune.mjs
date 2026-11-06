@@ -1,8 +1,9 @@
 // Settle tuning on the fixture: for each quiet window, how often a late reaction (a line added N ms
 // after the tap, nothing in between) is missed, and how long an unchanged screen and a navigation take.
 // Usage: node scripts/settle-tune.mjs <serial> [n per cell]  (build first; a quiet machine)
-import { buildScreen, stats } from '../dist/index.js';
+import { buildScreen, stats } from '@appdyno/core';
 import { APP, openFixture } from './settle-fixture.mjs';
+import { answered } from './timed.mjs';
 
 const [serial, nArg] = process.argv.slice(2);
 if (!serial) {
@@ -39,11 +40,13 @@ for (const quietMs of QUIETS) {
       if (late.tree.nodes.some((x) => x.t?.startsWith('Tepki')))
         throw new Error('a reaction is still on the screen');
       const b = button(late, `${delay} ms`);
-      const r = await d.tap(b, {
-        settle: { quietMs, maxMs: 3_000 },
-        read: 'tree',
-        before: late.hash,
-      });
+      const r = answered(
+        await d.tap(b, {
+          settle: { quietMs, maxMs: 3_000 },
+          read: 'tree',
+          before: late.hash,
+        }),
+      );
       if (!r.tree.nodes.some((x) => x.t === `Tepki ${delay}`)) missed++;
       ms.push(r.settle.ms);
       await pause(delay + 300); // the reaction lands before the next clear
@@ -60,8 +63,13 @@ for (const quietMs of QUIETS) {
   for (let i = 0; i < n; i++) {
     const before = await read();
     unchanged.push(
-      (await d.tap(title, { settle: { quietMs, maxMs: 3_000 }, read: 'hash', before: before.hash }))
-        .settle.ms,
+      answered(
+        await d.tap(title, {
+          settle: { quietMs, maxMs: 3_000 },
+          read: 'hash',
+          before: before.hash,
+        }),
+      ).settle.ms,
     );
   }
   row.unchangedMs = stats(unchanged, 0);
@@ -72,14 +80,17 @@ for (const quietMs of QUIETS) {
     await pause(1_200);
     const home = await read();
     const form = home.list.find((e) => e.label === 'FORM');
-    const r = await d.tap(form, {
-      settle: { quietMs, maxMs: 3_000 },
-      read: 'tree',
-      before: home.hash,
-    });
+    if (!form) throw new Error('no FORM button');
+    const r = answered(
+      await d.tap(form, {
+        settle: { quietMs, maxMs: 3_000 },
+        read: 'tree',
+        before: home.hash,
+      }),
+    );
     nav.push(r.settle.ms);
     // the settled read must be the form screen at its final place
-    const s = buildScreen(r.tree, { platform: 'android', appId: APP });
+    const s = buildScreen(r.tree, { port: d.platformScreen, appId: APP });
     const later = await read();
     const key = (x) => x.list.map((e) => `${e.id ?? e.label}@${e.x},${e.y}`).join(' ');
     if (!s.list.some((e) => e.label === 'Enter your details') || key(s) !== key(later)) wrong++;

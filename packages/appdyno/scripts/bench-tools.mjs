@@ -3,8 +3,9 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '@appdyno/mcp';
+import { stats } from '@appdyno/core';
+import { Adb, androidProvider } from '@appdyno/driver-android';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
-import { Adb, androidProvider, stats } from '../dist/index.js';
 import { timedCalls } from './timed.mjs';
 
 const [serial, nArg] = process.argv.slice(2);
@@ -30,8 +31,9 @@ const client = new Client({ name: 'bench', version: '0' });
 await client.connect(b);
 const call = async (name, args = {}) => {
   const r = await client.callTool({ name, arguments: args });
-  if (r.isError) throw new Error(`${name}: ${r.content.map((c) => c.text).join(' ')}`);
-  return r.content.map((c) => c.text ?? '').join('\n');
+  const words = /** @type {{ text?: string }[]} */ (r.content).map((c) => c.text ?? '');
+  if (r.isError) throw new Error(`${name}: ${words.join(' ')}`);
+  return words.join('\n');
 };
 const ref = (text, label) => new RegExp(`(@[a-z0-9-]+) \\w+ "${label}"`).exec(text)?.[1];
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));

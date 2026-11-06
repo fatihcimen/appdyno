@@ -22,6 +22,9 @@ pnpm run ci      # lint, types, tests, build; no device
 `pnpm lint` runs eslint and `prettier --check`; `pnpm format` fixes formatting. The same checks run in
 `.github/workflows/ci.yml`.
 
+`pnpm typecheck` holds every `.mjs` to the packages' types too, by `tsconfig.scripts.json`: a script is run by hand and
+no test reaches it. That config lets a parameter go untyped, under which an empty array that fills later needs a type.
+
 ## Device suites
 
 These need a real emulator, simulator or phone, and you name it. There is never a default device, because

@@ -17,3 +17,27 @@ export const median = (xs: number[]) => {
 };
 
 export const round1 = (x: number) => Math.round(x * 10) / 10;
+
+export type Stats = {
+  n: number;
+  failed: number;
+  p50: number;
+  p90: number;
+  p95: number;
+  max: number;
+  mean: number;
+};
+
+/** What a run of timed samples comes to, each in whole milliseconds; NaN where there are no samples. */
+export function stats(ms: number[], failed: number): Stats {
+  const at = (q: number) => Math.round(quantile(ms, q));
+  return {
+    n: ms.length,
+    failed,
+    p50: at(0.5),
+    p90: at(0.9),
+    p95: at(0.95),
+    max: at(1),
+    mean: ms.length ? Math.round(ms.reduce((a, b) => a + b, 0) / ms.length) : Number.NaN,
+  };
+}

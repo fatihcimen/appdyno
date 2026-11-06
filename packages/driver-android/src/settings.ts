@@ -94,7 +94,7 @@ export class AndroidSettings implements DeviceSettings {
   }
 
   private async getAnimations() {
-    const values = [];
+    const values: string[] = [];
     for (const key of ANIMATION_SCALES)
       values.push((await this.sh(`settings get global ${key}`)).trim());
     return values.join(',');

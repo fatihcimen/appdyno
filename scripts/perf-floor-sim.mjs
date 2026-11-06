@@ -1,6 +1,6 @@
 // False alarms and catches of the gate's run-to-run floor, on simulated launches: the numbers docs/perf.md quotes.
 // Needs a build: pnpm --filter @appdyno/perf build; then node scripts/perf-floor-sim.mjs
-import { median, rankTest, shift } from '../packages/perf/dist/index.js';
+import { median, rankTest, shift } from '@appdyno/perf';
 
 let seed = 7;
 const r = () => {
@@ -29,11 +29,11 @@ for (const [runSd, k] of [
   [0.1, 8],
 ]) {
   const row = [];
-  for (const [name, floorOf] of [
-    ['range', (m) => Math.max(...m) - Math.min(...m)],
-    ['2*range', (m) => 2 * (Math.max(...m) - Math.min(...m))],
-    ['3sd', (m) => 3 * sd(m)],
-    ['4sd', (m) => 4 * sd(m)],
+  for (const { name, floorOf } of [
+    { name: 'range', floorOf: (m) => Math.max(...m) - Math.min(...m) },
+    { name: '2*range', floorOf: (m) => 2 * (Math.max(...m) - Math.min(...m)) },
+    { name: '3sd', floorOf: (m) => 3 * sd(m) },
+    { name: '4sd', floorOf: (m) => 4 * sd(m) },
   ]) {
     let fa = 0,
       hit20 = 0,

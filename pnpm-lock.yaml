@@ -8,6 +8,15 @@ importers:
 
   .:
     devDependencies:
+      '@appdyno/cli':
+        specifier: workspace:*
+        version: link:packages/cli
+      '@appdyno/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@appdyno/perf':
+        specifier: workspace:*
+        version: link:packages/perf
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.13.0)

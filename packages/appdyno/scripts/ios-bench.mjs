@@ -2,8 +2,9 @@
 // (unchanged screen, new screen), typing 20 Turkish letters, screenshot, reconnect, cold start.
 // Usage: node scripts/ios-bench.mjs <simulator id> [n]   (build first; a quiet host; prints JSON)
 import { loadavg } from 'node:os';
-import { IosSimulatorDevice, buildScreen, stats } from '../dist/index.js';
-import { timedCalls } from './timed.mjs';
+import { buildScreen, stats } from '@appdyno/core';
+import { IosSimulatorDevice } from '@appdyno/driver-apple';
+import { answered, timedCalls } from './timed.mjs';
 
 const [udid, nArg] = process.argv.slice(2);
 if (!udid) {
@@ -25,7 +26,7 @@ const measure = async (name, count, fn, between) => {
   ops[name] = stats(ms, failed);
   console.error(`${name}: ${JSON.stringify(ops[name])}`);
 };
-const screen = async () => buildScreen(await d.tree(), { platform: 'ios', appId: APP });
+const screen = async () => buildScreen(await d.tree(), { port: d.platformScreen, appId: APP });
 const find = async (pred) => {
   for (let i = 0; i < 10; i++) {
     const e = (await screen()).list.find(pred);
@@ -52,7 +53,7 @@ try {
   await measure('tap.ack', n, () => d.tap(title, { settle: false }));
   let hash = (await screen()).hash;
   await measure('tapRead.unchanged', n, async () => {
-    const r = await d.tap(title, { settle: SETTLE, read: 'tree', before: hash });
+    const r = answered(await d.tap(title, { settle: SETTLE, read: 'tree', before: hash }));
     hash = r.tree.hash;
   });
   // the screen is read before the timer starts (the first read after a launch is slow, measured apart)
@@ -63,9 +64,9 @@ try {
     async () => {
       const form = nav.list.find((e) => e.label === 'Form');
       if (!form) throw new Error('no Form button');
-      const r = await d.tap(form, { settle: SETTLE, read: 'tree', before: nav.hash });
+      const r = answered(await d.tap(form, { settle: SETTLE, read: 'tree', before: nav.hash }));
       if (process.env.APPDYNO_DEBUG) console.error('navigate settle', JSON.stringify(r.settle));
-      if (!buildScreen(r.tree, { platform: 'ios' }).list.some((e) => e.id === 'name_input'))
+      if (!buildScreen(r.tree, { port: d.platformScreen }).list.some((e) => e.id === 'name_input'))
         throw new Error('settled before the form');
     },
     async () => {

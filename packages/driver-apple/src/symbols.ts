@@ -72,7 +72,7 @@ export async function withSymbols(answer: CrashesAnswer, path: string): Promise<
   const binaries = await dsymBinaries(path);
   const unmatched = new Set<string>();
   const dir = join(stateDir(), 'crashes');
-  const reports = [];
+  const reports: CrashesAnswer['reports'] = [];
   for (const r of answer.reports) {
     if (!r.file) {
       reports.push(r);

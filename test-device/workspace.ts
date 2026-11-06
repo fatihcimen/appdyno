@@ -7,7 +7,6 @@ export * from '@appdyno/driver-apple';
 export {
   benchmark,
   appdynoDriver,
-  stats,
   table,
   environment,
   type BenchDriver,

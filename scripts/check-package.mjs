@@ -109,6 +109,7 @@ async function drive(device, app, keys) {
     let notifications = 0;
     // a first use may build the runner: long, and alive as long as progress comes
     const call = async (name, args = {}) => {
+      /** @type {any} */
       let answer;
       await step(`${device} ${name}`, async () => {
         answer = await client.callTool({ name, arguments: args }, undefined, {
@@ -175,7 +176,7 @@ try {
     const installed = readdirSync(join(project, 'node_modules')).filter((f) => !f.startsWith('.'));
     if (installed.join() !== 'appdyno') throw new Error(`installed: ${installed.join(' ')}`);
     const dist = join(project, 'node_modules/appdyno/dist');
-    for (const f of readdirSync(dist, { recursive: true }))
+    for (const f of readdirSync(dist, { recursive: true, encoding: 'utf8' }))
       if (f.endsWith('.d.ts') && readFileSync(join(dist, f), 'utf8').includes('@appdyno/'))
         throw new Error(`${f} names a workspace package`);
   });
@@ -193,7 +194,7 @@ try {
   );
   if (flags.android) {
     // the adb server outlives this run: it starts under the real HOME, not one about to go
-    spawnSync(join(adb, 'adb'), ['start-server'], { stdio: 'ignore' });
+    spawnSync(join(String(adb), 'adb'), ['start-server'], { stdio: 'ignore' });
     await drive(flags.android, 'com.android.settings', ['back']);
   }
   if (flags.ios) await drive(flags.ios, 'com.apple.Preferences', []);

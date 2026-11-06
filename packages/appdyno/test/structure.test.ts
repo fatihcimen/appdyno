@@ -146,6 +146,16 @@ describe("a person's pasteboard", () => {
   });
 });
 
+describe('a script', () => {
+  it('is type-checked with the rest, as nothing else runs it', () => {
+    const scripts = JSON.parse(readFileSync(join(root, 'tsconfig.scripts.json'), 'utf8'));
+    expect(scripts.compilerOptions.checkJs).toBe(true);
+    expect(scripts.include).toEqual(['**/*.mjs']);
+    const { typecheck } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).scripts;
+    expect(typecheck).toContain('tsconfig.scripts.json');
+  });
+});
+
 describe('the Xcode project', () => {
   it('builds every Swift source of the runner and the fixture', () => {
     const project = readFileSync(join(root, 'ios/Appdyno.xcodeproj/project.pbxproj'), 'utf8');

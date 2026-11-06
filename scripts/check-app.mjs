@@ -26,7 +26,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { CLIENTS, putOnPath, update } from '../packages/cli/dist/index.js';
+import { CLIENTS, putOnPath, update } from '@appdyno/cli';
 
 const { values: flags } = parseArgs({
   options: { android: { type: 'string' }, keep: { type: 'boolean' } },
@@ -296,7 +296,7 @@ async function selfUpdate() {
 
 /** A client's file, as `appdyno install` writes it from the app, and what becomes of it when the app moves. */
 async function moved() {
-  const file = join(home, CLIENTS.find((c) => c.format === 'jsonc').files[0]);
+  const file = join(home, CLIENTS.filter((c) => c.format === 'jsonc')[0].files[0]);
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, '{}\n');
   await step('MCP clients get the app, by the same install', () => {
@@ -422,7 +422,7 @@ try {
       const words = [
         'mirror',
         '--device',
-        flags.android,
+        String(flags.android),
         '--behind',
         '--seconds',
         '20',

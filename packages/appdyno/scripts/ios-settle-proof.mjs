@@ -1,14 +1,16 @@
 // What the settle window catches on iOS: taps on the late-reaction buttons (a line appears after the
 // button's delay) and a navigation push, per window. A miss: the settle ended before the change.
 // Usage: node scripts/ios-settle-proof.mjs <simulator id> [n] [windows ms, comma separated]
-import { IosSimulatorDevice, buildScreen } from '../dist/index.js';
+import { buildScreen } from '@appdyno/core';
+import { IosSimulatorDevice } from '@appdyno/driver-apple';
+import { answered } from './timed.mjs';
 
 const [udid, nArg, windowsArg] = process.argv.slice(2);
 const n = Number(nArg ?? 10);
 const windows = (windowsArg ?? '200,500,800').split(',').map(Number);
 const APP = 'dev.appdyno.fixture';
 const d = new IosSimulatorDevice(udid);
-const screen = async () => buildScreen(await d.tree(), { platform: 'ios', appId: APP });
+const screen = async () => buildScreen(await d.tree(), { port: d.platformScreen, appId: APP });
 const find = async (pred, what) => {
   for (let i = 0; i < 10; i++) {
     const s = await screen();
@@ -26,7 +28,7 @@ try {
   await d.launch(APP);
   for (const quietMs of windows) {
     const settle = { quietMs, maxMs: 3_000 };
-    const r = { late: {}, navigate: { missed: 0, ms: [] } };
+    const r = { late: {}, navigate: { missed: 0, ms: /** @type {number[]} */ ([]) } };
     await d.openUrl('appdyno-fixture://open/late', APP);
     await new Promise((x) => setTimeout(x, 800));
     for (const delay of [0, 100, 300, 450, 700]) {
@@ -34,9 +36,11 @@ try {
       for (let i = 0; i < n; i++) {
         await d.tap((await find((e) => e.id === 'late_clear', 'late_clear')).e, { settle: false });
         const { s, e } = await find((x) => x.id === `late_${delay}`, `late_${delay}`);
-        const res = await d.tap(e, { settle, read: 'tree', before: s.hash });
+        const res = answered(await d.tap(e, { settle, read: 'tree', before: s.hash }));
         if (
-          !buildScreen(res.tree, { platform: 'ios' }).list.some((e) => e.label === `Tepki ${delay}`)
+          !buildScreen(res.tree, { port: d.platformScreen }).list.some(
+            (e) => e.label === `Tepki ${delay}`,
+          )
         )
           missed++;
         await new Promise((x) => setTimeout(x, delay + 300)); // a missed reaction lands before the next trial
@@ -49,9 +53,11 @@ try {
       await new Promise((x) => setTimeout(x, 800));
       const { s, e } = await find((x) => x.label === 'Form', 'Form');
       const t = performance.now();
-      const res = await d.tap(e, { settle, read: 'tree', before: s.hash });
+      const res = answered(await d.tap(e, { settle, read: 'tree', before: s.hash }));
       r.navigate.ms.push(Math.round(performance.now() - t));
-      if (!buildScreen(res.tree, { platform: 'ios' }).list.some((e) => e.id === 'name_input'))
+      if (
+        !buildScreen(res.tree, { port: d.platformScreen }).list.some((e) => e.id === 'name_input')
+      )
         r.navigate.missed++;
     }
     out.windows[quietMs] = r;

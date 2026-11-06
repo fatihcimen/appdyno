@@ -1,8 +1,9 @@
 // Proof of the settle: late reactions to an actionable tap (0–300 ms after it) and a 30 ms touch reaction
 // on a non-clickable view are never missed; an unchanged screen ends quickly on an inert target.
 // Usage: node scripts/settle-proof.mjs <serial> [n]  (build first; a quiet machine)
-import { stats } from '../dist/index.js';
+import { stats } from '@appdyno/core';
 import { APP, openFixture } from './settle-fixture.mjs';
+import { answered } from './timed.mjs';
 
 const [serial, nArg] = process.argv.slice(2);
 if (!serial) {
@@ -34,11 +35,13 @@ for (const delay of DELAYS) {
   const ms = [];
   for (let i = 0; i < n; i++) {
     await clean();
-    const r = await d.tap(find(late, `${delay} ms`), {
-      settle: SETTLE,
-      read: 'tree',
-      before: late.hash,
-    });
+    const r = answered(
+      await d.tap(find(late, `${delay} ms`), {
+        settle: SETTLE,
+        read: 'tree',
+        before: late.hash,
+      }),
+    );
     if (!r.tree.nodes.some((x) => x.t === `Tepki ${delay}`)) missed++;
     ms.push(r.settle.ms);
     await pause(delay + 200);
@@ -52,11 +55,13 @@ for (const delay of DELAYS) {
   const quiet = [];
   for (let i = 0; i < n; i++) {
     await clean();
-    const r = await d.tap(find(late, 'Touch area'), {
-      settle: SETTLE,
-      read: 'tree',
-      before: late.hash,
-    });
+    const r = answered(
+      await d.tap(find(late, 'Touch area'), {
+        settle: SETTLE,
+        read: 'tree',
+        before: late.hash,
+      }),
+    );
     if (!r.tree.nodes.some((x) => x.t === 'Touch reaction')) missed++;
     ms.push(r.settle.ms);
     quiet.push(r.settle.quietMs);
@@ -77,7 +82,7 @@ for (const [name, label] of [
     const t = label
       ? find(before, label)
       : { x: before.window.w / 2, y: Math.round(before.window.h * 0.85) };
-    const r = await d.tap(t, { settle: SETTLE, read: 'hash', before: before.hash });
+    const r = answered(await d.tap(t, { settle: SETTLE, read: 'hash', before: before.hash }));
     ms.push(r.settle.ms);
     quiet.push(r.settle.quietMs);
   }

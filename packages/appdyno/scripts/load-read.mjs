@@ -1,7 +1,9 @@
 // Reads under load: the storefront screen (an auto-advancing carousel, a few hundred nodes) read <n>
 // times while two device cores are kept busy and a screenshot is taken every second. Counts failed and
 // truncated reads. Usage: node scripts/load-read.mjs <serial> [n]  (build first; a quiet host)
-import { Adb, AndroidDevice, stats } from '../dist/index.js';
+import { buildScreen, stats } from '@appdyno/core';
+import { Adb, AndroidDevice } from '@appdyno/driver-android';
+import { answered } from './timed.mjs';
 
 const [serial, nArg] = process.argv.slice(2);
 if (!serial) {
@@ -59,17 +61,18 @@ try {
     await new Promise((r) => setTimeout(r, 1_500));
     const home = await d.read(APP);
     const form = home.list.find((e) => e.label === 'FORM');
-    const r = await d.tap(form, {
-      settle: { quietMs: 200, maxMs: 3_000 },
-      read: 'tree',
-      before: home.hash,
-    });
+    if (!form) throw new Error('no FORM button');
+    const r = answered(
+      await d.tap(form, {
+        settle: { quietMs: 200, maxMs: 3_000 },
+        read: 'tree',
+        before: home.hash,
+      }),
+    );
     navMs.push(r.settle.ms);
     const now = await d.read(APP);
     const key = (x) => x.list.map((e) => `${e.id ?? e.label}@${e.x},${e.y}`).join(' ');
-    const settled = await import('../dist/index.js').then((m) =>
-      m.buildScreen(r.tree, { platform: 'android', appId: APP }),
-    );
+    const settled = buildScreen(r.tree, { port: d.platformScreen, appId: APP });
     if (!settled.list.some((e) => e.label === 'Enter your details') || key(settled) !== key(now))
       navWrong++;
   }

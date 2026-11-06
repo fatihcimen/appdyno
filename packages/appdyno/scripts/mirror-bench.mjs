@@ -13,9 +13,9 @@ import { writeFileSync } from 'node:fs';
 import { loadavg } from 'node:os';
 import { parseArgs } from 'node:util';
 import { byMinute, quietAndBusy } from './mirror-bench-minutes.mjs';
-import { MirrorSession, startViewer, ViewerProcess, viewerBinary } from '../../core/dist/index.js';
-import { Adb, AndroidDevice } from '../../driver-android/dist/index.js';
-import { IosPhoneDevice, IosSimulatorDevice } from '../../driver-apple/dist/index.js';
+import { MirrorSession, startViewer, ViewerProcess, viewerBinary } from '@appdyno/core';
+import { Adb, AndroidDevice } from '@appdyno/driver-android';
+import { IosPhoneDevice, IosSimulatorDevice } from '@appdyno/driver-apple';
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -64,8 +64,10 @@ const device = isIphone
     ? new IosSimulatorDevice(serial)
     : new AndroidDevice(serial, adb);
 // an Android phone at a size asked for, which `auto` then leaves alone, as touch follows a picture's pixels
-if (values['max-size'])
-  device.mirror.open = (o) => device.mirror.sourceWith(o, { maxSize: Number(values['max-size']) });
+if (values['max-size']) {
+  const phone = /** @type {import('@appdyno/driver-android').AndroidMirror} */ (device.mirror);
+  phone.open = (o) => phone.sourceWith(o, { maxSize: Number(values['max-size']) });
+}
 
 const seconds = [];
 const session = new MirrorSession({
@@ -227,7 +229,13 @@ const displayHz = async () => {
   return Number(rate);
 };
 
-const result = { serial, kind, date: new Date().toISOString(), runs: [] };
+const result = {
+  serial,
+  kind,
+  date: new Date().toISOString(),
+  /** @type {{ name: string; value: unknown; target?: string; ok?: boolean; load: number }[]} */
+  runs: [],
+};
 const note = (name, value, target, ok) => {
   const row = { name, value, target, ok, load: load() };
   result.runs.push(row);
@@ -268,7 +276,7 @@ const finish = async (why) => {
   }
   await session.stop(why);
   if (isIphone) {
-    const proved = device.mirror.stopProved;
+    const proved = /** @type {{ stopProved?: boolean }} */ (device.mirror).stopProved;
     note(
       'the stop',
       proved ? 'the phone says it ended' : 'no word from the phone',
@@ -285,6 +293,7 @@ const opening = Date.now();
 await waitFor('picture', () => session.status.state === 'live');
 note('first picture', `${Date.now() - opening} ms`);
 const picture = session.status.picture;
+if (!picture) throw new Error('live with no picture');
 note('picture', `${picture.w}x${picture.h} ${picture.codec}`);
 
 // the viewer on a still screen, after what starting it cost has passed
@@ -404,7 +413,7 @@ const guest =
 const fullSeconds = moved.slice(1).filter((n) => Number(n.arrived) >= 30);
 const fps = median(fullSeconds.map((n) => Number(n.arrived)));
 const best = Math.max(...fullSeconds.map((n) => Number(n.arrived)));
-const hz = kind === 'phone' ? await displayHz() : undefined;
+const hz = kind === 'phone' ? await displayHz() : 60;
 // what a phone's picture must hold is 60 frames, or all its display has: `auto` trades what is past that for a touch
 const fpsNeeded =
   kind === 'emulator'

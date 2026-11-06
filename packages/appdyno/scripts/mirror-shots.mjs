@@ -6,7 +6,7 @@
 import { spawn } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { viewerBinary } from '../dist/index.js';
+import { viewerBinary } from '@appdyno/core';
 
 const SETTLE_MS = 900;
 const FIRST_MS = 700;

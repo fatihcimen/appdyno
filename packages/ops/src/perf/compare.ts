@@ -162,7 +162,7 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
         );
       }
       if (action === 'reference') {
-        const taken = [];
+        const taken: Awaited<ReturnType<typeof looks.reference>>[] = [];
         for (const k of keys) taken.push(await looks.reference(k));
         const ok = taken.every((t) => t.ok);
         return reply(taken.map((t) => t.line).join('\n'), {
@@ -250,7 +250,7 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
       );
       const code = exitCode(reports);
       if (action === 'why') {
-        const answers = [];
+        const answers: Awaited<ReturnType<typeof looks.why>>[] = [];
         for (const [i, report] of reports.entries()) {
           const [run = []] = await latestRuns(dir, keys[i]!);
           answers.push(await looks.why(keys[i]!, report, run));

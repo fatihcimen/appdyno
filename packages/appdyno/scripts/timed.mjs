@@ -1,3 +1,14 @@
+/**
+ * A tap's answer, with the settle and the read a run asked for: it cannot go on without them.
+ * @template T
+ * @param {T & { settle?: unknown }} r
+ * @returns {{ [K in keyof T]-?: NonNullable<T[K]> }}
+ */
+export function answered(r) {
+  if (!r.settle) throw new Error('a tap came back with no settle');
+  return /** @type {any} */ (r);
+}
+
 /** `count` timed calls after 3 that warm up; failures are counted and said, and the run goes on. */
 export async function timedCalls(count, fn, between, label = '') {
   const ms = [];

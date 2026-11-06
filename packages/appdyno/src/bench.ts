@@ -1,6 +1,6 @@
 import { freemem, loadavg, totalmem } from 'node:os';
 import { pathToFileURL } from 'node:url';
-import { sleep, run, buildScreen } from '@appdyno/core';
+import { buildScreen, run, sleep, stats, type Stats } from '@appdyno/core';
 import { Adb, AndroidDevice } from '@appdyno/driver-android';
 
 /** An element a benchmark looks up: its label or id, and its centre in tap units. */
@@ -75,37 +75,6 @@ export function appdynoDriver(serial: string, adb = new Adb()): BenchDriver {
       d = new AndroidDevice(serial, adb);
       await d.open();
     },
-  };
-}
-
-export type Stats = {
-  n: number;
-  failed: number;
-  p50: number;
-  p90: number;
-  p95: number;
-  max: number;
-  mean: number;
-};
-
-export function stats(ms: number[], failed: number): Stats {
-  const s = [...ms].sort((a, b) => a - b);
-  const q = (p: number) => {
-    if (s.length === 0) return NaN;
-    const k = (s.length - 1) * p;
-    const i = Math.floor(k);
-    const j = Math.min(i + 1, s.length - 1);
-    return Math.round(s[i]! + (s[j]! - s[i]!) * (k - i));
-  };
-  const mean = s.length ? Math.round(s.reduce((a, b) => a + b, 0) / s.length) : NaN;
-  return {
-    n: s.length,
-    failed,
-    p50: q(0.5),
-    p90: q(0.9),
-    p95: q(0.95),
-    max: s.length ? Math.round(s.at(-1)!) : NaN,
-    mean,
   };
 }
 

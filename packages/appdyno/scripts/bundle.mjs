@@ -23,6 +23,7 @@ import { toolsInterface } from './tool-types.mjs';
 
 const pkg = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(pkg, 'dist');
+/** @type {import('esbuild').BuildOptions} */
 const options = {
   absWorkingDir: pkg,
   // not tsconfig.json: its paths lead to the sources, and what was type-checked is each package's dist

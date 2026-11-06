@@ -1,6 +1,7 @@
 // Soak: reads, taps, typing and screenshots on the fixture app for <minutes>, sampling the agent's RSS.
 // Usage: node scripts/soak.mjs <serial> <minutes>  (build first; one device; a quiet machine)
-import { Adb, AndroidDevice, stats } from '../dist/index.js';
+import { stats } from '@appdyno/core';
+import { Adb, AndroidDevice } from '@appdyno/driver-android';
 
 const [serial, minutesArg] = process.argv.slice(2);
 if (!serial) {
@@ -14,7 +15,7 @@ const hello = await d.open();
 const end = Date.now() + Number(minutesArg ?? 30) * 60_000;
 const rss = async () =>
   Number(
-    /VmRSS:\s+(\d+)/.exec(await adb.exec(serial, `cat /proc/${d.hello.pid}/status`))?.[1] ?? NaN,
+    /VmRSS:\s+(\d+)/.exec(await adb.exec(serial, `cat /proc/${d.hello?.pid}/status`))?.[1] ?? NaN,
   );
 const samples = [{ at: 0, rssKb: await rss() }];
 const ms = { read: [], tap: [], type: [], shot: [] };
@@ -51,7 +52,7 @@ while (Date.now() < end) {
 }
 samples.push({ at: Math.round((Date.now() - start) / 1000), rssKb: await rss() });
 d.close();
-const growth = (samples.at(-1).rssKb - samples[1]?.rssKb) / samples[1]?.rssKb;
+const growth = (samples[samples.length - 1].rssKb - samples[1]?.rssKb) / samples[1]?.rssKb;
 console.log(
   JSON.stringify(
     {

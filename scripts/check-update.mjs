@@ -10,7 +10,7 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { update, verifyRelease } from '../packages/cli/dist/index.js';
+import { update, verifyRelease } from '@appdyno/cli';
 
 const UPSTREAM = 'https://registry.npmjs.org';
 const SEMVER_REPOSITORY = 'https://github.com/npm/node-semver';
@@ -35,10 +35,11 @@ const env = {
 };
 
 const executed = promisify(execFile);
+/** @type {(extra?: object) => import('@appdyno/cli').Run} */
 const runWith =
   (extra = {}) =>
   (file, args, options) =>
-    executed(file, args, { ...options, env: { ...env, ...extra } });
+    executed(file, args, { ...options, encoding: 'utf8', env: { ...env, ...extra } });
 const run = runWith();
 
 const shell = (file, ...args) => {
@@ -81,19 +82,21 @@ const verified = (name, version, repository, options) =>
 async function registryWith(change) {
   const server = createServer(async (req, res) => {
     const headers = { accept: req.headers.accept ?? '*/*' };
-    const upstream = await fetch(`${UPSTREAM}${req.url}`, { headers });
+    const url = String(req.url);
+    const upstream = await fetch(`${UPSTREAM}${url}`, { headers });
     let body = Buffer.from(await upstream.arrayBuffer());
     // pnpm follows a packument's tarball address, so it has to lead back here
-    if (!req.url.endsWith('.tgz'))
+    if (!url.endsWith('.tgz'))
       body = Buffer.from(body.toString().replaceAll(`${UPSTREAM}/`, registry));
-    const changed = upstream.ok ? change(req.url, body) : undefined;
+    const changed = upstream.ok ? change(url, body) : undefined;
     if (changed) body = Buffer.from(changed);
     const type = upstream.headers.get('content-type') ?? 'application/json';
     res.writeHead(upstream.status, { 'content-type': type });
     res.end(body);
   });
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const registry = `http://127.0.0.1:${server.address().port}/`;
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(undefined)));
+  const { port } = /** @type {import('node:net').AddressInfo} */ (server.address());
+  const registry = `http://127.0.0.1:${port}/`;
   // its own cache, so that an answer the tampering changed goes nowhere else
   const options = runWith({
     npm_config_registry: registry,
@@ -190,7 +193,11 @@ try {
     ),
   );
 
-  const say = { out: () => undefined };
+  const say = {
+    out: () => undefined,
+    // an app's appcast is the one thing that asks for it, and these are packages
+    get: () => Promise.reject(new Error('no appcast here')),
+  };
   const npmRoot = join(prefix, 'lib/node_modules/semver');
   shell('npm', 'install', '--global', '--ignore-scripts', `semver@${oldSemver}`);
 

@@ -24,7 +24,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildIcns, buildMenuGlyph } from './build-icons.mjs';
 
@@ -90,9 +90,9 @@ async function helperBinaries() {
   process.env.APPDYNO_NATIVE_DIR = join(out, 'cache/native');
   process.env.MACOSX_DEPLOYMENT_TARGET = MIN_MACOS;
   rmSync(process.env.APPDYNO_NATIVE_DIR, { recursive: true, force: true });
-  const { textScanner, viewerBinary } = await import('../packages/core/dist/index.js');
+  const { textScanner, viewerBinary } = await import('@appdyno/core');
   for (const built of [await viewerBinary(), await textScanner()]) {
-    const to = join(helpers, built.split('/').at(-1));
+    const to = join(helpers, basename(built));
     copyFileSync(built, to);
     sh('strip', '-x', to);
   }
@@ -236,12 +236,12 @@ function diskImage() {
 }
 
 /** What a release says of itself, signed: the only thing an app believes before it downloads. */
-function appcast(dmg) {
+function appcast(dmg, key) {
   const url = `${repository}/releases/download/v${version}/${image}`;
   const cast = { version, url, sha256: sha256(dmg), size: statSync(dmg).size };
   const text = `${JSON.stringify(cast, null, 2)}\n`;
   writeFileSync(join(out, 'appcast.json'), text);
-  const signature = sign(null, Buffer.from(text), createPrivateKey(updateKey));
+  const signature = sign(null, Buffer.from(text), createPrivateKey(key));
   writeFileSync(join(out, 'appcast.json.sig'), `${signature.toString('base64')}\n`);
 }
 
@@ -263,7 +263,7 @@ icon();
 thePackage();
 signAll();
 const dmg = diskImage();
-if (updateKey) appcast(dmg);
+if (updateKey) appcast(dmg, updateKey);
 cask(dmg);
 
 const parts = [
