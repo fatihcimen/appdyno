@@ -14,7 +14,8 @@ import { liveMirror } from '../packages/ops/src/mirror/state.js';
 
 /**
  * The hub as one window, on devices we hold (APPDYNO_HUB_DEVICES=A,B; never a default, and only those are listed): its
- * real window kept off every screen, with the device chosen live in it. APPDYNO_SHOTS names a folder for pictures.
+ * real window kept off every screen, with the device chosen live in it. APPDYNO_SHOTS names a folder for pictures. An
+ * iPhone cannot stand here: its stream's thread starts only from built files, and this runs from sources.
  */
 const serials = process.env.APPDYNO_HUB_DEVICES?.split(',') ?? [];
 const LIVE_MS = 180_000;

@@ -41,7 +41,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** A phone's launcher holds its screen upright whatever is asked: a turn only shows over an app. */
 const overAnApp = async (adb: Adb, serial: string, turn: () => Promise<void>) => {
-  await adb.exec(serial, 'am start -W -a android.settings.SETTINGS');
+  // the fixture, which turns on any phone: a maker's own Settings may not, as a Xiaomi's stays upright
+  await adb.exec(
+    serial,
+    'am start -W -a android.intent.action.VIEW -d appdyno-fixture://open/gestures dev.appdyno.fixture',
+  );
   try {
     await turn();
   } finally {
