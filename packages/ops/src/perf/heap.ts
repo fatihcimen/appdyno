@@ -36,9 +36,13 @@ export function perfHeapOp(ctx: ServerContext) {
         const m = await measure(s, 'heapProfile')(pkg, profile, seconds);
         const v = m.value;
         const saved = await save('heap-profile', [m], v);
-        await keep(s, pkg, `heap-${profile}`, 'perf_heap', saved.txt, [
-          { kind: 'heap.bytes', unit: 'bytes', samples: [v.totalBytes] },
-        ]);
+        await keep(s, {
+          app: pkg,
+          scenario: `heap-${profile}`,
+          source: 'perf_heap',
+          raw: saved.txt,
+          metrics: [{ kind: 'heap.bytes', unit: 'bytes', samples: [v.totalBytes] }],
+        });
         return reply(
           [
             `measurement ${saved.id}`,
@@ -55,9 +59,13 @@ export function perfHeapOp(ctx: ServerContext) {
       const v = m.value;
       const saved = await save(HEAP[v.kind].store, [m], v);
       if (v.leaks !== undefined)
-        await keep(s, pkg, 'heap', 'perf_heap', saved.txt, [
-          { kind: 'heap.leaks', unit: 'count', samples: [v.leaks] },
-        ]);
+        await keep(s, {
+          app: pkg,
+          scenario: 'heap',
+          source: 'perf_heap',
+          raw: saved.txt,
+          metrics: [{ kind: 'heap.leaks', unit: 'count', samples: [v.leaks] }],
+        });
       else
         await keepRefusal(
           ctx,

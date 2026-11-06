@@ -182,6 +182,18 @@ async function pruneWhenDue(ctx: ServerContext) {
   }
 }
 
+/** What a measure keeps of a run. */
+export type KeptRun = {
+  app: string;
+  scenario: string;
+  /** What measured it. */
+  source: string;
+  /** The file with what the device said. */
+  raw: string;
+  metrics: Metric[];
+  compile?: string | undefined;
+};
+
 /**
  * A run's records, with the context each number is judged by; read after the measured window, so it does not
  * disturb it. Whatever measures next (a flow's journey, step by step) keeps its numbers here and perf_compare
@@ -190,12 +202,7 @@ async function pruneWhenDue(ctx: ServerContext) {
 export async function keepRun(
   ctx: ServerContext,
   s: Session,
-  app: string,
-  scenario: string,
-  source: string,
-  raw: string,
-  metrics: Metric[],
-  compile?: string,
+  { app, scenario, source, raw, metrics, compile }: KeptRun,
 ) {
   const m = s.device.measure;
   const vitals = (await m.vitals().catch(() => undefined))?.value;
@@ -271,15 +278,7 @@ export function perfTools(ctx: ServerContext) {
       : '';
   const save = async (kind: string, m: Measured<unknown>[], value: unknown) =>
     store(ctx.measurementsDir, kind, value, m.map((x) => `## ${x.at}\n${x.raw}`).join('\n\n'));
-  const keep = (
-    s: Session,
-    app: string,
-    scenario: string,
-    source: string,
-    raw: string,
-    metrics: Metric[],
-    compile?: string,
-  ) => keepRun(ctx, s, app, scenario, source, raw, metrics, compile);
+  const keep = (s: Session, run: KeptRun) => keepRun(ctx, s, run);
   const noisy = (noise: string[]) => (noise.length ? [`noise: ${noise.join(', ')}`] : []);
   /** Frames on a simulator come through the probe unless told otherwise: what it cost is said in the answer. */
   const withProbe = async (s: Session, pkg: string, probe = s.device.measure.framesByProbe) => {

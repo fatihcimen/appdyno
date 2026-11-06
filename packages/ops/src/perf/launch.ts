@@ -40,17 +40,16 @@ export function perfLaunchOp(ctx: ServerContext) {
         s.acted();
         const saved = await save('launch', [m], m.value);
         const { present, state, applied, rules, without, with: withMs } = m.value;
-        const noise = await keep(
-          s,
-          pkg,
-          scenario ?? 'launch-baseline-profile',
-          'perf_launch',
-          saved.txt,
-          [
+        const noise = await keep(s, {
+          app: pkg,
+          scenario: scenario ?? 'launch-baseline-profile',
+          source: 'perf_launch',
+          raw: saved.txt,
+          metrics: [
             { kind: 'launch.without_profile_ms', unit: 'ms', samples: without },
             { kind: 'launch.with_profile_ms', unit: 'ms', samples: withMs },
           ],
-        );
+        });
         return reply(
           [
             `measurement ${saved.id}${virtualNote(s)}`,
@@ -100,13 +99,12 @@ export function perfLaunchOp(ctx: ServerContext) {
       // Play keeps a state's longest start of the day, and only what the platform itself reports is its number
       const worstKind = `launch.worst_${mode}_ms` as const;
       const worst = !until && times.length ? Math.max(...times) : undefined;
-      const noise = await keep(
-        s,
-        pkg,
-        name,
-        'perf_launch',
-        saved.txt,
-        [
+      const noise = await keep(s, {
+        app: pkg,
+        scenario: name,
+        source: 'perf_launch',
+        raw: saved.txt,
+        metrics: [
           {
             kind: !until
               ? 'launch.ttid_ms'
@@ -130,8 +128,8 @@ export function perfLaunchOp(ctx: ServerContext) {
             samples: [b.ms],
           })),
         ],
-        m.value.compile?.asked,
-      );
+        compile: m.value.compile?.asked,
+      });
       const longest =
         worst === undefined || !ratedByPlay(s.device.platform)
           ? undefined

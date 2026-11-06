@@ -169,7 +169,13 @@ export async function measureJourney(
       samples: h.samples,
       ...(h.throughHost && { throughHost: true }),
     }));
-  const noise = await keepRun(ctx, s, app, name, 'flow measure', saved.txt, metrics);
+  const noise = await keepRun(ctx, s, {
+    app,
+    scenario: name,
+    source: 'flow measure',
+    raw: saved.txt,
+    metrics,
+  });
   const unread = (['frames', 'memory'] as const).filter((k) => !reader.quick(k));
   const notes = [
     ...(unread.length

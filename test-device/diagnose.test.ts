@@ -90,7 +90,7 @@ describe.skipIf(!serial)('android: another tool holds UI automation', () => {
   });
 
   it('stops the holder only with --takeover, and drives', async () => {
-    const d = new AndroidDevice(serial!, adb, 0, true);
+    const d = new AndroidDevice(serial!, adb, { takeover: true });
     const hello = await d.open();
     expect(hello.platform).toBe('android');
     expect((await d.tree()).nodes.length).toBeGreaterThan(0);

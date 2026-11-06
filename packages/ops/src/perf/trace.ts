@@ -56,7 +56,13 @@ export function perfTraceOp(ctx: ServerContext) {
       ) => {
         // the scroll stays with the reading: a look at this run on a regression does the same
         const saved = await save(kind, [m], { ...(m.value as object), scroll });
-        const noise = await keep(s, pkg, name, m.source ?? 'perf_trace', saved.txt, metrics);
+        const noise = await keep(s, {
+          app: pkg,
+          scenario: name,
+          source: m.source ?? 'perf_trace',
+          raw: saved.txt,
+          metrics,
+        });
         return reply(
           [
             `measurement ${saved.id}${virtualNote(s)}`,

@@ -280,7 +280,7 @@ reacting within 80 ms is caught (0/50 missed at 30 ms), a slower one is not.
 ### Animations
 
 `animations.set {off}` (host: `--animations off`, `APPDYNO_ANIMATIONS=off`, the
-fifth `AndroidDevice` argument) sets the three system animation scales to 0. They come back as they were when
+`animations` option of `AndroidDevice`) sets the three system animation scales to 0. They come back as they were when
 the last connection that asked has gone, and if the agent dies first, by a separate shell process watching
 it (within a second). The first performance measurement of a session puts them back for the rest of that
 session, as a measurement must see what a user sees. `doctor --serial` warns about scales left at 0 (a reboot

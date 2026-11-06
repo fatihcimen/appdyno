@@ -59,6 +59,16 @@ const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
 const WAKE_FOCUS_MS = 5_000;
 const WAKE_STEADY_MS = 600;
 
+export type AndroidOptions = {
+  /** How long a read-only call waits for an unplugged or rebooting device to come back (0: not at all). */
+  reconnectWaitMs?: number;
+  takeover?: boolean | undefined;
+  /** Off: the device's animations are off while this host is connected (docs/protocol.md "Animations"). */
+  animations?: 'on' | 'off' | undefined;
+  /** What `app install` may answer on the phone (docs/protocol.md "A phone's install prompts"). */
+  installAnswers?: InstallAnswers | undefined;
+};
+
 /**
  * An Android device or emulator driven through its agent: every command has a timeout, commands never
  * overlap, failures are typed DeviceErrors. App lifecycle, links and location go through adb's own
@@ -70,19 +80,23 @@ export class AndroidDevice extends RpcDevice implements Device {
   protected readonly retrySafe = RETRY_SAFE;
   private readonly launcher: AndroidAgentLauncher;
 
+  private readonly reconnectWaitMs: number;
+  private animations: 'on' | 'off';
+
   constructor(
     readonly serial: string,
     private readonly adb: Adb = new Adb(),
-    /** How long a read-only call waits for an unplugged or rebooting device to come back (0: not at all). */
-    private readonly reconnectWaitMs = 0,
-    takeover = false,
-    /** Off: the device's animations are off while this host is connected (docs/protocol.md "Animations"). */
-    private animations: 'on' | 'off' = 'on',
-    /** What `app install` may answer on the phone (docs/protocol.md "A phone's install prompts"). */
-    installAnswers?: InstallAnswers,
+    {
+      reconnectWaitMs = 0,
+      takeover = false,
+      animations = 'on',
+      installAnswers,
+    }: AndroidOptions = {},
   ) {
     super();
     assertSerial(serial);
+    this.reconnectWaitMs = reconnectWaitMs;
+    this.animations = animations;
     this.launcher = new AndroidAgentLauncher(adb, serial, takeover);
     this.apps = new AndroidApps(
       adb,

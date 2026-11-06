@@ -140,13 +140,12 @@ export function perfScrollOp(ctx: ServerContext) {
         ...leakSignal(rounds),
       ];
       const play = frameVitals(histograms);
-      const noise = await keep(
-        s,
-        pkg,
-        scenario ?? `scroll-${direction}`,
-        'perf_scroll',
-        saved.txt,
-        [
+      const noise = await keep(s, {
+        app: pkg,
+        scenario: scenario ?? `scroll-${direction}`,
+        source: 'perf_scroll',
+        raw: saved.txt,
+        metrics: [
           {
             kind: 'frames.jank_percent',
             unit: 'percent',
@@ -164,7 +163,7 @@ export function perfScrollOp(ctx: ServerContext) {
           { kind: 'stalls.worst_ms', unit: 'ms', samples: stalls },
           ...play.metrics,
         ],
-      );
+      });
       return reply(
         [
           `measurement ${saved.id}${virtualNote(s)}`,

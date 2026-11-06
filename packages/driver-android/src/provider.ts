@@ -219,14 +219,12 @@ export function androidProvider(
     virtual: new AndroidEmulators(adb),
     // a phone unplugged for a moment (or rebooting) is waited for, up to 30 s, on read-only calls
     open: (serial) =>
-      new AndroidDevice(
-        serial,
-        new Adb(),
-        30_000,
-        opts.takeover,
-        opts.animations,
-        opts.installAnswers,
-      ),
+      new AndroidDevice(serial, new Adb(), {
+        reconnectWaitMs: 30_000,
+        takeover: opts.takeover,
+        animations: opts.animations,
+        installAnswers: opts.installAnswers,
+      }),
     doctor: (serial) => androidChecks(adb, serial),
     queryTrace,
   };

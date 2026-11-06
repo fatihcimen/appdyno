@@ -16,7 +16,7 @@ describe('an agent reached', () => {
     };
     const hello = { model: 'Pixel' };
     const adb = { exec: async (_: string, c: string) => (ran.push(c), '') } as unknown as Adb;
-    const device = new AndroidDevice('emulator-5640', adb, 0, false, animations);
+    const device = new AndroidDevice('emulator-5640', adb, { animations });
     Object.assign(device, { launcher: { connect: async () => ({ rpc, hello, started }) } });
     return { asked, ran, device, hello };
   };

@@ -338,12 +338,18 @@ export function perfSnapshotOp(ctx: ServerContext) {
       );
       const f = frames?.value;
       const play = frameVitals(f?.histogram ? [f.histogram] : []);
-      const noise = await keep(s, pkg, keptAs, 'perf_snapshot', saved.txt, [
-        { kind: 'cpu.percent', unit: 'percent', samples: [cpu.value.percent] },
-        { kind: 'memory.kb', unit: 'kb', samples: [mem.value.kb] },
-        ...play.metrics,
-        ...got.flatMap((g) => g.metrics),
-      ]);
+      const noise = await keep(s, {
+        app: pkg,
+        scenario: keptAs,
+        source: 'perf_snapshot',
+        raw: saved.txt,
+        metrics: [
+          { kind: 'cpu.percent', unit: 'percent', samples: [cpu.value.percent] },
+          { kind: 'memory.kb', unit: 'kb', samples: [mem.value.kb] },
+          ...play.metrics,
+          ...got.flatMap((g) => g.metrics),
+        ],
+      });
       const m = mem.value;
       const v = vitals?.value;
       return reply(

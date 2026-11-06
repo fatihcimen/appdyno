@@ -36,9 +36,13 @@ const context = (o: { measurements?: string; traceLimitGb: number; autoPrune?: b
 };
 
 const kept = async (ctx: ServerContext) =>
-  keepRun(ctx, await ctx.session(), 'dev.app', 's', 't', '', [
-    { kind: 'memory.kb', unit: 'kb', samples: [1] },
-  ]);
+  keepRun(ctx, await ctx.session(), {
+    app: 'dev.app',
+    scenario: 's',
+    source: 't',
+    raw: '',
+    metrics: [{ kind: 'memory.kb', unit: 'kb', samples: [1] }],
+  });
 
 beforeEach(() => {
   vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-prune-ops-')));
@@ -116,9 +120,13 @@ describe('perf_compare prune', () => {
     writeFileSync(raw, trace);
     writeFileSync(raw.replace('.txt', '.json'), '{}');
     const ctx = context({ traceLimitGb: 0 });
-    await keepRun(ctx, await ctx.session(), 'dev.app', 's', 't', raw, [
-      { kind: 'memory.kb', unit: 'kb', samples: [1] },
-    ]);
+    await keepRun(ctx, await ctx.session(), {
+      app: 'dev.app',
+      scenario: 's',
+      source: 't',
+      raw,
+      metrics: [{ kind: 'memory.kb', unit: 'kb', samples: [1] }],
+    });
     await callerOf(ctx)('perf_compare', { action: 'baseline' });
     // another project, which has no such baseline
     const other = context({ traceLimitGb: 0 });

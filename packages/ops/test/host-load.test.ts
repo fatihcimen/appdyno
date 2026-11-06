@@ -82,10 +82,16 @@ describe('a loaded Mac', () => {
   it('leaves out of a baseline the number under it, says which, and keeps what the device timed itself', async () => {
     const { ctx, perf } = phone();
     const s = await ctx.session();
-    const noise = await keepRun(ctx, s, 'dev.app', 'mixed', 'test', '', [
-      { kind: 'memory.kb', unit: 'kb', samples: [1] },
-      { kind: 'launch.until_ms', unit: 'ms', samples: [3_000], throughHost: true },
-    ]);
+    const noise = await keepRun(ctx, s, {
+      app: 'dev.app',
+      scenario: 'mixed',
+      source: 'test',
+      raw: '',
+      metrics: [
+        { kind: 'memory.kb', unit: 'kb', samples: [1] },
+        { kind: 'launch.until_ms', unit: 'ms', samples: [3_000], throughHost: true },
+      ],
+    });
     expect(noise).toEqual(['high-host-load']);
     const r = await checkedOps(ctx).perf_compare!.handler({
       action: 'baseline',
@@ -107,9 +113,13 @@ describe('a loaded Mac', () => {
   it('takes no baseline from a run with every number under it', async () => {
     const { ctx } = phone();
     const s = await ctx.session();
-    await keepRun(ctx, s, 'dev.app', 'loud', 'test', '', [
-      { kind: 'launch.until_ms', unit: 'ms', samples: [3_000], throughHost: true },
-    ]);
+    await keepRun(ctx, s, {
+      app: 'dev.app',
+      scenario: 'loud',
+      source: 'test',
+      raw: '',
+      metrics: [{ kind: 'launch.until_ms', unit: 'ms', samples: [3_000], throughHost: true }],
+    });
     const r = await checkedOps(ctx).perf_compare!.handler({
       action: 'baseline',
       format: 'text',

@@ -174,7 +174,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
         .trim()
         .split(/\s+/);
     const before = await scales();
-    const off = new AndroidDevice(serial!, undefined, 0, false, 'off');
+    const off = new AndroidDevice(serial!, undefined, { animations: 'off' });
     await off.open();
     expect(await scales()).toEqual(['0', '0', '0']);
     expect((await off.tree()).nodes.length).toBeGreaterThan(0);
@@ -191,7 +191,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(await scales()).toEqual(before);
     off.close();
 
-    const crash = new AndroidDevice(serial!, undefined, 0, false, 'off');
+    const crash = new AndroidDevice(serial!, undefined, { animations: 'off' });
     await crash.open();
     expect(await scales()).toEqual(['0', '0', '0']);
     const checks = await androidProvider().doctor!(serial!);
@@ -200,7 +200,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     crash.close();
     await expect.poll(scales, { timeout: 15_000, interval: 500 }).toEqual(before);
 
-    const graceful = new AndroidDevice(serial!, undefined, 0, false, 'off');
+    const graceful = new AndroidDevice(serial!, undefined, { animations: 'off' });
     await graceful.open();
     expect(await scales()).toEqual(['0', '0', '0']);
     graceful.close();
@@ -647,7 +647,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
   });
 
   it('a dropped adb connection: a read waits for the device and finds the running agent again', async () => {
-    const back = new AndroidDevice(serial!, new Adb(), 30_000);
+    const back = new AndroidDevice(serial!, new Adb(), { reconnectWaitMs: 30_000 });
     await back.open();
     const pid = back.hello!.pid;
     await new Adb().run(['-s', serial!, 'reconnect'], 30_000);
