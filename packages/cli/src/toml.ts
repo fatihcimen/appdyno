@@ -125,11 +125,14 @@ const decoded = (value: string): unknown => {
   }
 };
 
+/** The table is written as a value of a key, or under one: TOML lets no table be added to a value on one line. */
 const inlined = (keys: Key[], full: string) =>
   keys.some((k) => {
     const inTable = k.table === full || k.table.startsWith(`${full}.`);
     const path = k.table ? `${k.table}.${k.name}` : k.name;
-    return !inTable && (path === full || path.startsWith(`${full}.`));
+    return (
+      !inTable && (path === full || path.startsWith(`${full}.`) || full.startsWith(`${path}.`))
+    );
   });
 
 /** The server's table, with any ways it is written that this tool will not touch refused. */

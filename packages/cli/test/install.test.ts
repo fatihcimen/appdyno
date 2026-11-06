@@ -419,6 +419,19 @@ describe('a TOML file', () => {
     expect(() => add(text)).toThrow('edit it by hand');
   });
 
+  it.each([
+    [`mcp_servers = { docs = { command = "node" } }\n`],
+    [`mcp_servers = { ${SERVER} = { command = "npx" } }\n`],
+  ])('refuses a list on one line, as a table after it breaks the file: %j', (text) => {
+    expect(() => add(text)).toThrow('edit it by hand');
+    expect(() => tomlEdit.read(text, 'mcp_servers', SERVER)).toThrow('edit it by hand');
+  });
+
+  it('takes a list of tables or of dotted keys as one a table can join', () => {
+    for (const text of [`[mcp_servers.docs]\nc = 1\n`, `mcp_servers.docs.c = 1\n`])
+      expect(add(text)).toBe(`${text}\n${table}`);
+  });
+
   it('replaces only the table, keeping its own subtable', () => {
     const text = `[mcp_servers.${SERVER}]\ncommand = "old"\n\n[mcp_servers.${SERVER}.env]\nA = "1"\n`;
     expect(add(text)).toBe(`${table}\n[mcp_servers.${SERVER}.env]\nA = "1"\n`);
