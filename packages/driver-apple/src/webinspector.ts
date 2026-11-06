@@ -38,8 +38,13 @@ export function readBplist(b: Buffer): Plist {
       p += width;
       return n;
     };
-    const refs = (n: number, from: number) =>
-      Array.from({ length: n }, (_, k) => read(b.readUIntBE(p + (from + k) * refSize, refSize)));
+    const refs = (n: number, from: number) => {
+      // room is made before the first is read: a length from the wire, at every level of a list that holds itself
+      if (p + (from + n) * refSize > b.length) throw new Error('a plist list past its end');
+      return Array.from({ length: n }, (_, k) =>
+        read(b.readUIntBE(p + (from + k) * refSize, refSize)),
+      );
+    };
     switch (marker >> 4) {
       case 0:
         return low === 8 ? false : low === 9 ? true : null;

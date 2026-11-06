@@ -35,6 +35,18 @@ describe('a plist that cannot be read to its end', () => {
     expect(() => readBplist(bplistOf([...levels, []]))).toThrow(/more than/);
   });
 
+  it('makes no room for a list longer than the file: this one names itself, 64 million times', () => {
+    const long = Buffer.from([0xaf, 0x12, 0x03, 0xd0, 0x90, 0x00, 0x00]);
+    const trailer = Buffer.alloc(32);
+    trailer[6] = 2;
+    trailer[7] = 1;
+    trailer.writeBigUInt64BE(1n, 8);
+    trailer.writeBigUInt64BE(BigInt(8 + long.length), 24);
+    const offset = Buffer.from([0, 8]);
+    const file = Buffer.concat([Buffer.from('bplist00', 'latin1'), long, offset, trailer]);
+    expect(() => readBplist(file)).toThrow('past its end');
+  });
+
   it('reads an object named many times, as a list of the same string', () => {
     const many = Array.from({ length: 14 }, () => 1);
     expect(readBplist(bplistOf([many, []]))).toEqual(many.map(() => []));
