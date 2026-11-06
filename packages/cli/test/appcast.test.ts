@@ -64,7 +64,13 @@ const released = (bytes = cast()) => ({
   [`${REPOSITORY}/releases/download/v1.1.0/Tool.dmg`]: IMAGE,
 });
 
-type Say = { signer?: string; version?: string; unsigned?: boolean; failAt?: string };
+type Say = {
+  signer?: string;
+  version?: string;
+  unsigned?: boolean;
+  noSigner?: boolean;
+  failAt?: string;
+};
 
 /** The Mac's own tools as they answer, with an unpack that lays down the new app. */
 function tools(say: Say = {}) {
@@ -81,6 +87,7 @@ function tools(say: Say = {}) {
     if (tool === 'codesign' && args[0] === '--verify' && say.unsigned)
       throw new Error('a sealed resource is missing');
     if (tool === 'plutil') return { stdout: `${say.version ?? NEWER}\n` };
+    if (say.noSigner) return { stdout: '', stderr: '' };
     const identity = args[1]?.includes('.Tool-') ? (say.signer ?? 'TEAM') : 'TEAM';
     return { stdout: '', stderr: `Identifier=dev.tool\nTeamIdentifier=${identity}\n` };
   };
@@ -209,6 +216,12 @@ describe('appdyno update, in the app', () => {
   it('refuses an app signed by someone else', async () => {
     const { going } = updating(getting(released()), { signer: 'STRANGER' });
     await expect(going).rejects.toThrow(/of STRANGER, not dev\.tool of TEAM/);
+    oldStays();
+  });
+
+  it('refuses when it cannot tell who signed either app, as two blanks are alike', async () => {
+    const { going } = updating(getting(released()), { noSigner: true });
+    await expect(going).rejects.toThrow(/names no signer/);
     oldStays();
   });
 

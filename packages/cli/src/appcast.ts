@@ -65,7 +65,10 @@ async function signer(bundle: string, run: Run) {
     maxBuffer: 1 << 20,
   });
   const field = (name: string) => new RegExp(`^${name}=(.*)$`, 'm').exec(stderr)?.[1];
-  return `${field('Identifier')} of ${field('TeamIdentifier')}`;
+  const [identifier, team] = [field('Identifier'), field('TeamIdentifier')];
+  // two apps whose signer cannot be read would read as the same
+  if (!identifier || !team) throw refuse(`${bundle} names no signer`, 'CHECK_FAILED', HINT);
+  return `${identifier} of ${team}`;
 }
 
 /** The app in the image, as `copy`. */
