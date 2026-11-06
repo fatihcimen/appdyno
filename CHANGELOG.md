@@ -135,7 +135,7 @@
 - `appdyno mirror`: a window with the device in a frame drawn in code, by model, with buttons that press, off by a setting. It stands on a backdrop of its own picture's colours, with its status, controls and Inspector on Liquid Glass; before macOS 26 a material stands in.
 - A window's controls: Home, App Switcher, Lock, volume, Siri, Control Center, Notifications, Spotlight, rotation, screenshot, recording and zoom, in one table for its bar and menus, each kind of device showing only what it has. The Inspector has Stats, Activity and Apps, which lists, launches, quits and removes.
 - A person's gestures: a right click is a long press, a pinch two fingers, a drag from the bezel an edge gesture, and text goes through the system's own input, so that dead keys and held accents work. ⌘V pastes up to 4,096 characters.
-- `--behind` keeps a window off every screen, and it can write itself to a PNG as the window server draws it. `scripts/mirror-shots.mjs` does so for each state, in light and dark.
+- `--behind` keeps a window off every screen, and it can write itself to a PNG as the window server draws it. `packages/appdyno/scripts/mirror-shots.mjs` does so for each state, in light and dark.
 - `LiveMetrics`: a port for a device's numbers each second, in one `perf` message. A measure a device cannot give stays out with its reason, and is never a 0.
 - A window's live numbers (⌥⌘P): frame rate, jank, frozen frames, CPU, memory and network beside the device, each with its last minute, a state in words, and the reason where a device has none. Nothing is read until they are open.
 - The dashboard and the report share one look; rows no device has said anything of fold into a line, trends stand side by side, and a report's steps are cards.

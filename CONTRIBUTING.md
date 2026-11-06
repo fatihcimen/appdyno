@@ -60,6 +60,15 @@ takes `PLATFORMS` in `packages/protocol/src/messages.ts`, the tables keyed by it
 `packages/perf/src/dashboard/format.ts`, its provider in `packages/appdyno/src/main.ts` and its rule in
 `boundaries.test.ts`. `packages/appdyno/test/platforms.test.ts` holds the list.
 
+## Words used here
+
+Some names here carry a meaning of their own:
+
+- A **place** is what stands in the hub where a device would: AI Clients and Help. `HubPlaces` is what they ask of this Mac.
+- **Words** are text for a person, in `WordsTable.m` and `wordsOf`, and a **need** is what stands between a person and a device, with its fix.
+- **said** and **heard** are what a process wrote and what the other side took from it, on the viewer's wire or a command's output.
+- To **keep** a run is to save its records for the gate, and a **source** is what a window shows from, or what measured a number.
+
 ## Commits
 
 One change per commit, with a short message in the style of `git log --oneline -15`: `type: what changed`,

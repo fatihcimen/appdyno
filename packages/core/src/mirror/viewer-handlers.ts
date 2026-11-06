@@ -5,7 +5,7 @@ import type { MirrorStats } from './state.js';
 import type { ViewerMessage } from './viewer.js';
 
 /** What a session does with what its viewer says. */
-export type ViewerWords = {
+export type ViewerHandlers = {
   first(m: ViewerMessage): void;
   stats(stats: MirrorStats, decoded: number): void;
   lost(why: string, fatal: boolean): void;
@@ -25,7 +25,7 @@ export type ViewerWords = {
 };
 
 /** A viewer's message as what it means; one a session does not know goes nowhere. */
-export function heardFromViewer(m: ViewerMessage, on: ViewerWords) {
+export function heardFromViewer(m: ViewerMessage, on: ViewerHandlers) {
   switch (m.op) {
     case 'first':
       return on.first(m);

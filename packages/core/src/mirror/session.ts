@@ -13,7 +13,7 @@ import {
 } from './state.js';
 import type { ViewerLink, ViewerMessage, ViewerOrder } from './viewer.js';
 import { ViewerAsks } from './viewer-asks.js';
-import { heardFromViewer, type ViewerWords } from './viewer-words.js';
+import { heardFromViewer, type ViewerHandlers } from './viewer-handlers.js';
 
 const WAITING_POLL_MS = 1_000;
 /** A viewer that goes on dying is not started a third time. */
@@ -295,7 +295,7 @@ export class MirrorSession {
       .then(() => this.reconnect(why));
   }
 
-  private readonly words: ViewerWords = {
+  private readonly handlers: ViewerHandlers = {
     first: (m) => this.onFirst(m),
     stats: (stats, decoded) => {
       // a viewer's -1 is no reading, and goes no further than here
@@ -319,7 +319,7 @@ export class MirrorSession {
   };
 
   private onViewer(m: ViewerMessage) {
-    heardFromViewer(m, this.words);
+    heardFromViewer(m, this.handlers);
   }
 
   private onFirst(m: ViewerMessage) {

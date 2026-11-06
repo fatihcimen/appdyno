@@ -424,7 +424,7 @@ export async function drive(flow: string, log: (line: string) => void) {
 | `--allow-apps a,b`          | `APPDYNO_ALLOW_APPS`                | only these apps                                                                                                     |
 | `--allow-urls RE`           | `APPDYNO_ALLOW_URLS`                | only links that match                                                                                               |
 | `--no-home`                 |                                     | block the home key                                                                                                  |
-| `--measurements dir`        | `APPDYNO_MEASUREMENTS`              | where measurements are stored (default: the state directory)                                                        |
+| `--measurements dir`        |                                     | where measurements are stored (default: the state directory)                                                        |
 | `--takeover`                |                                     | stop another tool that holds UI automation on Android                                                               |
 | `--no-install-consent`      | `APPDYNO_NO_INSTALL_CONSENT=1`      | `app install` touches no prompt on the phone: a person answers them all                                             |
 | `--accept-install-warnings` | `APPDYNO_ACCEPT_INSTALL_WARNINGS=1` | `app install` passes a Play Protect warning, and always says so and quotes it                                       |

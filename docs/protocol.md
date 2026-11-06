@@ -1,7 +1,7 @@
 # Host ↔ agent protocol (v2)
 
 The host library talks to an on-device agent over one byte stream: on Android an abstract unix socket
-of the agent opened through the adb server (`localabstract:<name>`), later on iOS a TCP connection
+of the agent opened through the adb server (`localabstract:<name>`), on iOS a TCP connection
 (simulator loopback, or a usbmux connection to a phone). The source of truth for message shapes is
 `packages/protocol/src/messages.ts`. The host parses a request's params by it, so a default there is what goes on
 the wire and an agent has none of its own: a value missing is `INVALID_ARGUMENT`. `packages/protocol/fixtures` has

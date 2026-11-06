@@ -37,7 +37,7 @@ and write `APPDYNO_LOCK_FILE` while they run. A device is never chosen by defaul
 scripts/ci.sh                                      # no device
 scripts/ci.sh --device emulator-5580               # + device suites
 scripts/ci.sh --device emulator-5580 --nightly     # + latency history and gate
-scripts/ci.sh --ios <simulator id>                 # + iOS simulator (a shared one: APPDYNO_WATCH_SIM in the session guard)
+scripts/ci.sh --ios <simulator id>                 # + iOS simulator
 scripts/ci.sh --iphone <UDID>                      # + iPhone (APPDYNO_IOS_PROFILE, _KEYCHAIN, _KEYCHAIN_PASSWORD)
 ```
 
