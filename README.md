@@ -62,7 +62,7 @@ appdyno perf survey --app A    # every measure on this device, then a page of th
 ## What it does
 
 <p>
-  <img src="docs/images/window-performance.png" width="49%" alt="A window on an Android emulator with the Performance pane open: readings over time, and a cold launch and a scroll measured for real">
+  <img src="docs/images/window-performance.png" width="49%" alt="The hub with an iPhone simulator and its Performance pane open: readings over time, and three cold launches measured for real">
   <img src="docs/images/dashboard.png" width="49%" alt="The dashboard of a kept app: what needs attention, measures by device, and trends">
 </p>
 
