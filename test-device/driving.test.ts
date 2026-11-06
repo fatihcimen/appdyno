@@ -186,13 +186,13 @@ function shared(
     ok(r);
   });
 
-  it('reads the clipboard it set, then types without asking the user about it', async () => {
+  it('reads the clipboard it set, then types without asking the user about it', async (ctx) => {
     await open('form');
     // on a phone it is a person's
     const held = await call('clipboard');
     const set = await call('clipboard', { text: 'pano içeriği' });
     // a simulator whose pasteboard stalls on a loaded Mac: a refusal that says so, not a hang
-    if (set.error && /did not take the text/.test(set.text)) return;
+    if (set.error && /did not take the text/.test(set.text)) return ctx.skip();
     ok(set);
     expect(ok(await call('clipboard')).text).toBe('pano içeriği');
     ok(await call('type_text', { text: 'x', selector: names.field }));
@@ -434,11 +434,11 @@ describe.skipIf(!android)('driving on Android', () => {
     expect(b.data.code).toBe('UNSUPPORTED');
   });
 
-  it('holds the device: a second process is refused by name, may share, and the holder shows', async () => {
+  it('holds the device: a second process is refused by name, may share, and the holder shows', async (ctx) => {
     const other = join(ROOT, 'packages/appdyno/dist/main.js');
     const list = ok(await h.call('list_devices'));
     expect(JSON.stringify(list.data)).toContain(`"pid":${process.pid}`);
-    if (!existsSync(other)) return;
+    if (!existsSync(other)) return ctx.skip();
     const refused = (() => {
       try {
         return execFileSync(process.execPath, [other, 'screen', '--device', android!], {

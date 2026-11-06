@@ -269,8 +269,8 @@ describe.skipIf(!serial)('the flight recorder', () => {
     expect(Math.max(...page.frames.marks.map((f) => f.ms))).toBeGreaterThan(900);
   }, 180_000);
 
-  it('keeps a stall no frame shows, by the log that says so', async () => {
-    if (!(await writesSkippedFrames())) return;
+  it('keeps a stall no frame shows, by the log that says so', async (ctx) => {
+    if (!(await writesSkippedFrames())) return ctx.skip();
     await adb(
       `run-as ${APP} sh -c 'mkdir -p files; rm -f files/stall_ms; echo 1500 > files/sleep_ms'`,
     );

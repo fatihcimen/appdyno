@@ -450,14 +450,14 @@ describe.each(kinds)('a flow recorded in a window on $name', ({ name, serial, de
 });
 
 describe('a flow recorded on one kind', () => {
-  it.each(kinds.flatMap((from) => kinds.map((to) => ({ from, to }))))(
+  it.for(kinds.flatMap((from) => kinds.filter((to) => to !== from).map((to) => ({ from, to }))))(
     'from $from.name replays on $to.name',
-    async ({ from, to }) => {
+    { timeout: LONG_MS },
+    async ({ from, to }, ctx) => {
       const file = made.get(from.name);
-      if (from === to || !file || !to.serial) return;
+      if (!file || !to.serial) return ctx.skip();
       await replay(await to.device(), file);
     },
-    LONG_MS,
   );
 });
 

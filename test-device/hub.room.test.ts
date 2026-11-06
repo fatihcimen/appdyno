@@ -230,8 +230,8 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
 
   it(
     'stands two devices beside each other in one window',
-    async () => {
-      if (serials.length < 2) return;
+    async (ctx) => {
+      if (serials.length < 2) return ctx.skip();
       await until('a device', () => serials.some(live), LIVE_MS);
       await quiet(3_000);
       told.length = 0;

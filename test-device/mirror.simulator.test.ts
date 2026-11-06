@@ -166,7 +166,6 @@ describe.runIf(udid && process.env.APPDYNO_MIRROR_WINDOW === '1')('the one real 
       await new Promise((r) => setTimeout(r, 500));
       expect(session.status.state).toBe('live');
       expect(session.status.inputFailed).toBe(0);
-      expect(Number(session.status.stats?.shown ?? 0)).toBeGreaterThanOrEqual(0);
     } finally {
       await session.stop('the test ended');
       device.close();
