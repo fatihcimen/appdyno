@@ -15,6 +15,9 @@ import { describe, expect, it } from 'vitest';
 const root = join(import.meta.dirname, '../../..');
 const read = (p: string) => readFileSync(join(root, p), 'utf8');
 
+type Package = { identifier: string; version: string };
+type Manifest = { name: string; mcpName: string; keywords: string[] };
+
 describe('release version', () => {
   it('is the same everywhere', () => {
     const v = JSON.parse(read('packages/appdyno/package.json')).version as string;
@@ -27,6 +30,25 @@ describe('release version', () => {
     expect(read('ios/Appdyno.xcodeproj/project.pbxproj')).toContain(`MARKETING_VERSION = ${v};`);
     expect(read('packages/mcp/src/brand.ts')).toContain(`version: '${v}'`);
     expect(read('CHANGELOG.md')).toContain(`## ${v}`);
+    const server = JSON.parse(read('server.json')) as { version: string; packages: Package[] };
+    expect(server.version).toBe(v);
+    expect(server.packages.map((p) => p.version)).toEqual([v]);
+  });
+
+  it('is the one package the MCP registry lists, as npm has it', () => {
+    const manifest = JSON.parse(read('packages/appdyno/package.json')) as Manifest;
+    const server = JSON.parse(read('server.json')) as {
+      name: string;
+      description: string;
+      packages: Package[];
+    };
+    expect(server.name).toBe(manifest.mcpName);
+    expect(server.packages.map((p) => p.identifier)).toEqual([manifest.name]);
+    // the registry's limit
+    expect(server.description.length).toBeLessThanOrEqual(100);
+    expect(manifest.keywords).toEqual(
+      expect.arrayContaining(['mcp', 'mcp-server', 'ios', 'android']),
+    );
   });
 
   it('names the repository a release is published from, which update holds it to', () => {

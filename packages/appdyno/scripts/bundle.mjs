@@ -20,6 +20,7 @@ import { NATIVE_PARTS, VIEWER_TEST_FILES } from '@appdyno/core';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { build } from 'esbuild';
 import { bundledPackages, noticesFor } from './notices.mjs';
+import { publishedReadme } from './published-readme.mjs';
 import { toolsInterface } from './tool-types.mjs';
 
 const pkg = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -117,7 +118,11 @@ packed(join(pkg, '../..', viewer.repo), viewer, (f) => !VIEWER_TEST_FILES.test(b
 packed(join(pkg, '../..', mac.repo), mac);
 
 // what a registry shows, and what has to travel with copies of the code inlined above
-cpSync(join(pkg, '../../README.md'), join(pkg, 'README.md'));
+const { repository } = JSON.parse(readFileSync(join(pkg, 'package.json'), 'utf8'));
+writeFileSync(
+  join(pkg, 'README.md'),
+  publishedReadme(readFileSync(join(pkg, '../../README.md'), 'utf8'), repository.url),
+);
 writeFileSync(
   join(pkg, 'THIRD_PARTY_NOTICES'),
   noticesFor(

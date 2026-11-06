@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.fatihcimen/appdyno",
+  "title": "appdyno",
+  "description": "Test, drive and measure iOS and Android apps on simulators, emulators and real phones.",
+  "version": "0.6.0",
+  "websiteUrl": "https://github.com/fatihcimen/appdyno",
+  "repository": {
+    "url": "https://github.com/fatihcimen/appdyno",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "appdyno",
+      "version": "0.6.0",
+      "runtimeHint": "npx",
+      "transport": { "type": "stdio" },
+      "packageArguments": [{ "type": "positional", "value": "mcp" }]
+    }
+  ]
+}

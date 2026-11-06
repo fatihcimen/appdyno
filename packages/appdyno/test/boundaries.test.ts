@@ -178,8 +178,17 @@ describe('the phone stream', () => {
   });
 });
 
-/** What the clients are called has to be written somewhere, and only here: the list, and how to set each up. */
-const CLIENT_DATA = ['packages/cli/src/clients.ts', 'docs/clients.md', 'docs/clients.tr.md'];
+/**
+ * What the clients are called has to be written somewhere, and only here: the list, how to set each up, and the two
+ * places a person searching for one finds this tool.
+ */
+const CLIENT_DATA = [
+  'packages/cli/src/clients.ts',
+  'docs/clients.md',
+  'docs/clients.tr.md',
+  'README.md',
+  'packages/appdyno/package.json',
+];
 
 const trackedFiles = () =>
   execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' })
