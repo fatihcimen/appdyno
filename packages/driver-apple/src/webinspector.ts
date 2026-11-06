@@ -107,8 +107,9 @@ export function writeBplist(root: Plist): Buffer {
       });
     } else if (typeof v === 'number') {
       const n = Buffer.alloc(9);
-      n[0] = 0x13;
-      n.writeBigInt64BE(BigInt(v), 1);
+      n[0] = Number.isInteger(v) ? 0x13 : 0x23;
+      if (Number.isInteger(v)) n.writeBigInt64BE(BigInt(v), 1);
+      else n.writeDoubleBE(v, 1);
       objects.push({ own: n });
     } else if (typeof v === 'boolean') objects.push({ own: Buffer.from([v ? 9 : 8]) });
     else if (v === null) objects.push({ own: Buffer.from([0]) });

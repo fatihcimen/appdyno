@@ -93,6 +93,13 @@ describe('binary plists', () => {
     expect(readBplist(writeBplist(value))).toEqual(value);
   });
 
+  it('writes back a number that is no whole one, as a token from a phone may hold', () => {
+    expect(readBplist(writeBplist({ ratio: 0.5, list: [-1.25, 3] }))).toEqual({
+      ratio: 0.5,
+      list: [-1.25, 3],
+    });
+  });
+
   it('writes what Apple reads, and reads what Apple writes', () => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-plist-'));
     const file = join(dir, 'x.plist');
