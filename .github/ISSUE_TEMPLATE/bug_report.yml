@@ -1,0 +1,43 @@
+name: Bug report
+description: Something did not work as the docs say.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: appdyno doctor
+      description: Paste the output of `appdyno doctor`. Check it first for anything you would rather not share, such as a device id.
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      options:
+        - iOS simulator
+        - iPhone
+        - Android emulator
+        - Android phone
+        - Not about a device
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The output of `appdyno --version`.
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: MCP client
+      description: The client you use, if any, and its version.
