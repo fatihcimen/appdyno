@@ -160,7 +160,8 @@ export class PhoneStream {
     const local = stack.localAddress;
     const endpoint = this.parts.thisMac();
     const session = randomUUID();
-    rememberOwn(this.udid, [session]);
+    // beside what a mode tried before it left: a process that dies now leaves none it cannot name
+    rememberOwn(this.udid, [...ownSessions(this.udid), session]);
     const ssrc = randomBytes(4).readUInt32BE();
     this.audio = stack.createUdp();
     this.video = stack.createUdp();

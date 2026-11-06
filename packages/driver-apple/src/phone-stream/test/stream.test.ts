@@ -13,6 +13,14 @@ const session = (id: string) => ({
   connection: { options: { avcMediaStreamOptionClientSessionID: { uuid: id } } },
 });
 
+/** What a phone says of a stream it started. */
+const STARTED = () => ({
+  connection: {
+    sender: { port: 9000 },
+    streamConfig: { CustomWidth: 1284, CustomHeight: 2778 },
+  },
+});
+
 /** A phone that answers as it is told, and keeps what it was asked. */
 function phone(answers: Partial<Record<string, () => DecodedDict>> = {}) {
   const asked: string[] = [];
@@ -40,12 +48,7 @@ function phone(answers: Partial<Record<string, () => DecodedDict>> = {}) {
     getmediasupportinfo: () => ({}),
     getmediastreamserverstatus: () => ({ running: false, sessions: [] }),
     stopmediastream: () => ({}),
-    startmediastream: () => ({
-      connection: {
-        sender: { port: 9000 },
-        streamConfig: { CustomWidth: 1284, CustomHeight: 2778 },
-      },
-    }),
+    startmediastream: STARTED,
   };
   const wire = {
     openTunnel: async () => ({ stack, rsdPort: 1 }),
@@ -128,6 +131,21 @@ describe('a stream starting', () => {
     });
     expect(p.asked).not.toContain('stopmediastream');
     expect(p.asked).not.toContain('startmediastream');
+  });
+
+  it('names every session a retried start tried, as one left on the phone reads as a stranger', async () => {
+    let starts = 0;
+    const p = phone({
+      startmediastream: () => {
+        if (starts++ === 0) throw new Error('no such mode');
+        return STARTED();
+      },
+    });
+    const s = sink();
+    const stream = await PhoneStream.open(udid, 'auto', s.out, p.wire);
+    expect(s.live[0]!.mode).toBe('mode 5');
+    expect(ownSessions(udid)).toHaveLength(2);
+    await stream.stop();
   });
 
   it('ends what a process of ours left behind, and only then starts', async () => {
