@@ -42,8 +42,14 @@ export async function startTimeline(
   const first: ClockReading = await measureClock(() => device.wallClock());
   if (measure.framesByProbe) await measure.attachProbe(app);
   const frames = await recordFrames(device, app, MAX_SECONDS);
+  /** One that did not start has no stop: what is up by then has nothing else to end it. */
+  const abandon = async (e: unknown): Promise<never> => {
+    await endRecording(s).catch(() => undefined);
+    await frames.finish();
+    throw e;
+  };
 
-  const pid = await device.appPid?.(app);
+  const pid = await device.appPid?.(app).catch(abandon);
   const file = join(dir, 'video', `screen.${recorder.extension}`);
   mkdirSync(dirname(file), { recursive: true });
   let noVideo: string | undefined;
@@ -55,10 +61,9 @@ export async function startTimeline(
   const startedAt = Date.now();
 
   const samples: LiveSample[] = [];
-  const endLive = await (device.liveMetrics ?? measuredLive(device)).start(
-    (sample) => samples.push(sample),
-    app,
-  );
+  const endLive = await (device.liveMetrics ?? measuredLive(device))
+    .start((sample) => samples.push(sample), app)
+    .catch(abandon);
   const from = startedAt + first.offsetMs;
 
   const finishing = async (reason?: string): Promise<TimelineDone> => {

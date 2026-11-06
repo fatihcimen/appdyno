@@ -21,6 +21,10 @@ const pageOf = (file: string) =>
 
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+const refused = async (): Promise<never> => {
+  throw new Error('it will not start');
+};
+
 /** A device with a recorder that writes a real file, and the frames of a stretch that ends when asked. */
 class TimedDevice extends FakeDevice {
   ended = 0;
@@ -99,6 +103,26 @@ describe('report timeline', () => {
     expect(page.steps.marks[0]!.name).toBe('tap');
     expect(page.steps.marks[0]!.at).toBeGreaterThanOrEqual(page.from - 50);
     expect(page.steps.marks[0]!.at).toBeLessThanOrEqual(page.to + 50);
+  });
+
+  it.each([
+    ['its numbers', (d: TimedDevice) => (d.liveMetrics.start = refused)],
+    ['the process of the app', (d: TimedDevice) => (d.appPid = refused)],
+  ])('leaves nothing running when %s will not start', async (_, spoil) => {
+    const device = new TimedDevice();
+    let traces = 0;
+    const { frameMarks } = device;
+    device.frameMarks = async (app, seconds, during) => {
+      traces++;
+      const ended = await frameMarks(app, seconds, during);
+      traces--;
+      return ended;
+    };
+    spoil(device);
+    const { call } = connect(device);
+    await expect(call('report', { action: 'timeline', dir })).rejects.toThrow('it will not start');
+    expect(filming.read(device.serial)).toBeUndefined();
+    expect(traces).toBe(0);
   });
 
   it('carries the video inside the page, and says how large it came to', async () => {
