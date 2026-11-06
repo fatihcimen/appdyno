@@ -3,14 +3,15 @@ import { createHash, randomBytes } from 'node:crypto';
 import { closeSync, existsSync, openSync, readdirSync, statSync } from 'node:fs';
 import { mkdir, readFile, rm } from 'node:fs/promises';
 import { connect, createServer, type Socket } from 'node:net';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { createInterface } from 'node:readline';
-import { fileURLToPath } from 'node:url';
 import { DeviceError, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
 import {
   sleep,
   greet,
+  inCheckout,
+  inPackage,
   readStateFile,
   reportProgress,
   run,
@@ -18,7 +19,7 @@ import {
   writeStateFile,
   type RpcClient,
 } from '@appdyno/core';
-import { brandSimulatorRunner, checkoutIos } from './brand.js';
+import { brandSimulatorRunner } from './brand.js';
 import { assertUdid, xcodeEnv } from './simctl.js';
 import { recordXctMetrics } from './trace.js';
 
@@ -44,7 +45,6 @@ export async function iosProducts(
   kind: 'simulator' | 'device',
   build = true,
 ): Promise<string | undefined> {
-  const here = dirname(fileURLToPath(import.meta.url));
   const derived = kind === 'simulator' ? '.derived' : '.derived-device';
   const env =
     kind === 'simulator'
@@ -53,13 +53,13 @@ export async function iosProducts(
   const sdk = kind === 'simulator' ? 'iphonesimulator' : 'iphoneos';
   const has = (dir: string) =>
     existsSync(dir) && readdirSync(dir).some((f) => f.includes(sdk) && f.endsWith('.xctestrun'));
-  const repo = checkoutIos();
+  const repo = inCheckout('ios');
   const found = [env, repo && join(repo, derived, 'Build/Products')].find(
     (d): d is string => !!d && has(d),
   );
   if (found) return found;
-  const src = join(here, '../agents/ios-src');
-  if (!existsSync(join(src, 'Appdyno.xcodeproj'))) return undefined;
+  const src = inPackage('ios');
+  if (!src || !existsSync(join(src, 'Appdyno.xcodeproj'))) return undefined;
   const id = (await readFile(join(src, 'sources.sha256'), 'utf8').catch(() => 'unknown'))
     .trim()
     .slice(0, 16);
@@ -157,12 +157,8 @@ export function xcodebuildTelling(args: string[], what: string): Promise<void> {
 
 /** Removes the runner builds of other packaged sources than the installed ones; how many were removed. */
 export async function pruneIosBuilds(): Promise<number> {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const id = (
-    await readFile(join(here, '../agents/ios-src/sources.sha256'), 'utf8').catch(() => '')
-  )
-    .trim()
-    .slice(0, 16);
+  const sources = inPackage('ios', 'sources.sha256');
+  const id = sources ? (await readFile(sources, 'utf8')).trim().slice(0, 16) : '';
   const root = join(stateDir(), 'ios-build');
   if (!id || !existsSync(root)) return 0;
   let n = 0;

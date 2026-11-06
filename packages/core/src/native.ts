@@ -2,13 +2,49 @@ import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { chmod, mkdir, readFile, rename } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Check } from './device.js';
-import { NEEDS } from './mirror/need.js';
+import { NEEDS, NeedError } from './mirror/need.js';
 import { run } from './run.js';
 
 /** How long a first compile may take on a loaded Mac: 25 s was measured at load 270. */
 const COMPILE_MS = 300_000;
+
+/** Each native part: where it is in the repository, and under `agents` in the published package. The one list of both. */
+export const NATIVE_PARTS = {
+  viewer: { repo: 'mirror/Viewer', packaged: 'mirror-src' },
+  mac: { repo: 'mac', packaged: 'mac-src' },
+  ios: { repo: 'ios', packaged: 'ios-src' },
+  agent: { repo: 'android/agent/build/outputs/apk/debug', packaged: 'android' },
+} as const;
+type NativePart = keyof typeof NATIVE_PARTS;
+
+const here = dirname(fileURLToPath(import.meta.url));
+const root = join(here, '../../..');
+
+/**
+ * A part in the repository, when this runs from a checkout. An installed package sits at the same depth, so a folder
+ * that merely is at that place must not count: a project has an `ios` of its own.
+ */
+export function inCheckout(part: NativePart, file = ''): string | undefined {
+  const isCheckout = existsSync(join(root, NATIVE_PARTS.ios.repo, 'Appdyno.xcodeproj'));
+  return isCheckout ? join(root, NATIVE_PARTS[part].repo, file) : undefined;
+}
+
+/** A part in the published package, or in a checkout where a driver's build left its own. */
+export const inPackage = (part: NativePart, file = ''): string | undefined =>
+  ['..', '../../driver-android', '../../driver-apple']
+    .map((pkg) => join(here, pkg, 'agents', NATIVE_PARTS[part].packaged, file))
+    .find((p) => existsSync(p));
+
+/** A file of a native part: a checkout's, which is the newest, or else the package's. */
+export function nativeFile(part: NativePart, file: string): string {
+  const repo = inCheckout(part, file);
+  const found = repo && existsSync(repo) ? repo : inPackage(part, file);
+  if (!found) throw new Error(`${file} is missing from this install`);
+  return found;
+}
 
 export type NativeBuild = {
   name: string;
@@ -43,6 +79,10 @@ export async function nativeBinary(build: NativeBuild): Promise<string> {
   await run('xcrun', [...build.flags, '-o', tmp, ...build.sources], {
     ...(build.env && { env: build.env }),
     timeout: COMPILE_MS,
+  }).catch((e: Error) => {
+    if (/ENOENT|invalid active developer path|xcrun: error/.test(e.message))
+      throw new NeedError('no-compiler');
+    throw e;
   });
   await chmod(tmp, 0o700);
   await rename(tmp, binary);

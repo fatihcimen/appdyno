@@ -1,8 +1,7 @@
 import { spawn } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { nativeBinary } from '../native.js';
+import { nativeBinary, nativeFile } from '../native.js';
 import { NeedError } from './need.js';
 
 export const VIEWER_FLAGS = [
@@ -29,19 +28,9 @@ export const VIEWER_FLAGS = [
   'Carbon',
 ];
 
-/** The viewer's sources: beside the repository's packages, or inside the published one. */
-function viewerSources(): string {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const dir = [join(here, '../../../../mirror/Viewer'), join(here, '../agents/mirror-src')].find(
-    (p) => existsSync(join(p, 'main.m')),
-  );
-  if (!dir) throw new Error('the sources of the viewer are missing');
-  return dir;
-}
-
 /** Compiled on first use; a Mac with no compiler has no viewer, and is told so. */
 export async function viewerBinary(env?: NodeJS.ProcessEnv): Promise<string> {
-  const dir = viewerSources();
+  const dir = dirname(nativeFile('viewer', 'main.m'));
   const inDir = (ext: string) =>
     readdirSync(dir)
       .filter((f) => f.endsWith(ext))
@@ -54,8 +43,7 @@ export async function viewerBinary(env?: NodeJS.ProcessEnv): Promise<string> {
     flags: VIEWER_FLAGS,
     ...(env && { env }),
   }).catch((e: Error) => {
-    if (/ENOENT|invalid active developer path|xcrun: error/.test(e.message))
-      throw new NeedError('no-compiler');
+    if (e instanceof NeedError) throw e;
     throw new Error(`the viewer did not compile: ${e.message.slice(0, 500)}`, { cause: e });
   });
 }
@@ -227,7 +215,7 @@ export const startViewer =
       [
         ...(headless ? ['--headless'] : behind ? ['--behind'] : []),
         '--tile',
-        join(viewerSources(), 'tile.png'),
+        nativeFile('viewer', 'tile.png'),
       ],
       env,
     );

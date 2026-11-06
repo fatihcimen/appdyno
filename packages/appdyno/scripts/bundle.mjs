@@ -16,6 +16,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { NATIVE_PARTS } from '@appdyno/core';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { build } from 'esbuild';
 import { bundledPackages, noticesFor } from './notices.mjs';
@@ -108,10 +109,12 @@ try {
 
 const agents = join(pkg, 'agents');
 rmSync(agents, { recursive: true, force: true });
-cpSync(join(pkg, '../driver-android/agents/android'), join(agents, 'android'), { recursive: true });
-cpSync(join(pkg, '../driver-apple/agents/ios-src'), join(agents, 'ios-src'), { recursive: true });
-cpSync(join(pkg, '../../mirror/Viewer'), join(agents, 'mirror-src'), { recursive: true });
-cpSync(join(pkg, '../../mac'), join(agents, 'mac-src'), { recursive: true });
+const { agent, ios, mac, viewer } = NATIVE_PARTS;
+const packed = (from, part) => cpSync(from, join(agents, part.packaged), { recursive: true });
+packed(join(pkg, '../driver-android/agents', agent.packaged), agent);
+packed(join(pkg, '../driver-apple/agents', ios.packaged), ios);
+packed(join(pkg, '../..', viewer.repo), viewer);
+packed(join(pkg, '../..', mac.repo), mac);
 
 // what a registry shows, and what has to travel with copies of the code inlined above
 cpSync(join(pkg, '../../README.md'), join(pkg, 'README.md'));

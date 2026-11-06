@@ -2,13 +2,12 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync } from 'node:fs';
 import { cp, mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
 import { BRAND_VERSION, brandRunner } from './brand.js';
 import { xcodeEnv } from './simctl.js';
 import { parsePlist, plistXml } from './usbmux.js';
-import { run } from '@appdyno/core';
+import { nativeFile, run } from '@appdyno/core';
 
 /**
  * Where the phone's signing comes from: a development profile for the runner and an identity. Without a
@@ -153,14 +152,12 @@ export async function findPhoneSigning(
 
 /** Xcode provisions the runner's own id from its account (it stores the profile with the others). */
 async function xcodeProvision(team: string) {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const packaged = join(here, '../agents/ios-src/Appdyno.xcodeproj');
   await run(
     'xcodebuild',
     [
       'build-for-testing',
       '-project',
-      existsSync(packaged) ? packaged : join(here, '../../../ios/Appdyno.xcodeproj'),
+      nativeFile('ios', 'Appdyno.xcodeproj'),
       '-scheme',
       'Runner',
       '-destination',

@@ -14,6 +14,7 @@ const packages = join(root, 'packages');
 const NAMES_A_PLATFORM = [
   'packages/appdyno/src/main.ts',
   'packages/core/src/device.ts',
+  'packages/core/src/native.ts',
   'packages/perf/src/dashboard/format.ts',
   'packages/perf/src/dashboard/measures.ts',
   'packages/perf/src/vitals.ts',

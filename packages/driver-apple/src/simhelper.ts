@@ -1,9 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { assertUdid, xcodeEnv } from './simctl.js';
-import { nativeBinary } from '@appdyno/core';
+import { nativeBinary, nativeFile } from '@appdyno/core';
 
 const IN_A_SIMULATOR = [
   '--sdk',
@@ -56,12 +54,7 @@ const SDK_FLAGS = {
 
 /** The helper's binary, compiled once per source (a Mac without Xcode's tools has no simulator either). */
 export async function helperBinary(name: keyof typeof SDK_FLAGS): Promise<string> {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const source = [
-    join(here, `../../../ios/SimHelper/${name}.m`),
-    join(here, `../agents/ios-src/SimHelper/${name}.m`),
-  ].find((p) => existsSync(p));
-  if (!source) throw new Error(`the source of ${name} is missing`);
+  const source = nativeFile('ios', `SimHelper/${name}.m`);
   // what SimOpen may do, in the section a simulator reads
   const allowed = source.replace(/\.m$/, '.plist');
   const linked = existsSync(allowed);

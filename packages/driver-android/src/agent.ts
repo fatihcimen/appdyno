@@ -1,13 +1,14 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { DeviceError, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
 import {
   sleep,
   greet,
+  inCheckout,
+  inPackage,
   pause,
   readStateFile,
   reportProgress,
@@ -32,16 +33,12 @@ const POLL_MS = 100;
 
 /** The agent APK the package ships (or a development build), and its sha256. */
 export async function agentApk(): Promise<{ path: string; sha256: string }> {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const built = join(here, '../../../android/agent/build/outputs/apk/debug/agent-debug.apk');
-  const packaged = join(here, '../agents/android/agent.apk');
-  // from the sources (tests, development) the fresh build wins over a copy packaged earlier
-  const fromSource = /[\\/]src$/.test(here);
-  const candidates = [
+  // a checkout's fresh build wins over a copy packaged earlier
+  const path = [
     process.env.APPDYNO_ANDROID_AGENT,
-    ...(fromSource ? [built, packaged] : [packaged, built]),
-  ].filter((p): p is string => !!p);
-  const path = candidates.find((p) => existsSync(p));
+    inCheckout('agent', 'agent-debug.apk'),
+    inPackage('agent', 'agent.apk'),
+  ].find((p): p is string => !!p && existsSync(p));
   if (!path)
     throw new DeviceError(
       'UNSUPPORTED',

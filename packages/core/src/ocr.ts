@@ -3,11 +3,9 @@ import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { NODE_FLAGS, type Tree, type WireNode } from '@appdyno/protocol';
-import { NeedError } from './mirror/need.js';
-import { nativeBinary } from './native.js';
+import { nativeBinary, nativeFile } from './native.js';
 import { pause } from './call.js';
 import { run } from './run.js';
 import { stateDir } from './state.js';
@@ -43,28 +41,9 @@ export const PICTURE_TEXT = 'PictureText';
 
 const FLAGS = ['clang', '-fobjc-arc', '-framework', 'Foundation', '-framework', 'Vision'];
 
-/** The source, beside the repository's packages or inside the published one. */
-function scanSource(): string {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const source = [
-    join(here, '../../../mac/TextScan.m'),
-    join(here, '../agents/mac-src/TextScan.m'),
-  ].find((p) => existsSync(p));
-  if (!source) throw new Error('the source of TextScan is missing');
-  return source;
-}
-
 /** The scanner, ready to run. */
 export const textScanner = () =>
-  nativeBinary({
-    name: 'TextScan',
-    sources: [scanSource()],
-    flags: FLAGS,
-  }).catch((e: Error) => {
-    if (/ENOENT|invalid active developer path|xcrun: error/.test(e.message))
-      throw new NeedError('no-compiler');
-    throw e;
-  });
+  nativeBinary({ name: 'TextScan', sources: [nativeFile('mac', 'TextScan.m')], flags: FLAGS });
 
 /** The fast level: no gate or person waits on a system service. The picture is a file for this user alone, and is gone after. */
 export async function fastWords(image: Buffer, binary?: string): Promise<PictureText[]> {

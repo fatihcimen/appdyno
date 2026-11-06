@@ -4,10 +4,11 @@ import { createHash } from 'node:crypto';
 import { cpSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { NATIVE_PARTS } from '@appdyno/core';
 
 const pkg = join(dirname(fileURLToPath(import.meta.url)), '..');
-const ios = join(pkg, '../../ios');
-const dest = join(pkg, 'agents/ios-src');
+const ios = join(pkg, '../..', NATIVE_PARTS.ios.repo);
+const dest = join(pkg, 'agents', NATIVE_PARTS.ios.packaged);
 rmSync(dest, { recursive: true, force: true });
 for (const part of [
   'Appdyno.xcodeproj',
