@@ -232,6 +232,10 @@ export function noiseOf(
   return out;
 }
 
+/** What keeps a reading out of a reference: one taken under load would hide every later change. A build is told apart by `build`. */
+export const loudOf = (r: Pick<PerfRecord, 'noise'>) =>
+  r.noise.filter((n) => n !== 'debuggable-build');
+
 export type Metric = {
   kind: Kind;
   unit: Unit;

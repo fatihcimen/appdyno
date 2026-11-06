@@ -1,10 +1,12 @@
 import {
   compareMetric,
   latestRuns,
+  loudOf,
   MIN_SAMPLES,
   runKeys,
   type BaselineMetric,
   type Comparison,
+  type Noise,
   type PerfRecord,
 } from '@appdyno/perf';
 
@@ -60,7 +62,10 @@ const signed = (c: Comparison) => {
 };
 
 /** What a comparison comes to in words; none where the number is all there is to say. */
-function judged(c: Comparison): Pick<PastMeasure, 'flagged' | 'verdict'> & { words?: string } {
+function judged(
+  c: Comparison,
+  noise: Noise[],
+): Pick<PastMeasure, 'flagged' | 'verdict'> & { words?: string } {
   switch (c.verdict) {
     case 'regression':
       return { flagged: true, verdict: 'regression', words: `Regression ${signed(c)}` };
@@ -69,12 +74,18 @@ function judged(c: Comparison): Pick<PastMeasure, 'flagged' | 'verdict'> & { wor
     case 'few-samples':
       return {
         flagged: true,
-        words: `Could not judge: ${c.n.current} of ${MIN_SAMPLES} samples`,
+        words:
+          c.n.current < MIN_SAMPLES
+            ? `Could not judge: ${c.n.current} of ${MIN_SAMPLES} samples`
+            : 'Could not judge: too few runs before it',
       };
     case 'noisy':
-      return { flagged: true, words: 'Could not judge: measured under load' };
-    case 'refused':
-      return { flagged: true, words: 'Could not judge: not the same kind of build' };
+      return {
+        flagged: true,
+        words: noise.every((n) => n === 'mirrored' || n === 'debuggable-build')
+          ? 'Could not judge: measured with a mirror running'
+          : 'Could not judge: measured under load',
+      };
     default:
       return { flagged: false };
   }
@@ -87,7 +98,7 @@ const lineOf = (
   c: Comparison,
   now: number,
 ): PastMeasure => {
-  const { words, ...verdict } = judged(c);
+  const { words, ...verdict } = judged(c, main.noise);
   return {
     ok: true,
     title: words ?? title,
@@ -99,8 +110,9 @@ const lineOf = (
 };
 
 /**
- * What was measured on this device, for this app, newest first, each judged by the method the gate uses against the runs
- * before it. It reads files only: nothing is asked of a device, so a phone is not touched for it.
+ * What was measured on this device, for this app, newest first, each judged by the gate's method against what the gate
+ * would hold as a reference for it: the clean runs before it, of its own kind of build. It reads files only: nothing is
+ * asked of a device, so a phone is not touched for it.
  */
 export async function measureHistory(dir: string, app: string, serial: string, now = Date.now()) {
   const lines: { at: string; line: PastMeasure }[] = [];
@@ -113,11 +125,13 @@ export async function measureHistory(dir: string, app: string, serial: string, n
       const main = records.find((r) => shape.kind.test(r.kind));
       if (!main) continue;
       const { samples, build, compile, noise, at, kind, unit, better, value } = main;
-      const base = before.length ? { unit, better, runs: [...before] } : undefined;
+      const alike = before.filter((r) => r.build === build && r.compile === compile);
+      const base = alike.length ? { unit, better, runs: alike } : undefined;
       const compared = compareMetric(kind, { samples, build, compile, noise }, base, unit, better);
       if (main.device.serial === serial)
         lines.push({ at, line: lineOf(main, shape.title, shape.value(value), compared, now) });
-      before.push({ at, samples, build, ...(compile && { compile }), noise });
+      if (loudOf(main).length === 0)
+        before.push({ at, samples, build, ...(compile && { compile }), noise });
     }
   }
   return lines

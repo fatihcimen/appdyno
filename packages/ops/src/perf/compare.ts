@@ -7,6 +7,7 @@ import {
   writeDashboard,
   runKeys,
   latestRuns,
+  loudOf,
   saveBaseline,
   addToBaseline,
   loadBaseline,
@@ -14,7 +15,6 @@ import {
   MIN_BASELINE_RUNS,
   runsIn,
   type KeyReport,
-  type PerfRecord,
   reportKey,
   exitCode,
   toJson,
@@ -184,8 +184,7 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
           let repeated = 0;
           // oldest first, as a baseline holds them
           for (const run of runs.toReversed()) {
-            // a reference taken under load would hide every later change; a number of the device's own in the same run stands
-            const loudOf = (r: PerfRecord) => r.noise.filter((n) => n !== 'debuggable-build');
+            // a number of the device's own in the same run stands
             const clean = run.filter((r) => loudOf(r).length === 0);
             const noisy = run.filter((r) => loudOf(r).length > 0);
             const said = [...new Set(noisy.flatMap(loudOf))].join(', ');

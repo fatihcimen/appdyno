@@ -22,7 +22,13 @@ const dir = () => {
   return made;
 };
 
-const run = (name: string, at: string, samples: number[], device = phone) =>
+const run = (
+  name: string,
+  at: string,
+  samples: number[],
+  device = phone,
+  context: Partial<Parameters<typeof recordsOf>[0]> = {},
+) =>
   recordsOf(
     {
       run: name,
@@ -35,11 +41,18 @@ const run = (name: string, at: string, samples: number[], device = phone) =>
       load: { host: [1, 1, 1], hostCpus: 10 },
       tool: '',
       at,
+      ...context,
     },
     [{ kind: 'launch.ttid_ms', unit: 'ms', samples }],
   );
 
 const steady = [400, 402, 398, 401, 399];
+const slow = [950, 955, 948, 952, 951];
+const fourDays = async (d: string) => {
+  for (const [i, day] of ['01', '02', '03', '04'].entries())
+    await saveRun(d, run(`r${i}`, `2026-11-${day}T10:00:00Z`, steady));
+};
+const late = '2026-11-05T11:00:00Z';
 
 afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
@@ -78,6 +91,95 @@ describe('what a window says of past measures', () => {
     const [line] = await measureHistory(d, 'dev.app', phone.serial, NOW);
     expect(line).toMatchObject({ title: 'Could not judge: 3 of 5 samples', flagged: true });
     expect(line?.verdict).toBeUndefined();
+  });
+
+  it('leaves a run under load out of what later runs are judged by, as the gate does', async () => {
+    const d = dir();
+    await saveRun(
+      d,
+      run('hot', '2026-10-31T10:00:00Z', steady, phone, {
+        load: { host: [1, 1, 1], hostCpus: 10 },
+        thermal: 3,
+      }),
+    );
+    await fourDays(d);
+    await saveRun(d, run('late', late, slow));
+    const [line] = await measureHistory(d, 'dev.app', phone.serial, NOW);
+    expect(line).toMatchObject({ verdict: 'regression', flagged: true });
+    expect(line?.title).toMatch(/^Regression \+55\d ms$/);
+  });
+
+  it('judges a run by the runs of its own build alone, an earlier debug build or not', async () => {
+    const d = dir();
+    await saveRun(d, run('debug', '2026-10-31T10:00:00Z', steady, phone, { build: 'debug' }));
+    await fourDays(d);
+    await saveRun(d, run('late', late, slow));
+    const [line] = await measureHistory(d, 'dev.app', phone.serial, NOW);
+    expect(line).toMatchObject({ verdict: 'regression', flagged: true });
+  });
+
+  it('holds a run of another compile state apart too', async () => {
+    const d = dir();
+    await fourDays(d);
+    await saveRun(d, run('late', late, slow, phone, { compile: 'speed' }));
+    const [line] = await measureHistory(d, 'dev.app', phone.serial, NOW);
+    expect(line).toMatchObject({ title: 'Cold launch', value: '951 ms', flagged: false });
+  });
+
+  it('calls a first number of a build a first number, with nothing of its kind to judge by', async () => {
+    const d = dir();
+    await fourDays(d);
+    await saveRun(d, run('late', late, slow, phone, { build: 'debug' }));
+    const [line] = await measureHistory(d, 'dev.app', phone.serial, NOW);
+    expect(line).toMatchObject({ title: 'Cold launch', value: '951 ms', flagged: false });
+  });
+
+  it('says a worse run under load is one it could not judge', async () => {
+    const d = dir();
+    await fourDays(d);
+    await saveRun(d, run('late', late, slow, phone, { thermal: 3 }));
+    const [line] = await measureHistory(d, 'dev.app', phone.serial, NOW);
+    expect(line).toMatchObject({ title: 'Could not judge: measured under load', flagged: true });
+    expect(line?.verdict).toBeUndefined();
+  });
+
+  it('says a mirror where a mirror is why, as a window is no load', async () => {
+    const d = dir();
+    await fourDays(d);
+    await saveRun(
+      d,
+      run('late', late, slow, phone, {
+        load: { host: [1, 1, 1], hostCpus: 10, mirrored: true },
+      }),
+    );
+    const [line] = await measureHistory(d, 'dev.app', phone.serial, NOW);
+    expect(line).toMatchObject({
+      title: 'Could not judge: measured with a mirror running',
+      flagged: true,
+    });
+  });
+
+  it('keeps a run from a window out of what the next is judged by', async () => {
+    const d = dir();
+    await fourDays(d);
+    await saveRun(
+      d,
+      run('mirrored', '2026-11-05T09:00:00Z', slow, phone, {
+        load: { host: [1, 1, 1], hostCpus: 10, mirrored: true },
+      }),
+    );
+    await saveRun(d, run('late', late, slow));
+    const [line] = await measureHistory(d, 'dev.app', phone.serial, NOW);
+    expect(line).toMatchObject({ verdict: 'regression' });
+  });
+
+  it('says too few runs when a whole run has nothing but two runs to go by', async () => {
+    const d = dir();
+    await saveRun(d, run('a', '2026-11-01T10:00:00Z', steady));
+    await saveRun(d, run('b', '2026-11-02T10:00:00Z', steady));
+    await saveRun(d, run('late', late, slow));
+    const [line] = await measureHistory(d, 'dev.app', phone.serial, NOW);
+    expect(line).toMatchObject({ title: 'Could not judge: too few runs before it', flagged: true });
   });
 
   it('shows only this device, while judging by its class', async () => {
