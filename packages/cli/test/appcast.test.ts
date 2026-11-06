@@ -76,6 +76,7 @@ function tools(say: Say = {}) {
     if (tool === 'ditto') {
       mkdirSync(args[1]!, { recursive: true });
       writeFileSync(join(args[1]!, 'new'), 'the new app');
+      if (say.failAt === 'ditto') throw new Error('no space left on the disk');
     }
     if (tool === 'codesign' && args[0] === '--verify' && say.unsigned)
       throw new Error('a sealed resource is missing');
@@ -217,10 +218,17 @@ describe('appdyno update, in the app', () => {
     oldStays();
   });
 
-  it('detaches the disk image when the copy fails', async () => {
-    const { mac, going } = updating(getting(released()), { failAt: `ditto ${'x'}` });
-    await going.catch(() => undefined);
-    expect(mac.calls).toContain('hdiutil detach');
+  it('detaches the disk image when the copy fails, and leaves none of the copy', async () => {
+    const { mac, going } = updating(getting(released()), { failAt: 'ditto' });
+    await expect(going).rejects.toThrow(/no space left on the disk/);
+    expect(mac.calls.at(-1)).toBe('hdiutil detach');
+    oldStays();
+  });
+
+  it('leaves none of the copy when the image will not detach', async () => {
+    const { going } = updating(getting(released()), { failAt: 'hdiutil detach' });
+    await expect(going).rejects.toThrow();
+    oldStays();
   });
 
   it('says what stood in the way of a folder it may not write, not nothing', async () => {

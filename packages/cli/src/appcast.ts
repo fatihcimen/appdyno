@@ -68,11 +68,9 @@ async function signer(bundle: string, run: Run) {
   return `${field('Identifier')} of ${field('TeamIdentifier')}`;
 }
 
-/** A new app beside the old one, so that the last step is a rename on one disk. */
-async function unpacked(cast: Appcast, image: string, place: TheApp, run: Run) {
-  const folder = dirname(place.bundle);
+/** The app in the image, as `copy`. */
+async function unpack(copy: string, image: string, place: TheApp, run: Run) {
   const mount = await mkdtemp(join(dirname(image), 'mount-'));
-  const copy = join(folder, `.${basename(place.bundle, '.app')}-${cast.version}.app`);
   await call(run, '/usr/bin/hdiutil', [
     'attach',
     image,
@@ -88,7 +86,6 @@ async function unpacked(cast: Appcast, image: string, place: TheApp, run: Run) {
   } finally {
     await call(run, '/usr/bin/hdiutil', ['detach', mount, '-force']);
   }
-  return copy;
 }
 
 /** That what was unpacked is whole, is this program, and is the version the signed appcast names. */
@@ -139,18 +136,19 @@ export async function installApp(
     throw refuse(`the download is not what the appcast signs`, 'CHECK_FAILED', HINT);
   const folder = await mkdtemp(join(o.tmp, 'appdyno-update-'));
   const dmg = join(folder, 'Appdyno.dmg');
-  let copy: string | undefined;
+  // beside the old app, so that the last step is a rename on one disk; once swapped in there is nothing left to take away
+  const { bundle } = place;
+  const copy = join(dirname(bundle), `.${basename(bundle, '.app')}-${cast.version}.app`);
   try {
     await writeFile(dmg, image);
-    copy = await unpacked(cast, dmg, place, o.run);
+    await unpack(copy, dmg, place, o.run);
     o.out('checking its signature');
     await check(copy, cast, place, o.run);
-    swapIn(copy, place.bundle);
-    copy = undefined;
+    swapIn(copy, bundle);
   } catch (e) {
     throw failed(e, 'replacing the app');
   } finally {
     rmSync(folder, { recursive: true, force: true });
-    if (copy) rmSync(copy, { recursive: true, force: true });
+    rmSync(copy, { recursive: true, force: true });
   }
 }
