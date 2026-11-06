@@ -568,6 +568,33 @@ describe('install', () => {
     expect(beside(file)).toEqual([]);
   });
 
+  it.each([
+    ['JSON', cursor!, Buffer.from('{ "name": "caf\xe9" }\n', 'latin1')],
+    [
+      'TOML',
+      CLIENTS.find((c) => c.format === 'toml')!,
+      Buffer.from('# caf\xe9\na = 1\n', 'latin1'),
+    ],
+  ])('refuses %s that is not UTF-8, which it could not put back', async (_, client, bytes) => {
+    const { home, file } = homeWith(client);
+    writeFileSync(file, bytes);
+    const { code, err } = await run(home);
+    expect(code).toBe(1);
+    expect(err.join('\n')).toContain('refused');
+    expect(readFileSync(file).equals(bytes)).toBe(true);
+    expect(beside(file)).toEqual([]);
+  });
+
+  it('keeps the mark at the head of a file, and its backup is the file to the byte', async () => {
+    const client = CLIENTS.find((c) => c.format === 'toml')!;
+    const bytes = Buffer.from('﻿name = "café"\n');
+    const { home, file } = homeWith(client);
+    writeFileSync(file, bytes);
+    await run(home);
+    expect(readFileSync(file).subarray(0, 3)).toEqual(Buffer.from('﻿'));
+    expect(readFileSync(join(dirname(file), beside(file)[0]!)).equals(bytes)).toBe(true);
+  });
+
   it('says what to add by hand when it finds no client', async () => {
     const home = mkdtempSync(join(tmpdir(), 'appdyno-home-'));
     homes.push(home);

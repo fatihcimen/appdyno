@@ -69,6 +69,12 @@ function repointed(have: unknown, command: string) {
   return { ...entry, command: Array.isArray(now) ? [command, ...now.slice(1)] : command };
 }
 
+/** Refuses a byte that is not UTF-8, which would come back changed in the file and in its backup, and keeps a BOM. */
+const UTF8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
+
+/** A client's file, or nothing where it has none yet. */
+const textOf = (file: string) => (existsSync(file) ? UTF8.decode(readFileSync(file)) : '');
+
 type Asked = Pick<InstallOptions, 'remove' | 'server' | 'moved'> & {
   /** Puts back an entry as it was, flags and all: what an undo has, and an edit by hand may hold more than `entry` makes. */
   back?: Record<string, unknown>;
@@ -79,7 +85,7 @@ export function outcomeFor(client: Client, file: string, o: Asked): Outcome {
   const { key } = client;
   const base = { client, file, before: '', after: '' };
   try {
-    const before = existsSync(file) ? readFileSync(file, 'utf8') : '';
+    const before = textOf(file);
     const edit = EDIT[client.format];
     const have = edit.read(before, key, SERVER);
     const same = { ...base, before, after: before, ...(have !== undefined && { had: have }) };
