@@ -30,6 +30,9 @@ const STATES = {
   window: [live],
   stats: [live, { op: 'poke', pane: 0 }, { pause: 2_500 }],
   hud: [live, { op: 'poke', control: 'hud' }, { pause: 2_500 }],
+  both: [live, { op: 'pair', both: true, with: 'Pixel 9' }],
+  hereOnly: [live, { op: 'pair', both: false, with: 'Pixel 9' }],
+  bothFailing: [live, { op: 'pair', both: true, with: 'Pixel 9', failing: 'No Send here' }],
   activity: [
     live,
     { op: 'poke', pane: 1 },
