@@ -274,6 +274,9 @@ loaded host):
 | 250 ms           | up to 250 ms             | 10/50 at 300 ms |
 | 300 ms           | up to 300 ms             | 49/50 at 350 ms |
 
+To run this again, `node packages/appdyno/scripts/settle-proof.mjs <serial>`, with `QUIET` setting the window, or
+`ios-settle-proof.mjs <simulator id>` beside it for a simulator. Build first, on a quiet Mac.
+
 A reaction that starts later than the window (a network answer, a timer) is not waited for: wait for
 the element instead. A touch listener on a view that is not marked clickable is treated as inert; one
 reacting within 80 ms is caught (0/50 missed at 30 ms), a slower one is not.
