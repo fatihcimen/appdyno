@@ -6,7 +6,7 @@ import type { Socket } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deviceStateFile, startOf, thisOwner } from '@appdyno/core';
 import { fakeAgentStream, TOKEN } from '../../core/test/fake-agent.js';
-import { IosRunnerLauncher, type RunnerTransport } from '../src/runner.js';
+import { IosRunnerLauncher, RUNNER_TEST, type RunnerTransport } from '../src/runner.js';
 
 const UDID = '00000000-0000-4000-8000-000000000001';
 
@@ -62,6 +62,16 @@ describe('a runner of another build on a simulator', () => {
     await expect(new IosRunnerLauncher(UDID, through).connect()).rejects.toThrow(
       'a new runner was asked for',
     );
+  });
+
+  it('stops an xcodebuild no state names before it starts, as that would start its runner again', async () => {
+    const keeps = ['-e', 'setTimeout(() => {}, 30_000)', `id=${UDID} -only-testing:${RUNNER_TEST}`];
+    const xcodebuild = spawn(process.execPath, keeps, { stdio: 'ignore' });
+    const stopped = new Promise((r) => xcodebuild.once('exit', r));
+    await expect(new IosRunnerLauncher(UDID, transport()).connect()).rejects.toThrow(
+      'a new runner was asked for',
+    );
+    await stopped;
   });
 
   it('waits for a start under way and shares what it brings, as two would take the phone from each other', async () => {

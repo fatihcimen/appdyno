@@ -285,8 +285,7 @@ export class IosRunnerLauncher {
       const theirs = await running();
       if (theirs) return theirs;
       await beforeStart?.();
-      const state = await this.readState();
-      if (state?.pid) await this.kill(state.pid);
+      await this.killServing();
       return { ...(await this.start(build, target)), started: true };
     };
     let told = false;
@@ -401,6 +400,18 @@ export class IosRunnerLauncher {
     const { socket, rest } = await this.transport.open(s.port);
     socket.setNoDelay(true);
     return greet(socket, rest, 'runner', s.token, 5_000);
+  }
+
+  /**
+   * Whatever state names it, or none does: a host killed during a start leaves xcodebuild with no state, and an xcodebuild
+   * whose runner is replaced starts it again some seconds later, which takes the device from the new one.
+   */
+  private async killServing() {
+    const serving = await run('pgrep', ['-f', `id=${this.udid} -only-testing:${RUNNER_TEST}`]).then(
+      (r) => r.stdout,
+      () => '',
+    );
+    for (const pid of serving.split('\n').filter(Boolean)) await this.kill(Number(pid));
   }
 
   private async kill(pid: number) {
