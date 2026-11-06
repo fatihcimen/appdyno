@@ -70,7 +70,8 @@ const COAST_MS = 1_500;
 /**
  * The frames of what `during` does. Frozen frames come from the rows, read as it goes: one stall of 1 s reads as 4 in
  * the summary of a Xiaomi with Android 16, as a stall holds up the next frame too, and its summary counts each frame
- * twice (142 frames rendered for 71 rows).
+ * twice (142 frames rendered for 71 rows). The histogram keeps its slow share, a ratio the doubling leaves alone and a
+ * row's length is no measure of, and takes its frozen frames and its frames for them from the rows.
  */
 export async function framesDuring(
   d: PerfDevice,
@@ -106,7 +107,12 @@ export async function framesDuring(
   );
   // the summary saw one the rows did not: at least that
   const frozenFrames = m.value.frozenFrames > 0 ? Math.max(moments, 1) : moments;
-  return { ...m, value: { ...m.value, frozenFrames } };
+  const histogram = m.value.histogram && {
+    ...m.value.histogram,
+    over700: frozenFrames,
+    ...(rows.size > 0 && { rowFrames: rows.size }),
+  };
+  return { ...m, value: { ...m.value, frozenFrames, ...(histogram && { histogram }) } };
 }
 
 /**

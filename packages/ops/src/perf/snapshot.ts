@@ -341,6 +341,11 @@ export function perfSnapshotOp(ctx: ServerContext) {
                     : 'no frame counter on a phone: perf_scroll and perf_trace record its hitches',
               ]),
           ...(f?.limits ? [f.limits] : []),
+          ...(f?.histogram && f.frozenFrames > 0
+            ? [
+                "frozen frames here are the system's summary, which on some phones counts a stall more than once: perf_scroll reads them from the frame rows",
+              ]
+            : []),
           ...play.lines,
           ...(v
             ? [

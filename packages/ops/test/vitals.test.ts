@@ -1,3 +1,6 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { MeasureSource } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { frameVitals } from '../src/perf/vitals.js';
@@ -40,11 +43,65 @@ describe("a session's frames in Play's words", () => {
     expect(metrics.find((m) => m.kind === 'frames.slow_percent')!.samples).toEqual([10, 20]);
   });
 
+  it('holds frozen frames to the frames there were, on a phone whose summary counts each twice', () => {
+    const twice = frameVitals([{ frames: 1_420, over16: 142, over700: 1, rowFrames: 710 }]);
+    expect(twice.shares?.frozenPercent).toBeUndefined();
+    expect(twice.lines[1]).toContain('too few frames to say of frozen frames (710 of the 1000');
+    // the slow share is a ratio of the summary's own, which the doubling leaves alone
+    expect(twice.shares?.slowPercent).toBe(10);
+    expect(twice.metrics.find((m) => m.kind === 'frames.slow_percent')!.samples).toEqual([10]);
+    const many = frameVitals([{ frames: 4_000, over16: 0, over700: 1, rowFrames: 2_000 }]);
+    expect(many.shares?.frozenPercent).toBe(0.05);
+  });
+
+  it('holds a round of slow frames to the frames there were', () => {
+    const few = frameVitals([{ frames: 60, over16: 60, over700: 0, rowFrames: 30 }]);
+    expect(few.metrics.find((m) => m.kind === 'frames.slow_percent')!.samples).toEqual([]);
+  });
+
   it('says too few frames for a few frames of slow, and has nothing with no histogram', () => {
     expect(frameVitals([{ frames: 10, over16: 10, over700: 0 }]).lines[0]).toContain(
       'too few frames to say of slow frames (10)',
     );
     expect(frameVitals([])).toEqual({ metrics: [], lines: [] });
+  });
+});
+
+describe("a snapshot's frozen frames", () => {
+  const snapshot = async (frozenFrames: number) => {
+    const d = new FakeDevice();
+    const { frames } = d.measure;
+    Object.defineProperty(d, 'measure', {
+      value: {
+        ...d.measure,
+        frames: async () => {
+          const read = await frames();
+          const histogram = { frames: 120, over16: 4, over700: frozenFrames };
+          return { ...read, value: { ...read.value, frozenFrames, histogram } };
+        },
+      } satisfies MeasureSource,
+    });
+    const ctx = new ServerContext(
+      DEFAULT_POLICY,
+      [
+        {
+          list: async () => [{ serial: d.serial, state: 'device', ready: true }],
+          handles: () => true,
+          open: () => d,
+        },
+      ],
+      {
+        device: d.serial,
+        app: 'dev.app',
+        measurements: mkdtempSync(join(tmpdir(), 'appdyno-vitals-')),
+      },
+    );
+    return callerOf(ctx)('perf_snapshot', {});
+  };
+
+  it("are said as the summary's, which has no rows behind it here", async () => {
+    expect((await snapshot(4)).text).toContain("frozen frames here are the system's summary");
+    expect((await snapshot(0)).text).not.toContain('frozen frames here');
   });
 });
 

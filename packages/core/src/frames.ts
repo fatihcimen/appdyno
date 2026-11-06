@@ -26,6 +26,8 @@ export type FrameHistogram = {
   /** A bucket holds a whole millisecond and those above it: 16 ms is left out, so this is the least it can be. */
   over16: number;
   over700: number;
+  /** The frames there were, where rows were read for each: a summary may count each one twice, and `over16` stays its. */
+  rowFrames?: number;
 };
 
 export type FrameStats = FrameSummary & {

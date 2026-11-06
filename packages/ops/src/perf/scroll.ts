@@ -106,7 +106,7 @@ export function perfScrollOp(ctx: ServerContext) {
         rounds.push({
           jankyPercent: f.value.jankyPercent,
           frozen: f.value.frozenFrames,
-          frames: f.value.totalFrames,
+          frames: f.value.histogram?.rowFrames ?? f.value.totalFrames,
           ...(f.value.p95Ms !== undefined && { p95Ms: f.value.p95Ms }),
           memStartKb: m0.value.kb,
           memEndKb: m1.value.kb,

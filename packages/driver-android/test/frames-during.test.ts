@@ -39,6 +39,17 @@ describe('frames of what ran, on Android', () => {
     expect(value.frozenFrames).toBe(1);
   });
 
+  it("corrects Play's numbers with the count, and leaves the slow share the summary's", async () => {
+    const stall = [row(1_000, 1_012), row(1_016, 1_014), row(2_030, 8)];
+    const { value } = await framesDuring(
+      device(['', dump(1000, 4, [row(0, 8), ...stall])]),
+      'dev.app',
+      0,
+      async () => undefined,
+    );
+    expect(value.histogram).toEqual({ frames: 142, over16: 4, over700: 1, rowFrames: 4 });
+  });
+
   it('keeps what the ring has since lost, and counts two stalls apart', async () => {
     const first = dump(1000, 0, [row(1_000, 1_000)]);
     const later = dump(1000, 4, [row(5_000, 900)]);

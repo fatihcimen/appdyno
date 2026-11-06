@@ -24,17 +24,19 @@ export function frameVitals(rounds: FrameHistogram[]): {
   shares?: { slowPercent?: number; frozenPercent?: number };
 } {
   if (rounds.length === 0) return { metrics: [], lines: [] };
+  // how many there were; a share of slow ones stays the summary's own, which its doubling leaves as it is
+  const counted = (h: FrameHistogram) => h.rowFrames ?? h.frames;
   const shares = rounds
-    .filter((h) => h.frames >= MIN_FRAMES)
+    .filter((h) => counted(h) >= MIN_FRAMES)
     .map((h) => percentOf(h.over16, h.frames));
-  const frames = rounds.reduce((a, h) => a + h.frames, 0);
+  const frames = rounds.reduce((a, h) => a + counted(h), 0);
   const frozen = percentOf(
     rounds.reduce((a, h) => a + h.over700, 0),
     frames,
   );
   const whole = percentOf(
     rounds.reduce((a, h) => a + h.over16, 0),
-    frames,
+    rounds.reduce((a, h) => a + h.frames, 0),
   );
   const enough = frames >= FROZEN_MIN_FRAMES;
   return {
