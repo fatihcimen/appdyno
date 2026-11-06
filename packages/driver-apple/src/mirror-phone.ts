@@ -117,7 +117,9 @@ export class PhoneMirror implements Mirror {
   }
 
   private begin(stream: PhoneStreamModule, options: MirrorOptions) {
-    return stream.start(this.udid, { quality: options.quality }, (e) => {
+    const handle = stream.start(this.udid, { quality: options.quality }, (e) => {
+      // a stream being stopped still speaks, and it is no longer the one this mirror is about
+      if (handle !== this.handle) return;
       if (e.kind === 'live') this.live = { w: e.w, h: e.h, mode: e.mode };
       if (e.kind === 'state') {
         this.dark = e.state === 'asleep';
@@ -134,6 +136,7 @@ export class PhoneMirror implements Mirror {
         this.tell(e.need ?? 'not-connected');
       }
     });
+    return handle;
   }
 
   async open(
@@ -226,7 +229,9 @@ export class PhoneMirror implements Mirror {
     const handle = this.handle;
     this.handle = undefined;
     this.dropPipe();
-    if (handle) this.stopProved = await handle.stop();
+    if (!handle) return;
+    this.stopProved = await handle.stop();
+    if (!this.handle) this.dark = false;
   }
 
   watch(onChange: (s: DeviceState) => void) {

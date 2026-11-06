@@ -236,6 +236,43 @@ describe('a phone mirror', () => {
     expect(module.start).toHaveBeenCalledTimes(2);
   });
 
+  it('hears nothing more of a stream it has stopped, with a new one in its place', async () => {
+    const { mirror, module } = fake();
+    const heard: ((e: PhoneStreamEvent) => void)[] = [];
+    const handles = [0, 1].map(() => ({
+      attach: vi.fn(),
+      input: vi.fn(),
+      keyframe: vi.fn(),
+      stop: vi.fn(() => new Promise<boolean>(() => undefined)),
+    }));
+    vi.mocked(module.start).mockImplementation((_udid, _options, listener) => {
+      heard.push(listener);
+      return handles[heard.length - 1]!;
+    });
+    const seen: DeviceState[] = [];
+    mirror.watch((s) => seen.push(s));
+    await mirror.open(OPTIONS);
+    void mirror.close();
+    await mirror.open(OPTIONS);
+    heard[0]!({ kind: 'state', state: 'asleep' });
+    heard[0]!({ kind: 'lost', why: 'gone', need: 'camera-or-mic' });
+    heard[0]!({ kind: 'ended', proved: false });
+    await mirror.keyframe();
+    expect(handles[1]!.keyframe).toHaveBeenCalledTimes(1);
+    expect(seen).toEqual([]);
+    await expect(mirror.check()).resolves.toMatchObject({ ok: true });
+    await mirror.open(OPTIONS);
+    expect(module.start).toHaveBeenCalledTimes(2);
+  });
+
+  it('a stream stopped on a dark screen leaves no dark screen behind', async () => {
+    const { mirror, say } = fake();
+    await mirror.open(OPTIONS);
+    say({ kind: 'state', state: 'asleep' });
+    await mirror.close();
+    await expect(mirror.check()).resolves.toMatchObject({ ok: true });
+  });
+
   it('a stream lost with no reason reads as a phone gone', async () => {
     const { mirror, say } = fake();
     const seen: DeviceState[] = [];
