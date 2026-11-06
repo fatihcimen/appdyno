@@ -68,7 +68,7 @@ export type TestOptions = {
   log?: (line: string) => void;
 };
 
-/** A path's part from a serial or a file's name, which may hold any character. */
+/** What a report line shows of a message, whose next lines are for a person reading the one failure. */
 const firstLine = (s: string) => s.split('\n')[0]!;
 
 /** One go at a file: how its run ended, or what kept it from one. */

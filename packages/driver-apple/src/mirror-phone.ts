@@ -55,12 +55,12 @@ async function makeFrames(file: string) {
 /** A stream that ended for this need is not tried again for this long, however often it is checked. */
 const RETRY_NEED_MS = 3_000;
 
-/** An iPhone's mirror: all it speaks is in the stream it loads, and only what a session asks is here. */
 /** How long a paste's text stays on the phone's pasteboard with no touch, and after the touch that allows it. */
 const RESTORE_MS = 60_000;
 const AFTER_TOUCH_MS = 3_000;
 const PROMPT_MS = 2_000;
 
+/** An iPhone's mirror: all it speaks is in the stream it loads, and only what a session asks is here. */
 export class PhoneMirror implements Mirror {
   private say: (text: string) => void = () => undefined;
   private afterTouch: (() => void) | undefined;

@@ -218,7 +218,7 @@ export function parseNetstatsUid(text: string, uid: number): { rxBytes: number; 
 }
 
 /**
- * `dumpsys batterystats --charged <pkg>`: the "Estimated power use (mAh)" section. Global `Computed drain`
+ * `dumpsys batterystats --usage`: the "Estimated power use (mAh)" section. Global `Computed drain`
  * and the app's `UID u0a193: 1.23 fg: 1.1 ( cpu=1.00 (1s 123ms) screen=0.2 )` row (no row when it drew
  * nothing). `mah` is absent when the device computes nothing at all: it has no power model.
  */
@@ -237,7 +237,7 @@ export function parseBatteryUsage(text: string, uid: number): Omit<EnergyReading
   return { mah: Number(row[1]), breakdown };
 }
 
-/** What a count since the last charge grew by; what fell (a charge reset it meanwhile) counts from zero. */
+/** What a count since the last charge grew by; one that fell (a charge reset it meanwhile) grew by 0, and says nothing. */
 export function usageSince(
   before: Omit<EnergyReading, 'note'>,
   after: Omit<EnergyReading, 'note'>,

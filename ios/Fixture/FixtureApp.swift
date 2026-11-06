@@ -68,7 +68,7 @@ struct FixtureApp: App {
         case "canvas": CanvasScreen()
         case "marquee", "marquee_jumps", "marquee_back", "marquee_cut": MarqueeScreen(mode: key)
         case "locale": LocaleScreen()
-        default: Text("Bilinmeyen ekran: \(key)")
+        default: Text("Unknown screen: \(key)")
         }
     }
 }
