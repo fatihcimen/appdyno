@@ -62,7 +62,7 @@ type Box = { x: number; y: number; width: number; height: number };
  * place. Only a label said once tells an element: the rows' repeated words keep their order, not their place.
  * Undefined: they share nothing to measure by.
  */
-export function shift(was: ScreenElement[], now: ScreenElement[], box: Box, vertical: boolean) {
+function shift(was: ScreenElement[], now: ScreenElement[], box: Box, vertical: boolean) {
   const inside = ({ rect: r }: ScreenElement) =>
     r.x >= box.x &&
     r.y >= box.y &&

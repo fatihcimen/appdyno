@@ -22,7 +22,7 @@ import {
 import { type Adb, assertSerial, shq } from './adb.js';
 import { conflictHint, holdersIn, PROCESS_LIST, type Holder } from './holders.js';
 
-export const AGENT_MAIN = 'dev.appdyno.agent.Main';
+const AGENT_MAIN = 'dev.appdyno.agent.Main';
 export const REMOTE_DIR = '/data/local/tmp/appdyno';
 /**
  * How long a fresh agent may take to open its socket while its process is alive: a JVM start on a

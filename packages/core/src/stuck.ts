@@ -2,7 +2,7 @@ import { DeviceError } from '@appdyno/protocol';
 import type { RpcClient } from './rpc.js';
 
 /** How long the agent's work lane gets to answer a quick call after another call timed out. */
-export const STUCK_PROBE_MS = 3_000;
+const STUCK_PROBE_MS = 3_000;
 
 /**
  * After a call timed out: the agent does its device work one job at a time, so a job stuck past its

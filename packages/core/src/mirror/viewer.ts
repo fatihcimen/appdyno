@@ -5,7 +5,7 @@ import { jsonLines } from '../json-lines.js';
 import { nativeBinary, nativeFile } from '../native.js';
 import { NeedError } from './need.js';
 
-export const VIEWER_FLAGS = [
+const VIEWER_FLAGS = [
   'clang',
   '-fobjc-arc',
   '-O2',

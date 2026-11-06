@@ -19,7 +19,7 @@ import { Check, Step, keyPress, showSelector, viewNamed } from './step-schemas.j
 import { scrollingFor } from './scroll.js';
 import { dragPath, swipeLine } from './gesture-paths.js';
 
-export const STALE = 'stale ref, read the screen again';
+const STALE = 'stale ref, read the screen again';
 
 /** These leave the app, as the home key does. */
 const LEAVES_APP = new Set(['home', 'appSwitch', 'power', 'lock', 'siri']);

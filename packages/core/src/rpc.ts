@@ -18,7 +18,7 @@ import { z } from 'zod';
 import { callSignal, cancelled } from './call.js';
 
 /** Extra time the host gives a request over the agent's own deadline before it gives up itself. */
-export const DEADLINE_SLACK_MS = 1_000;
+const DEADLINE_SLACK_MS = 1_000;
 
 type Pending = {
   method: string;

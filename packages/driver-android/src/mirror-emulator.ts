@@ -31,7 +31,7 @@ const TURNS_POLL_MS = 500;
 export type GrpcEndpoint = { port: number; token?: string };
 
 /** Where a running emulator describes itself on a Mac. */
-export const runningDir = () => join(homedir(), 'Library/Caches/TemporaryItems/avd/running');
+const runningDir = () => join(homedir(), 'Library/Caches/TemporaryItems/avd/running');
 
 const processAlive = (pid: number) => {
   try {

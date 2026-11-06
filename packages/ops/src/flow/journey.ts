@@ -25,7 +25,7 @@ export const JOURNEY_ITERATIONS = 5;
 export type JourneyAnswer = NonNullable<import('zod').infer<typeof FlowOut>['journey']>;
 
 /** A file's scenario, as a store's folder holds it. */
-export const journeyScenario = (file: string) =>
+const journeyScenario = (file: string) =>
   `journey-${keyName(basename(file, '.flow'))}`.slice(0, 60);
 
 type Held = { unit: Unit; samples: number[]; throughHost: boolean };

@@ -180,7 +180,7 @@ export function dexoptState(d: PerfDevice, pkg: string) {
   return sh(d, `dumpsys package dexopt | grep -A 3 '\\[${pkg}\\]'`, 60_000);
 }
 
-export async function analyseStartup(pkg: string, file: string): Promise<StartupAnalysis> {
+async function analyseStartup(pkg: string, file: string): Promise<StartupAnalysis> {
   const csv = await queryFile(file, startupSql(pkg));
   const { stdout: metric } = await run(
     await traceProcessor(),

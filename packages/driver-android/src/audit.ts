@@ -29,7 +29,7 @@ const hex = (c: Rgb) =>
  * the others from it (the glyph or icon core; anti-aliasing blends sit between) and how many are
  * common. 5-bit bins per channel: a solid colour stays in one.
  */
-export function sample(img: Image, r: { x: number; y: number; w: number; h: number }) {
+function sample(img: Image, r: { x: number; y: number; w: number; h: number }) {
   const x0 = Math.max(0, Math.round(r.x));
   const y0 = Math.max(0, Math.round(r.y));
   const x1 = Math.min(img.width, Math.round(r.x + r.w));

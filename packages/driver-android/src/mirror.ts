@@ -29,7 +29,7 @@ const BEHIND =
   'This device cannot keep up. The picture stays at a size that can be read, and runs late.';
 
 /** A failure that no wait will clear: another tool holds the device, or the agent is not built. */
-export const fatal = (e: unknown) => {
+const fatal = (e: unknown) => {
   if (e instanceof DeviceError && ['AGENT_CONFLICT', 'UNSUPPORTED'].includes(e.code))
     Object.assign(e, { fatal: true });
   return e;

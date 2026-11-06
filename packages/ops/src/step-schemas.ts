@@ -6,7 +6,7 @@ import { z } from 'zod';
 export const Read = z.enum(['diff', 'full', 'none']).default('diff');
 
 // a check, not a pattern: a pattern in the schema costs the catalog on every tool that takes a ref
-export const Ref = z
+const Ref = z
   .string()
   .refine((r) => /^@[a-z0-9]{1,10}(-\d{1,3})?$/.test(r), 'a ref as the screen shows it (@k3f9)');
 
@@ -81,7 +81,7 @@ const KeyWords = z
 
 export const WAIT_MS = 5_000;
 
-export const MAX_WAIT_MS = 15_000;
+const MAX_WAIT_MS = 15_000;
 
 export const SCROLL_MAX = 10;
 
@@ -89,7 +89,7 @@ export const Check = z.enum(['exists', 'absent', 'text', 'enabled', 'checked', '
 
 const TapStep = z.object({ action: z.literal('tap'), ...Target }).strict();
 
-export const LongPressStep = z
+const LongPressStep = z
   .object({
     action: z.literal('long_press'),
     ...Target,
@@ -129,9 +129,9 @@ export const KeyStep = z
   })
   .strict();
 
-export const DoubleTapStep = z.object({ action: z.literal('double_tap'), ...Target }).strict();
+const DoubleTapStep = z.object({ action: z.literal('double_tap'), ...Target }).strict();
 
-export const DragStep = z
+const DragStep = z
   .object({
     action: z.literal('drag'),
     ...Target,
