@@ -1,5 +1,6 @@
 // What the hub's panes are made of: its words, its colours, its symbols and how they move.
 #import <AppKit/AppKit.h>
+#import <QuartzCore/QuartzCore.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -74,6 +75,8 @@ NSImage *_Nullable MVSymbol(NSString *name, NSColor *color, CGFloat size, NSFont
 void MVAnnounce(NSString *words);
 /// One small spring for something found: nothing for a person who asked for less motion.
 void MVPulse(NSView *view);
+/// A spring that comes to rest, and where the system has none, below macOS 14, the same move eased.
+CABasicAnimation *MVSpring(NSString *keyPath, double seconds, double bounce);
 /// Whether a person has left motion on.
 BOOL MVMoves(void);
 /// As if a person had asked for less motion: a test's way to it, as that setting is the whole Mac's.

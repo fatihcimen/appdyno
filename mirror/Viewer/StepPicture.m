@@ -134,6 +134,20 @@ static void drawGetting(NSRect screen) {
 }
 
 /// Most of a circle and its arrowhead, around nothing: the phone restarts.
+/// By hand, as `NSBezierPath.CGPath` is macOS 14.
+static CGPathRef _Nonnull cgPath(NSBezierPath *path) {
+  CGMutablePathRef out = CGPathCreateMutable();
+  NSPoint at[3];
+  for (NSInteger i = 0; i < path.elementCount; i++) {
+    NSBezierPathElement element = [path elementAtIndex:i associatedPoints:at];
+    if (element == NSBezierPathElementMoveTo) CGPathMoveToPoint(out, NULL, at[0].x, at[0].y);
+    else if (element == NSBezierPathElementLineTo) CGPathAddLineToPoint(out, NULL, at[0].x, at[0].y);
+    else if (element == NSBezierPathElementCurveTo) CGPathAddCurveToPoint(out, NULL, at[0].x, at[0].y, at[1].x, at[1].y, at[2].x, at[2].y);
+    else CGPathCloseSubpath(out);
+  }
+  return (CGPathRef)CFAutorelease(out);
+}
+
 static NSBezierPath *restartPath(void) {
   const double radius = 14, end = 20, wing = 9;
   NSBezierPath *round = [NSBezierPath bezierPath];
@@ -313,7 +327,7 @@ static void drawTick(NSPoint at) {
 
 - (CALayer *)turningAt:(NSPoint)at {
   CAShapeLayer *round = [CAShapeLayer layer];
-  round.path = restartPath().CGPath;
+  round.path = cgPath(restartPath());
   round.position = at;
   round.fillColor = NSColor.clearColor.CGColor;
   round.strokeColor = accent().CGColor;

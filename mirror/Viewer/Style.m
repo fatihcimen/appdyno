@@ -5,7 +5,8 @@
 
 // the Inspector's width, less what it leaves at its sides
 static const double kPaneWordsWide = 288;
-static const double kPulseSeconds = 0.3;
+// a spring settles in about 1.5 times its perceptual length, and it is the settling that the ceiling of 300 ms is about
+static const double kPulseSeconds = 0.16, kPulseBounce = 0.2;
 
 @interface MVLabel : NSTextField
 @end
@@ -77,7 +78,10 @@ NSTextField *MVWrappedText(NSString *text, MVStyle style) {
 }
 
 NSImage *_Nullable MVSymbol(NSString *name, NSColor *color, CGFloat size, NSFontWeight weight) {
-  NSImage *shape = [[NSImage imageWithSystemSymbolName:name accessibilityDescription:nil] imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithPointSize:size weight:weight]];
+  NSImage *found = [NSImage imageWithSystemSymbolName:name accessibilityDescription:nil];
+  // what a Mac below 14 has in its place: a tile or a state with nothing on it says nothing
+  if (!found) found = [NSImage imageWithSystemSymbolName:@{@"cable.connector.slash": @"cable.connector", @"gauge.with.dots.needle.33percent": @"gauge.medium"}[name] ?: name accessibilityDescription:nil];
+  NSImage *shape = [found imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithPointSize:size weight:weight]];
   if (!shape) return nil;
   NSColor *ink = MVSolid(color);
   return [NSImage imageWithSize:shape.size flipped:NO drawingHandler:^BOOL(NSRect rect) {
@@ -134,11 +138,23 @@ void MVAnnounce(NSString *words) {
   NSAccessibilityPostNotificationWithUserInfo(NSApp, NSAccessibilityAnnouncementRequestedNotification, @{NSAccessibilityAnnouncementKey: MVWord(words), NSAccessibilityPriorityKey: @(NSAccessibilityPriorityHigh)});
 }
 
+CABasicAnimation *MVSpring(NSString *keyPath, double seconds, double bounce) {
+  if (@available(macOS 14, *)) {
+    CASpringAnimation *spring = [[CASpringAnimation alloc] initWithPerceptualDuration:seconds bounce:bounce];
+    spring.keyPath = keyPath;
+    spring.duration = spring.settlingDuration;
+    return spring;
+  }
+  CABasicAnimation *eased = [CABasicAnimation animationWithKeyPath:keyPath];
+  eased.duration = seconds;
+  eased.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
+  return eased;
+}
+
 void MVPulse(NSView *view) {
   if (!MVMoves()) return;
   view.wantsLayer = YES;
-  CASpringAnimation *pulse = [[CASpringAnimation alloc] initWithPerceptualDuration:kPulseSeconds bounce:0.3];
-  pulse.keyPath = @"transform.scale";
+  CABasicAnimation *pulse = MVSpring(@"transform.scale", kPulseSeconds, kPulseBounce);
   pulse.fromValue = @1.02;
   pulse.toValue = @1;
   [view.layer addAnimation:pulse forKey:@"pulse"];

@@ -45,7 +45,8 @@ static const double kSymbolSize = 14, kButtonWide = 28, kTitleWidest = 150;
   // with no device there is nothing to say, and an empty capsule is a pill of glass holding nothing
   if (_groups.count) [names addObjectsFromArray:@[@"status", NSToolbarFlexibleSpaceItemIdentifier]];
   for (NSUInteger i = 0; i < _groups.count; i++) [names addObject:[NSString stringWithFormat:@"group%lu", (unsigned long)i]];
-  [names addObjectsFromArray:@[NSToolbarInspectorTrackingSeparatorItemIdentifier, NSToolbarFlexibleSpaceItemIdentifier, @"inspector"]];
+  if (@available(macOS 14, *)) [names addObject:NSToolbarInspectorTrackingSeparatorItemIdentifier];
+  [names addObjectsFromArray:@[NSToolbarFlexibleSpaceItemIdentifier, @"inspector"]];
   return names;
 }
 

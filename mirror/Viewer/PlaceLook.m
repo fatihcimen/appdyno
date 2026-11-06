@@ -8,7 +8,7 @@ static const double kButtonHigh = 28, kButtonWide = 14, kSoftAlpha = 0.14, kWord
 static const double kTileRound = 0.28, kTileLift = 0.14, kWashRound = 12;
 static const double kChipHigh = 22, kChipWide = 9, kChipAlpha = 0.14;
 static const double kHeadTile = 44, kHeadGap = 14;
-static const double kSlideSeconds = 0.3, kFadeSeconds = 0.2;
+static const double kSlideSeconds = 0.2, kFadeSeconds = 0.2;
 
 static double channel(double value) {
   return value <= 0.03928 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4);
@@ -230,10 +230,8 @@ void MVSlideIn(NSView *view, double from) {
   view.wantsLayer = YES;
   MVFade(view.layer, 0, 1, kFadeSeconds);
   if (!MVMoves()) return;
-  CASpringAnimation *slide = [[CASpringAnimation alloc] initWithPerceptualDuration:kSlideSeconds bounce:0];
-  slide.keyPath = @"transform.translation.x";
+  CABasicAnimation *slide = MVSpring(@"transform.translation.x", kSlideSeconds, 0);
   slide.fromValue = @(from);
   slide.toValue = @0;
-  slide.duration = slide.settlingDuration;
   [view.layer addAnimation:slide forKey:@"slide"];
 }
