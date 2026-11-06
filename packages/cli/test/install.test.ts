@@ -333,6 +333,16 @@ describe('a JSON file', () => {
     expect(() => edit.read(after, 's', SERVER)).not.toThrow();
   });
 
+  it.each([
+    ['opening on the line of the brace', '{ /* long\n     comment */\n  "a": 1\n}\n'],
+    ['ending on the line of the first member', '{ /* long\n     comment */ "a": 1\n}\n'],
+    ['in an empty object', '{ /* long\n     comment */ }\n'],
+  ])('writes past a comment over two lines, %s, and not into it', (_, text) => {
+    const after = add(text);
+    expect(edit.read(after, 'servers', SERVER)).toEqual(STDIO);
+    expect(after).toContain('/* long\n     comment */');
+  });
+
   it('takes only the list at the top: one nested in a project is another', () => {
     const edits = jsonEdit(true);
     const text = STATE('mcpServers');

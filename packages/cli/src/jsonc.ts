@@ -44,7 +44,10 @@ function outsideStrings(text: string, change: (i: number) => { to: string; next:
   return parts.join('') + text.slice(from);
 }
 
-/** Comments blanked at their offsets, so that a place in this is the same place in the file. */
+/**
+ * Comments blanked at their offsets, so that a place in this is the same place in the file. Their line breaks go too:
+ * a break in here is one a member can be put after.
+ */
 const uncommented = (text: string) =>
   outsideStrings(text, (i) => {
     const line = text.startsWith('//', i);
@@ -52,7 +55,7 @@ const uncommented = (text: string) =>
     const found = text.indexOf(line ? '\n' : '*/', i);
     if (found < 0 && !line) throw new Error('a comment has no end');
     const next = found < 0 ? text.length : line ? found : found + 2;
-    return { to: text.slice(i, next).replace(/[^\n]/g, ' '), next };
+    return { to: ' '.repeat(next - i), next };
   });
 
 const withoutTrailingCommas = (text: string) =>
