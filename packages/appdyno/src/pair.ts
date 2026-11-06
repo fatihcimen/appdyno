@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 import { Adb, overNetwork } from '@appdyno/driver-android';
-import { forgetPhone, pairPhone } from '@appdyno/driver-apple';
+import { assertPhoneUdid, forgetPhone, pairPhone } from '@appdyno/driver-apple';
 import { pause } from '@appdyno/core';
 import { COMMANDS, usage } from './usage.js';
 
@@ -36,7 +36,8 @@ export async function pairCommand(
     return 0;
   }
   if (values.device && values.forget) {
-    use.forget(values.device);
+    // an Android phone's pairing is kept on the phone: only an iPhone has anything here to forget
+    use.forget(assertPhoneUdid(values.device));
     use.say(FORGOTTEN);
     return 0;
   }

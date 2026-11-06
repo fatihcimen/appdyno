@@ -33,10 +33,19 @@ describe('appdyno pair', () => {
 
   it('forgets a phone on this Mac, and says what the phone keeps', async () => {
     const f = fake([[]]);
-    expect(await pairCommand(['--forget', '--device', 'UDID'], f.use as never)).toBe(0);
-    expect(f.forget).toHaveBeenCalledWith('UDID');
+    const udid = '00001234-0123456789ABCDEF';
+    expect(await pairCommand(['--forget', '--device', udid], f.use as never)).toBe(0);
+    expect(f.forget).toHaveBeenCalledWith(udid);
     expect(f.phone).not.toHaveBeenCalled();
     expect(f.said[0]).toContain('The phone keeps its half');
+  });
+
+  it('does not say it forgot what is not an iPhone', async () => {
+    const f = fake([[]]);
+    await expect(pairCommand(['--forget', '--device', 'R5C'], f.use as never)).rejects.toThrow(
+      'not an iPhone UDID',
+    );
+    expect(f.forget).not.toHaveBeenCalled();
   });
 
   it('words that make no call get the usage, and pair nothing', async () => {
