@@ -64,9 +64,7 @@ if (existsSync(stream)) {
   });
   metafiles.push(worker.metafile);
 }
-// not bundled: its import of ./main.js stays, so that there is one copy
-await build({ ...options, entryPoints: ['src/mcp-bin.ts'] });
-for (const bin of ['main.js', 'mcp-bin.js']) chmodSync(join(dist, bin), 0o755);
+chmodSync(join(dist, 'main.js'), 0o755);
 
 // the public face and nothing behind it: the workspace is inlined, and shows no types
 const PUBLIC = ['index.d.ts', 'library.d.ts'];

@@ -159,7 +159,6 @@ try {
     const files = pack.files.map((f) => f.path);
     for (const f of [
       'dist/main.js',
-      'dist/mcp-bin.js',
       'dist/index.js',
       'dist/index.d.ts',
       'README.md',

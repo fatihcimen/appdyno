@@ -122,7 +122,7 @@ describe.runIf(serial)('a client driving a device in the hub', () => {
     await agent.connect(
       new StdioClientTransport({
         command: process.execPath,
-        args: [join(dist, 'mcp-bin.js'), '--device', serial!, '--allow-devices', `^${serial}$`],
+        args: [join(dist, 'main.js'), 'mcp', '--device', serial!, '--allow-devices', `^${serial}$`],
         env: process.env as Record<string, string>,
       }),
     );

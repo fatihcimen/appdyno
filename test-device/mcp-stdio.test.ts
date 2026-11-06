@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { refIn, toolCaller } from './helpers.js';
 import { IosSimulatorDevice } from './workspace.js';
@@ -10,14 +11,14 @@ import { IosSimulatorDevice } from './workspace.js';
  * device APPDYNO_ANDROID_SERIAL names and on the simulator APPDYNO_IOS_UDID names (each when given).
  */
 const APP = 'dev.appdyno.fixture';
-const MAIN = fileURLToPath(new URL('../packages/appdyno/dist/mcp-bin.js', import.meta.url));
+const MAIN = fileURLToPath(new URL('../packages/appdyno/dist/main.js', import.meta.url));
 const targets = [
   { platform: 'android', serial: process.env.APPDYNO_ANDROID_SERIAL, form: 'FORM' },
   { platform: 'ios', serial: process.env.APPDYNO_IOS_UDID, form: 'Form' },
 ];
 
 for (const { platform, serial, form } of targets)
-  describe.skipIf(!serial)(`appdyno-mcp over stdio (${platform})`, () => {
+  describe.skipIf(!serial)(`appdyno mcp over stdio (${platform})`, () => {
     let client: Client;
     const stderr: string[] = [];
     const call = toolCaller(() => client);
@@ -28,6 +29,7 @@ for (const { platform, serial, form } of targets)
         command: process.execPath,
         args: [
           MAIN,
+          'mcp',
           '--device',
           serial!,
           '--app',
@@ -52,7 +54,8 @@ for (const { platform, serial, form } of targets)
 
     it('starts as appdyno and lists its tools', async () => {
       expect(client.getServerVersion()?.title).toBe('appdyno');
-      expect((await client.listTools()).tools.length).toBe(44);
+      const ops = opsFor(new ServerContext(DEFAULT_POLICY, []));
+      expect((await client.listTools()).tools.length).toBe(Object.keys(ops).length);
     });
 
     it('drives the fixture: launch, read, tap by ref with a diff, type, screenshot', async () => {

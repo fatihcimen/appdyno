@@ -18,8 +18,7 @@
     }
   },
   "bin": {
-    "appdyno": "dist/main.js",
-    "appdyno-mcp": "dist/mcp-bin.js"
+    "appdyno": "dist/main.js"
   },
   "files": [
     "dist",

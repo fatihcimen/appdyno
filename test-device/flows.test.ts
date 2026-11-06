@@ -21,7 +21,6 @@ import { Devicectl, IosSimulatorDevice } from './workspace.js';
  * `OK` goes by role and text.
  */
 const APP = 'dev.appdyno.fixture';
-const BIN = fileURLToPath(new URL('../packages/appdyno/dist/mcp-bin.js', import.meta.url));
 const CLI = fileURLToPath(new URL('../packages/appdyno/dist/main.js', import.meta.url));
 
 const PASSWORD = 'p4ss-w0rd-7788';
@@ -90,7 +89,7 @@ for (const { platform, serial, form } of targets)
       if (platform === 'iphone') await new Devicectl(serial!).install(iphoneFixture!);
       const transport = new StdioClientTransport({
         command: process.execPath,
-        args: [BIN, '--device', serial!, '--app', APP, '--allow-devices', `^${serial}$`],
+        args: [CLI, 'mcp', '--device', serial!, '--app', APP, '--allow-devices', `^${serial}$`],
         env,
         stderr: 'pipe',
       });

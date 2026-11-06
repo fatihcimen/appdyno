@@ -8,9 +8,9 @@ import { IosPhoneDevice } from './workspace.js';
 /** The built MCP server over stdio on a real iPhone (APPDYNO_IPHONE_UDID), on Settings: read, open General, screenshot. */
 const udid = process.env.APPDYNO_IPHONE_UDID;
 const APP = 'com.apple.Preferences';
-const MAIN = fileURLToPath(new URL('../packages/appdyno/dist/mcp-bin.js', import.meta.url));
+const MAIN = fileURLToPath(new URL('../packages/appdyno/dist/main.js', import.meta.url));
 
-describe.skipIf(!udid)('appdyno-mcp over stdio (iPhone)', () => {
+describe.skipIf(!udid)('appdyno mcp over stdio (iPhone)', () => {
   let client: Client;
   const call = toolCaller(() => client);
   const ref = refIn;
@@ -20,6 +20,7 @@ describe.skipIf(!udid)('appdyno-mcp over stdio (iPhone)', () => {
       command: process.execPath,
       args: [
         MAIN,
+        'mcp',
         '--device',
         udid!,
         '--app',

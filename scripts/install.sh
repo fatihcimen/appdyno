@@ -1,7 +1,6 @@
 #!/bin/sh
-# Developer install: builds this checkout, packs the one package and installs `appdyno-mcp` (the MCP
-# server) and `appdyno` from that file, with no registry. npm's global prefix gets the two commands
-# (APPDYNO_PREFIX=<dir> installs them there instead).
+# Developer install: builds this checkout, packs the one package and installs `appdyno` from that file,
+# with no registry. npm's global prefix gets the command (APPDYNO_PREFIX=<dir> installs it there instead).
 set -eu
 cd "$(dirname "$0")/.."
 # the Android agent builds with the project's Java (.mise.toml): found through mise when the shell has none
