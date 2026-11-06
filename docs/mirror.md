@@ -438,7 +438,7 @@ What it says:
 - On a window a person has not clicked, keys go nowhere: typing into a window needs a hand run, as a test's window never holds the keyboard.
 - A simulator's fold: no control that folds one was found, so a new surface at a fold is untested.
 - The window does not yet show a secure Android window's content, as no shell can have it from Android 12: it is black, with the status bar still there. Not run on Android 12 and 13, or on 10, for which no image is here.
-- Live numbers have been run on a simulator, an Android emulator, a Xiaomi and an iPhone. A window following a person from one app to another on an iPhone has been tested without a phone.
+- Live numbers have been run on a simulator, an Android emulator, a Samsung, a Xiaomi and an iPhone. A window following a person from one app to another on an iPhone has been tested without a phone.
 - A window's measures have been run on a simulator and an Android emulator. On an iPhone a launch has been run; a scroll runs its rounds and then the trace tool fails on its own trace, which the window says.
 - What the readings cost a device has been measured on one Android 14 emulator, at rest on a screen changing ten times a second: 6.0 % of its whole CPU with a window open and the numbers shut, 10.8 % with them shown, over eight spells of 30 s. No phone has been measured.
 - A device's colour: the frame takes one, and nothing yet reads it from a device, so every frame is the table's own graphite or carbon.

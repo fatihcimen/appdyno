@@ -60,9 +60,9 @@ export const IPHONE_FIXTURE = process.env.APPDYNO_IPHONE_FIXTURE_APP;
 export const IPHONE = IPHONE_FIXTURE && process.env.APPDYNO_IPHONE_UDID;
 
 /** The operations on that iPhone, with the fixture on it. */
-export async function onIphone(app: string) {
+export async function onIphone(app: string, provider: DeviceProvider = appleProvider()) {
   await new Devicectl(IPHONE!).install(IPHONE_FIXTURE!);
-  return opsOn(appleProvider(), IPHONE!, app);
+  return opsOn(provider, IPHONE!, app);
 }
 
 /** Calls a tool over the client `get` gives, which connects after this is made. */

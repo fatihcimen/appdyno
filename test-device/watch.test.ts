@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Adb, androidProvider, appleProvider, pause, Simctl } from './workspace.js';
-import { type Answer, type Call, opsOn } from './helpers.js';
+import { type Answer, type Call, IPHONE, onIphone, opsOn } from './helpers.js';
 import { Parent } from '../packages/hub/src/parent.js';
 import { liveMirror } from '../packages/ops/src/mirror-state.js';
 import type { ServerContext } from '../packages/ops/src/context.js';
@@ -103,6 +103,27 @@ describe.skipIf(!ANDROID)('a watch on Android', () => {
     () => o.call,
     () => o.ctx,
     ANDROID!,
+  );
+});
+
+describe.skipIf(!IPHONE)('a watch on an iPhone', () => {
+  let o: Awaited<ReturnType<typeof onIphone>>;
+  beforeAll(async () => {
+    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-watch-')));
+    // what is built, as an iPhone's stream runs in a thread that cannot start from sources
+    const built = join(import.meta.dirname, '../packages/driver-apple/dist/index.js');
+    const driver = (await import(built)) as { appleProvider: typeof appleProvider };
+    o = await onIphone(APP, driver.appleProvider());
+  }, 300_000);
+  afterAll(async () => {
+    await o.call('terminate_app');
+    await o.ctx.end();
+    o.ctx.close();
+  }, 60_000);
+  watchOf(
+    () => o.call,
+    () => o.ctx,
+    IPHONE!,
   );
 });
 
