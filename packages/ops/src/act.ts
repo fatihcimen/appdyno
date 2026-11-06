@@ -312,7 +312,7 @@ export function actOps(
               [
                 ...done,
                 `${i + 1}. ${name} failed, the rest were not run: ${e.message}`,
-                ...(screen ? [header(s, screen)] : []),
+                ...(screen ? [header(screen)] : []),
               ].join('\n'),
               e.code,
               e.hint,

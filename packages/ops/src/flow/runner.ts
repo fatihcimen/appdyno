@@ -280,7 +280,7 @@ export function flowRunner(
         const screen = await s.read().catch(() => undefined);
         if (screen) {
           show(s, screen);
-          f.screen = header(s, screen);
+          f.screen = header(screen);
         }
         if (o.evidence) f.saved = await keepEvidence(s, o.evidence);
       }

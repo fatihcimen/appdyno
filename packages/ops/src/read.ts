@@ -71,7 +71,7 @@ export function readOps(
         s.shown = screen.list;
         const fg = await noticed(s, screen);
         const web = await webLines(s, screen, clean);
-        return reply(`${header(s, screen)}${web ? `\n${web}` : ''}${fg}`, {
+        return reply(`${header(screen)}${web ? `\n${web}` : ''}${fg}`, {
           elements: screen.list.length,
           ...(screen.foreground && { foreground: screen.foreground }),
           warnings: fg ? [fg.trim()] : [],
@@ -148,7 +148,7 @@ export function readOps(
           read === 'diff' && before
             ? diffText(diffScreens(before, last.list), last.list.length, clean)
             : undefined;
-        const said = read === 'none' ? head : `${head}\n${diff ?? header(s, last)}`;
+        const said = read === 'none' ? head : `${head}\n${diff ?? header(last)}`;
         if (!met) throw new ToolError(said, 'TIMEOUT');
         if (read === 'none') return reply(said, { ...out, screen: 'none' });
         return reply(said, {
