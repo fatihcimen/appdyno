@@ -1,3 +1,4 @@
+import type { ListedDevice } from './device.js';
 import type { Need } from './mirror/need.js';
 import { run } from './run.js';
 
@@ -45,17 +46,21 @@ export type Step = { id: StepId; done: boolean; sees: boolean };
 export const step = (id: StepId, done: boolean, sees = true): Step => ({ id, done, sees });
 
 /** A phone as a driver lists it, with what it reads of itself. */
-export type ListedPhone = {
-  serial: string;
-  state: string;
-  ready: boolean;
-  model?: string;
+export type ListedPhone = ListedDevice & {
   need?: Need;
   switches?: { input: string; install: string };
+  /** It is also there by the network. */
+  onWifi?: boolean;
 };
 
 /** What a driver asks of a person for a phone of its kind, and what is said in place of a step. */
-export type PhoneSteps = { steps: Step[]; need?: Need; maker: Maker };
+export type PhoneSteps = {
+  steps: Step[];
+  need?: Need;
+  maker: Maker;
+  /** How this phone goes without a cable, for a phone on one: on it, or by a code it shows. */
+  wifi?: { way: 'cable' | 'code'; paired: boolean };
+};
 
 export type PhoneLook = {
   phone?: ListedPhone;

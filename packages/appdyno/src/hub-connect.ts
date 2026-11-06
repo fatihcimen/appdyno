@@ -41,17 +41,24 @@ export async function listedPhones(
   providers: DeviceProvider[],
   switches: (serial: string) => Promise<ListedPhone['switches']>,
 ): Promise<ListedPhone[]> {
-  const listed = await Promise.all(providers.map((p) => p.list().catch(() => [])));
+  const listed = (await Promise.all(providers.map((p) => p.list().catch(() => [])))).flat();
+  const twins = new Set(listed.flatMap((d) => d.sameAs ?? []));
   return Promise.all(
     listed
-      .flat()
       .filter(isPhone)
+      // the phone is its row on a cable, and what is on the network says so of it
+      .filter((d) => !(d.sameAs && listed.some((other) => other.serial === d.sameAs)))
       .map(async (d) => {
         const provider = providers.findLast((p) => p.handles(d.serial));
         const need = await provider?.need?.(d).catch(() => undefined);
         const own =
           d.state === 'device' ? await switches(d.serial).catch(() => undefined) : undefined;
-        return { ...d, ...(need && { need }), ...(own && { switches: own }) };
+        return {
+          ...d,
+          ...(need && { need }),
+          ...(own && { switches: own }),
+          ...(twins.has(d.serial) && { onWifi: true }),
+        };
       }),
   );
 }

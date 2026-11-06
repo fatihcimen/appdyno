@@ -47,7 +47,10 @@ export async function hubDevices(ctx: ServerContext, hardware: Hardware): Promis
   }
   const seen = new Set(virtual.map((d) => d.serial ?? d.id));
   const phones: HubDevice[] = [];
-  for (const d of await ctx.devices()) {
+  const listed = await ctx.devices();
+  for (const d of listed) {
+    // one phone is one row, as it has one encoder: on its cable while it has one, and by the network once it has not
+    if (d.sameAs && listed.some((other) => other.serial === d.sameAs)) continue;
     // what this server may not drive is not even asked of, as asking refuses
     if (seen.has(d.serial) || !ctx.allowed(d.serial)) continue;
     const known = await hardware(d.serial);
@@ -62,9 +65,9 @@ export async function hubDevices(ctx: ServerContext, hardware: Hardware): Promis
       mirrored: mirrored.has(d.serial),
       ...(known?.platform && { platform: known.platform }),
       ...(known?.model && { model: known.model }),
-      detail: '',
-      // shortcut: an address names Wi-Fi on Android, and an iPhone here always reads USB; ask its own transport when one says
-      link: d.state === 'network' || d.serial.includes(':') ? 'Wi-Fi' : 'USB',
+      // said on the row as well as over the device: a person chooses from the list
+      detail: d.link === 'Wi-Fi' ? 'Wi-Fi' : '',
+      link: d.link ?? 'USB',
       ...(need && { need }),
     });
   }

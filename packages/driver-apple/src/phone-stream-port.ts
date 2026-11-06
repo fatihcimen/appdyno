@@ -48,6 +48,8 @@ export interface PhoneStreamModule {
   secureFocused(udid: string): Promise<boolean>;
   /** The name of the field being typed in. */
   focusedField(udid: string): Promise<string | undefined>;
+  /** Whether it goes by the network: at a person's word, or as a phone paired for it with no cable has nothing else. */
+  onWifi(udid: string, asked?: boolean): Promise<boolean>;
   /** What can be known with no stream started. */
   check(udid: string, options?: { wifi?: boolean }): Promise<PhoneStreamCheck>;
   start(

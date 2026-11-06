@@ -151,10 +151,21 @@ export interface Device {
 /** A doctor's finding. */
 export type Check = { name: string; ok: boolean; warn?: boolean; detail: string; fix?: string };
 
+export type ListedDevice = {
+  serial: string;
+  state: string;
+  ready: boolean;
+  model?: string;
+  /** How a phone is joined to this Mac. */
+  link?: 'USB' | 'Wi-Fi';
+  /** The serial it has on a cable, where this way in names it: a person has one phone, whatever the ways to it. */
+  sameAs?: string;
+};
+
 /** The devices of one driver. */
 export interface DeviceProvider {
   /** `state` is the driver's own word; `ready` says whether the device can be driven now. */
-  list(): Promise<{ serial: string; state: string; ready: boolean; model?: string }[]>;
+  list(): Promise<ListedDevice[]>;
   handles(serial: string): boolean;
   /** What a person must do before a listed device can be driven, by reads that change nothing. */
   need?(device: { serial: string; state: string }): Promise<Need | undefined>;

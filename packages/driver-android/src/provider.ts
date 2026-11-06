@@ -1,6 +1,6 @@
 import type { Check, DeviceProvider, Need } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { Adb, overNetwork } from './adb.js';
+import { Adb, cableSerial, overNetwork } from './adb.js';
 import { androidGuide } from './guide.js';
 import { agentApk } from './agent.js';
 import { AndroidDevice } from './device.js';
@@ -211,12 +211,17 @@ export function androidProvider(
 ): DeviceProvider {
   return {
     list: async () =>
-      (await adb.devices().catch(noAdbNoDevices)).map((d) => ({
-        serial: d.serial,
-        state: d.state,
-        ready: d.state === 'device',
-        ...(d.props.model && { model: d.props.model }),
-      })),
+      (await adb.devices().catch(noAdbNoDevices)).map((d) => {
+        const sameAs = cableSerial(d.serial);
+        return {
+          serial: d.serial,
+          state: d.state,
+          ready: d.state === 'device',
+          ...(d.props.model && { model: d.props.model }),
+          link: overNetwork(d.serial) ? ('Wi-Fi' as const) : ('USB' as const),
+          ...(sameAs && { sameAs }),
+        };
+      }),
     handles: () => true,
     need: (d) => androidNeed(adb, d),
     guide: androidGuide,

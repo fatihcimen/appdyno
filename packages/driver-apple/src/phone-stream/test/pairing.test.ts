@@ -121,7 +121,7 @@ describe('what carries a pairing', () => {
   });
 });
 
-describe('a pairing over the network', () => {
+describe('a pairing', () => {
   it('makes an identity once a person accepts, and proves it on a new connection', async () => {
     const phone = await aPhone();
     const channel = await open(phone);

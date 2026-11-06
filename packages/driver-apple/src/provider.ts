@@ -10,7 +10,8 @@ import { Simctl, xcodeEnv, type Simulator } from './simctl.js';
 import { Devicectl } from './devicectl.js';
 import { queryTraceFile } from './trace.js';
 import { iphoneGuide } from './guide.js';
-import { listPhones } from './usbmux.js';
+import { listPhones, sameUdid } from './usbmux.js';
+import { pairedPhones } from './wifi-paired.js';
 import { run } from '@appdyno/core';
 
 const RUNNER_NOT_BUILT =
@@ -130,29 +131,51 @@ const bootedSimulators = (): Promise<Simulator[]> =>
 
 /** Simulators and iPhones connected by USB. */
 export function appleProvider(
-  connected: { simulators: () => Promise<Simulator[]>; phones: () => Promise<string[]> } = {
+  connected: {
+    simulators: () => Promise<Simulator[]>;
+    phones: () => Promise<string[]>;
+    /** Paired for Wi-Fi: what is on disk, as a list comes often and a look on the network takes seconds. */
+    paired?: () => string[];
+  } = {
     simulators: bootedSimulators,
     phones: () => listPhones().catch(() => []),
+    paired: pairedPhones,
   },
 ): DeviceProvider {
   return {
-    list: async () => [
-      ...(await connected.simulators()).map((d) => ({
-        serial: d.udid,
-        state: 'booted',
-        ready: true,
-        model: `iOS simulator ${d.name}`,
-      })),
-      ...(await connected.phones()).map((udid) => ({
-        serial: udid,
-        state: 'usb',
-        ready: true,
-        model: 'iPhone',
-      })),
-    ],
+    list: async () => {
+      const phones = await connected.phones();
+      return [
+        ...(await connected.simulators()).map((d) => ({
+          serial: d.udid,
+          state: 'booted',
+          ready: true,
+          model: `iOS simulator ${d.name}`,
+        })),
+        ...phones.map((udid) => ({
+          serial: udid,
+          state: 'usb',
+          ready: true,
+          model: 'iPhone',
+          link: 'USB' as const,
+        })),
+        // with no cable a window is all it can do, and whether the phone is there is that window's to say
+        ...(connected.paired?.() ?? [])
+          .filter((udid) => !phones.some((phone) => sameUdid(phone, udid)))
+          .map((udid) => ({
+            serial: udid,
+            state: 'network',
+            ready: false,
+            model: 'iPhone',
+            link: 'Wi-Fi' as const,
+          })),
+      ];
+    },
     handles: (serial) => SIMULATOR_ID.test(serial) || PHONE_ID.test(serial),
-    need: async ({ serial }) =>
-      SIMULATOR_ID.test(serial) ? undefined : phoneNeed(new Devicectl(serial)),
+    need: async ({ serial, state }) =>
+      SIMULATOR_ID.test(serial) || state === 'network'
+        ? undefined
+        : phoneNeed(new Devicectl(serial)),
     guide: iphoneGuide,
     virtual: new Simulators(new Simctl()),
     open: (serial) =>

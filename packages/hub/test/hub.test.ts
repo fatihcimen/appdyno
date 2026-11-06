@@ -109,6 +109,30 @@ describe('the hub', () => {
     expect(devices.filter((d) => d.serial === 'B')).toHaveLength(1);
   });
 
+  it('is one row for one phone, by its cable while it has one, and says how it is joined', async () => {
+    const onCable = { serial: 'R58M', state: 'device', ready: true, link: 'USB' as const };
+    const onWifi = {
+      serial: 'adb-R58M-Ab._adb-tls-connect._tcp',
+      state: 'device',
+      ready: true,
+      link: 'Wi-Fi' as const,
+      sameAs: 'R58M',
+    };
+    const rows = (list: (typeof onCable | typeof onWifi)[]) =>
+      hubDevices(
+        new ServerContext(DEFAULT_POLICY, [
+          {
+            list: async () => list,
+            handles: () => true,
+            open: () => ({ hardware: async () => undefined }) as unknown as Device,
+          },
+        ]),
+        async () => undefined,
+      ).then((devices) => devices.map((d) => [d.id, d.link, d.detail]));
+    expect(await rows([onCable, onWifi])).toEqual([['R58M', 'USB', '']]);
+    expect(await rows([onWifi])).toEqual([[onWifi.serial, 'Wi-Fi', 'Wi-Fi']]);
+  });
+
   it('leaves out what this server may not drive', async () => {
     const provider = new Simulated();
     const allowed = new ServerContext({ ...DEFAULT_POLICY, devices: /^R58M$/ }, [

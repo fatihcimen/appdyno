@@ -161,7 +161,7 @@ export class PhoneMirror implements Mirror {
     if (this.blocked && this.now() < this.blocked.until) {
       return { ok: false, need: this.blocked.need, detail: this.blocked.detail };
     }
-    const wifi = options?.wifi === true;
+    const wifi = await stream.onWifi(this.udid, options?.wifi === true);
     const c = await stream.check(this.udid, { wifi });
     return c.ok ? { ok: true, routes: ['tunnel', ...(wifi ? ['wifi'] : [])] } : c;
   }
@@ -206,14 +206,15 @@ export class PhoneMirror implements Mirror {
     this.dropPipe();
     await this.makePipe(file);
     this.pipe = file;
-    this.handle ??= this.begin(stream, options);
+    const wifi = await stream.onWifi(this.udid, options.wifi === true);
+    this.handle ??= this.begin(stream, { ...options, wifi });
     this.handle.attach(file);
     return {
       kind: 'pipe',
       encoded: true,
       file,
       codec: 'hevc',
-      ...(options.wifi && { note: ON_WIFI }),
+      ...(wifi && { note: ON_WIFI }),
     };
   }
 

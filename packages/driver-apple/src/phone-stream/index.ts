@@ -12,7 +12,7 @@ import { LiveReader, NO_HUB, unreadable } from './live.js';
 import { readServices, takeScreenshot } from './services.js';
 import { openTunnel, PhoneRefusal, readPairRecord } from './tunnel.js';
 import type { ToWorker } from './stream-thread.js';
-import { isPaired, openWifiTunnel, pairOverWifi, wifiCheck } from './wifi.js';
+import { isPaired, openWifiTunnel, pairOnCable, wifiCheck } from './wifi.js';
 
 /** This folder's one way in. All it holds speaks a phone's private services; see `phone-stream-port.ts`. */
 
@@ -21,9 +21,12 @@ const STOP_MS = 12_000;
 const onCable = async (udid: string) =>
   (await listDevices()).some((d) => d.connection === 'USB' && sameUdid(d.serial, udid));
 
+const onWifi = async (udid: string, asked = false) =>
+  asked || (isPaired(udid) && !(await onCable(udid)));
+
 /** A cable where there is one; a phone paired for it is reached by the network where there is none. */
 async function tunnelTo(udid: string) {
-  return isPaired(udid) && !(await onCable(udid)) ? openWifiTunnel(udid) : openTunnel(udid);
+  return (await onWifi(udid)) ? openWifiTunnel(udid) : openTunnel(udid);
 }
 
 async function check(udid: string, options?: { wifi?: boolean }): Promise<PhoneStreamCheck> {
@@ -171,6 +174,7 @@ const phoneStream: PhoneStreamModule = {
   focusedField,
   live,
   start,
-  pair: pairOverWifi,
+  onWifi,
+  pair: pairOnCable,
 };
 export default phoneStream;

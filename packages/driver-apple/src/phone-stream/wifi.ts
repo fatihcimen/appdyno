@@ -3,8 +3,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { Socket } from 'node:net';
 import { dirname } from 'node:path';
 import { connect as tlsConnect, type TLSSocket } from 'node:tls';
-import { deviceStateFile } from '@appdyno/core';
 import type { PhoneStreamCheck } from '../phone-stream-port.js';
+import { identityFile } from '../wifi-paired.js';
 import { FramedLine, XpcLine } from './pairing-line.js';
 import { PairingChannel, type Identity } from './pairing.js';
 import { RemoteXpc } from './remotexpc.js';
@@ -105,8 +105,6 @@ function connected(address: string, port: number) {
   });
 }
 
-const identityFile = (udid: string) => deviceStateFile('wifi-pairing', udid);
-
 /** The key is what the phone trusts: read and written by this user alone. */
 function keep(udid: string, identity: Identity) {
   const file = identityFile(udid);
@@ -194,7 +192,7 @@ const PAIRING_SERVICE = 'com.apple.internal.dt.coredevice.untrusted.tunnelservic
  * Makes this Mac's identity with a phone on a cable, which it then uses on the network: the phone asks a person, and
  * `say` tells them to look. A phone that already knows this Mac is left as it is.
  */
-export async function pairOverWifi(udid: string, say: (words: string) => void): Promise<void> {
+export async function pairOnCable(udid: string, say: (words: string) => void): Promise<void> {
   if (isPaired(udid)) {
     (await provenChannel(identityOf(udid))).channel.close();
     say('This Mac is already paired with the phone.');

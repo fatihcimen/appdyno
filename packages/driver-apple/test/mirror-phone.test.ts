@@ -22,6 +22,7 @@ function fake(
   };
   const module: PhoneStreamModule = {
     check: async () => check,
+    onWifi: async (_udid, asked = false) => asked,
     screenshot: vi.fn(async () => {
       const png = Buffer.alloc(24);
       png[0] = 0x89;
@@ -414,6 +415,20 @@ describe('a phone mirror', () => {
       ok: false,
       need: 'not-trusted',
     });
+  });
+
+  it('goes by the network with no word when that is all a paired phone has', async () => {
+    const { mirror, module } = fake();
+    module.onWifi = async () => true;
+    await expect(mirror.check()).resolves.toEqual({ ok: true, routes: ['tunnel', 'wifi'] });
+    const source = await mirror.open(OPTIONS);
+    expect(module.start).toHaveBeenCalledWith(
+      UDID,
+      { ...OPTIONS, wifi: true },
+      expect.any(Function),
+    );
+    expect(source).toMatchObject({ note: expect.stringContaining('On Wi-Fi') });
+    await mirror.close();
   });
 
   it('goes by the network only when asked, and says so', async () => {

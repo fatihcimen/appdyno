@@ -16,8 +16,23 @@ describe('the Apple provider', () => {
     });
     expect(await p.list()).toEqual([
       { serial: udid, state: 'booted', ready: true, model: 'iOS simulator appdyno-iphone' },
-      { serial: phone, state: 'usb', ready: true, model: 'iPhone' },
+      { serial: phone, state: 'usb', ready: true, model: 'iPhone', link: 'USB' },
     ]);
+  });
+
+  it('a phone paired for Wi-Fi stands in the list by the network while it has no cable', async () => {
+    const paired = () => [phone];
+    const away = appleProvider({ simulators: async () => [], phones: async () => [], paired });
+    expect(await away.list()).toEqual([
+      { serial: phone, state: 'network', ready: false, model: 'iPhone', link: 'Wi-Fi' },
+    ]);
+    await expect(away.need!({ serial: phone, state: 'network' })).resolves.toBeUndefined();
+    const home = appleProvider({
+      simulators: async () => [],
+      phones: async () => [phone],
+      paired,
+    });
+    expect(await home.list()).toMatchObject([{ state: 'usb', link: 'USB' }]);
   });
 
   it('takes simulator and phone ids, not adb serials', () => {
