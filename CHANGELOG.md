@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The Inspector shows contrast on a simulator and an iPhone: it asked for a kind of audit only Android has, and the whole audit was refused.
 - `install --remove` leaves a client's settings readable whatever comments stand around its entry: a closing brace under a `//` comment was pulled into it, and the client could no longer read the file. An entry no longer goes into a comment that opens on the line of the brace, and an edit that does not read back as asked is refused, with the file left as it was.
 - A client's file reaches the disk before it replaces the old one, so a power cut leaves one or the other whole.
 - A move or an undo keeps a TOML entry's inline table, literal string or date word for word: it wrote them as strings, and the client refused its whole file. Strings in a JSON entry keep their brackets and spaces too.

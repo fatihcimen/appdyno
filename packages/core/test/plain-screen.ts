@@ -2,6 +2,7 @@ import type { PlatformScreen } from '../src/screen/index.js';
 
 /** A platform with nothing of its own on the screen: what `core` holds on any. */
 export const plainScreen: PlatformScreen = {
+  contrastAudits: [],
   systemAlert: () => undefined,
   personPrompt: () => undefined,
   alertButton: () => undefined,

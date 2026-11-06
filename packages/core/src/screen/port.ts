@@ -1,9 +1,11 @@
-import type { Tree } from '@appdyno/protocol';
+import type { AuditType, Tree } from '@appdyno/protocol';
 import type { AlertAction, AlertButton, AlertWords, SystemAlert } from './alert.js';
 import type { Rect, UiElement } from './elements.js';
 
 /** What only a platform knows about what its screen shows. */
 export interface PlatformScreen {
+  /** What of this platform's audit is about contrast: a type it does not have refuses the whole audit. */
+  readonly contrastAudits: readonly AuditType[];
   /** The system alert on the screen, whatever it asks. */
   systemAlert(tree: Tree, elements: UiElement[]): SystemAlert | undefined;
   /** What this screen wants of a person, as `personNeeded` names it: a prompt that is no alert as well. */

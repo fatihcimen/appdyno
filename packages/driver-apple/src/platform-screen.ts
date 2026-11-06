@@ -64,6 +64,8 @@ export const iosScreen: PlatformScreen = {
     );
   },
 
+  contrastAudits: ['contrast'],
+
   keyboardOpen: (tree) => tree.nodes.some((n) => /keyboard$/i.test(n.c)),
 
   keyboardArea(tree) {

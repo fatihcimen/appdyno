@@ -12,7 +12,7 @@ import { type Aim, aimAt, named, type Size, stepOf } from '@appdyno/ops';
 
 /** What the inspector needs of its window. */
 export type InspectPort = {
-  device: Pick<Device, 'audit'>;
+  device: Pick<Device, 'audit' | 'platformScreen'>;
   latest(): Screen | undefined;
   sizeOf(screen: Screen): Size | undefined;
   tell(message: ViewerOrder): void;
@@ -26,7 +26,6 @@ export type InspectPort = {
   recording(): boolean;
 };
 
-const CONTRAST_TYPES = ['contrast', 'imageContrast'] as const;
 const MOST_ISSUES = 50;
 /** An audit waits for the pointer to rest: one for each screen passed over would be seconds of nothing. */
 const REST_MS = 300;
@@ -51,9 +50,8 @@ export function windowInspector(o: InspectPort) {
     const read = { hash } as NonNullable<typeof audit>;
     audit = read;
     try {
-      read.issues = (
-        await o.device.audit({ types: [...CONTRAST_TYPES], maxIssues: MOST_ISSUES })
-      ).issues;
+      const types = [...o.device.platformScreen.contrastAudits];
+      read.issues = (await o.device.audit({ types, maxIssues: MOST_ISSUES })).issues;
     } catch (e) {
       read.why = (e as Error).message;
     }

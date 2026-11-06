@@ -65,6 +65,8 @@ export const androidScreen: PlatformScreen = {
     );
   },
 
+  contrastAudits: ['contrast', 'imageContrast'],
+
   keyboardOpen: (tree) => tree.windows.some((w) => w.type === INPUT_METHOD_WINDOW),
 
   /** The window's bounds, which are the keyboard's: the nodes in it span the whole screen. */

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { screenElements, windowRect, withStableRefs, type UiElement } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
@@ -8,6 +10,14 @@ const root: UiElement = {
   ref: '@e1',
   rect: { x: 0, y: 0, width: 402, height: 874 },
 };
+
+describe('the audit', () => {
+  it('is asked of contrast only what the runner has, as a type it has not refuses all of it', () => {
+    const runner = readFileSync(join(import.meta.dirname, '../../../ios/Runner/DeviceAudit.swift'));
+    expect(iosScreen.contrastAudits.length).toBeGreaterThan(0);
+    for (const type of iosScreen.contrastAudits) expect(String(runner)).toContain(`("${type}", .`);
+  });
+});
 
 describe('system alerts', () => {
   /** An app screen with its own "Tamam" button and a system Alert (the home screen app's) over it. */

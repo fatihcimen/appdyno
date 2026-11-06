@@ -590,6 +590,19 @@ describe('the element under the pointer', () => {
   };
   const element = (t: ReturnType<typeof setup>) => t.told.filter((m) => m.op === 'element').at(-1);
 
+  it('asks of an audit only what the platform has', async () => {
+    const t = setup();
+    const audit = vi.fn(async () => issue([100, 310, 200, 340]));
+    t.device.audit = audit;
+    const screen = { ...t.device.platformScreen, contrastAudits: ['contrast'] };
+    Object.assign(t.device, { platformScreen: screen });
+    t.flow.onWindow({ op: 'inspect', on: true });
+    await t.settle();
+    t.flow.onWindow({ op: 'hover', x: 0.5, y: 350 / 2400 });
+    await t.settle();
+    expect(audit).toHaveBeenCalledWith(expect.objectContaining({ types: ['contrast'] }));
+  });
+
   it('says what it is, what a click there writes and where to draw it', async () => {
     const t = await opened();
     t.flow.onWindow({ op: 'hover', x: 0.5, y: 350 / 2400 });
