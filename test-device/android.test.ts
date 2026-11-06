@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { PROTOCOL } from '@appdyno/protocol';
+import { agentMayGo } from './one-agent.js';
 import {
   Adb,
   androidScreen,
@@ -196,6 +197,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(await scales()).toEqual(['0', '0', '0']);
     const checks = await androidProvider().doctor!(serial!);
     expect(checks.find((c) => c.name === 'animations')?.warn).toBe(true);
+    agentMayGo();
     await d.shell(`kill -9 ${crash.hello!.pid}`);
     crash.close();
     await expect.poll(scales, { timeout: 15_000, interval: 500 }).toEqual(before);
@@ -601,6 +603,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     // the host that set them is gone (a process that ran and exited), and its agent with it
     const dead = spawnSync('true').pid!;
     await d.shell(`sed -i 's/^[0-9]*/${dead}/' ${TEST_LOCATION}`);
+    agentMayGo();
     await new Adb().exec(serial!, `kill ${d.hello!.pid}`);
     const next = new AndroidDevice(serial!);
     try {
@@ -696,6 +699,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     const pending = d.longPress({ x: 10, y: 10 }, 3_000, { settle: false });
     await new Promise((r) => setTimeout(r, 300));
     // not through the device's queue: it waits for the long press
+    agentMayGo();
     await new Adb().exec(serial!, `kill ${pid}`);
     const e = await pending.catch((x: unknown) => x);
     expect((e as DeviceError).code).toBe('AGENT_UNAVAILABLE');
@@ -718,6 +722,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
 
   it('takes UI automation over from an agent killed a moment ago, which the system keeps for about 2 s', async () => {
     await d.read(APP);
+    agentMayGo();
     await d.shell(`kill -9 ${d.hello!.pid}`);
     expect(labels(await d.read(APP)).length).toBeGreaterThan(0);
   });

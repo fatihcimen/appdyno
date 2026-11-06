@@ -14,6 +14,7 @@ import {
   type TextResult,
   type Tree,
 } from '@appdyno/protocol';
+import { agentMet } from './agent-hosts.js';
 import { TIMEOUTS, type ActOptions, type TreeOptions } from './device.js';
 import { DeviceQueue } from './queue.js';
 import type { RpcClient } from './rpc.js';
@@ -65,6 +66,7 @@ export abstract class DeviceActions {
  */
 export abstract class RpcDevice extends DeviceActions {
   abstract readonly platform: Platform;
+  abstract readonly serial: string;
   abstract readonly platformScreen: PlatformScreen;
   protected rpc: RpcClient | undefined;
   private connecting: Promise<RpcClient> | undefined;
@@ -144,6 +146,7 @@ export abstract class RpcDevice extends DeviceActions {
     this.rpc = rpc;
     this.helloInfo = hello;
     this.lastStartWasCold = started;
+    agentMet(this.serial, hello.pid);
     return rpc;
   }
 

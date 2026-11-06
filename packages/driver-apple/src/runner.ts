@@ -16,6 +16,7 @@ import {
   readStateFile,
   reportProgress,
   run,
+  agentLeft,
   sharedAgent,
   stateDir,
   writeStateFile,
@@ -305,6 +306,7 @@ export class IosRunnerLauncher {
   }
 
   async stop(rpc?: RpcClient) {
+    agentLeft(this.udid);
     if (rpc && !rpc.closed)
       await rpc.call('shutdown', {}, { timeoutMs: 5_000 }).catch(() => undefined);
     const state = await this.readState();

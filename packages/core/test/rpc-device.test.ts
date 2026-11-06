@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { subscribe, unsubscribe } from 'node:diagnostics_channel';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DeviceError,
   PROTOCOL,
@@ -7,6 +8,7 @@ import {
   type Method,
   type Tree,
 } from '@appdyno/protocol';
+import { agentLeft } from '../src/agent-hosts.js';
 import { readStateFile, writeStateFile } from '../src/state.js';
 import { assertLatLon, RpcDevice } from '../src/rpc-device.js';
 import { greet } from '../src/rpc.js';
@@ -31,13 +33,18 @@ class TestDevice extends RpcDevice {
   protected readonly retrySafe = new Set<Method>(['tree.get']);
   connects = 0;
 
-  constructor(private readonly agents: Record<string, FakeHandler>[]) {
+  constructor(
+    private readonly agents: Record<string, FakeHandler>[],
+    readonly serial = 'a-device',
+    private readonly pids: number[] = [],
+  ) {
     super();
   }
 
   protected async startAgent() {
+    const pid = this.pids[this.connects];
     const { rpc } = fakeAgent(this.agents[this.connects++]!);
-    return { rpc, hello: HELLO as Hello, started: true };
+    return { rpc, hello: { ...HELLO, ...(pid && { pid }) } as Hello, started: true };
   }
 
   protected async restartStuck() {}
@@ -53,6 +60,55 @@ class TestDevice extends RpcDevice {
 
 const gone: FakeHandler = () => ({ error: 'AGENT_UNAVAILABLE' });
 const tree: FakeHandler = () => ({ result: wireTree([{ t: 'Merhaba' }]) });
+
+describe('an agent that stops under a device', () => {
+  const CHANNEL = 'appdyno.agent.lost';
+  const heard: unknown[] = [];
+  const hear = (m: unknown) => void heard.push(m);
+  beforeEach(() => {
+    heard.length = 0;
+    subscribe(CHANNEL, hear);
+  });
+  afterEach(() => {
+    unsubscribe(CHANNEL, hear);
+    vi.restoreAllMocks();
+  });
+
+  it('is said once, with a word for a person, though the read that lost it goes on', async () => {
+    const said = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const d = new TestDevice(
+      [{ 'tree.get': gone }, { 'tree.get': tree }],
+      'lost-under-a-read',
+      [10, 20],
+    );
+    await expect(d.tree()).resolves.toBeDefined();
+    expect(heard).toEqual([{ serial: 'lost-under-a-read', was: 10, pid: 20 }]);
+    expect(said).toHaveBeenCalledTimes(1);
+    expect(String(said.mock.calls[0]![0])).toContain('lost-under-a-read');
+  });
+
+  it("is said to a device made after it, as what a process had is its own and no object's", async () => {
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    await new TestDevice([{}], 'lost-before-this-one', [10]).open();
+    await new TestDevice([{}], 'lost-before-this-one', [20]).open();
+    expect(heard).toEqual([{ serial: 'lost-before-this-one', was: 10, pid: 20 }]);
+  });
+
+  it('is not said of a first agent, of one met again, or of one that names no pid', async () => {
+    await new TestDevice([{}], 'met-again', [10]).open();
+    await new TestDevice([{}], 'met-again', [10]).open();
+    await new TestDevice([{}], 'met-again').open();
+    await new TestDevice([{}], 'met-again', [10]).open();
+    expect(heard).toEqual([]);
+  });
+
+  it('is not said of one this process stopped', async () => {
+    await new TestDevice([{}], 'stopped-here', [10]).open();
+    agentLeft('stopped-here');
+    await new TestDevice([{}], 'stopped-here', [20]).open();
+    expect(heard).toEqual([]);
+  });
+});
 
 describe('a device through its agent', () => {
   it('reads its clock past whatever the device is busy with', async () => {

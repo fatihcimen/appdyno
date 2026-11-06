@@ -13,6 +13,7 @@ import {
   readStateFile,
   reportProgress,
   safeName,
+  agentLeft,
   sharedAgent,
   stateDir,
   writeStateFile,
@@ -144,6 +145,7 @@ export class AndroidAgentLauncher {
 
   /** Stops this device's agent (and forgets it). */
   async stop(): Promise<void> {
+    agentLeft(this.serial);
     const state = await this.readState();
     if (state?.pid) await this.kill(state.pid);
     await rm(this.statePath, { force: true });

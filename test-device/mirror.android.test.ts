@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { agentMayGo } from './one-agent.js';
 import {
   decodePng,
   deviceStateFile,
@@ -189,6 +190,7 @@ describe.runIf(serial)('the agent stream', () => {
     await until('picture', () => session.status.state === 'live');
     const before = seen.length;
     const { rpc } = await launcher.connect();
+    agentMayGo();
     await rpc.call('shutdown', {}, { timeoutMs: 5_000 }).catch(() => undefined);
     await until(
       'reconnecting',

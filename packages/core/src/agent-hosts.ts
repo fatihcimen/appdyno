@@ -1,3 +1,4 @@
+import { channel } from 'node:diagnostics_channel';
 import { DeviceError, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
 import { reportProgress } from './call.js';
@@ -7,6 +8,29 @@ import { deviceState } from './state.js';
 
 /** The processes of this Mac that use a device's agent: it has no word on who is connected, and a process's end says it left. */
 const hosts = deviceState('agent-hosts', z.array(Owner));
+
+/** The agent each device last gave this process. */
+const met = new Map<string, number>();
+/** By name: a process can hold this module twice, as what is built and what is not, and a test hears both. */
+const lost = channel('appdyno.agent.lost');
+
+/**
+ * Says when a device's agent is not the one this process had. A read that loses its agent starts another and tries
+ * again, and nothing else would show that: what the agent held went with it, and a person paid for its start.
+ */
+export function agentMet(serial: string, pid: number | undefined) {
+  if (pid === undefined) return;
+  const was = met.get(serial);
+  met.set(serial, pid);
+  if (was === undefined || was === pid) return;
+  const line = `the agent on ${serial} stopped, and another took its place`;
+  reportProgress(line);
+  process.stderr.write(`${line}\n`);
+  lost.publish({ serial, was, pid });
+}
+
+/** This process ended it: the next is no news. */
+export const agentLeft = (serial: string) => void met.delete(serial);
 
 /** This process uses the device's agent; the live others that do. */
 function join(serial: string): Owner[] {
