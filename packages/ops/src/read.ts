@@ -61,7 +61,7 @@ export function readOps(
       name: 'screen',
       title: 'Read screen',
       description:
-        'The elements on the screen (ref role "label" x,y flags; rows alike under one header, what a row holds left to find). A ref keeps naming its element when the screen changes.',
+        'Read the screen: its elements from the accessibility tree (ref role "label" x,y flags; rows alike under one header, what a row holds left to find). A ref keeps naming its element when the screen changes.',
       input: z.object({}).strict(),
       output: ScreenOut,
       annotations: READ,

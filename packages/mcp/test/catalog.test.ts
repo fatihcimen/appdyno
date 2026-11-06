@@ -3,7 +3,49 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { expect, it } from 'vitest';
+import { INSTRUCTIONS } from '../src/brand.js';
 import { createServer } from '../src/server.js';
+
+/** A client's search reads names and descriptions, and may read only the start: each word here finds its tool there. */
+const SEARCHED: Record<string, string> = {
+  emulator: 'simulator',
+  simulator: 'simulator',
+  'deep link': 'open_link',
+  'dark mode': 'device_setting',
+  fingerprint: 'device_setting',
+  'face id': 'device_setting',
+  'push notifications': 'device_setting',
+  'long press': 'gesture',
+  landscape: 'set_orientation',
+  gps: 'set_location',
+  install: 'app',
+  logcat: 'logs',
+  anr: 'crashes',
+  'screen mirror': 'mirror',
+  'network traffic': 'network',
+  'visual regression': 'visual',
+  'accessibility tree': 'screen',
+  performance: 'perf_snapshot',
+  jank: 'perf_trace',
+  startup: 'perf_launch',
+  'memory leaks': 'perf_heap',
+  'regression gate': 'perf_compare',
+  'repeatable test': 'flow',
+};
+
+it('is found by the words people search for, where a search reads them', () => {
+  const ops = opsFor(new ServerContext(DEFAULT_POLICY, []));
+  const missed = Object.entries(SEARCHED).filter(
+    ([word, tool]) => !ops[tool]!.description.slice(0, 200).toLowerCase().includes(word),
+  );
+  expect(missed).toEqual([]);
+});
+
+it('says what it is for first, within what a client keeps of its instructions', () => {
+  expect(INSTRUCTIONS.length).toBeLessThanOrEqual(4_096);
+  for (const word of ['iOS', 'Android', 'simulators', 'emulators', 'phones'])
+    expect(INSTRUCTIONS.slice(0, 100)).toContain(word);
+});
 
 it('has every tool in the table of the README, and what it says of steps as the tool says it', () => {
   const readme = readFileSync(new URL('../../../README.md', import.meta.url), 'utf8');

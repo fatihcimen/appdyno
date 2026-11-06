@@ -15,7 +15,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       name: 'list_devices',
       title: 'Devices',
       description:
-        'Connected devices (serial, state, model), which this server may drive, who holds each, what blocks each with its fix. To start one: simulator.',
+        'Connected phones, simulators and emulators (serial, state, model), which this server may drive, who holds each, what blocks each with its fix. To start one: simulator.',
       input: z.object({}).strict(),
       output: DevicesOut,
       annotations: READ,
@@ -108,7 +108,8 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
     defineOp({
       name: 'set_orientation',
       title: 'Orientation',
-      description: 'The rotation stays fixed: go back to portrait afterwards.',
+      description:
+        'Rotate to portrait or landscape. It stays fixed: go back to portrait afterwards.',
       input: z.object({ orientation: z.enum(ROTATIONS), read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
@@ -121,7 +122,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
     defineOp({
       name: 'set_location',
       title: 'Set location',
-      description: 'Fix the GPS position; clear: true ends it.',
+      description: 'Set a fake GPS location; clear: true ends it.',
       input: z
         .object({
           lat: z.number().min(-90).max(90).optional(),

@@ -121,11 +121,17 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
       name: 'device_setting',
       title: 'Device conditions',
       description:
-        'No value reads one. A switch takes on, off; text_size: 1.3, iOS large; locale: tr-TR; network: slow, full; proxy: host:port, none; battery: 0-100. Put back at the end or by restore. One-shot: push (value; title), biometric (match, nomatch, enroll), fold (open, closed), call (number; end number), sms (value; title: number), keychain (reset).',
+        'Dark mode, text size, reduce motion, slow network, airplane mode, Wi-Fi, mobile data, push notifications, Face ID, fingerprint, calls, SMS. No value reads one. Put back at the end or by restore.',
       input: z
         .object({
           name: z.enum([...SETTINGS, ...ONE_SHOT]),
-          value: z.string().max(500).optional(),
+          value: z
+            .string()
+            .max(500)
+            .describe(
+              'A switch takes on, off; text_size: 1.3, iOS large; locale: tr-TR; network: slow, full; proxy: host:port, none; battery: 0-100. One-shot: push (value; title), biometric (match, nomatch, enroll), fold (open, closed), call (number; end number), sms (value; title: number), keychain (reset).',
+            )
+            .optional(),
           title: z.string().max(200).optional(),
           app: z.string().max(200).optional(),
         })

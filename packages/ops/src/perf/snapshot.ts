@@ -296,7 +296,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
     name: 'perf_snapshot',
     title: 'Performance snapshot',
     description:
-      "The app's CPU now, memory, frames since the last measure and the device's load and heat.",
+      "Performance now: the app's CPU, memory, frames since the last measure and the device's load and heat.",
     input: z
       .object({
         app: App,

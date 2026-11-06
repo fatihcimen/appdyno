@@ -37,7 +37,7 @@ export function flowOps(ctx: ServerContext, runner: FlowRunner) {
       name: 'flow',
       title: 'Flow',
       description:
-        'Record your actions; replay them with no model. save (file, overwrite), run (file, from: a step, params: NAME=value, envFile; iterations: a journey timed by step, kept for perf_compare), export (file, to Maestro YAML).',
+        'Record your actions as a repeatable test; replay them with no model. save (file, overwrite), run (file, from: a step, params: NAME=value, envFile; iterations: a journey timed by step, kept for perf_compare), export (file, to Maestro YAML).',
       input: z
         .object({
           action: z.enum(['start', 'stop', 'save', 'run', 'export']),

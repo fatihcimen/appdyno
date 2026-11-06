@@ -77,7 +77,7 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
     name: 'app',
     title: 'App management',
     description:
-      'list (all: with system apps), state, install (path: .apk, .app or .ipa), uninstall, clear, grant, revoke (service), launch (restarts it with args, env; Android args: key=value extras), download_data, replace_data (path: a folder; stops the app), build_and_run (path: Xcode project or Gradle folder; scheme, or Gradle module; configuration, or variant).',
+      'Install and manage apps. list (all: with system apps), state, install (path: .apk, .app or .ipa), uninstall, clear (data), grant, revoke (permission: service), launch (restarts it with args, env; Android args: key=value extras), download_data, replace_data (path: a folder; stops the app), build_and_run (path: Xcode project or Gradle folder; scheme, or Gradle module; configuration, or variant).',
     input: z
       .object({
         action: z.enum([
@@ -287,7 +287,7 @@ function simulatorOp(ctx: ServerContext) {
     name: 'simulator',
     title: 'Simulators and emulators',
     description:
-      'Only on request. list (what can be started), boot (name: its id or name), create (name: an iOS model; starts and selects it), shutdown (name; none: those this tool started).',
+      'Start or stop an iOS simulator or Android emulator, only on request. list (what can be started), boot (name: its id or name), create (name: an iOS model; starts and selects it), shutdown (name; none: those this tool started).',
     input: z
       .object({
         action: z.enum(['list', 'boot', 'create', 'shutdown']),

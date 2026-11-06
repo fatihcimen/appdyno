@@ -88,7 +88,7 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
       name: 'logs',
       title: 'App log',
       description:
-        "The app's log, bounded, secrets redacted. On an iPhone it says what it cannot read.",
+        "The app's log (logcat on Android), bounded, secrets redacted. On an iPhone it says what it cannot read.",
       input: z
         .object({
           app: App,
@@ -127,7 +127,7 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
       name: 'crashes',
       title: 'Crashes',
       description:
-        "The app's crash and exit reports: a bounded summary, each report's file on this machine. since: ISO time; default: all kept.",
+        "The app's crash, ANR and exit reports: a bounded summary, each report's file on this machine. since: ISO time; default: all kept.",
       input: z
         .object({
           app: App,

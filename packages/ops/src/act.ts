@@ -95,7 +95,7 @@ export function actOps(
       name: 'gesture',
       title: 'Gesture',
       description:
-        'double_tap, long_press: at the target. drag: from the target to `to` over durationMs, no flick; holdMs first lifts a row or an icon. pinch: scale > 1 zooms in, < 1 out, at x,y or the middle. plan: free paths in `pointers`, one per finger, t in ms.',
+        'Double tap, long press, drag or pinch. double_tap, long_press: at the target. drag: from the target to `to` over durationMs, no flick; holdMs first lifts a row or an icon. pinch: scale > 1 zooms in, < 1 out, at x,y or the middle. plan: free paths in `pointers`, one per finger, t in ms.',
       input: z
         .object({
           kind: z.enum(['double_tap', 'long_press', 'drag', 'pinch', 'plan']),

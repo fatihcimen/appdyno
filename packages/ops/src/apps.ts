@@ -74,7 +74,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
       name: 'open_link',
       title: 'Open link',
       description:
-        "Open a link (https:// or an app scheme) and answer its screen; with an app selected it opens there. settings instead: a page of Settings (about, privacy, wifi…; a wrong word lists them), or an app's own: its id, or app.",
+        "Open a URL or deep link (https:// or an app scheme) and answer its screen; with an app selected it opens there. settings instead: a page of Settings (about, privacy, wifi…; a wrong word lists them), or an app's own: its id, or app.",
       input: z
         .object({
           url: z.string().min(3).max(2_000).optional(),
