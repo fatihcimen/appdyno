@@ -76,7 +76,7 @@ It then upgrades with whatever installed appdyno. `appdyno doctor` shows which, 
 | installed with               | `appdyno update`                                                                |
 | ---------------------------- | ------------------------------------------------------------------------------- |
 | `npm install -g`, any prefix | upgrades with npm, in that prefix, from the copy it just verified               |
-| `pnpm add -g`                | upgrades with pnpm, to that exact version                                       |
+| `pnpm add -g`                | upgrades with pnpm, to that exact version, which pnpm downloads again itself    |
 | the Mac app                  | replaces the app: see below                                                     |
 | Homebrew, Volta, Nix         | refuses: upgrade it with that manager                                           |
 | a one-off `npx`              | refuses: see below                                                              |

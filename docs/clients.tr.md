@@ -76,7 +76,7 @@ Ardından appdyno'yu hangi araç kurduysa onunla yükseltir. Hangisi olduğunu, 
 | neyle kuruldu                | `appdyno update`                                                  |
 | ---------------------------- | ----------------------------------------------------------------- |
 | `npm install -g`, her prefix | npm ile, o prefix içinde, az önce doğruladığı kopyadan yükseltir  |
-| `pnpm add -g`                | pnpm ile, tam o sürüme yükseltir                                  |
+| `pnpm add -g`                | pnpm ile, tam o sürüme yükseltir; pnpm onu yeniden indirir        |
 | Mac uygulaması               | uygulamayı değiştirir: aşağıya bakın                              |
 | Homebrew, Volta, Nix         | reddeder: o araçla yükseltin                                      |
 | tek seferlik `npx`           | reddeder: aşağıya bakın                                           |
