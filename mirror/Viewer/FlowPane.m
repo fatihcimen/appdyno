@@ -32,7 +32,7 @@ static NSString *clickNamed(NSInteger segment) {
     _ids = MVPaneNote(@"Move the pointer over the device.");
     _writes = MVPaneNote(@"");
     _writes.font = [NSFont monospacedSystemFontOfSize:11 weight:NSFontWeightRegular];
-    _writes.textColor = NSColor.labelColor;
+    _writes.textColor = MVInkColor();
     _writes.selectable = YES;
     _contrast = MVPaneNote(@"");
     _contrast.lineBreakMode = NSLineBreakByWordWrapping;
@@ -105,7 +105,7 @@ static NSString *clickNamed(NSInteger segment) {
   BOOL on = [m[@"on"] boolValue], starting = [m[@"starting"] boolValue];
   _record.title = MVWord(on ? @"Stop" : starting ? @"Starting" : @"Record");
   _record.enabled = !starting;
-  _record.contentTintColor = on ? NSColor.systemRedColor : nil;
+  _record.contentTintColor = on ? MVRed() : nil;
   NSArray<NSString *> *lines = [m[@"lines"] isKindOfClass:NSArray.class] ? m[@"lines"] : @[];
   _look = [m[@"look"] isKindOfClass:NSArray.class] ? m[@"look"] : @[];
   _state.stringValue = starting ? @"Reading the screen. The first time, this starts the device agent."
@@ -135,7 +135,7 @@ static NSString *clickNamed(NSInteger segment) {
   _writes.stringValue = m[@"tap"] ?: @"";
   NSArray *issues = [m[@"contrast"] isKindOfClass:NSArray.class] ? m[@"contrast"] : @[];
   _contrast.stringValue = !named ? @"" : issues.count ? [issues componentsJoinedByString:@"\n"] : m[@"contrastNote"] ?: @"No contrast issue";
-  _contrast.textColor = issues.count ? NSColor.systemOrangeColor : NSColor.secondaryLabelColor;
+  _contrast.textColor = issues.count ? MVOrange() : MVQuietColor();
 }
 
 @end

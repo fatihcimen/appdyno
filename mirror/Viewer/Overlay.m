@@ -94,7 +94,7 @@ static NSString *symbolOf(NSString *state) {
 - (void)showTouchAtX:(double)x y:(double)y agent:(BOOL)agent {
   CALayer *dot = [CALayer layer];
   CGSize size = _view.bounds.size;
-  NSColor *color = agent ? NSColor.systemPurpleColor : NSColor.controlAccentColor;
+  NSColor *color = agent ? MVAgent() : MVAccent();
   dot.frame = CGRectMake(x * size.width - kDot / 2, (1 - y) * size.height - kDot / 2, kDot, kDot);
   dot.cornerRadius = kDot / 2;
   dot.borderWidth = 2;
@@ -122,8 +122,8 @@ static NSString *symbolOf(NSString *state) {
   } else {
     [parts addObject:symbol(symbolOf(state), NSColor.whiteColor)];
   }
-  [parts addObject:words(title ?: state, 14, NSFontWeightSemibold, NSColor.labelColor)];
-  if (fix.length) [parts addObject:words(fix, 12, NSFontWeightRegular, NSColor.labelColor)];
+  [parts addObject:words(title ?: state, 14, NSFontWeightSemibold, MVInkColor())];
+  if (fix.length) [parts addObject:words(fix, 12, NSFontWeightRegular, MVInkColor())];
   // what no one can wait out alone gets a step of its own
   if ([state isEqual:@"waiting"] || [state isEqual:@"stopped"]) {
     NSButton *again = [MVBarButton buttonWithTitle:MVWord(@"Try Again") target:self action:@selector(tryAgain:)];
@@ -145,12 +145,12 @@ static NSString *symbolOf(NSString *state) {
   _bannerId = m[@"id"];
   NSMutableArray<NSView *> *parts = [NSMutableArray arrayWithArray:@[
     symbol(@"hand.raised", NSColor.systemYellowColor),
-    words(m[@"title"] ?: @"Needs you", 14, NSFontWeightSemibold, NSColor.labelColor),
-    words(m[@"text"] ?: @"A person is needed", 12, NSFontWeightRegular, NSColor.labelColor),
+    words(m[@"title"] ?: @"Needs you", 14, NSFontWeightSemibold, MVInkColor()),
+    words(m[@"text"] ?: @"A person is needed", 12, NSFontWeightRegular, MVInkColor()),
   ]];
   if ([m[@"needsDone"] boolValue]) {
     NSButton *done = [NSButton buttonWithTitle:MVWord(@"I'm Done") target:self action:@selector(done:)];
-    done.bezelColor = NSColor.controlAccentColor;
+    done.bezelColor = MVAccent();
     done.keyEquivalent = @"\r";
     done.controlSize = NSControlSizeLarge;
     [parts addObject:done];

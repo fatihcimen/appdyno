@@ -30,7 +30,7 @@
   pane.recording = on;
   NSButton *button = [self.bar buttonNamed:@"recordFlow"];
   button.image = [NSImage imageWithSystemSymbolName:on ? @"hand.tap.fill" : @"hand.tap" accessibilityDescription:on ? @"Stop Recording Flow" : MVControlTitle(@"recordFlow")];
-  button.contentTintColor = on ? NSColor.systemRedColor : NSColor.labelColor;
+  button.contentTintColor = on ? MVRed() : MVInkColor();
   [pane show:message];
 }
 

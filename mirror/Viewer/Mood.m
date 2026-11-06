@@ -6,6 +6,9 @@
 enum { kMoodColumns = 5, kMoodRows = 9, kMoodSamples = 6 };
 // the rate a backdrop follows its picture: it is mood, and costs nothing for being slow
 static const double kBackdropSeconds = 2;
+static const double kPlaceSeconds = 0.24;
+// how far a picture's colour reaches and how strongly, how much colour in a picture counts as all of it, and its light in each look
+static const double kMoodReach = 0.3, kMoodStrength = 0.9, kMoodFull = 60, kMoodDark = 0.66, kMoodLight = 0.68, kMoodSeconds = 0.3;
 
 typedef struct {
   const uint8_t *base;
@@ -114,51 +117,155 @@ CGImageRef MVImageMood(CVImageBufferRef image, BOOL dark) {
 }
 
 @implementation MVBackdrop {
-  CALayer *_layer;
+  CALayer *_layer, *_grain;
   __weak NSWindow *_window;
   double _at;
+  id _picture;
+  BOOL _waiting;
+  NSInteger _place;
+  /// What the picture adds, each side of it, as colour and strength.
+  MVGroundBloom _mood[2];
 }
 
 - (instancetype)initInView:(NSView *)view window:(NSWindow *)window {
   if ((self = [super init])) {
     _window = window;
     _layer = [CALayer layer];
-    _layer.backgroundColor = NSColor.windowBackgroundColor.CGColor;
     _layer.contentsGravity = kCAGravityResize;
     _layer.magnificationFilter = kCAFilterLinear;
     _layer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
     _layer.frame = view.bounds;
-    [view.layer addSublayer:_layer];
+    _grain = [CALayer layer];
+    _grain.backgroundColor = MVGrain();
+    _grain.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
+    _grain.frame = view.bounds;
+    [view.layer insertSublayer:_grain atIndex:0];
+    [view.layer insertSublayer:_layer atIndex:0];
+    [self repaint];
+    __weak MVBackdrop *weak = self;
+    [NSWorkspace.sharedWorkspace.notificationCenter addObserverForName:NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *n) {
+      [weak settingsChanged];
+    }];
   }
   return self;
 }
 
-- (BOOL)isDue {
-  double now = MVNowMs();
-  if (now - _at < kBackdropSeconds * 1000) return NO;
-  _at = now;
-  return YES;
+static void drawAgain(NSView *view) {
+  view.needsDisplay = YES;
+  for (NSView *child in view.subviews) drawAgain(child);
+}
+
+/// Colours are read as they are drawn, so a setting that changed needs only a drawing.
+- (void)settingsChanged {
+  [self repaint];
+  drawAgain(_window.contentView);
 }
 
 - (BOOL)isDark {
-  return [[_window.effectiveAppearance bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]] isEqual:NSAppearanceNameDarkAqua];
+  return MVIsDark(_window.effectiveAppearance);
 }
 
-- (void)show:(nullable CGImageRef)mood {
-  if (!mood) return;
+- (void)paint {
+  MVGroundPlan plan;
+  MVGroundOf(self.isDark, _place, &plan);
+  for (int i = 0; i < 2; i++)
+    if (!_place && !MVSolidGrounds() && _mood[i].strength > 0 && plan.count < MVGroundBlooms) plan.blooms[plan.count++] = _mood[i];
+  CGImageRef image = MVPaintGround(&plan);
   [CATransaction begin];
   [CATransaction setDisableActions:YES];
-  _layer.contents = (__bridge id)mood;
+  _layer.contents = (__bridge id)image;
   [CATransaction commit];
+  CGImageRelease(image);
+}
+
+- (void)repaint {
+  [self paint];
+}
+
+/// What is painted next comes in over this long; at once for a person who asked for less motion.
+- (void)fadeOver:(double)seconds {
+  if (!MVMoves()) return;
+  CATransition *fade = [CATransition animation];
+  fade.type = kCATransitionFade;
+  fade.duration = seconds;
+  fade.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
+  [_layer addAnimation:fade forKey:@"ground"];
+}
+
+- (void)showPlace:(NSInteger)place {
+  if (place == _place) return;
+  _place = place;
+  [self fadeOver:kPlaceSeconds];
+  [self paint];
+}
+
+/// What a picture adds is its hue and no more: its light stays the ground's, so that nothing a device shows can reach what is read over it.
+- (void)show:(nullable CGImageRef)mood {
+  if (!mood) return;
+  MVGroundBloom was[2] = {_mood[0], _mood[1]};
+  NSData *cells = CFBridgingRelease(CGDataProviderCopyData(CGImageGetDataProvider(mood)));
+  const uint8_t *bytes = cells.bytes;
+  size_t row = CGImageGetBytesPerRow(mood), wide = CGImageGetWidth(mood), tall = CGImageGetHeight(mood);
+  BOOL dark = self.isDark;
+  for (int side = 0; side < 2; side++) {
+    double sum[3] = {0, 0, 0}, weight = 0;
+    for (size_t y = 0; y < tall; y++)
+      for (size_t x = side ? wide / 2 : 0; x < (side ? wide : wide / 2 + 1); x++) {
+        const uint8_t *px = bytes + y * row + x * 4;
+        double high = MAX(px[0], MAX(px[1], px[2])), low = MIN(px[0], MIN(px[1], px[2])), chroma = high - low;
+        for (int i = 0; i < 3; i++) sum[i] += px[i] * chroma;
+        weight += chroma;
+      }
+    double reach = wide * tall * kMoodFull;
+    _mood[side] = (MVGroundBloom){side ? 0.68 : 0.32, 0.56, kMoodReach, 0, 0};
+    if (weight < 1) continue;
+    double r = sum[0] / weight, g = sum[1] / weight, b = sum[2] / weight, top = MAX(r, MAX(g, b)), floor = MIN(r, MIN(g, b));
+    double level = dark ? kMoodDark : kMoodLight, sat = top > floor ? (top - floor) / top : 0;
+    // a hue at the ground's own light: dark stays dark and light stays light, whatever is on the screen
+    uint8_t channel[3];
+    double value[3] = {r, g, b};
+    for (int i = 0; i < 3; i++) {
+      double share = top > 0 ? value[i] / top : 0;
+      channel[i] = (uint8_t)(255 * (dark ? level * share : 1 - (1 - share) * (1 - level)));
+    }
+    _mood[side].color = (uint32_t)channel[0] << 16 | (uint32_t)channel[1] << 8 | channel[2];
+    _mood[side].strength = MIN(1, weight / reach) * sat * kMoodStrength;
+  }
   CGImageRelease(mood);
+  // a screen that stays as it was changes nothing, and is not painted
+  if (fabs(was[0].strength - _mood[0].strength) + fabs(was[1].strength - _mood[1].strength) < 0.02 && was[0].color == _mood[0].color && was[1].color == _mood[1].color) return;
+  [self fadeOver:kMoodSeconds];
+  [self paint];
+}
+
+- (void)sample {
+  id picture = _picture;
+  _picture = nil;
+  _at = MVNowMs();
+  if (!picture) return;
+  CFTypeRef held = (__bridge CFTypeRef)picture;
+  [self show:CFGetTypeID(held) == IOSurfaceGetTypeID() ? MVPictureMood((IOSurfaceRef)held, self.isDark) : MVImageMood((CVImageBufferRef)held, self.isDark)];
+}
+
+/// At most once in its time, and the last picture always: a screen that stops sends nothing more, and it is the one that stays.
+- (void)follow:(id)picture {
+  _picture = picture;
+  double wait = kBackdropSeconds * 1000 - (MVNowMs() - _at);
+  if (wait <= 0) return [self sample];
+  if (_waiting) return;
+  _waiting = YES;
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(wait * NSEC_PER_MSEC)), dispatch_get_main_queue(), ^{
+    self->_waiting = NO;
+    [self sample];
+  });
 }
 
 - (void)followSurface:(IOSurfaceRef)surface {
-  if ([self isDue]) [self show:MVPictureMood(surface, [self isDark])];
+  [self follow:(__bridge id)surface];
 }
 
 - (void)followImage:(CVImageBufferRef)image {
-  if ([self isDue]) [self show:MVImageMood(image, [self isDark])];
+  [self follow:(__bridge id)image];
 }
 
 @end

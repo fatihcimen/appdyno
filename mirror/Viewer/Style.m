@@ -41,31 +41,13 @@ NSColor *MVSolid(NSColor *color) {
   }];
 }
 
-static NSColor *byLook(NSColor *dark, NSColor *light) {
-  return [NSColor colorWithName:nil dynamicProvider:^NSColor *(NSAppearance *look) {
-    return [[look bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]] isEqual:NSAppearanceNameDarkAqua] ? dark : light;
-  }];
-}
-
-NSColor *MVQuietColor(void) {
-  return byLook([NSColor colorWithWhite:1 alpha:0.76], [NSColor colorWithWhite:0 alpha:0.7]);
-}
-
-// the system's green and orange reach only 2:1 on light glass
-NSColor *MVGreen(void) {
-  return byLook(NSColor.systemGreenColor, [NSColor colorWithSRGBRed:0.09 green:0.5 blue:0.22 alpha:1]);
-}
-
-NSColor *MVOrange(void) {
-  return byLook(NSColor.systemOrangeColor, [NSColor colorWithSRGBRed:0.72 green:0.36 blue:0 alpha:1]);
-}
-
 static void dress(NSTextField *field, MVStyle style) {
   const struct {
     CGFloat size;
     NSFontWeight weight;
     BOOL quiet;
   } kStyles[] = {
+      [MVStyleHero] = {22, NSFontWeightSemibold, NO},
       [MVStyleTitle] = {15, NSFontWeightSemibold, NO},
       [MVStyleBody] = {13, NSFontWeightRegular, NO},
       [MVStyleStrong] = {13, NSFontWeightSemibold, NO},
@@ -74,7 +56,7 @@ static void dress(NSTextField *field, MVStyle style) {
       [MVStyleSub] = {11, NSFontWeightRegular, YES},
   };
   field.font = [NSFont systemFontOfSize:kStyles[style].size weight:kStyles[style].weight];
-  field.textColor = kStyles[style].quiet ? MVQuietColor() : MVSolid(NSColor.labelColor);
+  field.textColor = kStyles[style].quiet ? MVQuietColor() : MVInkColor();
 }
 
 NSTextField *MVText(NSString *text, MVStyle style) {

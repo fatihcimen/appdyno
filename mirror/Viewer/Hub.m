@@ -40,6 +40,11 @@ static NSString *stateWords(NSDictionary *device) {
   self.needsLayout = YES;
 }
 
+- (void)viewDidChangeEffectiveAppearance {
+  [super viewDidChangeEffectiveAppearance];
+  [self.backdrop repaint];
+}
+
 - (void)layout {
   [super layout];
   NSArray<NSView *> *stages = self.stages;
@@ -129,7 +134,7 @@ static NSString *stateWords(NSDictionary *device) {
   _new.identifier = @"new";
   _new.toolTip = MVWord(@"New simulator or emulator");
   _new.accessibilityLabel = _new.toolTip;
-  MVInk *plus = [[MVInk alloc] initWithSymbol:@"plus" color:NSColor.labelColor size:16];
+  MVInk *plus = [[MVInk alloc] initWithSymbol:@"plus" color:MVInkColor() size:16];
   plus.frame = NSMakeRect(0, 0, 24, 24);
   plus.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
   [_new addSubview:plus];
@@ -168,6 +173,7 @@ static NSString *stateWords(NSDictionary *device) {
 - (NSView *)roomView {
   _room = [MVRoomView new];
   _room.wantsLayer = YES;
+  ((MVRoomView *)_room).backdrop = [[MVBackdrop alloc] initInView:_room window:_window];
   _name = MVText(@"", MVStyleTitle);
   _about = MVWrappedText(@"", MVStyleBody);
   _about.alignment = NSTextAlignmentCenter;

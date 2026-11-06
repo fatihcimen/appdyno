@@ -124,11 +124,16 @@ NSArray<NSDictionary *> *MVWindowParts(NSWindow *window);
 CGImageRef _Nullable MVPictureMood(IOSurfaceRef surface, BOOL dark);
 /// The same of a decoded stream's image; NULL for a kind of image it cannot read.
 CGImageRef _Nullable MVImageMood(CVImageBufferRef image, BOOL dark);
-/// What is behind everything in a window: the picture's own colours, so that glass has something of the device to bend.
+/// What is behind everything in a window: the palette's ground, joined by the picture's own colours, so that glass has
+/// something to show whatever the device does.
 @interface MVBackdrop : NSObject
 - (instancetype)initInView:(NSView *)view window:(NSWindow *)window;
 - (void)followSurface:(IOSurfaceRef)surface;
 - (void)followImage:(CVImageBufferRef)image;
+/// A place's colours; 0 for a device.
+- (void)showPlace:(NSInteger)place;
+/// The look changed.
+- (void)repaint;
 @end
 
 /// A mouse's click at a point of a window, posted to this process as the window server would send it.
@@ -177,6 +182,8 @@ NSFont *MVRoundedFont(CGFloat size, NSFontWeight weight);
 /// How many readings it holds: a minute's, unless told.
 @property(nonatomic) int capacity;
 @property(nonatomic, nullable) NSColor *color;
+/// A soft fall of its colour under the line, and a mark at its end.
+@property(nonatomic) BOOL glows;
 - (void)add:(double)value;
 /// The second to come holds a stutter, or does not.
 - (void)mark;
@@ -205,6 +212,8 @@ static const double MVHudWidth = 188;
 @property(nonatomic, copy, nullable) NSString *help;
 @property(nonatomic, copy, nullable) NSString *symbol;
 @property(nonatomic, nullable) NSColor *tint;
+/// Its symbol stands on a tile of this colour.
+@property(nonatomic, nullable) NSColor *tile;
 @property(nonatomic, copy, nullable) NSString *key;
 /// A heading over the rows beneath it, which cannot be chosen.
 @property(nonatomic) BOOL header;
@@ -308,6 +317,8 @@ void MVGiveWay(NSSplitViewItem *item, BOOL narrow, BOOL *gaveWay);
 
 /// Where the chosen stand: one fills it, and two share it evenly. Its window's Inspector goes with it.
 @interface MVRoomView : NSView
+/// What stands behind every stage and place.
+@property(nonatomic) MVBackdrop *backdrop;
 @property(nonatomic) MVInspectorSlot *slot;
 /// The toolbar while no device stands here.
 @property(nonatomic) NSToolbar *bare;

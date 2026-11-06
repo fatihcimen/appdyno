@@ -87,7 +87,7 @@ static NSArray<NSDictionary *> *cards(void) {
 }
 
 - (NSView *)card:(NSDictionary *)card at:(NSUInteger)at {
-  MVInk *mark = [[MVInk alloc] initWithSymbol:card[@"symbol"] color:NSColor.labelColor size:15];
+  MVInk *mark = [[MVInk alloc] initWithSymbol:card[@"symbol"] color:MVInkColor() size:15];
   [mark.widthAnchor constraintEqualToConstant:18].active = YES;
   NSStackView *head = [NSStackView stackViewWithViews:@[mark, MVText(card[@"goal"], MVStyleStrong)]];
   head.spacing = 8;
@@ -158,7 +158,7 @@ static NSArray<NSDictionary *> *cards(void) {
   for (NSView *view in _checks.arrangedSubviews) [view removeFromSuperview];
   for (NSDictionary *check in checks) {
     BOOL ok = [check[@"ok"] boolValue], warn = [check[@"warn"] boolValue];
-    MVInk *mark = [[MVInk alloc] initWithSymbol:ok ? @"checkmark.circle.fill" : warn ? @"exclamationmark.triangle.fill" : @"xmark.octagon.fill" color:ok ? MVGreen() : warn ? MVOrange() : NSColor.systemRedColor size:13];
+    MVInk *mark = [[MVInk alloc] initWithSymbol:ok ? @"checkmark.circle.fill" : warn ? @"exclamationmark.triangle.fill" : @"xmark.octagon.fill" color:ok ? MVGreen() : warn ? MVOrange() : MVRed() size:13];
     [mark.widthAnchor constraintEqualToConstant:18].active = YES;
     NSMutableArray<NSView *> *words = [NSMutableArray arrayWithObject:MVText([NSString stringWithFormat:@"%@: %@", check[@"name"], check[@"detail"]], MVStyleCallout)];
     if ([check[@"fix"] length]) [words addObject:MVParagraph(check[@"fix"], MVStyleSub)];

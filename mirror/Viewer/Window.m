@@ -55,7 +55,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
     _window = room ? (MVOffscreenWindow *)room.window : [self ownWindow];
     MVRootView *root = [[MVRootView alloc] initWithFrame:room ? room.bounds : NSMakeRect(0, 0, 440, 760)];
     root.wantsLayer = YES;
-    _backdrop = [[MVBackdrop alloc] initInView:root window:_window];
+    _backdrop = room ? ((MVRoomView *)room).backdrop : [[MVBackdrop alloc] initInView:root window:_window];
     _root = root;
     __weak MVWindow *held = self;
     root.onResize = ^{
@@ -108,7 +108,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 /// How a device is, said once: a colour around it and the capsule over it. The window's title stays for the Window menu and
 /// Mission Control, and the bar says it, as the system's own title fades to 2:1 in a window behind others.
 - (void)showState {
-  NSColor *edge = _recording || _line.failing ? NSColor.systemRedColor : _waitingForPerson ? MVOrange() : _line.tool ? NSColor.systemPurpleColor : _line.both ? NSColor.controlAccentColor : nil;
+  NSColor *edge = _recording || _line.failing ? MVRed() : _waitingForPerson ? MVOrange() : _line.tool ? MVAgent() : _line.both ? MVAccent() : nil;
   [_frame setEdge:edge];
   if (_window.toolbar != _toolbar) return;
   _window.title = _line.name ?: @"";
@@ -256,9 +256,11 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 
 - (void)showSurface:(IOSurfaceRef)surface {
   [_layers showSurface:surface];
+  [_backdrop followSurface:surface];
 }
 
 - (BOOL)showImage:(CVImageBufferRef)image {
+  [_backdrop followImage:image];
   return [_layers showImage:image];
 }
 
@@ -386,7 +388,7 @@ void MVPresent(MVOffscreenWindow *window, MVShow how) {
 
 /// The toolbar's record button says a movie is being made.
 - (void)setRecording:(BOOL)on {
-  [_bar paint:@"record" symbol:on ? @"stop.circle.fill" : @"record.circle" color:on ? NSColor.systemRedColor : NSColor.labelColor];
+  [_bar paint:@"record" symbol:on ? @"stop.circle.fill" : @"record.circle" color:on ? MVRed() : MVInkColor()];
   [_bar buttonNamed:@"record"].accessibilityLabel = MVWord(on ? @"Stop Recording" : @"Record Screen");
   _recording = on;
   _line.recording = on;

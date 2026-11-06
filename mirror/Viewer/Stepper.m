@@ -55,9 +55,9 @@ static const double kPulseSeconds = 1.4, kPulses = 3, kPulseGrows = 1.7;
   } else if ([self.state isEqual:@"now"]) {
     NSBezierPath *ring = [NSBezierPath bezierPathWithOvalInRect:NSInsetRect(circle, 1, 1)];
     ring.lineWidth = kLine;
-    [MVSolid(NSColor.controlAccentColor) setStroke];
+    [MVAccent() setStroke];
     [ring stroke];
-    [MVSolid(NSColor.controlAccentColor) setFill];
+    [MVAccent() setFill];
     [[NSBezierPath bezierPathWithOvalInRect:NSInsetRect(circle, 6, 6)] fill];
   } else {
     NSString *number = [NSString stringWithFormat:@"%lu", (unsigned long)self.number];
@@ -78,7 +78,7 @@ static const double kPulseSeconds = 1.4, kPulses = 3, kPulseGrows = 1.7;
   _pulse.bounds = CGRectMake(0, 0, 2 * kRadius, 2 * kRadius);
   _pulse.position = CGPointMake(NSMidX(self.bounds), NSMidY(self.bounds));
   _pulse.fillColor = NSColor.clearColor.CGColor;
-  _pulse.strokeColor = MVSolid(NSColor.controlAccentColor).CGColor;
+  _pulse.strokeColor = MVAccent().CGColor;
   _pulse.lineWidth = kLine;
   _pulse.opacity = 0;
   [self.layer addSublayer:_pulse];

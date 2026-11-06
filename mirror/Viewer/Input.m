@@ -176,10 +176,10 @@ static CALayer *dotLayer(CALayer *parent) {
 - (void)showMark:(nullable NSDictionary *)rect {
   if (rect && !_mark) {
     _mark = [CALayer layer];
-    _mark.borderColor = NSColor.controlAccentColor.CGColor;
+    _mark.borderColor = MVAccent().CGColor;
     _mark.borderWidth = 2;
     _mark.cornerRadius = 6;
-    _mark.backgroundColor = [NSColor.controlAccentColor colorWithAlphaComponent:0.14].CGColor;
+    _mark.backgroundColor = [MVAccent() colorWithAlphaComponent:0.14].CGColor;
     _mark.zPosition = 19;
     [self.layer addSublayer:_mark];
   }

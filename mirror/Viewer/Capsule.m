@@ -77,13 +77,13 @@ static NSColor *colorOf(MVTone tone) {
     case MVToneLive:
       return MVGreen();
     case MVToneBusy:
-      return NSColor.labelColor;
+      return MVInkColor();
     case MVToneNeedsYou:
       return MVOrange();
     case MVToneAgent:
-      return NSColor.systemPurpleColor;
+      return MVAgent();
     case MVToneBad:
-      return NSColor.systemRedColor;
+      return MVRed();
   }
 }
 
@@ -116,7 +116,7 @@ static NSColor *colorOf(MVTone tone) {
       [_row.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
     ]];
     _bar = [CALayer layer];
-    _bar.backgroundColor = NSColor.controlAccentColor.CGColor;
+    _bar.backgroundColor = MVAccent().CGColor;
     _bar.anchorPoint = CGPointZero;
     [self.layer addSublayer:_bar];
   }

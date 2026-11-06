@@ -53,7 +53,7 @@ static const double kSymbolSize = 14, kButtonWide = 28, kTitleWidest = 150;
 - (NSToolbarItem *)itemNamed:(NSString *)name {
   NSButton *button = [MVBarButton buttonWithImage:[NSImage new] target:_target action:_action];
   button.bezelStyle = NSBezelStyleToolbar;
-  MVInk *ink = [[MVInk alloc] initWithSymbol:MVControlSymbol(name) color:NSColor.labelColor size:kSymbolSize];
+  MVInk *ink = [[MVInk alloc] initWithSymbol:MVControlSymbol(name) color:MVInkColor() size:kSymbolSize];
   ink.translatesAutoresizingMaskIntoConstraints = NO;
   [button addSubview:ink];
   [NSLayoutConstraint activateConstraints:@[

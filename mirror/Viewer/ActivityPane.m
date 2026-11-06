@@ -29,7 +29,7 @@ static MVRow *rowOfCall(NSDictionary *call) {
   row.help = call[@"args"];
   // only what failed gets a mark: a run of ticks says nothing
   row.symbol = ok ? nil : @"xmark.octagon.fill";
-  row.tint = NSColor.systemRedColor;
+  row.tint = MVRed();
   return row;
 }
 
