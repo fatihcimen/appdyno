@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- `install --remove` leaves a client's settings readable whatever comments stand around its entry: a closing brace under a `//` comment was pulled into it, and the client could no longer read the file. An entry no longer goes into a comment that opens on the line of the brace, and an edit that does not read back as asked is refused, with the file left as it was.
+- A client's file reaches the disk before it replaces the old one, so a power cut leaves one or the other whole.
+- A move or an undo keeps a TOML entry's inline table, literal string or date word for word: it wrote them as strings, and the client refused its whole file. Strings in a JSON entry keep their brackets and spaces too.
+- `install` leaves alone a TOML list written on one line, a file not in UTF-8, a link that leads nowhere and a file closed to writing, each of which it damaged or replaced, and `--remove` no longer takes a server whose quoted name begins with this one's and a dot.
+- What a phone or a simulator sends that cannot be read ends that connection, not the server, and a plist or an archive that names itself ends with an error, where a few small objects ran the process out of memory.
+- A long answer from a phone's service no longer stops at 1 MB when another stream speaks last: each stream gets back the window it used.
+- A failed update leaves none of its copy beside the app, says why when the failure is this Mac's own, and refuses an app whose signer it cannot read.
+- A flight recorder or a timeline that cannot start leaves nothing running, one turned off waits for the trace coming up, a crash is looked for by the device's clock, and a timeline left open stops reading its device at the 180 s it can hold.
+- A store edited by hand no longer takes the whole dashboard down: what cannot be shown is left out.
 - A client that reaches an iPhone as something else starts its runner shares that runner: each started its own, and the one that lost heard nothing for 3 minutes.
 - A hub with a device in it ends within a second of being closed, dark screen or not: a timer for a window that had already gone held the finished process for 5 s.
 - A start's phases are kept once: a run keeps the stamp of the newest start it read, on that phone, and a start is new when it is not that one, which asks no clock of the phone's to agree with another.
