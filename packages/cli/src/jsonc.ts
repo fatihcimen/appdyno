@@ -188,7 +188,19 @@ export function jsonEdit(strict: boolean) {
     return list;
   };
 
+  /** A list left empty stays: it is the user's, and only the entry is this tool's. A name that stands twice goes twice. */
+  function remove(file: string, key: string, name: string): string {
+    const { text, plain, open } = parsed(file);
+    const list = membersOf(plain, open).members.findLast((m) => m.name === key);
+    if (!list) return text;
+    const inner = membersOf(plain, list.value);
+    const i = inner.members.findLastIndex((m) => m.name === name);
+    return i < 0 ? text : remove(cut(text, list.value, inner, i), key, name);
+  }
+
   return {
+    remove,
+
     read: (file: string, key: string, name: string) => listIn(parsed(file).root, key)?.[name],
 
     write(file: string, key: string, name: string, entry: unknown) {
@@ -216,16 +228,6 @@ export function jsonEdit(strict: boolean) {
       return have
         ? splice(text, have.value, have.end, oneLine(entry))
         : insert(text, plain, list.value, inner, unit, () => line);
-    },
-
-    /** A list left empty stays: it is the user's, and only the entry is this tool's. */
-    remove(file: string, key: string, name: string) {
-      const { text, plain, open } = parsed(file);
-      const list = membersOf(plain, open).members.findLast((m) => m.name === key);
-      if (!list) return text;
-      const inner = membersOf(plain, list.value);
-      const i = inner.members.findLastIndex((m) => m.name === name);
-      return i < 0 ? text : cut(text, list.value, inner, i);
     },
   };
 }

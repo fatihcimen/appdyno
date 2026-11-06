@@ -350,6 +350,11 @@ describe('a JSON file', () => {
     expect(after).toContain('"args": ["a[ b", "c ]d", "[ e ]"]');
   });
 
+  it('takes out every copy of a name that stands twice, as a client reads the last', () => {
+    const text = '{"s":{"appdyno":{"a":1},"b":2,"appdyno":{"c":3}}}\n';
+    expect(edit.remove(text, 's', SERVER)).toBe('{"s":{"b":2}}\n');
+  });
+
   it('takes only the list at the top: one nested in a project is another', () => {
     const edits = jsonEdit(true);
     const text = STATE('mcpServers');
