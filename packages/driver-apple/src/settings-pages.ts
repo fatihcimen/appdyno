@@ -46,4 +46,7 @@ export const PHONE_LINKS: SettingsLinks = {
   display: 'prefs:root=DISPLAY',
   sounds: 'prefs:root=Sounds',
   notifications: 'prefs:root=NOTIFICATIONS_ID',
+  software_update: 'prefs:root=General&path=SOFTWARE_UPDATE_LINK',
+  storage: 'prefs:root=General&path=STORAGE_MGMT',
+  date_time: 'prefs:root=General&path=DATE_AND_TIME',
 };
