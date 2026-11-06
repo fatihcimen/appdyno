@@ -5,7 +5,12 @@ type Key = { table: string; name: string; value: string };
 
 const BARE_VALUE = /^(?:true|false|[+-]?(?:inf|nan)|[+-]?\d[\w.:+-]*(?: \d[\w.:+-]*)?)/;
 
-const pathOf = (words: string) => words.replace(/["'\s]/g, '');
+/** A dotted name, without the quotes it can do without: a part that holds a dot is no path, and keeps them. */
+const pathOf = (words: string) =>
+  words.replace(/"(?:[^"\\]|\\.)*"|'[^']*'|\s+/g, (part) => {
+    const inner = part.slice(1, -1);
+    return /^[\w-]+$/.test(inner) ? inner : part.trim();
+  });
 
 /**
  * shortcut: the file's shape, not a full TOML reader: anything it cannot follow is refused, but a duplicate

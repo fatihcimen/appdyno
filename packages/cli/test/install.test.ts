@@ -427,6 +427,13 @@ describe('a TOML file', () => {
     expect(() => tomlEdit.read(text, 'mcp_servers', SERVER)).toThrow('edit it by hand');
   });
 
+  it('takes a server whose name is only quoted to hold a dot for another', () => {
+    const other = `[mcp_servers."${SERVER}.staging"]\ncommand = "elsewhere"\n`;
+    expect(tomlEdit.read(other, 'mcp_servers', SERVER)).toBeUndefined();
+    expect(tomlEdit.remove(`${other}\n${table}`, 'mcp_servers', SERVER)).toBe(other);
+    expect(add(other)).toBe(`${other}\n${table}`);
+  });
+
   it('takes a list of tables or of dotted keys as one a table can join', () => {
     for (const text of [`[mcp_servers.docs]\nc = 1\n`, `mcp_servers.docs.c = 1\n`])
       expect(add(text)).toBe(`${text}\n${table}`);
