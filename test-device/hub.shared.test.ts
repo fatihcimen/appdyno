@@ -184,10 +184,13 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
       },
       /** A person's click on the picture, which has to reach the device with the client driving. */
       touched: async () => {
-        link!.send({ op: 'poke', stage: serial, x: 0.5, y: 0.75 });
+        // on the fixture's title: its home holds Crash and Freeze lower down, and a hang outlasts the scene
+        link!.send({ op: 'poke', stage: serial, x: 0.5, y: 0.11 });
         await until('the touch', () => liveMirror(serial)?.status.touchedAt !== undefined);
         expect(liveMirror(serial)?.status).toMatchObject({ state: 'live', inputFailed: 0 });
       },
+      /** Its clients go, and what they started stays on the device. */
+      leave: () => Promise.all(clients.map((c) => c.close())),
       end: async () => {
         await Promise.all(clients.map((c) => c.close()));
         link?.send({ op: 'quit' });
@@ -254,6 +257,28 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
           await first('tap', { x: 200, y: 400, read: 'none' });
           await second('tap', { x: 200, y: 400, read: 'none' });
           expect(agentIn(s.state, serial)).toBe(agent);
+        } finally {
+          await s.end();
+        }
+      },
+      SCENE_MS,
+    );
+
+    it.runIf(isAndroid(serial))(
+      `replaces at once an agent on ${serial} that nothing here has the state of`,
+      async () => {
+        const before = scene(serial);
+        const first = await before.openClient();
+        await first('launch_app', { read: 'full' });
+        const orphan = agentIn(before.state, serial);
+        await before.leave();
+        // a new home, a moment later: that agent still holds UI automation, and nobody is connected to it
+        const s = scene(serial);
+        try {
+          const call = await s.openClient();
+          await call('launch_app', { read: 'full' });
+          expect(agentIn(s.state, serial)).not.toBe(orphan);
+          await call('tap', { x: 200, y: 400, read: 'none' });
         } finally {
           await s.end();
         }
