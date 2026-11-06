@@ -103,7 +103,7 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
 @implementation MVPerfPane {
   NSMutableArray<MVTrend *> *_trends;
   NSTextField *_sentence, *_app;
-  NSView *_slack, *_none;
+  NSView *_slack, *_none, *_resultsCard;
   NSArray<NSButton *> *_measures;
   NSMutableArray<NSDictionary *> *_kept;
   NSArray<NSDictionary *> *_past;
@@ -126,17 +126,15 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
     _sentence = MVText(@"Waiting for the first readings", MVStyleStrong);
     _app = MVPaneNote(@"Open an app, then measure it. It restarts.");
     _measures = @[rowButton(@"measureLaunch", 0, target), rowButton(@"measureScroll", 1, target), rowButton(@"journey", 2, target)];
-    MVInk *chart = [[MVInk alloc] initWithSymbol:@"chart.bar.xaxis" color:MVQuietColor() size:16];
-    NSStackView *none = [NSStackView stackViewWithViews:@[chart, MVPaneNote(@"No results yet. A measure gives you a number to compare against.")]];
-    none.spacing = 10;
-    _none = MVCard(none, 10);
+    _none = MVEmptyCard(@"chart.bar.xaxis", @"No results yet. A measure gives you a number to compare against.");
     _results = [MVList new];
+    _resultsCard = MVCardInset(_results, 2, 0);
     _slack = [NSView new];
     [_slack setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
     NSView *measures = grouped(_measures);
     NSMutableArray<NSView *> *all = [NSMutableArray arrayWithObject:_sentence];
     [all addObjectsFromArray:lines];
-    [all addObjectsFromArray:@[MVPaneHeading(@"Measure"), measures, _app, MVPaneHeading(@"Results"), _none, _results, _slack, grouped(@[rowButton(@"dashboard", 3, target)])]];
+    [all addObjectsFromArray:@[MVPaneHeading(@"Measure"), measures, _app, MVPaneHeading(@"Results"), _none, _resultsCard, _slack, grouped(@[rowButton(@"dashboard", 3, target)])]];
     NSStackView *stack = [NSStackView stackViewWithViews:all];
     stack.orientation = NSUserInterfaceLayoutOrientationVertical;
     stack.alignment = NSLayoutAttributeLeading;
@@ -145,7 +143,7 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
     [stack setCustomSpacing:kBetween afterView:_sentence];
     [stack setCustomSpacing:kBetween afterView:lines.lastObject];
     [stack setCustomSpacing:kBetween afterView:_app];
-    [_results setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
+    [_resultsCard setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [self addSubview:stack];
     [NSLayoutConstraint activateConstraints:@[
@@ -212,7 +210,7 @@ static MVRow *rowOfResult(NSDictionary *result) {
   row.detail = result[@"detail"] ?: @"";
   row.help = result[@"why"];
   row.symbol = regression ? @"arrow.up.circle.fill" : plain ? @"chart.bar" : @"exclamationmark.triangle.fill";
-  row.tint = regression ? MVRed() : plain ? nil : MVOrange();
+  row.tint = regression ? MVRed() : plain ? MVHue(0) : MVOrange();
   return row;
 }
 
@@ -221,7 +219,7 @@ static MVRow *rowOfResult(NSDictionary *result) {
   for (NSDictionary *result in [_kept arrayByAddingObjectsFromArray:_past]) [rows addObject:rowOfResult(result)];
   _results.rows = rows;
   _none.hidden = _results.rows.count > 0;
-  _results.hidden = !_none.hidden;
+  _resultsCard.hidden = !_none.hidden;
   _slack.hidden = _none.hidden;
 }
 

@@ -1,5 +1,6 @@
 // What an agent did on a device, as a person would tell it: runs of work, each one line, opening to what was done. Calls
 // close together are one run; the newest stands first and open, as it is what a person came to see.
+#import "Place.h"
 #import "Window.h"
 #import "Words.h"
 
@@ -35,14 +36,14 @@ static MVRow *rowOfCall(NSDictionary *call) {
 
 @implementation MVActivityPane {
   MVList *_list;
-  NSTextField *_none;
+  NSView *_none;
   NSMutableArray<MVRun *> *_runs;
 }
 
 - (instancetype)initWithFrame:(NSRect)frame {
   if ((self = [super initWithFrame:frame])) {
     _runs = [NSMutableArray array];
-    _none = MVWrappedText(@"Nothing yet. What an AI client does on this device is told here.", MVStyleBody);
+    _none = MVEmptyCard(@"sparkles", @"Nothing yet. What an AI client does on this device is told here.");
     _list = [MVList new];
     __weak MVActivityPane *weak = self;
     _list.onClick = ^(MVRow *row) {
@@ -59,6 +60,7 @@ static MVRow *rowOfCall(NSDictionary *call) {
       [stack.trailingAnchor constraintEqualToAnchor:self.trailingAnchor],
       [stack.bottomAnchor constraintEqualToAnchor:self.bottomAnchor],
       [_list.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
+      [_none.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
     ]];
     [self listRuns];
   }

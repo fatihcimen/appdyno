@@ -36,7 +36,7 @@ static const MVSide kDark = {
 
 static const MVSide kLight = {
     .ink = 0x12163A, .quiet = 0x434A78, .accent = 0x2447E0, .fillFrom = 0x2F52F0, .fillTo = 0x7A2EE0, .rule = 0x1A2050,
-    .good = 0x0B7A3E, .watch = 0x9A5700, .bad = 0xC4201A, .agent = 0x6A32C8,
+    .good = 0x0B7A3E, .watch = 0x8A4C00, .bad = 0xC4201A, .agent = 0x6A32C8,
     .ground = 0xEEF0FF, .surface = 0xD9DFFF, .card = 0xFFFFFF, .edge = 0xFFFFFF, .cardAlpha = 0.62, .edgeAlpha = 0.8,
     .hues = {0x2447E0, 0x6A32C8, 0xA8189A, 0x0B6FA8, 0x3A4FC0, 0x7F2AC0},
     .tiles = {0x3358F0, 0x7B3DEB, 0xC92AA0, 0x0E86C9, 0x4A55D8, 0x9A35D0},

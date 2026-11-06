@@ -6,7 +6,7 @@
 #import "Window.h"
 #import "Words.h"
 
-static const double kBetweenSections = 24, kShowSeconds = 0.2;
+static const double kBetweenSections = 24, kShowSeconds = 0.2, kCardTile = 28;
 
 typedef struct {
   NSString *device, *of, *in, *object;
@@ -60,7 +60,8 @@ static NSArray<NSDictionary *> *cards(void) {
     _prompts = [NSMutableArray array];
     _cardNotes = [NSMutableArray array];
     _checks = MVPlaceColumn(@[], 6);
-    NSStackView *column = MVPlaceColumn(@[[self about], [self prompts], [self meanings], [self failing]], kBetweenSections);
+    NSView *head = MVPlaceHead(@"questionmark.circle", MVHueTile(4), @"Help", @"What to ask for, what each word means, and what to do when something fails.");
+    NSStackView *column = MVPlaceColumn(@[head, [self about], [self prompts], [self meanings], [self failing]], kBetweenSections);
     NSScrollView *page = MVPlacePage(column);
     page.frame = self.bounds;
     page.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
@@ -75,11 +76,11 @@ static NSArray<NSDictionary *> *cards(void) {
 }
 
 - (NSView *)about {
-  return MVPlaceColumn(@[MVParagraph(@"appdyno lets an AI client see and drive your iPhones, Android phones, simulators and emulators from this Mac. It taps, types, reads the screen and measures how fast your app really is, and it shows all of that here as it happens. Everything runs on this Mac, with no account and no telemetry.", MVStyleBody)], 8);
+  return MVCard(MVPlaceColumn(@[MVParagraph(@"appdyno lets an AI client see and drive your iPhones, Android phones, simulators and emulators from this Mac. It taps, types, reads the screen and measures how fast your app really is, and it shows all of that here as it happens. Everything runs on this Mac, with no account and no telemetry.", MVStyleBody)], 8), 12);
 }
 
 - (NSView *)prompts {
-  NSMutableArray<NSView *> *views = [NSMutableArray arrayWithObjects:MVText(@"What You Can Ask an AI to Do", MVStyleStrong), MVParagraph(@"Copy one into your AI client. Any prompt works in any client, and each says what it does to the device.", MVStyleCallout), nil];
+  NSMutableArray<NSView *> *views = [NSMutableArray arrayWithObjects:MVText(@"What You Can Ask an AI to Do", MVStyleTitle), MVParagraph(@"Copy one into your AI client. Any prompt works in any client, and each says what it does to the device.", MVStyleCallout), nil];
   [cards() enumerateObjectsUsingBlock:^(NSDictionary *card, NSUInteger at, BOOL *stop) {
     [views addObject:[self card:card at:at]];
   }];
@@ -87,11 +88,10 @@ static NSArray<NSDictionary *> *cards(void) {
 }
 
 - (NSView *)card:(NSDictionary *)card at:(NSUInteger)at {
-  MVInk *mark = [[MVInk alloc] initWithSymbol:card[@"symbol"] color:MVInkColor() size:15];
-  [mark.widthAnchor constraintEqualToConstant:18].active = YES;
-  NSStackView *head = [NSStackView stackViewWithViews:@[mark, MVText(card[@"goal"], MVStyleStrong)]];
-  head.spacing = 8;
-  NSButton *copy = MVPlaceButton(@"Copy", [NSString stringWithFormat:@"copyPrompt:%lu", (unsigned long)at], self, @selector(copyPrompt:));
+  NSStackView *head = [NSStackView stackViewWithViews:@[MVTile(card[@"symbol"], MVHueTile((NSInteger)at), kCardTile), MVText(card[@"goal"], MVStyleStrong)]];
+  head.spacing = 10;
+  MVAccentButton *copy = (MVAccentButton *)MVPlaceButton(@"Copy", [NSString stringWithFormat:@"copyPrompt:%lu", (unsigned long)at], self, @selector(copyPrompt:));
+  copy.hue = MVHue((NSInteger)at);
   [head addView:[NSView new] inGravity:NSStackViewGravityTrailing];
   [head addView:copy inGravity:NSStackViewGravityTrailing];
   NSTextField *prompt = MVParagraph(@"", MVStyleBody);
@@ -129,21 +129,22 @@ static NSArray<NSDictionary *> *cards(void) {
 }
 
 - (NSView *)meanings {
-  NSMutableArray<NSView *> *views = [NSMutableArray arrayWithObjects:MVText(@"What Each Panel and Number Means", MVStyleStrong), MVCard(MVPlaceColumn(@[MVParagraph(@"A real device is needed for real measurement. A simulator or an emulator measures this Mac, so its numbers compare only with themselves. Real frame rates, frozen frames, hitches and energy need a phone.", MVStyleStrong)], 0), 12), nil];
+  NSMutableArray<NSView *> *rows = [NSMutableArray array];
+  NSMutableArray<NSView *> *views = [NSMutableArray arrayWithObjects:MVText(@"What Each Panel and Number Means", MVStyleTitle), MVCard(MVPlaceColumn(@[MVParagraph(@"A real device is needed for real measurement. A simulator or an emulator measures this Mac, so its numbers compare only with themselves. Real frame rates, frozen frames, hitches and energy need a phone.", MVStyleStrong)], 0), 12), nil];
   for (NSArray<NSString *> *pair in MVHelpMeanings()) {
-    NSStackView *row = MVPlaceColumn(@[MVText(pair[0], MVStyleCallout), MVParagraph(pair[1], MVStyleSub)], 1);
-    [views addObject:row];
+    [rows addObject:MVPlaceColumn(@[MVText(pair[0], MVStyleStrong), MVParagraph(pair[1], MVStyleSub)], 1)];
   }
+  [views addObject:MVCard(MVPlaceColumn(rows, 10), 12)];
   return MVPlaceColumn(views, 8);
 }
 
 - (NSView *)failing {
-  _doctor = MVPlaceButton(@"Run Doctor", @"runDoctor", self, @selector(runDoctor:));
+  _doctor = MVPlacePrimary(@"Run Doctor", @"runDoctor", self, @selector(runDoctor:));
   NSStackView *lead = [NSStackView stackViewWithViews:@[MVParagraph(@"Doctor checks this Mac and says what it lacks, as appdyno doctor does in a terminal.", MVStyleCallout)]];
   [lead addView:_doctor inGravity:NSStackViewGravityTrailing];
-  NSMutableArray<NSView *> *views = [NSMutableArray arrayWithObjects:MVText(@"When Something Fails", MVStyleStrong), lead, _checks, nil];
-  for (NSArray<NSString *> *pair in MVHelpFailures()) [views addObject:MVPlaceColumn(@[MVText(pair[0], MVStyleCallout), MVParagraph(pair[1], MVStyleSub)], 1)];
-  return MVPlaceColumn(views, 8);
+  NSMutableArray<NSView *> *rows = [NSMutableArray array];
+  for (NSArray<NSString *> *pair in MVHelpFailures()) [rows addObject:MVPlaceColumn(@[MVText(pair[0], MVStyleStrong), MVParagraph(pair[1], MVStyleSub)], 1)];
+  return MVPlaceColumn(@[MVText(@"When Something Fails", MVStyleTitle), lead, _checks, MVCard(MVPlaceColumn(rows, 10), 12)], 8);
 }
 
 - (void)runDoctor:(NSButton *)sender {

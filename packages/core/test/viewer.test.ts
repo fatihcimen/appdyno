@@ -92,7 +92,7 @@ describe('the keyboard', () => {
 
   it('a card over the picture takes no click, but on its own button', () => {
     expect(source('Overlay.m')).toMatch(
-      /@implementation MVCard\n- \(NSView \*\)hitTest[^}]*isKindOfClass:NSButton\.class\] \? hit : nil;/,
+      /@implementation MVOverlayCard\n- \(NSView \*\)hitTest[^}]*isKindOfClass:NSButton\.class\] \? hit : nil;/,
     );
   });
 

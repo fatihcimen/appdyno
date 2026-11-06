@@ -1,5 +1,6 @@
 // What sits over the picture, for a person's eyes: how the stream is, and a request for a person. None of it
 // touches the device, and a click anywhere but on its button goes to the picture.
+#import "Place.h"
 #import "Viewer.h"
 #import "Window.h"
 #import "Words.h"
@@ -7,10 +8,10 @@
 static const double kCardWidth = 264, kInset = 16, kDot = 24, kDotSeconds = 0.3;
 
 /// A click on it is the picture's, even with a card showing; only a button is its own.
-@interface MVCard : NSVisualEffectView
+@interface MVOverlayCard : NSVisualEffectView
 @end
 
-@implementation MVCard
+@implementation MVOverlayCard
 - (NSView *)hitTest:(NSPoint)point {
   NSView *hit = [super hitTest:point];
   return [hit isKindOfClass:NSButton.class] ? hit : nil;
@@ -36,8 +37,8 @@ static NSTextField *words(NSString *text, CGFloat size, NSFontWeight weight, NSC
 }
 
 /// A card of the window's own material, always in its dark form: it sits on a dimmed picture.
-static MVCard *card(NSArray<NSView *> *parts) {
-  MVCard *box = [MVCard new];
+static MVOverlayCard *card(NSArray<NSView *> *parts) {
+  MVOverlayCard *box = [MVOverlayCard new];
   box.material = NSVisualEffectMaterialHUDWindow;
   box.blendingMode = NSVisualEffectBlendingModeWithinWindow;
   box.state = NSVisualEffectStateActive;
@@ -81,7 +82,7 @@ static NSString *symbolOf(NSString *state) {
 
 @implementation MVOverlay {
   __weak NSView *_view;
-  MVCard *_stateCard, *_banner;
+  MVOverlayCard *_stateCard, *_banner;
   NSString *_bannerId;
 }
 
@@ -126,9 +127,7 @@ static NSString *symbolOf(NSString *state) {
   if (fix.length) [parts addObject:words(fix, 12, NSFontWeightRegular, MVInkColor())];
   // what no one can wait out alone gets a step of its own
   if ([state isEqual:@"waiting"] || [state isEqual:@"stopped"]) {
-    NSButton *again = [MVBarButton buttonWithTitle:MVWord(@"Try Again") target:self action:@selector(tryAgain:)];
-    again.identifier = @"tryAgain";
-    [parts addObject:again];
+    [parts addObject:MVPlacePrimary(@"Try Again", @"tryAgain", self, @selector(tryAgain:))];
   }
   _stateCard = card(parts);
   place(_stateCard, view, [_stateCard.centerYAnchor constraintEqualToAnchor:view.centerYAnchor]);
@@ -144,15 +143,13 @@ static NSString *symbolOf(NSString *state) {
   if (!view) return;
   _bannerId = m[@"id"];
   NSMutableArray<NSView *> *parts = [NSMutableArray arrayWithArray:@[
-    symbol(@"hand.raised", NSColor.systemYellowColor),
+    symbol(@"hand.raised", MVOrange()),
     words(m[@"title"] ?: @"Needs you", 14, NSFontWeightSemibold, MVInkColor()),
     words(m[@"text"] ?: @"A person is needed", 12, NSFontWeightRegular, MVInkColor()),
   ]];
   if ([m[@"needsDone"] boolValue]) {
-    NSButton *done = [NSButton buttonWithTitle:MVWord(@"I'm Done") target:self action:@selector(done:)];
-    done.bezelColor = MVAccent();
+    NSButton *done = MVPlacePrimary(@"I'm Done", @"done", self, @selector(done:));
     done.keyEquivalent = @"\r";
-    done.controlSize = NSControlSizeLarge;
     [parts addObject:done];
   }
   _banner = card(parts);

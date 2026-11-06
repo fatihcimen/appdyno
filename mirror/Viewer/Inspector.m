@@ -1,5 +1,6 @@
 // The pane beside the device: the stream's numbers, what an agent has called, and the device's apps. The numbers
 // come from this process; the rest from the parent, by messages.
+#import "Place.h"
 #import "Window.h"
 #import "Words.h"
 
@@ -43,6 +44,7 @@ static NSString *ms(id v) {
   NSDictionary<NSString *, NSTextField *> *_values;
   MVActivityPane *_activity;
   MVList *_apps;
+  NSView *_noApps;
   NSArray<NSDictionary *> *_appList;
   NSSearchField *_filter;
   NSTextField *_appsNote;
@@ -189,6 +191,7 @@ static NSString *ms(id v) {
   _filter.action = @selector(filterChanged:);
   _filter.accessibilityLabel = MVWord(@"Filter apps");
   _apps = [MVList new];
+  _noApps = MVEmptyCard(@"square.grid.2x2", @"No apps of your own on this device yet.");
   __weak MVInspector *weak = self;
   _apps.onSelect = ^(MVRow *row) {
     [weak enableAppButtons:row != nil];
@@ -196,13 +199,15 @@ static NSString *ms(id v) {
   _appsNote = caption(@"");
   _appsNote.lineBreakMode = NSLineBreakByWordWrapping;
   _appsNote.maximumNumberOfLines = 3;
-  _launch = [NSButton buttonWithTitle:MVWord(@"Launch") target:self action:@selector(launchApp:)];
-  _quit = [NSButton buttonWithTitle:MVWord(@"Quit") target:self action:@selector(quitApp:)];
-  _remove = [NSButton buttonWithTitle:MVWord(@"Remove…") target:self action:@selector(removeApp:)];
+  _launch = MVPlaceButton(@"Launch", @"appLaunch", self, @selector(launchApp:));
+  _quit = MVPlaceButton(@"Quit", @"appQuit", self, @selector(quitApp:));
+  _remove = MVPlaceButton(@"Remove…", @"appRemove", self, @selector(removeApp:));
   NSStackView *buttons = [NSStackView stackViewWithViews:@[_launch, _quit, _remove]];
   buttons.distribution = NSStackViewDistributionFillEqually;
   [self enableAppButtons:NO];
-  NSStackView *stack = [NSStackView stackViewWithViews:@[_filter, _apps, _appsNote, buttons]];
+  NSView *gap = [NSView new];
+  [gap setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
+  NSStackView *stack = [NSStackView stackViewWithViews:@[_filter, _noApps, _apps, gap, _appsNote, buttons]];
   stack.orientation = NSUserInterfaceLayoutOrientationVertical;
   stack.alignment = NSLayoutAttributeWidth;
   stack.spacing = 8;
@@ -282,10 +287,13 @@ static NSString *ms(id v) {
     row.title = name;
     row.detail = app[@"version"] ? [NSString stringWithFormat:@"%@  ·  %@", app[@"id"], app[@"version"]] : app[@"id"];
     row.symbol = @"app.dashed";
+    row.tile = MVHueTile((NSInteger)(name.hash % 6));
     row.key = app[@"id"];
     [rows addObject:row];
   }
   _apps.rows = rows;
+  _apps.hidden = rows.count == 0;
+  _noApps.hidden = rows.count > 0;
   [self enableAppButtons:NO];
 }
 

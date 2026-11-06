@@ -1,5 +1,6 @@
 // The Flow pane: what a person's clicks have written so far, and what is under the pointer. The parent reads the device
 // and keeps the recording: this draws what it is told, and says what a click is to do.
+#import "Place.h"
 #import "Window.h"
 #import "Words.h"
 
@@ -13,19 +14,18 @@ static NSString *clickNamed(NSInteger segment) {
 }
 
 @implementation MVFlowPane {
-  NSButton *_record;
+  MVAccentButton *_record;
   NSTextField *_state, *_what, *_ids, *_writes, *_contrast;
-  NSSegmentedControl *_click;
+  NSArray<MVAccentButton *> *_clicks;
+  NSInteger _clickChosen;
   MVList *_steps;
   NSArray<NSString *> *_look;
 }
 
 - (instancetype)initWithFrame:(NSRect)frame target:(id)target {
   if ((self = [super initWithFrame:frame])) {
-    _record = [NSButton buttonWithTitle:MVWord(@"Record") image:MVControlImage(@"recordFlow") ?: [NSImage new] target:target action:@selector(control:)];
-    _record.identifier = @"recordFlow";
+    _record = MVPlacePrimary(@"Record", @"recordFlow", target, @selector(control:));
     _record.accessibilityLabel = MVControlTitle(@"recordFlow");
-    _record.imagePosition = NSImageLeading;
     _state = MVPaneNote(@"Each click is written by the element it touched.");
     _what = MVText(@"Nothing yet", MVStyleStrong);
     _what.lineBreakMode = NSLineBreakByTruncatingTail;
@@ -37,18 +37,25 @@ static NSString *clickNamed(NSInteger segment) {
     _contrast = MVPaneNote(@"");
     _contrast.lineBreakMode = NSLineBreakByWordWrapping;
     _contrast.preferredMaxLayoutWidth = kWordsWide;
-    _click = [NSSegmentedControl segmentedControlWithLabels:@[MVWord(@"Touches"), MVWord(@"Copies"), MVWord(@"Asserts")] trackingMode:NSSegmentSwitchTrackingSelectOne target:self action:@selector(clickChosen:)];
-    _click.selectedSegment = 0;
-    _click.accessibilityLabel = MVWord(@"What a click on the device does");
+    NSMutableArray<MVAccentButton *> *clicks = [NSMutableArray array];
+    [@[@"Touches", @"Copies", @"Asserts"] enumerateObjectsUsingBlock:^(NSString *word, NSUInteger at, BOOL *stop) {
+      MVAccentButton *click = (MVAccentButton *)MVPlaceButton(word, [NSString stringWithFormat:@"clickDoes:%lu", (unsigned long)at], self, @selector(clickChosen:));
+      click.tag = (NSInteger)at;
+      [clicks addObject:click];
+    }];
+    _clicks = clicks;
+    NSStackView *click = [NSStackView stackViewWithViews:clicks];
+    click.spacing = 6;
+    click.accessibilityLabel = MVWord(@"What a click on the device does");
     _steps = [MVList new];
     _look = @[];
-    NSStackView *stack = [NSStackView stackViewWithViews:@[_record, _state, MVPaneHeading(@"Under the pointer"), _what, _ids, _writes, _contrast, MVPaneHeading(@"A click on the device"), _click, MVPaneHeading(@"Steps"), _steps]];
+    NSStackView *stack = [NSStackView stackViewWithViews:@[_record, _state, MVPaneHeading(@"Under the pointer"), _what, _ids, _writes, _contrast, MVPaneHeading(@"A click on the device"), click, MVPaneHeading(@"Steps"), _steps]];
     stack.orientation = NSUserInterfaceLayoutOrientationVertical;
     stack.alignment = NSLayoutAttributeLeading;
     stack.spacing = 4;
     [stack setCustomSpacing:kBetween afterView:_state];
     [stack setCustomSpacing:kBetween afterView:_contrast];
-    [stack setCustomSpacing:kBetween afterView:_click];
+    [stack setCustomSpacing:kBetween afterView:click];
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [self addSubview:stack];
     [NSLayoutConstraint activateConstraints:@[
@@ -57,28 +64,36 @@ static NSString *clickNamed(NSInteger segment) {
       [stack.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-4],
       [stack.bottomAnchor constraintEqualToAnchor:self.bottomAnchor],
       [_steps.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
-      [_click.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
       [_what.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
       [_writes.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
       [_contrast.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
       [_state.widthAnchor constraintEqualToAnchor:stack.widthAnchor],
     ]];
     [_steps setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
+    [self showClick];
   }
   return self;
 }
 
+- (void)showClick {
+  for (MVAccentButton *click in _clicks) {
+    click.hue = click.tag == _clickChosen ? MVAccent() : nil;
+    click.accessibilityValue = click.tag == _clickChosen ? MVWord(@"selected") : nil;
+  }
+}
+
 - (nullable NSString *)clickDoes {
-  return clickNamed(_click.selectedSegment);
+  return clickNamed(_clickChosen);
 }
 
 - (void)chooseClick:(NSString *)does {
-  _click.selectedSegment = [does isEqual:@"copy"] ? 1 : [does isEqual:@"assert"] ? 2 : 0;
-  [self clickChosen:_click];
+  _clickChosen = [does isEqual:@"copy"] ? 1 : [does isEqual:@"assert"] ? 2 : 0;
+  [self showClick];
+  if (self.onClick) self.onClick();
 }
 
-- (void)clickChosen:(id)sender {
-  if (self.onClick) self.onClick();
+- (void)clickChosen:(NSButton *)sender {
+  [self chooseClick:clickNamed(sender.tag) ?: @""];
 }
 
 - (NSString *)recordTitle {
@@ -105,7 +120,8 @@ static NSString *clickNamed(NSInteger segment) {
   BOOL on = [m[@"on"] boolValue], starting = [m[@"starting"] boolValue];
   _record.title = MVWord(on ? @"Stop" : starting ? @"Starting" : @"Record");
   _record.enabled = !starting;
-  _record.contentTintColor = on ? MVRed() : nil;
+  _record.hasDestructiveAction = on;
+  _record.needsDisplay = YES;
   NSArray<NSString *> *lines = [m[@"lines"] isKindOfClass:NSArray.class] ? m[@"lines"] : @[];
   _look = [m[@"look"] isKindOfClass:NSArray.class] ? m[@"look"] : @[];
   _state.stringValue = starting ? @"Reading the screen. The first time, this starts the device agent."

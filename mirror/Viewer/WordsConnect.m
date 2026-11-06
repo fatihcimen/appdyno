@@ -124,6 +124,8 @@ const MVWordRow MVWordTableConnect[] = {
     // the longer stands first: the table is searched in order
     {"%@ min %@ s", "%1$@ dk %2$@ sn"},
     {"%@ s", "%@ sn"},
+    {"What to ask for, what each word means, and what to do when something fails.", "Ne isteyebileceğiniz, her sözcüğün anlamı ve bir şey ters gidince ne yapacağınız."},
+    {"No apps of your own on this device yet.", "Bu cihazda henüz size ait bir uygulama yok."},
     {"Needs an app", "Uygulama gerekli"},
     {"Needs a device", "Cihaz gerekli"},
     {"Needs a folder", "Klasör gerekli"},
