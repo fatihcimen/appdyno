@@ -1,9 +1,8 @@
 import { DeviceError } from '@appdyno/protocol';
-import { parsePlist, plistXml } from '../usbmux.js';
-import { readBplist } from '../webinspector.js';
+import { lockdownFrame, nextLockdownMessage } from '../usbmux.js';
 import { greeted, within, type DtxClient } from './dtx.js';
 import type { IpStack, TcpConnection } from './ipstack.js';
-import type { Archived } from './keyed-archive.js';
+import { isDict, type Archived } from './keyed-archive.js';
 import type { ServiceList } from './services.js';
 
 const SERVICE = 'com.apple.accessibility.axAuditDaemon.remoteserver.shim.remote';
@@ -50,8 +49,6 @@ const attribute = (name: string) =>
     ValueTypeValue_v1: 1,
   });
 
-const isDict = (v: Archived | undefined): v is Dict =>
-  !!v && typeof v === 'object' && !Buffer.isBuffer(v) && !Array.isArray(v);
 const fieldsOf = (v: Archived | undefined): Dict => {
   const outer = isDict(v) ? v.Value : undefined;
   const inner = isDict(outer) ? outer.Value : undefined;
@@ -214,25 +211,17 @@ export class Audit {
 
 /** A service reached over the tunnel is told who calls, in lockdown's framing, and answers twice; what follows is its own. */
 async function checkIn(connection: TcpConnection) {
-  let held = Buffer.alloc(0);
-  const answers: unknown[] = [];
+  let held: Buffer = Buffer.alloc(0);
+  let answers = 0;
   const twice = new Promise<Buffer>((resolve) => {
     connection.onData((d) => {
       held = Buffer.concat([held, d]);
-      while (held.length >= 4 && held.length >= 4 + held.readUInt32BE(0)) {
-        const body = held.subarray(4, 4 + held.readUInt32BE(0));
-        held = held.subarray(4 + body.length);
-        const binary = body.toString('latin1', 0, 6) === 'bplist';
-        answers.push(binary ? readBplist(body) : parsePlist(body.toString()));
-      }
-      if (answers.length >= 2) resolve(held);
+      for (let next; answers < 2 && (next = nextLockdownMessage(held)); answers++) held = next.rest;
+      if (answers >= 2) resolve(held);
     });
   });
-  const hello = Buffer.from(
-    plistXml({ Label: 'appdyno', ProtocolVersion: '2', Request: 'RSDCheckin' }),
+  connection.write(
+    lockdownFrame({ Label: 'appdyno', ProtocolVersion: '2', Request: 'RSDCheckin' }),
   );
-  const size = Buffer.alloc(4);
-  size.writeUInt32BE(hello.length);
-  connection.write(Buffer.concat([size, hello]));
   return twice;
 }

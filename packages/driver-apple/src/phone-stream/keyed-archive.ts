@@ -43,7 +43,10 @@ export function archive(root: Archived): Buffer {
   });
 }
 
-const isDict = (v: Plist | undefined): v is { [k: string]: Plist } =>
+/** What of an archived value has keys: the rest is a value of its own, a list or bytes. */
+export const isDict = <T extends Plist | Archived>(
+  v: T | undefined,
+): v is Extract<T, { [k: string]: unknown }> =>
   !!v && typeof v === 'object' && !Buffer.isBuffer(v) && !Array.isArray(v);
 
 /** An archive as plain values: an object of any other class comes as its fields. */

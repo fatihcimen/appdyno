@@ -1,7 +1,7 @@
 import { LIVE_FIELDS, type LiveField, type LiveSample } from '@appdyno/core';
 import { DtxDouble, DtxInt, greeted, type DtxClient, type DtxMessage } from './dtx.js';
 import type { IpStack, TcpConnection } from './ipstack.js';
-import type { Archived } from './keyed-archive.js';
+import { isDict, type Archived } from './keyed-archive.js';
 import type { ServiceList } from './services.js';
 
 const HUB = 'com.apple.instruments.dtservicehub';
@@ -52,8 +52,6 @@ export function unreadable(why: string, app?: string): LiveSample {
   return { at: Date.now(), ...(app && { app }), absent };
 }
 
-const isDict = (v: Archived | undefined): v is { [k: string]: Archived } =>
-  !!v && typeof v === 'object' && !Buffer.isBuffer(v) && !Array.isArray(v);
 const number = (v: Archived | undefined) => (typeof v === 'number' ? v : undefined);
 
 export type AppReading = { cpuPercent?: number; memoryMb?: number; threads?: number };

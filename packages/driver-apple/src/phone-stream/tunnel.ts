@@ -1,8 +1,14 @@
 import { type Socket } from 'node:net';
 import type { Duplex } from 'node:stream';
 import { connect as tlsConnect, type TLSSocket } from 'node:tls';
-import { connectPort, muxRequest, parsePlist, plistXml, USBMUXD } from '../usbmux.js';
-import { readBplist } from '../webinspector.js';
+import {
+  connectPort,
+  lockdownFrame,
+  muxRequest,
+  nextLockdownMessage,
+  readPlist,
+  USBMUXD,
+} from '../usbmux.js';
 import { IpStack, type PacketStream } from './ipstack.js';
 
 /**
@@ -56,10 +62,7 @@ export async function readPairRecord(udid: string, path = USBMUXD): Promise<Pair
   if (typeof reply.PairRecordData !== 'string') {
     throw new PhoneRefusal('not-trusted', 'this Mac has no pair record with the phone');
   }
-  const data = Buffer.from(reply.PairRecordData, 'base64');
-  const record = (
-    data.toString('latin1', 0, 6) === 'bplist' ? readBplist(data) : parsePlist(data.toString())
-  ) as Record<string, unknown>;
+  const record = readPlist(Buffer.from(reply.PairRecordData, 'base64')) as Record<string, unknown>;
   return {
     hostId: String(record.HostID),
     buid: String(record.SystemBUID),
@@ -86,7 +89,7 @@ const withTls = (socket: Socket, record: PairRecord) =>
     t.once('error', reject);
   });
 
-/** Lockdown's framing: 32 bits of length, an XML plist, one answer per question. */
+/** Lockdown: one answer per question. */
 class Lockdown {
   private buffer: Buffer = Buffer.alloc(0);
   private waiting: ((m: Record<string, unknown>) => void) | undefined;
@@ -103,21 +106,13 @@ class Lockdown {
   }
 
   private pump() {
-    if (!this.waiting || this.buffer.length < 4) return;
-    const n = this.buffer.readUInt32BE(0);
-    if (this.buffer.length < 4 + n) return;
-    const body = this.buffer.subarray(4, 4 + n);
-    const m = (
-      body.toString('latin1', 0, 6) === 'bplist' ? readBplist(body) : parsePlist(body.toString())
-    ) as Record<string, unknown>;
-    this.buffer = this.buffer.subarray(4 + n);
-    this.waiting(m);
+    const next = this.waiting && nextLockdownMessage(this.buffer);
+    if (!next) return;
+    this.buffer = next.rest;
+    this.waiting!(next.message as Record<string, unknown>);
   }
 
   ask(message: Record<string, string>): Promise<Record<string, unknown>> {
-    const body = Buffer.from(plistXml({ Label: LABEL, ...message }));
-    const head = Buffer.alloc(4);
-    head.writeUInt32BE(body.length);
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('lockdown did not answer')), ANSWER_MS);
       this.failed = (e) => {
@@ -132,7 +127,7 @@ class Lockdown {
           reject(new PhoneRefusal(NEEDS_OF[error] ?? 'not-trusted', `the phone refused: ${error}`));
         } else resolve(m);
       };
-      this.socket.write(Buffer.concat([head, body]));
+      this.socket.write(lockdownFrame({ Label: LABEL, ...message }));
       this.pump();
     });
   }

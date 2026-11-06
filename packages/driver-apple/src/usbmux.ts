@@ -1,6 +1,7 @@
 import { connect, type Socket } from 'node:net';
 import { DeviceError } from '@appdyno/protocol';
 import { xmlText } from '@appdyno/core';
+import { readBplist } from './webinspector.js';
 
 /**
  * The USB multiplexer of the Mac (`/var/run/usbmuxd`): lists the connected phones and opens a raw
@@ -76,6 +77,25 @@ export function parsePlist(xml: string): Plist {
     throw new Error(`plist: unexpected ${t}`);
   };
   return value();
+}
+
+/** A property list as a phone sends it: of either kind, with nothing to say which but its first bytes. */
+export const readPlist = (bytes: Buffer) =>
+  bytes.toString('latin1', 0, 6) === 'bplist' ? readBplist(bytes) : parsePlist(bytes.toString());
+
+/** Lockdown's framing, which a service reached over a tunnel keeps: 32 bits of length, then a property list. */
+export function lockdownFrame(message: Plist): Buffer {
+  const body = Buffer.from(plistXml(message));
+  const head = Buffer.alloc(4);
+  head.writeUInt32BE(body.length);
+  return Buffer.concat([head, body]);
+}
+
+/** The first whole message at the head of what has arrived, and what follows it. */
+export function nextLockdownMessage(held: Buffer) {
+  if (held.length < 4 || held.length < 4 + held.readUInt32BE(0)) return undefined;
+  const end = 4 + held.readUInt32BE(0);
+  return { message: readPlist(held.subarray(4, end)), rest: held.subarray(end) };
 }
 
 export function frame(message: Record<string, Plist>, tag: number): Buffer {
