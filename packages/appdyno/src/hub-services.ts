@@ -248,13 +248,14 @@ export function hubServices(o: ServicesOptions): HubServices {
       const undo = undos.get(String(m.client));
       if (!undo) return;
       const plan = planned(m, undo.back ? { back: undo.back } : { remove: true });
-      // nothing changed, and it can be asked again once the file reads; `line` is what keeps a window's Undo on the row
+      // nothing changed, and it can be asked again; `line` is what keeps a window's Undo on the row
       if (!plan || plan.did === 'refused') {
-        const [said, next] = TRIED.notPutBack;
-        return say({
-          ...status(),
-          tested: { client: m.client, ok: false, said, next, line: said },
-        });
+        const now = status();
+        const [said] = TRIED.notPutBack;
+        // a file that cannot be read says why on its row, and one that cannot be written does not
+        const shown = now.rows.find((r) => r.name === m.client)?.why;
+        const next = shown ? '' : (plan?.why ?? '');
+        return say({ ...now, tested: { client: m.client, ok: false, said, next, line: said } });
       }
       if (changes(plan)) apply(plan);
       undos.delete(String(m.client));

@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { noteClientCall } from '@appdyno/core';
@@ -34,7 +42,7 @@ type Said = {
   server: { address?: string };
   notes: unknown[];
   done: { backup: string };
-  tested: { ok: boolean; said: string; line: string };
+  tested: { ok: boolean; said: string; line: string; next: string };
   token: string;
   doctor: unknown;
   preview: { lines: string[] };
@@ -144,6 +152,23 @@ describe('a change', () => {
     const again = await act(p, 'undo');
     expect(again.done).toMatchObject({ client: client.name, did: 'undone' });
     expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ theme: 'dark', [client.key]: {} });
+  });
+
+  it('says why an Undo did not happen where the row does not, as a file closed to writing', async () => {
+    writeFileSync(file, JSON.stringify({ theme: 'dark' }, null, 2));
+    const p = place();
+    await act(p, 'change');
+    const written = readFileSync(file, 'utf8');
+    chmodSync(file, 0o444);
+    const refused = await act(p, 'undo');
+    expect(refused.done).toBeUndefined();
+    expect(refused.tested).toMatchObject({
+      ok: false,
+      next: expect.stringMatching(/EACCES|denied/),
+    });
+    expect(readFileSync(file, 'utf8')).toBe(written);
+    chmodSync(file, 0o644);
+    expect((await act(p, 'undo')).done).toMatchObject({ did: 'undone' });
   });
 
   it('takes out only its entry, and Undo puts back what was set by hand', async () => {
