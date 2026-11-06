@@ -126,6 +126,8 @@ final class WireFixtureTests: XCTestCase {
 
     func testASettleATextAndAPictureAreWhatTheHostTakes() throws {
         same(settleWire(settled: true, ms: 240, reads: 3, quietMs: 200), try XCTUnwrap(result("act.settled")["settle"] as? Wire))
+        same(settleWire(settled: true, ms: 240, reads: 3, quietMs: 200, idleMs: 800),
+             try XCTUnwrap(result("act.watched")["settle"] as? Wire))
         same(textWire(focusMs: 2000, verified: nil), try result("text.keys"))
         same(shotWire(w: 540, h: 1200, png: false, bytes: 4096), try result("screenshot.jpeg"))
         same(shotWire(w: 540, h: 1200, png: true, bytes: 8192), try result("screenshot.png"))

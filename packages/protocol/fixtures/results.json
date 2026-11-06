@@ -99,6 +99,13 @@
       "hash": "abc"
     }
   },
+  "act.watched": {
+    "method": "act",
+    "result": {
+      "settle": { "settled": true, "ms": 240, "reads": 3, "quietMs": 200, "idleMs": 800 },
+      "hash": "abc"
+    }
+  },
   "act.moving": {
     "method": "act",
     "result": {

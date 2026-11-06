@@ -85,6 +85,8 @@ export const SettleResult = z.object({
   /** The quiet window in effect: shorter after a tap on something that cannot react (plain text, empty
    * space), stretched on a loaded device. */
   quietMs: z.number().int().optional(),
+  /** What the agent waited past `ms` for a system alert: a wait of its own, which no time of the app's includes. */
+  idleMs: z.number().int().optional(),
   /** The content is still but a window transition runs: places given are those it comes to rest at. */
   moving: z.boolean().optional(),
 });

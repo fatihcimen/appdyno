@@ -23,8 +23,11 @@ public func treeWire(windows: [Wire], nodes: [Node], truncated: Bool, elapsedMs:
     ["windows": windows, "nodes": nodes.map(\.wire), "truncated": truncated, "elapsedMs": elapsedMs, "hash": hash]
 }
 
-public func settleWire(settled: Bool, ms: Int, reads: Int, quietMs: Int) -> Wire {
-    ["settled": settled, "ms": ms, "reads": reads, "quietMs": quietMs]
+/// `idleMs`: what was waited past `ms` for a system alert, a wait of the runner's own and no time of the app's.
+public func settleWire(settled: Bool, ms: Int, reads: Int, quietMs: Int, idleMs: Int = 0) -> Wire {
+    var w: Wire = ["settled": settled, "ms": ms, "reads": reads, "quietMs": quietMs]
+    if idleMs > 0 { w["idleMs"] = idleMs }
+    return w
 }
 
 /// `verified`: no verdict when the field cannot be read back.

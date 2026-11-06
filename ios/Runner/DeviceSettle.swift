@@ -45,7 +45,7 @@ extension Device {
                 last = (try? capture(job: job)) ?? last
                 idleMs = Int(Date().timeIntervalSince(idleAt) * 1000)
             }
-            out["settle"] = settleWire(settled: r.settled, ms: r.elapsedMs + idleMs, reads: r.reads, quietMs: quiet)
+            out["settle"] = settleWire(settled: r.settled, ms: r.elapsedMs, reads: r.reads, quietMs: quiet, idleMs: idleMs)
         }
         switch a.read {
         case "hash", "tree":
