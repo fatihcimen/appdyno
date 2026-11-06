@@ -80,6 +80,14 @@ describe('what a watch says', () => {
     expect(movedIn(m, SCREEN, { x: 0, y: 500, w: 50, h: 10 })).toBe(false);
     expect(movedIn(watch([{ ...band, kind: 'changes' }]), SCREEN)).toBe(false);
   });
+
+  it('holds "must keep still" to a spinner or a video too, in the box it is asked of', () => {
+    const spinner = watch([{ ...band, kind: 'changes' }]);
+    expect(movedIn(spinner, SCREEN, undefined, true)).toBe(true);
+    expect(movedIn(spinner, SCREEN, { x: 0, y: 130, w: 50, h: 10 }, true)).toBe(true);
+    expect(movedIn(spinner, SCREEN, { x: 0, y: 500, w: 50, h: 10 }, true)).toBe(false);
+    expect(movedIn(watch([]), SCREEN, undefined, true)).toBe(false);
+  });
 });
 
 describe('a window that shares its stream', () => {

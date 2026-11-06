@@ -196,6 +196,8 @@ stop`),
     fails('scroll_to text="x" maxSwipes=3', /step 1 .*maxSwipes/);
     fails('type "cost $${A}"', /step 1 .*literal/);
     fails('assert id=r check=text equals="a" timeoutMs=9', /step 1 .*timeoutMs/);
+    fails('assert id=r check=moves', /step 1 .*what moves/);
+    fails('assert text="x" check=moves', /step 1 .*what moves/);
     fails('unrecorded "gesture pinch"', /step 1 .*gesture pinch/);
     expect(() => yaml('alert allow\nlaunch\nunrecorded "x"')).toThrow(/step 1[^]*step 3/);
     expect(() => toMaestro(parseFlow('launch'))).toThrow(/needs an app/);

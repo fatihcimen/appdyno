@@ -177,15 +177,19 @@ export function motionText(m: MotionWatch, screen: { w: number; h: number }) {
   ].join('\n');
 }
 
-/** Whether something moved inside this box, in tap units; none: anywhere. */
+/**
+ * Whether something moved inside this box, in tap units; none: anywhere. A spinner or a video only changes, with no way
+ * it goes: that is no move to wait for, and neither is it keeping still, so `anyChange` counts those too.
+ */
 export const movedIn = (
   m: MotionWatch,
   screen: { w: number; h: number },
   box?: { x: number; y: number; w: number; h: number },
+  anyChange = false,
 ) =>
   (m.summary?.regions ?? []).some(
     (r) =>
-      r.kind === 'moves' &&
+      (anyChange || r.kind === 'moves') &&
       (!box ||
         (r.x * screen.w < box.x + box.w &&
           (r.x + r.w) * screen.w > box.x &&

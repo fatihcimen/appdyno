@@ -116,6 +116,7 @@ function commands(st: FlowStep): Yaml[] {
     case 'assert': {
       const yes = a.expect !== false;
       const check = a.check ?? 'exists';
+      if (check === 'moves') unsupported('Maestro has no check of what moves on a screen');
       const sel = maestroSelector(st.selector);
       if (check === 'exists' || check === 'absent') {
         const shows = (check === 'exists') === yes;

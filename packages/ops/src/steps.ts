@@ -231,7 +231,7 @@ export function stepsFor(
       w: element.rect.width,
       h: element.rect.height,
     };
-    const moved = movedIn(m, s.device.hello!.screen, box);
+    const moved = movedIn(m, s.device.hello!.screen, box, !a.expect);
     const said = motionText(m, s.device.hello!.screen);
     if (moved !== a.expect) throw new ToolError(`check failed: ${said}`, 'CHECK_FAILED');
     return { screen, done: `check passed: ${said}` };
