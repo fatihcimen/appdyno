@@ -61,6 +61,21 @@ class TestDevice extends RpcDevice {
 const gone: FakeHandler = () => ({ error: 'AGENT_UNAVAILABLE' });
 const tree: FakeHandler = () => ({ result: wireTree([{ t: 'Merhaba' }]) });
 
+describe('a start that failed', () => {
+  class Failing extends TestDevice {
+    protected override async startAgent(): Promise<never> {
+      this.connects++;
+      throw new DeviceError('AGENT_UNAVAILABLE', 'it did not start');
+    }
+  }
+
+  it('lost no connection: a read says so, and spends no second start on it', async () => {
+    const d = new Failing([]);
+    await expect(d.tree()).rejects.toMatchObject({ message: 'it did not start' });
+    expect(d.connects).toBe(1);
+  });
+});
+
 describe('an agent that stops under a device', () => {
   const CHANNEL = 'appdyno.agent.lost';
   const heard: unknown[] = [];

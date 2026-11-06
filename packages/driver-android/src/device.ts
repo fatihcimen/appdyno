@@ -157,8 +157,8 @@ export class AndroidDevice extends RpcDevice implements Device {
     return agent;
   }
 
-  protected override connectionLost(e: unknown) {
-    return super.connectionLost(e) || (e instanceof DeviceError && e.code === 'DEVICE_GONE');
+  protected override connectionLost(e: unknown, had: RpcClient | undefined) {
+    return super.connectionLost(e, had) || (e instanceof DeviceError && e.code === 'DEVICE_GONE');
   }
 
   /** An unplugged cable or a reboot: the agent may still run on the device, its state file finds it. */

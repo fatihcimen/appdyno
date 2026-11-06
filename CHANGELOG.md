@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A read tries a lost connection once more, and no longer a start that failed, which took as long again for the same answer.
 - A start of the iOS runner ends as soon as the runner it started speaks another protocol, and says which build to make again. It waited out its 180 s for an answer it already had.
 - A client's search finds a tool by the words people use, such as emulator, performance, deep link and dark mode, none of which was in any description.
 - `appdyno mcp` is the one way to start the server: `appdyno-mcp` is gone.

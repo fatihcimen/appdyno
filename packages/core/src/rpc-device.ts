@@ -174,7 +174,9 @@ export abstract class RpcDevice extends DeviceActions {
       rpc = await this.ensure();
       return await rpc.call(method, params, { timeoutMs });
     } catch (e) {
-      if (!this.connectionLost(e)) throw await afterTimeout(e, rpc, () => this.restartStuck(rpc!));
+      // no connection to lose: a start that failed takes as long again, for the same answer
+      if (!this.connectionLost(e, rpc))
+        throw await afterTimeout(e, rpc, () => this.restartStuck(rpc!));
       // closed here is not lost: a connection that dropped is worth a new one, and this one was let go
       if (closes !== this.closes || !this.retrySafe.has(method)) throw e;
       this.rpc = undefined;
@@ -183,8 +185,8 @@ export abstract class RpcDevice extends DeviceActions {
     }
   }
 
-  protected connectionLost(e: unknown) {
-    return e instanceof DeviceError && e.code === 'AGENT_UNAVAILABLE';
+  protected connectionLost(e: unknown, had: RpcClient | undefined) {
+    return !!had && e instanceof DeviceError && e.code === 'AGENT_UNAVAILABLE';
   }
 
   protected async beforeRetry(_lost: unknown): Promise<void> {}
