@@ -447,6 +447,30 @@ describe('the flight recorder', () => {
     expect(d.frameTraces).toBe(0);
   });
 
+  it('looks for a crash by the clock of the device, which may be far from this one', async () => {
+    const behind = 3_600_000;
+    const d = new FlightDevice();
+    d.wallClock = async () => Date.now() - behind;
+    const { call } = connect(d, 20);
+    await call('report', { action: 'flight' });
+    const all = d.crashes.bind(d);
+    d.crashes = async (q) => {
+      const answer = await all(q);
+      return {
+        ...answer,
+        reports: answer.reports.filter((r) => !q.since || Date.parse(r.at) >= q.since),
+      };
+    };
+    d.running = false;
+    d.crashReports = [{ at: new Date(Date.now() - behind).toISOString(), reason: 'it crashed' }];
+    d.tell({ at: Date.now() });
+    await until(() => saved().length === 1);
+    d.running = true;
+    const off = call('report', { action: 'stop' });
+    await vi.advanceTimersByTimeAsync(2_000);
+    await off;
+  });
+
   it('ends with its session', async () => {
     const d = new FlightDevice();
     const { call, ctx } = connect(d, 20);

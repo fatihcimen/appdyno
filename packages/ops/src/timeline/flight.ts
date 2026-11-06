@@ -299,7 +299,7 @@ export async function startFlight(
     await alone(async () => {
       if (a !== armed) return;
       if (!(await stillThere(a))) {
-        const crash = await crashOf(Date.now() - (seconds + 5) * 1_000);
+        const crash = await crashOf(Date.now() + a.first.offsetMs - (seconds + 5) * 1_000);
         await disarm(crash && `a crash: ${crash}`);
         await comeBack();
         return;
