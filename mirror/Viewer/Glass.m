@@ -6,7 +6,7 @@
 static const double kNearest = 12;
 static const double kComesAndGoes = 0.18;
 
-NSView *MVGlass(NSView *content, double radius, NSColor *_Nullable tint) {
+NSView *MVGlass(NSView *content, double radius, BOOL holdsControls) {
   Class glass = NSClassFromString(@"NSGlassEffectView");
   if (!glass) {
     NSVisualEffectView *pane = [NSVisualEffectView new];
@@ -29,15 +29,15 @@ NSView *MVGlass(NSView *content, double radius, NSColor *_Nullable tint) {
   NSView *pane = [glass new];
   [pane setValue:content forKey:@"contentView"];
   [pane setValue:@(radius) forKey:@"cornerRadius"];
-  if (tint) [pane setValue:tint forKey:@"tintColor"];
-  // macOS 27: a pane that holds controls answers a touch
-  if ([pane respondsToSelector:NSSelectorFromString(@"setEffectIsInteractive:")]) [pane setValue:@YES forKey:@"effectIsInteractive"];
+  // macOS 27: only what holds controls answers a touch. No tint: glass takes its colour from what stands behind it, and a tint
+  // near opaque turns it solid there
+  if (holdsControls && [pane respondsToSelector:NSSelectorFromString(@"setEffectIsInteractive:")]) [pane setValue:@YES forKey:@"effectIsInteractive"];
   pane.translatesAutoresizingMaskIntoConstraints = NO;
   return pane;
 }
 
 void MVShowPane(NSView *pane, BOOL shown) {
-  if (NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion) {
+  if (!MVMoves()) {
     pane.hidden = !shown;
     pane.alphaValue = 1;
     return;

@@ -85,9 +85,20 @@ void MVGiveWay(NSSplitViewItem *item, BOOL narrow, BOOL *gaveWay) {
   NSViewController *main = [NSViewController new];
   main.view = root;
   NSSplitViewController *split = [NSSplitViewController new];
-  [split addSplitViewItem:[NSSplitViewItem splitViewItemWithViewController:main]];
+  NSSplitViewItem *content = [NSSplitViewItem splitViewItemWithViewController:main];
+  // the device's ground runs on under the Inspector, whose glass shows it, as in the hub
+  if ([content respondsToSelector:NSSelectorFromString(@"setAutomaticallyAdjustsSafeAreaInsets:")]) [content setValue:@YES forKey:@"automaticallyAdjustsSafeAreaInsets"];
+  [split addSplitViewItem:content];
   [split addSplitViewItem:_slot.item];
   _window.contentViewController = split;
+  // running on under the Inspector, the stage's frame stays as it is while the Inspector moves: only its insets change, and the
+  // picture must leave them, as nothing may stand over it. The insets follow the split a turn later
+  __weak MVWindow *weak = self;
+  [NSNotificationCenter.defaultCenter addObserverForName:NSSplitViewDidResizeSubviewsNotification object:split.splitView queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+      [weak layoutPicture];
+    });
+  }];
 }
 
 /// What is read for the Inspector runs while it shows: the slot says when that changed, for this device or by the window's size.
@@ -102,6 +113,14 @@ void MVGiveWay(NSSplitViewItem *item, BOOL narrow, BOOL *gaveWay) {
 
 - (void)letGoOfInspector {
   if (_slot.pane == _inspector) [_slot hold:nil onMove:nil];
+}
+
+- (NSRect)deviceInWindow {
+  return [_frame convertRect:_frame.bounds toView:nil];
+}
+
+- (NSRect)inspectorInWindow {
+  return [_inspector convertRect:_inspector.bounds toView:nil];
 }
 
 - (void)openInspector:(BOOL)open {

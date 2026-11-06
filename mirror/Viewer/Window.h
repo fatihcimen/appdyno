@@ -94,7 +94,7 @@ typedef NS_ENUM(NSInteger, MVTone) { MVToneLive, MVToneBusy, MVToneNeedsYou, MVT
 @end
 
 /// A pane of glass around `content`: the system's where it has one, its nearest material where it has not.
-NSView *MVGlass(NSView *content, double radius, NSColor *_Nullable tint);
+NSView *MVGlass(NSView *content, double radius, BOOL holdsControls);
 /// A pane comes or goes: a short fade, or at once for a person who asked for less motion.
 void MVShowPane(NSView *pane, BOOL shown);
 /// Panes that merge as they near each other, and share one pass.

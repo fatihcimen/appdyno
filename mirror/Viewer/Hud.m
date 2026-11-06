@@ -198,6 +198,7 @@ static MVMeasureCard *cardOf(const MVMeasureRow *row) {
   card.number.font = MVRoundedFont(24, NSFontWeightSemibold);
   card.spark = [MVSpark new];
   card.spark.hidden = YES;
+  card.spark.glows = YES;
   [card.spark.heightAnchor constraintEqualToConstant:kLineHeight].active = YES;
   card.why = small(@"");
   card.why.lineBreakMode = NSLineBreakByTruncatingTail;
@@ -212,7 +213,7 @@ static MVMeasureCard *cardOf(const MVMeasureRow *row) {
   [head.widthAnchor constraintEqualToAnchor:stack.widthAnchor constant:-24].active = YES;
   [card.spark.widthAnchor constraintEqualToAnchor:stack.widthAnchor constant:-24].active = YES;
   [card.why.widthAnchor constraintEqualToAnchor:stack.widthAnchor constant:-24].active = YES;
-  card.pane = MVGlass(stack, 18, nil);
+  card.pane = MVGlass(stack, 18, NO);
   [card.pane.heightAnchor constraintGreaterThanOrEqualToConstant:kCardHeight].active = YES;
   return card;
 }

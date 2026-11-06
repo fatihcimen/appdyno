@@ -57,7 +57,7 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
     _index.edgeInsets = NSEdgeInsetsMake(0, 14, 0, 14);
     _page = MVPlacePage(_column);
     _page.automaticallyAdjustsContentInsets = NO;
-    NSView *bar = MVGlass(_index, kIndexHigh / 2, nil);
+    NSView *bar = MVGlass(_index, kIndexHigh / 2, YES);
     for (NSView *part in @[_page, bar]) {
       part.translatesAutoresizingMaskIntoConstraints = NO;
       [self addSubview:part];

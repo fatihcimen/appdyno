@@ -33,6 +33,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)setZoom:(double)zoom;
 - (void)setFrameShown:(BOOL)shown;
 - (void)toggleInspector;
+- (void)layoutPicture;
 - (void)watchReadings;
 - (void)toggleHud;
 - (void)showState;
@@ -43,6 +44,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)holdInspector;
 - (void)letGoOfInspector;
 - (void)openInspector:(BOOL)open;
+/// Where the device stands and where the Inspector does, in the window: nothing may stand over a device.
+@property(nonatomic, readonly) NSRect deviceInWindow, inspectorInWindow;
 @end
 
 NS_ASSUME_NONNULL_END

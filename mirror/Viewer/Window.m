@@ -156,7 +156,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   // what stands under a sidebar and an Inspector is the backdrop's
   NSEdgeInsets under = _root.safeAreaInsets;
   _stage.frame = NSMakeRect(under.left, 0, all.size.width - [self sideWidth] - under.left - under.right, all.size.height);
-  _hud.frame = NSMakeRect(all.size.width - MVHudWidth - kInset, kInset, MVHudWidth, all.size.height - kTop - kInset);
+  _hud.frame = NSMakeRect(all.size.width - under.right - MVHudWidth - kInset, kInset, MVHudWidth, all.size.height - kTop - kInset);
   if (_picture.width <= 0) return;
   [CATransaction begin];
   [CATransaction setDisableActions:YES];

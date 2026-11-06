@@ -84,6 +84,8 @@ NSView *MVCardInset(NSView *content, CGFloat tall, CGFloat wide);
 /// What belongs to the row above it.
 NSView *MVIndented(NSView *view, CGFloat left);
 /// What lies over a device for a moment, on a solid ground of its own.
+@interface MVNoteView : NSView
+@end
 NSView *MVNote(NSView *content);
 /// Words that take the room they have, with what is pressed at the row's end.
 NSView *MVPlaceRow(NSView *words, NSArray<NSView *> *ends);

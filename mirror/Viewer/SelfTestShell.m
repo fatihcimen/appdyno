@@ -1,7 +1,7 @@
 // The hub's shell, with no device: what a person's real clicks do in its Inspector and capsule, and the places of its sidebar.
 #import "Place.h"
 #import "SelfTest.h"
-#import "Window.h"
+#import "WindowParts.h"
 
 void MVPump(double seconds) {
   NSDate *end = [NSDate dateWithTimeIntervalSinceNow:seconds];
@@ -17,6 +17,14 @@ static void checkTabs(void) {
   [window showPane:MVPanePerf];
   [window.nsWindow displayIfNeeded];
   MVCheck(@"inspector: it opens when a pane is asked for", window.inspecting, nil);
+  // the order that matters: a picture standing, and the Inspector opening beside it
+  [window openInspector:NO];
+  MVPump(0.3);
+  [window setPicture:CGSizeMake(400, 860)];
+  MVPump(0.2);
+  [window openInspector:YES];
+  MVPump(0.5);
+  MVCheck(@"inspector: nothing stands over the device, as the ground runs on under it", NSMaxX(window.deviceInWindow) <= NSMinX(window.inspectorInWindow), [NSString stringWithFormat:@"device to %.0f, Inspector from %.0f", NSMaxX(window.deviceInWindow), NSMinX(window.inspectorInWindow)]);
   NSDictionary *tabs = @{@"tabFlows": @(MVPaneFlow), @"tabApps": @(MVPaneApps), @"tabActivity": @(MVPaneActivity), @"tabPerformance": @(MVPanePerf)};
   for (NSString *tab in tabs) {
     [window pokeClick:tab];

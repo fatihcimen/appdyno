@@ -143,9 +143,6 @@ NSView *MVCardInset(NSView *content, CGFloat tall, CGFloat wide) {
   return card;
 }
 
-@interface MVNoteView : NSView
-@end
-
 @implementation MVNoteView
 - (BOOL)wantsUpdateLayer {
   return YES;

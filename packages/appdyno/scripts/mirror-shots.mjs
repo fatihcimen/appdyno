@@ -29,6 +29,7 @@ const call = (tool, ms, ok, args) => ({ op: 'activity', tool, ms, ok, args, time
 const STATES = {
   window: [live],
   stats: [live, { op: 'poke', pane: 0 }, { pause: 2_500 }],
+  hud: [live, { op: 'poke', control: 'hud' }, { pause: 2_500 }],
   activity: [
     live,
     { op: 'poke', pane: 1 },

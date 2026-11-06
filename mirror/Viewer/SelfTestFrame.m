@@ -189,7 +189,7 @@ static void checkHubChoice(void) {
 
 static void checkGlass(void) {
   NSView *content = [NSView new];
-  NSView *pane = MVGlass(content, 20, nil);
+  NSView *pane = MVGlass(content, 20, NO);
   BOOL system = NSClassFromString(@"NSGlassEffectView") != nil;
   // the glass or its stand-in, and what it holds is in it either way
   MVCheck(@"glass: a pane holds its content", system ? [pane valueForKey:@"contentView"] == content : content.superview == pane, nil);

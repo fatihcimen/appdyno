@@ -8,7 +8,7 @@
 static const double kCardWidth = 264, kInset = 16, kDot = 24, kDotSeconds = 0.3;
 
 /// A click on it is the picture's, even with a card showing; only a button is its own.
-@interface MVOverlayCard : NSVisualEffectView
+@interface MVOverlayCard : MVNoteView
 @end
 
 @implementation MVOverlayCard
@@ -36,16 +36,14 @@ static NSTextField *words(NSString *text, CGFloat size, NSFontWeight weight, NSC
   return field;
 }
 
-/// A card of the window's own material, always in its dark form: it sits on a dimmed picture.
+/// A solid card of the palette's, always in its dark form: it sits on a dimmed picture, and a material would sample a live one.
 static MVOverlayCard *card(NSArray<NSView *> *parts) {
   MVOverlayCard *box = [MVOverlayCard new];
-  box.material = NSVisualEffectMaterialHUDWindow;
-  box.blendingMode = NSVisualEffectBlendingModeWithinWindow;
-  box.state = NSVisualEffectStateActive;
   box.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
   box.wantsLayer = YES;
-  box.layer.cornerRadius = 14;
-  box.layer.masksToBounds = YES;
+  box.layer.cornerRadius = 16;
+  box.layer.cornerCurve = kCACornerCurveContinuous;
+  box.layer.borderWidth = 1;
   box.translatesAutoresizingMaskIntoConstraints = NO;
   NSStackView *stack = [NSStackView stackViewWithViews:parts];
   stack.orientation = NSUserInterfaceLayoutOrientationVertical;
