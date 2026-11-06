@@ -5,17 +5,25 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { afterAll, describe, expect, it } from 'vitest';
 import { viewerBinary, ViewerProcess, type ViewerMessage } from '../packages/core/src/index.js';
-import { androidProvider } from '../packages/driver-android/src/index.js';
-import { appleProvider, IosSimulatorDevice } from '../packages/driver-apple/src/index.js';
+import {
+  Adb,
+  AndroidAgentLauncher,
+  androidProvider,
+} from '../packages/driver-android/src/index.js';
+import {
+  appleProvider,
+  IosPhoneDevice,
+  IosSimulatorDevice,
+} from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, ServerContext, runHub } from '../packages/ops/src/index.js';
 import { liveMirror } from '../packages/ops/src/mirror-state.js';
 import { untilWithin } from './until.js';
 
 /**
  * A person at the hub and an AI client on one device, as the product has them: the real `appdyno mcp` over stdio, in a
- * home of its own whose default state folder is the hub's. On the simulators and emulators APPDYNO_HUB_DEVICES names
- * (never a default), with the fixture installed. APPDYNO_OTHER_AGENT and APPDYNO_OTHER_RUNNER name another build's agent
- * and runner products, for the client an update leaves beside a hub. APPDYNO_SHARED_LOG names a file for how it went.
+ * home of its own whose default state folder is the hub's. On the devices APPDYNO_HUB_DEVICES names (never a default),
+ * with the fixture installed. APPDYNO_OTHER_AGENT and APPDYNO_OTHER_RUNNER name another build's agent and runner products,
+ * for the client an update leaves beside a hub. APPDYNO_SHARED_LOG names a file for how it went.
  */
 const serials = process.env.APPDYNO_HUB_DEVICES?.split(',') ?? [];
 const APP = 'dev.appdyno.fixture';
@@ -28,17 +36,37 @@ const SCENE_MS = 420_000;
 const { APPDYNO_OTHER_AGENT: agentBuild, APPDYNO_OTHER_RUNNER: runnerBuild } = process.env;
 const OTHER_BUILD = {
   ...(agentBuild && { APPDYNO_ANDROID_AGENT: agentBuild }),
-  ...(runnerBuild && { APPDYNO_IOS_PRODUCTS: runnerBuild }),
+  ...(runnerBuild && {
+    APPDYNO_IOS_PRODUCTS: runnerBuild,
+    APPDYNO_IOS_DEVICE_PRODUCTS: runnerBuild,
+  }),
 };
 const BUILDS = [
   { named: 'of this build', env: {} },
   ...(agentBuild || runnerBuild ? [{ named: 'of another build', env: OTHER_BUILD }] : []),
 ];
 
-const isEmulator = (serial: string) => serial.startsWith('emulator-');
+const isSimulator = (serial: string) => /^[0-9A-F]{8}-[0-9A-F]{4}-/i.test(serial);
+const isIphone = (serial: string) => /^[0-9A-F]{8}-[0-9A-F]{16}$/i.test(serial);
+const isAndroid = (serial: string) => !isSimulator(serial) && !isIphone(serial);
+/** An iPhone's stream has its thread only from built files, and this runs from sources. */
+const appleProviderFor = async (serial: string) =>
+  isIphone(serial)
+    ? (
+        (await import(join(MAIN, '../../../driver-apple/dist/index.js'))) as {
+          appleProvider: typeof appleProvider;
+        }
+      ).appleProvider()
+    : appleProvider();
+/** What this test left on a device: a home that goes leaves nothing to find it by. */
+const stopAgent = async (serial: string) => {
+  if (isSimulator(serial)) return new IosSimulatorDevice(serial).stopAgent();
+  if (isIphone(serial)) return new IosPhoneDevice(serial).stopAgent();
+  return new AndroidAgentLauncher(new Adb(), serial).stop();
+};
 /** The agent on the device, by its state file: a simulator has none until something needs it. */
 const agentIn = (state: string, serial: string) => {
-  const file = join(state, `${isEmulator(serial) ? 'android' : 'ios'}-${serial}.json`);
+  const file = join(state, `${isAndroid(serial) ? 'android' : 'ios'}-${serial}.json`);
   return existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')) as { pid?: number }).pid : 0;
 };
 
@@ -63,12 +91,13 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
     };
     const clients: Client[] = [];
     let link: ViewerProcess | undefined;
+    let listed = false;
     let done: Promise<number> | undefined;
 
     const openHub = async () => {
       const binary = await viewerBinary();
       const policy = { ...DEFAULT_POLICY, devices: new RegExp(`^${serial}$`) };
-      const ctx = new ServerContext(policy, [androidProvider(), appleProvider()]);
+      const ctx = new ServerContext(policy, [androidProvider(), await appleProviderFor(serial)]);
       done = runHub(ctx, {
         focus: false,
         behind: true,
@@ -76,10 +105,16 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
         viewer: () => {
           link = new ViewerProcess(binary, ['--hub', '--behind', '--not-key']);
           link.onMessage((m) => heard.push(m));
+          const send = link.send.bind(link);
+          link.send = (m) => {
+            listed ||= m.op === 'hub' && JSON.stringify(m).includes(`"${serial}"`);
+            send(m);
+          };
           return link;
         },
       });
-      await until('its list', () => heard.length > 0);
+      // a choice of a row the window has not been given is lost, and a phone's takes longer than a simulator's
+      await until('its row', () => listed);
       link!.send({ op: 'poke', id: serial });
     };
 
@@ -102,7 +137,12 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
             '--allow-apps',
             APP,
           ],
-          env: { ...outer, HOME: home, ...env },
+          // an iPhone's runner is signed from this user's keychain, which a home of its own has not
+          env: {
+            ...outer,
+            ...(isIphone(serial) ? { APPDYNO_STATE_DIR: state } : { HOME: home }),
+            ...env,
+          },
           stderr: 'ignore',
         }),
       );
@@ -151,8 +191,7 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
         await Promise.all(clients.map((c) => c.close()));
         link?.send({ op: 'quit' });
         await done;
-        // a runner outlives its host, and this home goes
-        if (!isEmulator(serial)) await new IosSimulatorDevice(serial).stopAgent();
+        await stopAgent(serial);
       },
     };
   };
@@ -191,8 +230,8 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
             expect(agentIn(s.state, serial)).toBe(agent);
             await s.drive(call);
             await s.touched();
-            // a cold start ends a simulator's runner by itself, with no hub about
-            if (isEmulator(serial)) expect(agentIn(s.state, serial)).toBe(agent);
+            // a cold start ends a runner by itself, with no hub about
+            if (isAndroid(serial)) expect(agentIn(s.state, serial)).toBe(agent);
           } finally {
             await s.end();
           }
@@ -221,7 +260,7 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
       SCENE_MS,
     );
 
-    it.runIf(isEmulator(serial))(
+    it.runIf(isAndroid(serial))(
       `leaves ${serial} to a client of a state folder of its own`,
       async () => {
         const s = scene(serial);
@@ -238,6 +277,8 @@ describe.runIf(serials.length > 0)('a hub and a client on one device', () => {
           expect(agentIn(own, serial)).toBe(agent);
         } finally {
           await s.end();
+          process.env.APPDYNO_STATE_DIR = own;
+          await stopAgent(serial);
         }
       },
       SCENE_MS,
