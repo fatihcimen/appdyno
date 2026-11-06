@@ -9,8 +9,7 @@ static const NSUInteger kCodeDigits = 6;
 @implementation MVWifiCard {
   NSTextField *_say, *_said, *_address, *_code;
   NSStackView *_fields;
-  NSButton *_forget;
-  MVAccentButton *_pair;
+  NSButton *_forget, *_pair;
   NSString *_serial;
   NSDictionary *_wifi;
   BOOL _pairing;
@@ -26,11 +25,13 @@ static const NSUInteger kCodeDigits = 6;
     _code = [NSTextField textFieldWithString:@""];
     _code.identifier = @"wifiCode";
     _code.placeholderString = MVWord(@"Code");
-    [_address.widthAnchor constraintEqualToConstant:kAddressWide].active = YES;
-    [_code.widthAnchor constraintEqualToConstant:kCodeWide].active = YES;
-    _fields = [NSStackView stackViewWithViews:@[_address, _code]];
+    NSView *addressPlate = MVFieldPlate(_address, nil), *codePlate = MVFieldPlate(_code, nil);
+    [addressPlate.widthAnchor constraintEqualToConstant:kAddressWide].active = YES;
+    [codePlate.widthAnchor constraintEqualToConstant:kCodeWide].active = YES;
+    _fields = [NSStackView stackViewWithViews:@[addressPlate, codePlate]];
     _fields.spacing = 8;
-    _pair = MVPlacePrimary(@"Pair for Wi-Fi", @"pairWifi", self, @selector(pair:));
+    // one colour on a screen, and the step above is what a person came for
+    _pair = MVPlaceButton(@"Pair for Wi-Fi", @"pairWifi", self, @selector(pair:));
     _forget = MVPlaceButton(@"Forget Pairing", @"forgetWifi", self, @selector(forget:));
     NSView *head = MVPlaceRow(MVText(@"Without a Cable", MVStyleStrong), @[_forget, _pair]);
     _view = MVCard(MVPlaceColumn(@[head, _say, _fields, _said], 6), 12);
