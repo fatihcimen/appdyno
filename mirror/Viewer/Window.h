@@ -235,8 +235,9 @@ static const double MVHudWidth = 188;
 /// What a secondary click on a row offers, and the row it was on.
 @property(nonatomic, nullable) NSMenu *rowMenu;
 @property(nonatomic, readonly, nullable) NSString *clickedKey;
-/// Rows are matched by key or title, and what comes or goes opens or closes; else the list just shows what it is given.
+/// With either, rows are matched by key or title, and what comes or goes opens or closes; else a list just shows what it is given.
 - (void)useSidebarStyle;
+- (void)letRowsArrive;
 @end
 
 /// The layers of a device's screen: a surface's or a stream's picture, a cutout where it has none, and a dimming.

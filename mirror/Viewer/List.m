@@ -60,6 +60,7 @@ static NSString *identityOf(MVRow *row);
 
 @implementation MVList {
   NSTableView *_table;
+  BOOL _arrives;
 }
 
 - (instancetype)initWithFrame:(NSRect)frame {
@@ -122,7 +123,7 @@ static NSString *identityOf(MVRow *row) {
 }
 
 - (void)setRows:(NSArray<MVRow *> *)rows {
-  if (_table.style == NSTableViewStyleSourceList && MVMoves() && _rows.count && [self changeTo:rows]) return;
+  if (_arrives && MVMoves() && _rows.count && [self changeTo:rows]) return;
   _rows = [rows copy];
   [_table reloadData];
 }
@@ -178,6 +179,11 @@ static NSString *identityOf(MVRow *row) {
 - (void)useSidebarStyle {
   _table.style = NSTableViewStyleSourceList;
   _table.rowHeight = 44;
+  _arrives = YES;
+}
+
+- (void)letRowsArrive {
+  _arrives = YES;
 }
 
 - (NSTableRowView *)tableView:(NSTableView *)table rowViewForRow:(NSInteger)at {

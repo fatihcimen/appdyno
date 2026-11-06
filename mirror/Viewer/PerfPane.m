@@ -5,7 +5,7 @@
 #import "Window.h"
 
 enum { kSeconds = 60, kResults = 20 };
-static const double kNewsGrows = 1.02;
+static const double kNewsGrows = 1.02, kFirstFrom = 14;
 static const double kChartHeight = 34, kWhyWide = 244, kRowHeight = 36, kRowInset = 10, kTile = 24, kBetween = 14, kFigure = 20, kMaySwayShare = 0.1, kMaySwayFps = 3, kWaiting = 0.6;
 
 /// What a line of readings shows, in the order it stands.
@@ -129,6 +129,7 @@ static MVTrend *trendOf(const MVTrendRow *row, NSInteger hue) {
     _measures = @[rowButton(@"measureLaunch", 0, target), rowButton(@"measureScroll", 1, target), rowButton(@"journey", 2, target)];
     _none = MVEmptyCard(@"chart.bar.xaxis", @"No results yet. A measure gives you a number to compare against.");
     _results = [MVList new];
+    [_results letRowsArrive];
     _resultsCard = MVCardInset(_results, 2, 0);
     _slack = [NSView new];
     [_slack setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationVertical];
@@ -218,10 +219,13 @@ static MVRow *rowOfResult(NSDictionary *result) {
 - (void)listResults {
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
   for (NSDictionary *result in [_kept arrayByAddingObjectsFromArray:_past]) [rows addObject:rowOfResult(result)];
+  BOOL first = _resultsCard.hidden;
   _results.rows = rows;
   _none.hidden = _results.rows.count > 0;
   _resultsCard.hidden = !_none.hidden;
   _slack.hidden = _none.hidden;
+  // only what was just measured is news: a window opening on old results shows them
+  if (first && _none.hidden && _measured) MVSlideIn(_resultsCard, kFirstFrom);
 }
 
 - (void)showMeasured:(NSDictionary *)result {

@@ -101,6 +101,32 @@ static void checkMeasures(void) {
   MVCheck(@"performance: a measure's result stands, and the next can start", [pane.lastResult containsString:@"412 ms"] && MVFindControl(pane, @"measureScroll").enabled, pane.lastResult);
   [pane showMeasured:@{@"ok": @YES, @"flagged": @YES, @"title": @"Scroll", @"value": @"72% jank", @"detail": @"3 rounds"}];
   MVCheck(@"performance: that a measure ran is no verdict, and what its tool found is marked", pane.lastMarked, nil);
+  MVCheck(@"performance: a second result reaches the list, not only its rows", ((NSTableView *)((MVList *)[pane valueForKey:@"_results"]).documentView).numberOfRows == 2, nil);
+}
+
+/// In a window that has been drawn, as a view with no window has no layer to give an animation to.
+static NSView *resultsCardOf(MVPerfPane *pane, NSWindow **holder) {
+  *holder = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 320, 700) styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO];
+  [(*holder).contentView addSubview:pane];
+  [*holder display];
+  return [pane valueForKey:@"_resultsCard"];
+}
+
+static MVPerfPane *newPane(void) {
+  return [[MVPerfPane alloc] initWithFrame:NSMakeRect(0, 0, 276, 600) target:NSNull.null];
+}
+
+static void checkFirstResult(void) {
+  NSWindow *holder;
+  MVPerfPane *pane = newPane();
+  NSView *card = resultsCardOf(pane, &holder);
+  [pane showHistory:@{@"results": @[@{@"title": @"Cold launch", @"value": @"400 ms"}]}];
+  [holder display];
+  MVCheck(@"performance: a window opening on old results shows them, and nothing comes in", card.layer && !card.hidden && ![card.layer animationForKey:@"fade"], nil);
+  pane = newPane();
+  card = resultsCardOf(pane, &holder);
+  [pane showMeasured:@{@"ok": @YES, @"title": @"Cold launch", @"value": @"412 ms", @"detail": @"dev.app"}];
+  MVCheck(@"performance: the first result just measured comes in", [card.layer animationForKey:@"fade"] != nil, nil);
 }
 
 static void checkPair(void) {
@@ -273,6 +299,7 @@ void MVCheckFrame(void) {
   checkGlass();
   checkLive();
   checkMeasures();
+  checkFirstResult();
   checkPair();
   checkClicks();
   checkMenus();
