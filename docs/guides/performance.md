@@ -47,7 +47,7 @@ A gate that cannot judge does not pass. `few-samples`, `noisy` and `refused` all
 
 ## A journey
 
-To measure a whole path through your app, record a [flow](flows.md) and run it with `--measure`. Each step gets its own time, so the gate can name the step that got slower.
+To measure a whole path through your app, record a [flow](flows.md) and [run it with `--measure`](flows.md#a-journey-measured-and-gated). Each step gets its own time, so the gate can name the step that got slower.
 
 ```sh
 appdyno test flows/login.flow --measure --device <id>       # three times, then:

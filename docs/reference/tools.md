@@ -18,12 +18,18 @@ else the one `use_device` selected.
 | measure  | `perf_snapshot`, `perf_scroll`, `perf_launch`, `perf_profile`, `perf_heap`, `perf_trace`, `perf_compare`, `perf_query`     |
 | replay   | `flow`                                                                                                                     |
 
+## Reading the screen
+
 A whole screen in an answer folds what repeats. A plain text or image inside a row whose label holds it gets no line, nor does a control of the row's name at the row's very place, and the first line counts them. Three or more rows alike in a row share one header (`cell x=201 clickable: ref "label" y`). A label given twice over is said once, and what tells alike elements apart only when another line shows the same name. Only the text is folded: `find`, selectors, refs, diffs, flows and `report` still reach every element.
+
+## Targets
 
 A target is a `ref`, `x` and `y`, or a `selector` `{ text, id, role, index }`, resolved on a fresh read
 just before the action. Text matches as `find` does, without case or accents ("İstanbul", "istanbul"),
 and an exact match beats a partial one. Several matches refuse and list them with their refs; no match
 waits a moment, then refuses with the nearest labels.
+
+## Steps, gestures, apps and settings
 
 `steps` runs up to 30 steps across screens. A ref or selector need exist only when its step runs. It
 stops at the first failure, says which step and why, and shows the screen. `wait_for` and selectors
@@ -36,6 +42,8 @@ from one, which stops the app and takes away what the folder does not hold, and 
 project on this Mac: an Xcode project with `scheme` and `configuration`, or a Gradle folder with `scheme` as
 its module and `configuration` as its variant. `device_setting` holds `dark_mode`, `text_size`,
 `reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `push`, `biometric`, `fold`, `call`, `sms` and `keychain`.
+
+## What each platform can do
 
 What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 
@@ -60,6 +68,8 @@ What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 | battery level                | yes                        | no: it only draws one        | no                             |
 | proxy                        | yes, put back              | follows the Mac's            | no: its Wi-Fi settings         |
 
+## Radios, biometrics and the keychain
+
 A radio is done when the device reads as asked, within 10 s: Wi-Fi by the state of the radio, because its setting changes first, and airplane mode and mobile data by the user's switch, so that a restore during airplane mode brings back what they chose. A device that does not change is refused with what it said. A device reached over its network (`adb connect`, wireless debugging) refuses `wifi off` and `airplane on`, because nothing could reach it to put them back. On an emulator, by `test-device/settings.test.ts`, data off or airplane mode on leaves the device with no way to this Mac, and `restore` brings it back. On a Xiaomi with Android 16 all three took effect and read back in 234 to 1,127 ms, its saved networks untouched; it rejoined its Wi-Fi a few seconds after the switch read on. A switch says nothing of a connection.
 
 `biometric` on an emulator touches its sensor and is done only when the fingerprint service counted the touch: `match`, `nomatch`, each refused when no app is asking. A fresh emulator has no fingerprint: set a screen lock, open Settings' fingerprint enrolment, and `enroll` touches until the service holds one. A simulator's `enroll` turns Face ID or Touch ID on. An app's prompt on Android is the system's and holds the focus: it reads as elements like any screen, though a screenshot of it is blank, because it is a secure window.
@@ -67,6 +77,8 @@ A radio is done when the device reads as asked, within 10 s: Wi-Fi by the state 
 On an iPhone `devicectl device simulate biometrics` answers `Device does not support any biometric simulation, nothing to do` and exits 0, so it is not used: an answer would say done for a touch that never happened. That is one iPhone with no face enrolled, and no phone has been seen to take one.
 
 `keychain` `reset` empties a simulator's keychain, and says how many items apps held, from the store's own rows, which also prove it empty after. The system's own rows stay and are not counted. It is one-shot: nothing brings them back.
+
+## Putting a device back
 
 Changing a condition writes the old value down first, with the process that changed it. It goes back
 when that session ends, or with `device_setting` name `restore`, which leaves alone what another live
@@ -86,14 +98,20 @@ A dead owner's claim is free. A second process is refused with the owner's pid a
 to share: `use_device` with `share: true`, `--share` on either command line, or `APPDYNO_SHARE=1`.
 `list_devices` shows who holds what. There is no daemon.
 
+## Starting a simulator or emulator
+
 `simulator` boots and shuts down simulators and emulators, on request only. With no name, shutdown
 touches only what this tool started. `APPDYNO_EMULATOR_ARGS` replaces the emulator's default flags, and `APPDYNO_EMULATOR_FIRST_PORT` is where the search for a free port starts.
+
+## What an action answers
 
 An action answers with the settled screen. `settled` means the screen was still for the window.
 `changed` means the screen differs from before the action, in layout or text; it does not say the action
 caused it. If nothing changed the answer says "no change seen in N ms; if a slow reaction is expected,
 use wait_for". A failed call is an `isError` answer with a `code` and a `hint`, and a failed action says whether its touch went out (`dispatched`). An action reads a screen nobody has seen before it touches it, and a locked phone refuses by name (`DEVICE_LOCKED`). Cancelling a request
 reaches the device, and long operations report progress.
+
+## Logs and crashes
 
 `logs` reads logcat for the app on Android and the simulator log on a simulator. For an iPhone,
 `devicectl` cannot read the log of a running app, and the answer says so. `crashes` collects the
