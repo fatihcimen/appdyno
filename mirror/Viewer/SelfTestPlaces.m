@@ -105,6 +105,9 @@ static void checkServer(MVHub *hub) {
   MVCheck(@"server: Stop asks for that", [clicked(hub, @"serverPower")[@"do"] isEqual:@"stop"], nil);
   [hub showClients:@{@"serverFailed": @"no port free"}];
   [hub showClients:fixture()];
+  [hub showClients:@{@"rows": @[@{@"name": @"", @"state": @"open", @"file": @"/x/none"}, @{@"name": @"\U0001F98A Fox", @"state": @"open", @"file": @"/x/fox"}], @"browser": @[], @"server": @{}}];
+  MVCheck(@"clients: a client of no name, or of a letter two units long, still gets its row", has(hub, @"add:") && has(hub, @"add:\U0001F98A Fox"), wordsOf(hub));
+  [hub showClients:fixture()];
   MVCheck(@"server: why it could not start outlasts the next look", [wordsOf(hub) containsString:@"no port free"], wordsOf(hub));
   MVCheck(@"server: and goes with the next try", [clicked(hub, @"serverPower")[@"do"] isEqual:@"start"], nil);
   [hub showClients:fixture()];

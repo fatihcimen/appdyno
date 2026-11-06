@@ -36,6 +36,11 @@ static NSTextField *line(NSString *text, MVStyle style) {
   return MVParagraph(text, style);
 }
 
+/// A name is whatever a client calls itself: it may be empty, and its first letter may be more than one unit long.
+static NSString *letterOf(NSString *name) {
+  return name.length ? [name substringWithRange:[name rangeOfComposedCharacterSequenceAtIndex:0]].uppercaseString : @"?";
+}
+
 static NSString *shownName(NSDictionary *row) {
   return MVSaid(@{@"en": row[@"name"], @"tr": row[@"tr"] ?: row[@"name"]});
 }
@@ -208,7 +213,7 @@ static NSString *shownName(NSDictionary *row) {
   NSString *name = row[@"name"];
   BOOL browser = [_browserNames containsObject:name];
   // a hue of the palette's, by its name: no client's own colour stands here
-  NSView *mark = MVLetterTile([shownName(row) substringToIndex:1].uppercaseString, MVHueTile((NSInteger)(shownName(row).hash % 6)), kTileSide);
+  NSView *mark = MVLetterTile(letterOf(shownName(row)), MVHueTile((NSInteger)(shownName(row).hash % 6)), kTileSide);
   MVInk *state = [[MVInk alloc] initWithSymbol:symbolOf(row[@"state"]) color:colorOf(row[@"state"]) size:11];
   _stateLines[name] = MVText(stateWords(row), MVStyleSub);
   NSStackView *stateLine = [NSStackView stackViewWithViews:@[state, _stateLines[name]]];
