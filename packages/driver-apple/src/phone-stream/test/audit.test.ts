@@ -69,6 +69,12 @@ describe('DTX frames', () => {
     });
   });
 
+  it('refuses a length no message has, and waits for nothing more', () => {
+    const frame = dtxFrame(7, 'x', [], true);
+    frame.writeUInt32LE(0xffffffff, 12);
+    expect(() => new DtxReader().push(frame)).toThrow('too long');
+  });
+
   it('sends a plain number as one, and on the channel asked for', () => {
     const [m] = new DtxReader().push(dtxFrame(2, 'on', [new DtxInt(5), 'name'], true, 3));
     expect(m?.channel).toBe(3);

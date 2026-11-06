@@ -10,6 +10,8 @@ const AUX_ITEM = 10;
 const AUX_ARCHIVE = 2;
 const AUX_INT = 3;
 const AUX_DOUBLE = 9;
+/** Well past what a service says: a length from the wire would be waited for with all that came after it. */
+const MOST_BYTES = 1 << 28;
 const ANSWER_MS = 5_000;
 const OPEN_MS = 5_000;
 
@@ -118,6 +120,7 @@ export class DtxReader {
       const piece = this.held.readUInt16LE(8);
       const count = this.held.readUInt16LE(10);
       const size = this.held.readUInt32LE(12);
+      if (size > MOST_BYTES) throw new Error('a DTX frame too long to be one');
       const id = this.held.readUInt32LE(16);
       const reply = this.held.readUInt32LE(20) !== 0;
       const channel = this.held.readInt32LE(24);

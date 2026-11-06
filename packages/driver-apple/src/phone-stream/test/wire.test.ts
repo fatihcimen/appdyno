@@ -206,6 +206,20 @@ describe('a service connection', () => {
     expect(given(0)).toBeGreaterThan(rounds * 17 * part.length - 256 * 1024);
   });
 
+  it('refuses a wrapper with no magic, or one no message is as long as, and waits for neither', () => {
+    const spoilt = [
+      (b: Buffer) => b.writeUInt32LE(0, 0),
+      (b: Buffer) => b.writeBigUInt64LE(1n << 62n, 8),
+    ];
+    for (const spoil of spoilt) {
+      const { connection, feed } = fakeConnection();
+      RemoteXpc.start(connection);
+      const message = encodeWrapper(0x101, { a: 1n });
+      spoil(message);
+      expect(() => feed(http2(0, 0, 1, message))).toThrow(RangeError);
+    }
+  });
+
   it('a connection that ends rejects who waits, and who asks later; so does silence', async () => {
     const { connection, end } = fakeConnection();
     const x = RemoteXpc.start(connection);

@@ -41,6 +41,8 @@ const OBJECT_MAGIC = 0x42133742;
 const OBJECT_VERSION = 5;
 const WRAPPER_MAGIC = 0x29b00b92;
 export const WRAPPER_HEADER = 24;
+/** Well past a screenshot, the longest message there is. */
+const MOST_BODY = 1n << 28n;
 
 const u32 = (n: number) => {
   const b = Buffer.alloc(4);
@@ -182,5 +184,13 @@ export function encodeWrapper(flags: number, v?: XpcValue): Buffer {
   return Buffer.concat([h, body]);
 }
 
-/** Length of a wrapper's body, from a buffer that holds its header. */
-export const wrapperBodyLength = (b: Buffer) => Number(b.readBigUInt64LE(8));
+/**
+ * Length of a wrapper's body, from a buffer that holds its header. What is no wrapper, or longer than any message here,
+ * throws: it would be waited for with all that comes after it, and that wait has no end.
+ */
+export function wrapperBodyLength(b: Buffer) {
+  const n = b.readBigUInt64LE(8);
+  if (b.readUInt32LE(0) !== WRAPPER_MAGIC || n > MOST_BODY)
+    throw new RangeError('not the head of an XPC message');
+  return Number(n);
+}
