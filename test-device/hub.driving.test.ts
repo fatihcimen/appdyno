@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { hubPlaces } from '../packages/appdyno/src/hub-places.js';
+import { hubServices } from '../packages/appdyno/src/hub-services.js';
 import { clientNamed, CLIENTS } from '../packages/cli/src/index.js';
 import { viewerBinary, ViewerProcess, type ViewerMessage } from '../packages/core/src/index.js';
 import { appleProvider } from '../packages/driver-apple/src/index.js';
@@ -75,7 +75,7 @@ describe.runIf(serial)('a client driving a device in the hub', () => {
       focus: false,
       behind: true,
       log: () => undefined,
-      places: hubPlaces({
+      services: hubServices({
         home,
         env: { ...process.env, HOME: home },
         mcpCommand: [process.execPath, join(dist, 'main.js'), 'mcp'],

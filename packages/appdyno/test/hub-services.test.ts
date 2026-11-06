@@ -5,7 +5,7 @@ import { noteClientCall } from '@appdyno/core';
 import { BROWSER_CLIENTS, CLIENTS } from '@appdyno/cli';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HubHttp, httpToken, renewHttpToken } from '../src/hub-http.js';
-import { hubPlaces } from '../src/hub-places.js';
+import { hubServices } from '../src/hub-services.js';
 
 const fake = join(import.meta.dirname, 'fake-mcp.mjs');
 /** Plain JSON, a key of `mcpServers`, and a file `install` may begin. */
@@ -15,16 +15,16 @@ const other = CLIENTS.find((c) => c !== client && c.format === 'jsonc' && !c.own
 let home: string;
 let file: string;
 const told: Record<string, unknown>[] = [];
-const places: ReturnType<typeof hubPlaces>[] = [];
+const services: ReturnType<typeof hubServices>[] = [];
 
 function place(o: { mcpCommand?: string[]; dock?: boolean } = {}) {
-  const made = hubPlaces({
+  const made = hubServices({
     home,
     env: { PATH: process.env.PATH },
     mcpCommand: o.mcpCommand ?? [process.execPath, fake, 'http'],
     doctor: async () => [{ name: 'node', ok: true, detail: '22' }],
   });
-  places.push(made);
+  services.push(made);
   return made;
 }
 
@@ -39,7 +39,7 @@ type Said = {
   preview: { lines: string[] };
 };
 
-const act = async (p: ReturnType<typeof hubPlaces>, what: string, more = {}) => {
+const act = async (p: ReturnType<typeof hubServices>, what: string, more = {}) => {
   told.length = 0;
   await p.act({ do: what, client: client.name, ...more }, (said) => told.push(said));
   return told.at(-1) as Said;
@@ -51,14 +51,14 @@ const entryWith = (entry: object) => {
 };
 
 beforeEach(() => {
-  home = mkdtempSync(join(tmpdir(), 'appdyno-places-'));
+  home = mkdtempSync(join(tmpdir(), 'appdyno-services-'));
   file = join(home, client.files[0]!);
   mkdirSync(dirname(file), { recursive: true });
-  vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-places-state-')));
+  vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-services-state-')));
 });
 
 afterEach(async () => {
-  await Promise.all(places.splice(0).map((p) => p.end()));
+  await Promise.all(services.splice(0).map((p) => p.end()));
   rmSync(home, { recursive: true, force: true });
   vi.unstubAllEnvs();
 });
@@ -160,7 +160,7 @@ describe('a change', () => {
 });
 
 describe('Test', () => {
-  const tried = async (p: ReturnType<typeof hubPlaces>, what = client.name) => {
+  const tried = async (p: ReturnType<typeof hubServices>, what = client.name) => {
     await act(p, 'test', { client: what });
     return (told.find((m) => m.tested)!.tested ?? {}) as Record<string, unknown>;
   };

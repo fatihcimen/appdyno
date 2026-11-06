@@ -20,10 +20,10 @@ export type HubRun = {
   /** Makes its window, where a caller does; again if one dies. */
   viewer?: () => ViewerLink;
   /** What its AI Clients and Help ask of this Mac, from a package this one may not import. */
-  places?: HubPlaces;
+  services?: HubServices;
 };
 
-export type HubPlaces = {
+export type HubServices = {
   act(m: Record<string, unknown>, say: (said: Record<string, unknown>) => void): unknown;
   /** The hub is closing: what it started goes with it. */
   end(): Promise<void>;
@@ -126,7 +126,7 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
       ctx.providers
         .find((p) => p.virtual?.kind === m.kind)
         ?.virtual?.create?.(m as unknown as NewDevice),
-    clients: (m) => o.places?.act(m, (said) => link.send({ op: 'clients', ...said })) as void,
+    clients: (m) => o.services?.act(m, (said) => link.send({ op: 'clients', ...said })) as void,
   };
   let leaving = false;
   let windowGone = false;
@@ -177,7 +177,7 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     ended = done;
   });
   clearInterval(timer);
-  await Promise.all([o.places?.end(), parent.stopAll('the hub closed')]);
+  await Promise.all([o.services?.end(), parent.stopAll('the hub closed')]);
   await Promise.all(parent.done.values());
   process.off('SIGINT', onStop);
   process.off('SIGTERM', onStop);

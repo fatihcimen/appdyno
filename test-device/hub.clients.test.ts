@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { hubPlaces } from '../packages/appdyno/src/hub-places.js';
+import { hubServices } from '../packages/appdyno/src/hub-services.js';
 import { CLIENTS, BROWSER_CLIENTS, type Client } from '../packages/cli/src/index.js';
 import {
   noteClientCall,
@@ -86,7 +86,7 @@ describe.runIf(process.env.APPDYNO_HUB_PLACES)('AI Clients and Help', () => {
   };
 
   beforeAll(async () => {
-    home = mkdtempSync(join(tmpdir(), 'appdyno-hub-places-'));
+    home = mkdtempSync(join(tmpdir(), 'appdyno-hub-services-'));
     process.env.APPDYNO_STATE_DIR = join(home, 'state');
     const entries = (client: Client, entry: object) =>
       client.format === 'toml'
@@ -110,7 +110,7 @@ describe.runIf(process.env.APPDYNO_HUB_PLACES)('AI Clients and Help', () => {
       focus: false,
       behind: true,
       log: () => undefined,
-      places: hubPlaces({
+      services: hubServices({
         home,
         env: { ...process.env, HOME: home },
         mcpCommand: [process.execPath, main, 'mcp'],

@@ -10,7 +10,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { hubPlaces } from '../packages/appdyno/src/hub-places.js';
+import { hubServices } from '../packages/appdyno/src/hub-services.js';
 import { CLIENTS } from '../packages/cli/src/index.js';
 import {
   viewerBinary,
@@ -136,7 +136,7 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
       focus: false,
       behind: true,
       log: () => undefined,
-      places: hubPlaces({
+      services: hubServices({
         home,
         env: { ...process.env, HOME: home },
         mcpCommand: [process.execPath, main, 'mcp'],

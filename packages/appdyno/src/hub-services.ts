@@ -22,7 +22,7 @@ import {
 import { Adb, ownSwitches, PLATFORM_TOOLS } from '@appdyno/driver-android';
 import { probeCommand, probeHttp, type Probe } from '@appdyno/mcp';
 import { runKeys } from '@appdyno/perf';
-import { ago, type HubPlaces } from '@appdyno/hub';
+import { ago, type HubServices } from '@appdyno/hub';
 import { guideFor, listedPhones, runnerChecks } from './hub-connect.js';
 import { HubHttp, httpToken, renewHttpToken } from './hub-http.js';
 import { HubRuns } from './hub-run.js';
@@ -81,7 +81,7 @@ function triedWords(probe: Probe, o: { command?: string; connected: boolean }): 
   return { ok: false, said, next, ...(tail && { tail }) };
 }
 
-export type PlacesOptions = {
+export type ServicesOptions = {
   /** Given, as `install` is: nothing but the caller can point this at a real home. */
   home: string;
   env: Record<string, string | undefined>;
@@ -104,7 +104,7 @@ type Say = (said: Message) => void;
 type Undo = { back?: Record<string, unknown> };
 
 /** What the hub's AI Clients and Help ask of this Mac, from `install`'s own code. */
-export function hubPlaces(o: PlacesOptions): HubPlaces {
+export function hubServices(o: ServicesOptions): HubServices {
   const where = { home: o.home, env: o.env, ...(o.server && { server: o.server }) };
   const http = new HubHttp(o.mcpCommand);
   const runs = new HubRuns(o.self ?? o.mcpCommand.slice(0, -1), o.env, o.home);

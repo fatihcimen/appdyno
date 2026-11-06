@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { hubPlaces } from '../packages/appdyno/src/hub-places.js';
+import { hubServices } from '../packages/appdyno/src/hub-services.js';
 import { doctor } from '../packages/appdyno/src/doctor.js';
 import { deviceProviders } from '../packages/appdyno/src/providers.js';
 import {
@@ -115,7 +115,7 @@ describe.runIf(sim)('Connect and Tools on a simulator', () => {
       focus: false,
       behind: true,
       log: () => undefined,
-      places: hubPlaces({
+      services: hubServices({
         home,
         env: { ...process.env, HOME: home, APPDYNO_ALLOW_DEVICES: `^${sim}$` },
         mcpCommand: [process.execPath, main, 'mcp'],

@@ -39,7 +39,7 @@ import { endWithHub } from './lifetime.js';
 import { alertPerson } from './alert.js';
 import { benchmark, appdynoDriver, loadDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
-import { hubPlaces } from './hub-places.js';
+import { hubServices } from './hub-services.js';
 import { hubCommand, mirrorCommand } from './mirror-args.js';
 import { deviceProviders as providers } from './providers.js';
 import { COMMANDS, commandList, helpFor, usage } from './usage.js';
@@ -120,9 +120,9 @@ function contextFrom(values: ServerFlags, remember?: string) {
 }
 
 /** What the hub's AI Clients and Help ask of this Mac: the same checks and entries as `doctor` and `install`. */
-const placesOfHub = (measurements: string) => {
+const servicesOfHub = (measurements: string) => {
   const server = serverOf(root, manifestOf(root).name);
-  return hubPlaces({
+  return hubServices({
     home: homedir(),
     env: process.env,
     ...(server && { server }),
@@ -204,7 +204,7 @@ async function main(): Promise<number> {
     case 'hub':
       return hubCommand(rest, {
         context: contextFrom,
-        hub: (ctx, run) => runHub(ctx, { ...run, places: placesOfHub(ctx.measurementsDir) }),
+        hub: (ctx, run) => runHub(ctx, { ...run, services: servicesOfHub(ctx.measurementsDir) }),
       });
     case 'timeline':
       return timelineCommand(rest, contextFrom);

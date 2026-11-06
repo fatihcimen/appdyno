@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { NEEDS } from '@appdyno/core';
-import { TRIED } from '../src/hub-places.js';
+import { TRIED } from '../src/hub-services.js';
 
 const viewer = join(import.meta.dirname, '../../../mirror/Viewer');
 const source = (file: string) => readFileSync(join(viewer, file), 'utf8');

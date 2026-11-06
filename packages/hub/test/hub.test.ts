@@ -157,12 +157,12 @@ describe('the hub', () => {
   it('passes what a place asks to what serves it, says its answer, and ends it with itself', async () => {
     const { link, told, say, close } = window();
     const end = vi.fn(async () => undefined);
-    const places = { act: vi.fn((m, tell) => tell({ heard: m.do })), end };
+    const services = { act: vi.fn((m, tell) => tell({ heard: m.do })), end };
     const done = runHub(context(new Simulated()), {
       focus: false,
       log: () => undefined,
       viewer: () => link,
-      places,
+      services,
     });
     await vi.waitFor(() => expect(lastList(told)).toBeDefined());
     say({ op: 'hub', action: 'clients', do: 'list' });
@@ -189,17 +189,17 @@ describe('the hub', () => {
     expect(process.listenerCount(FOCUS_SIGNAL)).toBe(before);
   });
 
-  it('closes its streams beside what its places hold, not behind it', async () => {
+  it('closes its streams beside what its services hold, not behind it', async () => {
     const { link, told, close } = window();
     const stopAll = vi.spyOn(Parent.prototype, 'stopAll');
     let held: () => void = () => undefined;
     const end = () => new Promise<void>((done) => (held = done));
-    const places = { act: vi.fn(), end };
+    const services = { act: vi.fn(), end };
     const done = runHub(context(new Simulated()), {
       focus: false,
       log: () => undefined,
       viewer: () => link,
-      places,
+      services,
     });
     await vi.waitFor(() => expect(lastList(told)).toBeDefined());
     close();
