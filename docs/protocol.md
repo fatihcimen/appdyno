@@ -428,11 +428,16 @@ agent would take the device from each other for as long as both run, which is wh
 beside a client that has already moved on. So the agent stays, and the newer host uses it and is told, until its last host
 has gone; `agent-hosts/<serial>.json` in the state folder lists them, and a process's end is what takes it off. A host
 that cannot speak that agent's protocol is refused with the pid of the one that uses it. An iOS runner keeps to the same
-rule. The agent exits after 30 minutes without a
+rule, and one host at a time starts it, by `ios-<udid>.starting` in the state folder: a device serves one runner and its
+state is written only once it answers, so two starting at once took the phone from each other and the one that lost heard
+nothing for 3 minutes. On an iPhone 13 Pro Max a client's first call then took 1 to 6.3 s over 16, hub first or client
+first. The agent exits after 30 minutes without a
 connection. Exit code 3 with `AGENT_CONFLICT` on stderr: another UI automation client holds the device
 (a device has exactly one). The agent says so after trying for 4 s, as the system keeps UI automation for a holder that was
 killed: held 1.3 s after its process had gone, free at 2.3 s, on an emulator, while after a plain `kill` it was free at once.
 
 An agent of ours that this state folder knows nothing of is replaced once, as a cleared cache leaves one behind, unless
 `/proc/net/unix` shows a host connected to it: that is a host with a state folder of its own, and the start is refused
-with `AGENT_CONFLICT`. Where a phone keeps that table from a shell, the agent is replaced.
+with `AGENT_CONFLICT`. Where a phone keeps that table from a shell, the agent is replaced. A Samsung SM-A525F with Android
+14 and a Xiaomi 25078RA3EY with Android 16 both give it: the agent's listening line, `St 01`, and one `St 03` on its path for
+each connection, and the Samsung refused such a start with the other host's calls still answering.

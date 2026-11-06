@@ -8,6 +8,7 @@ import { createInterface } from 'node:readline';
 import { DeviceError, type Hello } from '@appdyno/protocol';
 import { z } from 'zod';
 import {
+  exclusively,
   sleep,
   greet,
   inCheckout,
@@ -18,6 +19,7 @@ import {
   sharedAgent,
   stateDir,
   writeStateFile,
+  type Owner,
   type RpcClient,
 } from '@appdyno/core';
 import { brandSimulatorRunner } from './brand.js';
@@ -240,6 +242,13 @@ export const simulatorTransport: RunnerTransport = {
     }),
 };
 
+/** Another host is starting the runner of this device. */
+class StartingElsewhere extends Error {
+  constructor(readonly holder: Owner) {
+    super(`pid ${holder.pid} is starting this runner`);
+  }
+}
+
 export class IosRunnerLauncher {
   constructor(
     readonly udid: string,
@@ -254,19 +263,46 @@ export class IosRunnerLauncher {
   private get logPath() {
     return join(stateDir(), `ios-${this.udid}.log`);
   }
+  private get startPath() {
+    return join(stateDir(), `ios-${this.udid}.starting`);
+  }
 
-  /** `beforeStart` runs only when a new runner must be started (e.g. to check the simulator is up). */
+  /**
+   * `beforeStart` runs only when a new runner must be started (e.g. to check the simulator is up). One host starts it and
+   * the others wait for that: a device serves one runner, and the state says where only once it answers, so two starting
+   * at once take it from each other, and the one that lost hears nothing until its time is up.
+   */
   async connect(
     target?: string,
     beforeStart?: () => Promise<void>,
   ): Promise<{ rpc: RpcClient; hello: Hello; started: boolean }> {
     const build = await this.transport.build();
-    const state = await this.readState();
-    const running = await sharedAgent(this.udid, state, build.sha256, (s) => this.tryConnect(s));
-    if (running) return running;
-    await beforeStart?.();
-    if (state?.pid) await this.kill(state.pid);
-    return { ...(await this.start(build, target)), started: true };
+    const running = async () => {
+      const state = await this.readState();
+      return sharedAgent(this.udid, state, build.sha256, (s) => this.tryConnect(s));
+    };
+    const start = async () => {
+      const theirs = await running();
+      if (theirs) return theirs;
+      await beforeStart?.();
+      const state = await this.readState();
+      if (state?.pid) await this.kill(state.pid);
+      return { ...(await this.start(build, target)), started: true };
+    };
+    let told = false;
+    for (;;) {
+      const there = await running();
+      if (there) return there;
+      try {
+        const starter = (holder: Owner) => new StartingElsewhere(holder);
+        return await exclusively(this.startPath, 'a runner start', starter, start);
+      } catch (e) {
+        if (!(e instanceof StartingElsewhere)) throw e;
+        if (!told) reportProgress(`waiting for pid ${e.holder.pid} to start the iOS runner`);
+        told = true;
+        await sleep(POLL_MS);
+      }
+    }
   }
 
   async stop(rpc?: RpcClient) {

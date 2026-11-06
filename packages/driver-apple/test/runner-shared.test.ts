@@ -63,4 +63,30 @@ describe('a runner of another build on a simulator', () => {
       'a new runner was asked for',
     );
   });
+
+  it('waits for a start under way and shares what it brings, as two would take the phone from each other', async () => {
+    let finish!: () => void;
+    const held = new Promise<void>((r) => (finish = r));
+    const through = transport();
+    vi.mocked(through.port).mockImplementationOnce(async () => {
+      await held;
+      // what a start leaves as its runner answers; a real one goes on to spawn xcodebuild, which no test may
+      writeFileSync(
+        join(state, `ios-${UDID}.json`),
+        JSON.stringify({ port: 1, token: TOKEN, sha256: 'a'.repeat(64) }),
+      );
+      throw new Error('this start ends here');
+    });
+    const first = new IosRunnerLauncher(UDID, through).connect();
+    await vi.waitFor(() => expect(through.port).toHaveBeenCalledOnce());
+    const second = new IosRunnerLauncher(UDID, through).connect();
+    await new Promise((r) => setTimeout(r, 400));
+    expect(through.port).toHaveBeenCalledOnce();
+    finish();
+    await expect(first).rejects.toThrow('this start ends here');
+    const found = await second;
+    found.rpc.close();
+    expect(found.started).toBe(false);
+    expect(through.port).toHaveBeenCalledOnce();
+  });
 });

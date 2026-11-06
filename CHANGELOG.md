@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A client that reaches an iPhone as something else starts its runner shares that runner: each started its own, and the one that lost heard nothing for 3 minutes.
 - A hub with a device in it ends within a second of being closed, dark screen or not: a timer for a window that had already gone held the finished process for 5 s.
 - A start's phases are kept once: a run keeps the stamp of the newest start it read, on that phone, and a start is new when it is not that one, which asks no clock of the phone's to agree with another.
 - A phone that has slept keeps a start's phases: its starts are stamped on the clock that stops in sleep, so each read as older than the last run and none was kept. A service's start no longer shows a phase of minus 29 hours, as its launch is stamped on the other clock.
