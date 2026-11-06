@@ -142,17 +142,18 @@ function insert(
   return splice(text, eol, eol, `\n${indent}${member(indent)},`);
 }
 
-function cut(text: string, open: number, { members, close }: Members, i: number) {
+/** What can stand after anything on a line: nothing, or a comment to its end. */
+const LINE_ENDS = /^[ \t\r]*(?:\/\/.*)?$/;
+
+function cut(text: string, open: number, { members }: Members, i: number) {
   const m = members[i]!;
   const next = members[i + 1];
   const previous = members[i - 1];
   const past = m.comma === undefined ? m.end : m.comma + 1;
   const gap = spaceBefore(text, m.start);
-  // the close on the member's line stays down there: on the line above, a comment would take it in
-  const from =
-    text.slice(gap, m.start).includes('\n') && !text.slice(past, close).includes('\n')
-      ? m.start
-      : gap;
+  // the line goes with the member only if what stays of it can join the line above: a comment there takes in the rest
+  const rest = text.slice(past, text.indexOf('\n', past));
+  const from = text.slice(gap, m.start).includes('\n') && !LINE_ENDS.test(rest) ? m.start : gap;
   if (members.length === 1) {
     if (text.slice(open + 1, m.start).trim() !== '') return splice(text, from, past, '');
     const end = spaceAfter(text, past);

@@ -328,6 +328,16 @@ describe('a JSON file', () => {
       '{ "s": {\n  "a": 1, // one\n  "appdyno": {} } }\n',
       '{ "s": {\n  "a": 1 // one\n   } }\n',
     ],
+    [
+      'last, with a comment over two lines after it',
+      '{ "s": {\n  "a": 1, // one\n  "appdyno": {} /* two\n  more */\n} }\n',
+      '{ "s": {\n  "a": 1 // one\n   /* two\n  more */\n} }\n',
+    ],
+    [
+      'before a comment over two lines that leads to the next',
+      '{ "s": {\n  "x": 1, // one\n  "appdyno": {}, /* two\n  more */ "a": 1\n} }\n',
+      '{ "s": {\n  "x": 1, // one\n   /* two\n  more */ "a": 1\n} }\n',
+    ],
   ])('leaves valid text when the entry is %s', (_, text, expected) => {
     const after = edit.remove(text, 's', SERVER);
     expect(after).toBe(expected);
@@ -546,22 +556,11 @@ describe('install', () => {
     expect(readFileSync(real, 'utf8')).toContain(SERVER);
   });
 
-  it.each([
-    [
-      'a comment an edit would break',
-      cursor!,
-      { remove: true },
-      '{ "mcpServers": {\n  "x": 1, // one\n  "appdyno": {}, /* a\n  b */ "a": 1\n} }\n',
-    ],
-    [
-      'a table that stands twice',
-      CLIENTS.find((c) => c.format === 'toml')!,
-      {},
-      `[mcp_servers.${SERVER}]\ncommand = "old"\n\n[mcp_servers.${SERVER}]\nargs = ["x"]\n`,
-    ],
-  ])('writes no edit that does not read back as asked: %s', async (_, client, o, text) => {
+  it('writes no edit that does not read back as asked: a table that stands twice', async () => {
+    const client = CLIENTS.find((c) => c.format === 'toml')!;
+    const text = `[mcp_servers.${SERVER}]\ncommand = "old"\n\n[mcp_servers.${SERVER}]\nargs = ["x"]\n`;
     const { home, file } = homeWith(client, text);
-    const { code, err } = await run(home, o);
+    const { code, err } = await run(home);
     expect(code).toBe(1);
     expect(err.join('\n')).toContain('refused');
     expect(readFileSync(file, 'utf8')).toBe(text);
@@ -587,11 +586,12 @@ describe('install', () => {
 
   it('keeps the mark at the head of a file, and its backup is the file to the byte', async () => {
     const client = CLIENTS.find((c) => c.format === 'toml')!;
-    const bytes = Buffer.from('﻿name = "café"\n');
+    const mark = Buffer.from([0xef, 0xbb, 0xbf]);
+    const bytes = Buffer.concat([mark, Buffer.from('name = "café"\n')]);
     const { home, file } = homeWith(client);
     writeFileSync(file, bytes);
     await run(home);
-    expect(readFileSync(file).subarray(0, 3)).toEqual(Buffer.from('﻿'));
+    expect(readFileSync(file).subarray(0, 3)).toEqual(mark);
     expect(readFileSync(join(dirname(file), beside(file)[0]!)).equals(bytes)).toBe(true);
   });
 
