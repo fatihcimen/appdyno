@@ -376,7 +376,10 @@ describe('a measure during a recording', () => {
     expect(stepsOf(text)).toEqual([
       'stop',
       'launch',
-      ...Array<string>(4).fill('swipe up'),
+      // the scroll's two rounds, the list brought back between them
+      ...Array<string>(2).fill('swipe up'),
+      ...Array<string>(2).fill('swipe down'),
+      ...Array<string>(2).fill('swipe up'),
       ...Array<string>(4).fill('swipe down'),
       ...Array<string>(4).fill('swipe up'),
       'launch',

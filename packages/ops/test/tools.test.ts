@@ -413,6 +413,33 @@ describe('perf tools', () => {
     expect(swipe.to.y).toBeLessThan(swipe.from.y);
   });
 
+  it('scroll: each round starts where the first did, as a short list has nothing left for the next', async () => {
+    const dev = new FakeDevice();
+    const t = await connect({}, dev);
+    await t.textOf('perf_scroll', { swipes: 2, repeats: 3 });
+    const way = (c: (typeof dev.calls)[number]) => {
+      if (c.name === 'perf.frames') return 'read';
+      const s = c.args[0] as { from: { y: number }; to: { y: number } };
+      return s.to.y < s.from.y ? 'up' : 'down';
+    };
+    const seen = dev.calls.filter((c) => c.name === 'act' || c.name === 'perf.frames').map(way);
+    expect(seen).toEqual([
+      'up',
+      'up',
+      'read',
+      'down',
+      'down',
+      'up',
+      'up',
+      'read',
+      'down',
+      'down',
+      'up',
+      'up',
+      'read',
+    ]);
+  });
+
   it('launch: the median against the vitals threshold; only allowed apps', async () => {
     const t = await connect({ apps: ['dev.app'] });
     const r = await t.textOf('perf_launch', { mode: 'cold' });

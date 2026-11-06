@@ -3,6 +3,7 @@ import {
   MIN_FRAMES,
   type FrameHistogram,
   type Measured,
+  pause,
   reportProgress,
   median,
 } from '@appdyno/core';
@@ -45,7 +46,7 @@ export function perfScrollOp(ctx: ServerContext) {
     name: 'perf_scroll',
     title: 'Scroll performance',
     description:
-      'Frames, frozen frames and memory while scrolling a list: each round swipes `swipes` times, and reads both once the list stops.',
+      'Frames, frozen frames and memory while scrolling a list: each round swipes `swipes` times, reads both once the list stops, and swipes back, so that every round moves the same rows.',
     input: z
       .object({
         app: App,
@@ -83,6 +84,7 @@ export function perfScrollOp(ctx: ServerContext) {
       const hitches: number[] = [];
       const histograms: FrameHistogram[] = [];
       const swipeAll = await scroller(s, direction, 0, swipes);
+      const swipeBack = await scroller(s, direction === 'up' ? 'down' : 'up', 0, swipes);
       const framesOfRound = () =>
         measure(s, 'framesDuring', row)(
           pkg,
@@ -112,6 +114,11 @@ export function perfScrollOp(ctx: ServerContext) {
         if (f.value.totalFrames > 0 && f.value.stalls) stalls.push(f.value.stalls.worstMs);
         if (f.value.totalFrames > 0 && f.value.worstHitchMs !== undefined)
           hitches.push(f.value.worstHitchMs);
+        if (r === repeats - 1) break;
+        // a short list ends within a round, and a round that moves nothing has no frames, which a phone refuses; the
+        // list then comes to rest, or the next round would count its coasting
+        await swipeBack();
+        await pause(COAST_SECONDS * 1_000);
       }
       s.acted();
       const counted = rounds.filter((x) => x.frames >= MIN_FRAMES);

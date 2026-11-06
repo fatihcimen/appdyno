@@ -214,10 +214,15 @@ const restarts = (a: Record<string, unknown>) => [
 const MEASURES: Record<string, ToStep> = {
   perf_launch: (a) =>
     a.mode === 'cold' ? restarts(a) : stepOf('launch', {}, { app: a.app as string | undefined }),
-  perf_scroll: (a, data) => [
-    ...(data.relaunched ? restarts(a) : []),
-    ...swipes(a, (a.swipes as number) * (a.repeats as number)),
-  ],
+  perf_scroll: (a, data) => {
+    const count = a.swipes as number;
+    const back = { direction: a.direction === 'up' ? 'down' : 'up' };
+    const rounds = Array.from({ length: a.repeats as number }, (_, round) => [
+      ...(round ? swipes(back, count) : []),
+      ...swipes(a, count),
+    ]);
+    return [...(data.relaunched ? restarts(a) : []), ...rounds.flat()];
+  },
   perf_trace: (a, data) => [
     ...(data.relaunched || String(a.what).startsWith('xct_') ? restarts(a) : []),
     ...(a.scroll ? swipes(a, SCROLLER_SWIPES) : []),
