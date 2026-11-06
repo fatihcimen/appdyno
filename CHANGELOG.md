@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A hub with a device in it ends within a second of being closed, dark screen or not: a timer for a window that had already gone held the finished process for 5 s.
 - A start's phases are kept once: a run keeps the stamp of the newest start it read, on that phone, and a start is new when it is not that one, which asks no clock of the phone's to agree with another.
 - A phone that has slept keeps a start's phases: its starts are stamped on the clock that stops in sleep, so each read as older than the last run and none was kept. A service's start no longer shows a phase of minus 29 hours, as its launch is stamped on the other clock.
 - The viewer a Mac compiles on first use, and the one in the app, hold no test code: about 14 % less to build, and no test switch in what a person runs.

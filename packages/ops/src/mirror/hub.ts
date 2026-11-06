@@ -137,7 +137,12 @@ async function ownerOf(ctx: ServerContext, id: string) {
 }
 
 /** The stage of one device in the hub's window, as a session sees a viewer. */
-function stageLink(link: () => ViewerLink, stage: string, heard: Map<string, Stage>): ViewerLink {
+export function stageLink(
+  link: () => ViewerLink,
+  stage: string,
+  heard: Map<string, Stage>,
+  windowGone: () => boolean,
+): ViewerLink {
   const own: Stage = { message: () => undefined, exit: () => undefined };
   heard.set(stage, own);
   return {
@@ -147,6 +152,8 @@ function stageLink(link: () => ViewerLink, stage: string, heard: Map<string, Sta
     },
     onExit: (listener) => {
       own.exit = listener;
+      // once, however it ended: what waits for a stage whose window has gone would wait out its limit for nothing
+      if (windowGone()) listener('');
     },
     kill: () => link().send({ op: 'quit', stage }),
   };
@@ -228,7 +235,13 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     options: { quality: 'auto' },
     headless: false,
     ...(o.behind && { behind: true }),
-    viewer: (serial) => async () => stageLink(() => link, serial, stages),
+    viewer: (serial) => async () =>
+      stageLink(
+        () => link,
+        serial,
+        stages,
+        () => windowGone,
+      ),
     noInput: false,
     focus: false,
     inputOnClick: false,
@@ -294,6 +307,7 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     clients: (m) => o.places?.act(m, (said) => link.send({ op: 'clients', ...said })) as void,
   };
   let leaving = false;
+  let windowGone = false;
   let ended: () => void = () => undefined;
   let deaths: number[] = [];
   const heard = (m: ViewerMessage) => {
@@ -315,7 +329,10 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     fresh.onMessage(heard);
     fresh.onExit((tail) => {
       deaths = [...deaths.filter((t) => Date.now() - t < DEATHS_MS), Date.now()];
-      if (leaving || deaths.length > MAX_DEATHS) return ended();
+      if (leaving || deaths.length > MAX_DEATHS) {
+        windowGone = true;
+        return ended();
+      }
       o.log(`the window ended, and comes back: ${tail.slice(-200)}`);
       said = '';
       listen(start());

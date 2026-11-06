@@ -12,7 +12,7 @@ import type {
 } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startOf } from '@appdyno/core';
-import { hubDevices, runHub, type HubDevice } from '../src/mirror/hub.js';
+import { hubDevices, runHub, stageLink, type HubDevice } from '../src/mirror/hub.js';
 import { Parent } from '../src/mirror/parent.js';
 import { removeMirrorFile, writeMirrorFile } from '../src/mirror-state.js';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
@@ -215,6 +215,23 @@ describe('the hub', () => {
     expect(open).not.toHaveBeenCalled();
     close();
     await done;
+  });
+
+  it('says at once that a stage has ended once its window has, as a limit would hold the hub up for nothing', () => {
+    let gone = false;
+    const stage = stageLink(
+      () => window().link,
+      'R58M',
+      new Map(),
+      () => gone,
+    );
+    const early = vi.fn();
+    stage.onExit(early);
+    expect(early).not.toHaveBeenCalled();
+    gone = true;
+    const late = vi.fn();
+    stage.onExit(late);
+    expect(late).toHaveBeenCalledOnce();
   });
 
   it('takes a device back as soon as its own window has come and gone', async () => {
