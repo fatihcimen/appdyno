@@ -1,31 +1,6 @@
 import Foundation
 import Network
 
-/// One request's work: run on the main thread in arrival order, stopped by its deadline or a cancel.
-final class Job {
-    let id: Int
-    let method: String
-    let params: [String: Any]
-    let deadline: Date
-    private let lock = NSLock()
-    private var _cancelled = false
-
-    init(id: Int, method: String, params: [String: Any]) throws {
-        self.id = id
-        self.method = method
-        self.params = params
-        deadline = Date().addingTimeInterval(try requiredNumber(params, "_deadlineMs") / 1000)
-    }
-
-    var cancelled: Bool {
-        get { lock.lock(); defer { lock.unlock() }; return _cancelled }
-        set { lock.lock(); _cancelled = newValue; lock.unlock() }
-    }
-
-    /// True once the caller no longer waits (cancelled, or past its deadline).
-    var over: Bool { cancelled || Date() >= deadline }
-}
-
 /// What a method answers: a JSON result and, for a screenshot, the image bytes.
 struct Reply {
     var result: [String: Any]
@@ -79,7 +54,6 @@ final class Server {
     private let pump: MainPump
     private let handle: (Job) throws -> Reply
     private let hello: () -> [String: Any]
-    private var running: [Int: Job] = [:]
     private let startedAt = Date()
 
     init(port: UInt16, token: String, pump: MainPump, hello: @escaping () -> [String: Any],
@@ -110,6 +84,7 @@ final class Server {
     private final class Session {
         let connection: NWConnection
         let decoder = FrameDecoder()
+        let jobs = JobTable()
         var greeted = false
         init(connection: NWConnection) { self.connection = connection }
     }
@@ -154,11 +129,11 @@ final class Server {
             send(s, id: id, Reply(result: ["uptimeMs": Int(now.timeIntervalSince(startedAt) * 1000),
                                            "atMs": now.timeIntervalSince1970 * 1000]))
         case "cancel":
-            running[try OneValue.id(params)]?.cancelled = true
+            s.jobs.cancel(try OneValue.id(params))
             send(s, id: id, Reply(result: [:]))
         default:
             let job = try Job(id: id, method: method, params: params)
-            running[id] = job
+            s.jobs.add(job)
             pump.submit { [weak self] in
                 guard let self else { return }
                 var reply: Reply?
@@ -174,7 +149,7 @@ final class Server {
                 }
                 if failure == nil, job.cancelled { failure = AgentError("CANCELLED", "cancelled") }
                 self.queue.async {
-                    self.running[id] = nil
+                    s.jobs.remove(job)
                     if let failure { self.sendError(s, id: id, failure) } else { self.send(s, id: id, reply!) }
                 }
             }

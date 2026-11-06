@@ -7,12 +7,6 @@ import org.json.JSONObject
 
 class Reply(val result: JSONObject, val binary: ByteArray? = null)
 
-/** A request in flight; `cancelled` is polled by every loop that can run long. */
-class Job(val id: Int) {
-    @Volatile
-    var cancelled = false
-}
-
 /** The protocol's methods on this device. Everything here runs on the one action thread. */
 class Handlers(private val automation: Automation, private val token: String) {
     private val capture = TreeCapture(automation)

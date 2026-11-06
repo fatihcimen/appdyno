@@ -31,6 +31,34 @@ class ServerPartsTest {
     }
 
     @Test
+    fun aCancelReachesTheJobOfItsOwnConnectionAlone() {
+        val (mine, theirs) = JobTable() to JobTable()
+        val (own, other) = Job(1) to Job(1)
+        mine.add(own)
+        theirs.add(other)
+        theirs.cancel(1)
+        assertTrue(other.cancelled)
+        assertFalse(own.cancelled)
+        mine.cancel(2)
+        assertFalse(own.cancelled)
+    }
+
+    @Test
+    fun theEndOfAJobLeavesAnotherOfItsIdWhereItIs() {
+        val jobs = JobTable()
+        val (old, new) = Job(1) to Job(1)
+        jobs.add(old)
+        jobs.add(new)
+        jobs.remove(old)
+        jobs.cancel(1)
+        assertTrue(new.cancelled)
+        jobs.remove(new)
+        val after = Job(1)
+        jobs.cancel(1)
+        assertFalse(after.cancelled)
+    }
+
+    @Test
     fun aFailureTellsTheHostWhoseItIs() {
         val typed = AgentFailure("NO_FOCUS", "no field")
         assertSame(typed, failureOf(typed))

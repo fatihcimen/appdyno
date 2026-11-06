@@ -1,6 +1,43 @@
 import XCTest
 @testable import RunnerCore
 
+final class JobTableTests: XCTestCase {
+    private func job(_ id: Int = 1) throws -> Job {
+        try Job(id: id, method: "act", params: ["_deadlineMs": 60_000])
+    }
+
+    func testACancelReachesTheJobOfItsOwnConnectionAlone() throws {
+        let (mine, theirs) = (JobTable(), JobTable())
+        let (own, other) = (try job(), try job())
+        mine.add(own)
+        theirs.add(other)
+        theirs.cancel(1)
+        XCTAssertTrue(other.cancelled)
+        XCTAssertFalse(own.cancelled)
+        mine.cancel(2)
+        XCTAssertFalse(own.cancelled)
+    }
+
+    func testTheEndOfAJobLeavesAnotherOfItsIdWhereItIs() throws {
+        let jobs = JobTable()
+        let (old, new) = (try job(), try job())
+        jobs.add(old)
+        jobs.add(new)
+        jobs.remove(old)
+        jobs.cancel(1)
+        XCTAssertTrue(new.cancelled)
+    }
+
+    func testAJobIsOverOnceCancelledOrPastItsDeadline() throws {
+        let running = try job()
+        XCTAssertFalse(running.over)
+        running.cancelled = true
+        XCTAssertTrue(running.over)
+        XCTAssertTrue(try Job(id: 2, method: "act", params: ["_deadlineMs": 0]).over)
+        XCTAssertThrowsError(try Job(id: 3, method: "act", params: [:]))
+    }
+}
+
 final class TextCheckTests: XCTestCase {
     func testAFieldHoldsWhatWasTyped() {
         XCTAssertTrue(holdsText("abc", before: "", text: "abc", replace: true))

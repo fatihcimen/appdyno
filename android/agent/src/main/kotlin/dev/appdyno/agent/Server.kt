@@ -4,7 +4,6 @@ import android.net.LocalServerSocket
 import android.net.LocalSocket
 import android.os.SystemClock
 import org.json.JSONObject
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -22,7 +21,6 @@ const val RELEASE_GRACE_MS = 2_000L
 class Server(private val opts: Options, private val handlers: Handlers) {
     private val timers = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "appdyno-timers").apply { isDaemon = true } }
     private val actions = WorkLane(timers)
-    private val jobs = ConcurrentHashMap<Int, Job>()
     private val streams = Streams()
 
     /** The connections that asked for the animations off. */
@@ -56,6 +54,7 @@ class Server(private val opts: Options, private val handlers: Handlers) {
         synchronized(this) { connections++ }
         var stream: Stream? = null
         var drives = false
+        val jobs = JobTable()
         try {
             val reader = FrameReader(socket.inputStream)
             val writer = FrameWriter(socket.outputStream)
@@ -79,7 +78,7 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                     "hello" -> writer.json(resultJson(id, handlers.hello()))
                     "ping" -> writer.json(resultJson(id, handlers.ping()))
                     "cancel" -> {
-                        jobs[OneValue.id(params)]?.cancelled = true
+                        jobs.cancel(OneValue.id(params))
                         writer.json(resultJson(id, JSONObject()))
                     }
                     "animations.set" -> {
@@ -88,7 +87,7 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                             if (off) animationsOff += socket else animationsOff -= socket
                             params.put("off", animationsOff.isNotEmpty())
                         }
-                        submit(id, method, params, writer)
+                        submit(id, method, params, writer, jobs)
                     }
                     // on this thread, not the work lane: a person's finger and a stream wait for nothing
                     "touch" -> {
@@ -116,7 +115,7 @@ class Server(private val opts: Options, private val handlers: Handlers) {
                             drives = true
                             synchronized(this) { drivers++ }
                         }
-                        submit(id, method, params, writer)
+                        submit(id, method, params, writer, jobs)
                     }
                 }
             }
@@ -153,9 +152,9 @@ class Server(private val opts: Options, private val handlers: Handlers) {
         }, RELEASE_GRACE_MS, TimeUnit.MILLISECONDS)
     }
 
-    private fun submit(id: Int, method: String, params: JSONObject, writer: FrameWriter) {
+    private fun submit(id: Int, method: String, params: JSONObject, writer: FrameWriter, jobs: JobTable) {
         val job = Job(id)
-        jobs[id] = job
+        jobs.add(job)
         val replied = AtomicBoolean(false)
         val deadlineMs = params.getLong("_deadlineMs").coerceIn(100, 600_000)
         val timedOut = {
@@ -174,7 +173,7 @@ class Server(private val opts: Options, private val handlers: Handlers) {
             } catch (t: Throwable) {
                 if (replied.compareAndSet(false, true)) writer.safe { json(errorJson(id, failureOf(t))) }
             } finally {
-                jobs.remove(id)
+                jobs.remove(job)
             }
         }
     }
