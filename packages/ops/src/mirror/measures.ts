@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { inCall, type Device } from '@appdyno/core';
-import { writeDashboard } from '@appdyno/perf';
+import { loud, writeDashboard, type Noise } from '@appdyno/perf';
 import { claim, release } from '../claims.js';
 import { ServerContext } from '../context.js';
 import { measureHistory, type PastMeasure } from './history.js';
@@ -42,16 +42,17 @@ const NOISE: Record<string, string> = {
   'high-device-load': 'loaded device',
   'hot-device': 'hot device',
   'debuggable-build': 'debug build',
+  'device-state-unread': 'device state unread',
 };
 
 /** Whether a number is one to judge by: a line for the pane, and all of it for a look closer. */
 const judged = (app: string, runs: string, data: { virtualDevice: boolean; noise: string[] }) => {
-  // a debug build is said where all of it is, and is no alarm on a line of its own, as on the dashboard
+  // a mark is said where all of it is, and is no alarm on a line of its own, as on the dashboard
   const marks = data.noise.map((n) => NOISE[n] ?? n);
-  const loud = data.noise.filter((n) => n !== 'debuggable-build').map((n) => NOISE[n] ?? n);
+  const alarms = loud(data.noise as Noise[]).map((n) => NOISE[n] ?? n);
   const relative = data.virtualDevice ? ['virtual device: compare only with its kind'] : [];
   return {
-    detail: [runs, ...loud].join(', '),
+    detail: [runs, ...alarms].join(', '),
     why: [app, runs, ...relative, ...marks].join(', '),
   };
 };

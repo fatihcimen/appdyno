@@ -1,7 +1,7 @@
 import {
   compareMetric,
   latestRuns,
-  loudOf,
+  loud,
   MIN_SAMPLES,
   runKeys,
   type BaselineMetric,
@@ -82,7 +82,7 @@ function judged(
     case 'noisy':
       return {
         flagged: true,
-        words: noise.every((n) => n === 'mirrored' || n === 'debuggable-build')
+        words: loud(noise).every((n) => n === 'mirrored')
           ? 'Could not judge: measured with a mirror running'
           : 'Could not judge: measured under load',
       };
@@ -130,7 +130,7 @@ export async function measureHistory(dir: string, app: string, serial: string, n
       const compared = compareMetric(kind, { samples, build, compile, noise }, base, unit, better);
       if (main.device.serial === serial)
         lines.push({ at, line: lineOf(main, shape.title, shape.value(value), compared, now) });
-      if (loudOf(main).length === 0)
+      if (loud(noise).length === 0)
         before.push({ at, samples, build, ...(compile && { compile }), noise });
     }
   }

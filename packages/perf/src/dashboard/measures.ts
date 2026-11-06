@@ -88,6 +88,9 @@ const readingCell = (r: Reading, now: number) => {
     ...(meaning ? [`<div class="m">${esc(meaning)}</div>`] : []),
     ...(noise.length ? [chip('warning', `noise: ${noise.join(', ')}`)] : []),
     ...(record.noise.includes('debuggable-build') ? ['<span class="m">debug build</span>'] : []),
+    ...(record.noise.includes('device-state-unread')
+      ? ['<span class="m">device state unread</span>']
+      : []),
   ];
   return `<div class="v">${record.modelled ? '~' : ''}${esc(valueOf(r))}</div><div class="m">${esc(detailOf(r))}, ${esc(scenario.key.scenario)}, ${esc(age(record.at, now))}</div>${notes.join('')}`;
 };

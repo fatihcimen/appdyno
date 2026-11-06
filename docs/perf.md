@@ -133,7 +133,7 @@ The same comes through `perf_compare`. [Why it got worse](#why-it-got-worse) say
 **How a change is called.** All of: at least 5 samples each side and 3 baseline runs, else `few-samples`: a change the gate could not judge, which is no pass and exits 1; a rank
 test on all baseline samples against the run, p under 0.01 (by permutation, because whole milliseconds tie; 4 against 4 cannot reach
 it); a shift past a floor by unit (15 % and 10 ms for times); and past 4 standard deviations of the baseline's run medians. A run under
-high load or on a hot device says `noisy` and exit 1, as the gate could not judge it, and is refused as a baseline; a number of its own under noise is left out of one and named, and the rest of the run goes in. Unlike builds or compile states say `refused` and exit 1, naming both sides. A number with no baseline says `new`, and passes.
+high load or on a hot device says `noisy` and exit 1, as the gate could not judge it, and is refused as a baseline; a number of its own under noise is left out of one and named, and the rest of the run goes in. Unlike builds or compile states say `refused` and exit 1, naming both sides. A number with no baseline says `new`, and passes. A phone whose load, pressure, share at work and heat could not be read says `device-state-unread` beside its numbers: that stops nothing and keeps nothing out of a baseline, but a device unread is not a device known to be calm. A virtual device's state is this Mac's, which is read.
 
 **Why that method.** Samples of one run share its load and heat, so two runs of an unchanged app differ "significantly". Across 72
 ordered pairs of unchanged runs, a rank test alone and a 10 % difference of medians alone would have alarmed:

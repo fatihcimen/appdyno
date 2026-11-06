@@ -7,7 +7,7 @@ import {
   writeDashboard,
   runKeys,
   latestRuns,
-  loudOf,
+  loud,
   saveBaseline,
   addToBaseline,
   loadBaseline,
@@ -185,9 +185,9 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
           // oldest first, as a baseline holds them
           for (const run of runs.toReversed()) {
             // a number of the device's own in the same run stands
-            const clean = run.filter((r) => loudOf(r).length === 0);
-            const noisy = run.filter((r) => loudOf(r).length > 0);
-            const said = [...new Set(noisy.flatMap(loudOf))].join(', ');
+            const clean = run.filter((r) => loud(r.noise).length === 0);
+            const noisy = run.filter((r) => loud(r.noise).length > 0);
+            const said = [...new Set(noisy.flatMap((r) => loud(r.noise)))].join(', ');
             if (clean.length === 0) {
               lines.push(`not added, ${said}: measure ${k.scenario} again`);
               continue;

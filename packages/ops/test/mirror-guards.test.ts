@@ -245,9 +245,8 @@ describe('a measure on a mirrored device', () => {
   it('is marked, naming the mirror', () => {
     const device = { virtual: false } as never;
     const load = { host: [1], hostCpus: 8 };
-    expect(noiseOf({ load, device, build: 'release' } as never)).toEqual([]);
-    expect(
-      noiseOf({ load: { ...load, mirrored: true }, device, build: 'release' } as never),
-    ).toEqual(['mirrored']);
+    const run = { device, build: 'release', thermal: 0 };
+    expect(noiseOf({ load, ...run } as never)).toEqual([]);
+    expect(noiseOf({ load: { ...load, mirrored: true }, ...run } as never)).toEqual(['mirrored']);
   });
 });

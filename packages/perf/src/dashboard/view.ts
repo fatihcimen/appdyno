@@ -4,10 +4,10 @@ import {
   JOURNEY_TOTAL,
   isPhase,
   journeyStep,
+  loud,
   measureOf,
   MEASURES,
   stepName,
-  type Noise,
   type PerfRecord,
 } from '../record.js';
 import { reportKey, type KeyReport } from '../report.js';
@@ -39,7 +39,7 @@ export const rowOf = (kind: string) => measureOf(kind) ?? kind;
 
 export const cellKey = (row: string, cls: string) => `${row}\n${cls}`;
 
-export { isPhase };
+export { isPhase, loud };
 
 export const isJourney = (kind: string) => kind.startsWith('journey.');
 
@@ -57,9 +57,6 @@ export const regressedSteps = (s: Scenario) =>
 /** A kind of the row that has a chart of its own: a journey's whole, and a step while it stands out. */
 export const hasTrend = (s: Scenario, kind: string) =>
   !isJourney(kind) || kind === JOURNEY_TOTAL || regressedSteps(s).some((c) => c.kind === kind);
-
-/** A debuggable build is said beside its number, but it is no reason to measure again. */
-export const loud = (noise: Noise[]) => noise.filter((n) => n !== 'debuggable-build');
 
 export function scenariosOf(data: DashboardData, unread: string[]): Scenario[] {
   return data.keys.map((k) => {

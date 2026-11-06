@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { noiseOf, recordsOf, type DeviceInfo, type Metric } from '../src/record.js';
+import { compareMetric } from '../src/compare.js';
+import { loud, noiseOf, recordsOf, type DeviceInfo, type Metric } from '../src/record.js';
 
 const device: DeviceInfo = {
   serial: 'Y9',
@@ -20,6 +21,43 @@ const noise = (load: number, deviceParked?: number) =>
     },
   });
 
+describe('a device whose state could not be read', () => {
+  const unread = (over: Partial<Parameters<typeof noiseOf>[0]> = {}) =>
+    noiseOf({ device, build: 'release', load: { host: [1], hostCpus: 15 }, ...over });
+  const load = { host: [1], hostCpus: 15 };
+
+  it('does not look like a calm one', () => {
+    expect(unread()).toEqual(['device-state-unread']);
+  });
+
+  it('is read if any one of its load, pressure, share at work or heat was', () => {
+    expect(unread({ thermal: 0 })).toEqual([]);
+    expect(unread({ load: { ...load, device: [0, 0, 0] } })).toEqual([]);
+    expect(unread({ load: { ...load, devicePressure: 2 } })).toEqual([]);
+    expect(unread({ load: { ...load, deviceBusy: 6 } })).toEqual([]);
+  });
+
+  it('is no mark on a virtual device, whose state is this Mac’s, read as it is', () => {
+    expect(unread({ device: { ...device, virtual: true } })).toEqual([]);
+  });
+
+  it('stops no gate and keeps no run out of a reference, as a debug build does not', () => {
+    expect(loud(['device-state-unread', 'debuggable-build'])).toEqual([]);
+    expect(loud(['device-state-unread', 'hot-device'])).toEqual(['hot-device']);
+    const run = { build: 'release', noise: ['device-state-unread'] } as const;
+    const samples = [100, 101, 99, 100, 102];
+    const worse = [900, 901, 899, 900, 902];
+    const base = {
+      unit: 'ms',
+      better: 'lower',
+      runs: ['a', 'b', 'c'].map((at) => ({ at, samples, ...run, noise: [...run.noise] })),
+    } as const;
+    const now = { samples: worse, ...run, noise: [...run.noise] };
+    const c = compareMetric('x', now, { ...base, runs: [...base.runs] }, 'ms', 'lower');
+    expect(c.verdict).toBe('regression');
+  });
+});
+
 describe('the load of the Mac', () => {
   const run = (host: number, device_: DeviceInfo, metrics: Metric[]) =>
     recordsOf(
@@ -32,6 +70,7 @@ describe('the load of the Mac', () => {
         device: device_,
         build: 'release',
         load: { host: [host], hostCpus: 15 },
+        thermal: 0,
         tool: 't',
         at: '2026-11-04T00:00:00.000Z',
       },

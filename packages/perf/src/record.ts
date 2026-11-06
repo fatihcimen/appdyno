@@ -13,9 +13,14 @@ export type DeviceInfo = {
   virtual: boolean;
 };
 
-/** What makes a number less trustworthy; the first three also keep a change from failing a gate. */
+/** What makes a number less trustworthy; `BLOCKING` in `compare.ts` says which also keep a change from failing a gate. */
 export type Noise =
-  'high-host-load' | 'high-device-load' | 'hot-device' | 'debuggable-build' | 'mirrored';
+  | 'high-host-load'
+  | 'high-device-load'
+  | 'hot-device'
+  | 'debuggable-build'
+  | 'mirrored'
+  | 'device-state-unread';
 
 /** One number of one measurement, with everything needed to judge it later. */
 export type PerfRecord = {
@@ -229,12 +234,17 @@ export function noiseOf(
   if ((r.thermal ?? 0) >= THERMAL_STATUS) out.push('hot-device');
   if (r.build === 'debug') out.push('debuggable-build');
   if (r.load.mirrored) out.push('mirrored');
+  // an unread phone must not look like a calm one; a virtual device's state is this Mac's, read above
+  const read = [r.load.device, r.load.deviceBusy, r.load.devicePressure, r.thermal];
+  if (!r.device.virtual && read.every((x) => x === undefined)) out.push('device-state-unread');
   return out;
 }
 
-/** What keeps a reading out of a reference: one taken under load would hide every later change. A build is told apart by `build`. */
-export const loudOf = (r: Pick<PerfRecord, 'noise'>) =>
-  r.noise.filter((n) => n !== 'debuggable-build');
+/** They say what a number is, beside it, and are no reason to measure again: a build is told apart by `build`. */
+const MARKS: Noise[] = ['debuggable-build', 'device-state-unread'];
+
+/** What stood in a number's way: a reference taken under it would hide every later change. */
+export const loud = (noise: Noise[]) => noise.filter((n) => !MARKS.includes(n));
 
 export type Metric = {
   kind: Kind;

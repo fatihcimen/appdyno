@@ -32,7 +32,11 @@ function phone(until?: string) {
     value: {
       ...device.measure,
       buildType: async () => 'release',
-      vitals: async () => ({ value: {}, raw: '', at: new Date().toISOString() }),
+      vitals: async () => ({
+        value: { thermalStatus: 0 },
+        raw: '',
+        at: new Date().toISOString(),
+      }),
       launch,
     } satisfies MeasureSource,
   });
