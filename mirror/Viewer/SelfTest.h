@@ -10,6 +10,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// `count` frames in Annex B, a keyframe every `keyEvery`; nil where this Mac has no such encoder.
 NSArray<MVTestFrame *> *_Nullable MVEncodeFrames(BOOL hevc, int count, int keyEvery);
 
+/// Runs the checks; the process's exit code.
+int MVSelfTest(NSString *_Nullable fixtures);
+/// Writes encoded test frames to stdout, for a stand-in agent: `[u32 length][u8 key][bytes]`.
+int MVEncodeFixture(NSString *codec, int frames);
+
 void MVCheck(NSString *name, BOOL ok, NSString *_Nullable detail);
 void MVTestMotion(void);
 void MVSkip(NSString *name, NSString *why);

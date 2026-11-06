@@ -168,6 +168,8 @@ try {
       'agents/ios-src/Appdyno.xcodeproj/project.pbxproj',
     ])
       if (!files.includes(f)) throw new Error(`${f} is not in the package: pnpm build first`);
+    if (files.some((f) => f.includes('mirror-src/SelfTest')))
+      throw new Error("the viewer's self test is in the package");
     return join(temp, pack.filename);
   });
   await step('npm install, no registry', () => {

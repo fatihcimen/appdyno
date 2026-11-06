@@ -13,7 +13,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ViewerProcess, viewerBinary, type ViewerMessage } from '../src/index.js';
+import {
+  ViewerProcess,
+  viewerBinary,
+  VIEWER_TEST_FILES,
+  viewerTestBinary,
+  type ViewerMessage,
+} from '../src/index.js';
 
 const run = promisify(execFile);
 const FIXTURES = join(import.meta.dirname, '../../../mirror/Viewer/fixtures');
@@ -23,10 +29,12 @@ const COMPILE_MS = 300_000;
 const WAIT_MS = 240_000;
 
 let binary: string;
+let testBinary: string;
 const dir = mkdtempSync(join(tmpdir(), 'appdyno-viewer-'));
 
 beforeAll(async () => {
   binary = await viewerBinary();
+  testBinary = await viewerTestBinary();
 }, COMPILE_MS);
 
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -158,9 +166,17 @@ describe('the viewer, compiled by its first-use path', () => {
     WAIT_MS + 10_000,
   );
 
+  it('has no test in what a person runs, and nothing of it in what is published', () => {
+    expect(readFileSync(binary).includes('--selftest')).toBe(false);
+    expect(readFileSync(binary).includes('--encode')).toBe(false);
+    expect(readFileSync(testBinary).includes('--selftest')).toBe(true);
+    const viewer = join(import.meta.dirname, '../../../mirror/Viewer');
+    expect(readdirSync(viewer).filter((f) => VIEWER_TEST_FILES.test(f)).length).toBeGreaterThan(5);
+  });
+
   it('passes its self test: real frames, bad input, the sums a window rests on', async () => {
     // a failed check exits 1, and it is the lines that say which
-    const { stdout } = await run(binary, ['--selftest', FIXTURES], { timeout: 180_000 }).catch(
+    const { stdout } = await run(testBinary, ['--selftest', FIXTURES], { timeout: 180_000 }).catch(
       (e: { stdout: string }) => ({ stdout: e.stdout }),
     );
     const lines = stdout
@@ -369,7 +385,7 @@ describe('the viewer on an agent stream, through adb', () => {
 
   beforeAll(async () => {
     await agent.listen();
-    const { stdout } = await run(binary, ['--encode', 'h264', '20'], {
+    const { stdout } = await run(testBinary, ['--encode', 'h264', '20'], {
       encoding: 'buffer',
       maxBuffer: 1 << 26,
     });

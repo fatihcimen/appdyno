@@ -28,25 +28,44 @@ export const VIEWER_FLAGS = [
   'Carbon',
 ];
 
-/** Compiled on first use; a Mac with no compiler has no viewer, and is told so. */
-export async function viewerBinary(env?: NodeJS.ProcessEnv): Promise<string> {
+/** What tests the viewer: in no build a person runs, and not in the published package. */
+export const VIEWER_TEST_FILES = /^(SelfTest|Fixtures|fixtures)/;
+
+function compiled(o: {
+  name: string;
+  withTest: boolean;
+  flags: string[];
+  env?: NodeJS.ProcessEnv;
+}) {
   const dir = dirname(nativeFile('viewer', 'main.m'));
   const inDir = (ext: string) =>
     readdirSync(dir)
-      .filter((f) => f.endsWith(ext))
+      .filter((f) => f.endsWith(ext) && (o.withTest || !VIEWER_TEST_FILES.test(f)))
       .sort()
       .map((f) => join(dir, f));
   return nativeBinary({
-    name: 'appdyno-viewer',
+    name: o.name,
     sources: inDir('.m'),
     headers: inDir('.h'),
-    flags: VIEWER_FLAGS,
-    ...(env && { env }),
+    flags: o.flags,
+    ...(o.env && { env: o.env }),
   }).catch((e: Error) => {
     if (e instanceof NeedError) throw e;
     throw new Error(`the viewer did not compile: ${e.message.slice(0, 500)}`, { cause: e });
   });
 }
+
+/** Compiled on first use; a Mac with no compiler has no viewer, and is told so. */
+export const viewerBinary = (env?: NodeJS.ProcessEnv) =>
+  compiled({ name: 'appdyno-viewer', withTest: false, flags: VIEWER_FLAGS, ...(env && { env }) });
+
+/** The viewer with its self test in, for what tests it. */
+export const viewerTestBinary = () =>
+  compiled({
+    name: 'appdyno-viewer-test',
+    withTest: true,
+    flags: [...VIEWER_FLAGS, '-DMV_SELFTEST'],
+  });
 
 /**
  * The viewer's wire, by name: what it takes and what it says. Both sides pass over a name they do not know, so one

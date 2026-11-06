@@ -8,8 +8,10 @@ export type { MirrorClock, MirrorState, MirrorStats, MirrorStatus } from './stat
 export {
   startViewer,
   VIEWER_OPS,
+  VIEWER_TEST_FILES,
   viewerBinary,
   ViewerProcess,
+  viewerTestBinary,
   type ViewerLink,
   type ViewerMessage,
   type ViewerOrder,

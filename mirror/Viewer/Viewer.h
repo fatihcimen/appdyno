@@ -234,9 +234,4 @@ void MVLayoutTurned(CALayer *layer, CGSize parent, int turns);
 - (void)askJourney;
 @end
 
-/// Runs the checks; the process's exit code.
-int MVSelfTest(NSString *_Nullable fixtures);
-/// Writes encoded test frames to stdout, for a stand-in agent: `[u32 length][u8 key][bytes]`.
-int MVEncodeFixture(NSString *codec, int frames);
-
 NS_ASSUME_NONNULL_END

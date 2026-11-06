@@ -1,14 +1,14 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { STEP_IDS, VIEWER_OPS } from '../src/index.js';
+import { STEP_IDS, VIEWER_OPS, VIEWER_TEST_FILES } from '../src/index.js';
 
 const root = join(import.meta.dirname, '../../..');
 const read = (path: string) => readFileSync(join(root, path), 'utf8');
 
 /** The viewer's own sources: a self test speaks the wire as a parent does. */
 const viewer = readdirSync(join(root, 'mirror/Viewer'))
-  .filter((f) => f.endsWith('.m') && !/^(SelfTest|Fixtures)/.test(f))
+  .filter((f) => f.endsWith('.m') && !VIEWER_TEST_FILES.test(f))
   .map((f) => read(`mirror/Viewer/${f}`))
   .join('\n');
 

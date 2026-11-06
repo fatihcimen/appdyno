@@ -5,9 +5,12 @@
 //   appdyno-viewer --behind    a real window kept off every screen, for a test on a Mac a person is using
 //   appdyno-viewer --behind --appearance light|dark [--not-key]   the same, drawn as in use or as behind others, to be looked at by `snapshot`
 //   appdyno-viewer --hub [--focus]   the window of `appdyno hub`, whose stages stand in its room
-//   appdyno-viewer --selftest [fixtures dir]
+//   appdyno-viewer --selftest [fixtures dir]        a test build only, as what follows
 //   appdyno-viewer --encode <h264|hevc> <frames>
 #import "Place.h"
+#ifdef MV_SELFTEST
+#import "SelfTest.h"
+#endif
 #import "Viewer.h"
 #import "Window.h"
 #import <CoreGraphics/CoreGraphics.h>
@@ -207,11 +210,13 @@ int main(int argc, char **argv) {
     gOut = [NSLock new];
     signal(SIGPIPE, SIG_IGN);
     NSArray<NSString *> *args = NSProcessInfo.processInfo.arguments;
+#ifdef MV_SELFTEST
     if ([args containsObject:@"--selftest"]) {
       NSUInteger at = [args indexOfObject:@"--selftest"];
       return MVSelfTest(args.count > at + 1 ? args[at + 1] : nil);
     }
     if ([args containsObject:@"--encode"] && argc == 4) return MVEncodeFixture(args[2], args[3].intValue);
+#endif
     BOOL headless = [args containsObject:@"--headless"];
     MVApp *app = [[MVApp alloc] initWithWindow:!headless];
     app.behind = [args containsObject:@"--behind"];
