@@ -38,6 +38,10 @@ export function assertSerial(serial: string): string {
 /** A serial of a phone reached by the network: it is an address, or a name adb found on the network. */
 export const overNetwork = (serial: string) => /:\d+$|\._adb-tls-connect\._tcp/.test(serial);
 
+/** What a phone found on the network is on a cable: an address says nothing of that, the name adb finds it by does. */
+export const cableSerial = (serial: string) =>
+  /^adb-(.+)-[^-]+\._adb-tls-connect\._tcp/.exec(serial)?.[1];
+
 /** One argument for the device's `sh -c`: single-quoted, quotes inside escaped. */
 const PACKAGE_NAME = /^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/;
 

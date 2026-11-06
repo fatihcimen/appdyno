@@ -10,6 +10,20 @@ const SERIAL = 'emulator-5640';
 const LISTENING = '0000: 00000002 00000000 00010000 0001 01 138017 @appdyno_f40fc8831e0ed474\n';
 const CONNECTED = '0000: 00000003 00000000 00000000 0001 03 142134 @appdyno_f40fc8831e0ed474\n';
 
+describe('a phone in its two ways in', () => {
+  it('has one agent: what is kept of it goes by the phone', async () => {
+    const state = mkdtempSync(join(tmpdir(), 'appdyno-agent-'));
+    process.env.APPDYNO_STATE_DIR = state;
+    writeFileSync(
+      join(state, 'android-R68.json'),
+      JSON.stringify({ socket: 'appdyno_a', token: 't'.repeat(32), sha256: 'a' }),
+    );
+    const network = new AndroidAgentLauncher({} as Adb, 'adb-R68-Ab._adb-tls-connect._tcp');
+    await expect(network.address()).resolves.toMatchObject({ socket: 'appdyno_a' });
+    rmSync(state, { recursive: true, force: true });
+  });
+});
+
 describe('an agent that holds a device and that this host has no state of', () => {
   let state: string;
 

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DeviceError } from '@appdyno/protocol';
-import { Adb, assertSerial, overNetwork, parseDevices, shq } from '../src/adb.js';
+import { Adb, assertSerial, cableSerial, overNetwork, parseDevices, shq } from '../src/adb.js';
 import { AndroidDevice } from '../src/device.js';
 
 describe('an agent reached', () => {
@@ -206,6 +206,8 @@ describe('adb helpers', () => {
     expect(overNetwork('adb-R68-Ab._adb-tls-connect._tcp')).toBe(true);
     expect(overNetwork('emulator-5580')).toBe(false);
     expect(overNetwork('EXAMPLE0SERIAL')).toBe(false);
+    expect(cableSerial('adb-R68-Ab._adb-tls-connect._tcp')).toBe('R68');
+    expect(cableSerial('192.168.1.5:41111')).toBeUndefined();
   });
 
   it('pairs by what the phone shows, and says what adb said when it did not', async () => {

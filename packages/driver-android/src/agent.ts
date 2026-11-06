@@ -19,7 +19,7 @@ import {
   writeStateFile,
   type RpcClient,
 } from '@appdyno/core';
-import { type Adb, assertSerial, shq } from './adb.js';
+import { type Adb, assertSerial, cableSerial, shq } from './adb.js';
 import { conflictHint, holdersIn, PROCESS_LIST, type Holder } from './holders.js';
 
 const AGENT_MAIN = 'dev.appdyno.agent.Main';
@@ -76,15 +76,20 @@ export class AndroidAgentLauncher {
     assertSerial(serial);
   }
 
+  /** One phone has one agent, on its cable or by the network: what is kept goes by the phone. */
+  private get phone() {
+    return cableSerial(this.serial) ?? this.serial;
+  }
+
   private get statePath() {
-    return join(stateDir(), `android-${safeName(this.serial)}.json`);
+    return join(stateDir(), `android-${safeName(this.phone)}.json`);
   }
 
   /** A connected client to a running agent of this build: the one already there, else a new one. */
   async connect(): Promise<{ rpc: RpcClient; hello: Hello; started: boolean }> {
     const apk = await agentApk();
     const found = async () =>
-      sharedAgent(this.serial, await this.readState(), apk.sha256, (s) => this.tryConnect(s));
+      sharedAgent(this.phone, await this.readState(), apk.sha256, (s) => this.tryConnect(s));
     const running = await found();
     if (running) return running;
     const state = await this.readState();
