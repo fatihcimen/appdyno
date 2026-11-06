@@ -270,10 +270,13 @@ export type RunContext = Omit<
   | 'deviceClass'
 >;
 
-/** The records of a run; a metric with no finite sample was not measured and has none. */
+/**
+ * The records of a run; a metric with no sample that can be a reading was not measured and has none. No kind goes below
+ * zero: one that does is a count that fell between its two reads, and says nothing of the run.
+ */
 export function recordsOf(ctx: RunContext, metrics: Metric[]): PerfRecord[] {
   return metrics.flatMap((m, i) => {
-    const samples = m.samples.filter(Number.isFinite);
+    const samples = m.samples.filter((x) => Number.isFinite(x) && x >= 0);
     if (samples.length === 0) return [];
     return [
       {

@@ -148,7 +148,8 @@ export const LaunchOut = z.object({
 export const TraceOut = z.object({
   ...Measurement,
   relaunched: z.boolean().optional(),
-  frames: z.number(),
+  /** What a recording counted: hangs and XCTest's own metrics count no frames, and answer none. */
+  frames: z.number().optional(),
   /** Android. */
   appDeadlineMissed: z.number().optional(),
   appJankPercent: z.number().optional(),
@@ -157,7 +158,7 @@ export const TraceOut = z.object({
   slowBecause: z.string().optional(),
   p50Ms: z.number().optional(),
   p95Ms: z.number().optional(),
-  worstMs: z.number(),
+  worstMs: z.number().optional(),
   /** Android: the longest hold of the main thread by Choreographer's own line in the app's log, which may be in no frame. */
   heldMs: z.number().optional(),
   frozen: z.number().optional(),

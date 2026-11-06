@@ -1,4 +1,11 @@
-import type { AnonMemory, EnergyReading, ExitCounts, Measured } from '@appdyno/core';
+import {
+  MIN_FRAMES,
+  type AnonMemory,
+  type EnergyReading,
+  type ExitCounts,
+  type Measured,
+  type NetworkReading,
+} from '@appdyno/core';
 import { playCall, ramTier, type Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
@@ -27,6 +34,8 @@ const energyText = (v: EnergyReading) =>
   `energy${v.modelled ? ' (a model)' : ''}: ${ENERGY_KINDS.flatMap(({ field, says }) =>
     v[field] === undefined ? [] : [`${v[field]} ${says}`],
   ).join(', ')}; ${v.note}`;
+
+const wentBack = (v: NetworkReading) => v.rxBytes < 0 || v.txBytes < 0;
 
 const exitWords = (c: ExitCounts) =>
   `${c.crashes} crashes of ${c.total}${c.anrs === undefined ? '' : `; ${c.anrs} ANRs filed`}`;
@@ -97,22 +106,35 @@ const anonLines = (v: AnonMemory) => {
 const EXTRAS = {
   threads: extra({
     read: (a) => a.measure(a.s, 'threads')(a.pkg, a.windowMs),
-    metrics: (v) => [{ kind: 'threads.over90_ms', unit: 'ms', samples: [v.worstOver90Ms] }],
+    metrics: (v) =>
+      v.threads.length
+        ? [{ kind: 'threads.over90_ms', unit: 'ms', samples: [v.worstOver90Ms] }]
+        : [],
     line: (v) =>
-      `threads: ${v.threads
-        .slice(0, 5)
-        .map((t) => `${t.name} ${t.percent}%${t.over90Ms ? ` (${t.over90Ms} ms above 90 %)` : ''}`)
-        .join(', ')}`,
+      v.threads.length
+        ? `threads: ${v.threads
+            .slice(0, 5)
+            .map(
+              (t) => `${t.name} ${t.percent}%${t.over90Ms ? ` (${t.over90Ms} ms above 90 %)` : ''}`,
+            )
+            .join(', ')}`
+        : 'threads: no two reads to compare, so no reading',
     data: (v) => ({ threads: v.threads.slice(0, 10) }),
   }),
   network: extra({
     read: (a) => a.measure(a.s, 'network')(a.pkg, a.windowMs),
-    metrics: (v) => [
-      { kind: 'network.rx_bytes', unit: 'bytes', samples: [v.rxBytes] },
-      { kind: 'network.tx_bytes', unit: 'bytes', samples: [v.txBytes] },
-    ],
-    line: (v) => `network: ${v.rxBytes} bytes in, ${v.txBytes} out${v.note ? ` (${v.note})` : ''}`,
-    data: (v) => ({ rxBytes: v.rxBytes, txBytes: v.txBytes }),
+    metrics: (v) =>
+      wentBack(v)
+        ? []
+        : [
+            { kind: 'network.rx_bytes', unit: 'bytes', samples: [v.rxBytes] },
+            { kind: 'network.tx_bytes', unit: 'bytes', samples: [v.txBytes] },
+          ],
+    line: (v) =>
+      wentBack(v)
+        ? 'network: the system aged out a count between the two reads, so no reading'
+        : `network: ${v.rxBytes} bytes in, ${v.txBytes} out${v.note ? ` (${v.note})` : ''}`,
+    data: (v) => (wentBack(v) ? {} : { rxBytes: v.rxBytes, txBytes: v.txBytes }),
   }),
   energy: extra({
     read: (a) => {
@@ -146,13 +168,17 @@ const EXTRAS = {
     }),
   }),
   startInfo: extra({
-    read: (a) => a.measure(a.s, 'startInfo')(a.pkg),
+    // the system keeps a start for as long as it likes: what is kept is one that came since the run before this
+    read: async (a) =>
+      a.measure(a.s, 'startInfo')(a.pkg, await lastRunAt(a.ctx, a.s, a.pkg, a.scenario)),
     metrics: (v) =>
-      Object.entries(v.newest.phases).map(([phase, ms]) => ({
-        kind: `launch.phase.${phase}_ms` as const,
-        unit: 'ms' as const,
-        samples: [ms],
-      })),
+      v.newestIsNew
+        ? Object.entries(v.newest.phases).map(([phase, ms]) => ({
+            kind: `launch.phase.${phase}_ms` as const,
+            unit: 'ms' as const,
+            samples: [ms],
+          }))
+        : [],
     line: (v) => {
       const { reason, startType, wasForceStopped, phases } = v.newest;
       const counts = new Map<string, number>();
@@ -165,7 +191,7 @@ const EXTRAS = {
                 .map(([p, ms]) => `${p.replaceAll('_', ' ')} ${ms} ms`)
                 .join(', ')}`
             : ''
-        }`,
+        }${v.newestIsNew ? '' : '; not known to be since the last run, so it keeps no phase'}`,
         `the ${v.starts.length} starts the system keeps: ${reasons}`,
       ].join('\n');
     },
@@ -178,8 +204,9 @@ const EXTRAS = {
   }),
   surface: extra({
     read: (a) => a.measure(a.s, 'surfaceFrames')(a.pkg),
+    // a surface keeps its last frames, whatever their age: one that stopped drawing says nothing of this run
     metrics: (v) =>
-      v.frames === 0
+      !v.drawing || v.frames < MIN_FRAMES
         ? []
         : [
             { kind: 'surface.p95_ms', unit: 'ms', samples: [v.p95Ms] },
@@ -190,7 +217,7 @@ const EXTRAS = {
       v.frames === 0
         ? 'no SurfaceView of the app holds frames: what it draws through the View toolkit is in frames above'
         : [
-            `surface: ${v.frames} frames, ${v.fps} a second, p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms, on a ${v.refreshMs} ms display${v.drawing ? '' : ', and it is not drawing now: these are its last'}`,
+            `surface: ${v.frames} frames, ${v.fps} a second, p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms, on a ${v.refreshMs} ms display${v.drawing ? '' : ', and it is not drawing now: these are its last, of any age, and none is kept'}`,
             playLine('surface.slow_50_percent', v.slow50Percent),
             playLine('surface.slow_34_percent', v.slow34Percent),
           ].join('\n'),

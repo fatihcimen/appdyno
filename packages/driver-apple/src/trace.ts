@@ -18,7 +18,13 @@ import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
 import { xcodeEnv } from './simctl.js';
-import { parseXctMetrics, stallSpans, traceDigest, hitchSummary } from './trace-parse.js';
+import {
+  heldTable,
+  hitchSummary,
+  parseXctMetrics,
+  stallSpans,
+  traceDigest,
+} from './trace-parse.js';
 import { exporting, traceTable } from './trace-read.js';
 import { watchKtraces } from './trace-temp.js';
 
@@ -396,11 +402,12 @@ export async function recordHitches(
     dir,
     ...(during && { during }),
   });
+  const held = async (schema: string) => heldTable(await traceTable(tracePath, schema), schema);
   const summary = hitchSummary(
-    await traceTable(tracePath, 'hitches'),
-    await traceTable(tracePath, 'displayed-surfaces-interval'),
+    await held('hitches'),
+    await held('displayed-surfaces-interval'),
     seconds * 1000,
-    await traceTable(tracePath, 'potential-hangs'),
+    await held('potential-hangs'),
     known,
   );
   // no frames is no reading, never "no hitches"; and it is this screen's, not the device's

@@ -23,6 +23,7 @@ import { assertBundle } from './simctl.js';
 import {
   hitchFrames,
   parseActivityMonitor,
+  heldTable,
   parseHangs,
   parseThermal,
   parseTimeProfile,
@@ -253,7 +254,7 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
   /** The main thread's hangs (over 250 ms) while `during` runs: part of the Time Profiler's recording. */
   async hangsOf(bundle: string, seconds = 5, during?: () => Promise<unknown>, symbols?: Symbols) {
     const { trace, pid, samples } = await this.profile(bundle, seconds * 1000, during, symbols);
-    const hangs = await traceTable(trace, 'potential-hangs');
+    const hangs = heldTable(await traceTable(trace, 'potential-hangs'), 'potential-hangs');
     return {
       ...parseHangs(hangs, pid),
       causes: parseHangCauses(hangs, samples, pid),

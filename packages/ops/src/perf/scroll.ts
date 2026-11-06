@@ -108,8 +108,10 @@ export function perfScrollOp(ctx: ServerContext) {
         });
         limits = f.value.limits;
         if (f.value.histogram) histograms.push(f.value.histogram);
-        if (f.value.stalls) stalls.push(f.value.stalls.worstMs);
-        if (f.value.worstHitchMs !== undefined) hitches.push(f.value.worstHitchMs);
+        // the worst of no frames is none, and not a good round
+        if (f.value.totalFrames > 0 && f.value.stalls) stalls.push(f.value.stalls.worstMs);
+        if (f.value.totalFrames > 0 && f.value.worstHitchMs !== undefined)
+          hitches.push(f.value.worstHitchMs);
       }
       s.acted();
       const counted = rounds.filter((x) => x.frames >= MIN_FRAMES);
@@ -157,7 +159,11 @@ export function perfScrollOp(ctx: ServerContext) {
             samples: counted.flatMap((x) => (x.p95Ms === undefined ? [] : [x.p95Ms])),
           },
           // the whole run's: one frozen frame in one round is not a median of none
-          { kind: 'frames.frozen', unit: 'count', samples: [frozen] },
+          {
+            kind: 'frames.frozen',
+            unit: 'count',
+            samples: rounds.some((x) => x.frames > 0) ? [frozen] : [],
+          },
           { kind: 'hitches.worst_ms', unit: 'ms', samples: hitches },
           { kind: 'memory.end_kb', unit: 'kb', samples: rounds.map((x) => x.memEndKb) },
           { kind: 'stalls.worst_ms', unit: 'ms', samples: stalls },

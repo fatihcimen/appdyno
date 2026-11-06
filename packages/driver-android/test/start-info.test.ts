@@ -31,11 +31,13 @@ describe('start info', () => {
       startType: 'WARM',
       wasForceStopped: true,
       phases: {},
+      startedNs: 433894334439707,
     });
     expect(cold).toEqual({
       reason: 'BROADCAST',
       startType: 'COLD',
       wasForceStopped: false,
+      startedNs: 433612846493229,
       phases: {
         fork: 76.9,
         bind_application: 177.8,
@@ -70,5 +72,38 @@ describe('start info', () => {
     const { value } = await startInfo(device(36, DUMP) as never, 'dev.app');
     expect(value.starts).toHaveLength(2);
     expect(value.newest.startType).toBe('WARM');
+  });
+
+  describe('whether the newest began since the run before', () => {
+    /** The device up for as long as the dump's newest start, and `ago` s more. */
+    const upFor = (ago: number | string) => ({
+      shell: async (cmd: string) =>
+        cmd.includes('getprop')
+          ? '36\n'
+          : cmd.includes('/proc/uptime')
+            ? `${typeof ago === 'number' ? 433894.334 + ago : ago} 99.0\n`
+            : DUMP,
+    });
+    const isNew = async (ago: number | string, since: number | undefined) =>
+      (await startInfo(upFor(ago) as never, 'dev.app', since)).value.newestIsNew;
+    const before = (s: number) => Date.now() - s * 1_000;
+
+    it('goes by how long ago the device says, on any clock this Mac has', async () => {
+      expect(await isNew(5, before(60))).toBe(true);
+      expect(await isNew(600, before(60))).toBe(false);
+    });
+
+    it('says no with no run to count from', async () => {
+      expect(await isNew(5, undefined)).toBe(false);
+    });
+
+    it('says no with a clock it cannot read', async () => {
+      expect(await isNew('garbled', before(60))).toBe(false);
+    });
+
+    it('says no of a stamp from a clock that left out the time it slept', async () => {
+      // the stamp's clock stood still while the uptime went on: an older start than it is, never a newer
+      expect(await isNew(12 * 3_600, before(60))).toBe(false);
+    });
   });
 });

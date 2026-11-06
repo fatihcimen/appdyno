@@ -87,7 +87,7 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
       pause(3_000).then(() => d.tap(byId(s, 'stall_500'), { settle: false })),
     ]);
     console.log(r.text);
-    within(r.data.worstMs, 500, 0.1);
+    within(r.data.worstMs!, 500, 0.1);
     expect(r.data.stalls).toBe(1);
   }, 120_000);
 

@@ -561,6 +561,22 @@ describe('the measures of a device', () => {
     });
   });
 
+  it('keeps no size of an app whose files it could not read, where none would read as 0 bytes', async () => {
+    const device = {
+      serial: 'R58M',
+      shell: async (cmd: string) =>
+        cmd.includes('pm path') ? 'package:/data/app/a.apk\n' : 'nope',
+      shellAlongside: async () => '',
+      shellBuffer: async () => Buffer.from(''),
+      pull: async () => undefined,
+      readyToMeasure: async () => undefined,
+      ensureAwake: async () => ({ woke: false, unlocked: false, locked: false }),
+    };
+    await expect(new AndroidPerf(device).size('dev.app')).rejects.toMatchObject({
+      code: 'UNSUPPORTED',
+    });
+  });
+
   it('hears a recording that fails after what it was around threw', async () => {
     const heard: unknown[] = [];
     const note = (e: unknown) => void heard.push(e);

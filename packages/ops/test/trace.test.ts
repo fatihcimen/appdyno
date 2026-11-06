@@ -71,7 +71,7 @@ describe('perf_trace', () => {
         frameTrace: async () => ({
           value: {
             kind: 'timeline',
-            frames: 50,
+            frames: 120,
             janky: 5,
             jankyPercent: 10,
             appDeadlineMissed: 4,
@@ -82,7 +82,7 @@ describe('perf_trace', () => {
             p95Ms: 30,
             worstMs: 45,
             frozen: 1,
-            stats: { frames: 50, overrunP95Ms: 3, overrunWorstMs: 5, cpuP95Ms: 7 },
+            stats: { frames: 120, overrunP95Ms: 3, overrunWorstMs: 5, cpuP95Ms: 7 },
             tracePath: '/t.pftrace',
           },
           raw: 'csv',
@@ -93,7 +93,7 @@ describe('perf_trace', () => {
     );
     expect(r.lines).toEqual([
       head,
-      '50 frames; late by the app 4 (8%); any jank 5 (10%: buffer stuffing 1, compositor 0)',
+      '120 frames; late by the app 4 (8%); any jank 5 (10%: buffer stuffing 1, compositor 0)',
       'frame time p50 9 ms, p95 30 ms, worst 45 ms; frozen frames: 1',
       'overrun p95 3 ms, worst 5 ms; CPU p95 7 ms',
       'trace (perf_query): /t.pftrace',
@@ -101,7 +101,7 @@ describe('perf_trace', () => {
     ]);
     expect(r.data).toEqual({
       ...common,
-      frames: 50,
+      frames: 120,
       frozen: 1,
       appDeadlineMissed: 4,
       appJankPercent: 8,
@@ -244,8 +244,6 @@ describe('perf_trace', () => {
     expect(r.lines).toEqual([head, 'ratio: 1, 2, 3', 'a note', 'result bundle: /r.xcresult']);
     expect(r.data).toEqual({
       ...common,
-      frames: 0,
-      worstMs: 0,
       metrics: { ratio: [1, 2, 3] },
       tracePath: '/r.xcresult',
     });
@@ -271,7 +269,6 @@ describe('perf_trace', () => {
     ]);
     expect(r.data).toEqual({
       ...common,
-      frames: 0,
       hangs: 1,
       worstMs: 500,
       tracePath: '/s.trace',

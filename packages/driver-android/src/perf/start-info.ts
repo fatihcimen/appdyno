@@ -1,6 +1,7 @@
 import type { Measured, StartInfo, StartRecord } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg } from '../adb.js';
+import { num } from './parse-common.js';
 import { at, sh, type PerfDevice } from './shared.js';
 
 /** `dumpsys activity start-info` came with Android 15. */
@@ -50,22 +51,38 @@ export function parseStartInfo(text: string): StartRecord[] {
       const reason = /\breason=(.+?) startType=/.exec(block)?.[1];
       const startType = /\bstartType=(\S+)/.exec(block)?.[1];
       if (!reason || !startType) return [];
+      const startedNs = num(/timestamps: 0=(\d+)/, block);
       return [
         {
           reason,
           startType,
           wasForceStopped: /wasForceStopped=true/.test(block),
           phases: phasesOf(block),
+          ...(startedNs !== undefined && { startedNs }),
         },
       ];
     });
 }
 
 /**
+ * Whether a start began at `since` or later. How long ago is asked of the device's own clock and taken from this Mac's
+ * now, so the two need not agree. A stamp on any clock but the boot's reads as older, and keeps nothing.
+ */
+const beganSince = async (d: PerfDevice, start: StartRecord, since: number) => {
+  const up = await sh(d, 'cat /proc/uptime').catch(() => '');
+  const ago = Number(up.trim().split(/\s+/)[0]) * 1_000 - (start.startedNs ?? NaN) / 1e6;
+  return Date.now() - ago >= since;
+};
+
+/**
  * Why the app started and where the start's time went, as the system kept it, with no trace: on Android 15 and later,
  * for the starts it remembers. A process started for a job or a broadcast shows here, which no launch measure sees.
  */
-export async function startInfo(d: PerfDevice, pkg: string): Promise<Measured<StartInfo>> {
+export async function startInfo(
+  d: PerfDevice,
+  pkg: string,
+  since?: number,
+): Promise<Measured<StartInfo>> {
   assertPkg(pkg);
   const sdk = Number((await sh(d, 'getprop ro.build.version.sdk')).trim());
   if (sdk < FIRST_SDK)
@@ -80,5 +97,7 @@ export async function startInfo(d: PerfDevice, pkg: string): Promise<Measured<St
       'UNSUPPORTED',
       `this device keeps no start info of ${pkg}: its build may not have the feature on`,
     );
-  return { value: { starts, newest: starts[0]! }, raw, at: at() };
+  const newest = starts[0]!;
+  const newestIsNew = since !== undefined && (await beganSince(d, newest, since));
+  return { value: { starts, newest, newestIsNew }, raw, at: at() };
 }

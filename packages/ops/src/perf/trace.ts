@@ -1,4 +1,10 @@
-import { frameCauseText, hangText, type Measured, type SlowFrameCauses } from '@appdyno/core';
+import {
+  frameCauseText,
+  hangText,
+  MIN_FRAMES,
+  type Measured,
+  type SlowFrameCauses,
+} from '@appdyno/core';
 import { UNEXPLAINED_FRAMES, type Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
@@ -17,6 +23,14 @@ const causeLines = (c: SlowFrameCauses | undefined) => {
     ...rest.slice(0, 3).map((x) => `then ${frameCauseText(x)}`),
   ];
 };
+
+/** A share or a percentile of few frames is a frame or two; a count needs only that there were frames to count. */
+const ofMany = (frames: number, x: number) => (frames >= MIN_FRAMES ? [x] : []);
+const ofAny = (frames: number, x: number) => (frames > 0 ? [x] : []);
+const fewLine = (frames: number) =>
+  frames < MIN_FRAMES
+    ? [`${frames} frames, of the ${MIN_FRAMES} a share or a percentile needs: none is kept`]
+    : [];
 
 export function perfTraceOp(ctx: ServerContext) {
   const { measure, appOf, virtualNote, save, keep, noisy, withProbe, scroller } = perfTools(ctx);
@@ -91,8 +105,6 @@ export function perfTraceOp(ctx: ServerContext) {
             ],
             after: () => [`result bundle: ${m.value.resultBundle}`],
             data: {
-              frames: 0,
-              worstMs: 0,
               metrics: m.value.metrics,
               tracePath: m.value.resultBundle,
             },
@@ -118,7 +130,6 @@ export function perfTraceOp(ctx: ServerContext) {
             ],
             after: () => [`trace (Instruments): ${v.tracePath}`],
             data: {
-              frames: 0,
               hangs: v.hangs,
               worstMs: v.worstMs,
               ...(v.causes && { hangCauses: v.causes }),
@@ -138,14 +149,23 @@ export function perfTraceOp(ctx: ServerContext) {
           'frame-probe',
           m,
           [
-            { kind: 'probe.missed_percent', unit: 'percent', samples: [v.missedPercent] },
-            { kind: 'probe.p95_ms', unit: 'ms', samples: [v.p95Ms] },
-            { kind: 'probe.stall_worst_ms', unit: 'ms', samples: [v.stalls.worstMs] },
-            { kind: 'frames.frozen', unit: 'count', samples: [v.frozen] },
+            {
+              kind: 'probe.missed_percent',
+              unit: 'percent',
+              samples: ofMany(v.frames, v.missedPercent),
+            },
+            { kind: 'probe.p95_ms', unit: 'ms', samples: ofMany(v.frames, v.p95Ms) },
+            {
+              kind: 'probe.stall_worst_ms',
+              unit: 'ms',
+              samples: ofAny(v.frames, v.stalls.worstMs),
+            },
+            { kind: 'frames.frozen', unit: 'count', samples: ofAny(v.frames, v.frozen) },
           ],
           {
             lines: [
               ...relaunched,
+              ...fewLine(v.frames),
               `${v.frames} frames in ${v.durationMs} ms; ${v.missed} missed (${v.missedPercent}%), ${v.frozen} frozen; interval p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms`,
               `stalls over 100 ms: ${v.stalls.count}, ${v.stalls.totalMs} ms in all, worst ${v.stalls.worstMs} ms`,
               ...(v.lastInputMsAgo !== undefined
@@ -206,31 +226,45 @@ export function perfTraceOp(ctx: ServerContext) {
         'frame-timeline',
         m,
         [
-          { kind: 'frames.app_jank_percent', unit: 'percent', samples: [v.appJankPercent] },
-          { kind: 'frames.p95_ms', unit: 'ms', samples: [v.p95Ms] },
-          { kind: 'frames.frozen', unit: 'count', samples: [v.frozen] },
+          {
+            kind: 'frames.app_jank_percent',
+            unit: 'percent',
+            samples: ofMany(v.frames, v.appJankPercent),
+          },
+          { kind: 'frames.p95_ms', unit: 'ms', samples: ofMany(v.frames, v.p95Ms) },
+          { kind: 'frames.frozen', unit: 'count', samples: ofAny(v.frames, v.frozen) },
           // the longest frame of the app's process, or a hold of its main thread no frame shows
-          { kind: 'stalls.worst_ms', unit: 'ms', samples: [Math.max(v.worstMs, v.heldMs ?? 0)] },
-          ...(v.stats
-            ? ([
-                { kind: 'frames.overrun_p95_ms', unit: 'ms', samples: [v.stats.overrunP95Ms] },
-              ] satisfies Metric[])
-            : []),
-          ...(v.stats?.cpuP95Ms === undefined
-            ? []
-            : ([
-                { kind: 'frames.cpu_p95_ms', unit: 'ms', samples: [v.stats.cpuP95Ms] },
-              ] satisfies Metric[])),
+          {
+            kind: 'stalls.worst_ms',
+            unit: 'ms',
+            samples:
+              v.heldMs === undefined ? ofAny(v.frames, v.worstMs) : [Math.max(v.worstMs, v.heldMs)],
+          },
+          {
+            kind: 'frames.overrun_p95_ms',
+            unit: 'ms',
+            samples: v.stats ? ofMany(v.frames, v.stats.overrunP95Ms) : [],
+          },
+          {
+            kind: 'frames.cpu_p95_ms',
+            unit: 'ms',
+            samples: v.stats?.cpuP95Ms === undefined ? [] : ofMany(v.frames, v.stats.cpuP95Ms),
+          },
         ],
         {
           lines: [
+            ...fewLine(v.frames),
             `${v.frames} frames; late by the app ${v.appDeadlineMissed + (v.appResynced ?? 0)} (${v.appJankPercent}%); any jank ${v.janky} (${v.jankyPercent}%: buffer stuffing ${v.bufferStuffing}, compositor ${v.surfaceFlinger})`,
             ...(s.device.virtual
               ? [
                   "on a virtual device the compositor's jank is the display's prediction error, not the app's: look at the app's share",
                 ]
               : []),
-            `frame time p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms; frozen frames: ${v.frozen}`,
+            ...(v.frames > 0
+              ? [
+                  `frame time p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms; frozen frames: ${v.frozen}`,
+                ]
+              : []),
             ...(v.heldMs !== undefined && v.heldMs > v.worstMs
               ? [
                   `its main thread stopped for ${v.heldMs} ms and no frame shows it: from Choreographer's "Skipped frames" line in the app's log`,
@@ -257,9 +291,7 @@ export function perfTraceOp(ctx: ServerContext) {
               slowFrames: v.causes.slowFrames,
               ...(v.causes.top && { slowBecause: v.causes.top }),
             }),
-            p50Ms: v.p50Ms,
-            p95Ms: v.p95Ms,
-            worstMs: v.worstMs,
+            ...(v.frames > 0 && { p50Ms: v.p50Ms, p95Ms: v.p95Ms, worstMs: v.worstMs }),
             ...(v.heldMs !== undefined && { heldMs: v.heldMs }),
             ...(v.tracePath && { tracePath: v.tracePath }),
           },

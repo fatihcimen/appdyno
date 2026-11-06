@@ -222,9 +222,16 @@ export type StartRecord = {
   startType: string;
   wasForceStopped: boolean;
   phases: Record<string, number>;
+  /** When it began, by the clock of the device since it booted. */
+  startedNs?: number;
 };
 
-export type StartInfo = { starts: StartRecord[]; newest: StartRecord };
+export type StartInfo = {
+  starts: StartRecord[];
+  newest: StartRecord;
+  /** The newest began since the time asked of: the system keeps a start as long as it likes. */
+  newestIsNew: boolean;
+};
 
 export type SizeReading = { bytes: number; parts: Record<string, number>; note?: string };
 
@@ -357,7 +364,7 @@ export interface MeasureSource {
   battery(app: string, windowMs: number): Promise<Measured<BatterySignals>>;
   /** `since`: epoch ms by this Mac's clock; with none, only what the system holds. */
   exits(app: string, since?: number): Promise<Measured<ExitReading>>;
-  startInfo(app: string): Promise<Measured<StartInfo>>;
+  startInfo(app: string, since?: number): Promise<Measured<StartInfo>>;
   size(app: string): Promise<Measured<SizeReading>>;
   heapProfile(
     app: string,

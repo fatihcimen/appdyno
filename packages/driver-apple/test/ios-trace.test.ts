@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  heldTable,
   hitchFrames,
   hitchSummary,
   parseActivityMonitor,
@@ -19,6 +20,15 @@ import { queryTraceFile } from '../src/trace.js';
 const fixture = (f: string) => readFileSync(join(import.meta.dirname, 'fixtures', f), 'utf8');
 
 describe('iOS trace export', () => {
+  it('tells a table with no rows from one the trace does not hold, as an export of a phone’s trace does', () => {
+    const none = `<?xml version="1.0"?>\n<trace-query-result>\n<node xpath='//trace-toc[1]/run[1]/data[1]/table[1]'><schema name="potential-hangs"><col><mnemonic>start</mnemonic></col></schema></node></trace-query-result>`;
+    expect(parseHangs(heldTable(none, 'potential-hangs'))).toMatchObject({ hangs: 0 });
+    const absent = `<?xml version="1.0"?>\n<trace-query-result>\n</trace-query-result>`;
+    expect(() => heldTable(absent, 'potential-hangs')).toThrow(
+      expect.objectContaining({ code: 'UNSUPPORTED' }),
+    );
+  });
+
   it('reads an exported table, references resolved', () => {
     const rows = parseTraceTable(fixture('ios-hitches.xml'));
     expect(rows).toHaveLength(5);

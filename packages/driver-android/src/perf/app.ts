@@ -227,6 +227,8 @@ export async function size(d: PerfDevice, pkg: string): Promise<Measured<SizeRea
   const parts: Record<string, number> = {};
   for (const [, bytes, path] of stat.matchAll(/^(\d+) (.+)$/gm))
     parts[basename(path!.trim())] = Number(bytes);
+  if (Object.keys(parts).length === 0)
+    throw new DeviceError('UNSUPPORTED', `no size of ${pkg} in: ${stat.trim().slice(0, 200)}`);
   const bytes = Object.values(parts).reduce((a, b) => a + b, 0);
   const listed = parseDiskstats(disk, pkg);
   return {

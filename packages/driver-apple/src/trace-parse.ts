@@ -9,6 +9,7 @@ import {
   type CpuProfile,
   type ProfileEntry,
 } from '@appdyno/core';
+import { DeviceError } from '@appdyno/protocol';
 
 /** One cell of an exported trace table: its value and the tool's formatted text. */
 export type Cell = { value: string; fmt?: string };
@@ -69,6 +70,16 @@ const spansOf = (rows: Record<string, Cell>[]): Span[] =>
     start: Number(r.start?.value ?? 0) / 1e6,
     ms: Number(r.duration?.value ?? 0) / 1e6,
   }));
+
+/**
+ * A table as an export found it. One with no rows still has its schema; one the trace does not hold is an empty answer and
+ * no error, and read as rows it would say that nothing happened.
+ */
+export function heldTable(xml: string, schema: string) {
+  if (!/<schema\b/.test(xml))
+    throw new DeviceError('UNSUPPORTED', `this trace holds no ${schema} table: no reading of it`);
+  return xml;
+}
 
 /** The main thread's hangs of a process in the template's table: what it only suspects is no hang. */
 export const hangRows = (xml: string, pid?: number) =>

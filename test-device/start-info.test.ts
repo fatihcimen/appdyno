@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, sleep as pause, type AndroidDevice } from './workspace.js';
-import { loadRefusals } from '@appdyno/perf';
+import { latestRuns, loadRefusals, runKeys } from '@appdyno/perf';
 import { opsOn } from './helpers.js';
 
 /**
@@ -28,6 +28,7 @@ describe.skipIf(!serial)('start info', () => {
     await pause(3_000);
     const r = await t.call('perf_snapshot', { also: ['startInfo'], cpuWindowMs: 500 });
     console.log(r.text.split('\n').filter((l) => /start/.test(l)));
+    expect(r.error, r.text).toBe(false);
     return r;
   };
   const launcher = `am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n ${APP}/.MainActivity`;
@@ -72,6 +73,29 @@ describe.skipIf(!serial)('start info', () => {
       `am start -W -a android.intent.action.VIEW -d 'appdyno-fixture://open/frozen?cause=binder' ${APP}`,
     );
     expect(service.data.startReason).toBe('SERVICE');
+  }, 120_000);
+
+  it('keeps the phases of a start since the last run, and not the same start again', async (ctx) => {
+    if (sdk < 35) return ctx.skip();
+    const scenario = 'a-start-of-its-own';
+    const start = async () => {
+      await d.shell(`am force-stop ${APP}`);
+      await pause(500);
+      await d.shell(launcher);
+      await pause(3_000);
+    };
+    const phasesKept = async () => {
+      const r = await t.call('perf_snapshot', { also: ['startInfo'], cpuWindowMs: 500, scenario });
+      expect(r.error, r.text).toBe(false);
+      const [key] = await runKeys(t.measurements, { app: APP, scenario });
+      const [run] = await latestRuns(t.measurements, key!, 1);
+      return run!.filter((r) => r.kind.startsWith('launch.phase.')).length;
+    };
+    await start();
+    expect(await phasesKept()).toBe(0);
+    await start();
+    expect(await phasesKept()).toBeGreaterThan(0);
+    expect(await phasesKept()).toBe(0);
   }, 120_000);
 
   it('a broadcast start reads as one, where the device lets a stopped app start', async (ctx) => {
