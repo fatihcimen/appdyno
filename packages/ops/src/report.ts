@@ -136,7 +136,7 @@ export function reportFor(ctx: ServerContext) {
       name: 'report',
       title: 'Session report',
       description:
-        "A test report as index.html: steps, video, logs, crashes, measurements; secrets hidden. start (dir), until stop or the session's end; write: now. timeline: one page on one clock. flight: last seconds, kept on a crash or stall.",
+        "Test report, index.html: steps, video, logs, crashes, measurements; secrets hidden. start (dir), until stop or the session's end; write: now. timeline: one page on one clock. flight: last seconds, kept on a crash or stall.",
       input: z
         .object({
           action: z.enum(['start', 'timeline', 'flight', 'write', 'stop']),

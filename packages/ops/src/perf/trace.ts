@@ -38,7 +38,7 @@ export function perfTraceOp(ctx: ServerContext) {
     name: 'perf_trace',
     title: 'Frame trace',
     description:
-      "Why frames were slow, jank: record frames (Android 12+: each frame's time and why it was late; iPhone: animation hitches and causes; iOS simulator: main-thread pacing, through a probe). `scroll` scrolls meanwhile. `what`: hangs (iPhone), or XCTest's own hitch or launch metric. Kept for perf_query.",
+      "Why frames were slow, jank: frames (Android 12+: each frame's time and why it was late; iPhone: animation hitches and causes; iOS simulator: main-thread pacing, through a probe). `scroll` scrolls meanwhile. `what`: hangs (iPhone), or XCTest's own hitch or launch metric. Kept for perf_query.",
     input: z
       .object({
         app: App,

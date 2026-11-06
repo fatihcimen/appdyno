@@ -13,7 +13,7 @@ export function perfLaunchOp(ctx: ServerContext) {
     name: 'perf_launch',
     title: 'Launch time',
     description:
-      'App startup and launch time: cold (stopped first), warm (process alive, activity new) or hot (back from the background); a warm-up, then `repeats` launches. `trace` adds one start that names why it was slow. Android: `compile` sets the compile state (then reset). The app restarts.',
+      'App startup time: cold (stopped first), warm (process alive, activity new) or hot (back from the background); a warm-up, then `repeats` launches. `trace` adds one start that names why it was slow. Android: `compile` sets the compile state (then reset). The app restarts.',
     input: z
       .object({
         app: App,

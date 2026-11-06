@@ -48,7 +48,7 @@ export function perfScrollOp(ctx: ServerContext) {
     name: 'perf_scroll',
     title: 'Scroll performance',
     description:
-      'Scroll performance, jank: frames, frozen frames and memory while scrolling a list: each round swipes `swipes` times into new rows, and reads both once the list stops. A list at its end is brought back for a round, which the answer says.',
+      'Scroll jank: frames, frozen frames and memory while scrolling a list: each round swipes `swipes` times into new rows, and reads both once the list stops. A list at its end is brought back for a round, which the answer says.',
     input: z
       .object({
         app: App,
