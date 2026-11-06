@@ -187,7 +187,7 @@ const MVWordRow MVWordTable[] = {
     {"Steady at %@ fps for %@ s", "%2$@ saniyedir %1$@ fps'de sabit"},
     {"Moving at %@ fps", "%@ fps'de hareketli"},
     {"Measure", "Ölçüm"},
-    {"Open an app, then measure it. It restarts.", "Bir uygulama açın, sonra ölçün. Uygulama yeniden başlar."},
+    {"Open an app, then measure it. It restarts.", "Bir uygulama açıp ölçün: yeniden başlar."},
     {"A measure restarts %@.", "Ölçüm, %@ uygulamasını yeniden başlatır."},
     {"Results", "Sonuçlar"},
     {"No results yet. A measure gives you a number to compare against.", "Henüz sonuç yok. Ölçüm, karşılaştıracağınız bir sayı verir."},
