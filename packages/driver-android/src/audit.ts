@@ -1,5 +1,5 @@
 import type { AuditIssue, AuditResult, AuditType, TextClip, Tree } from '@appdyno/protocol';
-import { elementsOf, type Image, type UiElement } from '@appdyno/core';
+import { elementsOf, familyOf, type Image, type UiElement } from '@appdyno/core';
 
 /**
  * Android's accessibility checks, computed on the host from the agent's tree, a screenshot and the
@@ -96,17 +96,7 @@ export function auditAndroid(
 ): AuditResult {
   const els = elementsOf(tree);
   const byRef = new Map(els.map((e, i) => [e.ref, i] as const));
-  const children = new Map<number, number[]>();
-  els.forEach((e, i) => {
-    if (e.parent !== undefined) children.set(e.parent, [...(children.get(e.parent) ?? []), i]);
-  });
-  const ancestors = (i: number) => {
-    const out: number[] = [];
-    for (let p = els[i]!.parent; p !== undefined; p = els[p]!.parent) out.push(p);
-    return out;
-  };
-  const descendants = (i: number): number[] =>
-    (children.get(i) ?? []).flatMap((c) => [c, ...descendants(c)]);
+  const { ancestors, descendants } = familyOf(els);
   const win = els.find((e) => e.parent === undefined && e.rect?.x === 0 && e.rect.y === 0)?.rect;
   const shown = (e: UiElement) =>
     e.visible !== false && !!e.rect && e.rect.width > 0 && e.rect.height > 0;

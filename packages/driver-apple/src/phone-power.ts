@@ -1,12 +1,11 @@
 import {
   sleep,
-  stateDir,
+  tracesDir,
   type EnergyReading,
   type Measured,
   type NetworkReading,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { join } from 'node:path';
 import { parsePowerBytes, parsePowerImpact } from './trace-parse.js';
 import { recordTrace, traceTable } from './trace.js';
 
@@ -36,7 +35,7 @@ async function recordPower(
     attach: pid,
     attachedOnly: true,
     seconds,
-    dir: join(stateDir(), 'traces'),
+    dir: tracesDir(),
     ...(during && { during }),
   });
   const xml = await traceTable(trace, 'ProcessSubsystemPowerImpact');

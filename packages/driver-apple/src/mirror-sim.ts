@@ -1,4 +1,3 @@
-import { spawn } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -77,7 +76,8 @@ export class SimulatorMirror implements Mirror {
     private readonly udid: string,
     private readonly simctl: Simctl = new Simctl(),
     private readonly startHid: (udid: string) => Promise<HelperProcess> = startSimHid,
-    private readonly paste: (udid: string, text: string) => Promise<void> = pasteboard,
+    private readonly paste: (udid: string, text: string) => Promise<void> = (u, text) =>
+      simctl.pbcopy(u, text),
     private readonly startReader: (udid: string) => Promise<HelperProcess> = startSimAx,
   ) {}
 
@@ -222,18 +222,4 @@ export class SimulatorMirror implements Mirror {
     // the viewer watches the simulator's state itself, and says `lost` when it goes
     return () => undefined;
   }
-}
-
-function pasteboard(udid: string, text: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const p = spawn('xcrun', ['simctl', 'pbcopy', udid], {
-      stdio: ['pipe', 'ignore', 'ignore'],
-      env: xcodeEnv(),
-    });
-    p.on('error', reject);
-    p.on('close', (code) =>
-      code === 0 ? resolve() : reject(new Error(`simctl pbcopy exited with ${code}`)),
-    );
-    p.stdin.end(text);
-  });
 }

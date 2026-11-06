@@ -1,4 +1,4 @@
-import type { Rect, UiElement } from './elements.js';
+import { familyOf, type Rect, type UiElement } from './elements.js';
 import type { PlatformScreen, ScreenOptions } from './port.js';
 
 type Role =
@@ -124,9 +124,7 @@ function appTree(elements: UiElement[], opts: ScreenOptions) {
   const front = elements.some((el) => el.pkg === opts.appId) ? opts.appId : undefined;
   const dropped = new Set<number>();
   const systemUi = new Set<number>();
-  const children = new Map<number, number[]>();
   elements.forEach((el, i) => {
-    if (el.parent !== undefined) children.set(el.parent, [...(children.get(el.parent) ?? []), i]);
     const pkg = packageOf(el.identifier);
     const own = opts.appId !== undefined && pkg === opts.appId && !systemUi.has(el.parent ?? -1);
     const inherited = el.parent !== undefined && dropped.has(el.parent) && !own;
@@ -150,16 +148,10 @@ function appTree(elements: UiElement[], opts: ScreenOptions) {
     items.set(index, { el, index, type, role, r: { x, y, w: width, h: height } });
   });
 
+  const family = familyOf(elements);
   const descendants = (i: number): Item[] =>
-    (children.get(i) ?? []).flatMap((c) => [
-      ...(items.has(c) ? [items.get(c)!] : []),
-      ...descendants(c),
-    ]);
-  const ancestors = (i: number): number[] => {
-    const out: number[] = [];
-    for (let p = elements[i]!.parent; p !== undefined; p = elements[p]!.parent) out.push(p);
-    return out;
-  };
+    family.descendants(i).flatMap((d) => (items.has(d) ? [items.get(d)!] : []));
+  const { ancestors } = family;
   const nameOf = (i: Item) =>
     ownName(i.el) ||
     descendants(i.index)

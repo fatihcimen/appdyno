@@ -1,5 +1,4 @@
-import { run, stateDir, type ProfileEntry } from '@appdyno/core';
-import { join } from 'node:path';
+import { run, tracesDir, type ProfileEntry } from '@appdyno/core';
 import type { Simctl } from './simctl.js';
 import { parseTimeProfile } from './trace-parse.js';
 import { recordTrace, traceTable } from './trace.js';
@@ -26,7 +25,7 @@ export async function profileStart(
     attach: async () => pid,
     attachedOnly: true,
     seconds: START_SECONDS,
-    dir: join(stateDir(), 'traces'),
+    dir: tracesDir(),
     during: () => run('kill', ['-CONT', String(pid)]),
   });
   return parseTimeProfile(await traceTable(trace, 'time-profile'), pid).appTop.slice(0, BUSIEST);

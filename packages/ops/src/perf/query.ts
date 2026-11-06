@@ -1,5 +1,5 @@
-import { resolve, join, relative, isAbsolute } from 'node:path';
-import { stateDir, type TraceDigest } from '@appdyno/core';
+import { resolve, relative, isAbsolute } from 'node:path';
+import { tracesDir, type TraceDigest } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { QueryOut } from './schemas.js';
@@ -23,7 +23,7 @@ export function perfQueryOp(ctx: ServerContext) {
     annotations: READ,
     run: async ({ trace, sql, table, limit }) => {
       const path = resolve(trace);
-      const inside = [join(stateDir(), 'traces'), ctx.measurementsDir].some((d) => {
+      const inside = [tracesDir(), ctx.measurementsDir].some((d) => {
         const r = relative(d, path);
         return r !== '' && !r.startsWith('..') && !isAbsolute(r);
       });

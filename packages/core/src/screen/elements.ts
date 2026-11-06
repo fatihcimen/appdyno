@@ -107,3 +107,19 @@ export function elementsOf(tree: Tree, traversal: Traversal[] = []): UiElement[]
   }
   return out;
 }
+
+/** Who holds whom, in a list where each names its parent by its place in the list. */
+export function familyOf(elements: { parent?: number | undefined }[]) {
+  const children = new Map<number, number[]>();
+  elements.forEach((e, i) => {
+    if (e.parent !== undefined) children.set(e.parent, [...(children.get(e.parent) ?? []), i]);
+  });
+  const ancestors = (i: number) => {
+    const out: number[] = [];
+    for (let p = elements[i]!.parent; p !== undefined; p = elements[p]!.parent) out.push(p);
+    return out;
+  };
+  const descendants = (i: number): number[] =>
+    (children.get(i) ?? []).flatMap((c) => [c, ...descendants(c)]);
+  return { ancestors, descendants };
+}

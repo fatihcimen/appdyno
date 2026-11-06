@@ -2,7 +2,7 @@ import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { sleep, run, type TraceDigest, stateDir } from '@appdyno/core';
+import { sleep, run, type TraceDigest, tracesDir } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { traceProcessor } from '../tools.js';
 import { parseCsv } from './parse.js';
@@ -120,7 +120,7 @@ export async function recordTrace(
       await sleep(300);
     const trace = await d.shellBuffer(`cat ${remote}`, 120_000);
     if (trace.length === 0) throw new DeviceError('INTERNAL', 'the trace is empty');
-    const dir = join(stateDir(), 'traces');
+    const dir = tracesDir();
     await mkdir(dir, { recursive: true, mode: 0o700 });
     const file = join(dir, `${pkg}-${name}-${Date.now()}.pftrace`);
     await writeFile(file, trace, { mode: 0o600 });

@@ -289,13 +289,18 @@ export function perfTools(ctx: ServerContext) {
       ? ['the app was relaunched with the frame probe in it; probe: false turns it off']
       : [];
   };
-  /** Four swipes after `waitMs`, for a measure that records during a scroll. */
-  const scroller = async (s: Session, direction: 'up' | 'down', waitMs: number) => {
+  /** Swipes after `waitMs`, for a measure that records during a scroll. */
+  const scroller = async (
+    s: Session,
+    direction: 'up' | 'down',
+    waitMs: number,
+    swipes = SCROLLER_SWIPES,
+  ) => {
     const h = s.device.hello!;
     const size = (await s.current()).window ?? { w: h.screen.w, h: h.screen.h };
     return async () => {
       await pause(waitMs);
-      for (let i = 0; i < SCROLLER_SWIPES; i++) {
+      for (let i = 0; i < swipes; i++) {
         const { from, to } = swipeLine(size, { direction, distance: size.h * 0.4 });
         await s.device.swipe(from, to, 300, { settle: false });
       }

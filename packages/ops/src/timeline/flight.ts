@@ -6,7 +6,9 @@ import {
   measuredLive,
   measureClock,
   safeName,
+  sleep,
   stateDir,
+  tracesDir,
   type ClockReading,
   type FrameMarks,
   type LiveField,
@@ -40,7 +42,6 @@ const CRASH_WAIT_MS = 4_000;
 const POLL_MS = 500;
 /** Each is a few MB, and a stall that repeats is one to look at. */
 const MAX_SAVES = 20;
-const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** A stretch no one kept leaves nothing of its trace on this Mac. */
 const dropTrace = async (marks: FrameMarks | { why: string }) => {
@@ -113,7 +114,7 @@ export async function startFlight(
     mkdirSync(folder, { recursive: true, mode: 0o700 });
   };
   clear();
-  const to = dir ?? join(stateDir(), 'traces');
+  const to = dir ?? tracesDir();
   mkdirSync(to, { recursive: true });
   const segmentSeconds = Math.ceil(seconds / 2);
   const saved: string[] = [];
@@ -258,13 +259,13 @@ export async function startFlight(
       const c = await device.crashes({ app, since, limit: 1 }).catch(() => undefined);
       if (c?.reports[0]) return c.reports[0].reason;
       if (Date.now() >= end) return undefined;
-      await pause(POLL_MS);
+      await sleep(POLL_MS);
     }
   };
 
   /** After a crash it waits for the app, at no cost but a look each second. */
   const comeBack = async () => {
-    while (!over && !(await device.appRunning(app).catch(() => false))) await pause(POLL_MS * 2);
+    while (!over && !(await device.appRunning(app).catch(() => false))) await sleep(POLL_MS * 2);
     if (!over) await arm();
   };
 
@@ -289,7 +290,7 @@ export async function startFlight(
       if (saved.length >= MAX_SAVES || Date.now() - lastSave < seconds * 1_000) return;
       const stall = stallOf(sample) ?? (await stallInLog(a));
       if (!stall) return;
-      await pause(AFTER_MS);
+      await sleep(AFTER_MS);
       await keep(stall);
     }).catch(() => undefined); // what a person turned on goes on: a save that failed loses that one
   };

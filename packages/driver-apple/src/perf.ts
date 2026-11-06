@@ -6,7 +6,9 @@ import {
   type XctMetrics,
   type MemoryReading,
   run,
+  pause,
   stateDir,
+  tracesDir,
   type FrameStats,
   type FrameTrace,
   type NetworkReading,
@@ -158,7 +160,7 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
       ...vars,
     });
     const pid = Number(/:\s*(\d+)/.exec(out)?.[1]);
-    for (const end = Date.now() + 20_000; Date.now() < end; await sleep(50)) {
+    for (const end = Date.now() + 20_000; Date.now() < end; await pause(50)) {
       const head = probeHead(await readFile(file, 'utf8').catch(() => ''));
       if (head.pid === pid && head.launchMs !== undefined) return head.launchMs;
     }
@@ -245,7 +247,7 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
     const to = Date.now();
     await sleep(PROBE_FLUSH_MS);
     const raw = probeWindow(await readFile(this.probeFile(bundle), 'utf8'), from, to);
-    const dir = join(stateDir(), 'traces');
+    const dir = tracesDir();
     await mkdir(dir, { recursive: true });
     const tracePath = join(dir, `probe-${to}.jsonl`);
     await writeFile(tracePath, `${raw}\n`);
@@ -387,7 +389,7 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
       device: this.udid,
       attach: async () => pid,
       seconds: s,
-      dir: join(stateDir(), 'traces'),
+      dir: tracesDir(),
       ...(once && { during: once }),
     }).then(
       async (trace) => {

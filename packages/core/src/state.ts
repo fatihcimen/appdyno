@@ -19,6 +19,9 @@ const LOCK_WAIT_MS = 2_000;
 export const stateDir = () =>
   process.env.APPDYNO_STATE_DIR ?? join(homedir(), 'Library/Caches/appdyno');
 
+/** Where traces are kept, and from where the prune takes them. */
+export const tracesDir = (state = stateDir()) => join(state, 'traces');
+
 /** A device's id or a label as part of a file name. */
 export const safeName = (s: string) => s.replace(/[^\w.-]/g, '_');
 

@@ -1,14 +1,8 @@
 // False alarms and catches of the gate's floors, on simulated launches and counts: the numbers docs/perf.md quotes.
 // Needs a build: pnpm --filter '@appdyno/perf...' build; then node scripts/perf-floor-sim.mjs
-import { compareMetric, FLOOR, median, rankTest, shift } from '@appdyno/perf';
+import { compareMetric, FLOOR, median, rankTest, seededRandom, shift } from '@appdyno/perf';
 
-let seed = 7;
-const r = () => {
-  seed = (seed + 0x6d2b79f5) | 0;
-  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-};
+const r = seededRandom(7);
 const g = () => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r());
 const run = (c, n, rs, s) => {
   const lv = c * (1 + rs * g());

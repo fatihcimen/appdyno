@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { appendFile, lstat, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { basename, join, resolve, sep } from 'node:path';
+import { tracesDir } from '@appdyno/core';
 import { loadBaseline, readRun, runFiles, runKeys, type RunKey } from './store.js';
 import type { PerfRecord } from './record.js';
 
@@ -48,7 +49,7 @@ export type PruneReport = {
 class Unread extends Error {}
 
 const fileOf = (state: string) => ({
-  traces: join(state, 'traces'),
+  traces: tracesDir(state),
   measurements: join(state, 'measurements'),
   pins: join(state, 'traces-pinned.json'),
   log: join(state, 'traces-pruned.log'),
@@ -144,7 +145,7 @@ const entries = async (dir: string, kind: RegExp) => {
 function assertInside(state: string, path: string) {
   const root = resolve(state);
   const parent = resolve(path, '..');
-  if (parent !== join(root, 'traces') && parent !== join(root, 'measurements'))
+  if (parent !== tracesDir(root) && parent !== join(root, 'measurements'))
     throw new Error(`refusing to remove ${path}: it is not in ${root}${sep}`);
 }
 

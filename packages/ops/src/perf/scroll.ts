@@ -9,7 +9,6 @@ import {
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { ScrollOut } from './schemas.js';
-import { swipeLine } from '../gesture-paths.js';
 import { defineOp, ACT, reply } from '../tool.js';
 import { perfTools, App, Probe, Scenario, kb } from './shared.js';
 import { frameVitals } from './vitals.js';
@@ -41,7 +40,7 @@ export function leakSignal(
 }
 
 export function perfScrollOp(ctx: ServerContext) {
-  const { measure, appOf, virtualNote, save, keep, noisy, withProbe } = perfTools(ctx);
+  const { measure, appOf, virtualNote, save, keep, noisy, withProbe, scroller } = perfTools(ctx);
   return defineOp({
     name: 'perf_scroll',
     title: 'Scroll performance',
@@ -67,8 +66,6 @@ export function perfScrollOp(ctx: ServerContext) {
       // turned off by the caller, which says nothing of the device
       const row = probe === false ? false : 'frames';
       const readMemory = measure(s, 'memory');
-      const h = s.device.hello!;
-      const size = (await s.current()).window ?? { w: h.screen.w, h: h.screen.h };
       const all: Measured<unknown>[] = [];
       const rounds: {
         jankyPercent: number;
@@ -85,12 +82,7 @@ export function perfScrollOp(ctx: ServerContext) {
       const stalls: number[] = [];
       const hitches: number[] = [];
       const histograms: FrameHistogram[] = [];
-      const swipeAll = async () => {
-        for (let i = 0; i < swipes; i++) {
-          const { from, to } = swipeLine(size, { direction, distance: size.h * 0.4 });
-          await s.device.swipe(from, to, 300, { settle: false });
-        }
-      };
+      const swipeAll = await scroller(s, direction, 0, swipes);
       const framesOfRound = () =>
         measure(s, 'framesDuring', row)(
           pkg,

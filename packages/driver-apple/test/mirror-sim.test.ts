@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Simctl } from '../src/simctl.js';
+import { Simctl } from '../src/simctl.js';
 import type { HelperProcess } from '../src/simhelper.js';
 import { onSurface, SimulatorMirror, turnsOf } from '../src/mirror-sim.js';
 import { hidKey, HID_MODIFIERS, usageOf } from '../src/simtouch.js';
@@ -95,6 +95,15 @@ describe('a simulator mirror', () => {
       { op: 'keyState', page: 7, usage: 5, state: 2 },
       { op: 'keyState', page: 7, usage: 0xe1, state: 2 },
     ]);
+  });
+
+  it('reaches a simulator pasteboard by the one way that checks its id', async () => {
+    const pbcopy = vi.fn(async () => undefined);
+    const start = vi.fn(async () => setup().helper as unknown as HelperProcess);
+    const mirror = new SimulatorMirror(UDID, { pbcopy } as unknown as Simctl, start);
+    await mirror.input({ kind: 'text', s: 'ş' });
+    expect(pbcopy).toHaveBeenCalledWith(UDID, 'ş');
+    await expect(new Simctl().pbcopy('x; rm', 'ş')).rejects.toThrow('not a simulator id');
   });
 
   it('types anything else by the pasteboard and command V', async () => {

@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { jsonLines } from '../json-lines.js';
 import { nativeBinary, nativeFile } from '../native.js';
 import { NeedError } from './need.js';
 
@@ -160,7 +161,6 @@ export class ViewerProcess implements ViewerLink {
   private readonly listeners: ((m: ViewerMessage) => void)[] = [];
   private readonly exits: ((tail: string) => void)[] = [];
   private tail = '';
-  private buffered = '';
   private ended = false;
   private readonly child;
 
@@ -170,7 +170,13 @@ export class ViewerProcess implements ViewerLink {
       ...(env && { env }),
     });
     this.child.stdin.on('error', () => undefined);
-    this.child.stdout.setEncoding('utf8').on('data', (s: string) => this.onData(s));
+    this.child.stdout.on(
+      'data',
+      jsonLines((m) => {
+        if (m && typeof (m as ViewerMessage).op === 'string')
+          for (const l of this.listeners) l(m as ViewerMessage);
+      }),
+    );
     this.child.stderr.setEncoding('utf8').on('data', (s: string) => {
       this.tail = (this.tail + s).slice(-STDERR_TAIL);
     });
@@ -180,22 +186,6 @@ export class ViewerProcess implements ViewerLink {
 
   get pid() {
     return this.child.pid;
-  }
-
-  private onData(s: string) {
-    this.buffered += s;
-    for (let at = this.buffered.indexOf('\n'); at >= 0; at = this.buffered.indexOf('\n')) {
-      const line = this.buffered.slice(0, at);
-      this.buffered = this.buffered.slice(at + 1);
-      let m: unknown;
-      try {
-        m = JSON.parse(line);
-      } catch {
-        continue; // a framework's print on its stdout is no message
-      }
-      if (m && typeof (m as ViewerMessage).op === 'string')
-        for (const l of this.listeners) l(m as ViewerMessage);
-    }
   }
 
   private end(extra?: string) {

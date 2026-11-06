@@ -1,8 +1,7 @@
-import { join } from 'node:path';
 import {
   Cannot,
   cannot,
-  stateDir,
+  tracesDir,
   type DeviceVitals,
   type FrameStats,
   type FrameTrace,
@@ -87,7 +86,7 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
       this.phone.serial,
       () => this.phone.ctl.pid(bundle),
       Math.min(Math.max(Math.round(seconds), 1), 30),
-      join(stateDir(), 'traces'),
+      tracesDir(),
       during,
     );
   }
@@ -122,7 +121,7 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
       this.phone.serial,
       () => this.phone.ctl.pid(bundle),
       seconds,
-      join(stateDir(), 'traces'),
+      tracesDir(),
       during,
     );
     if (started === undefined)
@@ -157,7 +156,7 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
       template: 'Activity Monitor',
       device: this.phone.serial,
       seconds: Math.min(Math.max(Math.round(windowMs / 1000), 2), 30),
-      dir: join(stateDir(), 'traces'),
+      dir: tracesDir(),
     });
     const value = parseActivityMonitor(
       await traceTable(trace, 'activity-monitor-process-live'),
@@ -196,7 +195,7 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
       template: 'Time Profiler',
       device: this.phone.serial,
       seconds: Math.min(Math.max(Math.round(ms / 1000), 1), 30),
-      dir: join(stateDir(), 'traces'),
+      dir: tracesDir(),
       ...(during && { during }),
     });
     const exported = await traceTable(trace, 'time-profile');

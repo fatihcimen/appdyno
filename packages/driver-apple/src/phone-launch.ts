@@ -1,6 +1,5 @@
-import { stateDir, type StartupAnalysis } from '@appdyno/core';
+import { tracesDir, type StartupAnalysis } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { join } from 'node:path';
 import { parseLaunchPhases } from './launch-phases.js';
 import { recordTrace, traceTable } from './trace.js';
 
@@ -21,7 +20,7 @@ export async function appLaunchPhases(
     device,
     launch: { app: bundle, ...(env && { env }) },
     seconds: LAUNCH_SECONDS,
-    dir: join(stateDir(), 'traces'),
+    dir: tracesDir(),
   });
   const { phases, totalMs } = parseLaunchPhases(await traceTable(tracePath, 'life-cycle-period'));
   if (!phases.length)

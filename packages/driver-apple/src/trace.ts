@@ -7,7 +7,7 @@ import {
   run,
   type Measured,
   type XctMetrics,
-  stateDir,
+  tracesDir,
   type TraceDigest,
   type HitchSummary,
 } from '@appdyno/core';
@@ -236,7 +236,7 @@ export async function recordXctMetrics(
   test: 'launch' | 'hitches',
 ): Promise<Measured<XctMetrics>> {
   const name = test === 'hitches' ? 'testHitches' : 'testLaunch';
-  const dir = join(stateDir(), 'traces');
+  const dir = tracesDir();
   await mkdir(dir, { recursive: true });
   const resultBundle = join(dir, `xct-${test}-${Date.now()}.xcresult`);
   const failed = (why: string) =>

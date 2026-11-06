@@ -1,7 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { assertUdid, xcodeEnv } from './simctl.js';
-import { nativeBinary, nativeFile } from '@appdyno/core';
+import { jsonLines, nativeBinary, nativeFile } from '@appdyno/core';
 
 const IN_A_SIMULATOR = [
   '--sdk',
@@ -80,12 +80,19 @@ export class HelperProcess {
   private readonly child: ChildProcessWithoutNullStreams;
   private readonly waiting = new Map<number, (a: HelperAnswer) => void>();
   private next = 1;
-  private buffered: Buffer[] = [];
   closed = false;
 
   constructor(command: string, args: string[]) {
     this.child = spawn(command, args, { env: xcodeEnv() });
-    this.child.stdout.on('data', (b: Buffer) => this.onData(b));
+    this.child.stdout.on(
+      'data',
+      jsonLines((m) => {
+        const a = m as (HelperAnswer & { id?: number }) | null;
+        if (!a) return;
+        this.waiting.get(a.id ?? 0)?.(a);
+        this.waiting.delete(a.id ?? 0);
+      }),
+    );
     this.child.stderr.resume();
     this.child.stdin.on('error', () => undefined);
     this.child.on('error', () => this.end());
@@ -95,23 +102,6 @@ export class HelperProcess {
     (this.child.stdout as unknown as { unref?: () => void }).unref?.();
     (this.child.stderr as unknown as { unref?: () => void }).unref?.();
     (this.child.stdin as unknown as { unref?: () => void }).unref?.();
-  }
-
-  private onData(b: Buffer) {
-    let start = 0;
-    for (let i = b.indexOf(10); i >= 0; i = b.indexOf(10, start)) {
-      const line = Buffer.concat([...this.buffered, b.subarray(start, i)]);
-      this.buffered = [];
-      start = i + 1;
-      try {
-        const a = JSON.parse(line.toString('utf8')) as HelperAnswer & { id?: number };
-        this.waiting.get(a.id ?? 0)?.(a);
-        this.waiting.delete(a.id ?? 0);
-      } catch {
-        // anything else on its stdout is no answer
-      }
-    }
-    if (start < b.length) this.buffered.push(b.subarray(start));
   }
 
   private end() {
