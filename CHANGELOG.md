@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A start of the iOS runner ends as soon as the runner it started speaks another protocol, and says which build to make again. It waited out its 180 s for an answer it already had.
 - A client's search finds a tool by the words people use, such as emulator, performance, deep link and dark mode, none of which was in any description.
 - `appdyno mcp` is the one way to start the server: `appdyno-mcp` is gone.
 - `bench` times this tool alone: `--driver` is gone.

@@ -1,11 +1,11 @@
 import { spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Socket } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deviceStateFile, startOf, thisOwner } from '@appdyno/core';
-import { fakeAgentStream, TOKEN } from '../../core/test/fake-agent.js';
+import { fakeAgentStream, HELLO, TOKEN } from '../../core/test/fake-agent.js';
 import { IosRunnerLauncher, RUNNER_TEST, type RunnerTransport } from '../src/runner.js';
 
 const UDID = '00000000-0000-4000-8000-000000000001';
@@ -98,5 +98,69 @@ describe('a runner of another build on a simulator', () => {
     found.rpc.close();
     expect(found.started).toBe(false);
     expect(through.port).toHaveBeenCalledOnce();
+  });
+});
+
+describe('a start that cannot come', () => {
+  const PATH = process.env.PATH;
+  let state: string;
+  let other: ReturnType<typeof spawn>;
+
+  const through = (major: number): RunnerTransport => ({
+    build: async () => ({ xctestrun: '/products/x.xctestrun', sha256: 'a'.repeat(64) }),
+    port: async () => 1,
+    open: async () => {
+      const hello = () => ({ result: { ...HELLO, protocol: { major } } });
+      const { host } = fakeAgentStream({ hello });
+      return { socket: Object.assign(host, { setNoDelay: () => undefined }) as unknown as Socket };
+    },
+  });
+
+  beforeEach(() => {
+    state = mkdtempSync(join(tmpdir(), 'appdyno-runner-'));
+    process.env.APPDYNO_STATE_DIR = state;
+    other = spawn('sleep', ['30'], { stdio: 'ignore' });
+    // what a start spawns, with the command line that names the runner: no test may run the real one
+    writeFileSync(
+      join(state, 'xcodebuild'),
+      `#!${process.execPath}\nsetTimeout(() => {}, 30000);\n`,
+    );
+    chmodSync(join(state, 'xcodebuild'), 0o755);
+    process.env.PATH = `${state}:${PATH}`;
+  });
+  afterEach(() => {
+    process.env.PATH = PATH;
+    vi.restoreAllMocks();
+    other.kill('SIGKILL');
+    rmSync(state, { recursive: true, force: true });
+  });
+
+  it('ends when the runner it started speaks another protocol, which it will say until the time is up', async () => {
+    const stopped = vi.spyOn(process, 'kill');
+    const started = Date.now();
+    await expect(new IosRunnerLauncher(UDID, through(1)).connect()).rejects.toMatchObject({
+      code: 'AGENT_VERSION_MISMATCH',
+      message: expect.stringContaining('runner protocol 1'),
+      hint: expect.stringContaining('/products/x.xctestrun'),
+    });
+    expect(Date.now() - started).toBeLessThan(4_000);
+    expect(stopped).toHaveBeenCalledWith(expect.any(Number), 'SIGTERM');
+  });
+
+  it('is waited for no longer than one, with who holds it said', async () => {
+    const holder = {
+      ...thisOwner('a runner start'),
+      pid: other.pid!,
+      started: startOf(other.pid!),
+    };
+    writeFileSync(join(state, `ios-${UDID}.starting`), JSON.stringify(holder));
+    const asked = new IosRunnerLauncher(UDID, through(2)).connect();
+    await new Promise((r) => setTimeout(r, 400));
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockImplementation(() => now + 181_000);
+    await expect(asked).rejects.toMatchObject({
+      code: 'AGENT_UNAVAILABLE',
+      message: expect.stringContaining(`pid ${other.pid}`),
+    });
   });
 });

@@ -121,14 +121,16 @@ export class IosRunnerLauncher {
       const state = await this.readState();
       return sharedAgent(this.udid, state, build.sha256, (s) => this.tryConnect(s));
     };
+    // one start's time in all: a host that waited for another's has that much less for its own
+    let waitEnds: number | undefined;
     const start = async () => {
       const theirs = await running();
       if (theirs) return theirs;
       await beforeStart?.();
       await this.killServing();
-      return { ...(await this.start(build, target)), started: true };
+      const deadline = waitEnds ?? Date.now() + START_MS;
+      return { ...(await this.start(build, deadline, target)), started: true };
     };
-    let told = false;
     for (;;) {
       const there = await running();
       if (there) return there;
@@ -137,8 +139,16 @@ export class IosRunnerLauncher {
         return await exclusively(this.startPath, 'a runner start', starter, start);
       } catch (e) {
         if (!(e instanceof StartingElsewhere)) throw e;
-        if (!told) reportProgress(`waiting for pid ${e.holder.pid} to start the iOS runner`);
-        told = true;
+        if (waitEnds === undefined) {
+          reportProgress(`waiting for pid ${e.holder.pid} to start the iOS runner`);
+          waitEnds = Date.now() + START_MS;
+        }
+        if (Date.now() >= waitEnds)
+          throw new DeviceError(
+            'AGENT_UNAVAILABLE',
+            `pid ${e.holder.pid} did not start the iOS runner within ${START_MS} ms`,
+            'close that process, or try again',
+          );
         await sleep(POLL_MS);
       }
     }
@@ -159,7 +169,11 @@ export class IosRunnerLauncher {
     return recordXctMetrics(this.udid, xctestrun, bundle, test);
   }
 
-  private async start(build: { xctestrun: string; sha256: string }, target?: string) {
+  private async start(
+    build: { xctestrun: string; sha256: string },
+    deadline: number,
+    target?: string,
+  ) {
     reportProgress('starting the iOS runner');
     const port = await this.transport.port();
     const token = randomBytes(24).toString('hex');
@@ -199,7 +213,6 @@ export class IosRunnerLauncher {
     let exited: number | null | undefined;
     child.once('exit', (code) => (exited = code));
     const s: State = { port, token, sha256: build.sha256, ...(child.pid && { pid: child.pid }) };
-    const deadline = Date.now() + START_MS;
     const startedAt = Date.now();
     const say = (line: string) =>
       process.stderr.write(
@@ -222,9 +235,17 @@ export class IosRunnerLauncher {
         await this.writeState(s);
         return c;
       }
-      if (exited !== undefined || Date.now() >= deadline) {
+      // it answered: an older build says the same until the time is up
+      const refused = c instanceof DeviceError && c.code === 'AGENT_VERSION_MISMATCH';
+      if (refused || exited !== undefined || Date.now() >= deadline) {
         const log = await readFile(this.logPath, 'utf8').catch(() => '');
         if (child.pid) await this.kill(child.pid);
+        if (refused)
+          throw new DeviceError(
+            c.code,
+            c.message,
+            `build the runner again: ${build.xctestrun} is of another version of this host`,
+          );
         throw new DeviceError(
           'AGENT_UNAVAILABLE',
           exited !== undefined
