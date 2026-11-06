@@ -248,6 +248,31 @@ export function addToBaseline(
 export const runsIn = (b: Baseline | undefined) =>
   Math.max(0, ...Object.values(b?.metrics ?? {}).map((m) => m.runs.length));
 
+/**
+ * What every run of a baseline measured and this one did not, as a judgement that never happened: a screen that stops
+ * drawing keeps no frames, and a gate that looked only at what a run holds would call that clear. A kind some of its
+ * runs lack comes and goes by itself, and says nothing here.
+ */
+export function unmeasured(baseline: Baseline | undefined, held: string[]): Comparison[] {
+  const runs = runsIn(baseline);
+  if (!baseline || runs < MIN_BASELINE_RUNS) return [];
+  return Object.entries(baseline.metrics).flatMap(([kind, { unit, runs: of }]) => {
+    if (of.length < runs || held.includes(kind)) return [];
+    const samples = of.flatMap((r) => r.samples);
+    return [
+      {
+        kind,
+        unit,
+        verdict: 'few-samples' as const,
+        current: Number.NaN,
+        baseline: median(samples),
+        n: { current: 0, baseline: samples.length },
+        note: 'every run of the baseline has it, and this one does not',
+      },
+    ];
+  });
+}
+
 /** Limits a project sets. A rule without app, scenario or device class holds for all. */
 export type BudgetRule = {
   kind: string;

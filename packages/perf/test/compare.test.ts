@@ -446,6 +446,62 @@ describe('store and reports', () => {
     expect(pooled.at).toBe(stamp(6));
   });
 
+  describe('what a baseline measured and this run did not', () => {
+    const baselineOf = async (metrics: Record<string, number[][]>) => {
+      const d = dir();
+      await saveRun(d, context([100, 101, 102, 103, 104], 'r1', '2026-11-03T00:00:00.000Z'));
+      const [key] = await runKeys(d);
+      const baseline: Baseline = {
+        schema: 1,
+        ...key!,
+        metrics: Object.fromEntries(Object.entries(metrics).map(([k, m]) => [k, metric(m)])),
+      };
+      return { key: key!, runs: await latestRuns(d, key!, 1), baseline };
+    };
+    const THREE = [
+      [100, 101, 102],
+      [100, 101, 102],
+      [100, 101, 102],
+    ];
+
+    it('stops the gate where every run of the baseline had it, as a screen that stops drawing keeps none', async () => {
+      const { key, runs, baseline } = await baselineOf({
+        'launch.ttid_ms': THREE,
+        'frames.p95_ms': THREE,
+      });
+      const r = reportKey(key, runs, baseline, []);
+      expect(r.comparisons.find((c) => c.kind === 'frames.p95_ms')).toMatchObject({
+        verdict: 'few-samples',
+        baseline: 101,
+        n: { current: 0, baseline: 9 },
+      });
+      expect(exitCode([r])).toBe(1);
+      const text = toText([r]);
+      expect(text).toContain('frames.p95_ms: ? ms against 101 [n 0/9]');
+      expect(text).toContain('the gate could not judge 1 of these');
+    });
+
+    it('says nothing of one that comes and goes by itself', async () => {
+      const { key, runs, baseline } = await baselineOf({
+        'launch.ttid_ms': THREE,
+        'journey.03_tap.frames_p95_ms': THREE.slice(0, 2),
+      });
+      const r = reportKey(key, runs, baseline, []);
+      expect(r.comparisons.map((c) => c.kind)).toEqual(['launch.ttid_ms']);
+    });
+
+    it('says nothing of a baseline too short to know what a run holds', async () => {
+      const short = THREE.slice(0, 2);
+      const { key, runs, baseline } = await baselineOf({
+        'launch.ttid_ms': short,
+        'frames.p95_ms': short,
+      });
+      expect(reportKey(key, runs, baseline, []).comparisons.map((c) => c.kind)).toEqual([
+        'launch.ttid_ms',
+      ]);
+    });
+  });
+
   it('refuses a pool of two builds, baseline or none, and says which', async () => {
     const d = dir();
     await saveRun(d, context([100, 101, 102], 'r1', '2026-11-03T00:00:00.000Z'));

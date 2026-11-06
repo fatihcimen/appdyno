@@ -1,6 +1,7 @@
 import {
   checkBudgets,
   compareMetric,
+  unmeasured,
   type Baseline,
   type BudgetResult,
   type BudgetRule,
@@ -45,9 +46,13 @@ export function reportKey(
     run: newest[0]?.run ?? '',
     at: newest[0]?.at ?? '',
     noise: [...new Set(pooled.flatMap((r) => r.noise))],
-    comparisons: pooled.map((r) =>
-      compareMetric(r.kind, r, baseline?.metrics[r.kind], r.unit, r.better),
-    ),
+    comparisons: [
+      ...pooled.map((r) => compareMetric(r.kind, r, baseline?.metrics[r.kind], r.unit, r.better)),
+      ...unmeasured(
+        baseline,
+        pooled.map((r) => r.kind),
+      ),
+    ],
     budgets: checkBudgets(pooled, rules),
   };
 }
@@ -75,7 +80,7 @@ const failed = (r: KeyReport) => [...judged(r).filter(stops), ...r.budgets.filte
 export const exitCode = (reports: KeyReport[]) => (reports.some((r) => failed(r).length) ? 1 : 0);
 
 const shown = (x: number | undefined) =>
-  x === undefined ? '?' : String(Math.round(x * 100) / 100);
+  x === undefined || Number.isNaN(x) ? '?' : String(Math.round(x * 100) / 100);
 
 /** What makes a number something other than the device's own reading, said beside it wherever it goes. */
 const marksOf = (c: Comparison) =>
