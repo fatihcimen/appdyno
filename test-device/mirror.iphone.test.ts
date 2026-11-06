@@ -109,8 +109,8 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     expect(status().picture).toMatchObject({ codec: 'hevc' });
     expect(status().picture!.h).toBeGreaterThan(status().picture!.w);
     await until('frames', () => Number(status().stats?.arrived ?? 0) > 0);
-    expect(status().stats?.mode).toBe('mode 7');
-    // told by the first image, which comes after the first frame's arrival
+    // both told by the first image, which comes after the first frame's arrival
+    await until('the mode', () => status().stats?.mode === 'mode 7');
     await until('the decoder', () => status().stats?.decoder === 'hardware 444f');
     if (!headless) await until('the window to show it', () => status().stats?.layer === 'ok');
   }, 60_000);

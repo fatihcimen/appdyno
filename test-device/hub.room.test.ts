@@ -7,7 +7,7 @@ import {
   ViewerProcess,
   type ViewerMessage,
 } from '../packages/core/src/index.js';
-import { androidProvider } from '../packages/driver-android/src/index.js';
+import { Adb, androidProvider } from '../packages/driver-android/src/index.js';
 import { appleProvider } from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, ServerContext, runHub } from '../packages/ops/src/index.js';
 import { liveMirror } from '../packages/ops/src/mirror/state.js';
@@ -215,6 +215,9 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
     async () => {
       // what left for a window of its own stands in the room again once that has closed
       const shown = await inRoom();
+      // a phone left alone this long sleeps, and a window rightly waits for it
+      if (!/^[0-9A-F]{8}-/.test(shown))
+        await new Adb().exec(shown, 'input keyevent KEYCODE_WAKEUP');
       const at = Date.now();
       told.length = 0;
       process.kill(link.pid!, 'SIGKILL');
