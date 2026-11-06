@@ -31,6 +31,17 @@ static void checkTabs(void) {
     MVPump(0.1);
     MVCheck([@"inspector: a real click chooses " stringByAppendingString:tab], window.inspector.chosen == [tabs[tab] integerValue], nil);
   }
+  [window showPane:MVPaneFlow];
+  MVPump(0.2);
+  NSDictionary *clicks = @{@"clickDoes:1": @"copy", @"clickDoes:2": @"assert"};
+  for (NSString *name in clicks) {
+    [window pokeClick:name];
+    MVPump(0.1);
+    MVCheck([@"flow: a real click on a capsule chooses " stringByAppendingString:clicks[name]], [window.inspector.flow.clickDoes isEqual:clicks[name]], window.inspector.flow.clickDoes);
+  }
+  [window pokeClick:@"clickDoes:0"];
+  MVPump(0.1);
+  MVCheck(@"flow: and the first gives a click back to the device", window.inspector.flow.clickDoes == nil, window.inspector.flow.clickDoes);
   [window pokeClick:@"status"];
   MVPump(0.2);
   MVCheck(@"capsule: a real click shows the stream's numbers", window.numbersShown, nil);

@@ -271,6 +271,10 @@ static void checkNeedsYou(MVHub *hub) {
   [hub show:@{@"devices": @[]}];
 }
 
+@interface MVToolsPane (Picked)
+- (void)appPicked:(NSMenuItem *)item;
+@end
+
 static void checkTools(MVHub *hub, MVToolsPane *tools) {
   [hub pokeRow:@"Tools"];
   MVPump(0.2);
@@ -290,6 +294,11 @@ static void checkTools(MVHub *hub, MVToolsPane *tools) {
   }
   NSDictionary *run = clicked(hub, @"run:flows");
   MVCheck(@"tools: a run takes the app, device and folder chosen", [run[@"device"] isEqual:@"S"] && [run[@"folder"] isEqual:@"/flows"] && [run[@"app"] isEqual:@"com.example.app"], run.description);
+  NSDictionary *none = clicked(hub, @"appList");
+  MVCheck(@"tools: behind others, the list of apps opens no menu on a person's screen", none == nil, none.description);
+  [tools appPicked:[[NSMenuItem alloc] initWithTitle:@"com.example.picked" action:nil keyEquivalent:@""]];
+  MVCheck(@"tools: an app picked from the list is the app a run takes", [clicked(hub, @"run:flows")[@"app"] isEqual:@"com.example.picked"], nil);
+  [tools chooseApp:@"com.example.app" folder:@"/flows"];
   [hub showClients:@{@"run": @{@"name": @"compare", @"started": @YES, @"command": @"appdyno perf compare --app com.example.app"}}];
   [hub showClients:@{@"run": @{@"name": @"compare", @"text": @"launch 553 ms slower\n"}}];
   MVPump(0.1);
