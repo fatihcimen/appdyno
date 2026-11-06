@@ -702,6 +702,15 @@ The phone's touch stays about one display tick over its target: 98 ms by way of 
 
 Under other work, nothing but the load differs: on the phone at load 325 to 369, 51 frames/s, capture to arrival 33.8, 48.4 ms, touch 103 ms, decode 9.6 ms.
 
+By Wi-Fi, against the same phone by cable: a Samsung SM-A525F, Android 14, H.264, with its cable in and driven by its Wi-Fi serial, `--max-size 1280` both ways, three runs each in turn, a minute and a half apart, at load 3 to 6, on a network where a ping to the phone averaged 31 to 86 ms:
+
+| way   | first picture, ms | touch to first changed frame p50, ms | frames/s while moving | capture to arrival p50, p95, ms    |
+| ----- | ----------------- | ------------------------------------ | --------------------- | ---------------------------------- |
+| cable | 260, 256, 260     | 106, 103, 110                        | 75, 74, 75            | 25, 28; 25, 29; 25, 28             |
+| Wi-Fi | 357, 411, 357     | **187, 208, 197**                    | 82, 82, 72            | 29, **81**; 27, **74**; 32, **88** |
+
+The third pair ran with one agent on the phone, and the first two with a second one idle. `auto` keeps a size for each way in: by Wi-Fi it settled at 720x1600, where touch read 212 and 201 ms and capture to arrival p95 100 and 85 ms. Why frames/s reads higher by Wi-Fi in two of three runs has not been looked into.
+
 A phone's target for frames is 59, or 59 of every 60 where its display is slower, read from `dumpsys display`: `auto` gives up what is past that for a touch. On the Samsung capture to arrival follows the picture's pixels, and touch read 215 ms at load 160 and 217 at load 21, so that is the size, not load, and [`auto` measures it](../mirror.md#the-size-of-a-phones-picture). Its first stream settled on 576x1280 from 1080x2400 by way of 1920 lines, and the next started there, first picture in 360 to 932 ms. Touch stays a miss at any size: 95 to 107 ms at 1280 lines across runs, and 94 at 1024.
 
 Thirty minutes of a picture that keeps moving, by `--soak 30`, with the viewer's memory a minute in and at the end:

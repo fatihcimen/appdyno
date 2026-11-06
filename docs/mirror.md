@@ -231,6 +231,7 @@ Tools runs what appdyno does at a terminal, each row the very command, spawned b
 | Timeline, Flight Recorder                             | `timeline`, `flight`                                  |
 | Dashboard                                             | `perf dashboard`, and it opens                        |
 | Get Trace Tools, Get adb                              | `tools install`, `tools install adb --accept-license` |
+| Pair for Wi-Fi, Forget Pairing, in Connect a Phone    | `pair`, `pair --forget`                               |
 | Add to All AI Clients                                 | `install --dry-run` first, then `install --yes`       |
 | Add to PATH, Take off PATH                            | `path`, `path --remove`, from the app only            |
 | Check for Updates, Update                             | `update --check`, `update`                            |
@@ -491,11 +492,33 @@ A cable stays the default. The network is a person's choice, made once for each 
 The window's title says it is on Wi-Fi, and a note says what that costs. An iPhone takes the lower mode unless
 `--quality high` asks for the other.
 
+All of it is in the hub too. Connect a Phone has a card, Without a Cable, for a phone on a cable: Pair for Wi-Fi runs the
+same `appdyno pair`, for an iPhone at a click and for an Android phone with the address and code it shows. Forget Pairing
+runs `appdyno pair --forget`, which takes this Mac's half of an iPhone's pairing; the phone keeps its half until its
+trusted computers are cleared, and an Android phone's pairing is forgotten under Wireless debugging on the phone.
+
+One phone is one row, as it has one encoder. On a cable it goes by the cable, and a name adb found on the network is left
+out while that phone has its cable. Without one the same phone stands in the list by Wi-Fi, and the bar over it says so:
+`Live · 60 fps · Wi-Fi`. An address says nothing of whose it is, so a phone reached by `adb connect` keeps a row of its
+own. An iPhone paired for Wi-Fi stands in the list with no cable, from what is on this Mac and with no look at the
+network, and its window says if the phone is not there. It goes by the network with no `--wifi`, as it has nothing else.
+
 A network that goes leaves no end to read, so silence is what tells: past it the last picture dims and the window
 says `waiting not-connected`, as for a pulled cable, and it comes back by itself. Measured on an emulator reached by
 address through a relay that goes silent: said within 7 s of 20 s of silence, live within 1 s of the return.
 
-An iPhone over the network is not yet run on a phone, so nothing here is a number of one.
+What Wi-Fi costs, measured on a Samsung SM-A525F against itself by cable (the table is in `reference/perf.md`): a touch takes about twice as long to show, 187 to 208 ms for 103 to 110, and a window opens 100 to 150 ms later. Most pictures arrive about as soon as by cable, and the slowest one in twenty about 50 ms later, which a person sees as an uneven picture on a phone that is moving. The network's round trip is the likely cause, though it was not measured apart: a ping to that phone took from 6 to 170 ms.
+
+Run on that Samsung by its Wi-Fi serial with its cable in, by the window suite kept behind: a picture, a tap, typing, a long press, a drag, Home, Recents, Back, turning it, a screenshot, the Inspector, its agent killed and back, a close and a new open. One phone has one agent whichever way it is reached.
+
+A window on Wi-Fi does not do these:
+
+- An iPhone's pairing cannot be made there: on the network a phone refuses to start one, so it takes a cable, once.
+- An iPhone has a window and nothing that needs its runner, which is reached by USB.
+- A phone must share this Mac's network: an iPhone is found by what it advertises there, and an Android phone needs Wireless debugging left on.
+- An iPhone by Wi-Fi takes the lower mode unless asked.
+
+Not yet run on a phone, so no claim is made: a network that goes, on a Samsung or an iPhone, as the numbers above it are an emulator's; a pulled cable going on by Wi-Fi; the hub's card pairing a real phone, and its list and bar with a phone on Wi-Fi, which its self test and unit tests hold; and anything of an iPhone past the question it puts to a person, which was reached on an iPhone 13 Pro Max and has not been accepted. There are no iPhone numbers here.
 
 ## Left out, for now
 
