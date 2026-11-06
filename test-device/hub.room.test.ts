@@ -143,28 +143,37 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
 
   /** The real item of More, fired by its menu: no menu opens, as one would on a person's screen and hold their mouse. */
   const fired = async (stage: string, menu: string) => {
-    told.length = 0;
+    const from = told.length;
+    const heard = () => told.slice(from).find((m) => m.op === 'fired');
     link.send({ op: 'poke', stage, menu });
-    await until(`${menu} fired`, () => told.some((m) => m.op === 'fired'), 10_000);
-    expect(told.find((m) => m.op === 'fired')).toMatchObject({ found: true, enabled: true });
+    await until(`${menu} fired`, () => !!heard(), 10_000);
+    expect(heard()).toMatchObject({ found: true, enabled: true });
+  };
+  /** What stands in the room now: the last to give a picture, once a window of its own has given the room back. */
+  const inRoom = async () => {
+    await quiet(3_000);
+    await until('a device in the room', () => told.some((m) => m.op === 'first'), LIVE_MS);
+    return String(told.findLast((m) => m.op === 'first')!.stage);
   };
 
   it(
     'turns the device by the item of More, and back',
     async () => {
-      const shown = serials.findLast((s) => live(s) || serials.length === 1)!;
-      await until('the device in the room', () => live(shown), LIVE_MS);
-      const size = () => told.findLast((m) => m.op === 'stats' && m.stage === shown && m.w);
-      await until('a picture', () => !!size(), 20_000);
-      await fired(shown, 'rotateLeft');
+      const shown = await inRoom();
+      const size = () => {
+        const { w, h } = told.findLast((m) => m.op === 'stats' && m.stage === shown && m.w)!;
+        return `${String(w)}x${String(h)}`;
+      };
       await until(
-        'the press',
-        () => told.some((m) => m.op === 'button' || m.op === 'control'),
-        5_000,
+        'a picture',
+        () => told.some((m) => m.op === 'stats' && m.stage === shown && m.w),
+        20_000,
       );
+      const upright = size();
+      await fired(shown, 'rotateLeft');
       // the app in front may not turn, and the window then says so: what counts is that the device was asked
       await quiet(4_000);
-      measured(`rotate left on ${shown}: picture ${JSON.stringify(size())}`);
+      measured(`rotate left on ${shown}: picture ${upright} became ${size()}`);
       await picture('turned');
       await fired(shown, 'rotateRight');
       await quiet(4_000);
@@ -175,22 +184,26 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
   it(
     'gives a device a window of its own by the item of More',
     async () => {
-      const shown = serials.findLast((s) => live(s) || serials.length === 1)!;
-      await until('the device in the room', () => live(shown), LIVE_MS);
-      await quiet(2_000);
-      await fired(shown, 'newWindow');
-      await until(
-        'a window of its own',
-        () => {
-          const own = liveMirror(shown);
-          return own?.pid !== process.pid && own?.status.state === 'live';
-        },
-        LIVE_MS,
-      );
-      const window = liveMirror(shown)!;
-      await quiet(5_000);
-      link.send({ op: 'poke', id: shown, press: 'window' });
-      await until('it to close', () => !isAlive(window), 60_000);
+      const shown = await inRoom();
+      try {
+        await fired(shown, 'newWindow');
+        await until(
+          'a window of its own',
+          () => {
+            const own = liveMirror(shown);
+            return own?.pid !== process.pid && own?.status.state === 'live';
+          },
+          LIVE_MS,
+        );
+        const window = liveMirror(shown)!;
+        await quiet(5_000);
+        link.send({ op: 'poke', id: shown, press: 'window' });
+        await until('it to close', () => !isAlive(window), 60_000);
+      } finally {
+        // it outlives the hub by design, so a test that fails must not leave it on a person's phone
+        const left = liveMirror(shown);
+        if (left && left.pid !== process.pid) process.kill(left.pid);
+      }
       await quiet(3_000);
     },
     LIVE_MS + 90_000,
@@ -199,9 +212,8 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
   it(
     'brings the device back when the viewer under it is killed',
     async () => {
-      const shown = serials.findLast((s) => live(s) || serials.length === 1)!;
       // what left for a window of its own stands in the room again once that has closed
-      await until('the device in the room', () => live(shown), LIVE_MS);
+      const shown = await inRoom();
       const at = Date.now();
       told.length = 0;
       process.kill(link.pid!, 'SIGKILL');

@@ -53,9 +53,9 @@ NSDictionary *MVClickControl(NSWindow *window, NSButton *_Nullable button, NSStr
   NSMenu *menu = [self moreMenu];
   NSInteger at = [menu indexOfItemWithRepresentedObject:name];
   [menu update];
-  BOOL enabled = at >= 0 && [menu itemAtIndex:at].enabled;
+  BOOL found = at >= 0, enabled = found && [menu itemAtIndex:at].enabled;
   if (enabled) [menu performActionForItemAtIndex:at];
-  MVEmitFrom(self.screenView, @{@"op": @"fired", @"name": name, @"found": @(at >= 0), @"enabled": @(enabled)});
+  MVEmitFrom(self.screenView, @{@"op": @"fired", @"name": name, @"found": @(found), @"enabled": @(enabled)});
 }
 
 - (void)pokeX:(double)x y:(double)y right:(BOOL)right {
