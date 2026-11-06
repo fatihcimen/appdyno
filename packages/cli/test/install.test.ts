@@ -546,6 +546,28 @@ describe('install', () => {
     expect(readFileSync(real, 'utf8')).toContain(SERVER);
   });
 
+  it.each([
+    [
+      'a comment an edit would break',
+      cursor!,
+      { remove: true },
+      '{ "mcpServers": {\n  "x": 1, // one\n  "appdyno": {}, /* a\n  b */ "a": 1\n} }\n',
+    ],
+    [
+      'a table that stands twice',
+      CLIENTS.find((c) => c.format === 'toml')!,
+      {},
+      `[mcp_servers.${SERVER}]\ncommand = "old"\n\n[mcp_servers.${SERVER}]\nargs = ["x"]\n`,
+    ],
+  ])('writes no edit that does not read back as asked: %s', async (_, client, o, text) => {
+    const { home, file } = homeWith(client, text);
+    const { code, err } = await run(home, o);
+    expect(code).toBe(1);
+    expect(err.join('\n')).toContain('refused');
+    expect(readFileSync(file, 'utf8')).toBe(text);
+    expect(beside(file)).toEqual([]);
+  });
+
   it('says what to add by hand when it finds no client', async () => {
     const home = mkdtempSync(join(tmpdir(), 'appdyno-home-'));
     homes.push(home);

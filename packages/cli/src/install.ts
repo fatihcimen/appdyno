@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { writeWhole } from '@appdyno/core';
 import { CLIENTS, SERVER, STDIO, type Client, type Stdio } from './clients.js';
 import { jsonEdit } from './jsonc.js';
@@ -82,21 +83,36 @@ export function outcomeFor(client: Client, file: string, o: Asked): Outcome {
     const edit = EDIT[client.format];
     const have = edit.read(before, key, SERVER);
     const same = { ...base, before, after: before, ...(have !== undefined && { had: have }) };
-    if (o.back) return { ...same, did: 'replaced', after: edit.write(before, key, SERVER, o.back) };
+    const others = (text: string) => edit.others(text, key, SERVER);
+    /** An edit works on text: what it made is read back, and is the entry asked for and nothing else, or is not written. */
+    const proved = (after: string, entry: unknown) => {
+      if (
+        !isDeepStrictEqual(edit.read(after, key, SERVER), entry) ||
+        !isDeepStrictEqual(others(after), others(before))
+      )
+        throw new Error('the edit would change more than the entry: edit it by hand');
+      return after;
+    };
+    const writing = (entry: Record<string, unknown>) =>
+      proved(edit.write(before, key, SERVER, entry), entry);
+    if (o.back) return { ...same, did: 'replaced', after: writing(o.back) };
     if (o.remove) {
       if (have === undefined) return { ...same, did: 'absent' };
-      return { ...same, did: 'removed', after: edit.remove(before, key, SERVER) };
+      return {
+        ...same,
+        did: 'removed',
+        after: proved(edit.remove(before, key, SERVER), undefined),
+      };
     }
     const server = o.server ?? STDIO;
     if (o.moved) {
       const entry = repointed(have, server.command);
       if (!entry) return { ...same, did: 'right' };
-      return { ...same, did: 'replaced', after: edit.write(before, key, SERVER, entry) };
+      return { ...same, did: 'replaced', after: writing(entry) };
     }
     const entry = client.entry(server);
     if (fits(have, entry)) return { ...same, did: 'right' };
-    const after = edit.write(before, key, SERVER, entry);
-    return { ...same, did: have === undefined ? 'added' : 'replaced', after };
+    return { ...same, did: have === undefined ? 'added' : 'replaced', after: writing(entry) };
   } catch (e) {
     return { ...base, did: 'refused', why: (e as Error).message };
   }

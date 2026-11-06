@@ -203,6 +203,13 @@ export function jsonEdit(strict: boolean) {
 
     read: (file: string, key: string, name: string) => listIn(parsed(file).root, key)?.[name],
 
+    /** All the file says but the entry. */
+    others(file: string, key: string, name: string) {
+      const { root } = parsed(file);
+      const { [name]: _entry, ...rest } = listIn(root, key) ?? {};
+      return { ...root, [key]: rest };
+    },
+
     write(file: string, key: string, name: string, entry: unknown) {
       const { text, plain, root, open } = parsed(file);
       listIn(root, key);

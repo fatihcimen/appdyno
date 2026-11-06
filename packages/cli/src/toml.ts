@@ -185,6 +185,16 @@ export const tomlEdit = {
     );
   },
 
+  /** All the file says but the entry and what hangs under it. */
+  others(text: string, key: string, name: string) {
+    const { full, keys, tables } = located(text, key, name);
+    const apart = (table: string) => table !== full && !table.startsWith(`${full}.`);
+    return {
+      tables: tables.map((t) => t.name).filter(apart),
+      keys: keys.filter((k) => apart(k.table)),
+    };
+  },
+
   write(text: string, key: string, name: string, entry: Record<string, unknown>) {
     const { full, table } = located(text, key, name);
     const lines = Object.entries(entry).map(([k, v]) => `${k} = ${encoded(v)}`);
