@@ -1,5 +1,5 @@
 import { DeviceError } from '@appdyno/protocol';
-import type { SettingName } from './device.js';
+import type { SettingName } from './device-conditions.js';
 import type {
   FrameMarks,
   FrameStats,

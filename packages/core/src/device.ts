@@ -22,6 +22,11 @@ import type { Need } from './mirror/need.js';
 import type { SystemView } from './system-swipes.js';
 import type { Mirror } from './mirror/port.js';
 import type { VirtualDevices } from './virtual.js';
+import type { AppManager } from './device-apps.js';
+import type { ScreenInspector, ScreenRecorder } from './device-capture.js';
+import type { DeviceEvents, DeviceSettings, SettingsPage } from './device-conditions.js';
+import type { CrashesAnswer, CrashesQuery, LogsAnswer, LogsQuery } from './device-logs.js';
+import type { NetworkSource, WebInspector } from './device-network.js';
 
 /** Per-command limits (ms); the settle cap is added to an action's. */
 export const TIMEOUTS = {
@@ -39,206 +44,12 @@ export type ActOptions = { settle?: SettleInput | false; read?: Read; before?: s
 
 export type TreeOptions = { maxDepth?: number; maxNodes?: number; asItIs?: boolean };
 
-export type AppEntry = { id: string; name?: string; version?: string };
-
-export type AppState = 'not_installed' | 'stopped' | 'running' | 'foreground';
-
-export type LaunchOptions = { args?: string[]; env?: Record<string, string>; language?: string };
-
-/** Apps on a device; what a device cannot do answers UNSUPPORTED with the reason. */
-/** A project on this Mac: `scheme` is Xcode's, or the Gradle module; `configuration` is Xcode's, or the variant. */
-export type BuildRequest = { project: string; scheme?: string; configuration?: string };
-
-export interface AppManager {
-  /** A launch's language stays with the app, as a condition to put back; else it lasts that launch. */
-  readonly languageStays?: boolean;
-  /** Installs the file; what it answered on the device along the way, for the caller to keep in its answer. */
-  install(path: string): Promise<string[]>;
-  /** Builds a project for this device and installs it; the app's id. */
-  buildAndInstall(request: BuildRequest): Promise<string>;
-  uninstall(app: string): Promise<void>;
-  clearData(app: string): Promise<void>;
-  /** The app's data, into an empty folder on this Mac. */
-  downloadData(app: string, to: string): Promise<void>;
-  /** The folder's content becomes the app's data, with the app stopped. */
-  replaceData(app: string, from: string): Promise<void>;
-  listApps(all: boolean): Promise<AppEntry[]>;
-  /** Installed and running; `foreground` is told by the caller, which has the screen. */
-  appState(app: string): Promise<Exclude<AppState, 'foreground'>>;
-  permission(app: string, grant: boolean, service: string): Promise<void>;
-  launchWith(app: string, opts: LaunchOptions): Promise<void>;
-}
-
-export const SETTINGS = [
-  'dark_mode',
-  'text_size',
-  'reduce_motion',
-  'increase_contrast',
-  'reduce_transparency',
-  'animations',
-  'locale',
-  'network',
-  'proxy',
-  'battery',
-  'airplane',
-  'wifi',
-  'mobile_data',
-] as const;
-
-export type SettingName = (typeof SETTINGS)[number];
-
-/** The pages of the system's Settings a call opens by name, where the device has them. */
-export const SETTINGS_PAGES = [
-  'general',
-  'about',
-  'keyboard',
-  'language_region',
-  'device_management',
-  'accessibility',
-  'siri',
-  'apps',
-  'privacy',
-  'privacy_location',
-  'privacy_photos',
-  'privacy_camera',
-  'privacy_contacts',
-  'privacy_microphone',
-  'privacy_reminders',
-  'privacy_bluetooth',
-  'privacy_health',
-  'privacy_motion',
-  'privacy_speech',
-  'privacy_media',
-  'privacy_tracking',
-  'privacy_analytics',
-  'privacy_advertising',
-  'screen_time',
-  'camera',
-  'game_center',
-  'home_screen',
-  'developer',
-  'software_update',
-  'storage',
-  'date_time',
-  'vpn',
-  'wifi',
-  'bluetooth',
-  'cellular',
-  'battery',
-  'display',
-  'sounds',
-  'notifications',
-] as const;
-
-export type SettingsPage = (typeof SETTINGS_PAGES)[number];
-
-/**
- * The device's conditions. `get` answers what `set` takes, so a change can be put back; `app` is the app
- * a per-app setting (Android's locale) is about.
- */
-export interface DeviceSettings {
-  /** Before a condition is written down and changed: whatever else holds it lets go, so that the old value read is the user's. */
-  willChange?(name: SettingName): Promise<void>;
-  get(name: SettingName, app?: string): Promise<string>;
-  set(name: SettingName, value: string, app?: string): Promise<void>;
-}
-
-/** `enroll`: a fingerprint or a face is known to the device; the others answer a request for one. */
-export type BiometricAnswer = 'match' | 'nomatch' | 'enroll';
-
-/** What happens to a device once: a condition holds and is put back, an event is over when it is said. */
-export interface DeviceEvents {
-  push(app: string | undefined, title: string, body: string): Promise<void>;
-  biometric(answer: BiometricAnswer): Promise<void>;
-  /** Empties a simulator's keychain, and answers how many items it held. */
-  resetKeychain(): Promise<number>;
-  /** A foldable's pose. */
-  fold(closed: boolean): Promise<void>;
-  /** A call coming in from `number`, or that call ended. */
-  call(number: string, end: boolean): Promise<void>;
-  sms(from: string, text: string): Promise<void>;
-}
-
-/** What `stop` needs: plain values, as the stop may be another process. */
-export type RecordingHandle = Record<string, string | number>;
-
-/** One file; several, in order, only when segments could not be joined. */
-export type RecordingFiles = { files: string[]; note?: string };
-
-/** Screen video. A recording outlives the process that started it. */
-export interface ScreenRecorder {
-  readonly extension: 'mp4' | 'mov';
-  /**
-   * Where the first frame of a video with no times of its own lies, as measured for this recorder: `ms` before `start`
-   * answers, to within `withinMs`. None where it keeps its own, or where no one has measured it.
-   */
-  readonly lead?: { ms: number; withinMs: number };
-  /** A second recording cannot begin before the first has ended, so a ring of them has a hole in it. */
-  readonly oneAtATime?: boolean;
-  /** `light`: what will run for hours, kept only in case: fewer bits, for what it costs the device and the disk. */
-  start(file: string, opts: { maxSeconds: number; light?: boolean }): Promise<RecordingHandle>;
-  stop(handle: RecordingHandle): Promise<RecordingFiles>;
-}
-
-export type NetworkVia = 'proxy' | 'probe' | 'packets' | 'bytes';
-
-/** One way of seeing traffic on this device: what it sees, or why it cannot. */
-export type NetworkPath = { via: NetworkVia; sees?: string; refused?: string };
-
-/** A request, or a count, whichever the way sees. */
-export type NetworkEntry = {
-  at?: string;
-  method?: string;
-  url?: string;
-  status?: number;
-  ms?: number;
-  /** A count: which way, and what it was counted against (a port, a uid). */
-  direction?: string;
-  host?: string;
-  packets?: number;
-  bytes?: number;
-  /** The export holds its response body. */
-  body?: boolean;
-  error?: string;
-};
-
-export type NetworkAnswer = { entries: NetworkEntry[]; note?: string };
-
-/** What later calls need: plain values, as they may be other processes. */
-export type NetworkHandle = Record<string, string | number>;
-
-/** The traffic a device can tell about by itself; a local proxy is the operations' own, through settings. */
-export interface NetworkSource {
-  paths(): Promise<NetworkPath[]>;
-  start(via: NetworkVia, app: string | undefined): Promise<NetworkHandle>;
-  read(handle: NetworkHandle): Promise<NetworkAnswer>;
-  stop(handle: NetworkHandle): Promise<NetworkAnswer>;
-}
-
-export type WebPage = { id: string; title: string; url: string; app?: string; visible?: boolean };
-
-/** The web views of debuggable apps, as DevTools or the Safari inspector shows them. */
-export interface WebInspector {
-  pages(app: string | undefined): Promise<WebPage[]>;
-  /** Runs a script on the page, its value back; a thrown error is a refusal with its text. */
-  evaluate(page: WebPage, script: string): Promise<unknown>;
-}
-
 /** The OS by name, for a stored record too, which has no device to ask. */
 const OS_NAMES: Record<Platform, string> = { android: 'Android', ios: 'iOS' };
 
 /** The OS as people name it: Android 14, iOS 18.2. */
 export const osName = (platform: Platform, version: string) => `${OS_NAMES[platform]} ${version}`;
 
-/** One thing on a screen as the system's accessibility service tells it: its words and id, and no place. */
-export type InspectedElement = { caption: string; identifier?: string };
-
-/** A screen read and pressed with no agent on the device, by the system's own accessibility service. */
-export interface ScreenInspector {
-  elements(): Promise<InspectedElement[]>;
-  /** Activates what has that id or those words on the screen as read now, and says which it was. */
-  press(name: string): Promise<InspectedElement>;
-}
 /** What a device is, for how a window draws it: nothing here starts anything on it. */
 export type DeviceHardware = {
   platform: Platform;
@@ -336,64 +147,6 @@ export interface Device {
   appPid?(app: string): Promise<string | undefined>;
   readonly measure: MeasureSource;
 }
-
-export type LogLevel = 'verbose' | 'debug' | 'info' | 'warn' | 'error';
-
-export type LogsQuery = {
-  app: string;
-  /** Epoch ms; absent: the newest lines. */
-  since?: number;
-  level: LogLevel;
-  maxLines: number;
-  /** Each line's time too, in `LogsAnswer.marks`; `since` is then by the device's clock. */
-  timed?: boolean;
-  /** The process, for one that may have ended: a crash's own lines are read after it is gone. */
-  pid?: string;
-};
-
-/** A line's place on the device's clock, in ms since the epoch, and how the platform ranked it. */
-export type LogMark = { at: number; level?: 'warn' | 'error' };
-
-/** The app's log lines as the platform prints them, and what the platform could not give. */
-export type LogsAnswer = {
-  lines: string[];
-  source: string;
-  note?: string;
-  /** Asked with `timed`, one for each of `lines`. */
-  marks?: LogMark[];
-};
-
-export type CrashesQuery = {
-  app: string;
-  /** Epoch ms; absent: any time. */
-  since?: number;
-  limit: number;
-  /** A build's symbols: a `.dSYM` or a folder of them; on Android a folder of libraries that keep theirs. */
-  symbols?: string;
-};
-
-export type CrashReport = {
-  /** When, as the platform says it. */
-  at: string;
-  reason: string;
-  /** The first lines of its stack or description. */
-  detail?: string;
-  /** The whole report on this machine. */
-  file?: string;
-  /** Its stack with the names `symbols` gave, on this machine. */
-  symbolicated?: string;
-};
-
-/** One way an app's processes ended, as the system keeps them, with how many went that way. */
-export type ExitCount = { reason: string; count: number; newest: string; memory?: string };
-
-export type CrashesAnswer = {
-  reports: CrashReport[];
-  source: string;
-  note?: string;
-  /** Every exit the system keeps, by reason, what no one calls a crash too (Android). */
-  exits?: ExitCount[];
-};
 
 /** A doctor's finding. */
 export type Check = { name: string; ok: boolean; warn?: boolean; detail: string; fix?: string };
