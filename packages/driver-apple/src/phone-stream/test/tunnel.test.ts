@@ -1,0 +1,75 @@
+import { PassThrough } from 'node:stream';
+import { describe, expect, it, vi } from 'vitest';
+import { closingOnFailure, tunnelAnswer } from '../tunnel.js';
+
+const answer = (more = '') => {
+  const body = Buffer.from(
+    JSON.stringify({
+      clientParameters: { address: 'fd00::2', mtu: 16_000 },
+      serverAddress: 'fd00::1',
+      serverRSDPort: 49_571,
+    }),
+  );
+  const h = Buffer.alloc(10);
+  h.write('CDTunnel', 'latin1');
+  h.writeUInt16BE(body.length, 8);
+  return Buffer.concat([h, body, Buffer.from(more)]);
+};
+
+const listeners = (s: PassThrough) => s.listenerCount('data') + s.listenerCount('close');
+
+describe('a handshake on a tunnel', () => {
+  it('gives up on a phone that never answers, and leaves nothing on the stream', async () => {
+    const stream = new PassThrough();
+    const before = listeners(stream);
+    await expect(tunnelAnswer(stream, 5)).rejects.toThrow('the tunnel did not answer');
+    expect(listeners(stream)).toBe(before);
+  });
+
+  it('says a stream that closed at its start, and leaves nothing on it', async () => {
+    const stream = new PassThrough();
+    const before = listeners(stream);
+    const asked = tunnelAnswer(stream, 60_000);
+    stream.destroy();
+    await expect(asked).rejects.toThrow('the tunnel closed at its start');
+    expect(listeners(stream)).toBe(before);
+  });
+
+  it('refuses what is no tunnel, and leaves nothing on the stream', async () => {
+    const stream = new PassThrough();
+    const before = listeners(stream);
+    const asked = tunnelAnswer(stream, 60_000);
+    stream.write(Buffer.alloc(20));
+    await expect(asked).rejects.toThrow('no tunnel');
+    expect(listeners(stream)).toBe(before);
+  });
+
+  it('hands on what came after its answer, and the stream to what reads it next', async () => {
+    const stream = new PassThrough();
+    const before = listeners(stream);
+    const asked = tunnelAnswer(stream, 60_000);
+    stream.write(answer('packets'));
+    const { info, rest } = await asked;
+    expect(info.rsdPort).toBe(49_571);
+    expect(rest.toString()).toBe('packets');
+    expect(listeners(stream)).toBe(before);
+  });
+});
+
+describe('what is done on a new connection', () => {
+  it('takes the connection with it when it fails, as an open socket holds a process', async () => {
+    const socket = { destroy: vi.fn() };
+    await expect(
+      closingOnFailure(socket, async () => {
+        throw new Error('no answer');
+      }),
+    ).rejects.toThrow('no answer');
+    expect(socket.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves it open when it goes well', async () => {
+    const socket = { destroy: vi.fn() };
+    await expect(closingOnFailure(socket, async () => 7)).resolves.toBe(7);
+    expect(socket.destroy).not.toHaveBeenCalled();
+  });
+});

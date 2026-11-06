@@ -1,4 +1,5 @@
 import { type Socket } from 'node:net';
+import type { Duplex } from 'node:stream';
 import { connect as tlsConnect, type TLSSocket } from 'node:tls';
 import { connectPort, muxRequest, parsePlist, plistXml, USBMUXD } from '../usbmux.js';
 import { readBplist } from '../webinspector.js';
@@ -208,12 +209,51 @@ export async function orientationReader(udid: string) {
   const record = await readPairRecord(udid);
   const service = await startService(udid, record, SPRINGBOARD_SERVICE);
   const { socket } = await connectPort(udid, service.port);
-  const stream = service.secure ? await withTls(socket, record) : socket;
-  const lockdown = new Lockdown(stream);
-  return {
-    read: async () => Number((await lockdown.ask(ORIENTATION_REQUEST)).interfaceOrientation),
-    close: () => stream.destroy(),
-  };
+  return closingOnFailure(socket, async () => {
+    const stream = service.secure ? await withTls(socket, record) : socket;
+    const lockdown = new Lockdown(stream);
+    return {
+      read: async () => Number((await lockdown.ask(ORIENTATION_REQUEST)).interfaceOrientation),
+      close: () => stream.destroy(),
+    };
+  });
+}
+
+/** What is done on a new connection: if it fails the connection goes with it, as an open socket holds a process for ever. */
+export async function closingOnFailure<T>(socket: { destroy(): void }, use: () => Promise<T>) {
+  try {
+    return await use();
+  } catch (e) {
+    socket.destroy();
+    throw e;
+  }
+}
+
+/** The answer to `tunnelRequest`, and what came after it. A phone that accepts and never answers gets `ms`. */
+export function tunnelAnswer(stream: Duplex, ms = ANSWER_MS) {
+  return new Promise<NonNullable<ReturnType<typeof readTunnelAnswer>>>((resolve, reject) => {
+    let held: Buffer = Buffer.alloc(0);
+    const stop = (done: () => void) => {
+      clearTimeout(timer);
+      stream.off('data', onData);
+      stream.off('close', onClose);
+      done();
+    };
+    const timer = setTimeout(() => stop(() => reject(new Error('the tunnel did not answer'))), ms);
+    const onData = (d: Buffer) => {
+      held = Buffer.concat([held, d]);
+      try {
+        const answer = readTunnelAnswer(held);
+        if (answer) stop(() => resolve(answer));
+      } catch (e) {
+        stop(() => reject(e as Error));
+      }
+    };
+    const onClose = () => stop(() => reject(new Error('the tunnel closed at its start')));
+    stream.on('data', onData);
+    stream.once('close', onClose);
+    stream.resume();
+  });
 }
 
 export type Tunnel = { stack: IpStack; rsdPort: number };
@@ -222,33 +262,12 @@ export async function openTunnel(udid: string): Promise<Tunnel> {
   const record = await readPairRecord(udid);
   const service = await startService(udid, record, PROXY_SERVICE);
   const { socket } = await connectPort(udid, service.port);
-  const stream = service.secure ? await withTls(socket, record) : socket;
-  stream.write(tunnelRequest());
-  const { info, rest } = await new Promise<NonNullable<ReturnType<typeof readTunnelAnswer>>>(
-    (resolve, reject) => {
-      let held: Buffer = Buffer.alloc(0);
-      const timer = setTimeout(() => reject(new Error('the tunnel did not answer')), ANSWER_MS);
-      const stop = (done: () => void) => {
-        clearTimeout(timer);
-        stream.off('data', onData);
-        done();
-      };
-      const onData = (d: Buffer) => {
-        held = Buffer.concat([held, d]);
-        try {
-          const answer = readTunnelAnswer(held);
-          if (answer) stop(() => resolve(answer));
-        } catch (e) {
-          stop(() => reject(e as Error));
-        }
-      };
-      stream.on('data', onData);
-      stream.once('close', () => stop(() => reject(new Error('the tunnel closed at its start'))));
-      stream.resume();
-    },
-  );
-  stream.removeAllListeners('close');
-  const stack = new IpStack(stream as PacketStream, info);
-  if (rest.length) stack.feed(rest);
-  return { stack, rsdPort: info.rsdPort };
+  return closingOnFailure(socket, async () => {
+    const stream = service.secure ? await withTls(socket, record) : socket;
+    stream.write(tunnelRequest());
+    const { info, rest } = await tunnelAnswer(stream);
+    const stack = new IpStack(stream as PacketStream, info);
+    if (rest.length) stack.feed(rest);
+    return { stack, rsdPort: info.rsdPort };
+  });
 }
