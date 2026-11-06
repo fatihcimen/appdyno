@@ -14,6 +14,7 @@ import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { windowControls, windowLook } from '../packages/hub/src/controls.js';
 import { windowMeasures } from '../packages/hub/src/measures.js';
 import { expectSamePicture, shownByWindow } from './window-picture.js';
+import { agentMayGo } from './one-agent.js';
 import { untilWithin } from './until.js';
 
 /**
@@ -246,6 +247,7 @@ describe.runIf(onPhone && process.env.APPDYNO_MIRROR_WINDOW === '1')(
       const seen: string[] = [];
       const watch = setInterval(() => seen.push(session.status.state), 100);
       try {
+        agentMayGo();
         await sh(`kill -9 ${pids.join(' ')}`);
         await until('the loss', () => seen.includes('reconnecting'), 40_000).catch(
           async (e: Error) => {
