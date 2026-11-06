@@ -1,3 +1,4 @@
+import { deflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { decodePng, diffImages, encodePng, paintRects, type Image } from '../src/png.js';
 
@@ -17,6 +18,31 @@ describe('PNG', () => {
       expect(back).toMatchObject({ width: 5, height: 4, channels });
       expect([...back.data]).toEqual([...img.data]);
     }
+  });
+
+  it("reads an iPhone's own screenshot, which is 16 bits a sample, as 8", () => {
+    const chunk = (type: string, data: Buffer) => {
+      const head = Buffer.alloc(8);
+      head.writeUInt32BE(data.length, 0);
+      head.write(type, 4, 'latin1');
+      return Buffer.concat([head, data, Buffer.alloc(4)]);
+    };
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(2, 0);
+    ihdr.writeUInt32BE(1, 4);
+    ihdr[8] = 16;
+    ihdr[9] = 6;
+    // the Sub filter takes each byte from the same byte of the pixel before: 8 bytes back here, not 4
+    const row = [1, 0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xff, 0xff, 1, 0, 1, 0, 1, 0, 0, 0];
+    const png = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk('IHDR', ihdr),
+      chunk('IDAT', deflateSync(Buffer.from(row))),
+      chunk('IEND', Buffer.alloc(0)),
+    ]);
+    const back = decodePng(png)!;
+    expect([back.width, back.height, back.channels]).toEqual([2, 1, 4]);
+    expect([...back.data]).toEqual([0x12, 0x56, 0x9a, 0xff, 0x13, 0x57, 0x9b, 0xff]);
   });
 
   it('paints a rect, cut to the image', () => {

@@ -6,8 +6,9 @@ export type Image = { width: number; height: number; channels: 3 | 4; data: Uint
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 /**
- * PNG screenshots as pixels (zlib and the five row filters, no dependency).
- * shortcut: 8-bit RGB/RGBA, non-interlaced only (what the agents' encoders write); anything else is null
+ * PNG screenshots as pixels (zlib and the five row filters, no dependency). 16 bits a sample, as an iPhone's own screenshot
+ * is, come out as their high byte.
+ * shortcut: RGB/RGBA, non-interlaced only (what the agents and an iPhone write); anything else is null
  */
 export function decodePng(buf: Buffer): Image | null {
   try {
@@ -16,6 +17,7 @@ export function decodePng(buf: Buffer): Image | null {
     let width = 0;
     let height = 0;
     let c: 3 | 4 | undefined;
+    let sample = 1;
     const idat: Buffer[] = [];
     while (p + 8 <= buf.length) {
       const len = buf.readUInt32BE(p);
@@ -25,18 +27,22 @@ export function decodePng(buf: Buffer): Image | null {
         width = data.readUInt32BE(0);
         height = data.readUInt32BE(4);
         const [depth, color, , , interlace] = data.subarray(8, 13);
-        if (depth !== 8 || interlace !== 0 || (color !== 2 && color !== 6)) return null;
+        if ((depth !== 8 && depth !== 16) || interlace !== 0 || (color !== 2 && color !== 6))
+          return null;
         c = color === 6 ? 4 : 3;
+        sample = depth! / 8;
       } else if (type === 'IDAT') idat.push(data);
       else if (type === 'IEND') break;
       p += 12 + len;
     }
     if (!c || width === 0 || height === 0 || width * height > 16e6) return null;
-    const stride = width * c;
+    // a filter works on bytes, a pixel back: the pixel's bytes, whatever a sample's depth
+    const pixel = c * sample;
+    const stride = width * pixel;
     const raw = inflateSync(Buffer.concat(idat), { maxOutputLength: height * (stride + 1) });
     if (raw.length < height * (stride + 1)) return null;
     const out = new Uint8Array(height * stride);
-    const left = (dst: number, x: number) => (x >= c ? out[dst + x - c]! : 0);
+    const left = (dst: number, x: number) => (x >= pixel ? out[dst + x - pixel]! : 0);
     for (let y = 0; y < height; y++) {
       const f = raw[y * (stride + 1)];
       const src = y * (stride + 1) + 1;
@@ -54,14 +60,19 @@ export function decodePng(buf: Buffer): Image | null {
         for (let x = 0; x < stride; x++) {
           const a = left(dst, x);
           const b = up(x);
-          const d = x >= c && y > 0 ? out[dst - stride + x - c]! : 0;
+          const d = x >= pixel && y > 0 ? out[dst - stride + x - pixel]! : 0;
           const q = a + b - d;
           const [pa, pb, pc] = [Math.abs(q - a), Math.abs(q - b), Math.abs(q - d)];
           out[dst + x] = raw[src + x]! + (pa <= pb && pa <= pc ? a : pb <= pc ? b : d);
         }
       else return null;
     }
-    return { width, height, channels: c, data: out };
+    return {
+      width,
+      height,
+      channels: c,
+      data: sample === 1 ? out : out.filter((_, i) => i % 2 === 0),
+    };
   } catch {
     return null;
   }
