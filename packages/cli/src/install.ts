@@ -146,7 +146,7 @@ export const changes = ({ did }: Outcome) =>
 /** Backed up first, then replaced whole: through a link to the real file, in its own mode. */
 export function apply({ file, before, after }: Outcome) {
   if (!existsSync(file)) {
-    writeWhole(file, after);
+    writeWhole(file, after, { durable: true });
     return undefined;
   }
   const real = realpathSync(file);
@@ -156,7 +156,7 @@ export function apply({ file, before, after }: Outcome) {
   // never over an earlier one: that may be the only copy of the file as it was
   for (let n = 2; existsSync(backup); n++) backup = `${name}-${n}`;
   writeFileSync(backup, before, { flag: 'wx', mode: mode & 0o777 });
-  writeWhole(real, after, mode & 0o777);
+  writeWhole(real, after, { mode: mode & 0o777, durable: true });
   return backup;
 }
 

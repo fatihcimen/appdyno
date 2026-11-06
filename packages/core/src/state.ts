@@ -1,7 +1,10 @@
 import {
-  chmodSync,
+  closeSync,
   existsSync,
+  fchmodSync,
+  fsyncSync,
   mkdirSync,
+  openSync,
   readFileSync,
   renameSync,
   rmdirSync,
@@ -41,14 +44,23 @@ export function readState<T>(file: string, schema: Parser<T>): T | undefined {
   }
 }
 
-/** A file whole or not at all: a process killed here leaves the old one, never part of the new. */
-export function writeWhole(file: string, text: string, mode = 0o600) {
+/**
+ * A file whole or not at all: a process killed here leaves the old one, never part of the new. `durable`, for a person's
+ * own file, holds through a power cut too: left to itself a rename can reach the disk before the text it names.
+ */
+export function writeWhole(file: string, text: string, { mode = 0o600, durable = false } = {}) {
   mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
   const temp = `${file}.${process.pid}.tmp`;
   try {
-    writeFileSync(temp, text, { mode });
-    // as asked: a mode given to a new file is narrowed by the process's umask
-    chmodSync(temp, mode);
+    const fd = openSync(temp, 'w', mode);
+    try {
+      writeFileSync(fd, text);
+      // as asked: a mode given to a new file is narrowed by the process's umask
+      fchmodSync(fd, mode);
+      if (durable) fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
     renameSync(temp, file);
   } catch (e) {
     rmSync(temp, { recursive: true, force: true });
