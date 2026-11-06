@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, sleep as pause, type AndroidDevice } from './workspace.js';
 import { latestRuns, runKeys } from '@appdyno/perf';
 import { opsOn } from './helpers.js';
+import { untilWithin } from './until.js';
 
 /**
  * Numbers against Play's definitions, on known shares of frames, a known slow start and a provoked ANR
@@ -9,6 +10,7 @@ import { opsOn } from './helpers.js';
  */
 const serial = process.env.APPDYNO_ANDROID_SERIAL;
 const APP = 'dev.appdyno.fixture';
+const until = untilWithin(30_000);
 
 describe.skipIf(!serial)("Android against Play's definitions", () => {
   const t = opsOn(androidProvider(new Adb(), {}), serial!, APP);
@@ -27,8 +29,13 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
       `am start -W -a android.intent.action.VIEW -d 'appdyno-fixture://open/frozen?${query}' ${APP}`,
     );
     const shown = async (id: string) => (await d.read(APP)).list.find((e) => e.id === id);
-    for (let i = 0; i < 50 && !(await shown('frozen_start').catch(() => undefined)); i++)
-      await pause(200);
+    await until('the start button', async () => {
+      const button = await shown('frozen_start').catch((e: { code?: string }) => {
+        // no wait ends another client's hold of the device, and running out would read as a slow screen
+        if (e.code === 'AGENT_CONFLICT') throw e;
+      });
+      return !!button;
+    });
     await pause(1_000);
     // a read resets the count: from here on it is the frames of the run alone
     await t.call('perf_snapshot', { cpuWindowMs: 500, scenario: 'reset' });
