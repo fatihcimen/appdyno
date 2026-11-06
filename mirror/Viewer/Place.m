@@ -259,8 +259,16 @@ NSString *_Nullable MVLastOpened(void) {
   return gOpened;
 }
 
+/** A board to each viewer kept behind, as viewers side by side read each other's, and it goes with it: a named board outlives its writer until logout. */
 NSPasteboard *MVPlaceBoard(void) {
-  return gBehind ? [NSPasteboard pasteboardWithName:@"dev.appdyno.behind"] : NSPasteboard.generalPasteboard;
+  if (!gBehind) return NSPasteboard.generalPasteboard;
+  static NSPasteboard *board;
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    board = [NSPasteboard pasteboardWithName:[NSString stringWithFormat:@"dev.appdyno.behind.%d", NSProcessInfo.processInfo.processIdentifier]];
+    atexit_b(^{ [board releaseGlobally]; });
+  });
+  return board;
 }
 
 void MVSayCopied(NSButton *button) {

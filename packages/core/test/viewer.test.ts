@@ -135,22 +135,27 @@ describe('the viewer, compiled by its first-use path', () => {
   it.each(['--headless', '--behind'])(
     "%s copies to a board of its own, and leaves a person's pasteboard alone",
     async (flag) => {
-      const counts = async () => {
-        const read = `ObjC.import('AppKit');
-          [$.NSPasteboard.generalPasteboard.changeCount,
-           $.NSPasteboard.pasteboardWithName('dev.appdyno.behind').changeCount].join(' ')`;
-        const { stdout } = await run('osascript', ['-l', 'JavaScript', '-e', read]);
-        const [general, own] = stdout.trim().split(' ').map(Number);
-        return { general: general!, own: own! };
-      };
       const file = join(dir, `copied${flag}.png`);
       // a picture of one pixel
       const pixel =
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
       writeFileSync(file, Buffer.from(pixel, 'base64'));
-      const before = await counts();
       const v = new ViewerProcess(binary, [flag]);
+      const board = `$.NSPasteboard.pasteboardWithName('dev.appdyno.behind.${v.pid}')`;
+      const ask = async (what: string) => {
+        const read = `ObjC.import('AppKit'); ${what}`;
+        return (await run('osascript', ['-l', 'JavaScript', '-e', read])).stdout.trim();
+      };
+      const counts = async () => {
+        const said = await ask(
+          `[$.NSPasteboard.generalPasteboard.changeCount, ${board}.changeCount].join(' ')`,
+        );
+        const [general, own] = said.split(' ').map(Number);
+        return { general: general!, own: own! };
+      };
+      const held = () => ask(`ObjC.unwrap(${board}.stringForType($.NSPasteboardTypeString)) || ''`);
       try {
+        const before = await counts();
         v.send({ op: 'copied', file });
         v.send({ op: 'copyText', text: 'nothing of a person' });
         // that the viewer did copy is what makes the other count mean anything
@@ -159,6 +164,11 @@ describe('the viewer, compiled by its first-use path', () => {
         while (after.own < before.own + 2 && Date.now() < end) after = await counts();
         expect(after.own).toBeGreaterThanOrEqual(before.own + 2);
         expect(after.general).toBe(before.general);
+        expect(await held()).toBe('nothing of a person');
+        const gone = new Promise((resolve) => v.onExit(resolve));
+        v.send({ op: 'quit' });
+        await gone;
+        expect(await held()).toBe('');
       } finally {
         v.kill();
       }
