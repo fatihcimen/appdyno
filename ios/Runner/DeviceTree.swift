@@ -72,6 +72,9 @@ extension Device {
             return
         }
         let app = front().0
+        // the home screen's copies are a widget and its icon, or a keyboard on its way: asking of them went to a widget's
+        // process, and on an iPhone took 7 s and then did not answer
+        if app === springboard { return }
         var hidden: [String] = []
         defer {
             unreachable.removeAll { $0.hash == key }
@@ -83,8 +86,10 @@ extension Device {
             let query = app.descendants(matching: .any).matching(identifier: id)
             for k in 0 ..< min(query.count, 8) {
                 let e = query.element(boundBy: k)
-                guard e.exists, !e.isHittable else { continue }
-                let r = box(e.frame)
+                // what it reads may have gone by now, as a keyboard's does as it closes: a snapshot throws where
+                // a live element's frame ends the runner
+                guard e.exists, !e.isHittable, let s = try? e.snapshot() else { continue }
+                let r = box(s.frame)
                 if let ni = idxs.first(where: { c.nodes[$0].box == r }) {
                     c.nodes[ni].flags &= ~Flag.visible
                     hidden.append(c.nodes[ni].copyKey)

@@ -34,8 +34,8 @@ extension Device {
         let app = front().0
         if let (x, y) = r.at {
             // a field that already has the focus there is not tapped again (each event costs about 350 ms)
-            let focused = focusedField(app)
-            if focused == nil || !(focused!.frame.contains(CGPoint(x: x, y: y))) {
+            let focused = try? focusedField(app)?.snapshot()
+            if focused?.frame.contains(CGPoint(x: x, y: y)) != true {
                 _ = animationsOver(x, y)
                 point(x, y).tap()
             }
@@ -64,7 +64,7 @@ extension Device {
             return out.merging(textWire(focusMs: focusMs, verified: nil)) { $1 }
         }
         let replace = r.replace
-        let secure = field.elementType == .secureTextField
+        let secure = (try? field.snapshot())?.elementType == .secureTextField
         let before = currentText(field) ?? ""
         // nil: the field is gone (a code entry that submitted itself took the text)
         func check() -> Bool? {

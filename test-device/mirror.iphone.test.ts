@@ -50,6 +50,7 @@ describe.runIf(udid)('mirror on an iPhone', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let session: any;
   let viewerProcess: (ViewerLink & { pid?: number }) | undefined;
+  let runner: number | undefined;
   const seen: MirrorStatus[] = [];
 
   const status = () => session.status as MirrorStatus;
@@ -88,7 +89,7 @@ describe.runIf(udid)('mirror on an iPhone', () => {
       ...(await import(join(packages, 'driver-apple/dist/index.js'))),
     };
     device = new built.IosPhoneDevice(udid!);
-    await device.open();
+    runner = (await device.open()).pid;
     await device.launch(FIXTURE);
     await start();
   }, 300_000);
@@ -369,4 +370,9 @@ describe.runIf(udid)('mirror on an iPhone', () => {
     await start();
     await until('a picture after it', () => status().state === 'live', 60_000);
   }, 180_000);
+
+  // a read that loses its runner starts another and tries again, so nothing else here would show one lost
+  it('kept one runner through all of this', async () => {
+    expect((await device.open()).pid).toBe(runner);
+  });
 });

@@ -5,8 +5,9 @@ let agentVersion = "0.6.0"
 
 /// The runner: one long test that serves the host until it asks to shut down. Port and token come from
 /// the launch environment (APPDYNO_PORT, APPDYNO_TOKEN; xcodebuild passes TEST_RUNNER_-prefixed variables).
-/// A failure XCTest recorded during a request (an element that went away): the request's error, never the
-/// end of the runner.
+/// A failure XCTest recorded during a request: the request's error, if the runner lives through it. It may not: on an
+/// iPhone a live element's frame read after the element went ended this test, whatever `continueAfterFailure` says, so
+/// a request reads by snapshots, which throw.
 enum IssueTrap {
     private static let lock = NSLock()
     private static var last: String?
