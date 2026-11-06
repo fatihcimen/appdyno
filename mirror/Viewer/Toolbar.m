@@ -12,6 +12,8 @@ static const double kSymbolSize = 14, kButtonWide = 28, kTitleWidest = 150;
   NSMutableDictionary<NSString *, NSButton *> *_buttons;
   NSMutableDictionary<NSString *, MVInk *> *_inks;
   NSTextField *_name, *_about;
+  __weak NSToolbar *_made;
+  BOOL _switchHidden;
 }
 
 - (instancetype)initWithGroups:(NSArray<NSArray<NSString *> *> *)groups target:(id)target action:(SEL)action {
@@ -34,6 +36,7 @@ static const double kSymbolSize = 14, kButtonWide = 28, kTitleWidest = 150;
   bar.delegate = self;
   bar.displayMode = NSToolbarDisplayModeIconOnly;
   bar.centeredItemIdentifiers = [NSSet setWithObject:@"status"];
+  _made = bar;
   return bar;
 }
 
@@ -108,7 +111,9 @@ static const double kSymbolSize = 14, kButtonWide = 28, kTitleWidest = 150;
 
 /// A place has no use for the Inspector's switch. Before macOS 15 an item cannot hide, and it opens a pane that says so.
 - (void)hideInspectorSwitch:(BOOL)hidden {
-  for (NSToolbarItem *item in _buttons[@"inspector"].window.toolbar.items)
+  _switchHidden = hidden;
+  // the bar it stands on, which need not be the window's yet: a device's bar comes down a moment after its place is chosen
+  for (NSToolbarItem *item in _made.items)
     if ([item.itemIdentifier isEqual:@"inspector"] && [item respondsToSelector:@selector(setHidden:)]) [item setValue:@(hidden) forKey:@"hidden"];
 }
 
@@ -119,7 +124,11 @@ static const double kSymbolSize = 14, kButtonWide = 28, kTitleWidest = 150;
 - (nullable NSToolbarItem *)toolbar:(NSToolbar *)toolbar itemForItemIdentifier:(NSToolbarItemIdentifier)name willBeInsertedIntoToolbar:(BOOL)flag {
   if ([name isEqual:@"title"]) return [self titleItem];
   if ([name isEqual:@"status"]) return [self statusItem];
-  if ([name isEqual:@"inspector"]) return [self itemNamed:name];
+  if ([name isEqual:@"inspector"]) {
+    NSToolbarItem *item = [self itemNamed:name];
+    if (_switchHidden && [item respondsToSelector:@selector(setHidden:)]) [item setValue:@YES forKey:@"hidden"];
+    return item;
+  }
   if (![name hasPrefix:@"group"]) return nil;
   NSArray<NSString *> *names = _groups[[name substringFromIndex:5].integerValue];
   NSMutableArray *items = [NSMutableArray array];
