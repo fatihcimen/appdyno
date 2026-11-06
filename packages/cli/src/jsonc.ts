@@ -106,8 +106,14 @@ const lineIndent = (t: string, at: number) =>
 const splice = (t: string, from: number, to: number, text: string) =>
   t.slice(0, from) + text + t.slice(to);
 
-const oneLine = (entry: unknown) =>
-  JSON.stringify(entry, null, 1).replace(/\n\s*/g, ' ').replace(/\[ /g, '[').replace(/ \]/g, ']');
+/** An entry on one line. No string in JSON holds a line break; any may hold a bracket, and it is a person's. */
+const oneLine = (entry: unknown) => {
+  const text = JSON.stringify(entry, null, 1).replace(/\n\s*/g, ' ');
+  return outsideStrings(text, (i) => {
+    const two = text.slice(i, i + 2);
+    return two === '[ ' || two === ' ]' ? { to: two.trim(), next: i + 2 } : undefined;
+  });
+};
 
 const isObject = (x: unknown): x is Record<string, unknown> =>
   typeof x === 'object' && x !== null && !Array.isArray(x);

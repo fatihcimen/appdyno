@@ -343,6 +343,13 @@ describe('a JSON file', () => {
     expect(after).toContain('/* long\n     comment */');
   });
 
+  it('keeps the strings of an entry as they are, brackets and spaces too', () => {
+    const entry = { command: 'x', args: ['a[ b', 'c ]d', '[ e ]'], env: { NOTE: 'f [ g' } };
+    const after = edit.write('{}\n', 'servers', SERVER, entry);
+    expect(edit.read(after, 'servers', SERVER)).toEqual(entry);
+    expect(after).toContain('"args": ["a[ b", "c ]d", "[ e ]"]');
+  });
+
   it('takes only the list at the top: one nested in a project is another', () => {
     const edits = jsonEdit(true);
     const text = STATE('mcpServers');
