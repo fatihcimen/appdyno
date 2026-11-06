@@ -255,7 +255,7 @@ A journey's whole goes with the step that moved most. A step that starts the app
 
 **A replay's values** come from the environment. A value given by `--param` is not kept, as it may be a secret, so a flow that needs one has it set, or the answer says which it lacks. A flow changed so that a step is no longer that step is said, and not timed.
 
-**The comment.** `perf comment` reads what `perf why` kept of the newest run of each scenario, and an answer of an older run is not used. All that comes from the app is escaped, as a pull request can name a function anything and an `@name` would notify someone. A body is cut at 60,000 characters. [`perf-gate.yml`](perf-gate.yml) is a job to copy: see [`ci.md`](ci.md).
+**The comment.** `perf comment` reads what `perf why` kept of the newest run of each scenario, and an answer of an older run is not used. All that comes from the app is escaped, as a pull request can name a function anything and an `@name` would notify someone. A body is cut at 60,000 characters. [`perf-gate.yml`](../examples/perf-gate.yml) is a job to copy: see [`ci.md`](ci.md).
 
 Against what was put there on purpose, by `test-device/gate-why.test.ts`, on 2026-11-04, each on a baseline of 3 runs of 5 iterations, 6 launches for a start, and a reference, on an emulator with API 34 and an iPhone 17 simulator with iOS 26.5, each made for the test, host load 6-10 on 15 cores. The cost is 800 ms in one step or at the start, read from a file or the environment by the same fixture build:
 
@@ -292,7 +292,7 @@ A CPU number takes five snapshots, one sample each. The app has to have settled 
 
 **Not run to the end:** a scroll and a CPU look on the iPhone. A scroll there was stopped by a USB drop of every device on the Mac, then at Mac load 170-324 by `xctrace export` failing on its own trace, then by the phone itself, which read hot (thermal 2) after hours of traces with a mirror open on it, and the gate refused those runs, `hot-device`. In that last go the heavy list read 32.5 % janky against 0.5 %, and was rightly not called.
 
-[`perf-gate.yml`](perf-gate.yml) was run by its own `run:` blocks, in order, on this Mac and an iPhone 17 simulator with iOS 27.2, at load 7 to 13, with `gh` stubbed and the `actions/*` steps skipped: three runs into the baseline, 800 ms put into the head's run only, the gate failed the job on +797 ms, and the comment was written and handed to `gh` all the same. As the cost was in the measured run and not in the look, the answer said it did not show again and named nothing, which is the honest answer to that. An earlier go on a simulator just booted stopped at the base, 8 of 8 runs refused for load, and still wrote its comment, "1 of 1 scenario not called". The wait for load that this added to the job ran by itself and not within the job. **Not run:** on a GitHub runner, and the Android job on an Intel runner.
+[`perf-gate.yml`](../examples/perf-gate.yml) was run by its own `run:` blocks, in order, on this Mac and an iPhone 17 simulator with iOS 27.2, at load 7 to 13, with `gh` stubbed and the `actions/*` steps skipped: three runs into the baseline, 800 ms put into the head's run only, the gate failed the job on +797 ms, and the comment was written and handed to `gh` all the same. As the cost was in the measured run and not in the look, the answer said it did not show again and named nothing, which is the honest answer to that. An earlier go on a simulator just booted stopped at the base, 8 of 8 runs refused for load, and still wrote its comment, "1 of 1 scenario not called". The wait for load that this added to the job ran by itself and not within the job. **Not run:** on a GitHub runner, and the Android job on an Intel runner.
 
 ## Why an app started
 
@@ -570,6 +570,31 @@ A simulator's numbers are relative: `Device.virtual` is true there, false on a p
 its leaks summary, cold launches slower than warm. `test-device/iphone.test.ts` reads memory, CPU, a profile, the
 hangs and a launch of Settings; a cost-known check of them needs an app signed for the phone.
 
+## Speed
+
+Measured, not claimed: the Settings scenario, on one boot, three runs of 10 rounds, which also read each answer's positions against a read 1.5 s later. Medians in ms, p50 / p90. A number is relative to this Mac at this load.
+
+**Android 14 emulator** (`sdk_gphone64_arm64`), 2026-11-03, appdyno 0.6.0, host load 10-11 on 15 cores, device load 1-2:
+
+| read    | tap and see | back and see | screenshot | read answer, chars | first open | position error, px, median / p95 / max | stale | errors |
+| ------- | ----------- | ------------ | ---------- | ------------------ | ---------- | -------------------------------------- | ----- | ------ |
+| 64 / 82 | 819 / 948   | 550 / 577    | 50 / 71    | 1,405              | 1,922      | 0 / 0 / 0                              | 0     | 0      |
+
+**iOS 26.5 simulator** (iPhone 17 Pro), same date and version, host load 6-8:
+
+| read    | tap and see | back and see | screenshot | read answer, chars | first open | position error, points, median / p95 / max; missing | stale | errors |
+| ------- | ----------- | ------------ | ---------- | ------------------ | ---------- | --------------------------------------------------- | ----- | ------ |
+| 57 / 64 | 909 / 1,073 | 674 / 713    | 85 / 97    | 2,050              | 7,428      | 0 / 0 / 1; 4                                        | 0     | 0      |
+
+**Phones.** The same 10 rounds on each phone's own Settings through the MCP server, p50 / p90 in ms, the same date, host load 12-36 with other work on the Mac:
+
+| phone                                 | read      | tap and see   | back and see  | screenshot | read answer, chars |
+| ------------------------------------- | --------- | ------------- | ------------- | ---------- | ------------------ |
+| Xiaomi 25078RA3EY, Android 16 (tr-TR) | 105 / 121 | 896 / 941     | 739 / 980     | 111 / 134  | 1,438              |
+| iPhone 13 Pro Max, iOS 27.0.1 (tr-TR) | 308 / 313 | 2,017 / 2,025 | 1,988 / 2,089 | 189 / 199  | 2,272              |
+
+The Android tables predate the agent's check for a dark screen before a touch, which was not measured apart.
+
 ## iPhone speed
 
 iPhone 13 Pro Max, iOS 27.0.1, the Settings scenario through the library: read 240, tap and see 1,523, back 1,682,
@@ -658,7 +683,7 @@ The phone's touch stays about one display tick over its target: 98 ms by way of 
 
 Under other work, nothing but the load differs: on the phone at load 325 to 369, 51 frames/s, capture to arrival 33.8, 48.4 ms, touch 103 ms, decode 9.6 ms.
 
-A phone's target for frames is 59, or 59 of every 60 where its display is slower, read from `dumpsys display`: `auto` gives up what is past that for a touch. On the Samsung capture to arrival follows the picture's pixels, and touch read 215 ms at load 160 and 217 at load 21, so that is the size, not load, and [`auto` measures it](mirror.md#the-size-of-a-phones-picture). Its first stream settled on 576x1280 from 1080x2400 by way of 1920 lines, and the next started there, first picture in 360 to 932 ms. Touch stays a miss at any size: 95 to 107 ms at 1280 lines across runs, and 94 at 1024.
+A phone's target for frames is 59, or 59 of every 60 where its display is slower, read from `dumpsys display`: `auto` gives up what is past that for a touch. On the Samsung capture to arrival follows the picture's pixels, and touch read 215 ms at load 160 and 217 at load 21, so that is the size, not load, and [`auto` measures it](../mirror.md#the-size-of-a-phones-picture). Its first stream settled on 576x1280 from 1080x2400 by way of 1920 lines, and the next started there, first picture in 360 to 932 ms. Touch stays a miss at any size: 95 to 107 ms at 1280 lines across runs, and 94 at 1024.
 
 Thirty minutes of a picture that keeps moving, by `--soak 30`, with the viewer's memory a minute in and at the end:
 

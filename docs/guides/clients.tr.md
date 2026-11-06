@@ -108,7 +108,7 @@ Bulunamayan bir istemci klasörünü henüz oluşturmamıştır: bir kez açın 
 { "command": "npx", "args": ["-y", "appdyno", "mcp"] }
 ```
 
-Seçenekler `args` dizisinin sonuna eklenir. Örneğin `"--device", "emulator-5554"` ya da `"--allow-apps", "com.example.app"`. Bkz. [Server options](../README.md#server-options).
+Seçenekler `args` dizisinin sonuna eklenir. Örneğin `"--device", "emulator-5554"` ya da `"--allow-apps", "com.example.app"`. Bkz. [Server options](../reference/cli.md#server-options).
 
 ### Hub'dan
 
@@ -377,7 +377,7 @@ Android cihazlarla konuşan `adb` aracı gerekir.
 
 Telefon yok mu? Android Studio'nun Device Manager'ında sanal bir cihaz oluşturup başlatın. `adb devices` onu `emulator-5554` olarak listeler.
 
-appdyno ilk kullanımda cihaza kendi ajanını kurar. Xiaomi her yeni kurulumda ekranda sorar, appdyno da yalnızca kendi başlattığı kurulumda bu tek soruyu yanıtlar. Bkz. [Reaching a phone](../README.md#reaching-a-phone).
+appdyno ilk kullanımda cihaza kendi ajanını kurar. Xiaomi her yeni kurulumda ekranda sorar, appdyno da yalnızca kendi başlattığı kurulumda bu tek soruyu yanıtlar. Bkz. [Reaching a phone](../reference/tools.md#reaching-a-phone).
 
 ## iPhone veya simülatör
 

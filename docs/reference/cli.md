@@ -1,0 +1,46 @@
+# Command line
+
+Every tool is also a command, with dashes:
+
+```sh
+appdyno devices
+appdyno screen --device emulator-5554
+appdyno wait-for --text Done
+appdyno tap --help
+appdyno --help
+```
+
+An op with `action` takes it as its first word: `appdyno record start`, `appdyno network stop`. Other commands: `mirror` (see [the window](../mirror.md)), `doctor [--serial S]`, `ios build`, `test` (see [flows](../guides/flows.md)), `tools install` (fetches the pinned
+Perfetto trace processor), `bench`. Exit code 1 means the call was refused, 2 means wrong arguments. The selected
+device and the diff baseline between CLI processes are kept in a small file in the state directory, one per working
+directory, so two terminals in two folders do not share a device.
+
+## Server options
+
+`appdyno mcp [flags]`. Each flag has an environment variable.
+
+| flag                        | environment                         | what                                                                                                                |
+| --------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `--device S`                | `APPDYNO_SERIAL`                    | adb serial, simulator id or iPhone UDID                                                                             |
+| `--app A`                   | `APPDYNO_APP`                       | default app (bundle or package id)                                                                                  |
+| `--allow-devices RE`        | `APPDYNO_ALLOW_DEVICES`             | only devices whose id matches                                                                                       |
+| `--allow-apps a,b`          | `APPDYNO_ALLOW_APPS`                | only these apps                                                                                                     |
+| `--allow-urls RE`           | `APPDYNO_ALLOW_URLS`                | only links that match                                                                                               |
+| `--no-home`                 |                                     | block the home key                                                                                                  |
+| `--measurements dir`        |                                     | where measurements are stored (default: the state directory)                                                        |
+| `--takeover`                |                                     | stop another tool that holds UI automation on Android                                                               |
+| `--no-install-consent`      | `APPDYNO_NO_INSTALL_CONSENT=1`      | `app install` touches no prompt on the phone: a person answers them all                                             |
+| `--accept-install-warnings` | `APPDYNO_ACCEPT_INSTALL_WARNINGS=1` | `app install` passes a Play Protect warning, and always says so and quotes it                                       |
+| `--share`                   | `APPDYNO_SHARE=1`                   | use a device another process holds                                                                                  |
+| `--animations V`            | `APPDYNO_ANIMATIONS`                | `off` sets an Android device's animation scales to 0 while it is driven                                             |
+| `--trace-limit-gb N`        | `APPDYNO_TRACE_LIMIT_GB`            | what kept traces and heap dumps may take, 10 by default; older ones go, never what a baseline or a recent run names |
+| `--http 127.0.0.1:PORT`     |                                     | Streamable HTTP on this Mac's loopback, not stdio: see below. Off unless given, and no variable turns it on         |
+|                             | `APPDYNO_HTTP_TOKEN`                | the token `--http` asks for, 32 characters or more: generated and printed if not set                                |
+|                             | `APPDYNO_SECRETS=a,b`               | values never shown back or put on the clipboard                                                                     |
+
+Without `--takeover`, a second tool holding UI automation on Android is never stopped. The error names
+the holder by its pid and command line and gives the exact command to stop it.
+
+`--http` is for a client that cannot start a program on this Mac. It listens on loopback and refuses any other address, and it reaches further only through a tunnel you run: there is no service of ours. **Whoever has the address and the token drives your devices**, and reads and writes files here where a tool takes a path. See [docs/clients.md](../guides/clients.md#clients-in-a-browser) before you open one.
+
+A request needs the token, as `Authorization: Bearer <token>` on `/mcp`, or as `/mcp/<token>` for a client with no field for a header, and a token in an address shows in a tunnel's logs. A request with an `Origin` other than the server's own is refused with 403. There is a server per POST and no MCP session, because such a client may open one for each tool call and never say it is done. A client is known by the name it gives: once it has called a tool it holds the context of a stdio session until 10 minutes after its last call, when its conditions go back, and another client is refused with a 409 that names it. A broken connection stops its call. A variable sets the token and no flag does, because a flag would show in `ps`.

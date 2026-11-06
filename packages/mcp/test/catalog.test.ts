@@ -47,14 +47,15 @@ it('says what it is for first, within what a client keeps of its instructions', 
     expect(INSTRUCTIONS.slice(0, 100)).toContain(word);
 });
 
-it('has every tool in the table of the README, and what it says of steps as the tool says it', () => {
-  const readme = readFileSync(new URL('../../../README.md', import.meta.url), 'utf8');
+it('has every tool in the table of the docs, and what they say of steps as the tool says it', () => {
+  const doc = readFileSync(new URL('../../../docs/reference/tools.md', import.meta.url), 'utf8');
   const ops = opsFor(new ServerContext(DEFAULT_POLICY, []));
-  const start = readme.indexOf('| purpose');
-  const table = readme.slice(start, readme.indexOf('\n\n', start));
+  const start = doc.indexOf('| purpose');
+  const table = doc.slice(start, doc.indexOf('\n\n', start));
   expect(Object.keys(ops).filter((name) => !table.includes(`\`${name}\``))).toEqual([]);
   const limit = /at most (\d+),/.exec(ops.steps!.description)?.[1];
-  expect(readme).toContain(`\`steps\` runs up to ${limit} steps`);
+  expect(doc).toContain(`\`steps\` runs up to ${limit} steps`);
+  expect(doc).toContain(`${Object.keys(ops).length} tools`);
 });
 
 it('keeps the tool catalog within its budget', async () => {

@@ -20,7 +20,7 @@ import type { ActionOut } from './schemas.js';
 import type { Session } from './session.js';
 import { refusedAction, reply } from './tool.js';
 
-/** After an action: quiet window and cap of the on-device settle (the window: docs/protocol.md, measured). */
+/** After an action: quiet window and cap of the on-device settle (the window: docs/reference/protocol.md, measured). */
 export const SETTLE = { quietMs: 200, maxMs: 3_000 } as const;
 const MAYBE_MOVING = 'the screen may still be changing';
 const FAST_READ =

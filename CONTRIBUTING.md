@@ -46,7 +46,7 @@ APPDYNO_ANDROID_SERIAL=<serial> APPDYNO_IOS_UDID=<udid> pnpm test:device
 ```
 
 Set only the variable of the device you have. `APPDYNO_IPHONE_UDID` runs the iPhone suites and needs the
-signing variables from the README. See `vitest.device.config.ts` and `docs/ci.md`. `scripts/ci.sh` runs
+signing variables in [Tools](docs/reference/tools.md#reaching-a-phone). See `vitest.device.config.ts` and `docs/reference/ci.md`. `scripts/ci.sh` runs
 every gate locally and records the results.
 
 Close the hub on a device a suite uses. A suite keeps its state in a folder of its own, by `APPDYNO_STATE_DIR`, so it
@@ -100,3 +100,13 @@ with `type` one of `feat`, `fix`, `refactor`, `test`, `docs`, and an optional sc
 
 Write a comment only for the why that the code cannot show. Do not restate what the code does. Fixtures
 and tests use neutral English names.
+
+## Docs
+
+[The docs](docs/README.md) hold guides, which take a reader through a task, and a reference to look things up in. A new
+page goes in one of those and in the index. A number in the docs is one you ran: say on what, and with what load.
+
+Diagrams are hand-written SVG in `docs/images`, one file each, with no generator. Each has its own ground and both
+themes inside it, so it reads on any page and follows GitHub's theme. To draw one, copy the style block of another and
+keep to its shapes: blue is your Mac, teal or violet the device, pink whoever is asking. Look at it in both themes.
+`packages/appdyno/test/docs.test.ts` holds them to the code, and every link in the docs to a real target.

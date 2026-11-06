@@ -206,7 +206,7 @@ export const deviceClass = (d: DeviceInfo) =>
 /**
  * Host load per core over this: a virtual device shares the host's cores with whatever else runs, and a number timed
  * on the host waits for them, on any device. An emulator's cold start doubled, 350 ms to 700 ms, between load 11 and
- * 16 on 15 cores, and an iPhone's launch swung between 550 ms and 3 s (docs/perf.md).
+ * 16 on 15 cores, and an iPhone's launch swung between 550 ms and 3 s (docs/reference/perf.md).
  */
 const HOST_LOAD_PER_CORE = 0.8;
 /** Above this share of all its cores a device is busy with more than the app. */

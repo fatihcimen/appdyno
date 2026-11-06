@@ -58,7 +58,7 @@ describe.skipIf(!serial)('start info', () => {
     const slow = await onCreate();
     await costs();
     console.log('oncreate_to_first_frame', plain, slow);
-    // an emulator's own start work runs alongside a sleep, which shows only in part there (docs/perf.md)
+    // an emulator's own start work runs alongside a sleep, which shows only in part there (docs/reference/perf.md)
     if (serial!.startsWith('emulator-')) expect(slow).toBeGreaterThan(plain + COST_MS * 0.3);
     else expect(Math.abs(slow - plain - COST_MS)).toBeLessThan(COST_MS * 0.1);
   }, 180_000);

@@ -5,7 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { COMMANDS } from '../src/usage.js';
 
 /** A file people copy and nothing here runs: what can rot in it is held to the command table. */
-const file = readFileSync(join(import.meta.dirname, '../../../docs/perf-gate.yml'), 'utf8');
+const file = readFileSync(
+  join(import.meta.dirname, '../../../docs/examples/perf-gate.yml'),
+  'utf8',
+);
 const code = file
   .split('\n')
   .filter((l) => !l.trimStart().startsWith('#'))

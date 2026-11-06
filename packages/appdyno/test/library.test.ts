@@ -19,7 +19,7 @@ vi.mock('../src/providers.js', () => ({
 }));
 
 describe('the library', () => {
-  it('runs the example the README shows', async () => {
+  it('runs the example the docs show', async () => {
     const flow = join(mkdtempSync(join(tmpdir(), 'appdyno-library-')), 'a.flow');
     writeFileSync(flow, 'assert text="Bilgiler"\n');
     const lines: string[] = [];
@@ -27,7 +27,10 @@ describe('the library', () => {
     expect(lines[0]).toContain('tapped');
     expect(lines[1]).toMatch(/^assert text="Bilgiler": \d+ ms$/);
     expect(lines[2]).toMatch(/^NOT_FOUND: /);
-    const shown = readFileSync(new URL('../../../README.md', import.meta.url), 'utf8');
+    const shown = readFileSync(
+      new URL('../../../docs/reference/library.md', import.meta.url),
+      'utf8',
+    );
     const example = readFileSync(new URL('../examples/drive.ts', import.meta.url), 'utf8');
     expect(shown).toContain(example.trim());
   });

@@ -108,7 +108,7 @@ A client that is not found has not created its folder yet: open it once, or add 
 { "command": "npx", "args": ["-y", "appdyno", "mcp"] }
 ```
 
-Flags go at the end of `args`. For example `"--device", "emulator-5554"`, or `"--allow-apps", "com.example.app"`. See [Server options](../README.md#server-options).
+Flags go at the end of `args`. For example `"--device", "emulator-5554"`, or `"--allow-apps", "com.example.app"`. See [Server options](../reference/cli.md#server-options).
 
 ### From the hub
 
@@ -377,7 +377,7 @@ You need `adb`, Android's tool for talking to a device.
 
 No phone? Create a virtual device in Android Studio's Device Manager and start it. `adb devices` lists it as `emulator-5554`.
 
-appdyno installs its own agent on the device the first time it is used. A Xiaomi asks on its screen before each new install, and appdyno answers that one question for an install it started. See [Reaching a phone](../README.md#reaching-a-phone).
+appdyno installs its own agent on the device the first time it is used. A Xiaomi asks on its screen before each new install, and appdyno answers that one question for an install it started. See [Reaching a phone](../reference/tools.md#reaching-a-phone).
 
 ## An iPhone or a simulator
 

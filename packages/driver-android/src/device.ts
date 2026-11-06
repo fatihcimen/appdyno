@@ -63,9 +63,9 @@ export type AndroidOptions = {
   /** How long a read-only call waits for an unplugged or rebooting device to come back (0: not at all). */
   reconnectWaitMs?: number;
   takeover?: boolean | undefined;
-  /** Off: the device's animations are off while this host is connected (docs/protocol.md "Animations"). */
+  /** Off: the device's animations are off while this host is connected (docs/reference/protocol.md "Animations"). */
   animations?: 'on' | 'off' | undefined;
-  /** What `app install` may answer on the phone (docs/protocol.md "A phone's install prompts"). */
+  /** What `app install` may answer on the phone (docs/reference/protocol.md "A phone's install prompts"). */
   installAnswers?: InstallAnswers | undefined;
 };
 
@@ -289,7 +289,7 @@ export class AndroidDevice extends RpcDevice implements Device {
   }
 
   /**
-   * The screen's accessibility issues (docs/protocol.md "Accessibility audit"): the host's checks of a
+   * The screen's accessibility issues (docs/reference/protocol.md "Accessibility audit"): the host's checks of a
    * tree read, a PNG screenshot and the characters each text does not show.
    */
   async audit(opts: { types?: AuditType[]; maxIssues?: number } = {}): Promise<AuditResult> {

@@ -2,7 +2,7 @@ import type { Platform } from '@appdyno/protocol';
 import type { PerfRecord } from './record.js';
 
 /**
- * Android vitals' definitions (links in docs/perf.md). Play's thresholds are shares of users or sessions over 28 days,
+ * Android vitals' definitions (links in docs/reference/perf.md). Play's thresholds are shares of users or sessions over 28 days,
  * which a local run cannot have: it can only say that this session would count, and never a rate.
  */
 

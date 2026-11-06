@@ -184,8 +184,8 @@ describe('the phone stream', () => {
  */
 const CLIENT_DATA = [
   'packages/cli/src/clients.ts',
-  'docs/clients.md',
-  'docs/clients.tr.md',
+  'docs/guides/clients.md',
+  'docs/guides/clients.tr.md',
   'README.md',
   'packages/appdyno/package.json',
 ];
@@ -213,5 +213,45 @@ describe('a client', () => {
         return marks.filter((m) => m.test(text)).map((m) => `${f}: ${m.source}`);
       });
     expect(hits).toEqual([]);
+  });
+
+  it('is named in the README, where a person searching for it looks', () => {
+    const readme = readFileSync(join(root, 'README.md'), 'utf8');
+    const line = readme.split('\n').find((l) => l.startsWith('Works with '))!;
+    const unnamed = CLIENTS.flatMap((c) => c.name.split(' and '))
+      .map((name) => name.replace(/ (desktop|CLI|in a browser)$/, ''))
+      .filter((name) => !line.includes(name));
+    expect(unnamed).toEqual([]);
+  });
+});
+
+describe('the picture of the packages', () => {
+  const picture = readFileSync(join(root, 'docs/images/package-map.svg'), 'utf8');
+  const rows = new Map(
+    [...picture.matchAll(/data-package="([\w-]+)" data-row="(\d+)"/g)].map((m) => [
+      m[1]!,
+      Number(m[2]),
+    ]),
+  );
+  const nameOf = (spec: string) => spec.replace('@appdyno/', '');
+
+  it('draws every package, and no other', () => {
+    expect([...rows.keys()].sort()).toEqual(Object.keys(RULES).sort());
+  });
+
+  it('draws each package above all it may import', () => {
+    const upward = Object.entries(RULES).flatMap(([pkg, imports]) =>
+      imports
+        .filter((spec) => rows.get(nameOf(spec))! <= rows.get(pkg)!)
+        .map((spec) => `${pkg} imports ${spec}`),
+    );
+    expect(upward).toEqual([]);
+  });
+
+  it('shows that only the top package names a driver', () => {
+    const naming = Object.entries(RULES).filter(([, imports]) =>
+      imports.some((spec) => spec === ANDROID || spec === APPLE),
+    );
+    expect(naming.map(([pkg]) => pkg)).toEqual(['appdyno']);
   });
 });

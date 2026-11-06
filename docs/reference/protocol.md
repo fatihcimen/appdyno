@@ -342,7 +342,7 @@ size. An encoder that ran 10 s and then failed keeps its step. `failFirst: n` ma
 **Backpressure**: three frames wait at most. With the socket full a frame is dropped, and every frame up to the next
 keyframe, which is asked for: the picture freezes for a moment and is never wrong.
 
-An emulator's guest encoder runs as this does, and lags by seconds: see [mirror.md](mirror.md).
+An emulator's guest encoder runs as this does, and lags by seconds: see [mirror.md](../mirror.md).
 
 ### A phone's screen goes off
 

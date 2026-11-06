@@ -1,4 +1,4 @@
-# Local CI
+# CI and releases
 
 `scripts/ci.sh` runs every gate in order and stops nothing early: each step's exit code and duration go to
 `.ci/runs/<stamp>.json`, its output to `.ci/logs/`. The script exits 1 when any step failed, and 3 when none did and a
@@ -73,24 +73,6 @@ Before the first release:
 Before a tag, from a node whose folder has no pnpm, `node scripts/check-package.mjs` installs the tarball on an empty home. It stays out of the workflow, as it refuses to run where a JDK is on its path.
 
 `scripts/check-update.mjs` runs `update` and its verification for real, on public packages in a temporary folder, with no change to this machine: a release with provenance, one without, one whose dependency alone has it, a tampered registry, and a failed install under npm and under pnpm. It needs the network and npm 11.12 or newer.
-
-## The performance gate on a pull request
-
-[`perf-gate.yml`](perf-gate.yml) is a job to copy to `.github/workflows/perf-gate.yml`. Set the values under its `env`: the app, the flow, the simulator and how the app builds.
-
-**Real measurement needs a real device.** The job runs on a macOS runner with a simulator, so its numbers are relative to that runner, and real frame rates, frozen frames, hitches and energy need a phone. What it does is catch a change between two builds on one machine, and say why.
-
-It measures the pull request's base and head in one job, as a baseline from another machine does not compare:
-
-1. builds the base, measures the flow until three runs are in the baseline, and takes the [reference](perf.md#why-it-got-worse);
-2. builds the head and measures the flow;
-3. `appdyno perf why`, which fails the job at its end on a regression, a broken budget or a change it could not judge (`few-samples`, `noisy`, `refused`);
-4. `appdyno perf comment --out perf-comment.md`, whatever the gate said;
-5. uploads that file, and posts it with `gh pr comment` and the repository's own token.
-
-appdyno has no service and no token, and posts nothing: it writes a file, and your job posts it. A pull request from a fork gets a token that cannot comment, so there the comment is only in the job's artifacts. A new comment is written each time, as `gh pr comment --edit-last` edits the token's last comment, which may be another workflow's.
-
-**What to expect of a runner.** A change seen under load says `noisy` and fails the job, with the words to measure again, and a run under load is refused as a baseline. GitHub's arm64 runners have 3 cores, so that is a load over 2.4, as a build leaves behind, which is why the job measures until three are in. A new simulator works by itself at first too: about 3 minutes and 7 cores on an M5 Pro, with iOS 27.2, so the job waits for the load first, and again after each build it measures in. `macos-latest` is an arm64 runner, and [those have no nested virtualization](https://docs.github.com/en/actions/reference/runners/github-hosted-runners), so an Android emulator needs an Intel label or a Mac of your own. The job's simulator is new, and a new simulator asks once whether a link may open the app, which stops a flow at its first `open_link`: answer that once before the first measured run, or reach the screen by its buttons.
 
 ### The Mac app
 

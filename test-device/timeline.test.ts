@@ -11,7 +11,7 @@ import type { Timeline } from '@appdyno/perf';
 /**
  * A real journey on the fixture with a stall put in on purpose, and what the page says of it (APPDYNO_ANDROID_SERIAL).
  * The video is the check on the frames: both are stamped by the device, by two different parts of it, so a slow frame
- * and the freeze in the video have to fall together. Numbers are printed: docs/perf.md quotes them.
+ * and the freeze in the video have to fall together. Numbers are printed: docs/reference/perf.md quotes them.
  */
 const serial = process.env.APPDYNO_ANDROID_SERIAL;
 const APP = 'dev.appdyno.fixture';

@@ -11,7 +11,7 @@ const quietly = (command: string, args: string[]) => {
 /**
  * No window to show a request in: a sound, and a notification where the system lets one through. Best
  * effort: nothing waits on either and a notification needs no permission to be asked for. Not run by any
- * test, as it reaches a person: a hand-run step (docs/ci.md). The reason goes as an argument, never as script.
+ * test, as it reaches a person: a hand-run step (docs/reference/ci.md). The reason goes as an argument, never as script.
  */
 export function alertPerson(reason: string) {
   quietly('afplay', [SOUND]);

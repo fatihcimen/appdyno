@@ -15,7 +15,7 @@ export type PromptKind = 'long' | 'acts' | 'picture';
 /** What any client has, wherever it runs. */
 export type Named = {
   name: string;
-  /** What it calls itself in MCP's `clientInfo`, which only its own call shows: `docs/clients.md` says which were seen. */
+  /** What it calls itself in MCP's `clientInfo`, which only its own call shows: `docs/guides/clients.md` says which were seen. */
   says: RegExp;
   /** Where a person sees that it worked. */
   check: Translated;

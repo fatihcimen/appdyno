@@ -8,7 +8,7 @@
 #   scripts/ci.sh --ios <simulator id>    + the iOS runner build and the simulator suites (contract, perf, stdio)
 #   scripts/ci.sh --iphone <UDID>         + the iPhone runner build and the iPhone suites (APPDYNO_IOS_* signing, and
 #                                           APPDYNO_IPHONE_FIXTURE_APP: with no fixture its measures would not run)
-#   scripts/ci.sh --all-on <serial>       + every suite that device can take, one file at a time (docs/ci.md)
+#   scripts/ci.sh --all-on <serial>       + every suite that device can take, one file at a time (docs/reference/ci.md)
 #
 # Exits 1 when a step failed, and 3 when none did and something was postponed: what never ran is no pass.
 #

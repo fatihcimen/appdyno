@@ -47,7 +47,7 @@ export async function memory(
 }
 
 /**
- * The memory Play judges (docs/perf.md): `RssAnon` + `VmSwap` from the process's own status, the state the system holds
+ * The memory Play judges (docs/reference/perf.md): `RssAnon` + `VmSwap` from the process's own status, the state the system holds
  * it in, its bitmaps, and the device's RAM, which picks the limit.
  */
 export async function anonMemory(d: PerfDevice, pkg: string): Promise<Measured<AnonMemory>> {
