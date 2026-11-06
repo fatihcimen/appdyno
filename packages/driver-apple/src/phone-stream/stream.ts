@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { monitorEventLoopDelay } from 'node:perf_hooks';
 import type { DeviceState, InputEvent, MirrorQuality, Need } from '@appdyno/core';
-import type { IpStack, UdpSocket } from './ipstack.js';
+import type { IpStack, TcpConnection, UdpSocket } from './ipstack.js';
 import { PhoneHid } from './phone-hid.js';
 import { RemoteXpc } from './remotexpc.js';
 import { RtcpWriter, RtpReceiver, type Picture } from './rtp-hevc.js';
@@ -48,6 +48,18 @@ const WATCH_MS = 2_000;
 
 type TurnsReader = Awaited<ReturnType<typeof orientationReader>>;
 
+/** All a stream reaches the phone and this Mac by: what a test stands in for, as nothing here needs a phone to be read. */
+const WIRE = {
+  openTunnel,
+  readServices,
+  invoke,
+  takeScreenshot,
+  orientationReader,
+  thisMac,
+  xpc: (connection: TcpConnection) => RemoteXpc.start(connection),
+};
+export type StreamWire = typeof WIRE;
+
 export interface StreamSink {
   live(info: { w: number; h: number; mode: string; crop: boolean }): void;
   picture(p: Picture): void;
@@ -82,10 +94,16 @@ export class PhoneStream {
   private constructor(
     private readonly udid: string,
     private readonly sink: StreamSink,
+    private readonly parts: StreamWire,
   ) {}
 
-  static async open(udid: string, quality: MirrorQuality, sink: StreamSink): Promise<PhoneStream> {
-    const stream = new PhoneStream(udid, sink);
+  static async open(
+    udid: string,
+    quality: MirrorQuality,
+    sink: StreamSink,
+    parts: StreamWire = WIRE,
+  ): Promise<PhoneStream> {
+    const stream = new PhoneStream(udid, sink, parts);
     try {
       await stream.start(quality);
       return stream;
@@ -99,25 +117,27 @@ export class PhoneStream {
   }
 
   private async start(quality: MirrorQuality) {
-    const { stack, rsdPort } = await openTunnel(this.udid);
+    const { stack, rsdPort } = await this.parts.openTunnel(this.udid);
     this.stack = stack;
     stack.onEnded((why) => this.onLost(why));
-    this.services = await readServices(stack, rsdPort);
+    this.services = await this.parts.readServices(stack, rsdPort);
     const port = this.services.ports[DISPLAY];
     if (!port) {
       throw new StreamRefusal('disk-image-missing', 'the phone lists no display service');
     }
-    const display = RemoteXpc.start(await stack.connect(port));
+    const display = this.parts.xpc(await stack.connect(port));
     this.display = display;
-    await invoke(display, `${FEATURE}getmediasupportinfo`, {});
-    const before = sessionsOf(await invoke(display, `${FEATURE}getmediastreamserverstatus`, {}));
+    await this.parts.invoke(display, `${FEATURE}getmediasupportinfo`, {});
+    const before = sessionsOf(
+      await this.parts.invoke(display, `${FEATURE}getmediastreamserverstatus`, {}),
+    );
     const mine = ownSessions(this.udid).map(compact);
     if (before.some((id) => !mine.includes(compact(id)))) {
       throw new StreamRefusal('taken-over', 'another app has a stream from this phone');
     }
     // only ours are there, as `stopAll` is all there is: what a process that died left behind
     if (before.length)
-      await invoke(display, `${FEATURE}stopmediastream`, { stopAll: true }, STOP_ACTION);
+      await this.parts.invoke(display, `${FEATURE}stopmediastream`, { stopAll: true }, STOP_ACTION);
     rememberOwn(this.udid, []);
     const ladder: StreamMode[] = quality === 'standard' ? [5] : [7, 5];
     let lastError: unknown;
@@ -138,7 +158,7 @@ export class PhoneStream {
   private async startStreams(stack: IpStack, display: RemoteXpc, mode: StreamMode) {
     const remote = stack.remoteAddress;
     const local = stack.localAddress;
-    const endpoint = thisMac();
+    const endpoint = this.parts.thisMac();
     const session = randomUUID();
     rememberOwn(this.udid, [session]);
     const ssrc = randomBytes(4).readUInt32BE();
@@ -167,7 +187,7 @@ export class PhoneStream {
       },
     });
     const start = (input: ReturnType<typeof params>) =>
-      invoke(display, `${FEATURE}startmediastream`, input);
+      this.parts.invoke(display, `${FEATURE}startmediastream`, input);
     const audioAnswer = await start(
       params('audio', this.audio, audioOffer(mode, randomBytes(4).readUInt32BE(), endpoint), false),
     );
@@ -202,7 +222,7 @@ export class PhoneStream {
   }
 
   private async screenSize() {
-    const size = imageSize(await takeScreenshot(this.stack!, this.services!, 'png'));
+    const size = imageSize(await this.parts.takeScreenshot(this.stack!, this.services!, 'png'));
     if (!size) throw new Error('a screenshot with no size');
     return size;
   }
@@ -248,7 +268,7 @@ export class PhoneStream {
    * stream is live: a phone already on its side would otherwise take its first touches as upright, and lose them.
    */
   private async openTurns() {
-    const reader = await orientationReader(this.udid).catch(() => undefined);
+    const reader = await this.parts.orientationReader(this.udid).catch(() => undefined);
     if (reader) await this.readTurns(reader).catch(() => undefined);
     return reader;
   }
@@ -283,7 +303,7 @@ export class PhoneStream {
   private async watchServer() {
     if (!this.display || this.stopped) return;
     try {
-      const status = await invoke(
+      const status = await this.parts.invoke(
         this.display,
         `${FEATURE}getmediastreamserverstatus`,
         {},
@@ -331,8 +351,8 @@ export class PhoneStream {
     const indigo = ports[HID_INDIGO];
     const universal = ports[HID_UNIVERSAL];
     if (!stack || !indigo || !universal) throw new Error('the phone lists no input service');
-    this.indigo = RemoteXpc.start(await stack.connect(indigo));
-    this.universal = RemoteXpc.start(await stack.connect(universal));
+    this.indigo = this.parts.xpc(await stack.connect(indigo));
+    this.universal = this.parts.xpc(await stack.connect(universal));
     this.hid = new PhoneHid(this.indigo, this.universal);
     this.hid.turns = this.turns;
     return this.hid;
@@ -360,8 +380,8 @@ export class PhoneStream {
     let proved = false;
     try {
       const display = this.display!;
-      await invoke(display, `${FEATURE}stopmediastream`, { stopAll: true }, STOP_ACTION);
-      const after = await invoke(display, `${FEATURE}getmediastreamserverstatus`, {});
+      await this.parts.invoke(display, `${FEATURE}stopmediastream`, { stopAll: true }, STOP_ACTION);
+      const after = await this.parts.invoke(display, `${FEATURE}getmediastreamserverstatus`, {});
       proved = after.running === false || sessionsOf(after).length === 0;
       if (proved) rememberOwn(this.udid, []);
     } catch {
