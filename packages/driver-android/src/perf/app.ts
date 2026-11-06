@@ -7,13 +7,14 @@ import {
   type Measured,
   type NetworkReading,
   type EnergyReading,
+  type ExitCounts,
   type ExitReading,
   type SizeReading,
   type DeviceVitals,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg, shq } from '../adb.js';
-import { parseDropbox, parseExitInfo } from '../crashes.js';
+import { parseDropbox, parseExitInfo, stampTime } from '../crashes.js';
 import { BATTERY_BACK, BATTERY_GUARD } from '../settings.js';
 import { traceProcessor } from '../tools.js';
 import {
@@ -154,33 +155,64 @@ const ANR_HEADERS = `dumpsys dropbox --print data_app_anr | grep -E '^(=====|[0-
 const USER_PERCEIVED = /Input dispatching timed out/i;
 
 /**
- * How the app's processes ended, as far back as the system keeps (16 by default), and its ANRs. An app that recovers
- * ends in no exit, though the user waited all the same, and its ANR is only in the dropbox: three in a row on a Xiaomi
- * left none in the exits. A kill is in both, so what counts is the larger of the two, not their sum.
+ * An app that recovers ends in no exit, though the user waited all the same, and its ANR is only in the dropbox: three
+ * in a row on a Xiaomi left none in the exits. A kill is in both, so what counts is the larger of the two, not their
+ * sum. With the dropbox unread, none seen is no reading of none.
  */
-export async function exits(d: PerfDevice, pkg: string): Promise<Measured<ExitReading>> {
-  assertPkg(pkg);
-  const raw = await sh(d, `dumpsys activity exit-info ${pkg}`, 30_000);
-  const filed = await sh(d, ANR_HEADERS, 30_000).catch(() => '');
-  const ended = parseExitInfo(raw);
+function countsOf(
+  ended: ReturnType<typeof parseExitInfo>,
+  filed: ReturnType<typeof parseDropbox> | undefined,
+): ExitCounts {
   const anrExits = ended.filter((e) => /\bANR\b/i.test(e.reason));
-  const anrFiled = parseDropbox(filed, pkg);
+  const anrs = Math.max(anrExits.length, filed?.length ?? 0);
   return {
-    value: {
-      crashes: ended.filter((e) => /CRASH/i.test(e.reason)).length,
-      anrs: Math.max(anrExits.length, anrFiled.length),
+    crashes: ended.filter((e) => /CRASH/i.test(e.reason)).length,
+    ...((filed || anrs > 0) && {
+      anrs,
       userAnrs: Math.max(
         anrExits.filter((e) => USER_PERCEIVED.test(e.detail ?? '')).length,
-        anrFiled.filter((e) => USER_PERCEIVED.test(e.text)).length,
+        (filed ?? []).filter((e) => USER_PERCEIVED.test(e.text)).length,
       ),
-      total: ended.length,
+    }),
+    total: ended.length,
+  };
+}
+
+/** How far the system's stamps stand ahead of this Mac's clock, by what it reads now; NaN where that cannot be read. */
+async function stampsAhead(d: PerfDevice) {
+  const now = await sh(d, `date '+%Y-%m-%d %H:%M:%S'`).catch(() => '');
+  return stampTime(now.trim()) - Date.now();
+}
+
+/**
+ * How the app's processes ended, and its ANRs: what happened from `since` on, by the system's own stamps, and all it
+ * still holds, as far back as it keeps them (16 exits by default, the dropbox by its own age).
+ */
+export async function exits(
+  d: PerfDevice,
+  pkg: string,
+  since?: number,
+): Promise<Measured<ExitReading>> {
+  assertPkg(pkg);
+  const raw = await sh(d, `dumpsys activity exit-info ${pkg}`, 30_000);
+  const filed = await sh(d, ANR_HEADERS, 30_000).catch(() => undefined);
+  const ended = parseExitInfo(raw);
+  const anrFiled = filed === undefined ? undefined : parseDropbox(filed, pkg);
+  const ahead = since === undefined ? NaN : await stampsAhead(d);
+  const newer = ({ time }: { time: number }) => time >= since! + ahead;
+  return {
+    value: {
+      ...(!Number.isNaN(ahead) && {
+        run: countsOf(ended.filter(newer), anrFiled?.filter(newer)),
+      }),
+      held: countsOf(ended, anrFiled),
       recent: ended.slice(0, 10).map((e) => ({
         at: e.at,
         reason: e.reason,
         ...(e.detail && { description: e.detail }),
       })),
     },
-    raw: `${raw}\n---\n${filed}`,
+    raw: `${raw}\n---\n${filed ?? ''}`,
     at: at(),
   };
 }

@@ -27,6 +27,9 @@ type Exit = {
   memory?: string;
 };
 
+/** A stamp of the system's, its local time read in this Mac's zone: `stampsAhead` says how far off that puts it. */
+export const stampTime = (at: string) => new Date(at.replace(' ', 'T')).getTime();
+
 /**
  * Every exit in `dumpsys activity exit-info <pkg>`, newest first as printed. Shortcut: its times are the
  * device's local time read in the host's zone; a phone in another zone needs its offset. Most exits read
@@ -47,7 +50,7 @@ export function allExits(text: string): Exit[] {
       return [
         {
           at,
-          time: new Date(at.replace(' ', 'T')).getTime(),
+          time: stampTime(at),
           reason,
           ...(description && description !== 'null' && { detail: description }),
           ...(subreason && subreason !== 'UNKNOWN' && { subreason }),
@@ -87,7 +90,7 @@ export function parseDropbox(text: string, app: string): Drop[] {
     return [
       {
         at: h[1]!,
-        time: new Date(h[1]!.replace(' ', 'T')).getTime(),
+        time: stampTime(h[1]!),
         tag: h[2]!,
         text: block.trim(),
       },

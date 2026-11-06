@@ -198,8 +198,8 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
     };
   }
 
-  exits(bundle: string) {
-    return crashExits((q) => simulatorCrashes(this.udid, q), bundle);
+  exits(bundle: string, since?: number) {
+    return crashExits((q) => simulatorCrashes(this.udid, q), bundle, since);
   }
 
   /** What this Mac counts for the app's process: its energy, not a phone's. */

@@ -182,13 +182,20 @@ export type EnergyReading = {
   breakdown?: Record<string, number>;
 };
 
-export type ExitReading = {
+export type ExitCounts = {
   crashes: number;
-  /** Android's; iOS has no such count, and its hangs are a measure of their own. */
+  /** Android's, where it can be told; iOS has no such count, and its hangs are a measure of their own. */
   anrs?: number;
   /** Those of input dispatching timed out: the only kind Android vitals calls user-perceived. */
   userAnrs?: number;
   total: number;
+};
+
+export type ExitReading = {
+  /** What happened from the time asked for on, by the system's own stamps: all a run keeps. None where it cannot be told. */
+  run?: ExitCounts;
+  /** All the system still holds, of any age: a stock, to say as one, and no run's reading. */
+  held: ExitCounts & { atLeast?: boolean };
   recent: { at: string; reason: string; description?: string }[];
 };
 
@@ -345,7 +352,8 @@ export interface MeasureSource {
   ): Promise<Measured<NetworkReading>>;
   energy(app: string, windowMs: number): Promise<Measured<EnergyReading>>;
   battery(app: string, windowMs: number): Promise<Measured<BatterySignals>>;
-  exits(app: string): Promise<Measured<ExitReading>>;
+  /** `since`: epoch ms by this Mac's clock; with none, only what the system holds. */
+  exits(app: string, since?: number): Promise<Measured<ExitReading>>;
   startInfo(app: string): Promise<Measured<StartInfo>>;
   size(app: string): Promise<Measured<SizeReading>>;
   heapProfile(

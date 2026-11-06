@@ -80,9 +80,20 @@ export const SnapshotOut = z.object({
   energyMj: z.number().optional(),
   energyImpact: z.number().optional(),
   energyModelled: z.boolean().optional(),
+  /** Since the run before this one, by the system's own stamps; none with no such run. */
   crashes: z.number().optional(),
   anrs: z.number().optional(),
   userAnrs: z.number().optional(),
+  /** All the system still holds, of any age: no reading of this run. */
+  exitsHeld: z
+    .object({
+      crashes: z.number(),
+      anrs: z.number().optional(),
+      userAnrs: z.number().optional(),
+      total: z.number(),
+      atLeast: z.boolean().optional(),
+    })
+    .optional(),
   sizeBytes: z.number().optional(),
   lacking: z.array(z.string()).optional(),
 });

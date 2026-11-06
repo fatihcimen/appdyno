@@ -225,7 +225,14 @@ describe('the page and the measures', () => {
       ),
       network: reading({ windowMs: 2000, rxBytes: 3, txBytes: 4, note: 'loopback' }, 'raw network'),
       energy: reading({ mah: 5, note: 'a formula' }, 'raw energy'),
-      exits: reading({ crashes: 1, anrs: 2, total: 3, recent: [] }, 'raw exits'),
+      exits: reading(
+        {
+          run: { crashes: 1, anrs: 2, total: 3 },
+          held: { crashes: 4, anrs: 2, total: 9 },
+          recent: [],
+        },
+        'raw exits',
+      ),
       size: reading({ bytes: 1_048_576, parts: {} }, 'raw size'),
     });
     const { data, blocks } = await op(ctx, 'perf_snapshot', {
@@ -244,7 +251,8 @@ describe('the page and the measures', () => {
       'threads: main 50% (10 ms above 90 %)',
       'network: 3 bytes in, 4 out (loopback)',
       'energy: 5 mAh; a formula',
-      'exits: 1 crashes of 3; 2 ANRs filed',
+      'exits since the last run: 1 crashes of 3; 2 ANRs filed',
+      'the system holds 4 crashes of 9; 2 ANRs filed, of any age: no reading of this run',
       'size: 1.0 MB',
     ]);
     expect(data).toMatchObject({
@@ -277,6 +285,71 @@ describe('the page and the measures', () => {
       expect(raw).toContain(`raw ${part}`);
     const stored = JSON.parse(readFileSync(String(data.raw).replace(/\.txt$/, '.json'), 'utf8'));
     expect(JSON.stringify(stored)).toMatch(/"threads":.*"network":.*"energy":.*"exits":.*"size":/);
+  });
+
+  describe('what a run keeps of how the app ended', () => {
+    /** A device that keeps what it was asked from, and holds the same stock whatever it is asked. */
+    const held = { crashes: 3, anrs: 1, userAnrs: 1, total: 6 };
+    const device = (run: { crashes: number; anrs: number; userAnrs: number; total: number }) => {
+      const asked: (number | undefined)[] = [];
+      const exits = async (_app: string, since?: number) => {
+        asked.push(since);
+        return {
+          value: { held, recent: [], ...(since !== undefined && { run }) },
+          raw: 'raw exits',
+          at: new Date().toISOString(),
+        };
+      };
+      return { asked, ...context({ exits }) };
+    };
+    const quiet = { crashes: 0, anrs: 0, userAnrs: 0, total: 0 };
+
+    it('keeps nothing of a stock with no run to count from, and says it as one', async () => {
+      const { ctx, measurements } = device(quiet);
+      const { data, blocks } = await op(ctx, 'perf_snapshot', { also: ['exits'] });
+      const text = (blocks[0] as { text: string }).text;
+      expect(text).toContain('exits: no earlier run to count from, so this one keeps none');
+      expect(text).toContain('the system holds 3 crashes of 6; 1 ANRs filed, of any age');
+      // a stock makes no claim of this session
+      expect(text).not.toContain('user-perceived ANR');
+      expect(data).toMatchObject({ exitsHeld: held });
+      expect(data).not.toHaveProperty('crashes');
+      expect(data).not.toHaveProperty('userAnrs');
+      const [key] = await runKeys(measurements, { app: 'dev.app' });
+      const [run] = await latestRuns(measurements, key!, 1);
+      expect(run!.filter((r) => r.kind.startsWith('exits.'))).toEqual([]);
+    });
+
+    it('counts from the key’s last run, and only what is newer says this session counts', async () => {
+      const { ctx, measurements, asked } = device({ ...quiet, crashes: 1, anrs: 1, userAnrs: 1 });
+      await op(ctx, 'perf_snapshot', { also: ['exits'] });
+      const [key] = await runKeys(measurements, { app: 'dev.app' });
+      const [first] = await latestRuns(measurements, key!, 1);
+      const { data, blocks } = await op(ctx, 'perf_snapshot', { also: ['exits'] });
+      expect(asked).toEqual([undefined, Date.parse(first![0]!.at)]);
+      expect((blocks[0] as { text: string }).text).toContain(
+        'this session would count as a user-perceived ANR',
+      );
+      expect(data).toMatchObject({ crashes: 1, anrs: 1, userAnrs: 1 });
+      const [second] = await latestRuns(measurements, key!, 1);
+      expect(second!.find((r) => r.kind === 'exits.user_anrs')!.value).toBe(1);
+    });
+
+    it('says a quiet run is one, whatever the system still holds', async () => {
+      const { ctx } = device(quiet);
+      await op(ctx, 'perf_snapshot', { also: ['exits'] });
+      const { blocks } = await op(ctx, 'perf_snapshot', { also: ['exits'] });
+      expect((blocks[0] as { text: string }).text).toContain(
+        'this session would not count as a user-perceived ANR',
+      );
+    });
+
+    it('goes by the runs of its own scenario', async () => {
+      const { ctx, asked } = device(quiet);
+      await op(ctx, 'perf_snapshot', { also: ['exits'], scenario: 'a' });
+      await op(ctx, 'perf_snapshot', { also: ['exits'], scenario: 'b' });
+      expect(asked).toEqual([undefined, undefined]);
+    });
   });
 
   it('is rewritten after each kept run', async () => {

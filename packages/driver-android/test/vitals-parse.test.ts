@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { exits } from '../src/perf/app.js';
 import { parseGfxSummary } from '../src/perf/parse.js';
 
@@ -44,14 +44,14 @@ describe("what Play's definitions are read from", () => {
 
   it('counts only the ANRs of a touch as user-perceived', async () => {
     const { value } = await exits(device('') as never, 'dev.appdyno.fixture');
-    expect(value).toMatchObject({ crashes: 1, anrs: 2, userAnrs: 1, total: 3 });
+    expect(value.held).toMatchObject({ crashes: 1, anrs: 2, userAnrs: 1, total: 3 });
   });
 
   it('counts an ANR the app recovered from, which ends in no exit', async () => {
     const shell = async (cmd: string) =>
       cmd.includes('dropbox') ? filed(TOUCH, TOUCH, TOUCH) : 'no exits here';
     const { value } = await exits({ shell } as never, 'dev.appdyno.fixture');
-    expect(value).toMatchObject({ crashes: 0, anrs: 3, userAnrs: 3, total: 0 });
+    expect(value.held).toMatchObject({ crashes: 0, anrs: 3, userAnrs: 3, total: 0 });
   });
 
   it('counts one that was killed once, though both have it', async () => {
@@ -59,19 +59,102 @@ describe("what Play's definitions are read from", () => {
       device(filed(TOUCH, 'Broadcast of Intent')) as never,
       'dev.appdyno.fixture',
     );
-    expect(value).toMatchObject({ anrs: 2, userAnrs: 1 });
+    expect(value.held).toMatchObject({ anrs: 2, userAnrs: 1 });
   });
 
   it('counts no other app’s, and stands where the dropbox cannot be read', async () => {
     const other = filed(TOUCH).replace('Process: dev.appdyno.fixture', 'Process: com.other');
     const { value } = await exits(device(other) as never, 'dev.appdyno.fixture');
-    expect(value).toMatchObject({ anrs: 2, userAnrs: 1 });
+    expect(value.held).toMatchObject({ anrs: 2, userAnrs: 1 });
     const failing = {
       shell: async (cmd: string) => {
         if (cmd.includes('dropbox')) throw new Error('no dropbox');
         return EXIT_INFO;
       },
     };
-    expect((await exits(failing as never, 'dev.appdyno.fixture')).value.userAnrs).toBe(1);
+    expect((await exits(failing as never, 'dev.appdyno.fixture')).value.held.userAnrs).toBe(1);
+  });
+
+  it('reads no ANR as none where the dropbox was unread and the exits show none', async () => {
+    const shell = async (cmd: string) => {
+      if (cmd.includes('dropbox')) throw new Error('no dropbox');
+      return 'no exits here';
+    };
+    const { value } = await exits({ shell } as never, 'dev.appdyno.fixture');
+    expect(value.held.anrs).toBeUndefined();
+    expect(value.held.userAnrs).toBeUndefined();
+    expect(value.held.crashes).toBe(0);
+  });
+
+  /** A device whose local clock reads `now`, this Mac's being `macNow`. */
+  const onClock = (now: string, dropbox = '') => ({
+    shell: async (cmd: string) => {
+      if (cmd.includes("date '+")) return `${now}\n`;
+      return cmd.includes('dropbox') ? dropbox : EXIT_INFO;
+    },
+  });
+  const macNow = new Date('2026-11-04T12:00:00').getTime();
+  const local = (at: string) => new Date(at).getTime();
+
+  describe('over a run', () => {
+    beforeEach(() => vi.spyOn(Date, 'now').mockReturnValue(macNow));
+    afterEach(() => vi.restoreAllMocks());
+
+    it('counts what is newer than its start, and holds the rest apart as a stock', async () => {
+      const { value } = await exits(
+        onClock('2026-11-04 12:00:00') as never,
+        'dev.appdyno.fixture',
+        local('2026-11-04T10:12:30'),
+      );
+      expect(value.run).toEqual({ crashes: 0, anrs: 1, userAnrs: 1, total: 1 });
+      expect(value.held).toMatchObject({ crashes: 1, anrs: 2, total: 3 });
+    });
+
+    it('counts nothing of last week, however much the system still holds', async () => {
+      const { value } = await exits(
+        onClock('2026-11-04 12:00:00') as never,
+        'dev.appdyno.fixture',
+        macNow - 1_000,
+      );
+      expect(value.run).toEqual({ crashes: 0, anrs: 0, userAnrs: 0, total: 0 });
+      expect(value.held.total).toBe(3);
+    });
+
+    it('goes by the device’s own clock, in a zone three hours off this Mac’s', async () => {
+      // the same run on a phone that reads 15:00 when this Mac reads 12:00: its 10:13 was this Mac's 07:13
+      const { value } = await exits(
+        onClock('2026-11-04 15:00:00') as never,
+        'dev.appdyno.fixture',
+        local('2026-11-04T07:12:30'),
+      );
+      expect(value.run).toMatchObject({ crashes: 0, total: 1 });
+    });
+
+    it('counts an ANR in the dropbox by its own time', async () => {
+      const entries = filed(TOUCH, TOUCH);
+      vi.spyOn(Date, 'now').mockReturnValue(local('2026-11-04T14:00:00'));
+      const { value } = await exits(
+        onClock('2026-11-04 14:00:00', entries) as never,
+        'dev.appdyno.fixture',
+        local('2026-11-04T13:00:30'),
+      );
+      expect(value.run).toMatchObject({ anrs: 1, userAnrs: 1 });
+      expect(value.held.anrs).toBe(2);
+    });
+
+    it('has no reading of a run where the device’s clock cannot be read', async () => {
+      const shell = async (cmd: string) => {
+        if (cmd.includes("date '+")) throw new Error('no clock');
+        return cmd.includes('dropbox') ? '' : EXIT_INFO;
+      };
+      const { value } = await exits({ shell } as never, 'dev.appdyno.fixture', macNow - 1_000);
+      expect(value.run).toBeUndefined();
+      expect(value.held.total).toBe(3);
+    });
+
+    it('has none asked for with no time to count from', async () => {
+      const { value } = await exits(onClock('2026-11-04 12:00:00') as never, 'dev.appdyno.fixture');
+      expect(value.run).toBeUndefined();
+    });
   });
 });

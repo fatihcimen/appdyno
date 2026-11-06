@@ -371,10 +371,11 @@ describe.skipIf(!serial)('android perf accuracy', () => {
     expect(Math.abs(m.bytes - size)).toBeLessThanOrEqual(size * 0.01);
   });
 
-  it('exits: pressing Crash raises the crash count by one', async () => {
+  it('exits: pressing Crash is one crash of the run, and one more the system holds', async () => {
     // the system keeps 16 exits of a package: a full list would not grow
     await d.shell(`am clear-exit-info ${APP}`);
     const before = (await d.measure.exits(APP)).value;
+    const start = Date.now();
     await d.shell(`am force-stop ${APP}`);
     await d.shell(`am start -W -n ${APP}/.MainActivity`);
     await pause(1_000);
@@ -384,11 +385,12 @@ describe.skipIf(!serial)('android perf accuracy', () => {
       { settle: false },
     );
     await pause(2_000);
-    const after = (await d.measure.exits(APP)).value;
+    const after = (await d.measure.exits(APP, start)).value;
     await d.shell(`am force-stop ${APP}`);
-    console.log('exits:', before.crashes, after.crashes, after.recent[0]);
-    expect(after.crashes).toBe(before.crashes + 1);
-    expect(after.total).toBe(before.total + 1);
+    console.log('exits:', before.held, after.held, after.run, after.recent[0]);
+    expect(after.run?.crashes).toBe(1);
+    expect(after.held.crashes).toBe(before.held.crashes + 1);
+    expect(after.held.total).toBe(before.held.total + 1);
     expect(after.recent[0]!.reason).toMatch(/CRASH/);
   }, 60_000);
 

@@ -2,7 +2,8 @@ import { mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { endReports, parseIps, reportsIn, simulatorCrashes } from '../src/crashes.js';
+import type { CrashesQuery } from '@appdyno/core';
+import { crashExits, endReports, parseIps, reportsIn, simulatorCrashes } from '../src/crashes.js';
 import { logShowArgs, placeLines } from '../src/logs.js';
 
 const UDID = '8BC57F11-901C-4DF6-A2B9-2A3B7DE1B79D';
@@ -89,6 +90,54 @@ describe('crash reports', () => {
     expect(since.reports).toHaveLength(1);
     expect(await reportsIn(dir, { ...q, limit: 1 })).toHaveLength(1);
     expect((await simulatorCrashes(UDID, q, join(dir, 'none'))).reports).toEqual([]);
+  });
+});
+
+describe('how an app ended, as a reading', () => {
+  const report = (at: string) => ({ at, reason: 'EXC_CRASH' });
+  const of = (...at: string[]) => {
+    const asked: CrashesQuery[] = [];
+    return {
+      asked,
+      crashes: async (q: CrashesQuery) => {
+        asked.push(q);
+        return { reports: at.map(report), source: 'a folder' };
+      },
+    };
+  };
+  const since = Date.parse('2026-11-05T10:00:00+03:00');
+
+  it('counts what is newer than the run by the time in each report, in that report’s zone', async () => {
+    const { crashes } = of('2026-11-05 10:30:00.00 +0300', '2026-11-05 09:30:00.00 +0300');
+    const { value } = await crashExits(crashes, 'dev.app', since);
+    expect(value.run).toEqual({ crashes: 1, total: 1 });
+    expect(value.held).toEqual({ crashes: 2, total: 2 });
+  });
+
+  it('holds a week of reports as a stock, and none of it as this run’s', async () => {
+    const { crashes } = of('2026-10-29 09:30:00.00 +0300');
+    const { value } = await crashExits(crashes, 'dev.app', since);
+    expect(value.run).toEqual({ crashes: 0, total: 0 });
+    expect(value.held.crashes).toBe(1);
+  });
+
+  it('has no reading of a run asked for with no time, or with a report of no time', async () => {
+    expect((await crashExits(of('').crashes, 'dev.app')).value.run).toBeUndefined();
+    const undated = of('2026-11-05 10:30:00.00 +0300', '');
+    expect((await crashExits(undated.crashes, 'dev.app', since)).value.run).toBeUndefined();
+  });
+
+  it('says a full list is at least that many', async () => {
+    const full = of(...Array.from({ length: 100 }, () => '2026-11-05 09:30:00.00 +0300'));
+    expect((await crashExits(full.crashes, 'dev.app', since)).value.held.atLeast).toBe(true);
+    const some = of('2026-11-05 09:30:00.00 +0300');
+    expect((await crashExits(some.crashes, 'dev.app', since)).value.held.atLeast).toBeUndefined();
+  });
+
+  it('asks a query of no age: its `since` goes by a file’s time, here a copy’s', async () => {
+    const { crashes, asked } = of();
+    await crashExits(crashes, 'dev.app', since);
+    expect(asked[0]!.since).toBeUndefined();
   });
 });
 

@@ -117,6 +117,7 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
     await d.shell(`am force-stop ${APP}`);
     await t.call('launch_app');
     const before = await t.call('perf_snapshot', { also: ['exits'], cpuWindowMs: 500 });
+    const heldBefore = before.data.exitsHeld!.userAnrs!;
     await pause(1_500);
     const freeze = (await d.read(APP)).list.find((e) => /freeze/i.test(e.label ?? ''))!;
     await d.tap(freeze, { settle: false });
@@ -127,16 +128,21 @@ describe.skipIf(!serial)("Android against Play's definitions", () => {
       await pause(ms);
       await d.shell(`input tap ${freeze.x} ${freeze.y}`).catch(() => undefined);
     });
-    // the system files it in the time it takes, and an app that recovers ends in no exit: the count is what says
+    // the system files it in the time it takes, and an app that recovers ends in no exit: the count is what says. Each
+    // snapshot is a run, so the one that sees it counts it, and only that one
     let after = before;
-    for (let i = 0; i < 40 && after.data.userAnrs === before.data.userAnrs; i++) {
+    for (let i = 0; i < 40 && !after.data.userAnrs; i++) {
       await pause(1_000);
       after = await t.call('perf_snapshot', { also: ['exits'], cpuWindowMs: 500 });
     }
     await Promise.all(stuck);
     console.log(after.text);
-    expect(after.data.userAnrs!).toBe(before.data.userAnrs! + 1);
+    expect(after.data.userAnrs).toBe(1);
+    expect(after.data.exitsHeld!.userAnrs).toBe(heldBefore + 1);
     expect(after.text).toContain('this session would count as a user-perceived ANR');
+    const next = await t.call('perf_snapshot', { also: ['exits'], cpuWindowMs: 500 });
+    expect(next.data.userAnrs).toBe(0);
+    expect(next.text).toContain('this session would not count as a user-perceived ANR');
     expect((await t.call('crashes', {})).text).toContain('Input dispatching timed out');
   }, 240_000);
 });

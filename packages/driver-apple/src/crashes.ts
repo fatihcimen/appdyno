@@ -142,16 +142,31 @@ export function endReports(files: PhoneFile[], q: CrashesQuery): PhoneFile[] {
  * list: `devicectl device copy from` of the folder stops at the first file it cannot take, and iOS leaves such
  * files there (`19:24.spindump.txt`).
  */
-/** A device's crash reports as the reading every platform gives: how the app's processes ended. */
+/** A folder may hold more than a reading opens. */
+const EXIT_REPORTS = 100;
+
+/**
+ * A device's crash reports as the reading every platform gives: how the app's processes ended. A run's are told by the
+ * time in each report: a query's `since` goes by a file's, which on this Mac is when it was copied here. A report with no
+ * time that can be read could be of any age, so with one among them there is no reading of a run.
+ */
 export async function crashExits(
   crashes: (q: CrashesQuery) => Promise<CrashesAnswer>,
   bundle: string,
+  since?: number,
 ): Promise<Measured<ExitReading>> {
-  const { reports, source } = await crashes({ app: bundle, limit: 100 });
+  const { reports, source } = await crashes({ app: bundle, limit: EXIT_REPORTS });
+  const times = reports.map((r) => Date.parse(r.at));
+  const fresh = times.filter((t) => since !== undefined && t >= since).length;
   return {
     value: {
-      crashes: reports.length,
-      total: reports.length,
+      ...(since !== undefined &&
+        !times.some(Number.isNaN) && { run: { crashes: fresh, total: fresh } }),
+      held: {
+        crashes: reports.length,
+        total: reports.length,
+        ...(reports.length >= EXIT_REPORTS && { atLeast: true }),
+      },
       recent: reports.slice(0, 10).map((r) => ({
         at: r.at,
         reason: r.reason,

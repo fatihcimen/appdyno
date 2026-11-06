@@ -288,7 +288,7 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
     return phoneEnergy(this.phone.serial, bundle, () => this.phone.ctl.pid(bundle), windowMs);
   }
 
-  exits = (bundle: string) => crashExits(this.phone.crashes, bundle);
+  exits = (bundle: string, since?: number) => crashExits(this.phone.crashes, bundle, since);
 
   async heap(bundle: string, dir: string) {
     await this.phone.inFront(bundle);

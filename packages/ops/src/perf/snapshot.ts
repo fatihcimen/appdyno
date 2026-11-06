@@ -1,4 +1,4 @@
-import type { AnonMemory, EnergyReading, Measured } from '@appdyno/core';
+import type { AnonMemory, EnergyReading, ExitCounts, Measured } from '@appdyno/core';
 import { playCall, ramTier, type Metric } from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
@@ -6,7 +6,7 @@ import { holdingCondition } from '../settings.js';
 import { SnapshotOut } from './schemas.js';
 import type { Session } from '../session.js';
 import { defineOp, READ, reply } from '../tool.js';
-import { perfTools, App, Scenario, unlessUnsupported, kb } from './shared.js';
+import { perfTools, App, Scenario, unlessUnsupported, kb, lastRunAt } from './shared.js';
 import { frameVitals, playLine } from './vitals.js';
 
 /** A device's energy in the unit it has it in: a charge, a count of energy, or a score. */
@@ -28,9 +28,14 @@ const energyText = (v: EnergyReading) =>
     v[field] === undefined ? [] : [`${v[field]} ${says}`],
   ).join(', ')}; ${v.note}`;
 
+const exitWords = (c: ExitCounts) =>
+  `${c.crashes} crashes of ${c.total}${c.anrs === undefined ? '' : `; ${c.anrs} ANRs filed`}`;
+
 type Asked = {
+  ctx: ServerContext;
   s: Session;
   pkg: string;
+  scenario: string;
   windowMs: number;
   batteryMs: number;
   measure: ReturnType<typeof perfTools>['measure'];
@@ -218,26 +223,41 @@ const EXTRAS = {
       jobs: v.jobs,
     }),
   }),
+  // a snapshot is a moment: what happened in it is what happened since the run before it
   exits: extra({
-    read: (a) => a.measure(a.s, 'exits')(a.pkg),
-    metrics: (v) => [
-      { kind: 'exits.crashes', unit: 'count', samples: [v.crashes] },
-      { kind: 'exits.anrs', unit: 'count', samples: v.anrs === undefined ? [] : [v.anrs] },
-      {
-        kind: 'exits.user_anrs',
-        unit: 'count',
-        samples: v.userAnrs === undefined ? [] : [v.userAnrs],
-      },
-    ],
-    line: (v) =>
+    read: async (a) =>
+      a.measure(a.s, 'exits')(a.pkg, await lastRunAt(a.ctx, a.s, a.pkg, a.scenario)),
+    metrics: ({ run }) =>
+      run
+        ? [
+            { kind: 'exits.crashes', unit: 'count', samples: [run.crashes] },
+            {
+              kind: 'exits.anrs',
+              unit: 'count',
+              samples: run.anrs === undefined ? [] : [run.anrs],
+            },
+            {
+              kind: 'exits.user_anrs',
+              unit: 'count',
+              samples: run.userAnrs === undefined ? [] : [run.userAnrs],
+            },
+          ]
+        : [],
+    line: ({ run, held }) =>
       [
-        `exits: ${v.crashes} crashes of ${v.total}${v.anrs === undefined ? '' : `; ${v.anrs} ANRs filed`}`,
-        ...(v.userAnrs === undefined ? [] : [playLine('exits.user_anrs', v.userAnrs)]),
+        run
+          ? `exits since the last run: ${exitWords(run)}`
+          : 'exits: no earlier run to count from, so this one keeps none',
+        ...(run?.userAnrs === undefined ? [] : [playLine('exits.user_anrs', run.userAnrs)]),
+        `the system holds ${held.atLeast ? 'at least ' : ''}${exitWords(held)}, of any age: no reading of this run`,
       ].join('\n'),
-    data: (v) => ({
-      crashes: v.crashes,
-      anrs: v.anrs,
-      ...(v.userAnrs !== undefined && { userAnrs: v.userAnrs }),
+    data: ({ run, held }) => ({
+      ...(run && {
+        crashes: run.crashes,
+        ...(run.anrs !== undefined && { anrs: run.anrs }),
+        ...(run.userAnrs !== undefined && { userAnrs: run.userAnrs }),
+      }),
+      exitsHeld: held,
     }),
   }),
   size: extra({
@@ -287,7 +307,16 @@ export function perfSnapshotOp(ctx: ServerContext) {
       const source = s.device.measure;
       const frames = await unlessUnsupported(source.frames(pkg));
       const vitals = await unlessUnsupported(source.vitals());
-      const asked = { s, pkg, windowMs: cpuWindowMs, batteryMs: batteryWindowMs, measure };
+      const keptAs = scenario ?? 'idle';
+      const asked = {
+        ctx,
+        s,
+        pkg,
+        scenario: keptAs,
+        windowMs: cpuWindowMs,
+        batteryMs: batteryWindowMs,
+        measure,
+      };
       const lacking: ExtraName[] = [];
       const got: (Got & { name: ExtraName })[] = [];
       for (const name of EXTRA_NAMES) {
@@ -309,7 +338,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
       );
       const f = frames?.value;
       const play = frameVitals(f?.histogram ? [f.histogram] : []);
-      const noise = await keep(s, pkg, scenario ?? 'idle', 'perf_snapshot', saved.txt, [
+      const noise = await keep(s, pkg, keptAs, 'perf_snapshot', saved.txt, [
         { kind: 'cpu.percent', unit: 'percent', samples: [cpu.value.percent] },
         { kind: 'memory.kb', unit: 'kb', samples: [mem.value.kb] },
         ...play.metrics,

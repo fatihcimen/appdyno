@@ -492,6 +492,8 @@ Against known costs, by `test-device/vitals.test.ts`, on the Xiaomi, Android 16,
 
 This phone's summary counts each frame twice, 7,994 frames for 4,000 drawn, and a stall holds up the next frame too, so one stall reads as 4 frames of 700 ms or longer: the share of 0.05 % is of 0.025 % drawn. Doubled on both sides it holds, and whether Play's own count of a stall is 2 frames could not be checked from here.
 
+**What a run keeps of how an app ended.** `exits.crashes`, `exits.anrs` and `exits.user_anrs` are what happened during the run, and never what the system still holds. A snapshot is a moment, so they count what is newer than the last run of the same app, scenario and kind of device, by the system's own stamps: each exit's and each dropbox entry's time on Android, read against the device's own clock as they are in its local time, and the time in each report on iOS. A first run has nothing to count from and keeps none. What the system holds, 16 exits, a dropbox with no age limit and up to 100 reports, is said beside it as `the system holds N`, and feeds no gate and no Play line. A run's time is stamped after its reads, so what falls between the two belongs to neither.
+
 **How an app ended.** `crashes` reports what is a death, with its stack, and counts every exit the system keeps by its reason in full, so that an end nobody calls a crash is seen: `every exit kept: USER REQUESTED FORCE STOP 2, SIGNALED status 9 1, ...`. Each was caused and read back, by `test-device/exits.test.ts`, on an emulator with API 34, host load 8-13:
 
 | caused by                                | read                                |

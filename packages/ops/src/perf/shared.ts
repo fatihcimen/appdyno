@@ -14,6 +14,7 @@ import {
   type MeasureId,
   saveRefusal,
   deviceClass,
+  latestRuns,
   writeDashboard,
   type Metric,
   recordsOf,
@@ -100,6 +101,17 @@ export const deviceInfo = (s: Session): DeviceInfo => ({
   os: s.device.hello?.osVersion ?? 'unknown',
   virtual: s.device.virtual,
 });
+
+/**
+ * When this key's last run was kept: where a reading of what happened in a run starts, when a run has no window of its
+ * own. Shortcut: a run's time is stamped after its reads, so what falls between the two belongs to neither run; a run
+ * would have to keep the time of its read to close that.
+ */
+export async function lastRunAt(ctx: ServerContext, s: Session, app: string, scenario: string) {
+  const key = { app, scenario, deviceClass: deviceClass(deviceInfo(s)) };
+  const [run] = await latestRuns(ctx.measurementsDir, key, 1).catch(() => []);
+  return run?.[0] && Date.parse(run[0].at);
+}
 
 /** That this device said it cannot give a measure, and why, for the dashboard. */
 export const keepRefusal = (
