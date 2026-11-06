@@ -65,11 +65,15 @@ describe('a hub that dies with no word', () => {
 describe('a command', () => {
   const stream = () => ({ once: vi.fn(), resume: vi.fn(), unref: vi.fn() });
 
-  it('with no hub leaves its stdin alone', () => {
+  it('with no hub leaves its stdin alone, and does not so much as open it', () => {
     vi.stubEnv(HELD_BY_HUB, '');
     const stdin = stream();
     endWithHub(stdin as never, vi.fn());
     expect(stdin.resume).not.toHaveBeenCalled();
+    const opened = vi.spyOn(process, 'stdin', 'get');
+    endWithHub();
+    expect(opened).not.toHaveBeenCalled();
+    opened.mockRestore();
     vi.unstubAllEnvs();
   });
 

@@ -43,11 +43,13 @@ export function endWithClient(
  * starts has a stdin of its own, and a command that is done is done, whatever its stdin.
  */
 export function endWithHub(
-  stdin: Pick<typeof process.stdin, 'once' | 'resume' | 'unref'> = process.stdin,
+  given?: Pick<typeof process.stdin, 'once' | 'resume' | 'unref'>,
   signal: (name: NodeJS.Signals) => void = (name) => process.kill(0, name),
 ) {
   if (!process.env[HELD_BY_HUB]) return;
   delete process.env[HELD_BY_HUB];
+  // only here: a command no hub started has its stdin left as it found it
+  const stdin = given ?? process.stdin;
   stdin.once('close', () => {
     signal('SIGINT');
     setTimeout(() => signal('SIGKILL'), STOP_MS).unref();
