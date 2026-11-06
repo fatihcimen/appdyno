@@ -586,7 +586,8 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     );
   });
 
-  it('sends a push to the app and a biometric result', async () => {
+  // neither leaves anything to read back: what stands here is that the simulator takes them
+  it('takes a push and a biometric result with no refusal', async () => {
     ok(await h.call('device_setting', { name: 'push', value: 'merhaba', title: 'appdyno' }));
     ok(await h.call('device_setting', { name: 'biometric', value: 'match' }));
   });

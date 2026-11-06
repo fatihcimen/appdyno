@@ -212,7 +212,8 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
       expect((await call('device_setting', { name })).data.value).toBe('off');
   });
 
-  it('fixes a position and ends it, as the simulator takes both', async () => {
+  // a simulator's position has no reading back, so what stands here is that it is taken
+  it('takes a position and its end with no refusal', async () => {
     ok(await call('set_location', { lat: 41.01, lon: 28.97 }));
     ok(await call('set_location', { clear: true }));
   });
@@ -304,7 +305,8 @@ describe.skipIf(!IPHONE)('small tools on an iPhone', () => {
       expect(ok(await call('device_setting', { name })).data.value).toMatch(/^(on|off)$/);
   });
 
-  it('fixes a position and ends it', async () => {
+  // an iPhone's position has no reading back that needs no app of its own: what stands here is that it is taken
+  it('takes a position and its end with no refusal', async () => {
     try {
       ok(await call('set_location', { lat: 41.01, lon: 28.97 }));
     } finally {
