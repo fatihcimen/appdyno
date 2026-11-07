@@ -3,7 +3,8 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   Adb,
   androidProvider,
-  appleProvider,
+  iphoneProvider,
+  simulatorProvider,
   KEYGUARD_READ,
   sleep as pause,
   type AndroidDevice,
@@ -118,12 +119,12 @@ describe.skipIf(!android)('guards on Android', () => {
   );
 });
 
-for (const [name, serial] of [
-  ['a simulator', simulator],
-  ['an iPhone', phone],
+for (const [name, serial, provider] of [
+  ['a simulator', simulator, simulatorProvider],
+  ['an iPhone', phone, iphoneProvider],
 ] as const)
   describe.skipIf(!serial)(`guards on ${name}`, () => {
-    const t = opsOn(appleProvider(), serial!, APP);
+    const t = opsOn(provider(), serial!, APP);
 
     afterAll(() => t.ctx.close());
 
@@ -147,7 +148,7 @@ for (const [name, serial] of [
   });
 
 describe.skipIf(!phone)('an iPhone that locked itself', () => {
-  const t = opsOn(appleProvider(), phone!, APP);
+  const t = opsOn(iphoneProvider(), phone!, APP);
   let d: IosPhoneDevice;
   const LOCKS_AFTER_MS = 90_000;
 
@@ -176,7 +177,7 @@ describe.skipIf(!phone)('an iPhone that locked itself', () => {
 
   it('a read with no app chosen gets past it too', async () => {
     await d.stopAgent();
-    const fresh = opsOn(appleProvider(), phone!, APP);
+    const fresh = opsOn(iphoneProvider(), phone!, APP);
     await pause(LOCKS_AFTER_MS);
     const s = await fresh.ctx.session();
     const read = await s.device.tree();

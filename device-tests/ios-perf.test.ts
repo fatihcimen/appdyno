@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   IosSimulatorDevice,
   Simctl,
-  appleProvider,
+  simulatorProvider,
   buildScreen,
   sleep as pause,
   recordTrace,
@@ -166,7 +166,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
       dir: mkdtempSync(join(tmpdir(), 'appdyno-trace-')),
       during: () => d.tap(byId(s, 'cpu_load'), { settle: false }),
     });
-    const provider = appleProvider();
+    const provider = simulatorProvider();
     const tables = await provider.queryTrace!(trace, { limit: 500 });
     expect(tables!.rows.flat()).toContain('time-profile');
     const digest = await provider.queryTrace!(trace, { table: 'time-profile', limit: 3 });

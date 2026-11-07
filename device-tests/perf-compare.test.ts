@@ -4,7 +4,7 @@ import { cpus, loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, describe, expect, it } from 'vitest';
-import { Adb, androidProvider, appleProvider, Simctl } from './workspace.js';
+import { Adb, androidProvider, iphoneProvider, simulatorProvider, Simctl } from './workspace.js';
 import { latestRuns, rankTest, runKeys, type Comparison } from '@appdyno/perf';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { checkedOps } from '../packages/ops/test/helpers.js';
@@ -63,7 +63,7 @@ const targets: Target[] = [
     serial: process.env.APPDYNO_IOS_UDID,
     kind: 'launch.until_ms',
     injectMs: 1_000,
-    provider: () => appleProvider() as ReturnType<typeof androidProvider>,
+    provider: () => simulatorProvider() as ReturnType<typeof androidProvider>,
     inject: async (ms) => {
       process.env[ENV_SIM] = String(ms);
     },
@@ -76,7 +76,7 @@ const targets: Target[] = [
     serial: process.env.APPDYNO_IPHONE_UDID,
     kind: 'launch.until_ms',
     injectMs: 400,
-    provider: () => appleProvider() as ReturnType<typeof androidProvider>,
+    provider: () => iphoneProvider() as ReturnType<typeof androidProvider>,
     inject: async (ms) => {
       process.env[ENV_PHONE] = String(ms);
     },

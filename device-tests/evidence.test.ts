@@ -12,7 +12,8 @@ import { opCaller, type Call } from './helpers.js';
 import {
   Adb,
   androidProvider,
-  appleProvider,
+  iphoneProvider,
+  simulatorProvider,
   decodePng,
   Devicectl,
   PERFETTO,
@@ -134,8 +135,8 @@ const simulator = process.env.APPDYNO_IOS_UDID;
 const iphone = process.env.APPDYNO_IPHONE_FIXTURE_APP ? process.env.APPDYNO_IPHONE_UDID : undefined;
 const targets = [
   { platform: 'android', serial: android, provider: () => androidProvider(new Adb()) },
-  { platform: 'ios', serial: simulator, provider: () => appleProvider() },
-  { platform: 'iphone', serial: iphone, provider: () => appleProvider() },
+  { platform: 'ios', serial: simulator, provider: () => simulatorProvider() },
+  { platform: 'iphone', serial: iphone, provider: () => iphoneProvider() },
 ];
 
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -430,7 +431,7 @@ describe.skipIf(!simulator)('network on a simulator', () => {
   let web: Awaited<ReturnType<typeof localWeb>>;
   beforeAll(async () => {
     web = await localWeb();
-    h = harness(simulator!, appleProvider());
+    h = harness(simulator!, simulatorProvider());
     await h.ok('launch_app');
   }, 240_000);
   afterAll(() => {
@@ -743,7 +744,7 @@ describe.skipIf(!android || !android.startsWith('emulator-'))('emulator events o
 
 describe.skipIf(!simulator)('emulator events on a simulator', () => {
   it('says why it has none', async () => {
-    const h = harness(simulator!, appleProvider());
+    const h = harness(simulator!, simulatorProvider());
     for (const [args, why] of [
       [{ name: 'fold', value: 'closed' }, /simctl has no fold pose/],
       [{ name: 'call', value: '5551212' }, /no telephony/],

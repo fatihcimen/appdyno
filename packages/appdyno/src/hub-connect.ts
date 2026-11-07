@@ -2,8 +2,6 @@ import type { Check, DeviceProvider, ListedPhone, PhoneLook, PhoneSteps } from '
 
 export type Guide = Partial<PhoneSteps> & {
   steps: PhoneSteps['steps'];
-  /** The kind of phone in a person's hand: nothing else is asked of them. */
-  hand?: string;
   /** Nothing but a person's word is left. */
   ready: boolean;
   serial?: string;
@@ -23,7 +21,6 @@ export function guideFor(
     const name = phone?.model ?? o.usb[0]?.name;
     return {
       ...made,
-      ...(provider.virtual && { hand: provider.virtual.platform }),
       ready: !made.need && made.steps.every((s) => s.done || !s.sees),
       ...(phone && { serial: phone.serial }),
       ...(name && { name }),

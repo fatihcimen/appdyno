@@ -4,7 +4,13 @@ import { loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, describe, expect, it } from 'vitest';
-import { Adb, androidProvider, appleProvider, sleep as pause, videoStamps } from './workspace.js';
+import {
+  Adb,
+  androidProvider,
+  simulatorProvider,
+  sleep as pause,
+  videoStamps,
+} from './workspace.js';
 import { opsOn } from './helpers.js';
 import type { Timeline } from '@appdyno/perf';
 
@@ -161,7 +167,7 @@ describe.skipIf(!serial)('perf_trace of a held main thread', () => {
 });
 
 describe.skipIf(!udid)('a timeline on a simulator', () => {
-  const t = opsOn(appleProvider(), udid!, APP);
+  const t = opsOn(simulatorProvider(), udid!, APP);
   afterAll(() => leave(t));
 
   it('holds the stall, and says what a simulator cannot give', async () => {
@@ -293,7 +299,7 @@ describe.skipIf(!serial)('the flight recorder', () => {
 
 /** The same on a simulator, which restarts nothing, and whose crash reports are this Mac's (APPDYNO_IOS_UDID). */
 describe.skipIf(!udid)('the flight recorder on a simulator', () => {
-  const t = opsOn(appleProvider(), udid!, APP);
+  const t = opsOn(simulatorProvider(), udid!, APP);
   afterAll(() => leave(t));
 
   it('keeps a real crash', async () => {

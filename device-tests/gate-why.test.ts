@@ -11,7 +11,7 @@ import { cpus, loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { Adb, androidProvider, appleProvider, Devicectl } from './workspace.js';
+import { Adb, androidProvider, iphoneProvider, simulatorProvider, Devicectl } from './workspace.js';
 import { gateAnswers, writeComment, type Comparison, type GateAnswer } from '@appdyno/perf';
 import { IPHONE_FIXTURE, opsOn } from './helpers.js';
 
@@ -100,7 +100,7 @@ const targets: Target[] = [
   {
     name: 'simulator',
     serial: process.env.APPDYNO_IOS_UDID,
-    provider: () => appleProvider() as ReturnType<typeof androidProvider>,
+    provider: () => simulatorProvider() as ReturnType<typeof androidProvider>,
     flow: IOS_FLOW,
     step: '04_tap_id_stall_light',
     phase: 'main',
@@ -112,7 +112,7 @@ const targets: Target[] = [
   {
     name: 'iphone',
     serial: process.env.APPDYNO_IPHONE_FIXTURE_APP && process.env.APPDYNO_IPHONE_UDID,
-    provider: () => appleProvider() as ReturnType<typeof androidProvider>,
+    provider: () => iphoneProvider() as ReturnType<typeof androidProvider>,
     flow: IOS_FLOW,
     step: '04_tap_id_stall_light',
     phase: 'main',

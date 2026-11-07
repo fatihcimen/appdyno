@@ -1,4 +1,5 @@
-export { appleProvider, iosChecks } from './provider.js';
+export { iosChecks, simulatorProvider } from './provider.js';
+export { iphoneProvider } from './phone-provider.js';
 export { IosDevice, type IosDeviceOps } from './device.js';
 export { ALERT_WORDS, iosScreen, promptButton } from './platform-screen.js';
 export { IosSimulatorDevice } from './simulator.js';

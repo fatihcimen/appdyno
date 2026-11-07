@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
-  appleProvider,
+  simulatorProvider,
   buildScreen,
   IosSimulatorDevice,
   Simctl,
@@ -23,7 +23,7 @@ const within = (read: number, known: number, share: number) => {
 };
 
 describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
-  const t = opsOn(appleProvider(), udid!, APP);
+  const t = opsOn(simulatorProvider(), udid!, APP);
   let d: IosSimulatorDevice;
   const open = async (screen: string): Promise<Screen> => {
     await d.openUrl(`appdyno-fixture://open/${screen}`, APP);

@@ -9,6 +9,7 @@ export function androidGuide({ phone, usb, has }: PhoneLook): PhoneSteps | undef
   const { input = '', install = '' } = phone?.switches ?? {};
   return {
     maker,
+    hand: 'android',
     steps: [
       ...(has('adb') ? [] : [step('get-adb', false)]),
       // from a Mac these two are one state: adb has not heard of the phone

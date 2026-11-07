@@ -81,10 +81,11 @@ from `ops` is what `ops` lets out in its `index.ts`, and the rule above keeps `o
 
 ## A new platform
 
-A platform is one driver package: a `DeviceProvider`, a `Device`, a `PlatformScreen` and a `MeasureSource`, each of
-which the compiler holds to the whole port, with `cannot` for what it has no way of measuring. Outside the package it
-takes `PLATFORMS` in `packages/protocol/src/messages.ts`, the tables keyed by it in `packages/core/src/device.ts` and
-`packages/perf/src/dashboard/format.ts`, its provider in `packages/appdyno/src/main.ts` and its rule in
+A platform is one driver package: a `DeviceProvider` for each kind of device it lists by a tool of its own (Apple's
+simulators and iPhones are two), a `Device`, a `PlatformScreen` and a `MeasureSource`, each of which the compiler holds
+to the whole port, with `cannot` for what it has no way of measuring. Outside the package it takes `PLATFORMS` in
+`packages/protocol/src/messages.ts`, the tables keyed by it in `packages/core/src/device.ts` and
+`packages/perf/src/dashboard/format.ts`, its providers in `packages/appdyno/src/providers.ts` and its rule in
 `boundaries.test.ts`. `packages/appdyno/test/platforms.test.ts` holds the list.
 
 ## Words used here

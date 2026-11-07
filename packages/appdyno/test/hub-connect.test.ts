@@ -1,11 +1,11 @@
 import type { ListedPhone as Listed, UsbPhone } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { androidProvider } from '@appdyno/driver-android';
-import { appleProvider } from '@appdyno/driver-apple';
+import { iphoneProvider, simulatorProvider } from '@appdyno/driver-apple';
 import { guideFor as guideOf, listedPhones, runnerChecks, type Guide } from '../src/hub-connect.js';
 
 const all = () => true;
-const drivers = [androidProvider(), appleProvider()];
+const drivers = [androidProvider(), simulatorProvider(), iphoneProvider()];
 const guideFor = (o: Parameters<typeof guideOf>[1]) => guideOf(drivers, o);
 const samsung: UsbPhone = { maker: 'samsung', name: 'SM-S928B' };
 const xiaomi: UsbPhone = { maker: 'xiaomi', name: 'REDMI 15C' };

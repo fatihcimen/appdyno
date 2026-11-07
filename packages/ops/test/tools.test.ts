@@ -6,7 +6,8 @@ import { DeviceError, type Tree } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY, type Policy } from '../src/policy.js';
-import { iosScreen } from '@appdyno/driver-apple';
+import { iosScreen, iphoneProvider, simulatorProvider } from '@appdyno/driver-apple';
+import { fine, slowDevicectl } from '../../driver-apple/test/slow-devicectl.js';
 import { pinchPaths, swipeLine } from '../src/gesture-paths.js';
 import { FakeDevice, LACKS } from './fake-device.js';
 import { linkedClient } from './helpers.js';
@@ -582,29 +583,35 @@ describe('iOS simulators', () => {
     expect(failing.content[0]!.text).toBe(`${device.serial} device Fake`);
   });
 
-  it("reads a driver's blocks once it has listed, not once the slowest has, and keeps the drivers' order", async () => {
-    let listSlow = () => {};
-    const asked: string[] = [];
-    const driver = (serial: string, listed: Promise<void>): DeviceProvider => ({
-      list: async () => {
-        await listed;
-        return [{ serial, state: 'device', ready: true, model: 'Fake' }];
-      },
-      handles: (s) => s === serial,
-      open: () => new FakeDevice(),
-      need: async () => {
-        asked.push(serial);
-        return 'locked';
-      },
+  it("reads an iPhone's block while simctl still lists the simulators, and keeps the drivers' order", async () => {
+    const udid = '75505767-61E2-40F2-8FC6-8AFE20EE25C9';
+    let listSimulators = () => {};
+    const simulators = simulatorProvider(
+      () =>
+        new Promise((done) => {
+          listSimulators = () =>
+            done([{ udid, name: 'appdyno-iphone', state: 'Booted', runtime: 'iOS-27-2' }]);
+        }),
+    );
+    const devicectl = slowDevicectl(
+      () => fine,
+      () => ({ passcodeRequired: true }),
+    );
+    const phones = iphoneProvider({
+      phones: async () => [{ udid: '00001234-0123456789ABCDEF', deviceId: 3 }],
+      devicectl: () => devicectl,
     });
-    const slow = driver('slow-1', new Promise((done) => (listSlow = done)));
-    const ctx = new ServerContext(DEFAULT_POLICY, [slow, driver('fast-1', Promise.resolve())]);
+    const ctx = new ServerContext(DEFAULT_POLICY, [simulators, phones]);
     const client = await linkedClient(ctx, () => undefined);
     const listing = client.callTool({ name: 'list_devices', arguments: {} }) as Promise<Result>;
-    await vi.waitFor(() => expect(asked).toEqual(['fast-1']));
-    listSlow();
-    const text = (await listing).content[0]!.text!;
-    expect(text.split('\n').map((l) => l.split(' ')[0])).toEqual(['slow-1', 'fast-1']);
+    await vi.waitFor(() => expect(devicectl.log).toContain('lock done'));
+    listSimulators();
+    expect((await listing).content[0]!.text).toBe(
+      [
+        `${udid} booted iOS simulator appdyno-iphone`,
+        '00001234-0123456789ABCDEF usb iPhone: The device is locked. Unlock it. The picture goes on; input stops where it asks for a passcode.',
+      ].join('\n'),
+    );
   });
 
   it('says which measure a device lacks', async () => {

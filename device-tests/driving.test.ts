@@ -11,7 +11,8 @@ import {
   AndroidDevice,
   AndroidEmulators,
   androidProvider,
-  appleProvider,
+  iphoneProvider,
+  simulatorProvider,
   Devicectl,
   Simctl,
 } from './workspace.js';
@@ -472,7 +473,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-drive-')));
     await simctl.install(ios!, SIM_FIXTURE);
-    h = harness(ios!, appleProvider());
+    h = harness(ios!, simulatorProvider());
     ok(await h.call('use_device', { device: ios!, app: APP }));
     ok(await h.call('launch_app'));
   }, 300_000);
@@ -614,7 +615,7 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
 
   beforeAll(async () => {
     await new Devicectl(iphone!).install(iphoneFixture!);
-    h = harness(iphone!, appleProvider());
+    h = harness(iphone!, iphoneProvider());
     ok(await h.call('use_device', { device: iphone!, app: APP }));
     ok(await h.call('launch_app'));
   }, 300_000);
@@ -749,7 +750,7 @@ describe.skipIf(!emulator)('emulator lifecycle', () => {
 describe.skipIf(!ios)('simulator lifecycle', () => {
   it('lists, shuts down the one named, and boots it again', async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-life-')));
-    const h = harness(ios!, appleProvider());
+    const h = harness(ios!, simulatorProvider());
     expect(ok(await h.call('simulator', { action: 'list' })).text).toContain(ios!);
     expect(ok(await h.call('simulator', { action: 'shutdown' })).text).toContain(
       'none to shut down',

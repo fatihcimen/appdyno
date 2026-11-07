@@ -2,7 +2,7 @@ import { generateKeyPairSync } from 'node:crypto';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { appleProvider, Devicectl } from './workspace.js';
+import { iphoneProvider, Devicectl } from './workspace.js';
 import type { DeviceProvider } from '@appdyno/core';
 import {
   DEFAULT_POLICY,
@@ -70,7 +70,7 @@ export const SIM_FIXTURE = join(
 );
 
 /** The operations on that iPhone, with the fixture on it. */
-export async function onIphone(app: string, provider: DeviceProvider = appleProvider()) {
+export async function onIphone(app: string, provider: DeviceProvider = iphoneProvider()) {
   await new Devicectl(IPHONE!).install(IPHONE_FIXTURE!);
   return opsOn(provider, IPHONE!, app);
 }

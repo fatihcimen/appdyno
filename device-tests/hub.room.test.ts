@@ -8,7 +8,7 @@ import {
   type ViewerMessage,
 } from '../packages/core/src/index.js';
 import { Adb, androidProvider } from '../packages/driver-android/src/index.js';
-import { appleProvider } from '../packages/driver-apple/src/index.js';
+import { iphoneProvider, simulatorProvider } from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { runHub } from '../packages/hub/src/index.js';
 import { liveMirror } from '../packages/ops/src/mirror-state.js';
@@ -45,9 +45,13 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
     const look = process.env.APPDYNO_HUB_LOOK ?? 'dark';
     const binary = await viewerBinary();
     const policy = { ...DEFAULT_POLICY, devices: new RegExp(`^(${serials.join('|')})$`) };
-    const ctx = new ServerContext(policy, [androidProvider(), appleProvider()], {
-      mirrorCommand: [process.execPath, main, 'mirror'],
-    });
+    const ctx = new ServerContext(
+      policy,
+      [androidProvider(), simulatorProvider(), iphoneProvider()],
+      {
+        mirrorCommand: [process.execPath, main, 'mirror'],
+      },
+    );
     done = runHub(ctx, {
       focus: false,
       behind: true,

@@ -5,7 +5,7 @@ import { networkInterfaces, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
-  appleProvider,
+  iphoneProvider,
   buildScreen,
   Devicectl,
   sleep as pause,
@@ -30,7 +30,7 @@ const within = (read: number, known: number, share: number) => {
 };
 
 describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture', () => {
-  const t = opsOn(appleProvider(), udid!, APP);
+  const t = opsOn(iphoneProvider(), udid!, APP);
   let d: IosPhoneDevice;
   const ctl = new Devicectl(udid!);
   const open = async (screen: string, env?: Record<string, string>): Promise<Screen> => {

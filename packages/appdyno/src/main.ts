@@ -8,7 +8,12 @@ import { homedir, loadavg } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
+import {
+  iosProducts,
+  iphoneProvider,
+  pruneIosBuilds,
+  simulatorProvider,
+} from '@appdyno/driver-apple';
 import {
   askOnTerminal,
   clientNamed,
@@ -311,7 +316,7 @@ async function main(): Promise<number> {
         err('--serial is required (never a default: other devices may be attached)');
         return 2;
       }
-      if (appleProvider().handles(serial)) {
+      if ([simulatorProvider(), iphoneProvider()].some((p) => p.handles(serial))) {
         err(`bench drives an Android device: ${serial} is an iOS one`);
         return 2;
       }

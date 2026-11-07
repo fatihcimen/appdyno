@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { appleProvider, Simctl } from './workspace.js';
+import { simulatorProvider, Simctl } from './workspace.js';
 import { type Answer, opsOn } from './helpers.js';
 
 /**
@@ -16,7 +16,7 @@ const ok = <A extends Answer>(r: A) => {
 describe.skipIf(!SIMULATOR)('a simulator of a model', () => {
   const simctl = new Simctl();
   let made: string | undefined;
-  const { call, ctx } = opsOn(appleProvider(), SIMULATOR!, 'dev.appdyno.fixture');
+  const { call, ctx } = opsOn(simulatorProvider(), SIMULATOR!, 'dev.appdyno.fixture');
   afterAll(async () => {
     if (!made) return;
     await ctx.forget(made);

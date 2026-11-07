@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { Adb, androidProvider, appleProvider, sleep } from './workspace.js';
+import { Adb, androidProvider, simulatorProvider, sleep } from './workspace.js';
 import { opsOn, type Call, SIM_FIXTURE } from './helpers.js';
 
 /**
@@ -108,7 +108,7 @@ describe.skipIf(!SIMULATOR || !RELEASE)('a crash on a simulator', () => {
     execFileSync('xcrun', ['clang', '-g', '-arch', 'arm64', '-c', source, '-o', `${binary}.o`]);
     execFileSync('xcrun', ['clang', '-arch', 'arm64', `${binary}.o`, '-o', binary]);
     execFileSync('xcrun', ['dsymutil', binary, '-o', other]);
-    call = opsOn(appleProvider(), SIMULATOR!, APP).call;
+    call = opsOn(simulatorProvider(), SIMULATOR!, APP).call;
   });
   afterAll(() => {
     if (existsSync(SIM_FIXTURE))

@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { Adb, androidProvider, appleProvider, Simctl } from './workspace.js';
+import { Adb, androidProvider, simulatorProvider, Simctl } from './workspace.js';
 import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 
 /**
@@ -61,7 +61,7 @@ describe.skipIf(!SIMULATOR)('a picture on a simulator', () => {
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-words-')));
     await new Simctl().install(SIMULATOR!, SIM_FIXTURE);
-    o = opsOn(appleProvider(), SIMULATOR!, APP);
+    o = opsOn(simulatorProvider(), SIMULATOR!, APP);
   }, 300_000);
   afterAll(() => o.ctx.close());
   wordsOf(() => o.call);

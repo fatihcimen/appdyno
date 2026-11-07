@@ -7,7 +7,7 @@ import {
   ViewerProcess,
   type ViewerMessage,
 } from '../packages/core/src/index.js';
-import { appleProvider } from '../packages/driver-apple/src/index.js';
+import { simulatorProvider } from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { runHub } from '../packages/hub/src/index.js';
 import { liveMirror } from '../packages/ops/src/mirror-state.js';
@@ -63,7 +63,7 @@ describe.runIf(udid)('the hub', () => {
     // only ours, unless a picture is to show the Mac's whole list: nothing else here is pressed
     const whole = process.env.APPDYNO_HUB_ALL === '1';
     const policy = whole ? DEFAULT_POLICY : { ...DEFAULT_POLICY, devices: new RegExp(`^${udid}$`) };
-    const ctx = new ServerContext(policy, [appleProvider()], {
+    const ctx = new ServerContext(policy, [simulatorProvider()], {
       mirrorCommand: [process.execPath, main, 'mirror'],
     });
     done = runHub(ctx, { focus: false, behind: true, log: () => undefined, viewer: () => link });

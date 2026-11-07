@@ -20,7 +20,7 @@ import {
   type ViewerMessage,
 } from '../packages/core/src/index.js';
 import { androidProvider } from '../packages/driver-android/src/index.js';
-import { appleProvider } from '../packages/driver-apple/src/index.js';
+import { iphoneProvider } from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { runHub } from '../packages/hub/src/index.js';
 import { untilWithin } from './until.js';
@@ -128,7 +128,7 @@ describe.runIf(process.env.APPDYNO_HUB_CONNECT)('Connect a Phone and Tools', () 
     });
     const providers = [
       staged(androidProvider(), (p) => p.state !== 'usb'),
-      staged(appleProvider(), (p) => p.state === 'usb'),
+      staged(iphoneProvider(), (p) => p.state === 'usb'),
     ];
     const binary = await viewerBinary();
     const ctx = new ServerContext({ ...DEFAULT_POLICY, devices: /^none$/ }, []);

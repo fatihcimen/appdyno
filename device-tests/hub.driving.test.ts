@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { hubServices } from '../packages/appdyno/src/hub-services.js';
 import { clientNamed, CLIENTS } from '../packages/cli/src/index.js';
 import { viewerBinary, ViewerProcess, type ViewerMessage } from '../packages/core/src/index.js';
-import { appleProvider } from '../packages/driver-apple/src/index.js';
+import { simulatorProvider } from '../packages/driver-apple/src/index.js';
 import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
 import { runHub } from '../packages/hub/src/index.js';
 import { untilWithin } from './until.js';
@@ -70,7 +70,7 @@ describe.runIf(serial)('a client driving a device in the hub', () => {
     execFileSync('xcrun', ['simctl', 'launch', serial!, 'dev.appdyno.fixture']);
     const binary = await viewerBinary();
     const policy = { ...DEFAULT_POLICY, devices: new RegExp(`^${serial}$`) };
-    const ctx = new ServerContext(policy, [appleProvider()], { clientNamed });
+    const ctx = new ServerContext(policy, [simulatorProvider()], { clientNamed });
     done = runHub(ctx, {
       focus: false,
       behind: true,

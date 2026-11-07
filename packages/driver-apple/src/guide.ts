@@ -8,6 +8,7 @@ export function iphoneGuide({ phone, usb, has }: PhoneLook): PhoneSteps | undefi
     phone !== undefined && !['not-connected', 'not-trusted'].includes(phone.need ?? '');
   return {
     maker: 'apple',
+    hand: 'ios',
     steps: [
       ...(has('xcode') ? [] : [step('get-xcode', false)]),
       step('trust', trusted),

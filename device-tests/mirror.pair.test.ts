@@ -2,7 +2,13 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { androidProvider, appleProvider, type MirrorSession, type WireNode } from './workspace.js';
+import {
+  androidProvider,
+  iphoneProvider,
+  simulatorProvider,
+  type MirrorSession,
+  type WireNode,
+} from './workspace.js';
 import { viewerBinary, ViewerProcess, type Device } from '../packages/core/src/index.js';
 import { NODE_FLAGS } from '../packages/protocol/src/index.js';
 import { DEFAULT_POLICY, ServerContext } from '../packages/ops/src/index.js';
@@ -32,7 +38,7 @@ describe.runIf(serials.length === 2)('two windows as one hand', () => {
   const held = new Map<string, Device>();
   const ctx = new ServerContext(
     { ...DEFAULT_POLICY, devices: new RegExp(`^(${serials.join('|')})$`) },
-    [androidProvider(), appleProvider()].map((provider) => ({
+    [androidProvider(), simulatorProvider(), iphoneProvider()].map((provider) => ({
       ...provider,
       // one driver object on a device: a second would be a second agent on it
       open: (serial: string) =>

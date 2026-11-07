@@ -2,7 +2,14 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { Adb, androidProvider, appleProvider, pause, Simctl } from './workspace.js';
+import {
+  Adb,
+  androidProvider,
+  iphoneProvider,
+  simulatorProvider,
+  pause,
+  Simctl,
+} from './workspace.js';
 import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 import { Parent } from '../packages/hub/src/parent.js';
 import { liveMirror } from '../packages/ops/src/mirror-state.js';
@@ -111,8 +118,8 @@ describe.skipIf(!IPHONE)('a watch on an iPhone', () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-watch-')));
     // what is built, as an iPhone's stream runs in a thread that cannot start from sources
     const built = join(import.meta.dirname, '../packages/driver-apple/dist/index.js');
-    const driver = (await import(built)) as { appleProvider: typeof appleProvider };
-    o = await onIphone(APP, driver.appleProvider());
+    const driver = (await import(built)) as { iphoneProvider: typeof iphoneProvider };
+    o = await onIphone(APP, driver.iphoneProvider());
   }, 300_000);
   afterAll(async () => {
     await o.call('terminate_app');
@@ -131,7 +138,7 @@ describe.skipIf(!SIMULATOR)('a watch on a simulator', () => {
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-watch-')));
     await new Simctl().install(SIMULATOR!, SIM_FIXTURE);
-    o = opsOn(appleProvider(), SIMULATOR!, APP);
+    o = opsOn(simulatorProvider(), SIMULATOR!, APP);
   }, 300_000);
   afterAll(() => o.ctx.close());
   watchOf(

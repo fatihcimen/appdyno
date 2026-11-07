@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest';
-import { Adb, androidProvider, appleProvider, Simctl } from './workspace.js';
+import { Adb, androidProvider, simulatorProvider, Simctl } from './workspace.js';
 import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 
 /**
@@ -190,7 +190,7 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-small-')));
     await new Simctl().install(SIMULATOR!, SIM_FIXTURE);
-    o = opsOn(appleProvider(), SIMULATOR!, APP);
+    o = opsOn(simulatorProvider(), SIMULATOR!, APP);
     call = o.call;
     ok(await call('launch_app'));
   }, 300_000);

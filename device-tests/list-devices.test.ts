@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { afterAll, describe, expect, it } from 'vitest';
-import { Adb, androidProvider, appleProvider } from './workspace.js';
+import { Adb, androidProvider, iphoneProvider } from './workspace.js';
 import { IPHONE, opsOn } from './helpers.js';
 import { untilWithin } from './until.js';
 
@@ -48,7 +48,7 @@ describe.skipIf(!EMULATOR)('what blocks an emulator', () => {
 
 describe.skipIf(!IPHONE)('what blocks an iPhone', () => {
   it('nothing, when it is unlocked and trusts this Mac', async () => {
-    const { call } = opsOn(appleProvider(), IPHONE!, 'dev.appdyno.fixture');
+    const { call } = opsOn(iphoneProvider(), IPHONE!, 'dev.appdyno.fixture');
     const { devices } = (await call('list_devices')).data;
     const phone = devices.find((d) => d.serial === IPHONE);
     expect(phone).toBeDefined();

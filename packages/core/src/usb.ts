@@ -1,3 +1,4 @@
+import type { Platform } from '@appdyno/protocol';
 import type { ListedDevice } from './device.js';
 import type { Need } from './mirror/need.js';
 import { run } from './run.js';
@@ -58,6 +59,8 @@ export type PhoneSteps = {
   steps: Step[];
   need?: Need;
   maker: Maker;
+  /** The kind of phone in a person's hand: nothing else is asked of them. */
+  hand: Platform;
   /** How this phone goes without a cable, for a phone on one: on it, or by a code it shows. */
   wifi?: { way: 'cable' | 'code'; paired: boolean };
 };

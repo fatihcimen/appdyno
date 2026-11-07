@@ -11,7 +11,8 @@ import {
   androidProvider,
 } from '../packages/driver-android/src/index.js';
 import {
-  appleProvider,
+  iphoneProvider,
+  simulatorProvider,
   IosPhoneDevice,
   IosSimulatorDevice,
 } from '../packages/driver-apple/src/index.js';
@@ -55,10 +56,10 @@ const appleProviderFor = async (serial: string) =>
   isIphone(serial)
     ? (
         (await import(join(MAIN, '../../../driver-apple/dist/index.js'))) as {
-          appleProvider: typeof appleProvider;
+          iphoneProvider: typeof iphoneProvider;
         }
-      ).appleProvider()
-    : appleProvider();
+      ).iphoneProvider()
+    : simulatorProvider();
 /** What this test left on a device: a home that goes leaves nothing to find it by. */
 const stopAgent = async (serial: string) => {
   if (isSimulator(serial)) return new IosSimulatorDevice(serial).stopAgent();

@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { Adb, androidProvider, appleProvider, Simctl } from './workspace.js';
+import { Adb, androidProvider, simulatorProvider, Simctl } from './workspace.js';
 import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 
 /** Settings at a page and at an app's own, read back from what it shows, on the devices the variables name. */
@@ -29,7 +29,7 @@ describe.skipIf(!SIMULATOR)('Settings on a simulator', () => {
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-settings-')));
     await new Simctl().install(SIMULATOR!, SIM_FIXTURE);
-    call = opsOn(appleProvider(), SIMULATOR!, APP).call;
+    call = opsOn(simulatorProvider(), SIMULATOR!, APP).call;
   }, 300_000);
   afterAll(() => call('terminate_app'));
 

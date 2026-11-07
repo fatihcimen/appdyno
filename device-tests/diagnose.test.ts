@@ -5,7 +5,8 @@ import {
   DeviceError,
   IosSimulatorDevice,
   androidProvider,
-  appleProvider,
+  iphoneProvider,
+  simulatorProvider,
   Devicectl,
   holdersIn,
   PROCESS_LIST,
@@ -194,7 +195,7 @@ describe.skipIf(!udid)('simulator: logs and crashes of the fixture', () => {
 
   beforeAll(async () => {
     await simctl.install(udid!, SIM_FIXTURE);
-    ctx = new ServerContext(DEFAULT_POLICY, [appleProvider()], { device: udid!, app: APP });
+    ctx = new ServerContext(DEFAULT_POLICY, [simulatorProvider()], { device: udid!, app: APP });
     call = caller(ctx);
     await call('launch_app', { read: 'none' });
   });
@@ -266,7 +267,7 @@ describe.skipIf(!iphone || !iphoneFixture)('iPhone: logs and crashes of the fixt
 
   beforeAll(async () => {
     await ctl.install(iphoneFixture!);
-    ctx = new ServerContext(DEFAULT_POLICY, [appleProvider()], { device: iphone!, app: APP });
+    ctx = new ServerContext(DEFAULT_POLICY, [iphoneProvider()], { device: iphone!, app: APP });
     call = caller(ctx);
     await call('launch_app', { read: 'none' });
   }, 240_000);

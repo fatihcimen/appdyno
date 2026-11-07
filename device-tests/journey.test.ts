@@ -4,7 +4,7 @@ import { cpus, loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, describe, expect, it } from 'vitest';
-import { Adb, androidProvider, appleProvider } from './workspace.js';
+import { Adb, androidProvider, iphoneProvider } from './workspace.js';
 import { latestRuns, runKeys, type PerfRecord, type Comparison } from '@appdyno/perf';
 import { opsOn } from './helpers.js';
 
@@ -53,7 +53,7 @@ const targets: Target[] = [
   {
     name: 'iphone',
     serial: process.env.APPDYNO_IPHONE_FIXTURE_APP && process.env.APPDYNO_IPHONE_UDID,
-    provider: () => appleProvider() as ReturnType<typeof androidProvider>,
+    provider: () => iphoneProvider() as ReturnType<typeof androidProvider>,
     flow: `app ${APP}\nstop\nlaunch\ntap id=open_delayed\nassert id=loaded\n`,
     step: '03_tap_id_open_delayed',
     inject: async (ms) => {
