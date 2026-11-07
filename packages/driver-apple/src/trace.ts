@@ -14,7 +14,7 @@ import {
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
 import { xcodeEnv } from './simctl.js';
@@ -246,6 +246,8 @@ export async function recordXctMetrics(
   const dir = tracesDir();
   await mkdir(dir, { recursive: true });
   const resultBundle = join(dir, `xct-${test}-${Date.now()}.xcresult`);
+  // with none named, each run leaves a folder of its own in Xcode's DerivedData
+  const derived = `${resultBundle}.derived`;
   const failed = (why: string) =>
     new DeviceError(
       'UNSUPPORTED',
@@ -261,6 +263,8 @@ export async function recordXctMetrics(
       '-destination',
       `id=${udid}`,
       `-only-testing:Runner/PerfMetricsTests/${name}`,
+      '-derivedDataPath',
+      derived,
       '-resultBundlePath',
       resultBundle,
     ],
@@ -270,9 +274,11 @@ export async function recordXctMetrics(
       timeout: 600_000,
       ...(callSignal() && { signal: callSignal()! }),
     },
-  ).catch((e: { stdout?: string; message: string }) => {
-    throw failed((e.stdout ?? e.message).trim().split('\n').slice(-3).join(' ').slice(0, 300));
-  });
+  )
+    .catch((e: { stdout?: string; message: string }) => {
+      throw failed((e.stdout ?? e.message).trim().split('\n').slice(-3).join(' ').slice(0, 300));
+    })
+    .finally(() => rm(derived, { recursive: true, force: true }));
   const { stdout } = await run(
     'xcrun',
     [
