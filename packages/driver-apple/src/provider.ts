@@ -10,9 +10,10 @@ import { Simctl, xcodeEnv, type Simulator } from './simctl.js';
 import { Devicectl } from './devicectl.js';
 import { queryTraceFile } from './trace.js';
 import { iphoneGuide } from './guide.js';
-import { listPhones, sameUdid } from './usbmux.js';
+import { listPhones, sameUdid, type UsbAttach } from './usbmux.js';
 import { pairedPhones } from './wifi-paired.js';
-import { run } from '@appdyno/core';
+import { deviceState, run } from '@appdyno/core';
+import { z } from 'zod';
 
 const RUNNER_NOT_BUILT =
   'built once on first use (a few minutes), or build it now: appdyno ios build';
@@ -20,17 +21,58 @@ const RUNNER_NOT_BUILT =
 /** The runner's deployment target. */
 const RUNNER_MIN_IOS = 17;
 
-/** What keeps a phone from being driven: what the Mac knows of it, and last its lock, which asks the phone. */
+/**
+ * What keeps a phone from being driven: what the Mac knows of it, then its lock, which asks the phone. `trusted`: it
+ * has been seen to trust this Mac on this cable, so its lock is asked alongside; the answer is the fresh list's either way.
+ */
 export async function phoneNeed(
   ctl: Pick<Devicectl, 'listed' | 'lockState'>,
+  trusted = false,
 ): Promise<Need | undefined> {
+  const lock = trusted ? ctl.lockState() : undefined;
+  // its failure counts only once the list has passed
+  lock?.catch(() => undefined);
   const phone = await ctl.listed();
   if (!phone) return 'not-connected';
   if (phone.connectionProperties?.pairingState !== 'paired') return 'not-trusted';
   if (phone.deviceProperties?.developerModeStatus !== 'enabled') return 'developer-mode-off';
   if (parseInt(phone.deviceProperties.osVersionNumber ?? '', 10) < RUNNER_MIN_IOS)
     return 'os-too-old';
-  return (await ctl.lockState()).passcodeRequired ? 'locked' : undefined;
+  return (await (lock ?? ctl.lockState())).passcodeRequired ? 'locked' : undefined;
+}
+
+/**
+ * The plug-in on which each phone's list last passed, by the multiplexer's number: on it, the phone trusts this Mac.
+ * On disk, as a session's first list is a process of its own. Any other answer, or a failed read, takes it away.
+ * shortcut: usbmux numbers plug-ins anew when it restarts, so a kept number may come back; that changes when the lock
+ * is asked, never the answer. Upgrade if usbmux gives a plug-in an identity that outlives it.
+ */
+const trustedOn = deviceState('iphone-trusted-on', z.number().int());
+
+/** What is kept says only when to ask the lock: a file that cannot be written changes no answer. */
+function keepTrusted(serial: string, plugIn: number | undefined) {
+  try {
+    if (plugIn === undefined) trustedOn.remove(serial);
+    else if (trustedOn.read(serial) !== plugIn) trustedOn.write(serial, plugIn);
+  } catch {
+    // the next list asks the lock after the list, as with nothing kept
+  }
+}
+
+/** A phone's need, its lock asked alongside the list on a plug-in where it has been seen to trust this Mac. */
+async function usbPhoneNeed(
+  serial: string,
+  plugIn: number | undefined,
+  ctl: Pick<Devicectl, 'listed' | 'lockState'>,
+) {
+  let trusts = false;
+  try {
+    const need = await phoneNeed(ctl, plugIn !== undefined && trustedOn.read(serial) === plugIn);
+    trusts = need === undefined || need === 'locked';
+    return need;
+  } finally {
+    keepTrusted(serial, trusts ? plugIn : undefined);
+  }
 }
 
 /** A simulator is named by its id. */
@@ -68,7 +110,7 @@ export async function iosChecks(now = Date.now()): Promise<Check[]> {
       ? { name: 'ios runner (iPhone)', ok: true, detail: phone }
       : warn('ios runner (iPhone)', 'not built yet', RUNNER_NOT_BUILT),
   );
-  const phones = await listPhones().catch(() => [] as string[]);
+  const phones = (await listPhones().catch(() => [])).map((p) => p.udid);
   const explicit = phoneSigningFromEnv();
   if (!phones.length && !explicit)
     out.push(warn('iPhone signing', 'chosen when a phone is connected (needed for iPhones only)'));
@@ -133,19 +175,25 @@ const bootedSimulators = (): Promise<Simulator[]> =>
 export function appleProvider(
   connected: {
     simulators: () => Promise<Simulator[]>;
-    phones: () => Promise<string[]>;
+    phones: () => Promise<UsbAttach[]>;
     /** Paired for Wi-Fi: what is on disk, as a list comes often and a look on the network takes seconds. */
     paired?: () => string[];
+    devicectl?: (udid: string) => Pick<Devicectl, 'listed' | 'lockState'>;
   } = {
     simulators: bootedSimulators,
     phones: () => listPhones().catch(() => []),
     paired: pairedPhones,
   },
 ): DeviceProvider {
+  const devicectl = connected.devicectl ?? ((udid) => new Devicectl(udid));
   return {
     list: async () => {
       // each is asked of its own tool, at once
-      const [simulators, phones] = await Promise.all([connected.simulators(), connected.phones()]);
+      const [simulators, attached] = await Promise.all([
+        connected.simulators(),
+        connected.phones(),
+      ]);
+      const phones = attached.map((p) => p.udid);
       return [
         ...simulators.map((d) => ({
           serial: d.udid,
@@ -173,10 +221,11 @@ export function appleProvider(
       ];
     },
     handles: (serial) => SIMULATOR_ID.test(serial) || PHONE_ID.test(serial),
-    need: async ({ serial, state }) =>
-      SIMULATOR_ID.test(serial) || state === 'network'
-        ? undefined
-        : phoneNeed(new Devicectl(serial)),
+    need: async ({ serial, state }) => {
+      if (SIMULATOR_ID.test(serial) || state === 'network') return undefined;
+      const plugIn = (await connected.phones()).find((p) => sameUdid(p.udid, serial));
+      return usbPhoneNeed(serial, plugIn?.deviceId, devicectl(serial));
+    },
     guide: iphoneGuide,
     virtual: new Simulators(new Simctl()),
     open: (serial) =>

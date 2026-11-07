@@ -204,11 +204,17 @@ export async function connectPort(
   return { socket, rest };
 }
 
-/** UDIDs of the iPhones connected by USB (in the UDID form the device tools use). */
-export async function listPhones(path = USBMUXD): Promise<string[]> {
+/** A phone on a cable: its UDID as the device tools write it, and the multiplexer's number for this plug-in. */
+export type UsbAttach = { udid: string; deviceId: number };
+
+/** The iPhones connected by USB. */
+export async function listPhones(path = USBMUXD): Promise<UsbAttach[]> {
   return (await listDevices(path))
     .filter((d) => d.connection === 'USB')
-    .map((d) =>
-      /^[0-9A-F]{24}$/i.test(d.serial) ? `${d.serial.slice(0, 8)}-${d.serial.slice(8)}` : d.serial,
-    );
+    .map((d) => ({
+      udid: /^[0-9A-F]{24}$/i.test(d.serial)
+        ? `${d.serial.slice(0, 8)}-${d.serial.slice(8)}`
+        : d.serial,
+      deviceId: d.deviceId,
+    }));
 }
