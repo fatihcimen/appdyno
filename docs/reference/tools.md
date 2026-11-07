@@ -75,15 +75,15 @@ What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 | what                         | Android                              | simulator                         | iPhone                         |
 | ---------------------------- | ------------------------------------ | --------------------------------- | ------------------------------ |
 | volume buttons               | yes                                  | yes (no way to read back)         | the runner                     |
-| clear an app's data          | `pm clear`                           | empties its container             | no: uninstall and install      |
+| clear an app's data          | `pm clear`                           | empties its container             | development-signed apps        |
 | reads with no signing        | no need                              | no need                           | `inspector`: words and ids     |
 | download, replace app data   | debuggable builds                    | yes                               | development-signed apps        |
-| grant, revoke a permission   | `pm grant`, `pm revoke`              | `simctl privacy`                  | no: answer with `alert`        |
+| grant, revoke a permission   | `pm grant`, `pm revoke`              | `simctl privacy`                  | reset to ask, then `alert`     |
 | launch environment           | no: args are intent extras           | yes                               | yes                            |
 | dark mode, text, motion      | yes                                  | yes                               | `devicectl`                    |
 | animations                   | yes                                  | no: use `reduce_motion`           | no                             |
-| locale                       | per app, API 33+; whole device below | per app, changed; `app ""`: whole | no                             |
-| slow network                 | emulator; a phone's downloads, 13+   | no                                | no                             |
+| locale                       | per app, API 33+; whole device below | per app, changed; `app ""`: whole | per app, the tool's launches   |
+| slow network, thermal state  | emulator; a phone's downloads, 13+   | no                                | Xcode's conditions             |
 | biometrics                   | an emulator's fingerprint            | yes                               | no: `devicectl` simulates none |
 | airplane, Wi-Fi, mobile data | yes, read back                       | no: it has the Mac's network      | no                             |
 | keychain                     | no: Android has none                 | emptied, counted                  | no                             |
@@ -158,9 +158,17 @@ On an iPhone `devicectl device simulate biometrics` answers `Device does not sup
 
 A simulator's animations stay as they are, as no way to slow them was found. UIKit's `UIAnimationDragCoefficient` set to 10, in `com.apple.UIKit`, in the global domain or as a launch argument, left the fixture's 300 ms slide over within 0.7 s on an iPhone 17 Pro simulator with iOS 27.2, as it was with none. An iPhone Duo simulator with iOS 27.1 shows its app on the outer screen. With that screen powered off by `simctl io screenConfig`, Settings started again showed nothing on the inner one, so a fold of it is not that either.
 
+## An iPhone's own conditions, data and permissions
+
+`network` and `thermal` on an iPhone are the phone's own conditions, as Xcode's Devices window sets them, through its instruments: `network` `slow` is the first EDGE profile the phone lists, or a profile by name, and `full` none; `thermal` `fair`, `serious` or `critical`, and `nominal` none. One holds at a time. The phone keeps one after the process that set it is gone: a session killed by SIGKILL left `SlowNetworkEdgeBad` on, and the next session's start found it written down and turned it off. A thermal profile ramps for seconds each way, and the phone answers nothing meanwhile, so one is done when the phone reads it so. These go through the phone stream, and with its folder gone are refused with why.
+
+`app clear` on an iPhone empties the app's data container, as `replace_data` with an empty folder does: development-signed apps only. iOS has no grant: `grant` and `revoke` reset the app's answer, so it asks again, and `alert` answers. `locale` with an app holds it in a language for every launch this tool makes, as on a simulator.
+
+Run on an iPhone 13 Pro Max over its cable: the fixture's data went from 4 files to none; its location went from Allowed to "Not asked", it asked again, and `alert deny` made it "Denied"; `network slow` read back `SlowNetworkEdgeBad` and `full` none; `thermal serious` read back `ThermalSerious` and `nominal` none; the fixture showed `tr-TR`. `network slow` on a Samsung with One UI set the cap to 29,600 and `restore` deleted it, as the key had none before.
+
 ## A slow network
 
-`network` `slow` on an emulator goes by its console: an EDGE speed both ways and a delay of 40 to 100 ms. A phone from Android 13 has only Android's own cap, `ingress_rate_limit_bytes_per_second`: `slow` caps what it downloads at 30 kB/s, an EDGE network's download, and a number caps it at that many bytes a second on a phone or an emulator. It adds no delay and leaves uploads at full speed, and the answer says so. The cap is a setting the device keeps, so the old one is written down and `restore` deletes it. On an API 34 emulator a megabyte from this Mac took 778 ms, 11.2 s under a cap of 100,000, and the cap was gone after `restore`. No phone has been run yet.
+`network` `slow` on an emulator goes by its console: an EDGE speed both ways and a delay of 40 to 100 ms. A phone from Android 13 has only Android's own cap, `ingress_rate_limit_bytes_per_second`: `slow` caps what it downloads at 30 kB/s, an EDGE network's download, and a number caps it at that many bytes a second on a phone or an emulator. It adds no delay and leaves uploads at full speed, and the answer says so. The cap is a setting the device keeps, so the old one is written down and `restore` deletes it. On an API 34 emulator a megabyte from this Mac took 778 ms, 11.2 s under a cap of 100,000, and the cap was gone after `restore`. Run on a Samsung too, below.
 
 ## A fold
 

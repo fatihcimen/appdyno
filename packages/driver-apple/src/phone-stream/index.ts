@@ -18,6 +18,8 @@ import { isPaired, openWifiTunnel, pairOnCable, portOnWifi, wifiCheck } from './
 /** This folder's one way in. All it holds speaks a phone's private services; see `phone-stream-port.ts`. */
 
 const STOP_MS = 12_000;
+/** A thermal profile ramps for about 10 s each way (WWDC19 422). */
+const SETTLE_MS = 30_000;
 
 const onCable = async (udid: string) =>
   (await listDevices()).some((d) => d.connection === 'USB' && sameUdid(d.serial, udid));
@@ -188,13 +190,42 @@ async function conditions(udid: string) {
   }
 }
 
+/**
+ * The profile on for `id` as a new connection reads it, once it is what `settled` takes, or the time a condition takes
+ * to settle is over; undefined with none on.
+ */
+async function listedAfter(udid: string, id: string, settled = (_: string | undefined) => true) {
+  const end = Date.now() + SETTLE_MS;
+  let now: string | undefined;
+  for (;;) {
+    const read = await conditions(udid).catch(() => undefined);
+    now = read ? read.find((c) => c.id === id)?.on : now;
+    if ((read && settled(now)) || Date.now() > end) return now;
+    await new Promise((r) => setTimeout(r, 2_000));
+  }
+}
+
 async function induce(udid: string, condition?: { id: string; profile: string }) {
   const opened = holding.get(udid) ?? (await openInducer(udid));
   holding.delete(udid);
   try {
-    if ((await opened.inducer.list()).some((c) => c.on)) await opened.inducer.disable();
+    const on = (await opened.inducer.list()).find((c) => c.on);
+    if (on) {
+      await opened.inducer.disable();
+      // a thermal profile still lists as on while it ramps down: it is off when the phone reads it so
+      if (await listedAfter(udid, on.id, (now) => now === undefined))
+        throw new Error(`${on.id} still reads as on ${SETTLE_MS / 1000} s after it was turned off`);
+    }
     if (!condition) return;
-    await opened.inducer.enable(condition.id, condition.profile);
+    try {
+      await opened.inducer.enable(condition.id, condition.profile);
+    } catch (e) {
+      // a thermal profile ramps, and the phone's channel answers nothing meanwhile: a new one, once it does, decides
+      opened.close();
+      const listed = await listedAfter(udid, condition.id, (now) => now === condition.profile);
+      if (listed !== condition.profile) throw e;
+      return;
+    }
     holding.set(udid, opened);
   } finally {
     if (!holding.has(udid)) opened.close();
