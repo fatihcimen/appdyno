@@ -17,6 +17,18 @@ import type { Steps } from './steps.js';
 import { ACT, defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 
 const NO_APP = 'give app (or select one with use_device)';
+/** With `links`, each link the app opens, as its lines say. */
+const LinkOut = ActionOut.extend({
+  links: z
+    .array(
+      z.object({
+        url: z.string(),
+        kind: z.enum(['scheme', 'domain', 'filter']),
+        state: z.string().optional(),
+      }),
+    )
+    .optional(),
+});
 /** An app's id; anything else is what a person calls it. */
 const APP_ID = /^[\w-]+(\.[\w-]+)+$/;
 
@@ -97,7 +109,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
           read: Read,
         })
         .strict(),
-      output: ActionOut,
+      output: LinkOut,
       annotations: ACT,
       run: async ({ url, settings, links, read }) => {
         if ([url, settings, links].filter(Boolean).length !== 1)
@@ -105,8 +117,10 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         const s = await ctx.session();
         if (links) {
           const found = await s.device.apps.links(checkApp(policy, links));
-          const t = found.length > 0 ? found.join('\n') : `${links} opens no links`;
-          return reply(t, { done: t, screen: 'none', warnings: [] });
+          const t =
+            found.map((l) => `${l.kind} ${l.url}${l.state ? `: ${l.state}` : ''}`).join('\n') ||
+            `${links} opens no links`;
+          return reply(t, { done: t, screen: 'none', warnings: [], links: found });
         }
         if (settings) return openSettings(s, settings, read);
         const href = checkUrl(policy, url!);

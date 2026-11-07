@@ -75,11 +75,13 @@ export const toolCaller =
     const r = (await get().callTool({ name, arguments: args })) as {
       isError?: boolean;
       content: { type: string; text?: string }[];
+      structuredContent?: Record<string, unknown>;
     };
     return {
       error: r.isError === true,
       text: r.content.map((c) => c.text ?? '').join('\n'),
       content: r.content,
+      data: r.structuredContent ?? {},
     };
   };
 

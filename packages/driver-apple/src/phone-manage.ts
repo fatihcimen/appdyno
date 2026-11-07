@@ -136,7 +136,7 @@ export class PhoneApps implements AppManager {
     throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.permission);
   }
 
-  async links(): Promise<string[]> {
+  async links(): Promise<never> {
     throw new DeviceError(
       'UNSUPPORTED',
       "an iPhone's installed app is not read from here: list the links of its build on a simulator",

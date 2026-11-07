@@ -1,7 +1,9 @@
+import type { AppLink } from '@appdyno/core';
+
 const VIEW = '"android.intent.action.VIEW"';
 
 /** Each of a package's filters that opens a link, from `dumpsys package`: `scheme://host/path`, once each. */
-export function linkFilters(dump: string): string[] {
+export function linkFilters(dump: string): AppLink[] {
   const found = new Set<string>();
   // a filter is listed under each scheme it has: its lines follow its header, deeper in
   for (const block of dump.split(/\n(?=\s+[0-9a-f]+ \S+ filter [0-9a-f]+\s*$)/m).slice(1)) {
@@ -20,20 +22,26 @@ export function linkFilters(dump: string): string[] {
     });
     for (const scheme of of('Scheme'))
       for (const host of of('Authority').length > 0 ? of('Authority') : [''])
-        for (const path of paths.length > 0 ? paths : [''])
-          found.add(`filter ${scheme}://${host}${path}`);
+        for (const path of paths.length > 0 ? paths : ['']) found.add(`${scheme}://${host}${path}`);
   }
-  return [...found];
+  return [...found].map((url) => ({ url, kind: 'filter' as const }));
 }
 
 /** The verification state of each App Link domain, from `pm get-app-links`. */
-export function linkStates(out: string): string[] {
+export function linkStates(out: string): AppLink[] {
   const after = out.split(/Domain verification state:\s*\n/)[1] ?? '';
-  return [...after.matchAll(/^\s+([\w.*-]+): (\w+)\s*$/gm)].map((m) => `app link ${m[1]}: ${m[2]}`);
+  return [...after.matchAll(/^\s+([\w.*-]+): (\w+)\s*$/gm)].map((m) => ({
+    url: `https://${m[1]}`,
+    kind: 'domain' as const,
+    state: m[2]!,
+  }));
 }
 
 /** What an installed app says it opens: the filters of its activities, and its App Links as verified. */
-export async function androidLinks(sh: (command: string) => Promise<string>, pkg: string) {
+export async function androidLinks(
+  sh: (command: string) => Promise<string>,
+  pkg: string,
+): Promise<AppLink[]> {
   const filters = linkFilters(await sh(`dumpsys package ${pkg}`));
   // API 31+: older systems have no such command, and no states to read
   const states = linkStates(await sh(`pm get-app-links ${pkg}`));

@@ -897,6 +897,21 @@ describe('gestures, keys, clipboard', () => {
     expect((await call('launch_app', { app: 'Twin' })).text).toContain('dev.two, dev.three');
   });
 
+  it('lists the links an app opens, as lines and as data', async () => {
+    const d = new FakeDevice();
+    const links = [
+      { url: 'demo://', kind: 'scheme' },
+      { url: 'https://example.com', kind: 'domain', state: 'verified' },
+    ];
+    Object.assign(d, { apps: { links: async () => links } });
+    const { call } = await connect(d);
+    const r = await call('open_link', { links: 'dev.app' });
+    expect(r.text).toBe('scheme demo://\ndomain https://example.com: verified');
+    expect(r.data.links).toEqual(links);
+    Object.assign(d, { apps: { links: async () => [] } });
+    expect((await call('open_link', { links: 'dev.app' })).text).toBe('dev.app opens no links');
+  });
+
   it('keeps a name to what the server allows', async () => {
     const d = new FakeDevice();
     Object.assign(d, { apps: { listApps: async () => [{ id: 'dev.other', name: 'Other' }] } });

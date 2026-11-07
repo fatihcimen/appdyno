@@ -99,8 +99,9 @@ describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
     const r = await call('open_link', { links: APP });
     // the state is the verifier's, and it moves: none just after an install, a number of its own once it has tried
     expect(r.text).toMatch(
-      /^filter appdyno-fixture:\/\/open\nfilter https:\/\/example\.com\/order\*\napp link example\.com: \w+$/,
+      /^filter appdyno-fixture:\/\/open\nfilter https:\/\/example\.com\/order\*\ndomain https:\/\/example\.com: \w+$/,
     );
+    expect(r.data.links).toContainEqual({ url: 'appdyno-fixture://open', kind: 'filter' });
   });
 
   it('refuses what only Google could send, and says why', async () => {
@@ -175,6 +176,7 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
   it('lists the links the app opens, read from it', async () => {
     const r = await call('open_link', { links: APP });
     expect(r.text).toBe('scheme appdyno-fixture://');
+    expect(r.data.links).toEqual([{ url: 'appdyno-fixture://', kind: 'scheme' }]);
   });
 });
 

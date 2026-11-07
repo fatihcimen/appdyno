@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { run } from '@appdyno/core';
+import { run, type AppLink } from '@appdyno/core';
 import { assertBundle, type Simctl } from './simctl.js';
 
 const DOMAINS = 'com.apple.developer.associated-domains';
@@ -10,14 +10,21 @@ export const schemesOf = (urlTypes: unknown) =>
     Array.isArray(t.CFBundleURLSchemes) ? t.CFBundleURLSchemes.map(String) : [],
   );
 
-/** The associated domains of a signature's entitlements, as `codesign --xml` gives them. */
+/**
+ * The domains a signature's entitlements, as `codesign --xml` gives them, name for universal links (`applinks:`), with
+ * no mode: an associated domain for another service opens no link.
+ */
 export function domainsOf(xml: string) {
   const list = new RegExp(`<key>${DOMAINS}</key>\\s*<array>([\\s\\S]*?)</array>`).exec(xml)?.[1];
-  return [...(list ?? '').matchAll(/<string>([^<]+)<\/string>/g)].map((m) => m[1]!);
+  return [...(list ?? '').matchAll(/<string>applinks:([^<?]+)[^<]*<\/string>/g)].map((m) => m[1]!);
 }
 
 /** What an app installed on a simulator says it opens: its URL schemes, and the domains its signature names. */
-export async function simulatorLinks(simctl: Simctl, udid: string, app: string) {
+export async function simulatorLinks(
+  simctl: Simctl,
+  udid: string,
+  app: string,
+): Promise<AppLink[]> {
   const bundle = (await simctl.exec(['get_app_container', udid, assertBundle(app)])).trim();
   const types = await run('plutil', [
     '-extract',
@@ -35,7 +42,7 @@ export async function simulatorLinks(simctl: Simctl, udid: string, app: string) 
     () => '',
   );
   return [
-    ...schemesOf(types).map((s) => `scheme ${s}://`),
-    ...domainsOf(signed).map((d) => `domain ${d}`),
+    ...schemesOf(types).map((s) => ({ url: `${s}://`, kind: 'scheme' as const })),
+    ...domainsOf(signed).map((d) => ({ url: `https://${d}`, kind: 'domain' as const })),
   ];
 }

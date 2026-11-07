@@ -4,6 +4,12 @@ export type AppState = 'not_installed' | 'stopped' | 'running' | 'foreground';
 
 export type LaunchOptions = { args?: string[]; env?: Record<string, string>; language?: string };
 
+/**
+ * A link an installed app opens: one of its URL schemes, a domain it opens web links of (an App Link's, with Android's
+ * verification `state`), or an Android filter, as `scheme://host/path` with `*` for a path's rest.
+ */
+export type AppLink = { url: string; kind: 'scheme' | 'domain' | 'filter'; state?: string };
+
 /** A project on this Mac: `scheme` is Xcode's, or the Gradle module; `configuration` is Xcode's, or the variant. */
 export type BuildRequest = { project: string; scheme?: string; configuration?: string };
 
@@ -29,5 +35,5 @@ export interface AppManager {
   permission(app: string, grant: boolean, service: string): Promise<void>;
   launchWith(app: string, opts: LaunchOptions): Promise<void>;
   /** The links the installed app says it opens: its schemes, its domains, Android's filters and their verification. */
-  links(app: string): Promise<string[]>;
+  links(app: string): Promise<AppLink[]>;
 }
