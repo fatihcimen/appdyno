@@ -205,7 +205,7 @@ describe('adb helpers', () => {
     expect(overNetwork('[fe80::1]:5555')).toBe(true);
     expect(overNetwork('adb-R68-Ab._adb-tls-connect._tcp')).toBe(true);
     expect(overNetwork('emulator-5580')).toBe(false);
-    expect(overNetwork('EXAMPLE0SERIAL')).toBe(false);
+    expect(overNetwork('R58TEST0001')).toBe(false);
     expect(cableSerial('adb-R68-Ab._adb-tls-connect._tcp')).toBe('R68');
     expect(cableSerial('192.168.1.5:41111')).toBeUndefined();
   });
@@ -232,8 +232,8 @@ describe('adb helpers', () => {
     for (const wireless of [
       '192.168.1.5:41111',
       '[fe80::1%wlan0]:5555',
-      'adb-EXAMPLE0SERIAL-AbCdEf._adb-tls-connect._tcp',
-      'adb-EXAMPLE0SERIAL-AbCdEf (2)._adb-tls-connect._tcp',
+      'adb-R58TEST0001-AbCdEf._adb-tls-connect._tcp',
+      'adb-R58TEST0001-AbCdEf (2)._adb-tls-connect._tcp',
     ])
       expect(assertSerial(wireless)).toBe(wireless);
     expect(() => assertSerial('a$(b)')).toThrow();
