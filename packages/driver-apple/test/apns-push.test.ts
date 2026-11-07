@@ -64,6 +64,12 @@ const secretsIn = (words: string, jwt?: string) =>
   );
 
 describe("an app's tokens in its own lines", () => {
+  it("are a line's that names a token, and not a digest or an id as long in another", () => {
+    const digest = `NSURLSession sha256 ${'9'.repeat(64)}`;
+    expect(tokensIn([LINES[0]!, digest])).toEqual([{ token: DEVICE, kind: 'device' }]);
+    expect(tokensIn([digest])).toEqual([{ token: '9'.repeat(64), kind: 'device' }]);
+  });
+
   it('are known by the words of their line, and any other is the device token', () => {
     expect(tokensIn(LINES)).toEqual([
       { token: DEVICE, kind: 'device' },

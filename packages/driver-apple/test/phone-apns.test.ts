@@ -61,6 +61,18 @@ describe("an iPhone's app, to APNs", () => {
     expect(follow).toHaveBeenCalledWith('U', 'dev.app');
   });
 
+  it("keeps the newest 5,000 of a console's lines, however much the app says", async () => {
+    const child = console_();
+    const target = new PhoneApnsTarget({ udid: 'U' } as Devicectl, new Map(), () => child as never);
+    const read = target.lines('dev.app', 'device');
+    child.stdout.write(
+      `${Array.from({ length: 6_000 }, (_, i) => `line ${i}`).join('\n')}\ntoken ${DEVICE}\n`,
+    );
+    const { lines } = await read;
+    expect(lines).toHaveLength(5_000);
+    expect(lines.at(-1)).toBe(`token ${DEVICE}`);
+  });
+
   it('lets go of the console by SIGKILL, which devicectl cannot hand on to the app', async () => {
     const child = console_();
     const target = new PhoneApnsTarget({ udid: 'U' } as Devicectl, new Map(), () => child as never);

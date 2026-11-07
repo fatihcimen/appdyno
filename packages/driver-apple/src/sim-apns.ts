@@ -18,7 +18,8 @@ export function simulatorApnsTarget(simctl: Simctl, udid: string): ApnsTarget {
         () => false,
       ),
     lines: async (app) => {
-      const q = { app, since, level: 'debug' as const, maxLines: 10_000 };
+      // NSLog's and os_log's own lines: debug would add the libraries' noise
+      const q = { app, since, level: 'info' as const, maxLines: 10_000 };
       const log = await simctl.exec(logShowArgs(udid, await appBundle(simctl, udid, app), q));
       return { lines: log.split('\n') };
     },

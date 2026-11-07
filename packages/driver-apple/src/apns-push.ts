@@ -65,11 +65,16 @@ const kindOf = (line: string): PushTokenKind =>
           ? 'widget'
           : 'device';
 
-/** Every token in an app's lines, by the words of its line, oldest first. */
-export const tokensIn = (lines: string[]) =>
-  lines.flatMap((line) =>
+/**
+ * Every token in an app's lines, by the words of its line, oldest first: those of a line that names a token, where one
+ * does, as an app's log has other hex as long, a digest or an id.
+ */
+export const tokensIn = (lines: string[]) => {
+  const named = lines.filter((l) => /token/i.test(l));
+  return (named.length > 0 ? named : lines).flatMap((line) =>
     [...line.matchAll(HEX)].map((m) => ({ token: m[0].toLowerCase(), kind: kindOf(line) })),
   );
+};
 
 const HOW_A_TOKEN_IS_FOUND =
   'the app prints it in its own log, by NSLog or os_log, in a line that names a push to start, an activity, VoIP or a widget for those tokens, any other for the device token; or a person types it in the window';

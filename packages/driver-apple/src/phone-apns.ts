@@ -11,6 +11,8 @@ export type PhoneBuild = { build?: 'development' | 'distribution'; voip: boolean
 
 /** How long a relaunched app has to print the token asked for. */
 const TOKEN_WAIT_MS = 15_000;
+/** The newest of a followed console's lines kept: an app under OS_ACTIVITY_DT_MODE says a great deal. */
+const KEPT_LINES = 5_000;
 
 /** A signature's `aps-environment`: production is a distribution build's, development a development build's. */
 export const apsEnvironment = (entitlements: string) =>
@@ -98,6 +100,7 @@ export class PhoneApnsTarget implements ApnsTarget {
       const timer = setTimeout(done, TOKEN_WAIT_MS);
       const take = (line: string) => {
         lines.push(line);
+        if (lines.length > KEPT_LINES) lines.splice(0, lines.length - KEPT_LINES);
         if (tokensIn([line]).some((t) => t.kind === wanted)) {
           clearTimeout(timer);
           done();

@@ -16,7 +16,8 @@ const b64url = (b: Buffer | string) => Buffer.from(b).toString('base64url');
 
 /**
  * The service account's own token, by Google's "service account authorization without OAuth": an RS256 JWT for
- * FCM's audience, which goes as the bearer with no exchange at Google's token endpoint.
+ * FCM's audience, which goes as the bearer with no exchange at Google's token endpoint. Whether FCM's HTTP v1 API takes
+ * one is unverified until a live send: if it does not, the token comes from that endpoint instead, a second host.
  */
 export function fcmToken(k: FcmKey, now = Date.now()) {
   const kept = tokens.get(k.keyId);
