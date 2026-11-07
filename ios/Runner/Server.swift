@@ -46,8 +46,10 @@ final class MainPump {
     }
 }
 
-/// TCP server, frames in, JSON-RPC requests out to the handler, replies back: on the loopback, which a cable reaches, and on
-/// a tunnel's interface, which is how a Mac reaches a phone with none. Never on Wi-Fi itself, and the token holds both.
+/// TCP server, frames in, JSON-RPC requests out to the handler, replies back: on the loopback, which a cable reaches, and on a
+/// phone paired for Wi-Fi by a tunnel too, which is how a Mac reaches one with none. No listener can be kept to a tunnel, as
+/// its interface comes after the listener and its path names the Wi-Fi it rides on as well: so a connection is read only when
+/// it came by the loopback or an interface of a tunnel's kind, and one by Wi-Fi alone is closed unread.
 final class Server {
     private let listeners: [NWListener]
     private let queue = DispatchQueue(label: "server")
@@ -57,15 +59,15 @@ final class Server {
     private let hello: () -> [String: Any]
     private let startedAt = Date()
 
-    init(port: UInt16, token: String, pump: MainPump, hello: @escaping () -> [String: Any],
+    init(port: UInt16, token: String, tunnels: Bool, pump: MainPump, hello: @escaping () -> [String: Any],
          handle: @escaping (Job) throws -> Reply) throws {
         let loopback = NWParameters.tcp
         loopback.requiredLocalEndpoint = NWEndpoint.hostPort(host: .ipv4(.loopback), port: NWEndpoint.Port(rawValue: port)!)
         loopback.allowLocalEndpointReuse = true
         let tunnel = NWParameters.tcp
-        tunnel.requiredInterfaceType = .other
         tunnel.allowLocalEndpointReuse = true
-        listeners = [try NWListener(using: loopback), try NWListener(using: tunnel, on: NWEndpoint.Port(rawValue: port)!)]
+        listeners = [try NWListener(using: loopback)]
+            + (tunnels ? [try NWListener(using: tunnel, on: NWEndpoint.Port(rawValue: port)!)] : [])
         self.token = token
         self.pump = pump
         self.hello = hello
@@ -83,8 +85,16 @@ final class Server {
 
     private func accept(_ c: NWConnection) {
         let session = Session(connection: c)
+        c.stateUpdateHandler = { [weak self] state in
+            guard case .ready = state else { return }
+            c.stateUpdateHandler = nil
+            guard let path = c.currentPath, path.usesInterfaceType(.loopback) || path.usesInterfaceType(.other) else {
+                c.cancel()
+                return
+            }
+            self?.receive(session)
+        }
         c.start(queue: queue)
-        receive(session)
     }
 
     private final class Session {

@@ -48,6 +48,11 @@ which is read and never written. An iPhone's pairing is made on its cable, as on
 each start the phone proves itself with the key it gave at pairing, so something else on the network that answers as it
 is turned away. All of it is encrypted on the network. Android's is adb's own, kept by adb.
 
+An iPhone's runner keeps to the phone's loopback unless the phone is paired so. A paired phone's runner takes a tunnel too,
+with the same token, and as no listener could be kept to a tunnel alone its port stands open on the phone's network while
+it runs: a connection is read only when it came by the loopback or an interface of a tunnel's kind, and one by the phone's
+Wi-Fi is closed with nothing read from it.
+
 ## `--http`
 
 `appdyno mcp --http 127.0.0.1:PORT` serves the same tools over MCP's Streamable HTTP. It binds only to this Mac's

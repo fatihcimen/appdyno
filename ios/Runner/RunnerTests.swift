@@ -36,7 +36,7 @@ final class RunnerTests: XCTestCase {
         // XCUI must be asked on the main thread; hello is answered on the network queue from this copy
         let lock = NSLock()
         var info = Self.hello(env)
-        let server = try Server(port: port, token: token, pump: pump, hello: { lock.lock(); defer { lock.unlock() }; return info }) { job in
+        let server = try Server(port: port, token: token, tunnels: env["APPDYNO_TUNNELS"] == "1", pump: pump, hello: { lock.lock(); defer { lock.unlock() }; return info }) { job in
             let reply = try Self.handle(job, device, pump)
             if job.method == "orientation.set" {
                 let fresh = Self.hello(env)

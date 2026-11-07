@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Socket } from 'node:net';
@@ -145,6 +145,21 @@ describe('a start that cannot come', () => {
     });
     expect(Date.now() - started).toBeLessThan(4_000);
     expect(stopped).toHaveBeenCalledWith(expect.any(Number), 'SIGTERM');
+  });
+
+  it.each([
+    ['takes a tunnel on a phone paired for Wi-Fi', true, '1'],
+    ['stays on the loopback on any other', false, 'undefined'],
+  ])('%s', async (_, tunnels, told) => {
+    const heard = join(state, 'heard');
+    writeFileSync(
+      join(state, 'xcodebuild'),
+      `#!${process.execPath}\nrequire('node:fs').writeFileSync(${JSON.stringify(heard)}, String(process.env.TEST_RUNNER_APPDYNO_TUNNELS));\nsetTimeout(() => {}, 30000);\n`,
+    );
+    const runner = new IosRunnerLauncher(UDID, { ...through(2), tunnels: () => tunnels });
+    const { rpc } = await runner.connect();
+    await vi.waitFor(() => expect(readFileSync(heard, 'utf8')).toBe(told), { timeout: 5_000 });
+    await runner.stop(rpc);
   });
 
   it('is waited for no longer than one, with who holds it said', async () => {

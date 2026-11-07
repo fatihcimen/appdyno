@@ -28,6 +28,7 @@ import { signedRunner, type PhoneSigning, findPhoneSigning, phoneXctestrun } fro
 import { assertBundle } from './simctl.js';
 import { IosPhonePerf } from './phone-perf.js';
 import { connectPort, listDevices } from './usbmux.js';
+import { pairedPhones } from './wifi-paired.js';
 import { Devicectl } from './devicectl.js';
 
 /** The runner built for phones (unsigned; signed for the profile at first use): built once when missing. */
@@ -91,6 +92,7 @@ export function phoneTransport(
       (await wifiOnly(udid))
         ? (await loadPhoneStream())!.portOnWifi(udid, port)
         : connectPort(udid, port),
+    tunnels: () => pairedPhones().includes(udid),
   };
 }
 

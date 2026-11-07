@@ -1,5 +1,6 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { connect } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -13,7 +14,7 @@ import { untilWithin } from './until.js';
 /**
  * A mirror on our own iPhone (APPDYNO_IPHONE_UDID; never a default), through what is built: the stream's thread runs only
  * from built files, so build first. Each touch reads the screen first: a phone left alone may lock, and a blind flick on
- * its home screen opens Spotlight. Headless, unless APPDYNO_MIRROR_WINDOW=1 asks for the one real window; by the network at APPDYNO_MIRROR_WIFI=1.
+ * its home screen opens Spotlight. Headless, unless APPDYNO_MIRROR_WINDOW=1 asks for the one real window; by the network at APPDYNO_MIRROR_WIFI=1. APPDYNO_IPHONE_ADDRESS is its address on the Wi-Fi of a phone paired for that.
  */
 const udid = process.env.APPDYNO_IPHONE_UDID;
 const FIXTURE = 'dev.appdyno.fixture';
@@ -346,6 +347,19 @@ describe.runIf(udid)('mirror on an iPhone', () => {
       expect(data[0]).toBe(format === 'png' ? 0x89 : 0xff);
     }
   }, 60_000);
+
+  // a listener cannot be kept to a tunnel, so this is what keeps a runner off the phone's own network
+  it.runIf(process.env.APPDYNO_IPHONE_ADDRESS)(
+    'a runner answers nothing on the phone network, its own token included',
+    async () => {
+      const file = join(built.stateDir(), `ios-${udid}.json`);
+      const { port, token } = JSON.parse(readFileSync(file, 'utf8'));
+      const socket = connect({ host: process.env.APPDYNO_IPHONE_ADDRESS, port });
+      await expect(built.greet(socket, undefined, 'runner', token, 5_000)).rejects.toThrow();
+      socket.destroy();
+    },
+    20_000,
+  );
 
   it('a viewer killed comes back, with a new key for its picture', async () => {
     const pid = viewerProcess!.pid!;

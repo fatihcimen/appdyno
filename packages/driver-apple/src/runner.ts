@@ -68,6 +68,8 @@ export type RunnerTransport = {
   build(): Promise<{ xctestrun: string; sha256: string }>;
   port(): Promise<number>;
   open(port: number): Promise<{ socket: Socket; rest?: Buffer }>;
+  /** Whether a runner must take a tunnel too: else it is on the device's loopback and nowhere else. */
+  tunnels?(): boolean;
 };
 
 /** A simulator: the runner as built, a free port of the Mac's loopback (the simulator shares it). */
@@ -206,6 +208,7 @@ export class IosRunnerLauncher {
           ...xcodeEnv(),
           TEST_RUNNER_APPDYNO_PORT: String(port),
           TEST_RUNNER_APPDYNO_TOKEN: token,
+          ...(this.transport.tunnels?.() && { TEST_RUNNER_APPDYNO_TUNNELS: '1' }),
           ...(target && { TEST_RUNNER_APPDYNO_TARGET: target }),
           // APPDYNO_FAST_TAP=0: taps through XCUI instead of XCTest's event synthesizer (the runner's EventShim)
           ...(process.env.APPDYNO_FAST_TAP && {
