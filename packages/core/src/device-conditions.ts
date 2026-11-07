@@ -73,7 +73,8 @@ export interface DeviceSettings {
   /** Before a condition is written down and changed: whatever else holds it lets go, so that the old value read is the user's. */
   willChange?(name: SettingName): Promise<void>;
   get(name: SettingName, app?: string): Promise<string>;
-  set(name: SettingName, value: string, app?: string): Promise<void>;
+  /** What the answer should add, where the change is less than its name says. */
+  set(name: SettingName, value: string, app?: string): Promise<string | void>;
 }
 
 /** `enroll`: a fingerprint or a face is known to the device; the others answer a request for one. */

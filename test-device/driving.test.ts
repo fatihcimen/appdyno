@@ -372,7 +372,10 @@ describe.skipIf(!android)('driving on Android', () => {
     ok(await h.call('device_setting', { name: 'locale', value: 'tr-TR' }));
     expect(await get(`cmd locale get-app-locales ${APP}`)).toContain('tr-TR');
     const slow = await h.call('device_setting', { name: 'network', value: 'slow' });
-    if (android!.startsWith('emulator-')) ok(slow);
+    // a phone from Android 13 caps its downloads
+    const shapes =
+      android!.startsWith('emulator-') || Number(await get('getprop ro.build.version.sdk')) >= 33;
+    if (shapes) ok(slow);
     else expect(slow.data.code).toBe('UNSUPPORTED');
     const restored = ok(await h.call('device_setting', { name: 'restore' }));
     expect(restored.text).toContain('dark_mode');
@@ -383,6 +386,7 @@ describe.skipIf(!android)('driving on Android', () => {
     );
     expect(await get('settings get global animator_duration_scale')).toBe(anim);
     expect(await get(`cmd locale get-app-locales ${APP}`)).not.toContain('tr-TR');
+    expect(await get('settings get global ingress_rate_limit_bytes_per_second')).toBe('null');
     expect(ok(await h.call('device_setting', { name: 'restore' })).text).toContain('nothing');
   });
 

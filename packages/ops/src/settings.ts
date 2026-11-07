@@ -52,13 +52,13 @@ const forget = (s: Session, name: string) =>
     return Object.keys(rest).length > 0 ? rest : undefined;
   });
 
-/** Sets a condition, the old value written down first so a crash cannot lose it. */
+/** Sets a condition, the old value written down first so a crash cannot lose it; what the answer should add. */
 export async function setCondition(s: Session, name: SettingName, value: string, app?: string) {
   const settings = s.device.settings;
-  await s.conditions.run(async () => {
+  return s.conditions.run(async () => {
     const first = await writeDown(s, settings, name, app);
     try {
-      await settings.set(name, value, app);
+      return await settings.set(name, value, app);
     } catch (e) {
       // nothing changed, so nothing to put back
       if (first) forget(s, name);
@@ -171,7 +171,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
           // setting one up may leave the app, as Settings' enrolment on an emulator does
           const also = await events.biometric(
             answer,
-            policy.allowHome ? (n, v) => setCondition(s, n, v) : undefined,
+            policy.allowHome ? async (n, v) => void (await setCondition(s, n, v)) : undefined,
           );
           const t = [`biometric: ${value}`, also].filter(Boolean).join('; ');
           return reply(t, { done: t });
@@ -213,9 +213,9 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
           const t = `${name}: ${now}`;
           return reply(clean(t), { done: clean(t), value: now });
         }
-        await setCondition(s, name, value, pkg);
+        const also = await setCondition(s, name, value, pkg);
         s.acted();
-        const t = `${name}: ${value}`;
+        const t = [`${name}: ${value}`, also].filter(Boolean).join('; ');
         return reply(t, { done: t, value, changed: { [name]: value } });
       },
     }),

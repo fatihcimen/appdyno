@@ -1,4 +1,6 @@
-import { execFileSync } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
+import { createServer, type AddressInfo } from 'node:net';
+import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, appleProvider } from './workspace.js';
 import { opsOn, type Call } from './helpers.js';
@@ -158,6 +160,40 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
       'default (now open)',
       'Optional.empty',
     ]);
+  });
+
+  it('caps what the device downloads from API 33, and restore lifts the cap', async (t) => {
+    if (Number(adb('getprop', 'ro.build.version.sdk')) < 33) t.skip();
+    // a megabyte to each connection, from this Mac, which an emulator reaches at 10.0.2.2
+    const server = createServer((c) => c.end(Buffer.alloc(1_000_000)));
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+    const { port } = server.address() as AddressInfo;
+    const download = async () => {
+      const start = Date.now();
+      const { stdout } = await promisify(execFile)('adb', [
+        '-s',
+        ANDROID!,
+        'shell',
+        `nc 10.0.2.2 ${port} | wc -c`,
+      ]);
+      expect(stdout.trim()).toBe('1000000');
+      return Date.now() - start;
+    };
+    try {
+      const full = await download();
+      const capped = await set(call, 'network', '100000');
+      expect(capped.text).toBe(
+        'network: 100000; a download cap alone: no delay, and uploads go at full speed, at 100 kB/s',
+      );
+      const slow = await download();
+      expect(slow).toBeGreaterThan(Math.max(5_000, full * 4));
+      expect((await call('device_setting', { name: 'restore' })).text).toContain('network: full');
+      expect(adb('settings', 'get', 'global', 'ingress_rate_limit_bytes_per_second')).toBe('null');
+      expect(await download()).toBeLessThan(slow / 4);
+      console.log(`a megabyte: ${full} ms, capped ${slow} ms`);
+    } finally {
+      server.close();
+    }
   });
 
   it('says Android has no keychain', async () => {

@@ -3,6 +3,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { type Adb, shq } from './adb.js';
 import { AndroidFold } from './fold.js';
 import { AndroidLocale } from './locale.js';
+import { AndroidShaping } from './shaping.js';
 
 const ANIMATION_SCALES = [
   'window_animation_scale',
@@ -68,11 +69,13 @@ export class AndroidSettings implements DeviceSettings {
   ) {
     this.locale = new AndroidLocale(this.sh, deviceLocales);
     this.fold = new AndroidFold(this.sh);
+    this.shaping = new AndroidShaping(serial, this.sh, this.emu);
   }
 
   private sh = (c: string) => shellOf(this.adb, this.serial)(c);
   private readonly locale: AndroidLocale;
   private readonly fold: AndroidFold;
+  private readonly shaping: AndroidShaping;
 
   private emu = (what: string, ...words: string[]) =>
     emulatorConsole(this.adb, this.serial, what, words);
@@ -125,8 +128,7 @@ export class AndroidSettings implements DeviceSettings {
       case 'locale':
         return this.locale.get(app);
       case 'network':
-        await this.emu('network shaping', 'network', 'status');
-        return 'full';
+        return this.shaping.get();
       case 'battery': {
         const out = await this.sh('dumpsys battery');
         const level = /^\s*level: (\d+)/m.exec(out)?.[1] ?? '?';
@@ -269,21 +271,8 @@ export class AndroidSettings implements DeviceSettings {
       case 'locale':
         await this.locale.set(value, app);
         return;
-      case 'network': {
-        if (!/^\w+$/.test(value))
-          throw new DeviceError(
-            'INVALID_ARGUMENT',
-            `network: slow, full or a speed name, not ${value}`,
-          );
-        await this.emu('network shaping', 'network', 'speed', value === 'slow' ? 'edge' : value);
-        await this.emu(
-          'network shaping',
-          'network',
-          'delay',
-          ...(value === 'slow' ? ['40', '100'] : ['none']),
-        );
-        return;
-      }
+      case 'network':
+        return this.shaping.set(value);
       case 'proxy':
         await this.setProxy(value);
         return;

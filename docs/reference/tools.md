@@ -58,7 +58,7 @@ What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 | dark mode, text, motion      | yes                                  | yes                          | `devicectl`                    |
 | animations                   | yes                                  | no: use `reduce_motion`      | no                             |
 | locale                       | per app, API 33+; whole device below | whole simulator              | no                             |
-| slow network                 | emulator only                        | no                           | no                             |
+| slow network                 | emulator; a phone's downloads, 13+   | no                           | no                             |
 | push                         | a shell notification                 | to the app                   | no: needs Apple credentials    |
 | biometrics                   | an emulator's fingerprint            | yes                          | no: `devicectl` simulates none |
 | airplane, Wi-Fi, mobile data | yes, read back                       | no: it has the Mac's network | no                             |
@@ -77,6 +77,10 @@ A radio is done when the device reads as asked, within 10 s: Wi-Fi by the state 
 On an iPhone `devicectl device simulate biometrics` answers `Device does not support any biometric simulation, nothing to do` and exits 0, so it is not used: an answer would say done for a touch that never happened. That is one iPhone with no face enrolled, and no phone has been seen to take one.
 
 `keychain` `reset` empties a simulator's keychain, and says how many items apps held, from the store's own rows, which also prove it empty after. The system's own rows stay and are not counted. It is one-shot: nothing brings them back.
+
+## A slow network
+
+`network` `slow` on an emulator goes by its console: an EDGE speed both ways and a delay of 40 to 100 ms. A phone from Android 13 has only Android's own cap, `ingress_rate_limit_bytes_per_second`: `slow` caps what it downloads at 30 kB/s, an EDGE network's download, and a number caps it at that many bytes a second on a phone or an emulator. It adds no delay and leaves uploads at full speed, and the answer says so. The cap is a setting the device keeps, so the old one is written down and `restore` deletes it. On an API 34 emulator a megabyte from this Mac took 778 ms, 11.2 s under a cap of 100,000, and the cap was gone after `restore`. No phone has been run yet.
 
 ## A fold
 
