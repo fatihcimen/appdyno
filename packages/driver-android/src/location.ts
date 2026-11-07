@@ -1,5 +1,5 @@
 import { DeviceError } from '@appdyno/protocol';
-import { TIMEOUTS } from '@appdyno/core';
+import { processAlive, TIMEOUTS } from '@appdyno/core';
 import { shortFirstLine } from './adb.js';
 import { REMOTE_DIR } from './agent.js';
 
@@ -88,17 +88,6 @@ export function parseTestLocation(text: string): { pid?: number; providers: stri
       (e) => /^\w+(\/plain)?$/.test(e) && TEST_PROVIDERS.includes(e.split('/')[0]!),
     ),
   };
-}
-
-/** Whether a process of this Mac still runs (a host that set the location and has not gone). */
-export function processAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    // EPERM: it runs, as another user
-    return (e as NodeJS.ErrnoException).code === 'EPERM';
-  }
 }
 
 /**

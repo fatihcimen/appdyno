@@ -17,6 +17,7 @@ import {
   type Mirror,
   type MirrorOptions,
   type MirrorSource,
+  processAlive,
   type ViewerOrder,
 } from '@appdyno/core';
 import { GrpcMessages, grpcFrame, imageInfo, imageRequest } from './grpc-image.js';
@@ -32,15 +33,6 @@ export type GrpcEndpoint = { port: number; token?: string };
 
 /** Where a running emulator describes itself on a Mac. */
 const runningDir = () => join(homedir(), 'Library/Caches/TemporaryItems/avd/running');
-
-const processAlive = (pid: number) => {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-};
 
 /** The gRPC port of the emulator with this serial, as its own run file says; its token, if it wants one. */
 export function findGrpc(serial: string, dir = runningDir()): GrpcEndpoint | undefined {

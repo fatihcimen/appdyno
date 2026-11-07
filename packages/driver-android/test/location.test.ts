@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { spawnSync } from 'node:child_process';
 import {
   clearStaleTestLocation,
   clearTestLocation,
   locationScript,
   parseLocationRun,
   parseTestLocation,
-  processAlive,
   removableProviders,
 } from '../src/location.js';
 
@@ -22,11 +20,6 @@ describe('test location bookkeeping', () => {
       expect(parseTestLocation(other).providers.filter((p) => p === 'passive')).toEqual([]);
     expect(parseTestLocation('').pid).toBeUndefined();
     expect(parseTestLocation('gps network').pid).toBeUndefined();
-  });
-
-  it('tells a running host process from one that is gone', () => {
-    expect(processAlive(process.pid)).toBe(true);
-    expect(processAlive(spawnSync('true').pid!)).toBe(false);
   });
 
   const block = (p: string, tags?: string) =>

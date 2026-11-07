@@ -8,6 +8,7 @@ import {
   heldElsewhere,
   isAlive,
   isThisProcess,
+  processAlive,
   ownerGone,
   ownerIn,
   thisOwner,
@@ -75,6 +76,11 @@ function otherProcess() {
 }
 
 describe('who owns a file', () => {
+  it('tells a running process from one that is gone, by its pid alone', () => {
+    expect(processAlive(process.pid)).toBe(true);
+    expect(processAlive(spawnSync('true').pid!)).toBe(false);
+  });
+
   it('knows this process, a live one and a dead one', async () => {
     const me = thisOwner('here');
     expect(me.pid).toBe(process.pid);
