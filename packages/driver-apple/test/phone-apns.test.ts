@@ -96,9 +96,11 @@ describe("an iPhone's push types", () => {
   it("are refused, saying how, until a person sets APNs up; then go by APNs, but for a tap and Android's styles", async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-phone-push-')));
     const events = new PhoneEvents({ udid: 'U' } as Devicectl, new Map());
-    const said = () =>
-      Object.fromEntries(events.pushRoutes().map((r) => [r.type, 'route' in r ? r.route : r.why]));
-    expect(new Set(Object.values(said()))).toEqual(
+    const said = async () =>
+      Object.fromEntries(
+        (await events.pushRoutes()).map((r) => [r.type, 'route' in r ? r.route : r.why]),
+      );
+    expect(new Set(Object.values(await said()))).toEqual(
       new Set([
         expect.stringContaining('once a person sets APNs up with `appdyno push setup apns`'),
       ]),
@@ -110,7 +112,7 @@ describe("an iPhone's push types", () => {
       teamId: 'DEF123GHIJ',
       production: true,
     });
-    const routes = said();
+    const routes = await said();
     expect(routes.alert).toMatch(
       /^APNs, its sandbox, or production for a distribution build, by the device token/,
     );

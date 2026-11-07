@@ -282,7 +282,7 @@ export class PhoneEvents implements DeviceEvents {
     this.apns = new ApnsPush(this.target);
   }
 
-  pushRoutes(): PushRoute[] {
+  async pushRoutes(): Promise<PushRoute[]> {
     const byApns = this.apns.routes();
     return PUSH_TYPES.map(
       (type) =>
@@ -299,7 +299,7 @@ export class PhoneEvents implements DeviceEvents {
   }
 
   async push(app: string, push: Push): Promise<string> {
-    const route = this.pushRoutes().find((r) => r.type === push.type);
+    const route = (await this.pushRoutes()).find((r) => r.type === push.type);
     if (!route || 'why' in route) throw new DeviceError('UNSUPPORTED', route?.why ?? push.type);
     return this.apns.push(app, push);
   }

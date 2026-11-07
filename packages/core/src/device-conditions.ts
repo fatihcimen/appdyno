@@ -155,8 +155,8 @@ export type BiometricAnswer = 'match' | 'nomatch' | 'enroll';
 
 /** What happens to a device once: a condition holds and is put back, an event is over when it is said. */
 export interface DeviceEvents {
-  /** Each type, by how this device takes it. */
-  pushRoutes(): PushRoute[];
+  /** Each type, by how this device takes it, for `app` where it is named: an app's build may take another route. */
+  pushRoutes(app?: string): Promise<PushRoute[]>;
   /** Sends one to the app, by its type's route; what reached the app's code, for the answer. */
   push(app: string, push: Push): Promise<string>;
   /** A token a person typed in a window, for pushes to the app by Apple or Google: never an MCP client's. */

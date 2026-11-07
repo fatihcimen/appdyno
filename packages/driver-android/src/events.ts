@@ -47,7 +47,7 @@ export class AndroidEvents implements DeviceEvents {
     await this.emu('SMS', 'sms', 'send', from, text.replace(/\s+/g, ' '));
   }
 
-  pushRoutes() {
+  async pushRoutes() {
     const byFcm = this.fcm.routes();
     return ANDROID_PUSHES.map((r) => byFcm.find((f) => f.type === r.type) ?? r);
   }

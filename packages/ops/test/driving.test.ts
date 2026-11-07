@@ -1313,11 +1313,16 @@ describe('device conditions', () => {
       if (this.failing) throw new DeviceError('INTERNAL', 'broke');
       this.values[name] = value;
     };
-    pushRoutes = (): PushRoute[] => [
-      { type: 'alert', route: 'by hand', fields: ['title', 'data'], template: '{"aps":{}}' },
-      { type: 'tapped', why: 'no hand' },
-      { type: 'widgets', route: 'by APNs', fields: [], template: '{"aps":{}}' },
-    ];
+    /** The app each listing of routes was for. */
+    routesFor: (string | undefined)[] = [];
+    pushRoutes = async (app?: string): Promise<PushRoute[]> => (
+      this.routesFor.push(app),
+      [
+        { type: 'alert', route: 'by hand', fields: ['title', 'data'], template: '{"aps":{}}' },
+        { type: 'tapped', why: 'no hand' },
+        { type: 'widgets', route: 'by APNs', fields: [], template: '{"aps":{}}' },
+      ]
+    );
     push = async (app: string, push: Push) => {
       this.pushed.push([app, push]);
       return `pushed to ${app}`;
@@ -1435,6 +1440,9 @@ describe('device conditions', () => {
     expect(net.data.code).toBe('UNSUPPORTED');
     expect(net.text).toContain('a phone has no network shaping');
     expect((await call('push')).text).toBe('alert: by hand\ntapped: no: no hand\nwidgets: by APNs');
+    await call('push', { app: 'dev.other' });
+    // the session's app, then the one named: a route may depend on the app's build
+    expect(settings.routesFor).toEqual(['dev.app', 'dev.other']);
     const pushed = await call('push', {
       type: 'alert',
       title: 'T',
@@ -1462,6 +1470,14 @@ describe('device conditions', () => {
     const keychain = await call('device_setting', { name: 'keychain', value: 'reset' });
     expect(keychain.text).toBe('the keychain is empty: it held 3 items');
     expect((await call('device_setting', { name: 'keychain' })).text).toMatch(/needs value: reset/);
+  });
+
+  it("reads no app's routes off the allow list", async () => {
+    const settings = new Settings();
+    const d = Object.assign(new FakeDevice(), { settings, events: settings });
+    const { call } = await connect(d, { policy: { apps: ['dev.app'] } });
+    expect((await call('push', { app: 'dev.other' })).data.code).toBe('POLICY_DENIED');
+    expect(settings.routesFor).toEqual([]);
   });
 });
 

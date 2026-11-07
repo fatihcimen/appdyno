@@ -70,7 +70,10 @@ export function pushOps(ctx: ServerContext, { afterChange }: Answers) {
       annotations: ACT,
       run: async ({ app, type, title, body, image, data, payload, read }) => {
         const s = await ctx.session();
-        const routes = s.device.events.pushRoutes();
+        // through the allow list for a listing too: the routes are read from the app's build
+        const named = app ?? s.appId;
+        const pkg = named ? checkApp(ctx.policy, named) : undefined;
+        const routes = await s.device.events.pushRoutes(pkg);
         if (!type) {
           const t = routes
             .map((r) => `${r.type}: ${'route' in r ? r.route : `no: ${r.why}`}`)
@@ -95,7 +98,6 @@ export function pushOps(ctx: ServerContext, { afterChange }: Answers) {
             'payload replaces the fields: give one or the other',
             'INVALID_ARGUMENT',
           );
-        const pkg = checkApp(ctx.policy, app ?? s.appId ?? '');
         if (!pkg)
           throw new ToolError('give app (or select one with use_device)', 'INVALID_ARGUMENT');
         const said = await s.device.events.push(pkg, {

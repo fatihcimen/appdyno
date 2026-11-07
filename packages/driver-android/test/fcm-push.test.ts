@@ -175,16 +175,20 @@ describe("an Android device's pushes, by FCM once it is set up", () => {
       },
     };
     const events = new AndroidEvents(adb as never, 'emulator-5554');
-    const route = (type: string) => events.pushRoutes().find((r) => r.type === type)!;
-    expect(route('background')).toMatchObject({ why: expect.stringContaining("Google's servers") });
+    const route = async (type: string) => (await events.pushRoutes()).find((r) => r.type === type)!;
+    expect(await route('background')).toMatchObject({
+      why: expect.stringContaining("Google's servers"),
+    });
     keepFcmKey(ACCOUNT);
-    expect(route('background')).toMatchObject({
+    expect(await route('background')).toMatchObject({
       route: expect.stringMatching(/^FCM, data alone/),
       tokens: ['device'],
     });
-    expect(route('inbox')).toMatchObject({ route: expect.stringContaining('drawn by the shell') });
+    expect(await route('inbox')).toMatchObject({
+      route: expect.stringContaining('drawn by the shell'),
+    });
     // a person types a token only for what goes by FCM
-    expect('tokens' in route('inbox')).toBe(false);
+    expect('tokens' in (await route('inbox'))).toBe(false);
     // nothing leaves this Mac: fetch is this test's
     const post = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ name: 'n' }));
     expect(await events.push('dev.app', { type: 'background', data: { a: 'b' } })).toContain(

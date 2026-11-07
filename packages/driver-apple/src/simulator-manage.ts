@@ -321,7 +321,7 @@ export class SimulatorEvents implements DeviceEvents {
 
   private spawn = (...words: string[]) => this.simctl.exec(['spawn', this.udid, ...words]);
 
-  pushRoutes() {
+  async pushRoutes() {
     return simulatorRoutes(this.apns.routes());
   }
 
