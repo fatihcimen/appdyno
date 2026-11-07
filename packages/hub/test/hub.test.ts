@@ -101,6 +101,38 @@ describe('the hub', () => {
     ]);
   });
 
+  it('asks each list at once, and keeps one order whichever answers first', async () => {
+    const answer = new Map<string, () => void>();
+    const held =
+      <T>(what: string, value: T) =>
+      () =>
+        new Promise<T>((done) => answer.set(what, () => done(value)));
+    const virtual = (kind: 'simulator' | 'emulator', id: string): VirtualDevices => ({
+      kind,
+      platform: kind === 'emulator' ? 'android' : 'ios',
+      startable: held(kind, [{ id, name: id, state: 'stopped' }]),
+      boot: async (booted) => booted,
+      shutdown: async () => undefined,
+    });
+    const provider = (kind: 'simulator' | 'emulator', id: string): DeviceProvider => ({
+      list: held(`${kind} list`, kind === 'emulator' ? [phone] : []),
+      handles: () => true,
+      open: () => ({ hardware: async () => undefined }) as unknown as Device,
+      virtual: virtual(kind, id),
+    });
+    const ctx = new ServerContext(DEFAULT_POLICY, [
+      provider('emulator', 'Pixel'),
+      provider('simulator', 'iPhone'),
+    ]);
+    const rows = hubDevices(ctx, async () => undefined);
+    await vi.waitFor(() => expect(answer.size).toBe(4));
+    for (const what of [...answer.keys()].reverse()) {
+      answer.get(what)!();
+      await new Promise((settled) => setImmediate(settled));
+    }
+    expect((await rows).map((d) => d.id)).toEqual(['R58M', 'Pixel', 'iPhone']);
+  });
+
   it('does not list a running virtual device twice', async () => {
     const ctx = context(new Simulated(), [
       { serial: 'B', state: 'booted', ready: true, model: '' },

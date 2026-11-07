@@ -20,6 +20,26 @@ describe('the Apple provider', () => {
     ]);
   });
 
+  it('asks for simulators and phones at once, and lists them in one order whichever answers first', async () => {
+    const simulator = { udid, name: 'appdyno-iphone', state: 'Booted', runtime: 'iOS-27-0' };
+    for (const first of ['simulators', 'phones']) {
+      const answer = new Map<string, () => void>();
+      const held =
+        <T>(what: string, value: T) =>
+        () =>
+          new Promise<T>((done) => answer.set(what, () => done(value)));
+      const listing = appleProvider({
+        simulators: held('simulators', [simulator]),
+        phones: held('phones', [phone]),
+      }).list();
+      expect([...answer.keys()].sort()).toEqual(['phones', 'simulators']);
+      answer.get(first)!();
+      await new Promise((settled) => setImmediate(settled));
+      for (const [, done] of answer) done();
+      expect((await listing).map((d) => d.serial)).toEqual([udid, phone]);
+    }
+  });
+
   it('a phone paired for Wi-Fi stands in the list by the network while it has no cable', async () => {
     const paired = () => [phone];
     const away = appleProvider({ simulators: async () => [], phones: async () => [], paired });

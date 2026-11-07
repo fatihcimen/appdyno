@@ -144,9 +144,10 @@ export function appleProvider(
 ): DeviceProvider {
   return {
     list: async () => {
-      const phones = await connected.phones();
+      // each is asked of its own tool, at once
+      const [simulators, phones] = await Promise.all([connected.simulators(), connected.phones()]);
       return [
-        ...(await connected.simulators()).map((d) => ({
+        ...simulators.map((d) => ({
           serial: d.udid,
           state: 'booted',
           ready: true,

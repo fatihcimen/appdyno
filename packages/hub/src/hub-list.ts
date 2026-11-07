@@ -29,25 +29,26 @@ export async function hubDevices(ctx: ServerContext, hardware: Hardware): Promis
       .filter((m) => m.pid !== process.pid)
       .map((m) => m.serial),
   );
-  const virtual: HubDevice[] = [];
-  for (const { virtual: driver } of ctx.providers) {
-    const found = await driver?.startable().catch(() => [] as Startable[]);
-    for (const d of found ?? [])
-      virtual.push({
-        id: d.id,
-        ...(d.serial && { serial: d.serial }),
-        name: d.name,
-        kind: driver!.kind,
-        state: d.state,
-        mirrored: d.serial !== undefined && mirrored.has(d.serial),
-        platform: driver!.platform,
-        ...(d.model && { model: d.model }),
-        detail: d.model ?? '',
-      });
-  }
+  // each list is a tool of its own, asked at once
+  const [startable, listed] = await Promise.all([
+    Promise.all(ctx.providers.map((p) => p.virtual?.startable().catch(() => [] as Startable[]))),
+    ctx.devices(),
+  ]);
+  const virtual: HubDevice[] = ctx.providers.flatMap(({ virtual: driver }, i) =>
+    (startable[i] ?? []).map((d) => ({
+      id: d.id,
+      ...(d.serial && { serial: d.serial }),
+      name: d.name,
+      kind: driver!.kind,
+      state: d.state,
+      mirrored: d.serial !== undefined && mirrored.has(d.serial),
+      platform: driver!.platform,
+      ...(d.model && { model: d.model }),
+      detail: d.model ?? '',
+    })),
+  );
   const seen = new Set(virtual.map((d) => d.serial ?? d.id));
   const phones: HubDevice[] = [];
-  const listed = await ctx.devices();
   // a phone whose Wi-Fi went and came back may be found twice by the network, under its name and the same with "(2)"
   const mine = listed.filter((o) => ctx.allowed(o.serial));
   const byNetwork = (phone: string) =>
