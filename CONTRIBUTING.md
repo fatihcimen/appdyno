@@ -4,10 +4,10 @@ Everyone here follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Setup
 
-You need macOS, Node 22 and pnpm 10.
+You need macOS, Node 22 and pnpm 12.
 
 ```sh
-mise install        # Node 22, pnpm 10, JDK 21 (see .mise.toml)
+mise install        # Node 22, pnpm 12, JDK 21 (see .mise.toml)
 pnpm install
 pnpm run ci         # lint, types, tests, build
 ```

@@ -29,7 +29,7 @@ const IN_THE_APP = /^(.+\.app)\/Contents\/Resources\/app$/;
 /** Opened where it was downloaded, or from its disk image: both places are gone by the next open. */
 const PASSING_THROUGH = /\/AppTranslocation\/|^\/Volumes\/Appdyno/;
 
-/** Where pnpm 10 and pnpm 11 really keep a global package. */
+/** Where pnpm 10, and pnpm 11 and 12, really keep a global package. */
 const PNPM_GLOBAL = /\/global\/\d+\/\.pnpm\/|\/store\/v\d+\/links\//;
 const ONE_OFF = /\/_npx\//;
 /** These hold a `lib/node_modules` too, but the prefix is another manager's to change. */

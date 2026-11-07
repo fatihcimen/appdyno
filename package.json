@@ -2,7 +2,7 @@
   "name": "appdyno-workspace",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.34.0",
+  "packageManager": "pnpm@12.18.0",
   "engines": {
     "node": ">=22"
   },
