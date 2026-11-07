@@ -283,7 +283,7 @@ A dot shows where the pointer touches, and two for a pinch. With no frame, a dra
 A window never takes the keyboard by itself: not when it opens, reconnects or restarts, and not when an agent opens it.
 A person's click gives it, or `--focus` at the first opening. A key that reaches a window without the keyboard goes
 nowhere. A window an agent opened also holds all input until a person's click, and that click goes no further. What
-is typed reaches the device and nothing else: no log, the Activity pane or `report` holds it.
+is typed reaches the device and nothing else: no log, the Activity pane or `report` holds it. On an iPhone that takes a runner told so: XCTest writes a line for each key, a secure field's as well, and each field's value it reads, into the result bundle `xcodebuild` keeps, and its own typing writes the text into `xcodebuild`'s output. The runner turns those lines off, types by XCTest's event synthesizer, and `xcodebuild` keeps one folder for each device, `ios-<udid>.kept` in the state folder, replaced at each start and gone at a stop. A device test searches it.
 
 Being the key window is not enough. The app in front hands activation to what it starts, so a terminal a person is typing in could give a new window their keys. A viewer therefore cannot be activated until it has launched, and one kept behind cannot be at all: the system calls it a background process. And a device hears no key, typed text, paste or device shortcut until a person's mouse has come down in that window, which holds until the window loses the keyboard. Coming back by ⌘Tab needs a click before keys reach the device; a menu chosen with the mouse needs none.
 

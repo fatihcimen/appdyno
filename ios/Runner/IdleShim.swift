@@ -7,6 +7,27 @@ import XCTest
 /// does, so each call waits for a long timeout. The settle decides about quiet itself, so these waits
 /// are turned off. Each method is patched only when it exists with the expected type; otherwise the
 /// public behaviour stays (slower, still correct).
+enum LogShim {
+    final class Nothing: NSObject {
+        @objc func logDebugMessage(_ message: String) {}
+    }
+
+    private static let nothing = Nothing()
+    private typealias SetLogger = @convention(c) (AnyObject) -> Void
+
+    /**
+     * XCTest hands xcodebuild a line for all it does, and they stay in the result bundle: each key, a secure field's as
+     * well, and the value of each field it reads. A person's words have no place in a file, and nothing here reads them.
+     */
+    static func install() {
+        let anywhere = UnsafeMutableRawPointer(bitPattern: -2)
+        for name in ["XCSetDebugLogger", "XCTASSetDebugLogger"] {
+            guard let set = dlsym(anywhere, name) else { continue }
+            unsafeBitCast(set, to: SetLogger.self)(nothing)
+        }
+    }
+}
+
 enum IdleShim {
     /// Which patches took effect, e.g. for the hello.
     private(set) static var applied: [String] = []

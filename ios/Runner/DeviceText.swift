@@ -87,7 +87,8 @@ extension Device {
                 // a paste that went in half: what it added is taken back
                 field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: now.count - before.count))
             }
-            if field.exists { field.typeText(text) }
+            // shortcut: with the synthesizer gone XCUI's typing writes plain text into the test's log and result bundle
+            if field.exists, !EventShim.type(text, orientation: Device.interfaceOrientation()) { field.typeText(text) }
             verified = check()
             // the keys are sent, not yet handled, and a field that formats what is typed takes a moment more
             let echoEnd = Date().addingTimeInterval(Device.echoWaitS)

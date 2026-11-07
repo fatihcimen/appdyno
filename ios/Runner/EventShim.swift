@@ -108,7 +108,7 @@ enum EventShim {
         let record = imp(rawRecord, selInitRecord, InitRecord.self)(rawRecord, selInitRecord, "type" as NSString, orientation)
         let rawPath = pc.alloc() as AnyObject
         let path = imp(rawPath, selInitText, InitText.self)(rawPath, selInitText)
-        imp(path, selTypeText, TypeText.self)(path, selTypeText, text as NSString, 0, perSecond, false)
+        imp(path, selTypeText, TypeText.self)(path, selTypeText, text as NSString, 0, perSecond, true)
         imp(record, selAdd, AddPath.self)(record, selAdd, path)
         return synthesize(record, within: 5 + Double(text.count) / Double(max(1, perSecond)))
     }

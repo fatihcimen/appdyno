@@ -1,10 +1,11 @@
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { untilWithin } from './until.js';
 
 /**
  * What a person types in a window of our own iPhone (APPDYNO_IPHONE_UDID), through what is built: the letters given and
- * no others, into the field tapped and no other.
+ * no others, into the field tapped and no other, and in no file on this Mac.
  */
 const udid = process.env.APPDYNO_IPHONE_UDID;
 const FIXTURE = 'dev.appdyno.fixture';
@@ -15,6 +16,8 @@ const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** What a phone's own layout turns into something else, by key position: `-` went in as `*`, `quick` as `quıck`. */
 const HARD = ['-', 'i', 'ı', '@', '"', 'I', 'İ', 'ğ', 'ş', 'ç'];
+const WORD = 'zqwordofaperson';
+const SECRET = 'zqs3cr3t';
 
 type Element = { id?: string; label: string; x: number; y: number; flags?: string[] };
 
@@ -119,6 +122,36 @@ describe.runIf(udid)('letters in a window on an iPhone', () => {
     expect((await field('name_input')).label).toBe('Ada');
     expect((await field('password_input')).label).not.toContain('•');
   }, 60_000);
+
+  it('leave no word in what xcodebuild keeps', async () => {
+    await form();
+    await tap(await field('name_input'));
+    typed(WORD);
+    await until('the word', async () => (await field('name_input')).label === WORD);
+    await tap(await field('password_input'));
+    await device.typeText(SECRET, { settle: false });
+    await until('the secret', async () =>
+      (await field('password_input')).label.startsWith('••••••••'),
+    );
+    const name = await field('name_input');
+    await device.typeText(WORD, { at: { x: name.x, y: name.y }, replace: true, settle: false });
+    await device.read(FIXTURE);
+
+    const kept = join(built.stateDir(), `ios-${udid}.kept`);
+    const files = (readdirSync(kept, { recursive: true }) as string[])
+      .map((f) => join(kept, f))
+      .filter((f) => statSync(f).isFile());
+    // nothing found in nothing would say nothing: this is where these lines were
+    expect(files.some((f) => /Session-.*\.log$/.test(f))).toBe(true);
+    const log = join(built.stateDir(), `ios-${udid}.log`);
+    for (const file of [log, ...files]) {
+      const text = readFileSync(file).toString('latin1');
+      expect(text, file).not.toContain(WORD);
+      expect(text, file).not.toContain(SECRET);
+      expect(text, file).not.toContain('KeyEventComplete');
+      expect(text, file).not.toMatch(/value: \S/);
+    }
+  }, 90_000);
 
   it('kept one runner through all of this', async () => {
     expect((await device.open()).pid).toBe(runner);

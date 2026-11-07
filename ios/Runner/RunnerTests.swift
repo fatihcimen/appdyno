@@ -28,6 +28,7 @@ final class RunnerTests: XCTestCase {
         guard let port = env["APPDYNO_PORT"].flatMap(UInt16.init), let token = env["APPDYNO_TOKEN"], token.count >= 16 else {
             throw AgentError("INVALID_ARGUMENT", "APPDYNO_PORT and APPDYNO_TOKEN (16+ characters) are required")
         }
+        LogShim.install()
         if env["APPDYNO_IDLE_WAITS"] != "1" { IdleShim.install() }
         let device = Device()
         if let target = env["APPDYNO_TARGET"], !target.isEmpty { device.setTarget(target) }

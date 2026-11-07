@@ -106,6 +106,10 @@ export class IosRunnerLauncher {
   private get startPath() {
     return join(stateDir(), `ios-${this.udid}.starting`);
   }
+  /** What xcodebuild keeps of a session, replaced at each start: left to itself it keeps every one, in DerivedData. */
+  private get keptPath() {
+    return join(stateDir(), `ios-${this.udid}.kept`);
+  }
 
   /**
    * `beforeStart` runs only when a new runner must be started (e.g. to check the simulator is up). One host starts it and
@@ -161,6 +165,7 @@ export class IosRunnerLauncher {
     const state = await this.readState();
     if (state?.pid) await this.kill(state.pid);
     await rm(this.statePath, { force: true });
+    await rm(this.keptPath, { recursive: true, force: true });
   }
 
   /** The runner's product running one `measure()` test of `PerfMetricsTests` instead of serving. */
@@ -179,6 +184,7 @@ export class IosRunnerLauncher {
     const token = randomBytes(24).toString('hex');
     await mkdir(stateDir(), { recursive: true, mode: 0o700 });
     const out = openSync(this.logPath, 'w', 0o600);
+    await rm(this.keptPath, { recursive: true, force: true });
     const child = spawn(
       'xcodebuild',
       [
@@ -187,6 +193,10 @@ export class IosRunnerLauncher {
         build.xctestrun,
         '-destination',
         `id=${this.udid}`,
+        '-derivedDataPath',
+        this.keptPath,
+        '-resultBundlePath',
+        join(this.keptPath, 'session.xcresult'),
         `-only-testing:${RUNNER_TEST}`,
       ],
       {
