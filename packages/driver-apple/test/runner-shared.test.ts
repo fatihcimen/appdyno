@@ -13,7 +13,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Socket } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { deviceStateFile, startOf, thisOwner } from '@appdyno/core';
+import { deviceStateFile, processAlive, startOf, thisOwner } from '@appdyno/core';
 import { fakeAgentStream, HELLO, TOKEN } from '../../core/test/fake-agent.js';
 import { IosRunnerLauncher, simulatorTransport, type RunnerTransport } from '../src/runner.js';
 
@@ -235,6 +235,34 @@ setTimeout(() => {}, 30000);
     await runner.stop(rpc);
     const to = sent.mock.calls.filter(([p, s]) => p === pid && s !== 0).map(([, s]) => s);
     expect([to, asked]).toEqual([signals, stop !== 'kill']);
+  });
+
+  /** A runner served by a fake xcodebuild, on a device `down` says is shutting down or off, its connection then lost. */
+  const lost = async (down: boolean) => {
+    const udid = randomUUID().toUpperCase();
+    const runner = new IosRunnerLauncher(udid, {
+      ...through(2),
+      stop: 'kill',
+      down: async () => down,
+    });
+    const { rpc } = await runner.connect();
+    const { pid } = JSON.parse(readFileSync(join(state, `ios-${udid}.json`), 'utf8')) as {
+      pid: number;
+    };
+    rpc.close();
+    return { runner, pid };
+  };
+
+  it('ends the xcodebuild of a simulator shut down under its runner, as it would boot it again', async () => {
+    const { pid } = await lost(true);
+    await vi.waitFor(() => expect(processAlive(pid)).toBe(false));
+  });
+
+  it('leaves it serving where its device is up, as when a host lets its connection go', async () => {
+    const { runner, pid } = await lost(false);
+    await new Promise((r) => setTimeout(r, 300));
+    expect(processAlive(pid)).toBe(true);
+    await runner.stop();
   });
 
   it('is waited for no longer than one, with who holds it said', async () => {

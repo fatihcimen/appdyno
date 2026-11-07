@@ -22,7 +22,7 @@ import {
   type RpcClient,
 } from '@appdyno/core';
 import { runnerBuild } from './runner-build.js';
-import { assertUdid, xcodeEnv } from './simctl.js';
+import { assertUdid, Simctl, xcodeEnv } from './simctl.js';
 import { recordXctMetrics } from './trace.js';
 
 /** A first start installs the runner (on a phone, UI automation may wait for an approval): allow for it. */
@@ -83,6 +83,8 @@ export type RunnerTransport = {
    * told by SIGTERM, then SIGKILL, ENDS_MS apart.
    */
   stop?: 'kill';
+  /** Whether the device is shutting down or off. */
+  down?(udid: string): Promise<boolean>;
 };
 
 /** A simulator: the runner as built, a free port of the Mac's loopback (the simulator shares it). */
@@ -92,6 +94,7 @@ export const simulatorTransport: RunnerTransport = {
   // an xcodebuild that booted its simulator again, after a person shut it down under it, shuts it down as it ends by
   // itself or by SIGTERM: a kill leaves it as it is, and the runner ended within 3 s, 5 of 5
   stop: 'kill',
+  down: async (udid) => /^Shut/.test((await new Simctl().state(udid)) ?? ''),
   open: (port) =>
     new Promise((resolve, reject) => {
       const c = connect({ host: '127.0.0.1', port });
@@ -134,7 +137,21 @@ export class IosRunnerLauncher {
    * the others wait for that: a device serves one runner, and the state says where only once it answers, so two starting
    * at once take it from each other, and the one that lost hears nothing until its time is up.
    */
-  async connect(
+  async connect(target?: string, beforeStart?: () => Promise<void>) {
+    const agent = await this.reach(target, beforeStart);
+    agent.rpc.onClose(() => void this.endIfDown());
+    return agent;
+  }
+
+  /**
+   * A person who shut the simulator down under its runner wants it off: its xcodebuild booted it again 1 to 3 s later, to
+   * start the runner again, and shut it down once more about 30 s after.
+   */
+  private async endIfDown() {
+    if (await this.transport.down?.(this.udid).catch(() => false)) await this.killServing();
+  }
+
+  private async reach(
     target?: string,
     beforeStart?: () => Promise<void>,
   ): Promise<{ rpc: RpcClient; hello: Hello; started: boolean }> {
