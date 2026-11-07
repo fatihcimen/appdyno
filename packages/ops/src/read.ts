@@ -61,7 +61,7 @@ export function readOps(
       name: 'screen',
       title: 'Read screen',
       description:
-        'Read the screen: its elements from the accessibility tree (ref role "label" x,y flags; rows alike under one header, what a row holds left to find). A ref keeps naming its element when the screen changes.',
+        'Read the screen: its elements from the accessibility tree (ref role "label" x,y flags; rows alike under one header, what a row holds left to find). A ref keeps naming its element across changes.',
       input: z.object({}).strict(),
       output: ScreenOut,
       annotations: READ,
@@ -82,7 +82,7 @@ export function readOps(
       name: 'find',
       title: 'Find',
       description:
-        'Elements matching text, id or role, with enabled, checked, focused, value and bounds; no whole screen. For a pass or fail: assert.',
+        'Elements matching text, id or role, with enabled, checked, focused, value and bounds. For a pass or fail: assert.',
       input: Selector,
       output: FindOut,
       annotations: READ,
@@ -124,7 +124,7 @@ export function readOps(
     defineOp({
       name: 'wait_for',
       title: 'Wait for',
-      description: `Wait until an element shows (gone: until it is gone): text, id, role or ref. Use this instead of fixed sleeps.`,
+      description: `Wait until an element shows (gone: until it is gone).`,
       input: z.object({ ...WaitStep.omit({ action: true }).shape, read: Read }).strict(),
       output: WaitOut,
       annotations: READ,
@@ -160,7 +160,7 @@ export function readOps(
     defineOp({
       name: 'screenshot',
       title: 'Screenshot',
-      description: `An image of the screen (at most ${SHOT_PX} px unless width) and the scale from its pixels to tap units; only for a visual judgement: the tree first, then watchMs (no image: what moved, way, speed, jumps; not intent), then a video. strip: 8 timed frames. A second of an unchanged screen is refused. points: 1 pixel is 1 tap unit. file: full size into a .png or .jpg, or a folder; overwrite replaces.`,
+      description: `An image of the screen (at most ${SHOT_PX} px unless width) and the scale from its pixels to tap units. The tree first, then watchMs (no image: what moved, way, speed, jumps; not intent), then a video. strip: 8 timed frames. A second of an unchanged screen is refused. points: 1 pixel is 1 tap unit. file: full size to a .png, .jpg or folder; overwrite replaces.`,
       input: z
         .object({
           points: z.boolean().optional(),

@@ -85,7 +85,7 @@ export function actOps(
       name: 'tap',
       title: 'Tap',
       description:
-        'Tap; answers the settled screen (read). A target, here and in gesture, type_text and steps: ref, x,y or selector. Several matches refuse, listing refs; no match waits briefly, then refuses with the nearest labels.',
+        'Tap a target: ref, x,y or selector. Several matches refuse, listing refs; no match waits briefly, then refuses with the nearest labels.',
       input: z.object({ ...Target, read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
@@ -95,7 +95,7 @@ export function actOps(
       name: 'gesture',
       title: 'Gesture',
       description:
-        'Double tap, long press, drag or pinch. double_tap, long_press: at the target. drag: from the target to `to` over durationMs, no flick; holdMs first lifts a row or an icon. pinch: scale > 1 zooms in, < 1 out, at x,y or the middle. plan: free paths in `pointers`, one per finger, t in ms.',
+        'Double tap, long press or drag at the target, or pinch. drag: to `to` over durationMs, no flick; holdMs first lifts a row or icon. pinch: scale > 1 zooms in, < 1 out, at x,y or the middle. plan: free paths in `pointers`, one per finger, t in ms.',
       input: z
         .object({
           kind: z.enum(['double_tap', 'long_press', 'drag', 'pinch', 'plan']),
@@ -164,7 +164,7 @@ export function actOps(
       name: 'swipe',
       title: 'Swipe',
       description:
-        'direction up: content moves up, a list scrolls on; optional start (a target) and distance. exact: the content moves that far and stops, by strokes; the answer says how far.',
+        'Swipe, from a target if given; up: the content moves up, a list scrolls on. exact: the content moves distance and stops, by strokes; the answer says how far.',
       input: z.object({ ...SwipeStep.omit({ action: true }).shape, read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
@@ -174,7 +174,7 @@ export function actOps(
       name: 'scroll_to',
       title: 'Scroll to',
       description:
-        "Scroll until the selector's element is on the screen. direction: as swipe; x,y: a point in the list if several. Refuses at the list's end (nothing moved), with the nearest labels.",
+        "Scroll until the selector's element is on screen; direction as swipe's; x,y: a point in the list if several. Refuses at the list's end, with the nearest labels.",
       input: z.object({ ...ScrollStep.omit({ action: true }).shape, read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
@@ -183,7 +183,7 @@ export function actOps(
     defineOp({
       name: 'type_text',
       title: 'Type text',
-      description: `Type up to ${MAX_TYPED} characters of Unicode into the focused field. A target is tapped first and its focus waited for; replace: the field's text; submit: then enter.`,
+      description: `Type up to ${MAX_TYPED} characters of Unicode into the focused field, or a target, tapped and focused first. replace: the field's text; submit: then enter.`,
       input: z.object({ ...TypeStep.omit({ action: true }).shape, read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
@@ -193,7 +193,7 @@ export function actOps(
       name: 'press_key',
       title: 'Press key',
       description:
-        'A key or button: back, home, enter, delete, tab, escape, space, arrow_up, arrow_down, arrow_left, arrow_right, app_switch, volume_up, volume_down, mute, siri, power, lock; or a letter or digit, held keys first: command+a (Android: Ctrl). count: presses. control_center, notification_center, spotlight open those; home closes them.',
+        'Press a key or button: back, home, enter, delete, tab, escape, space, arrow_up/down/left/right, app_switch, volume_up/down, mute, siri, power, lock; or a letter or digit, held keys first: command+a (Android: Ctrl). control_center, notification_center, spotlight open those; home closes them.',
       input: z.object({ ...KeyStep.omit({ action: true }).shape, read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
@@ -203,7 +203,7 @@ export function actOps(
       name: 'keyboard',
       title: 'Keyboard',
       description:
-        'The on-screen keyboard. status: is it open; dismiss: closes it (refuses if the app keeps it open); enter: its enter key.',
+        'The on-screen keyboard. status: is it open; dismiss: refused if the app keeps it open; enter: its enter key.',
       input: z.object({ action: z.enum(['status', 'dismiss', 'enter']), read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
@@ -236,7 +236,7 @@ export function actOps(
     defineOp({
       name: 'steps',
       title: 'Steps',
-      description: `A sequence in one call: at most ${MAX_STEPS}, each { action, ...the arguments of the tool of that name }; any tool but steps and flow, and double_tap, long_press, drag as gesture's. Stops at the first failure, saying which and why. Each step's answer comes back, images too; a touch reads the screen only with read on its step, or last.`,
+      description: `A sequence in one call: at most ${MAX_STEPS}, each { action: a tool's name, ...its arguments }; any tool but steps and flow, and double_tap, long_press, drag as gesture's. Stops at the first failure, saying which and why. All answers come back, images too; a touch reads the screen only with read on its step, or last.`,
       input: z
         .object({
           steps: z
@@ -328,7 +328,7 @@ export function actOps(
       name: 'assert',
       title: 'Assert',
       description:
-        'Check an element (ref, text, id or role) without acting; refuses (CHECK_FAILED) saying what it found. check text: against equals; expect: false for the opposite; timeoutMs: time to come true.',
+        'Check an element without acting; refuses (CHECK_FAILED) saying what it found. check text: against equals; expect: false for the opposite; timeoutMs: to come true.',
       input: z.object({ ...AssertStep.omit({ action: true }).shape }).strict(),
       output: ActionOut,
       annotations: READ,
@@ -342,7 +342,7 @@ export function actOps(
       name: 'alert',
       title: 'System alert',
       description:
-        "The open system alert, of any kind: with no answer its text and buttons; answer: a button's label, or allow or deny on a permission prompt in any language. Never touches the app's own dialogs.",
+        "The open system alert: with no answer its text and buttons; answer: a button's label, or allow or deny on a permission prompt in any language. Never touches the app's own dialogs.",
       input: z.object({ answer: z.string().min(1).max(200).optional(), read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
