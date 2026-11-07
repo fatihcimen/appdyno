@@ -55,6 +55,26 @@ describe('a push to a simulator', () => {
     expect(sent).toBeUndefined();
   });
 
+  it('says what an app no one allowed notifications got: its code, only in front', async () => {
+    const simctl = {
+      exec: async () => {
+        throw new Error(
+          'simctl push: Underlying error (domain=UNErrorDomain, code=2003): Repository could not save notification. Source is not authorized.',
+        );
+      },
+      pid: async () => 7,
+    } as unknown as Simctl;
+    const push = (front?: string) =>
+      simulatorPush(simctl, 'U', 'dev.app', { type: 'alert', title: 'T' }, async () => front);
+    expect(await push('dev.app')).toBe(
+      'pushed to dev.app by simctl, which shows none, as it is not allowed notifications: it is in front, and its code gets it as a remote notification',
+    );
+    expect(await push()).toContain('its code gets it only if it is in front');
+    await expect(push('com.apple.springboard')).rejects.toThrow(
+      'dev.app is not allowed notifications, and is not in front: the push reached nothing',
+    );
+  });
+
   it('names a route for each type, or why it has none', () => {
     const routes = Object.fromEntries(
       SIMULATOR_PUSHES.map((r) => [r.type, 'route' in r ? 'route' : r.why]),

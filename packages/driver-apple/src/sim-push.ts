@@ -88,6 +88,16 @@ export async function simulatorPush(
     const file = join(dir, 'push.apns');
     writeFileSync(file, payload);
     await simctl.exec(['push', udid, assertBundle(app), file]);
+  } catch (e) {
+    // seen on iOS 27.2: simctl fails, and still hands an app in front the push it may not show
+    if (!/Source is not authorized/.test((e as Error).message)) throw e;
+    if (at === 'back' || at === 'off')
+      throw new DeviceError(
+        'UNSUPPORTED',
+        `${app} is not allowed notifications, and is not in front: the push reached nothing`,
+        "allow them: the app's own prompt, answered with alert",
+      );
+    return `pushed to ${app} by simctl, which shows none, as it is not allowed notifications: ${at === 'front' ? REACHED.front : 'its code gets it only if it is in front (what is in front could not be read)'}`;
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
