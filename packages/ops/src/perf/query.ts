@@ -10,10 +10,10 @@ export function perfQueryOp(ctx: ServerContext) {
     name: 'perf_query',
     title: 'Query a kept trace',
     description:
-      'A bounded table from a kept trace: Perfetto (.pftrace): read-only SQL; Instruments (.trace): its top rows (`table`; none lists the tables).',
+      'A bounded table from a kept trace, by the path a perf_ answer gave: Perfetto (.pftrace): read-only SQL; Instruments (.trace): its top rows (`table`; none lists the tables).',
     input: z
       .object({
-        trace: z.string().max(1000).describe('the path a perf_ answer gave'),
+        trace: z.string().max(1000),
         sql: z.string().max(10_000).optional(),
         table: z.string().max(200).optional(),
         limit: z.number().int().min(1).max(500).default(50),

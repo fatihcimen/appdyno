@@ -16,7 +16,7 @@ export function perfProfileOp(ctx: ServerContext) {
     name: 'perf_profile',
     title: 'CPU profile',
     description:
-      "Where the app's CPU time goes: sampled for `seconds` (a debuggable or profileable app), the top functions. `scroll` scrolls meanwhile. perf_compare's `functions` compares two of these.",
+      "Where the app's CPU time goes: sampled for `seconds` (a debuggable or profileable app), the top functions.",
     input: z
       .object({
         app: App,

@@ -38,7 +38,7 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
     name: 'perf_compare',
     title: 'Compare with the baseline',
     description:
-      "Performance regression gate: the newest runs against baseline and budgets in .appdyno/perf/; a change must be statistically and practically significant. why: finds a regression's cause on device; reference: its other side, on baseline's build; budget; baseline: adds the newest, `replace` resets; dashboard; functions: two perf_profile ids; prune: traces.",
+      "Performance regression gate: the `last` newest runs against baseline and budgets in .appdyno/perf/; a change must be statistically and practically significant. why: finds a regression's cause on device; reference: its other side, on baseline's build; baseline: adds the newest, `replace` resets; functions: two perf_profile ids; prune: traces.",
     input: z
       .object({
         action: z
@@ -60,7 +60,7 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
         app: z.string().max(200).optional(),
         scenario: Scenario,
         deviceClass: z.string().max(200).optional(),
-        last: z.number().int().min(1).max(20).default(1).describe('newest runs to use'),
+        last: z.number().int().min(1).max(20).default(1),
         replace: z.boolean().optional(),
         format: z.enum(['text', 'json', 'junit']).default('text'),
         dsym: z.string().max(1_000).optional(),

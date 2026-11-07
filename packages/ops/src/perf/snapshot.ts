@@ -305,7 +305,7 @@ export function perfSnapshotOp(ctx: ServerContext) {
           .array(z.enum(EXTRA_NAMES))
           .optional()
           .describe(
-            'threads; network; energy (says if a model); anonMemory: by process state, bitmaps; surface: a SurfaceView or game; startInfo: why it last started; battery: wake locks, wakeups, jobs; exits; size',
+            'energy (says if a model); anonMemory: by process state, bitmaps; surface: a SurfaceView or game; startInfo: why it last started; battery: wake locks, wakeups, jobs',
           ),
         batteryWindowMs: z.number().int().min(1_000).max(600_000).default(30_000),
         scenario: Scenario,
