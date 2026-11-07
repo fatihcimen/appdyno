@@ -1,9 +1,11 @@
 // The Push pane in a window kept behind: what the op says a device takes, the fields that follow the type, the payload
-// to start from, what a send carries, and an answer shown whole.
+// to start from, what a send carries, an answer shown whole, and a token a person types where a route takes one.
 #import "Place.h"
 #import "SelfTest.h"
 #import "WindowParts.h"
 #import "Words.h"
+
+static NSString *const kToken = @"c0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffee";
 
 static NSDictionary *typesSaid(void) {
   return @{@"op": @"answer", @"name": @"push", @"app": @"dev.app", @"types": @[
@@ -11,6 +13,46 @@ static NSDictionary *typesSaid(void) {
     @{@"type": @"background", @"why": @"simctl takes no push with nothing to see"},
     @{@"type": @"rich", @"route": @"simctl push with mutable-content", @"fields": @[@"title", @"body", @"image", @"data"], @"template": @"{\"aps\":{\"mutable-content\":1},\"image\":\"I\"}"},
   ]};
+}
+
+/// The same once APNs is set up: a route by it names the tokens it goes by.
+static NSDictionary *tokensSaid(void) {
+  return @{@"op": @"answer", @"name": @"push", @"types": @[
+    @{@"type": @"alert", @"route": @"simctl push", @"fields": @[@"title"], @"template": @"{}"},
+    @{@"type": @"rich", @"route": @"APNs' sandbox", @"fields": @[@"title"], @"template": @"{}", @"tokens": @[@"device"]},
+    @{@"type": @"live_activity", @"route": @"APNs' sandbox", @"fields": @[], @"template": @"{}", @"tokens": @[@"activity", @"start"]},
+  ]};
+}
+
+static void checkToken(MVWindow *window, MVPushPane *pane, NSMutableArray<NSDictionary *> *sent) {
+  MVHoldStill(YES);
+  [pane show:@{@"op": @"answer", @"name": @"push", @"ok": @YES, @"text": @"Pushed to dev.app"}];
+  NSView *card = [pane valueForKey:@"_tokenCard"];
+  MVCheck(@"push: no token field where no route takes one a person types", card.isHiddenOrHasHiddenAncestor, nil);
+  [pane show:tokensSaid()];
+  NSPopUpButton *type = [pane valueForKey:@"_type"], *kind = [pane valueForKey:@"_kind"];
+  NSTextField *token = [pane valueForKey:@"_token"], *note = [pane valueForKey:@"_tokenNote"];
+  MVCheck(@"push: a field unseen as it is typed where a route takes a token, with each kind the routes go by", !card.hidden && [token isKindOfClass:NSSecureTextField.class] && kind.numberOfItems == 3 && [[kind itemAtIndex:2].title isEqual:MVWord(@"Push to Start")], [kind.itemTitles componentsJoinedByString:@"|"]);
+  [type selectItemAtIndex:2];
+  [type sendAction:type.action to:type.target];
+  MVCheck(@"push: the kind follows the type, and the pane says whose the token is and for how long", [kind.titleOfSelectedItem isEqual:MVWord(@"Activity")] && [note.stringValue isEqual:MVWord(@"Kept for this session only, as dev.app's Activity token")], note.stringValue);
+  MVCheck(@"push: the token's field, kind and button say what they are to a screen reader", [token.accessibilityLabel isEqual:MVWord(@"Push token")] && [kind.accessibilityLabel isEqual:MVWord(@"Kind of token")] && [MVFindControl(window.nsWindow.contentView, @"pushTokenGo").accessibilityLabel isEqual:MVWord(@"Keep push token")], nil);
+  [kind selectItemAtIndex:2];
+  [kind sendAction:kind.action to:kind.target];
+  [sent removeAllObjects];
+  token.stringValue = kToken;
+  [window.nsWindow makeFirstResponder:token];
+  MVPressReturn(window.nsWindow);
+  MVPressReturn(window.nsWindow);
+  NSDictionary *wanted = @{@"op": @"control", @"name": @"pushToken", @"app": @"dev.app", @"token": kToken, @"kind": @"start"};
+  MVCheck(@"push: Return keeps the token for the app and kind in the pane, once, and the field lets it go", sent.count == 1 && [sent[0] isEqual:wanted] && !token.stringValue.length, sent.description);
+  [pane show:@{@"op": @"answer", @"name": @"push", @"ok": @YES, @"text": @"Kept dev.app's start token for this session only"}];
+  MVCheck(@"push: what became of the token is said, with no move for a person who asked for less, and none of the token", [pane.answer.said containsString:@"session only"] && ![pane.answer.layer animationForKey:@"slide"] && ![note.stringValue containsString:kToken], pane.answer.said);
+  MVHoldStill(NO);
+  // a secure field with the keyboard keeps the Mac's other apps from what is typed: it lets go
+  [window.nsWindow makeFirstResponder:nil];
+  [pane show:typesSaid()];
+  MVCheck(@"push: the field goes with the routes that took a token", card.isHiddenOrHasHiddenAncestor, nil);
 }
 
 void MVCheckPush(void) {
@@ -43,8 +85,7 @@ void MVCheckPush(void) {
   title.stringValue = @"Order 42";
   data.stringValue = @"order=42\nkind=shipped";
   [window.nsWindow makeFirstResponder:title];
-  [window.nsWindow sendEvent:[NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:window.nsWindow.windowNumber context:nil characters:@"\r" charactersIgnoringModifiers:@"\r" isARepeat:NO keyCode:36]];
-  MVPump(0.1);
+  MVPressReturn(window.nsWindow);
   NSDictionary *args = sent.lastObject[@"args"];
   NSDictionary *wanted = @{@"app": @"dev.app", @"type": @"rich", @"title": @"Order 42", @"data": @{@"order": @"42", @"kind": @"shipped"}};
   MVCheck(@"push: Return sends what the type takes, and only what was filled", sent.count == 1 && [args isEqual:wanted], [args description]);
@@ -58,4 +99,5 @@ void MVCheckPush(void) {
   [sent removeAllObjects];
   [MVFindControl(window.nsWindow.contentView, @"pushGo") performClick:nil];
   MVCheck(@"push: a payload goes alone, as the op takes it", [sent.lastObject[@"args"][@"payload"] isEqual:payload.string] && !sent.lastObject[@"args"][@"title"], [sent.lastObject description]);
+  checkToken(window, pane, sent);
 }

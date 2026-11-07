@@ -50,6 +50,8 @@ void MVCheckPush(void);
 void MVCheckHevc444(NSString *_Nullable fixtures);
 /// Lets what was sent reach a window kept behind.
 void MVPump(double seconds);
+/// Return, as the keyboard sends it, to whatever has the window's keyboard.
+void MVPressReturn(NSWindow *window);
 @class MVHub, MVList;
 /// A row of a list by a real click, or, where a table takes none from this test, chosen as that click would.
 void MVPokeListRow(MVList *list, NSString *title);

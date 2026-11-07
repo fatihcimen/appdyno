@@ -78,7 +78,8 @@ NSButton *_Nullable MVFindControl(NSView *view, NSString *name) {
 
 static void addParts(NSView *view, NSView *top, double height, NSMutableArray *parts) {
   if (view.isHiddenOrHasHiddenAncestor || view.alphaValue < 0.05) return;
-  NSString *text = [view isKindOfClass:NSTextField.class] ? ((NSTextField *)view).stringValue : [view isKindOfClass:NSButton.class] ? ((NSButton *)view).title : nil;
+  // a secure field's text is a secret, and no part of what the window shows
+  NSString *text = [view isKindOfClass:NSSecureTextField.class] ? nil : [view isKindOfClass:NSTextField.class] ? ((NSTextField *)view).stringValue : [view isKindOfClass:NSButton.class] ? ((NSButton *)view).title : nil;
   NSImage *symbol = [view isKindOfClass:NSImageView.class] ? ((NSImageView *)view).image : [view isKindOfClass:NSButton.class] ? ((NSButton *)view).image : nil;
   if (text.length || symbol.size.width > 0 || [view isKindOfClass:MVInk.class]) {
     NSRect at = [view convertRect:view.bounds toView:top];

@@ -18,8 +18,8 @@ static NSTextField *wrapped(MVStyle style) {
   return field;
 }
 
-NSTextField *MVSendField(NSString *name, NSString *placeholder, NSString *label, id target, SEL action) {
-  NSTextField *field = [NSTextField textFieldWithString:@""];
+static NSTextField *sendField(Class kind, NSString *name, NSString *placeholder, NSString *label, id target, SEL action) {
+  NSTextField *field = [kind textFieldWithString:@""];
   field.identifier = name;
   field.placeholderString = MVWord(placeholder);
   field.accessibilityLabel = MVWord(label);
@@ -27,6 +27,14 @@ NSTextField *MVSendField(NSString *name, NSString *placeholder, NSString *label,
   field.target = target;
   field.action = action;
   return field;
+}
+
+NSTextField *MVSendField(NSString *name, NSString *placeholder, NSString *label, id target, SEL action) {
+  return sendField(NSTextField.class, name, placeholder, label, target, action);
+}
+
+NSSecureTextField *MVSecretField(NSString *name, NSString *placeholder, NSString *label, id target, SEL action) {
+  return (NSSecureTextField *)sendField(NSSecureTextField.class, name, placeholder, label, target, action);
 }
 
 void MVPaneSend(NSView<MVSendPane> *pane, NSDictionary *message) {

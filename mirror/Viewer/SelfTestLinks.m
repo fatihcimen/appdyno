@@ -5,8 +5,7 @@
 #import "Words.h"
 #import <Carbon/Carbon.h>
 
-/// Return, as the keyboard sends it, to whatever has the window's keyboard.
-static void pressReturn(NSWindow *window) {
+void MVPressReturn(NSWindow *window) {
   [window sendEvent:[NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:window.windowNumber context:nil characters:@"\r" charactersIgnoringModifiers:@"\r" isARepeat:NO keyCode:kVK_Return]];
   MVPump(0.1);
 }
@@ -27,7 +26,7 @@ static void checkAnswers(MVLinkPane *pane, NSMutableArray<NSDictionary *> *sent)
   MVCheck(@"links: the recent links stand under a heading", pane.rows.count == 3 && pane.rows[0].header && [pane.rows[2].key isEqual:@"https://example.test/item/7"], [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
   NSString *refusal = @"this link is not on this server's allow list", *hint = @"change that and call again: nothing was done";
   [pane fill:@"https://elsewhere.test/" app:nil];
-  pressReturn(pane.window);
+  MVPressReturn(pane.window);
   [pane show:@{@"op": @"answer", @"name": @"openLink", @"ok": @NO, @"text": refusal, @"hint": hint}];
   MVCheck(@"links: a refusal is shown whole, with what to do", [pane.answer.said isEqual:MVWord(refusal)] && [pane.answer.hint isEqual:MVWord(hint)], [NSString stringWithFormat:@"%@ / %@", pane.answer.said, pane.answer.hint]);
   MVCheck(@"links: an answer arrives with a move, where motion is on", [answer.layer animationForKey:@"slide"] != nil, nil);
@@ -38,7 +37,7 @@ static void checkAnswers(MVLinkPane *pane, NSMutableArray<NSDictionary *> *sent)
   [sent removeAllObjects];
   MVPokeListRow([pane valueForKey:@"_recent"], @"https://example.test/item/7");
   MVPump(0.2);
-  pressReturn(pane.window);
+  MVPressReturn(pane.window);
   MVCheck(@"links: a recent link chosen opens again with Return", [sent.lastObject[@"url"] isEqual:@"https://example.test/item/7"], [sent.lastObject description]);
   [pane show:@{@"op": @"answer", @"name": @"openLink", @"suggested": @[@{@"url": @"app://", @"kind": @"scheme"}, @{@"url": @"https://example.test/order*", @"kind": @"filter"}, @{@"url": @"https://example.test", @"kind": @"domain", @"state": @"verified"}]}];
   NSArray<NSString *> *titles = [pane.rows valueForKey:@"title"];
@@ -68,8 +67,8 @@ void MVCheckLinks(void) {
   MVCheck(@"links: its field and button say what they are to a screen reader", [field.accessibilityLabel isEqual:MVWord(@"Link to open")] && [MVFindControl(window.nsWindow.contentView, @"openLinkGo").accessibilityLabel isEqual:MVControlTitle(@"openLink")], nil);
   [sent removeAllObjects];
   [pane fill:@"  appdyno-fixture://open/form " app:nil];
-  pressReturn(window.nsWindow);
-  pressReturn(window.nsWindow);
+  MVPressReturn(window.nsWindow);
+  MVPressReturn(window.nsWindow);
   MVCheck(@"links: Return sends the link, once, until its answer comes, in the app in front", sent.count == 1 && [sent[0][@"name"] isEqual:@"openLink"] && [sent[0][@"url"] isEqual:@"appdyno-fixture://open/form"] && [sent[0][@"app"] isEqual:@"dev.app"], sent.description);
   MVCheck(@"links: and says it is opening", [pane.answer.said containsString:@"appdyno-fixture://open/form"], pane.answer.said);
   checkAnswers(pane, sent);

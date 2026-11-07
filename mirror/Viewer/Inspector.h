@@ -78,6 +78,8 @@ NSTextField *MVPaneHeading(NSString *text);
 
 /// A field of a send pane, by the name a click finds it by: Return sends, and leaving the field does not.
 NSTextField *MVSendField(NSString *name, NSString *placeholder, NSString *label, id target, SEL action);
+/// The same, unseen as it is typed and never copied out of: for a token.
+NSSecureTextField *MVSecretField(NSString *name, NSString *placeholder, NSString *label, id target, SEL action);
 /// What a send pane asks: to its `onSend` where a test set one, else to the parent.
 void MVPaneSend(NSView<MVSendPane> *pane, NSDictionary *message);
 

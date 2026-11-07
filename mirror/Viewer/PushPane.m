@@ -1,5 +1,6 @@
 // The Push pane: a push to an app by `push`, the op an agent calls. Which types the device takes, how each goes, the
 // fields each takes and the payload to start from are the op's: the pane shows them, and sends what a person fills in.
+// Where a route goes by a token a person may type, a token typed here goes to the parent alone, never to an op.
 #import "Place.h"
 #import "Window.h"
 #import "Words.h"
@@ -8,10 +9,19 @@ static const double kBetween = 10, kPayloadHigh = 150;
 /// The fields a type may take, in the order they stand, by the op's names.
 static NSString *const kFields[] = {@"title", @"body", @"image", @"data"};
 enum { kFieldCount = sizeof kFields / sizeof kFields[0] };
+/// The kinds of token, by the op's names, as a person reads them.
+static NSString *const kKinds[][2] = {{@"device", @"Device"}, {@"activity", @"Activity"}, {@"start", @"Push to Start"}, {@"voip", @"VoIP"}, {@"widget", @"Widget"}};
 
 /// A type as a person reads it: `live_activity` is Live Activity.
 static NSString *typeTitle(NSString *type) {
   return MVWord([type stringByReplacingOccurrencesOfString:@"_" withString:@" "].capitalizedString);
+}
+
+/// A kind of token in English, where the table has it.
+static NSString *kindTitle(NSString *kind) {
+  for (size_t i = 0; i < sizeof kKinds / sizeof kKinds[0]; i++)
+    if ([kKinds[i][0] isEqual:kind]) return kKinds[i][1];
+  return kind;
 }
 
 /// `key=value` a line, as the op takes them: keys to strings.
@@ -32,14 +42,17 @@ static NSString *readable(NSString *json) {
   return pretty ? [[NSString alloc] initWithData:pretty encoding:NSUTF8StringEncoding] : json;
 }
 
+@interface MVPushPane () <NSTextFieldDelegate>
+@end
+
 @implementation MVPushPane {
-  NSTextField *_app, *_how;
+  NSTextField *_app, *_how, *_token, *_tokenNote;
   NSString *_suggested, *_template;
-  NSPopUpButton *_type;
+  NSPopUpButton *_type, *_kind;
   NSArray<MVAccentButton *> *_modes;
   NSGridView *_fields;
   NSDictionary<NSString *, NSTextField *> *_inputs;
-  NSView *_payloadCard;
+  NSView *_payloadCard, *_tokenCard;
   NSTextView *_payload;
   MVAccentButton *_send;
   BOOL _raw;
@@ -47,9 +60,32 @@ static NSString *readable(NSString *json) {
 
 @synthesize onSend = _onSend, answer = _answer;
 
+/// A token for the app in the field, of a kind to choose, and what becomes of it, said before it is typed.
+- (NSView *)tokenCard {
+  _token = MVSecretField(@"push:token", @"Push token", @"Push token", self, @selector(keepToken:));
+  _kind = [NSPopUpButton new];
+  _kind.identifier = @"pushTokenKind";
+  _kind.target = self;
+  _kind.action = @selector(sayToken);
+  _kind.accessibilityLabel = MVWord(@"Kind of token");
+  NSButton *keep = MVPlaceButton(@"Keep", @"pushTokenGo", self, @selector(keepToken:));
+  keep.accessibilityLabel = MVWord(@"Keep push token");
+  NSStackView *field = [NSStackView stackViewWithViews:@[MVFieldPlate(_token, nil), keep]];
+  field.spacing = 8;
+  _tokenNote = MVPaneNote(@"");
+  NSStackView *card = [NSStackView stackViewWithViews:@[_kind, field, _tokenNote]];
+  card.orientation = NSUserInterfaceLayoutOrientationVertical;
+  card.alignment = NSLayoutAttributeLeading;
+  card.spacing = 6;
+  for (NSView *view in card.arrangedSubviews) [view.widthAnchor constraintEqualToAnchor:card.widthAnchor].active = YES;
+  card.hidden = YES;
+  return card;
+}
+
 - (instancetype)initWithFrame:(NSRect)frame {
   if ((self = [super initWithFrame:frame])) {
     _app = MVSendField(@"push:app", @"The app's id", @"App", self, @selector(sendPush:));
+    _app.delegate = self;
     _type = [NSPopUpButton new];
     _type.identifier = @"pushType";
     _type.autoenablesItems = NO;
@@ -98,12 +134,14 @@ static NSString *readable(NSString *json) {
     _send.accessibilityLabel = MVControlTitle(@"push");
     _send.enabled = NO;
     _answer = [MVAnswerView new];
-    NSStackView *stack = [NSStackView stackViewWithViews:@[MVFieldPlate(_app, nil), _type, _how, mode, _fields, _payloadCard, _send, _answer]];
+    _tokenCard = [self tokenCard];
+    NSStackView *stack = [NSStackView stackViewWithViews:@[MVFieldPlate(_app, nil), _type, _how, _tokenCard, mode, _fields, _payloadCard, _send, _answer]];
     stack.orientation = NSUserInterfaceLayoutOrientationVertical;
     stack.alignment = NSLayoutAttributeLeading;
     stack.spacing = 6;
-    for (NSView *view in @[stack.arrangedSubviews[0], _type, _how, _fields, _payloadCard, _answer]) [view.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
+    for (NSView *view in @[stack.arrangedSubviews[0], _type, _how, _tokenCard, _fields, _payloadCard, _answer]) [view.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
     [stack setCustomSpacing:kBetween afterView:_how];
+    [stack setCustomSpacing:kBetween afterView:_tokenCard];
     [stack setCustomSpacing:kBetween afterView:_send];
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [self addSubview:stack];
@@ -131,9 +169,9 @@ static NSString *readable(NSString *json) {
 }
 
 - (void)show:(NSDictionary *)m {
-  if ([m[@"types"] isKindOfClass:NSArray.class]) [self list:m[@"types"]];
   // the app in front, unless a person has put another
   if ([m[@"app"] isKindOfClass:NSString.class] && (!_app.stringValue.length || [_app.stringValue isEqual:_suggested])) _app.stringValue = _suggested = m[@"app"];
+  if ([m[@"types"] isKindOfClass:NSArray.class]) [self list:m[@"types"]];
   [_answer show:m];
   _send.enabled = self.chosen[@"route"] && !_answer.waiting;
 }
@@ -141,6 +179,7 @@ static NSString *readable(NSString *json) {
 - (void)list:(NSArray<NSDictionary *> *)types {
   NSString *was = self.chosen[@"type"];
   [_type removeAllItems];
+  NSMutableOrderedSet<NSString *> *kinds = [NSMutableOrderedSet orderedSet];
   for (NSDictionary *entry in types) {
     if (![entry isKindOfClass:NSDictionary.class] || ![entry[@"type"] isKindOfClass:NSString.class]) continue;
     [_type addItemWithTitle:typeTitle(entry[@"type"])];
@@ -148,7 +187,16 @@ static NSString *readable(NSString *json) {
     item.representedObject = entry;
     item.enabled = entry[@"route"] != nil;
     item.toolTip = entry[@"why"];
+    for (id kind in [entry[@"tokens"] isKindOfClass:NSArray.class] ? entry[@"tokens"] : @[])
+      if ([kind isKindOfClass:NSString.class]) [kinds addObject:kind];
   }
+  // the kinds of token the routes go by: none until a person sets APNs or FCM up for this device
+  [_kind removeAllItems];
+  for (NSString *kind in kinds) {
+    [_kind addItemWithTitle:MVWord(kindTitle(kind))];
+    _kind.lastItem.representedObject = kind;
+  }
+  _tokenCard.hidden = kinds.count == 0;
   // the type chosen before if it is still taken, else the first that is
   NSInteger first = -1, same = -1;
   for (NSInteger i = 0; i < _type.numberOfItems; i++) {
@@ -170,14 +218,51 @@ static NSString *readable(NSString *json) {
   for (int i = 0; i < kFieldCount; i++) [_fields rowAtIndex:i].hidden = ![takes containsObject:kFields[i]];
   if ([entry[@"template"] isKindOfClass:NSString.class] && (!_payload.string.length || [_payload.string isEqual:_template])) _payload.string = _template = readable(entry[@"template"]);
   _send.enabled = entry[@"route"] && !_answer.waiting;
+  // the token this type goes by first
+  if ([entry[@"tokens"] isKindOfClass:NSArray.class]) [self chooseKind:[entry[@"tokens"] firstObject]];
+  [self sayToken];
 }
 
 - (void)fill:(NSDictionary<NSString *, NSString *> *)fields {
+  if (fields[@"app"]) _app.stringValue = fields[@"app"];
   for (NSInteger i = 0; i < _type.numberOfItems; i++)
     if ([[_type itemAtIndex:i].representedObject[@"type"] isEqual:fields[@"type"]]) [_type selectItemAtIndex:i];
   [self typeChosen:nil];
   for (NSString *name in _inputs) _inputs[name].stringValue = fields[name] ?: @"";
-  if (fields[@"app"]) _app.stringValue = fields[@"app"];
+  if (fields[@"kind"]) [self chooseKind:fields[@"kind"]];
+  [self sayToken];
+  _token.stringValue = fields[@"token"] ?: @"";
+}
+
+- (void)chooseKind:(nullable NSString *)kind {
+  NSInteger at = kind ? [_kind indexOfItemWithRepresentedObject:kind] : -1;
+  if (at >= 0) [_kind selectItemAtIndex:at];
+}
+
+- (NSString *)appNamed {
+  return [_app.stringValue stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+}
+
+/// Another app named: the token typed is for it.
+- (void)controlTextDidChange:(NSNotification *)note {
+  [self sayToken];
+}
+
+/// What becomes of a token typed here, said before it is: whose it is, which, and for how long.
+- (void)sayToken {
+  NSString *app = self.appNamed, *kind = _kind.selectedItem.representedObject;
+  _tokenNote.stringValue = app.length && kind ? MVWord([NSString stringWithFormat:@"Kept for this session only, as %@'s %@ token", app, kindTitle(kind)]) : MVWord(@"Kept for this session only, for the app above");
+}
+
+/// To the parent alone, and out of the field as it goes: a token is never shown back.
+- (void)keepToken:(id)sender {
+  NSString *token = [_token.stringValue stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+  NSString *kind = _kind.selectedItem.representedObject;
+  if (_tokenCard.hidden || !token.length || !kind || _answer.waiting) return;
+  _token.stringValue = @"";
+  _send.enabled = NO;
+  [_answer sending:MVWord(@"Keeping the token")];
+  MVPaneSend(self, @{@"op": @"control", @"name": @"pushToken", @"app": self.appNamed, @"token": token, @"kind": kind});
 }
 
 - (void)modeChosen:(NSButton *)sender {
@@ -199,7 +284,7 @@ static NSString *readable(NSString *json) {
   NSDictionary *entry = self.chosen;
   if (!entry[@"route"] || _answer.waiting) return;
   NSMutableDictionary *args = [NSMutableDictionary dictionaryWithObject:entry[@"type"] forKey:@"type"];
-  NSString *app = [_app.stringValue stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+  NSString *app = self.appNamed;
   if (app.length) args[@"app"] = app;
   if (_raw) args[@"payload"] = _payload.string;
   for (NSString *name in _raw ? @[] : entry[@"fields"]) {
