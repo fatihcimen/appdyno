@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.2
 // The platform-independent core of the iOS runner (frames, layout comparison, settle, hit test), unit
 // tested on the Mac with `swift test`; the runner's UI test target compiles the same sources.
 import PackageDescription

@@ -22,28 +22,29 @@ final class PushDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCen
 
     func application(_ application: UIApplication, didReceiveRemoteNotification info: [AnyHashable: Any],
                      fetchCompletionHandler done: @escaping (UIBackgroundFetchResult) -> Void) {
-        PushDelegate.shared.record("background", info)
+        PushDelegate.record("background", info)
         done(.newData)
     }
 
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent n: UNNotification,
-                                withCompletionHandler done: @escaping (UNNotificationPresentationOptions) -> Void) {
-        PushDelegate.shared.record("alert \(n.request.content.title)", n.request.content.userInfo)
+    // the center's calls are bound to no actor, as its protocol declares them
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent n: UNNotification,
+                                            withCompletionHandler done: @escaping (UNNotificationPresentationOptions) -> Void) {
+        PushDelegate.record("alert \(n.request.content.title)", n.request.content.userInfo)
         done([.banner, .list, .sound, .badge])
     }
 
-    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive r: UNNotificationResponse,
-                                withCompletionHandler done: @escaping () -> Void) {
-        PushDelegate.shared.record("opened \(r.actionIdentifier)", r.notification.request.content.userInfo)
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive r: UNNotificationResponse,
+                                            withCompletionHandler done: @escaping () -> Void) {
+        PushDelegate.record("opened \(r.actionIdentifier)", r.notification.request.content.userInfo)
         done()
     }
 
-    /// The kind, and the keys other than `aps`, sorted.
-    func record(_ kind: String, _ info: [AnyHashable: Any]) {
+    /// The kind, and the keys other than `aps`, sorted: in the log at once, on the screen from the main queue.
+    nonisolated static func record(_ kind: String, _ info: [AnyHashable: Any]) {
         let keys = info.keys.map { "\($0)" }.filter { $0 != "aps" }.sorted()
         let text = "\(kind): \(keys.map { "\($0)=\(info[$0] ?? "")" }.joined(separator: ", "))"
         NSLog("appdyno-fixture push %@", text)
-        DispatchQueue.main.async { self.last = text }
+        DispatchQueue.main.async { PushDelegate.shared.last = text }
     }
 }
 

@@ -61,9 +61,10 @@ final class RunnerTests: XCTestCase {
             default: return 0
             }
         }()
+        // the scale by traits, as iOS 26 deprecates UIScreen.main and the runner has no window of its own to ask
         return helloWire(agentVersion: agentVersion, osVersion: UIDevice.current.systemVersion,
                          model: env["SIMULATOR_MODEL_IDENTIFIER"] ?? UIDevice.current.model,
-                         w: b.width, h: b.height, density: UIScreen.main.scale, rotation: rotation,
+                         w: b.width, h: b.height, density: UITraitCollection.current.displayScale, rotation: rotation,
                          pid: Int(ProcessInfo.processInfo.processIdentifier), idleShimChecked: IdleShim.selfChecked)
     }
 
