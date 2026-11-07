@@ -12,9 +12,10 @@ import { windowSends } from '../packages/hub/src/window-sends.js';
 import { untilWithin } from './until.js';
 
 /**
- * What a person sends from a window, through its Links and Push panes, on our own simulator (APPDYNO_IOS_UDID) and our own
- * emulator or phone (APPDYNO_ANDROID_SERIAL), each with the fixture installed: never a default. The window is real and
- * kept off every screen; what it sends goes by the op an agent calls, and the device itself says what came of it.
+ * What a person sends from a window, through its Links and Push panes, on our own simulator (APPDYNO_IOS_UDID), iPhone
+ * (APPDYNO_IPHONE_UDID) and emulator or phone (APPDYNO_ANDROID_SERIAL), each with the fixture installed: never a default.
+ * The window is real and kept off every screen; what it sends goes by the op an agent calls, and the device itself says
+ * what came of it.
  */
 const APP = 'dev.appdyno.fixture';
 const HOME = 'com.apple.springboard';
@@ -23,26 +24,39 @@ const FIRST_MS = 420_000;
 /** How long the system may take to ask for a permission; an app that has it is not asked at all. */
 const ASK_MS = 8_000;
 
+/** An iPhone's picture comes by the phone stream, which only a build holds. */
+const built = process.env.APPDYNO_IPHONE_UDID
+  ? await import('../packages/driver-apple/dist/index.js')
+  : undefined;
+
+type Kind = 'simulator' | 'iphone' | 'android';
 const devices = (
   [
-    ['a simulator', process.env.APPDYNO_IOS_UDID, (id) => new IosSimulatorDevice(id)],
-    ['Android', process.env.APPDYNO_ANDROID_SERIAL, (id) => new AndroidDevice(id, new Adb())],
-  ] as [string, string | undefined, (id: string) => Device][]
+    ['a simulator', process.env.APPDYNO_IOS_UDID, 'simulator', (id) => new IosSimulatorDevice(id)],
+    ['an iPhone', process.env.APPDYNO_IPHONE_UDID, 'iphone', (id) => new built!.IosPhoneDevice(id)],
+    [
+      'Android',
+      process.env.APPDYNO_ANDROID_SERIAL,
+      'android',
+      (id) => new AndroidDevice(id, new Adb()),
+    ],
+  ] as [string, string | undefined, Kind, (id: string) => Device][]
 ).filter(([, id]) => id);
 
 const until = untilWithin(30_000);
 
 describe.runIf(devices.length > 0).each(devices)(
   "a window's panes that send, on %s",
-  (_, id, make) => {
+  (_, id, kind, make) => {
     const device = make(id!);
-    const ios = device instanceof IosSimulatorDevice;
+    const ios = kind !== 'android';
+    const simulator = kind === 'simulator';
     const told: Record<string, unknown>[] = [];
     let session: MirrorSession;
     const poke = (m: Record<string, unknown>) => session.tell({ op: 'poke', ...m });
     /** What an app shows, read where it is: a simulator's runner reads the app it is told, and a link names none. */
     const nodesOf = async (app: string) => {
-      if (device instanceof IosSimulatorDevice) await device.target(app);
+      if (ios) await (device as IosSimulatorDevice).target(app);
       return (await device.tree()).nodes;
     };
     const showsForm = async () => (await nodesOf(APP)).some((n) => n.id?.endsWith('name_input'));
@@ -61,7 +75,8 @@ describe.runIf(devices.length > 0).each(devices)(
     const openFromPane = async (url: string, ms?: number) => {
       told.length = 0;
       poke({ control: 'openLink' });
-      poke({ link: url });
+      // an iPhone opens a link only in a named app
+      poke({ link: url, ...(kind === 'iphone' && { app: APP }) });
       poke({ clickOn: 'openLinkGo' });
       await until('an answer', () => !!answered(), ms);
       return answered()!;
@@ -138,32 +153,47 @@ describe.runIf(devices.length > 0).each(devices)(
       return answered()!;
     };
 
-    it.runIf(ios)("sends an alert the fixture's code receives, from the Push pane", async () => {
-      const ask = async () => (await nodesOf(APP)).find((n) => n.id === 'ask_notifications');
-      await openAt('appdyno-fixture://open/push', async () => !!(await ask()));
-      await click((await ask())!);
-      // the first time, the system asks the person whether the app may show notifications, a moment after the tap; a
-      // click while it still comes in is not taken, so a person clicks again
-      const askedBy = Date.now() + ASK_MS;
-      let asked = false;
-      await until('the question answered', async () => {
-        const allow = await systemButton(/^Allow$/);
-        asked ||= !!allow;
-        if (!allow) return asked || Date.now() > askedBy;
-        await click(allow);
-        await new Promise((r) => setTimeout(r, 1_000));
-        return false;
-      });
-      expect(
-        await pushFromPane({ type: 'alert', title: 'Order 42', data: 'order=42' }),
-      ).toMatchObject({
-        ok: true,
-        text: expect.stringMatching(/^Pushed to dev\.appdyno\.fixture by simctl/),
-      });
-      await until('the push in the app', async () =>
-        (await nodesOf(APP)).some((n) => (n.t ?? n.d) === 'alert Order 42: order=42'),
-      );
-    });
+    it.runIf(simulator)(
+      "sends an alert the fixture's code receives, from the Push pane",
+      async () => {
+        const ask = async () => (await nodesOf(APP)).find((n) => n.id === 'ask_notifications');
+        await openAt('appdyno-fixture://open/push', async () => !!(await ask()));
+        await click((await ask())!);
+        // the first time, the system asks the person whether the app may show notifications, a moment after the tap; a
+        // click while it still comes in is not taken, so a person clicks again
+        const askedBy = Date.now() + ASK_MS;
+        let asked = false;
+        await until('the question answered', async () => {
+          const allow = await systemButton(/^Allow$/);
+          asked ||= !!allow;
+          if (!allow) return asked || Date.now() > askedBy;
+          await click(allow);
+          await new Promise((r) => setTimeout(r, 1_000));
+          return false;
+        });
+        expect(
+          await pushFromPane({ type: 'alert', title: 'Order 42', data: 'order=42' }),
+        ).toMatchObject({
+          ok: true,
+          text: expect.stringMatching(/^Pushed to dev\.appdyno\.fixture by simctl/),
+        });
+        await until('the push in the app', async () =>
+          (await nodesOf(APP)).some((n) => (n.t ?? n.d) === 'alert Order 42: order=42'),
+        );
+      },
+    );
+
+    it.runIf(ios && !simulator)(
+      'says for each type why an iPhone takes no push, in the Push pane',
+      async () => {
+        told.length = 0;
+        poke({ control: 'push' });
+        await until('the types', () => told.some((m) => m.op === 'answer' && 'types' in m));
+        const { types } = told.find((m) => 'types' in m) as { types: { why?: string }[] };
+        expect(types.length).toBeGreaterThan(0);
+        expect(types.filter((t) => !t.why)).toEqual([]);
+      },
+    );
 
     it.runIf(!ios)(
       'opens the fixture as a tapped push, its data in the extras, from the Push pane',

@@ -49,13 +49,15 @@ describe('what a window sends to its device', () => {
     await open('app://screen/form');
     told.length = 0;
     sends.onWindow({ op: 'control', name: 'links' });
-    expect(told).toEqual([
-      {
-        op: 'answer',
-        name: 'openLink',
-        recent: ['app://screen/form', 'https://example.test/item/7'],
-      },
-    ]);
+    await expect
+      .poll(() => told)
+      .toEqual([
+        {
+          op: 'answer',
+          name: 'openLink',
+          recent: ['app://screen/form', 'https://example.test/item/7'],
+        },
+      ]);
   });
 
   it('says a refusal as the op does, with what to do, and opens nothing', async () => {
@@ -114,6 +116,23 @@ describe('what a window sends to its device', () => {
       text: 'payload replaces the fields: give one or the other',
     });
     expect(pushed).toHaveLength(1);
+  });
+
+  it('opens a link in the app the pane names, the app in front first, through the policy', async () => {
+    const device = new FakeDevice();
+    const front = await device.foreground();
+    device.apps = { listApps: async () => [{ id: front }] } as unknown as AppManager;
+    const { sends, told, answer } = sendsOn(device, { ...DEFAULT_POLICY, apps: [front!] });
+    sends.onWindow({ op: 'control', name: 'links' });
+    await expect.poll(() => told.find((m) => 'recent' in m)).toMatchObject({ app: front });
+    told.length = 0;
+    sends.onWindow({ op: 'control', name: 'openLink', url: 'app://screen', app: front });
+    expect(await answer()).toMatchObject({ ok: true });
+    expect(device.calls.find((c) => c.name === 'openUrl')?.args).toEqual(['app://screen', front]);
+    told.length = 0;
+    sends.onWindow({ op: 'control', name: 'openLink', url: 'app://screen', app: 'com.other' });
+    expect(await answer()).toMatchObject({ ok: false, text: expect.stringContaining('com.other') });
+    expect(device.calls.filter((c) => c.name === 'openUrl')).toHaveLength(1);
   });
 
   it('leaves what is not its own to the rest of the window', () => {

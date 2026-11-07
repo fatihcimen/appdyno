@@ -47,21 +47,9 @@ static NSString *readable(NSString *json) {
 
 @synthesize onSend = _onSend, answer = _answer;
 
-- (NSTextField *)input:(NSString *)name placeholder:(NSString *)placeholder label:(NSString *)label {
-  NSTextField *field = [NSTextField textFieldWithString:@""];
-  field.identifier = [@"push:" stringByAppendingString:name];
-  field.placeholderString = MVWord(placeholder);
-  field.accessibilityLabel = MVWord(label);
-  // Return sends, and leaving the field does not
-  field.cell.sendsActionOnEndEditing = NO;
-  field.target = self;
-  field.action = @selector(sendPush:);
-  return field;
-}
-
 - (instancetype)initWithFrame:(NSRect)frame {
   if ((self = [super initWithFrame:frame])) {
-    _app = [self input:@"app" placeholder:@"The app's id" label:@"App"];
+    _app = MVSendField(@"push:app", @"The app's id", @"App", self, @selector(sendPush:));
     _type = [NSPopUpButton new];
     _type.identifier = @"pushType";
     _type.autoenablesItems = NO;
@@ -80,10 +68,10 @@ static NSString *readable(NSString *json) {
     mode.spacing = 6;
     mode.accessibilityLabel = MVWord(@"What is sent");
     _inputs = @{
-      @"title": [self input:@"title" placeholder:@"Order 42" label:@"Title"],
-      @"body": [self input:@"body" placeholder:@"It has shipped" label:@"Body"],
-      @"image": [self input:@"image" placeholder:@"A link, or a file on this Mac" label:@"Image"],
-      @"data": [self input:@"data" placeholder:@"key=value, a line each" label:@"Data"],
+      @"title": MVSendField(@"push:title", @"Order 42", @"Title", self, @selector(sendPush:)),
+      @"body": MVSendField(@"push:body", @"It has shipped", @"Body", self, @selector(sendPush:)),
+      @"image": MVSendField(@"push:image", @"A link, or a file on this Mac", @"Image", self, @selector(sendPush:)),
+      @"data": MVSendField(@"push:data", @"key=value, a line each", @"Data", self, @selector(sendPush:)),
     };
     // lines of their own, by Option-Return: inbox and messaging take a line each
     for (NSString *name in @[@"body", @"data"]) _inputs[name].usesSingleLineMode = NO;

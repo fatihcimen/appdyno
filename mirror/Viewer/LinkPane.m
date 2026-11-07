@@ -7,34 +7,29 @@
 static const double kBetween = 10;
 
 @implementation MVLinkPane {
-  NSTextField *_field;
+  NSTextField *_field, *_app;
+  NSString *_suggested;
   MVAccentButton *_open;
   MVList *_recent;
   NSView *_none;
-  BOOL _asked;
 }
 
 @synthesize onSend = _onSend, answer = _answer;
 
 - (instancetype)initWithFrame:(NSRect)frame {
   if ((self = [super initWithFrame:frame])) {
-    _field = [NSTextField textFieldWithString:@""];
-    _field.identifier = @"linkField";
-    _field.placeholderString = MVWord(@"https://… or yourapp://…");
-    _field.accessibilityLabel = MVWord(@"Link to open");
+    _field = MVSendField(@"linkField", @"https://… or yourapp://…", @"Link to open", self, @selector(open:));
     _field.usesSingleLineMode = YES;
     _field.lineBreakMode = NSLineBreakByTruncatingMiddle;
-    // Return opens it, and leaving the field does not
-    _field.cell.sendsActionOnEndEditing = NO;
-    _field.target = self;
-    _field.action = @selector(open:);
+    // an iPhone opens a link only in a named app; elsewhere none lets the system choose
+    _app = MVSendField(@"linkApp", @"Any app, or one app's id", @"App to open it in", self, @selector(open:));
     _open = MVPlacePrimary(@"Open", @"openLinkGo", self, @selector(open:));
     _open.accessibilityLabel = MVControlTitle(@"openLink");
     NSStackView *ask = [NSStackView stackViewWithViews:@[MVFieldPlate(_field, nil), _open]];
     ask.spacing = 8;
     _answer = [MVAnswerView new];
     _none = MVEmptyCard(@"clock.arrow.circlepath", @"Links opened here stay, for this device.");
-    NSStackView *stack = [NSStackView stackViewWithViews:@[ask, MVPaneNote(@"Any scheme: a web link, a universal link or App Link, or the app's own."), _answer, _none]];
+    NSStackView *stack = [NSStackView stackViewWithViews:@[ask, MVFieldPlate(_app, nil), MVPaneNote(@"Any scheme: a web link, a universal link or App Link, or the app's own."), _answer, _none]];
     stack.orientation = NSUserInterfaceLayoutOrientationVertical;
     stack.alignment = NSLayoutAttributeWidth;
     stack.spacing = 6;
@@ -44,7 +39,7 @@ static const double kBetween = 10;
     _recent.hidden = YES;
     __weak MVLinkPane *weak = self;
     _recent.onSelect = ^(MVRow *row) {
-      if (row) [weak fill:row.key];
+      if (row) [weak fill:row.key app:nil];
     };
     // the list takes what room is left under the rest
     for (NSView *part in @[stack, _recent]) {
@@ -62,9 +57,8 @@ static const double kBetween = 10;
   return self;
 }
 
+/// The recent links, and the app in front, asked again each time: the app may have changed.
 - (void)ask {
-  if (_asked) return;
-  _asked = YES;
   MVPaneSend(self, @{@"op": @"control", @"name": @"links"});
 }
 
@@ -72,8 +66,9 @@ static const double kBetween = 10;
   [self.window makeFirstResponder:_field];
 }
 
-- (void)fill:(NSString *)url {
+- (void)fill:(NSString *)url app:(nullable NSString *)app {
   _field.stringValue = url;
+  if (app) _app.stringValue = app;
   [self focus];
 }
 
@@ -83,11 +78,14 @@ static const double kBetween = 10;
   if (!url.length || _answer.waiting) return;
   _open.enabled = NO;
   [_answer sending:MVFormat(@"Opening %@", @[url])];
-  MVPaneSend(self, @{@"op": @"control", @"name": @"openLink", @"url": url});
+  NSString *app = [_app.stringValue stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+  MVPaneSend(self, @{@"op": @"control", @"name": @"openLink", @"url": url, @"app": app});
 }
 
 - (void)show:(NSDictionary *)m {
   if ([m[@"recent"] isKindOfClass:NSArray.class]) [self list:m[@"recent"]];
+  // the app in front, unless a person has put another
+  if ([m[@"app"] isKindOfClass:NSString.class] && (!_app.stringValue.length || [_app.stringValue isEqual:_suggested])) _app.stringValue = _suggested = m[@"app"];
   [_answer show:m];
   _open.enabled = !_answer.waiting;
 }

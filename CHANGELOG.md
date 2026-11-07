@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Links** in a window names the app to open a link in, the app in front first, through the server's list of apps: an iPhone opens a link only in a named app, and its window could not open one. Run on an iPhone 13 Pro Max with iOS 27.2 and a Samsung Galaxy A52 with Android 14.
 - A window's Inspector has **Push**: a push to an app by `push`, as an agent sends one, from **Send Push…** (⇧⌘P), the File menu or More. The types are the op's for the device, one it does not take shown with why; the fields follow the type, or the op's template is edited as the payload. Run on an iPhone 17 Pro simulator with iOS 27.2 and an API 34 emulator.
 - `open_link` no longer says it opened a link the system asks about first: a simulator asks "Open in …?" before an app's scheme first opens it, and nothing opens until that is answered. The answer says `sent`, with the alert's words and buttons, and to answer it with `alert`; a window's Links pane says the same. Run on an iPhone 17 Pro simulator with iOS 27.2, just erased.
 - A window's Inspector has **Links**: a link typed there, of any scheme, goes to the device by `open_link`, as an agent's does, from **Open Link…** (⌘O), the File menu or More. Its answer comes as it goes, a refusal whole with its hint, and the links opened stay for the device. A person's own link no longer reads as an AI client driving. Run on an iPhone 17 Pro simulator with iOS 27.2 and an API 34 emulator.

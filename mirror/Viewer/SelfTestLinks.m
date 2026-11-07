@@ -26,7 +26,7 @@ static void checkAnswers(MVLinkPane *pane, NSMutableArray<NSDictionary *> *sent)
   MVHoldStill(NO);
   MVCheck(@"links: the recent links stand under a heading", pane.rows.count == 3 && pane.rows[0].header && [pane.rows[2].key isEqual:@"https://example.test/item/7"], [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
   NSString *refusal = @"this link is not on this server's allow list", *hint = @"change that and call again: nothing was done";
-  [pane fill:@"https://elsewhere.test/"];
+  [pane fill:@"https://elsewhere.test/" app:nil];
   pressReturn(pane.window);
   [pane show:@{@"op": @"answer", @"name": @"openLink", @"ok": @NO, @"text": refusal, @"hint": hint}];
   MVCheck(@"links: a refusal is shown whole, with what to do", [pane.answer.said isEqual:MVWord(refusal)] && [pane.answer.hint isEqual:MVWord(hint)], [NSString stringWithFormat:@"%@ / %@", pane.answer.said, pane.answer.hint]);
@@ -56,13 +56,14 @@ void MVCheckLinks(void) {
   MVPump(0.3);
   NSTextField *field = [pane valueForKey:@"_field"];
   MVCheck(@"links: Open Link in More shows the pane, its field taking the keyboard", window.inspecting && window.inspector.chosen == MVPaneLinks && typesInto(window.nsWindow, field), NSStringFromClass([window.nsWindow.firstResponder class]));
-  MVCheck(@"links: the pane asks once for this device's recent links", sent.count == 1 && [sent[0][@"name"] isEqual:@"links"], sent.description);
+  MVCheck(@"links: the pane asks for this device's recent links and the app in front as it shows", sent.count == 1 && [sent[0][@"name"] isEqual:@"links"], sent.description);
+  [pane show:@{@"op": @"answer", @"name": @"openLink", @"recent": @[], @"app": @"dev.app"}];
   MVCheck(@"links: its field and button say what they are to a screen reader", [field.accessibilityLabel isEqual:MVWord(@"Link to open")] && [MVFindControl(window.nsWindow.contentView, @"openLinkGo").accessibilityLabel isEqual:MVControlTitle(@"openLink")], nil);
   [sent removeAllObjects];
-  [pane fill:@"  appdyno-fixture://open/form "];
+  [pane fill:@"  appdyno-fixture://open/form " app:nil];
   pressReturn(window.nsWindow);
   pressReturn(window.nsWindow);
-  MVCheck(@"links: Return sends the link, once, until its answer comes", sent.count == 1 && [sent[0][@"name"] isEqual:@"openLink"] && [sent[0][@"url"] isEqual:@"appdyno-fixture://open/form"], sent.description);
+  MVCheck(@"links: Return sends the link, once, until its answer comes, in the app in front", sent.count == 1 && [sent[0][@"name"] isEqual:@"openLink"] && [sent[0][@"url"] isEqual:@"appdyno-fixture://open/form"] && [sent[0][@"app"] isEqual:@"dev.app"], sent.description);
   MVCheck(@"links: and says it is opening", [pane.answer.said containsString:@"appdyno-fixture://open/form"], pane.answer.said);
   checkAnswers(pane, sent);
 }

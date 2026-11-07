@@ -74,7 +74,7 @@
   if (m[@"pane"]) return [_window showPane:[m[@"pane"] integerValue]];
   if (m[@"journey"]) return [self say:@{@"op": @"control", @"name": @"journey", @"file": m[@"journey"]}];
   if (m[@"control"]) return [_window perform:m[@"control"]];
-  if (m[@"link"]) return [_window.inspector.links fill:m[@"link"]];
+  if (m[@"link"]) return [_window.inspector.links fill:m[@"link"] app:m[@"app"]];
   if (m[@"push"]) return [_window.inspector.push fill:m[@"push"]];
   if (m[@"click"]) return [_window chooseClick:m[@"click"]];
   double x = [m[@"x"] doubleValue], y = [m[@"y"] doubleValue];

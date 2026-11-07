@@ -18,6 +18,17 @@ static NSTextField *wrapped(MVStyle style) {
   return field;
 }
 
+NSTextField *MVSendField(NSString *name, NSString *placeholder, NSString *label, id target, SEL action) {
+  NSTextField *field = [NSTextField textFieldWithString:@""];
+  field.identifier = name;
+  field.placeholderString = MVWord(placeholder);
+  field.accessibilityLabel = MVWord(label);
+  field.cell.sendsActionOnEndEditing = NO;
+  field.target = target;
+  field.action = action;
+  return field;
+}
+
 void MVPaneSend(NSView<MVSendPane> *pane, NSDictionary *message) {
   if (pane.onSend) return pane.onSend(message);
   MVEmitFrom(pane, message);

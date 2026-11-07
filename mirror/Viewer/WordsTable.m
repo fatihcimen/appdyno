@@ -157,6 +157,8 @@ const MVWordRow MVWordTable[] = {
     {"Links", "Bağlantılar"},
     {"Open Link…", "Bağlantı Aç…"},
     {"Link to open", "Açılacak bağlantı"},
+    {"Any app, or one app's id", "Herhangi bir uygulama ya da bir uygulamanın kimliği"},
+    {"App to open it in", "Açılacağı uygulama"},
     {"https://… or yourapp://…", "https://… ya da uygulamanız://…"},
     {"Any scheme: a web link, a universal link or App Link, or the app's own.", "Her şema olur: bir web bağlantısı, evrensel bağlantı ya da App Link, ya da uygulamanın kendi şeması."},
     {"Links opened here stay, for this device.", "Burada açılan bağlantılar bu cihaz için saklanır."},
