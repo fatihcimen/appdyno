@@ -85,3 +85,23 @@ final class BoxTests: XCTestCase {
         XCTAssertEqual(box(CGRect(x: 0, y: 0, width: CGFloat.infinity, height: 1)), [0, 0, 0, 0])
     }
 }
+
+final class PeerTests: XCTestCase {
+    private func address(_ text: String) -> [UInt8] {
+        var bytes = [UInt8](repeating: 0, count: 16)
+        XCTAssertEqual(inet_pton(AF_INET6, text, &bytes), 1, text)
+        return bytes
+    }
+
+    func testATunnelsTwoEndsAreTheOnlyOnesLetIn() {
+        XCTAssertTrue(tunnelEnds(local: address("fd12:3456:789a::1"), remote: address("fd12:3456:789a::2")))
+        // a VPN's, a network's own, and a tunnel's ends the wrong way round or from another tunnel
+        XCTAssertFalse(tunnelEnds(local: address("fd7a:115c:a1e0::5"), remote: address("fd7a:115c:a1e0::9")))
+        XCTAssertFalse(tunnelEnds(local: address("fd12:3456:789a::1"), remote: address("fd12:3456:789a::7")))
+        XCTAssertFalse(tunnelEnds(local: address("fd12:3456:789a::2"), remote: address("fd12:3456:789a::1")))
+        XCTAssertFalse(tunnelEnds(local: address("fd12:3456:789a::1"), remote: address("fd99:3456:789a::2")))
+        XCTAssertFalse(tunnelEnds(local: address("2001:db8::1"), remote: address("2001:db8::2")))
+        XCTAssertFalse(tunnelEnds(local: [192, 168, 1, 61], remote: [192, 168, 1, 2]))
+        XCTAssertFalse(tunnelEnds(local: [], remote: []))
+    }
+}

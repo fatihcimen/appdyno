@@ -63,8 +63,10 @@ is turned away. All of it is encrypted on the network. Android's is adb's own, k
 
 An iPhone's runner keeps to the phone's loopback unless the phone is paired so. A paired phone's runner takes a tunnel too,
 with the same token, and as no listener could be kept to a tunnel alone its port stands open on the phone's network while
-it runs: a connection is read only when it came by the loopback or an interface of a tunnel's kind, and one by the phone's
-Wi-Fi is closed with nothing read from it.
+it runs: a connection is read only when it came by the loopback, or by an interface of a tunnel's kind from the Mac's end
+of a tunnel to the phone's, which every tunnel seen made `::2` and `::1` of one private /64. Any other is closed with
+nothing read from it, the phone's Wi-Fi and a VPN's among them, but for a VPN on the phone set up with addresses of that
+same form, which would reach the runner's token.
 
 ## `--http`
 

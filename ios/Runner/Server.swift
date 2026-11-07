@@ -49,7 +49,8 @@ final class MainPump {
 /// TCP server, frames in, JSON-RPC requests out to the handler, replies back: on the loopback, which a cable reaches, and on a
 /// phone paired for Wi-Fi by a tunnel too, which is how a Mac reaches one with none. No listener can be kept to a tunnel, as
 /// its interface comes after the listener and its path names the Wi-Fi it rides on as well: so a connection is read only when
-/// it came by the loopback or an interface of a tunnel's kind, and one by Wi-Fi alone is closed unread.
+/// it came by the loopback, or by an interface of a tunnel's kind between a tunnel's two ends, and any other is closed
+/// unread, a VPN's among them.
 final class Server {
     private let listeners: [NWListener]
     private let queue = DispatchQueue(label: "server")
@@ -83,12 +84,20 @@ final class Server {
 
     func stop() { listeners.forEach { $0.cancel() } }
 
+    private static func bytes(_ endpoint: NWEndpoint?) -> [UInt8] {
+        guard case let .hostPort(.ipv6(address), _)? = endpoint else { return [] }
+        return [UInt8](address.rawValue)
+    }
+
     private func accept(_ c: NWConnection) {
         let session = Session(connection: c)
         c.stateUpdateHandler = { [weak self] state in
             guard case .ready = state else { return }
             c.stateUpdateHandler = nil
-            guard let path = c.currentPath, path.usesInterfaceType(.loopback) || path.usesInterfaceType(.other) else {
+            guard let path = c.currentPath, path.usesInterfaceType(.loopback)
+                || (path.usesInterfaceType(.other)
+                    && tunnelEnds(local: Self.bytes(path.localEndpoint), remote: Self.bytes(c.endpoint)))
+            else {
                 c.cancel()
                 return
             }
