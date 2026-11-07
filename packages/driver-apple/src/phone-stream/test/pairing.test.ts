@@ -2,12 +2,20 @@ import { createServer as createTls } from 'node:tls';
 import { createServer as createNet, Socket } from 'node:net';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FramedLine, pairingFrame, XpcLine } from '../pairing-line.js';
-import { PairingChannel, type Identity } from '../pairing.js';
+import { NotProved, PairingChannel, type Identity } from '../pairing.js';
 import { N, opack, readTlv, srpClient, TAG, tlv } from '../pairing-wire.js';
 import type { RemoteXpc } from '../remotexpc.js';
 import { PhoneRefusal } from '../tunnel.js';
 import { PortRefused } from '../ipstack.js';
-import { networkAddress, phonesIn, phonesToTry, portOnWifi, pskTls } from '../wifi.js';
+import {
+  firstProved,
+  networkAddress,
+  phonesIn,
+  phonesToTry,
+  portOnWifi,
+  pskTls,
+  type FoundPhone,
+} from '../wifi.js';
 import { XpcInt64 } from '../xpc-codec.js';
 import { FakePhone } from './fake-phone.js';
 
@@ -179,7 +187,18 @@ describe('a pairing', () => {
     phone.impostor = true;
     const channel = await open(phone);
     await channel.handshake();
-    await expect(channel.verify(identity)).rejects.toMatchObject({ need: 'not-paired' });
+    await expect(channel.verify(identity)).rejects.toBeInstanceOf(NotProved);
+  });
+
+  it('what refuses before it proves itself is not the phone, and its words are not taken', async () => {
+    const phone = await aPhone();
+    const identity = await paired(phone);
+    phone.refusesWith = 'Words of its own choosing';
+    const channel = await open(phone);
+    await channel.handshake();
+    const failure = await channel.verify(identity).catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(NotProved);
+    expect(String(failure)).not.toContain('Words of its own');
   });
 
   it('a key that is not its own is refused by a real signature check', async () => {
@@ -189,7 +208,7 @@ describe('a pairing', () => {
     const forged: Identity = { ...(await paired(other)), host: identity.host };
     const channel = await open(phone);
     await channel.handshake();
-    await expect(channel.verify(forged)).rejects.toBeInstanceOf(PhoneRefusal);
+    await expect(channel.verify(forged)).rejects.toBeInstanceOf(NotProved);
   });
 });
 
@@ -238,12 +257,58 @@ describe('finding a phone', () => {
     '5E1F._remotepairing._tcp TXT     "identifier=5E1F0A2B" "authTag=Ab12Cd34" "ver=26" "minVer=8" "flags=0"',
   ];
 
-  it('goes by its name where that finds it, and else tries what is there', () => {
-    const at = (phone: string) => ({ phone, host: `${phone}.local.`, port: 1 });
+  const at = (phone: string, host = `${phone}.local.`): FoundPhone => ({ phone, host, port: 1 });
+
+  it('goes by its name first, and then tries what else is there', () => {
     const found = [at('A'), at('B')];
-    expect(phonesToTry(found, 'B')).toEqual([at('B')]);
+    expect(phonesToTry(found, 'B')).toEqual([at('B'), at('A')]);
     expect(phonesToTry(found, 'C')).toEqual(found);
     expect(phonesToTry([], 'C')).toEqual([]);
+  });
+
+  describe('the one that proves itself', () => {
+    const refusing = new PhoneRefusal('not-trusted', 'Words of its own choosing');
+    /** What each host does when asked to prove itself. */
+    const proving =
+      (answers: Record<string, () => unknown>) =>
+      async ({ host }: FoundPhone) =>
+        answers[host]!();
+
+    it('is found past one that takes its name, refuses and is seen first', async () => {
+      const looks = [
+        async () => [at('PHONE', 'other')],
+        async () => [at('PHONE', 'other'), at('NEW', 'it')],
+      ];
+      const prove = vi.fn(proving({ other: () => Promise.reject(refusing), it: () => 'proved' }));
+      await expect(firstProved(looks, 'PHONE', prove)).resolves.toBe('proved');
+      expect(prove).toHaveBeenCalledTimes(2);
+    });
+
+    it('when none does, says so in words of its own', async () => {
+      const looks = [async () => [at('PHONE', 'other')], async () => [at('PHONE', 'other')]];
+      const failure = await firstProved(
+        looks,
+        'PHONE',
+        proving({ other: () => Promise.reject(refusing) }),
+      ).catch((e: unknown) => e);
+      expect(failure).toMatchObject({ need: 'not-connected' });
+      expect(String(failure)).not.toContain('Words of its own');
+    });
+
+    it('stops at a phone that proved itself and no longer knows this Mac', async () => {
+      const forgot = new PhoneRefusal('not-paired', 'the phone no longer knows this Mac');
+      const looks = [async () => [at('PHONE', 'it'), at('OTHER', 'other')]];
+      const prove = vi.fn(proving({ it: () => Promise.reject(forgot), other: () => 'no' }));
+      await expect(firstProved(looks, 'PHONE', prove)).rejects.toBe(forgot);
+      expect(prove).toHaveBeenCalledOnce();
+    });
+
+    it('with nothing there says the phone is not on this network', async () => {
+      await expect(firstProved([async () => []], 'PHONE', vi.fn())).rejects.toMatchObject({
+        need: 'not-connected',
+        message: 'the phone is not on this network',
+      });
+    });
   });
 
   it('reads its name, host and port from what is advertised', () => {

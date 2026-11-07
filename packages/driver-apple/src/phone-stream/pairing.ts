@@ -64,6 +64,9 @@ const signedBy = (key: Buffer, signed: Buffer, signature: Buffer | undefined) =>
   signature !== undefined && verify(null, signed, rawKey(ED25519_SPKI, key), signature);
 
 const b64 = (b: Buffer) => b.toString('base64');
+
+/** What answered did not prove itself the phone paired, so nothing it said is the phone's word. */
+export class NotProved extends Error {}
 const bytes = (v: unknown) =>
   Buffer.isBuffer(v) ? v : Buffer.from(typeof v === 'string' ? v : '', 'base64');
 
@@ -159,7 +162,8 @@ export class PairingChannel {
 
   /**
    * Proves `identity` to the phone. False when it does not know it, or with none, which is how a new pairing starts;
-   * the key for a tunnel is held when it does.
+   * the key for a tunnel is held when it does. What has not proved itself the phone is a `NotProved`: anyone on a network
+   * can answer as one, and its words are not shown as the phone's, nor are those that come in the clear after the proof.
    */
   async verify(identity?: Identity): Promise<boolean> {
     const { publicKey, privateKey } = generateKeyPairSync('x25519');
@@ -173,9 +177,14 @@ export class PairingChannel {
       ]),
       true,
     );
-    const first = await this.pairingAnswer();
+    const first = await this.pairingAnswer().catch((e: unknown) => {
+      if (identity && e instanceof PhoneRefusal)
+        throw new NotProved('it refused before it proved itself');
+      throw e;
+    });
     const theirs = first.get(TAG.publicKey);
-    if (!theirs || !identity) return this.notKnown();
+    if (!identity) return this.notKnown();
+    if (!theirs) throw this.notProved('it gave no key');
     const shared = diffieHellman({ privateKey, publicKey: rawKey(X25519_SPKI, theirs) });
     const host = Buffer.from(identity.host);
     const key = derive(shared, 'Pair-Verify-Encrypt-Salt', 'Pair-Verify-Encrypt-Info');
@@ -190,7 +199,7 @@ export class PairingChannel {
         said.get(TAG.signature),
       )
     ) {
-      throw new PhoneRefusal('not-paired', 'something answered as the phone and did not prove it');
+      throw this.notProved('it answered as the phone and did not prove it');
     }
     const proof = sign(
       null,
@@ -209,8 +218,11 @@ export class PairingChannel {
       ]),
       false,
     );
-    const second = await this.pairingAnswer();
-    if (second.has(TAG.error)) return this.notKnown();
+    const second = await this.pairingAnswer().catch((e: unknown) => {
+      if (e instanceof PhoneRefusal) return undefined;
+      throw e;
+    });
+    if (!second || second.has(TAG.error)) return this.notKnown();
     this.shared = shared;
     return true;
   }
@@ -218,6 +230,12 @@ export class PairingChannel {
   private notKnown() {
     this.sendPlain({ event: { _0: { pairVerifyFailed: {} } } });
     return false;
+  }
+
+  /** The verify is left as one that failed, so that on a cable a new pairing can follow on the same connection. */
+  private notProved(why: string) {
+    this.notKnown();
+    return new NotProved(why);
   }
 
   /**

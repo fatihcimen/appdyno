@@ -37,6 +37,8 @@ export class FakePhone {
   consent: boolean | undefined = true;
   /** Set to answer with another key than the one that paired. */
   impostor = false;
+  /** Set to refuse a verify at its first step, before proving anything, in these words. */
+  refusesWith: string | undefined;
   readonly failedVerifies: number[] = [];
   listenerPort = 4242;
   port = 0;
@@ -193,6 +195,18 @@ export class FakePhone {
 
     const onVerify = (data: Map<number, Buffer>) => {
       const state = data.get(TAG.state)![0];
+      if (state === 1 && this.refusesWith) {
+        plain({
+          event: {
+            _0: {
+              pairingRejectedWithError: {
+                wrappedError: { userInfo: { NSLocalizedDescription: this.refusesWith } },
+              },
+            },
+          },
+        });
+        return;
+      }
       if (state === 1) {
         const theirs = data.get(TAG.publicKey)!;
         const { publicKey, privateKey } = generateKeyPairSync('x25519');

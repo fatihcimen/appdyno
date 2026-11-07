@@ -7,7 +7,7 @@ import type { PhoneStreamCheck } from '../phone-stream-port.js';
 import { identityFile } from '../wifi-paired.js';
 import { PortRefused } from './ipstack.js';
 import { FramedLine, XpcLine } from './pairing-line.js';
-import { PairingChannel, type Identity } from './pairing.js';
+import { NotProved, PairingChannel, type Identity } from './pairing.js';
 import { RemoteXpc } from './remotexpc.js';
 import { readServices } from './services.js';
 import { tunnelSocket } from './tunnel-socket.js';
@@ -66,16 +66,50 @@ export function phonesIn(lines: string[]): FoundPhone[] {
   });
 }
 
-const findPhones = async () =>
-  phonesIn(await browse(['-Z', SERVICE, 'local.'], (l) => phonesIn(l).length > 0, OTHERS_MS));
+/** What is advertised: a quick look ends soon after the first phone, and a whole one takes its time. */
+const findPhones = async (whole = false) =>
+  phonesIn(
+    await browse(['-Z', SERVICE, 'local.'], (l) => !whole && phonesIn(l).length > 0, OTHERS_MS),
+  );
 
 /**
- * The phone by its name where that finds it, and else all that are there: an iPhone 13 Pro Max advertised another name
- * than it paired by, and a new one by morning, so what decides is the key a phone proves it holds.
+ * The phone by its name first, then all else that is there: an iPhone 13 Pro Max advertised another name than it paired
+ * by, and a new one by morning, so what decides is the key a phone proves it holds, and a name taken by another goes
+ * first and no further.
  */
 export function phonesToTry(found: FoundPhone[], name: string) {
-  const named = found.filter((p) => p.phone === name);
-  return named.length ? named : found;
+  return [...found.filter((p) => p.phone === name), ...found.filter((p) => p.phone !== name)];
+}
+
+/**
+ * The first that proves itself, of a quick look and then of a whole one: anything on the network may answer as the phone
+ * and refuse, or be quicker to be seen, and neither ends the search. Only a phone that proved itself is heard saying it
+ * no longer knows this Mac.
+ */
+export async function firstProved<T>(
+  looks: (() => Promise<FoundPhone[]>)[],
+  name: string,
+  prove: (phone: FoundPhone) => Promise<T>,
+): Promise<T> {
+  const tried = new Set<string>();
+  for (const look of looks) {
+    for (const phone of phonesToTry(await look(), name)) {
+      const at = `${phone.host}:${phone.port}`;
+      if (tried.has(at)) continue;
+      tried.add(at);
+      try {
+        return await prove(phone);
+      } catch (e) {
+        if (e instanceof PhoneRefusal && e.need === 'not-paired') throw e;
+      }
+    }
+  }
+  throw new PhoneRefusal(
+    'not-connected',
+    tried.size
+      ? 'nothing on this network proved itself the phone paired'
+      : 'the phone is not on this network',
+  );
 }
 
 /**
@@ -183,21 +217,15 @@ async function provedBy(phone: FoundPhone, identity: Identity) {
     return { address, channel };
   } catch (e) {
     channel.close();
-    throw e;
+    // what did not prove itself says nothing as the phone, so it is only another that was not the one
+    throw e instanceof PhoneRefusal && e.need === 'not-paired' ? e : new NotProved(String(e));
   }
 }
 
-async function provenChannel(identity: Identity) {
-  let refused: unknown;
-  for (const phone of await phonesFor(identity)) {
-    try {
-      return await provedBy(phone, identity);
-    } catch (e) {
-      refused = e;
-    }
-  }
-  throw refused;
-}
+const provenChannel = (identity: Identity) =>
+  firstProved([findPhones, () => findPhones(true)], identity.phone, (phone) =>
+    provedBy(phone, identity),
+  );
 
 /** The same tunnel as by cable, with its packets over TCP and TLS on the network. */
 export async function openWifiTunnel(udid: string): Promise<Tunnel> {
