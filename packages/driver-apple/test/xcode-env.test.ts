@@ -1,5 +1,8 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { chooseDeveloperDir, xcodeEnv } from '../src/simctl.js';
+import { chooseDeveloperDir, xcodeEnv, xcodeTool } from '../src/simctl.js';
 
 const dev = (app: string) => `/Applications/${app}/Contents/Developer`;
 const CLT = '/Library/Developer/CommandLineTools';
@@ -29,5 +32,22 @@ describe('the developer folder', () => {
   it('is DEVELOPER_DIR when that is set', () => {
     const env = { DEVELOPER_DIR: '/somewhere' };
     expect(xcodeEnv(env)).toBe(env);
+  });
+});
+
+describe("a command of Xcode's", () => {
+  it('runs by its own path in the developer folder, and by xcrun where the folder has none', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-developer-'));
+    mkdirSync(join(dir, 'usr/bin'), { recursive: true });
+    writeFileSync(join(dir, 'usr/bin/simctl'), '');
+    expect(xcodeTool('simctl', ['list'], { DEVELOPER_DIR: dir })).toEqual([
+      join(dir, 'usr/bin/simctl'),
+      ['list'],
+    ]);
+    expect(xcodeTool('devicectl', ['list'], { DEVELOPER_DIR: dir })).toEqual([
+      'xcrun',
+      ['devicectl', 'list'],
+    ]);
+    expect(xcodeTool('simctl', ['list'], {})).toEqual(['xcrun', ['simctl', 'list']]);
   });
 });

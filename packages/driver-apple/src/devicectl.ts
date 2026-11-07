@@ -1,7 +1,7 @@
 import { DeviceError } from '@appdyno/protocol';
 import { run } from '@appdyno/core';
 import { launchLanguage } from './manage.js';
-import { xcodeEnv, assertBundle } from './simctl.js';
+import { xcodeEnv, xcodeTool, assertBundle } from './simctl.js';
 
 /** An app's own arguments: what starts with a dash is the app's, not this tool's. */
 const andArgs = (args: string[]) => (args.length > 0 ? ['--', ...args] : []);
@@ -36,14 +36,10 @@ export class Devicectl {
 
   async json(args: string[], timeoutMs = 60_000): Promise<Record<string, unknown>> {
     try {
+      const env = xcodeEnv();
       const { stdout } = await run(
-        'xcrun',
-        ['devicectl', '--json-output', '-', '--quiet', ...args],
-        {
-          timeout: timeoutMs,
-          maxBuffer: 64 * 1024 * 1024,
-          env: xcodeEnv(),
-        },
+        ...xcodeTool('devicectl', ['--json-output', '-', '--quiet', ...args], env),
+        { timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024, env },
       );
       return JSON.parse(stdout) as Record<string, unknown>;
     } catch (e) {
@@ -139,9 +135,11 @@ export class Devicectl {
   }
 
   private pasteboard(action: 'copy' | 'paste') {
-    return run('xcrun', ['devicectl', 'device', 'pasteboard', action, '--device', this.udid], {
-      env: xcodeEnv(),
-    });
+    const env = xcodeEnv();
+    return run(
+      ...xcodeTool('devicectl', ['device', 'pasteboard', action, '--device', this.udid], env),
+      { env },
+    );
   }
 
   /** Whether the phone wants its passcode now. */

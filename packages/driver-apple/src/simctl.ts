@@ -54,6 +54,24 @@ export function xcodeEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEn
   return developerDir.dir ? { ...env, DEVELOPER_DIR: developerDir.dir } : env;
 }
 
+const toolPaths = new Map<string, string | undefined>();
+
+/**
+ * A command of Xcode's developer folder as a file and its arguments: its own path there, looked for once, as xcrun's
+ * lookup costs 4-5 ms a call; xcrun where `env` names no such folder, or one without it, as before.
+ */
+export function xcodeTool(
+  tool: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+): [string, string[]] {
+  const dir = env.DEVELOPER_DIR;
+  const key = `${dir}/usr/bin/${tool}`;
+  if (dir && !toolPaths.has(key)) toolPaths.set(key, existsSync(key) ? key : undefined);
+  const path = dir && toolPaths.get(key);
+  return path ? [path, args] : ['xcrun', [tool, ...args]];
+}
+
 const UDID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;
 export const assertUdid = (u: string) => {
   if (!UDID.test(u)) throw new DeviceError('INVALID_ARGUMENT', `not a simulator id: ${u}`);
@@ -134,10 +152,11 @@ export class Simctl {
 
   async exec(args: string[], timeoutMs = 60_000, env?: NodeJS.ProcessEnv): Promise<string> {
     try {
-      const { stdout } = await run('xcrun', ['simctl', ...args], {
+      const all = { ...this.env, ...env };
+      const { stdout } = await run(...xcodeTool('simctl', args, all), {
         timeout: timeoutMs,
         maxBuffer: 64 * 1024 * 1024,
-        env: { ...this.env, ...env },
+        env: all,
         ...(callSignal() && { signal: callSignal()! }),
       });
       return stdout;
@@ -232,7 +251,7 @@ export class Simctl {
   /** Puts `text` on the simulator's clipboard, from the Mac. */
   pbcopy(udid: string, text: string) {
     return new Promise<void>((resolve, reject) => {
-      const p = spawn('xcrun', ['simctl', 'pbcopy', assertUdid(udid)], {
+      const p = spawn(...xcodeTool('simctl', ['pbcopy', assertUdid(udid)], this.env), {
         env: this.env,
         stdio: ['pipe', 'ignore', 'ignore'],
       });
