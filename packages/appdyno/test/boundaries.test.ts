@@ -127,6 +127,18 @@ describe('module boundaries', () => {
     // a package's sources are not its tests
     expect(violations('ops', join(packages, 'ops/src/x.ts'), `from '${MCP}';`)).not.toEqual([]);
   });
+
+  it('lets a device suite take a build only by a path the type checker does not follow', () => {
+    // a clean clone checks types before anything is built
+    const literalDist = (source: string) =>
+      [...source.matchAll(IMPORT)].some((m) => /\/dist\//.test(m[1]!));
+    const suites = sources(join(root, 'test-device')).filter((f) =>
+      literalDist(readFileSync(f, 'utf8')),
+    );
+    expect(suites.map((f) => relative(root, f))).toEqual([]);
+    expect(literalDist(`await import('../packages/core/dist/index.js')`)).toBe(true);
+    expect(literalDist(`await import(join(packages, 'core/dist/index.js'))`)).toBe(false);
+  });
 });
 
 // joined here so that this file passes itself
