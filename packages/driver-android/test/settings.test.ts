@@ -246,6 +246,29 @@ describe('a fingerprint', () => {
     },
   );
 
+  it('says the PIN it set when Settings never reaches the sensor, and closes Settings', async () => {
+    const asked: string[] = [];
+    const adb = {
+      exec: async (_: string, c: string) => {
+        asked.push(c);
+        if (c.startsWith('cmd lock_settings verify'))
+          return 'Lock credential verified successfully';
+        return c.startsWith('dumpsys fingerprint') ? prints(0) : '';
+      },
+      run: async () => 'OK',
+    };
+    // each read of the clock a second on, so that each wait for the sensor ends at once
+    let t = 0;
+    const now = vi.spyOn(Date, 'now').mockImplementation(() => (t += 1_000));
+    const events = new AndroidEvents(adb as unknown as Adb, 'emulator-5554', async () => tree([]));
+    const e = await refusal(events.biometric('enroll', async () => undefined));
+    now.mockRestore();
+    expect(e.message).toBe(
+      "Settings' fingerprint enrolment did not come to its sensor in 8 screens: enrol by hand, then biometric enroll; the screen lock is PIN 1234 until restore takes it off",
+    );
+    expect(asked.at(-1)).toBe('am force-stop com.android.settings 2>&1');
+  });
+
   it('refuses a screen lock of its own, and a server that keeps to the app', async () => {
     const theirs = device('emulator-5554', [
       [/dumpsys fingerprint/, prints(0)],

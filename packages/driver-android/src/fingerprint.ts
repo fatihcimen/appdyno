@@ -110,11 +110,22 @@ export class EmulatorFingerprint {
     listening: boolean,
     setUp?: (name: SettingName, value: string) => Promise<void>,
   ) {
-    const pinSet = listening ? false : await this.openEnrolment(setUp);
-    for (let i = 0; i < ENROLL_TOUCHES && (await this.prints()).enrolled === 0; i++)
-      await this.touch(KNOWN_FINGER);
-    if ((await this.prints()).enrolled === 0)
-      throw new DeviceError('NOT_FOUND', `${ENROLL_TOUCHES} touches enrolled nothing`);
+    const pinSet = listening ? false : await this.lockForEnrolment(setUp);
+    try {
+      if (!listening) await this.reachSensor();
+      for (let i = 0; i < ENROLL_TOUCHES && (await this.prints()).enrolled === 0; i++)
+        await this.touch(KNOWN_FINGER);
+      if ((await this.prints()).enrolled === 0)
+        throw new DeviceError('NOT_FOUND', `${ENROLL_TOUCHES} touches enrolled nothing`);
+    } catch (e) {
+      // what this opened goes, back to the app; a PIN it set stays until restore, and is said
+      if (!listening) await this.sh('am force-stop com.android.settings');
+      if (!pinSet || !(e instanceof DeviceError)) throw e;
+      throw new DeviceError(
+        e.code,
+        `${e.message}; the screen lock is PIN ${EMULATOR_PIN} until restore takes it off`,
+      );
+    }
     if (listening) return undefined;
     // the last screen of what this opened says it was added: Done takes it away
     const done = enrolmentStep(await this.screen());
@@ -124,8 +135,8 @@ export class EmulatorFingerprint {
       : undefined;
   }
 
-  /** Settings' enrolment, up to where the sensor listens; whether a PIN had to be set for it. */
-  private async openEnrolment(setUp?: (name: SettingName, value: string) => Promise<void>) {
+  /** A screen lock Settings' enrolment can pass: this tool's PIN, set and written down where there is none. */
+  private async lockForEnrolment(setUp?: (name: SettingName, value: string) => Promise<void>) {
     if (!setUp)
       throw new DeviceError(
         'UNSUPPORTED',
@@ -140,9 +151,14 @@ export class EmulatorFingerprint {
         'this emulator has a screen lock of its own, whose PIN this tool cannot type: enrol a fingerprint in Settings by hand',
       );
     if (none) await setUp('screen_lock', 'pin');
+    return none;
+  }
+
+  /** Settings' enrolment, up to where the sensor listens. */
+  private async reachSensor() {
     await this.sh('am start -a android.settings.FINGERPRINT_ENROLL');
     for (let step = 0; step < SETTINGS_STEPS; step++) {
-      if (await this.listening()) return none;
+      if (await this.listening()) return;
       const next = enrolmentStep(await this.screen());
       if (next?.kind === 'pin')
         await this.sh(
@@ -150,7 +166,7 @@ export class EmulatorFingerprint {
         );
       else if (next) await this.sh(`input tap ${next.x} ${next.y}`);
     }
-    if (await this.listening()) return none;
+    if (await this.listening()) return;
     throw new DeviceError(
       'UNSUPPORTED',
       `Settings' fingerprint enrolment did not come to its sensor in ${SETTINGS_STEPS} screens: enrol by hand, then biometric enroll`,
