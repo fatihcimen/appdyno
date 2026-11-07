@@ -63,7 +63,7 @@ What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 | biometrics                   | an emulator's fingerprint            | yes                          | no: `devicectl` simulates none |
 | airplane, Wi-Fi, mobile data | yes, read back                       | no: it has the Mac's network | no                             |
 | keychain                     | no: Android has none                 | emptied, counted             | no                             |
-| fold pose                    | a foldable emulator                  | no: `simctl` has none        | no                             |
+| fold pose                    | a foldable, API 31+, put back        | no: `simctl` has none        | no                             |
 | incoming call, SMS           | emulator only                        | no: no telephony             | no                             |
 | battery level                | yes                                  | no: it only draws one        | no                             |
 | proxy                        | yes, put back                        | follows the Mac's            | no: its Wi-Fi settings         |
@@ -77,6 +77,10 @@ A radio is done when the device reads as asked, within 10 s: Wi-Fi by the state 
 On an iPhone `devicectl device simulate biometrics` answers `Device does not support any biometric simulation, nothing to do` and exits 0, so it is not used: an answer would say done for a touch that never happened. That is one iPhone with no face enrolled, and no phone has been seen to take one.
 
 `keychain` `reset` empties a simulator's keychain, and says how many items apps held, from the store's own rows, which also prove it empty after. The system's own rows stay and are not counted. It is one-shot: nothing brings them back.
+
+## A fold
+
+`fold` on Android asks `cmd device_state` for the state of that name, `open`, `closed` or another the device lists such as `half_opened`, by its id there, which differs by device, and is done when the device is in it. The request holds until it is reset, whatever the hinge does and whatever becomes of this tool, so it is a condition: `restore` resets it, and `default (now open)` is no request. It is the same on an emulator and a phone, from API 31. Run on a 7.6" foldable emulator with API 34, where the device read `CLOSED` from the request and nothing after `restore`. No real foldable has been run.
 
 ## Languages
 

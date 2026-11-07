@@ -12,6 +12,7 @@ export const SETTINGS = [
   'airplane',
   'wifi',
   'mobile_data',
+  'fold',
 ] as const;
 
 /** What the tool changes only on its way to something asked, written down and put back as the rest: an emulator's PIN, which a fingerprint needs. */
@@ -91,8 +92,6 @@ export interface DeviceEvents {
   ): Promise<string | void>;
   /** Empties a simulator's keychain, and answers how many items it held. */
   resetKeychain(): Promise<number>;
-  /** A foldable's pose. */
-  fold(closed: boolean): Promise<void>;
   /** A call coming in from `number`, or that call ended. */
   call(number: string, end: boolean): Promise<void>;
   sms(from: string, text: string): Promise<void>;

@@ -1286,7 +1286,6 @@ describe('device conditions', () => {
     };
     resetKeychain = async () => 3;
     events: unknown[] = [];
-    fold = async (closed: boolean) => void this.events.push(['fold', closed]);
     call = async (number: string, end: boolean) => void this.events.push(['call', number, end]);
     sms = async (from: string, text: string) => void this.events.push(['sms', from, text]);
   }
@@ -1294,19 +1293,14 @@ describe('device conditions', () => {
   it('takes one-shot events, and refuses what is not one', async () => {
     const settings = new Settings();
     const { call } = await connect(Object.assign(new FakeDevice(), { settings, events: settings }));
-    await call('device_setting', { name: 'fold', value: 'closed' });
     await call('device_setting', { name: 'call', value: '+905551112233' });
     await call('device_setting', { name: 'call', value: 'end +905551112233' });
     await call('device_setting', { name: 'sms', title: '5553434', value: 'Merhaba' });
     expect(settings.events).toEqual([
-      ['fold', true],
       ['call', '+905551112233', false],
       ['call', '+905551112233', true],
       ['sms', '5553434', 'Merhaba'],
     ]);
-    expect((await call('device_setting', { name: 'fold', value: 'half' })).text).toMatch(
-      /open or closed/,
-    );
     expect((await call('device_setting', { name: 'call', value: 'someone' })).text).toMatch(
       /phone number/,
     );
@@ -1323,9 +1317,15 @@ describe('device conditions', () => {
     await call('device_setting', { name: 'dark_mode', value: 'on' });
     await call('device_setting', { name: 'dark_mode', value: 'off' });
     await call('device_setting', { name: 'text_size', value: '1.3' });
-    expect(settings.values).toEqual({ dark_mode: 'off', text_size: '1.3' });
+    settings.values.fold = 'default (now open)';
+    await call('device_setting', { name: 'fold', value: 'closed' });
+    expect(settings.values).toEqual({ dark_mode: 'off', text_size: '1.3', fold: 'closed' });
     expect(await ctx.end()).toEqual([]);
-    expect(settings.values).toEqual({ dark_mode: 'no', text_size: '1.0' });
+    expect(settings.values).toEqual({
+      dark_mode: 'no',
+      text_size: '1.0',
+      fold: 'default (now open)',
+    });
   });
 
   it('restores on request, and reports what it cannot', async () => {

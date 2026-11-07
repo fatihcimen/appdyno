@@ -1,6 +1,7 @@
 import { type DeviceSettings, sleep, TIMEOUTS, type SettingName } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { type Adb, shq } from './adb.js';
+import { AndroidFold } from './fold.js';
 import { AndroidLocale } from './locale.js';
 
 const ANIMATION_SCALES = [
@@ -66,10 +67,12 @@ export class AndroidSettings implements DeviceSettings {
       Promise.reject(new DeviceError('UNSUPPORTED', 'no agent to reach the device languages')),
   ) {
     this.locale = new AndroidLocale(this.sh, deviceLocales);
+    this.fold = new AndroidFold(this.sh);
   }
 
   private sh = (c: string) => shellOf(this.adb, this.serial)(c);
   private readonly locale: AndroidLocale;
+  private readonly fold: AndroidFold;
 
   private emu = (what: string, ...words: string[]) =>
     emulatorConsole(this.adb, this.serial, what, words);
@@ -140,6 +143,8 @@ export class AndroidSettings implements DeviceSettings {
         return this.switchOf('mobile_data', name);
       case 'wifi':
         return this.wifi();
+      case 'fold':
+        return this.fold.get();
       case 'screen_lock':
         // with no credential to give, the check passes only where there is none
         return /verified successfully/.test(await this.sh('cmd lock_settings verify'))
@@ -295,6 +300,9 @@ export class AndroidSettings implements DeviceSettings {
         return;
       case 'screen_lock':
         await this.setScreenLock(value);
+        return;
+      case 'fold':
+        await this.fold.set(value);
         return;
     }
   }

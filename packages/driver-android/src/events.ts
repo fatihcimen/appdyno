@@ -20,10 +20,6 @@ export class AndroidEvents implements DeviceEvents {
     this.fingerprint = new EmulatorFingerprint(serial, this.sh, this.emu, screen);
   }
 
-  async fold(closed: boolean) {
-    await this.emu('fold pose', closed ? 'fold' : 'unfold');
-  }
-
   async call(number: string, end: boolean) {
     await this.emu('calls', 'gsm', end ? 'cancel' : 'call', number);
   }

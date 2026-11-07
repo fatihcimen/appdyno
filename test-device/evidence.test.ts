@@ -737,7 +737,7 @@ describe.skipIf(!android || !android.startsWith('emulator-'))('emulator events o
     const r = await h.call('device_setting', { name: 'fold', value: 'closed' });
     expect(r.error).toBe(true);
     expect(r.data.code).toBe('UNSUPPORTED');
-    expect(r.text).toMatch(/refused fold pose: Device is not foldable/);
+    expect(r.text).toMatch(/this device does not fold: its states are default/);
   });
 });
 

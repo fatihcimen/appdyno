@@ -215,6 +215,8 @@ export class SimulatorSettings implements DeviceSettings {
         throw new DeviceError('UNSUPPORTED', SIM_CANNOT.radio);
       case 'screen_lock':
         throw new DeviceError('UNSUPPORTED', 'a simulator has no screen lock to set');
+      case 'fold':
+        throw new DeviceError('UNSUPPORTED', SIM_CANNOT.fold);
     }
   }
 
@@ -323,10 +325,6 @@ export class SimulatorEvents implements DeviceEvents {
     if (left > 0)
       throw new DeviceError('INTERNAL', `apps still hold ${left} keychain items after a reset`);
     return held;
-  }
-
-  async fold(): Promise<void> {
-    throw new DeviceError('UNSUPPORTED', SIM_CANNOT.fold);
   }
 
   async call(): Promise<void> {

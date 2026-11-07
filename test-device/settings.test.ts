@@ -142,6 +142,24 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
     await call('press_key', { key: 'home' });
   });
 
+  it('folds a foldable by its device state, read back, and restore ends the request', async (t) => {
+    const override = () => /mOverrideState=(.*)/.exec(adb('dumpsys device_state'))?.[1];
+    if (!adb('cmd device_state print-states 2>&1 || true').includes("name='CLOSED'")) t.skip();
+    expect([await value(call, 'fold'), override()]).toEqual([
+      'default (now open)',
+      'Optional.empty',
+    ]);
+    await set(call, 'fold', 'closed');
+    expect(await value(call, 'fold')).toBe('closed');
+    expect(override()).toContain("name='CLOSED'");
+    const back = await call('device_setting', { name: 'restore' });
+    expect(back.text).toContain('fold: default (now open)');
+    expect([await value(call, 'fold'), override()]).toEqual([
+      'default (now open)',
+      'Optional.empty',
+    ]);
+  });
+
   it('says Android has no keychain', async () => {
     const r = await call('device_setting', { name: 'keychain', value: 'reset' });
     expect(r.data.code).toBe('UNSUPPORTED');

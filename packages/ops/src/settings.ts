@@ -17,7 +17,7 @@ import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 const PHONE_NUMBER = /^\+?\d{3,20}$/;
 const DEFAULT_SENDER = '5551234';
 const BIOMETRIC = ['match', 'nomatch', 'enroll'] as const;
-const ONE_SHOT = ['restore', 'push', 'biometric', 'fold', 'call', 'sms', 'keychain'] as const;
+const ONE_SHOT = ['restore', 'push', 'biometric', 'call', 'sms', 'keychain'] as const;
 
 /** The conditions this tool changed on a device and what to put back. Survives its process. */
 const Changes = z.record(
@@ -129,7 +129,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
             .string()
             .max(500)
             .describe(
-              'A switch takes on, off; text_size: 1.3, iOS large; locale: tr-TR; network: slow, full; proxy: host:port, none; battery: 0-100. One-shot: push (value; title), biometric (match, nomatch, enroll), fold (open, closed), call (number; end number), sms (value; title: number), keychain (reset).',
+              'A switch takes on, off; text_size: 1.3, iOS large; locale: tr-TR; network: slow, full; proxy: host:port, none; battery: 0-100; fold: open, closed. One-shot: push (value; title), biometric (match, nomatch, enroll), call (number; end number), sms (value; title: number), keychain (reset).',
             )
             .optional(),
           title: z.string().max(200).optional(),
@@ -181,13 +181,6 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
             throw new ToolError('keychain needs value: reset', 'INVALID_ARGUMENT');
           const t = `the keychain is empty: it held ${await events.resetKeychain()} items`;
           return reply(t, { done: t });
-        }
-        if (name === 'fold') {
-          if (value !== 'open' && value !== 'closed')
-            throw new ToolError('fold needs value: open or closed', 'INVALID_ARGUMENT');
-          await events.fold(value === 'closed');
-          s.acted();
-          return reply(`fold: ${value}`, { done: `fold: ${value}` });
         }
         if (name === 'call') {
           const m = /^(end )?(\+?\d{3,20})$/.exec(value ?? '');

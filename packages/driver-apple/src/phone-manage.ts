@@ -153,6 +153,12 @@ const APPEARANCE: ReadonlySet<SettingName> = new Set<SettingName>([
 /** `devicectl` shows "Extra Large" where it is told extra-large. */
 export const phoneTextSize = (shown: string) => shown.trim().toLowerCase().replace(/\s+/g, '-');
 
+const noSwitch = (name: SettingName) =>
+  new DeviceError(
+    'UNSUPPORTED',
+    name === 'fold' ? PHONE_CANNOT.fold : `an iPhone has no ${name} switch this tool can reach`,
+  );
+
 /** A phone's appearance through `devicectl`; what it has no switch for says so. */
 export class PhoneSettings implements DeviceSettings {
   constructor(private readonly ctl: Devicectl) {}
@@ -162,8 +168,7 @@ export class PhoneSettings implements DeviceSettings {
   }
 
   async get(name: SettingName): Promise<string> {
-    if (!APPEARANCE.has(name))
-      throw new DeviceError('UNSUPPORTED', `an iPhone has no ${name} switch this tool can reach`);
+    if (!APPEARANCE.has(name)) throw noSwitch(name);
     const j = await this.ctl.json(['device', 'info', 'appearance', '--device', this.ctl.udid]);
     const a = (j.result ?? {}) as {
       userInterfaceStyle?: string;
@@ -188,8 +193,7 @@ export class PhoneSettings implements DeviceSettings {
     else if (name === 'reduce_motion') await this.appearance('--reduce-motion', value);
     else if (name === 'increase_contrast') await this.appearance('--increase-contrast', value);
     else if (name === 'reduce_transparency') await this.appearance('--reduce-transparency', value);
-    else
-      throw new DeviceError('UNSUPPORTED', `an iPhone has no ${name} switch this tool can reach`);
+    else throw noSwitch(name);
   }
 }
 
@@ -205,10 +209,6 @@ export class PhoneEvents implements DeviceEvents {
 
   async resetKeychain(): Promise<number> {
     throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.keychain);
-  }
-
-  async fold(): Promise<void> {
-    throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.fold);
   }
 
   async call(): Promise<void> {
