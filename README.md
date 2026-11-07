@@ -95,16 +95,17 @@ An iPhone's live picture is experimental, and rests on undocumented Apple servic
 
 ## Speed
 
-On an iPhone 17 Pro simulator, through MCP, in the system Settings app:
+Medians through MCP over stdio, on the fixture app, 5 runs each, on 2026-11-07, on an M5 Pro with 15 cores, at host load 6-10 (the iPhone's 12-48):
 
-| call                                         | median |
-| -------------------------------------------- | ------ |
-| read the screen                              | 50 ms  |
-| tap by coordinate                            | 67 ms  |
-| tap by selector                              | 98 ms  |
-| tap that waits and proves the screen settled | 858 ms |
+| call                          | iOS simulator | Android emulator | iPhone 13 Pro Max | Samsung SM-A525F | Xiaomi 25078RA3EY |
+| ----------------------------- | ------------- | ---------------- | ----------------- | ---------------- | ----------------- |
+| read the screen               | 14 ms         | 40 ms            | 441-992 ms        | 51 ms            | 60 ms             |
+| tap by selector               | 1,111 ms      | 847 ms           | 1,093 ms          | 980 ms           | 825 ms            |
+| type into a field by selector | 1,220 ms      | 635 ms           | 2,262 ms          | 904 ms           | 1,220 ms          |
+| swipe                         | 2,107 ms      | 1,448 ms         | 3,739 ms          | 2,517 ms         | 2,510 ms          |
+| screenshot                    | 84 ms         | 24 ms            | 4,719 ms          | 164 ms           | 111 ms            |
 
-`node scripts/speed.mjs <device id>` times the common calls on the fixture app, on any device, on your Mac. [Speed](docs/reference/perf.md#speed) has every number, and what each one proves.
+A tap, a swipe or typing answers once the screen has settled, with what changed, so most of its time is the app's own. The iPhone's read comes right after a launch, and took 441 ms in one series and 992 in the next. `node scripts/speed.mjs <device id>` runs the same calls on your Mac. [Speed](docs/reference/perf.md#speed) has every call, on which device, where the time goes, and what each one proves.
 
 ## Documentation
 

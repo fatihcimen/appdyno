@@ -574,45 +574,65 @@ hangs and a launch of Settings; a cost-known check of them needs an app signed f
 
 ## Speed
 
-The table below came from the system Settings app on a simulator, by an earlier `scripts/speed.mjs`. The script now times the common calls on the fixture app, on any device: `node scripts/speed.mjs <device id> [runs]`, with the fixture installed and `pnpm build` first.
+Run it yourself: `node scripts/speed.mjs <device id> [runs]` times the calls an MCP client makes most, on the fixture app (`dev.appdyno.fixture`, from `android/fixture` or `ios/`), on any device. `pnpm build` first. Each run starts a new server over stdio, as a client does, sends `initialize` and `tools/list`, then the calls below. Every call is proved by its answer: a tap has to reach the next screen, a typed field has to hold the text, and a refusal or a missing proof stops the run. The fixture is stopped before each `launch_app`, so each launch is cold. A run before the measured ones starts what the device needs, the iOS runner's build and start or the Android agent's, and only its first read is kept.
 
-| call                                    | median, ms | range, ms | answer, characters |
-| --------------------------------------- | ---------- | --------- | ------------------ |
-| `screen`                                | 50         | 35-58     | 518                |
-| `tap` by coordinate, `read: none`       | 67         | 58-284    | 14                 |
-| `tap` by ref, `read: none`              | 65         | 60-69     | 26                 |
-| `tap` by selector, `read: none`         | 98         | 92-105    | 20                 |
-| `tap` by selector, waits for the screen | 858        | 841-884   | 1,092              |
-| `tap` by ref, waits for the screen      | 822        | 814-836   | 1,098              |
+Medians and the worst of 5 runs, in ms, each through the MCP server over stdio, on 2026-11-07, at `ab96deed`, on an M5 Pro with 15 cores and macOS 27.0.1, with the host's load beside each device:
 
-An iPhone 17 Pro simulator with iOS 27.2, on an M5 Pro with 15 cores and macOS 27.0.1, 2026-11-07, appdyno 0.6.0, through MCP over stdio, with no runner up. Host load 6-13. 12 rounds a tap and 60 reads. Each tap opens General, About, and the next read has to find "Model" there, so a tap that landed nowhere stops the run.
+| call                                 | iOS simulator | Android emulator | iPhone        | Samsung       | Xiaomi        |
+| ------------------------------------ | ------------- | ---------------- | ------------- | ------------- | ------------- |
+| `list_devices`                       | 532 / 839     | 502 / 517        | 566 / 661     | 460 / 496     | 495 / 633     |
+| `screen`, first of a server          | 647 / 1,032   | 67 / 72          | 549 / 567     | 199 / 202     | 132 / 166     |
+| `initialize`                         | 115 / 140     | 105 / 112        | 107 / 178     | 104 / 115     | 108 / 116     |
+| `tools/list`                         | 7 / 9         | 6 / 6            | 6 / 9         | 6 / 6         | 6 / 7         |
+| `launch_app` of the fixture, cold    | 2,215 / 2,573 | 780 / 1,019      | 1,948 / 2,900 | 1,530 / 1,556 | 1,913 / 1,972 |
+| `screen`                             | 14 / 31       | 40 / 42          | 992 / 1,055   | 51 / 53       | 60 / 63       |
+| `swipe`                              | 2,107 / 2,320 | 1,448 / 1,496    | 3,739 / 3,751 | 2,517 / 2,665 | 2,510 / 2,692 |
+| `find`                               | 88 / 119      | 43 / 58          | 181 / 186     | 170 / 182     | 43 / 78       |
+| `tap` by coordinate                  | 937 / 1,008   | 797 / 812        | 1,094 / 1,184 | 1,157 / 1,859 | 820 / 867     |
+| back                                 | 375 / 398     | 480 / 782        | 1,524 / 1,610 | 842 / 1,222   | 661 / 824     |
+| `tap` by selector                    | 1,111 / 1,131 | 847 / 915        | 1,093 / 1,380 | 980 / 1,496   | 825 / 1,015   |
+| `type_text` into a field by selector | 1,220 / 1,454 | 635 / 648        | 2,262 / 2,425 | 904 / 1,003   | 1,220 / 1,779 |
+| `wait_for` an element on the screen  | 61 / 93       | 64 / 66          | 627 / 632     | 158 / 173     | 129 / 133     |
+| `screenshot`                         | 84 / 114      | 24 / 47          | 4,719 / 4,746 | 164 / 329     | 111 / 262     |
+| `logs`, 20 lines                     | 1,135 / 1,329 | 20 / 22          | 1 / 2         | 454 / 457     | 241 / 250     |
 
-A tap with `read: none` answers once the touch has gone, and proves nothing by itself. A tap with no `read` waits for the screen to settle and answers with what changed, which is the proof, and costs the 200 ms window and the app's own animation. A selector costs a read of the screen first. A number is relative to this Mac at this load.
+- iOS simulator: an iPhone 17 Pro with iOS 27.2, host load 8.4-9.9.
+- Android emulator: a Pixel 6 AVD with API 34 (`google_apis`, arm64), `-gpu host`, host load 7.9-9.7.
+- iPhone: an iPhone 13 Pro Max with iOS 27.2, by USB, host load 11.8-47.6, as others ran builds. Its `screen` follows `launch_app`, and read 441 ms in a run before this one, at load 40-119; its `logs` says at once that `devicectl` cannot read an app's log.
+- Samsung: an SM-A525F with Android 14, by USB, host load 5.9-7.1.
+- Xiaomi: a 25078RA3EY with Android 16 in Turkish, by USB, host load 6.1-7.2.
 
-The tables below ran on 2026-11-03 by a harness that is not in this repository, so they cannot be run again as they stand.
+The first read of a script's first server, which starts what the device needs, is not in the table: 4,726 ms on the simulator, with the runner built before, and 16,325 on the iPhone, which also signs and installs it; 1,624 on the emulator, 2,238 on the Samsung and 2,029 on the Xiaomi, which push and start the agent.
 
-Measured, not claimed: the Settings scenario, on one boot, three runs of 10 rounds, which also read each answer's positions against a read 1.5 s later. Medians in ms, p50 / p90. A number is relative to this Mac at this load.
+Every tap, swipe and key waits for the screen to settle and answers with what changed, which is its proof, so its time is mostly the app's own: the settle column of the script says how much. `back` is the key on Android and the screen's own control on iOS. `find` and `wait_for` come after a screen changed, so each reads it afresh. A number is relative to this Mac at this load.
 
-**Android 14 emulator** (`sdk_gphone64_arm64`), 2026-11-03, appdyno 0.6.0, host load 10-11 on 15 cores, device load 1-2:
+### Where the time goes
 
-| read    | tap and see | back and see | screenshot | read answer, chars | first open | position error, px, median / p95 / max | stale | errors |
-| ------- | ----------- | ------------ | ---------- | ------------------ | ---------- | -------------------------------------- | ----- | ------ |
-| 64 / 82 | 819 / 948   | 550 / 577    | 50 / 71    | 1,405              | 1,922      | 0 / 0 / 0                              | 0     | 0      |
+Each call split into its parts, on the same devices, from the server's log, and from a run of the same ops in one process with each device round trip, helper call and child process timed:
 
-**iOS 26.5 simulator** (iPhone 17 Pro), same date and version, host load 6-8:
+- Android: nearly all of a call is the agent's action, the touch and then the settle, which waits for the screen to be still. The server adds about 10 ms on the emulator. On a phone it adds one `adb shell pidof` after each action, which says whether the app died during it: 44 ms on the Samsung. A swipe's 300 ms stroke takes about 600 ms to send, as each move waits for the app to take it, and the list then coasts for the settle.
+- iOS simulator: the helper reads the screen in 14-20 ms and sends the touches. Text goes by the runner, by XCTest. A new server starts its helper, about 400 ms of its first read, and its first touch starts the input helper, about 500 ms. `logs` is `log show` (1.0-1.5 s) after `simctl get_app_container` (130-200 ms).
+- iPhone: every read is the runner's, 170-300 ms. `screen` reads twice: the app, then the home screen app, for a Face ID or passcode sheet that no read of the app shows. A swipe's list coasts for 2.8 s of the settle.
 
-| read    | tap and see | back and see | screenshot | read answer, chars | first open | position error, points, median / p95 / max; missing | stale | errors |
-| ------- | ----------- | ------------ | ---------- | ------------------ | ---------- | --------------------------------------------------- | ----- | ------ |
-| 57 / 64 | 909 / 1,073 | 674 / 713    | 85 / 97    | 2,050              | 7,428      | 0 / 0 / 1; 4                                        | 0     | 0      |
+The three costliest that are not the device's own:
 
-**Phones.** The same 10 rounds on each phone's own Settings through the MCP server, p50 / p90 in ms, the same date, host load 12-36 with other work on the Mac:
+1. A text entry looked for the focused field by a snapshot, and a snapshot of a field that has no focus yet waits for one to appear: before the tap, and again after it. Fixed: it asks whether the field exists first, which answers at once, and polls as before.
+2. On an iPhone the look at the home screen app costs a read on every `screen`, `screenshot` and `launch_app`: a `screen` read 176 ms for the app and 391-574 in all in a trace, and a `screenshot` taken with the keyboard up takes 4.7 s, where the image itself takes about 200 ms and the read of the home screen app 4.5 s. It stays: it is how a sheet over the app is seen, and no such sheet could be raised on the phone to prove a cheaper sign against.
+3. `list_devices` runs `simctl list`, then `devicectl list devices`, then `devicectl` for the lock of each connected iPhone, one after another: 460-600 ms on this Mac, whichever device is driven. It stays: the lock is asked last on purpose, as it asks the phone, and asked alongside the list it would ask a phone not yet known to trust this Mac.
 
-| phone                                 | read      | tap and see   | back and see  | screenshot | read answer, chars |
-| ------------------------------------- | --------- | ------------- | ------------- | ---------- | ------------------ |
-| Xiaomi 25078RA3EY, Android 16 (tr-TR) | 105 / 121 | 896 / 941     | 739 / 980     | 111 / 134  | 1,438              |
-| iPhone 13 Pro Max, iOS 27.0.1 (tr-TR) | 308 / 313 | 2,017 / 2,025 | 1,988 / 2,089 | 189 / 199  | 2,272              |
+The fix, before and after in turn, the rest of each run the same:
 
-The Android tables predate the agent's check for a dark screen before a touch, which was not measured apart.
+| `type_text` into a field by selector | before (`49e073c8`) | after (`ab96deed`) | host load, before; after |
+| ------------------------------------ | ------------------- | ------------------ | ------------------------ |
+| iOS simulator, median / worst        | 3,236 / 3,700       | 1,220 / 1,454      | 9.5-10.2; 8.4-9.9        |
+| iPhone, median / worst               | 4,398 / 4,486       | 2,262 / 2,425      | 6.9-53.3; 11.8-47.6      |
+
+On the simulator the runner's own `focusMs`, from the tap to the field's focus, went from 2,904-3,680 to 760-1,374, at load 30-150. The Android devices and the other calls, run before and after in turn, are the same within their spread: the fix is the iOS runner's alone.
+
+Tried and dropped:
+
+- The app's process asked of the Android agent, which answers at once, for the `adb shell pidof` after each action: 36.8 ms against 43.9 on the Samsung and 8.6 against 9.8 on the emulator, medians of 15 each in turn at load 56-64. Not worth a method of the protocol.
+- A text entry's tap by the event synthesizer, as an `act` tap is, for XCTest's own: the field's focus in 915 ms against 760-1,374, at load 30-85. No gain shown.
 
 ## iPhone speed
 
