@@ -289,6 +289,10 @@ Being the key window is not enough. The app in front hands activation to what it
 
 Typing goes through the system's own text input, so a dead key, an accent held down and an input method all work. ⌘V sends the Mac's text the same way, 4,096 characters at most, and the window says when it cut one short, as a long text goes one key at a time. A simulator types what a US keyboard has as keys and anything else by its pasteboard and command V, so an app may ask Allow Paste.
 
+An iPhone's letters go by its runner, which the first letters start, about 3 s, as a string, so the phone's keyboard layout has no say in them: keys go by position, and on a Turkish layout `quick` went in as `quıck` and `-` as `*`, with no word. The first letters after a tap ask what is under it. On a text field they name that field, and go once it has the focus, in 2.3 s for a first tap in a new window and 70 to 200 ms for a tap from one field to the next; in 6 s they are dropped and the window says so, with what is typed after them until the next tap, because a keyboard stays up across that tap and letters that came early reached the field before it, a password among them. A tap on no field leaves the caret where it was, and they go there. A letter takes 285 ms by the runner, and at 8 letters a second a person sees them about 475 ms on, the worst 678, as those typed while one is on its way go together. Only what has text goes this way: a key with none, such as an arrow, goes as a key, after the letters before it.
+
+In an app the runner was not told of, it cannot say what is under a tap, so the letters wait for one look by the phone's accessibility service, 3 s after it, and go only if that names a field, and another than the last unless the tap was on it. It is one look because looks in a row kept a field from the focus for 8.9 s. With no runner to be had the same look decides, the letters go by key position, and the window says that the phone's layout decides them.
+
 A window takes its menu bar and Dock icon at a person's first click, not before: an agent's window changes nothing on a Mac until someone uses it.
 
 ## Sharing a device
@@ -446,7 +450,9 @@ What it says:
 - What the readings cost a device has been measured on one Android 14 emulator, at rest on a screen changing ten times a second: 6.0 % of its whole CPU with a window open and the numbers shut, 10.8 % with them shown, over eight spells of 30 s. No phone has been measured.
 - A device's colour: the frame takes one, and nothing yet reads it from a device, so every frame is the table's own graphite or carbon.
 - The frame's Action button and Camera Control are drawn and do nothing: no input is known that presses them.
-- Text an iPhone's keyboard has no key for goes by its pasteboard: the phone asks a person to allow the paste, and what it held comes back after, if that was text. In a secure field it does not go at all, and the window says so.
+- With no runner, text an iPhone's keyboard has no key for goes by its pasteboard: the phone asks a person to allow the paste, and what it held comes back after, if that was text. In a secure field it does not go at all, and the window says so. The one look that decides there has unit tests only, in rounds on no phone.
+- Why a first tap in a new window takes 2.3 s to give a field the focus is not known. It stays near that from round to round, with no read of the accessibility service in the way.
+- Letters dropped because no field took them still reach a recording, which notes them as they leave the window: a replay types them.
 - More's menu, the frame's hover, a window's remembered size and place, and a trackpad's pinch or a dead key on a real keyboard have not been run by hand; their maths are checked by the self test.
 - `auto` on a phone starts at its display's size and changes it, once, on the first motion that shows the encoder falling behind, so a person may see the picture restart on their first touches. `--quality high` and `standard` keep the display's size.
 - A phone's touch has a floor below which no size goes: 94 ms on a Samsung SM-A525F at 1024 lines, and 95 to 107 at 1280 across runs, over the target of 80. A Xiaomi's reads 92 at its own size, a miss too.

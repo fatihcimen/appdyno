@@ -72,10 +72,7 @@ extension Device {
         }
         // keys, not a paste: a paste the user did not make brings up iOS's "Allow Paste" alert, which no one
         // answers here and which holds the text up (a timeout, or text doubled once it goes)
-        // a field that just took the focus may not take key commands before its keyboard is up
-        let keyboard = app.keyboards.firstMatch
-        let kbEnd = Date().addingTimeInterval(1)
-        while !keyboard.exists, Date() < kbEnd, !job.over { Thread.sleep(forTimeInterval: 0.05) }
+        keyboardUp(app, job: job)
         var verified: Bool? = false
         if verified == false, field.exists {
             if replace {
@@ -104,5 +101,37 @@ extension Device {
         let out = try after(r.after, job: job, actionAt: Int(Date().timeIntervalSince1970 * 1000), tapAt: nil)
         // no verdict when the field cannot be read back: gone (it took the text and submitted), or secure
         return out.merging(textWire(focusMs: focusMs, verified: secure ? nil : verified)) { $1 }
+    }
+
+    /// A field that just took the focus may not take key commands before its keyboard is up.
+    private func keyboardUp(_ app: XCUIApplication, job: Job) {
+        let keyboard = app.keyboards.firstMatch
+        let end = Date().addingTimeInterval(1)
+        while !keyboard.exists, Date() < end, !job.over { Thread.sleep(forTimeInterval: 0.05) }
+    }
+
+    /**
+     * What a person types in a mirror: a string to the synthesizer, so the phone's layout has no say in the letters and
+     * nothing is read back. `into` is a point of a field they tapped: the letters wait for that field and for no other,
+     * as one a keyboard is already up on keeps the focus for a while after the tap.
+     */
+    func typeKeys(_ r: KeysRequest, job: Job) throws -> [String: Any] {
+        let t0 = Date()
+        if let (x, y) = r.into {
+            let app = front().0
+            let end = t0.addingTimeInterval(Double(r.focusTimeoutMs) / 1000)
+            while (try? focusedField(app)?.snapshot())?.frame.contains(CGPoint(x: x, y: y)) != true {
+                guard Date() < end, !job.over else {
+                    throw AgentError("NO_FOCUS", "the field there did not take the focus", hint: "tap the field first")
+                }
+                Thread.sleep(forTimeInterval: 0.15)
+            }
+            keyboardUp(app, job: job)
+        }
+        let focusMs = Int(Date().timeIntervalSince(t0) * 1000)
+        guard EventShim.type(r.text, orientation: Device.interfaceOrientation()) else {
+            throw AgentError("UNSUPPORTED", "this Xcode's event synthesizer takes no text")
+        }
+        return ["focusMs": focusMs]
     }
 }

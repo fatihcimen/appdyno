@@ -5,6 +5,7 @@ import { promisify } from 'node:util';
 import {
   imageSize,
   NeedError,
+  pause,
   safeName,
   startOf,
   stateDir,
@@ -17,7 +18,7 @@ import {
   type Need,
   type ViewerOrder,
 } from '@appdyno/core';
-import { keyOfUsage } from '@appdyno/protocol';
+import { keyOfUsage, type DeviceError } from '@appdyno/protocol';
 import { Devicectl } from './devicectl.js';
 import { applePress, pasteKeys } from './mirror-press.js';
 import { usageOf } from './simtouch.js';
@@ -59,12 +60,46 @@ const RETRY_NEED_MS = 3_000;
 const RESTORE_MS = 60_000;
 const AFTER_TOUCH_MS = 3_000;
 const PROMPT_MS = 2_000;
+/**
+ * With no runner to ask, the one look at which field a tap gave the focus comes this long after it. Looks in a row kept
+ * a field from the focus for 8.9 s, measured, in 3 rounds of 4, and one look at 3 s saw it, 4 of 4.
+ */
+const LOOK_AFTER_MS = 3_000;
+/** This close to the last tap, as a share of the screen, is the same field: closer than two fields stand. */
+const SAME_FIELD = 0.03;
+const NOT_TRUE =
+  "These letters went by key position, so the phone's keyboard layout decides what they become: the device agent types them true.";
+
+type Spot = { x: number; y: number };
+type Tap = Spot & { at: number };
+
+/** What a runner does for a window. */
+export type PhoneRunner = {
+  /** A point of the text field under a share of the screen; false: none; undefined: it cannot say. */
+  fieldAt(x: number, y: number): Promise<Spot | false | undefined>;
+  /** Types any character, into the field at `into` once it has the focus, or refuses with NO_FOCUS. */
+  keys(text: string, into?: Spot): Promise<void>;
+};
 
 /** An iPhone's mirror: all it speaks is in the stream it loads, and only what a session asks is here. */
 export class PhoneMirror implements Mirror {
   private say: (text: string) => void = () => undefined;
   private afterTouch: (() => void) | undefined;
   private typing: Promise<void> = Promise.resolve();
+  /** The last tap that no letters have followed. */
+  private tap: Tap | undefined;
+  /** Letters not yet on their way, which more can join. */
+  private gathering: { s: string } | undefined;
+  /** No field took what was typed: nothing goes until the next tap, or the rest of it would reach the old field. */
+  private closed = false;
+  /** Letters waiting their turn: a touch after them stays after them, or they reach the next field. */
+  private waiting = 0;
+  /** This press came behind letters, and its moves and its lift stay with it. */
+  private behind = false;
+  /** The field the last look named, and where it was tapped: with no runner, nothing else tells a tap on the same one. */
+  private named: (Spot & { name: string }) | undefined;
+  /** No runner to be had: keys, which the phone's layout decides, with a word to say so. */
+  private keysOnly = false;
   readonly sendsWhenStill = true;
   /** A start lights the screen: it would turn back on a phone a person has just turned off. */
   readonly holdsThrough = 'asleep' as const;
@@ -85,6 +120,8 @@ export class PhoneMirror implements Mirror {
     private readonly load: () => Promise<PhoneStreamModule | undefined> = loadPhoneStream,
     private readonly makePipe: (file: string) => Promise<void> = makeFrames,
     private readonly now: () => number = Date.now,
+    private readonly wait: (ms: number) => Promise<void> = pause,
+    private readonly runner?: PhoneRunner,
   ) {}
 
   private async stream() {
@@ -204,18 +241,90 @@ export class PhoneMirror implements Mirror {
     };
   }
 
+  private refuse() {
+    this.closed = true;
+    this.say('That did not go in: no field took it. Tap the field and type it again.');
+  }
+
+  /**
+   * With nothing to say what is under a tap, letters go only if one look, late, names a field, and another than the last
+   * unless the tap was on it: a keyboard stays up for a tap from one field to the next, and a secret went to the old one.
+   */
+  private async fieldTook(tap: Tap) {
+    await this.wait(tap.at + LOOK_AFTER_MS - this.now());
+    const stream = await this.stream();
+    const name = await stream?.focusedField(this.udid).catch(() => undefined);
+    const was = this.named;
+    const moved = name !== was?.name;
+    if (name && (moved || (was && Math.hypot(tap.x - was.x, tap.y - was.y) <= SAME_FIELD))) {
+      this.named = { name, x: tap.x, y: tap.y };
+      return true;
+    }
+    this.refuse();
+    return false;
+  }
+
+  /** By the runner where there is one, so that the letters are the ones given; a tap's field is named, and none other gets them. */
+  private async send(letters: { s: string }, tap: Tap | undefined) {
+    const { runner } = this;
+    const asked = runner && !this.keysOnly && tap;
+    const under = asked ? await runner.fieldAt(tap.x, tap.y).catch(() => undefined) : undefined;
+    if (tap && under === undefined && !(await this.fieldTook(tap))) return;
+    if (this.gathering === letters) this.gathering = undefined;
+    if (this.closed) return;
+    if (runner && !this.keysOnly) {
+      const failed = await runner.keys(letters.s, under || undefined).catch((e: Error) => e);
+      if (!failed) return;
+      if ((failed as DeviceError).code === 'NO_FOCUS') return this.refuse();
+      this.keysOnly = true;
+      this.say(NOT_TRUE);
+    }
+    const keyless = [...letters.s].some((c) => !usageOf(c));
+    await (keyless ? this.paste(letters.s) : this.handle?.input({ kind: 'text', s: letters.s }));
+  }
+
   async input(e: InputEvent) {
-    if (e.kind === 'touch' && e.p === 2) this.afterTouch?.();
+    if (e.kind === 'touch') {
+      if (e.p === 0) {
+        this.tap = { x: e.x, y: e.y, at: this.now() };
+        this.gathering = undefined;
+        this.closed = false;
+        this.behind = this.waiting > 0;
+      }
+      if (e.p === 2) this.afterTouch?.();
+      // the whole press, or a lift held behind letters that wait for this tap's focus would hold that focus back
+      if (this.behind) {
+        this.typing = this.typing.then(() => this.handle?.input(e));
+        return;
+      }
+    }
     if (e.kind === 'button' && (await applePress(e.name, (next) => this.input(next)))) return;
-    // reading the screen and the pasteboard takes seconds, which must not hold up a touch: it may be the one that
-    // answers the phone's prompt. Keys wait, to stay in the order they were typed
-    if (e.kind === 'text' && [...e.s].some((c) => !usageOf(c))) {
+    // what is typed waits its turn behind reads that take seconds, which must not hold up a touch: it may be the one
+    // that answers the phone's prompt
+    if (e.kind === 'text') {
+      if (this.closed) return;
+      if (this.gathering) {
+        this.gathering.s += e.s;
+        return;
+      }
+      const letters = (this.gathering = { s: e.s });
+      const { tap } = this;
+      this.tap = undefined;
+      // a paste's own wait lets touches past, as one of them is what answers the phone
+      const pasted = (this.keysOnly || !this.runner) && [...e.s].some((c) => !usageOf(c));
+      if (!pasted) this.waiting++;
       this.typing = this.typing
-        .then(() => this.paste(e.s))
-        .catch((failed: Error) => this.say(`That text did not go in: ${failed.message}`));
+        .then(() => this.send(letters, tap))
+        .catch((failed: Error) => this.say(`That text did not go in: ${failed.message}`))
+        .finally(() => {
+          if (!pasted) this.waiting--;
+        });
       return;
     }
-    if (e.kind === 'text' || e.kind === 'key') await this.typing;
+    if (e.kind === 'key') {
+      await this.typing;
+      if (this.closed) return;
+    }
     this.handle?.input(e);
   }
 

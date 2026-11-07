@@ -99,6 +99,8 @@ final class RunnerTests: XCTestCase {
             return Reply(result: waited.map { ["ms": $0] } ?? [:])
         case "text.set":
             return Reply(result: try d.setText(TextRequest(p), job: job))
+        case "text.keys":
+            return Reply(result: try d.typeKeys(KeysRequest(p), job: job))
         case "screenshot":
             return try d.screenshot(ShotRequest(p))
         case "audit":

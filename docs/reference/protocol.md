@@ -53,6 +53,7 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 | `tree.get`                                               | `maxDepth` (128), `maxNodes` (5000)                                                                      | `Tree`                                                                           |
 | `act`                                                    | `action`, `settle?`, `read` (`none`/`hash`/`tree`), `before?`                                            | `settle?`, `hash?`, `tree?`                                                      |
 | `text.set`                                               | `text`, `replace`, `submit`, `at?`, `focusTimeoutMs` (5000; the iOS driver asks 2000), `settle?`, `read` | as `act`, plus `mode` (`setText`/`paste`/`keys`), `verified`, `focusMs`          |
+| `text.keys` (iOS)                                        | `text`, `into?`, `focusTimeoutMs` (6000)                                                                 | `focusMs`                                                                        |
 | `screenshot`                                             | `format` (`jpeg`/`png`), `quality` (80), `maxPx?`                                                        | `w`, `h`, `format`, `bytes`, plus the image as an attachment                     |
 | `app.foreground`                                         | –                                                                                                        | `pkg?`                                                                           |
 | `app.target` (iOS)                                       | `pkg` (bundle id)                                                                                        | –                                                                                |
@@ -105,6 +106,7 @@ clipboard and every case below. `APPDYNO_SIM_DIRECT=off` turns both off, `read` 
 `appdyno doctor --serial <simulator>` says whether both answer.
 
 `text.set` goes in as keys on iOS (`mode: keys`): a paste the user did not make brings up the "Allow Paste" alert, which holds it up.
+`text.keys` is what a person types in a window: a string to XCTest's event synthesizer, with no element looked up and nothing read back. `into` is a point of the field a tap landed on: the letters wait for that field to have the focus and answer `NO_FOCUS` at the bound, and nothing is tapped.
 `clipboard.get` answers only what the runner wrote itself, as reading another app's text asks the user; a simulator's is read with
 `simctl pbpaste` instead, and an iPhone's goes both ways by `devicectl device pasteboard`, as the runner has the pasteboard only while it is in front. Where `simctl pbcopy` writes nothing (Xcode 27.1 on a new iOS 26.5 simulator) the runner sets and reads it. That is a known limit: on a loaded Mac the runner's call can stall too (twice at load 138), and `clipboard` then refuses within about 20 s, with `UNSUPPORTED` and the reason, and the runner restarted.
 

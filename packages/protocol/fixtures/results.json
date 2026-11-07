@@ -124,6 +124,10 @@
     "method": "text.set",
     "result": { "mode": "keys", "focusMs": 2000 }
   },
+  "text.keys.sent": {
+    "method": "text.keys",
+    "result": { "focusMs": 40 }
+  },
   "screenshot.jpeg": {
     "method": "screenshot",
     "result": { "w": 540, "h": 1200, "format": "jpeg", "bytes": 4096 }

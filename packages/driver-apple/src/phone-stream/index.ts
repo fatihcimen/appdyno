@@ -152,6 +152,7 @@ function start(
 }
 
 const secureFocused = (udid: string) => withAudit(udid, (audit) => audit.secureFocused());
+const focusedField = (udid: string) => withAudit(udid, (audit) => audit.focusedField());
 
 const phoneStream: PhoneStreamModule = {
   check,
@@ -159,6 +160,7 @@ const phoneStream: PhoneStreamModule = {
   elements,
   press,
   secureFocused,
+  focusedField,
   live,
   start,
 };

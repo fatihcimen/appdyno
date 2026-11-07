@@ -136,18 +136,27 @@ export class Audit {
     return this.inspecting(() => this.walk());
   }
 
-  /** Any field being typed in that is secure, by its traits: reads the whole screen, so only when it matters. */
-  secureFocused() {
+  /** The field being typed in, by its traits: reads the whole screen, so only when it matters. */
+  private editing() {
     return this.inspecting(async () => {
-      let secure = false;
+      let editing: { traits: number; name: string } | undefined;
       await this.walk(async (element) => {
         const traits = valueOf(await this.read(element.token, 'Traits'));
         if (typeof traits !== 'number' || !isEditing(traits)) return false;
-        secure = isSecure(traits);
+        editing = { traits, name: element.identifier ?? element.caption };
         return true;
       });
-      return secure;
+      return editing as { traits: number; name: string } | undefined;
     });
+  }
+
+  async secureFocused() {
+    const field = await this.editing();
+    return field !== undefined && isSecure(field.traits);
+  }
+
+  async focusedField() {
+    return (await this.editing())?.name;
   }
 
   /** The service answers of an element only with its inspector on. */

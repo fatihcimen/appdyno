@@ -39,6 +39,7 @@ describe('the canonical requests', () => {
         'tree.get',
         'act',
         'text.set',
+        'text.keys',
         'screenshot',
         'audit',
         'wait',

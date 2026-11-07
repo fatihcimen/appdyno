@@ -185,7 +185,16 @@ describe.runIf(udid)('mirror on an iPhone', () => {
       });
     };
 
-    it('goes by the pasteboard, which gets back what it held', async () => {
+    it('goes by the runner, with no question and the pasteboard left as it was', async () => {
+      pasteboard('copy', 'a person copied this');
+      await focus('name_input');
+      session.send({ kind: 'text', s: 'çay 12' });
+      await until('the words', async () => (await field('name_input'))?.label === 'çay 12');
+      expect(pasteboard('paste')).toContain('a person copied this');
+    }, 120_000);
+
+    it('with no runner goes by the pasteboard, which gets back what it held', async () => {
+      device.mirror.keysOnly = true;
       pasteboard('copy', 'a person copied this');
       await focus('name_input');
       session.send({ kind: 'text', s: 'çay 12' });
@@ -206,12 +215,13 @@ describe.runIf(udid)('mirror on an iPhone', () => {
       await until('what it held', () => pasteboard('paste').startsWith('a person copied this'));
     }, 120_000);
 
-    it('stays off a pasteboard for a secure field', async () => {
+    it('with no runner stays off a pasteboard for a secure field', async () => {
       pasteboard('copy', 'still here');
       await focus('password_input');
       session.send({ kind: 'text', s: 'çay' });
       await new Promise((r) => setTimeout(r, 6_000));
       expect(pasteboard('paste')).not.toContain('çay');
+      device.mirror.keysOnly = false;
     }, 120_000);
   });
 

@@ -5,6 +5,8 @@
 - On a simulator the look for a Face ID or passcode sheet over the app starts no runner: `screen` after `launch_app` or `open_link` hid a start of the runner, or its first build.
 - A read tries a lost connection once more, and no longer a start that failed, which took as long again for the same answer.
 - A start of the iOS runner ends as soon as the runner it started speaks another protocol, and says which build to make again. It waited out its 180 s for an answer it already had.
+- What is typed in an iPhone's window goes by its runner as a string, so the letters are the ones typed whatever the phone's keyboard layout: keys go by position, and on a Turkish layout `quick` went in as `quıck` and `-` as `*`, with no word. Text with no key needs no paste. With no runner to be had the window says that the layout decides them.
+- Letters typed just after a tap in an iPhone's window name the field under it and go once that field has the focus, or are dropped with a word: they were lost, could take the focus with them, and after a tap from one field to the next a password reached the field before it, 8 rounds of 36 at 100 to 300 ms.
 - A client's search finds a tool by the words people use, such as emulator, performance, deep link and dark mode, none of which was in any description.
 - `appdyno mcp` is the one way to start the server: `appdyno-mcp` is gone.
 - `bench` times this tool alone: `--driver` is gone.

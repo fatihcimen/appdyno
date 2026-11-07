@@ -6,11 +6,12 @@ import { PhoneApps, PhoneEvents, PhoneSettings } from './phone-manage.js';
 import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { DeviceError, type Tree } from '@appdyno/protocol';
+import { DeviceError, type Point, type Tree } from '@appdyno/protocol';
 import {
   sleep,
   stateDir,
   swipePath,
+  TIMEOUTS,
   type ScreenRecorder,
   type SystemSwipe,
   type TreeOptions,
@@ -41,6 +42,8 @@ export async function phoneRunnerApp(build = true): Promise<string> {
     );
   return app;
 }
+
+const TEXT_FIELDS = new Set(['TextField', 'SecureTextField', 'TextView', 'SearchField']);
 
 /** What the phone's lock screen shows, in any language. */
 const LOCK_SCREEN = 'lockscreen-date-view';
@@ -145,7 +148,10 @@ export class IosPhoneDevice extends IosDevice {
     super(serial, phoneOps(serial, ctl), new IosRunnerLauncher(serial, transport));
     this.transport = transport;
     this.ctl = ctl;
-    this.mirror = new PhoneMirror(serial);
+    this.mirror = new PhoneMirror(serial, undefined, undefined, undefined, undefined, {
+      fieldAt: (x, y) => this.fieldAt(x, y),
+      keys: (text, into) => this.keys(text, into),
+    });
     this.apps = new PhoneApps(ctl);
     this.settings = new PhoneSettings(ctl);
     this.events = new PhoneEvents();
@@ -155,6 +161,33 @@ export class IosPhoneDevice extends IosDevice {
   }
 
   readonly recorder: ScreenRecorder;
+
+  /**
+   * That point of the text field under a share of the screen, false with none there; undefined when another app is in
+   * front, as a runner reads only the app it was told of.
+   */
+  private async fieldAt(x: number, y: number) {
+    const { windows, nodes } = await this.tree({ asItIs: true });
+    const front = windows[0];
+    if (!front || front.pkg !== this.targetApp) return undefined;
+    const at = { x: x * front.b[2], y: y * front.b[3] };
+    return nodes.some(
+      ({ f, c, b }) =>
+        f & 1 &&
+        TEXT_FIELDS.has(c ?? '') &&
+        at.x >= b[0] &&
+        at.x <= b[2] &&
+        at.y >= b[1] &&
+        at.y <= b[3],
+    )
+      ? at
+      : false;
+  }
+
+  /** The first letters of a window start the runner, which it needs for nothing else. */
+  private async keys(text: string, into?: Point) {
+    await this.call('text.keys', { text, ...(into && { into }) }, TIMEOUTS.text);
+  }
 
   /** By the phone's own service: the runner has the pasteboard only while it is in front. */
   override async setClipboard(text: string) {

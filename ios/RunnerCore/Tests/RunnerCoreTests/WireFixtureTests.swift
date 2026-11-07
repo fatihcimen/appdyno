@@ -85,6 +85,16 @@ final class WireFixtureTests: XCTestCase {
         XCTAssertEqual(at.after.read, "tree")
     }
 
+    func testLettersAsTheHostSendsThem() throws {
+        let plain = try KeysRequest(params("text.keys"))
+        XCTAssertEqual(plain.text, "merhaba dünya")
+        XCTAssertNil(plain.into)
+        XCTAssertEqual(plain.focusTimeoutMs, 6000)
+        let into = try KeysRequest(params("text.keys.into"))
+        XCTAssertEqual(into.into?.x, 12.5)
+        XCTAssertEqual(into.into?.y, 34)
+    }
+
     func testReadsAsTheHostSendsThem() throws {
         let tree = try TreeRequest(params("tree.get"))
         XCTAssertEqual(tree.maxDepth, 128)

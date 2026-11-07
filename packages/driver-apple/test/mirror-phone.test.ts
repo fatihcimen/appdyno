@@ -3,13 +3,16 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { NeedError, stateDir, type DeviceState } from '@appdyno/core';
 import { imageSize } from '@appdyno/core';
-import { loadPhoneStream, PhoneMirror } from '../src/mirror-phone.js';
+import { loadPhoneStream, PhoneMirror, type PhoneRunner } from '../src/mirror-phone.js';
 import type { PhoneStreamEvent, PhoneStreamModule } from '../src/phone-stream-port.js';
 
 const UDID = '00001234-0123456789ABCDEF';
 const OPTIONS = { quality: 'auto' as const };
 
-function fake(check: Awaited<ReturnType<PhoneStreamModule['check']>> = { ok: true }) {
+function fake(
+  check: Awaited<ReturnType<PhoneStreamModule['check']>> = { ok: true },
+  withRunner = false,
+) {
   let onEvent: (e: PhoneStreamEvent) => void = () => undefined;
   const handle = {
     attach: vi.fn(),
@@ -29,6 +32,7 @@ function fake(check: Awaited<ReturnType<PhoneStreamModule['check']>> = { ok: tru
     elements: async () => [],
     press: async () => ({ caption: '' }),
     secureFocused: async () => false,
+    focusedField: async () => 'a field',
     live: async () => () => undefined,
     start: vi.fn((_udid, _options, listener) => {
       onEvent = listener;
@@ -37,21 +41,264 @@ function fake(check: Awaited<ReturnType<PhoneStreamModule['check']>> = { ok: tru
   };
   const pipes: string[] = [];
   let now = 1000;
+  const waited: number[] = [];
+  const runner = {
+    fieldAt: vi.fn<PhoneRunner['fieldAt']>(async (x, y) => ({ x, y })),
+    keys: vi.fn<PhoneRunner['keys']>(async () => undefined),
+  };
   const mirror = new PhoneMirror(
     UDID,
     async () => module,
     async (file) => void pipes.push(file),
     () => now,
+    (ms) => {
+      waited.push(ms);
+      return new Promise((r) => setTimeout(r, 0));
+    },
+    withRunner ? runner : undefined,
   );
   return {
     mirror,
     handle,
     module,
     pipes,
+    runner,
+    waited,
     say: (e: PhoneStreamEvent) => onEvent(e),
     tick: (ms: number) => (now += ms),
   };
 }
+
+describe('letters in a window', () => {
+  const NAME = { x: 0.5, y: 0.2 };
+  const SECRET = { x: 0.5, y: 0.4 };
+  const refused = Object.assign(new Error('the field there did not take the focus'), {
+    code: 'NO_FOCUS',
+  });
+  const opened = async (withRunner = true) => {
+    const f = fake(undefined, withRunner);
+    const told: Record<string, unknown>[] = [];
+    await f.mirror.open(OPTIONS, undefined, (m) => told.push(m));
+    const typed = () =>
+      f.handle.input.mock.calls
+        .flatMap(([e]) => (e.kind === 'text' ? [e.s as string] : []))
+        .join('');
+    const fingers = () =>
+      f.handle.input.mock.calls.flatMap(([e]) => (e.kind === 'touch' ? [e.p as number] : []));
+    const tap = async (at = NAME) => {
+      await f.mirror.input({ kind: 'touch', p: 0, ...at });
+      await f.mirror.input({ kind: 'touch', p: 2, ...at });
+    };
+    const type = (s: string) => f.mirror.input({ kind: 'text', s });
+    const said = () => told.map((m) => String(m.text)).join(' ');
+    /** The next call to the runner waits for this. */
+    const held = () => {
+      let done: () => void = () => undefined;
+      f.runner.keys.mockImplementationOnce(() => new Promise<void>((r) => (done = r)));
+      return () => done();
+    };
+    return { ...f, told, typed, fingers, tap, type, said, held };
+  };
+
+  it('go by the runner, naming the field under the tap', async () => {
+    const { runner, typed, tap, type } = await opened();
+    await tap();
+    await type('Ada');
+    await vi.waitFor(() => expect(runner.keys).toHaveBeenCalledWith('Ada', NAME));
+    expect(typed()).toBe('');
+  });
+
+  it('are joined by those a person types while they wait for what is under the tap', async () => {
+    const { runner, tap, type } = await opened();
+    let answer: (at: typeof NAME) => void = () => undefined;
+    runner.fieldAt.mockImplementationOnce(() => new Promise((r) => (answer = r)));
+    await tap();
+    await type('A');
+    await type('d');
+    await vi.waitFor(() => expect(runner.fieldAt).toHaveBeenCalled());
+    await type('a');
+    expect(runner.keys).not.toHaveBeenCalled();
+    answer(NAME);
+    await vi.waitFor(() => expect(runner.keys).toHaveBeenCalledWith('Ada', NAME));
+    expect(runner.keys).toHaveBeenCalledTimes(1);
+  });
+
+  it('that outrun the runner go together, to where the focus is by then', async () => {
+    const { runner, tap, type, held } = await opened();
+    const done = held();
+    await tap();
+    await type('A');
+    await vi.waitFor(() => expect(runner.keys).toHaveBeenCalledTimes(1));
+    await type('d');
+    await type('a');
+    expect(runner.keys).toHaveBeenCalledTimes(1);
+    done();
+    await vi.waitFor(() => expect(runner.keys).toHaveBeenLastCalledWith('da', undefined));
+  });
+
+  it('after a tap on no field go to where the focus is, with nothing asked of the phone', async () => {
+    const { runner, module, tap, type } = await opened();
+    const look = vi.spyOn(module, 'focusedField');
+    runner.fieldAt.mockResolvedValueOnce(false);
+    await tap();
+    await type('b');
+    await vi.waitFor(() => expect(runner.keys).toHaveBeenCalledWith('b', undefined));
+    expect(look).not.toHaveBeenCalled();
+  });
+
+  it('that no field took are dropped with a word, and all after them until a tap', async () => {
+    const { mirror, runner, handle, tap, type, said } = await opened();
+    runner.keys.mockRejectedValueOnce(refused);
+    await tap();
+    await type('s3');
+    await vi.waitFor(() => expect(said()).toContain('did not go in'));
+    await type('cret');
+    await mirror.input({ kind: 'key', page: 7, usage: 42, state: 1 });
+    expect(runner.keys).toHaveBeenCalledTimes(1);
+    expect(handle.input.mock.calls.filter(([e]) => e.kind === 'key')).toEqual([]);
+    await tap(SECRET);
+    await type('x');
+    await vi.waitFor(() => expect(runner.keys).toHaveBeenLastCalledWith('x', SECRET));
+  });
+
+  it('leave the lift of the press before them free, or the focus they wait for never comes', async () => {
+    const { mirror, runner, fingers, type, held } = await opened();
+    const done = held();
+    await mirror.input({ kind: 'touch', p: 0, ...NAME });
+    await type('A');
+    await vi.waitFor(() => expect(runner.keys).toHaveBeenCalled());
+    await mirror.input({ kind: 'touch', p: 2, ...NAME });
+    expect(fingers()).toEqual([0, 2]);
+    done();
+  });
+
+  it('keep a press after them behind them, the whole of it', async () => {
+    const { mirror, runner, fingers, tap, type, held } = await opened();
+    const done = held();
+    await tap();
+    await type('A');
+    await vi.waitFor(() => expect(runner.keys).toHaveBeenCalled());
+    await mirror.input({ kind: 'touch', p: 0, ...SECRET });
+    await mirror.input({ kind: 'touch', p: 1, ...SECRET });
+    await mirror.input({ kind: 'touch', p: 2, ...SECRET });
+    expect(fingers()).toEqual([0, 2]);
+    done();
+    await vi.waitFor(() => expect(fingers()).toEqual([0, 2, 0, 1, 2]));
+  });
+
+  it('after a later tap keep to that tap, as the word before it keeps to its own', async () => {
+    const { runner, tap, type } = await opened();
+    let answer: (at: typeof NAME) => void = () => undefined;
+    runner.fieldAt.mockImplementationOnce(() => new Promise((r) => (answer = r)));
+    await tap();
+    await type('Ada');
+    await tap(SECRET);
+    await type('s3');
+    answer(NAME);
+    await vi.waitFor(() => expect(runner.keys).toHaveBeenCalledTimes(2));
+    expect(runner.keys.mock.calls).toEqual([
+      ['Ada', NAME],
+      ['s3', SECRET],
+    ]);
+  });
+
+  it('come before a key typed after them', async () => {
+    const { mirror, runner, handle, tap, type, held } = await opened();
+    const done = held();
+    await tap();
+    await type('A');
+    await vi.waitFor(() => expect(runner.keys).toHaveBeenCalled());
+    const key = mirror.input({ kind: 'key', page: 7, usage: 42, state: 1 });
+    await new Promise((r) => setTimeout(r, 5));
+    expect(handle.input.mock.calls.filter(([e]) => e.kind === 'key')).toEqual([]);
+    done();
+    await key;
+    expect(handle.input.mock.calls.filter(([e]) => e.kind === 'key')).toHaveLength(1);
+  });
+
+  describe('with another app in front, which a runner cannot read', () => {
+    const elsewhere = async () => {
+      const o = await opened();
+      o.runner.fieldAt.mockResolvedValue(undefined);
+      return o;
+    };
+
+    it('are true letters, after one look, and only one, late', async () => {
+      const { runner, module, waited, tap, type } = await elsewhere();
+      const look = vi.spyOn(module, 'focusedField');
+      await tap();
+      await type('Ada');
+      await vi.waitFor(() => expect(runner.keys).toHaveBeenCalledWith('Ada', undefined));
+      expect(look).toHaveBeenCalledTimes(1);
+      expect(waited).toEqual([3_000]);
+    });
+
+    it('are dropped when the look names no field', async () => {
+      const { runner, module, tap, type, said } = await elsewhere();
+      module.focusedField = async () => undefined;
+      await tap();
+      await type('s3');
+      await vi.waitFor(() => expect(said()).toContain('did not go in'));
+      expect(runner.keys).not.toHaveBeenCalled();
+    });
+
+    it('never reach the old field when the focus has not moved: a secret went there', async () => {
+      const { runner, module, tap, type, said } = await elsewhere();
+      module.focusedField = async () => 'name';
+      await tap();
+      await type('Ada');
+      await vi.waitFor(() => expect(runner.keys).toHaveBeenCalledTimes(1));
+      await tap(SECRET);
+      await type('s3');
+      await vi.waitFor(() => expect(said()).toContain('did not go in'));
+      expect(runner.keys).toHaveBeenCalledTimes(1);
+    });
+
+    it('go after a second tap on the field the last look named', async () => {
+      const { runner, module, tap, type } = await elsewhere();
+      module.focusedField = async () => 'name';
+      await tap();
+      await type('A');
+      await vi.waitFor(() => expect(runner.keys).toHaveBeenCalledTimes(1));
+      await tap({ x: NAME.x + 0.01, y: NAME.y });
+      await type('d');
+      await vi.waitFor(() => expect(runner.keys).toHaveBeenCalledTimes(2));
+    });
+  });
+
+  describe('with no runner to be had', () => {
+    const noRunner = async () => {
+      const o = await opened();
+      o.runner.fieldAt.mockRejectedValue(new Error('no signing'));
+      o.runner.keys.mockRejectedValue(new Error('no signing'));
+      return o;
+    };
+
+    it('go by keys, and a person is told once that the layout decides them', async () => {
+      const { runner, typed, tap, type, said } = await noRunner();
+      await tap();
+      await type('a');
+      await vi.waitFor(() => expect(typed()).toBe('a'));
+      expect(said()).toContain('keyboard layout');
+      await type('b');
+      await vi.waitFor(() => expect(typed()).toBe('ab'));
+      expect(runner.keys).toHaveBeenCalledTimes(1);
+      expect(said().match(/keyboard layout/g)).toHaveLength(1);
+    });
+
+    it('still reach no old field: the one look decides', async () => {
+      const { module, typed, tap, type, said } = await noRunner();
+      module.focusedField = async () => 'name';
+      await tap();
+      await type('Ada');
+      await vi.waitFor(() => expect(typed()).toBe('Ada'));
+      await tap(SECRET);
+      await type('s3');
+      await vi.waitFor(() => expect(said()).toContain('did not go in'));
+      expect(typed()).toBe('Ada');
+    });
+  });
+});
 
 describe('text with no key on a phone', () => {
   it('holds up no touch while it reads the screen, and keys wait their turn', async () => {

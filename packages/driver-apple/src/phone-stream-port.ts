@@ -46,6 +46,8 @@ export interface PhoneStreamModule {
   ): Promise<() => void>;
   /** Whether the field in focus is a secure one, as text must not reach it by a pasteboard. */
   secureFocused(udid: string): Promise<boolean>;
+  /** The name of the field being typed in. */
+  focusedField(udid: string): Promise<string | undefined>;
   /** What can be known with no stream started. */
   check(udid: string): Promise<PhoneStreamCheck>;
   start(

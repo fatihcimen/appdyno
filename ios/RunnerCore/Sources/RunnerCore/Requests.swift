@@ -110,6 +110,18 @@ public struct TextRequest {
     }
 }
 
+public struct KeysRequest {
+    public let text: String
+    public let into: (x: Double, y: Double)?
+    public let focusTimeoutMs: Int
+
+    public init(_ p: Wire) throws {
+        text = try requiredString(p, "text")
+        into = try (p["into"] as? Wire).map { (x: try requiredNumber($0, "x"), y: try requiredNumber($0, "y")) }
+        focusTimeoutMs = try requiredInt(p, "focusTimeoutMs")
+    }
+}
+
 public struct ShotRequest {
     public let png: Bool
     public let quality: Int

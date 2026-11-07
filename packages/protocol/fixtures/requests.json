@@ -94,6 +94,15 @@
       "read": "tree"
     }
   },
+  "text.keys": {
+    "method": "text.keys",
+    "input": { "text": "merhaba dünya" },
+    "params": { "text": "merhaba dünya", "focusTimeoutMs": 6000 }
+  },
+  "text.keys.into": {
+    "method": "text.keys",
+    "params": { "text": "a", "into": { "x": 12.5, "y": 34 }, "focusTimeoutMs": 2000 }
+  },
   "screenshot": {
     "method": "screenshot",
     "input": {},

@@ -281,6 +281,16 @@ export const METHODS = {
     }),
     result: TextResult,
   },
+  /** iOS only: a person's letters, by no element, so none of them reaches a log. */
+  'text.keys': {
+    params: z.object({
+      text: z.string().max(5_000),
+      /** Only into the field over this point, once it has the focus; nothing is tapped. */
+      into: Point.optional(),
+      focusTimeoutMs: z.number().int().min(0).max(10_000).default(6_000),
+    }),
+    result: z.object({ focusMs: z.number() }),
+  },
   screenshot: {
     params: z.object({
       format: z.enum(['png', 'jpeg']).default('jpeg'),
