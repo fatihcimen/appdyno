@@ -6,7 +6,7 @@
 // answer: a tap that landed nowhere, or anything refused, stops the run. The device is always named, and it needs
 // the fixture (dev.appdyno.fixture) installed. The fixture is stopped before each launch, so each is a cold one.
 // A run before the measured ones starts what the device needs, and only its first read is kept, apart.
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -96,6 +96,24 @@ function server(state) {
 }
 
 const pause = (ms) => new Promise((done) => setTimeout(done, ms));
+
+/**
+ * What a server started that outlives it, as the iOS runner does for a user, names the state folder: xcodebuild keeps a
+ * session's results there, and writes them as it ends. Each is stopped and waited for, so the folder can go.
+ */
+async function endWhatOutlives(state) {
+  const left = () =>
+    spawnSync('pgrep', ['-f', state], { encoding: 'utf8' }).stdout.split('\n').filter(Boolean);
+  for (const pid of left()) {
+    try {
+      process.kill(Number(pid), 'SIGTERM');
+    } catch {
+      // ended by itself
+    }
+  }
+  for (let i = 0; i < 600 && left().length; i++) await pause(100);
+  if (left().length) console.error(`pid ${left().join(', ')} still writes in ${state}`);
+}
 
 /** Each call's times: the client's round trip, the server's own, and the settle an action's answer says. */
 /** @type {Map<string, { ms: number[]; served: number[]; settle: number[] }>} */
@@ -234,6 +252,7 @@ try {
   failed = e;
 }
 loads.push(loadavg()[0]);
+await endWhatOutlives(state);
 rmSync(state, { recursive: true, force: true });
 if (failed) {
   console.error(`stopped: ${failed.message}`);
