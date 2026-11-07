@@ -278,11 +278,13 @@ export class IosRunnerLauncher {
   }
 
   /**
-   * Whatever state names it, or none does: a host killed during a start leaves xcodebuild with no state, and an xcodebuild
-   * whose runner is replaced starts it again some seconds later, which takes the device from the new one.
+   * Whatever state names it, or none does: a host killed during a start, or one with a state folder of its own, leaves
+   * xcodebuild with no state here, and an xcodebuild whose runner is replaced starts it again, which kills the new one
+   * before it connects. Found by the test alone, as the arguments between the device and the test change; `kill` keeps
+   * to this device's.
    */
   private async killServing() {
-    const serving = await run('pgrep', ['-f', `id=${this.udid} -only-testing:${RUNNER_TEST}`]).then(
+    const serving = await run('pgrep', ['-f', `only-testing:${RUNNER_TEST}`]).then(
       (r) => r.stdout,
       () => '',
     );

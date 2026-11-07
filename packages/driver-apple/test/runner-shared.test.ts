@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -6,7 +7,7 @@ import type { Socket } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deviceStateFile, startOf, thisOwner } from '@appdyno/core';
 import { fakeAgentStream, HELLO, TOKEN } from '../../core/test/fake-agent.js';
-import { IosRunnerLauncher, RUNNER_TEST, type RunnerTransport } from '../src/runner.js';
+import { IosRunnerLauncher, type RunnerTransport } from '../src/runner.js';
 
 const UDID = '00000000-0000-4000-8000-000000000001';
 
@@ -62,16 +63,6 @@ describe('a runner of another build on a simulator', () => {
     await expect(new IosRunnerLauncher(UDID, through).connect()).rejects.toThrow(
       'a new runner was asked for',
     );
-  });
-
-  it('stops an xcodebuild no state names before it starts, as that would start its runner again', async () => {
-    const keeps = ['-e', 'setTimeout(() => {}, 30_000)', `id=${UDID} -only-testing:${RUNNER_TEST}`];
-    const xcodebuild = spawn(process.execPath, keeps, { stdio: 'ignore' });
-    const stopped = new Promise((r) => xcodebuild.once('exit', r));
-    await expect(new IosRunnerLauncher(UDID, transport()).connect()).rejects.toThrow(
-      'a new runner was asked for',
-    );
-    await stopped;
   });
 
   it('waits for a start under way and shares what it brings, as two would take the phone from each other', async () => {
@@ -160,6 +151,23 @@ describe('a start that cannot come', () => {
     const { rpc } = await runner.connect();
     await vi.waitFor(() => expect(readFileSync(heard, 'utf8')).toBe(told), { timeout: 5_000 });
     await runner.stop(rpc);
+  });
+
+  it("stops the xcodebuild another host's start left, found by the command line a start gives it", async () => {
+    // a device of its own: what stops a runner goes by the device, and another run of these tests has this one's
+    const udid = randomUUID().toUpperCase();
+    (await new IosRunnerLauncher(udid, through(2)).connect()).rpc.close();
+    const { pid } = JSON.parse(readFileSync(join(state, `ios-${udid}.json`), 'utf8')) as {
+      pid: number;
+    };
+    // another host, with a state folder of its own, where no state names that xcodebuild
+    const own = mkdtempSync(join(tmpdir(), 'appdyno-runner-'));
+    process.env.APPDYNO_STATE_DIR = own;
+    const second = new IosRunnerLauncher(udid, through(2));
+    const { rpc } = await second.connect();
+    await vi.waitFor(() => expect(() => process.kill(pid, 0)).toThrow());
+    await second.stop(rpc);
+    rmSync(own, { recursive: true, force: true });
   });
 
   it('is waited for no longer than one, with who holds it said', async () => {
