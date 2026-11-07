@@ -19,24 +19,25 @@ export function domainsOf(xml: string) {
   return [...(list ?? '').matchAll(/<string>applinks:([^<?]+)[^<]*<\/string>/g)].map((m) => m[1]!);
 }
 
+/** The folder of an app installed on a simulator. */
+export const appBundle = async (simctl: Simctl, udid: string, app: string) =>
+  (await simctl.exec(['get_app_container', udid, assertBundle(app)])).trim();
+
+/** A key of an app's Info.plist, as JSON; nothing where it has none. */
+export const infoValue = (bundle: string, key: string) =>
+  run('plutil', ['-extract', key, 'json', '-o', '-', join(bundle, 'Info.plist')]).then(
+    (r) => JSON.parse(r.stdout) as unknown,
+    () => undefined,
+  );
+
 /** What an app installed on a simulator says it opens: its URL schemes, and the domains its signature names. */
 export async function simulatorLinks(
   simctl: Simctl,
   udid: string,
   app: string,
 ): Promise<AppLink[]> {
-  const bundle = (await simctl.exec(['get_app_container', udid, assertBundle(app)])).trim();
-  const types = await run('plutil', [
-    '-extract',
-    'CFBundleURLTypes',
-    'json',
-    '-o',
-    '-',
-    join(bundle, 'Info.plist'),
-  ]).then(
-    (r) => JSON.parse(r.stdout) as unknown,
-    () => [],
-  );
+  const bundle = await appBundle(simctl, udid, app);
+  const types = await infoValue(bundle, 'CFBundleURLTypes');
   const signed = await run('codesign', ['-d', '--entitlements', '-', '--xml', bundle]).then(
     (r) => r.stdout,
     () => '',

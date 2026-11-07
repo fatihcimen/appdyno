@@ -86,7 +86,7 @@ export function pushOps(ctx: ServerContext, { afterChange }: Answers) {
         const extra = given.filter((f) => !(route.fields as string[]).includes(f));
         if (extra.length > 0)
           throw new ToolError(
-            `${type} here takes ${route.fields.join(', ')}: not ${extra.join(', ')}`,
+            `${type} here takes ${route.fields.join(', ') || 'payload alone'}: not ${extra.join(', ')}`,
             'INVALID_ARGUMENT',
           );
         if (payload && given.length > 0)

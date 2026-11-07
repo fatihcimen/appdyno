@@ -3,11 +3,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PUSH_PLACEHOLDERS, PUSH_TYPES, type Push, type PushRoute } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import { apnsPayload } from './apns-payload.js';
 import { assertBundle, type Simctl } from './simctl.js';
 
 const ANDROID_ONLY = 'an Android style: an iOS push shows as an alert';
 /** What does take these to a simulator: Apple's own servers, as Xcode 14's notes and ActivityKit's guide say. */
-const BY_APNS = "APNs' sandbox takes it to a simulator, with a key of the app's team";
+const BY_APNS =
+  "APNs' sandbox takes it to a simulator, by a key of the app's team a person sets up with `appdyno push setup apns`";
 /**
  * Why a simulator takes no push of these types by simctl, which hands the notification center a request of its own
  * making: apsd, where an extension is run and a Live Activity's push arrives, never sees it.
@@ -18,40 +20,29 @@ const CANNOT: Record<string, string> = {
   // Xcode 11.4's notes: "The mutable-content key is not honored"; Xcode 14's: remote notifications only
   rich: `simctl push runs no Notification Service Extension, as Xcode's notes say: ${BY_APNS}, and an alert here reaches the app's code with the same keys`,
   // seen on iOS 27.2: liveactivitiesd heard nothing, and the topic with its suffix was taken for an app's id
-  live_activity: `simctl push makes a notification, which no Live Activity takes: ${BY_APNS} and the activity's token`,
+  live_activity: `simctl push makes a notification, which no Live Activity takes: ${BY_APNS}`,
+  voip: `simctl takes no VoIP push, as its help says: ${BY_APNS}`,
+  widgets: `simctl push makes a notification, which no widget takes: ${BY_APNS}`,
   tapped: 'simctl taps nothing: push an alert, then tap its banner',
   inbox: ANDROID_ONLY,
   messaging: ANDROID_ONLY,
   media: ANDROID_ONLY,
 };
 
-/** A push as APNs takes it: the payload given, else one made of the fields. */
-export function apnsPayload(push: Push): Record<string, unknown> {
-  if (push.payload) {
-    const aps = push.payload.aps;
-    if (!aps || typeof aps !== 'object' || Array.isArray(aps))
-      throw new DeviceError('INVALID_ARGUMENT', 'an APNs payload has aps: an object');
-    return push.payload;
-  }
-  const alert = { ...(push.title && { title: push.title }), ...(push.body && { body: push.body }) };
-  const aps =
-    push.type === 'background'
-      ? { 'content-available': 1 }
-      : { alert, sound: 'default', ...(push.type === 'rich' && { 'mutable-content': 1 }) };
-  return { aps, ...push.data, ...(push.type === 'rich' && push.image && { image: push.image }) };
-}
-
-export const SIMULATOR_PUSHES: PushRoute[] = PUSH_TYPES.map((type) =>
-  type === 'alert'
-    ? {
-        type,
-        route:
-          "simctl push: the app's code gets it as a remote notification while the app is in front, else when its banner is tapped",
-        fields: ['title', 'body', 'data'],
-        template: JSON.stringify(apnsPayload({ ...PUSH_PLACEHOLDERS, type })),
-      }
-    : { type, why: CANNOT[type]! },
-);
+/** Each type on a simulator: an alert by simctl, and what APNs takes by `byApns`, once a person set it up. */
+export const simulatorRoutes = (byApns: PushRoute[]): PushRoute[] =>
+  PUSH_TYPES.map(
+    (type) =>
+      (type === 'alert'
+        ? {
+            type,
+            route:
+              "simctl push: the app's code gets it as a remote notification while the app is in front, else when its banner is tapped",
+            fields: ['title', 'body', 'data'],
+            template: JSON.stringify(apnsPayload({ ...PUSH_PLACEHOLDERS, type })),
+          }
+        : byApns.find((r) => r.type === type)) ?? { type, why: CANNOT[type]! },
+  );
 
 /**
  * What reached the app's code, by where it was at the push. In the background even `content-available` woke nothing:

@@ -9,6 +9,7 @@ import {
   type LaunchOptions,
   type BiometricAnswer,
   type Push,
+  type PushTokenKind,
   type DeviceEvents,
   type DeviceSettings,
   type SettingName,
@@ -16,7 +17,9 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import { buildScheme } from './build.js';
 import { macProxy } from './network.js';
-import { SIMULATOR_PUSHES, simulatorPush } from './sim-push.js';
+import { ApnsPush } from './apns-push.js';
+import { simulatorApnsTarget } from './sim-apns.js';
+import { simulatorPush, simulatorRoutes } from './sim-push.js';
 import { simulatorLinks } from './sim-links.js';
 import { type Simctl, assertBundle } from './simctl.js';
 import {
@@ -309,16 +312,24 @@ export class SimulatorEvents implements DeviceEvents {
     private readonly udid: string,
     /** The app in front, if it can be read: what a push reaches depends on it. */
     private readonly front: () => Promise<string | undefined>,
+    /** What simctl cannot take, once a person set APNs up. */
+    private readonly apns = new ApnsPush(simulatorApnsTarget(simctl, udid)),
   ) {}
 
   private spawn = (...words: string[]) => this.simctl.exec(['spawn', this.udid, ...words]);
 
   pushRoutes() {
-    return SIMULATOR_PUSHES;
+    return simulatorRoutes(this.apns.routes());
   }
 
   push(app: string, push: Push) {
-    return simulatorPush(this.simctl, this.udid, app, push, this.front);
+    return push.type === 'alert' || !this.apns.ready
+      ? simulatorPush(this.simctl, this.udid, app, push, this.front)
+      : this.apns.push(app, push);
+  }
+
+  pushToken(app: string, token: string, kind?: PushTokenKind) {
+    this.apns.typed(app, token, kind);
   }
 
   /** Enrols if needed and answers the next biometric request: Face ID and Touch ID, whichever it has. */

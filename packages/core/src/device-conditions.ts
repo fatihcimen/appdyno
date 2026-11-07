@@ -79,7 +79,8 @@ export interface DeviceSettings {
 
 /**
  * A push by what it does: `alert` is seen, `background` wakes the app's code alone, `rich` carries an image, `tapped`
- * opens the app as a person's tap on one does, and `inbox`, `messaging` and `media` are Android's own styles.
+ * opens the app as a person's tap on one does, `inbox`, `messaging` and `media` are Android's own styles, and `voip`
+ * (PushKit's) and `widgets` (WidgetKit's) iOS's.
  */
 export const PUSH_TYPES = [
   'alert',
@@ -90,6 +91,8 @@ export const PUSH_TYPES = [
   'inbox',
   'messaging',
   'media',
+  'voip',
+  'widgets',
 ] as const;
 export type PushType = (typeof PUSH_TYPES)[number];
 
@@ -124,6 +127,9 @@ export const PUSH_PLACEHOLDERS: Push = {
   data: { key: 'value' },
 };
 
+/** Which of an app's tokens a push goes by: its device's, a Live Activity's, push to start's, PushKit's, a widget's. */
+export type PushTokenKind = 'device' | 'activity' | 'start' | 'voip' | 'widget';
+
 /** `enroll`: a fingerprint or a face is known to the device; the others answer a request for one. */
 export type BiometricAnswer = 'match' | 'nomatch' | 'enroll';
 
@@ -133,6 +139,8 @@ export interface DeviceEvents {
   pushRoutes(): PushRoute[];
   /** Sends one to the app, by its type's route; what reached the app's code, for the answer. */
   push(app: string, push: Push): Promise<string>;
+  /** A token a person typed in a window, for pushes to the app by Apple or Google: never an MCP client's. */
+  pushToken?(app: string, token: string, kind?: PushTokenKind): void;
   /**
    * `setUp` changes a condition the answer needs, written down first to be put back; without it nothing is set up.
    * What else was done, for the answer.

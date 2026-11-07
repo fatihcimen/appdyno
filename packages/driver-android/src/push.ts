@@ -87,6 +87,11 @@ export const ANDROID_PUSHES: PushRoute[] = [
     type: 'live_activity',
     why: `a Live Update is the app's own notification, built from a data message: ${NO_SERVER}`,
   },
+  { type: 'voip', why: "PushKit's, an iOS push: a call reaches an Android app as a data message" },
+  {
+    type: 'widgets',
+    why: "WidgetKit's, an iOS push: an Android widget updates from the app's own code",
+  },
 ];
 
 export class AndroidPush {

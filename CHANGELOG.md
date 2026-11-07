@@ -3,6 +3,7 @@
 ## Unreleased
 
 - `appdyno push setup apns|fcm` keeps a push service's credentials, the team's APNs key or a Firebase service account, which only a person gives at a terminal, for this user alone; `--forget` deletes them. Nothing an MCP client sends reaches them, and nothing says them back.
+- With APNs set up, `push` sends a simulator's rich, background, Live Activity, VoIP and widget pushes by APNs' sandbox: to an app installed there, by a token the app printed in its own log in this session or a person typed in the window, never one an MCP client sends; Apple's two hosts alone, 4 KB a payload, 10 a minute, each push type with Apple's topic suffix and priority, and Apple's reasons in words. `voip` and `widgets` are new types. Tested against recorded requests; no push by APNs has been sent yet.
 - **Links** offers what the app in its field opens, as `open_link` `links` lists it: schemes, domains and Android's filters, a domain with its state.
 - A recording writes no step for `open_link` `links`, which reads what an app opens and opens nothing: it wrote an empty `open_link`.
 - **Links** in a window names the app to open a link in, the app in front first, through the server's list of apps: an iPhone opens a link only in a named app, and its window could not open one. Run on an iPhone 13 Pro Max with iOS 27.2 and a Samsung Galaxy A52 with Android 14.

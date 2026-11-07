@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { apnsPayload, SIMULATOR_PUSHES, simulatorPush } from '../src/sim-push.js';
+import { apnsPayload } from '../src/apns-payload.js';
+import { simulatorPush, simulatorRoutes } from '../src/sim-push.js';
 import type { Simctl } from '../src/simctl.js';
 
 describe('a push to a simulator', () => {
@@ -75,20 +76,32 @@ describe('a push to a simulator', () => {
     );
   });
 
-  it('names a route for each type, or why it has none', () => {
+  it('names a route for each type, or why it has none, and says what takes it instead', () => {
     const routes = Object.fromEntries(
-      SIMULATOR_PUSHES.map((r) => [r.type, 'route' in r ? 'route' : r.why]),
+      simulatorRoutes([]).map((r) => [r.type, 'route' in r ? 'route' : r.why]),
     );
-    const byApns = "APNs' sandbox takes it to a simulator, with a key of the app's team";
+    const byApns =
+      "APNs' sandbox takes it to a simulator, by a key of the app's team a person sets up with `appdyno push setup apns`";
     expect(routes).toEqual({
       alert: 'route',
       rich: `simctl push runs no Notification Service Extension, as Xcode's notes say: ${byApns}, and an alert here reaches the app's code with the same keys`,
       background: `simctl takes no push with nothing to see, "no user visible content": ${byApns}`,
       tapped: 'simctl taps nothing: push an alert, then tap its banner',
-      live_activity: `simctl push makes a notification, which no Live Activity takes: ${byApns} and the activity's token`,
+      live_activity: `simctl push makes a notification, which no Live Activity takes: ${byApns}`,
+      voip: `simctl takes no VoIP push, as its help says: ${byApns}`,
+      widgets: `simctl push makes a notification, which no widget takes: ${byApns}`,
       inbox: 'an Android style: an iOS push shows as an alert',
       messaging: 'an Android style: an iOS push shows as an alert',
       media: 'an Android style: an iOS push shows as an alert',
+    });
+  });
+
+  it('takes the routes of APNs once a person set it up, and keeps the alert to simctl', () => {
+    const byApns = { type: 'rich' as const, route: 'APNs', fields: [], template: '{}' };
+    const routes = simulatorRoutes([byApns, { ...byApns, type: 'alert' }]);
+    expect(routes.find((r) => r.type === 'rich')).toBe(byApns);
+    expect(routes.find((r) => r.type === 'alert')).toMatchObject({
+      route: expect.stringMatching(/^simctl push/),
     });
   });
 });

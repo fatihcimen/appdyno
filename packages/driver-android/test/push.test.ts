@@ -56,5 +56,7 @@ describe('a push on Android', () => {
     );
     expect(routes.background).toContain("no onMessageReceived: that needs Google's servers");
     expect(routes.alert).toBe('route');
+    expect(routes.voip).toContain('an iOS push');
+    expect(Object.keys(routes)).toHaveLength(10);
   });
 });

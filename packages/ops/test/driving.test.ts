@@ -1316,6 +1316,7 @@ describe('device conditions', () => {
     pushRoutes = (): PushRoute[] => [
       { type: 'alert', route: 'by hand', fields: ['title', 'data'], template: '{"aps":{}}' },
       { type: 'tapped', why: 'no hand' },
+      { type: 'widgets', route: 'by APNs', fields: [], template: '{"aps":{}}' },
     ];
     push = async (app: string, push: Push) => {
       this.pushed.push([app, push]);
@@ -1433,7 +1434,7 @@ describe('device conditions', () => {
     const net = await call('device_setting', { name: 'network', value: 'slow' });
     expect(net.data.code).toBe('UNSUPPORTED');
     expect(net.text).toContain('a phone has no network shaping');
-    expect((await call('push')).text).toBe('alert: by hand\ntapped: no: no hand');
+    expect((await call('push')).text).toBe('alert: by hand\ntapped: no: no hand\nwidgets: by APNs');
     const pushed = await call('push', {
       type: 'alert',
       title: 'T',
@@ -1443,6 +1444,9 @@ describe('device conditions', () => {
     expect(pushed.text).toBe('pushed to dev.app');
     expect(settings.pushed).toEqual([['dev.app', { type: 'alert', title: 'T', data: { k: 'v' } }]]);
     expect((await call('push', { type: 'tapped' })).text).toBe('no hand');
+    expect((await call('push', { type: 'widgets', title: 'T' })).text).toBe(
+      'widgets here takes payload alone: not title',
+    );
     expect((await call('push', { type: 'loud' })).text).toMatch(
       /^type: alert, background, .*, not loud$/,
     );

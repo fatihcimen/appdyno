@@ -1,4 +1,8 @@
 import { execFileSync } from 'node:child_process';
+import { generateKeyPairSync } from 'node:crypto';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
@@ -18,7 +22,7 @@ const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
 const SIMULATOR = process.env.APPDYNO_IOS_UDID;
 
 /** The server on that device, with the fixture named as its app unless `named` is false, as in a window. */
-function server(serial: string, named = true) {
+function server(serial: string, named = true, env: Record<string, string> = {}) {
   let client: Client;
   const call = toolCaller(() => client);
   beforeAll(async () => {
@@ -33,7 +37,7 @@ function server(serial: string, named = true) {
         '--allow-devices',
         `^${serial}$`,
       ],
-      env: process.env as Record<string, string>,
+      env: { ...(process.env as Record<string, string>), ...env },
       stderr: 'pipe',
     });
     client = new Client({ name: 'push-test', version: '0' });
@@ -194,5 +198,49 @@ describe.skipIf(!SIMULATOR)('a simulator with no app named, over MCP', () => {
     expect((await call('screen')).text).toContain(`foreground: ${APP}`);
     const pushed = await call('push', { app: APP, type: 'alert', title: 'Linked' });
     expect(pushed.text).toMatch(/^pushed to dev\.appdyno\.fixture by simctl: it is in front/);
+  });
+});
+
+/**
+ * A key made up here, in a state folder of the suite's own, so that this Mac's own is never read: its team owns no app,
+ * and the fixture prints no token (it has no aps-environment), so each push is refused before anything reaches Apple.
+ */
+function madeUpKey() {
+  const state = mkdtempSync(join(tmpdir(), 'appdyno-push-suite-'));
+  mkdirSync(join(state, 'push'), { mode: 0o700 });
+  const key = generateKeyPairSync('ec', { namedCurve: 'prime256v1' }).privateKey.export({
+    type: 'pkcs8',
+    format: 'pem',
+  });
+  const made = { key, keyId: 'AAAAAAAAAA', teamId: 'BBBBBBBBBB', production: false };
+  writeFileSync(join(state, 'push', 'apns.json'), JSON.stringify(made), { mode: 0o600 });
+  return { APPDYNO_STATE_DIR: state };
+}
+
+describe.skipIf(!SIMULATOR)('a simulator with APNs set up, over MCP', () => {
+  const call = server(SIMULATOR!, true, madeUpKey());
+  afterAll(() => new IosSimulatorDevice(SIMULATOR!).stopAgent());
+
+  it("takes what simctl cannot by APNs' sandbox, and only by a token the app printed in this session", async () => {
+    const types = (await call('push')).text;
+    expect(types).toContain(
+      "rich: APNs' sandbox, by the device token the app printed in this session",
+    );
+    expect(types).toContain("live_activity: APNs' sandbox, by the activity token");
+    expect(types).toContain('alert: simctl push');
+    const rich = await call('push', { type: 'rich', title: 'R' });
+    expect(rich.text).toContain(`no device token from ${APP} in this session (NOT_FOUND)`);
+    expect(rich.text).toContain('by NSLog or os_log');
+  });
+
+  it("refuses a Live Activity's payload that is not ActivityKit's, VoIP the app does not declare, and an app not there", async () => {
+    const update = JSON.stringify({ aps: { event: 'update' } });
+    expect((await call('push', { type: 'live_activity', payload: update })).text).toContain(
+      "a Live Activity's aps.content-state is an object",
+    );
+    expect((await call('push', { type: 'voip' })).text).toContain('not known to declare VoIP');
+    expect((await call('push', { type: 'background', app: 'dev.not.here' })).text).toContain(
+      'dev.not.here is not installed on this simulator',
+    );
   });
 });
