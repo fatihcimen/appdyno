@@ -15,7 +15,7 @@ import type { Socket } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deviceStateFile, startOf, thisOwner } from '@appdyno/core';
 import { fakeAgentStream, HELLO, TOKEN } from '../../core/test/fake-agent.js';
-import { IosRunnerLauncher, type RunnerTransport } from '../src/runner.js';
+import { IosRunnerLauncher, simulatorTransport, type RunnerTransport } from '../src/runner.js';
 
 const UDID = '00000000-0000-4000-8000-000000000001';
 
@@ -105,12 +105,15 @@ describe('a start that cannot come', () => {
   let state: string;
   let other: ReturnType<typeof spawn>;
 
-  const through = (major: number): RunnerTransport => ({
+  const through = (
+    major: number,
+    handlers: Parameters<typeof fakeAgentStream>[0] = {},
+  ): RunnerTransport => ({
     build: async () => ({ xctestrun: '/products/x.xctestrun', sha256: 'a'.repeat(64) }),
     port: async () => 1,
     open: async () => {
       const hello = () => ({ result: { ...HELLO, protocol: { major } } });
-      const { host } = fakeAgentStream({ hello });
+      const { host } = fakeAgentStream({ hello, ...handlers });
       return { socket: Object.assign(host, { setNoDelay: () => undefined }) as unknown as Socket };
     },
   });
@@ -210,6 +213,28 @@ setTimeout(() => {}, 30000);
     await new Promise((r) => setTimeout(r, 600));
     expect(existsSync(join(state, `ios-${udid}.kept`, 'session.xcresult', 'late'))).toBe(false);
     await runner.stop(rpc);
+  });
+
+  it.each([
+    [
+      "a simulator's is killed, and its runner not asked to end",
+      simulatorTransport.stop,
+      ['SIGKILL'],
+    ],
+    ["an iPhone's runner is asked, then its xcodebuild told", undefined, ['SIGTERM']],
+  ] as const)('%s: a simulator it booted again stays up', async (_, stop, signals) => {
+    const udid = randomUUID().toUpperCase();
+    let asked = false;
+    const shutdown = () => ((asked = true), { result: {} });
+    const runner = new IosRunnerLauncher(udid, { ...through(2, { shutdown }), stop });
+    const { rpc } = await runner.connect();
+    const { pid } = JSON.parse(readFileSync(join(state, `ios-${udid}.json`), 'utf8')) as {
+      pid: number;
+    };
+    const sent = vi.spyOn(process, 'kill');
+    await runner.stop(rpc);
+    const to = sent.mock.calls.filter(([p, s]) => p === pid && s !== 0).map(([, s]) => s);
+    expect([to, asked]).toEqual([signals, stop !== 'kill']);
   });
 
   it('is waited for no longer than one, with who holds it said', async () => {

@@ -78,12 +78,20 @@ export type RunnerTransport = {
   open(port: number): Promise<{ socket: Socket; rest?: Buffer }>;
   /** Whether a runner must take a tunnel too: else it is on the device's loopback and nowhere else. */
   tunnels?(): boolean;
+  /**
+   * `kill`: its xcodebuild is ended by SIGKILL, its runner with it. Else the runner is asked to end, then its xcodebuild
+   * told by SIGTERM, then SIGKILL, ENDS_MS apart.
+   */
+  stop?: 'kill';
 };
 
 /** A simulator: the runner as built, a free port of the Mac's loopback (the simulator shares it). */
 export const simulatorTransport: RunnerTransport = {
   build: runnerBuild,
   port: freePort,
+  // an xcodebuild that booted its simulator again, after a person shut it down under it, shuts it down as it ends by
+  // itself or by SIGTERM: a kill leaves it as it is, and the runner ended within 3 s, 5 of 5
+  stop: 'kill',
   open: (port) =>
     new Promise((resolve, reject) => {
       const c = connect({ host: '127.0.0.1', port });
@@ -170,9 +178,10 @@ export class IosRunnerLauncher {
 
   async stop(rpc?: RpcClient) {
     agentLeft(this.udid);
-    if (rpc && !rpc.closed)
-      await rpc.call('shutdown', {}, { timeoutMs: 5_000 }).catch(() => undefined);
     const state = await this.readState();
+    const killed = this.transport.stop === 'kill' && !!state?.pid;
+    if (!killed && rpc && !rpc.closed)
+      await rpc.call('shutdown', {}, { timeoutMs: 5_000 }).catch(() => undefined);
     if (state?.pid) await this.kill(state.pid);
     await rm(this.statePath, { force: true });
     await rm(this.keptPath, { recursive: true, force: true });
@@ -310,17 +319,19 @@ export class IosRunnerLauncher {
       () => '',
     );
     if (!cmd.includes(RUNNER_TEST) || !cmd.includes(this.udid)) return;
-    const send = (signal: NodeJS.Signals) => {
+    // an iPhone's keeps SIGTERM first, as before: a kill is not yet tried on a phone, none was at hand
+    const signals: NodeJS.Signals[] =
+      this.transport.stop === 'kill' ? ['SIGKILL'] : ['SIGTERM', 'SIGKILL'];
+    for (const signal of signals) {
       try {
         process.kill(pid, signal);
       } catch {
-        /* gone already */
+        return; // gone already
       }
-    };
-    send('SIGTERM');
-    const end = Date.now() + ENDS_MS;
-    while (processAlive(pid) && Date.now() < end) await sleep(ENDS_POLL_MS);
-    if (processAlive(pid)) send('SIGKILL');
+      const end = Date.now() + ENDS_MS;
+      while (processAlive(pid) && Date.now() < end) await sleep(ENDS_POLL_MS);
+      if (!processAlive(pid)) return;
+    }
   }
 
   private readState() {
