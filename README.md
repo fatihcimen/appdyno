@@ -116,8 +116,8 @@ Local only: no network listener by default, no telemetry, and you decide which d
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). `CHANGELOG.md` lists the releases.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). `CHANGELOG.md` lists the releases.
 
 ## License
 
-No license is granted yet.
+MIT. See [LICENSE](LICENSE).

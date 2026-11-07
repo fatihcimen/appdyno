@@ -8,6 +8,7 @@ android/*/.cxx/
 android/local.properties
 packages/*/agents/
 packages/appdyno/README.md
+packages/appdyno/LICENSE
 packages/appdyno/THIRD_PARTY_NOTICES
 *.tgz
 .ci/

@@ -123,6 +123,7 @@ writeFileSync(
   join(pkg, 'README.md'),
   publishedReadme(readFileSync(join(pkg, '../../README.md'), 'utf8'), repository.url),
 );
+cpSync(join(pkg, '../../LICENSE'), join(pkg, 'LICENSE'));
 writeFileSync(
   join(pkg, 'THIRD_PARTY_NOTICES'),
   noticesFor(

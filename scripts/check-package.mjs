@@ -162,6 +162,7 @@ try {
       'dist/index.js',
       'dist/index.d.ts',
       'README.md',
+      'LICENSE',
       'THIRD_PARTY_NOTICES',
       'agents/android/agent.apk',
       'agents/ios-src/Appdyno.xcodeproj/project.pbxproj',

@@ -1,5 +1,7 @@
 # Contributing
 
+Everyone here follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Setup
 
 You need macOS, Node 22 and pnpm 10.

@@ -38,6 +38,7 @@
     "zed",
     "cline"
   ],
+  "license": "MIT",
   "homepage": "https://github.com/fatihcimen/appdyno#readme",
   "bugs": {
     "url": "https://github.com/fatihcimen/appdyno/issues"
@@ -64,6 +65,7 @@
     "dist",
     "agents",
     "README.md",
+    "LICENSE",
     "THIRD_PARTY_NOTICES"
   ],
   "engines": {
