@@ -1,4 +1,4 @@
-import { osName } from '@appdyno/core';
+import { osName, type ListedDevice } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
@@ -20,19 +20,21 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       output: DevicesOut,
       annotations: READ,
       run: async () => {
-        const devices = await Promise.all(
-          (await ctx.devices()).map(async (d) => {
-            const h = ctx.heldBy(d.serial);
-            const blocked = await ctx.blockOf(d);
-            return {
-              ...d,
-              allowed: ctx.allowed(d.serial),
-              selected: d.serial === ctx.currentSerial,
-              ...(h && { heldBy: { pid: h.pid, tool: h.tool, since: h.since } }),
-              ...(blocked && { blocked }),
-            };
-          }),
-        );
+        const row = async (d: ListedDevice) => {
+          const h = ctx.heldBy(d.serial);
+          const blocked = await ctx.blockOf(d);
+          return {
+            ...d,
+            allowed: ctx.allowed(d.serial),
+            selected: d.serial === ctx.currentSerial,
+            ...(h && { heldBy: { pid: h.pid, tool: h.tool, since: h.since } }),
+            ...(blocked && { blocked }),
+          };
+        };
+        // each driver's blocks are read once that driver has listed, not once the slowest has
+        const devices = (
+          await Promise.all(ctx.providers.map(async (p) => Promise.all((await p.list()).map(row))))
+        ).flat();
         if (devices.length === 0)
           return reply('no device connected, and no simulator booted', { devices });
         return reply(

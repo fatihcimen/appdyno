@@ -582,6 +582,31 @@ describe('iOS simulators', () => {
     expect(failing.content[0]!.text).toBe(`${device.serial} device Fake`);
   });
 
+  it("reads a driver's blocks once it has listed, not once the slowest has, and keeps the drivers' order", async () => {
+    let listSlow = () => {};
+    const asked: string[] = [];
+    const driver = (serial: string, listed: Promise<void>): DeviceProvider => ({
+      list: async () => {
+        await listed;
+        return [{ serial, state: 'device', ready: true, model: 'Fake' }];
+      },
+      handles: (s) => s === serial,
+      open: () => new FakeDevice(),
+      need: async () => {
+        asked.push(serial);
+        return 'locked';
+      },
+    });
+    const slow = driver('slow-1', new Promise((done) => (listSlow = done)));
+    const ctx = new ServerContext(DEFAULT_POLICY, [slow, driver('fast-1', Promise.resolve())]);
+    const client = await linkedClient(ctx, () => undefined);
+    const listing = client.callTool({ name: 'list_devices', arguments: {} }) as Promise<Result>;
+    await vi.waitFor(() => expect(asked).toEqual(['fast-1']));
+    listSlow();
+    const text = (await listing).content[0]!.text!;
+    expect(text.split('\n').map((l) => l.split(' ')[0])).toEqual(['slow-1', 'fast-1']);
+  });
+
   it('says which measure a device lacks', async () => {
     const none = new FakeDevice();
     Object.defineProperty(none, 'measure', { value: LACKS });
