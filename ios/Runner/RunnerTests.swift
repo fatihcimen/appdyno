@@ -108,6 +108,9 @@ final class RunnerTests: XCTestCase {
             return Reply(result: try d.audit(AuditRequest(p), job: job))
         case "app.foreground":
             return Reply(result: d.foreground())
+        case "permission.reset":
+            try d.resetPermission(try OneValue.pkg(p), try OneValue.service(p))
+            return Reply(result: [:])
         case "app.target":
             d.setTarget(try OneValue.pkg(p))
             return Reply(result: [:])

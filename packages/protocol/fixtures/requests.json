@@ -136,6 +136,10 @@
   "a11y.read": { "method": "a11y.read", "input": {}, "params": { "maxNodes": 60 } },
   "rest.wait": { "method": "rest.wait", "params": {} },
   "animations.set": { "method": "animations.set", "params": { "off": true } },
+  "permission.reset": {
+    "method": "permission.reset",
+    "params": { "pkg": "dev.appdyno.fixture", "service": "location" }
+  },
   "locales": { "method": "locales", "params": { "set": "tr-TR,en-US" } },
   "touch": {
     "method": "touch",

@@ -646,16 +646,7 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
   }, 240_000);
 
   it('says what an iPhone cannot do, and why', async () => {
-    for (const [action, why] of [
-      ['clear', /uninstall/],
-      ['grant', /alert/],
-      ['revoke', /alert/],
-    ] as const) {
-      const r = await h.call('app', { action, service: 'camera' });
-      expect(r.data.code, action).toBe('UNSUPPORTED');
-      expect(r.text).toMatch(why);
-    }
-    for (const name of ['animations', 'network', 'proxy', 'battery']) {
+    for (const name of ['animations', 'proxy', 'battery']) {
       const r = await h.call('device_setting', { name, value: name === 'battery' ? '50' : 'on' });
       expect(r.data.code, name).toBe('UNSUPPORTED');
     }

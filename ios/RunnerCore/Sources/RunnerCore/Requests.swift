@@ -23,6 +23,8 @@ public enum OneValue {
 
     public static func pkg(_ p: Wire) throws -> String { try requiredString(p, "pkg") }
 
+    public static func service(_ p: Wire) throws -> String { try requiredString(p, "service") }
+
     public static func rotation(_ p: Wire) throws -> Int { try requiredInt(p, "rotation") }
 
     public static func id(_ p: Wire) throws -> Int { try requiredInt(p, "id") }

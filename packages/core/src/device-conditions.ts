@@ -14,6 +14,7 @@ export const SETTINGS = [
   'wifi',
   'mobile_data',
   'fold',
+  'thermal',
 ] as const;
 
 /** What the tool changes only on its way to something asked, written down and put back as the rest: an emulator's PIN, which a fingerprint needs. */

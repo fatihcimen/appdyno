@@ -117,6 +117,7 @@ final class WireFixtureTests: XCTestCase {
         XCTAssertEqual(try OneValue.pkg(params("app.target")), "dev.appdyno.fixture")
         XCTAssertEqual(try OneValue.rotation(params("orientation.set")), 1)
         XCTAssertEqual(try OneValue.id(params("cancel")), 7)
+        XCTAssertEqual(try OneValue.service(params("permission.reset")), "location")
         let at = try OneValue.point(params("animations.wait"))
         XCTAssertEqual(at.x, 10)
         XCTAssertEqual(at.y, 20)

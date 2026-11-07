@@ -30,6 +30,9 @@ export interface PhoneStreamHandle {
   stop(): Promise<boolean>;
 }
 
+/** A condition of the phone's own, as Xcode's Devices window offers them: its profiles, and the one on. */
+export type PhoneCondition = { id: string; profiles: string[]; on?: string };
+
 export type PhoneStreamCheck = { ok: true } | { ok: false; need: Need; detail?: string };
 
 export interface PhoneStreamModule {
@@ -45,6 +48,10 @@ export interface PhoneStreamModule {
     app: string | undefined,
     onSample: (s: LiveSample) => void,
   ): Promise<() => void>;
+  /** The phone's own conditions: slow network, thermal state. */
+  conditions(udid: string): Promise<PhoneCondition[]>;
+  /** Turns the one on off, then turns this one on, its connection held while this process lives. */
+  induce(udid: string, condition?: { id: string; profile: string }): Promise<void>;
   /** Whether the field in focus is a secure one, as text must not reach it by a pasteboard. */
   secureFocused(udid: string): Promise<boolean>;
   /** The name of the field being typed in. */

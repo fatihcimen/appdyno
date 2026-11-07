@@ -162,7 +162,9 @@ export class IosPhoneDevice extends IosDevice {
       keys: (text, into) => this.keys(text, into),
     });
     const builds = new Map<string, PhoneBuild>();
-    this.apps = new PhoneApps(ctl, builds);
+    this.apps = new PhoneApps(ctl, builds, async (pkg, service) => {
+      await this.call('permission.reset', { pkg, service }, TIMEOUTS.action);
+    });
     this.settings = new PhoneSettings(ctl);
     this.events = new PhoneEvents(ctl, builds);
     this.inspector = new PhoneInspector(ctl);

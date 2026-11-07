@@ -13,6 +13,8 @@ const ANIMATION_SCALES = [
 
 /** Android's own: high contrast text, the nearest it has to increasing contrast. */
 const HIGH_CONTRAST = 'high_text_contrast_enabled';
+const NO_THERMAL =
+  "this tool sets no thermal state on Android: only an iPhone's, through Xcode's conditions";
 const NO_TRANSPARENCY =
   'Android has no reduce_transparency switch: its blurs are a developer option';
 
@@ -147,6 +149,8 @@ export class AndroidSettings implements DeviceSettings {
         return this.wifi();
       case 'fold':
         return this.fold.get();
+      case 'thermal':
+        throw new DeviceError('UNSUPPORTED', NO_THERMAL);
       case 'screen_lock':
         // which emulator had none: a serial is reused, and another's lock is not this tool's to clear
         return (await this.unlocked()) ? `none on ${await this.avd()}` : 'pin';
@@ -313,6 +317,8 @@ export class AndroidSettings implements DeviceSettings {
       case 'fold':
         await this.fold.set(value);
         return;
+      case 'thermal':
+        throw new DeviceError('UNSUPPORTED', NO_THERMAL);
     }
   }
 

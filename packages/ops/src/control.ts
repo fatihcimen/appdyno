@@ -176,8 +176,10 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
           if (!service) throw new ToolError(`${action} needs service`, 'INVALID_ARGUMENT');
           if (action === 'revoke' || apps.grantResets)
             await approve(policy, s, `app ${action}`, pkg, service);
-          await apps.permission(pkg, action === 'grant', service);
-          return done(`${action === 'grant' ? 'granted' : 'revoked'} ${service} for ${pkg}`);
+          const said = await apps.permission(pkg, action === 'grant', service);
+          return done(
+            said ?? `${action === 'grant' ? 'granted' : 'revoked'} ${service} for ${pkg}`,
+          );
         }
         case 'download_data': {
           const pkg = appOf(s, app);

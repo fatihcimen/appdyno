@@ -32,7 +32,8 @@ export interface AppManager {
   listApps(all: boolean): Promise<AppEntry[]>;
   /** Installed and running; `foreground` is told by the caller, which has the screen. */
   appState(app: string): Promise<Exclude<AppState, 'foreground'>>;
-  permission(app: string, grant: boolean, service: string): Promise<void>;
+  /** What the answer says, where a grant or a revoke is less than its name. */
+  permission(app: string, grant: boolean, service: string): Promise<string | void>;
   launchWith(app: string, opts: LaunchOptions): Promise<void>;
   /** The links the installed app says it opens: its schemes, its domains, Android's filters and their verification. */
   links(app: string): Promise<AppLink[]>;

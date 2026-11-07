@@ -187,6 +187,7 @@
   },
   "rest.wait": { "method": "rest.wait", "result": {} },
   "animations.set": { "method": "animations.set", "result": {} },
+  "permission.reset": { "method": "permission.reset", "result": {} },
   "locales": { "method": "locales", "result": { "tags": "tr-TR,en-US" } },
   "touch": { "method": "touch", "result": {} },
   "stream.start": { "method": "stream.start", "result": {} },

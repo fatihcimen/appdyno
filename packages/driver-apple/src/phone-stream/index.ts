@@ -8,6 +8,7 @@ import type {
 } from '../phone-stream-port.js';
 import { listDevices, sameUdid } from '../usbmux.js';
 import { Audit, elementNamed, type AuditElement } from './audit.js';
+import { ConditionInducer } from './conditions.js';
 import { LiveReader, NO_HUB, unreadable } from './live.js';
 import { readServices, takeScreenshot } from './services.js';
 import { openTunnel, PhoneRefusal, readPairRecord } from './tunnel.js';
@@ -162,6 +163,44 @@ function start(
   };
 }
 
+/** The connection that holds a phone's condition, while this process lives: the phone may end one with it. */
+const holding = new Map<string, { inducer: ConditionInducer; close(): void }>();
+
+async function openInducer(udid: string) {
+  const { stack, rsdPort } = await tunnelTo(udid);
+  try {
+    const inducer = await ConditionInducer.open(stack, await readServices(stack, rsdPort));
+    return { inducer, close: () => (inducer.close(), stack.close()) };
+  } catch (e) {
+    stack.close();
+    throw e;
+  }
+}
+
+async function conditions(udid: string) {
+  const held = holding.get(udid);
+  if (held) return held.inducer.list();
+  const opened = await openInducer(udid);
+  try {
+    return await opened.inducer.list();
+  } finally {
+    opened.close();
+  }
+}
+
+async function induce(udid: string, condition?: { id: string; profile: string }) {
+  const opened = holding.get(udid) ?? (await openInducer(udid));
+  holding.delete(udid);
+  try {
+    if ((await opened.inducer.list()).some((c) => c.on)) await opened.inducer.disable();
+    if (!condition) return;
+    await opened.inducer.enable(condition.id, condition.profile);
+    holding.set(udid, opened);
+  } finally {
+    if (!holding.has(udid)) opened.close();
+  }
+}
+
 const secureFocused = (udid: string) => withAudit(udid, (audit) => audit.secureFocused());
 const focusedField = (udid: string) => withAudit(udid, (audit) => audit.focusedField());
 
@@ -173,6 +212,8 @@ const phoneStream: PhoneStreamModule = {
   secureFocused,
   focusedField,
   live,
+  conditions,
+  induce,
   start,
   onWifi,
   portOnWifi,

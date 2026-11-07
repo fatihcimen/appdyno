@@ -1,4 +1,5 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PUSH_TYPES } from '@appdyno/core';
 import type {
@@ -17,6 +18,8 @@ import type {
 import { DeviceError } from '@appdyno/protocol';
 import { ApnsPush } from './apns-push.js';
 import { buildScheme } from './build.js';
+import { PhoneConditions } from './phone-conditions.js';
+import type { PhoneStreamModule } from './phone-stream-port.js';
 import type { Devicectl } from './devicectl.js';
 import { PhoneApnsTarget, readBuild, type PhoneBuild } from './phone-apns.js';
 import { assertBundle } from './simctl.js';
@@ -30,8 +33,6 @@ import {
 } from './manage.js';
 
 const PHONE_CANNOT = {
-  clear: "an iPhone's app data can only go with the app: uninstall and install it again",
-  permission: 'no tool grants an iPhone app a permission: its prompt has to be answered',
   push: "a real iPhone takes a push only from Apple's servers, once a person sets APNs up with `appdyno push setup apns`: else open the app's deep link, or push to a simulator",
   tapped: 'nothing taps a push on an iPhone but a person: push an alert, and a person taps it',
   style: 'an Android style: an iOS push shows as an alert',
@@ -55,6 +56,9 @@ export class PhoneApps implements AppManager {
     private readonly ctl: Devicectl,
     /** What this tool read of each build it installed, for APNs. */
     private readonly builds = new Map<string, PhoneBuild>(),
+    /** The runner's reset of what an app was answered for a protected resource. */
+    private readonly resetPermission: (app: string, service: string) => Promise<void> = () =>
+      Promise.reject(new DeviceError('UNSUPPORTED', 'no runner to reset a permission')),
   ) {}
 
   async install(path: string) {
@@ -80,8 +84,15 @@ export class PhoneApps implements AppManager {
     );
   }
 
-  async clearData(): Promise<void> {
-    throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.clear);
+  /** An empty container in its place: development-signed apps alone, as for a replace. */
+  async clearData(app: string) {
+    const empty = mkdtempSync(join(tmpdir(), 'appdyno-empty-'));
+    try {
+      for (const dir of DATA_FOLDERS) mkdirSync(join(empty, dir));
+      await this.replaceData(app, empty);
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
+    }
   }
 
   private copy(way: 'from' | 'to', app: string, paths: string[]) {
@@ -147,8 +158,10 @@ export class PhoneApps implements AppManager {
     return (await this.ctl.pids(app)).length > 0 ? 'running' : 'stopped';
   }
 
-  async permission(): Promise<void> {
-    throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.permission);
+  /** iOS has no grant: the answer is forgotten, so that the app asks again and `alert` answers it. */
+  async permission(app: string, grant: boolean, service: string) {
+    await this.resetPermission(assertBundle(app), service);
+    return `${service} for ${app} is reset to ask: when the app asks, alert ${grant ? 'allow' : 'deny'}`;
   }
 
   async links(): Promise<never> {
@@ -196,7 +209,14 @@ const noSwitch = (name: SettingName) =>
 
 /** A phone's appearance through `devicectl`; what it has no switch for says so. */
 export class PhoneSettings implements DeviceSettings {
-  constructor(private readonly ctl: Devicectl) {}
+  private readonly conditions: PhoneConditions;
+
+  constructor(
+    private readonly ctl: Devicectl,
+    load?: () => Promise<PhoneStreamModule | undefined>,
+  ) {
+    this.conditions = new PhoneConditions(ctl.udid, load);
+  }
 
   /** An iPhone's own language is the phone's: an app's is held for the launches this tool makes. */
   private appOf(app: string | undefined) {
@@ -214,6 +234,7 @@ export class PhoneSettings implements DeviceSettings {
 
   async get(name: SettingName, app?: string): Promise<string> {
     if (name === 'locale') return appLanguage(this.ctl.udid, this.appOf(app));
+    if (name === 'network' || name === 'thermal') return this.conditions.get(name);
     if (!APPEARANCE.has(name)) throw noSwitch(name);
     const j = await this.ctl.json(['device', 'info', 'appearance', '--device', this.ctl.udid]);
     const a = (j.result ?? {}) as {
@@ -242,6 +263,7 @@ export class PhoneSettings implements DeviceSettings {
         await this.ctl.launch(bundle);
       });
     }
+    if (name === 'network' || name === 'thermal') return this.conditions.set(name, value);
     if (name === 'dark_mode') await this.appearance('--mode', on(value, 'dark', 'light'));
     else if (name === 'text_size') await this.appearance('--text-size', value);
     else if (name === 'reduce_motion') await this.appearance('--reduce-motion', value);

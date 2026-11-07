@@ -21,6 +21,22 @@ final class Device {
     /// How long typed text has to show in its field before it counts as not gone in.
     static let echoWaitS = 1.5
 
+    /// The protected resources by the names `app grant` and `revoke` take: a reset is all iOS offers.
+    static let resources: [String: XCUIProtectedResource] = [
+        "contacts": .contacts, "calendar": .calendar, "reminders": .reminders, "photos": .photos,
+        "microphone": .microphone, "camera": .camera, "media-library": .mediaLibrary, "homekit": .homeKit,
+        "focus": .focus, "local-network": .localNetwork, "bluetooth": .bluetooth,
+        "keyboard-network": .keyboardNetwork, "location": .location, "health": .health, "tracking": .userTracking,
+    ]
+
+    /// The app asks again, as if it never had; one that runs may be ended by it.
+    func resetPermission(_ pkg: String, _ service: String) throws {
+        guard let resource = Device.resources[service] else {
+            throw AgentError("INVALID_ARGUMENT", "a permission iOS resets: \(Device.resources.keys.sorted().joined(separator: ", ")), not \(service)")
+        }
+        XCUIApplication(bundleIdentifier: pkg).resetAuthorizationStatus(for: resource)
+    }
+
     func setTarget(_ id: String) {
         targetId = id
         target = XCUIApplication(bundleIdentifier: id)

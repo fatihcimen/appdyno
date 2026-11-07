@@ -37,6 +37,8 @@ function fake(
     secureFocused: async () => false,
     focusedField: async () => 'a field',
     live: async () => () => undefined,
+    conditions: async () => [],
+    induce: async () => undefined,
     start: vi.fn((_udid, _options, listener) => {
       onEvent = listener;
       return handle;

@@ -300,6 +300,11 @@ export const METHODS = {
     result: Screenshot,
   },
   'app.foreground': { params: z.object({}), result: Foreground },
+  /** iOS: what an app was answered for a protected resource, forgotten, so that it asks again. */
+  'permission.reset': {
+    params: z.object({ pkg: z.string().min(1).max(255), service: z.string().min(1).max(40) }),
+    result: z.object({}),
+  },
   /** iOS: the app the runner reads and acts on while it is in front. */
   'app.target': { params: z.object({ pkg: z.string().min(1).max(255) }), result: z.object({}) },
   /** Android: what a launcher calls each app. */
