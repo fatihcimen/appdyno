@@ -122,7 +122,7 @@ and `min` optional.
 
 ```text
 appdyno perf-launch --app A --mode cold --repeats 6      a measured run, kept
-appdyno perf baseline --app A [--last 3]                 adds the newest run, or runs, to the baseline, each once; exit 1 until it holds 3
+appdyno perf baseline --app A [--last 3]                 adds the newest run, or runs, to the baseline, each once; exit 1 until it holds 3, and 5 samples of a kind
 appdyno perf compare --app A [--format text|json|junit]  exit 1 on a regression, a broken budget, or what it could not judge
 appdyno perf budget --app A                              budgets only
 appdyno perf why --app A                                 the same as compare, and on a regression its cause

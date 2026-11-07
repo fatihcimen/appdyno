@@ -249,6 +249,20 @@ export const runsIn = (b: Baseline | undefined) =>
   Math.max(0, ...Object.values(b?.metrics ?? {}).map((m) => m.runs.length));
 
 /**
+ * The most samples of a kind every run of a baseline has: under that a comparison can call nothing. A launch has a kind
+ * of few beside its times, and that kind says so for itself.
+ */
+export const mostSamples = (b: Baseline | undefined) => {
+  const runs = runsIn(b);
+  return Math.max(
+    0,
+    ...Object.values(b?.metrics ?? {})
+      .filter((m) => m.runs.length >= runs)
+      .map((m) => m.runs.reduce((all, r) => all + r.samples.length, 0)),
+  );
+};
+
+/**
  * What every run of a baseline measured and this one did not, as a judgement that never happened: a screen that stops
  * drawing keeps no frames, and a gate that looked only at what a run holds would call that clear. A kind some of its
  * runs lack comes and goes by itself, and says nothing here.

@@ -13,6 +13,8 @@ import {
   loadBaseline,
   loadBudgets,
   MIN_BASELINE_RUNS,
+  MIN_SAMPLES,
+  mostSamples,
   runsIn,
   type KeyReport,
   reportKey,
@@ -203,12 +205,15 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
           }
           const held = runsIn(base);
           const short = MIN_BASELINE_RUNS - held;
-          // one that cannot call a regression must not look done
-          if (usable === 0 || short > 0) left++;
+          const samples = mostSamples(base);
+          // one that cannot call a regression must not look done, and a run may hold one sample
+          if (usable === 0 || short > 0 || samples < MIN_SAMPLES) left++;
           const count =
             short > 0
               ? `${held} of the ${MIN_BASELINE_RUNS} runs a comparison needs, ${short} missing: it cannot call a regression yet`
-              : `${held} runs`;
+              : samples < MIN_SAMPLES
+                ? `${held} runs, with ${samples} of the ${MIN_SAMPLES} samples a comparison needs: it cannot call a regression yet`
+                : `${held} runs`;
           if (!base || usable === 0) {
             lines.push(`baseline unchanged: ${count}`);
             continue;

@@ -17,6 +17,7 @@ function context(
   measurements: string,
   perf: string,
   vitals: Record<string, unknown> = {},
+  samples = 6,
 ) {
   const device = new FakeDevice();
   const m = device.measure;
@@ -30,7 +31,10 @@ function context(
       launch: async () => ({
         value: {
           mode: 'cold',
-          samples: [0, 1, 2, 3, 4, 5].map((i) => ({ totalMs: startup.ms + i, state: 'COLD' })),
+          samples: Array.from({ length: samples }, (_, i) => ({
+            totalMs: startup.ms + i,
+            state: 'COLD',
+          })),
           medianMs: startup.ms,
         },
         raw: 'TotalTime',
@@ -118,6 +122,23 @@ describe('the gate', () => {
     const third = await add();
     expect(text(third)).toMatch(/: 3 runs$/m);
     expect(third.data.exitCode).toBe(0);
+  });
+
+  it('is not done on runs of a sample each, however many: no comparison could call them', async () => {
+    const ops = context({ ms: 500 }, fresh(), fresh(), {}, 1);
+    const add = async () => {
+      await ops.perf_launch!.handler({ mode: 'cold', repeats: 1 });
+      return ops.perf_compare!.handler({ action: 'baseline', format: 'text', last: 1 });
+    };
+    await add();
+    await add();
+    const third = await add();
+    expect(text(third)).toContain('3 runs, with 3 of the 5 samples a comparison needs');
+    expect(third.data.exitCode).toBe(1);
+    await add();
+    const fifth = await add();
+    expect(text(fifth)).toMatch(/: 5 runs$/m);
+    expect(fifth.data.exitCode).toBe(0);
   });
 
   it('says what it holds when a noisy run adds nothing to a baseline still short', async () => {

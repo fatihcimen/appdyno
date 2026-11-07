@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `perf_compare baseline` is not done while it can call nothing: three runs of a sample each, as `perf_snapshot` gives, read as ready, and every comparison after them said too little to call. It says how many samples it holds of the five a comparison needs.
 - On a simulator the look for a Face ID or passcode sheet over the app starts no runner: `screen` after `launch_app` or `open_link` hid a start of the runner, or its first build.
 - A read tries a lost connection once more, and no longer a start that failed, which took as long again for the same answer.
 - A start of the iOS runner ends as soon as the runner it started speaks another protocol, and says which build to make again. It waited out its 180 s for an answer it already had.
