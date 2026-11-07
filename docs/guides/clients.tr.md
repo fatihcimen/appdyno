@@ -51,7 +51,7 @@ brew install --cask siz/araclar/appdyno
 
 Bir Mac ve Node 22 ya da üstü gerekir. `node --version` ile bakın; "command not found" derse [nodejs.org](https://nodejs.org/) adresinden LTS sürümünü kurun.
 
-appdyno henüz npm'de yok. Yayımlanana kadar kaynak koddan derlenir, bunun için pnpm ve JDK 21 de gerekir:
+appdyno henüz npm'de yok. Yayımlanana kadar kaynak koddan derlenir, bunun için pnpm ve JDK 25 de gerekir:
 
 ```sh
 sh scripts/install.sh      # kaynak kodu derler ve appdyno komutunu kurar
