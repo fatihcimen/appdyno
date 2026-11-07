@@ -104,6 +104,43 @@ describe('what is in front of a simulator with no runner', () => {
   });
 });
 
+describe('a runner up on a simulator with no app named', () => {
+  /** An app opened by a link: the helper sees it in front, and the runner reads the home screen unless told. */
+  const up = (front: string | undefined) => {
+    const runners = { windows: [], nodes: [], hash: 'runner', truncated: false };
+    const call = vi.fn(async (method: string, _params: unknown) => ({
+      result: method === 'app.foreground' ? { pkg: 'com.apple.springboard' } : runners,
+    }));
+    const direct = {
+      front: async () => front,
+      read: async () => ({ refused: 'window-not-full-screen' }),
+      close: vi.fn(),
+    };
+    const device = new IosSimulatorDevice(UDID, new Listed(''), direct as never);
+    Object.defineProperty(device, 'runnerUp', { value: true });
+    Object.assign(device, { rpc: { closed: false, call }, keepDump: async () => undefined });
+    return { device, call };
+  };
+
+  it('says the app the helper sees in front, and never the runner, which can only say the home screen', async () => {
+    const { device, call } = up('dev.app');
+    expect(await device.foreground()).toBe('dev.app');
+    expect(await up(undefined).device.foreground()).toBeUndefined();
+    expect(call).not.toHaveBeenCalled();
+  });
+
+  it("reads that app by the runner, told it once, and not the home screen's card of it", async () => {
+    const { device, call } = up('dev.app');
+    await device.tree();
+    await device.tree();
+    expect(call.mock.calls.map(([method, params]) => [method, params])).toEqual([
+      ['app.target', { pkg: 'dev.app' }],
+      ['tree.get', {}],
+      ['tree.get', {}],
+    ]);
+  });
+});
+
 describe('a look for what stands over the app on a simulator', () => {
   const word = (d: string) => ({ c: 'StaticText', d });
   const tree = { windows: [], nodes: [word('Face ID'), { c: 'Button', d: 'Cancel' }], hash: 'h' };

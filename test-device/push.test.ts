@@ -17,13 +17,22 @@ const PICTURE = fileURLToPath(new URL('../docs/images/social.png', import.meta.u
 const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
 const SIMULATOR = process.env.APPDYNO_IOS_UDID;
 
-function server(serial: string) {
+/** The server on that device, with the fixture named as its app unless `named` is false, as in a window. */
+function server(serial: string, named = true) {
   let client: Client;
   const call = toolCaller(() => client);
   beforeAll(async () => {
     const transport = new StdioClientTransport({
       command: process.execPath,
-      args: [MAIN, 'mcp', '--device', serial, '--app', APP, '--allow-devices', `^${serial}$`],
+      args: [
+        MAIN,
+        'mcp',
+        '--device',
+        serial,
+        ...(named ? ['--app', APP] : []),
+        '--allow-devices',
+        `^${serial}$`,
+      ],
       env: process.env as Record<string, string>,
       stderr: 'pipe',
     });
@@ -32,6 +41,16 @@ function server(serial: string) {
   });
   afterAll(() => client?.close());
   return call;
+}
+
+/**
+ * To a simulator's home screen. A banner over the app takes the first press, and so does the end of a link's opening:
+ * then a second goes home.
+ */
+async function goHome(call: ReturnType<typeof toolCaller>) {
+  const home = async () =>
+    (await call('press_key', { key: 'home' })).text.includes('foreground: com.apple.springboard');
+  if (!(await home())) expect(await home()).toBe(true);
 }
 
 describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
@@ -128,10 +147,7 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
   });
 
   it('says a push to an app in the background or not running is only shown, and its code got nothing', async () => {
-    const home = async () =>
-      (await call('press_key', { key: 'home' })).text.includes('foreground: com.apple.springboard');
-    // the banner of the push before may be over the app, and takes the first press
-    if (!(await home())) expect(await home()).toBe(true);
+    await goHome(call);
     const back = await call('push', { type: 'alert', title: 'Back', data: { order: '8' } });
     expect(back.text).toMatch(
       /^pushed to dev\.appdyno\.fixture by simctl: it is in the background/,
@@ -159,5 +175,22 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
   it('lists the links the app opens, read from it', async () => {
     const r = await call('open_link', { links: APP });
     expect(r.text).toBe('scheme appdyno-fixture://');
+  });
+});
+
+describe.skipIf(!SIMULATOR)('a simulator with no app named, over MCP', () => {
+  const call = server(SIMULATOR!, false);
+  afterAll(() => new IosSimulatorDevice(SIMULATOR!).stopAgent());
+
+  it('reads the app a link brought back, with a runner up, and a push says it was in front', async () => {
+    await call('open_link', { url: 'appdyno-fixture://open/push' });
+    // a runner, which with no app named would read the home screen whatever is up
+    expect((await call('audit', { maxIssues: 1 })).error).toBe(false);
+    await goHome(call);
+    const back = await call('open_link', { url: 'appdyno-fixture://open/push' });
+    expect(back.text).toContain(`foreground: ${APP}`);
+    expect((await call('screen')).text).toContain(`foreground: ${APP}`);
+    const pushed = await call('push', { app: APP, type: 'alert', title: 'Linked' });
+    expect(pushed.text).toMatch(/^pushed to dev\.appdyno\.fixture by simctl: it is in front/);
   });
 });

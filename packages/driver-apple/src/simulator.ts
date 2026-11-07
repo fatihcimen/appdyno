@@ -16,7 +16,9 @@ import {
   type Tree,
   type ActParams,
   type ActResult,
+  type Method,
   type Modifier,
+  type ParamsOf,
 } from '@appdyno/protocol';
 import { SimulatorMirror } from './mirror-sim.js';
 import { SimulatorNetwork } from './network.js';
@@ -130,6 +132,7 @@ export class IosSimulatorDevice extends IosDevice {
 
   protected override async startAgent() {
     const at = Date.now();
+    this.runnerFront = undefined;
     try {
       return await super.startAgent();
     } finally {
@@ -139,6 +142,29 @@ export class IosSimulatorDevice extends IosDevice {
 
   protected override startAlongside(pkg: string) {
     return this.ops.launch(assertBundle(pkg)).then(() => true);
+  }
+
+  /** The app the runner was last told is in front, while none is named. */
+  private runnerFront: string | undefined;
+
+  /**
+   * With no app named the runner reads and acts on the home screen whatever is up, and a read of it was the home
+   * screen's card of the app in front: it is told the app the helper sees there first.
+   */
+  protected override async callNow<M extends Method>(
+    method: M,
+    params: ParamsOf<M>,
+    timeoutMs: number,
+    closes?: number,
+  ) {
+    if (!this.targetApp && method !== 'app.target') {
+      const front = await this.direct.front().catch(() => undefined);
+      if (front && front !== this.runnerFront) {
+        await super.callNow('app.target', { pkg: front }, TIMEOUTS.action, closes);
+        this.runnerFront = front;
+      }
+    }
+    return super.callNow(method, params, timeoutMs, closes);
   }
 
   /** A runner that starts later is told by `connect`. */
@@ -273,8 +299,8 @@ export class IosSimulatorDevice extends IosDevice {
     // the system's alert over an app makes the home screen the primary one: only the runner can tell, of the app it
     // was given. With no target, as in a window, it has nothing to tell, and says the home screen whatever is up
     const front = await this.direct.front().catch(() => undefined);
-    if (!this.runnerUp) return front;
-    return front && (!this.targetApp || front === this.targetApp) ? front : super.foreground();
+    if (!this.runnerUp || !this.targetApp) return front;
+    return front === this.targetApp ? front : super.foreground();
   }
 
   /** A touch the app in front never reports is one `act` would take for lost and do again by the runner. */
