@@ -3,6 +3,7 @@ import { phoneCrashes } from './crashes.js';
 import { phoneLogs } from './logs.js';
 import { loadPhoneStream, PhoneMirror } from './mirror-phone.js';
 import { PhoneApps, PhoneEvents, PhoneSettings } from './phone-manage.js';
+import type { PhoneBuild } from './phone-apns.js';
 import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -160,9 +161,10 @@ export class IosPhoneDevice extends IosDevice {
       fieldAt: (x, y) => this.fieldAt(x, y),
       keys: (text, into) => this.keys(text, into),
     });
-    this.apps = new PhoneApps(ctl);
+    const builds = new Map<string, PhoneBuild>();
+    this.apps = new PhoneApps(ctl, builds);
     this.settings = new PhoneSettings(ctl);
-    this.events = new PhoneEvents();
+    this.events = new PhoneEvents(ctl, builds);
     this.inspector = new PhoneInspector(ctl);
     this.liveMetrics = new PhoneLive(serial);
     this.recorder = phoneRecorder(serial);
@@ -214,6 +216,11 @@ export class IosPhoneDevice extends IosDevice {
   readonly apps: PhoneApps;
   readonly settings: PhoneSettings;
   readonly events: PhoneEvents;
+
+  override close() {
+    this.events.close();
+    super.close();
+  }
   readonly inspector: PhoneInspector;
   readonly liveMetrics: PhoneLive;
 

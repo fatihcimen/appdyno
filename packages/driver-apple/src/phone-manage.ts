@@ -3,7 +3,9 @@ import { join } from 'node:path';
 import { PUSH_TYPES } from '@appdyno/core';
 import type {
   AppManager,
+  Push,
   PushRoute,
+  PushTokenKind,
   BuildRequest,
   AppEntry,
   BiometricAnswer,
@@ -13,8 +15,10 @@ import type {
   SettingName,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import { ApnsPush } from './apns-push.js';
 import { buildScheme } from './build.js';
 import type { Devicectl } from './devicectl.js';
+import { PhoneApnsTarget, readBuild, type PhoneBuild } from './phone-apns.js';
 import { assertBundle } from './simctl.js';
 import {
   DATA_FOLDERS,
@@ -28,7 +32,9 @@ import {
 const PHONE_CANNOT = {
   clear: "an iPhone's app data can only go with the app: uninstall and install it again",
   permission: 'no tool grants an iPhone app a permission: its prompt has to be answered',
-  push: "a real iPhone takes a push only from Apple's servers: open the app's deep link instead, or push to a simulator",
+  push: "a real iPhone takes a push only from Apple's servers, once a person sets APNs up with `appdyno push setup apns`: else open the app's deep link, or push to a simulator",
+  tapped: 'nothing taps a push on an iPhone but a person: push an alert, and a person taps it',
+  style: 'an Android style: an iOS push shows as an alert',
   // seen on one iPhone with no face enrolled: `devicectl device simulate biometrics` says so and exits 0, so it proves nothing
   biometric:
     'an iPhone takes biometrics only from a person: devicectl reads it as supporting no simulation',
@@ -45,10 +51,19 @@ export class PhoneApps implements AppManager {
   // the system's reset of an authorization is the only way a grant is made here
   readonly grantResets = true;
 
-  constructor(private readonly ctl: Devicectl) {}
+  constructor(
+    private readonly ctl: Devicectl,
+    /** What this tool read of each build it installed, for APNs. */
+    private readonly builds = new Map<string, PhoneBuild>(),
+  ) {}
 
   async install(path: string) {
-    await installingApp(path, 'iPhoneOS', (app) => this.ctl.install(app));
+    await installingApp(path, 'iPhoneOS', async (app) => {
+      // an installed app's signing is not read on an iPhone: only the build's, here
+      const read = await readBuild(app).catch(() => undefined);
+      await this.ctl.install(app);
+      if (read) this.builds.set(...read);
+    });
     return [];
   }
 
@@ -236,14 +251,45 @@ export class PhoneSettings implements DeviceSettings {
   }
 }
 
-/** No one-time event reaches an iPhone from a Mac: each says why. */
+/** An iPhone's one-time events: a push by APNs, once a person sets it up; for each other, why not. */
 export class PhoneEvents implements DeviceEvents {
-  pushRoutes(): PushRoute[] {
-    return PUSH_TYPES.map((type) => ({ type, why: PHONE_CANNOT.push }));
+  private readonly target: PhoneApnsTarget;
+  private readonly apns: ApnsPush;
+
+  constructor(ctl: Devicectl, builds: Map<string, PhoneBuild>) {
+    this.target = new PhoneApnsTarget(ctl, builds);
+    this.apns = new ApnsPush(this.target);
   }
 
-  async push(): Promise<string> {
-    throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.push);
+  pushRoutes(): PushRoute[] {
+    const byApns = this.apns.routes();
+    return PUSH_TYPES.map(
+      (type) =>
+        byApns.find((r) => r.type === type) ?? {
+          type,
+          why:
+            byApns.length === 0
+              ? PHONE_CANNOT.push
+              : type === 'tapped'
+                ? PHONE_CANNOT.tapped
+                : PHONE_CANNOT.style,
+        },
+    );
+  }
+
+  async push(app: string, push: Push): Promise<string> {
+    const route = this.pushRoutes().find((r) => r.type === push.type);
+    if (!route || 'why' in route) throw new DeviceError('UNSUPPORTED', route?.why ?? push.type);
+    return this.apns.push(app, push);
+  }
+
+  pushToken(app: string, token: string, kind?: PushTokenKind) {
+    this.apns.typed(app, token, kind);
+  }
+
+  /** Lets go of each app's console followed for its tokens. */
+  close() {
+    this.target.close();
   }
 
   async biometric(_answer: BiometricAnswer): Promise<void> {

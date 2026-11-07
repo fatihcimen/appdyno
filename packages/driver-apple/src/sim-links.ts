@@ -23,10 +23,10 @@ export function domainsOf(xml: string) {
 export const appBundle = async (simctl: Simctl, udid: string, app: string) =>
   (await simctl.exec(['get_app_container', udid, assertBundle(app)])).trim();
 
-/** A key of an app's Info.plist, as JSON; nothing where it has none. */
-export const infoValue = (bundle: string, key: string) =>
-  run('plutil', ['-extract', key, 'json', '-o', '-', join(bundle, 'Info.plist')]).then(
-    (r) => JSON.parse(r.stdout) as unknown,
+/** A key of an app's Info.plist: an array or a dictionary as JSON, `raw` a string; nothing where it has none. */
+export const infoValue = (bundle: string, key: string, as: 'json' | 'raw' = 'json') =>
+  run('plutil', ['-extract', key, as, '-o', '-', join(bundle, 'Info.plist')]).then(
+    (r): unknown => (as === 'raw' ? r.stdout.trim() : JSON.parse(r.stdout)),
     () => undefined,
   );
 
