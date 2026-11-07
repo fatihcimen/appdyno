@@ -8,9 +8,41 @@ import {
   type PlatformScreen,
   type UiElement,
 } from '@appdyno/core';
+import { NODE_FLAGS, type Point, type Tree } from '@appdyno/protocol';
 
 /** The home screen app, whose alerts are the system's (permission prompts), never the app's own. */
 export const HOME_SCREEN_APP = 'com.apple.springboard';
+
+/**
+ * The confirming button of a system prompt over the screen ("Open in …?" after a link): of two buttons
+ * the second (the first cancels, in any language), else one that says `words`.
+ */
+// shortcut: a two-button system prompt that is not the link's (a notification prompt) within the 3 s
+// after a link is answered as confirmed; tell them apart by the prompt's text if one shows up there
+export function promptButton(t: Tree, words: RegExp = /^open$/): Point | undefined {
+  const buttons = t.nodes.filter((n) => t.windows[n.w]?.type === 3 && n.c === 'Button');
+  const b = buttons.length === 2 ? buttons[1] : buttons.find((n) => words.test(fold(n.d ?? '')));
+  return b && { x: (b.b[0] + b.b[2]) / 2, y: (b.b[1] + b.b[3]) / 2 };
+}
+
+/** The words of a read that are no control's. */
+export const staticTexts = ({ nodes }: Tree) =>
+  nodes.flatMap((n) => (n.c === 'StaticText' ? (n.d ?? n.t ?? []) : []));
+
+/** A point above the keyboard with no control or field on it; else near the top. */
+export function inertPoint(t: Tree): Point {
+  const screen = t.windows[0]?.b ?? [0, 0, 400, 800];
+  const keyboard = t.nodes.find((n) => /keyboard$/i.test(n.c));
+  const bottom = keyboard ? keyboard.b[1] : screen[3];
+  const x = Math.round((screen[0] + screen[2]) / 2);
+  const reacts = NODE_FLAGS.clickable | NODE_FLAGS.editable | NODE_FLAGS.checkable;
+  const taken = (y: number) =>
+    t.nodes.some(
+      (n) => (n.f & reacts) !== 0 && x >= n.b[0] && x <= n.b[2] && y >= n.b[1] && y <= n.b[3],
+    );
+  for (let y = 120; y < bottom - 10; y += 40) if (!taken(y)) return { x, y };
+  return { x, y: 120 };
+}
 /** As tall as it gets, on a phone with a Dynamic Island: a pixel comparison leaves it out. */
 const STATUS_BAND_PT = 64;
 /** Status bar items are root elements in this band. */

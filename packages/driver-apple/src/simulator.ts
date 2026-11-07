@@ -33,9 +33,9 @@ import { type Capture, settleAfter } from './simsettle.js';
 import { learnCopies, onKeyboard, withoutCopies } from './simtree.js';
 import { IosRunnerLauncher } from './runner.js';
 import { assertBundle, Simctl } from './simctl.js';
-import { IosDevice, staticTexts } from './device.js';
+import { IosDevice } from './device.js';
 import { simulatorOps } from './simulator-ops.js';
-import { HOME_SCREEN_APP } from './platform-screen.js';
+import { HOME_SCREEN_APP, staticTexts } from './platform-screen.js';
 
 type Node = Tree['nodes'][number];
 

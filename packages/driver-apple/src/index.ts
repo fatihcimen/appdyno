@@ -1,6 +1,6 @@
 export { appleProvider, iosChecks } from './provider.js';
-export { IosDevice, promptButton, type IosDeviceOps } from './device.js';
-export { ALERT_WORDS, iosScreen } from './platform-screen.js';
+export { IosDevice, type IosDeviceOps } from './device.js';
+export { ALERT_WORDS, iosScreen, promptButton } from './platform-screen.js';
 export { IosSimulatorDevice } from './simulator.js';
 export { simulatorOps } from './simulator-ops.js';
 export { Devicectl, assertPhoneUdid } from './devicectl.js';

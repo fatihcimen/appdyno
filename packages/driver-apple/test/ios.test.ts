@@ -114,13 +114,13 @@ describe('the link prompt', () => {
   });
 
   it('confirms by place in any language: the second of two buttons', async () => {
-    const { promptButton } = await import('../src/device.js');
+    const { promptButton } = await import('../src/platform-screen.js');
     expect(promptButton(prompt(['Vazgeç', 'Aç']))).toEqual({ x: 271.5, y: 495 });
     expect(promptButton(prompt(['Abbrechen', 'Öffnen']))).toEqual({ x: 271.5, y: 495 });
   });
 
   it('falls back to the word with another count of buttons, and finds nothing without a prompt', async () => {
-    const { promptButton } = await import('../src/device.js');
+    const { promptButton } = await import('../src/platform-screen.js');
     expect(promptButton(prompt(['Cancel', 'Open', 'Always']))).toEqual({ x: 271.5, y: 495 });
     expect(promptButton(prompt(['OK']))).toBeUndefined();
     expect(
