@@ -1,0 +1,56 @@
+{
+  "alert": {
+    "headers": {
+      ":method": "POST",
+      ":path": "/3/device/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "apns-push-type": "alert",
+      "apns-topic": "dev.app",
+      "apns-priority": "10",
+      "apns-expiration": "0"
+    },
+    "body": "{\"aps\":{}}"
+  },
+  "background": {
+    "headers": {
+      ":method": "POST",
+      ":path": "/3/device/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "apns-push-type": "background",
+      "apns-topic": "dev.app",
+      "apns-priority": "5",
+      "apns-expiration": "0"
+    },
+    "body": "{\"aps\":{}}"
+  },
+  "liveactivity": {
+    "headers": {
+      ":method": "POST",
+      ":path": "/3/device/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "apns-push-type": "liveactivity",
+      "apns-topic": "dev.app.push-type.liveactivity",
+      "apns-priority": "10",
+      "apns-expiration": "0"
+    },
+    "body": "{\"aps\":{}}"
+  },
+  "voip": {
+    "headers": {
+      ":method": "POST",
+      ":path": "/3/device/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "apns-push-type": "voip",
+      "apns-topic": "dev.app.voip",
+      "apns-priority": "10",
+      "apns-expiration": "0"
+    },
+    "body": "{\"aps\":{}}"
+  },
+  "widgets": {
+    "headers": {
+      ":method": "POST",
+      ":path": "/3/device/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "apns-push-type": "widgets",
+      "apns-topic": "dev.app.push-type.widgets",
+      "apns-expiration": "0"
+    },
+    "body": "{\"aps\":{}}"
+  }
+}
