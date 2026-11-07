@@ -268,18 +268,32 @@ describe('a fingerprint', () => {
       "a phone's is its owner's",
     );
     expect(phone.asked).toEqual([]);
+    let pin = false;
     const emulator = device('emulator-5554', [
-      [/set-pin/, "Pin set to '1234'"],
-      [/clear/, 'Lock credential cleared'],
-      [/verify/, 'Lock credential verified successfully'],
+      [/set-pin/, () => ((pin = true), "Pin set to '1234'")],
+      [/clear/, () => ((pin = false), 'Lock credential cleared')],
+      [
+        /verify/,
+        () => (pin ? 'IllegalArgumentException' : 'Lock credential verified successfully'),
+      ],
     ]);
-    expect(await emulator.settings.get('screen_lock')).toBe('none');
+    const was = await emulator.settings.get('screen_lock');
+    expect(was).toBe('none on OK');
     await emulator.settings.set('screen_lock', 'pin');
-    await emulator.settings.set('screen_lock', 'none');
-    expect(emulator.asked.slice(1)).toEqual([
-      'cmd lock_settings set-pin 1234 2>&1',
-      'cmd lock_settings clear --old 1234 2>&1',
-    ]);
+    await emulator.settings.set('screen_lock', was);
+    expect(
+      emulator.asked.filter((c) => c.includes('lock_settings set') || c.includes('clear')),
+    ).toEqual(['cmd lock_settings set-pin 1234 2>&1', 'cmd lock_settings clear --old 1234 2>&1']);
+  });
+
+  it('takes a PIN already gone as put back, and leaves another emulator on the same serial alone', async () => {
+    const emulator = device('emulator-5554', [[/verify/, 'Lock credential verified successfully']]);
+    await emulator.settings.set('screen_lock', 'none on OK');
+    const other = await refusal(emulator.settings.set('screen_lock', 'none on Pixel_Fold'));
+    expect(other.message).toBe(
+      'emulator-5554 is OK now, not Pixel_Fold, whose PIN this tool set: it is put back when Pixel_Fold is here',
+    );
+    expect(emulator.asked.filter((c) => c.includes('clear'))).toEqual([]);
   });
 
   it('touches nothing when one is enrolled', async () => {

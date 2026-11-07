@@ -148,17 +148,38 @@ export class AndroidSettings implements DeviceSettings {
       case 'fold':
         return this.fold.get();
       case 'screen_lock':
-        // with no credential to give, the check passes only where there is none
-        return /verified successfully/.test(await this.sh('cmd lock_settings verify'))
-          ? 'none'
-          : 'pin';
+        // which emulator had none: a serial is reused, and another's lock is not this tool's to clear
+        return (await this.unlocked()) ? `none on ${await this.avd()}` : 'pin';
     }
   }
 
-  /** On an emulator only, and only this tool's PIN: clearing it deletes the fingerprints with it. */
+  /** With no credential to give, the check passes only where there is none. */
+  private async unlocked() {
+    return /verified successfully/.test(await this.sh('cmd lock_settings verify'));
+  }
+
+  private async avd() {
+    return (await this.emu('its name', 'avd', 'name')).split('\n')[0]!.trim();
+  }
+
+  /**
+   * On an emulator only, and only this tool's PIN on the emulator it set it on: clearing it deletes the fingerprints
+   * with it. One already gone is done.
+   */
   private async setScreenLock(value: string) {
     if (!this.serial.startsWith('emulator-'))
       throw new DeviceError('UNSUPPORTED', NOT_A_PHONE_LOCK);
+    const on = /^none on (.+)$/.exec(value)?.[1];
+    if (on) {
+      const now = await this.avd();
+      if (now !== on)
+        throw new DeviceError(
+          'UNSUPPORTED',
+          `${this.serial} is ${now} now, not ${on}, whose PIN this tool set: it is put back when ${on} is here`,
+        );
+      value = 'none';
+    }
+    if (value === 'none' && (await this.unlocked())) return;
     const [command, done] =
       value === 'pin'
         ? [`set-pin ${EMULATOR_PIN}`, /Pin set/]
