@@ -21,11 +21,17 @@ import { openTunnel, PhoneRefusal, tunnelOver, type Tunnel } from './tunnel.js';
 const SERVICE = '_remotepairing._tcp';
 const LOOK_MS = 3_000;
 const CONNECT_MS = 4_000;
+/** Once a phone is seen, how long another has to show: what a phone advertises changes, so only its key tells them apart. */
+const OTHERS_MS = 300;
 
 export type FoundPhone = { phone: string; host: string; port: number };
 
 /** What `dns-sd` prints until `enough` has what is wanted or the time is up: it never ends by itself. */
-function browse(args: string[], enough: (lines: string[]) => boolean): Promise<string[]> {
+function browse(
+  args: string[],
+  enough: (lines: string[]) => boolean,
+  othersMs = 0,
+): Promise<string[]> {
   return new Promise((resolve) => {
     const tool = spawn('/usr/bin/dns-sd', args, { stdio: ['ignore', 'pipe', 'ignore'] });
     const lines: string[] = [];
@@ -37,7 +43,7 @@ function browse(args: string[], enough: (lines: string[]) => boolean): Promise<s
     const timer = setTimeout(end, LOOK_MS);
     tool.stdout.on('data', (d: Buffer) => {
       lines.push(...String(d).split('\n'));
-      if (enough(lines)) end();
+      if (enough(lines)) setTimeout(end, othersMs);
     });
     tool.once('error', end);
   });
@@ -59,16 +65,12 @@ export function phonesIn(lines: string[]): FoundPhone[] {
   });
 }
 
-/** What is advertised, once the name wanted is among it or the time is up. */
-const findPhones = async (wanted: string) =>
-  phonesIn(
-    await browse(['-Z', SERVICE, 'local.'], (l) => phonesIn(l).some((p) => p.phone === wanted)),
-  );
+const findPhones = async () =>
+  phonesIn(await browse(['-Z', SERVICE, 'local.'], (l) => phonesIn(l).length > 0, OTHERS_MS));
 
 /**
- * The phone by its name where that finds it, and else all that are there, as what decides is the key a phone proves it
- * holds. shortcut: a phone that advertises another name costs a full look at each start; keep the name it is found by if
- * a real phone turns out to.
+ * The phone by its name where that finds it, and else all that are there: an iPhone 13 Pro Max advertised another name
+ * than it paired by, and a new one by morning, so what decides is the key a phone proves it holds.
  */
 export function phonesToTry(found: FoundPhone[], name: string) {
   const named = found.filter((p) => p.phone === name);
@@ -135,7 +137,7 @@ const identityOf = (udid: string) => {
 };
 
 async function phonesFor(identity: Identity) {
-  const phones = phonesToTry(await findPhones(identity.phone), identity.phone);
+  const phones = phonesToTry(await findPhones(), identity.phone);
   if (!phones.length) throw new PhoneRefusal('not-connected', 'the phone is not on this network');
   return phones;
 }
@@ -157,7 +159,7 @@ export const pskTls = (socket: Socket, key: Buffer) =>
       socket,
       ciphers: 'PSK:@SECLEVEL=0',
       maxVersion: 'TLSv1.2',
-      pskCallback: () => ({ psk: key, identity: 'appdyno' }),
+      pskCallback: () => ({ psk: key, identity: '' }),
       checkServerIdentity: () => undefined,
     });
     t.once('secureConnect', () => {
