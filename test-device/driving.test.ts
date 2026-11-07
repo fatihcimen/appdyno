@@ -431,7 +431,7 @@ describe.skipIf(!android)('driving on Android', () => {
   }, 120_000);
 
   it('posts a notification, and says biometrics are not here', async () => {
-    ok(await h.call('device_setting', { name: 'push', value: 'merhaba', title: 'appdyno' }));
+    ok(await h.call('push', { type: 'alert', title: 'appdyno', body: 'merhaba' }));
     // posting is queued: the list has it a moment later
     await expect.poll(() => sh('cmd notification list')).toContain('appdyno');
     const b = await h.call('device_setting', { name: 'biometric', value: 'match' });
@@ -597,7 +597,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
 
   // neither leaves anything to read back: what stands here is that the simulator takes them
   it('takes a push and a biometric result with no refusal', async () => {
-    ok(await h.call('device_setting', { name: 'push', value: 'merhaba', title: 'appdyno' }));
+    ok(await h.call('push', { type: 'alert', title: 'appdyno', body: 'merhaba' }));
     ok(await h.call('device_setting', { name: 'biometric', value: 'match' }));
   });
 });

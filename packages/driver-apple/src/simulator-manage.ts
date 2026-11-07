@@ -8,6 +8,7 @@ import {
   run,
   type LaunchOptions,
   type BiometricAnswer,
+  type Push,
   type DeviceEvents,
   type DeviceSettings,
   type SettingName,
@@ -18,6 +19,8 @@ import {
 import { DeviceError } from '@appdyno/protocol';
 import { buildScheme } from './build.js';
 import { macProxy } from './network.js';
+import { SIMULATOR_PUSHES, simulatorPush } from './sim-push.js';
+import { simulatorLinks } from './sim-links.js';
 import { type Simctl, assertBundle } from './simctl.js';
 import {
   DATA_FOLDERS,
@@ -139,6 +142,10 @@ export class SimulatorApps implements AppManager {
 
   async permission(app: string, grant: boolean, service: string) {
     await this.simctl.privacy(this.udid, grant ? 'grant' : 'revoke', service, app);
+  }
+
+  links(app: string) {
+    return simulatorLinks(this.simctl, this.udid, app);
   }
 
   async launchWith(app: string, opts: LaunchOptions) {
@@ -309,17 +316,12 @@ export class SimulatorEvents implements DeviceEvents {
 
   private spawn = (...words: string[]) => this.simctl.exec(['spawn', this.udid, ...words]);
 
-  async push(app: string | undefined, title: string, body: string) {
-    if (!app)
-      throw new DeviceError('INVALID_ARGUMENT', 'a simulator push goes to an app: give app');
-    const dir = mkdtempSync(join(tmpdir(), 'appdyno-push-'));
-    try {
-      const file = join(dir, 'push.apns');
-      writeFileSync(file, JSON.stringify({ aps: { alert: { title, body } } }));
-      await this.simctl.exec(['push', this.udid, assertBundle(app), file]);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+  pushRoutes() {
+    return SIMULATOR_PUSHES;
+  }
+
+  push(app: string, push: Push) {
+    return simulatorPush(this.simctl, this.udid, app, push);
   }
 
   /** Enrols if needed and answers the next biometric request: Face ID and Touch ID, whichever it has. */

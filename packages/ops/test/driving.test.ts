@@ -8,6 +8,8 @@ import type {
   DeviceProvider,
   DeviceSettings,
   SettingName,
+  Push,
+  PushRoute,
   Startable,
   VirtualDevices,
 } from '@appdyno/core';
@@ -1278,8 +1280,13 @@ describe('device conditions', () => {
       if (this.failing) throw new DeviceError('INTERNAL', 'broke');
       this.values[name] = value;
     };
-    push = async (app: string | undefined, title: string, body: string) => {
-      this.pushed.push([app, title, body]);
+    pushRoutes = (): PushRoute[] => [
+      { type: 'alert', route: 'by hand', fields: ['title', 'data'], template: '{"aps":{}}' },
+      { type: 'tapped', why: 'no hand' },
+    ];
+    push = async (app: string, push: Push) => {
+      this.pushed.push([app, push]);
+      return `pushed to ${app}`;
     };
     biometric = async () => {
       throw new DeviceError('UNSUPPORTED', 'simulator only');
@@ -1370,8 +1377,25 @@ describe('device conditions', () => {
     const net = await call('device_setting', { name: 'network', value: 'slow' });
     expect(net.data.code).toBe('UNSUPPORTED');
     expect(net.text).toContain('a phone has no network shaping');
-    await call('device_setting', { name: 'push', value: 'hello', title: 'T' });
-    expect(settings.pushed).toEqual([['dev.app', 'T', 'hello']]);
+    expect((await call('push')).text).toBe('alert: by hand\ntapped: no: no hand');
+    const pushed = await call('push', {
+      type: 'alert',
+      title: 'T',
+      data: { k: 'v' },
+      read: 'none',
+    });
+    expect(pushed.text).toBe('pushed to dev.app');
+    expect(settings.pushed).toEqual([['dev.app', { type: 'alert', title: 'T', data: { k: 'v' } }]]);
+    expect((await call('push', { type: 'tapped' })).text).toBe('no hand');
+    expect((await call('push', { type: 'loud' })).text).toMatch(
+      /^type: alert, background, .*, not loud$/,
+    );
+    for (const [payload, why] of [
+      ['[1]', 'payload is JSON: an object'],
+      ['{', 'payload is JSON: an object'],
+      [`{"a":"${'x'.repeat(4_100)}"}`, 'a payload is 4096 bytes at most'],
+    ])
+      expect((await call('push', { type: 'alert', payload })).text).toBe(why);
     const b = await call('device_setting', { name: 'biometric', value: 'match' });
     expect(b.data.code).toBe('UNSUPPORTED');
     expect((await call('device_setting', { name: 'biometric', value: 'x' })).error).toBe(true);

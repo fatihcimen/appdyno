@@ -1,7 +1,9 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { PUSH_TYPES } from '@appdyno/core';
 import type {
   AppManager,
+  PushRoute,
   BuildRequest,
   AppEntry,
   BiometricAnswer,
@@ -26,7 +28,7 @@ import {
 const PHONE_CANNOT = {
   clear: "an iPhone's app data can only go with the app: uninstall and install it again",
   permission: 'no tool grants an iPhone app a permission: its prompt has to be answered',
-  push: 'a push to an iPhone needs Apple push credentials, which this tool does not hold',
+  push: "a real iPhone takes a push only from Apple's servers: open the app's deep link instead, or push to a simulator",
   // seen on one iPhone with no face enrolled: `devicectl device simulate biometrics` says so and exits 0, so it proves nothing
   biometric:
     'an iPhone takes biometrics only from a person: devicectl reads it as supporting no simulation',
@@ -132,6 +134,13 @@ export class PhoneApps implements AppManager {
     throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.permission);
   }
 
+  async links(): Promise<string[]> {
+    throw new DeviceError(
+      'UNSUPPORTED',
+      "an iPhone's installed app is not read from here: list the links of its build on a simulator",
+    );
+  }
+
   async launchWith(app: string, opts: LaunchOptions) {
     await this.ctl.json([
       'device',
@@ -227,7 +236,11 @@ export class PhoneSettings implements DeviceSettings {
 
 /** No one-time event reaches an iPhone from a Mac: each says why. */
 export class PhoneEvents implements DeviceEvents {
-  async push(): Promise<void> {
+  pushRoutes(): PushRoute[] {
+    return PUSH_TYPES.map((type) => ({ type, why: PHONE_CANNOT.push }));
+  }
+
+  async push(): Promise<string> {
     throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.push);
   }
 

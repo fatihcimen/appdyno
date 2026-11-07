@@ -61,6 +61,7 @@ class MainActivity : Activity() {
         }
         column {
             label("appdyno fixture", R.id.title)
+            label("", R.id.push_extras)
             for (v in SCREENS.values) button(v.first) { startActivity(Intent(this@MainActivity, v.second)) }
             button("Crash") { throw IllegalStateException("fixture crash") }
             button("Freeze") { Thread.sleep(12_000) }
@@ -80,12 +81,21 @@ class MainActivity : Activity() {
         }, Handler(Looper.getMainLooper()))
     }
 
+    /** What a tapped push hands its launcher activity: its data, as the intent's extras. */
+    private fun showExtras(intent: Intent?) {
+        val extras = intent?.extras ?: return
+        val text = extras.keySet().sorted().joinToString(", ") { "$it=${extras.getString(it)}" }
+        findViewById<android.widget.TextView>(R.id.push_extras).text = "extras: $text"
+        android.util.Log.i("appdyno-fixture", "launched with extras: $text")
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         route(intent)
     }
 
     private fun route(intent: Intent?) {
+        showExtras(intent)
         val key = intent?.data?.lastPathSegment ?: return
         (SCREENS[key]?.second ?: LINKED[key])?.let { startActivity(Intent(this, it).setData(intent.data)) }
     }

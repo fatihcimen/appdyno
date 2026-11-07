@@ -74,19 +74,26 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
       name: 'open_link',
       title: 'Open link',
       description:
-        "Open a URL or deep link (https:// or an app scheme) and answer its screen; with an app selected it opens there. settings instead: a page of Settings (about, privacy, wifi…; a wrong word lists them), or an app's own: its id, or app.",
+        "Open a URL, deep link, universal link or App Link and answer its screen; with an app selected it opens there. settings instead: a page of Settings (about, privacy, wifi…; a wrong word lists them), or an app's own: its id, or app. links: an app's id lists the links it opens.",
       input: z
         .object({
           url: z.string().min(3).max(2_000).optional(),
           settings: z.string().min(1).max(200).optional(),
+          links: z.string().min(1).max(200).optional(),
           read: Read,
         })
         .strict(),
       output: ActionOut,
       annotations: ACT,
-      run: async ({ url, settings, read }) => {
-        if (!url === !settings) throw new ToolError('give url, or settings', 'INVALID_ARGUMENT');
+      run: async ({ url, settings, links, read }) => {
+        if ([url, settings, links].filter(Boolean).length !== 1)
+          throw new ToolError('give url, settings or links', 'INVALID_ARGUMENT');
         const s = await ctx.session();
+        if (links) {
+          const found = await s.device.apps.links(checkApp(policy, links));
+          const t = found.length > 0 ? found.join('\n') : `${links} opens no links`;
+          return reply(t, { done: t, screen: 'none', warnings: [] });
+        }
         if (settings) return openSettings(s, settings, read);
         const href = checkUrl(policy, url!);
         await s.device.openUrl(href, s.appId);

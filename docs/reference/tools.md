@@ -1,6 +1,6 @@
 # Tools
 
-The 47 tools an MCP client can call. Each is also [a command](cli.md), and a call in [the library](library.md).
+The 48 tools an MCP client can call. Each is also [a command](cli.md), and a call in [the library](library.md).
 
 Tools take no `device` parameter. The device is the server's `--device`, else the only connected one,
 else the one `use_device` selected.
@@ -11,7 +11,7 @@ else the one `use_device` selected.
 | window   | `mirror`, `hand_off`                                                                                                       |
 | read     | `screen`, `find`, `wait_for`, `assert`, `screenshot`                                                                       |
 | act      | `tap`, `gesture`, `swipe`, `scroll_to`, `type_text`, `press_key`, `keyboard`, `steps`, `alert`, `inspector`                |
-| apps     | `open_link`, `launch_app`, `terminate_app`, `app`                                                                          |
+| apps     | `open_link`, `launch_app`, `terminate_app`, `app`, `push`                                                                  |
 | check    | `audit` (accessibility), `logs`, `crashes`, `visual`                                                                       |
 | evidence | `record`, `report`, `network`                                                                                              |
 | inside   | `webview`, `react_native`                                                                                                  |
@@ -41,7 +41,7 @@ hardware buttons. `app` holds `list`, `state`, `install`, `uninstall`, `clear`, 
 from one, which stops the app and takes away what the folder does not hold, and `build_and_run` from a
 project on this Mac: an Xcode project with `scheme` and `configuration`, or a Gradle folder with `scheme` as
 its module and `configuration` as its variant. `device_setting` holds `dark_mode`, `text_size`,
-`reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `push`, `biometric`, `fold`, `call`, `sms` and `keychain`.
+`reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `biometric`, `fold`, `call`, `sms` and `keychain`.
 
 ## What each platform can do
 
@@ -59,7 +59,6 @@ What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 | animations                   | yes                                  | no: use `reduce_motion`           | no                             |
 | locale                       | per app, API 33+; whole device below | per app, changed; `app ""`: whole | no                             |
 | slow network                 | emulator; a phone's downloads, 13+   | no                                | no                             |
-| push                         | a shell notification                 | to the app                        | no: needs Apple credentials    |
 | biometrics                   | an emulator's fingerprint            | yes                               | no: `devicectl` simulates none |
 | airplane, Wi-Fi, mobile data | yes, read back                       | no: it has the Mac's network      | no                             |
 | keychain                     | no: Android has none                 | emptied, counted                  | no                             |
@@ -67,6 +66,25 @@ What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 | incoming call, SMS           | emulator only                        | no: no telephony                  | no                             |
 | battery level                | yes                                  | no: it only draws one             | no                             |
 | proxy                        | yes, put back                        | follows the Mac's                 | no: its Wi-Fi settings         |
+
+## Push notifications
+
+`push` sends one to the app, by `type`, from fields (`title`, `body`, `image`, `data`) or from `payload`, the platform's own JSON: APNs' on iOS, an FCM message on Android. Given both, it refuses. With no type it answers each type this device takes, the route it takes and the fields it takes there, with a template of the payload it would send, or why it cannot; its `data` holds the same as `types`. A push is answered with the screen after it, as an action is.
+
+| type                    | Android emulator and phone                                          | simulator                                        | iPhone                   |
+| ----------------------- | ------------------------------------------------------------------- | ------------------------------------------------ | ------------------------ |
+| alert                   | drawn by the shell, big text: the app's code gets nothing           | `simctl push`: the app's code gets it            | no: only Apple's servers |
+| rich                    | drawn by the shell, big picture                                     | `simctl push` with `mutable-content`, not proved | no                       |
+| inbox, messaging, media | drawn by the shell in that style                                    | no: Android's styles                             | no                       |
+| tapped                  | the launcher activity, or `click_action`'s, with the data as extras | no: `simctl` taps nothing                        | no                       |
+| background              | no: only Google's servers call `onMessageReceived`                  | no: `simctl` refuses a push with nothing to see  | no                       |
+| live_activity           | no: a Live Update is built by the app from a data message           | not yet                                          | no                       |
+
+The shell's notification is not the app's, and Android lets the shell give it nothing to open when tapped: `Permission Denial: getIntentSender()`. `tapped` is what [Firebase documents](https://firebase.google.com/docs/cloud-messaging/android/receive) for a push tapped while the app is in the background, "the data payload is delivered in the extras of the intent of your launcher Activity", opened as Firebase's tap opens it, on top of the app's task anew. An image is made small on this Mac and goes in the command, as the system cannot read the shell's files. A real iPhone takes a push only from Apple's servers: `open_link` with the app's deep link reaches the same code, or a simulator takes the push.
+
+Run through the MCP server over stdio, by `test-device/push.test.ts`. On an API 34 emulator each drawn style was drawn, and `tapped` opened the fixture, whose screen showed the two keys it was given. On an iPhone 17 Pro simulator with iOS 27.2 an alert from fields and one from APNs' own payload, with a badge, a sound and a category, reached the fixture's code with their keys, and `simctl` refused a background push: "Notification has no user visible content".
+
+`open_link` `links` with an app's id lists the links it opens, read from the installed app: on a simulator its URL schemes and the domains its signature names, on Android each filter that views a link, as `scheme://host/path`, and each App Link domain with Android's verification state. Run on both: the fixture's scheme on the simulator, and on the emulator its scheme, its `https://example.com/order*` App Link, and that domain's state, `none` just after the install and a number of the verifier's own once it had tried. An iPhone's installed app is not read.
 
 ## Radios, biometrics and the keychain
 

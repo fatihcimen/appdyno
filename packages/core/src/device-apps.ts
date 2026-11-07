@@ -26,4 +26,6 @@ export interface AppManager {
   appState(app: string): Promise<Exclude<AppState, 'foreground'>>;
   permission(app: string, grant: boolean, service: string): Promise<void>;
   launchWith(app: string, opts: LaunchOptions): Promise<void>;
+  /** The links the installed app says it opens: its schemes, its domains, Android's filters and their verification. */
+  links(app: string): Promise<string[]>;
 }

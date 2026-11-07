@@ -17,7 +17,7 @@ import { defineOp, DESTRUCTIVE, reply, ToolError } from './tool.js';
 const PHONE_NUMBER = /^\+?\d{3,20}$/;
 const DEFAULT_SENDER = '5551234';
 const BIOMETRIC = ['match', 'nomatch', 'enroll'] as const;
-const ONE_SHOT = ['restore', 'push', 'biometric', 'call', 'sms', 'keychain'] as const;
+const ONE_SHOT = ['restore', 'biometric', 'call', 'sms', 'keychain'] as const;
 
 /** The conditions this tool changed on a device and what to put back. Survives its process. */
 const Changes = z.record(
@@ -128,7 +128,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
       name: 'device_setting',
       title: 'Device conditions',
       description:
-        'Dark mode, text size, reduce motion, slow network, airplane mode, Wi-Fi, mobile data, push notifications, Face ID, fingerprint, calls, SMS. No value reads one. Put back at the end or by restore.',
+        'Dark mode, text size, reduce motion, slow network, airplane mode, Wi-Fi, mobile data, Face ID, fingerprint, calls, SMS. No value reads one. Put back at the end or by restore.',
       input: z
         .object({
           name: z.enum([...SETTINGS, ...ONE_SHOT]),
@@ -136,7 +136,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
             .string()
             .max(500)
             .describe(
-              'A switch takes on, off; text_size: 1.3, iOS large; locale: tr-TR; network: slow, full; proxy: host:port, none; battery: 0-100; fold: open, closed. One-shot: push (value; title), biometric (match, nomatch, enroll), call (number; end number), sms (value; title: number), keychain (reset).',
+              'A switch takes on, off; text_size: 1.3, iOS large; locale: tr-TR; network: slow, full; proxy: host:port, none; battery: 0-100; fold: open, closed. One-shot: biometric (match, nomatch, enroll), call (number; end number), sms (value; title: number), keychain (reset).',
             )
             .optional(),
           title: z.string().max(200).optional(),
@@ -160,13 +160,6 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
               ...left.map((l) => `left alone, as its process still runs: ${l}`),
             ].join('\n') || 'nothing was changed';
           return reply(t, { done: t, ...(failed.length > 0 && { notRestored: failed }) });
-        }
-        if (name === 'push') {
-          if (!value) throw new ToolError('push needs value: the text', 'INVALID_ARGUMENT');
-          const pkg = app ?? s.appId;
-          if (pkg) checkApp(policy, pkg);
-          await events.push(pkg, title ?? 'appdyno', value);
-          return reply(`posted a notification`, { done: 'posted a notification' });
         }
         if (name === 'biometric') {
           const answer = BIOMETRIC.find((b) => b === value);

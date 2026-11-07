@@ -13,6 +13,7 @@ func fixtureCost(_ name: String) -> Double? {
 /// `appdyno-fixture://open/<screen>` opens a screen directly.
 @main
 struct FixtureApp: App {
+    @UIApplicationDelegateAdaptor(PushDelegate.self) private var pushes
     @State private var path: [String] = []
     @State private var lastLink = ""
 
@@ -68,6 +69,7 @@ struct FixtureApp: App {
         case "canvas": CanvasScreen()
         case "marquee", "marquee_jumps", "marquee_back", "marquee_cut": MarqueeScreen(mode: key)
         case "locale": LocaleScreen()
+        case "push": PushScreen()
         default: Text("Unknown screen: \(key)")
         }
     }

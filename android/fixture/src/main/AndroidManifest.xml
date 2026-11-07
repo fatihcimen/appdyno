@@ -18,6 +18,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="appdyno-fixture" android:host="open" />
             </intent-filter>
+            <!-- an App Link of a domain that cannot prove it, for a test to read its state -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="example.com" android:pathPrefix="/order" />
+            </intent-filter>
         </activity>
         <activity android:name=".FormActivity" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".ListActivity" />

@@ -87,6 +87,7 @@ describe('tool list', () => {
         "perf_snapshot",
         "perf_trace",
         "press_key",
+        "push",
         "react_native",
         "record",
         "report",
@@ -135,7 +136,7 @@ describe('tool list', () => {
       'visual',
       'wait_for',
     ]);
-    expect(tools.length).toBeLessThanOrEqual(47);
+    expect(tools.length).toBeLessThanOrEqual(48);
   });
 
   it('reports the server as appdyno with an icon', async () => {

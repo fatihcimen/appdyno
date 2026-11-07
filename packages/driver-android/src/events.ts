@@ -1,13 +1,15 @@
-import type { BiometricAnswer, DeviceEvents, SettingName } from '@appdyno/core';
+import type { BiometricAnswer, DeviceEvents, Push, SettingName } from '@appdyno/core';
 import { DeviceError, type Tree } from '@appdyno/protocol';
-import { type Adb, shq } from './adb.js';
+import type { Adb } from './adb.js';
 import { EmulatorFingerprint } from './fingerprint.js';
+import { ANDROID_PUSHES, AndroidPush } from './push.js';
 import { emulatorConsole, shellOf } from './settings.js';
 
 export class AndroidEvents implements DeviceEvents {
   private readonly sh: (command: string) => Promise<string>;
   private readonly emu: (what: string, ...words: string[]) => Promise<string>;
   private readonly fingerprint: EmulatorFingerprint;
+  private readonly pusher: AndroidPush;
 
   constructor(
     adb: Adb,
@@ -18,6 +20,7 @@ export class AndroidEvents implements DeviceEvents {
     this.sh = shellOf(adb, serial);
     this.emu = (what, ...words) => emulatorConsole(adb, serial, what, words);
     this.fingerprint = new EmulatorFingerprint(serial, this.sh, this.emu, screen);
+    this.pusher = new AndroidPush(this.sh);
   }
 
   async call(number: string, end: boolean) {
@@ -28,13 +31,12 @@ export class AndroidEvents implements DeviceEvents {
     await this.emu('SMS', 'sms', 'send', from, text.replace(/\s+/g, ' '));
   }
 
-  /** Posted by the shell user: Android has no way to post as the app without its own code. */
-  async push(_app: string | undefined, title: string, body: string) {
-    const out = await this.sh(
-      `cmd notification post -S bigtext -t ${shq(title)} appdyno ${shq(body)}`,
-    );
-    if (/Exception|Error/.test(out))
-      throw new DeviceError('INTERNAL', `the notification was not posted: ${out.split('\n')[0]}`);
+  pushRoutes() {
+    return ANDROID_PUSHES;
+  }
+
+  push(app: string, push: Push) {
+    return this.pusher.send(app, push);
   }
 
   biometric(answer: BiometricAnswer, setUp?: (name: SettingName, value: string) => Promise<void>) {

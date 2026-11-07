@@ -14,7 +14,9 @@ const SEARCHED: Record<string, string> = {
   'dark mode': 'device_setting',
   fingerprint: 'device_setting',
   'face id': 'device_setting',
-  'push notifications': 'device_setting',
+  'push notification': 'push',
+  'universal link': 'open_link',
+  'app link': 'open_link',
   'long press': 'gesture',
   landscape: 'set_orientation',
   gps: 'set_location',
@@ -66,7 +68,7 @@ it('keeps the tool catalog within its budget', async () => {
   await client.connect(b);
   const { tools } = await client.listTools();
   expect(tools).toHaveLength(Object.keys(opsFor(ctx)).length);
-  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(27_500);
+  expect(JSON.stringify({ tools }).length).toBeLessThanOrEqual(28_148);
   expect(JSON.stringify(tools)).not.toMatch(
     /\$schema|taskSupport|"additionalProperties":false|"(minimum|maximum)":/,
   );

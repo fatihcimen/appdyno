@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <item name="title" type="id" />
+    <item name="push_extras" type="id" />
     <item name="name_input" type="id" />
     <item name="phone_input" type="id" />
     <item name="gsm_layout" type="id" />

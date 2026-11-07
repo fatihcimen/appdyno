@@ -13,6 +13,7 @@ import { DeviceError } from '@appdyno/protocol';
 import { type Adb, amStartError, assertPkg, shq } from './adb.js';
 import { apkNames } from './apk-names.js';
 import { buildVariant } from './build.js';
+import { androidLinks } from './links.js';
 import {
   answerInstallPrompts,
   CONSENT_TAPPED,
@@ -210,6 +211,10 @@ export class AndroidApps implements AppManager {
     const out = await this.sh(`pm ${grant ? 'grant' : 'revoke'} ${assertPkg(app)} ${shq(name)}`);
     if (/Exception|Unknown|Error/.test(out))
       throw new DeviceError('INVALID_ARGUMENT', `${name}: ${out.trim().split('\n')[0]}`);
+  }
+
+  links(app: string) {
+    return androidLinks((c) => this.sh(c), assertPkg(app));
   }
 
   async launchWith(app: string, opts: LaunchOptions) {

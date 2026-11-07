@@ -6,6 +6,7 @@ import { answersFor, type Answers } from './answers.js';
 import { appOps } from './apps.js';
 import type { ServerContext } from './context.js';
 import { controlOps } from './control.js';
+import { pushOps } from './push.js';
 import { settingOps } from './settings.js';
 import { deviceOps } from './device.js';
 import { diagnoseOps } from './diagnose.js';
@@ -41,6 +42,7 @@ const everyOp = (
   ...appOps(ctx, answers, steps),
   ...controlOps(ctx, answers),
   ...settingOps(ctx, answers),
+  ...pushOps(ctx, answers),
   ...diagnoseOps(ctx, answers),
   ...recordOps(ctx),
   ...mirrorOps(ctx),
