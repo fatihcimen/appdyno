@@ -13,6 +13,9 @@ import { NODE_FLAGS, type Point, type Tree } from '@appdyno/protocol';
 /** The home screen app, whose alerts are the system's (permission prompts), never the app's own. */
 export const HOME_SCREEN_APP = 'com.apple.springboard';
 
+/** Spotlight, an app of its own over the home screen, in the simulators of iOS 17.5 to 27.2. */
+export const SPOTLIGHT_APP = 'com.apple.Spotlight';
+
 /**
  * The confirming button of a system prompt over the screen ("Open in …?" after a link): of two buttons
  * the second (the first cancels, in any language), else one that says `words`.

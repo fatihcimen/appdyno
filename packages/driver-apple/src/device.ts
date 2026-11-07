@@ -40,6 +40,7 @@ import { join } from 'node:path';
 import { IosRunnerLauncher } from './runner.js';
 import {
   HOME_SCREEN_APP,
+  SPOTLIGHT_APP,
   inertPoint,
   iosScreen,
   promptButton,
@@ -272,7 +273,8 @@ export abstract class IosDevice extends RpcDevice implements Device {
 
   /**
    * A person's drag from the screen's top; Spotlight is the keyboard's, from the home screen, as an app may keep the
-   * shortcut. These are the home screen app's: an app under one is still in front, and a read of it would miss the view.
+   * shortcut. The drags' views are the home screen app's: an app under one is still in front, and a read of it would
+   * miss the view. Spotlight is an app of its own, read once it is in front.
    */
   async openView(view: SystemView) {
     this.underView ??= this.targetApp;
@@ -280,6 +282,9 @@ export abstract class IosDevice extends RpcDevice implements Device {
     if (view === 'spotlight') {
       await super.key('home', { settle: {}, read: 'none' });
       await super.key('space', { settle: false, read: 'none' }, ['command']);
+      // read as the home screen app's it showed nothing of itself, but its keyboard: a second late by the runner's keys
+      await this.target(SPOTLIGHT_APP);
+      await this.untilFront(SPOTLIGHT_APP);
     } else
       await this.drag(
         view === 'control_center' ? SYSTEM_SWIPES.controlCenter : SYSTEM_SWIPES.notifications,

@@ -194,6 +194,30 @@ describe('the app switcher on a simulator', () => {
   });
 });
 
+describe('Spotlight on a simulator', () => {
+  afterEach(() => void vi.restoreAllMocks());
+
+  it('is read as the app it is, once it is in front: as the home screen app it showed only its keyboard', async () => {
+    const device = new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951');
+    const seen: string[] = [];
+    vi.spyOn(device, 'act').mockImplementation(async (a) => {
+      seen.push(a.kind === 'key' ? a.key : a.kind);
+      return {};
+    });
+    vi.spyOn(device, 'target').mockImplementation(async (b) => void seen.push(`read ${b}`));
+    const waits = device as unknown as { untilFront: (b: string) => Promise<void> };
+    vi.spyOn(waits, 'untilFront').mockImplementation(async (b) => void seen.push(`until ${b}`));
+    await device.openView('spotlight');
+    expect(seen).toEqual([
+      'read com.apple.springboard',
+      'home',
+      'space',
+      'read com.apple.Spotlight',
+      'until com.apple.Spotlight',
+    ]);
+  });
+});
+
 describe('home on a simulator', () => {
   afterEach(() => void vi.restoreAllMocks());
   const shows = (pkg: string): Tree => ({

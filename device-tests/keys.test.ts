@@ -146,7 +146,8 @@ describe.skipIf(!SIMULATOR)('keys on a simulator', () => {
   viewsOf(() => o.call, {
     control: /"Add Controls"/,
     notifications: /id=lockscreen-date-view/,
-    search: /id=inputView/,
+    // its own field: inputView is the keyboard's, which the runner's keys bring a second later
+    search: /foreground: com\.apple\.Spotlight[\s\S]*textField "Search/,
   });
 });
 
