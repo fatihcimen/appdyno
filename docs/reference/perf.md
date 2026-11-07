@@ -574,7 +574,7 @@ hangs and a launch of Settings; a cost-known check of them needs an app signed f
 
 ## Speed
 
-Run this yourself: `node scripts/speed.mjs <simulator id>` prints the table below, from the system Settings app, so it needs no app of yours. `pnpm build` first.
+The table below came from the system Settings app on a simulator, by an earlier `scripts/speed.mjs`. The script now times the common calls on the fixture app, on any device: `node scripts/speed.mjs <device id> [runs]`, with the fixture installed and `pnpm build` first.
 
 | call                                    | median, ms | range, ms | answer, characters |
 | --------------------------------------- | ---------- | --------- | ------------------ |

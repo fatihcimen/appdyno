@@ -104,7 +104,7 @@ On an iPhone 17 Pro simulator, through MCP, in the system Settings app:
 | tap by selector                              | 98 ms  |
 | tap that waits and proves the screen settled | 858 ms |
 
-`node scripts/speed.mjs <simulator id>` runs the same table on your Mac. [Speed](docs/reference/perf.md#speed) has every number, and what each one proves.
+`node scripts/speed.mjs <device id>` times the common calls on the fixture app, on any device, on your Mac. [Speed](docs/reference/perf.md#speed) has every number, and what each one proves.
 
 ## Documentation
 

@@ -1,81 +1,191 @@
 #!/usr/bin/env node
-// How fast this tool answers an MCP client: the table in docs/reference/perf.md, from a simulator's Settings app.
-//   pnpm build && node scripts/speed.mjs <simulator id> [rounds]
+// How fast this tool answers an MCP client: the table in docs/reference/perf.md, on the fixture app, on any device.
+//   pnpm build && node scripts/speed.mjs <device id> [runs]
 //
-// Each tap opens General, About, and the next read must find "Model" there: a tap that landed nowhere stops the run.
-// The device is always named, and it needs only its own Settings.
+// Each run starts the server as a client does, then makes the common calls on the fixture, each proved by its
+// answer: a tap that landed nowhere, or anything refused, stops the run. The device is always named, and it needs
+// the fixture (dev.appdyno.fixture) installed. The fixture is stopped before each launch, so each is a cold one.
+// A run before the measured ones starts what the device needs, and only its first read is kept, apart.
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const [udid, rounds = '12'] = process.argv.slice(2);
-if (!udid) {
-  console.error('usage: speed.mjs <simulator id> [rounds]');
+const APP = 'dev.appdyno.fixture';
+const [serial, runs = '5'] = process.argv.slice(2);
+if (!serial) {
+  console.error('usage: speed.mjs <device id> [runs]');
   process.exit(2);
 }
+/** A simulator's or an iPhone's id, against an Android serial. */
+const IOS = /^[0-9A-F]{8}-[0-9A-F]{4,}/i.test(serial);
 
-const state = mkdtempSync(join(tmpdir(), 'appdyno-speed-'));
-const server = spawn(
-  process.execPath,
-  [
-    join(import.meta.dirname, '../packages/appdyno/dist/main.js'),
-    'mcp',
-    '--device',
-    udid,
-    '--allow-devices',
-    `^${udid}$`,
-  ],
-  { stdio: ['pipe', 'pipe', 'ignore'], env: { ...process.env, APPDYNO_STATE_DIR: state } },
-);
-
-const write = (message) =>
-  server.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', ...message })}\n`);
-const waiting = new Map();
-let nextId = 1;
-let buffered = '';
-server.stdout.setEncoding('utf8').on('data', (chunk) => {
-  buffered += chunk;
-  for (let at = buffered.indexOf('\n'); at >= 0; at = buffered.indexOf('\n')) {
-    const message = JSON.parse(buffered.slice(0, at));
-    buffered = buffered.slice(at + 1);
+/**
+ * A server as a client starts one, over stdio, and what it says of each call on stderr. Its state folder lasts the
+ * whole script, as a user's does.
+ */
+function server(state) {
+  const child = spawn(
+    process.execPath,
+    [
+      join(import.meta.dirname, '../packages/appdyno/dist/main.js'),
+      'mcp',
+      '--device',
+      serial,
+      '--allow-devices',
+      `^${serial}$`,
+      '--app',
+      APP,
+      '--allow-apps',
+      APP,
+    ],
+    { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, APPDYNO_STATE_DIR: state } },
+  );
+  /** @type {Map<number, (message: any) => void>} */
+  const waiting = new Map();
+  /** @type {number[]} */
+  const served = [];
+  let nextId = 1;
+  const lines = (stream, each) => {
+    let buffered = '';
+    stream.setEncoding('utf8').on('data', (chunk) => {
+      buffered += chunk;
+      for (let at = buffered.indexOf('\n'); at >= 0; at = buffered.indexOf('\n')) {
+        each(buffered.slice(0, at));
+        buffered = buffered.slice(at + 1);
+      }
+    });
+  };
+  lines(child.stdout, (line) => {
+    const message = JSON.parse(line);
     waiting.get(message.id)?.(message);
-  }
-});
-const request = (method, params) =>
-  new Promise((done) => {
-    const id = nextId++;
-    waiting.set(id, done);
-    write({ id, method, params });
   });
-
-/** One tool call as a client makes it, timed around the whole round trip. A refusal ends the run. */
-async function call(name, args = {}) {
-  const start = performance.now();
-  const { result } = await request('tools/call', { name, arguments: args });
-  const ms = performance.now() - start;
-  const text = result.content.flatMap((c) => (c.type === 'text' ? [c.text] : [])).join('\n');
-  if (result.isError) throw new Error(`${name} refused: ${text.slice(0, 200)}`);
-  return { ms, text };
+  // the server's own time of each call, from its log
+  lines(child.stderr, (line) => {
+    const said = line.startsWith('{') ? JSON.parse(line) : {};
+    if (said.tool) served.push(said.ms);
+  });
+  const write = (message) =>
+    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', ...message })}\n`);
+  /** One request, timed around the whole round trip. */
+  const request = async (method, params) => {
+    const start = performance.now();
+    /** @type {any} */
+    const message = await new Promise((done) => {
+      const id = nextId++;
+      waiting.set(id, done);
+      write({ id, method, params });
+    });
+    return { ms: performance.now() - start, message };
+  };
+  const ended = new Promise((done) => child.once('exit', done));
+  return {
+    request,
+    write,
+    /** What the server logged of the last call, once its line is in. */
+    servedLast: async () => {
+      for (let i = 0; served.length === 0 && i < 50; i++) await pause(10);
+      return served.shift();
+    },
+    stop: async () => {
+      // a server writes to its state folder as it ends
+      child.kill();
+      await ended;
+    },
+  };
 }
 
 const pause = (ms) => new Promise((done) => setTimeout(done, ms));
 
-/** Reads until the screen holds this word: how a tap is proved to have landed. */
-async function until(word) {
-  for (let i = 0; i < 40; i++) {
-    if ((await call('screen')).text.includes(word)) return;
-    await pause(100);
-  }
-  throw new Error(`no "${word}" on the screen`);
-}
-
-const backToGeneral = async () => {
-  await pause(700);
-  await call('tap', { selector: { text: 'General', role: 'button' }, read: 'none' });
-  await until('Language & Region');
-  await pause(900);
+/** Each call's times: the client's round trip, the server's own, and the settle an action's answer says. */
+/** @type {Map<string, { ms: number[]; served: number[]; settle: number[] }>} */
+const times = new Map();
+const timed = (what, ms, served, settle) => {
+  const t = times.get(what) ?? { ms: [], served: [], settle: [] };
+  t.ms.push(ms);
+  if (served !== undefined) t.served.push(served);
+  if (settle !== undefined) t.settle.push(settle);
+  times.set(what, t);
 };
+/** @type {number[]} */
+const loads = [];
+
+/** One run: a new server, `initialize`, `tools/list`, then each call, proved by what it answers. */
+async function run(s, warmUp) {
+  const init = await s.request('initialize', {
+    protocolVersion: '2025-06-18',
+    capabilities: {},
+    clientInfo: { name: 'speed', version: '1' },
+  });
+  s.write({ method: 'notifications/initialized' });
+  const list = await s.request('tools/list', {});
+  if (!list.message.result?.tools?.length) throw new Error('tools/list listed no tool');
+
+  /**
+   * One tool call; `proof` must be in its answer, in any case (Android's buttons say FORM). A refusal ends the run.
+   * An untitled call is not kept.
+   */
+  const call = async (what, name, args, proof) => {
+    const { ms, message } = await s.request('tools/call', { name, arguments: args });
+    const served = await s.servedLast();
+    const { result } = message;
+    const text = result.content.flatMap((c) => (c.type === 'text' ? [c.text] : [])).join('\n');
+    if (result.isError) throw new Error(`${name} refused: ${text.slice(0, 300)}`);
+    const has = (word) => text.toLowerCase().includes(word.toLowerCase());
+    const missing = proof && !(typeof proof === 'string' ? has(proof) : proof(result));
+    if (missing) throw new Error(`${what || name}: no proof in its answer: ${text.slice(0, 300)}`);
+    if (what && !warmUp) timed(what, ms, served, result.structuredContent?.settleMs);
+    return { text, result };
+  };
+
+  const devices = await call('`list_devices`', 'list_devices', {}, serial);
+  if (/held by pid/.test(devices.text.split('\n').find((l) => l.startsWith(serial)) ?? ''))
+    throw new Error(`another process holds ${serial}: ${devices.text}`);
+  const first = await s.request('tools/call', { name: 'screen', arguments: {} });
+  if (first.message.result.isError) throw new Error('the first read was refused');
+  timed(
+    warmUp ? '`screen`, first of all: starts what the device needs' : '`screen`, first of a server',
+    first.ms,
+    await s.servedLast(),
+  );
+  if (warmUp) return;
+  timed('`initialize`', init.ms);
+  timed('`tools/list`', list.ms);
+
+  await call('', 'terminate_app', {});
+  const inFront = (r) => r.structuredContent?.foreground === APP;
+  await call('`launch_app` of the fixture, cold', 'launch_app', { app: APP }, inFront);
+  await call('`screen`', 'screen', {}, 'Form');
+  // iOS has no back key: its back is the screen's own control
+  const back = (what, proof) =>
+    IOS
+      ? call(what, 'tap', { selector: { text: 'Back', role: 'button' } }, proof)
+      : call(what, 'press_key', { key: 'back' }, proof);
+  // the first touch of a server and of an app's process pays for itself: the untimed one, before the two taps compared
+  await call('', 'tap', { selector: { text: 'List' } }, 'Product 1');
+  await call('`swipe`', 'swipe', { direction: 'up' }, (r) => r.structuredContent?.changed === true);
+  await back('', 'Form');
+  const found = await call(
+    '`find`',
+    'find',
+    { text: 'Form' },
+    (r) => r.structuredContent?.matches?.length === 1,
+  );
+  const at = found.result.structuredContent.matches[0];
+  await call('`tap` by coordinate', 'tap', { x: at.x, y: at.y }, 'Send');
+  // the home screen's title: a phone in Turkish says LİST
+  await back('back', 'appdyno fixture');
+  await call('`tap` by selector', 'tap', { selector: { text: 'Form' } }, 'Send');
+  await call(
+    '`type_text` into a field by selector',
+    'type_text',
+    { selector: { id: 'name_input' }, text: 'speed' },
+    'speed',
+  );
+  await call('`wait_for` an element on the screen', 'wait_for', { text: 'Send' }, 'found');
+  await call('`screenshot`', 'screenshot', {}, (r) => r.content.some((c) => c.type === 'image'));
+  await call('`logs`, 20 lines', 'logs', { maxLines: 20 }, 'lines of');
+}
 
 const median = (values) => {
   const sorted = [...values].sort((a, b) => a - b);
@@ -83,69 +193,36 @@ const median = (values) => {
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 };
 
-await request('initialize', {
-  protocolVersion: '2025-06-18',
-  capabilities: {},
-  clientInfo: { name: 'speed', version: '1' },
-});
-write({ method: 'notifications/initialized' });
-
-const loadBefore = loadavg()[0];
-await call('open_link', { settings: 'general' });
-await until('Language & Region');
-await pause(800);
-const { text: page } = await call('screen');
-// rows alike share a header, `cell x=201 clickable:`, and each keeps its own y
-const place = /x=(\d+)[^]*?"About" (\d+)/.exec(page);
-if (!place) throw new Error('no row About on the screen');
-const [x, y] = [Number(place[1]), Number(place[2])];
-
-const ABOUT = { selector: { text: 'About' } };
-const refOf = (text) => /(@\S+) "About"/.exec(text)?.[1];
-/** @type {[string, (text: string) => object][]} */
-const TAPS = [
-  ['`tap` by coordinate, `read: none`', () => ({ x, y, read: 'none' })],
-  ['`tap` by ref, `read: none`', (text) => ({ ref: refOf(text), read: 'none' })],
-  ['`tap` by selector, `read: none`', () => ({ ...ABOUT, read: 'none' })],
-  ['`tap` by selector, waits for the screen', () => ABOUT],
-  ['`tap` by ref, waits for the screen', (text) => ({ ref: refOf(text) })],
-];
-
-/** @type {{ ms: number[]; chars: number[] }} */
-const reads = { ms: [], chars: [] };
-/** @type {[string, number[], number][]} */
-const rows = [];
-for (const [what, args] of TAPS) {
-  /** @type {number[]} */
-  const times = [];
-  /** @type {number[]} */
-  const chars = [];
-  for (let i = 0; i < Number(rounds); i++) {
-    const read = await call('screen');
-    reads.ms.push(read.ms);
-    reads.chars.push(read.text.length);
-    const tap = await call('tap', args(read.text));
-    times.push(tap.ms);
-    chars.push(tap.text.length);
-    await until('Model');
-    await backToGeneral();
+const state = mkdtempSync(join(tmpdir(), 'appdyno-speed-'));
+let failed;
+try {
+  for (let i = 0; i <= Number(runs); i++) {
+    loads.push(loadavg()[0]);
+    const s = server(state);
+    try {
+      await run(s, i === 0);
+    } finally {
+      await s.stop();
+    }
   }
-  rows.push([what, times, median(chars)]);
+} catch (e) {
+  failed = e;
+}
+loads.push(loadavg()[0]);
+rmSync(state, { recursive: true, force: true });
+if (failed) {
+  console.error(`stopped: ${failed.message}`);
+  process.exit(1);
 }
 
-const row = ([what, ms, chars]) =>
-  `| ${what} | ${median(ms).toFixed(0)} | ${Math.min(...ms).toFixed(0)}-${Math.max(...ms).toFixed(0)} | ${chars.toLocaleString('en-US')} |`;
-console.log('| call | median, ms | range, ms | answer, characters |');
-console.log('| ---- | ---------- | --------- | ------------------ |');
-console.log(row(['`screen`', reads.ms, median(reads.chars)]));
-for (const each of rows) console.log(row(each));
+const ms = (values) => (values.length ? median(values).toFixed(0) : '');
+console.log('| call | median, ms | worst, ms | in the server, median | settle, median |');
+console.log('| ---- | ---------- | --------- | --------------------- | -------------- |');
+for (const [what, t] of times)
+  console.log(
+    `| ${what} | ${ms(t.ms)} | ${Math.max(...t.ms).toFixed(0)} | ${ms(t.served)} | ${ms(t.settle)} |`,
+  );
 console.log(
-  `\n${rounds} rounds a tap, ${reads.ms.length} reads, every tap proved by the next read. Load ${loadBefore.toFixed(1)} before, ${loadavg()[0].toFixed(1)} after.`,
+  `\n${runs} runs on ${serial}, each with a new server, every call proved by its answer. Host load ${Math.min(...loads).toFixed(1)}-${Math.max(...loads).toFixed(1)}.`,
 );
-
-// a server writes to its state folder as it ends
-const ended = new Promise((done) => server.once('exit', done));
-server.kill();
-await ended;
-rmSync(state, { recursive: true, force: true });
 process.exit(0);
