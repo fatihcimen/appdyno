@@ -46,6 +46,28 @@ describe('iOS trace export', () => {
     expect(s.frozen).toBe(0);
   });
 
+  it('reads a low rate that no hitch shows, and leaves out the screen at rest between swipes', () => {
+    const shown = (frames: number[]) =>
+      `<node><schema name="displayed-surfaces-interval"><col><mnemonic>start</mnemonic></col><col><mnemonic>duration</mnemonic></col></schema>${frames
+        .map(
+          (ms, i) =>
+            `<row><start fmt="x">${i * 1e6}</start><duration fmt="x">${ms * 1e6}</duration></row>`,
+        )
+        .join('')}</node>`;
+    const none = '<node><schema><col><mnemonic>duration</mnemonic></col></schema></node>';
+    const read = (frames: number[]) => hitchSummary(none, shown(frames), 6_000);
+    const swift = Array<number>(95).fill(8.3);
+    const slow = Array<number>(95).fill(41.7);
+    const rests = Array<number>(10).fill(1_050);
+    expect(read(swift).p95Ms).toBe(8.3);
+    expect(read(slow).p95Ms).toBe(41.7);
+    // ten rests in a hundred frames would be all this figure said
+    expect(read([...swift, ...rests]).p95Ms).toBe(8.3);
+    expect(read([...swift, ...rests]).frames).toBe(105);
+    expect(hitchFrames(read(slow))).toMatchObject({ p95Ms: 41.7, jankyPercent: 0 });
+    expect(read(rests).p95Ms).toBeUndefined();
+  });
+
   it('counts a hitch of 700 ms or longer as a frozen frame, and reads as frames of any platform', () => {
     const hitch = (at: number, ns: number) =>
       `<row><start fmt="x">${at * 1e9}</start><duration fmt="x">${ns}</duration></row>`;

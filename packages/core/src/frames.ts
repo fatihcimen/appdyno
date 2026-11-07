@@ -125,6 +125,8 @@ export type HitchSummary = {
   durationMs: number;
   /** Frames the display showed (all surfaces). */
   frames: number;
+  /** A frame's time on the screen, of those drawn: a steady low rate has no hitch to count. */
+  p95Ms?: number;
   /** The app's hitches (system ones left out). */
   hitches: number;
   hitchMs: number;

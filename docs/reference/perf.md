@@ -58,7 +58,7 @@ Xcode 27.1, iOS 27.0.1 on a cable, iOS 26.5 on the simulator, 2026-11-03. Host l
 
 **Why launch was slow, iPhone.** App Launch with `--launch`. Settings answers "Permission to debug com.apple.Preferences was denied ... signed with 'get-task-allow'" within 4 s, and the measure asks first, so a refusal costs no launches.
 
-**Frames, frozen frames, stalls, iPhone.** A 1 s stall of the main thread in a scroll shows as a hitch of 50 ms and as a hang of 1.02 s in one Animation Hitches recording: no frame was on its way, so nothing was late. A frozen frame there is a hitch or a hang of 700 ms or longer, the two of one moment counted once.
+**Frames, frozen frames, stalls, iPhone.** A 1 s stall of the main thread in a scroll shows as a hitch of 50 ms and as a hang of 1.02 s in one Animation Hitches recording: no frame was on its way, so nothing was late. A frozen frame there is a hitch or a hang of 700 ms or longer, the two of one moment counted once. A steady low rate is no hitch: a list doing 40 ms on each frame read 0 to 4 % janky against 0, at 150 frames a round to 400. So `frames.p95_ms` there is a frame's time on the screen, from the `displayed-surfaces-interval` table, leaving out what stayed 700 ms or longer, the screen at rest between swipes or a frozen frame.
 
 **Leaks, iPhone.** The Leaks template attached. Its table is under `tracks/track/details/detail`, not `data/table`, and has one row per leaked object. Its first look at the heap comes 10 s in: a recording of 5 s reads 0 of 3 retain cycles made, one of 12 s reads all, so it records 15 s. Settings answers "Unable to acquire required task port". An earlier attempt never started at host load 400 and over; at load 7-24 it takes 18 s.
 

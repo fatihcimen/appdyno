@@ -1,7 +1,9 @@
 import {
+  FROZEN_FRAME_MS,
   frozenMoments,
   MIN_FRAMES,
   PROFILE_FUNCTIONS,
+  quantile,
   type FrameStats,
   type HitchSummary,
   round1,
@@ -116,9 +118,14 @@ export function hitchSummary(
     causes[c] = (causes[c] ?? 0) + 1;
   }
   const total = ms.reduce((a, b) => a + b, 0);
+  const shown = spansOf(parseTraceTable(surfacesXml)).map((s) => s.ms);
+  // a steady 25 frames a second is no hitch: a list at that read 0 % jank against one at 120, with 150 frames to its 400.
+  // Up this long, a frame is the screen at rest between swipes, or a frozen frame, counted as that
+  const drawn = shown.filter((m) => m < FROZEN_FRAME_MS);
   return {
     durationMs,
-    frames: parseTraceTable(surfacesXml).length,
+    frames: shown.length,
+    ...(drawn.length > 0 && { p95Ms: round1(quantile(drawn, 0.95)) }),
     hitches: hitches.length,
     hitchMs: round1(total),
     worstMs: round1(Math.max(0, ...ms)),
@@ -142,7 +149,9 @@ export const hitchFrames = (h: HitchSummary): FrameStats => ({
   worstHitchMs: h.worstMs,
   stalls: h.stalls,
   fewFrames: h.frames < MIN_FRAMES,
-  limits: 'Janky here is a hitch of the app, as Animation Hitches counts it.',
+  ...(h.p95Ms !== undefined && { p95Ms: h.p95Ms }),
+  limits:
+    "Janky here is a hitch of the app, as Animation Hitches counts it; p95 a frame's time on the screen.",
 });
 
 /** A test's readings from `xcresulttool get test-results metrics`, by the metric's id. */
