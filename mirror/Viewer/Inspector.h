@@ -53,27 +53,49 @@ NSTextField *MVPaneHeading(NSString *text);
 - (NSArray<MVRow *> *)rows;
 @end
 
-/// A link to open on the device, by the op an agent calls, what came of it, and the links opened here before.
-@interface MVLinkPane : NSView
+/// What an op answered a pane: a line of progress while it runs, then what it did, or why not and what to do.
+@interface MVAnswerView : NSStackView
+- (void)sending:(NSString *)words;
+/// The parent's `answer`: a `line` of progress, or `ok` with its `text` and `hint`.
+- (void)show:(NSDictionary *)message;
+/// A send has had no answer yet.
+@property(nonatomic, readonly) BOOL waiting;
+@property(nonatomic, readonly) NSString *said, *hint;
+@end
+
+/// A pane that sends to the device by an op an agent calls, and shows what came of it.
+@protocol MVSendPane <NSObject>
 /// Where what it asks goes; none: to the parent.
 @property(nonatomic, copy, nullable) void (^onSend)(NSDictionary *message);
-/// The parent's answer: a line of progress, what the op did or why not, and the recent links.
+/// The parent's answer, and what the pane lists.
 - (void)show:(NSDictionary *)message;
-/// The field takes the keyboard, for a person who asked for the pane.
+/// Its first field takes the keyboard, for a person who asked for the pane.
 - (void)focus;
-/// The recent links, asked for once.
+/// What it lists, asked of the parent as it shows.
 - (void)ask;
+@property(nonatomic, readonly) MVAnswerView *answer;
+@end
+
+/// What a send pane asks: to its `onSend` where a test set one, else to the parent.
+void MVPaneSend(NSView<MVSendPane> *pane, NSDictionary *message);
+
+/// A link to open on the device by `open_link`, what came of it, and the links opened here before.
+@interface MVLinkPane : NSView <MVSendPane>
 /// For a test: a link in the field, as typed.
 - (void)fill:(NSString *)url;
-/// What the answer says now, its hint, and the links listed.
-@property(nonatomic, readonly) NSString *said, *hint;
 @property(nonatomic, readonly) NSArray<MVRow *> *rows;
 @end
 
-/// The panes of the Inspector, by the index `showPane:` takes.
-enum { MVPanePerf, MVPaneFlow, MVPaneApps, MVPaneActivity, MVPaneLinks, MVPanes };
+/// A push to an app by `push`: the types this device takes, the fields of the one chosen or its payload, and what came of it.
+@interface MVPushPane : NSView <MVSendPane>
+/// For a test: a type chosen and its fields typed, by the op's names.
+- (void)fill:(NSDictionary<NSString *, NSString *> *)fields;
+@end
 
-/// What goes in the Inspector: Performance, Flows, Apps, Activity and Links, by their symbols and the name of the one chosen.
+/// The panes of the Inspector, by the index `showPane:` takes.
+enum { MVPanePerf, MVPaneFlow, MVPaneApps, MVPaneActivity, MVPaneLinks, MVPanePush, MVPanes };
+
+/// What goes in the Inspector: Performance, Flows, Apps, Activity, Links and Push, by their symbols and the name of the one chosen.
 @interface MVInspector : NSView
 - (instancetype)initWithFrame:(NSRect)frame target:(id)target;
 @property(nonatomic, readonly) MVPerfPane *perf;
@@ -82,6 +104,9 @@ enum { MVPanePerf, MVPaneFlow, MVPaneApps, MVPaneActivity, MVPaneLinks, MVPanes 
 @property(nonatomic, readonly) NSView *numbers;
 @property(nonatomic, readonly) MVActivityPane *activity;
 @property(nonatomic, readonly) MVLinkPane *links;
+@property(nonatomic, readonly) MVPushPane *push;
+/// The pane an `answer` is for, by its name.
+- (id<MVSendPane>)answering:(NSString *)name;
 /// The pane chosen, by the index `showPane:` takes.
 @property(nonatomic, readonly) NSInteger chosen;
 /// Whether Performance is the pane chosen.

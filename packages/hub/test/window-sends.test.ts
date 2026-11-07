@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { AppManager, DeviceEvents } from '@appdyno/core';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { windowSends } from '../src/window-sends.js';
 import { followDevice } from '../src/follow.js';
@@ -30,7 +31,7 @@ describe('what a window sends to its device', () => {
       expect(sends.onWindow({ op: 'control', name: 'openLink', url })).toBe(true);
       return answer();
     };
-    return { sends, told, open };
+    return { sends, told, open, answer };
   };
 
   it("opens a link by the agent's own op, and remembers it for this device", async () => {
@@ -71,6 +72,48 @@ describe('what a window sends to its device', () => {
       hint: 'change that and call again: nothing was done',
     });
     expect(device.calls.some((c) => c.name === 'openUrl')).toBe(false);
+  });
+
+  it("lists the pushes the device takes, with the app in front, and sends one by the agent's op", async () => {
+    const device = new FakeDevice();
+    const pushed: unknown[] = [];
+    const routes = [
+      { type: 'alert', route: 'by hand', fields: ['title', 'data'], template: '{"aps":{}}' },
+      { type: 'tapped', why: 'no hand' },
+    ];
+    device.events = {
+      pushRoutes: () => routes,
+      push: async (app: string, push: unknown) => {
+        pushed.push([app, push]);
+        return `pushed to ${app}`;
+      },
+    } as unknown as DeviceEvents;
+    const front = await device.foreground();
+    device.apps = { listApps: async () => [{ id: front }] } as unknown as AppManager;
+    const { sends, told, answer } = sendsOn(device);
+    sends.onWindow({ op: 'control', name: 'pushes' });
+    await expect
+      .poll(() => told.find((m) => 'types' in m))
+      .toEqual({
+        op: 'answer',
+        name: 'push',
+        types: routes,
+        app: front,
+      });
+    told.length = 0;
+    const args = { app: 'dev.app', type: 'alert', title: 'Order 42', data: { order: '42' } };
+    expect(sends.onWindow({ op: 'control', name: 'push', args })).toBe(true);
+    expect(await answer()).toMatchObject({ name: 'push', ok: true, text: 'Pushed to dev.app' });
+    expect(pushed).toEqual([
+      ['dev.app', { type: 'alert', title: 'Order 42', data: { order: '42' } }],
+    ]);
+    told.length = 0;
+    sends.onWindow({ op: 'control', name: 'push', args: { ...args, payload: '{"aps":{}}' } });
+    expect(await answer()).toMatchObject({
+      ok: false,
+      text: 'payload replaces the fields: give one or the other',
+    });
+    expect(pushed).toHaveLength(1);
   });
 
   it('leaves what is not its own to the rest of the window', () => {

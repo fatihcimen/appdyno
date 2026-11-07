@@ -1,4 +1,4 @@
-// The pane beside the device: the stream's numbers, what an agent has called, the device's apps and a link to open. The
+// The pane beside the device: the stream's numbers, what an agent has called, the device's apps, and a link or a push to send. The
 // numbers come from this process; the rest from the parent, by messages.
 #import "Place.h"
 #import "Window.h"
@@ -15,6 +15,7 @@ static const struct {
     {"tabApps", "Apps", "square.grid.2x2"},
     {"tabActivity", "Activity", "clock.arrow.circlepath"},
     {"tabLinks", "Links", "link"},
+    {"tabPush", "Push", "bell.badge"},
 };
 
 static NSTextField *caption(NSString *text) {
@@ -82,6 +83,8 @@ static NSString *ms(id v) {
     _panes[MVPaneApps] = [self appsPane];
     _links = [MVLinkPane new];
     _panes[MVPaneLinks] = _links;
+    _push = [MVPushPane new];
+    _panes[MVPanePush] = _push;
     _perf = [[MVPerfPane alloc] initWithFrame:NSZeroRect target:target];
     _panes[MVPanePerf] = _perf;
     _flow = [[MVFlowPane alloc] initWithFrame:NSZeroRect target:target];
@@ -221,6 +224,10 @@ static NSString *ms(id v) {
   _launch.enabled = _quit.enabled = _remove.enabled = on;
 }
 
+- (id<MVSendPane>)answering:(NSString *)name {
+  return [name isEqual:@"push"] ? _push : _links;
+}
+
 - (BOOL)readings {
   return _chosen == MVPanePerf;
 }
@@ -244,7 +251,7 @@ static NSString *ms(id v) {
   for (int i = 0; i < MVPanes; i++) _panes[i].hidden = i != pane;
   _chosen = pane;
   if (self.onPane) self.onPane();
-  if (pane == MVPaneLinks) [_links ask];
+  if (pane == MVPaneLinks || pane == MVPanePush) [[self answering:pane == MVPanePush ? @"push" : @"openLink"] ask];
   if (pane == MVPaneApps && !_asked) {
     _asked = YES;
     MVEmitFrom(self, @{@"op": @"app", @"action": @"list"});

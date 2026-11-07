@@ -17,22 +17,22 @@ static BOOL typesInto(NSWindow *window, NSTextField *field) {
 }
 
 static void checkAnswers(MVLinkPane *pane, NSMutableArray<NSDictionary *> *sent) {
-  NSView *answer = [pane valueForKey:@"_answer"];
+  MVAnswerView *answer = pane.answer;
   [pane show:@{@"op": @"answer", @"name": @"openLink", @"line": @"Connecting to a device"}];
-  MVCheck(@"links: progress shows as it comes", [pane.said containsString:@"Connecting"], pane.said);
+  MVCheck(@"links: progress shows as it comes", [pane.answer.said containsString:@"Connecting"], pane.answer.said);
   MVHoldStill(YES);
   [pane show:@{@"op": @"answer", @"name": @"openLink", @"ok": @YES, @"text": @"Opened app://screen/form", @"recent": @[@"app://screen/form", @"https://example.test/item/7"]}];
-  MVCheck(@"links: what the op did is said, with no move for a person who asked for less", [pane.said isEqual:@"Opened app://screen/form"] && ![answer.layer animationForKey:@"slide"], pane.said);
+  MVCheck(@"links: what the op did is said, with no move for a person who asked for less", [pane.answer.said isEqual:@"Opened app://screen/form"] && ![answer.layer animationForKey:@"slide"], pane.answer.said);
   MVHoldStill(NO);
   MVCheck(@"links: the recent links stand under a heading", pane.rows.count == 3 && pane.rows[0].header && [pane.rows[2].key isEqual:@"https://example.test/item/7"], [[pane.rows valueForKey:@"title"] componentsJoinedByString:@"|"]);
   NSString *refusal = @"this link is not on this server's allow list", *hint = @"change that and call again: nothing was done";
   [pane fill:@"https://elsewhere.test/"];
   pressReturn(pane.window);
   [pane show:@{@"op": @"answer", @"name": @"openLink", @"ok": @NO, @"text": refusal, @"hint": hint}];
-  MVCheck(@"links: a refusal is shown whole, with what to do", [pane.said isEqual:MVWord(refusal)] && [pane.hint isEqual:MVWord(hint)], [NSString stringWithFormat:@"%@ / %@", pane.said, pane.hint]);
+  MVCheck(@"links: a refusal is shown whole, with what to do", [pane.answer.said isEqual:MVWord(refusal)] && [pane.answer.hint isEqual:MVWord(hint)], [NSString stringWithFormat:@"%@ / %@", pane.answer.said, pane.answer.hint]);
   MVCheck(@"links: an answer arrives with a move, where motion is on", [answer.layer animationForKey:@"slide"] != nil, nil);
   [pane.window layoutIfNeeded];
-  NSView *mark = [pane valueForKey:@"_mark"];
+  NSView *mark = [answer valueForKey:@"_mark"];
   NSRect at = [mark convertRect:mark.bounds toView:pane];
   MVCheck(@"links: an answer reads from the pane's edge, its mark beside its words", NSMinX(at) < 2 && NSWidth(at) < 20, NSStringFromRect(at));
   [sent removeAllObjects];
@@ -63,6 +63,6 @@ void MVCheckLinks(void) {
   pressReturn(window.nsWindow);
   pressReturn(window.nsWindow);
   MVCheck(@"links: Return sends the link, once, until its answer comes", sent.count == 1 && [sent[0][@"name"] isEqual:@"openLink"] && [sent[0][@"url"] isEqual:@"appdyno-fixture://open/form"], sent.description);
-  MVCheck(@"links: and says it is opening", [pane.said containsString:@"appdyno-fixture://open/form"], pane.said);
+  MVCheck(@"links: and says it is opening", [pane.answer.said containsString:@"appdyno-fixture://open/form"], pane.answer.said);
   checkAnswers(pane, sent);
 }

@@ -1,7 +1,7 @@
 import { deviceState, inCall, type Device, type ViewerMessage } from '@appdyno/core';
 import { argumentsFor, opsFor, ToolError, type Op, type ServerContext } from '@appdyno/ops';
 import { z } from 'zod';
-import type { WindowSession } from './controls.js';
+import { frontApp, type WindowSession } from './controls.js';
 import { spokenDone } from './follow.js';
 import { WINDOW, windowContext } from './measures.js';
 
@@ -13,8 +13,8 @@ const recentLinks = deviceState('links', z.array(z.string()));
 type Answer = { ok: boolean; text: string; hint?: string };
 
 /**
- * What a window sends to its device by the op an agent calls, with the same arguments: a link. Each line of progress goes
- * back as it comes, then what the op did, or its refusal with its hint.
+ * What a window sends to its device by the ops an agent calls, with the same arguments: a link and a push. Each line of
+ * progress goes back as it comes, then what the op did, or its refusal with its hint.
  */
 export function windowSends(
   ctx: ServerContext,
@@ -27,7 +27,8 @@ export function windowSends(
     session().tell({ op: 'answer', name, ...m });
   const recent = () => recentLinks.read(serial) ?? [];
 
-  const call = async (name: string, op: string, args: Record<string, unknown>): Promise<Answer> => {
+  /** One op's call, by the pane it answers: its answer, and what it said whole where it said it. */
+  const call = async (name: string, op: string, args: Record<string, unknown>) => {
     // the first call opens a session, which starts the device agent, as an agent's first call does
     const tool = (ops ??= opsFor(windowContext(ctx, device)))[op]!;
     try {
@@ -35,29 +36,58 @@ export function windowSends(
       const { data } = await inCall({ client: WINDOW, progress }, () =>
         tool.handler(argumentsFor(tool, args)),
       );
-      return { ok: true, text: spokenDone(String(data.done)) ?? op };
+      const answer: Answer = { ok: true, text: spokenDone(String(data.done)) ?? op };
+      return { answer, data };
     } catch (e) {
       const { message } = e as Error;
       const hint = e instanceof ToolError ? e.hint : undefined;
-      return { ok: false, text: message, ...(hint && !message.includes(hint) && { hint }) };
+      const answer: Answer = {
+        ok: false,
+        text: message,
+        ...(hint && !message.includes(hint) && { hint }),
+      };
+      return { answer, data: undefined };
     }
   };
 
   const openLink = async (url: string) => {
-    const answer = await call('openLink', 'open_link', { url });
+    const { answer } = await call('openLink', 'open_link', { url });
     if (answer.ok)
       recentLinks.write(serial, [url, ...recent().filter((u) => u !== url)].slice(0, RECENT));
     tell('openLink', { ...answer, recent: recent() });
   };
 
+  /** What this device takes, by the op with no type, and the app in front where it is a person's own. */
+  const pushes = async () => {
+    const [{ answer, data }, front] = await Promise.all([
+      call('push', 'push', {}),
+      frontApp(device).catch(() => undefined),
+    ]);
+    tell('push', data ? { types: data.types, ...(front?.mine && { app: front.app }) } : answer);
+  };
+
+  /** What the pane filled in, as the op takes it: the op refuses what does not fit. */
+  const push = async (args: unknown) => {
+    const given = args && typeof args === 'object' ? (args as Record<string, unknown>) : {};
+    tell('push', (await call('push', 'push', given)).answer);
+  };
+
+  const sends: Record<string, (m: ViewerMessage) => Promise<void>> = {
+    openLink: (m) => openLink(String(m.url ?? '').trim()),
+    pushes: () => pushes(),
+    push: (m) => push(m.args),
+  };
+  const answering = (name: string) => (name.startsWith('push') ? 'push' : 'openLink');
+
   return {
     /** What is a send of what the window says; false: it is another's. */
     onWindow(m: ViewerMessage): boolean {
       if (m.op !== 'control') return false;
-      if (m.name === 'links') tell('openLink', { recent: recent() });
-      else if (m.name === 'openLink')
-        void openLink(String(m.url ?? '').trim()).catch((e: Error) =>
-          tell('openLink', { ok: false, text: e.message }),
+      const name = String(m.name);
+      if (name === 'links') tell('openLink', { recent: recent() });
+      else if (sends[name])
+        void sends[name](m).catch((e: Error) =>
+          tell(answering(name), { ok: false, text: e.message }),
         );
       else return false;
       return true;

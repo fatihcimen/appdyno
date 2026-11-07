@@ -51,7 +51,7 @@ static void checkTabs(void) {
   [window openInspector:YES];
   MVPump(0.5);
   MVCheck(@"inspector: nothing stands over the device, as the ground runs on under it", NSMaxX(window.deviceInWindow) <= NSMinX(window.inspectorInWindow), [NSString stringWithFormat:@"device to %.0f, Inspector from %.0f", NSMaxX(window.deviceInWindow), NSMinX(window.inspectorInWindow)]);
-  NSDictionary *tabs = @{@"tabFlows": @(MVPaneFlow), @"tabApps": @(MVPaneApps), @"tabActivity": @(MVPaneActivity), @"tabPerformance": @(MVPanePerf), @"tabLinks": @(MVPaneLinks)};
+  NSDictionary *tabs = @{@"tabFlows": @(MVPaneFlow), @"tabApps": @(MVPaneApps), @"tabActivity": @(MVPaneActivity), @"tabPerformance": @(MVPanePerf), @"tabLinks": @(MVPaneLinks), @"tabPush": @(MVPanePush)};
   for (NSString *tab in tabs) {
     [window pokeClick:tab];
     MVPump(0.1);
