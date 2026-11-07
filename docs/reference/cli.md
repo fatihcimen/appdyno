@@ -11,7 +11,7 @@ appdyno --help
 ```
 
 An op with `action` takes it as its first word: `appdyno record start`, `appdyno network stop`. Other commands: `mirror` (see [the window](../mirror.md)), `doctor [--serial S]`, `ios build`, `test` (see [flows](../guides/flows.md)), `tools install` (fetches the pinned
-Perfetto trace processor), `bench`. Exit code 1 means the call was refused, 2 means wrong arguments. The selected
+Perfetto trace processor), `bench`, `push setup apns|fcm [--forget]` (see [Tools](tools.md#push-to-a-phone-and-a-simulator-by-apple-and-google)). Exit code 1 means the call was refused, 2 means wrong arguments. The selected
 device and the diff baseline between CLI processes are kept in a small file in the state directory, one per working
 directory, so two terminals in two folders do not share a device. A command that loses data asks on its terminal first,
 as [Tools](tools.md#what-asks-the-person-first) lists; `--yes` is the answer, and with no terminal and no `--yes` it is

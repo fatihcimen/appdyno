@@ -84,6 +84,11 @@ export const COMMANDS = {
   },
   doctor: { flags: { serial: value('S') }, what: 'what this machine and that device lack' },
   'ios build': { what: 'build the iOS runners now' },
+  'push setup': {
+    takes: 'apns|fcm',
+    flags: { forget: on },
+    what: "a push service's credentials, which a person gives here and push uses; --forget deletes them",
+  },
   'tools install': {
     takes: '[adb]',
     flags: { 'accept-license': on },

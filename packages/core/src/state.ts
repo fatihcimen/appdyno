@@ -33,6 +33,13 @@ export const safeName = (s: string) => s.replace(/[^\w.-]/g, '_');
 export const deviceStateFile = (folder: string, serial: string) =>
   join(stateDir(), folder, `${safeName(serial)}.json`);
 
+/**
+ * A push service's credentials, which only a person sets up, at a terminal: written as every state file is, for this
+ * user alone.
+ */
+export const pushCredentials = (service: 'apns' | 'fcm') =>
+  join(stateDir(), 'push', `${service}.json`);
+
 type Parser<T> = { parse(x: unknown): T };
 
 /** A state file as its schema says, or nothing when it is missing or not that. */

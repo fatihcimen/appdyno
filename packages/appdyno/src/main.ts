@@ -43,6 +43,7 @@ import { doctor } from './doctor.js';
 import { hubServices } from './hub-services.js';
 import { hubCommand, mirrorCommand } from './mirror-args.js';
 import { pairCommand } from './pair.js';
+import { pushCommand } from './push-setup.js';
 import { deviceProviders as providers } from './providers.js';
 import { COMMANDS, commandList, helpFor, usage } from './usage.js';
 import { SERVER_INFO } from '@appdyno/mcp';
@@ -214,6 +215,8 @@ async function main(): Promise<number> {
       });
     case 'pair':
       return pairCommand(rest);
+    case 'push':
+      return pushCommand(rest);
     case 'timeline':
       return timelineCommand(rest, contextFrom);
     case 'flight':

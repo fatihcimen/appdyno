@@ -7,6 +7,7 @@ export { Devicectl, assertPhoneUdid } from './devicectl.js';
 export { IosPhoneDevice, phoneRunnerApp } from './phone.js';
 export { pairPhone } from './mirror-phone.js';
 export { forgetPhone } from './wifi-paired.js';
+export { apnsKey, keepApnsKey, type ApnsKey } from './apns-key.js';
 export { phoneSigningFromEnv, readProfile, signedRunner, type PhoneSigning } from './signing.js';
 export { IosRunnerLauncher } from './runner.js';
 export { iosProducts, pruneIosBuilds, runnerBuild } from './runner-build.js';

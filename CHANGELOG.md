@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `appdyno push setup apns|fcm` keeps a push service's credentials, the team's APNs key or a Firebase service account, which only a person gives at a terminal, for this user alone; `--forget` deletes them. Nothing an MCP client sends reaches them, and nothing says them back.
 - **Links** offers what the app in its field opens, as `open_link` `links` lists it: schemes, domains and Android's filters, a domain with its state.
 - A recording writes no step for `open_link` `links`, which reads what an app opens and opens nothing: it wrote an empty `open_link`.
 - **Links** in a window names the app to open a link in, the app in front first, through the server's list of apps: an iPhone opens a link only in a named app, and its window could not open one. Run on an iPhone 13 Pro Max with iOS 27.2 and a Samsung Galaxy A52 with Android 14.
