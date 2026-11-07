@@ -44,7 +44,7 @@ export function windowSends(
   };
 
   const openLink = async (url: string) => {
-    const answer = await call('openLink', 'open_link', { url, read: 'none' });
+    const answer = await call('openLink', 'open_link', { url });
     if (answer.ok)
       recentLinks.write(serial, [url, ...recent().filter((u) => u !== url)].slice(0, RECENT));
     tell('openLink', { ...answer, recent: recent() });

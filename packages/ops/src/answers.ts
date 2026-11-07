@@ -264,23 +264,21 @@ async function act(
   });
 }
 
-async function afterChange(
-  clean: Clean,
-  s: Session,
-  done: string,
-  read: ReadMode,
-  launched = false,
-) {
+/** What a change did, said once the screen it left is known: none with no read. */
+type Said = string | ((screen: Screen | undefined) => string);
+const saidOf = (said: Said, screen?: Screen) => (typeof said === 'string' ? said : said(screen));
+
+async function afterChange(clean: Clean, s: Session, said: Said, read: ReadMode, launched = false) {
   const started = Date.now();
   const before = s.shown;
   const base = s.fresh?.list ?? before;
   s.acted();
   // a launch or a link may start a new process on purpose
   s.appPid = undefined;
-  if (read === 'none') return reply(done, summaryOf(clean, done));
+  if (read === 'none') return reply(saidOf(said), summaryOf(clean, saidOf(said)));
   reportProgress('waiting for the screen to settle');
   const { screen, settled } = await settleRead(s);
-  return afterAction(clean, s, done, read, screen, {
+  return afterAction(clean, s, saidOf(said, screen), read, screen, {
     before,
     base,
     settled,
@@ -310,8 +308,8 @@ export function answersFor(ctx: ServerContext) {
       found?: () => boolean,
     ) => act(clean, s, read, run, done, found),
     settleRead,
-    afterChange: (s: Session, done: string, read: ReadMode, launched?: boolean) =>
-      afterChange(clean, s, done, read, launched),
+    afterChange: (s: Session, said: Said, read: ReadMode, launched?: boolean) =>
+      afterChange(clean, s, said, read, launched),
   };
 }
 

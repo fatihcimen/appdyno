@@ -1,4 +1,10 @@
-import { fold, reportProgress, SETTINGS_PAGES, type SettingsPage } from '@appdyno/core';
+import {
+  fold,
+  reportProgress,
+  SETTINGS_PAGES,
+  type Screen,
+  type SettingsPage,
+} from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers, ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
@@ -38,6 +44,14 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
       'INVALID_ARGUMENT',
       'give its id',
     );
+  };
+
+  /** What a link did, by the screen it left: iOS asks before a scheme first opens an app, and nothing opens until then. */
+  const linkSaid = (s: Session, href: string) => (screen: Screen | undefined) => {
+    const asks = screen && s.device.platformScreen.systemAlert(screen.tree, screen.elements);
+    if (!asks) return `opened ${href}`;
+    const buttons = asks.buttons.map((b) => b.label).join(', ');
+    return `sent ${href}, and the system asks: ${asks.texts.join(' ')} (${buttons}): answer it with alert`;
   };
 
   const openSettings = async (s: Session, settings: string, read: ReadMode) => {
@@ -97,7 +111,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         if (settings) return openSettings(s, settings, read);
         const href = checkUrl(policy, url!);
         await s.device.openUrl(href, s.appId);
-        return afterChange(s, `opened ${href}`, read);
+        return afterChange(s, linkSaid(s, href), read);
       },
     }),
     defineOp({

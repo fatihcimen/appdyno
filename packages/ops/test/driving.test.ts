@@ -1022,6 +1022,21 @@ describe('system alerts', () => {
     expect((await call('alert')).text).toContain('no system alert');
   });
 
+  it('says of a link the system asks about first that nothing opened yet, and how to answer', async () => {
+    const d = new WithDialog();
+    const { call } = await connect(d);
+    expect((await call('open_link', { url: 'app://screen' })).data.done).toBe(
+      'opened app://screen',
+    );
+    d.add = dialog('android', 3);
+    expect((await call('open_link', { url: 'app://screen' })).data.done).toBe(
+      'sent app://screen, and the system asks: Pixel keeps stopping (Close app, App info): answer it with alert',
+    );
+    expect((await call('open_link', { url: 'app://screen', read: 'none' })).data.done).toBe(
+      'opened app://screen',
+    );
+  });
+
   it('answers a localized permission prompt by allow, and leaves the app’s dialog alone', async () => {
     const d = new FakeDevice();
     d.permissionUp = true;

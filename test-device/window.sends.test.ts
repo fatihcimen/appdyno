@@ -84,11 +84,14 @@ describe.runIf(devices.length > 0).each(devices)("a window's Links pane on %s", 
     async () => {
       expect(await openFromPane('appdyno-fixture://open/form', FIRST_MS)).toMatchObject({
         ok: true,
-        text: 'Opened appdyno-fixture://open/form',
+        // a simulator asks before an app's scheme first opens it, and until then nothing has opened
+        text: expect.stringMatching(
+          /^Opened appdyno-fixture:\/\/open\/form$|^Sent appdyno-fixture:\/\/open\/form, and the system asks: .+ \(Cancel, Open\): answer it with alert$/,
+        ),
         recent: expect.arrayContaining(['appdyno-fixture://open/form']),
       });
       await until('the form', async () => {
-        // a simulator asks before an app's scheme first opens it: a person presses Open in the window
+        // a person presses Open in the window
         if (device instanceof IosSimulatorDevice) await device.target(HOME);
         const open = (await device.tree()).nodes.find(
           (n) => n.c.endsWith('Button') && (n.t ?? n.d) === 'Open',
