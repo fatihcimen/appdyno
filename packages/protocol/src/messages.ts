@@ -354,6 +354,11 @@ export const METHODS = {
   },
   /** Android: until a running window transition has ended (an answer can come before that). */
   'rest.wait': { params: z.object({}), result: z.object({}) },
+  /** Android: the whole device's languages as tags, set first when `set` is given: the system keeps them through a reboot. */
+  locales: {
+    params: z.object({ set: z.string().min(2).max(200).optional() }),
+    result: z.object({ tags: z.string() }),
+  },
   /** Android: the device's animation scales off, back when the last host leaves. */
   'animations.set': { params: z.object({ off: z.boolean() }), result: z.object({}) },
   /** Android: one phase of a person's touch, in fractions of the screen, with no settle. */

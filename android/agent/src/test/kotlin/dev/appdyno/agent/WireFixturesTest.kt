@@ -120,6 +120,8 @@ class WireFixturesTest {
         assertEquals(1, OneValue.rotation(params("orientation.set")))
         assertEquals(60, OneValue.maxNodes(params("a11y.read")))
         assertEquals(7, OneValue.id(params("cancel")))
+        assertEquals("tr-TR,en-US", OneValue.tags(params("locales")))
+        assertNull(OneValue.tags(JSONObject()))
     }
 
     @Test

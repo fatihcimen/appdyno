@@ -47,26 +47,26 @@ its module and `configuration` as its variant. `device_setting` holds `dark_mode
 
 What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 
-| what                         | Android                    | simulator                    | iPhone                         |
-| ---------------------------- | -------------------------- | ---------------------------- | ------------------------------ |
-| volume buttons               | yes                        | yes (no way to read back)    | the runner                     |
-| clear an app's data          | `pm clear`                 | empties its container        | no: uninstall and install      |
-| reads with no signing        | no need                    | no need                      | `inspector`: words and ids     |
-| download, replace app data   | debuggable builds          | yes                          | development-signed apps        |
-| grant, revoke a permission   | `pm grant`, `pm revoke`    | `simctl privacy`             | no: answer with `alert`        |
-| launch environment           | no: args are intent extras | yes                          | yes                            |
-| dark mode, text, motion      | yes                        | yes                          | `devicectl`                    |
-| animations                   | yes                        | no: use `reduce_motion`      | no                             |
-| locale                       | per app, API 33+           | whole simulator              | no                             |
-| slow network                 | emulator only              | no                           | no                             |
-| push                         | a shell notification       | to the app                   | no: needs Apple credentials    |
-| biometrics                   | an emulator's fingerprint  | yes                          | no: `devicectl` simulates none |
-| airplane, Wi-Fi, mobile data | yes, read back             | no: it has the Mac's network | no                             |
-| keychain                     | no: Android has none       | emptied, counted             | no                             |
-| fold pose                    | a foldable emulator        | no: `simctl` has none        | no                             |
-| incoming call, SMS           | emulator only              | no: no telephony             | no                             |
-| battery level                | yes                        | no: it only draws one        | no                             |
-| proxy                        | yes, put back              | follows the Mac's            | no: its Wi-Fi settings         |
+| what                         | Android                              | simulator                    | iPhone                         |
+| ---------------------------- | ------------------------------------ | ---------------------------- | ------------------------------ |
+| volume buttons               | yes                                  | yes (no way to read back)    | the runner                     |
+| clear an app's data          | `pm clear`                           | empties its container        | no: uninstall and install      |
+| reads with no signing        | no need                              | no need                      | `inspector`: words and ids     |
+| download, replace app data   | debuggable builds                    | yes                          | development-signed apps        |
+| grant, revoke a permission   | `pm grant`, `pm revoke`              | `simctl privacy`             | no: answer with `alert`        |
+| launch environment           | no: args are intent extras           | yes                          | yes                            |
+| dark mode, text, motion      | yes                                  | yes                          | `devicectl`                    |
+| animations                   | yes                                  | no: use `reduce_motion`      | no                             |
+| locale                       | per app, API 33+; whole device below | whole simulator              | no                             |
+| slow network                 | emulator only                        | no                           | no                             |
+| push                         | a shell notification                 | to the app                   | no: needs Apple credentials    |
+| biometrics                   | an emulator's fingerprint            | yes                          | no: `devicectl` simulates none |
+| airplane, Wi-Fi, mobile data | yes, read back                       | no: it has the Mac's network | no                             |
+| keychain                     | no: Android has none                 | emptied, counted             | no                             |
+| fold pose                    | a foldable emulator                  | no: `simctl` has none        | no                             |
+| incoming call, SMS           | emulator only                        | no: no telephony             | no                             |
+| battery level                | yes                                  | no: it only draws one        | no                             |
+| proxy                        | yes, put back                        | follows the Mac's            | no: its Wi-Fi settings         |
 
 ## Radios, biometrics and the keychain
 
@@ -77,6 +77,10 @@ A radio is done when the device reads as asked, within 10 s: Wi-Fi by the state 
 On an iPhone `devicectl device simulate biometrics` answers `Device does not support any biometric simulation, nothing to do` and exits 0, so it is not used: an answer would say done for a touch that never happened. That is one iPhone with no face enrolled, and no phone has been seen to take one.
 
 `keychain` `reset` empties a simulator's keychain, and says how many items apps held, from the store's own rows, which also prove it empty after. The system's own rows stay and are not counted. It is one-shot: nothing brings them back.
+
+## Languages
+
+`locale` on Android is an app's own from API 33, given the app or with one selected, by `cmd locale`. Below API 33, where apps have none, it is the whole device's, set by the agent as Settings sets it: Android keeps it in `persist.sys.locale`, so the old value is written down first and put back. A device that had never chosen one keeps the old language as chosen after. Run on an API 30 emulator, where Settings read Turkish after `tr-TR` and English after `restore`.
 
 ## Putting a device back
 

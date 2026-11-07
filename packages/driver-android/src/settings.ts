@@ -1,6 +1,7 @@
 import { type DeviceSettings, sleep, TIMEOUTS, type SettingName } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
-import { type Adb, assertPkg, shq } from './adb.js';
+import { type Adb, shq } from './adb.js';
+import { AndroidLocale } from './locale.js';
 
 const ANIMATION_SCALES = [
   'window_animation_scale',
@@ -12,15 +13,6 @@ const ANIMATION_SCALES = [
 const HIGH_CONTRAST = 'high_text_contrast_enabled';
 const NO_TRANSPARENCY =
   'Android has no reduce_transparency switch: its blurs are a developer option';
-
-const localeApp = (app: string | undefined) => {
-  if (!app)
-    throw new DeviceError(
-      'INVALID_ARGUMENT',
-      'on Android the locale is per app (API 33+): give app; the whole device has no shell switch',
-    );
-  return assertPkg(app);
-};
 
 /**
  * What an energy reading changes for its time: the count since the last charge kept from resetting, which an unplug at
@@ -69,9 +61,15 @@ export class AndroidSettings implements DeviceSettings {
     private readonly serial: string,
     /** The session's animations-off option lets go: the agent puts the scales back and holds nothing. */
     private readonly releaseAnimations: () => Promise<void> = async () => undefined,
-  ) {}
+    /** The whole device's languages, by the agent, set first when given. */
+    deviceLocales: (set?: string) => Promise<string> = () =>
+      Promise.reject(new DeviceError('UNSUPPORTED', 'no agent to reach the device languages')),
+  ) {
+    this.locale = new AndroidLocale(this.sh, deviceLocales);
+  }
 
   private sh = (c: string) => shellOf(this.adb, this.serial)(c);
+  private readonly locale: AndroidLocale;
 
   private emu = (what: string, ...words: string[]) =>
     emulatorConsole(this.adb, this.serial, what, words);
@@ -121,10 +119,8 @@ export class AndroidSettings implements DeviceSettings {
       }
       case 'reduce_transparency':
         throw new DeviceError('UNSUPPORTED', NO_TRANSPARENCY);
-      case 'locale': {
-        const out = await this.sh(`cmd locale get-app-locales ${localeApp(app)}`);
-        return /are \[([^\]]*)\]/.exec(out)?.[1] ?? '';
-      }
+      case 'locale':
+        return this.locale.get(app);
       case 'network':
         await this.emu('network shaping', 'network', 'status');
         return 'full';
@@ -265,17 +261,9 @@ export class AndroidSettings implements DeviceSettings {
         return;
       case 'reduce_transparency':
         throw new DeviceError('UNSUPPORTED', NO_TRANSPARENCY);
-      case 'locale': {
-        const out = await this.sh(
-          `cmd locale set-app-locales ${localeApp(app)} --locales ${shq(value)}`,
-        );
-        if (/Unknown|Exception|Error/.test(out))
-          throw new DeviceError(
-            'UNSUPPORTED',
-            `this Android cannot set an app's locale: ${out.trim().split('\n')[0]}`,
-          );
+      case 'locale':
+        await this.locale.set(value, app);
         return;
-      }
       case 'network': {
         if (!/^\w+$/.test(value))
           throw new DeviceError(

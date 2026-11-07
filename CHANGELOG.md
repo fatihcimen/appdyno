@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `locale` on Android below API 33 sets the whole device's language, by the agent as Settings does, where it was refused: apps have no language of their own there. Android keeps it through a reboot, so the old one is written down and put back. Run on an API 30 emulator, where Settings read Turkish, then English after `restore`.
 - `biometric enroll` on an emulator with no fingerprint takes one by itself: it sets the screen lock to PIN 1234, written down first, goes through Settings' enrolment and touches the sensor. `restore` takes the PIN off, and Android deletes the fingerprints with it. A real phone, and an emulator with a lock of its own, are refused with why. Run on an API 34 emulator.
 - `scripts/speed.mjs` prints the speed table from a simulator's Settings, so anyone can check it.
 - The app is signed with one Developer ID and the hardened runtime, and is notarized when credentials are given. A release refuses to be anything less.

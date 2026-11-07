@@ -136,6 +136,7 @@
   "a11y.read": { "method": "a11y.read", "input": {}, "params": { "maxNodes": 60 } },
   "rest.wait": { "method": "rest.wait", "params": {} },
   "animations.set": { "method": "animations.set", "params": { "off": true } },
+  "locales": { "method": "locales", "params": { "set": "tr-TR,en-US" } },
   "touch": {
     "method": "touch",
     "params": { "p": 1, "x": 0.5, "y": 0.25, "x2": 0.75, "y2": 0.125 }

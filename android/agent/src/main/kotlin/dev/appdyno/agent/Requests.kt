@@ -122,6 +122,9 @@ object OneValue {
     fun maxNodes(p: JSONObject) = p.getInt("maxNodes")
 
     fun id(p: JSONObject) = p.getInt("id")
+
+    /** Language tags to set, if any. */
+    fun tags(p: JSONObject): String? = p.optString("set").takeIf { it.isNotEmpty() }
 }
 
 private fun JSONObject.x() = getDouble("x").toFloat()

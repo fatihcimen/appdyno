@@ -125,6 +125,23 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
     expect([counts(), unlocked()]).toEqual(['0', true]);
   });
 
+  it('sets the whole device in Turkish below API 33, which Settings reads, and puts it back', async (t) => {
+    if (Number(adb('getprop', 'ro.build.version.sdk')) >= 33) t.skip();
+    const was = await value(call, 'locale');
+    expect(was).toMatch(/^en/);
+    await set(call, 'locale', 'tr-TR');
+    expect([await value(call, 'locale'), adb('getprop', 'persist.sys.locale')]).toEqual([
+      'tr-TR',
+      'tr-TR',
+    ]);
+    await call('open_link', { settings: 'general' });
+    expect((await call('wait_for', { text: 'Ayarlar', timeoutMs: 8_000 })).data.met).toBe(true);
+    const back = await call('device_setting', { name: 'restore' });
+    expect(back.text).toContain(`locale: ${was}`);
+    expect(adb('getprop', 'persist.sys.locale')).toBe(was);
+    await call('press_key', { key: 'home' });
+  });
+
   it('says Android has no keychain', async () => {
     const r = await call('device_setting', { name: 'keychain', value: 'reset' });
     expect(r.data.code).toBe('UNSUPPORTED');
