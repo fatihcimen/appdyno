@@ -174,7 +174,8 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
         case 'revoke': {
           const pkg = appOf(s, app);
           if (!service) throw new ToolError(`${action} needs service`, 'INVALID_ARGUMENT');
-          if (action === 'revoke') await approve(policy, s, 'app revoke', pkg, service);
+          if (action === 'revoke' || apps.grantResets)
+            await approve(policy, s, `app ${action}`, pkg, service);
           await apps.permission(pkg, action === 'grant', service);
           return done(`${action === 'grant' ? 'granted' : 'revoked'} ${service} for ${pkg}`);
         }

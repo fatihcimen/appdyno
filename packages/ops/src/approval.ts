@@ -21,6 +21,10 @@ export const DATA_LOSS = {
     `Revoke ${service} from ${app}`,
     'The permission it was given is lost until it is granted again',
   ],
+  'app grant': (app: string, service = '') => [
+    `Grant ${service} to ${app}, which here resets it to ask`,
+    'The answer the person gave is lost, and the app asks again',
+  ],
   'device_setting keychain': () => [
     'Empty the keychain',
     'Every item apps keep in it is lost for good',
@@ -28,6 +32,14 @@ export const DATA_LOSS = {
 } satisfies Record<string, (app: string, also?: string) => [string, string]>;
 
 export type DataLoss = keyof typeof DATA_LOSS;
+
+/** What loses data only on some devices, and on which: a driver says so of its own. */
+const ONLY: Partial<Record<DataLoss, string>> = { 'app grant': 'on an iPhone' };
+
+/** Each, as the server's instructions name them. */
+export const DATA_LOSS_WORDS = Object.keys(DATA_LOSS)
+  .map((k) => [k, ONLY[k as DataLoss]].filter(Boolean).join(' '))
+  .join(', ');
 
 const ALLOW =
   "a person allows it in this server's own command line: --allow-data-loss virtual for simulators and emulators, all for every device (APPDYNO_ALLOW_DATA_LOSS); on the command line, --yes";

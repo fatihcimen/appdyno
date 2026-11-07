@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { DATA_LOSS, DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
+import { DATA_LOSS, DATA_LOSS_WORDS, DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { expect, it } from 'vitest';
 import { INSTRUCTIONS } from '../src/brand.js';
 import { createServer } from '../src/server.js';
@@ -66,7 +66,8 @@ it('names in the docs and in its instructions each action that asks the person f
   const section = doc.slice(start, doc.indexOf('\n## ', start + 1));
   const listed = [...section.matchAll(/^- `([a-z_]+ [a-z_]+)`:/gm)].map((m) => m[1]);
   expect(listed.sort()).toEqual(Object.keys(DATA_LOSS).sort());
-  expect(INSTRUCTIONS).toContain(`${Object.keys(DATA_LOSS).join(', ')} ask the person first.`);
+  expect(INSTRUCTIONS).toContain(`${DATA_LOSS_WORDS} ask the person first.`);
+  expect(DATA_LOSS_WORDS).toContain('app revoke, app grant on an iPhone, device_setting keychain');
 });
 
 it('keeps the tool catalog within its budget', async () => {

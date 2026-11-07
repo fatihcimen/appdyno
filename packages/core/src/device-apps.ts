@@ -11,6 +11,8 @@ export type BuildRequest = { project: string; scheme?: string; configuration?: s
 export interface AppManager {
   /** A launch's language stays with the app, as a condition to put back; else it lasts that launch. */
   readonly languageStays?: boolean;
+  /** A grant resets the permission to ask, as a revoke does, and so takes away the answer the person gave. */
+  readonly grantResets?: boolean;
   /** Installs the file; what it answered on the device along the way, for the caller to keep in its answer. */
   install(path: string): Promise<string[]>;
   /** Builds a project for this device and installs it; the app's id. */

@@ -45,12 +45,14 @@ its module and `configuration` as its variant. `device_setting` holds `dark_mode
 
 ## What asks the person first
 
-These lose what a person may want, so each waits for the person's yes, on every platform:
+These lose what a person may want, so each waits for the person's yes:
 
 - `app uninstall`: the app and all it keeps on the device
 - `app clear`: all the app keeps
 - `app replace_data`: all the app keeps now
 - `app revoke`: a permission the app was given
+- `app grant`: on an iPhone only, whose grant resets the permission to ask: the answer the person gave. A simulator's
+  and Android's lose nothing and ask nothing
 - `device_setting keychain`: every item apps keep in the keychain
 
 The server asks by the client's own prompt, MCP elicitation, where the client declared it at `initialize`, and names the

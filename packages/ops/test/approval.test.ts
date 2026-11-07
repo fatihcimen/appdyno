@@ -15,12 +15,15 @@ import { linkedClient } from './helpers.js';
 
 const folder = mkdtempSync(join(tmpdir(), 'appdyno-approval-'));
 
-/** Each action that loses data, its call, and what the driver is asked to do by it. */
-const GATED: [DataLoss, string, Record<string, unknown>, string][] = [
+type Kind = { grantResets?: boolean };
+
+/** Each action that loses data, its call, what the driver is asked to do by it, and the device it loses data on. */
+const GATED: [DataLoss, string, Record<string, unknown>, string, Kind?][] = [
   ['app uninstall', 'app', { action: 'uninstall' }, 'uninstall'],
   ['app clear', 'app', { action: 'clear' }, 'clear'],
   ['app replace_data', 'app', { action: 'replace_data', path: folder }, 'replace'],
   ['app revoke', 'app', { action: 'revoke', service: 'camera' }, 'revoke'],
+  ['app grant', 'app', { action: 'grant', service: 'camera' }, 'grant', { grantResets: true }],
   ['device_setting keychain', 'device_setting', { name: 'keychain', value: 'reset' }, 'keychain'],
 ];
 
@@ -30,7 +33,7 @@ beforeEach(() => {
 
 /** A device whose drivers only write down what they were asked; a client that answers each question as `answer` says. */
 async function on(
-  o: { virtual?: boolean; policy?: Partial<Policy>; answer?: ElicitResult['action'] } = {},
+  o: Kind & { virtual?: boolean; policy?: Partial<Policy>; answer?: ElicitResult['action'] } = {},
 ) {
   const done: string[] = [];
   const asked: string[] = [];
@@ -38,6 +41,7 @@ async function on(
   const device = Object.assign(new FakeDevice(), {
     virtual: o.virtual ?? true,
     apps: {
+      grantResets: o.grantResets,
       uninstall: record('uninstall'),
       clearData: record('clear'),
       replaceData: record('replace'),
@@ -79,21 +83,21 @@ describe('what loses data', () => {
     expect(GATED.map(([action]) => action).sort()).toEqual(Object.keys(DATA_LOSS).sort());
   });
 
-  describe.each(GATED)('%s', (action, tool, args, driver) => {
+  describe.each(GATED)('%s', (action, tool, args, driver, kind = {}) => {
     it("goes ahead on the person's yes, asked with the device, the app and what is lost", async () => {
-      const { call, done, asked, serial } = await on({ answer: 'accept' });
+      const { call, done, asked, serial } = await on({ ...kind, answer: 'accept' });
       const r = await call(tool, args);
       expect(r.error ? r.text : '').toBe('');
       expect(done).toEqual([driver]);
       expect(asked).toHaveLength(1);
       expect(asked[0]).toContain(serial);
-      expect(asked[0]).toMatch(/\? .* lost /);
+      expect(asked[0]).toMatch(/\? .* lost\b/);
       if (tool === 'app') expect(asked[0]).toContain('dev.app');
     });
 
     it('does nothing on a no or a closed prompt, and says the person declined', async () => {
       for (const answer of ['decline', 'cancel'] as const) {
-        const { call, done, asked } = await on({ answer });
+        const { call, done, asked } = await on({ ...kind, answer });
         const r = await call(tool, args);
         expect(r.error).toBe(true);
         expect(r.code).toBe('PERMISSION_REQUIRED');
@@ -107,7 +111,7 @@ describe('what loses data', () => {
 
     it('is refused where the client cannot ask and no flag allows it, saying how a person allows it', async () => {
       for (const o of [{}, { virtual: false, policy: { allowDataLoss: 'virtual' as const } }]) {
-        const { call, done } = await on(o);
+        const { call, done } = await on({ ...kind, ...o });
         const r = await call(tool, args);
         expect(r.error).toBe(true);
         expect(r.code).toBe('PERMISSION_REQUIRED');
@@ -124,7 +128,7 @@ describe('what loses data', () => {
         { virtual: true, policy: { allowDataLoss: 'virtual' as const } },
         { virtual: false, policy: { allowDataLoss: 'all' as const } },
       ]) {
-        const { call, done, asked } = await on({ ...o, answer: 'decline' });
+        const { call, done, asked } = await on({ ...kind, ...o, answer: 'decline' });
         const r = await call(tool, args);
         expect(r.error ? r.text : '').toBe('');
         expect(done).toEqual([driver]);
@@ -145,7 +149,7 @@ describe('what loses data', () => {
     expect(done).toEqual([]);
   });
 
-  it('asks nothing of what loses nothing', async () => {
+  it("asks nothing of a grant that loses nothing, as a simulator's and Android's", async () => {
     const { call, done, asked } = await on({ answer: 'decline' });
     expect((await call('app', { action: 'grant', service: 'camera' })).error).toBe(false);
     expect(done).toEqual(['grant']);

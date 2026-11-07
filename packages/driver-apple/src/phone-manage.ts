@@ -42,6 +42,8 @@ const DATA_MS = 600_000;
 
 export class PhoneApps implements AppManager {
   readonly languageStays = true;
+  // the system's reset of an authorization is the only way a grant is made here
+  readonly grantResets = true;
 
   constructor(private readonly ctl: Devicectl) {}
 

@@ -79,6 +79,13 @@ describe('an iOS app data', () => {
   });
 });
 
+describe('a grant', () => {
+  it("resets to ask on a phone, and so takes the person's answer away, and on a simulator does not", () => {
+    expect(new PhoneApps({ udid: UDID } as unknown as Devicectl).grantResets).toBe(true);
+    expect('grantResets' in new SimulatorApps({} as Simctl, UDID)).toBe(false);
+  });
+});
+
 describe('a launch on a phone', () => {
   it("keeps the app's arguments from the tool's own, as a dash would be taken for one", async () => {
     let args: string[] = [];
