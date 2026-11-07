@@ -116,17 +116,19 @@ describe('the viewer, compiled by its first-use path', () => {
   it('kept behind, it is one the system can never put in front, whoever started it', async () => {
     const viewer = spawn(binary, ['--hub', '--behind'], { stdio: ['pipe', 'ignore', 'ignore'] });
     try {
-      let kind = '';
-      for (let i = 0; i < 100 && !kind.includes('type='); i++) {
+      let kind: string | undefined;
+      for (let i = 0; i < 100 && !kind; i++) {
         await new Promise((r) => setTimeout(r, 100));
-        ({ stdout: kind } = await run('lsappinfo', [
+        const { stdout } = await run('lsappinfo', [
           'info',
           '-only',
           'ApplicationType',
           String(viewer.pid),
-        ]));
+        ]);
+        // up to macOS 26 the field alone, "ApplicationType"="…"; from 27 the whole record, with type="…"
+        kind = /(?:"ApplicationType"|\btype)="(\w+)"/.exec(stdout)?.[1];
       }
-      expect(kind).toContain('type="BackgroundOnly"');
+      expect(kind).toBe('BackgroundOnly');
     } finally {
       viewer.kill();
     }
