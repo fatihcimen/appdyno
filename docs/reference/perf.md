@@ -574,6 +574,23 @@ hangs and a launch of Settings; a cost-known check of them needs an app signed f
 
 ## Speed
 
+Run this yourself: `node scripts/speed.mjs <simulator id>` prints the table below, from the system Settings app, so it needs no app of yours. `pnpm build` first.
+
+| call                                    | median, ms | range, ms | answer, characters |
+| --------------------------------------- | ---------- | --------- | ------------------ |
+| `screen`                                | 50         | 35-58     | 518                |
+| `tap` by coordinate, `read: none`       | 67         | 58-284    | 14                 |
+| `tap` by ref, `read: none`              | 65         | 60-69     | 26                 |
+| `tap` by selector, `read: none`         | 98         | 92-105    | 20                 |
+| `tap` by selector, waits for the screen | 858        | 841-884   | 1,092              |
+| `tap` by ref, waits for the screen      | 822        | 814-836   | 1,098              |
+
+An iPhone 17 Pro simulator with iOS 27.2, on an M5 Pro with 15 cores and macOS 27.0.1, 2026-11-07, appdyno 0.6.0, through MCP over stdio, with no runner up. Host load 6-13. 12 rounds a tap and 60 reads. Each tap opens General, About, and the next read has to find "Model" there, so a tap that landed nowhere stops the run.
+
+A tap with `read: none` answers once the touch has gone, and proves nothing by itself. A tap with no `read` waits for the screen to settle and answers with what changed, which is the proof, and costs the 200 ms window and the app's own animation. A selector costs a read of the screen first. A number is relative to this Mac at this load.
+
+The tables below ran on 2026-11-03 by a harness that is not in this repository, so they cannot be run again as they stand.
+
 Measured, not claimed: the Settings scenario, on one boot, three runs of 10 rounds, which also read each answer's positions against a read 1.5 s later. Medians in ms, p50 / p90. A number is relative to this Mac at this load.
 
 **Android 14 emulator** (`sdk_gphone64_arm64`), 2026-11-03, appdyno 0.6.0, host load 10-11 on 15 cores, device load 1-2:
