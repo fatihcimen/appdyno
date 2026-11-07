@@ -87,7 +87,9 @@ export class IosSimulatorDevice extends IosDevice {
     this.direct = direct ?? new DirectSim(serial);
     this.apps = new SimulatorApps(simctl, serial);
     this.settings = new SimulatorSettings(simctl, serial);
-    this.events = new SimulatorEvents(simctl, serial);
+    this.events = new SimulatorEvents(simctl, serial, () =>
+      this.foreground().catch(() => undefined),
+    );
     this.recorder = simulatorRecorder(serial);
     this.mirror = new SimulatorMirror(serial, simctl);
     this.network = new SimulatorNetwork(simctl, serial);

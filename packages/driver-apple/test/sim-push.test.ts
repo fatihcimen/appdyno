@@ -20,23 +20,37 @@ describe('a push to a simulator', () => {
     );
   });
 
-  it('goes by simctl to the app, and says what reached its code', async () => {
+  it('goes by simctl to the app, and says what reached its code from where the app was', async () => {
     let sent: unknown;
+    let running = true;
     const simctl = {
       exec: async (args: string[]) => {
         sent = [args.slice(0, 3), JSON.parse(readFileSync(args[3]!, 'utf8'))];
         return '';
       },
+      pid: async () => {
+        if (!running) throw new Error('not running');
+        return 7;
+      },
     } as unknown as Simctl;
-    const said = await simulatorPush(simctl, 'U', 'dev.app', { type: 'alert', title: 'T' });
-    expect(said).toBe('pushed to dev.app by simctl: its code gets it as a remote notification');
+    const push = (front?: string) =>
+      simulatorPush(simctl, 'U', 'dev.app', { type: 'alert', title: 'T' }, async () => front);
+    expect(await push('dev.app')).toBe(
+      'pushed to dev.app by simctl: it is in front, and its code gets it as a remote notification',
+    );
     expect(sent).toEqual([
       ['push', 'U', 'dev.app'],
       { aps: { alert: { title: 'T' }, sound: 'default' } },
     ]);
+    expect(await push('com.apple.springboard')).toContain(
+      'it is in the background, so the push is only shown: its code gets it when the banner is tapped',
+    );
+    expect(await push()).toContain('(what is in front could not be read)');
+    running = false;
+    expect(await push()).toContain('it is not running, so the push is only shown');
     sent = undefined;
     await expect(
-      simulatorPush(simctl, 'U', 'dev.app', { type: 'rich', title: 'T' }),
+      simulatorPush(simctl, 'U', 'dev.app', { type: 'rich', title: 'T' }, async () => undefined),
     ).rejects.toThrow('runs no Notification Service Extension');
     expect(sent).toBeUndefined();
   });

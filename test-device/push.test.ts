@@ -110,7 +110,7 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
     await call('wait_for', { text: 'Would Like to Send You Notifications', timeoutMs: 5_000 });
     await call('alert', { answer: 'allow' });
     const alert = await call('push', { type: 'alert', title: 'Order 42', data: { order: '42' } });
-    expect(alert.text).toMatch(/^pushed to dev\.appdyno\.fixture by simctl/);
+    expect(alert.text).toMatch(/^pushed to dev\.appdyno\.fixture by simctl: it is in front/);
     await call('wait_for', { text: 'alert Order 42: order=42', timeoutMs: 8_000 });
     expect(await last()).toBe('alert Order 42: order=42');
     // APNs' own payload, with a badge, a sound and a category of actions
@@ -124,6 +124,26 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
     // the simulator takes no push with nothing to see
     const quiet = await call('push', { type: 'background', data: { sync: '7' } });
     expect(quiet.text).toContain('simctl takes no push with nothing to see');
+  });
+
+  it('says a push to an app in the background or not running is only shown, and its code got nothing', async () => {
+    const home = async () =>
+      (await call('press_key', { key: 'home' })).text.includes('foreground: com.apple.springboard');
+    // the banner of the push before may be over the app, and takes the first press
+    if (!(await home())) expect(await home()).toBe(true);
+    const back = await call('push', { type: 'alert', title: 'Back', data: { order: '8' } });
+    expect(back.text).toMatch(
+      /^pushed to dev\.appdyno\.fixture by simctl: it is in the background/,
+    );
+    // brought back as it was, not by the banner: its code still has the push before
+    await call('launch_app');
+    expect(await last()).toBe('alert Raw: order=7');
+    await call('terminate_app');
+    const off = await call('push', { type: 'alert', title: 'Off' });
+    expect(off.text).toMatch(/^pushed to dev\.appdyno\.fixture by simctl: it is not running/);
+    await call('launch_app');
+    await call('open_link', { url: 'appdyno-fixture://open/push' });
+    expect(await last()).toBe('none');
   });
 
   it('refuses a payload with no aps, an Android style, and an extension simctl never runs', async () => {

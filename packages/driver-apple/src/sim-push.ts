@@ -42,23 +42,51 @@ export const SIMULATOR_PUSHES: PushRoute[] = PUSH_TYPES.map((type) =>
   type === 'alert'
     ? {
         type,
-        route: "simctl push: the app's code gets it as a remote notification",
+        route:
+          "simctl push: the app's code gets it as a remote notification while the app is in front, else when its banner is tapped",
         fields: ['title', 'body', 'data'],
         template: JSON.stringify(apnsPayload({ ...PUSH_PLACEHOLDERS, type })),
       }
     : { type, why: CANNOT[type]! },
 );
 
-/** An alert to a simulator's app, which its code receives as from APNs. */
-export async function simulatorPush(simctl: Simctl, udid: string, app: string, push: Push) {
+/**
+ * What reached the app's code, by where it was at the push. In the background even `content-available` woke nothing:
+ * seen on iOS 27.2, the code got neither until the banner was tapped.
+ */
+const REACHED = {
+  front: 'it is in front, and its code gets it as a remote notification',
+  back: 'it is in the background, so the push is only shown: its code gets it when the banner is tapped',
+  off: 'it is not running, so the push is only shown: a tap on the banner launches it with the push',
+  unknown:
+    'its code gets it now if it is in front, else when the banner is tapped (what is in front could not be read)',
+};
+
+/** An alert to a simulator's app, as from APNs; `front` is the app in front, if it can be read. */
+export async function simulatorPush(
+  simctl: Simctl,
+  udid: string,
+  app: string,
+  push: Push,
+  front: () => Promise<string | undefined>,
+) {
   if (push.type !== 'alert') throw new DeviceError('UNSUPPORTED', CANNOT[push.type] ?? push.type);
+  const payload = JSON.stringify(apnsPayload(push));
+  const shown = await front();
+  const at: keyof typeof REACHED =
+    shown === app
+      ? 'front'
+      : await simctl.pid(udid, app).then(
+          () => (shown ? 'back' : 'unknown'),
+          () => 'off',
+        );
   const dir = mkdtempSync(join(tmpdir(), 'appdyno-push-'));
   try {
     const file = join(dir, 'push.apns');
-    writeFileSync(file, JSON.stringify(apnsPayload(push)));
+    writeFileSync(file, payload);
     await simctl.exec(['push', udid, assertBundle(app), file]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
-  return `pushed to ${app} by simctl: its code gets it as a remote notification`;
+  return `pushed to ${app} by simctl: ${REACHED[at]}`;
 }

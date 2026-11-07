@@ -312,6 +312,8 @@ export class SimulatorEvents implements DeviceEvents {
   constructor(
     private readonly simctl: Simctl,
     private readonly udid: string,
+    /** The app in front, if it can be read: what a push reaches depends on it. */
+    private readonly front: () => Promise<string | undefined>,
   ) {}
 
   private spawn = (...words: string[]) => this.simctl.exec(['spawn', this.udid, ...words]);
@@ -321,7 +323,7 @@ export class SimulatorEvents implements DeviceEvents {
   }
 
   push(app: string, push: Push) {
-    return simulatorPush(this.simctl, this.udid, app, push);
+    return simulatorPush(this.simctl, this.udid, app, push, this.front);
   }
 
   /** Enrols if needed and answers the next biometric request: Face ID and Touch ID, whichever it has. */
