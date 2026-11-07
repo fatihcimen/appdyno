@@ -184,7 +184,9 @@ async function run(s, warmUp) {
   );
   await call('`wait_for` an element on the screen', 'wait_for', { text: 'Send' }, 'found');
   await call('`screenshot`', 'screenshot', {}, (r) => r.content.some((c) => c.type === 'image'));
-  await call('`logs`, 20 lines', 'logs', { maxLines: 20 }, 'lines of');
+  // one line, or none, is a log read too
+  const read = (r) => typeof r.structuredContent?.lines === 'number';
+  await call('`logs`, 20 lines', 'logs', { maxLines: 20 }, read);
 }
 
 const median = (values) => {
