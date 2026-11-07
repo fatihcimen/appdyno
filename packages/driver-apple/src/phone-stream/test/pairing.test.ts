@@ -295,6 +295,21 @@ describe('the tunnel by the network', () => {
     await expect(pskTls(await socketTo(), Buffer.alloc(32, 1))).rejects.toThrow();
     server.close();
   });
+
+  it('takes no suite that leaves what it carries in the clear', async () => {
+    const key = Buffer.alloc(32, 9);
+    const server = createTls(
+      { ciphers: 'PSK-NULL-SHA256:PSK-NULL-SHA:@SECLEVEL=0', pskCallback: () => key },
+      (s) => void s.end('in'),
+    );
+    server.on('tlsClientError', () => undefined);
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+    const socket = new Socket();
+    const { port } = server.address() as { port: number };
+    await new Promise<void>((r) => socket.connect(port, '127.0.0.1', r));
+    await expect(pskTls(socket, key)).rejects.toThrow();
+    server.close();
+  });
 });
 
 describe('a port on the phone by the network', () => {

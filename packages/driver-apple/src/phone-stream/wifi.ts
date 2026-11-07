@@ -158,7 +158,8 @@ export const pskTls = (socket: Socket, key: Buffer) =>
   new Promise<TLSSocket>((resolve, reject) => {
     const t = tlsConnect({
       socket,
-      ciphers: 'PSK:@SECLEVEL=0',
+      // the phone's suites are old ones, and one that encrypts nothing is not taken
+      ciphers: 'PSK:!eNULL:@SECLEVEL=0',
       maxVersion: 'TLSv1.2',
       pskCallback: () => ({ psk: key, identity: '' }),
       checkServerIdentity: () => undefined,
