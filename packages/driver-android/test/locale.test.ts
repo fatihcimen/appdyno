@@ -44,6 +44,17 @@ describe('a locale', () => {
     }
   });
 
+  it('says it took the whole device, reads an old code back by its new name, and takes extensions', async () => {
+    const legacy = on(30, 'en-US', 'he');
+    expect(await legacy.locale.set('iw', 'com.example')).toBe(
+      'the whole device: below Android 13 an app has no language of its own',
+    );
+    expect(legacy.agent).toEqual(['he']);
+    const extended = on(30);
+    expect(await extended.locale.set('th-TH-u-nu-thai')).toBe('the whole device');
+    expect(extended.agent).toEqual(['th-TH-u-nu-thai']);
+  });
+
   it('refuses what is no language, and a device that reads another', async () => {
     const bad = on(30);
     await expect(bad.locale.set('tr TR; reboot')).rejects.toThrow('a language such as tr-TR');

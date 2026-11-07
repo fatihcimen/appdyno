@@ -3,7 +3,15 @@ import { assertPkg, shq } from './adb.js';
 
 /** Where an app has languages of its own, by `cmd locale`. */
 const PER_APP_SDK = 33;
-const TAGS = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*(,[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*)*$/;
+
+/** Tags as BCP 47 has them, so that an old code (`iw`) is the one Android reads back (`he`); undefined if one is none. */
+function canonical(tags: string) {
+  try {
+    return Intl.getCanonicalLocales(tags.split(',')).join(',');
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * An app's languages from API 33, given the app; else the whole device's, by the agent, as Settings sets them. The
@@ -31,7 +39,8 @@ export class AndroidLocale {
     return /are \[([^\]]*)\]/.exec(out)?.[1] ?? '';
   }
 
-  async set(value: string, app?: string) {
+  /** What the answer says: the whole device, where the app was meant and Android has no language of its own for it. */
+  async set(value: string, app?: string): Promise<string | void> {
     const pkg = await this.perApp(app);
     if (pkg) {
       const out = await this.sh(`cmd locale set-app-locales ${pkg} --locales ${shq(value)}`);
@@ -42,14 +51,18 @@ export class AndroidLocale {
         );
       return;
     }
-    if (!TAGS.test(value))
+    const asked = canonical(value);
+    if (!asked)
       throw new DeviceError('INVALID_ARGUMENT', `locale: a language such as tr-TR, not ${value}`);
-    const now = await this.device(value);
-    const first = (tags: string) => tags.split(',')[0]!.toLowerCase();
-    if (first(now) !== first(value))
+    const now = await this.device(asked);
+    const first = (tags: string) => (canonical(tags) ?? tags).split(',')[0]!.toLowerCase();
+    if (first(now) !== first(asked))
       throw new DeviceError(
         'UNSUPPORTED',
         `asked for the locale ${value} and the device reads ${now}`,
       );
+    return app
+      ? 'the whole device: below Android 13 an app has no language of its own'
+      : 'the whole device';
   }
 }

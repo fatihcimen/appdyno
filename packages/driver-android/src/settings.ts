@@ -290,8 +290,7 @@ export class AndroidSettings implements DeviceSettings {
       case 'reduce_transparency':
         throw new DeviceError('UNSUPPORTED', NO_TRANSPARENCY);
       case 'locale':
-        await this.locale.set(value, app);
-        return;
+        return this.locale.set(value, app);
       case 'network':
         return this.shaping.set(value);
       case 'proxy':

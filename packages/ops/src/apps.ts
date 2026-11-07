@@ -125,9 +125,12 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
           return afterChange(s, `launched ${pkg}`, read, true);
         }
         const { apps } = s.device;
-        if (apps.languageStays) await setCondition(s, 'locale', language, pkg);
+        const held = apps.languageStays
+          ? await setCondition(s, 'locale', language, pkg)
+          : undefined;
         await apps.launchWith(pkg, { language });
-        return afterChange(s, `launched ${pkg} in ${language}`, read, true);
+        const done = [`launched ${pkg} in ${language}`, held].filter(Boolean).join('; ');
+        return afterChange(s, done, read, true);
       },
     }),
     defineOp({
