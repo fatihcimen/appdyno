@@ -31,10 +31,10 @@ import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildGlassIcon, buildIcns, buildMenuGlyph } from './build-icons.mjs';
 
-/** The runtime, as nodejs.org publishes its digest. The smallest long-term release with years of fixes ahead. */
+/** The runtime, as nodejs.org publishes its digest: the long-term release in active support, which asks no newer macOS. */
 const NODE = {
-  version: 'v24.22.2',
-  sha256: '1f5ac075be50bed4780ea3be19a007fda95ea4d527d28d76d0b91de47d915115',
+  version: 'v26.13.0',
+  sha256: '6f5b3187d9df9fc007e881167905bc7d69ad26450ddc377c83d63256a2495b6e',
 };
 const MIN_MACOS = '13.5';
 const NAME = 'Appdyno';

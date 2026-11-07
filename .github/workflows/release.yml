@@ -31,7 +31,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           # its npm can publish by trusted publishing too, which the 22's cannot
-          node-version: 24
+          node-version: 26
           registry-url: https://registry.npmjs.org
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
