@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { PassThrough } from 'node:stream';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { DeviceProvider } from '@appdyno/core';
@@ -11,6 +12,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { FakeDevice } from '../../ops/test/fake-device.js';
 import { checkedOps } from '../../ops/test/helpers.js';
 import {
+  askOnTerminal,
   cliSessionFile,
   commandsFor,
   deviceFlag,
@@ -156,6 +158,8 @@ describe('commands from the operations', () => {
     const help = (await run('use-device', '--help')).out.join('\n');
     expect(help.match(/^ {2}--device /gm)).toHaveLength(1);
     expect((await run('tap', '--help')).out.join('\n')).toContain('--device <serial>');
+    expect((await run('app', '--help')).out.join('\n')).toContain('--yes  yes to what');
+    expect((await run('tap', '--help')).out.join('\n')).not.toContain('--yes');
   });
 
   it('says each command in a whole sentence, or marks where it cut one', () => {
@@ -333,5 +337,62 @@ describe('flow on the command line', () => {
       'x',
     ]);
     expect(() => flowWords(['run', 'a.flow', 'extra'])).toThrow(/unexpected word: extra/);
+  });
+});
+
+describe('a command that loses data', () => {
+  const runOn = async (argv: string[], answer?: boolean) => {
+    const cleared: string[] = [];
+    const asked: string[] = [];
+    const device = Object.assign(new FakeDevice(), {
+      apps: { clearData: async (app: string) => void cleared.push(app) },
+    });
+    const provider: DeviceProvider = {
+      list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+      handles: () => true,
+      open: () => device,
+    };
+    const ops = checkedOps(new ServerContext(DEFAULT_POLICY, [provider], { app: 'dev.app' }));
+    const err: string[] = [];
+    const code = await commandsFor(ops).app!.run(argv, {
+      out: () => undefined,
+      err: (s) => err.push(s),
+      ...(answer !== undefined && { ask: async (q: string) => (asked.push(q), answer) }),
+    });
+    return { code, err: err.join('\n'), cleared, asked };
+  };
+
+  it('asks the person at the terminal, and goes ahead only on a yes', async () => {
+    const yes = await runOn(['clear'], true);
+    expect(yes).toMatchObject({ code: 0, cleared: ['dev.app'] });
+    expect(yes.asked).toEqual([expect.stringMatching(/^Clear the data of dev\.app on .*\? /)]);
+    const no = await runOn(['clear'], false);
+    expect(no).toMatchObject({ code: 1, cleared: [] });
+    expect(no.err).toContain('the person declined app clear');
+  });
+
+  it('takes --yes for the answer, and with nobody to ask refuses, saying so', async () => {
+    expect(await runOn(['clear', '--yes'], false)).toMatchObject({
+      code: 0,
+      cleared: ['dev.app'],
+      asked: [],
+    });
+    const none = await runOn(['clear']);
+    expect(none).toMatchObject({ code: 1, cleared: [] });
+    expect(none.err).toContain('this client cannot ask');
+    expect(none.err).toContain('--yes');
+  });
+
+  it('reads only a y or a yes as one, from the terminal', async () => {
+    const answer = async (typed: string) => {
+      const input = new PassThrough();
+      const said = askOnTerminal('Clear?', input, new PassThrough());
+      input.end(typed);
+      return said;
+    };
+    expect(await answer('y\n')).toBe(true);
+    expect(await answer(' YES \n')).toBe(true);
+    expect(await answer('\n')).toBe(false);
+    expect(await answer('yes please\n')).toBe(false);
   });
 });

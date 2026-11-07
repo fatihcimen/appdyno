@@ -10,6 +10,7 @@ import {
 } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
+import { approve } from './approval.js';
 import { holder } from './claims.js';
 import type { ServerContext } from './context.js';
 import { checkApp, checkDevice } from './policy.js';
@@ -173,6 +174,7 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
         case 'revoke': {
           const pkg = appOf(s, app);
           if (!service) throw new ToolError(`${action} needs service`, 'INVALID_ARGUMENT');
+          if (action === 'revoke') await approve(policy, s, 'app revoke', pkg, service);
           await apps.permission(pkg, action === 'grant', service);
           return done(`${action === 'grant' ? 'granted' : 'revoked'} ${service} for ${pkg}`);
         }
@@ -186,6 +188,7 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
         case 'replace_data': {
           const pkg = appOf(s, app);
           const from = dataFolder(path);
+          await approve(policy, s, 'app replace_data', pkg);
           reportProgress(`replacing the data of ${pkg}`);
           await apps.replaceData(pkg, from);
           s.acted();
@@ -195,6 +198,7 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
         case 'uninstall':
         case 'clear': {
           const pkg = appOf(s, app);
+          await approve(policy, s, `app ${action}`, pkg);
           await (action === 'clear' ? apps.clearData(pkg) : apps.uninstall(pkg));
           s.acted();
           s.appPid = undefined;

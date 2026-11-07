@@ -2,8 +2,9 @@ import { createHash, randomBytes } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createInterface } from 'node:readline/promises';
 import { deviceStateFile } from '@appdyno/core';
-import { argumentsFor, ToolError, type Op } from '@appdyno/ops';
+import { argumentsFor, DATA_LOSS, inCall, ToolError, type Op } from '@appdyno/ops';
 import { z } from 'zod';
 
 export {
@@ -22,7 +23,26 @@ export { followMove, putOnPath, takeOffPath } from './on-path.js';
 export { verifyRelease, type Run } from './release.js';
 export { update } from './update.js';
 
-export type Io = { out: (line: string) => void; err: (line: string) => void };
+/** `ask`: a person at a terminal, to say yes to what loses data; none where nobody is there to answer. */
+export type Io = {
+  out: (line: string) => void;
+  err: (line: string) => void;
+  ask?: (question: string) => Promise<boolean>;
+};
+
+/** The question on stderr, as stdout is the answer's: only a y or a yes is one. */
+export async function askOnTerminal(
+  question: string,
+  input: NodeJS.ReadableStream = process.stdin,
+  output: NodeJS.WritableStream = process.stderr,
+) {
+  const line = createInterface({ input, output });
+  try {
+    return /^y(es)?$/i.test((await line.question(`${question} [y/N] `)).trim());
+  } finally {
+    line.close();
+  }
+}
 
 /** Where a command line keeps its device and diff baseline: by folder, so two terminals are two sessions. */
 export const cliSessionFile = (cwd = process.cwd()) =>
@@ -69,6 +89,9 @@ export function helpOf(op: Op): string {
     ...(properties.device
       ? []
       : ['  --device <serial>  the device, for this command and the next ones']),
+    ...(Object.keys(DATA_LOSS).some((k) => k.startsWith(`${op.name} `))
+      ? ['  --yes  yes to what would ask before it loses data']
+      : []),
   ].join('\n');
 }
 
@@ -105,6 +128,7 @@ function parse(op: Op, argv: string[]) {
   };
   const args: Record<string, unknown> = {};
   let out: string | undefined;
+  let yes = false;
   for (let i = 0; i < argv.length; i++) {
     const word = argv[i]!;
     // `record start`: the first bare word of an op with actions
@@ -114,6 +138,11 @@ function parse(op: Op, argv: string[]) {
     }
     if (!word.startsWith('--')) throw new ToolError(`unexpected word: ${word}`, 'INVALID_ARGUMENT');
     const flag = word.slice(2);
+    // the person's answer to a question the op would ask, and no argument of it
+    if (flag === 'yes') {
+      yes = true;
+      continue;
+    }
     const key = camel(flag);
     const type = properties[key]?.type;
     if (type === 'boolean') {
@@ -139,7 +168,7 @@ function parse(op: Op, argv: string[]) {
   // an op that saves by name itself takes the format from it; bytes written here would be its reply's
   if (out && properties.file && properties.overwrite)
     Object.assign(args, { file: out, overwrite: true });
-  return { args: argumentsFor(op, args, '--'), out };
+  return { args: argumentsFor(op, args, '--'), out, yes };
 }
 
 const FLOW_VALUES = new Set([
@@ -191,8 +220,9 @@ export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
           io.err(`${name}: ${e.message}`);
           return 2;
         }
+        const ask = call.yes ? async () => true : io.ask;
         try {
-          const { blocks, data } = await op.handler(call.args);
+          const { blocks, data } = await inCall(ask ? { ask } : {}, () => op.handler(call.args));
           for (const b of blocks) {
             if (b.type === 'text') {
               io.out(b.text);

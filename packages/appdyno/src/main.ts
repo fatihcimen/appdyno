@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { appleProvider, iosProducts, pruneIosBuilds } from '@appdyno/driver-apple';
 import {
+  askOnTerminal,
   clientNamed,
   cliSessionFile,
   commandsFor,
@@ -70,6 +71,9 @@ function contextFrom(values: ServerFlags, remember?: string) {
   const regex = (s: string | undefined) => (s ? new RegExp(s) : undefined);
   const devices = regex(values['allow-devices'] ?? env.APPDYNO_ALLOW_DEVICES);
   const urls = regex(values['allow-urls'] ?? env.APPDYNO_ALLOW_URLS);
+  const loss = values['allow-data-loss'] ?? env.APPDYNO_ALLOW_DATA_LOSS;
+  if (loss !== undefined && loss !== 'virtual' && loss !== 'all')
+    throw new Error(`--allow-data-loss takes virtual or all, not ${loss}`);
   const policy: Policy = {
     ...DEFAULT_POLICY,
     ...(devices && { devices }),
@@ -77,6 +81,7 @@ function contextFrom(values: ServerFlags, remember?: string) {
     apps: list(values['allow-apps'] ?? env.APPDYNO_ALLOW_APPS),
     allowHome: !values['no-home'],
     secrets: list(env.APPDYNO_SECRETS),
+    ...(loss && { allowDataLoss: loss }),
   };
   const device = values.device ?? env.APPDYNO_SERIAL;
   const app = values.app ?? env.APPDYNO_APP;
@@ -372,7 +377,9 @@ ${listOf(ops)}`,
         return asked ? 0 : 2;
       }
       try {
-        return await op.run(rest, { out: (s) => console.log(s), err });
+        // piped words are no person: what would ask them is refused, but for --yes
+        const ask = process.stdin.isTTY ? askOnTerminal : undefined;
+        return await op.run(rest, { out: (s) => console.log(s), err, ...(ask && { ask }) });
       } finally {
         ctx.close();
       }

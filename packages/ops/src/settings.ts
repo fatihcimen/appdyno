@@ -8,6 +8,7 @@ import {
 } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
+import { approve } from './approval.js';
 import type { ServerContext } from './context.js';
 import { checkApp } from './policy.js';
 import { SettingOut } from './schemas.js';
@@ -188,6 +189,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
         if (name === 'keychain') {
           if (value !== 'reset')
             throw new ToolError('keychain needs value: reset', 'INVALID_ARGUMENT');
+          await approve(policy, s, 'device_setting keychain');
           const t = `the keychain is empty: it held ${await events.resetKeychain()} items`;
           return reply(t, { done: t });
         }

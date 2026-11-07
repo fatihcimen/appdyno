@@ -34,6 +34,7 @@ export const COMMANDS = {
       'allow-devices': value('RE'),
       'allow-apps': value('a,b'),
       'allow-urls': value('RE'),
+      'allow-data-loss': value('virtual|all'),
       'no-home': on,
       takeover: on,
       share: on,

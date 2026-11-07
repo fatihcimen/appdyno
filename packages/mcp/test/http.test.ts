@@ -6,6 +6,7 @@ import type { DeviceProvider, DeviceSettings, SettingName } from '@appdyno/core'
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { ElicitRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '../../ops/test/fake-device.js';
 import { listenOn, serveHttp } from '../src/http.js';
@@ -164,6 +165,24 @@ describe('a client', () => {
     const dir = join(process.env.APPDYNO_STATE_DIR!, 'clients');
     for (const file of readdirSync(dir))
       expect(readFileSync(join(dir, file), 'utf8')).not.toContain(TOKEN);
+  });
+
+  it('cannot ask the person, whatever it declares, so what loses data is refused', async () => {
+    const { url } = await serving();
+    const client = new Client(
+      { name: 'asks', version: '1' },
+      { capabilities: { elicitation: {} } },
+    );
+    const asked = vi.fn(() => ({ action: 'accept' as const }));
+    client.setRequestHandler(ElicitRequestSchema, asked);
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(url), { requestInit: { headers: bearer } }),
+    );
+    const reset = { name: 'device_setting', arguments: { name: 'keychain', value: 'reset' } };
+    expect(text(await client.callTool(reset))).toBe(
+      'device_setting keychain asks the person first, and this client cannot ask: nothing was done',
+    );
+    expect(asked).not.toHaveBeenCalled();
   });
 
   it('reaches it with the token in the path, for a client with no field for a header', async () => {

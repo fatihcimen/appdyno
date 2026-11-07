@@ -13,7 +13,9 @@ appdyno --help
 An op with `action` takes it as its first word: `appdyno record start`, `appdyno network stop`. Other commands: `mirror` (see [the window](../mirror.md)), `doctor [--serial S]`, `ios build`, `test` (see [flows](../guides/flows.md)), `tools install` (fetches the pinned
 Perfetto trace processor), `bench`. Exit code 1 means the call was refused, 2 means wrong arguments. The selected
 device and the diff baseline between CLI processes are kept in a small file in the state directory, one per working
-directory, so two terminals in two folders do not share a device.
+directory, so two terminals in two folders do not share a device. A command that loses data asks on its terminal first,
+as [Tools](tools.md#what-asks-the-person-first) lists; `--yes` is the answer, and with no terminal and no `--yes` it is
+refused unless `APPDYNO_ALLOW_DATA_LOSS` allows it.
 
 ## Server options
 
@@ -26,6 +28,7 @@ directory, so two terminals in two folders do not share a device.
 | `--allow-devices RE`        | `APPDYNO_ALLOW_DEVICES`             | only devices whose id matches                                                                                       |
 | `--allow-apps a,b`          | `APPDYNO_ALLOW_APPS`                | only these apps                                                                                                     |
 | `--allow-urls RE`           | `APPDYNO_ALLOW_URLS`                | only links that match                                                                                               |
+| `--allow-data-loss V`       | `APPDYNO_ALLOW_DATA_LOSS`           | what loses data goes ahead with nothing asked: `virtual` on simulators and emulators, `all` on every device         |
 | `--no-home`                 |                                     | block the home key                                                                                                  |
 | `--measurements dir`        |                                     | where measurements are stored (default: the state directory)                                                        |
 | `--takeover`                |                                     | stop another tool that holds UI automation on Android                                                               |

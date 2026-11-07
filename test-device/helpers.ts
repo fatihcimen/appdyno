@@ -47,11 +47,14 @@ export const opCaller =
     }
   };
 
+/** A person named the device to the suite: what it loses there is the fixture's, asked of nobody. */
+export const SUITE_POLICY = { ...DEFAULT_POLICY, allowDataLoss: 'all' } as const;
+
 /** The operations on one device with stores of their own, as a client calls them. */
 export function opsOn(provider: DeviceProvider, device: string, app: string) {
   const measurements = mkdtempSync(join(tmpdir(), 'appdyno-measures-'));
   const perf = mkdtempSync(join(tmpdir(), 'appdyno-perf-'));
-  const ctx = new ServerContext(DEFAULT_POLICY, [provider], { device, app, measurements, perf });
+  const ctx = new ServerContext(SUITE_POLICY, [provider], { device, app, measurements, perf });
   return { ctx, measurements, call: opCaller(checkedOps(ctx)) };
 }
 

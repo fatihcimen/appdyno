@@ -15,6 +15,26 @@ import {
 /** How often a call with a progress token says it is still working. */
 const BEAT_MS = 5_000;
 
+/** How long a question waits for the person, who may be away from the screen: past it, no answer is a no. */
+const ASK_MS = 5 * 60_000;
+
+/**
+ * A yes or no, put to the person by the client's own prompt, where the client declared it can show one: an empty form,
+ * whose accept is the yes. Over `--http` there is none, as a server lasts one POST and never saw the client's `initialize`.
+ */
+const askerOf = (server: McpServer, signal: AbortSignal) =>
+  // what `initialize` declared, as the SDK parsed it: `elicitation: {}` reads as `{ form: {} }`, which the specification
+  // (2025-11-25, Elicitation, Capabilities) makes the same, and `elicitInput` refuses a form without it
+  server.server.getClientCapabilities()?.elicitation?.form
+    ? async (message: string) =>
+        (
+          await server.server.elicitInput(
+            { mode: 'form', message, requestedSchema: { type: 'object', properties: {} } },
+            { signal, timeout: ASK_MS },
+          )
+        ).action === 'accept'
+    : undefined;
+
 /** What many tools would each say of an argument: the server's instructions say it once. */
 const IN_INSTRUCTIONS = new Set([
   'default: the selected app',
@@ -88,12 +108,14 @@ export function createServer(
               progress(`${name}: still working (${Math.round((Date.now() - started) / 1000)} s)`),
             BEAT_MS,
           );
+        const ask = askerOf(server, extra.signal);
         try {
           const r = await inCall(
             {
               signal: extra.signal,
               ...(progress && { progress }),
               ...(client && { client: client.name }),
+              ...(ask && { ask }),
             },
             () => t.handler(argumentsFor(t, args)),
           );

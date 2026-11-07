@@ -43,6 +43,29 @@ project on this Mac: an Xcode project with `scheme` and `configuration`, or a Gr
 its module and `configuration` as its variant. `device_setting` holds `dark_mode`, `text_size`,
 `reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `biometric`, `fold`, `call`, `sms` and `keychain`.
 
+## What asks the person first
+
+These lose what a person may want, so each waits for the person's yes, on every platform:
+
+- `app uninstall`: the app and all it keeps on the device
+- `app clear`: all the app keeps
+- `app replace_data`: all the app keeps now
+- `app revoke`: a permission the app was given
+- `device_setting keychain`: every item apps keep in the keychain
+
+The server asks by the client's own prompt, MCP elicitation, where the client declared it at `initialize`, and names the
+device, the app and what is lost. The model cannot answer it. A no or a closed prompt does nothing, and the answer says
+the person declined. A client that cannot ask is refused with `PERMISSION_REQUIRED` and how a person allows it, and so is
+every client over `--http`, whose server lasts one POST and never saw its `initialize`. `--allow-data-loss virtual` on the
+server's command line lets these go ahead with nothing asked on simulators and emulators, and `all` on phones too. Only a
+person's registration of the server sets it: no argument, step or file of a tool stands for a yes. A command asks on its
+terminal and takes `--yes` for the answer; with neither, only the flag lets it go ahead. `test-device/ask-person.test.ts`
+runs a yes, a no, a client that cannot ask and the flag over stdio on a simulator, and the fixture's data stays on the no
+and where nothing could ask.
+
+`app install` and `build_and_run` are not among them: neither removes an app first, and on a simulator a file the
+fixture kept was still there after its install over itself.
+
 ## What each platform can do
 
 What a platform cannot do is refused with the reason (`UNSUPPORTED`):

@@ -39,6 +39,19 @@ Limits you set:
 
 A window shows what the screen shows, to whoever sits at this Mac. `--no-input` makes it watch only.
 
+## What waits for a person
+
+No tool reboots, erases or resets a device or a simulator, and none deletes a simulator or emulator:
+`packages/appdyno/test/device-reset.test.ts` fails if any source gains a way to. `simulator create` says how a person
+removes what it made, and runs none of it.
+
+What loses data a person may want asks the person first: [the list](docs/reference/tools.md#what-asks-the-person-first).
+The client shows the question, the model cannot answer it, and a no does nothing. Where the client cannot ask, and over
+`--http`, it is refused, unless the person started the server with `--allow-data-loss virtual` (simulators and
+emulators) or `all`. Nothing a tool call carries sets that or stands for a yes. A model that can change the client's
+settings or run a shell is past what the server can hold back: it can run `appdyno` with `--yes`, or `adb` itself, and
+the client's own permission for each command is what stands then.
+
 ## Wi-Fi
 
 `appdyno pair` makes an identity this Mac shares with one phone, once, with a person accepting on it. On an iPhone its

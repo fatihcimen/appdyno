@@ -1,4 +1,5 @@
 import { SERVER_ICON_SVG } from '@appdyno/core';
+import { DATA_LOSS } from '@appdyno/ops';
 
 /** The server's icon, as a client shows it. */
 export const DEVICE_ICON_SVG = SERVER_ICON_SVG;
@@ -25,4 +26,5 @@ export const INSTRUCTIONS =
   'Every action returns the settled screen after it (read: diff by default), no extra read needed, with changed: false when nothing moved and settled: false when it kept moving. ' +
   'No fixed sleeps: use wait_for. Take a screenshot only for a visual judgement. A failed answer has code and hint. When the app misbehaves: logs and crashes. ' +
   'Apps: app; an app left out is the selected one, scenario names what a measure is kept under, and probe is the frame probe of an iOS simulator, which relaunches the app. Conditions, push and biometrics: device_setting. Starting a simulator or emulator: simulator. ' +
+  `${Object.keys(DATA_LOSS).join(', ')} ask the person first. ` +
   'To see why something was slow: report timeline, then the journey, then report stop: timeline.html holds video, touches, frames, requests, log and memory on one clock, in one file to send.';

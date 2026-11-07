@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
+import { DATA_LOSS, DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { expect, it } from 'vitest';
 import { INSTRUCTIONS } from '../src/brand.js';
 import { createServer } from '../src/server.js';
@@ -58,6 +58,15 @@ it('has every tool in the table of the docs, and what they say of steps as the t
   const limit = /at most (\d+),/.exec(ops.steps!.description)?.[1];
   expect(doc).toContain(`\`steps\` runs up to ${limit} steps`);
   expect(doc).toContain(`${Object.keys(ops).length} tools`);
+});
+
+it('names in the docs and in its instructions each action that asks the person first, and no other', () => {
+  const doc = readFileSync(new URL('../../../docs/reference/tools.md', import.meta.url), 'utf8');
+  const start = doc.indexOf('## What asks the person first');
+  const section = doc.slice(start, doc.indexOf('\n## ', start + 1));
+  const listed = [...section.matchAll(/^- `([a-z_]+ [a-z_]+)`:/gm)].map((m) => m[1]);
+  expect(listed.sort()).toEqual(Object.keys(DATA_LOSS).sort());
+  expect(INSTRUCTIONS).toContain(`${Object.keys(DATA_LOSS).join(', ')} ask the person first.`);
 });
 
 it('keeps the tool catalog within its budget', async () => {

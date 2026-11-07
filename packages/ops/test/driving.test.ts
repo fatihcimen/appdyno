@@ -1065,10 +1065,13 @@ describe('app management', () => {
     } as AppManager & { log: unknown[][] };
   };
 
+  /** A person's yes in advance, by the server's flag: what asks first is `approval.test.ts`'s. */
+  const allowed = { policy: { allowDataLoss: 'virtual' as const } };
+
   it('does each action, with the selected app by default', async () => {
     const apps = manager();
     const d = Object.assign(new FakeDevice(), { apps });
-    const { call } = await connect(d);
+    const { call } = await connect(d, allowed);
     expect((await call('app', { action: 'list' })).data.apps[0].id).toBe('dev.app');
     expect((await call('app', { action: 'state' })).data.state).toBe('foreground');
     expect((await call('app', { action: 'state', app: 'dev.other' })).data.state).toBe('running');
@@ -1158,7 +1161,7 @@ describe('app management', () => {
 
   it('copies an app data only with a safe folder', async () => {
     const apps = manager();
-    const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
+    const { call } = await connect(Object.assign(new FakeDevice(), { apps }), allowed);
     const base = mkdtempSync(join(tmpdir(), 'app-data-op-'));
     try {
       const to = join(base, 'new', 'copy');
@@ -1204,7 +1207,7 @@ describe('app management', () => {
       },
     });
     const d = Object.assign(new FakeDevice(), { apps });
-    const { call } = await connect(d, { policy: { apps: ['dev.app'] } });
+    const { call } = await connect(d, { policy: { apps: ['dev.app'], allowDataLoss: 'virtual' } });
     const off = await call('app', { action: 'install', path: '/tmp/a.apk' });
     expect(off.data.code).toBe('POLICY_DENIED');
     expect((await call('app', { action: 'uninstall', app: 'dev.other' })).error).toBe(true);
@@ -1396,7 +1399,7 @@ describe('device conditions', () => {
   it('passes on a refusal, posts a push, and says biometrics are not here', async () => {
     const settings = new Settings();
     const d = Object.assign(new FakeDevice(), { settings, events: settings });
-    const { call } = await connect(d);
+    const { call } = await connect(d, { policy: { allowDataLoss: 'virtual' } });
     const net = await call('device_setting', { name: 'network', value: 'slow' });
     expect(net.data.code).toBe('UNSUPPORTED');
     expect(net.text).toContain('a phone has no network shaping');

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { ElicitRequestSchema, type ElicitResult } from '@modelcontextprotocol/sdk/types.js';
 import { createServer } from '@appdyno/mcp';
 import { latestRuns, runKeys } from '@appdyno/perf';
 import {
@@ -81,14 +82,20 @@ export async function keptBy(
   };
 }
 
-/** A client of this context's server, in this process. */
+/** A client of this context's server, in this process; with `answer`, one that shows the server's questions to a person. */
 export async function linkedClient(
   ctx: ServerContext,
   log: Parameters<typeof createServer>[1] = () => undefined,
+  answer?: (question: string) => ElicitResult['action'],
 ) {
   const [a, b] = InMemoryTransport.createLinkedPair();
   await createServer(checkedOps(ctx), log).connect(a);
-  const client = new Client({ name: 'test', version: '0' });
+  const client = new Client(
+    { name: 'test', version: '0' },
+    answer && { capabilities: { elicitation: {} } },
+  );
+  if (answer)
+    client.setRequestHandler(ElicitRequestSchema, (r) => ({ action: answer(r.params.message) }));
   await client.connect(b);
   return client;
 }

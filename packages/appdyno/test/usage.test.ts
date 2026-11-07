@@ -5,7 +5,7 @@ import { commandList, COMMANDS, helpFor, line, usage } from '../src/usage.js';
 describe('usage', () => {
   it('says a command as its table has it', () => {
     expect(line('mcp')).toBe(
-      'mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--no-home] [--takeover] [--share] [--animations on|off] [--measurements dir] [--trace-limit-gb N] [--flight-seconds N] [--full-urls] [--no-install-consent] [--accept-install-warnings] [--http 127.0.0.1:PORT]',
+      'mcp [--device S] [--app A] [--allow-devices RE] [--allow-apps a,b] [--allow-urls RE] [--allow-data-loss virtual|all] [--no-home] [--takeover] [--share] [--animations on|off] [--measurements dir] [--trace-limit-gb N] [--flight-seconds N] [--full-urls] [--no-install-consent] [--accept-install-warnings] [--http 127.0.0.1:PORT]',
     );
     expect(line('install')).toBe('install [--yes] [--dry-run] [--remove]');
     expect(line('test')).toBe(

@@ -12,6 +12,8 @@ export type Policy = {
   allowHome: boolean;
   /** Texts never typed, set on the clipboard or shown back (a test account's secrets). */
   secrets: string[];
+  /** What loses data goes ahead with no question asked: on simulators and emulators, or on every device. */
+  allowDataLoss?: 'virtual' | 'all';
 };
 
 export const DEFAULT_POLICY: Policy = { apps: [], allowHome: true, secrets: [] };

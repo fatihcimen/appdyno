@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext, type Op } from '@appdyno/ops';
 import { checkedOps } from '../packages/ops/test/helpers.js';
-import { opCaller, type Answer, type Call } from './helpers.js';
+import { opCaller, SUITE_POLICY, type Answer, type Call } from './helpers.js';
 import {
   Adb,
   AndroidDevice,
@@ -24,7 +24,7 @@ const APP = 'dev.appdyno.fixture';
 const ROOT = join(import.meta.dirname, '..');
 
 function harness(serial: string, provider: ConstructorParameters<typeof ServerContext>[1][number]) {
-  const ctx = new ServerContext(DEFAULT_POLICY, [provider], {
+  const ctx = new ServerContext(SUITE_POLICY, [provider], {
     device: serial,
     app: APP,
     claims: true,

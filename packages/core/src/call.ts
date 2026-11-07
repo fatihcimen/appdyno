@@ -7,6 +7,8 @@ export type CallScope = {
   progress?: (message: string) => void;
   /** Who is calling, as it named itself. */
   client?: string;
+  /** Puts a yes or no question to the person, by the client's own prompt or a terminal: none where nobody can be asked. */
+  ask?: (question: string) => Promise<boolean>;
 };
 
 const scope = new AsyncLocalStorage<CallScope>();
@@ -21,6 +23,9 @@ export const reportProgress = (message: string) => scope.getStore()?.progress?.(
 
 /** The client whose request this is, if it gave a name. */
 export const callClient = () => scope.getStore()?.client;
+
+/** How to ask the person behind this request, if anyone can be asked. */
+export const callAsk = () => scope.getStore()?.ask;
 
 export const cancelled = (what: string) =>
   new DeviceError('CANCELLED', `${what}: cancelled by the client`, 'the client cancelled the call');
