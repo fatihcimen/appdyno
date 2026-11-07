@@ -293,6 +293,8 @@ An iPhone's letters go by its runner, which the first letters start, about 3 s, 
 
 In an app the runner was not told of, it cannot say what is under a tap, so the letters wait for one look by the phone's accessibility service, 3 s after it, and go only if that names a field, and another than the last unless the tap was on it. It is one look because looks in a row kept a field from the focus for 8.9 s. With no runner to be had the same look decides, the letters go by key position, and the window says that the phone's layout decides them.
 
+An Android phone needs none of this. A Samsung and a Xiaomi took all 95 printable ASCII characters and `ç ğ ı İ ö ş ü` as given, through a window and through `type_text`, and letters typed 100 to 900 ms after a tap on a secure field landed there in 72 rounds of 72.
+
 A window takes its menu bar and Dock icon at a person's first click, not before: an agent's window changes nothing on a Mac until someone uses it.
 
 ## Sharing a device
