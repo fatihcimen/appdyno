@@ -228,7 +228,10 @@ export async function closingOnFailure<T>(socket: { destroy(): void }, use: () =
   }
 }
 
-/** The answer to `tunnelRequest`, and what came after it. A phone that accepts and never answers gets `ms`. */
+/**
+ * The answer to `tunnelRequest`, and what came after it. A phone that accepts and never answers gets `ms`. Until a stack
+ * reads the stream nothing else listens on it, so a reset in the meantime is said here, as unheard it ends the process.
+ */
 export function tunnelAnswer(stream: Duplex, ms = ANSWER_MS) {
   return new Promise<NonNullable<ReturnType<typeof readTunnelAnswer>>>((resolve, reject) => {
     let held: Buffer = Buffer.alloc(0);
@@ -236,6 +239,7 @@ export function tunnelAnswer(stream: Duplex, ms = ANSWER_MS) {
       clearTimeout(timer);
       stream.off('data', onData);
       stream.off('close', onClose);
+      stream.off('error', onError);
       done();
     };
     const timer = setTimeout(() => stop(() => reject(new Error('the tunnel did not answer'))), ms);
@@ -249,8 +253,10 @@ export function tunnelAnswer(stream: Duplex, ms = ANSWER_MS) {
       }
     };
     const onClose = () => stop(() => reject(new Error('the tunnel closed at its start')));
+    const onError = (e: Error) => stop(() => reject(e));
     stream.on('data', onData);
     stream.once('close', onClose);
+    stream.once('error', onError);
     stream.resume();
   });
 }
@@ -267,10 +273,12 @@ export async function openTunnel(udid: string): Promise<Tunnel> {
 }
 
 /** The tunnel's handshake and the stack over it, on whatever reached the phone: a cable and a network take the same. */
-export async function tunnelOver(stream: Socket): Promise<Tunnel> {
-  stream.write(tunnelRequest());
-  const { info, rest } = await tunnelAnswer(stream);
-  const stack = new IpStack(stream as PacketStream, info);
-  if (rest.length) stack.feed(rest);
-  return { stack, rsdPort: info.rsdPort };
+export function tunnelOver(stream: Socket): Promise<Tunnel> {
+  return closingOnFailure(stream, async () => {
+    stream.write(tunnelRequest());
+    const { info, rest } = await tunnelAnswer(stream);
+    const stack = new IpStack(stream as PacketStream, info);
+    if (rest.length) stack.feed(rest);
+    return { stack, rsdPort: info.rsdPort };
+  });
 }

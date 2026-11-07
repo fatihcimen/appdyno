@@ -1,8 +1,8 @@
 import { EventEmitter } from 'node:events';
-import type { Socket } from 'node:net';
+import { createServer, Socket } from 'node:net';
 import { PassThrough } from 'node:stream';
 import { describe, expect, it, vi } from 'vitest';
-import { closingOnFailure, Lockdown, tunnelAnswer } from '../tunnel.js';
+import { closingOnFailure, Lockdown, tunnelAnswer, tunnelOver } from '../tunnel.js';
 
 const answer = (more = '') => {
   const body = Buffer.from(
@@ -18,7 +18,8 @@ const answer = (more = '') => {
   return Buffer.concat([h, body, Buffer.from(more)]);
 };
 
-const listeners = (s: PassThrough) => s.listenerCount('data') + s.listenerCount('close');
+const listeners = (s: PassThrough) =>
+  s.listenerCount('data') + s.listenerCount('close') + s.listenerCount('error');
 
 describe('lockdown', () => {
   it('fails the question on an answer it cannot read, and does not throw on the socket', async () => {
@@ -57,6 +58,18 @@ describe('a handshake on a tunnel', () => {
     stream.write(Buffer.alloc(20));
     await expect(asked).rejects.toThrow('no tunnel');
     expect(listeners(stream)).toBe(before);
+  });
+
+  it('says a connection reset before its answer, takes the socket down, and does not throw', async () => {
+    const server = createServer((s) => s.once('data', () => s.resetAndDestroy()));
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+    const socket = new Socket();
+    await new Promise<void>((r) =>
+      socket.connect((server.address() as { port: number }).port, '127.0.0.1', r),
+    );
+    await expect(tunnelOver(socket)).rejects.toThrow('ECONNRESET');
+    expect(socket.destroyed).toBe(true);
+    server.close();
   });
 
   it('hands on what came after its answer, and the stream to what reads it next', async () => {
