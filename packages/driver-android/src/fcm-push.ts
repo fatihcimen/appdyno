@@ -89,6 +89,7 @@ export class FcmPush {
       template: JSON.stringify(
         messageOf({ type: type as PushType, title: 'Title', body: 'Body', data: { key: 'value' } }),
       ),
+      tokens: ['device'],
     }));
   }
 

@@ -113,10 +113,11 @@ export type PushField = 'title' | 'body' | 'image' | 'data';
 
 /**
  * How a device takes a push of this type, the fields it takes there, and the payload it would send, made of
- * placeholders; or why it cannot.
+ * placeholders; or why it cannot. `tokens`: the kinds of token it goes by, where a person may type one in a window.
  */
 export type PushRoute = { type: PushType } & (
-  { route: string; fields: PushField[]; template: string } | { why: string }
+  | { route: string; fields: PushField[]; template: string; tokens?: PushTokenKind[] }
+  | { why: string }
 );
 
 /** The fields a template is made of, for a person or an AI to put their own in. */
@@ -145,7 +146,8 @@ export class PushRate {
 }
 
 /** Which of an app's tokens a push goes by: its device's, a Live Activity's, push to start's, PushKit's, a widget's. */
-export type PushTokenKind = 'device' | 'activity' | 'start' | 'voip' | 'widget';
+export const PUSH_TOKEN_KINDS = ['device', 'activity', 'start', 'voip', 'widget'] as const;
+export type PushTokenKind = (typeof PUSH_TOKEN_KINDS)[number];
 
 /** `enroll`: a fingerprint or a face is known to the device; the others answer a request for one. */
 export type BiometricAnswer = 'match' | 'nomatch' | 'enroll';

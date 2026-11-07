@@ -272,6 +272,16 @@ describe('a push by APNs', () => {
     expect(routes.find((r) => r.type === 'live_activity')).toMatchObject({
       fields: [],
       template: '{"aps":{"event":"update","content-state":{"key":"value"}}}',
+      tokens: ['activity', 'start'],
     });
+    // the kinds a person may type in a window, by the route that goes by each
+    expect(routes.map((r) => ('tokens' in r ? r.tokens : undefined))).toEqual([
+      ['device'],
+      ['device'],
+      ['device'],
+      ['activity', 'start'],
+      ['voip'],
+      ['widget'],
+    ]);
   });
 });

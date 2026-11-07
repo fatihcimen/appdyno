@@ -15,6 +15,7 @@ const PushOut = ActionOut.extend({
           route: z.string(),
           fields: z.array(z.string()),
           template: z.string(),
+          tokens: z.array(z.string()).optional(),
         }),
         z.object({ type: z.string(), why: z.string() }),
       ]),

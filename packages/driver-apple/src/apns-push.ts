@@ -125,6 +125,8 @@ export class ApnsPush {
           ? LIVE_ACTIVITY_TEMPLATE
           : apnsPayload({ ...PUSH_PLACEHOLDERS, type: type as PushType }),
       ),
+      // an event start goes by push to start's
+      tokens: t.kind === 'liveactivity' ? [t.token, 'start'] : [t.token],
     }));
   }
 

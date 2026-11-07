@@ -94,7 +94,7 @@ What a platform cannot do is refused with the reason (`UNSUPPORTED`):
 
 ## Push notifications
 
-`push` sends one to the app, by `type`, from fields (`title`, `body`, `image`, `data`) or from `payload`, the platform's own JSON: APNs' on iOS, an FCM message on Android. Given both, it refuses. With no type it answers each type this device takes, the route it takes and the fields it takes there, with a template of the payload it would send, or why it cannot; its `data` holds the same as `types`. A push is answered with the screen after it, as an action is.
+`push` sends one to the app, by `type`, from fields (`title`, `body`, `image`, `data`) or from `payload`, the platform's own JSON: APNs' on iOS, an FCM message on Android. Given both, it refuses. With no type it answers each type this device takes, the route it takes and the fields it takes there, with a template of the payload it would send, or why it cannot; its `data` holds the same as `types`, where a route by APNs or FCM names in `tokens` the kinds of token it goes by, which a person may type in a window. A push is answered with the screen after it, as an action is.
 
 | type                    | Android emulator and phone                                                                  | simulator                                                                                    | iPhone                                              |
 | ----------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------- |
