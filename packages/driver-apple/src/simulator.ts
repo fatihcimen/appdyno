@@ -5,6 +5,7 @@ import {
   type ScreenRecorder,
   type SystemSwipe,
   TIMEOUTS,
+  TRANSITION_MS,
   type ActOptions,
   type TreeOptions,
   pause,
@@ -54,12 +55,6 @@ const FIRST_FRONT_MS = 10_000;
 const FRONT_AGAIN_MS = 250;
 
 const WAKE_PRESSES = 6;
-
-/**
- * UIKit takes no touches during a push or a pop. The tree is final and the app's reports say all is still well
- * before it ends: a tap under 560 ms after the touch that went back was lost, 7 of 30, with the app reporting it.
- */
-const TRANSITION_MS = 650;
 
 /** How long a touch that changed nothing has to be reported, before the runner does it again. */
 const LATE_TOUCH_MS = 4_000;

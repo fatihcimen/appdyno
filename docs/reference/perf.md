@@ -633,6 +633,7 @@ Tried and dropped:
 
 - The app's process asked of the Android agent, which answers at once, for the `adb shell pidof` after each action: 36.8 ms against 43.9 on the Samsung and 8.6 against 9.8 on the emulator, medians of 15 each in turn at load 56-64. Not worth a method of the protocol.
 - A text entry's tap by the event synthesizer, as an `act` tap is, for XCTest's own: the field's focus in 915 ms against 760-1,374, at load 30-85. No gain shown.
+  A touch after a touch alone: a touch with `read: none` that brings a screen leaves it sliding in, a pushed screen's tree reads where it ends from the start of its slide, and a touch during the slide is lost. On a simulator a `tap` on Back answered "no change seen" right after a `tap` with `read: none` on Form. On iOS a touch after one that skipped its settle now first looks at the screen, and if that touch changed it, waits until 650 ms after it, as a simulator's touch already did after a settled one that changed the screen. A touch after a settled one, or after one that changed nothing, pays nothing. On a simulator at load 28-75, 10 taps with `read: none` on empty space took 80-137 ms each before and 79-80 after; a tap on Form and one on Back right after it, both `read: none`, took 297-340 ms the pair before and 1,384 after, which is the wait. In those 16 pairs before it no touch was lost; in the script's runs one was, at load 77-144.
 
 ## iPhone speed
 

@@ -28,6 +28,15 @@ import type { DeviceEvents, DeviceSettings, SettingsPage } from './device-condit
 import type { CrashesAnswer, CrashesQuery, LogsAnswer, LogsQuery } from './device-logs.js';
 import type { NetworkSource, WebInspector } from './device-network.js';
 
+/**
+ * UIKit takes no touches during a push or a pop. The tree is final and the app's reports say all is still well
+ * before it ends: a tap under 560 ms after the touch that went back was lost, 7 of 30, with the app reporting it.
+ */
+export const TRANSITION_MS = 650;
+
+/** Whether a touch during a slide is lost, as UIKit drops it: Android's agent waits for rest before each action. */
+export const SLIDE_DROPS_TOUCH: Record<Platform, boolean> = { android: false, ios: true };
+
 /** Per-command limits (ms); the settle cap is added to an action's. */
 export const TIMEOUTS = {
   hello: 10_000,

@@ -242,7 +242,9 @@ async function act(
   const r: ActResult = await run(opts).catch(refusedAction);
   // the last read before the action, which a ref's lookup may have just made
   const base = s.fresh?.list ?? before;
+  const aimed = s.fresh?.hash;
   s.acted();
+  if (read === 'none') s.unsettled = { at: Date.now(), hash: aimed };
   const said = typeof done === 'string' ? done : done(r);
   const pid = await pidNow;
   const isFound = found();

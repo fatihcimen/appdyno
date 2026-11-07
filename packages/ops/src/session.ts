@@ -3,7 +3,9 @@ import {
   DeviceQueue,
   pause,
   readPicture,
+  SLIDE_DROPS_TOUCH,
   throwIfCancelled,
+  TRANSITION_MS,
   withPictureText,
   type Device,
   type Owner,
@@ -175,7 +177,15 @@ export class Session {
    */
   async beforeTouch() {
     if (!this.fresh || Date.now() - this.latest!.taken > LOOK_MS) await this.read();
+    const slid = this.unsettled;
+    this.unsettled = undefined;
+    // UIKit drops a touch during a slide, which no read nor the app's idle reports show: its remainder is the only sign
+    if (SLIDE_DROPS_TOUCH[this.device.platform] && slid && slid.hash !== this.fresh?.hash)
+      await pause(slid.at + TRANSITION_MS - Date.now());
   }
+
+  /** The last touch skipped its settle: when it ended, and the screen it was aimed at. */
+  unsettled: { at: number; hash: string | undefined } | undefined;
 
   /** The newest read when it is still the device's screen (no action since), else undefined. */
   get fresh(): Screen | undefined {
