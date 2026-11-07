@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, existsSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { DeviceProvider } from '@appdyno/core';
+import type { AppManager, DeviceProvider } from '@appdyno/core';
 import { parseFlow, type StepEvent } from '@appdyno/flows';
 import { DeviceError } from '@appdyno/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -77,6 +77,23 @@ describe('flows', () => {
       });
       expect(text).toContain('text="Wi-Fi"');
       expect(text).not.toMatch(/@\w/);
+    });
+
+    it('writes no step for the links an app opens: they are read, and nothing is opened', async () => {
+      device.apps = {
+        links: async () => [{ url: 'app://', kind: 'scheme' }],
+      } as unknown as AppManager;
+      const call = callerOf(context());
+      const { text } = await recorded(call, async () => {
+        await call('open_link', { links: 'dev.app' });
+        await call('open_link', { url: 'app://x' });
+      });
+      expect(
+        text
+          .trim()
+          .split('\n')
+          .filter((l) => l.startsWith('open_link')),
+      ).toEqual(['open_link "app://x"']);
     });
 
     it('records a tap on a control an answer said once with its row, by its role', async () => {
