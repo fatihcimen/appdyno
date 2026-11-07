@@ -85,7 +85,7 @@ export function actOps(
       name: 'tap',
       title: 'Tap',
       description:
-        'Tap a target: ref, x,y or selector. Several matches refuse, listing refs; no match waits briefly, then refuses with the nearest labels.',
+        'Tap a target: ref, x,y or selector; answers the settled screen (read). Several matches refuse, listing refs; no match waits briefly, then refuses with the nearest labels.',
       input: z.object({ ...Target, read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,
