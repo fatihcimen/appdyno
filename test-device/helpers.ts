@@ -1,4 +1,5 @@
-import { mkdtempSync } from 'node:fs';
+import { generateKeyPairSync } from 'node:crypto';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { appleProvider, Devicectl } from './workspace.js';
@@ -88,3 +89,29 @@ export const toolCaller =
 /** The ref a screen's text gives the element with this label. */
 export const refIn = (text: string, label: string) =>
   new RegExp(`(@[a-z0-9-]+) (?:\\w+ )?"${label}"`).exec(text)?.[1];
+
+/**
+ * A push service's credentials made up here, in a state folder of the suite's own, so that this Mac's own is never read:
+ * no team or project owns them, and the fixtures print no token, so each push is refused before anything leaves, but one
+ * by a token a person typed, which a suite sends to itself.
+ */
+export function madeUp(service: 'apns' | 'fcm') {
+  const state = mkdtempSync(join(tmpdir(), 'appdyno-push-suite-'));
+  mkdirSync(join(state, 'push'), { mode: 0o700 });
+  const pem = (type: 'ec' | 'rsa') =>
+    (type === 'ec'
+      ? generateKeyPairSync('ec', { namedCurve: 'prime256v1' })
+      : generateKeyPairSync('rsa', { modulusLength: 2048 })
+    ).privateKey.export({ type: 'pkcs8', format: 'pem' });
+  const made =
+    service === 'apns'
+      ? { key: pem('ec'), keyId: 'AAAAAAAAAA', teamId: 'BBBBBBBBBB', production: false }
+      : {
+          projectId: 'made-up-project',
+          clientEmail: 'push@made-up-project.iam.gserviceaccount.com',
+          keyId: 'k1',
+          key: pem('rsa'),
+        };
+  writeFileSync(join(state, 'push', `${service}.json`), JSON.stringify(made), { mode: 0o600 });
+  return { APPDYNO_STATE_DIR: state };
+}
