@@ -352,7 +352,9 @@ static void checkStats(void) {
 int MVSelfTest(NSString *fixtures) {
   // before any check, so that one failing cannot reach this Mac's pasteboard, which is a person's
   MVPlaceBehind(YES);
-    MVTestMotion();
+  // motion as a Mac with it on has it, whatever this one asks: GitHub's runners ask for less. A check of a cut holds still
+  MVHoldStill(NO);
+  MVTestMotion();
   checkNals();
   checkInputMaths();
   checkTurns();

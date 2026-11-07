@@ -80,7 +80,7 @@ void MVPulse(NSView *view, double scale);
 CABasicAnimation *MVSpring(NSString *keyPath, double seconds, double bounce);
 /// Whether a person has left motion on.
 BOOL MVMoves(void);
-/// As if a person had asked for less motion: a test's way to it, as that setting is the whole Mac's.
+/// As if a person had asked for less motion, or had not: a test's way to either, as that setting is the whole Mac's.
 void MVHoldStill(BOOL held);
 /// Opacity to `to`; at once for a person who asked for less motion.
 void MVFade(CALayer *layer, double from, double to, double seconds);

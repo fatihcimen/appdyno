@@ -162,14 +162,15 @@ void MVPulse(NSView *view, double scale) {
   [view.layer addAnimation:pulse forKey:@"pulse"];
 }
 
-static BOOL gHeldStill;
+/// Unset, as the Mac asks.
+static NSNumber *gHeldStill;
 
 void MVHoldStill(BOOL held) {
-  gHeldStill = held;
+  gHeldStill = @(held);
 }
 
 BOOL MVMoves(void) {
-  return !gHeldStill && !NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion;
+  return gHeldStill ? !gHeldStill.boolValue : !NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion;
 }
 
 void MVFade(CALayer *layer, double from, double to, double seconds) {
