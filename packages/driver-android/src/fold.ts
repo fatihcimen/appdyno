@@ -79,7 +79,7 @@ export class AndroidFold {
     if (now !== String(state.id))
       throw new DeviceError(
         'UNSUPPORTED',
-        `asked for fold ${value} and the device stays in state ${now}`,
+        `asked for fold ${value} and the device stays in state ${now}: the request holds until restore resets it`,
       );
   }
 }

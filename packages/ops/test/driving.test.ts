@@ -1316,6 +1316,29 @@ describe('device conditions', () => {
     );
   });
 
+  it('keeps a change written down when the device refused after making it, and forgets one it never made', async () => {
+    const settings = new Settings();
+    settings.values.fold = 'default (now open)';
+    // as a fold does that is asked for and does not read back in time: the request went, and holds
+    settings.set = async (name: SettingName, value: string) => {
+      settings.values[name] = value;
+      if (value === 'closed') throw new DeviceError('UNSUPPORTED', 'it stays in state 3');
+    };
+    const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
+    expect((await call('device_setting', { name: 'fold', value: 'closed' })).data.code).toBe(
+      'UNSUPPORTED',
+    );
+    expect((await call('device_setting', { name: 'restore' })).text).toBe(
+      'restored fold: default (now open)',
+    );
+    expect(settings.values.fold).toBe('default (now open)');
+    settings.set = async () => {
+      throw new DeviceError('UNSUPPORTED', 'no fold here');
+    };
+    await call('device_setting', { name: 'fold', value: 'closed' });
+    expect((await call('device_setting', { name: 'restore' })).text).toBe('nothing was changed');
+  });
+
   it('changes a condition and puts it back at the end of the session', async () => {
     const settings = new Settings();
     const d = Object.assign(new FakeDevice(), { settings });

@@ -67,11 +67,20 @@ export async function setCondition(s: Session, name: SettingName, value: string,
     try {
       return await settings.set(name, value, app);
     } catch (e) {
-      // nothing changed, so nothing to put back
-      if (first) forget(s, name);
+      // what went out stays written down until the device reads as it was: a refusal may come after the change
+      if (first && (await readsAsItWas(s, name, app))) forget(s, name);
       throw e;
     }
   });
+}
+
+/** Whether the device reads what was written down for `name`; not when it cannot be read. */
+async function readsAsItWas(s: Session, name: SettingName, app?: string) {
+  const was = conditions.read(s.device.serial)?.[name]?.was;
+  return s.device.settings.get(name, app).then(
+    (now) => now === was,
+    () => false,
+  );
 }
 
 /** `during` changes a condition for its time and puts it back itself: only a process dying meanwhile leaves it. */
