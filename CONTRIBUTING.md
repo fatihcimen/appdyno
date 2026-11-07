@@ -42,8 +42,9 @@ These need a real emulator, simulator or phone, and you name it. There is never 
 other devices may be attached.
 
 ```sh
-(cd android && ./gradlew :agent:assembleDebug :fixture:assembleDebug)
+(cd android && ./gradlew :agent:assembleDebug :fixture:assembleDebug :push-fixture:assembleDebug)
 adb -s <serial> install -r -g android/fixture/build/outputs/apk/debug/fixture-debug.apk
+adb -s <serial> install -r -g android/push-fixture/build/outputs/apk/debug/push-fixture-debug.apk
 (cd ios && xcodebuild build-for-testing -project Appdyno.xcodeproj -scheme Runner \
   -destination 'generic/platform=iOS Simulator' -derivedDataPath .derived)
 APPDYNO_ANDROID_SERIAL=<serial> APPDYNO_IOS_UDID=<udid> pnpm test:device

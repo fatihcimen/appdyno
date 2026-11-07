@@ -69,7 +69,7 @@ step format mise exec -- pnpm exec prettier --check .
 step lint mise exec -- pnpm lint
 step typecheck mise exec -- pnpm typecheck
 step unit mise exec -- pnpm test
-step agent zsh -c 'cd android && mise exec -- ./gradlew --console=plain :agent:testDebugUnitTest :agent:assembleDebug :fixture:assembleDebug'
+step agent zsh -c 'cd android && mise exec -- ./gradlew --console=plain :agent:testDebugUnitTest :agent:assembleDebug :fixture:assembleDebug :push-fixture:assembleDebug'
 step build mise exec -- pnpm build
 # the runner's platform-independent core (Xcode's Swift: the command line tools have no XCTest; skipped
 # where there is no Xcode)

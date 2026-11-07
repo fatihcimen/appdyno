@@ -16,6 +16,7 @@ const sourcesIn = (dir: string, name: RegExp): string[] =>
 const NATIVE = [
   'android/agent/src',
   'android/fixture/src',
+  'android/push-fixture/src',
   'ios/Fixture',
   'ios/Runner',
   'ios/RunnerCore/Sources',
@@ -202,6 +203,7 @@ describe('repeated code', () => {
       'mac/Viewer/main.m',
       'android/agent/src/main/kotlin/dev/appdyno/agent/Handlers.kt',
       'android/fixture/src/main/kotlin/dev/appdyno/fixture/MainActivity.kt',
+      'android/push-fixture/src/main/kotlin/dev/appdyno/pushfixture/PushService.kt',
       'ios/Runner/Device.swift',
       'ios/Fixture/FixtureApp.swift',
       'ios/SimHelper/SimAX.m',

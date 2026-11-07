@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "appdyno-android"
-include(":agent", ":fixture")
+include(":agent", ":fixture", ":push-fixture")

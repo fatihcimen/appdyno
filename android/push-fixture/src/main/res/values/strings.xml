@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Made up: what the google-services plugin writes from a project's file, so Firebase starts in every process of
+         the app, its messaging service's too, with no project behind it. -->
+    <string name="google_app_id" translatable="false">1:1234567890:android:0123456789abcdef</string>
+    <string name="gcm_defaultSenderId" translatable="false">1234567890</string>
+    <string name="google_api_key" translatable="false">made-up-key-for-a-test-app</string>
+    <string name="project_id" translatable="false">appdyno-push-fixture</string>
+</resources>
