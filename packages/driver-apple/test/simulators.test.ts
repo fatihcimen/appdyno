@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Simulators } from '../src/simulator-manage.js';
+import { Simulators } from '../src/simulators.js';
 import type { Simctl } from '../src/simctl.js';
 
 const RUNTIME = 'com.apple.CoreSimulator.SimRuntime.iOS-27-2';

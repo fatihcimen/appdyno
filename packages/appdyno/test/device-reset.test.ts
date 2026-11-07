@@ -27,7 +27,7 @@ const FORBIDDEN: Record<string, RegExp> = {
  * gave one that was not there before.
  */
 const OWN: [string, RegExp][] = [
-  ['packages/driver-apple/src/simulator-manage.ts', /^return `xcrun simctl delete \$\{id\}`;$/],
+  ['packages/driver-apple/src/simulators.ts', /^return `xcrun simctl delete \$\{id\}`;$/],
   ['test-device/simulator-create.test.ts', /^await simctl\.exec\(\['delete', made\]\);$/],
   [
     'test-device/simulator-create.test.ts',
@@ -95,7 +95,7 @@ describe('a device', () => {
       .sort();
     expect(using).toEqual([
       'packages/core/src/virtual.ts',
-      'packages/driver-apple/src/simulator-manage.ts',
+      'packages/driver-apple/src/simulators.ts',
       'packages/ops/src/control.ts',
     ]);
     const control = readFileSync(join(root, 'packages/ops/src/control.ts'), 'utf8');

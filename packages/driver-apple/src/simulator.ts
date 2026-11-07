@@ -10,7 +10,8 @@ import {
   type TreeOptions,
   pause,
 } from '@appdyno/core';
-import { SimulatorApps, SimulatorEvents, SimulatorSettings, typeName } from './simulator-manage.js';
+import { SimulatorApps, SimulatorEvents, SimulatorSettings } from './simulator-manage.js';
+import { typeName } from './simulators.js';
 import {
   DeviceError,
   type Hello,
@@ -27,6 +28,7 @@ import { IosSimulatorPerf } from './perf.js';
 import { simulatorRecorder } from './record.js';
 import { SimulatorWeb } from './webinspector.js';
 import { DirectSim } from './simdirect.js';
+import { SimulatorLock } from './sim-lock.js';
 import { type Capture, settleAfter } from './simsettle.js';
 import { learnCopies, onKeyboard, withoutCopies } from './simtree.js';
 import { IosRunnerLauncher } from './runner.js';
@@ -49,12 +51,9 @@ const firstPoint = (a: ActParams) =>
         : undefined;
 
 /** An iOS simulator: the simulator tool for apps, links and location; perf from the Mac. */
-const WAKE_GAP_MS = 400;
 /** A first boot has nothing in front for a few seconds: this is shorter than a runner's start. */
 const FIRST_FRONT_MS = 10_000;
 const FRONT_AGAIN_MS = 250;
-
-const WAKE_PRESSES = 6;
 
 /** How long a touch that changed nothing has to be reported, before the runner does it again. */
 const LATE_TOUCH_MS = 4_000;
@@ -91,7 +90,10 @@ export class IosSimulatorDevice extends IosDevice {
     this.mirror = new SimulatorMirror(serial, simctl);
     this.network = new SimulatorNetwork(simctl, serial);
     this.web = new SimulatorWeb(simctl, serial);
+    this.lock = new SimulatorLock(simctl, serial);
   }
+
+  private readonly lock: SimulatorLock;
 
   readonly recorder: ScreenRecorder;
   readonly mirror: SimulatorMirror;
@@ -304,9 +306,6 @@ export class IosSimulatorDevice extends IosDevice {
   }
 
   /** A running app comes forward as it is; to start it afresh, terminate it first. */
-  /** Locked by this tool: a screen under the lock still reads, and an app will not come forward. */
-  private locked = false;
-
   override async key(key: string, opts?: ActOptions, modifiers?: Modifier[]) {
     // what a window's control sends: the runner's drag up from the home indicator shows no switcher here
     if (key === 'siri' || key === 'appSwitch') {
@@ -314,33 +313,13 @@ export class IosSimulatorDevice extends IosDevice {
       return opts?.read === 'tree' ? { tree: await this.tree() } : {};
     }
     const r = await super.key(key, opts, modifiers);
-    if (key === 'lock' || key === 'power') this.locked = true;
+    if (key === 'lock' || key === 'power') this.lock.pressed();
     return r;
   }
 
-  /** The next read or action wakes it, as on Android: one press wakes it, one more opens it (no passcode here). */
-  private async wake() {
-    if (!this.locked) return;
-    this.locked = false;
-    // the lock comes a moment after its press; a press during its animation does nothing; and a read under the lock
-    // holds the runner up for 15 s
-    for (let i = 0; i < WAKE_PRESSES && !(await this.lockedNow()); i++)
-      await pause(WAKE_GAP_MS / 2);
-    for (let i = 0; i < WAKE_PRESSES && (await this.lockedNow()); i++) {
-      await super.key('home', { settle: false, read: 'none' });
-      await pause(WAKE_GAP_MS);
-    }
-  }
-
-  private async lockedNow() {
-    const state = await this.simctl.exec([
-      'spawn',
-      this.serial,
-      'notifyutil',
-      '-g',
-      'com.apple.springboard.lockstate',
-    ]);
-    return state.trim().endsWith(' 1');
+  /** The next read or action wakes it, if this tool locked it. */
+  private wake() {
+    return this.lock.wake(() => super.key('home', { settle: false, read: 'none' }));
   }
 
   private readonly pasteOnMac = () => this.simctl.exec(['pbpaste', this.serial]);
