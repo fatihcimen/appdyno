@@ -142,7 +142,8 @@ async function run(s, warmUp) {
   if (/held by pid/.test(devices.text.split('\n').find((l) => l.startsWith(serial)) ?? ''))
     throw new Error(`another process holds ${serial}: ${devices.text}`);
   const first = await s.request('tools/call', { name: 'screen', arguments: {} });
-  if (first.message.result.isError) throw new Error('the first read was refused');
+  if (first.message.result.isError)
+    throw new Error(`the first read was refused: ${first.message.result.content[0]?.text}`);
   timed(
     warmUp ? '`screen`, first of all: starts what the device needs' : '`screen`, first of a server',
     first.ms,
