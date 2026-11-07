@@ -43,14 +43,10 @@ function server(serial: string, named = true, env: Record<string, string> = {}) 
   return call;
 }
 
-/**
- * To a simulator's home screen. A banner over the app takes the first press, and so does the end of a link's opening:
- * then a second goes home.
- */
+/** To a simulator's home screen, by one press, over a banner or just after a link: it answers once the app has gone. */
 async function goHome(call: ReturnType<typeof toolCaller>) {
-  const home = async () =>
-    (await call('press_key', { key: 'home' })).text.includes('foreground: com.apple.springboard');
-  if (!(await home())) expect(await home()).toBe(true);
+  const r = await call('press_key', { key: 'home' });
+  expect([r.data.foreground, r.data.changed]).toEqual(['com.apple.springboard', true]);
 }
 
 describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {

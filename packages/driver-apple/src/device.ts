@@ -74,6 +74,9 @@ export const staticTexts = ({ nodes }: Tree) =>
 /** How long a field has to report the focus before the keys go to whatever has the keyboard. */
 const KEYS_AFTER_MS = 2_000;
 
+/** The app goes 0.9 to 1.8 s after home, at load 7 to 40 on a simulator, by either input. */
+const LEAVES_MS = 5_000;
+
 /** Read-only requests are retried once on a fresh connection when the runner went away. */
 const RETRY_SAFE: ReadonlySet<Method> = new Set<Method>([
   'tree.get',
@@ -251,7 +254,22 @@ export abstract class IosDevice extends RpcDevice implements Device {
         opts,
       );
     }
-    return super.key(key, opts, modifiers);
+    const r = await super.key(key, opts, modifiers);
+    const app = r.tree?.windows[0]?.pkg;
+    return key === 'home' && app && app !== HOME_SCREEN_APP ? this.onceGone(app, r) : r;
+  }
+
+  /**
+   * Home's answer once the app has left the front: it reads alike while it goes, so the settle saw nothing move and
+   * answered with the app still there, and a second press went home.
+   */
+  private async onceGone(app: string, r: ActResult): Promise<ActResult> {
+    const end = Date.now() + LEAVES_MS;
+    while ((await this.foreground()) === app) {
+      if (Date.now() >= end) return r;
+      await sleep(20);
+    }
+    return { ...r, tree: await this.tree() };
   }
 
   /** An app's page has no link any more: its row is on Apps. */

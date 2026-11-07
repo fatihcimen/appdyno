@@ -194,6 +194,37 @@ describe('the app switcher on a simulator', () => {
   });
 });
 
+describe('home on a simulator', () => {
+  afterEach(() => void vi.restoreAllMocks());
+  const shows = (pkg: string): Tree => ({
+    windows: [{ type: 1, pkg, layer: 0, b: [0, 0, 402, 874], active: true, focused: true }],
+    nodes: [],
+    truncated: false,
+    elapsedMs: 1,
+    hash: pkg,
+  });
+  const pressed = (fronts: string[]) => {
+    const device = new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951');
+    vi.spyOn(device, 'act').mockResolvedValue({ tree: shows('dev.app') });
+    vi.spyOn(device, 'foreground').mockImplementation(async () => fronts.shift() ?? 'dev.app');
+    vi.spyOn(device, 'tree').mockResolvedValue(shows('com.apple.springboard'));
+    return device.key('home', { read: 'tree' });
+  };
+
+  it('answers once the app has left, which comes after the settle saw the app still there', async () => {
+    const r = await pressed(['dev.app', 'dev.app', 'com.apple.springboard']);
+    expect(r.tree?.windows[0]?.pkg).toBe('com.apple.springboard');
+  });
+
+  it("answers with the app where it never leaves, once home's time is up", async () => {
+    vi.useFakeTimers();
+    const r = pressed([]);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect((await r).tree?.windows[0]?.pkg).toBe('dev.app');
+    vi.useRealTimers();
+  });
+});
+
 describe('the kind of device', () => {
   it('calls a simulator virtual, and a phone not', () => {
     expect(new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951').virtual).toBe(true);
