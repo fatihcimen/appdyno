@@ -179,17 +179,31 @@ describe('the viewer, compiled by its first-use path', () => {
     expect(readdirSync(viewer).filter((f) => VIEWER_TEST_FILES.test(f)).length).toBeGreaterThan(5);
   });
 
-  it('passes its self test: real frames, bad input, the sums a window rests on', async () => {
-    // a failed check exits 1, and it is the lines that say which
-    const { stdout } = await run(testBinary, ['--selftest', FIXTURES], { timeout: 180_000 }).catch(
-      (e: { stdout: string }) => ({ stdout: e.stdout }),
+  it('passes its self test: real frames, bad input, the sums a window rests on', async ({
+    annotate,
+  }) => {
+    // a failed check exits 1, and it is the lines that say which; one that ends them early is a crash, which says how
+    const { stdout, ended } = await run(testBinary, ['--selftest', FIXTURES], {
+      timeout: 180_000,
+    }).then(
+      ({ stdout }) => ({ stdout, ended: '' }),
+      (e: { stdout: string; stderr: string; code?: number; signal?: string }) => ({
+        stdout: e.stdout,
+        ended: `it ended by ${e.signal ?? `exit ${e.code}`}: ${e.stderr.slice(-1_000)}`,
+      }),
     );
     const lines = stdout
       .trim()
       .split('\n')
       .map((l) => JSON.parse(l) as Record<string, unknown>);
-    expect(lines.filter((l) => l.ok === false)).toEqual([]);
-    expect(lines.at(-1)).toMatchObject({ selftest: 'done', failed: 0 });
+    expect(
+      lines.filter((l) => l.ok === false),
+      ended,
+    ).toEqual([]);
+    expect(lines.at(-1), ended).toMatchObject({ selftest: 'done', failed: 0 });
+    // what this Mac cannot run is said by name, with why: a check not run never reads as one passed
+    for (const l of lines.filter((l) => l.skipped))
+      await annotate(`not run here: ${String(l.check)}: ${String(l.skipped)}`, 'notice');
     const named = lines.map((l) => String(l.check));
     expect(named).toContain('nal: random bytes stay in bounds');
     expect(named).toContain('pixels: a size past the file is refused, unread');
