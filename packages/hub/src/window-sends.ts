@@ -1,4 +1,10 @@
-import { deviceState, inCall, type Device, type ViewerMessage } from '@appdyno/core';
+import {
+  deviceState,
+  inCall,
+  PUSH_TOKEN_KINDS,
+  type Device,
+  type ViewerMessage,
+} from '@appdyno/core';
 import {
   argumentsFor,
   checkApp,
@@ -21,7 +27,7 @@ type Answer = { ok: boolean; text: string; hint?: string };
 
 /**
  * What a window sends to its device by the ops an agent calls, with the same arguments: a link and a push. Each line of
- * progress goes back as it comes, then what the op did, or its refusal with its hint.
+ * progress goes back as it comes, then what the op did, or its refusal with its hint. A push token goes by no op.
  */
 export function windowSends(
   ctx: ServerContext,
@@ -88,6 +94,22 @@ export function windowSends(
     tell('push', (await call('push', 'push', given)).answer);
   };
 
+  /**
+   * A token a person typed for the app in the pane, which the device keeps for this session for its pushes by APNs or
+   * FCM. No op takes it, so no call, Activity or log of one sees it, and nothing here says it back.
+   */
+  const pushToken = async (m: ViewerMessage) => {
+    const app = String(m.app ?? '').trim();
+    const kind = PUSH_TOKEN_KINDS.find((k) => k === m.kind);
+    if (!app) throw new ToolError('give the app the token is for', 'INVALID_ARGUMENT');
+    checkApp(ctx.policy, app);
+    if (!kind) throw new ToolError(`kind: ${PUSH_TOKEN_KINDS.join(', ')}`, 'INVALID_ARGUMENT');
+    if (!device.events.pushToken)
+      throw new ToolError('this device takes no token a person types', 'UNSUPPORTED');
+    device.events.pushToken(app, String(m.token ?? '').trim(), kind);
+    tell('push', { ok: true, text: `Kept ${app}'s ${kind} token for this session only` });
+  };
+
   const sends: Record<string, (m: ViewerMessage) => Promise<void>> = {
     links: async (m) => {
       const front = await ownFront();
@@ -103,6 +125,7 @@ export function windowSends(
     openLink: (m) => openLink(String(m.url ?? '').trim(), String(m.app ?? '').trim()),
     pushes: () => pushes(),
     push: (m) => push(m.args),
+    pushToken,
   };
   const answering = (name: string) => (name.startsWith('push') ? 'push' : 'openLink');
 
