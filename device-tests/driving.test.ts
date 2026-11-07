@@ -592,6 +592,15 @@ describe.skipIf(!ios)('driving on a simulator', () => {
 
   // neither leaves anything to read back: what stands here is that the simulator takes them
   it('takes a push and a biometric result with no refusal', async () => {
+    // on its own: the app there and running, and allowed notifications by its own prompt, which comes once an install
+    ok(await h.call('app', { action: 'install', path: SIM_FIXTURE }));
+    await open('push');
+    ok(await h.call('tap', { selector: { id: 'ask_notifications' } }));
+    const asked = await h.call('wait_for', {
+      text: 'Would Like to Send You Notifications',
+      timeoutMs: 3_000,
+    });
+    if (!asked.error) ok(await h.call('alert', { answer: 'allow' }));
     ok(await h.call('push', { type: 'alert', title: 'appdyno', body: 'merhaba' }));
     ok(await h.call('device_setting', { name: 'biometric', value: 'match' }));
   });
