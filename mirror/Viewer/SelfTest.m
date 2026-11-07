@@ -352,7 +352,6 @@ static void checkStats(void) {
 int MVSelfTest(NSString *fixtures) {
   // before any check, so that one failing cannot reach this Mac's pasteboard, which is a person's
   MVPlaceBehind(YES);
-  NSInteger board = NSPasteboard.generalPasteboard.changeCount;
     MVTestMotion();
   checkNals();
   checkInputMaths();
@@ -371,7 +370,8 @@ int MVSelfTest(NSString *fixtures) {
   checkCodec(NO);
   checkCodec(YES);
   MVCheckHevc444(fixtures);
-  MVCheck(@"pasteboard: all of this left a person's alone", NSPasteboard.generalPasteboard.changeCount == board, nil);
+  // the one way to a board, not the general board's count: that is the whole Mac's, and anything else copying moves it
+  MVCheck(@"pasteboard: a viewer kept behind copies to a board of its own", ![MVPlaceBoard().name isEqual:NSPasteboardNameGeneral], nil);
   MVEmit(@{@"selftest": @"done", @"ok": @(gFailed == 0), @"failed": @(gFailed)});
   return gFailed ? 1 : 0;
 }

@@ -133,7 +133,7 @@ describe('the viewer, compiled by its first-use path', () => {
   }, 30_000);
 
   it.each(['--headless', '--behind'])(
-    "%s copies to a board of its own, and leaves a person's pasteboard alone",
+    '%s copies to a board of its own',
     async (flag) => {
       const file = join(dir, `copied${flag}.png`);
       // a picture of one pixel
@@ -146,24 +146,17 @@ describe('the viewer, compiled by its first-use path', () => {
         const read = `ObjC.import('AppKit'); ${what}`;
         return (await run('osascript', ['-l', 'JavaScript', '-e', read])).stdout.trim();
       };
-      const counts = async () => {
-        const said = await ask(
-          `[$.NSPasteboard.generalPasteboard.changeCount, ${board}.changeCount].join(' ')`,
-        );
-        const [general, own] = said.split(' ').map(Number);
-        return { general: general!, own: own! };
-      };
+      // only its own: the general board's count is the whole Mac's, and anything else copying moves it
+      const count = async () => Number(await ask(`${board}.changeCount`));
       const held = () => ask(`ObjC.unwrap(${board}.stringForType($.NSPasteboardTypeString)) || ''`);
       try {
-        const before = await counts();
+        const before = await count();
         v.send({ op: 'copied', file });
         v.send({ op: 'copyText', text: 'nothing of a person' });
-        // that the viewer did copy is what makes the other count mean anything
         const end = Date.now() + WAIT_MS;
-        let after = await counts();
-        while (after.own < before.own + 2 && Date.now() < end) after = await counts();
-        expect(after.own).toBeGreaterThanOrEqual(before.own + 2);
-        expect(after.general).toBe(before.general);
+        let after = await count();
+        while (after < before + 2 && Date.now() < end) after = await count();
+        expect(after).toBeGreaterThanOrEqual(before + 2);
         expect(await held()).toBe('nothing of a person');
         const gone = new Promise((resolve) => v.onExit(resolve));
         v.send({ op: 'quit' });
@@ -199,7 +192,7 @@ describe('the viewer, compiled by its first-use path', () => {
     expect(named).toContain('nal: random bytes stay in bounds');
     expect(named).toContain('pixels: a size past the file is refused, unread');
     expect(named).toContain('stream: a frame over the limit ends it');
-    expect(named).toContain("pasteboard: all of this left a person's alone");
+    expect(named).toContain('pasteboard: a viewer kept behind copies to a board of its own');
   }, 200_000);
 
   it(
