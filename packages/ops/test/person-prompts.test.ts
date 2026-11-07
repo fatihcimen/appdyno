@@ -31,10 +31,12 @@ async function connect(words: string[]) {
 }
 
 describe('a prompt over the app that no read of it has', () => {
-  it('is said by a read and a picture', async () => {
-    const { call } = await connect(['Face ID']);
+  it('is said by a read, and is in a picture, which takes no look past the app', async () => {
+    const { call, looks } = await connect(['Face ID']);
     expect(await call('screen')).toContain('needs a person: Face ID');
-    expect(await call('screenshot')).toContain('needs a person: Face ID');
+    const before = looks();
+    expect(await call('screenshot')).toContain('image');
+    expect(looks()).toBe(before);
   });
 
   it('is said by an action that changed nothing, which is all it leaves', async () => {

@@ -220,7 +220,8 @@ export function readOps(
             : SHOT_PX,
         });
         const look = await s.current().catch(() => undefined);
-        const fg = look ? await noticed(s, look) : '';
+        // a sheet over the app is in the picture: no look past the app, which took 4.5 s of an iPhone's after typing
+        const fg = look ? await noticed(s, look, false) : '';
         const w = s.device.hello?.screen.w;
         s.shot = { at: s.version, hash: layout ?? '' };
         const scale = w ? Math.round((w / meta.w) * 1000) / 1000 : undefined;
