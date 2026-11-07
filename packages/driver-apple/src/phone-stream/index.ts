@@ -12,7 +12,7 @@ import { LiveReader, NO_HUB, unreadable } from './live.js';
 import { readServices, takeScreenshot } from './services.js';
 import { openTunnel, PhoneRefusal, readPairRecord } from './tunnel.js';
 import type { ToWorker } from './stream-thread.js';
-import { isPaired, openWifiTunnel, pairOnCable, wifiCheck } from './wifi.js';
+import { isPaired, openWifiTunnel, pairOnCable, portOnWifi, wifiCheck } from './wifi.js';
 
 /** This folder's one way in. All it holds speaks a phone's private services; see `phone-stream-port.ts`. */
 
@@ -175,6 +175,7 @@ const phoneStream: PhoneStreamModule = {
   live,
   start,
   onWifi,
+  portOnWifi,
   pair: pairOnCable,
 };
 export default phoneStream;

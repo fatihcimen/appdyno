@@ -9,6 +9,7 @@ import { FramedLine, XpcLine } from './pairing-line.js';
 import { PairingChannel, type Identity } from './pairing.js';
 import { RemoteXpc } from './remotexpc.js';
 import { readServices } from './services.js';
+import { tunnelSocket } from './tunnel-socket.js';
 import { openTunnel, PhoneRefusal, tunnelOver, type Tunnel } from './tunnel.js';
 
 /**
@@ -205,6 +206,26 @@ export async function openWifiTunnel(udid: string): Promise<Tunnel> {
     return tunnel;
   } catch (e) {
     channel.close();
+    throw e;
+  }
+}
+
+/** Each phone's tunnel for what is reached by a port, kept: a start asks for a port many times over. */
+const portTunnels = new Map<string, Promise<Tunnel>>();
+
+/** A connection to a port on the phone, inside a tunnel by the network, as a socket for what speaks to one. */
+export async function portOnWifi(udid: string, port: number) {
+  const opening =
+    portTunnels.get(udid) ??
+    openWifiTunnel(udid).then((tunnel) => {
+      tunnel.stack.onEnded(() => portTunnels.delete(udid));
+      return tunnel;
+    });
+  portTunnels.set(udid, opening);
+  try {
+    return { socket: tunnelSocket(await (await opening).stack.connect(port)) };
+  } catch (e) {
+    portTunnels.delete(udid);
     throw e;
   }
 }

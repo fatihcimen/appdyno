@@ -23,6 +23,7 @@ function fake(
   const module: PhoneStreamModule = {
     check: async () => check,
     onWifi: async (_udid, asked = false) => asked,
+    portOnWifi: async () => ({ socket: {} as never }),
     screenshot: vi.fn(async () => {
       const png = Buffer.alloc(24);
       png[0] = 0x89;

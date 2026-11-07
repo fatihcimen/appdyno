@@ -514,11 +514,10 @@ Run on that Samsung by its Wi-Fi serial with its cable in, by the window suite k
 A window on Wi-Fi does not do these:
 
 - An iPhone's pairing cannot be made there: on the network a phone refuses to start one, so it takes a cable, once.
-- An iPhone has a window and nothing that needs its runner, which is reached by USB.
 - A phone must share this Mac's network: an iPhone is found by what it advertises there, and an Android phone needs Wireless debugging left on.
 - An iPhone by Wi-Fi takes the lower mode unless asked.
 
-Not yet run on a phone, so no claim is made: a network that goes, on a Samsung or an iPhone, as the numbers above it are an emulator's; a pulled cable going on by Wi-Fi; the hub's card pairing a real phone, and its list and bar with a phone on Wi-Fi, which its self test and unit tests hold; and anything of an iPhone past the question it puts to a person, which was reached on an iPhone 13 Pro Max and has not been accepted. There are no iPhone numbers here.
+Not yet run on a phone, so no claim is made: a network that goes, on a Samsung or an iPhone, as the numbers above it are an emulator's; a pulled cable going on by Wi-Fi; an iPhone's runner by Wi-Fi, which listens on a tunnel's interface beside its loopback, never on Wi-Fi itself, and is reached inside the tunnel with its token, so that a window's letters go true there too; the hub's card pairing a real phone, and its list and bar with a phone on Wi-Fi, which its self test and unit tests hold; and anything of an iPhone past the question it puts to a person, which was reached on an iPhone 13 Pro Max and has not been accepted. There are no iPhone numbers here.
 
 ## Left out, for now
 

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IpStack, ipv6Bytes, type PacketStream } from '../ipstack.js';
 import { RemoteXpc } from '../remotexpc.js';
+import { tunnelSocket } from '../tunnel-socket.js';
 import { encodeWrapper, WRAPPER_HEADER } from '../xpc-codec.js';
 
 const LOCAL = 'fd81:fee2:fd54::2';
@@ -332,5 +333,41 @@ describe('UDP and the tunnel', () => {
     expect(ipv6Bytes('fd00:1:2:3:4:5:6:7').readUInt16BE(14)).toBe(7);
     expect(ipv6Bytes('fd00::7').readUInt16BE(0)).toBe(0xfd00);
     expect(ipv6Bytes('fd00::7').readUInt16BE(14)).toBe(7);
+  });
+});
+
+describe('a connection in a tunnel, as a socket', () => {
+  const connection = () => {
+    let data: (d: Buffer) => void = () => undefined;
+    let closed: (why: string) => void = () => undefined;
+    const c = {
+      write: vi.fn(),
+      close: vi.fn(),
+      onData: (l: typeof data) => void (data = l),
+      onClose: (l: typeof closed) => void (closed = l),
+    };
+    return { c, arrive: (d: Buffer) => data(d), end: () => closed('gone') };
+  };
+
+  it('carries bytes both ways, and takes what a socket is asked', async () => {
+    const { c, arrive } = connection();
+    const socket = tunnelSocket(c as never);
+    expect(socket.setNoDelay(true)).toBe(socket);
+    socket.write(Buffer.from('out'));
+    expect(c.write).toHaveBeenCalledWith(Buffer.from('out'));
+    const heard = new Promise<Buffer>((r) => socket.once('data', r));
+    arrive(Buffer.from('in'));
+    expect(await heard).toEqual(Buffer.from('in'));
+    socket.destroy();
+  });
+
+  it('ends with its connection, and takes it along', async () => {
+    const { c, end } = connection();
+    const socket = tunnelSocket(c as never);
+    const closed = new Promise((r) => socket.once('close', r));
+    end();
+    await closed;
+    expect(socket.destroyed).toBe(true);
+    expect(c.close).toHaveBeenCalled();
   });
 });

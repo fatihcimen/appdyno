@@ -1,7 +1,7 @@
 import { HOME_SCREEN_APP } from './platform-screen.js';
 import { phoneCrashes } from './crashes.js';
 import { phoneLogs } from './logs.js';
-import { PhoneMirror } from './mirror-phone.js';
+import { loadPhoneStream, PhoneMirror } from './mirror-phone.js';
 import { PhoneApps, PhoneEvents, PhoneSettings } from './phone-manage.js';
 import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -87,16 +87,22 @@ export function phoneTransport(
       return { xctestrun, sha256: r.key };
     },
     port: async () => 20_000 + Math.floor(Math.random() * 20_000),
-    open: (port) => connectPort(udid, port),
+    open: async (port) =>
+      (await wifiOnly(udid))
+        ? (await loadPhoneStream())!.portOnWifi(udid, port)
+        : connectPort(udid, port),
   };
 }
+
+/** A phone paired for Wi-Fi with no cable, whose stream is in this build: the network is what reaches it. */
+const wifiOnly = async (udid: string) => (await loadPhoneStream())?.onWifi(udid) ?? false;
 
 export function phoneOps(udid: string, ctl: Devicectl): IosDeviceOps {
   return {
     up: async () =>
       (await listDevices()).some(
         (d) => d.connection === 'USB' && d.serial.replace(/-/g, '') === udid.replace(/-/g, ''),
-      ),
+      ) || wifiOnly(udid),
     launch: async (b) => {
       await ctl.launch(b);
     },

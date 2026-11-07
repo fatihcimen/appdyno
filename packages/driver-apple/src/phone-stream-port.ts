@@ -1,3 +1,4 @@
+import type { Socket } from 'node:net';
 import type {
   DeviceState,
   InputEvent,
@@ -50,6 +51,8 @@ export interface PhoneStreamModule {
   focusedField(udid: string): Promise<string | undefined>;
   /** Whether it goes by the network: at a person's word, or as a phone paired for it with no cable has nothing else. */
   onWifi(udid: string, asked?: boolean): Promise<boolean>;
+  /** A connection to a port on the phone by the network, for what a cable would reach by usbmuxd. */
+  portOnWifi(udid: string, port: number): Promise<{ socket: Socket }>;
   /** What can be known with no stream started. */
   check(udid: string, options?: { wifi?: boolean }): Promise<PhoneStreamCheck>;
   start(

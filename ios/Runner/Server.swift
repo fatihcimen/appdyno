@@ -46,9 +46,10 @@ final class MainPump {
     }
 }
 
-/// TCP server on the loopback: frames in, JSON-RPC requests out to the handler, replies back.
+/// TCP server, frames in, JSON-RPC requests out to the handler, replies back: on the loopback, which a cable reaches, and on
+/// a tunnel's interface, which is how a Mac reaches a phone with none. Never on Wi-Fi itself, and the token holds both.
 final class Server {
-    private let listener: NWListener
+    private let listeners: [NWListener]
     private let queue = DispatchQueue(label: "server")
     private let token: String
     private let pump: MainPump
@@ -58,10 +59,13 @@ final class Server {
 
     init(port: UInt16, token: String, pump: MainPump, hello: @escaping () -> [String: Any],
          handle: @escaping (Job) throws -> Reply) throws {
-        let params = NWParameters.tcp
-        params.requiredLocalEndpoint = NWEndpoint.hostPort(host: .ipv4(.loopback), port: NWEndpoint.Port(rawValue: port)!)
-        params.allowLocalEndpointReuse = true
-        listener = try NWListener(using: params)
+        let loopback = NWParameters.tcp
+        loopback.requiredLocalEndpoint = NWEndpoint.hostPort(host: .ipv4(.loopback), port: NWEndpoint.Port(rawValue: port)!)
+        loopback.allowLocalEndpointReuse = true
+        let tunnel = NWParameters.tcp
+        tunnel.requiredInterfaceType = .other
+        tunnel.allowLocalEndpointReuse = true
+        listeners = [try NWListener(using: loopback), try NWListener(using: tunnel, on: NWEndpoint.Port(rawValue: port)!)]
         self.token = token
         self.pump = pump
         self.hello = hello
@@ -69,11 +73,13 @@ final class Server {
     }
 
     func start() {
-        listener.newConnectionHandler = { [weak self] c in self?.accept(c) }
-        listener.start(queue: queue)
+        for listener in listeners {
+            listener.newConnectionHandler = { [weak self] c in self?.accept(c) }
+            listener.start(queue: queue)
+        }
     }
 
-    func stop() { listener.cancel() }
+    func stop() { listeners.forEach { $0.cancel() } }
 
     private func accept(_ c: NWConnection) {
         let session = Session(connection: c)
