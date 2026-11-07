@@ -8,7 +8,8 @@ extension Device {
      */
     func focusedField(_ app: XCUIApplication) -> XCUIElement? {
         let f = app.descendants(matching: .any).matching(NSPredicate(format: "hasKeyboardFocus == true")).firstMatch
-        guard let snap = try? f.snapshot() else { return nil }
+        // `exists` answers at once; a snapshot of a missing element waits for it to appear, as before a tap
+        guard f.exists, let snap = try? f.snapshot() else { return nil }
         if !snap.identifier.isEmpty {
             return app.descendants(matching: snap.elementType).matching(identifier: snap.identifier).firstMatch
         }
