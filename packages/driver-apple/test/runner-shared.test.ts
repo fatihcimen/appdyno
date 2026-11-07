@@ -1,6 +1,14 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Socket } from 'node:net';
@@ -168,6 +176,40 @@ describe('a start that cannot come', () => {
     await vi.waitFor(() => expect(() => process.kill(pid, 0)).toThrow());
     await second.stop(rpc);
     rmSync(own, { recursive: true, force: true });
+  });
+
+  it('makes its folder for what xcodebuild keeps once the xcodebuild that kept it there has ended', async () => {
+    const udid = randomUUID().toUpperCase();
+    // what is still written as it ends, as by one that lived on through an erase beside the new start
+    writeFileSync(
+      join(state, 'xcodebuild'),
+      `#!${process.execPath}
+const fs = require('node:fs');
+const bundle = process.argv[process.argv.indexOf('-resultBundlePath') + 1];
+process.on('SIGTERM', () => setTimeout(() => {
+  fs.mkdirSync(bundle, { recursive: true });
+  fs.writeFileSync(bundle + '/late', '');
+  process.exit(0);
+}, 300));
+setTimeout(() => {}, 30000);
+`,
+    );
+    let port = 0;
+    let erased = -1;
+    const runner = new IosRunnerLauncher(udid, {
+      ...through(2),
+      port: async () => ++port,
+      open: async (at) => {
+        if (at === erased) throw new Error('its runner went with the erase');
+        return through(2).open(at);
+      },
+    });
+    (await runner.connect()).rpc.close();
+    erased = port;
+    const { rpc } = await runner.connect();
+    await new Promise((r) => setTimeout(r, 600));
+    expect(existsSync(join(state, `ios-${udid}.kept`, 'session.xcresult', 'late'))).toBe(false);
+    await runner.stop(rpc);
   });
 
   it('is waited for no longer than one, with who holds it said', async () => {

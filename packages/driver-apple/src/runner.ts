@@ -10,6 +10,7 @@ import {
   exclusively,
   sleep,
   greet,
+  processAlive,
   readStateFile,
   reportProgress,
   run,
@@ -28,6 +29,13 @@ import { recordXctMetrics } from './trace.js';
 const START_MS = 180_000;
 const POLL_MS = 250;
 const PROGRESS_MS = 5_000;
+
+/**
+ * SIGTERM ended xcodebuild in 5 to 31 ms, 11 of 11, as it served, as its simulator shut down and as it booted it again, at
+ * load 20 to 110; one that shut down the simulator it had booted took over a second.
+ */
+const ENDS_MS = 5_000;
+const ENDS_POLL_MS = 20;
 
 /** Where a runner's start has got to, by the last milestone of xcodebuild's log. */
 export function startPhase(log: string): string {
@@ -291,19 +299,28 @@ export class IosRunnerLauncher {
     for (const pid of serving.split('\n').filter(Boolean)) await this.kill(Number(pid));
   }
 
+  /**
+   * Ended before what comes next: it writes its result bundle up to its end, once in the 31 ms after the SIGTERM, where a
+   * start then removes and makes one, and a write within that removal fails it with ENOTEMPTY.
+   */
   private async kill(pid: number) {
     // only our own xcodebuild: its command line names the runner test
     const cmd = await run('ps', ['-o', 'command=', '-p', String(pid)]).then(
       (r) => r.stdout,
       () => '',
     );
-    if (cmd.includes(RUNNER_TEST) && cmd.includes(this.udid)) {
+    if (!cmd.includes(RUNNER_TEST) || !cmd.includes(this.udid)) return;
+    const send = (signal: NodeJS.Signals) => {
       try {
-        process.kill(pid, 'SIGTERM');
+        process.kill(pid, signal);
       } catch {
         /* gone already */
       }
-    }
+    };
+    send('SIGTERM');
+    const end = Date.now() + ENDS_MS;
+    while (processAlive(pid) && Date.now() < end) await sleep(ENDS_POLL_MS);
+    if (processAlive(pid)) send('SIGKILL');
   }
 
   private readState() {

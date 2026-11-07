@@ -1,6 +1,6 @@
 import { mkdir, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { run, stateDir } from '@appdyno/core';
+import { processAlive, run, stateDir } from '@appdyno/core';
 
 /**
  * Each `xctrace record` leaves an `instruments*.ktrace` of up to 0.7 GB in the user's temp folder, and a few hundred fill a
@@ -71,15 +71,6 @@ const heldBy = async (pid: number, dir: string) => {
 
 const ledger = () => join(stateDir(), 'trace-temp');
 
-const alive = (pid: number) => {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    return (e as NodeJS.ErrnoException).code === 'EPERM';
-  }
-};
-
 /** What goes of a run's files, and how many stay open: all that was made, or with others at work what it held. */
 async function clear(dir: string, window: { from: number; to: number }, kept: Set<string> | false) {
   const made = (await ktraces(dir)).filter((f) => f.born >= window.from && f.born <= window.to);
@@ -96,7 +87,7 @@ const working = new Set<string>();
 async function sweep(dir: string, spanMs: number, others: () => Promise<boolean>) {
   for (const line of await readdir(ledger()).catch(() => [] as string[])) {
     const [pid, from] = line.split('-').map(Number);
-    if (working.has(line) || (pid !== process.pid && alive(pid!))) continue;
+    if (working.has(line) || (pid !== process.pid && processAlive(pid!))) continue;
     if (await others()) return;
     const open = await clear(dir, { from: from!, to: from! + spanMs }, false);
     if (open === 0) await rm(join(ledger(), line), { force: true });

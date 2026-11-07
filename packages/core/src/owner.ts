@@ -38,6 +38,16 @@ export const thisOwner = (tool: string): Owner => ({
   since: new Date().toISOString(),
 });
 
+/** Whether a process of this Mac runs, by its pid alone; EPERM: it runs, as another user. */
+export const processAlive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return (e as NodeJS.ErrnoException).code === 'EPERM';
+  }
+};
+
 export const isAlive = (o: Pick<Owner, 'pid' | 'started'>) =>
   o.started !== '' && startOf(o.pid) === o.started;
 
