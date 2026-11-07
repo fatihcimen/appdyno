@@ -114,7 +114,7 @@ class Stream(private val request: StreamRequest, private val out: StreamOutput) 
             val started = SystemClock.uptimeMillis()
             try {
                 // none: a new size or rotation, and the same step at once
-                val next = when (val pace = runEncoder(step, ladder.takeIf { adapting && !step!!.software })) {
+                val next = when (val pace = runEncoder(step, ladder.takeIf { adapting && !step.software })) {
                     is SizePace.TooSlow -> {
                         System.err.println("too slow at ${step.maxSize}: its frames took ${pace.ms} ms")
                         ladder.smaller(pace.ms, SystemClock.uptimeMillis())

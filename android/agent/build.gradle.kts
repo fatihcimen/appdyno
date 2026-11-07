@@ -1,6 +1,5 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
 }
 
 // The agent is never installed: its APK is the class path of an app_process server run as the shell user.
@@ -22,14 +21,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
     // the wire as canonical JSON, read by the host's tests and the runner's as well
-    sourceSets["test"].resources.srcDir("../../packages/protocol/fixtures")
+    sourceSets["test"].resources.directories += "../../packages/protocol/fixtures"
 }
 
 dependencies {

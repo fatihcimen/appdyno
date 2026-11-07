@@ -1,6 +1,8 @@
 package dev.appdyno.agent
 
 import android.graphics.Rect
+import java.math.BigDecimal
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -21,7 +23,18 @@ class WireFixturesTest {
 
     private fun result(name: String) = results.getJSONObject(name).getJSONObject("result")
 
-    private fun same(expected: JSONObject, actual: JSONObject) = assertTrue("$actual\nis not\n$expected", expected.similar(actual))
+    /**
+     * What `similar` says, by calls android.jar's own `JSONObject` has too: the compiler finds that one first, and the
+     * tests run on the real one. A number is its value, whichever type the parse or the agent gave it.
+     */
+    private fun canonical(v: Any?): Any? = when (v) {
+        is JSONObject -> v.keys().asSequence().sorted().associateWith { canonical(v.get(it)) }
+        is JSONArray -> (0 until v.length()).map { canonical(v.get(it)) }
+        is Number -> BigDecimal(v.toString()).stripTrailingZeros()
+        else -> v
+    }
+
+    private fun same(expected: JSONObject, actual: JSONObject) = assertEquals(canonical(expected), canonical(actual))
 
     private fun JSONObject.text(key: String) = if (has(key)) getString(key) else null
 
@@ -57,7 +70,7 @@ class WireFixturesTest {
         assertEquals(200f, a.y)
         val after = AfterRequest.from(p)
         assertEquals(200L, after.settle!!.quietMs)
-        assertEquals(3_000L, after.settle!!.maxMs)
+        assertEquals(3_000L, after.settle.maxMs)
         assertEquals("none", after.read)
         assertEquals("abc", after.before)
     }
