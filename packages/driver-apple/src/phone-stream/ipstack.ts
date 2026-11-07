@@ -63,6 +63,9 @@ export interface PacketStream {
 
 type Sent = { seq: number; end: number; flags: number; data: Buffer; syn: boolean };
 
+/** The phone said no on a port: what carried that word works, unlike a port that says nothing. */
+export class PortRefused extends Error {}
+
 export class TcpConnection {
   private seq = (Math.random() * 0x7fffffff) | 0;
   private rcv = 0;
@@ -228,7 +231,7 @@ export class TcpConnection {
     const flags = p[13]!;
     const seq = p.readInt32BE(4);
     if (flags & RST) {
-      const refused = new Error(`port ${this.remotePort} refused the connection`);
+      const refused = new PortRefused(`port ${this.remotePort} refused the connection`);
       this.connected?.reject(refused);
       this.connected = undefined;
       this.end(refused.message);

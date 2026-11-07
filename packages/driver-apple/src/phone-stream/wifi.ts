@@ -5,6 +5,7 @@ import { dirname } from 'node:path';
 import { connect as tlsConnect, type TLSSocket } from 'node:tls';
 import type { PhoneStreamCheck } from '../phone-stream-port.js';
 import { identityFile } from '../wifi-paired.js';
+import { PortRefused } from './ipstack.js';
 import { FramedLine, XpcLine } from './pairing-line.js';
 import { PairingChannel, type Identity } from './pairing.js';
 import { RemoteXpc } from './remotexpc.js';
@@ -216,18 +217,23 @@ export async function openWifiTunnel(udid: string): Promise<Tunnel> {
 const portTunnels = new Map<string, Promise<Tunnel>>();
 
 /** A connection to a port on the phone, inside a tunnel by the network, as a socket for what speaks to one. */
-export async function portOnWifi(udid: string, port: number) {
+export async function portOnWifi(udid: string, port: number, open = openWifiTunnel) {
   const opening =
     portTunnels.get(udid) ??
-    openWifiTunnel(udid).then((tunnel) => {
+    open(udid).then((tunnel) => {
       tunnel.stack.onEnded(() => portTunnels.delete(udid));
       return tunnel;
     });
   portTunnels.set(udid, opening);
-  try {
-    return { socket: tunnelSocket(await (await opening).stack.connect(port)) };
-  } catch (e) {
+  const { stack } = await opening.catch((e: unknown) => {
     portTunnels.delete(udid);
+    throw e;
+  });
+  try {
+    return { socket: tunnelSocket(await stack.connect(port)) };
+  } catch (e) {
+    // a runner still starting refuses each look, and silence may be a network that went, which leaves no end to read
+    if (!(e instanceof PortRefused)) stack.close();
     throw e;
   }
 }

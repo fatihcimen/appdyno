@@ -6,7 +6,8 @@ import { PairingChannel, type Identity } from '../pairing.js';
 import { N, opack, readTlv, srpClient, TAG, tlv } from '../pairing-wire.js';
 import type { RemoteXpc } from '../remotexpc.js';
 import { PhoneRefusal } from '../tunnel.js';
-import { networkAddress, phonesIn, phonesToTry, pskTls } from '../wifi.js';
+import { PortRefused } from '../ipstack.js';
+import { networkAddress, phonesIn, phonesToTry, portOnWifi, pskTls } from '../wifi.js';
 import { XpcInt64 } from '../xpc-codec.js';
 import { FakePhone } from './fake-phone.js';
 
@@ -293,5 +294,59 @@ describe('the tunnel by the network', () => {
     expect(said).toBe('in');
     await expect(pskTls(await socketTo(), Buffer.alloc(32, 1))).rejects.toThrow();
     server.close();
+  });
+});
+
+describe('a port on the phone by the network', () => {
+  const connection = { onData: vi.fn(), onClose: vi.fn(), close: vi.fn(), write: vi.fn() };
+  /** A tunnel with what its connects answer, one by one, which then ends as a tunnel does when closed. */
+  const tunnels = (...answers: (Error | undefined)[][]) => {
+    const made: { close: ReturnType<typeof vi.fn> }[] = [];
+    const open = vi.fn(async () => {
+      const answering = answers.shift()!;
+      const ends: (() => void)[] = [];
+      const stack = {
+        connect: async () => {
+          const answer = answering.shift();
+          if (answer) throw answer;
+          return connection;
+        },
+        onEnded: (l: () => void) => ends.push(l),
+        close: vi.fn(() => ends.forEach((end) => end())),
+      };
+      made.push(stack);
+      return { stack, rsdPort: 1 } as never;
+    });
+    return { open, made };
+  };
+
+  it('keeps its tunnel through a refusal, as each look at a runner still starting is one', async () => {
+    const { open, made } = tunnels([
+      new PortRefused('no one yet'),
+      new PortRefused('nor now'),
+      undefined,
+    ]);
+    await expect(portOnWifi('refused', 1, open)).rejects.toThrow('no one yet');
+    await expect(portOnWifi('refused', 1, open)).rejects.toThrow('nor now');
+    await expect(portOnWifi('refused', 1, open)).resolves.toBeDefined();
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(made[0]!.close).not.toHaveBeenCalled();
+  });
+
+  it('with no answer ends its tunnel and opens another, as a network that went says nothing', async () => {
+    const { open, made } = tunnels([new Error('no answer')], [undefined]);
+    await expect(portOnWifi('silent', 1, open)).rejects.toThrow('no answer');
+    expect(made[0]!.close).toHaveBeenCalled();
+    await expect(portOnWifi('silent', 1, open)).resolves.toBeDefined();
+    expect(open).toHaveBeenCalledTimes(2);
+  });
+
+  it('tries again after a tunnel that would not open', async () => {
+    const open = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('not on this network'))
+      .mockImplementationOnce(tunnels([undefined]).open);
+    await expect(portOnWifi('away', 1, open)).rejects.toThrow('not on this network');
+    await expect(portOnWifi('away', 1, open)).resolves.toBeDefined();
   });
 });
