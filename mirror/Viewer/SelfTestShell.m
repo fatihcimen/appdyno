@@ -16,12 +16,18 @@ static BOOL tablesTakeClicks(void) {
   return [NSProcessInfo.processInfo isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){27, 0, 0}];
 }
 
-void MVPokeRow(MVHub *hub, NSString *title) {
-  if (tablesTakeClicks()) return [hub pokeRow:title];
+void MVPokeListRow(MVList *list, NSString *title) {
+  NSUInteger at = [[list.rows valueForKey:@"title"] indexOfObject:MVWord(title)];
+  if (at == NSNotFound) return;
+  [list.window layoutIfNeeded];
+  [list.window displayIfNeeded];
+  if (tablesTakeClicks()) return MVRealClick(list.window, [list pointOfRow:at]);
   // the table's own choosing, which its click would have set off
-  MVList *list = [hub valueForKey:@"_list"];
-  for (MVRow *row in list.rows)
-    if ([row.title isEqual:MVWord(title)]) [list selectKey:row.key];
+  [list selectKey:list.rows[at].key];
+}
+
+void MVPokeRow(MVHub *hub, NSString *title) {
+  MVPokeListRow([hub valueForKey:@"_list"], title);
 }
 
 void MVCheckRowClick(NSString *name, BOOL ok, NSString *_Nullable detail) {
@@ -45,7 +51,7 @@ static void checkTabs(void) {
   [window openInspector:YES];
   MVPump(0.5);
   MVCheck(@"inspector: nothing stands over the device, as the ground runs on under it", NSMaxX(window.deviceInWindow) <= NSMinX(window.inspectorInWindow), [NSString stringWithFormat:@"device to %.0f, Inspector from %.0f", NSMaxX(window.deviceInWindow), NSMinX(window.inspectorInWindow)]);
-  NSDictionary *tabs = @{@"tabFlows": @(MVPaneFlow), @"tabApps": @(MVPaneApps), @"tabActivity": @(MVPaneActivity), @"tabPerformance": @(MVPanePerf)};
+  NSDictionary *tabs = @{@"tabFlows": @(MVPaneFlow), @"tabApps": @(MVPaneApps), @"tabActivity": @(MVPaneActivity), @"tabPerformance": @(MVPanePerf), @"tabLinks": @(MVPaneLinks)};
   for (NSString *tab in tabs) {
     [window pokeClick:tab];
     MVPump(0.1);

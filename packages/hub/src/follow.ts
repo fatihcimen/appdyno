@@ -1,5 +1,6 @@
 import type { MirrorSession } from '@appdyno/core';
 import { activityFollower, type ActivityLine, handoffRequest } from '@appdyno/ops';
+import { WINDOW } from './measures.js';
 
 const POLL_MS = 250;
 /** The pill goes this long after the last call. */
@@ -39,7 +40,8 @@ export function followDevice(
   const timer = setInterval(() => {
     each?.();
     const now = Date.now();
-    for (const line of lines()) {
+    // what a person sent from this window is no agent driving
+    for (const line of lines().filter((l) => l.client !== WINDOW)) {
       lastCall = now;
       driving = true;
       session.tell({

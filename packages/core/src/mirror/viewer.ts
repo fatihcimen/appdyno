@@ -76,6 +76,7 @@ export const VIEWER_OPS = {
   takes: [
     'activity',
     'agent',
+    'answer',
     'apps',
     'attach',
     'banner',

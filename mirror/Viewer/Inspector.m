@@ -1,5 +1,5 @@
-// The pane beside the device: the stream's numbers, what an agent has called, and the device's apps. The numbers
-// come from this process; the rest from the parent, by messages.
+// The pane beside the device: the stream's numbers, what an agent has called, the device's apps and a link to open. The
+// numbers come from this process; the rest from the parent, by messages.
 #import "Place.h"
 #import "Window.h"
 #import "Words.h"
@@ -14,6 +14,7 @@ static const struct {
     {"tabFlows", "Flows", "point.topleft.down.to.point.bottomright.curvepath"},
     {"tabApps", "Apps", "square.grid.2x2"},
     {"tabActivity", "Activity", "clock.arrow.circlepath"},
+    {"tabLinks", "Links", "link"},
 };
 
 static NSTextField *caption(NSString *text) {
@@ -79,6 +80,8 @@ static NSString *ms(id v) {
     _numbers = [self statsPane];
     _panes[MVPaneActivity] = [self activityPane];
     _panes[MVPaneApps] = [self appsPane];
+    _links = [MVLinkPane new];
+    _panes[MVPaneLinks] = _links;
     _perf = [[MVPerfPane alloc] initWithFrame:NSZeroRect target:target];
     _panes[MVPanePerf] = _perf;
     _flow = [[MVFlowPane alloc] initWithFrame:NSZeroRect target:target];
@@ -241,6 +244,7 @@ static NSString *ms(id v) {
   for (int i = 0; i < MVPanes; i++) _panes[i].hidden = i != pane;
   _chosen = pane;
   if (self.onPane) self.onPane();
+  if (pane == MVPaneLinks) [_links ask];
   if (pane == MVPaneApps && !_asked) {
     _asked = YES;
     MVEmitFrom(self, @{@"op": @"app", @"action": @"list"});

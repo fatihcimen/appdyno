@@ -74,6 +74,7 @@
   if (m[@"pane"]) return [_window showPane:[m[@"pane"] integerValue]];
   if (m[@"journey"]) return [self say:@{@"op": @"control", @"name": @"journey", @"file": m[@"journey"]}];
   if (m[@"control"]) return [_window perform:m[@"control"]];
+  if (m[@"link"]) return [_window.inspector.links fill:m[@"link"]];
   if (m[@"click"]) return [_window chooseClick:m[@"click"]];
   double x = [m[@"x"] doubleValue], y = [m[@"y"] doubleValue];
   if ([m[@"hover"] boolValue]) return [_window pokeHoverX:x y:y];
@@ -121,6 +122,7 @@
   if ([op isEqual:@"element"]) return [_window showElement:m];
   if ([op isEqual:@"measuring"] || [op isEqual:@"measured"]) return [_window showMeasure:m];
   if ([op isEqual:@"results"]) return [_window.inspector.perf showHistory:m];
+  if ([op isEqual:@"answer"]) return [_window.inspector.links show:m];
   if ([op isEqual:@"note"]) return [_window sayNote:m[@"text"] ?: @""];
   if ([op isEqual:@"recording"]) return [_window setRecording:[m[@"on"] boolValue]];
   if ([op isEqual:@"pair"]) return [_window setPair:m];

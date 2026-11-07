@@ -93,6 +93,10 @@
   if ([name isEqual:@"paste"]) return [_view paste:self];
   if ([name isEqual:@"both"]) return MVEmitFrom(_view, @{@"op": @"control", @"name": name});
   if ([name isEqual:@"journey"]) return [self askJourney];
+  if ([name isEqual:@"openLink"]) {
+    [self showPane:MVPaneLinks];
+    return [_inspector.links focus];
+  }
   [_view pressButton:name];
 }
 

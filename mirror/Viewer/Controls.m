@@ -17,6 +17,7 @@ static const MVControlRow kControls[] = {
     {"copy", "Copy Screen", "doc.on.doc", 'c', kCmd, "File"},
     {"record", "Record Screen", "record.circle", 'r', kCmd | kOpt, "File"},
     {"recordFlow", "Record Flow", "hand.tap", 't', kCmd | kOpt, "File"},
+    {"openLink", "Open Link…", "link", 'o', kCmd, "File"},
     {"paste", "Paste", "doc.on.clipboard", 'v', kCmd, "Edit"},
     {"zoomFit", "Zoom to Fit", "arrow.up.left.and.down.right.magnifyingglass", '9', kCmd, "View"},
     {"zoomActual", "Actual Size", "1.magnifyingglass", '0', kCmd, "View"},

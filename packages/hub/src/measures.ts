@@ -61,6 +61,9 @@ const judged = (app: string, runs: string, data: { virtualDevice: boolean; noise
   };
 };
 
+/** Who acts in a window: a person, whose calls are no agent's to show. */
+export const WINDOW = 'appdyno window';
+
 /** Operations over a device already open in a window: a second driver object would be a second agent on it. */
 export const windowContext = (ctx: ServerContext, device: Device) =>
   new ServerContext(
@@ -70,7 +73,7 @@ export const windowContext = (ctx: ServerContext, device: Device) =>
       device: device.serial,
       measurements: ctx.measurementsDir,
       perf: ctx.perfDir,
-      tool: 'appdyno window',
+      tool: WINDOW,
     },
   );
 

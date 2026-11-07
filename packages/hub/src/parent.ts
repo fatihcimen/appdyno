@@ -12,6 +12,7 @@ import { windowFlow } from './flow.js';
 import { followDevice } from './follow.js';
 import { windowMeasures } from './measures.js';
 import { pairWindows, type PairSide, type WindowPair } from './pair.js';
+import { windowSends } from './window-sends.js';
 import {
   answerWatches,
   FOCUS_SIGNAL,
@@ -119,6 +120,7 @@ export class Parent {
       windowMeasures(this.ctx, device),
     );
     const flow = windowFlow(this.ctx, device, hardware, () => session, controls.measuring);
+    const sends = windowSends(this.ctx, device, () => session);
     const session: MirrorSession = new MirrorSession({
       mirror: device.mirror,
       viewer: this.o.viewer?.(serial) ?? startViewer(this.o.headless, undefined, this.o.behind),
@@ -129,7 +131,7 @@ export class Parent {
       press: controls.press,
       takeInput: (e) => this.pair?.input(serial, e) ?? false,
       onWindow: (m) => {
-        if (!this.pair?.control(m) && !flow.onWindow(m)) controls.onWindow(m);
+        if (!this.pair?.control(m) && !flow.onWindow(m) && !sends.onWindow(m)) controls.onWindow(m);
       },
       onInput: flow.input,
       options: this.o.options,
