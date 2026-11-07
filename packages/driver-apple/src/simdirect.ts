@@ -89,6 +89,17 @@ export class DirectSim {
     };
   }
 
+  /**
+   * Both helpers started and asked once, for a first read and a first touch to find them up: the input helper's first
+   * message, a ping no app sees, took 120 ms more than the next.
+   */
+  warm() {
+    if (!this.readOff) void this.hello().catch(() => undefined);
+    if (this.inputOff) return;
+    this.hid ??= this.start.hid(this.udid);
+    this.hid.then((h) => h.call({ op: 'ping' }, 8_000)).catch(() => undefined);
+  }
+
   /** Portrait only is verified for the read helper; a touch turns with the app in front. */
   setRotation(rotation: number) {
     this.rotated = rotation !== 0;

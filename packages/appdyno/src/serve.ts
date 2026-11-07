@@ -34,8 +34,13 @@ export async function serveCommand(
   const values = flags(args);
   const log = (line: object) =>
     process.stderr.write(`${JSON.stringify({ t: new Date().toISOString(), ...line })}\n`);
+  // a device named at the start: its first call finds what it needs started
+  const started = (ctx: ServerContext) => {
+    if (ctx.selected) ctx.warm(ctx.selected);
+    return ctx;
+  };
   if (!values.http) {
-    const ctx = context(values);
+    const ctx = started(context(values));
     endWithClient(ctx, log);
     await createServer(opsFor(ctx), log).connect(new StdioServerTransport());
     return;
@@ -49,7 +54,7 @@ export async function serveCommand(
     ...listen,
     token,
     open: () => {
-      const ctx = context(values);
+      const ctx = started(context(values));
       return { ops: opsFor(ctx), end: () => putBack(ctx, log) };
     },
     log,

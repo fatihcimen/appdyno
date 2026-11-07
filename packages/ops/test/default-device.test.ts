@@ -13,6 +13,24 @@ const provider = (list: Awaited<ReturnType<DeviceProvider['list']>>): DeviceProv
 const contextOf = (...providers: DeviceProvider[]) =>
   new ServerContext(DEFAULT_POLICY, providers, {});
 
+describe('a device warmed before its first call', () => {
+  it('is the one its session drives, warmed again as it opens, and none this server may not drive', async () => {
+    const opened: FakeDevice[] = [];
+    let warmed = 0;
+    const p = provider([{ serial: 'one', state: 'booted', ready: true }]);
+    p.open = () => {
+      const d = Object.assign(new FakeDevice(), { warm: () => void warmed++ });
+      opened.push(d);
+      return d;
+    };
+    const ctx = new ServerContext({ ...DEFAULT_POLICY, devices: /^one$/ }, [p], {});
+    ctx.warm('one');
+    ctx.warm('other');
+    const s = await ctx.session('one');
+    expect([opened.length, s.device === opened[0], warmed]).toEqual([1, true, 2]);
+  });
+});
+
 describe('the device a call uses with none named', () => {
   it.each([
     ['a lone booted simulator', 'booted'],

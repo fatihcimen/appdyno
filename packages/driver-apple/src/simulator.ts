@@ -112,6 +112,10 @@ export class IosSimulatorDevice extends IosDevice {
     return this.runnerUp;
   }
 
+  warm() {
+    this.direct.warm();
+  }
+
   /** The helper's hello: the runner starts for what needs it, a system alert, text, an image or a control found twice. */
   override async open(): Promise<Hello> {
     if (this.hello) return this.hello;

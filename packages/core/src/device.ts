@@ -106,6 +106,8 @@ export interface Device {
   /** Whether the last connect started a new agent. */
   lastStartWasCold: boolean;
   open(): Promise<Hello>;
+  /** What a first read and a first touch need, started in the background: nothing waits on it, nothing is refused by it. */
+  warm?(): void;
   close(): void;
   /** `asItIs`: a look that leaves a dark or locked screen so, for what reads with no one asking it to. */
   tree(opts?: TreeOptions): Promise<Tree>;

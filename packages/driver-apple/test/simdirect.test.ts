@@ -343,6 +343,26 @@ describe('the helpers prove themselves', () => {
         : { ok: true },
     );
 
+  it('starts both helpers when warmed, the read one through its hello, and neither of one turned off', async () => {
+    const started: string[] = [];
+    const hello = () =>
+      helper((q) =>
+        q.op === 'hello'
+          ? { ok: true, osVersion: '27.2', model: 'iPhone18,1', scale: 3, screen: [402, 874] }
+          : { ok: true },
+      );
+    const starting = (tag: string) => ({
+      ax: async () => (started.push(`${tag} read`), hello()),
+      hid: async () => (started.push(`${tag} input`), ax()),
+    });
+    const d = new DirectSim('u', starting('on'));
+    d.warm();
+    await vi.waitFor(() => expect(d.screenKnown).toBe(true));
+    new DirectSim('u', starting('off'), 'off').warm();
+    new DirectSim('u', starting('read'), 'read').warm();
+    expect(started.sort()).toEqual(['on input', 'on read', 'read read']);
+  });
+
   it('keeps away from a read until asked, and off when told', async () => {
     const off = new DirectSim('u', { ax: async () => ax(), hid: async () => ax() }, 'off');
     expect(await off.read('a.b')).toEqual({ refused: 'APPDYNO_SIM_DIRECT=off' });

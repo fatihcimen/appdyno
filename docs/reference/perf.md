@@ -611,7 +611,7 @@ With the settled screen, a call's time is mostly the app's own: the script's set
 Each call split into its parts, on the same devices, from the server's log, and from a run of the same ops in one process with each device round trip, helper call and child process timed:
 
 - Android: nearly all of a call is the agent's action, the touch and then the settle, which waits for the screen to be still. The server adds about 10 ms on the emulator. On a phone it adds one `adb shell pidof` after each action, which says whether the app died during it: 44 ms on the Samsung. A swipe's 300 ms stroke takes about 600 ms to send, as each move waits for the app to take it, and the list then coasts for the settle.
-- iOS simulator: the helper reads the screen in 14-20 ms and sends the touches. Text goes by the runner, by XCTest. A new server starts its helper, about 400 ms of its first read, and its first touch starts the input helper, about 500 ms. `logs` is `log show` (1.0-1.5 s) after `simctl get_app_container` (130-200 ms).
+- iOS simulator: the helper reads the screen in 14-20 ms and sends the touches. Text goes by the runner, by XCTest. A new server started its helper, about 400 ms of its first read, and its first touch the input helper: both now start once the device is named, [below](#a-simulators-helpers-started-before-the-first-call). `logs` is `log show` (1.0-1.5 s) after `simctl get_app_container` (130-200 ms).
 - iPhone: every read is the runner's, 170-300 ms. `screen` reads twice: the app, then the home screen app, for a Face ID or passcode sheet that no read of the app shows. A swipe's list coasts for 2.8 s of the settle.
 
 The three costliest that are not the device's own:
@@ -651,6 +651,22 @@ Tried and dropped:
 - The app's process asked of the Android agent, which answers at once, for the `adb shell pidof` after each action: 36.8 ms against 43.9 on the Samsung and 8.6 against 9.8 on the emulator, medians of 15 each in turn at load 56-64. Not worth a method of the protocol.
 - A text entry's tap by the event synthesizer, as an `act` tap is, for XCTest's own: the field's focus in 915 ms against 760-1,374, at load 30-85. No gain shown.
   A touch after a touch alone: a touch with `read: none` that brings a screen leaves it sliding in, a pushed screen's tree reads where it ends from the start of its slide, and a touch during the slide is lost. On a simulator a `tap` on Back answered "no change seen" right after a `tap` with `read: none` on Form. On iOS a touch after one that skipped its settle now first looks at the screen, and if that touch changed it, waits until 650 ms after it, as a simulator's touch already did after a settled one that changed the screen. A touch after a settled one, or after one that changed nothing, pays nothing. On a simulator at load 28-75, 10 taps with `read: none` on empty space took 80-137 ms each before and 79-80 after; a tap on Form and one on Back right after it, both `read: none`, took 297-340 ms the pair before and 1,384 after, which is the wait. In those 16 pairs before it no touch was lost; in the script's runs one was, at load 77-144.
+
+### A simulator's helpers, started before the first call
+
+A server named its simulator (`--device`, `use_device`, or the first call that opens it) and started nothing until a call needed it: the read helper took about 400 ms of the first read, and the input helper about 200 of the first touch, as its first message to the simulator took 120 ms more than the next, even with the helper up. Both now start in the background once the device is named, and the input helper is sent a ping no app sees. Nothing waits on that and nothing is refused by it, and a device the server may not drive is left alone. On an iPhone 17 Pro simulator with iOS 27.2, before at `52726c2e` and after in turn, medians in ms:
+
+| ms, median                                                 | before | after | host load, before; after |
+| ---------------------------------------------------------- | ------ | ----- | ------------------------ |
+| `screen`, first of a server, in the speed table (5 runs)   | 555    | 347   | 6.3-7.6; 5.9-8.4         |
+| `screen`, first of a server, the client 1 s after its list | 505    | 98    | 6.5-6.6; 5.4-5.6         |
+| `screen`, first of a server, the client at once (7 runs)   | 488    | 490   | 6.9-7.1; 5.6-6.1         |
+| first touch, `read: none`, the client at once (7 runs)     | 263    | 65-71 | 6.9-7.1; 5.6-6.1         |
+| first touch, `read: none`, the client 1 s after its list   | 261    | 70    | 6.5-6.6; 5.4-5.6         |
+
+The speed table's first read comes after `list_devices`, which the start runs beside. A client that calls the moment it has the list still waits for the read helper. One first touch of 21 took 1,010 ms after, none before; it did not come again in 14 more. Every answer of the speed table was the same, proved by its words.
+
+In the same runs, `tap` by coordinate, the touch alone, the table's last call, was 273 before and 268 after: it waits out the slide of the Back tap just before it. At `553a94dd` it was 63 (worst 264); what changed between was not looked into.
 
 ## iPhone speed
 

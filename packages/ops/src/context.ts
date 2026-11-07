@@ -125,8 +125,28 @@ export class ServerContext {
     return need && { need, ...NEEDS[need] };
   }
 
+  /** Driver objects warmed before their session opened: it takes the same one. */
+  private readonly warmed = new Map<string, Device>();
+
+  /**
+   * What a first call on a selected device needs, started in the background: a simulator's helpers took about 400 ms of a
+   * server's first read and 200 of its first touch. A device this server may not drive is left for its call to refuse.
+   */
+  warm(serial: string) {
+    if (this.sessions.has(serial) || this.warmed.has(serial) || !this.allowed(serial)) return;
+    try {
+      const device = this.deviceFor(serial);
+      this.warmed.set(serial, device);
+      device.warm?.();
+    } catch {
+      // no driver takes it: its first call says so
+    }
+  }
+
   private async open(serial: string, launching: string | undefined): Promise<Device> {
-    const device = this.deviceFor(serial);
+    const device = this.warmed.get(serial) ?? this.deviceFor(serial);
+    this.warmed.delete(serial);
+    device.warm?.();
     reportProgress(`connecting to ${serial}`);
     if (launching) device.launchAlongside(launching);
     await device.open();
@@ -207,6 +227,8 @@ export class ServerContext {
 
   /** Its device is going away: the agent stops first, as a runner left alive would boot a simulator again. */
   async forget(serial: string) {
+    this.warmed.get(serial)?.close();
+    this.warmed.delete(serial);
     const s = this.sessions.get(serial);
     if (!s) return;
     await s.device.stopAgent().catch(() => undefined);
@@ -274,6 +296,7 @@ export class ServerContext {
       });
     }
     for (const x of this.sessions.values()) x.device.close();
+    for (const device of this.warmed.values()) device.close();
     if (this.defaults.claims) for (const serial of this.sessions.keys()) release(serial);
   }
 }
