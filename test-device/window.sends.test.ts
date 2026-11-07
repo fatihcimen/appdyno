@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   MirrorSession,
@@ -25,8 +26,10 @@ const FIRST_MS = 420_000;
 const ASK_MS = 8_000;
 
 /** An iPhone's picture comes by the phone stream, which only a build holds. */
-const built = process.env.APPDYNO_IPHONE_UDID
-  ? await import('../packages/driver-apple/dist/index.js')
+// by a path the type checker does not follow, so a clean clone checks types before anything is built
+const built: typeof import('../packages/driver-apple/src/index.js') | undefined = process.env
+  .APPDYNO_IPHONE_UDID
+  ? await import(join(import.meta.dirname, '../packages/driver-apple/dist/index.js'))
   : undefined;
 
 type Kind = 'simulator' | 'iphone' | 'android';
