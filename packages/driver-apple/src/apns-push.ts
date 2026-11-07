@@ -1,5 +1,6 @@
 import {
   PUSH_PLACEHOLDERS,
+  PushRate,
   type Push,
   type PushField,
   type PushRoute,
@@ -70,9 +71,6 @@ export const tokensIn = (lines: string[]) =>
     [...line.matchAll(HEX)].map((m) => ({ token: m[0].toLowerCase(), kind: kindOf(line) })),
   );
 
-/** At most this many pushes a minute to a device. */
-const PER_MINUTE = 10;
-
 const HOW_A_TOKEN_IS_FOUND =
   'the app prints it in its own log, by NSLog or os_log, in a line that names a push to start, an activity, VoIP or a widget for those tokens, any other for the device token; or a person types it in the window';
 
@@ -91,7 +89,7 @@ type Kept = { token: string; kind: PushTokenKind; from: 'log' | 'person'; at: nu
  */
 export class ApnsPush {
   private readonly kept = new Map<string, Kept[]>();
-  private readonly sent: number[] = [];
+  private readonly rate = new PushRate();
 
   constructor(
     private readonly target: ApnsTarget,
@@ -144,15 +142,10 @@ export class ApnsPush {
     const starts = push.type === 'live_activity' && (payload.aps as { event?: unknown }).event;
     const wanted = starts === 'start' ? 'start' : t.token;
     const now = this.use.now();
-    while (this.sent.length > 0 && now - this.sent[0]! >= 60_000) this.sent.shift();
-    if (this.sent.length >= PER_MINUTE)
-      throw new DeviceError(
-        'UNSUPPORTED',
-        `${PER_MINUTE} pushes a minute to a device at most: wait a little`,
-      );
+    this.rate.check(now);
     const { token, relaunched } = await this.token(app, wanted);
     const request = apnsRequest(t.kind, app, token.token, payload, providerToken(key, now));
-    this.sent.push(now);
+    this.rate.went(now);
     const a = await this.use.send(environment, request);
     const by = `by the ${wanted} token ${token.from === 'person' ? 'a person typed' : 'its log gave'} at ${clock(token.at)}`;
     const lost = relaunched ? `; ${app} was relaunched to read it, and lost its state` : '';

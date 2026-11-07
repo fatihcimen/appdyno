@@ -1,3 +1,4 @@
+import { DeviceError } from '@appdyno/protocol';
 export const SETTINGS = [
   'dark_mode',
   'text_size',
@@ -126,6 +127,22 @@ export const PUSH_PLACEHOLDERS: Push = {
   image: 'https://example.com/image.png',
   data: { key: 'value' },
 };
+
+/** At most 10 pushes a minute to a device by Apple or Google, one a call: a push that went is counted, not one asked. */
+export class PushRate {
+  private readonly sent: number[] = [];
+
+  /** Refuses while 10 went in the last minute. */
+  check(now: number) {
+    while (this.sent.length > 0 && now - this.sent[0]! >= 60_000) this.sent.shift();
+    if (this.sent.length >= 10)
+      throw new DeviceError('UNSUPPORTED', '10 pushes a minute to a device at most: wait a little');
+  }
+
+  went(now: number) {
+    this.sent.push(now);
+  }
+}
 
 /** Which of an app's tokens a push goes by: its device's, a Live Activity's, push to start's, PushKit's, a widget's. */
 export type PushTokenKind = 'device' | 'activity' | 'start' | 'voip' | 'widget';

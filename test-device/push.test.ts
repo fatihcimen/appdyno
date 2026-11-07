@@ -202,23 +202,32 @@ describe.skipIf(!SIMULATOR)('a simulator with no app named, over MCP', () => {
 });
 
 /**
- * A key made up here, in a state folder of the suite's own, so that this Mac's own is never read: its team owns no app,
- * and the fixture prints no token (it has no aps-environment), so each push is refused before anything reaches Apple.
+ * A push service's credentials made up here, in a state folder of the suite's own, so that this Mac's own is never read:
+ * no team or project owns them, and the fixtures print no token, so each push is refused before anything leaves.
  */
-function madeUpKey() {
+function madeUp(service: 'apns' | 'fcm') {
   const state = mkdtempSync(join(tmpdir(), 'appdyno-push-suite-'));
   mkdirSync(join(state, 'push'), { mode: 0o700 });
-  const key = generateKeyPairSync('ec', { namedCurve: 'prime256v1' }).privateKey.export({
-    type: 'pkcs8',
-    format: 'pem',
-  });
-  const made = { key, keyId: 'AAAAAAAAAA', teamId: 'BBBBBBBBBB', production: false };
-  writeFileSync(join(state, 'push', 'apns.json'), JSON.stringify(made), { mode: 0o600 });
+  const pem = (type: 'ec' | 'rsa') =>
+    (type === 'ec'
+      ? generateKeyPairSync('ec', { namedCurve: 'prime256v1' })
+      : generateKeyPairSync('rsa', { modulusLength: 2048 })
+    ).privateKey.export({ type: 'pkcs8', format: 'pem' });
+  const made =
+    service === 'apns'
+      ? { key: pem('ec'), keyId: 'AAAAAAAAAA', teamId: 'BBBBBBBBBB', production: false }
+      : {
+          projectId: 'made-up-project',
+          clientEmail: 'push@made-up-project.iam.gserviceaccount.com',
+          keyId: 'k1',
+          key: pem('rsa'),
+        };
+  writeFileSync(join(state, 'push', `${service}.json`), JSON.stringify(made), { mode: 0o600 });
   return { APPDYNO_STATE_DIR: state };
 }
 
 describe.skipIf(!SIMULATOR)('a simulator with APNs set up, over MCP', () => {
-  const call = server(SIMULATOR!, true, madeUpKey());
+  const call = server(SIMULATOR!, true, madeUp('apns'));
   afterAll(() => new IosSimulatorDevice(SIMULATOR!).stopAgent());
 
   it("takes what simctl cannot by APNs' sandbox, and only by a token the app printed in this session", async () => {
@@ -242,5 +251,23 @@ describe.skipIf(!SIMULATOR)('a simulator with APNs set up, over MCP', () => {
     expect((await call('push', { type: 'background', app: 'dev.not.here' })).text).toContain(
       'dev.not.here is not installed on this simulator',
     );
+  });
+});
+
+describe.skipIf(!ANDROID)('an Android emulator with FCM set up, over MCP', () => {
+  const call = server(ANDROID!, true, madeUp('fcm'));
+
+  it('takes what only Google delivers by FCM, by a token the app printed in this session, and nothing aimed elsewhere', async () => {
+    const types = (await call('push')).text;
+    expect(types).toContain('background: FCM, data alone');
+    expect(types).toContain('alert: FCM, a notification');
+    expect(types).toContain('inbox: drawn by the shell');
+    await call('launch_app');
+    const quiet = await call('push', { type: 'background', data: { sync: '7' } });
+    expect(quiet.text).toContain(`no registration token from ${APP} in this session (NOT_FOUND)`);
+    const topic = await call('push', { type: 'alert', payload: JSON.stringify({ topic: 'news' }) });
+    expect(topic.text).toContain('an FCM payload names no topic');
+    const away = await call('push', { type: 'alert', app: 'dev.not.here' });
+    expect(away.text).toContain('dev.not.here is not installed on this device');
   });
 });
