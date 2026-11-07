@@ -34,6 +34,11 @@ describe('a push to a simulator', () => {
       ['push', 'U', 'dev.app'],
       { aps: { alert: { title: 'T' }, sound: 'default' } },
     ]);
+    sent = undefined;
+    await expect(
+      simulatorPush(simctl, 'U', 'dev.app', { type: 'rich', title: 'T' }),
+    ).rejects.toThrow('runs no Notification Service Extension');
+    expect(sent).toBeUndefined();
   });
 
   it('names a route for each type, or why it has none', () => {
@@ -42,7 +47,7 @@ describe('a push to a simulator', () => {
     );
     expect(routes).toMatchObject({
       alert: 'route',
-      rich: 'route',
+      rich: "simctl push runs no Notification Service Extension, as Xcode's notes say: an alert reaches the app's code with the same keys",
       background:
         'simctl takes no push with nothing to see: it says it has no user visible content',
       tapped: 'simctl taps nothing: push an alert, then tap its banner',

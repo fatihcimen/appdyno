@@ -106,7 +106,8 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
     await call('launch_app');
     await call('open_link', { url: 'appdyno-fixture://open/push' });
     await call('tap', { selector: { id: 'ask_notifications' } });
-    // the first time it asks
+    // the first time it asks, and its prompt may come after the tap's answer
+    await call('wait_for', { text: 'Would Like to Send You Notifications', timeoutMs: 5_000 });
     await call('alert', { answer: 'allow' });
     const alert = await call('push', { type: 'alert', title: 'Order 42', data: { order: '42' } });
     expect(alert.text).toMatch(/^pushed to dev\.appdyno\.fixture by simctl/);
@@ -125,11 +126,13 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
     expect(quiet.text).toContain('simctl takes no push with nothing to see');
   });
 
-  it('refuses a payload with no aps, and an Android style', async () => {
+  it('refuses a payload with no aps, an Android style, and an extension simctl never runs', async () => {
     const bad = await call('push', { type: 'alert', payload: '{"x":1}' });
     expect(bad.text).toContain('an APNs payload has aps: an object');
     const style = await call('push', { type: 'inbox', body: 'a' });
     expect(style.text).toContain('an Android style');
+    const rich = await call('push', { type: 'rich', title: 'Rich', image: PICTURE });
+    expect(rich.text).toContain('simctl push runs no Notification Service Extension');
   });
 
   it('lists the links the app opens, read from it', async () => {

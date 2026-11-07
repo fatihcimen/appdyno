@@ -6,13 +6,15 @@ import { DeviceError } from '@appdyno/protocol';
 import { assertBundle, type Simctl } from './simctl.js';
 
 const ANDROID_ONLY = 'an Android style: an iOS push shows as an alert';
-const SIMULATOR: Record<string, string> = {
-  alert: "simctl push: the app's code gets it as a remote notification",
-  rich: "simctl push with mutable-content: the app's Notification Service Extension changes it first",
-};
+/**
+ * Why a simulator takes no push of these types by simctl, which hands the notification center a request of its own
+ * making: apsd, where an extension is run and a Live Activity's push arrives, never sees it.
+ */
 const CANNOT: Record<string, string> = {
   // seen on iOS 27.2: "Notification has no user visible content" (UNErrorDomain 1401)
   background: 'simctl takes no push with nothing to see: it says it has no user visible content',
+  // Xcode 11.4's notes: "The mutable-content key is not honored"; Xcode 14's: remote notifications only
+  rich: "simctl push runs no Notification Service Extension, as Xcode's notes say: an alert reaches the app's code with the same keys",
   live_activity: 'not built yet',
   tapped: 'simctl taps nothing: push an alert, then tap its banner',
   inbox: ANDROID_ONLY,
@@ -37,27 +39,19 @@ export function apnsPayload(push: Push): Record<string, unknown> {
 }
 
 export const SIMULATOR_PUSHES: PushRoute[] = PUSH_TYPES.map((type) =>
-  SIMULATOR[type]
+  type === 'alert'
     ? {
         type,
-        route: SIMULATOR[type],
-        fields: type === 'rich' ? ['title', 'body', 'image', 'data'] : ['title', 'body', 'data'],
+        route: "simctl push: the app's code gets it as a remote notification",
+        fields: ['title', 'body', 'data'],
         template: JSON.stringify(apnsPayload({ ...PUSH_PLACEHOLDERS, type })),
       }
     : { type, why: CANNOT[type]! },
 );
 
-/** What the answer says reached the app's code, by type. */
-const REACHED: Record<string, (app: string) => string> = {
-  alert: (app) => `pushed to ${app} by simctl: its code gets it as a remote notification`,
-  rich: (app) =>
-    `pushed to ${app} by simctl with mutable-content: its Notification Service Extension, if it has one, changes it before it shows`,
-};
-
-/** A push to a simulator's app, which its code receives as from APNs. */
+/** An alert to a simulator's app, which its code receives as from APNs. */
 export async function simulatorPush(simctl: Simctl, udid: string, app: string, push: Push) {
-  const reached = REACHED[push.type];
-  if (!reached) throw new DeviceError('UNSUPPORTED', CANNOT[push.type] ?? push.type);
+  if (push.type !== 'alert') throw new DeviceError('UNSUPPORTED', CANNOT[push.type] ?? push.type);
   const dir = mkdtempSync(join(tmpdir(), 'appdyno-push-'));
   try {
     const file = join(dir, 'push.apns');
@@ -66,5 +60,5 @@ export async function simulatorPush(simctl: Simctl, udid: string, app: string, p
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
-  return reached(app);
+  return `pushed to ${app} by simctl: its code gets it as a remote notification`;
 }
