@@ -1,8 +1,8 @@
 import { createServer as createTls } from 'node:tls';
 import { createServer as createNet, Socket } from 'node:net';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FramedLine, pairingFrame, XpcLine } from '../pairing-line.js';
-import { NotProved, PairingChannel, type Identity } from '../pairing.js';
+import { describe, expect, it, vi } from 'vitest';
+import { pairingFrame, XpcLine } from '../pairing-line.js';
+import { NotProved, type Identity } from '../pairing.js';
 import { N, opack, readTlv, srpClient, TAG, tlv } from '../pairing-wire.js';
 import type { RemoteXpc } from '../remotexpc.js';
 import { PhoneRefusal } from '../tunnel.js';
@@ -17,29 +17,9 @@ import {
   type FoundPhone,
 } from '../wifi.js';
 import { XpcInt64 } from '../xpc-codec.js';
-import { FakePhone } from './fake-phone.js';
+import { fakePhones, type FakePhone } from './fake-phone.js';
 
-const phones: FakePhone[] = [];
-const channels: PairingChannel[] = [];
-
-afterEach(() => {
-  for (const c of channels.splice(0)) c.close();
-  for (const p of phones.splice(0)) p.close();
-});
-
-const aPhone = async () => {
-  const phone = await new FakePhone().start();
-  phones.push(phone);
-  return phone;
-};
-
-const open = async (phone: FakePhone) => {
-  const socket = new Socket();
-  await new Promise<void>((r) => socket.connect(phone.port, '127.0.0.1', r));
-  const channel = new PairingChannel(new FramedLine(socket));
-  channels.push(channel);
-  return channel;
-};
+const { aPhone, open, channelTo } = fakePhones();
 
 const paired = async (phone: FakePhone) => {
   const channel = await open(phone);
@@ -57,11 +37,7 @@ const answeredWith = async (bytes: Buffer) => {
     s.on('error', () => undefined);
   });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
-  const socket = new Socket();
-  const { port } = server.address() as { port: number };
-  await new Promise<void>((r) => socket.connect(port, '127.0.0.1', r));
-  const channel = new PairingChannel(new FramedLine(socket));
-  channels.push(channel);
+  const channel = await channelTo((server.address() as { port: number }).port);
   return { channel, server };
 };
 

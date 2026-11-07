@@ -1,7 +1,8 @@
 import { diffieHellman, generateKeyPairSync, randomBytes, sign, verify } from 'node:crypto';
-import { createServer, type Server, type Socket } from 'node:net';
-import { pairingFrame } from '../pairing-line.js';
-import { ED25519_SPKI, lastBytes, rawKey, X25519_SPKI } from '../pairing.js';
+import { createServer, type Server, Socket } from 'node:net';
+import { afterEach } from 'vitest';
+import { FramedLine, pairingFrame } from '../pairing-line.js';
+import { ED25519_SPKI, lastBytes, PairingChannel, rawKey, X25519_SPKI } from '../pairing.js';
 import {
   big,
   countNonce,
@@ -19,6 +20,32 @@ import {
 } from '../pairing-wire.js';
 
 /** A phone's end of a network pairing, on a loopback port: what a test needs a phone to say and to check. */
+
+/** Fake phones, and pairing channels to them or to any port, all closed after each test. */
+export function fakePhones() {
+  const phones: FakePhone[] = [];
+  const channels: PairingChannel[] = [];
+  afterEach(() => {
+    for (const c of channels.splice(0)) c.close();
+    for (const p of phones.splice(0)) p.close();
+  });
+  const channelTo = async (port: number) => {
+    const socket = new Socket();
+    await new Promise<void>((r) => socket.connect(port, '127.0.0.1', r));
+    const channel = new PairingChannel(new FramedLine(socket));
+    channels.push(channel);
+    return channel;
+  };
+  return {
+    aPhone: async () => {
+      const phone = await new FakePhone().start();
+      phones.push(phone);
+      return phone;
+    },
+    open: (phone: FakePhone) => channelTo(phone.port),
+    channelTo,
+  };
+}
 
 type Body = {
   message: {

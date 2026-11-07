@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { Socket } from 'node:net';
-import { dirname } from 'node:path';
 import { connect as tlsConnect, type TLSSocket } from 'node:tls';
+import { writeWhole } from '@appdyno/core';
 import type { PhoneStreamCheck } from '../phone-stream-port.js';
 import { identityFile } from '../wifi-paired.js';
 import { PortRefused } from './ipstack.js';
@@ -155,20 +155,29 @@ function connected(address: string, port: number) {
   });
 }
 
-/** The key is what the phone trusts: read and written by this user alone. */
-function keep(udid: string, identity: Identity) {
-  const file = identityFile(udid);
-  mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
-  writeFileSync(file, JSON.stringify(identity), { mode: 0o600 });
-}
+/** The key is what the phone trusts: read and written by this user alone, and whole or not at all. */
+const keep = (udid: string, identity: Identity) =>
+  writeWhole(identityFile(udid), JSON.stringify(identity));
 
 export const isPaired = (udid: string) => existsSync(identityFile(udid));
+
+/** What this Mac keeps of its pairing with the phone; none, or one that cannot be read, is undefined. */
+function identityIn(udid: string): Identity | undefined {
+  try {
+    return JSON.parse(readFileSync(identityFile(udid), 'utf8')) as Identity;
+  } catch {
+    return undefined;
+  }
+}
 
 const identityOf = (udid: string) => {
   if (!isPaired(udid)) {
     throw new PhoneRefusal('not-paired', 'this Mac has no pairing of its own with the phone');
   }
-  return JSON.parse(readFileSync(identityFile(udid), 'utf8')) as Identity;
+  const identity = identityIn(udid);
+  if (!identity)
+    throw new PhoneRefusal('not-paired', "this Mac's pairing with the phone cannot be read");
+  return identity;
 };
 
 async function phonesFor(identity: Identity) {
@@ -271,24 +280,40 @@ export async function portOnWifi(udid: string, port: number, open = openWifiTunn
 const PAIRING_SERVICE = 'com.apple.internal.dt.coredevice.untrusted.tunnelservice';
 
 /**
+ * On a channel to a phone's pairing service: what is `known` proved, and nothing asked of anyone, or else a new identity,
+ * which the phone asks a person for. A phone that forgot this Mac, or another key, or none kept, is paired anew.
+ */
+export async function pairAnew(
+  channel: PairingChannel,
+  known: Identity | undefined,
+  asked: () => void,
+) {
+  await channel.handshake();
+  const proved = await channel.verify(known).catch((e: unknown) => {
+    if (e instanceof NotProved) return false;
+    throw e;
+  });
+  return proved ? undefined : channel.pair(asked);
+}
+
+/**
  * Makes this Mac's identity with a phone on a cable, which it then uses on the network: the phone asks a person, and
- * `say` tells them to look. A phone that already knows this Mac is left as it is.
+ * `say` tells them to look. All of it goes by the cable, so a phone that forgot this Mac, or is not on this network, is
+ * paired again the same way; one that proves it still knows this Mac is left as it is.
  */
 export async function pairOnCable(udid: string, say: (words: string) => void): Promise<void> {
-  if (isPaired(udid)) {
-    (await provenChannel(identityOf(udid))).channel.close();
-    say('This Mac is already paired with the phone.');
-    return;
-  }
   const { stack, rsdPort } = await openTunnel(udid);
   try {
     const port = (await readServices(stack, rsdPort)).ports[PAIRING_SERVICE];
     if (!port) throw new PhoneRefusal('not-connected', 'the phone offers no pairing on its cable');
     const channel = new PairingChannel(new XpcLine(RemoteXpc.start(await stack.connect(port))));
     try {
-      await channel.handshake();
-      await channel.verify();
-      keep(udid, await channel.pair(() => say('Tap Trust on the phone.')));
+      const made = await pairAnew(channel, identityIn(udid), () => say('Tap Trust on the phone.'));
+      if (!made) {
+        say('This Mac is already paired with the phone.');
+        return;
+      }
+      keep(udid, made);
     } finally {
       channel.close();
     }

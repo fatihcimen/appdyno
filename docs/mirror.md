@@ -492,6 +492,10 @@ A cable stays the default. The network is a person's choice, made once for each 
 The window's title says it is on Wi-Fi, and a note says what that costs. An iPhone takes the lower mode unless
 `--quality high` asks for the other.
 
+`appdyno pair` run again for an iPhone goes by its cable too: a phone that proves it still knows this Mac is left as it
+is with nothing asked, as an iPhone 13 Pro Max was, and one that forgot this Mac, or a pairing here that cannot be read,
+is paired anew, with a person accepting. That second way is held by unit tests, and no phone has shown it.
+
 All of it is in the hub too. Connect a Phone has a card, Without a Cable, for a phone on a cable: Pair for Wi-Fi runs the
 same `appdyno pair`, for an iPhone at a click and for an Android phone with the address and code it shows. Forget Pairing
 runs `appdyno pair --forget`, which takes this Mac's half of an iPhone's pairing; the phone keeps its half until its
