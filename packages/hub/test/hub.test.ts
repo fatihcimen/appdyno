@@ -118,9 +118,9 @@ describe('the hub', () => {
       link: 'Wi-Fi' as const,
       sameAs: 'R58M',
     };
-    const rows = (list: (typeof onCable | typeof onWifi)[]) =>
+    const rows = (list: (typeof onCable | typeof onWifi)[], policy = DEFAULT_POLICY) =>
       hubDevices(
-        new ServerContext(DEFAULT_POLICY, [
+        new ServerContext(policy, [
           {
             list: async () => list,
             handles: () => true,
@@ -131,6 +131,14 @@ describe('the hub', () => {
       ).then((devices) => devices.map((d) => [d.id, d.link, d.detail]));
     expect(await rows([onCable, onWifi])).toEqual([['R58M', 'USB', '']]);
     expect(await rows([onWifi])).toEqual([[onWifi.serial, 'Wi-Fi', 'Wi-Fi']]);
+    // as a Samsung was, after its Wi-Fi went and came back
+    const again = { ...onWifi, serial: 'adb-R58M-Ab (2)._adb-tls-connect._tcp' };
+    expect(await rows([again, onWifi])).toEqual([[again.serial, 'Wi-Fi', 'Wi-Fi']]);
+    expect(await rows([{ ...again, state: 'offline', ready: false }, onWifi])).toEqual([
+      [onWifi.serial, 'Wi-Fi', 'Wi-Fi'],
+    ]);
+    const onlyItsName = { ...DEFAULT_POLICY, devices: /^adb-R58M-Ab\._adb-tls-connect\._tcp$/ };
+    expect(await rows([again, onWifi], onlyItsName)).toEqual([[onWifi.serial, 'Wi-Fi', 'Wi-Fi']]);
   });
 
   it('leaves out what this server may not drive', async () => {
