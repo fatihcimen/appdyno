@@ -227,9 +227,11 @@ export abstract class IosDevice extends RpcDevice implements Device {
         opts,
       );
     }
+    // only an app in front at the press goes: from the switcher, home brings back the app it was opened over
+    const was = key === 'home' && opts?.read === 'tree' ? await this.frontNow() : undefined;
     const r = await super.key(key, opts, modifiers);
     const app = r.tree?.windows[0]?.pkg;
-    return key === 'home' && app && app !== HOME_SCREEN_APP ? this.onceGone(app, r) : r;
+    return app && app === was && app !== HOME_SCREEN_APP ? this.onceGone(app, r) : r;
   }
 
   /**

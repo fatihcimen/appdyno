@@ -227,22 +227,31 @@ describe('home on a simulator', () => {
     elapsedMs: 1,
     hash: pkg,
   });
-  const pressed = (fronts: string[]) => {
+  /** Home pressed with `atPress` in front, and the app in front at each look after the settle. */
+  const pressed = (atPress: string, fronts: string[]) => {
     const device = new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951');
     vi.spyOn(device, 'act').mockResolvedValue({ tree: shows('dev.app') });
+    const looks = device as unknown as { frontNow: () => Promise<string | undefined> };
+    vi.spyOn(looks, 'frontNow').mockResolvedValue(atPress);
     vi.spyOn(device, 'foreground').mockImplementation(async () => fronts.shift() ?? 'dev.app');
     vi.spyOn(device, 'tree').mockResolvedValue(shows('com.apple.springboard'));
     return device.key('home', { read: 'tree' });
   };
 
   it('answers once the app has left, which comes after the settle saw the app still there', async () => {
-    const r = await pressed(['dev.app', 'dev.app', 'com.apple.springboard']);
+    const r = await pressed('dev.app', ['dev.app', 'dev.app', 'com.apple.springboard']);
     expect(r.tree?.windows[0]?.pkg).toBe('com.apple.springboard');
+  });
+
+  it('answers at once from the switcher, where home brings back the app it was opened over', async () => {
+    const started = Date.now();
+    const r = await pressed('com.apple.springboard', []);
+    expect([r.tree?.windows[0]?.pkg, Date.now() - started < 1_000]).toEqual(['dev.app', true]);
   });
 
   it("answers with the app where it never leaves, once home's time is up", async () => {
     vi.useFakeTimers();
-    const r = pressed([]);
+    const r = pressed('dev.app', []);
     await vi.advanceTimersByTimeAsync(5_000);
     expect((await r).tree?.windows[0]?.pkg).toBe('dev.app');
     vi.useRealTimers();

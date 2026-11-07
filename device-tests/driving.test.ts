@@ -524,16 +524,11 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     expect(ok(await h.call('alert')).text).toContain('no system alert');
   });
 
-  it('switches to the app switcher, and goes home', async () => {
+  it('switches to the app switcher, and home brings back the app it was opened over', async () => {
     await open('home');
     ok(await h.call('press_key', { key: 'app_switch' }));
-    ok(await h.call('press_key', { key: 'home' }));
-    // the home screen may come later than the settle's window
-    await expect
-      .poll(async () => ok(await h.call('device_info')).data.foreground, {
-        timeout: 8_000,
-      })
-      .not.toBe(APP);
+    // as iOS 27.2 does from the switcher: the home screen comes from a press in an app
+    expect(ok(await h.call('press_key', { key: 'home' })).data.foreground).toBe(APP);
   });
 
   it('volume and lock answer, or say why not', async () => {
