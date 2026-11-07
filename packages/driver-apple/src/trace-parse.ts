@@ -306,10 +306,18 @@ export function parseActivityMonitor(
   if (!last) return undefined;
   const first = rows[0]!;
   const ns = Number(last.start?.value) - Number(first.start?.value);
-  const busy = Number(last['cpu-total']?.value) - Number(first['cpu-total']?.value);
+  // the instrument's own, a row at a time: `cpu-total` comes at the end of a row and the first is short, so its change
+  // over the rows' starts read a core at 50 % as 88
+  const shares = rows.flatMap((r) =>
+    r['cpu-percent']?.value ? [Number(r['cpu-percent'].value)] : [],
+  );
   return {
     footprintBytes: Number(last['memory-physical-footprint']?.value),
-    ...(ns > 0 && { cpuPercent: Math.round((busy / ns) * 100), windowMs: Math.round(ns / 1e6) }),
+    ...(ns > 0 &&
+      shares.length > 0 && {
+        cpuPercent: Math.round(shares.reduce((a, b) => a + b, 0) / shares.length),
+        windowMs: Math.round(ns / 1e6),
+      }),
   };
 }
 

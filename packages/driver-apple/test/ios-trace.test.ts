@@ -140,17 +140,32 @@ describe('iOS trace export', () => {
     expect(p.top.map((e) => e.symbol)).toEqual(['mine']);
   });
 
-  it('reads one process of Activity Monitor: footprint at the end, CPU over the window', () => {
-    const am = `<schema><col><mnemonic>start</mnemonic></col><col><mnemonic>pid</mnemonic></col><col><mnemonic>cpu-total</mnemonic></col><col><mnemonic>memory-physical-footprint</mnemonic></col></schema>
-<row><t>0</t><pid id="1" fmt="7">7</pid><c>100000000</c><m>4096</m></row>
-<row><t>0</t><pid id="2" fmt="8">8</pid><c>1</c><m>1</m></row>
-<row><t>2000000000</t><pid ref="1"/><c>600000000</c><m>8192</m></row>`;
+  it('reads one process of Activity Monitor: footprint at the end, the instrument’s own CPU share', () => {
+    const cols = ['start', 'pid', 'cpu-percent', 'cpu-total', 'memory-physical-footprint'];
+    const row = (pid: number, ...cells: number[]) => {
+      const [start, percent, total, memory] = cells;
+      return `<row><t>${start}</t><pid fmt="${pid}">${pid}</pid><p>${percent || ''}</p><c>${total}</c><m>${memory}</m></row>`;
+    };
+    const table = (...rows: string[]) =>
+      `<schema>${cols.map((c) => `<col><mnemonic>${c}</mnemonic></col>`).join('')}</schema>${rows.join('')}`;
+    // a real trace of a core kept at 75 %: `cpu-total` over the rows' starts reads 136
+    const am = table(
+      row(7, 0, 0, 41338.4e6, 4096),
+      row(8, 0, 0, 1, 1),
+      row(7, 98e6, 75.88, 42124.3e6, 4096),
+      row(7, 1137.3e6, 74.5, 42891.7e6, 8192),
+    );
     expect(parseActivityMonitor(am, 7)).toEqual({
       footprintBytes: 8192,
-      cpuPercent: 25,
-      windowMs: 2000,
+      cpuPercent: 75,
+      windowMs: 1137,
     });
     expect(parseActivityMonitor(am, 9)).toBeUndefined();
+    // one row, with nothing to reckon a share over
+    expect(parseActivityMonitor(table(row(7, 0, 0, 1, 2048)), 7)).toEqual({ footprintBytes: 2048 });
+    // an idle app is a share of 0, and no missing one
+    const idle = table(row(7, 0, 0, 5, 1), row(7, 95e6, 0.07, 5, 1));
+    expect(parseActivityMonitor(idle, 7)).toMatchObject({ cpuPercent: 0 });
   });
 
   it('counts the hangs of the Time Profiler report', () => {
