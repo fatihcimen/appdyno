@@ -146,7 +146,7 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
             .string()
             .max(500)
             .describe(
-              'A switch takes on, off; text_size: 1.3, iOS large; locale: tr-TR; network: slow, full; proxy: host:port, none; battery: 0-100; fold: open, closed. One-shot: biometric (match, nomatch, enroll), call (number; end number), sms (value; title: number), keychain (reset).',
+              'A switch: on, off; text_size: 1.3, iOS large; locale: tr-TR; network: slow, full; proxy: host:port, none; battery: 0-100; fold: open, closed. One-shot: biometric (match, nomatch, enroll), call (number; end number), sms (value; title: number), keychain (reset).',
             )
             .optional(),
           title: z.string().max(200).optional(),

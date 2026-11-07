@@ -15,7 +15,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       name: 'list_devices',
       title: 'Devices',
       description:
-        'Connected phones, simulators and emulators (serial, state, model), which this server may drive, who holds each, what blocks each with its fix. To start one: simulator.',
+        'Connected phones, simulators and emulators (serial, state, model), which this server may drive, who holds each, what blocks each with its fix.',
       input: z.object({}).strict(),
       output: DevicesOut,
       annotations: READ,
@@ -50,7 +50,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       name: 'use_device',
       title: 'Use device',
       description:
-        'Drive this device, starting its agent if needed; app: the id under test. One another process holds refuses, naming it; share: true uses it anyway.',
+        'Drive this device; app: the id under test. One another process holds refuses, naming it; share: true uses it anyway.',
       input: z
         .object({
           device: z.string().max(64),
@@ -108,8 +108,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
     defineOp({
       name: 'set_orientation',
       title: 'Orientation',
-      description:
-        'Rotate to portrait or landscape. It stays fixed: go back to portrait afterwards.',
+      description: 'Rotate to portrait or landscape. It stays: go back to portrait after.',
       input: z.object({ orientation: z.enum(ROTATIONS), read: Read }).strict(),
       output: ActionOut,
       annotations: ACT,

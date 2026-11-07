@@ -140,7 +140,7 @@ export function mirrorOps(ctx: ServerContext) {
       name: 'mirror',
       title: 'Live window',
       description:
-        'A live screen mirror for your person, who can touch it as you drive: open, close, status (what stands in its way, the fix), stats (true frame rates, fps). No frames: use screenshot, record.',
+        'A live screen mirror for your person, who can touch it as you drive. status: what stands in its way, the fix; stats: true frame rates. No frames: use screenshot, record.',
       input: z
         .object({
           action: z.enum(['open', 'close', 'status', 'stats']),

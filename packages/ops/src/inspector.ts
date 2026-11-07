@@ -15,7 +15,7 @@ export function inspectorOps(ctx: ServerContext) {
       name: 'inspector',
       title: 'Accessibility inspector',
       description:
-        'With no runner on an iPhone: list (its screen by its own accessibility service: words and ids, no places), press (name: an id or words listed).',
+        "An iPhone's screen with no runner, by its own accessibility service: list (words and ids, no places), press (name: an id or words listed).",
       input: z
         .object({ action: z.enum(['list', 'press']), name: z.string().max(200).optional() })
         .strict(),

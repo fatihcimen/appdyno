@@ -248,7 +248,7 @@ export function networkOps(ctx: ServerContext) {
       name: 'network',
       title: 'Network',
       description:
-        "An app's network traffic (HTTP), bounded. paths: what each way sees here, or why not; start (via: proxy, with proxy host:port; probe, restarts the app; packets; bytes); read (har: a proxy's export; contains; limit); stop. Says when bodies are unavailable; installs no certificate.",
+        "An app's network traffic (HTTP), bounded. paths: what each way sees here, or why not; start (via proxy: at proxy host:port; probe: restarts the app); read (har: a proxy's export); stop. Says when bodies are unavailable; installs no certificate.",
       input: z
         .object({
           action: z.enum(['paths', 'start', 'read', 'stop']),

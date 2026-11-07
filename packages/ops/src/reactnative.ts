@@ -50,7 +50,7 @@ export function reactNativeOps(ctx: ServerContext) {
     defineOp({
       name: 'react_native',
       title: 'React Native',
-      description: `A debug React Native app through Metro. targets; logs (the JS console for ms); reload. metro: host:port.`,
+      description: `A debug React Native app through Metro: targets, logs (the JS console for ms), reload.`,
       input: z
         .object({
           action: z.enum(['targets', 'logs', 'reload']),

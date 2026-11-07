@@ -78,7 +78,7 @@ function appOp(ctx: ServerContext, { afterChange }: Answers) {
     name: 'app',
     title: 'App management',
     description:
-      'Install and manage apps. list (all: with system apps), state, install (path: .apk, .app or .ipa), uninstall, clear (data), grant, revoke (permission: service), launch (restarts it with args, env; Android args: key=value extras), download_data, replace_data (path: a folder; stops the app), build_and_run (path: Xcode project or Gradle folder; scheme, or Gradle module; configuration, or variant).',
+      'Install and manage apps. list (all: with system apps), state, install (path: .apk, .app or .ipa), uninstall, clear (data), grant, revoke (permission: service), launch (restarts it with args, env; Android args: key=value extras), download_data, replace_data (path: a folder; stops the app), build_and_run (path: Xcode project or Gradle folder; scheme or module; configuration or variant).',
     input: z
       .object({
         action: z.enum([

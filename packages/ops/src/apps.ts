@@ -100,7 +100,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
       name: 'open_link',
       title: 'Open link',
       description:
-        "Open a URL, deep link, universal link or App Link and answer its screen; with an app selected it opens there. settings instead: a page of Settings (about, privacy, wifi…; a wrong word lists them), or an app's own: its id, or app. links: an app's id lists the links it opens.",
+        "Open a URL, deep link, universal link or App Link, in the selected app if any. settings: a Settings page (about, privacy, wifi…; a wrong word lists them), or an app's: its id, or app. links: an app's id lists the links it opens.",
       input: z
         .object({
           url: z.string().min(3).max(2_000).optional(),
@@ -132,7 +132,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
       name: 'launch_app',
       title: 'Launch app',
       description:
-        'Launch the app, by id or name (to the front if it runs); answers its screen. language: tr, pt-BR: restarts it so, until restore.',
+        'Launch the app, by id or name, to the front if it runs. language: tr, pt-BR: restarts it so, until restore.',
       input: z
         .object({
           app: z.string().max(200).optional(),

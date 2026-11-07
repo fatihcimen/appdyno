@@ -137,7 +137,7 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
             .string()
             .max(1_000)
             .optional()
-            .describe('names the stack: a .dSYM or folder of them; Android: a folder of .so'),
+            .describe('a .dSYM or folder of them; Android: a folder of .so'),
         })
         .strict(),
       output: CrashesOut,

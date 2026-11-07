@@ -30,7 +30,7 @@ export function handoffOps(ctx: ServerContext) {
       name: 'hand_off',
       title: 'Ask a person',
       description:
-        'Asks your person to do what you cannot (Face ID, a passcode, a permission): alerts them and waits until they say done, the screen changes with no window open, or timeoutS.',
+        'Asks your person to do what you cannot (Face ID, a passcode, a permission): alerts them and waits until they say done or the screen changes with no window open.',
       input: z
         .object({
           reason: z.string().min(1).max(500),
