@@ -162,8 +162,15 @@ async function run(s, warmUp) {
       ? call(what, 'tap', { selector: { text: 'Back', role: 'button' } }, proof)
       : call(what, 'press_key', { key: 'back' }, proof);
   // the first touch of a server and of an app's process pays for itself: the untimed one, before the two taps compared
-  await call('', 'tap', { selector: { text: 'List' } }, 'Product 1');
-  await call('`swipe`', 'swipe', { direction: 'up' }, (r) => r.structuredContent?.changed === true);
+  const rows = await call('', 'tap', { selector: { text: 'List' } }, 'Product 1');
+  // the touch alone answers once it has gone and proves nothing by itself: the untimed wait after it is its proof
+  const none = { read: 'none' };
+  // a row is `@ref "label"` under its header, or `@ref role "label"`; on iOS its cell says the row's words
+  const row1 = /(@\S+) (?:\w+ )?"Product 1\b/.exec(rows.text)?.[1];
+  await call('`swipe`, the touch alone (`read: none`)', 'swipe', { direction: 'up', ...none });
+  await call('', 'wait_for', { ref: row1, gone: true }, 'gone');
+  const changed = (r) => r.structuredContent?.changed === true;
+  await call('`swipe`, with the settled screen', 'swipe', { direction: 'up' }, changed);
   await back('', 'Form');
   const found = await call(
     '`find`',
@@ -172,10 +179,22 @@ async function run(s, warmUp) {
     (r) => r.structuredContent?.matches?.length === 1,
   );
   const at = found.result.structuredContent.matches[0];
-  await call('`tap` by coordinate', 'tap', { x: at.x, y: at.y }, 'Send');
+  await call('`tap` by coordinate, the touch alone (`read: none`)', 'tap', {
+    x: at.x,
+    y: at.y,
+    ...none,
+  });
+  await call('', 'wait_for', { text: 'Send' }, 'found');
+  await back('', 'appdyno fixture');
+  await call('`tap` by coordinate, with the settled screen', 'tap', { x: at.x, y: at.y }, 'Send');
   // the home screen's title: a phone in Turkish says LİST
   await back('back', 'appdyno fixture');
-  await call('`tap` by selector', 'tap', { selector: { text: 'Form' } }, 'Send');
+  await call(
+    '`tap` by selector, with the settled screen',
+    'tap',
+    { selector: { text: 'Form' } },
+    'Send',
+  );
   await call(
     '`type_text` into a field by selector',
     'type_text',
