@@ -44,6 +44,10 @@ const READ_AGAIN_MS = 200;
 /** `adb connect`, or wireless debugging: a device whose radio is also the way to it. */
 const OVER_ITS_NETWORK = /:\d+$|_adb-tls-connect/;
 
+/** The PIN this tool gives an emulator for a fingerprint, and types where Settings asks for it. */
+export const EMULATOR_PIN = '1234';
+const NOT_A_PHONE_LOCK = "a screen lock is set only on an emulator: a phone's is its owner's";
+
 /** A shell command on the device, its errors in its answer. */
 export const shellOf = (adb: Adb, serial: string) => (command: string) =>
   adb.exec(serial, `${command} 2>&1`, { timeoutMs: TIMEOUTS.app });
@@ -140,7 +144,32 @@ export class AndroidSettings implements DeviceSettings {
         return this.switchOf('mobile_data', name);
       case 'wifi':
         return this.wifi();
+      case 'screen_lock':
+        // with no credential to give, the check passes only where there is none
+        return /verified successfully/.test(await this.sh('cmd lock_settings verify'))
+          ? 'none'
+          : 'pin';
     }
+  }
+
+  /** On an emulator only, and only this tool's PIN: clearing it deletes the fingerprints with it. */
+  private async setScreenLock(value: string) {
+    if (!this.serial.startsWith('emulator-'))
+      throw new DeviceError('UNSUPPORTED', NOT_A_PHONE_LOCK);
+    const [command, done] =
+      value === 'pin'
+        ? [`set-pin ${EMULATOR_PIN}`, /Pin set/]
+        : value === 'none'
+          ? [`clear --old ${EMULATOR_PIN}`, /cleared/]
+          : [];
+    if (!command)
+      throw new DeviceError('INVALID_ARGUMENT', `screen_lock: pin or none, not ${value}`);
+    const out = await this.sh(`cmd lock_settings ${command}`);
+    if (!done!.test(out))
+      throw new DeviceError(
+        'UNSUPPORTED',
+        `the screen lock did not change: ${out.trim().split('\n')[0]}`,
+      );
   }
 
   /**
@@ -275,6 +304,9 @@ export class AndroidSettings implements DeviceSettings {
       case 'wifi':
       case 'mobile_data':
         await this.radio(name, value);
+        return;
+      case 'screen_lock':
+        await this.setScreenLock(value);
         return;
     }
   }

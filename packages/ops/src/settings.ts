@@ -168,8 +168,13 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
               `biometric needs value: ${BIOMETRIC.join(', ')}`,
               'INVALID_ARGUMENT',
             );
-          await events.biometric(answer);
-          return reply(`biometric: ${value}`, { done: `biometric: ${value}` });
+          // setting one up may leave the app, as Settings' enrolment on an emulator does
+          const also = await events.biometric(
+            answer,
+            policy.allowHome ? (n, v) => setCondition(s, n, v) : undefined,
+          );
+          const t = [`biometric: ${value}`, also].filter(Boolean).join('; ');
+          return reply(t, { done: t });
         }
         if (name === 'keychain') {
           if (value !== 'reset')

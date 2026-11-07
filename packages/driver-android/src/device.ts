@@ -113,7 +113,7 @@ export class AndroidDevice extends RpcDevice implements Device {
       async () => (await this.call('app.labels', {}, TIMEOUTS.action)).result.apps,
     );
     this.settings = new AndroidSettings(adb, serial, () => this.releaseAnimations());
-    this.events = new AndroidEvents(adb, serial);
+    this.events = new AndroidEvents(adb, serial, () => this.tree());
     this.recorder = new AndroidRecorder(adb, serial);
     this.network = new AndroidNetwork(adb, serial);
     this.web = new AndroidWeb(adb, serial);

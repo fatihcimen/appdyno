@@ -8,13 +8,12 @@ import { untilWithin } from './until.js';
  * Conditions against what they cost, on the fixture. Airplane mode and mobile data are read back and proven
  * by the host being out of reach from the device and in reach again after `restore`; a fingerprint by the
  * fixture's own prompt; a keychain by an item the fixture saved and can no longer read. On the emulator
- * APPDYNO_ANDROID_SERIAL names and the simulator APPDYNO_IOS_UDID names. An emulator with no fingerprint is
- * given a PIN and one, through Settings, and keeps them.
+ * APPDYNO_ANDROID_SERIAL names and the simulator APPDYNO_IOS_UDID names. The emulator must have no fingerprint and
+ * no screen lock: the tool gives it both, and takes both away at restore.
  */
 const APP = 'dev.appdyno.fixture';
 const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
 const SIMULATOR = process.env.APPDYNO_IOS_UDID;
-const PIN = '1234';
 
 const adb = (...words: string[]) =>
   execFileSync('adb', ['-s', ANDROID!, 'shell', ...words], { encoding: 'utf8' }).trim();
@@ -90,25 +89,21 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
     expect(r.text).toContain('wifi: on or off, not half');
   });
 
-  it('says no fingerprint is enrolled, then takes one and answers the fixture', async () => {
+  it('enrols a fingerprint through Settings, answers the fixture, and takes its PIN back off', async () => {
     const counts = () => /"count":(\d+)/.exec(adb('dumpsys', 'fingerprint'))?.[1];
-    if (counts() === '0') {
-      const none = await call('device_setting', { name: 'biometric', value: 'match' });
-      expect(none.data.code).toBe('NOT_FOUND');
-      expect(none.text).toContain('no fingerprint is enrolled');
-      const nowhere = await call('device_setting', { name: 'biometric', value: 'enroll' });
-      expect(nowhere.text).toContain('enrolled nothing');
-      adb('locksettings', 'set-pin', PIN);
-      adb('am', 'start', '-a', 'android.settings.FINGERPRINT_ENROLL');
-      await call('wait_for', { role: 'textField', timeoutMs: 8_000 });
-      await call('type_text', { selector: { role: 'textField' }, text: PIN, submit: true });
-      await call('wait_for', { text: 'More', timeoutMs: 8_000 });
-      await call('tap', { selector: { text: 'More' } });
-      await call('tap', { selector: { text: 'I agree' } });
-      await call('wait_for', { text: 'Touch the sensor', timeoutMs: 8_000 });
-      await set(call, 'biometric', 'enroll');
-    }
-    expect(counts()).toBe('1');
+    // with a lock, a check without its credential fails the command
+    const unlocked = () =>
+      adb('cmd lock_settings verify 2>&1 || true').includes('verified successfully');
+    expect([counts(), unlocked()]).toEqual(['0', true]);
+    const none = await call('device_setting', { name: 'biometric', value: 'match' });
+    expect(none.data.code).toBe('NOT_FOUND');
+    expect(none.text).toContain('no fingerprint is enrolled');
+    const enrolled = await set(call, 'biometric', 'enroll');
+    expect(enrolled.text).toContain(
+      'the screen lock is PIN 1234 for it: restore takes the PIN off, and the fingerprints with it',
+    );
+    expect([counts(), unlocked()]).toEqual(['1', false]);
+    expect((await set(call, 'biometric', 'enroll')).text).toBe('biometric: enroll');
     await call('terminate_app');
     const nobody = await call('device_setting', { name: 'biometric', value: 'match' });
     expect(nobody.data.code).toBe('NOT_FOUND');
@@ -124,6 +119,10 @@ describe.skipIf(!ANDROID)('conditions on an emulator', () => {
     );
     await set(call, 'biometric', 'match');
     expect(await result(call, 'Authenticated')).toBe(true);
+
+    const back = await call('device_setting', { name: 'restore' });
+    expect(back.text).toContain('screen_lock: none');
+    expect([counts(), unlocked()]).toEqual(['0', true]);
   });
 
   it('says Android has no keychain', async () => {

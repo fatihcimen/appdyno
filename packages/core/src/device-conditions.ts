@@ -14,7 +14,10 @@ export const SETTINGS = [
   'mobile_data',
 ] as const;
 
-export type SettingName = (typeof SETTINGS)[number];
+/** What the tool changes only on its way to something asked, written down and put back as the rest: an emulator's PIN, which a fingerprint needs. */
+export const HELD = ['screen_lock'] as const;
+
+export type SettingName = (typeof SETTINGS)[number] | (typeof HELD)[number];
 
 /** The pages of the system's Settings a call opens by name, where the device has them. */
 export const SETTINGS_PAGES = [
@@ -78,7 +81,14 @@ export type BiometricAnswer = 'match' | 'nomatch' | 'enroll';
 /** What happens to a device once: a condition holds and is put back, an event is over when it is said. */
 export interface DeviceEvents {
   push(app: string | undefined, title: string, body: string): Promise<void>;
-  biometric(answer: BiometricAnswer): Promise<void>;
+  /**
+   * `setUp` changes a condition the answer needs, written down first to be put back; without it nothing is set up.
+   * What else was done, for the answer.
+   */
+  biometric(
+    answer: BiometricAnswer,
+    setUp?: (name: SettingName, value: string) => Promise<void>,
+  ): Promise<string | void>;
   /** Empties a simulator's keychain, and answers how many items it held. */
   resetKeychain(): Promise<number>;
   /** A foldable's pose. */

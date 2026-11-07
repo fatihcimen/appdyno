@@ -213,6 +213,8 @@ export class SimulatorSettings implements DeviceSettings {
       case 'wifi':
       case 'mobile_data':
         throw new DeviceError('UNSUPPORTED', SIM_CANNOT.radio);
+      case 'screen_lock':
+        throw new DeviceError('UNSUPPORTED', 'a simulator has no screen lock to set');
     }
   }
 

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `biometric enroll` on an emulator with no fingerprint takes one by itself: it sets the screen lock to PIN 1234, written down first, goes through Settings' enrolment and touches the sensor. `restore` takes the PIN off, and Android deletes the fingerprints with it. A real phone, and an emulator with a lock of its own, are refused with why. Run on an API 34 emulator.
 - `scripts/speed.mjs` prints the speed table from a simulator's Settings, so anyone can check it.
 - The app is signed with one Developer ID and the hardened runtime, and is notarized when credentials are given. A release refuses to be anything less.
 - A window by Wi-Fi, opt in: `appdyno pair` makes this Mac's pairing with a phone once, with a person accepting on it, on its cable for an iPhone, and a phone's serial may be an address. A dropped network reads as a pulled cable, and the window comes back by itself, though a phone whose own Wi-Fi goes loses Wireless debugging with it on Android, and takes a hand. In the hub a phone on a cable is paired from Connect a Phone, one phone is one row by whichever way it has, and the row and the bar say Wi-Fi. A window by Wi-Fi is run on a Samsung, where a touch shows in about 200 ms for a cable's 105. An iPhone is run with its cable in, its letters through tunnels on the network. Nothing has been run with a cable out.

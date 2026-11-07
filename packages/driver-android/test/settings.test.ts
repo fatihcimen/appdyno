@@ -1,7 +1,8 @@
-import { DeviceError } from '@appdyno/protocol';
+import { DeviceError, NODE_FLAGS, type Tree } from '@appdyno/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import type { Adb } from '../src/adb.js';
 import { AndroidEvents } from '../src/events.js';
+import { enrolmentStep } from '../src/fingerprint.js';
 import { AndroidSettings } from '../src/settings.js';
 import { openSettingsAt } from '../src/settings-pages.js';
 
@@ -36,8 +37,20 @@ const refusal = async (p: Promise<unknown>) => {
   throw new Error('it did not refuse');
 };
 
-const prints = (count: number, accept = 0, reject = 0) =>
-  `{"prints":[{"id":0,"count":${count},"accept":${accept},"reject":${reject},"acquire":0}]}`;
+const SHOWN = NODE_FLAGS.visible | NODE_FLAGS.enabled;
+const BUTTON = SHOWN | NODE_FLAGS.clickable;
+const EDIT = SHOWN | NODE_FLAGS.editable | NODE_FLAGS.password;
+/** One application window holding these nodes. */
+const tree = (nodes: [string, [number, number, number, number], number][]): Tree => ({
+  windows: [{ type: 1, layer: 1, b: [0, 0, 1080, 2400], active: true, focused: true }],
+  nodes: nodes.map(([c, b, f]) => ({ p: -1, w: 0, c, b, f })),
+  truncated: false,
+  elapsedMs: 1,
+  hash: 'h',
+});
+
+const prints = (count: number, accept = 0, reject = 0, state = 0) =>
+  `Fps state: ${state}\n{"prints":[{"id":0,"count":${count},"accept":${accept},"reject":${reject},"acquire":0}]}`;
 
 describe('a radio', () => {
   it('reads Wi-Fi by its state, not its setting', async () => {
@@ -165,16 +178,108 @@ describe('a fingerprint', () => {
     expect(asked.filter((c) => c.includes('finger touch'))).toEqual([]);
   });
 
-  it('touches until enrolled, lifting between', async () => {
+  it('touches until enrolled, lifting between, where the sensor already listens', async () => {
     const { events, asked } = device('emulator-5554', [
       [
         /dumpsys fingerprint/,
-        () => prints(asked.filter((c) => /touch/.test(c)).length >= 3 ? 1 : 0),
+        () => prints(asked.filter((c) => /touch/.test(c)).length >= 3 ? 1 : 0, 0, 0, 1),
       ],
     ]);
-    await events.biometric('enroll');
+    expect(await events.biometric('enroll')).toBeUndefined();
     expect(asked.filter((c) => c.includes('finger touch 1'))).toHaveLength(3);
     expect(asked.filter((c) => c.includes('finger remove'))).toHaveLength(3);
+    expect(asked.filter((c) => /lock_settings|am start/.test(c))).toEqual([]);
+  });
+
+  it('finds the step of an enrolment screen by its kinds, not its words', () => {
+    const t = tree([
+      ['android.widget.Button', [50, 2200, 300, 2300], BUTTON],
+      ['android.widget.Button', [800, 2200, 1000, 2300], BUTTON],
+      ['android.widget.Button', [800, 300, 1000, 400], BUTTON],
+      ['android.widget.ImageButton', [1000, 2300, 1080, 2400], BUTTON],
+    ]);
+    expect(enrolmentStep(t)).toEqual({ kind: 'tap', x: 900, y: 2250 });
+    const typing = tree([['android.widget.EditText', [0, 900, 1080, 1000], EDIT]]);
+    expect(enrolmentStep(typing)).toEqual({ kind: 'pin', x: 540, y: 950 });
+    const onKeyboard: Tree = {
+      ...typing,
+      windows: [...typing.windows, { ...typing.windows[0]!, type: 2 }],
+      nodes: [{ ...typing.nodes[0]!, w: 1 }],
+    };
+    expect(enrolmentStep(onKeyboard)).toBeUndefined();
+  });
+
+  it(
+    'sets a PIN, written down, and goes through Settings to the sensor',
+    { timeout: 10_000 },
+    async () => {
+      let listening = false;
+      const asked: string[] = [];
+      const adb = {
+        exec: async (_: string, command: string) => {
+          asked.push(command);
+          if (/keyevent 66/.test(command)) listening = true;
+          if (command.startsWith('cmd lock_settings verify'))
+            return 'Lock credential verified successfully';
+          const touches = asked.filter((c) => /touch/.test(c)).length;
+          if (/dumpsys fingerprint/.test(command))
+            return prints(touches >= 3 ? 1 : 0, 0, 0, listening && touches < 3 ? 1 : 0);
+          return '';
+        },
+        run: async (words: string[]) => (asked.push(words.join(' ')), 'OK'),
+      };
+      const pin = tree([['android.widget.EditText', [0, 900, 1080, 1000], EDIT]]);
+      const done = tree([['android.widget.Button', [800, 2200, 1000, 2300], BUTTON]]);
+      const screens = [pin, done];
+      const events = new AndroidEvents(adb as unknown as Adb, 'emulator-5554', async () =>
+        screens.shift()!,
+      );
+      const setUp = vi.fn(async () => undefined);
+      const said = await events.biometric('enroll', setUp);
+      expect(setUp).toHaveBeenCalledWith('screen_lock', 'pin');
+      expect(said).toBe(
+        'the screen lock is PIN 1234 for it: restore takes the PIN off, and the fingerprints with it',
+      );
+      expect(asked).toContain('am start -a android.settings.FINGERPRINT_ENROLL 2>&1');
+      expect(asked).toContain('input tap 540 950; input text 1234; input keyevent 66 2>&1');
+      expect(asked.at(-1)).toBe('input tap 900 2250 2>&1');
+    },
+  );
+
+  it('refuses a screen lock of its own, and a server that keeps to the app', async () => {
+    const theirs = device('emulator-5554', [
+      [/dumpsys fingerprint/, prints(0)],
+      [/lock_settings verify/, 'java.lang.IllegalArgumentException'],
+    ]);
+    const setUp = vi.fn(async () => undefined);
+    const e = await refusal(theirs.events.biometric('enroll', setUp));
+    expect(e.message).toContain('a screen lock of its own');
+    expect(setUp).not.toHaveBeenCalled();
+    const kept = device('emulator-5554', [[/dumpsys fingerprint/, prints(0)]]);
+    expect((await refusal(kept.events.biometric('enroll'))).message).toContain(
+      'it leaves the app for Settings',
+    );
+    expect(kept.asked.filter((c) => /lock_settings|am start/.test(c))).toEqual([]);
+  });
+
+  it("has its PIN set and cleared on an emulator alone, never on a phone's", async () => {
+    const phone = device('Y9DE', []);
+    expect((await refusal(phone.settings.set('screen_lock', 'pin'))).message).toContain(
+      "a phone's is its owner's",
+    );
+    expect(phone.asked).toEqual([]);
+    const emulator = device('emulator-5554', [
+      [/set-pin/, "Pin set to '1234'"],
+      [/clear/, 'Lock credential cleared'],
+      [/verify/, 'Lock credential verified successfully'],
+    ]);
+    expect(await emulator.settings.get('screen_lock')).toBe('none');
+    await emulator.settings.set('screen_lock', 'pin');
+    await emulator.settings.set('screen_lock', 'none');
+    expect(emulator.asked.slice(1)).toEqual([
+      'cmd lock_settings set-pin 1234 2>&1',
+      'cmd lock_settings clear --old 1234 2>&1',
+    ]);
   });
 
   it('touches nothing when one is enrolled', async () => {
