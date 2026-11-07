@@ -13,7 +13,7 @@ import { untilWithin } from './until.js';
 /**
  * A mirror on our own iPhone (APPDYNO_IPHONE_UDID; never a default), through what is built: the stream's thread runs only
  * from built files, so build first. Each touch reads the screen first: a phone left alone may lock, and a blind flick on
- * its home screen opens Spotlight. Headless, unless APPDYNO_MIRROR_WINDOW=1 asks for the one real window.
+ * its home screen opens Spotlight. Headless, unless APPDYNO_MIRROR_WINDOW=1 asks for the one real window; by the network at APPDYNO_MIRROR_WIFI=1.
  */
 const udid = process.env.APPDYNO_IPHONE_UDID;
 const FIXTURE = 'dev.appdyno.fixture';
@@ -75,7 +75,9 @@ describe.runIf(udid)('mirror on an iPhone', () => {
       mirror: device.mirror,
       viewer: async () =>
         (viewerProcess = new built.ViewerProcess(binary, [headless ? '--headless' : '--behind'])),
-      options: { quality: 'auto' },
+      options: process.env.APPDYNO_MIRROR_WIFI
+        ? { quality: 'high', wifi: true }
+        : { quality: 'auto' },
       title: 'a test',
       onChange: (s: MirrorStatus) => seen.push(s),
     });
