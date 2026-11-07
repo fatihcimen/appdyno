@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A second measure on an iPhone waits out the trace tool, which does not find a process for about 3 minutes after a recording attached to it: the wait ended at 180 s, just before the tool came back at 189 to 196.
 - An iPhone's CPU share is the instrument's own: reckoned from its running total it read 1.8 times too high, 88 % for a core at 50.
 - On an iPhone the gate sees a scroll that is steadily slow. A steady 25 frames a second is no hitch, so such a list read no regression against one at 120: `frames.p95_ms` is now a frame's time on the screen there.
 - `perf_compare baseline` is not done while it can call nothing: three runs of a sample each, as `perf_snapshot` gives, read as ready, and every comparison after them said too little to call. It says how many samples it holds of the five a comparison needs.

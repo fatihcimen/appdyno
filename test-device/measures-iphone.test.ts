@@ -206,7 +206,7 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
     } finally {
       server.close();
     }
-  }, 180_000);
+  }, 300_000);
 
   it('network: a system app is read too, attached with no debugger', async () => {
     await d.launch(SETTINGS);
@@ -214,7 +214,7 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
     console.log('network of Settings', JSON.stringify(n));
     expect(n.rxBytes).toBeGreaterThanOrEqual(0);
     expect(n.windowMs).toBeGreaterThan(0);
-  }, 120_000);
+  }, 300_000);
 
   it('energy: a busy core reads clearly above an idle app, and is a reading', async () => {
     const s = await open('cpu');
@@ -234,5 +234,5 @@ describe.skipIf(!udid || !fixture)('measures on an iPhone, on the signed fixture
     expect(busy.data.energyModelled).toBe(false);
     expect(busy.text).toMatch(/power impact/);
     expect(busy.data.energyImpact!).toBeGreaterThan(idle.data.energyImpact! * 2);
-  }, 300_000);
+  }, 600_000);
 });

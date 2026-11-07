@@ -43,7 +43,8 @@ const CAP_MS = 240_000;
 const START_MS = 90_000;
 const KILL_MS = 30_000;
 
-const FIND_PROCESS_MS = 180_000;
+/** A recording attached to a process leaves the tool blind to it for a while: 189 and 196 s, measured, on iOS 27.2. */
+const FIND_PROCESS_MS = 240_000;
 const FIND_RETRY_MS = 5_000;
 
 export type TraceRecording = {
@@ -103,8 +104,8 @@ async function recordInTurn(r: TraceRecording): Promise<string> {
     try {
       return await recordOnce(r, pid);
     } catch (e) {
-      // a phone's tool stops finding running processes at times, whichever way they are named (measured on iOS
-      // 27.0.1: the same live process not found for 100 s, then found, with the tool's service restarted too)
+      // a phone's tool stops finding running processes after an attached recording, whichever way they are named
+      // (the same live process not found, then found, with the tool's service restarted too)
       if (!pid || !/Cannot find process/.test((e as Error).message)) throw e;
       // every process is still recorded, where that has what is asked
       if (!r.attachedOnly) return recordOnce(r, undefined);
