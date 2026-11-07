@@ -576,35 +576,35 @@ hangs and a launch of Settings; a cost-known check of them needs an app signed f
 
 Run it yourself: `node scripts/speed.mjs <device id> [runs]` times the calls an MCP client makes most, on the fixture app (`dev.appdyno.fixture`, from `android/fixture` or `ios/`), on any device. `pnpm build` first. Each run starts a new server over stdio, as a client does, sends `initialize` and `tools/list`, then the calls below. Every call is proved by its answer: a tap has to reach the next screen, a typed field has to hold the text, and a refusal or a missing proof stops the run. The fixture is stopped before each `launch_app`, so each launch is cold. A run before the measured ones starts what the device needs, the iOS runner's build and start or the Android agent's, and only its first read is kept.
 
-Medians and the worst of 5 runs, in ms, each through the MCP server over stdio, on 2026-11-07, at `ab96deed`, on an M5 Pro with 15 cores and macOS 27.0.1, with the host's load beside each device:
+Medians and the worst of 5 runs, in ms, each through the MCP server over stdio, on 2026-11-07, on an M5 Pro with 15 cores and macOS 27.0.1, with the commit and the host's load beside each device. A tap or a swipe is timed two ways. The touch alone, with `read: none`, answers once the touch has gone, with no settle and no read, and proves nothing by itself: the script proves it by a wait after it, not timed. With the settled screen, the default, the call also waits until the screen has been still for 200 ms and answers with what changed, which is its proof. A tap elsewhere is often the touch alone, so compare it with that row:
 
-| call                                 | iOS simulator | Android emulator | iPhone        | Samsung       | Xiaomi        |
-| ------------------------------------ | ------------- | ---------------- | ------------- | ------------- | ------------- |
-| `list_devices`                       | 532 / 839     | 502 / 517        | 566 / 661     | 460 / 496     | 495 / 633     |
-| `screen`, first of a server          | 647 / 1,032   | 67 / 72          | 549 / 567     | 199 / 202     | 132 / 166     |
-| `initialize`                         | 115 / 140     | 105 / 112        | 107 / 178     | 104 / 115     | 108 / 116     |
-| `tools/list`                         | 7 / 9         | 6 / 6            | 6 / 9         | 6 / 6         | 6 / 7         |
-| `launch_app` of the fixture, cold    | 2,215 / 2,573 | 780 / 1,019      | 1,948 / 2,900 | 1,530 / 1,556 | 1,913 / 1,972 |
-| `screen`                             | 14 / 31       | 40 / 42          | 992 / 1,055   | 51 / 53       | 60 / 63       |
-| `swipe`                              | 2,107 / 2,320 | 1,448 / 1,496    | 3,739 / 3,751 | 2,517 / 2,665 | 2,510 / 2,692 |
-| `find`                               | 88 / 119      | 43 / 58          | 181 / 186     | 170 / 182     | 43 / 78       |
-| `tap` by coordinate                  | 937 / 1,008   | 797 / 812        | 1,094 / 1,184 | 1,157 / 1,859 | 820 / 867     |
-| back                                 | 375 / 398     | 480 / 782        | 1,524 / 1,610 | 842 / 1,222   | 661 / 824     |
-| `tap` by selector                    | 1,111 / 1,131 | 847 / 915        | 1,093 / 1,380 | 980 / 1,496   | 825 / 1,015   |
-| `type_text` into a field by selector | 1,220 / 1,454 | 635 / 648        | 2,262 / 2,425 | 904 / 1,003   | 1,220 / 1,779 |
-| `wait_for` an element on the screen  | 61 / 93       | 64 / 66          | 627 / 632     | 158 / 173     | 129 / 133     |
-| `screenshot`                         | 84 / 114      | 24 / 47          | 4,719 / 4,746 | 164 / 329     | 111 / 262     |
-| `logs`, 20 lines                     | 1,135 / 1,329 | 20 / 22          | 1 / 2         | 454 / 457     | 241 / 250     |
+| call                                                | iOS simulator | Android emulator | iPhone        | Samsung       | Xiaomi        |
+| --------------------------------------------------- | ------------- | ---------------- | ------------- | ------------- | ------------- |
+| `list_devices`                                      | 593 / 648     | 502 / 517        | 474 / 510     | 500 / 601     | 476 / 568     |
+| `screen`, first of a server                         | 689 / 892     | 67 / 72          | 526 / 569     | 194 / 209     | 136 / 159     |
+| `initialize`                                        | 114 / 146     | 105 / 112        | 108 / 120     | 103 / 109     | 104 / 115     |
+| `tools/list`                                        | 7 / 9         | 6 / 6            | 6 / 7         | 6 / 7         | 6 / 7         |
+| `launch_app` of the fixture, cold                   | 2,307 / 3,072 | 780 / 1,019      | 1,745 / 2,870 | 1,547 / 1,601 | 1,890 / 2,063 |
+| `screen`                                            | 16 / 20       | 40 / 42          | 954 / 1,057   | 54 / 60       | 58 / 68       |
+| `swipe`, the touch alone (`read: none`)             | 312 / 313     | not run          | 942 / 1,081   | 541 / 780     | 679 / 717     |
+| `swipe`, with the settled screen                    | 2,412 / 2,490 | 1,448 / 1,496    | 3,740 / 3,768 | 2,513 / 2,869 | 2,512 / 2,560 |
+| `find`                                              | 72 / 139      | 43 / 58          | 181 / 192     | 152 / 162     | 42 / 44       |
+| `tap` by coordinate, the touch alone (`read: none`) | 127 / 133     | not run          | 318 / 323     | 104 / 112     | 142 / 144     |
+| `tap` by coordinate, with the settled screen        | 904 / 916     | 797 / 812        | 1,139 / 1,140 | 949 / 1,180   | 810 / 858     |
+| back                                                | 331 / 375     | 480 / 782        | 1,327 / 1,536 | 991 / 1,123   | 624 / 805     |
+| `tap` by selector, with the settled screen          | 1,134 / 1,146 | 847 / 915        | 1,069 / 1,337 | 1,073 / 1,664 | 825 / 879     |
+| `type_text` into a field by selector                | 1,271 / 1,686 | 635 / 648        | 2,287 / 2,466 | 1,023 / 1,099 | 1,199 / 1,351 |
+| `wait_for` an element on the screen                 | 61 / 79       | 64 / 66          | 631 / 638     | 164 / 219     | 130 / 144     |
+| `screenshot`                                        | 90 / 189      | 24 / 47          | 183 / 227     | 184 / 334     | 111 / 119     |
+| `logs`, 20 lines                                    | 1,179 / 1,350 | 20 / 22          | 1 / 2         | 446 / 450     | 233 / 246     |
 
-- iOS simulator: an iPhone 17 Pro with iOS 27.2, host load 8.4-9.9.
-- Android emulator: a Pixel 6 AVD with API 34 (`google_apis`, arm64), `-gpu host`, host load 7.9-9.7.
-- iPhone: an iPhone 13 Pro Max with iOS 27.2, by USB, host load 11.8-47.6, as others ran builds. Its `screen` follows `launch_app`, and read 441 ms in a run before this one, at load 40-119; its `logs` says at once that `devicectl` cannot read an app's log.
-- Samsung: an SM-A525F with Android 14, by USB, host load 5.9-7.1.
-- Xiaomi: a 25078RA3EY with Android 16 in Turkish, by USB, host load 6.1-7.2.
+- iOS simulator: an iPhone 17 Pro with iOS 27.2, at `8991f574`, which has the text fix and not the screenshot one (a simulator's look past the app is its helper's, a few ms), host load 5.4-8.0.
+- Android emulator: a Pixel 6 AVD with API 34 (`google_apis`, arm64), `-gpu host`, at `ab96deed`, before the script timed the touch alone, host load 7.9-9.7.
+- iPhone: an iPhone 13 Pro Max with iOS 27.2, by USB, at `b9c2bbf0`, host load 5.1-6.5. Its `logs` says at once that `devicectl` cannot read an app's log.
+- Samsung: an SM-A525F with Android 14, by USB, at `b9c2bbf0`, host load 5.1-7.3.
+- Xiaomi: a 25078RA3EY with Android 16 in Turkish, by USB, at `b9c2bbf0`, host load 5.4-6.2.
 
-The first read of a script's first server, which starts what the device needs, is not in the table: 4,726 ms on the simulator, with the runner built before, and 16,325 on the iPhone, which also signs and installs it; 1,624 on the emulator, 2,238 on the Samsung and 2,029 on the Xiaomi, which push and start the agent.
-
-Every tap, swipe and key waits for the screen to settle and answers with what changed, which is its proof, so its time is mostly the app's own: the settle column of the script says how much. `back` is the key on Android and the screen's own control on iOS. `find` and `wait_for` come after a screen changed, so each reads it afresh. A number is relative to this Mac at this load.
+With the settled screen, a call's time is mostly the app's own: the script's settle column says how much. `back` is the key on Android and the screen's own control on iOS. `find` and `wait_for` come after a screen changed, so each reads it afresh. A number is relative to this Mac at this load.
 
 ### Where the time goes
 
@@ -617,17 +617,17 @@ Each call split into its parts, on the same devices, from the server's log, and 
 The three costliest that are not the device's own:
 
 1. A text entry looked for the focused field by a snapshot, and a snapshot of a field that has no focus yet waits for one to appear: before the tap, and again after it. Fixed: it asks whether the field exists first, which answers at once, and polls as before.
-2. On an iPhone the look at the home screen app costs a read on every `screen`, `screenshot` and `launch_app`: a `screen` read 176 ms for the app and 391-574 in all in a trace, and a `screenshot` taken with the keyboard up takes 4.7 s, where the image itself takes about 200 ms and the read of the home screen app 4.5 s. It stays: it is how a sheet over the app is seen, and no such sheet could be raised on the phone to prove a cheaper sign against.
-3. `list_devices` runs `simctl list`, then `devicectl list devices`, then `devicectl` for the lock of each connected iPhone, one after another: 460-600 ms on this Mac, whichever device is driven. It stays: the lock is asked last on purpose, as it asks the phone, and asked alongside the list it would ask a phone not yet known to trust this Mac.
+2. On an iPhone a `screenshot` read the home screen app's tree too, for a sheet over the app: 4.5 s of its 4.7 after typing in every run of the script, 250-380 ms in other sequences on the same phone, where what makes the difference was not found. Fixed for `screenshot`, as such a sheet is in its picture: it keeps the app's own check and takes no look past it. `screen`, `launch_app` and an action that changed nothing still look, about 200 ms of an iPhone's `screen`: a query for the sheets alone would be cheaper, and is not built, as no sheet could be raised on this phone to prove it against.
+3. `list_devices` runs `simctl list`, then `devicectl list devices`, then `devicectl` for the lock of each connected iPhone, one after another: 460-600 ms on this Mac, whichever device is driven. It stays: the lock is asked last on purpose, as it asks the phone, and asked alongside the list it would ask a phone not yet known to trust this Mac. Run alongside each other, the two lists would save about the shorter of them, 100-260 ms.
 
 The fix, before and after in turn, the rest of each run the same:
 
 | `type_text` into a field by selector | before (`49e073c8`) | after (`ab96deed`) | host load, before; after |
 | ------------------------------------ | ------------------- | ------------------ | ------------------------ |
 | iOS simulator, median / worst        | 3,236 / 3,700       | 1,220 / 1,454      | 9.5-10.2; 8.4-9.9        |
-| iPhone, median / worst               | 4,398 / 4,486       | 2,262 / 2,425      | 6.9-53.3; 11.8-47.6      |
+| iPhone, median / worst               | 4,334 / 4,605       | 2,287 / 2,466      | 5.0-8.2; 5.1-6.5         |
 
-On the simulator the runner's own `focusMs`, from the tap to the field's focus, went from 2,904-3,680 to 760-1,374, at load 30-150. The Android devices and the other calls, run before and after in turn, are the same within their spread: the fix is the iOS runner's alone.
+The iPhone's `screenshot` in the same runs, before at `49e073c8` and after at `b9c2bbf0`: 4,766 / 4,817 against 183 / 227. On the simulator the runner's own `focusMs`, from the tap to the field's focus, went from 2,904-3,680 to 760-1,374, at load 30-150. The Android devices and the other calls, run before and after in turn, are the same within their spread: the fix is the iOS runner's alone.
 
 Tried and dropped:
 

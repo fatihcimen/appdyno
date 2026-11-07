@@ -95,17 +95,19 @@ An iPhone's live picture is experimental, and rests on undocumented Apple servic
 
 ## Speed
 
-Medians through MCP over stdio, on the fixture app, 5 runs each, on 2026-11-07, on an M5 Pro with 15 cores, at host load 6-10 (the iPhone's 12-48):
+Medians through MCP over stdio, on the fixture app, 5 runs each, on 2026-11-07, on an M5 Pro with 15 cores, at host load 5-8:
 
-| call                          | iOS simulator | Android emulator | iPhone 13 Pro Max | Samsung SM-A525F | Xiaomi 25078RA3EY |
-| ----------------------------- | ------------- | ---------------- | ----------------- | ---------------- | ----------------- |
-| read the screen               | 14 ms         | 40 ms            | 441-992 ms        | 51 ms            | 60 ms             |
-| tap by selector               | 1,111 ms      | 847 ms           | 1,093 ms          | 980 ms           | 825 ms            |
-| type into a field by selector | 1,220 ms      | 635 ms           | 2,262 ms          | 904 ms           | 1,220 ms          |
-| swipe                         | 2,107 ms      | 1,448 ms         | 3,739 ms          | 2,517 ms         | 2,510 ms          |
-| screenshot                    | 84 ms         | 24 ms            | 4,719 ms          | 164 ms           | 111 ms            |
+| call                                  | iOS simulator | iPhone 13 Pro Max | Samsung SM-A525F | Xiaomi 25078RA3EY |
+| ------------------------------------- | ------------- | ----------------- | ---------------- | ----------------- |
+| read the screen                       | 16 ms         | 445-954 ms        | 54 ms            | 58 ms             |
+| tap, the touch alone (`read: none`)   | 127 ms        | 318 ms            | 104 ms           | 142 ms            |
+| tap, with the settled screen          | 904 ms        | 1,139 ms          | 949 ms           | 810 ms            |
+| swipe, the touch alone (`read: none`) | 312 ms        | 942 ms            | 541 ms           | 679 ms            |
+| swipe, with the settled screen        | 2,412 ms      | 3,740 ms          | 2,513 ms         | 2,512 ms          |
+| type into a field by selector         | 1,271 ms      | 2,287 ms          | 1,023 ms         | 1,199 ms          |
+| screenshot                            | 90 ms         | 183 ms            | 184 ms           | 111 ms            |
 
-A tap, a swipe or typing answers once the screen has settled, with what changed, so most of its time is the app's own. The iPhone's read comes right after a launch, and took 441 ms in one series and 992 in the next. `node scripts/speed.mjs <device id>` runs the same calls on your Mac. [Speed](docs/reference/perf.md#speed) has every call, on which device, where the time goes, and what each one proves.
+The touch alone answers once the touch has gone, with no settle and no read, and proves nothing by itself. With the settled screen, the default, a call also waits until the screen has been still for 200 ms and answers with what changed, which is its proof, so most of its time is the app's own. The iPhone reads the screen right after a launch, which took 445 ms in one series and 954 in another. A tap elsewhere is often the touch alone: compare it with that row. `node scripts/speed.mjs <device id>` runs the same calls on your Mac. [Speed](docs/reference/perf.md#speed) has every call, the Android emulator, where the time goes, and what each one proves.
 
 ## Documentation
 
