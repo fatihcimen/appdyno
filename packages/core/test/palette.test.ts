@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { PAGE_BASE } from '../src/html.js';
 
 /** The viewer's colours are Objective-C and a page's are CSS: this is what keeps the dashboard wearing the hub's palette. */
-const palette = readFileSync(join(import.meta.dirname, '../../../mirror/Viewer/Palette.m'), 'utf8');
+const palette = readFileSync(join(import.meta.dirname, '../../../mac/Viewer/Palette.m'), 'utf8');
 
 const side = (name: string) => {
   const from = palette.indexOf(`static const MVSide ${name} = {`);

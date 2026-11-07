@@ -131,7 +131,7 @@
   <text class="code" x="732" y="332">ios/Runner</text>
   <rect class="card s-h" x="716" y="490" width="204" height="60" rx="12"/>
   <text class="name" x="732" y="514">The window</text>
-  <text class="code" x="732" y="534">mirror/Viewer</text>
+  <text class="code" x="732" y="534">mac/Viewer</text>
   <path class="line s-d" marker-end="url(#ad)" d="M632 205H714"/>
   <path class="line s-d" marker-end="url(#ad)" d="M632 314H714"/>
   <path class="line s-h" marker-end="url(#ah)" d="M632 520H714"/>

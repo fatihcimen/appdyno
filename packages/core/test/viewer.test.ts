@@ -22,7 +22,7 @@ import {
 } from '../src/index.js';
 
 const run = promisify(execFile);
-const FIXTURES = join(import.meta.dirname, '../../../mirror/Viewer/fixtures');
+const FIXTURES = join(import.meta.dirname, '../../../mac/Viewer/fixtures');
 /** The first use compiles it, on a Mac that may be busy. */
 const COMPILE_MS = 300_000;
 /** A hang, not a slow machine: how long a word from a viewer is waited for. */
@@ -69,7 +69,7 @@ function viewer() {
 const exited = (v: ViewerProcess) => new Promise<string>((r) => v.onExit(r));
 
 describe('the keyboard', () => {
-  const viewer = join(import.meta.dirname, '../../../mirror/Viewer');
+  const viewer = join(import.meta.dirname, '../../../mac/Viewer');
   const source = (f: string) => readFileSync(join(viewer, f), 'utf8');
 
   it('is taken in one place, and that one is what --focus asks for', () => {
@@ -175,7 +175,7 @@ describe('the viewer, compiled by its first-use path', () => {
     expect(readFileSync(binary).includes('--selftest')).toBe(false);
     expect(readFileSync(binary).includes('--encode')).toBe(false);
     expect(readFileSync(testBinary).includes('--selftest')).toBe(true);
-    const viewer = join(import.meta.dirname, '../../../mirror/Viewer');
+    const viewer = join(import.meta.dirname, '../../../mac/Viewer');
     expect(readdirSync(viewer).filter((f) => VIEWER_TEST_FILES.test(f)).length).toBeGreaterThan(5);
   });
 

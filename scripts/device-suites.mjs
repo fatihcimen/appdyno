@@ -6,7 +6,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const SUITES = join(import.meta.dirname, '../test-device');
+const SUITES = join(import.meta.dirname, '../device-tests');
 
 /** What names a device to a suite. A suite gates on these, and never takes a device by default. */
 const VARIABLES = {
@@ -27,7 +27,7 @@ const suites = (variable) =>
   readdirSync(SUITES)
     .filter((f) => f.endsWith('.test.ts'))
     .filter((f) => readFileSync(join(SUITES, f), 'utf8').includes(variable))
-    .map((f) => `test-device/${f}`)
+    .map((f) => `device-tests/${f}`)
     .sort();
 
 const [command, argument] = process.argv.slice(2);

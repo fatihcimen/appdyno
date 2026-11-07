@@ -18,14 +18,14 @@ describe('the icon', () => {
     for (const path of [
       'ios/Branding/AppIcon60x60@2x.png',
       'ios/Branding/AppIcon60x60@3x.png',
-      'mirror/Viewer/tile.png',
+      'mac/Viewer/tile.png',
       'docs/images/social.png',
     ])
       expect(existsSync(join(root, path))).toBe(true);
   });
 
   it('wears the colours of the hub', () => {
-    const palette = readFileSync(join(root, 'mirror/Viewer/Palette.m'), 'utf8');
+    const palette = readFileSync(join(root, 'mac/Viewer/Palette.m'), 'utf8');
     const source = readFileSync(join(root, 'scripts/icon-art.mjs'), 'utf8');
     for (const [, name, value] of source.matchAll(/^const (\w+) = '#([0-9A-F]{6})';$/gm)) {
       if (name !== 'WHITE') expect(palette).toContain(`0x${value}`);

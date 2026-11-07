@@ -30,7 +30,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 appdyno's simulator helpers (ios/SimHelper) follow the wire shape of idb's DTUHID transport and the
 accessibility calls, attribute names and retry of rejected depths of idb's SimulatorFrameworkBridge, and its
-viewer (mirror/Viewer/SourceSurface.m) the selectors of idb's public headers for a simulator's screen:
+viewer (mac/Viewer/SourceSurface.m) the selectors of idb's public headers for a simulator's screen:
 
 idb (https://github.com/facebook/idb)
 

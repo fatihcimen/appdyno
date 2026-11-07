@@ -7,7 +7,7 @@ import { VIEWER_TEST_FILES } from '../src/index.js';
 
 /** A Mac at the floor is one nobody here has, so what it lacks fails nowhere but on its owner's screen. */
 const root = join(import.meta.dirname, '../../..');
-const viewer = join(root, 'mirror/Viewer');
+const viewer = join(root, 'mac/Viewer');
 const floor = /^const MIN_MACOS = '([\d.]+)';$/m.exec(
   readFileSync(join(root, 'scripts/build-app.mjs'), 'utf8'),
 )![1]!;

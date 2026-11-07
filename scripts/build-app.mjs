@@ -193,9 +193,9 @@ function assemble() {
   infoPlist(contents, 'dev.appdyno.app', NAME);
   infoPlist(join(helper, 'Contents'), 'dev.appdyno.window', 'appdyno-viewer');
   copyFileSync(join(repo, 'THIRD_PARTY_NOTICES'), join(resources, 'licenses/third-party.txt'));
-  copyFileSync(join(repo, 'app/appdyno'), join(resources, 'bin/appdyno'));
+  copyFileSync(join(repo, 'mac/App/appdyno'), join(resources, 'bin/appdyno'));
   for (const tool of ['xcrun', 'xcodebuild']) {
-    copyFileSync(join(repo, 'app/no-tool'), join(resources, 'no-tools', tool));
+    copyFileSync(join(repo, 'mac/App/no-tool'), join(resources, 'no-tools', tool));
     chmodSync(join(resources, 'no-tools', tool), 0o755);
   }
   const sdk = `-mmacosx-version-min=${MIN_MACOS}`;
@@ -210,7 +210,7 @@ function assemble() {
     'AppKit',
     '-o',
     menu,
-    join(repo, 'app/Menu.m'),
+    join(repo, 'mac/App/Menu.m'),
   );
   sh('strip', '-x', menu);
 }
@@ -222,7 +222,7 @@ function codesign(path, ...more) {
 
 /** From the inside out, as each signature covers what is in it. */
 function signAll() {
-  const jit = ['--entitlements', join(repo, 'app/entitlements.plist')];
+  const jit = ['--entitlements', join(repo, 'mac/App/entitlements.plist')];
   for (const f of readdirSync(helpers)) if (f !== 'appdyno-viewer') codesign(join(helpers, f));
   codesign(join(helpers, 'appdyno-viewer'));
   codesign(helper);
@@ -284,7 +284,7 @@ function appcast(dmg, key) {
 }
 
 function cask(dmg) {
-  const text = readFileSync(join(repo, 'app/appdyno.rb'), 'utf8')
+  const text = readFileSync(join(repo, 'mac/App/appdyno.rb'), 'utf8')
     .replaceAll('@VERSION@', version)
     .replaceAll('@SHA256@', sha256(dmg))
     .replaceAll('@REPOSITORY@', repository);

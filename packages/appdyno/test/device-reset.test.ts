@@ -28,13 +28,13 @@ const FORBIDDEN: Record<string, RegExp> = {
  */
 const OWN: [string, RegExp][] = [
   ['packages/driver-apple/src/simulators.ts', /^return `xcrun simctl delete \$\{id\}`;$/],
-  ['test-device/simulator-create.test.ts', /^await simctl\.exec\(\['delete', made\]\);$/],
+  ['device-tests/simulator-create.test.ts', /^await simctl\.exec\(\['delete', made\]\);$/],
   [
-    'test-device/simulator-create.test.ts',
+    'device-tests/simulator-create.test.ts',
     /^expect\(r\.text\)\.toContain\(`xcrun simctl delete \$\{made\}`\);$/,
   ],
   [
-    'test-device/hub.test.ts',
+    'device-tests/hub.test.ts',
     /^if \(named\(\)\) execFileSync\('xcrun', \['simctl', 'delete', MADE\], \{ stdio: 'ignore' \}\);$/,
   ],
 ];

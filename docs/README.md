@@ -18,15 +18,15 @@ Each one takes you through a task.
 
 Look things up here.
 
-| reference                           | what it holds                                                          |
-| ----------------------------------- | ---------------------------------------------------------------------- |
-| [Tools](reference/tools.md)         | every tool, and what each platform can and cannot do                   |
-| [Command line](reference/cli.md)    | every command, and the server's flags and variables                    |
-| [Library](reference/library.md)     | driving a device from TypeScript                                       |
-| [The window and the hub](mirror.md) | the live window: what feeds it, its states, its wire, its limits       |
-| [Performance](reference/perf.md)    | what each measure reads on each device, and how each number was proved |
-| [Protocol](reference/protocol.md)   | the bytes between the host and a device's agent                        |
-| [CI and releases](reference/ci.md)  | every gate, the device suites, how a release is made                   |
+| reference                                     | what it holds                                                          |
+| --------------------------------------------- | ---------------------------------------------------------------------- |
+| [Tools](reference/tools.md)                   | every tool, and what each platform can and cannot do                   |
+| [Command line](reference/cli.md)              | every command, and the server's flags and variables                    |
+| [Library](reference/library.md)               | driving a device from TypeScript                                       |
+| [The window and the hub](reference/mirror.md) | the live window: what feeds it, its states, its wire, its limits       |
+| [Performance](reference/perf.md)              | what each measure reads on each device, and how each number was proved |
+| [Protocol](reference/protocol.md)             | the bytes between the host and a device's agent                        |
+| [CI and releases](reference/ci.md)            | every gate, the device suites, how a release is made                   |
 
 ## How it works
 

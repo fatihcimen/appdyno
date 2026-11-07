@@ -86,8 +86,8 @@ iphone_build() { xb -destination 'generic/platform=iOS' -derivedDataPath ios/.de
 if [[ -n $serial ]]; then
   export APPDYNO_ANDROID_SERIAL=$serial
   step fixture-install install_fixture $serial
-  step device-functional ran device-functional test-device/android.test.ts test-device/smoke.test.ts test-device/mcp-stdio.test.ts
-  measuring device-perf ran device-perf test-device/perf.test.ts
+  step device-functional ran device-functional device-tests/android.test.ts device-tests/smoke.test.ts device-tests/mcp-stdio.test.ts
+  measuring device-perf ran device-perf device-tests/perf.test.ts
   if (( nightly )); then
     measuring latency mise exec -- node packages/appdyno/dist/main.js bench --serial $serial --n 30 --max-load 8 --out .ci/runs/$stamp-latency.json
     if [[ -e .ci/runs/$stamp-latency.json ]]; then
@@ -99,13 +99,13 @@ fi
 if [[ -n $ios ]]; then
   step ios-build ios_build
   export APPDYNO_IOS_UDID=$ios
-  step ios-functional ran ios-functional test-device/ios.test.ts test-device/mcp-stdio.test.ts
-  measuring ios-perf ran ios-perf test-device/ios-perf.test.ts
+  step ios-functional ran ios-functional device-tests/ios.test.ts device-tests/mcp-stdio.test.ts
+  measuring ios-perf ran ios-perf device-tests/ios-perf.test.ts
 fi
 if [[ -n $iphone ]]; then
   step iphone-build iphone_build
   export APPDYNO_IPHONE_UDID=$iphone
-  step iphone-functional ran iphone-functional test-device/iphone.test.ts test-device/iphone-mcp.test.ts
+  step iphone-functional ran iphone-functional device-tests/iphone.test.ts device-tests/iphone-mcp.test.ts
 fi
 
 if [[ -n $all_on ]]; then

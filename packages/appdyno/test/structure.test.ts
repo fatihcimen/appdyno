@@ -21,9 +21,7 @@ const NATIVE = [
   'ios/RunnerCore/Sources',
   'ios/RunnerCore/Tests',
   'ios/SimHelper',
-  'mirror/Viewer',
   'mac',
-  'app',
 ];
 
 const sources = [
@@ -114,7 +112,7 @@ describe("a person's pasteboard", () => {
 
   it('is reached by no test or script', () => {
     const tests = [
-      join(root, 'test-device'),
+      join(root, 'device-tests'),
       join(root, 'scripts'),
       ...readdirSync(packages).flatMap((p) => [
         join(packages, p, 'test'),
@@ -137,10 +135,10 @@ describe("a person's pasteboard", () => {
   });
 
   it('is written by no viewer source but the one that keeps a window behind off it', () => {
-    const viewer = sources.filter((f) => f.name.startsWith('mirror/Viewer/'));
+    const viewer = sources.filter((f) => f.name.startsWith('mac/Viewer/'));
     expect(viewer.length).toBeGreaterThan(40);
     const writers = viewer
-      .filter((f) => f.name !== 'mirror/Viewer/Place.m' && f.text.split('\n').some(writesIt))
+      .filter((f) => f.name !== 'mac/Viewer/Place.m' && f.text.split('\n').some(writesIt))
       .map((f) => f.name);
     expect(writers).toEqual([]);
   });
@@ -201,7 +199,7 @@ describe('repeated code', () => {
 
   it('takes in the native code', () => {
     for (const file of [
-      'mirror/Viewer/main.m',
+      'mac/Viewer/main.m',
       'android/agent/src/main/kotlin/dev/appdyno/agent/Handlers.kt',
       'android/fixture/src/main/kotlin/dev/appdyno/fixture/MainActivity.kt',
       'ios/Runner/Device.swift',

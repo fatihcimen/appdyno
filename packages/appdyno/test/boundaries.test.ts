@@ -132,7 +132,7 @@ describe('module boundaries', () => {
     // a clean clone checks types before anything is built
     const literalDist = (source: string) =>
       [...source.matchAll(IMPORT)].some((m) => /\/dist\//.test(m[1]!));
-    const suites = sources(join(root, 'test-device')).filter((f) =>
+    const suites = sources(join(root, 'device-tests')).filter((f) =>
       literalDist(readFileSync(f, 'utf8')),
     );
     expect(suites.map((f) => relative(root, f))).toEqual([]);

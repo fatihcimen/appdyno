@@ -21,8 +21,8 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['test-device/**/*.test.ts'],
-    setupFiles: ['test-device/one-agent.ts'],
+    include: ['device-tests/**/*.test.ts'],
+    setupFiles: ['device-tests/one-agent.ts'],
     fileParallelism: false,
     testTimeout: 120_000,
     hookTimeout: 180_000,

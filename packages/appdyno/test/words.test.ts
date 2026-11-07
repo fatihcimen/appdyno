@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { NEEDS } from '@appdyno/core';
 import { TRIED } from '../src/hub-services.js';
 
-const viewer = join(import.meta.dirname, '../../../mirror/Viewer');
+const viewer = join(import.meta.dirname, '../../../mac/Viewer');
 const source = (file: string) => readFileSync(join(viewer, file), 'utf8');
 
 const unquote = (s: string) => s.replace(/\\(.)/g, '$1');

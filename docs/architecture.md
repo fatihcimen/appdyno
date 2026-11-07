@@ -62,7 +62,7 @@ Each platform has its own way in. All of them speak the same protocol, except wh
 
 A window has to feel like the device. That sets its shape.
 
-**The window is native, and Node is the control plane.** The viewer in `mirror/Viewer` is Objective-C, one process per window, compiled by `clang` on first use. It decodes and draws. Node starts and stops streams, carries input, and names what is wrong. They speak one line of JSON at a time, on the viewer's stdin and stdout. [The wire](mirror.md#the-wire) lists every message.
+**The window is native, and Node is the control plane.** The viewer in `mac/Viewer` is Objective-C, one process per window, compiled by `clang` on first use. It decodes and draws. Node starts and stops streams, carries input, and names what is wrong. They speak one line of JSON at a time, on the viewer's stdin and stdout. [The wire](reference/mirror.md#the-wire) lists every message.
 
 **A picture takes the shortest way there is.** On an Android phone the viewer connects to the agent by itself, so Node never sees a frame. A simulator shares its surface, and an emulator fills a file. Node has a part in those only to say a new frame is there. An iPhone is the exception: its stream is held by a worker thread of the Node process, which writes to a named pipe.
 
@@ -90,9 +90,9 @@ A gate that cannot judge must not pass. So `few-samples`, `noisy` and `refused` 
 | `ios/Runner`     | Swift       | The XCTest runner, on a simulator or a phone.                     |
 | `ios/RunnerCore` | Swift       | What the runner decides with no device, tested with `swift test`. |
 | `ios/SimHelper`  | Objective-C | Helpers a simulator needs: touch, accessibility, launch, probes.  |
-| `mirror/Viewer`  | Objective-C | The window and the hub.                                           |
-| `app`            | mixed       | The Mac app's shell: menu bar, launcher, icon, cask.              |
-| `mac`            | Objective-C | `TextScan`, which reads the words of a screen with no tree.       |
+| `mac/Viewer`     | Objective-C | The window and the hub.                                           |
+| `mac/App`        | mixed       | The Mac app's shell: menu bar, launcher, icon, cask.              |
+| `mac/TextScan`   | Objective-C | `TextScan`, which reads the words of a screen with no tree.       |
 
 `android/fixture` and `ios/Fixture` are test apps. Each has known costs built in, so a measure can be checked against a truth: a screen that draws for 40 ms, a 50 MB allocation, a 500 ms stall.
 
@@ -119,6 +119,6 @@ Rules that matter are tests, so they cannot go stale in silence.
 | `packages/protocol/test/native.test.ts`       | The Kotlin, Swift and TypeScript sides agree on the protocol.       |
 | `packages/appdyno/test/docs.test.ts`          | Every link in the docs resolves, and these diagrams match the code. |
 
-Device suites live in `test-device`. They need a device you name, and CI runs none of them: see [the CI page](reference/ci.md).
+Device suites live in `device-tests`. They need a device you name, and CI runs none of them: see [the CI page](reference/ci.md).
 
 **How the diagrams stay true.** Each is one hand-written SVG in `docs/images`, with no generator. `docs.test.ts` fails when one drifts: the package map carries each package's row, which is checked against the import rules. The gate's picture is checked against the gate's constants, and any path a diagram names must exist. A route or a layout that changes without a test seeing it is still yours to redraw.

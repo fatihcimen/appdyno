@@ -4,11 +4,11 @@
  *
  * Two drawings of one idea. From 128 px up, a device on a body of the hub's gradient. At 64 px and below that
  * closes into a ring and reads as a letter, so the body itself becomes the device, cut by the same curve. That
- * second drawing is for a Mac below the glass one: on macOS 26 and later the system draws app/appdyno.icon at
+ * second drawing is for a Mac below the glass one: on macOS 26 and later the system draws mac/App/appdyno.icon at
  * every size, and a device with a two-toned inside holds at 16 px there.
  */
 
-/** From the hub's palette, mirror/Viewer/Palette.m, as `brand.test.ts` holds them. */
+/** From the hub's palette, mac/Viewer/Palette.m, as `brand.test.ts` holds them. */
 const BLUE = '#3F6BFF';
 const VIOLET = '#7A3DF0';
 const PINK = '#FF7FD0';
@@ -248,14 +248,14 @@ const androidArt = `<?xml version="1.0" encoding="utf-8"?>
 /** Every generated text in the repository, by path, so that a test can hold them to this file. */
 export const GENERATED = {
   'docs/images/logo.svg': logo(),
-  'app/appdyno.icon/Assets/slab.svg': layer(`<path d="${SLAB}" fill="${NIGHT}"/>`),
-  'app/appdyno.icon/Assets/curve.svg': layer(
+  'mac/App/appdyno.icon/Assets/slab.svg': layer(`<path d="${SLAB}" fill="${NIGHT}"/>`),
+  'mac/App/appdyno.icon/Assets/curve.svg': layer(
     `<defs><clipPath id="in"><path d="${SLAB}"/></clipPath></defs><path d="${UNDER_PULL}" fill="${WHITE}" clip-path="url(#in)"/>`,
   ),
-  'app/appdyno.icon/Assets/glow.svg': layer(
+  'mac/App/appdyno.icon/Assets/glow.svg': layer(
     `<defs>${GLOW}</defs><rect width="1024" height="1024" fill="url(#glow)"/>`,
   ),
-  'app/appdyno.icon/icon.json': `${JSON.stringify(
+  'mac/App/appdyno.icon/icon.json': `${JSON.stringify(
     {
       fill: {
         'linear-gradient': [

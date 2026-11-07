@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 /** A device suite's own, reached by its path as a script is: it is no part of any package. */
 const { askOf, devicesOfRun, untilWithin } = (await import(
-  new URL('../../../test-device/until.ts', import.meta.url).href
+  new URL('../../../device-tests/until.ts', import.meta.url).href
 )) as {
   askOf: (id: string) => { file: string; args: string[]; about: (line: string) => boolean };
   devicesOfRun: (env: Record<string, string | undefined>) => string[];

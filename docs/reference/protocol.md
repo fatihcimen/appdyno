@@ -189,7 +189,7 @@ screen reader reads the node with its children as one unit, Android 9+); both ar
 `elapsedMs` is the agent's own time; `hash` is the layout digest (class, id and bounds of the visible
 nodes of the app's and the system dialogs' windows; text left out, a plain text node vertically only).
 
-A tree with no word for a tester is read from the picture on the host: a PNG of the screen goes to `mac/TextScan.m`, compiled on
+A tree with no word for a tester is read from the picture on the host: a PNG of the screen goes to `mac/TextScan/TextScan.m`, compiled on
 first use, which answers Vision's lines as fractions of the image: the accurate level's within 3 s, else the fast level's, with the accurate scan left to finish in its own process for the next look at that picture, its words in a `0600` file that goes once read and after 5 minutes anyway, and they join the tree as nodes of class `PictureText`
 in the app's window. `hash` stays the agent's. A device's `wait` sees none of this, so `wait_for` then polls the picture. A
 screen with any word of its own is never read this way: words on a canvas beside a labelled button stay out.
@@ -198,7 +198,7 @@ screen with any word of its own is never read this way: words on a canvas beside
 
 The tree first, then `screenshot` `watchMs`, then a video: a tree says what is there, and one picture cannot show a marquee that runs wrongly.
 
-`watchMs` asks the viewer of the device's one stream with `{op: "watch", id, ms, strip}`, and it answers `{op: "watched", id, summary, strip?}`. Another process's window takes the request by a file in the state folder, and a device with no window gets a viewer of its own for that watch, with no window. The frames are those it has decoded for a window, made gray and 360 samples wide once, and read in `mirror/Viewer/Motion.m`: tiles of 24 samples are looked for along each axis a tenth of a second later, tiles that moved the same way and touch are a region, and the middle of their shifts at each step is how it moved. Times are the device's capture times where a stream carries them, as frames bunch up on the way. A step is judged against what its own length should give, so a late frame is no jump.
+`watchMs` asks the viewer of the device's one stream with `{op: "watch", id, ms, strip}`, and it answers `{op: "watched", id, summary, strip?}`. Another process's window takes the request by a file in the state folder, and a device with no window gets a viewer of its own for that watch, with no window. The frames are those it has decoded for a window, made gray and 360 samples wide once, and read in `mac/Viewer/Motion.m`: tiles of 24 samples are looked for along each axis a tenth of a second later, tiles that moved the same way and touch are a region, and the middle of their shifts at each step is how it moved. Times are the device's capture times where a stream carries them, as frames bunch up on the way. A step is judged against what its own length should give, so a late frame is no jump.
 
 | Says                 | Means                                                                     |
 | -------------------- | ------------------------------------------------------------------------- |
@@ -212,7 +212,7 @@ The tree first, then `screenshot` `watchMs`, then a video: a tree says what is t
 
 Its limits are said where they matter: it reads motion and not intent; much of the screen changing at once, as a video or a game, is called noise; under 15 frames a second speeds and jumps are guesses; a fling faster than about 650 points a second is lost; and a region is no finer than a tile, about 27 points on a phone. A device with no stream refuses, naming what is missing.
 
-Cost, on an iOS 27.2 simulator and an API 34 emulator with no window open: a 3 s watch answered in 4.1 s on the simulator, and in 7.0 s on the emulator, where a stream has to start and settle, at load 10 to 40. On an iPhone 13 Pro Max a 3 s watch answered in 4.5 to 5.2 s, of a stream at 61 to 62 frames a second, and `test-device/watch.test.ts` passed 7 of 7. On a Samsung A52 with no window open a 3 s watch answered in 7.2 s, of a stream at 82 to 85 frames a second, at load 10 to 20, and `test-device/watch.test.ts` passed 7 of 7, each fault called. On a Xiaomi 25078RA3EY the same watch answered in 4.2 to 4.3 s, of a stream at 60 to 61 frames a second, at load 9, and the same 7 of 7 passed. The viewer took a median of 14 % of a core through the simulator's watches, at 120 frames a second, and 30 % at most. An answer is about 100 characters, against an image.
+Cost, on an iOS 27.2 simulator and an API 34 emulator with no window open: a 3 s watch answered in 4.1 s on the simulator, and in 7.0 s on the emulator, where a stream has to start and settle, at load 10 to 40. On an iPhone 13 Pro Max a 3 s watch answered in 4.5 to 5.2 s, of a stream at 61 to 62 frames a second, and `device-tests/watch.test.ts` passed 7 of 7. On a Samsung A52 with no window open a 3 s watch answered in 7.2 s, of a stream at 82 to 85 frames a second, at load 10 to 20, and `device-tests/watch.test.ts` passed 7 of 7, each fault called. On a Xiaomi 25078RA3EY the same watch answered in 4.2 to 4.3 s, of a stream at 60 to 61 frames a second, at load 9, and the same 7 of 7 passed. The viewer took a median of 14 % of a core through the simulator's watches, at 120 frames a second, and 30 % at most. An answer is about 100 characters, against an image.
 
 `strip` adds one gray PNG of up to 8 frames evenly through the watch, side by side, their times in the answer. Its file goes as soon as it is read.
 
@@ -348,7 +348,7 @@ size. An encoder that ran 10 s and then failed keeps its step. `failFirst: n` ma
 **Backpressure**: three frames wait at most. With the socket full a frame is dropped, and every frame up to the next
 keyframe, which is asked for: the picture freezes for a moment and is never wrong.
 
-An emulator's guest encoder runs as this does, and lags by seconds: see [mirror.md](../mirror.md).
+An emulator's guest encoder runs as this does, and lags by seconds: see [mirror.md](mirror.md).
 
 ### A phone's screen goes off
 
@@ -379,10 +379,10 @@ dialog in another language, or any other dialog of that window, is quoted and le
 when it comes, and says so.
 
 The warning was seen on an app built for `targetSdk` 24 (`-PoldTarget` on the fixture), the only warning this phone could be made to show with a harmless app, and
-was passed by the host all the way to an installed app (`test-device/install-consent.test.ts`). Others, such as "harmful app blocked" or "app scan recommended", are in those resources, were not seen, and
+was passed by the host all the way to an installed app (`device-tests/install-consent.test.ts`). Others, such as "harmful app blocked" or "app scan recommended", are in those resources, were not seen, and
 their "Install without scanning" is not taken. Any other maker's USB install prompt is left alone: the install then ends as it does on its own.
 
-A Samsung SM-A525F (One UI 6.1, Android 14, en-US) has no USB install prompt of its own: its `persist.security.adbinstall` is empty and installs took 1.1 s with nothing on the screen. Play Protect looked at them only with "Verify apps over USB" on (`verifier_verify_adb_installs`, 0 on this phone as found). With it on, its dialogs were the Xiaomi's, in the same window, in English: the warning, "More details" and "Install anyway" passed with the flag and left alone without it, and "Send app for a security check?" answered "Don't send" by the host itself, by `test-device/install-consent.test.ts`, 3 of 3.
+A Samsung SM-A525F (One UI 6.1, Android 14, en-US) has no USB install prompt of its own: its `persist.security.adbinstall` is empty and installs took 1.1 s with nothing on the screen. Play Protect looked at them only with "Verify apps over USB" on (`verifier_verify_adb_installs`, 0 on this phone as found). With it on, its dialogs were the Xiaomi's, in the same window, in English: the warning, "More details" and "Install anyway" passed with the flag and left alone without it, and "Send app for a security check?" answered "Don't send" by the host itself, by `device-tests/install-consent.test.ts`, 3 of 3.
 
 With no person, uninstalling and installing the fixture each round, it took 14 of 14 rounds, 6 of 6 more with a report open, a cold agent or a screen put to sleep as the
 prompt opened, and 3 of 3 through the built command line and server. These are small counts on one phone.

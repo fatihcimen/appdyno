@@ -50,7 +50,7 @@
   <text class="name" x="750" y="112">Viewer</text>
   <text class="text" x="750" y="136">one native process</text>
   <text class="text" x="750" y="156">for each window</text>
-  <text class="code" x="750" y="588">mirror/Viewer</text>
+  <text class="code" x="750" y="588">mac/Viewer</text>
 
   <!-- the control plane: every touch goes through it -->
   <rect class="band-h" x="370" y="60" width="220" height="570" rx="20"/>

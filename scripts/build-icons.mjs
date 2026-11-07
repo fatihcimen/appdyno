@@ -67,7 +67,7 @@ export function buildGlassIcon(dir, minimum) {
   const said = sh(
     'xcrun',
     'actool',
-    join(repo, 'app/appdyno.icon'),
+    join(repo, 'mac/App/appdyno.icon'),
     '--compile',
     dir,
     '--app-icon',
@@ -93,7 +93,7 @@ function main() {
   }
   render(iosIcon(120), join(repo, 'ios/Branding/AppIcon60x60@2x.png'));
   render(iosIcon(180), join(repo, 'ios/Branding/AppIcon60x60@3x.png'));
-  render(macIcon(256), join(repo, 'mirror/Viewer/tile.png'));
+  render(macIcon(256), join(repo, 'mac/Viewer/tile.png'));
   render(social(), join(repo, 'docs/images/social.png'));
   const proof = mkdtempSync(join(tmpdir(), 'appdyno-proof-'));
   buildGlassIcon(proof, '14.0');

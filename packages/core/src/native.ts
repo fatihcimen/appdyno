@@ -13,8 +13,8 @@ const COMPILE_MS = 300_000;
 
 /** Each native part: where it is in the repository, and under `agents` in the published package. The one list of both. */
 export const NATIVE_PARTS = {
-  viewer: { repo: 'mirror/Viewer', packaged: 'mirror-src' },
-  mac: { repo: 'mac', packaged: 'mac-src' },
+  viewer: { repo: 'mac/Viewer', packaged: 'mirror-src' },
+  mac: { repo: 'mac/TextScan', packaged: 'mac-src' },
   ios: { repo: 'ios', packaged: 'ios-src' },
   agent: { repo: 'android/agent/build/outputs/apk/debug', packaged: 'android' },
 } as const;

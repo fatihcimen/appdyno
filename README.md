@@ -72,7 +72,7 @@ appdyno perf survey --app A    # every measure on this device, then a page of th
 
 **Drive.** An agent reads the screen as elements, and acts on them by reference or by text. Each action answers with the settled screen, so it needs no second call to see what happened. See [Tools](docs/reference/tools.md).
 
-**Watch and touch.** `appdyno hub` opens every device on this Mac in one window, driven by mouse and keyboard while an agent drives it too. A cable is the default, and Wi-Fi a choice made once for each phone with `appdyno pair`. See [The window and the hub](docs/mirror.md).
+**Watch and touch.** `appdyno hub` opens every device on this Mac in one window, driven by mouse and keyboard while an agent drives it too. A cable is the default, and Wi-Fi a choice made once for each phone with `appdyno pair`. See [The window and the hub](docs/reference/mirror.md).
 
 **Keep evidence.** Video, a report of each step, logs, crashes, network traffic, accessibility audits and visual diffs. See [Evidence](docs/guides/evidence.md).
 

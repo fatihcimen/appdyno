@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 const root = join(import.meta.dirname, '../../..');
 const SCRIPT = join(root, 'scripts/device-suites.mjs');
-const suites = join(root, 'test-device');
+const suites = join(root, 'device-tests');
 
 const run = (...args: string[]) =>
   spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' });
@@ -40,17 +40,17 @@ describe('which suites a device can take', () => {
 
   it('lists the files that read its variable, and only those', () => {
     const android = on('emulator-5612').files;
-    expect(android).toContain('test-device/android.test.ts');
-    expect(android).toContain('test-device/mirror.android.test.ts');
-    expect(android).not.toContain('test-device/ios.test.ts');
-    expect(on(SIMULATOR).files).toContain('test-device/mirror.simulator.test.ts');
-    expect(on(IPHONE).files).toContain('test-device/iphone.test.ts');
+    expect(android).toContain('device-tests/android.test.ts');
+    expect(android).toContain('device-tests/mirror.android.test.ts');
+    expect(android).not.toContain('device-tests/ios.test.ts');
+    expect(on(SIMULATOR).files).toContain('device-tests/mirror.simulator.test.ts');
+    expect(on(IPHONE).files).toContain('device-tests/iphone.test.ts');
   });
 
   it('leaves no suite with no place: a device takes it, or it gates itself and is named here', () => {
     const taken = new Set(
       ['emulator-5612', SIMULATOR, IPHONE].flatMap((serial) =>
-        on(serial).files.map((f) => f.replace('test-device/', '')),
+        on(serial).files.map((f) => f.replace('device-tests/', '')),
       ),
     );
     const all = readdirSync(suites).filter((f) => f.endsWith('.test.ts'));
@@ -97,7 +97,7 @@ describe('ci.sh', () => {
   });
 
   it('has every suite it names, as a path that moved would pass by skipping', () => {
-    const named = [...readFileSync(ci, 'utf8').matchAll(/test-device\/([\w.-]+\.test\.ts)/g)];
+    const named = [...readFileSync(ci, 'utf8').matchAll(/device-tests\/([\w.-]+\.test\.ts)/g)];
     expect(named.length).toBeGreaterThan(5);
     const all = readdirSync(suites);
     expect(named.map((m) => m[1]!).filter((f) => !all.includes(f))).toEqual([]);

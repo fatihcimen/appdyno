@@ -94,7 +94,7 @@ describe('what is written three times', () => {
 
   it('the Mac keyboard sends the usage of every key it has', () => {
     const table = inside(
-      read('mirror/Viewer/Input.m'),
+      read('mac/Viewer/Input.m'),
       /MVUsageOfKeyCode\(uint16_t keyCode\) \{/,
       'default:',
     );
@@ -129,7 +129,7 @@ describe('what is written three times', () => {
   });
 
   it('the viewer reads frames as the host writes them', () => {
-    const stream = read('mirror/Viewer/SourceStream.m');
+    const stream = read('mac/Viewer/SourceStream.m');
     expect(valueOf(stream, 'kFrameJson')).toBe(FRAME_JSON);
     expect(valueOf(stream, 'kFrameVideo')).toBe(FRAME_VIDEO);
     expect(valueOf(stream, 'kVideoHeader')).toBe(VIDEO_HEADER_BYTES);
@@ -151,8 +151,8 @@ describe('what is written three times', () => {
   });
 
   it('the host calls a region cut at an edge by the tile the viewer looks in', () => {
-    const tile = /MVTile = (\d+)/.exec(read('mirror/Viewer/Motion.m'));
-    const width = /MVWatchWidth = (\d+)/.exec(read('mirror/Viewer/Watch.m'));
+    const tile = /MVTile = (\d+)/.exec(read('mac/Viewer/Motion.m'));
+    const width = /MVWatchWidth = (\d+)/.exec(read('mac/Viewer/Watch.m'));
     const edge = /const EDGE = ([\d.]+)/.exec(read('packages/ops/src/watch.ts'));
     expect(Number(edge![1])).toBeCloseTo(Number(tile![1]) / Number(width![1]), 2);
   });
@@ -160,12 +160,12 @@ describe('what is written three times', () => {
   it('all speak one version', () => {
     expect(read(`${AGENT}/Errors.kt`)).toContain(`PROTOCOL_MAJOR = ${PROTOCOL.major}\n`);
     expect(read(`${CORE}/Errors.swift`)).toContain(`protocolMajor = ${PROTOCOL.major}\n`);
-    expect(read('mirror/Viewer/SourceStream.m')).toContain(`@"protocol": @${PROTOCOL.major}}`);
+    expect(read('mac/Viewer/SourceStream.m')).toContain(`@"protocol": @${PROTOCOL.major}}`);
   });
 });
 
 describe('the stream, which a viewer speaks to the agent with no host between them', () => {
-  const VIEWER = 'mirror/Viewer/SourceStream.m';
+  const VIEWER = 'mac/Viewer/SourceStream.m';
   const names = (path: string) => [
     ...new Set([...read(path).matchAll(/["'](stream\.\w+)["']/g)].map((m) => m[1]!)),
   ];
