@@ -18,9 +18,10 @@ class StreamEncoder(private val step: EncoderStep, w: Int, h: Int, fps: Float, q
 
     init {
         val caps = codec.codecInfo.getCapabilitiesForType(step.mime).videoCapabilities
+        val rate = streamBitRate(w, h, quality)
         val format = MediaFormat.createVideoFormat(step.mime, w, h).apply {
-            // a software codec has its own cap, and refuses more
-            setInteger(MediaFormat.KEY_BIT_RATE, caps.bitrateRange.clamp(streamBitRate(w, h, quality)))
+            // a software codec has its own cap, and refuses more; one that names no range takes the rate as asked
+            setInteger(MediaFormat.KEY_BIT_RATE, if (caps == null) rate else caps.bitrateRange.clamp(rate))
             setInteger(MediaFormat.KEY_FRAME_RATE, fps.toInt().coerceAtLeast(1))
             setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
             // no frame is repeated: a still screen costs nothing, and a keyframe comes when one is asked for

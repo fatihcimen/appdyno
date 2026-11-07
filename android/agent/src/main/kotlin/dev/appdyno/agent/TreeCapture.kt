@@ -315,7 +315,10 @@ class TreeCapture(private val automation: Automation) {
         if (n.isFocusable) f = f or Flags.FOCUSABLE
         if (n.isFocused) f = f or Flags.FOCUSED
         if (n.isEnabled) f = f or Flags.ENABLED
-        if (n.isChecked) f = f or Flags.CHECKED
+        // from API 36 in three states, a box checked in part among them; the boolean stays for the Androids before it
+        @Suppress("DEPRECATION")
+        val checked = if (Build.VERSION.SDK_INT >= 36) n.checked == AccessibilityNodeInfo.CHECKED_STATE_TRUE else n.isChecked
+        if (checked) f = f or Flags.CHECKED
         if (n.isCheckable) f = f or Flags.CHECKABLE
         if (n.isSelected) f = f or Flags.SELECTED
         if (n.isEditable) f = f or Flags.EDITABLE

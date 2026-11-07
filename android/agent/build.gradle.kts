@@ -5,12 +5,12 @@ plugins {
 // The agent is never installed: its APK is the class path of an app_process server run as the shell user.
 android {
     namespace = "dev.appdyno.agent"
-    compileSdk = 35
-    buildToolsVersion = "35.0.0"
+    compileSdk = 37
+    buildToolsVersion = "37.0.0"
     defaultConfig {
         applicationId = "dev.appdyno.agent"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 37
         versionCode = 6
         versionName = "0.6.0"
     }
@@ -30,5 +30,5 @@ android {
 
 dependencies {
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.json:json:20240303")
+    testImplementation("org.json:json:20260814")
 }
