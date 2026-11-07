@@ -116,9 +116,9 @@ static void checkServer(MVHub *hub) {
 
 static void checkHelp(MVHub *hub) {
   NSSplitViewItem *inspector = ((MVRoomView *)hub.room).slot.item;
-  [hub pokeRow:@"Help"];
+  MVPokeRow(hub, @"Help");
   MVPump(0.2);
-  MVCheck(@"help: a real click on its row takes the room", [hub.placeShown isKindOfClass:MVHelpPane.class], nil);
+  MVCheckRowClick(@"help: a real click on its row takes the room", [hub.placeShown isKindOfClass:MVHelpPane.class], nil);
   MVCheck(@"help: it has no Inspector beside it", inspector.collapsed, nil);
   MVHelpPane *help = (MVHelpPane *)hub.placeShown;
   [help fillDevice:@{@"name": @"A Phone, Blue"} app:@"Some, App"];
@@ -153,7 +153,7 @@ static void checkSidebar(MVHub *hub) {
   [hub show:@{@"devices": @[off, up]}];
   MVPump(0.3);
   MVCheck(@"sidebar: a list changing behind a place leaves it standing", hub.placeShown != nil && hub.chosen == nil, nil);
-  [hub pokeRow:@"Another Simulator"];
+  MVPokeRow(hub, @"Another Simulator");
   MVPump(0.3);
   MVCheck(@"sidebar: a device takes the room back, with its Inspector", hub.placeShown == nil && [hub.chosen isEqual:@"u"] && !inspector.collapsed, hub.chosen);
 }
@@ -167,9 +167,9 @@ void MVCheckPlaces(void) {
   MVHub *hub = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
   [hub show:@{@"devices": @[]}];
   MVPump(0.2);
-  [hub pokeRow:@"AI Clients"];
+  MVPokeRow(hub, @"AI Clients");
   MVPump(0.2);
-  MVCheck(@"clients: a real click on its row takes the room", [hub.placeShown isKindOfClass:MVClientsPane.class], nil);
+  MVCheckRowClick(@"clients: a real click on its row takes the room", [hub.placeShown isKindOfClass:MVClientsPane.class], nil);
   [hub showClients:fixture()];
   MVPump(0.1);
   checkStates(hub);

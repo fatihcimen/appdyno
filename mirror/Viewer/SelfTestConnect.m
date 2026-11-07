@@ -181,7 +181,7 @@ static void checkDone(MVHub *hub) {
   [hub pokeClick:@"noteClose"];
   MVPump(0.2);
   MVCheck(@"done: Close takes the sentence away, and leaves the device", !says(hub, @"Ask your AI app what is on its screen.") && [hub.chosen isEqual:@"R5C"], wordsOf(hub));
-  [hub pokeRow:@"Connect a Phone"];
+  MVPokeRow(hub, @"Connect a Phone");
   MVPump(0.3);
   look(hub, android(@"samsung", YES, YES));
   MVCheck(@"done: a phone ready all along waits to be chosen", hub.chosen == nil && hub.placeShown != nil, hub.chosen);
@@ -191,7 +191,7 @@ static void checkDone(MVHub *hub) {
   [hub pokeClick:@"noteClients"];
   MVPump(0.3);
   MVCheck(@"done: AI Clients is one step away", [hub.placeShown isKindOfClass:MVClientsPane.class], nil);
-  [hub pokeRow:@"Connect a Phone"];
+  MVPokeRow(hub, @"Connect a Phone");
   MVPump(0.3);
   [hub pokeClick:@"toClients"];
   MVPump(0.3);
@@ -204,15 +204,15 @@ static void checkLimits(MVHub *hub) {
   NSDictionary *one = @{@"id": @"R5C", @"serial": @"R5C", @"kind": @"phone", @"state": @"running", @"name": @"Test Phone"};
   NSDictionary *two = @{@"id": @"R6D", @"serial": @"R6D", @"kind": @"phone", @"state": @"running", @"name": @"Other Phone"};
   [hub show:@{@"devices": @[one, two]}];
-  [hub pokeRow:@"Connect a Phone"];
+  MVPokeRow(hub, @"Connect a Phone");
   MVPump(0.3);
   look(hub, android(@"samsung", YES, NO));
-  [hub pokeRow:@"Tools"];
+  MVPokeRow(hub, @"Tools");
   MVPump(0.3);
   look(hub, android(@"samsung", YES, YES));
   MVPump(0.2);
   MVCheck(@"limits: a phone that gets ready while a person is elsewhere moves nothing", hub.chosen == nil && [hub.placeShown isKindOfClass:MVToolsPane.class], hub.chosen);
-  [hub pokeRow:@"Connect a Phone"];
+  MVPokeRow(hub, @"Connect a Phone");
   MVPump(0.3);
   NSMutableDictionary *second = [android(@"samsung", YES, NO) mutableCopy];
   second[@"serial"] = @"R6D";
@@ -250,7 +250,7 @@ static void checkPictureMoves(MVHub *hub) {
 static void checkNoteLeaves(MVHub *hub) {
   NSDictionary *one = @{@"id": @"R5C", @"serial": @"R5C", @"kind": @"phone", @"state": @"running", @"name": @"Test Phone"};
   [hub show:@{@"devices": @[one]}];
-  [hub pokeRow:@"Connect a Phone"];
+  MVPokeRow(hub, @"Connect a Phone");
   MVPump(0.3);
   look(hub, android(@"samsung", YES, NO));
   look(hub, android(@"samsung", YES, YES));
@@ -265,18 +265,18 @@ static void checkWays(MVHub *hub) {
   NSDictionary *kinds = @{@"models": @[@{@"name": @"iPhone 17", @"id": @"m"}], @"systems": @[@{@"name": @"iOS 27", @"id": @"s"}]};
   NSDictionary *choices = @{@"simulator": kinds, @"emulator": kinds};
   [hub show:@{@"devices": @[], @"choices": choices}];
-  [hub pokeRow:@"Connect a Phone"];
+  MVPokeRow(hub, @"Connect a Phone");
   MVPump(0.2);
   look(hub, @{@"steps": @[], @"ready": @NO});
   [hub pokeClick:@"startClients"];
   MVPump(0.3);
   MVCheck(@"started: Open goes to AI Clients", [hub.placeShown isKindOfClass:MVClientsPane.class], nil);
-  [hub pokeRow:@"Connect a Phone"];
+  MVPokeRow(hub, @"Connect a Phone");
   MVPump(0.3);
   [hub pokeClick:@"startHelp"];
   MVPump(0.3);
   MVCheck(@"started: and to Help", [hub.placeShown isKindOfClass:MVHelpPane.class], nil);
-  [hub pokeRow:@"Connect a Phone"];
+  MVPokeRow(hub, @"Connect a Phone");
   MVPump(0.3);
   look(hub, @{@"steps": @[], @"ready": @NO, @"client": @YES, @"prompt": @YES});
   NSWindow *window = hub.room.window;
@@ -295,9 +295,9 @@ static void checkWays(MVHub *hub) {
 static void checkNeedsYou(MVHub *hub) {
   NSDictionary *held = @{@"id": @"H", @"serial": @"H", @"kind": @"phone", @"state": @"running", @"name": @"Held Phone", @"need": @"not-trusted"};
   [hub show:@{@"devices": @[held]}];
-  [hub pokeRow:@"Tools"];
+  MVPokeRow(hub, @"Tools");
   MVPump(0.2);
-  [hub pokeRow:@"Held Phone"];
+  MVPokeRow(hub, @"Held Phone");
   MVPump(0.2);
   MVCheck(@"connect: a phone under Needs You opens on its step, and starts no stream", [hub.placeShown isKindOfClass:MVConnectPane.class] && hub.chosen == nil, hub.chosen);
   [hub show:@{@"devices": @[]}];
@@ -308,9 +308,9 @@ static void checkNeedsYou(MVHub *hub) {
 @end
 
 static void checkTools(MVHub *hub, MVToolsPane *tools) {
-  [hub pokeRow:@"Tools"];
+  MVPokeRow(hub, @"Tools");
   MVPump(0.2);
-  MVCheck(@"tools: a real click on its row takes the room", hub.placeShown == tools, nil);
+  MVCheckRowClick(@"tools: a real click on its row takes the room", hub.placeShown == tools, nil);
   [tools chooseApp:@"" folder:@""];
   [tools fillDevice:nil];
   MVCheck(@"tools: a row says what it lacks where its button stood", says(hub, @"Needs an app") && !MVFindControl(hub.room.window.contentView, @"run:baseline").enabled, wordsOf(hub));
@@ -418,7 +418,7 @@ void MVCheckConnect(void) {
   checkPictureMoves(hub);
   checkWays(hub);
   checkNeedsYou(hub);
-  [hub pokeRow:@"Connect a Phone"];
+  MVPokeRow(hub, @"Connect a Phone");
   MVPump(0.2);
   MVCheck(@"connect: it stays reachable later", [hub.placeShown isKindOfClass:MVConnectPane.class], nil);
   checkTools(hub, hub.toolsPane);

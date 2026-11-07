@@ -48,5 +48,10 @@ void MVCheckConnect(void);
 void MVCheckHevc444(NSString *_Nullable fixtures);
 /// Lets what was sent reach a window kept behind.
 void MVPump(double seconds);
+@class MVHub;
+/// A row of the hub's sidebar by a real click, or, where a table takes none from this test, chosen as that click would.
+void MVPokeRow(MVHub *hub, NSString *title);
+/// A check of what a real click on a table's row did: said by name, with why, where a table takes no click from this test.
+void MVCheckRowClick(NSString *name, BOOL ok, NSString *_Nullable detail);
 
 NS_ASSUME_NONNULL_END
