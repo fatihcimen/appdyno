@@ -668,6 +668,20 @@ The speed table's first read comes after `list_devices`, which the start runs be
 
 In the same runs, `tap` by coordinate, the touch alone, the table's last call, was 273 before and 268 after: it waits out the slide of the Back tap just before it. At `553a94dd` it was 63 (worst 264); what changed between was not looked into.
 
+### A simulator's `logs`
+
+`logs` asked the simulator for the app's folder each time, for its name in the predicate, and then ran `log show` in it. Its parts, medians of 7 at load 6.6-7.1: `get_app_container` 100 ms; `simctl spawn … log help`, the spawn and the `log` tool starting, 220; `log show` over 5 s matching nothing 773, the app's lines over 5 s 783 and over 5 minutes 809. Most of it is `log show` starting, whatever it is asked. The folder is now kept for each simulator and app while it stands, as a reinstall puts the app in a new folder and removes the old one. `log show` is asked the same as before, so the answer is the same. A session's later `logs`, 8 calls on each of 3 servers, before at `e5554ec5` and after in turn:
+
+| ms, median (range)                | before         | after          | host load, before; after |
+| --------------------------------- | -------------- | -------------- | ------------------------ |
+| `logs`, the first of a session    | 901 (896-1089) | 917 (897-1046) | 7.6-8.2; 7.2-7.9         |
+| `logs`, later in the same session | 892 (880-997)  | 785 (768-799)  | 7.6-8.2; 7.2-7.9         |
+
+Tried and dropped:
+
+- A narrower predicate, the process's name for the image path: 793-803 against 783-809. `log show`'s start is the cost, not the filter.
+- A `log stream` kept for the session, answering from what it held: its answer is not `log show`'s. Over the same 8 s of the fixture's relaunch, links and a push, it held 1,545 lines against 296: debug lines, which the log store does not keep, so `log show` never had them. The same message was stamped 7 ms apart by each. Lines from the process's first moment were in `log show` alone.
+
 ## iPhone speed
 
 iPhone 13 Pro Max, iOS 27.0.1, the Settings scenario through the library: read 240, tap and see 1,523, back 1,682,

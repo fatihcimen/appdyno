@@ -299,7 +299,16 @@ export class Simctl {
   privacy(udid: string, action: 'grant' | 'revoke' | 'reset', service: string, bundle: string) {
     return this.exec(['privacy', assertUdid(udid), action, service, assertBundle(bundle)]);
   }
+  /** An app's folder on this Mac, kept while it stands: a reinstall puts the app in a new one and removes the old. */
   async appContainer(udid: string, bundle: string): Promise<string> {
-    return (await this.exec(['get_app_container', assertUdid(udid), assertBundle(bundle)])).trim();
+    const key = `${udid} ${bundle}`;
+    const known = this.containers.get(key);
+    if (known && existsSync(known)) return known;
+    const found = (
+      await this.exec(['get_app_container', assertUdid(udid), assertBundle(bundle)])
+    ).trim();
+    this.containers.set(key, found);
+    return found;
   }
+  private readonly containers = new Map<string, string>();
 }

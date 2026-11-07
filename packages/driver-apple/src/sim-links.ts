@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { run, type AppLink } from '@appdyno/core';
-import { assertBundle, type Simctl } from './simctl.js';
+import type { Simctl } from './simctl.js';
 
 const DOMAINS = 'com.apple.developer.associated-domains';
 
@@ -19,10 +19,6 @@ export function domainsOf(xml: string) {
   return [...(list ?? '').matchAll(/<string>applinks:([^<?]+)[^<]*<\/string>/g)].map((m) => m[1]!);
 }
 
-/** The folder of an app installed on a simulator. */
-export const appBundle = async (simctl: Simctl, udid: string, app: string) =>
-  (await simctl.exec(['get_app_container', udid, assertBundle(app)])).trim();
-
 /** A key of an app's Info.plist: an array or a dictionary as JSON, `raw` a string; nothing where it has none. */
 export const infoValue = (bundle: string, key: string, as: 'json' | 'raw' = 'json') =>
   run('plutil', ['-extract', key, as, '-o', '-', join(bundle, 'Info.plist')]).then(
@@ -36,7 +32,7 @@ export async function simulatorLinks(
   udid: string,
   app: string,
 ): Promise<AppLink[]> {
-  const bundle = await appBundle(simctl, udid, app);
+  const bundle = await simctl.appContainer(udid, app);
   const types = await infoValue(bundle, 'CFBundleURLTypes');
   const signed = await run('codesign', ['-d', '--entitlements', '-', '--xml', bundle]).then(
     (r) => r.stdout,

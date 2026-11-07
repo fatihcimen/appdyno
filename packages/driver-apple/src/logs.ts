@@ -1,6 +1,6 @@
 import { basename } from 'node:path';
 import type { LogLevel, LogMark, LogsAnswer, LogsQuery } from '@appdyno/core';
-import { assertBundle, assertUdid, type Simctl } from './simctl.js';
+import { assertUdid, type Simctl } from './simctl.js';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 /** `log`'s --start format, in this machine's time zone (a simulator shares it). */
@@ -75,7 +75,7 @@ export async function simulatorLogs(
   udid: string,
   q: LogsQuery,
 ): Promise<LogsAnswer> {
-  const app = await simctl.exec(['get_app_container', assertUdid(udid), assertBundle(q.app)]);
+  const app = await simctl.appContainer(udid, q.app);
   const out = await simctl.exec(logShowArgs(udid, app.trim(), q), 60_000);
   const lines = out
     .split('\n')

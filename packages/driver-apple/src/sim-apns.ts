@@ -1,6 +1,6 @@
 import type { ApnsTarget } from './apns-push.js';
 import { logShowArgs } from './logs.js';
-import { appBundle, infoValue } from './sim-links.js';
+import { infoValue } from './sim-links.js';
 import type { Simctl } from './simctl.js';
 
 /**
@@ -13,19 +13,19 @@ export function simulatorApnsTarget(simctl: Simctl, udid: string): ApnsTarget {
     name: 'simulator',
     production: false,
     installed: (app) =>
-      appBundle(simctl, udid, app).then(
+      simctl.appContainer(udid, app).then(
         () => true,
         () => false,
       ),
     lines: async (app) => {
       // NSLog's and os_log's own lines: debug would add the libraries' noise
       const q = { app, since, level: 'info' as const, maxLines: 10_000 };
-      const log = await simctl.exec(logShowArgs(udid, await appBundle(simctl, udid, app), q));
+      const log = await simctl.exec(logShowArgs(udid, await simctl.appContainer(udid, app), q));
       return { lines: log.split('\n') };
     },
     build: async () => undefined,
     declaresVoip: async (app) => {
-      const modes = await infoValue(await appBundle(simctl, udid, app), 'UIBackgroundModes');
+      const modes = await infoValue(await simctl.appContainer(udid, app), 'UIBackgroundModes');
       return Array.isArray(modes) && modes.includes('voip');
     },
     osMajor: async () => {
