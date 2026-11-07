@@ -59,12 +59,16 @@ describe('a push to a simulator', () => {
     const routes = Object.fromEntries(
       SIMULATOR_PUSHES.map((r) => [r.type, 'route' in r ? 'route' : r.why]),
     );
-    expect(routes).toMatchObject({
+    const byApns = "APNs' sandbox takes it to a simulator, with a key of the app's team";
+    expect(routes).toEqual({
       alert: 'route',
-      rich: "simctl push runs no Notification Service Extension, as Xcode's notes say: an alert reaches the app's code with the same keys",
-      background:
-        'simctl takes no push with nothing to see: it says it has no user visible content',
+      rich: `simctl push runs no Notification Service Extension, as Xcode's notes say: ${byApns}, and an alert here reaches the app's code with the same keys`,
+      background: `simctl takes no push with nothing to see, "no user visible content": ${byApns}`,
       tapped: 'simctl taps nothing: push an alert, then tap its banner',
+      live_activity: `simctl push makes a notification, which no Live Activity takes: ${byApns} and the activity's token`,
+      inbox: 'an Android style: an iOS push shows as an alert',
+      messaging: 'an Android style: an iOS push shows as an alert',
+      media: 'an Android style: an iOS push shows as an alert',
     });
   });
 });

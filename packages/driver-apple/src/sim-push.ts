@@ -6,16 +6,19 @@ import { DeviceError } from '@appdyno/protocol';
 import { assertBundle, type Simctl } from './simctl.js';
 
 const ANDROID_ONLY = 'an Android style: an iOS push shows as an alert';
+/** What does take these to a simulator: Apple's own servers, as Xcode 14's notes and ActivityKit's guide say. */
+const BY_APNS = "APNs' sandbox takes it to a simulator, with a key of the app's team";
 /**
  * Why a simulator takes no push of these types by simctl, which hands the notification center a request of its own
  * making: apsd, where an extension is run and a Live Activity's push arrives, never sees it.
  */
 const CANNOT: Record<string, string> = {
   // seen on iOS 27.2: "Notification has no user visible content" (UNErrorDomain 1401)
-  background: 'simctl takes no push with nothing to see: it says it has no user visible content',
+  background: `simctl takes no push with nothing to see, "no user visible content": ${BY_APNS}`,
   // Xcode 11.4's notes: "The mutable-content key is not honored"; Xcode 14's: remote notifications only
-  rich: "simctl push runs no Notification Service Extension, as Xcode's notes say: an alert reaches the app's code with the same keys",
-  live_activity: 'not built yet',
+  rich: `simctl push runs no Notification Service Extension, as Xcode's notes say: ${BY_APNS}, and an alert here reaches the app's code with the same keys`,
+  // seen on iOS 27.2: liveactivitiesd heard nothing, and the topic with its suffix was taken for an app's id
+  live_activity: `simctl push makes a notification, which no Live Activity takes: ${BY_APNS} and the activity's token`,
   tapped: 'simctl taps nothing: push an alert, then tap its banner',
   inbox: ANDROID_ONLY,
   messaging: ANDROID_ONLY,

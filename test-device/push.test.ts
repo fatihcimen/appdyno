@@ -100,6 +100,7 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
     const r = await call('push');
     expect(r.text).toContain("alert: simctl push: the app's code gets it");
     expect(r.text).toContain('tapped: no: simctl taps nothing');
+    expect(r.text).toContain('live_activity: no: simctl push makes a notification');
   });
 
   it("reaches the app's code with an alert, data and all, and refuses a background push", async () => {
