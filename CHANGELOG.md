@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Links** offers what the app in its field opens, as `open_link` `links` lists it: schemes, domains and Android's filters, a domain with its state.
 - A recording writes no step for `open_link` `links`, which reads what an app opens and opens nothing: it wrote an empty `open_link`.
 - **Links** in a window names the app to open a link in, the app in front first, through the server's list of apps: an iPhone opens a link only in a named app, and its window could not open one. Run on an iPhone 13 Pro Max with iOS 27.2 and a Samsung Galaxy A52 with Android 14.
 - A window's Inspector has **Push**: a push to an app by `push`, as an agent sends one, from **Send Push…** (⇧⌘P), the File menu or More. The types are the op's for the device, one it does not take shown with why; the fields follow the type, or the op's template is edited as the payload. Run on an iPhone 17 Pro simulator with iOS 27.2 and an API 34 emulator.

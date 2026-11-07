@@ -40,6 +40,13 @@ static void checkAnswers(MVLinkPane *pane, NSMutableArray<NSDictionary *> *sent)
   MVPump(0.2);
   pressReturn(pane.window);
   MVCheck(@"links: a recent link chosen opens again with Return", [sent.lastObject[@"url"] isEqual:@"https://example.test/item/7"], [sent.lastObject description]);
+  [pane show:@{@"op": @"answer", @"name": @"openLink", @"suggested": @[@{@"url": @"app://", @"kind": @"scheme"}, @{@"url": @"https://example.test/order*", @"kind": @"filter"}, @{@"url": @"https://example.test", @"kind": @"domain", @"state": @"verified"}]}];
+  NSArray<NSString *> *titles = [pane.rows valueForKey:@"title"];
+  MVCheck(@"links: the links the app opens stand under their own heading, after the recent ones", titles.count == 7 && [titles[3] isEqual:MVWord(@"This app's links")] && [pane.rows.lastObject.detail isEqual:[NSString stringWithFormat:@"%@ · verified", MVWord(@"domain")]], [titles componentsJoinedByString:@"|"]);
+  MVPokeListRow([pane valueForKey:@"_recent"], @"https://example.test/order*");
+  MVPump(0.2);
+  NSTextField *field = [pane valueForKey:@"_field"];
+  MVCheck(@"links: one chosen stands in the field, a filter's star left for a person to fill", [field.stringValue isEqual:@"https://example.test/order"], field.stringValue);
 }
 
 void MVCheckLinks(void) {

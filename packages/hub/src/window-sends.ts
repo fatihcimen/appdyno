@@ -89,7 +89,17 @@ export function windowSends(
   };
 
   const sends: Record<string, (m: ViewerMessage) => Promise<void>> = {
-    links: async () => tell('openLink', { recent: recent(), ...(await ownFront()) }),
+    links: async (m) => {
+      const front = await ownFront();
+      // the app the pane names, else the one in front: what it opens, as `open_link` lists it
+      const app = String(m.app ?? '').trim() || front.app;
+      const { data } = app ? await call('openLink', 'open_link', { links: app }) : {};
+      tell('openLink', {
+        recent: recent(),
+        ...front,
+        ...(app && { suggested: data?.links ?? [] }),
+      });
+    },
     openLink: (m) => openLink(String(m.url ?? '').trim(), String(m.app ?? '').trim()),
     pushes: () => pushes(),
     push: (m) => push(m.args),

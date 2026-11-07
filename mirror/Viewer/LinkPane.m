@@ -6,9 +6,13 @@
 
 static const double kBetween = 10;
 
+@interface MVLinkPane () <NSTextFieldDelegate>
+@end
+
 @implementation MVLinkPane {
   NSTextField *_field, *_app;
   NSString *_suggested;
+  NSArray *_recentLinks, *_appLinks;
   MVAccentButton *_open;
   MVList *_recent;
   NSView *_none;
@@ -23,6 +27,7 @@ static const double kBetween = 10;
     _field.lineBreakMode = NSLineBreakByTruncatingMiddle;
     // an iPhone opens a link only in a named app; elsewhere none lets the system choose
     _app = MVSendField(@"linkApp", @"Any app, or one app's id", @"App to open it in", self, @selector(open:));
+    _app.delegate = self;
     _open = MVPlacePrimary(@"Open", @"openLinkGo", self, @selector(open:));
     _open.accessibilityLabel = MVControlTitle(@"openLink");
     NSStackView *ask = [NSStackView stackViewWithViews:@[MVFieldPlate(_field, nil), _open]];
@@ -57,9 +62,14 @@ static const double kBetween = 10;
   return self;
 }
 
-/// The recent links, and the app in front, asked again each time: the app may have changed.
+/// The recent links, the app in front, and the links the app named opens, asked again each time: the app may have changed.
 - (void)ask {
-  MVPaneSend(self, @{@"op": @"control", @"name": @"links"});
+  MVPaneSend(self, @{@"op": @"control", @"name": @"links", @"app": _app.stringValue});
+}
+
+/// Another app named: the links it opens.
+- (void)controlTextDidEndEditing:(NSNotification *)note {
+  [self ask];
 }
 
 - (void)focus {
@@ -83,27 +93,41 @@ static const double kBetween = 10;
 }
 
 - (void)show:(NSDictionary *)m {
-  if ([m[@"recent"] isKindOfClass:NSArray.class]) [self list:m[@"recent"]];
   // the app in front, unless a person has put another
   if ([m[@"app"] isKindOfClass:NSString.class] && (!_app.stringValue.length || [_app.stringValue isEqual:_suggested])) _app.stringValue = _suggested = m[@"app"];
+  if ([m[@"recent"] isKindOfClass:NSArray.class]) _recentLinks = m[@"recent"];
+  if ([m[@"suggested"] isKindOfClass:NSArray.class]) _appLinks = m[@"suggested"];
+  if (m[@"recent"] || m[@"suggested"]) [self list];
   [_answer show:m];
   _open.enabled = !_answer.waiting;
 }
 
-- (void)list:(NSArray *)links {
-  NSMutableArray<MVRow *> *rows = [NSMutableArray arrayWithObject:[MVRow headerNamed:MVWord(@"Recent")]];
-  for (NSString *link in links) {
-    if (![link isKindOfClass:NSString.class]) continue;
-    MVRow *row = [MVRow new];
-    row.title = link;
-    row.detail = [link componentsSeparatedByString:@":"].firstObject;
-    row.symbol = @"link";
-    row.key = link;
-    [rows addObject:row];
+/// A row a click puts in the field: a filter's `*` stands for what a person writes there.
+static MVRow *linkRow(NSString *url, NSString *detail, NSString *symbol) {
+  MVRow *row = [MVRow new];
+  row.title = url;
+  row.detail = detail;
+  row.symbol = symbol;
+  row.key = [url hasSuffix:@"*"] ? [url substringToIndex:url.length - 1] : url;
+  return row;
+}
+
+/// The links opened here, then those the app named opens, as `open_link` lists them.
+- (void)list {
+  NSMutableArray<MVRow *> *rows = [NSMutableArray array];
+  for (NSString *link in _recentLinks)
+    if ([link isKindOfClass:NSString.class]) [rows addObject:linkRow(link, [link componentsSeparatedByString:@":"].firstObject, @"link")];
+  if (rows.count) [rows insertObject:[MVRow headerNamed:MVWord(@"Recent")] atIndex:0];
+  NSUInteger before = rows.count;
+  for (NSDictionary *link in _appLinks) {
+    if (![link isKindOfClass:NSDictionary.class] || ![link[@"url"] isKindOfClass:NSString.class]) continue;
+    NSString *kind = MVWord([link[@"kind"] description] ?: @"");
+    [rows addObject:linkRow(link[@"url"], link[@"state"] ? [NSString stringWithFormat:@"%@ · %@", kind, link[@"state"]] : kind, @"arrow.up.forward.app")];
   }
+  if (rows.count > before) [rows insertObject:[MVRow headerNamed:MVWord(@"This app's links")] atIndex:before];
   _recent.rows = rows;
   [_recent selectKey:nil];
-  _recent.hidden = rows.count < 2;
+  _recent.hidden = rows.count == 0;
   _none.hidden = !_recent.hidden;
 }
 

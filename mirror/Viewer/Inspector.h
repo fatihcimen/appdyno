@@ -81,7 +81,7 @@ NSTextField *MVSendField(NSString *name, NSString *placeholder, NSString *label,
 /// What a send pane asks: to its `onSend` where a test set one, else to the parent.
 void MVPaneSend(NSView<MVSendPane> *pane, NSDictionary *message);
 
-/// A link to open on the device by `open_link`, what came of it, and the links opened here before.
+/// A link to open on the device by `open_link`, what came of it, the links opened here before and those the app named opens.
 @interface MVLinkPane : NSView <MVSendPane>
 /// A link in the field, as typed, and the app where one is given.
 - (void)fill:(NSString *)url app:(nullable NSString *)app;

@@ -121,10 +121,17 @@ describe('what a window sends to its device', () => {
   it('opens a link in the app the pane names, the app in front first, through the policy', async () => {
     const device = new FakeDevice();
     const front = await device.foreground();
-    device.apps = { listApps: async () => [{ id: front }] } as unknown as AppManager;
+    const opens = [{ url: 'app://', kind: 'scheme' }];
+    device.apps = {
+      listApps: async () => [{ id: front }],
+      links: async () => opens,
+    } as unknown as AppManager;
     const { sends, told, answer } = sendsOn(device, { ...DEFAULT_POLICY, apps: [front!] });
     sends.onWindow({ op: 'control', name: 'links' });
-    await expect.poll(() => told.find((m) => 'recent' in m)).toMatchObject({ app: front });
+    // and what that app opens, as open_link lists it
+    await expect
+      .poll(() => told.find((m) => 'recent' in m))
+      .toMatchObject({ app: front, suggested: opens });
     told.length = 0;
     sends.onWindow({ op: 'control', name: 'openLink', url: 'app://screen', app: front });
     expect(await answer()).toMatchObject({ ok: true });
