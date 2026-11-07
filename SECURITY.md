@@ -17,7 +17,7 @@ By default the MCP server speaks over stdio to the
 client that started it and opens no network listener. Only `--http` opens one: see below. Measurements are stored on the local disk, under the state
 directory or the `--measurements` directory. The Android agent listens on an abstract unix socket on the
 device, reached through adb, and accepts a connection only with its launch token. An iPhone is reached
-over USB, and a window on it by the network only with `--wifi`. A window's picture comes from the same agent, with the same token, given to the viewer by its
+over USB, and by the network only once a person has paired it for that with `appdyno pair`. A window's picture comes from the same agent, with the same token, given to the viewer by its
 stdin; on an emulator booted by `simulator` from that emulator's own gRPC port, behind its token, into a
 file only this user can read.
 

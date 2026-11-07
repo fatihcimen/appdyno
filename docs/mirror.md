@@ -504,20 +504,32 @@ own. An iPhone paired for Wi-Fi stands in the list with no cable, from what is o
 network, and its window says if the phone is not there. It goes by the network with no `--wifi`, as it has nothing else.
 
 A network that goes leaves no end to read, so silence is what tells: past it the last picture dims and the window
-says `waiting not-connected`, as for a pulled cable, and it comes back by itself. Measured on an emulator reached by
-address through a relay that goes silent: said within 7 s of 20 s of silence, live within 1 s of the return.
+says `waiting not-connected`, as for a pulled cable. Measured on an emulator reached by address through a relay that
+goes silent: said within 7 s of 20 s of silence, live within 1 s of the return, by itself.
 
-What Wi-Fi costs, measured on a Samsung SM-A525F against itself by cable (the table is in `reference/perf.md`): a touch takes about twice as long to show, 187 to 208 ms for 103 to 110, and a window opens 100 to 150 ms later. Most pictures arrive about as soon as by cable, and the slowest one in twenty about 50 ms later, which a person sees as an uneven picture on a phone that is moving. The network's round trip is the likely cause, though it was not measured apart: a ping to that phone took from 6 to 170 ms.
+A phone's own Wi-Fi going is another matter on Android. On a Samsung SM-A525F by its Wi-Fi serial with its cable in, its Wi-Fi off for 20 s by `svc wifi`, one run at load 5: said at 7.1 s, and it did not come back by itself, as Android turned Wireless debugging off with the Wi-Fi and 30 s after the Wi-Fi returned it was still off. Turned on again, by `adb_wifi_enabled` over that cable, the window was live 1.6 s later. A phone with no cable takes a hand under Wireless debugging. adb then listed the phone twice, by its name and by the same with `(2)`, both reaching the one port the phone listened on, and still so after Wireless debugging was turned off and on: the hub keeps one row for it.
 
-Run on that Samsung by its Wi-Fi serial with its cable in, by the window suite kept behind: a picture, a tap, typing, a long press, a drag, Home, Recents, Back, turning it, a screenshot, the Inspector, its agent killed and back, a close and a new open. One phone has one agent whichever way it is reached.
+What Wi-Fi costs, measured on a Samsung SM-A525F against itself by cable (the table is in `reference/perf.md`): a touch takes about twice as long to show, 168 to 208 ms for 103 to 110, and a window opens 100 to 150 ms later, and once 1.4 s later. Most pictures arrive about as soon as by cable, and the slowest one in twenty about 50 ms later, which a person sees as an uneven picture on a phone that is moving. The network's round trip is the likely cause, though it was not measured apart: a ping to that phone took from 6 to 170 ms.
+
+What it costs on an iPhone 13 Pro Max against itself by cable, in the same place: a window opens in 1.5 to 2.5 s for 0.5, a picture takes 44 to 59 frames a second for 60 and freezes 13 to 18 times a run for 0 to 4, each time for under a second, and a flick shows in 121 to 470 ms for 93 to 98. By Wi-Fi only 2 to 5 flicks of 10 showed at all in three runs of five, and no cause has been found.
+
+Run on that Samsung by its Wi-Fi serial with its cable in, by the window suite kept behind, 12 of 12 at load 4: a picture, a tap, typing, a long press, a drag, Home, Recents, Back, turning it, a screenshot, the Inspector, its agent killed and back, a close and a new open. One phone has one agent whichever way it is reached.
+
+Run on that iPhone with its cable in. A pairing: a question appears on the phone, a person accepts, and `appdyno pair` then says the two are paired. By the window suite kept behind, 16 of 16 by Wi-Fi with its letters still going by the cable: a flick, a tap, text, a secret off the pasteboard, dark and back, turning it, screenshots, a viewer killed. With the driver told there is no cable, so that picture, touches and letters all go through tunnels on the network, at load 4 to 7: the letters suite, 6 of 6, with each character a layout turns into another, a secret into a secure field tapped 100 and 900 ms before, a field without the focus, and no word left in what `xcodebuild` keeps; and the window suite with its real window kept behind, 17 of 17. `xcodebuild` started the runner by the cable in all of these.
+
+A runner keeps to its phone's loopback, and on a phone paired for Wi-Fi it takes a tunnel too, with the same token. No listener could be kept to a tunnel alone, so on a paired phone its port stands open on Wi-Fi as well, and what comes that way is closed with nothing read. Tried on that iPhone: its token by the phone's Wi-Fi address was cut off within 15 ms, and through a tunnel it was answered. With no pairing on this Mac, that port refused on Wi-Fi.
+
+With no runner to be had, as an `xcodebuild` that fails at once stood in for, one run each: text with no key, typed after a tap on a plain field, went by the pasteboard, the window said so and that letters now go by key position, and it waited on the phone's question about a paste; typed after a tap on a secure field, it did not go, and the window said that no field took it. The phone's own picture after both showed every field empty.
+
+With the driver told there are no cables, a real hub lists a Samsung and an iPhone by Wi-Fi, each on one row, also with adb listing the Samsung twice, and each window's bar says so with live numbers beside it. With the cables seen, each is on one row by its cable.
 
 A window on Wi-Fi does not do these:
 
 - An iPhone's pairing cannot be made there: on the network a phone refuses to start one, so it takes a cable, once.
-- A phone must share this Mac's network: an iPhone is found by what it advertises there, and an Android phone needs Wireless debugging left on.
+- A phone must share this Mac's network: an iPhone is found by what it advertises there, and an Android phone needs Wireless debugging left on, which its Wi-Fi going turns off.
 - An iPhone by Wi-Fi takes the lower mode unless asked.
 
-Not yet run on a phone, so no claim is made: a network that goes, on a Samsung or an iPhone, as the numbers above it are an emulator's; a pulled cable going on by Wi-Fi; an iPhone's runner by Wi-Fi, which listens on a tunnel's interface beside its loopback, never on Wi-Fi itself, and is reached inside the tunnel with its token, so that a window's letters go true there too; the hub's card pairing a real phone, and its list and bar with a phone on Wi-Fi, which its self test and unit tests hold; and anything of an iPhone past the question it puts to a person, which was reached on an iPhone 13 Pro Max and has not been accepted. There are no iPhone numbers here.
+Not run with a cable out, so no claim is made: anything of an iPhone with no cable, and first whether `xcodebuild` can start its runner at all; a cable pulled from a phone in use, a window going on by Wi-Fi, and a row in a real hub changing with it. Not run on a phone: a network that goes on an iPhone, and the hub's card pairing a real phone, which its self test and unit tests hold.
 
 ## Left out, for now
 

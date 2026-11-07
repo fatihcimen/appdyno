@@ -709,7 +709,16 @@ By Wi-Fi, against the same phone by cable: a Samsung SM-A525F, Android 14, H.264
 | cable | 260, 256, 260     | 106, 103, 110                        | 75, 74, 75            | 25, 28; 25, 29; 25, 28             |
 | Wi-Fi | 357, 411, 357     | **187, 208, 197**                    | 82, 82, 72            | 29, **81**; 27, **74**; 32, **88** |
 
-The third pair ran with one agent on the phone, and the first two with a second one idle. `auto` keeps a size for each way in: by Wi-Fi it settled at 720x1600, where touch read 212 and 201 ms and capture to arrival p95 100 and 85 ms. Why frames/s reads higher by Wi-Fi in two of three runs has not been looked into.
+The third pair ran with one agent on the phone, and the first two with a second one idle. `auto` keeps a size for each way in: by Wi-Fi it settled at 720x1600, where touch read 212 and 201 ms and capture to arrival p95 100 and 85 ms. Why frames/s reads higher by Wi-Fi in two of three runs has not been looked into. A fourth pair at the last commit, at load 4, read 258 ms, 109 ms and 75 frames/s by cable and 1615 ms, 168 ms and 85 frames/s by Wi-Fi: its first picture is unlike the three before it, and is not explained.
+
+An iPhone 13 Pro Max, iOS 27.2, HEVC, with its cable in, by `--wifi` or not, `auto` both ways, five runs each in turn, at load 4 to 14, on a network where a ping to the phone averaged 12 to 86 ms:
+
+| way   | first picture, ms            | touch to first changed frame p50, ms | flicks seen of 10 | frames/s while moving  | freezes a run      |
+| ----- | ---------------------------- | ------------------------------------ | ----------------- | ---------------------- | ------------------ |
+| cable | 559, 508, 510, 510, 463      | 98, 97, 98, 93, 93                   | 7, 7, 7, 7, 7     | 60, 60, 60, 60, 60     | 1, 4, 0, 0, 1      |
+| Wi-Fi | 1677, 2545, 1577, 1529, 1840 | 128, **470**, **270**, 121, **164**  | 10, 2, 3, 10, 5   | 59, 56, 58, **44**, 56 | 17, 17, 14, 13, 18 |
+
+A touch here is a flick along the fixture's list, and a flick that brought no frame within 5 s is not counted, so a p50 of few stands on few. By cable the ones not seen were the first 3 of each run, and by Wi-Fi any of them. Neither is explained, and whether those flicks reached the phone was not read. `auto` took mode 7 at 1284x2778, 4:4:4, by cable, and mode 5 at 1296x2816, 4:2:0, by Wi-Fi. A freeze by Wi-Fi lasted up to 834 ms, 2.3 to 6.0 s in a run; by cable each lasted about 1.1 s. None of this is a phone with no cable.
 
 A phone's target for frames is 59, or 59 of every 60 where its display is slower, read from `dumpsys display`: `auto` gives up what is past that for a touch. On the Samsung capture to arrival follows the picture's pixels, and touch read 215 ms at load 160 and 217 at load 21, so that is the size, not load, and [`auto` measures it](../mirror.md#the-size-of-a-phones-picture). Its first stream settled on 576x1280 from 1080x2400 by way of 1920 lines, and the next started there, first picture in 360 to 932 ms. Touch stays a miss at any size: 95 to 107 ms at 1280 lines across runs, and 94 at 1024.
 
