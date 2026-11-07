@@ -3,13 +3,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Adb, androidProvider, appleProvider, Simctl } from './workspace.js';
-import { type Answer, type Call, IPHONE, onIphone, opsOn } from './helpers.js';
+import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 
 /** Settings at a page and at an app's own, read back from what it shows, on the devices the variables name. */
 const APP = 'dev.appdyno.fixture';
 const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
 const SIMULATOR = process.env.APPDYNO_IOS_UDID;
-const PRODUCTS = join(import.meta.dirname, '../ios/.derived/Build/Products/Debug-iphonesimulator');
 
 const ok = <A extends Answer>(r: A) => {
   expect(r.error ? r.text : '').toBe('');
@@ -29,7 +28,7 @@ describe.skipIf(!SIMULATOR)('Settings on a simulator', () => {
   let call: Call;
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-settings-')));
-    await new Simctl().install(SIMULATOR!, join(PRODUCTS, 'Fixture.app'));
+    await new Simctl().install(SIMULATOR!, SIM_FIXTURE);
     call = opsOn(appleProvider(), SIMULATOR!, APP).call;
   }, 300_000);
   afterAll(() => call('terminate_app'));

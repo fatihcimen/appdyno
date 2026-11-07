@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { Adb, androidProvider, appleProvider, Simctl } from './workspace.js';
-import { type Answer, type Call, IPHONE, onIphone, opsOn } from './helpers.js';
+import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 
 /**
  * The small arguments, each against what the device says, on the devices the variables name. On a phone what was set
@@ -14,7 +14,6 @@ const APP = 'dev.appdyno.fixture';
 const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
 const EMULATOR = ANDROID?.startsWith('emulator-');
 const SIMULATOR = process.env.APPDYNO_IOS_UDID;
-const PRODUCTS = join(import.meta.dirname, '../ios/.derived/Build/Products/Debug-iphonesimulator');
 
 const ok = <A extends Answer>(r: A) => {
   expect(r.error ? r.text : '').toBe('');
@@ -190,7 +189,7 @@ describe.skipIf(!SIMULATOR)('small tools on a simulator', () => {
   let call: Call;
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-small-')));
-    await new Simctl().install(SIMULATOR!, join(PRODUCTS, 'Fixture.app'));
+    await new Simctl().install(SIMULATOR!, SIM_FIXTURE);
     o = opsOn(appleProvider(), SIMULATOR!, APP);
     call = o.call;
     ok(await call('launch_app'));

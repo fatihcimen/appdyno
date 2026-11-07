@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Adb, androidProvider, appleProvider, Simctl } from './workspace.js';
-import { type Answer, type Call, IPHONE, onIphone, opsOn } from './helpers.js';
+import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 
 /**
  * What a keyboard does in a real field, read back from it, on the emulator APPDYNO_ANDROID_SERIAL names and the
@@ -12,7 +12,6 @@ import { type Answer, type Call, IPHONE, onIphone, opsOn } from './helpers.js';
 const APP = 'dev.appdyno.fixture';
 const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
 const SIMULATOR = process.env.APPDYNO_IOS_UDID;
-const PRODUCTS = join(import.meta.dirname, '../ios/.derived/Build/Products/Debug-iphonesimulator');
 const FIELD = 'name_input';
 
 const ok = <A extends Answer>(r: A) => {
@@ -139,7 +138,7 @@ describe.skipIf(!SIMULATOR)('keys on a simulator', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-keys-')));
-    await new Simctl().install(SIMULATOR!, join(PRODUCTS, 'Fixture.app'));
+    await new Simctl().install(SIMULATOR!, SIM_FIXTURE);
     o = opsOn(appleProvider(), SIMULATOR!, APP);
   }, 300_000);
   afterAll(() => o.ctx.close());

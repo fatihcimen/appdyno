@@ -13,6 +13,7 @@ import type { AddressInfo } from 'node:net';
 import { mkdtempSync, statSync } from 'node:fs';
 import { release, tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { SIM_FIXTURE } from './helpers.js';
 
 /**
  * Accuracy of the iOS simulator perf tools against the fixture's measurement screens (APPDYNO_IOS_UDID):
@@ -22,7 +23,6 @@ import { join } from 'node:path';
  */
 const udid = process.env.APPDYNO_IOS_UDID;
 const APP = 'dev.appdyno.fixture';
-const PRODUCTS = join(import.meta.dirname, '../ios/.derived/Build/Products/Debug-iphonesimulator');
 
 /**
  * On macOS 27 (Darwin 27) `sample` leaves out a simulator app's running thread: no busy sample while `ps`
@@ -46,7 +46,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
   };
 
   beforeAll(async () => {
-    await new Simctl().install(udid!, join(PRODUCTS, 'Fixture.app'));
+    await new Simctl().install(udid!, SIM_FIXTURE);
     d = new IosSimulatorDevice(udid!);
     await d.open();
   }, 240_000);

@@ -1,5 +1,4 @@
 import { execFileSync } from 'node:child_process';
-import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   appleProvider,
@@ -10,7 +9,7 @@ import {
   type Screen,
 } from './workspace.js';
 import { latestRuns, loadRefusals, runKeys } from '@appdyno/perf';
-import { opsOn } from './helpers.js';
+import { opsOn, SIM_FIXTURE } from './helpers.js';
 
 /**
  * Every measure a simulator has, with no argument, against a known cost (APPDYNO_IOS_UDID): a slow start named in its
@@ -18,7 +17,6 @@ import { opsOn } from './helpers.js';
  */
 const udid = process.env.APPDYNO_IOS_UDID;
 const APP = 'dev.appdyno.fixture';
-const PRODUCTS = join(import.meta.dirname, '../ios/.derived/Build/Products/Debug-iphonesimulator');
 const within = (read: number, known: number, share: number) => {
   expect(read).toBeGreaterThan(known * (1 - share));
   expect(read).toBeLessThan(known * (1 + share));
@@ -39,7 +37,7 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
   };
 
   beforeAll(async () => {
-    await new Simctl().install(udid!, join(PRODUCTS, 'Fixture.app'));
+    await new Simctl().install(udid!, SIM_FIXTURE);
     d = (await t.ctx.session()).device as IosSimulatorDevice;
     await d.terminate(APP);
     await d.launch(APP);

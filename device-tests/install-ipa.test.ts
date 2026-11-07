@@ -4,19 +4,18 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { appleProvider } from './workspace.js';
-import { type Answer, IPHONE, IPHONE_FIXTURE, onIphone, opsOn } from './helpers.js';
+import { type Answer, IPHONE, IPHONE_FIXTURE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 
 /** The fixture as an `.ipa`, on the simulator APPDYNO_IOS_UDID names and an iPhone, and each refusing the other's. */
 const APP = 'dev.appdyno.fixture';
 const SIMULATOR = process.env.APPDYNO_IOS_UDID;
-const PRODUCTS = join(import.meta.dirname, '../ios/.derived/Build/Products/Debug-iphonesimulator');
 
 const ok = <A extends Answer>(r: A) => {
   expect(r.error ? r.text : '').toBe('');
   return r;
 };
 
-const ipa = (platform?: string, from = join(PRODUCTS, 'Fixture.app')) => {
+const ipa = (platform?: string, from = SIM_FIXTURE) => {
   const dir = mkdtempSync(join(tmpdir(), 'appdyno-ipa-make-'));
   mkdirSync(join(dir, 'Payload'));
   const app = join(dir, 'Payload/Fixture.app');

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Adb, androidProvider, appleProvider, Simctl } from './workspace.js';
-import { type Answer, type Call, IPHONE, onIphone, opsOn } from './helpers.js';
+import { type Answer, type Call, IPHONE, onIphone, opsOn, SIM_FIXTURE } from './helpers.js';
 
 /**
  * A prompt only a person can answer, said by the call that met it with nothing asked: on the simulator APPDYNO_IOS_UDID
@@ -14,7 +14,6 @@ const APP = 'dev.appdyno.fixture';
 const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
 const EMULATOR = ANDROID?.startsWith('emulator-');
 const SIMULATOR = process.env.APPDYNO_IOS_UDID;
-const PRODUCTS = join(import.meta.dirname, '../ios/.derived/Build/Products/Debug-iphonesimulator');
 const PIN = '1234';
 
 const ok = <A extends Answer>(r: A) => {
@@ -32,7 +31,7 @@ describe.skipIf(!SIMULATOR)('a prompt on a simulator', () => {
   let o: ReturnType<typeof opsOn>;
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-person-')));
-    await new Simctl().install(SIMULATOR!, join(PRODUCTS, 'Fixture.app'));
+    await new Simctl().install(SIMULATOR!, SIM_FIXTURE);
     o = opsOn(appleProvider(), SIMULATOR!, APP);
     ok(await o.call('device_setting', { name: 'biometric', value: 'enroll' }));
   }, 300_000);

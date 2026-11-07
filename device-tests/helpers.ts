@@ -63,6 +63,12 @@ export function opsOn(provider: DeviceProvider, device: string, app: string) {
 export const IPHONE_FIXTURE = process.env.APPDYNO_IPHONE_FIXTURE_APP;
 export const IPHONE = IPHONE_FIXTURE && process.env.APPDYNO_IPHONE_UDID;
 
+/** The fixture CONTRIBUTING's simulator build makes, for a suite to install on its simulator. */
+export const SIM_FIXTURE = join(
+  import.meta.dirname,
+  '../ios/.derived/Build/Products/Debug-iphonesimulator/Fixture.app',
+);
+
 /** The operations on that iPhone, with the fixture on it. */
 export async function onIphone(app: string, provider: DeviceProvider = appleProvider()) {
   await new Devicectl(IPHONE!).install(IPHONE_FIXTURE!);

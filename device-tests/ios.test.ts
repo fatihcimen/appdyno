@@ -1,13 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { IosSimulatorDevice, Simctl, buildScreen, type Screen } from './workspace.js';
 import { PROTOCOL, type Tree } from '@appdyno/protocol';
-import { join } from 'node:path';
 import { IosDevice } from '../packages/driver-apple/src/device.js';
 import { IosRunnerLauncher } from '../packages/driver-apple/src/index.js';
 import { directChecks } from '../packages/driver-apple/src/provider.js';
 import { DirectSim } from '../packages/driver-apple/src/simdirect.js';
 import { learnCopies, sameTree, withoutCopies } from '../packages/driver-apple/src/simtree.js';
 import { startSimAx, type HelperProcess } from '../packages/driver-apple/src/simhelper.js';
+import { SIM_FIXTURE } from './helpers.js';
 
 /**
  * The iOS runner against the fixture app on our own simulator (APPDYNO_IOS_UDID; never a default: other
@@ -16,7 +16,6 @@ import { startSimAx, type HelperProcess } from '../packages/driver-apple/src/sim
 const udid = process.env.APPDYNO_IOS_UDID;
 const APP = 'dev.appdyno.fixture';
 const SETTLE = { quietMs: 200, maxMs: 3_000 };
-const PRODUCTS = join(import.meta.dirname, '../ios/.derived/Build/Products/Debug-iphonesimulator');
 
 describe.skipIf(!udid)('ios runner on a simulator', () => {
   let d: IosSimulatorDevice;
@@ -38,7 +37,7 @@ describe.skipIf(!udid)('ios runner on a simulator', () => {
   };
 
   beforeAll(async () => {
-    await simctl.install(udid!, join(PRODUCTS, 'Fixture.app'));
+    await simctl.install(udid!, SIM_FIXTURE);
     d = new IosSimulatorDevice(udid!);
     await d.open();
   }, 240_000);

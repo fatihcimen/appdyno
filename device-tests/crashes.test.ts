@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Adb, androidProvider, appleProvider, sleep } from './workspace.js';
-import { opsOn, type Call } from './helpers.js';
+import { opsOn, type Call, SIM_FIXTURE } from './helpers.js';
 
 /**
  * A real crash on the fixture, found by `crashes`, then named from a real symbol file: a function that only
@@ -26,10 +26,6 @@ const RELEASE = process.env.APPDYNO_IOS_RELEASE_BUILD;
 const LIBS = join(
   import.meta.dirname,
   '../android/fixture/build/intermediates/merged_native_libs/debug/mergeDebugNativeLibs/out/lib',
-);
-const DEBUG_APP = join(
-  import.meta.dirname,
-  '../ios/.derived/Build/Products/Debug-iphonesimulator/Fixture.app',
 );
 
 /** Crashes the fixture by a button of its crash screen, and waits for a report that says `shows`. */
@@ -115,7 +111,8 @@ describe.skipIf(!SIMULATOR || !RELEASE)('a crash on a simulator', () => {
     call = opsOn(appleProvider(), SIMULATOR!, APP).call;
   });
   afterAll(() => {
-    if (existsSync(DEBUG_APP)) execFileSync('xcrun', ['simctl', 'install', SIMULATOR!, DEBUG_APP]);
+    if (existsSync(SIM_FIXTURE))
+      execFileSync('xcrun', ['simctl', 'install', SIMULATOR!, SIM_FIXTURE]);
   });
 
   it('finds a crash, and only the dSYM with its UUID names the function', async () => {

@@ -44,10 +44,13 @@ other devices may be attached.
 ```sh
 (cd android && ./gradlew :agent:assembleDebug :fixture:assembleDebug)
 adb -s <serial> install -r -g android/fixture/build/outputs/apk/debug/fixture-debug.apk
+(cd ios && xcodebuild build-for-testing -project Appdyno.xcodeproj -scheme Runner \
+  -destination 'generic/platform=iOS Simulator' -derivedDataPath .derived)
 APPDYNO_ANDROID_SERIAL=<serial> APPDYNO_IOS_UDID=<udid> pnpm test:device
 ```
 
-Set only the variable of the device you have. `APPDYNO_IPHONE_UDID` runs the iPhone suites and needs the
+Set only the variable of the device you have. The iOS build makes the runner and the fixture app, which each
+simulator suite installs. `APPDYNO_IPHONE_UDID` runs the iPhone suites and needs the
 signing variables in [Tools](docs/reference/tools.md#reaching-a-phone). See `vitest.device.config.ts` and `docs/reference/ci.md`. `scripts/ci.sh` runs
 every gate locally and records the results.
 

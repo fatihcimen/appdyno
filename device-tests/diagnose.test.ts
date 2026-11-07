@@ -1,5 +1,4 @@
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
-import { join } from 'node:path';
 import {
   Adb,
   AndroidDevice,
@@ -23,6 +22,7 @@ import {
 } from '@appdyno/ops';
 import { checkedOps } from '../packages/ops/test/helpers.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { SIM_FIXTURE } from './helpers.js';
 
 /** Conflicts with a real holder, logs and crashes of the fixture, cancellation: on the devices named. */
 const APP = 'dev.appdyno.fixture';
@@ -188,16 +188,12 @@ describe.skipIf(!serial)('android: logs and crashes of the fixture', () => {
 });
 
 describe.skipIf(!udid)('simulator: logs and crashes of the fixture', () => {
-  const PRODUCTS = join(
-    import.meta.dirname,
-    '../ios/.derived/Build/Products/Debug-iphonesimulator',
-  );
   const simctl = new Simctl();
   let ctx: ServerContext;
   let call: Call;
 
   beforeAll(async () => {
-    await simctl.install(udid!, join(PRODUCTS, 'Fixture.app'));
+    await simctl.install(udid!, SIM_FIXTURE);
     ctx = new ServerContext(DEFAULT_POLICY, [appleProvider()], { device: udid!, app: APP });
     call = caller(ctx);
     await call('launch_app', { read: 'none' });

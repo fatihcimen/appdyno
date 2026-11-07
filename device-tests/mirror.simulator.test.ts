@@ -9,7 +9,8 @@ import {
   type MirrorStatus,
   type ViewerLink,
 } from '../packages/core/src/index.js';
-import { IosSimulatorDevice } from '../packages/driver-apple/src/index.js';
+import { IosSimulatorDevice, Simctl } from '../packages/driver-apple/src/index.js';
+import { SIM_FIXTURE } from './helpers.js';
 import { untilWithin } from './until.js';
 
 /**
@@ -70,6 +71,7 @@ describe.runIf(udid)('mirror on a simulator', () => {
   it('a person drag reaches the simulator, and the screen answers', async () => {
     // a list as wide as any screen: Settings on an iPad or an open Duo has a sidebar and a pane that does not move. By
     // the app's own button, as a link from outside first asks whether to open it
+    await new Simctl().install(udid!, SIM_FIXTURE);
     await device.launch('dev.appdyno.fixture');
     const home = await device.read('dev.appdyno.fixture');
     const open = home.list.find((e) => e.id === 'open_list')!;

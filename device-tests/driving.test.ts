@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext, type Op } from '@appdyno/ops';
 import { checkedOps } from '../packages/ops/test/helpers.js';
-import { opCaller, SUITE_POLICY, type Answer, type Call } from './helpers.js';
+import { opCaller, SUITE_POLICY, type Answer, type Call, SIM_FIXTURE } from './helpers.js';
 import {
   Adb,
   AndroidDevice,
@@ -468,11 +468,10 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     if (screen !== 'home')
       ok(await h.call('open_link', { url: `appdyno-fixture://open/${screen}` }));
   };
-  const PRODUCTS = join(ROOT, 'ios/.derived/Build/Products/Debug-iphonesimulator');
 
   beforeAll(async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-drive-')));
-    await simctl.install(ios!, join(PRODUCTS, 'Fixture.app'));
+    await simctl.install(ios!, SIM_FIXTURE);
     h = harness(ios!, appleProvider());
     ok(await h.call('use_device', { device: ios!, app: APP }));
     ok(await h.call('launch_app'));
@@ -556,7 +555,7 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');
     ok(await h.call('app', { action: 'uninstall' }));
     expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('not_installed');
-    ok(await h.call('app', { action: 'install', path: join(PRODUCTS, 'Fixture.app') }));
+    ok(await h.call('app', { action: 'install', path: SIM_FIXTURE }));
     expect(ok(await h.call('app', { action: 'state' })).data.state).toBe('stopped');
     expect((await h.call('app', { action: 'install', path: '/tmp/none.app' })).error).toBe(true);
   });
