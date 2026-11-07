@@ -9,6 +9,12 @@ a phone expects back on RTCP and takes as input were read in the source of idevi
 (https://github.com/jkcoxson/idevice), whose authors worked them out. What was run on a phone here confirmed them. No
 code of it is here. That folder can be deleted as a whole: all else still builds, and an iPhone keeps its runner.
 
+appdyno's Android push by FCM's own message (packages/driver-android/src/fcm-local.ts) sends the broadcast Google Play
+services hands an app, as the Firebase Android SDK reads it, which was read in its source
+(https://github.com/firebase/firebase-android-sdk, Apache License 2.0): the receiver and the action, the names of the
+extras, and which of them make a notification. No code of it is here. The push suite's own app,
+android/push-fixture, is built with that SDK's Firebase Messaging, which ships in no package of appdyno.
+
 idevice (https://github.com/jkcoxson/idevice)
 
 MIT License

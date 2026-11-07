@@ -16,9 +16,7 @@ describe('a push on Android', () => {
       type: 'tapped',
       data: { order: '42', note: "it's" },
     });
-    expect(said).toBe(
-      "opened dev.app as a tapped push, with 2 data keys as extras: no onMessageReceived: that needs Google's servers",
-    );
+    expect(said).toBe('opened dev.app as a tapped push, with 2 data keys as extras');
     expect(asked.at(-1)).toBe(
       "am start -W -f 0x04000000 -n dev.app/.Main --es order '42' --es note 'it'\\''s'",
     );
@@ -40,21 +38,24 @@ describe('a push on Android', () => {
     const { push, asked } = device();
     const said = await push.send('dev.app', { type: 'inbox', title: 'T', body: 'one\ntwo' });
     expect(said).toMatch(
-      /^drawn by the shell in the inbox style, not by dev\.app: its code got nothing/,
+      /^drawn by the shell in the inbox style, not by dev\.app: its code got nothing, as FCM has no such style/,
     );
     expect(asked[0]).toBe(
       "cmd notification post -S inbox --line 'one' --line 'two' -t 'T' appdyno-dev.app 'one'",
     );
   });
 
-  it('refuses a data key a shell would take apart, and what only Google sends', async () => {
+  it("refuses a data key a shell would take apart, and what only FCM's own message gives", async () => {
     await expect(
       device().push.send('dev.app', { type: 'tapped', data: { 'a b': 'c' } }),
     ).rejects.toThrow('a data key is letters, digits, _ . -: not a b');
     const routes = Object.fromEntries(
       ANDROID_PUSHES.map((r) => [r.type, 'route' in r ? 'route' : r.why]),
     );
-    expect(routes.background).toContain("no onMessageReceived: that needs Google's servers");
+    expect(routes.background).toBe(
+      "a data message reaches the app's code only as FCM's own message: FCM set up, or a debuggable build of an app with Firebase Messaging, takes one here",
+    );
+    expect(routes.inbox).toBe('route');
     expect(routes.alert).toBe('route');
     expect(routes.voip).toContain('an iOS push');
     expect(Object.keys(routes)).toHaveLength(10);

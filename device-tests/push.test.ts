@@ -58,7 +58,7 @@ describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
     const r = await call('push');
     expect(r.text).toContain('tapped: the launcher activity');
     expect(r.text).toContain(
-      'background: no: a data message reaches the app only as onMessageReceived',
+      "background: no: a data message reaches the app's code only as FCM's own message, and dev.appdyno.fixture has no Firebase Messaging",
     );
   });
 
@@ -100,10 +100,10 @@ describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
     expect(r.data.links).toContainEqual({ url: 'appdyno-fixture://open', kind: 'filter' });
   });
 
-  it('refuses what only Google could send, and says why', async () => {
+  it("refuses what only FCM's own message gives, and says why", async () => {
     const r = await call('push', { type: 'background', data: { a: 'b' } });
     expect(r.error).toBe(true);
-    expect(r.text).toContain("needs Google's servers");
+    expect(r.text).toContain('dev.appdyno.fixture has no Firebase Messaging');
   });
 });
 

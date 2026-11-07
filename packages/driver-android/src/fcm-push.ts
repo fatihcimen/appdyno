@@ -25,7 +25,7 @@ export const fcmTokensIn = (lines: string[]) =>
   lines.flatMap((l) => [...l.matchAll(TOKEN)].map((m) => m[0]));
 
 /** What each type is to FCM: a notification, or data alone for the app's own code to make of it; its fields. */
-const BY_TYPE: Partial<Record<PushType, { notification: boolean; fields: PushField[] }>> = {
+export const BY_TYPE: Partial<Record<PushType, { notification: boolean; fields: PushField[] }>> = {
   alert: { notification: true, fields: ['title', 'body', 'data'] },
   rich: { notification: true, fields: ['title', 'body', 'image', 'data'] },
   background: { notification: false, fields: ['data'] },
@@ -39,7 +39,7 @@ const HOW_A_TOKEN_IS_FOUND =
 const clock = (ms: number) => new Date(ms).toTimeString().slice(0, 8);
 
 /** The message of a push of these fields: high priority and a TTL of 0, delivered now or never. */
-function messageOf(push: Push): Record<string, unknown> {
+export function messageOf(push: Push): Record<string, unknown> {
   if (push.payload) return push.payload;
   const t = BY_TYPE[push.type]!;
   const notification = {
@@ -53,6 +53,10 @@ function messageOf(push: Push): Record<string, unknown> {
     android: { priority: 'HIGH', ttl: '0s' },
   };
 }
+
+/** A type's message of placeholders, for a person or an AI to put their own in. */
+export const templateOf = (type: PushType) =>
+  JSON.stringify(messageOf({ type, title: 'Title', body: 'Body', data: { key: 'value' } }));
 
 /**
  * Pushes by FCM to an app on one device, behind what a person set up: Google's FCM host alone, a registration token this
@@ -86,9 +90,7 @@ export class FcmPush {
       type: type as PushType,
       route: `FCM, ${t.notification ? 'a notification' : "data alone, for the app's own code"}, by the registration token the app printed in this session or a person typed`,
       fields: t.fields,
-      template: JSON.stringify(
-        messageOf({ type: type as PushType, title: 'Title', body: 'Body', data: { key: 'value' } }),
-      ),
+      template: templateOf(type as PushType),
       tokens: ['device'],
     }));
   }

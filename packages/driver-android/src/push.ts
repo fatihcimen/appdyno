@@ -5,8 +5,13 @@ import { PUSH_PLACEHOLDERS, run, type Push, type PushRoute, type PushType } from
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg, shq } from './adb.js';
 
-/** What only Google's servers hand an app: its code runs on a message only by them. */
-const NO_SERVER = "no onMessageReceived: that needs Google's servers";
+/** What only FCM's own message gives the app's code. */
+export const FCM_ONLY: Partial<Record<PushType, string>> = {
+  background: "a data message reaches the app's code only as FCM's own message",
+  live_activity: "a Live Update is the app's own notification, built from FCM's own data message",
+};
+const TAKES_ONE =
+  'FCM set up, or a debuggable build of an app with Firebase Messaging, takes one here';
 const STYLES: Partial<Record<PushType, string>> = {
   alert: 'bigtext',
   rich: 'bigpicture',
@@ -19,6 +24,9 @@ const LINES: Record<string, string> = {
   inbox: ', a line of the body each',
   messaging: ', a line of the body each, who: what',
 };
+/** Why the shell draws a style FCM takes no notification in. */
+const noStyle = (type: string) =>
+  type === 'alert' || type === 'rich' ? undefined : 'FCM has no such style';
 const DATA_KEY = /^[\w.-]{1,100}$/;
 /** `Intent.FLAG_ACTIVITY_CLEAR_TOP`. */
 const CLEAR_TOP = '0x04000000';
@@ -69,7 +77,7 @@ function fieldsOf(push: Push) {
 export const ANDROID_PUSHES: PushRoute[] = [
   ...Object.entries(STYLES).map(([type, style]): PushRoute => ({
     type: type as PushType,
-    route: `drawn by the shell in the ${style} style${LINES[style] ?? ''}; the app's code gets nothing`,
+    route: `drawn by the shell in the ${style} style${LINES[style] ?? ''}; ${noStyle(type) ? `${noStyle(type)}, and ` : ''}the app's code gets nothing`,
     fields: type === 'rich' ? ['title', 'body', 'image'] : ['title', 'body'],
     template: fcmTemplate(type as PushType),
   })),
@@ -79,14 +87,8 @@ export const ANDROID_PUSHES: PushRoute[] = [
     fields: ['data'],
     template: fcmTemplate('tapped'),
   },
-  {
-    type: 'background',
-    why: `a data message reaches the app only as onMessageReceived: ${NO_SERVER}`,
-  },
-  {
-    type: 'live_activity',
-    why: `a Live Update is the app's own notification, built from a data message: ${NO_SERVER}`,
-  },
+  { type: 'background', why: `${FCM_ONLY.background}: ${TAKES_ONE}` },
+  { type: 'live_activity', why: `${FCM_ONLY.live_activity}: ${TAKES_ONE}` },
   { type: 'voip', why: "PushKit's, an iOS push: a call reaches an Android app as a data message" },
   {
     type: 'widgets',
@@ -97,7 +99,8 @@ export const ANDROID_PUSHES: PushRoute[] = [
 export class AndroidPush {
   constructor(private readonly sh: (command: string) => Promise<string>) {}
 
-  async send(app: string, push: Push): Promise<string> {
+  /** `why`: why the app's code cannot be given this push here, for an answer that says so. */
+  async send(app: string, push: Push, why?: string): Promise<string> {
     const pkg = assertPkg(app);
     const f = fieldsOf(push);
     if (push.type === 'tapped') return this.tapped(pkg, f.action, f.data);
@@ -127,7 +130,8 @@ export class AndroidPush {
         'INTERNAL',
         `the notification was not drawn: ${out.trim().split('\n')[0]}`,
       );
-    return `drawn by the shell in the ${style} style, not by ${pkg}: its code got nothing, and a tap opens nothing (${NO_SERVER}); type tapped opens it as a tapped push`;
+    const as = why ?? noStyle(push.type);
+    return `drawn by the shell in the ${style} style, not by ${pkg}: its code got nothing${as ? `, as ${as}` : ''}, and a tap opens nothing; type tapped opens it as a tapped push`;
   }
 
   /** As a person's tap on a push opens the app: its activity, with the data as extras. */
@@ -151,7 +155,7 @@ export class AndroidPush {
     const out = await this.sh(`am start -W -f ${CLEAR_TOP} ${target} ${extras}`);
     if (/Error|Exception/.test(out))
       throw new DeviceError('NOT_FOUND', `the app did not open: ${out.trim().split('\n').at(-1)}`);
-    return `opened ${pkg} as a tapped push, with ${data.length} data keys as extras: ${NO_SERVER}`;
+    return `opened ${pkg} as a tapped push, with ${data.length} data keys as extras`;
   }
 
   /**

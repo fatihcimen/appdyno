@@ -1,5 +1,6 @@
 import type { BiometricAnswer, DeviceEvents, Push, SettingName } from '@appdyno/core';
-import { FcmPush } from './fcm-push.js';
+import { LocalFcm } from './fcm-local.js';
+import { BY_TYPE, FcmPush } from './fcm-push.js';
 import { DeviceError, type Tree } from '@appdyno/protocol';
 import { shq, type Adb } from './adb.js';
 import { EmulatorFingerprint } from './fingerprint.js';
@@ -12,8 +13,10 @@ export class AndroidEvents implements DeviceEvents {
   private readonly emu: (what: string, ...words: string[]) => Promise<string>;
   private readonly fingerprint: EmulatorFingerprint;
   private readonly pusher: AndroidPush;
-  /** What only Google's servers deliver, once a person set FCM up. */
+  /** By Google's servers, once a person set FCM up. */
   private readonly fcm: FcmPush;
+  /** FCM's own message straight to the app's Firebase SDK, until then. */
+  private readonly local: LocalFcm;
 
   constructor(
     adb: Adb,
@@ -25,6 +28,7 @@ export class AndroidEvents implements DeviceEvents {
     this.emu = (what, ...words) => emulatorConsole(adb, serial, what, words);
     this.fingerprint = new EmulatorFingerprint(serial, this.sh, this.emu, screen);
     this.pusher = new AndroidPush(this.sh);
+    this.local = new LocalFcm(this.sh);
     const since = Date.now();
     this.fcm = new FcmPush({
       installed: async (app) => (await this.sh(`pm path ${shq(app)}`)).startsWith('package:'),
@@ -47,14 +51,25 @@ export class AndroidEvents implements DeviceEvents {
     await this.emu('SMS', 'sms', 'send', from, text.replace(/\s+/g, ' '));
   }
 
-  async pushRoutes() {
+  async pushRoutes(app?: string) {
     const byFcm = this.fcm.routes();
-    return ANDROID_PUSHES.map((r) => byFcm.find((f) => f.type === r.type) ?? r);
+    const sender = app && byFcm.length === 0 ? await this.local.sender(app) : undefined;
+    return ANDROID_PUSHES.map(
+      (r) => byFcm.find((f) => f.type === r.type) ?? (sender ? LocalFcm.route(r, sender) : r),
+    );
   }
 
-  push(app: string, push: Push) {
-    const byFcm = this.fcm.routes().some((r) => r.type === push.type);
-    return byFcm ? this.fcm.push(app, push) : this.pusher.send(app, push);
+  async push(app: string, push: Push) {
+    if (this.fcm.routes().some((r) => r.type === push.type)) return this.fcm.push(app, push);
+    if (!BY_TYPE[push.type]) return this.pusher.send(app, push);
+    const sender = await this.local.sender(app);
+    if ('by' in sender) return this.local.send(app, push, sender.by);
+    const route = LocalFcm.route(
+      ANDROID_PUSHES.find((r) => r.type === push.type)!,
+      sender,
+    );
+    if ('why' in route) throw new DeviceError('UNSUPPORTED', route.why);
+    return this.pusher.send(app, push, sender.why);
   }
 
   pushToken(app: string, token: string) {

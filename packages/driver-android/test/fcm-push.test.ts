@@ -177,7 +177,7 @@ describe("an Android device's pushes, by FCM once it is set up", () => {
     const events = new AndroidEvents(adb as never, 'emulator-5554');
     const route = async (type: string) => (await events.pushRoutes()).find((r) => r.type === type)!;
     expect(await route('background')).toMatchObject({
-      why: expect.stringContaining("Google's servers"),
+      why: expect.stringContaining("only as FCM's own message"),
     });
     keepFcmKey(ACCOUNT);
     expect(await route('background')).toMatchObject({
