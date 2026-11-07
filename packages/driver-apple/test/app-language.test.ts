@@ -51,6 +51,27 @@ describe("an app's language", () => {
     expect(appLanguage(SIM, APP)).toBe('');
   });
 
+  it('says it holds when the app does not start again, and reads as held, so that restore lets it go', async () => {
+    const asked: string[][] = [];
+    const simctl = {
+      exec: async (args: string[]) => (asked.push(args), ''),
+      pid: async () => 42,
+      terminate: async () => {
+        throw new Error('the phone went away');
+      },
+      launch: async () => undefined,
+    } as unknown as Simctl;
+    const settings = new SimulatorSettings(simctl, SIM);
+    await expect(settings.set('locale', 'tr-TR', APP)).rejects.toThrow(
+      `${APP} is held in tr-TR for this tool's launches, but did not start again: the phone went away`,
+    );
+    // what is held reads back, so it stays written down to be put back
+    expect(await settings.get('locale', APP)).toBe('tr-TR');
+    expect(launchLanguage(SIM, APP)).toContain('(tr-TR)');
+    await settings.set('locale', '', APP).catch(() => undefined);
+    expect(launchLanguage(SIM, APP)).toEqual([]);
+  });
+
   it('with no app is the whole simulator, which says so', async () => {
     const { settings, asked } = simulator();
     expect(await settings.set('locale', 'tr-TR')).toBe(
