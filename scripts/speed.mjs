@@ -180,13 +180,6 @@ async function run(s, warmUp) {
     (r) => r.structuredContent?.matches?.length === 1,
   );
   const at = found.result.structuredContent.matches[0];
-  await call('`tap` by coordinate, the touch alone (`read: none`)', 'tap', {
-    x: at.x,
-    y: at.y,
-    ...none,
-  });
-  await call('', 'wait_for', { text: 'Send' }, 'found');
-  await back('', 'appdyno fixture');
   await call('`tap` by coordinate, with the settled screen', 'tap', { x: at.x, y: at.y }, 'Send');
   // the home screen's title: a phone in Turkish says LİST
   await back('back', 'appdyno fixture');
@@ -207,6 +200,16 @@ async function run(s, warmUp) {
   // one line, or none, is a log read too
   const read = (r) => typeof r.structuredContent?.lines === 'number';
   await call('`logs`, 20 lines', 'logs', { maxLines: 20 }, read);
+  // last: a touch on a screen still sliding in is lost, and nothing waits out a slide a touch alone started
+  // Android's back closes the keyboard first
+  if (!IOS) await call('', 'keyboard', { action: 'dismiss' }, 'closed');
+  await back('', 'appdyno fixture');
+  await call('`tap` by coordinate, the touch alone (`read: none`)', 'tap', {
+    x: at.x,
+    y: at.y,
+    ...none,
+  });
+  await call('', 'wait_for', { text: 'Send' }, 'found');
 }
 
 const median = (values) => {
