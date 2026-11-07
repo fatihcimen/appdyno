@@ -87,8 +87,10 @@ export const iosScreen: PlatformScreen = {
   alertButton(elements, action, words = ALERT_WORDS) {
     const root = alertRoot(elements);
     if (root < 0) return undefined;
-    const buttons = insideOf(elements, root).filter((e) => isButton(e) && !!e.rect);
     const text = (e: UiElement) => (e.label || e.text || e.name || '').trim();
+    const all = insideOf(elements, root).filter((e) => isButton(e) && !!e.rect);
+    // a location prompt's precise switch is no answer, and shows as two buttons of one label
+    const buttons = all.filter((b) => all.filter((o) => text(o) === text(b)).length === 1);
     const re = action === 'allow' ? words.allow : words.deny;
     const byWord = buttons.find((b) => re.test(fold(text(b))));
     if (byWord) return alertButtonOf(byWord);

@@ -80,6 +80,16 @@ describe('system alerts', () => {
     ]);
     expect(iosScreen.alertButton(three, 'allow')?.label).toBe('Beim Verwenden der App erlauben');
     expect(iosScreen.alertButton(three, 'deny')?.label).toBe('Nicht erlauben');
+    // a location prompt's precise switch comes last, and twice: seen on an iPhone in Turkish
+    const precise = promptOver([
+      'Bir Kez İzin Ver',
+      'Uygulamayı Kullanırken İzin Ver',
+      'İzin Verme',
+      'Tam Konum: Açık',
+      'Tam Konum: Açık',
+    ]);
+    expect(iosScreen.alertButton(precise, 'deny')?.label).toBe('İzin Verme');
+    expect(iosScreen.alertButton(precise, 'allow')?.label).toBe('Uygulamayı Kullanırken İzin Ver');
   });
 
   it("never answers an app's own alert on iOS", () => {

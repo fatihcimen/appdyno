@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `alert deny` on an iPhone's location prompt taps "Don't Allow": in Turkish it tapped the Precise Location switch, which comes after it twice.
 - An iPhone takes `app clear`, a `grant` or `revoke` as a reset to ask that `alert` answers, `locale` per app, and the phone's own `network` and new `thermal` conditions, as Xcode sets them. A condition the phone keeps after a killed process is turned off at the next start. Run on an iPhone 13 Pro Max; `network slow` was run on a Samsung too.
 - `press_key` `home` in iOS's app switcher answers at once, with the app it brings back, as iOS 27.2 does from there: it waited 5 s for that app to leave. Home waits only for an app that was in front when it was pressed. On an iPhone 17 Pro simulator with iOS 27.2, 7 presses of 7 in the switcher brought back its app.
 - `press_key` `spotlight` on iOS answers with Spotlight, its own search field and suggestions: Spotlight is an app of its own over the home screen, `com.apple.Spotlight`, and was read as the home screen app's, which showed nothing of it but its keyboard, and that a second late by the runner's keys, where the answer showed the bare home screen. On an iPhone 17 Pro simulator with iOS 27.2, 3 runs of 3 of the keys suite by the runner's keys, which failed every run before, and 3 of 3 by the direct input, at load 6 to 9. A phone opens it the same way; no phone has run it yet.
