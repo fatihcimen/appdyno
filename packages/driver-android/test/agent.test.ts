@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DeviceError } from '@appdyno/protocol';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Adb } from '../src/adb.js';
 import { AndroidAgentLauncher, agentApk } from '../src/agent.js';
@@ -24,26 +25,40 @@ describe('an agent that holds a device and that this host has no state of', () =
   });
 
   /** A device where every start is refused, as UI automation is held, and `sockets` is its table of them. */
-  const device = async (sockets: string) => {
+  const device = async (
+    sockets: string,
+    { answer = new Error('no such socket'), log = 'AGENT_CONFLICT: UI automation is held\n' } = {},
+  ) => {
     const { sha256 } = await agentApk();
     const ran: string[] = [];
     const adb = {
       exec: async (_: string, command: string) => {
         ran.push(command);
         if (command.startsWith('sha256sum')) return `${sha256} agent.apk`;
-        if (command.startsWith('cat ')) return 'AGENT_CONFLICT: UI automation is held\n';
+        if (command.startsWith('cat ')) return log;
         if (command.includes('/proc/net/unix')) return sockets;
         if (command.startsWith('pgrep')) return '1234\n';
         return '';
       },
       startDetached: async () => ({ close: () => undefined }),
       open: async () => {
-        throw new Error('no such socket');
+        throw answer;
       },
     } as unknown as Adb;
     return { launcher: new AndroidAgentLauncher(adb, SERIAL), ran };
   };
   const killed = (ran: string[]) => ran.filter((c) => /&& kill 1234/.test(c));
+
+  it('ends at an agent of another version, which no wait would change', async () => {
+    const answer = new DeviceError('AGENT_VERSION_MISMATCH', 'agent protocol 1, host 2');
+    const { launcher, ran } = await device('', { answer, log: '' });
+    await expect(launcher.connect()).rejects.toMatchObject({
+      code: 'AGENT_VERSION_MISMATCH',
+      hint: expect.stringContaining('assembleDebug'),
+    });
+    // the first answer ended it: a poll reads the log before it asks again
+    expect(ran.filter((c) => c.startsWith('cat '))).toEqual([]);
+  });
 
   it('is left to a host connected to it, as a test run from a state folder of its own is', async () => {
     const { launcher, ran } = await device(LISTENING + CONNECTED);

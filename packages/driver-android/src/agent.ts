@@ -35,6 +35,9 @@ const POLL_MS = 100;
 /** One line of `/proc/net/unix`: its state, its inode and its path. */
 const CONNECTED_SOCKET = / 03 \d+ @appdyno_/;
 
+const AGENT_BUILD =
+  'build it: (cd android && ./gradlew :agent:assembleDebug), or set APPDYNO_ANDROID_AGENT';
+
 /** The agent APK the package ships (or a development build), and its sha256. */
 export async function agentApk(): Promise<{ path: string; sha256: string }> {
   // a checkout's fresh build wins over a copy packaged earlier
@@ -43,12 +46,7 @@ export async function agentApk(): Promise<{ path: string; sha256: string }> {
     inCheckout('agent', 'agent-debug.apk'),
     inPackage('agent', 'agent.apk'),
   ].find((p): p is string => !!p && existsSync(p));
-  if (!path)
-    throw new DeviceError(
-      'UNSUPPORTED',
-      'the Android agent is not built',
-      'build it: (cd android && ./gradlew :agent:assembleDebug), or set APPDYNO_ANDROID_AGENT',
-    );
+  if (!path) throw new DeviceError('UNSUPPORTED', 'the Android agent is not built', AGENT_BUILD);
   const sha256 = createHash('sha256')
     .update(await readFile(path))
     .digest('hex');
@@ -188,6 +186,9 @@ export class AndroidAgentLauncher {
         return c;
       }
       if (c instanceof DeviceError && c.code === 'DEVICE_GONE') throw c;
+      // it answered: an agent of another version says the same until the time is up
+      if (c instanceof DeviceError && c.code === 'AGENT_VERSION_MISMATCH')
+        throw new DeviceError(c.code, c.message, AGENT_BUILD);
       const out = await this.adb.exec(this.serial, `cat ${log} 2>/dev/null`).catch(() => '');
       const failed = /^(AGENT_CONFLICT|UNSUPPORTED|INTERNAL|INVALID_ARGUMENT): (.*)$/m.exec(out);
       if (failed) {
