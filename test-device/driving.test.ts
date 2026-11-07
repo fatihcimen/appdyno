@@ -575,8 +575,13 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     expect(await ui('content_size')).toBe('extra-large');
     ok(await h.call('device_setting', { name: 'reduce_motion', value: 'on' }));
     expect(ok(await h.call('device_setting', { name: 'reduce_motion' })).data.value).toBe('on');
+    // with an app selected, its own launches: the whole simulator is left alone
+    const global = await simctl.exec(['spawn', ios!, 'defaults', 'read', '-g', 'AppleLocale']);
     ok(await h.call('device_setting', { name: 'locale', value: 'tr-TR' }));
-    expect(ok(await h.call('device_setting', { name: 'locale' })).data.value).toBe('tr_TR');
+    expect(ok(await h.call('device_setting', { name: 'locale' })).data.value).toBe('tr-TR');
+    expect(await simctl.exec(['spawn', ios!, 'defaults', 'read', '-g', 'AppleLocale'])).toBe(
+      global,
+    );
     const restored = ok(await h.call('device_setting', { name: 'restore' }));
     expect(restored.text).toContain('dark_mode');
     expect(await ui('appearance')).toBe(before.dark);
@@ -655,7 +660,7 @@ describe.skipIf(!iphone || !iphoneFixture)('driving on an iPhone', () => {
       expect(r.data.code, action).toBe('UNSUPPORTED');
       expect(r.text).toMatch(why);
     }
-    for (const name of ['animations', 'locale', 'network', 'proxy', 'battery']) {
+    for (const name of ['animations', 'network', 'proxy', 'battery']) {
       const r = await h.call('device_setting', { name, value: name === 'battery' ? '50' : 'on' });
       expect(r.data.code, name).toBe('UNSUPPORTED');
     }

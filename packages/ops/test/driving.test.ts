@@ -1328,6 +1328,21 @@ describe('device conditions', () => {
     });
   });
 
+  it("refuses a condition held for another app, as that app's could not be put back", async () => {
+    const settings = new Settings();
+    const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
+    settings.values.locale = '';
+    await call('device_setting', { name: 'locale', value: 'tr-TR', app: 'a.one' });
+    await call('device_setting', { name: 'locale', value: 'de', app: 'a.one' });
+    const other = await call('device_setting', { name: 'locale', value: 'de', app: 'a.two' });
+    expect([other.data.code, other.text]).toEqual([
+      'INVALID_ARGUMENT',
+      'locale is held for a.one until it is put back',
+    ]);
+    expect(settings.values.locale).toBe('de');
+    expect((await call('device_setting', { name: 'restore' })).text).toBe('restored locale: ');
+  });
+
   it('restores on request, and reports what it cannot', async () => {
     const settings = new Settings();
     const d = Object.assign(new FakeDevice(), { settings });

@@ -1,6 +1,10 @@
 import { DeviceError } from '@appdyno/protocol';
 import { run } from '@appdyno/core';
+import { launchLanguage } from './manage.js';
 import { xcodeEnv, assertBundle } from './simctl.js';
+
+/** An app's own arguments: what starts with a dash is the app's, not this tool's. */
+const andArgs = (args: string[]) => (args.length > 0 ? ['--', ...args] : []);
 
 const PHONE_UDID = /^[0-9A-F]{8}-[0-9A-F]{16}$|^[0-9a-f]{40}$/;
 
@@ -103,6 +107,7 @@ export class Devicectl {
       ...(url ? ['--payload-url', url] : []),
       ...(env ? ['--environment-variables', JSON.stringify(env)] : []),
       assertBundle(bundle),
+      ...andArgs(launchLanguage(this.udid, bundle)),
     ]);
   }
 

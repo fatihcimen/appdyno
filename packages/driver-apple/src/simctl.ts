@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { sleep, run, callSignal, cancelled } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import { launchLanguage } from './manage.js';
 
 /**
  * The developer folder for Xcode's tools without DEVELOPER_DIR: the selected one when it is a full
@@ -252,7 +253,8 @@ export class Simctl {
   launch(udid: string, bundle: string, vars: Record<string, string> = {}, stopped = false) {
     const child = Object.entries(vars).map(([k, v]) => [`SIMCTL_CHILD_${k}`, v]);
     const wait = stopped ? ['--wait-for-debugger'] : [];
-    return this.exec(['launch', ...wait, assertUdid(udid), assertBundle(bundle)], 60_000, {
+    const args = [assertUdid(udid), assertBundle(bundle), ...launchLanguage(udid, bundle)];
+    return this.exec(['launch', ...wait, ...args], 60_000, {
       ...this.env,
       ...Object.fromEntries(child),
     });

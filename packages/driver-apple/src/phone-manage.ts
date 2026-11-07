@@ -14,7 +14,14 @@ import { DeviceError } from '@appdyno/protocol';
 import { buildScheme } from './build.js';
 import type { Devicectl } from './devicectl.js';
 import { assertBundle } from './simctl.js';
-import { DATA_FOLDERS, installingApp, languageArgs, on } from './manage.js';
+import {
+  DATA_FOLDERS,
+  appLanguage,
+  holdAppLanguage,
+  installingApp,
+  launchLanguage,
+  on,
+} from './manage.js';
 
 const PHONE_CANNOT = {
   clear: "an iPhone's app data can only go with the app: uninstall and install it again",
@@ -32,6 +39,8 @@ const PHONE_CANNOT = {
 const DATA_MS = 600_000;
 
 export class PhoneApps implements AppManager {
+  readonly languageStays = true;
+
   constructor(private readonly ctl: Devicectl) {}
 
   async install(path: string) {
@@ -135,7 +144,7 @@ export class PhoneApps implements AppManager {
       assertBundle(app),
       // what starts with a dash is the app's, not this tool's
       '--',
-      ...languageArgs(opts.language),
+      ...launchLanguage(this.ctl.udid, app, opts.language),
       ...(opts.args ?? []),
     ]);
   }
@@ -163,11 +172,22 @@ const noSwitch = (name: SettingName) =>
 export class PhoneSettings implements DeviceSettings {
   constructor(private readonly ctl: Devicectl) {}
 
+  /** An iPhone's own language is the phone's: an app's is held for the launches this tool makes. */
+  private appOf(app: string | undefined) {
+    if (!app)
+      throw new DeviceError(
+        'UNSUPPORTED',
+        "an iPhone's language is set on the phone: give app, held for its launches by this tool",
+      );
+    return assertBundle(app);
+  }
+
   private appearance(...words: string[]) {
     return this.ctl.json(['device', 'settings', 'appearance', '--device', this.ctl.udid, ...words]);
   }
 
-  async get(name: SettingName): Promise<string> {
+  async get(name: SettingName, app?: string): Promise<string> {
+    if (name === 'locale') return appLanguage(this.ctl.udid, this.appOf(app));
     if (!APPEARANCE.has(name)) throw noSwitch(name);
     const j = await this.ctl.json(['device', 'info', 'appearance', '--device', this.ctl.udid]);
     const a = (j.result ?? {}) as {
@@ -187,7 +207,15 @@ export class PhoneSettings implements DeviceSettings {
     return flags[name as keyof typeof flags]?.enabled ? 'on' : 'off';
   }
 
-  async set(name: SettingName, value: string) {
+  async set(name: SettingName, value: string, app?: string): Promise<string | void> {
+    if (name === 'locale') {
+      const bundle = this.appOf(app);
+      return holdAppLanguage(this.ctl.udid, bundle, value, async () => {
+        if ((await this.ctl.pids(bundle)).length === 0) return;
+        await this.ctl.terminate(bundle);
+        await this.ctl.launch(bundle);
+      });
+    }
     if (name === 'dark_mode') await this.appearance('--mode', on(value, 'dark', 'light'));
     else if (name === 'text_size') await this.appearance('--text-size', value);
     else if (name === 'reduce_motion') await this.appearance('--reduce-motion', value);

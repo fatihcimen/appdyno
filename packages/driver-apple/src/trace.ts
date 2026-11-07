@@ -17,6 +17,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
+import { launchLanguage } from './manage.js';
 import { xcodeEnv } from './simctl.js';
 import {
   heldTable,
@@ -269,7 +270,11 @@ export async function recordXctMetrics(
       resultBundle,
     ],
     {
-      env: { ...xcodeEnv(), TEST_RUNNER_APPDYNO_METRICS_APP: bundle },
+      env: {
+        ...xcodeEnv(),
+        TEST_RUNNER_APPDYNO_METRICS_APP: bundle,
+        TEST_RUNNER_APPDYNO_METRICS_ARGS: launchLanguage(udid, bundle).join('\n'),
+      },
       maxBuffer: 256 * 1024 * 1024,
       timeout: 600_000,
       ...(callSignal() && { signal: callSignal()! }),

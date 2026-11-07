@@ -97,7 +97,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
       name: 'launch_app',
       title: 'Launch app',
       description:
-        'Launch the app, by id or name (to the front if it runs); answers its screen. language: tr, pt-BR: restarts it so, for that launch (Android: until restore).',
+        'Launch the app, by id or name (to the front if it runs); answers its screen. language: tr, pt-BR: restarts it so, until restore.',
       input: z
         .object({
           app: z.string().max(200).optional(),

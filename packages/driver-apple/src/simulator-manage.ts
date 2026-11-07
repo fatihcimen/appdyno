@@ -19,7 +19,14 @@ import { DeviceError } from '@appdyno/protocol';
 import { buildScheme } from './build.js';
 import { macProxy } from './network.js';
 import { type Simctl, assertBundle } from './simctl.js';
-import { DATA_FOLDERS, installingApp, languageArgs, on } from './manage.js';
+import {
+  DATA_FOLDERS,
+  appLanguage,
+  holdAppLanguage,
+  installingApp,
+  launchLanguage,
+  on,
+} from './manage.js';
 
 const SIMULATOR_ID = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;
 
@@ -31,6 +38,8 @@ const copyFolders = (from: string, to: string) => {
 };
 
 export class SimulatorApps implements AppManager {
+  readonly languageStays = true;
+
   constructor(
     private readonly simctl: Simctl,
     private readonly udid: string,
@@ -139,7 +148,7 @@ export class SimulatorApps implements AppManager {
         '--terminate-running-process',
         this.udid,
         assertBundle(app),
-        ...languageArgs(opts.language),
+        ...launchLanguage(this.udid, app, opts.language),
         ...(opts.args ?? []),
       ],
       60_000,
@@ -168,11 +177,18 @@ export class SimulatorSettings implements DeviceSettings {
     private readonly udid: string,
   ) {}
 
+  /** An app that runs starts again, in what it is held in now. */
+  private async restart(app: string) {
+    if (!(await this.simctl.pid(this.udid, app).catch(() => 0))) return;
+    await this.simctl.terminate(this.udid, app);
+    await this.simctl.launch(this.udid, app);
+  }
+
   private ui = async (...words: string[]) =>
     (await this.simctl.exec(['ui', this.udid, ...words])).trim();
   private spawn = (...words: string[]) => this.simctl.exec(['spawn', this.udid, ...words]);
 
-  async get(name: SettingName): Promise<string> {
+  async get(name: SettingName, app?: string): Promise<string> {
     switch (name) {
       case 'dark_mode':
         return this.ui('appearance');
@@ -194,6 +210,7 @@ export class SimulatorSettings implements DeviceSettings {
         return v.trim() === '1' ? 'on' : 'off';
       }
       case 'locale':
+        if (app) return appLanguage(this.udid, app);
         return (await this.spawn('defaults', 'read', '-g', 'AppleLocale').catch(() => '')).trim();
       case 'animations':
         throw new DeviceError('UNSUPPORTED', 'iOS has no animations setting: use reduce_motion');
@@ -220,7 +237,7 @@ export class SimulatorSettings implements DeviceSettings {
     }
   }
 
-  async set(name: SettingName, value: string) {
+  async set(name: SettingName, value: string, app?: string): Promise<string | void> {
     switch (name) {
       case 'dark_mode':
         await this.ui('appearance', on(value, 'dark', 'light'));
@@ -253,6 +270,10 @@ export class SimulatorSettings implements DeviceSettings {
         await this.spawn('notifyutil', '-p', 'com.apple.accessibility.reduce.transparency.status');
         return;
       case 'locale':
+        if (app) {
+          const held = await holdAppLanguage(this.udid, app, value, () => this.restart(app));
+          return `${held}: app "" for the whole simulator`;
+        }
         if (value) {
           await this.spawn('defaults', 'write', '-g', 'AppleLocale', value.replace('-', '_'));
           await this.spawn(
@@ -267,7 +288,7 @@ export class SimulatorSettings implements DeviceSettings {
           await this.spawn('defaults', 'delete', '-g', 'AppleLocale').catch(() => undefined);
           await this.spawn('defaults', 'delete', '-g', 'AppleLanguages').catch(() => undefined);
         }
-        return;
+        return "the whole simulator: app for one app's launches";
       case 'proxy':
         throw new DeviceError(
           'UNSUPPORTED',

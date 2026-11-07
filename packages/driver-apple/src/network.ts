@@ -12,6 +12,7 @@ import {
   type NetworkVia,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import { launchLanguage } from './manage.js';
 import { helperBinary } from './simhelper.js';
 import { assertBundle, type Simctl } from './simctl.js';
 
@@ -51,7 +52,13 @@ export class SimulatorNetwork implements NetworkSource {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     const log = join(dir, `${randomBytes(4).toString('hex')}.jsonl`);
     await this.simctl.exec(
-      ['launch', '--terminate-running-process', this.udid, assertBundle(app)],
+      [
+        'launch',
+        '--terminate-running-process',
+        this.udid,
+        assertBundle(app),
+        ...launchLanguage(this.udid, app),
+      ],
       60_000,
       {
         SIMCTL_CHILD_DYLD_INSERT_LIBRARIES: await helperBinary('NetProbe'),

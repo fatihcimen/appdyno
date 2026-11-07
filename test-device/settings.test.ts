@@ -238,6 +238,36 @@ describe.skipIf(!SIMULATOR)('conditions on a simulator', () => {
     expect(await result(call, 'Authenticated')).toBe(true);
   });
 
+  it('holds one app in a language for its launches, or with app "" the whole simulator', async () => {
+    const PREFS = 'com.apple.Preferences';
+    const global = () =>
+      execFileSync(
+        'xcrun',
+        ['simctl', 'spawn', SIMULATOR!, 'defaults', 'read', '-g', 'AppleLocale'],
+        {
+          encoding: 'utf8',
+        },
+      ).trim();
+    const before = global();
+    const one = await call('device_setting', { name: 'locale', value: 'tr-TR', app: PREFS });
+    expect(one.text).toBe(
+      `locale: tr-TR; ${PREFS}'s launches by this tool, not the system's own text: app "" for the whole simulator`,
+    );
+    expect(global()).toBe(before);
+    await call('launch_app', { app: PREFS });
+    expect((await call('wait_for', { text: 'Ayarlar', timeoutMs: 10_000 })).data.met).toBe(true);
+    expect((await call('device_setting', { name: 'restore' })).text).toBe('restored locale: ');
+    // it ran, so it started again in the simulator's own
+    expect((await call('wait_for', { text: 'Settings', timeoutMs: 10_000 })).data.met).toBe(true);
+
+    const whole = await call('device_setting', { name: 'locale', value: 'tr-TR', app: '' });
+    expect(whole.text).toBe("locale: tr-TR; the whole simulator: app for one app's launches");
+    expect(global()).toBe('tr_TR');
+    await call('device_setting', { name: 'restore' });
+    expect(global()).toBe(before);
+    await call('terminate_app', { app: PREFS });
+  });
+
   it('says a simulator has no radios', async () => {
     const r = await call('device_setting', { name: 'airplane', value: 'on' });
     expect(r.data.code).toBe('UNSUPPORTED');

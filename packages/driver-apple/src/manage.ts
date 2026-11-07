@@ -1,8 +1,9 @@
 import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { run } from '@appdyno/core';
+import { deviceState, run } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
+import { z } from 'zod';
 
 /** What an iOS app owns in its container; the rest there is the system's. */
 export const DATA_FOLDERS = ['Documents', 'Library', 'tmp'];
@@ -58,5 +59,36 @@ export async function installingApp(
 /** A language for one launch, in the arguments the system reads for it. */
 export const languageArgs = (language: string | undefined) =>
   language ? ['-AppleLanguages', `(${language})`, '-AppleLocale', language.replace('-', '_')] : [];
+
+/** The language each app is launched in by this tool, kept on this Mac: nothing on the device holds one for an app. */
+const appLanguages = deviceState('app-languages', z.record(z.string(), z.string()));
+const LANGUAGE = /^[A-Za-z]{2,3}([-_][A-Za-z0-9]{2,8})*$/;
+
+/** The arguments of every launch this tool makes: its own language, else the one the app is held in. */
+export const launchLanguage = (device: string, app: string, language?: string) =>
+  languageArgs(language ?? appLanguages.read(device)?.[app]);
+
+/**
+ * An app held in a language for every launch this tool makes, or let go with ''; one that runs starts again in it.
+ * What the answer says of where it holds.
+ */
+export async function holdAppLanguage(
+  device: string,
+  app: string,
+  language: string,
+  restart: () => Promise<void>,
+) {
+  if (language && !LANGUAGE.test(language))
+    throw new DeviceError('INVALID_ARGUMENT', `locale: a language such as tr-TR, not ${language}`);
+  appLanguages.update(device, (now = {}) => {
+    const { [app]: _, ...rest } = now;
+    const next = language ? { ...rest, [app]: language.replace('_', '-') } : rest;
+    return Object.keys(next).length > 0 ? next : undefined;
+  });
+  await restart();
+  return `${app}'s launches by this tool, not the system's own text`;
+}
+
+export const appLanguage = (device: string, app: string) => appLanguages.read(device)?.[app] ?? '';
 
 export const on = (v: string, yes: string, no: string) => ({ on: yes, off: no })[v] ?? v;

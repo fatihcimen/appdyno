@@ -30,10 +30,17 @@ export const conditions = deviceState('conditions', Changes);
 /** Whose entries a restore takes, by their owner. */
 export type Whose = (owner: Owner | undefined) => boolean;
 
-/** Writes a condition's old value down, once: true when this call did. */
+/** Writes a condition's old value down, once: true when this call did. One held for another app is refused, as its own could not be put back. */
 async function writeDown(s: Session, settings: DeviceSettings, name: SettingName, app?: string) {
   const serial = s.device.serial;
-  if (conditions.read(serial)?.[name]) return false;
+  const held = conditions.read(serial)?.[name];
+  if (held && (held.app ?? '') !== (app ?? ''))
+    throw new ToolError(
+      `${name} is held for ${held.app ?? 'the whole device'} until it is put back`,
+      'INVALID_ARGUMENT',
+      'device_setting restore first',
+    );
+  if (held) return false;
   await settings.willChange?.(name);
   const was = await settings.get(name, app);
   let first = false;
