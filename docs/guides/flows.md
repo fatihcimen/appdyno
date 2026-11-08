@@ -1,5 +1,7 @@
 # Flows
 
+[Türkçe](flows.tr.md)
+
 What an agent does once can run again with no model, on this device or another, and in CI.
 
 ```sh
