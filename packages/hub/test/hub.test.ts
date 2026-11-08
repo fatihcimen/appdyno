@@ -160,17 +160,20 @@ describe('the hub', () => {
           },
         ]),
         async () => undefined,
-      ).then((devices) => devices.map((d) => [d.id, d.link, d.detail]));
-    expect(await rows([onCable, onWifi])).toEqual([['R58M', 'USB', '']]);
-    expect(await rows([onWifi])).toEqual([[onWifi.serial, 'Wi-Fi', 'Wi-Fi']]);
+      ).then((devices) => devices.map((d) => [d.id, d.link, d.detail, d.sameAs]));
+    expect(await rows([onCable, onWifi])).toEqual([['R58M', 'USB', '', undefined]]);
+    // the sidebar knows it for the phone whose cable row went
+    expect(await rows([onWifi])).toEqual([[onWifi.serial, 'Wi-Fi', 'Wi-Fi', 'R58M']]);
     // as a Samsung was, after its Wi-Fi went and came back
     const again = { ...onWifi, serial: 'adb-R58M-Ab (2)._adb-tls-connect._tcp' };
-    expect(await rows([again, onWifi])).toEqual([[again.serial, 'Wi-Fi', 'Wi-Fi']]);
+    expect(await rows([again, onWifi])).toEqual([[again.serial, 'Wi-Fi', 'Wi-Fi', 'R58M']]);
     expect(await rows([{ ...again, state: 'offline', ready: false }, onWifi])).toEqual([
-      [onWifi.serial, 'Wi-Fi', 'Wi-Fi'],
+      [onWifi.serial, 'Wi-Fi', 'Wi-Fi', 'R58M'],
     ]);
     const onlyItsName = { ...DEFAULT_POLICY, devices: /^adb-R58M-Ab\._adb-tls-connect\._tcp$/ };
-    expect(await rows([again, onWifi], onlyItsName)).toEqual([[onWifi.serial, 'Wi-Fi', 'Wi-Fi']]);
+    expect(await rows([again, onWifi], onlyItsName)).toEqual([
+      [onWifi.serial, 'Wi-Fi', 'Wi-Fi', 'R58M'],
+    ]);
   });
 
   it('leaves out what this server may not drive', async () => {

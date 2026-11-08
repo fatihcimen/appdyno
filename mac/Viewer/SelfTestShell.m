@@ -149,6 +149,25 @@ static void checkPlaces(void) {
   MVCheck(@"hub: wide again, both come back", !inspector.collapsed && !hub.sidebarClosed, nil);
 }
 
+/// A phone off its cable that runs by Wi-Fi is one phone, and needs nothing of a person; gone every way, it does.
+static void checkGoneAnotherWay(void) {
+  MVHub *hub = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
+  NSString *network = @"adb-R5C-Ab._adb-tls-connect._tcp";
+  NSDictionary *cable = @{@"id": @"R5C", @"serial": @"R5C", @"kind": @"phone", @"state": @"running", @"name": @"Test Phone", @"link": @"USB"};
+  NSDictionary *wifi = @{@"id": network, @"serial": network, @"kind": @"phone", @"state": @"running", @"name": @"Test Phone", @"detail": @"Wi-Fi", @"link": @"Wi-Fi", @"sameAs": @"R5C"};
+  [hub show:@{@"devices": @[cable], @"showing": @"R5C"}];
+  [hub show:@{@"devices": @[wifi]}];
+  NSString *needs = MVWord(@"Needs You");
+  MVCheck(@"sidebar: a phone off its cable that runs by Wi-Fi is not under Needs You", ![hub.rowTitles containsObject:needs] && [hub.rowTitles containsObject:MVWord(@"Running")], [hub.rowTitles componentsJoinedByString:@"|"]);
+  [hub show:@{@"devices": @[]}];
+  MVCheck(@"sidebar: gone every way, it is", [hub.rowTitles containsObject:needs], [hub.rowTitles componentsJoinedByString:@"|"]);
+  // and the other way: chosen by Wi-Fi, its cable back, the network row gives way to the cable's
+  MVHub *back = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
+  [back show:@{@"devices": @[wifi], @"showing": network}];
+  [back show:@{@"devices": @[cable]}];
+  MVCheck(@"sidebar: nor is one on its cable again after Wi-Fi", ![back.rowTitles containsObject:needs], [back.rowTitles componentsJoinedByString:@"|"]);
+}
+
 static NSInteger passedUnder(NSView *view) {
   NSInteger count = [view isKindOfClass:NSClassFromString(@"MVStepMark")] && [[view valueForKey:@"passed"] boolValue] ? 1 : 0;
   for (NSView *sub in view.subviews) count += passedUnder(sub);
@@ -197,4 +216,5 @@ void MVCheckShell(void) {
   checkActivity();
   checkTabs();
   checkPlaces();
+  checkGoneAnotherWay();
 }

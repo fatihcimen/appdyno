@@ -15,6 +15,8 @@ export type HubDevice = {
   detail: string;
   /** How a phone is joined to this Mac. */
   link?: 'USB' | 'Wi-Fi';
+  /** A row by the network: the phone's serial on its cable, so its cable row gone is no phone gone. */
+  sameAs?: string;
   /** What a person has to do before it can show. */
   need?: Need;
 };
@@ -74,6 +76,7 @@ export async function hubDevices(ctx: ServerContext, hardware: Hardware): Promis
       // said on the row as well as over the device: a person chooses from the list
       detail: d.link === 'Wi-Fi' ? 'Wi-Fi' : '',
       link: d.link ?? 'USB',
+      ...(d.sameAs && { sameAs: d.sameAs }),
       ...(need && { need }),
     });
   }

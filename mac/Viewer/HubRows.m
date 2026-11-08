@@ -53,6 +53,18 @@ MVRow *MVDeviceRow(NSDictionary *device) {
   return row;
 }
 
+/// One phone whatever the way to it: a row by the network carries its serial on the cable.
+static NSString *phoneOf(NSDictionary *device) {
+  return device[@"sameAs"] ?: device[@"serial"] ?: device[@"id"];
+}
+
+/// A phone that left one way in and runs by another needs nothing of a person.
+static BOOL hereAnotherWay(NSDictionary *gone, NSArray<NSDictionary *> *devices) {
+  for (NSDictionary *device in devices)
+    if ([phoneOf(device) isEqual:phoneOf(gone)]) return YES;
+  return NO;
+}
+
 /// A phone that left: dimmed and said in words, for as long as it stays the one chosen.
 static MVRow *goneRow(NSDictionary *device) {
   MVRow *row = MVDeviceRow(device);
@@ -76,8 +88,9 @@ static MVRow *goneRow(NSDictionary *device) {
     [device[@"need"] ? needs : phone ? phones : up ? running : off addObject:MVDeviceRow(device)];
   }
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
-  if (needs.count || _left) [rows addObject:[MVRow headerNamed:@"Needs You"]];
-  if (_left) [rows addObject:goneRow(_left)];
+  BOOL gone = _left && !hereAnotherWay(_left, _devices);
+  if (needs.count || gone) [rows addObject:[MVRow headerNamed:@"Needs You"]];
+  if (gone) [rows addObject:goneRow(_left)];
   [rows addObjectsFromArray:needs];
   [running insertObjects:phones atIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, phones.count)]];
   if (running.count) [rows addObject:[MVRow headerNamed:@"Running"]];
