@@ -16,15 +16,37 @@
 # postponed); APPDYNO_LOCK_FILE — written while a measuring step runs, removed after.
 set -u
 cd "${0:A:h}/.."
-serial=""; nightly=0; ios=""; iphone=""; all_on=""
-while (( $# )); do
+serial=""
+nightly=0
+ios=""
+iphone=""
+all_on=""
+while (($#)); do
   case $1 in
-    --device) serial=$2; shift 2 ;;
-    --nightly) nightly=1; shift ;;
-    --ios) ios=$2; shift 2 ;;
-    --iphone) iphone=$2; shift 2 ;;
-    --all-on) all_on=$2; shift 2 ;;
-    *) echo "unknown option $1" >&2; exit 2 ;;
+    --device)
+      serial=$2
+      shift 2
+      ;;
+    --nightly)
+      nightly=1
+      shift
+      ;;
+    --ios)
+      ios=$2
+      shift 2
+      ;;
+    --iphone)
+      iphone=$2
+      shift 2
+      ;;
+    --all-on)
+      all_on=$2
+      shift 2
+      ;;
+    *)
+      echo "unknown option $1" >&2
+      exit 2
+      ;;
   esac
 done
 if [[ -n $iphone && -z ${APPDYNO_IPHONE_FIXTURE_APP:-} ]]; then
@@ -38,28 +60,42 @@ failed=0
 postponed=0
 sweeping=0
 step() { # name, command…
-  local name=$1; shift
+  local name=$1
+  shift
   local t0=$(date +%s)
-  "$@" > .ci/logs/$stamp-$name.log 2>&1
+  "$@" >.ci/logs/$stamp-$name.log 2>&1
   local code=$?
-  local secs=$(( $(date +%s) - t0 ))
+  local secs=$(($(date +%s) - t0))
   results+=("{\"step\":\"$name\",\"exit\":$code,\"seconds\":$secs}")
-  if (( code == 0 )); then echo "ok   $name (${secs}s)"
-  elif (( code == 3 && sweeping )); then echo "none $name (${secs}s): ran nothing here, .ci/logs/$stamp-$name.log"
-  else echo "FAIL $name (${secs}s): .ci/logs/$stamp-$name.log"; failed=1; fi
+  if ((code == 0)); then
+    echo "ok   $name (${secs}s)"
+  elif ((code == 3 && sweeping)); then
+    echo "none $name (${secs}s): ran nothing here, .ci/logs/$stamp-$name.log"
+  else
+    echo "FAIL $name (${secs}s): .ci/logs/$stamp-$name.log"
+    failed=1
+  fi
   return $code
 }
 busy() { [[ -n ${APPDYNO_BUSY_FILE:-} && -e $APPDYNO_BUSY_FILE ]]; }
 ran() { # report name, test files…: exit 3 for a run that skipped all it holds, which vitest calls a pass
-  local report=.ci/logs/$stamp-$1.json; shift
+  local report=.ci/logs/$stamp-$1.json
+  shift
   mise exec -- npx vitest run --config vitest.device.config.ts --reporter=default --reporter=json --outputFile.json=$report "$@" || return $?
   mise exec -- node scripts/device-suites.mjs check $report
 }
 measuring() { # name, command…: skipped while busy, holds the lock while it runs
-  local name=$1; shift
-  if busy; then echo "skip $name (machine busy: $APPDYNO_BUSY_FILE)"; results+=("{\"step\":\"$name\",\"exit\":null,\"postponed\":true}"); postponed=1; return 0; fi
-  [[ -n ${APPDYNO_LOCK_FILE:-} ]] && echo "start=$(date -u +%FT%TZ) what=ci-$name pid=$$" > $APPDYNO_LOCK_FILE
-  step "$name" "$@"; local code=$?
+  local name=$1
+  shift
+  if busy; then
+    echo "skip $name (machine busy: $APPDYNO_BUSY_FILE)"
+    results+=("{\"step\":\"$name\",\"exit\":null,\"postponed\":true}")
+    postponed=1
+    return 0
+  fi
+  [[ -n ${APPDYNO_LOCK_FILE:-} ]] && echo "start=$(date -u +%FT%TZ) what=ci-$name pid=$$" >$APPDYNO_LOCK_FILE
+  step "$name" "$@"
+  local code=$?
   [[ -n ${APPDYNO_LOCK_FILE:-} ]] && rm -f $APPDYNO_LOCK_FILE
   return $code
 }
@@ -88,7 +124,7 @@ if [[ -n $serial ]]; then
   step fixture-install install_fixture $serial
   step device-functional ran device-functional device-tests/android.test.ts device-tests/smoke.test.ts device-tests/mcp-stdio.test.ts
   measuring device-perf ran device-perf device-tests/perf.test.ts
-  if (( nightly )); then
+  if ((nightly)); then
     measuring latency mise exec -- node packages/appdyno/dist/main.js bench --serial $serial --n 30 --max-load 8 --out .ci/runs/$stamp-latency.json
     if [[ -e .ci/runs/$stamp-latency.json ]]; then
       step regression-gate mise exec -- node scripts/ci-gate.mjs .ci/runs/$stamp-latency.json .ci/history.jsonl
@@ -128,9 +164,12 @@ fi
 
 {
   printf '{"stamp":"%s","commit":"%s","device":"%s","nightly":%s,"steps":[%s]}\n' \
-    "$stamp" "$(git rev-parse --short HEAD)" "$serial" "$( (( nightly )) && echo true || echo false)" "${(j:,:)results}"
-} > .ci/runs/$stamp.json
+    "$stamp" "$(git rev-parse --short HEAD)" "$serial" "$( ((nightly)) && echo true || echo false)" "${(j:,:)results}"
+} >.ci/runs/$stamp.json
 echo "run: .ci/runs/$stamp.json"
-if (( failed )); then exit 1; fi
-if (( postponed )); then echo "postponed steps did not run: this is no pass" >&2; exit 3; fi
+if ((failed)); then exit 1; fi
+if ((postponed)); then
+  echo "postponed steps did not run: this is no pass" >&2
+  exit 3
+fi
 exit 0
