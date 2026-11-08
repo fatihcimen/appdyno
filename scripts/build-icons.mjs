@@ -13,9 +13,17 @@ import { fileURLToPath } from 'node:url';
 import { GENERATED, iosIcon, macIcon, menuGlyph, social } from './icon-art.mjs';
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), '..');
+/**
+ * @param {string} command
+ * @param {...string} args
+ */
 const sh = (command, ...args) => execFileSync(command, args, { stdio: 'pipe', encoding: 'utf8' });
 
-/** Through the same tool at every size: it draws an SVG at the size the file declares. */
+/**
+ * Through the same tool at every size: it draws an SVG at the size the file declares.
+ * @param {string} svg
+ * @param {string} out
+ */
 function render(svg, out) {
   const made = mkdtempSync(join(tmpdir(), 'appdyno-icon-'));
   const source = join(made, 'art.svg');
@@ -29,6 +37,7 @@ function render(svg, out) {
  * The Mac's sizes, each drawn for itself. macOS 27 sets the two 1x sizes below 64 px on a grey plate,
  * on a 1x display only. Left out, it scales the large drawing down there, which is worse: a letter.
  */
+/** @type {[string, number][]} */
 const ICONSET = [
   ['16x16', 16],
   ['16x16@2x', 32],
@@ -42,7 +51,10 @@ const ICONSET = [
   ['512x512@2x', 1024],
 ];
 
-/** The app's icon, through iconutil. */
+/**
+ * The app's icon, through iconutil.
+ * @param {string} out
+ */
 export function buildIcns(out) {
   const made = mkdtempSync(join(tmpdir(), 'appdyno-iconset-'));
   const set = join(made, 'appdyno.iconset');
@@ -52,7 +64,10 @@ export function buildIcns(out) {
   rmSync(made, { recursive: true, force: true });
 }
 
-/** The menu bar's template image at 18 pt; the name is what makes AppKit take it as a template. */
+/**
+ * The menu bar's template image at 18 pt; the name is what makes AppKit take it as a template.
+ * @param {string} dir
+ */
 export function buildMenuGlyph(dir) {
   render(menuGlyph(18), join(dir, 'menuTemplate.png'));
   render(menuGlyph(36), join(dir, 'menuTemplate@2x.png'));
@@ -61,6 +76,8 @@ export function buildMenuGlyph(dir) {
 /**
  * The glass icon for macOS 26 and later, compiled by the tool Xcode uses into an Assets.car. actool writes an
  * .icns beside it, scaled from the large drawing: `buildIcns` after it puts the drawn one in its place.
+ * @param {string} dir
+ * @param {string} minimum
  */
 export function buildGlassIcon(dir, minimum) {
   const made = mkdtempSync(join(tmpdir(), 'appdyno-glass-'));

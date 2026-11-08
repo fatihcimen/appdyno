@@ -77,16 +77,31 @@ if (!existsSync(join(pkg, 'agents/android/agent.apk')))
     'no Android agent: run ./gradlew :agent:assembleDebug in android/, then pnpm build',
   );
 
-const manifest = JSON.parse(readFileSync(join(pkg, 'package.json'), 'utf8'));
+/** @type {unknown} */
+const parsed = JSON.parse(readFileSync(join(pkg, 'package.json'), 'utf8'));
+const manifest =
+  /** @type {{ name: string; version: string; type: string; repository: { url: string } }} */ (
+    parsed
+  );
 const { version } = manifest;
 const repository = manifest.repository.url.replace(/^git\+/, '').replace(/\.git$/, '');
 const image = `${NAME}-${version}-arm64.dmg`;
 
+/**
+ * @param {string} file
+ * @param {...string} args
+ */
 const sh = (file, ...args) =>
   execFileSync(file, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
+/** @param {string} file */
 const sha256 = (file) => createHash('sha256').update(readFileSync(file)).digest('hex');
+/** @param {number} bytes */
 const mb = (bytes) => `${(bytes / 1e6).toFixed(1)} MB`;
 
+/**
+ * @param {string} path
+ * @returns {number}
+ */
 function sizeOf(path) {
   if (!statSync(path, { throwIfNoEntry: false })?.isDirectory()) return statSync(path).size;
   return readdirSync(path).reduce((sum, f) => sum + sizeOf(join(path, f)), 0);
@@ -132,7 +147,12 @@ function icon() {
   copyFileSync(join(resources, `${NAME}.icns`), join(helper, 'Contents/Resources', `${NAME}.icns`));
 }
 
-/** No Dock icon of its own: a window's process takes one, and gives it up with the window. */
+/**
+ * No Dock icon of its own: a window's process takes one, and gives it up with the window.
+ * @param {string} to
+ * @param {string} identifier
+ * @param {string} executable
+ */
 function infoPlist(to, identifier, executable) {
   const keys = {
     CFBundleDevelopmentRegion: 'en',
@@ -172,6 +192,7 @@ ${entries.join('\n')}
 /** What runs a package: nothing of its types or its library, which no Mac app reads. */
 function thePackage() {
   const to = join(resources, 'app');
+  /** @param {string} f */
   const needed = (f) =>
     !f.endsWith('.d.ts') && !f.endsWith('dist/types') && !f.endsWith('dist/index.js');
   cpSync(join(pkg, 'dist'), join(to, 'dist'), { recursive: true, filter: needed });
@@ -215,6 +236,10 @@ function assemble() {
   sh('strip', '-x', menu);
 }
 
+/**
+ * @param {string} path
+ * @param {...string} more
+ */
 function codesign(path, ...more) {
   const how = identity ? ['--sign', identity, '--timestamp'] : ['--sign', '-'];
   sh('codesign', '--force', '--options', 'runtime', ...how, ...more, path);
@@ -231,7 +256,10 @@ function signAll() {
   sh('codesign', '--verify', '--deep', '--strict', app);
 }
 
-/** Apple's scan and its ticket, stapled on, so that a Mac with no network opens it too. */
+/**
+ * Apple's scan and its ticket, stapled on, so that a Mac with no network opens it too.
+ * @param {string} path
+ */
 function notarize(path, upload = path) {
   sh('xcrun', 'notarytool', 'submit', upload, ...credentials, '--wait');
   sh('xcrun', 'stapler', 'staple', path);
@@ -273,7 +301,11 @@ function diskImage() {
   return dmg;
 }
 
-/** What a release says of itself, signed: the only thing an app believes before it downloads. */
+/**
+ * What a release says of itself, signed: the only thing an app believes before it downloads.
+ * @param {string} dmg
+ * @param {string} key
+ */
 function appcast(dmg, key) {
   const url = `${repository}/releases/download/v${version}/${image}`;
   const cast = { version, url, sha256: sha256(dmg), size: statSync(dmg).size };
@@ -283,6 +315,7 @@ function appcast(dmg, key) {
   writeFileSync(join(out, 'appcast.json.sig'), `${signature.toString('base64')}\n`);
 }
 
+/** @param {string} dmg */
 function cask(dmg) {
   const text = readFileSync(join(repo, 'mac/App/appdyno.rb'), 'utf8')
     .replaceAll('@VERSION@', version)
@@ -305,6 +338,7 @@ const dmg = diskImage();
 if (updateKey) appcast(dmg, updateKey);
 cask(dmg);
 
+/** @type {[string, string][]} */
 const parts = [
   ['Node runtime', join(macos, 'node')],
   ['viewer and scanner', helpers],

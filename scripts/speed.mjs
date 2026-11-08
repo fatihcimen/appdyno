@@ -10,9 +10,10 @@ import { spawn, spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { loadavg, tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { must } from '@appdyno/core';
 
 const APP = 'dev.appdyno.fixture';
-const [serial, runs = '5'] = process.argv.slice(2);
+const [serial = '', runs = '5'] = process.argv.slice(2);
 if (!serial) {
   console.error('usage: speed.mjs <device id> [runs]');
   process.exit(2);
@@ -21,8 +22,25 @@ if (!serial) {
 const IOS = /^[0-9A-F]{8}-[0-9A-F]{4,}/i.test(serial);
 
 /**
+ * A tool's answer, as the server writes it: what of it is read here.
+ * @typedef {{
+ *   content: { type: string; text?: string }[];
+ *   isError?: boolean;
+ *   structuredContent?: {
+ *     settleMs?: number;
+ *     foreground?: string;
+ *     changed?: boolean;
+ *     matches?: { x: number; y: number }[];
+ *     lines?: number;
+ *   };
+ * }} Result
+ * @typedef {{ id: number; result?: Result & { tools?: unknown[] } }} Response
+ */
+
+/**
  * A server as a client starts one, over stdio, and what it says of each call on stderr. Its state folder lasts the
  * whole script, as a user's does.
+ * @param {string} state
  */
 function server(state) {
   const child = spawn(
@@ -41,14 +59,18 @@ function server(state) {
     ],
     { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, APPDYNO_STATE_DIR: state } },
   );
-  /** @type {Map<number, (message: any) => void>} */
+  /** @type {Map<number, (message: Response) => void>} */
   const waiting = new Map();
   /** @type {number[]} */
   const served = [];
   let nextId = 1;
+  /**
+   * @param {import('node:stream').Readable} stream
+   * @param {(line: string) => void} each
+   */
   const lines = (stream, each) => {
     let buffered = '';
-    stream.setEncoding('utf8').on('data', (chunk) => {
+    stream.setEncoding('utf8').on('data', (/** @type {string} */ chunk) => {
       buffered += chunk;
       for (let at = buffered.indexOf('\n'); at >= 0; at = buffered.indexOf('\n')) {
         each(buffered.slice(0, at));
@@ -57,20 +79,29 @@ function server(state) {
     });
   };
   lines(child.stdout, (line) => {
-    const message = JSON.parse(line);
+    /** @type {unknown} */
+    const parsed = JSON.parse(line);
+    const message = /** @type {Response} */ (parsed);
     waiting.get(message.id)?.(message);
   });
   // the server's own time of each call, from its log
   lines(child.stderr, (line) => {
-    const said = line.startsWith('{') ? JSON.parse(line) : {};
+    /** @type {unknown} */
+    const parsed = line.startsWith('{') ? JSON.parse(line) : {};
+    const said = /** @type {{ tool?: string; ms: number }} */ (parsed);
     if (said.tool) served.push(said.ms);
   });
+  /** @param {object} message */
   const write = (message) =>
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', ...message })}\n`);
-  /** One request, timed around the whole round trip. */
+  /**
+   * One request, timed around the whole round trip.
+   * @param {string} method
+   * @param {object} params
+   */
   const request = async (method, params) => {
     const start = performance.now();
-    /** @type {any} */
+    /** @type {Response} */
     const message = await new Promise((done) => {
       const id = nextId++;
       waiting.set(id, done);
@@ -95,11 +126,13 @@ function server(state) {
   };
 }
 
+/** @param {number} ms */
 const pause = (ms) => new Promise((done) => setTimeout(done, ms));
 
 /**
  * What a server started that outlives it, as the iOS runner does for a user, names the state folder: xcodebuild keeps a
  * session's results there, and writes them as it ends. Each is stopped and waited for, so the folder can go.
+ * @param {string} state
  */
 async function endWhatOutlives(state) {
   const left = () =>
@@ -118,6 +151,12 @@ async function endWhatOutlives(state) {
 /** Each call's times: the client's round trip, the server's own, and the settle an action's answer says. */
 /** @type {Map<string, { ms: number[]; served: number[]; settle: number[] }>} */
 const times = new Map();
+/**
+ * @param {string} what
+ * @param {number} ms
+ * @param {number} [served]
+ * @param {number} [settle]
+ */
 const timed = (what, ms, served, settle) => {
   const t = times.get(what) ?? { ms: [], served: [], settle: [] };
   t.ms.push(ms);
@@ -128,7 +167,11 @@ const timed = (what, ms, served, settle) => {
 /** @type {number[]} */
 const loads = [];
 
-/** One run: a new server, `initialize`, `tools/list`, then each call, proved by what it answers. */
+/**
+ * One run: a new server, `initialize`, `tools/list`, then each call, proved by what it answers.
+ * @param {ReturnType<typeof server>} s
+ * @param {boolean} warmUp
+ */
 async function run(s, warmUp) {
   const init = await s.request('initialize', {
     protocolVersion: '2025-06-18',
@@ -142,13 +185,18 @@ async function run(s, warmUp) {
   /**
    * One tool call; `proof` must be in its answer, in any case (Android's buttons say FORM). A refusal ends the run.
    * An untitled call is not kept.
+   * @param {string} what
+   * @param {string} name
+   * @param {object} args
+   * @param {string | ((r: Result) => boolean)} [proof]
    */
   const call = async (what, name, args, proof) => {
     const { ms, message } = await s.request('tools/call', { name, arguments: args });
     const served = await s.servedLast();
-    const { result } = message;
+    const result = must(message.result, `the answer of ${name}`);
     const text = result.content.flatMap((c) => (c.type === 'text' ? [c.text] : [])).join('\n');
     if (result.isError) throw new Error(`${name} refused: ${text.slice(0, 300)}`);
+    /** @param {string} word */
     const has = (word) => text.toLowerCase().includes(word.toLowerCase());
     const missing = proof && !(typeof proof === 'string' ? has(proof) : proof(result));
     if (missing) throw new Error(`${what || name}: no proof in its answer: ${text.slice(0, 300)}`);
@@ -157,11 +205,11 @@ async function run(s, warmUp) {
   };
 
   const devices = await call('`list_devices`', 'list_devices', {}, serial);
-  if (/held by pid/.test(devices.text.split('\n').find((l) => l.startsWith(serial)) ?? ''))
+  if ((devices.text.split('\n').find((l) => l.startsWith(serial)) ?? '').includes('held by pid'))
     throw new Error(`another process holds ${serial}: ${devices.text}`);
   const first = await s.request('tools/call', { name: 'screen', arguments: {} });
-  if (first.message.result.isError)
-    throw new Error(`the first read was refused: ${first.message.result.content[0]?.text}`);
+  const read = must(first.message.result, 'the answer of the first read');
+  if (read.isError) throw new Error(`the first read was refused: ${String(read.content[0]?.text)}`);
   timed(
     warmUp ? '`screen`, first of all: starts what the device needs' : '`screen`, first of a server',
     first.ms,
@@ -172,10 +220,15 @@ async function run(s, warmUp) {
   timed('`tools/list`', list.ms);
 
   await call('', 'terminate_app', {});
+  /** @param {Result} r */
   const inFront = (r) => r.structuredContent?.foreground === APP;
   await call('`launch_app` of the fixture, cold', 'launch_app', { app: APP }, inFront);
   await call('`screen`', 'screen', {}, 'Form');
   // iOS has no back key: its back is the screen's own control
+  /**
+   * @param {string} what
+   * @param {string} proof
+   */
   const back = (what, proof) =>
     IOS
       ? call(what, 'tap', { selector: { text: 'Back', role: 'button' } }, proof)
@@ -188,6 +241,7 @@ async function run(s, warmUp) {
   const row1 = /(@\S+) (?:\w+ )?"Product 1\b/.exec(rows.text)?.[1];
   await call('`swipe`, the touch alone (`read: none`)', 'swipe', { direction: 'up', ...none });
   await call('', 'wait_for', { ref: row1, gone: true }, 'gone');
+  /** @param {Result} r */
   const changed = (r) => r.structuredContent?.changed === true;
   await call('`swipe`, with the settled screen', 'swipe', { direction: 'up' }, changed);
   await back('', 'Form');
@@ -197,7 +251,7 @@ async function run(s, warmUp) {
     { text: 'Form' },
     (r) => r.structuredContent?.matches?.length === 1,
   );
-  const at = found.result.structuredContent.matches[0];
+  const at = must(found.result.structuredContent?.matches?.[0], 'the match');
   await call('`tap` by coordinate, with the settled screen', 'tap', { x: at.x, y: at.y }, 'Send');
   // the home screen's title: a phone in Turkish says LİST
   await back('back', 'appdyno fixture');
@@ -216,8 +270,9 @@ async function run(s, warmUp) {
   await call('`wait_for` an element on the screen', 'wait_for', { text: 'Send' }, 'found');
   await call('`screenshot`', 'screenshot', {}, (r) => r.content.some((c) => c.type === 'image'));
   // one line, or none, is a log read too
-  const read = (r) => typeof r.structuredContent?.lines === 'number';
-  await call('`logs`, 20 lines', 'logs', { maxLines: 20 }, read);
+  /** @param {Result} r */
+  const lines = (r) => typeof r.structuredContent?.lines === 'number';
+  await call('`logs`, 20 lines', 'logs', { maxLines: 20 }, lines);
   // last: a touch on a screen still sliding in is lost, and nothing waits out a slide a touch alone started
   // Android's back closes the keyboard first
   if (!IOS) await call('', 'keyboard', { action: 'dismiss' }, 'closed');
@@ -230,17 +285,20 @@ async function run(s, warmUp) {
   await call('', 'wait_for', { text: 'Send' }, 'found');
 }
 
+/** @param {number[]} values */
 const median = (values) => {
   const sorted = [...values].sort((a, b) => a - b);
   const middle = sorted.length >> 1;
-  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  const at = (/** @type {number} */ i) => must(sorted[i], 'a value');
+  return sorted.length % 2 ? at(middle) : (at(middle - 1) + at(middle)) / 2;
 };
 
 const state = mkdtempSync(join(tmpdir(), 'appdyno-speed-'));
+/** @type {string | undefined} */
 let failed;
 try {
   for (let i = 0; i <= Number(runs); i++) {
-    loads.push(loadavg()[0]);
+    loads.push(must(loadavg()[0], "the host's load"));
     const s = server(state);
     try {
       await run(s, i === 0);
@@ -249,16 +307,17 @@ try {
     }
   }
 } catch (e) {
-  failed = e;
+  failed = e instanceof Error ? e.message : String(e);
 }
-loads.push(loadavg()[0]);
+loads.push(must(loadavg()[0], "the host's load"));
 await endWhatOutlives(state);
 rmSync(state, { recursive: true, force: true });
-if (failed) {
-  console.error(`stopped: ${failed.message}`);
+if (failed !== undefined) {
+  console.error(`stopped: ${failed}`);
   process.exit(1);
 }
 
+/** @param {number[]} values */
 const ms = (values) => (values.length ? median(values).toFixed(0) : '');
 console.log('| call | median, ms | worst, ms | in the server, median | settle, median |');
 console.log('| ---- | ---------- | --------- | --------------------- | -------------- |');

@@ -27,6 +27,12 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { CLIENTS, putOnPath, update } from '@appdyno/cli';
+import { must } from '@appdyno/core';
+
+/**
+ * How `update` reads what a release serves.
+ * @typedef {Parameters<typeof update>[0]['get']} Get
+ */
 
 const { values: flags } = parseArgs({
   options: { android: { type: 'string' }, iphone: { type: 'string' }, keep: { type: 'boolean' } },
@@ -103,16 +109,24 @@ cpSync(built, app, { recursive: true, verbatimSymlinks: true });
 const command = join(app, 'Contents/Resources/bin/appdyno');
 const menu = join(app, 'Contents/MacOS/Appdyno');
 
+/**
+ * @param {string} file
+ * @param {...string} args
+ */
 const say = (file, ...args) =>
   spawnSync(file, args, { env, encoding: 'utf8', input: '', timeout: 120_000 });
 
 let failed = 0;
+/**
+ * @param {string} name
+ * @param {() => string | Promise<string>} fn
+ */
 async function step(name, fn) {
   try {
     console.log(`ok   ${name}: ${await fn()}`);
   } catch (e) {
     failed = 1;
-    console.log(`FAIL ${name}: ${e.message}`);
+    console.log(`FAIL ${name}: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
@@ -148,6 +162,7 @@ function windowLister() {
   return () => execFileSync(bin, { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
 }
 
+/** @param {string} pattern */
 const pidsOf = (pattern) =>
   spawnSync('/usr/bin/pgrep', ['-f', pattern], { encoding: 'utf8' })
     .stdout.trim()
@@ -167,6 +182,11 @@ async function stopAll() {
   await until('the app to end', () => pidsOf(temp).length === 0, 30_000);
 }
 
+/**
+ * @template T
+ * @param {string} what
+ * @param {() => T} ready
+ */
 async function until(what, ready, ms = 60_000) {
   const start = performance.now();
   for (;;) {
@@ -177,6 +197,7 @@ async function until(what, ready, ms = 60_000) {
   }
 }
 
+/** @type {import('@appdyno/cli').Run} */
 const run = (file, args, options) =>
   new Promise((resolve, reject) => {
     const r = spawnSync(file, args, { ...options, encoding: 'utf8' });
@@ -184,10 +205,21 @@ const run = (file, args, options) =>
     else reject(Object.assign(new Error(r.stderr), { stdout: r.stdout, stderr: r.stderr }));
   });
 
-const versionOf = (bundle) =>
-  JSON.parse(readFileSync(join(bundle, 'Contents/Resources/app/package.json'), 'utf8')).version;
+/** @param {string} bundle */
+const versionOf = (bundle) => {
+  /** @type {unknown} */
+  const manifest = JSON.parse(
+    readFileSync(join(bundle, 'Contents/Resources/app/package.json'), 'utf8'),
+  );
+  return /** @type {{ version: string }} */ (manifest).version;
+};
 
-/** The app at another version, signed as the build signs it, in a disk image as a release has it. */
+/**
+ * The app at another version, signed as the build signs it, in a disk image as a release has it.
+ * @param {string} from
+ * @param {string} version
+ * @param {string} name
+ */
 function aRelease(from, version, name) {
   const stage = join(temp, name);
   mkdirSync(stage);
@@ -224,7 +256,13 @@ function aRelease(from, version, name) {
   return dmg;
 }
 
-/** The two files of a release, and the image, by the addresses `update` asks for: no network. */
+/**
+ * The two files of a release, and the image, by the addresses `update` asks for: no network.
+ * @param {string} dmg
+ * @param {string} version
+ * @param {import('node:crypto').KeyObject} key
+ * @returns {Get}
+ */
 function aRegistry(dmg, version, key) {
   const repository = 'https://github.com/fatihcimen/appdyno';
   const url = `${repository}/releases/download/v${version}/image.dmg`;
@@ -232,14 +270,17 @@ function aRegistry(dmg, version, key) {
   const sha256 = createHash('sha256').update(bytes).digest('hex');
   const text = Buffer.from(JSON.stringify({ version, url, sha256, size: bytes.length }));
   const cast = `${repository}/releases/latest/download/appcast.json`;
+  /** @type {Record<string, Buffer | string>} */
   const files = {
     [cast]: text,
     [`${cast}.sig`]: sign(null, text, key).toString('base64'),
     [url]: bytes,
   };
-  return async (at) => {
-    if (!files[at]) throw new Error(`nothing at ${at}`);
-    return Buffer.from(files[at]);
+  return (at) => {
+    const file = files[at];
+    return file
+      ? Promise.resolve(Buffer.from(file))
+      : Promise.reject(new Error(`nothing at ${at}`));
   };
 }
 
@@ -254,14 +295,19 @@ async function selfUpdate() {
   const was = versionOf(old);
   const root = join(old, 'Contents/Resources/app');
   const o = { root, run, tmp: join(temp, 'tmp'), out: () => undefined };
+  /**
+   * @param {Get} get
+   * @param {RegExp} words
+   */
   const refused = async (get, words) => {
-    const e = await update({ ...o, get }).then(
+    const said = await update({ ...o, get }).then(
       () => undefined,
-      (x) => x,
+      (/** @type {unknown} */ e) => (e instanceof Error ? e.message : String(e)),
     );
-    if (!e || !words.test(e.message)) throw new Error(`not refused: ${e?.message ?? 'it updated'}`);
+    if (said === undefined || !words.test(said))
+      throw new Error(`not refused: ${said ?? 'it updated'}`);
     if (versionOf(old) !== was) throw new Error('the old app moved');
-    return e.message;
+    return said;
   };
   await step('a release signed by another key is refused', () =>
     refused(
@@ -289,15 +335,18 @@ async function selfUpdate() {
     await update({ ...o, get });
     if (versionOf(old) !== '9.0.2') throw new Error(`at ${versionOf(old)}`);
     const beside = readdirSync(dirname(old));
-    if (beside.join() !== 'Appdyno.app') throw new Error(`left beside it: ${beside}`);
+    if (beside.join() !== 'Appdyno.app') throw new Error(`left beside it: ${beside.join()}`);
     const r = say(join(old, 'Contents/Resources/bin/appdyno'), 'doctor');
-    return r.stdout.split('\n')[0].replace(temp, '');
+    return must(r.stdout.split('\n')[0], 'its first line').replace(temp, '');
   });
 }
 
 /** A client's file, as `appdyno install` writes it from the app, and what becomes of it when the app moves. */
 async function moved() {
-  const file = join(home, CLIENTS.filter((c) => c.format === 'jsonc')[0].files[0]);
+  const file = join(
+    home,
+    must(CLIENTS.find((c) => c.format === 'jsonc')?.files[0], "a JSONC client's file"),
+  );
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, '{}\n');
   await step('MCP clients get the app, by the same install', () => {
@@ -346,37 +395,40 @@ try {
   await step('doctor says it is the app, and fails on nothing a stranger lacks but adb', () => {
     const r = say(command, 'doctor');
     const lines = r.stdout.split('\n');
-    if (!lines[0].includes('installed by the app')) throw new Error(lines[0]);
-    const failing = lines.filter((l) => l.startsWith('FAIL')).filter((l) => !/ adb:/.test(l));
+    const first = must(lines[0], 'its first line');
+    if (!first.includes('installed by the app')) throw new Error(first);
+    const failing = lines.filter((l) => l.startsWith('FAIL')).filter((l) => !l.includes(' adb:'));
     if (failing.length) throw new Error(failing.join('; '));
     return `\n     ${lines.join('\n     ').replaceAll(temp, '')}`;
   });
   await step('the menu lists what a stranger has', () => {
     const r = say(menu, '--menu');
-    if (r.status !== 0) throw new Error(`exit ${r.status}: ${r.stderr}`);
+    if (r.status !== 0) throw new Error(`exit ${String(r.status)}: ${r.stderr}`);
     if (!r.stdout.includes('in the menu bar: yes\nOpen Hub')) throw new Error(r.stdout);
     return r.stdout.trim().split('\n').join(' | ');
   });
   const windows = windowLister();
   const windowPids = () => new Set(windows().map((w) => w.split(' ')[0]));
+  /** @param {string} pid */
   const carried = (pid) =>
     spawnSync('/bin/ps', ['-o', 'command=', '-p', pid], { encoding: 'utf8' }).stdout.includes(
       'Appdyno Window.app/Contents/MacOS/appdyno-viewer',
     );
   /** A window of a new process, of the viewer this app carries: a window that grew is not one. */
+  /** @param {Set<string | undefined>} before */
   const newWindow = (before) =>
     windows().find((w) => {
-      const pid = w.split(' ')[0];
-      return !before.has(pid) && !/ 0x0 /.test(w) && carried(pid);
+      const [pid = ''] = w.split(' ');
+      return !before.has(pid) && !w.includes(' 0x0 ') && carried(pid);
     });
   await step("adb, from Google, with a person's word", () => {
     const no = say(command, 'tools', 'install', 'adb');
-    if (no.status !== 2 || !/terms/.test(no.stderr)) throw new Error('it did not ask');
+    if (no.status !== 2 || !no.stderr.includes('terms')) throw new Error('it did not ask');
     const r = say(command, 'tools', 'install', 'adb', '--accept-license');
     if (r.status !== 0) throw new Error(r.stderr);
     const doctor = say(command, 'doctor')
       .stdout.split('\n')
-      .find((l) => / adb:/.test(l));
+      .find((l) => l.includes(' adb:'));
     if (!doctor?.startsWith('ok')) throw new Error(doctor);
     return doctor.trim();
   });
@@ -393,8 +445,8 @@ try {
     // a moment for its first list of devices, then its picture, which a window off every screen still has
     await new Promise((r) => setTimeout(r, 3_000));
     const apps = spawnSync('/usr/bin/lsappinfo', ['list'], { encoding: 'utf8' }).stdout;
-    const kind = new RegExp(`pid = ${child.pid} .*type="(\\w+)"`).exec(apps)?.[1];
-    if (kind !== 'UIElement') throw new Error(`its type is ${kind}`);
+    const kind = new RegExp(`pid = ${String(child.pid)} .*type="(\\w+)"`).exec(apps)?.[1];
+    if (kind !== 'UIElement') throw new Error(`its type is ${String(kind)}`);
     return `${got} after ${ms} ms, and no place in the Dock for the app itself`;
   });
   await step('a double click: LaunchServices opens the bundle', async () => {
@@ -420,25 +472,18 @@ try {
       const video = join(temp, 'window.mp4');
       const log = join(temp, 'window.log');
       const written = openSync(log, 'w');
-      const words = [
-        'mirror',
-        '--device',
-        String(phone),
-        '--behind',
-        '--seconds',
-        '20',
-        '--record',
-        video,
-      ];
+      const words = ['mirror', '--device', phone, '--behind', '--seconds', '20', '--record', video];
       const child = spawn(command, words, { env, stdio: ['ignore', written, written] });
       closeSync(written);
+      /** @type {Promise<number | null>} */
       const ended = new Promise((resolve) => child.once('exit', resolve));
       const { got, ms } = await until('device window', () => newWindow(before), 120_000);
       const code = await ended;
       const said = readFileSync(log, 'utf8');
       const frames = /recorded (\d+) frames/.exec(said)?.[1];
-      if (code !== 0 || !Number(frames)) throw new Error(`exit ${code}: ${said.slice(-400)}`);
-      return `${got} after ${ms} ms; ${frames} frames recorded, ${statSync(video).size} bytes of video`;
+      if (code !== 0 || !Number(frames))
+        throw new Error(`exit ${String(code)}: ${said.slice(-400)}`);
+      return `${got} after ${ms} ms; ${String(frames)} frames recorded, ${statSync(video).size} bytes of video`;
     });
   await selfUpdate();
   await moved();

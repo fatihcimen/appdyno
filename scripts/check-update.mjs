@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { update, verifyRelease } from '@appdyno/cli';
+import { must } from '@appdyno/core';
 
 const UPSTREAM = 'https://registry.npmjs.org';
 const SEMVER_REPOSITORY = 'https://github.com/npm/node-semver';
@@ -22,7 +23,7 @@ const tmp = join(temp, 'tmp');
 for (const d of [prefix, pnpmHome, tmp]) mkdirSync(d);
 const env = {
   ...process.env,
-  PATH: `${join(pnpmHome, 'bin')}:${pnpmHome}:${process.env.PATH}`,
+  PATH: `${join(pnpmHome, 'bin')}:${pnpmHome}:${String(process.env.PATH)}`,
   PNPM_HOME: pnpmHome,
   XDG_CONFIG_HOME: join(temp, 'xdg-config'),
   XDG_DATA_HOME: join(temp, 'xdg-data'),
@@ -35,52 +36,102 @@ const env = {
 };
 
 const executed = promisify(execFile);
-/** @type {(extra?: object) => import('@appdyno/cli').Run} */
+/**
+ * What runs npm and pnpm here, with what options a caller gives: `update` gives more than a step does.
+ * @typedef {(file: string, args: string[], options: { cwd: string }) => Promise<{ stdout: string; stderr: string }>} Run
+ */
+/** @type {(extra?: object) => Run} */
 const runWith =
   (extra = {}) =>
   (file, args, options) =>
     executed(file, args, { ...options, encoding: 'utf8', env: { ...env, ...extra } });
 const run = runWith();
 
+/**
+ * @param {string} file
+ * @param {...string} args
+ */
 const shell = (file, ...args) => {
   const r = spawnSync(file, args, { cwd: temp, env, encoding: 'utf8', maxBuffer: 1 << 26 });
   if (r.status !== 0) throw new Error(`${file} ${args.join(' ')}: ${r.stderr}`);
   return r.stdout.trim();
 };
-const npmSays = (...args) => JSON.parse(shell('npm', 'view', ...args, '--json'));
-const versionAt = (root) => JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
+/**
+ * What JSON says, to be read as what it is known to be.
+ * @param {string | Buffer} text
+ * @returns {unknown}
+ */
+const parsed = (text) => JSON.parse(text.toString());
+/** @param {...string} args */
+const npmSays = (...args) => parsed(shell('npm', 'view', ...args, '--json'));
+/** @param {string} root */
+const versionAt = (root) =>
+  /** @type {{ version: string }} */ (parsed(readFileSync(join(root, 'package.json'), 'utf8')))
+    .version;
 
 let failed = 0;
+/**
+ * @param {string} name
+ * @param {() => Promise<unknown>} fn
+ */
 async function step(name, fn) {
   try {
-    console.log(`ok   ${name}: ${await fn()}`);
+    console.log(`ok   ${name}: ${String(await fn())}`);
   } catch (e) {
     failed = 1;
-    console.log(`FAIL ${name}: ${e.message}`);
+    console.log(`FAIL ${name}: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
-/** The promise must be refused in these words, and not for another reason. */
+/**
+ * The promise must be refused in these words, and not for another reason.
+ * @param {Promise<unknown>} going
+ * @param {RegExp} words
+ */
 async function refused(going, words) {
   const e = await going.then(
     () => undefined,
-    (x) => x,
+    (/** @type {unknown} */ x) => x,
   );
+  const said = e instanceof Error ? e.message : String(e);
   if (!e) throw new Error('it was let through');
-  if (!words.test(e.message)) throw new Error(`refused for another reason: ${e.message}`);
-  return e.message;
+  if (!words.test(said)) throw new Error(`refused for another reason: ${said}`);
+  return said;
 }
 
+/** @param {string[]} versions */
 const stable = (versions) => versions.filter((v) => /^\d+\.\d+\.\d+$/.test(v));
-const semver = npmSays('semver', 'dist-tags.latest');
-const oldSemver = stable(npmSays('semver', 'versions')).at(-2);
-const makeDirLatest = npmSays('make-dir', 'dist-tags.latest');
+const semver = String(npmSays('semver', 'dist-tags.latest'));
+const oldSemver = must(
+  stable(/** @type {string[]} */ (npmSays('semver', 'versions'))).at(-2),
+  'an older semver',
+);
+const makeDirLatest = String(npmSays('make-dir', 'dist-tags.latest'));
+/**
+ * @param {string} name
+ * @param {string} version
+ * @param {string} repository
+ * @param {Run} [options]
+ */
 const verified = (name, version, repository, options) =>
   verifyRelease({ name, version, repository }, options ?? run, tmp);
 
-/** A registry that hands on the real one's answers, changed by `change` where it returns something. */
+/**
+ * A packument's or a version's `dist`, as the registry has it: what of it is changed here.
+ * @typedef {{ attestations?: unknown; signatures: { sig: string }[] }} Dist
+ * @typedef {(url: string, body: Buffer) => string | Buffer | undefined} Change
+ */
+
+/**
+ * A registry that hands on the real one's answers, changed by `change` where it returns something.
+ * @param {Change} change
+ */
 async function registryWith(change) {
-  const server = createServer(async (req, res) => {
+  /**
+   * @param {import('node:http').IncomingMessage} req
+   * @param {import('node:http').ServerResponse} res
+   */
+  const answer = async (req, res) => {
     const headers = { accept: req.headers.accept ?? '*/*' };
     const url = String(req.url);
     const upstream = await fetch(`${UPSTREAM}${url}`, { headers });
@@ -93,7 +144,8 @@ async function registryWith(change) {
     const type = upstream.headers.get('content-type') ?? 'application/json';
     res.writeHead(upstream.status, { 'content-type': type });
     res.end(body);
-  });
+  };
+  const server = createServer((req, res) => void answer(req, res));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(undefined)));
   const { port } = /** @type {import('node:net').AddressInfo} */ (server.address());
   const registry = `http://127.0.0.1:${port}/`;
@@ -106,18 +158,32 @@ async function registryWith(change) {
   return { options, registry, close: () => server.close() };
 }
 
+/** @type {Change} */
 const inTarball = (url, body) =>
   url.endsWith('.tgz') ? Buffer.concat([body, Buffer.from('x')]) : undefined;
 
+/**
+ * @param {string} url
+ * @param {Buffer} body
+ * @param {(dist: Dist) => void} edit
+ */
 const inPackument = (url, body, edit) => {
   if (url !== '/semver' && url !== `/semver/${semver}`) return undefined;
-  const doc = JSON.parse(body);
-  edit((doc.versions?.[semver] ?? doc).dist);
+  const doc = /** @type {{ versions?: Record<string, { dist?: Dist }>; dist?: Dist }} */ (
+    parsed(body)
+  );
+  edit(must((doc.versions?.[semver] ?? doc).dist, 'its dist'));
   return JSON.stringify(doc);
 };
 
-const flip = (text) => `${text[0] === 'A' ? 'B' : 'A'}${text.slice(1)}`;
+/** @param {string} text */
+const flip = (text) => `${text.startsWith('A') ? 'B' : 'A'}${text.slice(1)}`;
 
+/**
+ * @template T
+ * @param {Change} change
+ * @param {(options: Run, registry: string) => Promise<T>} going
+ */
 async function tampered(change, going) {
   const { options, registry, close } = await registryWith(change);
   try {
@@ -127,15 +193,20 @@ async function tampered(change, going) {
   }
 }
 
-/** A real install fails while it unpacks, past the point where a manager has moved the old copy aside. */
+/**
+ * A real install fails while it unpacks, past the point where a manager has moved the old copy aside.
+ * @param {(options: Run, registry: string) => Promise<unknown>} installing
+ */
 const failsMidway = async (installing) => {
-  const e = await tampered(inTarball, (options, registry) =>
-    installing(options, registry).then(
-      () => undefined,
-      (x) => x,
-    ),
+  const e = /** @type {{ stdout?: string; stderr?: string } | undefined} */ (
+    await tampered(inTarball, (options, registry) =>
+      installing(options, registry).then(
+        () => undefined,
+        (/** @type {unknown} */ x) => x,
+      ),
+    )
   );
-  if (!/INTEGRITY|TARBALL/i.test(`${e?.stdout}${e?.stderr}`))
+  if (!/INTEGRITY|TARBALL/i.test(`${String(e?.stdout)}${String(e?.stderr)}`))
     throw new Error(`no integrity failure: ${e?.stderr ?? 'it installed'}`);
 };
 
@@ -178,9 +249,14 @@ try {
     tampered(
       (url, body) => {
         if (!url.startsWith('/-/npm/v1/attestations/')) return undefined;
-        const doc = JSON.parse(body);
-        for (const { bundle } of doc.attestations)
-          bundle.dsseEnvelope.signatures[0].sig = flip(bundle.dsseEnvelope.signatures[0].sig);
+        const doc =
+          /** @type {{ attestations: { bundle: { dsseEnvelope: { signatures: { sig: string }[] } } }[] }} */ (
+            parsed(body)
+          );
+        for (const { bundle } of doc.attestations) {
+          const signature = must(bundle.dsseEnvelope.signatures[0], 'its signature');
+          signature.sig = flip(signature.sig);
+        }
         return JSON.stringify(doc);
       },
       (options) =>
@@ -201,7 +277,11 @@ try {
   const npmRoot = join(prefix, 'lib/node_modules/semver');
   shell('npm', 'install', '--global', '--ignore-scripts', `semver@${oldSemver}`);
 
+  /** What the semver this installed says it is. */
+  const semverSays = () =>
+    must(shell(join(prefix, 'bin/semver'), '-h').split('\n')[0], 'its first line');
   await step('--check changes nothing', async () => {
+    /** @type {string[]} */
     const lines = [];
     await update({ root: npmRoot, run, tmp, check: true, ...say, out: (l) => lines.push(l) });
     if (versionAt(npmRoot) !== oldSemver) throw new Error(`moved to ${versionAt(npmRoot)}`);
@@ -212,7 +292,7 @@ try {
     chmodSync(parent, 0o555);
     try {
       const said = await refused(update({ root: npmRoot, run, tmp, ...say }), /stays$/);
-      const ran = shell(join(prefix, 'bin/semver'), '-h').split('\n')[0];
+      const ran = semverSays();
       if (ran !== `SemVer ${oldSemver}`) throw new Error(`it says ${ran}`);
       return `${said}; it runs: ${ran}`;
     } finally {
@@ -225,24 +305,30 @@ try {
         cwd: temp,
       }),
     );
-    const ran = shell(join(prefix, 'bin/semver'), '-h').split('\n')[0];
+    const ran = semverSays();
     if (ran !== `SemVer ${oldSemver}`) throw new Error(`it says ${ran}`);
     return ran;
   });
   await step(`npm: ${oldSemver} to ${semver}`, async () => {
     await update({ root: npmRoot, run, tmp, ...say });
-    const ran = shell(join(prefix, 'bin/semver'), '-h').split('\n')[0];
+    const ran = semverSays();
     if (ran !== `SemVer ${semver}`) throw new Error(`it says ${ran}`);
     return ran;
   });
   await step('npm: already current', async () => {
+    /** @type {string[]} */
     const lines = [];
     await update({ root: npmRoot, run, tmp, ...say, out: (l) => lines.push(l) });
     return lines.at(-1);
   });
   await step('pnpm: the same, by the manager that keeps it', async () => {
     const version = () =>
-      JSON.parse(shell('pnpm', 'ls', '--global', '--json', '--depth', '0'))[0].dependencies.semver;
+      must(
+        /** @type {{ dependencies: { semver: { version: string; path: string } } }[]} */ (
+          parsed(shell('pnpm', 'ls', '--global', '--json', '--depth', '0'))
+        )[0],
+        "pnpm's global packages",
+      ).dependencies.semver;
     shell('pnpm', 'add', '--global', '--ignore-scripts', `semver@${oldSemver}`);
     const root = realpathSync(version().path);
     await failsMidway((options, registry) =>

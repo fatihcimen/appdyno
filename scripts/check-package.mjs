@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import { must } from '@appdyno/core';
 
 const { values: flags } = parseArgs({
   options: {
@@ -28,6 +29,7 @@ const { values: flags } = parseArgs({
   },
 });
 
+/** @param {string} why */
 const refuse = (why) => {
   console.error(`refused: ${why}`);
   process.exit(2);
@@ -67,20 +69,35 @@ const env = {
   ...(process.env.DEVELOPER_DIR && { DEVELOPER_DIR: process.env.DEVELOPER_DIR }),
 };
 
+/**
+ * @template {string | void} T
+ * @param {string} name
+ * @param {() => T | Promise<T>} fn
+ */
 async function step(name, fn) {
   const started = performance.now();
   const said = await fn();
   const ms = Math.round(performance.now() - started);
-  console.log(`ok   ${name} ${ms} ms${said ? `: ${said}` : ''}`);
+  console.log(`ok   ${name} ${ms} ms${typeof said === 'string' && said !== '' ? `: ${said}` : ''}`);
   return said;
 }
 
+/**
+ * @param {string} cmd
+ * @param {string[]} args
+ * @param {string} cwd
+ */
 function run(cmd, args, cwd) {
   const r = spawnSync(cmd, args, { cwd, env, encoding: 'utf8' });
-  if (r.status !== 0) throw new Error(`${cmd} ${args.join(' ')}: ${r.stderr || r.error}`);
+  if (r.status !== 0) throw new Error(`${cmd} ${args.join(' ')}: ${String(r.stderr || r.error)}`);
   return r.stdout;
 }
 
+/**
+ * @template T
+ * @param {string[]} args
+ * @param {(client: Client) => Promise<T>} use
+ */
 async function serve(args, use, revision = '2025-11-25') {
   const client = new Client(
     { name: 'check-package', version: '1' },
@@ -101,19 +118,26 @@ async function serve(args, use, revision = '2025-11-25') {
   }
 }
 
+/** @param {Awaited<ReturnType<Client['callTool']>>} answer */
 const textOf = (answer) =>
   answer.content
     .filter((c) => c.type === 'text')
     .map((c) => c.text)
     .join('\n');
 
+/**
+ * @param {string} device
+ * @param {string} app
+ * @param {string[]} keys
+ */
 async function drive(device, app, keys) {
   await serve(['--device', device], async (client) => {
     let notifications = 0;
     // a first use may build the runner: long, and alive as long as progress comes
+    /** @param {string} name */
     const call = async (name, args = {}) => {
-      /** @type {any} */
-      let answer;
+      // set inside the step, where the compiler does not follow it
+      let answer = /** @type {Awaited<ReturnType<Client['callTool']>> | undefined} */ (undefined);
       await step(`${device} ${name}`, async () => {
         answer = await client.callTool(
           { name, arguments: args },
@@ -128,7 +152,7 @@ async function drive(device, app, keys) {
         );
         if (answer.isError) throw new Error(`${name}: ${textOf(answer)}`);
       });
-      return answer;
+      return must(answer, `the answer of ${name}`);
     };
     await call('device_info');
     await call('screen');
@@ -145,12 +169,17 @@ async function drive(device, app, keys) {
   });
 }
 
-/** A runner outlives its server: stopped here, or it would run on from files about to go. */
+/**
+ * A runner outlives its server: stopped here, or it would run on from files about to go.
+ * @param {string} udid
+ */
 function stopRunner(udid) {
   const state = join(HOME, 'Library/Caches/appdyno', `ios-${udid}.json`);
   if (!existsSync(state)) return;
   try {
-    process.kill(JSON.parse(readFileSync(state, 'utf8')).pid, 'SIGTERM');
+    /** @type {unknown} */
+    const runner = JSON.parse(readFileSync(state, 'utf8'));
+    process.kill(/** @type {{ pid: number }} */ (runner).pid, 'SIGTERM');
   } catch {
     /* gone already */
   }
@@ -159,10 +188,12 @@ function stopRunner(udid) {
 try {
   console.log(`PATH=${PATH}`);
   const tarball = await step('npm pack', () => {
-    const [pack] = JSON.parse(
+    /** @type {unknown} */
+    const packed = JSON.parse(
       run('npm', ['pack', '--json', '--pack-destination', temp], join(repo, 'packages/appdyno')),
     );
-    const files = pack.files.map((f) => f.path);
+    const [pack] = /** @type {{ files: { path: string }[]; filename: string }[]} */ (packed);
+    const files = must(pack, "npm's pack").files.map((f) => f.path);
     for (const f of [
       'dist/main.js',
       'dist/index.js',
@@ -176,7 +207,7 @@ try {
       if (!files.includes(f)) throw new Error(`${f} is not in the package: pnpm build first`);
     if (files.some((f) => f.includes('mirror-src/SelfTest')))
       throw new Error("the viewer's self test is in the package");
-    return join(temp, pack.filename);
+    return join(temp, must(pack, "npm's pack").filename);
   });
   await step('npm install, no registry', () => {
     writeFileSync(join(project, 'package.json'), '{ "private": true }\n');
@@ -191,7 +222,7 @@ try {
   await step('appdyno --help', () => {
     const r = spawnSync('npx', ['appdyno', '--help'], { cwd: project, env, encoding: 'utf8' });
     if (!`${r.stdout}${r.stderr}`.includes('usage: appdyno'))
-      throw new Error(`no usage line: ${r.stderr || r.error}`);
+      throw new Error(`no usage line: ${String(r.stderr || r.error)}`);
   });
   await step('tools/list over stdio, on each revision', async () => {
     /** @type {string[]} */
@@ -200,10 +231,13 @@ try {
       lists.push(
         await serve([], async (c) => JSON.stringify((await c.listTools()).tools), revision),
       );
-    if (lists[0] !== lists[1]) throw new Error('2025-11-25 and 2026-07-28 list other tools');
-    const count = JSON.parse(lists[0]).length;
+    const [first = '', second] = lists;
+    if (first !== second) throw new Error('2025-11-25 and 2026-07-28 list other tools');
+    /** @type {unknown} */
+    const tools = JSON.parse(first);
+    const count = /** @type {unknown[]} */ (tools).length;
     if (count === 0) throw new Error('no tools');
-    return `${count} tools, ${lists[0].length} bytes, the same on 2025-11-25 and 2026-07-28`;
+    return `${count} tools, ${first.length} bytes, the same on 2025-11-25 and 2026-07-28`;
   });
   if (flags.android) {
     // the adb server outlives this run: it starts under the real HOME, not one about to go
@@ -213,7 +247,7 @@ try {
   if (flags.ios) await drive(flags.ios, 'com.apple.Preferences', []);
   console.log('passed');
 } catch (e) {
-  console.error(`FAILED: ${e.message}`);
+  console.error(`FAILED: ${e instanceof Error ? e.message : String(e)}`);
   process.exitCode = 1;
 } finally {
   if (flags.keep) console.log(`kept ${temp}`);

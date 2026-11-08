@@ -21,15 +21,30 @@ const MIST = '#D9DFFF';
 const WHITE = '#FFFFFF';
 
 const SVG = 'xmlns="http://www.w3.org/2000/svg"';
+/** @param {number} v */
 const n = (v) => +v.toFixed(2);
 
-/** A continuous corner. At r = 217 on an 824 body it fits a Mac's own icons to within a pixel. */
+/**
+ * A continuous corner. At r = 217 on an 824 body it fits a Mac's own icons to within a pixel.
+ * @param {number} x
+ * @param {number} y
+ * @param {number} w
+ * @param {number} h
+ * @param {number} r
+ */
 function rounded(x, y, w, h, r) {
   const [a, b, c, d, e, f, g] = [
-    1.528665, 1.08849, 0.86841, 0.63149, 0.07491, 0.37282, 0.16906,
-  ].map((v) => v * r);
+    1.528665 * r,
+    1.08849 * r,
+    0.86841 * r,
+    0.63149 * r,
+    0.07491 * r,
+    0.37282 * r,
+    0.16906 * r,
+  ];
   const X = x + w;
   const Y = y + h;
+  /** @param {...number} v */
   const P = (...v) => v.map(n).join(' ');
   return [
     `M${P(x + a, y)}H${n(X - a)}C${P(X - b, y, X - c, y, X - d, y + e)}`,
@@ -43,6 +58,10 @@ function rounded(x, y, w, h, r) {
   ].join('');
 }
 
+/**
+ * @param {string} id
+ * @param {[number, string, number?][]} stops
+ */
 const gradient = (id, stops, attributes = 'x1="0" y1="0" x2="0" y2="1"') =>
   `<linearGradient id="${id}" ${attributes}>${stops
     .map(
@@ -101,8 +120,10 @@ function large() {
 
 /** The small drawing: the curve across the whole body, heavier as the pixels get fewer. */
 const CUT = 'M-20 700C260 700 380 610 480 450C570 310 680 262 1044 256';
+/** @type {Record<number, number>} */
 const RIBBON = { 64: 54, 32: 72, 16: 96 };
 
+/** @param {number} px */
 const small = (px) =>
   `<defs>${gradient('up', [
     [0, SURFACE],
@@ -116,13 +137,16 @@ const small = (px) =>
     DIAGONAL,
   )}</defs>${FULL}up)"/>` +
   `<path d="${CUT}L1044 1044L-20 1044Z" fill="url(#low)"/>` +
-  `<path d="${CUT}" fill="none" stroke="${WHITE}" stroke-width="${RIBBON[px]}"/>`;
+  `<path d="${CUT}" fill="none" stroke="${WHITE}" stroke-width="${String(RIBBON[px])}"/>`;
 
 /** The body on a Mac's canvas, as this Mac's own icons have it: 824 at an inset of 100. */
 const BODY = rounded(100, 100, 824, 824, 217);
 const IN_BODY = 'translate(100 100) scale(.8046875)';
 
-/** Drawn at exactly `px`, never scaled from a bigger picture. */
+/**
+ * Drawn at exactly `px`, never scaled from a bigger picture.
+ * @param {number} px
+ */
 export function macIcon(px) {
   const large_ = px > 64;
   const shadow = large_
@@ -145,24 +169,42 @@ export function macIcon(px) {
   );
 }
 
-/** Full bleed: iOS masks it. */
+/**
+ * Full bleed: iOS masks it.
+ * @param {number} px
+ */
 export const iosIcon = (px) =>
   `<svg ${SVG} width="${px}" height="${px}" viewBox="0 0 1024 1024">${large()}</svg>`;
 
-/** The curve as two closed parts with a gap, so a mark needs no mask and works in any colour. */
+/**
+ * The curve as two closed parts with a gap, so a mark needs no mask and works in any colour.
+ * @param {number} r
+ * @param {number} gap
+ */
 const upper = (r, gap) =>
   `M0 ${700 - gap}C260 ${700 - gap} 380 ${610 - gap} 480 ${450 - gap}C570 ${310 - gap} 680 ${262 - gap} 1024 ${256 - gap}` +
   `V${r}A${r} ${r} 0 0 0 ${1024 - r} 0H${r}A${r} ${r} 0 0 0 0 ${r}Z`;
+/**
+ * @param {number} r
+ * @param {number} gap
+ */
 const lower = (r, gap) =>
   `M0 ${700 + gap}C260 ${700 + gap} 380 ${610 + gap} 480 ${450 + gap}C570 ${310 + gap} 680 ${262 + gap} 1024 ${256 + gap}` +
   `V${1024 - r}A${r} ${r} 0 0 1 ${1024 - r} 1024H${r}A${r} ${r} 0 0 1 0 ${1024 - r}Z`;
 const MARK_UPPER = upper(240, 66);
 const MARK_LOWER = lower(240, 66);
 
+/**
+ * @param {string} top
+ * @param {string} bottom
+ */
 const mark = (top, bottom, attributes = '') =>
   `<svg ${attributes}viewBox="0 0 1024 1024"><path d="${MARK_UPPER}" fill="${top}"/><path d="${MARK_LOWER}" fill="${bottom}"/></svg>`;
 
-/** The menu bar's glyph: only its shape counts, as a template image. */
+/**
+ * The menu bar's glyph: only its shape counts, as a template image.
+ * @param {number} px
+ */
 export const menuGlyph = (px) =>
   mark('#000', '#000', `${SVG} width="${px}" height="${px}" `).replace(
     'viewBox="0 0 1024 1024"',
@@ -174,15 +216,24 @@ export const PAGE_MARK = mark('currentColor', 'var(--series)', 'class="mark" ari
 /** Stands alone, so it brings its own colours. */
 export const SERVER_ICON = mark(BLUE, VIOLET, `${SVG} `);
 
-/** Letters from a ring and a stem, so that a logo depends on no font. */
+/**
+ * Letters from a ring and a stem, so that a logo depends on no font.
+ * @param {number} x
+ * @param {number} baseline
+ * @param {number} height
+ * @param {string} stroke
+ */
 function wordmark(x, baseline, height, stroke) {
   const r = height / 2;
   const width = height * 0.2;
   const top = baseline - height;
   const middle = baseline - r;
   const reach = height * 0.62;
+  /** @param {number} at */
   const ring = (at) => `<circle cx="${n(at + r)}" cy="${n(middle)}" r="${n(r - width / 2)}"/>`;
+  /** @param {string} d */
   const line = (d) => `<path d="${d}"/>`;
+  /** @type {Record<'a' | 'p' | 'd' | 'y' | 'n' | 'o', (at: number) => string>} */
   const letters = {
     a: (at) => ring(at) + line(`M${n(at + height - width / 2)} ${n(top + width / 2)}V${baseline}`),
     p: (at) =>
@@ -200,7 +251,9 @@ function wordmark(x, baseline, height, stroke) {
     o: ring,
   };
   const advance = height + height * 0.28;
-  const drawn = [...'appdyno'].map((letter, i) => letters[letter](x + i * advance)).join('');
+  /** @type {(keyof typeof letters)[]} */
+  const word = ['a', 'p', 'p', 'd', 'y', 'n', 'o'];
+  const drawn = word.map((letter, i) => letters[letter](x + i * advance)).join('');
   return {
     width: 7 * advance - height * 0.28,
     svg: `<g class="word" fill="none" stroke="${stroke}" stroke-width="${n(width)}" stroke-linecap="round" stroke-linejoin="round">${drawn}</g>`,
@@ -231,6 +284,7 @@ export function social() {
   );
 }
 
+/** @param {string} body */
 const layer = (body) =>
   `<svg ${SVG} width="1024" height="1024" viewBox="0 0 1024 1024">${body}</svg>\n`;
 
@@ -243,7 +297,7 @@ const androidArt = `<?xml version="1.0" encoding="utf-8"?>
     android:viewportHeight="1024">
     <path android:fillColor="${SURFACE}" android:pathData="M0 0H1024V1024H0Z" />
     <path android:fillColor="${BLUE}" android:pathData="${CUT}L1044 1044L-20 1044Z" />
-    <path android:strokeColor="${WHITE}" android:strokeWidth="${RIBBON[16]}" android:pathData="${CUT}" />
+    <path android:strokeColor="${WHITE}" android:strokeWidth="${String(RIBBON[16])}" android:pathData="${CUT}" />
 </vector>
 `;
 
