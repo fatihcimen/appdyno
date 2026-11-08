@@ -9,7 +9,11 @@ import { logShowArgs, placeLines } from '../src/logs.js';
 const UDID = '8BC57F11-901C-4DF6-A2B9-2A3B7DE1B79D';
 const OTHER = '11111111-2222-3333-4444-555555555555';
 
-const ips = (bundle: string, device = UDID) =>
+/**
+ * A report as a simulator's app leaves one: its path names the simulator, and so does its coalition. A system app's
+ * path is in the runtime's volume, which names none; a report of neither names no simulator.
+ */
+const ips = (bundle: string, device = UDID, path: 'app' | 'system' = 'app') =>
   [
     JSON.stringify({
       bundleID: bundle,
@@ -17,7 +21,11 @@ const ips = (bundle: string, device = UDID) =>
       bug_type: '309',
     }),
     JSON.stringify({
-      procPath: `/Users/x/Library/Developer/CoreSimulator/Devices/${device}/data/Containers/Bundle/Application/A/App.app/App`,
+      procPath:
+        path === 'app' && device
+          ? `/Users/x/Library/Developer/CoreSimulator/Devices/${device}/data/Containers/Bundle/Application/A/App.app/App`
+          : '/Volumes/VOLUME/*/Preferences.app/Preferences',
+      ...(device ? { coalitionName: `com.apple.CoreSimulator.SimDevice.${device}` } : {}),
       exception: { type: 'EXC_BAD_ACCESS', signal: 'SIGSEGV' },
       termination: { indicator: 'Segmentation fault: 11' },
       faultingThread: 1,
@@ -90,6 +98,19 @@ describe('crash reports', () => {
     expect(since.reports).toHaveLength(1);
     expect(await reportsIn(dir, { ...q, limit: 1 })).toHaveLength(1);
     expect((await simulatorCrashes(UDID, q, join(dir, 'none'))).reports).toEqual([]);
+  });
+
+  it("takes a simulator's report only where it names that simulator, a system app's by its coalition, and says what it left out", async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'appdyno-ips-'));
+    writeFileSync(join(dir, 'mine.ips'), ips('com.apple.Preferences', UDID, 'system'));
+    writeFileSync(join(dir, 'theirs.ips'), ips('com.apple.Preferences', OTHER, 'system'));
+    writeFileSync(join(dir, 'anyones.ips'), ips('com.apple.Preferences', ''));
+    const a = await simulatorCrashes(UDID, { app: 'com.apple.Preferences', limit: 5 }, dir);
+    expect(a.reports.map((r) => r.file?.split('/').pop())).toEqual(['mine.ips']);
+    expect(a.note).toBe(
+      "left out 1 of another simulator, and 1 that name no simulator, so none could be told to be this one's",
+    );
+    expect((await simulatorCrashes(UDID, { app: 'dev.none', limit: 5 }, dir)).note).toBeUndefined();
   });
 });
 

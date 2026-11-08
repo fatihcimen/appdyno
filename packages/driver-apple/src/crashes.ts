@@ -24,6 +24,8 @@ type Ips = {
   reason: string;
   detail?: string;
   procPath?: string;
+  /** A simulator's process runs in a coalition named after it, the system's own apps too, whose path names none. */
+  coalition?: string;
 };
 
 /** A `.ips` crash report: one line of JSON (the header), then JSON (the report). */
@@ -44,6 +46,7 @@ export function parseIps(text: string): Ips | undefined {
       usedImages?: { name?: string }[];
       threads?: { frames?: { imageIndex?: number; symbol?: string }[] }[];
       bundleInfo?: { CFBundleIdentifier?: string };
+      coalitionName?: string;
     };
     const ex = body.exception;
     const frames = body.threads?.[body.faultingThread ?? 0]?.frames ?? [];
@@ -60,6 +63,7 @@ export function parseIps(text: string): Ips | undefined {
         `report of type ${head.bug_type ?? 'unknown'}`,
       ...(detail && { detail }),
       ...(body.procPath && { procPath: body.procPath }),
+      ...(body.coalitionName && { coalition: body.coalitionName }),
     };
   } catch {
     return undefined;
@@ -99,17 +103,40 @@ export async function reportsIn(
 
 const SIM_SOURCE = '~/Library/Logs/DiagnosticReports';
 
-/** A simulator's reports are on the Mac; a report names the simulator through the app's path, a system app does not. */
+/** The simulator a report names: by the app's path, or by its coalition, which a system app's has as well. */
+const simulatorOf = (r: Ips) =>
+  /\/Devices\/([0-9A-F-]{36})\//.exec(r.procPath ?? '')?.[1] ??
+  /^com\.apple\.CoreSimulator\.SimDevice\.([0-9A-F-]{36})$/.exec(r.coalition ?? '')?.[1];
+
+/**
+ * A simulator's reports are on the Mac, every simulator's in one folder: only what names this one is its own. What was
+ * left out is said in the note, as a report that names no simulator could be any one's, this one's too.
+ */
 export async function simulatorCrashes(
   udid: string,
   q: CrashesQuery,
   dir = join(homedir(), 'Library/Logs/DiagnosticReports'),
 ): Promise<CrashesAnswer> {
+  let others = 0;
+  let unnamed = 0;
   const reports = await reportsIn(dir, q, (r) => {
-    const other = /\/Devices\/([0-9A-F-]{36})\//.exec(r.procPath ?? '')?.[1];
-    return !other || other === udid;
+    const named = simulatorOf(r);
+    if (named === udid) return true;
+    if (named) others++;
+    else unnamed++;
+    return false;
   });
-  const answer = { reports, source: SIM_SOURCE };
+  const left = [
+    ...(others > 0 ? [`${others} of another simulator`] : []),
+    ...(unnamed > 0
+      ? [`${unnamed} that name no simulator, so none could be told to be this one's`]
+      : []),
+  ];
+  const answer = {
+    reports,
+    source: SIM_SOURCE,
+    ...(left.length > 0 && { note: `left out ${left.join(', and ')}` }),
+  };
   return q.symbols ? withSymbols(answer, q.symbols) : answer;
 }
 

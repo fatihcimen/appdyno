@@ -117,7 +117,9 @@ export async function withSymbols(answer: CrashesAnswer, path: string): Promise<
     ...answer,
     reports,
     ...(unmatched.size > 0 && {
-      note: `no dSYM for ${[...unmatched].join(', ')}: ${path} has ${held}`,
+      note: [answer.note, `no dSYM for ${[...unmatched].join(', ')}: ${path} has ${held}`]
+        .filter(Boolean)
+        .join('\n'),
     }),
   };
 }
