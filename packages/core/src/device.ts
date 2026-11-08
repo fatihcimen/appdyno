@@ -173,6 +173,12 @@ export type ListedDevice = {
   sameAs?: string;
 };
 
+/** What a listed device is: Android names an emulator by its port, and only a simulator is listed booted. */
+export const kindOf = (
+  d: Pick<ListedDevice, 'serial' | 'state'>,
+): 'phone' | 'simulator' | 'emulator' =>
+  d.serial.startsWith('emulator-') ? 'emulator' : d.state === 'booted' ? 'simulator' : 'phone';
+
 /** The devices of one driver. */
 export type DeviceProvider = {
   /** `state` is the driver's own word; `ready` says whether the device can be driven now. */

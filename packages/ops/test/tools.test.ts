@@ -605,9 +605,9 @@ describe('iOS simulators', () => {
     ]);
     expect((await t.textOf('list_devices')).text).toBe(
       [
-        'emulator-5580 device Fake',
-        `${udid} booted iOS simulator appdyno-iphone`,
-        '00001234-0123456789ABCDEF usb iPhone',
+        'emulator-5580 device Fake (emulator)',
+        `${udid} booted iOS simulator appdyno-iphone (simulator)`,
+        '00001234-0123456789ABCDEF usb iPhone (phone)',
       ].join('\n'),
     );
   });
@@ -630,18 +630,18 @@ describe('iOS simulators', () => {
     };
     const locked = await listing(() => Promise.resolve('locked'));
     expect(locked.content[0]?.text).toBe(
-      `${device.serial} device Fake: The device is locked. Unlock it. The picture goes on; input stops where it asks for a passcode.`,
+      `${device.serial} device Fake (emulator): The device is locked. Unlock it. The picture goes on; input stops where it asks for a passcode.`,
     );
     expect(locked.structuredContent.devices[0]?.blocked).toMatchObject({
       need: 'locked',
       title: 'The device is locked',
     });
     const failing = await listing(() => Promise.reject(new Error('no answer')));
-    expect(failing.content[0]?.text).toBe(`${device.serial} device Fake`);
+    expect(failing.content[0]?.text).toBe(`${device.serial} device Fake (emulator)`);
     const asked = vi.fn(() => Promise.resolve('locked' as const));
     const other = await listing(asked, { ...DEFAULT_POLICY, devices: /^no-such-device$/ });
     expect(other.content[0]?.text).toBe(
-      `${device.serial} device Fake (not allowed on this server)`,
+      `${device.serial} device Fake (emulator) (not allowed on this server)`,
     );
     expect(asked).not.toHaveBeenCalled();
   });
@@ -671,8 +671,8 @@ describe('iOS simulators', () => {
     listSimulators();
     expect((await listing).content[0]?.text).toBe(
       [
-        `${udid} booted iOS simulator appdyno-iphone`,
-        '00001234-0123456789ABCDEF usb iPhone: The device is locked. Unlock it. The picture goes on; input stops where it asks for a passcode.',
+        `${udid} booted iOS simulator appdyno-iphone (simulator)`,
+        '00001234-0123456789ABCDEF usb iPhone (phone): The device is locked. Unlock it. The picture goes on; input stops where it asks for a passcode.',
       ].join('\n'),
     );
   });

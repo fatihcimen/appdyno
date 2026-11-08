@@ -1,4 +1,4 @@
-import { must, osName, type ListedDevice } from '@appdyno/core';
+import { kindOf, must, osName, type ListedDevice } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
@@ -15,7 +15,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       name: 'list_devices',
       title: 'Devices',
       description:
-        'Connected phones, simulators and emulators (serial, state, model), which this server may drive, who holds each, what blocks each with its fix.',
+        'Connected phones, simulators and emulators (serial, state, model, kind), which this server may drive, who holds each, what blocks each with its fix.',
       input: z.object({}).strict(),
       output: DevicesOut,
       annotations: READ,
@@ -27,6 +27,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
           const blocked = allowed ? await ctx.blockOf(d) : undefined;
           return {
             ...d,
+            kind: kindOf(d),
             allowed,
             selected: d.serial === ctx.currentSerial,
             ...(h && { heldBy: { pid: h.pid, tool: h.tool, since: h.since } }),
@@ -43,7 +44,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
           devices
             .map(
               (d) =>
-                `${d.serial} ${d.state} ${d.model ?? ''}${d.allowed ? '' : ' (not allowed on this server)'}${d.selected ? ' ← selected' : ''}${d.heldBy ? ` (held by pid ${d.heldBy.pid}, ${d.heldBy.tool}, since ${d.heldBy.since})` : ''}${d.blocked ? `: ${d.blocked.title}. ${d.blocked.fix}` : ''}`,
+                `${d.serial} ${d.state} ${d.model ?? ''} (${d.kind})${d.allowed ? '' : ' (not allowed on this server)'}${d.selected ? ' ← selected' : ''}${d.heldBy ? ` (held by pid ${d.heldBy.pid}, ${d.heldBy.tool}, since ${d.heldBy.since})` : ''}${d.blocked ? `: ${d.blocked.title}. ${d.blocked.fix}` : ''}`,
             )
             .join('\n'),
           { devices },

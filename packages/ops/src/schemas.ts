@@ -89,6 +89,7 @@ export const DevicesOut = z.object({
       serial: z.string(),
       state: z.string(),
       model: z.string().optional(),
+      kind: z.enum(['phone', 'simulator', 'emulator']),
       allowed: z.boolean(),
       selected: z.boolean(),
       heldBy: z.object({ pid: z.number(), tool: z.string(), since: z.string() }).optional(),

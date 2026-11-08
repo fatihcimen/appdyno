@@ -67,4 +67,21 @@ describe('the device a call uses with none named', () => {
     );
     await expect(ctx.session()).rejects.toThrow(/more than one device/);
   });
+
+  it('is refused naming each it could be, by serial, kind and model, with how to pick one', async () => {
+    const ctx = contextOf(
+      provider([
+        { serial: 'emulator-5580', state: 'device', ready: true, model: 'sdk_gphone64_arm64' },
+        { serial: 'R58M', state: 'device', ready: true },
+        { serial: 'locked', state: 'unauthorized', ready: false },
+      ]),
+      provider([{ serial: 'SIM-1', state: 'booted', ready: true, model: 'iOS simulator a' }]),
+    );
+    await expect(ctx.session()).rejects.toMatchObject({
+      code: 'INVALID_ARGUMENT',
+      message:
+        'more than one device this server may drive: emulator-5580 (emulator, sdk_gphone64_arm64); R58M (phone); SIM-1 (simulator, iOS simulator a)',
+      hint: 'pick one with use_device: device "emulator-5580" or device "R58M" or device "SIM-1"',
+    });
+  });
 });

@@ -9,7 +9,7 @@ import type { InstallAnswers } from './install-consent.js';
 import { needOfState } from './mirror.js';
 import { queryTrace } from './perf/perfetto.js';
 import { traceProcessorCheck } from './tools.js';
-import { must, run } from '@appdyno/core';
+import { kindOf, must, run } from '@appdyno/core';
 
 /**
  * What this machine (and, with `serial`, that device) needs: adb, the agent build; on the device the agent
@@ -208,7 +208,10 @@ export function androidProvider(
           state: d.state,
           ready: d.state === 'device',
           ...(d.props.model && { model: d.props.model }),
-          link: overNetwork(d.serial) ? ('Wi-Fi' as const) : ('USB' as const),
+          // an emulator is joined to no cable
+          ...(kindOf(d) === 'phone' && {
+            link: overNetwork(d.serial) ? ('Wi-Fi' as const) : ('USB' as const),
+          }),
           ...(sameAs && { sameAs }),
         };
       }),

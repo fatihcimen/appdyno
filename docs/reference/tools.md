@@ -233,6 +233,8 @@ A dead owner's claim is free. A second process is refused with the owner's pid a
 to share: `use_device` with `share: true`, `--share` on either command line, or `APPDYNO_SHARE=1`.
 `list_devices` shows who holds what. There is no daemon.
 
+With no device selected and more than one this server may drive, a call that needs one is refused, naming each by serial, kind and model, and `use_device` picks one. `list_devices` gives each device's `kind`: `phone`, `simulator` or `emulator`; an emulator has no `link`, as no cable joins it.
+
 ## Starting a simulator or emulator
 
 `simulator` boots and shuts down simulators and emulators, on request only. With no name, shutdown

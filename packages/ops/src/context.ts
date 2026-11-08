@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import {
+  kindOf,
   must,
   readState,
   reportProgress,
@@ -280,11 +281,15 @@ export class ServerContext {
     );
     const [only, other] = ready;
     if (only && !other) return only.serial;
+    if (!only)
+      throw new ToolError(
+        'no connected device this server may drive (list_devices)',
+        'DEVICE_GONE',
+      );
     throw new ToolError(
-      ready.length === 0
-        ? 'no connected device this server may drive (list_devices)'
-        : 'more than one device: pick one with use_device',
-      ready.length === 0 ? 'DEVICE_GONE' : 'INVALID_ARGUMENT',
+      `more than one device this server may drive: ${ready.map((d) => `${d.serial} (${[kindOf(d), d.model].filter(Boolean).join(', ')})`).join('; ')}`,
+      'INVALID_ARGUMENT',
+      `pick one with use_device: ${ready.map((d) => `device "${d.serial}"`).join(' or ')}`,
     );
   }
 

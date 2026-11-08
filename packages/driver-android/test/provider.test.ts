@@ -32,6 +32,21 @@ describe('the devices of a Mac', () => {
       ['b', false],
     ]);
   });
+
+  it('a phone by how it is joined, an emulator by no cable', async () => {
+    const devices = await withAdb(() =>
+      Promise.resolve([
+        { serial: 'R58M', state: 'device', props: {} },
+        { serial: '192.168.1.5:5555', state: 'device', props: {} },
+        { serial: 'emulator-5580', state: 'device', props: {} },
+      ]),
+    ).list();
+    expect(devices.map((d) => [d.serial, d.link])).toEqual([
+      ['R58M', 'USB'],
+      ['192.168.1.5:5555', 'Wi-Fi'],
+      ['emulator-5580', undefined],
+    ]);
+  });
 });
 
 describe('what blocks a listed device', () => {

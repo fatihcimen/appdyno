@@ -233,6 +233,8 @@ Bir cihazı yöneten süreç onu tutar: durum klasöründe pid'ini ve başlangı
 `share: true` ile `use_device`, iki komut satırından birinde `--share` ya da `APPDYNO_SHARE=1`.
 `list_devices` kimin neyi tuttuğunu gösterir. Daemon yoktur.
 
+Seçili bir cihaz yokken bu sunucunun sürebileceği birden fazla cihaz varsa, cihaz gerektiren bir çağrı reddedilir ve her birini seri numarası, türü ve modeliyle adlandırır; `use_device` birini seçer. `list_devices` her cihazın `kind`'ını verir: `phone`, `simulator` ya da `emulator`; bir emülatörün `link`'i yoktur, çünkü onu hiçbir kablo bağlamaz.
+
 ## Bir simülatör ya da emülatör başlatmak
 
 `simulator` simülatörleri ve emülatörleri yalnızca istek üzerine başlatır ve kapatır. Ad verilmezse kapatma
