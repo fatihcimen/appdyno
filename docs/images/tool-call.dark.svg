@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" width="960" height="500" role="img" aria-labelledby="title desc">
+  <title id="title">How a tool call travels</title>
+  <desc id="desc">An MCP client calls tap with a selector. The mcp package passes it to the tool in ops, whose arguments are checked strictly. The tool reads the screen afresh to find the element, then sends one act request through the driver to the agent or runner: tap there, settle, read. The agent waits until the screen has been still for 200 ms and sends the settled tree back. The client gets what changed.</desc>
+  <style>
+    svg { --ground: #0A0E2E; --card: #151B4A; --ink: #EEF0FF; --soft: #B9C3EA; --host: #7EA2FF; --device: #5FD0F7; --person: #FF7FD0; --host-band: #3F6BFF26; --device-band: #7A3DF033; }
+    text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
+    .ground { fill: var(--ground); }
+    .band-h { fill: var(--host-band); }
+    .band-d { fill: var(--device-band); }
+    .card { fill: var(--card); stroke-width: 1.5; }
+    .s-h { stroke: var(--host); }
+    .s-d { stroke: var(--device); }
+    .s-p { stroke: var(--person); }
+    .f-h { fill: var(--host); }
+    .f-d { fill: var(--device); }
+    .f-p { fill: var(--person); }
+    .line { fill: none; stroke-width: 2; }
+    .rule { fill: none; stroke: var(--soft); stroke-width: 1; stroke-dasharray: 3 5; }
+    .dash { stroke-dasharray: 6 5; }
+    .label { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; fill: var(--soft); }
+    .big { font-size: 22px; font-weight: 700; }
+    .name { font-size: 16px; font-weight: 600; }
+    .text { font-size: 14px; fill: var(--soft); }
+    .note { font-size: 14px; fill: var(--ink); }
+    .code { font-size: 13px; fill: var(--soft); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .on-h { fill: var(--host); font-weight: 600; }
+    .on-d { fill: var(--device); font-weight: 600; }
+    .on-p { fill: var(--person); font-weight: 600; }
+    .mid { text-anchor: middle; }
+    .end { text-anchor: end; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-h" d="M0 0 10 5 0 10z"/></marker>
+    <marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-d" d="M0 0 10 5 0 10z"/></marker>
+    <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-p" d="M0 0 10 5 0 10z"/></marker>
+  </defs>
+
+  <rect class="ground" width="960" height="500" rx="16"/>
+
+  <!-- who takes part -->
+  <rect class="band-h" x="200" y="24" width="540" height="452" rx="20"/>
+  <rect class="band-d" x="760" y="24" width="176" height="452" rx="20"/>
+  <text class="label" x="222" y="50">YOUR MAC</text>
+  <text class="label" x="778" y="50">THE DEVICE</text>
+
+  <rect class="card s-p" x="32" y="62" width="150" height="66" rx="12"/>
+  <text class="name mid" x="107" y="90">MCP client</text>
+  <text class="text mid" x="107" y="112">the AI agent</text>
+
+  <rect class="card s-h" x="216" y="62" width="150" height="66" rx="12"/>
+  <text class="name mid" x="291" y="90">mcp</text>
+  <text class="code mid" x="291" y="112">the server</text>
+
+  <rect class="card s-h" x="400" y="62" width="150" height="66" rx="12"/>
+  <text class="name mid" x="475" y="90">ops</text>
+  <text class="code mid" x="475" y="112">the tool</text>
+
+  <rect class="card s-h" x="574" y="62" width="150" height="66" rx="12"/>
+  <text class="name mid" x="649" y="90">driver</text>
+  <text class="code mid" x="649" y="112">one per platform</text>
+
+  <rect class="card s-d" x="776" y="62" width="144" height="66" rx="12"/>
+  <text class="name mid" x="848" y="90">agent</text>
+  <text class="text mid" x="848" y="112">or runner</text>
+
+  <!-- the lifelines -->
+  <path class="rule" d="M107 128V456"/>
+  <path class="rule" d="M291 128V456"/>
+  <path class="rule" d="M475 128V456"/>
+  <path class="rule" d="M649 128V456"/>
+  <path class="rule" d="M848 128V456"/>
+
+  <!-- there -->
+  <path class="line s-p" marker-end="url(#ap)" d="M107 164H289"/>
+  <text class="text" x="118" y="154">tap { selector }</text>
+
+  <path class="line s-h" marker-end="url(#ah)" d="M291 204H473"/>
+  <text class="text" x="302" y="194">checked strictly</text>
+
+  <path class="line s-h" marker-end="url(#ah)" d="M475 244H846"/>
+  <text class="text" x="486" y="234">a fresh read: which element is that?</text>
+
+  <path class="line s-h" marker-end="url(#ah)" d="M475 292H846"/>
+  <text class="text" x="486" y="282">act: tap there, settle, read</text>
+
+  <rect class="card s-d" x="784" y="320" width="128" height="62" rx="12"/>
+  <text class="note mid" x="848" y="346">still for 200 ms,</text>
+  <text class="note mid" x="848" y="366">at most 3 s</text>
+
+  <!-- back -->
+  <path class="line s-d" marker-end="url(#ad)" d="M846 404H477"/>
+  <text class="text" x="486" y="394">the settled tree</text>
+
+  <path class="line s-d" marker-end="url(#ad)" d="M475 444H109"/>
+  <text class="text" x="118" y="434">what changed on the screen: a diff, settled, changed</text>
+</svg>

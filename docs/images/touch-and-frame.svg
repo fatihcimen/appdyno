@@ -3,9 +3,6 @@
   <desc id="desc">Each device feeds the window its own way. An Android phone's agent sends H.264 or HEVC through adb straight to the window. An emulator's gRPC port fills a shared file, and Node says when with a tick. A simulator shares its framebuffer. An iPhone's stream is held by a worker thread of the Node process, which writes to a named pipe. A touch always goes from the window to Node as a line of JSON, then to the device: by the agent's request on Android, by the SimHID helper on a simulator, and on the stream on an iPhone.</desc>
   <style>
     svg { --ground: #EEF0FF; --card: #FFFFFF; --ink: #0A0E2E; --soft: #3D4570; --host: #2447E0; --device: #7A2EE0; --person: #A8189A; --host-band: #2447E01A; --device-band: #7A2EE01A; }
-    @media (prefers-color-scheme: dark) {
-      svg { --ground: #0A0E2E; --card: #151B4A; --ink: #EEF0FF; --soft: #B9C3EA; --host: #7EA2FF; --device: #5FD0F7; --person: #FF7FD0; --host-band: #3F6BFF26; --device-band: #7A3DF033; }
-    }
     text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
     .ground { fill: var(--ground); }
     .band-h { fill: var(--host-band); }

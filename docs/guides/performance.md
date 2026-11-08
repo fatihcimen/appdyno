@@ -37,7 +37,10 @@ The baseline goes to `.appdyno/perf/baselines/`. Commit it. Limits of your own g
 
 ## How the gate decides
 
-![How the gate decides: seven questions in order, each ending in a verdict: new, refused, ok, few-samples, improvement, noisy or regression](../images/perf-gate.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/perf-gate.dark.svg">
+  <img src="../images/perf-gate.svg" alt="How the gate decides: seven questions in order, each ending in a verdict: new, refused, ok, few-samples, improvement, noisy or regression">
+</picture>
 
 A gate that cannot judge does not pass. `few-samples`, `noisy` and `refused` all exit 1, each with what to do. [The gate](../reference/perf.md#the-gate) has the method, and why it needs all three tests.
 

@@ -162,7 +162,10 @@ page goes in one of those and in the index. A number in the docs is one you ran:
 A page is in English and in Turkish, `X.md` and `X.tr.md`, but for the few `docs.test.ts` names, and a change to one is
 made in both: the test holds the two to the same lines, code, numbers and links, each in its own language.
 
-Diagrams are hand-written SVG in `docs/images`, one file each, with no generator. Each has its own ground and both
-themes inside it, so it reads on any page and follows GitHub's theme. To draw one, copy the style block of another and
-keep to its shapes: blue is your Mac, teal or violet the device, pink whoever is asking. Look at it in both themes.
+Diagrams are hand-written SVG in `docs/images`, with no generator. Each has its own ground, so it reads on any page, and
+comes as two files, `X.svg` light and `X.dark.svg` dark, which a page shows in a `<picture>` whose
+`<source media="(prefers-color-scheme: dark)">` picks by GitHub's theme: a media query inside an SVG follows the
+system's theme, not GitHub's. A Turkish page shows `X.tr.svg` and `X.tr.dark.svg`. To draw one, copy the style block of
+another and keep to its shapes: blue is your Mac, teal or violet the device, pink whoever is asking. Look at it in both
+themes.
 `packages/appdyno/test/docs.test.ts` holds them to the code, and every link in the docs to a real target.

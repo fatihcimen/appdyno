@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 690" width="960" height="690" role="img" aria-labelledby="title desc">
+  <title id="title">How a touch and a picture travel</title>
+  <desc id="desc">Each device feeds the window its own way. An Android phone's agent sends H.264 or HEVC through adb straight to the window. An emulator's gRPC port fills a shared file, and Node says when with a tick. A simulator shares its framebuffer. An iPhone's stream is held by a worker thread of the Node process, which writes to a named pipe. A touch always goes from the window to Node as a line of JSON, then to the device: by the agent's request on Android, by the SimHID helper on a simulator, and on the stream on an iPhone.</desc>
+  <style>
+    svg { --ground: #0A0E2E; --card: #151B4A; --ink: #EEF0FF; --soft: #B9C3EA; --host: #7EA2FF; --device: #5FD0F7; --person: #FF7FD0; --host-band: #3F6BFF26; --device-band: #7A3DF033; }
+    text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
+    .ground { fill: var(--ground); }
+    .band-h { fill: var(--host-band); }
+    .band-d { fill: var(--device-band); }
+    .card { fill: var(--card); stroke-width: 1.5; }
+    .s-h { stroke: var(--host); }
+    .s-d { stroke: var(--device); }
+    .s-p { stroke: var(--person); }
+    .f-h { fill: var(--host); }
+    .f-d { fill: var(--device); }
+    .f-p { fill: var(--person); }
+    .line { fill: none; stroke-width: 2; }
+    .rule { fill: none; stroke: var(--soft); stroke-width: 1; stroke-dasharray: 3 5; }
+    .dash { stroke-dasharray: 6 5; }
+    .label { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; fill: var(--soft); }
+    .big { font-size: 22px; font-weight: 700; }
+    .name { font-size: 16px; font-weight: 600; }
+    .text { font-size: 14px; fill: var(--soft); }
+    .note { font-size: 14px; fill: var(--ink); }
+    .code { font-size: 13px; fill: var(--soft); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .on-h { fill: var(--host); font-weight: 600; }
+    .on-d { fill: var(--device); font-weight: 600; }
+    .on-p { fill: var(--person); font-weight: 600; }
+    .mid { text-anchor: middle; }
+    .end { text-anchor: end; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-h" d="M0 0 10 5 0 10z"/></marker>
+    <marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-d" d="M0 0 10 5 0 10z"/></marker>
+    <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-p" d="M0 0 10 5 0 10z"/></marker>
+  </defs>
+
+  <rect class="ground" width="960" height="690" rx="16"/>
+
+  <text class="label" x="40" y="46">THE DEVICE</text>
+  <text class="label mid" x="480" y="46">APPDYNO, IN NODE</text>
+  <text class="label" x="730" y="46">THE WINDOW</text>
+
+  <!-- what a person sees and touches -->
+  <rect class="band-h" x="716" y="60" width="220" height="570" rx="20"/>
+  <rect class="card s-p" x="732" y="78" width="188" height="534" rx="12"/>
+  <text class="name" x="750" y="112">Viewer</text>
+  <text class="text" x="750" y="136">one native process</text>
+  <text class="text" x="750" y="156">for each window</text>
+  <text class="code" x="750" y="588">mac/Viewer</text>
+
+  <!-- the control plane: every touch goes through it -->
+  <rect class="band-h" x="370" y="60" width="220" height="570" rx="20"/>
+
+  <!-- Android phone -->
+  <rect class="card s-d" x="32" y="78" width="190" height="120" rx="12"/>
+  <text class="name" x="50" y="110">Android phone</text>
+  <text class="text" x="50" y="134">the agent encodes</text>
+  <text class="text" x="50" y="154">H.264 or HEVC</text>
+  <rect class="card s-h" x="386" y="130" width="188" height="56" rx="12"/>
+  <text class="name" x="404" y="154">MirrorSession</text>
+  <text class="code" x="404" y="175">its own connection</text>
+  <path class="line s-d" marker-end="url(#ad)" d="M222 104H730"/>
+  <text class="text" x="238" y="94">through adb, straight to the window</text>
+  <path class="line s-p" marker-end="url(#ap)" d="M730 158H576"/>
+  <path class="line s-p" marker-end="url(#ap)" d="M386 158H224"/>
+  <text class="text" x="238" y="150">touch request</text>
+
+  <!-- Android emulator -->
+  <rect class="card s-d" x="32" y="214" width="190" height="120" rx="12"/>
+  <text class="name" x="50" y="246">Android emulator</text>
+  <text class="text" x="50" y="270">its own gRPC port</text>
+  <text class="text" x="50" y="290">fills a shared file</text>
+  <rect class="card s-h" x="386" y="266" width="188" height="56" rx="12"/>
+  <text class="name" x="404" y="290">MirrorSession</text>
+  <text class="code" x="404" y="311">a tick for each frame</text>
+  <path class="line s-d" marker-end="url(#ad)" d="M222 240H730"/>
+  <text class="text" x="238" y="230">pixels in a shared file, no copy through Node</text>
+  <path class="line s-p" marker-end="url(#ap)" d="M730 294H576"/>
+  <path class="line s-p" marker-end="url(#ap)" d="M386 294H224"/>
+  <text class="text" x="238" y="286">touch request</text>
+
+  <!-- simulator -->
+  <rect class="card s-d" x="32" y="350" width="190" height="120" rx="12"/>
+  <text class="name" x="50" y="382">iOS simulator</text>
+  <text class="text" x="50" y="406">its framebuffer,</text>
+  <text class="text" x="50" y="426">with no encode</text>
+  <rect class="card s-h" x="386" y="402" width="188" height="56" rx="12"/>
+  <text class="name" x="404" y="426">MirrorSession</text>
+  <text class="code" x="404" y="447">a helper sends it</text>
+  <path class="line s-d" marker-end="url(#ad)" d="M222 376H730"/>
+  <text class="text" x="238" y="366">the surface itself, shared by CoreSimulator</text>
+  <path class="line s-p" marker-end="url(#ap)" d="M730 430H576"/>
+  <path class="line s-p" marker-end="url(#ap)" d="M386 430H224"/>
+  <text class="text" x="238" y="422">SimHID helper</text>
+
+  <!-- iPhone: its picture does pass through this process -->
+  <rect class="card s-d" x="32" y="486" width="190" height="126" rx="12"/>
+  <text class="name" x="50" y="518">iPhone</text>
+  <text class="text" x="50" y="542">its display service,</text>
+  <text class="text" x="50" y="562">HEVC, experimental</text>
+  <rect class="card s-h" x="386" y="498" width="188" height="102" rx="12"/>
+  <text class="name" x="404" y="524">Stream worker</text>
+  <text class="text" x="404" y="546">a thread of this</text>
+  <text class="text" x="404" y="566">process holds it</text>
+  <path class="line s-d" marker-end="url(#ad)" d="M222 522H384"/>
+  <path class="line s-d" marker-end="url(#ad)" d="M574 522H730"/>
+  <text class="text" x="596" y="512">named pipe</text>
+  <path class="line s-p" marker-end="url(#ap)" d="M730 576H576"/>
+  <path class="line s-p" marker-end="url(#ap)" d="M386 576H224"/>
+  <text class="text" x="238" y="568">touch, on its stream</text>
+
+  <!-- key -->
+  <path class="line s-d" marker-end="url(#ad)" d="M40 664H84"/>
+  <text class="note" x="94" y="669">a picture</text>
+  <path class="line s-p" marker-end="url(#ap)" d="M196 664H240"/>
+  <text class="note" x="250" y="669">a touch, a line of JSON from the window to Node first</text>
+</svg>

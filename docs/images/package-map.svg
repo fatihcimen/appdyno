@@ -3,9 +3,6 @@
   <desc id="desc">The published package appdyno sits on top and wires the rest. Under it are mcp, cli and hub, which import ops, the tools. ops imports flows and perf. All of them may import core and protocol. The two drivers, driver-android and driver-apple, are named only by the top package. Each driver talks to native code on the device, and core starts the window.</desc>
   <style>
     svg { --ground: #EEF0FF; --card: #FFFFFF; --ink: #0A0E2E; --soft: #3D4570; --host: #2447E0; --device: #7A2EE0; --person: #A8189A; --host-band: #2447E01A; --device-band: #7A2EE01A; }
-    @media (prefers-color-scheme: dark) {
-      svg { --ground: #0A0E2E; --card: #151B4A; --ink: #EEF0FF; --soft: #B9C3EA; --host: #7EA2FF; --device: #5FD0F7; --person: #FF7FD0; --host-band: #3F6BFF26; --device-band: #7A3DF033; }
-    }
     text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
     .ground { fill: var(--ground); }
     .band-h { fill: var(--host-band); }

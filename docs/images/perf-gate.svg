@@ -3,9 +3,6 @@
   <desc id="desc">Each measure of a run is judged in order. With no baseline it is new. With another build or compile state it is refused. If it did not move past its floor it is ok. With too few runs or samples it is few-samples. If the rank test finds no change it is ok. A better change is an improvement. A worse change measured under load, heat or a mirror is noisy, and otherwise it is a regression. ok, improvement and new exit 0. Everything else, and a broken budget, exits 1.</desc>
   <style>
     svg { --ground: #EEF0FF; --card: #FFFFFF; --ink: #0A0E2E; --soft: #3D4570; --host: #2447E0; --device: #7A2EE0; --person: #A8189A; --host-band: #2447E01A; --device-band: #7A2EE01A; }
-    @media (prefers-color-scheme: dark) {
-      svg { --ground: #0A0E2E; --card: #151B4A; --ink: #EEF0FF; --soft: #B9C3EA; --host: #7EA2FF; --device: #5FD0F7; --person: #FF7FD0; --host-band: #3F6BFF26; --device-band: #7A3DF033; }
-    }
     text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
     .ground { fill: var(--ground); }
     .band-h { fill: var(--host-band); }

@@ -2,7 +2,10 @@
 
 This page is for someone about to change appdyno. It says how the parts fit, and why they are shaped this way. Once you have read it, the folder you need should be easy to find.
 
-![An AI agent, a person or a script asks; appdyno on your Mac drives, shows, measures and keeps; it reaches simulators, emulators and phones](images/overview.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/overview.dark.svg">
+  <img src="images/overview.svg" alt="An AI agent, a person or a script asks; appdyno on your Mac drives, shows, measures and keeps; it reaches simulators, emulators and phones">
+</picture>
 
 appdyno runs on your Mac and nowhere else. There is no service, no daemon and no telemetry. Each command, MCP server or window is a process of its own, and processes share a device through a small file that says who holds it.
 
@@ -10,7 +13,10 @@ appdyno runs on your Mac and nowhere else. There is no service, no daemon and no
 
 Everything in TypeScript lives in `packages/`. A package may import only what lies below it here.
 
-![The package map: appdyno on top; mcp, cli and hub above ops; ops above flows and perf; core and protocol at the bottom; the two drivers named only by the top package](images/package-map.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/package-map.dark.svg">
+  <img src="images/package-map.svg" alt="The package map: appdyno on top; mcp, cli and hub above ops; ops above flows and perf; core and protocol at the bottom; the two drivers named only by the top package">
+</picture>
 
 | package          | what it holds                                                                 |
 | ---------------- | ----------------------------------------------------------------------------- |
@@ -36,7 +42,10 @@ Three decisions shape this.
 
 ## A tool call
 
-![A tool call: the client calls tap; mcp passes it to the tool in ops; the tool reads the screen, then sends one act request through the driver to the agent; the agent waits for the screen to settle and answers](images/tool-call.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/tool-call.dark.svg">
+  <img src="images/tool-call.svg" alt="A tool call: the client calls tap; mcp passes it to the tool in ops; the tool reads the screen, then sends one act request through the driver to the agent; the agent waits for the screen to settle and answers">
+</picture>
 
 What an agent does most is look, act, and look again. Most of the design serves that loop.
 
@@ -58,7 +67,10 @@ Each platform has its own way in. All of them speak the same protocol, except wh
 
 ## A window
 
-![A touch and a picture: each device feeds the window its own way; a touch always goes from the window to Node, then to the device](images/touch-and-frame.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/touch-and-frame.dark.svg">
+  <img src="images/touch-and-frame.svg" alt="A touch and a picture: each device feeds the window its own way; a touch always goes from the window to Node, then to the device">
+</picture>
 
 A window has to feel like the device. That sets its shape.
 
@@ -76,7 +88,10 @@ Every measure is read from the platform's own tools, and kept with the raw outpu
 
 A run becomes a set of records in `packages/perf`, and a baseline is a set of runs. The gate compares them in one function, `compareMetric`, in this order.
 
-![How the gate decides: seven questions in order, each ending in a verdict: new, refused, ok, few-samples, improvement, noisy or regression](images/perf-gate.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/perf-gate.dark.svg">
+  <img src="images/perf-gate.svg" alt="How the gate decides: seven questions in order, each ending in a verdict: new, refused, ok, few-samples, improvement, noisy or regression">
+</picture>
 
 The order is the point. A change must pass a floor, and a rank test, and the baseline's own run-to-run movement. Samples of one run share its load and heat, so two runs of an unchanged app often differ significantly by a rank test alone. [The gate](reference/perf.md#the-gate) has the rates with and without each part.
 
