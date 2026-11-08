@@ -284,7 +284,9 @@ for (const { platform, serial, provider } of targets)
         const r = await cli(serial, 'report', 'stop');
         expect(faults(r.err)).toBe('');
         expect(r.out).toContain('1 steps');
-        expect(readFileSync(join(folder, 'index.html'), 'utf8')).toMatch(/1\. open_link/);
+        expect(readFileSync(join(folder, 'index.html'), 'utf8')).toMatch(
+          /<span class="n">1<\/span>open_link/,
+        );
       }, 120_000);
     });
   });
