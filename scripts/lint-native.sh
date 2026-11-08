@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The linters of all that is not TypeScript, at the versions .mise.toml pins (`mise install`), with this Mac's
-# Xcode for the Objective-C: the shell scripts, the workflows, the cask, the Swift, and the Objective-C's format, warnings
-# and static analysis. Exits 1 when any of them finds something.
+# Xcode and a JDK: the shell scripts, the workflows, the cask, the Swift, the Kotlin and Android Lint, and the
+# Objective-C's format, warnings and static analysis. Exits 1 when any of them finds something.
 set -u
 cd "$(dirname "$0")/.." || exit 2
 failed=0
@@ -43,6 +43,10 @@ fi
 
 # by .swiftlint.yml; --strict: a warning fails as an error does
 check swiftlint swiftlint lint --strict --quiet
+
+# by android/.editorconfig; then AGP's own lint, by each module's lint.xml, a warning an error (build.gradle.kts)
+check ktlint ktlint --relative 'android/*/src/**/*.kt' 'android/*.kts' 'android/*/*.kts'
+check android-lint android/gradlew -p android --console=plain --quiet :agent:lintDebug :fixture:lintDebug :push-fixture:lintDebug
 
 objc=(mac/Viewer/*.m mac/Viewer/*.h mac/App/*.m mac/TextScan/*.m ios/SimHelper/*.m)
 check clang-format clang-format --dry-run --Werror "${objc[@]}"
