@@ -1,5 +1,7 @@
 # Host ↔ agent protocol (v2)
 
+[Türkçe](protocol.tr.md)
+
 The host library talks to an on-device agent over one byte stream: on Android an abstract unix socket
 of the agent opened through the adb server (`localabstract:<name>`), on iOS a TCP connection
 (simulator loopback, or a usbmux connection to a phone). The source of truth for message shapes is

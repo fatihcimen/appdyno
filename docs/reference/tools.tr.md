@@ -260,7 +260,7 @@ bir iPhone'un sistem çökme logları) sınırlı bir özet ve bir dosya yolu ol
 - Android: USB hata ayıklamayı açın, bağlayın ve `adb devices` ile kontrol edin. Bir Xiaomi, USB üzerinden her yeni kurulumdan önce ekranında sorar ve
   10 s sonra kendiliğinden hayır der: `app install` onu uyandırır ve evete dokunur, yalnızca buna ve yalnızca kendi başlattığı kurulum sırasında; yanıt ve `report`
   bunu söyler (`--no-install-consent` bunu size bırakır). Play Protect'in uygulamayı Google'a gönderme sorusu her zaman hayırla yanıtlanır: özel bir build
-  burada kalır. Sunucu `--accept-install-warnings` ile çalışmıyorsa bir Play Protect uyarısına dokunulmaz, aktarılır. Hangi telefonda neyin görüldüğü için bkz. [protokol](protocol.md),
+  burada kalır. Sunucu `--accept-install-warnings` ile çalışmıyorsa bir Play Protect uyarısına dokunulmaz, aktarılır. Hangi telefonda neyin görüldüğü için bkz. [protokol](protocol.tr.md),
   "Bir telefonun kurulum soruları". One UI'lı bir Samsung'un kendine ait bir sorusu yoktur, Play Protect'inkiler de yalnızca "Verify apps over USB" açıkken gelir. İkisi arasında başka neyin farklı olduğu [performans başvurusunda](perf.md), "One UI ile HyperOS karşılaştırması".
 - iPhone: geliştirici modunu açın. Bir telefon, bir geliştirme imzalama kimliğine ve onu adlandıran bir provisioning profile'a ihtiyaç duyar.
   Wildcard bir uygulama kimliği için kurulu, kimliği kilidi açık giriş anahtar zincirinde olan bir profil kendiliğinden bulunur. Başka birini seçmek için

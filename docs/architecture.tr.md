@@ -53,7 +53,7 @@ Bir ajanın en çok yaptığı şey bakmak, işlem yapmak ve yeniden bakmaktır.
 
 **Yanıt ekranı taşır.** Bir işlem durulmuş ekranı, neyin değiştiğini gösteren bir diff olarak döndürür; böylece bir istemcinin ne olduğunu görmek için ikinci bir çağrıya ihtiyacı olmaz. `settled`, ekranın durgunlaştığını söyler. `changed`, öncekinden farklı olduğunu söyler.
 
-**Ekranın ne zaman durgun olduğuna ekrana en yakın taraf karar verir.** Ajan ya da runner ekranı izler ve ekran 200 ms boyunca sessiz kaldığında, en çok 3 s içinde, yanıt verir. Bunu cihazda yapmak gidiş-dönüş gerektirmez ve hiçbir şey kıpırdamazken hat sessiz kalır. Runner'ı olmayan bir simülatör aynısını Mac'te, `simsettle.ts` içinde, kendi zamanlamalarıyla yapar: orada bir okuma yaklaşık 30 ms sürer, bu yüzden daha sık bakabilir. Kurallar ve pencerenin neleri yakaladığı [protokolde](reference/protocol.md#settle).
+**Ekranın ne zaman durgun olduğuna ekrana en yakın taraf karar verir.** Ajan ya da runner ekranı izler ve ekran 200 ms boyunca sessiz kaldığında, en çok 3 s içinde, yanıt verir. Bunu cihazda yapmak gidiş-dönüş gerektirmez ve hiçbir şey kıpırdamazken hat sessiz kalır. Runner'ı olmayan bir simülatör aynısını Mac'te, `simsettle.ts` içinde, kendi zamanlamalarıyla yapar: orada bir okuma yaklaşık 30 ms sürer, bu yüzden daha sık bakabilir. Kurallar ve pencerenin neleri yakaladığı [protokolde](reference/protocol.tr.md#durulma).
 
 **Bir seçici son anda çözülür.** Hedef, dokunuştan hemen önce, taze bir okumada bulunur. Arada kıpırdayan bir ekran onu yanlış yere gönderemez. Birden çok eşleşme, ref'leriyle birlikte reddedilir. Bir tahmin başarı gibi görünürdü.
 
