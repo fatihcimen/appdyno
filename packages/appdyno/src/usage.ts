@@ -36,6 +36,7 @@ export const COMMANDS = {
       'allow-urls': value('RE'),
       'allow-data-loss': value('virtual|all'),
       'no-home': on,
+      silent: on,
       takeover: on,
       share: on,
       animations: value('on|off'),

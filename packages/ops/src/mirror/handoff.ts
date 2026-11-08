@@ -30,7 +30,7 @@ export function handoffOps(ctx: ServerContext) {
       name: 'hand_off',
       title: 'Ask a person',
       description:
-        'Asks your person to do what you cannot (Face ID, a passcode, a permission): alerts them and waits until they say done or the screen changes with no window open.',
+        'Asks your person to do what you cannot (Face ID, a passcode, a permission) and waits until they say done or, with no window, the screen changes. On this Mac: a banner and a sound in a window; with none, a sound and a macOS notification of reason, unless the server runs --silent.',
       input: z
         .object({
           reason: z.string().min(1).max(500),

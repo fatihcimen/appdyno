@@ -43,7 +43,7 @@ import {
 } from '@appdyno/ops';
 import { runHub, runMirrors } from '@appdyno/hub';
 import { endWithHub } from './lifetime.js';
-import { alertPerson } from './alert.js';
+import { alertOf } from './alert.js';
 import { benchmark, appdynoDriver, table, type BenchResult } from './bench.js';
 import { doctor } from './doctor.js';
 import { hubServices } from './hub-services.js';
@@ -114,6 +114,7 @@ function contextFrom(values: ServerFlags, remember?: string) {
     warnings:
       values['accept-install-warnings'] === true || env.APPDYNO_ACCEPT_INSTALL_WARNINGS === '1',
   };
+  const alertPerson = alertOf(values.silent);
   return new ServerContext(policy, providers(values.takeover, animations, installAnswers), {
     ...(device && { device }),
     ...(app && { app }),
@@ -127,7 +128,7 @@ function contextFrom(values: ServerFlags, remember?: string) {
     claims: true,
     tool: remember ? 'appdyno cli' : 'appdyno mcp',
     ...((values.share || env.APPDYNO_SHARE === '1') && { share: true }),
-    alertPerson,
+    ...(alertPerson && { alertPerson }),
     clientNamed,
     mirrorCommand: [
       process.execPath,

@@ -330,7 +330,7 @@ typed text by its length and secrets hidden, by the code `report` uses. It reads
 
 An alert that only a person can answer (Face ID, Touch ID, a passcode, an Apple Account, Allow Paste, a VPN, a profile, a
 purchase) is said in the answer that read the screen: `needs a person: Face ID`. `hand_off {reason, timeoutS}` puts a banner on the window with a sound, a Dock bounce and "I'm Done". With no
-window, a sound and a best-effort notification, and it waits for the screen to change. It answers who ended the
+window, a sound and a best-effort notification of the reason, none on a server run with `--silent`, and it waits for the screen to change. It answers who ended the
 wait, or that no one did.
 
 `perf_*` on a mirrored device gets the noise mark `mirrored`, which holds a run out of a gate as high load does:

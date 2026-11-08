@@ -32,6 +32,7 @@ refused unless `APPDYNO_ALLOW_DATA_LOSS` allows it.
 | `--allow-urls RE`           | `APPDYNO_ALLOW_URLS`                | only links that match                                                                                               |
 | `--allow-data-loss V`       | `APPDYNO_ALLOW_DATA_LOSS`           | what loses data goes ahead with nothing asked: `virtual` on simulators and emulators, `all` on every device         |
 | `--no-home`                 |                                     | block the home key                                                                                                  |
+| `--silent`                  | `APPDYNO_SILENT=1`                  | `hand_off` plays no sound and posts no macOS notification, for CI and a shared Mac: a window still sounds           |
 | `--measurements dir`        |                                     | where measurements are stored (default: the state directory)                                                        |
 | `--takeover`                |                                     | stop another tool that holds UI automation on Android                                                               |
 | `--no-install-consent`      | `APPDYNO_NO_INSTALL_CONSENT=1`      | `app install` touches no prompt on the phone: a person answers them all                                             |

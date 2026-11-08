@@ -13,7 +13,7 @@ const quietly = (command: string, args: string[]) => {
  * effort: nothing waits on either and a notification needs no permission to be asked for. Not run by any
  * test, as it reaches a person: a hand-run step (docs/reference/ci.md). The reason goes as an argument, never as script.
  */
-export function alertPerson(reason: string) {
+function alertPerson(reason: string) {
   quietly('afplay', [SOUND]);
   quietly('osascript', [
     '-e',
@@ -25,3 +25,7 @@ export function alertPerson(reason: string) {
     reason,
   ]);
 }
+
+/** What `hand_off` sounds and shows with no window: nothing on a server run `--silent` or with APPDYNO_SILENT=1, as CI and a shared Mac are. */
+export const alertOf = (silent: boolean | undefined, env: NodeJS.ProcessEnv = process.env) =>
+  silent === true || env.APPDYNO_SILENT === '1' ? undefined : alertPerson;
