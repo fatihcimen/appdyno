@@ -283,13 +283,18 @@ export function perfTools(ctx: ServerContext) {
     store(ctx.measurementsDir, kind, value, m.map((x) => `## ${x.at}\n${x.raw}`).join('\n\n'));
   const keep = (s: Session, run: KeptRun) => keepRun(ctx, s, run);
   const noisy = (noise: string[]) => (noise.length ? [`noise: ${noise.join(', ')}`] : []);
-  /** Frames on a simulator come through the probe unless told otherwise: what it cost is said in the answer. */
+  /**
+   * Frames on a simulator come through the probe unless told otherwise. Its relaunch leaves the app on its first screen,
+   * and a measure of that is not of the screen asked for: no way back to it is sure, so the call stops there.
+   */
   const withProbe = async (s: Session, pkg: string, probe = s.device.measure.framesByProbe) => {
-    if (!probe) return [];
-    const relaunched = await measure(s, 'attachProbe')(pkg);
-    return relaunched
-      ? ['the app was relaunched with the frame probe in it; probe: false turns it off']
-      : [];
+    if (!probe || !(await measure(s, 'attachProbe')(pkg))) return;
+    s.acted();
+    throw new ToolError(
+      `${pkg} was relaunched with the frame probe in it, and shows its first screen: nothing was measured`,
+      'CHECK_FAILED',
+      'open the screen to measure again and call once more: the probe stays in until the app stops',
+    );
   };
   /** Swipes after `waitMs`, for a measure that records during a scroll. */
   const scroller = async (

@@ -8,7 +8,7 @@ import { baselineLines, baselineVerdict } from './baseline.js';
 import { dayLongest, playLine } from './vitals.js';
 
 export function perfLaunchOp(ctx: ServerContext) {
-  const { measure, appOf, virtualNote, save, keep, noisy, withProbe } = perfTools(ctx);
+  const { measure, appOf, virtualNote, save, keep, noisy } = perfTools(ctx);
   return defineOp({
     name: 'perf_launch',
     title: 'Launch time',
@@ -77,8 +77,8 @@ export function perfLaunchOp(ctx: ServerContext) {
           },
         );
       }
-      // not by default: a kept launch stays one kind, whatever else measured this app
-      await withProbe(s, pkg, probe ?? false);
+      // not by default: a kept launch stays one kind, whatever else measured this app; a launch relaunches anyway
+      if (probe) await measure(s, 'attachProbe')(pkg);
       const m = await measure(
         s,
         'launch',

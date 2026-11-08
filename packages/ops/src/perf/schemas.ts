@@ -101,7 +101,6 @@ export const SnapshotOut = z.object({
 
 export const ScrollOut = z.object({
   ...Measurement,
-  relaunched: z.boolean().optional(),
   rounds: z.array(
     z.object({
       rewound: z.boolean().optional(),
@@ -149,7 +148,6 @@ export const LaunchOut = z.object({
 
 export const TraceOut = z.object({
   ...Measurement,
-  relaunched: z.boolean().optional(),
   /** What a recording counted: hangs and XCTest's own metrics count no frames, and answer none. */
   frames: z.number().optional(),
   /** Android. */

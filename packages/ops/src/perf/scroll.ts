@@ -66,7 +66,7 @@ export function perfScrollOp(ctx: ServerContext) {
       const s = await ctx.session();
       s.appPid = undefined;
       const pkg = appOf(s, app);
-      const relaunched = await withProbe(s, pkg, probe);
+      await withProbe(s, pkg, probe);
       // turned off by the caller, which says nothing of the device
       const row = probe === false ? false : 'frames';
       const readMemory = measure(s, 'memory');
@@ -213,7 +213,6 @@ export function perfScrollOp(ctx: ServerContext) {
       return reply(
         [
           `measurement ${saved.id}${virtualNote(s)}`,
-          ...relaunched,
           ...rounds.map(
             (x, i) =>
               `round ${i + 1}: ${x.frames} frames, janky ${x.jankyPercent}%${x.p95Ms !== undefined ? `, p95 ${x.p95Ms} ms` : ''}, frozen ${x.frozen}, memory ${kb(x.memStartKb)} → ${kb(x.memEndKb)}`,
@@ -229,7 +228,6 @@ export function perfScrollOp(ctx: ServerContext) {
           id: saved.id,
           raw: saved.txt,
           virtualDevice: s.device.virtual,
-          ...(relaunched.length && { relaunched: true }),
           rounds,
           ...(jank !== undefined && { jankMedianPercent: jank }),
           frozen,

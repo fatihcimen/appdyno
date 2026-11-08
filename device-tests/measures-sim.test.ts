@@ -49,19 +49,19 @@ describe.skipIf(!udid)('measures on a simulator, with no argument', () => {
     await d.launch(APP);
   }, 240_000);
 
-  it('frames: the probe attaches itself, says so, and tells a 40 ms draw from a plain list', async () => {
+  it('frames: the probe attaches itself, measures nothing of the first screen it leaves, and tells a 40 ms draw from a plain list', async () => {
+    await open('list_heavy');
     const first = await t.call('perf_scroll', { repeats: 1 });
     console.log(first.text);
-    expect(first.error).toBe(false);
-    expect(first.text).toMatch(/relaunched with the frame probe/);
-    expect(first.text).toMatch(/main-thread pacing/);
+    expect([first.error, first.data.code]).toEqual([true, 'CHECK_FAILED']);
+    expect(first.text).toMatch(/relaunched with the frame probe in it, and shows its first screen/);
 
     await open('list');
     const light = await t.call('perf_scroll');
     await open('list_heavy');
     const heavy = await t.call('perf_scroll');
     console.log('light', light.text, '\nheavy', heavy.text);
-    expect(heavy.text).not.toMatch(/relaunched/);
+    expect(light.text).toMatch(/main-thread pacing/);
     const of = (a: typeof light) => a.data.rounds;
     expect(a95(of(heavy))).toBeGreaterThan(40);
     expect(a95(of(heavy))).toBeGreaterThan(a95(of(light)));

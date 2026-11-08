@@ -19,7 +19,11 @@ vi.mock('node:os', async (original) => ({
   loadavg: () => [0, 0, 0],
 }));
 
-type Result = { isError?: boolean; content: { type: string; text?: string; data?: string }[] };
+type Result = {
+  isError?: boolean;
+  content: { type: string; text?: string; data?: string }[];
+  structuredContent?: Record<string, unknown>;
+};
 
 const MEASUREMENTS = mkdtempSync(join(tmpdir(), 'appdyno-measure-'));
 
@@ -484,6 +488,33 @@ describe('perf tools', () => {
     };
     const seen = dev.calls.filter((c) => c.name === 'act' || c.name === 'perf.frames').map(way);
     expect(seen).toEqual(['up', 'up', 'read', 'up', 'up', 'read', 'up', 'up', 'read']);
+  });
+
+  it("scroll and trace: a probe's relaunch measures nothing, as it leaves the app on its first screen", async () => {
+    const dev = new FakeDevice();
+    let probed = false;
+    Object.defineProperty(dev, 'measure', {
+      value: {
+        ...dev.measure,
+        framesByProbe: true,
+        attachProbe: () => Promise.resolve(!probed && (probed = true)),
+      },
+    });
+    const t = await connect({}, dev);
+    for (const name of ['perf_scroll', 'perf_trace']) {
+      probed = false;
+      const relaunched = await t.call(name);
+      expect(relaunched.structuredContent).toMatchObject({
+        code: 'CHECK_FAILED',
+        hint: 'open the screen to measure again and call once more: the probe stays in until the app stops',
+      });
+      expect(relaunched.content[0]?.text).toBe(
+        'CHECK_FAILED: dev.app was relaunched with the frame probe in it, and shows its first screen: nothing was measured\nhint: open the screen to measure again and call once more: the probe stays in until the app stops',
+      );
+      expect(dev.calls.some((c) => c.name.startsWith('perf.'))).toBe(false);
+      expect((await t.call(name)).isError).toBeUndefined();
+      dev.calls.length = 0;
+    }
   });
 
   it('launch: the median against the vitals threshold; only allowed apps', async () => {

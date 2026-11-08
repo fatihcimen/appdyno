@@ -221,10 +221,10 @@ const MEASURES: Record<string, ToStep> = {
       ...(round.rewound ? swipes(back, count) : []),
       ...swipes(a, count),
     ]);
-    return [...(data.relaunched ? restarts(a) : []), ...rounds.flat()];
+    return rounds.flat();
   },
-  perf_trace: (a, data) => [
-    ...(data.relaunched || String(a.what).startsWith('xct_') ? restarts(a) : []),
+  perf_trace: (a) => [
+    ...(String(a.what).startsWith('xct_') ? restarts(a) : []),
     ...(a.scroll ? swipes(a, SCROLLER_SWIPES) : []),
   ],
   perf_profile: (a) => (a.scroll ? swipes(a, SCROLLER_SWIPES) : undefined),

@@ -139,7 +139,7 @@ export function perfTraceOp(ctx: ServerContext) {
         );
       }
       const record = measure(s, 'frameTrace', probe === false ? false : 'frames');
-      const relaunched = await withProbe(s, pkg, probe);
+      await withProbe(s, pkg, probe);
       const during = scroll ? await scroller(s, scroll, 500) : undefined;
       const m = await record(pkg, seconds, during);
       if (scroll) s.acted();
@@ -164,7 +164,6 @@ export function perfTraceOp(ctx: ServerContext) {
           ],
           {
             lines: [
-              ...relaunched,
               ...fewLine(v.frames),
               `${v.frames} frames in ${v.durationMs} ms; ${v.missed} missed (${v.missedPercent}%), ${v.frozen} frozen; interval p50 ${v.p50Ms} ms, p95 ${v.p95Ms} ms, worst ${v.worstMs} ms`,
               `stalls over 100 ms: ${v.stalls.count}, ${v.stalls.totalMs} ms in all, worst ${v.stalls.worstMs} ms`,
@@ -175,7 +174,6 @@ export function perfTraceOp(ctx: ServerContext) {
             ],
             after: () => [`probe output: ${v.tracePath}`],
             data: {
-              ...(relaunched.length && { relaunched: true }),
               frames: v.frames,
               p50Ms: v.p50Ms,
               p95Ms: v.p95Ms,
