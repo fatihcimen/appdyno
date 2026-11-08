@@ -114,8 +114,8 @@ pano ve aşağıdaki her durum için. `APPDYNO_SIM_DIRECT=off` ikisini de kapat�
 
 iOS'ta klavyeyi kapatacak ya da uygulama değiştiriciyi açacak bir tuş yoktur. `dismissKeyboard`, klavye bir gizleme tuşu gösteriyorsa ona,
 yoksa kontrol olmayan bir yere dokunur; host sonra klavyenin gidip gitmediğini okur ve gitmediyse reddeder. `appSwitch` bir simülatörde
-iki kez basılan Home'dur, bir pencerenin kontrolüyle aynı girdi, ve ikinci basıştan yarım saniye sonra yanıt verir,
-çünkü iOS bu ikisiyle bir basışı daha erken sayar; bir telefonda ana ekran göstergesinin yukarı doğru yavaş sürüklenmesidir. Denetim Merkezi ve Bildirim Merkezi, bir simülatörde bir pencerenin kontrollerinin mirror'ın
+iki kez basılan Home'dur, bir pencerenin kontrolüyle aynı girdi; ikinci basıştan yarım saniye sonra yanıt verir,
+çünkü iOS daha erken gelen bir basışı o ikisinin parçası sayar; bir telefonda ana ekran göstergesinin yukarı doğru yavaş sürüklenmesidir. Denetim Merkezi ve Bildirim Merkezi, bir simülatörde bir pencerenin kontrollerinin mirror'ın
 girdisiyle gönderdiği sürüklemelerdir: `act`, altlarındaki uygulamanın dokunuşu bildirmesini bekler, bildirmediğinde onu kayıp sayar ve
 yeniden yapardı. Spotlight, ana ekrandan Command-Space'tir. Her biri ana ekran uygulamasınındır, bu yüzden onu kapatana kadar okunan odur:
 `home`. Ses, kilit ve güç tuşları bir simülatörde doğrudan girdiyle, bir telefonda
@@ -130,10 +130,10 @@ yeniden yapardı. Spotlight, ana ekrandan Command-Space'tir. Her biri ana ekran 
 - **Ayarlar**, `simctl spawn` ile simülatörün içinde `SimOpen`: `prefs:` ve `settings-navigation:` özeldir ve `simctl openurl` bunlar için reddedilir (LaunchServices hatası 115). Onları, bir simülatörün okuduğu `__entitlements` bölümü olarak içine bağlanmış `com.apple.springboard.opensensitiveurl` ile açar, çünkü bunu taşıyan bir imza başlamaz. XCUI'nin `open`'ı da sayfaya ulaştı, sonra runner'ı iki dakika bekletti. Bir iPhone bağlantıyı Ayarlar'a `devicectl`'in `--payload-url`'i olarak alır. Bir uygulamanın kendi sayfasının bağlantısı yoktur: Uygulamalar'daki satıra dokunulur.
 - **Trafik**, `DYLD_INSERT_LIBRARIES` ile uygulamaya enjekte edilen `NetProbe`: biten her istek için `APPDYNO_NET_LOG`'un adlandırdığı dosyaya bir JSON satırı yazan bir `NSURLProtocol`. Bir simülatörün uygulaması Mac'in dosyalarına olduğu gibi yazar.
 - **Web sayfaları**, `simctl getenv <udid> RWI_LISTEN_SOCKET`'in adlandırdığı soket: her biri 4 baytlık uzunluğundan sonra gelen ikili property list'ler. `_rpc_reportIdentifier:` uygulamaları, `_rpc_forwardGetListing:` bir sayfa listesini, `_rpc_forwardSocketSetup:` bir `Target.targetCreated` getirir; `Target.sendMessageToTarget` de sayfaya gideni sarar.
-- **Okumalar**, `simctl spawn` ile simülatörün içinde `SimAX`: ağaç başına bir `XCTAccessibilityFramework`
-  `userTestingSnapshotForElement:options:error:` isteği (reddedilen bir derinlik yarıya indirilir; sınırda
-  tutulan çocuklar yeniden okunur), modal görünümleri XCUI gibi dikkate alarak; böylece bir sheet'in örttüğü şey yanıtta yer almaz (bu olmadan 215
-  düğüm, runner'ın 49 düğümüne karşı). Düğümler, runner'ın kurduğu gibi, iki suite'in de `packages/driver-apple/test/fixtures/runner-rules.json`'dan okuduğu kurallarla kurulur ve bir test tür tablolarını karşılaştırır; böylece ref'ler, hash'ler ve diff'ler kimin okuduğuna
+- **Okumalar**, `simctl spawn` ile simülatörün içinde `SimAX`: bir ağaç tek bir `XCTAccessibilityFramework`
+  `userTestingSnapshotForElement:options:error:` isteğidir; bir derinlik reddedilirse yarı derinlikle yeniden istenir,
+  derinliğin sınırında çocukları olmadan dönen her düğümden de yeniden okunur. Modal görünümleri XCUI gibi dikkate alır, böylece bir sheet'in örttüğü şey yanıtta yer almaz: bunu yapmadan önce bir listenin üstündeki bir sheet, alttaki liste de içinde 215
+  düğüm olarak okunuyordu, runner ise 49 düğüm okuyordu. Düğümler, runner'ın kurduğu gibi, iki suite'in de `packages/driver-apple/test/fixtures/runner-rules.json`'dan okuduğu kurallarla kurulur ve bir test tür tablolarını karşılaştırır; böylece ref'ler, hash'ler ve diff'ler kimin okuduğuna
   bağlı olmaz. Bir dokunuşun bir kontrolün hangi kopyasına ulaştığını yalnızca XCUI söyler: iki ya da üç farklı yerde bulunan
   bir kontrolü olan bir yerleşim bir kez runner'a gider ve onun kararı yerleşimin özetiyle saklanır. Diğer her yerleşim runner'a
   ihtiyaç duymaz. Runner başka bir şey için açıldığında, henüz görülmemiş bir yerleşim onun okumasıyla da karşılaştırılır (yaklaşık 100 ms, yerleşim başına

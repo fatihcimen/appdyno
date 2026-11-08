@@ -115,7 +115,7 @@ clipboard and every case below. `APPDYNO_SIM_DIRECT=off` turns both off, `read` 
 iOS has no key to close a keyboard or to open the app switcher. `dismissKeyboard` taps the keyboard's hide key where it
 shows one, else a place with no control; the host then reads whether it went and refuses if it did not. `appSwitch` is Home
 pressed twice on a simulator, the same input as a window's control, and it answers half a second after the second press,
-as iOS counts a press sooner with those two; on a phone it is the home indicator's slow drag up. Control Center and Notification Center are the drags a window's controls send, by the mirror's
+as iOS takes a press that comes sooner as part of the two; on a phone it is the home indicator's slow drag up. Control Center and Notification Center are the drags a window's controls send, by the mirror's
 input on a simulator: `act` would wait for the app under them to report the touch, take it for lost when it does not, and
 do it again. Spotlight is Command-Space from the home screen. Each is the home screen app's, so that is what is read until
 `home` closes it. The volume, lock and power keys go through direct input on a simulator and through
@@ -130,10 +130,10 @@ do it again. Spotlight is Command-Space from the home screen. Each is the home s
 - **Settings**, `SimOpen` inside the simulator through `simctl spawn`: `prefs:` and `settings-navigation:` are private, and `simctl openurl` is refused them (LaunchServices error 115). It opens them with `com.apple.springboard.opensensitiveurl`, linked in as the `__entitlements` section a simulator reads, as a signature holding it does not start. XCUI's `open` reached the page too, then held the runner up for two minutes. An iPhone takes the link as `devicectl`'s `--payload-url` to Settings. An app's own page has no link: the row on Apps is tapped.
 - **Traffic**, `NetProbe` injected into the app with `DYLD_INSERT_LIBRARIES`: an `NSURLProtocol` that writes a JSON line per finished request to the file `APPDYNO_NET_LOG` names. A simulator's app writes to the Mac's files as they are.
 - **Web pages**, the socket `simctl getenv <udid> RWI_LISTEN_SOCKET` names: binary property lists, each after its 4-byte length. `_rpc_reportIdentifier:` brings the applications, `_rpc_forwardGetListing:` a page list, `_rpc_forwardSocketSetup:` a `Target.targetCreated`, and `Target.sendMessageToTarget` wraps what goes to the page.
-- **Reads**, `SimAX` inside the simulator through `simctl spawn`: one request of `XCTAccessibilityFramework`
-  `userTestingSnapshotForElement:options:error:` per tree (a rejected depth is halved; children withheld at the
-  boundary are read again), honouring modal views as XCUI does, so that what a sheet covers is not in the answer (215
-  nodes against the runner's 49 without). The nodes are built as the runner builds them, by rules both suites read from `packages/driver-apple/test/fixtures/runner-rules.json`, with a test comparing their type tables, so refs, hashes and diffs do not depend
+- **Reads**, `SimAX` inside the simulator through `simctl spawn`: a tree is one request of `XCTAccessibilityFramework`
+  `userTestingSnapshotForElement:options:error:`, asked again at half the depth where that depth is refused, and again
+  from each node at the depth's edge that came back without its children. It honours modal views as XCUI does, so that what a sheet covers is not in the answer: before it did, a sheet over a list read as 215
+  nodes, the list's among them, against the runner's 49. The nodes are built as the runner builds them, by rules both suites read from `packages/driver-apple/test/fixtures/runner-rules.json`, with a test comparing their type tables, so refs, hashes and diffs do not depend
   on who read. Only XCUI tells which copy of a control a tap reaches: a layout with a control found at two or three
   different places goes to the runner once, and its verdict is kept by the layout's digest. Any other layout needs no
   runner. Once one is up for something else, a layout not seen yet is also compared with its read (about 100 ms, once per
