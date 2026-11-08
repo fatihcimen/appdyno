@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { NATIVE_PARTS, VIEWER_TEST_FILES } from '@appdyno/core';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { build } from 'esbuild';
-import { bundledPackages, noticesFor } from './notices.mjs';
+import { bundledPackages, inlinedPackages, noticesFor } from './notices.mjs';
 import { publishedReadme } from './published-readme.mjs';
 import { toolsInterface } from './tool-types.mjs';
 
@@ -126,10 +126,10 @@ writeFileSync(
 cpSync(join(pkg, '../../LICENSE'), join(pkg, 'LICENSE'));
 writeFileSync(
   join(pkg, 'THIRD_PARTY_NOTICES'),
-  noticesFor(
-    readFileSync(join(pkg, '../../THIRD_PARTY_NOTICES'), 'utf8'),
-    bundledPackages(metafiles, pkg),
-  ),
+  noticesFor(readFileSync(join(pkg, '../../THIRD_PARTY_NOTICES'), 'utf8'), [
+    ...bundledPackages(metafiles, pkg),
+    ...inlinedPackages(metafiles, pkg, join(pkg, 'licenses')),
+  ]),
 );
 
 for (const f of ['main.js', 'index.js'])
