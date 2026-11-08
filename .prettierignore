@@ -1,3 +1,5 @@
 android/
 pnpm-lock.yaml
 dist/
+# written by scripts/build-icons.mjs as JSON.stringify lays it out, and held to that by brand.test.ts
+mac/App/appdyno.icon/icon.json
