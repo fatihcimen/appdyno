@@ -160,7 +160,7 @@ appdyno doctor             # what is here, what is missing, and how to fix it
 appdyno devices            # what is connected
 ```
 
-[Connecting a client](docs/guides/clients.md) ([Türkçe](docs/guides/clients.tr.md)) takes each client step by step, and gets a phone ready from nothing, signing included.
+[Connecting a client](docs/guides/clients.md) takes each client step by step, and gets a phone ready from nothing, signing included.
 
 ## A first run
 

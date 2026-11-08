@@ -160,7 +160,7 @@ appdyno doctor             # neyin kurulu, neyin eksik olduğunu ve nasıl düze
 appdyno devices            # neler bağlı
 ```
 
-[İstemci bağlamak](docs/guides/clients.tr.md) ([English](docs/guides/clients.md)) her istemciyi adım adım anlatır; hiçbir şey kurulu değilken bir telefonu, imzalama dahil, baştan nasıl hazırlayacağınızı gösterir.
+[İstemci bağlamak](docs/guides/clients.tr.md) her istemciyi adım adım anlatır; hiçbir şey kurulu değilken bir telefonu, imzalama dahil, baştan nasıl hazırlayacağınızı gösterir.
 
 ## İlk çalıştırma
 

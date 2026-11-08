@@ -11,7 +11,6 @@ Each one takes you through a task.
 | guide                                          | read it to                                                                    |
 | ---------------------------------------------- | ----------------------------------------------------------------------------- |
 | [Connecting a client](guides/clients.md)       | join appdyno to your MCP client and get a phone ready, signing included       |
-| [İstemci bağlama](guides/clients.tr.md)        | aynı rehber, Türkçe                                                           |
 | [Flows](guides/flows.md)                       | record what an agent did, replay it with no model, run it in CI               |
 | [Evidence](guides/evidence.md)                 | leave a video, a report, a network log or a visual diff behind                |
 | [Measuring performance](guides/performance.md) | measure an app, keep a baseline, and fail a pull request that makes it slower |
