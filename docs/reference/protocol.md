@@ -67,7 +67,7 @@ itself and sends `cancel {id}`. Device work runs on one thread in arrival order;
 | `audit` (iOS)                                            | `types?`, `maxIssues` (50)                                                                               | `issues`, `truncated`, `elapsedMs`                                                   |
 | `a11y.read` (Android)                                    | `maxNodes` (60)                                                                                          | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`)     |
 | `touch` (Android)                                        | `p` (0 down, 1 moved, 2 up), `x`, `y`, `x2?`, `y2?`: fractions of the screen, no settle                  | –                                                                                    |
-| `stream.start` (Android)                                 | `codec` (`h264`), `quality`, `maxSize?`, `failFirst?`, `startSize?`, `roomMs?`                           | –, then video frames on this connection until it ends                                |
+| `stream.start` (Android)                                 | `codec` (`h264`/`hevc`), `quality`, `maxSize?`, `failFirst?`, `startSize?`, `roomMs?`                    | –, then video frames on this connection until it ends                                |
 | `stream.clock`, `stream.sync`, `stream.status` (Android) | –                                                                                                        | `now` (ns) / – / `active`, `on`, `w`, `h`, `rotation`, `modes`, `dropped`, `behind?` |
 | `wait`                                                   | `since?`, `timeoutMs`, `minMs` (300)                                                                     | `sig`, `changed`, `reads`, `elapsedMs`, `tree?`                                      |
 | `cancel`                                                 | `id`                                                                                                     | –                                                                                    |
@@ -367,7 +367,7 @@ A screen that has only dimmed is awake, and no refusal stops a touch there. Yet 
 
 `app install` watches the phone's focused window with a plain `dumpsys` while `adb install` runs, and does nothing else until one of two windows has the
 focus, so where no prompt comes it starts no agent and adds no wait. Only during that call, on that device, and only for the app in the file: its names
-are read from the `.apk`, and a prompt that names another is left alone. With `--allow-apps` an install stays off altogether, as it always was. Neither option is a
+are read from the `.apk`, and a prompt that names another is left alone. With `--allow-apps`, `app install` is refused altogether (`POLICY_DENIED`), as it always was. Neither option is a
 tool argument: only the person who runs the server sets them. Seen on a Xiaomi 25078RA3EY (HyperOS 3, Android 16, tr-TR, Play Store 53.8):
 
 | window                                                                      | what it is                         | what is read                                                                   | answer                                            |
@@ -439,7 +439,7 @@ beside a client that has already moved on. So the agent stays, and the newer hos
 has gone; `agent-hosts/<serial>.json` in the state folder lists them, and a process's end is what takes it off. A host
 that cannot speak that agent's protocol is refused with the pid of the one that uses it. An iOS runner keeps to the same
 rule, and one host at a time starts it, by `ios-<udid>.starting` in the state folder: a device serves one runner and its
-state is written only once it answers, so two starting at once took the phone from each other and the one that lost heard
+state is written only once it answers, so two runners that two hosts started at once took the phone from each other and the one that lost heard
 nothing for 3 minutes. On an iPhone 13 Pro Max a client's first call then took 1 to 6.3 s over 16, hub first or client
 first. The agent exits after 30 minutes without a
 connection. Exit code 3 with `AGENT_CONFLICT` on stderr: another UI automation client holds the device

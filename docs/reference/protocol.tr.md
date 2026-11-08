@@ -67,7 +67,7 @@ kendisi başarısız sayar ve `cancel {id}` gönderir. Cihaz işi tek bir thread
 | `audit` (iOS)                                            | `types?`, `maxIssues` (50)                                                                              | `issues`, `truncated`, `elapsedMs`                                                   |
 | `a11y.read` (Android)                                    | `maxNodes` (60)                                                                                         | `tree`, `clips` (`n`, `chars`, `hidden`), `traversal` (`n`, `before?`, `after?`)     |
 | `touch` (Android)                                        | `p` (0 basma, 1 hareket, 2 bırakma), `x`, `y`, `x2?`, `y2?`: ekranın kesirleri, durulma yok             | –                                                                                    |
-| `stream.start` (Android)                                 | `codec` (`h264`), `quality`, `maxSize?`, `failFirst?`, `startSize?`, `roomMs?`                          | –, ardından bağlantı bitene kadar bu bağlantıda video kareleri                       |
+| `stream.start` (Android)                                 | `codec` (`h264`/`hevc`), `quality`, `maxSize?`, `failFirst?`, `startSize?`, `roomMs?`                   | –, ardından bağlantı bitene kadar bu bağlantıda video kareleri                       |
 | `stream.clock`, `stream.sync`, `stream.status` (Android) | –                                                                                                       | `now` (ns) / – / `active`, `on`, `w`, `h`, `rotation`, `modes`, `dropped`, `behind?` |
 | `wait`                                                   | `since?`, `timeoutMs`, `minMs` (300)                                                                    | `sig`, `changed`, `reads`, `elapsedMs`, `tree?`                                      |
 | `cancel`                                                 | `id`                                                                                                    | –                                                                                    |
@@ -367,7 +367,7 @@ Yalnızca kararmış bir ekran uyanıktır ve orada hiçbir ret bir dokunuşu du
 
 `app install`, `adb install` çalışırken telefonun odaklı penceresini düz bir `dumpsys` ile izler ve iki pencereden biri odağı alana kadar
 başka hiçbir şey yapmaz, böylece soru gelmeyen yerde hiçbir ajan başlatmaz ve bekleme eklemez. Yalnızca o çağrı sırasında, o cihazda ve yalnızca dosyadaki uygulama için: adları
-`.apk`'den okunur, başka birini adlandıran bir soruya dokunulmaz. `--allow-apps` ile bir kurulum, her zaman olduğu gibi, tamamen kapalı kalır. İki seçenek de bir
+`.apk`'den okunur, başka birini adlandıran bir soruya dokunulmaz. `--allow-apps` ile `app install`, her zaman olduğu gibi, tamamen reddedilir (`POLICY_DENIED`). İki seçenek de bir
 araç argümanı değildir: onları yalnızca sunucuyu çalıştıran kişi ayarlar. Bir Xiaomi 25078RA3EY'de görüldü (HyperOS 3, Android 16, tr-TR, Play Store 53.8):
 
 | pencere                                                                     | ne olduğu                             | ne okunur                                                                            | yanıt                                               |
@@ -439,7 +439,7 @@ yanında açık bir hub. Bu yüzden ajan kalır, daha yeni host da onu kullanır
 gidene kadar sürer; durum klasöründeki `agent-hosts/<serial>.json` onları listeler ve bir sürecin bitişi onu listeden çıkarır. O ajanın
 protokolünü konuşamayan bir host, onu kullananın pid'iyle reddedilir. Bir iOS runner'ı da aynı
 kurala uyar ve onu bir seferde tek bir host, durum klasöründeki `ios-<udid>.starting` ile başlatır: bir cihaz tek bir runner'a hizmet eder ve
-runner'ın durumu ancak yanıt verdiğinde yazılır; bu yüzden aynı anda başlayan iki runner telefonu birbirinden aldı ve kaybeden
+runner'ın durumu ancak yanıt verdiğinde yazılır; bu yüzden iki host'un aynı anda başlattığı iki runner telefonu birbirinden aldı ve kaybeden
 3 dakika boyunca hiçbir şey duymadı. Bir iPhone 13 Pro Max'te bir istemcinin ilk çağrısı o zaman 16 denemede 1 ile 6,3 s arasında sürdü, önce hub ya da önce
 istemci. Ajan bağlantısız geçen 30 dakikadan sonra
 kapanır. stderr'de `AGENT_CONFLICT` ile çıkış kodu 3: başka bir UI automation istemcisi cihazı tutuyor
