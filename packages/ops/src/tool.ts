@@ -1,3 +1,4 @@
+import { noting } from '@appdyno/core';
 import { DeviceError, type ErrorCode } from '@appdyno/protocol';
 import { z } from 'zod';
 
@@ -93,7 +94,10 @@ export type Tool = {
 /** One operation: a tool on the MCP surface and a command on the CLI. */
 export type Op = Tool & { name: string };
 
-/** An op, whose device failures reach the surfaces as refusals wherever in its `run` they came from. */
+/**
+ * An op, whose device failures reach the surfaces as refusals wherever in its `run` they came from, and whose answer
+ * says what its call did on the way, as a fetch that made it take longer.
+ */
 export function defineOp<
   const N extends string,
   S extends z.ZodObject,
@@ -112,7 +116,10 @@ export function defineOp<
     ...rest,
     handler: async (args) => {
       try {
-        return await run(args as z.infer<S>);
+        const { value, notes } = await noting(() => run(args as z.infer<S>));
+        return notes.length
+          ? { ...value, blocks: [...value.blocks, ...text(notes.join('\n'))] }
+          : value;
       } catch (e) {
         return refused(e);
       }

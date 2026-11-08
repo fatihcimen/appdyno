@@ -9,6 +9,8 @@ export type CallScope = {
   client?: string;
   /** Puts a yes or no question to the person, by the client's own prompt or a terminal: none where nobody can be asked. */
   ask?: (question: string) => Promise<boolean>;
+  /** What the call did on the way that its answer says: a tool it fetched. */
+  notes?: string[];
 };
 
 const scope = new AsyncLocalStorage<CallScope>();
@@ -20,6 +22,19 @@ export const callSignal = () => scope.getStore()?.signal;
 
 /** Tells the client what a long operation is doing, when it asked to be told. */
 export const reportProgress = (message: string) => scope.getStore()?.progress?.(message);
+
+/** Puts a line in the answer of the call being served, once, where an answer is made by `noting`. */
+export function noteInAnswer(line: string) {
+  const notes = scope.getStore()?.notes;
+  if (notes && !notes.includes(line)) notes.push(line);
+}
+
+/** `fn` in the scope of the call it serves, with the lines it noted for its answer. */
+export async function noting<T>(fn: () => Promise<T>): Promise<{ value: T; notes: string[] }> {
+  const notes: string[] = [];
+  const value = await scope.run({ ...scope.getStore(), notes }, fn);
+  return { value, notes };
+}
 
 /** The client whose request this is, if it gave a name. */
 export const callClient = () => scope.getStore()?.client;

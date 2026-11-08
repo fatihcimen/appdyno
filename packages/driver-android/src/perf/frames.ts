@@ -121,7 +121,7 @@ export async function framesDuring(
  * Every frame of the app over `durationMs` from Perfetto's frame timeline (Android 12+): the time each
  * frame took and why it was late (the app, the compositor, buffer stuffing). `during` runs while it
  * records (a scroll, a transition). The trace is kept for later queries; atrace in it gives what each
- * frame cost (`android_frame_stats`). Needs the trace processor (`appdyno tools install`).
+ * frame cost (`android_frame_stats`). Needs the trace processor, fetched on first need.
  */
 export async function frameTimeline(
   d: PerfDevice,

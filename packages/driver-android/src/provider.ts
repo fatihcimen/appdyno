@@ -8,7 +8,7 @@ import { AndroidEmulators } from './emulators.js';
 import type { InstallAnswers } from './install-consent.js';
 import { needOfState } from './mirror.js';
 import { queryTrace } from './perf/perfetto.js';
-import { traceProcessor } from './tools.js';
+import { traceProcessorCheck } from './tools.js';
 import { must, run } from '@appdyno/core';
 
 /**
@@ -56,17 +56,7 @@ export async function androidChecks(adb: Adb, serial?: string): Promise<Check[]>
       fix: (e as DeviceError).hint ?? '',
     });
   }
-  try {
-    checks.push({ name: 'trace processor', ok: true, detail: await traceProcessor() });
-  } catch (e) {
-    checks.push({
-      name: 'trace processor',
-      ok: false,
-      warn: true,
-      detail: 'not installed: frame timelines are not available',
-      fix: (e as DeviceError).hint ?? 'appdyno tools install',
-    });
-  }
+  checks.push(traceProcessorCheck());
   for (const d of await adb.devices().catch(() => []))
     checks.push({
       name: `android ${d.serial}`,

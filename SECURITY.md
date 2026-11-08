@@ -15,6 +15,9 @@ Check for Updates: the npm registry from the package, this repository's releases
 does. The app downloads adb from Google only when you accept Google's terms. A client that runs `npx -y appdyno` has npx ask the registry at each
 start, before appdyno runs: that is npm's doing, and a global install, as `docs/guides/clients.md` says, keeps it from
 changing the version.
+One file comes by itself: Perfetto's trace processor, pinned to v59.1, which reads Android's traces. The first time
+an Android trace needs it, and neither the app carries one nor `APPDYNO_TRACE_PROCESSOR` names one, it is fetched
+once from Google's release of it on GitHub, and checked by its sha256. Nothing else comes unless you ask for it.
 By default the MCP server speaks over stdio to the
 client that started it and opens no network listener. Only `--http` opens one: see below. Measurements are stored on the local disk, under the state
 directory or the `--measurements` directory. The Android agent listens on an abstract unix socket on the

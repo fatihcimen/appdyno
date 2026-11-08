@@ -51,6 +51,11 @@ bir uyarısı bir kişiyi viewer'sız bırakmamalıdır.
 bir betik elle çalıştırılır ve ona hiçbir test ulaşmaz. O config bir betiği bir paket kadar sıkı tutar: bir parametrenin ve
 sonradan dolan boş bir dizinin JSDoc tipi vardır, `/** @param {string} serial */` gibi.
 
+Android'in trace'lerini okuyan Perfetto trace processor'ı `packages/driver-android/src/tools.ts` içinde sürümüyle ve
+sürümünün her zip için yayımladığı sha256 ile sabitlenir. Daha yeni bir sürüm,
+Android sürücüsünün gönderdiği her sorgu ondan aynı sütunları okuduğunda ve açılış sayıları tuttuğunda, `perf`,
+`measures-android` ve `frame-cause` suite'leri bir API 34 emülatöründe geçerek sabitlenir.
+
 ## Cihaz suite'leri
 
 Bunlar gerçek bir emülatör, simülatör ya da telefon ister ve onun adını siz verirsiniz. Hiçbir zaman varsayılan bir cihaz yoktur, çünkü

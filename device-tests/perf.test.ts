@@ -160,7 +160,7 @@ describe.skipIf(!serial)('android perf accuracy', () => {
 
   it('frame timeline: the 40 ms draw is late by the app, the light one mostly on time', async (ctx) => {
     const tp = await traceProcessor().catch(() => undefined);
-    if (!tp) return ctx.skip(); // the trace processor is not installed (doctor says so)
+    if (!tp) return ctx.skip(); // none here, and this Mac could not fetch it
     const s = await open('frames');
     const heavy = (
       await d.measure.frameTimeline(APP, 4_000, async () => {

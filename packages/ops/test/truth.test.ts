@@ -1,4 +1,10 @@
-import { must, reportProgress, type Device, type DeviceProvider } from '@appdyno/core';
+import {
+  must,
+  noteInAnswer,
+  reportProgress,
+  type Device,
+  type DeviceProvider,
+} from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
@@ -150,6 +156,29 @@ describe('failed answers', () => {
     // what is no device's failure stays what it is: the server logs it as an internal error
     const bug = defineOp({ ...op, run: () => Promise.reject(new TypeError('a bug')) });
     await expect(bug.handler({})).rejects.toBeInstanceOf(TypeError);
+  });
+
+  it('an answer says what its call fetched on the way, once', async () => {
+    const op = defineOp({
+      name: 'x',
+      title: 'x',
+      description: 'x',
+      input: z.object({}),
+      output: z.object({}),
+      annotations: READ,
+      run: () => {
+        noteInAnswer('fetched a tool');
+        noteInAnswer('fetched a tool');
+        return Promise.resolve(reply('measured', {}));
+      },
+    });
+    expect((await op.handler({})).blocks).toEqual([
+      { type: 'text', text: 'measured' },
+      { type: 'text', text: 'fetched a tool' },
+    ]);
+    expect(
+      (await defineOp({ ...op, run: () => Promise.resolve(reply('a', {})) }).handler({})).blocks,
+    ).toHaveLength(1);
   });
 
   it('of the last of several steps still say which step it was and show the screen', async () => {

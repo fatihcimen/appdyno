@@ -15,6 +15,9 @@ Check for Updates çalıştırırken sorar: paket npm kayıt defterine, uygulama
 hiç yapmaz. Uygulama adb'yi Google'dan yalnızca Google'ın koşullarını kabul ettiğinizde indirir. `npx -y appdyno` çalıştıran bir istemcide npx,
 her açılışta, appdyno çalışmadan önce kayıt defterine sorar: bu npm'in işidir ve `docs/guides/clients.md` dosyasının dediği gibi global bir
 kurulum sürümün değişmesini önler.
+Kendiliğinden gelen tek bir dosya vardır: Android'in trace'lerini okuyan, v59.1'e sabitlenmiş Perfetto trace processor'ı.
+Bir Android trace'i ona ilk kez ihtiyaç duyduğunda, uygulama bir tane taşımıyor ve `APPDYNO_TRACE_PROCESSOR` bir tane
+göstermiyorsa, Google'ın GitHub'daki sürümünden bir kez indirilir ve sha256'sıyla doğrulanır. Siz istemedikçe başka hiçbir şey gelmez.
 Varsayılan olarak MCP sunucusu, onu başlatan istemciyle stdio üzerinden
 konuşur ve ağdan bağlantı dinlemez. Yalnızca `--http` bir dinleyici açar: aşağıya bakın. Ölçümler yerel diskte, durum
 klasörü ya da `--measurements` klasörü altında saklanır. Android ajanı cihazda abstract bir unix soketini

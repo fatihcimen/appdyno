@@ -28,7 +28,7 @@ export const ERROR_CODES = [
   'DEVICE_CLAIMED',
   /** A phone locked behind what this tool cannot answer. Host only, never on the wire. */
   'DEVICE_LOCKED',
-  /** The package registry cannot be reached. Host only, never on the wire. */
+  /** The package registry, or a pinned tool's release, cannot be reached. Host only, never on the wire. */
   'OFFLINE',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

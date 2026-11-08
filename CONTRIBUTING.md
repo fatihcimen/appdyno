@@ -51,6 +51,11 @@ warning must not leave a person with no viewer.
 a script is run by hand and no test reaches it. That config holds a script as strictly as a package: a parameter, and an
 empty array that fills later, have a JSDoc type, as `/** @param {string} serial */`.
 
+Perfetto's trace processor, which reads Android's traces, is pinned in `packages/driver-android/src/tools.ts` by its
+version and the sha256 its release publishes for each zip. A newer release is
+pinned once each query the Android driver sends reads the same columns from it and the startup numbers agree, with the
+`perf`, `measures-android` and `frame-cause` suites passing on an API 34 emulator.
+
 ## Device suites
 
 These need a real emulator, simulator or phone, and you name it. There is never a default device, because

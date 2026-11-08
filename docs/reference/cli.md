@@ -42,6 +42,7 @@ refused unless `APPDYNO_ALLOW_DATA_LOSS` allows it.
 | `--http 127.0.0.1:PORT`     |                                     | Streamable HTTP on this Mac's loopback, not stdio: see below. Off unless given, and no variable turns it on         |
 |                             | `APPDYNO_HTTP_TOKEN`                | the token `--http` asks for, 32 characters or more: generated and printed if not set                                |
 |                             | `APPDYNO_TOOLS_DIR`                 | where fetched tools are kept, whatever the state directory: `~/Library/Caches/appdyno/tools` by default             |
+|                             | `APPDYNO_TRACE_PROCESSOR`           | a `trace_processor_shell` to read Android's traces with, in place of the app's and the pinned one fetched           |
 |                             | `APPDYNO_SECRETS=a,b`               | values never shown back or put on the clipboard                                                                     |
 
 Without `--takeover`, a second tool holding UI automation on Android is never stopped. The error names
