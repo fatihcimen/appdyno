@@ -1,5 +1,7 @@
 # Changelog
 
+[Türkçe](CHANGELOG.tr.md)
+
 ## Unreleased
 
 - `crashes` with no NDK on this Mac names Android Studio's SDK Manager or `android sdk install ndk/<version>` to get one, as the command-line tools 23 deprecate `sdkmanager` for the Android CLI.

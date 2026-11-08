@@ -12,7 +12,7 @@ const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: '
   .split('\0')
   .filter((f) => f && existsSync(join(root, f)));
 // a changelog is what was true then
-const pages = tracked.filter((f) => f.endsWith('.md') && f !== 'CHANGELOG.md');
+const pages = tracked.filter((f) => f.endsWith('.md') && !/^CHANGELOG(\.tr)?\.md$/.test(f));
 
 /** A heading's anchor, as GitHub makes it: an İ keeps its dot, as i and U+0307. */
 const slug = (heading: string) =>
@@ -85,7 +85,6 @@ describe('the docs', () => {
 const TR = /\.tr\.md$/;
 /** The pages in English alone, and why. */
 const ENGLISH_ONLY: Record<string, string> = {
-  'CHANGELOG.md': 'not yet in Turkish',
   'CONTRIBUTING.md': 'not yet in Turkish',
 };
 const english = tracked.filter((f) => f.endsWith('.md') && !f.endsWith('.tr.md'));
