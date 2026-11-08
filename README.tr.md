@@ -211,7 +211,7 @@ Dokunuş, ekran 200 ms boyunca durgun kalana kadar bekler ve neyin değiştiğin
 | [Tools](docs/reference/tools.md)                    | her araç, her platformun neyi yapıp neyi yapamadığı                           |
 | [Architecture](docs/architecture.md)                | parçaların nasıl birleştiği, kodu değiştirecek olan için                      |
 
-Diğer başvuru sayfaları [belgelerin dizininde](docs/README.md). İstemci rehberi dışındaki sayfalar İngilizcedir.
+Diğer başvuru sayfaları [belgelerin dizininde](docs/README.tr.md).
 
 ## Güvenlik
 

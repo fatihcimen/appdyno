@@ -61,10 +61,12 @@ describe('the docs', () => {
     expect(broken).toEqual([]);
   });
 
-  it('are in the index', () => {
-    const index = read('docs/README.md');
-    const listed = pages.filter((p) => p.startsWith('docs/') && p !== 'docs/README.md');
-    expect(listed.filter((p) => !index.includes(`](${p.replace('docs/', '')}`))).toEqual([]);
+  it('are in the index of their language', () => {
+    const listed = pages.filter(
+      (p) => p.startsWith('docs/') && !/^docs\/README(\.tr)?\.md$/.test(p),
+    );
+    const indexOf = (p: string) => read(TR.test(p) ? 'docs/README.tr.md' : 'docs/README.md');
+    expect(listed.filter((p) => !indexOf(p).includes(`](${p.replace('docs/', '')}`))).toEqual([]);
   });
 
   it('are the docs a comment or a script names', () => {
@@ -83,7 +85,6 @@ const TR = /\.tr\.md$/;
 const ENGLISH_ONLY: Record<string, string> = {
   'CHANGELOG.md': 'not yet in Turkish',
   'CONTRIBUTING.md': 'not yet in Turkish',
-  'docs/README.md': 'not yet in Turkish',
   'docs/architecture.md': 'not yet in Turkish',
   'docs/guides/evidence.md': 'not yet in Turkish',
   'docs/guides/flows.md': 'not yet in Turkish',

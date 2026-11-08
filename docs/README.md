@@ -1,5 +1,7 @@
 # Documentation
 
+[Türkçe](README.tr.md)
+
 appdyno drives and measures iOS and Android apps from your Mac. New here? Start with the [README](../README.md).
 
 ## Guides
