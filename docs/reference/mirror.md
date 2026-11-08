@@ -161,7 +161,7 @@ A simulator needs no runner for any of this: it reads the app in front by its re
 
 ## Recording a flow
 
-**Record Flow** (⌥⌘T) writes what a person does on the window as a flow, the file `flow run` replays. The **Flow** pane opens beside the device and lists each step as it is written. A second press stops it and saves it to the Desktop as `<device> <date>.flow`, and closing the window does the same, as it does for a movie.
+**Record Flow** (⌥⌘T) writes what a person does on the window as a flow, the file `flow run` replays. The **Flows** pane opens beside the device and lists each step as it is written. A second press stops it and saves it to the Desktop as `<device> <date>.flow`, and closing the window does the same, as it does for a movie.
 
 It writes what a person meant, by the element and not the place. Each click is named by the selector a tool would use on the screen that click landed on, by the rule of `flow start`, so that a flow made on one device runs on another of the same app wherever the selector holds.
 
@@ -193,7 +193,7 @@ A click to the first picture it changed, 15 clicks each way, each from a still s
 | Xiaomi, Android 16   | 68.2                  | 67.1               | 3          |
 | iPhone 13 Pro Max    | 110.7                 | 109.0              | 10         |
 
-**Under the pointer.** With the Flow pane open, the pointer over the device shows the element under it, marked on the picture: its role, words, ref and id, what a click there would write, and what `audit` says of its contrast, read once per screen. An audit waits for the pointer to rest, may start a simulator's runner, and the pane says it is reading until it is done. No audit runs during a recording, as a read waiting behind one would come after the click it was to name, and the pane says so. What a click on the device does is chosen there: it **Touches** the device, **Copies** the element's selector, or **Asserts**, which adds a check to the recording and touches nothing: `assert id=result check=text equals="Sent: Ada"`, or `assert text="Bilgiler"` where its words are what names it.
+**Under the pointer.** With the Flows pane open, the pointer over the device shows the element under it, marked on the picture: its role, words, ref and id, what a click there would write, and what `audit` says of its contrast, read once per screen. An audit waits for the pointer to rest, may start a simulator's runner, and the pane says it is reading until it is done. No audit runs during a recording, as a read waiting behind one would come after the click it was to name, and the pane says so. What a click on the device does is chosen there: it **Touches** the device, **Copies** the element's selector, or **Asserts**, which adds a check to the recording and touches nothing: `assert id=result check=text equals="Sent: Ada"`, or `assert text="Bilgiler"` where its words are what names it.
 
 The recording is the one `flow` keeps, a file per device. So `flow start` from an agent or the command line takes a person's clicks too, and a window's recording takes an agent's calls, each in the order they came. A flow's `stop` and `save` work on either.
 
@@ -209,9 +209,9 @@ The recording is the one `flow` keeps, a file per device. So `flow start` from a
 
 ## Connect a Phone
 
-Where the hub has nothing to show, Connect a Phone stands in its place, and its sidebar row keeps it reachable later. It is no wizard and no gate: every other part of the hub stays open.
+Where the hub has nothing to show, Connect a Phone stands in its place, and its sidebar row keeps it reachable later. It holds nothing up: every other part of the hub stays open while it shows.
 
-It finds the phone in your hand by itself. The Mac's USB registry names who made what is plugged in, whatever the phone allows, and asks the phone nothing: an Android with USB debugging off is there before adb has heard of it. So adb is asked for only with an Android in hand, after showing Google's terms, and Xcode only with an iPhone. Nothing on USB is said plainly: a cable that only charges shows nothing.
+It finds the phone in your hand by itself. The Mac's USB registry names who made what is plugged in, whatever the phone allows, and asks the phone nothing: an Android with USB debugging off is there before adb has heard of it. So adb is asked for only with an Android in hand, after showing Google's terms, and Xcode only with an iPhone. With nothing on USB it says so plainly, and that a cable that only charges shows nothing, so to try another.
 
 Each driver owns its steps (`guide` on its provider), and `doctor` and `NEEDS` hold the facts. The current step is one short sentence and a diagram drawn in the viewer, and it moves on as the phone's state changes:
 

@@ -161,7 +161,7 @@ Denetçi'deki **Performans**, aynı okumaları gösterildiği on dakikaya kadar 
 
 ## Bir akış kaydetmek
 
-**Akışı Kaydet** (⌥⌘T), bir kişinin pencerede yaptığını bir akış olarak, yani `flow run`'ın yeniden oynattığı dosya olarak yazar. **Flow** paneli cihazın yanında açılır ve her adımı yazıldıkça listeler. İkinci bir basış kaydı durdurur ve Masaüstüne `<device> <date>.flow` olarak kaydeder; pencereyi kapatmak da bir film için olduğu gibi aynısını yapar.
+**Akışı Kaydet** (⌥⌘T), bir kişinin pencerede yaptığını bir akış olarak, yani `flow run`'ın yeniden oynattığı dosya olarak yazar. **Akışlar** paneli cihazın yanında açılır ve her adımı yazıldıkça listeler. İkinci bir basış kaydı durdurur ve Masaüstüne `<device> <date>.flow` olarak kaydeder; pencereyi kapatmak da bir film için olduğu gibi aynısını yapar.
 
 Bir kişinin ne demek istediğini, yerle değil öğeyle yazar. Her tıklama, `flow start`'ın kuralıyla, bir aracın o tıklamanın indiği ekranda kullanacağı seçiciyle adlandırılır; böylece bir cihazda yapılan bir akış, seçicinin tuttuğu her yerde aynı uygulamanın başka bir cihazında çalışır.
 
@@ -193,7 +193,7 @@ Bir tıklamadan değiştirdiği ilk görüntüye kadar, her iki durumda 15 tıkl
 | Xiaomi, Android 16   | 68,2               | 67,1           | 3           |
 | iPhone 13 Pro Max    | 110,7              | 109,0          | 10          |
 
-**İmlecin altında.** Flow paneli açıkken cihazın üzerindeki imleç, altındaki öğeyi görüntü üzerinde işaretleyerek gösterir: rolünü, sözlerini, ref'ini ve id'sini, oraya bir tıklamanın ne yazacağını ve `audit`'in kontrastı hakkında ne dediğini; bu, ekran başına bir kez okunur. Bir denetim imlecin durmasını bekler, bir simülatörün runner'ını başlatabilir ve panel, bitene kadar okuduğunu söyler. Bir kayıt sırasında hiçbir denetim çalışmaz, çünkü bir denetimin arkasında bekleyen bir okuma, adlandıracağı tıklamadan sonra gelirdi; panel bunu söyler. Cihazdaki bir tıklamanın ne yapacağı orada seçilir: cihaza **Dokunur**, öğenin seçicisini **Kopyalar** ya da kayda bir denetim ekleyen ve hiçbir şeye dokunmayan **Doğrular**: `assert id=result check=text equals="Sent: Ada"` ya da öğeyi sözleri adlandırıyorsa `assert text="Bilgiler"`.
+**İmlecin altında.** Akışlar paneli açıkken cihazın üzerindeki imleç, altındaki öğeyi görüntü üzerinde işaretleyerek gösterir: rolünü, sözlerini, ref'ini ve id'sini, oraya bir tıklamanın ne yazacağını ve `audit`'in kontrastı hakkında ne dediğini; bu, ekran başına bir kez okunur. Bir denetim imlecin durmasını bekler, bir simülatörün runner'ını başlatabilir ve panel, bitene kadar okuduğunu söyler. Bir kayıt sırasında hiçbir denetim çalışmaz, çünkü bir denetimin arkasında bekleyen bir okuma, adlandıracağı tıklamadan sonra gelirdi; panel bunu söyler. Cihazdaki bir tıklamanın ne yapacağı orada seçilir: cihaza **Dokunur**, öğenin seçicisini **Kopyalar** ya da kayda bir denetim ekleyen ve hiçbir şeye dokunmayan **Doğrular**: `assert id=result check=text equals="Sent: Ada"` ya da öğeyi sözleri adlandırıyorsa `assert text="Bilgiler"`.
 
 Kayıt, `flow`'un tuttuğu kayıttır, cihaz başına bir dosya. Bu yüzden bir ajandan ya da komut satırından gelen `flow start` bir kişinin tıklamalarını da alır, bir pencerenin kaydı da bir ajanın çağrılarını alır; her biri geldiği sırayla. Bir akışın `stop` ve `save`'i ikisinde de çalışır.
 
@@ -209,9 +209,9 @@ More menüsünde, bir satırın menüsünde ya da shift-command-N ile bulunan **
 
 ## Telefon Bağla
 
-Hub'ın gösterecek bir şeyi olmadığında yerinde Telefon Bağla durur ve kenar çubuğundaki satırı ona sonra da ulaşılabilmesini sağlar. Bir sihirbaz da değildir, bir engel de: hub'ın diğer her bölümü açık kalır.
+Hub'ın gösterecek bir şeyi olmadığında yerinde Telefon Bağla durur ve kenar çubuğundaki satırı ona sonra da ulaşılabilmesini sağlar. Hiçbir şeyi bekletmez: o görünürken hub'ın diğer her bölümü açık kalır.
 
-Elinizdeki telefonu kendisi bulur. Mac'in USB kaydı, telefon neye izin verirse versin, takılı olanı kimin yaptığını söyler ve telefona hiçbir şey sormaz: USB hata ayıklaması kapalı bir Android, adb onu duymadan önce oradadır. Bu yüzden adb yalnızca elde bir Android varken, Google'ın koşulları gösterildikten sonra istenir; Xcode ise yalnızca bir iPhone varken. USB'de hiçbir şey yoksa bu açıkça söylenir: yalnızca şarj eden bir kablo hiçbir şey göstermez.
+Elinizdeki telefonu kendisi bulur. Mac'in USB kaydı, telefon neye izin verirse versin, takılı olanı kimin yaptığını söyler ve telefona hiçbir şey sormaz: USB hata ayıklaması kapalı bir Android, adb onu duymadan önce oradadır. Bu yüzden adb yalnızca elde bir Android varken, Google'ın koşulları gösterildikten sonra istenir; Xcode ise yalnızca bir iPhone varken. USB'de hiçbir şey yoksa bunu açıkça söyler; yalnızca şarj eden bir kablonun hiçbir şey göstermediğini ve başka bir kablo denenmesini de söyler.
 
 Her sürücü kendi adımlarına sahiptir (sağlayıcısındaki `guide`); gerçekleri `doctor` ve `NEEDS` tutar. Geçerli adım kısa bir cümle ve viewer'da çizilen bir diyagramdır ve telefonun durumu değiştikçe ilerler:
 
