@@ -133,7 +133,7 @@ const MVWordRow MVWordTable[] = {
     {"Measure Launch", "Açılışı Ölç"},
     {"Measure Scroll", "Kaydırmayı Ölç"},
     {"Measure Journey…", "Yolculuğu Ölç…"},
-    {"Open Dashboard", "Panoyu Aç"},
+    {"Open Dashboard", "Gösterge Panelini Aç"},
     {"Touches Go to Both", "Dokunuşlar İkisine de Gitsin"},
     {"More Controls", "Diğer Denetimler"},
     {"Reconnect", "Yeniden Bağlan"},
