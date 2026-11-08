@@ -28,6 +28,8 @@ static _Atomic double lastTick, lastInput, launchMs, uikitAt, finishedAt;
 static FILE *out;
 static double processStart, firstCode;
 static CADisplayLink *displayLink;
+/** What flushes, held for as long as the app runs. */
+static dispatch_source_t flushTimer;
 
 static double nowMs(void) {
   struct timeval tv;
@@ -155,6 +157,5 @@ __attribute__((constructor)) static void start(void) {
     flush();
   });
   dispatch_resume(timer);
-  static dispatch_source_t keep;
-  keep = timer;
+  flushTimer = timer;
 }

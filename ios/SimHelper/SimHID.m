@@ -150,6 +150,7 @@ int main(int argc, char **argv) {
         fflush(stdout);
       }
     }
+    free(line);
   }
   return 0;
 }
