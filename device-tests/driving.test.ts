@@ -538,11 +538,17 @@ describe.skipIf(!ios)('driving on a simulator', () => {
     expect(ok(await h.call('alert')).text).toContain('no system alert');
   });
 
-  it('switches to the app switcher, and home brings back the app it was opened over', async () => {
-    await open('home');
-    ok(await h.call('press_key', { key: 'app_switch' }));
-    // as iOS 27.2 does from the switcher: the home screen comes from a press in an app
-    expect(ok(await h.call('press_key', { key: 'home' })).data.foreground).toBe(APP);
+  it('switches to the app switcher, home brings back the app it was opened over, and home again goes home', async () => {
+    // twice: a first switcher of a session may come late enough to pass by itself
+    for (let i = 0; i < 2; i++) {
+      await open('home');
+      ok(await h.call('press_key', { key: 'app_switch' }));
+      // as iOS 27.2 does from the switcher: the home screen comes from a press in an app
+      expect(ok(await h.call('press_key', { key: 'home' })).data.foreground).toBe(APP);
+      expect(ok(await h.call('press_key', { key: 'home' })).data.foreground).toBe(
+        'com.apple.springboard',
+      );
+    }
   });
 
   it('volume and lock answer, or say why not', async () => {
