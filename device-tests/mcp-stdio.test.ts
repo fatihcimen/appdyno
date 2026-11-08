@@ -78,11 +78,15 @@ for (const revision of REVISIONS)
         expect((await call('terminate_app')).error).toBe(false);
         const launched = await call('launch_app', { read: 'full' });
         expect(launched.error).toBe(false);
+        expect(launched.text).toContain(`started ${APP}`);
         const home = await call('screen');
         expect(home.text).toContain(`foreground: ${APP}`);
         const tapped = await call('tap', { ref: ref(home.text, form) });
         expect(tapped.text).toMatch(new RegExp(`^tapped @\\w+ "${form}"`));
         expect(tapped.text).toContain('Your name');
+        // whole in its structured content too, for a client that shows only that
+        for (const r of [launched, home, tapped]) expect(r.data.text).toBe(r.text);
+        expect(tapped.data).toMatchObject({ changed: true, foreground: APP });
         const typed = await call('type_text', {
           ref: ref(tapped.text, 'Your name'),
           text: 'gizli-kod-9911',
@@ -98,9 +102,17 @@ for (const revision of REVISIONS)
         expect(stderr.join('')).not.toContain('gizli-kod-9911');
       });
 
-      it('refuses another device and an unsafe link', async () => {
-        expect((await call('use_device', { device: 'another-device' })).error).toBe(true);
-        expect((await call('open_link', { url: 'file:///sdcard/x' })).error).toBe(true);
-        expect((await call('launch_app', { app: 'com.android.settings' })).error).toBe(true);
+      it('refuses another device and an unsafe link, each refusal its code first and its hint last', async () => {
+        for (const r of [
+          await call('use_device', { device: 'another-device' }),
+          await call('open_link', { url: 'file:///sdcard/x' }),
+          await call('launch_app', { app: 'com.android.settings' }),
+          await call('tap', { selector: { text: 'nothing like it' } }),
+        ]) {
+          expect(r.error).toBe(true);
+          expect(r.text.startsWith(`${String(r.data.code)}: `)).toBe(true);
+          if (typeof r.data.hint === 'string') expect(r.text.endsWith(r.data.hint)).toBe(true);
+          expect(r.data.text).toBe(r.text);
+        }
       });
     });
