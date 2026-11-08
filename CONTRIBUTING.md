@@ -159,6 +159,9 @@ code does.
 [The docs](docs/README.md) hold guides, which take a reader through a task, and a reference to look things up in. A new
 page goes in one of those and in the index. A number in the docs is one you ran: say on what, and with what load.
 
+A page is in English and in Turkish, `X.md` and `X.tr.md`, but for the few `docs.test.ts` names, and a change to one is
+made in both: the test holds the two to the same lines, code, numbers and links, each in its own language.
+
 Diagrams are hand-written SVG in `docs/images`, one file each, with no generator. Each has its own ground and both
 themes inside it, so it reads on any page and follows GitHub's theme. To draw one, copy the style block of another and
 keep to its shapes: blue is your Mac, teal or violet the device, pink whoever is asking. Look at it in both themes.

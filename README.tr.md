@@ -151,7 +151,7 @@ Yalnızca appdyno'nun girdisini değiştirir, dosyanın yanına bir yedek bırak
 
 - **iOS simülatörü**: başka bir şey gerekmez. Xcode'un Simulator uygulamasından açın ya da ajanınızdan açmasını isteyin. `appdyno ios build`, appdyno'nun yardımcısını ilk işlemin yapacağı gibi önceden derler; birkaç dakika sürer.
 - **Android emülatörü**: Android Studio'nun Device Manager'ında bir sanal cihaz oluşturup başlatın.
-- **Android telefon**: geliştirici seçeneklerini açın (Ayarlar, Telefon hakkında, Derleme numarasına yedi kez dokunun), ardından orada USB hata ayıklamayı açın. Kabloyu takın ve telefonun sorusuna İzin ver deyin. Wi-Fi için bir kez eşleştirin: Kablosuz hata ayıklama altında eşleme koduyla eşleştirmeyi seçin ve telefonun gösterdiğiyle `appdyno pair <adres> <kod>` çalıştırın.
+- **Android telefon**: geliştirici seçeneklerini açın (Ayarlar, Telefon hakkında, Derleme numarasına yedi kez dokunun), ardından orada USB hata ayıklamayı açın. Kabloyu takın ve telefonun sorusuna İzin ver deyin. Wi-Fi için bir kez eşleştirin: Kablosuz hata ayıklama altında eşleme koduyla eşleştirmeyi seçin ve telefonun gösterdiğiyle `appdyno pair <address> <code>` çalıştırın.
 - **iPhone**: kabloyu takın ve Güven deyin, Geliştirici Modu'nu açın, bir geliştirme imzası ve ona ait bir profil verin: [iPhone veya simülatör](docs/guides/clients.tr.md#iphone-veya-simülatör) adım adım anlatır. Wi-Fi için kabloluyken bir kez eşleştirin: `appdyno pair --device <udid>`.
 
 **5. Kontrol edin**
@@ -161,7 +161,7 @@ appdyno doctor             # neyin kurulu, neyin eksik olduğunu ve nasıl düze
 appdyno devices            # neler bağlı
 ```
 
-[İstemci bağlamak](docs/guides/clients.tr.md) her istemciyi adım adım anlatır; hiçbir şey kurulu değilken bir telefonu, imzalama dahil, baştan nasıl hazırlayacağınızı gösterir.
+[İstemci bağlamak](docs/guides/clients.tr.md) ([English](docs/guides/clients.md)) her istemciyi adım adım anlatır; hiçbir şey kurulu değilken bir telefonu, imzalama dahil, baştan nasıl hazırlayacağınızı gösterir.
 
 ## İlk çalıştırma
 
@@ -188,7 +188,7 @@ appdyno perf survey --app A    # bu cihazdaki her ölçüm, ardından hepsini g�
 
 ## Hız
 
-Beş çalıştırmanın medyanı; MCP üzerinden stdio ile, fixture uygulamasında, bir M5 Pro'da, 2026-11-07'de. iPhone bir 13 Pro Max, Android telefon bir Samsung SM-A525F:
+5 çalıştırmanın medyanı; MCP üzerinden stdio ile, fixture uygulamasında, bir M5 Pro'da, 2026-11-07'de. iPhone bir 13 Pro Max, Android telefon bir Samsung SM-A525F:
 
 | çağrı                | iOS simülatörü | Android emülatörü | iPhone   | Android telefon |
 | -------------------- | -------------- | ----------------- | -------- | --------------- |
@@ -198,7 +198,7 @@ Beş çalıştırmanın medyanı; MCP üzerinden stdio ile, fixture uygulamasın
 | bir alana yazmak     | 1.271 ms       | 635 ms            | 2.287 ms | 1.023 ms        |
 | ekran görüntüsü      | 90 ms          | 24 ms             | 183 ms   | 184 ms          |
 
-Dokunuş, ekran 200 ms boyunca durgun kalana kadar bekler ve neyin değiştiğini söyler; bu yüzden süresinin çoğu uygulamanın kendisine aittir. `node scripts/speed.mjs <cihaz kimliği>` aynı çağrıları sizin Mac'inizde çalıştırır. Her çağrı, sürenin nereye gittiği ve her birinin neyi kanıtladığı: [Speed](docs/reference/perf.md#speed).
+Dokunuş, ekran 200 ms boyunca durgun kalana kadar bekler ve neyin değiştiğini söyler; bu yüzden süresinin çoğu uygulamanın kendisine aittir. `node scripts/speed.mjs <device id>` aynı çağrıları sizin Mac'inizde çalıştırır. Her çağrı, sürenin nereye gittiği ve her birinin neyi kanıtladığı: [Speed](docs/reference/perf.md#speed).
 
 ## Belgeler
 

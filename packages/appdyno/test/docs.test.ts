@@ -13,26 +13,36 @@ const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: '
 // a changelog is what was true then
 const pages = tracked.filter((f) => f.endsWith('.md') && f !== 'CHANGELOG.md');
 
-/** A heading's anchor, as GitHub makes it. */
+/** A heading's anchor, as GitHub makes it: an İ keeps its dot, as i and U+0307. */
 const slug = (heading: string) =>
   heading
     .trim()
     .toLowerCase()
     .replace(/`/g, '')
-    .replace(/[^\p{L}\p{N}\- ]/gu, '')
+    .replace(/[^\p{L}\p{M}\p{N}\- ]/gu, '')
     .replace(/ /g, '-');
 
-const anchorsOf = (text: string) =>
-  [...text.replace(/```[^]*?```/g, '').matchAll(/^#{1,6} (.+)$/gm)].map((m) => slug(m[1]!));
+/** A page's anchors in order, a heading met again numbered as GitHub numbers it. */
+const anchorsOf = (text: string) => {
+  const seen = new Map<string, number>();
+  return [...text.replace(/```[^]*?```/g, '').matchAll(/^#{1,6} (.+)$/gm)].map((m) => {
+    const anchor = slug(m[1]!);
+    const times = seen.get(anchor) ?? 0;
+    seen.set(anchor, times + 1);
+    return times ? `${anchor}-${times}` : anchor;
+  });
+};
 
-/** Where a page leads: each link and image, leaving out what code shows. */
+/** Where a page leads: each link, reference and image, leaving out what code shows. */
 const linksOf = (text: string) =>
   [
     ...text
       .replace(/```[^]*?```/g, '')
       .replace(/`[^`\n]*`/g, '')
-      .matchAll(/\]\(([^)\s]+)\)|<(?:img[^>]* src|source[^>]* srcset)="([^"]+)"/g),
-  ].map((m) => (m[1] ?? m[2])!);
+      .matchAll(
+        /\]\(([^)\s]+)\)|<(?:img[^>]* src|source[^>]* srcset)="([^"]+)"|^\[[^\]\n]+\]: (\S+)/gm,
+      ),
+  ].map((m) => (m[1] ?? m[2] ?? m[3])!);
 
 describe('the docs', () => {
   it('lead only to what is there', () => {
@@ -66,6 +76,127 @@ describe('the docs', () => {
     expect(named.length).toBeGreaterThan(5);
     expect(named.filter(([, doc]) => !existsSync(join(root, doc)))).toEqual([]);
   });
+});
+
+const TR = /\.tr\.md$/;
+/** The pages in English alone, and why. */
+const ENGLISH_ONLY: Record<string, string> = {
+  'CHANGELOG.md': 'not yet in Turkish',
+  'CODE_OF_CONDUCT.md': 'not yet in Turkish',
+  'CONTRIBUTING.md': 'not yet in Turkish',
+  'SECURITY.md': 'not yet in Turkish',
+  'docs/README.md': 'not yet in Turkish',
+  'docs/architecture.md': 'not yet in Turkish',
+  'docs/guides/evidence.md': 'not yet in Turkish',
+  'docs/guides/flows.md': 'not yet in Turkish',
+  'docs/guides/performance.md': 'not yet in Turkish',
+  'docs/reference/ci.md': 'not yet in Turkish',
+  'docs/reference/cli.md': 'not yet in Turkish',
+  'docs/reference/library.md': 'not yet in Turkish',
+  'docs/reference/mirror.md': 'not yet in Turkish',
+  'docs/reference/perf.md': 'not yet in Turkish',
+  'docs/reference/protocol.md': 'not yet in Turkish',
+  'docs/reference/tools.md': 'not yet in Turkish',
+};
+const english = tracked.filter((f) => f.endsWith('.md') && !TR.test(f));
+const turkishOf = (page: string) => page.replace(/\.md$/, '.tr.md');
+const pairs = english
+  .filter((page) => tracked.includes(turkishOf(page)))
+  .map((page) => [page, turkishOf(page)] as const);
+
+/** The same file in the other language where there is one: X.md and X.tr.md, X.dark.svg and X.tr.dark.svg. */
+const otherOf = (file: string) => {
+  const other = file.includes('.tr.')
+    ? file.replace('.tr.', '.')
+    : file.replace(/^(.*\/)?([^./]+)\./, '$1$2.tr.');
+  return existsSync(join(root, other)) ? other : file;
+};
+
+/** What a line is to Markdown, so that a pair's lines answer one for one. */
+const kindOf = (line: string) => {
+  const text = line.trimStart();
+  const mark = /^(?:#{1,6} |[-*] |\d+\. |> |!\[|<\/?[a-z]+|\[[^\]]+\]: |\|)/.exec(text)?.[0];
+  return text ? `${line.length - text.length}${mark?.trim() ?? 'text'}` : '';
+};
+
+/** A page as a pair compares it: its lines' kinds, its code with no comments, and its prose. */
+const partsOf = (text: string) => {
+  const kinds: string[] = [];
+  const code: string[] = [];
+  const prose: string[] = [];
+  let fenced = false;
+  for (const line of text.split('\n')) {
+    const fence = line.trimStart().startsWith('```');
+    if (fence) fenced = !fenced;
+    kinds.push(fence ? '```' : fenced ? 'code' : kindOf(line));
+    if (fence || fenced) code.push(line.replace(/(?:^|\s+)(?:#|\/\/) .*$/, ''));
+    else prose.push(line);
+  }
+  return { kinds, code, prose: prose.join('\n') };
+};
+
+const spansOf = (prose: string) => (prose.match(/`[^`\n]+`/g) ?? []).sort();
+
+/**
+ * The numbers prose and tables say, as digits: Turkish writes 1,800 as 1.800 and 0.1 as 0,1. What a picture shows is
+ * left out, as a Turkish picture may be another capture.
+ */
+const numbersOf = (prose: string) =>
+  (
+    prose
+      .replace(/`[^`\n]+`|!\[[^\]]*\]|\]\([^)]*\)|<[^>]*>|https?:\/\/\S+|^\[[^\]]+\]: .*$/gm, ' ')
+      .replace(/^ *\d+\. /gm, '')
+      .match(/\d+(?:[.,]\d+)*/g) ?? []
+  )
+    .map((n) => n.replace(/,/g, '.'))
+    .sort();
+
+/** Where a page's links lead, a heading by its place in its page; `across` names what the other language's page would. */
+const targetsOf = (page: string, across = false) =>
+  linksOf(read(page))
+    .map((link) => {
+      if (/^[a-z]+:/.test(link)) return link;
+      const [path, anchor] = link.split('#') as [string, string | undefined];
+      const file = path ? relative(root, resolve(root, dirname(page), path)) : page;
+      if (!existsSync(join(root, file))) return link;
+      const heading = anchor === undefined ? '' : `#${anchorsOf(read(file)).indexOf(anchor)}`;
+      return (across ? otherOf(file) : file) + heading;
+    })
+    .sort();
+
+describe('a page', () => {
+  it('is in English and in Turkish, but for the few named', () => {
+    expect(pairs.length).toBeGreaterThan(1);
+    expect(english.filter((p) => !tracked.includes(turkishOf(p)) && !(p in ENGLISH_ONLY))).toEqual(
+      [],
+    );
+    expect(
+      Object.keys(ENGLISH_ONLY).filter(
+        (p) => !english.includes(p) || tracked.includes(turkishOf(p)),
+      ),
+    ).toEqual([]);
+    expect(tracked.filter((f) => TR.test(f) && !english.includes(f.replace(TR, '.md')))).toEqual(
+      [],
+    );
+  });
+
+  it('leads to its other language at the top', () => {
+    const top = (page: string) => read(page).split('\n## ')[0]!;
+    for (const [en, tr] of pairs) {
+      expect(top(en), en).toContain(`[Türkçe](${tr.split('/').pop()})`);
+      expect(top(tr), tr).toContain(`[English](${en.split('/').pop()})`);
+    }
+  });
+
+  for (const [en, tr] of pairs)
+    it(`says in ${tr} what ${en} says`, () => {
+      const [a, b] = [partsOf(read(en)), partsOf(read(tr))];
+      expect(b.kinds, 'a line for each line').toEqual(a.kinds);
+      expect(b.code, 'the same code').toEqual(a.code);
+      expect(spansOf(b.prose), 'the same code in the prose').toEqual(spansOf(a.prose));
+      expect(numbersOf(b.prose), 'the same numbers').toEqual(numbersOf(a.prose));
+      expect(targetsOf(tr), 'the same links, to its own language').toEqual(targetsOf(en, true));
+    });
 });
 
 const IMAGES = 'docs/images';

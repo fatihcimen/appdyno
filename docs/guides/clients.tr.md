@@ -2,7 +2,7 @@
 
 [English](clients.md)
 
-appdyno, Mac'inizde, kullandığı telefonun ya da simülatörün yanında çalışır. İstemci ise sizin konuştuğunuz uygulamadır. Bu sayfa ikisini nasıl bağlayacağınızı istemci istemci anlatır, ayrıca hiçbir şey kurulu değilken bir telefonu nasıl hazırlayacağınızı gösterir. Her istemcinin neler sunduğu 4 Kasım 2026'da kendi belgelerinden okundu. Bunlar sık değişir: bir menünün yeri değiştiyse istemcinin kendi sayfasına güvenin. İstemcilerin menü adları İngilizce arayüzdeki gibi yazıldı; telefon ayarlarının adları ise üreticiye ve sürüme göre değişebilir.
+appdyno, Mac'inizde, kullandığı telefonun ya da simülatörün yanında çalışır. İstemci ise sizin konuştuğunuz uygulamadır. Bu sayfa ikisini nasıl bağlayacağınızı istemci istemci anlatır, ayrıca hiçbir şey kurulu değilken bir telefonu nasıl hazırlayacağınızı gösterir. Her istemcinin neler sunduğu 2026-11-04'te kendi belgelerinden okundu. Bunlar sık değişir: bir menünün yeri değiştiyse istemcinin kendi sayfasına güvenin. İstemcilerin menü adları İngilizce arayüzdeki gibi yazıldı; telefon ayarlarının adları ise üreticiye ve sürüme göre değişebilir.
 
 İstemcilerin çoğu appdyno'yu Mac'inizde kendisi başlatır, bunun için ağ gerekmez. Tarayıcıda çalışan bir istemci ise Mac'inizde hiçbir şey başlatamaz. Zor olan durum budur.
 
@@ -23,11 +23,11 @@ Sonra cihazınızı hazırlayın: [Android](#android-telefon-veya-emülatör), [
 
 ### Mac uygulaması
 
-Apple silicon işlemcili, macOS 13.5 ya da üstü bir Mac gerekir. Node, Xcode ya da terminal gerekmez: uygulama kendi Node'unu, Android agent'ı ve penceresini içinde taşır.
+Apple silicon işlemcili, macOS 13.5 ya da üstü bir Mac gerekir. Node, Xcode ya da terminal gerekmez: uygulama kendi Node'unu, Android ajanını ve penceresini içinde taşır.
 
 Henüz yayımlanmış bir sürüm yok. O zamana kadar kaynak kod aynı uygulamayı derler: `pnpm build && node scripts/build-app.mjs` onu `.app-build` klasörüne bırakır.
 
-1. `Appdyno-<sürüm>-arm64.dmg` dosyasını [sürümler](https://github.com/fatihcimen/appdyno/releases) sayfasından indirip açın.
+1. `Appdyno-<version>-arm64.dmg` dosyasını [sürümler](https://github.com/fatihcimen/appdyno/releases) sayfasından indirip açın.
 2. Appdyno'yu Applications klasörüne sürükleyin.
 3. Appdyno'yu açın. Hub açılır, menü çubuğunda cihazlarınızla birlikte bir simge kalır. Dock'ta Appdyno yalnızca bir pencere açıkken görünür.
 
@@ -42,9 +42,9 @@ Henüz yayımlanmış bir sürüm yok. O zamana kadar kaynak kod aynı uygulamay
 **Homebrew ile.** Her sürüm bir cask dosyası taşır: `appdyno.rb`. Onu kendi tap'inize kopyalayın:
 
 ```sh
-brew tap-new siz/araclar
-cp appdyno.rb "$(brew --repository siz/araclar)/Casks/"
-brew install --cask siz/araclar/appdyno
+brew tap-new you/tools
+cp appdyno.rb "$(brew --repository you/tools)/Casks/"
+brew install --cask you/tools/appdyno
 ```
 
 ### npm paketi
@@ -91,7 +91,7 @@ Başarısız bir kurulum eski sürümü çalışır halde bırakır. `update` hi
 
 **`npx -y appdyno mcp` çalıştıran bir istemci.** npx her açılışta kayıt defterine sorar ve yukarıdaki denetimlerin hiçbiri olmadan son sürüme kendiliğinden geçer. appdyno global olarak kuruluysa npx onun yerine o kurulumu çalıştırır. Bu yüzden bir kez `npm install -g appdyno` çalıştırın: istemcilerinizin çalıştırdığı sürüm artık yalnızca siz `appdyno update` çalıştırdığınızda değişir.
 
-**Güncellemeden sonra.** Çalışan bir MCP sunucusu, istemcisi onu yeniden başlatana kadar eski kodla devam eder, bu yüzden istemciyi yeniden başlatın. Android agent ve iOS runner için bir şey gerekmez: ikisi de bir sonraki bağlantıda hash'lerine göre değişir. Yeni bir iOS runner içeren sürüm onu ilk kullanımda bir kez derler, bu birkaç dakika sürer.
+**Güncellemeden sonra.** Çalışan bir MCP sunucusu, istemcisi onu yeniden başlatana kadar eski kodla devam eder, bu yüzden istemciyi yeniden başlatın. Android ajanı ve iOS runner için bir şey gerekmez: ikisi de bir sonraki bağlantıda hash'lerine göre değişir. Yeni bir iOS runner içeren sürüm onu ilk kullanımda bir kez derler, bu birkaç dakika sürer.
 
 ## Bu Mac'teki istemciler
 
@@ -346,7 +346,7 @@ Masaüstü uygulamasında bunların hiçbiri yoktur: appdyno'yu Mac'inizde çal�
 
 Her isteğin **120 saniyesi vardır, ne kadar ilerleme bildirirse bildirsin**, boyut sınırı da 10 MiB'dir. Uzun ölçümler ve ilk derleme buna sığmaz: önce `appdyno ios build` çalıştırın.
 
-**Kendi tünelinizle.** [HTTP sunucusunu](#http-sunucusu) ve bir tüneli başlatın, sonra özel sunucuyu Server URL olarak `https://<tüneliniz>/mcp/<token>` ve No authentication ile ekleyin. Bu adrese sahip olan herkes içeridedir, onu parola gibi saklayın.
+**Kendi tünelinizle.** [HTTP sunucusunu](#http-sunucusu) ve bir tüneli başlatın, sonra özel sunucuyu Server URL olarak `https://<your tunnel>/mcp/<token>` ve No authentication ile ekleyin. Bu adrese sahip olan herkes içeridedir, onu parola gibi saklayın.
 
 ChatGPT her yazma işleminde varsayılan olarak onay ister. Bir telefonun araçları için bunu değiştirmek sizin kararınızdır. Bir kullanıcı bildirimine göre bir aracın görselini boş gösteriyor: `screenshot` boş dönerse `screen` kullanın.
 
@@ -356,13 +356,13 @@ Bu bölüm Claude'un web, telefon ve Cowork sürümlerini ve masaüstü uygulama
 
 1. [HTTP sunucusunu](#http-sunucusu) ve bir tüneli başlatın.
 2. Customize, Connectors, +, Add custom connector.
-3. Bir ad ve `https://<tüneliniz>/mcp/<token>` adresini girin.
+3. Bir ad ve `https://<your tunnel>/mcp/<token>` adresini girin.
 4. Authentication: **No sign-in**. Ekleyin.
 5. Sohbette: +, Connectors, açın ve cihazları listelemesini isteyin.
 
 Team ve Enterprise'da bağlayıcıyı bir Owner, Organization settings, Connectors altından ekler.
 
-Claude'un sayfaları bir konuda çelişiyor. Yardım makalesi sabit token için bir **Request headers** alanı gösteriyor, geliştirici sayfaları ise bu alanın yalnızca sınırlı sayıda kuruluşa açık bir beta olduğunu söylüyor. Bu alanı görüyorsanız düz `https://<tüneliniz>/mcp` adresini ve `Authorization: Bearer <token>` başlığını kullanın, böylece token adreste durmaz.
+Claude'un sayfaları bir konuda çelişiyor. Yardım makalesi sabit token için bir **Request headers** alanı gösteriyor, geliştirici sayfaları ise bu alanın yalnızca sınırlı sayıda kuruluşa açık bir beta olduğunu söylüyor. Bu alanı görüyorsanız düz `https://<your tunnel>/mcp` adresini ve `Authorization: Bearer <token>` başlığını kullanın, böylece token adreste durmaz.
 
 Bir araç çağrısının yaklaşık 240 saniyesi, bir yanıtın yaklaşık 150.000 karakteri vardır. Claude'un kendi MCP tünelleri, sunucuda OAuth isteyen bir Enterprise önizlemesidir, dolayısıyla appdyno için bir yol değildir.
 
@@ -375,7 +375,7 @@ Android cihazlarla konuşan `adb` aracı gerekir.
 3. Ayarlar, Geliştirici seçenekleri altında **USB hata ayıklama**yı açın. Xiaomi'de **USB ile yükle** ve **USB hata ayıklama (Güvenlik ayarları)** da açılmalı.
 4. Kabloyu takın. Telefonun kilidini açın, sorduğu soruya **İzin ver** deyin.
 5. Kontrol: `adb devices` telefonu `device` olarak listeler. `unauthorized`, sorunun yanıtlanmadığı anlamına gelir: telefona bakın. Liste boşsa kablo büyük olasılıkla yalnızca şarj kablosudur.
-6. Bir kontrol daha: `appdyno doctor --serial <seri>`.
+6. Bir kontrol daha: `appdyno doctor --serial <serial>`.
 
 Telefon yok mu? Android Studio'nun Device Manager'ında sanal bir cihaz oluşturup başlatın. `adb devices` onu `emulator-5554` olarak listeler.
 
@@ -437,8 +437,8 @@ Kimlik 10 karakterdir, Apple Developer hesabınızda Membership altındadır. ap
 Derleme makinesi ya da birden çok profil olan bir Mac için:
 
 ```sh
-export APPDYNO_IOS_PROFILE=/yol/runner.mobileprovision
-export APPDYNO_IOS_KEYCHAIN=/yol/build.keychain-db
+export APPDYNO_IOS_PROFILE=/path/to/runner.mobileprovision
+export APPDYNO_IOS_KEYCHAIN=/path/to/build.keychain-db
 export APPDYNO_IOS_KEYCHAIN_PASSWORD=...
 ```
 
@@ -489,12 +489,12 @@ Sonra girdiye `npx` için tam yolu ve `node` ile `adb`'yi de içeren bir `PATH` 
 | `403 requests from ... are not accepted`                  | bir web sayfası ya da bu sunucuya ait olmayan `Origin` başlığı gönderen bir istemci. Değeri sunucunun kaydında yazar                     |
 | `409 this server serves one client at a time`             | iletide adı geçen başka bir istemci tutuyor. Son çağrısından 10 dakika bekleyin ya da sunucuyu yeniden başlatın                          |
 | `address already in use`                                  | port dolu: başka bir port seçin                                                                                                          |
-| bağlayıcı eklenmiyor ya da araç görmüyor                  | `curl -i -X POST https://<tüneliniz>/mcp` 401 vermeli. Başka bir yanıt, tünelin sunucuya ulaşmadığını gösterir                           |
+| bağlayıcı eklenmiyor ya da araç görmüyor                  | `curl -i -X POST https://<your tunnel>/mcp` 401 vermeli. Başka bir yanıt, tünelin sunucuya ulaşmadığını gösterir                         |
 | bağlayıcı çalışıyordu, artık çalışmıyor                   | sunucu üretilmiş bir token ile yeniden başladı ya da tünelin adresi değişti. `APPDYNO_HTTP_TOKEN` saklayın, adlandırılmış tünel kullanın |
 
 ## Neyle denendi
 
-macOS'ta, geçici bir ev klasörüyle, paketinden derlenip kurulan sürümle, bütün cihazlar `--allow-devices` ile dışarıda bırakılarak, 4 Kasım 2026'da:
+macOS'ta, geçici bir ev klasörüyle, paketinden derlenip kurulan sürümle, bütün cihazlar `--allow-devices` ile dışarıda bırakılarak, 2026-11-04'te:
 
 | denenen                                      | sonuç                                                     |
 | -------------------------------------------- | --------------------------------------------------------- |
