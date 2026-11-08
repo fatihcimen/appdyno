@@ -49,7 +49,7 @@ project on this Mac: an Xcode project with `scheme` and `configuration`, or a Gr
 its module and `configuration` as its variant. `device_setting` holds `dark_mode`, `text_size`,
 `reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `biometric`, `fold`, `call`, `sms` and `keychain`.
 
-`launch_app` says whether it started the app or brought a running one to the front, on the screen it was on.
+`launch_app` says whether it started the app or brought a running one to the front, on the screen it was on. An app the device does not have is refused as `NOT_FOUND` on both platforms, with `app` `list` in its hint.
 
 ## What asks the person first
 
@@ -135,6 +135,8 @@ Of Google's behavior changes for Android 17, for all apps and for apps that targ
 | tapped        | the launcher activity, or `click_action`'s, with the data as extras                                                                                                      | no: `simctl` taps nothing                                                                    | no: only a person's tap                             |
 
 `tapped` draws nothing. It is what [Firebase documents](https://firebase.google.com/docs/cloud-messaging/android/receive) for a push tapped while the app is in the background, "the data payload is delivered in the extras of the intent of your launcher Activity": the activity opens anew on top of the app's task, as Firebase's own tap opens it. A real iPhone takes a push only from Apple's servers, once a person has set APNs up as in [Push to a phone and a simulator, by Apple and Google](#push-to-a-phone-and-a-simulator-by-apple-and-google). Until then, `open_link` with the app's deep link reaches the code a push with that link would, or a simulator takes the push. Xcode 27.1's `devicectl` has no push of its own: `devicectl device notification post` posts a Darwin notification, by its name alone, as its help says, which is no push. Without a key, Apple's Push Notifications Console sends a push from a browser signed in to the team's account, to the token the app printed, as [Apple shows it](https://developer.apple.com/videos/play/wwdc2023/10025/): that was not tried here, and nothing here can drive it.
+
+A type this device or the app's build cannot take is refused with why, and the hint names the types that still work there, such as `tapped`.
 
 Run through the MCP server over stdio, by `device-tests/push.test.ts`. On an API 34 emulator `tapped` opened the fixture, whose screen showed the two keys it was given, and each other type to it was refused, as it has no Firebase Messaging, with no notification drawn by anyone. On an iPhone 17 Pro simulator with iOS 27.2 an alert from fields and one from APNs' own payload, with a badge, a sound and a category, reached the fixture's code with their keys, and `simctl` refused a background push: "Notification has no user visible content". The answer says what reached the app's code by where the app was at the push, read just before it: in front, the code gets it; in the background or not running it is only shown, and the code gets it when its banner is tapped. With the fixture in the background, an alert, and one with `content-available`, left its code with the push before, as it did when it was not running. An app no one allowed notifications shows none, and `simctl` fails, "Source is not authorized", yet an app in front still got the push in its code: the answer says so then, and refuses with how to allow them when the app is not in front.
 

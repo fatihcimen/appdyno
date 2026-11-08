@@ -83,7 +83,16 @@ export function pushOps(ctx: ServerContext, { afterChange }: Answers) {
         const route = routes.find((r) => r.type === type);
         if (!route)
           throw new ToolError(`type: ${PUSH_TYPES.join(', ')}, not ${type}`, 'INVALID_ARGUMENT');
-        if ('why' in route) throw new ToolError(route.why, 'UNSUPPORTED');
+        if ('why' in route) {
+          const works = routes.flatMap((r) => ('route' in r ? [r.type] : []));
+          throw new ToolError(
+            route.why,
+            'UNSUPPORTED',
+            works.length > 0
+              ? `type ${works.join(', ')} still ${works.length === 1 ? 'works' : 'work'} here`
+              : undefined,
+          );
+        }
         const given = Object.entries({ title, body, image, data }).flatMap(([k, v]) =>
           v ? [k] : [],
         );

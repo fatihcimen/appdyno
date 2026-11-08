@@ -64,6 +64,11 @@ function shared(
     expect(ok(await call('launch_app')).data.done).toBe(
       `brought ${APP} to the front, on the screen it was on`,
     );
+    const gone = await call('launch_app', { app: 'dev.appdyno.nothere' });
+    expect([gone.data.code, gone.text]).toEqual([
+      'NOT_FOUND',
+      expect.stringMatching(/^dev\.appdyno\.nothere is not installed on /) as unknown,
+    ]);
   });
 
   it('taps by a selector, folding case and accents, and refuses several or none', async () => {

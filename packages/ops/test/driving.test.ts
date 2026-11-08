@@ -933,6 +933,24 @@ describe('gestures, keys, clipboard', () => {
     expect((await call('launch_app')).data.done).toBe('started dev.app');
   });
 
+  it('refuses an app the device does not have by one code on every platform, with how to list them', async () => {
+    const d = new FakeDevice();
+    let state = 'not_installed';
+    Object.assign(d, { apps: { appState: () => Promise.resolve(state) } });
+    // a simulator's launch of an app it does not have fails in simctl's own words
+    d.launch = () => Promise.reject(new DeviceError('INTERNAL', 'simctl launch: code=4 failed'));
+    const { call } = await connect(d);
+    const gone = await call('launch_app', { app: 'dev.gone' });
+    expect([gone.data.code, gone.text]).toEqual([
+      'NOT_FOUND',
+      'NOT_FOUND: dev.gone is not installed on emulator-5580\nhint: app action list names the installed apps',
+    ]);
+    // an app that is there and does not start keeps what its launch said
+    state = 'stopped';
+    d.launch = () => Promise.reject(new DeviceError('APP_NOT_RUNNING', 'dev.app did not start'));
+    expect((await call('launch_app')).text).toBe('APP_NOT_RUNNING: dev.app did not start');
+  });
+
   it('lists the links an app opens, as lines and as data', async () => {
     const d = new FakeDevice();
     const links = [
@@ -1507,7 +1525,9 @@ describe('device conditions', () => {
     });
     expect(pushed.text).toBe('pushed to dev.app');
     expect(settings.pushed).toEqual([['dev.app', { type: 'alert', title: 'T', data: { k: 'v' } }]]);
-    expect((await call('push', { type: 'tapped' })).text).toBe('UNSUPPORTED: no hand');
+    expect((await call('push', { type: 'tapped' })).text).toBe(
+      'UNSUPPORTED: no hand\nhint: type alert, widgets still work here',
+    );
     expect((await call('push', { type: 'widgets', title: 'T' })).text).toBe(
       'INVALID_ARGUMENT: widgets here takes payload alone: not title',
     );

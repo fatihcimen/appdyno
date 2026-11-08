@@ -60,6 +60,17 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
     );
   };
 
+  /** A launch that failed for an app the device does not have says so, by the same code on every platform. */
+  const notThere = (s: Session, pkg: string) => async (e: unknown) => {
+    if ((await s.device.apps.appState(pkg).catch(() => undefined)) === 'not_installed')
+      throw new ToolError(
+        `${pkg} is not installed on ${s.device.serial}`,
+        'NOT_FOUND',
+        'app action list names the installed apps',
+      );
+    throw e;
+  };
+
   /** What a link did, by the screen it left: iOS asks before a scheme first opens an app, and nothing opens until then. */
   const linkSaid = (s: Session, href: string) => (screen: Screen | undefined) => {
     const asks = screen && s.device.platformScreen.systemAlert(screen.tree, screen.elements);
@@ -154,7 +165,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         reportProgress(`launching ${pkg}`);
         if (!language) {
           const ran = await ctx.ranBeforeLaunch(s, pkg);
-          await s.device.launch(pkg);
+          await s.device.launch(pkg).catch(notThere(s, pkg));
           const said =
             ran === undefined
               ? `launched ${pkg}`
@@ -167,7 +178,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         const held = apps.languageStays
           ? await setCondition(s, 'locale', language, pkg)
           : undefined;
-        await apps.launchWith(pkg, { language });
+        await apps.launchWith(pkg, { language }).catch(notThere(s, pkg));
         const done = [`started ${pkg} in ${language}`, held].filter(Boolean).join('; ');
         return afterChange(s, done, read, true);
       },
