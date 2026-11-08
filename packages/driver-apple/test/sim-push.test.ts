@@ -90,9 +90,6 @@ describe('a push to a simulator', () => {
       live_activity: `simctl push makes a notification, which no Live Activity takes: ${byApns}`,
       voip: `simctl takes no VoIP push, as its help says: ${byApns}`,
       widgets: `simctl push makes a notification, which no widget takes: ${byApns}`,
-      inbox: 'an Android style: an iOS push shows as an alert',
-      messaging: 'an Android style: an iOS push shows as an alert',
-      media: 'an Android style: an iOS push shows as an alert',
     });
   });
 

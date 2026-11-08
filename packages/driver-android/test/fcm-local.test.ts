@@ -142,7 +142,6 @@ describe("an Android device's pushes, by the app's own Firebase SDK", () => {
       /^FCM's own message to the app's Firebase SDK, .* by run-as on its debuggable build: onMessageReceived gets it wherever the app is/,
     );
     expect(routes.alert).toContain('in front onMessageReceived gets it, else the SDK draws it');
-    expect(routes.inbox).toContain('draws its inbox style itself');
     expect(routes.tapped).toContain('the launcher activity');
     // with no app named, nothing is read of a build
     expect((await said(events({}))).background).toContain('name an app with Firebase Messaging');

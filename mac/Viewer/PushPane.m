@@ -109,7 +109,7 @@ static NSString *readable(NSString *json) {
       @"image": MVSendField(@"push:image", @"A link, or a file on this Mac", @"Image", self, @selector(sendPush:)),
       @"data": MVSendField(@"push:data", @"key=value, a line each", @"Data", self, @selector(sendPush:)),
     };
-    // lines of their own, by Option-Return: inbox and messaging take a line each
+    // lines of their own, by Option-Return: a body may run to lines, and data takes a key a line
     for (NSString *name in @[@"body", @"data"]) _inputs[name].usesSingleLineMode = NO;
     NSMutableArray *rows = [NSMutableArray array];
     for (int i = 0; i < kFieldCount; i++) [rows addObject:@[MVText(_inputs[kFields[i]].accessibilityLabel, MVStyleStrong), MVFieldPlate(_inputs[kFields[i]], nil)]];

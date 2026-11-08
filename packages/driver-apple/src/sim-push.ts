@@ -6,7 +6,6 @@ import { DeviceError } from '@appdyno/protocol';
 import { apnsPayload } from './apns-payload.js';
 import { assertBundle, type Simctl } from './simctl.js';
 
-const ANDROID_ONLY = 'an Android style: an iOS push shows as an alert';
 /** What does take these to a simulator: Apple's own servers, as Xcode 14's notes and ActivityKit's guide say. */
 const BY_APNS =
   "APNs' sandbox takes it to a simulator, by a key of the app's team a person sets up with `appdyno push setup apns`";
@@ -24,9 +23,6 @@ const CANNOT: Record<string, string> = {
   voip: `simctl takes no VoIP push, as its help says: ${BY_APNS}`,
   widgets: `simctl push makes a notification, which no widget takes: ${BY_APNS}`,
   tapped: 'simctl taps nothing: push an alert, then tap its banner',
-  inbox: ANDROID_ONLY,
-  messaging: ANDROID_ONLY,
-  media: ANDROID_ONLY,
 };
 
 /** Each type on a simulator: an alert by simctl, and what APNs takes by `byApns`, once a person set it up. */

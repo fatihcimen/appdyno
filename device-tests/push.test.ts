@@ -64,7 +64,20 @@ describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
     expect(r.text).toContain(
       "background: no: dev.appdyno.fixture has no Firebase Messaging, which takes FCM's own message",
     );
-    expect(r.text).toContain('inbox: no: an Android app draws its inbox style itself');
+    expect(r.text.split('\n').map((l) => l.split(':')[0])).toEqual([
+      'alert',
+      'background',
+      'rich',
+      'live_activity',
+      'tapped',
+      'voip',
+      'widgets',
+    ]);
+    // a style is no push of its own
+    const style = await call('push', { type: 'inbox' });
+    expect(style.text).toBe(
+      'type: alert, background, rich, live_activity, tapped, voip, widgets, not inbox',
+    );
   });
 
   it('refuses every push but a tap to an app with no Firebase Messaging, saying why, and draws none of its own', async () => {
@@ -78,10 +91,6 @@ describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
       const r = await call('push', { type, title: type, ...extra });
       expect(r.error, type).toBe(true);
       expect(r.text, type).toContain('dev.appdyno.fixture has no Firebase Messaging');
-    }
-    for (const type of ['inbox', 'messaging', 'media'] as const) {
-      const r = await call('push', { type, title: type, body: 'a' });
-      expect(r.text, type).toContain(`draws its ${type} style itself`);
     }
     expect(byShell()).toBe(before);
   });
@@ -138,7 +147,9 @@ describe.skipIf(!ANDROID)("FCM's own message to the push fixture on an emulator,
       /alert: FCM's own message to the app's Firebase SDK, as Google Play services hands it, by run-as on its debuggable build/,
     );
     expect(types).toMatch(/background: FCM's own message .*onMessageReceived gets it wherever/);
-    expect(types).toContain('inbox: no: an Android app draws its inbox style itself');
+    expect(types).toMatch(
+      /live_activity: FCM's own message .*for the app to make its own Live Update/,
+    );
   });
 
   it('hands its code a data message in front, away and not running, each value as given', async () => {
@@ -263,11 +274,9 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
     expect(await last()).toBe('none');
   });
 
-  it('refuses a payload with no aps, an Android style, and an extension simctl never runs', async () => {
+  it('refuses a payload with no aps, and an extension simctl never runs', async () => {
     const bad = await call('push', { type: 'alert', payload: '{"x":1}' });
     expect(bad.text).toContain('an APNs payload has aps: an object');
-    const style = await call('push', { type: 'inbox', body: 'a' });
-    expect(style.text).toContain('an Android style');
     const rich = await call('push', { type: 'rich', title: 'Rich', image: PICTURE });
     expect(rich.text).toContain('simctl push runs no Notification Service Extension');
   });
@@ -331,7 +340,7 @@ describe.skipIf(!ANDROID)('an Android emulator with FCM set up, over MCP', () =>
     const types = (await call('push')).text;
     expect(types).toContain('background: FCM, data alone');
     expect(types).toContain('alert: FCM, a notification');
-    expect(types).toContain('inbox: no: an Android app draws its inbox style itself');
+    expect(types).toContain('tapped: the launcher activity');
     await call('launch_app');
     const quiet = await call('push', { type: 'background', data: { sync: '7' } });
     expect(quiet.text).toContain(`no registration token from ${APP} in this session (NOT_FOUND)`);

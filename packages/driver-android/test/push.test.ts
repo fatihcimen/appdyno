@@ -34,11 +34,8 @@ describe('a push on Android', () => {
     ]);
   });
 
-  it("draws nothing of its own: a style is the app's to draw, and the rest goes by FCM", async () => {
+  it('draws nothing of its own: what is not a tap goes by FCM', async () => {
     const { push, asked } = device();
-    await expect(push.send('dev.app', { type: 'inbox', title: 'T', body: 'one' })).rejects.toThrow(
-      'an Android app draws its inbox style itself, from the data its code is handed: background, with that data, is the push for it',
-    );
     await expect(push.send('dev.app', { type: 'alert', title: 'T' })).rejects.toThrow(
       "the app's own Firebase SDK takes it, as FCM's own message",
     );
@@ -56,10 +53,16 @@ describe('a push on Android', () => {
       expect(routes[type], type).toBe(
         "the app's own Firebase SDK takes it, as FCM's own message: name an app with Firebase Messaging on a debuggable build, or set FCM up with `appdyno push setup fcm`",
       );
-    for (const type of ['inbox', 'messaging', 'media'])
-      expect(routes[type], type).toContain(`draws its ${type} style itself`);
     expect(routes.tapped).toBe('route');
     expect(routes.voip).toContain('an iOS push');
-    expect(Object.keys(routes)).toHaveLength(10);
+    expect(Object.keys(routes)).toEqual([
+      'alert',
+      'background',
+      'rich',
+      'live_activity',
+      'tapped',
+      'voip',
+      'widgets',
+    ]);
   });
 });

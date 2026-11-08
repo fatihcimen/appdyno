@@ -35,7 +35,6 @@ import {
 const PHONE_CANNOT = {
   push: "a real iPhone takes a push only from Apple's servers, once a person sets APNs up with `appdyno push setup apns`: else open the app's deep link, or push to a simulator",
   tapped: 'nothing taps a push on an iPhone but a person: push an alert, and a person taps it',
-  style: 'an Android style: an iOS push shows as an alert',
   // seen on one iPhone with no face enrolled: `devicectl device simulate biometrics` says so and exits 0, so it proves nothing
   biometric:
     'an iPhone takes biometrics only from a person: devicectl reads it as supporting no simulation',
@@ -286,14 +285,10 @@ export class PhoneEvents implements DeviceEvents {
     const byApns = this.apns.routes();
     return PUSH_TYPES.map(
       (type) =>
+        // APNs, once set up, takes every type but a tap
         byApns.find((r) => r.type === type) ?? {
           type,
-          why:
-            byApns.length === 0
-              ? PHONE_CANNOT.push
-              : type === 'tapped'
-                ? PHONE_CANNOT.tapped
-                : PHONE_CANNOT.style,
+          why: byApns.length === 0 ? PHONE_CANNOT.push : PHONE_CANNOT.tapped,
         },
     );
   }

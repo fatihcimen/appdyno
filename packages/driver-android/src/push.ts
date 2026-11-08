@@ -11,13 +11,7 @@ import { assertPkg, shq } from './adb.js';
 /** What gives an app's code a push on Android: FCM's own message, to the app's own Firebase SDK. */
 const BY_FCM =
   "the app's own Firebase SDK takes it, as FCM's own message: name an app with Firebase Messaging on a debuggable build, or set FCM up with `appdyno push setup fcm`";
-/** An Android style is the app's own notification, drawn by its code from what it was handed. */
-const style = (name: string) =>
-  `an Android app draws its ${name} style itself, from the data its code is handed: background, with that data, is the push for it`;
 const WHY: Partial<Record<PushType, string>> = {
-  inbox: style('inbox'),
-  messaging: style('messaging'),
-  media: style('media'),
   voip: "PushKit's, an iOS push: a call reaches an Android app as a data message",
   widgets: "WidgetKit's, an iOS push: an Android widget updates from the app's own code",
 };

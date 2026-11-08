@@ -162,7 +162,7 @@ describe('a push by FCM', () => {
 });
 
 describe("an Android device's pushes, by FCM once it is set up", () => {
-  it("go by FCM for what only Google delivers, read the app's own logcat for its token, and leave a style to the app", async () => {
+  it("go by FCM for what only Google delivers, read the app's own logcat for its token, and leave a tap as it was", async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-fcm-')));
     const asked: string[] = [];
     const adb = {
@@ -184,11 +184,11 @@ describe("an Android device's pushes, by FCM once it is set up", () => {
       route: expect.stringMatching(/^FCM, data alone/),
       tokens: ['device'],
     });
-    expect(await route('inbox')).toMatchObject({
-      why: expect.stringContaining('draws its inbox style itself'),
+    expect(await route('tapped')).toMatchObject({
+      route: expect.stringContaining('the launcher activity'),
     });
     // a person types a token only for what goes by FCM
-    expect('tokens' in (await route('inbox'))).toBe(false);
+    expect('tokens' in (await route('tapped'))).toBe(false);
     // nothing leaves this Mac: fetch is this test's
     const post = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ name: 'n' }));
     expect(await events.push('dev.app', { type: 'background', data: { a: 'b' } })).toContain(

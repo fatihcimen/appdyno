@@ -81,8 +81,8 @@ export interface DeviceSettings {
 
 /**
  * A push by what it does: `alert` is seen, `background` wakes the app's code alone, `rich` carries an image, `tapped`
- * opens the app as a person's tap on one does, `inbox`, `messaging` and `media` are Android's own styles, and `voip`
- * (PushKit's) and `widgets` (WidgetKit's) iOS's.
+ * opens the app as a person's tap on one does, and `voip` (PushKit's) and `widgets` (WidgetKit's) are iOS's. A style
+ * such as Android's inbox is no push of its own: the app draws it from what a `background` push hands its code.
  */
 export const PUSH_TYPES = [
   'alert',
@@ -90,9 +90,6 @@ export const PUSH_TYPES = [
   'rich',
   'live_activity',
   'tapped',
-  'inbox',
-  'messaging',
-  'media',
   'voip',
   'widgets',
 ] as const;

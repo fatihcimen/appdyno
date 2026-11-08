@@ -93,7 +93,7 @@ describe("an iPhone's app, to APNs", () => {
 });
 
 describe("an iPhone's push types", () => {
-  it("are refused, saying how, until a person sets APNs up; then go by APNs, but for a tap and Android's styles", async () => {
+  it('are refused, saying how, until a person sets APNs up; then go by APNs, but for a tap', async () => {
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-phone-push-')));
     const events = new PhoneEvents({ udid: 'U' } as Devicectl, new Map());
     const said = async () =>
@@ -118,8 +118,9 @@ describe("an iPhone's push types", () => {
     );
     expect(routes.widgets).toContain('by the widget token');
     expect(routes.tapped).toContain('nothing taps a push on an iPhone but a person');
-    expect(routes.inbox).toContain('an Android style');
-    await expect(events.push('dev.app', { type: 'inbox' })).rejects.toThrow('an Android style');
+    await expect(events.push('dev.app', { type: 'tapped' })).rejects.toThrow(
+      'nothing taps a push on an iPhone but a person',
+    );
     events.close();
     vi.unstubAllEnvs();
   });
