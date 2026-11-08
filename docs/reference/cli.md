@@ -1,5 +1,7 @@
 # Command line
 
+[Türkçe](cli.tr.md)
+
 Every tool is also a command, with dashes:
 
 ```sh

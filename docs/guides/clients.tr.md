@@ -110,7 +110,7 @@ Bulunamayan bir istemci klasörünü henüz oluşturmamıştır: bir kez açın 
 { "command": "npx", "args": ["-y", "appdyno", "mcp"] }
 ```
 
-Seçenekler `args` dizisinin sonuna eklenir. Örneğin `"--device", "emulator-5554"` ya da `"--allow-apps", "com.example.app"`. Bkz. [Server options](../reference/cli.md#server-options).
+Seçenekler `args` dizisinin sonuna eklenir. Örneğin `"--device", "emulator-5554"` ya da `"--allow-apps", "com.example.app"`. Bkz. [Sunucu seçenekleri](../reference/cli.tr.md#sunucu-seçenekleri).
 
 ### Hub'dan
 
