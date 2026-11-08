@@ -13,10 +13,10 @@ appdyno --help
 ```
 
 `action` alan bir op onu ilk sözcüğü olarak alır: `appdyno record start`, `appdyno network stop`. Diğer komutlar: `mirror` (bkz. [pencere](mirror.md)), `doctor [--serial S]`, `ios build`, `test` (bkz. [akışlar](../guides/flows.tr.md)), `tools install` (sabitlenmiş
-Perfetto trace processor'ı indirir), `bench`, `push setup apns|fcm [--forget]` (bkz. [Araçlar](tools.md#push-to-a-phone-and-a-simulator-by-apple-and-google)). Çıkış kodu 1 çağrının reddedildiği, 2 argümanların yanlış olduğu anlamına gelir. CLI süreçleri
+Perfetto trace processor'ı indirir), `bench`, `push setup apns|fcm [--forget]` (bkz. [Araçlar](tools.tr.md#apple-ve-google-üzerinden-bir-telefona-ve-bir-simülatöre-push)). Çıkış kodu 1 çağrının reddedildiği, 2 argümanların yanlış olduğu anlamına gelir. CLI süreçleri
 arasında seçili cihaz ve diff baseline'ı, durum klasöründe çalışma klasörü başına bir tane olan küçük bir dosyada
 tutulur, böylece iki klasördeki iki terminal bir cihazı paylaşmaz. Veri kaybettiren bir komut önce kendi terminalinde sorar,
-[Araçlar](tools.md#what-asks-the-person-first) sayfasının listelediği gibi; yanıt `--yes`'tir, terminal ve `--yes` yoksa da
+[Araçlar](tools.tr.md#önce-kişiye-sorulanlar) sayfasının listelediği gibi; yanıt `--yes`'tir, terminal ve `--yes` yoksa da
 `APPDYNO_ALLOW_DATA_LOSS` izin vermedikçe reddedilir.
 
 ## Sunucu seçenekleri

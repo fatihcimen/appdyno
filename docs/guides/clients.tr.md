@@ -379,7 +379,7 @@ Android cihazlarla konuşan `adb` aracı gerekir.
 
 Telefon yok mu? Android Studio'nun Device Manager'ında sanal bir cihaz oluşturup başlatın. `adb devices` onu `emulator-5554` olarak listeler.
 
-appdyno ilk kullanımda cihaza kendi ajanını kurar. Xiaomi her yeni kurulumda ekranda sorar, appdyno da yalnızca kendi başlattığı kurulumda bu tek soruyu yanıtlar. Bkz. [Reaching a phone](../reference/tools.md#reaching-a-phone).
+appdyno ilk kullanımda cihaza kendi ajanını kurar. Xiaomi her yeni kurulumda ekranda sorar, appdyno da yalnızca kendi başlattığı kurulumda bu tek soruyu yanıtlar. Bkz. [Bir telefona ulaşmak](../reference/tools.tr.md#bir-telefona-ulaşmak).
 
 ## iPhone veya simülatör
 

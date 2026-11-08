@@ -47,7 +47,7 @@ Hiçbir araç bir cihazı ya da simülatörü yeniden başlatmaz, içeriğini si
 herhangi bir kaynak bunun bir yolunu kazanırsa `packages/appdyno/test/device-reset.test.ts` başarısız olur. `simulator create`, oluşturduğunu bir kişinin
 nasıl kaldıracağını söyler ve bunların hiçbirini çalıştırmaz.
 
-Bir kişinin isteyebileceği veriyi kaybettiren işlem önce o kişiye sorar: [liste](docs/reference/tools.md#what-asks-the-person-first).
+Bir kişinin isteyebileceği veriyi kaybettiren işlem önce o kişiye sorar: [liste](docs/reference/tools.tr.md#önce-kişiye-sorulanlar).
 Soruyu istemci gösterir, model onu yanıtlayamaz ve bir hayır hiçbir şey yaptırmaz. İstemcinin soramadığı yerde ve
 `--http` üzerinden işlem reddedilir; ancak kişi sunucuyu `--allow-data-loss virtual` (simülatörler ve
 emülatörler) ya da `all` ile başlattıysa reddedilmez. Bir araç çağrısının taşıdığı hiçbir şey bunu ayarlamaz ya da evet yerine geçmez. İstemcinin

@@ -1,5 +1,7 @@
 # Tools
 
+[Türkçe](tools.tr.md)
+
 The 48 tools an MCP client can call. Each is also [a command](cli.md), and a call in [the library](library.md).
 
 Tools take no `device` parameter. The device is the server's `--device`, else the only connected one,

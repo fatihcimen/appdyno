@@ -47,7 +47,7 @@ Ne olduğuna bakmak için ikinci bir çağrı gerekmez, sabit bir bekleme de yok
 | **Akışlar.** Ajanın bir kez yaptığı iş, model olmadan, başka bir cihazda ve CI'da yeniden çalışır.                                                                                                                                       | `flow`                                                                  |
 | **İnsan da işin içinde.** Ajan cihazı kullanırken sizin de dokunabildiğiniz canlı bir pencere. Face ID gibi yalnızca bir insanın geçebileceği bir yerde ajan size sorar ve "tamam" diyene kadar bekler.                                  | `mirror` `hand_off`                                                     |
 
-48 aracın hepsi [Tools](docs/reference/tools.md) sayfasında; her biri [kütüphanede](docs/reference/library.tr.md) bir çağrı olarak da var.
+48 aracın hepsi [Araçlar](docs/reference/tools.tr.md) sayfasında; her biri [kütüphanede](docs/reference/library.tr.md) bir çağrı olarak da var.
 
 ### Push bildirimleri ve bağlantılar
 
@@ -66,7 +66,7 @@ APNs kurulana kadar gerçek bir iPhone push almaz, yanıt da bunu söyler. Apple
 
 `open_link` bir deep link, universal link ya da App Link açar ve vardığı ekranla yanıt verir. Bir uygulamanın kimliği verilirse o uygulamanın açtığı bağlantıları listeler: simülatörde URL şemalarını ve imzasında adı geçen alan adlarını, Android'de her filtreyi `scheme://host/path` biçiminde ve her App Link alan adını Android'in doğrulama durumuyla.
 
-Her türün her cihazdaki durumu ve neyin nerede denendiği: [Push notifications](docs/reference/tools.md#push-notifications).
+Her türün her cihazdaki durumu ve neyin nerede denendiği: [Push bildirimleri](docs/reference/tools.tr.md#push-bildirimleri).
 
 ### Canlı pencere ve hub
 
@@ -88,7 +88,7 @@ Her türün her cihazdaki durumu ve neyin nerede denendiği: [Push notifications
   <img src="docs/images/approval.tr.svg" alt="Bir yapay zekâ ajanı bir uygulamanın verisini silmek ister. appdyno durur, çünkü bu veri kaybettirir, ve kişiye istemcinin kendi penceresinde sorar: uygulamayı, cihazı ve neyin kaybolacağını söyler. Kişi evet der; appdyno ancak o zaman veriyi siler ve ajana yanıt verir. Hayır derse ya da yanıt gelmezse hiçbir şey yapılmaz">
 </picture>
 
-Ajanın gönderdiği hiçbir şey evet sayılmaz; hiçbir araç bir cihazı silmez ya da sıfırlamaz. Hangi işlemlerin önce kişiye sorulduğu ve kişinin bunlara nasıl önceden izin verdiği: [What asks the person first](docs/reference/tools.md#what-asks-the-person-first).
+Ajanın gönderdiği hiçbir şey evet sayılmaz; hiçbir araç bir cihazı silmez ya da sıfırlamaz. Hangi işlemlerin önce kişiye sorulduğu ve kişinin bunlara nasıl önceden izin verdiği: [Önce kişiye sorulanlar](docs/reference/tools.tr.md#önce-kişiye-sorulanlar).
 
 ## Hangi cihazda ne çalışır
 
@@ -208,7 +208,7 @@ Dokunuş, ekran 200 ms boyunca durgun kalana kadar bekler ve neyin değiştiğin
 | [Akışlar](docs/guides/flows.tr.md)                  | ajanın yaptığını kaydetmek, model olmadan yeniden oynatmak, CI'da çalıştırmak |
 | [Kanıt](docs/guides/evidence.tr.md)                 | geride bir video, rapor, ağ kaydı ya da görsel fark bırakmak                  |
 | [Performansı ölçmek](docs/guides/performance.tr.md) | bir uygulamayı ölçmek, baseline tutmak, yavaşlatan değişikliği durdurmak      |
-| [Tools](docs/reference/tools.md)                    | her araç, her platformun neyi yapıp neyi yapamadığı                           |
+| [Araçlar](docs/reference/tools.tr.md)               | her araç, her platformun neyi yapıp neyi yapamadığı                           |
 | [Nasıl yapıldığı](docs/architecture.tr.md)          | parçaların nasıl birleştiği, kodu değiştirecek olan için                      |
 
 Diğer başvuru sayfaları [belgelerin dizininde](docs/README.tr.md).
