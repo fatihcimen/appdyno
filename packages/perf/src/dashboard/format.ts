@@ -1,4 +1,4 @@
-import { osName } from '@appdyno/core';
+import { must, osName } from '@appdyno/core';
 import { PLATFORMS, type Platform } from '@appdyno/protocol';
 import type { Unit } from '../record.js';
 import { keyName, MEASURE_TITLE, type MeasureId } from '../record.js';
@@ -32,7 +32,8 @@ export type Scale = { per: number; suffix: string };
 /** The one unit a set of values reads in, from its largest. */
 export function scaleOf(unit: Unit, largest: number): Scale {
   const steps = UNIT_STEPS[unit];
-  const [, per, suffix] = steps.findLast(([from]) => Math.abs(largest) >= from) ?? steps[0]!;
+  const [, per, suffix] =
+    steps.findLast(([from]) => Math.abs(largest) >= from) ?? must(steps[0], 'a step of the unit');
   return { per, suffix };
 }
 
@@ -64,8 +65,8 @@ export function age(at: string, now: number) {
 }
 
 /** A time as the page prints it: always UTC, so that a rewrite on another machine reads the same. */
-export const when = (at: string) => {
-  const date = new Date(at);
+export const when = (at: string | undefined) => {
+  const date = new Date(at ?? '');
   // a baseline is a person's file too: what is no time stays what it is, with the rest of the page around it
   if (Number.isNaN(date.getTime())) return String(at);
   const iso = date.toISOString();
@@ -85,11 +86,10 @@ export type DeviceName = { name: string; detail: string; virtual: boolean };
 
 /** A device class in words; `model` is the record's own spelling, where the class has only a safe one. */
 export function deviceName(cls: string, model?: string): DeviceName {
-  const m = DEVICE_CLASS.exec(cls);
-  if (!m) return { name: cls, detail: '', virtual: false };
-  const [, platform, where, safeModel, os] = m;
+  const [, platform, where, safeModel, os] = DEVICE_CLASS.exec(cls) ?? [];
+  if (!platform || !where || !safeModel || !os) return { name: cls, detail: '', virtual: false };
   const name = KINDS[`${platform}-${where}` as keyof typeof KINDS];
-  const version = osName(platform as Platform, os!);
+  const version = osName(platform as Platform, os);
   const shown = model ?? safeModel;
   return {
     name,

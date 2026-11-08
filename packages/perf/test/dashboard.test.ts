@@ -1,7 +1,8 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { must } from '@appdyno/core';
+import { assert, describe, expect, it } from 'vitest';
 import {
   addToBaseline,
   latestRuns,
@@ -90,7 +91,8 @@ async function baselineAndBudget(project: string) {
     const key = { app: 'dev.app', scenario: 'launch-cold', deviceClass: PHONE_CLASS };
     baseline = addToBaseline(key, baseline, records(ago(100 - i), [launch(ms)]));
   }
-  await saveBaseline(project, baseline!);
+  assert(baseline);
+  await saveBaseline(project, baseline);
   writeFileSync(
     join(project, 'budgets.json'),
     JSON.stringify([{ kind: 'launch.ttid_ms', max: 600 }]),
@@ -132,10 +134,11 @@ describe('the page', () => {
   it('escapes an app name no folder could hold', () => {
     const app = '"><script>alert(1)</script>';
     const [record] = records(ago(1), [launch(400)], { app });
+    assert(record);
     const key = { app, scenario: 'launch-cold', deviceClass: PHONE_CLASS };
     const html = renderDashboard({
       now: ago(0),
-      keys: [{ key, runs: [[record!]], total: 1 }],
+      keys: [{ key, runs: [[record]], total: 1 }],
       rules: [],
       refusals: [],
       unread: [],
@@ -282,7 +285,7 @@ describe('the page', () => {
     const legends = page.match(/<ul class="legend">.*?<\/ul>/g) ?? [];
     expect(legends).toHaveLength(2);
     for (const legend of legends) {
-      const slots = [...legend.matchAll(/class="key s(\d)"/g)].map((m) => m[1]!);
+      const slots = [...legend.matchAll(/class="key s(\d)"/g)].map((m) => m[1]);
       const painted = slots.filter((c) => c !== '0');
       expect(new Set(painted).size).toBe(painted.length);
       expect(slots.filter((c) => c === '0').length).toBeLessThanOrEqual(1);
@@ -451,8 +454,9 @@ describe('what it reads', () => {
   it('holds when a file is half written, and says what it could not read', async () => {
     const s = store();
     const file = await s.run(2, [launch(400)]);
+    assert(file);
     await s.run(1, [launch(410)]);
-    writeFileSync(file!, '[{"kind":');
+    writeFileSync(file, '[{"kind":');
     writeFileSync(join(s.project, 'budgets.json'), '{"not": "a list"}');
     const html = await s.page();
     expect(textOf(html)).toContain('Could not read');
@@ -462,9 +466,10 @@ describe('what it reads', () => {
   it('leaves out a record it could not show', async () => {
     const s = store();
     const file = await s.run(1, [launch(400)]);
-    const held = JSON.parse(readFileSync(file!, 'utf8')) as PerfRecord[];
+    assert(file);
+    const held = JSON.parse(readFileSync(file, 'utf8')) as PerfRecord[];
     writeFileSync(
-      file!,
+      file,
       JSON.stringify([...held, { ...held[0], kind: 'x.bad', value: 'much' }, null]),
     );
     expect(textOf(await s.page())).not.toContain('x.bad');
@@ -478,8 +483,9 @@ describe('what it reads', () => {
     const s = store();
     await s.run(2, [launch(400)]);
     const file = await s.run(1, [launch(410)]);
-    const held = JSON.parse(readFileSync(file!, 'utf8')) as PerfRecord[];
-    writeFileSync(file!, JSON.stringify(held.map(spoil)));
+    assert(file);
+    const held = JSON.parse(readFileSync(file, 'utf8')) as PerfRecord[];
+    writeFileSync(file, JSON.stringify(held.map(spoil)));
     expect(textOf(await s.page())).toContain('403 ms');
   });
 
@@ -505,7 +511,9 @@ describe('what it reads', () => {
     const baseline = JSON.parse(readFileSync(file, 'utf8')) as {
       metrics: Record<string, { runs: { at?: string }[] }>;
     };
-    delete baseline.metrics['launch.ttid_ms']!.runs[0]!.at;
+    const [run] = baseline.metrics['launch.ttid_ms']?.runs ?? [];
+    assert(run);
+    delete run.at;
     writeFileSync(file, JSON.stringify(baseline));
     await s.run(1, [launch(900)]);
     expect(textOf(await s.page())).toContain('Why it got worse');
@@ -515,8 +523,8 @@ describe('what it reads', () => {
     const s = store();
     for (let i = 35; i > 0; i--) await s.run(i, [launch(400 + i)]);
     const data = await loadDashboard(s.dir, s.project);
-    expect(data.keys[0]!.runs).toHaveLength(30);
-    expect(data.keys[0]!.total).toBe(35);
+    expect(data.keys[0]?.runs).toHaveLength(30);
+    expect(data.keys[0]?.total).toBe(35);
     expect(textOf(renderDashboard(data))).toContain('newest 30 of 35 runs');
   });
 
@@ -542,8 +550,9 @@ describe('why it got worse', () => {
     await baselineAndBudget(s.project);
     await s.run(1, [launch(900)]);
     const [key] = await runKeys(s.dir);
-    const [run] = await latestRuns(s.dir, key!);
-    return { ...s, runId: run![0]!.run };
+    assert(key);
+    const [run] = await latestRuns(s.dir, key);
+    return { ...s, runId: must(run?.[0], 'a record of the run').run };
   }
 
   const kept = (run: string, says: string): GateAnswer => ({

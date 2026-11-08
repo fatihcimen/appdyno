@@ -50,15 +50,13 @@ type Direction = 'up' | 'down';
 /** How a run did what it measured, from the measurement it names. */
 async function asMeasured(dir: string, run: PerfRecord[]) {
   const id = /(pm-[0-9a-f]{8})\.txt$/.exec(run[0]?.raw ?? '')?.[1];
-  const held = id
-    ? await loadMeasurement<{
-        file?: string;
-        mode?: LaunchMode;
-        direction?: Direction;
-        scroll?: Direction;
-      }>(dir, id)
-    : undefined;
-  return held?.value ?? {};
+  const held = id ? await loadMeasurement(dir, id) : undefined;
+  return (held?.value ?? {}) as {
+    file?: string;
+    mode?: LaunchMode;
+    direction?: Direction;
+    scroll?: Direction;
+  };
 }
 
 const keptOf = (p: CpuProfile): Profile => {

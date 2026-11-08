@@ -1,7 +1,8 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { must } from '@appdyno/core';
+import { assert, describe, expect, it } from 'vitest';
 import {
   addToBaseline,
   compareMetric,
@@ -340,7 +341,7 @@ describe('store and reports', () => {
           at: '',
         },
         [{ kind: 'cpu.percent', unit: 'ms', samples: [1] }],
-      )[0]!.noise,
+      )[0]?.noise,
     ).toEqual(['high-host-load', 'debuggable-build']);
     expect(
       recordsOf(
@@ -368,52 +369,58 @@ describe('store and reports', () => {
     await saveRun(d, a);
     await saveRun(d, context([900, 905, 910, 915, 920], 'r2', '2026-11-03T00:01:00.000Z'));
     const [key] = await runKeys(d, { app: 'dev.x' });
+    assert(key);
     expect(key).toEqual({
       app: 'dev.x',
       scenario: 'launch-cold',
       deviceClass: 'android-physical-Pixel_9-15',
     });
-    const newest = await latestRuns(d, key!);
-    expect(newest[0]![0]!.run).toBe('r2');
-    expect(await loadBaseline(project, key!)).toBeUndefined();
+    const newest = await latestRuns(d, key);
+    expect(newest[0]?.[0]?.run).toBe('r2');
+    expect(await loadBaseline(project, key)).toBeUndefined();
     const held = (n: number) =>
       context([500, 505, 510, 515, 520], `b${n}`, `2026-11-02T00:0${n}:00.000Z`);
     await saveBaseline(
       project,
       addToBaseline(
-        key!,
-        addToBaseline(key!, addToBaseline(key!, undefined, held(1)), held(2)),
+        key,
+        addToBaseline(key, addToBaseline(key, undefined, held(1)), held(2)),
         held(3),
       ),
     );
-    const baseline = await loadBaseline(project, key!);
-    expect(baseline!.metrics['launch.ttid_ms']!.runs).toHaveLength(3);
-    expect(addToBaseline(key!, baseline, a).metrics['launch.ttid_ms']!.runs).toHaveLength(4);
+    const baseline = await loadBaseline(project, key);
+    expect(baseline?.metrics['launch.ttid_ms']?.runs).toHaveLength(3);
+    expect(addToBaseline(key, baseline, a).metrics['launch.ttid_ms']?.runs).toHaveLength(4);
     // one run counts once: three calls on it would meet the count with no movement in it
-    expect(addToBaseline(key!, baseline, held(1)).metrics['launch.ttid_ms']!.runs).toHaveLength(3);
-    expect(addToBaseline(key!, baseline, a, true).metrics['launch.ttid_ms']!.runs).toHaveLength(1);
+    expect(addToBaseline(key, baseline, held(1)).metrics['launch.ttid_ms']?.runs).toHaveLength(3);
+    expect(addToBaseline(key, baseline, a, true).metrics['launch.ttid_ms']?.runs).toHaveLength(1);
 
-    const report = reportKey(key!, newest, baseline, []);
-    expect(report.comparisons[0]!.verdict).toBe('regression');
+    const report = reportKey(key, newest, baseline, []);
+    expect(report.comparisons[0]?.verdict).toBe('regression');
     expect(exitCode([report])).toBe(1);
     expect(toText([report])).toMatch(/regression\s+launch\.ttid_ms: 910 ms against 510/);
-    expect(JSON.parse(toJson([report])).failed).toBe(true);
+    expect((JSON.parse(toJson([report])) as { failed: boolean }).failed).toBe(true);
     expect(toJUnit([report])).toContain('<failure message="regression');
 
-    const pass = reportKey(key!, newest, addToBaseline(key!, undefined, newest[0]!), []);
+    const pass = reportKey(
+      key,
+      newest,
+      addToBaseline(key, undefined, must(newest[0], 'the newest run')),
+      [],
+    );
     expect(exitCode([pass])).toBe(0);
     expect(toJUnit([pass])).not.toContain('<failure');
 
-    const over = reportKey(key!, newest, undefined, [{ kind: 'launch.ttid_ms', max: 800 }]);
-    expect(over.comparisons[0]!.verdict).toBe('new');
+    const over = reportKey(key, newest, undefined, [{ kind: 'launch.ttid_ms', max: 800 }]);
+    expect(over.comparisons[0]?.verdict).toBe('new');
     expect(exitCode([over])).toBe(1);
     expect(toText([over])).toMatch(/over budget launch\.ttid_ms: 910 \(max 800\)/);
     expect(
-      exitCode([reportKey(key!, newest, undefined, [{ kind: 'launch.ttid_ms', max: 2000 }])]),
+      exitCode([reportKey(key, newest, undefined, [{ kind: 'launch.ttid_ms', max: 2000 }])]),
     ).toBe(0);
     expect(
       exitCode([
-        reportKey(key!, newest, undefined, [{ kind: 'launch.ttid_ms', max: 1, scenario: 'other' }]),
+        reportKey(key, newest, undefined, [{ kind: 'launch.ttid_ms', max: 1, scenario: 'other' }]),
       ]),
     ).toBe(0);
   });
@@ -423,8 +430,9 @@ describe('store and reports', () => {
     await saveRun(d, context([100, 100], 'r1', '2026-11-03T00:00:00.000Z'));
     await saveRun(d, context([200, 200, 200], 'r2', '2026-11-03T00:01:00.000Z'));
     const [key] = await runKeys(d);
-    const r = reportKey(key!, await latestRuns(d, key!, 2), undefined, []);
-    expect(r.comparisons[0]!.n.current).toBe(5);
+    assert(key);
+    const r = reportKey(key, await latestRuns(d, key, 2), undefined, []);
+    expect(r.comparisons[0]?.n.current).toBe(5);
   });
 
   it('calls a change only pooling can show, and goes by the newest run for its name', async () => {
@@ -432,16 +440,17 @@ describe('store and reports', () => {
     const stamp = (i: number) => `2026-11-0${i}T00:00:00.000Z`;
     for (const i of [4, 5, 6]) await saveRun(d, context([900, 901], `r${i}`, stamp(i)));
     const [key] = await runKeys(d);
+    assert(key);
     const baseline = [1, 2, 3].reduce<Baseline | undefined>(
-      (base, i) => addToBaseline(key!, base, context([100, 101], `b${i}`, stamp(i))),
+      (base, i) => addToBaseline(key, base, context([100, 101], `b${i}`, stamp(i))),
       undefined,
     );
-    const runs = await latestRuns(d, key!, 3);
-    const one = reportKey(key!, runs.slice(0, 1), baseline, []).comparisons[0]!;
-    expect(one.verdict).toBe('few-samples');
-    const pooled = reportKey(key!, runs, baseline, []);
+    const runs = await latestRuns(d, key, 3);
+    const one = reportKey(key, runs.slice(0, 1), baseline, []).comparisons[0];
+    expect(one?.verdict).toBe('few-samples');
+    const pooled = reportKey(key, runs, baseline, []);
     expect(pooled.comparisons[0]).toMatchObject({ verdict: 'regression', current: 900.5 });
-    expect(pooled.comparisons[0]!.n.current).toBe(6);
+    expect(pooled.comparisons[0]?.n.current).toBe(6);
     expect(pooled.run).toBe('r6');
     expect(pooled.at).toBe(stamp(6));
   });
@@ -451,12 +460,13 @@ describe('store and reports', () => {
       const d = dir();
       await saveRun(d, context([100, 101, 102, 103, 104], 'r1', '2026-11-03T00:00:00.000Z'));
       const [key] = await runKeys(d);
+      assert(key);
       const baseline: Baseline = {
         schema: 1,
-        ...key!,
+        ...key,
         metrics: Object.fromEntries(Object.entries(metrics).map(([k, m]) => [k, metric(m)])),
       };
-      return { key: key!, runs: await latestRuns(d, key!, 1), baseline };
+      return { key: key, runs: await latestRuns(d, key, 1), baseline };
     };
     const THREE = [
       [100, 101, 102],
@@ -507,16 +517,20 @@ describe('store and reports', () => {
     await saveRun(d, context([100, 101, 102], 'r1', '2026-11-03T00:00:00.000Z'));
     await saveRun(d, context([100, 101, 102], 'r2', '2026-11-03T00:01:00.000Z'));
     const [key] = await runKeys(d);
-    const [newest, older] = await latestRuns(d, key!, 2);
-    const debug = older!.map((r) => ({ ...r, build: 'debug' as const }));
-    const baseline = addToBaseline(key!, undefined, newest!);
+    assert(key);
+    const [newest, older] = await latestRuns(d, key, 2);
+    assert(newest && older);
+    const debug = older.map((r) => ({ ...r, build: 'debug' as const }));
+    const baseline = addToBaseline(key, undefined, newest);
     for (const base of [baseline, undefined]) {
-      const c = reportKey(key!, [newest!, debug], base, []).comparisons[0]!;
-      expect(c.verdict).toBe('refused');
-      expect(c.note).toContain('more than one build, release and debug');
+      const c = reportKey(key, [newest, debug], base, []).comparisons[0];
+      expect(c?.verdict).toBe('refused');
+      expect(c?.note).toContain('more than one build, release and debug');
     }
-    expect(exitCode([reportKey(key!, [newest!, debug], undefined, [])])).toBe(1);
-    expect(reportKey(key!, [newest!], baseline, []).comparisons[0]!.verdict).not.toBe('refused');
+    expect(exitCode([reportKey(key, [newest, debug], undefined, [])])).toBe(1);
+    expect(
+      must(reportKey(key, [newest], baseline, []).comparisons[0], 'a comparison').verdict,
+    ).not.toBe('refused');
   });
 
   it('says of a pool what any run of it is, as the newest alone would wash a mark off', async () => {
@@ -524,13 +538,15 @@ describe('store and reports', () => {
     await saveRun(d, context([100], 'r1', '2026-11-03T00:00:00.000Z'));
     await saveRun(d, context([100], 'r2', '2026-11-03T00:01:00.000Z'));
     const [key] = await runKeys(d);
-    const [newest, older] = await latestRuns(d, key!, 2);
-    const marked = older!.map((r) => ({ ...r, modelled: true, throughHost: true }));
-    expect(reportKey(key!, [newest!, marked], undefined, []).comparisons[0]).toMatchObject({
+    assert(key);
+    const [newest, older] = await latestRuns(d, key, 2);
+    assert(newest && older);
+    const marked = older.map((r) => ({ ...r, modelled: true, throughHost: true }));
+    expect(reportKey(key, [newest, marked], undefined, []).comparisons[0]).toMatchObject({
       modelled: true,
       throughHost: true,
     });
-    expect(reportKey(key!, [newest!], undefined, []).comparisons[0]).not.toHaveProperty('modelled');
+    expect(reportKey(key, [newest], undefined, []).comparisons[0]).not.toHaveProperty('modelled');
   });
 
   it('holds a budget to the pool, and carries the noise of any run of it', async () => {
@@ -538,8 +554,9 @@ describe('store and reports', () => {
     await saveRun(d, context([100], 'r1', '2026-11-03T00:00:00.000Z'));
     await saveRun(d, context([300], 'r2', '2026-11-03T00:01:00.000Z', 3));
     const [key] = await runKeys(d);
+    assert(key);
     const rule = { kind: 'launch.ttid_ms', max: 150 };
-    const r = reportKey(key!, await latestRuns(d, key!, 2), undefined, [rule]);
+    const r = reportKey(key, await latestRuns(d, key, 2), undefined, [rule]);
     expect(r.budgets[0]).toMatchObject({ value: 200, ok: false });
     expect(r.noise).toContain('hot-device');
   });

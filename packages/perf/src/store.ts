@@ -24,14 +24,16 @@ export async function store(dir: string, kind: string, value: unknown, raw: stri
 
 const MEASUREMENT = /^pm-[0-9a-f]{8}$/;
 
-/** A kept measurement by the id its answer gave; none for anything else, which goes no further than this folder. */
-export async function loadMeasurement<T>(
-  dir: string,
-  id: string,
-): Promise<{ id: string; kind: string; at: string; value: T } | undefined> {
+type Measurement = { id: string; kind: string; at: string; value: unknown };
+
+/**
+ * A kept measurement by the id its answer gave; none for anything else, which goes no further than this folder. Its
+ * value is what its kind wrote, which the caller that knows the kind says.
+ */
+export async function loadMeasurement(dir: string, id: string): Promise<Measurement | undefined> {
   if (!MEASUREMENT.test(id)) return undefined;
   const file = join(dir, `${id}.json`);
-  return existsSync(file) ? JSON.parse(await readFile(file, 'utf8')) : undefined;
+  return existsSync(file) ? (JSON.parse(await readFile(file, 'utf8')) as Measurement) : undefined;
 }
 
 export type RunKey = { app: string; scenario: string; deviceClass: string };
@@ -157,7 +159,10 @@ export async function loadBudgets(projectDir: string): Promise<BudgetRule[]> {
   const file = join(projectDir, 'budgets.json');
   if (!existsSync(file)) return [];
   const rules = JSON.parse(await readFile(file, 'utf8')) as unknown;
-  if (!Array.isArray(rules) || rules.some((r: BudgetRule) => typeof r?.kind !== 'string'))
+  if (
+    !Array.isArray(rules) ||
+    rules.some((r: { kind?: unknown } | null) => typeof r?.kind !== 'string')
+  )
     throw new Error(`${file}: expected a list of rules, each with a "kind"`);
   return rules as BudgetRule[];
 }

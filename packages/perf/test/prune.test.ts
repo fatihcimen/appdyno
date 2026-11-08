@@ -10,6 +10,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { must } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import {
   addToBaseline,
@@ -73,7 +74,7 @@ function store() {
       [metric],
     );
     const file = await saveRun(measurements, records);
-    return { records, file: file!, raw };
+    return { records, file: must(file, 'a run file'), raw };
   };
   const prune = (limitMb: number, dryRun = false) =>
     pruneTraces({ state, project, limitBytes: limitMb * MB, dryRun });
@@ -210,14 +211,14 @@ describe('kept traces pruned', () => {
 
 describe('what it does not know, it does not delete', () => {
   it.each([
-    ['no run at all', async () => undefined],
+    ['no run at all', () => undefined],
     [
       'an empty folder of runs',
-      async (s: ReturnType<typeof store>) => mkdirSync(join(s.measurements, 'runs')),
+      (s: ReturnType<typeof store>) => mkdirSync(join(s.measurements, 'runs')),
     ],
   ])('%s: removes nothing, and says why', async (_what, make) => {
     const s = store();
-    await make(s);
+    make(s);
     const t = s.trace('a.pftrace', 4, 40);
     const r = await s.prune(0);
     expect(r.removed).toEqual([]);

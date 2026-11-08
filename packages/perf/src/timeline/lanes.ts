@@ -67,7 +67,7 @@ function lane<T>(name: string, row: TimelineRow<T>, plot: () => string, info?: s
 export function lanes(t: Timeline) {
   const p = plotOf(t);
   const log = t.logs.marks;
-  const spoken = log.filter((l) => l.level);
+  const spoken = log.flatMap(({ at, level }) => (level ? [{ at, level }] : []));
   return [
     lane('Touches', t.touches, () => t.touches.marks.map((m) => span(p, m, 'touch')).join('')),
     lane('Steps', t.steps, () =>
@@ -100,7 +100,7 @@ export function lanes(t: Timeline) {
         ...log
           .filter((l) => !l.level)
           .map((l) => span(p, { at: l.at, ms: 0 }, 'tick', 12, HEIGHT - 24)),
-        ...spoken.map((l) => span(p, { at: l.at, ms: 0 }, l.level!, 4, HEIGHT - 8)),
+        ...spoken.map((l) => span(p, { at: l.at, ms: 0 }, l.level, 4, HEIGHT - 8)),
       ].join(''),
     ),
     lane('Memory', t.memory, () => line(p, t.memory.marks, (m) => m.mb, 'line')),

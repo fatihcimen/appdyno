@@ -1,4 +1,4 @@
-import { round1, esc } from '@appdyno/core';
+import { must, round1, esc } from '@appdyno/core';
 import type { Unit } from '../record.js';
 import { inScale, scaleOf, when, withDigits, type Scale } from './format.js';
 import { tooltip } from './marks.js';
@@ -77,8 +77,8 @@ export function lineChart(c: LineChart): string {
     )
     .join('');
   const last = c.points.length - 1;
-  const lastPoint = c.points[last]!;
-  const first = c.points[0]!;
+  const lastPoint = must(c.points[last], 'a last point');
+  const first = must(c.points[0], 'a first point');
   const sameDay = dayOf(first.at) === dayOf(lastPoint.at);
 
   // each point owns the column nearest to it, so the pointer need only be closest; these draw nothing until hovered

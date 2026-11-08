@@ -1,7 +1,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import {
   KINDS,
   loadRefusals,
@@ -77,8 +77,9 @@ describe('a model is said to be one', () => {
       { kind: 'energy.mah', unit: 'mah', samples: [1], modelled: true },
       { kind: 'cpu.percent', unit: 'percent', samples: [1] },
     ]);
-    expect(model!.modelled).toBe(true);
-    expect(read!).not.toHaveProperty('modelled');
+    assert(model && read);
+    expect(model.modelled).toBe(true);
+    expect(read).not.toHaveProperty('modelled');
   });
 });
 

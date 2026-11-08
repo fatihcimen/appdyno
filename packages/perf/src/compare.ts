@@ -162,12 +162,11 @@ export function compareMetric(
         Math.sqrt(medians.reduce((a, b) => a + (b - mean) ** 2, 0) / (medians.length - 1));
   const limits = FLOOR[unit];
   const floor = Math.max((Math.abs(reference) * limits.percent) / 100, limits.absolute, runToRun);
+  const percent = percentChange(moved, reference);
   const stats = {
     ...head,
     shift: r3(moved),
-    ...(percentChange(moved, reference) !== undefined && {
-      percent: percentChange(moved, reference)!,
-    }),
+    ...(percent !== undefined && { percent }),
     floor: r3(floor),
   };
   if (Math.abs(moved) <= floor) return { ...stats, verdict: 'ok' };

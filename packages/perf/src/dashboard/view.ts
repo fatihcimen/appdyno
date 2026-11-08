@@ -47,7 +47,7 @@ export const isJourney = (kind: string) => kind.startsWith('journey.');
 export const stepTimes = (run: PerfRecord[]) =>
   run.flatMap((r) => {
     const s = journeyStep(r.kind);
-    return s?.what === 'ms' ? [{ name: stepName(s.step), record: r }] : [];
+    return s?.what === 'ms' ? [{ name: stepName(s.step), step: s.step, record: r }] : [];
   });
 
 /** A step's kinds that the gate calls slower in the newest run of this scenario. */
@@ -78,7 +78,7 @@ export function scenariosOf(data: DashboardData, unread: string[]): Scenario[] {
 export function namesOf(data: DashboardData) {
   const models = new Map<string, string>();
   for (const k of data.keys) {
-    const model = k.runs[0]?.[0]?.device?.model;
+    const model = k.runs[0]?.[0]?.device.model;
     if (typeof model === 'string') models.set(k.key.deviceClass, model);
   }
   const classes = [

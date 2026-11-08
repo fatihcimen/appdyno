@@ -1,4 +1,4 @@
-import { esc } from '@appdyno/core';
+import { esc, must } from '@appdyno/core';
 import { rulesFor } from '../compare.js';
 import type { PerfRecord } from '../record.js';
 import { figure, multiples } from './figure.js';
@@ -38,7 +38,7 @@ const swatch = (kind: string, text: string) =>
   `<span><span class="key ${kind}"></span>${esc(text)}</span>`;
 
 function trendFigure(v: AppView, s: Scenario, kind: string, points: Point[]) {
-  const newest = points.at(-1)!.record;
+  const newest = must(points.at(-1), 'a point').record;
   const { unit } = newest;
   const c = s.report.comparisons.find((x) => x.kind === kind);
   const { baseline, floor } = c ?? {};

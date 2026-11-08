@@ -1,4 +1,4 @@
-import type { GateAnswer } from '../answer.js';
+import type { Finding, GateAnswer } from '../answer.js';
 import type { Baseline, BudgetRule } from '../compare.js';
 import type { PerfRecord } from '../record.js';
 import {
@@ -40,7 +40,10 @@ export type DashboardData = {
   unread: string[];
 };
 
-const usable = (r: PerfRecord) =>
+/** A file's own, which a hand may have edited: any of it may be missing. */
+type Stored<T> = Partial<T> | null | undefined;
+
+const usable = (r: Stored<PerfRecord>): r is PerfRecord =>
   typeof r?.kind === 'string' &&
   typeof r.device?.platform === 'string' &&
   Number.isFinite(r.value) &&
@@ -48,12 +51,14 @@ const usable = (r: PerfRecord) =>
   r.samples.length > 0 &&
   r.samples.every(Number.isFinite) &&
   Array.isArray(r.noise) &&
-  Number.isFinite(Date.parse(r.at)) &&
-  Object.hasOwn(UNIT_STEPS, r.unit);
+  Number.isFinite(Date.parse(r.at ?? '')) &&
+  Object.hasOwn(UNIT_STEPS, r.unit ?? '');
 
-const usableAnswer = (a: GateAnswer | undefined) =>
+const usableAnswer = (
+  a: Stored<Omit<GateAnswer, 'findings'> & { findings: Stored<Finding>[] }>,
+): a is GateAnswer =>
   Array.isArray(a?.notes) &&
-  Array.isArray(a?.findings) &&
+  Array.isArray(a.findings) &&
   a.findings.every((f) =>
     [f?.worse, f?.causes, f?.evidence, f?.cannot].every((list) => Array.isArray(list)),
   );
@@ -98,7 +103,7 @@ export async function loadDashboard(
         .filter((run) => run.length > 0),
       total: files.length,
       ...(baseline && { baseline }),
-      ...(usableAnswer(answer) && { answer: answer! }),
+      ...(usableAnswer(answer) && { answer }),
     };
   };
   const keys: KeyRuns[] = [];
@@ -117,10 +122,10 @@ export async function loadDashboard(
     keys,
     rules,
     refusals: refusals.filter(
-      (r) =>
+      (r: Stored<Refusal>): r is Refusal =>
         typeof r?.reason === 'string' &&
         typeof r.deviceClass === 'string' &&
-        Number.isFinite(Date.parse(r.at)),
+        Number.isFinite(Date.parse(r.at ?? '')),
     ),
     unread,
   };

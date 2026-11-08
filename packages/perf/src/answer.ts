@@ -1,4 +1,4 @@
-import { frameCauseText, hangText, round1 } from '@appdyno/core';
+import { frameCauseText, hangText, must, round1 } from '@appdyno/core';
 import type { HangCause, SlowFrameCauses } from '@appdyno/core';
 import { ALPHA, FLOOR, type Baseline, type Comparison } from './compare.js';
 import { when } from './dashboard/format.js';
@@ -31,8 +31,10 @@ const LOOKS: Partial<Record<MeasureId, Look[]>> = {
 };
 
 /** What fits one number: a step's memory is a journey's number and no CPU profile explains it. */
-const lookOf = (kind: string) =>
-  journeyStep(kind)?.what === 'memory_kb' ? [] : (LOOKS[measureOf(kind) as MeasureId] ?? []);
+const lookOf = (kind: string) => {
+  const measure = measureOf(kind);
+  return journeyStep(kind)?.what === 'memory_kb' || !measure ? [] : (LOOKS[measure] ?? []);
+};
 
 /** What is looked at for these numbers: none, for a kind no tool here can explain. */
 export const looksFor = (kinds: string[]) => [...new Set(kinds.flatMap(lookOf))];
@@ -55,7 +57,7 @@ export function placesOf(comparisons: Comparison[]): Map<string, Comparison[]> {
   if (whole) {
     const steps = comparisons.filter((c) => journeyStep(c.kind)?.what === 'ms');
     const most = steps.toSorted((a, b) => (b.shift ?? 0) - (a.shift ?? 0))[0];
-    add(most ? journeyStep(most.kind)!.step : WHOLE_RUN, whole);
+    add(most ? must(journeyStep(most.kind), 'a step').step : WHOLE_RUN, whole);
   }
   return places;
 }
@@ -162,8 +164,9 @@ const needsReference = (what: string) =>
   `nothing to compare ${what} with: \`appdyno perf reference\`, with the baseline's build installed, keeps its side`;
 
 const sureOf = (lead: Comparison, runs: number) => {
-  const times = round1(Math.abs(lead.shift!) / lead.floor!);
-  return `p ${lead.p} (it takes under ${ALPHA}), ${lead.n.current} against ${lead.n.baseline} samples over ${runs} baseline runs; ${times} times the floor of ${lead.floor} ${lead.unit}${times < 2 ? ', just past it' : ''}`;
+  const floor = must(lead.floor, 'a floor');
+  const times = round1(Math.abs(must(lead.shift, 'a shift')) / floor);
+  return `p ${String(lead.p)} (it takes under ${ALPHA}), ${lead.n.current} against ${lead.n.baseline} samples over ${runs} baseline runs; ${times} times the floor of ${floor} ${lead.unit}${times < 2 ? ', just past it' : ''}`;
 };
 
 /** A step is work done once: what moved in it, in ms of CPU, can be held against its own change. */
@@ -180,7 +183,7 @@ const functionWords = (f: FunctionChange, per: string, share?: number) =>
  */
 const deepest = (rose: FunctionChange[]) =>
   rose
-    .filter((f) => f.changeMs >= rose[0]!.changeMs * NEAR_THE_MOST)
+    .filter((f) => f.changeMs >= must(rose[0], 'a function').changeMs * NEAR_THE_MOST)
     .toSorted((a, b) => a.afterMs - b.afterMs)[0];
 
 /** The function that rose against the other build's profile of the same place. */
@@ -220,7 +223,7 @@ function byPhase(lead: Comparison, seen: Seen, before?: Seen['phases']): Part {
   if (!phases?.length) return {};
   const evidence = seen.reasons?.length ? [`the platform says: ${seen.reasons.join('; ')}`] : [];
   if (!before?.length) {
-    const longest = phases.toSorted((a, b) => b.ms - a.ms)[0]!;
+    const longest = must(phases.toSorted((a, b) => b.ms - a.ms)[0], 'a phase');
     return {
       evidence: [...evidence, `the longest phase now: ${longest.phase} ${longest.ms} ms`],
       cannot: [needsReference('the phases of a start')],
@@ -285,7 +288,7 @@ function findingOf(
   seen: Seen | undefined,
   reference: Reference | undefined,
 ): Finding {
-  const lead = worse.find((c) => journeyStep(c.kind)?.what === 'ms') ?? worse[0]!;
+  const lead = worse.find((c) => journeyStep(c.kind)?.what === 'ms') ?? must(worse[0], 'a change');
   const said = { place, worse, sure: sureOf(lead, runs) };
   if (!seen)
     return {
@@ -306,17 +309,19 @@ function findingOf(
   const againMs = isPhase(lead.kind)
     ? seen.phases?.find((p) => phaseKind(p.phase) === lead.kind)?.ms
     : seen.againMs;
-  const showed =
+  const again =
     againMs === undefined || lead.baseline === undefined || !lead.shift
       ? undefined
-      : againMs - lead.baseline >= lead.shift / 2;
-  const again = `${againMs} ms while it was looked at, against ${lead.baseline} ms`;
+      : {
+          showed: againMs - lead.baseline >= lead.shift / 2,
+          says: `${againMs} ms while it was looked at, against ${lead.baseline} ms`,
+        };
   return {
     ...said,
     causes,
     evidence: [
       ...parts.flatMap((p) => p.evidence ?? []),
-      ...(showed ? [`it showed again: ${again}`] : []),
+      ...(again?.showed ? [`it showed again: ${again.says}`] : []),
       ...seen.read,
       ...(reference
         ? [`the other side: the reference of ${when(reference.at)}, ${buildWords(reference.build)}`]
@@ -324,8 +329,8 @@ function findingOf(
       ...(seen.hostLoad === undefined ? [] : [`host load ${seen.hostLoad} while it was looked at`]),
     ],
     cannot: [
-      ...(showed === false
-        ? [`it did not show again: ${again}: what was read may not be that change`]
+      ...(again?.showed === false
+        ? [`it did not show again: ${again.says}: what was read may not be that change`]
         : []),
       ...parts.flatMap((p) => p.cannot ?? []),
       ...seen.cannot,
@@ -337,9 +342,9 @@ function findingOf(
 }
 
 const NOTE_OF: Partial<Record<Comparison['verdict'], (c: Comparison) => string>> = {
-  noisy: (c) => `a change under noise, not called: ${c.kind}: ${c.note}`,
-  'few-samples': (c) => `a change with too little to call it: ${c.kind}: ${c.note}`,
-  refused: (c) => `not comparable: ${c.kind}: ${c.note}`,
+  noisy: (c) => `a change under noise, not called: ${c.kind}: ${String(c.note)}`,
+  'few-samples': (c) => `a change with too little to call it: ${c.kind}: ${String(c.note)}`,
+  refused: (c) => `not comparable: ${c.kind}: ${String(c.note)}`,
   improvement: (c) => `improved: ${c.kind}`,
 };
 
@@ -356,7 +361,9 @@ const baselineOf = (b: Baseline | undefined) => {
   const times = [
     ...new Set(Object.values(b?.metrics ?? {}).flatMap((m) => m.runs.map((r) => r.at))),
   ].sort();
-  return times.length ? { runs: times.length, from: times[0]!, to: times.at(-1)! } : undefined;
+  const [from] = times;
+  const to = times.at(-1);
+  return from !== undefined && to !== undefined ? { runs: times.length, from, to } : undefined;
 };
 
 /** The gate's report of a key's newest run, joined with what was seen at each place: the same for the same data. */
@@ -374,7 +381,7 @@ export function answerOf(
     findingOf(
       place,
       worse,
-      baseline?.metrics[worse[0]!.kind]?.runs.length ?? 0,
+      baseline?.metrics[must(worse[0], 'a change').kind]?.runs.length ?? 0,
       seen[place],
       reference,
     ),

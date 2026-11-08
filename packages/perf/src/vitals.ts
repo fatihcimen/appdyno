@@ -140,14 +140,14 @@ const mb = (kb: number) => Math.round(kb / 1024);
 
 /** A kind with its state, and its tier, in its name: what the limit depends on stays with the number. */
 function memoryRule(kind: string): Rule | undefined {
-  const anon = /^memory\.anon_swap\.(\w+)\.(\d+)gb_kb$/.exec(kind);
-  const limit = anon && ANON_SWAP_GB[Number(anon[2])]?.[anon[1]!];
+  const [, held = '', gb = ''] = /^memory\.anon_swap\.(\w+)\.(\d+)gb_kb$/.exec(kind) ?? [];
+  const limit = held && ANON_SWAP_GB[Number(gb)]?.[held];
   if (limit)
     return {
       limit: limit * 1024 * 1024,
       name: 'over the memory limit',
       reads: (value) =>
-        `anon RSS and swap ${mb(value)} MB in ${anon[1]}, the limit ${limit} GB with ${anon[2]} GB of RAM`,
+        `anon RSS and swap ${mb(value)} MB in ${held}, the limit ${limit} GB with ${gb} GB of RAM`,
       note: MEMORY_NOTE,
     };
   const state = /^memory\.bitmap\.(\w+)_kb$/.exec(kind)?.[1];

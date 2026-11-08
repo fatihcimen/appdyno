@@ -97,12 +97,12 @@ describe('the load of the Mac', () => {
 
   it('marks nothing on a calm Mac, and nothing of a phone’s own however it is', () => {
     expect(run(5, iphone, [throughTheMac, itsOwn]).flatMap((r) => r.noise)).toEqual([]);
-    expect(run(100, device, [{ ...throughTheMac, throughHost: false }])[0]!.noise).toEqual([]);
+    expect(run(100, device, [{ ...throughTheMac, throughHost: false }])[0]?.noise).toEqual([]);
   });
 
   it('marks every reading of a virtual device at high load, as it did', () => {
     const emulator = { ...device, virtual: true };
-    expect(run(100, emulator, [itsOwn])[0]!.noise).toEqual(['high-host-load']);
+    expect(run(100, emulator, [itsOwn])[0]?.noise).toEqual(['high-host-load']);
   });
 });
 

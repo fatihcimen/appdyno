@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { JOURNEY_TOTAL, journeyStep, stepName } from '../record.js';
 import { figure, multiples } from './figure.js';
 import { deviceLabel, formatValue, when } from './format.js';
@@ -34,7 +35,7 @@ export function journeyFigures(v: AppView): string {
       const steps = stepTimes(run);
       if (steps.length === 0) return [];
       const whole = run.find((r) => r.kind === JOURNEY_TOTAL)?.value;
-      const about = `${whole === undefined ? '' : `${formatValue(whole, 'ms')} in all, `}${s.key.scenario}, ${when(steps[0]!.record.at)}`;
+      const about = `${whole === undefined ? '' : `${formatValue(whole, 'ms')} in all, `}${s.key.scenario}, ${when(must(steps[0], 'a step').record.at)}`;
       const cls = s.key.deviceClass;
       const of = (step: string, what: string) => {
         const r = run.find((x) => {
@@ -60,8 +61,7 @@ export function journeyFigures(v: AppView): string {
           tableView(
             `Table: ${steps.length} steps, ${s.total} runs kept`,
             ['Step', 'Time', 'Against the baseline', 'Frames p95', 'Worst frame', 'Memory'],
-            steps.map(({ name, record }) => {
-              const step = journeyStep(record.kind)!.step;
+            steps.map(({ name, step, record }) => {
               return [
                 name,
                 formatValue(record.value, record.unit),

@@ -1,7 +1,8 @@
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { must } from '@appdyno/core';
+import { assert, describe, expect, it } from 'vitest';
 import {
   answerMarkdown,
   answerOf,
@@ -93,7 +94,7 @@ const reference = (places: Reference['places']): Reference => ({
 const stepAlarm = [worse(`journey.${STEP}.ms`)];
 const answer = (s: Seen, r?: Reference, c = stepAlarm) =>
   answerOf(report(c), run, baseline, { [STEP]: s }, r);
-const only = (a: ReturnType<typeof answer>) => a.findings[0]!;
+const only = (a: ReturnType<typeof answer>) => must(a.findings[0], 'a finding');
 
 describe('where a change is looked for', () => {
   it('takes a journey step by step, and the whole with the step that moved most', () => {
@@ -104,7 +105,7 @@ describe('where a change is looked for', () => {
       worse('journey.02_launch.ms', { verdict: 'ok', shift: 3 }),
     ]);
     expect([...places.keys()]).toEqual([STEP]);
-    expect(places.get(STEP)!.map((c) => c.kind)).toEqual([
+    expect(places.get(STEP)?.map((c) => c.kind)).toEqual([
       `journey.${STEP}.ms`,
       `journey.${STEP}.frames_worst_ms`,
       'journey.total_ms',
@@ -168,8 +169,8 @@ describe('a cause', () => {
         reference({ [STEP]: { profile: counted({ main: 900, closure: 5, steady: 300 }) } }),
       ),
     );
-    expect(f.causes[0]!.name).toBe('knownCost');
-    expect(f.causes[0]!.says).toContain('+790 ms of CPU in the step (0 to 790)');
+    expect(f.causes[0]?.name).toBe('knownCost');
+    expect(f.causes[0]?.says).toContain('+790 ms of CPU in the step (0 to 790)');
   });
 
   it('names the innermost of a caller and a callee that read the same, as a simulator gave them', () => {
@@ -197,7 +198,7 @@ describe('a cause', () => {
         }),
       ),
     );
-    expect(f.causes[0]!.name).toBe('knownCost()');
+    expect(f.causes[0]?.name).toBe('knownCost()');
   });
 
   it('names no function that accounts for too little of the change, and says which it was', () => {
@@ -291,7 +292,7 @@ describe('a cause', () => {
     } as Seen['frames'];
     const f = only(answer(seen({ frames })));
     expect(f.causes[0]).toMatchObject({ kind: 'frames', name: 'lock' });
-    expect(f.causes[0]!.says).toContain('91.6 ms a frame (96 %): held by worker');
+    expect(f.causes[0]?.says).toContain('91.6 ms a frame (96 %): held by worker');
 
     const hang = only(
       answer(
@@ -304,7 +305,7 @@ describe('a cause', () => {
       ),
     );
     expect(hang.causes[0]).toMatchObject({ kind: 'hang', name: 'busyMainThread()' });
-    expect(hang.causes[0]!.says).toContain('busy, on the CPU 100 % of it');
+    expect(hang.causes[0]?.says).toContain('busy, on the CPU 100 % of it');
   });
 
   it('says of slow frames with no cause that they are unexplained', () => {
@@ -492,7 +493,7 @@ describe('what is kept of an answer', () => {
         build: 'debug',
         load: { host: [1, 1, 1], hostCpus: 10 },
         tool: '',
-        at: `2026-11-04T10:00:0${id.at(-1)}.000Z`,
+        at: `2026-11-04T10:00:0${id.slice(-1)}.000Z`,
       },
       [{ kind: 'launch.ttid_ms', unit: 'ms', samples: [ms] }],
     );
@@ -501,8 +502,9 @@ describe('what is kept of an answer', () => {
     const [dir, project] = [fresh(), fresh()];
     await saveRun(dir, records('run-1', 100));
     const [kept] = await runKeys(dir);
+    assert(kept);
     await saveAnswer(dir, {
-      ...kept!,
+      ...kept,
       schema: 1,
       status: 'regression',
       run: 'run-1',
@@ -510,12 +512,13 @@ describe('what is kept of an answer', () => {
       findings: [],
       notes: ['kept for run-1'],
     });
-    expect((await gateAnswers(dir, project))[0]!.notes).toEqual(['kept for run-1']);
+    expect((await gateAnswers(dir, project))[0]?.notes).toEqual(['kept for run-1']);
     // a newer run has no answer yet, and the one kept says nothing of it
     await saveRun(dir, records('run-2', 100));
     const [newest] = await gateAnswers(dir, project);
-    expect(newest!.run).toBe('run-2');
-    expect(newest!.notes).not.toContain('kept for run-1');
+    assert(newest);
+    expect(newest.run).toBe('run-2');
+    expect(newest.notes).not.toContain('kept for run-1');
   });
 
   it('writes the comment to a file, and touches no device to do it', async () => {

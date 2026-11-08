@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { figure, multiples } from './figure.js';
 import { deviceLabel, formatValue, when } from './format.js';
 import { shareOf, splitBar, type Part } from './split-bar.js';
@@ -17,7 +18,9 @@ function slotOf(name: string, slots: Map<string, number>, taken: Set<number>) {
   const given = new Set(slots.values());
   const held = slots.get(name);
   const slot =
-    held !== undefined && !taken.has(held) ? held : (free.find((s) => !given.has(s)) ?? free[0]!);
+    held !== undefined && !taken.has(held)
+      ? held
+      : (free.find((s) => !given.has(s)) ?? must(free[0], 'a free color'));
   if (held === undefined) slots.set(name, slot);
   taken.add(slot);
   return slot;
@@ -49,8 +52,9 @@ export function phaseFigures(v: AppView): string {
     v.classes.flatMap((cls) => {
       const reading = v.cells.get(cellKey('launch-why', cls));
       const phases = reading ? phasesOf(reading.run) : [];
-      if (!reading || phases.length === 0) return [];
-      const { unit } = phases[0]!;
+      const [first] = phases;
+      if (!reading || !first) return [];
+      const { unit } = first;
       const whole = phases.reduce((a, p) => a + p.value, 0);
       const total = formatValue(whole, unit);
       return [

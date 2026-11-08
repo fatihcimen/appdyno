@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { must } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import {
   renderTimeline,
@@ -9,6 +10,15 @@ import {
   writeTimeline,
   type Timeline,
 } from '../src/timeline/index.js';
+import type {
+  FrameSpan,
+  LogLine,
+  MemorySample,
+  RequestSpan,
+  StallSpan,
+  StepSpan,
+  TrafficSample,
+} from '../src/timeline/model.js';
 import { inert } from '../src/timeline/page.js';
 import { MOMENT, SCRIPT } from '../src/timeline/script.js';
 
@@ -49,7 +59,7 @@ const timeline = (over: Partial<Timeline> = {}): Timeline => ({
   ...over,
 });
 
-const script = (html: string) => /<script>([\s\S]*?)<\/script>/.exec(html)![1]!;
+const script = (html: string) => must(/<script>([\s\S]*?)<\/script>/.exec(html)?.[1], 'a script');
 
 describe('the page', () => {
   it('loads nothing, and asks nothing of a network', () => {
@@ -79,8 +89,8 @@ describe('the page', () => {
     expect(html).not.toContain('<script>window.owned');
     expect(html).not.toContain('<img src=x');
     // read back from the page, the line is whole
-    const data = /id="timeline">([\s\S]*?)<\/script>/.exec(html)![1]!;
-    expect((JSON.parse(data) as Timeline).logs.marks[0]!.text).toBe(hostile);
+    const data = must(/id="timeline">([\s\S]*?)<\/script>/.exec(html)?.[1], 'the data');
+    expect((JSON.parse(data) as Timeline).logs.marks[0]?.text).toBe(hostile);
   });
 
   it('says what stands in for each row a device could not give, with its reason', () => {
@@ -150,7 +160,7 @@ describe('the page', () => {
   it('draws thousands of frames small', () => {
     const marks = Array.from({ length: 10_800 }, (_, i) => ({ at: FROM + i * 16, ms: 16 }));
     const html = renderTimeline(timeline({ to: FROM + 172_800, frames: { marks } }));
-    expect(html.match(/<rect/g)!.length).toBeLessThan(10);
+    expect(must(html.match(/<rect/g), 'a rect').length).toBeLessThan(10);
   });
 });
 
@@ -162,19 +172,28 @@ describe('inert', () => {
   });
 });
 
+/** What `moment` answers, as the page's script builds it. */
+type Moment = {
+  frame?: FrameSpan;
+  stall?: StallSpan;
+  step?: StepSpan;
+  requests: RequestSpan[];
+  logs: LogLine[];
+  logsMore: number;
+  memory?: MemorySample;
+  traffic?: TrafficSample;
+};
+
 describe('a moment', () => {
-  const moment = new Function(`${MOMENT}; return moment;`)() as (
-    t: Timeline,
-    at: number,
-  ) => Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  const moment =
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval -- the page's own script, run here as the page runs it
+    (new Function(`${MOMENT}; return moment;`) as () => (t: Timeline, at: number) => Moment)();
 
   it('finds the slow frame, and what happened during it', () => {
     const now = moment(timeline(), FROM + 2_300);
-    expect(now.frame.ms).toBe(807.4);
-    expect(now.requests.map((r: { name: string }) => r.name)).toEqual([
-      'GET api.example.com/items',
-    ]);
-    expect(now.logs.map((l: { text: string }) => l.text)).toEqual(['loading items']);
+    expect(now.frame?.ms).toBe(807.4);
+    expect(now.requests.map((r) => r.name)).toEqual(['GET api.example.com/items']);
+    expect(now.logs.map((l) => l.text)).toEqual(['loading items']);
   });
 
   it('takes a moment on a slow frame as all of that frame: what explains it comes as it ends', () => {
@@ -191,12 +210,12 @@ describe('a moment', () => {
 
   it('takes the last frame and reading before a moment that has none of its own', () => {
     const now = moment(timeline(), FROM + 2_900);
-    expect(now.frame.at).toBe(FROM + 2_000);
-    expect(now.memory.mb).toBe(120);
+    expect(now.frame?.at).toBe(FROM + 2_000);
+    expect(now.memory?.mb).toBe(120);
   });
 
   it('finds a stall that no frame shows', () => {
-    expect(moment(timeline(), FROM + 5_600).stall.how).toBe('Skipped frames');
+    expect(moment(timeline(), FROM + 5_600).stall?.how).toBe('Skipped frames');
   });
 
   it('leaves out a request over before the moment', () => {
@@ -213,7 +232,7 @@ describe('a moment', () => {
     const marks = Array.from({ length: 20 }, (_, i) => ({ at: FROM + 1_000 + i, text: `l${i}` }));
     const now = moment(timeline({ logs: { marks } }), FROM + 1_000);
     expect(now.logs).toHaveLength(8);
-    expect(now.logs[0].text).toBe('l0');
+    expect(now.logs[0]?.text).toBe('l0');
     expect(now.logsMore).toBe(12);
   });
 
@@ -240,10 +259,13 @@ describe('a moment', () => {
   });
 
   describe('its place in the video', () => {
-    const videoSeconds = new Function(`${MOMENT}; return videoSeconds;`)() as (
+    type Seconds = (
       v: { firstAt: number; parts?: { at: number; s: number }[] },
       t: number,
     ) => number;
+    const videoSeconds =
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval -- the page's own script, run here as the page runs it
+      (new Function(`${MOMENT}; return videoSeconds;`) as () => Seconds)();
 
     it('is its distance from the first frame', () => {
       expect(videoSeconds({ firstAt: 1_000 }, 3_500)).toBe(2.5);
@@ -281,7 +303,7 @@ describe('the file', () => {
   it('leaves one too large to send beside it, and points there', async () => {
     const t = timeline();
     const r = await writeTimeline(
-      { ...t, video: { ...t.video!, bytes: VIDEO_INSIDE_BYTES + 1 } },
+      { ...t, video: { ...must(t.video, 'a video'), bytes: VIDEO_INSIDE_BYTES + 1 } },
       dir,
       video,
     );

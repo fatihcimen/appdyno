@@ -119,13 +119,13 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
       }
       if (action === 'functions') {
         const profile = async (id: string | undefined) => {
-          const held = id ? await loadMeasurement<CpuProfile>(dir, id) : undefined;
+          const held = id ? await loadMeasurement(dir, id) : undefined;
           if (held?.kind !== 'cpu-profile')
             throw new ToolError(
               `give from and to: the ids perf_profile answered${id ? `; ${id} is no profile kept here` : ''}`,
               'NOT_FOUND',
             );
-          return held.value;
+          return held.value as CpuProfile;
         };
         const functions = functionDiff(await profile(from), await profile(to));
         return reply(

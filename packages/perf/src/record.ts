@@ -187,8 +187,8 @@ export const journeyKind = (n: number, line: string, what: string): `journey.${s
 
 /** The two parts of a step's kind; none for the journey's whole, or a kind from elsewhere. */
 export function journeyStep(kind: string): { step: string; what: string } | undefined {
-  const m = /^journey\.(\d+_.*)\.(\w+)$/.exec(kind);
-  return m ? { step: m[1]!, what: m[2]! } : undefined;
+  const [, step, what] = /^journey\.(\d+_.*)\.(\w+)$/.exec(kind) ?? [];
+  return step !== undefined && what !== undefined ? { step, what } : undefined;
 }
 
 /** A step's name in words, from its kind. */

@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import {
   checkBudgets,
   compareMetric,
@@ -32,7 +33,7 @@ export function reportKey(
   const byKind = new Map<string, PerfRecord[]>();
   for (const r of runs.flat()) byKind.set(r.kind, [...(byKind.get(r.kind) ?? []), r]);
   const pooled = [...byKind.values()].map((rs) => ({
-    ...rs[0]!,
+    ...must(rs[0], 'a record'),
     samples: rs.flatMap((r) => r.samples),
     value: median(rs.flatMap((r) => r.samples)),
     noise: [...new Set(rs.flatMap((r) => r.noise))],

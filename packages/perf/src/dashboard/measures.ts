@@ -46,10 +46,10 @@ const valueOf = ({ record, run }: Reading) =>
 const detailOf = ({ record, run }: Reading) => {
   if (isJourney(record.kind)) {
     const steps = stepTimes(run);
-    const slowest = steps.reduce((a, x) => (x.record.value > a.record.value ? x : a), steps[0]!);
-    return steps.length
-      ? `${steps.length} steps, slowest ${slowest.name} ${formatValue(slowest.record.value, slowest.record.unit)}`
-      : record.kind;
+    const [first] = steps;
+    if (!first) return record.kind;
+    const slowest = steps.reduce((a, x) => (x.record.value > a.record.value ? x : a), first);
+    return `${steps.length} steps, slowest ${slowest.name} ${formatValue(slowest.record.value, slowest.record.unit)}`;
   }
   if (!isPhase(record.kind)) return record.kind;
   const phases = phasesOf(run);

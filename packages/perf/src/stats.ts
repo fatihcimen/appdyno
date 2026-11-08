@@ -1,4 +1,4 @@
-import { median, quantile } from '@appdyno/core';
+import { median, must, quantile } from '@appdyno/core';
 
 /** The statistics of a comparison: pure, and the same answer every time for the same samples. */
 
@@ -24,8 +24,12 @@ const midranks = (values: number[]) => {
   const ranks = new Array<number>(values.length);
   for (let i = 0; i < order.length;) {
     let j = i;
-    while (j + 1 < order.length && order[j + 1]![0] === order[i]![0]) j++;
-    for (let k = i; k <= j; k++) ranks[order[k]![1]] = (i + j) / 2 + 1;
+    while (
+      j + 1 < order.length &&
+      must(order[j + 1], 'a value')[0] === must(order[i], 'a value')[0]
+    )
+      j++;
+    for (let k = i; k <= j; k++) ranks[must(order[k], 'a value')[1]] = (i + j) / 2 + 1;
     i = j + 1;
   }
   return ranks;
@@ -54,8 +58,10 @@ export function rankTest(a: number[], b: number[], draws = 20_000): number {
     let sum = 0;
     for (let i = 0; i < n; i++) {
       const j = i + Math.floor(random() * (ranks.length - i));
-      [ranks[i], ranks[j]] = [ranks[j]!, ranks[i]!];
-      sum += ranks[i]!;
+      const drawn = must(ranks[j], 'a rank');
+      ranks[j] = must(ranks[i], 'a rank');
+      ranks[i] = drawn;
+      sum += drawn;
     }
     if (Math.abs(sum - expected) >= observed - 1e-9) extreme++;
   }

@@ -16,6 +16,7 @@ const strict = [
   'device-tests/**',
   'packages/driver-apple/**',
   'packages/driver-android/**',
+  'packages/perf/**',
 ];
 
 export default defineConfig(

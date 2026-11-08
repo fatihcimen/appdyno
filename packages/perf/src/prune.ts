@@ -188,8 +188,7 @@ export async function pruneTraces(o: PruneOptions): Promise<PruneReport> {
     named = await pinned(f.pins);
     for (const name of await namedByRuns(f.measurements, o.project)) named.add(name);
   } catch (e) {
-    if (e instanceof Unread || e instanceof SyntaxError)
-      return report(beforeBytes, [], (e as Error).message);
+    if (e instanceof Unread || e instanceof SyntaxError) return report(beforeBytes, [], e.message);
     throw e;
   }
   const young = Date.now() - GRACE_MS;
