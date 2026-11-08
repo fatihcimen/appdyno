@@ -191,7 +191,7 @@ describe.skipIf(!udid)('ios simulator perf accuracy', () => {
       const e = await d.measure.frames(APP).catch((x: unknown) => x);
       expect(e).toBeInstanceOf(DeviceError);
       expect((e as DeviceError).code).toBe('UNSUPPORTED');
-      expect((e as DeviceError).hint).toMatch(/leave `probe` on/);
+      expect((e as DeviceError).hint).toMatch(/the probe takes a relaunch of the app/);
     });
 
     it('attaches once: a running probe is not relaunched', async () => {
