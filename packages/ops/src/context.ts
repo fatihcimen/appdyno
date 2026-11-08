@@ -150,9 +150,28 @@ export class ServerContext {
     this.warmed.delete(serial);
     device.warm?.();
     reportProgress(`connecting to ${serial}`);
-    if (launching) device.launchAlongside(launching);
+    if (launching) {
+      // the launch alongside would hide whether the app ran before it, which the launch's answer says
+      this.firstLaunch = {
+        serial,
+        app: launching,
+        ran: await device.appRunning(launching).catch(() => undefined),
+      };
+      device.launchAlongside(launching);
+    }
     await device.open();
     return device;
+  }
+
+  /** Whether the app of a first call's launch ran before that launch began alongside its device's start. */
+  private firstLaunch: { serial: string; app: string; ran: boolean | undefined } | undefined;
+
+  /** Whether `app` runs before a launch of it, asked before the launch that began alongside a start; unknown: undefined. */
+  ranBeforeLaunch(s: Session, app: string): Promise<boolean | undefined> {
+    const first = this.firstLaunch;
+    this.firstLaunch = undefined;
+    if (first?.serial === s.device.serial && first.app === app) return Promise.resolve(first.ran);
+    return s.device.appRunning(app).catch(() => undefined);
   }
 
   /** The session a launch runs on; when it is the first call, the app starts alongside the agent. */

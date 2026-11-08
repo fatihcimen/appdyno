@@ -58,6 +58,14 @@ function shared(
 ) {
   const call: Call = (n, a) => get().call(n, a);
 
+  it('says whether a launch started the app or brought it to the front as it was', async () => {
+    ok(await call('terminate_app'));
+    expect(ok(await call('launch_app')).data.done).toBe(`started ${APP}`);
+    expect(ok(await call('launch_app')).data.done).toBe(
+      `brought ${APP} to the front, on the screen it was on`,
+    );
+  });
+
   it('taps by a selector, folding case and accents, and refuses several or none', async () => {
     await open('list');
     const many = await call('tap', { selector: { text: 'Product' } });

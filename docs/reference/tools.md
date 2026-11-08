@@ -49,6 +49,8 @@ project on this Mac: an Xcode project with `scheme` and `configuration`, or a Gr
 its module and `configuration` as its variant. `device_setting` holds `dark_mode`, `text_size`,
 `reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `biometric`, `fold`, `call`, `sms` and `keychain`.
 
+`launch_app` says whether it started the app or brought a running one to the front, on the screen it was on.
+
 ## What asks the person first
 
 These lose what a person may want, so each waits for the person's yes:

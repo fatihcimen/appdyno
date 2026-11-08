@@ -139,9 +139,7 @@ const turns = async (call: Call) => {
 /** By what a launcher shows: the fixture's name is the same on every device. */
 const byName = async (call: Call) => {
   await call('terminate_app');
-  expect(ok(await call('launch_app', { app: 'appdyno fixture' })).text).toContain(
-    `launched ${APP}`,
-  );
+  expect(ok(await call('launch_app', { app: 'appdyno fixture' })).text).toContain(`started ${APP}`);
   expect(ok(await call('device_info')).data.foreground).toBe(APP);
   expect((await call('launch_app', { app: 'no such app' })).data.code).toBe('NOT_FOUND');
 };

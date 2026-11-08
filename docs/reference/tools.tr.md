@@ -49,6 +49,8 @@ argümanlar ve ortam değişkenleriyle `launch`, yeni ya da boş bir klasöre `d
 varyantı `configuration` olan bir Gradle klasörü. `device_setting`; `dark_mode`, `text_size`,
 `reduce_motion`, `animations`, `locale`, `network`, `proxy`, `battery`, `airplane`, `wifi`, `mobile_data`, `biometric`, `fold`, `call`, `sms` ve `keychain` içerir.
 
+`launch_app` uygulamayı başlattığını mı, yoksa çalışan birini olduğu ekranda öne mi getirdiğini söyler.
+
 ## Önce kişiye sorulanlar
 
 Bunlar bir kişinin isteyebileceği bir şeyi kaybettirir, bu yüzden her biri kişinin evet demesini bekler:

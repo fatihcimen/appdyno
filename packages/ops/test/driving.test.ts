@@ -909,10 +909,28 @@ describe('gestures, keys, clipboard', () => {
     ];
     Object.assign(d, { apps: { listApps: () => Promise.resolve(names) } });
     const { call } = await connect(d);
-    expect((await call('launch_app', { app: 'ödeme' })).text).toContain('launched dev.one');
+    expect((await call('launch_app', { app: 'ödeme' })).text).toContain(
+      'brought dev.one to the front, on the screen it was on',
+    );
     const none = await call('launch_app', { app: 'Nothing' });
     expect(none.text).toContain('no app named Nothing');
     expect((await call('launch_app', { app: 'Twin' })).text).toContain('dev.two, dev.three');
+  });
+
+  it('says whether a launch started the app or brought a running one to the front, asked before a first launch begins', async () => {
+    const d = new FakeDevice();
+    d.running = false;
+    // the first call's launch begins alongside the device's start, and the app runs from then on
+    d.launchAlongside = () => {
+      d.running = true;
+    };
+    const { call } = await connect(d);
+    expect((await call('launch_app')).text).toMatch(/^started dev\.app\n/);
+    expect((await call('launch_app')).text).toMatch(
+      /^brought dev\.app to the front, on the screen it was on\n/,
+    );
+    d.running = false;
+    expect((await call('launch_app')).data.done).toBe('started dev.app');
   });
 
   it('lists the links an app opens, as lines and as data', async () => {
@@ -952,7 +970,7 @@ describe('gestures, keys, clipboard', () => {
     });
     const { call } = await connect(d);
     const r = await call('launch_app', { language: 'pt-BR' });
-    expect(r.text).toMatch(/^launched dev\.app in pt-BR/);
+    expect(r.text).toMatch(/^started dev\.app in pt-BR/);
     expect(launched).toEqual([['dev.app', { language: 'pt-BR' }]]);
     expect((await call('launch_app', { language: 'tr; rm -rf' })).error).toBe(true);
   });

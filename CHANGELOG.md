@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- `launch_app` says whether it started the app or brought a running one to the front, on the screen it was on: it said "launched" for both. The first call of a session, whose launch begins alongside the device's start, asks before that launch begins. A launch in a language says it started the app, as it does.
 - With more than one device this server may drive and none selected, the refusal names each, by serial, kind and model, and its hint says how to pick one: it named none. `list_devices` gives each device's `kind`, and an Android emulator has no `link`: it read as joined by USB.
 - Every answer's `structuredContent` holds its whole text, as `text`, beside the summary it held: a client that shows a tool's `structuredContent` in place of its text was shown a screen read as a count of its elements, and no action's settled screen or diff, nor any of the lines `logs` read. A refusal's text starts with its code and ends with its hint, as a client that shows a failed answer's text alone lost both, and its `structuredContent` holds that text too. A device's failure says its code and hint once, where its words said them in the middle; the command line prints the code first too.
 - What an op fetched inside `steps` or `flow` is said once, at the end of the answer the client reads: a flow lost it, and `steps` said it inside the line of each step that waited for it.

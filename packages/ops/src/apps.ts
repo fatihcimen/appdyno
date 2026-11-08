@@ -153,15 +153,22 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         if (!pkg) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
         reportProgress(`launching ${pkg}`);
         if (!language) {
+          const ran = await ctx.ranBeforeLaunch(s, pkg);
           await s.device.launch(pkg);
-          return afterChange(s, `launched ${pkg}`, read, true);
+          const said =
+            ran === undefined
+              ? `launched ${pkg}`
+              : ran
+                ? `brought ${pkg} to the front, on the screen it was on`
+                : `started ${pkg}`;
+          return afterChange(s, said, read, true);
         }
         const { apps } = s.device;
         const held = apps.languageStays
           ? await setCondition(s, 'locale', language, pkg)
           : undefined;
         await apps.launchWith(pkg, { language });
-        const done = [`launched ${pkg} in ${language}`, held].filter(Boolean).join('; ');
+        const done = [`started ${pkg} in ${language}`, held].filter(Boolean).join('; ');
         return afterChange(s, done, read, true);
       },
     }),

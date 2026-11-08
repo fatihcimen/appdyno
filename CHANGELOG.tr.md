@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- `launch_app` uygulamayı başlattığını mı, yoksa çalışan birini olduğu ekranda öne mi getirdiğini söyler: ikisi için de "launched" diyordu. Başlatması cihazın açılışıyla birlikte başlayan, bir oturumun ilk çağrısı o başlatma başlamadan önce sorar. Bir dilde başlatma, uygulamayı başlattığını söyler, çünkü öyle yapar.
 - Bu sunucunun sürebileceği birden fazla cihaz varken ve hiçbiri seçili değilken ret her birini seri numarası, türü ve modeliyle adlandırır, ipucu da birinin nasıl seçileceğini söyler: hiçbirini adlandırmıyordu. `list_devices` her cihazın `kind`'ını verir ve bir Android emülatörünün `link`'i yoktur: USB ile bağlı okunuyordu.
 - Her yanıtın `structuredContent`'i, taşıdığı özetin yanında metninin tamamını `text` olarak taşır: bir aracın metni yerine `structuredContent`'ini gösteren bir istemciye ekran okuması öğelerinin sayısı olarak gösteriliyordu; hiçbir işlemin durulmuş ekranı ya da farkı, `logs`'un okuduğu satırların hiçbiri gösterilmiyordu. Bir reddin metni koduyla başlar ve ipucuyla biter, çünkü başarısız bir yanıtın yalnızca metnini gösteren bir istemci ikisini de kaybediyordu; `structuredContent`'i de bu metni taşır. Bir cihaz hatası kodunu ve ipucunu bir kez söyler, sözleri bunları ortada söylüyordu; komut satırı da kodu önce yazar.
 - Bir op'un `steps` ya da `flow` içinde indirdiği, istemcinin okuduğu yanıtın sonunda bir kez söylenir: bir flow bunu kaybediyordu, `steps` ise onu bekleyen her adımın kendi satırında söylüyordu.
