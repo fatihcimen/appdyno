@@ -27,6 +27,8 @@ const until = untilWithin(30_000);
 
 describe.runIf(serials.length > 0)('the hub as one window', () => {
   const told: ViewerMessage[] = [];
+  /** What the hub said to its window. */
+  const sent: Record<string, unknown>[] = [];
   const shots = process.env.APPDYNO_SHOTS;
   let link: ViewerProcess;
   let done: Promise<number>;
@@ -59,6 +61,11 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
       viewer: () => {
         link = new ViewerProcess(binary, ['--hub', '--behind', '--appearance', look]);
         link.onMessage((m) => told.push(m));
+        const send = link.send.bind(link);
+        link.send = (m) => {
+          sent.push(m);
+          send(m);
+        };
         return link;
       },
     });
@@ -118,6 +125,47 @@ describe.runIf(serials.length > 0)('the hub as one window', () => {
       await picture('other');
     },
     4 * LIVE_MS,
+  );
+
+  it(
+    "answers the Inspector's panes as a window of its own does: Push, Links and Apps name their device",
+    async () => {
+      // the device standing in the room, by what its stream reports each second
+      const streaming = () => told.findLast((m) => m.op === 'stats' && m.stage)?.stage;
+      await until('a device in the room', () => !!streaming(), LIVE_MS);
+      const shown = String(streaming());
+      const from = told.length;
+      const said = (what: (m: ViewerMessage) => boolean) => told.slice(from).find(what);
+      const answered = (what: (m: Record<string, unknown>) => boolean) => () => sent.some(what);
+      sent.length = 0;
+      link.send({ op: 'poke', stage: shown, control: 'push' });
+      await until(
+        'the push types',
+        answered((m) => m.op === 'answer' && m.name === 'push' && Array.isArray(m.types)),
+        60_000,
+      );
+      link.send({ op: 'poke', stage: shown, control: 'openLink' });
+      await until(
+        'the links',
+        answered((m) => m.op === 'answer' && m.name === 'openLink'),
+        60_000,
+      );
+      link.send({ op: 'poke', stage: shown, clickOn: 'tabApps' });
+      await until(
+        'the apps',
+        answered((m) => m.op === 'apps'),
+        60_000,
+      );
+      for (const name of ['pushes', 'links'])
+        expect(
+          said((m) => m.op === 'control' && m.name === name),
+          name,
+        ).toMatchObject({
+          stage: shown,
+        });
+      expect(said((m) => m.op === 'app' && m.action === 'list')).toMatchObject({ stage: shown });
+    },
+    LIVE_MS,
   );
 
   it(

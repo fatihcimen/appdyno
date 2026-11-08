@@ -17,6 +17,14 @@ void MVEmit(NSDictionary *message);
 /// The same, from what stands on a stage, so that a parent with several hears which device it is about.
 void MVEmitFrom(NSView *_Nullable view, NSDictionary *message);
 
+/// A view that says which of a process's devices it is of: the device's own views, and what stands apart from them.
+@protocol MVStaged <NSObject>
+@property(nonatomic, readonly, copy, nullable) NSString *stage;
+@end
+
+/// The device a view is of, by the first view at or above it that says so; none in a process of one device.
+NSString *_Nullable MVStageOf(NSView *_Nullable view);
+
 /// What a second of frames came to. Thread safe; sources and the sink feed it, the app reports it.
 @interface MVStats : NSObject
 @property(atomic, copy) NSString *source;

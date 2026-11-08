@@ -54,6 +54,10 @@ static NSString *ms(id v) {
   BOOL _asked;
 }
 
+- (nullable NSString *)stage {
+  return self.of.stage;
+}
+
 - (instancetype)initWithFrame:(NSRect)frame target:(id)target {
   if ((self = [super initWithFrame:frame])) {
     NSMutableArray *tabs = [NSMutableArray array];

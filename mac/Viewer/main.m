@@ -17,16 +17,18 @@
 
 static NSLock *gOut;
 
+NSString *_Nullable MVStageOf(NSView *_Nullable view) {
+  for (NSView *above = view; above; above = above.superview)
+    if ([above conformsToProtocol:@protocol(MVStaged)]) return ((id<MVStaged>)above).stage;
+  return nil;
+}
+
 void MVEmitFrom(NSView *_Nullable view, NSDictionary *message) {
-  for (NSView *above = view; above; above = above.superview) {
-    if (![above isKindOfClass:MVRootView.class]) continue;
-    NSString *stage = ((MVRootView *)above).stage;
-    if (!stage) break;
-    NSMutableDictionary *tagged = [message mutableCopy];
-    tagged[@"stage"] = stage;
-    return MVEmit(tagged);
-  }
-  MVEmit(message);
+  NSString *stage = MVStageOf(view);
+  if (!stage) return MVEmit(message);
+  NSMutableDictionary *tagged = [message mutableCopy];
+  tagged[@"stage"] = stage;
+  MVEmit(tagged);
 }
 
 void MVEmit(NSDictionary *message) {

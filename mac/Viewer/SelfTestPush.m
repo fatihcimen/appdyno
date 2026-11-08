@@ -55,6 +55,23 @@ static void checkToken(MVWindow *window, MVPushPane *pane, NSMutableArray<NSDict
   MVCheck(@"push: the field goes with the routes that took a token", card.isHiddenOrHasHiddenAncestor, nil);
 }
 
+/// In the hub a device's Inspector stands in the room's slot, apart from the device's views: what it and its panes send
+/// still names that device, as the hub sends to a device only by its stage.
+static void checkInHub(void) {
+  MVHub *hub = [[MVHub alloc] initWithShow:MVShowBehind poses:NO];
+  MVWindow *window = [[MVWindow alloc] initInRoom:hub.room];
+  [window configure:@{@"title": @"push", @"stage": @"emulator-5554", @"look": @{@"controls": @[@"home"]}}];
+  [window pokeMenu:@"push"];
+  MVPump(0.3);
+  MVInspector *inspector = window.inspector;
+  BOOL apart = YES;
+  for (NSView *above = inspector.push; above; above = above.superview)
+    if ([above isKindOfClass:MVRootView.class]) apart = NO;
+  MVCheck(@"push: in the hub its pane stands apart from the device's views", apart, nil);
+  MVCheck(@"push: and what Push, Links and Apps send names the device", [MVStageOf(inspector.push) isEqual:@"emulator-5554"] && [MVStageOf(inspector.links) isEqual:@"emulator-5554"] && [MVStageOf(inspector) isEqual:@"emulator-5554"], MVStageOf(inspector.push));
+  [window leave];
+}
+
 void MVCheckPush(void) {
   MVWindow *window = [MVWindow new];
   window.behind = YES;
@@ -68,6 +85,7 @@ void MVCheckPush(void) {
   [window pokeMenu:@"push"];
   MVPump(0.3);
   MVCheck(@"push: Send Push in More shows the pane, and asks what this device takes", window.inspecting && window.inspector.chosen == MVPanePush && [sent.lastObject[@"name"] isEqual:@"pushes"], sent.description);
+  MVCheck(@"push: in a window of its own, of one device, what it sends names none", MVStageOf(pane) == nil, MVStageOf(pane));
   [pane show:typesSaid()];
   NSPopUpButton *type = [pane valueForKey:@"_type"];
   NSTextField *app = [pane valueForKey:@"_app"];
@@ -107,4 +125,5 @@ void MVCheckPush(void) {
   [MVFindControl(window.nsWindow.contentView, @"pushGo") performClick:nil];
   MVCheck(@"push: a payload goes alone, as the op takes it", [sent.lastObject[@"args"][@"payload"] isEqual:payload.string] && !sent.lastObject[@"args"][@"title"], [sent.lastObject description]);
   checkToken(window, pane, sent);
+  checkInHub();
 }

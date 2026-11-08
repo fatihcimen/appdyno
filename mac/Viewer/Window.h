@@ -305,7 +305,7 @@ typedef NS_ENUM(NSInteger, MVShow) { MVShowBehind, MVShowFront, MVShowFocused };
 @end
 
 /// All of a device's views: the whole of a window of its own, or what stands in a room of the hub's.
-@interface MVRootView : NSView
+@interface MVRootView : NSView <MVStaged>
 /// The device it is, where a process holds more than one.
 @property(nonatomic, copy, nullable) NSString *stage;
 @property(nonatomic, copy, nullable) void (^onResize)(void);

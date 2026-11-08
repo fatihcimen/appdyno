@@ -90,6 +90,7 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
       [held showState];
     };
     _inspector = [[MVInspector alloc] initWithFrame:NSZeroRect target:self];
+    _inspector.of = root;
     __weak MVWindow *weak = self;
     _inspector.onPane = ^{
       [weak watchReadings];

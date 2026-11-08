@@ -1,5 +1,6 @@
 // The Inspector beside a device and the panes it holds.
 #import <AppKit/AppKit.h>
+#import "Viewer.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -100,8 +101,10 @@ void MVPaneSend(NSView<MVSendPane> *pane, NSDictionary *message);
 enum { MVPanePerf, MVPaneFlow, MVPaneApps, MVPaneActivity, MVPaneLinks, MVPanePush, MVPanes };
 
 /// What goes in the Inspector: Performance, Flows, Apps, Activity, Links and Push, by their symbols and the name of the one chosen.
-@interface MVInspector : NSView
+@interface MVInspector : NSView <MVStaged>
 - (instancetype)initWithFrame:(NSRect)frame target:(id)target;
+/// The device's own views, which name its stage: in the hub the Inspector stands apart from them, in the room's slot.
+@property(nonatomic, weak, nullable) id<MVStaged> of;
 @property(nonatomic, readonly) MVPerfPane *perf;
 @property(nonatomic, readonly) MVFlowPane *flow;
 /// The stream's numbers, which stand in no pane of their own.
