@@ -6,19 +6,37 @@ import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 const [current, historyPath] = process.argv.slice(2);
-const [result] = JSON.parse(readFileSync(current, 'utf8'));
+if (!current || !historyPath) {
+  console.error('usage: ci-gate.mjs <latency.json> <history.jsonl>');
+  process.exit(2);
+}
+/**
+ * A run of the latency suite as it writes it, and a line of the history as this writes it.
+ * @typedef {{ before: unknown; ops: Record<string, { p50: number; p95: number; failed: number }> }} Run
+ * @typedef {{ passed: boolean; ops: Record<string, { p50: number } | undefined> }} Past
+ */
+/**
+ * @param {string} text
+ * @returns {unknown}
+ */
+const parsed = (text) => JSON.parse(text);
+const [result] = /** @type {Run[]} */ (parsed(readFileSync(current, 'utf8')));
+if (!result) throw new Error(`${current} holds no run`);
 const history = existsSync(historyPath)
   ? readFileSync(historyPath, 'utf8')
       .split('\n')
       .filter(Boolean)
-      .map((l) => JSON.parse(l))
+      .map((l) => /** @type {Past} */ (parsed(l)))
   : [];
 const recent = history.filter((h) => h.passed).slice(-5);
+/** @param {number[]} xs */
 const median = (xs) => {
   const s = [...xs].sort((a, b) => a - b);
   return s.length ? s[Math.floor(s.length / 2)] : undefined;
 };
+/** @type {string[]} */
 const failures = [];
+/** @type {string[]} */
 const rows = [];
 for (const [op, s] of Object.entries(result.ops)) {
   const base = median(recent.map((h) => h.ops[op]?.p50).filter((x) => x !== undefined));

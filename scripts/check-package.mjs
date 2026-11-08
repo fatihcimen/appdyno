@@ -36,6 +36,7 @@ const refuse = (why) => {
 };
 
 function adbDir() {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a command that cannot start has no stdout, whatever its types say
   const onPath = spawnSync('which', ['adb'], { encoding: 'utf8' }).stdout?.trim();
   return [
     process.env.ANDROID_HOME && join(process.env.ANDROID_HOME, 'platform-tools'),

@@ -16,6 +16,7 @@ const VARIABLES = {
 };
 
 /** A simulator's id is a UUID, an iPhone's is its chip and a number; anything else is what adb names. */
+/** @param {string} serial */
 export const kindOf = (serial) =>
   /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i.test(serial)
     ? 'simulator'
@@ -23,6 +24,7 @@ export const kindOf = (serial) =>
       ? 'iphone'
       : 'android';
 
+/** @param {string} variable */
 const suites = (variable) =>
   readdirSync(SUITES)
     .filter((f) => f.endsWith('.test.ts'))
@@ -35,9 +37,12 @@ if (command === 'of' && argument) {
   const variable = VARIABLES[kindOf(argument)];
   console.log([variable, ...suites(variable)].join('\n'));
 } else if (command === 'check' && argument) {
-  const { numPassedTests, numFailedTests, numTotalTests } = JSON.parse(
-    readFileSync(argument, 'utf8'),
-  );
+  /** @type {unknown} */
+  const report = JSON.parse(readFileSync(argument, 'utf8'));
+  const { numPassedTests, numFailedTests, numTotalTests } =
+    /** @type {{ numPassedTests: number; numFailedTests: number; numTotalTests: number }} */ (
+      report
+    );
   if (numPassedTests + numFailedTests === 0) {
     console.log(`ran nothing: all ${numTotalTests} tests skipped`);
     process.exit(3);

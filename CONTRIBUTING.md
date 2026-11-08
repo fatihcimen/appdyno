@@ -47,8 +47,8 @@ lint's alone: the flags a Mac compiles the viewer and helpers with on first use 
 warning must not leave a person with no viewer.
 
 `pnpm typecheck` holds every `.mjs` and the configs at the root to the packages' types too, by the root `tsconfig.json`:
-a script is run by hand and no test reaches it. That config lets a parameter go untyped, under which an empty array that
-fills later needs a type.
+a script is run by hand and no test reaches it. That config holds a script as strictly as a package: a parameter, and an
+empty array that fills later, have a JSDoc type, as `/** @param {string} serial */`.
 
 ## Device suites
 
