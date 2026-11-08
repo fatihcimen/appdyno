@@ -22,8 +22,10 @@ const inside = (p: Point, r: Rect) =>
 /** The smallest scrolling thing holding a point: a swipe there moves it. */
 const scrollerAt = (screen: Screen, p: Point) =>
   screen.elements
-    .filter((e) => e.scrollable && e.rect && inside(p, e.rect))
-    .sort((a, b) => a.rect!.width * a.rect!.height - b.rect!.width * b.rect!.height)[0]?.ref;
+    .flatMap((e) =>
+      e.scrollable && e.rect && inside(p, e.rect) ? [{ ref: e.ref, rect: e.rect }] : [],
+    )
+    .sort((a, b) => a.rect.width * a.rect.height - b.rect.width * b.rect.height)[0]?.ref;
 
 const heldFor = (ms: number) => {
   const { least, most, step } = LONG_PRESS_MS;
@@ -59,12 +61,15 @@ export class TouchSteps {
     const was = this.lastTap;
     this.lastTap = undefined;
     const twice =
-      was &&
-      was.index === r.state.steps.length - 1 &&
+      was?.index === r.state.steps.length - 1 &&
       when - was.when <= DOUBLE_MS &&
       Math.hypot(at.x - was.at.x, at.y - was.at.y) <= DOUBLE_NEAR;
-    if (twice) return this.steps.rewrite(r, 1, stepOf('double_tap', was.aim));
-    const el = a.element && screen.elements.find((e) => e.ref === a.element!.ref);
+    if (twice) {
+      this.steps.rewrite(r, 1, stepOf('double_tap', was.aim));
+      return;
+    }
+    const { element } = a;
+    const el = element && screen.elements.find((e) => e.ref === element.ref);
     this.typing.field = el?.editable ? el : undefined;
     this.steps.coordinatesTold(a);
     this.reached(r, a);
@@ -108,7 +113,10 @@ export class TouchSteps {
   ): Promise<void> {
     const screen = await was;
     const size = screen && this.o.sizeOf(screen);
-    if (!screen || !size) return this.steps.told(r, 'a touch on a screen not read');
+    if (!screen || !size) {
+      this.steps.told(r, 'a touch on a screen not read');
+      return;
+    }
     const g = gestureOf(stroke, size);
     const p = { x: Math.round(g.at.x * size.w), y: Math.round(g.at.y * size.h) };
     const keyboard = this.o.keyboardOf(screen);
@@ -118,10 +126,19 @@ export class TouchSteps {
       return;
     }
     this.typing.endKeyed(r, screen);
-    if (g.kind === 'swipe') return this.onSwipe(r, g, p, when, screen, size);
-    if (g.kind === 'other') return this.steps.told(r, g.what);
+    if (g.kind === 'swipe') {
+      this.onSwipe(r, g, p, when, screen, size);
+      return;
+    }
+    if (g.kind === 'other') {
+      this.steps.told(r, g.what);
+      return;
+    }
     const a = aimAt(screen, p, size);
-    if (g.kind === 'tap') return this.onTap(r, a, g.at, when, screen);
+    if (g.kind === 'tap') {
+      this.onTap(r, a, g.at, when, screen);
+      return;
+    }
     this.steps.coordinatesTold(a);
     this.reached(r, a);
     this.steps.write(r, stepOf('long_press', a, { durationMs: heldFor(g.ms) }));

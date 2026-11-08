@@ -33,7 +33,7 @@ export class StepWriter {
         const r = this.o.recording();
         return r && work(r);
       })
-      .catch((e: Error) => this.o.say(e.message));
+      .catch((e: unknown) => this.o.say(e instanceof Error ? e.message : String(e)));
   }
 
   /** All that was queued has gone down. */

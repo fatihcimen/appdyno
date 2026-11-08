@@ -40,8 +40,9 @@ const DEATHS_MS = 60_000;
 /** The driver a virtual device belongs to. */
 async function ownerOf(ctx: ServerContext, id: string) {
   for (const { virtual } of ctx.providers) {
-    const found = await virtual?.startable().catch(() => []);
-    if (found?.some((d) => d.id === id)) return virtual!;
+    if (!virtual) continue;
+    const found = await virtual.startable().catch(() => []);
+    if (found.some((d) => d.id === id)) return virtual;
   }
   throw new ToolError(`no such device: ${id}`, 'NOT_FOUND');
 }
@@ -96,12 +97,14 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     options: { quality: 'auto' },
     headless: false,
     ...(o.behind && { behind: true }),
-    viewer: (serial) => async () =>
-      stageLink(
-        () => link,
-        serial,
-        stages,
-        () => windowGone,
+    viewer: (serial) => () =>
+      Promise.resolve(
+        stageLink(
+          () => link,
+          serial,
+          stages,
+          () => windowGone,
+        ),
       ),
     noInput: false,
     focus: false,
@@ -115,7 +118,7 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
     windowUp: (serial) => room.windowUp(serial),
     tell: (m) => link.send(m),
   });
-  const acts: Record<string, (m: ViewerMessage) => Promise<unknown> | void> = {
+  const acts: Record<string, (m: ViewerMessage) => unknown> = {
     select: (m) => room.select(m),
     open: (m) => room.open(m),
     pair: (m) => room.pair(m),
@@ -126,7 +129,7 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
       ctx.providers
         .find((p) => p.virtual?.kind === m.kind)
         ?.virtual?.create?.(m as unknown as NewDevice),
-    clients: (m) => o.services?.act(m, (said) => link.send({ op: 'clients', ...said })) as void,
+    clients: (m) => o.services?.act(m, (said) => link.send({ op: 'clients', ...said })),
   };
   let leaving = false;
   let windowGone = false;
@@ -153,7 +156,8 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
       deaths = [...deaths.filter((t) => Date.now() - t < DEATHS_MS), Date.now()];
       if (leaving || deaths.length > MAX_DEATHS) {
         windowGone = true;
-        return ended();
+        ended();
+        return;
       }
       o.log(`the window ended, and comes back: ${tail.slice(-200)}`);
       list.forgetTold();
@@ -172,7 +176,7 @@ export async function runHub(ctx: ServerContext, o: HubRun): Promise<number> {
   // what stands here has its file in this pid's name, and with no handler this signal ends the process
   process.on(FOCUS_SIGNAL, parent.raise);
   const timer = setInterval(() => void list.refresh().catch(() => undefined), POLL_MS);
-  await list.refresh().catch((e: Error) => o.log(e.message));
+  await list.refresh().catch((e: unknown) => o.log(e instanceof Error ? e.message : String(e)));
   await new Promise<void>((done) => {
     ended = done;
   });

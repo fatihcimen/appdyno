@@ -1,4 +1,4 @@
-import type { InputEvent } from '@appdyno/core';
+import { must, type InputEvent } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import { pairWindows, type PairSide } from '../src/pair.js';
@@ -38,10 +38,10 @@ function side(serial: string, read: Tree, ran?: JourneyAnswer) {
   const it: PairSide = {
     serial,
     name: `the ${serial}`,
-    read: async () => read,
+    read: () => Promise.resolve(read),
     session: session as unknown as PairSide['session'],
     press,
-    journey: async () => ran,
+    journey: () => Promise.resolve(ran),
   };
   return { it, sent, told, session, press };
 }
@@ -58,17 +58,16 @@ const touch = (p: 0 | 1 | 2, x: number, y: number): InputEvent => ({ kind: 'touc
 /** What a window does takes real time, and more of it on a loaded Mac: a test waits for what it is after. */
 const landed = (check: () => void) => vi.waitFor(check, { timeout: 10_000 });
 
-const run = (totalMs: number, samples: number[], steps: [string, number][]): JourneyAnswer =>
-  ({
-    id: 'x',
-    raw: 'x',
-    scenario: 'journey-x',
-    iterations: samples.length,
-    totalMs,
-    samples,
-    steps: steps.map(([step, ms]) => ({ step, ms })),
-    noise: [],
-  }) as JourneyAnswer;
+const run = (totalMs: number, samples: number[], steps: [string, number][]): JourneyAnswer => ({
+  id: 'x',
+  raw: 'x',
+  scenario: 'journey-x',
+  iterations: samples.length,
+  totalMs,
+  samples,
+  steps: steps.map(([step, ms]) => ({ step, ms })),
+  noise: [],
+});
 
 describe('two windows as one hand', () => {
   it('sends a touch to the same thing on the other, wherever it stands there', async () => {
@@ -128,7 +127,9 @@ describe('two windows as one hand', () => {
         { p: 2, x: 0.85, y: 0.6 },
       ]),
     );
-    expect(b.told).not.toContainEqual(expect.objectContaining({ failing: expect.anything() }));
+    expect(b.told).not.toContainEqual(
+      expect.objectContaining({ failing: expect.anything() as unknown }),
+    );
   });
 
   it('keeps a drag the same length, from where it landed', async () => {
@@ -139,7 +140,7 @@ describe('two windows as one hand', () => {
     pair.input('a', touch(2, 0.25, 0.325));
     await landed(() => expect(b.sent).toHaveLength(3));
     const [down, moved] = b.sent as { y: number }[];
-    expect(moved!.y - down!.y).toBeCloseTo(0.1);
+    expect(must(moved, 'the move').y - must(down, 'the touch down').y).toBeCloseTo(0.1);
   });
 
   it('knows a thing by its id on one and its words on the other', async () => {
@@ -195,9 +196,7 @@ describe('two windows as one hand', () => {
 
   it('sends a touch on where a screen cannot be read, and says so', async () => {
     const [a, b] = [side('a', IPHONE), side('b', ANDROID)];
-    b.it.read = async () => {
-      throw new Error('no agent');
-    };
+    b.it.read = () => Promise.reject(new Error('no agent'));
     const pair = pairWindows([a.it, b.it]);
     pair.input('a', touch(0, 0.25, 0.125));
     pair.input('a', touch(2, 0.25, 0.125));
@@ -229,7 +228,9 @@ describe('two windows as one hand', () => {
     await landed(() =>
       expect(b.told).toContainEqual(expect.objectContaining({ failing: 'That did not land' })),
     );
-    expect(a.told).not.toContainEqual(expect.objectContaining({ failing: expect.anything() }));
+    expect(a.told).not.toContainEqual(
+      expect.objectContaining({ failing: expect.anything() as unknown }),
+    );
     pair.input('a', touch(0, 0.25, 0.125));
     pair.input('a', touch(2, 0.25, 0.125));
     await landed(() => {

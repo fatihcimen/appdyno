@@ -1,6 +1,7 @@
 import {
   deviceState,
   inCall,
+  must,
   PUSH_TOKEN_KINDS,
   type Device,
   type ViewerMessage,
@@ -40,6 +41,8 @@ export function windowSends(
   const tell = (name: string, m: Record<string, unknown>) =>
     session().tell({ op: 'answer', name, ...m });
   const recent = () => recentLinks.read(serial) ?? [];
+  /** A field the pane sent, as text: the window sends each as a string, and what is none is empty. */
+  const field = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 
   /**
    * One op's call, by the pane it answers: its answer, and what it said whole where it said it. `app`, where given, is
@@ -47,10 +50,11 @@ export function windowSends(
    */
   const call = async (name: string, op: string, args: Record<string, unknown>, app?: string) => {
     // the first call opens a session, which starts the device agent, as an agent's first call does
-    const tool = (ops ??= opsFor((own ??= windowContext(ctx, device))))[op]!;
+    const context = (own ??= windowContext(ctx, device));
+    const tool = must((ops ??= opsFor(context))[op], `the op ${op}`);
     try {
       if (app !== undefined)
-        (await own!.session()).appId = app ? checkApp(own!.policy, app) : undefined;
+        (await context.session()).appId = app ? checkApp(context.policy, app) : undefined;
       const progress = (line: string) => tell(name, { line: spokenDone(line) });
       const { data } = await inCall({ client: WINDOW, progress }, () =>
         tool.handler(argumentsFor(tool, args)),
@@ -103,23 +107,25 @@ export function windowSends(
    * A token a person typed for the app in the pane, which the device keeps for this session for its pushes by APNs or
    * FCM. No op takes it, so no call, Activity or log of one sees it, and nothing here says it back.
    */
-  const pushToken = async (m: ViewerMessage) => {
-    const app = String(m.app ?? '').trim();
-    const kind = PUSH_TOKEN_KINDS.find((k) => k === m.kind);
-    if (!app) throw new ToolError('give the app the token is for', 'INVALID_ARGUMENT');
-    checkApp(ctx.policy, app);
-    if (!kind) throw new ToolError(`kind: ${PUSH_TOKEN_KINDS.join(', ')}`, 'INVALID_ARGUMENT');
-    if (!device.events.pushToken)
-      throw new ToolError('this device takes no token a person types', 'UNSUPPORTED');
-    device.events.pushToken(app, String(m.token ?? '').trim(), kind);
-    tell('push', { ok: true, text: `Kept ${app}'s ${kind} token for this session only` });
-  };
+  const pushToken = (m: ViewerMessage) =>
+    new Promise<void>((resolve) => {
+      const app = field(m.app);
+      const kind = PUSH_TOKEN_KINDS.find((k) => k === m.kind);
+      if (!app) throw new ToolError('give the app the token is for', 'INVALID_ARGUMENT');
+      checkApp(ctx.policy, app);
+      if (!kind) throw new ToolError(`kind: ${PUSH_TOKEN_KINDS.join(', ')}`, 'INVALID_ARGUMENT');
+      if (!device.events.pushToken)
+        throw new ToolError('this device takes no token a person types', 'UNSUPPORTED');
+      device.events.pushToken(app, field(m.token), kind);
+      tell('push', { ok: true, text: `Kept ${app}'s ${kind} token for this session only` });
+      resolve();
+    });
 
   const sends: Record<string, (m: ViewerMessage) => Promise<void>> = {
     links: async (m) => {
       const front = await ownFront();
       // the app the pane names, else the one in front: what it opens, as `open_link` lists it
-      const app = String(m.app ?? '').trim() || front.app;
+      const app = field(m.app) || front.app;
       const { data } = app ? await call('openLink', 'open_link', { links: app }) : {};
       tell('openLink', {
         recent: recent(),
@@ -127,8 +133,8 @@ export function windowSends(
         ...(app && { suggested: data?.links ?? [] }),
       });
     },
-    openLink: (m) => openLink(String(m.url ?? '').trim(), String(m.app ?? '').trim()),
-    pushes: (m) => pushes(String(m.app ?? '').trim()),
+    openLink: (m) => openLink(field(m.url), field(m.app)),
+    pushes: (m) => pushes(field(m.app)),
     push: (m) => push(m.args),
     pushToken,
   };
@@ -140,8 +146,8 @@ export function windowSends(
       if (m.op !== 'control') return false;
       const name = String(m.name);
       if (!sends[name]) return false;
-      void sends[name](m).catch((e: Error) =>
-        tell(answering(name), { ok: false, text: e.message }),
+      void sends[name](m).catch((e: unknown) =>
+        tell(answering(name), { ok: false, text: e instanceof Error ? e.message : String(e) }),
       );
       return true;
     },

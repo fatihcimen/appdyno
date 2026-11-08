@@ -1,8 +1,8 @@
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Device, InputEvent } from '@appdyno/core';
-import { afterAll, describe, expect, it, vi } from 'vitest';
+import { must, type Device, type InputEvent } from '@appdyno/core';
+import { afterAll, describe, expect, it, vi, type Mock } from 'vitest';
 import { stamp, windowControls, windowLook, type WindowSession } from '../src/controls.js';
 import { type JourneyAnswer } from '@appdyno/ops';
 
@@ -18,12 +18,16 @@ const nothingFor = () => new Promise((r) => setTimeout(r, 400));
 /** A gesture takes real time, and more of it on a loaded Mac: a test waits for its end, not for a guess at it. */
 const WAIT = { timeout: 10_000 };
 
+/** The fake device's members, as the mocks they are. */
+const mocks = (d: Device) =>
+  d as unknown as Record<'open' | 'setOrientation' | 'launch' | 'terminate', Mock>;
+
 function fixture(platform: 'ios' | 'android', device: Partial<Device> = {}, streams = false) {
   const sent: InputEvent[] = [];
   const told: Record<string, unknown>[] = [];
   const recording = {
     start: vi.fn(),
-    stop: vi.fn(async () => ({ frames: 12 })),
+    stop: vi.fn(() => Promise.resolve({ frames: 12 })),
   };
   const picture = { w: 1080, h: 2400 };
   const session = {
@@ -37,14 +41,15 @@ function fixture(platform: 'ios' | 'android', device: Partial<Device> = {}, stre
   const whole = {
     serial: 'S',
     mirror: {},
-    open: vi.fn(async () => undefined),
-    foreground: vi.fn(async () => 'dev.app'),
-    setOrientation: vi.fn(async () => {
+    open: vi.fn(() => Promise.resolve(undefined)),
+    foreground: vi.fn(() => Promise.resolve('dev.app')),
+    setOrientation: vi.fn(() => {
       [picture.w, picture.h] = [picture.h, picture.w];
+      return Promise.resolve();
     }),
-    screenshot: vi.fn(async () => ({ meta: {}, data: Buffer.from('png') })),
-    launch: vi.fn(async () => ''),
-    terminate: vi.fn(async () => undefined),
+    screenshot: vi.fn(() => Promise.resolve({ meta: {}, data: Buffer.from('png') })),
+    launch: vi.fn(() => Promise.resolve('')),
+    terminate: vi.fn(() => Promise.resolve(undefined)),
     ...device,
   } as unknown as Device;
   const hardware = { platform, controls: [], model: 'Test Phone' };
@@ -56,17 +61,19 @@ function fixture(platform: 'ios' | 'android', device: Partial<Device> = {}, stre
     flagged: false,
   };
   const measures = {
-    launch: vi.fn(async (_app: string, say: (line: string) => void) => {
+    launch: vi.fn((_app: string, say: (line: string) => void) => {
       say('launch 1 of 5');
-      return measured;
+      return Promise.resolve(measured);
     }),
-    scroll: vi.fn(async () => measured),
-    journey: vi.fn(async (_file: string, _app: string | undefined) => ({
-      said: measured,
-      ran: { totalMs: 412 } as JourneyAnswer,
-    })),
-    dashboard: vi.fn(async () => undefined),
-    history: vi.fn(async () => []),
+    scroll: vi.fn(() => Promise.resolve(measured)),
+    journey: vi.fn((_file: string, _app: string | undefined) =>
+      Promise.resolve({
+        said: measured,
+        ran: { totalMs: 412 } as JourneyAnswer,
+      }),
+    ),
+    dashboard: vi.fn(() => Promise.resolve(undefined)),
+    history: vi.fn(() => Promise.resolve([])),
   };
   const controls = windowControls(whole, hardware, () => session, measures);
   return { controls, sent, told, device: whole, session, recording, measures };
@@ -105,14 +112,14 @@ describe("a window's controls", () => {
     const touches = sent as { p: number; x: number; y: number }[];
     await vi.waitFor(() => expect(touches.at(-1)?.p).toBe(2), WAIT);
     expect(touches[0]).toMatchObject({ p: 0 });
-    expect(touches[0]!.y).toBeLessThan(0.02);
+    expect(touches[0]?.y).toBeLessThan(0.02);
     expect(touches.every((t) => t.x > 0.8)).toBe(true);
-    expect(touches.at(-1)!.y).toBeGreaterThan(0.5);
+    expect(touches.at(-1)?.y).toBeGreaterThan(0.5);
   });
 
   it('turns once per press, each way, around the four', async () => {
     const { controls, device } = fixture('android');
-    const turns = vi.mocked(device.setOrientation).mock.calls;
+    const turns = mocks(device).setOrientation.mock.calls;
     controls.press('rotateRight');
     await vi.waitFor(() => expect(turns).toEqual([[3]]), WAIT);
     controls.press('rotateLeft');
@@ -121,26 +128,21 @@ describe("a window's controls", () => {
 
   it('says so when the app in front does not turn, and asks for no turn it would keep', async () => {
     const { controls, told, device } = fixture('android', {
-      setOrientation: vi.fn(async () => undefined),
+      setOrientation: vi.fn(() => Promise.resolve(undefined)),
     });
     controls.press('rotateRight');
     await vi.waitFor(
       () => expect(told).toContainEqual({ op: 'note', text: 'The app in front does not turn' }),
       WAIT,
     );
-    expect(vi.mocked(device.setOrientation).mock.calls).toEqual([[3], [0]]);
+    expect(mocks(device).setOrientation.mock.calls).toEqual([[3], [0]]);
     controls.press('rotateLeft');
-    await vi.waitFor(
-      () => expect(vi.mocked(device.setOrientation).mock.calls[2]).toEqual([1]),
-      WAIT,
-    );
+    await vi.waitFor(() => expect(mocks(device).setOrientation.mock.calls[2]).toEqual([1]), WAIT);
   });
 
   it('says what went wrong beneath the device, and goes on', async () => {
     const { controls, told } = fixture('ios', {
-      setOrientation: async () => {
-        throw new Error('no agent here');
-      },
+      setOrientation: () => Promise.reject(new Error('no agent here')),
     });
     controls.press('rotateLeft');
     await vi.waitFor(
@@ -172,14 +174,14 @@ describe("a window's captures", () => {
   });
 
   it('takes a picture with no agent where the device has its own way', async () => {
-    const screenshot = vi.fn(async () => ({ data: Buffer.from('png') }));
+    const screenshot = vi.fn(() => Promise.resolve({ data: Buffer.from('png') }));
     const { controls, device, told } = fixture('ios', {
       mirror: { screenshot },
     } as unknown as Partial<Device>);
     controls.onWindow({ op: 'control', name: 'copy' });
     await vi.waitFor(() => expect(told.some((m) => m.op === 'copied')).toBe(true), WAIT);
     expect(screenshot).toHaveBeenCalledWith('png');
-    expect(device.open).not.toHaveBeenCalled();
+    expect(mocks(device).open).not.toHaveBeenCalled();
   });
 
   it("records a stream's own frames, and says so at both ends", async () => {
@@ -195,8 +197,8 @@ describe("a window's captures", () => {
   });
 
   it("records by the device's own recorder where the picture is no stream", async () => {
-    const start = vi.fn(async () => ({ pid: 1 }));
-    const stop = vi.fn(async () => ({ files: ['a.mp4'] }));
+    const start = vi.fn(() => Promise.resolve({ pid: 1 }));
+    const stop = vi.fn(() => Promise.resolve({ files: ['a.mp4'] }));
     const { controls, recording } = fixture('ios', {
       recorder: { extension: 'mp4', start, stop },
     });
@@ -217,13 +219,13 @@ describe("a window's captures", () => {
 describe("a window's live numbers", () => {
   it('read nothing until they are shown, and stop when they are not', async () => {
     const stop = vi.fn();
-    const start = vi.fn(async (onSample: (s: { at: number }) => void) => {
+    const start = vi.fn((onSample: (s: { at: number }) => void) => {
       onSample({ at: 1 });
-      return stop;
+      return Promise.resolve(stop);
     });
     const { controls, told } = fixture('ios', {
       liveMetrics: { start },
-    } as unknown as Partial<Device>);
+    });
     expect(start).not.toHaveBeenCalled();
     controls.onWindow({ op: 'perfWatch', on: true });
     await vi.waitFor(
@@ -235,31 +237,29 @@ describe("a window's live numbers", () => {
   });
 
   it('start an agent only for a device that cannot say what is in front without one', async () => {
-    const start = vi.fn(async () => vi.fn());
+    const start = vi.fn(() => Promise.resolve(vi.fn()));
     const live = { liveMetrics: { start } };
     const answers = fixture('ios', {
       ...live,
-      foreground: async () => undefined,
-    } as unknown as Partial<Device>);
+      foreground: () => Promise.resolve(undefined),
+    });
     answers.controls.onWindow({ op: 'perfWatch', on: true });
     await vi.waitFor(() => expect(start).toHaveBeenCalled(), WAIT);
-    expect(answers.device.open).not.toHaveBeenCalled();
+    expect(mocks(answers.device).open).not.toHaveBeenCalled();
     const refuses = fixture('android', {
       ...live,
-      foreground: async () => {
-        throw new Error('no agent');
-      },
-    } as unknown as Partial<Device>);
+      foreground: () => Promise.reject(new Error('no agent')),
+    });
     refuses.controls.onWindow({ op: 'perfWatch', on: true });
-    await vi.waitFor(() => expect(refuses.device.open).toHaveBeenCalledOnce(), WAIT);
+    await vi.waitFor(() => expect(mocks(refuses.device).open).toHaveBeenCalledOnce(), WAIT);
   });
 
   it('end with the window', async () => {
     const stop = vi.fn();
-    const start = vi.fn(async () => stop);
+    const start = vi.fn(() => Promise.resolve(stop));
     const { controls } = fixture('ios', {
       liveMetrics: { start },
-    } as unknown as Partial<Device>);
+    });
     controls.onWindow({ op: 'perfWatch', on: true });
     await vi.waitFor(() => expect(start).toHaveBeenCalled(), WAIT);
     await controls.end();
@@ -267,10 +267,10 @@ describe("a window's live numbers", () => {
   });
 
   it('end only once a reading under way has, as the device closes next', async () => {
-    let finish = () => undefined as void;
+    let finish: () => void = () => undefined;
     let ended = false;
-    const start = vi.fn(async () => () => new Promise<void>((r) => (finish = r)));
-    const { controls } = fixture('ios', { liveMetrics: { start } } as unknown as Partial<Device>);
+    const start = vi.fn(() => Promise.resolve(() => new Promise<void>((r) => (finish = r))));
+    const { controls } = fixture('ios', { liveMetrics: { start } });
     controls.onWindow({ op: 'perfWatch', on: true });
     await vi.waitFor(() => expect(start).toHaveBeenCalled(), WAIT);
     const ending = controls.end().then(() => (ended = true));
@@ -284,8 +284,8 @@ describe("a window's live numbers", () => {
 
 describe("a window's Apps pane", () => {
   const apps = {
-    listApps: vi.fn(async () => [{ id: 'a.b', name: 'App' }]),
-    uninstall: vi.fn(async () => undefined),
+    listApps: vi.fn(() => Promise.resolve([{ id: 'a.b', name: 'App' }])),
+    uninstall: vi.fn(() => Promise.resolve(undefined)),
   };
 
   it('lists them', async () => {
@@ -302,10 +302,10 @@ describe("a window's Apps pane", () => {
     controls.onWindow({ op: 'app', action: 'launch', id: 'a.b' });
     controls.onWindow({ op: 'app', action: 'quit', id: 'a.b' });
     await vi.waitFor(() => {
-      expect(device.launch).toHaveBeenCalledWith('a.b');
-      expect(device.terminate).toHaveBeenCalledWith('a.b');
+      expect(mocks(device).launch).toHaveBeenCalledWith('a.b');
+      expect(mocks(device).terminate).toHaveBeenCalledWith('a.b');
     }, WAIT);
-    expect(device.open).toHaveBeenCalledOnce();
+    expect(mocks(device).open).toHaveBeenCalledOnce();
   });
 
   it('removes an app and shows the list without it', async () => {
@@ -318,14 +318,14 @@ describe("a window's Apps pane", () => {
 });
 
 describe("a window's measures", () => {
-  const yours = { apps: { listApps: async () => [{ id: 'dev.app', name: 'App' }] } };
+  const yours = { apps: { listApps: () => Promise.resolve([{ id: 'dev.app', name: 'App' }]) } };
   const answer = (told: Record<string, unknown>[]) => told.find((m) => m.op === 'measured');
 
   it('measure the app in front by the tool an agent calls, and say how it goes', async () => {
     const { controls, told, measures } = fixture('ios', yours as unknown as Partial<Device>);
     controls.onWindow({ op: 'control', name: 'measureLaunch' });
     await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
-    expect(measures.launch.mock.calls[0]![0]).toBe('dev.app');
+    expect(measures.launch.mock.calls[0]?.[0]).toBe('dev.app');
     expect(told).toContainEqual({ op: 'measuring', line: 'launch 1 of 5' });
     expect(answer(told)).toMatchObject({ ok: true, title: 'Cold launch', value: '412 ms' });
   });
@@ -333,13 +333,13 @@ describe("a window's measures", () => {
   it("leave alone what is the system's: a measure restarts what it measures", async () => {
     const { controls, told, measures } = fixture('ios', {
       ...yours,
-      foreground: async () => 'com.apple.springboard',
+      foreground: () => Promise.resolve('com.apple.springboard'),
     } as unknown as Partial<Device>);
     controls.onWindow({ op: 'control', name: 'measureScroll' });
     await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
     expect(measures.scroll).not.toHaveBeenCalled();
     expect(answer(told)).toMatchObject({ title: 'Open an app first' });
-    expect(answer(told)!.ok).toBeUndefined();
+    expect(must(answer(told), 'the answer').ok).toBeUndefined();
   });
 
   it('say why there is no number, and let the next one run', async () => {
@@ -348,7 +348,7 @@ describe("a window's measures", () => {
     controls.onWindow({ op: 'control', name: 'measureScroll' });
     await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
     expect(answer(told)).toMatchObject({ title: 'No measure' });
-    expect(String(answer(told)!.detail)).toContain('held by pid 7');
+    expect(String(answer(told)?.detail)).toContain('held by pid 7');
     told.length = 0;
     controls.onWindow({ op: 'control', name: 'measureScroll' });
     await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
@@ -358,16 +358,16 @@ describe("a window's measures", () => {
   it('run a journey as any other, and hand back what it ran', async () => {
     const { controls, told, measures } = fixture('ios', yours as unknown as Partial<Device>);
     expect(await controls.journey('x.flow')).toEqual({ totalMs: 412 });
-    expect(measures.journey.mock.calls[0]!.slice(0, 2)).toEqual(['x.flow', 'dev.app']);
+    expect(measures.journey.mock.calls[0]?.slice(0, 2)).toEqual(['x.flow', 'dev.app']);
     expect(answer(told)).toMatchObject({ ok: true, value: '412 ms' });
   });
 
   it("give a journey no app of the system's, which a flow would stop", async () => {
     const { controls, measures } = fixture('ios', {
-      apps: { listApps: async () => [] },
+      apps: { listApps: () => Promise.resolve([]) },
     } as unknown as Partial<Device>);
     await controls.journey('x.flow');
-    expect(measures.journey.mock.calls[0]![1]).toBeUndefined();
+    expect(must(measures.journey.mock.calls[0], 'a journey')[1]).toBeUndefined();
   });
 
   it('say why a journey did not run, and hand back nothing', async () => {
@@ -384,15 +384,15 @@ describe("a window's measures", () => {
     const { controls, told, measures } = fixture('ios', yours as unknown as Partial<Device>);
     controls.onWindow({ op: 'control', name: 'journey', file: 'chosen.flow' });
     await vi.waitFor(() => expect(answer(told)).toBeDefined(), WAIT);
-    expect(measures.journey.mock.calls[0]![0]).toBe('chosen.flow');
+    expect(measures.journey.mock.calls[0]?.[0]).toBe('chosen.flow');
   });
 
   it('try the device agent again after it failed to start', async () => {
-    const open = vi.fn(async () => undefined);
+    const open = vi.fn(() => Promise.resolve(undefined));
     open.mockRejectedValueOnce(new Error('not yet'));
     const { controls } = fixture('ios', {
       open,
-      tree: async () => ({ nodes: [] }),
+      tree: () => Promise.resolve({ nodes: [] }),
     } as unknown as Partial<Device>);
     await expect(controls.read()).rejects.toThrow('not yet');
     await expect(controls.read()).resolves.toEqual({ nodes: [] });
@@ -401,10 +401,13 @@ describe("a window's measures", () => {
   it('read the screen only once the device agent is up', async () => {
     const order: string[] = [];
     const { controls } = fixture('ios', {
-      open: async () => void order.push('open'),
-      tree: async () => {
+      open: () => {
+        order.push('open');
+        return Promise.resolve();
+      },
+      tree: () => {
         order.push('tree');
-        return { nodes: [] };
+        return Promise.resolve({ nodes: [] });
       },
     } as unknown as Partial<Device>);
     await controls.read();
@@ -422,15 +425,15 @@ describe("a window's measures", () => {
 
   it('stop the readings while they run, whose counts a reading would reset', async () => {
     const stop = vi.fn();
-    const start = vi.fn(async () => stop);
+    const start = vi.fn(() => Promise.resolve(stop));
     const { controls, told, measures } = fixture('ios', {
       ...yours,
       liveMetrics: { start },
     } as unknown as Partial<Device>);
     let stoppedBefore = 0;
-    measures.scroll.mockImplementationOnce(async () => {
+    measures.scroll.mockImplementationOnce(() => {
       stoppedBefore = stop.mock.calls.length;
-      return { title: 'Scroll', value: '1%', detail: '', why: '', flagged: false };
+      return Promise.resolve({ title: 'Scroll', value: '1%', detail: '', why: '', flagged: false });
     });
     controls.onWindow({ op: 'perfWatch', on: true });
     await vi.waitFor(() => expect(start).toHaveBeenCalledOnce(), WAIT);
@@ -442,8 +445,8 @@ describe("a window's measures", () => {
 
   it('leave no reading running that started as its window closed', async () => {
     const stop = vi.fn();
-    const start = vi.fn(async () => stop);
-    const { controls } = fixture('ios', { liveMetrics: { start } } as unknown as Partial<Device>);
+    const start = vi.fn(() => Promise.resolve(stop));
+    const { controls } = fixture('ios', { liveMetrics: { start } });
     controls.onWindow({ op: 'perfWatch', on: true });
     controls.onWindow({ op: 'perfWatch', on: false });
     await controls.end();
@@ -451,11 +454,11 @@ describe("a window's measures", () => {
   });
 
   it('ask a device that can tell of all its apps, and give its own source the app', async () => {
-    const start = vi.fn(async () => vi.fn());
+    const start = vi.fn(() => Promise.resolve(vi.fn()));
     const { controls, measures } = fixture('ios', {
       ...yours,
-      foreground: async () => 'com.apple.springboard',
-      frontApp: async () => 'dev.app',
+      foreground: () => Promise.resolve('com.apple.springboard'),
+      frontApp: () => Promise.resolve('dev.app'),
       liveMetrics: { start },
     } as unknown as Partial<Device>);
     controls.onWindow({ op: 'perfWatch', on: true });
@@ -470,8 +473,8 @@ describe("a window's measures", () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     try {
       const stop = vi.fn();
-      const start = vi.fn(async () => stop);
-      const frontApp = vi.fn(async () => 'dev.app');
+      const start = vi.fn(() => Promise.resolve(stop));
+      const frontApp = vi.fn(() => Promise.resolve('dev.app'));
       const { controls } = fixture('ios', {
         ...yours,
         frontApp,

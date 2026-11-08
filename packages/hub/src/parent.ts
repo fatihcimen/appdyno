@@ -98,7 +98,7 @@ export class Parent {
       );
     }
     const device = this.ctx.deviceFor(serial);
-    if (this.o.options.wifi && !device.mirror?.wifi) {
+    if (this.o.options.wifi && !device.mirror.wifi) {
       throw new ToolError(
         `--wifi is for an iPhone: ${serial} is on the network already if its address says so`,
         'INVALID_ARGUMENT',
@@ -145,7 +145,7 @@ export class Parent {
           this.o.log(`${serial}: recording to ${this.o.record}`);
           this.movies.set(
             serial,
-            controls.movieTo(this.o.record).catch((e: Error) => this.noMovie(serial, e)),
+            controls.movieTo(this.o.record).catch((e: unknown) => this.noMovie(serial, e)),
           );
         }
         // a stop is the end of its file; a status written after would look like a mirror
@@ -198,15 +198,15 @@ export class Parent {
     }
   }
 
-  private noMovie(serial: string, e: Error) {
+  private noMovie(serial: string, e: unknown) {
     this.failed = true;
-    this.o.log(`${serial}: no movie: ${e.message}`);
+    this.o.log(`${serial}: no movie: ${e instanceof Error ? e.message : String(e)}`);
     return undefined;
   }
 
   private async endMovie(serial: string) {
     const stop = await this.movies.get(serial);
-    const end = await stop?.().catch((e: Error) => this.noMovie(serial, e));
+    const end = await stop?.().catch((e: unknown) => this.noMovie(serial, e));
     if (!end) return;
     if (!end.kept) this.failed = true;
     this.o.log(`${serial}: recorded ${end.what}${end.why ? `: ${end.why}` : ''}`);
@@ -245,9 +245,10 @@ export async function runMirrors(ctx: ServerContext, o: MirrorRun): Promise<numb
   process.on(FOCUS_SIGNAL, parent.raise);
   const refusals = new Map<string, string>();
   const open = (serial: string) =>
-    parent.open(serial).catch((e: Error) => {
-      if (refusals.get(serial) !== e.message) o.log(`${serial}: ${e.message}`);
-      refusals.set(serial, e.message);
+    parent.open(serial).catch((e: unknown) => {
+      const why = e instanceof Error ? e.message : String(e);
+      if (refusals.get(serial) !== why) o.log(`${serial}: ${why}`);
+      refusals.set(serial, why);
     });
   const ready = async () =>
     (await ctx.devices()).filter((d) => d.ready && ctx.allowed(d.serial)).map((d) => d.serial);

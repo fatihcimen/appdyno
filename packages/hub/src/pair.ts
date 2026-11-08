@@ -1,4 +1,10 @@
-import { pause, type InputEvent, type MirrorSession, type ViewerMessage } from '@appdyno/core';
+import {
+  must,
+  pause,
+  type InputEvent,
+  type MirrorSession,
+  type ViewerMessage,
+} from '@appdyno/core';
 import { MIN_SAMPLES, pairedChange } from '@appdyno/perf';
 import { NODE_FLAGS, type Tree, type WireNode } from '@appdyno/protocol';
 import { type JourneyAnswer } from '@appdyno/ops';
@@ -88,7 +94,7 @@ const shifted = (e: Touch, way: Point): Touch => ({
   ...e,
   x: e.x + way.x,
   y: e.y + way.y,
-  ...(e.x2 !== undefined && { x2: e.x2 + way.x, y2: e.y2! + way.y }),
+  ...(e.x2 !== undefined && e.y2 !== undefined && { x2: e.x2 + way.x, y2: e.y2 + way.y }),
 });
 
 /** This window's journey against the other's, by the test the gate makes of two conditions measured in turns. */
@@ -113,7 +119,10 @@ function against(name: string, mine: JourneyAnswer, theirs: JourneyAnswer) {
     return s.ms === undefined || there === undefined ? [] : [{ ...s, ms: s.ms, there }];
   });
   const apart = (s: (typeof steps)[number]) => Math.abs(s.ms - s.there);
-  const most = steps.reduce((a, b) => (apart(b) > apart(a) ? b : a), steps[0]!);
+  // what moved most, where the whole moved: a journey's steps each have a time
+  const most = called
+    ? steps.reduce((a, b) => (apart(b) > apart(a) ? b : a), must(steps[0], 'a step'))
+    : undefined;
   const why = [
     `${mine.samples.length} runs here, ${theirs.samples.length} there, one device after the other`,
     ...steps.map((s) => `${s.step}: ${shown(s.ms)} here, ${shown(s.there)} there`),
@@ -124,7 +133,7 @@ function against(name: string, mine: JourneyAnswer, theirs: JourneyAnswer) {
     : 'No clear difference';
   return [
     { ...row, title: `Against ${name}`, detail: `${verdict}, ${shown(before)} there` },
-    ...(called
+    ...(most
       ? [
           {
             ...row,
@@ -166,7 +175,7 @@ export function pairWindows(sides: [PairSide, PairSide]) {
     const place = placeOf(mine, node, theirs);
     return place
       ? { place }
-      : { why: `No ${node.t || node.d || namesOf(node)[0]} here`, strays: true };
+      : { why: `No ${String(node.t || node.d || namesOf(node)[0])} here`, strays: true };
   };
 
   const land = (to: PairSide, g: Gesture, e: Touch, place: Point) => {
@@ -180,7 +189,7 @@ export function pairWindows(sides: [PairSide, PairSide]) {
     clearTimeout(look);
     look = setTimeout(() => {
       for (const side of sides) {
-        const failed = side.session.status.inputFailed ?? 0;
+        const failed = side.session.status.inputFailed;
         say(side, failed > (heard.get(side) ?? 0) ? 'That did not land' : undefined);
         heard.set(side, failed);
       }
@@ -217,7 +226,7 @@ export function pairWindows(sides: [PairSide, PairSide]) {
   const carry = async (from: PairSide, to: PairSide, e: InputEvent) => {
     if (e.kind === 'touch') return touch(from, to, e);
     for (const side of sides) if (e.kind !== 'button' || !side.press(e.name)) side.session.send(e);
-    return lookBack();
+    lookBack();
   };
 
   /** One journey on each in turn, as two at once would load each other, and each told how it stands to the other. */

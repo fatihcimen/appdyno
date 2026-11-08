@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { inCall, type Device } from '@appdyno/core';
+import { inCall, must, type Device } from '@appdyno/core';
 import { loud, writeDashboard, type Noise } from '@appdyno/perf';
 import { measureHistory, type PastMeasure } from './history.js';
 import {
@@ -26,17 +26,17 @@ export type MeasureWords = {
 
 /** The real measures of a window: the ones an agent calls, kept with the same runs. */
 export type WindowMeasures = {
-  launch(app: string, say: (line: string) => void): Promise<MeasureWords>;
-  scroll(app: string, say: (line: string) => void): Promise<MeasureWords>;
+  launch: (app: string, say: (line: string) => void) => Promise<MeasureWords>;
+  scroll: (app: string, say: (line: string) => void) => Promise<MeasureWords>;
   /** A flow's journey, kept as any is: what a window says of it, and all of it for one to compare. */
-  journey(
+  journey: (
     file: string,
     app: string | undefined,
     say: (line: string) => void,
-  ): Promise<{ said: MeasureWords; ran: JourneyAnswer }>;
-  dashboard(): Promise<void>;
+  ) => Promise<{ said: MeasureWords; ran: JourneyAnswer }>;
+  dashboard: () => Promise<void>;
   /** What was measured here before, for an app. */
-  history(app: string): Promise<PastMeasure[]>;
+  history: (app: string) => Promise<PastMeasure[]>;
 };
 
 /** What may stand behind a number, as the dashboard marks it. */
@@ -68,7 +68,7 @@ export const WINDOW = 'appdyno window';
 export const windowContext = (ctx: ServerContext, device: Device) =>
   new ServerContext(
     ctx.policy,
-    [{ list: async () => [], handles: (s) => s === device.serial, open: () => device }],
+    [{ list: () => Promise.resolve([]), handles: (s) => s === device.serial, open: () => device }],
     {
       device: device.serial,
       measurements: ctx.measurementsDir,
@@ -87,7 +87,7 @@ export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasur
   const held = async <T>(say: (line: string) => void, work: () => Promise<ToolResult<T>>) => {
     claim(serial, 'appdyno window');
     try {
-      return (await inCall({ progress: say }, work)).data as T;
+      return (await inCall({ progress: say }, work)).data;
     } finally {
       release(serial);
     }
@@ -119,12 +119,12 @@ export function windowMeasures(ctx: ServerContext, device: Device): WindowMeasur
       };
     },
     journey: async (file, app, say) => {
-      const flow = opsFor(own).flow!;
+      const flow = must(opsFor(own).flow, 'flow');
       const input = flow.input.parse({ action: 'run', file, iterations: JOURNEY_ITERATIONS });
       const data = await held(say, async () => {
         // a flow that names no app takes the one in front, so that two builds can run one file
         (await own.session()).appId = app;
-        return flow.handler(input) as Promise<ToolResult<unknown>>;
+        return flow.handler(input);
       });
       const { journey: ran } = flow.output.parse(data) as { journey?: JourneyAnswer };
       if (!ran) throw new Error('that flow kept no journey');

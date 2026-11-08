@@ -1,4 +1,4 @@
-import type { InputEvent } from '@appdyno/core';
+import { must, type InputEvent } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { gestureOf, StrokeReader, type Stroke } from '../src/gestures.js';
 
@@ -13,7 +13,7 @@ const stroke = (events: [0 | 1 | 2, number, number, number][], over: Partial<Tou
     done = reader.feed({ kind: 'touch', p, x, y, ...over }, 1_000 + ms) ?? done;
   return done;
 };
-const kindOf = (...a: Parameters<typeof stroke>) => gestureOf(stroke(...a)!, SIZE);
+const kindOf = (...a: Parameters<typeof stroke>) => gestureOf(must(stroke(...a), 'a stroke'), SIZE);
 
 describe("a window's strokes", () => {
   it('reads a click as a tap, a hand that moved a little included', () => {

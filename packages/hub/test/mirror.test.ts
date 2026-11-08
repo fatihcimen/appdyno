@@ -10,8 +10,10 @@ import {
   type MirrorSource,
 } from '@appdyno/core';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { startOf } from '@appdyno/core';
+import { must, startOf } from '@appdyno/core';
 import { checkedOps } from '../../ops/test/helpers.js';
+
+const mirrorOp = (ctx: Parameters<typeof checkedOps>[0]) => must(checkedOps(ctx).mirror, 'mirror');
 import { runMirrors, type MirrorRun } from '../src/parent.js';
 import {
   DEFAULT_POLICY,
@@ -52,18 +54,18 @@ function pixelsDevice(serial: string, recorder?: object) {
   writeFileSync(file, Buffer.alloc(8 * 8 * 4, 100));
   chmodSync(file, 0o600);
   const mirror: Mirror = {
-    check: async () => ({ ok: true, routes: ['test'] }),
-    open: async (_o, _s, tell): Promise<MirrorSource> => {
+    check: () => Promise.resolve({ ok: true, routes: ['test'] }),
+    open: (_o, _s, tell): Promise<MirrorSource> => {
       setTimeout(() => tell({ op: 'tick', w: 8, h: 8, seq: 1 }), 20);
-      return { kind: 'pixels', file, w: 8, h: 8 };
+      return Promise.resolve({ kind: 'pixels', file, w: 8, h: 8 });
     },
-    keyframe: async () => undefined,
-    input: async () => undefined,
+    keyframe: () => Promise.resolve(undefined),
+    input: () => Promise.resolve(undefined),
     keyOf: () => undefined,
-    close: async () => undefined,
+    close: () => Promise.resolve(undefined),
     watch: () => () => undefined,
   };
-  const hardware = async () => ({ platform: 'android', controls: [] });
+  const hardware = () => Promise.resolve({ platform: 'android', controls: [] });
   return { serial, mirror, hardware, recorder, close: vi.fn() } as unknown as Device;
 }
 
@@ -95,7 +97,8 @@ function context(
   over: { policy?: object; command?: string[]; recorder?: object } = {},
 ) {
   const provider: DeviceProvider = {
-    list: async () => serials.map((serial) => ({ serial, state: 'device', ready: true })),
+    list: () =>
+      Promise.resolve(serials.map((serial) => ({ serial, state: 'device', ready: true }))),
     handles: () => true,
     open: (serial) => pixelsDevice(serial, over.recorder),
   };
@@ -122,7 +125,7 @@ const run = (ctx: ServerContext, o: Partial<MirrorRun> = {}) => {
 
 /** A run's time, up when the test has seen what it came for, however slow the machine is. */
 const clock = () => {
-  let end = () => {};
+  let end: () => void = () => undefined;
   const ends = new Promise<void>((resolve) => {
     end = resolve;
   });
@@ -152,8 +155,8 @@ afterEach(() => rmSync(join(dir, 'mirror'), { recursive: true, force: true }));
 describe('a movie asked for by --record, where the picture is no stream', () => {
   const recorder = (over: object = {}) => ({
     extension: 'mp4',
-    start: vi.fn(async (file: string, _o: object) => ({ file })),
-    stop: vi.fn(async (h: { file: string }) => ({ files: [h.file] })),
+    start: vi.fn((file: string, _o: object) => Promise.resolve({ file })),
+    stop: vi.fn((h: { file: string }) => Promise.resolve({ files: [h.file] })),
     ...over,
   });
   const movie = (made: ReturnType<typeof recorder>, serial: string) => {
@@ -169,7 +172,7 @@ describe('a movie asked for by --record, where the picture is no stream', () => 
     const made = recorder();
     const { lines, done, end } = movie(made, 'device-m');
     await until(() => made.start.mock.calls.length > 0);
-    expect(made.start.mock.calls[0]![0]).toBe('/movies/out.mp4');
+    expect(made.start.mock.calls[0]?.[0]).toBe('/movies/out.mp4');
     end();
     await expect(done).resolves.toBe(0);
     expect(made.stop).toHaveBeenCalledOnce();
@@ -177,9 +180,7 @@ describe('a movie asked for by --record, where the picture is no stream', () => 
   }, 300_000);
 
   it('fails the run where the recorder will not start, and says why', async () => {
-    const start = vi.fn(async () => {
-      throw new Error('screenrecord did not start');
-    });
+    const start = vi.fn(() => Promise.reject(new Error('screenrecord did not start')));
     const { lines, done, end } = movie(recorder({ start }), 'device-n');
     await until(() => start.mock.calls.length > 0);
     end();
@@ -189,9 +190,9 @@ describe('a movie asked for by --record, where the picture is no stream', () => 
 
   it('fails the run where it ended with nothing kept', async () => {
     const made = recorder({
-      stop: vi.fn(async () => {
-        throw new Error('the recording failed: screenrecord wrote no file');
-      }),
+      stop: vi.fn(() =>
+        Promise.reject(new Error('the recording failed: screenrecord wrote no file')),
+      ),
     });
     const { lines, done, end } = movie(made, 'device-o');
     await until(() => made.start.mock.calls.length > 0);
@@ -224,15 +225,16 @@ describe('a mirror parent', () => {
 
   it('watches whoever holds the device: a holder is no refusal, and keeps its claim', async () => {
     const other = spawn(process.execPath, ['-e', 'setInterval(()=>{},1000)'], { stdio: 'ignore' });
+    const pid = must(other.pid, "the other's pid");
     try {
       const claims = join(dir, 'claims');
       mkdirSync(claims, { recursive: true });
-      await until(() => startOf(other.pid!) !== '');
+      await until(() => startOf(pid) !== '');
       writeFileSync(
         join(claims, 'device-b.json'),
         JSON.stringify({
-          pid: other.pid,
-          started: startOf(other.pid!),
+          pid,
+          started: startOf(pid),
           tool: 'another tool',
           since: 'a while ago',
         }),
@@ -315,8 +317,8 @@ describe('what other processes read', () => {
         touchedAt: Date.now() - 3_000,
       }),
     );
-    const ops = checkedOps(context(['device-j']));
-    const answer = await ops.mirror!.handler({ action: 'status', quality: 'auto' });
+    const mirror = mirrorOp(context(['device-j']));
+    const answer = await mirror.handler({ action: 'status', quality: 'auto' });
     const text = answer.blocks.map((b) => (b.type === 'text' ? b.text : '')).join();
     expect(text).toContain('The device is not connected');
     expect(text).toContain('Connect it');
@@ -348,8 +350,8 @@ describe('what other processes read', () => {
     );
     writeMirrorFile(file('device-l', process.pid, {}));
     writeMirrorFile(file('device-p', process.pid, { stats: { arrived: 0, shown: 0 } }));
-    const ops = checkedOps(context(['device-k', 'device-l', 'device-p']));
-    const answer = await ops.mirror!.handler({ action: 'stats', quality: 'auto' });
+    const mirror = mirrorOp(context(['device-k', 'device-l', 'device-p']));
+    const answer = await mirror.handler({ action: 'stats', quality: 'auto' });
     const text = answer.blocks.map((b) => (b.type === 'text' ? b.text : '')).join('\n');
     expect(text).toContain('59 frames/s shown of 60 arrived');
     expect(text).toContain('p50 26, p95 31 ms');
@@ -361,25 +363,21 @@ describe('what other processes read', () => {
   });
 
   it('with nothing open it says so, and close refuses', async () => {
-    const ops = checkedOps(context([]));
-    await expect(ops.mirror!.handler({ action: 'status', quality: 'auto' })).resolves.toMatchObject(
-      {
-        data: { done: 'none' },
-      },
-    );
-    await expect(ops.mirror!.handler({ action: 'close', quality: 'auto' })).rejects.toMatchObject({
+    const mirror = mirrorOp(context([]));
+    await expect(mirror.handler({ action: 'status', quality: 'auto' })).resolves.toMatchObject({
+      data: { done: 'none' },
+    });
+    await expect(mirror.handler({ action: 'close', quality: 'auto' })).rejects.toMatchObject({
       code: 'NOT_FOUND',
     });
   });
 
   it('a device the server may not touch is left out', async () => {
     writeMirrorFile(file('device-m', process.pid, {}));
-    const ops = checkedOps(context([], { policy: { devices: /^other/ } }));
-    await expect(ops.mirror!.handler({ action: 'status', quality: 'auto' })).resolves.toMatchObject(
-      {
-        data: { done: 'none' },
-      },
-    );
+    const mirror = mirrorOp(context([], { policy: { devices: /^other/ } }));
+    await expect(mirror.handler({ action: 'status', quality: 'auto' })).resolves.toMatchObject({
+      data: { done: 'none' },
+    });
     rmSync(join(dir, 'mirror/device-m.json'));
   });
 });
@@ -406,17 +404,17 @@ describe('open and close from a tool', () => {
     const script = join(dir, 'parent.cjs');
     writeFileSync(script, parentScript('device-n'));
     const ctx = context(['device-n'], { command: [process.execPath, script] });
-    const ops = checkedOps(ctx);
-    const opened = await ops.mirror!.handler({ action: 'open', quality: 'standard' });
+    const mirror = mirrorOp(ctx);
+    const opened = await mirror.handler({ action: 'open', quality: 'standard' });
     expect(opened.data).toMatchObject({
       done: 'open',
       mirrors: [{ serial: 'device-n', state: 'live' }],
     });
-    const live = liveMirror('device-n')!;
+    const live = must(liveMirror('device-n'), 'the mirror');
     expect(live.pid).not.toBe(process.pid);
-    const again = await ops.mirror!.handler({ action: 'open', quality: 'auto' });
+    const again = await mirror.handler({ action: 'open', quality: 'auto' });
     expect(again.data).toMatchObject({ done: 'already open' });
-    const closed = await ops.mirror!.handler({ action: 'close', quality: 'auto' });
+    const closed = await mirror.handler({ action: 'close', quality: 'auto' });
     expect(closed.data).toMatchObject({ mirrors: [] });
     expect(liveMirror('device-n')).toBeUndefined();
   }, 300_000);
@@ -424,15 +422,15 @@ describe('open and close from a tool', () => {
   it('a parent that ends at once is a refusal with its last word', async () => {
     const script = join(dir, 'ends.cjs');
     writeFileSync(script, `console.log('device-o: stopped: No compiler for the viewer');`);
-    const ops = checkedOps(context(['device-o'], { command: [process.execPath, script] }));
-    await expect(ops.mirror!.handler({ action: 'open', quality: 'auto' })).rejects.toThrow(
+    const mirror = mirrorOp(context(['device-o'], { command: [process.execPath, script] }));
+    await expect(mirror.handler({ action: 'open', quality: 'auto' })).rejects.toThrow(
       /No compiler/,
     );
   }, 300_000);
 
   it('a host with no way to start a window says so', async () => {
-    const ops = checkedOps(context(['device-p']));
-    await expect(ops.mirror!.handler({ action: 'open', quality: 'auto' })).rejects.toMatchObject({
+    const mirror = mirrorOp(context(['device-p']));
+    await expect(mirror.handler({ action: 'open', quality: 'auto' })).rejects.toMatchObject({
       code: 'UNSUPPORTED',
     });
   });

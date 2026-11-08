@@ -1,7 +1,7 @@
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { MirrorSession, type DeviceProvider, type InputEvent } from '@appdyno/core';
+import { MirrorSession, must, type DeviceProvider, type InputEvent } from '@appdyno/core';
 import { parseFlow } from '@appdyno/flows';
 import { type Adb, AndroidMirror, EmulatorMirror } from '@appdyno/driver-android';
 import { type AuditResult, keyOfUsage } from '@appdyno/protocol';
@@ -22,14 +22,16 @@ const PASSWORD = 's3cr3t-pass';
 let serial = 0;
 
 function setup(device: FakeDevice = new FakeDevice(`emulator-${6000 + serial++}`)) {
-  device.apps = { listApps: async () => [{ id: 'dev.app' }] } as unknown as FakeDevice['apps'];
+  device.apps = {
+    listApps: () => Promise.resolve([{ id: 'dev.app' }]),
+  } as unknown as FakeDevice['apps'];
   device.mirror = { keyOf: keyOfUsage } as unknown as FakeDevice['mirror'];
   const told: Record<string, unknown>[] = [];
   const status = { state: 'live' };
   const window = { tell: (m: Record<string, unknown>) => told.push(m), status };
   let measuring = false;
   const provider: DeviceProvider = {
-    list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+    list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
     handles: () => true,
     open: () => device,
   };
@@ -81,8 +83,11 @@ function setup(device: FakeDevice = new FakeDevice(`emulator-${6000 + serial++}`
   const said = () => told.filter((m) => m.op === 'flow').at(-1) as { lines: string[] };
   const lines = () => said().lines;
   const saved = () => {
-    const file = (told.filter((m) => m.op === 'flow').at(-1) as { file?: string }).file;
-    return { file: file!, text: readFileSync(file!, 'utf8') };
+    const file = must(
+      (told.filter((m) => m.op === 'flow').at(-1) as { file?: string }).file,
+      'the saved flow',
+    );
+    return { file, text: readFileSync(file, 'utf8') };
   };
   return {
     device,
@@ -166,7 +171,7 @@ describe('a flow recorded in a window', () => {
     const viewer = new FakeViewer();
     const session = new MirrorSession({
       mirror,
-      viewer: async () => viewer,
+      viewer: () => Promise.resolve(viewer),
       options: { quality: 'auto' },
       title: 'a device',
       onInput: t.flow.input,
@@ -236,7 +241,10 @@ describe('a flow recorded in a window', () => {
     const was = t.device.current.bind(t.device);
     t.device.current = () => {
       const tree = was();
-      tree.nodes.find((n) => n.id === 'dev.app:id/user')!.t = 'ad';
+      must(
+        tree.nodes.find((n) => n.id === 'dev.app:id/user'),
+        'the user field',
+      ).t = 'ad';
       return tree;
     };
     await t.toggle();
@@ -404,10 +412,13 @@ describe('a flow recorded in a window', () => {
       await t.click(100, 1700);
       await t.click(200, 1700);
       t.device.current = ((was) => () => {
-        const tree = was.call(t.device);
-        tree.nodes.find((n) => n.id === 'dev.app:id/user')!.t = 'hi';
+        const tree = was();
+        must(
+          tree.nodes.find((n) => n.id === 'dev.app:id/user'),
+          'the user field',
+        ).t = 'hi';
         return tree;
-      })(t.device.current);
+      })(t.device.current.bind(t.device));
       await t.settle();
       await t.click(250, 550);
       expect(t.lines()).toEqual([
@@ -514,14 +525,14 @@ describe('a flow recorded in a window', () => {
     t.flow.follow();
     await t.settle();
     await t.click(FORM_BUTTON.x, FORM_BUTTON.y);
-    expect(flowRecordings.read(t.device.serial)!.steps.map((s) => s.action)).toEqual(['tap']);
+    expect(flowRecordings.read(t.device.serial)?.steps.map((s) => s.action)).toEqual(['tap']);
     flowRecordings.write(t.device.serial, {
-      ...flowRecordings.read(t.device.serial)!,
+      ...must(flowRecordings.read(t.device.serial), 'the recording'),
       running: false,
     });
     t.flow.follow();
     await t.click(SEND.x, SEND.y);
-    expect(flowRecordings.read(t.device.serial)!.steps).toHaveLength(1);
+    expect(flowRecordings.read(t.device.serial)?.steps).toHaveLength(1);
   });
 
   it('keeps what was recorded when the window closes', async () => {
@@ -530,7 +541,7 @@ describe('a flow recorded in a window', () => {
     await t.click(FORM_BUTTON.x, FORM_BUTTON.y);
     await t.flow.end();
     expect(readdirSync(join(home, 'Desktop')).filter((f) => f.endsWith('.flow'))).toHaveLength(1);
-    expect(flowRecordings.read(t.device.serial)!.running).toBe(false);
+    expect(flowRecordings.read(t.device.serial)?.running).toBe(false);
   });
 
   it('says nothing was recorded, and leaves no file, where nothing was', async () => {
@@ -543,9 +554,7 @@ describe('a flow recorded in a window', () => {
 
   it('says why a recording could not start', async () => {
     const t = setup();
-    t.device.tree = async () => {
-      throw new Error('no window to read');
-    };
+    t.device.tree = () => Promise.reject(new Error('no window to read'));
     await t.toggle();
     expect(t.notes().at(-1)).toBe('No recording: no window to read');
     expect(t.device.serial && flowRecordings.read(t.device.serial)).toBeUndefined();
@@ -583,7 +592,7 @@ describe('the element under the pointer', () => {
 
   const opened = async () => {
     const t = setup();
-    t.device.audit = async () => issue([100, 310, 200, 340]);
+    t.device.audit = () => Promise.resolve(issue([100, 310, 200, 340]));
     t.flow.onWindow({ op: 'inspect', on: true });
     await t.settle();
     return t;
@@ -592,7 +601,7 @@ describe('the element under the pointer', () => {
 
   it('asks of an audit only what the platform has', async () => {
     const t = setup();
-    const audit = vi.fn(async () => issue([100, 310, 200, 340]));
+    const audit = vi.fn(() => Promise.resolve(issue([100, 310, 200, 340])));
     t.device.audit = audit;
     const screen = { ...t.device.platformScreen, contrastAudits: ['contrast'] };
     Object.assign(t.device, { platformScreen: screen });
@@ -615,7 +624,7 @@ describe('the element under the pointer', () => {
       rect: { x: 0, y: 300 / 2400, w: 1, h: 100 / 2400 },
       contrast: ['text contrast 2.1:1'],
     });
-    expect(String((element(t) as { ref: string }).ref)).toMatch(/^@/);
+    expect((element(t) as { ref: string }).ref).toMatch(/^@/);
   });
 
   it('asks a device nothing for a hover', async () => {
@@ -631,9 +640,9 @@ describe('the element under the pointer', () => {
   it('audits nothing while a recording runs: a read behind an audit would name a click on the screen it made', async () => {
     const t = await opened();
     let audits = 0;
-    t.device.audit = async () => {
+    t.device.audit = () => {
       audits++;
-      return issue([100, 310, 200, 340]);
+      return Promise.resolve(issue([100, 310, 200, 340]));
     };
     await t.toggle();
     t.flow.onWindow({ op: 'hover', x: 0.5, y: 0.14 });
@@ -653,9 +662,9 @@ describe('the element under the pointer', () => {
   it('waits for the pointer to rest before it audits', async () => {
     const t = await opened();
     let audits = 0;
-    t.device.audit = async () => {
+    t.device.audit = () => {
       audits++;
-      return issue([100, 310, 200, 340]);
+      return Promise.resolve(issue([100, 310, 200, 340]));
     };
     for (let i = 0; i < 6; i++) {
       t.flow.onWindow({ op: 'hover', x: 0.5, y: 0.14 });
@@ -669,7 +678,7 @@ describe('the element under the pointer', () => {
   it('says a click is named by the screen it landed on, with the pointer resting on it first', async () => {
     const t = await opened();
     // an audit as a device has it: reads wait behind it, in one queue
-    let done = () => undefined as void;
+    let done: () => void = () => undefined;
     let auditing = false;
     t.device.audit = async () => {
       auditing = true;
@@ -694,9 +703,9 @@ describe('the element under the pointer', () => {
   it('reads contrast once per screen, and says when it could not', async () => {
     const t = await opened();
     let audits = 0;
-    t.device.audit = async () => {
+    t.device.audit = () => {
       audits++;
-      throw new Error('this device has no audit');
+      return Promise.reject(new Error('this device has no audit'));
     };
     t.flow.onWindow({ op: 'hover', x: 0.5, y: 0.14 });
     t.flow.onWindow({ op: 'hover', x: 0.5, y: 0.15 });

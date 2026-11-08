@@ -36,12 +36,16 @@ export function windowSteps(o: WindowStepsPort) {
   const onKey = (r: Recording, usage: number) => {
     const sent = o.keyOf(usage);
     if (usage === TAB) typing.field = undefined;
-    if (!sent) return steps.told(r, 'a key with no step');
+    if (!sent) {
+      steps.told(r, 'a key with no step');
+      return;
+    }
     const key = keyName(sent);
     const last = lastKey;
     if (last?.key === key && last.index === r.state.steps.length - 1) {
       last.count++;
-      return steps.rewrite(r, 1, stepOf('press_key', {}, { key, count: last.count }));
+      steps.rewrite(r, 1, stepOf('press_key', {}, { key, count: last.count }));
+      return;
     }
     steps.write(r, stepOf('press_key', {}, { key }));
     lastKey = { key, index: r.state.steps.length - 1, count: 1 };
@@ -49,11 +53,13 @@ export function windowSteps(o: WindowStepsPort) {
 
   const onButton = (r: Recording, name: string) => {
     const key = keyOfButton(name);
-    if (!key)
-      return steps.told(
+    if (!key) {
+      steps.told(
         r,
         name.replace(/[A-Z]/g, (c) => ` ${c.toLowerCase()}`),
       );
+      return;
+    }
     steps.write(r, stepOf('press_key', {}, { key }));
   };
 
@@ -81,12 +87,15 @@ export function windowSteps(o: WindowStepsPort) {
           return;
         }
         case 'text':
-          return typing.text(e.s);
+          typing.text(e.s);
+          return;
         case 'key':
           if (e.state !== 1 || typing.key(e.usage)) return;
-          return thenOnScreen(o.seen(), (r) => onKey(r, e.usage));
+          thenOnScreen(o.seen(), (r) => onKey(r, e.usage));
+          return;
         case 'button':
-          return thenOnScreen(o.seen(), (r) => onButton(r, e.name));
+          thenOnScreen(o.seen(), (r) => onButton(r, e.name));
+          return;
       }
     },
 

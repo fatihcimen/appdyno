@@ -1,6 +1,13 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { Device, DeviceHardware, InputEvent, Screen, ViewerMessage } from '@appdyno/core';
+import {
+  must,
+  type Device,
+  type DeviceHardware,
+  type InputEvent,
+  type Screen,
+  type ViewerMessage,
+} from '@appdyno/core';
 import { type FlowStep, type Recording, stepLine } from '@appdyno/flows';
 import { windowSteps } from './window-steps.js';
 import { fileName, frontApp, stamp, type WindowSession } from './controls.js';
@@ -116,7 +123,7 @@ export function windowFlow(
       if (mine) s.appId = app;
       await follow.first();
       startRecording(own, serial, mine ? app : undefined, s.owner);
-      const r = loadRecording(own, serial)!;
+      const r = must(loadRecording(own, serial), 'the recording');
       // to the front if it runs: on another device, the way to where this one is
       if (mine) addSteps(r, stepOf('launch', {}));
       else say(`${app ?? 'Nothing named'} is in front: a replay must start there`);
@@ -137,12 +144,16 @@ export function windowFlow(
     recording = ours = false;
     wanted();
     const r = loadRecording(own, serial);
-    if (!r) return tellFlow(undefined);
+    if (!r) {
+      tellFlow(undefined);
+      return;
+    }
     r.state.running = false;
     keepRecording(r);
     if (!r.state.steps.some((st) => st.action !== 'launch')) {
       say('Nothing was recorded');
-      return tellFlow(undefined);
+      tellFlow(undefined);
+      return;
     }
     const file = join(homedir(), 'Desktop', `${fileName(device, hardware)} ${stamp()}.flow`);
     const notes = saveRecording(r, file, false);
@@ -150,7 +161,8 @@ export function windowFlow(
     tellFlow(r, { file });
   };
 
-  const trying = (work: () => Promise<void>) => void work().catch((e: Error) => say(e.message));
+  const trying = (work: () => Promise<void>) =>
+    void work().catch((e: unknown) => say(e instanceof Error ? e.message : String(e)));
 
   /** A step from the window that is no input. */
   const fromPane = (m: ViewerMessage): FlowStep | undefined => {
@@ -163,7 +175,7 @@ export function windowFlow(
 
   return {
     /** A person's input, gone to the device already. */
-    input(e: InputEvent) {
+    input: (e: InputEvent) => {
       if (recording) steps.input(e, Date.now());
       follow.touched(e);
     },
@@ -172,7 +184,10 @@ export function windowFlow(
     onWindow(m: ViewerMessage): boolean {
       if (m.op === 'inspect') {
         inspecting = m.on === true;
-        if (inspecting) trying(async () => void (await readerSession()));
+        if (inspecting)
+          trying(async () => {
+            await readerSession();
+          });
         wanted();
         return true;
       }

@@ -89,7 +89,10 @@ export function windowInspector(o: InspectPort) {
     if (!u) return;
     const { screen, size, p, e } = u;
     const tap = stepLine(stepOf('tap', aimAt(screen, p, size)));
-    if (!e) return o.tell({ op: 'element', tap });
+    if (!e) {
+      o.tell({ op: 'element', tap });
+      return;
+    }
     const { selector } = named(screen, e);
     o.tell({
       op: 'element',
@@ -128,11 +131,15 @@ export function windowInspector(o: InspectPort) {
     /** A click that is no touch: it copies what names an element, or checks it. */
     pick(m: ViewerMessage) {
       const u = under({ x: Number(m.x), y: Number(m.y) });
-      if (!u?.e) return o.say('Nothing is named there');
+      if (!u?.e) {
+        o.say('Nothing is named there');
+        return;
+      }
       if (m.as === 'copy') {
         const text = selectorLine(named(u.screen, u.e).selector);
         o.tell({ op: 'copyText', text });
-        return o.say(`Copied ${text}`);
+        o.say(`Copied ${text}`);
+        return;
       }
       const { step, aim } = assertion(u.screen, u.e);
       o.say(o.assert(step, aim) ? `Added ${stepLine(step)}` : 'Start a recording first');

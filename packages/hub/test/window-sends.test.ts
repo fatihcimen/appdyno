@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AppManager, DeviceEvents } from '@appdyno/core';
+import { must, type AppManager, type DeviceEvents } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { DEFAULT_POLICY, ServerContext } from '@appdyno/ops';
 import { windowSends } from '../src/window-sends.js';
@@ -25,7 +25,10 @@ describe('what a window sends to its device', () => {
     /** What the window is told last of a link: its answer, once the op has given one. */
     const answer = async () => {
       await expect.poll(() => told.some((m) => 'ok' in m)).toBe(true);
-      return told.find((m) => 'ok' in m)!;
+      return must(
+        told.find((m) => 'ok' in m),
+        'an answer',
+      );
     };
     const open = (url: string) => {
       told.length = 0;
@@ -45,7 +48,7 @@ describe('what a window sends to its device', () => {
       text: 'Opened app://screen/form',
       recent: ['app://screen/form'],
     });
-    expect(device.calls.filter((c) => c.name === 'openUrl')[0]?.args[0]).toBe('app://screen/form');
+    expect(device.calls.find((c) => c.name === 'openUrl')?.args[0]).toBe('app://screen/form');
     await open('https://example.test/item/7');
     await open('app://screen/form');
     told.length = 0;
@@ -71,7 +74,7 @@ describe('what a window sends to its device', () => {
     });
     expect(await open('ab')).toMatchObject({
       ok: false,
-      text: expect.stringContaining('url'),
+      text: expect.stringContaining('url') as unknown,
       hint: 'change that and call again: nothing was done',
     });
     expect(device.calls.some((c) => c.name === 'openUrl')).toBe(false);
@@ -86,14 +89,17 @@ describe('what a window sends to its device', () => {
     ];
     const listedFor: (string | undefined)[] = [];
     device.events = {
-      pushRoutes: async (app?: string) => (listedFor.push(app), routes),
-      push: async (app: string, push: unknown) => {
+      pushRoutes: (app?: string) => {
+        listedFor.push(app);
+        return Promise.resolve(routes);
+      },
+      push: (app: string, push: unknown) => {
         pushed.push([app, push]);
-        return `pushed to ${app}`;
+        return Promise.resolve(`pushed to ${app}`);
       },
     } as unknown as DeviceEvents;
     const front = await device.foreground();
-    device.apps = { listApps: async () => [{ id: front }] } as unknown as AppManager;
+    device.apps = { listApps: () => Promise.resolve([{ id: front }]) } as unknown as AppManager;
     const { sends, told, answer } = sendsOn(device);
     sends.onWindow({ op: 'control', name: 'pushes' });
     await expect
@@ -132,10 +138,13 @@ describe('what a window sends to its device', () => {
     const front = await device.foreground();
     const opens = [{ url: 'app://', kind: 'scheme' }];
     device.apps = {
-      listApps: async () => [{ id: front }],
-      links: async () => opens,
+      listApps: () => Promise.resolve([{ id: front }]),
+      links: () => Promise.resolve(opens),
     } as unknown as AppManager;
-    const { sends, told, answer } = sendsOn(device, { ...DEFAULT_POLICY, apps: [front!] });
+    const { sends, told, answer } = sendsOn(device, {
+      ...DEFAULT_POLICY,
+      apps: [must(front, 'the app in front')],
+    });
     sends.onWindow({ op: 'control', name: 'links' });
     // and what that app opens, as open_link lists it
     await expect
@@ -147,7 +156,10 @@ describe('what a window sends to its device', () => {
     expect(device.calls.find((c) => c.name === 'openUrl')?.args).toEqual(['app://screen', front]);
     told.length = 0;
     sends.onWindow({ op: 'control', name: 'openLink', url: 'app://screen', app: 'com.other' });
-    expect(await answer()).toMatchObject({ ok: false, text: expect.stringContaining('com.other') });
+    expect(await answer()).toMatchObject({
+      ok: false,
+      text: expect.stringContaining('com.other') as unknown,
+    });
     expect(device.calls.filter((c) => c.name === 'openUrl')).toHaveLength(1);
   });
 

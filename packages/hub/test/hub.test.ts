@@ -11,7 +11,7 @@ import type {
   VirtualDevices,
 } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { startOf } from '@appdyno/core';
+import { must, startOf } from '@appdyno/core';
 import { runHub, stageLink } from '../src/hub.js';
 import { hubDevices, type HubDevice } from '../src/hub-list.js';
 import { Parent } from '../src/parent.js';
@@ -30,27 +30,28 @@ class Simulated implements VirtualDevices {
     { id: 'A', name: 'iPhone 17', state: 'stopped', model: 'iPhone 17' },
     { id: 'B', name: 'iPad Air', state: 'running', serial: 'B', model: 'iPad Air' },
   ];
-  boot = vi.fn(async (id: string) => id);
-  shutdown = vi.fn(async () => undefined);
-  startable = async () => this.all;
-  catalog = vi.fn(async () => ({ models: [{ id: 'm', name: 'M' }], systems: [] }));
-  create = vi.fn(async (d: NewDevice) => d.name);
+  boot = vi.fn((id: string) => Promise.resolve(id));
+  shutdown = vi.fn(() => Promise.resolve(undefined));
+  startable = () => Promise.resolve(this.all);
+  catalog = vi.fn(() => Promise.resolve({ models: [{ id: 'm', name: 'M' }], systems: [] }));
+  create = vi.fn((d: NewDevice) => Promise.resolve(d.name));
 }
 
 const phone = { serial: 'R58M', state: 'device', ready: true, model: 'SM-S918B' };
 
 function context(virtual: VirtualDevices, connected = [phone], mirrorCommand?: string[]) {
   const provider: DeviceProvider = {
-    list: async () => connected,
+    list: () => Promise.resolve(connected),
     handles: () => true,
     open: () =>
       ({
-        hardware: async () => ({
-          platform: 'android',
-          controls: [],
-          model: 'SM-S918B',
-          name: 'Galaxy S23 Ultra',
-        }),
+        hardware: () =>
+          Promise.resolve({
+            platform: 'android',
+            controls: [],
+            model: 'SM-S918B',
+            name: 'Galaxy S23 Ultra',
+          }),
       }) as unknown as Device,
     virtual,
   };
@@ -111,23 +112,23 @@ describe('the hub', () => {
       kind,
       platform: kind === 'emulator' ? 'android' : 'ios',
       startable: held(kind, [{ id, name: id, state: 'stopped' }]),
-      boot: async (booted) => booted,
-      shutdown: async () => undefined,
+      boot: (booted) => Promise.resolve(booted),
+      shutdown: () => Promise.resolve(undefined),
     });
     const provider = (kind: 'simulator' | 'emulator', id: string): DeviceProvider => ({
       list: held(`${kind} list`, kind === 'emulator' ? [phone] : []),
       handles: () => true,
-      open: () => ({ hardware: async () => undefined }) as unknown as Device,
+      open: () => ({ hardware: () => Promise.resolve(undefined) }) as unknown as Device,
       virtual: virtual(kind, id),
     });
     const ctx = new ServerContext(DEFAULT_POLICY, [
       provider('emulator', 'Pixel'),
       provider('simulator', 'iPhone'),
     ]);
-    const rows = hubDevices(ctx, async () => undefined);
+    const rows = hubDevices(ctx, () => Promise.resolve(undefined));
     await vi.waitFor(() => expect(answer.size).toBe(4));
     for (const what of [...answer.keys()].reverse()) {
-      answer.get(what)!();
+      must(answer.get(what), what)();
       await new Promise((settled) => setImmediate(settled));
     }
     expect((await rows).map((d) => d.id)).toEqual(['R58M', 'Pixel', 'iPhone']);
@@ -137,7 +138,7 @@ describe('the hub', () => {
     const ctx = context(new Simulated(), [
       { serial: 'B', state: 'booted', ready: true, model: '' },
     ]);
-    const devices = await hubDevices(ctx, async () => undefined);
+    const devices = await hubDevices(ctx, () => Promise.resolve(undefined));
     expect(devices.filter((d) => d.serial === 'B')).toHaveLength(1);
   });
 
@@ -154,12 +155,12 @@ describe('the hub', () => {
       hubDevices(
         new ServerContext(policy, [
           {
-            list: async () => list,
+            list: () => Promise.resolve(list),
             handles: () => true,
-            open: () => ({ hardware: async () => undefined }) as unknown as Device,
+            open: () => ({ hardware: () => Promise.resolve(undefined) }) as unknown as Device,
           },
         ]),
-        async () => undefined,
+        () => Promise.resolve(undefined),
       ).then((devices) => devices.map((d) => [d.id, d.link, d.detail, d.sameAs]));
     expect(await rows([onCable, onWifi])).toEqual([['R58M', 'USB', '', undefined]]);
     // the sidebar knows it for the phone whose cable row went
@@ -180,21 +181,21 @@ describe('the hub', () => {
     const provider = new Simulated();
     const allowed = new ServerContext({ ...DEFAULT_POLICY, devices: /^R58M$/ }, [
       {
-        list: async () => [phone],
+        list: () => Promise.resolve([phone]),
         handles: () => true,
-        open: () => ({ hardware: async () => undefined }) as unknown as Device,
+        open: () => ({ hardware: () => Promise.resolve(undefined) }) as unknown as Device,
         virtual: provider,
       },
     ]);
-    const devices = await hubDevices(allowed, async () => undefined);
+    const devices = await hubDevices(allowed, () => Promise.resolve(undefined));
     expect(devices.map((d) => d.id)).toEqual(['R58M']);
   });
 
   it('asks nothing of what this server may not drive, as that refuses', async () => {
     const provider: DeviceProvider = {
-      list: async () => [phone],
+      list: () => Promise.resolve([phone]),
       handles: () => true,
-      open: () => ({ hardware: async () => undefined }) as unknown as Device,
+      open: () => ({ hardware: () => Promise.resolve(undefined) }) as unknown as Device,
       virtual: new Simulated(),
     };
     const ctx = new ServerContext({ ...DEFAULT_POLICY, devices: /^B$/ }, [provider]);
@@ -223,8 +224,13 @@ describe('the hub', () => {
 
   it('passes what a place asks to what serves it, says its answer, and ends it with itself', async () => {
     const { link, told, say, close } = window();
-    const end = vi.fn(async () => undefined);
-    const services = { act: vi.fn((m, tell) => tell({ heard: m.do })), end };
+    const end = vi.fn(() => Promise.resolve(undefined));
+    const services = {
+      act: vi.fn((m: Record<string, unknown>, tell: (said: Record<string, unknown>) => void) =>
+        tell({ heard: m.do }),
+      ),
+      end,
+    };
     const done = runHub(context(new Simulated()), {
       focus: false,
       log: () => undefined,
@@ -377,14 +383,15 @@ describe('the hub', () => {
     const done = runHub(ctx, {
       focus: false,
       log: () => undefined,
-      viewer: () => made.shift()!.link,
+      viewer: () => must(made.shift(), 'a window').link,
     });
-    await vi.waitFor(() => expect(lastList(windows[0]!.told)).toBeDefined());
-    windows[0]!.die();
-    await vi.waitFor(() => expect(lastList(windows[1]!.told)).toBeDefined());
-    windows[1]!.die();
-    windows[2]!.die();
-    windows[3]!.die();
+    const w = (i: number) => must(windows[i], `window ${i}`);
+    await vi.waitFor(() => expect(lastList(w(0).told)).toBeDefined());
+    w(0).die();
+    await vi.waitFor(() => expect(lastList(w(1).told)).toBeDefined());
+    w(1).die();
+    w(2).die();
+    w(3).die();
     expect(await done).toBe(0);
   });
 

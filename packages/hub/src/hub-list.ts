@@ -33,18 +33,29 @@ export async function hubDevices(ctx: ServerContext, hardware: Hardware): Promis
   );
   // each list is a tool of its own, asked at once
   const [startable, listed] = await Promise.all([
-    Promise.all(ctx.providers.map((p) => p.virtual?.startable().catch(() => [] as Startable[]))),
+    Promise.all(
+      ctx.providers.flatMap(({ virtual: driver }) =>
+        driver
+          ? [
+              driver
+                .startable()
+                .catch(() => [] as Startable[])
+                .then((found) => ({ driver, found })),
+            ]
+          : [],
+      ),
+    ),
     ctx.devices(),
   ]);
-  const virtual: HubDevice[] = ctx.providers.flatMap(({ virtual: driver }, i) =>
-    (startable[i] ?? []).map((d) => ({
+  const virtual: HubDevice[] = startable.flatMap(({ driver, found }) =>
+    found.map((d) => ({
       id: d.id,
       ...(d.serial && { serial: d.serial }),
       name: d.name,
-      kind: driver!.kind,
+      kind: driver.kind,
       state: d.state,
       mirrored: d.serial !== undefined && mirrored.has(d.serial),
-      platform: driver!.platform,
+      platform: driver.platform,
       ...(d.model && { model: d.model }),
       detail: d.model ?? '',
     })),

@@ -12,6 +12,7 @@ const strict = [
   'packages/cli/**',
   'packages/core/**',
   'packages/ops/**',
+  'packages/hub/**',
 ];
 
 export default defineConfig(

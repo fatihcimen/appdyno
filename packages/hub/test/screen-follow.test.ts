@@ -1,4 +1,4 @@
-import type { InputEvent, Screen } from '@appdyno/core';
+import { must, type InputEvent, type Screen } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { followScreen } from '../src/screen-follow.js';
 
@@ -31,7 +31,7 @@ describe('a screen followed beside a window', () => {
     await passes(0);
     expect(reads).toHaveLength(1);
     follow.want(false);
-    reads[0]!.end(screen('a'));
+    must(reads[0], 'a read').end(screen('a'));
     await passes(1_000);
     expect(reads).toHaveLength(1);
   });
@@ -40,7 +40,7 @@ describe('a screen followed beside a window', () => {
     const { follow, reads } = setup();
     follow.want(true);
     await passes(0);
-    reads[0]!.end(screen('a'));
+    must(reads[0], 'a read').end(screen('a'));
     await passes(200);
     expect(reads).toHaveLength(2);
     // nothing here waits for the read that has just started
@@ -53,7 +53,7 @@ describe('a screen followed beside a window', () => {
     const { follow, reads } = setup();
     follow.want(true);
     await passes(0);
-    reads[0]!.end(screen('a'));
+    must(reads[0], 'a read').end(screen('a'));
     await passes(0);
     follow.touched(down);
     await passes(1_000);
@@ -70,7 +70,7 @@ describe('a screen followed beside a window', () => {
     follow.want(true);
     await passes(0);
     await passes(1_000);
-    reads[0]!.end(screen('a'));
+    must(reads[0], 'a read').end(screen('a'));
     await passes(900);
     expect(reads).toHaveLength(1);
     await passes(150);
@@ -81,13 +81,13 @@ describe('a screen followed beside a window', () => {
     const { follow, reads } = setup();
     follow.want(true);
     await passes(0);
-    reads[0]!.end(screen('before'));
+    must(reads[0], 'a read').end(screen('before'));
     await passes(200);
     expect(reads).toHaveLength(2);
     follow.touched(up);
     await passes(10);
     const seen = follow.seen();
-    reads[1]!.end(screen('during'));
+    must(reads[1], 'a read').end(screen('during'));
     expect(await seen).toEqual(screen('during'));
   });
 
@@ -95,7 +95,7 @@ describe('a screen followed beside a window', () => {
     const { follow, reads } = setup();
     follow.want(true);
     await passes(0);
-    reads[0]!.end(screen('before'));
+    must(reads[0], 'a read').end(screen('before'));
     await passes(0);
     follow.touched(down);
     follow.touched(up);
@@ -108,12 +108,12 @@ describe('a screen followed beside a window', () => {
     const { follow, reads, failures } = setup();
     follow.want(true);
     await passes(0);
-    reads[0]!.end(screen('a'));
+    must(reads[0], 'a read').end(screen('a'));
     await passes(200);
     follow.touched(up);
     await passes(10);
     const seen = follow.seen();
-    reads[1]!.fail(new Error('gone'));
+    must(reads[1], 'a read').fail(new Error('gone'));
     expect(await seen).toEqual(screen('a'));
     expect(failures).toHaveLength(1);
   });

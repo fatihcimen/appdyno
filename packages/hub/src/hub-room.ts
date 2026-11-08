@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { closeSync, mkdirSync, openSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { isAlive, pause, type ViewerMessage } from '@appdyno/core';
+import { isAlive, must, pause, type ViewerMessage } from '@appdyno/core';
 import type { Parent } from './parent.js';
 import { liveMirror, mirrorLog, type ServerContext, ToolError } from '@appdyno/ops';
 
@@ -16,7 +16,7 @@ function openWindow(ctx: ServerContext, serial: string, behind: boolean) {
   mkdirSync(dirname(log), { recursive: true, mode: 0o700 });
   const out = openSync(log, 'w', 0o600);
   const child = spawn(
-    command[0]!,
+    must(command[0], "the window's command"),
     [...command.slice(1), '--device', serial, ...(behind ? ['--behind'] : [])],
     { detached: true, stdio: ['ignore', out, out] },
   );
@@ -78,7 +78,8 @@ export class HubRoom {
   }
 
   select(m: ViewerMessage): Promise<unknown> | undefined {
-    const serial = m.serial === undefined ? undefined : String(m.serial);
+    // the window names a device by its serial, a string
+    const serial = typeof m.serial === 'string' ? m.serial : undefined;
     this.wanted = serial;
     const held = serial ? (this.ownWindows.get(serial) ?? 0) - Date.now() : 0;
     // the window says a thing once: a choice held off is not lost, as nothing will ask again

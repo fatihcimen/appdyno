@@ -34,8 +34,8 @@ export function followScreen(o: FollowPort) {
         newest = { screen, began };
         return screen;
       },
-      (e: Error) => {
-        o.failed(e);
+      (e: unknown) => {
+        o.failed(e instanceof Error ? e : new Error(String(e)));
         return undefined;
       },
     );
@@ -71,7 +71,7 @@ export function followScreen(o: FollowPort) {
      * What a person sees as this input comes, to be asked in the same tick: the newest read since the last input, else
      * the one under way, as that began before this input took effect, else the newest there is.
      */
-    seen(): Promise<Screen | undefined> {
+    seen: (): Promise<Screen | undefined> => {
       if (newest && newest.began >= lastInput) return Promise.resolve(newest.screen);
       const last = newest?.screen;
       return reading ? reading.then((s) => s ?? last) : Promise.resolve(last);

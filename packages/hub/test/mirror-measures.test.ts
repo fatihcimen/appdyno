@@ -2,9 +2,9 @@ import { spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { startOf } from '@appdyno/core';
+import { must, startOf } from '@appdyno/core';
 import { latestRuns, runKeys } from '@appdyno/perf';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest';
 import { windowMeasures } from '../src/measures.js';
 import { FakeDevice } from '../../ops/test/fake-device.js';
 import { DEFAULT_POLICY, holder, ServerContext } from '@appdyno/ops';
@@ -50,14 +50,15 @@ describe('what a window measures', () => {
     expect(words.why).toContain('dev.app');
     expect(words.why).toContain('compare only with its kind');
     const [key] = await runKeys(measurements, { app: 'dev.app' });
-    expect(await latestRuns(measurements, key!, 1)).toHaveLength(1);
+    assert(key);
+    expect(await latestRuns(measurements, key, 1)).toHaveLength(1);
   });
 
   it('passes on what the tool found: that a measure ran is no verdict', async () => {
     const device = new FakeDevice();
     const framesDuring = device.measure.framesDuring.bind(device.measure);
     vi.spyOn(device, 'measure', 'get').mockReturnValue(
-      Object.assign(Object.create(device.measure), {
+      Object.assign(Object.create(device.measure) as typeof device.measure, {
         framesDuring: async (...a: Parameters<typeof framesDuring>) => {
           const m = await framesDuring(...a);
           return { ...m, value: { ...m.value, jankyPercent: 72.31, totalFrames: 500 } };
@@ -97,20 +98,21 @@ describe('what a window measures', () => {
   it('is refused by name while something else holds the device', async () => {
     const device = new FakeDevice();
     const other = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);
+    const pid = must(other.pid, "the other's pid");
     try {
       const claims = join(state, 'claims');
       mkdirSync(claims, { recursive: true });
       writeFileSync(
         join(claims, `${device.serial}.json`),
         JSON.stringify({
-          pid: other.pid,
-          started: startOf(other.pid!),
+          pid,
+          started: startOf(pid),
           tool: 'appdyno mcp',
           since: '2026-11-03T00:00:00Z',
         }),
       );
       await expect(measuresOn(device).scroll('dev.app', () => undefined)).rejects.toThrow(
-        `held by pid ${other.pid} (appdyno mcp)`,
+        `held by pid ${pid} (appdyno mcp)`,
       );
     } finally {
       other.kill();
@@ -119,7 +121,7 @@ describe('what a window measures', () => {
 
   it('opens the page of every kept run', async () => {
     await measuresOn(new FakeDevice()).dashboard();
-    expect(opened.mock.calls[0]![0]).toBe('open');
-    expect(String(opened.mock.calls[0]![1])).toContain('index.html');
+    expect(opened.mock.calls[0]?.[0]).toBe('open');
+    expect(String(opened.mock.calls[0]?.[1])).toContain('index.html');
   });
 });

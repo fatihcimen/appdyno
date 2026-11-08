@@ -81,12 +81,13 @@ export function windowControls(
 
   /** The window needs no agent of its own; what is asked of the device past the stream does. */
   const ready = () =>
-    (opened ??= device.open().catch((e: Error) => {
+    (opened ??= device.open().catch((e: unknown) => {
       opened = undefined;
       throw e;
     }));
   const note = (text: string) => session().tell({ op: 'note', text });
-  const trying = (work: () => Promise<void>) => void work().catch((e: Error) => note(e.message));
+  const trying = (work: () => Promise<void>) =>
+    void work().catch((e: unknown) => note(e instanceof Error ? e.message : String(e)));
 
   const swipe = (way: SystemSwipe) => swipeThrough(way, (e) => session().send(e));
 
@@ -126,7 +127,10 @@ export function windowControls(
       : join(homedir(), 'Desktop', `${name()} ${stamp()}.png`);
     writeFileSync(file, data, { mode: 0o600 });
     session().tell({ op: 'copied', file });
-    if (!copyOnly) return note(`Saved to the Desktop and copied`);
+    if (!copyOnly) {
+      note(`Saved to the Desktop and copied`);
+      return;
+    }
     note('Copied');
     await pause(2_000);
     rmSync(file, { force: true });
@@ -311,7 +315,7 @@ export function windowControls(
     movieTo,
 
     /** A press of what is more than a key; `false` leaves it to the device's own. */
-    press(button: string) {
+    press: (button: string) => {
       const swiped = SWIPES[button];
       if (swiped) trying(() => swipe(swiped));
       else if (presses[button]) trying(presses[button]);

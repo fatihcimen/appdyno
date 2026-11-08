@@ -35,7 +35,7 @@ export class TypingSteps {
 
   /** Anything is held that a read has yet to say. */
   get holding() {
-    return !!(this.typing || this.keyed);
+    return !!(this.typing ?? this.keyed);
   }
 
   text(s: string) {
@@ -109,11 +109,14 @@ export class TypingSteps {
     if (!k) return;
     const el =
       after?.elements.find((e) => e.ref === k.field?.ref) ?? focusOf(after) ?? k.field ?? undefined;
-    if (!el)
-      return this.steps.told(r, "typing on the device's keyboard, into nothing the screen names");
+    if (!el) {
+      this.steps.told(r, "typing on the device's keyboard, into nothing the screen names");
+      return;
+    }
     // what a secure field holds no read gives: the step needs its name, and the flow's run its value
-    const text = el.password ? randomUUID() : el.text;
-    if (el.password) r.learnSecret(text!, fieldName(el));
+    const secret = el.password ? randomUUID() : undefined;
+    const text = secret ?? el.text;
+    if (secret) r.learnSecret(secret, fieldName(el));
     if (text) this.steps.write(r, stepOf('type', {}, { text, replace: true }));
     this.o.say("Typed on the device's keyboard: read from the field. Its Return key is not seen.");
   }
