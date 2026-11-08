@@ -57,6 +57,8 @@ void MVPressReturn(NSWindow *window);
 void MVPokeListRow(MVList *list, NSString *title);
 /// The same on the hub's sidebar.
 void MVPokeRow(MVHub *hub, NSString *title);
+/// Tools, on the hub Connect a Phone's checks leave.
+void MVCheckTools(MVHub *hub);
 /// A check of what a real click on a table's row did: said by name, with why, where a table takes no click from this test.
 void MVCheckRowClick(NSString *name, BOOL ok, NSString *_Nullable detail);
 
