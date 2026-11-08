@@ -847,7 +847,14 @@ describe('gestures, keys, clipboard', () => {
     expect((await call('open_link', { url: 'https://a.b', settings: 'about' })).error).toBe(true);
     const wrong = await call('open_link', { settings: 'wifii' });
     expect(wrong.error).toBe(true);
-    expect(wrong.text).toContain('privacy_photos');
+    // the device's own pages, Android's here: a fingerprint and security, and none of iOS's
+    expect(wrong.text).toMatch(/\bfingerprint\b/);
+    expect(wrong.text).toMatch(/\bsecurity, /);
+    for (const ios of ['siri', 'game_center', 'screen_time', 'privacy_photos'])
+      expect(wrong.text).not.toContain(ios);
+    const theirs = await call('open_link', { settings: 'game_center' });
+    expect([theirs.data.code, theirs.text]).toEqual(['INVALID_ARGUMENT', wrong.text]);
+    expect(opened()).toHaveLength(3);
     const locked = await connect(new FakeDevice(), { policy: { allowHome: false } });
     expect((await locked.call('open_link', { settings: 'about' })).data.code).toBe('POLICY_DENIED');
   });

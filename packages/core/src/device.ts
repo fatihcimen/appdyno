@@ -121,6 +121,8 @@ export type Device = {
   systemWords?(): Promise<string[]>;
   /** One of the system's own views, over what is on the screen. */
   openView(view: SystemView): Promise<void>;
+  /** The pages of Settings this device opens by name, and no other. */
+  readonly settingsPages: readonly SettingsPage[];
   /** Settings at a page or at an app's own; `row`: no link goes there, and this row of the page it opened does. */
   openSettings(to: { page: SettingsPage } | { app: string }): Promise<{ row?: string }>;
   typeText(

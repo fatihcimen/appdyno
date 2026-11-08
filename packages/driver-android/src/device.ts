@@ -43,7 +43,7 @@ import { androidHardware } from './hardware.js';
 import { EmulatorMirror } from './mirror-emulator.js';
 import { androidScreen } from './platform-screen.js';
 import { AndroidRecorder } from './record.js';
-import { openSearch, openSettingsAt } from './settings-pages.js';
+import { ANDROID_PAGES, openSearch, openSettingsAt } from './settings-pages.js';
 import { AndroidWeb } from './web.js';
 import { FOCUS_READ, KEYGUARD_READ } from './window-dump.js';
 
@@ -78,6 +78,7 @@ export type AndroidOptions = {
 export class AndroidDevice extends RpcDevice implements Device {
   readonly platform = 'android' as const;
   readonly platformScreen = androidScreen;
+  readonly settingsPages = ANDROID_PAGES;
   protected readonly retrySafe = RETRY_SAFE;
   private readonly launcher: AndroidAgentLauncher;
 

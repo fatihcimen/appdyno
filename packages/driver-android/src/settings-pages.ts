@@ -1,4 +1,4 @@
-import type { SettingsPage } from '@appdyno/core';
+import { SETTINGS_PAGES, type SettingsPage } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertPkg } from './adb.js';
 
@@ -9,7 +9,7 @@ const SETTINGS_ACTIONS: Partial<Record<SettingsPage, string>> = {
   keyboard: 'android.settings.INPUT_METHOD_SETTINGS',
   language_region: 'android.settings.LOCALE_SETTINGS',
   accessibility: 'android.settings.ACCESSIBILITY_SETTINGS',
-  siri: 'android.settings.VOICE_INPUT_SETTINGS',
+  voice_input: 'android.settings.VOICE_INPUT_SETTINGS',
   apps: 'android.settings.MANAGE_APPLICATIONS_SETTINGS',
   privacy: 'android.settings.PRIVACY_SETTINGS',
   privacy_location: 'android.settings.LOCATION_SOURCE_SETTINGS',
@@ -25,7 +25,13 @@ const SETTINGS_ACTIONS: Partial<Record<SettingsPage, string>> = {
   storage: 'android.settings.INTERNAL_STORAGE_SETTINGS',
   date_time: 'android.settings.DATE_SETTINGS',
   vpn: 'android.settings.VPN_SETTINGS',
+  security: 'android.settings.SECURITY_SETTINGS',
+  // with no screen lock, it asks for one first
+  fingerprint: 'android.settings.FINGERPRINT_SETTINGS',
 };
+
+/** Android's own pages: iOS's, as screen_time, are none of them. */
+export const ANDROID_PAGES = SETTINGS_PAGES.filter((p) => p in SETTINGS_ACTIONS);
 
 /** What an `am start` of these words says went wrong, if anything. */
 type Start = (intent: string) => Promise<string | undefined>;

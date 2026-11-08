@@ -5,7 +5,7 @@ import type { Adb } from '../src/adb.js';
 import { AndroidEvents } from '../src/events.js';
 import { enrolmentStep } from '../src/fingerprint.js';
 import { AndroidSettings } from '../src/settings.js';
-import { openSettingsAt } from '../src/settings-pages.js';
+import { ANDROID_PAGES, openSettingsAt } from '../src/settings-pages.js';
 
 /** A device by what its shell answers: the first pattern that matches a command. */
 const device = (serial: string, answers: [RegExp, string | (() => string)][]) => {
@@ -450,6 +450,21 @@ describe('the pages of Settings', () => {
     expect(asked).toEqual([
       '-a android.settings.DEVICE_INFO_SETTINGS',
       '-a android.settings.APPLICATION_DETAILS_SETTINGS -d package:com.example.app',
+    ]);
+  });
+
+  it("are Android's own: a fingerprint, security and voice input, and none of iOS's names", async () => {
+    expect(ANDROID_PAGES).toEqual(
+      expect.arrayContaining(['security', 'fingerprint', 'voice_input']),
+    );
+    for (const ios of ['siri', 'game_center', 'screen_time', 'privacy_photos'])
+      expect(ANDROID_PAGES).not.toContain(ios);
+    asked.length = 0;
+    await openSettingsAt({ page: 'security' }, start);
+    await openSettingsAt({ page: 'fingerprint' }, start);
+    expect(asked).toEqual([
+      '-a android.settings.SECURITY_SETTINGS',
+      '-a android.settings.FINGERPRINT_SETTINGS',
     ]);
   });
 

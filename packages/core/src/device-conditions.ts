@@ -22,7 +22,7 @@ export const HELD = ['screen_lock'] as const;
 
 export type SettingName = (typeof SETTINGS)[number] | (typeof HELD)[number];
 
-/** The pages of the system's Settings a call opens by name, where the device has them. */
+/** The pages of the system's Settings a call opens by name: each device has its own of them, as `settingsPages` says. */
 export const SETTINGS_PAGES = [
   'general',
   'about',
@@ -63,6 +63,9 @@ export const SETTINGS_PAGES = [
   'display',
   'sounds',
   'notifications',
+  'voice_input',
+  'security',
+  'fingerprint',
 ] as const;
 
 export type SettingsPage = (typeof SETTINGS_PAGES)[number];

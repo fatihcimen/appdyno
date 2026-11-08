@@ -1,11 +1,4 @@
-import {
-  fold,
-  must,
-  reportProgress,
-  SETTINGS_PAGES,
-  type Screen,
-  type SettingsPage,
-} from '@appdyno/core';
+import { fold, must, reportProgress, type Screen } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers, ReadMode } from './answers.js';
 import type { ServerContext } from './context.js';
@@ -85,14 +78,14 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         'Settings is off on this server: the app may not be left',
         'POLICY_DENIED',
       );
-    const page = SETTINGS_PAGES.find((p): p is SettingsPage => p === settings);
+    const page = s.device.settingsPages.find((p) => p === settings);
     const app = page
       ? undefined
       : checkApp(policy, settings === 'app' ? (s.appId ?? '') : settings);
     if (!page && !app) throw new ToolError(NO_APP, 'INVALID_ARGUMENT');
     if (!page && settings !== 'app' && !settings.includes('.'))
       throw new ToolError(
-        `settings: an app's id, app, or a page: ${SETTINGS_PAGES.join(', ')}`,
+        `settings: an app's id, app, or a page of this device's Settings: ${s.device.settingsPages.join(', ')}`,
         'INVALID_ARGUMENT',
       );
     s.leftApp = true;

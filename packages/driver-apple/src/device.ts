@@ -18,6 +18,7 @@ import {
   type ActOptions,
   assertLatLon,
   SYSTEM_SWIPES,
+  SETTINGS_PAGES,
   type SettingsPage,
   type SystemSwipe,
   type SystemView,
@@ -245,6 +246,10 @@ export abstract class IosDevice extends RpcDevice implements Device {
       await sleep(20);
     }
     return { ...r, tree: await this.tree() };
+  }
+
+  get settingsPages() {
+    return SETTINGS_PAGES.filter((p) => p in this.ops.settingsLinks);
   }
 
   /** An app's page has no link any more: its row is on Apps. */

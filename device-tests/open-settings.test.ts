@@ -62,10 +62,13 @@ describe.skipIf(!SIMULATOR)('Settings on a simulator', () => {
     expect(r.text).toContain('tapped');
   });
 
-  it('refuses a page a simulator has not got, by name', async () => {
-    const r = await call('open_link', { settings: 'wifi' });
-    expect(r.data.code).toBe('UNSUPPORTED');
-    expect(r.text).toContain('no wifi page');
+  it("refuses a page a simulator has not got, or Android's, naming its own", async () => {
+    for (const page of ['wifi', 'security', 'voice_input']) {
+      const r = await call('open_link', { settings: page });
+      expect(r.data.code).toBe('INVALID_ARGUMENT');
+      expect(r.text).toMatch(/: general, about, .*\bsiri, .*\bdeveloper$/);
+      expect(r.text).not.toContain(`${page},`);
+    }
   });
 
   it('goes back to the app by launching it', async () => {
@@ -128,13 +131,20 @@ describe.skipIf(!ANDROID)('Settings on Android', () => {
     ['date_time', /Date|Tarih/],
     ['vpn', /VPN/],
     ['home_screen', /Home|Default|Ana ekran|Varsayılan/],
+    ['security', /Security|Güvenlik/],
+    // with no screen lock, it asks for one first
+    ['fingerprint', /Fingerprint|Pixel Imprint|screen lock|Parmak izi/i],
+    ['voice_input', /assistant|voice|asistan/i],
   ])('opens %s', (page, shown) => pageShows(call, page, shown));
 
   it("opens an app's own page", () => pageShows(call, 'app', /appdyno fixture|App info/));
 
-  it('refuses a page Android has not got as one, by name', async () => {
-    const r = await call('open_link', { settings: 'privacy_photos' });
-    expect(r.data.code).toBe('UNSUPPORTED');
-    expect(r.text).toContain('no privacy_photos page');
+  it("refuses a page of iOS's, naming Android's own", async () => {
+    for (const ios of ['privacy_photos', 'siri', 'game_center', 'screen_time']) {
+      const r = await call('open_link', { settings: ios });
+      expect(r.data.code).toBe('INVALID_ARGUMENT');
+      expect(r.text).toMatch(/: general, about, .*\bsecurity, fingerprint$/);
+      expect(r.text).not.toContain(`${ios},`);
+    }
   });
 });

@@ -9,6 +9,7 @@ export { FOCUS_READ, KEYGUARD_READ } from './window-dump.js';
 export { apkNames, type ApkNames } from './apk-names.js';
 export type { InstallAnswers } from './install-consent.js';
 export { androidScreen } from './platform-screen.js';
+export { ANDROID_PAGES } from './settings-pages.js';
 export { TEST_LOCATION, TEST_TAG } from './location.js';
 export { AndroidEmulators } from './emulators.js';
 export { AndroidAgentLauncher, agentApk } from './agent.js';

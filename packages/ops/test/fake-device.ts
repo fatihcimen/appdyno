@@ -1,4 +1,4 @@
-import { androidScreen } from '@appdyno/driver-android';
+import { ANDROID_PAGES, androidScreen } from '@appdyno/driver-android';
 import {
   cannot,
   DeviceActions,
@@ -180,6 +180,7 @@ const answer = <T>(work: () => T) =>
 export class FakeDevice extends DeviceActions implements Device {
   readonly platform = 'android' as const;
   readonly platformScreen = androidScreen;
+  readonly settingsPages = ANDROID_PAGES;
   virtual = true;
   lastStartWasCold = true;
   apps = notGiven('apps') as AppManager;
