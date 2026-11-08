@@ -22,9 +22,6 @@ const LONGER: Record<string, string> = {
   'packages/ops/src/perf/trace.ts perfTraceOp': 'one op, nearly all of it `run` below',
   'packages/ops/src/perf/trace.ts run':
     'one branch per kind of trace, and each says its own answer',
-  'packages/ops/src/perf/compare.ts perfCompareOp': 'one op, nearly all of it `run` below',
-  'packages/ops/src/perf/compare.ts run':
-    'one branch per action of the gate, in the order they read',
   'packages/ops/src/timeline/flight.ts startFlight':
     'a recorder, armed and disarmed around one state: its parts have no use apart',
   'packages/hub/src/controls.ts windowControls':

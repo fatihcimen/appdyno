@@ -1,14 +1,171 @@
-import { deviceClass, phaseKind, ratedByPlay, SLOW_LAUNCH_MS, type Metric } from '@appdyno/perf';
+import { must, reportProgress, type LaunchMode } from '@appdyno/core';
+import {
+  deviceClass,
+  loadBaseline,
+  MIN_BASELINE_RUNS,
+  phaseKind,
+  ratedByPlay,
+  runsIn,
+  SLOW_LAUNCH_MS,
+  type Metric,
+  type RunKey,
+} from '@appdyno/perf';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { LaunchOut } from './schemas.js';
-import { defineOp, DESTRUCTIVE, reply } from '../tool.js';
-import { perfTools, App, Probe, Scenario, deviceInfo } from './shared.js';
+import type { Session } from '../session.js';
+import { defineOp, DESTRUCTIVE, reply, ToolError } from '../tool.js';
+import { keepBaseline } from './compare.js';
+import { perfTools, App, Probe, Scenario, deviceInfo, rewriteDashboard } from './shared.js';
 import { baselineLines, baselineVerdict } from './baseline.js';
 import { dayLongest, playLine } from './vitals.js';
 
+type Tools = ReturnType<typeof perfTools>;
+
+/** One run of a warm-up and `repeats` launches, kept under `key`: its lines and its answer. */
+async function launchRun(
+  ctx: ServerContext,
+  { measure, virtualNote, save, keep, noisy }: Tools,
+  s: Session,
+  key: RunKey,
+  o: {
+    mode: LaunchMode;
+    repeats: number;
+    compile?: 'speed' | 'speed-profile' | 'verify' | undefined;
+    trace?: boolean | undefined;
+    probe?: boolean | undefined;
+  },
+) {
+  const { app: pkg, scenario: name } = key;
+  const { mode, repeats, compile, trace, probe } = o;
+  // not by default: a kept launch stays one kind, whatever else measured this app; a launch relaunches anyway
+  if (probe) await measure(s, 'attachProbe')(pkg);
+  const m = await measure(
+    s,
+    'launch',
+    trace ? 'launch-why' : 'launch',
+  )(pkg, {
+    mode,
+    repeats,
+    ...(compile && { compile }),
+    ...(trace && { trace }),
+    ...(probe && { probe }),
+  });
+  s.acted();
+  const saved = await save('launch', [m], m.value);
+  const limit = SLOW_LAUNCH_MS[mode];
+  const { medianMs: med, until, samples, startup, fullyDrawnMedianMs } = m.value;
+  const times = samples.flatMap((x) => (x.totalMs === undefined ? [] : [x.totalMs]));
+  // Play keeps a state's longest start of the day, and only what the platform itself reports is its number
+  const worstKind = `launch.worst_${mode}_ms` as const;
+  const worst = !until && times.length ? Math.max(...times) : undefined;
+  const noise = await keep(s, {
+    app: pkg,
+    scenario: name,
+    source: 'perf_launch',
+    raw: saved.txt,
+    metrics: [
+      {
+        kind: !until
+          ? 'launch.ttid_ms'
+          : until.includes('first frame')
+            ? 'launch.first_frame_ms'
+            : 'launch.until_ms',
+        unit: 'ms',
+        samples: times,
+        // a tool's own mark is counted on this Mac; what a platform reports is its own
+        ...(until && { throughHost: true }),
+      },
+      {
+        kind: 'launch.ttfd_ms',
+        unit: 'ms',
+        samples: samples.flatMap((x) => (x.fullyDrawnMs === undefined ? [] : [x.fullyDrawnMs])),
+      },
+      { kind: worstKind, unit: 'ms', samples: worst === undefined ? [] : [worst] },
+      ...(startup?.breakdown ?? []).map((b): Metric => ({
+        kind: phaseKind(b.reason),
+        unit: 'ms',
+        samples: [b.ms],
+      })),
+    ],
+    compile: m.value.compile?.asked,
+  });
+  const longest =
+    worst === undefined || !ratedByPlay(s.device.platform)
+      ? undefined
+      : await dayLongest(
+          ctx.measurementsDir,
+          { app: pkg, scenario: name, deviceClass: deviceClass(deviceInfo(s)) },
+          { kind: worstKind, value: worst, at: m.at },
+        );
+  const over = longest !== undefined && longest >= limit;
+  return {
+    lines: [
+      `measurement ${saved.id}${virtualNote(s)}`,
+      `${mode} launch${until ? ` (until ${until})` : ''}: ${samples.map((x) => `${x.totalMs ?? '?'} ms${until ? '' : ` (${x.state ?? '?'})`}`).join(', ')}`,
+      `median: ${med === undefined ? 'not measured' : `${med} ms`}${worst === undefined ? '' : `, longest ${worst} ms`}`,
+      ...(longest === undefined ? [] : [playLine(worstKind, longest)]),
+      ...(fullyDrawnMedianMs !== undefined ? [`fully drawn: ${fullyDrawnMedianMs} ms`] : []),
+      ...(m.value.compile
+        ? [
+            `compile: ${m.value.compile.asked}${m.value.compile.status ? ` (${m.value.compile.status})` : ''}, reset afterwards`,
+          ]
+        : []),
+      ...(startup
+        ? [
+            `start trace: ${startup.startupType ?? '?'} ${startup.durMs ?? '?'} ms${startup.odex ? `, ${startup.odex}` : ''}`,
+            ...(startup.reasons.length
+              ? [`slow start reasons: ${startup.reasons.join('; ')}`]
+              : []),
+            ...startup.findings.map((x) => `finding: ${x}`),
+            ...(startup.breakdown.length
+              ? [
+                  `where the time went: ${startup.breakdown
+                    .slice(0, 6)
+                    .map((b) => `${b.reason} ${b.ms} ms`)
+                    .join(', ')}`,
+                ]
+              : []),
+            `trace (perf_query): ${startup.tracePath}`,
+          ]
+        : []),
+      ...noisy(noise),
+      `raw output: ${saved.txt}`,
+    ],
+    data: {
+      id: saved.id,
+      raw: saved.txt,
+      virtualDevice: s.device.virtual,
+      mode,
+      samples: samples.map((x) => ({
+        ...(x.totalMs !== undefined && { totalMs: x.totalMs }),
+        ...(x.state && { state: x.state }),
+      })),
+      ...(med !== undefined && { medianMs: med }),
+      excessive: over,
+      ...(fullyDrawnMedianMs !== undefined && { fullyDrawnMedianMs }),
+      ...(m.value.compile && { compile: m.value.compile.asked }),
+      ...(startup && {
+        tracePath: startup.tracePath,
+        reasons: startup.reasons,
+        findings: startup.findings,
+      }),
+      noise,
+    },
+  };
+}
+
+/** What a run is kept as, said where it is: a run alone is no baseline, and a regression is called against one. */
+async function nextOf(ctx: ServerContext, key: RunKey) {
+  const held = runsIn(await loadBaseline(ctx.perfDir, key));
+  if (held >= MIN_BASELINE_RUNS)
+    return `perf_compare with scenario ${key.scenario} compares this run with its baseline of ${held} runs`;
+  return `kept as one run of ${key.scenario}, not as a baseline: ${held ? `its baseline holds ${held} of the ${MIN_BASELINE_RUNS} runs it needs` : 'it has none'}; perf_launch with baseline: true measures ${MIN_BASELINE_RUNS} runs and keeps them as one`;
+}
+
 export function perfLaunchOp(ctx: ServerContext) {
-  const { measure, appOf, virtualNote, save, keep, noisy } = perfTools(ctx);
+  const tools = perfTools(ctx);
+  const { measure, appOf, virtualNote, save, keep, noisy } = tools;
   return defineOp({
     name: 'perf_launch',
     title: 'Launch time',
@@ -27,15 +184,34 @@ export function perfLaunchOp(ctx: ServerContext) {
           .describe('Android, a release build: in the APK, applied, cold starts with and without'),
         probe: Probe,
         scenario: Scenario,
+        baseline: z
+          .boolean()
+          .optional()
+          .describe(`${MIN_BASELINE_RUNS} runs, added to perf_compare's baseline`),
       })
       .strict(),
     output: LaunchOut,
     annotations: DESTRUCTIVE,
-    run: async ({ app, mode, repeats, compile, trace, baselineProfile, probe, scenario }) => {
+    run: async ({
+      app,
+      mode,
+      repeats,
+      compile,
+      trace,
+      baselineProfile,
+      probe,
+      scenario,
+      baseline,
+    }) => {
       const s = await ctx.session();
       s.appPid = undefined;
       const pkg = appOf(s, app);
       if (baselineProfile) {
+        if (baseline)
+          throw new ToolError(
+            'baselineProfile measures a Baseline Profile, and baseline keeps launches: one or the other',
+            'INVALID_ARGUMENT',
+          );
         const m = await measure(s, 'baselineProfile', false)(pkg, { repeats });
         s.acted();
         const saved = await save('launch', [m], m.value);
@@ -77,120 +253,37 @@ export function perfLaunchOp(ctx: ServerContext) {
           },
         );
       }
-      // not by default: a kept launch stays one kind, whatever else measured this app; a launch relaunches anyway
-      if (probe) await measure(s, 'attachProbe')(pkg);
-      const m = await measure(
-        s,
-        'launch',
-        trace ? 'launch-why' : 'launch',
-      )(pkg, {
-        mode,
-        repeats,
-        ...(compile && { compile }),
-        ...(trace && { trace }),
-        ...(probe && { probe }),
-      });
-      s.acted();
-      const saved = await save('launch', [m], m.value);
-      const limit = SLOW_LAUNCH_MS[mode];
-      const { medianMs: med, until, samples, startup, fullyDrawnMedianMs } = m.value;
-      const name = scenario ?? `launch-${mode}`;
-      const times = samples.flatMap((x) => (x.totalMs === undefined ? [] : [x.totalMs]));
-      // Play keeps a state's longest start of the day, and only what the platform itself reports is its number
-      const worstKind = `launch.worst_${mode}_ms` as const;
-      const worst = !until && times.length ? Math.max(...times) : undefined;
-      const noise = await keep(s, {
+      const key = {
         app: pkg,
-        scenario: name,
-        source: 'perf_launch',
-        raw: saved.txt,
-        metrics: [
-          {
-            kind: !until
-              ? 'launch.ttid_ms'
-              : until.includes('first frame')
-                ? 'launch.first_frame_ms'
-                : 'launch.until_ms',
-            unit: 'ms',
-            samples: times,
-            // a tool's own mark is counted on this Mac; what a platform reports is its own
-            ...(until && { throughHost: true }),
-          },
-          {
-            kind: 'launch.ttfd_ms',
-            unit: 'ms',
-            samples: samples.flatMap((x) => (x.fullyDrawnMs === undefined ? [] : [x.fullyDrawnMs])),
-          },
-          { kind: worstKind, unit: 'ms', samples: worst === undefined ? [] : [worst] },
-          ...(startup?.breakdown ?? []).map((b): Metric => ({
-            kind: phaseKind(b.reason),
-            unit: 'ms',
-            samples: [b.ms],
-          })),
-        ],
-        compile: m.value.compile?.asked,
-      });
-      const longest =
-        worst === undefined || !ratedByPlay(s.device.platform)
-          ? undefined
-          : await dayLongest(
-              ctx.measurementsDir,
-              { app: pkg, scenario: name, deviceClass: deviceClass(deviceInfo(s)) },
-              { kind: worstKind, value: worst, at: m.at },
-            );
-      const over = longest !== undefined && longest >= limit;
+        scenario: scenario ?? `launch-${mode}`,
+        deviceClass: deviceClass(deviceInfo(s)),
+      };
+      const o = { mode, repeats, compile, trace, probe };
+      if (!baseline) {
+        const { lines, data } = await launchRun(ctx, tools, s, key, o);
+        const next = await nextOf(ctx, key);
+        return reply([...lines, next].join('\n'), { ...data, next });
+      }
+      const runs: Awaited<ReturnType<typeof launchRun>>[] = [];
+      for (let i = 1; i <= MIN_BASELINE_RUNS; i++) {
+        reportProgress(`run ${i} of the ${MIN_BASELINE_RUNS} a baseline takes`);
+        runs.push(await launchRun(ctx, tools, s, key, o));
+      }
+      const kept = await keepBaseline(ctx, key, MIN_BASELINE_RUNS);
+      await rewriteDashboard(ctx);
+      const next = kept.ready
+        ? `perf_compare with scenario ${key.scenario} compares a later run with it`
+        : `not a baseline yet: ${kept.lines.join('; ')}`;
       return reply(
         [
-          `measurement ${saved.id}${virtualNote(s)}`,
-          `${mode} launch${until ? ` (until ${until})` : ''}: ${samples.map((x) => `${x.totalMs ?? '?'} ms${until ? '' : ` (${x.state ?? '?'})`}`).join(', ')}`,
-          `median: ${med === undefined ? 'not measured' : `${med} ms`}${worst === undefined ? '' : `, longest ${worst} ms`}`,
-          ...(longest === undefined ? [] : [playLine(worstKind, longest)]),
-          ...(fullyDrawnMedianMs !== undefined ? [`fully drawn: ${fullyDrawnMedianMs} ms`] : []),
-          ...(m.value.compile
-            ? [
-                `compile: ${m.value.compile.asked}${m.value.compile.status ? ` (${m.value.compile.status})` : ''}, reset afterwards`,
-              ]
-            : []),
-          ...(startup
-            ? [
-                `start trace: ${startup.startupType ?? '?'} ${startup.durMs ?? '?'} ms${startup.odex ? `, ${startup.odex}` : ''}`,
-                ...(startup.reasons.length
-                  ? [`slow start reasons: ${startup.reasons.join('; ')}`]
-                  : []),
-                ...startup.findings.map((x) => `finding: ${x}`),
-                ...(startup.breakdown.length
-                  ? [
-                      `where the time went: ${startup.breakdown
-                        .slice(0, 6)
-                        .map((b) => `${b.reason} ${b.ms} ms`)
-                        .join(', ')}`,
-                    ]
-                  : []),
-                `trace (perf_query): ${startup.tracePath}`,
-              ]
-            : []),
-          ...noisy(noise),
-          `raw output: ${saved.txt}`,
+          ...runs.flatMap((r, i) => [`run ${i + 1} of ${MIN_BASELINE_RUNS}:`, ...r.lines]),
+          ...kept.lines,
+          next,
         ].join('\n'),
         {
-          id: saved.id,
-          raw: saved.txt,
-          virtualDevice: s.device.virtual,
-          mode,
-          samples: samples.map((x) => ({
-            ...(x.totalMs !== undefined && { totalMs: x.totalMs }),
-            ...(x.state && { state: x.state }),
-          })),
-          ...(med !== undefined && { medianMs: med }),
-          excessive: over,
-          ...(fullyDrawnMedianMs !== undefined && { fullyDrawnMedianMs }),
-          ...(m.value.compile && { compile: m.value.compile.asked }),
-          ...(startup && {
-            tracePath: startup.tracePath,
-            reasons: startup.reasons,
-            findings: startup.findings,
-          }),
-          noise,
+          ...must(runs.at(-1), 'the last run').data,
+          ...(kept.file && { baselineFile: kept.file }),
+          next,
         },
       );
     },

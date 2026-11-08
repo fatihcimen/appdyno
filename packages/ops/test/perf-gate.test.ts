@@ -140,6 +140,38 @@ describe('the gate', () => {
     expect(third.data.exitCode).toBe(0);
   });
 
+  it('keeps a baseline from perf_launch alone when asked, and says of every run what it is kept as', async () => {
+    const ops = context({ ms: 500 }, fresh(), fresh());
+    const one = await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
+    expect(one.data.next).toBe(
+      'kept as one run of launch-cold, not as a baseline: it has none; perf_launch with baseline: true measures 3 runs and keeps them as one',
+    );
+    const kept = await ops.perf_launch.handler({ mode: 'cold', repeats: 5, baseline: true });
+    expect(text(kept)).toMatch(/^run 3 of 3:$/m);
+    expect(text(kept)).toMatch(
+      /^baseline: .*baselines\/dev\.appdyno\.fixture\/launch-cold\/.*: 3 runs$/m,
+    );
+    expect(existsSync(String(kept.data.baselineFile))).toBe(true);
+    expect(kept.data.next).toBe(
+      'perf_compare with scenario launch-cold compares a later run with it',
+    );
+    const later = await ops.perf_launch.handler({ mode: 'cold', repeats: 5 });
+    expect(later.data.next).toBe(
+      'perf_compare with scenario launch-cold compares this run with its baseline of 3 runs',
+    );
+    const same = await ops.perf_compare.handler({ action: 'compare', format: 'text', last: 1 });
+    expect(text(same)).toMatch(/^\s+ok\s+launch\.ttid_ms/m);
+  });
+
+  it('says in its next step why the runs it measured for a baseline are none yet', async () => {
+    const ops = context({ ms: 500 }, fresh(), fresh(), { thermalStatus: 3 });
+    const kept = await ops.perf_launch.handler({ mode: 'cold', repeats: 5, baseline: true });
+    expect(kept.data.next).toMatch(
+      /^not a baseline yet: not added, hot-device: measure launch-cold again; .*baseline unchanged: 0 of the 3 runs a comparison needs, 3 missing/,
+    );
+    expect(kept.data.baselineFile).toBeUndefined();
+  });
+
   it('is not done on runs of a sample each, however many: no comparison could call them', async () => {
     const ops = context({ ms: 500 }, fresh(), fresh(), {}, 1);
     const add = async () => {

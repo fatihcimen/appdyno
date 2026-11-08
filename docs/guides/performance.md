@@ -31,6 +31,8 @@ appdyno perf-launch --app A --mode cold --repeats 6     # after your change
 appdyno perf compare --app A                            # exit 1 on a regression
 ```
 
+Through your agent, `perf_launch` with `baseline` measures the three runs and keeps them as the baseline in one call. Any other run's answer says, in `next`, what it was kept as: one run of its scenario is no baseline.
+
 The baseline goes to `.appdyno/perf/baselines/`. Commit it. Limits of your own go in `.appdyno/perf/budgets.json`:
 
 ```json

@@ -144,6 +144,10 @@ export const LaunchOut = z.object({
       verdict: z.enum(['worth-it', 'no-gain', 'slower']).optional(),
     })
     .optional(),
+  /** The baseline `baseline` kept these runs in. */
+  baselineFile: z.string().optional(),
+  /** What the run is kept as, and the call that goes on from it: a run alone is no baseline. */
+  next: z.string().optional(),
 });
 
 export const TraceOut = z.object({

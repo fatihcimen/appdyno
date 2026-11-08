@@ -782,10 +782,11 @@ describe('iOS simulators', () => {
         'no frame measure on a simulator without the probe',
       ]);
       const launch = (await t.textOf('perf_launch')).text.split('\n');
-      expect(launch.slice(1, -1)).toEqual([
+      expect(launch.slice(1, -2)).toEqual([
         'cold launch (until the first screen is read): 100 ms, 9000 ms, 8000 ms',
         'median: 8000 ms',
       ]);
+      expect(launch.at(-1)).toMatch(/^kept as one run of launch-cold, not as a baseline/);
       expect((await t.textOf('perf_heap')).text).toMatch(
         /^measurement pm-\w+\nmemory graph \(Xcode\): .*x\.memgraph \(1\.0 MB\); 3 leaks, 192 bytes$/,
       );

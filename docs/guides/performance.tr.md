@@ -31,6 +31,8 @@ appdyno perf-launch --app A --mode cold --repeats 6     # değişikliğinizden s
 appdyno perf compare --app A                            # gerilemede 1 ile çıkar
 ```
 
+Ajanınız üzerinden `baseline` ile `perf_launch` üç çalıştırmayı ölçer ve onları tek çağrıda baseline olarak saklar. Başka her çalıştırmanın yanıtı, `next` içinde, neyin olarak saklandığını söyler: senaryosunun tek bir çalıştırması baseline değildir.
+
 Baseline `.appdyno/perf/baselines/` altına gider. Onu commit edin. Kendi sınırlarınız `.appdyno/perf/budgets.json` içine girer:
 
 ```json

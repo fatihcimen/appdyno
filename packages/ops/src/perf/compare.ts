@@ -17,6 +17,7 @@ import {
   mostSamples,
   runsIn,
   type KeyReport,
+  type RunKey,
   reportKey,
   exitCode,
   toJson,
@@ -33,12 +34,74 @@ import { gateLooks } from './why.js';
 
 const MeasurementId = z.string().max(40).optional();
 
+/**
+ * A key's `last` newest runs added to its baseline (`replace`: in its place), but for a number a loud run measured: what
+ * it says of that, its file, and whether it can call a regression now.
+ */
+export async function keepBaseline(
+  ctx: ServerContext,
+  k: RunKey,
+  last: number,
+  replace?: boolean,
+): Promise<{ lines: string[]; file?: string; ready: boolean }> {
+  const project = ctx.perfDir;
+  const lines: string[] = [];
+  const runs = await latestRuns(ctx.measurementsDir, k, last);
+  let base = await loadBaseline(project, k);
+  let anew = replace;
+  let usable = 0;
+  let repeated = 0;
+  // oldest first, as a baseline holds them
+  for (const run of runs.toReversed()) {
+    // a number of the device's own in the same run stands
+    const clean = run.filter((r) => loud(r.noise).length === 0);
+    const noisy = run.filter((r) => loud(r.noise).length > 0);
+    const said = [...new Set(noisy.flatMap((r) => loud(r.noise)))].join(', ');
+    if (clean.length === 0) {
+      lines.push(`not added, ${said}: measure ${k.scenario} again`);
+      continue;
+    }
+    const before = runsIn(base);
+    base = addToBaseline(k, base, clean, anew);
+    if (!anew && runsIn(base) === before) repeated++;
+    anew = false;
+    usable++;
+    await pinBaseline(stateDir(), clean);
+    if (noisy.length) lines.push(`left out, ${said}: ${noisy.map((r) => r.kind).join(', ')}`);
+  }
+  const held = runsIn(base);
+  const short = MIN_BASELINE_RUNS - held;
+  const samples = mostSamples(base);
+  // one that cannot call a regression must not look done, and a run may hold one sample
+  const ready = usable > 0 && short <= 0 && samples >= MIN_SAMPLES;
+  const count =
+    short > 0
+      ? `${held} of the ${MIN_BASELINE_RUNS} runs a comparison needs, ${short} missing: it cannot call a regression yet`
+      : samples < MIN_SAMPLES
+        ? `${held} runs, with ${samples} of the ${MIN_SAMPLES} samples a comparison needs: it cannot call a regression yet`
+        : `${held} runs`;
+  if (!base || usable === 0) return { lines: [...lines, `baseline unchanged: ${count}`], ready };
+  const file = await saveBaseline(project, base);
+  lines.push(
+    [
+      `baseline: ${file}: ${count}`,
+      ...(repeated ? [`${repeated} already in it, not added again`] : []),
+      ...(runs.length < last
+        ? [
+            `only ${runs.length} of the ${last} runs asked for ${runs.length === 1 ? 'is' : 'are'} kept`,
+          ]
+        : []),
+    ].join('; '),
+  );
+  return { lines, file, ready };
+}
+
 export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
   return defineOp({
     name: 'perf_compare',
     title: 'Compare with the baseline',
     description:
-      "Performance regression gate: the `last` newest runs against baseline and budgets in .appdyno/perf/; a change must be statistically and practically significant. why: finds a regression's cause on device; reference: its other side, on baseline's build; baseline: adds the newest, `replace` resets; functions: two perf_profile ids; prune: traces.",
+      "Performance regression gate: the `last` newest runs against baseline and budgets in .appdyno/perf/; a change must be statistically and practically significant. why: finds a regression's cause on device; reference: its other side, on baseline's build; baseline: adds the `last` newest runs (3 needed), `replace` resets; functions: two perf_profile ids; prune: traces.",
     input: z
       .object({
         action: z
@@ -179,58 +242,10 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
         const files: string[] = [];
         let left = 0;
         for (const k of keys) {
-          const runs = await latestRuns(dir, k, last);
-          let base = await loadBaseline(project, k);
-          let anew = replace;
-          let usable = 0;
-          let repeated = 0;
-          // oldest first, as a baseline holds them
-          for (const run of runs.toReversed()) {
-            // a number of the device's own in the same run stands
-            const clean = run.filter((r) => loud(r.noise).length === 0);
-            const noisy = run.filter((r) => loud(r.noise).length > 0);
-            const said = [...new Set(noisy.flatMap((r) => loud(r.noise)))].join(', ');
-            if (clean.length === 0) {
-              lines.push(`not added, ${said}: measure ${k.scenario} again`);
-              continue;
-            }
-            const before = runsIn(base);
-            base = addToBaseline(k, base, clean, anew);
-            if (!anew && runsIn(base) === before) repeated++;
-            anew = false;
-            usable++;
-            await pinBaseline(stateDir(), clean);
-            if (noisy.length)
-              lines.push(`left out, ${said}: ${noisy.map((r) => r.kind).join(', ')}`);
-          }
-          const held = runsIn(base);
-          const short = MIN_BASELINE_RUNS - held;
-          const samples = mostSamples(base);
-          // one that cannot call a regression must not look done, and a run may hold one sample
-          if (usable === 0 || short > 0 || samples < MIN_SAMPLES) left++;
-          const count =
-            short > 0
-              ? `${held} of the ${MIN_BASELINE_RUNS} runs a comparison needs, ${short} missing: it cannot call a regression yet`
-              : samples < MIN_SAMPLES
-                ? `${held} runs, with ${samples} of the ${MIN_SAMPLES} samples a comparison needs: it cannot call a regression yet`
-                : `${held} runs`;
-          if (!base || usable === 0) {
-            lines.push(`baseline unchanged: ${count}`);
-            continue;
-          }
-          const file = await saveBaseline(project, base);
-          files.push(file);
-          lines.push(
-            [
-              `baseline: ${file}: ${count}`,
-              ...(repeated ? [`${repeated} already in it, not added again`] : []),
-              ...(runs.length < last
-                ? [
-                    `only ${runs.length} of the ${last} runs asked for ${runs.length === 1 ? 'is' : 'are'} kept`,
-                  ]
-                : []),
-            ].join('; '),
-          );
+          const added = await keepBaseline(ctx, k, last, replace);
+          lines.push(...added.lines);
+          if (added.file) files.push(added.file);
+          if (!added.ready) left++;
         }
         await rewriteDashboard(ctx);
         return reply(lines.join('\n'), {

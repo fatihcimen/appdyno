@@ -25,6 +25,6 @@ export const INSTRUCTIONS =
   'It drives one device: the one use_device selected, or the only one connected. Read the screen first; act on elements by ref or selector (tap, gesture, type_text, steps). ' +
   'Every action returns the settled screen after it (read: diff by default), no extra read needed, with changed: false when nothing moved and settled: false when it kept moving. ' +
   'No fixed sleeps: use wait_for. Take a screenshot only for a visual judgement. A failed answer starts with its code and ends with its hint.When the app misbehaves: logs and crashes. ' +
-  'Apps: app; an app left out is the selected one, scenario names what a measure is kept under, and probe is the frame probe of an iOS simulator, which relaunches the app. Conditions and biometrics: device_setting; pushes: push. Starting a simulator or emulator: simulator. ' +
+  'Apps: app; an app left out is the selected one, scenario names the runs a measure is kept among, of which a baseline takes 3 (perf_launch baseline), and probe is the frame probe of an iOS simulator, which relaunches the app. Conditions and biometrics: device_setting; pushes: push. Starting a simulator or emulator: simulator. ' +
   `${DATA_LOSS_WORDS} ask the person first. ` +
   'To see why something was slow: report timeline, then the journey, then report stop: timeline.html holds video, touches, frames, requests, log and memory on one clock, in one file to send.';
