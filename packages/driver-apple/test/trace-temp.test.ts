@@ -14,6 +14,29 @@ import { must } from '@appdyno/core';
 import { watchKtraces } from '../src/trace-temp.js';
 
 const SPAN = 60_000;
+
+/** A listing of `gate.dir` waits for `gate.open`, as one of a temp folder of a million names does. */
+const gate = vi.hoisted((): { dir: string; open: Promise<void> } => ({
+  dir: '',
+  open: Promise.resolve(),
+}));
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const fs = await importOriginal<typeof import('node:fs/promises')>();
+  const readdir = async (path: string) => {
+    if (path === gate.dir) await gate.open;
+    return fs.readdir(path);
+  };
+  return { ...fs, readdir };
+});
+/** Holds the listing of `dir` until the returned function is called. */
+const holdListing = (dir: string) => {
+  let open: () => void = () => undefined;
+  gate.dir = dir;
+  gate.open = new Promise<void>((r) => (open = r));
+  return () => {
+    open();
+  };
+};
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const ktrace = (dir: string, name: string) => {
   const path = join(dir, `instruments${name}.ktrace`);
@@ -40,7 +63,10 @@ describe('what a recording leaves in the temp folder', () => {
     dir = realpathSync(mkdtempSync(join(tmpdir(), 'appdyno-temp-')));
     vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-temp-state-')));
   });
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    gate.dir = '';
+  });
 
   it('removes what was made during the run, and nothing older or of another name', async () => {
     const older = ktrace(dir, 'Older');
@@ -80,8 +106,8 @@ describe('what a recording leaves in the temp folder', () => {
     expect(readdirSync(lines)).toHaveLength(1);
     await ended(tail);
     const next = await watchKtraces({ ...alone, dir });
-    expect(existsSync(open)).toBe(false);
     await next.done();
+    expect(existsSync(open)).toBe(false);
     expect(readdirSync(lines)).toEqual([]);
   });
 
@@ -118,10 +144,35 @@ describe('what a recording leaves in the temp folder', () => {
     const left = ktrace(dir, 'Left');
     const lines = await killedRun();
     const next = await watchKtraces({ ...alone, dir });
-    expect(existsSync(left)).toBe(false);
-    expect(readdirSync(lines)).toHaveLength(1);
     await next.done();
+    expect(existsSync(left)).toBe(false);
     expect(readdirSync(lines)).toEqual([]);
+  });
+
+  it('begins a recording without waiting for the listing of what a killed run left', async () => {
+    const left = ktrace(dir, 'Left');
+    const lines = await killedRun();
+    const open = holdListing(dir);
+    const next = await watchKtraces({ ...alone, dir });
+    expect(existsSync(left)).toBe(true);
+    open();
+    await next.done();
+    expect(existsSync(left)).toBe(false);
+    expect(readdirSync(lines)).toEqual([]);
+  });
+
+  it('leaves to the recording beside it what was born after it began', async () => {
+    await killedRun();
+    let asked = 0;
+    // nothing else at work when it sweeps, another recording by its end: it takes only what its tool held
+    const others = () => Promise.resolve(asked++ > 0);
+    const open = holdListing(dir);
+    const next = await watchKtraces({ spanMs: SPAN, dir, others });
+    await pause(20);
+    const born = ktrace(dir, 'Born');
+    open();
+    await next.done();
+    expect(existsSync(born)).toBe(true);
   });
 
   it('waits with a killed run while another recording may be at work', async () => {

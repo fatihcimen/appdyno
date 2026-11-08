@@ -83,16 +83,31 @@ async function clear(dir: string, window: { from: number; to: number }, kept: Se
 /** Lines of the runs still at work in this process. */
 const working = new Set<string>();
 
-/** A run killed with its process, or whose files stayed open too long, left its line: it is finished once nothing else may be at work. */
-async function sweep(dir: string, spanMs: number, others: () => Promise<boolean>) {
-  for (const line of await readdir(ledger()).catch(() => [] as string[])) {
+/**
+ * A run killed with its process, or whose files stayed open too long, left its line: it is finished once nothing else may be
+ * at work. What is asked now is whether that may be; the clearing, whose listing of the temp folder is slow (1.5 million
+ * names took 4.5 s on this Mac, once for each line), is what is handed back, to go on beside the recording that begins at
+ * `before`, and it takes nothing born since then.
+ */
+async function sweep(
+  dir: string,
+  spanMs: number,
+  others: () => Promise<boolean>,
+  before: number,
+): Promise<{ cleared: Promise<void> }> {
+  const left = (await readdir(ledger()).catch(() => [] as string[])).flatMap((line) => {
     // a line of no run of this tool reads as no process and no time
     const [pid = NaN, from = NaN] = line.split('-').map(Number);
-    if (working.has(line) || (pid !== process.pid && processAlive(pid))) continue;
-    if (await others()) return;
-    const open = await clear(dir, { from, to: from + spanMs }, false);
-    if (open === 0) await rm(join(ledger(), line), { force: true });
-  }
+    return working.has(line) || (pid !== process.pid && processAlive(pid)) ? [] : [{ line, from }];
+  });
+  if (left.length === 0 || (await others())) return { cleared: Promise.resolve() };
+  const cleared = (async () => {
+    for (const { line, from } of left) {
+      const open = await clear(dir, { from, to: Math.min(from + spanMs, before) }, false);
+      if (open === 0) await rm(join(ledger(), line), { force: true });
+    }
+  })().catch(() => undefined);
+  return { cleared };
 }
 
 /**
@@ -107,8 +122,8 @@ export async function watchKtraces({
   closeMs = CLOSE_MS,
 }: TempOptions) {
   const temp = dir ?? (await userTemp());
-  await sweep(temp, spanMs, others);
   const from = Date.now();
+  const { cleared } = await sweep(temp, spanMs, others, from);
   const line = `${process.pid}-${from}`;
   working.add(line);
   await mkdir(ledger(), { recursive: true });
@@ -135,6 +150,8 @@ export async function watchKtraces({
         await new Promise((r) => setTimeout(r, CLOSE_EVERY_MS).unref());
         open = await clearing();
       }
+      // what came before this run is cleared beside it, from windows apart from its own
+      await cleared;
       working.delete(line);
       if (open === 0) await rm(join(ledger(), line), { force: true });
     },

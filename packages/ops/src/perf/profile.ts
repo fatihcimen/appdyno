@@ -16,7 +16,7 @@ export function perfProfileOp(ctx: ServerContext) {
     name: 'perf_profile',
     title: 'CPU profile',
     description:
-      "Where the app's CPU time goes: sampled for `seconds` (a debuggable or profileable app), the top functions.",
+      "Where the app's CPU time goes: sampled for `seconds` (a debuggable or profileable app), the top functions. iOS: Xcode's trace tool adds about 8 s.",
     input: z
       .object({
         app: App,
