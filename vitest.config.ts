@@ -31,7 +31,11 @@ export default defineConfig({
     // a test's own work, on a machine others are also using: a hang still fails
     testTimeout: 30_000,
     // what is compiled outlives a run, and stays out of this Mac's own state as all else does
-    env: { APPDYNO_STATE_DIR: own, APPDYNO_NATIVE_DIR: join(tmpdir(), 'appdyno-test-native') },
+    env: {
+      APPDYNO_STATE_DIR: own,
+      APPDYNO_NATIVE_DIR: join(tmpdir(), 'appdyno-test-native'),
+      APPDYNO_TOOLS_DIR: join(own, 'tools'),
+    },
     setupFiles: ['packages/appdyno/test/no-real-state.setup.ts'],
     globalSetup: ['packages/appdyno/test/no-real-state.teardown.ts'],
     // the phone's stream keeps its tests in its folder, so that it can go whole

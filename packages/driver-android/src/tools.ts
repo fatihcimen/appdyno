@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { arch, platform, tmpdir } from 'node:os';
+import { arch, homedir, platform, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DeviceError } from '@appdyno/protocol';
-import { run, stateDir } from '@appdyno/core';
+import { run } from '@appdyno/core';
 
 /**
  * Host tools some measurements need, pinned by version and sha256 (the digests the release publishes);
@@ -43,8 +43,11 @@ export const PLATFORM_TOOLS = {
   terms: 'https://developer.android.com/studio/terms',
 } as const;
 
-const toolDir = () => join(stateDir(), 'tools', `perfetto-${PERFETTO.version}`);
-const adbDir = () => join(stateDir(), 'tools', `platform-tools-${PLATFORM_TOOLS.version}`);
+/** Downloaded tools: a cache of this Mac, the same whatever state folder a server keeps. */
+const toolsDir = () =>
+  process.env.APPDYNO_TOOLS_DIR ?? join(homedir(), 'Library/Caches/appdyno/tools');
+const toolDir = () => join(toolsDir(), `perfetto-${PERFETTO.version}`);
+const adbDir = () => join(toolsDir(), `platform-tools-${PLATFORM_TOOLS.version}`);
 /** Where a person's download of adb is. */
 export const downloadedAdb = () => join(adbDir(), 'platform-tools/adb');
 const asset = () => PERFETTO.assets[`${platform()}-${arch()}`];

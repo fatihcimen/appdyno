@@ -22,6 +22,7 @@ describe('a unit test and this Mac’s own state', () => {
   it('runs on a state folder of its own', () => {
     expect(process.env.APPDYNO_STATE_DIR).toBeTruthy();
     expect(stateDir().startsWith(REAL)).toBe(false);
+    expect(process.env.APPDYNO_TOOLS_DIR?.startsWith(REAL)).toBe(false);
   });
 
   it('cannot read, write or remove there, by either kind of call', async () => {

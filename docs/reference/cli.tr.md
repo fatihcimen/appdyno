@@ -41,6 +41,7 @@ tutulur, böylece iki klasördeki iki terminal bir cihazı paylaşmaz. Veri kayb
 | `--trace-limit-gb N`        | `APPDYNO_TRACE_LIMIT_GB`            | saklanan trace'lerin ve heap dump'ların kaplayabileceği yer, varsayılan 10; eskiler silinir, bir baseline'ın ya da yakın tarihli bir çalıştırmanın andıkları asla |
 | `--http 127.0.0.1:PORT`     |                                     | stdio değil, bu Mac'in loopback'inde Streamable HTTP: aşağıya bakın. Verilmedikçe kapalıdır ve hiçbir değişken onu açmaz                                          |
 |                             | `APPDYNO_HTTP_TOKEN`                | `--http`'nin istediği token, 32 karakter ya da daha uzun: ayarlanmamışsa üretilir ve yazdırılır                                                                   |
+|                             | `APPDYNO_TOOLS_DIR`                 | indirilen araçların tutulduğu yer, durum klasörü ne olursa olsun: varsayılan `~/Library/Caches/appdyno/tools`                                                     |
 |                             | `APPDYNO_SECRETS=a,b`               | hiçbir zaman geri gösterilmeyen ve panoya konmayan değerler                                                                                                       |
 
 `--takeover` olmadan, Android'de UI otomasyonunu tutan ikinci bir araç asla durdurulmaz. Hata, onu tutanı

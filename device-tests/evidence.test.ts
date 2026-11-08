@@ -2,7 +2,7 @@ import { execFile, execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { homedir, networkInterfaces, tmpdir } from 'node:os';
+import { networkInterfaces, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest';
@@ -16,7 +16,6 @@ import {
   simulatorProvider,
   decodePng,
   Devicectl,
-  PERFETTO,
 } from './workspace.js';
 import { untilWithin } from './until.js';
 
@@ -30,12 +29,6 @@ const LONG_MS = 300_000;
 
 const dir = mkdtempSync(join(tmpdir(), 'appdyno-evidence-'));
 const stateDir = join(dir, 'state');
-// the suite has a state folder of its own, the tools downloaded for this machine stay in theirs
-const tools = join(
-  homedir(),
-  `Library/Caches/appdyno/tools/perfetto-${PERFETTO.version}/mac-arm64/trace_processor_shell`,
-);
-if (existsSync(tools)) process.env.APPDYNO_TRACE_PROCESSOR ??= tools;
 process.env.APPDYNO_STATE_DIR = stateDir;
 
 const ffprobe = (() => {

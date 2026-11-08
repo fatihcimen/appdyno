@@ -12,7 +12,7 @@ describe('pinned host tools', () => {
 
   it('never unpacks a download whose sha256 is not the pinned one', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appdyno-tools-'));
-    vi.stubEnv('APPDYNO_STATE_DIR', dir);
+    vi.stubEnv('APPDYNO_TOOLS_DIR', join(dir, 'tools'));
     vi.stubGlobal('fetch', () => Promise.resolve(new Response(Buffer.from('not the release'))));
     const e = await installTools().catch((x: unknown) => x);
     expect((e as { code?: string }).code).toBe('POLICY_DENIED');
@@ -20,7 +20,7 @@ describe('pinned host tools', () => {
   });
 
   it('says how to install the trace processor when it is missing, and honours an explicit path', async () => {
-    vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-tools-')));
+    vi.stubEnv('APPDYNO_TOOLS_DIR', mkdtempSync(join(tmpdir(), 'appdyno-tools-')));
     vi.stubEnv('APPDYNO_TRACE_PROCESSOR', '');
     await expect(traceProcessor()).rejects.toMatchObject({ code: 'UNSUPPORTED' });
     vi.stubEnv('APPDYNO_TRACE_PROCESSOR', '/opt/tp');
@@ -36,10 +36,12 @@ describe('adb, from Google', () => {
   });
 
   it('is never unpacked when its digest differs', async () => {
-    process.env.APPDYNO_STATE_DIR = mkdtempSync(join(tmpdir(), 'appdyno-adb-'));
+    const tools = join(mkdtempSync(join(tmpdir(), 'appdyno-adb-')), 'tools');
+    vi.stubEnv('APPDYNO_TOOLS_DIR', tools);
     vi.stubGlobal('fetch', () => Promise.resolve(new Response(Buffer.from('not the zip'))));
     await expect(installAdb()).rejects.toMatchObject({ code: 'POLICY_DENIED' });
-    expect(existsSync(join(process.env.APPDYNO_STATE_DIR, 'tools'))).toBe(false);
+    expect(existsSync(tools)).toBe(false);
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 });
