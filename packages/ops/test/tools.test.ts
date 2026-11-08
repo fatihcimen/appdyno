@@ -554,16 +554,16 @@ describe('iOS simulators', () => {
     );
   });
 
-  it('says what blocks a device, with the fix, and a read that fails stops nothing', async () => {
+  it('says what blocks a device, with the fix, a read that fails stops nothing, and one it may not drive is asked nothing', async () => {
     const device = new FakeDevice();
-    const listing = async (need: DeviceProvider['need']) => {
+    const listing = async (need: DeviceProvider['need'], policy: Policy = DEFAULT_POLICY) => {
       const provider: DeviceProvider = {
         list: async () => [{ serial: device.serial, state: 'device', ready: true, model: 'Fake' }],
         handles: () => true,
         open: () => device,
         ...(need && { need }),
       };
-      const ctx = new ServerContext(DEFAULT_POLICY, [provider]);
+      const ctx = new ServerContext(policy, [provider]);
       const client = await linkedClient(ctx, () => undefined);
       return (await client.callTool({ name: 'list_devices', arguments: {} })) as Result & {
         structuredContent: { devices: { blocked?: unknown }[] };
@@ -581,6 +581,12 @@ describe('iOS simulators', () => {
       throw new Error('no answer');
     });
     expect(failing.content[0]!.text).toBe(`${device.serial} device Fake`);
+    const asked = vi.fn(async () => 'locked' as const);
+    const other = await listing(asked, { ...DEFAULT_POLICY, devices: /^no-such-device$/ });
+    expect(other.content[0]!.text).toBe(
+      `${device.serial} device Fake (not allowed on this server)`,
+    );
+    expect(asked).not.toHaveBeenCalled();
   });
 
   it("reads an iPhone's block while simctl still lists the simulators, and keeps the drivers' order", async () => {

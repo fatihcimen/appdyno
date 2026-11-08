@@ -22,10 +22,12 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       run: async () => {
         const row = async (d: ListedDevice) => {
           const h = ctx.heldBy(d.serial);
-          const blocked = await ctx.blockOf(d);
+          const allowed = ctx.allowed(d.serial);
+          // a block is read on the device itself, and a device this server may not drive is asked nothing
+          const blocked = allowed ? await ctx.blockOf(d) : undefined;
           return {
             ...d,
-            allowed: ctx.allowed(d.serial),
+            allowed,
             selected: d.serial === ctx.currentSerial,
             ...(h && { heldBy: { pid: h.pid, tool: h.tool, since: h.since } }),
             ...(blocked && { blocked }),
