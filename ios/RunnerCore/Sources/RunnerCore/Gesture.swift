@@ -1,7 +1,9 @@
 import Foundation
 
 /// A point of a finger's path; `t` in the host's milliseconds, or in seconds from the down once on a timeline.
-public typealias GesturePoint = (x: Double, y: Double, t: Double)
+public struct GesturePoint {
+    public let x: Double, y: Double, t: Double
+}
 
 /**
  * A gesture's fingers on one timeline, as the protocol has them: down together at their first sample and
@@ -9,15 +11,18 @@ public typealias GesturePoint = (x: Double, y: Double, t: Double)
  * apart, as what the event synthesizer does with equal offsets was not tried.
  */
 public func gestureTimeline(_ fingers: [[GesturePoint]]) throws -> (fingers: [[GesturePoint]], liftAt: Double) {
-    guard fingers.allSatisfy({ !$0.isEmpty }), let t0 = fingers.compactMap({ $0.first?.t }).min() else {
+    guard fingers.allSatisfy({ !$0.isEmpty }), let start = fingers.compactMap({ $0.first?.t }).min() else {
         throw AgentError("INVALID_ARGUMENT", "a gesture needs a finger, each with a sample")
     }
     var last = 0.0
     let timed = try fingers.map { f -> [GesturePoint] in
         var out: [GesturePoint] = []
-        for (i, s) in f.enumerated() {
-            if i > 0, s.t < f[i - 1].t { throw AgentError("INVALID_ARGUMENT", "a finger's samples go back in time") }
-            out.append((s.x, s.y, i == 0 ? 0 : max((s.t - t0) / 1000, out[i - 1].t + 0.001)))
+        for (index, sample) in f.enumerated() {
+            if index > 0, sample.t < f[index - 1].t {
+                throw AgentError("INVALID_ARGUMENT", "a finger's samples go back in time")
+            }
+            let t = index == 0 ? 0 : max((sample.t - start) / 1000, out[index - 1].t + 0.001)
+            out.append(GesturePoint(x: sample.x, y: sample.y, t: t))
         }
         last = max(last, out[out.count - 1].t)
         return out

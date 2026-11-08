@@ -32,12 +32,12 @@ import XCTest
 
     /// Keys typed through the synthesizer reach whatever has the keyboard, with no element reporting focus.
     static let textAvailable: Bool = {
-        guard let r = recordClass, let p = pathClass,
-              class_getInstanceMethod(r, selInitRecord) != nil, class_getInstanceMethod(r, selAdd) != nil,
-              class_getInstanceMethod(p, selInitText) != nil, class_getInstanceMethod(p, selTypeText) != nil,
+        guard let record = recordClass, let path = pathClass,
+              class_getInstanceMethod(record, selInitRecord) != nil, class_getInstanceMethod(record, selAdd) != nil,
+              class_getInstanceMethod(path, selInitText) != nil, class_getInstanceMethod(path, selTypeText) != nil,
               XCUIDevice.shared.responds(to: selSynth),
-              let s = XCUIDevice.shared.perform(selSynth)?.takeUnretainedValue(),
-              s.responds(to: selSynthesize)
+              let synth = XCUIDevice.shared.perform(selSynth)?.takeUnretainedValue(),
+              synth.responds(to: selSynthesize)
         else { return false }
         return true
     }()
@@ -45,13 +45,13 @@ import XCTest
     /// Everything a gesture along its samples needs exists. No public call can do one, so APPDYNO_FAST_TAP=0
     /// does not turn this off.
     static let gestureAvailable: Bool = {
-        guard let r = recordClass, let p = pathClass,
-              class_getInstanceMethod(r, selInitRecord) != nil, class_getInstanceMethod(r, selAdd) != nil,
-              class_getInstanceMethod(p, selInitPath) != nil, class_getInstanceMethod(p, selMove) != nil,
-              class_getInstanceMethod(p, selLift) != nil,
+        guard let record = recordClass, let path = pathClass,
+              class_getInstanceMethod(record, selInitRecord) != nil, class_getInstanceMethod(record, selAdd) != nil,
+              class_getInstanceMethod(path, selInitPath) != nil, class_getInstanceMethod(path, selMove) != nil,
+              class_getInstanceMethod(path, selLift) != nil,
               XCUIDevice.shared.responds(to: selSynth),
-              let s = XCUIDevice.shared.perform(selSynth)?.takeUnretainedValue(),
-              s.responds(to: selSynthesize)
+              let synth = XCUIDevice.shared.perform(selSynth)?.takeUnretainedValue(),
+              synth.responds(to: selSynthesize)
         else { return false }
         return true
     }()
@@ -60,26 +60,27 @@ import XCTest
     static let available: Bool = {
         // on unless APPDYNO_FAST_TAP=0: about half the time of XCUI's tap on a phone (313 vs 603 ms)
         guard ProcessInfo.processInfo.environment["APPDYNO_FAST_TAP"] != "0",
-              let r = recordClass, let p = pathClass,
-              class_getInstanceMethod(r, selInitRecord) != nil, class_getInstanceMethod(r, selAdd) != nil,
-              class_getInstanceMethod(p, selInitPath) != nil, class_getInstanceMethod(p, selLift) != nil,
+              let record = recordClass, let path = pathClass,
+              class_getInstanceMethod(record, selInitRecord) != nil, class_getInstanceMethod(record, selAdd) != nil,
+              class_getInstanceMethod(path, selInitPath) != nil, class_getInstanceMethod(path, selLift) != nil,
               XCUIDevice.shared.responds(to: selSynth),
-              let s = XCUIDevice.shared.perform(selSynth)?.takeUnretainedValue(),
-              s.responds(to: selSynthesize)
+              let synth = XCUIDevice.shared.perform(selSynth)?.takeUnretainedValue(),
+              synth.responds(to: selSynthesize)
         else { return false }
         return true
     }()
 
     private static func imp<T>(_ obj: AnyObject, _ sel: Selector, _: T.Type) -> T {
-        unsafeBitCast((obj as! NSObject).method(for: sel), to: T.self)
+        unsafeBitCast(class_getMethodImplementation(object_getClass(obj), sel), to: T.self)
     }
 
     /// Taps at `p` (screen points); false when the synthesizer refused it.
     static func tap(_ p: CGPoint, orientation: Int) -> Bool {
-        guard available, let r = recordClass, let pc = pathClass else { return false }
-        let rawRecord = r.alloc() as AnyObject
-        let record = imp(rawRecord, selInitRecord, InitRecord.self)(rawRecord, selInitRecord, "tap" as NSString, orientation)
-        let rawPath = pc.alloc() as AnyObject
+        guard available, let recordType = recordClass, let pathType = pathClass else { return false }
+        let rawRecord = recordType.alloc() as AnyObject
+        let initRecord = imp(rawRecord, selInitRecord, InitRecord.self)
+        let record = initRecord(rawRecord, selInitRecord, "tap" as NSString, orientation)
+        let rawPath = pathType.alloc() as AnyObject
         let path = imp(rawPath, selInitPath, InitPath.self)(rawPath, selInitPath, p, 0)
         imp(path, selLift, Lift.self)(path, selLift, 0.05)
         imp(record, selAdd, AddPath.self)(record, selAdd, path)
@@ -88,13 +89,17 @@ import XCTest
 
     /// One path per finger on a `gestureTimeline`, all in one record; false when the synthesizer refused it.
     static func gesture(_ fingers: [[GesturePoint]], liftAt: Double, orientation: Int) -> Bool {
-        guard gestureAvailable, let r = recordClass, let pc = pathClass else { return false }
-        let rawRecord = r.alloc() as AnyObject
-        let record = imp(rawRecord, selInitRecord, InitRecord.self)(rawRecord, selInitRecord, "gesture" as NSString, orientation)
+        guard gestureAvailable, let recordType = recordClass, let pathType = pathClass else { return false }
+        let rawRecord = recordType.alloc() as AnyObject
+        let initRecord = imp(rawRecord, selInitRecord, InitRecord.self)
+        let record = initRecord(rawRecord, selInitRecord, "gesture" as NSString, orientation)
         for f in fingers {
-            let rawPath = pc.alloc() as AnyObject
-            let path = imp(rawPath, selInitPath, InitPath.self)(rawPath, selInitPath, CGPoint(x: f[0].x, y: f[0].y), f[0].t)
-            for s in f.dropFirst() { imp(path, selMove, MoveTo.self)(path, selMove, CGPoint(x: s.x, y: s.y), s.t) }
+            let rawPath = pathType.alloc() as AnyObject
+            let initPath = imp(rawPath, selInitPath, InitPath.self)
+            let path = initPath(rawPath, selInitPath, CGPoint(x: f[0].x, y: f[0].y), f[0].t)
+            for sample in f.dropFirst() {
+                imp(path, selMove, MoveTo.self)(path, selMove, CGPoint(x: sample.x, y: sample.y), sample.t)
+            }
             imp(path, selLift, Lift.self)(path, selLift, liftAt)
             imp(record, selAdd, AddPath.self)(record, selAdd, path)
         }
@@ -104,10 +109,11 @@ import XCTest
     /// Types `text` as key events, `perSecond` of them a second (the synthesizer spaces them itself); false
     /// when the synthesizer refused it.
     static func type(_ text: String, orientation: Int, perSecond: UInt64 = 60) -> Bool {
-        guard textAvailable, let r = recordClass, let pc = pathClass else { return false }
-        let rawRecord = r.alloc() as AnyObject
-        let record = imp(rawRecord, selInitRecord, InitRecord.self)(rawRecord, selInitRecord, "type" as NSString, orientation)
-        let rawPath = pc.alloc() as AnyObject
+        guard textAvailable, let recordType = recordClass, let pathType = pathClass else { return false }
+        let rawRecord = recordType.alloc() as AnyObject
+        let initRecord = imp(rawRecord, selInitRecord, InitRecord.self)
+        let record = initRecord(rawRecord, selInitRecord, "type" as NSString, orientation)
+        let rawPath = pathType.alloc() as AnyObject
         let path = imp(rawPath, selInitText, InitText.self)(rawPath, selInitText)
         imp(path, selTypeText, TypeText.self)(path, selTypeText, text as NSString, 0, perSecond, true)
         imp(record, selAdd, AddPath.self)(record, selAdd, path)
@@ -124,7 +130,9 @@ import XCTest
         imp(synth, selSynthesize, Synthesize.self)(synth, selSynthesize, record, completion as AnyObject)
         let end = Date().addingTimeInterval(seconds)
         // the completion may come on this (main) thread: turn the run loop, never block it
-        while result.withLock({ $0 }) == nil, Date() < end { RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.005)) }
+        while result.withLock({ $0 }) == nil, Date() < end {
+            RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.005))
+        }
         return result.withLock { $0 } ?? false
     }
 }

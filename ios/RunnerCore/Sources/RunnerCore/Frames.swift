@@ -28,7 +28,9 @@ public func encodeBinary(id: UInt32, _ data: Data) -> Data {
     return out
 }
 
-private func u32(_ v: UInt32) -> [UInt8] { [UInt8(v >> 24 & 0xff), UInt8(v >> 16 & 0xff), UInt8(v >> 8 & 0xff), UInt8(v & 0xff)] }
+private func u32(_ value: UInt32) -> [UInt8] {
+    [UInt8(value >> 24 & 0xff), UInt8(value >> 16 & 0xff), UInt8(value >> 8 & 0xff), UInt8(value & 0xff)]
+}
 
 private func header(_ length: Int, _ type: UInt8) -> Data {
     var d = Data(u32(UInt32(length)))

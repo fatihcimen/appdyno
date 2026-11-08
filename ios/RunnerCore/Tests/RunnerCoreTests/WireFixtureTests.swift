@@ -1,5 +1,5 @@
-import XCTest
 @testable import RunnerCore
+import XCTest
 
 /// A JSON file of the repository: the fixtures both sides' tests read.
 func repoJSON(_ path: String) throws -> Wire {
@@ -10,11 +10,12 @@ func repoJSON(_ path: String) throws -> Wire {
 }
 
 extension Node {
-    init(wire w: Wire) {
-        let b = w["b"] as! [Int]
-        self.init(parent: w["p"] as! Int, window: w["w"] as! Int, type: w["c"] as! String, id: w["id"] as? String,
+    init(wire w: Wire) throws {
+        let b = try XCTUnwrap(w["b"] as? [Int])
+        self.init(parent: try XCTUnwrap(w["p"] as? Int), window: try XCTUnwrap(w["w"] as? Int),
+                  type: try XCTUnwrap(w["c"] as? String), id: w["id"] as? String,
                   text: w["t"] as? String, label: w["d"] as? String, hint: w["h"] as? String,
-                  left: b[0], top: b[1], right: b[2], bottom: b[3], flags: w["f"] as! Int)
+                  left: b[0], top: b[1], right: b[2], bottom: b[3], flags: try XCTUnwrap(w["f"] as? Int))
     }
 }
 
@@ -48,19 +49,19 @@ final class WireFixtureTests: XCTestCase {
 
     func testTheOtherActionsAsTheHostSendsThem() throws {
         func action(_ name: String) throws -> Action { try Action(XCTUnwrap(params(name)["action"] as? Wire)) }
-        guard case let .doubleTap(x, _) = try action("act.doubleTap") else { return XCTFail("doubleTap") }
+        guard case let .doubleTap(x, _) = try action("act.doubleTap") else { XCTFail("doubleTap"); return }
         XCTAssertEqual(x, 10)
-        guard case let .longPress(_, _, press) = try action("act.longPress") else { return XCTFail("longPress") }
+        guard case let .longPress(_, _, press) = try action("act.longPress") else { XCTFail("longPress"); return }
         XCTAssertEqual(press, 800)
-        guard case let .swipe(x0, y0, x1, y1, swipe) = try action("act.swipe") else { return XCTFail("swipe") }
-        XCTAssertEqual([x0, y0, x1, y1, swipe], [1, 2, 3, 4, 300])
-        guard case let .gesture(pointers) = try action("act.gesture") else { return XCTFail("gesture") }
+        guard case let .swipe(fromX, fromY, toX, toY, swipe) = try action("act.swipe") else { XCTFail("swipe"); return }
+        XCTAssertEqual([fromX, fromY, toX, toY, swipe], [1, 2, 3, 4, 300])
+        guard case let .gesture(pointers) = try action("act.gesture") else { XCTFail("gesture"); return }
         XCTAssertEqual(pointers.map(\.count), [2, 1])
         XCTAssertEqual(pointers[0][1].t, 100)
-        guard case let .key(key, none) = try action("act.key") else { return XCTFail("key") }
+        guard case let .key(key, none) = try action("act.key") else { XCTFail("key"); return }
         XCTAssertEqual(key, "enter")
         XCTAssertEqual(none, [])
-        guard case let .key(letter, held) = try action("act.shortcut") else { return XCTFail("shortcut") }
+        guard case let .key(letter, held) = try action("act.shortcut") else { XCTFail("shortcut"); return }
         XCTAssertEqual(letter, "a")
         XCTAssertEqual(held, ["command", "shift"])
         XCTAssertNil(try AfterRequest(params("act.doubleTap")).settle)
@@ -124,8 +125,9 @@ final class WireFixtureTests: XCTestCase {
     }
 
     func testAHelloIsWhatTheHostTakes() throws {
-        same(helloWire(agentVersion: "0.0.0", osVersion: "26.5", model: "iPhone17,3", w: 402, h: 874, density: 3, rotation: 0,
-                       pid: 1234, idleShimChecked: true), try result("hello.ios"))
+        let hello = Hello(agentVersion: "0.0.0", osVersion: "26.5", model: "iPhone17,3", w: 402, h: 874, density: 3,
+                          rotation: 0, pid: 1234, idleShimChecked: true)
+        same(hello.wire, try result("hello.ios"))
     }
 
     func testATreeIsWhatTheHostTakes() throws {
@@ -136,7 +138,8 @@ final class WireFixtureTests: XCTestCase {
     }
 
     func testASettleATextAndAPictureAreWhatTheHostTakes() throws {
-        same(settleWire(settled: true, ms: 240, reads: 3, quietMs: 200), try XCTUnwrap(result("act.settled")["settle"] as? Wire))
+        same(settleWire(settled: true, ms: 240, reads: 3, quietMs: 200),
+             try XCTUnwrap(result("act.settled")["settle"] as? Wire))
         same(settleWire(settled: true, ms: 240, reads: 3, quietMs: 200, idleMs: 800),
              try XCTUnwrap(result("act.watched")["settle"] as? Wire))
         same(textWire(focusMs: 2000, verified: nil), try result("text.keys"))
@@ -157,10 +160,10 @@ final class WireFixtureTests: XCTestCase {
     func testAnErrorIsWhatTheHostTakes() throws {
         let errors = try repoJSON("packages/protocol/fixtures/errors.json")
         for (name, value) in errors {
-            let e = try XCTUnwrap(value as? Wire, name)
-            let data = try XCTUnwrap(e["data"] as? Wire, name)
-            same(AgentError(try XCTUnwrap(data["code"] as? String), try XCTUnwrap(e["message"] as? String),
-                            hint: data["hint"] as? String).json, e)
+            let expected = try XCTUnwrap(value as? Wire, name)
+            let data = try XCTUnwrap(expected["data"] as? Wire, name)
+            same(AgentError(try XCTUnwrap(data["code"] as? String), try XCTUnwrap(expected["message"] as? String),
+                            hint: data["hint"] as? String).json, expected)
         }
         same(unknownMethod("nope").json, try XCTUnwrap(errors["unknownMethod"] as? Wire))
     }

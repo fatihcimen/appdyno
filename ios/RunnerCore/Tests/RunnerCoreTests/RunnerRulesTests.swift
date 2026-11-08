@@ -1,5 +1,5 @@
-import XCTest
 @testable import RunnerCore
+import XCTest
 
 /// The rules the runner shares with the host's direct read of a simulator, the same file in both suites.
 final class RunnerRulesTests: XCTestCase {
@@ -36,14 +36,15 @@ final class RunnerRulesTests: XCTestCase {
                 quietMs: try XCTUnwrap(t["quietMs"] as? Int, why),
                 maxMs: try XCTUnwrap(t["maxMs"] as? Int, why),
                 before: t["before"] as? String,
-                read: {
-                    now += readMs
-                    defer { read += 1 }
-                    return screens[min(read, screens.count - 1)]
-                },
-                same: ==,
-                busy: { busy.contains($0) },
-                cancelled: { false })
+                probe: SettleProbe(
+                    read: {
+                        now += readMs
+                        defer { read += 1 }
+                        return screens[min(read, screens.count - 1)]
+                    },
+                    same: ==,
+                    busy: { busy.contains($0) },
+                    cancelled: { false }))
             XCTAssertEqual(outcome.settled, t["settled"] as? Bool, why)
             XCTAssertEqual(outcome.reads, t["reads"] as? Int, why)
             XCTAssertEqual(outcome.elapsedMs, t["elapsedMs"] as? Int, why)
@@ -60,15 +61,17 @@ final class RunnerRulesTests: XCTestCase {
 
     func testTheSameLayout() throws {
         for c in try cases("sameLayout") {
-            XCTAssertEqual(sameLayout(try nodes(c, "a"), try nodes(c, "b")), c["same"] as? Bool, c["why"] as? String ?? "")
+            XCTAssertEqual(sameLayout(try nodes(c, "a"), try nodes(c, "b")), c["same"] as? Bool,
+                           c["why"] as? String ?? "")
         }
     }
 
     func testWhatATapCanReach() throws {
         for c in try cases("actionable") {
-            let n = try nodes(c)
+            let screen = try nodes(c)
             for p in try XCTUnwrap(c["points"] as? [Wire]) {
-                XCTAssertEqual(actionable(n, x: p["x"] as! Int, y: p["y"] as! Int), p["actionable"] as? Bool, p["why"] as? String ?? "")
+                let x = try XCTUnwrap(p["x"] as? Int), y = try XCTUnwrap(p["y"] as? Int)
+                XCTAssertEqual(actionable(screen, x: x, y: y), p["actionable"] as? Bool, p["why"] as? String ?? "")
             }
         }
         XCTAssertTrue(actionable(nil, x: 0, y: 0)) // no screen known: careful
@@ -80,10 +83,13 @@ final class RunnerRulesTests: XCTestCase {
         }
         let c = try XCTUnwrap(rules()["containerBars"] as? Wire)
         let screen = try XCTUnwrap(c["screen"] as? [String: Int])
-        XCTAssertEqual(containerBars(try nodes(c), screenW: screen["w"]!, screenH: screen["h"]!), c["bars"] as? [Int])
+        let screenW = try XCTUnwrap(screen["w"]), screenH = try XCTUnwrap(screen["h"])
+        XCTAssertEqual(containerBars(try nodes(c), screenW: screenW, screenH: screenH), c["bars"] as? [Int])
     }
 
     func testAnAlert() throws {
-        for c in try cases("hasAlert") { XCTAssertEqual(hasAlert(try nodes(c)), c["has"] as? Bool, c["why"] as? String ?? "") }
+        for c in try cases("hasAlert") {
+            XCTAssertEqual(hasAlert(try nodes(c)), c["has"] as? Bool, c["why"] as? String ?? "")
+        }
     }
 }

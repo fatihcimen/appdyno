@@ -1,7 +1,7 @@
 import Foundation
 
-/// One request's work: run on the main thread in arrival order, stopped by its deadline or a cancel. Unchecked: its params
-/// are never changed once made, and `cancelled` is behind its lock.
+/// One request's work: run on the main thread in arrival order, stopped by its deadline or a cancel. Unchecked: its
+/// params are never changed once made, and `cancelled` is behind its lock.
 public final class Job: @unchecked Sendable {
     public let id: Int
     public let method: String
@@ -26,9 +26,9 @@ public final class Job: @unchecked Sendable {
     public var over: Bool { cancelled || Date() >= deadline }
 }
 
-/// The requests one connection has in flight, kept on the server's one queue. A host's ids start at 1 on each connection,
-/// so an id names a job only on its own: one table for the process let a host's cancel stop another's job, and the end of
-/// either take both off it.
+/// The requests one connection has in flight, kept on the server's one queue. A host's ids start at 1 on each
+/// connection, so an id names a job only on its own: one table for the process let a host's cancel stop another's job,
+/// and the end of either take both off it.
 public final class JobTable {
     private var jobs: [Int: Job] = [:]
 

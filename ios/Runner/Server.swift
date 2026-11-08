@@ -26,9 +26,9 @@ final class MainPump: Sendable {
     @MainActor func run(idleExit: TimeInterval) {
         var lastWork = Date()
         while true {
-            let (next, done) = state.withLock { s -> (Work?, Bool) in
-                let next = s.jobs.isEmpty ? nil : s.jobs.removeFirst()
-                return (next, s.stopped && s.jobs.isEmpty)
+            let (next, done) = state.withLock { locked -> (Work?, Bool) in
+                let next = locked.jobs.isEmpty ? nil : locked.jobs.removeFirst()
+                return (next, locked.stopped && locked.jobs.isEmpty)
             }
             if let next { lastWork = Date(); next(); continue }
             if done { return }
@@ -44,11 +44,11 @@ final class MainPump: Sendable {
     }
 }
 
-/// TCP server, frames in, JSON-RPC requests out to the handler, replies back: on the loopback, which a cable reaches, and on a
-/// phone paired for Wi-Fi by a tunnel too, which is how a Mac reaches one with none. No listener can be kept to a tunnel, as
-/// its interface comes after the listener and its path names the Wi-Fi it rides on as well: so a connection is read only when
-/// it came by the loopback, or by an interface of a tunnel's kind between a tunnel's two ends, and any other is closed
-/// unread, a VPN's among them.
+/// TCP server, frames in, JSON-RPC requests out to the handler, replies back: on the loopback, which a cable reaches,
+/// and on a phone paired for Wi-Fi by a tunnel too, which is how a Mac reaches one with none. No listener can be kept
+/// to a tunnel, as its interface comes after the listener and its path names the Wi-Fi it rides on as well: so a
+/// connection is read only when it came by the loopback, or by an interface of a tunnel's kind between a tunnel's two
+/// ends, and any other is closed unread, a VPN's among them.
 final class Server: Sendable {
     private let listeners: [NWListener]
     private let queue = DispatchQueue(label: "server")
@@ -60,13 +60,14 @@ final class Server: Sendable {
 
     init(port: UInt16, token: String, tunnels: Bool, pump: MainPump, hello: @escaping @Sendable () -> [String: Any],
          handle: @escaping @MainActor @Sendable (Job) throws -> Reply) throws {
+        guard let endpointPort = NWEndpoint.Port(rawValue: port) else { throw NWError.posix(.EINVAL) }
         let loopback = NWParameters.tcp
-        loopback.requiredLocalEndpoint = NWEndpoint.hostPort(host: .ipv4(.loopback), port: NWEndpoint.Port(rawValue: port)!)
+        loopback.requiredLocalEndpoint = NWEndpoint.hostPort(host: .ipv4(.loopback), port: endpointPort)
         loopback.allowLocalEndpointReuse = true
         let tunnel = NWParameters.tcp
         tunnel.allowLocalEndpointReuse = true
         listeners = [try NWListener(using: loopback)]
-            + (tunnels ? [try NWListener(using: tunnel, on: NWEndpoint.Port(rawValue: port)!)] : [])
+            + (tunnels ? [try NWListener(using: tunnel, on: endpointPort)] : [])
         self.token = token
         self.pump = pump
         self.hello = hello
@@ -113,90 +114,98 @@ final class Server: Sendable {
         init(connection: NWConnection) { self.connection = connection }
     }
 
-    private func receive(_ s: Session) {
-        s.connection.receive(minimumIncompleteLength: 1, maximumLength: 1 << 20) { [weak self] data, _, done, error in
+    private func receive(_ session: Session) {
+        session.connection.receive(minimumIncompleteLength: 1,
+                                   maximumLength: 1 << 20) { [weak self] data, _, done, error in
             guard let self else { return }
             if let data, !data.isEmpty {
                 do {
-                    for frame in try s.decoder.push(data) {
+                    for frame in try session.decoder.push(data) {
                         guard case let .json(payload) = frame else { throw FrameError.unknownType(1) }
-                        try self.request(payload, s)
+                        try self.request(payload, session)
                     }
                 } catch {
-                    s.connection.cancel()
+                    session.connection.cancel()
                     return
                 }
             }
-            if done || error != nil { s.connection.cancel(); return }
-            self.receive(s)
+            if done || error != nil { session.connection.cancel(); return }
+            self.receive(session)
         }
     }
 
-    private func request(_ payload: Data, _ s: Session) throws {
+    private func request(_ payload: Data, _ session: Session) throws {
         guard let msg = try JSONSerialization.jsonObject(with: payload) as? [String: Any],
               let id = (msg["id"] as? NSNumber)?.intValue, let method = msg["method"] as? String
         else { throw FrameError.unknownType(0) }
         let params = msg["params"] as? [String: Any] ?? [:]
-        if !s.greeted {
+        if !session.greeted {
             guard method == "hello", let t = params["token"] as? String, t.count >= 16, sameToken(t, token) else {
-                s.connection.cancel()
+                session.connection.cancel()
                 return
             }
-            s.greeted = true
-            send(s, Self.frame(id: id, Reply(result: hello())))
+            session.greeted = true
+            send(session, try Self.frame(id: id, Reply(result: hello())))
             return
         }
         pump.touch()
         switch method {
         case "ping":
             let now = Date()
-            send(s, Self.frame(id: id, Reply(result: ["uptimeMs": Int(now.timeIntervalSince(startedAt) * 1000),
-                                                      "atMs": now.timeIntervalSince1970 * 1000])))
+            let result: [String: Any] = ["uptimeMs": Int(now.timeIntervalSince(startedAt) * 1000),
+                                         "atMs": now.timeIntervalSince1970 * 1000]
+            send(session, try Self.frame(id: id, Reply(result: result)))
         case "cancel":
-            s.jobs.cancel(try OneValue.id(params))
-            send(s, Self.frame(id: id, Reply(result: [:])))
+            session.jobs.cancel(try OneValue.id(params))
+            send(session, try Self.frame(id: id, Reply(result: [:])))
         default:
             let job = try Job(id: id, method: method, params: params)
-            s.jobs.add(job)
+            session.jobs.add(job)
             pump.submit { [handle, queue] in
-                let answer = Self.answer(job, handle)
+                let answer = try? Self.answer(job, handle)
                 queue.async {
-                    s.jobs.remove(job)
-                    s.connection.send(content: answer, completion: .contentProcessed { _ in })
+                    session.jobs.remove(job)
+                    // an answer that cannot be written ends the connection, as a request that cannot be read does
+                    guard let answer else { session.connection.cancel(); return }
+                    session.connection.send(content: answer, completion: .contentProcessed { _ in })
                 }
             }
         }
     }
 
     /// The job's answer as the bytes that go back: made on the main actor, so that only bytes leave it.
-    @MainActor private static func answer(_ job: Job, _ handle: (Job) throws -> Reply) -> Data {
-        var reply: Reply?
-        var failure: AgentError?
+    @MainActor private static func answer(_ job: Job, _ handle: (Job) throws -> Reply) throws -> Data {
+        var outcome: Result<Reply, AgentError>
         if job.cancelled {
-            failure = AgentError("CANCELLED", "cancelled before it started")
+            outcome = .failure(AgentError("CANCELLED", "cancelled before it started"))
         } else if job.over {
-            failure = AgentError("TIMEOUT", "the deadline passed before the work started")
+            outcome = .failure(AgentError("TIMEOUT", "the deadline passed before the work started"))
         } else {
-            do { reply = try handle(job) } catch let e as AgentError { failure = e } catch {
-                failure = AgentError("INTERNAL", "\(error)")
+            do { outcome = .success(try handle(job)) } catch let error as AgentError {
+                outcome = .failure(error)
+            } catch {
+                outcome = .failure(AgentError("INTERNAL", "\(error)"))
             }
         }
-        if failure == nil, job.cancelled { failure = AgentError("CANCELLED", "cancelled") }
-        if let failure {
-            return encodeJSON(try! JSONSerialization.data(withJSONObject: ["jsonrpc": "2.0", "id": job.id, "error": failure.json]))
+        if case .success = outcome, job.cancelled { outcome = .failure(AgentError("CANCELLED", "cancelled")) }
+        switch outcome {
+        case let .success(reply):
+            return try frame(id: job.id, reply)
+        case let .failure(failure):
+            let body: [String: Any] = ["jsonrpc": "2.0", "id": job.id, "error": failure.json]
+            return encodeJSON(try JSONSerialization.data(withJSONObject: body))
         }
-        return frame(id: job.id, reply!)
     }
 
-    private static func frame(id: Int, _ r: Reply) -> Data {
+    private static func frame(id: Int, _ reply: Reply) throws -> Data {
         var out = Data()
-        if let b = r.binary { out.append(encodeBinary(id: UInt32(id), b)) }
-        let body: [String: Any] = ["jsonrpc": "2.0", "id": id, "result": r.result]
-        out.append(encodeJSON(try! JSONSerialization.data(withJSONObject: body)))
+        if let b = reply.binary { out.append(encodeBinary(id: UInt32(id), b)) }
+        let body: [String: Any] = ["jsonrpc": "2.0", "id": id, "result": reply.result]
+        out.append(encodeJSON(try JSONSerialization.data(withJSONObject: body)))
         return out
     }
 
-    private func send(_ s: Session, _ frame: Data) {
-        s.connection.send(content: frame, completion: .contentProcessed { _ in })
+    private func send(_ session: Session, _ frame: Data) {
+        session.connection.send(content: frame, completion: .contentProcessed { _ in })
     }
 }

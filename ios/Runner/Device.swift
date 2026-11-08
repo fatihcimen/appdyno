@@ -26,13 +26,16 @@ import XCTest
         "contacts": .contacts, "calendar": .calendar, "reminders": .reminders, "photos": .photos,
         "microphone": .microphone, "camera": .camera, "media-library": .mediaLibrary, "homekit": .homeKit,
         "focus": .focus, "local-network": .localNetwork, "bluetooth": .bluetooth,
-        "keyboard-network": .keyboardNetwork, "location": .location, "health": .health, "tracking": .userTracking,
+        "keyboard-network": .keyboardNetwork, "location": .location, "health": .health, "tracking": .userTracking
     ]
 
     /// The app asks again, as if it never had; one that runs may be ended by it.
     func resetPermission(_ pkg: String, _ service: String) throws {
         guard let resource = Device.resources[service] else {
-            throw AgentError("INVALID_ARGUMENT", "a permission iOS resets: \(Device.resources.keys.sorted().joined(separator: ", ")), not \(service)")
+            throw AgentError(
+                "INVALID_ARGUMENT",
+                "a permission iOS resets: \(Device.resources.keys.sorted().joined(separator: ", ")), not \(service)"
+            )
         }
         XCUIApplication(bundleIdentifier: pkg).resetAuthorizationStatus(for: resource)
     }

@@ -7,8 +7,8 @@ import Foundation
 public typealias Wire = [String: Any]
 
 func required<T>(_ p: Wire, _ key: String) throws -> T {
-    guard let v = p[key] as? T else { throw AgentError("INVALID_ARGUMENT", "\(key) is required") }
-    return v
+    guard let value = p[key] as? T else { throw AgentError("INVALID_ARGUMENT", "\(key) is required") }
+    return value
 }
 
 public func requiredNumber(_ p: Wire, _ key: String) throws -> Double { (try required(p, key) as NSNumber).doubleValue }
@@ -29,7 +29,9 @@ public enum OneValue {
 
     public static func id(_ p: Wire) throws -> Int { try requiredInt(p, "id") }
 
-    public static func point(_ p: Wire) throws -> (x: Double, y: Double) { (try requiredNumber(p, "x"), try requiredNumber(p, "y")) }
+    public static func point(_ p: Wire) throws -> (x: Double, y: Double) {
+        (try requiredNumber(p, "x"), try requiredNumber(p, "y"))
+    }
 }
 
 public struct TreeRequest {
@@ -52,39 +54,44 @@ public struct AfterRequest {
     public let before: String?
 
     public init(_ p: Wire) throws {
-        settle = try (p["settle"] as? Wire).map { SettleRequest(quietMs: try requiredInt($0, "quietMs"), maxMs: try requiredInt($0, "maxMs")) }
+        settle = try (p["settle"] as? Wire).map {
+            SettleRequest(quietMs: try requiredInt($0, "quietMs"), maxMs: try requiredInt($0, "maxMs"))
+        }
         read = try requiredString(p, "read")
         before = p["before"] as? String
     }
 }
 
 public enum Action {
-    public typealias Sample = (x: Double, y: Double, t: Double)
+    public typealias Sample = GesturePoint
 
     case tap(x: Double, y: Double)
     case doubleTap(x: Double, y: Double)
     case longPress(x: Double, y: Double, durationMs: Double)
-    case swipe(x0: Double, y0: Double, x1: Double, y1: Double, durationMs: Double)
+    case swipe(fromX: Double, fromY: Double, toX: Double, toY: Double, durationMs: Double)
     case gesture(pointers: [[Sample]])
     case key(String, modifiers: [String])
 
-    public init(_ a: Wire) throws {
-        func x(_ d: Wire = a) throws -> Double { try requiredNumber(d, "x") }
-        func y(_ d: Wire = a) throws -> Double { try requiredNumber(d, "y") }
-        switch a["kind"] as? String {
+    public init(_ wire: Wire) throws {
+        func x(_ d: Wire = wire) throws -> Double { try requiredNumber(d, "x") }
+        func y(_ d: Wire = wire) throws -> Double { try requiredNumber(d, "y") }
+        switch wire["kind"] as? String {
         case "tap": self = .tap(x: try x(), y: try y())
         case "doubleTap": self = .doubleTap(x: try x(), y: try y())
-        case "longPress": self = .longPress(x: try x(), y: try y(), durationMs: try requiredNumber(a, "durationMs"))
+        case "longPress": self = .longPress(x: try x(), y: try y(), durationMs: try requiredNumber(wire, "durationMs"))
         case "swipe":
-            let from: Wire = try required(a, "from"), to: Wire = try required(a, "to")
-            self = .swipe(x0: try x(from), y0: try y(from), x1: try x(to), y1: try y(to), durationMs: try requiredNumber(a, "durationMs"))
+            let from: Wire = try required(wire, "from"), to: Wire = try required(wire, "to")
+            self = .swipe(fromX: try x(from), fromY: try y(from), toX: try x(to), toY: try y(to),
+                          durationMs: try requiredNumber(wire, "durationMs"))
         case "gesture":
-            let pointers: [[Wire]] = try required(a, "pointers")
+            let pointers: [[Wire]] = try required(wire, "pointers")
             self = .gesture(pointers: try pointers.map { f in
-                try f.map { s in (x: try x(s), y: try y(s), t: try requiredNumber(s, "t")) }
+                try f.map { sample in
+                    GesturePoint(x: try x(sample), y: try y(sample), t: try requiredNumber(sample, "t"))
+                }
             })
-        case "key": self = .key(try requiredString(a, "key"), modifiers: a["modifiers"] as? [String] ?? [])
-        default: throw AgentError("INVALID_ARGUMENT", "unknown action \(a["kind"] ?? "nil")")
+        case "key": self = .key(try requiredString(wire, "key"), modifiers: wire["modifiers"] as? [String] ?? [])
+        default: throw AgentError("INVALID_ARGUMENT", "unknown action \(wire["kind"] ?? "nil")")
         }
     }
 
@@ -149,6 +156,10 @@ public struct AuditRequest {
 public struct WaitRequest {
     public let since: String?
     public let timeoutMs: Int, minMs: Int
+
+    init(since: String?, timeoutMs: Int, minMs: Int) {
+        self.since = since; self.timeoutMs = timeoutMs; self.minMs = minMs
+    }
 
     public init(_ p: Wire) throws {
         since = p["since"] as? String

@@ -7,7 +7,7 @@ public let protocolMajor = 2
 public let errorCodes = [
     "TIMEOUT", "CANCELLED", "DEVICE_GONE", "AGENT_UNAVAILABLE", "AGENT_CONFLICT", "AGENT_VERSION_MISMATCH",
     "UNSUPPORTED", "PERMISSION_REQUIRED", "NOT_FOUND", "NO_FOCUS", "APP_NOT_RUNNING", "POLICY_DENIED",
-    "INVALID_ARGUMENT", "STALE", "SCREEN_OFF", "INTERNAL",
+    "INVALID_ARGUMENT", "STALE", "SCREEN_OFF", "INTERNAL"
 ]
 
 public struct AgentError: Error {
@@ -33,11 +33,11 @@ public struct AgentError: Error {
 public func unknownMethod(_ method: String) -> AgentError { AgentError("UNSUPPORTED", "unknown method \(method)") }
 
 /// Constant-time comparison of the launch token.
-public func sameToken(_ a: String, _ b: String) -> Bool {
-    let x = Array(a.utf8), y = Array(b.utf8)
+public func sameToken(_ given: String, _ expected: String) -> Bool {
+    let x = Array(given.utf8), y = Array(expected.utf8)
     var diff = x.count ^ y.count
-    for i in 0 ..< max(x.count, y.count) {
-        diff |= Int((i < x.count ? x[i] : 0) ^ (i < y.count ? y[i] : 0))
+    for index in 0 ..< max(x.count, y.count) {
+        diff |= Int((index < x.count ? x[index] : 0) ^ (index < y.count ? y[index] : 0))
     }
     return diff == 0
 }

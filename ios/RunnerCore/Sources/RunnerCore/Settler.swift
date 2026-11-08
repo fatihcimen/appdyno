@@ -11,6 +11,15 @@ public enum SettleTimes {
     public static let alertAppearMs = 450
 }
 
+/// What a settle asks of its caller: a read of the screen, whether two reads show one layout, whether a read shows
+/// the screen busy, and whether the caller has stopped waiting.
+public struct SettleProbe<S> {
+    public let read: () -> S
+    public let same: (S, S) -> Bool
+    public let busy: (S) -> Bool
+    public let cancelled: () -> Bool
+}
+
 public struct SettleOutcome<S> {
     public let settled: Bool
     public let reads: Int
@@ -31,27 +40,26 @@ public final class Settler {
         self.sleep = sleep
     }
 
-    public func run<S>(actionAt: Int, quietMs: Int, maxMs: Int, before: S?, read: () -> S,
-                       same: (S, S) -> Bool, busy: (S) -> Bool, cancelled: () -> Bool) -> SettleOutcome<S> {
+    public func run<S>(actionAt: Int, quietMs: Int, maxMs: Int, before: S?, probe: SettleProbe<S>) -> SettleOutcome<S> {
         let deadline = actionAt + maxMs
         var reads = 0
         var last = before
         var changedAt = actionAt
         while true {
             let readStart = clock()
-            let next = read()
+            let next = probe.read()
             reads += 1
             let now = clock()
             // a read shows the layout as it was when it began: stillness is proven up to its start only
-            if let prev = last, same(next, prev), !busy(next) {
+            if let prev = last, probe.same(next, prev), !probe.busy(next) {
                 // still
             } else {
                 changedAt = readStart
             }
-            let settled = last != nil && !busy(next) && readStart - changedAt >= quietMs
+            let settled = last != nil && !probe.busy(next) && readStart - changedAt >= quietMs
             last = next
             if settled { return SettleOutcome(settled: true, reads: reads, last: next, elapsedMs: now - actionAt) }
-            if cancelled() || now >= deadline {
+            if probe.cancelled() || now >= deadline {
                 return SettleOutcome(settled: false, reads: reads, last: next, elapsedMs: now - actionAt)
             }
             sleep(max(1, min(pollMs, deadline - now)))
@@ -68,24 +76,28 @@ public struct WaitOutcome<S> {
     public let last: S?
 }
 
-/// Reads every `pollMs` until the screen differs from `since` and `minMs` has passed, at most `timeoutMs`;
-/// without `since`, the first read is the answer. `stop` says why the caller no longer waits.
-public func waitForChange<S>(since: String?, timeoutMs: Int, minMs: Int, pollMs: Int = 80, clock: () -> Int,
-                             sleep: (Int) -> Void, stop: () -> AgentError?, read: () throws -> S,
-                             sig: (S) -> String) throws -> WaitOutcome<S> {
-    let start = clock()
-    var reads = 0
-    while true {
-        if let e = stop() { throw e }
-        let next = try read()
-        reads += 1
-        let s = sig(next)
-        let elapsed = clock() - start
-        // a timeout shorter than minMs still tells of the change it saw
-        guard let since, s == since || elapsed < min(minMs, timeoutMs) else {
-            return WaitOutcome(sig: s, changed: true, reads: reads, elapsedMs: elapsed, last: next)
+public extension Settler {
+    /// Reads every `pollMs` until the screen differs from `since` and `minMs` has passed, at most `timeoutMs`;
+    /// without `since`, the first read is the answer. `stop` says why the caller no longer waits.
+    func waitForChange<S>(_ request: WaitRequest, stop: () -> AgentError?, read: () throws -> S,
+                          sig: (S) -> String) throws -> WaitOutcome<S> {
+        let (since, timeoutMs, minMs) = (request.since, request.timeoutMs, request.minMs)
+        let start = clock()
+        var reads = 0
+        while true {
+            if let error = stop() { throw error }
+            let next = try read()
+            reads += 1
+            let nextSig = sig(next)
+            let elapsed = clock() - start
+            // a timeout shorter than minMs still tells of the change it saw
+            guard let since, nextSig == since || elapsed < min(minMs, timeoutMs) else {
+                return WaitOutcome(sig: nextSig, changed: true, reads: reads, elapsedMs: elapsed, last: next)
+            }
+            if elapsed >= timeoutMs {
+                return WaitOutcome(sig: since, changed: false, reads: reads, elapsedMs: elapsed, last: nil)
+            }
+            sleep(max(1, min(pollMs, timeoutMs - elapsed)))
         }
-        if elapsed >= timeoutMs { return WaitOutcome(sig: since, changed: false, reads: reads, elapsedMs: elapsed, last: nil) }
-        sleep(max(1, min(pollMs, timeoutMs - elapsed)))
     }
 }

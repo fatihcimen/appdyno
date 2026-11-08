@@ -1,5 +1,5 @@
-import XCTest
 @testable import RunnerCore
+import XCTest
 
 final class JobTableTests: XCTestCase {
     private func job(_ id: Int = 1) throws -> Job {

@@ -11,6 +11,11 @@ extension Device {
     }
 
     func capture(maxDepth: Int = 128, maxNodes: Int = 5000, job: Job? = nil) throws -> Capture {
+        struct Pending {
+            let snap: XCUIElementSnapshot
+            let parent: Int
+            let depth: Int
+        }
         let (app, id) = front()
         var windows: [[String: Any]] = []
         var nodes: [Node] = []
@@ -18,18 +23,18 @@ extension Device {
         var busy = false
         var screen = CGRect.zero
         func add(_ root: XCUIElementSnapshot, window: Int) {
-            var queue: [(XCUIElementSnapshot, Int, Int)] = [(root, -1, 0)]
+            var queue = [Pending(snap: root, parent: -1, depth: 0)]
             var head = 0
             while head < queue.count {
-                let (s, parent, depth) = queue[head]
+                let pending = queue[head], snap = pending.snap
                 head += 1
                 if nodes.count >= maxNodes || job?.over == true { truncated = true; break }
                 let index = nodes.count
-                let n = Device.node(s, parent: parent, window: window, screen: screen)
-                if s.elementType == .activityIndicator, n.flags & Flag.visible != 0 { busy = true }
-                nodes.append(n)
-                if depth + 1 >= maxDepth { if !s.children.isEmpty { truncated = true }; continue }
-                for c in s.children { queue.append((c, index, depth + 1)) }
+                let node = Device.node(snap, parent: pending.parent, window: window, screen: screen)
+                if snap.elementType == .activityIndicator, node.flags & Flag.visible != 0 { busy = true }
+                nodes.append(node)
+                if pending.depth + 1 >= maxDepth { if !snap.children.isEmpty { truncated = true }; continue }
+                for c in snap.children { queue.append(Pending(snap: c, parent: index, depth: pending.depth + 1)) }
             }
         }
         let snap: XCUIElementSnapshot
@@ -52,8 +57,10 @@ extension Device {
         }
         // a scroll view's bars are no control: shown only while it scrolls, they would name the screen's
         // nameless controls differently than the app's own elements do
-        for i in scrollIndicators(nodes) { nodes[i].flags &= ~Flag.visible }
-        for i in containerBars(nodes, screenW: Int(screen.width), screenH: Int(screen.height)) { nodes[i].flags &= ~Flag.visible }
+        for index in scrollIndicators(nodes) { nodes[index].flags &= ~Flag.visible }
+        for index in containerBars(nodes, screenW: Int(screen.width), screenH: Int(screen.height)) {
+            nodes[index].flags &= ~Flag.visible
+        }
         return Capture(windows: windows, nodes: nodes, truncated: truncated, busy: busy)
     }
 
@@ -66,14 +73,14 @@ extension Device {
     func hideUnreachableCopies(_ c: inout Capture) {
         let key = c.hash
         if let known = unreachable.first(where: { $0.hash == key }) {
-            for i in c.nodes.indices where known.copies.contains(c.nodes[i].copyKey) {
-                c.nodes[i].flags &= ~Flag.visible
+            for index in c.nodes.indices where known.copies.contains(c.nodes[index].copyKey) {
+                c.nodes[index].flags &= ~Flag.visible
             }
             return
         }
         let app = front().0
-        // the home screen's copies are a widget and its icon, or a keyboard on its way: asking of them went to a widget's
-        // process, and on an iPhone took 7 s and then did not answer
+        // the home screen's copies are a widget and its icon, or a keyboard on its way: asking of them went to a
+        // widget's process, and on an iPhone took 7 s and then did not answer
         if app === springboard { return }
         var hidden: [String] = []
         defer {
@@ -84,15 +91,15 @@ extension Device {
         for idxs in repeatedControls(c.nodes).prefix(4) {
             guard let id = c.nodes[idxs[0]].id else { continue }
             let query = app.descendants(matching: .any).matching(identifier: id)
-            for k in 0 ..< min(query.count, 8) {
-                let e = query.element(boundBy: k)
+            for index in 0 ..< min(query.count, 8) {
+                let element = query.element(boundBy: index)
                 // what it reads may have gone by now, as a keyboard's does as it closes: a snapshot throws where
                 // a live element's frame ends the runner
-                guard e.exists, !e.isHittable, let s = try? e.snapshot() else { continue }
-                let r = box(s.frame)
-                if let ni = idxs.first(where: { c.nodes[$0].box == r }) {
-                    c.nodes[ni].flags &= ~Flag.visible
-                    hidden.append(c.nodes[ni].copyKey)
+                guard element.exists, !element.isHittable, let snap = try? element.snapshot() else { continue }
+                let place = box(snap.frame)
+                if let copy = idxs.first(where: { c.nodes[$0].box == place }) {
+                    c.nodes[copy].flags &= ~Flag.visible
+                    hidden.append(c.nodes[copy].copyKey)
                 }
             }
         }
@@ -124,16 +131,24 @@ extension Device {
                                                 UnsafeMutablePointer<NSError?>?) -> AnyObject?
     private static let selRequest = NSSelectorFromString("requestSnapshotForElement:attributes:parameters:error:")
 
-    private static func ask(_ o: AnyObject, _ name: String) -> AnyObject? {
+    private static func ask(_ object: AnyObject, _ name: String) -> AnyObject? {
         let sel = NSSelectorFromString(name)
-        return o.responds(to: sel) ? o.perform(sel)?.takeUnretainedValue() : nil
+        return object.responds(to: sel) ? object.perform(sel)?.takeUnretainedValue() : nil
+    }
+
+    private struct Parts {
+        let client: AnyObject
+        let request: Request
+        let attributes: NSArray
+        let parameters: NSDictionary
     }
 
     /// The accessibility client, its request, the attributes' own names and the parameters; nil where any is missing.
-    private static let parts: (client: AnyObject, request: Request, attributes: NSArray, parameters: NSDictionary)? = {
+    private static let parts: Parts? = {
         guard let snapshotClass: AnyClass = NSClassFromString("XCElementSnapshot"),
               let client = ask(XCUIDevice.shared, "accessibilityInterface"),
-              let map = class_getClassMethod(snapshotClass, NSSelectorFromString("axAttributesForElementSnapshotKeyPaths:isMacOS:")),
+              let map = class_getClassMethod(snapshotClass,
+                                             NSSelectorFromString("axAttributesForElementSnapshotKeyPaths:isMacOS:")),
               let request = class_getInstanceMethod(object_getClass(client), selRequest),
               let parameters = ask(client, "defaultParameters") as? NSDictionary
         else {
@@ -145,14 +160,18 @@ extension Device {
         // an NSSet in Xcode 27.1, which the request refuses
         guard let attributes = (mapped as? NSArray) ?? ((mapped as? NSSet)?.allObjects as NSArray?) else { return nil }
         NSLog("appdyno runner: snapshots ask XCTest for %d attributes", attributes.count)
-        return (client, unsafeBitCast(method_getImplementation(request), to: Request.self), attributes, parameters)
+        return Parts(client: client, request: unsafeBitCast(method_getImplementation(request), to: Request.self),
+                     attributes: attributes, parameters: parameters)
     }()
 
     static func of(_ app: XCUIApplication) -> XCUIElementSnapshot? {
-        guard let p = parts, let process = ask(app, "currentProcess"), let element = ask(process, "accessibilityElement")
+        guard let p = parts, let process = ask(app, "currentProcess"),
+              let element = ask(process, "accessibilityElement")
         else { return nil }
         var error: NSError?
-        guard let result = p.request(p.client, selRequest, element, p.attributes, p.parameters, &error) else { return nil }
+        guard let result = p.request(p.client, selRequest, element, p.attributes, p.parameters, &error) else {
+            return nil
+        }
         return ask(result, "rootElementSnapshot") as? XCUIElementSnapshot
     }
 }

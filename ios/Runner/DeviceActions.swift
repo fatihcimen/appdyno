@@ -9,7 +9,7 @@ extension Device {
 
     /// A point on screen, in the app a touch there goes to.
     func point(_ x: Double, _ y: Double) -> XCUICoordinate {
-        app(at: x, y).coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: x, dy: y))
+        app(at: x, y).coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: x, dy: y))
     }
 
     /// UIKit takes no touches while a view animates (a sheet sliding in, a button fading in), and the tree
@@ -20,8 +20,8 @@ extension Device {
     }
 
     /// Does the action; for a touch, the milliseconds it first waited for the app's animations.
-    func perform(_ a: Action) throws -> Int? {
-        switch a {
+    func perform(_ action: Action) throws -> Int? {
+        switch action {
         case let .tap(x, y):
             let waited = animationsOver(x, y)
             // the synthesizer's tap missed on a turned screen, where XCUI's own coordinate knows the way
@@ -36,85 +36,112 @@ extension Device {
             let waited = animationsOver(x, y)
             point(x, y).press(forDuration: ms / 1000)
             return waited
-        case let .swipe(x0, y0, x1, y1, ms):
-            let waited = animationsOver(x0, y0)
-            try drag(x0, y0, x1, y1, ms: ms)
+        case let .swipe(fromX, fromY, toX, toY, ms):
+            let waited = animationsOver(fromX, fromY)
+            try drag(fromX, fromY, toX, toY, ms: ms)
             return waited
         case let .gesture(pointers):
-            guard let path = pointers.first, let first = path.first, let last = path.last else {
-                throw AgentError("INVALID_ARGUMENT", "pointers need a finger with samples")
-            }
-            let (x0, y0, x1, y1) = (first.x, first.y, last.x, last.y)
-            if pointers.count == 1, path.count <= 2 {
-                let ms = max(20, last.t - first.t)
-                let waited = animationsOver(x0, y0)
-                if x0 == x1, y0 == y1 { point(x0, y0).press(forDuration: ms / 1000) } else { try drag(x0, y0, x1, y1, ms: ms) }
-                return waited
-            }
-            let plan = try gestureTimeline(pointers)
-            guard EventShim.gestureAvailable else {
-                throw AgentError("UNSUPPORTED", "this XCTest has no event synthesizer for a gesture of \(pointers.count) fingers and \(path.count) samples")
-            }
-            let waited = animationsOver(x0, y0)
-            guard EventShim.gesture(plan.fingers, liftAt: plan.liftAt, orientation: Device.interfaceOrientation()) else {
-                throw AgentError("UNSUPPORTED", "XCTest's event synthesizer refused a gesture of \(pointers.count) fingers and \(path.count) samples")
-            }
-            return waited
-        case let .key(k, modifiers):
-            try key(k, modifiers)
+            return try perform(gesture: pointers)
+        case let .key(name, modifiers):
+            try key(name, modifiers)
             return nil
         }
     }
 
-    private func drag(_ x0: Double, _ y0: Double, _ x1: Double, _ y1: Double, ms: Double) throws {
-        let distance = hypot(x1 - x0, y1 - y0)
+    private func perform(gesture pointers: [[Action.Sample]]) throws -> Int? {
+        guard let path = pointers.first, let first = path.first, let last = path.last else {
+            throw AgentError("INVALID_ARGUMENT", "pointers need a finger with samples")
+        }
+        let (fromX, fromY, toX, toY) = (first.x, first.y, last.x, last.y)
+        if pointers.count == 1, path.count <= 2 {
+            let ms = max(20, last.t - first.t)
+            let waited = animationsOver(fromX, fromY)
+            if fromX == toX, fromY == toY {
+                point(fromX, fromY).press(forDuration: ms / 1000)
+            } else {
+                try drag(fromX, fromY, toX, toY, ms: ms)
+            }
+            return waited
+        }
+        let plan = try gestureTimeline(pointers)
+        guard EventShim.gestureAvailable else { throw Self.noSynthesizer(pointers, path) }
+        let waited = animationsOver(fromX, fromY)
+        guard EventShim.gesture(plan.fingers, liftAt: plan.liftAt, orientation: Device.interfaceOrientation()) else {
+            throw AgentError(
+                "UNSUPPORTED",
+                "XCTest's event synthesizer refused a gesture of \(pointers.count) fingers and \(path.count) samples"
+            )
+        }
+        return waited
+    }
+
+    private static func noSynthesizer(_ pointers: [[Action.Sample]], _ path: [Action.Sample]) -> AgentError {
+        AgentError(
+            "UNSUPPORTED",
+            "this XCTest has no event synthesizer for a gesture of \(pointers.count) fingers and \(path.count) samples"
+        )
+    }
+
+    private func drag(_ fromX: Double, _ fromY: Double, _ toX: Double, _ toY: Double, ms: Double) throws {
+        let distance = hypot(toX - fromX, toY - fromY)
         let velocity = XCUIGestureVelocity(max(1, distance / max(0.02, ms / 1000)))
-        point(x0, y0).press(forDuration: 0.05, thenDragTo: point(x1, y1), withVelocity: velocity, thenHoldForDuration: 0)
+        point(fromX, fromY).press(forDuration: 0.05, thenDragTo: point(toX, toY), withVelocity: velocity,
+                                  thenHoldForDuration: 0)
     }
 
     /// A key of a hardware keyboard, by XCTest's words for it.
     private static let keyboard: [String: XCUIKeyboardKey] = [
         "escape": .escape, "space": .space, "enter": .enter, "delete": .delete, "tab": .tab,
-        "arrowUp": .upArrow, "arrowDown": .downArrow, "arrowLeft": .leftArrow, "arrowRight": .rightArrow,
+        "arrowUp": .upArrow, "arrowDown": .downArrow, "arrowLeft": .leftArrow, "arrowRight": .rightArrow
     ]
 
     private static let held: [String: XCUIElement.KeyModifierFlags] = [
-        "command": .command, "control": .control, "option": .option, "shift": .shift,
+        "command": .command, "control": .control, "option": .option, "shift": .shift
     ]
 
-    private func key(_ k: String, _ modifiers: [String]) throws {
+    private func key(_ name: String, _ modifiers: [String]) throws {
         let flags = modifiers.reduce(into: XCUIElement.KeyModifierFlags()) { $0.formUnion(Device.held[$1] ?? []) }
-        if !flags.isEmpty || k.count == 1 || ["escape", "space", "arrowUp", "arrowDown", "arrowLeft", "arrowRight"].contains(k) {
-            front().0.typeKey(Device.keyboard[k]?.rawValue ?? k, modifierFlags: flags)
+        if !flags.isEmpty || name.count == 1
+            || ["escape", "space", "arrowUp", "arrowDown", "arrowLeft", "arrowRight"].contains(name) {
+            front().0.typeKey(Device.keyboard[name]?.rawValue ?? name, modifierFlags: flags)
             return
         }
-        switch k {
-        case "home": XCUIDevice.shared.press(.home)
+        switch name {
         case "enter":
             // synthesized: XCUI's typing refuses when no element reports the focus
             if !EventShim.type("\n", orientation: Device.interfaceOrientation()) { front().0.typeText("\n") }
         case "delete": front().0.typeText(XCUIKeyboardKey.delete.rawValue)
         case "tab": front().0.typeText("\t")
+        default: try press(name)
+        }
+    }
+
+    /// A key that is a button of the device's own.
+    private func press(_ name: String) throws {
+        switch name {
+        case "home": XCUIDevice.shared.press(.home)
         case "volumeUp", "volumeDown":
             #if targetEnvironment(simulator)
-            throw AgentError("UNSUPPORTED", "a simulator has no \(k) button: XCTest offers it on a phone only")
+            throw AgentError("UNSUPPORTED", "a simulator has no \(name) button: XCTest offers it on a phone only")
             #else
-            XCUIDevice.shared.press(k == "volumeUp" ? .volumeUp : .volumeDown)
+            XCUIDevice.shared.press(name == "volumeUp" ? .volumeUp : .volumeDown)
             #endif
         case "mute":
             guard XCUIDevice.shared.hasHardwareButton(.action) else {
-                throw AgentError("UNSUPPORTED", "this iPhone has a mute switch, not an Action button: only a hand moves it")
+                throw AgentError("UNSUPPORTED",
+                                 "this iPhone has a mute switch, not an Action button: only a hand moves it")
             }
             XCUIDevice.shared.press(.action)
         case "siri":
-            throw AgentError("UNSUPPORTED", "Siri is the side button held, which XCTest cannot press on a phone", hint: "appdyno mirror presses it")
+            throw AgentError("UNSUPPORTED", "Siri is the side button held, which XCTest cannot press on a phone",
+                             hint: "appdyno mirror presses it")
         case "lock", "power":
             let press = NSSelectorFromString("pressLockButton")
             guard XCUIDevice.shared.responds(to: press) else {
                 throw AgentError("UNSUPPORTED", "this XCTest cannot press the lock button (it has no pressLockButton)")
             }
             _ = XCUIDevice.shared.perform(press)
-        default: throw AgentError("UNSUPPORTED", "no \(k) key on iOS", hint: "tap the screen's own back control")
+        default: throw AgentError("UNSUPPORTED", "no \(name) key on iOS", hint: "tap the screen's own back control")
         }
     }
 }

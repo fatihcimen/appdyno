@@ -1,5 +1,5 @@
-import XCTest
 @testable import RunnerCore
+import XCTest
 
 final class FrameTests: XCTestCase {
     func testRoundTripAcrossChunks() throws {
@@ -19,41 +19,44 @@ final class FrameTests: XCTestCase {
 }
 
 final class SettlerTests: XCTestCase {
-    final class Clock {
+    private final class Clock {
         var now = 0
     }
 
     func testSettlesAfterTheQuietWindowAndCatchesALateChange() {
         let c = Clock()
-        let s = Settler(clock: { c.now }, sleep: { c.now += $0 })
+        let settler = Settler(clock: { c.now }, sleep: { c.now += $0 })
         // the screen changes at 150 ms, then stays
-        let r = s.run(actionAt: 0, quietMs: 200, maxMs: 3000, before: 0, read: { c.now >= 150 ? 1 : 0 },
-                      same: ==, busy: { _ in false }, cancelled: { false })
-        XCTAssertTrue(r.settled)
-        XCTAssertEqual(r.last, 1)
-        XCTAssertGreaterThanOrEqual(r.elapsedMs, 350)
+        let outcome = settler.run(actionAt: 0, quietMs: 200, maxMs: 3000, before: 0,
+                                  probe: SettleProbe(read: { c.now >= 150 ? 1 : 0 }, same: ==, busy: { _ in false },
+                                                     cancelled: { false }))
+        XCTAssertTrue(outcome.settled)
+        XCTAssertEqual(outcome.last, 1)
+        XCTAssertGreaterThanOrEqual(outcome.elapsedMs, 350)
     }
 
     func testOneSlowReadOfTheOldScreenIsNoProofOfQuiet() {
         let c = Clock()
-        let s = Settler(clock: { c.now }, sleep: { c.now += $0 })
-        var n = 0
-        let r = s.run(actionAt: 0, quietMs: 200, maxMs: 3000, before: 0, read: { () -> Int in
-            n += 1
-            c.now += n == 1 ? 1500 : 10
-            return n == 1 ? 0 : 1
-        }, same: ==, busy: { _ in false }, cancelled: { false })
-        XCTAssertTrue(r.settled)
-        XCTAssertEqual(r.last, 1)
+        let settler = Settler(clock: { c.now }, sleep: { c.now += $0 })
+        var count = 0
+        let read = { () -> Int in
+            count += 1
+            c.now += count == 1 ? 1500 : 10
+            return count == 1 ? 0 : 1
+        }
+        let outcome = settler.run(actionAt: 0, quietMs: 200, maxMs: 3000, before: 0,
+                                  probe: SettleProbe(read: read, same: ==, busy: { _ in false }, cancelled: { false }))
+        XCTAssertTrue(outcome.settled)
+        XCTAssertEqual(outcome.last, 1)
     }
 
     func testABusyScreenRunsToTheLimit() {
         let c = Clock()
-        let s = Settler(clock: { c.now }, sleep: { c.now += $0 })
-        let r = s.run(actionAt: 0, quietMs: 200, maxMs: 1000, before: 0, read: { 0 }, same: ==, busy: { _ in true },
-                      cancelled: { false })
-        XCTAssertFalse(r.settled)
-        XCTAssertEqual(r.elapsedMs, 1000)
+        let settler = Settler(clock: { c.now }, sleep: { c.now += $0 })
+        let outcome = settler.run(actionAt: 0, quietMs: 200, maxMs: 1000, before: 0,
+                                  probe: SettleProbe(read: { 0 }, same: ==, busy: { _ in true }, cancelled: { false }))
+        XCTAssertFalse(outcome.settled)
+        XCTAssertEqual(outcome.elapsedMs, 1000)
     }
 }
 
@@ -61,48 +64,53 @@ final class WaitTests: XCTestCase {
     private var now = 1000
 
     /// Reads take 10 ms; `sigAt` is the screen's digest at that time after the start.
-    private func go(since: String?, timeout: Int = 1000, min: Int = 300, stop: @escaping () -> AgentError? = { nil },
-                    sigAt: (Int) -> String) throws -> WaitOutcome<String> {
+    private func go(since: String?, timeout: Int = 1000, min: Int = 300,
+                    stop: @escaping () -> AgentError? = { nil }, sigAt: (Int) -> String) throws -> WaitOutcome<String> {
         let start = now
-        return try waitForChange(since: since, timeoutMs: timeout, minMs: min, clock: { now }, sleep: { now += $0 }, stop: stop,
-                                 read: { now += 10; return sigAt(now - start) }, sig: { $0 })
+        let settler = Settler(clock: { self.now }, sleep: { self.now += $0 })
+        return try settler.waitForChange(WaitRequest(since: since, timeoutMs: timeout, minMs: min), stop: stop,
+                                         read: { now += 10; return sigAt(now - start) }, sig: { $0 })
     }
 
     func testEveryFieldCountsInTheDigest() {
-        func sig(_ n: Node, _ w: [String] = ["w"]) -> String { screenSig([n], windows: w) }
-        let n = Node(parent: -1, window: 0, type: "Button", id: "x", text: "a", label: "d", left: 0, top: 0, right: 10, bottom: 10, flags: 1)
-        XCTAssertEqual(sig(n), sig(n))
+        func sig(_ node: Node, _ w: [String] = ["w"]) -> String { screenSig([node], windows: w) }
+        let node = Node(parent: -1, window: 0, type: "Button", id: "x", text: "a", label: "d",
+                        left: 0, top: 0, right: 10, bottom: 10, flags: 1)
+        XCTAssertEqual(sig(node), sig(node))
         var others: [Node] = []
-        for change in [{ $0.type = "Cell" }, { $0.id = "y" }, { $0.id = nil }, { $0.text = "b" }, { $0.text = nil }, { $0.text = "" },
-                       { $0.label = "e" }, { $0.right = 11 }, { $0.flags = 3 }] as [(inout Node) -> Void] {
-            var o = n
-            change(&o)
-            others.append(o)
+        let changes: [(inout Node) -> Void] = [
+            { $0.type = "Cell" }, { $0.id = "y" }, { $0.id = nil }, { $0.text = "b" }, { $0.text = nil },
+            { $0.text = "" }, { $0.label = "e" }, { $0.right = 11 }, { $0.flags = 3 }
+        ]
+        for change in changes {
+            var other = node
+            change(&other)
+            others.append(other)
         }
-        for o in others { XCTAssertNotEqual(sig(n), sig(o)) }
-        XCTAssertNotEqual(sig(n), sig(n, ["w2"]))
-        XCTAssertNotEqual(sig(n), sig(n, []))
-        XCTAssertNotEqual(sig(n), screenSig([n, n], windows: ["w"]))
-        var moved = n
+        for other in others { XCTAssertNotEqual(sig(node), sig(other)) }
+        XCTAssertNotEqual(sig(node), sig(node, ["w2"]))
+        XCTAssertNotEqual(sig(node), sig(node, []))
+        XCTAssertNotEqual(sig(node), screenSig([node, node], windows: ["w"]))
+        var moved = node
         moved.text = "ab"; moved.label = "c"
-        var shifted = n
+        var shifted = node
         shifted.text = "a"; shifted.label = "bc"
         XCTAssertNotEqual(sig(moved), sig(shifted))
     }
 
     func testWithoutSinceTheFirstReadIsTheAnswer() throws {
-        let r = try go(since: nil) { _ in "A" }
-        XCTAssertTrue(r.changed)
-        XCTAssertEqual(r.last, "A")
-        XCTAssertEqual(r.reads, 1)
+        let outcome = try go(since: nil) { _ in "A" }
+        XCTAssertTrue(outcome.changed)
+        XCTAssertEqual(outcome.last, "A")
+        XCTAssertEqual(outcome.reads, 1)
     }
 
     func testAnEarlyChangeIsAnsweredOnceMinMsHasPassed() throws {
-        let r = try go(since: "A") { $0 >= 100 ? "B" : "A" }
-        XCTAssertTrue(r.changed)
-        XCTAssertEqual(r.sig, "B")
-        XCTAssertEqual(r.last, "B")
-        XCTAssertTrue((300 ... 390).contains(r.elapsedMs), "answered at \(r.elapsedMs)")
+        let outcome = try go(since: "A") { $0 >= 100 ? "B" : "A" }
+        XCTAssertTrue(outcome.changed)
+        XCTAssertEqual(outcome.sig, "B")
+        XCTAssertEqual(outcome.last, "B")
+        XCTAssertTrue((300 ... 390).contains(outcome.elapsedMs), "answered at \(outcome.elapsedMs)")
     }
 
     func testAChangeThatWentBackBeforeMinMsIsNoChange() throws {
@@ -110,18 +118,18 @@ final class WaitTests: XCTestCase {
     }
 
     func testAStillScreenEndsAtTheTimeoutWithoutATree() throws {
-        let r = try go(since: "A") { _ in "A" }
-        XCTAssertFalse(r.changed)
-        XCTAssertEqual(r.sig, "A")
-        XCTAssertNil(r.last)
-        XCTAssertTrue((1000 ... 1010).contains(r.elapsedMs), "ended at \(r.elapsedMs)")
-        XCTAssertTrue((11 ... 13).contains(r.reads), "reads \(r.reads)")
+        let outcome = try go(since: "A") { _ in "A" }
+        XCTAssertFalse(outcome.changed)
+        XCTAssertEqual(outcome.sig, "A")
+        XCTAssertNil(outcome.last)
+        XCTAssertTrue((1000 ... 1010).contains(outcome.elapsedMs), "ended at \(outcome.elapsedMs)")
+        XCTAssertTrue((11 ... 13).contains(outcome.reads), "reads \(outcome.reads)")
     }
 
     func testATimeoutShorterThanMinMsStillTellsOfAChange() throws {
-        let r = try go(since: "A", timeout: 100, min: 300) { _ in "B" }
-        XCTAssertTrue(r.changed)
-        XCTAssertEqual(r.last, "B")
+        let outcome = try go(since: "A", timeout: 100, min: 300) { _ in "B" }
+        XCTAssertTrue(outcome.changed)
+        XCTAssertEqual(outcome.last, "B")
     }
 
     func testStopFailsTheWait() {
@@ -129,15 +137,17 @@ final class WaitTests: XCTestCase {
         XCTAssertThrowsError(try go(since: "A", stop: {
             polls += 1
             return polls > 2 ? AgentError("CANCELLED", "cancelled") : nil
-        }) { _ in "A" }) { XCTAssertEqual(($0 as? AgentError)?.code, "CANCELLED") }
+        }, sigAt: { _ in "A" })) { XCTAssertEqual(($0 as? AgentError)?.code, "CANCELLED") }
     }
 }
 
 final class GestureTimelineTests: XCTestCase {
+    private func sample(_ x: Double, _ y: Double, _ t: Double) -> GesturePoint { GesturePoint(x: x, y: y, t: t) }
+
     func testFingersGoDownTogetherAndLiftAfterTheLastSampleOfAny() throws {
         let plan = try gestureTimeline([
-            [(10, 10, 100), (20, 10, 200), (30, 10, 300)],
-            [(50, 50, 100), (60, 50, 150)],
+            [sample(10, 10, 100), sample(20, 10, 200), sample(30, 10, 300)],
+            [sample(50, 50, 100), sample(60, 50, 150)]
         ])
         XCTAssertEqual(plan.fingers[0].map(\.t), [0, 0.1, 0.2])
         XCTAssertEqual(plan.fingers[0].map(\.x), [10, 20, 30])
@@ -146,24 +156,24 @@ final class GestureTimelineTests: XCTestCase {
     }
 
     func testAFingerThatStartsLaterStillGoesDownWithTheOthers() throws {
-        let plan = try gestureTimeline([[(0, 0, 0), (1, 1, 200)], [(5, 5, 100), (6, 6, 200)]])
+        let plan = try gestureTimeline([[sample(0, 0, 0), sample(1, 1, 200)], [sample(5, 5, 100), sample(6, 6, 200)]])
         XCTAssertEqual(plan.fingers[1].map(\.t), [0, 0.2])
     }
 
     func testTouchesWithoutMovesLastAsLongAsATap() throws {
-        let plan = try gestureTimeline([[(0, 0, 0)], [(5, 5, 0)]])
+        let plan = try gestureTimeline([[sample(0, 0, 0)], [sample(5, 5, 0)]])
         XCTAssertEqual(plan.liftAt, 0.05)
     }
 
     func testSamplesAtOneTimeGoAMillisecondApart() throws {
-        let t = try gestureTimeline([[(0, 0, 0), (1, 1, 100), (2, 2, 100)]]).fingers[0].map(\.t)
+        let t = try gestureTimeline([[sample(0, 0, 0), sample(1, 1, 100), sample(2, 2, 100)]]).fingers[0].map(\.t)
         XCTAssertEqual(t[2], 0.101, accuracy: 0.0001)
     }
 
     func testBadGesturesAreRefused() {
         XCTAssertThrowsError(try gestureTimeline([]))
-        XCTAssertThrowsError(try gestureTimeline([[(0, 0, 0)], []]))
-        XCTAssertThrowsError(try gestureTimeline([[(0, 0, 100), (1, 1, 50)]]))
+        XCTAssertThrowsError(try gestureTimeline([[sample(0, 0, 0)], []]))
+        XCTAssertThrowsError(try gestureTimeline([[sample(0, 0, 100), sample(1, 1, 50)]]))
     }
 }
 

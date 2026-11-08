@@ -2,24 +2,27 @@ import UIKit
 import XCTest
 
 extension Device {
-    func screenshot(_ r: ShotRequest) throws -> Reply {
+    func screenshot(_ request: ShotRequest) throws -> Reply {
         let shot = XCUIScreen.main.screenshot()
         var image = shot.image
-        if let maxPx = r.maxPx {
-            let px = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
-            let k = maxPx / max(px.width, px.height)
-            if k < 1 {
-                let size = CGSize(width: (px.width * k).rounded(), height: (px.height * k).rounded())
+        if let maxPx = request.maxPx {
+            let pixels = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
+            let factor = maxPx / max(pixels.width, pixels.height)
+            if factor < 1 {
+                let size = CGSize(width: (pixels.width * factor).rounded(), height: (pixels.height * factor).rounded())
                 let format = UIGraphicsImageRendererFormat()
                 format.scale = 1
-                image = UIGraphicsImageRenderer(size: size, format: format).image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
+                image = UIGraphicsImageRenderer(size: size, format: format).image { _ in
+                    image.draw(in: CGRect(origin: .zero, size: size))
+                }
             }
         }
-        guard let data = r.png ? image.pngData() : image.jpegData(compressionQuality: Double(r.quality) / 100) else {
+        let quality = Double(request.quality) / 100
+        guard let data = request.png ? image.pngData() : image.jpegData(compressionQuality: quality) else {
             throw AgentError("INTERNAL", "the screenshot could not be encoded")
         }
         let w = Int(image.size.width * image.scale), h = Int(image.size.height * image.scale)
-        return Reply(result: shotWire(w: w, h: h, png: r.png, bytes: data.count), binary: data)
+        return Reply(result: shotWire(w: w, h: h, png: request.png, bytes: data.count), binary: data)
     }
 
     func foreground() -> [String: Any] {
@@ -37,7 +40,7 @@ extension Device {
         }
     }
 
-    func orientation(_ r: Int) {
-        XCUIDevice.shared.orientation = [.portrait, .landscapeLeft, .portraitUpsideDown, .landscapeRight][r & 3]
+    func orientation(_ rotation: Int) {
+        XCUIDevice.shared.orientation = [.portrait, .landscapeLeft, .portraitUpsideDown, .landscapeRight][rotation & 3]
     }
 }

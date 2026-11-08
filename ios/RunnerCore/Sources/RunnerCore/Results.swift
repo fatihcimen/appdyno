@@ -2,10 +2,17 @@ import Foundation
 
 // The runner's answers as JSON (the unit tests hold them against the protocol's fixtures).
 
-public func helloWire(agentVersion: String, osVersion: String, model: String, w: Double, h: Double, density: Double,
-                      rotation: Int, pid: Int, idleShimChecked: Bool) -> Wire {
-    ["agentVersion": agentVersion, "protocol": ["major": protocolMajor], "platform": "ios", "osVersion": osVersion, "model": model,
-     "screen": ["w": w, "h": h, "density": density, "rotation": rotation], "pid": pid, "idleShimChecked": idleShimChecked]
+/// What the runner answers a hello with: itself, the device, and its screen.
+public struct Hello {
+    public let agentVersion: String, osVersion: String, model: String
+    public let w: Double, h: Double, density: Double, rotation: Int
+    public let pid: Int, idleShimChecked: Bool
+
+    public var wire: Wire {
+        ["agentVersion": agentVersion, "protocol": ["major": protocolMajor], "platform": "ios", "osVersion": osVersion,
+         "model": model, "screen": ["w": w, "h": h, "density": density, "rotation": rotation], "pid": pid,
+         "idleShimChecked": idleShimChecked]
+    }
 }
 
 public extension Node {
