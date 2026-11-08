@@ -9,16 +9,17 @@ import { IosSimulatorDevice } from './workspace.js';
 /**
  * Pushes as an MCP client sends them, through the built server over stdio, to the fixture: on the emulator
  * APPDYNO_ANDROID_SERIAL names and the simulator APPDYNO_IOS_UDID names. What reached the app's code is read from
- * the fixture's own screen, which shows it.
+ * the fixture's own screen, which shows it, and from the push fixture's log, which says what Firebase handed it.
  */
 const APP = 'dev.appdyno.fixture';
+const PUSH_APP = 'dev.appdyno.pushfixture';
 const MAIN = fileURLToPath(new URL('../packages/appdyno/dist/main.js', import.meta.url));
 const PICTURE = fileURLToPath(new URL('../docs/images/social.png', import.meta.url));
 const ANDROID = process.env.APPDYNO_ANDROID_SERIAL;
 const SIMULATOR = process.env.APPDYNO_IOS_UDID;
 
-/** The server on that device, with the fixture named as its app unless `named` is false, as in a window. */
-function server(serial: string, named = true, env: Record<string, string> = {}) {
+/** The server on that device, with `app` named as its app, or none, as in a window. */
+function server(serial: string, app: string | undefined = APP, env: Record<string, string> = {}) {
   let client: Client;
   const call = toolCaller(() => client);
   beforeAll(async () => {
@@ -29,7 +30,7 @@ function server(serial: string, named = true, env: Record<string, string> = {}) 
         'mcp',
         '--device',
         serial,
-        ...(named ? ['--app', APP] : []),
+        ...(app ? ['--app', app] : []),
         '--allow-devices',
         `^${serial}$`,
       ],
@@ -107,6 +108,99 @@ describe.skipIf(!ANDROID)('a push to an Android emulator, over MCP', () => {
   });
 });
 
+describe.skipIf(!ANDROID)("FCM's own message to the push fixture on an emulator, over MCP", () => {
+  const call = server(ANDROID!, PUSH_APP);
+  const adb = (...words: string[]) =>
+    execFileSync('adb', ['-s', ANDROID!, ...words], { encoding: 'utf8' });
+  // a mark in the fixture's own log before each push, as clearing the log would clear it for all on a shared phone
+  let mark = '';
+  /** What the fixture's code was handed since the last push, a line a message. */
+  const received = () => {
+    const lines = adb('logcat', '-d', '-s', 'PushFixture:I').split('\n');
+    return lines
+      .slice(lines.findLastIndex((l) => l.includes(mark)) + 1)
+      .filter((l) => l.includes('onMessageReceived'));
+  };
+  const pushed = async (args: Record<string, unknown>) => {
+    mark = `push ${Date.now()}`;
+    adb('shell', 'log', '-t', 'PushFixture', '-p', 'i', `'${mark}'`);
+    const r = await call('push', args);
+    expect(r.error ? r.text : '', String(args.type)).toBe('');
+    return r.text;
+  };
+  /** In front with the screen on: a locked screen counts as away to Firebase. A device locked by a code stays locked. */
+  const inFront = async () => {
+    adb('shell', 'input keyevent KEYCODE_WAKEUP && wm dismiss-keyguard');
+    await call('launch_app');
+  };
+
+  it('names the route each type takes for its debuggable build', async () => {
+    const types = (await call('push')).text;
+    expect(types).toMatch(
+      /alert: FCM's own message to the app's Firebase SDK, as Google Play services hands it, by run-as on its debuggable build/,
+    );
+    expect(types).toMatch(/background: FCM's own message .*onMessageReceived gets it wherever/);
+    expect(types).toContain('inbox: drawn by the shell in the inbox style');
+    expect(types).toContain('FCM has no such style');
+  });
+
+  it('hands its code a data message in front, away and not running, each value as given', async () => {
+    await inFront();
+    const text = await pushed({ type: 'background', data: { order: "42 it's", kind: 'sync' } });
+    expect(text).toMatch(
+      /^pushed to dev\.appdyno\.pushfixture as FCM's own message, by run-as on its debuggable build: its receiver took it/,
+    );
+    await expect
+      .poll(received)
+      .toEqual([expect.stringContaining("data=kind=sync,order=42 it's notification=none")]);
+    await call('press_key', { key: 'home' });
+    await pushed({ type: 'live_activity', data: { stage: 'away' } });
+    await expect.poll(received).toEqual([expect.stringContaining('data=stage=away')]);
+    const pid = adb('shell', 'pidof', PUSH_APP).trim();
+    adb('shell', `run-as ${PUSH_APP} kill -9 ${pid}`);
+    await expect.poll(() => adb('shell', `pidof ${PUSH_APP} || true`).trim()).toBe('');
+    await pushed({ type: 'background', data: { stage: 'cold' } });
+    await expect
+      .poll(received, { timeout: 15_000 })
+      .toEqual([expect.stringContaining('data=stage=cold')]);
+    expect(adb('shell', 'pidof', PUSH_APP).trim()).not.toBe(pid);
+  });
+
+  it('hands its code an alert and a rich one in front, and its SDK draws one when it is away', async () => {
+    await inFront();
+    await pushed({ type: 'alert', title: 'Order 42', body: 'shipped', data: { order: '42' } });
+    await expect
+      .poll(received)
+      .toEqual([
+        expect.stringContaining('priority=1 data=order=42 notification=Order 42|shipped|'),
+      ]);
+    const image = 'https://example.com/p.png';
+    await pushed({ type: 'rich', title: 'Pic', body: 'b', image });
+    await expect.poll(received).toEqual([expect.stringContaining(`notification=Pic|b|${image}`)]);
+    await call('press_key', { key: 'home' });
+    await pushed({ type: 'alert', title: 'Away', body: 'drawn by its SDK' });
+    await expect
+      .poll(() => adb('shell', 'cmd notification list'))
+      .toContain(`|${PUSH_APP}|0|FCM-Notification:`);
+    expect(received()).toEqual([]);
+  });
+
+  it("says when it may show no notification, and refuses FCM's own names and an image file", async () => {
+    adb('shell', 'pm', 'revoke', PUSH_APP, 'android.permission.POST_NOTIFICATIONS');
+    try {
+      expect(await pushed({ type: 'alert', title: 'T' })).toContain(
+        'or would: the app is not allowed notifications',
+      );
+    } finally {
+      adb('shell', 'pm', 'grant', PUSH_APP, 'android.permission.POST_NOTIFICATIONS');
+    }
+    const named = await call('push', { type: 'background', data: { 'google.x': 'y' } });
+    expect(named.text).toContain("google.x is FCM's own name");
+    const file = await call('push', { type: 'rich', title: 'T', image: PICTURE });
+    expect(file.text).toContain('give a link');
+  });
+});
+
 describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
   const call = server(SIMULATOR!);
   afterAll(() => new IosSimulatorDevice(SIMULATOR!).stopAgent());
@@ -177,7 +271,7 @@ describe.skipIf(!SIMULATOR)('a push to a simulator, over MCP', () => {
 });
 
 describe.skipIf(!SIMULATOR)('a simulator with no app named, over MCP', () => {
-  const call = server(SIMULATOR!, false);
+  const call = server(SIMULATOR!, undefined);
   afterAll(() => new IosSimulatorDevice(SIMULATOR!).stopAgent());
 
   it('reads the app a link brought back, with a runner up, and a push says it was in front', async () => {
@@ -194,7 +288,7 @@ describe.skipIf(!SIMULATOR)('a simulator with no app named, over MCP', () => {
 });
 
 describe.skipIf(!SIMULATOR)('a simulator with APNs set up, over MCP', () => {
-  const call = server(SIMULATOR!, true, madeUp('apns'));
+  const call = server(SIMULATOR!, APP, madeUp('apns'));
   afterAll(() => new IosSimulatorDevice(SIMULATOR!).stopAgent());
 
   it("takes what simctl cannot by APNs' sandbox, and only by a token the app printed in this session", async () => {
@@ -222,7 +316,7 @@ describe.skipIf(!SIMULATOR)('a simulator with APNs set up, over MCP', () => {
 });
 
 describe.skipIf(!ANDROID)('an Android emulator with FCM set up, over MCP', () => {
-  const call = server(ANDROID!, true, madeUp('fcm'));
+  const call = server(ANDROID!, APP, madeUp('fcm'));
 
   it('takes what only Google delivers by FCM, by a token the app printed in this session, and nothing aimed elsewhere', async () => {
     const types = (await call('push')).text;
