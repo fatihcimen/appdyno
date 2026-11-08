@@ -1,5 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import type { ListedPhone } from '../src/devicectl.js';
+import { phoneFacts, type ListedPhone } from '../src/devicectl.js';
 import { iphoneProvider, phoneNeed } from '../src/phone-provider.js';
 import { fine, overlapped, slowDevicectl } from './slow-devicectl.js';
 
@@ -57,6 +58,43 @@ describe('what blocks a phone', () => {
     const known = slowDevicectl(() => fine);
     await phoneNeed(known, true);
     expect(overlapped(known.log)).toBe(true);
+  });
+
+  // `devicectl list devices` of Xcode 27.1 (JSON version 5) with a phone, its every identifying value made up
+  const listed = (
+    JSON.parse(
+      readFileSync(new URL('./fixtures/devicectl-list-devices.json', import.meta.url), 'utf8'),
+    ) as { result: { devices: ListedPhone[] } }
+  ).result.devices[0]!;
+  const facts = {
+    udid: '00001234-0123456789ABCDEF',
+    marketingName: 'iPhone 13 Pro Max',
+    pairingState: 'paired',
+    developerModeStatus: 'enabled',
+    osVersion: '27.2',
+  };
+
+  it('reads a phone by properties, with the keys they deprecate gone as they will be', async () => {
+    const {
+      hardwareProperties: _h,
+      connectionProperties: _c,
+      deviceProperties: _d,
+      ...now
+    } = listed;
+    expect(phoneFacts(now)).toEqual(facts);
+    expect(phoneFacts(listed)).toEqual(facts);
+    expect(await need(now)).toBeUndefined();
+    const off = {
+      ...now,
+      properties: { ...now.properties, state: { developerModeStatus: { disabled: {} } } },
+    };
+    expect(await need(off)).toBe('developer-mode-off');
+  });
+
+  it('reads the same by the old keys alone, as Xcode 26 lists a phone', async () => {
+    const { properties: _p, ...before } = listed;
+    expect(phoneFacts(before)).toEqual(facts);
+    expect(await need(before)).toBeUndefined();
   });
 
   it('answers from the list read now, whatever the lock asked alongside it says', async () => {

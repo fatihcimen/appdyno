@@ -21,12 +21,35 @@ type PhoneApp = {
   builtByDeveloper?: boolean;
 };
 
-/** What the Mac knows of a paired phone, with no word to the phone. */
+/**
+ * What the Mac knows of a paired phone, with no word to the phone: devicectl's `properties`, which its JSON version 5
+ * (Xcode 27) brings, and the keys that version deprecates for it, which are all Xcode 26 gives.
+ */
 export type ListedPhone = {
-  hardwareProperties?: { udid?: string };
+  properties?: {
+    hardware?: { udid?: string; marketingName?: string };
+    connection?: { pairingState?: string };
+    // a case with its values: `{ "enabled": { "mode": 1 } }`
+    state?: { developerModeStatus?: Record<string, unknown> };
+    software?: { osVersionNumber?: { stringValue?: string } };
+  };
+  hardwareProperties?: { udid?: string; marketingName?: string };
   connectionProperties?: { pairingState?: string };
   deviceProperties?: { developerModeStatus?: string; osVersionNumber?: string };
 };
+
+/** A phone's facts from devicectl's JSON, by `properties` where it has them. */
+export function phoneFacts(d: ListedPhone) {
+  const p = d.properties;
+  const mode = p?.state?.developerModeStatus;
+  return {
+    udid: p?.hardware?.udid ?? d.hardwareProperties?.udid,
+    marketingName: p?.hardware?.marketingName ?? d.hardwareProperties?.marketingName,
+    pairingState: p?.connection?.pairingState ?? d.connectionProperties?.pairingState,
+    developerModeStatus: (mode && Object.keys(mode)[0]) ?? d.deviceProperties?.developerModeStatus,
+    osVersion: p?.software?.osVersionNumber?.stringValue ?? d.deviceProperties?.osVersionNumber,
+  };
+}
 
 /** Xcode's device tool for one phone; JSON results. */
 export class Devicectl {
@@ -110,15 +133,14 @@ export class Devicectl {
   /** The phone's name as people know it. */
   async marketingName() {
     const r = await this.json(['device', 'info', 'details', '--device', this.udid]);
-    const result = (r.result ?? r) as { hardwareProperties?: { marketingName?: string } };
-    return result.hardwareProperties?.marketingName;
+    return phoneFacts((r.result ?? r) as ListedPhone).marketingName;
   }
 
   /** This phone as the Mac lists it. */
   async listed(): Promise<ListedPhone | undefined> {
     const j = await this.json(['list', 'devices']);
     const all = (j.result as { devices?: ListedPhone[] } | undefined)?.devices ?? [];
-    return all.find((d) => d.hardwareProperties?.udid === this.udid);
+    return all.find((d) => phoneFacts(d).udid === this.udid);
   }
 
   /** The text on the phone's pasteboard, '' with none. */

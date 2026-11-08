@@ -1,0 +1,191 @@
+{
+  "info": {
+    "jsonVersion": 5,
+    "outcome": "success"
+  },
+  "result": {
+    "devices": [
+      {
+        "_deprecationNotice": {
+          "deprecatedFields": ["hardwareProperties", "deviceProperties", "connectionProperties"],
+          "message": "The 'hardwareProperties', 'deviceProperties', 'connectionProperties' fields are deprecated and will be removed in a future release. Use the 'properties' dictionary instead.",
+          "replacement": "properties"
+        },
+        "capabilities": [
+          {
+            "featureIdentifier": "com.apple.coredevice.feature.acquireusageassertion",
+            "name": "Acquire Usage Assertion"
+          },
+          {
+            "featureIdentifier": "com.apple.coredevice.feature.applicationcontrol",
+            "name": "Application Control"
+          },
+          {
+            "featureIdentifier": "com.apple.coredevice.feature.capturescreenshot",
+            "name": "Capture Screenshot"
+          }
+        ],
+        "connectionProperties": {
+          "authenticationType": "manualPairing",
+          "isMobileDeviceOnly": false,
+          "lastConnectionDate": "2026-11-08T10:00:00.000Z",
+          "localHostnames": [
+            "00001234-0123456789ABCDEF.coredevice.local",
+            "Test-iPhone.coredevice.local"
+          ],
+          "pairingState": "paired",
+          "potentialHostnames": [
+            "00001234-0123456789ABCDEF.coredevice.local",
+            "Test-iPhone.coredevice.local"
+          ],
+          "transportType": "wired",
+          "tunnelIPAddress": "fd00::1",
+          "tunnelState": "connected",
+          "tunnelTransportProtocol": "tcp"
+        },
+        "deviceProperties": {
+          "bootState": "booted",
+          "bootedFromSnapshot": true,
+          "bootedSnapshotName": "com.apple.os.update-0000000000000000000000000000000000000000000000000000000000000000",
+          "ddiServicesAvailable": true,
+          "developerModeStatus": "enabled",
+          "hasInternalOSBuild": false,
+          "name": "Test iPhone",
+          "osBuildUpdate": "24B119",
+          "osVersionNumber": "27.2",
+          "rootFileSystemIsWritable": false,
+          "screenViewingURL": "devices://device/open?id=00000000-0000-0000-0000-000000000001",
+          "supportsCheckedAllocations": false
+        },
+        "hardwareProperties": {
+          "cpuType": {
+            "name": "arm64e",
+            "subType": -2147483646,
+            "type": 16777228
+          },
+          "deviceType": "iPhone",
+          "ecid": 1234567890123456,
+          "hardwareModel": "D64AP",
+          "internalStorageCapacity": 256000000000,
+          "isProductionFused": true,
+          "marketingName": "iPhone 13 Pro Max",
+          "platform": "iOS",
+          "productType": "iPhone14,3",
+          "reality": "physical",
+          "serialNumber": "A1B2C3D4E5",
+          "supportedCPUTypes": [
+            {
+              "name": "arm64e",
+              "subType": -2147483646,
+              "type": 16777228
+            },
+            {
+              "name": "arm64",
+              "subType": 0,
+              "type": 16777228
+            }
+          ],
+          "supportedDeviceFamilies": [1],
+          "thinningProductType": "iPhone14,3",
+          "udid": "00001234-0123456789ABCDEF"
+        },
+        "identifier": "00000000-0000-0000-0000-000000000001",
+        "properties": {
+          "connection": {
+            "authenticationType": "manualPairing",
+            "lastConnectionDate": 784288800,
+            "pairingState": "paired",
+            "screenViewingURL": {
+              "relative": "devices://device/open?id=00000000-0000-0000-0000-000000000001"
+            },
+            "state": "connected",
+            "transportType": "wired",
+            "tunnelIPAddressString": "fd00::1",
+            "tunnelTransportProtocol": "tcp"
+          },
+          "hardware": {
+            "cpuCount": {
+              "logicalCores": 6,
+              "packages": 1,
+              "physicalCores": 6
+            },
+            "cpuType": {
+              "subtype": 18446744071562067970,
+              "type": 16777228
+            },
+            "deviceType": "iPhone",
+            "ecid": 1234567890123456,
+            "hasActionButton": false,
+            "internalStorageCapacity": 256000000000,
+            "marketingName": "iPhone 13 Pro Max",
+            "platform": "iOS",
+            "productType": "iPhone14,3",
+            "reality": "physical",
+            "serialNumber": "A1B2C3D4E5",
+            "supportedBiometrics": ["faceID"],
+            "supportedCPUTypes": [
+              {
+                "subtype": 18446744071562067970,
+                "type": 16777228
+              },
+              {
+                "subtype": 0,
+                "type": 16777228
+              }
+            ],
+            "supportedDeviceFamilies": [1],
+            "supportsSiri": true,
+            "thinningProductType": "iPhone14,3",
+            "udid": "00001234-0123456789ABCDEF"
+          },
+          "software": {
+            "osBuildVersions": {
+              "buildVersion": {
+                "majorLetterComponent": "B",
+                "majorNumberComponent": 24,
+                "name": "24B119",
+                "revisionVersion": {
+                  "components": [24, 2, 119, 0, 0],
+                  "originalComponentsCount": 5,
+                  "stringValue": "24.2.119.0.0"
+                },
+                "trainProgram": "iOS",
+                "updateNumberComponent": 119
+              },
+              "supplementalBuildVersion": {
+                "majorLetterComponent": "B",
+                "majorNumberComponent": 24,
+                "name": "24B119",
+                "revisionVersion": {
+                  "components": [24, 2, 119, 0, 0],
+                  "originalComponentsCount": 5,
+                  "stringValue": "24.2.119.0.0"
+                },
+                "trainProgram": "iOS",
+                "updateNumberComponent": 119
+              }
+            },
+            "osVersionNumber": {
+              "components": [27, 2, 0, 0, 0],
+              "originalComponentsCount": 2,
+              "stringValue": "27.2"
+            },
+            "supportsCheckedAllocations": false
+          },
+          "state": {
+            "bootState": "booted",
+            "developerModeStatus": {
+              "enabled": {
+                "mode": 1
+              }
+            },
+            "name": "Test iPhone",
+            "preparednessState": 7
+          }
+        },
+        "propertyDisplayNames": null,
+        "visibilityClass": "default"
+      }
+    ]
+  }
+}

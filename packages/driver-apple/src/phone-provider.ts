@@ -1,6 +1,6 @@
 import { deviceState, type DeviceProvider, type Need } from '@appdyno/core';
 import { z } from 'zod';
-import { Devicectl } from './devicectl.js';
+import { Devicectl, phoneFacts } from './devicectl.js';
 import { iphoneGuide } from './guide.js';
 import { IosPhoneDevice } from './phone.js';
 import { listPhones, sameUdid, type UsbAttach } from './usbmux.js';
@@ -23,12 +23,12 @@ export async function phoneNeed(
   const lock = trusted ? ctl.lockState() : undefined;
   // its failure counts only once the list has passed
   lock?.catch(() => undefined);
-  const phone = await ctl.listed();
-  if (!phone) return 'not-connected';
-  if (phone.connectionProperties?.pairingState !== 'paired') return 'not-trusted';
-  if (phone.deviceProperties?.developerModeStatus !== 'enabled') return 'developer-mode-off';
-  if (parseInt(phone.deviceProperties.osVersionNumber ?? '', 10) < RUNNER_MIN_IOS)
-    return 'os-too-old';
+  const listed = await ctl.listed();
+  if (!listed) return 'not-connected';
+  const phone = phoneFacts(listed);
+  if (phone.pairingState !== 'paired') return 'not-trusted';
+  if (phone.developerModeStatus !== 'enabled') return 'developer-mode-off';
+  if (parseInt(phone.osVersion ?? '', 10) < RUNNER_MIN_IOS) return 'os-too-old';
   return (await (lock ?? ctl.lockState())).passcodeRequired ? 'locked' : undefined;
 }
 

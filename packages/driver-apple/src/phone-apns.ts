@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { run, type PushTokenKind } from '@appdyno/core';
 import { tokensIn, type ApnsTarget } from './apns-push.js';
-import type { Devicectl } from './devicectl.js';
+import { phoneFacts, type Devicectl, type ListedPhone } from './devicectl.js';
 import { infoValue } from './sim-links.js';
 import { assertBundle, xcodeEnv } from './simctl.js';
 
@@ -85,8 +85,7 @@ export class PhoneApnsTarget implements ApnsTarget {
 
   async osMajor() {
     const j = await this.ctl.json(['device', 'info', 'details', '--device', this.ctl.udid]);
-    const v = (j.result as { deviceProperties?: { osVersionNumber?: string } } | undefined)
-      ?.deviceProperties?.osVersionNumber;
+    const v = phoneFacts((j.result ?? {}) as ListedPhone).osVersion;
     return Number(v?.split('.')[0] ?? 0);
   }
 
