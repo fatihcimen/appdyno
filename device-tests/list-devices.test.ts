@@ -19,7 +19,12 @@ const lockedNow = () => adb('dumpsys', 'trust').includes('deviceLocked=1');
 describe.skipIf(!EMULATOR)('what blocks an emulator', () => {
   afterAll(() => {
     adb('input', 'keyevent', 'KEYCODE_WAKEUP');
-    adb('locksettings', 'clear', '--old', PIN);
+    try {
+      adb('locksettings', 'clear', '--old', PIN);
+    } catch (e) {
+      // Android 17 fails a clear where there is no PIN, as after the test's own
+      if (!/has no password/.test(String((e as { stdout?: string }).stdout))) throw e;
+    }
   });
 
   it('a lock behind a PIN is listed with its fix, and is gone with the PIN', async () => {
