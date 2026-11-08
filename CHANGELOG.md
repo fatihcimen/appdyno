@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Every answer's `structuredContent` holds its whole text, as `text`, beside the summary it held: a client that shows a tool's `structuredContent` in place of its text was shown a screen read as a count of its elements, and no action's settled screen or diff, nor any of the lines `logs` read. A refusal's text starts with its code and ends with its hint, as a client that shows a failed answer's text alone lost both, and its `structuredContent` holds that text too. A device's failure says its code and hint once, where its words said them in the middle; the command line prints the code first too.
 - What an op fetched inside `steps` or `flow` is said once, at the end of the answer the client reads: a flow lost it, and `steps` said it inside the line of each step that waited for it.
 - The hub's Get Trace Tools is left out of the app, which carries its own trace processor, and where it shows it says what it does: it fetches Android's trace processor now, before a trace needs it.
 - The Mac app carries Perfetto's trace processor, the pinned v59.1 for arm64 checked by its sha256, with its license, signed as the app's other programs are, and its appdyno takes it first: the app downloads nothing for Android's traces. The app grows from 121.1 MB to 135.4 MB, its disk image from 35.7 MB to 40.4 MB. On an API 34 emulator the built app's `doctor` and two `perf_launch` calls with `trace` found it in the app, and fetched nothing.

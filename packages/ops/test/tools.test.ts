@@ -10,7 +10,8 @@ import { iosScreen, iphoneProvider, simulatorProvider } from '@appdyno/driver-ap
 import { fine, slowDevicectl } from '../../driver-apple/test/slow-devicectl.js';
 import { pinchPaths, swipeLine } from '../src/gesture-paths.js';
 import { FakeDevice, LACKS } from './fake-device.js';
-import { linkedClient } from './helpers.js';
+import { linkedClient, REVISIONS, type Revision } from './helpers.js';
+import { opsFor } from '../src/registry.js';
 
 // a virtual device's numbers are noisy under host load: these answers must not depend on this Mac's
 vi.mock('node:os', async (original) => ({
@@ -26,6 +27,7 @@ async function connect(
   policy: Partial<Policy> = {},
   device: FakeDevice = new FakeDevice(),
   others: Awaited<ReturnType<DeviceProvider['list']>> = [],
+  revision?: Revision,
 ) {
   const logs: object[] = [];
   const provider: DeviceProvider = {
@@ -41,7 +43,7 @@ async function connect(
     app: 'dev.app',
     measurements: MEASUREMENTS,
   });
-  const client = await linkedClient(ctx, (l) => logs.push(l));
+  const client = await linkedClient(ctx, (l) => logs.push(l), undefined, revision);
   const call = async (name: string, args: Record<string, unknown> = {}) =>
     (await client.callTool({ name, arguments: args })) as Result;
   const textOf = async (name: string, args: Record<string, unknown> = {}) => {
@@ -182,6 +184,54 @@ describe('structured answers', () => {
       matches: [{ role: 'button', label: 'Gönder' }],
     });
   });
+
+  it('leaves the text its own field: no summary has a text of its own', () => {
+    const ops = opsFor(new ServerContext(DEFAULT_POLICY, []));
+    expect(Object.values(ops).filter((op) => 'text' in op.output.shape)).toEqual([]);
+  });
+
+  describe.each(REVISIONS)(
+    'whole in the text alone and in the structured content alone, on %s',
+    (revision) => {
+      it('the screen, an action with its diff, log lines, and a refusal with its code and hint', async () => {
+        const device = new FakeDevice();
+        device.logLines = ['E/Fixture: the form failed to load'];
+        const t = await connect({}, device, [], revision);
+        const both = async (name: string, args: Record<string, unknown> = {}) => {
+          const r = (await t.call(name, args)) as Result & {
+            structuredContent?: Record<string, unknown>;
+          };
+          const said = r.content.flatMap((c) => (c.type === 'text' ? [c.text] : [])).join('\n');
+          const sc = must(r.structuredContent, `${name}'s structured content`);
+          expect(sc.text).toBe(said);
+          return { said, sc, error: r.isError === true };
+        };
+        const screen = await both('screen');
+        expect(screen.said).toMatch(/button "Form" \d+,\d+/);
+        expect(screen.sc).toMatchObject({ elements: 3, foreground: 'dev.app' });
+        const tap = await both('tap', { ref: refOf(screen.said, 'Form') });
+        expect(tap.sc).toMatchObject({ screen: 'full', changed: true, settled: true });
+        expect(tap.said).toContain('button "Gönder"');
+        const sent = await both('tap', { ref: refOf(tap.said, 'Gönder') });
+        expect(sent.sc).toMatchObject({ screen: 'diff', changes: { added: 1 }, changed: true });
+        expect(sent.said).toMatch(/^screen changed: \+1 -0 ~0 .*\n\+ @[\w-]+ text "Gönderildi"/m);
+        expect(await both('logs')).toMatchObject({
+          said: expect.stringContaining('E/Fixture: the form failed to load') as unknown,
+        });
+        device.screen = 'login';
+        const refusal = await both('tap', { selector: { text: 'Add' } });
+        expect(refusal.error).toBe(true);
+        expect(refusal.said).toMatch(
+          /^AMBIGUOUS: 2 elements match .*\nhint: give the selector an index, or use a ref$/,
+        );
+        expect(refusal.sc).toMatchObject({
+          code: 'AMBIGUOUS',
+          hint: 'give the selector an index, or use a ref',
+          dispatched: false,
+        });
+      });
+    },
+  );
 });
 
 describe('act and read', () => {
@@ -299,8 +349,9 @@ describe('act and read', () => {
     t.device.fail = new DeviceError('TIMEOUT', 'act did not answer');
     const r = await t.textOf('tap', { x: 1, y: 1 });
     expect(r.error).toBe(true);
-    expect(r.text).toContain('(TIMEOUT)');
-    expect(r.text).toContain('try again');
+    expect(r.text).toMatch(
+      /^TIMEOUT: act did not answer \(the touch may have been sent: .*\)\nhint: .*try again$/,
+    );
   });
 });
 
@@ -630,13 +681,19 @@ describe('iOS simulators', () => {
     const none = new FakeDevice();
     Object.defineProperty(none, 'measure', { value: LACKS });
     const r = await (await connect({}, none)).textOf('perf_snapshot');
-    expect(r).toEqual({ error: true, text: 'emulator-5580 cannot measure CPU' });
+    expect(r).toEqual({ error: true, text: 'UNSUPPORTED: emulator-5580 cannot measure CPU' });
     const part = new FakeDevice();
     Object.defineProperty(part, 'measure', { value: { ...LACKS, cpu: part.measure.cpu } });
     const t = await connect({}, part);
-    expect((await t.textOf('perf_snapshot')).text).toBe('emulator-5580 cannot measure memory');
-    expect((await t.textOf('perf_trace')).text).toBe('emulator-5580 cannot measure a frame trace');
-    expect((await t.textOf('perf_heap')).text).toBe('emulator-5580 cannot measure a heap dump');
+    expect((await t.textOf('perf_snapshot')).text).toBe(
+      'UNSUPPORTED: emulator-5580 cannot measure memory',
+    );
+    expect((await t.textOf('perf_trace')).text).toBe(
+      'UNSUPPORTED: emulator-5580 cannot measure a frame trace',
+    );
+    expect((await t.textOf('perf_heap')).text).toBe(
+      'UNSUPPORTED: emulator-5580 cannot measure a heap dump',
+    );
   });
 
   it('words each measure a real device has no way of giving', async () => {
@@ -648,7 +705,9 @@ describe('iOS simulators', () => {
       ['perf_heap', { profile: 'java_hprof' }, 'a heap profile'],
       ['perf_launch', { baselineProfile: true }, 'a Baseline Profile'],
     ] as const)
-      expect((await t.textOf(name, args)).text).toBe(`emulator-5580 cannot measure ${word}`);
+      expect((await t.textOf(name, args)).text).toBe(
+        `UNSUPPORTED: emulator-5580 cannot measure ${word}`,
+      );
   });
 
   describe('each measure in its own terms', () => {
@@ -699,9 +758,11 @@ describe('iOS simulators', () => {
       expect((await t.textOf('perf_heap')).text).toMatch(
         /^measurement pm-\w+\nmemory graph \(Xcode\): .*x\.memgraph \(1\.0 MB\); 3 leaks, 192 bytes$/,
       );
-      expect((await t.textOf('perf_scroll')).text).toBe('emulator-5580 cannot measure frames');
+      expect((await t.textOf('perf_scroll')).text).toBe(
+        'UNSUPPORTED: emulator-5580 cannot measure frames',
+      );
       expect((await t.textOf('perf_trace')).text).toBe(
-        'emulator-5580 cannot measure a frame trace',
+        'UNSUPPORTED: emulator-5580 cannot measure a frame trace',
       );
     });
 
@@ -730,7 +791,9 @@ describe('iOS simulators', () => {
         'likely causes: 2× expensive commit',
         'trace (Instruments): /t/h.trace',
       ]);
-      expect((await t.textOf('perf_snapshot')).text).toBe('emulator-5580 cannot measure CPU');
+      expect((await t.textOf('perf_snapshot')).text).toBe(
+        'UNSUPPORTED: emulator-5580 cannot measure CPU',
+      );
     });
   });
 
@@ -748,7 +811,7 @@ describe('iOS simulators', () => {
     ])
       expect(r).toEqual({
         error: true,
-        text: 'another client holds UI automation (AGENT_CONFLICT): stop it first',
+        text: 'AGENT_CONFLICT: another client holds UI automation\nhint: stop it first',
       });
   });
 });

@@ -4,6 +4,7 @@
 
 ## Yayımlanmamış
 
+- Her yanıtın `structuredContent`'i, taşıdığı özetin yanında metninin tamamını `text` olarak taşır: bir aracın metni yerine `structuredContent`'ini gösteren bir istemciye ekran okuması öğelerinin sayısı olarak gösteriliyordu; hiçbir işlemin durulmuş ekranı ya da farkı, `logs`'un okuduğu satırların hiçbiri gösterilmiyordu. Bir reddin metni koduyla başlar ve ipucuyla biter, çünkü başarısız bir yanıtın yalnızca metnini gösteren bir istemci ikisini de kaybediyordu; `structuredContent`'i de bu metni taşır. Bir cihaz hatası kodunu ve ipucunu bir kez söyler, sözleri bunları ortada söylüyordu; komut satırı da kodu önce yazar.
 - Bir op'un `steps` ya da `flow` içinde indirdiği, istemcinin okuduğu yanıtın sonunda bir kez söylenir: bir flow bunu kaybediyordu, `steps` ise onu bekleyen her adımın kendi satırında söylüyordu.
 - Hub'daki İz Araçlarını Al, kendi trace processor'ını taşıyan uygulamada gösterilmez; gösterildiği yerde ne yaptığını söyler: Android'in trace processor'ını, bir trace ona ihtiyaç duymadan önce şimdi indirir.
 - Mac uygulaması Perfetto'nun trace processor'ını taşır: arm64 için sabitlenmiş, sha256'sıyla doğrulanmış v59.1'i, lisansıyla, uygulamanın öteki programları gibi imzalanmış olarak; uygulamanın appdyno'su önce onu alır ve uygulama Android'in trace'leri için hiçbir şey indirmez. Uygulama 121,1 MB'tan 135,4 MB'a, disk görüntüsü 35,7 MB'tan 40,4 MB'a büyür. Bir API 34 emülatöründe build edilmiş uygulamanın `doctor`'ı ve `trace` ile iki `perf_launch` çağrısı onu uygulamada buldu ve hiçbir şey indirmedi.

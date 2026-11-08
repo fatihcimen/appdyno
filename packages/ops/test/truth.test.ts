@@ -118,9 +118,11 @@ describe('failed answers', () => {
     const r = await call('screen');
     expect(r.isError).toBe(true);
     expect(r.structuredContent).toEqual({
+      text: 'TIMEOUT: tree.get did not answer\nhint: the device did not answer; read the screen and try again',
       code: 'TIMEOUT',
       hint: 'the device did not answer; read the screen and try again',
     });
+    expect(r.text).toBe(r.structuredContent?.text);
   });
 
   it.each(['TIMEOUT', 'DEVICE_GONE', 'AGENT_UNAVAILABLE'] as const)(
@@ -130,10 +132,12 @@ describe('failed answers', () => {
       device.openError = new DeviceError(code, 'xcodebuild ended', 'the last lines of its log');
       const { call } = await connect(device);
       const r = await call('screen');
-      expect(r.structuredContent).toEqual({ code, hint: 'the last lines of its log' });
-      expect(r.text).toContain('xcodebuild ended');
-      expect(r.text).toContain('the last lines of its log');
-      expect(r.text).not.toContain('try');
+      expect(r.structuredContent).toEqual({
+        text: `${code}: xcodebuild ended\nhint: the last lines of its log`,
+        code,
+        hint: 'the last lines of its log',
+      });
+      expect(r.text).toBe(r.structuredContent?.text);
     },
   );
 
@@ -214,7 +218,10 @@ describe('failed answers', () => {
       ],
     });
     expect(r.isError).toBe(true);
-    expect(r.text).toContain('2. tap failed, the rest were not run: act did not answer (TIMEOUT)');
+    expect(r.text).toMatch(
+      /^TIMEOUT: 1\. tapped 5,2390\n2\. tap failed, the rest were not run: act did not answer \(the touch may/,
+    );
+    expect(r.text).toMatch(/\nhint: the device did not answer; read the screen and try again$/);
     expect(r.text).toContain('Form');
     expect(r.structuredContent).toMatchObject({ code: 'TIMEOUT' });
   });

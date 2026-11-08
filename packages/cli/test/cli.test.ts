@@ -274,7 +274,11 @@ describe('commands from the operations', () => {
 
   it('prints a refusal and exits 1', async () => {
     const r = await run('tap');
-    expect(r).toEqual({ code: 1, out: [], err: ['give a ref, a selector, or x and y'] });
+    expect(r).toEqual({
+      code: 1,
+      out: [],
+      err: ['INVALID_ARGUMENT: give a ref, a selector, or x and y'],
+    });
   });
 
   it('prints what to do with a refusal, once', async () => {
@@ -286,7 +290,7 @@ describe('commands from the operations', () => {
     device.fail = new DeviceError('TIMEOUT', 'the build hung', 'the last lines of its log');
     const failed = await run('screen');
     expect(failed.code).toBe(1);
-    expect(failed.err).toEqual(['the build hung (TIMEOUT): the last lines of its log']);
+    expect(failed.err).toEqual(['TIMEOUT: the build hung', '  the last lines of its log']);
   });
 
   it('writes an image to --out, or to a temporary file it names', async () => {

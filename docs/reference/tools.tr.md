@@ -243,7 +243,7 @@ yalnızca bu aracın başlattıklarına dokunur. `APPDYNO_EMULATOR_ARGS` emülat
 Bir işlem durulmuş ekranla yanıt verir. `settled`, ekranın bekleme süresi boyunca durgun kaldığı anlamına gelir.
 `changed`, ekranın işlemden öncekinden düzende ya da metinde farklı olduğu anlamına gelir; farka işlemin
 yol açtığını söylemez. Hiçbir şey değişmediyse yanıt "no change seen in N ms; if a slow reaction is expected,
-use wait_for" der. Başarısız bir çağrı bir `code` ve bir `hint` taşıyan bir `isError` yanıtıdır, başarısız bir işlem de dokunuşunun gidip gitmediğini söyler (`dispatched`). Bir işlem, kimsenin görmediği bir ekrana dokunmadan önce onu okur ve kilitli bir telefonda adını koyarak reddeder (`DEVICE_LOCKED`). Bir isteğin iptali
+use wait_for" der. Her yanıtın `structuredContent`'i, özetin yanında metninin tamamını `text` olarak taşır, çünkü bir istemci iki kısımdan yalnızca birini gösterebilir. Başarısız bir çağrı, metni `code` ile başlayıp `hint` ile biten bir `isError` yanıtıdır, ikisi `structuredContent`'te de vardır; başarısız bir işlem de dokunuşunun gidip gitmediğini söyler (`dispatched`). Bir işlem, kimsenin görmediği bir ekrana dokunmadan önce onu okur ve kilitli bir telefonda adını koyarak reddeder (`DEVICE_LOCKED`). Bir isteğin iptali
 cihaza ulaşır ve uzun işlemler ilerleme bildirir.
 
 ## Loglar ve çökmeler

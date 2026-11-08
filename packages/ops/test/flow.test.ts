@@ -723,7 +723,8 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
       const r = await flowsFor(context()).replay(flowFile('tap text="Form"\n'));
       expect(r.failure).toMatchObject({
         code: 'TIMEOUT',
-        message: expect.stringContaining('tree.get did not answer (TIMEOUT)') as unknown,
+        message: 'tree.get did not answer',
+        hint: 'the device did not answer; read the screen and try again',
       });
     });
 

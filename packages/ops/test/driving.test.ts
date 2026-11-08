@@ -1444,7 +1444,7 @@ describe('device conditions', () => {
     const other = await call('device_setting', { name: 'locale', value: 'de', app: 'a.two' });
     expect([other.data.code, other.text]).toEqual([
       'INVALID_ARGUMENT',
-      'locale is held for a.one until it is put back',
+      'INVALID_ARGUMENT: locale is held for a.one until it is put back\nhint: device_setting restore first',
     ]);
     expect(settings.values.locale).toBe('de');
     expect((await call('device_setting', { name: 'restore' })).text).toBe('restored locale: ');
@@ -1489,19 +1489,21 @@ describe('device conditions', () => {
     });
     expect(pushed.text).toBe('pushed to dev.app');
     expect(settings.pushed).toEqual([['dev.app', { type: 'alert', title: 'T', data: { k: 'v' } }]]);
-    expect((await call('push', { type: 'tapped' })).text).toBe('no hand');
+    expect((await call('push', { type: 'tapped' })).text).toBe('UNSUPPORTED: no hand');
     expect((await call('push', { type: 'widgets', title: 'T' })).text).toBe(
-      'widgets here takes payload alone: not title',
+      'INVALID_ARGUMENT: widgets here takes payload alone: not title',
     );
     expect((await call('push', { type: 'loud' })).text).toMatch(
-      /^type: alert, background, .*, not loud$/,
+      /^INVALID_ARGUMENT: type: alert, background, .*, not loud$/,
     );
     for (const [payload, why] of [
       ['[1]', 'payload is JSON: an object'],
       ['{', 'payload is JSON: an object'],
       [`{"a":"${'x'.repeat(4_100)}"}`, 'a payload is 4096 bytes at most'],
-    ])
-      expect((await call('push', { type: 'alert', payload })).text).toBe(why);
+    ] as const)
+      expect((await call('push', { type: 'alert', payload })).text).toBe(
+        `INVALID_ARGUMENT: ${why}`,
+      );
     const b = await call('device_setting', { name: 'biometric', value: 'match' });
     expect(b.data.code).toBe('UNSUPPORTED');
     expect((await call('device_setting', { name: 'biometric', value: 'x' })).error).toBe(true);

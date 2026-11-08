@@ -15,6 +15,7 @@ import {
   DEFAULT_POLICY,
   opsFor,
   ServerContext,
+  textOf,
   type Op,
   type OpData,
   type OpName,
@@ -43,10 +44,7 @@ export const callerOf = (ctx: ServerContext) => {
   return async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {
     const op = must(ops[name], `the op ${name}`);
     const r = await op.handler(op.input.parse(args));
-    return {
-      text: r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'),
-      data: r.data as OpData<N>,
-    };
+    return { text: textOf(r.blocks), data: r.data as OpData<N> };
   };
 };
 

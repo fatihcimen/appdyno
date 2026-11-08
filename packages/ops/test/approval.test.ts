@@ -123,7 +123,9 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
         expect(r.error).toBe(true);
         expect(r.code).toBe('PERMISSION_REQUIRED');
         expect(r.text).toMatch(
-          new RegExp(`^the person declined ${action} on .*: nothing was done$`),
+          new RegExp(
+            `^PERMISSION_REQUIRED: the person declined ${action} on .*: nothing was done\\nhint: ask again only if the person asks for it$`,
+          ),
         );
         expect(asked).toHaveLength(1);
         expect(done).toEqual([]);
@@ -136,10 +138,10 @@ describe.each(REVISIONS)('what loses data, on %s', (revision) => {
         const r = await call(tool, args);
         expect(r.error).toBe(true);
         expect(r.code).toBe('PERMISSION_REQUIRED');
-        expect(r.text).toBe(
-          `${action} asks the person first, and this client cannot ask: nothing was done`,
-        );
         expect(r.hint).toContain('--allow-data-loss virtual');
+        expect(r.text).toBe(
+          `PERMISSION_REQUIRED: ${action} asks the person first, and this client cannot ask: nothing was done\nhint: ${String(r.hint)}`,
+        );
         expect(done).toEqual([]);
       }
     });

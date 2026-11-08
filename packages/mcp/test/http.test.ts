@@ -255,8 +255,8 @@ describe('asking the person over HTTP', () => {
       new StreamableHTTPClientTransport(new URL(url), { requestInit: { headers: bearer } }),
     );
     const reset = { name: 'device_setting', arguments: { name: 'keychain', value: 'reset' } };
-    expect(text(await client.callTool(reset))).toBe(
-      'device_setting keychain asks the person first, and this client cannot ask: nothing was done',
+    expect(text(await client.callTool(reset))).toMatch(
+      /^PERMISSION_REQUIRED: device_setting keychain asks the person first, and this client cannot ask: nothing was done\nhint: /,
     );
     expect(asked).not.toHaveBeenCalled();
   });

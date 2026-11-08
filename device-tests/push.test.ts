@@ -317,7 +317,7 @@ describe.skipIf(!SIMULATOR)('a simulator with APNs set up, over MCP', () => {
     expect(types).toContain("live_activity: APNs' sandbox, by the activity token");
     expect(types).toContain('alert: simctl push');
     const rich = await call('push', { type: 'rich', title: 'R' });
-    expect(rich.text).toContain(`no device token from ${APP} in this session (NOT_FOUND)`);
+    expect(rich.text).toContain(`NOT_FOUND: no device token from ${APP} in this session`);
     expect(rich.text).toContain('by NSLog or os_log');
   });
 
@@ -343,7 +343,7 @@ describe.skipIf(!ANDROID)('an Android emulator with FCM set up, over MCP', () =>
     expect(types).toContain('tapped: the launcher activity');
     await call('launch_app');
     const quiet = await call('push', { type: 'background', data: { sync: '7' } });
-    expect(quiet.text).toContain(`no registration token from ${APP} in this session (NOT_FOUND)`);
+    expect(quiet.text).toContain(`NOT_FOUND: no registration token from ${APP} in this session`);
     const topic = await call('push', { type: 'alert', payload: JSON.stringify({ topic: 'news' }) });
     expect(topic.text).toContain('an FCM payload names no topic');
     const away = await call('push', { type: 'alert', app: 'dev.not.here' });

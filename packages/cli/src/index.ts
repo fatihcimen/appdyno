@@ -244,9 +244,8 @@ export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
           return typeof data.exitCode === 'number' ? data.exitCode : 0;
         } catch (e) {
           if (!(e instanceof ToolError)) throw e;
-          io.err(e.message);
-          // a device's failure says it in its message already
-          if (e.hint && !e.message.includes(e.hint)) io.err(`  ${e.hint}`);
+          io.err(`${e.code}: ${e.message}`);
+          if (e.hint && !e.message.endsWith(e.hint)) io.err(`  ${e.hint}`);
           return 1;
         }
       },

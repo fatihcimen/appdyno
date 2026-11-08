@@ -16,8 +16,10 @@ import {
   argumentsFor,
   inCall,
   inputSchemaOf,
+  refusalText,
   ToolError,
   text,
+  textOf,
   type Op,
 } from '@appdyno/ops';
 
@@ -46,16 +48,20 @@ function callerOf(server: McpServer, ctx: ServerContext) {
   };
 }
 
-/** A refusal as a client reads it: the words, and the code and hint to act on. */
-const refusal = (e: ToolError): CallToolResult => ({
-  isError: true,
-  content: text(e.message),
-  structuredContent: {
-    code: e.code,
-    ...(e.hint && { hint: e.hint }),
-    ...(e.dispatched !== undefined && { dispatched: e.dispatched }),
-  },
-});
+/** A refusal, whole in its words and whole in its structured content, as a client may show either alone. */
+const refusal = (e: ToolError): CallToolResult => {
+  const said = refusalText(e);
+  return {
+    isError: true,
+    content: text(said),
+    structuredContent: {
+      text: said,
+      code: e.code,
+      ...(e.hint && { hint: e.hint }),
+      ...(e.dispatched !== undefined && { dispatched: e.dispatched }),
+    },
+  };
+};
 
 /** What many tools would each say of an argument: the server's instructions say it once. */
 const IN_INSTRUCTIONS = new Set([
@@ -87,8 +93,9 @@ function slim(schema: unknown): unknown {
 /**
  * The MCP server, one tool per op; an unexpected failure is logged to stderr by its message only. No
  * output schemas in the catalog: 16,000 characters that a client's validator would also hold against a
- * failed answer's code and hint. Structured content goes out all the same. `held` is the client over HTTP, where a
- * server lasts one POST and the `initialize` that named it came in another.
+ * failed answer's code and hint. Structured content goes out all the same, the answer's text in it beside the
+ * summary, as a client may show it in place of the text. `held` is the client over HTTP, where a server lasts one
+ * POST and the `initialize` that named it came in another.
  */
 export function createServer(
   ops: Record<string, Op>,
@@ -132,7 +139,10 @@ export function createServer(
                 () => t.handler(argumentsFor(t, args)),
               );
               said('ok');
-              return { content: r.blocks, structuredContent: r.data };
+              return {
+                content: r.blocks,
+                structuredContent: { text: textOf(r.blocks), ...r.data },
+              };
             } catch (e) {
               if (e instanceof ToolError) {
                 said('refused', { code: e.code });
@@ -140,11 +150,13 @@ export function createServer(
               }
               // never the arguments: they may hold typed text
               said('error', { error: e instanceof Error ? e.message : String(e) });
-              return {
-                isError: true,
-                content: text(`${name} failed with an internal error`),
-                structuredContent: { code: 'INTERNAL', hint: 'see the server log' },
-              };
+              return refusal(
+                new ToolError(
+                  `${name} failed with an internal error`,
+                  'INTERNAL',
+                  'see the server log',
+                ),
+              );
             }
           },
           () =>

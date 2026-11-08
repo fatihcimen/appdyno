@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 /**
  * The structured part of every tool's answer: a short summary a program can read (what was done, how
- * the screen changed, the measurement's numbers). The screen's elements stay in the text, so a client
- * that shows both to a model does not pay for the screen twice.
+ * the screen changed, the measurement's numbers). The MCP server puts the answer's text beside it, as `text`, as a
+ * client may show the structured content alone: no summary here has a `text` of its own.
  */
 const Changes = z.object({
   added: z.number().int(),

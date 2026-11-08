@@ -51,7 +51,8 @@ export function refusedAction(err: unknown): never {
   }
 }
 
-const NO_FOCUS = 'no editable field has the focus: tap the field first (or give type_text a ref)';
+const NO_FOCUS = 'no editable field has the focus';
+const NO_FOCUS_HINT = 'tap the field first (or give type_text a ref)';
 const CONNECTION = 'the device is not connected or its agent stopped; try once more';
 /** What to do, where the driver has nothing better to say (a build's log tail, which process holds the port). */
 const HINTS: Partial<Record<ErrorCode, string>> = {
@@ -60,13 +61,16 @@ const HINTS: Partial<Record<ErrorCode, string>> = {
   AGENT_UNAVAILABLE: CONNECTION,
 };
 
-/** A device failure as the agent's error: what failed and what to do. */
+/** A device failure as the agent's error: what failed and what to do, each said once, by `refusalText`. */
 export function refused(err: unknown): never {
   if (!(err instanceof DeviceError)) throw err;
-  if (err.code === 'NO_FOCUS') throw new ToolError(NO_FOCUS, err.code, NO_FOCUS);
-  const hint = err.hint ?? HINTS[err.code];
-  throw new ToolError(`${err.message} (${err.code})${hint ? `: ${hint}` : ''}`, err.code, hint);
+  if (err.code === 'NO_FOCUS') throw new ToolError(NO_FOCUS, err.code, NO_FOCUS_HINT);
+  throw new ToolError(err.message, err.code, err.hint ?? HINTS[err.code]);
 }
+
+/** A refusal in words, whole for a client that reads only them: its code first, its hint last. */
+export const refusalText = ({ code, message, hint }: ToolError) =>
+  `${code}: ${message}${hint && !message.endsWith(hint) ? `\nhint: ${hint}` : ''}`;
 
 export type Block =
   { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };
@@ -79,7 +83,7 @@ export type ToolAnnotations = {
   openWorldHint: boolean;
 };
 
-/** What a tool answers: the text (and images) for the model, a summary matching its output schema. */
+/** What a tool answers: the text (and images), and a summary matching its output schema. */
 export type ToolResult<D = Record<string, unknown>> = { blocks: Block[]; data: D };
 
 export type Tool = {
@@ -175,6 +179,10 @@ export function argumentsFor(op: Pick<Tool, 'input'>, args: unknown, flag = '') 
 }
 
 export const text = (t: string): Block[] => [{ type: 'text', text: t }];
+
+/** The words of an answer: its text blocks, in order. */
+export const textOf = (blocks: Block[]) =>
+  blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n');
 
 export const reply = <D>(t: string, data: D, extra: Block[] = []): ToolResult<D> => ({
   blocks: [{ type: 'text', text: t }, ...extra],
