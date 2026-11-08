@@ -8,7 +8,9 @@ import android.content.ContextWrapper
 import android.os.HandlerThread
 import android.os.Looper
 import android.os.SystemClock
+import android.view.InputDevice
 import android.view.InputEvent
+import android.view.MotionEvent
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityWindowInfo
 import java.lang.reflect.InvocationTargetException
@@ -159,16 +161,9 @@ class Automation private constructor(private val looper: Looper) {
         if (android.os.Build.VERSION.SDK_INT >= 34) ua.clearCache() else ua.serviceInfo = ua.serviceInfo
     }
 
-    fun inject(event: InputEvent) {
-        val ok = try {
-            if (injectNoWait != null) injectNoWait.invoke(ua, event, true, false) as Boolean
-            else ua.injectInputEvent(event, true)
-        } catch (e: InvocationTargetException) {
-            throw injectFailure(e.targetException)
-        } catch (e: SecurityException) {
-            throw injectFailure(e)
-        }
-        if (!ok) throw AgentFailure("INTERNAL", "the input event was not delivered")
+    fun inject(event: InputEvent) = deliver(event) {
+        if (injectNoWait != null) injectNoWait.invoke(ua, it, true, false) as Boolean
+        else ua.injectInputEvent(it, true)
     }
 
     /** The input manager's own injection, which a shell user may call: no accessibility connection on its way. */
@@ -188,17 +183,50 @@ class Automation private constructor(private val looper: Looper) {
      * For a person's finger on a mirror's window. Waits for nothing: the next move must not queue behind a busy
      * app. Directly where the release allows: measured on a Xiaomi, the way by UI automation cost a tap 30 ms.
      */
-    fun injectLive(event: InputEvent) {
+    fun injectLive(event: InputEvent) = deliver(event) {
+        if (direct != null) direct.second.invoke(direct.first, it, INJECT_ASYNC) as Boolean
+        else if (injectNoWait != null) injectNoWait.invoke(ua, it, false, false) as Boolean
+        else ua.injectInputEvent(it, false)
+    }
+
+    private fun deliver(event: InputEvent, send: (InputEvent) -> Boolean) {
         val ok = try {
-            if (direct != null) direct.second.invoke(direct.first, event, INJECT_ASYNC) as Boolean
-            else if (injectNoWait != null) injectNoWait.invoke(ua, event, false, false) as Boolean
-            else ua.injectInputEvent(event, false)
+            pastLeftFinger(event, send)
         } catch (e: InvocationTargetException) {
             throw injectFailure(e.targetException)
         } catch (e: SecurityException) {
             throw injectFailure(e)
         }
         if (!ok) throw AgentFailure("INTERNAL", "the input event was not delivered")
+    }
+
+    /**
+     * Android 17 holds injected touches to one consistent stream, whoever sent them: a finger left down, by an agent
+     * killed during a long press or a window closed during a drag, has every later finger-down refused ("Invalid DOWN
+     * event - pointers already down") until it is cancelled, where an earlier release took the new one. A refused
+     * finger-down lifts it and is sent once more.
+     */
+    private fun pastLeftFinger(event: InputEvent, send: (InputEvent) -> Boolean): Boolean {
+        if (send(event)) return true
+        if (event !is MotionEvent || event.actionMasked != MotionEvent.ACTION_DOWN) return false
+        return liftLeftFinger(send) && send(event)
+    }
+
+    /**
+     * Cancels a finger an injection left down, one or a pinch's two, and says whether there was one. Held on the
+     * status bar it opens the shade at the next activity start on Android 17, so a new agent lifts it at once.
+     */
+    fun liftLeftFinger(send: (InputEvent) -> Boolean = { ua.injectInputEvent(it, true) }): Boolean =
+        (1..2).any { send(cancel(it)) }
+
+    private fun cancel(fingers: Int): MotionEvent {
+        val now = SystemClock.uptimeMillis()
+        val props = Array(fingers) { i -> MotionEvent.PointerProperties().apply { id = i; toolType = MotionEvent.TOOL_TYPE_FINGER } }
+        val coords = Array(fingers) { MotionEvent.PointerCoords() }
+        return MotionEvent.obtain(
+            now, now, MotionEvent.ACTION_CANCEL, fingers, props, coords,
+            0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, MotionEvent.FLAG_CANCELED,
+        )
     }
 
     private fun injectFailure(t: Throwable): Throwable =
@@ -236,7 +264,8 @@ class Automation private constructor(private val looper: Looper) {
         /** Opens the connection once at start, so a device that refuses it fails the start. */
         fun connect(): Automation {
             val thread = HandlerThread("appdyno-a11y").apply { start() }
-            return Automation(thread.looper).also { it.ua }
+            // a device that refuses injected input says so at the first touch, not here
+            return Automation(thread.looper).also { it.ua; runCatching { it.liftLeftFinger() } }
         }
 
         /** The constructor this release has: a looper or a context, the connection, maybe a display id. */

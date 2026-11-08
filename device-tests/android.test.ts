@@ -693,7 +693,7 @@ describe.skipIf(!serial)('android agent on a device', () => {
     other.close();
   });
 
-  it('a killed agent fails the call in flight and comes back on the next read', async () => {
+  it('a killed agent fails the call in flight, comes back on the next read, and a touch lands after it', async () => {
     await home();
     const pid = d.hello!.pid!;
     const pending = d.longPress({ x: 10, y: 10 }, 3_000, { settle: false });
@@ -707,6 +707,8 @@ describe.skipIf(!serial)('android agent on a device', () => {
     expect(s.list.length).toBeGreaterThan(0);
     expect(d.lastStartWasCold).toBe(true);
     expect(d.hello!.pid).not.toBe(pid);
+    // the long press it killed left its finger down, which Android 17 holds against every later one
+    expect(labels(await open('FORM'))).toContain('Enter your details');
   });
 
   it('a second automation server on the device is refused with a typed reason', async () => {
