@@ -1,5 +1,4 @@
 import { expect, it } from 'vitest';
-// @ts-expect-error: a script's reckoning, with no types of its own
 import { publishedReadme } from '../scripts/published-readme.mjs';
 
 const REPOSITORY = 'git+https://github.com/o/r.git';

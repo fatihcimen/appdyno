@@ -13,7 +13,7 @@ import { writeFileSync } from 'node:fs';
 import { loadavg } from 'node:os';
 import { parseArgs } from 'node:util';
 import { byMinute, quietAndBusy } from './mirror-bench-minutes.mjs';
-import { MirrorSession, startViewer, ViewerProcess, viewerBinary } from '@appdyno/core';
+import { MirrorSession, must, startViewer, ViewerProcess, viewerBinary } from '@appdyno/core';
 import { Adb, AndroidDevice } from '@appdyno/driver-android';
 import { IosPhoneDevice, IosSimulatorDevice } from '@appdyno/driver-apple';
 
@@ -41,12 +41,20 @@ const TAPS = Number(values.taps);
 const FIXTURE = 'dev.appdyno.fixture';
 const LOAD_LIMIT = 60;
 
+/** @param {number} ms */
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
-const load = () => Number(loadavg()[0].toFixed(0));
+const load = () => Number(must(loadavg()[0], "the host's load").toFixed(0));
+/**
+ * @param {number[]} values
+ * @param {number} p
+ */
 const percentile = (values, p) => {
   const sorted = values.filter((v) => v >= 0).sort((a, b) => a - b);
-  return sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] : -1;
+  return sorted.length
+    ? must(sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))], 'the percentile')
+    : -1;
 };
+/** @param {number[]} values */
 const median = (values) => percentile(values, 0.5);
 
 const isIphone = /^[0-9A-F]{8}-[0-9A-F]{16}$/.test(serial);
@@ -70,7 +78,11 @@ if (values['max-size']) {
   phone.open = (o) => phone.sourceWith(o, { maxSize: Number(values['max-size']) });
 }
 
+/** @typedef {import('@appdyno/core').MirrorStats} Stats */
+/** @type {(Stats & { load: number })[]} */
 const seconds = [];
+/** @type {Stats | undefined} */
+let lastStats;
 const session = new MirrorSession({
   mirror: device.mirror,
   // a real window stays behind the others, on a Mac someone is using
@@ -80,12 +92,17 @@ const session = new MirrorSession({
   options: { quality: 'auto', ...(values.wifi && { wifi: true }) },
   title: `bench ${serial}`,
   onChange: (s) => {
-    if (s.stats && s.stats !== seconds.at(-1)?.from) {
-      seconds.push({ ...s.stats, from: s.stats, load: load() });
+    if (s.stats && s.stats !== lastStats) {
+      lastStats = s.stats;
+      seconds.push({ ...s.stats, load: load() });
     }
   },
 });
 
+/**
+ * @param {string} what
+ * @param {() => boolean} test
+ */
 const waitFor = async (what, test, ms = 120_000) => {
   const end = Date.now() + ms;
   while (!test()) {
@@ -95,7 +112,10 @@ const waitFor = async (what, test, ms = 120_000) => {
   }
 };
 
-/** The numbers of the seconds from now, once they have passed. */
+/**
+ * The numbers of the seconds from now, once they have passed.
+ * @param {number} ms
+ */
 const during = async (ms) => {
   const from = seconds.length;
   await pause(ms);
@@ -115,6 +135,7 @@ const still = async (ms = 20_000) => {
   );
 };
 
+/** @param {string} cmd */
 const adbShell = (cmd) => adb.exec(serial, cmd, { timeoutMs: 30_000 });
 
 /** Android: the fixture's screen with a button that animates each vsync for 2 s, and where it is. */
@@ -143,19 +164,23 @@ async function prepareAndroid() {
  * A simulator: Settings, a long list on any simulator. The fixture's List sits behind iOS's question about
  * its link, and with no runner there is nothing here that reads the screen to answer it.
  */
-async function prepareSimulator() {
+const prepareSimulator = async () => {
   execFileSync('xcrun', ['simctl', 'launch', serial, 'com.apple.Preferences'], {
     encoding: 'utf8',
   });
   await pause(2_500);
   return { on: 'Settings' };
-}
+};
 
 /**
  * An iPhone: the fixture's List, known to be on the screen before any touch, as a phone left alone may lock and a
  * blind flick on its home screen opens Spotlight. The runner reads the screen, and is let go of after.
  */
-async function showOnIphone(screen, wanted) {
+/**
+ * @param {string} screen
+ * @param {(e: import('@appdyno/core').Screen['list'][number]) => boolean} [wanted]
+ */
+const showOnIphone = async (screen, wanted) => {
   execFileSync(
     'xcrun',
     [
@@ -185,8 +210,9 @@ async function showOnIphone(screen, wanted) {
     if (Date.now() > end) throw new Error(`the fixture's ${screen} is not on the phone's screen`);
     await pause(500);
   }
-}
+};
 
+/** @param {import('@appdyno/core').Screen['list'][number]} e */
 const isRow = (e) => e.id === 'row_name';
 
 async function prepareIphone() {
@@ -194,6 +220,10 @@ async function prepareIphone() {
   return { on: 'the fixture list' };
 }
 
+/**
+ * @param {number} x
+ * @param {number} y
+ */
 const tapAt = (x, y) => {
   session.send({ kind: 'touch', p: 0, x, y });
   session.send({ kind: 'touch', p: 2, x, y });
@@ -236,7 +266,15 @@ const result = {
   date: new Date().toISOString(),
   /** @type {{ name: string; value: unknown; target?: string; ok?: boolean; load: number }[]} */
   runs: [],
+  /** @type {import('./mirror-bench-minutes.mjs').Minute[] | undefined} */
+  minutes: undefined,
 };
+/**
+ * @param {string} name
+ * @param {string | number} value
+ * @param {string} [target]
+ * @param {boolean} [ok]
+ */
 const note = (name, value, target, ok) => {
   const row = { name, value, target, ok, load: load() };
   result.runs.push(row);
@@ -253,17 +291,20 @@ const note = (name, value, target, ok) => {
   );
 };
 
-/** Ends it; of an iPhone, what its stream counted, and what the phone says of the stop. */
+/**
+ * Ends it; of an iPhone, what its stream counted, and what the phone says of the stop.
+ * @param {string} why
+ */
 const finish = async (why) => {
   const last = seconds.at(-1);
   if (isIphone && last) {
     note(
       'packets',
-      `${last.lostPackets} lost, ${last.latePackets} late of ${last.packets}; ${last.heldPictures} pictures held, ${last.droppedPictures} dropped`,
+      `${String(last.lostPackets)} lost, ${String(last.latePackets)} late of ${String(last.packets)}; ${String(last.heldPictures)} pictures held, ${String(last.droppedPictures)} dropped`,
     );
     note(
       'freezes',
-      `${last.freezes}, longest ${last.longestFreezeMs} ms, ${(last.frozenMs / 1000).toFixed(1)} s in all`,
+      `${String(last.freezes)}, longest ${String(last.longestFreezeMs)} ms, ${(Number(last.frozenMs) / 1000).toFixed(1)} s in all`,
     );
     const minutes = byMinute(seconds);
     for (const line of quietAndBusy(minutes, LOAD_LIMIT)) note('held', line);
@@ -286,7 +327,7 @@ const finish = async (why) => {
     );
     await device.stopAgent().catch(() => undefined);
   }
-  device.close?.();
+  device.close();
 };
 
 await session.start();
@@ -311,7 +352,9 @@ const prepared = isIphone
   : isUdid
     ? await prepareSimulator()
     : await prepareAndroid();
-if (prepared.on) note('on', prepared.on);
+if ('on' in prepared) note('on', prepared.on);
+/** Android's: the fixture's button that animates, and where it is. */
+const button = 'x' in prepared ? prepared : undefined;
 const settled = isIphone ? () => pause(1_500) : still;
 await settled().catch(() =>
   note('still screen', 'never: a moving screen makes the touch figure mean nothing'),
@@ -321,11 +364,12 @@ if (values.soak) {
   // the heaviest a phone sends: nothing touches it, and a held stream was seen to keep it awake
   if (isIphone) await showOnIphone('noise');
   const act = async () => {
-    if (isIphone) return;
-    await (isUdid ? drag() : tapAt(prepared.x, prepared.y));
+    if (button) tapAt(button.x, button.y);
+    else if (isUdid) await drag();
   };
   const begun = Date.now();
   const end = begun + Number(values.soak) * 60_000;
+  /** @type {typeof seconds | undefined} */
   let early;
   let soakMark = 0;
   while (Date.now() < end) {
@@ -338,12 +382,17 @@ if (values.soak) {
       soakMark = Math.floor((Date.now() - begun) / 300_000);
       note(
         `at ${soakMark * 5} min`,
-        `${last.arrived} frames/s, ${last.mbps} Mbit/s, viewer ${last.rssMb} MB, this process ${Math.round(process.memoryUsage().rss / 1e6)} MB`,
+        `${String(last.arrived)} frames/s, ${String(last.mbps)} Mbit/s, viewer ${String(last.rssMb)} MB, this process ${Math.round(process.memoryUsage().rss / 1e6)} MB`,
       );
     }
   }
   const late = seconds.slice(-30);
-  const top = (list, key) => Math.max(...list.map((n) => Number(n[key])));
+  /**
+   * @param {typeof seconds | undefined} list
+   * @param {string} key
+   */
+  const top = (list, key) =>
+    Math.max(...must(list, 'a minute of the soak').map((n) => Number(n[key])));
   note(
     'RSS, a minute in and at the end',
     `${top(early, 'rssMb')}, ${top(late, 'rssMb')} MB`,
@@ -373,10 +422,10 @@ const touches = [];
 for (let i = 0; i < TAPS; i++) {
   await settled();
   const marked = session.mark();
-  if (isUdid || isIphone) void drag();
-  else tapAt(prepared.x, prepared.y);
+  if (button) tapAt(button.x, button.y);
+  else void drag();
   touches.push(await Promise.race([marked, pause(5_000).then(() => -1)]));
-  await pause(isUdid || isIphone ? 1_000 : prepared.animateMs);
+  await pause(button ? button.animateMs : 1_000);
 }
 const touchTarget = { phone: 80, emulator: 120, simulator: 80, iphone: 150 }[kind];
 const touch = median(touches);
@@ -397,12 +446,12 @@ while (Date.now() - start < SECONDS * 1000) {
   const from = seconds.length;
   if (isIphone) {
     await pause(1_000);
-  } else if (isUdid) {
+  } else if (button) {
+    tapAt(button.x, button.y);
+    await pause(button.animateMs - 100);
+  } else {
     await drag();
     await pause(200);
-  } else {
-    tapAt(prepared.x, prepared.y);
-    await pause(prepared.animateMs - 100);
   }
   moved.push(...seconds.slice(from));
 }
@@ -437,6 +486,7 @@ note(
   fps >= fpsNeeded,
 );
 
+/** @param {string} key */
 const p95 = (key) => median(fullSeconds.map((n) => Number(n[key])));
 if (kind === 'simulator') {
   const gap = p95('gapP95');
@@ -454,7 +504,7 @@ if (kind !== 'simulator') {
 note('Mbit/s', median(fullSeconds.map((n) => Number(n.mbps))));
 note(
   'mode',
-  `${fullSeconds.at(-1)?.source} ${fullSeconds.at(-1)?.mode}, ${fullSeconds.at(-1)?.decoder}`,
+  `${String(fullSeconds.at(-1)?.source)} ${String(fullSeconds.at(-1)?.mode)}, ${String(fullSeconds.at(-1)?.decoder)}`,
 );
 note('inputs', `${session.status.inputFailed} failed, ${session.status.inputDropped} moves merged`);
 

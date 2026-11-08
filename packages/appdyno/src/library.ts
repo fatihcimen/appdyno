@@ -12,10 +12,12 @@ import { deviceProviders } from './providers.js';
  * Each tool's arguments and what it answers, by its name. The build writes this out from the tools' own schemas:
  * what is published needs no other package's types, and zod's are not among them.
  */
-export interface Tools {
-  [tool: string]: { args: Record<string, unknown>; data: Record<string, unknown> };
-}
+export type Tools = Record<
+  string,
+  { args: Record<string, unknown>; data: Record<string, unknown> }
+>;
 
+// eslint-disable-next-line @typescript-eslint/no-duplicate-type-constituents -- the build puts an interface in Tools' place, whose keys are names
 export type ToolName = keyof Tools & string;
 
 export type ConnectOptions = {

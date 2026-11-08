@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { NEEDS } from '@appdyno/core';
+import { must, NEEDS } from '@appdyno/core';
 import { TRIED } from '../src/hub-services.js';
 
 const viewer = join(import.meta.dirname, '../../../mac/Viewer');
@@ -12,7 +12,7 @@ const rows = ['WordsTable.m', 'WordsClients.m', 'WordsHelp.m', 'WordsConnect.m']
   .flatMap((file) => [
     ...source(file).matchAll(/^\s*\{"((?:[^"\\]|\\.)*)", "((?:[^"\\]|\\.)*)"\},$/gm),
   ])
-  .map((m) => ({ en: unquote(m[1]!), tr: unquote(m[2]!) }));
+  .map((m) => ({ en: unquote(must(m[1], 'its English')), tr: unquote(must(m[2], 'its Turkish')) }));
 const english = new Set(rows.map((r) => r.en));
 /** A word the table would find, as a pattern too. */
 const known = (word: string) =>
@@ -73,7 +73,7 @@ describe('the table of words', () => {
   it('has every sentence of the client and help panes, in whatever shape they are kept', () => {
     const missed = ['HubClients.m', 'HubHelp.m', 'HubConnect.m', 'HubTools.m'].flatMap((file) =>
       [...source(file).matchAll(/@"([A-Z][^"]* [^"]*)"/g)]
-        .map((m) => m[1]!)
+        .map((m) => must(m[1], 'a sentence'))
         .filter((word) => !known(word))
         .map((word) => `${file}: ${word}`),
     );
@@ -87,7 +87,7 @@ describe('the table of words', () => {
     for (const file of readdirSync(viewer).filter((f) => f.endsWith('.m'))) {
       if (file.startsWith('SelfTest') || file.startsWith('Words')) continue;
       for (const m of source(file).matchAll(shown)) {
-        const word = (m[1] ?? m[2] ?? m[3])!;
+        const word = must(m[1] ?? m[2] ?? m[3], 'a word');
         // a dash for a figure not read yet, and a name to type: no word to put in another language
         if (word.startsWith('\\u') || !/[a-z]{2}/i.test(word) || word === 'appdyno_emulator')
           continue;

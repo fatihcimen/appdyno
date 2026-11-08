@@ -1,6 +1,10 @@
 // npm shows the README against the package's own folder, where the docs and the pictures are not.
 
-/** The README with its links to this repository's files made whole. */
+/**
+ * The README with its links to this repository's files made whole.
+ * @param {string} text
+ * @param {string} repository
+ */
 export const publishedReadme = (text, repository) => {
   const home = repository.replace(/^git\+/, '').replace(/\.git$/, '');
   return text

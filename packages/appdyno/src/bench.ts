@@ -1,5 +1,5 @@
 import { freemem, loadavg, totalmem } from 'node:os';
-import { buildScreen, run, sleep, stats, type Stats } from '@appdyno/core';
+import { buildScreen, must, run, sleep, stats, type Stats } from '@appdyno/core';
 import { Adb, AndroidDevice } from '@appdyno/driver-android';
 
 /** An element a benchmark looks up: its label or id, and its centre in tap units. */
@@ -9,7 +9,7 @@ export type BenchElement = { label: string; id?: string; x: number; y: number };
  * What a benchmark needs of a device driver. Each call is one measured operation; `tapAndRead` is an
  * action followed by that driver's own way of waiting for the screen and reading it.
  */
-export interface BenchDriver {
+export type BenchDriver = {
   readonly name: string;
   setup(): Promise<void>;
   teardown(): Promise<void>;
@@ -23,7 +23,7 @@ export interface BenchDriver {
   coldRead?(): Promise<void>;
   /** A new client connection to the running on-device server (one round trip). */
   reconnect?(): Promise<void>;
-}
+};
 
 /** This project's driver: the host library and the on-device agent. */
 export function appdynoDriver(serial: string, adb = new Adb()): BenchDriver {
@@ -52,7 +52,7 @@ export function appdynoDriver(serial: string, adb = new Adb()): BenchDriver {
         read: 'tree',
         ...(lastHash && { before: lastHash }),
       });
-      const s = buildScreen(r.tree!, { port: d.platformScreen });
+      const s = buildScreen(must(r.tree, 'the tree it read'), { port: d.platformScreen });
       lastHash = s.hash;
       return { reads: r.settle?.reads ?? 0, settled: r.settle?.settled ?? false };
     },
@@ -108,7 +108,7 @@ export async function environment(adb: Adb, serial: string): Promise<Environment
     const port = /^emulator-(\d+)$/.exec(serial)?.[1];
     const line = stdout
       .split('\n')
-      .find((l) => /qemu-system/.test(l) && (!port || l.includes(`-port ${port}`)));
+      .find((l) => l.includes('qemu-system') && (!port || l.includes(`-port ${port}`)));
     const gpu = line && /-gpu (\S+)/.exec(line)?.[1];
     if (gpu) env.emulatorGpu = gpu;
   } catch {
@@ -184,7 +184,7 @@ export async function benchmark(
       if (e) return e;
       await sleep(300);
     }
-    throw new Error(`no ${label} on the screen`);
+    throw new Error(`no ${String(label)} on the screen`);
   };
 
   const before = await environment(adb, serial);
@@ -223,8 +223,9 @@ export async function benchmark(
     await measure('type.20tr', n, () => driver.typeText(field, TEXT_20));
     await home();
     await measure('screenshot', n, () => driver.screenshot());
-    if (driver.reconnect) await measure('reconnect', Math.min(n, 20), () => driver.reconnect!());
-    if (driver.coldRead) await measure('coldRead', 5, () => driver.coldRead!());
+    if (driver.reconnect)
+      await measure('reconnect', Math.min(n, 20), driver.reconnect.bind(driver));
+    if (driver.coldRead) await measure('coldRead', 5, driver.coldRead.bind(driver));
   } finally {
     await driver.teardown().catch(() => undefined);
   }

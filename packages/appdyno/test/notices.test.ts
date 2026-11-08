@@ -4,7 +4,6 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error: a script's reckoning, with no types of its own
 import { bundledPackages, inlinedPackages, noticesFor } from '../scripts/notices.mjs';
 
 const root = mkdtempSync(join(tmpdir(), 'appdyno-notices-'));

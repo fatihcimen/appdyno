@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { join } from 'node:path';
-import { endChild } from '@appdyno/core';
+import { endChild, must } from '@appdyno/core';
 import { gateVerdict } from '@appdyno/perf';
 import { HELD_BY_HUB, STOP_MS } from './lifetime.js';
 import type { COMMANDS } from './usage.js';
@@ -23,11 +23,12 @@ const plain = (v: unknown): v is string => typeof v === 'string' && v !== '' && 
 
 const app = (a: Asked) => (plain(a.app) ? ['--app', a.app] : []);
 const device = (a: Asked) => (plain(a.device) ? ['--device', a.device] : []);
-const seconds = (a: Asked) => (/^\d+$/.test(a.seconds ?? '') ? ['--seconds', a.seconds!] : []);
+const seconds = (a: Asked) =>
+  a.seconds !== undefined && /^\d+$/.test(a.seconds) ? ['--seconds', a.seconds] : [];
 /** What a command cannot run without: nothing, where one is missing. */
 const needs = (ok: boolean, words: string[]) => (ok ? words : undefined);
 /** What Wireless debugging shows, and nothing that would read as anything else. */
-const shown = (a: Asked) =>
+const shown = (a: Asked): a is Asked & { address: string; code: string } =>
   plain(a.address) && /^[\w.:[\]%-]{1,64}$/.test(a.address) && /^\d{6}$/.test(a.code ?? '');
 
 /**
@@ -41,13 +42,9 @@ export const HUB_RUNS: Record<string, (a: Asked) => string[] | undefined> = {
   survey: (a) =>
     needs(plain(a.app) && plain(a.device), ['perf', 'survey', ...app(a), ...device(a)]),
   flows: (a) =>
-    needs(plain(a.folder) && plain(a.device), [
-      'test',
-      a.folder!,
-      ...device(a),
-      '--artifacts',
-      join(a.folder!, 'appdyno-artifacts'),
-    ]),
+    plain(a.folder) && plain(a.device)
+      ? ['test', a.folder, ...device(a), '--artifacts', join(a.folder, 'appdyno-artifacts')]
+      : undefined,
   timeline: (a) =>
     needs(plain(a.app) && plain(a.device), ['timeline', ...app(a), ...device(a), ...seconds(a)]),
   flight: (a) => needs(plain(a.app) && plain(a.device), ['flight', ...app(a), ...device(a)]),
@@ -56,7 +53,7 @@ export const HUB_RUNS: Record<string, (a: Asked) => string[] | undefined> = {
   adb: () => ['tools', 'install', 'adb', '--accept-license'],
   runner: () => RUNNER.split(' '),
   pair: (a) =>
-    shown(a) ? ['pair', a.address!, a.code!] : needs(plain(a.device), ['pair', ...device(a)]),
+    shown(a) ? ['pair', a.address, a.code] : needs(plain(a.device), ['pair', ...device(a)]),
   forget: (a) => needs(plain(a.device), ['pair', '--forget', ...device(a)]),
   'path-on': () => ['path'],
   'path-off': () => ['path', '--remove'],
@@ -107,11 +104,13 @@ export class HubRuns {
   ) {}
 
   start(name: string, asked: Asked, say: Say) {
-    const words = Object.hasOwn(HUB_RUNS, name) ? HUB_RUNS[name]!(asked) : undefined;
-    if (!words)
-      return say({ run: { name, code: 2, line: `${name}: something it needs is missing` } });
+    const words = Object.hasOwn(HUB_RUNS, name) ? HUB_RUNS[name]?.(asked) : undefined;
+    if (!words) {
+      say({ run: { name, code: 2, line: `${name}: something it needs is missing` } });
+      return undefined;
+    }
     if (this.runs.has(name)) return undefined;
-    const child = spawn(this.self[0]!, [...this.self.slice(1), ...words], {
+    const child = spawn(must(this.self[0], 'the command'), [...this.self.slice(1), ...words], {
       env: { ...this.env, [HELD_BY_HUB]: '1' },
       cwd: this.home,
       // a group of its own: Ctrl-C at a terminal reaches all a command started, and so must Stop
@@ -128,8 +127,8 @@ export class HubRuns {
       run.file = [...text.matchAll(MADE)].at(-1)?.[1] ?? run.file;
       say({ run: { name, text: forPerson(text) } });
     };
-    child.stdout!.on('data', heard);
-    child.stderr!.on('data', heard);
+    child.stdout.on('data', heard);
+    child.stderr.on('data', heard);
     child.on('error', (e) => say({ run: { name, text: `${e.message}\n` } }));
     child.on('close', (code) => {
       this.runs.delete(name);

@@ -7,21 +7,25 @@ import { line } from '../src/usage.js';
 const op = (calls: string[], name: string) => ({
   name,
   input: z.object({ action: z.string() }),
-  handler: async (args: { action: string }) => {
+  handler: (args: { action: string }) => {
     calls.push(`${name} ${args.action}`);
-    return { blocks: [{ type: 'text', text: `${name} ${args.action} done` }], data: {} };
+    return Promise.resolve({
+      blocks: [{ type: 'text', text: `${name} ${args.action} done` }],
+      data: {},
+    });
   },
 });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const opsWith = (calls: string[]): any => ({ report: op(calls, 'report') });
+/** The one op a timeline calls, as the tools it is given. */
+const opsWith = (calls: string[]) =>
+  ({ report: op(calls, 'report') }) as unknown as Parameters<typeof recordTimeline>[0];
 
 describe('a timeline from the command line', () => {
   it('starts, runs what it is given, and stops, in that order', async () => {
     const calls: string[] = [];
     const log: string[] = [];
     await recordTimeline(opsWith(calls), {
-      during: async () => calls.push('journey'),
+      during: () => Promise.resolve(calls.push('journey')),
       log: (l) => log.push(l),
     });
     expect(calls).toEqual(['report timeline', 'journey', 'report stop']);

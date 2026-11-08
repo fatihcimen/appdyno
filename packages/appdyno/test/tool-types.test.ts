@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-// @ts-expect-error: a script's reckoning, with no types of its own
 import { toolsInterface, typeOf } from '../scripts/tool-types.mjs';
 
 describe('the published types of the tools', () => {

@@ -1,10 +1,11 @@
 // One of the processes of two-processes.test.ts: real operations on a fake device, in a process of its own.
 import { once } from 'node:events';
 import type { Device, DeviceProvider, DeviceSettings, SettingName } from '@appdyno/core';
+import { must } from '@appdyno/core';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { FakeDevice } from '../../ops/test/fake-device.js';
 
-const names = process.argv[2]!.split(',') as SettingName[];
+const names = must(process.argv[2], 'the settings').split(',') as SettingName[];
 const rounds = Number(process.argv[3]);
 
 const WAS = 'as it was';
@@ -15,17 +16,20 @@ const settings = {
     await new Promise((r) => setTimeout(r, 2));
     return values.get(name) ?? WAS;
   },
-  set: async (name: SettingName, value: string) => void values.set(name, value),
+  set: (name: SettingName, value: string) => {
+    values.set(name, value);
+    return Promise.resolve();
+  },
 } as unknown as DeviceSettings;
 
 const device: Device = Object.assign(new FakeDevice(), { settings });
 const provider: DeviceProvider = {
-  list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+  list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
   handles: () => true,
   open: () => device,
 };
 const ops = opsFor(new ServerContext(DEFAULT_POLICY, [provider], { share: true }));
-const setting = ops.device_setting!;
+const setting = must(ops.device_setting, 'device_setting');
 const change = () => Promise.all(names.map((name) => setting.handler({ name, value: 'changed' })));
 
 process.stdout.write('ready\n');

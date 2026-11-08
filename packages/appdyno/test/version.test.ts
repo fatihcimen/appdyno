@@ -20,11 +20,11 @@ type Manifest = { name: string; mcpName: string; keywords: string[] };
 
 describe('release version', () => {
   it('is the same everywhere', () => {
-    const v = JSON.parse(read('packages/appdyno/package.json')).version as string;
+    const { version: v } = JSON.parse(read('packages/appdyno/package.json')) as { version: string };
     expect(v).toMatch(/^\d+\.\d+\.\d+$/);
     for (const p of readdirSync(join(root, 'packages')))
       if (existsSync(join(root, 'packages', p, 'package.json')))
-        expect(JSON.parse(read(`packages/${p}/package.json`)).version, p).toBe(v);
+        expect(JSON.parse(read(`packages/${p}/package.json`)), p).toHaveProperty('version', v);
     expect(read('android/agent/build.gradle.kts')).toContain(`versionName = "${v}"`);
     expect(read('ios/Runner/RunnerTests.swift')).toContain(`let agentVersion = "${v}"`);
     expect(read('ios/Appdyno.xcodeproj/project.pbxproj')).toContain(`MARKETING_VERSION = ${v};`);
@@ -63,7 +63,7 @@ describe('release version', () => {
     const refusal = (env: Record<string, string>, ...flags: string[]) =>
       spawnSync(process.execPath, [join(root, 'scripts/build-app.mjs'), ...flags], {
         encoding: 'utf8',
-        env: { PATH: process.env.PATH!, ...env },
+        env: { PATH: process.env.PATH, ...env },
       }).stderr;
     const ours = { APPDYNO_SIGN_IDENTITY: 'Developer ID Application: Fatih Cimen (BKXMF846AT)' };
     expect(refusal({ APPDYNO_SIGN_IDENTITY: 'Apple Distribution: Another' })).toContain(
@@ -75,9 +75,9 @@ describe('release version', () => {
   });
 
   it('leaves this Mac only with its Android agent, which a build goes on without', () => {
-    const { prepack } = JSON.parse(read('packages/appdyno/package.json')).scripts as {
-      prepack: string;
-    };
+    const { prepack } = (
+      JSON.parse(read('packages/appdyno/package.json')) as { scripts: { prepack: string } }
+    ).scripts;
     const folder = mkdtempSync(join(tmpdir(), 'appdyno-prepack-'));
     const packs = () => spawnSync('sh', ['-c', prepack], { cwd: folder, stdio: 'ignore' }).status;
     expect(packs()).toBe(1);

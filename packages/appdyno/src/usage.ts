@@ -224,7 +224,7 @@ export const COMMANDS = {
 type Name = keyof typeof COMMANDS;
 
 const spelled = (name: string, flag: Flag) =>
-  `--${name}${flag.type === 'string' ? ` ${flag.says}` : ''}`;
+  `--${name}${flag.type === 'string' ? ` ${String(flag.says)}` : ''}`;
 
 /** A command with its flags, as people type it. */
 export function line(name: Name) {

@@ -14,23 +14,23 @@ const { askOf, devicesOfRun, untilWithin } = (await import(
 
 describe('a wait in a device suite', () => {
   it('that runs out names what it waited for, and how the device stood', async () => {
-    const until = untilWithin(1, async () => 'emulator-5612: mWakefulness=Asleep');
+    const until = untilWithin(1, () => Promise.resolve('emulator-5612: mWakefulness=Asleep'));
     await expect(until('a first picture', () => false)).rejects.toThrow(
       'no a first picture in 1 ms; emulator-5612: mWakefulness=Asleep',
     );
   });
 
   it('asks the device nothing until it has run out', async () => {
-    const state = vi.fn(async () => 'x');
+    const state = vi.fn(() => Promise.resolve('x'));
     let left = 2;
     await untilWithin(10_000, state)('a turn', () => left-- === 0);
     expect(state).not.toHaveBeenCalled();
   });
 
   it('takes a test that has to ask the device itself, and a time of its own', async () => {
-    const until = untilWithin(10_000, async () => 'x');
-    await until('a screen', async () => true);
-    await expect(until('a screen', async () => false, 1)).rejects.toThrow('in 1 ms');
+    const until = untilWithin(10_000, () => Promise.resolve('x'));
+    await until('a screen', () => Promise.resolve(true));
+    await expect(until('a screen', () => Promise.resolve(false), 1)).rejects.toThrow('in 1 ms');
   });
 });
 

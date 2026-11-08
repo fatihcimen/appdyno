@@ -28,7 +28,7 @@ describe('the icon', () => {
     const palette = readFileSync(join(root, 'mac/Viewer/Palette.m'), 'utf8');
     const source = readFileSync(join(root, 'scripts/icon-art.mjs'), 'utf8');
     for (const [, name, value] of source.matchAll(/^const (\w+) = '#([0-9A-F]{6})';$/gm)) {
-      if (name !== 'WHITE') expect(palette).toContain(`0x${value}`);
+      if (name !== 'WHITE') expect(palette).toContain(`0x${String(value)}`);
     }
   });
 
@@ -38,8 +38,8 @@ describe('the icon', () => {
   });
 
   it('keeps colours of an earlier life out of every tracked text', () => {
-    const gone = [['5D3E', 'BC'].join(''), ['FFD3', '00'].join('')];
-    const found = spawnSync('git', ['grep', '-Iil', '-e', gone[0]!, '-e', gone[1]!], {
+    const [old, older] = [['5D3E', 'BC'].join(''), ['FFD3', '00'].join('')] as const;
+    const found = spawnSync('git', ['grep', '-Iil', '-e', old, '-e', older], {
       cwd: root,
       encoding: 'utf8',
     });

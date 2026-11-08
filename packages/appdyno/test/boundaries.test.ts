@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { CLIENTS } from '@appdyno/cli';
+import { must } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 
 const root = join(import.meta.dirname, '../../..');
@@ -48,7 +49,7 @@ function violations(pkg: string, file: string, source: string): string[] {
   const inTest = relative(home, file).startsWith('test');
   const allowed = [...(RULES[pkg] ?? []), ...(inTest ? (IN_TESTS[pkg] ?? []) : [])];
   const bad = [...source.matchAll(IMPORT)]
-    .map((m) => m[1]!)
+    .map((m) => must(m[1], 'what it imports'))
     .filter((spec) => {
       if (spec.startsWith('.')) {
         const to = relative(home, resolve(dirname(file), spec));
@@ -131,7 +132,7 @@ describe('module boundaries', () => {
   it('lets a device suite take a build only by a path the type checker does not follow', () => {
     // a clean clone checks types before anything is built
     const literalDist = (source: string) =>
-      [...source.matchAll(IMPORT)].some((m) => /\/dist\//.test(m[1]!));
+      [...source.matchAll(IMPORT)].some((m) => must(m[1], 'what it imports').includes('/dist/'));
     const suites = sources(join(root, 'device-tests')).filter((f) =>
       literalDist(readFileSync(f, 'utf8')),
     );
@@ -230,7 +231,10 @@ describe('a client', () => {
 
   it('is named in the README, where a person searching for it looks', () => {
     const readme = readFileSync(join(root, 'README.md'), 'utf8');
-    const line = readme.split('\n').find((l) => l.startsWith('Works with '))!;
+    const line = must(
+      readme.split('\n').find((l) => l.startsWith('Works with ')),
+      'the line of clients',
+    );
     const unnamed = CLIENTS.flatMap((c) => c.name.split(' and '))
       .map((name) => name.replace(/ (desktop|CLI|in a browser)$/, ''))
       .filter((name) => !line.includes(name));
@@ -242,7 +246,7 @@ describe('the picture of the packages', () => {
   const picture = readFileSync(join(root, 'docs/images/package-map.svg'), 'utf8');
   const rows = new Map(
     [...picture.matchAll(/data-package="([\w-]+)" data-row="(\d+)"/g)].map((m) => [
-      m[1]!,
+      must(m[1], 'a package'),
       Number(m[2]),
     ]),
   );
@@ -255,7 +259,7 @@ describe('the picture of the packages', () => {
   it('draws each package above all it may import', () => {
     const upward = Object.entries(RULES).flatMap(([pkg, imports]) =>
       imports
-        .filter((spec) => rows.get(nameOf(spec))! <= rows.get(pkg)!)
+        .filter((spec) => must(rows.get(nameOf(spec)), spec) <= must(rows.get(pkg), pkg))
         .map((spec) => `${pkg} imports ${spec}`),
     );
     expect(upward).toEqual([]);

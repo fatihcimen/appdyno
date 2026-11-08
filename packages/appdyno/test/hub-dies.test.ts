@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, assert, beforeAll, describe, expect, it, vi } from 'vitest';
 import { HELD_BY_HUB, endWithHub } from '../src/lifetime.js';
 import { childFile } from './child-file.js';
 
@@ -63,12 +63,16 @@ describe('a hub that dies with no word', () => {
 });
 
 describe('a command', () => {
-  const stream = () => ({ once: vi.fn(), resume: vi.fn(), unref: vi.fn() });
+  const stream = () => ({
+    once: vi.fn<(event: string, listener: () => void) => typeof process.stdin>(),
+    resume: vi.fn(),
+    unref: vi.fn(),
+  });
 
   it('with no hub leaves its stdin alone, and does not so much as open it', () => {
     vi.stubEnv(HELD_BY_HUB, '');
     const stdin = stream();
-    endWithHub(stdin as never, vi.fn());
+    endWithHub(stdin, vi.fn());
     expect(stdin.resume).not.toHaveBeenCalled();
     const opened = vi.spyOn(process, 'stdin', 'get');
     endWithHub();
@@ -81,12 +85,14 @@ describe('a command', () => {
     vi.stubEnv(HELD_BY_HUB, '1');
     const stdin = stream();
     const signal = vi.fn();
-    endWithHub(stdin as never, signal);
+    endWithHub(stdin, signal);
     expect(process.env[HELD_BY_HUB]).toBeUndefined();
     expect(stdin.unref).toHaveBeenCalledOnce();
     expect(signal).not.toHaveBeenCalled();
     vi.useFakeTimers();
-    stdin.once.mock.calls[0]![1]();
+    const [closed] = stdin.once.mock.calls;
+    assert(closed);
+    closed[1]();
     expect(signal.mock.calls).toEqual([['SIGINT']]);
     vi.advanceTimersByTime(60_000);
     expect(signal.mock.calls).toEqual([['SIGINT'], ['SIGKILL']]);

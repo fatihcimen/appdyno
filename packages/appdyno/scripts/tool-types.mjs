@@ -2,10 +2,18 @@
 // a project that uses the library needs no zod.
 import { z } from 'zod';
 
+/** @param {string} name */
 const property = (name) => (/^[A-Za-z_$][\w$]*$/.test(name) ? name : JSON.stringify(name));
 
-/** A JSON schema as a TypeScript type. What it does not say is `unknown`, never a guess. */
-export function typeOf(s = {}) {
+/**
+ * A JSON schema as a TypeScript type. What it does not say is `unknown`, never a guess: so is a part in a form this
+ * does not read, `true` or a tuple.
+ * @param {import('zod').core.JSONSchema._JSONSchema | import('zod').core.JSONSchema._JSONSchema[]} [part]
+ * @returns {string}
+ */
+export function typeOf(part = {}) {
+  if (typeof part !== 'object' || Array.isArray(part)) return 'unknown';
+  const s = part;
   if (s.const !== undefined) return JSON.stringify(s.const);
   if (s.enum) return s.enum.map((v) => JSON.stringify(v)).join(' | ');
   const union = s.anyOf ?? s.oneOf;
@@ -35,7 +43,10 @@ export function typeOf(s = {}) {
   }
 }
 
-/** What `Tools` holds in the source's place: each op's arguments as a caller writes them, and its data. */
+/**
+ * What `Tools` holds in the source's place: each op's arguments as a caller writes them, and its data.
+ * @param {{ name: string; input: import('zod').ZodType; output: import('zod').ZodType }[]} ops
+ */
 export function toolsInterface(ops) {
   const lines = ops.map((op) => {
     const args = z.toJSONSchema(op.input, { io: 'input', unrepresentable: 'any' });

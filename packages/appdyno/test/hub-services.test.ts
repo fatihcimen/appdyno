@@ -9,7 +9,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { noteClientCall } from '@appdyno/core';
+import { must, noteClientCall } from '@appdyno/core';
 import { BROWSER_CLIENTS, CLIENTS } from '@appdyno/cli';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HubHttp, httpToken, renewHttpToken } from '../src/hub-http.js';
@@ -17,8 +17,14 @@ import { hubServices } from '../src/hub-services.js';
 
 const fake = join(import.meta.dirname, 'fake-mcp.mjs');
 /** Plain JSON, a key of `mcpServers`, and a file `install` may begin. */
-const client = CLIENTS.find((c) => c.format === 'json' && !c.ownFile)!;
-const other = CLIENTS.find((c) => c !== client && c.format === 'jsonc' && !c.ownFile)!;
+const client = must(
+  CLIENTS.find((c) => c.format === 'json' && !c.ownFile),
+  'a client of plain JSON',
+);
+const other = must(
+  CLIENTS.find((c) => c !== client && c.format === 'jsonc' && !c.ownFile),
+  'a client of JSONC',
+);
 
 let home: string;
 let file: string;
@@ -30,7 +36,7 @@ function place(o: { mcpCommand?: string[]; dock?: boolean } = {}) {
     home,
     env: { PATH: process.env.PATH },
     mcpCommand: o.mcpCommand ?? [process.execPath, fake, 'http'],
-    doctor: async () => [{ name: 'node', ok: true, detail: '22' }],
+    doctor: () => Promise.resolve([{ name: 'node', ok: true, detail: '22' }]),
   });
   services.push(made);
   return made;
@@ -61,7 +67,7 @@ const entryWith = (entry: object) => {
 
 beforeEach(() => {
   home = mkdtempSync(join(tmpdir(), 'appdyno-services-'));
-  file = join(home, client.files[0]!);
+  file = join(home, must(client.files[0], 'its file'));
   mkdirSync(dirname(file), { recursive: true });
   vi.stubEnv('APPDYNO_STATE_DIR', mkdtempSync(join(tmpdir(), 'appdyno-services-state-')));
 });
@@ -90,14 +96,18 @@ describe('the list', () => {
     const { rows } = await act(place(), 'list');
     expect(rows.find((r: { name: string }) => r.name === client.name)).toMatchObject({
       state: 'connected',
-      lastSaid: expect.stringMatching(/seconds? ago$/),
+      lastSaid: expect.stringMatching(/seconds? ago$/) as unknown,
     });
   });
 
   it('carries each note a client has on a kind of prompt, in both languages', async () => {
     const { notes } = await act(place(), 'list');
-    const noted = CLIENTS.find((c) => c.notes?.long)!;
-    expect(notes).toContainEqual({ client: noted.name, kind: 'long', ...noted.notes!.long });
+    const noted = must(
+      CLIENTS.find((c) => c.notes?.long),
+      'a client with a note',
+    );
+    const long = must(noted.notes?.long, 'its note');
+    expect(notes).toContainEqual({ client: noted.name, kind: 'long', ...long });
   });
 });
 
@@ -105,7 +115,10 @@ describe('a change', () => {
   it('shows the exact lines first, and writes nothing for showing them', async () => {
     const p = place();
     await act(p, 'preview');
-    const preview = told.find((m) => m.preview)!.preview as Said['preview'];
+    const preview = must(
+      told.find((m) => m.preview),
+      'a preview',
+    ).preview as Said['preview'];
     expect(preview).toMatchObject({ client: client.name, did: 'added', file, remove: false });
     expect(preview.lines.join('\n')).toContain('+');
     expect(preview.lines.join('\n')).toContain('npx');
@@ -164,7 +177,7 @@ describe('a change', () => {
     expect(refused.done).toBeUndefined();
     expect(refused.tested).toMatchObject({
       ok: false,
-      next: expect.stringMatching(/EACCES|denied/),
+      next: expect.stringMatching(/EACCES|denied/) as unknown,
     });
     expect(readFileSync(file, 'utf8')).toBe(written);
     chmodSync(file, 0o644);
@@ -175,9 +188,11 @@ describe('a change', () => {
     entryWith({ command: 'mine', args: ['--flag'], env: { A: '1' } });
     const p = place();
     await act(p, 'change', { remove: true });
-    expect(JSON.parse(readFileSync(file, 'utf8'))[client.key].appdyno).toBeUndefined();
+    const taken: unknown = JSON.parse(readFileSync(file, 'utf8'));
+    expect(taken).toHaveProperty(client.key);
+    expect(taken).not.toHaveProperty([client.key, 'appdyno']);
     await act(p, 'undo');
-    expect(JSON.parse(readFileSync(file, 'utf8'))[client.key].appdyno).toEqual({
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toHaveProperty([client.key, 'appdyno'], {
       command: 'mine',
       args: ['--flag'],
       env: { A: '1' },
@@ -191,11 +206,11 @@ describe('a change', () => {
     await act(p, 'change', { remove: true });
     entryWith({ command: 'x' });
     const { rows } = await act(p, 'list');
-    expect(rows.find((r) => r.name === client.name)!.state).toBe('added');
+    expect(rows.find((r) => r.name === client.name)?.state).toBe('added');
   });
 
   it('touches no other client, and reaches nothing for a name not on the list', async () => {
-    const theirs = join(home, other.files[0]!);
+    const theirs = join(home, must(other.files[0], 'its file'));
     mkdirSync(dirname(theirs), { recursive: true });
     writeFileSync(theirs, '{ "theirs": true }\n');
     const p = place();
@@ -210,7 +225,10 @@ describe('a change', () => {
 describe('Test', () => {
   const tried = async (p: ReturnType<typeof hubServices>, what = client.name) => {
     await act(p, 'test', { client: what });
-    return (told.find((m) => m.tested)!.tested ?? {}) as Record<string, unknown>;
+    return (must(
+      told.find((m) => m.tested),
+      'a test',
+    ).tested ?? {}) as Record<string, unknown>;
   };
 
   it('runs what the entry says, and reads the tools it lists', async () => {
@@ -218,7 +236,7 @@ describe('Test', () => {
     expect(await tried(place())).toMatchObject({
       ok: true,
       said: 'It started, and lists 1 tools.',
-      next: expect.stringContaining('Restart it'),
+      next: expect.stringContaining('Restart it') as unknown,
     });
   });
 
@@ -227,7 +245,7 @@ describe('Test', () => {
     const p = place();
     await tried(p);
     const { rows } = await act(p, 'list');
-    expect(rows.find((r) => r.name === client.name)!.state).toBe('added');
+    expect(rows.find((r) => r.name === client.name)?.state).toBe('added');
   });
 
   it('says what to do when the command is not there', async () => {
@@ -235,7 +253,7 @@ describe('Test', () => {
     expect(await tried(place())).toMatchObject({
       ok: false,
       said: 'It could not find /no/such/program.',
-      next: expect.stringContaining('full path'),
+      next: expect.stringContaining('full path') as unknown,
     });
   });
 
@@ -263,15 +281,20 @@ describe('Test', () => {
   });
 
   it('wants a running server for a client in a browser', async () => {
-    expect(await tried(place(), BROWSER_CLIENTS[0]!.name)).toMatchObject({
+    expect(
+      await tried(place(), must(BROWSER_CLIENTS[0], 'a client in a browser').name),
+    ).toMatchObject({
       ok: false,
       said: 'The server is not running.',
     });
   });
 
   it('tries a client from the Dock with what the Dock gives it', async () => {
-    const dock = CLIENTS.find((c) => c.dock)!;
-    const entry = join(home, dock.files[0]!);
+    const dock = must(
+      CLIENTS.find((c) => c.dock),
+      'a client from the Dock',
+    );
+    const entry = join(home, must(dock.files[0], 'its file'));
     mkdirSync(dirname(entry), { recursive: true });
     writeFileSync(entry, JSON.stringify({ [dock.key]: { appdyno: { command: 'npx', args: [] } } }));
     expect(await tried(place(), dock.name)).toMatchObject({

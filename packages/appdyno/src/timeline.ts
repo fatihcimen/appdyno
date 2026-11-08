@@ -1,13 +1,14 @@
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { must } from '@appdyno/core';
 import { opsFor, type Op, type ServerContext } from '@appdyno/ops';
 import { COMMANDS, usage } from './usage.js';
 
 type Ops = Record<string, Op>;
 
 const say = async (ops: Ops, name: string, args: Record<string, unknown>) => {
-  const op = ops[name]!;
-  const { blocks } = await op.handler(op.input.parse(args) as Record<string, unknown>);
+  const op = must(ops[name], `the ${name} tool`);
+  const { blocks } = await op.handler(op.input.parse(args));
   return blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n');
 };
 
@@ -37,6 +38,7 @@ export async function recordTimeline(ops: Ops, { during, dir, log }: TimelineRun
   let failed: unknown;
   await during(ops).catch((e: unknown) => (failed = e));
   log(await say(ops, 'report', { action: 'stop' }));
+  // eslint-disable-next-line @typescript-eslint/only-throw-error -- what failed during it, thrown on as it came
   if (failed !== undefined) throw failed;
 }
 

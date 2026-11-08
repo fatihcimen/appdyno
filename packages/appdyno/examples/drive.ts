@@ -12,8 +12,9 @@ export async function drive(flow: string, log: (line: string) => void) {
         if (e.phase === 'after') log(`${e.result.step}: ${e.result.ms} ms`);
       },
     });
-    await device.tool('tap', { selector: { text: 'Not on this screen' } }).catch((e: Refusal) => {
-      log(`${e.code}: ${e.hint}`);
+    await device.tool('tap', { selector: { text: 'Not on this screen' } }).catch((e: unknown) => {
+      const { code, hint } = e as Refusal;
+      log(`${code}: ${hint ?? ''}`);
     });
     return run.passed;
   } finally {

@@ -1,7 +1,7 @@
 // Proof of the settle: late reactions to an actionable tap (0–300 ms after it) and a 30 ms touch reaction
 // on a non-clickable view are never missed; an unchanged screen ends quickly on an inert target.
 // Usage: node scripts/settle-proof.mjs <serial> [n]  (build first; a quiet machine)
-import { stats } from '@appdyno/core';
+import { must, stats } from '@appdyno/core';
 import { APP, openFixture } from './settle-fixture.mjs';
 import { answered } from './timed.mjs';
 
@@ -20,8 +20,15 @@ await adb.exec(
 );
 await pause(1_500);
 let late = await read();
+/**
+ * @param {{ list: import('@appdyno/core').Screen['list'] }} s
+ * @param {string} label
+ */
 const find = (s, label) =>
-  s.list.find((e) => e.label === label.toUpperCase() || e.label === label || e.id === label);
+  must(
+    s.list.find((e) => e.label === label.toUpperCase() || e.label === label || e.id === label),
+    label,
+  );
 const clean = async () => {
   await d.tap(find(late, 'Clear'), { settle: SETTLE, read: 'none' });
   await pause(200);
@@ -29,7 +36,16 @@ const clean = async () => {
   if (late.tree.nodes.some((x) => x.t?.startsWith('Tepki') || x.t === 'Touch reaction'))
     throw new Error('not clean');
 };
-const out = { n, quietMs: SETTLE.quietMs, actionable: {}, touch: {}, unchanged: {} };
+const out = {
+  n,
+  quietMs: SETTLE.quietMs,
+  /** @type {Record<number, unknown>} */
+  actionable: {},
+  /** @type {unknown} */
+  touch: {},
+  /** @type {Record<string, unknown>} */
+  unchanged: {},
+};
 for (const delay of DELAYS) {
   let missed = 0;
   const ms = [];
@@ -71,10 +87,12 @@ for (const delay of DELAYS) {
   console.error(`touch 30 ms on a non-clickable view: missed ${missed}/${n}`);
 }
 await clean();
-for (const [name, label] of [
+/** @type {[string, string | undefined][]} */
+const unchanged = [
   ['inert (empty space)', undefined],
   ['actionable (nothing to clear)', 'Clear'],
-]) {
+];
+for (const [name, label] of unchanged) {
   const ms = [];
   const quiet = [];
   for (let i = 0; i < n; i++) {

@@ -10,7 +10,10 @@ type Ending = { end(): Promise<string[]>; close(): void };
 /** A session's end: what it changed goes back, within END_MS, and its devices close. */
 export async function putBack(ctx: Ending, log: (line: object) => void) {
   const giveUp = new Promise<string[]>((r) => setTimeout(() => r(['timed out']), END_MS));
-  const failed = await Promise.race([ctx.end().catch((e: Error) => [e.message]), giveUp]);
+  const failed = await Promise.race([
+    ctx.end().catch((e: unknown) => [e instanceof Error ? e.message : String(e)]),
+    giveUp,
+  ]);
   for (const f of failed) log({ conditionNotRestored: f });
   ctx.close();
 }
@@ -23,7 +26,7 @@ export async function putBack(ctx: Ending, log: (line: object) => void) {
 export function endWithClient(
   ctx: Ending,
   log: (line: object) => void,
-  exit: (code: number) => void = process.exit,
+  exit: (code: number) => void = (code) => process.exit(code),
   stdin: NodeJS.ReadableStream | null = process.stdin,
 ) {
   let ending = false;
@@ -47,7 +50,7 @@ export function endWithHub(
   signal: (name: NodeJS.Signals) => void = (name) => process.kill(0, name),
 ) {
   if (!process.env[HELD_BY_HUB]) return;
-  delete process.env[HELD_BY_HUB];
+  Reflect.deleteProperty(process.env, HELD_BY_HUB);
   // only here: a command no hub started has its stdin left as it found it
   const stdin = given ?? process.stdin;
   stdin.once('close', () => {

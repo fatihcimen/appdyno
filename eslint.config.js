@@ -17,6 +17,7 @@ const strict = [
   'packages/driver-apple/**',
   'packages/driver-android/**',
   'packages/perf/**',
+  'packages/appdyno/**',
 ];
 
 export default defineConfig(

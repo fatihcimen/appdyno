@@ -12,15 +12,25 @@ if (mode === 'http') {
   }
   if (process.env.FAKE_ARGS)
     (await import('node:fs')).writeFileSync(process.env.FAKE_ARGS, process.argv.join(' '));
-  process.stderr.write(`appdyno mcp: http://127.0.0.1:${port}/mcp\n`);
+  process.stderr.write(`appdyno mcp: http://127.0.0.1:${String(port)}/mcp\n`);
   process.stdin.resume();
   process.stdin.once('close', () => process.exit(0));
   process.once('SIGTERM', () => process.exit(0));
 } else {
+  /**
+   * @param {unknown} id
+   * @param {unknown} result
+   */
   const answer = (id, result) =>
     process.stdout.write(`${JSON.stringify({ jsonrpc: '2.0', id, result })}\n`);
   for await (const line of createInterface({ input: process.stdin })) {
-    const { id, method, params } = JSON.parse(line);
+    // what the client under test sends: `params` as `initialize` has it
+    /** @type {unknown} */
+    const message = JSON.parse(line);
+    const { id, method, params } =
+      /** @type {{ id: unknown; method: unknown; params: { protocolVersion: unknown } }} */ (
+        message
+      );
     if (method === 'initialize')
       answer(id, {
         protocolVersion: params.protocolVersion,

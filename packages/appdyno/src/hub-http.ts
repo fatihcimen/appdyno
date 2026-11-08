@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { endChild, stateDir, writeWhole } from '@appdyno/core';
+import { endChild, must, stateDir, writeWhole } from '@appdyno/core';
 
 /** The port the guide uses, and how far on to look when that is taken: a tunnel goes wherever the hub says it stands. */
 const FIRST_PORT = 8765;
@@ -55,12 +55,17 @@ export class HubHttp {
   }
 
   private tryPort(port: number) {
-    return new Promise<'taken' | string>((resolve, reject) => {
+    // its address, or 'taken'
+    return new Promise<string>((resolve, reject) => {
       const [program, ...args] = this.command;
-      const child = spawn(program!, [...args, '--http', `127.0.0.1:${port}`, '--end-with-parent'], {
-        stdio: ['pipe', 'ignore', 'pipe'],
-        env: { ...process.env, APPDYNO_HTTP_TOKEN: httpToken() },
-      });
+      const child = spawn(
+        must(program, 'the command'),
+        [...args, '--http', `127.0.0.1:${port}`, '--end-with-parent'],
+        {
+          stdio: ['pipe', 'ignore', 'pipe'],
+          env: { ...process.env, APPDYNO_HTTP_TOKEN: httpToken() },
+        },
+      );
       let said = '';
       const timer = setTimeout(() => {
         child.kill();
@@ -83,7 +88,7 @@ export class HubHttp {
       });
       child.once('exit', () => {
         clearTimeout(timer);
-        if (/EADDRINUSE/.test(said)) resolve('taken');
+        if (said.includes('EADDRINUSE')) resolve('taken');
         else reject(new Error(said.trim() || 'the server stopped as it started'));
       });
     });

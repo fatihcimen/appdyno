@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { must } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 
 const root = join(import.meta.dirname, '../../..');
@@ -100,7 +101,7 @@ describe('ci.sh', () => {
     const named = [...readFileSync(ci, 'utf8').matchAll(/device-tests\/([\w.-]+\.test\.ts)/g)];
     expect(named.length).toBeGreaterThan(5);
     const all = readdirSync(suites);
-    expect(named.map((m) => m[1]!).filter((f) => !all.includes(f))).toEqual([]);
+    expect(named.map((m) => must(m[1], 'a suite')).filter((f) => !all.includes(f))).toEqual([]);
   });
 
   it('goes through the check that tells nothing from a pass, on every suite it names', () => {

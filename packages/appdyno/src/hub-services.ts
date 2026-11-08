@@ -193,8 +193,10 @@ export function hubServices(o: ServicesOptions): HubServices {
     };
   };
 
-  const acts: Record<string, (m: Message, say: Say) => Promise<unknown> | void> = {
-    list: (_, say) => say(status()),
+  const acts: Record<string, (m: Message, say: Say) => Promise<unknown> | undefined> = {
+    list: (_, say) => {
+      say(status());
+    },
     connect: async (m, say) => {
       if (looking) return;
       looking = true;
@@ -205,12 +207,14 @@ export function hubServices(o: ServicesOptions): HubServices {
         });
     },
     run: (m, say) => {
-      if (m.stop === true) return runs.stop(String(m.name));
-      return runs.start(String(m.name), m as never, (said) => {
-        // a tool that just came changes what a person is asked
-        if (typeof (said.run as Message)?.code === 'number') checks = undefined;
-        say(said);
-      });
+      if (m.stop === true) runs.stop(String(m.name));
+      else
+        runs.start(String(m.name), m, (said) => {
+          // a tool that just came changes what a person is asked
+          if (typeof (said.run as Message | undefined)?.code === 'number') checks = undefined;
+          say(said);
+        });
+      return undefined;
     },
     apps: async (_, say) => {
       const kept = o.measurements ? await runKeys(o.measurements).catch(() => []) : [];
@@ -233,7 +237,10 @@ export function hubServices(o: ServicesOptions): HubServices {
     },
     change: (m, say) => {
       const plan = planned(m, { remove: m.remove === true });
-      if (!plan || !changes(plan)) return say(status());
+      if (!plan || !changes(plan)) {
+        say(status());
+        return;
+      }
       const backup = apply(plan);
       undos.set(plan.client.name, plan.had === undefined ? {} : { back: plan.had as Undo['back'] });
       if (m.remove === true)
@@ -255,7 +262,8 @@ export function hubServices(o: ServicesOptions): HubServices {
         // a file that cannot be read says why on its row, and one that cannot be written does not
         const shown = now.rows.find((r) => r.name === m.client)?.why;
         const next = shown ? '' : (plan?.why ?? '');
-        return say({ ...now, tested: { client: m.client, ok: false, said, next, line: said } });
+        say({ ...now, tested: { client: m.client, ok: false, said, next, line: said } });
+        return;
       }
       if (changes(plan)) apply(plan);
       undos.delete(String(m.client));
@@ -263,20 +271,29 @@ export function hubServices(o: ServicesOptions): HubServices {
     },
     test: async (m, say) => say({ tested: { client: m.client, ...(await tryClient(m)) } }),
     start: async (_, say) => {
-      await http.start().catch((e: Error) => say({ serverFailed: e.message }));
+      await http
+        .start()
+        .catch((e: unknown) => say({ serverFailed: e instanceof Error ? e.message : String(e) }));
       say(status());
     },
     stop: async (_, say) => {
       await http.stop();
       say(status());
     },
-    token: (_, say) => say({ token: httpToken() }),
-    copyToken: (_, say) => say({ copy: httpToken(), concealed: true }),
+    token: (_, say) => {
+      say({ token: httpToken() });
+    },
+    copyToken: (_, say) => {
+      say({ copy: httpToken(), concealed: true });
+    },
     renewToken: async (_, say) => {
       const running = http.address !== undefined;
       await http.stop();
       renewHttpToken();
-      if (running) await http.start().catch((e: Error) => say({ serverFailed: e.message }));
+      if (running)
+        await http
+          .start()
+          .catch((e: unknown) => say({ serverFailed: e instanceof Error ? e.message : String(e) }));
       say(status());
     },
     doctor: async (_, say) => say({ doctor: await o.doctor() }),

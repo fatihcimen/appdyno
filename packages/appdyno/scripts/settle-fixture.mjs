@@ -3,7 +3,10 @@ import { Adb, AndroidDevice } from '@appdyno/driver-android';
 
 export const APP = 'dev.appdyno.fixture';
 
-/** The fixture on this device, for what tunes the settle. */
+/**
+ * The fixture on this device, for what tunes the settle.
+ * @param {string} serial
+ */
 export async function openFixture(serial) {
   const adb = new Adb();
   const d = new AndroidDevice(serial, adb);

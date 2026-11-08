@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { SETTINGS } from '@appdyno/core';
+import { must, SETTINGS } from '@appdyno/core';
 import { childFile } from './child-file.js';
 
 const ROUNDS = 12;
@@ -36,7 +36,7 @@ function start(names: readonly string[], state: string) {
         const line = out.split('\n').find((l) => l.startsWith(word));
         if (line !== undefined) resolve(line.slice(word.length).trim());
       });
-      c.once('exit', (code) => reject(new Error(`exited ${code} before ${word}: ${err}`)));
+      c.once('exit', (code) => reject(new Error(`exited ${String(code)} before ${word}: ${err}`)));
     });
   return { c, said };
 }
@@ -56,13 +56,13 @@ describe('two processes on one device', () => {
 
     const folder = join(state, 'conditions');
     const [file] = readdirSync(folder).filter((f) => f.endsWith('.json'));
-    const entries = JSON.parse(readFileSync(join(folder, file!), 'utf8')) as Record<
-      string,
-      { was: string; owner: { pid: number } }
-    >;
+    const entries = JSON.parse(
+      readFileSync(join(folder, must(file, 'the conditions file')), 'utf8'),
+    ) as Record<string, { was: string; owner: { pid: number } }>;
     expect(Object.keys(entries).sort()).toEqual([...SETTINGS].sort());
     both.forEach(({ c }, i) => {
-      for (const name of sets[i]!) expect(entries[name]?.owner.pid).toBe(c.pid);
+      for (const name of must(sets[i], 'its settings'))
+        expect(entries[name]?.owner.pid).toBe(c.pid);
     });
   });
 });

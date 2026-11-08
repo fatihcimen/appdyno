@@ -6,7 +6,7 @@
 import { spawn } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { viewerBinary } from '@appdyno/core';
+import { must, viewerBinary } from '@appdyno/core';
 
 const SETTLE_MS = 900;
 const FIRST_MS = 700;
@@ -23,9 +23,18 @@ if (!udid || !folder) {
 
 const live = { op: 'status', state: 'live' };
 const CONTROLS = ['home', 'appSwitch', 'lock', 'volumeUp', 'volumeDown', 'siri', 'controlCenter'];
+/**
+ * @param {string} tool
+ * @param {number} ms
+ * @param {boolean} ok
+ * @param {string} args
+ */
 const call = (tool, ms, ok, args) => ({ op: 'activity', tool, ms, ok, args, time: '15:12:04' });
 
-/** Each state as the messages that bring it about. */
+/**
+ * Each state as the messages that bring it about.
+ * @type {Record<string, { pause?: number; [key: string]: unknown }[]>}
+ */
 const STATES = {
   window: [live],
   stats: [live, { op: 'poke', pane: 0 }, { pause: 2_500 }],
@@ -90,26 +99,40 @@ const STATES = {
   frameless: [live, { op: 'poke', control: 'frame' }],
 };
 
+/** @param {number} ms */
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** One viewer, off every screen, and the file it wrote. */
-async function shoot(binary, state, appearance) {
+/**
+ * One viewer, off every screen, and the file it wrote.
+ * @param {string} binary
+ * @param {string} state
+ * @param {string} appearance
+ */
+const shoot = async (binary, state, appearance) => {
   const child = spawn(binary, ['--behind', '--appearance', appearance], {
     stdio: ['pipe', 'pipe', 'inherit'],
   });
+  /** @param {unknown} m */
   const send = (m) => child.stdin.write(`${JSON.stringify(m)}\n`);
+  /** @type {Map<string, (m: Record<string, unknown>) => void>} */
   const waiting = new Map();
   let buffered = '';
-  child.stdout.setEncoding('utf8').on('data', (s) => {
+  child.stdout.setEncoding('utf8').on('data', (/** @type {string} */ s) => {
     buffered += s;
     for (let at = buffered.indexOf('\n'); at >= 0; at = buffered.indexOf('\n')) {
       const line = buffered.slice(0, at);
       buffered = buffered.slice(at + 1);
       if (!line.startsWith('{')) continue;
-      const m = JSON.parse(line);
-      waiting.get(m.op)?.(m);
+      /** @type {unknown} */
+      const said = JSON.parse(line);
+      const m = /** @type {Record<string, unknown>} */ (said);
+      waiting.get(String(m.op))?.(m);
     }
   });
+  /**
+   * @param {string} op
+   * @returns {Promise<Record<string, unknown>>}
+   */
   const until = (op) => new Promise((done) => waiting.set(op, done));
   const ready = until('ready');
   await ready;
@@ -127,7 +150,7 @@ async function shoot(binary, state, appearance) {
   });
   await first;
   await pause(FIRST_MS);
-  for (const m of STATES[state]) {
+  for (const m of must(STATES[state], `the state ${state}`)) {
     if (m.pause) await pause(m.pause);
     else send(m);
   }
@@ -139,7 +162,7 @@ async function shoot(binary, state, appearance) {
   child.stdin.end();
   if (!ok) throw new Error(`no picture of ${state}, ${appearance}`);
   return file;
-}
+};
 
 const binary = await viewerBinary();
 for (const state of only.length ? only : Object.keys(STATES)) {

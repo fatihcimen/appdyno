@@ -11,15 +11,17 @@ import { endWithClient } from '../src/lifetime.js';
 
 function serving() {
   const values: Record<string, string> = { dark_mode: 'no' };
+  const set = vi.fn((name: SettingName, value: string) => {
+    values[name] = value;
+    return Promise.resolve();
+  });
   const settings = {
-    get: async (name: SettingName) => values[name]!,
-    set: vi.fn(async (name: SettingName, value: string) => {
-      values[name] = value;
-    }),
+    get: (name: SettingName) => Promise.resolve(values[name]),
+    set,
   } as unknown as DeviceSettings;
   const device = Object.assign(new FakeDevice(), { settings });
   const provider: DeviceProvider = {
-    list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+    list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
     handles: () => true,
     open: () => device,
   };
@@ -27,9 +29,9 @@ function serving() {
   const close = vi.spyOn(ctx, 'close');
   const exit = vi.fn();
   const stdin = new PassThrough();
-  const log = vi.fn();
+  const log = vi.fn<(line: object) => void>();
   endWithClient(ctx, log, exit, stdin);
-  return { values, settings, ctx, close, exit, stdin, log, call: callerOf(ctx) };
+  return { values, set, ctx, close, exit, stdin, log, call: callerOf(ctx) };
 }
 
 const signals = ['SIGTERM', 'SIGINT'] as const;
@@ -63,7 +65,7 @@ describe('the end of the server', () => {
   });
 
   it('with no stdin to watch, as over HTTP, goes on until a signal', async () => {
-    const end = vi.fn(async () => []);
+    const end = vi.fn(() => Promise.resolve([]));
     const exit = vi.fn();
     endWithClient({ end, close: () => undefined }, vi.fn(), exit, null);
     await new Promise((r) => setTimeout(r, 5));
@@ -82,23 +84,25 @@ describe('the end of the server', () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(s.exit).toHaveBeenCalledOnce();
     expect(s.close).toHaveBeenCalledOnce();
-    expect(s.settings.set).toHaveBeenCalledTimes(2);
+    expect(s.set).toHaveBeenCalledTimes(2);
   });
 
   it('says what it could not put back, and still exits', async () => {
     const s = serving();
     await s.call('device_setting', { name: 'dark_mode', value: 'yes' });
-    vi.mocked(s.settings.set).mockRejectedValueOnce(new Error('broke'));
+    s.set.mockRejectedValueOnce(new Error('broke'));
     process.emit('SIGTERM');
     await vi.waitFor(() => expect(s.exit).toHaveBeenCalled());
-    expect(s.log.mock.calls[0]![0].conditionNotRestored).toContain('broke');
+    expect(s.log.mock.calls[0]?.[0]).toMatchObject({
+      conditionNotRestored: expect.stringContaining('broke') as unknown,
+    });
     drain();
   });
 
   it('gives up on a device that does not answer, and still exits', async () => {
     const s = serving();
     await s.call('device_setting', { name: 'dark_mode', value: 'yes' });
-    vi.mocked(s.settings.set).mockReturnValueOnce(new Promise(() => undefined));
+    s.set.mockReturnValueOnce(new Promise(() => undefined));
     vi.useFakeTimers();
     process.emit('SIGTERM');
     await vi.advanceTimersByTimeAsync(20_000);

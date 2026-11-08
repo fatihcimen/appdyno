@@ -1,13 +1,16 @@
+import { must } from '@appdyno/core';
 import { describe, expect, it, vi } from 'vitest';
 import { pairCommand } from '../src/pair.js';
 
 const fake = (seen: { serial: string }[][]) => {
   const said: string[] = [];
   const adb = {
-    pair: vi.fn(async () => undefined),
-    devices: vi.fn(async () => (seen.length > 1 ? seen.shift()! : seen[0]!)),
+    pair: vi.fn(() => Promise.resolve(undefined)),
+    devices: vi.fn(() =>
+      Promise.resolve(must(seen.length > 1 ? seen.shift() : seen[0], 'what adb lists')),
+    ),
   };
-  const phone = vi.fn(async () => undefined);
+  const phone = vi.fn(() => Promise.resolve(undefined));
   const forget = vi.fn();
   return {
     said,

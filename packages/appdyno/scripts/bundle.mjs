@@ -72,7 +72,8 @@ const PUBLIC = ['index.d.ts', 'library.d.ts'];
 for (const f of readdirSync(dist))
   if (f.endsWith('.d.ts') && !PUBLIC.includes(f)) rmSync(join(dist, f));
 const face = join(dist, 'library.d.ts');
-const interfaceInSource = /export interface Tools \{[\s\S]*?\n\}/;
+// the source's stand-in as tsc writes it, which the published interface replaces
+const interfaceInSource = /export type Tools = Record<string, \{[\s\S]*?\n\}>;/;
 const declared = readFileSync(face, 'utf8');
 if (!interfaceInSource.test(declared)) throw new Error('library.d.ts has no Tools to fill in');
 const ops = Object.values(opsFor(new ServerContext(DEFAULT_POLICY, [])));
@@ -109,6 +110,11 @@ try {
 const agents = join(pkg, 'agents');
 rmSync(agents, { recursive: true, force: true });
 const { agent, ios, mac, viewer } = NATIVE_PARTS;
+/**
+ * @param {string} from
+ * @param {{ packaged: string }} part
+ * @param {(f: string) => boolean} [filter]
+ */
 const packed = (from, part, filter = () => true) =>
   cpSync(from, join(agents, part.packaged), { recursive: true, filter });
 const android = join(pkg, '../driver-android/agents', agent.packaged);
@@ -118,7 +124,9 @@ packed(join(pkg, '../..', viewer.repo), viewer, (f) => !VIEWER_TEST_FILES.test(b
 packed(join(pkg, '../..', mac.repo), mac);
 
 // what a registry shows, and what has to travel with copies of the code inlined above
-const { repository } = JSON.parse(readFileSync(join(pkg, 'package.json'), 'utf8'));
+/** @type {unknown} */
+const manifest = JSON.parse(readFileSync(join(pkg, 'package.json'), 'utf8'));
+const { repository } = /** @type {{ repository: { url: string } }} */ (manifest);
 writeFileSync(
   join(pkg, 'README.md'),
   publishedReadme(readFileSync(join(pkg, '../../README.md'), 'utf8'), repository.url),

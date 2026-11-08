@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
+import { must } from '@appdyno/core';
 import { ALPHA, FLOOR, MIN_BASELINE_RUNS, MIN_SAMPLES, RUN_SDS } from '@appdyno/perf';
 import { SETTLE } from '@appdyno/ops';
 import { describe, expect, it } from 'vitest';
@@ -26,7 +27,7 @@ const slug = (heading: string) =>
 const anchorsOf = (text: string) => {
   const seen = new Map<string, number>();
   return [...text.replace(/```[^]*?```/g, '').matchAll(/^#{1,6} (.+)$/gm)].map((m) => {
-    const anchor = slug(m[1]!);
+    const anchor = slug(must(m[1], 'a heading'));
     const times = seen.get(anchor) ?? 0;
     seen.set(anchor, times + 1);
     return times ? `${anchor}-${times}` : anchor;
@@ -42,7 +43,7 @@ const linksOf = (text: string) =>
       .matchAll(
         /\]\(([^)\s]+)\)|<(?:img[^>]* src|source[^>]* srcset)="([^"]+)"|^\[[^\]\n]+\]: (\S+)/gm,
       ),
-  ].map((m) => (m[1] ?? m[2] ?? m[3])!);
+  ].map((m) => must(m[1] ?? m[2] ?? m[3], 'a link'));
 
 describe('the docs', () => {
   it('lead only to what is there', () => {
@@ -65,7 +66,8 @@ describe('the docs', () => {
     const listed = pages.filter(
       (p) => p.startsWith('docs/') && !/^docs\/README(\.tr)?\.md$/.test(p),
     );
-    const indexOf = (p: string) => read(TR.test(p) ? 'docs/README.tr.md' : 'docs/README.md');
+    const indexOf = (p: string) =>
+      read(p.endsWith('.tr.md') ? 'docs/README.tr.md' : 'docs/README.md');
     expect(listed.filter((p) => !indexOf(p).includes(`](${p.replace('docs/', '')}`))).toEqual([]);
   });
 
@@ -86,7 +88,7 @@ const ENGLISH_ONLY: Record<string, string> = {
   'CHANGELOG.md': 'not yet in Turkish',
   'CONTRIBUTING.md': 'not yet in Turkish',
 };
-const english = tracked.filter((f) => f.endsWith('.md') && !TR.test(f));
+const english = tracked.filter((f) => f.endsWith('.md') && !f.endsWith('.tr.md'));
 const turkishOf = (page: string) => page.replace(/\.md$/, '.tr.md');
 const pairs = english
   .filter((page) => tracked.includes(turkishOf(page)))
@@ -163,16 +165,16 @@ describe('a page', () => {
         (p) => !english.includes(p) || tracked.includes(turkishOf(p)),
       ),
     ).toEqual([]);
-    expect(tracked.filter((f) => TR.test(f) && !english.includes(f.replace(TR, '.md')))).toEqual(
-      [],
-    );
+    expect(
+      tracked.filter((f) => f.endsWith('.tr.md') && !english.includes(f.replace(TR, '.md'))),
+    ).toEqual([]);
   });
 
   it('leads to its other language at the top', () => {
-    const top = (page: string) => read(page).split('\n## ')[0]!;
+    const top = (page: string) => must(read(page).split('\n## ')[0], `the top of ${page}`);
     for (const [en, tr] of pairs) {
-      expect(top(en), en).toContain(`[Türkçe](${tr.split('/').pop()})`);
-      expect(top(tr), tr).toContain(`[English](${en.split('/').pop()})`);
+      expect(top(en), en).toContain(`[Türkçe](${must(tr.split('/').pop(), tr)})`);
+      expect(top(tr), tr).toContain(`[English](${must(en.split('/').pop(), en)})`);
     }
   });
 
@@ -222,8 +224,8 @@ describe('a diagram', () => {
         `${name}.tr.svg`,
       ]),
     );
-    const light = styleOf(read(`${IMAGES}/overview.svg`))!;
-    const dark = styleOf(read(`${IMAGES}/overview.dark.svg`))!;
+    const light = must(styleOf(read(`${IMAGES}/overview.svg`)), 'the light look');
+    const dark = must(styleOf(read(`${IMAGES}/overview.dark.svg`)), 'the dark look');
     expect(dark).not.toBe(light);
     expect(dark.replace(COLOURS, '')).toBe(light.replace(COLOURS, ''));
     for (const f of diagrams)
@@ -240,12 +242,14 @@ describe('a diagram', () => {
     const shown: string[] = [];
     for (const page of pages) {
       const at = (f: string) => relative(root, resolve(root, dirname(page), f));
-      const pictures = [...read(page).matchAll(PICTURE)].map(([, dark, light]) => [
-        at(dark!),
-        at(light!),
-      ]);
+      const pictures = [...read(page).matchAll(PICTURE)].map(
+        ([, dark, light]): [string, string] => [
+          at(must(dark, 'a dark picture')),
+          at(must(light, 'its light one')),
+        ],
+      );
       expect(
-        pictures.filter(([dark, light]) => isDiagram(dark!) && light !== lightOf(dark!)),
+        pictures.filter(([dark, light]) => isDiagram(dark) && light !== lightOf(dark)),
         page,
       ).toEqual([]);
       const pictured = pictures.flat().filter(isDiagram).sort();
@@ -261,7 +265,7 @@ describe('a diagram', () => {
   });
 
   it('renders on GitHub, with no font of ours', () => {
-    const look = styleOf(read(`${IMAGES}/overview.svg`))!;
+    const look = must(styleOf(read(`${IMAGES}/overview.svg`)), 'the look');
     expect(look).toContain('sans-serif');
     expect(look).toContain('monospace');
     for (const f of diagrams) {
@@ -272,18 +276,19 @@ describe('a diagram', () => {
         /foreignObject|<image|<script|@font-face|href=|https?:\/\/(?!www\.w3)/,
       );
       // what is drawn takes its colours from the look alone
-      expect(text.replace(styleOf(text)!, ''), f).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+      expect(text.replace(must(styleOf(text), f), ''), f).not.toMatch(/#[0-9a-f]{3,8}\b/i);
     }
   });
 
   it('keeps its lines on its canvas', () => {
     for (const f of diagrams) {
       const text = read(`${IMAGES}/${f}`);
-      const [, width, height] = /viewBox="0 0 (\d+) (\d+)"/.exec(text)!.map(Number) as number[];
+      const size = must(/viewBox="0 0 (\d+) (\d+)"/.exec(text), `the size of ${f}`);
+      const [width, height] = [Number(size[1]), Number(size[2])];
       const off = [...text.matchAll(/class="line[^"]*"[^>]* d="([^"]+)"/g)].filter(([, d]) =>
-        [...d!.matchAll(/([MHV])(\d+)(?: (\d+))?/g)].some(([, op, a, b]) => {
+        [...must(d, 'a line').matchAll(/([MHV])(\d+)(?: (\d+))?/g)].some(([, op, a, b]) => {
           const [x, y] = op === 'V' ? [0, Number(a)] : [Number(a), Number(b ?? 0)];
-          return x > width! || y > height!;
+          return x > width || y > height;
         }),
       );
       expect(off, f).toEqual([]);
@@ -292,8 +297,8 @@ describe('a diagram', () => {
 
   it('names only paths that are there', () => {
     const paths = diagrams.flatMap((f) =>
-      [...read(`${IMAGES}/${f}`).matchAll(/class="code[^>]*>([\w./-]+\/[\w./-]+)</g)].map(
-        (m) => m[1]!,
+      [...read(`${IMAGES}/${f}`).matchAll(/class="code[^>]*>([\w./-]+\/[\w./-]+)</g)].map((m) =>
+        must(m[1], 'a path'),
       ),
     );
     expect(paths.length).toBeGreaterThan(2);

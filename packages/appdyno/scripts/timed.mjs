@@ -9,8 +9,14 @@ export function answered(r) {
   return /** @type {any} */ (r);
 }
 
-/** `count` timed calls after 3 that warm up; failures are counted and said, and the run goes on. */
+/**
+ * `count` timed calls after 3 that warm up; failures are counted and said, and the run goes on.
+ * @param {number} count
+ * @param {() => Promise<unknown>} fn
+ * @param {() => Promise<unknown>} [between]
+ */
 export async function timedCalls(count, fn, between, label = '') {
+  /** @type {number[]} */
   const ms = [];
   let failed = 0;
   for (let i = 0; i < count + 3; i++) {
@@ -20,7 +26,7 @@ export async function timedCalls(count, fn, between, label = '') {
       if (i >= 3) ms.push(performance.now() - t);
     } catch (e) {
       if (i >= 3) failed++;
-      console.error(`${label}${e.message}`);
+      console.error(`${label}${e instanceof Error ? e.message : String(e)}`);
     }
     if (between) await between();
   }

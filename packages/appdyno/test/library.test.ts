@@ -11,7 +11,7 @@ const device = new FakeDevice();
 vi.mock('../src/providers.js', () => ({
   deviceProviders: () => [
     {
-      list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+      list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
       handles: () => true,
       open: () => device,
     },

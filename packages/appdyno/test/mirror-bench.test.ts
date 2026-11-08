@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error: a script's reckoning, with no types of its own
 import { byMinute, quietAndBusy } from '../scripts/mirror-bench-minutes.mjs';
 
 const second = (o: Record<string, number>) => ({

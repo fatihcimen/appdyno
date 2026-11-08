@@ -44,31 +44,33 @@ describe('going without a cable', () => {
   });
 
   it('sees one phone in its two ways in', async () => {
-    const list = async () => [
-      { serial: 'R68', state: 'device', ready: true, link: 'USB' as const },
-      {
-        serial: 'adb-R68-Ab._adb-tls-connect._tcp',
-        state: 'device',
-        ready: true,
-        link: 'Wi-Fi' as const,
-        sameAs: 'R68',
-      },
-    ];
+    const list = () =>
+      Promise.resolve([
+        { serial: 'R68', state: 'device', ready: true, link: 'USB' as const },
+        {
+          serial: 'adb-R68-Ab._adb-tls-connect._tcp',
+          state: 'device',
+          ready: true,
+          link: 'Wi-Fi' as const,
+          sameAs: 'R68',
+        },
+      ]);
     const seen = await listedPhones(
       [{ list, handles: () => true, open: () => undefined }] as never,
-      async () => undefined,
+      () => Promise.resolve(undefined),
     );
     expect(seen).toEqual([expect.objectContaining({ serial: 'R68', onWifi: true })]);
   });
 
   it('asks nothing of an iPhone away on Wi-Fi, which would stand before the phone in a hand', async () => {
-    const list = async () => [
-      { serial: '00001234-0123456789ABCDEF', state: 'network', ready: false },
-      { serial: 'R68', state: 'device', ready: true },
-    ];
+    const list = () =>
+      Promise.resolve([
+        { serial: '00001234-0123456789ABCDEF', state: 'network', ready: false },
+        { serial: 'R68', state: 'device', ready: true },
+      ]);
     const seen = await listedPhones(
       [{ list, handles: () => true, open: () => undefined }] as never,
-      async () => undefined,
+      () => Promise.resolve(undefined),
     );
     expect(seen.map((p) => p.serial)).toEqual(['R68']);
   });
@@ -101,7 +103,7 @@ describe('an Android, step by step as it changes by itself', () => {
     expect(g.hand).toBe('android');
     expect(g.maker).toBe('samsung');
     expect(now(g)).toBe('developer-options');
-    expect(g.steps[0]!.sees).toBe(false);
+    expect(g.steps[0]?.sees).toBe(false);
     expect(g.ready).toBe(false);
   });
 
@@ -136,7 +138,7 @@ describe('an Android, step by step as it changes by itself', () => {
     const g = guideFor({ usb: [xiaomi], phones: [android({ switches: on })], has: all });
     expect(now(g)).toBe('xiaomi-install');
     expect(g.ready).toBe(true);
-    expect(g.steps.find((s) => s.id === 'xiaomi-install')!.sees).toBe(false);
+    expect(g.steps.find((s) => s.id === 'xiaomi-install')?.sees).toBe(false);
   });
 
   it('knows a Xiaomi with neither switch read, as a phone may not say', () => {
@@ -173,7 +175,7 @@ describe('an iPhone, step by step', () => {
 
 describe('what the drivers say of phones', () => {
   const provider = (over: object) => ({
-    list: async () => [],
+    list: () => Promise.resolve([]),
     handles: () => true,
     open: () => {
       throw new Error('no phone is opened to look at it');
@@ -182,14 +184,15 @@ describe('what the drivers say of phones', () => {
   });
 
   it('leaves out what is virtual, and asks each phone what is in its way', async () => {
-    const list = async () => [
-      { serial: 'emulator-5554', state: 'device', ready: true },
-      { serial: 'A-B', state: 'booted', ready: true },
-      { serial: 'R5C', state: 'unauthorized', ready: false },
-    ];
+    const list = () =>
+      Promise.resolve([
+        { serial: 'emulator-5554', state: 'device', ready: true },
+        { serial: 'A-B', state: 'booted', ready: true },
+        { serial: 'R5C', state: 'unauthorized', ready: false },
+      ]);
     const seen = await listedPhones(
-      [provider({ list, need: async () => 'not-trusted' })] as never,
-      async () => ({ input: '', install: '' }),
+      [provider({ list, need: () => Promise.resolve('not-trusted') })] as never,
+      () => Promise.resolve({ input: '', install: '' }),
     );
     expect(seen).toEqual([
       { serial: 'R5C', state: 'unauthorized', ready: false, need: 'not-trusted' },
@@ -197,18 +200,18 @@ describe('what the drivers say of phones', () => {
   });
 
   it('reads a switch only of a phone that allows it, and a failed read says nothing', async () => {
-    const list = async () => [{ serial: 'R5C', state: 'device', ready: true }];
-    const failed = await listedPhones([provider({ list })] as never, async () => {
-      throw new Error('gone');
-    });
+    const list = () => Promise.resolve([{ serial: 'R5C', state: 'device', ready: true }]);
+    const failed = await listedPhones([provider({ list })] as never, () =>
+      Promise.reject(new Error('gone')),
+    );
     expect(failed[0]).toEqual({ serial: 'R5C', state: 'device', ready: true });
   });
 
   it('takes a driver that fails to list for one with nothing to say', async () => {
-    const list = async () => {
-      throw new Error('no such tool');
-    };
-    expect(await listedPhones([provider({ list })] as never, async () => undefined)).toEqual([]);
+    const list = () => Promise.reject(new Error('no such tool'));
+    expect(
+      await listedPhones([provider({ list })] as never, () => Promise.resolve(undefined)),
+    ).toEqual([]);
   });
 
   it('names what a runner asks of this Mac', () => {

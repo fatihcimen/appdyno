@@ -17,7 +17,7 @@ export async function pairCommand(
     adb: Pick<Adb, 'pair' | 'devices'>;
     phone: typeof pairPhone;
     forget: typeof forgetPhone;
-    say(line: string): void;
+    say: (line: string) => void;
   } = {
     adb: new Adb(),
     phone: pairPhone,

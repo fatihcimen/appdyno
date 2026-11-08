@@ -2,7 +2,7 @@ import { generateKeyPairSync } from 'node:crypto';
 import { mkdtempSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { pushCredentials } from '@appdyno/core';
+import { must, pushCredentials } from '@appdyno/core';
 import { fcmKey } from '@appdyno/driver-android';
 import { apnsKey } from '@appdyno/driver-apple';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -29,7 +29,7 @@ const person = (answers: string[], files: Record<string, string> = {}) => {
   return {
     said,
     use: {
-      ask: vi.fn(async () => answers.shift() ?? ''),
+      ask: vi.fn(() => Promise.resolve(answers.shift() ?? '')),
       read: (path: string) => files[path.trim()] ?? '',
       say: (line: string) => void said.push(line),
     },
@@ -56,7 +56,7 @@ describe('appdyno push setup', () => {
     expect(statSync(file).mode & 0o777).toBe(0o600);
     expect(statSync(dirname(file)).mode & 0o777).toBe(0o700);
     const words = p.said.join('\n');
-    for (const secret of [P8.split('\n')[1]!, 'ABC123DEFG', 'DEF123GHIJ'])
+    for (const secret of [must(P8.split('\n')[1], 'a line of the key'), 'ABC123DEFG', 'DEF123GHIJ'])
       expect(words).not.toContain(secret);
     expect(words).toContain('an MCP client is told only that it is set');
   });

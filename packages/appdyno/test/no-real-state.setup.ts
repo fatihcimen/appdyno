@@ -38,33 +38,35 @@ const CALLS = [
   'writeFile',
 ];
 
-const breachFile = process.env.APPDYNO_TEST_BREACH_FILE!;
+const breachFile = process.env.APPDYNO_TEST_BREACH_FILE;
+if (breachFile === undefined)
+  throw new Error('APPDYNO_TEST_BREACH_FILE is missing: vitest.config.ts sets it');
 const note = fs.appendFileSync;
 
 /** A test of this guard itself sets this: what it provokes is no breach. */
 export const provoked = { now: false };
 
-const isReal = (p: unknown) => {
+const isReal = (p: unknown): p is string | URL | Buffer => {
   const path = p instanceof URL ? p.pathname : Buffer.isBuffer(p) ? p.toString() : p;
   return typeof path === 'string' && `${resolve(path).toLowerCase()}/`.startsWith(`${REAL}/`);
 };
 
-function watch(on: Record<string, unknown>, name: string, promised = false) {
+const watch = (on: Record<string, unknown>, name: string, promised = false) => {
   const real = on[name];
   if (typeof real !== 'function') return;
   on[name] = function (this: unknown, ...args: unknown[]) {
     const hit = args.slice(0, 2).find(isReal);
-    if (hit === undefined) return real.apply(this, args);
+    if (hit === undefined) return real.apply(this, args) as unknown;
     if (!provoked.now) note(breachFile, `${name} ${String(hit)}\n`);
     const refused = new Error(`a unit test reached this Mac's own state: ${name} ${String(hit)}`);
     if (promised) return Promise.reject(refused);
     throw refused;
   };
-}
+};
 
 for (const call of CALLS) {
-  watch(fs as unknown as Record<string, unknown>, call);
-  watch(fs as unknown as Record<string, unknown>, `${call}Sync`);
-  watch(fs.promises as unknown as Record<string, unknown>, call, true);
+  watch(fs, call);
+  watch(fs, `${call}Sync`);
+  watch(fs.promises, call, true);
 }
 syncBuiltinESMExports();

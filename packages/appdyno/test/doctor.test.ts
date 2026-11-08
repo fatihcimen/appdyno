@@ -7,9 +7,9 @@ const provider = (name: string, handles: (serial: string) => boolean) => {
   const asked: (string | undefined)[] = [];
   const p: Pick<DeviceProvider, 'handles' | 'doctor'> = {
     handles,
-    doctor: async (serial): Promise<Check[]> => {
+    doctor: (serial): Promise<Check[]> => {
       asked.push(serial);
-      return [{ name, ok: true, detail: serial ?? 'this machine' }];
+      return Promise.resolve([{ name, ok: true, detail: serial ?? 'this machine' }]);
     },
   };
   return { asked, provider: p as DeviceProvider };

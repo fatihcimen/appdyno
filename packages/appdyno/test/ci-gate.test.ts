@@ -34,7 +34,7 @@ const run = (
       history: readFileSync(hist, 'utf8')
         .trim()
         .split('\n')
-        .map((l) => JSON.parse(l)),
+        .map((l): unknown => JSON.parse(l)),
     };
   } catch {
     return {
@@ -42,7 +42,7 @@ const run = (
       history: readFileSync(hist, 'utf8')
         .trim()
         .split('\n')
-        .map((l) => JSON.parse(l)),
+        .map((l): unknown => JSON.parse(l)),
     };
   }
 };
@@ -65,6 +65,6 @@ describe('nightly regression gate', () => {
   it('fails on any failed operation and keeps a failing run out of the baseline', () => {
     const r = run({ 'read.home': { p50: 9, failed: 1 } }, [past(9)]);
     expect(r.ok).toBe(false);
-    expect(r.history.at(-1)!.passed).toBe(false);
+    expect(r.history.at(-1)).toMatchObject({ passed: false });
   });
 });

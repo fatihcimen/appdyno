@@ -6,11 +6,19 @@ import { IosSimulatorDevice } from '@appdyno/driver-apple';
 import { answered } from './timed.mjs';
 
 const [udid, nArg, windowsArg] = process.argv.slice(2);
+if (!udid) {
+  console.error('usage: ios-settle-proof.mjs <simulator id> [n] [windows ms, comma separated]');
+  process.exit(2);
+}
 const n = Number(nArg ?? 10);
 const windows = (windowsArg ?? '200,500,800').split(',').map(Number);
 const APP = 'dev.appdyno.fixture';
 const d = new IosSimulatorDevice(udid);
 const screen = async () => buildScreen(await d.tree(), { port: d.platformScreen, appId: APP });
+/**
+ * @param {(e: import('@appdyno/core').Screen['list'][number]) => boolean} pred
+ * @param {string} what
+ */
 const find = async (pred, what) => {
   for (let i = 0; i < 10; i++) {
     const s = await screen();
@@ -21,6 +29,7 @@ const find = async (pred, what) => {
   const s = await screen();
   throw new Error(`no ${what}: ${s.list.map((e) => `${e.label}|${e.id ?? ''}`).join(', ')}`);
 };
+/** @type {{ n: number; windows: Record<number, unknown> }} */
 const out = { n, windows: {} };
 try {
   await d.open();
@@ -28,7 +37,8 @@ try {
   await d.launch(APP);
   for (const quietMs of windows) {
     const settle = { quietMs, maxMs: 3_000 };
-    const r = { late: {}, navigate: { missed: 0, ms: /** @type {number[]} */ ([]) } };
+    /** @type {{ late: Record<number, number>; navigate: { missed: number; ms: number[] } }} */
+    const r = { late: {}, navigate: { missed: 0, ms: [] } };
     await d.openUrl('appdyno-fixture://open/late', APP);
     await new Promise((x) => setTimeout(x, 800));
     for (const delay of [0, 100, 300, 450, 700]) {

@@ -26,6 +26,7 @@ import {
   serverOf,
   takeFlag,
 } from '@appdyno/cli';
+import { must } from '@appdyno/core';
 import { writeComment, writeDashboard } from '@appdyno/perf';
 import {
   DEFAULT_POLICY,
@@ -64,6 +65,12 @@ import { flightCommand, timelineCommand } from './timeline.js';
 
 const [command, ...rest] = process.argv.slice(2);
 const err = (s: string) => process.stderr.write(`${s}\n`);
+/** The tool's own `mirror`, which `appdyno mirror` hands what is not a window's. */
+const mirrorTool = (ctx: ServerContext, words: string[]) =>
+  must(commandsFor(opsFor(ctx)).mirror, 'the mirror command').run(words, {
+    out: (s) => console.log(s),
+    err,
+  });
 /** This package's own folder: `dist` and `src` both sit in it. */
 const root = realpathSync(fileURLToPath(new URL('..', import.meta.url)));
 /** The operations' context, from flags and the environment. */
@@ -97,11 +104,11 @@ function contextFrom(values: ServerFlags, remember?: string) {
   const limit = values['trace-limit-gb'] ?? env.APPDYNO_TRACE_LIMIT_GB;
   const traceLimitGb = limit === undefined ? undefined : Number(limit);
   if (traceLimitGb !== undefined && !(traceLimitGb >= 0))
-    throw new Error(`--trace-limit-gb takes a number of GB, not ${limit}`);
+    throw new Error(`--trace-limit-gb takes a number of GB, not ${String(limit)}`);
   const flight = values['flight-seconds'] ?? env.APPDYNO_FLIGHT_SECONDS;
   const flightSeconds = flight === undefined ? undefined : Number(flight);
   if (flightSeconds !== undefined && !(flightSeconds > 0))
-    throw new Error(`--flight-seconds takes a number of seconds, not ${flight}`);
+    throw new Error(`--flight-seconds takes a number of seconds, not ${String(flight)}`);
   const installAnswers = {
     prompts: !(values['no-install-consent'] || env.APPDYNO_NO_INSTALL_CONSENT === '1'),
     warnings:
@@ -209,8 +216,7 @@ async function main(): Promise<number> {
     case 'mirror':
       return mirrorCommand(rest, {
         context: contextFrom,
-        tool: (ctx, words) =>
-          commandsFor(opsFor(ctx)).mirror!.run(words, { out: (s) => console.log(s), err }),
+        tool: mirrorTool,
         windows: runMirrors,
       });
     case 'hub':
@@ -319,9 +325,9 @@ async function main(): Promise<number> {
         return 2;
       }
       const maxLoad = Number(values['max-load'] ?? 4);
-      if (loadavg()[0]! > maxLoad) {
+      if (must(loadavg()[0], "the host's load") > maxLoad) {
         err(
-          `host load ${loadavg()[0]!.toFixed(2)} is over ${maxLoad}: run the benchmark on a quiet machine`,
+          `host load ${must(loadavg()[0], "the host's load").toFixed(2)} is over ${maxLoad}: run the benchmark on a quiet machine`,
         );
         return 3;
       }
