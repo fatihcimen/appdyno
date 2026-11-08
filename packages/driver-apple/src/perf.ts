@@ -216,25 +216,29 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
     await appendFile(this.probeFile(bundle), `${JSON.stringify({ reset: Date.now() })}\n`);
   }
 
-  /** The frames since the last reset, or since the app started under the probe, then a reset unless told otherwise. */
-  async frames(bundle: string, opts: { reset?: boolean } = {}): Promise<Measured<FrameStats>> {
+  /** The frames since `since`, else the last reset, else the app's start under the probe, then a reset unless told not. */
+  async frames(
+    bundle: string,
+    opts: { reset?: boolean; since?: number } = {},
+  ): Promise<Measured<FrameStats>> {
     await this.requireProbe(bundle);
     const to = Date.now();
     await sleep(PROBE_FLUSH_MS);
     const text = await readFile(this.probeFile(bundle), 'utf8');
     const head = probeHead(text);
-    const from = head.resetAt ?? must(head.loadedAt, "the probe's start");
+    const from = opts.since ?? head.resetAt ?? must(head.loadedAt, "the probe's start");
     const raw = probeWindow(text, from, to);
     if (opts.reset !== false) await this.resetFrames(bundle);
     return { value: probeFrames(raw, from, to), raw, at: at() };
   }
 
-  /** What the probe counts from a reset to the end of what a list coasts on after `during`. */
+  /** What the probe counts to the end of what a list coasts on after `during`: by the clock, which no reset moves. */
   async framesDuring(bundle: string, _seconds: number, during: () => Promise<unknown>) {
-    await this.resetFrames(bundle);
+    await this.requireProbe(bundle);
+    const from = Date.now();
     await during();
     await sleep(COAST_MS);
-    return this.frames(bundle);
+    return this.frames(bundle, { reset: false, since: from });
   }
 
   /** The probe's lines for a window of `seconds`, and `during` too if it takes longer. */

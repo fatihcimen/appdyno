@@ -43,7 +43,7 @@ const NOTHING_DRAWN: FrameStats = {
 export async function frames(
   d: PerfDevice,
   pkg: string,
-  opts: { reset?: boolean; asItIs?: boolean } = {},
+  opts: { reset?: boolean; asItIs?: boolean; after?: number } = {},
 ): Promise<Measured<FrameStats>> {
   if (!opts.asItIs) await d.readyToMeasure();
   assertPkg(pkg);
@@ -55,7 +55,7 @@ export async function frames(
     throw new DeviceError('APP_NOT_RUNNING', `${pkg} is not running`);
   // a process up for a broadcast or a job has no window, and prints no summary: it drew nothing
   if (!raw.includes('Total frames rendered')) return { value: NOTHING_DRAWN, raw, at: at() };
-  return { value: parseFrameStats(raw), raw, at: at() };
+  return { value: parseFrameStats(raw, opts.after), raw, at: at() };
 }
 
 export async function resetFrames(d: PerfDevice, pkg: string) {

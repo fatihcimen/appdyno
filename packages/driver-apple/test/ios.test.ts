@@ -1,3 +1,6 @@
+import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RpcDevice } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
@@ -153,21 +156,27 @@ describe('what a device measures', () => {
     expect(phone().slowReads).toEqual(['memory', 'frames', 'resetFrames']);
   });
 
-  it('a simulator counts from a reset, through what it is given, to its read', async () => {
-    const perf = simulator();
-    const seen: string[] = [];
-    const frames = { value: {}, raw: '', at: '' } as Awaited<ReturnType<typeof perf.frames>>;
-    Object.assign(perf, {
-      resetFrames: () => {
-        seen.push('reset');
+  it("a simulator counts what it is given by the clock, whatever another reader's reset said meanwhile", async () => {
+    const state = mkdtempSync(join(tmpdir(), 'appdyno-probe-'));
+    vi.stubEnv('APPDYNO_STATE_DIR', state);
+    try {
+      const perf = simulator();
+      Object.assign(perf, { pid: () => Promise.resolve(42) });
+      const file = join(state, 'probes', '7994F239-7CD7-4247-9FC0-4F92C7CFC951-a.b.jsonl');
+      mkdirSync(dirname(file), { recursive: true });
+      const line = (l: object) => `${JSON.stringify(l)}\n`;
+      writeFileSync(file, line({ loaded: 'a.b', pid: 42, t: Date.now() - 5_000 }));
+      const m = await perf.framesDuring('a.b', 1, () => {
+        const t = Date.now();
+        const frame = (at: number) => line({ t: at, dt: 16.7, v: 16.7 });
+        // a timeline's reader, as it was, reset the probe's count between two frames of the scroll
+        appendFileSync(file, frame(t + 1) + frame(t + 2) + line({ reset: t + 3 }) + frame(t + 4));
         return Promise.resolve();
-      },
-      frames: () => Promise.resolve((seen.push('read'), frames)),
-    });
-    await expect(
-      perf.framesDuring('a.b', 1, () => Promise.resolve(seen.push('during'))),
-    ).resolves.toBe(frames);
-    expect(seen).toEqual(['reset', 'during', 'read']);
+      });
+      expect(m.value.totalFrames).toBe(3);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('each says what it has no way of measuring', async () => {

@@ -86,10 +86,10 @@ export function parseFramestats(text: string): Required<FrameRow>[] {
   return out;
 }
 
-/** The summary plus what the per-frame rows say: a frame over two vsync intervals is slow. */
-export function parseFrameStats(text: string): FrameStats {
+/** The summary plus what the per-frame rows say, those after `afterNs` only: a frame over two vsync intervals is slow. */
+export function parseFrameStats(text: string, afterNs = -Infinity): FrameStats {
   const out: FrameStats = parseGfxSummary(text);
-  const rows = parseFramestats(text);
+  const rows = parseFramestats(text).filter((r) => r.startNs > afterNs);
   if (rows.length > 0) {
     const ms = rows.map((r) => r.durationMs);
     // a frame finishes about one interval after its vsync even when smooth (the render pipeline): slow is
@@ -104,6 +104,7 @@ export function parseFrameStats(text: string): FrameStats {
       p95Ms: round1(quantile(ms, 0.95)),
       worstMs: Math.max(...ms),
       ...(worst && { worstWindow: worst }),
+      newestNs: Math.max(...rows.map((r) => r.startNs)),
     };
   }
   return out;

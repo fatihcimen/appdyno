@@ -330,7 +330,7 @@ A timeline puts what happened in a journey on one clock, in one HTML file: the v
 appdyno timeline --app dev.app --flow journey.flow    # a flow, or --seconds 30 of your own hands
 ```
 
-Through the server: `report` `timeline`, then the journey, then `report` `stop`; a session's end writes it too. A timeline lasts at most 180 s, as past one recording's segment the video's own times are lost. It writes `timeline.html` beside the report, and a video over 64 MB stays beside the page, with the page saying so. A `perf_*` run during it is marked `mirrored`, as an encoder is at work on the device.
+Through the server: `report` `timeline`, then the journey, then `report` `stop`; a session's end writes it too. A timeline lasts at most 180 s, as past one recording's segment the video's own times are lost. It writes `timeline.html` beside the report, and a video over 64 MB stays beside the page, with the page saying so. A `perf_*` run during it is marked `mirrored`, as an encoder is at work on the device. Its frames each second are what the counters grew by, as a reset would cut the window a `perf_scroll` counts from its own: one that reset them every second left a list janking on every frame at 0 % on an Android 14 emulator, against 97 % alone, and now reads 98 %; on a simulator it left 0 frames, and now 100 % as alone. The second in which another measure begins its own count has no frames.
 
 ### One clock
 

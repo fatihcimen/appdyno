@@ -14,6 +14,20 @@ const reading = <T>(value: T) => Promise.resolve({ value, raw: '', at: '' });
 const mocks = (d: Pick<Device, 'measure'>) =>
   d.measure as unknown as Record<'cpu' | 'memory' | 'network' | 'frames', Mock>;
 
+/** A device's frame counters, which only grow until something resets them: `each` more frames at every read. */
+const counters = (each: { totalFrames: number; jankyFrames: number; frozenFrames: number }) => {
+  let read = 0;
+  return () => {
+    read++;
+    return reading({
+      totalFrames: 1_000 + each.totalFrames * read,
+      jankyFrames: 40 + each.jankyFrames * read,
+      frozenFrames: 3 + each.frozenFrames * read,
+      frames: { worstMs: 41 },
+    });
+  };
+};
+
 function device(over: Record<string, unknown> = {}) {
   return {
     foreground: vi.fn(() => Promise.resolve('dev.app')),
@@ -22,9 +36,7 @@ function device(over: Record<string, unknown> = {}) {
       cpu: vi.fn(() => reading({ percent: 12.5, windowMs: 500 })),
       memory: vi.fn(() => reading({ kb: 204_800, kind: 'pss' })),
       network: vi.fn(() => reading({ windowMs: 500, rxBytes: 6_250, txBytes: 625 })),
-      frames: vi.fn(() =>
-        reading({ totalFrames: 58, jankyFrames: 2, frozenFrames: 0, frames: { worstMs: 41 } }),
-      ),
+      frames: vi.fn(counters({ totalFrames: 58, jankyFrames: 2, frozenFrames: 0 })),
       ...over,
     },
   } as unknown as Pick<Device, 'measure' | 'foreground'>;
@@ -71,11 +83,11 @@ describe('what one that runs all day reads', () => {
     expect(s.absent?.cpuPercent).toContain('not read');
   });
 
-  it('takes the screen as it is: a number is no reason to light a phone a person turned off', async () => {
+  it('takes the screen as it is, and resets no counter a measure of its own counts from', async () => {
     const d = device();
     await firstOf(d, ['fps']);
     expect(mocks(d).frames).toHaveBeenCalledWith('dev.app', {
-      reset: true,
+      reset: false,
       asItIs: true,
     });
   });
@@ -98,10 +110,36 @@ describe("a device's numbers each second", () => {
     expect(sample.fps).toBeGreaterThan(0);
   });
 
-  it('count no frames at first: what came before the first reset belongs to no second', async () => {
+  it('count no frames at first: what came before the first read belongs to no second', async () => {
     const sample = await first(device());
     expect(sample).not.toHaveProperty('fps');
     expect(sample.absent?.fps).toBe('counting begins');
+  });
+
+  it('count what came between two reads, and say a second whose counters another measure reset', async () => {
+    const reads = [
+      { totalFrames: 1_000, jankyFrames: 40, frozenFrames: 3 },
+      { totalFrames: 1_060, jankyFrames: 70, frozenFrames: 4 },
+      // perf_scroll began its own window here
+      { totalFrames: 12, jankyFrames: 11, frozenFrames: 0 },
+      { totalFrames: 72, jankyFrames: 70, frozenFrames: 0 },
+    ];
+    let newestNs = 0;
+    const frames = vi.fn(() =>
+      reading({ ...must(reads.shift(), 'a read'), frames: { worstMs: 41, newestNs: ++newestNs } }),
+    );
+    const [, second, third, fourth] = await samples(device({ frames }), 4);
+    // the rows a device keeps outlive a second: each read takes those after the newest of the one before
+    expect(frames.mock.calls.map((c: unknown[]) => (c[1] as { after?: number }).after)).toEqual([
+      undefined,
+      1,
+      2,
+      3,
+    ]);
+    expect(second).toMatchObject({ framesDrawn: 60, jankyFrames: 30, frozenFrames: 1 });
+    expect(third).not.toHaveProperty('fps');
+    expect(third?.absent?.fps).toBe('another measure began counting the frames again');
+    expect(fourth).toMatchObject({ framesDrawn: 60, jankyFrames: 59, frozenFrames: 0 });
   });
 
   it('count frames over the time since the last count, however long the reading took', async () => {
@@ -111,7 +149,7 @@ describe("a device's numbers each second", () => {
         raw: '',
         at: '',
       }));
-    const frames = () => reading({ totalFrames: 150, jankyFrames: 0, frozenFrames: 0 });
+    const frames = counters({ totalFrames: 150, jankyFrames: 0, frozenFrames: 0 });
     const sample = must((await samples(device({ memory: slow, frames }), 2))[1], 'a second sample');
     // 150 frames in the second and a half the memory read holds a turn for, and not in a second
     expect(sample.fps).toBeGreaterThan(90);

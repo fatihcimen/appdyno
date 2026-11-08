@@ -43,6 +43,8 @@ export type FrameStats = FrameSummary & {
     worstMs: number;
     /** The worst second: the one-second window of frames with the most slow frames. */
     worstWindow?: { frames: number; slow: number; avgMs: number };
+    /** The newest frame's vsync, on the device's clock in ns: where a reader that resets nothing goes on from. */
+    newestNs?: number;
   };
 };
 

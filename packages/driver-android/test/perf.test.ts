@@ -62,6 +62,16 @@ describe('android perf parsers on recorded outputs', () => {
     });
   });
 
+  it('reads on from the newest frame a reader saw, with no reset between: the rows a device keeps outlive a second', () => {
+    const text = fx('android-gfxinfo-framestats.txt');
+    const rows = parseFramestats(text).toSorted((a, b) => a.startNs - b.startNs);
+    const every = parseFrameStats(text).frames;
+    const cut = rows.at(-3)?.startNs;
+    assert(every && cut !== undefined);
+    expect(parseFrameStats(text, cut).frames).toMatchObject({ count: 2, newestNs: every.newestNs });
+    expect(parseFrameStats(text, every.newestNs).frames).toBeUndefined();
+  });
+
   it('reads the rows of every window block, an empty block first', () => {
     const block = (rows: string) =>
       `---PROFILEDATA---\nFlags,IntendedVsync,FrameCompleted,\n${rows}---PROFILEDATA---\n`;

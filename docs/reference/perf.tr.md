@@ -330,7 +330,7 @@ Bir zaman çizelgesi bir yolculukta olanları tek bir saatte, tek bir HTML dosya
 appdyno timeline --app dev.app --flow journey.flow    # bir akış, ya da kendi ellerinizle --seconds 30
 ```
 
-Sunucu üzerinden: `report` `timeline`, sonra yolculuk, sonra `report` `stop`; bir oturumun sonu da onu yazar. Bir zaman çizelgesi en çok 180 s sürer, çünkü tek bir kaydın parçasından sonra videonun kendi zamanları kaybolur. `timeline.html`'i raporun yanına yazar; 64 MB'tan büyük bir video sayfanın yanında kalır ve sayfa bunu söyler. Bu sırada yapılan bir `perf_*` çalıştırması `mirrored` olarak işaretlenir, çünkü cihazda bir kodlayıcı çalışmaktadır.
+Sunucu üzerinden: `report` `timeline`, sonra yolculuk, sonra `report` `stop`; bir oturumun sonu da onu yazar. Bir zaman çizelgesi en çok 180 s sürer, çünkü tek bir kaydın parçasından sonra videonun kendi zamanları kaybolur. `timeline.html`'i raporun yanına yazar; 64 MB'tan büyük bir video sayfanın yanında kalır ve sayfa bunu söyler. Bu sırada yapılan bir `perf_*` çalıştırması `mirrored` olarak işaretlenir, çünkü cihazda bir kodlayıcı çalışmaktadır. Her saniyenin kareleri sayaçların ne kadar arttığıdır, çünkü bir sıfırlama bir `perf_scroll`'un kendi başından saydığı pencereyi keserdi: sayaçları her saniye sıfırlayan, her karede takılan bir listeyi bir Android 14 emülatöründe tek başına %97 iken %0 bırakıyordu, şimdi %98 okur; bir simülatörde 0 kare bırakıyordu, şimdi tek başına olduğu gibi %100 okur. Başka bir ölçümün kendi sayımına başladığı saniyenin karesi yoktur.
 
 ### Tek bir saat
 

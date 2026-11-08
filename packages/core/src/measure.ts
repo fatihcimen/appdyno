@@ -330,8 +330,12 @@ export type MeasureSource = {
   /**
    * The frames since the last reset, then a reset, so that the next read starts a window of its own; `reset: false` leaves
    * this one open. `asItIs` only looks: a dark screen stays dark, where a measure would light it to see what a person sees.
+   * `after` (a `newestNs`) leaves out of the per-frame rows those up to it, for a reader that resets nothing.
    */
-  frames(app: string, opts?: { reset?: boolean; asItIs?: boolean }): Promise<Measured<FrameStats>>;
+  frames(
+    app: string,
+    opts?: { reset?: boolean; asItIs?: boolean; after?: number },
+  ): Promise<Measured<FrameStats>>;
   /** Frames of what `during` does: recorded around it, or a counter read before and after it. */
   framesDuring(
     app: string,

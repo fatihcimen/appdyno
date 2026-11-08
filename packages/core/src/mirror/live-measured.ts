@@ -1,5 +1,6 @@
 import { pause } from '../call.js';
 import type { Device } from '../device.js';
+import type { FrameStats } from '../frames.js';
 import type { Capability, Measured } from '../measure.js';
 import { LIVE_FIELDS, type LiveField, type LiveMetrics, type LiveSample } from './live-metrics.js';
 
@@ -13,9 +14,18 @@ const NOT_EACH_SECOND = 'too slow to read each second here';
 const NOT_ASKED = 'not read: each read costs the device';
 const FRAME_FIELDS: LiveField[] = ['fps', 'jankyFrames', 'frozenFrames'];
 const COUNT_BEGINS = 'counting begins';
+const COUNTED_AGAIN = 'another measure began counting the frames again';
 
-/** What a source keeps from turn to turn: which app, since when its frames are counted, and its memory as last read. */
-type Kept = { app?: string; since?: number; turn: number; memoryMb?: number };
+/** What a source keeps from turn to turn: which app, its frame counters when and as last read, and its memory. */
+type Kept = {
+  app?: string;
+  since?: number;
+  counted?: FrameStats;
+  /** The newest frame read, on the device's clock: the next read's rows are those after it. */
+  newestNs?: number;
+  turn: number;
+  memoryMb?: number;
+};
 
 /** Whatever is missing is missing for one reason, said once for each measure it takes away. */
 const allAbsent = (fields: readonly LiveField[], why: string) =>
@@ -83,18 +93,33 @@ async function sampleOf(
     read(
       FRAME_FIELDS,
       'frames',
-      () => measure.frames(app, { reset: true, asItIs: true }),
+      // the counters only grow here: a reset would cut the window a measure such as perf_scroll counts from its own
+      () =>
+        measure.frames(app, {
+          reset: false,
+          asItIs: true,
+          ...(sameApp && kept.newestNs !== undefined && { after: kept.newestNs }),
+        }),
       (v) => {
         const now = Date.now();
         const since = sameApp ? kept.since : undefined;
+        const was = sameApp ? kept.counted : undefined;
         kept.since = now;
-        // what was counted before the first reset belongs to no second
-        if (since === undefined)
+        kept.counted = v;
+        kept.newestNs = v.frames?.newestNs ?? (sameApp ? kept.newestNs : undefined);
+        // what was counted before the first read belongs to no second
+        if (since === undefined || !was)
           return void Object.assign(absent, allAbsent(FRAME_FIELDS, COUNT_BEGINS));
-        sample.fps = Math.round(v.totalFrames / ((now - since) / SECOND_MS));
-        sample.framesDrawn = v.totalFrames;
-        sample.jankyFrames = v.jankyFrames;
-        sample.frozenFrames = v.frozenFrames;
+        const drawn = v.totalFrames - was.totalFrames;
+        const janky = v.jankyFrames - was.jankyFrames;
+        const frozen = v.frozenFrames - was.frozenFrames;
+        // a counter lower than before was reset in this second, and what came before that is lost to it
+        if (drawn < 0 || janky < 0 || frozen < 0)
+          return void Object.assign(absent, allAbsent(FRAME_FIELDS, COUNTED_AGAIN));
+        sample.fps = Math.round(drawn / ((now - since) / SECOND_MS));
+        sample.framesDrawn = drawn;
+        sample.jankyFrames = janky;
+        sample.frozenFrames = frozen;
         if (v.frames) sample.worstFrameMs = v.frames.worstMs;
       },
     ),
