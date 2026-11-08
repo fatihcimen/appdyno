@@ -27,6 +27,13 @@ describe('the memory Play judges', () => {
     expect(read.bitmapKb).toBeUndefined();
   });
 
+  it('has none where Android 17 lists native allocations by kind and no bitmap among them', () => {
+    const rows =
+      ' Native Allocations\n    Other (malloced):      429                             39\n';
+    expect(parseAnonMemory(READ(2).replace(/^.*Bitmap.*\n/gm, '') + rows).bitmapKb).toBe(0);
+    expect(parseAnonMemory(READ(2) + rows).bitmapKb).toBe(3_516);
+  });
+
   it('has no swap where a kernel prints none', () => {
     expect(parseAnonMemory(READ(2, '')).kb).toBe(80_960);
   });

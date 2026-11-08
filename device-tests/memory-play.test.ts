@@ -70,7 +70,10 @@ describe.skipIf(!serial)('memory by Play’s metric', () => {
   }, 180_000);
 
   it('a 50 MB bitmap raises the anon memory within 15 %, and the bitmaps where this Android lists them', async () => {
-    const listed = /Bitmap \(malloced\)/.test(await d.shell(`dumpsys meminfo ${APP}`));
+    // Android 17 lists a bitmap row only once the app holds a bitmap, under its native allocations
+    const listed = /Bitmap \(malloced\)|Native Allocations/.test(
+      await d.shell(`dumpsys meminfo ${APP}`),
+    );
     const before = await read();
     await press('memory_bitmap', 'Held bitmap');
     const held = await read();

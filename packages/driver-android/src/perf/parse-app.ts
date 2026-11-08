@@ -54,7 +54,7 @@ const stateOf = (procState: number): ProcessMemoryState => {
   return procState >= 16 ? 'cached' : 'background';
 };
 
-/** The lines `anonMemory` asks for: `RssAnon:`, `VmSwap:`, `MemTotal:`, `curProcState=`, `Bitmap (malloced):`. */
+/** The lines `anonMemory` asks for: `RssAnon:`, `VmSwap:`, `MemTotal:`, `curProcState=`, `Native Allocations`, `Bitmap (malloced):`. */
 export function parseAnonMemory(text: string): AnonMemory {
   const rssAnonKb = num(/^RssAnon:\s*(\d+)/m, text);
   const memTotalKb = num(/^MemTotal:\s*(\d+)/m, text);
@@ -65,6 +65,8 @@ export function parseAnonMemory(text: string): AnonMemory {
   const bitmaps = ['malloced', 'nonmalloced'].flatMap(
     (name) => num(new RegExp(`Bitmap \\(${name}\\):\\s+\\d+\\s+(\\d+)`), text) ?? [],
   );
+  // Android 17 lists its native allocations by kind, a bitmap row only where the app holds one
+  if (bitmaps.length === 0 && /^\s*Native Allocations/m.test(text)) bitmaps.push(0);
   return {
     kb: rssAnonKb + swapKb,
     rssAnonKb,

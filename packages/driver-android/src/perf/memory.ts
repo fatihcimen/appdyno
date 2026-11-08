@@ -54,7 +54,7 @@ export async function anonMemory(d: PerfDevice, pkg: string): Promise<Measured<A
   const pid = await pidOf(d, pkg);
   const raw = await sh(
     d,
-    `grep -E '^(RssAnon|VmSwap):' /proc/${pid}/status; grep MemTotal /proc/meminfo; dumpsys activity processes ${pkg} | grep -m1 -o 'curProcState=[0-9]*'; dumpsys meminfo ${pkg} | grep -E 'Bitmap \\((non)?malloced\\)'`,
+    `grep -E '^(RssAnon|VmSwap):' /proc/${pid}/status; grep MemTotal /proc/meminfo; dumpsys activity processes ${pkg} | grep -m1 -o 'curProcState=[0-9]*'; dumpsys meminfo ${pkg} | grep -E 'Native Allocations|Bitmap \\((non)?malloced\\)'`,
   );
   return { value: parseAnonMemory(raw), raw, at: at() };
 }
