@@ -85,7 +85,6 @@ const TR = /\.tr\.md$/;
 const ENGLISH_ONLY: Record<string, string> = {
   'CHANGELOG.md': 'not yet in Turkish',
   'CONTRIBUTING.md': 'not yet in Turkish',
-  'docs/reference/ci.md': 'not yet in Turkish',
   'docs/reference/mirror.md': 'not yet in Turkish',
   'docs/reference/perf.md': 'not yet in Turkish',
   'docs/reference/protocol.md': 'not yet in Turkish',

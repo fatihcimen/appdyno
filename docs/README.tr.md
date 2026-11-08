@@ -28,7 +28,7 @@ Bir şeye bakmak için burası.
 | [Pencere ve hub](reference/mirror.md) | canlı pencere: onu neyin beslediği, durumları, hattı, sınırları        |
 | [Performans](reference/perf.md)       | her ölçümün her cihazda neyi okuduğu ve her sayının nasıl kanıtlandığı |
 | [Protokol](reference/protocol.md)     | host ile bir cihazın ajanı arasındaki baytlar                          |
-| [CI ve sürümler](reference/ci.md)     | her kapı, cihaz suite'leri, bir sürümün nasıl yapıldığı                |
+| [CI ve sürümler](reference/ci.tr.md)  | her kapı, cihaz suite'leri, bir sürümün nasıl yapıldığı                |
 
 ## Nasıl çalışır
 

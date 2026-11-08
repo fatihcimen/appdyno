@@ -1,5 +1,7 @@
 # CI and releases
 
+[Türkçe](ci.tr.md)
+
 `scripts/ci.sh` runs every gate in order and stops nothing early: each step's exit code and duration go to
 `.ci/runs/<stamp>.json`, its output to `.ci/logs/`. The script exits 1 when any step failed, and 3 when none did and a
 measuring step was postponed, as what never ran is no pass.

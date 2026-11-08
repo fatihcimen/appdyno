@@ -136,6 +136,6 @@ Bir cihaz üzerindeki talep bir pid ve bir başlangıç zamanı tutar; böylece 
 | `packages/protocol/test/native.test.ts`       | Kotlin, Swift ve TypeScript taraflarının protokolde anlaşması.                    |
 | `packages/appdyno/test/docs.test.ts`          | Belgelerdeki her bağlantının bir yere varması ve bu diyagramların kodla uyuşması. |
 
-Cihaz suite'leri `device-tests` içindedir. Adını verdiğiniz bir cihaz isterler ve CI hiçbirini çalıştırmaz: bkz. [CI sayfası](reference/ci.md).
+Cihaz suite'leri `device-tests` içindedir. Adını verdiğiniz bir cihaz isterler ve CI hiçbirini çalıştırmaz: bkz. [CI sayfası](reference/ci.tr.md).
 
 **Diyagramlar nasıl doğru kalır.** Her biri `docs/images` içinde elle yazılmış tek bir SVG'dir, üreteci yoktur. Biri koddan uzaklaştığında `docs.test.ts` başarısız olur: paket haritası her paketin satırını taşır ve bu satırlar içe aktarma kurallarına karşı denetlenir. Kapının resmi kapının sabitlerine karşı denetlenir ve bir diyagramın andığı her yol var olmalıdır. Bir testin görmediği biçimde değişen bir rotayı ya da yerleşimi yeniden çizmek yine size kalır.
