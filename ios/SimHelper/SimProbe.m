@@ -131,7 +131,7 @@ __attribute__((constructor)) static void start(void) {
   [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidFinishLaunchingNotification
                                                   object:nil
                                                    queue:nil
-                                              usingBlock:^(NSNotification *n) {
+                                              usingBlock:^(__unused NSNotification *n) {
                                                 atomic_store(&finishedAt, nowMs());
                                               }];
 

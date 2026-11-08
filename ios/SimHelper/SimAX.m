@@ -92,7 +92,7 @@ static NSString *setup(void) {
   gNumbers = gNumbersForNames(gNames);
   if (gNumbers.count != gNames.count) return @"the attribute names are not known";
   NSMutableDictionary *byNumber = [NSMutableDictionary dictionary];
-  [gNumbers enumerateObjectsUsingBlock:^(id n, NSUInteger i, BOOL *stop) { byNumber[n] = names[gNames[i]]; }];
+  [gNumbers enumerateObjectsUsingBlock:^(id n, NSUInteger i, __unused BOOL *stop) { byNumber[n] = names[gNames[i]]; }];
   gShortNames = byNumber;
   gFrameNumber = gNumbers[[gNames indexOfObject:@"XC_kAXXCAttributeFrame"]];
   gChildrenNumber = gNumbers[[gNames indexOfObject:@"XC_kAXXCAttributeChildren"]];
@@ -236,7 +236,7 @@ static void answer(NSDictionary *a, id ident, uint64_t t0) {
   fflush(stdout);
 }
 
-static void observed(void *observer, void *element, uint32_t notification, const void *info, void *refcon) {
+static void observed(__unused void *observer, __unused void *element, uint32_t notification, const void *info, __unused void *refcon) {
   id report = (__bridge id)info;
   id event = notification == kUserTesting && [report isKindOfClass:NSDictionary.class] ? report[@"event"] : nil;
   if ([event isEqual:@"TouchEventsCompleted"]) gTouchesEnded++;
