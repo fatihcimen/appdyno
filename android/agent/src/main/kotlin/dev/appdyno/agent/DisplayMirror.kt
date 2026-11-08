@@ -13,7 +13,7 @@ import java.lang.reflect.Method
  * mirrors the main one where the release has that (proven on 14 and 16), else one made directly (proven on
  * 11). What differs between releases was read in another project's source: see THIRD_PARTY_NOTICES.
  */
-@SuppressLint("PrivateApi")
+@SuppressLint("PrivateApi") // the platform's hidden display calls are what it is made of
 class DisplayMirror private constructor(val how: String, private val release: () -> Unit) {
     fun release() = release.invoke()
 

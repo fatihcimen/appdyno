@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit
  * with the accessibility event stream kept as the settle signal. Only one such connection may exist on a
  * device: a second owner is reported as AGENT_CONFLICT.
  */
-@SuppressLint("PrivateApi")
+@SuppressLint("PrivateApi") // a shell process opens its UI automation by a hidden connection
 class Automation private constructor(private val looper: Looper) {
     @Volatile
     private var current: UiAutomation? = null

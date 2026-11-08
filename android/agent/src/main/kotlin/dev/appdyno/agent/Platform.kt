@@ -17,7 +17,7 @@ import java.lang.reflect.Method
  * lookup is by name and parameter types at run time, so a release that changes a signature fails with a
  * typed error instead of a crash, and the call that matches is chosen by its parameter types.
  */
-@SuppressLint("PrivateApi", "DiscouragedPrivateApi", "SoonBlockedPrivateApi")
+@SuppressLint("PrivateApi", "DiscouragedPrivateApi", "SoonBlockedPrivateApi") // the internals an app_process server needs
 object Platform {
     /** Lifts the non-SDK interface checks for this process (no effect where they are not enforced). */
     fun exemptHiddenApis() {
