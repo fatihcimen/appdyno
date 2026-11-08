@@ -693,9 +693,24 @@ A runner's read took XCTest's whole snapshot of the app, every attribute XCTest 
 | the home screen app, the fixture over it | 54-55 (41-42) | 43 (31) | 6.2-8.1; 5.8-5.9         |
 | the home screen app, Settings over it    | 54-55 (42-43) | 44 (33) | 6.2-8.1; 5.8-5.9         |
 
-Each tree was the same as before, all of it, but the status bar's clock. An iPhone, where a runner read is 170-300 ms, has not been measured yet. A depth limit was not tried: the answer is the whole tree.
+Each tree was the same as before, all of it, but the status bar's clock. A depth limit was not tried: the answer is the whole tree.
 
-The home screen app's read for a sheet over the app (`screen` on an iPhone reads twice) reads its whole tree, 110 elements here with the home screen's icons, for the words of a sheet. A query for the sheets alone is not built, as no sheet on the phone has proved it yet.
+On an iPhone 13 Pro Max with iOS 27.2, over USB, a build of the runner chose its snapshot at each read, so the whole snapshot, the keyed one and a third (below) took turns in each of 15 rounds. Medians of two runs in ms, the runner's own time in brackets, host load 9.8 and 7.0:
+
+| ms, median (the runner's own)                           | whole             | keyed             | type, label and value |
+| ------------------------------------------------------- | ----------------- | ----------------- | --------------------- |
+| the fixture's first screen, 20 elements                 | 159-161 (146-148) | 130-134 (119-121) |                       |
+| Settings, 189 elements                                  | 348-350 (335)     | 307-310 (293-294) |                       |
+| the home screen app, the fixture over it, 76 elements   | 182-184 (169-170) | 150 (136)         | 140-141 (126-128)     |
+| the home screen app, Settings over it, 77 elements      | 181-184 (169)     | 150 (136)         | 136-140 (124-127)     |
+| the home screen, 77 elements                            | 181-183 (168-170) | 150-151 (137)     | 139-140 (126-127)     |
+| the home screen app, a location prompt over the fixture | 232-237 (218-223) | 175-176 (161-163) | 166-168 (152-155)     |
+
+The keyed trees were the same as the whole ones, node for node, but the clock. The commit's own build, on the phone afterwards, logged the keyed request.
+
+The home screen app is read a second time, for the words of a sheet over the app, when an action changed nothing. Asking it for type, label and value alone, all those words are made of, gave the same words in every case, the location prompt's included, and saved 7-14 ms of the round trip, 4-9 % of that read. That third snapshot is not built, as it would need a request of its own through the protocol for so little.
+
+A query for the sheets alone is not built either. On an iOS 27.2 simulator, a Face ID sheet over the fixture is a StaticText "Face ID" under 37 levels of Other, none with an identifier, inside the app switcher's card for the app: nothing a query could find it by. A permission prompt is an alert, which the app's read already takes by a query of its own. The phone has no passcode and no Face ID, so no such sheet could be raised on it.
 
 ## iPhone speed
 
