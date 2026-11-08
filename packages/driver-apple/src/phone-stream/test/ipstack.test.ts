@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { assert, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { must } from '@appdyno/core';
 import { IpStack, ipv6Bytes, type PacketStream } from '../ipstack.js';
 import { RemoteXpc } from '../remotexpc.js';
 import { tunnelSocket } from '../tunnel-socket.js';
@@ -33,8 +34,8 @@ function peer() {
           src: p.readUInt16BE(0),
           seq: p.readInt32BE(4),
           ack: p.readInt32BE(8),
-          flags: p[13]!,
-          data: p.subarray((p[12]! >> 4) * 4),
+          flags: p.readUInt8(13),
+          data: p.subarray((p.readUInt8(12) >> 4) * 4),
         };
       });
   const packet = (next: number, payload: Buffer) => {
@@ -66,7 +67,8 @@ function peer() {
 async function connected() {
   const p = peer();
   const opening = p.stack.connect(1234);
-  const syn = p.tcp()[0]!;
+  const syn = p.tcp()[0];
+  assert(syn);
   p.stack.feed(p.segment(syn.src, 1234, { seq: 1000, ack: syn.seq + 1, flags: SYN | ACK }));
   const c = await opening;
   p.sent.length = 0;
@@ -80,10 +82,11 @@ describe('TCP in this process', () => {
   it('opens with what it can take, and answers the phone', async () => {
     const p = peer();
     const opening = p.stack.connect(1234);
-    const syn = p.tcp()[0]!;
+    const syn = p.tcp()[0];
+    assert(syn);
     expect(syn.flags).toBe(SYN);
     // its first segment names the size: the MTU less both headers
-    expect(p.sent[0]!.readUInt16BE(40 + 22)).toBe(MTU - 60);
+    expect(p.sent[0]?.readUInt16BE(40 + 22)).toBe(MTU - 60);
     p.stack.feed(p.segment(syn.src, 1234, { seq: 1000, ack: syn.seq + 1, flags: SYN | ACK }));
     await opening;
     expect(p.tcp().at(-1)).toMatchObject({ flags: ACK, ack: 1001, seq: syn.seq + 1 });
@@ -92,7 +95,7 @@ describe('TCP in this process', () => {
   it('says a port refused, or that none answered', async () => {
     const p = peer();
     const refused = p.stack.connect(1234);
-    p.stack.feed(p.segment(p.tcp()[0]!.src, 1234, { seq: 0, flags: RST }));
+    p.stack.feed(p.segment(must(p.tcp()[0], 'a segment').src, 1234, { seq: 0, flags: RST }));
     await expect(refused).rejects.toThrow('port 1234 refused');
     const silent = p.stack.connect(4321);
     const told = expect(silent).rejects.toThrow('no answer on port 4321');
@@ -105,7 +108,7 @@ describe('TCP in this process', () => {
     c.write(Buffer.alloc(MTU * 2 + 5, 7));
     const data = tcp().map((s) => s.data.length);
     expect(data).toEqual([MTU - 60, MTU - 60, 125]);
-    expect(tcp()[1]!.seq - tcp()[0]!.seq).toBe(MTU - 60);
+    expect(must(tcp()[1], 'a segment').seq - must(tcp()[0], 'a segment').seq).toBe(MTU - 60);
   });
 
   it('sends again what is not acknowledged, later each time, and stops once it is', async () => {
@@ -116,7 +119,7 @@ describe('TCP in this process', () => {
     expect(tcp()).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(1);
     expect(tcp()).toHaveLength(2);
-    expect(tcp()[1]!.data.toString()).toBe('hello');
+    expect(tcp()[1]?.data.toString()).toBe('hello');
     await vi.advanceTimersByTimeAsync(499);
     expect(tcp()).toHaveLength(2);
     await vi.advanceTimersByTimeAsync(1);
@@ -176,7 +179,7 @@ describe('TCP in this process', () => {
   it('says goodbye when it closes, and writes no more', async () => {
     const { c, tcp, sent } = await connected();
     c.close();
-    expect(tcp().at(-1)!.flags & FIN).toBe(FIN);
+    expect(must(tcp().at(-1), 'a segment').flags & FIN).toBe(FIN);
     sent.length = 0;
     c.write(Buffer.from('late'));
     expect(tcp()).toHaveLength(0);
@@ -187,7 +190,8 @@ describe('TCP in this process', () => {
   it('sequence numbers go round', async () => {
     const p = peer();
     const opening = p.stack.connect(1234);
-    const syn = p.tcp()[0]!;
+    const syn = p.tcp()[0];
+    assert(syn);
     p.stack.feed(p.segment(syn.src, 1234, { seq: -2, ack: syn.seq + 1, flags: SYN | ACK }));
     const c = await opening;
     const got: string[] = [];
@@ -222,7 +226,8 @@ describe('UDP and the tunnel', () => {
     const { stack, sent } = peer();
     const u = stack.createUdp();
     u.send(Buffer.from('hello'), 5000);
-    const b = sent[0]!;
+    const b = sent[0];
+    assert(b);
     expect(b[6]).toBe(17);
     expect(b.subarray(8, 24)).toEqual(ipv6Bytes(LOCAL));
     expect(b.subarray(24, 40)).toEqual(ipv6Bytes(REMOTE));
@@ -232,7 +237,7 @@ describe('UDP and the tunnel', () => {
     pseudo[7] = 17;
     let sum = 0;
     for (const part of [ipv6Bytes(LOCAL), ipv6Bytes(REMOTE), pseudo, payload]) {
-      for (let i = 0; i < part.length; i += 2) sum += (part[i]! << 8) | (part[i + 1] ?? 0);
+      for (let i = 0; i < part.length; i += 2) sum += (part.readUInt8(i) << 8) | (part[i + 1] ?? 0);
     }
     while (sum > 0xffff) sum = (sum & 0xffff) + (sum >>> 16);
     expect(sum).toBe(0xffff);

@@ -1,4 +1,4 @@
-import { LIVE_FIELDS, type LiveSample } from '@appdyno/core';
+import { LIVE_FIELDS, type LiveSample, must } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { PhoneLive } from '../../phone-live.js';
 import type { Archived } from '../keyed-archive.js';
@@ -53,8 +53,12 @@ describe('what the phone instruments say', () => {
 
   it('says why for every field in a build without this folder, and stopping does nothing', async () => {
     const said: LiveSample[] = [];
-    const stop = await new PhoneLive('phone', async () => undefined).start((s) => said.push(s));
-    expect(Object.keys(said[0]!.absent!).sort()).toEqual([...LIVE_FIELDS].sort());
+    const stop = await new PhoneLive('phone', () => Promise.resolve(undefined)).start((s) =>
+      said.push(s),
+    );
+    expect(Object.keys(must(said[0]?.absent, 'what is absent')).sort()).toEqual(
+      [...LIVE_FIELDS].sort(),
+    );
     stop();
     stop();
   });
@@ -62,7 +66,7 @@ describe('what the phone instruments say', () => {
   it('says why for every field when it can read nothing', () => {
     const s = unreadable('why', 'dev.app');
     expect(s.app).toBe('dev.app');
-    expect(Object.keys(s.absent!).sort()).toEqual([...LIVE_FIELDS].sort());
+    expect(Object.keys(must(s.absent, 'what is absent')).sort()).toEqual([...LIVE_FIELDS].sort());
     expect(LIVE_FIELDS.some((f) => f in s)).toBe(false);
   });
 });

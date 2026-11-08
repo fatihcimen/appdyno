@@ -14,7 +14,7 @@ export const identityFile = (udid: string) => deviceStateFile(FOLDER, udid);
 export function pairedPhones() {
   try {
     return readdirSync(join(stateDir(), FOLDER))
-      .filter((f) => JSON_FILE.test(f))
+      .filter((f) => f.endsWith('.json'))
       .map((f) => f.replace(JSON_FILE, ''));
   } catch {
     return [];

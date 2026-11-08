@@ -1,7 +1,7 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { sleep, run, callSignal, cancelled } from '@appdyno/core';
+import { sleep, run, callSignal, cancelled, must } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { launchLanguage } from './manage.js';
 
@@ -66,9 +66,9 @@ export function xcodeTool(
   env: NodeJS.ProcessEnv,
 ): [string, string[]] {
   const dir = env.DEVELOPER_DIR;
-  const key = `${dir}/usr/bin/${tool}`;
-  if (dir && !toolPaths.has(key)) toolPaths.set(key, existsSync(key) ? key : undefined);
-  const path = dir && toolPaths.get(key);
+  const key = dir && `${dir}/usr/bin/${tool}`;
+  if (key && !toolPaths.has(key)) toolPaths.set(key, existsSync(key) ? key : undefined);
+  const path = key && toolPaths.get(key);
   return path ? [path, args] : ['xcrun', [tool, ...args]];
 }
 
@@ -151,24 +151,26 @@ export class Simctl {
   private names: Promise<Map<string, string>> | undefined;
 
   async exec(args: string[], timeoutMs = 60_000, env?: NodeJS.ProcessEnv): Promise<string> {
+    const command = must(args[0], 'a simctl command');
     try {
       const all = { ...this.env, ...env };
+      const signal = callSignal();
       const { stdout } = await run(...xcodeTool('simctl', args, all), {
         timeout: timeoutMs,
         maxBuffer: 64 * 1024 * 1024,
         env: all,
-        ...(callSignal() && { signal: callSignal()! }),
+        ...(signal && { signal }),
       });
       return stdout;
     } catch (e) {
       const err = e as { stderr?: string; message: string; killed?: boolean; name?: string };
-      if (err.name === 'AbortError') throw cancelled(`simctl ${args[0]}`);
+      if (err.name === 'AbortError') throw cancelled(`simctl ${command}`);
       if (err.killed)
-        throw new DeviceError('TIMEOUT', `simctl ${args[0]} took over ${timeoutMs} ms`);
+        throw new DeviceError('TIMEOUT', `simctl ${command} took over ${timeoutMs} ms`);
       const msg = (err.stderr || err.message).trim().split('\n').slice(-2).join(' ').slice(0, 300);
       throw new DeviceError(
         /Invalid device|not found/i.test(msg) ? 'NOT_FOUND' : 'INTERNAL',
-        `simctl ${args[0]}: ${msg}`,
+        `simctl ${command}: ${msg}`,
       );
     }
   }
@@ -240,7 +242,10 @@ export class Simctl {
         if (!(e instanceof DeviceError && /current state: Shutdown/i.test(e.message))) throw e;
       });
       if (Date.now() > end)
-        throw new DeviceError('TIMEOUT', `simulator ${udid} did not shut down (state ${state})`);
+        throw new DeviceError(
+          'TIMEOUT',
+          `simulator ${udid} did not shut down (state ${String(state)})`,
+        );
       await sleep(2_000);
     }
   }
@@ -259,7 +264,7 @@ export class Simctl {
       p.on('close', (code) =>
         code === 0
           ? resolve()
-          : reject(new DeviceError('INTERNAL', `simctl pbcopy exited with ${code}`)),
+          : reject(new DeviceError('INTERNAL', `simctl pbcopy exited with ${String(code)}`)),
       );
       p.stdin.end(text);
     });
@@ -270,7 +275,7 @@ export class Simctl {
    * before its first instruction, as for a debugger.
    */
   launch(udid: string, bundle: string, vars: Record<string, string> = {}, stopped = false) {
-    const child = Object.entries(vars).map(([k, v]) => [`SIMCTL_CHILD_${k}`, v]);
+    const child = Object.entries(vars).map(([k, v]): [string, string] => [`SIMCTL_CHILD_${k}`, v]);
     const wait = stopped ? ['--wait-for-debugger'] : [];
     const args = [assertUdid(udid), assertBundle(bundle), ...launchLanguage(udid, bundle)];
     return this.exec(['launch', ...wait, ...args], 60_000, {

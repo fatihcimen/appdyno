@@ -5,7 +5,7 @@ import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { DeviceError } from '@appdyno/protocol';
-import { inCheckout, inPackage, reportProgress, stateDir } from '@appdyno/core';
+import { inCheckout, inPackage, reportProgress, stateDir, must } from '@appdyno/core';
 import { brandSimulatorRunner } from './brand.js';
 import { xcodeEnv } from './simctl.js';
 
@@ -113,7 +113,7 @@ const builds = new Map<string, Promise<void>>();
 /** The phase a line of xcodebuild's output starts, if any. */
 export function buildPhase(line: string): string | undefined {
   const target = /^=== BUILD TARGET (\S+)/.exec(line);
-  if (target) return `target ${target[1]}`;
+  if (target) return `target ${must(target[1], 'a target')}`;
   // SwiftExplicitDependency…: the system's modules, the long part of a first build
   if (
     /^(SwiftExplicitDependency\w*|SwiftCompile|CompileSwift|SwiftEmitModule|CompileC)\b/.test(line)
@@ -202,12 +202,15 @@ export async function runnerBuild(): Promise<{ xctestrun: string; sha256: string
   const hashed = existsSync(binary) ? binary : join(dir, file);
   const mtime = statSync(hashed).mtimeMs;
   // the build id is read once per build (hashing the binary on every connect costs time)
-  if (buildIds.get(hashed)?.mtime !== mtime)
-    buildIds.set(hashed, {
+  let known = buildIds.get(hashed);
+  if (known?.mtime !== mtime) {
+    known = {
       mtime,
       sha256: createHash('sha256')
         .update(await readFile(hashed))
         .digest('hex'),
-    });
-  return { xctestrun: join(dir, file), sha256: buildIds.get(hashed)!.sha256 };
+    };
+    buildIds.set(hashed, known);
+  }
+  return { xctestrun: join(dir, file), sha256: known.sha256 };
 }

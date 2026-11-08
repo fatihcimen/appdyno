@@ -14,6 +14,7 @@ const strict = [
   'packages/ops/**',
   'packages/hub/**',
   'device-tests/**',
+  'packages/driver-apple/**',
 ];
 
 export default defineConfig(

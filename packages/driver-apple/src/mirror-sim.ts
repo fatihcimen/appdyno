@@ -1,14 +1,15 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type {
-  DeviceState,
-  InputEvent,
-  Mirror,
-  MirrorCheck,
-  MirrorOptions,
-  MirrorSource,
-  ViewerOrder,
+import {
+  type DeviceState,
+  type InputEvent,
+  type Mirror,
+  type MirrorCheck,
+  type MirrorOptions,
+  type MirrorSource,
+  type ViewerOrder,
+  must,
 } from '@appdyno/core';
 import { type Key, KEY_USAGES, keyOfUsage } from '@appdyno/protocol';
 import { applePress } from './mirror-press.js';
@@ -107,7 +108,7 @@ export class SimulatorMirror implements Mirror {
     // closed meanwhile: a helper started now would have no one to end it
     if (!this.turnsTimer) return true;
     if (!running || running.closed) this.reader = this.startReader(this.udid);
-    const a = await (await this.reader!).call({ op: 'orientation' }, INPUT_MS);
+    const a = await (await must(this.reader, 'the reader')).call({ op: 'orientation' }, INPUT_MS);
     const turns = turnsOf(a.orientation as number);
     if (turns !== undefined && turns !== this.turns) {
       this.turns = turns;
@@ -116,24 +117,28 @@ export class SimulatorMirror implements Mirror {
     return a.ok;
   }
 
-  async open(
+  open(
     _opts?: MirrorOptions,
     _signal?: AbortSignal,
     tell: (message: ViewerOrder) => void = () => undefined,
   ): Promise<MirrorSource> {
-    // up before a person's first touch, which would otherwise wait over a second for it
-    void this.helper().catch(() => undefined);
-    this.followTurns(tell);
-    return {
-      kind: 'surface',
-      udid: this.udid,
-      turns: this.turns,
-      ...(xcodeEnv().DEVELOPER_DIR && { developerDir: xcodeEnv().DEVELOPER_DIR! }),
-    };
+    return new Promise((resolve) => {
+      // up before a person's first touch, which would otherwise wait over a second for it
+      void this.helper().catch(() => undefined);
+      this.followTurns(tell);
+      const developerDir = xcodeEnv().DEVELOPER_DIR;
+      resolve({
+        kind: 'surface',
+        udid: this.udid,
+        turns: this.turns,
+        ...(developerDir && { developerDir }),
+      });
+    });
   }
 
-  async keyframe() {
+  keyframe() {
     // nothing is encoded: each frame is the whole screen
+    return Promise.resolve();
   }
 
   private async helper() {
@@ -165,9 +170,10 @@ export class SimulatorMirror implements Mirror {
 
   /** Keys where the keyboard has them; anything else by the simulator's pasteboard, as a person would. */
   private async type(text: string) {
+    // eslint-disable-next-line @typescript-eslint/no-misused-spread -- a key types one code point
     const keys = [...text].map(usageOf);
-    if (keys.every((k) => k)) {
-      for (const k of keys) await this.press(k!.usage, k!.shift ? SHIFT : undefined);
+    if (keys.every((k) => k !== undefined)) {
+      for (const k of keys) await this.press(k.usage, k.shift ? SHIFT : undefined);
       return;
     }
     await this.paste(this.udid, text);

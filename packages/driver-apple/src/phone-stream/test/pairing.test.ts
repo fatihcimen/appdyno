@@ -1,6 +1,7 @@
 import { createServer as createTls } from 'node:tls';
 import { createServer as createNet, Socket } from 'node:net';
-import { describe, expect, it, vi } from 'vitest';
+import { assert, describe, expect, it, vi } from 'vitest';
+import { must } from '@appdyno/core';
 import { pairingFrame, XpcLine } from '../pairing-line.js';
 import { NotProved, type Identity } from '../pairing.js';
 import { N, opack, readTlv, srpClient, TAG, tlv } from '../pairing-wire.js';
@@ -247,13 +248,13 @@ describe('finding a phone', () => {
     /** What each host does when asked to prove itself. */
     const proving =
       (answers: Record<string, () => unknown>) =>
-      async ({ host }: FoundPhone) =>
-        answers[host]!();
+      ({ host }: FoundPhone) =>
+        Promise.resolve(must(answers[host], `the answer of ${host}`)());
 
     it('is found past one that takes its name, refuses and is seen first', async () => {
       const looks = [
-        async () => [at('PHONE', 'other')],
-        async () => [at('PHONE', 'other'), at('NEW', 'it')],
+        () => Promise.resolve([at('PHONE', 'other')]),
+        () => Promise.resolve([at('PHONE', 'other'), at('NEW', 'it')]),
       ];
       const prove = vi.fn(proving({ other: () => Promise.reject(refusing), it: () => 'proved' }));
       await expect(firstProved(looks, 'PHONE', prove)).resolves.toBe('proved');
@@ -261,7 +262,10 @@ describe('finding a phone', () => {
     });
 
     it('when none does, says so in words of its own', async () => {
-      const looks = [async () => [at('PHONE', 'other')], async () => [at('PHONE', 'other')]];
+      const looks = [
+        () => Promise.resolve([at('PHONE', 'other')]),
+        () => Promise.resolve([at('PHONE', 'other')]),
+      ];
       const failure = await firstProved(
         looks,
         'PHONE',
@@ -273,14 +277,16 @@ describe('finding a phone', () => {
 
     it('stops at a phone that proved itself and no longer knows this Mac', async () => {
       const forgot = new PhoneRefusal('not-paired', 'the phone no longer knows this Mac');
-      const looks = [async () => [at('PHONE', 'it'), at('OTHER', 'other')]];
+      const looks = [() => Promise.resolve([at('PHONE', 'it'), at('OTHER', 'other')])];
       const prove = vi.fn(proving({ it: () => Promise.reject(forgot), other: () => 'no' }));
       await expect(firstProved(looks, 'PHONE', prove)).rejects.toBe(forgot);
       expect(prove).toHaveBeenCalledOnce();
     });
 
     it('with nothing there says the phone is not on this network', async () => {
-      await expect(firstProved([async () => []], 'PHONE', vi.fn())).rejects.toMatchObject({
+      await expect(
+        firstProved([() => Promise.resolve([])], 'PHONE', vi.fn()),
+      ).rejects.toMatchObject({
         need: 'not-connected',
         message: 'the phone is not on this network',
       });
@@ -358,20 +364,21 @@ describe('a port on the phone by the network', () => {
   /** A tunnel with what its connects answer, one by one, which then ends as a tunnel does when closed. */
   const tunnels = (...answers: (Error | undefined)[][]) => {
     const made: { close: ReturnType<typeof vi.fn> }[] = [];
-    const open = vi.fn(async () => {
-      const answering = answers.shift()!;
+    const open = vi.fn(() => {
+      const answering = answers.shift();
+      assert(answering);
       const ends: (() => void)[] = [];
       const stack = {
-        connect: async () => {
+        connect: () => {
           const answer = answering.shift();
-          if (answer) throw answer;
-          return connection;
+          if (answer) return Promise.reject(answer);
+          return Promise.resolve(connection);
         },
         onEnded: (l: () => void) => ends.push(l),
         close: vi.fn(() => ends.forEach((end) => end())),
       };
       made.push(stack);
-      return { stack, rsdPort: 1 } as never;
+      return Promise.resolve({ stack, rsdPort: 1 } as never);
     });
     return { open, made };
   };
@@ -386,13 +393,15 @@ describe('a port on the phone by the network', () => {
     await expect(portOnWifi('refused', 1, open)).rejects.toThrow('nor now');
     await expect(portOnWifi('refused', 1, open)).resolves.toBeDefined();
     expect(open).toHaveBeenCalledTimes(1);
-    expect(made[0]!.close).not.toHaveBeenCalled();
+    const [first] = made;
+    assert(first);
+    expect(first.close).not.toHaveBeenCalled();
   });
 
   it('with no answer ends its tunnel and opens another, as a network that went says nothing', async () => {
     const { open, made } = tunnels([new Error('no answer')], [undefined]);
     await expect(portOnWifi('silent', 1, open)).rejects.toThrow('no answer');
-    expect(made[0]!.close).toHaveBeenCalled();
+    expect(made[0]?.close).toHaveBeenCalled();
     await expect(portOnWifi('silent', 1, open)).resolves.toBeDefined();
     expect(open).toHaveBeenCalledTimes(2);
   });

@@ -11,6 +11,7 @@ import {
   type RecordingFiles,
   type RecordingHandle,
   type ScreenRecorder,
+  must,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { assertUdid, xcodeEnv } from './simctl.js';
@@ -40,7 +41,7 @@ class ToolRecorder implements ScreenRecorder {
     private readonly limits: boolean,
     private readonly stillNote?: string,
     private readonly refusedHint?: string,
-    private readonly tool: string = 'xcrun',
+    private readonly tool = 'xcrun',
     readonly lead?: ScreenRecorder['lead'],
     readonly oneAtATime?: boolean,
   ) {}
@@ -56,7 +57,7 @@ class ToolRecorder implements ScreenRecorder {
       { detached: true, stdio: 'ignore' },
     );
     child.unref();
-    return child.pid!;
+    return must(child.pid, "the sleeper's pid");
   }
 
   async start(file: string, { maxSeconds }: { maxSeconds: number }): Promise<RecordingHandle> {
@@ -72,15 +73,13 @@ class ToolRecorder implements ScreenRecorder {
     closeSync(fd);
     child.unref();
     let exited: string | undefined;
-    child.on('exit', (code, signal) => (exited = `exit ${code ?? signal}`));
+    child.on('exit', (code, signal) => (exited = `exit ${String(code ?? signal)}`));
     child.on('error', (e) => (exited = e.message));
     const end = Date.now() + (this.started ? START_MS : QUIET_MS);
-    const up = () => ({
-      pid: child.pid!,
-      log,
-      file,
-      ...(this.limits ? {} : { sleeper: this.sleeper(child.pid!, maxSeconds) }),
-    });
+    const up = () => {
+      const pid = must(child.pid, "the recorder's pid");
+      return { pid, log, file, ...(this.limits ? {} : { sleeper: this.sleeper(pid, maxSeconds) }) };
+    };
     for (;;) {
       const text = readFileSync(log, 'utf8');
       if (this.started?.test(text)) return up();

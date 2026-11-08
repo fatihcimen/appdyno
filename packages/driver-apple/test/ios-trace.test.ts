@@ -32,9 +32,9 @@ describe('iOS trace export', () => {
   it('reads an exported table, references resolved', () => {
     const rows = parseTraceTable(fixture('ios-hitches.xml'));
     expect(rows).toHaveLength(5);
-    expect(rows[0]!.duration).toEqual({ value: '62504375', fmt: '62.50 ms' });
-    expect(rows[1]!.process!.fmt).toBe('Settings (1235)'); // a ref to the first row's process
-    expect(rows[0]!['narrative-description']!.value).toBe('Potentially expensive app update(s)');
+    expect(rows[0]?.duration).toEqual({ value: '62504375', fmt: '62.50 ms' });
+    expect(rows[1]?.process?.fmt).toBe('Settings (1235)'); // a ref to the first row's process
+    expect(rows[0]?.['narrative-description']?.value).toBe('Potentially expensive app update(s)');
   });
 
   it('sums the app hitches over the recording', () => {
@@ -91,7 +91,7 @@ describe('iOS trace export', () => {
       frozen: 1,
       stalls: { count: 1, worstMs: 1_020 },
     });
-    const overlapping = `<node><schema><col><mnemonic>start</mnemonic></col><col><mnemonic>duration</mnemonic></col></schema><row><start fmt="x">${200e6}</start><duration fmt="x">${900e6}</duration></row></node>`;
+    const overlapping = `<node><schema><col><mnemonic>start</mnemonic></col><col><mnemonic>duration</mnemonic></col></schema><row><start fmt="x">200000000</start><duration fmt="x">900000000</duration></row></node>`;
     expect(hitchSummary(overlapping, fixture('ios-surfaces.xml'), 6_000, hangs).frozen).toBe(1);
     expect(hitchFrames(s)).toMatchObject({
       totalFrames: 40,
@@ -113,9 +113,9 @@ describe('iOS trace export', () => {
     const p = parseTimeProfile(profile);
     expect(p.samples).toBe(3);
     expect(p.top[0]).toEqual({ symbol: 'spin', samples: 2, percent: 66.7 });
-    expect(p.top[1]!.symbol).toBe('memcpy & co');
+    expect(p.top[1]?.symbol).toBe('memcpy & co');
     expect(p.appTop[0]).toEqual({ symbol: 'main', samples: 3, percent: 100 });
-    expect(p.appTop[1]!.symbol).toBe('spin');
+    expect(p.appTop[1]?.symbol).toBe('spin');
   });
 
   it('ranks the app’s named functions over the addresses, addresses when all are', () => {
@@ -142,10 +142,9 @@ describe('iOS trace export', () => {
 
   it('reads one process of Activity Monitor: footprint at the end, the instrument’s own CPU share', () => {
     const cols = ['start', 'pid', 'cpu-percent', 'cpu-total', 'memory-physical-footprint'];
-    const row = (pid: number, ...cells: number[]) => {
-      const [start, percent, total, memory] = cells;
-      return `<row><t>${start}</t><pid fmt="${pid}">${pid}</pid><p>${percent || ''}</p><c>${total}</c><m>${memory}</m></row>`;
-    };
+    const row = (pid: number, start: number, percent: number, total: number, memory: number) =>
+      // a share of 0 is an empty cell, as the instrument's first row has
+      `<row><t>${start}</t><pid fmt="${pid}">${pid}</pid><p>${percent || ''}</p><c>${total}</c><m>${memory}</m></row>`;
     const table = (...rows: string[]) =>
       `<schema>${cols.map((c) => `<col><mnemonic>${c}</mnemonic></col>`).join('')}</schema>${rows.join('')}`;
     // a real trace of a core kept at 75 %: `cpu-total` over the rows' starts reads 136
@@ -216,12 +215,12 @@ describe('iOS trace export', () => {
     expect(d.rows).toHaveLength(2);
     expect(d.dropped).toBe(3);
     const i = d.columns.indexOf('duration');
-    expect(d.rows[0]![i]).toBe('62.50 ms');
+    expect(d.rows[0]?.[i]).toBe('62.50 ms');
     const long = `<schema><col><mnemonic>weight</mnemonic></col><col><mnemonic>name</mnemonic></col></schema>
 <row><w fmt="1 ms">1000000</w><n>a</n></row><row><w fmt="3 ms">3000000</w><n>${'x'.repeat(500)}</n></row>`;
     const w = traceDigest('/t.trace', 'x', long, 10);
-    expect(w.rows[0]![0]).toBe('3 ms');
-    expect(w.rows[0]![1]).toHaveLength(200);
+    expect(w.rows[0]?.[0]).toBe('3 ms');
+    expect(w.rows[0]?.[1]).toHaveLength(200);
     expect(w.dropped).toBe(0);
     // no duration or weight: the rows stay in their order
     const plain = `<schema><col><mnemonic>name</mnemonic></col></schema><row><n>b</n></row><row><n>a</n></row>`;
@@ -232,7 +231,7 @@ describe('iOS trace export', () => {
     const m = parseXctMetrics(fixture('ios-xct-launch.json'));
     const durations = m['com.apple.dt.XCTMetric_ApplicationLaunch-AppLaunch.duration'];
     expect(durations).toHaveLength(5);
-    expect(durations![0]).toBeCloseTo(1.1223, 3);
+    expect(durations?.[0]).toBeCloseTo(1.1223, 3);
     expect(parseXctMetrics('[{"testRuns":[{"metrics":[]}]}]')).toEqual({});
   });
 

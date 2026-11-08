@@ -150,7 +150,10 @@ export async function sendApns(
       stream.on('data', (c: Buffer) => chunks.push(c));
       stream.on('error', (e: Error) => reject(unreached(e.message)));
       stream.on('close', () => {
-        if (!status) return reject(unreached(`no answer in ${timeoutMs / 1000} s`));
+        if (!status) {
+          reject(unreached(`no answer in ${timeoutMs / 1000} s`));
+          return;
+        }
         resolve({ status, ...(apnsId && { apnsId }), ...reasonOf(chunks) });
       });
       stream.end(request.body);

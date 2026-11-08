@@ -13,8 +13,8 @@ export type Archived =
 
 export function archive(root: Archived): Buffer {
   const objects: Plist[] = ['$null'];
-  const classOf = (...names: string[]) => {
-    objects.push({ $classname: names[0]!, $classes: [...names, 'NSObject'] });
+  const classOf = (name: string, ...more: string[]) => {
+    objects.push({ $classname: name, $classes: [name, ...more, 'NSObject'] });
     return plistUid(objects.length - 1);
   };
   const put = (v: Archived): Plist => {
@@ -30,9 +30,9 @@ export function archive(root: Archived): Buffer {
     } else if (Array.isArray(v)) {
       objects[at] = { 'NS.objects': v.map(put), $class: classOf('NSMutableArray', 'NSArray') };
     } else {
-      const names = Object.keys(v);
-      const keys = names.map(put);
-      const values = names.map((n) => put(v[n]!));
+      const entries = Object.entries(v);
+      const keys = entries.map(([n]) => put(n));
+      const values = entries.map(([, x]) => put(x));
       objects[at] = {
         'NS.keys': keys,
         'NS.objects': values,
@@ -53,7 +53,7 @@ export function archive(root: Archived): Buffer {
 /** What of an archived value has keys: the rest is a value of its own, a list or bytes. */
 export const isDict = <T extends Plist | Archived>(
   v: T | undefined,
-): v is Extract<T, { [k: string]: unknown }> =>
+): v is Extract<T, Record<string, unknown>> =>
   !!v && typeof v === 'object' && !Buffer.isBuffer(v) && !Array.isArray(v);
 
 /** An archive as plain values: an object of any other class comes as its fields. */
@@ -63,25 +63,28 @@ export function unarchive(bytes: Buffer): Archived {
     throw new Error('not a keyed archive');
   const objects = whole.$objects;
   let left = MOST_VALUES;
-  const value = (ref: Plist): Archived => {
+  const value = (ref: Plist | undefined): Archived => {
     if (--left < 0) throw new Error(`an archive of more than ${MOST_VALUES} values`);
     const uid = uidOf(ref);
     const v = uid === undefined ? ref : objects[uid];
     if (v === undefined || v === '$null') return null;
-    if (!isDict(v) || uidOf(v) !== undefined) return v as Archived;
+    if (!isDict(v) || uidOf(v) !== undefined) return v;
     const list = v['NS.objects'];
     const keys = v['NS.keys'];
     if (Array.isArray(keys) && Array.isArray(list)) {
-      return Object.fromEntries(keys.map((k, i) => [String(value(k)), value(list[i]!)]));
+      return Object.fromEntries(
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string -- a dictionary's keys are its strings
+        keys.map((k, i) => [String(value(k)), value(list[i])]),
+      );
     }
     if (Array.isArray(list)) return list.map(value);
-    if ('NS.data' in v) return value(v['NS.data']!);
-    if ('NS.string' in v) return value(v['NS.string']!);
+    if ('NS.data' in v) return value(v['NS.data']);
+    if ('NS.string' in v) return value(v['NS.string']);
     return Object.fromEntries(
       Object.entries(v)
         .filter(([k]) => k !== '$class')
         .map(([k, x]) => [k, value(x)]),
     );
   };
-  return value(whole.$top.root!);
+  return value(whole.$top.root);
 }

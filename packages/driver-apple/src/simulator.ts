@@ -9,6 +9,7 @@ import {
   type ActOptions,
   type TreeOptions,
   pause,
+  must,
 } from '@appdyno/core';
 import { SimulatorApps, SimulatorEvents, SimulatorSettings } from './simulator-manage.js';
 import { typeName } from './simulators.js';
@@ -41,14 +42,13 @@ type Node = Tree['nodes'][number];
 
 const nodesBusy = (t: Tree) => t.nodes.some((n) => n.c === 'ActivityIndicator' && (n.f & 1) !== 0);
 
-const firstPoint = (a: ActParams) =>
-  a.kind === 'tap' || a.kind === 'longPress'
-    ? { x: a.x, y: a.y }
-    : a.kind === 'swipe'
-      ? a.from
-      : a.kind === 'gesture'
-        ? { x: a.pointers[0]![0]!.x, y: a.pointers[0]![0]!.y }
-        : undefined;
+const firstPoint = (a: ActParams) => {
+  if (a.kind === 'tap' || a.kind === 'longPress') return { x: a.x, y: a.y };
+  if (a.kind === 'swipe') return a.from;
+  if (a.kind !== 'gesture') return undefined;
+  const { x, y } = must(a.pointers[0]?.[0], 'a pointer');
+  return { x, y };
+};
 
 /** An iOS simulator: the simulator tool for apps, links and location; perf from the Mac. */
 /** A first boot has nothing in front for a few seconds: this is shorter than a runner's start. */
@@ -70,8 +70,8 @@ export class IosSimulatorDevice extends IosDevice {
   private readonly verdicts = new Map<string, Set<string>>();
 
   /** Its processes run on this Mac's kernel and read this clock, and a time needs no runner brought up for it. */
-  override async wallClock() {
-    return Date.now();
+  override wallClock() {
+    return Promise.resolve(Date.now());
   }
 
   constructor(
@@ -177,7 +177,7 @@ export class IosSimulatorDevice extends IosDevice {
   private remember(t: Tree) {
     this.recent.delete(t.hash);
     this.recent.set(t.hash, t.nodes);
-    if (this.recent.size > 8) this.recent.delete(this.recent.keys().next().value!);
+    if (this.recent.size > 8) this.recent.delete(must(this.recent.keys().next().value, 'a read'));
     return t;
   }
 
@@ -202,7 +202,8 @@ export class IosSimulatorDevice extends IosDevice {
       return { tree: runner, busy: nodesBusy(runner), byRunner: true };
     this.verdicts.delete(r.tree.hash);
     this.verdicts.set(r.tree.hash, verdict);
-    if (this.verdicts.size > 64) this.verdicts.delete(this.verdicts.keys().next().value!);
+    if (this.verdicts.size > 64)
+      this.verdicts.delete(must(this.verdicts.keys().next().value, 'a verdict'));
     return { tree: withoutCopies(r.tree, verdict), busy: r.busy };
   }
 
@@ -268,7 +269,7 @@ export class IosSimulatorDevice extends IosDevice {
       const settled = () => settleAfter(on, action, opts).catch(failedAfterSending);
       let out = await settled();
       // nothing moved and the app has not seen the touch finish: it never got it, or a loaded Mac has it far behind
-      const reports = armed && !onKeyboard([...this.recent.values()].pop() ?? [], at!.x, at!.y);
+      const reports = armed && !onKeyboard([...this.recent.values()].pop() ?? [], at.x, at.y);
       if (reports && out.untouched && touchesBefore === this.direct.touchesEnded) {
         await this.direct.touchHandled(LATE_TOUCH_MS).catch(() => undefined);
         if (touchesBefore === this.direct.touchesEnded) {

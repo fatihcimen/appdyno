@@ -5,10 +5,13 @@ import { helperBinary } from './simhelper.js';
 const readNj = async (pid: number) => {
   const { stdout } = await run(await helperBinary('SimEnergy'), [String(pid)], {
     timeout: 30_000,
-  }).catch((e: Error) => {
-    throw new DeviceError('UNSUPPORTED', `no energy count of process ${pid}: ${e.message}`);
+  }).catch((e: unknown) => {
+    throw new DeviceError(
+      'UNSUPPORTED',
+      `no energy count of process ${pid}: ${e instanceof Error ? e.message : String(e)}`,
+    );
   });
-  return Number((JSON.parse(stdout) as { energyNj: number }).energyNj);
+  return Number((JSON.parse(stdout) as { energyNj: unknown }).energyNj);
 };
 
 /** What this Mac's kernel counts for a simulator app's process over the window: a reading, of the Mac's chip. */

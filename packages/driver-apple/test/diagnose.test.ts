@@ -1,7 +1,7 @@
 import { mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import type { CrashesQuery } from '@appdyno/core';
 import { crashExits, endReports, parseIps, reportsIn, simulatorCrashes } from '../src/crashes.js';
 import { logShowArgs, placeLines } from '../src/logs.js';
@@ -85,7 +85,7 @@ describe('crash reports', () => {
     put('note.txt', 'not a report', 1_000);
     const q = { app: 'dev.app', limit: 5 };
     const a = await simulatorCrashes(UDID, q, dir);
-    expect(a.reports.map((r) => r.file!.split('/').pop())).toEqual(['new.ips', 'old.ips']);
+    expect(a.reports.map((r) => r.file?.split('/').pop())).toEqual(['new.ips', 'old.ips']);
     const since = await simulatorCrashes(UDID, { ...q, since: Date.now() - 10_000 }, dir);
     expect(since.reports).toHaveLength(1);
     expect(await reportsIn(dir, { ...q, limit: 1 })).toHaveLength(1);
@@ -99,9 +99,9 @@ describe('how an app ended, as a reading', () => {
     const asked: CrashesQuery[] = [];
     return {
       asked,
-      crashes: async (q: CrashesQuery) => {
+      crashes: (q: CrashesQuery) => {
         asked.push(q);
-        return { reports: at.map(report), source: 'a folder' };
+        return Promise.resolve({ reports: at.map(report), source: 'a folder' });
       },
     };
   };
@@ -137,7 +137,9 @@ describe('how an app ended, as a reading', () => {
   it('asks a query of no age: its `since` goes by a file’s time, here a copy’s', async () => {
     const { crashes, asked } = of();
     await crashExits(crashes, 'dev.app', since);
-    expect(asked[0]!.since).toBeUndefined();
+    const [query] = asked;
+    assert(query);
+    expect(query.since).toBeUndefined();
   });
 });
 
@@ -172,9 +174,9 @@ describe('simulator log', () => {
         '2026-11-05 04:46:59.959 Df SpringBoard[23436:143f1ae] [com.apple] a message',
         '2026-11-05 04:46:59.960 E  SpringBoard[23436:143f1ae] [com.apple] it failed',
       ]);
-      expect(first!.mark).toEqual({ at: AT });
-      expect(second!.mark).toEqual({ at: AT + 1, level: 'error' });
-      expect(second!.line).toBe('E  SpringBoard[23436:143f1ae] [com.apple] it failed');
+      expect(first?.mark).toEqual({ at: AT });
+      expect(second?.mark).toEqual({ at: AT + 1, level: 'error' });
+      expect(second?.line).toBe('E  SpringBoard[23436:143f1ae] [com.apple] it failed');
     });
 
     it('keeps the later lines of one message where the message is', () => {

@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { NODE_FLAGS, type Tree } from '@appdyno/protocol';
 import { HOME_SCREEN_APP } from './platform-screen.js';
 
@@ -91,7 +92,7 @@ export function sameLayout(a: Node[], b: Node[]): boolean {
   if (x.length !== y.length) return false;
   const near = (u: number, v: number) => Math.abs(u - v) <= TOLERANCE;
   return x.every((p, i) => {
-    const q = y[i]!;
+    const q = must(y[i], 'a node');
     return (
       p.c === q.c &&
       p.id === q.id &&
@@ -126,8 +127,8 @@ export function sameContent(a: Node[], b: Node[]): boolean {
           near(p.b[3], q.b[3]) &&
           (plainText(p) || (near(p.b[0], q.b[0]) && near(p.b[2], q.b[2]))),
       ) ?? -1;
-    if (i < 0) return false;
-    same!.splice(i, 1);
+    if (!same || i < 0) return false;
+    same.splice(i, 1);
     return true;
   });
 }
@@ -151,13 +152,13 @@ export function actionable(nodes: Node[] | undefined, x: number, y: number): boo
 export function scrollIndicators(nodes: Node[]): number[] {
   const named = nodes.map(() => false);
   for (let i = nodes.length - 1; i >= 0; i--) {
-    const n = nodes[i]!;
+    const n = must(nodes[i], 'a node');
     if ((n.id !== undefined || n.d !== undefined || named[i]) && n.p >= 0 && n.p < i)
       named[n.p] = true;
   }
   return nodes.flatMap((n, i) => {
     if (n.c !== 'Other' || n.id !== undefined || named[i] || n.p < 0) return [];
-    const p = nodes[n.p]!;
+    const p = must(nodes[n.p], 'a parent');
     if (!SCROLLERS.has(p.c)) return [];
     const w = n.b[2] - n.b[0];
     const h = n.b[3] - n.b[1];
@@ -237,8 +238,8 @@ export function learnCopies(direct: Tree, runner: Tree): Set<string> | undefined
   if (direct.nodes.length !== runner.nodes.length) return undefined;
   const hidden = new Set<string>();
   for (let i = 0; i < direct.nodes.length; i++) {
-    const a = direct.nodes[i]!;
-    const b = runner.nodes[i]!;
+    const a = must(direct.nodes[i], 'a node');
+    const b = must(runner.nodes[i], 'a node');
     if (a.c !== b.c || a.id !== b.id) return undefined;
     if ((a.f & F.visible) !== 0 && (b.f & F.visible) === 0) hidden.add(copyKey(a));
   }
@@ -269,8 +270,8 @@ export function toTree(
   let busy = false;
   let truncated = false;
   let partial = false;
-  for (let head = 0; head < queue.length; head++) {
-    const [r, parent] = queue[head]!;
+  // what each node adds to the queue is walked too
+  for (const [r, parent] of queue) {
     const n = toNode(r, parent, screen);
     if (r.r && (n.f & F.visible) !== 0) {
       // what fills the screen is what it shows, as Spotlight does; a widget beside the icons is no reason for a runner
@@ -287,7 +288,7 @@ export function toTree(
     for (const k of r.k ?? []) queue.push([k, index]);
   }
   for (const i of [...scrollIndicators(nodes), ...containerBars(nodes, screen)])
-    nodes[i]!.f &= ~F.visible;
+    must(nodes[i], 'a node').f &= ~F.visible;
   const places = new Map<string, string[]>();
   for (const n of nodes)
     if (n.id !== undefined && (n.f & F.visible) !== 0) {
@@ -329,7 +330,10 @@ export function sameTree(a: Tree, b: Tree): boolean {
   const x = a.nodes.filter(shown);
   const y = b.nodes.filter(shown);
   // a clock or a counter on screen moves between the two reads
-  const off = x.filter((n, i) => n.d !== y[i]!.d || n.t !== y[i]!.t).length;
+  const off = x.filter((n, i) => {
+    const m = must(y[i], 'a node');
+    return n.d !== m.d || n.t !== m.t;
+  }).length;
   return off <= x.length * 0.2;
 }
 

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { assert, describe, expect, it, vi } from 'vitest';
 import { RtcpWriter, RtpReceiver, type Picture } from '../rtp-hevc.js';
 
 const VPS = 32;
@@ -68,11 +68,12 @@ describe('pictures out of RTP', () => {
     const { r, pictures } = setup();
     r.push(rtp(1, 100, aggregate(nal(VPS, 'a'), nal(33, 'b'))));
     const [one, two] = fragments(IDR, ['first-', 'second']);
-    r.push(rtp(2, 100, one!));
-    r.push(rtp(3, 100, two!));
+    assert(one && two);
+    r.push(rtp(2, 100, one));
+    r.push(rtp(3, 100, two));
     r.push(rtp(4, 100, nal(TRAIL, 'tail'), true));
     expect(pictures).toHaveLength(1);
-    expect(pictures[0]!.annexB).toEqual(
+    expect(pictures[0]?.annexB).toEqual(
       annexB(nal(VPS, 'a'), nal(33, 'b'), nal(IDR, 'first-second'), nal(TRAIL, 'tail')),
     );
   });
@@ -91,7 +92,7 @@ describe('pictures out of RTP', () => {
     const extension = Buffer.alloc(8);
     extension.writeUInt16BE(1, 2);
     r.push(rtp(1, 100, nal(IDR, 'body'), true, extension));
-    expect(pictures[0]!.annexB).toEqual(annexB(nal(IDR, 'body')));
+    expect(pictures[0]?.annexB).toEqual(annexB(nal(IDR, 'body')));
   });
 
   it('a gap freezes the picture until a key, and asks for it, then again', () => {
@@ -147,8 +148,9 @@ describe('pictures out of RTP', () => {
     const { r, pictures } = setup();
     r.push(rtp(1, 100, nal(IDR), true));
     const [one, , three] = fragments(IDR, ['a', 'b', 'c']);
-    r.push(rtp(2, 200, one!));
-    r.push(rtp(4, 200, three!, true));
+    assert(one && three);
+    r.push(rtp(2, 200, one));
+    r.push(rtp(4, 200, three, true));
     expect(pictures).toHaveLength(1);
     expect(r.stats.lost).toBe(1);
   });
@@ -224,36 +226,40 @@ describe('RTCP back to the phone', () => {
 
   it('a report and a name, from us about the sender', () => {
     const [report, sdes] = packets(w.alive(0xabcd, 77));
-    expect(report![1]).toBe(201);
-    expect(report!.readUInt32BE(4)).toBe(0x11223344);
-    expect(report!.readUInt32BE(8)).toBe(0xabcd);
-    expect(report!.readUInt32BE(16)).toBe(77);
-    expect(sdes![1]).toBe(202);
-    expect(sdes!.toString('latin1', 10, 17)).toBe('appdyno');
-    expect(sdes!.length % 4).toBe(0);
+    assert(report && sdes);
+    expect(report[1]).toBe(201);
+    expect(report.readUInt32BE(4)).toBe(0x11223344);
+    expect(report.readUInt32BE(8)).toBe(0xabcd);
+    expect(report.readUInt32BE(16)).toBe(77);
+    expect(sdes[1]).toBe(202);
+    expect(sdes.toString('latin1', 10, 17)).toBe('appdyno');
+    expect(sdes.length % 4).toBe(0);
   });
 
   it('each picture acknowledged by its time', () => {
     const [ack] = packets(w.ack(0xdeadbeef));
-    expect(ack![1]).toBe(204);
-    expect(ack!.subarray(8, 12)).toEqual(Buffer.from([0, 0, 0, 5]));
-    expect(ack!.readUInt32BE(12)).toBe(0xdeadbeef);
+    assert(ack);
+    expect(ack[1]).toBe(204);
+    expect(ack.subarray(8, 12)).toEqual(Buffer.from([0, 0, 0, 5]));
+    expect(ack.readUInt32BE(12)).toBe(0xdeadbeef);
   });
 
   it('rate control, with its counters going round', () => {
     const [rctl] = packets(w.rateControl(0x12345, 0x54321 + 0.9, 0x10002));
-    expect(rctl!.toString('latin1', 8, 12)).toBe('RCTL');
-    expect(rctl!.readUInt16BE(12 + 4)).toBe(0x2345);
-    expect(rctl!.readUInt16BE(12 + 12)).toBe(0x4321);
-    expect(rctl!.readUInt16BE(12 + 16)).toBe(2);
+    assert(rctl);
+    expect(rctl.toString('latin1', 8, 12)).toBe('RCTL');
+    expect(rctl.readUInt16BE(12 + 4)).toBe(0x2345);
+    expect(rctl.readUInt16BE(12 + 12)).toBe(0x4321);
+    expect(rctl.readUInt16BE(12 + 16)).toBe(2);
   });
 
   it('asks for a key both ways, numbering its requests', () => {
-    const first = packets(w.askForKey(0xabcd));
-    expect(first[0]![0]! & 0x1f).toBe(1);
-    expect(first[1]![0]! & 0x1f).toBe(4);
-    expect(first[1]![1]).toBe(206);
-    const second = packets(w.askForKey(0xabcd));
-    expect(second[1]![16]).toBe(first[1]![16]! + 1);
+    const [pli, fir] = packets(w.askForKey(0xabcd));
+    assert(pli && fir);
+    expect(pli.readUInt8(0) & 0x1f).toBe(1);
+    expect(fir.readUInt8(0) & 0x1f).toBe(4);
+    expect(fir[1]).toBe(206);
+    const [, again] = packets(w.askForKey(0xabcd));
+    expect(again?.[16]).toBe(fir.readUInt8(16) + 1);
   });
 });

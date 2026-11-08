@@ -14,7 +14,7 @@ describe('an Xcode build', () => {
       path: '/d/My.app',
       bundle: 'dev.my',
     });
-    expect(() => builtApp([{ buildSettings: tests }])).toThrowError(/builds no app/);
+    expect(() => builtApp([{ buildSettings: tests }])).toThrow(/builds no app/);
   });
 
   it('refuses what is not a project, and a project with no scheme', async () => {

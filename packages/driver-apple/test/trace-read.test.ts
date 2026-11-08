@@ -25,7 +25,7 @@ describe('reading a trace', () => {
       `#!/bin/sh\necho read >> '${reads}'\nn=$(wc -l < '${reads}' | tr -d ' ')\n${script}\n`,
     );
     chmodSync(bin, 0o755);
-    process.env.PATH = `${dir}:${path}`;
+    process.env.PATH = `${dir}:${String(path)}`;
     return () => readFileSync(reads, 'utf8').split('\n').length - 1;
   };
 

@@ -56,7 +56,9 @@ describe("an iPhone's app, to APNs", () => {
     child.stdout.write(`Live Activity token ${DEVICE}\n`);
     await new Promise((r) => setImmediate(r));
     const again = await target.lines('dev.app', 'activity');
-    expect(again).toEqual({ lines: expect.arrayContaining([`Live Activity token ${DEVICE}`]) });
+    expect(again).toEqual({
+      lines: expect.arrayContaining([`Live Activity token ${DEVICE}`]) as unknown,
+    });
     expect(follow).toHaveBeenCalledTimes(1);
     expect(follow).toHaveBeenCalledWith('U', 'dev.app');
   });

@@ -54,7 +54,7 @@ describe('a build’s names for its frames', () => {
   it('refuses a path with no dSYM in it, by name', async () => {
     await expect(nameFrames(TABLE, '/nowhere/Fixture.dSYM')).rejects.toMatchObject({
       code: 'NOT_FOUND',
-      message: expect.stringContaining('no such dSYM or folder: /nowhere/Fixture.dSYM'),
+      message: expect.stringContaining('no such dSYM or folder: /nowhere/Fixture.dSYM') as unknown,
     });
   });
 
@@ -66,7 +66,7 @@ describe('a build’s names for its frames', () => {
     copyFileSync('/usr/bin/true', join(dwarfs, 'Other'));
     await expect(nameFrames(TABLE, dsym)).rejects.toMatchObject({
       code: 'NOT_FOUND',
-      message: expect.stringContaining('is of no build in this trace'),
+      message: expect.stringContaining('is of no build in this trace') as unknown,
     });
   });
 });

@@ -14,10 +14,16 @@ const APP = 'dev.appdyno.fixture';
 const simulator = (running: string[] = []) => {
   const asked: string[][] = [];
   const simctl = {
-    exec: async (args: string[]) => (asked.push(args), ''),
-    pid: async (_: string, app: string) => (running.includes(app) ? 42 : 0),
-    terminate: async (_: string, app: string) => void asked.push(['terminate', app]),
-    launch: async (_: string, app: string) => void asked.push(['launch', app]),
+    exec: (args: string[]) => Promise.resolve((asked.push(args), '')),
+    pid: (_: string, app: string) => Promise.resolve(running.includes(app) ? 42 : 0),
+    terminate: (_: string, app: string) => {
+      asked.push(['terminate', app]);
+      return Promise.resolve();
+    },
+    launch: (_: string, app: string) => {
+      asked.push(['launch', app]);
+      return Promise.resolve();
+    },
   } as unknown as Simctl;
   return {
     settings: new SimulatorSettings(simctl, SIM),
@@ -73,12 +79,12 @@ describe("an app's language", () => {
   it('says it holds when the app does not start again, and reads as held, so that restore lets it go', async () => {
     const asked: string[][] = [];
     const simctl = {
-      exec: async (args: string[]) => (asked.push(args), ''),
-      pid: async () => 42,
-      terminate: async () => {
-        throw new Error('the phone went away');
+      exec: (args: string[]) => Promise.resolve((asked.push(args), '')),
+      pid: () => Promise.resolve(42),
+      terminate: () => {
+        return Promise.reject(new Error('the phone went away'));
       },
-      launch: async () => undefined,
+      launch: () => Promise.resolve(undefined),
     } as unknown as Simctl;
     const settings = new SimulatorSettings(simctl, SIM);
     await expect(settings.set('locale', 'tr-TR', APP)).rejects.toThrow(
@@ -106,12 +112,13 @@ describe("an app's language", () => {
   it('goes on every launch of an iPhone, and the phone itself is not the tool’s to change', async () => {
     const said: string[][] = [];
     const ctl = new Devicectl(PHONE);
-    ctl.json = async (args: string[]) => (said.push(args), { result: { runningProcesses: [] } });
-    ctl.pids = async () => [];
+    ctl.json = (args: string[]) =>
+      Promise.resolve((said.push(args), { result: { runningProcesses: [] } }));
+    ctl.pids = () => Promise.resolve([]);
     const phone = new PhoneSettings(ctl);
     await phone.set('locale', 'pt-BR', APP);
     await ctl.launch(APP);
-    expect(said.at(-1)!.slice(-6)).toEqual([
+    expect(said.at(-1)?.slice(-6)).toEqual([
       APP,
       '--',
       '-AppleLanguages',
@@ -125,6 +132,6 @@ describe("an app's language", () => {
     await expect(phone.set('locale', 'tr TR; x', APP)).rejects.toThrow('a language such as tr-TR');
     await phone.set('locale', '', APP);
     await ctl.launch(APP);
-    expect(said.at(-1)!.at(-1)).toBe(APP);
+    expect(said.at(-1)?.at(-1)).toBe(APP);
   });
 });

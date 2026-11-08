@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { type BuildRequest, run, runBuild, stateDir } from '@appdyno/core';
+import { type BuildRequest, run, runBuild, stateDir, must } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 
 const SETTINGS_BYTES = 64 * 1024 * 1024;
@@ -20,7 +20,10 @@ export function builtApp(settings: Settings[]) {
   if (!app?.PRODUCT_BUNDLE_IDENTIFIER)
     throw new DeviceError('INVALID_ARGUMENT', 'the scheme builds no app');
   return {
-    path: join(app.TARGET_BUILD_DIR!, app.WRAPPER_NAME!),
+    path: join(
+      must(app.TARGET_BUILD_DIR, 'a build folder'),
+      must(app.WRAPPER_NAME, 'a bundle name'),
+    ),
     bundle: app.PRODUCT_BUNDLE_IDENTIFIER,
   };
 }

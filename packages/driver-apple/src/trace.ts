@@ -10,6 +10,7 @@ import {
   tracesDir,
   type TraceDigest,
   type HitchSummary,
+  must,
 } from '@appdyno/core';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
@@ -107,7 +108,7 @@ async function recordInTurn(r: TraceRecording): Promise<string> {
     } catch (e) {
       // a phone's tool stops finding running processes after an attached recording, whichever way they are named
       // (the same live process not found, then found, with the tool's service restarted too)
-      if (!pid || !/Cannot find process/.test((e as Error).message)) throw e;
+      if (!pid || !(e as Error).message.includes('Cannot find process')) throw e;
       // every process is still recorded, where that has what is asked
       if (!r.attachedOnly) return recordOnce(r, undefined);
       if (Date.now() > givenUp)
@@ -145,6 +146,7 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
     // a tool that never says: `during` runs anyway, and the result shows what it caught
     setTimeout(resolve, START_MS).unref();
   });
+  const signal = callSignal();
   const rec = spawn(
     'xcrun',
     [
@@ -173,7 +175,7 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
           ? ['--attach', String(attach)]
           : ['--all-processes']),
     ],
-    { env: xcodeEnv(), ...(callSignal() && { signal: callSignal()! }) },
+    { env: xcodeEnv(), ...(signal && { signal }) },
   );
   if (rec.pid) temp.follow(rec.pid);
   let log = '';
@@ -216,7 +218,10 @@ async function recordOnce(r: TraceRecording, attach: number | undefined): Promis
         'check its cable or hub, then measure again',
       );
     // a stopped recording still has what it caught
-    if (code !== 0 && (!existsSync(tracePath) || (code !== null && /Recording failed/.test(log))))
+    if (
+      code !== 0 &&
+      (!existsSync(tracePath) || (code !== null && log.includes('Recording failed')))
+    )
       throw new DeviceError('UNSUPPORTED', `the trace tool could not record: ${failure(log)}`);
     return tracePath;
   } finally {
@@ -255,6 +260,7 @@ export async function recordXctMetrics(
       `XCTest's ${test} metric: ${why}`,
       `the result bundle is at ${resultBundle}`,
     );
+  const signal = callSignal();
   await run(
     'xcodebuild',
     [
@@ -277,11 +283,12 @@ export async function recordXctMetrics(
       },
       maxBuffer: 256 * 1024 * 1024,
       timeout: 600_000,
-      ...(callSignal() && { signal: callSignal()! }),
+      ...(signal && { signal }),
     },
   )
-    .catch((e: { stdout?: string; message: string }) => {
-      throw failed((e.stdout ?? e.message).trim().split('\n').slice(-3).join(' ').slice(0, 300));
+    .catch((e: unknown) => {
+      const { stdout, message } = e as { stdout?: string; message: string };
+      throw failed((stdout ?? message).trim().split('\n').slice(-3).join(' ').slice(0, 300));
     })
     .finally(() => rm(derived, { recursive: true, force: true }));
   const { stdout } = await run(
@@ -348,7 +355,9 @@ export async function queryTraceFile(
     maxBuffer: 64 * 1024 * 1024,
     timeout: 120_000,
   }).catch(refused);
-  const schemas = [...new Set([...stdout.matchAll(/\bschema="([^"]+)"/g)].map((m) => m[1]!))];
+  const schemas = [
+    ...new Set([...stdout.matchAll(/\bschema="([^"]+)"/g)].map((m) => must(m[1], 'a schema'))),
+  ];
   return {
     tracePath,
     source: 'xctrace export --toc',
@@ -380,7 +389,7 @@ export async function recordStallSpans(
   const tracePath = await recordTrace({
     template: 'Animation Hitches',
     device,
-    attach: async () => known,
+    attach: () => Promise.resolve(known),
     seconds,
     dir,
     during,
@@ -409,7 +418,7 @@ export async function recordHitches(
   const tracePath = await recordTrace({
     template: 'Animation Hitches',
     device,
-    attach: async () => known,
+    attach: () => Promise.resolve(known),
     seconds,
     dir,
     ...(during && { during }),

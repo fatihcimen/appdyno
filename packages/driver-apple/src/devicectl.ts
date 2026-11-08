@@ -133,7 +133,7 @@ export class Devicectl {
   /** The phone's name as people know it. */
   async marketingName() {
     const r = await this.json(['device', 'info', 'details', '--device', this.udid]);
-    return phoneFacts((r.result ?? r) as ListedPhone).marketingName;
+    return phoneFacts(r.result ?? r).marketingName;
   }
 
   /** This phone as the Mac lists it. */

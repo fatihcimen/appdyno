@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
-import { NeedError, stateDir, type DeviceState } from '@appdyno/core';
+import { assert, describe, expect, it, vi } from 'vitest';
+import { must, NeedError, stateDir, type DeviceState, type InputEvent } from '@appdyno/core';
 import { imageSize } from '@appdyno/core';
 import { loadPhoneStream, PhoneMirror, type PhoneRunner } from '../src/mirror-phone.js';
 import type { PhoneStreamEvent, PhoneStreamModule } from '../src/phone-stream-port.js';
@@ -15,46 +15,49 @@ function fake(
 ) {
   let onEvent: (e: PhoneStreamEvent) => void = () => undefined;
   const handle = {
-    attach: vi.fn(),
-    input: vi.fn(),
+    attach: vi.fn<(file: string) => void>(),
+    input: vi.fn<(e: InputEvent) => void>(),
     keyframe: vi.fn(),
-    stop: vi.fn(async () => true),
+    stop: vi.fn(() => Promise.resolve(true)),
   };
-  const module: PhoneStreamModule = {
-    check: async () => check,
-    onWifi: async (_udid, asked = false) => asked,
-    portOnWifi: async () => ({ socket: {} as never }),
-    screenshot: vi.fn(async () => {
+  const module = {
+    check: () => Promise.resolve(check),
+    onWifi: (_udid, asked = false) => Promise.resolve(asked),
+    portOnWifi: () => Promise.resolve({ socket: {} as never }),
+    screenshot: vi.fn(() => {
       const png = Buffer.alloc(24);
       png[0] = 0x89;
       png.writeUInt32BE(100, 16);
       png.writeUInt32BE(200, 20);
-      return png;
+      return Promise.resolve(png);
     }),
-    elements: async () => [],
-    pair: async () => undefined,
-    press: async () => ({ caption: '' }),
-    secureFocused: async () => false,
-    focusedField: async () => 'a field',
-    live: async () => () => undefined,
-    conditions: async () => [],
-    induce: async () => undefined,
-    start: vi.fn((_udid, _options, listener) => {
+    elements: () => Promise.resolve([]),
+    pair: () => Promise.resolve(undefined),
+    press: () => Promise.resolve({ caption: '' }),
+    secureFocused: () => Promise.resolve(false),
+    focusedField: (): ReturnType<PhoneStreamModule['focusedField']> => Promise.resolve('a field'),
+    live: () => Promise.resolve(() => undefined),
+    conditions: () => Promise.resolve([]),
+    induce: () => Promise.resolve(undefined),
+    start: vi.fn<PhoneStreamModule['start']>((_udid, _options, listener) => {
       onEvent = listener;
       return handle;
     }),
-  };
+  } satisfies PhoneStreamModule;
   const pipes: string[] = [];
   let now = 1000;
   const waited: number[] = [];
   const runner = {
-    fieldAt: vi.fn<PhoneRunner['fieldAt']>(async (x, y) => ({ x, y })),
-    keys: vi.fn<PhoneRunner['keys']>(async () => undefined),
+    fieldAt: vi.fn<PhoneRunner['fieldAt']>((x, y) => Promise.resolve({ x, y })),
+    keys: vi.fn<PhoneRunner['keys']>(() => Promise.resolve(undefined)),
   };
   const mirror = new PhoneMirror(
     UDID,
-    async () => module,
-    async (file) => void pipes.push(file),
+    () => Promise.resolve(module),
+    (file) => {
+      pipes.push(file);
+      return Promise.resolve();
+    },
     () => now,
     (ms) => {
       waited.push(ms);
@@ -85,11 +88,9 @@ describe('letters in a window', () => {
     const told: Record<string, unknown>[] = [];
     await f.mirror.open(OPTIONS, undefined, (m) => told.push(m));
     const typed = () =>
-      f.handle.input.mock.calls
-        .flatMap(([e]) => (e.kind === 'text' ? [e.s as string] : []))
-        .join('');
+      f.handle.input.mock.calls.flatMap(([e]) => (e.kind === 'text' ? [e.s] : [])).join('');
     const fingers = () =>
-      f.handle.input.mock.calls.flatMap(([e]) => (e.kind === 'touch' ? [e.p as number] : []));
+      f.handle.input.mock.calls.flatMap(([e]) => (e.kind === 'touch' ? [e.p] : []));
     const tap = async (at = NAME) => {
       await f.mirror.input({ kind: 'touch', p: 0, ...at });
       await f.mirror.input({ kind: 'touch', p: 2, ...at });
@@ -240,7 +241,7 @@ describe('letters in a window', () => {
 
     it('are dropped when the look names no field', async () => {
       const { runner, module, tap, type, said } = await elsewhere();
-      module.focusedField = async () => undefined;
+      module.focusedField = () => Promise.resolve(undefined);
       await tap();
       await type('s3');
       await vi.waitFor(() => expect(said()).toContain('did not go in'));
@@ -249,7 +250,7 @@ describe('letters in a window', () => {
 
     it('never reach the old field when the focus has not moved: a secret went there', async () => {
       const { runner, module, tap, type, said } = await elsewhere();
-      module.focusedField = async () => 'name';
+      module.focusedField = () => Promise.resolve('name');
       await tap();
       await type('Ada');
       await vi.waitFor(() => expect(runner.keys).toHaveBeenCalledTimes(1));
@@ -261,7 +262,7 @@ describe('letters in a window', () => {
 
     it('go after a second tap on the field the last look named', async () => {
       const { runner, module, tap, type } = await elsewhere();
-      module.focusedField = async () => 'name';
+      module.focusedField = () => Promise.resolve('name');
       await tap();
       await type('A');
       await vi.waitFor(() => expect(runner.keys).toHaveBeenCalledTimes(1));
@@ -293,7 +294,7 @@ describe('letters in a window', () => {
 
     it('still reach no old field: the one look decides', async () => {
       const { module, typed, tap, type, said } = await noRunner();
-      module.focusedField = async () => 'name';
+      module.focusedField = () => Promise.resolve('name');
       await tap();
       await type('Ada');
       await vi.waitFor(() => expect(typed()).toBe('Ada'));
@@ -329,8 +330,8 @@ describe('text with no key on a phone', () => {
 
   it('sends nothing when it cannot tell whether a field is secure', async () => {
     const { mirror, handle, module } = fake();
-    module.secureFocused = async () => {
-      throw new Error('no service');
+    module.secureFocused = () => {
+      return Promise.reject(new Error('no service'));
     };
     const told: Record<string, unknown>[] = [];
     await mirror.open({ quality: 'auto' }, undefined, (m) => told.push(m));
@@ -342,7 +343,7 @@ describe('text with no key on a phone', () => {
 });
 
 describe('the phone stream, gone from a build', () => {
-  const absent = new PhoneMirror(UDID, async () => undefined);
+  const absent = new PhoneMirror(UDID, () => Promise.resolve(undefined));
 
   it('is a refusal in words, and the rest of the phone is not touched', async () => {
     await expect(absent.check()).resolves.toEqual({ ok: false, need: 'no-phone-stream' });
@@ -371,7 +372,7 @@ describe('the pipe to a viewer', () => {
     writeFileSync(mine, '');
     const start = fake().module.start;
     const module = { ...fake().module, start };
-    const mirror = new PhoneMirror(UDID, async () => module);
+    const mirror = new PhoneMirror(UDID, () => Promise.resolve(module));
     const source = await mirror.open(OPTIONS);
     expect(source).toMatchObject({ kind: 'pipe' });
     const { file } = source as { file: string };
@@ -406,7 +407,7 @@ describe('a screenshot by the phone service', () => {
     vi.mocked(module.screenshot).mockRejectedValueOnce(new Error('no service'));
     await expect(mirror.screenshot('png')).resolves.toBeUndefined();
     await expect(
-      new PhoneMirror(UDID, async () => undefined).screenshot('png'),
+      new PhoneMirror(UDID, () => Promise.resolve(undefined)).screenshot('png'),
     ).resolves.toBeUndefined();
   });
 });
@@ -422,7 +423,7 @@ describe('a phone mirror', () => {
 
   it('goes by the network with no word when that is all a paired phone has', async () => {
     const { mirror, module } = fake();
-    module.onWifi = async () => true;
+    module.onWifi = () => Promise.resolve(true);
     await expect(mirror.check()).resolves.toEqual({ ok: true, routes: ['tunnel', 'wifi'] });
     const source = await mirror.open(OPTIONS);
     expect(module.start).toHaveBeenCalledWith(
@@ -430,7 +431,7 @@ describe('a phone mirror', () => {
       { ...OPTIONS, wifi: true },
       expect.any(Function),
     );
-    expect(source).toMatchObject({ note: expect.stringContaining('On Wi-Fi') });
+    expect(source).toMatchObject({ note: expect.stringContaining('On Wi-Fi') as unknown });
     await mirror.close();
   });
 
@@ -450,7 +451,7 @@ describe('a phone mirror', () => {
       { ...OPTIONS, wifi: true },
       expect.any(Function),
     );
-    expect(source).toMatchObject({ note: expect.stringContaining('On Wi-Fi') });
+    expect(source).toMatchObject({ note: expect.stringContaining('On Wi-Fi') as unknown });
     await mirror.close();
     const byCable = await mirror.open(OPTIONS);
     expect(byCable).not.toHaveProperty('note');
@@ -536,18 +537,20 @@ describe('a phone mirror', () => {
     }));
     vi.mocked(module.start).mockImplementation((_udid, _options, listener) => {
       heard.push(listener);
-      return handles[heard.length - 1]!;
+      return must(handles[heard.length - 1], 'a handle');
     });
     const seen: DeviceState[] = [];
     mirror.watch((s) => seen.push(s));
     await mirror.open(OPTIONS);
     void mirror.close();
     await mirror.open(OPTIONS);
-    heard[0]!({ kind: 'state', state: 'asleep' });
-    heard[0]!({ kind: 'lost', why: 'gone', need: 'camera-or-mic' });
-    heard[0]!({ kind: 'ended', proved: false });
+    const [first] = heard;
+    assert(first);
+    first({ kind: 'state', state: 'asleep' });
+    first({ kind: 'lost', why: 'gone', need: 'camera-or-mic' });
+    first({ kind: 'ended', proved: false });
     await mirror.keyframe();
-    expect(handles[1]!.keyframe).toHaveBeenCalledTimes(1);
+    expect(handles[1]?.keyframe).toHaveBeenCalledTimes(1);
     expect(seen).toEqual([]);
     await expect(mirror.check()).resolves.toMatchObject({ ok: true });
     await mirror.open(OPTIONS);

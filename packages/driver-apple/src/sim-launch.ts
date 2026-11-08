@@ -22,7 +22,7 @@ export async function profileStart(
   const trace = await recordTrace({
     template: 'Time Profiler',
     device: udid,
-    attach: async () => pid,
+    attach: () => Promise.resolve(pid),
     attachedOnly: true,
     seconds: START_SECONDS,
     dir: tracesDir(),

@@ -142,8 +142,10 @@ export class PhoneApps implements AppManager {
       ...(all ? ['--include-all-apps'] : []),
     ]);
     const apps =
-      (j.result as { apps?: { bundleIdentifier: string; name?: string; version?: string }[] })
-        ?.apps ?? [];
+      (
+        j.result as
+          { apps?: { bundleIdentifier: string; name?: string; version?: string }[] } | undefined
+      )?.apps ?? [];
     return apps.map((a) => ({
       id: a.bundleIdentifier,
       ...(a.name && { name: a.name }),
@@ -162,10 +164,12 @@ export class PhoneApps implements AppManager {
     return `${service} for ${app} is reset to ask: when the app asks, alert ${grant ? 'allow' : 'deny'}`;
   }
 
-  async links(): Promise<never> {
-    throw new DeviceError(
-      'UNSUPPORTED',
-      "an iPhone's installed app is not read from here: list the links of its build on a simulator",
+  links(): Promise<never> {
+    return Promise.reject(
+      new DeviceError(
+        'UNSUPPORTED',
+        "an iPhone's installed app is not read from here: list the links of its build on a simulator",
+      ),
     );
   }
 
@@ -281,16 +285,20 @@ export class PhoneEvents implements DeviceEvents {
     this.apns = new ApnsPush(this.target);
   }
 
-  async pushRoutes(): Promise<PushRoute[]> {
-    const byApns = this.apns.routes();
-    return PUSH_TYPES.map(
-      (type) =>
-        // APNs, once set up, takes every type but a tap
-        byApns.find((r) => r.type === type) ?? {
-          type,
-          why: byApns.length === 0 ? PHONE_CANNOT.push : PHONE_CANNOT.tapped,
-        },
-    );
+  pushRoutes(): Promise<PushRoute[]> {
+    return new Promise((resolve) => {
+      const byApns = this.apns.routes();
+      resolve(
+        PUSH_TYPES.map(
+          (type) =>
+            // APNs, once set up, takes every type but a tap
+            byApns.find((r) => r.type === type) ?? {
+              type,
+              why: byApns.length === 0 ? PHONE_CANNOT.push : PHONE_CANNOT.tapped,
+            },
+        ),
+      );
+    });
   }
 
   async push(app: string, push: Push): Promise<string> {
@@ -308,19 +316,19 @@ export class PhoneEvents implements DeviceEvents {
     this.target.close();
   }
 
-  async biometric(_answer: BiometricAnswer): Promise<undefined> {
-    throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.biometric);
+  biometric(_answer: BiometricAnswer): Promise<undefined> {
+    return Promise.reject(new DeviceError('UNSUPPORTED', PHONE_CANNOT.biometric));
   }
 
-  async resetKeychain(): Promise<number> {
-    throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.keychain);
+  resetKeychain(): Promise<number> {
+    return Promise.reject(new DeviceError('UNSUPPORTED', PHONE_CANNOT.keychain));
   }
 
-  async call(): Promise<void> {
-    throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.call);
+  call(): Promise<void> {
+    return Promise.reject(new DeviceError('UNSUPPORTED', PHONE_CANNOT.call));
   }
 
-  async sms(): Promise<void> {
-    throw new DeviceError('UNSUPPORTED', PHONE_CANNOT.sms);
+  sms(): Promise<void> {
+    return Promise.reject(new DeviceError('UNSUPPORTED', PHONE_CANNOT.sms));
   }
 }

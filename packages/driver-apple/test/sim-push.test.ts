@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { must } from '@appdyno/core';
 import { apnsPayload } from '../src/apns-payload.js';
 import { simulatorPush, simulatorRoutes } from '../src/sim-push.js';
 import type { Simctl } from '../src/simctl.js';
@@ -25,17 +26,22 @@ describe('a push to a simulator', () => {
     let sent: unknown;
     let running = true;
     const simctl = {
-      exec: async (args: string[]) => {
-        sent = [args.slice(0, 3), JSON.parse(readFileSync(args[3]!, 'utf8'))];
-        return '';
+      exec: (args: string[]) => {
+        sent = [
+          args.slice(0, 3),
+          JSON.parse(readFileSync(must(args[3], 'a file'), 'utf8')) as unknown,
+        ];
+        return Promise.resolve('');
       },
-      pid: async () => {
-        if (!running) throw new Error('not running');
-        return 7;
+      pid: () => {
+        if (!running) return Promise.reject(new Error('not running'));
+        return Promise.resolve(7);
       },
     } as unknown as Simctl;
     const push = (front?: string) =>
-      simulatorPush(simctl, 'U', 'dev.app', { type: 'alert', title: 'T' }, async () => front);
+      simulatorPush(simctl, 'U', 'dev.app', { type: 'alert', title: 'T' }, () =>
+        Promise.resolve(front),
+      );
     expect(await push('dev.app')).toBe(
       'pushed to dev.app by simctl: it is in front, and its code gets it as a remote notification',
     );
@@ -51,22 +57,28 @@ describe('a push to a simulator', () => {
     expect(await push()).toContain('it is not running, so the push is only shown');
     sent = undefined;
     await expect(
-      simulatorPush(simctl, 'U', 'dev.app', { type: 'rich', title: 'T' }, async () => undefined),
+      simulatorPush(simctl, 'U', 'dev.app', { type: 'rich', title: 'T' }, () =>
+        Promise.resolve(undefined),
+      ),
     ).rejects.toThrow('runs no Notification Service Extension');
     expect(sent).toBeUndefined();
   });
 
   it('says what an app no one allowed notifications got: its code, only in front', async () => {
     const simctl = {
-      exec: async () => {
-        throw new Error(
-          'simctl push: Underlying error (domain=UNErrorDomain, code=2003): Repository could not save notification. Source is not authorized.',
+      exec: () => {
+        return Promise.reject(
+          new Error(
+            'simctl push: Underlying error (domain=UNErrorDomain, code=2003): Repository could not save notification. Source is not authorized.',
+          ),
         );
       },
-      pid: async () => 7,
+      pid: () => Promise.resolve(7),
     } as unknown as Simctl;
     const push = (front?: string) =>
-      simulatorPush(simctl, 'U', 'dev.app', { type: 'alert', title: 'T' }, async () => front);
+      simulatorPush(simctl, 'U', 'dev.app', { type: 'alert', title: 'T' }, () =>
+        Promise.resolve(front),
+      );
     expect(await push('dev.app')).toBe(
       'pushed to dev.app by simctl, which shows none, as it is not allowed notifications: it is in front, and its code gets it as a remote notification',
     );
@@ -98,7 +110,7 @@ describe('a push to a simulator', () => {
     const routes = simulatorRoutes([byApns, { ...byApns, type: 'alert' }]);
     expect(routes.find((r) => r.type === 'rich')).toBe(byApns);
     expect(routes.find((r) => r.type === 'alert')).toMatchObject({
-      route: expect.stringMatching(/^simctl push/),
+      route: expect.stringMatching(/^simctl push/) as unknown,
     });
   });
 });

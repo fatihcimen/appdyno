@@ -1,5 +1,5 @@
 import type { FrameMark, FrameStats, ProbeSummary } from '@appdyno/core';
-import { FROZEN_FRAME_MS, MIN_FRAMES, quantile, round1 } from '@appdyno/core';
+import { FROZEN_FRAME_MS, MIN_FRAMES, must, quantile, round1 } from '@appdyno/core';
 
 export const PROBE_LIMITS =
   "The probe sees the app's main-thread pacing, not the render server or GPU, and the speed is the Mac's: it finds stalls and regressions on this machine and does not predict a phone's frame rate.";
@@ -48,7 +48,12 @@ export function probeHead(text: string): {
   const resetAt = all.findLast((l) => l.reset !== undefined)?.reset;
   const phases = all.findLast((l) => l.phases !== undefined)?.phases;
   return {
-    ...(head && { pid: head.pid!, bundle: head.loaded!, loadedAt: head.t! }),
+    // the probe writes the three together
+    ...(head && {
+      pid: must(head.pid, 'a pid'),
+      bundle: must(head.loaded, 'a bundle'),
+      loadedAt: must(head.t, 'a start'),
+    }),
     ...(launchMs !== undefined && { launchMs }),
     ...(phases && { phases }),
     ...(resetAt !== undefined && { resetAt }),
@@ -71,12 +76,15 @@ export function probeWindow(text: string, fromMs: number, toMs: number): string 
 function stats(windowText: string, fromMs: number, toMs: number) {
   const all = lines(windowText);
   const frames = all.filter((l) => l.dt !== undefined);
-  const intervals = frames.map((l) => l.dt!);
+  const intervals = frames.map((l) => must(l.dt, 'an interval'));
   const lastFrame = frames.at(-1)?.t ?? 0;
   // a stall still running when the window ends has no frame of its own yet
   const open = all.findLast((l) => l.open !== undefined);
-  if (open && open.open! > lastFrame) intervals.push(toMs - (open.open! - open.ms!));
-  const vsync = frames.map((l) => l.v!).sort((a, b) => a - b)[frames.length >> 1] ?? 0;
+  if (open?.open !== undefined && open.open > lastFrame)
+    intervals.push(toMs - (open.open - must(open.ms, "a stall's time")));
+  // a frame's line has its vsync too
+  const vsync =
+    frames.map((l) => must(l.v, 'a vsync')).sort((a, b) => a - b)[frames.length >> 1] ?? 0;
   const sorted = intervals.toSorted((a, b) => a - b);
   const at = (p: number) => (sorted.length ? quantile(sorted, p) : 0);
   const missed = intervals.filter((x) => vsync > 0 && x > vsync * LATE_VSYNCS).length;
@@ -104,13 +112,17 @@ function stats(windowText: string, fromMs: number, toMs: number) {
 
 /** A window of the probe's lines as frames: each interval on the wall clock its process read, late over 1.5 vsync. */
 export const probeMarks = (windowText: string): FrameMark[] =>
-  lines(windowText)
-    .filter((l) => l.dt !== undefined)
-    .map((l) => ({
-      at: l.t! - l.dt!,
-      ms: l.dt!,
-      ...(l.dt! > l.v! * LATE_VSYNCS && { late: true }),
-    }));
+  lines(windowText).flatMap(({ t, dt, v }) =>
+    dt === undefined
+      ? []
+      : [
+          {
+            at: must(t, "a frame's time") - dt,
+            ms: dt,
+            ...(dt > must(v, 'a vsync') * LATE_VSYNCS && { late: true }),
+          },
+        ],
+  );
 
 /** A window of the probe's lines (`probeWindow`), summed up. */
 export const probeSummary = (windowText: string, fromMs: number, toMs: number): ProbeSummary =>

@@ -9,6 +9,7 @@ import {
   type MeasureSource,
   type Measured,
   type Symbols,
+  must,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { crashExits } from './crashes.js';
@@ -181,7 +182,11 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
       throw new DeviceError('UNSUPPORTED', `the trace has one reading of ${bundle}: no CPU share`);
     const behind = await this.inFrontOf(bundle);
     return {
-      value: { percent: value.cpuPercent, windowMs: value.windowMs!, ...(behind && { behind }) },
+      value: {
+        percent: value.cpuPercent,
+        windowMs: must(value.windowMs, 'a window'),
+        ...(behind && { behind }),
+      },
       raw,
       at: now(),
     };
@@ -308,10 +313,12 @@ export class IosPhonePerf extends IosPerf implements MeasureSource {
     return phoneLeaks(this.phone.serial, bundle, () => this.phone.ctl.pid(bundle), dir);
   }
 
-  async size(_bundle: string): Promise<never> {
-    throw new DeviceError(
-      'UNSUPPORTED',
-      "devicectl lists no size of an app, and a phone's app bundle cannot be read from the Mac",
+  size(_bundle: string): Promise<never> {
+    return Promise.reject(
+      new DeviceError(
+        'UNSUPPORTED',
+        "devicectl lists no size of an app, and a phone's app bundle cannot be read from the Mac",
+      ),
     );
   }
 

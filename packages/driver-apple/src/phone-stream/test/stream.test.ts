@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { must } from '@appdyno/core';
 import { DISPLAY, HID_INDIGO, HID_UNIVERSAL } from '../services.js';
 import { PhoneStream, type StreamSink, type StreamWire } from '../stream.js';
 import { ownSessions, rememberOwn, StreamRefusal } from '../stream-state.js';
@@ -31,7 +32,9 @@ function phone(answers: Partial<Record<string, () => DecodedDict>> = {}) {
   const udp = (name: 'video' | 'audio', localPort: number) => ({
     localPort,
     message: undefined,
-    send: () => void sent[name]++,
+    send: () => {
+      sent[name]++;
+    },
     close: closes(name),
   });
   let ports = 0;
@@ -39,7 +42,7 @@ function phone(answers: Partial<Record<string, () => DecodedDict>> = {}) {
     localAddress: 'fd00::2',
     remoteAddress: 'fd00::1',
     onEnded: (f: (why: string) => void) => void (ended = f),
-    connect: async (port: number) => ({ port }),
+    connect: (port: number) => Promise.resolve({ port }),
     // the audio socket is made first
     createUdp: () => (ports++ % 2 ? udp('video', 7000 + ports) : udp('audio', 7000 + ports)),
     close: closes('stack'),
@@ -51,26 +54,31 @@ function phone(answers: Partial<Record<string, () => DecodedDict>> = {}) {
     startmediastream: STARTED,
   };
   const wire = {
-    openTunnel: async () => ({ stack, rsdPort: 1 }),
-    readServices: async () => ({
-      ports: { [DISPLAY]: 2, [HID_INDIGO]: 3, [HID_UNIVERSAL]: 4 },
-      properties: {},
-      close: closes('services'),
-    }),
-    invoke: async (_x: unknown, feature: string) => {
+    openTunnel: () => Promise.resolve({ stack, rsdPort: 1 }),
+    readServices: () =>
+      Promise.resolve({
+        ports: { [DISPLAY]: 2, [HID_INDIGO]: 3, [HID_UNIVERSAL]: 4 },
+        properties: {},
+        close: closes('services'),
+      }),
+    invoke: (_x: unknown, feature: string) => {
       const name = short(feature);
       asked.push(name);
-      return (answers[name] ?? defaults[name]!)();
+      return Promise.resolve((answers[name] ?? must(defaults[name], `an answer to ${name}`))());
     },
-    takeScreenshot: async () => {
+    takeScreenshot: () => {
       // a PNG's header, all a size needs
       const png = Buffer.alloc(24);
       png[0] = 0x89;
       png.writeUInt32BE(1179, 16);
       png.writeUInt32BE(2556, 20);
-      return png;
+      return Promise.resolve(png);
     },
-    orientationReader: async () => ({ read: async () => 1, close: closes('orientation') }),
+    orientationReader: () =>
+      Promise.resolve({
+        read: () => Promise.resolve(1),
+        close: closes('orientation'),
+      }),
     thisMac: () => ({ model: 'Mac17,1', avc: '1', build: '26A' }),
     xpc: () => ({ close: closes('xpc') }),
   } as unknown as StreamWire;
@@ -150,7 +158,7 @@ describe('a stream starting', () => {
     });
     const s = sink();
     const stream = await PhoneStream.open(udid, { quality: 'auto', wifi: false }, s.out, p.wire);
-    expect(s.live[0]!.mode).toBe('mode 5');
+    expect(s.live[0]?.mode).toBe('mode 5');
     expect(ownSessions(udid)).toHaveLength(2);
     await stream.stop();
   });
@@ -174,7 +182,8 @@ describe('a stream starting', () => {
 
   it('says a phone with no display service as the disk image it lacks', async () => {
     const p = phone();
-    p.wire.readServices = async () => ({ ports: {}, properties: {}, close: () => undefined });
+    p.wire.readServices = () =>
+      Promise.resolve({ ports: {}, properties: {}, close: () => undefined });
     await expect(
       PhoneStream.open(udid, { quality: 'auto', wifi: false }, sink().out, p.wire),
     ).rejects.toMatchObject({

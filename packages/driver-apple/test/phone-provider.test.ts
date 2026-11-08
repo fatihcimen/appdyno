@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
+import { must } from '@appdyno/core';
 import { phoneFacts, type ListedPhone } from '../src/devicectl.js';
 import { iphoneProvider, phoneNeed } from '../src/phone-provider.js';
 import { fine, overlapped, slowDevicectl } from './slow-devicectl.js';
@@ -8,7 +9,7 @@ const phone = '00001234-0123456789ABCDEF';
 
 describe('the iPhone provider', () => {
   it('lists the phones on a cable', async () => {
-    const p = iphoneProvider({ phones: async () => [{ udid: phone, deviceId: 4 }] });
+    const p = iphoneProvider({ phones: () => Promise.resolve([{ udid: phone, deviceId: 4 }]) });
     expect(await p.list()).toEqual([
       { serial: phone, state: 'usb', ready: true, model: 'iPhone', link: 'USB' },
     ]);
@@ -16,19 +17,25 @@ describe('the iPhone provider', () => {
 
   it('a phone paired for Wi-Fi stands in the list by the network while it has no cable', async () => {
     const paired = () => [phone];
-    const away = iphoneProvider({ phones: async () => [], paired });
+    const away = iphoneProvider({ phones: () => Promise.resolve([]), paired });
     expect(await away.list()).toEqual([
       { serial: phone, state: 'network', ready: false, model: 'iPhone', link: 'Wi-Fi' },
     ]);
-    await expect(away.need!({ serial: phone, state: 'network' })).resolves.toBeUndefined();
-    const home = iphoneProvider({ phones: async () => [{ udid: phone, deviceId: 4 }], paired });
+    await expect(away.need?.({ serial: phone, state: 'network' })).resolves.toBeUndefined();
+    const home = iphoneProvider({
+      phones: () => Promise.resolve([{ udid: phone, deviceId: 4 }]),
+      paired,
+    });
     expect(await home.list()).toMatchObject([{ state: 'usb', link: 'USB' }]);
   });
 });
 
 describe('what blocks a phone', () => {
   const need = (listed: ListedPhone | undefined, passcodeRequired = false) =>
-    phoneNeed({ listed: async () => listed, lockState: async () => ({ passcodeRequired }) });
+    phoneNeed({
+      listed: () => Promise.resolve(listed),
+      lockState: () => Promise.resolve({ passcodeRequired }),
+    });
 
   it('nothing on a paired phone in Developer Mode, unlocked', async () => {
     expect(await need(fine)).toBeUndefined();
@@ -65,7 +72,8 @@ describe('what blocks a phone', () => {
     JSON.parse(
       readFileSync(new URL('./fixtures/devicectl-list-devices.json', import.meta.url), 'utf8'),
     ) as { result: { devices: ListedPhone[] } }
-  ).result.devices[0]!;
+  ).result.devices[0];
+  assert(listed);
   const facts = {
     udid: '00001234-0123456789ABCDEF',
     marketingName: 'iPhone 13 Pro Max',
@@ -117,15 +125,14 @@ describe('what blocks a phone', () => {
 });
 
 describe('a phone on its cable', () => {
-  type Lock = { passcodeRequired: boolean };
   const unlocked = () => ({ passcodeRequired: false });
   /** A phone plugged in as `plugIn` says, listed and locked as `now` says; a read says whether its two reads overlapped. */
   const cable = (serial: string) => {
-    const now = { plugIn: 7, listed: fine, lock: unlocked as () => Lock };
+    const now = { plugIn: 7, listed: fine, lock: unlocked };
     const tools: ReturnType<typeof slowDevicectl>[] = [];
     const provider = () =>
       iphoneProvider({
-        phones: async () => [{ udid: serial, deviceId: now.plugIn }],
+        phones: () => Promise.resolve([{ udid: serial, deviceId: now.plugIn }]),
         devicectl: () => {
           const tool = slowDevicectl(
             () => now.listed,
@@ -137,8 +144,10 @@ describe('a phone on its cable', () => {
       });
     const p = provider();
     const read = async (from = p) => ({
-      need: await from.need!({ serial, state: 'usb' }).catch((e: Error) => e.message),
-      overlapped: overlapped(tools.at(-1)!.log),
+      need: await from
+        .need?.({ serial, state: 'usb' })
+        .catch((e: unknown) => (e instanceof Error ? e.message : String(e))),
+      overlapped: overlapped(must(tools.at(-1), 'a devicectl').log),
     });
     return { now, read, provider };
   };

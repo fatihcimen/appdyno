@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { run, type Check, type DeviceProvider } from '@appdyno/core';
+import { run, type Check, type DeviceProvider, must } from '@appdyno/core';
 import type { DeviceError } from '@appdyno/protocol';
 import { IosSimulatorDevice } from './simulator.js';
 import { Simulators } from './simulators.js';
@@ -54,7 +54,7 @@ export async function iosChecks(now = Date.now()): Promise<Check[]> {
   for (const udid of phones.length ? phones : explicit ? [undefined] : []) {
     const name = udid ? `iPhone ${udid}` : 'iPhone signing';
     try {
-      const signing = udid ? await findPhoneSigning(udid) : explicit!;
+      const signing = udid ? await findPhoneSigning(udid) : must(explicit, 'a signing');
       const profile = await readProfile(signing.profile);
       const days = profile.expires
         ? Math.floor((Date.parse(profile.expires) - now) / 86_400_000)
@@ -91,10 +91,10 @@ export async function directChecks(udid: string, direct = new DirectSim(udid)): 
     how === 'ok'
       ? { name, ok: true, detail: 'answers' }
       : { name, ok: false, warn: true, detail: `${how}; the runner does this instead` };
-  const r = await direct.probe().catch((e: Error) => ({
-    input: e.message.slice(0, 200),
-    read: e.message.slice(0, 200),
-  }));
+  const r = await direct.probe().catch((e: unknown) => {
+    const why = (e instanceof Error ? e.message : String(e)).slice(0, 200);
+    return { input: why, read: why };
+  });
   return [
     check(`simulator ${udid} direct input`, r.input),
     check(`simulator ${udid} direct read`, r.read),

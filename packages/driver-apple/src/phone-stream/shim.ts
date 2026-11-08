@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { lockdownFrame, nextLockdownMessage } from '../usbmux.js';
 import type { IpStack, TcpConnection } from './ipstack.js';
 import type { ServiceList } from './services.js';
@@ -36,7 +37,7 @@ export async function checkIn(connection: TcpConnection) {
 export async function askShim(connection: TcpConnection, message: Record<string, string>) {
   const answer = answers(connection, 1);
   connection.write(lockdownFrame({ Label: 'appdyno', ...message }));
-  return (await answer).out[0]!;
+  return must((await answer).out[0], 'an answer');
 }
 
 /** Opens SpringBoard's service by the tunnel. */

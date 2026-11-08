@@ -9,6 +9,7 @@ import {
   type LaunchOptions,
   type BiometricAnswer,
   type Push,
+  type PushRoute,
   type PushTokenKind,
   type DeviceEvents,
   type DeviceSettings,
@@ -321,8 +322,10 @@ export class SimulatorEvents implements DeviceEvents {
 
   private spawn = (...words: string[]) => this.simctl.exec(['spawn', this.udid, ...words]);
 
-  async pushRoutes() {
-    return simulatorRoutes(this.apns.routes());
+  pushRoutes() {
+    return new Promise<PushRoute[]>((resolve) => {
+      resolve(simulatorRoutes(this.apns.routes()));
+    });
   }
 
   push(app: string, push: Push) {
@@ -361,11 +364,11 @@ export class SimulatorEvents implements DeviceEvents {
     return held;
   }
 
-  async call(): Promise<void> {
-    throw new DeviceError('UNSUPPORTED', SIM_CANNOT.call);
+  call(): Promise<void> {
+    return Promise.reject(new DeviceError('UNSUPPORTED', SIM_CANNOT.call));
   }
 
-  async sms(): Promise<void> {
-    throw new DeviceError('UNSUPPORTED', SIM_CANNOT.sms);
+  sms(): Promise<void> {
+    return Promise.reject(new DeviceError('UNSUPPORTED', SIM_CANNOT.sms));
   }
 }

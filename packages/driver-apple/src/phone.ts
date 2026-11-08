@@ -16,6 +16,7 @@ import {
   type ScreenRecorder,
   type SystemSwipe,
   type TreeOptions,
+  must,
 } from '@appdyno/core';
 import { type IosDeviceOps, IosDevice } from './device.js';
 import { phoneRecorder } from './record.js';
@@ -88,10 +89,10 @@ export function phoneTransport(
       await writeFile(xctestrun, phoneXctestrun(r.app, r.appId), { mode: 0o600 });
       return { xctestrun, sha256: r.key };
     },
-    port: async () => 20_000 + Math.floor(Math.random() * 20_000),
+    port: () => Promise.resolve(20_000 + Math.floor(Math.random() * 20_000)),
     open: async (port) =>
       (await wifiOnly(udid))
-        ? (await loadPhoneStream())!.portOnWifi(udid, port)
+        ? must(await loadPhoneStream(), 'the phone stream').portOnWifi(udid, port)
         : connectPort(udid, port),
     tunnels: () => pairedPhones().includes(udid),
   };
@@ -185,12 +186,7 @@ export class IosPhoneDevice extends IosDevice {
     const at = { x: x * front.b[2], y: y * front.b[3] };
     return nodes.some(
       ({ f, c, b }) =>
-        f & 1 &&
-        TEXT_FIELDS.has(c ?? '') &&
-        at.x >= b[0] &&
-        at.x <= b[2] &&
-        at.y >= b[1] &&
-        at.y <= b[3],
+        f & 1 && TEXT_FIELDS.has(c) && at.x >= b[0] && at.x <= b[2] && at.y >= b[1] && at.y <= b[3],
     )
       ? at
       : false;
@@ -280,7 +276,10 @@ export class IosPhoneDevice extends IosDevice {
 
   /** A phone takes a mirror's input only while a stream runs: by the runner. */
   protected async drag(way: SystemSwipe) {
-    await this.act({ kind: 'gesture', pointers: [swipePath(way, this.helloInfo!.screen)] });
+    await this.act({
+      kind: 'gesture',
+      pointers: [swipePath(way, must(this.helloInfo, 'the hello').screen)],
+    });
   }
 
   /** The app in front on a screen that is on: a launch brings a running app forward as it is and lights a dark screen. */

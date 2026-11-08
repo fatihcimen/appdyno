@@ -24,8 +24,8 @@ describe('simulator inputs', () => {
 describe("a simulator's clipboard", () => {
   const device = (pasted: string) =>
     new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951', {
-      pbcopy: async () => undefined,
-      exec: async () => pasted,
+      pbcopy: () => Promise.resolve(undefined),
+      exec: () => Promise.resolve(pasted),
     } as unknown as Simctl);
   const runner = () => vi.spyOn(RpcDevice.prototype, 'setClipboard');
   afterEach(() => void vi.restoreAllMocks());
@@ -46,8 +46,8 @@ describe("a simulator's clipboard", () => {
     const set = runner().mockRejectedValue(new DeviceError('TIMEOUT', 'no answer in 15000 ms'));
     await expect(device('').setClipboard('pano')).rejects.toMatchObject({
       code: 'UNSUPPORTED',
-      message: expect.stringMatching(/did not take the text.*stalled/),
-      hint: expect.stringMatching(/type the text/),
+      message: expect.stringMatching(/did not take the text.*stalled/) as unknown,
+      hint: expect.stringMatching(/type the text/) as unknown,
       retryable: true,
     });
     expect(set).toHaveBeenCalledOnce();
@@ -158,12 +158,15 @@ describe('what a device measures', () => {
     const seen: string[] = [];
     const frames = { value: {}, raw: '', at: '' } as Awaited<ReturnType<typeof perf.frames>>;
     Object.assign(perf, {
-      resetFrames: async () => void seen.push('reset'),
-      frames: async () => (seen.push('read'), frames),
+      resetFrames: () => {
+        seen.push('reset');
+        return Promise.resolve();
+      },
+      frames: () => Promise.resolve((seen.push('read'), frames)),
     });
-    await expect(perf.framesDuring('a.b', 1, async () => seen.push('during'))).resolves.toBe(
-      frames,
-    );
+    await expect(
+      perf.framesDuring('a.b', 1, () => Promise.resolve(seen.push('during'))),
+    ).resolves.toBe(frames);
     expect(seen).toEqual(['reset', 'during', 'read']);
   });
 
@@ -200,13 +203,19 @@ describe('Spotlight on a simulator', () => {
   it('is read as the app it is, once it is in front: as the home screen app it showed only its keyboard', async () => {
     const device = new IosSimulatorDevice('7994F239-7CD7-4247-9FC0-4F92C7CFC951');
     const seen: string[] = [];
-    vi.spyOn(device, 'act').mockImplementation(async (a) => {
+    vi.spyOn(device, 'act').mockImplementation((a) => {
       seen.push(a.kind === 'key' ? a.key : a.kind);
-      return {};
+      return Promise.resolve({});
     });
-    vi.spyOn(device, 'target').mockImplementation(async (b) => void seen.push(`read ${b}`));
+    vi.spyOn(device, 'target').mockImplementation((b) => {
+      seen.push(`read ${b}`);
+      return Promise.resolve();
+    });
     const waits = device as unknown as { untilFront: (b: string) => Promise<void> };
-    vi.spyOn(waits, 'untilFront').mockImplementation(async (b) => void seen.push(`until ${b}`));
+    vi.spyOn(waits, 'untilFront').mockImplementation((b) => {
+      seen.push(`until ${b}`);
+      return Promise.resolve();
+    });
     await device.openView('spotlight');
     expect(seen).toEqual([
       'read com.apple.springboard',
@@ -233,7 +242,9 @@ describe('home on a simulator', () => {
     vi.spyOn(device, 'act').mockResolvedValue({ tree: shows('dev.app') });
     const looks = device as unknown as { frontNow: () => Promise<string | undefined> };
     vi.spyOn(looks, 'frontNow').mockResolvedValue(atPress);
-    vi.spyOn(device, 'foreground').mockImplementation(async () => fronts.shift() ?? 'dev.app');
+    vi.spyOn(device, 'foreground').mockImplementation(() =>
+      Promise.resolve(fronts.shift() ?? 'dev.app'),
+    );
     vi.spyOn(device, 'tree').mockResolvedValue(shows('com.apple.springboard'));
     return device.key('home', { read: 'tree' });
   };

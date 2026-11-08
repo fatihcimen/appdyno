@@ -8,15 +8,16 @@ const UDID = '00008110-000000000000001E';
 const phone = (offered: PhoneCondition[]) => {
   const induced: ({ id: string; profile: string } | undefined)[] = [];
   const stream = {
-    conditions: async () => offered,
-    induce: async (_: string, c?: { id: string; profile: string }) => {
+    conditions: () => Promise.resolve(offered),
+    induce: (_: string, c?: { id: string; profile: string }) => {
       induced.push(c);
       for (const o of offered) delete o.on;
       const on = offered.find((o) => o.id === c?.id);
       if (on && c) on.on = c.profile;
+      return Promise.resolve();
     },
   } as unknown as PhoneStreamModule;
-  return { conditions: new PhoneConditions(UDID, async () => stream), induced };
+  return { conditions: new PhoneConditions(UDID, () => Promise.resolve(stream)), induced };
 };
 const offer = (): PhoneCondition[] => [
   {
@@ -63,7 +64,7 @@ describe("an iPhone's conditions", () => {
   });
 
   it('refuses with why where the phone stream is not in this build', async () => {
-    const gone = new PhoneConditions(UDID, async () => undefined);
+    const gone = new PhoneConditions(UDID, () => Promise.resolve(undefined));
     await expect(gone.set('network', 'slow')).rejects.toThrow('this build has no phone stream');
     await expect(gone.get('thermal')).rejects.toThrow('this build has no phone stream');
   });

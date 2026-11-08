@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { run, type AppLink } from '@appdyno/core';
+import { run, type AppLink, must } from '@appdyno/core';
 import type { Simctl } from './simctl.js';
 
 const DOMAINS = 'com.apple.developer.associated-domains';
@@ -16,7 +16,9 @@ export const schemesOf = (urlTypes: unknown) =>
  */
 export function domainsOf(xml: string) {
   const list = new RegExp(`<key>${DOMAINS}</key>\\s*<array>([\\s\\S]*?)</array>`).exec(xml)?.[1];
-  return [...(list ?? '').matchAll(/<string>applinks:([^<?]+)[^<]*<\/string>/g)].map((m) => m[1]!);
+  return [...(list ?? '').matchAll(/<string>applinks:([^<?]+)[^<]*<\/string>/g)].map((m) =>
+    must(m[1], 'a domain'),
+  );
 }
 
 /** A key of an app's Info.plist: an array or a dictionary as JSON, `raw` a string; nothing where it has none. */

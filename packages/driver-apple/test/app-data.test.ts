@@ -19,8 +19,9 @@ describe('an iOS app data', () => {
   };
   const simulator = () => {
     const simctl = {
-      terminate: async () => undefined,
-      exec: async (args: string[]) => (args[0] === 'get_app_container' ? `${container}\n` : ''),
+      terminate: () => Promise.resolve(undefined),
+      exec: (args: string[]) =>
+        Promise.resolve(args[0] === 'get_app_container' ? `${container}\n` : ''),
     } as unknown as Simctl;
     return new SimulatorApps(simctl, UDID);
   };
@@ -62,10 +63,13 @@ describe('an iOS app data', () => {
     const stops: string[] = [];
     const ctl = {
       udid: UDID,
-      terminate: async (app: string) => void stops.push(app),
-      json: async (args: string[]) => {
+      terminate: (app: string) => {
+        stops.push(app);
+        return Promise.resolve();
+      },
+      json: (args: string[]) => {
         calls.push(args);
-        return {};
+        return Promise.resolve({});
       },
     } as unknown as Devicectl;
     const from = join(folder, 'from');
@@ -89,7 +93,7 @@ describe('a grant', () => {
 describe('a launch on a phone', () => {
   it("keeps the app's arguments from the tool's own, as a dash would be taken for one", async () => {
     let args: string[] = [];
-    const json = async (given: string[]) => ((args = given), {});
+    const json = (given: string[]) => Promise.resolve(((args = given), {}));
     await new PhoneApps({ udid: UDID, json } as unknown as Devicectl).launchWith(APP, {
       language: 'de',
       args: ['-mode', 'test'],

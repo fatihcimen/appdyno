@@ -1,4 +1,4 @@
-import { Cannot, cannot, reportProgress, sleep, type CompileMode } from '@appdyno/core';
+import { Cannot, cannot, reportProgress, sleep, type CompileMode, must } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 
 const SHOWN_WITHIN_MS = 20_000;
@@ -7,7 +7,7 @@ const BEFORE_A_LAUNCH_MS = 500;
 /** A launch that really took place: of two in the middle, the lower. */
 export const lowerMedian = (xs: number[]) => {
   const s = [...xs].sort((a, b) => a - b);
-  return s.length ? s[Math.floor((s.length - 1) / 2)]! : 0;
+  return s.length ? must(s[Math.floor((s.length - 1) / 2)], 'a launch') : 0;
 };
 
 /** The times of `repeats` launches, after a first one that warms up. */

@@ -14,6 +14,10 @@ export const uidOf = (v: Plist | undefined): number | undefined =>
     ? (v[UID] as number | undefined)
     : undefined;
 
+/** A device's string or number as text, and '' for what is neither, or missing. */
+export const plistText = (v: unknown) =>
+  typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '';
+
 /** Past any message here: an object may be named twice, so that a few bytes can unfold for as long as there is memory. */
 export const MOST_VALUES = 1 << 20;
 
@@ -21,7 +25,7 @@ export const MOST_VALUES = 1 << 20;
 export function readBplist(b: Buffer): Plist {
   if (b.toString('latin1', 0, 8) !== 'bplist00') throw new Error('not a binary plist');
   const trailer = b.subarray(b.length - 32);
-  const [offsetSize, refSize] = [trailer[6]!, trailer[7]!];
+  const [offsetSize, refSize] = [trailer.readUInt8(6), trailer.readUInt8(7)];
   const count = Number(trailer.readBigUInt64BE(8));
   const top = Number(trailer.readBigUInt64BE(16));
   const table = Number(trailer.readBigUInt64BE(24));
@@ -29,11 +33,11 @@ export function readBplist(b: Buffer): Plist {
   const read = (i: number): Plist => {
     if (--left < 0) throw new Error(`a plist of more than ${MOST_VALUES} values`);
     let p = b.readUIntBE(table + i * offsetSize, offsetSize);
-    const marker = b[p++]!;
+    const marker = b.readUInt8(p++);
     const low = marker & 15;
     const size = () => {
       if (low !== 15) return low;
-      const width = 1 << (b[p++]! & 15);
+      const width = 1 << (b.readUInt8(p++) & 15);
       const n = b.readUIntBE(p, width);
       p += width;
       return n;
@@ -77,7 +81,7 @@ export function readBplist(b: Buffer): Plist {
         const n = size();
         const keys = refs(n, 0) as string[];
         const values = refs(n, n);
-        return Object.fromEntries(keys.map((k, j) => [k, values[j]!]));
+        return Object.fromEntries(keys.map((k, j) => [k, values[j] ?? null]));
       }
       default:
         throw new Error(`a plist object of kind ${marker >> 4}`);
@@ -88,7 +92,8 @@ export function readBplist(b: Buffer): Plist {
 }
 
 export function writeBplist(root: Plist): Buffer {
-  const objects: { own: Buffer; refs?: number[] }[] = [];
+  type Written = { own: Buffer; refs?: number[] };
+  const objects: Written[] = [];
   const sized = (kind: number, n: number) => {
     if (n < 15) return Buffer.from([(kind << 4) | n]);
     const length = Buffer.alloc(6);
@@ -99,6 +104,7 @@ export function writeBplist(root: Plist): Buffer {
   };
   const add = (v: Plist): number => {
     const i = objects.length;
+    const uid = uidOf(v);
     if (typeof v === 'string') {
       const ascii = Buffer.byteLength(v) === v.length;
       const body = ascii ? Buffer.from(v, 'latin1') : Buffer.from(v, 'utf16le').swap16();
@@ -115,17 +121,19 @@ export function writeBplist(root: Plist): Buffer {
     else if (v === null) objects.push({ own: Buffer.from([0]) });
     else if (Buffer.isBuffer(v)) objects.push({ own: Buffer.concat([sized(4, v.length), v]) });
     else if (Array.isArray(v)) {
-      objects.push({ own: sized(10, v.length) });
-      objects[i]!.refs = v.map(add);
-    } else if (uidOf(v) !== undefined) {
+      const list: Written = { own: sized(10, v.length) };
+      objects.push(list);
+      list.refs = v.map(add);
+    } else if (uid !== undefined) {
       const n = Buffer.alloc(5);
       n[0] = 0x83;
-      n.writeUInt32BE(uidOf(v)!, 1);
+      n.writeUInt32BE(uid, 1);
       objects.push({ own: n });
     } else {
-      const keys = Object.keys(v);
-      objects.push({ own: sized(13, keys.length) });
-      objects[i]!.refs = [...keys.map(add), ...keys.map((k) => add(v[k]!))];
+      const entries = Object.entries(v);
+      const dict: Written = { own: sized(13, entries.length) };
+      objects.push(dict);
+      dict.refs = [...entries.map(([k]) => add(k)), ...entries.map(([, x]) => add(x))];
     }
     return i;
   };
@@ -159,7 +167,7 @@ const LISTING_MS = 1_500;
 /** `WIRIsApplicationActiveKey`: 2 is in front. */
 const IN_FRONT = 2;
 
-type Rpc = { __selector: string; __argument: Record<string, Plist> };
+type Rpc = { __selector: string; __argument: Record<string, unknown> };
 type App = Record<string, Plist>;
 
 /** One conversation with a simulator's `webinspectord`: messages each way, and a wait for one. */
@@ -294,15 +302,16 @@ export class SimulatorWeb implements WebInspector {
         );
         const listing = (m?.__argument.WIRListingKey ?? {}) as Record<
           string,
-          Record<string, Plist>
+          Record<string, unknown>
         >;
+        const app = bundleOf(a);
         for (const p of Object.values(listing))
           if (p.WIRTypeKey === 'WIRTypeWebPage' || p.WIRTypeKey === 'WIRTypeWeb')
             pages.push({
               id: `${appKeyOf(a)}/${String(p.WIRPageIdentifierKey)}`,
-              title: String(p.WIRTitleKey ?? ''),
-              url: String(p.WIRURLKey ?? ''),
-              ...(bundleOf(a) && { app: bundleOf(a)! }),
+              title: plistText(p.WIRTitleKey),
+              url: plistText(p.WIRURLKey),
+              ...(app && { app }),
               ...(a.WIRIsApplicationActiveKey === IN_FRONT && { visible: true }),
             });
       }
@@ -368,7 +377,8 @@ export class SimulatorWeb implements WebInspector {
         result?: { result?: { value?: unknown; description?: string }; wasThrown?: boolean };
         error?: { message?: string };
       };
-      if (r.error) throw new DeviceError('INTERNAL', `the page refused: ${r.error.message}`);
+      if (r.error)
+        throw new DeviceError('INTERNAL', `the page refused: ${String(r.error.message)}`);
       if (r.result?.wasThrown)
         throw new DeviceError(
           'INVALID_ARGUMENT',

@@ -30,7 +30,7 @@ describe("an app's folder on a simulator", () => {
     const folder = mkdtempSync(join(tmpdir(), 'appdyno-container-'));
     const asked: string[][] = [];
     const simctl = Object.assign(new Simctl({}), {
-      exec: async (args: string[]) => (asked.push(args), `${folder}\n`),
+      exec: (args: string[]) => Promise.resolve((asked.push(args), `${folder}\n`)),
     });
     const udid = '7994F239-7CD7-4247-9FC0-4F92C7CFC951';
     expect(await simctl.appContainer(udid, 'dev.app')).toBe(folder);

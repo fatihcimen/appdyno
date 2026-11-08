@@ -57,7 +57,7 @@ describe('the runner build', () => {
     const bin = join(dir, 'xcodebuild');
     writeFileSync(bin, `#!/bin/sh\ncat <<'EOF'\n${output}\nEOF\nexit ${code}\n`);
     chmodSync(bin, 0o755);
-    process.env.PATH = `${dir}:${path}`;
+    process.env.PATH = `${dir}:${String(path)}`;
   };
 
   it('knows a phase from a line of output, and nothing from others', () => {

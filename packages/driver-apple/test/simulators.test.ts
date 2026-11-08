@@ -7,30 +7,32 @@ const TYPE = 'com.apple.CoreSimulator.SimDeviceType.';
 
 const simulators = () =>
   new Simulators({
-    list: async () => [
-      {
-        udid: 'A',
-        name: 'Mine',
-        state: 'Booted',
-        runtime: RUNTIME,
-        deviceType: `${TYPE}iPhone-17-Pro`,
-      },
-      {
-        udid: 'C',
-        name: 'Tablet',
-        state: 'Shutdown',
-        runtime: RUNTIME,
-        deviceType: `${TYPE}iPad-Pro-11-inch-M5-12GB`,
-      },
-      {
-        udid: 'B',
-        name: 'A watch',
-        state: 'Shutdown',
-        runtime: RUNTIME,
-        deviceType: `${TYPE}Apple-Watch-Series-12-46mm`,
-      },
-    ],
-    typeNames: async () => new Map([[`${TYPE}iPad-Pro-11-inch-M5-12GB`, 'iPad Pro 11-inch (M5)']]),
+    list: () =>
+      Promise.resolve([
+        {
+          udid: 'A',
+          name: 'Mine',
+          state: 'Booted',
+          runtime: RUNTIME,
+          deviceType: `${TYPE}iPhone-17-Pro`,
+        },
+        {
+          udid: 'C',
+          name: 'Tablet',
+          state: 'Shutdown',
+          runtime: RUNTIME,
+          deviceType: `${TYPE}iPad-Pro-11-inch-M5-12GB`,
+        },
+        {
+          udid: 'B',
+          name: 'A watch',
+          state: 'Shutdown',
+          runtime: RUNTIME,
+          deviceType: `${TYPE}Apple-Watch-Series-12-46mm`,
+        },
+      ]),
+    typeNames: () =>
+      Promise.resolve(new Map([[`${TYPE}iPad-Pro-11-inch-M5-12GB`, 'iPad Pro 11-inch (M5)']])),
   } as unknown as Simctl);
 
 describe("a Mac's simulators", () => {

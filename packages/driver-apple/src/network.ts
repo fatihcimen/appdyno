@@ -20,7 +20,9 @@ import { assertBundle, type Simctl } from './simctl.js';
 export async function macProxy(): Promise<string> {
   const { stdout } = await run('scutil', ['--proxy']);
   const word = (k: string) => new RegExp(`\\b${k} : (\\S+)`).exec(stdout)?.[1];
-  return word('HTTPEnable') === '1' ? `${word('HTTPProxy')}:${word('HTTPPort')}` : 'none';
+  return word('HTTPEnable') === '1'
+    ? `${String(word('HTTPProxy'))}:${String(word('HTTPPort'))}`
+    : 'none';
 }
 
 /** An app on a simulator with the probe in it (`ios/SimHelper/NetProbe.m`), which logs to a file here. */
@@ -30,15 +32,15 @@ export class SimulatorNetwork implements NetworkSource {
     private readonly udid: string,
   ) {}
 
-  async paths(): Promise<NetworkPath[]> {
-    return [
+  paths(): Promise<NetworkPath[]> {
+    return Promise.resolve([
       {
         via: 'probe',
         sees: 'the URLSession requests of the app, restarted with the probe: method, URL, status, time, size. Not background sessions, WKWebView or Network.framework. No bodies',
       },
       { via: 'packets', refused: 'a simulator has no packet trace of its own' },
       { via: 'bytes', refused: "a simulator's traffic is the Mac's: no count per app" },
-    ];
+    ]);
   }
 
   async start(via: NetworkVia, app: string | undefined): Promise<NetworkHandle> {
@@ -68,25 +70,10 @@ export class SimulatorNetwork implements NetworkSource {
     return { via, log };
   }
 
-  async read(h: NetworkHandle): Promise<NetworkAnswer> {
-    const log = String(h.log);
-    if (!existsSync(log))
-      return {
-        entries: [],
-        note: 'no request has finished in the app since the probe went in',
-      };
-    const entries = readFileSync(log, 'utf8')
-      .split('\n')
-      .filter(Boolean)
-      .map((l) => {
-        const e = JSON.parse(l) as { at: number; error?: string } & NetworkEntry;
-        return {
-          ...e,
-          at: new Date(e.at).toISOString(),
-          ms: Math.round(e.ms ?? 0),
-        };
-      });
-    return { entries };
+  read(h: NetworkHandle): Promise<NetworkAnswer> {
+    return new Promise((resolve) => {
+      resolve(probeLog(String(h.log)));
+    });
   }
 
   async stop(h: NetworkHandle): Promise<NetworkAnswer> {
@@ -94,4 +81,24 @@ export class SimulatorNetwork implements NetworkSource {
     rmSync(String(h.log), { force: true });
     return { ...answer, note: 'the probe stays in the app until it next starts' };
   }
+}
+
+function probeLog(log: string): NetworkAnswer {
+  if (!existsSync(log))
+    return {
+      entries: [],
+      note: 'no request has finished in the app since the probe went in',
+    };
+  const entries = readFileSync(log, 'utf8')
+    .split('\n')
+    .filter(Boolean)
+    .map((l) => {
+      const e = JSON.parse(l) as { at: number; error?: string } & NetworkEntry;
+      return {
+        ...e,
+        at: new Date(e.at).toISOString(),
+        ms: Math.round(e.ms ?? 0),
+      };
+    });
+  return { entries };
 }

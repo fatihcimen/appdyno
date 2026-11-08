@@ -94,8 +94,8 @@ export class RemoteXpc {
     while (this.inbound.length >= 9) {
       const n = this.inbound.readUIntBE(0, 3);
       if (this.inbound.length < 9 + n) return;
-      const type = this.inbound[3]!;
-      const flags = this.inbound[4]!;
+      const type = this.inbound.readUInt8(3);
+      const flags = this.inbound.readUInt8(4);
       const stream = this.inbound.readUInt32BE(5) & 0x7fffffff;
       const payload = this.inbound.subarray(9, 9 + n);
       this.inbound = this.inbound.subarray(9 + n);

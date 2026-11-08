@@ -26,9 +26,10 @@ const exported = async (tracePath: string, xpath: string) =>
     await exporting(['--input', tracePath, '--xpath', xpath], {
       maxBuffer: 256 * 1024 * 1024,
       timeout: 300_000,
-    }).catch((e: { stderr?: string; message: string }) => {
+    }).catch((e: unknown) => {
       // says nothing of what the device can do: a recording cut short on a loaded Mac reads so
-      const said = (e.stderr ?? e.message).trim().split('\n').slice(0, 2).join(' ');
+      const { stderr, message } = e as { stderr?: string; message: string };
+      const said = (stderr ?? message).trim().split('\n').slice(0, 2).join(' ');
       throw new DeviceError(
         'TIMEOUT',
         `the trace tool cannot read its own trace: ${said}`,

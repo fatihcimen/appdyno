@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
+import { must } from '@appdyno/core';
 import { probeFrames, probeHead, probeMarks, probeSummary, probeWindow } from '../src/probe.js';
 
 // recorded from the fixture's stall screen: a window with one tap of 500 ms, as frameTrace keeps it
@@ -12,16 +13,21 @@ const frame = (at: number, dt = 16.7) => `{"t":${T + at},"dt":${dt},"v":16.7}`;
 describe('the frame probe', () => {
   it('places each frame on the clock: a stall began when the frame before it ended', () => {
     const marks = probeMarks(recorded);
-    const stall = marks.find((m) => m.ms === 522.2)!;
-    expect(stall).toEqual({ at: expect.closeTo(1793666303259.6, 1), ms: 522.2, late: true });
+    const stall = marks.find((m) => m.ms === 522.2);
+    assert(stall);
+    expect(stall).toEqual({
+      at: expect.closeTo(1793666303259.6, 1) as unknown,
+      ms: 522.2,
+      late: true,
+    });
     // the frame after it came late too: 27.8 ms, over one and a half of the display's 16.7
     expect(marks.filter((m) => m.late).map((m) => m.ms)).toEqual([522.2, 27.8]);
   });
 
   it('sums up a recorded window: the 500 ms stall, the touch, the rate', () => {
     const times = [...recorded.matchAll(/"t":([\d.]+),"dt"/g)].map((m) => Number(m[1]));
-    const from = times[0]! - 1;
-    const to = times.at(-1)! + 1;
+    const from = must(times[0], 'a first time') - 1;
+    const to = must(times.at(-1), 'a last time') + 1;
     const s = probeSummary(recorded, from, to);
     expect(s.stalls.count).toBe(1);
     expect(s.stalls.worstMs).toBeGreaterThan(450);

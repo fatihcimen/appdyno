@@ -13,7 +13,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Socket } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { deviceStateFile, processAlive, startOf, thisOwner } from '@appdyno/core';
+import { deviceStateFile, processAlive, startOf, thisOwner, must } from '@appdyno/core';
 import { fakeAgentStream, HELLO, TOKEN } from '../../core/test/fake-agent.js';
 import { IosRunnerLauncher, simulatorTransport, type RunnerTransport } from '../src/runner.js';
 
@@ -31,20 +31,24 @@ describe('a runner of another build on a simulator', () => {
     );
     const file = deviceStateFile('agent-hosts', UDID);
     mkdirSync(join(file, '..'), { recursive: true });
-    const host = { ...thisOwner('host'), pid: other.pid!, started: startOf(other.pid!) };
+    const pid = must(other.pid, 'its pid');
+    const host = { ...thisOwner('host'), pid, started: startOf(pid) };
     writeFileSync(file, JSON.stringify(used ? [host] : []));
   };
 
-  const transport = (): RunnerTransport => ({
-    build: async () => ({ xctestrun: 'x', sha256: 'a'.repeat(64) }),
-    port: vi.fn(async () => {
-      throw new Error('a new runner was asked for');
-    }),
-    open: async () => {
-      const { host } = fakeAgentStream();
-      return { socket: Object.assign(host, { setNoDelay: () => undefined }) as unknown as Socket };
-    },
-  });
+  const transport = () =>
+    ({
+      build: () => Promise.resolve({ xctestrun: 'x', sha256: 'a'.repeat(64) }),
+      port: vi.fn(() => {
+        return Promise.reject(new Error('a new runner was asked for'));
+      }),
+      open: () => {
+        const { host } = fakeAgentStream();
+        return Promise.resolve({
+          socket: Object.assign(host, { setNoDelay: () => undefined }) as unknown as Socket,
+        });
+      },
+    }) satisfies RunnerTransport;
 
   beforeEach(() => {
     state = mkdtempSync(join(tmpdir(), 'appdyno-runner-'));
@@ -109,12 +113,14 @@ describe('a start that cannot come', () => {
     major: number,
     handlers: Parameters<typeof fakeAgentStream>[0] = {},
   ): RunnerTransport => ({
-    build: async () => ({ xctestrun: '/products/x.xctestrun', sha256: 'a'.repeat(64) }),
-    port: async () => 1,
-    open: async () => {
+    build: () => Promise.resolve({ xctestrun: '/products/x.xctestrun', sha256: 'a'.repeat(64) }),
+    port: () => Promise.resolve(1),
+    open: () => {
       const hello = () => ({ result: { ...HELLO, protocol: { major } } });
       const { host } = fakeAgentStream({ hello, ...handlers });
-      return { socket: Object.assign(host, { setNoDelay: () => undefined }) as unknown as Socket };
+      return Promise.resolve({
+        socket: Object.assign(host, { setNoDelay: () => undefined }) as unknown as Socket,
+      });
     },
   });
 
@@ -128,7 +134,7 @@ describe('a start that cannot come', () => {
       `#!${process.execPath}\nsetTimeout(() => {}, 30000);\n`,
     );
     chmodSync(join(state, 'xcodebuild'), 0o755);
-    process.env.PATH = `${state}:${PATH}`;
+    process.env.PATH = `${state}:${String(PATH)}`;
   });
   afterEach(() => {
     process.env.PATH = PATH;
@@ -142,8 +148,8 @@ describe('a start that cannot come', () => {
     const started = Date.now();
     await expect(new IosRunnerLauncher(UDID, through(1)).connect()).rejects.toMatchObject({
       code: 'AGENT_VERSION_MISMATCH',
-      message: expect.stringContaining('runner protocol 1'),
-      hint: expect.stringContaining('/products/x.xctestrun'),
+      message: expect.stringContaining('runner protocol 1') as unknown,
+      hint: expect.stringContaining('/products/x.xctestrun') as unknown,
     });
     expect(Date.now() - started).toBeLessThan(4_000);
     expect(stopped).toHaveBeenCalledWith(expect.any(Number), 'SIGTERM');
@@ -201,7 +207,7 @@ setTimeout(() => {}, 30000);
     let erased = -1;
     const runner = new IosRunnerLauncher(udid, {
       ...through(2),
-      port: async () => ++port,
+      port: () => Promise.resolve(++port),
       open: async (at) => {
         if (at === erased) throw new Error('its runner went with the erase');
         return through(2).open(at);
@@ -243,7 +249,7 @@ setTimeout(() => {}, 30000);
     const runner = new IosRunnerLauncher(udid, {
       ...through(2),
       stop: 'kill',
-      down: async () => down,
+      down: () => Promise.resolve(down),
     });
     const { rpc } = await runner.connect();
     const { pid } = JSON.parse(readFileSync(join(state, `ios-${udid}.json`), 'utf8')) as {
@@ -268,8 +274,8 @@ setTimeout(() => {}, 30000);
   it('is waited for no longer than one, with who holds it said', async () => {
     const holder = {
       ...thisOwner('a runner start'),
-      pid: other.pid!,
-      started: startOf(other.pid!),
+      pid: must(other.pid, 'its pid'),
+      started: startOf(must(other.pid, 'its pid')),
     };
     writeFileSync(join(state, `ios-${UDID}.starting`), JSON.stringify(holder));
     const asked = new IosRunnerLauncher(UDID, through(2)).connect();
@@ -278,7 +284,7 @@ setTimeout(() => {}, 30000);
     vi.spyOn(Date, 'now').mockImplementation(() => now + 181_000);
     await expect(asked).rejects.toMatchObject({
       code: 'AGENT_UNAVAILABLE',
-      message: expect.stringContaining(`pid ${other.pid}`),
+      message: expect.stringContaining(`pid ${must(other.pid, 'its pid')}`) as unknown,
     });
   });
 });

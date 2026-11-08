@@ -31,8 +31,8 @@ function checksum(parts: Buffer[]): number {
   let s = 0;
   for (const b of parts) {
     let i = 0;
-    for (; i + 1 < b.length; i += 2) s += (b[i]! << 8) | b[i + 1]!;
-    if (i < b.length) s += b[i]! << 8;
+    for (; i + 1 < b.length; i += 2) s += b.readUInt16BE(i);
+    if (i < b.length) s += b.readUInt8(i) << 8;
   }
   while (s > 0xffff) s = (s & 0xffff) + (s >>> 16);
   return ~s & 0xffff;
@@ -53,13 +53,13 @@ export function ipv6Bytes(text: string): Buffer {
   return b;
 }
 
-export interface PacketStream {
+export type PacketStream = {
   write(b: Buffer): unknown;
   on(event: 'data', listener: (d: Buffer) => void): unknown;
   on(event: 'close', listener: () => void): unknown;
   on(event: 'error', listener: (e: Error) => void): unknown;
   destroy(): unknown;
-}
+};
 
 type Sent = { seq: number; end: number; flags: number; data: Buffer; syn: boolean };
 
@@ -167,11 +167,10 @@ export class TcpConnection {
   }
 
   private flush() {
-    while (this.waiting.length && !this.closed) {
+    for (let head = this.waiting[0]; head && !this.closed; head = this.waiting[0]) {
       const inFlight = this.unacked.reduce((n, s) => n + s.data.length, 0);
       const room = this.peerWindow - inFlight;
       if (room <= 0) return;
-      const head = this.waiting[0]!;
       const take = Math.min(head.length, this.stack.mss, room);
       this.transmit(PSH, head.subarray(0, take));
       if (take === head.length) this.waiting.shift();
@@ -228,7 +227,7 @@ export class TcpConnection {
   }
 
   onPacket(p: Buffer) {
-    const flags = p[13]!;
+    const flags = p.readUInt8(13);
     const seq = p.readInt32BE(4);
     if (flags & RST) {
       const refused = new PortRefused(`port ${this.remotePort} refused the connection`);
@@ -249,7 +248,7 @@ export class TcpConnection {
       }
       return;
     }
-    const data = p.subarray((p[12]! >> 4) * 4);
+    const data = p.subarray((p.readUInt8(12) >> 4) * 4);
     if (data.length) this.deliver(seq, Buffer.from(data));
     const finAt = (seq + data.length) | 0;
     if (flags & FIN && finAt === this.rcv) {

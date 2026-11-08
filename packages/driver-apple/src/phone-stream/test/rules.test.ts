@@ -42,9 +42,10 @@ describe('what this folder must never do', () => {
       ]) {
         expect(text.includes(banned), `${file}: ${banned}`).toBe(false);
       }
-      expect(/from 'node:net'/.test(text) && !/import \{ (type )?Socket \}/.test(text), file).toBe(
-        false,
-      );
+      expect(
+        text.includes("from 'node:net'") && !/import \{ (type )?Socket \}/.test(text),
+        file,
+      ).toBe(false);
       // the one place that opens a socket of this Mac, to what a phone advertises for pairing and the port it then names
       expect(text.includes('new Socket()') && file !== 'wifi.ts', file).toBe(false);
     }
@@ -60,7 +61,7 @@ describe('what this folder must never do', () => {
   it('reads the pair record and never writes it, and never asks to pair', () => {
     const asked = new Set<string>();
     for (const { file, text } of sources()) {
-      for (const m of text.matchAll(/Request: '(\w+)'/g)) asked.add(m[1]!);
+      for (const [, request] of text.matchAll(/Request: '(\w+)'/g)) if (request) asked.add(request);
       for (const banned of [
         'SavePairRecord',
         'DeletePairRecord',
@@ -87,7 +88,7 @@ describe('what this folder must never do', () => {
     for (const { file, text } of sources()) {
       expect(/CoreMediaIO|AVCapture/.test(text), file).toBe(false);
       // the phone's one question, which a person asks for by a command of their own
-      expect(/_remotepairing/.test(text) && file !== 'wifi.ts', file).toBe(false);
+      expect(text.includes('_remotepairing') && file !== 'wifi.ts', file).toBe(false);
     }
   });
 });
@@ -225,10 +226,14 @@ describe('frames to a viewer', () => {
     });
     const said: { method: Notification; params: unknown }[] = [];
     for (let at = 0; at < got.length; at += 5 + got.readUInt32BE(at))
-      said.push(JSON.parse(got.toString('utf8', at + 5, at + 5 + got.readUInt32BE(at))));
+      said.push(
+        JSON.parse(
+          got.toString('utf8', at + 5, at + 5 + got.readUInt32BE(at)),
+        ) as (typeof said)[number],
+      );
     expect(said.map((m) => m.method)).toEqual(['stream.info', 'stream.turns', 'stream.counters']);
     for (const m of said) expect(() => NOTIFICATIONS[m.method].parse(m.params)).not.toThrow();
-    expect(said[2]!.params).toEqual({ packets: 2400, lostPackets: 3, droppedPictures: 0 });
+    expect(said[2]?.params).toEqual({ packets: 2400, lostPackets: 3, droppedPictures: 0 });
     w.close();
     closeSync(fd);
   });
@@ -249,7 +254,7 @@ describe('frames to a viewer', () => {
     closeSync(fd);
   });
 
-  it('a file that is gone, or a viewer that never comes, is said once', async () => {
+  it('a file that is gone, or a viewer that never comes, is said once', () => {
     const said: string[] = [];
     const w = new FrameWriter(
       () => undefined,

@@ -7,7 +7,8 @@ import { DeviceError } from '@appdyno/protocol';
 import { BRAND_VERSION, brandRunner } from './brand.js';
 import { xcodeEnv } from './simctl.js';
 import { parsePlist, plistXml } from './usbmux.js';
-import { nativeFile, run } from '@appdyno/core';
+import { plistText } from './webinspector.js';
+import { nativeFile, run, must } from '@appdyno/core';
 
 /**
  * Where the phone's signing comes from: a development profile for the runner and an identity. Without a
@@ -48,8 +49,8 @@ export function runnerAppId(appId: string): string {
 /** The development identities a `security find-identity` listing names, by certificate hash. */
 export function developmentIdentities(listing: string): Set<string> {
   return new Set(
-    [...listing.matchAll(/\b([0-9A-F]{40}) "(?:Apple Development|iPhone Developer):/g)].map(
-      (m) => m[1]!,
+    [...listing.matchAll(/\b([0-9A-F]{40}) "(?:Apple Development|iPhone Developer):/g)].map((m) =>
+      must(m[1], 'a hash'),
     ),
   );
 }
@@ -178,8 +179,8 @@ async function xcodeProvision(team: string) {
 export function parseProfile(xml: string): Profile {
   const p = parsePlist(xml) as Record<string, unknown>;
   const ent = (p.Entitlements ?? {}) as Record<string, unknown>;
-  const team = String((p.TeamIdentifier as string[] | undefined)?.[0] ?? '');
-  const full = String(ent['application-identifier'] ?? '');
+  const team = plistText((p.TeamIdentifier as unknown[] | undefined)?.[0]);
+  const full = plistText(ent['application-identifier']);
   return {
     team,
     appId: full.startsWith(`${team}.`) ? full.slice(team.length + 1) : full,
@@ -187,15 +188,16 @@ export function parseProfile(xml: string): Profile {
       createHash('sha1').update(Buffer.from(b64, 'base64')).digest('hex').toUpperCase(),
     ),
     devices: ((p.ProvisionedDevices as string[] | undefined) ?? []).map(String),
-    ...(p.ExpirationDate !== undefined && { expires: String(p.ExpirationDate) }),
+    ...(typeof p.ExpirationDate === 'string' && { expires: p.ExpirationDate }),
   };
 }
 
 export async function readProfile(path: string): Promise<Profile> {
-  const { stdout } = await run('security', ['cms', '-D', '-i', path]).catch((e: Error) => {
+  const { stdout } = await run('security', ['cms', '-D', '-i', path]).catch((e: unknown) => {
+    const message = e instanceof Error ? e.message : String(e);
     throw new DeviceError(
       'UNSUPPORTED',
-      `cannot read the signing profile ${path}: ${e.message.split('\n')[1] ?? e.message}`,
+      `cannot read the signing profile ${path}: ${message.split('\n')[1] ?? message}`,
       'it needs your login keychain: `security default-keychain` says which is in use for this HOME',
     );
   });

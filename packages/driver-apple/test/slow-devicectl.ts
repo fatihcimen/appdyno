@@ -20,7 +20,7 @@ export function slowDevicectl(
         try {
           done(answer());
         } catch (e) {
-          fail(e as Error);
+          fail(e instanceof Error ? e : new Error(String(e)));
         }
       }, 5),
     );

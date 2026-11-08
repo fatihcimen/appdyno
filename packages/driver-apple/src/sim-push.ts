@@ -1,7 +1,13 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { PUSH_PLACEHOLDERS, PUSH_TYPES, type Push, type PushRoute } from '@appdyno/core';
+import {
+  PUSH_PLACEHOLDERS,
+  PUSH_TYPES,
+  type Push,
+  type PushRoute,
+  type PushType,
+} from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { apnsPayload } from './apns-payload.js';
 import { assertBundle, type Simctl } from './simctl.js';
@@ -13,7 +19,7 @@ const BY_APNS =
  * Why a simulator takes no push of these types by simctl, which hands the notification center a request of its own
  * making: apsd, where an extension is run and a Live Activity's push arrives, never sees it.
  */
-const CANNOT: Record<string, string> = {
+const CANNOT: Record<Exclude<PushType, 'alert'>, string> = {
   // seen on iOS 27.2: "Notification has no user visible content" (UNErrorDomain 1401)
   background: `simctl takes no push with nothing to see, "no user visible content": ${BY_APNS}`,
   // Xcode 11.4's notes: "The mutable-content key is not honored"; Xcode 14's: remote notifications only
@@ -27,17 +33,16 @@ const CANNOT: Record<string, string> = {
 
 /** Each type on a simulator: an alert by simctl, and what APNs takes by `byApns`, once a person set it up. */
 export const simulatorRoutes = (byApns: PushRoute[]): PushRoute[] =>
-  PUSH_TYPES.map(
-    (type) =>
-      (type === 'alert'
-        ? {
-            type,
-            route:
-              "simctl push: the app's code gets it as a remote notification while the app is in front, else when its banner is tapped",
-            fields: ['title', 'body', 'data'],
-            template: JSON.stringify(apnsPayload({ ...PUSH_PLACEHOLDERS, type })),
-          }
-        : byApns.find((r) => r.type === type)) ?? { type, why: CANNOT[type]! },
+  PUSH_TYPES.map((type) =>
+    type === 'alert'
+      ? {
+          type,
+          route:
+            "simctl push: the app's code gets it as a remote notification while the app is in front, else when its banner is tapped",
+          fields: ['title', 'body', 'data'],
+          template: JSON.stringify(apnsPayload({ ...PUSH_PLACEHOLDERS, type })),
+        }
+      : (byApns.find((r) => r.type === type) ?? { type, why: CANNOT[type] }),
   );
 
 /**
@@ -60,7 +65,7 @@ export async function simulatorPush(
   push: Push,
   front: () => Promise<string | undefined>,
 ) {
-  if (push.type !== 'alert') throw new DeviceError('UNSUPPORTED', CANNOT[push.type] ?? push.type);
+  if (push.type !== 'alert') throw new DeviceError('UNSUPPORTED', CANNOT[push.type]);
   const payload = JSON.stringify(apnsPayload(push));
   const shown = await front();
   const at: keyof typeof REACHED =
@@ -77,7 +82,7 @@ export async function simulatorPush(
     await simctl.exec(['push', udid, assertBundle(app), file]);
   } catch (e) {
     // seen on iOS 27.2: simctl fails, and still hands an app in front the push it may not show
-    if (!/Source is not authorized/.test((e as Error).message)) throw e;
+    if (!(e as Error).message.includes('Source is not authorized')) throw e;
     if (at === 'back' || at === 'off')
       throw new DeviceError(
         'UNSUPPORTED',

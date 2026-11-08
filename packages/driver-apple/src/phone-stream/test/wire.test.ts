@@ -1,5 +1,6 @@
 import { inflateSync } from 'node:zlib';
-import { describe, expect, it, vi } from 'vitest';
+import { assert, describe, expect, it, vi } from 'vitest';
+import { must } from '@appdyno/core';
 import { readBplist } from '../../webinspector.js';
 import type { TcpConnection } from '../ipstack.js';
 import { touchReport, PhoneHid } from '../phone-hid.js';
@@ -47,8 +48,8 @@ function framesOf(written: Buffer[]) {
   while (b.length >= 9) {
     const n = b.readUIntBE(0, 3);
     out.push({
-      type: b[3]!,
-      flags: b[4]!,
+      type: b.readUInt8(3),
+      flags: b.readUInt8(4),
       stream: b.readUInt32BE(5),
       payload: b.subarray(9, 9 + n),
     });
@@ -124,12 +125,13 @@ describe('a service connection', () => {
     expect(opened.filter((f) => f.type === 1).map((f) => f.stream)).toEqual([1, 3]);
     written.length = 0;
     x.send({ a: 1n }, true);
-    const f = framesOf(written)[0]!;
+    const f = framesOf(written)[0];
+    assert(f);
     expect(f.stream).toBe(1);
     expect(f.payload.readUInt32LE(4)).toBe(0x10101);
     written.length = 0;
     x.send({ a: 1n }, false);
-    expect(framesOf(written)[0]!.payload.readUInt32LE(4)).toBe(0x101);
+    expect(framesOf(written)[0]?.payload.readUInt32LE(4)).toBe(0x101);
   });
 
   it('cuts a long message to the size of a frame', () => {
@@ -171,7 +173,7 @@ describe('a service connection', () => {
       [4, 1],
       [6, 1],
     ]);
-    expect(f[1]!.payload).toEqual(Buffer.alloc(8, 9));
+    expect(f[1]?.payload).toEqual(Buffer.alloc(8, 9));
   });
 
   it('gives back the flow window, so that a big answer does not stall', () => {
@@ -183,7 +185,7 @@ describe('a service connection', () => {
     feed(http2(0, 0, 1, part));
     const updates = framesOf(written).filter((p) => p.type === 8);
     expect(updates.map((p) => p.stream)).toEqual([0, 1]);
-    expect(updates[0]!.payload.readUInt32BE()).toBeGreaterThanOrEqual(256 * 1024);
+    expect(updates[0]?.payload.readUInt32BE()).toBeGreaterThanOrEqual(256 * 1024);
   });
 
   it('gives each channel back what it took, whichever of them last spoke', () => {
@@ -237,7 +239,7 @@ describe('a service connection', () => {
     const ok = invoke(x, 'f', {});
     feed(reply({ 'CoreDevice.output': { running: false } }));
     await expect(ok).resolves.toEqual({ running: false });
-    expect(decodeObject(framesOf(written)[0]!.payload.subarray(24))).toMatchObject({
+    expect(decodeObject(must(framesOf(written)[0], 'a frame').payload.subarray(24))).toMatchObject({
       'CoreDevice.featureIdentifier': 'f',
       'CoreDevice.coreDeviceVersion': { stringValue: '651.28' },
     });
@@ -331,7 +333,7 @@ describe('the offer', () => {
     const asked: string[] = [];
     const run = ((file: string) => {
       asked.push(file);
-      return ` ${file.split('/').at(-1)}\n`;
+      return ` ${String(file.split('/').at(-1))}\n`;
     }) as never;
     expect(thisMac(run)).toEqual({ model: 'sysctl', avc: 'plutil', build: 'sw_vers' });
     expect(asked).toHaveLength(3);
@@ -365,7 +367,8 @@ describe('the tunnel handshake', () => {
     const whole = answer(j, 'packets');
     expect(readTunnelAnswer(whole.subarray(0, 5))).toBeUndefined();
     expect(readTunnelAnswer(whole.subarray(0, 20))).toBeUndefined();
-    const read = readTunnelAnswer(whole)!;
+    const read = readTunnelAnswer(whole);
+    assert(read);
     expect(read.info).toEqual({
       local: 'fd00::2',
       remote: 'fd00::1',
@@ -394,11 +397,13 @@ describe('a finger, as a report', () => {
 
   it('a touch on a stood-up picture is turned back to where the phone has that point', async () => {
     const universal = { send: vi.fn() };
-    const hid = new PhoneHid({ send: vi.fn() } as never, universal as never, async () => undefined);
+    const hid = new PhoneHid({ send: vi.fn() } as never, universal as never, () =>
+      Promise.resolve(undefined),
+    );
     hid.turns = 1;
     await hid.send({ kind: 'touch', p: 0, x: 0.25, y: 0.5 });
     const { _0: report } = (
-      universal.send.mock.calls[0]![0] as { payload: { send: { _0: Buffer } } }
+      must(universal.send.mock.calls[0], 'a report')[0] as { payload: { send: { _0: Buffer } } }
     ).payload.send;
     expect(report.readUInt16LE(4)).toBe(32_768);
     expect(report.readUInt16LE(6)).toBe(16_384);
@@ -407,7 +412,7 @@ describe('a finger, as a report', () => {
   it('a touch goes to one service, a button and a key to the other', async () => {
     const indigo = { send: vi.fn() };
     const universal = { send: vi.fn() };
-    const hid = new PhoneHid(indigo as never, universal as never, async () => undefined);
+    const hid = new PhoneHid(indigo as never, universal as never, () => Promise.resolve(undefined));
     await hid.send({ kind: 'touch', p: 0, x: 0.1, y: 0.2 });
     await hid.send({ kind: 'touch', p: 2, x: 0.1, y: 0.2 });
     const state = (c: unknown[]) =>
@@ -415,7 +420,7 @@ describe('a finger, as a report', () => {
     expect(universal.send.mock.calls.map(state)).toEqual([0xc2, 0x02]);
     expect(indigo.send).not.toHaveBeenCalled();
     await hid.send({ kind: 'key', page: 7, usage: 4, state: 1 });
-    expect(indigo.send.mock.calls[0]![0]).toMatchObject({
+    expect(indigo.send.mock.calls[0]?.[0]).toMatchObject({
       messageType: 'IndigoButtonEvent',
       payload: { state: 1n, usagePage: 7n, usageCode: 4n },
     });

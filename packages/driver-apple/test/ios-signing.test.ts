@@ -38,8 +38,8 @@ describe('iPhone runner signing', () => {
       string,
       Record<string, unknown>
     >;
-    expect(x.Runner!.UITargetAppPath).toBe('/x/R.app');
-    expect(x.Runner!.SystemAttachmentLifetime).toBe('keepNever');
+    expect(x.Runner?.UITargetAppPath).toBe('/x/R.app');
+    expect(x.Runner?.SystemAttachmentLifetime).toBe('keepNever');
     expect(stampOf('abcdef0123456789')).toBe('appdyno-abcdef012345');
   });
 
@@ -119,7 +119,7 @@ describe('iPhone runner signing', () => {
   });
 
   it('asks Xcode to provision only with a team named', async () => {
-    const provision = vi.fn(async () => undefined);
+    const provision = vi.fn(() => Promise.resolve(undefined));
     await findPhoneSigning('no-such-phone', {}, provision).catch(() => undefined);
     expect(provision).not.toHaveBeenCalled();
     await expect(

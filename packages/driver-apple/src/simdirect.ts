@@ -106,8 +106,9 @@ export class DirectSim {
   }
 
   private async helperAx() {
-    this.ax ??= this.start.ax(this.udid).catch((e: Error) => {
-      this.turnReadOff(`the read helper did not start: ${e.message.slice(0, 120)}`);
+    this.ax ??= this.start.ax(this.udid).catch((e: unknown) => {
+      const why = (e instanceof Error ? e.message : String(e)).slice(0, 120);
+      this.turnReadOff(`the read helper did not start: ${why}`);
       throw e;
     });
     const h = await this.ax;
@@ -174,7 +175,7 @@ export class DirectSim {
     if (this.readOff) return false;
     const a = this.note(await (await this.helperAx()).call({ op: 'arm' }, 3_000));
     if (!a.ok && a.refused !== 'no-report' && a.refused !== 'helper-gone')
-      this.inputOff = `the app's reports cannot be observed: ${a.refused}`;
+      this.inputOff = `the app's reports cannot be observed: ${String(a.refused)}`;
     this.reporting = a.ok;
     return a.ok;
   }
@@ -221,8 +222,9 @@ export class DirectSim {
   async send(action: ActParams): Promise<boolean> {
     if (this.inputOff || !this.screen) return false;
     this.hid ??= this.start.hid(this.udid);
-    const hid = await this.hid.catch((e: Error) => {
-      this.inputOff = `the input helper did not start: ${e.message.slice(0, 120)}`;
+    const hid = await this.hid.catch((e: unknown) => {
+      const why = (e instanceof Error ? e.message : String(e)).slice(0, 120);
+      this.inputOff = `the input helper did not start: ${why}`;
       return undefined;
     });
     if (!hid) return false;

@@ -2,7 +2,8 @@ import { generateKeyPairSync, verify } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { connect, createServer, type Http2Server } from 'node:http2';
 import type { AddressInfo } from 'node:net';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { assert, afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { must } from '@appdyno/core';
 import {
   APNS_HINTS,
   APNS_HOSTS,
@@ -28,7 +29,10 @@ const RECORDED = JSON.parse(
 ) as Record<ApnsKind, { headers: Record<string, string>; body: string }>;
 
 const part = (jwt: string, i: number) =>
-  JSON.parse(Buffer.from(jwt.split('.')[i]!, 'base64url').toString()) as Record<string, unknown>;
+  JSON.parse(Buffer.from(must(jwt.split('.')[i], 'a part'), 'base64url').toString()) as Record<
+    string,
+    unknown
+  >;
 
 describe("APNs' provider token", () => {
   it('is an ES256 JWT of the key id and the team, signed by the key', () => {
@@ -102,7 +106,7 @@ describe('a push to APNs', () => {
 
   it('goes to the sandbox with its headers and payload, and answers its id', async () => {
     const request = apnsRequest('alert', 'dev.app', TOKEN, { aps: { alert: 'Hi' } }, 'J');
-    const r = await sendApns('sandbox', request, open as never);
+    const r = await sendApns('sandbox', request, open);
     expect(hosts).toEqual(['api.sandbox.push.apple.com']);
     expect(r).toEqual({ status: 200, apnsId: request.headers['apns-id'] });
     expect(seen[0]).toMatchObject({
@@ -127,7 +131,8 @@ describe('a push to APNs', () => {
   it('says APNs was not reached, with nothing of the request in its words', async () => {
     const request = apnsRequest('alert', 'dev.app', TOKEN, { aps: {} }, 'SECRETJWT');
     const nowhere = () => connect('http://127.0.0.1:1');
-    const e = await sendApns('sandbox', request, nowhere as never).catch((x: Error) => x);
+    const e = await sendApns('sandbox', request, nowhere as never).catch((x: unknown) => x);
+    assert(e instanceof Error);
     expect(String(e)).toContain('APNs was not reached');
     expect(String(e)).not.toMatch(/SECRETJWT|0123456789abcdef/);
   });

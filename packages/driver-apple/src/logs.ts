@@ -1,5 +1,5 @@
 import { basename } from 'node:path';
-import type { LogLevel, LogMark, LogsAnswer, LogsQuery } from '@appdyno/core';
+import { type LogLevel, type LogMark, type LogsAnswer, type LogsQuery, must } from '@appdyno/core';
 import { assertUdid, type Simctl } from './simctl.js';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -61,11 +61,14 @@ export function placeLines(lines: string[]) {
         number,
         number,
       ];
-      const level = /^[EF]/.test(m[8]!) ? ('error' as const) : undefined;
+      const level = /^[EF]/.test(must(m[8], 'a level')) ? ('error' as const) : undefined;
       const at = new Date(y, mo - 1, d, h, mi, s, ms).getTime();
       // its time is in its mark: what is left is what happened
       placed.push({ line: line.slice(STAMP_CHARS), mark: { at, ...(level && { level }) } });
-    } else if (placed.length) placed.push({ line, mark: placed.at(-1)!.mark });
+    } else {
+      const last = placed.at(-1);
+      if (last) placed.push({ line, mark: last.mark });
+    }
   }
   return placed;
 }
@@ -90,8 +93,5 @@ export async function simulatorLogs(
 export const PHONE_LOGS_NOTE =
   "devicectl cannot read a running app's log on an iPhone. It can restart the app and follow what it prints: `xcrun devicectl device process launch --console --terminate-existing --device <udid> <bundle>`. The system log is in Console.app; crashes works here. A person can collect the phone's log with `sudo log collect --device-udid <udid> --last 5m --output x.logarchive`: it needs root, so this tool does not.";
 
-export const phoneLogs = async (): Promise<LogsAnswer> => ({
-  lines: [],
-  source: 'devicectl',
-  note: PHONE_LOGS_NOTE,
-});
+export const phoneLogs = (): Promise<LogsAnswer> =>
+  Promise.resolve({ lines: [], source: 'devicectl', note: PHONE_LOGS_NOTE });

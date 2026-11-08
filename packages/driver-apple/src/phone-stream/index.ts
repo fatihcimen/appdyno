@@ -98,8 +98,8 @@ async function live(
     await readServices(stack, rsdPort),
     app,
     onSample,
-  ).catch((e: Error) => {
-    onSample(unreadable(e.message, app));
+  ).catch((e: unknown) => {
+    onSample(unreadable(e instanceof Error ? e.message : String(e), app));
   });
   if (reader === null) onSample(unreadable(NO_HUB, app));
   if (!reader) {
@@ -172,7 +172,13 @@ async function openInducer(udid: string) {
   const { stack, rsdPort } = await tunnelTo(udid);
   try {
     const inducer = await ConditionInducer.open(stack, await readServices(stack, rsdPort));
-    return { inducer, close: () => (inducer.close(), stack.close()) };
+    return {
+      inducer,
+      close: () => {
+        inducer.close();
+        stack.close();
+      },
+    };
   } catch (e) {
     stack.close();
     throw e;

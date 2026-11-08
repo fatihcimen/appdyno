@@ -14,7 +14,7 @@ import {
   takeScreenshot,
   type ServiceList,
 } from './services.js';
-import { imageSize } from '@appdyno/core';
+import { imageSize, must } from '@appdyno/core';
 import { turnsOf } from '../mirror-sim.js';
 import { audioOffer, thisMac, videoOffer, type StreamMode } from './stream-offer.js';
 import {
@@ -65,14 +65,14 @@ const WIRE = {
 };
 export type StreamWire = typeof WIRE;
 
-export interface StreamSink {
+export type StreamSink = {
   live(info: { w: number; h: number; mode: string; crop: boolean }): void;
   picture(p: Picture): void;
   state(s: DeviceState): void;
   counters(c: Record<string, number>): void;
   turns(turns: number): void;
   lost(why: string, need?: Need): void;
-}
+};
 
 /** One stream's whole life on a phone: tunnel, offer, RTP, RTCP, input, and the proof it has ended. */
 export class PhoneStream {
@@ -233,7 +233,13 @@ export class PhoneStream {
   }
 
   private async screenSize() {
-    const size = imageSize(await this.parts.takeScreenshot(this.stack!, this.services!, 'png'));
+    const size = imageSize(
+      await this.parts.takeScreenshot(
+        must(this.stack, 'the tunnel'),
+        must(this.services, 'the services'),
+        'png',
+      ),
+    );
     if (!size) throw new Error('a screenshot with no size');
     return size;
   }
@@ -288,11 +294,16 @@ export class PhoneStream {
   }
 
   private async turnsByTunnel(): Promise<TurnsReader> {
-    const connection = await springboardOver(this.stack!, this.services!);
+    const connection = await springboardOver(
+      must(this.stack, 'the tunnel'),
+      must(this.services, 'the services'),
+    );
     return {
       read: async () =>
         Number((await askShim(connection, ORIENTATION_REQUEST)).interfaceOrientation),
-      close: () => void connection.close(),
+      close: () => {
+        connection.close();
+      },
     };
   }
 
@@ -333,6 +344,7 @@ export class PhoneStream {
         undefined,
         WATCH_MS * 4,
       );
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a stop while it asked
       if (status.running === false && !this.stopped) this.onLost('the phone ended the stream');
     } catch {
       // the tunnel's end says this too, and a slow answer is no end
@@ -340,7 +352,7 @@ export class PhoneStream {
   }
 
   private onPicture(p: Picture) {
-    this.toPhone(this.rtcp!.ack(p.rtpTime));
+    this.toPhone(must(this.rtcp, 'the RTCP writer').ack(p.rtpTime));
     this.sink.picture(p);
   }
 
@@ -402,7 +414,7 @@ export class PhoneStream {
     for (const t of this.timers) clearInterval(t);
     let proved = false;
     try {
-      const display = this.display!;
+      const display = must(this.display, 'the display service');
       await this.parts.invoke(display, `${FEATURE}stopmediastream`, { stopAll: true }, STOP_ACTION);
       const after = await this.parts.invoke(display, `${FEATURE}getmediastreamserverstatus`, {});
       proved = after.running === false || sessionsOf(after).length === 0;

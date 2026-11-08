@@ -65,10 +65,12 @@ export function rowOf(message: Archived, pid: number): AppReading | undefined {
     if (!Array.isArray(row)) continue;
     const of = (name: string) => number(row[ROW.indexOf(name)]);
     const memory = of('physFootprint');
+    const cpu = of('cpuUsage');
+    const threads = of('threadCount');
     return {
-      ...(of('cpuUsage') !== undefined && { cpuPercent: of('cpuUsage')! }),
+      ...(cpu !== undefined && { cpuPercent: cpu }),
       ...(memory !== undefined && { memoryMb: memory / MEGABYTE }),
-      ...(of('threadCount') !== undefined && { threads: of('threadCount')! }),
+      ...(threads !== undefined && { threads }),
     };
   }
   return undefined;

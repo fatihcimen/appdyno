@@ -1,5 +1,6 @@
 import { generateKeyPairSync } from 'node:crypto';
-import { describe, expect, it, vi } from 'vitest';
+import { assert, describe, expect, it, vi } from 'vitest';
+import { must } from '@appdyno/core';
 import { ApnsPush, tokensIn, type ApnsTarget } from '../src/apns-push.js';
 import type { ApnsAnswer, ApnsEnvironment, ApnsRequest } from '../src/apns.js';
 
@@ -28,11 +29,11 @@ const LINES = [
 const target = (over: Partial<ApnsTarget> = {}): ApnsTarget => ({
   name: 'simulator',
   production: false,
-  installed: async () => true,
-  lines: async () => ({ lines: LINES }),
-  build: async () => undefined,
-  declaresVoip: async () => false,
-  osMajor: async () => 27,
+  installed: () => Promise.resolve(true),
+  lines: () => Promise.resolve({ lines: LINES }),
+  build: () => Promise.resolve(undefined),
+  declaresVoip: () => Promise.resolve(false),
+  osMajor: () => Promise.resolve(27),
   ...over,
 });
 
@@ -43,9 +44,9 @@ function apns(t: ApnsTarget = target(), key = KEY) {
   let now = NOW;
   const p = new ApnsPush(t, {
     key: () => key,
-    send: async (environment, request) => {
+    send: (environment, request) => {
       sent.push({ environment, request });
-      return answer;
+      return Promise.resolve(answer);
     },
     now: () => now,
   });
@@ -59,14 +60,20 @@ function apns(t: ApnsTarget = target(), key = KEY) {
 
 /** Nothing of a key, a provider token or an app's token in any answer or refusal. */
 const secretsIn = (words: string, jwt?: string) =>
-  [DEVICE, ACTIVITY, START, KEY.key.split('\n')[1]!, ...(jwt ? [jwt] : [])].filter((s) =>
-    words.includes(s),
-  );
+  [
+    DEVICE,
+    ACTIVITY,
+    START,
+    must(KEY.key.split('\n')[1], "the key's first line"),
+    ...(jwt ? [jwt] : []),
+  ].filter((s) => words.includes(s));
 
 describe("an app's tokens in its own lines", () => {
   it("are a line's that names a token, and not a digest or an id as long in another", () => {
     const digest = `NSURLSession sha256 ${'9'.repeat(64)}`;
-    expect(tokensIn([LINES[0]!, digest])).toEqual([{ token: DEVICE, kind: 'device' }]);
+    expect(tokensIn([must(LINES[0], 'a line'), digest])).toEqual([
+      { token: DEVICE, kind: 'device' },
+    ]);
     expect(tokensIn([digest])).toEqual([{ token: '9'.repeat(64), kind: 'device' }]);
   });
 
@@ -102,7 +109,7 @@ describe('a push by APNs', () => {
       `pushed to dev.app by APNs' sandbox by the device token its log gave at ${AT}: APNs took it, A1`,
     );
     expect(a.sent).toHaveLength(1);
-    const { environment, request } = a.sent[0]!;
+    const { environment, request } = must(a.sent[0], 'a request');
     expect(environment).toBe('sandbox');
     expect(request.headers).toMatchObject({
       ':path': `/3/device/${DEVICE}`,
@@ -134,13 +141,16 @@ describe('a push by APNs', () => {
     };
     await a.p.push('dev.app', { type: 'live_activity', payload: start });
     const [update, started] = a.sent.map((s) => s.request);
-    expect(update!.headers).toMatchObject({
+    assert(update && started);
+    expect(update.headers).toMatchObject({
       ':path': `/3/device/${ACTIVITY}`,
       'apns-topic': 'dev.app.push-type.liveactivity',
       'apns-push-type': 'liveactivity',
     });
-    expect(JSON.parse(update!.body).aps.timestamp).toBe(NOW / 1000);
-    expect(started!.headers[':path']).toBe(`/3/device/${START}`);
+    expect((JSON.parse(update.body) as { aps: { timestamp: number } }).aps.timestamp).toBe(
+      NOW / 1000,
+    );
+    expect(started.headers[':path']).toBe(`/3/device/${START}`);
   });
 
   it("refuses a Live Activity's payload that is not ActivityKit's", async () => {
@@ -160,32 +170,41 @@ describe('a push by APNs', () => {
   it('refuses an app that is not there, a token the app never printed, VoIP it does not declare, a widget before iOS 26', async () => {
     const cases: [Partial<ApnsTarget>, Parameters<ApnsPush['push']>[1], string][] = [
       [
-        { installed: async () => false },
+        { installed: () => Promise.resolve(false) },
         { type: 'alert' },
         'dev.app is not installed on this simulator',
       ],
       [
-        { lines: async () => ({ lines: ['nothing'] }) },
+        { lines: () => Promise.resolve({ lines: ['nothing'] }) },
         { type: 'alert' },
         'no device token from dev.app in this session',
       ],
       [{}, { type: 'voip' }, 'not known to declare VoIP'],
-      [{ osMajor: async () => 25 }, { type: 'widgets' }, 'a widget takes pushes from iOS 26'],
+      [
+        { osMajor: () => Promise.resolve(25) },
+        { type: 'widgets' },
+        'a widget takes pushes from iOS 26',
+      ],
     ];
     for (const [over, push, why] of cases) {
       const a = apns(target(over));
       await expect(a.p.push('dev.app', push)).rejects.toThrow(why);
       expect(a.sent).toEqual([]);
     }
-    const none = await apns(target({ lines: async () => ({ lines: [] }) }))
+    const none = await apns(target({ lines: () => Promise.resolve({ lines: [] }) }))
       .p.push('dev.app', { type: 'alert' })
-      .catch((e: { hint?: string }) => e.hint);
+      .catch((e: unknown) => (e as { hint?: string }).hint);
     expect(none).toContain('by NSLog or os_log');
   });
 
   it('takes VoIP where the app declares it, and a widget from iOS 26, each by its own token and topic', async () => {
     const lines = [`voip token ${DEVICE}`, `widget token ${ACTIVITY}`];
-    const a = apns(target({ declaresVoip: async () => true, lines: async () => ({ lines }) }));
+    const a = apns(
+      target({
+        declaresVoip: () => Promise.resolve(true),
+        lines: () => Promise.resolve({ lines }),
+      }),
+    );
     await a.p.push('dev.app', { type: 'voip', data: { call: '1' } });
     await a.p.push('dev.app', { type: 'widgets' });
     expect(
@@ -198,7 +217,7 @@ describe('a push by APNs', () => {
 
   it('goes to production only for a distribution build on an iPhone with production on, never by a guess', async () => {
     const iphone = (build: 'development' | 'distribution' | undefined) =>
-      target({ name: 'iPhone', production: true, build: async () => build });
+      target({ name: 'iPhone', production: true, build: () => Promise.resolve(build) });
     const environmentOf = async (t: ApnsTarget, production: boolean) => {
       const a = apns(t, { ...KEY, production });
       await a.p.push('dev.app', { type: 'alert' }).catch(() => undefined);
@@ -207,9 +226,9 @@ describe('a push by APNs', () => {
     expect(await environmentOf(iphone('distribution'), true)).toBe('production');
     expect(await environmentOf(iphone('development'), true)).toBe('sandbox');
     expect(await environmentOf(iphone(undefined), true)).toBe('sandbox');
-    expect(await environmentOf(target({ build: async () => 'distribution' }), true)).toBe(
-      'sandbox',
-    );
+    expect(
+      await environmentOf(target({ build: () => Promise.resolve('distribution') }), true),
+    ).toBe('sandbox');
     const off = apns(iphone('distribution'));
     await expect(off.p.push('dev.app', { type: 'alert' })).rejects.toThrow('production is off');
     expect(off.sent).toEqual([]);
@@ -225,7 +244,7 @@ describe('a push by APNs', () => {
   });
 
   it("says Apple's reason in words, on the host it went to alone, and reads a token again after a bad one", async () => {
-    const lines = vi.fn(async () => ({ lines: LINES }));
+    const lines = vi.fn(() => Promise.resolve({ lines: LINES }));
     const a = apns(target({ lines }));
     a.answer({ status: 400, reason: 'BadDeviceToken' });
     const e = (await a.p.push('dev.app', { type: 'alert' }).catch((x: unknown) => x)) as {
@@ -244,7 +263,7 @@ describe('a push by APNs', () => {
   });
 
   it("takes a person's token, typed in a window, and no other", async () => {
-    const a = apns(target({ lines: async () => ({ lines: [] }) }));
+    const a = apns(target({ lines: () => Promise.resolve({ lines: [] }) }));
     a.p.typed('dev.app', DEVICE.toUpperCase());
     expect(await a.p.push('dev.app', { type: 'alert' })).toContain(
       'by the device token a person typed',
@@ -253,7 +272,7 @@ describe('a push by APNs', () => {
   });
 
   it('says the app was relaunched to read its token, and that it lost its state', async () => {
-    const a = apns(target({ lines: async () => ({ lines: LINES, relaunched: true }) }));
+    const a = apns(target({ lines: () => Promise.resolve({ lines: LINES, relaunched: true }) }));
     expect(await a.p.push('dev.app', { type: 'alert' })).toContain(
       'dev.app was relaunched to read it, and lost its state',
     );

@@ -37,7 +37,7 @@ export function tlv(items: [number, Buffer][]): Buffer {
 export function readTlv(data: Buffer): Map<number, Buffer> {
   const out = new Map<number, Buffer>();
   for (let at = 0; at < data.length;) {
-    const tag = data[at]!;
+    const tag = data.readUInt8(at);
     const n = data[at + 1] ?? -1;
     const value = data.subarray(at + 2, at + 2 + n);
     if (n < 0 || value.length < n) throw new Error('a pairing answer was cut short');
@@ -111,7 +111,7 @@ export function srpClient(
   const key = sha512(wide(S));
   const group = Buffer.from(sha512(wide(N)));
   const generator = sha512(Buffer.from([Number(GENERATOR)]));
-  group.forEach((v, i) => (group[i] = v ^ generator[i]!));
+  group.forEach((v, i) => (group[i] = v ^ generator.readUInt8(i)));
   const proof = sha512(group, sha512(Buffer.from(user)), salt, wide(A), wide(B), key);
   return { publicKey: wide(A), proof, phoneProof: sha512(wide(A), proof, key), key };
 }

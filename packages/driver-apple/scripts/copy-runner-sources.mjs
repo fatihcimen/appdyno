@@ -22,7 +22,9 @@ for (const part of [
     recursive: true,
     filter: (p) => !/xcuserdata|\.build|\.derived/.test(p),
   });
+/** @type {string[]} */
 const files = [];
+/** @param {string} d */
 const walk = (d) => {
   for (const f of readdirSync(d).sort()) {
     const p = join(d, f);

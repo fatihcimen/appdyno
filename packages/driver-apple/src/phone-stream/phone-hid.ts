@@ -78,7 +78,7 @@ export class PhoneHid {
     this.button(page, usage, UP);
   }
 
-  private async type(text: string) {
+  private type(text: string) {
     for (const c of text) {
       const key = usageOf(c);
       if (!key) throw new Error('a character with no key on a US keyboard');
@@ -99,7 +99,7 @@ export class PhoneHid {
         this.button(e.page, e.usage, e.state);
         return;
       case 'text':
-        await this.type(e.s);
+        this.type(e.s);
         return;
       case 'button': {
         const key = KEY_USAGES[e.name as Key];

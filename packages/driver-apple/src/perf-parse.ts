@@ -1,4 +1,4 @@
-import type { LaunchReading, ProfileEntry } from '@appdyno/core';
+import { type LaunchReading, type ProfileEntry, must } from '@appdyno/core';
 
 /** The app's first and last counts of `nettop -L`: what it has before the first are not the window's. */
 export function parseNettop(csv: string): { rxBytes: number; txBytes: number } {
@@ -80,7 +80,7 @@ export function parseSampleTop(
       if (rows.length > 0 && line.trim() === '') break;
       continue;
     }
-    rows.push({ symbol: m[1]!.trim(), samples: Number(m[2]) });
+    rows.push({ symbol: must(m[1], 'a symbol').trim(), samples: Number(m[2]) });
   }
   const busy = rows.filter((r) => !IDLE.test(r.symbol));
   const total = busy.reduce((a, r) => a + r.samples, 0);
@@ -118,14 +118,15 @@ export function parseSampleApp(report: string, limit = 10): ProfileEntry[] {
     const m = /^([\s+!:|]*?)(\d+)\s+(.+?)(?:\s+\(in ([^)]+)\))?(?:\s+\+\s+\d+.*)?$/.exec(line);
     if (!m) continue;
     const node: N = {
-      depth: m[1]!.length,
+      depth: must(m[1], 'an indent').length,
       count: Number(m[2]),
-      symbol: m[3]!.trim(),
+      symbol: must(m[3], 'a symbol').trim(),
       image: m[4] ?? '',
       kids: [],
     };
-    while (stack.length && stack[stack.length - 1]!.depth >= node.depth) stack.pop();
-    (stack.length ? stack[stack.length - 1]!.kids : roots).push(node);
+    // a depth is never below 0
+    while ((stack.at(-1)?.depth ?? -1) >= node.depth) stack.pop();
+    (stack.at(-1)?.kids ?? roots).push(node);
     stack.push(node);
   }
   const busyOf = new Map<N, number>();

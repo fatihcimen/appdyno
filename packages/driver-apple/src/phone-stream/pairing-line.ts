@@ -1,4 +1,5 @@
 import { type Socket } from 'node:net';
+import { must } from '@appdyno/core';
 import type { RemoteXpc } from './remotexpc.js';
 import { XpcInt64, type XpcValue } from './xpc-codec.js';
 
@@ -64,7 +65,7 @@ export class FramedLine implements PairingLine {
       this.socket.destroy();
       return;
     }
-    if (this.arrived.length) this.waiting?.(this.arrived.shift()!);
+    if (this.waiting && this.arrived.length) this.waiting(must(this.arrived.shift(), 'a message'));
   }
 
   next(ms: number): Promise<Message> {

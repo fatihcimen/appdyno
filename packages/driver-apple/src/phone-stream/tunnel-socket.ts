@@ -5,7 +5,9 @@ import type { TcpConnection } from './ipstack.js';
 /** A connection in a tunnel, as a socket for what speaks to one: the stack already sends a touch's bytes at once. */
 export function tunnelSocket(connection: TcpConnection) {
   const stream = new Duplex({
-    read() {},
+    read() {
+      // the stack pushes what comes in
+    },
     write(chunk: Buffer, _encoding, done) {
       connection.write(chunk);
       done();

@@ -2,7 +2,7 @@ import { createServer } from 'node:net';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import { connectPort, frame, listDevices, parsePlist, plistXml } from '../src/usbmux.js';
 
 describe('usbmux', () => {
@@ -68,13 +68,17 @@ describe('usbmux', () => {
       expect((await listDevices(path)).map((d) => d.deviceId)).toEqual([4, 5]);
       const { socket, rest } = await connectPort('00001234-0123456789ABCDEF', 8100, path);
       const data = await new Promise<string>((r) => {
-        if (rest.length) return r(rest.toString());
+        if (rest.length) {
+          r(rest.toString());
+          return;
+        }
         socket.once('data', (d) => r(d.toString()));
         socket.resume();
       });
       socket.destroy();
       expect(data).toBe('hello');
-      const connect = seen.find((m) => m.MessageType === 'Connect')!;
+      const connect = seen.find((m) => m.MessageType === 'Connect');
+      assert(connect);
       expect(connect.DeviceID).toBe(5); // the USB one, not the Wi-Fi one
       expect(connect.PortNumber).toBe(0xa41f); // 8100 = 0x1fa4, swapped
     } finally {

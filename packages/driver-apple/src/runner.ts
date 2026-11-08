@@ -94,7 +94,7 @@ export const simulatorTransport: RunnerTransport = {
   // an xcodebuild that booted its simulator again, after a person shut it down under it, shuts it down as it ends by
   // itself or by SIGTERM: a kill leaves it as it is, and the runner ended within 3 s, 5 of 5
   stop: 'kill',
-  down: async (udid) => /^Shut/.test((await new Simctl().state(udid)) ?? ''),
+  down: async (udid) => ((await new Simctl().state(udid)) ?? '').startsWith('Shut'),
   open: (port) =>
     new Promise((resolve, reject) => {
       const c = connect({ host: '127.0.0.1', port });
@@ -296,7 +296,7 @@ export class IosRunnerLauncher {
         throw new DeviceError(
           'AGENT_UNAVAILABLE',
           exited !== undefined
-            ? `the iOS runner stopped (xcodebuild exit ${exited})`
+            ? `the iOS runner stopped (xcodebuild exit ${String(exited)})`
             : `the iOS runner did not start within ${START_MS} ms`,
           log.trim().split('\n').slice(-6).join(' ').slice(0, 500) || undefined,
         );

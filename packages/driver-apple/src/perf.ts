@@ -23,6 +23,7 @@ import {
   type HeapReading,
   type EnergyReading,
   type StartupAnalysis,
+  must,
 } from '@appdyno/core';
 import { existsSync } from 'node:fs';
 import { readFile, mkdir, rm, appendFile, writeFile } from 'node:fs/promises';
@@ -160,9 +161,10 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
       ...vars,
     });
     const pid = Number(/:\s*(\d+)/.exec(out)?.[1]);
-    for (const end = Date.now() + 20_000; Date.now() < end; await pause(50)) {
+    for (const end = Date.now() + 20_000; Date.now() < end;) {
       const head = probeHead(await readFile(file, 'utf8').catch(() => ''));
       if (head.pid === pid && head.launchMs !== undefined) return head.launchMs;
+      await pause(50);
     }
     throw new DeviceError(
       'UNSUPPORTED',
@@ -221,7 +223,7 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
     await sleep(PROBE_FLUSH_MS);
     const text = await readFile(this.probeFile(bundle), 'utf8');
     const head = probeHead(text);
-    const from = head.resetAt ?? head.loadedAt!;
+    const from = head.resetAt ?? must(head.loadedAt, "the probe's start");
     const raw = probeWindow(text, from, to);
     if (opts.reset !== false) await this.resetFrames(bundle);
     return { value: probeFrames(raw, from, to), raw, at: at() };
@@ -382,12 +384,13 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
   ): Promise<Measured<CpuProfile & { appTop: ProfileEntry[] }>> {
     const pid = await this.pid(bundle);
     const s = Math.min(Math.max(Math.round(durationMs / 1000), 1), 30);
-    let ran = false;
+    // set inside `once`, where the compiler does not follow it
+    let ran = false as boolean;
     const once = during && (() => ((ran = true), during()));
     const traced = await recordTrace({
       template: 'Time Profiler',
       device: this.udid,
-      attach: async () => pid,
+      attach: () => Promise.resolve(pid),
       seconds: s,
       dir: tracesDir(),
       ...(once && { during: once }),
@@ -405,10 +408,11 @@ export class IosSimulatorPerf extends IosPerf implements MeasureSource {
         raw: traced.trace,
         at: at(),
       };
+    const signal = callSignal();
     const rec = run('sample', [String(pid), String(s), '-mayDie'], {
       timeout: (s + 60) * 1000,
       maxBuffer: 64 * 1024 * 1024,
-      ...(callSignal() && { signal: callSignal()! }),
+      ...(signal && { signal }),
     });
     if (during && !ran) await during();
     const { stdout } = await rec;

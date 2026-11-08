@@ -1,6 +1,7 @@
 import { diffieHellman, generateKeyPairSync, randomBytes, sign, verify } from 'node:crypto';
 import { createServer, type Server, Socket } from 'node:net';
-import { afterEach } from 'vitest';
+import { assert, afterEach } from 'vitest';
+import { must } from '@appdyno/core';
 import { FramedLine, pairingFrame } from '../pairing-line.js';
 import { ED25519_SPKI, lastBytes, PairingChannel, rawKey, X25519_SPKI } from '../pairing.js';
 import {
@@ -73,8 +74,9 @@ export class FakePhone {
   udid: string | undefined = 'THE-UDID';
 
   async start() {
-    this.server = createServer((s) => this.serve(s));
-    await new Promise<void>((r) => this.server!.listen(0, '127.0.0.1', r));
+    const server = createServer((s) => this.serve(s));
+    this.server = server;
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
     this.port = (this.server.address() as { port: number }).port;
     return this;
   }
@@ -106,7 +108,7 @@ export class FakePhone {
     } = {};
 
     const onSetup = async (data: Map<number, Buffer>) => {
-      const state = data.get(TAG.state)![0];
+      const state = must(data.get(TAG.state), 'a state')[0];
       if (state === 1) {
         plain({ event: { _0: { awaitingUserConsent: {} } } });
         const yes =
@@ -141,15 +143,15 @@ export class FakePhone {
           ]),
         );
       } else if (state === 3) {
-        const { b, B, v, salt } = session.srp!;
-        const A = big(data.get(TAG.publicKey)!);
+        const { b, B, v, salt } = must(session.srp, 'the SRP values');
+        const A = big(must(data.get(TAG.publicKey), 'a public key'));
         const u = big(sha512(wide(A), wide(B)));
         const S = power((A * power(v, u)) % SRP_N, b);
         const key = sha512(wide(S));
         session.key = key;
         const group = Buffer.from(sha512(wide(SRP_N)));
         const g = sha512(Buffer.from([5]));
-        group.forEach((value, i) => (group[i] = value ^ g[i]!));
+        group.forEach((value, i) => (group[i] = value ^ g.readUInt8(i)));
         const expected = sha512(
           group,
           sha512(Buffer.from('Pair-Setup')),
@@ -158,7 +160,8 @@ export class FakePhone {
           wide(B),
           key,
         );
-        const proof = data.get(TAG.proof)!;
+        const proof = data.get(TAG.proof);
+        assert(proof);
         if (!proof.equals(expected)) {
           pairing(
             tlv([
@@ -175,11 +178,16 @@ export class FakePhone {
           ]),
         );
       } else if (state === 5) {
-        const key = session.key!;
+        const key = session.key;
+        assert(key);
         const box = derive(key, 'Pair-Setup-Encrypt-Salt', 'Pair-Setup-Encrypt-Info');
-        const inner = readTlv(unseal(box, stepNonce('PS-Msg05'), data.get(TAG.encrypted)!));
-        const host = inner.get(TAG.identifier)!;
-        const hostKey = inner.get(TAG.publicKey)!;
+        const inner = readTlv(
+          unseal(box, stepNonce('PS-Msg05'), must(data.get(TAG.encrypted), 'a sealed box')),
+        );
+        const host = inner.get(TAG.identifier);
+        assert(host);
+        const hostKey = inner.get(TAG.publicKey);
+        assert(hostKey);
         const signing = derive(
           key,
           'Pair-Setup-Controller-Sign-Salt',
@@ -190,7 +198,7 @@ export class FakePhone {
             null,
             Buffer.concat([signing, host, hostKey]),
             rawKey(ED25519_SPKI, hostKey),
-            inner.get(TAG.signature)!,
+            must(inner.get(TAG.signature), 'a signature'),
           )
         ) {
           throw new Error('the host did not sign');
@@ -221,7 +229,7 @@ export class FakePhone {
     };
 
     const onVerify = (data: Map<number, Buffer>) => {
-      const state = data.get(TAG.state)![0];
+      const state = must(data.get(TAG.state), 'a state')[0];
       if (state === 1 && this.refusesWith) {
         plain({
           event: {
@@ -235,7 +243,8 @@ export class FakePhone {
         return;
       }
       if (state === 1) {
-        const theirs = data.get(TAG.publicKey)!;
+        const theirs = data.get(TAG.publicKey);
+        assert(theirs);
         const { publicKey, privateKey } = generateKeyPairSync('x25519');
         const ours = lastBytes(publicKey);
         const shared = diffieHellman({ privateKey, publicKey: rawKey(X25519_SPKI, theirs) });
@@ -258,14 +267,28 @@ export class FakePhone {
         return;
       }
       const inner = readTlv(
-        unseal(session.verifyKey!, stepNonce('PV-Msg03'), data.get(TAG.encrypted)!),
+        unseal(
+          must(session.verifyKey, 'a verify key'),
+          stepNonce('PV-Msg03'),
+          must(data.get(TAG.encrypted), 'a sealed box'),
+        ),
       );
-      const host = inner.get(TAG.identifier)!;
+      const host = inner.get(TAG.identifier);
+      assert(host);
       const key = this.known.get(host.toString());
-      const signed = Buffer.concat([session.theirs!, host, session.ours!]);
+      const signed = Buffer.concat([
+        must(session.theirs, 'their key'),
+        host,
+        must(session.ours, 'our key'),
+      ]);
       const good =
         key !== undefined &&
-        verify(null, signed, rawKey(ED25519_SPKI, key), inner.get(TAG.signature)!);
+        verify(
+          null,
+          signed,
+          rawKey(ED25519_SPKI, key),
+          must(inner.get(TAG.signature), 'a signature'),
+        );
       pairing(
         good
           ? tlv([[TAG.state, Buffer.from([4])]])
@@ -277,7 +300,8 @@ export class FakePhone {
     };
 
     const onEncrypted = (sealed: string) => {
-      const shared = session.shared!;
+      const shared = session.shared;
+      assert(shared);
       const request = JSON.parse(
         unseal(
           derive(shared, '', 'ClientEncrypt-main'),
@@ -306,7 +330,7 @@ export class FakePhone {
         onEncrypted(message.streamEncrypted._0);
         return;
       }
-      const body = message.plain!._0 as {
+      const body = must(message.plain, 'a plain message')._0 as {
         request?: unknown;
         event?: {
           _0: { pairVerifyFailed?: unknown; pairingData?: { _0: Record<string, unknown> } };
@@ -329,12 +353,15 @@ export class FakePhone {
         });
         return;
       }
-      const event = body.event!._0;
+      const event = must(body.event, 'an event')._0;
       if ('pairVerifyFailed' in event) {
         this.failedVerifies.push(1);
         return;
       }
-      const { kind, data } = event.pairingData!._0 as { kind: string; data: string };
+      const { kind, data } = must(event.pairingData, 'pairing data')._0 as {
+        kind: string;
+        data: string;
+      };
       const fields = readTlv(Buffer.from(data, 'base64'));
       if (kind === 'verifyManualPairing') onVerify(fields);
       else await onSetup(fields);

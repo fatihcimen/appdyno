@@ -88,8 +88,8 @@ describe('what is done on a new connection', () => {
   it('takes the connection with it when it fails, as an open socket holds a process', async () => {
     const socket = { destroy: vi.fn() };
     await expect(
-      closingOnFailure(socket, async () => {
-        throw new Error('no answer');
+      closingOnFailure(socket, () => {
+        return Promise.reject(new Error('no answer'));
       }),
     ).rejects.toThrow('no answer');
     expect(socket.destroy).toHaveBeenCalledTimes(1);
@@ -97,7 +97,7 @@ describe('what is done on a new connection', () => {
 
   it('leaves it open when it goes well', async () => {
     const socket = { destroy: vi.fn() };
-    await expect(closingOnFailure(socket, async () => 7)).resolves.toBe(7);
+    await expect(closingOnFailure(socket, () => Promise.resolve(7))).resolves.toBe(7);
     expect(socket.destroy).not.toHaveBeenCalled();
   });
 });

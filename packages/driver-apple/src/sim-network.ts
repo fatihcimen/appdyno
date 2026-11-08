@@ -26,8 +26,11 @@ export async function nettopBytes(
       String(pid),
     ],
     { timeout: (seconds + 30) * 1000 },
-  ).catch((e: Error) => {
-    throw new DeviceError('UNSUPPORTED', `nettop: ${e.message.slice(0, 200)}`);
+  ).catch((e: unknown) => {
+    throw new DeviceError(
+      'UNSUPPORTED',
+      `nettop: ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`,
+    );
   });
   const [{ stdout: raw }] = await Promise.all([nettop, sleep(1_000).then(() => during?.())]);
   return {

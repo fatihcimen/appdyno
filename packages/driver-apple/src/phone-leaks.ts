@@ -24,7 +24,7 @@ export async function phoneLeaks(
     attachedOnly: true,
     seconds: LEAKS_SECONDS,
     dir,
-  }).catch((e: Error) => {
+  }).catch((e: unknown) => {
     throw e instanceof DeviceError && e.code === 'UNSUPPORTED'
       ? new DeviceError(
           'UNSUPPORTED',

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { must } from '@appdyno/core';
 import { parseLaunchPhases } from '../src/launch-phases.js';
 
 const recorded = (f: string) =>
@@ -38,7 +39,7 @@ describe('App Launch phases on recorded traces', () => {
   });
 
   it('a 500 ms slow start is named in `main`, within 15 %', () => {
-    const added = phase(slow, 'main')! - phase(base, 'main')!;
+    const added = must(phase(slow, 'main'), 'main') - must(phase(base, 'main'), 'main');
     expect(added).toBeGreaterThan(500 * 0.85);
     expect(added).toBeLessThan(500 * 1.15);
     expect(slow.phases.toSorted((a, b) => b.ms - a.ms)[0]?.name).toBe('main');

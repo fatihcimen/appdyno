@@ -21,21 +21,21 @@ export type PhoneStreamEvent =
   | { kind: 'lost'; why: string; need?: Need }
   | { kind: 'ended'; proved: boolean };
 
-export interface PhoneStreamHandle {
+export type PhoneStreamHandle = {
   /** Where frames go from now on: a pipe a viewer holds open. */
   attach(file: string): void;
   input(e: InputEvent): void;
   keyframe(): void;
   /** Ends the stream, and says if the phone says it ended. */
   stop(): Promise<boolean>;
-}
+};
 
 /** A condition of the phone's own, as Xcode's Devices window offers them: its profiles, and the one on. */
 export type PhoneCondition = { id: string; profiles: string[]; on?: string };
 
 export type PhoneStreamCheck = { ok: true } | { ok: false; need: Need; detail?: string };
 
-export interface PhoneStreamModule {
+export type PhoneStreamModule = {
   /** The screen by the phone's own service, with no stream and nothing on the phone. */
   screenshot(udid: string, format: 'png' | 'jpeg'): Promise<Buffer>;
   /** The screen by the phone's accessibility service, with no runner. */
@@ -69,4 +69,4 @@ export interface PhoneStreamModule {
   ): PhoneStreamHandle;
   /** Makes this Mac's own pairing for Wi-Fi, which a person accepts on the phone. */
   pair(udid: string, say: (words: string) => void): Promise<void>;
-}
+};

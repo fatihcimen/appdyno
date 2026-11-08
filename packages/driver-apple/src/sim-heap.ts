@@ -13,8 +13,9 @@ export async function memoryGraph(
   const r = await run('leaks', [`--outputGraph=${path}`, String(pid)], {
     timeout: 300_000,
     maxBuffer: 64 * 1024 * 1024,
-  }).catch((e: { stdout?: string; code?: number }) => {
-    if (e.code === 1 && e.stdout) return { stdout: e.stdout };
+  }).catch((e: unknown) => {
+    const { code, stdout } = e as { stdout?: string; code?: number };
+    if (code === 1 && stdout) return { stdout };
     throw new DeviceError('UNSUPPORTED', `no memory graph of ${bundle}`);
   });
   const { size } = await stat(path);
@@ -24,7 +25,7 @@ export async function memoryGraph(
     maxBuffer: 64 * 1024 * 1024,
   }).then(
     (x) => x.stdout,
-    (e: { stdout?: string }) => e.stdout ?? '',
+    (e: unknown) => (e as { stdout?: string }).stdout ?? '',
   );
   return {
     value: { file: path, bytes: size, ...parseLeaks(summary) },

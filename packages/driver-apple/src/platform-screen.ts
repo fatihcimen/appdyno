@@ -7,6 +7,7 @@ import {
   type AlertWords,
   type PlatformScreen,
   type UiElement,
+  must,
 } from '@appdyno/core';
 import { NODE_FLAGS, type Point, type Tree } from '@appdyno/protocol';
 
@@ -22,7 +23,7 @@ export const SPOTLIGHT_APP = 'com.apple.Spotlight';
  */
 // shortcut: a two-button system prompt that is not the link's (a notification prompt) within the 3 s
 // after a link is answered as confirmed; tell them apart by the prompt's text if one shows up there
-export function promptButton(t: Tree, words: RegExp = /^open$/): Point | undefined {
+export function promptButton(t: Tree, words = /^open$/): Point | undefined {
   const buttons = t.nodes.filter((n) => t.windows[n.w]?.type === 3 && n.c === 'Button');
   const b = buttons.length === 2 ? buttons[1] : buttons.find((n) => words.test(fold(n.d ?? '')));
   return b && { x: (b.b[0] + b.b[2]) / 2, y: (b.b[1] + b.b[3]) / 2 };
@@ -62,8 +63,8 @@ const alertRoot = (elements: UiElement[]) =>
   elements.findIndex((e) => /alert$/i.test(e.type) && e.pkg === HOME_SCREEN_APP);
 
 const insideOf = (elements: UiElement[], root: number) =>
-  elements.filter((_, i) => {
-    for (let q = elements[i]!.parent; q !== undefined; q = elements[q]!.parent)
+  elements.filter((e) => {
+    for (let q = e.parent; q !== undefined; q = must(elements[q], 'a parent').parent)
       if (q === root) return true;
     return false;
   });
@@ -123,8 +124,8 @@ export const iosScreen: PlatformScreen = {
   windowByBars(elements) {
     const bar = elements.find(
       (e) => /^(navigationbar|tabbar)$/.test(bare(e.type)) && e.rect?.x === 0,
-    );
-    return bar && { x: 0, y: -1e9, width: bar.rect!.width, height: 2e9 };
+    )?.rect;
+    return bar && { x: 0, y: -1e9, width: bar.width, height: 2e9 };
   },
 
   listsByIdAlone: true,

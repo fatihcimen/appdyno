@@ -28,16 +28,17 @@ describe('what an iOS device installs', () => {
   it('takes an .app as it is', async () => {
     const { app } = appFor('iPhoneSimulator');
     const given: string[] = [];
-    await installingApp(app, 'iPhoneSimulator', async (a) => given.push(a));
+    await installingApp(app, 'iPhoneSimulator', (a) => Promise.resolve(given.push(a)));
     expect(given).toEqual([app]);
   });
 
   it('takes the app inside an .ipa, and leaves no copy of it', async () => {
     const { dir } = appFor('iPhoneOS');
     let inside = '';
-    await installingApp(ipaOf(dir), 'iPhoneOS', async (a) => {
+    await installingApp(ipaOf(dir), 'iPhoneOS', (a) => {
       inside = a;
       expect(execFileSync('ls', [a]).toString()).toContain('Info.plist');
+      return Promise.resolve();
     });
     expect(inside).toMatch(/Payload\/Thing\.app$/);
     expect(() => execFileSync('ls', [inside], { stdio: 'ignore' })).toThrow();
@@ -46,13 +47,13 @@ describe('what an iOS device installs', () => {
   it('refuses a build for another kind of device, saying which it is for', async () => {
     const { dir } = appFor('iPhoneOS');
     await expect(
-      installingApp(ipaOf(dir), 'iPhoneSimulator', async () => undefined),
+      installingApp(ipaOf(dir), 'iPhoneSimulator', () => Promise.resolve(undefined)),
     ).rejects.toThrow(/is built for iPhoneOS, not for iPhoneSimulator/);
   });
 
   it('refuses what is neither', async () => {
-    await expect(installingApp('/no/such.apk', 'iPhoneOS', async () => undefined)).rejects.toThrow(
-      /not a local .app bundle or .ipa/,
-    );
+    await expect(
+      installingApp('/no/such.apk', 'iPhoneOS', () => Promise.resolve(undefined)),
+    ).rejects.toThrow(/not a local .app bundle or .ipa/);
   });
 });

@@ -11,7 +11,7 @@ const ACTIVATE = 'AXAction-2010';
 const MOST_ELEMENTS = 300;
 const SHOWN = 20;
 
-type Dict = { [k: string]: Archived };
+type Dict = Record<string, Archived>;
 
 /** One element as a walk met it. The token is good for this connection only. */
 export type AuditElement = { caption: string; identifier?: string; token: Archived };
@@ -102,7 +102,8 @@ export function elementNamed(list: AuditElement[], name: string): AuditElement {
   const hits = byId.length
     ? byId
     : list.filter((e) => e.caption === name || e.caption.split(', ')[0] === name);
-  if (hits.length === 1) return hits[0]!;
+  const [hit] = hits;
+  if (hit && hits.length === 1) return hit;
   if (hits.length > 1)
     throw new DeviceError('AMBIGUOUS', `${hits.length} elements are named ${name}`);
   const shown = list.map((e) => e.caption).slice(0, SHOWN);
@@ -146,7 +147,7 @@ export class Audit {
         editing = { traits, name: element.identifier ?? element.caption };
         return true;
       });
-      return editing as { traits: number; name: string } | undefined;
+      return editing;
     });
   }
 

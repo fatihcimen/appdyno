@@ -10,6 +10,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { must } from '@appdyno/core';
 import { watchKtraces } from '../src/trace-temp.js';
 
 const SPAN = 60_000;
@@ -33,7 +34,7 @@ const ended = (p: ReturnType<typeof spawn>) =>
 
 describe('what a recording leaves in the temp folder', () => {
   let dir: string;
-  const alone = { spanMs: SPAN, others: async () => false };
+  const alone = { spanMs: SPAN, others: () => Promise.resolve(false) };
 
   beforeEach(() => {
     dir = realpathSync(mkdtempSync(join(tmpdir(), 'appdyno-temp-')));
@@ -69,7 +70,7 @@ describe('what a recording leaves in the temp folder', () => {
   });
 
   it('leaves what stays open, and the next recording sees to it', async () => {
-    const lines = join(process.env.APPDYNO_STATE_DIR!, 'trace-temp');
+    const lines = join(must(process.env.APPDYNO_STATE_DIR, 'the state folder'), 'trace-temp');
     const watch = await watchKtraces({ ...alone, dir, closeMs: 0 });
     await pause(20);
     const open = ktrace(dir, 'Open');
@@ -88,14 +89,14 @@ describe('what a recording leaves in the temp folder', () => {
     const watch = await watchKtraces({
       spanMs: SPAN,
       dir,
-      others: async () => true,
+      others: () => Promise.resolve(true),
       seenEveryMs: 50,
     });
     await pause(20);
     const mine = ktrace(dir, 'Mine');
     const theirs = ktrace(dir, 'Theirs');
     const tail = await holding(mine);
-    watch.follow(tail.pid!);
+    watch.follow(must(tail.pid, 'its pid'));
     await pause(800);
     await ended(tail);
     await watch.done();
@@ -107,9 +108,9 @@ describe('what a recording leaves in the temp folder', () => {
   const killedRun = async () => {
     const dead = spawn('true');
     await new Promise((r) => dead.once('exit', r));
-    const lines = join(process.env.APPDYNO_STATE_DIR!, 'trace-temp');
+    const lines = join(must(process.env.APPDYNO_STATE_DIR, 'the state folder'), 'trace-temp');
     mkdirSync(lines, { recursive: true });
-    writeFileSync(join(lines, `${dead.pid}-${Date.now() - 1_000}`), '');
+    writeFileSync(join(lines, `${must(dead.pid, 'its pid')}-${Date.now() - 1_000}`), '');
     return lines;
   };
 
@@ -126,7 +127,7 @@ describe('what a recording leaves in the temp folder', () => {
   it('waits with a killed run while another recording may be at work', async () => {
     const left = ktrace(dir, 'Left');
     const lines = await killedRun();
-    const next = await watchKtraces({ spanMs: SPAN, dir, others: async () => true });
+    const next = await watchKtraces({ spanMs: SPAN, dir, others: () => Promise.resolve(true) });
     expect(existsSync(left)).toBe(true);
     await next.done();
     expect(readdirSync(lines)).toHaveLength(1);

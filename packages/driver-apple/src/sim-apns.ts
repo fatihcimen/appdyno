@@ -23,7 +23,7 @@ export function simulatorApnsTarget(simctl: Simctl, udid: string): ApnsTarget {
       const log = await simctl.exec(logShowArgs(udid, await simctl.appContainer(udid, app), q));
       return { lines: log.split('\n') };
     },
-    build: async () => undefined,
+    build: () => Promise.resolve(undefined),
     declaresVoip: async (app) => {
       const modes = await infoValue(await simctl.appContainer(udid, app), 'UIBackgroundModes');
       return Array.isArray(modes) && modes.includes('voip');

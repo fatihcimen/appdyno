@@ -10,6 +10,7 @@ import {
   type TraceDigest,
   type CpuProfile,
   type ProfileEntry,
+  must,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 
@@ -21,7 +22,9 @@ export type Cell = { value: string; fmt?: string };
  * from the schema, each row's cells in column order; `ref` cells are resolved to the element with that id.
  */
 export function parseTraceTable(xml: string): Record<string, Cell>[] {
-  const cols = [...xml.matchAll(/<col><mnemonic>([^<]+)<\/mnemonic>/g)].map((m) => m[1]!);
+  const cols = [...xml.matchAll(/<col><mnemonic>([^<]+)<\/mnemonic>/g)].map((m) =>
+    must(m[1], 'a column'),
+  );
   const ids = new Map<string, Cell>();
   const rows: Record<string, Cell>[] = [];
   for (const rowXml of xml.split('<row>').slice(1)) {
@@ -37,7 +40,7 @@ export function parseTraceTable(xml: string): Record<string, Cell>[] {
       if (!close && !selfClose) depth++;
       if (close) depth--;
       if (depth === 0 && start >= 0) {
-        const el = body.slice(start, m.index + whole!.length);
+        const el = body.slice(start, m.index + whole.length);
         const ref = /^<[\w-]+[^>]*\bref="([^"]+)"/.exec(el)?.[1];
         const id = /^<[\w-]+[^>]*\bid="([^"]+)"/.exec(el)?.[1];
         const fmt = /^<[\w-]+[^>]*\bfmt="([^"]*)"/.exec(el)?.[1];
@@ -52,10 +55,11 @@ export function parseTraceTable(xml: string): Record<string, Cell>[] {
           if (id) ids.set(id, cell);
         }
         // nested elements (a process's pid) carry ids too
-        for (const n of el.matchAll(
+        for (const [, key, fmt, value] of el.matchAll(
           /<[\w-]+[^>]*\bid="([^"]+)"[^>]*\bfmt="([^"]*)"[^>]*>([^<]*)(?=<)/g,
         ))
-          if (!ids.has(n[1]!)) ids.set(n[1]!, { value: n[3]!, fmt: n[2]! });
+          if (key !== undefined && !ids.has(key))
+            ids.set(key, { value: must(value, 'a value'), fmt: must(fmt, 'a format') });
         cells.push(cell);
         start = -1;
       }
@@ -87,7 +91,7 @@ export function heldTable(xml: string, schema: string) {
 export const hangRows = (xml: string, pid?: number) =>
   parseTraceTable(xml)
     .filter((r) => pid === undefined || r.process?.fmt?.includes(`(${pid})`))
-    .filter((r) => !/Interaction Delay/.test(r['hang-type']?.value ?? ''));
+    .filter((r) => !(r['hang-type']?.value ?? '').includes('Interaction Delay'));
 
 /** The app's hitches and its main thread's hangs, each counted from the trace's start. */
 export const stallSpans = (hitchesXml: string, hangsXml: string, pid?: number): Span[] => [
@@ -172,7 +176,9 @@ export function traceDigest(
   xml: string,
   limit: number,
 ): TraceDigest {
-  const columns = [...xml.matchAll(/<col><mnemonic>([^<]+)<\/mnemonic>/g)].map((m) => m[1]!);
+  const columns = [...xml.matchAll(/<col><mnemonic>([^<]+)<\/mnemonic>/g)].map((m) =>
+    must(m[1], 'a column'),
+  );
   const rows = parseTraceTable(xml);
   const key = ['duration', 'weight'].find((k) => columns.includes(k));
   if (key) rows.sort((a, b) => Number(b[key]?.value ?? 0) - Number(a[key]?.value ?? 0));
@@ -231,9 +237,12 @@ export function* samplesOf(xml: string): Generator<Sample> {
           if (f) stack.push(f);
           continue;
         }
-        if (m[3]) binaries.set(m[3], m[4]!);
-        const f = { name: m[2]!, binary: m[3] ? m[4]! : (binaries.get(m[5] ?? '') ?? '') };
-        frames.set(m[1]!, f);
+        // a frame of its own has an id and a name, and a binary of its own its path
+        const binary = m[3];
+        const path = binary ? must(m[4], "a binary's path") : undefined;
+        if (binary && path !== undefined) binaries.set(binary, path);
+        const f = { name: must(m[2], 'a name'), binary: path ?? binaries.get(m[5] ?? '') ?? '' };
+        frames.set(must(m[1], 'an id'), f);
         stack.push(f);
       }
       const id = /<(?:tagged-)?backtrace id="(\d+)"/.exec(row)?.[1];
@@ -272,7 +281,7 @@ export function parseTimeProfile(
   for (const { stack, weight, pid: of } of samplesOf(xml)) {
     if (!stack.length || (pid !== undefined && of !== pid)) continue;
     total += weight;
-    const head = unescaped(stack[0]!.name);
+    const head = unescaped(must(stack[0], 'a frame').name);
     top.set(head, (top.get(head) ?? 0) + weight);
     for (const name of new Set(stack.filter(inApp).map((f) => f.name)))
       app.set(name, (app.get(name) ?? 0) + weight);
@@ -304,7 +313,7 @@ export function parseActivityMonitor(
   const rows = parseTraceTable(xml).filter((r) => r.pid?.value === String(pid));
   const last = rows[rows.length - 1];
   if (!last) return undefined;
-  const first = rows[0]!;
+  const first = must(rows[0], 'a row');
   const ns = Number(last.start?.value) - Number(first.start?.value);
   // the instrument's own, a row at a time: `cpu-total` comes at the end of a row and the first is short, so its change
   // over the rows' starts read a core at 50 % as 88
@@ -330,7 +339,7 @@ export function parsePowerImpact(xml: string, pid: number): Record<string, numbe
   if (!rows.length) return undefined;
   // a row holds the subsystems of its period, and an empty cell for the others
   const mean = (c: string) => {
-    const xs = rows.flatMap((r) => (r[c]?.value ? [Number(r[c]!.value)] : []));
+    const xs = rows.flatMap((r) => (r[c]?.value ? [Number(r[c].value)] : []));
     return xs.length ? round1(xs.reduce((a, b) => a + b, 0) / xs.length) : 0;
   };
   return {

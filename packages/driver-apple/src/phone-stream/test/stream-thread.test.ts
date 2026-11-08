@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { must } from '@appdyno/core';
 import type { PhoneStreamEvent } from '../../phone-stream-port.js';
 import type { StreamSink } from '../stream.js';
 import { runStream, type ThreadPort, type ToWorker } from '../stream-thread.js';
@@ -8,15 +9,15 @@ import { StreamRefusal } from '../stream-state.js';
 function thread(proved = true) {
   const told: PhoneStreamEvent[] = [];
   let send: (m: ToWorker) => void = () => undefined;
-  const port: ThreadPort = {
+  const port = {
     on: (_event, listener) => void (send = listener),
     postMessage: (e) => void told.push(e),
     close: vi.fn(),
-  };
+  } satisfies ThreadPort;
   const stream = {
-    input: vi.fn(async () => undefined),
+    input: vi.fn(() => Promise.resolve(undefined)),
     keyframe: vi.fn(),
-    stop: vi.fn(async () => proved),
+    stop: vi.fn(() => Promise.resolve(proved)),
   };
   let connected: (() => void) | undefined;
   let refused: ((e: Error) => void) | undefined;
@@ -34,9 +35,9 @@ function thread(proved = true) {
     stream,
     done,
     send: (m: ToWorker) => send(m),
-    sink: () => sink!,
-    connect: () => connected!(),
-    refuse: (e: Error) => refused!(e),
+    sink: () => must(sink, 'the sink'),
+    connect: () => must(connected, 'the connect')(),
+    refuse: (e: Error) => must(refused, 'the refusal')(e),
   };
 }
 

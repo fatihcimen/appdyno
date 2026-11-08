@@ -1,5 +1,6 @@
 import { lstat, readdir } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
+import { must } from '@appdyno/core';
 
 /** A bundle on disk: its bytes, its folders apart and the rest of its files together. */
 export async function bundleSize(
@@ -12,7 +13,7 @@ export async function bundleSize(
     const path = join(e.parentPath, e.name);
     const { size } = await lstat(path);
     const [top, ...rest] = relative(app, path).split(sep);
-    const part = rest.length ? top! : 'files';
+    const part = rest.length ? must(top, 'a folder') : 'files';
     parts[part] = (parts[part] ?? 0) + size;
     bytes += size;
   }

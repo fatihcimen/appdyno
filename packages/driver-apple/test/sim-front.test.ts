@@ -8,7 +8,7 @@ class Listed extends Simctl {
   constructor(private readonly listing: string) {
     super({});
   }
-  override exec = async () => this.listing;
+  override exec = () => Promise.resolve(this.listing);
 }
 
 const LISTING = [
@@ -36,7 +36,7 @@ describe('a running app on a simulator', () => {
 
 describe('what is in front of a simulator with no runner', () => {
   const withFront = (front: string | undefined) => {
-    const read = vi.fn(async () => front);
+    const read = vi.fn(() => Promise.resolve(front));
     const direct = { front: read, close: vi.fn() };
     const device = new IosSimulatorDevice(UDID, new Listed(''), direct as never);
     return device;
@@ -48,10 +48,10 @@ describe('what is in front of a simulator with no runner', () => {
 
   it('is read with no app named, so that a first look at a simulator starts no runner', async () => {
     const tree = { windows: [], nodes: [], hash: 'h', truncated: false };
-    const read = vi.fn(async () => ({ busy: false, copies: false, tree }));
-    const direct = { front: async () => 'com.apple.springboard', read, close: vi.fn() };
+    const read = vi.fn(() => Promise.resolve({ busy: false, copies: false, tree }));
+    const direct = { front: () => Promise.resolve('com.apple.springboard'), read, close: vi.fn() };
     const device = Object.assign(new IosSimulatorDevice(UDID, new Listed(''), direct as never), {
-      keepDump: async () => undefined,
+      keepDump: () => Promise.resolve(undefined),
     });
     await expect(device.tree()).resolves.toMatchObject({ hash: 'h' });
     expect(read).toHaveBeenCalledWith('com.apple.springboard');
@@ -59,10 +59,10 @@ describe('what is in front of a simulator with no runner', () => {
 
   it('is the home screen while the helper cannot say yet, as on a first boot', async () => {
     const tree = { windows: [], nodes: [], hash: 'h', truncated: false };
-    const read = vi.fn(async () => ({ busy: false, copies: false, tree }));
-    const direct = { front: async () => undefined, read, close: vi.fn() };
+    const read = vi.fn(() => Promise.resolve({ busy: false, copies: false, tree }));
+    const direct = { front: () => Promise.resolve(undefined), read, close: vi.fn() };
     const device = Object.assign(new IosSimulatorDevice(UDID, new Listed(''), direct as never), {
-      keepDump: async () => undefined,
+      keepDump: () => Promise.resolve(undefined),
     });
     await expect(device.tree()).resolves.toMatchObject({ hash: 'h' });
     expect(read).toHaveBeenCalledWith('com.apple.springboard');
@@ -74,9 +74,9 @@ describe('what is in front of a simulator with no runner', () => {
       .fn()
       .mockResolvedValueOnce({ refused: 'no-foreground' })
       .mockResolvedValue({ busy: false, copies: false, tree });
-    const direct = { front: async () => undefined, read, close: vi.fn() };
+    const direct = { front: () => Promise.resolve(undefined), read, close: vi.fn() };
     const device = Object.assign(new IosSimulatorDevice(UDID, new Listed(''), direct as never), {
-      keepDump: async () => undefined,
+      keepDump: () => Promise.resolve(undefined),
     });
     await expect(device.tree()).resolves.toMatchObject({ hash: 'h' });
     expect(read).toHaveBeenCalledTimes(2);
@@ -85,14 +85,21 @@ describe('what is in front of a simulator with no runner', () => {
   it('goes to the runner where it is up, and a home screen read past a widget would say less', async () => {
     const mine = { windows: [], nodes: [], hash: 'helper', truncated: false };
     const runners = { windows: [], nodes: [], hash: 'runner', truncated: false };
-    const read = vi.fn(async () => ({ busy: false, copies: false, partial: true, tree: mine }));
+    const read = vi.fn(() =>
+      Promise.resolve({ busy: false, copies: false, partial: true, tree: mine }),
+    );
     const checkRead = vi.fn(() => false);
-    const direct = { front: async () => 'com.apple.springboard', read, checkRead, close: vi.fn() };
+    const direct = {
+      front: () => Promise.resolve('com.apple.springboard'),
+      read,
+      checkRead,
+      close: vi.fn(),
+    };
     const device = new IosSimulatorDevice(UDID, new Listed(''), direct as never);
     Object.defineProperty(device, 'runnerUp', { value: true });
     Object.assign(device, {
-      keepDump: async () => undefined,
-      callNow: async () => ({ result: runners }),
+      keepDump: () => Promise.resolve(undefined),
+      callNow: () => Promise.resolve({ result: runners }),
     });
     await expect(device.tree()).resolves.toMatchObject({ hash: 'runner' });
     // it is no misread, of which three would turn the helper's reads off
@@ -108,17 +115,22 @@ describe('a runner up on a simulator with no app named', () => {
   /** An app opened by a link: the helper sees it in front, and the runner reads the home screen unless told. */
   const up = (front: string | undefined) => {
     const runners = { windows: [], nodes: [], hash: 'runner', truncated: false };
-    const call = vi.fn(async (method: string, _params: unknown) => ({
-      result: method === 'app.foreground' ? { pkg: 'com.apple.springboard' } : runners,
-    }));
+    const call = vi.fn((method: string, _params: unknown) =>
+      Promise.resolve({
+        result: method === 'app.foreground' ? { pkg: 'com.apple.springboard' } : runners,
+      }),
+    );
     const direct = {
-      front: async () => front,
-      read: async () => ({ refused: 'window-not-full-screen' }),
+      front: () => Promise.resolve(front),
+      read: () => Promise.resolve({ refused: 'window-not-full-screen' }),
       close: vi.fn(),
     };
     const device = new IosSimulatorDevice(UDID, new Listed(''), direct as never);
     Object.defineProperty(device, 'runnerUp', { value: true });
-    Object.assign(device, { rpc: { closed: false, call }, keepDump: async () => undefined });
+    Object.assign(device, {
+      rpc: { closed: false, call },
+      keepDump: () => Promise.resolve(undefined),
+    });
     return { device, call };
   };
 
@@ -146,13 +158,13 @@ describe('a look for what stands over the app on a simulator', () => {
   const tree = { windows: [], nodes: [word('Face ID'), { c: 'Button', d: 'Cancel' }], hash: 'h' };
 
   const device = async (answer: unknown) => {
-    const read = vi.fn(async () => answer);
-    const direct = { front: async () => undefined, read, close: vi.fn() };
+    const read = vi.fn(() => Promise.resolve(answer));
+    const direct = { front: () => Promise.resolve(undefined), read, close: vi.fn() };
     const d = new IosSimulatorDevice(UDID, new Listed(''), direct as never);
-    const callNow = vi.fn(async () => {
-      throw new Error('a runner was asked for');
+    const callNow = vi.fn(() => {
+      return Promise.reject(new Error('a runner was asked for'));
     });
-    Object.assign(d, { callNow, keepDump: async () => undefined });
+    Object.assign(d, { callNow, keepDump: () => Promise.resolve(undefined) });
     await d.target('dev.app');
     return { d, read, callNow };
   };
@@ -173,7 +185,7 @@ describe('a look for what stands over the app on a simulator', () => {
   it('asks a runner that is up where the helper has no say, as in landscape', async () => {
     const { d, callNow } = await device({ refused: 'landscape' });
     Object.defineProperty(d, 'runnerUp', { value: true });
-    Object.assign(d, { rpc: { closed: false, call: async () => ({ result: {} }) } });
+    Object.assign(d, { rpc: { closed: false, call: () => Promise.resolve({ result: {} }) } });
     callNow.mockResolvedValue({ result: tree } as never);
     expect(await d.systemWords()).toEqual(['Face ID']);
   });

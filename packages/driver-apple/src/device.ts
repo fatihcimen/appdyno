@@ -21,6 +21,7 @@ import {
   type SettingsPage,
   type SystemSwipe,
   type SystemView,
+  must,
 } from '@appdyno/core';
 import { APPLE_CONTROLS } from './mirror-press.js';
 import {
@@ -140,10 +141,9 @@ export abstract class IosDevice extends RpcDevice implements Device {
     const hide = t.nodes.find(
       (n) => /button$/i.test(n.c) && /^(hide keyboard|dismiss keyboard)$/i.test(n.d ?? n.t ?? ''),
     );
-    const point =
-      hide && hide.b
-        ? { x: (hide.b[0] + hide.b[2]) / 2, y: (hide.b[1] + hide.b[3]) / 2 }
-        : inertPoint(t);
+    const point = hide
+      ? { x: (hide.b[0] + hide.b[2]) / 2, y: (hide.b[1] + hide.b[3]) / 2 }
+      : inertPoint(t);
     await this.tap(point, { settle: false, read: 'none' });
   };
 
@@ -211,7 +211,7 @@ export abstract class IosDevice extends RpcDevice implements Device {
     }
     if (key === 'appSwitch') {
       // iOS has no such key: the home indicator's slow drag up, held until the switcher shows, on a phone
-      const { w, h } = this.helloInfo!.screen;
+      const { w, h } = must(this.helloInfo, 'the hello').screen;
       const [x, y] = [Math.round(w / 2), Math.round(h * 0.55)];
       return this.act(
         {
@@ -356,8 +356,8 @@ export abstract class IosDevice extends RpcDevice implements Device {
   }
 
   /** What every kind of iOS device has; a subclass adds what it knows of itself. */
-  async hardware(): Promise<DeviceHardware> {
-    return { platform: 'ios', controls: APPLE_CONTROLS, systemApps: true };
+  hardware(): Promise<DeviceHardware> {
+    return Promise.resolve({ platform: 'ios', controls: APPLE_CONTROLS, systemApps: true });
   }
 
   async launch(pkg: string) {

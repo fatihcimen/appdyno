@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { assert, describe, expect, it, vi } from 'vitest';
+import { must } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
 import { directChecks } from '../src/provider.js';
 import { DirectSim } from '../src/simdirect.js';
@@ -71,7 +72,9 @@ describe('the helper read in the runner shape', () => {
       ['Cell', 0],
       ['Cell', 1],
     ]);
-    expect(t.nodes[0]!.d).toBeUndefined();
+    const [root] = t.nodes;
+    assert(root);
+    expect(root.d).toBeUndefined();
     expect(t.windows[0]).toMatchObject({ pkg: 'a.b', b: [0, 0, 402, 874] });
     expect(t.hash).toBe(layoutHash(t.nodes));
   });
@@ -86,28 +89,29 @@ describe('the helper read in the runner shape', () => {
       ),
     );
     const [, off, field, sw, below] = t.nodes;
-    expect(off!.f & 16).toBe(0);
-    expect(field!.f & 8).toBe(8);
-    expect(field!.f & 128).toBe(128);
-    expect(field!.t).toBeUndefined();
-    expect(field!.h).toBe('Search');
-    expect(sw!.f & (1024 | 32 | 64)).toBe(1024 | 32 | 64);
-    expect(below!.f & 1).toBe(0);
+    assert(off && field && sw && below);
+    expect(off.f & 16).toBe(0);
+    expect(field.f & 8).toBe(8);
+    expect(field.f & 128).toBe(128);
+    expect(field.t).toBeUndefined();
+    expect(field.h).toBe('Search');
+    expect(sw.f & (1024 | 32 | 64)).toBe(1024 | 32 | 64);
+    expect(below.f & 1).toBe(0);
   });
 
   it('leaves out the bars of a scroll view, told by their shape', () => {
     const { tree: t } = tree(
       app({ a: 32, f: [0, 0, 402, 874], k: [{ a: 0, f: [396, 0, 6, 800] }, cell('Row', 10)] }),
     );
-    expect(t.nodes[2]!.f & 1).toBe(0);
-    expect(t.nodes[3]!.f & 1).toBe(1);
+    expect(must(t.nodes[2], 'a node').f & 1).toBe(0);
+    expect(must(t.nodes[3], 'a node').f & 1).toBe(1);
   });
 
   it('leaves out a toolbar as large as the screen', () => {
     const { tree: t } = tree(app({ a: 24, l: 'Toolbar', f: [0, 0, 402, 874] }));
-    expect(t.nodes[1]!.f & 1).toBe(0);
+    expect(must(t.nodes[1], 'a node').f & 1).toBe(0);
     const { tree: bar } = tree(app({ a: 24, l: 'Toolbar', f: [0, 800, 402, 74] }));
-    expect(bar.nodes[1]!.f & 1).toBe(1);
+    expect(must(bar.nodes[1], 'a node').f & 1).toBe(1);
   });
 
   it('says busy for a progress indicator on screen', () => {
@@ -138,12 +142,13 @@ describe('the helper read in the runner shape', () => {
     const raw = app(copy(0), copy(100));
     const r = tree(raw);
     expect(r.copies).toBe(true);
-    const runner = structuredClone(r.tree) as Tree;
-    runner.nodes[2]!.f &= ~1;
-    const hidden = learnCopies(r.tree, runner)!;
+    const runner = structuredClone(r.tree);
+    must(runner.nodes[2], 'a node').f &= ~1;
+    const hidden = learnCopies(r.tree, runner);
+    assert(hidden);
     const without = withoutCopies(r.tree, hidden);
-    expect(without.nodes[2]!.f & 1).toBe(0);
-    expect(without.nodes[1]!.f & 1).toBe(1);
+    expect(must(without.nodes[2], 'a node').f & 1).toBe(0);
+    expect(must(without.nodes[1], 'a node').f & 1).toBe(1);
     expect(without.hash).toBe(layoutHash(runner.nodes));
     expect(learnCopies(tree(app(copy(0))).tree, runner)).toBeUndefined();
   });
@@ -198,15 +203,16 @@ describe('the settle compare', () => {
       maxMs: 500,
       pollMs: 20,
       before: 'x',
-      read: async () => {
+      read: () => {
         now += 10;
-        return states[Math.min(i++, states.length - 1)]!;
+        return Promise.resolve(must(states[Math.min(i++, states.length - 1)], 'a state'));
       },
       same: (a, b) => a === b,
       busy: (s) => s === 'busy',
       clock: () => now,
-      sleep: async (ms) => {
+      sleep: (ms) => {
         now += ms;
+        return Promise.resolve();
       },
     });
   };
@@ -242,7 +248,8 @@ describe('the digitizer events', () => {
   });
 
   it('holds a long press for its duration', () => {
-    const e = touchEvents({ kind: 'longPress', x: 0, y: 0, durationMs: 800 }, SCREEN)!;
+    const e = touchEvents({ kind: 'longPress', x: 0, y: 0, durationMs: 800 }, SCREEN);
+    assert(e);
     expect(e.map((x) => [x.p, x.at])).toEqual([
       [0, 0],
       [2, 800],
@@ -253,11 +260,12 @@ describe('the digitizer events', () => {
     const e = touchEvents(
       { kind: 'swipe', from: { x: 0, y: 0 }, to: { x: 402, y: 0 }, durationMs: 160 },
       SCREEN,
-    )!;
-    expect(e[0]!.p).toBe(0);
+    );
+    assert(e);
+    expect(e[0]?.p).toBe(0);
     expect(e[e.length - 1]).toEqual({ p: 2, x: 1, y: 0, at: 160 });
     expect(e.slice(1, -1).every((x) => x.p === 1)).toBe(true);
-    expect(e[5]!.x).toBeCloseTo(0.5);
+    expect(e[5]?.x).toBeCloseTo(0.5);
   });
 
   it('moves two fingers at once, and refuses more', () => {
@@ -268,7 +276,8 @@ describe('the digitizer events', () => {
     const e = touchEvents(
       { kind: 'gesture', pointers: [finger(100, 0), finger(200, 402)] },
       SCREEN,
-    )!;
+    );
+    assert(e);
     expect(e[e.length - 1]).toMatchObject({ p: 2, x: 0, x2: 1 });
     expect(
       touchEvents(
@@ -284,16 +293,17 @@ describe('an action with no settle', () => {
     const order: string[] = [];
     const t = tree(app(cell('A', 0))).tree;
     const on: SettleOn = {
-      read: async () => {
+      read: () => {
         order.push('read');
-        return { tree: t, busy: false };
+        return Promise.resolve({ tree: t, busy: false });
       },
       remember: () => undefined,
       recent: new Map(),
       width: 402,
       clock: Date.now,
-      handled: async () => {
+      handled: () => {
         order.push('handled');
+        return Promise.resolve();
       },
     };
     const tap = { kind: 'tap', x: 1, y: 1 } as const;
@@ -307,12 +317,12 @@ describe('an action with no settle', () => {
 
 describe('what a settle says of the screen', () => {
   const on = (now: Tree, was: Tree): SettleOn => ({
-    read: async () => ({ tree: now, busy: false }),
+    read: () => Promise.resolve({ tree: now, busy: false }),
     remember: () => undefined,
     recent: new Map([[was.hash, was.nodes]]),
     width: 402,
     clock: Date.now,
-    handled: async () => undefined,
+    handled: () => Promise.resolve(undefined),
   });
   const a = tree(app(cell('A', 0))).tree;
   const b = tree(app(cell('B', 200))).tree;
@@ -330,12 +340,13 @@ describe('what a settle says of the screen', () => {
 });
 
 describe('the helpers prove themselves', () => {
-  const helper = (answer: (q: Record<string, unknown>) => Record<string, unknown>) =>
-    ({
-      closed: false,
-      call: vi.fn(async (q: Record<string, unknown>) => answer(q)),
-      close: vi.fn(),
-    }) as unknown as HelperProcess;
+  type Answer = (q: Record<string, unknown>) => Record<string, unknown>;
+  /** A helper, and the mock of what it was asked. */
+  const helping = (answer: Answer) => {
+    const call = vi.fn((q: Record<string, unknown>) => Promise.resolve(answer(q)));
+    return { call, helper: { closed: false, call, close: vi.fn() } as unknown as HelperProcess };
+  };
+  const helper = (answer: Answer) => helping(answer).helper;
   const ax = () =>
     helper((q) =>
       q.op === 'read'
@@ -352,8 +363,8 @@ describe('the helpers prove themselves', () => {
           : { ok: true },
       );
     const starting = (tag: string) => ({
-      ax: async () => (started.push(`${tag} read`), hello()),
-      hid: async () => (started.push(`${tag} input`), ax()),
+      ax: () => Promise.resolve((started.push(`${tag} read`), hello())),
+      hid: () => Promise.resolve((started.push(`${tag} input`), ax())),
     });
     const d = new DirectSim('u', starting('on'));
     d.warm();
@@ -364,7 +375,11 @@ describe('the helpers prove themselves', () => {
   });
 
   it('keeps away from a read until asked, and off when told', async () => {
-    const off = new DirectSim('u', { ax: async () => ax(), hid: async () => ax() }, 'off');
+    const off = new DirectSim(
+      'u',
+      { ax: () => Promise.resolve(ax()), hid: () => Promise.resolve(ax()) },
+      'off',
+    );
     expect(await off.read('a.b')).toEqual({ refused: 'APPDYNO_SIM_DIRECT=off' });
     expect(await off.send({ kind: 'tap', x: 1, y: 1 })).toBe(false);
   });
@@ -376,7 +391,10 @@ describe('the helpers prove themselves', () => {
           ? { ok: true, osVersion: '26.5', model: 'iPhone18,1', scale: 3, screen: size }
           : { ok: true },
       );
-    const d = new DirectSim('u', { ax: async () => answer([402, 874]), hid: async () => ax() });
+    const d = new DirectSim('u', {
+      ax: () => Promise.resolve(answer([402, 874])),
+      hid: () => Promise.resolve(ax()),
+    });
     expect(d.screenKnown).toBe(false);
     expect(await d.hello()).toMatchObject({
       platform: 'ios',
@@ -385,11 +403,21 @@ describe('the helpers prove themselves', () => {
       screen: { w: 402, h: 874, density: 3, rotation: 0 },
     });
     expect(d.screenKnown).toBe(true);
-    const wide = new DirectSim('u', { ax: async () => answer([874, 402]), hid: async () => ax() });
+    const wide = new DirectSim('u', {
+      ax: () => Promise.resolve(answer([874, 402])),
+      hid: () => Promise.resolve(ax()),
+    });
     expect(await wide.hello()).toBeUndefined();
-    const none = new DirectSim('u', { ax: async () => answer([0, 0]), hid: async () => ax() });
+    const none = new DirectSim('u', {
+      ax: () => Promise.resolve(answer([0, 0])),
+      hid: () => Promise.resolve(ax()),
+    });
     expect(await none.hello()).toBeUndefined();
-    const off = new DirectSim('u', { ax: async () => ax(), hid: async () => ax() }, 'off');
+    const off = new DirectSim(
+      'u',
+      { ax: () => Promise.resolve(ax()), hid: () => Promise.resolve(ax()) },
+      'off',
+    );
     expect(await off.hello()).toBeUndefined();
   });
 
@@ -405,12 +433,16 @@ describe('the helpers prove themselves', () => {
         sent.push(q as never);
         return { ok: true };
       });
-      const d = new DirectSim('u', { ax: async () => answer, hid: async () => hid });
+      const d = new DirectSim('u', {
+        ax: () => Promise.resolve(answer),
+        hid: () => Promise.resolve(hid),
+      });
       await d.hello();
       // as in a process of its own after the turn: nothing told it, and it reads what is
-      if (screen[0]! < screen[1]!) d.setRotation(orientation === 1 ? 0 : 1);
+      if (must(screen[0], 'a width') < must(screen[1], 'a height'))
+        d.setRotation(orientation === 1 ? 0 : 1);
       expect(await d.send({ kind: 'tap', x: 753, y: 210 })).toBe(true);
-      return sent[0]!.events[0]!;
+      return must(sent[0]?.events[0], 'a touch');
     };
     const [across, down] = [753 / 874, 210 / 402];
     const right = await touch([402, 874], 3);
@@ -434,8 +466,8 @@ describe('the helpers prove themselves', () => {
         : { ok: true, osVersion: '26.5', model: 'x', scale: 3, screen: [402, 874] },
     );
     const d = new DirectSim('u', {
-      ax: async () => answer,
-      hid: async () => helper(() => ({ ok: true })),
+      ax: () => Promise.resolve(answer),
+      hid: () => Promise.resolve(helper(() => ({ ok: true }))),
     });
     await d.hello();
     d.setRotation(1);
@@ -448,11 +480,17 @@ describe('the helpers prove themselves', () => {
       asked.push(q);
       return { ok: true, ms: 473, over: 1 };
     });
-    const d = new DirectSim('u', { ax: async () => answer, hid: async () => ax() });
+    const d = new DirectSim('u', {
+      ax: () => Promise.resolve(answer),
+      hid: () => Promise.resolve(ax()),
+    });
     expect(await d.animationsOver()).toBe(473);
     expect(asked).toMatchObject([{ op: 'animations', within: 1 }]);
     const refused = helper(() => ({ ok: false, refused: 'no-report' }));
-    const none = new DirectSim('u', { ax: async () => refused, hid: async () => ax() });
+    const none = new DirectSim('u', {
+      ax: () => Promise.resolve(refused),
+      hid: () => Promise.resolve(ax()),
+    });
     expect(await none.animationsOver()).toBeUndefined();
     vi.stubEnv('APPDYNO_ANIMATION_WAIT', '0');
     expect(await d.animationsOver()).toBeUndefined();
@@ -467,7 +505,10 @@ describe('the helpers prove themselves', () => {
       return { ok: true, touchesEnded: q.op === 'arm' ? 4 : 6, ms: 300, screen: [402, 874] };
     });
     const hid = helper(() => ({ ok: true }));
-    const d = new DirectSim('u', { ax: async () => answer, hid: async () => hid });
+    const d = new DirectSim('u', {
+      ax: () => Promise.resolve(answer),
+      hid: () => Promise.resolve(hid),
+    });
     await d.hello();
     await d.touchHandled();
     expect(asked.map((q) => q.op)).toEqual(['hello']);
@@ -489,12 +530,18 @@ describe('the helpers prove themselves', () => {
         asked.push(q.op);
         return { ok: true, screen: [402, 874], osVersion: '26.5', model: 'x', scale: 3 };
       });
-    const gone = new DirectSim('u', { ax: async () => answer(), hid: async () => ax() });
+    const gone = new DirectSim('u', {
+      ax: () => Promise.resolve(answer()),
+      hid: () => Promise.resolve(ax()),
+    });
     await gone.hello();
     gone.close();
     await vi.waitFor(() => expect(asked).toEqual(['hello', 'leave']));
     asked.length = 0;
-    const stays = new DirectSim('u', { ax: async () => answer(), hid: async () => ax() });
+    const stays = new DirectSim('u', {
+      ax: () => Promise.resolve(answer()),
+      hid: () => Promise.resolve(ax()),
+    });
     await stays.hello();
     stays.close(true);
     await new Promise((r) => setTimeout(r, 10));
@@ -502,7 +549,11 @@ describe('the helpers prove themselves', () => {
   });
 
   it('believes a read that says what the runner says, and not one that does not', async () => {
-    const d = new DirectSim('u', { ax: async () => ax(), hid: async () => ax() }, undefined);
+    const d = new DirectSim(
+      'u',
+      { ax: () => Promise.resolve(ax()), hid: () => Promise.resolve(ax()) },
+      undefined,
+    );
     const r = await d.read('a.b');
     if ('refused' in r) throw new Error(r.refused);
     expect(d.screenKnown).toBe(true);
@@ -516,7 +567,11 @@ describe('the helpers prove themselves', () => {
   });
 
   it('gives up after three reads that never agreed', async () => {
-    const d = new DirectSim('u', { ax: async () => ax(), hid: async () => ax() }, undefined);
+    const d = new DirectSim(
+      'u',
+      { ax: () => Promise.resolve(ax()), hid: () => Promise.resolve(ax()) },
+      undefined,
+    );
     const r = await d.read('a.b');
     if ('refused' in r) throw new Error(r.refused);
     const other = tree(app(cell('B', 200))).tree;
@@ -539,19 +594,20 @@ describe('the helpers prove themselves', () => {
   });
 
   it('sends a touch once the screen is known, and leaves input to the runner after a lost one', async () => {
-    const hid = helper(() => ({ ok: true }));
-    const d = new DirectSim('u', { ax: async () => ax(), hid: async () => hid }, undefined);
+    const { call, helper: hid } = helping(() => ({ ok: true }));
+    const d = new DirectSim(
+      'u',
+      { ax: () => Promise.resolve(ax()), hid: () => Promise.resolve(hid) },
+      undefined,
+    );
     expect(await d.send({ kind: 'tap', x: 1, y: 1 })).toBe(false);
     await d.read('a.b');
     expect(await d.send({ kind: 'tap', x: 1, y: 1 })).toBe(true);
-    expect(hid.call).toHaveBeenCalledWith(
-      expect.objectContaining({ op: 'touch' }),
-      expect.any(Number),
-    );
+    expect(call).toHaveBeenCalledWith(expect.objectContaining({ op: 'touch' }), expect.any(Number));
     expect(await d.send({ kind: 'key', key: 'enter' })).toBe(true);
-    expect(hid.call).toHaveBeenCalledWith({ op: 'key', page: 7, usage: 0x28 }, expect.any(Number));
+    expect(call).toHaveBeenCalledWith({ op: 'key', page: 7, usage: 0x28 }, expect.any(Number));
     expect(await d.send({ kind: 'key', key: 'a', modifiers: ['command', 'shift'] })).toBe(true);
-    expect(hid.call).toHaveBeenLastCalledWith(
+    expect(call).toHaveBeenLastCalledWith(
       { op: 'key', page: 7, usage: 0x04, modifiers: [0xe3, 0xe1] },
       expect.any(Number),
     );
@@ -570,7 +626,10 @@ describe('the helpers prove themselves', () => {
       );
     const blind = new DirectSim(
       'u',
-      { ax: async () => refusing('the observer did not start'), hid: async () => ax() },
+      {
+        ax: () => Promise.resolve(refusing('the observer did not start')),
+        hid: () => Promise.resolve(ax()),
+      },
       undefined,
     );
     await blind.read('a.b');
@@ -578,7 +637,7 @@ describe('the helpers prove themselves', () => {
     expect(await blind.send({ kind: 'tap', x: 1, y: 1 })).toBe(false);
     const other = new DirectSim(
       'u',
-      { ax: async () => refusing('no-report'), hid: async () => ax() },
+      { ax: () => Promise.resolve(refusing('no-report')), hid: () => Promise.resolve(ax()) },
       undefined,
     );
     await other.read('a.b');
@@ -593,36 +652,49 @@ describe('the helpers prove themselves', () => {
   });
 
   it('leaves input to the runner when the daemon stops answering', async () => {
-    const hid = helper(() => ({ ok: false, error: 'dtuhidd did not answer' }));
-    const d = new DirectSim('u', { ax: async () => ax(), hid: async () => hid }, undefined);
+    const { call, helper: hid } = helping(() => ({ ok: false, error: 'dtuhidd did not answer' }));
+    const d = new DirectSim(
+      'u',
+      { ax: () => Promise.resolve(ax()), hid: () => Promise.resolve(hid) },
+      undefined,
+    );
     await d.read('a.b');
     expect(await d.send({ kind: 'tap', x: 1, y: 1 })).toBe(false);
     expect(await d.send({ kind: 'tap', x: 1, y: 1 })).toBe(false);
-    expect(hid.call).toHaveBeenCalledTimes(1);
+    expect(call).toHaveBeenCalledTimes(1);
   });
 
   it('turns both off in landscape: only portrait is verified', async () => {
-    const d = new DirectSim('u', { ax: async () => ax(), hid: async () => ax() }, undefined);
+    const d = new DirectSim(
+      'u',
+      { ax: () => Promise.resolve(ax()), hid: () => Promise.resolve(ax()) },
+      undefined,
+    );
     d.setRotation(1);
     expect(await d.read('a.b')).toEqual({ refused: 'no-target' });
     await expect(d.send({ kind: 'tap', x: 1, y: 1 })).resolves.toBe(false);
   });
 
   it('is reported by the doctor, a failure as a warning', async () => {
-    const good = new DirectSim('u', { ax: async () => ax(), hid: async () => ax() }, undefined);
+    const good = new DirectSim(
+      'u',
+      { ax: () => Promise.resolve(ax()), hid: () => Promise.resolve(ax()) },
+      undefined,
+    );
     expect((await directChecks('u', good)).every((c) => c.ok)).toBe(true);
     const bad = new DirectSim(
       'u',
       {
-        ax: async () => helper(() => ({ ok: false, refused: 'the snapshot call is missing' })),
-        hid: async () => {
-          throw new Error('no CoreSimulator');
+        ax: () =>
+          Promise.resolve(helper(() => ({ ok: false, refused: 'the snapshot call is missing' }))),
+        hid: () => {
+          return Promise.reject(new Error('no CoreSimulator'));
         },
       },
       undefined,
     );
     const checks = await directChecks('u', bad);
     expect(checks.every((c) => !c.ok && c.warn)).toBe(true);
-    expect(checks[0]!.detail).toContain('no CoreSimulator');
+    expect(checks[0]?.detail).toContain('no CoreSimulator');
   });
 });

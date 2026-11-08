@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
+import { must } from '@appdyno/core';
 import type { Tree } from '@appdyno/protocol';
 import { ALERT_APPEAR_MS, ALERT_WATCH_MS, INERT_QUIET_MS, settle } from '../src/simsettle.js';
 import {
@@ -73,14 +74,19 @@ describe('the rules the direct read shares with the runner', () => {
         maxMs: t.maxMs,
         pollMs: t.pollMs,
         before: t.before ?? undefined,
-        read: async () => {
+        read: () => {
           now += t.readMs;
-          return t.screens[Math.min(read++, t.screens.length - 1)]!;
+          return Promise.resolve(
+            must(t.screens[Math.min(read++, t.screens.length - 1)], 'a screen'),
+          );
         },
         same: (a, b) => a === b,
         busy: (s) => t.busy.includes(s),
         clock: () => now,
-        sleep: async (ms) => void (now += ms),
+        sleep: (ms) => {
+          now += ms;
+          return Promise.resolve();
+        },
       });
       expect(
         { settled: answer.settled, reads: answer.reads, elapsedMs: answer.elapsedMs },
@@ -130,12 +136,12 @@ describe('the type tables', () => {
       ...inside('names: [XCUIElement.ElementType: String] = [', '\n    ]').matchAll(
         /\.(\w+): "(\w+)"/g,
       ),
-    ].map((m) => [m[1]!, m[2]!]),
+    ].map((m) => [must(m[1], 'a type'), must(m[2], 'a name')]),
   );
   const table = (name: string) =>
     new Set(
       [...inside(`${name}: Set<XCUIElement.ElementType> = [`, ']').matchAll(/\.(\w+)/g)].map((m) =>
-        names.get(m[1]!),
+        names.get(must(m[1], 'a type')),
       ),
     );
 
@@ -155,7 +161,8 @@ describe('the type tables', () => {
       join(import.meta.dirname, '../../../ios/RunnerCore/Sources/RunnerCore/Layout.swift'),
       'utf8',
     );
-    const list = /scrollers: Set<String> = \[(.*)\]/.exec(core)![1]!;
+    const list = /scrollers: Set<String> = \[(.*)\]/.exec(core)?.[1];
+    assert(list);
     expect(new Set([...list.matchAll(/"(\w+)"/g)].map((m) => m[1]))).toEqual(SCROLLERS);
   });
 });

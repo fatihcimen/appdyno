@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { Socket } from 'node:net';
 import { connect as tlsConnect, type TLSSocket } from 'node:tls';
-import { writeWhole } from '@appdyno/core';
+import { writeWhole, must } from '@appdyno/core';
 import type { PhoneStreamCheck } from '../phone-stream-port.js';
 import { identityFile } from '../wifi-paired.js';
 import { PortRefused } from './ipstack.js';
@@ -56,9 +56,10 @@ export function phonesIn(lines: string[]): FoundPhone[] {
   const names = new Map<string, string>();
   for (const line of lines) {
     const srv = /^(\S+)\._remotepairing\._tcp\s+SRV\s+\d+\s+\d+\s+(\d+)\s+(\S+)/.exec(line);
-    if (srv) hosts.set(srv[1]!, { port: Number(srv[2]), host: srv[3]! });
+    if (srv)
+      hosts.set(must(srv[1], 'a name'), { port: Number(srv[2]), host: must(srv[3], 'a host') });
     const txt = /^(\S+)\._remotepairing\._tcp\s+TXT\s.*"identifier=([^"]+)"/.exec(line);
-    if (txt) names.set(txt[1]!, txt[2]!);
+    if (txt) names.set(must(txt[1], 'a name'), must(txt[2], 'a value'));
   }
   return [...hosts].flatMap(([instance, at]) => {
     const phone = names.get(instance);
@@ -120,7 +121,7 @@ export function networkAddress(lines: string[]): string | undefined {
   const all = lines.flatMap((l) => /\bAdd\s+\S+\s+\d+\s+\S+\s+(\S+)/.exec(l)?.[1] ?? []);
   const usable = all
     .map((a) => a.replace(/%.*$/, ''))
-    .filter((a) => a !== '0.0.0.0' && !/^169\.254\./.test(a) && !/^fe[89ab]/i.test(a));
+    .filter((a) => a !== '0.0.0.0' && !a.startsWith('169.254.') && !/^fe[89ab]/i.test(a));
   return usable.find((a) => a.includes('.')) ?? usable[0];
 }
 
@@ -189,7 +190,7 @@ async function phonesFor(identity: Identity) {
 /** Can a stream start: whether the phone is paired, there, and takes a connection. Asks it nothing. */
 export async function wifiCheck(udid: string): Promise<PhoneStreamCheck> {
   try {
-    (await reach((await phonesFor(identityOf(udid)))[0]!)).socket.destroy();
+    (await reach(must((await phonesFor(identityOf(udid)))[0], 'a phone'))).socket.destroy();
     return { ok: true };
   } catch (e) {
     if (e instanceof PhoneRefusal) return { ok: false, need: e.need, detail: e.message };

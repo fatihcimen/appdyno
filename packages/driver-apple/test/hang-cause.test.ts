@@ -49,19 +49,19 @@ describe('a hang, busy or blocked', () => {
       { ms: 500, kind: 'blocked', cpuPercent: 0 },
     ]);
     const another = profile(2_000, 2_500, ['a', 'main']).replaceAll(String(PID), '111');
-    expect(parseHangCauses(HANGS(2_000, 500), another, PID)[0]!.kind).toBe('blocked');
+    expect(parseHangCauses(HANGS(2_000, 500), another, PID)[0]?.kind).toBe('blocked');
   });
 
   it('says an address where the build has no symbols', () => {
     const xml = profile(2_000, 2_500, ['sysLeaf', '0x1001bd02b', 'main']);
-    expect(parseHangCauses(HANGS(2_000, 500), xml, PID)[0]!.function).toBe('0x1001bd02b');
+    expect(parseHangCauses(HANGS(2_000, 500), xml, PID)[0]?.function).toBe('0x1001bd02b');
   });
 
   it('reads a time, a thread and a process through their refs', () => {
     const rows = [...samplesOf(profile(100, 103, ['a']))];
     expect(rows.map((r) => r.ns)).toEqual([100 * MS, 101 * MS, 102 * MS]);
     expect(rows.every((r) => r.tid === TID && r.pid === PID && r.weight === MS)).toBe(true);
-    expect(rows[2]!.stack.map((f) => f.name)).toEqual(['a']);
+    expect(rows[2]?.stack.map((f) => f.name)).toEqual(['a']);
   });
 
   it('leaves the profile of a process as it read', () => {

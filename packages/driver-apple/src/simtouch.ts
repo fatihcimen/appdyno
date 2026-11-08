@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { type ActParams, type Key, KEY_USAGES, type Modifier } from '@appdyno/protocol';
 
 export type TouchEvent = {
@@ -26,19 +27,20 @@ export function touchEvents(
   type Path = { x: number; y: number; t: number }[];
   const along = (path: Path, t: number) => {
     const next = path.findIndex((q) => q.t >= t);
-    if (next <= 0) return next === 0 ? path[0]! : path[path.length - 1]!;
-    const a = path[next - 1]!;
-    const b = path[next]!;
+    if (next <= 0) return must(next === 0 ? path[0] : path.at(-1), 'a point');
+    const a = must(path[next - 1], 'a point');
+    const b = must(path[next], 'a point');
     const k = b.t === a.t ? 1 : (t - a.t) / (b.t - a.t);
     return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, t };
   };
   const walk = (paths: Path[]) => {
-    const t0 = Math.min(...paths.map((p) => p[0]!.t));
-    const t1 = Math.max(...paths.map((p) => p[p.length - 1]!.t));
+    const t0 = Math.min(...paths.map((p) => must(p[0], 'a point').t));
+    const t1 = Math.max(...paths.map((p) => must(p.at(-1), 'a point').t));
+    const [first, second] = paths;
     const events: TouchEvent[] = [];
     for (let t = t0; ; t = Math.min(t + STEP_MS, t1)) {
-      const a = along(paths[0]!, t);
-      const b = paths[1] && along(paths[1], t);
+      const a = along(must(first, 'a path'), t);
+      const b = second && along(second, t);
       events.push({
         p: t === t0 ? 0 : t === t1 ? 2 : 1,
         x: X(a.x),
@@ -114,9 +116,9 @@ export function usageOf(c: string): { usage: number; shift: boolean } | undefine
   const digit = SHIFTED_DIGITS.indexOf(c);
   if (digit >= 0) return { usage: 0x1e + digit, shift: true };
   const plain = UNSHIFTED.indexOf(c);
-  if (plain >= 0) return { usage: UNSHIFTED_USAGES[plain]!, shift: false };
+  if (plain >= 0) return { usage: must(UNSHIFTED_USAGES[plain], 'a usage'), shift: false };
   const shifted = SHIFTED.indexOf(c);
-  if (shifted >= 0) return { usage: UNSHIFTED_USAGES[shifted]!, shift: true };
+  if (shifted >= 0) return { usage: must(UNSHIFTED_USAGES[shifted], 'a usage'), shift: true };
   return undefined;
 }
 

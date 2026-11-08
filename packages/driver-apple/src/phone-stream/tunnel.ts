@@ -9,7 +9,7 @@ import {
   readPlist,
   USBMUXD,
 } from '../usbmux.js';
-import { IpStack, type PacketStream } from './ipstack.js';
+import { IpStack } from './ipstack.js';
 
 /**
  * A tunnel of this process's own to a phone over USB: lockdown, CoreDeviceProxy, then raw packets, with nothing of
@@ -107,10 +107,12 @@ export class Lockdown {
 
   private pump() {
     try {
-      const next = this.waiting && nextLockdownMessage(this.buffer);
+      const waiting = this.waiting;
+      if (!waiting) return;
+      const next = nextLockdownMessage(this.buffer);
       if (!next) return;
       this.buffer = next.rest;
-      this.waiting!(next.message as Record<string, unknown>);
+      waiting(next.message as Record<string, unknown>);
     } catch (e) {
       this.failed?.(e as Error);
     }
@@ -249,7 +251,7 @@ export function tunnelAnswer(stream: Duplex, ms = ANSWER_MS) {
         const answer = readTunnelAnswer(held);
         if (answer) stop(() => resolve(answer));
       } catch (e) {
-        stop(() => reject(e as Error));
+        stop(() => reject(e instanceof Error ? e : new Error(String(e))));
       }
     };
     const onClose = () => stop(() => reject(new Error('the tunnel closed at its start')));
@@ -277,7 +279,7 @@ export function tunnelOver(stream: Socket): Promise<Tunnel> {
   return closingOnFailure(stream, async () => {
     stream.write(tunnelRequest());
     const { info, rest } = await tunnelAnswer(stream);
-    const stack = new IpStack(stream as PacketStream, info);
+    const stack = new IpStack(stream, info);
     if (rest.length) stack.feed(rest);
     return { stack, rsdPort: info.rsdPort };
   });

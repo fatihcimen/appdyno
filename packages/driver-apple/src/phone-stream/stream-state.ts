@@ -59,7 +59,8 @@ export function sessionsOf(status: DecodedDict): string[] {
   const sessions = Array.isArray(status.sessions) ? status.sessions : [];
   const ids = sessions.map((s) => {
     const options = dict(dict(dict(s).connection).options);
-    return String(dict(options.avcMediaStreamOptionClientSessionID).uuid ?? '');
+    const { uuid } = dict(options.avcMediaStreamOptionClientSessionID);
+    return typeof uuid === 'string' ? uuid : '';
   });
   return [...new Set(ids)];
 }

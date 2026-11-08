@@ -219,12 +219,14 @@ export class PhoneMirror implements Mirror {
   }
 
   /** Only on a dark screen: the same press on a lit one goes to the home screen. */
-  async wake() {
+  wake() {
     if (this.dark) this.handle?.input({ kind: 'button', name: 'home' });
+    return Promise.resolve();
   }
 
-  async keyframe() {
+  keyframe() {
     this.handle?.keyframe();
+    return Promise.resolve();
   }
 
   /**
@@ -246,7 +248,10 @@ export class PhoneMirror implements Mirror {
     const ctl = new Devicectl(this.udid);
     const held = await ctl.readPasteboard().catch(() => '');
     await ctl.writePasteboard(text);
-    await pasteKeys(async (next) => this.handle?.input(next));
+    await pasteKeys((next) => {
+      this.handle?.input(next);
+      return Promise.resolve();
+    });
     this.say(
       `This text has no keys, so it went by the phone's pasteboard: allow the paste on its screen.${held ? '' : ' It held no text to put back.'}`,
     );
@@ -298,12 +303,16 @@ export class PhoneMirror implements Mirror {
     if (this.gathering === letters) this.gathering = undefined;
     if (this.closed) return;
     if (runner && !this.keysOnly) {
-      const failed = await runner.keys(letters.s, under || undefined).catch((e: Error) => e);
+      const failed = await runner.keys(letters.s, under || undefined).catch((e: unknown) => e);
       if (!failed) return;
-      if ((failed as DeviceError).code === 'NO_FOCUS') return this.refuse();
+      if ((failed as DeviceError).code === 'NO_FOCUS') {
+        this.refuse();
+        return;
+      }
       this.keysOnly = true;
       this.say(NOT_TRUE);
     }
+    // eslint-disable-next-line @typescript-eslint/no-misused-spread -- a key types one code point
     const keyless = [...letters.s].some((c) => !usageOf(c));
     await (keyless ? this.paste(letters.s) : this.handle?.input({ kind: 'text', s: letters.s }));
   }
@@ -336,11 +345,17 @@ export class PhoneMirror implements Mirror {
       const { tap } = this;
       this.tap = undefined;
       // a paste's own wait lets touches past, as one of them is what answers the phone
-      const pasted = (this.keysOnly || !this.runner) && [...e.s].some((c) => !usageOf(c));
+      const pasted =
+        // eslint-disable-next-line @typescript-eslint/no-misused-spread -- a key types one code point
+        (this.keysOnly || !this.runner) && [...e.s].some((c) => !usageOf(c));
       if (!pasted) this.waiting++;
       this.typing = this.typing
         .then(() => this.send(letters, tap))
-        .catch((failed: Error) => this.say(`That text did not go in: ${failed.message}`))
+        .catch((failed: unknown) =>
+          this.say(
+            `That text did not go in: ${failed instanceof Error ? failed.message : String(failed)}`,
+          ),
+        )
         .finally(() => {
           if (!pasted) this.waiting--;
         });
@@ -365,6 +380,7 @@ export class PhoneMirror implements Mirror {
     this.dropPipe();
     if (!handle) return;
     this.stopProved = await handle.stop();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- an open while it stopped holds one again
     if (!this.handle) this.dark = false;
   }
 

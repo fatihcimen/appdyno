@@ -85,11 +85,11 @@ export async function holdAppLanguage(
     const next = language ? { ...rest, [app]: language.replace('_', '-') } : rest;
     return Object.keys(next).length > 0 ? next : undefined;
   });
-  await restart().catch((e: Error) => {
+  await restart().catch((e: unknown) => {
     const held = language ? `held in ${language}` : 'let go';
     throw new DeviceError(
       e instanceof DeviceError ? e.code : 'INTERNAL',
-      `${app} is ${held} for this tool's launches, but did not start again: ${e.message}`,
+      `${app} is ${held} for this tool's launches, but did not start again: ${e instanceof Error ? e.message : String(e)}`,
     );
   });
   return `${app}'s launches by this tool, not the system's own text`;

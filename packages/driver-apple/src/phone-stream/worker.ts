@@ -9,4 +9,5 @@ const { udid, quality, wifi } = workerData as {
   wifi: boolean;
 };
 
-await runStream(parentPort!, (sink) => PhoneStream.open(udid, { quality, wifi }, sink));
+if (!parentPort) throw new Error('the stream runs in a worker');
+await runStream(parentPort, (sink) => PhoneStream.open(udid, { quality, wifi }, sink));

@@ -86,10 +86,11 @@ const working = new Set<string>();
 /** A run killed with its process, or whose files stayed open too long, left its line: it is finished once nothing else may be at work. */
 async function sweep(dir: string, spanMs: number, others: () => Promise<boolean>) {
   for (const line of await readdir(ledger()).catch(() => [] as string[])) {
-    const [pid, from] = line.split('-').map(Number);
-    if (working.has(line) || (pid !== process.pid && processAlive(pid!))) continue;
+    // a line of no run of this tool reads as no process and no time
+    const [pid = NaN, from = NaN] = line.split('-').map(Number);
+    if (working.has(line) || (pid !== process.pid && processAlive(pid))) continue;
     if (await others()) return;
-    const open = await clear(dir, { from: from!, to: from! + spanMs }, false);
+    const open = await clear(dir, { from, to: from + spanMs }, false);
     if (open === 0) await rm(join(ledger(), line), { force: true });
   }
 }
@@ -114,7 +115,8 @@ export async function watchKtraces({
   await writeFile(join(ledger(), line), '');
   const seen = new Set<string>();
   let tool: number | undefined;
-  let over = false;
+  // set by `done`, where the compiler does not follow it
+  let over = false as boolean;
   void (async () => {
     while (!over) {
       if (tool) for (const path of await heldBy(tool, temp)) seen.add(path);

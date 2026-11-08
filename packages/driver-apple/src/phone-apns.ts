@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { run, type PushTokenKind } from '@appdyno/core';
 import { tokensIn, type ApnsTarget } from './apns-push.js';
-import { phoneFacts, type Devicectl, type ListedPhone } from './devicectl.js';
+import { phoneFacts, type Devicectl } from './devicectl.js';
 import { infoValue } from './sim-links.js';
 import { assertBundle, xcodeEnv } from './simctl.js';
 
@@ -75,23 +75,23 @@ export class PhoneApnsTarget implements ApnsTarget {
     return (await this.ctl.app(app)) !== undefined;
   }
 
-  async build(app: string) {
-    return this.builds.get(app)?.build;
+  build(app: string) {
+    return Promise.resolve(this.builds.get(app)?.build);
   }
 
-  async declaresVoip(app: string) {
-    return this.builds.get(app)?.voip;
+  declaresVoip(app: string) {
+    return Promise.resolve(this.builds.get(app)?.voip);
   }
 
   async osMajor() {
     const j = await this.ctl.json(['device', 'info', 'details', '--device', this.ctl.udid]);
-    const v = phoneFacts((j.result ?? {}) as ListedPhone).osVersion;
+    const v = phoneFacts(j.result ?? {}).osVersion;
     return Number(v?.split('.')[0] ?? 0);
   }
 
   async lines(app: string, wanted: PushTokenKind) {
     const kept = this.followed.get(app);
-    if (kept && kept.child.exitCode === null) return { lines: kept.lines };
+    if (kept?.child.exitCode === null) return { lines: kept.lines };
     const lines: string[] = [];
     const child = this.follow(this.ctl.udid, app);
     this.followed.set(app, { child, lines });

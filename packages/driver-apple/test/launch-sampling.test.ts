@@ -14,7 +14,7 @@ const APP = 'dev.appdyno.fixture';
 const NO_SCREEN = {
   code: 'TIMEOUT',
   message: `${APP} showed no screen within 20 s`,
-  hint: expect.stringMatching(/read the screen/),
+  hint: expect.stringMatching(/read the screen/) as unknown,
 };
 
 /** A clock that jumps: a screen's 20 s go by in no time. */
@@ -31,14 +31,17 @@ describe('a launch on a simulator', () => {
   const simulator = (shown: () => Promise<boolean>) => {
     const did: string[] = [];
     const simctl = {
-      terminate: async () => void did.push('stop'),
-      launch: async () => {
-        did.push('launch');
-        return `${APP}: 4242`;
+      terminate: () => {
+        did.push('stop');
+        return Promise.resolve();
       },
-      exec: async (words: string[]) => {
+      launch: () => {
+        did.push('launch');
+        return Promise.resolve(`${APP}: 4242`);
+      },
+      exec: (words: string[]) => {
         did.push(words.join(' '));
-        return '';
+        return Promise.resolve('');
       },
     };
     const perf = new IosSimulatorPerf(
@@ -52,18 +55,18 @@ describe('a launch on a simulator', () => {
 
   it('warms up once, then keeps the lower middle of what it times', async () => {
     clockOf(10);
-    const { did, perf } = simulator(async () => true);
+    const { did, perf } = simulator(() => Promise.resolve(true));
     const { value, raw } = await perf.launch(APP, { mode: 'cold', repeats: 2 });
     expect(did).toEqual(['stop', 'launch', 'stop', 'launch', 'stop', 'launch']);
     expect(value.samples).toHaveLength(2);
-    expect(value.medianMs).toBe(value.samples[0]!.totalMs);
+    expect(value.medianMs).toBe(value.samples[0]?.totalMs);
     expect(value.until).toBe('the first screen is read');
     expect(raw.split('\n')).toHaveLength(3);
   }, 10_000);
 
   it('puts another app in front for a warm launch', async () => {
     clockOf(10);
-    const { did, perf } = simulator(async () => true);
+    const { did, perf } = simulator(() => Promise.resolve(true));
     await perf.launch(APP, { mode: 'warm', repeats: 1 });
     expect(did).toEqual([
       'launch U com.apple.Preferences',
@@ -75,13 +78,13 @@ describe('a launch on a simulator', () => {
 
   it('refuses a screen that never comes', async () => {
     clockOf(25_000);
-    const { perf } = simulator(async () => false);
+    const { perf } = simulator(() => Promise.resolve(false));
     await expect(perf.launch(APP, { mode: 'cold', repeats: 1 })).rejects.toMatchObject(NO_SCREEN);
   }, 10_000);
 
   it('looks once even when the launch itself took longer than the wait', async () => {
     clockOf(25_000);
-    const seen = vi.fn(async () => true);
+    const seen = vi.fn(() => Promise.resolve(true));
     const { perf } = simulator(seen);
     await expect(perf.launch(APP, { mode: 'cold', repeats: 1 })).resolves.toBeDefined();
     expect(seen).toHaveBeenCalled();
@@ -100,13 +103,24 @@ describe('a launch on a phone', () => {
     const did: string[] = [];
     const device = new IosPhoneDevice('00001234-0123456789ABCDEF', { profile: '/p' });
     Object.assign(device, {
-      terminate: async () => void did.push('stop'),
-      launch: async () => void did.push('launch'),
-      target: async () => void did.push('target'),
+      terminate: () => {
+        did.push('stop');
+        return Promise.resolve();
+      },
+      launch: () => {
+        did.push('launch');
+        return Promise.resolve();
+      },
+      target: () => {
+        did.push('target');
+        return Promise.resolve();
+      },
       tree: read,
       ctl: {
-        launch: async (app: string, _url?: string, env?: object) =>
-          void did.push(env ? `env ${app}` : `front ${app}`),
+        launch: (app: string, _url?: string, env?: object) => {
+          did.push(env ? `env ${app}` : `front ${app}`);
+          return Promise.resolve();
+        },
       },
     });
     return { did, perf: device.measure };
@@ -114,18 +128,18 @@ describe('a launch on a phone', () => {
 
   it('warms up once, and stops looking once the screen shows', async () => {
     clockOf(10);
-    const { did, perf } = phone(async () => screen(APP));
+    const { did, perf } = phone(() => Promise.resolve(screen(APP)));
     const { value, raw } = await perf.launch(APP, { mode: 'cold', repeats: 2 });
     expect(did.filter((d) => d === 'launch')).toHaveLength(3);
     expect(value.samples).toHaveLength(2);
-    expect(value.medianMs).toBe(value.samples[0]!.totalMs);
+    expect(value.medianMs).toBe(value.samples[0]?.totalMs);
     expect(value.until).toBe('the first screen is read');
     expect(raw.split(' ')).toHaveLength(2);
   }, 10_000);
 
   it('puts Settings in front for a warm launch', async () => {
     clockOf(10);
-    const { did, perf } = phone(async () => screen(APP));
+    const { did, perf } = phone(() => Promise.resolve(screen(APP)));
     await perf.launch(APP, { mode: 'warm', repeats: 1 });
     expect(did.filter((d) => d !== 'target')).toEqual([
       'front com.apple.Preferences',
@@ -137,14 +151,14 @@ describe('a launch on a phone', () => {
 
   it('launches by itself with an environment, naming the app', async () => {
     clockOf(10);
-    const { did, perf } = phone(async () => screen(APP));
+    const { did, perf } = phone(() => Promise.resolve(screen(APP)));
     await perf.launch(APP, { mode: 'cold', repeats: 1, env: { A: '1' } });
     expect(did.slice(0, 3)).toEqual(['stop', `env ${APP}`, 'target']);
   }, 10_000);
 
   it('refuses a screen that never comes: a launch that showed none is no measurement', async () => {
     clockOf(5_000);
-    const { perf } = phone(async () => screen('another.app'));
+    const { perf } = phone(() => Promise.resolve(screen('another.app')));
     await expect(perf.launch(APP, { mode: 'cold', repeats: 1 })).rejects.toMatchObject(NO_SCREEN);
   }, 10_000);
 });
@@ -154,9 +168,9 @@ describe('a runner reached', () => {
     const asked: string[] = [];
     const rpc = {
       closed: false,
-      call: async (method: string) => {
+      call: (method: string) => {
         asked.push(method);
-        return { result: {} };
+        return Promise.resolve({ result: {} });
       },
       close: () => undefined,
     };
@@ -164,7 +178,7 @@ describe('a runner reached', () => {
     const device = new IosPhoneDevice('00001234-0123456789ABCDEF', { profile: '/p' });
     Object.assign(device, {
       targetApp,
-      launcher: { connect: async () => ({ rpc, hello, started }) },
+      launcher: { connect: () => Promise.resolve({ rpc, hello, started }) },
     });
     return { asked, device, hello };
   };
@@ -188,7 +202,12 @@ describe('a compile state', () => {
   it.each([
     [
       'simulator',
-      new IosSimulatorPerf('U', new Simctl(), async () => true, cannot("XCTest's metrics")),
+      new IosSimulatorPerf(
+        'U',
+        new Simctl(),
+        () => Promise.resolve(true),
+        cannot("XCTest's metrics"),
+      ),
     ],
     ['phone', new IosPhonePerf({} as never)],
   ])('is refused on a %s, as a launch there would read as measured in it', async (_, perf) => {
@@ -203,8 +222,13 @@ describe('frames on a simulator', () => {
   const file = () => join(stateDir(), 'probes', `${UDID}-${APP}.jsonl`);
   const perf = () => {
     const list = `4242\t0\tUIKitApplication:${APP}[cd34][rb-legacy]`;
-    const simctl = Object.assign(new Simctl(), { exec: async () => list });
-    return new IosSimulatorPerf(UDID, simctl, async () => true, cannot("XCTest's metrics"));
+    const simctl = Object.assign(new Simctl(), { exec: () => Promise.resolve(list) });
+    return new IosSimulatorPerf(
+      UDID,
+      simctl,
+      () => Promise.resolve(true),
+      cannot("XCTest's metrics"),
+    );
   };
   const resets = () => (readFileSync(file(), 'utf8').match(/"reset"/g) ?? []).length;
 
@@ -226,8 +250,13 @@ describe('an app on a simulator', () => {
       `-\t0\tUIKitApplication:${APP}[ab12][rb-legacy]`,
       `4242\t0\tUIKitApplication:${APP}[cd34][rb-legacy]`,
     ].join('\n');
-    const simctl = Object.assign(new Simctl(), { exec: async () => list });
-    const perf = new IosSimulatorPerf('U', simctl, async () => true, cannot("XCTest's metrics"));
+    const simctl = Object.assign(new Simctl(), { exec: () => Promise.resolve(list) });
+    const perf = new IosSimulatorPerf(
+      'U',
+      simctl,
+      () => Promise.resolve(true),
+      cannot("XCTest's metrics"),
+    );
     await expect(perf.pid(APP)).resolves.toBe(4242);
   });
 });

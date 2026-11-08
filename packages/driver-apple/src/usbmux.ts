@@ -1,7 +1,7 @@
 import { connect, type Socket } from 'node:net';
 import { DeviceError } from '@appdyno/protocol';
-import { xmlText } from '@appdyno/core';
-import { readBplist } from './webinspector.js';
+import { xmlText, must } from '@appdyno/core';
+import { plistText, readBplist } from './webinspector.js';
 
 /**
  * The USB multiplexer of the Mac (`/var/run/usbmuxd`): lists the connected phones and opens a raw
@@ -35,22 +35,25 @@ export function parsePlist(xml: string): Plist {
   const unesc = (s: string) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
   const text = (close: string) => {
     let s = '';
-    while (i < tokens.length && tokens[i] !== close) s += tokens[i++];
+    for (let t = tokens[i]; t !== undefined && t !== close; t = tokens[++i]) s += t;
     i++; // close tag
     return unesc(s);
   };
   // whitespace between elements is layout; inside a string it is kept
   const skip = () => {
-    while (i < tokens.length && !tokens[i]!.startsWith('<') && tokens[i]!.trim() === '') i++;
+    while (tokens[i]?.startsWith('<') === false && tokens[i]?.trim() === '') i++;
   };
-  const peek = () => (skip(), tokens[i]!.trim());
+  // past the end: what was cut short has no token there
+  const token = (at: number) => must(tokens[at], 'a token');
+  const peek = () => (skip(), token(i).trim());
   const value = (): Plist => {
     skip();
-    const t = tokens[i++]!.trim();
+    const t = token(i++).trim();
     if (t === '<dict>') {
       const d: Record<string, Plist> = {};
       while (peek() !== '</dict>') {
-        if (tokens[i]!.trim() !== '<key>') throw new Error(`plist: key expected, got ${tokens[i]}`);
+        const key = token(i);
+        if (key.trim() !== '<key>') throw new Error(`plist: key expected, got ${key}`);
         i++;
         const k = text('</key>');
         d[k] = value();
@@ -116,7 +119,7 @@ export async function muxRequest(
   path = USBMUXD,
   timeoutMs = 5_000,
 ) {
-  return new Promise<{ reply: Record<string, Plist>; socket: Socket; rest: Buffer }>(
+  return new Promise<{ reply: Record<string, unknown>; socket: Socket; rest: Buffer }>(
     (resolve, reject) => {
       const socket = connect(path);
       let buf = Buffer.alloc(0);
@@ -143,13 +146,13 @@ export async function muxRequest(
         clearTimeout(timer);
         try {
           resolve({
-            reply: parsePlist(buf.subarray(16, len).toString('utf8')) as Record<string, Plist>,
+            reply: parsePlist(buf.subarray(16, len).toString('utf8')) as Record<string, unknown>,
             socket,
             rest: buf.subarray(len),
           });
         } catch (e) {
           socket.destroy();
-          reject(e);
+          reject(e instanceof Error ? e : new Error(String(e)));
         }
       };
       socket.on('data', onData);
@@ -160,13 +163,13 @@ export async function muxRequest(
 export async function listDevices(path = USBMUXD): Promise<MuxDevice[]> {
   const { reply, socket } = await muxRequest({ MessageType: 'ListDevices' }, path);
   socket.destroy();
-  const list = (reply.DeviceList as Record<string, Plist>[] | undefined) ?? [];
+  const list = (reply.DeviceList as Record<string, unknown>[] | undefined) ?? [];
   return list.map((d) => {
-    const p = d.Properties as Record<string, Plist>;
+    const p = d.Properties as Record<string, unknown>;
     return {
       deviceId: Number(d.DeviceID),
-      serial: String(p.SerialNumber ?? ''),
-      connection: String(p.ConnectionType ?? ''),
+      serial: plistText(p.SerialNumber),
+      connection: plistText(p.ConnectionType),
     };
   });
 }

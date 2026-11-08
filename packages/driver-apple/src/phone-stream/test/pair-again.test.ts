@@ -1,7 +1,8 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { assert, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { must } from '@appdyno/core';
 import { identityFile } from '../../wifi-paired.js';
 import type { Identity } from '../pairing.js';
 import { pairAnew, wifiCheck } from '../wifi.js';
@@ -10,7 +11,7 @@ import { fakePhones, type FakePhone } from './fake-phone.js';
 const { aPhone, open } = fakePhones();
 
 const pairedWith = async (phone: FakePhone) =>
-  (await pairAnew(await open(phone), undefined, vi.fn()))!;
+  must(await pairAnew(await open(phone), undefined, vi.fn()), 'a pairing');
 
 describe('a pairing asked for again on the cable', () => {
   it('leaves a phone that proves it knows this Mac as it is, and asks no one', async () => {
@@ -28,15 +29,17 @@ describe('a pairing asked for again on the cable', () => {
     const asked = vi.fn();
     const made = await pairAnew(await open(phone), known, asked);
     expect(asked).toHaveBeenCalledOnce();
-    expect(made!.host).not.toBe(known.host);
-    expect(phone.known.has(made!.host)).toBe(true);
+    assert(made);
+    expect(made.host).not.toBe(known.host);
+    expect(phone.known.has(made.host)).toBe(true);
   });
 
   it('pairs anew where what is kept is of another key, as an erased phone has', async () => {
     const phone = await aPhone();
     const other: Identity = await pairedWith(await aPhone());
     const made = await pairAnew(await open(phone), other, vi.fn());
-    expect(phone.known.has(made!.host)).toBe(true);
+    assert(made);
+    expect(phone.known.has(made.host)).toBe(true);
   });
 });
 

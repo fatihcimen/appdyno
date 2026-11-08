@@ -4,6 +4,7 @@ import {
   type EnergyReading,
   type Measured,
   type NetworkReading,
+  must,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { parsePowerBytes, parsePowerImpact } from './trace-parse.js';
@@ -57,7 +58,7 @@ export async function phoneEnergy(
   windowMs: number,
 ): Promise<Measured<EnergyReading>> {
   const r = await recordPower(device, bundle, pid, clamp(windowMs / 1000, LEAST_POWER_SECONDS));
-  const breakdown = parsePowerImpact(r.xml, r.pid)!;
+  const breakdown = must(parsePowerImpact(r.xml, r.pid), 'a power impact');
   return {
     value: {
       impact: Object.values(breakdown).reduce((a, b) => a + b, 0),

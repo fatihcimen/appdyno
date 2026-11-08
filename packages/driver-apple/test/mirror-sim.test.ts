@@ -10,31 +10,31 @@ function setup(state = 'Booted') {
   const calls: Record<string, unknown>[] = [];
   const helper = {
     closed: false,
-    call: vi.fn(async (q: Record<string, unknown>) => {
+    call: vi.fn((q: Record<string, unknown>) => {
       calls.push(q);
-      return { ok: true };
+      return Promise.resolve({ ok: true });
     }),
     close: vi.fn(function (this: { closed: boolean }) {
       this.closed = true;
     }),
   };
-  const start = vi.fn(async () => helper as unknown as HelperProcess);
-  const paste = vi.fn(async () => undefined);
+  const start = vi.fn(() => Promise.resolve(helper as unknown as HelperProcess));
+  const paste = vi.fn(() => Promise.resolve(undefined));
   const reader = {
     closed: false,
     orientation: 1,
     answer: true,
-    call: vi.fn(async function (this: { orientation: number; answer: boolean }) {
-      return { ok: this.answer, orientation: this.orientation };
+    call: vi.fn(function (this: { orientation: number; answer: boolean }) {
+      return Promise.resolve({ ok: this.answer, orientation: this.orientation });
     }),
     close: vi.fn(function (this: { closed: boolean }) {
       this.closed = true;
     }),
   };
-  const startReader = vi.fn(async () => reader as unknown as HelperProcess);
+  const startReader = vi.fn(() => Promise.resolve(reader as unknown as HelperProcess));
   const mirror = new SimulatorMirror(
     UDID,
-    { state: async () => state } as unknown as Simctl,
+    { state: () => Promise.resolve(state) } as unknown as Simctl,
     start,
     paste,
     startReader,
@@ -98,8 +98,8 @@ describe('a simulator mirror', () => {
   });
 
   it('reaches a simulator pasteboard by the one way that checks its id', async () => {
-    const pbcopy = vi.fn(async () => undefined);
-    const start = vi.fn(async () => setup().helper as unknown as HelperProcess);
+    const pbcopy = vi.fn(() => Promise.resolve(undefined));
+    const start = vi.fn(() => Promise.resolve(setup().helper as unknown as HelperProcess));
     const mirror = new SimulatorMirror(UDID, { pbcopy } as unknown as Simctl, start);
     await mirror.input({ kind: 'text', s: 'ş' });
     expect(pbcopy).toHaveBeenCalledWith(UDID, 'ş');

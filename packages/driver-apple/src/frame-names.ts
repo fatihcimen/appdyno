@@ -1,4 +1,4 @@
-import { xmlText } from '@appdyno/core';
+import { xmlText, must } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { dsymBinaries, named } from './symbols.js';
 import { parseTimeProfile } from './trace-parse.js';
@@ -35,7 +35,7 @@ export async function nameFrames(xml: string, dsym: string): Promise<string> {
       `<binary id="(\\d+)"[^>]*UUID="${binary.uuid}"[^>]*load-addr="(0x[0-9a-f]+)"`,
       'i',
     ).exec(xml);
-    return m ? [{ binary, id: m[1]!, base: Number(m[2]) }] : [];
+    return m ? [{ binary, id: must(m[1], 'a binary id'), base: Number(m[2]) }] : [];
   });
   if (inTrace.length === 0)
     throw new DeviceError(
@@ -45,7 +45,9 @@ export async function nameFrames(xml: string, dsym: string): Promise<string> {
     );
   let out = xml;
   for (const { binary, id, base } of inTrace) {
-    const addrs = [...new Set([...xml.matchAll(framesOf(id))].map((m) => m[2]!))];
+    const addrs = [
+      ...new Set([...xml.matchAll(framesOf(id))].map((m) => must(m[2], 'an address'))),
+    ];
     const names = new Map<string, string>();
     for (let i = 0; i < addrs.length; i += ADDRESSES_A_CALL) {
       const part = addrs.slice(i, i + ADDRESSES_A_CALL);

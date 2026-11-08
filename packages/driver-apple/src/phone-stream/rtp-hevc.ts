@@ -103,9 +103,9 @@ export class RtpReceiver {
 
   /** One UDP payload; what is not RTP, RTCP included, is dropped here. */
   push(m: Buffer) {
-    if (m.length < 12 || m[0]! >> 6 !== RTP_VERSION) return;
-    const type = m[1]! & 0x7f;
-    if (m[1]! >= RTCP_FIRST && m[1]! <= RTCP_LAST) return;
+    if (m.length < 12 || m.readUInt8(0) >> 6 !== RTP_VERSION) return;
+    const type = m.readUInt8(1) & 0x7f;
+    if (m.readUInt8(1) >= RTCP_FIRST && m.readUInt8(1) <= RTCP_LAST) return;
     const seq = m.readUInt16BE(2);
     const time = m.readUInt32BE(4);
     this.sender = m.readUInt32BE(8);
@@ -132,22 +132,23 @@ export class RtpReceiver {
     this.stats.bytes += m.length;
     if (this.time !== undefined && time !== this.time) this.finish();
     this.time = time;
-    const csrc = m[0]! & 0x0f;
+    const csrc = m.readUInt8(0) & 0x0f;
     let at = 12 + csrc * 4;
-    if (m[0]! & 0x10) at += 4 + m.readUInt16BE(at + 2) * 4;
+    if (m.readUInt8(0) & 0x10) at += 4 + m.readUInt16BE(at + 2) * 4;
     this.payload(m.subarray(at));
-    if (m[1]! & 0x80) this.finish();
+    if (m.readUInt8(1) & 0x80) this.finish();
   }
 
   private addNal(nal: Buffer) {
-    const type = (nal[0]! >> 1) & 0x3f;
+    // an empty one, as an aggregate may hold, is of no type
+    const type = ((nal[0] ?? 0) >> 1) & 0x3f;
     if (type >= IRAP_FIRST && type <= IRAP_LAST) this.key = true;
     this.nals.push(START_CODE, nal);
   }
 
   private payload(p: Buffer) {
     if (p.length < 3) return;
-    const type = (p[0]! >> 1) & 0x3f;
+    const type = (p.readUInt8(0) >> 1) & 0x3f;
     if (type === NAL_AP) {
       let i = 2;
       while (i + 2 <= p.length) {
@@ -156,10 +157,12 @@ export class RtpReceiver {
         i += 2 + n;
       }
     } else if (type === NAL_FU) {
-      const fu = p[2]!;
+      const fu = p.readUInt8(2);
       if (fu & 0x80) {
         // the NAL's own header, rebuilt with the type the fragment carries
-        this.fragment = [Buffer.from([(p[0]! & 0x81) | ((fu & 0x3f) << 1), p[1]!])];
+        this.fragment = [
+          Buffer.from([(p.readUInt8(0) & 0x81) | ((fu & 0x3f) << 1), p.readUInt8(1)]),
+        ];
       }
       if (!this.fragment) return;
       this.fragment.push(p.subarray(3));

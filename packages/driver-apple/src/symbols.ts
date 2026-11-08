@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { run, stateDir, type CrashesAnswer } from '@appdyno/core';
+import { run, stateDir, type CrashesAnswer, must } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 
 /** How many frames an answer holds; the whole thread is in the file. */
@@ -14,9 +14,9 @@ type Frame = { imageIndex?: number; imageOffset?: number; symbol?: string };
 /** `dwarfdump --uuid`, a line per architecture: `UUID: C828F7A9-… (arm64) /…/DWARF/Fixture`. */
 export const parseUuids = (out: string): Binary[] =>
   [...out.matchAll(/^UUID: (\S+) \((\S+)\) (.+)$/gm)].map(([, uuid, arch, path]) => ({
-    uuid: uuid!.toLowerCase(),
-    arch: arch!,
-    path: path!,
+    uuid: must(uuid, 'a UUID').toLowerCase(),
+    arch: must(arch, 'an architecture'),
+    path: must(path, 'a path'),
   }));
 
 /** The binaries of a `.dSYM`, or of every one under a folder such as a build's products. */
@@ -50,8 +50,9 @@ export function crashedFrames(text: string): { frame: Frame; image?: Image }[] {
  */
 export function atosName(line: string): string | undefined {
   const m = /^(.*?) \(in [^)]*\)(?: \((.*)\))?(?: \+ \d+)?$/.exec(line.trim());
-  if (!m || m[1]!.startsWith('0x')) return undefined;
-  return m[2] && !m[2].includes('<compiler-generated>') ? `${m[1]} (${m[2]})` : m[1];
+  const name = m?.[1];
+  if (!m || name === undefined || name.startsWith('0x')) return undefined;
+  return m[2] && !m[2].includes('<compiler-generated>') ? `${name} (${m[2]})` : name;
 }
 
 export async function named(binary: Binary, base: number, offsets: number[]) {
@@ -87,7 +88,8 @@ export async function withSymbols(answer: CrashesAnswer, path: string): Promise<
       const binary = binaries.find((b) => b.uuid === image.uuid?.toLowerCase());
       if (!binary) {
         // the system's own frameworks have no dSYM of anyone's: only the app's is worth a word
-        if (image.path?.includes('.app/')) unmatched.add(`${image.name} ${image.uuid}`);
+        if (image.path?.includes('.app/'))
+          unmatched.add(`${String(image.name)} ${String(image.uuid)}`);
         continue;
       }
       const bare = frames.filter((f) => f.image === image && !f.frame.symbol);

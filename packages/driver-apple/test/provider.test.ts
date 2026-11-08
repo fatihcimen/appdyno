@@ -8,18 +8,18 @@ const phone = '00001234-0123456789ABCDEF';
 
 describe('the simulator provider', () => {
   it('lists booted simulators, and has nothing that blocks one', async () => {
-    const p = simulatorProvider(async () => [
-      { udid, name: 'appdyno-iphone', state: 'Booted', runtime: 'iOS-27-0' },
-    ]);
+    const p = simulatorProvider(() =>
+      Promise.resolve([{ udid, name: 'appdyno-iphone', state: 'Booted', runtime: 'iOS-27-0' }]),
+    );
     expect(await p.list()).toEqual([
       { serial: udid, state: 'booted', ready: true, model: 'iOS simulator appdyno-iphone' },
     ]);
-    expect(p.need).toBeUndefined();
+    expect(p).not.toHaveProperty('need');
   });
 
   it("takes simulator ids, and none of an iPhone's or adb's, as the iPhone provider takes none of its", () => {
-    const simulators = simulatorProvider(async () => []);
-    const phones = iphoneProvider({ phones: async () => [] });
+    const simulators = simulatorProvider(() => Promise.resolve([]));
+    const phones = iphoneProvider({ phones: () => Promise.resolve([]) });
     const serials = [udid, phone, 'a'.repeat(40), 'emulator-5554', 'EXAMPLE0SERIAL00'];
     expect(serials.filter((s) => simulators.handles(s))).toEqual([udid]);
     expect(serials.filter((s) => phones.handles(s))).toEqual([phone, 'a'.repeat(40)]);

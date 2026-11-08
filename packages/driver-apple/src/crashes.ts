@@ -90,7 +90,7 @@ export async function reportsIn(
   const out: CrashReport[] = [];
   for (const f of files) {
     const r = parseIps(await readFile(f.file, 'utf8').catch(() => ''));
-    if (!r || r.bundle !== q.app || (only && !only(r))) continue;
+    if (r?.bundle !== q.app || (only && !only(r))) continue;
     out.push({ at: r.at, reason: r.reason, ...(r.detail && { detail: r.detail }), file: f.file });
     if (out.length >= q.limit) break;
   }

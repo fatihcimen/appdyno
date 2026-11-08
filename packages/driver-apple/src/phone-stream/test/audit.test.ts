@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { must } from '@appdyno/core';
 import {
   actionOf,
   childrenIn,
@@ -124,7 +125,7 @@ describe('DTX frames', () => {
     client.onPush = (m) => told.push(m.selector);
     const asked = client.call('deviceApiVersion');
     incoming(dtxFrame(90, 'hostApiVersion', [], true));
-    incoming(answer(sent[0]!.readUInt32LE(16), 'its answer'));
+    incoming(answer(must(sent[0], 'a frame').readUInt32LE(16), 'its answer'));
     await expect(asked).resolves.toBe('its answer');
     expect(told).toEqual(['hostApiVersion']);
   });
@@ -204,7 +205,7 @@ describe('what goes to the phone audit service', () => {
     expect(elementNamed(list, 'open_form').token).toBe(1);
     expect(elementNamed(list, 'Form').token).toBe(1);
     expect(elementNamed(list, 'List, Button').token).toBe(2);
-    expect(() => elementNamed(list, 'Save')).toThrowError(/2 elements are named Save/);
-    expect(() => elementNamed(list, 'Gone')).toThrowError(/it shows: Form, Button/);
+    expect(() => elementNamed(list, 'Save')).toThrow(/2 elements are named Save/);
+    expect(() => elementNamed(list, 'Gone')).toThrow(/it shows: Form, Button/);
   });
 });

@@ -15,11 +15,11 @@ export type ToWorker =
   | { op: 'stop' };
 
 /** What the thread has of the process that started it. */
-export interface ThreadPort {
+export type ThreadPort = {
   on(event: 'message', listener: (m: ToWorker) => void): void;
   postMessage(e: PhoneStreamEvent): void;
   close(): void;
-}
+};
 
 /** One stream, from its open to the word that it ended, whatever order a stop and the phone's answers come in. */
 export async function runStream(
@@ -28,7 +28,8 @@ export async function runStream(
 ) {
   const tell = (e: PhoneStreamEvent) => port.postMessage(e);
   let stream: Awaited<ReturnType<typeof open>> | undefined;
-  let stopping = false;
+  // set inside `handle`, where the compiler does not follow it
+  let stopping = false as boolean;
   let held: ToWorker[] = [];
 
   const writer = new FrameWriter(

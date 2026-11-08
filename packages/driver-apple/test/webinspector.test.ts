@@ -65,7 +65,7 @@ describe('the Safari inspector of a simulator', () => {
       socket.write(Buffer.concat([head, body]));
     });
     await new Promise<void>((r) => server.listen(path, r));
-    const simctl = { exec: async () => path } as unknown as Simctl;
+    const simctl = { exec: () => Promise.resolve(path) } as unknown as Simctl;
     const udid = '00000000-0000-0000-0000-000000000000';
     await expect(new SimulatorWeb(simctl, udid).pages(undefined)).rejects.toThrow(/said nothing/);
     server.close();

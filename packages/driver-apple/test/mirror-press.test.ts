@@ -4,7 +4,13 @@ import { applePress } from '../src/mirror-press.js';
 
 const sent = () => {
   const events: InputEvent[] = [];
-  return { events, send: async (e: InputEvent) => void events.push(e) };
+  return {
+    events,
+    send: (e: InputEvent) => {
+      events.push(e);
+      return Promise.resolve();
+    },
+  };
 };
 
 describe('a press on an Apple device', () => {
