@@ -4,11 +4,11 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo, Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { DeviceProvider } from '@appdyno/core';
+import { must, type DeviceProvider } from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
-import { ToolError, type Op } from '../src/tool.js';
+import { ToolError } from '../src/tool.js';
 import { FakeDevice } from './fake-device.js';
 import { callerOf, checkedOps } from './helpers.js';
 
@@ -24,11 +24,13 @@ const frame = (text: string) => {
 
 /** The text of one masked client frame, which is how they all come. */
 const unmask = (b: Buffer) => {
-  const short = b[1]! & 127;
+  const short = b.readUInt8(1) & 127;
   const at = short === 126 ? 4 : 2;
   const n = short === 126 ? b.readUInt16BE(2) : short;
   const key = b.subarray(at, at + 4);
-  return Buffer.from(b.subarray(at + 4, at + 4 + n).map((v, i) => v ^ key[i % 4]!)).toString();
+  return Buffer.from(
+    b.subarray(at + 4, at + 4 + n).map((v, i) => v ^ key.readUInt8(i % 4)),
+  ).toString();
 };
 
 /** A Metro as much as the op needs: its list, its reload route and a Hermes that logs on enable. */
@@ -42,7 +44,7 @@ async function fakeMetro(opts: { reloadRoute: boolean; targets?: number }) {
     webSocketDebuggerUrl: `ws://127.0.0.1:0/inspector/${i}`,
   }));
   const server: Server = createServer((req, res) => {
-    calls.push(`${req.method} ${req.url}`);
+    calls.push(`${String(req.method)} ${String(req.url)}`);
     if (req.url === '/json/list') {
       res.setHeader('content-type', 'application/json');
       res.end(
@@ -69,7 +71,7 @@ async function fakeMetro(opts: { reloadRoute: boolean; targets?: number }) {
       `HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`,
     );
     socket.on('data', (d: Buffer) => {
-      if ((d[0]! & 0x0f) !== 1) return;
+      if ((d.readUInt8(0) & 0x0f) !== 1) return;
       const m = JSON.parse(unmask(d)) as { id: number; method: string };
       calls.push(m.method);
       socket.write(frame(JSON.stringify({ id: m.id, result: {} })));
@@ -105,8 +107,8 @@ async function fakeMetro(opts: { reloadRoute: boolean; targets?: number }) {
 
 const ops = () => checkedOps(new ServerContext(DEFAULT_POLICY, []));
 const call = async (args: Record<string, unknown>) => {
-  const op = ops().react_native as Op;
-  const r = await op.handler(op.input.parse(args) as Record<string, unknown>);
+  const op = must(ops().react_native, 'react_native');
+  const r = await op.handler(op.input.parse(args));
   return r.blocks.map((b) => (b.type === 'text' ? b.text : '')).join('\n');
 };
 
@@ -152,7 +154,7 @@ describe('react_native', () => {
     let opens: number;
     const device = new FakeDevice();
     const provider: DeviceProvider = {
-      list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+      list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
       handles: () => true,
       open: () => {
         opens++;

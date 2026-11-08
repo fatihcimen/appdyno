@@ -251,7 +251,7 @@ const OPS: Record<string, ToStep> = {
     data.answered !== undefined ? stepOf('alert', {}, { answer: a.answer as string }) : undefined,
   keyboard: (_a, data) => (data.closed ? stepOf('hide_keyboard', {}) : undefined),
   gesture: (a) =>
-    a.kind === 'pinch' || a.kind === 'plan' ? unrecorded(`gesture ${String(a.kind)}`) : undefined,
+    a.kind === 'pinch' || a.kind === 'plan' ? unrecorded(`gesture ${a.kind}`) : undefined,
   set_orientation: (a) => unrecorded(`set_orientation ${String(a.orientation)}`),
   clipboard: (a) => (a.text !== undefined ? unrecorded('clipboard') : undefined),
   device_setting: (a) =>
@@ -260,10 +260,13 @@ const OPS: Record<string, ToStep> = {
       : undefined,
 };
 
-const unknownOp = (name: string) => (a: Record<string, unknown>) =>
-  LOOKS[name]?.includes(String(a.action))
+const unknownOp = (name: string) => (a: Record<string, unknown>) => {
+  // an op's action is one of its words, by its schema
+  const action = typeof a.action === 'string' ? a.action : '';
+  return LOOKS[name]?.includes(action)
     ? undefined
-    : unrecorded(a.action ? `${name} ${String(a.action)}` : name);
+    : unrecorded(action ? `${name} ${action}` : name);
+};
 
 /**
  * The one place the recorder touches the operations: every step an action runs passes `through`, every

@@ -75,7 +75,7 @@ export function perfHeapOp(ctx: ServerContext) {
           "a heap dump has no count of leaks: read it in a memory analyser, or watch Activities rise in perf_scroll's rounds",
         );
       return reply(
-        `measurement ${saved.id}\n${HEAP[v.kind].label}: ${v.file} (${(v.bytes / 1048576).toFixed(1)} MB)${v.leaks !== undefined ? `; ${v.leaks} leaks, ${v.leakedBytes} bytes` : ''}${v.note ? `\n${v.note}` : ''}`,
+        `measurement ${saved.id}\n${HEAP[v.kind].label}: ${v.file} (${(v.bytes / 1048576).toFixed(1)} MB)${v.leaks !== undefined ? `; ${v.leaks} leaks, ${String(v.leakedBytes)} bytes` : ''}${v.note ? `\n${v.note}` : ''}`,
         {
           id: saved.id,
           file: v.file,

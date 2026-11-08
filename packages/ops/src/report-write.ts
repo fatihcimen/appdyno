@@ -35,8 +35,8 @@ export async function reportShot(
 ) {
   const units = screen.window?.w ?? s.device.hello?.screen.w;
   const secret = (t?: string) => !!t && ctx.policy.secrets.some((x) => x && t.includes(x));
-  const hiding = screen.elements.filter(
-    (e) => e.rect && (e.password || [e.text, e.label, e.placeholder].some(secret)),
+  const hiding = screen.elements.flatMap((e) =>
+    e.rect && (e.password || [e.text, e.label, e.placeholder].some(secret)) ? [e.rect] : [],
   );
   mkdirSync(join(dir, 'shots'), { recursive: true });
   if (hiding.length === 0) {
@@ -50,12 +50,7 @@ export async function reportShot(
   const k = img.width / units;
   paintRects(
     img,
-    hiding.map((e) => ({
-      x: e.rect!.x * k,
-      y: e.rect!.y * k,
-      w: e.rect!.width * k,
-      h: e.rect!.height * k,
-    })),
+    hiding.map((r) => ({ x: r.x * k, y: r.y * k, w: r.width * k, h: r.height * k })),
   );
   writeFileSync(join(dir, 'shots', `${name}.png`), encodePng(img));
   return `shots/${name}.png`;
@@ -141,7 +136,11 @@ async function logSection(s: Session, since: number | undefined, clean: Clean) {
       maxLines: MAX_LOG_LINES,
       ...(since !== undefined && { since }),
     })
-    .catch((e: Error) => ({ lines: [] as string[], source: '', note: e.message }));
+    .catch((e: unknown) => ({
+      lines: [] as string[],
+      source: '',
+      note: e instanceof Error ? e.message : String(e),
+    }));
   return [
     `<h2>Log</h2>`,
     `<p class="note">${esc(`${logs.lines.length} lines${logs.source ? ` from ${logs.source}` : ''}${logs.note ? `: ${logs.note}` : ''}`)}</p>`,
@@ -154,7 +153,11 @@ async function crashSection(s: Session, since: number | undefined, clean: Clean)
   if (!app) return [`<h2>Crashes</h2>`, `<p class="note">no app selected: no crash reports</p>`];
   const c = await s.device
     .crashes({ app, limit: MAX_CRASHES, ...(since !== undefined && { since }) })
-    .catch((e: Error) => ({ reports: [], source: '', note: e.message }));
+    .catch((e: unknown) => ({
+      reports: [],
+      source: '',
+      note: e instanceof Error ? e.message : String(e),
+    }));
   return [
     `<h2>Crashes</h2>`,
     `<p class="note">${esc(`${c.reports.length} reports${c.source ? ` from ${c.source}` : ''}${c.note ? `: ${c.note}` : ''}`)}</p>`,

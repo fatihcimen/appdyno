@@ -2,20 +2,27 @@ import { execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type {
-  AppManager,
-  Device,
-  DeviceProvider,
-  DeviceSettings,
-  SettingName,
-  Push,
-  PushRoute,
-  Startable,
-  VirtualDevices,
+import {
+  must,
+  type AppManager,
+  type Device,
+  type DeviceProvider,
+  type DeviceSettings,
+  type SettingName,
+  type Push,
+  type PushRoute,
+  type Startable,
+  type VirtualDevices,
 } from '@appdyno/core';
-import { DeviceError, KEYS, type ActParams, type Tree } from '@appdyno/protocol';
+import { DeviceError, KEYS, type ActParams, type ErrorCode, type Tree } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
-import { DEFAULT_POLICY, ServerContext, type Policy } from '../src/index.js';
+import {
+  DEFAULT_POLICY,
+  ServerContext,
+  type OpData,
+  type OpName,
+  type Policy,
+} from '../src/index.js';
 import { keyName, keyPress } from '../src/step-schemas.js';
 import { FakeDevice, SCREENS, WithKeyboard } from './fake-device.js';
 import { linkedClient } from './helpers.js';
@@ -23,9 +30,11 @@ import { linkedClient } from './helpers.js';
 type Result = {
   isError?: boolean;
   content: { type?: string; text?: string }[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each test knows its tool's answer
-  structuredContent?: any;
+  structuredContent?: unknown;
 };
+
+/** What a tool answered, as this server writes it: its output, or a refusal's code and hint; any of it may be missing. */
+type Answer<N extends OpName> = Partial<OpData<N>> & { code?: ErrorCode; hint?: string };
 
 async function connect(
   device: Device,
@@ -36,7 +45,8 @@ async function connect(
   } = {},
 ) {
   const provider: DeviceProvider = {
-    list: async () => [{ serial: device.serial, state: 'device', ready: true, model: 'Fake' }],
+    list: () =>
+      Promise.resolve([{ serial: device.serial, state: 'device', ready: true, model: 'Fake' }]),
     handles: () => true,
     open: () => device,
     ...(o.virtual && { virtual: o.virtual }),
@@ -46,12 +56,12 @@ async function connect(
     ...o.defaults,
   });
   const client = await linkedClient(ctx);
-  const call = async (name: string, args: Record<string, unknown> = {}) => {
+  const call = async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {
     const r = (await client.callTool({ name, arguments: args })) as Result;
     return {
       error: r.isError === true,
       text: r.content.map((c) => c.text ?? '').join('\n'),
-      data: r.structuredContent,
+      data: r.structuredContent as Answer<N>,
       images: r.content.filter((c) => c.type === 'image').length,
     };
   };
@@ -171,7 +181,7 @@ describe('steps across screens', () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
     d.screen = 'form';
-    const send = /(@\w+) button "Gönder"/.exec((await call('screen')).text)![1]!;
+    const send = must(/(@\w+) button "Gönder"/.exec((await call('screen')).text)?.[1], 'its ref');
     d.screen = 'home';
     await call('screen');
     const r = await call('steps', {
@@ -197,8 +207,8 @@ describe('steps across screens', () => {
     const opts = d.calls
       .filter((c) => c.name === 'act')
       .map((c) => c.args[1] as { settle: unknown });
-    expect(opts.at(-3)!.settle).toBe(false);
-    expect(opts.at(-2)!.settle).toBeTruthy();
+    expect(opts.at(-3)?.settle).toBe(false);
+    expect(must(opts.at(-2), 'the touch before').settle).toBeTruthy();
   });
 
   it('stops at a failure, saying which step and why, with the screen', async () => {
@@ -306,12 +316,12 @@ describe('waiting on the device', () => {
   class Waiting extends FakeDevice {
     waits: (string | undefined)[] = [];
     next: Tree | undefined;
-    waitChange = async (since: string | undefined) => {
+    waitChange = (since: string | undefined) => {
       this.waits.push(since);
-      if (since === undefined) return { sig: 'a', tree: this.current() };
+      if (since === undefined) return Promise.resolve({ sig: 'a', tree: this.current() });
       const t = this.next;
       this.next = undefined;
-      return t ? { sig: 'b', tree: t } : { sig: since };
+      return Promise.resolve(t ? { sig: 'b', tree: t } : { sig: since });
     };
   }
 
@@ -334,9 +344,7 @@ describe('waiting on the device', () => {
     const r = await call('wait_for', { text: 'Form', timeoutMs: 1_000 });
     expect(r.data.met).toBe(true);
     const f = new Waiting();
-    f.waitChange = async () => {
-      throw new DeviceError('INTERNAL', 'no');
-    };
+    f.waitChange = () => Promise.reject(new DeviceError('INTERNAL', 'no'));
     const { call: call2 } = await connect(f);
     expect((await call2('wait_for', { text: 'Form', timeoutMs: 1_000 })).data.met).toBe(true);
     expect(f.calls.filter((c) => c.name === 'tree').length).toBeGreaterThan(0);
@@ -348,12 +356,12 @@ describe('a ref on a screen an app moved by itself', () => {
     const d = new FakeDevice();
     d.screen = 'settings';
     const { call } = await connect(d);
-    const line = /(@\w+) "Wi-Fi On" (\d+)/.exec((await call('screen')).text)!;
+    const line = must(/(@\w+) "Wi-Fi On" (\d+)/.exec((await call('screen')).text), 'its line');
     expect(line[2]).toBe('350');
     // the app adds a row above it, with no action of ours
     withScreen('settingsMoved', [
       { b: [0, 200, 1080, 300], c: 'android.widget.LinearLayout', d: 'Added', f: 19 },
-      ...SCREENS.settings!.map((n) => ({
+      ...must(SCREENS.settings, 'the settings').map((n) => ({
         ...n,
         b: [n.b[0], n.b[1] + 100, n.b[2], n.b[3] + 100] as typeof n.b,
       })),
@@ -368,7 +376,7 @@ describe('a ref on a screen an app moved by itself', () => {
     const d = new FakeDevice();
     d.screen = 'settings';
     const { call } = await connect(d);
-    const line = /(@\w+) "Wi-Fi On"/.exec((await call('screen')).text)!;
+    const line = must(/(@\w+) "Wi-Fi On"/.exec((await call('screen')).text), 'its line');
     const reads = d.calls.filter((c) => c.name === 'tree').length;
     await call('tap', { ref: line[1], read: 'none' });
     expect(d.calls.filter((c) => c.name === 'tree').length).toBe(reads);
@@ -380,7 +388,7 @@ describe('a first call that launches', () => {
     const d = new FakeDevice();
     const began: string[] = [];
     (d as { launchAlongside?: (pkg: string) => void }).launchAlongside = (pkg) => {
-      began.push(`${pkg} with hello ${d.calls.some((c) => c.name === 'open')}`);
+      began.push(`${pkg} with hello ${String(d.calls.some((c) => c.name === 'open'))}`);
     };
     const { call } = await connect(d);
     expect((await call('launch_app', { app: 'dev.app' })).error).toBe(false);
@@ -416,7 +424,7 @@ describe('a folded answer', () => {
     const { matches } = (await call('find', { text: 'Bluetooth' })).data;
     expect(matches).toMatchObject([{ role: 'text', label: 'Bluetooth', x: 300, y: 430 }]);
     expect((await call('tap', { selector: { text: 'Hotspot' } })).error).toBe(false);
-    expect((await call('tap', { ref: matches[0].ref })).error).toBe(false);
+    expect((await call('tap', { ref: matches?.[0]?.ref })).error).toBe(false);
     expect(act(d)).toMatchObject([
       { kind: 'tap', x: 300, y: 530 },
       { kind: 'tap', x: 300, y: 430 },
@@ -425,7 +433,7 @@ describe('a folded answer', () => {
 
   it('acts on a folded row by the ref its line gives', async () => {
     const { d, call } = await folded();
-    const line = /(@\w+) "Wi-Fi On"/.exec((await call('screen')).text)!;
+    const line = must(/(@\w+) "Wi-Fi On"/.exec((await call('screen')).text), 'its line');
     await call('tap', { ref: line[1] });
     expect(act(d)).toMatchObject([{ kind: 'tap', x: 540, y: 350 }]);
     expect(d.screen).toBe('settingsOff');
@@ -440,7 +448,7 @@ describe('a folded answer', () => {
     expect(text).toContain('; 3 inside rows, by find');
     const { matches } = (await call('find', { role: 'button', text: 'General' })).data;
     expect(matches).toMatchObject([{ role: 'button', label: 'General', y: 350 }]);
-    await call('tap', { ref: matches[0].ref });
+    await call('tap', { ref: must(matches?.[0], 'a match').ref });
     expect(act(d)).toMatchObject([{ kind: 'tap', x: 540, y: 350 }]);
     expect(d.screen).toBe('home');
   });
@@ -482,8 +490,8 @@ class ScrollingList extends FakeDevice {
   override async act(action: ActParams, opts = {}) {
     if (action.kind === 'gesture') {
       this.swipes++;
-      const p = action.pointers[0]!;
-      const by = this.taken(p[0]!.y - p.at(-1)!.y);
+      const p = must(action.pointers[0], 'a path');
+      const by = this.taken(must(p[0], 'its start').y - must(p.at(-1), 'its end').y);
       this.offset = Math.min(Math.max(this.offset + by, 0), 200 * 30 - 2400);
     }
     return super.act(action, opts);
@@ -509,9 +517,11 @@ class SidewaysRow extends FakeDevice {
   override async act(action: ActParams, opts = {}) {
     if (action.kind === 'gesture') {
       this.strokes++;
-      const p = action.pointers[0]!;
-      if (p[0]!.y >= 800 && p[0]!.y <= 1000)
-        this.offset = Math.max(this.offset + p[0]!.x - p.at(-1)!.x, 0);
+      const p = must(action.pointers[0], 'a path');
+      const [start] = p;
+      const end = p.at(-1);
+      if (start && end && start.y >= 800 && start.y <= 1000)
+        this.offset = Math.max(this.offset + start.x - end.x, 0);
     }
     return super.act(action, opts);
   }
@@ -557,8 +567,9 @@ describe('scroll_to', () => {
     expect(r.text).not.toContain('no change seen');
     expect(d.swipes).toBeGreaterThan(0);
     const g = act(d).at(-1) as Extract<ActParams, { kind: 'gesture' }>;
-    expect(g.pointers[0]!.at(-1)!.t).toBeGreaterThan(g.pointers[0]!.at(-2)!.t);
-    expect(g.pointers[0]!.at(-1)!.y).toBe(g.pointers[0]!.at(-2)!.y);
+    const before = must(g.pointers[0]?.at(-2), 'the point before its end');
+    expect(g.pointers[0]?.at(-1)?.t).toBeGreaterThan(before.t);
+    expect(g.pointers[0]?.at(-1)?.y).toBe(before.y);
   });
 
   it('answers once a list still coasting has stopped, with where the row ended', async () => {
@@ -678,7 +689,7 @@ describe('find and assert', () => {
     d.screen = 'attrs';
     const { call } = await connect(d);
     const name = await call('find', { id: 'dev.app:id/name' });
-    expect(name.data.matches[0]).toMatchObject({
+    expect(name.data.matches?.[0]).toMatchObject({
       role: 'textField',
       enabled: true,
       checked: false,
@@ -688,10 +699,10 @@ describe('find and assert', () => {
     });
     expect(name.text).toContain('focused');
     const box = await call('find', { text: 'Agree' });
-    expect(box.data.matches[0]).toMatchObject({ enabled: false, checked: true });
+    expect(box.data.matches?.[0]).toMatchObject({ enabled: false, checked: true });
     expect(box.text).toContain('disabled');
     const pw = await call('find', { id: 'dev.app:id/pw' });
-    expect(pw.data.matches[0].value).toBeUndefined();
+    expect(must(pw.data.matches?.[0], 'a match').value).toBeUndefined();
     expect((await call('find', { role: 'checkbox' })).data.matches).toHaveLength(1);
   });
 
@@ -723,13 +734,14 @@ describe('gestures, keys, clipboard', () => {
     expect(act(d).at(-1)).toEqual({ kind: 'doubleTap', x: 10, y: 20 });
     await call('gesture', { kind: 'drag', x: 10, y: 20, to: { x: 500, y: 600 }, durationMs: 900 });
     const drag = act(d).at(-1) as Extract<ActParams, { kind: 'gesture' }>;
-    expect(drag.pointers[0]!.map((p) => [p.x, p.y])).toEqual([
+    expect(drag.pointers[0]?.map((p) => [p.x, p.y])).toEqual([
       [10, 20],
       [10, 20],
       [500, 600],
       [500, 600],
     ]);
-    expect(drag.pointers[0]![2]!.t - drag.pointers[0]![1]!.t).toBe(900);
+    const path = must(drag.pointers[0], 'its path');
+    expect(must(path[2], 'its third point').t - must(path[1], 'its second point').t).toBe(900);
     const plan = [
       [
         { x: 1, y: 1, t: 0 },
@@ -844,11 +856,17 @@ describe('gestures, keys, clipboard', () => {
     const d = new FakeDevice();
     const { call } = await connect(d);
     await call('gesture', { kind: 'drag', x: 10, y: 10, to: { x: 10, y: 500 }, holdMs: 900 });
-    const path = (act(d).at(-1) as Extract<ActParams, { kind: 'gesture' }>).pointers[0]!;
+    const path = must(
+      (act(d).at(-1) as Extract<ActParams, { kind: 'gesture' }>).pointers[0],
+      'its path',
+    );
     expect(path[1]).toEqual({ x: 10, y: 10, t: 900 });
     await call('gesture', { kind: 'drag', x: 10, y: 10, to: { x: 10, y: 500 } });
-    const usual = (act(d).at(-1) as Extract<ActParams, { kind: 'gesture' }>).pointers[0]!;
-    expect(usual[1]!.t).toBe(150);
+    const usual = must(
+      (act(d).at(-1) as Extract<ActParams, { kind: 'gesture' }>).pointers[0],
+      'its path',
+    );
+    expect(usual[1]?.t).toBe(150);
   });
 
   it('ends a fixed location, and wants a position or that', async () => {
@@ -889,7 +907,7 @@ describe('gestures, keys, clipboard', () => {
       { id: 'dev.two', name: 'Twin' },
       { id: 'dev.three', name: 'Twin' },
     ];
-    Object.assign(d, { apps: { listApps: async () => names } });
+    Object.assign(d, { apps: { listApps: () => Promise.resolve(names) } });
     const { call } = await connect(d);
     expect((await call('launch_app', { app: 'ödeme' })).text).toContain('launched dev.one');
     const none = await call('launch_app', { app: 'Nothing' });
@@ -903,18 +921,20 @@ describe('gestures, keys, clipboard', () => {
       { url: 'demo://', kind: 'scheme' },
       { url: 'https://example.com', kind: 'domain', state: 'verified' },
     ];
-    Object.assign(d, { apps: { links: async () => links } });
+    Object.assign(d, { apps: { links: () => Promise.resolve(links) } });
     const { call } = await connect(d);
     const r = await call('open_link', { links: 'dev.app' });
     expect(r.text).toBe('scheme demo://\ndomain https://example.com: verified');
     expect(r.data.links).toEqual(links);
-    Object.assign(d, { apps: { links: async () => [] } });
+    Object.assign(d, { apps: { links: () => Promise.resolve([]) } });
     expect((await call('open_link', { links: 'dev.app' })).text).toBe('dev.app opens no links');
   });
 
   it('keeps a name to what the server allows', async () => {
     const d = new FakeDevice();
-    Object.assign(d, { apps: { listApps: async () => [{ id: 'dev.other', name: 'Other' }] } });
+    Object.assign(d, {
+      apps: { listApps: () => Promise.resolve([{ id: 'dev.other', name: 'Other' }]) },
+    });
     const { call } = await connect(d, { policy: { apps: ['dev.app'] } });
     expect((await call('launch_app', { app: 'Other' })).text).toContain('not an allowed app');
   });
@@ -923,7 +943,12 @@ describe('gestures, keys, clipboard', () => {
     const d = new FakeDevice();
     const launched: unknown[] = [];
     Object.assign(d, {
-      apps: { launchWith: async (app: string, o: unknown) => void launched.push([app, o]) },
+      apps: {
+        launchWith: (app: string, o: unknown) => {
+          launched.push([app, o]);
+          return Promise.resolve();
+        },
+      },
     });
     const { call } = await connect(d);
     const r = await call('launch_app', { language: 'pt-BR' });
@@ -954,7 +979,7 @@ describe('gestures, keys, clipboard', () => {
     const d = new FakeDevice();
     const { call } = await connect(d, { policy: { secrets: ['hunter2'] } });
     expect((await call('clipboard', { text: 'hi' })).error).toBe(false);
-    Object.assign(d, { getClipboard: async () => 'pw hunter2' });
+    Object.assign(d, { getClipboard: () => Promise.resolve('pw hunter2') });
     expect((await call('clipboard')).text).not.toContain('hunter2');
     expect((await call('clipboard', { text: 'hunter2' })).error).toBe(true);
   });
@@ -1070,25 +1095,26 @@ describe('app management', () => {
     const log: unknown[][] = [];
     const rec =
       (name: string) =>
-      async (...a: unknown[]) => {
+      (...a: unknown[]) => {
         log.push([name, ...a]);
+        return Promise.resolve();
       };
     return {
       log,
-      install: async (...a: unknown[]) => {
+      install: (...a: unknown[]) => {
         log.push(['install', ...a]);
-        return [];
+        return Promise.resolve([]);
       },
       uninstall: rec('uninstall'),
       clearData: rec('clear'),
       downloadData: rec('download'),
       replaceData: rec('replace'),
-      buildAndInstall: async (...a: unknown[]) => {
+      buildAndInstall: (...a: unknown[]) => {
         log.push(['build', ...a]);
-        return 'dev.built';
+        return Promise.resolve('dev.built');
       },
-      listApps: async () => [{ id: 'dev.app', name: 'App', version: '1' }],
-      appState: async () => 'running',
+      listApps: () => Promise.resolve([{ id: 'dev.app', name: 'App', version: '1' }]),
+      appState: () => Promise.resolve('running'),
       permission: rec('permission'),
       launchWith: rec('launch'),
       ...over,
@@ -1102,7 +1128,7 @@ describe('app management', () => {
     const apps = manager();
     const d = Object.assign(new FakeDevice(), { apps });
     const { call } = await connect(d, allowed);
-    expect((await call('app', { action: 'list' })).data.apps[0].id).toBe('dev.app');
+    expect((await call('app', { action: 'list' })).data.apps?.[0]?.id).toBe('dev.app');
     expect((await call('app', { action: 'state' })).data.state).toBe('foreground');
     expect((await call('app', { action: 'state', app: 'dev.other' })).data.state).toBe('running');
     await call('app', { action: 'install', path: '/tmp/a.apk' });
@@ -1123,7 +1149,8 @@ describe('app management', () => {
 
   it('keeps what an install answered on the phone in its answer, whatever the read mode', async () => {
     const apps = manager({
-      install: async () => ['passed a Play Protect warning for dev.app: "Unsafe app blocked"'],
+      install: () =>
+        Promise.resolve(['passed a Play Protect warning for dev.app: "Unsafe app blocked"']),
     });
     const { call } = await connect(Object.assign(new FakeDevice(), { apps }));
     for (const read of ['none', 'diff', 'full', undefined]) {
@@ -1167,13 +1194,14 @@ describe('app management', () => {
   it('lists a screen and presses by name, with no runner', async () => {
     const pressed: string[] = [];
     const inspector = {
-      elements: async () => [
-        { caption: 'Form, Button', identifier: 'open_form' },
-        { caption: 'Title' },
-      ],
-      press: async (name: string) => {
+      elements: () =>
+        Promise.resolve([
+          { caption: 'Form, Button', identifier: 'open_form' },
+          { caption: 'Title' },
+        ]),
+      press: (name: string) => {
         pressed.push(name);
-        return { caption: 'Form, Button' };
+        return Promise.resolve({ caption: 'Form, Button' });
       },
     };
     const { call } = await connect(Object.assign(new FakeDevice(), { inspector }));
@@ -1232,9 +1260,7 @@ describe('app management', () => {
 
   it('refuses what the policy forbids and passes on a driver’s reason', async () => {
     const apps = manager({
-      clearData: async () => {
-        throw new DeviceError('UNSUPPORTED', 'an iPhone cannot');
-      },
+      clearData: () => Promise.reject(new DeviceError('UNSUPPORTED', 'an iPhone cannot')),
     });
     const d = Object.assign(new FakeDevice(), { apps });
     const { call } = await connect(d, { policy: { apps: ['dev.app'], allowDataLoss: 'virtual' } });
@@ -1258,19 +1284,26 @@ describe('simulators and emulators', () => {
     ];
     readonly kind = 'simulator';
     readonly platform = 'ios';
-    startable = async () => this.all;
-    boot = async (id: string) => {
+    startable = () => Promise.resolve(this.all);
+    boot = (id: string) => {
       this.log.push(`boot ${id}`);
-      this.all.find((d) => d.id === id)!.state = 'running';
-      return id;
+      must(
+        this.all.find((d) => d.id === id),
+        id,
+      ).state = 'running';
+      return Promise.resolve(id);
     };
-    shutdown = async (id: string) => {
+    shutdown = (id: string) => {
       this.log.push(`shutdown ${id}`);
-      this.all.find((d) => d.id === id)!.state = 'stopped';
+      must(
+        this.all.find((d) => d.id === id),
+        id,
+      ).state = 'stopped';
+      return Promise.resolve();
     };
-    create = async () => {
+    create = () => {
       this.all.push({ id: 'C', name: 'new', state: 'stopped' });
-      return 'C';
+      return Promise.resolve('C');
     };
   }
 
@@ -1304,36 +1337,41 @@ describe('device conditions', () => {
     values: Record<string, string> = { dark_mode: 'no', text_size: '1.0' };
     failing = false;
     pushed: unknown[] = [];
-    get = async (name: SettingName) => {
+    get = (name: SettingName) => {
       if (name === 'network')
-        throw new DeviceError('UNSUPPORTED', 'a phone has no network shaping');
-      return this.values[name]!;
+        return Promise.reject(new DeviceError('UNSUPPORTED', 'a phone has no network shaping'));
+      return Promise.resolve(must(this.values[name], name));
     };
-    set = async (name: SettingName, value: string): Promise<undefined> => {
-      if (this.failing) throw new DeviceError('INTERNAL', 'broke');
+    set = (name: SettingName, value: string): Promise<undefined> => {
+      if (this.failing) return Promise.reject(new DeviceError('INTERNAL', 'broke'));
       this.values[name] = value;
+      return Promise.resolve(undefined);
     };
     /** The app each listing of routes was for. */
     routesFor: (string | undefined)[] = [];
-    pushRoutes = async (app?: string): Promise<PushRoute[]> => (
-      this.routesFor.push(app),
-      [
+    pushRoutes = (app?: string): Promise<PushRoute[]> => {
+      this.routesFor.push(app);
+      return Promise.resolve([
         { type: 'alert', route: 'by hand', fields: ['title', 'data'], template: '{"aps":{}}' },
         { type: 'tapped', why: 'no hand' },
         { type: 'widgets', route: 'by APNs', fields: [], template: '{"aps":{}}' },
-      ]
-    );
-    push = async (app: string, push: Push) => {
+      ]);
+    };
+    push = (app: string, push: Push) => {
       this.pushed.push([app, push]);
-      return `pushed to ${app}`;
+      return Promise.resolve(`pushed to ${app}`);
     };
-    biometric = async () => {
-      throw new DeviceError('UNSUPPORTED', 'simulator only');
-    };
-    resetKeychain = async () => 3;
+    biometric = () => Promise.reject(new DeviceError('UNSUPPORTED', 'simulator only'));
+    resetKeychain = () => Promise.resolve(3);
     events: unknown[] = [];
-    call = async (number: string, end: boolean) => void this.events.push(['call', number, end]);
-    sms = async (from: string, text: string) => void this.events.push(['sms', from, text]);
+    call = (number: string, end: boolean) => {
+      this.events.push(['call', number, end]);
+      return Promise.resolve();
+    };
+    sms = (from: string, text: string) => {
+      this.events.push(['sms', from, text]);
+      return Promise.resolve();
+    };
   }
 
   it('takes one-shot events, and refuses what is not one', async () => {
@@ -1359,9 +1397,11 @@ describe('device conditions', () => {
     const settings = new Settings();
     settings.values.fold = 'default (now open)';
     // as a fold does that is asked for and does not read back in time: the request went, and holds
-    settings.set = async (name: SettingName, value: string) => {
+    settings.set = (name: SettingName, value: string) => {
       settings.values[name] = value;
-      if (value === 'closed') throw new DeviceError('UNSUPPORTED', 'it stays in state 3');
+      if (value === 'closed')
+        return Promise.reject(new DeviceError('UNSUPPORTED', 'it stays in state 3'));
+      return Promise.resolve(undefined);
     };
     const { call } = await connect(Object.assign(new FakeDevice(), { settings }));
     expect((await call('device_setting', { name: 'fold', value: 'closed' })).data.code).toBe(
@@ -1371,9 +1411,7 @@ describe('device conditions', () => {
       'restored fold: default (now open)',
     );
     expect(settings.values.fold).toBe('default (now open)');
-    settings.set = async () => {
-      throw new DeviceError('UNSUPPORTED', 'no fold here');
-    };
+    settings.set = () => Promise.reject(new DeviceError('UNSUPPORTED', 'no fold here'));
     await call('device_setting', { name: 'fold', value: 'closed' });
     expect((await call('device_setting', { name: 'restore' })).text).toBe('nothing was changed');
   });
@@ -1486,7 +1524,7 @@ describe('device claims', () => {
     const started = execFileSync('ps', ['-o', 'lstart=', '-p', String(pid)], {
       encoding: 'utf8',
     }).trim();
-    const dir = join(process.env.APPDYNO_STATE_DIR!, 'claims');
+    const dir = join(must(process.env.APPDYNO_STATE_DIR, 'APPDYNO_STATE_DIR'), 'claims');
     mkdirSync(dir, { recursive: true });
     writeFileSync(
       join(dir, 'emulator-5580.json'),
@@ -1496,16 +1534,17 @@ describe('device claims', () => {
 
   it('refuses a device a live process holds, naming it, unless asked to share', async () => {
     const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);
+    const pid = must(child.pid, "the child's pid");
     try {
-      claimOf(child.pid!);
+      claimOf(pid);
       const d = new FakeDevice();
       const { call, ctx } = await connect(d, { defaults: { claims: true } });
       const r = await call('use_device', { device: d.serial });
       expect(r.error).toBe(true);
       expect(r.data.code).toBe('DEVICE_CLAIMED');
-      expect(r.text).toContain(`pid ${child.pid}`);
+      expect(r.text).toContain(`pid ${pid}`);
       expect(r.text).toContain('other agent');
-      expect((await call('list_devices')).data.devices[0].heldBy.pid).toBe(child.pid);
+      expect((await call('list_devices')).data.devices?.[0]?.heldBy?.pid).toBe(pid);
       expect((await call('use_device', { device: d.serial, share: true })).error).toBe(false);
       ctx.close();
     } finally {
@@ -1515,24 +1554,28 @@ describe('device claims', () => {
 
   it('frees a dead owner’s claim, a pid reused by another process, and its own at the end', async () => {
     const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);
-    claimOf(child.pid!);
+    claimOf(must(child.pid, "the child's pid"));
     child.kill('SIGKILL');
     await new Promise((r) => child.once('exit', r));
     const d = new FakeDevice();
     const first = await connect(d, { defaults: { claims: true, tool: 'one' } });
     expect((await first.call('use_device', { device: d.serial })).error).toBe(false);
-    expect((await first.call('list_devices')).data.devices[0].heldBy).toMatchObject({
+    expect((await first.call('list_devices')).data.devices?.[0]?.heldBy).toMatchObject({
       pid: process.pid,
       tool: 'one',
     });
     first.ctx.close();
-    expect((await first.call('list_devices')).data.devices[0].heldBy).toBeUndefined();
-    const dir = join(process.env.APPDYNO_STATE_DIR!, 'claims');
+    expect(
+      must((await first.call('list_devices')).data.devices?.[0], 'the device').heldBy,
+    ).toBeUndefined();
+    const dir = join(must(process.env.APPDYNO_STATE_DIR, 'APPDYNO_STATE_DIR'), 'claims');
     writeFileSync(
       join(dir, 'emulator-5580.json'),
       JSON.stringify({ pid: process.pid, started: 'long ago', tool: 'x', since: 'y' }),
     );
     const second = await connect(new FakeDevice(), { defaults: { claims: true } });
-    expect((await second.call('list_devices')).data.devices[0].heldBy).toBeUndefined();
+    expect(
+      must((await second.call('list_devices')).data.devices?.[0], 'the device').heldBy,
+    ).toBeUndefined();
   });
 });

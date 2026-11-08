@@ -56,7 +56,7 @@ export async function startTimeline(
   await recorder.start(file, { maxSeconds: MAX_SECONDS }).then(
     (handle) =>
       filming.write(serial, { handle, since: new Date().toISOString(), file, owner: s.owner }),
-    (e: Error) => (noVideo = e.message),
+    (e: unknown) => (noVideo = e instanceof Error ? e.message : String(e)),
   );
   const startedAt = Date.now();
 
@@ -75,8 +75,8 @@ export async function startTimeline(
     clearTimeout(held);
     endLive();
     // the video first: an iPhone's trace takes a minute to end, and the video would go on filming it
-    const movie = await endRecording(s).catch((e: Error) => {
-      noVideo = e.message;
+    const movie = await endRecording(s).catch((e: unknown) => {
+      noVideo = e instanceof Error ? e.message : String(e);
       return undefined;
     });
     const marks = await frames.finish();

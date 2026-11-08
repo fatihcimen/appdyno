@@ -1,5 +1,5 @@
 import { loadavg } from 'node:os';
-import { pause, type CompileMode, type CpuProfile, type LaunchMode } from '@appdyno/core';
+import { must, pause, type CompileMode, type CpuProfile, type LaunchMode } from '@appdyno/core';
 import { stepLine, type Flow, type StepEvent } from '@appdyno/flows';
 import {
   answerOf,
@@ -79,7 +79,7 @@ const secondsFor = (ms: number) => Math.min(MOST_SECONDS, Math.ceil(ms / 1000) +
 const blank = (cannot: string[] = []): Seen => ({
   read: [],
   cannot,
-  hostLoad: Math.round(loadavg()[0]!),
+  hostLoad: Math.round(must(loadavg()[0], 'the load average')),
 });
 
 /**
@@ -196,8 +196,8 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner, dsym?: string)
     const onStep = async (e: StepEvent) => {
       if (!wanted.includes(e.n)) return;
       if (e.phase === 'after') return finish();
-      let start = () => {};
-      let done = () => {};
+      let start: () => void = () => undefined;
+      let done: () => void = () => undefined;
       const started = new Promise<void>((r) => (start = r));
       const ended = new Promise<void>((r) => (done = r));
       const reading = read(e.n, () => {
@@ -223,26 +223,33 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner, dsym?: string)
     seen: Record<string, Seen>,
     file: string | undefined,
   ) => {
-    const each = (line: string) => places.forEach((p) => seen[p.name]!.cannot.push(line));
-    if (!file) return each('this run does not say which flow it came from: measure it again');
+    const seenAt = (name: string) => must(seen[name], `what ${name} saw`);
+    const each = (line: string) => {
+      for (const p of places) seenAt(p.name).cannot.push(line);
+    };
+    if (!file) {
+      each('this run does not say which flow it came from: measure it again');
+      return;
+    }
     let flow: Flow;
     try {
       flow = readFlow(file);
     } catch (e) {
-      return each((e as Error).message);
+      each((e as Error).message);
+      return;
     }
     const steps = places.flatMap((p) => {
       const n = Number(p.name.split('_')[0]);
       const step = flow.steps[n - 1];
       if (step && journeyKind(n, stepLine(step), 'ms') === `journey.${p.name}.ms`)
         return [{ ...p, n, action: step.action, after: flow.steps[n - 2]?.action }];
-      seen[p.name]!.cannot.push(`${file} has changed: this is no longer its step ${n}`);
+      seenAt(p.name).cannot.push(`${file} has changed: this is no longer its step ${n}`);
       return [];
     });
     for (const p of steps.filter((x) => x.action === 'stop'))
-      seen[p.name]!.cannot.push(NOT_RUNNING);
+      seenAt(p.name).cannot.push(NOT_RUNNING);
     for (const p of steps.filter((x) => x.action === 'launch'))
-      await launch(s, app, seen[p.name]!, p.after === 'stop' ? 'cold' : 'warm', run[0]?.compile);
+      await launch(s, app, seenAt(p.name), p.after === 'stop' ? 'cold' : 'warm', run[0]?.compile);
     const running = steps.filter((p) => p.action !== 'stop' && p.action !== 'launch');
     if (running.length === 0) return;
     const secondsOf = (name: string) =>
@@ -265,16 +272,20 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner, dsym?: string)
       const at = (n: number) => wanted.find((p) => p.n === n);
       const result = await replay(
         wanted.map((p) => p.n),
-        (n, during) => read(seen[at(n)!.name]!, secondsOf(at(n)!.name), during),
+        (n, during) => {
+          const p = must(at(n), `step ${n}`);
+          return read(seenAt(p.name), secondsOf(p.name), during);
+        },
       );
       for (const r of result?.steps ?? []) {
         const p = at(r.n);
-        if (p) seen[p.name]!.againMs = stepTime(flow.steps[r.n - 1]!.action, r).ms;
+        if (p)
+          seenAt(p.name).againMs = stepTime(must(flow.steps[r.n - 1], `step ${r.n}`).action, r).ms;
       }
       return result?.passed;
     };
     // as a measured journey leaves out its first: code run for the first time reads as the interpreter
-    if (!(await replay([], async () => undefined))?.passed) return;
+    if (!(await replay([], () => Promise.resolve()))?.passed) return;
     const profiled = await throughFlow('profile', (x, seconds, during) =>
       profile(s, app, x, seconds, during),
     );
@@ -308,7 +319,9 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner, dsym?: string)
 
   /** The session to look on, or why none can speak for this run. */
   const lookingOn = async (key: RunKey, run: PerfRecord[]) => {
-    const s = await ctx.session().catch((e: Error) => e);
+    const s = await ctx
+      .session()
+      .catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
     if (s instanceof Error) return `no device to look on: ${s.message}`;
     const here = deviceClass(deviceInfo(s));
     if (here !== key.deviceClass)
@@ -341,9 +354,11 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner, dsym?: string)
     const up = s.device.agentUp;
     try {
       if (steps.length) await lookAtSteps(s, app, run, steps, seen, how.file);
-      if (whole) await lookAtRun(s, app, run, whole.looks, seen[WHOLE_RUN]!, how);
+      if (whole)
+        await lookAtRun(s, app, run, whole.looks, must(seen[WHOLE_RUN], 'what the run saw'), how);
     } finally {
-      if (!up && s.device.agentUp) await s.device.stopAgent().catch(() => undefined);
+      // the looks may have started it, which the compiler does not follow
+      if (!up && (s.device.agentUp as boolean)) await s.device.stopAgent().catch(() => undefined);
     }
     return seen;
   };
@@ -404,7 +419,7 @@ export function gateLooks(ctx: ServerContext, runner: FlowRunner, dsym?: string)
       schema: 1,
       ...key,
       at: new Date().toISOString(),
-      build: run[0]!.build,
+      build: must(run[0], 'the newest run').build,
       ...(run[0]?.compile && { compile: run[0].compile }),
       places: held,
     });

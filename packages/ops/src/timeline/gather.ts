@@ -1,4 +1,5 @@
 import {
+  must,
   refreshMsOf,
   stopsInLog,
   type ClockReading,
@@ -62,7 +63,7 @@ export function requestName(e: NetworkEntry, clean: (s: string) => string, full 
     return clean(`${method} ${host}${pathname}`);
   } catch {
     // what is not a URL has no parts to keep apart: its start is all that can be said to be a name
-    return clean(`${method} ${e.url.split(/[?#]/)[0]!}`);
+    return clean(`${method} ${must(e.url.split(/[?#]/)[0], 'its start')}`);
   }
 }
 

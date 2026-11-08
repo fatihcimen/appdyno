@@ -77,7 +77,7 @@ export function actOps(
     if (!op || NOT_A_STEP.has(action)) throw fail(`no step ${action}`);
     const p = op.input.safeParse(args);
     if (!p.success) throw fail(z.prettifyError(p.error));
-    return { op, args: p.data as Record<string, unknown> };
+    return { op, args: p.data };
   };
 
   return [
@@ -256,7 +256,7 @@ export function actOps(
         let ending: ToolResult<ActionOut> | undefined;
         for (const [i, p] of plan.entries()) {
           const last = i === plan.length - 1;
-          const name = p.op?.name ?? p.st!.action;
+          const name = p.op ? p.op.name : p.st.action;
           try {
             throwIfCancelled('steps');
             reportProgress(`step ${i + 1} of ${plan.length}: ${name}`);

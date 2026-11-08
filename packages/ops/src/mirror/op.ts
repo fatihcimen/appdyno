@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { closeSync, mkdirSync, openSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { NEEDS, pause, reportProgress, isAlive } from '@appdyno/core';
+import { must, NEEDS, pause, reportProgress, isAlive } from '@appdyno/core';
 import { z } from 'zod';
 import type { ServerContext } from '../context.js';
 import { checkDevice } from '../policy.js';
@@ -38,10 +38,13 @@ function line({ serial, pid, status: s }: MirrorFile): string {
 function statsLine(f: MirrorFile): string {
   const n = f.status.stats;
   if (!n) return `${f.serial}: no numbers yet`;
+  // the viewer's own numbers, read from its file: one it left out reads as it always has
+  const of = (k: string) => String(n[k]);
   const none = '– (none counted)';
-  const capture = n.captureP50 === undefined ? none : `p50 ${n.captureP50}, p95 ${n.captureP95} ms`;
+  const capture =
+    n.captureP50 === undefined ? none : `p50 ${n.captureP50}, p95 ${of('captureP95')} ms`;
   const decode = n.decodeP95 === undefined ? none : `p95 ${n.decodeP95} ms`;
-  return `${f.serial}: ${n.shown} frames/s shown of ${n.arrived} arrived, ${n.dropped} dropped, ${n.mbps} Mbit/s; capture to arrival ${capture}; decode ${decode}; ${n.source} ${n.mode} ${n.w}x${n.h}; viewer ${n.cpu}% of a core, ${n.rssMb} MB`;
+  return `${f.serial}: ${of('shown')} frames/s shown of ${of('arrived')} arrived, ${of('dropped')} dropped, ${of('mbps')} Mbit/s; capture to arrival ${capture}; decode ${decode}; ${of('source')} ${of('mode')} ${of('w')}x${of('h')}; viewer ${of('cpu')}% of a core, ${of('rssMb')} MB`;
 }
 
 const asData = (f: MirrorFile) => ({ serial: f.serial, pid: f.pid, ...f.status });
@@ -78,7 +81,7 @@ export function mirrorOps(ctx: ServerContext) {
     mkdirSync(dirname(log), { recursive: true, mode: 0o700 });
     const out = openSync(log, 'w', 0o600);
     const child = spawn(
-      command[0]!,
+      must(command[0], "the window's command"),
       [
         ...command.slice(1),
         '--device',
@@ -92,7 +95,8 @@ export function mirrorOps(ctx: ServerContext) {
     );
     closeSync(out);
     child.unref();
-    let ended = false;
+    // the child's events set it, which the compiler cannot follow into the loop
+    let ended = false as boolean;
     child.on('exit', () => (ended = true));
     child.on('error', () => (ended = true));
     reportProgress(`opening a window on ${serial}`);

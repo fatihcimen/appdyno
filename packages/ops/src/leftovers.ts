@@ -1,4 +1,4 @@
-import { heldElsewhere, isThisProcess, ownerGone } from '@appdyno/core';
+import { heldElsewhere, isThisProcess, must, ownerGone } from '@appdyno/core';
 import type { ServerContext } from './context.js';
 import { dropFlightFolder } from './timeline/flight.js';
 import { flowRecordings } from './flow/shared.js';
@@ -22,14 +22,14 @@ async function takeBack(ctx: ServerContext, s: Session, whose: Whose): Promise<T
     {
       name: 'timeline',
       held: s.timeline && { owner: s.owner },
-      end: () => s.timeline!.finish(),
+      end: () => must(s.timeline, 'the timeline').finish(),
       done: 'timeline written',
     },
     {
       name: 'flight recorder',
       held: s.flight && { owner: s.owner },
       end: async () => {
-        await s.flight!.stop();
+        await must(s.flight, 'the flight recorder').stop();
         s.flight = undefined;
         return true;
       },
@@ -58,7 +58,7 @@ async function takeBack(ctx: ServerContext, s: Session, whose: Whose): Promise<T
     if (!held || !whose(held.owner)) continue;
     await end().then(
       (ended) => ended && restored.push(done),
-      (e: Error) => failed.push(`${name}: ${e.message}`),
+      (e: unknown) => failed.push(`${name}: ${e instanceof Error ? e.message : String(e)}`),
     );
   }
   const back = await restoreConditions(s, whose);

@@ -1,4 +1,4 @@
-import { stateDir, type CpuProfile } from '@appdyno/core';
+import { must, stateDir, type CpuProfile } from '@appdyno/core';
 import {
   answerText,
   functionDiff,
@@ -130,7 +130,7 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
         const functions = functionDiff(await profile(from), await profile(to));
         return reply(
           [
-            `functions, ms of CPU in each second, ${from} to ${to}:`,
+            `functions, ms of CPU in each second, ${String(from)} to ${String(to)}:`,
             ...(functions.length
               ? functions
                   .slice(0, 15)
@@ -158,7 +158,7 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
           : [];
         throw new ToolError(
           others.length > 0
-            ? `no runs of device class ${deviceClass}: they are under ${[...new Set(others.map((k) => k.deviceClass))].join(', ')}`
+            ? `no runs of device class ${String(deviceClass)}: they are under ${[...new Set(others.map((k) => k.deviceClass))].join(', ')}`
             : 'no measured runs: run a perf_ operation first',
           'NOT_FOUND',
         );
@@ -256,8 +256,9 @@ export function perfCompareOp(ctx: ServerContext, runner: FlowRunner) {
       if (action === 'why') {
         const answers: Awaited<ReturnType<typeof looks.why>>[] = [];
         for (const [i, report] of reports.entries()) {
-          const [run = []] = await latestRuns(dir, keys[i]!);
-          answers.push(await looks.why(keys[i]!, report, run));
+          const key = must(keys[i], "the report's key");
+          const [run = []] = await latestRuns(dir, key);
+          answers.push(await looks.why(key, report, run));
         }
         await rewriteDashboard(ctx);
         const words =

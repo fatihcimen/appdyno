@@ -1,10 +1,10 @@
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ActOptions, MeasureSource } from '@appdyno/core';
+import { must, type ActOptions, type MeasureSource } from '@appdyno/core';
 import { latestRuns, runKeys, type PerfRecord } from '@appdyno/perf';
 import { DeviceError, type ActParams } from '@appdyno/protocol';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, flowsFor, ServerContext, ToolError } from '../src/index.js';
 import { FakeDevice } from './fake-device.js';
 import { callerOf } from './helpers.js';
@@ -48,8 +48,8 @@ function phone(overrides: Partial<MeasureSource> = {}) {
   Object.defineProperty(device, 'measure', {
     value: {
       ...device.measure,
-      buildType: async () => 'release',
-      vitals: async () => ({ value: {}, raw: '', at: new Date().toISOString() }),
+      buildType: () => Promise.resolve('release'),
+      vitals: () => Promise.resolve({ value: {}, raw: '', at: new Date().toISOString() }),
       ...overrides,
     } satisfies MeasureSource,
   });
@@ -59,7 +59,7 @@ function phone(overrides: Partial<MeasureSource> = {}) {
     DEFAULT_POLICY,
     [
       {
-        list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+        list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
         handles: () => true,
         open: () => device,
       },
@@ -79,7 +79,8 @@ const flowFile = (text = JOURNEY, name = 'checkout.flow') => {
 
 const newestRun = async (measurements: string) => {
   const [key] = await runKeys(measurements);
-  return (await latestRuns(measurements, key!))[0]!;
+  assert(key);
+  return must((await latestRuns(measurements, key))[0], 'the newest run');
 };
 
 const named = (run: PerfRecord[], part: string) => run.find((r) => r.kind.includes(part));
@@ -89,17 +90,17 @@ describe('a journey as a performance scenario', () => {
     const { call, measurements, device } = phone();
     const file = flowFile();
     const r = await call('flow', { action: 'run', file, iterations: 5 });
-    expect(r.data.journey!.scenario).toBe('journey-checkout');
-    expect(r.data.journey!.iterations).toBe(5);
+    expect(r.data.journey?.scenario).toBe('journey-checkout');
+    expect(r.data.journey?.iterations).toBe(5);
     expect(r.text).toContain('tap text="Form": 40');
     const run = await newestRun(measurements);
-    expect(run[0]!.kind).toBe('journey.total_ms');
-    expect(run[0]!.samples).toHaveLength(5);
-    expect(named(run, '02_tap_text_Form.ms')!.samples).toHaveLength(5);
-    expect(named(run, '02_tap_text_Form.ms')!.value).toBeCloseTo(401, 0);
+    expect(run[0]?.kind).toBe('journey.total_ms');
+    expect(run[0]?.samples).toHaveLength(5);
+    expect(named(run, '02_tap_text_Form.ms')?.samples).toHaveLength(5);
+    expect(named(run, '02_tap_text_Form.ms')?.value).toBeCloseTo(401, 0);
     // what a device times itself is its own; what is timed on the Mac says so through the load it takes
-    expect(named(run, '02_tap_text_Form.frames_p95_ms')!.samples).toEqual([18, 18, 18, 18, 18]);
-    expect(named(run, '02_tap_text_Form.memory_kb')!.unit).toBe('kb');
+    expect(named(run, '02_tap_text_Form.frames_p95_ms')?.samples).toEqual([18, 18, 18, 18, 18]);
+    expect(named(run, '02_tap_text_Form.memory_kb')?.unit).toBe('kb');
     // the frames of a step are those of the step: reset before its action
     const names = device.calls.map((c) => c.name);
     expect(names.filter((n) => n === 'perf.reset')).toHaveLength(15);
@@ -126,7 +127,7 @@ describe('a journey as a performance scenario', () => {
     expect(worse.text).not.toMatch(/regression\s+journey\.03_/);
 
     const dashboard = await call('perf_compare', { action: 'dashboard' });
-    const page = readFileSync(dashboard.data.file!, 'utf8');
+    const page = readFileSync(must(dashboard.data.file, 'the dashboard'), 'utf8');
     const text = page.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
     expect(text).toContain('Journeys');
     expect(text).toContain('3 steps, slowest 02 tap text Form');
@@ -148,14 +149,14 @@ describe('a journey as a performance scenario', () => {
     };
     const r = await r0;
     const run = await newestRun(measurements);
-    const form = named(run, '02_tap_text_Form.ms')!;
+    const form = must(named(run, '02_tap_text_Form.ms'), 'the step');
     expect(form.samples).toHaveLength(3);
     expect(Math.max(...form.samples)).toBeLessThan(500);
-    expect(named(run, 'journey.total_ms')!.samples).toHaveLength(3);
-    expect(named(run, 'journey.unsettled')!.samples).toEqual([1, 1, 0, 0, 0]);
-    expect(r.data.journey!.steps[1]).toMatchObject({ unsettled: 2 });
-    expect(r.data.journey!.steps[1]!.ms).toBeLessThan(500);
-    expect(r.data.journey!.note).toContain('step 2 never settled in 2 of 5');
+    expect(named(run, 'journey.total_ms')?.samples).toHaveLength(3);
+    expect(named(run, 'journey.unsettled')?.samples).toEqual([1, 1, 0, 0, 0]);
+    expect(r.data.journey?.steps[1]).toMatchObject({ unsettled: 2 });
+    expect(r.data.journey?.steps[1]?.ms).toBeLessThan(500);
+    expect(r.data.journey?.note).toContain('step 2 never settled in 2 of 5');
     expect(r.text).toContain('(never settled in 2 of 5)');
     expect(r.text).toContain('as what ended them was the deadline');
   });
@@ -167,11 +168,11 @@ describe('a journey as a performance scenario', () => {
     const run = await newestRun(measurements);
     expect(named(run, '02_tap_text_Form.ms')).toBeUndefined();
     expect(named(run, 'journey.total_ms')).toBeUndefined();
-    expect(run[0]!.kind).toBe('journey.unsettled');
-    const j = r.data.journey!;
+    expect(run[0]?.kind).toBe('journey.unsettled');
+    const j = must(r.data.journey, 'the journey');
     expect(j.totalMs).toBeUndefined();
     expect(j.samples).toEqual([]);
-    expect(j.steps[1]!.ms).toBeUndefined();
+    expect(must(j.steps[1], 'its second step').ms).toBeUndefined();
     expect(r.text).toContain('no whole: none settled at every step');
     expect(r.text).toMatch(/2\. tap text="Form": no time \(never settled in 5 of 5\)/);
   });
@@ -222,24 +223,22 @@ describe('a journey as a performance scenario', () => {
           },
         };
       },
-    } as Partial<MeasureSource>);
+    });
     await call('flow', { action: 'run', file: flowFile(), iterations: 2 });
     const run = await newestRun(measurements);
-    expect(named(run, '02_tap_text_Form.frames_p95_ms')!.samples).toEqual([30, 30]);
-    expect(named(run, '02_tap_text_Form.frames_worst_ms')!.samples).toEqual([38.4, 38.4]);
+    expect(named(run, '02_tap_text_Form.frames_p95_ms')?.samples).toEqual([30, 30]);
+    expect(named(run, '02_tap_text_Form.frames_worst_ms')?.samples).toEqual([38.4, 38.4]);
   });
 
   it('a step after which the app does not run has no reading, and the run goes on', async () => {
-    const gone = async () => {
-      throw new DeviceError('APP_NOT_RUNNING', 'dev.app is not running');
-    };
+    const gone = () => Promise.reject(new DeviceError('APP_NOT_RUNNING', 'dev.app is not running'));
     let up = true;
     const base = phone();
     const { frames, memory } = base.device.measure;
     const { call, measurements, device } = phone({
       frames: async () => (up ? frames() : gone()),
       memory: async () => (up ? memory() : gone()),
-    } as Partial<MeasureSource>);
+    });
     const terminate = device.terminate.bind(device);
     device.terminate = async (pkg: string) => {
       up = false;
@@ -257,9 +256,9 @@ describe('a journey as a performance scenario', () => {
     });
     expect(r.data.done).toBe('passed');
     const run = await newestRun(measurements);
-    expect(named(run, '01_stop.ms')!.samples).toHaveLength(2);
+    expect(named(run, '01_stop.ms')?.samples).toHaveLength(2);
     expect(named(run, '01_stop.memory_kb')).toBeUndefined();
-    expect(named(run, '02_launch.memory_kb')!.samples).toHaveLength(2);
+    expect(named(run, '02_launch.memory_kb')?.samples).toHaveLength(2);
   });
 
   it('a read that takes a recording of seconds is not made between two steps, and the answer says so', async () => {
@@ -267,7 +266,7 @@ describe('a journey as a performance scenario', () => {
       slowReads: ['memory', 'frames', 'resetFrames'],
     });
     const r = await call('flow', { action: 'run', file: flowFile(), iterations: 1 });
-    expect(r.data.journey!.note).toMatch(/time only for frames and memory/);
+    expect(r.data.journey?.note).toMatch(/time only for frames and memory/);
     expect(device.calls.some((c) => c.name === 'perf.memory')).toBe(false);
     const run = await newestRun(measurements);
     expect(named(run, 'memory_kb')).toBeUndefined();
@@ -287,11 +286,11 @@ describe('a journey as a performance scenario', () => {
       (x: unknown) => x as ToolError,
     );
     expect(e).toBeInstanceOf(ToolError);
-    expect(e!.message).toContain('the phone went away');
-    expect(e!.message).toContain('what passed before it is kept');
+    expect(e?.message).toContain('the phone went away');
+    expect(e?.message).toContain('what passed before it is kept');
     device.fail = undefined;
     // the warm-up, then two that passed, then the one that failed
-    expect((await newestRun(measurements))[0]!.samples).toHaveLength(2);
+    expect((await newestRun(measurements))[0]?.samples).toHaveLength(2);
   });
 
   it('a warm-up that fails keeps nothing', async () => {
@@ -312,7 +311,7 @@ describe('a journey as a performance scenario', () => {
     const { device } = phone();
     const ctx = new ServerContext(DEFAULT_POLICY, [
       {
-        list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+        list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
         handles: () => true,
         open: () => device,
       },
@@ -345,7 +344,7 @@ describe('a journey as a performance scenario', () => {
     expect(r.passed).toBe(true);
     expect(logged.join('\n')).toContain('journey-a: 2 iterations');
     expect(readFileSync(junit, 'utf8')).toContain('journey-a: 2 iterations');
-    expect((await newestRun(measurements))[0]!.scenario).toBe('journey-a');
+    expect((await newestRun(measurements))[0]?.scenario).toBe('journey-a');
   });
 });
 

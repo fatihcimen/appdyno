@@ -26,15 +26,17 @@ const shown = (a: { value?: unknown; description?: string; type?: string }) =>
 /** Metro on this Mac, and the Hermes runtime it fronts over the DevTools protocol. Needs no device. */
 export function reactNativeOps(ctx: ServerContext) {
   const targetsAt = (base: string) =>
-    devToolsTargets(base).catch((e: Error) => {
+    devToolsTargets(base).catch((e: unknown) => {
       throw new ToolError(
-        `no Metro answers at ${base}: ${e.message}. Start it (npx react-native start), or give metro`,
+        `no Metro answers at ${base}: ${e instanceof Error ? e.message : String(e)}. Start it (npx react-native start), or give metro`,
         'NOT_FOUND',
       );
     });
 
-  const one = async (base: string, wanted: string | undefined): Promise<DevToolsTarget> => {
-    const all = (await targetsAt(base)).filter((t) => t.webSocketDebuggerUrl);
+  const one = async (base: string, wanted: string | undefined) => {
+    const all = (await targetsAt(base)).filter(
+      (t): t is DevToolsTarget & { webSocketDebuggerUrl: string } => !!t.webSocketDebuggerUrl,
+    );
     const hit = wanted ? all.find((t) => t.id === wanted) : all.at(-1);
     if (!hit)
       throw new ToolError(
@@ -85,7 +87,7 @@ export function reactNativeOps(ctx: ServerContext) {
           }).catch(() => undefined);
           if (r?.ok) return reply('reloaded through Metro', { done: 'reloaded through Metro' });
           const t = await one(base, target);
-          const session = await CdpSession.open(t.webSocketDebuggerUrl!);
+          const session = await CdpSession.open(t.webSocketDebuggerUrl);
           try {
             await session.send('Page.reload');
           } finally {
@@ -94,7 +96,7 @@ export function reactNativeOps(ctx: ServerContext) {
           return reply(`reloaded ${t.id}`, { done: `reloaded ${t.id}` });
         }
         const t = await one(base, target);
-        const session = await CdpSession.open(t.webSocketDebuggerUrl!);
+        const session = await CdpSession.open(t.webSocketDebuggerUrl);
         const lines: string[] = [];
         try {
           session.on('Runtime.consoleAPICalled', (p) => {

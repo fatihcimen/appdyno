@@ -33,10 +33,9 @@ export async function appDeath(
   since: number,
   clean: Clean,
 ) {
-  const { appPid } = s.device;
   if (!s.appId) return undefined;
-  if (appPid) {
-    const pid = await appPid.call(s.device, s.appId).catch(() => wasPid);
+  if (s.device.appPid) {
+    const pid = await s.device.appPid(s.appId).catch(() => wasPid);
     s.appPid = pid;
     if (wasPid && pid && pid !== wasPid) {
       reportProgress('the app has a new process: looking for its crash report');

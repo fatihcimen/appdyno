@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import {
+  must,
   readState,
   reportProgress,
   stateDir,
@@ -266,7 +267,8 @@ export class ServerContext {
   /** The session of `serial`, else the default device (the configured one, or the only allowed one). */
   async session(serial?: string, launching?: string): Promise<Session> {
     if (serial) return this.sessions.get(serial) ?? this.use(serial, undefined, false, launching);
-    if (this.currentSerial) return this.sessions.get(this.currentSerial)!;
+    if (this.currentSerial)
+      return must(this.sessions.get(this.currentSerial), 'the selected session');
     return this.use(await this.defaultSerial(), undefined, false, launching);
   }
 
@@ -276,7 +278,8 @@ export class ServerContext {
     const ready = (await this.devices().catch(refused)).filter(
       (d) => d.ready && this.allowed(d.serial),
     );
-    if (ready.length === 1) return ready[0]!.serial;
+    const [only, other] = ready;
+    if (only && !other) return only.serial;
     throw new ToolError(
       ready.length === 0
         ? 'no connected device this server may drive (list_devices)'

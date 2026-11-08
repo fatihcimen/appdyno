@@ -95,12 +95,12 @@ describe('a stall no frame shows', () => {
   it('goes by the refresh of this device, not a phone of another', () => {
     const fast = Array.from({ length: 9 }, (_, i) => ({ at: FROM + i * 8.3, ms: 8 }));
     const [s] = stallsIn(logs(line(FROM + 2_000, 'Skipped 120 frames!')), fast);
-    expect(s!.ms).toBeCloseTo(996, 0);
+    expect(s?.ms).toBeCloseTo(996, 0);
   });
 
   it('takes 60 Hz where there are too few frames to tell', () => {
     const [s] = stallsIn(logs(line(FROM + 2_000, 'Skipped 60 frames!')), []);
-    expect(s!.ms).toBeCloseTo(1_000, 0);
+    expect(s?.ms).toBeCloseTo(1_000, 0);
   });
 
   it('leaves out one a long frame already shows: one stop is one row', () => {
@@ -128,15 +128,15 @@ describe('one clock', () => {
       }),
     );
     expect(t.steps.marks[0]).toEqual({ at: FROM + 1_031, ms: 200, name: 'tap', ok: true });
-    expect(t.logs.marks[0]!.at).toBe(FROM + 3_000);
-    expect(t.frames.marks[0]!.at).toBe(FROM + 1_000);
+    expect(t.logs.marks[0]?.at).toBe(FROM + 3_000);
+    expect(t.frames.marks[0]?.at).toBe(FROM + 1_000);
   });
 
   it('says the bound of what crossed from the Mac, drift and all, in the report', () => {
     const t = assemble(gathered({ steps: [{ began: FROM, at: FROM + 1, op: 'tap', ok: true }] }));
     expect(t.clock.driftMs).toBe(0.5);
-    expect(t.clock.sources.find((s) => s.row === 'Steps')!.withinMs).toBeCloseTo(1.9, 5);
-    expect(t.clock.sources.find((s) => s.row === 'Frames')!.withinMs).toBe(1);
+    expect(t.clock.sources.find((s) => s.row === 'Steps')?.withinMs).toBeCloseTo(1.9, 5);
+    expect(t.clock.sources.find((s) => s.row === 'Frames')?.withinMs).toBe(1);
   });
 
   it('says how a video was placed in the words it came with: a guess calls itself one', () => {
@@ -225,7 +225,7 @@ describe('what may be private', () => {
         },
       }),
     );
-    expect(t.network.marks[0]!.name).toBe('GET a.example/x');
+    expect(t.network.marks[0]?.name).toBe('GET a.example/x');
     expect(t.network.note).toBe('method, host and path, no query');
   });
 });

@@ -1,4 +1,4 @@
-import type { LogLevel } from '@appdyno/core';
+import { must } from '@appdyno/core';
 import { AUDIT_TYPES } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
@@ -34,8 +34,9 @@ function sinceOf(given: string | undefined, s: Session) {
 export function boundLines(lines: string[], maxLines: number, maxChars = MAX_LOG_CHARS) {
   const kept: string[] = [];
   let chars = 0;
-  for (let i = lines.length - 1; i >= 0 && kept.length < maxLines; i--) {
-    const line = lines[i]!.slice(0, 2_000);
+  for (const whole of lines.toReversed()) {
+    if (kept.length >= maxLines) break;
+    const line = whole.slice(0, 2_000);
     if (chars + line.length + 1 > maxChars) break;
     chars += line.length + 1;
     kept.unshift(line);
@@ -65,7 +66,9 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
           type: i.type,
           rule: i.rule,
           message: clean(i.message),
-          ...(i.element?.t || i.element?.d ? { label: clean(i.element.t ?? i.element.d!) } : {}),
+          ...(i.element?.t || i.element?.d
+            ? { label: clean(i.element.t ?? must(i.element.d, 'its description')) }
+            : {}),
           ...(i.b && {
             x: Math.round((i.b[0] + i.b[2]) / 2),
             y: Math.round((i.b[1] + i.b[3]) / 2),
@@ -77,7 +80,7 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
             head,
             ...issues.map(
               (i) =>
-                `${i.type} ${i.rule}: ${i.message}${i.label ? ` ${JSON.stringify(i.label)}` : ''}${i.x !== undefined ? ` at ${i.x},${i.y}` : ''}`,
+                `${i.type} ${i.rule}: ${i.message}${i.label ? ` ${JSON.stringify(i.label)}` : ''}${i.x !== undefined && i.y !== undefined ? ` at ${i.x},${i.y}` : ''}`,
             ),
           ].join('\n'),
           { engine: r.engine, truncated: r.truncated, issues },
@@ -105,7 +108,7 @@ export function diagnoseOps(ctx: ServerContext, { clean }: Answers) {
         const from = sinceOf(since, s);
         const { lines, source, note } = await s.device.logs({
           app: pkg,
-          level: level as LogLevel,
+          level,
           maxLines,
           ...(from !== undefined && { since: from }),
         });

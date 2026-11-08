@@ -1,6 +1,6 @@
 import { existsSync, statSync, readdirSync, mkdirSync, writeFileSync } from 'node:fs';
 import { extname, join, basename, dirname } from 'node:path';
-import { safeName } from '@appdyno/core';
+import { must, safeName } from '@appdyno/core';
 import {
   type CaseFailure,
   type TestSuite,
@@ -69,7 +69,7 @@ export type TestOptions = {
 };
 
 /** What a report line shows of a message, whose next lines are for a person reading the one failure. */
-const firstLine = (s: string) => s.split('\n')[0]!;
+const firstLine = (s: string) => must(s.split('\n')[0], 'a first line');
 
 /** One go at a file: how its run ended, or what kept it from one. */
 type Attempt = { result?: RunResult; journey?: JourneyAnswer; error?: Error };

@@ -1,7 +1,13 @@
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { DeviceProvider, LiveMetrics, MeasureSource, ScreenRecorder } from '@appdyno/core';
+import {
+  must,
+  type DeviceProvider,
+  type LiveMetrics,
+  type MeasureSource,
+  type ScreenRecorder,
+} from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import type { Timeline } from '@appdyno/perf';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -16,32 +22,33 @@ import { callerOf } from './helpers.js';
 
 const pageOf = (file: string) =>
   JSON.parse(
-    /id="timeline">([\s\S]*?)<\/script>/.exec(readFileSync(file, 'utf8'))![1]!,
+    must(
+      /id="timeline">([\s\S]*?)<\/script>/.exec(readFileSync(file, 'utf8'))?.[1],
+      'its timeline',
+    ),
   ) as Timeline;
 
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-const refused = async (): Promise<never> => {
-  throw new Error('it will not start');
-};
+const refused = (): Promise<never> => Promise.reject(new Error('it will not start'));
 
 /** A device with a recorder that writes a real file, and the frames of a stretch that ends when asked. */
 class TimedDevice extends FakeDevice {
   ended = 0;
   override recorder: ScreenRecorder = {
     extension: 'mp4',
-    start: async (file) => ({ file }),
-    stop: async (h) => {
+    start: (file) => Promise.resolve({ file }),
+    stop: (h) => {
       writeFileSync(String(h.file), fakeVideo([Buffer.from('a frame')]));
       this.ended++;
-      return { files: [String(h.file)] };
+      return Promise.resolve({ files: [String(h.file)] });
     },
   };
   readonly liveMetrics: LiveMetrics = {
-    start: async (onSample) => {
+    start: (onSample) => {
       const now = Date.now();
       onSample({ at: now, app: 'dev.app', memoryMb: 120, networkInKbps: 8, networkOutKbps: 1 });
-      return () => undefined;
+      return Promise.resolve(() => undefined);
     },
   };
   /** When its one frame was drawn, by this Mac's clock: a test puts it inside the stretch. */
@@ -62,7 +69,8 @@ class TimedDevice extends FakeDevice {
 
 function connect(device: FakeDevice = new TimedDevice(), defaults = {}) {
   const provider: DeviceProvider = {
-    list: async () => [{ serial: device.serial, state: 'device', ready: true, model: 'Fake' }],
+    list: () =>
+      Promise.resolve([{ serial: device.serial, state: 'device', ready: true, model: 'Fake' }]),
     handles: () => true,
     open: () => device,
   };
@@ -94,15 +102,15 @@ describe('report timeline', () => {
     const r = await call('report', { action: 'stop' });
     expect(r.data).toMatchObject({ timeline: join(dir, 'timeline.html') });
     expect(existsSync(join(dir, 'index.html'))).toBe(true);
-    const page = pageOf(r.data.timeline as string);
+    const page = pageOf(must(r.data.timeline, 'the timeline'));
     expect(page.clock.offsetMs).toBeGreaterThan(4_900);
-    expect(page.frames.marks[0]!.ms).toBe(900);
+    expect(page.frames.marks[0]?.ms).toBe(900);
     expect(page.touches.marks).toHaveLength(1);
-    expect(page.memory.marks[0]!.mb).toBe(120);
+    expect(page.memory.marks[0]?.mb).toBe(120);
     // a step is the Mac's, and now stands on the device's clock with the rest
-    expect(page.steps.marks[0]!.name).toBe('tap');
-    expect(page.steps.marks[0]!.at).toBeGreaterThanOrEqual(page.from - 50);
-    expect(page.steps.marks[0]!.at).toBeLessThanOrEqual(page.to + 50);
+    expect(page.steps.marks[0]?.name).toBe('tap');
+    expect(page.steps.marks[0]?.at).toBeGreaterThanOrEqual(page.from - 50);
+    expect(page.steps.marks[0]?.at).toBeLessThanOrEqual(page.to + 50);
   });
 
   it.each([
@@ -130,7 +138,10 @@ describe('report timeline', () => {
     try {
       const device = new TimedDevice();
       let ended = 0;
-      device.liveMetrics.start = async () => () => void ended++;
+      device.liveMetrics.start = () =>
+        Promise.resolve(() => {
+          ended++;
+        });
       const { call } = connect(device);
       await call('report', { action: 'timeline', dir });
       await vi.advanceTimersByTimeAsync(179_000);
@@ -149,7 +160,9 @@ describe('report timeline', () => {
     const r = await call('report', { action: 'stop' });
     expect(r.text).toContain('video inside it');
     expect(r.data.timelineBytes).toBeGreaterThan(1_000);
-    expect(readFileSync(r.data.timeline as string, 'utf8')).toContain('id="video-bytes"');
+    expect(readFileSync(must(r.data.timeline, 'the timeline'), 'utf8')).toContain(
+      'id="video-bytes"',
+    );
   });
 
   it('fills an empty row with its reason, and takes nothing else with it', async () => {
@@ -165,7 +178,7 @@ describe('report timeline', () => {
     await call('report', { action: 'timeline', dir });
     const r = await call('report', { action: 'stop' });
     expect(r.text).toContain('no video: this phone records nothing');
-    const page = pageOf(r.data.timeline as string);
+    const page = pageOf(must(r.data.timeline, 'the timeline'));
     expect(page.noVideo).toBe('this phone records nothing');
     expect(page.frames.absent).toBe('no frames on a clock here');
     expect(page.logs.absent).toBe('no log on this device');
@@ -180,8 +193,11 @@ describe('report timeline', () => {
     const before = Date.now();
     await call('report', { action: 'timeline', dir });
     await call('report', { action: 'stop' });
-    const timed = logs.mock.calls.map(([q]) => q).find((q) => q.timed)!;
-    expect(timed.since!).toBeGreaterThan(before + 6_900);
+    const timed = must(
+      logs.mock.calls.map(([q]) => q).find((q) => q.timed),
+      'the timed read',
+    );
+    expect(timed.since).toBeGreaterThan(before + 6_900);
   });
 
   it('reads the log of a process by its id, for one that has ended since', async () => {
@@ -193,7 +209,7 @@ describe('report timeline', () => {
     await call('report', { action: 'timeline', dir });
     device.pid = undefined;
     await call('report', { action: 'stop' });
-    expect(logs.mock.calls.map(([q]) => q).find((q) => q.timed)!.pid).toBe('4242');
+    expect(logs.mock.calls.map(([q]) => q).find((q) => q.timed)?.pid).toBe('4242');
   });
 
   it('is finished by the end of a session, as anything else it left', async () => {
@@ -213,7 +229,7 @@ describe('report timeline', () => {
     const device = new TimedDevice();
     const { call, ctx } = connect(device);
     await call('report', { action: 'timeline', dir });
-    const running = (await ctx.session()).timeline!;
+    const running = must((await ctx.session()).timeline, 'the timeline');
     await Promise.all([running.finish(), running.finish()]);
     expect(device.ended).toBe(1);
     await call('report', { action: 'stop' });
@@ -227,20 +243,21 @@ describe('report timeline', () => {
       await call('report', { action: 'timeline', dir });
       captures.write(device.serial, { via: 'probe', since: Date.now(), handle: {} });
       (device as { network?: unknown }).network = {
-        read: async () => ({
-          entries: [
-            {
-              at: new Date().toISOString(),
-              method: 'GET',
-              url: 'https://api.example.com/items?page=2&token=abc123',
-              ms: 12,
-            },
-          ],
-        }),
+        read: () =>
+          Promise.resolve({
+            entries: [
+              {
+                at: new Date().toISOString(),
+                method: 'GET',
+                url: 'https://api.example.com/items?page=2&token=abc123',
+                ms: 12,
+              },
+            ],
+          }),
       };
       const r = await call('report', { action: 'stop' });
       captures.remove(device.serial);
-      return pageOf(r.data.timeline as string).network;
+      return pageOf(must(r.data.timeline, 'the timeline')).network;
     };
 
     it('keeps its name and times, and no query, as nobody asked', async () => {
@@ -252,7 +269,7 @@ describe('report timeline', () => {
 
     it('keeps the query only where a person turned that on, and hides a credential even then', async () => {
       const network = await withCapture({ fullUrls: true });
-      expect(network.marks[0]!.name).toContain('page=2');
+      expect(network.marks[0]?.name).toContain('page=2');
       expect(JSON.stringify(network)).not.toContain('abc123');
       expect(network.note).toBe('whole URLs, as asked');
     });

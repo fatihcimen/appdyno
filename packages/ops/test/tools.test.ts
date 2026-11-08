@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { DeviceProvider } from '@appdyno/core';
+import { must, type DeviceProvider } from '@appdyno/core';
 import { DeviceError, type Tree } from '@appdyno/protocol';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServerContext } from '../src/context.js';
@@ -29,10 +29,11 @@ async function connect(
 ) {
   const logs: object[] = [];
   const provider: DeviceProvider = {
-    list: async () => [
-      { serial: device.serial, state: 'device', ready: true, model: 'Fake' },
-      ...others,
-    ],
+    list: () =>
+      Promise.resolve([
+        { serial: device.serial, state: 'device', ready: true, model: 'Fake' },
+        ...others,
+      ]),
     handles: () => true,
     open: () => device,
   };
@@ -51,7 +52,7 @@ async function connect(
 }
 
 const refOf = (screen: string, label: string) =>
-  new RegExp(`(@[a-z0-9-]+) \\w+ "${label}"`).exec(screen)![1]!;
+  must(new RegExp(`(@[a-z0-9-]+) \\w+ "${label}"`).exec(screen)?.[1], `the ref of ${label}`);
 
 describe('tool list', () => {
   it('has the device tools with annotations, a title and no shell tool', async () => {
@@ -113,11 +114,11 @@ describe('tool list', () => {
       expect(t.annotations, t.name).toBeDefined();
       expect(t.outputSchema, t.name).toBeUndefined();
       expect(t.title, t.name).toBeTruthy();
-      expect(t.description!.length, t.name).toBeLessThan(400);
+      expect(t.description?.length, t.name).toBeLessThan(400);
     }
     expect(
       tools
-        .filter((t) => t.annotations!.readOnlyHint)
+        .filter((t) => t.annotations?.readOnlyHint)
         .map((t) => t.name)
         .sort(),
     ).toEqual([
@@ -142,7 +143,7 @@ describe('tool list', () => {
 
   it('reports the server as appdyno with an icon', async () => {
     const { client } = await connect();
-    const info = client.getServerVersion()!;
+    const info = must(client.getServerVersion(), 'the server version');
     expect(info.title).toBe('appdyno');
     expect((info as { icons?: unknown[] }).icons).toHaveLength(1);
   });
@@ -195,7 +196,10 @@ describe('act and read', () => {
     const form = refOf(screen, 'Form');
     const r = await t.textOf('tap', { ref: form });
     expect(r.error).toBe(false);
-    const act = t.device.calls.find((c) => c.name === 'act')!;
+    const act = must(
+      t.device.calls.find((c) => c.name === 'act'),
+      'a touch',
+    );
     expect(act.args[0]).toEqual({ kind: 'tap', x: 540, y: 350 });
     expect(act.args[1]).toMatchObject({ settle: { quietMs: 200, maxMs: 3000 }, read: 'tree' });
     expect((act.args[1] as { before?: string }).before).toBeDefined();
@@ -226,7 +230,7 @@ describe('act and read', () => {
     await t.textOf('screen');
     const r = await t.textOf('tap', { x: 10, y: 10, read: 'none' });
     expect(r.text).toBe('tapped 10,10');
-    expect(t.device.calls.at(-1)!.args[1]).toEqual({ settle: false, read: 'none' });
+    expect(t.device.calls.at(-1)?.args[1]).toEqual({ settle: false, read: 'none' });
   });
 
   it('types into a field by ref without echoing the text', async () => {
@@ -240,7 +244,7 @@ describe('act and read', () => {
     expect(r.text).toMatch(/^typed \(16 characters\)/);
     expect(r.text).not.toContain('5551234');
     expect(t.device.typed).toEqual(['İş Gören 5551234']);
-    expect(t.device.calls.find((c) => c.name === 'typeText')!.args[0]).toMatchObject({
+    expect(t.device.calls.find((c) => c.name === 'typeText')?.args[0]).toMatchObject({
       at: { x: 540, y: 350 },
       replace: true,
     });
@@ -285,7 +289,7 @@ describe('act and read', () => {
     await t.textOf('screen');
     const r = await t.call('screenshot');
     expect(r.content.map((c) => c.type)).toEqual(['text', 'image']);
-    expect(r.content[0]!.text).toContain('pixel × 2.348');
+    expect(r.content[0]?.text).toContain('pixel × 2.348');
     const again = await t.textOf('screenshot');
     expect(again).toMatchObject({ error: true });
   });
@@ -312,7 +316,7 @@ describe('policy', () => {
     ])
       expect((await t.textOf('open_link', { url, read: 'none' })).error, url).toBe(true);
     expect((await t.textOf('open_link', { url: 'demo://home', read: 'none' })).error).toBe(false);
-    expect(t.device.calls.find((c) => c.name === 'openUrl')!.args).toEqual([
+    expect(t.device.calls.find((c) => c.name === 'openUrl')?.args).toEqual([
       'demo://home',
       'dev.app',
     ]);
@@ -369,10 +373,10 @@ describe('gesture geometry', () => {
 
   it('spreads two fingers apart to zoom in and together to zoom out', () => {
     const [a, b] = pinchPaths({ x: 540, y: 1200 }, 3, 400, { w: 1080, h: 2400 });
-    expect(a![0]!.x).toBeGreaterThan(a![1]!.x);
-    expect(b![1]!.x).toBeGreaterThan(b![0]!.x);
+    expect(a?.[0]?.x).toBeGreaterThan(must(a?.[1], 'its second point').x);
+    expect(b?.[1]?.x).toBeGreaterThan(must(b?.[0], 'its first point').x);
     const [c] = pinchPaths({ x: 540, y: 1200 }, 0.3, 400, { w: 1080, h: 2400 });
-    expect(c![1]!.x).toBeGreaterThan(c![0]!.x);
+    expect(c?.[1]?.x).toBeGreaterThan(must(c?.[0], 'its first point').x);
   });
 });
 
@@ -384,8 +388,8 @@ describe('perf tools', () => {
     expect(r.text).toContain('virtual device: relative');
     expect(r.text).toContain('CPU: 12.5%');
     expect(r.text).toContain('janky 4%');
-    const id = /measurement (pm-[0-9a-f]{8})/.exec(r.text)![1];
-    const stored = JSON.parse(readFileSync(join(MEASUREMENTS, `${id}.json`), 'utf8'));
+    const id = must(/measurement (pm-[0-9a-f]{8})/.exec(r.text)?.[1], 'its id');
+    const stored = JSON.parse(readFileSync(join(MEASUREMENTS, `${id}.json`), 'utf8')) as unknown;
     expect(stored).toMatchObject({ id, kind: 'snapshot', value: { cpu: { percent: 12.5 } } });
     expect(readFileSync(join(MEASUREMENTS, `${id}.txt`), 'utf8')).toContain('TOTAL PSS');
   });
@@ -406,7 +410,10 @@ describe('perf tools', () => {
       'perf.frames',
       'perf.memory',
     ]);
-    const swipe = dev.calls.find((c) => c.name === 'act')!.args[0] as {
+    const swipe = must(
+      dev.calls.find((c) => c.name === 'act'),
+      'a swipe',
+    ).args[0] as {
       kind: string;
       from: { y: number };
       to: { y: number };
@@ -477,7 +484,7 @@ class FakeIos extends FakeDevice {
     return {
       ...t,
       windows: [
-        t.windows[0]!,
+        must(t.windows[0], 'its window'),
         {
           type: 3,
           pkg: 'com.apple.springboard',
@@ -558,7 +565,8 @@ describe('iOS simulators', () => {
     const device = new FakeDevice();
     const listing = async (need: DeviceProvider['need'], policy: Policy = DEFAULT_POLICY) => {
       const provider: DeviceProvider = {
-        list: async () => [{ serial: device.serial, state: 'device', ready: true, model: 'Fake' }],
+        list: () =>
+          Promise.resolve([{ serial: device.serial, state: 'device', ready: true, model: 'Fake' }]),
         handles: () => true,
         open: () => device,
         ...(need && { need }),
@@ -569,21 +577,19 @@ describe('iOS simulators', () => {
         structuredContent: { devices: { blocked?: unknown }[] };
       };
     };
-    const locked = await listing(async () => 'locked');
-    expect(locked.content[0]!.text).toBe(
+    const locked = await listing(() => Promise.resolve('locked'));
+    expect(locked.content[0]?.text).toBe(
       `${device.serial} device Fake: The device is locked. Unlock it. The picture goes on; input stops where it asks for a passcode.`,
     );
-    expect(locked.structuredContent.devices[0]!.blocked).toMatchObject({
+    expect(locked.structuredContent.devices[0]?.blocked).toMatchObject({
       need: 'locked',
       title: 'The device is locked',
     });
-    const failing = await listing(async () => {
-      throw new Error('no answer');
-    });
-    expect(failing.content[0]!.text).toBe(`${device.serial} device Fake`);
-    const asked = vi.fn(async () => 'locked' as const);
+    const failing = await listing(() => Promise.reject(new Error('no answer')));
+    expect(failing.content[0]?.text).toBe(`${device.serial} device Fake`);
+    const asked = vi.fn(() => Promise.resolve('locked' as const));
     const other = await listing(asked, { ...DEFAULT_POLICY, devices: /^no-such-device$/ });
-    expect(other.content[0]!.text).toBe(
+    expect(other.content[0]?.text).toBe(
       `${device.serial} device Fake (not allowed on this server)`,
     );
     expect(asked).not.toHaveBeenCalled();
@@ -591,7 +597,7 @@ describe('iOS simulators', () => {
 
   it("reads an iPhone's block while simctl still lists the simulators, and keeps the drivers' order", async () => {
     const udid = '75505767-61E2-40F2-8FC6-8AFE20EE25C9';
-    let listSimulators = () => {};
+    let listSimulators: () => void = () => undefined;
     const simulators = simulatorProvider(
       () =>
         new Promise((done) => {
@@ -604,7 +610,7 @@ describe('iOS simulators', () => {
       () => ({ passcodeRequired: true }),
     );
     const phones = iphoneProvider({
-      phones: async () => [{ udid: '00001234-0123456789ABCDEF', deviceId: 3 }],
+      phones: () => Promise.resolve([{ udid: '00001234-0123456789ABCDEF', deviceId: 3 }]),
       devicectl: () => devicectl,
     });
     const ctx = new ServerContext(DEFAULT_POLICY, [simulators, phones]);
@@ -612,7 +618,7 @@ describe('iOS simulators', () => {
     const listing = client.callTool({ name: 'list_devices', arguments: {} }) as Promise<Result>;
     await vi.waitFor(() => expect(devicectl.log).toContain('lock done'));
     listSimulators();
-    expect((await listing).content[0]!.text).toBe(
+    expect((await listing).content[0]?.text).toBe(
       [
         `${udid} booted iOS simulator appdyno-iphone`,
         '00001234-0123456789ABCDEF usb iPhone: The device is locked. Unlock it. The picture goes on; input stops where it asks for a passcode.',
@@ -656,24 +662,28 @@ describe('iOS simulators', () => {
     it('a simulator: physical footprint, launch until the first read, a memory graph', async () => {
       const t = await onDevice({
         framesByProbe: true,
-        attachProbe: async () => false,
-        cpu: async () => m({ percent: 5, windowMs: 2_000 }),
-        memory: async () => m({ kb: 52_429, kind: 'footprint', peakKb: 62_464 }),
-        launch: async (_: string, o: { mode: 'cold' | 'warm' }) =>
-          m({
-            mode: o.mode,
-            samples: [{ totalMs: 100 }, { totalMs: 9_000 }, { totalMs: 8_000 }],
-            medianMs: 8_000,
-            until: 'the first screen is read',
-          }),
-        heap: async (_: string, dir: string) =>
-          m({
-            file: `${dir}/x.memgraph`,
-            bytes: 1_048_576,
-            leaks: 3,
-            leakedBytes: 192,
-            kind: 'memgraph',
-          }),
+        attachProbe: () => Promise.resolve(false),
+        cpu: () => Promise.resolve(m({ percent: 5, windowMs: 2_000 })),
+        memory: () => Promise.resolve(m({ kb: 52_429, kind: 'footprint', peakKb: 62_464 })),
+        launch: (_: string, o: { mode: 'cold' | 'warm' }) =>
+          Promise.resolve(
+            m({
+              mode: o.mode,
+              samples: [{ totalMs: 100 }, { totalMs: 9_000 }, { totalMs: 8_000 }],
+              medianMs: 8_000,
+              until: 'the first screen is read',
+            }),
+          ),
+        heap: (_: string, dir: string) =>
+          Promise.resolve(
+            m({
+              file: `${dir}/x.memgraph`,
+              bytes: 1_048_576,
+              leaks: 3,
+              leakedBytes: 192,
+              kind: 'memgraph',
+            }),
+          ),
       });
       const snap = (await t.textOf('perf_snapshot')).text.split('\n');
       expect(snap.slice(1, -1)).toEqual([
@@ -697,20 +707,22 @@ describe('iOS simulators', () => {
 
     it('a phone: animation hitches and nothing else yet', async () => {
       const t = await onDevice({
-        frameTrace: async () =>
-          m({
-            kind: 'hitches',
-            durationMs: 5_000,
-            frames: 300,
-            hitches: 2,
-            hitchMs: 30,
-            worstMs: 20,
-            frozen: 0,
-            stalls: { count: 0, worstMs: 0, totalMs: 0 },
-            hitchRatio: 6,
-            causes: { 'expensive commit': 2 },
-            tracePath: '/t/h.trace',
-          }),
+        frameTrace: () =>
+          Promise.resolve(
+            m({
+              kind: 'hitches',
+              durationMs: 5_000,
+              frames: 300,
+              hitches: 2,
+              hitchMs: 30,
+              worstMs: 20,
+              frozen: 0,
+              stalls: { count: 0, worstMs: 0, totalMs: 0 },
+              hitchRatio: 6,
+              causes: { 'expensive commit': 2 },
+              tracePath: '/t/h.trace',
+            }),
+          ),
       });
       expect((await t.textOf('perf_trace')).text.split('\n').slice(1)).toEqual([
         '300 frames; 2 hitches of the app, 30 ms in all, worst 20 ms; hitch ratio 6 ms/s',

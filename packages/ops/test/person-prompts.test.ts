@@ -1,4 +1,4 @@
-import type { DeviceProvider } from '@appdyno/core';
+import { must, type DeviceProvider } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
 import { FakeDevice } from './fake-device.js';
@@ -11,13 +11,13 @@ async function connect(words: string[]) {
   const device = new FakeDevice();
   let looks = 0;
   Object.assign(device, {
-    systemWords: async () => {
+    systemWords: () => {
       looks++;
-      return words;
+      return Promise.resolve(words);
     },
   });
   const provider: DeviceProvider = {
-    list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+    list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
     handles: () => true,
     open: () => device,
   };
@@ -49,7 +49,7 @@ describe('a prompt over the app that no read of it has', () => {
     const { call, looks } = await connect(['Face ID']);
     const home = await call('screen');
     const before = looks();
-    const form = /(@[a-z0-9-]+) \w+ "Form"/.exec(home)![1];
+    const form = must(/(@[a-z0-9-]+) \w+ "Form"/.exec(home)?.[1], 'its ref');
     expect(await call('tap', { ref: form })).not.toContain('needs a person');
     expect(looks()).toBe(before);
   });

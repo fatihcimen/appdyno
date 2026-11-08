@@ -105,7 +105,7 @@ const textOf = (file: string) => {
 export const envValues = (file: string) => parseEnv(textOf(file)) as Record<string, string>;
 
 const parsedFile = (file: string): Flow => {
-  if (!FLOW_FILE.test(file))
+  if (!file.endsWith('.flow'))
     throw new ToolError(`a flow's file ends in .flow: ${file}`, 'INVALID_ARGUMENT');
   const text = textOf(file);
   try {

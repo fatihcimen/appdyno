@@ -1,6 +1,7 @@
 import {
   deviceState,
   heldElsewhere,
+  must,
   Owner,
   SETTINGS,
   type DeviceSettings,
@@ -116,7 +117,7 @@ export function restoreConditions(s: Session, whose: Whose) {
     // the newest first: two names can hold one thing (Android's animations and reduce_motion), and the older holds the user's value
     for (const [name, c] of Object.entries(changes).reverse()) {
       if (!whose(c.owner)) {
-        left.push(`${name} (pid ${c.owner?.pid})`);
+        left.push(`${name} (pid ${String(c.owner?.pid)})`);
         continue;
       }
       try {
@@ -181,9 +182,13 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
           // setting one up may leave the app, as Settings' enrolment on an emulator does
           const also = await events.biometric(
             answer,
-            policy.allowHome ? async (n, v) => void (await setCondition(s, n, v)) : undefined,
+            policy.allowHome
+              ? async (n, v) => {
+                  await setCondition(s, n, v);
+                }
+              : undefined,
           );
-          const t = [`biometric: ${value}`, also].filter(Boolean).join('; ');
+          const t = [`biometric: ${answer}`, also].filter(Boolean).join('; ');
           return reply(t, { done: t });
         }
         if (name === 'keychain') {
@@ -200,9 +205,10 @@ export function settingOps(ctx: ServerContext, { clean }: Answers) {
               'call needs value: a phone number; end and the number hangs up',
               'INVALID_ARGUMENT',
             );
-          await events.call(m[2]!, !!m[1]);
+          const number = must(m[2], 'the number');
+          await events.call(number, !!m[1]);
           s.acted();
-          const t = m[1] ? `the call from ${m[2]} ended` : `a call from ${m[2]} is coming in`;
+          const t = m[1] ? `the call from ${number} ended` : `a call from ${number} is coming in`;
           return reply(t, { done: t });
         }
         if (name === 'sms') {

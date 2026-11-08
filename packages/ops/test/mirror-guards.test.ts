@@ -5,7 +5,7 @@ import type { Device, DeviceProvider } from '@appdyno/core';
 import { noiseOf } from '@appdyno/perf';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { activityFollower, activityFor, appendActivity } from '../src/activity.js';
-import { inCall, startOf } from '@appdyno/core';
+import { inCall, must, startOf } from '@appdyno/core';
 import { ServerContext } from '../src/context.js';
 import { handoffDone, handoffOps, handoffRequest } from '../src/mirror/handoff.js';
 import { removeMirrorFile, writeMirrorFile } from '../src/mirror-state.js';
@@ -26,7 +26,7 @@ afterAll(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-const op = (name: string, run: () => Promise<void> = async () => undefined): Op => ({
+const op = (name: string, run: () => Promise<void> = () => Promise.resolve(undefined)): Op => ({
   name,
   title: name,
   description: name,
@@ -42,12 +42,12 @@ const op = (name: string, run: () => Promise<void> = async () => undefined): Op 
 function context(hash: () => string = () => 'same', alertPerson?: (reason: string) => void) {
   const device = {
     serial: 'guarded',
-    open: async () => ({}),
+    open: () => Promise.resolve({}),
     close: () => undefined,
-    tree: async () => ({ hash: hash(), nodes: [], windows: [] }),
+    tree: () => Promise.resolve({ hash: hash(), nodes: [], windows: [] }),
   } as unknown as Device;
   const provider: DeviceProvider = {
-    list: async () => [{ serial: 'guarded', state: 'device', ready: true }],
+    list: () => Promise.resolve([{ serial: 'guarded', state: 'device', ready: true }]),
     handles: () => true,
     open: () => device,
   };
@@ -73,11 +73,7 @@ describe('the activity of a device', () => {
     await wrap(op('type_text')).handler({ text: 'hello there' });
     await wrap(op('tap')).handler({ selector: { text: 'hunter2' } });
     await expect(
-      wrap(
-        op('terminate_app', async () => {
-          throw new Error('nope');
-        }),
-      ).handler({}),
+      wrap(op('terminate_app', () => Promise.reject(new Error('nope')))).handler({}),
     ).rejects.toThrow('nope');
     const lines = readActivity();
     expect(lines.map((l) => [l.tool, l.ok])).toEqual([
@@ -85,7 +81,7 @@ describe('the activity of a device', () => {
       ['tap', true],
       ['terminate_app', false],
     ]);
-    expect(JSON.stringify(lines[0]!.args)).toContain('(11 characters)');
+    expect(JSON.stringify(lines[0]?.args)).toContain('(11 characters)');
     expect(JSON.stringify(lines)).not.toContain('hello there');
     expect(JSON.stringify(lines)).not.toContain('hunter2');
   });
@@ -132,7 +128,7 @@ describe('the activity of a device', () => {
 });
 
 describe('hand_off', () => {
-  const handOff = (ctx: ServerContext) => handoffOps(ctx)[0]!;
+  const handOff = (ctx: ServerContext) => must(handoffOps(ctx)[0], 'hand_off');
 
   it('with a window: waits for a person to say done, and alerts by the window alone', async () => {
     const alert = vi.fn();
@@ -149,7 +145,7 @@ describe('hand_off', () => {
       const end = Date.now() + 5_000;
       while (!handoffRequest('guarded') && Date.now() < end)
         await new Promise((r) => setTimeout(r, 20));
-      const request = handoffRequest('guarded')!;
+      const request = must(handoffRequest('guarded'), 'the request');
       expect(request.reason).toBe('Face ID');
       handoffDone('guarded', 'another request');
       await new Promise((r) => setTimeout(r, 400));

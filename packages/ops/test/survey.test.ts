@@ -1,10 +1,10 @@
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { cannot } from '@appdyno/core';
+import { cannot, must } from '@appdyno/core';
 import { latestRuns, loadRefusals, MEASURES, runKeys } from '@appdyno/perf';
 import { DeviceError } from '@appdyno/protocol';
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, ServerContext, survey } from '../src/index.js';
 import { FakeDevice } from './fake-device.js';
 import { checkedOps } from './helpers.js';
@@ -21,7 +21,7 @@ function context(measures: Record<string, unknown> = {}) {
     DEFAULT_POLICY,
     [
       {
-        list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+        list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
         handles: () => true,
         open: () => device,
       },
@@ -31,9 +31,8 @@ function context(measures: Record<string, unknown> = {}) {
   return { ctx, measurements, perf };
 }
 
-const noEnergy = async () => {
-  throw new DeviceError('UNSUPPORTED', 'batterystats is all zero here');
-};
+const noEnergy = () =>
+  Promise.reject(new DeviceError('UNSUPPORTED', 'batterystats is all zero here'));
 
 // a scroll waits for real, on whatever else the Mac is doing
 describe('perf survey', { timeout: 60_000 }, () => {
@@ -64,11 +63,12 @@ describe('perf survey', { timeout: 60_000 }, () => {
 
   it('does not take a call that ran and kept no number for a device that cannot', async () => {
     const { ctx, measurements } = context({
-      frames: async () => ({
-        value: { totalFrames: 120, jankyFrames: 1, jankyPercent: 1, frozenFrames: 0 },
-        raw: '',
-        at: new Date().toISOString(),
-      }),
+      frames: () =>
+        Promise.resolve({
+          value: { totalFrames: 120, jankyFrames: 1, jankyPercent: 1, frozenFrames: 0 },
+          raw: '',
+          at: new Date().toISOString(),
+        }),
       frameTrace: cannot('a frame trace'),
     });
     const lines: string[] = [];
@@ -87,9 +87,7 @@ describe('perf survey', { timeout: 60_000 }, () => {
 
   it('does not take a failure for a device that cannot', async () => {
     const { ctx, measurements } = context({
-      heap: async () => {
-        throw new DeviceError('TIMEOUT', 'no answer');
-      },
+      heap: () => Promise.reject(new DeviceError('TIMEOUT', 'no answer')),
     });
     const lines: string[] = [];
     await survey(ctx, 'dev.app', (l) => lines.push(l));
@@ -100,12 +98,10 @@ describe('perf survey', { timeout: 60_000 }, () => {
 
 describe('the page and the measures', () => {
   const op = (ctx: ServerContext, name: string, args: Record<string, unknown> = {}) => {
-    const o = checkedOps(ctx)[name]!;
-    return o.handler(o.input.parse(args) as Record<string, unknown>);
+    const o = must(checkedOps(ctx)[name], name);
+    return o.handler(o.input.parse(args));
   };
-  const says = (why: string) => async () => {
-    throw new DeviceError('UNSUPPORTED', why);
-  };
+  const says = (why: string) => () => Promise.reject(new DeviceError('UNSUPPORTED', why));
   const kept = async (measurements: string) =>
     Object.fromEntries((await loadRefusals(measurements)).map((r) => [r.measure, r.reason]));
 
@@ -134,11 +130,12 @@ describe('the page and the measures', () => {
 
   it('a heap dump with no count of leaks says so in the row', async () => {
     const { ctx, measurements } = context({
-      heap: async () => ({
-        value: { file: '/h.hprof', bytes: 1, kind: 'hprof' },
-        raw: '',
-        at: new Date().toISOString(),
-      }),
+      heap: () =>
+        Promise.resolve({
+          value: { file: '/h.hprof', bytes: 1, kind: 'hprof' },
+          raw: '',
+          at: new Date().toISOString(),
+        }),
     });
     await op(ctx, 'perf_heap');
     expect((await kept(measurements)).leaks).toMatch(/no count of leaks/);
@@ -172,35 +169,39 @@ describe('the page and the measures', () => {
 
   it('keeps a start why by its phases, and a measure in the unit it has', async () => {
     const { ctx, measurements } = context({
-      launch: async () => ({
-        value: {
-          mode: 'cold',
-          samples: [{ totalMs: 300 }],
-          medianMs: 300,
-          until: 'the first screen is read',
-          startup: {
-            tracePath: '/t',
-            reasons: [],
-            findings: [],
-            breakdown: [
-              { reason: 'main', ms: 500 },
-              { reason: 'first frame', ms: 20 },
-            ],
+      launch: () =>
+        Promise.resolve({
+          value: {
+            mode: 'cold',
+            samples: [{ totalMs: 300 }],
+            medianMs: 300,
+            until: 'the first screen is read',
+            startup: {
+              tracePath: '/t',
+              reasons: [],
+              findings: [],
+              breakdown: [
+                { reason: 'main', ms: 500 },
+                { reason: 'first frame', ms: 20 },
+              ],
+            },
           },
-        },
-        raw: '',
-        at: new Date().toISOString(),
-      }),
-      energy: async () => ({
-        value: { mj: 12, modelled: true, note: 'A model, not a reading' },
-        raw: '',
-        at: new Date().toISOString(),
-      }),
+          raw: '',
+          at: new Date().toISOString(),
+        }),
+      energy: () =>
+        Promise.resolve({
+          value: { mj: 12, modelled: true, note: 'A model, not a reading' },
+          raw: '',
+          at: new Date().toISOString(),
+        }),
     });
     await op(ctx, 'perf_launch', { trace: true });
     const { data, blocks } = await op(ctx, 'perf_snapshot', { also: ['energy'] });
     expect(data).toMatchObject({ energyMj: 12, energyModelled: true });
-    expect(blocks[0]).toMatchObject({ text: expect.stringContaining('energy (a model): 12 mJ') });
+    expect(blocks[0]).toMatchObject({
+      text: expect.stringContaining('energy (a model): 12 mJ') as unknown,
+    });
     const keys = await runKeys(measurements, { app: 'dev.app' });
     const kinds = (await Promise.all(keys.map((k) => latestRuns(measurements, k, 1))))
       .flat(2)
@@ -214,7 +215,8 @@ describe('the page and the measures', () => {
     const at = '2026-11-03T00:00:00.000Z';
     const behind = 'com.apple.springboard';
     const { ctx, measurements } = context({
-      cpu: async () => ({ value: { percent: 0, windowMs: 1_200, behind }, raw: 'raw cpu', at }),
+      cpu: () =>
+        Promise.resolve({ value: { percent: 0, windowMs: 1_200, behind }, raw: 'raw cpu', at }),
     });
     const { data, blocks } = await op(ctx, 'perf_snapshot', {});
     expect(data).toMatchObject({ cpuBehind: behind });
@@ -222,15 +224,16 @@ describe('the page and the measures', () => {
       /CPU: .*com\.apple\.springboard.*not kept/,
     );
     const [key] = await runKeys(measurements, { app: 'dev.app' });
-    const [run] = await latestRuns(measurements, key!, 1);
-    const kinds = run!.map((r) => r.kind);
+    assert(key);
+    const [run] = await latestRuns(measurements, key, 1);
+    const kinds = must(run, 'the newest run').map((r) => r.kind);
     expect(kinds).toContain('memory.kb');
     expect(kinds).not.toContain('cpu.percent');
   });
 
   it('answers what `also` asks in one order, whatever order it was asked in', async () => {
     const at = '2026-11-03T00:00:00.000Z';
-    const reading = (value: unknown, raw: string) => async () => ({ value, raw, at });
+    const reading = (value: unknown, raw: string) => () => Promise.resolve({ value, raw, at });
     const { ctx, measurements } = context({
       threads: reading(
         {
@@ -285,8 +288,9 @@ describe('the page and the measures', () => {
     });
     expect(data).not.toHaveProperty('lacking');
     const [key] = await runKeys(measurements, { app: 'dev.app' });
-    const [run] = await latestRuns(measurements, key!, 1);
-    expect(run!.map((r) => r.kind)).toEqual([
+    assert(key);
+    const [run] = await latestRuns(measurements, key, 1);
+    expect(run?.map((r) => r.kind)).toEqual([
       'cpu.percent',
       'memory.kb',
       'threads.over90_ms',
@@ -301,7 +305,9 @@ describe('the page and the measures', () => {
     const raw = readFileSync(String(data.raw), 'utf8');
     for (const part of ['threads', 'network', 'energy', 'exits', 'size'])
       expect(raw).toContain(`raw ${part}`);
-    const stored = JSON.parse(readFileSync(String(data.raw).replace(/\.txt$/, '.json'), 'utf8'));
+    const stored = JSON.parse(
+      readFileSync(String(data.raw).replace(/\.txt$/, '.json'), 'utf8'),
+    ) as unknown;
     expect(JSON.stringify(stored)).toMatch(/"threads":.*"network":.*"energy":.*"exits":.*"size":/);
   });
 
@@ -310,13 +316,13 @@ describe('the page and the measures', () => {
     const held = { crashes: 3, anrs: 1, userAnrs: 1, total: 6 };
     const device = (run: { crashes: number; anrs: number; userAnrs: number; total: number }) => {
       const asked: (number | undefined)[] = [];
-      const exits = async (_app: string, since?: number) => {
+      const exits = (_app: string, since?: number) => {
         asked.push(since);
-        return {
+        return Promise.resolve({
           value: { held, recent: [], ...(since !== undefined && { run }) },
           raw: 'raw exits',
           at: new Date().toISOString(),
-        };
+        });
       };
       return { asked, ...context({ exits }) };
     };
@@ -334,23 +340,25 @@ describe('the page and the measures', () => {
       expect(data).not.toHaveProperty('crashes');
       expect(data).not.toHaveProperty('userAnrs');
       const [key] = await runKeys(measurements, { app: 'dev.app' });
-      const [run] = await latestRuns(measurements, key!, 1);
-      expect(run!.filter((r) => r.kind.startsWith('exits.'))).toEqual([]);
+      assert(key);
+      const [run] = await latestRuns(measurements, key, 1);
+      expect(run?.filter((r) => r.kind.startsWith('exits.'))).toEqual([]);
     });
 
     it('counts from the key’s last run, and only what is newer says this session counts', async () => {
       const { ctx, measurements, asked } = device({ ...quiet, crashes: 1, anrs: 1, userAnrs: 1 });
       await op(ctx, 'perf_snapshot', { also: ['exits'] });
       const [key] = await runKeys(measurements, { app: 'dev.app' });
-      const [first] = await latestRuns(measurements, key!, 1);
+      assert(key);
+      const [first] = await latestRuns(measurements, key, 1);
       const { data, blocks } = await op(ctx, 'perf_snapshot', { also: ['exits'] });
-      expect(asked).toEqual([undefined, Date.parse(first![0]!.at)]);
+      expect(asked).toEqual([undefined, Date.parse(must(first?.[0], 'a record').at)]);
       expect((blocks[0] as { text: string }).text).toContain(
         'this session would count as a user-perceived ANR',
       );
       expect(data).toMatchObject({ crashes: 1, anrs: 1, userAnrs: 1 });
-      const [second] = await latestRuns(measurements, key!, 1);
-      expect(second!.find((r) => r.kind === 'exits.user_anrs')!.value).toBe(1);
+      const [second] = await latestRuns(measurements, key, 1);
+      expect(second?.find((r) => r.kind === 'exits.user_anrs')?.value).toBe(1);
     });
 
     it('says a quiet run is one, whatever the system still holds', async () => {

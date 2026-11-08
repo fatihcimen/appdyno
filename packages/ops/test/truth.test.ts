@@ -1,4 +1,4 @@
-import { reportProgress, type Device, type DeviceProvider } from '@appdyno/core';
+import { must, reportProgress, type Device, type DeviceProvider } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
@@ -19,7 +19,7 @@ type Result = {
 
 async function connect(device: Device = new FakeDevice(), policy: Partial<Policy> = {}) {
   const provider: DeviceProvider = {
-    list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+    list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
     handles: () => true,
     open: () => device,
   };
@@ -33,7 +33,7 @@ async function connect(device: Device = new FakeDevice(), policy: Partial<Policy
 }
 
 const refOf = (screen: string, label: string) =>
-  new RegExp(`(@[a-z0-9-]+) \\w+ "${label}"`).exec(screen)![1]!;
+  must(new RegExp(`(@[a-z0-9-]+) \\w+ "${label}"`).exec(screen)?.[1], `the ref of ${label}`);
 
 describe('changed', () => {
   it('is true when the screen differs from before the action, on either read', async () => {
@@ -64,7 +64,7 @@ describe('changed', () => {
     expect(r.text).toMatch(
       /no change seen in \d+ ms; if a slow reaction is expected, use wait_for/,
     );
-    expect((r.structuredContent!.warnings as string[]).join()).toContain('no change seen');
+    expect((r.structuredContent?.warnings as string[]).join()).toContain('no change seen');
   });
 
   it('is unknown when the action asked for no read', async () => {
@@ -143,7 +143,10 @@ describe('failed answers', () => {
     });
     const e = await op.handler({}).catch((x: unknown) => x);
     expect(e).toBeInstanceOf(ToolError);
-    expect(e).toMatchObject({ code: 'DEVICE_GONE', message: expect.stringContaining('it left') });
+    expect(e).toMatchObject({
+      code: 'DEVICE_GONE',
+      message: expect.stringContaining('it left') as unknown,
+    });
     // what is no device's failure stays what it is: the server logs it as an internal error
     const bug = defineOp({ ...op, run: () => Promise.reject(new TypeError('a bug')) });
     await expect(bug.handler({})).rejects.toBeInstanceOf(TypeError);
@@ -183,7 +186,7 @@ describe('failed answers', () => {
     expect(r.isError).toBe(true);
     expect(r.text).toContain('adb -s e shell kill 7');
     expect(r.structuredContent).toMatchObject({ code: 'AGENT_CONFLICT' });
-    expect(r.structuredContent!.hint).toContain('uiautomator (pid 7)');
+    expect(r.structuredContent?.hint).toContain('uiautomator (pid 7)');
   });
 
   it('carry a code for refusals of the server itself', async () => {
@@ -195,9 +198,8 @@ describe('failed answers', () => {
   });
 
   it('say a policy as one, and what a device lacks as that, not as a wrong argument', async () => {
-    const lacks = async (): Promise<never> => {
-      throw new DeviceError('UNSUPPORTED', 'no such thing here');
-    };
+    const lacks = (): Promise<never> =>
+      Promise.reject(new DeviceError('UNSUPPORTED', 'no such thing here'));
     const device = Object.assign(new FakeDevice(), { logs: lacks, crashes: lacks });
     const { call } = await connect(device, { allowHome: false, secrets: ['s3cr3t'] });
     const code = async (name: string, args: Record<string, unknown> = {}) =>
@@ -215,7 +217,7 @@ describe('an answer', () => {
     const { ctx } = await connect();
     const call = callerOf(ctx);
     const { data } = await call('find', { text: 'Form' });
-    expect(data.matches[0]!.label).toBe('Form');
+    expect(data.matches[0]?.label).toBe('Form');
     // @ts-expect-error: no such key in the schema of find
     expect(data.settled).toBeUndefined();
     // @ts-expect-error: no such op
@@ -231,7 +233,7 @@ describe('an answer', () => {
       output: z.object({ done: z.string() }),
       annotations: READ,
       // @ts-expect-error: `done` is what the schema asks for
-      run: async () => reply('x', { other: 1 }),
+      run: () => Promise.resolve(reply('x', { other: 1 })),
     });
     expect(op.name).toBe('x');
   });
@@ -240,16 +242,18 @@ describe('an answer', () => {
 describe('a launch', () => {
   const launching = (until?: string) => {
     const device = new FakeDevice();
-    const launch = vi.fn(async () => ({
-      value: {
-        mode: 'cold' as const,
-        samples: [{ totalMs: 6_000 }],
-        medianMs: 6_000,
-        ...(until && { until }),
-      },
-      raw: '6000',
-      at: '2026-11-03T00:00:00.000Z',
-    }));
+    const launch = vi.fn(() =>
+      Promise.resolve({
+        value: {
+          mode: 'cold' as const,
+          samples: [{ totalMs: 6_000 }],
+          medianMs: 6_000,
+          ...(until && { until }),
+        },
+        raw: '6000',
+        at: '2026-11-03T00:00:00.000Z',
+      }),
+    );
     Object.defineProperty(device, 'measure', { value: { ...device.measure, launch } });
     return { device, launch };
   };
@@ -343,7 +347,7 @@ describe('logs', () => {
     const r = await call('logs', { level: 'warn' });
     expect(r.isError).toBeUndefined();
     expect(device.logAsked).toMatchObject({ app: 'dev.app', level: 'warn' });
-    expect(device.logAsked!.since).toBeGreaterThanOrEqual(before);
+    expect(device.logAsked?.since).toBeGreaterThanOrEqual(before);
     expect(r.text).toContain('I app: started');
     for (const secret of ['abcdef123456', 'hunter2', 'gizli-kod-9911'])
       expect(r.text).not.toContain(secret);
@@ -355,7 +359,7 @@ describe('logs', () => {
     device.logNote = 'devicectl cannot read this';
     const { call } = await connect(device);
     await call('logs', { since: '2026-11-02T10:00:00Z' });
-    expect(device.logAsked!.since).toBe(Date.parse('2026-11-02T10:00:00Z'));
+    expect(device.logAsked?.since).toBe(Date.parse('2026-11-02T10:00:00Z'));
     expect((await call('logs', { since: 'yesterday' })).structuredContent).toMatchObject({
       code: 'INVALID_ARGUMENT',
     });
@@ -451,20 +455,21 @@ describe('crashes', () => {
 describe('audit', () => {
   it('gives the issues in words and in structure', async () => {
     const device = new FakeDevice();
-    device.audit = async () => ({
-      engine: 'rules',
-      truncated: false,
-      elapsedMs: 3,
-      issues: [
-        {
-          type: 'contrast',
-          rule: 'android.textContrast',
-          message: 'ratio 2.1',
-          b: [0, 0, 100, 40],
-          element: { c: 'android.widget.TextView', t: 'Low' },
-        },
-      ],
-    });
+    device.audit = () =>
+      Promise.resolve({
+        engine: 'rules',
+        truncated: false,
+        elapsedMs: 3,
+        issues: [
+          {
+            type: 'contrast',
+            rule: 'android.textContrast',
+            message: 'ratio 2.1',
+            b: [0, 0, 100, 40],
+            element: { c: 'android.widget.TextView', t: 'Low' },
+          },
+        ],
+      });
     const { call } = await connect(device);
     const r = await call('audit');
     expect(r.text).toContain('1 accessibility issue');

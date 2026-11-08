@@ -90,7 +90,7 @@ export function visualOps(ctx: ServerContext) {
             });
             if (hits.length === 0)
               throw new ToolError(
-                `no element is ${m.text ?? m.id ?? m.role}, so nothing to mask`,
+                `no element is ${String(m.text ?? m.id ?? m.role)}, so nothing to mask`,
                 'NOT_FOUND',
               );
             return hits.map((e) => rect(e.rect));

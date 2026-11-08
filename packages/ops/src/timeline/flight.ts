@@ -81,12 +81,14 @@ type Armed = {
 };
 
 /** Whether a second's reading says the screen stood still, in words for a person. */
-const stallOf = (s: LiveSample) =>
-  (s.worstFrameMs ?? 0) >= FROZEN_FRAME_MS
-    ? `a stall of ${Math.round(s.worstFrameMs!)} ms`
+const stallOf = (s: LiveSample) => {
+  const worst = s.worstFrameMs ?? 0;
+  return worst >= FROZEN_FRAME_MS
+    ? `a stall of ${Math.round(worst)} ms`
     : (s.frozenFrames ?? 0) > 0
       ? 'a frozen frame'
       : undefined;
+};
 
 /**
  * A timeline with no end: it holds the last `seconds` of a device and keeps them when the app crashes or stalls, by the
@@ -151,8 +153,8 @@ export async function startFlight(
       ring = new VideoRing(recorder, folder, segmentSeconds, first.offsetMs);
       ring.onHandle = (handle, file) =>
         filming.write(serial, { handle, since: new Date().toISOString(), file, owner: s.owner });
-      await ring.rotate().catch((e: Error) => {
-        noVideo = e.message;
+      await ring.rotate().catch((e: unknown) => {
+        noVideo = e instanceof Error ? e.message : String(e);
         ring = undefined;
       });
     }

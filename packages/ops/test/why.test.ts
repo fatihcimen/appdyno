@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ActOptions, MeasureSource, SlowFrameCauses } from '@appdyno/core';
+import { must, type ActOptions, type MeasureSource, type SlowFrameCauses } from '@appdyno/core';
 import {
   addToBaseline,
   loadAnswer,
@@ -18,7 +18,7 @@ import {
   type Metric,
 } from '@appdyno/perf';
 import { DeviceError, type ActParams } from '@appdyno/protocol';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
 import { FakeDevice } from './fake-device.js';
 import { callerOf } from './helpers.js';
@@ -82,8 +82,8 @@ function phone(overrides: Partial<MeasureSource> = {}, policy = DEFAULT_POLICY) 
   Object.defineProperty(device, 'measure', {
     value: {
       ...device.measure,
-      buildType: async () => 'release',
-      vitals: async () => measured({}),
+      buildType: () => Promise.resolve('release'),
+      vitals: () => Promise.resolve(measured({})),
       cpuProfile: async (_app: string, ms: number, during?: () => Promise<unknown>) => {
         looks.push('profile');
         await during?.();
@@ -102,7 +102,7 @@ function phone(overrides: Partial<MeasureSource> = {}, policy = DEFAULT_POLICY) 
     policy,
     [
       {
-        list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+        list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
         handles: () => true,
         open: () => device,
       },
@@ -165,10 +165,14 @@ async function regressed(t: Phone, o: { reference?: boolean } = {}) {
         samples: five(step === STEP ? formMs : 200),
       })),
     ]);
-  const key = { app: 'dev.app', scenario: SCENARIO, deviceClass: run(1, 400)[0]!.deviceClass };
+  const key = {
+    app: 'dev.app',
+    scenario: SCENARIO,
+    deviceClass: must(run(1, 400)[0], 'a record').deviceClass,
+  };
   let baseline: Baseline | undefined;
   for (const n of [1, 2, 3]) baseline = addToBaseline(key, baseline, run(n, 400));
-  await saveBaseline(t.perf, baseline!);
+  await saveBaseline(t.perf, must(baseline, 'the baseline'));
   await saveRun(t.measurements, run(3, 400));
   if (o.reference) await t.call('perf_compare', { action: 'reference', scenario: SCENARIO });
   await saveRun(t.measurements, run(4, 1_100));
@@ -178,7 +182,8 @@ async function regressed(t: Phone, o: { reference?: boolean } = {}) {
 
 const why = (t: Phone) => t.call('perf_compare', { action: 'why', scenario: SCENARIO });
 const answers = (d: { answers?: unknown[] }) => d.answers as GateAnswer[];
-const finding = (d: { answers?: unknown[] }) => answers(d)[0]!.findings[0]!;
+const finding = (d: { answers?: unknown[] }) =>
+  must(must(answers(d)[0], 'an answer').findings[0], 'a finding');
 
 describe('the gate, asked why', () => {
   it('finds nothing to look at on an unchanged build, then names the function of a known cost', async () => {
@@ -194,7 +199,7 @@ describe('the gate, asked why', () => {
     t.looks.length = 0;
     const same = await why(t);
     expect(same.data.exitCode).toBe(0);
-    expect(answers(same.data)[0]!.status).toBe('clear');
+    expect(answers(same.data)[0]?.status).toBe('clear');
     expect(same.text).toContain('no regression');
     expect(t.looks).toEqual([]);
 
@@ -207,7 +212,7 @@ describe('the gate, asked why', () => {
     const f = finding(r.data);
     expect(f.place).toBe(STEP);
     expect(f.causes[0]).toMatchObject({ kind: 'function', name: 'knownCost' });
-    expect(f.causes[0]!.says).toContain('+700 ms of CPU in the step (0 to 700)');
+    expect(f.causes[0]?.says).toContain('+700 ms of CPU in the step (0 to 700)');
     expect(r.text).toContain('likeliest cause: knownCost');
     expect(f.evidence.join()).toContain('it showed again');
   });
@@ -216,10 +221,11 @@ describe('the gate, asked why', () => {
     const t = phone();
     await regressed(t);
     const [key] = await runKeys(t.measurements);
-    const before = await runFiles(t.measurements, key!);
+    assert(key);
+    const before = await runFiles(t.measurements, key);
     await why(t);
-    expect(await runFiles(t.measurements, key!)).toEqual(before);
-    expect((await loadAnswer(t.measurements, key!))!.status).toBe('regression');
+    expect(await runFiles(t.measurements, key)).toEqual(before);
+    expect((await loadAnswer(t.measurements, key))?.status).toBe('regression');
     const again = await t.call('perf_compare', { action: 'compare', scenario: SCENARIO });
     expect(again.data.exitCode).toBe(1);
   });
@@ -275,9 +281,8 @@ describe('the gate, asked why', () => {
 
   it('says what a device refused, and still answers as the gate does', async () => {
     const t = phone({
-      cpuProfile: async () => {
-        throw new DeviceError('UNSUPPORTED', 'simpleperf could not record dev.app');
-      },
+      cpuProfile: () =>
+        Promise.reject(new DeviceError('UNSUPPORTED', 'simpleperf could not record dev.app')),
     });
     await regressed(t);
     const r = await why(t);
@@ -296,7 +301,7 @@ describe('the gate, asked why', () => {
   });
 
   it('looks at no other build than the run was of', async () => {
-    const t = phone({ buildType: async () => 'debug' });
+    const t = phone({ buildType: () => Promise.resolve('debug') });
     await regressed(t);
     const r = await why(t);
     expect(finding(r.data).cannot.join()).toContain('and the run was of a release build');
@@ -315,9 +320,9 @@ describe('the gate, asked why', () => {
     const asked: unknown[] = [];
     const named = phone({
       symbolFiles: true,
-      cpuProfile: async (_app, _ms, _during, symbols) => {
+      cpuProfile: (_app, _ms, _during, symbols) => {
         asked.push(symbols);
-        return measured({ durationMs: 3_000, samples: 1, top: [] });
+        return Promise.resolve(measured({ durationMs: 3_000, samples: 1, top: [] }));
       },
     });
     await regressed(named);
@@ -328,14 +333,14 @@ describe('the gate, asked why', () => {
     const none = phone();
     await regressed(none);
     const r = await none.call('perf_compare', { action: 'why', scenario: SCENARIO, dsym });
-    expect(answers(r.data)[0]!.findings[0]!.cannot.join()).toContain('dsym is for iOS');
+    expect(answers(r.data)[0]?.findings[0]?.cannot.join()).toContain('dsym is for iOS');
   });
 
   it('stops the agent a look started, as it changes what the next run measures', async () => {
     const t = phone({
-      cpuProfile: async () => {
+      cpuProfile: () => {
         t.device.agentUp = true;
-        return measured({ durationMs: 3_000, samples: 1, top: [] });
+        return Promise.resolve(measured({ durationMs: 3_000, samples: 1, top: [] }));
       },
     });
     await regressed(t);
@@ -360,7 +365,7 @@ describe('the gate, asked why', () => {
     expect(json.data.exitCode).toBe(1);
     const held = JSON.parse(json.text) as { failed: boolean; answers: GateAnswer[] };
     expect(held.failed).toBe(true);
-    expect(held.answers[0]!.findings[0]!.place).toBe(STEP);
+    expect(held.answers[0]?.findings[0]?.place).toBe(STEP);
     const junit = await asked('junit');
     expect(junit.data.exitCode).toBe(1);
     expect(junit.text).toContain('<failure message=');
@@ -370,7 +375,11 @@ describe('the gate, asked why', () => {
     const t = phone();
     await regressed(t, { reference: true });
     const [key] = await runKeys(t.measurements);
-    await saveReference(t.perf, { ...(await loadReference(t.perf, key!))!, build: 'debug' });
+    assert(key);
+    await saveReference(t.perf, {
+      ...must(await loadReference(t.perf, key), 'the reference'),
+      build: 'debug',
+    });
     t.costs.knownCost = 700;
     const f = finding((await why(t)).data);
     expect(f.causes).toEqual([]);
@@ -412,21 +421,23 @@ describe('the gate, asked why', () => {
   it('reads a start by its phases, against the reference, and keeps no run of it', async () => {
     const start = { bind: 300, total: 400 };
     const t = phone({
-      launch: async () =>
-        measured({
-          mode: 'cold',
-          samples: [0, 1, 2, 3, 4, 5].map((i) => ({ totalMs: start.total + i, state: 'COLD' })),
-          medianMs: start.total,
-          startup: {
-            tracePath: 't',
-            reasons: ['Main Thread - Time spent in Running'],
-            breakdown: [
-              { reason: 'bindApplication', ms: start.bind },
-              { reason: 'activityStart', ms: 90 },
-            ],
-            findings: [],
-          },
-        }),
+      launch: () =>
+        Promise.resolve(
+          measured({
+            mode: 'cold',
+            samples: [0, 1, 2, 3, 4, 5].map((i) => ({ totalMs: start.total + i, state: 'COLD' })),
+            medianMs: start.total,
+            startup: {
+              tracePath: 't',
+              reasons: ['Main Thread - Time spent in Running'],
+              breakdown: [
+                { reason: 'bindApplication', ms: start.bind },
+                { reason: 'activityStart', ms: 90 },
+              ],
+              findings: [],
+            },
+          }),
+        ),
     });
     const scenario = 'launch-cold';
     const measure = () => t.call('perf_launch', { mode: 'cold', repeats: 6, scenario });
@@ -439,15 +450,16 @@ describe('the gate, asked why', () => {
     start.total = 1_100;
     await measure();
     const [key] = await runKeys(t.measurements);
-    const before = await runFiles(t.measurements, key!);
+    assert(key);
+    const before = await runFiles(t.measurements, key);
     const r = await t.call('perf_compare', { action: 'why', scenario });
     expect(r.data.exitCode).toBe(1);
     const f = finding(r.data);
     expect(f.place).toBe('run');
     expect(f.causes[0]).toMatchObject({ kind: 'phase', name: 'bindApplication' });
-    expect(f.causes[0]!.says).toContain('+700 ms (300 to 1000)');
+    expect(f.causes[0]?.says).toContain('+700 ms (300 to 1000)');
     expect(f.evidence.join()).toContain('Main Thread - Time spent in Running');
-    expect(await runFiles(t.measurements, key!)).toEqual(before);
+    expect(await runFiles(t.measurements, key)).toEqual(before);
   });
 
   it('does the swipes a scroll was measured with, the other way first', async () => {
@@ -458,11 +470,11 @@ describe('the gate, asked why', () => {
     const key = {
       app: 'dev.app',
       scenario: SCENARIO,
-      deviceClass: records(1, 1)[0]!.deviceClass,
+      deviceClass: must(records(1, 1)[0], 'a record').deviceClass,
     };
     let baseline: Baseline | undefined;
     for (const n of [1, 2, 3]) baseline = addToBaseline(key, baseline, records(n, 20));
-    await saveBaseline(t.perf, baseline!);
+    await saveBaseline(t.perf, must(baseline, 'the baseline'));
     await saveRun(t.measurements, records(3, 20));
     await t.call('perf_compare', { action: 'reference', scenario: SCENARIO });
     t.costs.scrollCost = 3_000;
@@ -471,7 +483,7 @@ describe('the gate, asked why', () => {
     const f = finding((await why(t)).data);
     expect(f.place).toBe('run');
     expect(f.causes[0]).toMatchObject({ kind: 'function', name: 'scrollCost' });
-    expect(f.causes[0]!.says).toContain('ms of CPU a second');
+    expect(f.causes[0]?.says).toContain('ms of CPU a second');
     // back, then the four it measured, once for the profile and once for the frames
     expect(t.device.calls.filter((c) => c.name === 'act')).toHaveLength(16);
   });
@@ -491,8 +503,8 @@ describe('the gate, asked why', () => {
     t.looks.length = 0;
     const r = await why(t);
     expect(r.data.exitCode).toBe(1);
-    expect(answers(r.data)[0]!.status).toBe('noisy');
-    expect(answers(r.data)[0]!.notes.join()).toContain('a change under noise, not called');
+    expect(answers(r.data)[0]?.status).toBe('noisy');
+    expect(answers(r.data)[0]?.notes.join()).toContain('a change under noise, not called');
     expect(t.looks).toEqual([]);
   });
 
@@ -503,11 +515,11 @@ describe('the gate, asked why', () => {
     const key = {
       app: 'dev.app',
       scenario: SCENARIO,
-      deviceClass: records(1, 1)[0]!.deviceClass,
+      deviceClass: must(records(1, 1)[0], 'a record').deviceClass,
     };
     let baseline: Baseline | undefined;
     for (const n of [1, 2, 3]) baseline = addToBaseline(key, baseline, records(n, 100_000_000));
-    await saveBaseline(t.perf, baseline!);
+    await saveBaseline(t.perf, must(baseline, 'the baseline'));
     await saveRun(t.measurements, records(4, 200_000_000));
     const r = await why(t);
     expect(r.data.exitCode).toBe(1);
@@ -521,17 +533,18 @@ describe('a reference', () => {
     const t = phone();
     await regressed(t);
     const [key] = await runKeys(t.measurements);
-    const before = await runFiles(t.measurements, key!);
+    assert(key);
+    const before = await runFiles(t.measurements, key);
     t.device.calls.length = 0;
     const r = await t.call('perf_compare', { action: 'reference', scenario: SCENARIO });
     expect(r.data.exitCode).toBe(0);
-    expect(await runFiles(t.measurements, key!)).toEqual(before);
+    expect(await runFiles(t.measurements, key)).toEqual(before);
     // the flow twice, a first time left out: no more, as a replay costs a recording on a phone
     expect(t.device.calls.filter((c) => c.name === 'act')).toHaveLength(2);
-    const held = JSON.parse(readFileSync(r.data.references![0]!, 'utf8')) as {
+    const held = JSON.parse(readFileSync(must(r.data.references?.[0], 'a reference'), 'utf8')) as {
       places: Record<string, { profile?: unknown }>;
     };
-    expect(held.places[STEP]!.profile).toBeDefined();
+    expect(must(held.places[STEP], 'the step').profile).toBeDefined();
     // the step that starts the app has no running app to profile, and a start of its own
     expect(held.places['01_launch']?.profile).toBeUndefined();
   });

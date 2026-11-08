@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { ToolError } from './tool.js';
 
 /** What this server may do; set by its command line, never by a tool call. */
@@ -26,7 +27,10 @@ export function checkUrl(policy: Policy, url: string): string {
   if (!/^[a-z][a-z0-9+.-]*:/i.test(u))
     throw new ToolError('give a link with its scheme (https://… or app://…)', 'INVALID_ARGUMENT');
   if (UNSAFE_SCHEME.test(u))
-    throw new ToolError(`this scheme is not opened: ${u.split(':')[0]}`, 'POLICY_DENIED');
+    throw new ToolError(
+      `this scheme is not opened: ${must(u.split(':')[0], 'its scheme')}`,
+      'POLICY_DENIED',
+    );
   if (policy.urls && !policy.urls.test(u))
     throw new ToolError("this link is not on this server's allow list", 'POLICY_DENIED');
   return u;

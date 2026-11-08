@@ -10,10 +10,9 @@ export type Asked = {
 };
 
 const at = '2026-11-03T00:00:00.000Z';
-export const says = (value: unknown) => async () => ({ value, raw: 'raw', at });
-export const refuses = (code: ErrorCode) => async () => {
-  throw new DeviceError(code, 'this reading is not to be had');
-};
+export const says = (value: unknown) => () => Promise.resolve({ value, raw: 'raw', at });
+export const refuses = (code: ErrorCode) => () =>
+  Promise.reject(new DeviceError(code, 'this reading is not to be had'));
 
 export const snapshot = (also: string, measure: string, value: unknown): Asked => ({
   tool: 'perf_snapshot',

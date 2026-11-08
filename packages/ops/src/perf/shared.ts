@@ -6,6 +6,7 @@ import {
   type Capability,
   type MeasureSource,
   type Measured,
+  must,
   pause,
   stateDir,
 } from '@appdyno/core';
@@ -229,7 +230,7 @@ export async function keepRun(
         ...(vitals?.cpuPressure !== undefined && { devicePressure: vitals.cpuPressure }),
         ...(vitals?.cpuBusyPercent !== undefined && { deviceBusy: vitals.cpuBusyPercent }),
         // a timeline's or a flight recorder's video runs the same encoder on the device
-        ...((liveMirror(s.device.serial) || s.timeline || s.flight) && { mirrored: true }),
+        ...((liveMirror(s.device.serial) ?? s.timeline ?? s.flight) && { mirrored: true }),
       },
       ...(vitals?.thermalStatus !== undefined && { thermal: vitals.thermalStatus }),
       ...(vitals?.batteryTempC !== undefined && { batteryTempC: vitals.batteryTempC }),
@@ -297,7 +298,7 @@ export function perfTools(ctx: ServerContext) {
     waitMs: number,
     swipes = SCROLLER_SWIPES,
   ) => {
-    const h = s.device.hello!;
+    const h = must(s.device.hello, "the agent's hello");
     const size = (await s.current()).window ?? { w: h.screen.w, h: h.screen.h };
     return async () => {
       await pause(waitMs);

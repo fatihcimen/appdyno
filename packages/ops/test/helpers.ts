@@ -8,6 +8,7 @@ import {
   type ElicitResult,
 } from '@modelcontextprotocol/client';
 import { createMcpHandler } from '@modelcontextprotocol/server';
+import { must } from '@appdyno/core';
 import { createServer } from '@appdyno/mcp';
 import { latestRuns, runKeys } from '@appdyno/perf';
 import {
@@ -40,8 +41,8 @@ export const checkedOps = (ctx: ServerContext): Record<string, Op> =>
 export const callerOf = (ctx: ServerContext) => {
   const ops = checkedOps(ctx);
   return async <N extends OpName>(name: N, args: Record<string, unknown> = {}) => {
-    const op = ops[name] as Op;
-    const r = await op.handler(op.input.parse(args) as Record<string, unknown>);
+    const op = must(ops[name], `the op ${name}`);
+    const r = await op.handler(op.input.parse(args));
     return {
       text: r.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'),
       data: r.data as OpData<N>,
@@ -69,7 +70,7 @@ export async function keptBy(
     DEFAULT_POLICY,
     [
       {
-        list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+        list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
         handles: () => true,
         open: () => device,
       },
@@ -78,10 +79,10 @@ export async function keptBy(
   );
   const { text, data } = await callerOf(ctx)(tool, args);
   const [key] = await runKeys(measurements, { app: 'dev.app' });
-  const run = key ? (await latestRuns(measurements, key, 1))[0]! : [];
+  const run = key ? must((await latestRuns(measurements, key, 1))[0], 'the newest run') : [];
   return {
     lines: text.split('\n'),
-    data: data as Record<string, unknown>,
+    data,
     kept: run.map(({ kind, value, source }) => ({ kind, value, source })),
   };
 }

@@ -1,4 +1,5 @@
 import {
+  must,
   osName,
   diffScreens,
   diffText,
@@ -77,11 +78,11 @@ async function noticed(s: Session, screen: Screen, lookFurther = true) {
 }
 
 function info(s: Session) {
-  const h = s.device.hello!;
+  const h = must(s.device.hello, "the agent's hello");
   return {
     serial: s.device.serial,
     model: h.model,
-    os: osName(s.device.platform, s.device.hello!.osVersion),
+    os: osName(s.device.platform, h.osVersion),
     ...(h.sdk !== undefined && { sdk: h.sdk }),
     screen: h.screen,
     agentVersion: h.agentVersion,

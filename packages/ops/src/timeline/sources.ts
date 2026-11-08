@@ -31,15 +31,18 @@ export async function recordFrames(
   seconds: number,
   keepSeconds?: number,
 ): Promise<FrameRecording> {
-  let end = () => undefined as void;
+  let end: () => void = () => undefined;
   const ended = new Promise<void>((r) => (end = r));
-  let up = () => undefined as void;
+  let up: () => void = () => undefined;
   const recording = new Promise<void>((r) => (up = r));
   const frames = device.measure
     .frameMarks(app, seconds, () => (up(), ended), keepSeconds)
     .then(
       (m): FrameMarks => m.value,
-      (e: Error) => (up(), { why: e.message }),
+      (e: unknown) => {
+        up();
+        return { why: e instanceof Error ? e.message : String(e) };
+      },
     );
   await recording;
   return {
@@ -117,7 +120,11 @@ export async function writePage(ctx: ServerContext, s: Session, p: Page): Promis
       timed: true,
       ...(p.pid && { pid: p.pid }),
     })
-    .catch((e: Error) => ({ lines: [], source: '', note: e.message }));
+    .catch((e: unknown) => ({
+      lines: [],
+      source: '',
+      note: e instanceof Error ? e.message : String(e),
+    }));
   const t = assemble({
     title: `${p.app} on ${device.hello?.model ?? device.serial}${device.hello ? `, ${osName(device.platform, device.hello.osVersion)}` : ''}`,
     written: new Date().toISOString(),

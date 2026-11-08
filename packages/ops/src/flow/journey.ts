@@ -1,5 +1,5 @@
 import { basename, resolve } from 'node:path';
-import { median, type Capability, type Measured } from '@appdyno/core';
+import { median, must, type Capability, type Measured } from '@appdyno/core';
 import type { Flow, RunResult, StepEvent } from '@appdyno/flows';
 import {
   JOURNEY_TOTAL,
@@ -126,8 +126,13 @@ export async function measureJourney(
     reader.add(
       JOURNEY_TOTAL,
       'ms',
-      result.steps.reduce((a, r) => a + stepTime(flow.steps[r.n - 1]!.action, r).ms, 0),
-      result.steps.some((r) => stepTime(flow.steps[r.n - 1]!.action, r).throughHost),
+      result.steps.reduce(
+        (a, r) => a + stepTime(must(flow.steps[r.n - 1], `step ${r.n}`).action, r).ms,
+        0,
+      ),
+      result.steps.some(
+        (r) => stepTime(must(flow.steps[r.n - 1], `step ${r.n}`).action, r).throughHost,
+      ),
     );
   }
   if (passed === 0) return { result };

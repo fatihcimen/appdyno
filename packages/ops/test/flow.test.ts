@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, existsSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { AppManager, DeviceProvider } from '@appdyno/core';
+import { must, type AppManager, type DeviceProvider } from '@appdyno/core';
 import { parseFlow, type StepEvent } from '@appdyno/flows';
 import { DeviceError } from '@appdyno/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -29,7 +29,7 @@ describe('flows', () => {
   let device: FakeDevice;
   const context = (secrets: string[] = []) => {
     const provider: DeviceProvider = {
-      list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+      list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
       handles: () => true,
       open: () => device,
     };
@@ -73,7 +73,7 @@ describe('flows', () => {
       device.screen = 'settings';
       const { text } = await recorded(call, async () => {
         const { data } = await call('find', { text: 'Wi-Fi' });
-        await call('tap', { ref: data.matches[0]!.ref });
+        await call('tap', { ref: must(data.matches[0], 'a match').ref });
       });
       expect(text).toContain('text="Wi-Fi"');
       expect(text).not.toMatch(/@\w/);
@@ -81,7 +81,7 @@ describe('flows', () => {
 
     it('writes no step for the links an app opens: they are read, and nothing is opened', async () => {
       device.apps = {
-        links: async () => [{ url: 'app://', kind: 'scheme' }],
+        links: () => Promise.resolve([{ url: 'app://', kind: 'scheme' }]),
       } as unknown as AppManager;
       const call = callerOf(context());
       const { text } = await recorded(call, async () => {
@@ -101,7 +101,7 @@ describe('flows', () => {
       device.screen = 'doubled';
       const { text } = await recorded(call, async () => {
         const { data } = await call('find', { role: 'button', text: 'Camera' });
-        await call('tap', { ref: (data.matches as { ref: string }[])[0]!.ref });
+        await call('tap', { ref: must((data.matches as { ref: string }[])[0], 'a match').ref });
       });
       expect(text).toContain('tap role=button text="Camera"');
     });
@@ -148,7 +148,10 @@ swipe up
       const call = callerOf(context());
       await call('flow', { action: 'start' });
       const s = await call('screen');
-      const second = [...s.text.matchAll(/(@[a-z0-9-]+) button "Add"/g)][1]![1];
+      const second = must(
+        [...s.text.matchAll(/(@[a-z0-9-]+) button "Add"/g)][1]?.[1],
+        'the second Add',
+      );
       await call('tap', { ref: second });
       const stop = await call('flow', { action: 'stop' });
       expect(stop.text).toContain('tap role=button text="Add" index=1 !ambiguous');
@@ -246,14 +249,15 @@ assert id=result check=text equals="Gönderildi"
       const page = { id: 'p', title: 't', url: 'https://x.test/', visible: true };
       device = Object.assign(new FakeDevice(), {
         web: {
-          pages: async () => [page],
-          evaluate: async () => ({ tag: 'a', text: 'Go', title: 't', url: page.url, elements: [] }),
+          pages: () => Promise.resolve([page]),
+          evaluate: () =>
+            Promise.resolve({ tag: 'a', text: 'Go', title: 't', url: page.url, elements: [] }),
         },
         network: {
-          paths: async () => [{ via: 'bytes', sees: 'bytes' }],
-          start: async () => ({ id: 'handle' }),
-          read: async () => ({ entries: [] }),
-          stop: async () => ({ entries: [] }),
+          paths: () => Promise.resolve([{ via: 'bytes', sees: 'bytes' }]),
+          start: () => Promise.resolve({ id: 'handle' }),
+          read: () => Promise.resolve({ entries: [] }),
+          stop: () => Promise.resolve({ entries: [] }),
         },
       });
       const call = callerOf(context());
@@ -289,7 +293,7 @@ assert id=result check=text equals="Gönderildi"
           input: z.object({}).loose(),
           output: z.object({}),
           annotations: ACT,
-          run: async () => reply('done', {}),
+          run: () => Promise.resolve(reply('done', {})),
         }),
       );
       const { text } = await recorded(call, () => op.handler({ words: 'typed words' }));
@@ -301,8 +305,8 @@ assert id=result check=text equals="Gönderildi"
       device = Object.assign(new FakeDevice(), {
         recorder: {
           extension: 'mp4',
-          start: async () => ({ id: 'handle' }),
-          stop: async () => ({ files: [] }),
+          start: () => Promise.resolve({ id: 'handle' }),
+          stop: () => Promise.resolve({ files: [] }),
         },
       });
       const call = callerOf(context());
@@ -385,16 +389,16 @@ tap id=greeting
 
     it('tells a password field by the focus, when text goes to no target', async () => {
       device.screen = 'login';
-      const node = SCREENS.login![1]!;
-      const was = node.f;
-      node.f = was! | 8;
+      const node = must(SCREENS.login?.[1], 'the password field');
+      const was = must(node.f, 'its flags');
+      node.f = was | 8;
       try {
         const call = callerOf(context());
         const { text } = await recorded(call, () => call('type_text', { text: 'p4ss' }));
         expect(text).not.toContain('p4ss');
         expect(text).toContain('type "${PASS}"');
       } finally {
-        node.f = was!;
+        node.f = was;
       }
     });
 
@@ -439,14 +443,17 @@ assert id=result check=text equals="Gönderildi"
       expect(device.screen).toBe('sent');
       expect(r.text).toContain('2. tap role=button text="Form": settled in 120 ms');
       expect(r.text).toContain('passed: 4 steps');
-      const timings = r.data.timings!;
+      const timings = must(r.data.timings, 'its timings');
       expect(timings[1]).toMatchObject({ settledMs: 120, settled: true, line: 4 });
-      expect(timings[0]!.settledMs).toBeGreaterThanOrEqual(0);
+      expect(timings[0]?.settledMs).toBeGreaterThanOrEqual(0);
     });
 
     it('touches a target only once it has stopped moving', async () => {
       device.screen = 'form';
-      const send = SCREENS.form!.find((n) => n.t === 'Gönder')!;
+      const send = must(
+        SCREENS.form?.find((n) => n.t === 'Gönder'),
+        'the send button',
+      );
       const home = send.b;
       const tree = device.tree.bind(device);
       let reads = 0;
@@ -464,7 +471,10 @@ assert id=result check=text equals="Gönderildi"
       } finally {
         send.b = home;
       }
-      const tap = device.calls.find((c) => c.name === 'act')!.args[0] as { y: number };
+      const tap = must(
+        device.calls.find((c) => c.name === 'act'),
+        'a touch',
+      ).args[0] as { y: number };
       expect(tap.y).toBe((home[1] + home[3]) / 2);
     });
 
@@ -593,7 +603,7 @@ assert id=result check=text equals="Gönderildi"
         const inner = write('inner.flow', 'launch\nassert text="Ana sayfa"\n');
         const file = write('outer.flow', 'app dev.app\nrun inner.flow\nlaunch\n');
         const { data } = await callerOf(context())('flow', { action: 'run', file, from: 2 });
-        expect(data.timings!.map((t) => [t.n, t.file])).toEqual([
+        expect(data.timings?.map((t) => [t.n, t.file])).toEqual([
           [2, inner],
           [3, undefined],
         ]);
@@ -692,10 +702,10 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
     it('fails a step whose app died, saying why', async () => {
       device.crashReports = [{ at: 'now', reason: 'NullPointerException' }];
       device.pid = '100';
-      device.appPid = async () => {
+      device.appPid = () => {
         const was = device.pid;
         device.pid = '200';
-        return was;
+        return Promise.resolve(was);
       };
       const e = await refusal(
         callerOf(context())('flow', { action: 'run', file: flowFile('tap text="Form"\n') }),
@@ -713,7 +723,7 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
       const r = await flowsFor(context()).replay(flowFile('tap text="Form"\n'));
       expect(r.failure).toMatchObject({
         code: 'TIMEOUT',
-        message: expect.stringContaining('tree.get did not answer (TIMEOUT)'),
+        message: expect.stringContaining('tree.get did not answer (TIMEOUT)') as unknown,
       });
     });
 
@@ -724,7 +734,7 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
           if (e.phase === 'before') {
             const acted = device.calls.filter((c) => c.name === 'act').length;
             events.push(`${e.n} before ${acted}`);
-          } else events.push(`${e.n} after ${e.result.settledMs !== undefined}`);
+          } else events.push(`${e.n} after ${String(e.result.settledMs !== undefined)}`);
         },
       });
       expect(r.passed).toBe(true);
@@ -801,7 +811,7 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
         log: (l) => lines.push(l),
       });
       expect(r.passed).toBe(false);
-      expect(r.suites[0]!.cases.map((c) => [c.name, !!c.failure])).toEqual([
+      expect(r.suites[0]?.cases.map((c) => [c.name, !!c.failure])).toEqual([
         ['a-good.flow', false],
         ['b-bad.flow', true],
         ['c-broken.flow', true],
@@ -845,7 +855,7 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
     describe('a retry', () => {
       const flow = 'app dev.app\nopen_link "app://x"\nassert text="Ana sayfa" timeoutMs=200\n';
       /** The test run of one file, on a screen that fails it, with `onRetry` as a retry begins. */
-      const run = async (text: string, retries: number, onRetry = () => {}) => {
+      const run = async (text: string, retries: number, onRetry: () => void = () => undefined) => {
         const tests = mkdtempSync(join(dir, 'tests-'));
         writeFileSync(join(tests, 'a.flow'), text);
         const artifacts = join(dir, 'artifacts');
@@ -939,10 +949,12 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
         ['two', new FakeDevice('two')],
       ]);
       const provider: DeviceProvider = {
-        list: async () =>
-          [...devices.keys()].map((serial) => ({ serial, state: 'device', ready: true })),
+        list: () =>
+          Promise.resolve(
+            [...devices.keys()].map((serial) => ({ serial, state: 'device', ready: true })),
+          ),
         handles: (serial) => devices.has(serial),
-        open: (serial) => devices.get(serial)!,
+        open: (serial) => must(devices.get(serial), serial),
       };
       const ctx = new ServerContext(DEFAULT_POLICY, [provider]);
       const artifacts = join(dir, 'artifacts');
@@ -952,7 +964,9 @@ assert id=greeting check=text equals="\${CODE}" timeoutMs=300
         artifacts,
         junit: join(artifacts, 'j.xml'),
       });
-      expect(r.suites.map((s) => [s.name, s.cases[0]!.failure === undefined])).toEqual([
+      expect(
+        r.suites.map((s) => [s.name, must(s.cases[0], 'its case').failure === undefined]),
+      ).toEqual([
         ['one', true],
         ['gone', false],
         ['two', true],

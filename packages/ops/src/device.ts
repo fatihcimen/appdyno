@@ -1,4 +1,4 @@
-import { osName, type ListedDevice } from '@appdyno/core';
+import { must, osName, type ListedDevice } from '@appdyno/core';
 import { z } from 'zod';
 import type { Answers } from './answers.js';
 import type { ServerContext } from './context.js';
@@ -75,7 +75,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
               ...left.failed.map((f) => `; could not restore ${f}`),
             ].join('')
           : '';
-        const h = s.device.hello!;
+        const h = must(s.device.hello, "the agent's hello");
         return reply(
           `selected ${device}: ${h.model}, ${osName(s.device.platform, h.osVersion)}, screen ${h.screen.w}x${h.screen.h}` +
             `${s.device.lastStartWasCold ? ' (agent started)' : ''}${s.appId ? `; app ${s.appId}` : ''}${note}`,
@@ -96,7 +96,7 @@ export function deviceOps(ctx: ServerContext, { info, afterChange }: Answers) {
       annotations: READ,
       run: async () => {
         const s = await ctx.session();
-        const h = s.device.hello!;
+        const h = must(s.device.hello, "the agent's hello");
         const fg = await s.device.foreground();
         return reply(
           [

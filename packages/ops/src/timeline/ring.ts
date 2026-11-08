@@ -1,6 +1,12 @@
 import { rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { joinVideos, readVideo, type RecordingHandle, type ScreenRecorder } from '@appdyno/core';
+import {
+  joinVideos,
+  must,
+  readVideo,
+  type RecordingHandle,
+  type ScreenRecorder,
+} from '@appdyno/core';
 import type { VideoFacts } from '@appdyno/perf';
 import { placeVideo } from './sources.js';
 
@@ -70,7 +76,8 @@ export class VideoRing {
       this.current = { file, startedAt: Date.now(), handle };
       this.onHandle(handle, file);
       if (before && !this.oneEncoder) await this.finish(before);
-      while (this.done.length > FINISHED) await rm(this.done.shift()!.file, { force: true });
+      while (this.done.length > FINISHED)
+        await rm(must(this.done.shift(), 'a finished part').file, { force: true });
     });
   }
 
@@ -128,7 +135,7 @@ export class VideoRing {
         facts: {
           ...newest.facts,
           bytes: (await stat(file)).size,
-          firstAt: map[0]!.at,
+          firstAt: must(map[0], 'the first part').at,
           ...(map.length > 1 && { parts: map }),
         },
         withinMs: Math.max(...parts.map((p) => p.withinMs)),

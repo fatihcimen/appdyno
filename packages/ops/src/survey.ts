@@ -1,4 +1,4 @@
-import type { Capability } from '@appdyno/core';
+import { must, type Capability } from '@appdyno/core';
 import {
   deviceClass,
   formatValue,
@@ -62,9 +62,9 @@ export async function survey(ctx: ServerContext, app: string, log: (line: string
 
   const made = new Map<string, Promise<Outcome>>();
   const attempt = async ({ op, args }: Call): Promise<Outcome> => {
-    const o = ops[op]!;
+    const o = must(ops[op], `the op ${op}`);
     try {
-      const { data } = await o.handler(o.input.parse({ app, ...args }) as Record<string, unknown>);
+      const { data } = await o.handler(o.input.parse({ app, ...args }));
       return { lacking: (data.lacking ?? []) as string[] };
     } catch (e) {
       const { code, message } = e as { code?: string; message: string };

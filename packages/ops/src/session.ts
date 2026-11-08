@@ -1,6 +1,7 @@
 import {
   buildScreen,
   DeviceQueue,
+  must,
   pause,
   readPicture,
   SLIDE_DROPS_TOUCH,
@@ -123,7 +124,7 @@ export class Session {
       const shot =
         (await this.device.mirror.screenshot?.('png')) ??
         (await this.device.screenshot({ format: 'png' }));
-      const size = screen.window ?? this.device.hello!.screen;
+      const size = screen.window ?? must(this.device.hello, "the agent's hello").screen;
       const { words, level } = await this.readWords(shot.data);
       this.pictureLevel = level;
       return this.screenOf(withPictureText(tree, words, size));
@@ -158,7 +159,7 @@ export class Session {
 
   /** The newest read when no action came after it, else a fresh one. */
   async current(): Promise<Screen> {
-    if (this.latest && this.latest.at === this.version) return this.latest.screen;
+    if (this.latest?.at === this.version) return this.latest.screen;
     return this.read();
   }
 
@@ -168,7 +169,7 @@ export class Session {
    */
   async justNow(): Promise<Screen> {
     const l = this.latest;
-    return l && l.at === this.version && Date.now() - l.taken < FRESH_MS ? l.screen : this.read();
+    return l?.at === this.version && Date.now() - l.taken < FRESH_MS ? l.screen : this.read();
   }
 
   /**
@@ -176,7 +177,8 @@ export class Session {
    * phone, no window), and nothing reaches a screen nobody has seen.
    */
   async beforeTouch() {
-    if (!this.fresh || Date.now() - this.latest!.taken > LOOK_MS) await this.read();
+    if (!this.fresh || Date.now() - must(this.latest, 'the last read').taken > LOOK_MS)
+      await this.read();
     const slid = this.unsettled;
     this.unsettled = undefined;
     // UIKit drops a touch during a slide, which no read nor the app's idle reports show: its remainder is the only sign
@@ -189,7 +191,7 @@ export class Session {
 
   /** The newest read when it is still the device's screen (no action since), else undefined. */
   get fresh(): Screen | undefined {
-    return this.latest && this.latest.at === this.version ? this.latest.screen : undefined;
+    return this.latest?.at === this.version ? this.latest.screen : undefined;
   }
 
   /** The app's process when last looked: another one means it went down and came back. */

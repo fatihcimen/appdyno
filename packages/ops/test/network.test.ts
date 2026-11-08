@@ -1,11 +1,11 @@
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { must } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { ServerContext } from '../src/context.js';
 import { harEntries } from '../src/network.js';
 import { DEFAULT_POLICY } from '../src/policy.js';
-import type { Op } from '../src/tool.js';
 import { FakeDevice } from './fake-device.js';
 import { checkedOps } from './helpers.js';
 
@@ -43,7 +43,7 @@ describe('a proxy export', () => {
         body: true,
       },
     ]);
-    expect((await harEntries(har([entry('2026-01-01T00:00:00Z')])))[0]!.body).toBe(false);
+    expect((await harEntries(har([entry('2026-01-01T00:00:00Z')])))[0]?.body).toBe(false);
   });
 
   it('takes braces and quotes in a body for what they are, and entries across chunks', async () => {
@@ -74,21 +74,19 @@ describe('a proxy export', () => {
       DEFAULT_POLICY,
       [
         {
-          list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+          list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
           handles: () => true,
           open: () => device,
         },
       ],
       { app: 'dev.app' },
     );
-    const op = checkedOps(ctx).network as Op;
+    const op = must(checkedOps(ctx).network, 'network');
     const list = Array.from({ length: 10 }, (_, i) => ({
       ...entry('2026-01-01T00:00:00Z'),
       request: { method: 'GET', url: `https://a.test/${i}?token=abc` },
     }));
-    const r = await op.handler(
-      op.input.parse({ action: 'read', har: har(list), limit: 3 }) as never,
-    );
+    const r = await op.handler(op.input.parse({ action: 'read', har: har(list), limit: 3 }));
     const text = r.blocks.map((b) => (b.type === 'text' ? b.text : '')).join('\n');
     expect(text).toMatch(/^3 of 10 from/);
     expect(text).toContain('https://a.test/9?token=•••');

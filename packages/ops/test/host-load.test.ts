@@ -1,9 +1,9 @@
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { MeasureSource } from '@appdyno/core';
+import { must, type MeasureSource } from '@appdyno/core';
 import { latestRuns, runKeys } from '@appdyno/perf';
-import { describe, expect, it, vi } from 'vitest';
+import { assert, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, keepRun, ServerContext } from '../src/index.js';
 import { FakeDevice } from './fake-device.js';
 import { callerOf, checkedOps } from './helpers.js';
@@ -17,26 +17,28 @@ vi.mock('node:os', async (original) => ({
 /** A phone, its own launch or one timed on the Mac. */
 function phone(until?: string) {
   const device = new FakeDevice();
-  const launch: MeasureSource['launch'] = async () => ({
-    value: {
-      mode: 'cold',
-      samples: [{ totalMs: 3_000 }],
-      medianMs: 3_000,
-      ...(until && { until }),
-    },
-    raw: '3000',
-    at: new Date().toISOString(),
-  });
+  const launch: MeasureSource['launch'] = () =>
+    Promise.resolve({
+      value: {
+        mode: 'cold',
+        samples: [{ totalMs: 3_000 }],
+        medianMs: 3_000,
+        ...(until && { until }),
+      },
+      raw: '3000',
+      at: new Date().toISOString(),
+    });
   device.virtual = false;
   Object.defineProperty(device, 'measure', {
     value: {
       ...device.measure,
-      buildType: async () => 'release',
-      vitals: async () => ({
-        value: { thermalStatus: 0 },
-        raw: '',
-        at: new Date().toISOString(),
-      }),
+      buildType: () => Promise.resolve('release'),
+      vitals: () =>
+        Promise.resolve({
+          value: { thermalStatus: 0 },
+          raw: '',
+          at: new Date().toISOString(),
+        }),
       launch,
     } satisfies MeasureSource,
   });
@@ -46,7 +48,7 @@ function phone(until?: string) {
     DEFAULT_POLICY,
     [
       {
-        list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+        list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
         handles: () => true,
         open: () => device,
       },
@@ -64,8 +66,9 @@ describe('a loaded Mac', () => {
     expect(text).toContain('noise: high-host-load');
     expect(data.medianMs).toBe(3_000);
     const [key] = await runKeys(measurements, { app: 'dev.app' });
-    const [run] = await latestRuns(measurements, key!, 1);
-    expect(run![0]).toMatchObject({
+    assert(key);
+    const [run] = await latestRuns(measurements, key, 1);
+    expect(run?.[0]).toMatchObject({
       kind: 'launch.until_ms',
       value: 3_000,
       noise: ['high-host-load'],
@@ -93,17 +96,19 @@ describe('a loaded Mac', () => {
       ],
     });
     expect(noise).toEqual(['high-host-load']);
-    const r = await checkedOps(ctx).perf_compare!.handler({
+    const r = await must(checkedOps(ctx).perf_compare, 'perf_compare').handler({
       action: 'baseline',
       format: 'text',
       last: 1,
     });
     expect(r.blocks[0]).toMatchObject({
-      text: expect.stringContaining('left out, high-host-load: launch.until_ms'),
+      text: expect.stringContaining('left out, high-host-load: launch.until_ms') as unknown,
     });
     // kept, and one run of the three a comparison needs
     expect(r.data.exitCode).toBe(1);
-    const baseline = JSON.parse(readFileSync((r.data.baselines as string[])[0]!, 'utf8')) as {
+    const baseline = JSON.parse(
+      readFileSync(must((r.data.baselines as string[])[0], 'a baseline'), 'utf8'),
+    ) as {
       metrics: Record<string, unknown>;
     };
     expect(Object.keys(baseline.metrics)).toEqual(['memory.kb']);
@@ -120,13 +125,13 @@ describe('a loaded Mac', () => {
       raw: '',
       metrics: [{ kind: 'launch.until_ms', unit: 'ms', samples: [3_000], throughHost: true }],
     });
-    const r = await checkedOps(ctx).perf_compare!.handler({
+    const r = await must(checkedOps(ctx).perf_compare, 'perf_compare').handler({
       action: 'baseline',
       format: 'text',
       last: 1,
     });
     expect(r.blocks[0]).toMatchObject({
-      text: expect.stringContaining('not added, high-host-load: measure loud again'),
+      text: expect.stringContaining('not added, high-host-load: measure loud again') as unknown,
     });
     expect(r.data.exitCode).toBe(1);
   });

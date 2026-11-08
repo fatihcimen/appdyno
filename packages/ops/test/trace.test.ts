@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { describe, expect, it, vi } from 'vitest';
 import { keptBy } from './helpers.js';
 
@@ -12,35 +13,44 @@ const at = '2026-11-03T00:00:00.000Z';
 const traced = (args: Record<string, unknown>, measures: Record<string, unknown>) =>
   keptBy('perf_trace', args, measures);
 
-const common = { id: expect.any(String), raw: expect.any(String), virtualDevice: false, noise: [] };
-const head = expect.stringMatching(/^measurement pm-\w+$/);
+const common = {
+  id: expect.any(String) as unknown,
+  raw: expect.any(String) as unknown,
+  virtualDevice: false,
+  noise: [],
+};
+const head = expect.stringMatching(/^measurement pm-\w+$/) as unknown;
 
 describe('perf_trace', () => {
   describe('a hold of the main thread', () => {
     const timeline = (over: Record<string, number>) => ({
-      frameTrace: async () => ({
-        value: {
-          kind: 'timeline',
-          frames: 50,
-          janky: 0,
-          jankyPercent: 0,
-          appDeadlineMissed: 0,
-          appJankPercent: 0,
-          bufferStuffing: 0,
-          surfaceFlinger: 0,
-          p50Ms: 9,
-          p95Ms: 16,
-          worstMs: 38,
-          frozen: 0,
-          ...over,
-        },
-        raw: 'csv',
-        at,
-        source: 'a timeline tool',
-      }),
+      frameTrace: () =>
+        Promise.resolve({
+          value: {
+            kind: 'timeline',
+            frames: 50,
+            janky: 0,
+            jankyPercent: 0,
+            appDeadlineMissed: 0,
+            appJankPercent: 0,
+            bufferStuffing: 0,
+            surfaceFlinger: 0,
+            p50Ms: 9,
+            p95Ms: 16,
+            worstMs: 38,
+            frozen: 0,
+            ...over,
+          },
+          raw: 'csv',
+          at,
+          source: 'a timeline tool',
+        }),
     });
     const stall = (r: Awaited<ReturnType<typeof traced>>) =>
-      r.kept.find((k) => k.kind === 'stalls.worst_ms')!.value;
+      must(
+        r.kept.find((k) => k.kind === 'stalls.worst_ms'),
+        'the worst stall',
+      ).value;
 
     it('that no frame shows is the number kept, and it says where that came from', async () => {
       // what a 1500 ms hold read on an emulator: a longest frame of 38 ms was the wrong answer
@@ -68,27 +78,28 @@ describe('perf_trace', () => {
     const r = await traced(
       {},
       {
-        frameTrace: async () => ({
-          value: {
-            kind: 'timeline',
-            frames: 120,
-            janky: 5,
-            jankyPercent: 10,
-            appDeadlineMissed: 4,
-            appJankPercent: 8,
-            bufferStuffing: 1,
-            surfaceFlinger: 0,
-            p50Ms: 9,
-            p95Ms: 30,
-            worstMs: 45,
-            frozen: 1,
-            stats: { frames: 120, overrunP95Ms: 3, overrunWorstMs: 5, cpuP95Ms: 7 },
-            tracePath: '/t.pftrace',
-          },
-          raw: 'csv',
-          at,
-          source: 'a timeline tool',
-        }),
+        frameTrace: () =>
+          Promise.resolve({
+            value: {
+              kind: 'timeline',
+              frames: 120,
+              janky: 5,
+              jankyPercent: 10,
+              appDeadlineMissed: 4,
+              appJankPercent: 8,
+              bufferStuffing: 1,
+              surfaceFlinger: 0,
+              p50Ms: 9,
+              p95Ms: 30,
+              worstMs: 45,
+              frozen: 1,
+              stats: { frames: 120, overrunP95Ms: 3, overrunWorstMs: 5, cpuP95Ms: 7 },
+              tracePath: '/t.pftrace',
+            },
+            raw: 'csv',
+            at,
+            source: 'a timeline tool',
+          }),
       },
     );
     expect(r.lines).toEqual([
@@ -119,31 +130,32 @@ describe('perf_trace', () => {
       ['frames.overrun_p95_ms', 3],
       ['frames.cpu_p95_ms', 7],
     ]);
-    expect(r.kept[0]!.source).toBe('a timeline tool');
+    expect(r.kept[0]?.source).toBe('a timeline tool');
   });
 
   it('a phone’s hitches', async () => {
     const r = await traced(
       {},
       {
-        frameTrace: async () => ({
-          value: {
-            kind: 'hitches',
-            tracePath: '/h.trace',
-            durationMs: 6_000,
-            frames: 300,
-            hitches: 2,
-            hitchMs: 40,
-            worstMs: 25,
-            frozen: 0,
-            stalls: { count: 1, worstMs: 260, totalMs: 260 },
-            hitchRatio: 6.6,
-            causes: { 'expensive commit': 2 },
-          },
-          raw: '/h.trace',
-          at,
-          source: 'a hitch tool',
-        }),
+        frameTrace: () =>
+          Promise.resolve({
+            value: {
+              kind: 'hitches',
+              tracePath: '/h.trace',
+              durationMs: 6_000,
+              frames: 300,
+              hitches: 2,
+              hitchMs: 40,
+              worstMs: 25,
+              frozen: 0,
+              stalls: { count: 1, worstMs: 260, totalMs: 260 },
+              hitchRatio: 6.6,
+              causes: { 'expensive commit': 2 },
+            },
+            raw: '/h.trace',
+            at,
+            source: 'a hitch tool',
+          }),
       },
     );
     expect(r.lines).toEqual([
@@ -171,33 +183,34 @@ describe('perf_trace', () => {
       ['frames.frozen', 0],
       ['stalls.worst_ms', 260],
     ]);
-    expect(r.kept[0]!.source).toBe('a hitch tool');
+    expect(r.kept[0]?.source).toBe('a hitch tool');
   });
 
   it('a simulator’s probe', async () => {
     const r = await traced(
       { probe: false },
       {
-        frameTrace: async () => ({
-          value: {
-            kind: 'probe',
-            tracePath: '/p.jsonl',
-            durationMs: 5_000,
-            frames: 250,
-            missed: 5,
-            missedPercent: 2,
-            p50Ms: 16,
-            p95Ms: 20,
-            worstMs: 120,
-            frozen: 0,
-            stalls: { count: 1, worstMs: 120, totalMs: 120 },
-            lastInputMsAgo: 300,
-            limits: 'pacing of the main thread',
-          },
-          raw: '/p.jsonl',
-          at,
-          source: 'a probe',
-        }),
+        frameTrace: () =>
+          Promise.resolve({
+            value: {
+              kind: 'probe',
+              tracePath: '/p.jsonl',
+              durationMs: 5_000,
+              frames: 250,
+              missed: 5,
+              missedPercent: 2,
+              p50Ms: 16,
+              p95Ms: 20,
+              worstMs: 120,
+              frozen: 0,
+              stalls: { count: 1, worstMs: 120, totalMs: 120 },
+              lastInputMsAgo: 300,
+              limits: 'pacing of the main thread',
+            },
+            raw: '/p.jsonl',
+            at,
+            source: 'a probe',
+          }),
       },
     );
     expect(r.lines).toEqual([
@@ -226,19 +239,20 @@ describe('perf_trace', () => {
       'probe.stall_worst_ms',
       'frames.frozen',
     ]);
-    expect(r.kept[0]!.source).toBe('a probe');
+    expect(r.kept[0]?.source).toBe('a probe');
   });
 
   it('XCTest’s own metrics', async () => {
     const r = await traced(
       { what: 'xct_hitches' },
       {
-        xctMetrics: async () => ({
-          value: { metrics: { ratio: [1, 2, 3] }, resultBundle: '/r.xcresult', note: 'a note' },
-          raw: '{}',
-          at,
-          source: 'a test tool',
-        }),
+        xctMetrics: () =>
+          Promise.resolve({
+            value: { metrics: { ratio: [1, 2, 3] }, resultBundle: '/r.xcresult', note: 'a note' },
+            raw: '{}',
+            at,
+            source: 'a test tool',
+          }),
       },
     );
     expect(r.lines).toEqual([head, 'ratio: 1, 2, 3', 'a note', 'result bundle: /r.xcresult']);
@@ -254,12 +268,13 @@ describe('perf_trace', () => {
     const r = await traced(
       { what: 'hangs' },
       {
-        hangs: async () => ({
-          value: { hangs: 1, worstMs: 500, totalMs: 700, tracePath: '/s.trace' },
-          raw: '/s.trace',
-          at,
-          source: 'a hang tool',
-        }),
+        hangs: () =>
+          Promise.resolve({
+            value: { hangs: 1, worstMs: 500, totalMs: 700, tracePath: '/s.trace' },
+            raw: '/s.trace',
+            at,
+            source: 'a hang tool',
+          }),
       },
     );
     expect(r.lines).toEqual([
@@ -281,6 +296,6 @@ describe('perf_trace', () => {
 
   it('a reading that says nothing of how it was read', async () => {
     const r = await traced({}, {});
-    expect(r.kept[0]!.source).toBe('perf_trace');
+    expect(r.kept[0]?.source).toBe('perf_trace');
   });
 });

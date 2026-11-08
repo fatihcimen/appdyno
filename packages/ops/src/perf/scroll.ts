@@ -6,6 +6,7 @@ import {
   pause,
   reportProgress,
   median,
+  must,
 } from '@appdyno/core';
 import { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
@@ -35,9 +36,9 @@ export function leakSignal(
 ): string[] {
   if (rounds.length < 2) return [];
   return OBJECTS.flatMap(([key, name]) => {
-    const seen = rounds.map((r) => r[key]);
-    if (seen.some((v) => v === undefined)) return [];
-    const grew = seen.every((v, i) => i === 0 || v! > seen[i - 1]!);
+    const seen = rounds.map((r) => r[key]).filter((v) => v !== undefined);
+    if (seen.length < rounds.length) return [];
+    const grew = seen.every((v, i) => i === 0 || v > must(seen[i - 1], 'the round before'));
     return grew ? [`${name} rose every round (${seen.join(' → ')}): likely a leak`] : [];
   });
 }
@@ -147,9 +148,11 @@ export function perfScrollOp(ctx: ServerContext) {
       const jank = counted.length ? median(counted.map((x) => x.jankyPercent)) : undefined;
       const frozen = rounds.reduce((a, x) => a + x.frozen, 0);
       // steady state: the second round's end to the last one's (the first loads images and caches)
+      const [, second] = rounds;
+      const last = rounds.at(-1);
       const growth =
-        rounds.length >= 3
-          ? (rounds.at(-1)!.memEndKb - rounds[1]!.memEndKb) / rounds[1]!.memEndKb
+        rounds.length >= 3 && second && last
+          ? (last.memEndKb - second.memEndKb) / second.memEndKb
           : undefined;
       const saved = await save('scroll', all, {
         direction,

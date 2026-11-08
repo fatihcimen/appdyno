@@ -1,4 +1,4 @@
-import { SYSTEM_VIEWS, type SystemView } from '@appdyno/core';
+import { must, SYSTEM_VIEWS, type SystemView } from '@appdyno/core';
 import { KEYS, MODIFIERS, type Key, type Modifier } from '@appdyno/protocol';
 import { z } from 'zod';
 
@@ -23,8 +23,9 @@ export const Selector = z
   })
   .strict();
 
+// a selector made by hand may hold a key set to undefined
 export const showSelector = (sel: z.infer<typeof Selector>) =>
-  Object.entries(sel)
+  Object.entries<unknown>(sel)
     .filter(([, v]) => v !== undefined)
     .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
     .join(' ');
@@ -63,7 +64,7 @@ export const viewNamed = (words: string) => SYSTEM_VIEWS.find((v): v is SystemVi
 /** `command+a` as the wire has it: what is held, then the key by its name, or a letter or digit. */
 export function keyPress(words: string): { key: string; modifiers: Modifier[] } | undefined {
   const parts = words.split('+');
-  const last = parts.pop()!;
+  const last = must(parts.pop(), 'a key');
   const key = WIRE_KEY[last] ?? (/^[a-z0-9]$/.test(last) ? last : undefined);
   const modifiers = parts.filter((m): m is Modifier => MODIFIERS.includes(m as Modifier));
   if (!key || modifiers.length !== parts.length || (parts.length > 0 && BUTTONS.has(key)))

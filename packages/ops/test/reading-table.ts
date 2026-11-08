@@ -442,4 +442,4 @@ export const READINGS = {
     reads: [xct({ ratio: [1, 2, 3] })],
     notRead: { 'it read none': xct({ ratio: [] }) },
   },
-} satisfies { [K in Kind]?: Reading };
+} satisfies Partial<Record<Kind, Reading>>;

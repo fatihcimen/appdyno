@@ -3,7 +3,7 @@ import { pairedChange } from '@appdyno/perf';
 
 /** What the device says, in words: `reason=install-dm` alone would read as applied when a `.dm` compiled nothing. */
 const onDevice = ({ state, applied }: BaselineReading) => {
-  if (applied) return `on the device: ${state}: applied`;
+  if (applied) return `on the device: ${String(state)}: applied`;
   if (state?.includes('install-dm'))
     return `on the device: ${state}: delivered, and it compiled nothing: a .dm of another Android's format does this`;
   return `on the device: ${state ?? 'no state read'}: not applied`;

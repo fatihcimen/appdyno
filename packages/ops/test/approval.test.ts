@@ -41,7 +41,10 @@ async function onDevice(
 ) {
   const done: string[] = [];
   const asked: string[] = [];
-  const record = (what: string) => async () => void done.push(what);
+  const record = (what: string) => () => {
+    done.push(what);
+    return Promise.resolve();
+  };
   const device = Object.assign(new FakeDevice(), {
     virtual: o.virtual ?? true,
     apps: {
@@ -49,16 +52,23 @@ async function onDevice(
       uninstall: record('uninstall'),
       clearData: record('clear'),
       replaceData: record('replace'),
-      permission: async (_app: string, grant: boolean) =>
-        void done.push(grant ? 'grant' : 'revoke'),
+      permission: (_app: string, grant: boolean) => {
+        done.push(grant ? 'grant' : 'revoke');
+        return Promise.resolve();
+      },
     },
-    events: { resetKeychain: async () => (done.push('keychain'), 3) },
+    events: {
+      resetKeychain: () => {
+        done.push('keychain');
+        return Promise.resolve(3);
+      },
+    },
   });
   const ctx = new ServerContext(
     { ...DEFAULT_POLICY, ...o.policy },
     [
       {
-        list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+        list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
         handles: () => true,
         open: () => device,
       },

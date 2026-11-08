@@ -46,9 +46,10 @@ const startedFile = () => join(stateDir(), 'started.json');
 async function virtuals(ctx: ServerContext) {
   const out: { d: Startable; on: VirtualDevices }[] = [];
   for (const p of ctx.providers) {
-    if (!p.virtual) continue;
-    const found = await p.virtual.startable().catch(() => [] as Startable[]);
-    out.push(...found.map((d) => ({ d, on: p.virtual! })));
+    const on = p.virtual;
+    if (!on) continue;
+    const found = await on.startable().catch(() => [] as Startable[]);
+    out.push(...found.map((d) => ({ d, on })));
   }
   return out;
 }
@@ -58,7 +59,8 @@ async function namedVirtual(ctx: ServerContext, id: string) {
   const hits = all.filter(
     (x) => x.d.id === id || x.d.serial === id || x.d.name === id || x.d.name.startsWith(`${id} (`),
   );
-  if (hits.length === 1) return hits[0]!;
+  const [only, other] = hits;
+  if (only && !other) return only;
   throw new ToolError(
     hits.length === 0
       ? `no simulator or emulator is named ${id} (action list)`

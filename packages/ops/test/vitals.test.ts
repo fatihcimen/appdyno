@@ -24,14 +24,14 @@ describe("a session's frames in Play's words", () => {
     const { lines, shares, metrics } = frameVitals([{ frames, over16: 0, over700 }]);
     expect(shares?.frozenPercent).toBe(percent);
     expect(lines[1]).toContain(counts ? 'would count as frozen' : 'would not count as frozen');
-    expect(metrics.find((m) => m.kind === 'frames.frozen_percent')!.samples).toEqual([percent]);
+    expect(metrics.find((m) => m.kind === 'frames.frozen_percent')?.samples).toEqual([percent]);
   });
 
   it('says too few frames under 1,000, and keeps no share', () => {
     const { lines, shares, metrics } = frameVitals([{ frames: 500, over16: 0, over700: 1 }]);
     expect(lines[1]).toContain('too few frames to say of frozen frames (500 of the 1000 it takes)');
     expect(shares?.frozenPercent).toBeUndefined();
-    expect(metrics.find((m) => m.kind === 'frames.frozen_percent')!.samples).toEqual([]);
+    expect(metrics.find((m) => m.kind === 'frames.frozen_percent')?.samples).toEqual([]);
   });
 
   it('pools rounds for the frozen share, and keeps slow frames round by round', () => {
@@ -40,7 +40,7 @@ describe("a session's frames in Play's words", () => {
       { frames: 600, over16: 120, over700: 1 },
     ]);
     expect(shares?.frozenPercent).toBe(0.17);
-    expect(metrics.find((m) => m.kind === 'frames.slow_percent')!.samples).toEqual([10, 20]);
+    expect(metrics.find((m) => m.kind === 'frames.slow_percent')?.samples).toEqual([10, 20]);
   });
 
   it('holds frozen frames to the frames there were, on a phone whose summary counts each twice', () => {
@@ -49,14 +49,14 @@ describe("a session's frames in Play's words", () => {
     expect(twice.lines[1]).toContain('too few frames to say of frozen frames (710 of the 1000');
     // the slow share is a ratio of the summary's own, which the doubling leaves alone
     expect(twice.shares?.slowPercent).toBe(10);
-    expect(twice.metrics.find((m) => m.kind === 'frames.slow_percent')!.samples).toEqual([10]);
+    expect(twice.metrics.find((m) => m.kind === 'frames.slow_percent')?.samples).toEqual([10]);
     const many = frameVitals([{ frames: 4_000, over16: 0, over700: 1, rowFrames: 2_000 }]);
     expect(many.shares?.frozenPercent).toBe(0.05);
   });
 
   it('holds a round of slow frames to the frames there were', () => {
     const few = frameVitals([{ frames: 60, over16: 60, over700: 0, rowFrames: 30 }]);
-    expect(few.metrics.find((m) => m.kind === 'frames.slow_percent')!.samples).toEqual([]);
+    expect(few.metrics.find((m) => m.kind === 'frames.slow_percent')?.samples).toEqual([]);
   });
 
   it('says too few frames for a few frames of slow, and has nothing with no histogram', () => {
@@ -85,7 +85,7 @@ describe("a snapshot's frozen frames", () => {
       DEFAULT_POLICY,
       [
         {
-          list: async () => [{ serial: d.serial, state: 'device', ready: true }],
+          list: () => Promise.resolve([{ serial: d.serial, state: 'device', ready: true }]),
           handles: () => true,
           open: () => d,
         },
@@ -114,9 +114,9 @@ describe('why a hang was a hang, in an answer', () => {
       value: {
         ...d.measure,
         symbolFiles: platform === 'ios',
-        hangs: async (_app, _seconds, _during, symbols) => {
+        hangs: (_app, _seconds, _during, symbols) => {
           asked.push(symbols);
-          return {
+          return Promise.resolve({
             value: {
               hangs: 1,
               worstMs: 513,
@@ -126,7 +126,7 @@ describe('why a hang was a hang, in an answer', () => {
             },
             raw: '/t.trace',
             at: new Date().toISOString(),
-          };
+          });
         },
       } satisfies MeasureSource,
     });
@@ -134,7 +134,7 @@ describe('why a hang was a hang, in an answer', () => {
       DEFAULT_POLICY,
       [
         {
-          list: async () => [{ serial: d.serial, state: 'device', ready: true }],
+          list: () => Promise.resolve([{ serial: d.serial, state: 'device', ready: true }]),
           handles: () => true,
           open: () => d,
         },

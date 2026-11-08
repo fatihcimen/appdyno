@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { toMaestro, FlowError } from '@appdyno/flows';
 import type { ErrorCode } from '@appdyno/protocol';
 import { z } from 'zod';
@@ -24,7 +25,10 @@ export function paramsOf(words: string[] = []): Record<string, string> {
     words.map((w) => {
       const at = w.indexOf('=');
       if (at < 1)
-        throw new ToolError(`a parameter is NAME=value: ${w.split('=')[0]}`, 'INVALID_ARGUMENT');
+        throw new ToolError(
+          `a parameter is NAME=value: ${must(w.split('=')[0], 'its name')}`,
+          'INVALID_ARGUMENT',
+        );
       return [w.slice(0, at), w.slice(at + 1)];
     }),
   );

@@ -1,4 +1,4 @@
-import { TRANSITION_MS, type DeviceProvider } from '@appdyno/core';
+import { must, TRANSITION_MS, type DeviceProvider } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
 import { FakeDevice } from './fake-device.js';
@@ -14,14 +14,20 @@ async function connect(platform: 'ios' | 'android' = 'ios') {
     act: (...a: Parameters<FakeDevice['act']>) => (at.push(Date.now()), act(...a)),
   });
   const provider: DeviceProvider = {
-    list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+    list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
     handles: () => true,
     open: () => device,
   };
-  const client = await linkedClient(new ServerContext(DEFAULT_POLICY, [provider], {}), () => {});
+  const client = await linkedClient(
+    new ServerContext(DEFAULT_POLICY, [provider], {}),
+    () => undefined,
+  );
   const call = (name: string, args: Record<string, unknown> = {}) =>
     client.callTool({ name, arguments: args });
-  return { call, gap: () => at.at(-1)! - at.at(-2)! };
+  return {
+    call,
+    gap: () => must(at.at(-1), 'the last touch') - must(at.at(-2), 'the touch before'),
+  };
 }
 
 // the home screen's Form button, which opens another screen, and empty space below the buttons

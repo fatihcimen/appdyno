@@ -6,6 +6,7 @@ import {
   selectIn,
   type Screen,
   attributesOf,
+  must,
   type ActOptions,
 } from '@appdyno/core';
 import type { ActResult, Point, TextResult } from '@appdyno/protocol';
@@ -197,7 +198,7 @@ export function stepsFor(
             ? missing
             : `${hits.length} elements match ${what}: ${hits.slice(0, 5).map(line).join('; ')}`,
       };
-    const at = attributesOf(screen.elements, hits[0]!);
+    const at = attributesOf(screen.elements, must(hits[0], 'the one match'));
     if (a.check === 'text') {
       if (a.equals === undefined)
         throw new ToolError('check text needs equals', 'INVALID_ARGUMENT');
@@ -231,8 +232,9 @@ export function stepsFor(
       w: element.rect.width,
       h: element.rect.height,
     };
-    const moved = movedIn(m, s.device.hello!.screen, box, !a.expect);
-    const said = motionText(m, s.device.hello!.screen);
+    const { screen: size } = must(s.device.hello, "the agent's hello");
+    const moved = movedIn(m, size, box, !a.expect);
+    const said = motionText(m, size);
     if (moved !== a.expect) throw new ToolError(`check failed: ${said}`, 'CHECK_FAILED');
     return { screen, done: `check passed: ${said}` };
   };
@@ -257,7 +259,9 @@ export function stepsFor(
     const sel = selectorOf(a);
     if (!a.ref && !sel) throw new ToolError('give text, id, role or ref', 'INVALID_ARGUMENT');
     const found = (x: Screen) =>
-      (a.ref ? x.list.filter((e) => e.ref === a.ref) : selectIn(x.list, sel!))[sel?.index ?? 0];
+      (a.ref ? x.list.filter((e) => e.ref === a.ref) : selectIn(x.list, must(sel, 'a selector')))[
+        sel?.index ?? 0
+      ];
     const { screen, met } = await s.until((x) => !!found(x) !== a.gone, a.timeoutMs);
     if (!screen)
       throw new ToolError('the screen could not be read: nothing to look in', 'NOT_FOUND');
@@ -372,7 +376,7 @@ export function stepsFor(
           s.acted();
           return { r: treeIfAsked(screen), done: `opened ${view}` };
         }
-        const { key, modifiers } = keyPress(st.key)!;
+        const { key, modifiers } = must(keyPress(st.key), `the key ${st.key}`);
         const leaves = LEAVES_APP.has(key) || (modifiers.length > 0 && SHORTCUT_LEAVES.has(key));
         if (leaves && !policy.allowHome)
           throw new ToolError(

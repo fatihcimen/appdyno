@@ -111,15 +111,13 @@ export const journaled =
     ...op,
     handler: async (args) => {
       const began = Date.now();
-      let out: ToolResult | undefined;
-      let err: unknown;
       try {
-        out = await op.handler(args);
+        const out = await op.handler(args);
+        await note(ctx, op, args, began, out, undefined).catch(() => undefined);
+        return out;
       } catch (e) {
-        err = e;
+        await note(ctx, op, args, began, undefined, e).catch(() => undefined);
+        throw e;
       }
-      await note(ctx, op, args, began, out, err).catch(() => undefined);
-      if (err !== undefined) throw err;
-      return out!;
     },
   });

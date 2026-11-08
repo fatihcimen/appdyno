@@ -1,7 +1,13 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { DeviceProvider, LiveMetrics, LiveSample, ScreenRecorder } from '@appdyno/core';
+import {
+  must,
+  type DeviceProvider,
+  type LiveMetrics,
+  type LiveSample,
+  type ScreenRecorder,
+} from '@appdyno/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeVideo } from '../../core/test/fake-video.js';
 import { ServerContext } from '../src/context.js';
@@ -16,18 +22,18 @@ const recorder = (over: Partial<ScreenRecorder> = {}) => {
   const log = { started: 0, stopped: 0, running: 0, most: 0, light: [] as (boolean | undefined)[] };
   const r: ScreenRecorder = {
     extension: 'mp4',
-    start: async (file, o) => {
+    start: (file, o) => {
       log.started++;
       log.running++;
       log.most = Math.max(log.most, log.running);
       log.light.push(o.light);
-      return { file };
+      return Promise.resolve({ file });
     },
-    stop: async (h) => {
+    stop: (h) => {
       log.stopped++;
       log.running--;
       writeFileSync(String(h.file), fakeVideo([Buffer.from(`frame of ${String(h.file)}`)]));
-      return { files: [String(h.file)] };
+      return Promise.resolve({ files: [String(h.file)] });
     },
     ...over,
   };
@@ -52,7 +58,7 @@ describe('a ring of video', () => {
     const ring = new VideoRing(r, dir(), 15, 0);
     await ring.rotate();
     expect(log.light).toEqual([true]);
-    expect(start.mock.calls[0]![1].maxSeconds).toBe(45);
+    expect(start.mock.calls[0]?.[1].maxSeconds).toBe(45);
   });
 
   it('keeps no more than it says, however long it runs', async () => {
@@ -69,36 +75,36 @@ describe('a ring of video', () => {
     const ring = new VideoRing(r, d, 15, 40);
     await ring.rotate();
     await ring.rotate();
-    const v = (await ring.seal(join(d, 'whole.mp4')))!;
+    const v = must(await ring.seal(join(d, 'whole.mp4')), 'the video');
     expect(v.file).toBe(join(d, 'whole.mp4'));
     expect(v.facts.parts).toHaveLength(2);
-    expect(v.facts.parts![0]!.s).toBe(0);
-    expect(v.facts.parts![1]!.s).toBeGreaterThan(0);
+    expect(v.facts.parts?.[0]?.s).toBe(0);
+    expect(v.facts.parts?.[1]?.s).toBeGreaterThan(0);
     expect(existsSync(v.file)).toBe(true);
   });
 
   it('gives the newest alone where two will not join', async () => {
     let n = 0;
     const { r } = recorder({
-      stop: async (h) => {
+      stop: (h) => {
         writeFileSync(String(h.file), fakeVideo([Buffer.from('x')], { stsd: `settings ${++n}` }));
-        return { files: [String(h.file)] };
+        return Promise.resolve({ files: [String(h.file)] });
       },
     });
     const d = dir();
     const ring = new VideoRing(r, d, 15, 0);
     await ring.rotate();
     await ring.rotate();
-    const v = (await ring.seal(join(d, 'whole.mp4')))!;
+    const v = must(await ring.seal(join(d, 'whole.mp4')), 'the video');
     expect(v.file).toBe(join(d, 'segment-2.mp4'));
     expect(v.facts.parts).toBeUndefined();
   });
 
   it('starts nothing once it is closing: a turn that comes late has nothing to do', async () => {
-    let letGo = () => undefined as void;
+    let letGo: () => void = () => undefined;
     const held = new Promise<void>((r) => (letGo = r));
     const { r, log } = recorder();
-    const start = r.start;
+    const start = r.start.bind(r);
     let first = true;
     r.start = async (file, o) => {
       if (first) await held;
@@ -118,7 +124,7 @@ describe('a ring of video', () => {
 
   it('ends the old segment first where a device runs one encoder, and asks no more', async () => {
     const { r, log } = recorder();
-    const start = r.start;
+    const start = r.start.bind(r);
     r.start = async (file, o) => {
       if (log.running > 0) throw new Error('screenrecord did not start: Encoder failed (err=-38)');
       return start(file, o);
@@ -135,7 +141,7 @@ describe('a ring of video', () => {
 
   it('keeps what it holds when the last segment has nothing in it', async () => {
     const { r } = recorder();
-    const stop = r.stop;
+    const stop = r.stop.bind(r);
     let stops = 0;
     r.stop = async (h) => {
       if (++stops === 2) throw new Error('the recording failed: seg1.mp4 is empty');
@@ -160,9 +166,7 @@ describe('a ring of video', () => {
   });
 });
 
-const refused = async (): Promise<never> => {
-  throw new Error('it will not start');
-};
+const refused = (): Promise<never> => Promise.reject(new Error('it will not start'));
 
 /** A device whose app, stalls and crashes a test decides. */
 class FlightDevice extends FakeDevice {
@@ -171,9 +175,9 @@ class FlightDevice extends FakeDevice {
   tell: (s: LiveSample) => void = () => undefined;
   liveEnded = 0;
   readonly liveMetrics: LiveMetrics = {
-    start: async (onSample) => {
+    start: (onSample) => {
       this.tell = onSample;
-      return () => this.liveEnded++;
+      return Promise.resolve(() => this.liveEnded++);
     },
   };
   frameRuns = 0;
@@ -207,7 +211,8 @@ class FlightDevice extends FakeDevice {
 
 function connect(device: FlightDevice, flightSeconds?: number) {
   const provider: DeviceProvider = {
-    list: async () => [{ serial: device.serial, state: 'device', ready: true, model: 'Fake' }],
+    list: () =>
+      Promise.resolve([{ serial: device.serial, state: 'device', ready: true, model: 'Fake' }]),
     handles: () => true,
     open: () => device,
   };
@@ -256,7 +261,7 @@ describe('the flight recorder', () => {
     await vi.advanceTimersByTimeAsync(10_500);
     d.tell({ at: Date.now(), worstFrameMs: 950 });
     await until(() => saved().length === 1);
-    const page = readFileSync(join(state, 'traces', saved()[0]!), 'utf8');
+    const page = readFileSync(join(state, 'traces', must(saved()[0], 'a page')), 'utf8');
     expect(page).toContain('a stall of 950 ms');
     expect(page).toContain('id="video-bytes"');
     await until(() => d.frameRuns === 2);
@@ -297,7 +302,7 @@ describe('the flight recorder', () => {
     d.crashReports = [{ at: new Date().toISOString(), reason: 'java.lang.IllegalStateException' }];
     d.tell({ at: Date.now() });
     await until(() => saved().length === 1);
-    expect(readFileSync(join(state, 'traces', saved()[0]!), 'utf8')).toContain(
+    expect(readFileSync(join(state, 'traces', must(saved()[0], 'a page')), 'utf8')).toContain(
       'a crash: java.lang.IllegalStateException',
     );
     const runs = d.frameRuns;
@@ -316,7 +321,7 @@ describe('the flight recorder', () => {
     d.crashReports = [{ at: new Date().toISOString(), reason: 'it crashed' }];
     d.tell({ at: Date.now() });
     await until(() => saved().length === 1);
-    expect(readFileSync(join(state, 'traces', saved()[0]!), 'utf8')).toContain(
+    expect(readFileSync(join(state, 'traces', must(saved()[0], 'a page')), 'utf8')).toContain(
       'a crash: it crashed',
     );
     await call('report', { action: 'stop' });
@@ -329,8 +334,10 @@ describe('the flight recorder', () => {
     await vi.advanceTimersByTimeAsync(5_000);
     d.tell({ at: Date.now(), worstFrameMs: 950 });
     await until(() => saved().length === 1);
-    const html = readFileSync(join(state, 'traces', saved()[0]!), 'utf8');
-    const page = JSON.parse(/id="timeline">([\s\S]*?)<\/script>/.exec(html)![1]!) as {
+    const html = readFileSync(join(state, 'traces', must(saved()[0], 'a page')), 'utf8');
+    const page = JSON.parse(
+      must(/id="timeline">([\s\S]*?)<\/script>/.exec(html)?.[1], 'its timeline'),
+    ) as {
       from: number;
       to: number;
     };
@@ -434,7 +441,7 @@ describe('the flight recorder', () => {
     const d = new FlightDevice();
     const { call } = connect(d, 20);
     await call('report', { action: 'flight' });
-    let up = () => undefined as void;
+    let up: () => void = () => undefined;
     d.frameGate = new Promise((r) => (up = r));
     await vi.advanceTimersByTimeAsync(480_000);
     expect(d.frameRuns).toBe(2);
@@ -450,7 +457,7 @@ describe('the flight recorder', () => {
   it('looks for a crash by the clock of the device, which may be far from this one', async () => {
     const behind = 3_600_000;
     const d = new FlightDevice();
-    d.wallClock = async () => Date.now() - behind;
+    d.wallClock = () => Promise.resolve(Date.now() - behind);
     const { call } = connect(d, 20);
     await call('report', { action: 'flight' });
     const all = d.crashes.bind(d);
@@ -488,7 +495,8 @@ describe('the flight recorder', () => {
     await call('report', { action: 'stop' });
     const remember = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 'session.json');
     const provider: DeviceProvider = {
-      list: async () => [{ serial: d.serial, state: 'device', ready: true, model: 'Fake' }],
+      list: () =>
+        Promise.resolve([{ serial: d.serial, state: 'device', ready: true, model: 'Fake' }]),
       handles: () => true,
       open: () => d,
     };

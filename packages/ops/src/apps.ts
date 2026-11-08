@@ -1,5 +1,6 @@
 import {
   fold,
+  must,
   reportProgress,
   SETTINGS_PAGES,
   type Screen,
@@ -48,8 +49,9 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
     const same = (await s.device.apps.listApps(true)).filter(
       (a) => a.name && fold(a.name) === fold(name),
     );
-    if (same.length === 1) return same[0]!.id;
-    if (same.length === 0)
+    const [only, other] = same;
+    if (only && !other) return only.id;
+    if (!only)
       throw new ToolError(`no app named ${name} here`, 'NOT_FOUND', 'app action list names them');
     throw new ToolError(
       `several apps are named ${name}: ${same.map((a) => a.id).join(', ')}`,
@@ -82,7 +84,9 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
         `settings: an app's id, app, or a page: ${SETTINGS_PAGES.join(', ')}`,
         'INVALID_ARGUMENT',
       );
-    const { row } = await s.device.openSettings(page ? { page } : { app: app! });
+    const { row } = await s.device.openSettings(
+      page ? { page } : { app: must(app, "the app's id") },
+    );
     if (!row) return afterChange(s, `opened Settings: ${settings}`, read);
     s.acted();
     const selector = { text: row };
@@ -123,7 +127,7 @@ export function appOps(ctx: ServerContext, { afterChange }: Answers, { one }: St
           return reply(t, { done: t, screen: 'none', warnings: [], links: found });
         }
         if (settings) return openSettings(s, settings, read);
-        const href = checkUrl(policy, url!);
+        const href = checkUrl(policy, must(url, 'url'));
         await s.device.openUrl(href, s.appId);
         return afterChange(s, linkSaid(s, href), read);
       },

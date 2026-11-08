@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { DeviceProvider } from '@appdyno/core';
-import { decodePng, encodePng } from '@appdyno/core';
+import { decodePng, encodePng, must } from '@appdyno/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { ServerContext } from '../src/context.js';
@@ -16,7 +16,8 @@ const SECRET = 's3cr3t-pass';
 
 function connect(device = new FakeDevice()) {
   const provider: DeviceProvider = {
-    list: async () => [{ serial: device.serial, state: 'device', ready: true, model: 'Fake' }],
+    list: () =>
+      Promise.resolve([{ serial: device.serial, state: 'device', ready: true, model: 'Fake' }]),
     handles: () => true,
     open: () => device,
   };
@@ -30,7 +31,7 @@ function connect(device = new FakeDevice()) {
 
 /** A device whose images are real PNGs: white, one pixel of tap units per pixel. */
 class ImagingDevice extends FakeDevice {
-  override async screenshot(): ReturnType<FakeDevice['screenshot']> {
+  override screenshot(): ReturnType<FakeDevice['screenshot']> {
     const img = {
       width: 1080,
       height: 2400,
@@ -38,7 +39,7 @@ class ImagingDevice extends FakeDevice {
       data: new Uint8Array(1080 * 2400 * 3).fill(255),
     };
     const data = encodePng(img);
-    return { meta: { w: 1080, h: 2400, format: 'png', bytes: data.length }, data };
+    return Promise.resolve({ meta: { w: 1080, h: 2400, format: 'png', bytes: data.length }, data });
   }
 }
 
@@ -70,7 +71,7 @@ describe('report', () => {
 
   it('keeps what an install answered on the phone', async () => {
     const device = Object.assign(new FakeDevice(), {
-      apps: { install: async () => ['passed a Play Protect warning for dev.app'] },
+      apps: { install: () => Promise.resolve(['passed a Play Protect warning for dev.app']) },
     });
     const { call } = connect(device);
     await call('report', { action: 'start', dir });
@@ -109,7 +110,8 @@ describe('report', () => {
     );
     await ctx.end();
     const all =
-      readFileSync(join(dir, 'index.html'), 'utf8') + readFileSync(join(dir, 'steps.jsonl'));
+      readFileSync(join(dir, 'index.html'), 'utf8') +
+      readFileSync(join(dir, 'steps.jsonl'), 'utf8');
     expect(all).not.toContain(SECRET);
     expect(all).not.toContain('abc123');
     expect(all).not.toContain('hidden-words');
@@ -128,7 +130,7 @@ describe('report', () => {
           input: z.object({}).loose(),
           output: z.object({}),
           annotations,
-          run: async () => reply('done', {}),
+          run: () => Promise.resolve(reply('done', {})),
         }),
       );
     await made(ACT).handler({
@@ -163,9 +165,9 @@ describe('report', () => {
     await call('report', { action: 'start', dir });
     await call('tap', { selector: { text: 'Add', index: 0 } });
     await call('report', { action: 'write' });
-    const name = readdirSync(join(dir, 'shots'))[0]!;
+    const name = must(readdirSync(join(dir, 'shots'))[0], 'a shot');
     expect(name).toBe('0001.png');
-    const img = decodePng(readFileSync(join(dir, 'shots', name)))!;
+    const img = must(decodePng(readFileSync(join(dir, 'shots', name))), 'its image');
     const red = (x: number, y: number) => img.data[(y * img.width + x) * img.channels];
     expect(red(540, 950)).toBe(0); // the greeting holding the secret
     expect(red(540, 350)).toBe(0); // the password field

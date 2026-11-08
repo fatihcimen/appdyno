@@ -11,6 +11,7 @@ const strict = [
   'packages/flows/**',
   'packages/cli/**',
   'packages/core/**',
+  'packages/ops/**',
 ];
 
 export default defineConfig(

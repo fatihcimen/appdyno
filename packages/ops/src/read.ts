@@ -6,6 +6,7 @@ import {
   diffScreens,
   diffText,
   imageSize,
+  must,
   safeName,
   screenStructure,
   selectIn,
@@ -114,7 +115,7 @@ export function readOps(
               (m) =>
                 `${m.ref} ${m.role} ${JSON.stringify(m.label)} ${m.x},${m.y} ${m.bounds.w}x${m.bounds.h}` +
                 `${m.enabled ? '' : ' disabled'}${m.checked ? ' checked' : ''}${m.focused ? ' focused' : ''}` +
-                `${m.value !== undefined ? ` value=${JSON.stringify(m.value)}` : ''}`,
+                (m.value !== undefined ? ` value=${JSON.stringify(m.value)}` : ''),
             )
             .join('\n'),
           { matches },
@@ -134,11 +135,12 @@ export function readOps(
         const { screen: last, met, found } = await waitFor(s, a);
         const { gone, timeoutMs } = a;
         show(s, last);
-        const head = met
-          ? gone
+        const hit = met && !gone ? must(found, 'what was found') : undefined;
+        const head = hit
+          ? `found: ${hit.ref} ${JSON.stringify(clean(hit.label))}`
+          : met
             ? 'gone'
-            : `found: ${found!.ref} ${JSON.stringify(clean(found!.label))}`
-          : `${gone ? 'still there' : 'not shown'} after ${timeoutMs} ms`;
+            : `${gone ? 'still there' : 'not shown'} after ${timeoutMs} ms`;
         const out = {
           met,
           gone,
@@ -178,7 +180,7 @@ export function readOps(
         if (watchMs) {
           const m = await watchScreen(ctx, s, watchMs, strip === true);
           const shown = takeStrip(m);
-          const text = motionText(m, s.device.hello!.screen);
+          const text = motionText(m, must(s.device.hello, "the agent's hello").screen);
           const at = shown
             ? `\nframes at ${shown.at.map((t) => (t / 1_000).toFixed(1)).join(', ')} s`
             : '';
@@ -199,9 +201,9 @@ export function readOps(
         }
         if (file) return saveShot(s, file, overwrite === true);
         const layout = s.fresh
-          ? `${!!points} ${width} ${screenStructure(s.fresh.list)}`
+          ? `${String(!!points)} ${String(width)} ${screenStructure(s.fresh.list)}`
           : undefined;
-        if (s.shot && s.shot.at === s.version && layout !== undefined && s.shot.hash === layout)
+        if (s.shot?.at === s.version && layout !== undefined && s.shot.hash === layout)
           throw new ToolError(
             'the screen has not changed since the last image: that image still holds',
             'INVALID_ARGUMENT',

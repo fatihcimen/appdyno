@@ -144,7 +144,9 @@ export function regionLine(r: MotionRegion, screen: { w: number; h: number }, ms
   if (r.kind === 'changes')
     return `x ${span(r.x, r.w, w)}, y ${span(r.y, r.h, h)}: changes, in no direction a frame can follow`;
   const along = r.axis === 'y' ? h : w;
-  const way = r.axis === 'y' ? (r.sign! < 0 ? 'up' : 'down') : r.sign! < 0 ? 'left' : 'right';
+  // the viewer's word: a region with no sign reads as it always has, as down or right
+  const back = (r.sign ?? 0) < 0;
+  const way = r.axis === 'y' ? (back ? 'up' : 'down') : back ? 'left' : 'right';
   const where = r.axis === 'y' ? `x ${span(r.x, r.w, w)}` : `y ${span(r.y, r.h, h)}`;
   const events = r.events ?? [];
   return [

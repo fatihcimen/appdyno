@@ -2,7 +2,13 @@ import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import type { Device, DeviceProvider, DeviceSettings, SettingName } from '@appdyno/core';
+import {
+  must,
+  type Device,
+  type DeviceProvider,
+  type DeviceSettings,
+  type SettingName,
+} from '@appdyno/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_POLICY, ServerContext } from '../src/index.js';
 import { FakeDevice } from './fake-device.js';
@@ -15,7 +21,7 @@ class Settings implements DeviceSettings {
   failNext = false;
   get = async (name: SettingName) => {
     await tick();
-    return this.values[name]!;
+    return must(this.values[name], name);
   };
   set = async (name: SettingName, value: string): Promise<undefined> => {
     await tick();
@@ -34,7 +40,7 @@ const withSettings = () => {
 
 function connect(device: Device, defaults: ConstructorParameters<typeof ServerContext>[2] = {}) {
   const provider: DeviceProvider = {
-    list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+    list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
     handles: () => true,
     open: () => device,
   };
@@ -48,9 +54,10 @@ const startedOf = (pid: number) =>
 /** A process that runs until killed, as an owner in a state file. */
 function liveProcess() {
   const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);
+  const pid = must(child.pid, "the child's pid");
   const owner = {
-    pid: child.pid!,
-    started: startedOf(child.pid!),
+    pid,
+    started: startedOf(pid),
     tool: 'other agent',
     since: '2026-11-03T00:00:00Z',
   };
@@ -69,7 +76,7 @@ async function killedProcess() {
 }
 
 const stateFile = (folder: string, serial: string) =>
-  join(process.env.APPDYNO_STATE_DIR!, folder, `${serial}.json`);
+  join(must(process.env.APPDYNO_STATE_DIR, 'APPDYNO_STATE_DIR'), folder, `${serial}.json`);
 
 function leave(folder: string, serial: string, value: unknown) {
   const file = stateFile(folder, serial);
@@ -260,13 +267,13 @@ describe('what a process leaves running', () => {
     Object.assign(new FakeDevice(), {
       recorder: {
         extension: 'mp4' as const,
-        start: async () => ({ id: 'r' }),
+        start: () => Promise.resolve({ id: 'r' }),
         stop: stops.recording,
       },
       network: {
-        paths: async () => [{ via: 'bytes' as const, sees: 'bytes' }],
-        start: async () => ({ id: 'n' }),
-        read: async () => ({ entries: [] }),
+        paths: () => Promise.resolve([{ via: 'bytes' as const, sees: 'bytes' }]),
+        start: () => Promise.resolve({ id: 'n' }),
+        read: () => Promise.resolve({ entries: [] }),
         stop: stops.network,
       },
     });

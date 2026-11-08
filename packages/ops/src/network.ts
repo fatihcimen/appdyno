@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   deviceState,
+  must,
   Owner,
   run,
   reportProgress,
@@ -103,7 +104,7 @@ export async function harEntries(file: string, since?: number): Promise<NetworkE
       }
       let from = depth > 0 ? 0 : -1;
       for (let i = 0; i < b.length; i++) {
-        const c = b[i]!;
+        const c = must(b[i], 'a byte');
         if (inString) {
           if (escaped) escaped = false;
           else if (c === BACKSLASH) escaped = true;
@@ -138,12 +139,12 @@ const PROXYMAN_CLI = [
 ];
 
 /** What a running Proxyman listening on `proxy`'s port has seen, if that is what `proxy` is. */
-async function proxymanEntries(proxy: string, since: number) {
+async function proxymanEntries(proxy: string | undefined, since: number) {
   const cli = PROXYMAN_CLI.find((p) => existsSync(p));
   if (!cli) return undefined;
   const host = await run(cli, ['proxy-host'], { timeout: 10_000 }).catch(() => undefined);
   const port = host && /"port"\s*:\s*(\d+)/.exec(host.stdout)?.[1];
-  if (!port || !proxy.endsWith(`:${port}`)) return undefined;
+  if (!port || !proxy?.endsWith(`:${port}`)) return undefined;
   const dir = mkdtempSync(join(tmpdir(), 'appdyno-har-'));
   try {
     const file = join(dir, 'export.har');
@@ -157,7 +158,7 @@ async function proxymanEntries(proxy: string, since: number) {
 const listening = (hostPort: string) =>
   new Promise<boolean>((resolve) => {
     const [host, port] = hostPort.split(':');
-    const c = connect({ host: host!, port: Number(port), timeout: 2_000 });
+    const c = connect({ host: must(host, 'a host'), port: Number(port), timeout: 2_000 });
     const done = (v: boolean) => {
       c.destroy();
       resolve(v);
@@ -174,8 +175,11 @@ const line = (e: NetworkEntry) =>
 
 /** What a running capture has seen so far; none from a proxy whose list this tool cannot read. */
 export async function readCapture(s: Session, c: Capture): Promise<NetworkAnswer | undefined> {
-  if (c.via !== 'proxy') return s.device.network!.read(c.handle!);
-  const entries = await proxymanEntries(c.proxy!, c.since);
+  if (c.via !== 'proxy')
+    return must(s.device.network, "the device's capture").read(
+      must(c.handle, "the capture's handle"),
+    );
+  const entries = await proxymanEntries(c.proxy, c.since);
   return entries && { entries };
 }
 
@@ -201,7 +205,10 @@ export function networkOps(ctx: ServerContext) {
     const own = (await s.device.network?.paths()) ?? [];
     const proxy = await s.device.settings.get('proxy').then(
       (now) => ({ via: 'proxy' as const, sees: `${SEES_PROXY}. Now: ${now}` }),
-      (e: Error) => ({ via: 'proxy' as const, refused: e.message }),
+      (e: unknown) => ({
+        via: 'proxy' as const,
+        refused: e instanceof Error ? e.message : String(e),
+      }),
     );
     return [proxy, ...own];
   };
@@ -268,7 +275,7 @@ export function networkOps(ctx: ServerContext) {
         const now = captures.read(serial);
         if (action === 'paths') {
           const ways = await paths(s);
-          const t = ways.map((p) => `${p.via}: ${p.sees ?? `no: ${p.refused}`}`).join('\n');
+          const t = ways.map((p) => `${p.via}: ${p.sees ?? `no: ${String(p.refused)}`}`).join('\n');
           return reply(clean(t), { done: clean(t), paths: ways });
         }
         if (action === 'start') {
@@ -333,7 +340,7 @@ export function networkOps(ctx: ServerContext) {
         if (read)
           return answer(now, read, contains, limit, now.via === 'proxy' ? 'Proxyman' : now.via);
         throw new ToolError(
-          `the traffic went through ${now.proxy}, whose list this tool cannot read: export it as HAR and give har (Charles: File, Export Session; mitmproxy: --set hardump=file)`,
+          `the traffic went through ${String(now.proxy)}, whose list this tool cannot read: export it as HAR and give har (Charles: File, Export Session; mitmproxy: --set hardump=file)`,
           'UNSUPPORTED',
         );
       },

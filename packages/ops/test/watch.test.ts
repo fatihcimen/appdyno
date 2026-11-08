@@ -102,7 +102,7 @@ describe('a window that shares its stream', () => {
   });
 
   it('takes a request once, and answers it by file under its id', async () => {
-    const watching = vi.fn(async () => ({ why: 'no picture' }));
+    const watching = vi.fn(() => Promise.resolve({ why: 'no picture' }));
     const answerFile = deviceStateFile('watch', 'phone.answer');
     writeState(deviceStateFile('watch', 'phone'), { id: 'a', ms: 10, strip: false });
     const look = answerWatches('phone', { watch: watching });

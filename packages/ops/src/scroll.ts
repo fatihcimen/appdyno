@@ -1,4 +1,5 @@
 import {
+  must,
   pause,
   reportProgress,
   selectIn,
@@ -45,7 +46,7 @@ const STILL_STROKES = 2;
 export const moved = (was: ScreenElement[], now: ScreenElement[]) =>
   was.length !== now.length ||
   was.some((e, i) => {
-    const o = now[i]!;
+    const o = must(now[i], 'the element now at its place');
     return e.label !== o.label || Math.abs(e.y - o.y) >= 8 || Math.abs(e.x - o.x) >= 8;
   });
 
@@ -109,8 +110,9 @@ export function scrollingFor({ windowSize, line, pick, offer }: Around) {
       a.y === undefined ||
       (a.x >= r.x && a.x <= r.x + r.width && a.y >= r.y && a.y <= r.y + r.height);
     const boxes = screen.elements
-      .filter((e) => e.scrollable && e.rect && e.visible !== false && under(e.rect))
-      .map((e) => e.rect!)
+      .flatMap((e) =>
+        e.scrollable && e.rect && e.visible !== false && under(e.rect) ? [e.rect] : [],
+      )
       .sort((p, q) => q.width * q.height - p.width * p.height);
     const row = vertical ? undefined : boxes.findLast((r) => r.width > r.height);
     return row ?? boxes[0] ?? { x: 0, y: 0, width: w.w, height: w.h };

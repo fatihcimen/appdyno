@@ -81,14 +81,14 @@ export type ToolAnnotations = {
 /** What a tool answers: the text (and images) for the model, a summary matching its output schema. */
 export type ToolResult<D = Record<string, unknown>> = { blocks: Block[]; data: D };
 
-export interface Tool {
+export type Tool = {
   title: string;
   description: string;
   input: z.ZodObject;
   output: z.ZodObject;
   annotations: ToolAnnotations;
   handler: (args: Record<string, unknown>) => Promise<ToolResult>;
-}
+};
 
 /** One operation: a tool on the MCP surface and a command on the CLI. */
 export type Op = Tool & { name: string };
@@ -112,7 +112,7 @@ export function defineOp<
     ...rest,
     handler: async (args) => {
       try {
-        return (await run(args as z.infer<S>)) as ToolResult;
+        return await run(args as z.infer<S>);
       } catch (e) {
         return refused(e);
       }
@@ -156,7 +156,7 @@ export const ANY_ARGUMENTS = z.looseObject({});
 /** A call's arguments as its op takes them, or a refusal naming each one wrong; `flag`: how the caller writes a name. */
 export function argumentsFor(op: Pick<Tool, 'input'>, args: unknown, flag = '') {
   const checked = op.input.safeParse(args);
-  if (checked.success) return checked.data as Record<string, unknown>;
+  if (checked.success) return checked.data;
   throw new ToolError(
     checked.error.issues
       .map((x) => `${x.path.length ? `${flag}${x.path.join('.')}: ` : ''}${x.message}`)

@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { nearest, throwIfCancelled, reportProgress } from '@appdyno/core';
+import { must, nearest, throwIfCancelled, reportProgress } from '@appdyno/core';
 import {
   type FlowStep,
   type RunOptions,
@@ -134,10 +134,10 @@ export function flowRunner(
   steps: Steps,
 ) {
   const opInput = (name: string, args: Record<string, unknown>, where: string) => {
-    const p = ops()[name]!.input.safeParse(args);
+    const p = must(ops()[name], `the op ${name}`).input.safeParse(args);
     if (!p.success)
       throw new ToolError(`${where}: ${z.prettifyError(p.error)}`, 'INVALID_ARGUMENT');
-    return p.data as Record<string, unknown>;
+    return p.data;
   };
 
   /** Every step's arguments, before the first runs: a typo is not found at step 40. */
@@ -167,7 +167,7 @@ export function flowRunner(
   const act = async (s: Session, st: FlowStep): Promise<StepOutcome> => {
     const [name, args] = opCall(st);
     const t0 = Date.now();
-    const op = ops()[name]!;
+    const op = must(ops()[name], `the op ${name}`);
     const answered = await op.handler(opInput(name, args, st.action)).catch(async (e: unknown) => {
       if (!(e instanceof ToolError)) throw e;
       // a prompt comes once: a run after the one that answered it finds none, and that is no failure of the run
@@ -216,14 +216,16 @@ export function flowRunner(
       .screenshot({ format: 'jpeg', quality: 80, maxPx: 1024 })
       .catch(() => undefined);
     if (shot) {
-      out.push(join(dir, 'screen.jpg'));
-      writeFileSync(out.at(-1)!, shot.data);
+      const file = join(dir, 'screen.jpg');
+      out.push(file);
+      writeFileSync(file, shot.data);
     }
     const tree = await s.device.tree().catch(() => undefined);
     if (tree) {
-      out.push(join(dir, 'tree.json'));
+      const file = join(dir, 'tree.json');
+      out.push(file);
       writeFileSync(
-        out.at(-1)!,
+        file,
         JSON.stringify(tree, (_k, v: unknown) => (typeof v === 'string' ? clean(v) : v), 1),
       );
     }

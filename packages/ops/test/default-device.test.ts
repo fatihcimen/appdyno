@@ -5,7 +5,7 @@ import { DEFAULT_POLICY } from '../src/policy.js';
 import { FakeDevice } from './fake-device.js';
 
 const provider = (list: Awaited<ReturnType<DeviceProvider['list']>>): DeviceProvider => ({
-  list: async () => list,
+  list: () => Promise.resolve(list),
   handles: () => true,
   open: () => new FakeDevice(),
 });
@@ -19,7 +19,11 @@ describe('a device warmed before its first call', () => {
     let warmed = 0;
     const p = provider([{ serial: 'one', state: 'booted', ready: true }]);
     p.open = () => {
-      const d = Object.assign(new FakeDevice(), { warm: () => void warmed++ });
+      const d = Object.assign(new FakeDevice(), {
+        warm: () => {
+          warmed++;
+        },
+      });
       opened.push(d);
       return d;
     };

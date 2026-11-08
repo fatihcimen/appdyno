@@ -26,7 +26,7 @@ const context = (o: { measurements?: string; traceLimitGb: number; autoPrune?: b
     DEFAULT_POLICY,
     [
       {
-        list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+        list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
         handles: () => true,
         open: () => device,
       },

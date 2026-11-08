@@ -12,7 +12,7 @@ const contextOf = (device: FakeDevice) =>
     DEFAULT_POLICY,
     [
       {
-        list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+        list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
         handles: () => true,
         open: () => device,
       },
@@ -92,7 +92,7 @@ describe('what did not happen is no success', () => {
       expect(r.isError).toBe(true);
       expect(r.structuredContent).toMatchObject({ code: 'INVALID_ARGUMENT', dispatched: false });
       expect(r.structuredContent.hint).toEqual(expect.any(String));
-      expect(r.content[0]!.text).toMatch(said);
+      expect(r.content[0]?.text).toMatch(said);
       expect(namesOf(device).filter((n) => n !== 'connect')).toEqual([]);
     },
   );
@@ -101,8 +101,8 @@ describe('what did not happen is no success', () => {
     const r = await asked(new FakeDevice(), 'wait_for', { text: 'Never', timeoutMs: 300 });
     expect(r.isError).toBe(true);
     expect(r.structuredContent.code).toBe('TIMEOUT');
-    expect(r.content[0]!.text).toContain('not shown after 300 ms');
-    expect(r.content[0]!.text).toContain('Ana sayfa');
+    expect(r.content[0]?.text).toContain('not shown after 300 ms');
+    expect(r.content[0]?.text).toContain('Ana sayfa');
   });
 
   it('so does one with nothing asked of the screen', async () => {
@@ -134,14 +134,14 @@ describe('what did not happen is no success', () => {
     const r = await asked(device, 'alert', { answer: 'allow' });
     expect(r.isError).toBe(true);
     expect(r.structuredContent).toMatchObject({ code: 'NOT_FOUND', dispatched: false });
-    expect(r.content[0]!.text).toContain('no system alert is open');
+    expect(r.content[0]?.text).toContain('no system alert is open');
     expect(namesOf(device)).not.toContain('act');
   });
 
   it('asking whether an alert is open is no refusal', async () => {
     const r = await asked(new FakeDevice(), 'alert', {});
     expect(r.isError).toBeFalsy();
-    expect(r.content[0]!.text).toContain('no system alert is open');
+    expect(r.content[0]?.text).toContain('no system alert is open');
   });
 
   it('a sequence stops at an answer to no alert', async () => {
@@ -169,9 +169,7 @@ describe('a failed action says whether its touch went out', () => {
 
   it('no: the device refused before the touch', async () => {
     const device = new FakeDevice();
-    device.act = async () => {
-      throw new DeviceError('STALE', 'another window came in front');
-    };
+    device.act = () => Promise.reject(new DeviceError('STALE', 'another window came in front'));
     const e = await refusal(callerOf(contextOf(device))('tap', { x: 10, y: 10 }));
     expect(e.code).toBe('STALE');
     expect(e.dispatched).toBe(false);
@@ -181,9 +179,7 @@ describe('a failed action says whether its touch went out', () => {
     'unknown: %s, as it may have made the touch first',
     async (code) => {
       const device = new FakeDevice();
-      device.act = async () => {
-        throw new DeviceError(code, 'it stopped answering');
-      };
+      device.act = () => Promise.reject(new DeviceError(code, 'it stopped answering'));
       const e = await refusal(callerOf(contextOf(device))('tap', { x: 10, y: 10 }));
       expect(e.dispatched).toBe('unknown');
       expect(e.message).toContain('read the screen before trying again');
@@ -192,10 +188,10 @@ describe('a failed action says whether its touch went out', () => {
 
   it('unknown: what failed after the action went out, whatever its code: the read after a touch can fail', async () => {
     const device = new FakeDevice();
-    device.act = async () => {
+    device.act = () => {
       const e = new DeviceError('NOT_FOUND', 'no window to read');
       e.sent = true;
-      throw e;
+      return Promise.reject(e);
     };
     const e = await refusal(callerOf(contextOf(device))('press_key', { key: 'home' }));
     expect(e.code).toBe('NOT_FOUND');
@@ -206,9 +202,7 @@ describe('a failed action says whether its touch went out', () => {
 
   it('no: a look at the screen that failed before the touch', async () => {
     const device = new FakeDevice();
-    device.tree = async () => {
-      throw new DeviceError('NOT_FOUND', 'no window to read');
-    };
+    device.tree = () => Promise.reject(new DeviceError('NOT_FOUND', 'no window to read'));
     const e = await refusal(callerOf(contextOf(device))('tap', { x: 10, y: 10 }));
     expect(e.dispatched).toBe(false);
     expect(namesOf(device)).not.toContain('act');
@@ -267,9 +261,10 @@ describe('a touch looks first', () => {
   it('a phone that locked meanwhile refuses by name, and is not touched', async () => {
     const device = new FakeDevice();
     const real = device.tree.bind(device);
-    device.tree = async () => {
-      throw new DeviceError('DEVICE_LOCKED', 'it is locked behind its passcode', 'unlock it');
-    };
+    device.tree = () =>
+      Promise.reject(
+        new DeviceError('DEVICE_LOCKED', 'it is locked behind its passcode', 'unlock it'),
+      );
     const e = await refusal(callerOf(contextOf(device))('swipe', { direction: 'up' }));
     expect(e.code).toBe('DEVICE_LOCKED');
     expect(e.dispatched).toBe(false);
@@ -283,9 +278,8 @@ describe('a touch looks first', () => {
     const call = callerOf(contextOf(device));
     await call('screen');
     const real = device.tree.bind(device);
-    device.tree = async () => {
-      throw new DeviceError('DEVICE_LOCKED', 'it is locked behind its PIN');
-    };
+    device.tree = () =>
+      Promise.reject(new DeviceError('DEVICE_LOCKED', 'it is locked behind its PIN'));
     await refusal(call('screen'));
     const e = await refusal(call('tap', { x: 10, y: 10 }));
     expect(e.code).toBe('DEVICE_LOCKED');

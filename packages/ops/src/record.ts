@@ -1,6 +1,14 @@
 import { mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { safeName, deviceState, Owner, readVideo, reportProgress, stateDir } from '@appdyno/core';
+import {
+  safeName,
+  deviceState,
+  must,
+  Owner,
+  readVideo,
+  reportProgress,
+  stateDir,
+} from '@appdyno/core';
 import type { DeviceError } from '@appdyno/protocol';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
@@ -34,7 +42,7 @@ export async function endRecording(s: Session) {
   filming.remove(serial);
   const videos = await Promise.all(files.map((f) => readVideo(f)));
   const lines = files.map((f, i) => {
-    const v = videos[i]!;
+    const v = must(videos[i], `the video of ${f}`);
     return `${f}: ${(v.durationMs / 1000).toFixed(1)} s, ${v.frames} frames, ${v.width}x${v.height}, ${v.codec}`;
   });
   return {

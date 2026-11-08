@@ -2,6 +2,7 @@ import { androidScreen } from '@appdyno/driver-android';
 import {
   cannot,
   DeviceActions,
+  must,
   type ActOptions,
   type AppManager,
   type CrashesQuery,
@@ -164,11 +165,16 @@ export const LACKS: MeasureSource = {
 };
 
 /** A part of the port a test did not give: whatever is asked of it, it refuses. */
-const notGiven = <T extends object>(what: string) =>
-  new Proxy({} as T, {
-    get: () => async () => {
-      throw new DeviceError('UNSUPPORTED', `this fake has no ${what}`);
-    },
+const notGiven = (what: string): object =>
+  new Proxy(
+    {},
+    { get: () => () => Promise.reject(new DeviceError('UNSUPPORTED', `this fake has no ${what}`)) },
+  );
+
+/** What a call of the device answers: what `work` throws is the promise's rejection, as it is a device's. */
+const answer = <T>(work: () => T) =>
+  new Promise<T>((resolve) => {
+    resolve(work());
   });
 
 export class FakeDevice extends DeviceActions implements Device {
@@ -176,15 +182,18 @@ export class FakeDevice extends DeviceActions implements Device {
   readonly platformScreen = androidScreen;
   virtual = true;
   lastStartWasCold = true;
-  apps = notGiven<AppManager>('apps');
-  recorder = notGiven<ScreenRecorder>('recorder');
-  mirror = notGiven<Mirror>('mirror');
-  settings: DeviceSettings = { get: async () => 'none', set: async () => undefined };
-  events = notGiven<DeviceEvents>('events');
+  apps = notGiven('apps') as AppManager;
+  recorder = notGiven('recorder') as ScreenRecorder;
+  mirror = notGiven('mirror') as Mirror;
+  settings: DeviceSettings = {
+    get: () => Promise.resolve('none'),
+    set: () => Promise.resolve(undefined),
+  };
+  events = notGiven('events') as DeviceEvents;
   /** An agent without `wait`: the caller polls. */
-  waitChange: Device['waitChange'] = async () => undefined;
-  dismissKeyboard: Device['dismissKeyboard'] = async () => undefined;
-  launchAlongside(_pkg: string) {}
+  waitChange: Device['waitChange'] = () => Promise.resolve(undefined);
+  dismissKeyboard: Device['dismissKeyboard'] = () => Promise.resolve();
+  launchAlongside = (_pkg: string) => undefined;
   hello: Hello = {
     agentVersion: '0.1.0',
     protocol: { major: 2 },
@@ -220,7 +229,7 @@ export class FakeDevice extends DeviceActions implements Device {
   private swiped = 0;
 
   current(): Tree {
-    const t = tree(SCREENS[this.screen]!);
+    const t = tree(must(SCREENS[this.screen], `the screen ${this.screen}`));
     if (this.swiped > 0) {
       t.nodes.push({
         p: -1,
@@ -258,19 +267,23 @@ export class FakeDevice extends DeviceActions implements Device {
     return t;
   }
 
-  async hardware() {
-    return { platform: 'android' as const, controls: [] };
+  hardware() {
+    return Promise.resolve({ platform: 'android' as const, controls: [] });
   }
 
-  async open() {
-    if (this.openError) throw this.openError;
-    return this.hello;
+  open() {
+    return this.openError ? Promise.reject(this.openError) : Promise.resolve(this.hello);
   }
-  async tree() {
-    this.record('tree');
-    return this.current();
+  tree() {
+    return answer(() => {
+      this.record('tree');
+      return this.current();
+    });
   }
-  async act(action: ActParams, opts: ActOptions = {}) {
+  act(action: ActParams, opts: ActOptions = {}) {
+    return answer(() => this.acted(action, opts));
+  }
+  private acted(action: ActParams, opts: ActOptions) {
     this.record('act', action, opts);
     if (action.kind === 'swipe') {
       const on = this.swiped + (action.to.y < action.from.y ? 1 : -1);
@@ -279,7 +292,7 @@ export class FakeDevice extends DeviceActions implements Device {
     if (action.kind === 'tap') {
       if (this.permissionUp && action.y >= 1000 && action.y <= 1100) this.permissionUp = false;
       else {
-        const hit = SCREENS[this.screen]!.find(
+        const hit = must(SCREENS[this.screen], `the screen ${this.screen}`).find(
           (n) =>
             n.go &&
             action.x >= n.b[0] &&
@@ -314,90 +327,97 @@ export class FakeDevice extends DeviceActions implements Device {
     const r = await this.act({ kind: 'key', key: 'tab' }, opts);
     return { ...r, mode: 'setText' as const, verified: true, focusMs: 5 };
   }
-  async screenshot(): ReturnType<Device['screenshot']> {
-    this.record('screenshot');
-    return {
-      meta: { w: 460, h: 1024, format: 'jpeg', bytes: 3 },
-      data: Buffer.from([1, 2, 3]),
-    };
+  screenshot(): ReturnType<Device['screenshot']> {
+    return answer(() => {
+      this.record('screenshot');
+      return {
+        meta: { w: 460, h: 1024, format: 'jpeg' as const, bytes: 3 },
+        data: Buffer.from([1, 2, 3]),
+      };
+    });
   }
-  async clearLocation() {
-    this.record('clearLocation');
+  clearLocation() {
+    return answer(() => this.record('clearLocation'));
   }
-  async openView(view: SystemView) {
-    this.record('openView', view);
+  openView(view: SystemView) {
+    return answer(() => this.record('openView', view));
   }
   /** A row to tap, as a device with no link to an app's page answers. */
   settingsRow: string | undefined;
-  async openSettings(to: Parameters<Device['openSettings']>[0]) {
-    this.record('openSettings', to);
-    return this.settingsRow ? { row: this.settingsRow } : {};
+  openSettings(to: Parameters<Device['openSettings']>[0]) {
+    return answer(() => {
+      this.record('openSettings', to);
+      return this.settingsRow ? { row: this.settingsRow } : {};
+    });
   }
-  async foreground() {
-    return this.current().windows.at(-1)!.pkg;
+  foreground() {
+    return answer(() => must(this.current().windows.at(-1), 'a window').pkg);
   }
-  async setClipboard(text: string) {
-    this.record('setClipboard', text);
+  setClipboard(text: string) {
+    return answer(() => this.record('setClipboard', text));
   }
-  async setOrientation(r: 0 | 1 | 2 | 3) {
-    this.record('setOrientation', r);
+  setOrientation(r: 0 | 1 | 2 | 3) {
+    return answer(() => this.record('setOrientation', r));
   }
-  async openUrl(url: string, pkg?: string) {
-    this.record('openUrl', url, pkg);
+  openUrl(url: string, pkg?: string) {
+    return answer(() => this.record('openUrl', url, pkg));
   }
-  async launch(pkg: string) {
-    this.record('launch', pkg);
-    this.screen = 'home';
+  launch(pkg: string) {
+    return answer(() => {
+      this.record('launch', pkg);
+      this.screen = 'home';
+    });
   }
-  async terminate(pkg: string) {
-    this.record('terminate', pkg);
+  terminate(pkg: string) {
+    return answer(() => this.record('terminate', pkg));
   }
-  async setLocation(lat: number, lon: number) {
-    this.record('setLocation', lat, lon);
+  setLocation(lat: number, lon: number) {
+    return answer(() => this.record('setLocation', lat, lon));
   }
-  async getClipboard() {
-    return undefined;
+  getClipboard() {
+    return Promise.resolve(undefined);
   }
-  async audit(): ReturnType<Device['audit']> {
-    return { engine: 'rules', issues: [], truncated: false, elapsedMs: 1 };
+  audit(): ReturnType<Device['audit']> {
+    return Promise.resolve({ engine: 'rules', issues: [], truncated: false, elapsedMs: 1 });
   }
   agentUp = false;
-  async stopAgent() {
+  stopAgent() {
     this.agentUp = false;
+    return Promise.resolve();
   }
   /** What `logs` finds, and what it was asked. */
   logLines: string[] = [];
   logNote: string | undefined;
   logAsked: LogsQuery | undefined;
-  async logs(q: LogsQuery) {
+  logs(q: LogsQuery) {
     this.logAsked = q;
-    return {
+    return Promise.resolve({
       lines: this.logLines,
       source: 'fake log',
       ...(this.logNote && { note: this.logNote }),
-    };
+    });
   }
   crashReports: CrashReport[] = [];
-  async crashes(q: CrashesQuery) {
-    return {
+  crashes(q: CrashesQuery) {
+    return Promise.resolve({
       reports: this.crashReports.slice(0, q.limit),
       source: 'fake reports',
-    };
+    });
   }
   /** How far ahead of this Mac the fake's clock runs. */
   clockAheadMs = 0;
-  async wallClock() {
-    return Date.now() + this.clockAheadMs;
+  wallClock() {
+    return Promise.resolve(Date.now() + this.clockAheadMs);
   }
   running = true;
-  async appRunning() {
-    return this.running;
+  appRunning() {
+    return Promise.resolve(this.running);
   }
   /** Set: the fake reports this process id, as Android does. */
   pid: string | undefined;
   appPid: FakeDevice['fakePid'] | undefined;
-  fakePid = async () => this.pid;
-  close() {}
+  fakePid = () => Promise.resolve(this.pid);
+  close = () => undefined;
 
   /** Canned measurements; `jank` sets the share of janky frames, `memKb` the PSS per read. */
   jank = 4;
@@ -407,92 +427,110 @@ export class FakeDevice extends DeviceActions implements Device {
     const m = <T>(value: T, raw: string) => ({ value, raw, at: '2026-10-25T00:00:00.000Z' });
     return {
       ...LACKS,
-      cpu: async () => {
-        this.record('perf.cpu');
-        return m(
-          { percent: 12.5, windowMs: 2000, ticks: 25, clockTicksPerSec: 100 },
-          'stat a\n---\nstat b',
-        );
-      },
-      memory: async () => {
-        this.record('perf.memory');
-        const pssKb = this.memKb[Math.min(this.memRead++, this.memKb.length - 1)]!;
-        return m(
-          { kb: pssKb, kind: 'pss', javaHeapKb: 20_000, nativeHeapKb: 30_000, graphicsKb: 10_000 },
-          `TOTAL PSS: ${pssKb}`,
-        );
-      },
-      frames: async () => {
-        this.record('perf.frames');
-        return m(
-          {
-            totalFrames: 120,
-            jankyFrames: Math.round(1.2 * this.jank),
-            jankyPercent: this.jank,
-            frozenFrames: 0,
-            fewFrames: false,
-            p95Ms: 18,
-          },
-          'Total frames rendered: 120',
-        );
-      },
-      resetFrames: async () => {
-        this.record('perf.reset');
-      },
+      cpu: () =>
+        answer(() => {
+          this.record('perf.cpu');
+          return m(
+            { percent: 12.5, windowMs: 2000, ticks: 25, clockTicksPerSec: 100 },
+            'stat a\n---\nstat b',
+          );
+        }),
+      memory: () =>
+        answer(() => {
+          this.record('perf.memory');
+          const pssKb = must(
+            this.memKb[Math.min(this.memRead++, this.memKb.length - 1)],
+            'a memory reading',
+          );
+          return m(
+            {
+              kb: pssKb,
+              kind: 'pss' as const,
+              javaHeapKb: 20_000,
+              nativeHeapKb: 30_000,
+              graphicsKb: 10_000,
+            },
+            `TOTAL PSS: ${pssKb}`,
+          );
+        }),
+      frames: () =>
+        answer(() => {
+          this.record('perf.frames');
+          return m(
+            {
+              totalFrames: 120,
+              jankyFrames: Math.round(1.2 * this.jank),
+              jankyPercent: this.jank,
+              frozenFrames: 0,
+              fewFrames: false,
+              p95Ms: 18,
+            },
+            'Total frames rendered: 120',
+          );
+        }),
+      resetFrames: () => answer(() => this.record('perf.reset')),
       /** A counter read before and after, by whatever a test made of the two. */
       async framesDuring(this: MeasureSource, app: string, _s: number, during) {
         await this.resetFrames(app);
         await during();
         return this.frames(app);
       },
-      vitals: async () => {
-        return m({ load: [1, 1, 1], cpuPressure: 2, thermalStatus: 0 }, '==load==');
-      },
-      launch: async (_pkg: string, o: { mode: LaunchMode }) => {
-        this.record('perf.launch', o.mode);
-        return m(
-          {
-            mode: o.mode,
-            samples: [
-              { totalMs: 610, state: 'COLD' },
-              { totalMs: 590, state: 'COLD' },
-              { totalMs: 600, state: 'COLD' },
-            ],
-            medianMs: 600,
-          },
-          'TotalTime: 600',
-        );
-      },
-      cpuProfile: async () =>
-        m(
-          {
-            durationMs: 3000,
-            samples: 2997,
-            top: [{ percent: 62.1, samples: 1861, symbol: 'dev.app.Busy.loop' }],
-          },
-          'Samples: 2997',
+      vitals: () =>
+        Promise.resolve(m({ load: [1, 1, 1], cpuPressure: 2, thermalStatus: 0 }, '==load==')),
+      launch: (_pkg: string, o: { mode: LaunchMode }) =>
+        answer(() => {
+          this.record('perf.launch', o.mode);
+          return m(
+            {
+              mode: o.mode,
+              samples: [
+                { totalMs: 610, state: 'COLD' },
+                { totalMs: 590, state: 'COLD' },
+                { totalMs: 600, state: 'COLD' },
+              ],
+              medianMs: 600,
+            },
+            'TotalTime: 600',
+          );
+        }),
+      cpuProfile: () =>
+        Promise.resolve(
+          m(
+            {
+              durationMs: 3000,
+              samples: 2997,
+              top: [{ percent: 62.1, samples: 1861, symbol: 'dev.app.Busy.loop' }],
+            },
+            'Samples: 2997',
+          ),
         ),
-      heap: async (pkg: string, dir: string) =>
-        m({ file: `${dir}/heap-${pkg}-1.hprof`, bytes: 60 * 1048576, kind: 'hprof' }, 'dumpheap'),
-      frameTrace: async () => {
-        return m(
-          {
-            kind: 'timeline',
-            frames: 50,
-            janky: 5,
-            jankyPercent: 10,
-            appDeadlineMissed: 4,
-            appJankPercent: 8,
-            bufferStuffing: 1,
-            surfaceFlinger: 0,
-            p50Ms: 9,
-            p95Ms: 30,
-            worstMs: 45,
-            frozen: 1,
-          },
-          '"ts","dur","jank_type"',
-        );
-      },
+      heap: (pkg: string, dir: string) =>
+        Promise.resolve(
+          m(
+            { file: `${dir}/heap-${pkg}-1.hprof`, bytes: 60 * 1048576, kind: 'hprof' as const },
+            'dumpheap',
+          ),
+        ),
+      frameTrace: () =>
+        Promise.resolve(
+          m(
+            {
+              kind: 'timeline',
+              frames: 50,
+              janky: 5,
+              jankyPercent: 10,
+              appDeadlineMissed: 4,
+              appJankPercent: 8,
+              bufferStuffing: 1,
+              surfaceFlinger: 0,
+              p50Ms: 9,
+              p95Ms: 30,
+              worstMs: 45,
+              frozen: 1,
+            },
+            '"ts","dur","jank_type"',
+          ),
+        ),
     } satisfies MeasureSource;
   }
 }
@@ -514,7 +552,8 @@ export class WithKeyboard extends FakeDevice {
       });
     return t;
   }
-  dismissKeyboard = async () => {
+  dismissKeyboard = () => {
     if (this.closes) this.up = false;
+    return Promise.resolve();
   };
 }
