@@ -147,11 +147,11 @@ describe("a person's pasteboard", () => {
 
 describe('a script', () => {
   it('is type-checked with the rest, as nothing else runs it', () => {
-    const scripts = JSON.parse(readFileSync(join(root, 'tsconfig.scripts.json'), 'utf8'));
+    const scripts = JSON.parse(readFileSync(join(root, 'tsconfig.json'), 'utf8'));
     expect(scripts.compilerOptions.checkJs).toBe(true);
-    expect(scripts.include).toEqual(['**/*.mjs']);
+    expect(scripts.include).toEqual(['**/*.mjs', '*.js', '*.ts']);
     const { typecheck } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).scripts;
-    expect(typecheck).toContain('tsconfig.scripts.json');
+    expect(typecheck).toContain('tsc -p tsconfig.json');
   });
 });
 

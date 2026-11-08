@@ -32,7 +32,9 @@ scripts/lint-native.sh                        # all that is not TypeScript; need
 ```
 
 `pnpm lint` runs eslint and `prettier --check`; `pnpm format` fixes formatting. The same checks run in
-`.github/workflows/ci.yml`.
+`.github/workflows/ci.yml`. eslint holds the paths in `strict` in `eslint.config.js` to typescript-eslint's
+`strictTypeChecked` and `stylisticTypeChecked`, with the compiler's types; a package goes in that list once it is clean
+under them.
 
 `scripts/lint-native.sh` runs the linters `.mise.toml` pins, and fails on any warning: shellcheck and shfmt for the
 shell scripts (`ci.sh` is zsh, which shellcheck does not read, so `zsh -n` parses it), actionlint and zizmor for the
@@ -44,8 +46,9 @@ warnings are the lint's alone: the flags a Mac compiles the viewer and helpers w
 newer clang's new warning must not leave a person with no viewer. `android/.editorconfig` holds ktlint's rules for the
 Kotlin.
 
-`pnpm typecheck` holds every `.mjs` to the packages' types too, by `tsconfig.scripts.json`: a script is run by hand and
-no test reaches it. That config lets a parameter go untyped, under which an empty array that fills later needs a type.
+`pnpm typecheck` holds every `.mjs` and the configs at the root to the packages' types too, by the root `tsconfig.json`:
+a script is run by hand and no test reaches it. That config lets a parameter go untyped, under which an empty array that
+fills later needs a type.
 
 ## Device suites
 

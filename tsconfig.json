@@ -8,6 +8,6 @@
     "useUnknownInCatchVariables": false,
     "noUncheckedIndexedAccess": false
   },
-  "include": ["**/*.mjs"],
+  "include": ["**/*.mjs", "*.js", "*.ts"],
   "exclude": ["**/node_modules", "**/dist", "**/build", "android", "ios"]
 }
