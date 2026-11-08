@@ -15,6 +15,10 @@ services hands an app, as the Firebase Android SDK reads it, which was read in i
 extras, and which of them make a notification. No code of it is here. The push suite's own app,
 android/push-fixture, is built with that SDK's Firebase Messaging, which ships in no package of appdyno.
 
+The Mac app carries Perfetto's trace processor (trace_processor_shell, https://github.com/google/perfetto, Apache
+License 2.0), which reads Android's traces, as Google's release builds it and unchanged but for the app's signature. Its
+license and notices are in licenses/perfetto.txt, as that release gives them.
+
 idevice (https://github.com/jkcoxson/idevice)
 
 MIT License

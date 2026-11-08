@@ -52,7 +52,7 @@ a script is run by hand and no test reaches it. That config holds a script as st
 empty array that fills later, have a JSDoc type, as `/** @param {string} serial */`.
 
 Perfetto's trace processor, which reads Android's traces, is pinned in `packages/driver-android/src/tools.ts` by its
-version and the sha256 its release publishes for each zip. A newer release is
+version and the sha256 its release publishes for each zip, and the app's build takes the same pin. A newer release is
 pinned once each query the Android driver sends reads the same columns from it and the startup numbers agree, with the
 `perf`, `measures-android` and `frame-cause` suites passing on an API 34 emulator.
 

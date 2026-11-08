@@ -52,7 +52,7 @@ bir betik elle çalıştırılır ve ona hiçbir test ulaşmaz. O config bir bet
 sonradan dolan boş bir dizinin JSDoc tipi vardır, `/** @param {string} serial */` gibi.
 
 Android'in trace'lerini okuyan Perfetto trace processor'ı `packages/driver-android/src/tools.ts` içinde sürümüyle ve
-sürümünün her zip için yayımladığı sha256 ile sabitlenir. Daha yeni bir sürüm,
+sürümünün her zip için yayımladığı sha256 ile sabitlenir; uygulamanın build'i de aynı sabiti alır. Daha yeni bir sürüm,
 Android sürücüsünün gönderdiği her sorgu ondan aynı sütunları okuduğunda ve açılış sayıları tuttuğunda, `perf`,
 `measures-android` ve `frame-cause` suite'leri bir API 34 emülatöründe geçerek sabitlenir.
 

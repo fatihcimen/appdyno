@@ -172,6 +172,9 @@ importers:
       '@appdyno/core':
         specifier: workspace:*
         version: link:packages/core
+      '@appdyno/driver-android':
+        specifier: workspace:*
+        version: link:packages/driver-android
       '@appdyno/perf':
         specifier: workspace:*
         version: link:packages/perf

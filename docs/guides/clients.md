@@ -4,7 +4,7 @@
 
 appdyno runs on your Mac, beside the phone or simulator it drives. A client is the app you talk to. This page says how to join the two, client by client, and how to get a phone ready from nothing. What each client offers was read from its own documentation on 2026-11-04. They change often, so if a menu has moved, trust the client's page.
 
-Most clients run appdyno themselves on your Mac, which needs no network at all. A client that lives in a browser cannot start anything on your Mac, and that is the hard case.
+Most clients run appdyno themselves on your Mac, which needs no network at all, but once without the app: the first Android trace fetches its trace processor. A client that lives in a browser cannot start anything on your Mac, and that is the hard case.
 
 | client                                      | how it reaches appdyno                         | start at                                      |
 | ------------------------------------------- | ---------------------------------------------- | --------------------------------------------- |

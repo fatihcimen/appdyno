@@ -71,6 +71,7 @@ const macos = join(contents, 'MacOS');
 const resources = join(contents, 'Resources');
 const helper = join(contents, 'Helpers', `${WINDOW}.app`);
 const helpers = join(helper, 'Contents/MacOS');
+const traceProcessor = join(helpers, 'trace_processor_shell');
 
 if (!existsSync(join(pkg, 'agents/android/agent.apk')))
   throw new Error(
@@ -136,6 +137,38 @@ async function helperBinaries() {
     copyFileSync(built, to);
     sh('strip', '-x', to);
   }
+}
+
+/**
+ * Perfetto's trace processor, which Android's traces are read with, by the pin and digest a download of it is held to,
+ * and its license. Beside the helpers, where the app's appdyno looks first; Perfetto's release has no NOTICE.
+ */
+async function traceProcessorBinary() {
+  const { PERFETTO } = await import('@appdyno/driver-android');
+  const asset = PERFETTO.assets['darwin-arm64'];
+  if (!asset) throw new Error('no pinned Perfetto build for darwin-arm64');
+  const folder = asset.name.replace(/\.zip$/, '');
+  const archive = join(out, 'cache', `perfetto-${PERFETTO.version}-${asset.name}`);
+  if (!existsSync(archive)) {
+    mkdirSync(dirname(archive), { recursive: true });
+    const url = `https://github.com/google/perfetto/releases/download/${PERFETTO.version}/${asset.name}`;
+    sh('curl', '-sSfL', '--retry', '3', '-o', archive, url);
+  }
+  if (sha256(archive) !== asset.sha256) throw new Error(`${archive} is not the pinned release`);
+  const unpacked = mkdtempSync(join(tmpdir(), 'appdyno-perfetto-'));
+  sh(
+    'unzip',
+    '-q',
+    archive,
+    `${folder}/trace_processor_shell`,
+    `${folder}/LICENSE`,
+    '-d',
+    unpacked,
+  );
+  copyFileSync(join(unpacked, folder, 'trace_processor_shell'), traceProcessor);
+  chmodSync(traceProcessor, 0o755);
+  copyFileSync(join(unpacked, folder, 'LICENSE'), join(resources, 'licenses/perfetto.txt'));
+  rmSync(unpacked, { recursive: true, force: true });
 }
 
 /** The app's icon and menu glyph, and the same icon for the helper's Dock tile. */
@@ -330,6 +363,7 @@ for (const file of ['appcast.json', 'appcast.json.sig']) rmSync(join(out, file),
 assemble();
 runtime();
 await helperBinaries();
+await traceProcessorBinary();
 icon();
 thePackage();
 signAll();
@@ -338,14 +372,15 @@ const dmg = diskImage();
 if (updateKey) appcast(dmg, updateKey);
 cask(dmg);
 
-/** @type {[string, string][]} */
+/** @type {[string, number][]} */
 const parts = [
-  ['Node runtime', join(macos, 'node')],
-  ['viewer and scanner', helpers],
-  ['menu bar item', join(macos, NAME)],
-  ['the package', join(resources, 'app')],
+  ['Node runtime', sizeOf(join(macos, 'node'))],
+  ['viewer and scanner', sizeOf(helpers) - sizeOf(traceProcessor)],
+  ['trace processor', sizeOf(traceProcessor)],
+  ['menu bar item', sizeOf(join(macos, NAME))],
+  ['the package', sizeOf(join(resources, 'app'))],
 ];
-for (const [what, path] of parts) console.log(`${what.padEnd(20)}${mb(sizeOf(path))}`);
+for (const [what, bytes] of parts) console.log(`${what.padEnd(20)}${mb(bytes)}`);
 console.log(`${'the app'.padEnd(20)}${mb(sizeOf(app))}`);
 const signed = notary ? 'signed and notarized' : identity ? 'signed, NOT notarized' : 'ad hoc';
 console.log(`${image.padEnd(32)}${mb(statSync(dmg).size)}, ${signed}`);
