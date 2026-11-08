@@ -87,7 +87,6 @@ const ENGLISH_ONLY: Record<string, string> = {
   'CONTRIBUTING.md': 'not yet in Turkish',
   'docs/reference/ci.md': 'not yet in Turkish',
   'docs/reference/cli.md': 'not yet in Turkish',
-  'docs/reference/library.md': 'not yet in Turkish',
   'docs/reference/mirror.md': 'not yet in Turkish',
   'docs/reference/perf.md': 'not yet in Turkish',
   'docs/reference/protocol.md': 'not yet in Turkish',
@@ -124,7 +123,7 @@ const partsOf = (text: string) => {
     const fence = line.trimStart().startsWith('```');
     if (fence) fenced = !fenced;
     kinds.push(fence ? '```' : fenced ? 'code' : kindOf(line));
-    if (fence || fenced) code.push(line.replace(/(?:^|\s+)(?:#|\/\/) .*$/, ''));
+    if (fence || fenced) code.push(line.replace(/\s*\/\*.*\*\/|(?:^|\s+)(?:#|\/\/) .*$/, ''));
     else prose.push(line);
   }
   return { kinds, code, prose: prose.join('\n') };

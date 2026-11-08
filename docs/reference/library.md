@@ -1,5 +1,7 @@
 # Library
 
+[Türkçe](library.tr.md)
+
 `appdyno` exports one function, `connect`. What it gives calls every tool by its name, its arguments and its answer typed from the tool's own schema, and replays flows. A refused call throws, with `code`, `hint` and `dispatched`. The types stand alone: a project needs nothing else installed, zod included.
 
 ```ts
