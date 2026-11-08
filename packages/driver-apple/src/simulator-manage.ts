@@ -39,8 +39,6 @@ const copyFolders = (from: string, to: string) => {
 };
 
 export class SimulatorApps implements AppManager {
-  readonly languageStays = true;
-
   constructor(
     private readonly simctl: Simctl,
     private readonly udid: string,

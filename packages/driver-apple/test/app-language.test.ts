@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import type { AppManager } from '@appdyno/core';
 import { Devicectl } from '../src/devicectl.js';
 import { appLanguage, launchLanguage } from '../src/manage.js';
-import { PhoneSettings } from '../src/phone-manage.js';
+import { PhoneApps, PhoneSettings } from '../src/phone-manage.js';
 import type { Simctl } from '../src/simctl.js';
-import { SimulatorSettings } from '../src/simulator-manage.js';
+import { SimulatorApps, SimulatorSettings } from '../src/simulator-manage.js';
 
 const SIM = 'AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE';
 const PHONE = '00008110-000000000000001E';
@@ -18,10 +19,28 @@ const simulator = (running: string[] = []) => {
     terminate: async (_: string, app: string) => void asked.push(['terminate', app]),
     launch: async (_: string, app: string) => void asked.push(['launch', app]),
   } as unknown as Simctl;
-  return { settings: new SimulatorSettings(simctl, SIM), asked };
+  return {
+    settings: new SimulatorSettings(simctl, SIM),
+    apps: new SimulatorApps(simctl, SIM),
+    asked,
+  };
 };
 
 describe("an app's language", () => {
+  it("of one launch is that launch's alone on a simulator and an iPhone: launch_app holds none", async () => {
+    // where a launch's language stays, launch_app holds it as `locale` does: on iOS the next plain launch was in it
+    const stays = (apps: AppManager) => apps.languageStays;
+    expect(stays(new PhoneApps(new Devicectl(PHONE)))).toBeUndefined();
+    const { apps, asked } = simulator();
+    expect(stays(apps)).toBeUndefined();
+    await apps.launchWith(APP, { language: 'tr' });
+    await apps.launchWith(APP, {});
+    expect(asked.map((a) => a.slice(3).join(' '))).toEqual([
+      `${APP} -AppleLanguages (tr) -AppleLocale tr`,
+      APP,
+    ]);
+  });
+
   it('is held for its launches on a simulator, which says so, and the whole simulator is left alone', async () => {
     const { settings, asked } = simulator([APP]);
     expect(await settings.get('locale', APP)).toBe('');
