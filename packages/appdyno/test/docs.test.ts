@@ -82,7 +82,6 @@ const TR = /\.tr\.md$/;
 /** The pages in English alone, and why. */
 const ENGLISH_ONLY: Record<string, string> = {
   'CHANGELOG.md': 'not yet in Turkish',
-  'CODE_OF_CONDUCT.md': 'not yet in Turkish',
   'CONTRIBUTING.md': 'not yet in Turkish',
   'SECURITY.md': 'not yet in Turkish',
   'docs/README.md': 'not yet in Turkish',
