@@ -17,8 +17,9 @@ const DENY = /:id\/permission_deny(_and_dont_ask_again)?_button$/;
 const STATUS_BAND_DP = 56;
 /** The system's own prompt, by its ids, in any language. */
 const BIOMETRIC_PROMPT = /^com\.android\.systemui:id\/biometric_/;
+/** Android 17 asks for the credential inside the biometric prompt, by a view of its own there. */
 const CREDENTIAL_PROMPT =
-  /^com\.android\.(systemui:id\/(lockPassword|lockPattern|lockPIN)|settings:id\/(password_entry|lockPattern))/;
+  /^com\.android\.(systemui:id\/(lockPassword|lockPattern|lockPIN|compose_credential_view)|settings:id\/(password_entry|lockPattern))/;
 
 export const androidScreen: PlatformScreen = {
   /**

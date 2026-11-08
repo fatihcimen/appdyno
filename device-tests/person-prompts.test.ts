@@ -94,10 +94,15 @@ describe.skipIf(!EMULATOR)('a prompt on an emulator', () => {
   // with a fingerprint the system asks for that instead
   it('a credential: a read says the system is asking for it', async (t) => {
     if (enrolled()) return t.skip();
+    // Android 17 asks inside the biometric prompt
+    const field =
+      Number(adb('getprop', 'ro.build.version.sdk')) >= 37
+        ? 'compose_credential_view'
+        : 'lockPassword';
     // a PIN just set takes a moment to count as one
     for (let i = 0; i < 5; i++) {
       adb('am', 'start', '-a', 'android.app.action.CONFIRM_DEVICE_CREDENTIAL');
-      if ((await o.call('wait_for', { id: 'lockPassword', timeoutMs: 2_000 })).data.met) break;
+      if ((await o.call('wait_for', { id: field, timeoutMs: 2_000 })).data.met) break;
     }
     expect(ok(await o.call('screen')).text).toContain('needs a person: a passcode');
     ok(await o.call('press_key', { key: 'back' }));

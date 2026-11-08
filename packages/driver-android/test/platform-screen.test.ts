@@ -151,6 +151,13 @@ describe('what wants a person', () => {
     );
   });
 
+  it("a credential in Android 17's prompt, which is the biometric one with a credential view in it", () => {
+    const ids = ['biometric_prompt_constraint_layout', 'panel', 'compose_credential_view'].map(
+      (n) => `com.android.systemui:id/${n}`,
+    );
+    expect(prompt('com.android.systemui', [...ids, 'cred_pin_pad'])).toBe('a passcode');
+  });
+
   it('none on a page of the permission controller, whatever its words', () => {
     const pkg = 'com.google.android.permissioncontroller';
     expect(prompt(pkg, [], ['Set a screen lock password'])).toBeUndefined();
