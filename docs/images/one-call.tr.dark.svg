@@ -95,7 +95,7 @@
   <text class="name on-d mid" x="724" y="346">3</text>
   <text class="name" x="748" y="335">Bekler</text>
   <text class="text" x="748" y="359">200 ms durgun kalana,</text>
-  <text class="text" x="748" y="379">en çok 3 sn</text>
+  <text class="text" x="748" y="379">en çok 3 s</text>
 
   <!-- the way there and back -->
   <path class="line s-p" marker-end="url(#ap)" d="M282 102H320"/>

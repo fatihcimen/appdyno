@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 710" width="960" height="710" role="img" aria-labelledby="title desc">
+  <title id="title">Paket haritası</title>
+  <desc id="desc">Yayımlanan paket appdyno en üstte durur ve geri kalanını birbirine bağlar. Altında, araçlar olan ops’u içe aktaran mcp, cli ve hub vardır. ops, flows ve perf’i içe aktarır. Hepsi core ve protocol’ü içe aktarabilir. İki sürücünün, driver-android ve driver-apple’ın adını yalnızca en üstteki paket anar. Her sürücü cihazdaki native kodla konuşur, pencereyi de core başlatır.</desc>
+  <style>
+    svg { --ground: #EEF0FF; --card: #FFFFFF; --ink: #0A0E2E; --soft: #3D4570; --host: #2447E0; --device: #7A2EE0; --person: #A8189A; --host-band: #2447E01A; --device-band: #7A2EE01A; }
+    text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
+    .ground { fill: var(--ground); }
+    .band-h { fill: var(--host-band); }
+    .band-d { fill: var(--device-band); }
+    .card { fill: var(--card); stroke-width: 1.5; }
+    .s-h { stroke: var(--host); }
+    .s-d { stroke: var(--device); }
+    .s-p { stroke: var(--person); }
+    .f-h { fill: var(--host); }
+    .f-d { fill: var(--device); }
+    .f-p { fill: var(--person); }
+    .line { fill: none; stroke-width: 2; }
+    .rule { fill: none; stroke: var(--soft); stroke-width: 1; stroke-dasharray: 3 5; }
+    .dash { stroke-dasharray: 6 5; }
+    .label { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; fill: var(--soft); }
+    .big { font-size: 22px; font-weight: 700; }
+    .name { font-size: 16px; font-weight: 600; }
+    .text { font-size: 14px; fill: var(--soft); }
+    .note { font-size: 14px; fill: var(--ink); }
+    .code { font-size: 13px; fill: var(--soft); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .on-h { fill: var(--host); font-weight: 600; }
+    .on-d { fill: var(--device); font-weight: 600; }
+    .on-p { fill: var(--person); font-weight: 600; }
+    .mid { text-anchor: middle; }
+    .end { text-anchor: end; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-h" d="M0 0 10 5 0 10z"/></marker>
+    <marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-d" d="M0 0 10 5 0 10z"/></marker>
+    <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-p" d="M0 0 10 5 0 10z"/></marker>
+  </defs>
+
+  <rect class="ground" width="960" height="710" rx="16"/>
+
+  <text class="label" x="40" y="46">TYPESCRIPT, packages/</text>
+  <text class="label" x="716" y="46">NATIVE KOD</text>
+
+  <!-- the published package: the only one that sees everything -->
+  <g data-package="appdyno" data-row="0">
+    <rect class="card s-p" x="32" y="60" width="600" height="72" rx="12"/>
+    <text class="name" x="52" y="90">appdyno</text>
+    <text class="text" x="52" y="114">yayımlanan tek paket: komut satırı, kütüphane ve geri kalanını bağlayan kod</text>
+  </g>
+
+  <!-- what a client meets -->
+  <g data-package="mcp" data-row="1">
+    <rect class="card s-h" x="32" y="166" width="122" height="78" rx="12"/>
+    <text class="name" x="48" y="196">mcp</text>
+    <text class="text" x="48" y="220">MCP sunucusu</text>
+  </g>
+  <g data-package="cli" data-row="1">
+    <rect class="card s-h" x="168" y="166" width="122" height="78" rx="12"/>
+    <text class="name" x="184" y="196">cli</text>
+    <text class="text" x="184" y="220">komutlar</text>
+  </g>
+  <g data-package="hub" data-row="1">
+    <rect class="card s-h" x="304" y="166" width="122" height="78" rx="12"/>
+    <text class="name" x="320" y="196">hub</text>
+    <text class="text" x="320" y="220">pencereler</text>
+  </g>
+
+  <!-- the tools -->
+  <g data-package="ops" data-row="2">
+    <rect class="card s-h" x="32" y="278" width="394" height="72" rx="12"/>
+    <text class="name" x="48" y="308">ops</text>
+    <text class="text" x="48" y="332">araçlar: bir istemcinin çağırabildiği her işlem</text>
+  </g>
+
+  <g data-package="flows" data-row="3">
+    <rect class="card s-h" x="32" y="384" width="188" height="72" rx="12"/>
+    <text class="name" x="48" y="414">flows</text>
+    <text class="text" x="48" y="438">kaydetme ve oynatma</text>
+  </g>
+  <g data-package="perf" data-row="3">
+    <rect class="card s-h" x="238" y="384" width="188" height="72" rx="12"/>
+    <text class="name" x="254" y="414">perf</text>
+    <text class="text" x="254" y="438">kapı ve dashboard</text>
+  </g>
+
+  <!-- the drivers, which nothing but the top package names -->
+  <g data-package="driver-android" data-row="1">
+    <rect class="card s-d" x="444" y="166" width="188" height="78" rx="12"/>
+    <text class="name" x="460" y="196">driver-android</text>
+    <text class="text" x="460" y="220">adb ve ajan</text>
+  </g>
+  <g data-package="driver-apple" data-row="2">
+    <rect class="card s-d" x="444" y="278" width="188" height="72" rx="12"/>
+    <text class="name" x="460" y="308">driver-apple</text>
+    <text class="text" x="460" y="332">simülatörler ve iPhone’lar</text>
+  </g>
+
+  <g data-package="core" data-row="4">
+    <rect class="card s-h" x="32" y="490" width="600" height="60" rx="12"/>
+    <text class="name" x="48" y="526">core</text>
+    <text class="text" x="108" y="526">Device portu, ekran, yansıtma oturumu</text>
+  </g>
+  <g data-package="protocol" data-row="5">
+    <rect class="card s-h" x="32" y="566" width="600" height="60" rx="12"/>
+    <text class="name" x="48" y="602">protocol</text>
+    <text class="text" x="134" y="602">hat: her mesaj, bir şema olarak</text>
+  </g>
+
+  <!-- may import -->
+  <path class="line s-h" marker-end="url(#ah)" d="M93 132V164"/>
+  <path class="line s-h" marker-end="url(#ah)" d="M229 132V164"/>
+  <path class="line s-h" marker-end="url(#ah)" d="M365 132V164"/>
+  <path class="line s-h" marker-end="url(#ah)" d="M93 244V276"/>
+  <path class="line s-h" marker-end="url(#ah)" d="M229 244V276"/>
+  <path class="line s-h" marker-end="url(#ah)" d="M365 244V276"/>
+  <path class="line s-h" marker-end="url(#ah)" d="M126 350V382"/>
+  <path class="line s-h" marker-end="url(#ah)" d="M332 350V382"/>
+  <!-- wired at the top: a driver is reached by no one else -->
+  <path class="line dash s-d" marker-end="url(#ad)" d="M538 132V164"/>
+  <path class="line dash s-d" marker-end="url(#ad)" d="M435 132V314H442"/>
+
+  <!-- what runs elsewhere -->
+  <rect class="band-d" x="700" y="60" width="236" height="566" rx="20"/>
+  <rect class="card s-d" x="716" y="166" width="204" height="78" rx="12"/>
+  <text class="name" x="732" y="196">Android ajanı</text>
+  <text class="code" x="732" y="220">android/agent</text>
+  <rect class="card s-d" x="716" y="278" width="204" height="72" rx="12"/>
+  <text class="name" x="732" y="308">iOS runner, yardımcılar</text>
+  <text class="code" x="732" y="332">ios/Runner</text>
+  <rect class="card s-h" x="716" y="490" width="204" height="60" rx="12"/>
+  <text class="name" x="732" y="514">Pencere</text>
+  <text class="code" x="732" y="534">mac/Viewer</text>
+  <path class="line s-d" marker-end="url(#ad)" d="M632 205H714"/>
+  <path class="line s-d" marker-end="url(#ad)" d="M632 314H714"/>
+  <path class="line s-h" marker-end="url(#ah)" d="M632 520H714"/>
+
+  <text class="note" x="40" y="664">Ok, içe aktarabilir demektir. core’un üstündeki her şey core ve protocol’ü de içe aktarabilir.</text>
+  <text class="note" x="40" y="688">Kesikli ok, bir sürücünün adının geçtiği tek yerdir: ops ve istemciler hiçbirini görmez.</text>
+</svg>

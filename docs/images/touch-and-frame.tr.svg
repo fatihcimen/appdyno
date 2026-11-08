@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 690" width="960" height="690" role="img" aria-labelledby="title desc">
+  <title id="title">Bir dokunuş ve bir görüntü nasıl ilerler</title>
+  <desc id="desc">Her cihaz pencereyi kendi yoluyla besler. Bir Android telefonun ajanı H.264 ya da HEVC’yi adb üzerinden doğrudan pencereye gönderir. Bir emülatörün gRPC portu ortak bir dosyayı doldurur, Node da ne zaman olduğunu bir tikle söyler. Bir simülatör framebuffer’ını paylaşır. Bir iPhone’un yayınını Node sürecinin bir worker thread’i tutar ve bu thread adlandırılmış bir pipe’a yazar. Bir dokunuş her zaman pencereden Node’a bir satır JSON olarak, sonra cihaza gider: Android’de ajanın isteğiyle, simülatörde SimHID yardımcısıyla, iPhone’da yayının üzerinden.</desc>
+  <style>
+    svg { --ground: #EEF0FF; --card: #FFFFFF; --ink: #0A0E2E; --soft: #3D4570; --host: #2447E0; --device: #7A2EE0; --person: #A8189A; --host-band: #2447E01A; --device-band: #7A2EE01A; }
+    text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
+    .ground { fill: var(--ground); }
+    .band-h { fill: var(--host-band); }
+    .band-d { fill: var(--device-band); }
+    .card { fill: var(--card); stroke-width: 1.5; }
+    .s-h { stroke: var(--host); }
+    .s-d { stroke: var(--device); }
+    .s-p { stroke: var(--person); }
+    .f-h { fill: var(--host); }
+    .f-d { fill: var(--device); }
+    .f-p { fill: var(--person); }
+    .line { fill: none; stroke-width: 2; }
+    .rule { fill: none; stroke: var(--soft); stroke-width: 1; stroke-dasharray: 3 5; }
+    .dash { stroke-dasharray: 6 5; }
+    .label { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; fill: var(--soft); }
+    .big { font-size: 22px; font-weight: 700; }
+    .name { font-size: 16px; font-weight: 600; }
+    .text { font-size: 14px; fill: var(--soft); }
+    .note { font-size: 14px; fill: var(--ink); }
+    .code { font-size: 13px; fill: var(--soft); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .on-h { fill: var(--host); font-weight: 600; }
+    .on-d { fill: var(--device); font-weight: 600; }
+    .on-p { fill: var(--person); font-weight: 600; }
+    .mid { text-anchor: middle; }
+    .end { text-anchor: end; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-h" d="M0 0 10 5 0 10z"/></marker>
+    <marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-d" d="M0 0 10 5 0 10z"/></marker>
+    <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-p" d="M0 0 10 5 0 10z"/></marker>
+  </defs>
+
+  <rect class="ground" width="960" height="690" rx="16"/>
+
+  <text class="label" x="40" y="46">CİHAZ</text>
+  <text class="label mid" x="480" y="46">APPDYNO, NODE İÇİNDE</text>
+  <text class="label" x="730" y="46">PENCERE</text>
+
+  <!-- what a person sees and touches -->
+  <rect class="band-h" x="716" y="60" width="220" height="570" rx="20"/>
+  <rect class="card s-p" x="732" y="78" width="188" height="534" rx="12"/>
+  <text class="name" x="750" y="112">Viewer</text>
+  <text class="text" x="750" y="136">her pencere için</text>
+  <text class="text" x="750" y="156">bir native süreç</text>
+  <text class="code" x="750" y="588">mac/Viewer</text>
+
+  <!-- the control plane: every touch goes through it -->
+  <rect class="band-h" x="370" y="60" width="220" height="570" rx="20"/>
+
+  <!-- Android phone -->
+  <rect class="card s-d" x="32" y="78" width="190" height="120" rx="12"/>
+  <text class="name" x="50" y="110">Android telefon</text>
+  <text class="text" x="50" y="134">ajan kodlar:</text>
+  <text class="text" x="50" y="154">H.264 ya da HEVC</text>
+  <rect class="card s-h" x="386" y="130" width="188" height="56" rx="12"/>
+  <text class="name" x="404" y="154">MirrorSession</text>
+  <text class="code" x="404" y="175">kendi bağlantısı</text>
+  <path class="line s-d" marker-end="url(#ad)" d="M222 104H730"/>
+  <text class="text" x="238" y="94">adb üzerinden, doğrudan pencereye</text>
+  <path class="line s-p" marker-end="url(#ap)" d="M730 158H576"/>
+  <path class="line s-p" marker-end="url(#ap)" d="M386 158H224"/>
+  <text class="text" x="238" y="150">dokunma isteği</text>
+
+  <!-- Android emulator -->
+  <rect class="card s-d" x="32" y="214" width="190" height="120" rx="12"/>
+  <text class="name" x="50" y="246">Android emülatörü</text>
+  <text class="text" x="50" y="270">kendi gRPC portu</text>
+  <text class="text" x="50" y="290">ortak dosyayı doldurur</text>
+  <rect class="card s-h" x="386" y="266" width="188" height="56" rx="12"/>
+  <text class="name" x="404" y="290">MirrorSession</text>
+  <text class="code" x="404" y="311">her kare için bir tik</text>
+  <path class="line s-d" marker-end="url(#ad)" d="M222 240H730"/>
+  <text class="text" x="238" y="230">ortak dosyada pikseller, Node’dan kopya geçmez</text>
+  <path class="line s-p" marker-end="url(#ap)" d="M730 294H576"/>
+  <path class="line s-p" marker-end="url(#ap)" d="M386 294H224"/>
+  <text class="text" x="238" y="286">dokunma isteği</text>
+
+  <!-- simulator -->
+  <rect class="card s-d" x="32" y="350" width="190" height="120" rx="12"/>
+  <text class="name" x="50" y="382">iOS simülatörü</text>
+  <text class="text" x="50" y="406">framebuffer’ı,</text>
+  <text class="text" x="50" y="426">kodlama olmadan</text>
+  <rect class="card s-h" x="386" y="402" width="188" height="56" rx="12"/>
+  <text class="name" x="404" y="426">MirrorSession</text>
+  <text class="code" x="404" y="447">bir yardımcı gönderir</text>
+  <path class="line s-d" marker-end="url(#ad)" d="M222 376H730"/>
+  <text class="text" x="238" y="366">yüzeyin kendisi, CoreSimulator paylaşır</text>
+  <path class="line s-p" marker-end="url(#ap)" d="M730 430H576"/>
+  <path class="line s-p" marker-end="url(#ap)" d="M386 430H224"/>
+  <text class="text" x="238" y="422">SimHID yardımcısı</text>
+
+  <!-- iPhone: its picture does pass through this process -->
+  <rect class="card s-d" x="32" y="486" width="190" height="126" rx="12"/>
+  <text class="name" x="50" y="518">iPhone</text>
+  <text class="text" x="50" y="542">ekran servisi,</text>
+  <text class="text" x="50" y="562">HEVC, deneysel</text>
+  <rect class="card s-h" x="386" y="498" width="188" height="102" rx="12"/>
+  <text class="name" x="404" y="524">Stream worker</text>
+  <text class="text" x="404" y="546">bu sürecin bir</text>
+  <text class="text" x="404" y="566">thread’i tutar</text>
+  <path class="line s-d" marker-end="url(#ad)" d="M222 522H384"/>
+  <path class="line s-d" marker-end="url(#ad)" d="M574 522H730"/>
+  <text class="text" x="596" y="512">adlandırılmış pipe</text>
+  <path class="line s-p" marker-end="url(#ap)" d="M730 576H576"/>
+  <path class="line s-p" marker-end="url(#ap)" d="M386 576H224"/>
+  <text class="text" x="238" y="568">dokunuş, yayında</text>
+
+  <!-- key -->
+  <path class="line s-d" marker-end="url(#ad)" d="M40 664H84"/>
+  <text class="note" x="94" y="669">bir görüntü</text>
+  <path class="line s-p" marker-end="url(#ap)" d="M196 664H240"/>
+  <text class="note" x="250" y="669">bir dokunuş, önce pencereden Node’a bir satır JSON</text>
+</svg>

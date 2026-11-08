@@ -85,7 +85,6 @@ const TR = /\.tr\.md$/;
 const ENGLISH_ONLY: Record<string, string> = {
   'CHANGELOG.md': 'not yet in Turkish',
   'CONTRIBUTING.md': 'not yet in Turkish',
-  'docs/architecture.md': 'not yet in Turkish',
   'docs/guides/evidence.md': 'not yet in Turkish',
   'docs/guides/flows.md': 'not yet in Turkish',
   'docs/guides/performance.md': 'not yet in Turkish',
@@ -215,31 +214,24 @@ const PICTURE =
   /<source media="\(prefers-color-scheme: dark\)" srcset="([^"]+)">\s*<img src="([^"]+)"/g;
 
 describe('a diagram', () => {
-  it('is one of the set, in one look, light or dark', () => {
-    expect(diagrams.sort()).toEqual([
-      'approval.dark.svg',
-      'approval.svg',
-      'approval.tr.dark.svg',
-      'approval.tr.svg',
-      'devices.dark.svg',
-      'devices.svg',
-      'devices.tr.dark.svg',
-      'devices.tr.svg',
-      'one-call.dark.svg',
-      'one-call.svg',
-      'one-call.tr.dark.svg',
-      'one-call.tr.svg',
-      'overview.dark.svg',
-      'overview.svg',
-      'package-map.dark.svg',
-      'package-map.svg',
-      'perf-gate.dark.svg',
-      'perf-gate.svg',
-      'tool-call.dark.svg',
-      'tool-call.svg',
-      'touch-and-frame.dark.svg',
-      'touch-and-frame.svg',
-    ]);
+  it('is one of the set, in English and in Turkish, light and dark, in one look', () => {
+    expect(diagrams.sort()).toEqual(
+      [
+        'approval',
+        'devices',
+        'one-call',
+        'overview',
+        'package-map',
+        'perf-gate',
+        'tool-call',
+        'touch-and-frame',
+      ].flatMap((name) => [
+        `${name}.dark.svg`,
+        `${name}.svg`,
+        `${name}.tr.dark.svg`,
+        `${name}.tr.svg`,
+      ]),
+    );
     const light = styleOf(read(`${IMAGES}/overview.svg`))!;
     const dark = styleOf(read(`${IMAGES}/overview.dark.svg`))!;
     expect(dark).not.toBe(light);
@@ -327,12 +319,26 @@ describe('a diagram', () => {
         `p &lt; ${ALPHA}`,
       ])
         expect(gate).toContain(said);
+    for (const gate of ['perf-gate.tr', 'perf-gate.tr.dark'].map(drawn))
+      for (const said of [
+        `%${percent}, ${absolute} ms ve`,
+        `${RUN_SDS} standart sapma`,
+        `${MIN_BASELINE_RUNS} baseline çalıştırması ve her iki yanda ${MIN_SAMPLES} örnek`,
+        `p &lt; ${String(ALPHA).replace('.', ',')}`,
+      ])
+        expect(gate).toContain(said);
   });
 
   it('says of a settle what the settle does', () => {
     for (const call of ['tool-call', 'tool-call.dark', 'one-call', 'one-call.dark'].map(drawn)) {
       expect(call).toContain(`still for ${SETTLE.quietMs} ms,`);
-      expect(call).toContain(`at most ${SETTLE.maxMs / 1000} s`);
+      expect(call).toContain(`at most ${SETTLE.maxMs / 1000} s<`);
+    }
+    for (const call of ['tool-call.tr', 'tool-call.tr.dark', 'one-call.tr', 'one-call.tr.dark'].map(
+      drawn,
+    )) {
+      expect(call).toContain(`${SETTLE.quietMs} ms durgun`);
+      expect(call).toContain(`en çok ${SETTLE.maxMs / 1000} s<`);
     }
   });
 });

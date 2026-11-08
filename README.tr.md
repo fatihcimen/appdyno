@@ -209,7 +209,7 @@ Dokunuş, ekran 200 ms boyunca durgun kalana kadar bekler ve neyin değiştiğin
 | [Evidence](docs/guides/evidence.md)                 | geride bir video, rapor, ağ kaydı ya da görsel fark bırakmak                  |
 | [Measuring performance](docs/guides/performance.md) | bir uygulamayı ölçmek, baseline tutmak, yavaşlatan değişikliği durdurmak      |
 | [Tools](docs/reference/tools.md)                    | her araç, her platformun neyi yapıp neyi yapamadığı                           |
-| [Architecture](docs/architecture.md)                | parçaların nasıl birleştiği, kodu değiştirecek olan için                      |
+| [Nasıl yapıldığı](docs/architecture.tr.md)          | parçaların nasıl birleştiği, kodu değiştirecek olan için                      |
 
 Diğer başvuru sayfaları [belgelerin dizininde](docs/README.tr.md).
 

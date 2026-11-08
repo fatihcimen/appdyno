@@ -1,5 +1,7 @@
 # Architecture
 
+[Türkçe](architecture.tr.md)
+
 This page is for someone about to change appdyno. It says how the parts fit, and why they are shaped this way. Once you have read it, the folder you need should be easy to find.
 
 <picture>

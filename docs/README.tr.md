@@ -32,6 +32,6 @@ Bir şeye bakmak için burası.
 
 ## Nasıl çalışır
 
-[Mimari](architecture.md), parçaların nasıl ve neden birleştiğini, onları değiştirmek üzere olan kişi için anlatır.
+[Mimari](architecture.tr.md), parçaların nasıl ve neden birleştiğini, onları değiştirmek üzere olan kişi için anlatır.
 
 [CONTRIBUTING](../CONTRIBUTING.md) kurulumu, kontrollerin nasıl çalıştırılacağını ve bir değişikliğin nasıl gönderileceğini anlatır. [SECURITY](../SECURITY.tr.md) appdyno'nun nelere ulaşabildiğini ve bir sorunun nasıl bildirileceğini söyler.
