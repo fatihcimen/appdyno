@@ -2,6 +2,7 @@ import {
   buildScreen,
   DeviceQueue,
   must,
+  opStartedAt,
   pause,
   readPicture,
   SLIDE_DROPS_TOUCH,
@@ -198,12 +199,12 @@ export class Session {
   leftApp = false;
   /** The app's process when last looked: another one means it went down and came back. */
   appPid: string | undefined;
-  /** When the last device action ended (epoch ms): `logs` starts here. */
+  /** When the op of the last device action began (epoch ms): `logs` starts there, with what it set off. */
   lastActionAt: number | undefined;
 
   /** A device action happened: refs read before it are resolved on a new read. */
   acted() {
     this.version++;
-    this.lastActionAt = Date.now();
+    this.lastActionAt = opStartedAt() ?? Date.now();
   }
 }

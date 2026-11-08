@@ -406,6 +406,33 @@ describe('logs', () => {
     expect(LogsOut.parse(r.structuredContent)).toMatchObject({ lines: 4, dropped: 0 });
   });
 
+  it('reads from when the last action began: what a push or a tap set off is logged while it runs', async () => {
+    const device = new FakeDevice();
+    let reached = 0;
+    const slowly = async <T>(work: () => Promise<T>) => {
+      reached = Date.now();
+      await new Promise((r) => setTimeout(r, 40));
+      return work();
+    };
+    const act = device.act.bind(device);
+    device.act = (action, opts) => slowly(() => act(action, opts));
+    device.events = {
+      pushRoutes: () =>
+        Promise.resolve([
+          { type: 'background', route: 'by hand', fields: ['data'], template: '{}' },
+        ]),
+      push: () => slowly(() => Promise.resolve('pushed')),
+    } as unknown as Device['events'];
+    const { call } = await connect(device);
+    await call('push', { type: 'background', data: { orderId: '43' }, read: 'none' });
+    await call('logs');
+    expect(device.logAsked?.since).toBeLessThanOrEqual(reached);
+    await call('screen');
+    await call('tap', { x: 5, y: 2390 });
+    await call('logs');
+    expect(device.logAsked?.since).toBeLessThanOrEqual(reached);
+  });
+
   it('takes a given time, refuses a bad one, and says what the platform cannot', async () => {
     const device = new FakeDevice();
     device.logNote = 'devicectl cannot read this';

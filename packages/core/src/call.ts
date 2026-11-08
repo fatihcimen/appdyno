@@ -11,11 +11,20 @@ export type CallScope = {
   ask?: (question: string) => Promise<boolean>;
   /** What the call did on the way that its answer says: a tool it fetched. */
   notes?: string[];
+  /** When the op being served began, in ms since the epoch: what it set off on the device dates from then. */
+  opStartedAt?: number;
 };
 
 const scope = new AsyncLocalStorage<CallScope>();
 
 export const inCall = <T>(s: CallScope, fn: () => Promise<T>): Promise<T> => scope.run(s, fn);
+
+/** `fn` as an op of its own, within the call it serves: what it does on the device dates from now. */
+export const inOp = <T>(fn: () => Promise<T>): Promise<T> =>
+  scope.run({ ...scope.getStore(), opStartedAt: Date.now() }, fn);
+
+/** When the op being served began, if one is. */
+export const opStartedAt = () => scope.getStore()?.opStartedAt;
 
 /** The abort signal of the request being served, if any. */
 export const callSignal = () => scope.getStore()?.signal;

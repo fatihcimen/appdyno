@@ -1,4 +1,4 @@
-import { noting } from '@appdyno/core';
+import { inOp, noting } from '@appdyno/core';
 import { DeviceError, type ErrorCode } from '@appdyno/protocol';
 import { z } from 'zod';
 
@@ -120,7 +120,7 @@ export function defineOp<
     ...rest,
     handler: async (args) => {
       try {
-        const { value, notes } = await noting(() => run(args as z.infer<S>));
+        const { value, notes } = await noting(() => inOp(() => run(args as z.infer<S>)));
         return notes.length
           ? { ...value, blocks: [...value.blocks, ...text(notes.join('\n'))] }
           : value;
