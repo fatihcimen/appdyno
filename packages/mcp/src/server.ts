@@ -27,17 +27,17 @@ import {
  */
 function callerOf(server: McpServer, ctx: ServerContext) {
   // the published type of the envelope is empty: these are its keys
-  const envelope = ctx.mcpReq.envelope as
+  const envelope:
     | {
         [CLIENT_INFO_META_KEY]?: Implementation;
         [CLIENT_CAPABILITIES_META_KEY]?: ClientCapabilities;
       }
-    | undefined;
+    | undefined = ctx.mcpReq.envelope;
   // a 2025 client says who it is and what it can once, in `initialize`, which only these deprecated accessors keep
-  const [named, declared] = [
-    server.server.getClientVersion(),
-    server.server.getClientCapabilities(),
-  ];
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- a 2025 client's own, as above
+  const named = server.server.getClientVersion();
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- a 2025 client's own, as above
+  const declared = server.server.getClientCapabilities();
   const elicitation = (envelope?.[CLIENT_CAPABILITIES_META_KEY] ?? declared)?.elicitation;
   return {
     info: envelope?.[CLIENT_INFO_META_KEY] ?? named,
@@ -139,7 +139,7 @@ export function createServer(
                 return refusal(e);
               }
               // never the arguments: they may hold typed text
-              said('error', { error: (e as Error)?.message ?? String(e) });
+              said('error', { error: e instanceof Error ? e.message : String(e) });
               return {
                 isError: true,
                 content: text(`${name} failed with an internal error`),

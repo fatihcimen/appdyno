@@ -9,7 +9,7 @@ import {
   StreamableHTTPClientTransport,
   type ClientCapabilities,
 } from '@modelcontextprotocol/client';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeDevice } from '../../ops/test/fake-device.js';
 import { REVISIONS, type Revision } from '../../ops/test/helpers.js';
 import { listenOn, serveHttp } from '../src/http.js';
@@ -23,14 +23,15 @@ const stops: (() => Promise<void>)[] = [];
 async function serving(idleMs?: number) {
   const dark = { value: 'no' };
   const settings = {
-    get: async () => dark.value,
-    set: vi.fn(async (_: SettingName, value: string) => {
+    get: () => Promise.resolve(dark.value),
+    set: vi.fn((_: SettingName, value: string) => {
       dark.value = value;
+      return Promise.resolve();
     }),
   } as unknown as DeviceSettings;
   const device = Object.assign(new FakeDevice(), { settings });
   const provider: DeviceProvider = {
-    list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+    list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
     handles: () => true,
     open: () => device,
   };
@@ -181,7 +182,9 @@ describe.each(REVISIONS)('a client, on %s', (revision) => {
     expect(clientCalls()).toEqual([]);
     await client.callTool({ name: 'list_devices' });
     expect(clientCalls()).toMatchObject([{ name: 'A Hosted Client', link: 'http' }]);
-    const dir = join(process.env.APPDYNO_STATE_DIR!, 'clients');
+    const state = process.env.APPDYNO_STATE_DIR;
+    assert(state, 'a test has a state folder of its own');
+    const dir = join(state, 'clients');
     for (const file of readdirSync(dir))
       expect(readFileSync(join(dir, file), 'utf8')).not.toContain(TOKEN);
   });
@@ -260,7 +263,7 @@ describe('asking the person over HTTP', () => {
 
   it('asks within the call itself on 2026-07-28, and goes on with the yes', async () => {
     const { url, device, log } = await serving();
-    const resets = vi.fn(async () => 3);
+    const resets = vi.fn(() => Promise.resolve(3));
     Object.assign(device, { events: { ...device.events, resetKeychain: resets } });
     const client = await clientOf(url, 'asks', bearer, '2026-07-28', { elicitation: {} });
     const reset = { name: 'device_setting', arguments: { name: 'keychain', value: 'reset' } };
@@ -279,8 +282,9 @@ describe('one client at a time', () => {
     await first.callTool({ name: 'use_device', arguments: { device: 'emulator-5580' } });
     const second = await clientOf(url, 'hosted');
     expect(text(await second.callTool({ name: 'device_info' }))).toContain('Fake Phone');
+    const [context] = contexts;
     expect(contexts).toHaveLength(1);
-    expect(contexts[0]!.currentSerial).toBe('emulator-5580');
+    expect(context?.currentSerial).toBe('emulator-5580');
   });
 
   it('refuses another client plainly, naming who holds it, and lets the first go on', async () => {
@@ -385,10 +389,12 @@ describe('when the client has gone', () => {
       arguments: { name: 'dark_mode', value: 'yes' },
     });
     expect(dark.value).toBe('yes');
-    expect(contexts[0]!.heldBy('emulator-5580')?.pid).toBe(process.pid);
+    const [context] = contexts;
+    assert(context);
+    expect(context.heldBy('emulator-5580')?.pid).toBe(process.pid);
     await first.close();
     await vi.waitFor(() => expect(dark.value).toBe('no'));
-    await vi.waitFor(() => expect(contexts[0]!.heldBy('emulator-5580')).toBeUndefined());
+    await vi.waitFor(() => expect(context.heldBy('emulator-5580')).toBeUndefined());
 
     const second = await clientOf(url, 'second');
     expect((await second.listTools()).tools.length).toBeGreaterThan(10);

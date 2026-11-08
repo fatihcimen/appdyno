@@ -28,10 +28,12 @@ async function listed(transport: Transport, heard: () => string, ms: number): Pr
     await client.connect(transport);
     const { tools } = await client.listTools();
     return { ok: true, tools: tools.length };
-  })().catch((e: NodeJS.ErrnoException): Probe => {
-    if (e.code === 'ENOENT') return { ok: false, why: 'missing' };
-    if (/\b409\b/.test(e.message)) return { ok: false, why: 'held' };
-    return { ok: false, why: 'ended', tail: heard() || e.message };
+  })().catch((e: unknown): Probe => {
+    if (e instanceof Error && 'code' in e && e.code === 'ENOENT')
+      return { ok: false, why: 'missing' };
+    const message = e instanceof Error ? e.message : String(e);
+    if (/\b409\b/.test(message)) return { ok: false, why: 'held' };
+    return { ok: false, why: 'ended', tail: heard() || message };
   });
   try {
     return await Promise.race([asked, late]);

@@ -27,7 +27,7 @@ type Turn = { reply: CallToolResult } | { question: string };
 const WAITING_ID = createRequestStateCodec<string>({ key: randomBytes(32) });
 
 /** What checks the id a round brings back, before its call is found. */
-export const verifyRound = WAITING_ID.verify;
+export const verifyRound = WAITING_ID.verify.bind(WAITING_ID);
 
 type Call = ReturnType<typeof calling>;
 
@@ -67,7 +67,10 @@ function calling(name: string, run: (round: Round) => Promise<CallToolResult>) {
     answered,
     /** Unanswered for `ASK_MS`, the question is a no, and the call goes on with it. */
     expire(forget: () => void) {
-      expiry = setTimeout(() => (forget(), answered(false)), ASK_MS);
+      expiry = setTimeout(() => {
+        forget();
+        answered(false);
+      }, ASK_MS);
       // a client gone with a question open does not keep the process alive
       expiry.unref();
     },

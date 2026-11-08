@@ -6,7 +6,7 @@ import {
 } from '@modelcontextprotocol/client';
 import { createMcpHandler } from '@modelcontextprotocol/server';
 import { DATA_LOSS, DATA_LOSS_WORDS, DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
-import { expect, it } from 'vitest';
+import { assert, expect, it } from 'vitest';
 import { INSTRUCTIONS } from '../src/brand.js';
 import { createServer } from '../src/server.js';
 
@@ -41,9 +41,11 @@ const SEARCHED: Record<string, string> = {
 
 it('is found by the words people search for, where a search reads them', () => {
   const ops = opsFor(new ServerContext(DEFAULT_POLICY, []));
-  const missed = Object.entries(SEARCHED).filter(
-    ([word, tool]) => !ops[tool]!.description.slice(0, 200).toLowerCase().includes(word),
-  );
+  const missed = Object.entries(SEARCHED).filter(([word, tool]) => {
+    const op = ops[tool];
+    assert(op, tool);
+    return !op.description.slice(0, 200).toLowerCase().includes(word);
+  });
   expect(missed).toEqual([]);
 });
 
@@ -59,7 +61,8 @@ it('has every tool in the table of the docs, and what they say of steps as the t
   const start = doc.indexOf('| purpose');
   const table = doc.slice(start, doc.indexOf('\n\n', start));
   expect(Object.keys(ops).filter((name) => !table.includes(`\`${name}\``))).toEqual([]);
-  const limit = /at most (\d+),/.exec(ops.steps!.description)?.[1];
+  const limit = /at most (\d+),/.exec(ops.steps?.description ?? '')?.[1];
+  assert(limit, 'steps says its limit');
   expect(doc).toContain(`\`steps\` runs up to ${limit} steps`);
   expect(doc).toContain(`${Object.keys(ops).length} tools`);
 });
@@ -95,7 +98,8 @@ it('lists the same tools on both revisions, byte for byte, and says the same of 
     '2026-07-28',
   ]);
   const [was, now] = await Promise.all([legacy, modern].map((c) => c.listTools()));
-  expect(JSON.stringify(now!.tools)).toBe(JSON.stringify(was!.tools));
+  assert(was && now);
+  expect(JSON.stringify(now.tools)).toBe(JSON.stringify(was.tools));
   expect(modern.getServerVersion()).toEqual(legacy.getServerVersion());
   expect(modern.getInstructions()).toBe(INSTRUCTIONS);
   expect(modern.getServerCapabilities()).toEqual(legacy.getServerCapabilities());
@@ -117,16 +121,21 @@ it('keeps the tool catalog within its budget', async () => {
   expect(JSON.stringify(tools)).not.toMatch(
     /"description":"(default: the selected app|kept under this name|iOS simulator: frame probe; relaunches the app)"/,
   );
-  const flag = (op: string, name: string) =>
-    (opsFor(ctx)[op]!.input.toJSONSchema().properties as Record<string, { description?: string }>)[
-      name
-    ]!.description;
+  const flag = (op: string, name: string) => {
+    const properties = opsFor(ctx)[op]?.input.toJSONSchema().properties as
+      Record<string, { description?: string }> | undefined;
+    const property = properties?.[name];
+    assert(property, `${op} has ${name}`);
+    return property.description;
+  };
   expect(flag('crashes', 'app')).toBe('default: the selected app');
   expect(flag('perf_snapshot', 'scenario')).toBe('kept under this name');
   expect(flag('perf_launch', 'probe')).toBe('iOS simulator: frame probe; relaunches the app');
   // a limit stays out of the catalog, but the words of a tool do not deny one
-  expect(tools.find((t) => t.name === 'type_text')!.description).toContain('up to 500 characters');
-  expect(tools.every((t) => t.inputSchema.type === 'object')).toBe(true);
+  const typeText = tools.find((t) => t.name === 'type_text');
+  assert(typeText);
+  expect(typeText.description).toContain('up to 500 characters');
+  for (const t of tools) expect(t.inputSchema.type).toBe('object');
   expect(
     tools.filter((t) => 'device' in (t.inputSchema.properties ?? {})).map((t) => t.name),
   ).toEqual(['use_device']);

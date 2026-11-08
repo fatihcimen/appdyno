@@ -29,8 +29,8 @@ export type HttpOptions = {
   /** 0 takes a free one. */
   port: number;
   token: string;
-  open(): Seat;
-  log(line: object): void;
+  open: () => Seat;
+  log: (line: object) => void;
   idleMs?: number;
 };
 
@@ -190,7 +190,7 @@ export async function serveHttp({ host, port, token, open, log, idleMs = IDLE_MS
 
   const listener = createListener((req, res) => {
     route(req, res).catch((e: unknown) => {
-      log({ http: 'failed', error: (e as Error)?.message ?? String(e) });
+      log({ http: 'failed', error: e instanceof Error ? e.message : String(e) });
       if (res.headersSent) res.destroy();
       else refuse(res, 500, 'internal error');
     });
@@ -205,7 +205,7 @@ export async function serveHttp({ host, port, token, open, log, idleMs = IDLE_MS
   return {
     url: `http://${host.includes(':') ? `[${host}]` : host}:${bound}${PATH}`,
     /** No more calls: those running stop, and the seat's conditions go back. */
-    async stop() {
+    stop: async () => {
       clearTimeout(idle);
       const closed = new Promise((resolve) => listener.close(resolve));
       listener.closeAllConnections();
