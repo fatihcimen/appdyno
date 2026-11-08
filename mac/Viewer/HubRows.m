@@ -105,7 +105,7 @@ static MVRow *goneRow(NSDictionary *device) {
     [rows addObject:fold];
     if (open) [rows addObjectsFromArray:off];
   }
-  [_places enumerateObjectsUsingBlock:^(MVPlace *place, NSUInteger at, BOOL *stop) {
+  [_places enumerateObjectsUsingBlock:^(MVPlace *place, NSUInteger at, __unused BOOL *stop) {
     MVRow *row = [MVRow new];
     row.title = place.title;
     row.detail = @"";

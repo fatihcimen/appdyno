@@ -165,18 +165,18 @@ static void checkNals(void) {
   const uint8_t two[] = {0, 0, 0, 1, 0x67, 0xAA, 0, 0, 1, 0x68, 0xBB, 0, 0, 0};
   __block int count = 0;
   __block size_t first = 0, second = 0;
-  MVForEachNal(two, sizeof two, ^(const uint8_t *nal, size_t length) {
+  MVForEachNal(two, sizeof two, ^(__unused const uint8_t *nal, size_t length) {
     if (count == 0) first = length;
     else second = length;
     count++;
   });
   MVCheck(@"nal: three- and four-byte starts", count == 2 && first == 2 && second == 5, nil);
   count = 0;
-  MVForEachNal(two, 0, ^(const uint8_t *nal, size_t length) {
+  MVForEachNal(two, 0, ^(__unused const uint8_t *nal, __unused size_t length) {
     count++;
   });
   const uint8_t cut[] = {0, 0, 1};
-  MVForEachNal(cut, sizeof cut, ^(const uint8_t *nal, size_t length) {
+  MVForEachNal(cut, sizeof cut, ^(__unused const uint8_t *nal, __unused size_t length) {
     count++;
   });
   MVCheck(@"nal: empty and cut input", count == 0, nil);
@@ -268,7 +268,7 @@ static void checkCodec(BOOL hevc) {
   NSMutableData *broken = [frames[0].data mutableCopy];
   uint8_t *bytes = broken.mutableBytes;
   __block size_t sliceAt = 0;
-  MVForEachNal(bytes, broken.length, ^(const uint8_t *nal, size_t length) {
+  MVForEachNal(bytes, broken.length, ^(const uint8_t *nal, __unused size_t length) {
     sliceAt = (size_t)(nal - bytes);
   });
   for (size_t i = sliceAt + 6; i < broken.length; i++) bytes[i] = (uint8_t)(i * 31);
@@ -281,7 +281,7 @@ static void checkCodec(BOOL hevc) {
 
   // a loss: the picture freezes, until a keyframe
   int before = sink.images;
-  NSUInteger firstKey = [frames indexOfObjectPassingTest:^BOOL(MVTestFrame *f, NSUInteger i, BOOL *stop) {
+  NSUInteger firstKey = [frames indexOfObjectPassingTest:^BOOL(MVTestFrame *f, NSUInteger i, __unused BOOL *stop) {
     return i > 0 && f.key;
   }];
   NSMutableData *garbage = [frames[1].data mutableCopy];

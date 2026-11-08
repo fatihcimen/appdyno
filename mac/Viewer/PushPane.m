@@ -94,7 +94,7 @@ static NSString *readable(NSString *json) {
     _type.accessibilityLabel = MVWord(@"Type of push");
     _how = MVPaneNote(@"Asking the device what it takes");
     NSMutableArray<MVAccentButton *> *modes = [NSMutableArray array];
-    [@[@"Fields", @"Payload"] enumerateObjectsUsingBlock:^(NSString *word, NSUInteger at, BOOL *stop) {
+    [@[@"Fields", @"Payload"] enumerateObjectsUsingBlock:^(NSString *word, NSUInteger at, __unused BOOL *stop) {
       MVAccentButton *mode = (MVAccentButton *)MVPlaceButton(word, [NSString stringWithFormat:@"pushMode:%lu", (unsigned long)at], self, @selector(modeChosen:));
       mode.tag = (NSInteger)at;
       [modes addObject:mode];

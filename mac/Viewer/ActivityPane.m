@@ -77,7 +77,7 @@ static MVRow *rowOfCall(NSDictionary *call) {
 - (void)listRuns {
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
   [_runs enumerateObjectsWithOptions:NSEnumerationReverse
-                          usingBlock:^(MVRun *run, NSUInteger at, BOOL *stop) {
+                          usingBlock:^(MVRun *run, NSUInteger at, __unused BOOL *stop) {
                             MVRow *head = [MVRow new];
                             head.title = tookWords(run);
                             head.detail = run.calls.firstObject[@"time"] ?: @"";

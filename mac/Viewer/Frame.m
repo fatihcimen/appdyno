@@ -96,7 +96,7 @@ MVFrameSpec MVFrameSpecOf(NSString *_Nullable model, NSString *_Nullable platfor
   return withKeys(android, kAndroidKeys, 3);
 }
 
-MVFrameLayout MVLayOutFrame(MVFrameSpec spec, CGSize screen, int turns) {
+MVFrameLayout MVLayOutFrame(MVFrameSpec spec, CGSize screen) {
   double portraitWidth = MIN(screen.width, screen.height);
   double unit = spec.points > 0 ? portraitWidth / spec.points : 1;
   double side = (spec.bezel + spec.rim) * unit;
@@ -115,7 +115,7 @@ MVFrameLayout MVLayOutFrame(MVFrameSpec spec, CGSize screen, int turns) {
   };
 }
 
-CGRect MVFrameKeyRect(MVFrameSpec spec, MVFrameLayout l, MVFrameKey key, int turns) {
+CGRect MVFrameKeyRect(MVFrameLayout l, MVFrameKey key) {
   double proud = kKeyStandsProud * l.unit;
   double thick = proud + 1.5 * l.unit;
   BOOL sideways = l.body.width > l.body.height;

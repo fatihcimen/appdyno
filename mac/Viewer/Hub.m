@@ -24,7 +24,7 @@ static NSString *stateWords(NSDictionary *device) {
 
 @implementation MVRoomView
 - (NSArray<NSView *> *)stages {
-  NSIndexSet *at = [self.subviews indexesOfObjectsPassingTest:^BOOL(NSView *view, NSUInteger i, BOOL *stop) {
+  NSIndexSet *at = [self.subviews indexesOfObjectsPassingTest:^BOOL(NSView *view, __unused NSUInteger i, __unused BOOL *stop) {
     return [view isKindOfClass:MVRootView.class];
   }];
   return [self.subviews objectsAtIndexes:at];
@@ -64,7 +64,7 @@ static NSString *stateWords(NSDictionary *device) {
   NSSize note = self.note.fittingSize;
   double band = self.note ? under.top + note.height + 2 * kNoteGap : 0;
   self.note.frame = NSMakeRect(under.left + (all - under.left - under.right - note.width) / 2, self.bounds.size.height - under.top - note.height - kNoteGap, note.width, note.height);
-  [stages enumerateObjectsUsingBlock:^(NSView *stage, NSUInteger i, BOOL *stop) {
+  [stages enumerateObjectsUsingBlock:^(NSView *stage, NSUInteger i, __unused BOOL *stop) {
     double left = i == 0 ? 0 : under.left + i * wide, right = i + 1 == stages.count ? all : under.left + (i + 1) * wide;
     stage.frame = NSMakeRect(left, 0, right - left, self.bounds.size.height - band);
   }];

@@ -54,7 +54,7 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
   _behind = [args containsObject:@"--behind"];
   if ([args containsObject:@"--menu"]) return [self printMenu];
   // an app that moved: what points at it follows, and with nothing stale this writes nothing
-  Ask(@[@"install", @"--moved"], ^(int code, NSString *said){});
+  Ask(@[@"install", @"--moved"], ^(__unused int code, __unused NSString *said){});
   [self showItem];
   [self openHub];
 }
@@ -98,7 +98,7 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
 }
 
 - (void)read:(void (^)(void))done {
-  Ask(@[@"devices", @"--json"], ^(int code, NSString *said) {
+  Ask(@[@"devices", @"--json"], ^(__unused int code, NSString *said) {
     // what a tool said on stderr comes first
     NSString *last = [said componentsSeparatedByString:@"\n"].lastObject;
     NSData *data = [last dataUsingEncoding:NSUTF8StringEncoding];
@@ -173,7 +173,7 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
 }
 
 - (void)doing:(NSArray<NSString *> *)words title:(NSString *)title {
-  Ask(words, ^(int code, NSString *said) {
+  Ask(words, ^(__unused int code, NSString *said) {
     [self tell:title saying:said];
   });
 }
@@ -186,7 +186,7 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
 }
 
 - (void)addToClients {
-  Ask(@[@"install", @"--dry-run"], ^(int code, NSString *said) {
+  Ask(@[@"install", @"--dry-run"], ^(__unused int code, NSString *said) {
     if ([self confirm:@"Add Appdyno to these MCP clients?" saying:said with:@"Add"])
       [self doing:@[@"install", @"--yes"] title:@"MCP clients"];
   });
@@ -200,7 +200,7 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
 }
 
 - (void)checkForUpdates {
-  Ask(@[@"update", @"--check"], ^(int code, NSString *said) {
+  Ask(@[@"update", @"--check"], ^(__unused int code, NSString *said) {
     if (![said containsString:@"would download"]) return [self tell:@"Updates" saying:said];
     if (![self confirm:@"Install the new version?" saying:said with:@"Install"]) return;
     Ask(@[@"update"], ^(int done, NSString *result) {
@@ -209,7 +209,7 @@ static void Ask(NSArray<NSString *> *words, void (^done)(int code, NSString *sai
       config.createsNewApplicationInstance = YES;
       [NSWorkspace.sharedWorkspace openApplicationAtURL:NSBundle.mainBundle.bundleURL
                                           configuration:config
-                                      completionHandler:^(NSRunningApplication *app, NSError *error) {
+                                      completionHandler:^(__unused NSRunningApplication *app, __unused NSError *error) {
                                         dispatch_async(dispatch_get_main_queue(), ^{
                                           [NSApp terminate:nil];
                                         });

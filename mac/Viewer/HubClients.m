@@ -101,7 +101,7 @@ static NSString *shownName(NSDictionary *row) {
   __weak MVClientsPane *weak = self;
   _timer = [NSTimer scheduledTimerWithTimeInterval:kListSeconds
                                            repeats:YES
-                                             block:^(NSTimer *timer) {
+                                             block:^(__unused NSTimer *timer) {
                                                if (weak) MVAskClients(@"list", @{});
                                              }];
 }
@@ -183,7 +183,7 @@ static NSString *shownName(NSDictionary *row) {
 
 - (void)fill:(NSStackView *)rows with:(NSArray<NSView *> *)views {
   for (NSView *view in rows.arrangedSubviews) [view removeFromSuperview];
-  [views enumerateObjectsUsingBlock:^(NSView *view, NSUInteger at, BOOL *stop) {
+  [views enumerateObjectsUsingBlock:^(NSView *view, NSUInteger at, __unused BOOL *stop) {
     if (at) [rows addArrangedSubview:MVSeparator()];
     [rows addArrangedSubview:view];
   }];

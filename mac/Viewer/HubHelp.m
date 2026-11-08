@@ -101,7 +101,7 @@ static NSArray<NSDictionary *> *cards(void) {
 
 - (NSView *)prompts {
   NSMutableArray<NSView *> *views = [NSMutableArray arrayWithObjects:MVText(@"What You Can Ask an AI to Do", MVStyleTitle), MVParagraph(@"Copy one into your AI client. Any prompt works in any client, and each says what it does to the device.", MVStyleCallout), nil];
-  [cards() enumerateObjectsUsingBlock:^(NSDictionary *card, NSUInteger at, BOOL *stop) {
+  [cards() enumerateObjectsUsingBlock:^(NSDictionary *card, NSUInteger at, __unused BOOL *stop) {
     [views addObject:[self card:card at:at]];
   }];
   return MVPlaceColumn(views, 8);
@@ -126,7 +126,7 @@ static NSArray<NSDictionary *> *cards(void) {
 
 - (void)fillDevice:(nullable NSDictionary *)device app:(nullable NSString *)app {
   MVFilled words = filled(device, app);
-  [_prompts enumerateObjectsUsingBlock:^(NSTextField *field, NSUInteger at, BOOL *stop) {
+  [_prompts enumerateObjectsUsingBlock:^(NSTextField *field, NSUInteger at, __unused BOOL *stop) {
     field.stringValue = promptOf(at, words);
   }];
 }
@@ -141,7 +141,7 @@ static NSArray<NSDictionary *> *cards(void) {
   if ([notes isEqual:_notes]) return;
   _notes = notes;
   NSArray<NSDictionary *> *all = cards();
-  [_cardNotes enumerateObjectsUsingBlock:^(NSStackView *stack, NSUInteger at, BOOL *stop) {
+  [_cardNotes enumerateObjectsUsingBlock:^(NSStackView *stack, NSUInteger at, __unused BOOL *stop) {
     for (NSView *view in stack.arrangedSubviews) [view removeFromSuperview];
     for (NSDictionary *note in notes)
       if ([all[at][@"kinds"] containsObject:note[@"kind"]]) [stack addArrangedSubview:MVNoteText(MVFormat(@"In %@: %@", @[MVSaid(@{@"en": note[@"client"], @"tr": note[@"clientTr"] ?: note[@"client"]}), MVSaid(note)]))];

@@ -165,7 +165,7 @@ void MVCheckRecorder(void) {
   __block NSArray *tracks = nil;
   dispatch_semaphore_t loaded = dispatch_semaphore_create(0);
   [asset loadTracksWithMediaType:AVMediaTypeVideo
-               completionHandler:^(NSArray *found, NSError *error) {
+               completionHandler:^(NSArray *found, __unused NSError *error) {
                  tracks = found;
                  dispatch_semaphore_signal(loaded);
                }];

@@ -61,7 +61,7 @@ typedef struct {
 - (void)finished:(OSStatus)status image:(CVImageBufferRef _Nullable)image frame:(MVInFlight)frame;
 @end
 
-static void onDecoded(void *owner, void *refcon, OSStatus status, VTDecodeInfoFlags flags, CVImageBufferRef image, CMTime pts, CMTime duration) {
+static void onDecoded(void *owner, void *refcon, OSStatus status, __unused VTDecodeInfoFlags flags, CVImageBufferRef image, __unused CMTime pts, __unused CMTime duration) {
   MVInFlight *frame = refcon;
   [(__bridge MVDecoder *)owner finished:status image:image frame:*frame];
   free(frame);

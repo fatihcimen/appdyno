@@ -45,8 +45,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic) BOOL showsFrame;
 @property(nonatomic) MVFrameSpec spec;
 /// What the whole of it takes at this screen size.
-- (CGSize)bodyFor:(CGSize)screen turns:(int)turns;
-- (void)layOutScreen:(CGSize)screen in:(NSRect)place turns:(int)turns;
+- (CGSize)bodyFor:(CGSize)screen;
+- (void)layOutScreen:(CGSize)screen in:(NSRect)place;
 /// A colour around the device; none takes it away.
 - (void)setEdge:(nullable NSColor *)color;
 - (void)press:(nullable NSString *)name;

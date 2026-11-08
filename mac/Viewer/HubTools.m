@@ -105,7 +105,7 @@ static NSArray<NSDictionary *> *sections(BOOL fromApp) {
   _sectionViews = [NSMutableArray array];
   [_column addArrangedSubview:MVPlaceHead(@"wrench.and.screwdriver", MVHueTile(2), @"Tools", @"What a terminal would do, from here: measure, compare, record and report.")];
   [_column addArrangedSubview:[self subjectCard]];
-  [sections(_fromApp) enumerateObjectsUsingBlock:^(NSDictionary *section, NSUInteger at, BOOL *stop) {
+  [sections(_fromApp) enumerateObjectsUsingBlock:^(NSDictionary *section, NSUInteger at, __unused BOOL *stop) {
     NSStackView *rows = MVPlaceColumn(@[], 0);
     for (NSArray<NSString *> *row in section[@"rows"]) {
       if (rows.arrangedSubviews.count) [rows addArrangedSubview:MVSeparator()];

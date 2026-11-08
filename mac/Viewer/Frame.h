@@ -48,10 +48,10 @@ typedef struct {
   double unit;
 } MVFrameLayout;
 
-MVFrameLayout MVLayOutFrame(MVFrameSpec spec, CGSize screen, int turns);
+MVFrameLayout MVLayOutFrame(MVFrameSpec spec, CGSize screen);
 
 /// Where a key sits, in the coordinates of the layout, with `travel` of it standing proud of the body.
-CGRect MVFrameKeyRect(MVFrameSpec spec, MVFrameLayout layout, MVFrameKey key, int turns);
+CGRect MVFrameKeyRect(MVFrameLayout layout, MVFrameKey key);
 
 /// A cutout's rect in the coordinates of a portrait screen of this size; empty when it has none.
 CGRect MVCutoutRect(MVFrameSpec spec, CGSize portraitScreen);

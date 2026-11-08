@@ -97,7 +97,7 @@ void MVGiveWay(NSSplitViewItem *item, BOOL narrow, BOOL *gaveWay) {
   [NSNotificationCenter.defaultCenter addObserverForName:NSSplitViewDidResizeSubviewsNotification
                                                   object:split.splitView
                                                    queue:NSOperationQueue.mainQueue
-                                              usingBlock:^(NSNotification *note) {
+                                              usingBlock:^(__unused NSNotification *note) {
                                                 dispatch_async(dispatch_get_main_queue(), ^{
                                                   [weak layoutPicture];
                                                 });

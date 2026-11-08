@@ -122,7 +122,7 @@ static const double kPulseSeconds = 1.4, kPulses = 3, kPulseGrows = 1.7, kPassed
   NSDictionary<NSString *, NSString *> *was = _was;
   _was = [NSDictionary dictionaryWithObjects:[items valueForKey:@"state"] forKeys:[items valueForKey:@"title"]];
   for (NSView *view in self.arrangedSubviews) [view removeFromSuperview];
-  [items enumerateObjectsUsingBlock:^(NSDictionary *item, NSUInteger at, BOOL *stop) {
+  [items enumerateObjectsUsingBlock:^(NSDictionary *item, NSUInteger at, __unused BOOL *stop) {
     MVStepMark *mark = [MVStepMark new];
     mark.state = item[@"state"];
     mark.number = at + 1;

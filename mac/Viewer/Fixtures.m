@@ -41,7 +41,7 @@ static void appendParameterSets(NSMutableData *to, CMFormatDescriptionRef format
   }
 }
 
-static void onEncoded(void *refcon, void *source, OSStatus status, VTEncodeInfoFlags flags, CMSampleBufferRef sample) {
+static void onEncoded(void *refcon, __unused void *source, OSStatus status, __unused VTEncodeInfoFlags flags, CMSampleBufferRef sample) {
   if (status != noErr || !sample) return;
   NSMutableArray<MVTestFrame *> *frames = (__bridge NSMutableArray *)refcon;
   CFDictionaryRef attachment = CFArrayGetValueAtIndex(CMSampleBufferGetSampleAttachmentsArray(sample, YES), 0);

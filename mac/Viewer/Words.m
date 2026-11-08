@@ -108,7 +108,7 @@ NSString *MVWord(NSString *english) {
 
 NSString *MVFormat(NSString *english, NSArray<NSString *> *values) {
   NSMutableString *out = [(turkish() ? forms()[english] ?: english : english) mutableCopy];
-  [values enumerateObjectsUsingBlock:^(NSString *value, NSUInteger at, BOOL *stop) {
+  [values enumerateObjectsUsingBlock:^(NSString *value, NSUInteger at, __unused BOOL *stop) {
     NSRange place = [out rangeOfString:[NSString stringWithFormat:@"%%%lu$@", (unsigned long)at + 1]];
     if (place.location == NSNotFound) place = [out rangeOfString:@"%@"];
     if (place.location != NSNotFound) [out replaceCharactersInRange:place withString:value];

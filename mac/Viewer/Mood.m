@@ -156,7 +156,7 @@ CGImageRef MVImageMood(CVImageBufferRef image, BOOL dark) {
     [NSWorkspace.sharedWorkspace.notificationCenter addObserverForName:NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification
                                                                 object:nil
                                                                  queue:NSOperationQueue.mainQueue
-                                                            usingBlock:^(NSNotification *n) {
+                                                            usingBlock:^(__unused NSNotification *n) {
                                                               [weak settingsChanged];
                                                             }];
   }
@@ -213,7 +213,7 @@ static void drawAgain(NSView *view) {
 }
 
 /// A hue at the ground's own light: dark stays dark and light stays light, whatever is on the screen.
-static MVGroundBloom bloomOf(const uint8_t *bytes, size_t row, size_t wide, size_t tall, size_t from, size_t to, BOOL dark, double x) {
+static MVGroundBloom bloomOf(const uint8_t *bytes, size_t row, size_t tall, size_t from, size_t to, BOOL dark, double x) {
   double sum[3] = {0, 0, 0}, weight = 0;
   for (size_t y = 0; y < tall; y++)
     for (size_t at = from; at < to; at++) {
@@ -243,10 +243,10 @@ static MVGroundBloom bloomOf(const uint8_t *bytes, size_t row, size_t wide, size
   size_t row = CGImageGetBytesPerRow(mood), wide = CGImageGetWidth(mood), tall = CGImageGetHeight(mood);
   BOOL dark = self.isDark;
   if (side < 0) {
-    _mood[0] = bloomOf(cells.bytes, row, wide, tall, 0, wide / 2 + 1, dark, kMoodLeft);
-    _mood[1] = bloomOf(cells.bytes, row, wide, tall, wide / 2, wide, dark, 1 - kMoodLeft);
+    _mood[0] = bloomOf(cells.bytes, row, tall, 0, wide / 2 + 1, dark, kMoodLeft);
+    _mood[1] = bloomOf(cells.bytes, row, tall, wide / 2, wide, dark, 1 - kMoodLeft);
   } else {
-    _mood[side] = bloomOf(cells.bytes, row, wide, tall, 0, wide, dark, side ? 1 - kMoodLeft : kMoodLeft);
+    _mood[side] = bloomOf(cells.bytes, row, tall, 0, wide, dark, side ? 1 - kMoodLeft : kMoodLeft);
   }
   CGImageRelease(mood);
   // a screen that stays as it was changes nothing, and is not painted

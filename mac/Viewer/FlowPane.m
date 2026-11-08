@@ -39,7 +39,7 @@ static NSString *clickNamed(NSInteger segment) {
     _contrast.lineBreakMode = NSLineBreakByWordWrapping;
     _contrast.preferredMaxLayoutWidth = kWordsWide;
     NSMutableArray<MVAccentButton *> *clicks = [NSMutableArray array];
-    [@[@"Touches", @"Copies", @"Asserts"] enumerateObjectsUsingBlock:^(NSString *word, NSUInteger at, BOOL *stop) {
+    [@[@"Touches", @"Copies", @"Asserts"] enumerateObjectsUsingBlock:^(NSString *word, NSUInteger at, __unused BOOL *stop) {
       MVAccentButton *click = (MVAccentButton *)MVPlaceButton(word, [NSString stringWithFormat:@"clickDoes:%lu", (unsigned long)at], self, @selector(clickChosen:));
       click.tag = (NSInteger)at;
       [clicks addObject:click];
@@ -135,7 +135,7 @@ static NSString *clickNamed(NSInteger segment) {
                        : m[@"file"] ? [NSString stringWithFormat:@"Saved %@", [m[@"file"] lastPathComponent]]
                                     : @"Each click is written by the element it touched.";
   NSMutableArray<MVRow *> *rows = [NSMutableArray array];
-  [lines enumerateObjectsUsingBlock:^(NSString *line, NSUInteger i, BOOL *stop) {
+  [lines enumerateObjectsUsingBlock:^(NSString *line, NSUInteger i, __unused BOOL *stop) {
     NSString *why = [self lookAt:i + 1];
     MVRow *row = [MVRow new];
     row.title = line;

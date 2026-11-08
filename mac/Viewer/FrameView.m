@@ -15,7 +15,7 @@ static NSColor *rgb(uint32_t c, double brightness) {
   return [NSColor colorWithSRGBRed:MIN(1, ((c >> 16) & 255) / 255.0 * k) green:MIN(1, ((c >> 8) & 255) / 255.0 * k) blue:MIN(1, (c & 255) / 255.0 * k) alpha:1];
 }
 
-static void fillMetal(CGContextRef c, CGRect rect, uint32_t color, BOOL across) {
+static void fillMetal(CGRect rect, uint32_t color, BOOL across) {
   NSGradient *metal = [[NSGradient alloc] initWithColorsAndLocations:rgb(color, 1.75), 0.0, rgb(color, 1.05), 0.16, rgb(color, 0.82), 0.52, rgb(color, 1.0), 0.84, rgb(color, 1.5), 1.0, nil];
   [metal drawInRect:rect angle:across ? 58 : 118];
 }
@@ -73,7 +73,7 @@ static void fillMetal(CGContextRef c, CGRect rect, uint32_t color, BOOL across) 
   double r = self.round ? self.bounds.size.width / 2 : MIN(self.bounds.size.width, self.bounds.size.height) / 2;
   [NSGraphicsContext saveGraphicsState];
   [[NSBezierPath bezierPathWithRoundedRect:self.bounds xRadius:r yRadius:r] addClip];
-  fillMetal(NSGraphicsContext.currentContext.CGContext, self.bounds, self.color, self.bounds.size.width < self.bounds.size.height);
+  fillMetal(self.bounds, self.color, self.bounds.size.width < self.bounds.size.height);
   if (_over || _pressed) {
     [[NSColor colorWithWhite:_pressed ? 0 : 1 alpha:_pressed ? kPressedAlpha : 0.2] setFill];
     NSRectFillUsingOperation(self.bounds, NSCompositingOperationSourceOver);
@@ -99,7 +99,6 @@ static void fillMetal(CGContextRef c, CGRect rect, uint32_t color, BOOL across) 
 @implementation MVFrameView {
   MVFrameSpec _spec;
   MVFrameLayout _layout;
-  int _turns;
   double _pad;
   NSMutableArray<MVFrameKeyView *> *_keys;
   CAShapeLayer *_ring;
@@ -140,9 +139,9 @@ static void fillMetal(CGContextRef c, CGRect rect, uint32_t color, BOOL across) 
   if (name) [self.screen pressButton:name];
 }
 
-- (CGSize)bodyFor:(CGSize)screen turns:(int)turns {
+- (CGSize)bodyFor:(CGSize)screen {
   if (!self.showsFrame) return screen;
-  MVFrameLayout layout = MVLayOutFrame(self.spec, screen, turns);
+  MVFrameLayout layout = MVLayOutFrame(self.spec, screen);
   double pad = 4 * layout.unit;
   return CGSizeMake(layout.body.width + 2 * pad, layout.body.height + 2 * pad);
 }
@@ -155,9 +154,8 @@ static void fillMetal(CGContextRef c, CGRect rect, uint32_t color, BOOL across) 
   _spec = spec;
 }
 
-- (void)layOutScreen:(CGSize)screen in:(NSRect)place turns:(int)turns {
-  _turns = turns;
-  _layout = MVLayOutFrame(_spec, screen, turns);
+- (void)layOutScreen:(CGSize)screen in:(NSRect)place {
+  _layout = MVLayOutFrame(_spec, screen);
   _pad = self.showsFrame ? 4 * _layout.unit : 0;
   self.frame = place;
   CGRect on = self.showsFrame ? CGRectOffset(_layout.screen, _pad, _pad) : CGRectMake(0, 0, screen.width, screen.height);
@@ -183,7 +181,7 @@ static void fillMetal(CGContextRef c, CGRect rect, uint32_t color, BOOL across) 
 - (void)addKeys {
   for (int i = 0; i < _spec.keyCount; i++) {
     MVFrameKey key = _spec.keys[i];
-    [self addKey:key.name ? @(key.name) : nil at:CGRectOffset(MVFrameKeyRect(_spec, _layout, key, _turns), _pad, _pad) round:NO];
+    [self addKey:key.name ? @(key.name) : nil at:CGRectOffset(MVFrameKeyRect(_layout, key), _pad, _pad) round:NO];
   }
   if (_spec.cutout != MVCutoutHomeButton) return;
   double across = 52 * _layout.unit;
@@ -223,14 +221,13 @@ static void fillMetal(CGContextRef c, CGRect rect, uint32_t color, BOOL across) 
 
 - (void)drawRect:(NSRect)dirty {
   if (!self.showsFrame) return;
-  CGContextRef c = NSGraphicsContext.currentContext.CGContext;
   CGRect body = CGRectOffset(CGRectMake(0, 0, _layout.body.width, _layout.body.height), _pad, _pad);
   double outer = MIN(_layout.outer, MIN(body.size.width, body.size.height) / 2 - 1);
   double rim = _spec.rim * _layout.unit;
   NSBezierPath *shell = [NSBezierPath bezierPathWithRoundedRect:body xRadius:outer yRadius:outer];
   [NSGraphicsContext saveGraphicsState];
   [shell addClip];
-  fillMetal(c, body, _spec.color, NO);
+  fillMetal(body, _spec.color, NO);
   [NSGraphicsContext restoreGraphicsState];
   // the lit edge of the band, inside and out
   [[NSColor colorWithWhite:1 alpha:0.28] setStroke];

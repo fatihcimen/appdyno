@@ -167,13 +167,13 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
   [CATransaction setDisableActions:YES];
   double margin = _frame.showsFrame ? kMargin : 0;
   CGSize room = CGSizeMake(_stage.frame.size.width - 2 * margin, all.size.height - kTop - kBottom);
-  CGSize body = [_frame bodyFor:_picture turns:_turns];
+  CGSize body = [_frame bodyFor:_picture];
   double scale = MVFitScale(body, room);
   CGSize screen = CGSizeMake(_picture.width * scale, _picture.height * scale);
-  CGSize drawn = [_frame bodyFor:screen turns:_turns];
+  CGSize drawn = [_frame bodyFor:screen];
   double bottom = kBottom + (room.height - drawn.height) / 2;
   NSRect place = NSMakeRect(round((_stage.frame.size.width - drawn.width) / 2), round(bottom), drawn.width, drawn.height);
-  [_frame layOutScreen:screen in:place turns:_turns];
+  [_frame layOutScreen:screen in:place];
   // a simulator's picture has its island in it and no notch, and an emulator's has what its device has
   BOOL drawsItsOwn = [_kind isEqual:@"pixels"] || ([_kind isEqual:@"surface"] && _frame.spec.cutout == MVCutoutIsland);
   CGSize portrait = screen.width > screen.height ? CGSizeMake(screen.height, screen.width) : screen;
@@ -217,14 +217,14 @@ MVShow MVShowOf(BOOL focus, BOOL behind) {
 
 /// The chrome that never scales, at a given zoom's device.
 - (CGSize)windowSizeAt:(double)zoom {
-  CGSize body = [_frame bodyFor:CGSizeMake(_picture.width * zoom, _picture.height * zoom) turns:_turns];
+  CGSize body = [_frame bodyFor:CGSizeMake(_picture.width * zoom, _picture.height * zoom)];
   double margin = _frame.showsFrame ? kMargin : 0;
   return CGSizeMake(MAX(body.width + 2 * margin, kOpensWide) + [self sideWidth] + (self.inspecting ? MVInspectorWidth : 0), MAX(body.height + kTop + kBottom, kSmallest.height));
 }
 
 - (double)fitZoom {
   NSRect visible = (_window.screen ?: NSScreen.mainScreen).visibleFrame;
-  CGSize body = [_frame bodyFor:_picture turns:_turns];
+  CGSize body = [_frame bodyFor:_picture];
   CGSize room = CGSizeMake(visible.size.width * kFitScreen - 2 * kMargin, visible.size.height * kFitScreen - kTop - kBottom);
   return MVFitScale(body, room);
 }

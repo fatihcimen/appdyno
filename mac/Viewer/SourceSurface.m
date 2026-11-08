@@ -78,7 +78,7 @@ enum { kBooted = 3 };
     id<MVSimulator> descriptor = port.descriptor;
     if (![(id)descriptor respondsToSelector:@selector(enumerateScreensWithCompletionQueue:completionHandler:)]) continue;
     [descriptor enumerateScreensWithCompletionQueue:dispatch_get_main_queue()
-                                  completionHandler:^(NSArray *screens, NSError *e) {
+                                  completionHandler:^(NSArray *screens, __unused NSError *e) {
                                     [weak registerScreens:screens];
                                   }];
   }
@@ -114,10 +114,10 @@ enum { kBooted = 3 };
         frameCallback:^{
           [weak presented:weakScreen];
         }
-        surfacesChangedCallback:^(id surface, id masked) {
+        surfacesChangedCallback:^(id surface, __unused id masked) {
           [weak screen:weakScreen surface:surface];
         }
-        propertiesChangedCallback:^(id properties){}];
+        propertiesChangedCallback:^(__unused id properties){}];
   }
 }
 

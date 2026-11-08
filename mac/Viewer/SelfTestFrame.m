@@ -24,16 +24,16 @@ static void checkTable(void) {
 static void checkLayout(void) {
   CGSize tall = CGSizeMake(402, 874);
   MVFrameSpec spec = MVFrameSpecOf(@"iPhone 17 Pro", @"ios", nil, CGSizeMake(1206, 2622));
-  MVFrameLayout upright = MVLayOutFrame(spec, tall, 0);
+  MVFrameLayout upright = MVLayOutFrame(spec, tall);
   MVCheck(@"frame: the screen sits in the middle of its body", near(upright.screen.origin.x, (upright.body.width - tall.width) / 2) && near(upright.screen.origin.y, (upright.body.height - tall.height) / 2), nil);
   MVCheck(@"frame: at one point a point it scales by one", near(upright.unit, 1), nil);
   MVCheck(@"frame: the body's corners wrap the screen's", upright.outer > upright.radius, nil);
-  MVFrameLayout doubled = MVLayOutFrame(spec, CGSizeMake(804, 1748), 0);
+  MVFrameLayout doubled = MVLayOutFrame(spec, CGSizeMake(804, 1748));
   MVCheck(@"frame: it scales with its picture", near(doubled.body.width, upright.body.width * 2), nil);
-  CGRect up = MVFrameKeyRect(spec, upright, spec.keys[1], 0), side = MVFrameKeyRect(spec, upright, spec.keys[3], 0);
+  CGRect up = MVFrameKeyRect(upright, spec.keys[1]), side = MVFrameKeyRect(upright, spec.keys[3]);
   MVCheck(@"frame: keys stand proud of the body, left and right", up.origin.x < 0 && CGRectGetMaxX(side) > upright.body.width, nil);
-  MVFrameLayout turned = MVLayOutFrame(spec, CGSizeMake(874, 402), 1);
-  CGRect key = MVFrameKeyRect(spec, turned, spec.keys[1], 1);
+  MVFrameLayout turned = MVLayOutFrame(spec, CGSizeMake(874, 402));
+  CGRect key = MVFrameKeyRect(turned, spec.keys[1]);
   MVCheck(@"frame: turned, a key stays on the body's edge", key.size.width > key.size.height && CGRectGetMaxY(key) > turned.body.height, NSStringFromRect(key));
   CGRect island = MVCutoutRect(spec, tall);
   MVCheck(@"frame: the island as a simulator's own picture has it", near(island.size.width, 126) && near(island.size.height, 37) && near(CGRectGetMidX(island), 201), nil);

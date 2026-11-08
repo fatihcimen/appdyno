@@ -91,10 +91,10 @@ static NSString *identityOf(MVRow *row) {
 /// What comes opens and what goes closes, where nothing else moved: a device arriving is a state changing.
 - (BOOL)changeTo:(NSArray<MVRow *> *)rows {
   NSArray *before = [_rows valueForKey:@"identity"], *after = [rows valueForKey:@"identity"];
-  NSIndexSet *gone = [before indexesOfObjectsPassingTest:^BOOL(id one, NSUInteger i, BOOL *stop) {
+  NSIndexSet *gone = [before indexesOfObjectsPassingTest:^BOOL(id one, __unused NSUInteger i, __unused BOOL *stop) {
     return ![after containsObject:one];
   }];
-  NSIndexSet *come = [after indexesOfObjectsPassingTest:^BOOL(id one, NSUInteger i, BOOL *stop) {
+  NSIndexSet *come = [after indexesOfObjectsPassingTest:^BOOL(id one, __unused NSUInteger i, __unused BOOL *stop) {
     return ![before containsObject:one];
   }];
   NSMutableArray *kept = [before mutableCopy], *still = [after mutableCopy];
@@ -130,7 +130,7 @@ static NSString *identityOf(MVRow *row) {
 
 - (void)selectKey:(nullable NSString *)key {
   if (!key) return [_table deselectAll:nil];
-  [_rows enumerateObjectsUsingBlock:^(MVRow *row, NSUInteger at, BOOL *stop) {
+  [_rows enumerateObjectsUsingBlock:^(MVRow *row, NSUInteger at, __unused BOOL *stop) {
     if (!row.header && [row.key isEqual:key]) [self->_table selectRowIndexes:[NSIndexSet indexSetWithIndex:at] byExtendingSelection:NO];
   }];
 }

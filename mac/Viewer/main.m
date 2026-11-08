@@ -73,13 +73,13 @@ NSDictionary<NSString *, Class> *MVSourceClasses(void) {
   [center addObserverForName:NSWorkspaceWillSleepNotification
                       object:nil
                        queue:nil
-                  usingBlock:^(NSNotification *n) {
+                  usingBlock:^(__unused NSNotification *n) {
                     MVEmit(@{@"op": @"sleep"});
                   }];
   [center addObserverForName:NSWorkspaceDidWakeNotification
                       object:nil
                        queue:nil
-                  usingBlock:^(NSNotification *n) {
+                  usingBlock:^(__unused NSNotification *n) {
                     MVEmit(@{@"op": @"wake"});
                   }];
 }
@@ -213,7 +213,7 @@ static void readParent(MVApp *app) {
   exit(0);
 }
 
-int main(int argc, char **argv) {
+int main(__unused int argc, __unused char **argv) {
   @autoreleasepool {
     gOut = [NSLock new];
     signal(SIGPIPE, SIG_IGN);

@@ -84,7 +84,7 @@ NSStackView *MVPlaceColumn(NSArray<NSView *> *views, CGFloat spacing) {
 NSTextField *MVNoteText(NSString *text) {
   NSTextField *field = MVParagraph(@"", MVStyleSub);
   NSMutableAttributedString *all = [NSMutableAttributedString new];
-  [[text componentsSeparatedByString:@"`"] enumerateObjectsUsingBlock:^(NSString *part, NSUInteger at, BOOL *stop) {
+  [[text componentsSeparatedByString:@"`"] enumerateObjectsUsingBlock:^(NSString *part, NSUInteger at, __unused BOOL *stop) {
     NSFont *font = at % 2 ? [NSFont monospacedSystemFontOfSize:field.font.pointSize weight:NSFontWeightRegular] : field.font;
     [all appendAttributedString:[[NSAttributedString alloc] initWithString:part attributes:@{NSFontAttributeName: font, NSForegroundColorAttributeName: field.textColor}]];
   }];

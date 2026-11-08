@@ -153,7 +153,7 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
   __weak MVConnectPane *weak = self;
   _timer = [NSTimer scheduledTimerWithTimeInterval:kLookSeconds
                                            repeats:YES
-                                             block:^(NSTimer *timer) {
+                                             block:^(__unused NSTimer *timer) {
                                                if (weak) MVAskClients(@"connect", @{});
                                              }];
 }
@@ -256,7 +256,7 @@ static NSArray<NSString *> *wordsOf(NSString *step, NSString *maker) {
   NSUInteger now = [ticked indexOfObject:@NO];
   NSArray<NSString *> *titles = @[@"Add a device", @"Connect an AI client", @"Try a prompt"];
   NSMutableArray<NSDictionary *> *started = [NSMutableArray array];
-  [titles enumerateObjectsUsingBlock:^(NSString *title, NSUInteger at, BOOL *stop) {
+  [titles enumerateObjectsUsingBlock:^(NSString *title, NSUInteger at, __unused BOOL *stop) {
     NSMutableDictionary *item = [@{@"title": title, @"state": ticked[at].boolValue ? @"done" : at == now ? @"now"
                                                                                                          : @"later"} mutableCopy];
     if (at) item[@"end"] = at == 1 ? self->_startClients : self->_startHelp;
