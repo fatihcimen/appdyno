@@ -17,6 +17,7 @@ import {
   parseAmStart,
   parseFullyDrawn,
   parseCompileStatus,
+  parseSlowStartReasons,
   parseStartup,
 } from './parse.js';
 import { NAME_NEW_PROCESSES, PROCESS_STATS, recordTrace, queryFile } from './perfetto.js';
@@ -58,7 +59,15 @@ SELECT 'reason', b.reason, SUM(b.dur)
 UNION ALL
 SELECT 'odex', sl.name, NULL
   FROM slice sl JOIN thread_track tt ON sl.track_id = tt.id JOIN thread t USING (utid) JOIN process p USING (upid)
-  WHERE p.name = '${pkg}' AND sl.name GLOB 'location=* status=* filter=* reason=*';`;
+  WHERE p.name = '${pkg}' AND sl.name GLOB 'location=* status=* filter=* reason=*'
+UNION ALL
+SELECT 'slice', n.name, android_sum_dur_for_startup_and_slice(s.startup_id, n.name)
+  FROM s, (SELECT 'bindApplication' AS name UNION ALL SELECT 'inflate' UNION ALL SELECT 'ResourcesManager#getResources') n
+UNION ALL
+SELECT 'drawn', NULL, MIN(sl.ts) - s.ts
+  FROM s JOIN android_startup_processes USING (startup_id) JOIN thread USING (upid)
+  JOIN thread_track tt USING (utid) JOIN slice sl ON sl.track_id = tt.id
+  WHERE sl.name GLOB 'reportFullyDrawn*' AND sl.ts >= s.ts;`;
 
 /**
  * Launch time: `repeats` launches after one warm-up, the median of their TotalTime (TTID) and of their
@@ -182,10 +191,11 @@ export function dexoptState(d: PerfDevice, pkg: string) {
 
 async function analyseStartup(pkg: string, file: string): Promise<StartupAnalysis> {
   const csv = await queryFile(file, startupSql(pkg));
+  // shortcut: slow_start_reason has no source but the v1 metric, deprecated in Perfetto v59; drop or port it when v1 goes
   const { stdout: metric } = await run(
     await traceProcessor(),
     ['--run-metrics', 'android_startup', '--metrics-output=json', file],
     { timeout: 120_000, maxBuffer: 64 * 1024 * 1024 },
   );
-  return parseStartup(csv, metric, pkg, file);
+  return parseStartup(csv, parseSlowStartReasons(metric, pkg), file);
 }

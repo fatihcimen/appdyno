@@ -18,3 +18,7 @@
 "reason","resources_manager_get_resources",1716375
 "reason","verify_class",2584
 "odex","location=/data/app/~~dYZPqZ8Ils9_Rg8SQQcIIQ==/dev.appdyno.fixture-Oji1v2UqqlwBj3_pRp_toA==/oat/arm64/base.odex status=up-to-date filter=verify reason=install","[NULL]"
+"slice","bindApplication",1532572043
+"slice","inflate",668208
+"slice","ResourcesManager#getResources",1716375
+"drawn","[NULL]",2139479668

@@ -38,50 +38,44 @@ export function parseCompileStatus(text: string): string | undefined {
   return m ? `status=${m[1]} reason=${m[2]}` : undefined;
 }
 
-const LIMITS: [name: string, metric: string, ms: number][] = [
-  ['bindApplication', 'time_bind_application', 1250],
-  ['inflate', 'time_inflate', 450],
-  ['getResources', 'time_get_resources', 130],
+/** A finding's name, the slices summed for it (as the `android_startup` metric's `to_first_frame` did), its limit. */
+const LIMITS: [name: string, slice: string, ms: number][] = [
+  ['bindApplication', 'bindApplication', 1250],
+  ['inflate', 'inflate', 450],
+  ['getResources', 'ResourcesManager#getResources', 130],
 ];
 
 const HOT_LIMIT_MS = 1500;
 
-type StartupMetric = {
-  package_name?: string;
-  report_fully_drawn?: { dur_ms?: number };
-  to_first_frame?: Record<string, { dur_ms?: number } | number | undefined>;
-  slow_start_reason?: string[];
-};
+/** The package's last startup's `slow_start_reason`, from the `android_startup` metric's JSON. */
+export function parseSlowStartReasons(metricJson: string, pkg: string): string[] {
+  const startups = (
+    JSON.parse(metricJson) as {
+      android_startup?: { startup?: { package_name?: string; slow_start_reason?: string[] }[] };
+    }
+  ).android_startup?.startup;
+  return startups?.filter((s) => s.package_name === pkg).at(-1)?.slow_start_reason ?? [];
+}
 
 /**
  * What a startup trace says, from the query in `AndroidPerf` (rows of `k,a,b`: `type`, `display`,
- * `reason`, `odex`) and the `android_startup` metric's JSON. TTFD falls back to the metric: the display
- * table leaves it empty when no frame follows `reportFullyDrawn`.
+ * `reason`, `odex`, `slice`, `drawn`) and the platform's reasons. TTFD falls back to the first
+ * `reportFullyDrawn`: the display table leaves it empty when no frame follows it.
  */
-export function parseStartup(
-  csv: string,
-  metricJson: string,
-  pkg: string,
-  tracePath: string,
-): StartupAnalysis {
+export function parseStartup(csv: string, reasons: string[], tracePath: string): StartupAnalysis {
   const { rows } = parseCsv(csv);
-  const find = (k: string) => rows.find((r) => r[0] === k);
-  const startups = (JSON.parse(metricJson) as { android_startup?: { startup?: StartupMetric[] } })
-    .android_startup?.startup;
-  const metric = startups?.filter((s) => s.package_name === pkg).at(-1);
+  const find = (k: string, a?: string) =>
+    rows.find((r) => r[0] === k && (a === undefined || r[1] === a));
   const type = find('type');
   const display = find('display');
   const durNs = cellNum(type?.[2]);
   const ttidNs = cellNum(display?.[1]);
-  const ttfdNs = cellNum(display?.[2]);
-  const drawnMs = metric?.report_fully_drawn?.dur_ms;
-  const ttfdMs = ttfdNs !== undefined ? nsToMs(ttfdNs) : drawnMs && Math.round(drawnMs * 10) / 10;
+  const ttfdNs = cellNum(display?.[2]) ?? cellNum(find('drawn')?.[2]);
   const odex = find('odex')?.[1];
-  const findings = LIMITS.flatMap(([name, key, limit]) => {
-    const part = metric?.to_first_frame?.[key];
-    const ms = typeof part === 'object' ? part.dur_ms : undefined;
-    return ms !== undefined && ms > limit
-      ? [`${name} took ${Math.round(ms)} ms (limit ${limit} ms)`]
+  const findings = LIMITS.flatMap(([name, slice, limit]) => {
+    const ns = cellNum(find('slice', slice)?.[2]);
+    return ns !== undefined && ns / 1e6 > limit
+      ? [`${name} took ${Math.round(ns / 1e6)} ms (limit ${limit} ms)`]
       : [];
   });
   if (type?.[1] === 'hot' && durNs !== undefined && durNs / 1e6 > HOT_LIMIT_MS)
@@ -91,8 +85,8 @@ export function parseStartup(
     ...(type?.[1] && { startupType: type[1] }),
     ...(durNs !== undefined && { durMs: nsToMs(durNs) }),
     ...(ttidNs !== undefined && { ttidMs: nsToMs(ttidNs) }),
-    ...(ttfdMs !== undefined && { ttfdMs }),
-    reasons: metric?.slow_start_reason ?? [],
+    ...(ttfdNs !== undefined && { ttfdMs: nsToMs(ttfdNs) }),
+    reasons,
     breakdown: rows
       .filter((r) => r[0] === 'reason')
       .map((r) => ({ reason: r[1]!, ms: nsToMs(cellNum(r[2]) ?? 0) }))

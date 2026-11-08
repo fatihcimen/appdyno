@@ -23,6 +23,7 @@ import {
   parseMeminfo,
   parseNetstatsUid,
   parseProcStatTicks,
+  parseSlowStartReasons,
   parseStartup,
   parseThreadReads,
   parseVitals,
@@ -254,8 +255,7 @@ describe('android perf parsers on recorded outputs', () => {
   it('reads a startup trace: type, times, the platform-s reasons, breakdown, findings, odex', () => {
     const s = parseStartup(
       fx('startup-query.csv'),
-      fx('startup-metric.json'),
-      'dev.appdyno.fixture',
+      parseSlowStartReasons(fx('startup-metric.json'), 'dev.appdyno.fixture'),
       '/traces/x.pftrace',
     );
     expect(s).toMatchObject({
@@ -280,13 +280,13 @@ describe('android perf parsers on recorded outputs', () => {
 
   it('finds a slow hot launch and nothing else on empty metrics', () => {
     const s = parseStartup(
-      '"k","a","b"\n"type","hot",1600000000\n',
-      '{"android_startup":{"startup":[]}}',
-      'a.b',
+      '"k","a","b"\n"type","hot",1600000000\n"drawn","[NULL]","[NULL]"\n',
+      parseSlowStartReasons('{"android_startup":{"startup":[]}}', 'a.b'),
       '/t.pftrace',
     );
     expect(s.findings).toEqual(['hot launch took 1600 ms (limit 1500 ms)']);
     expect(s.reasons).toEqual([]);
+    expect(s.ttfdMs).toBeUndefined();
     expect(s.breakdown).toEqual([]);
     expect(s.ttidMs).toBeUndefined();
   });
