@@ -431,7 +431,7 @@ describe.skipIf(!android)('driving on Android', () => {
     await expect.poll(scales, { timeout: 15_000, interval: 500 }).toBe(before);
   }, 120_000);
 
-  it("posts no notification that is not the app's own, and says biometrics are not here", async () => {
+  it("posts no notification that is not the app's own", async () => {
     const shell = async () =>
       (await sh('cmd notification list'))
         .split('\n')
@@ -441,8 +441,16 @@ describe.skipIf(!android)('driving on Android', () => {
     // the fixture has no Firebase Messaging, the only way an alert reaches its code
     expect(r.text).toContain(`${APP} has no Firebase Messaging`);
     expect(await shell()).toBe(before);
+  });
+
+  it('answers a fingerprint as the device can: an emulator wants one enrolled first, a phone a person', async () => {
     const b = await h.call('device_setting', { name: 'biometric', value: 'match' });
-    expect(b.data.code).toBe('UNSUPPORTED');
+    // an emulator has a sensor to touch, so nothing enrolled is a step away; a phone's sensor is a person's alone
+    if (android!.startsWith('emulator-')) {
+      const enrolled = /"count":(\d+)/.exec(await sh('dumpsys fingerprint'))?.[1];
+      expect(b.data.code).toBe('NOT_FOUND');
+      if (enrolled === '0') expect(b.text).toContain('biometric enroll takes one');
+    } else expect(b.data.code).toBe('UNSUPPORTED');
   });
 
   it('holds the device: a second process is refused by name, may share, and the holder shows', async (ctx) => {
