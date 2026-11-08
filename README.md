@@ -47,7 +47,7 @@ There is no second call to look, and no fixed sleep: an answer says `settled` wh
 | **Flows.** What an agent did once runs again with no model, on another device, and in CI.                                                                                                   | `flow`                                                                 |
 | **A person, too.** A live window you can touch while the agent drives. When only a person can go on, such as at Face ID, the agent asks one and waits until they say done.                  | `mirror` `hand_off`                                                    |
 
-All 48 tools are in [Tools](docs/reference/tools.md), and each is a call in [the library](docs/reference/library.md) too.
+All 48 tools are in [Tools](docs/reference/tools.md). Each is also [a command](docs/reference/cli.md), and a call in [the library](docs/reference/library.md).
 
 ### Push notifications and links
 
@@ -58,11 +58,11 @@ All 48 tools are in [Tools](docs/reference/tools.md), and each is a call in [the
 `push` sends a push by type, and answers with the screen after it. Asked with no type, it says which types this device takes, the way each one goes, and the payload it would send.
 
 - **On a simulator** an alert goes by `simctl` and reaches the app's own code, from fields or from APNs' own payload with a badge, a sound and a category.
-- **On Android** the shell posts a notification in each style, alert, rich, inbox, messaging and media, which the app's code does not see. `tapped` opens the app with its data in the launcher activity's extras, where a tapped push puts it.
+- **On Android** a push is always the app's own. A debuggable build with Firebase Messaging takes an alert, a rich push, a background push and a Live Activity's as FCM's own message to its Firebase SDK, sent by `run-as`, or as root where adbd already runs as root, with no Firebase project or key. `tapped` opens the app with its data in the launcher activity's extras, where a tapped push puts it. Any other build takes `tapped` alone, and the answer says what the rest need.
 - **With APNs set up** by a person, with `appdyno push setup apns`, a simulator also takes rich, background, Live Activity, VoIP and widget pushes by APNs' sandbox, and a real iPhone on its cable takes those and an alert. Behind strict controls: the sandbox by default, a token only from the app's own log or typed by a person in a window's Push pane, 4 KB at most (5 for VoIP), 10 pushes a minute, and no key or token in any answer or log.
 - **With FCM set up**, with `appdyno push setup fcm`, an Android device takes alert, rich, background and Live Activity pushes by FCM, behind the same kind of controls.
 
-Until APNs is set up, a real iPhone takes no push, and the answer says so. The requests to Apple and Google are tested against recorded ones, and the sending to Apple against a local stand-in server: no push has gone through Apple's or Google's servers from here yet.
+Until APNs is set up, a real iPhone takes no push, and the answer says so. FCM's own message was run on an API 34 emulator, and its data pushes on a Samsung phone too. The requests to Apple and Google are tested against recorded ones, and the sending to Apple against a local stand-in server: no push has gone through Apple's or Google's servers from here yet.
 
 `open_link` opens a deep link, a universal link or an App Link and answers with the screen it led to. Given an app's id, it lists the links that app opens: on a simulator its URL schemes and the domains its signature names, on Android each filter as `scheme://host/path` and each App Link domain with the state Android verified it in.
 
@@ -124,7 +124,6 @@ appdyno is not on npm yet, and has no release yet, so today it installs from a c
 ```sh
 git clone https://github.com/fatihcimen/appdyno.git
 cd appdyno
-mise install               # Node 26, pnpm 12 and a JDK 25, from .mise.toml, if you use mise
 sh scripts/install.sh      # builds this checkout and installs the appdyno command
 ```
 

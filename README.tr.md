@@ -47,7 +47,7 @@ Ne olduğuna bakmak için ikinci bir çağrı gerekmez, sabit bir bekleme de yok
 | **Akışlar.** Ajanın bir kez yaptığı iş, model olmadan, başka bir cihazda ve CI'da yeniden çalışır.                                                                                                                                       | `flow`                                                                  |
 | **İnsan da işin içinde.** Ajan cihazı kullanırken sizin de dokunabildiğiniz canlı bir pencere. Face ID gibi yalnızca bir insanın geçebileceği bir yerde ajan size sorar ve "tamam" diyene kadar bekler.                                  | `mirror` `hand_off`                                                     |
 
-48 aracın hepsi [Araçlar](docs/reference/tools.tr.md) sayfasında; her biri [kütüphanede](docs/reference/library.tr.md) bir çağrı olarak da var.
+48 aracın hepsi [Araçlar](docs/reference/tools.tr.md) sayfasında. Her biri aynı zamanda [bir komut](docs/reference/cli.tr.md) ve [kütüphanede](docs/reference/library.tr.md) bir çağrıdır.
 
 ### Push bildirimleri ve bağlantılar
 
@@ -58,11 +58,11 @@ Ne olduğuna bakmak için ikinci bir çağrı gerekmez, sabit bir bekleme de yok
 `push`, bildirimi türüne göre gönderir ve sonraki ekranla yanıt verir. Tür verilmezse bu cihazın hangi türleri kabul ettiğini, her birinin hangi yoldan gittiğini ve göndereceği payload'u söyler.
 
 - **Simülatörde** alert `simctl` ile gider ve doğrudan uygulamanın koduna ulaşır: alanlardan ya da badge, ses ve kategori içeren APNs payload'unun kendisinden.
-- **Android'de** shell her stilde bir bildirim yayımlar: alert, rich, inbox, messaging, media. Bunlar shell'in bildirimleridir, uygulamanın kodu onları görmez. `tapped` ise uygulamayı, dokunulmuş bir push'un yaptığı gibi, verisi launcher activity'nin extras'ında olacak şekilde açar.
+- **Android'de** push her zaman uygulamanın kendisinindir. Firebase Messaging içeren debuggable bir derleme alert, rich, background ve Live Activity push'larını, Firebase SDK'sına giden FCM'in kendi mesajı olarak alır: `run-as` ile, ya da adbd zaten root çalışıyorsa root olarak gönderilir; Firebase projesi ya da anahtar gerekmez. `tapped` ise uygulamayı, dokunulmuş bir push'un yaptığı gibi, verisi launcher activity'nin extras'ında olacak şekilde açar. Başka bir derleme yalnızca `tapped` alır; yanıt, diğerleri için neyin gerektiğini söyler.
 - **APNs kurulduğunda**, yani bir kişi `appdyno push setup apns` ile kurduğunda, simülatör APNs'in sandbox'ı üzerinden rich, background, Live Activity, VoIP ve widget push'larını da alır; kabloyla bağlı gerçek bir iPhone da bunları ve alert'i alır. Kurallar sıkıdır: varsayılan olarak sandbox; token yalnızca uygulamanın kendi logundan ya da bir kişinin pencerenin Bildirim panelinde yazdığından; en çok 4 KB (VoIP için 5); dakikada 10 push; hiçbir yanıtta ya da logda anahtar ya da token yok.
 - **FCM kurulduğunda**, `appdyno push setup fcm` ile, Android cihaz alert, rich, background ve Live Activity push'larını FCM üzerinden alır; kurallar aynı türdendir.
 
-APNs kurulana kadar gerçek bir iPhone push almaz, yanıt da bunu söyler. Apple'a ve Google'a giden istekler kaydedilmiş isteklerle, Apple'a gönderim de yerel bir test sunucusuyla sınanır: buradan henüz Apple'ın ya da Google'ın sunucularından geçen bir push gönderilmedi.
+APNs kurulana kadar gerçek bir iPhone push almaz, yanıt da bunu söyler. FCM'in kendi mesajı API 34 bir emülatörde, veri push'ları da bir Samsung telefonda denendi. Apple'a ve Google'a giden istekler kaydedilmiş isteklerle, Apple'a gönderim de yerel bir test sunucusuyla sınanır: buradan henüz Apple'ın ya da Google'ın sunucularından geçen bir push gönderilmedi.
 
 `open_link` bir deep link, universal link ya da App Link açar ve vardığı ekranla yanıt verir. Bir uygulamanın kimliği verilirse o uygulamanın açtığı bağlantıları listeler: simülatörde URL şemalarını ve imzasında adı geçen alan adlarını, Android'de her filtreyi `scheme://host/path` biçiminde ve her App Link alan adını Android'in doğrulama durumuyla.
 
@@ -124,7 +124,6 @@ appdyno henüz npm'de değil ve henüz bir sürümü yayımlanmadı; bu yüzden 
 ```sh
 git clone https://github.com/fatihcimen/appdyno.git
 cd appdyno
-mise install               # mise kullanıyorsanız .mise.toml'dan Node 26, pnpm 12 ve JDK 25
 sh scripts/install.sh      # bu kopyayı derler ve appdyno komutunu kurar
 ```
 

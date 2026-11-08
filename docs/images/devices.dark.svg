@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 708" width="960" height="708" role="img" aria-labelledby="title desc">
   <title id="title">What works on each device</title>
-  <desc id="desc">On iOS a simulator and an iPhone, on Android an emulator and a phone. Read the screen, tap, type, swipe: Simulator works; iPhone works; Emulator works; Phone works. Open a deep link, universal or App Link: Simulator works; iPhone part of it, as the note says, in a named app; Emulator works; Phone works. List the links an app opens: Simulator works, schemes, domains; iPhone no, use a simulator; Emulator works, App Link state; Phone not run on a phone yet. Send a push notification: Simulator part of it, as the note says, alert; APNs: more; iPhone not run on a phone yet, APNs, once set up; Emulator part of it, as the note says, 6 of 10 types; Phone not run on a phone yet. Live window, by hand: Simulator works; iPhone part of it, as the note says, experimental; Emulator works; Phone works, Android 10 and up. Launch, frames, memory, CPU: Simulator part of it, as the note says, frames: main thread; iPhone works; Emulator works; Phone works. Video, logs, crashes: Simulator works; iPhone part of it, as the note says, no app log; Emulator works; Phone works. Dark mode, text size: Simulator works; iPhone works; Emulator works; Phone works. Biometrics: Simulator works, Face ID, Touch ID; iPhone no; Emulator works, fingerprint; Phone no. Airplane, Wi-Fi, mobile data: Simulator no, the Mac's network; iPhone no; Emulator works; Phone works.</desc>
+  <desc id="desc">On iOS a simulator and an iPhone, on Android an emulator and a phone. Read the screen, tap, type, swipe: Simulator works; iPhone works; Emulator works; Phone works. Open a deep link, universal or App Link: Simulator works; iPhone part of it, as the note says, in a named app; Emulator works; Phone works. List the links an app opens: Simulator works, schemes, domains; iPhone no, use a simulator; Emulator works, App Link state; Phone not run on a phone yet. Send a push notification: Simulator part of it, as the note says, 1 of 7; APNs: 6; iPhone not run on a phone yet, APNs: 6 of 7; Emulator part of it, as the note says, 5 of 7 types; Phone part of it, as the note says, 5 of 7; data run. Live window, by hand: Simulator works; iPhone part of it, as the note says, experimental; Emulator works; Phone works, Android 10 and up. Launch, frames, memory, CPU: Simulator part of it, as the note says, frames: main thread; iPhone works; Emulator works; Phone works. Video, logs, crashes: Simulator works; iPhone part of it, as the note says, no app log; Emulator works; Phone works. Dark mode, text size: Simulator works; iPhone works; Emulator works; Phone works. Biometrics: Simulator works, Face ID, Touch ID; iPhone no; Emulator works, fingerprint; Phone no. Airplane, Wi-Fi, mobile data: Simulator no, the Mac's network; iPhone no; Emulator works; Phone works.</desc>
   <style>
     svg { --ground: #0A0E2E; --card: #151B4A; --ink: #EEF0FF; --soft: #B9C3EA; --host: #7EA2FF; --device: #5FD0F7; --person: #FF7FD0; --host-band: #3F6BFF26; --device-band: #7A3DF033; }
     text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); }
@@ -76,12 +76,13 @@
   <path class="rule" d="M32 280H936"/>
   <text class="note" x="44" y="311">Send a push notification</text>
   <circle class="card s-h" cx="446" cy="297" r="7"/><path class="f-h" d="M446 290A7 7 0 0 0 446 304Z"/>
-  <text class="text mid" x="446" y="323">alert; APNs: more</text>
+  <text class="text mid" x="446" y="323">1 of 7; APNs: 6</text>
   <circle class="card s-h dash" cx="586" cy="297" r="7"/>
-  <text class="text mid" x="586" y="323">APNs, once set up</text>
+  <text class="text mid" x="586" y="323">APNs: 6 of 7</text>
   <circle class="card s-d" cx="726" cy="297" r="7"/><path class="f-d" d="M726 290A7 7 0 0 0 726 304Z"/>
-  <text class="text mid" x="726" y="323">6 of 10 types</text>
-  <circle class="card s-d dash" cx="866" cy="306" r="7"/>
+  <text class="text mid" x="726" y="323">5 of 7 types</text>
+  <circle class="card s-d" cx="866" cy="297" r="7"/><path class="f-d" d="M866 290A7 7 0 0 0 866 304Z"/>
+  <text class="text mid" x="866" y="323">5 of 7; data run</text>
   <path class="rule" d="M32 332H936"/>
   <text class="note" x="44" y="363">Live window, by hand</text>
   <circle class="f-h" cx="446" cy="358" r="7"/>
