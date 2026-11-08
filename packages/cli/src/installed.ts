@@ -31,7 +31,7 @@ const PASSING_THROUGH = /\/AppTranslocation\/|^\/Volumes\/Appdyno/;
 
 /** Where pnpm 10, and pnpm 11 and 12, really keep a global package. */
 const PNPM_GLOBAL = /\/global\/\d+\/\.pnpm\/|\/store\/v\d+\/links\//;
-const ONE_OFF = /\/_npx\//;
+const ONE_OFF = '/_npx/';
 /** These hold a `lib/node_modules` too, but the prefix is another manager's to change. */
 const OTHER_MANAGER = /\/(Cellar|\.volta|nix\/store)\//;
 
@@ -43,15 +43,15 @@ export function installedBy(root: string, name: string): Installed {
       by: 'a source checkout',
       instead: 'update the checkout: git pull, then pnpm install && pnpm build',
     };
-  const app = IN_THE_APP.exec(root);
-  if (app)
+  const [, bundle] = IN_THE_APP.exec(root) ?? [];
+  if (bundle !== undefined)
     return PASSING_THROUGH.test(root)
       ? {
           by: 'an app not yet in Applications',
           instead: 'drag Appdyno to Applications, and open it from there',
         }
-      : { by: 'the app', bundle: app[1]! };
-  if (ONE_OFF.test(root))
+      : { by: 'the app', bundle };
+  if (root.includes(ONE_OFF))
     return {
       by: 'a one-off npx run',
       instead: `npx takes the registry's latest by itself, unverified, so there is nothing to update: npm install -g ${name} once, and ${name} update moves that install, which npx then runs too`,

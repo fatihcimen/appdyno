@@ -40,7 +40,7 @@ async function withPassword(shell: string, o: PathOptions) {
   const script = `do shell script ${shell} with administrator privileges`;
   await call(o.run, '/usr/bin/osascript', ['-e', script], { timeout: 120_000 }).catch(
     (e: unknown) => {
-      if (/User canceled|-128/.test(`${(e as { stderr?: string }).stderr}`))
+      if (/User canceled|-128/.test((e as { stderr?: string }).stderr ?? ''))
         throw refuse('no change was made', 'CANCELLED', 'the password dialog was dismissed');
       throw failed(e, 'asking for an administrator');
     },

@@ -43,7 +43,7 @@ function scan(text: string) {
     i = Math.min(i + 1, text.length);
   };
   const string = () => {
-    const quote = text[i]!;
+    const quote = text.charAt(i);
     const long = text.startsWith(quote.repeat(3), i);
     const end = long ? quote.repeat(3) : quote;
     i += end.length;
@@ -70,7 +70,10 @@ function scan(text: string) {
   };
   const value = () => {
     const c = text[i];
-    if (c === '"' || c === "'") return string();
+    if (c === '"' || c === "'") {
+      string();
+      return;
+    }
     if (c === '[' || c === '{') {
       const close = c === '[' ? ']' : '}';
       i++;

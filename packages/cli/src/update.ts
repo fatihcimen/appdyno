@@ -101,7 +101,11 @@ async function upgrade(o: UpdateOptions, me: Manifest, version: string, place: M
   }
   const now = await versionNow(o.root, name, place, o.run);
   if (now !== version)
-    throw refuse(`${place.by} said it upgraded, and ${name} is ${now}`, 'CHECK_FAILED', SEE_DOCTOR);
+    throw refuse(
+      `${place.by} said it upgraded, and ${name} is ${String(now)}`,
+      'CHECK_FAILED',
+      SEE_DOCTOR,
+    );
 }
 
 async function fromRegistry(
@@ -161,7 +165,7 @@ export async function update(o: UpdateOptions & { check?: boolean | undefined })
   else if (next) {
     if (!o.check) throw next;
     o.out(`would refuse: ${next.message}`);
-    o.out(`  ${next.hint}`);
+    o.out(`  ${String(next.hint)}`);
   } else if (o.check) o.out(`would ${latest.plan}; nothing was changed`);
   else {
     await latest.install();

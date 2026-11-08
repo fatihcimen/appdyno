@@ -3,7 +3,7 @@ import { writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
-import { deviceStateFile } from '@appdyno/core';
+import { deviceStateFile, must } from '@appdyno/core';
 import { argumentsFor, DATA_LOSS, inCall, ToolError, type Op } from '@appdyno/ops';
 import { z } from 'zod';
 
@@ -130,7 +130,7 @@ function parse(op: Op, argv: string[]) {
   let out: string | undefined;
   let yes = false;
   for (let i = 0; i < argv.length; i++) {
-    const word = argv[i]!;
+    const word = must(argv[i], 'a word');
     // `record start`: the first bare word of an op with actions
     if (i === 0 && !word.startsWith('--') && properties.action?.enum?.includes(word)) {
       args.action = word;
@@ -190,12 +190,15 @@ export function flowWords(argv: string[]): string[] {
   const params: string[] = [];
   const named = ['--action', '--file'];
   for (let i = 0; i < argv.length; i++) {
-    const word = argv[i]!;
+    const word = must(argv[i], 'a word');
     if (word === '--param') params.push(argv[++i] ?? '');
     else if (FLOW_VALUES.has(word)) out.push(word, argv[++i] ?? '');
     else if (word.startsWith('--')) out.push(word);
-    else if (named.length > 0) out.push(named.shift()!, word);
-    else throw new ToolError(`unexpected word: ${word}`, 'INVALID_ARGUMENT');
+    else {
+      const flag = named.shift();
+      if (flag === undefined) throw new ToolError(`unexpected word: ${word}`, 'INVALID_ARGUMENT');
+      out.push(flag, word);
+    }
   }
   return params.length > 0 ? [...out, '--params', JSON.stringify(params)] : out;
 }
@@ -220,7 +223,7 @@ export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
           io.err(`${name}: ${e.message}`);
           return 2;
         }
-        const ask = call.yes ? async () => true : io.ask;
+        const ask = call.yes ? () => Promise.resolve(true) : io.ask;
         try {
           const { blocks, data } = await inCall(ask ? { ask } : {}, () => op.handler(call.args));
           for (const b of blocks) {
@@ -232,7 +235,7 @@ export function commandsFor(ops: Record<string, Op>): Record<string, Command> {
               call.out ??
               join(
                 tmpdir(),
-                `appdyno-${randomBytes(4).toString('hex')}.${b.mimeType.split('/')[1]}`,
+                `appdyno-${randomBytes(4).toString('hex')}.${String(b.mimeType.split('/')[1])}`,
               );
             await writeFile(file, Buffer.from(b.data, 'base64'));
             io.out(file);

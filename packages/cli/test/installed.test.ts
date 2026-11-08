@@ -45,7 +45,7 @@ describe('where a copy is installed', () => {
   ])('says what to do instead at %s', (path, by, instead) => {
     const place = installedBy(path, 'tool');
     expect(said(place)).toContain(by);
-    expect(place).toMatchObject({ instead: expect.stringMatching(instead) });
+    expect(place).toMatchObject({ instead: expect.stringMatching(instead) as unknown });
   });
 
   it('knows the app wherever a person keeps it', () => {
@@ -61,7 +61,7 @@ describe('where a copy is installed', () => {
     '/private/var/folders/x/AppTranslocation/ab-cd/d/Appdyno.app/Contents/Resources/app',
   ])('tells an app passing through %s to move first', (path) => {
     expect(installedBy(path, 'tool')).toMatchObject({
-      instead: expect.stringMatching(/drag Appdyno to Applications/),
+      instead: expect.stringMatching(/drag Appdyno to Applications/) as unknown,
     });
     expect(serverOf(path, 'tool')).toBeUndefined();
   });

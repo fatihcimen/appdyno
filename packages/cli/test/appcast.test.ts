@@ -9,8 +9,10 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { must } from '@appdyno/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { readAppcast, type Get } from '../src/appcast.js';
+import type { Manifest } from '../src/installed.js';
 import type { Run } from '../src/release.js';
 import { update } from '../src/update.js';
 
@@ -35,7 +37,7 @@ const cast = (over: object = {}) =>
 const signed = (bytes: Buffer, key = privateKey) => sign(null, bytes, key).toString('base64');
 
 /** The app in a folder of a test's, as the build lays it out. */
-function anApp(key: object | undefined = publicKey) {
+function anApp(key: object | null = publicKey) {
   const bundle = join(
     mkdtempSync(join(tmpdir(), 'appdyno-appcast-test-')),
     'Applications/Tool.app',
@@ -50,11 +52,12 @@ function anApp(key: object | undefined = publicKey) {
 }
 
 const getting = (files: Record<string, Buffer | string | Error>): Get => {
-  return async (url) => {
+  return (url) => {
     const found = files[url];
-    if (found === undefined) throw Object.assign(new Error('E404'), { stderr: 'E404' });
-    if (found instanceof Error) throw found;
-    return Buffer.from(found);
+    if (found === undefined)
+      return Promise.reject(Object.assign(new Error('E404'), { stderr: 'E404' }));
+    if (found instanceof Error) return Promise.reject(found);
+    return Promise.resolve(Buffer.from(found));
   };
 };
 
@@ -75,21 +78,27 @@ type Say = {
 /** The Mac's own tools as they answer, with an unpack that lays down the new app. */
 function tools(say: Say = {}) {
   const calls: string[] = [];
-  const run: Run = async (file, args) => {
-    const tool = file.split('/').at(-1)!;
-    calls.push(`${tool} ${args[0]}`);
-    if (say.failAt === `${tool} ${args[0]}`) throw new Error('it failed');
+  const run: Run = (file, args) => {
+    const tool = must(file.split('/').at(-1), 'a tool');
+    const [first, second] = args;
+    const call = `${tool} ${String(first)}`;
+    calls.push(call);
+    if (say.failAt === call) return Promise.reject(new Error('it failed'));
     if (tool === 'ditto') {
-      mkdirSync(args[1]!, { recursive: true });
-      writeFileSync(join(args[1]!, 'new'), 'the new app');
-      if (say.failAt === 'ditto') throw new Error('no space left on the disk');
+      const into = must(second, 'where ditto unpacks');
+      mkdirSync(into, { recursive: true });
+      writeFileSync(join(into, 'new'), 'the new app');
+      if (say.failAt === 'ditto') return Promise.reject(new Error('no space left on the disk'));
     }
-    if (tool === 'codesign' && args[0] === '--verify' && say.unsigned)
-      throw new Error('a sealed resource is missing');
-    if (tool === 'plutil') return { stdout: `${say.version ?? NEWER}\n` };
-    if (say.noSigner) return { stdout: '', stderr: '' };
-    const identity = args[1]?.includes('.Tool-') ? (say.signer ?? 'TEAM') : 'TEAM';
-    return { stdout: '', stderr: `Identifier=dev.tool\nTeamIdentifier=${identity}\n` };
+    if (tool === 'codesign' && first === '--verify' && say.unsigned)
+      return Promise.reject(new Error('a sealed resource is missing'));
+    if (tool === 'plutil') return Promise.resolve({ stdout: `${say.version ?? NEWER}\n` });
+    if (say.noSigner) return Promise.resolve({ stdout: '', stderr: '' });
+    const identity = second?.includes('.Tool-') ? (say.signer ?? 'TEAM') : 'TEAM';
+    return Promise.resolve({
+      stdout: '',
+      stderr: `Identifier=dev.tool\nTeamIdentifier=${identity}\n`,
+    });
   };
   return { run, calls };
 }
@@ -97,7 +106,7 @@ function tools(say: Say = {}) {
 describe('the appcast', () => {
   it('is believed only when the key in this app verifies it', async () => {
     const { root } = anApp();
-    const me = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+    const me = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as Manifest;
     await expect(readAppcast(root, me, getting(released()))).resolves.toMatchObject({
       version: NEWER,
     });
@@ -105,7 +114,7 @@ describe('the appcast', () => {
 
   it('is refused when signed by any other key', async () => {
     const { root } = anApp();
-    const me = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+    const me = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as Manifest;
     const other = generateKeyPairSync('ed25519').privateKey;
     const bytes = cast();
     const get = getting({ [AT]: bytes, [`${AT}.sig`]: signed(bytes, other) });
@@ -114,17 +123,17 @@ describe('the appcast', () => {
 
   it('is refused when a byte of it changed', async () => {
     const { root } = anApp();
-    const me = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+    const me = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as Manifest;
     const get = getting({ [AT]: cast({ version: '9.9.9' }), [`${AT}.sig`]: signed(cast()) });
     await expect(readAppcast(root, me, get)).rejects.toThrow(/signature of the appcast is bad/);
   });
 
   it('cannot be trusted by a build with no key', async () => {
-    const { root } = anApp(null as never);
-    const me = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+    const { root } = anApp(null);
+    const me = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as Manifest;
     await expect(readAppcast(root, me, getting(released()))).rejects.toMatchObject({
       code: 'UNSUPPORTED',
-      message: expect.stringMatching(/no update key/),
+      message: expect.stringMatching(/no update key/) as unknown,
     });
   });
 });
@@ -164,9 +173,10 @@ describe('appdyno update, in the app', () => {
     expect(existsSync(join(app.bundle, 'old'))).toBe(false);
     expect(readdirSync(dirname(app.bundle))).toEqual(['Tool.app']);
     expect(readdirSync(tmp)).toEqual([]);
+    const [, ditto] = mac.calls;
     expect(mac.calls).toEqual([
       'hdiutil attach',
-      'ditto ' + mac.calls[1]!.split(' ')[1],
+      `ditto ${String(ditto?.split(' ')[1])}`,
       'hdiutil detach',
       'codesign --verify',
       'plutil -extract',
@@ -200,7 +210,8 @@ describe('appdyno update, in the app', () => {
   });
 
   it('refuses a download the appcast does not sign', async () => {
-    const get = getting({ ...released(), [JSON.parse(cast().toString()).url]: 'something else' });
+    const { url } = JSON.parse(cast().toString()) as { url: string };
+    const get = getting({ ...released(), [url]: 'something else' });
     const { mac, going } = updating(get);
     await expect(going).rejects.toThrow(/not what the appcast signs/);
     expect(mac.calls).toEqual([]);

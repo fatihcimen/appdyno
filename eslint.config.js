@@ -3,7 +3,14 @@ import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
 /** What is clean under the type-checked rules: the rest keeps the recommended ones until it is, and then this goes. */
-const strict = ['*.js', '*.ts', 'packages/protocol/**', 'packages/mcp/**', 'packages/flows/**'];
+const strict = [
+  '*.js',
+  '*.ts',
+  'packages/protocol/**',
+  'packages/mcp/**',
+  'packages/flows/**',
+  'packages/cli/**',
+];
 
 export default defineConfig(
   { ignores: ['**/dist/**', 'android/**', '**/node_modules/**'] },

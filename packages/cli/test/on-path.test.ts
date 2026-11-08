@@ -10,6 +10,7 @@ import {
 import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { must } from '@appdyno/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { followMove, PATH_LINK, putOnPath, takeOffPath } from '../src/on-path.js';
 import type { Run } from '../src/release.js';
@@ -21,9 +22,9 @@ describe('appdyno on the PATH', () => {
   let bin: string;
   let link: string;
   let scripts: string[];
-  const noPassword: Run = async (_, args) => {
-    scripts.push(args[1]!);
-    return { stdout: '' };
+  const noPassword: Run = (_, args) => {
+    scripts.push(must(args[1], 'a script'));
+    return Promise.resolve({ stdout: '' });
   };
   const options = (run = noPassword) => ({
     home,
@@ -96,7 +97,7 @@ describe('appdyno on the PATH', () => {
     symlinkSync('../lib/node_modules/appdyno/dist/main.js', link);
     await expect(putOnPath(options())).rejects.toMatchObject({
       code: 'UNSUPPORTED',
-      message: expect.stringMatching(/not this app's/),
+      message: expect.stringMatching(/not this app's/) as unknown,
     });
     expect(readlinkSync(link)).toContain('node_modules');
     expect(existsSync(stable())).toBe(false);

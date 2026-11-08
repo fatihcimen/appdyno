@@ -1,3 +1,4 @@
+import { must } from '@appdyno/core';
 import { describe, expect, it } from 'vitest';
 import { SERVER } from '../src/clients.js';
 import { jsonEdit } from '../src/jsonc.js';
@@ -20,9 +21,10 @@ function generator(seed: number) {
   const gap = () =>
     Array.from({ length: next(4) }, () => {
       const c = `c${++comments}`;
-      return [' ', '\n', '\n  ', '\t', `// ${c}\n`, ` /* ${c} */ `, `/* ${c}\n   more */`][
-        next(7)
-      ]!;
+      return must(
+        [' ', '\n', '\n  ', '\t', `// ${c}\n`, ` /* ${c} */ `, `/* ${c}\n   more */`][next(7)],
+        'a gap',
+      );
     }).join('');
   const object = (members: string[]) =>
     `{${gap()}${members
@@ -31,7 +33,10 @@ function generator(seed: number) {
       )
       .join('')}}`;
   const value = () =>
-    ['1', '"x"', 'null', '[1, 2]', '{ "n": 1 }', '"a // b"', '"/* c */"', '"}"'][next(8)]!;
+    must(
+      ['1', '"x"', 'null', '[1, 2]', '{ "n": 1 }', '"a // b"', '"/* c */"', '"}"'][next(8)],
+      'a value',
+    );
   const member = (name: string) => `"${name}"${gap()}:${gap()}${value()}${gap()}`;
   const list = () => {
     const members = Array.from({ length: next(4) }, (_, i) => member(`m${i}`));

@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { must } from '@appdyno/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CLIENTS } from '../src/clients.js';
 import { install } from '../src/install.js';
@@ -18,11 +19,14 @@ vi.mock('@appdyno/core', async (original) => {
   };
 });
 
-const client = CLIENTS.find((c) => c.format === 'jsonc' && !c.ownFile)!;
+const client = must(
+  CLIENTS.find((c) => c.format === 'jsonc' && !c.ownFile),
+  'a JSONC client in a file of others',
+);
 
 function homeWith(text?: string) {
   const home = mkdtempSync(join(tmpdir(), 'appdyno-durable-'));
-  const file = join(home, client.files[0]!);
+  const file = join(home, must(client.files[0], 'its file'));
   mkdirSync(dirname(file), { recursive: true });
   if (text !== undefined) writeFileSync(file, text);
   return home;

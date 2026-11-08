@@ -24,7 +24,10 @@ function stringEnd(t: string, at: number) {
 }
 
 /** The text with what `change` makes of its parts outside strings. */
-function outsideStrings(text: string, change: (i: number) => { to: string; next: number } | void) {
+function outsideStrings(
+  text: string,
+  change: (i: number) => { to: string; next: number } | undefined,
+) {
   const parts: string[] = [];
   let from = 0;
   let i = 0;
@@ -69,7 +72,7 @@ function valueEnd(t: string, at: number) {
   if (t[at] === '"') return stringEnd(t, at);
   let i = at;
   if (t[at] !== '{' && t[at] !== '[') {
-    while (!isSpace(t[i]) && !',}]'.includes(t[i]!)) i++;
+    while (!isSpace(t[i]) && !',}]'.includes(t.charAt(i))) i++;
     return i;
   }
   for (let depth = 0; ;) {
@@ -101,7 +104,7 @@ function membersOf(t: string, open: number): Members {
 }
 
 const lineIndent = (t: string, at: number) =>
-  /^[ \t]*/.exec(t.slice(t.lastIndexOf('\n', at - 1) + 1, at))![0];
+  /^[ \t]*/.exec(t.slice(t.lastIndexOf('\n', at - 1) + 1, at))?.[0] ?? '';
 
 const splice = (t: string, from: number, to: number, text: string) =>
   t.slice(0, from) + text + t.slice(to);
@@ -146,7 +149,8 @@ function insert(
 const LINE_ENDS = /^[ \t\r]*(?:\/\/.*)?$/;
 
 function cut(text: string, open: number, { members }: Members, i: number) {
-  const m = members[i]!;
+  const m = members[i];
+  if (!m) throw new Error(`no member ${i} to cut`);
   const next = members[i + 1];
   const previous = members[i - 1];
   const past = m.comma === undefined ? m.end : m.comma + 1;

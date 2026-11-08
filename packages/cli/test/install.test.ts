@@ -13,7 +13,8 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { must } from '@appdyno/core';
+import { afterEach, assert, describe, expect, it, vi } from 'vitest';
 import { entryCommand } from '../src/client-state.js';
 import { CLIENTS, SERVER, STDIO, type Client } from '../src/clients.js';
 import { fileOf, install, type InstallOptions } from '../src/install.js';
@@ -101,7 +102,7 @@ const homes: string[] = [];
 function homeWith(client: Client, text?: string) {
   const home = mkdtempSync(join(tmpdir(), 'appdyno-home-'));
   homes.push(home);
-  const file = join(home, client.files[0]!);
+  const file = join(home, must(client.files[0], 'its file'));
   mkdirSync(dirname(file), { recursive: true });
   if (text !== undefined) writeFileSync(file, text);
   return { home, file };
@@ -152,8 +153,9 @@ describe.each(CLIENTS)('$name', (client) => {
     chmodSync(file, 0o600);
     const { out } = await run(home);
     const [backup] = beside(file);
+    assert(backup);
     expect(out.join('\n')).toContain(backup);
-    const copy = join(dirname(file), backup!);
+    const copy = join(dirname(file), backup);
     expect(readFileSync(copy, 'utf8')).toBe(sample);
     expect(statSync(copy).mode & 0o777).toBe(0o600);
     expect(statSync(file).mode & 0o777).toBe(0o600);
@@ -208,8 +210,9 @@ describe.each(CLIENTS)('$name', (client) => {
         ? `[${client.key}.${SERVER}]\ncommand = "npx"\nargs = ["-y", "appdyno", "mcp", "--device", "x"]\nstartup_timeout_sec = 5\ntool_timeout_sec = 7200\n`
         : undefined;
     const entry = client.entry(STDIO);
-    const have = Array.isArray(entry.command)
-      ? { ...entry, command: [...entry.command, '--device', 'x'] }
+    const words: unknown[] | undefined = Array.isArray(entry.command) ? entry.command : undefined;
+    const have = words
+      ? { ...entry, command: [...words, '--device', 'x'] }
       : { ...entry, args: [...STDIO.args, '--device', 'x'], env: { A: '1' } };
     const text = extra ?? JSON.stringify({ [client.key]: { [SERVER]: have } }, null, 2);
     const { home, file } = homeWith(client, text);
@@ -244,10 +247,11 @@ describe.each(CLIENTS)('$name', (client) => {
     const { home, file } = homeWith(client, sample);
     const elsewhere = mkdtempSync(join(tmpdir(), 'appdyno-moved-'));
     homes.push(elsewhere);
-    const moved = client.moved!.file ? join(elsewhere, client.moved!.file) : join(elsewhere, 'm');
+    const to = must(client.moved, 'where it moves');
+    const moved = to.file ? join(elsewhere, to.file) : join(elsewhere, 'm');
     mkdirSync(dirname(moved), { recursive: true });
     writeFileSync(moved, sample);
-    const env = { [client.moved!.env]: client.moved!.file ? elsewhere : moved };
+    const env = { [to.env]: to.file ? elsewhere : moved };
     expect(fileOf(client, { home, env })).toBe(moved);
     await run(home, { env });
     expect(entryIn(client, moved)).toEqual(client.entry(STDIO));
@@ -275,7 +279,7 @@ describe('a JSON file', () => {
     for (const text of ['{}\n', '{\n  "servers": {}\n}\n', '{ "servers": {} }\n']) {
       const after = add(text);
       expect(edit.read(after, 'servers', SERVER)).toEqual(STDIO);
-      expect(JSON.parse(after).servers[SERVER]).toEqual(STDIO);
+      expect(JSON.parse(after)).toHaveProperty(['servers', SERVER], STDIO);
     }
     expect(add('  \n')).toBe(`{\n  "servers": {\n    ${line}\n  }\n}\n`);
     const empty = '{\n  "servers": {}\n}\n';
@@ -285,13 +289,13 @@ describe('a JSON file', () => {
   it('writes into a list on one line, and gives it back', () => {
     const text = '{"servers":{"a":{"command":"x"}}}\n';
     const after = add(text);
-    expect(JSON.parse(after).servers).toEqual({ [SERVER]: STDIO, a: { command: 'x' } });
+    expect(JSON.parse(after)).toHaveProperty('servers', { [SERVER]: STDIO, a: { command: 'x' } });
     expect(edit.remove(after, 'servers', SERVER)).toBe(text);
   });
 
   it.each([
-    ['first', `{"s":{${'"appdyno":{},'}"a":1,"b":2}}`, '{"s":{"a":1,"b":2}}'],
-    ['in the middle', `{"s":{"a":1,${'"appdyno":{},'}"b":2}}`, '{"s":{"a":1,"b":2}}'],
+    ['first', '{"s":{"appdyno":{},"a":1,"b":2}}', '{"s":{"a":1,"b":2}}'],
+    ['in the middle', '{"s":{"a":1,"appdyno":{},"b":2}}', '{"s":{"a":1,"b":2}}'],
     ['last', `{"s":{"a":1,"b":2,"appdyno":{}}}`, '{"s":{"a":1,"b":2}}'],
     ['alone', `{"s":{"appdyno":{}}}`, '{"s":{}}'],
     [
@@ -372,7 +376,9 @@ describe('a JSON file', () => {
     const text = STATE('mcpServers');
     expect(edits.read(text, 'mcpServers', SERVER)).toBeUndefined();
     const after = edits.write(text, 'mcpServers', SERVER, STDIO);
-    expect(JSON.parse(after).projects['/work/app'].mcpServers[SERVER]).toEqual({ command: 'old' });
+    expect(JSON.parse(after)).toHaveProperty(['projects', '/work/app', 'mcpServers', SERVER], {
+      command: 'old',
+    });
     expect(edits.remove(after, 'mcpServers', SERVER)).toBe(text);
   });
 
@@ -485,10 +491,14 @@ describe('a TOML file', () => {
 
 describe('install', () => {
   const [json, , cursor] = CLIENTS.filter((c) => c.format !== 'toml');
+  assert(json && cursor);
   const withTwo = () => {
-    const a = homeWith(cursor!, '{}\n');
-    const other = CLIENTS.find((c) => c.format === 'toml')!;
-    const b = join(a.home, other.files[0]!);
+    const a = homeWith(cursor, '{}\n');
+    const other = must(
+      CLIENTS.find((c) => c.format === 'toml'),
+      'a TOML client',
+    );
+    const b = join(a.home, must(other.files[0], 'its file'));
     mkdirSync(dirname(b), { recursive: true });
     writeFileSync(b, '');
     return { home: a.home, first: a.file, second: b };
@@ -496,7 +506,7 @@ describe('install', () => {
 
   it('asks which, and changes only the ones picked', async () => {
     const { home, first, second } = withTwo();
-    const ask = vi.fn(async () => '2');
+    const ask = vi.fn(() => Promise.resolve('2'));
     const { code, out } = await run(home, { yes: false, ask });
     expect(code).toBe(0);
     expect(ask).toHaveBeenCalledOnce();
@@ -508,14 +518,14 @@ describe('install', () => {
 
   it('takes all when told', async () => {
     const { home, first, second } = withTwo();
-    await run(home, { yes: false, ask: async () => 'all' });
+    await run(home, { yes: false, ask: () => Promise.resolve('all') });
     expect(readFileSync(first, 'utf8')).toContain(SERVER);
     expect(readFileSync(second, 'utf8')).toContain(SERVER);
   });
 
   it.each(['9', 'x', '1 9', '0'])('changes nothing on an answer that names none: %s', async (w) => {
     const { home, first, second } = withTwo();
-    const { code, err } = await run(home, { yes: false, ask: async () => w });
+    const { code, err } = await run(home, { yes: false, ask: () => Promise.resolve(w) });
     expect(code).toBe(2);
     expect(err.join('\n')).toContain('no such choice');
     expect(readFileSync(first, 'utf8')).toBe('{}\n');
@@ -543,17 +553,17 @@ describe('install', () => {
 
   it('reads the file again after the question: a client may have written it meanwhile', async () => {
     const { home, first } = withTwo();
-    const ask = async () => {
+    const ask = () => {
       writeFileSync(first, '{ "theme": "written meanwhile" }\n');
-      return '1';
+      return Promise.resolve('1');
     };
     await run(home, { yes: false, ask });
     expect(readFileSync(first, 'utf8')).toContain('written meanwhile');
-    expect(JSON.parse(readFileSync(first, 'utf8'))[cursor!.key][SERVER]).toBeDefined();
+    expect(JSON.parse(readFileSync(first, 'utf8'))).toHaveProperty([cursor.key, SERVER]);
   });
 
   it('writes through a link to the real file, and the link stays one', async () => {
-    const { home, file } = homeWith(cursor!);
+    const { home, file } = homeWith(cursor);
     const dotfiles = mkdtempSync(join(tmpdir(), 'appdyno-dotfiles-'));
     homes.push(dotfiles);
     const real = join(dotfiles, 'mcp.json');
@@ -565,7 +575,10 @@ describe('install', () => {
   });
 
   it('writes no edit that does not read back as asked: a table that stands twice', async () => {
-    const client = CLIENTS.find((c) => c.format === 'toml')!;
+    const client = must(
+      CLIENTS.find((c) => c.format === 'toml'),
+      'a TOML client',
+    );
     const text = `[mcp_servers.${SERVER}]\ncommand = "old"\n\n[mcp_servers.${SERVER}]\nargs = ["x"]\n`;
     const { home, file } = homeWith(client, text);
     const { code, err } = await run(home);
@@ -576,10 +589,13 @@ describe('install', () => {
   });
 
   it.each([
-    ['JSON', cursor!, Buffer.from('{ "name": "caf\xe9" }\n', 'latin1')],
+    ['JSON', cursor, Buffer.from('{ "name": "caf\xe9" }\n', 'latin1')],
     [
       'TOML',
-      CLIENTS.find((c) => c.format === 'toml')!,
+      must(
+        CLIENTS.find((c) => c.format === 'toml'),
+        'a TOML client',
+      ),
       Buffer.from('# caf\xe9\na = 1\n', 'latin1'),
     ],
   ])('refuses %s that is not UTF-8, which it could not put back', async (_, client, bytes) => {
@@ -593,18 +609,23 @@ describe('install', () => {
   });
 
   it('keeps the mark at the head of a file, and its backup is the file to the byte', async () => {
-    const client = CLIENTS.find((c) => c.format === 'toml')!;
+    const client = must(
+      CLIENTS.find((c) => c.format === 'toml'),
+      'a TOML client',
+    );
     const mark = Buffer.from([0xef, 0xbb, 0xbf]);
     const bytes = Buffer.concat([mark, Buffer.from('name = "café"\n')]);
     const { home, file } = homeWith(client);
     writeFileSync(file, bytes);
     await run(home);
     expect(readFileSync(file).subarray(0, 3)).toEqual(mark);
-    expect(readFileSync(join(dirname(file), beside(file)[0]!)).equals(bytes)).toBe(true);
+    const [backup] = beside(file);
+    assert(backup);
+    expect(readFileSync(join(dirname(file), backup)).equals(bytes)).toBe(true);
   });
 
   it('leaves a link that leads nowhere, whose place a new file would take', async () => {
-    const { home, file } = homeWith(cursor!);
+    const { home, file } = homeWith(cursor);
     symlinkSync(join(home, 'an unmounted disk', 'mcp.json'), file);
     const { code, err } = await run(home);
     expect(code).toBe(1);
@@ -613,7 +634,7 @@ describe('install', () => {
   });
 
   it('leaves a file its owner closed to writing, though a rename would go through', async () => {
-    const { home, file } = homeWith(cursor!, '{}\n');
+    const { home, file } = homeWith(cursor, '{}\n');
     chmodSync(file, 0o400);
     const { code, err } = await run(home);
     expect(code).toBe(1);
@@ -623,7 +644,7 @@ describe('install', () => {
   });
 
   it('keeps the mode of a file open to others, whatever this process gives a new one', async () => {
-    const { home, file } = homeWith(cursor!, '{}\n');
+    const { home, file } = homeWith(cursor, '{}\n');
     chmodSync(file, 0o666);
     await run(home);
     expect(statSync(file).mode & 0o777).toBe(0o666);
@@ -643,13 +664,13 @@ describe('install', () => {
   it('keeps two backups of two changes in one moment apart, the first as it was', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-11-04T10:00:00Z'));
-    const { home, file } = homeWith(json!, '{}\n');
+    const { home, file } = homeWith(json, '{}\n');
     await run(home);
     await run(home, { remove: true });
     const [first, second] = beside(file).sort();
-    expect(second).toBeDefined();
-    expect(readFileSync(join(dirname(file), first!), 'utf8')).toBe('{}\n');
-    expect(readFileSync(join(dirname(file), second!), 'utf8')).toContain(SERVER);
+    assert(first && second);
+    expect(readFileSync(join(dirname(file), first), 'utf8')).toBe('{}\n');
+    expect(readFileSync(join(dirname(file), second), 'utf8')).toContain(SERVER);
   });
 
   it('says a folder it cannot write to, leaves the file and goes on', async () => {
@@ -711,7 +732,10 @@ describe('install, from the app', () => {
   );
 
   it('keeps the variables of a TOML entry a table, when the app moved', async () => {
-    const client = CLIENTS.find((c) => c.format === 'toml')!;
+    const client = must(
+      CLIENTS.find((c) => c.format === 'toml'),
+      'a TOML client',
+    );
     const table = `[${client.key}.${SERVER}]\ncommand = "${here.command}"\nargs = ["mcp"]\nenv = { A = "1" }\n`;
     const { home, file } = homeWith(client, table);
     expect((await run(home, { server: moved, moved: true })).code).toBe(0);
@@ -719,7 +743,10 @@ describe('install, from the app', () => {
   });
 
   it('leaves a backup of what it repointed', async () => {
-    const client = CLIENTS.find((c) => c.format === 'jsonc')!;
+    const client = must(
+      CLIENTS.find((c) => c.format === 'jsonc'),
+      'a JSONC client',
+    );
     const { home, file } = homeWith(client, '{}\n');
     await run(home, { server: here });
     const before = readFileSync(file, 'utf8');
@@ -729,7 +756,10 @@ describe('install, from the app', () => {
   });
 
   it('adds nothing and writes nothing when no entry is stale', async () => {
-    const client = CLIENTS.find((c) => c.format === 'jsonc')!;
+    const client = must(
+      CLIENTS.find((c) => c.format === 'jsonc'),
+      'a JSONC client',
+    );
     const empty = homeWith(client, '{}\n');
     await run(empty.home, { server: moved, moved: true });
     expect(readFileSync(empty.file, 'utf8')).toBe('{}\n');
@@ -741,7 +771,10 @@ describe('install, from the app', () => {
   });
 
   it('never repoints an entry that is not the app', async () => {
-    const client = CLIENTS.find((c) => c.format === 'jsonc')!;
+    const client = must(
+      CLIENTS.find((c) => c.format === 'jsonc'),
+      'a JSONC client',
+    );
     const { home, file } = homeWith(client, '{}\n');
     await run(home, {});
     const written = readFileSync(file, 'utf8');

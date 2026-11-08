@@ -51,7 +51,10 @@ export type Outcome = {
 /** Where this client keeps its servers on this Mac, or nothing when it is not here. */
 export function fileOf(client: Client, { home, env }: Pick<InstallOptions, 'home' | 'env'>) {
   const moved = client.moved && env[client.moved.env];
-  const files = moved ? [join(moved, client.moved!.file)] : client.files.map((f) => join(home, f));
+  const files =
+    client.moved && moved
+      ? [join(moved, client.moved.file)]
+      : client.files.map((f) => join(home, f));
   return (
     files.find((f) => existsSync(f)) ??
     (client.ownFile ? undefined : files.find((f) => existsSync(dirname(f))))
@@ -67,15 +70,17 @@ const fits = (have: unknown, want: unknown): boolean => {
   return Object.entries(want).every(([k, v]) => fits((have as Record<string, unknown>)[k], v));
 };
 
-const IN_AN_APP = /\.app\/Contents\/Resources\/bin\/appdyno$/;
+const IN_AN_APP = '.app/Contents/Resources/bin/appdyno';
 
 /** An entry that runs the app from where it was, pointed at where it is. */
 function repointed(have: unknown, command: string) {
   const entry = (have ?? {}) as Record<string, unknown>;
   const now = entry.command;
-  const first: unknown = Array.isArray(now) ? now[0] : now;
-  if (typeof first !== 'string' || !IN_AN_APP.test(first) || first === command) return undefined;
-  return { ...entry, command: Array.isArray(now) ? [command, ...now.slice(1)] : command };
+  const words: unknown[] | undefined = Array.isArray(now) ? now : undefined;
+  const first: unknown = words ? words[0] : now;
+  if (typeof first !== 'string' || !first.endsWith(IN_AN_APP) || first === command)
+    return undefined;
+  return { ...entry, command: words ? [command, ...words.slice(1)] : command };
 }
 
 /** Refuses a byte that is not UTF-8, which would come back changed in the file and in its backup, and keeps a BOM. */
@@ -188,7 +193,7 @@ const said = ({ client, file, did, why }: Outcome) =>
     removed: `${client.name}: removed from ${file}`,
     right: `${client.name}: already right in ${file}`,
     absent: `${client.name}: not in ${file}`,
-    refused: `${client.name}: refused, ${file} is left as it is: ${why}`,
+    refused: `${client.name}: refused, ${file} is left as it is: ${String(why)}`,
   })[did];
 
 /** The ones asked for, or undefined when the answer names none of them. */
@@ -216,7 +221,8 @@ export async function install(o: InstallOptions): Promise<number> {
     );
     return 1;
   }
-  let refused = false;
+  // set inside `tell`, where the compiler does not follow it
+  let refused = false as boolean;
   const tell = (p: Outcome) => {
     refused ||= p.did === 'refused';
     (p.did === 'refused' ? o.err : o.out)(said(p));

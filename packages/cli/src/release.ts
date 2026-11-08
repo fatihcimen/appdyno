@@ -42,8 +42,10 @@ export function failed(e: unknown, doing: string): ToolError {
     message = '',
     stdout = '',
     stderr = '',
-  } = e as NodeJS.ErrnoException & {
+  } = e as {
+    code?: string;
     killed?: boolean;
+    message?: string;
     stdout?: string;
     stderr?: string;
   };
@@ -99,16 +101,16 @@ export async function latestRelease(name: string, run: Run, timeout = READ_MS) {
   }).catch((e: unknown) => {
     throw failed(e, `asking the registry for ${name}`);
   });
-  const { version, dist } = readJson<{
+  const { version, dist } = readJson(said, `the registry's answer for ${name}`) as {
     version: string;
     dist?: { attestations?: { provenance?: unknown } };
-  }>(said, `the registry's answer for ${name}`);
+  };
   return { version, attested: dist?.attestations?.provenance !== undefined };
 }
 
-function readJson<T>(text: string, what: string): T {
+function readJson(text: string, what: string): unknown {
   try {
-    return JSON.parse(text) as T;
+    return JSON.parse(text);
   } catch {
     throw refuse(`${what} is not JSON`, 'UNSUPPORTED', 'see what npm says with the same words');
   }
@@ -131,10 +133,10 @@ export type Wanted = Package & { repository: string | undefined };
 function builtFrom(entry: NonNullable<Audit['verified']>[number]) {
   const found = entry.attestationBundles?.find((b) => b.predicateType === PROVENANCE);
   if (!found) return undefined;
-  const statement = readJson<Statement>(
+  const statement = readJson(
     Buffer.from(found.bundle.dsseEnvelope.payload, 'base64').toString(),
     `the provenance of ${entry.name}`,
-  );
+  ) as Statement;
   return statement.predicate?.buildDefinition?.externalParameters?.workflow?.repository;
 }
 
@@ -187,7 +189,7 @@ export async function verifyRelease(wanted: Wanted, run: Run, tmp = tmpdir()) {
       if (stdout?.includes('"invalid"')) return stdout;
       throw e;
     });
-    return holds(readJson<Audit>(said, `npm's audit of ${spec}`), wanted);
+    return holds(readJson(said, `npm's audit of ${spec}`) as Audit, wanted);
   } catch (e) {
     throw failed(e, `verifying ${spec}`);
   } finally {

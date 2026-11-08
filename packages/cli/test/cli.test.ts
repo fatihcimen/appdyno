@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { Client, InMemoryTransport } from '@modelcontextprotocol/client';
-import type { DeviceProvider } from '@appdyno/core';
+import { must, type DeviceProvider } from '@appdyno/core';
 import { createServer } from '@appdyno/mcp';
 import { DEFAULT_POLICY, opsFor, ServerContext } from '@appdyno/ops';
 import { DeviceError } from '@appdyno/protocol';
@@ -26,7 +26,7 @@ describe('commands from the operations', () => {
   const run = async (name: string, ...argv: string[]) => {
     const out: string[] = [];
     const err: string[] = [];
-    const code = await commandsFor(ops)[name]!.run(argv, {
+    const code = await must(commandsFor(ops)[name], name).run(argv, {
       out: (s) => out.push(s),
       err: (s) => err.push(s),
     });
@@ -36,7 +36,7 @@ describe('commands from the operations', () => {
   beforeEach(() => {
     device = new FakeDevice();
     const provider: DeviceProvider = {
-      list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+      list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
       handles: () => true,
       open: () => device,
     };
@@ -163,7 +163,7 @@ describe('commands from the operations', () => {
 
   it('says each command in a whole sentence, or marks where it cut one', () => {
     const lines = listOf(ops).split('\n');
-    expect(lines.filter((l) => /:$/.test(l))).toEqual([]);
+    expect(lines.filter((l) => l.endsWith(':'))).toEqual([]);
     expect(lines.every((l) => l.length <= 124)).toBe(true);
     for (const l of lines) expect(l).toMatch(/(\.|…)$/);
   });
@@ -208,17 +208,18 @@ describe('commands from the operations', () => {
   it('keeps the selection and the diff baseline between processes in a small file', async () => {
     const file = join(mkdtempSync(join(tmpdir(), 'appdyno-cli-')), 'state', 'cli-session.json');
     const provider: DeviceProvider = {
-      list: async () => [
-        { serial: 'other', state: 'device', ready: true },
-        { serial: device.serial, state: 'device', ready: true },
-      ],
+      list: () =>
+        Promise.resolve([
+          { serial: 'other', state: 'device', ready: true },
+          { serial: device.serial, state: 'device', ready: true },
+        ]),
       handles: () => true,
       open: () => device,
     };
     const process = async (name: string, ...argv: string[]) => {
       const ctx = new ServerContext(DEFAULT_POLICY, [provider], { remember: file });
       const out: string[] = [];
-      const code = await commandsFor(opsFor(ctx))[name]!.run(argv, {
+      const code = await must(commandsFor(opsFor(ctx))[name], name).run(argv, {
         out: (s) => out.push(s),
         err: (s) => out.push(s),
       });
@@ -246,15 +247,17 @@ describe('commands from the operations', () => {
     process.env.APPDYNO_STATE_DIR = mkdtempSync(join(tmpdir(), 'appdyno-cli-'));
     const other = new FakeDevice('emulator-5612');
     const provider: DeviceProvider = {
-      list: async () =>
-        [device, other].map((d) => ({ serial: d.serial, state: 'device', ready: true })),
+      list: () =>
+        Promise.resolve(
+          [device, other].map((d) => ({ serial: d.serial, state: 'device', ready: true })),
+        ),
       handles: () => true,
       open: (serial) => (serial === other.serial ? other : device),
     };
     const inFolder = async (cwd: string, name: string, ...argv: string[]) => {
       const ctx = new ServerContext(DEFAULT_POLICY, [provider], { remember: cliSessionFile(cwd) });
       const out: string[] = [];
-      await commandsFor(opsFor(ctx))[name]!.run(argv, {
+      await must(commandsFor(opsFor(ctx))[name], name).run(argv, {
         out: (s) => out.push(s),
         err: (s) => out.push(s),
       });
@@ -295,7 +298,7 @@ describe('commands from the operations', () => {
     await run('tap', '--x', '100', '--y', '350');
     const temp = await run('screenshot');
     expect(temp.out[1]).toMatch(/appdyno-[0-9a-f]{8}\.jpeg$/);
-    expect(existsSync(temp.out[1]!)).toBe(true);
+    expect(existsSync(must(temp.out[1], 'its file'))).toBe(true);
   });
 });
 
@@ -344,19 +347,29 @@ describe('a command that loses data', () => {
     const cleared: string[] = [];
     const asked: string[] = [];
     const device = Object.assign(new FakeDevice(), {
-      apps: { clearData: async (app: string) => void cleared.push(app) },
+      apps: {
+        clearData: (app: string) => {
+          cleared.push(app);
+          return Promise.resolve();
+        },
+      },
     });
     const provider: DeviceProvider = {
-      list: async () => [{ serial: device.serial, state: 'device', ready: true }],
+      list: () => Promise.resolve([{ serial: device.serial, state: 'device', ready: true }]),
       handles: () => true,
       open: () => device,
     };
     const ops = checkedOps(new ServerContext(DEFAULT_POLICY, [provider], { app: 'dev.app' }));
     const err: string[] = [];
-    const code = await commandsFor(ops).app!.run(argv, {
+    const code = await must(commandsFor(ops).app, 'app').run(argv, {
       out: () => undefined,
       err: (s) => err.push(s),
-      ...(answer !== undefined && { ask: async (q: string) => (asked.push(q), answer) }),
+      ...(answer !== undefined && {
+        ask: (q: string) => {
+          asked.push(q);
+          return Promise.resolve(answer);
+        },
+      }),
     });
     return { code, err: err.join('\n'), cleared, asked };
   };

@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import type { ClientCall } from '@appdyno/core';
+import { must, type ClientCall } from '@appdyno/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { clientRows, entryCommand } from '../src/client-state.js';
 import { BROWSER_CLIENTS, CLIENTS, clientNamed, SERVER, type Client } from '../src/clients.js';
@@ -20,9 +20,12 @@ afterEach(() => {
 });
 
 const where = (dir: string) => ({ home: dir, env: {} });
-const fileIn = (dir: string, client: Client) => join(dir, client.files[0]!);
+const fileIn = (dir: string, client: Client) => join(dir, must(client.files[0], 'its file'));
 const rowOf = (dir: string, client: { name: string }, calls: ClientCall[] = []) =>
-  clientRows(where(dir), calls).find((r) => r.name === client.name)!;
+  must(
+    clientRows(where(dir), calls).find((r) => r.name === client.name),
+    client.name,
+  );
 /** A folder that holds the client, or its own file where it writes that itself. */
 const present = (dir: string, client: Client) => {
   const file = fileIn(dir, client);
@@ -83,7 +86,10 @@ describe.each(CLIENTS)('$name on this Mac', (client) => {
     added(dir, client);
     expect(rowOf(dir, client).stale).toBeUndefined();
     const server = { command: '/Applications/X.app/Contents/Resources/bin/x', args: ['mcp'] };
-    const row = clientRows({ ...where(dir), server }, []).find((r) => r.name === client.name)!;
+    const row = must(
+      clientRows({ ...where(dir), server }, []).find((r) => r.name === client.name),
+      client.name,
+    );
     expect(row.stale).toBe(true);
   });
 
@@ -124,8 +130,8 @@ describe('a client in a browser', () => {
   });
 
   it('is connected only by a call over HTTP: the same name on stdio is the app on this Mac', () => {
-    const client = BROWSER_CLIENTS[1]!;
-    const name = /^\w+/.exec(client.says.source)![0];
+    const client = must(BROWSER_CLIENTS[1], 'a second client in a browser');
+    const [name] = must(/^\w+/.exec(client.says.source), 'its name');
     expect(rowOf(home(), client, [call(name, 'stdio')]).state).toBe('browser');
     expect(rowOf(home(), client, [call(name, 'http')]).state).toBe('connected');
   });
@@ -154,14 +160,18 @@ describe('the name on a device', () => {
 
 describe('where a file is moved', () => {
   it('reads the state from where the client keeps it', () => {
-    const client = CLIENTS.find((c) => c.moved?.file && !c.ownFile)!;
+    const client = must(
+      CLIENTS.find((c) => c.moved?.file && !c.ownFile),
+      'a client whose file moves',
+    );
+    const to = must(client.moved, 'where it moves');
     const dir = home();
     const moved = join(dir, 'elsewhere');
-    mkdirSync(dirname(join(moved, client.moved!.file)), { recursive: true });
-    const env = { [client.moved!.env]: moved };
+    mkdirSync(dirname(join(moved, to.file)), { recursive: true });
+    const env = { [to.env]: moved };
     expect(clientRows({ home: dir, env }, []).find((r) => r.name === client.name)).toMatchObject({
       state: 'open',
-      file: join(moved, client.moved!.file),
+      file: join(moved, to.file),
     });
   });
 });

@@ -44,7 +44,7 @@ export async function readAppcast(root: string, me: Manifest, get: Get): Promise
       'UNSUPPORTED',
       'download the new version by hand',
     );
-  const at = `${repositoryOf(me)}/releases/latest/download/appcast.json`;
+  const at = `${String(repositoryOf(me))}/releases/latest/download/appcast.json`;
   const [cast, signature] = [await reached(get, at), await reached(get, `${at}.sig`)];
   const good = verify(
     null,
@@ -97,7 +97,7 @@ async function check(copy: string, cast: Appcast, place: TheApp, run: Run) {
     cwd: dirname(copy),
     timeout: INSTALL_MS,
   }).catch((e: unknown) => {
-    const said = `${(e as { stderr?: string }).stderr ?? ''}`.trim().split('\n').at(-1);
+    const said = ((e as { stderr?: string }).stderr ?? '').trim().split('\n').at(-1) ?? '';
     throw refuse(`the app inside fails its signature: ${said}`, 'CHECK_FAILED', HINT);
   });
   const plist = join(copy, 'Contents/Info.plist');

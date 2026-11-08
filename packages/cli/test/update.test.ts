@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { assert, beforeEach, describe, expect, it } from 'vitest';
 import { compareVersions, type Run } from '../src/release.js';
 import { update } from '../src/update.js';
 
@@ -109,18 +109,18 @@ function fake(root: string, answers: Answers = {}) {
     list: JSON.stringify([{ dependencies: { tool: { version: LATEST } } }]),
     ...answers,
   };
-  const run: Run = async (file, args, { cwd }) => {
+  const run: Run = (file, args, { cwd }) => {
     const word = wordOf(file, args);
     calls.push({ file, args, cwd, word });
     const answer = all[word];
     const given = typeof answer === 'function' ? answer() : answer;
-    if (given instanceof Error) throw given;
-    return { stdout: given };
+    if (given instanceof Error) return Promise.reject(given);
+    return Promise.resolve({ stdout: given });
   };
   return { run, calls, words: () => calls.map((c) => c.word) };
 }
 
-async function updating(root: string, answers: Answers = {}, check = false) {
+function updating(root: string, answers: Answers = {}, check = false) {
   const npm = fake(root, answers);
   const out: string[] = [];
   const tmp = temp();
@@ -132,12 +132,15 @@ async function updating(root: string, answers: Answers = {}, check = false) {
     check,
     out: (s) => out.push(s),
   });
-  return { npm, out, tmp, going };
+  return Promise.resolve({ npm, out, tmp, going });
 }
 
 const refused = async (root: string, answers: Answers, code: string, words: RegExp) => {
   const r = await updating(root, answers);
-  await expect(r.going).rejects.toMatchObject({ code, message: expect.stringMatching(words) });
+  await expect(r.going).rejects.toMatchObject({
+    code,
+    message: expect.stringMatching(words) as unknown,
+  });
   expect(versionAt(root)).toBe('1.0.0');
   expect(r.npm.words()).not.toContain('upgrade');
   expect(readdirSync(r.tmp)).toEqual([]);
@@ -167,13 +170,14 @@ describe('appdyno update', () => {
     expect(await r.going).toBe(0);
     expect(r.npm.words()).toEqual(['npm', 'view', 'fetch', 'audit', 'upgrade']);
     const [, seen, fetched, audited, upgraded] = r.npm.calls;
-    expect(seen!.args.slice(0, 2)).toEqual(['view', 'tool@latest']);
-    expect(fetched!.args).toContain(SPEC);
-    expect(fetched!.args).toContain('--ignore-scripts');
-    expect(audited!.args).toEqual(['audit', 'signatures', '--json', '--include-attestations']);
-    expect(audited!.cwd).toBe(fetched!.cwd);
-    expect(upgraded!.args).toEqual(expect.arrayContaining([SPEC, '--global', '--offline']));
-    expect(upgraded!.args).toContain(root.slice(0, -`/${GLOBAL}`.length));
+    assert(seen && fetched && audited && upgraded);
+    expect(seen.args.slice(0, 2)).toEqual(['view', 'tool@latest']);
+    expect(fetched.args).toContain(SPEC);
+    expect(fetched.args).toContain('--ignore-scripts');
+    expect(audited.args).toEqual(['audit', 'signatures', '--json', '--include-attestations']);
+    expect(audited.cwd).toBe(fetched.cwd);
+    expect(upgraded.args).toEqual(expect.arrayContaining([SPEC, '--global', '--offline']));
+    expect(upgraded.args).toContain(root.slice(0, -`/${GLOBAL}`.length));
     expect(versionAt(root)).toBe(LATEST);
     expect(readdirSync(r.tmp)).toEqual([]);
   });
@@ -200,7 +204,7 @@ describe('appdyno update', () => {
     const pnpmRoot = copyAt('pnpm/global/5/.pnpm/tool@1.0.0/node_modules/tool');
     const r = await updating(pnpmRoot);
     expect(await r.going).toBe(0);
-    expect(r.npm.calls.filter((c) => c.word === 'audit')[0]!.file).toBe('npm');
+    expect(r.npm.calls.find((c) => c.word === 'audit')?.file).toBe('npm');
     expect(r.npm.calls.find((c) => c.word === 'upgrade')).toMatchObject({
       file: 'pnpm',
       args: ['add', '--global', '--ignore-scripts', SPEC],
@@ -356,8 +360,8 @@ describe('appdyno update', () => {
     const e = await r.going.catch((x: unknown) => x);
     expect(e).toMatchObject({
       code: 'PERMISSION_REQUIRED',
-      message: expect.stringMatching(/may not write there.*; 1\.0\.0 stays$/),
-      hint: expect.stringMatching(/sudo would run the install as root/),
+      message: expect.stringMatching(/may not write there.*; 1\.0\.0 stays$/) as unknown,
+      hint: expect.stringMatching(/sudo would run the install as root/) as unknown,
     });
     expect(versionAt(root)).toBe('1.0.0');
   });
@@ -394,8 +398,8 @@ describe('appdyno update', () => {
     const r = await updating(copy);
     await expect(r.going).rejects.toMatchObject({
       code: 'UNSUPPORTED',
-      message: expect.stringContaining(by),
-      hint: expect.stringMatching(instead),
+      message: expect.stringContaining(by) as unknown,
+      hint: expect.stringMatching(instead) as unknown,
     });
     expect(r.npm.calls).toEqual([]);
   });
@@ -417,6 +421,6 @@ describe('appdyno update', () => {
     });
     const r = await updating(other, { view: view('1.0.0') });
     await r.going;
-    expect(r.npm.calls[1]!.args[1]).toBe('another@latest');
+    expect(r.npm.calls[1]?.args[1]).toBe('another@latest');
   });
 });
