@@ -32,12 +32,14 @@ class DialogActivity : Activity() {
                     inputType = InputType.TYPE_CLASS_PHONE
                 }
                 Dialog(this@DialogActivity).apply {
-                    setContentView(LinearLayout(context).apply {
-                        orientation = LinearLayout.VERTICAL
-                        setPadding(48, 48, 48, 48)
-                        addView(TextView(context).apply { text = "Enter your phone number" })
-                        addView(field)
-                    })
+                    setContentView(
+                        LinearLayout(context).apply {
+                            orientation = LinearLayout.VERTICAL
+                            setPadding(48, 48, 48, 48)
+                            addView(TextView(context).apply { text = "Enter your phone number" })
+                            addView(field)
+                        },
+                    )
                     window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
                     setOnShowListener { field.requestFocus() }
                     show()

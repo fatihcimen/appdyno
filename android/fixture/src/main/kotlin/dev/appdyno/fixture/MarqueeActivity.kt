@@ -37,11 +37,13 @@ private class MarqueeView(context: Context, private val mode: String) : View(con
         val turns = ms / EVERY_MS
         return when (mode) {
             "marquee_jumps" -> steady + turns * JUMP_DP
+
             "marquee_back" -> {
                 val into = ms % EVERY_MS
                 val stepped = turns * (EVERY_MS - 2 * BACK_MS) * DP_PER_SECOND / 1_000f
                 stepped + (if (into < EVERY_MS - BACK_MS) into else 2 * (EVERY_MS - BACK_MS) - into) * DP_PER_SECOND / 1_000f
             }
+
             else -> steady
         }
     }

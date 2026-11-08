@@ -12,7 +12,12 @@ class NetworkActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         column {
-            val url = EditText(context).apply { id = R.id.url_input; hint = "URL"; inputType = InputType.TYPE_TEXT_VARIATION_URI; addView(this) }
+            val url = EditText(context).apply {
+                id = R.id.url_input
+                hint = "URL"
+                inputType = InputType.TYPE_TEXT_VARIATION_URI
+                addView(this)
+            }
             val result = TextView(context)
             fun fetch(address: String) = Thread {
                 val text = try {

@@ -20,7 +20,12 @@ android {
         versionName = "0.1.0"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
-    externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "4.1.2" } }
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "4.1.2"
+        }
+    }
     buildTypes {
         // not debuggable, as a Baseline Profile needs, and it holds the profile Compose's libraries ship
         release {

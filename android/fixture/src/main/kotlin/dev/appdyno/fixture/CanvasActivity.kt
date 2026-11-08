@@ -13,7 +13,11 @@ class CanvasActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(object : View(this) {
             private var said = "Start Game"
-            private val paint = Paint().apply { textSize = 96f; color = Color.BLACK; isAntiAlias = true }
+            private val paint = Paint().apply {
+                textSize = 96f
+                color = Color.BLACK
+                isAntiAlias = true
+            }
 
             init {
                 importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO

@@ -21,14 +21,17 @@ class GesturesActivity : Activity() {
             var travel = 0
             var startY = 0f
             val show = { out.text = "double taps: $doubles; travel: $travel; fingers: $fingers" }
-            val detector = android.view.GestureDetector(context, object : android.view.GestureDetector.SimpleOnGestureListener() {
-                override fun onDown(e: android.view.MotionEvent) = true
-                override fun onDoubleTap(e: android.view.MotionEvent): Boolean {
-                    doubles++
-                    show()
-                    return true
-                }
-            })
+            val detector = android.view.GestureDetector(
+                context,
+                object : android.view.GestureDetector.SimpleOnGestureListener() {
+                    override fun onDown(e: android.view.MotionEvent) = true
+                    override fun onDoubleTap(e: android.view.MotionEvent): Boolean {
+                        doubles++
+                        show()
+                        return true
+                    }
+                },
+            )
             View(context).apply {
                 contentDescription = "Gesture pad"
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1400)
@@ -39,7 +42,9 @@ class GesturesActivity : Activity() {
                             startY = e.y
                             fingers = 1
                         }
+
                         android.view.MotionEvent.ACTION_POINTER_DOWN -> fingers = maxOf(fingers, e.pointerCount)
+
                         android.view.MotionEvent.ACTION_UP -> {
                             travel = (e.y - startY).toInt()
                             show()
@@ -69,7 +74,10 @@ open class ListActivity : Activity() {
             override fun getItemId(position: Int) = position.toLong()
             override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
                 onRow(position)
-                val row = LinearLayout(this@ListActivity).apply { orientation = LinearLayout.HORIZONTAL; setPadding(24, 24, 24, 24) }
+                val row = LinearLayout(this@ListActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    setPadding(24, 24, 24, 24)
+                }
                 TextView(this@ListActivity).apply {
                     id = R.id.row_name
                     text = "Product ${position + 1}"
@@ -84,7 +92,10 @@ open class ListActivity : Activity() {
                 Button(this@ListActivity).apply {
                     id = R.id.add_button
                     text = "Add"
-                    setOnClickListener { counts[position]++; count.text = "In basket: ${counts[position]}" }
+                    setOnClickListener {
+                        counts[position]++
+                        count.text = "In basket: ${counts[position]}"
+                    }
                     row.addView(this)
                 }
                 return row

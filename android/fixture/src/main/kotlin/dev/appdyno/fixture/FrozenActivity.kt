@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
  */
 class FrozenActivity : Activity() {
     private val monitor = Object()
+
     @Volatile private var holding = false
     private var kept: ByteArray? = null
     private var remote: android.os.IBinder? = null

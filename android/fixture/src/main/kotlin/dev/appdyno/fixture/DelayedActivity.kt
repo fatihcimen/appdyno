@@ -14,8 +14,15 @@ class DelayedActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         column {
-            val progress = ProgressBar(context).apply { visibility = View.GONE; addView(this) }
-            val loaded = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; id = R.id.loaded; visibility = View.GONE }
+            val progress = ProgressBar(context).apply {
+                visibility = View.GONE
+                addView(this)
+            }
+            val loaded = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                id = R.id.loaded
+                visibility = View.GONE
+            }
             for (i in 1..5) loaded.addView(Button(context).apply { text = "Result $i" })
             button("Load", R.id.load) {
                 progress.visibility = View.VISIBLE

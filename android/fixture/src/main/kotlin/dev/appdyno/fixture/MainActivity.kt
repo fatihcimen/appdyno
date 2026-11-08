@@ -69,16 +69,19 @@ class MainActivity : Activity() {
         route(intent)
         // the start's "fully drawn" mark (time to full display) `files/ttfd_ms` after the first frame is up;
         // a post from here runs at the first traversal, a good 100 ms before that frame is on screen
-        window.addOnFrameMetricsAvailableListener(object : Window.OnFrameMetricsAvailableListener {
-            var seen = false
-            override fun onFrameMetricsAvailable(w: Window, metrics: FrameMetrics, dropped: Int) {
-                // frames delivered together each call this, also after the listener is gone
-                if (seen) return
-                seen = true
-                w.removeOnFrameMetricsAvailableListener(this)
-                w.decorView.postDelayed({ reportFullyDrawn() }, costMs("ttfd_ms") ?: 0)
-            }
-        }, Handler(Looper.getMainLooper()))
+        window.addOnFrameMetricsAvailableListener(
+            object : Window.OnFrameMetricsAvailableListener {
+                var seen = false
+                override fun onFrameMetricsAvailable(w: Window, metrics: FrameMetrics, dropped: Int) {
+                    // frames delivered together each call this, also after the listener is gone
+                    if (seen) return
+                    seen = true
+                    w.removeOnFrameMetricsAvailableListener(this)
+                    w.decorView.postDelayed({ reportFullyDrawn() }, costMs("ttfd_ms") ?: 0)
+                }
+            },
+            Handler(Looper.getMainLooper()),
+        )
     }
 
     /** What a tapped push hands its launcher activity: its data, as the intent's extras. */

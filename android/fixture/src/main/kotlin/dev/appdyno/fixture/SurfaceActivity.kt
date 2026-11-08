@@ -4,10 +4,6 @@ import android.app.Activity
 import android.os.Bundle
 import android.view.View
 
-/**
- * Reactions that come late with nothing in between: a tap adds a line after the button's delay. A settle
- * that ends before the delay misses the change.
- */
 /** A surface drawn from its own thread, every `ms` of the link: frames the View toolkit never sees, as a game's are. */
 class SurfaceActivity : Activity() {
     @Volatile private var on = false

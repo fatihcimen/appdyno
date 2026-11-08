@@ -18,7 +18,11 @@ class FormActivity : Activity() {
         super.onCreate(savedInstanceState)
         column {
             label("Enter your details")
-            val name = EditText(context).apply { id = R.id.name_input; hint = "Your name"; addView(this) }
+            val name = EditText(context).apply {
+                id = R.id.name_input
+                hint = "Your name"
+                addView(this)
+            }
             EditText(context).apply {
                 id = R.id.phone_input
                 hint = "Phone"
@@ -30,7 +34,10 @@ class FormActivity : Activity() {
             LinearLayout(context).apply {
                 id = R.id.gsm_layout
                 orientation = LinearLayout.VERTICAL
-                TextView(context).apply { text = "Mobile phone"; addView(this) }
+                TextView(context).apply {
+                    text = "Mobile phone"
+                    addView(this)
+                }
                 EditText(context).apply {
                     id = R.id.gsm_input
                     inputType = InputType.TYPE_CLASS_PHONE
